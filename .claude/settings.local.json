@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude update *)",
+      "Bash(/Users/sudheer/Desktop/jupyter_env/bin/pip show *)",
+      "Bash(/Users/sudheer/Desktop/jupyter_env/bin/pip index *)",
+      "Bash(/Users/sudheer/Desktop/jupyter_env/bin/pip list *)",
+      "Bash(/Users/sudheer/Desktop/jupyter_env/bin/pip install *)",
+      "Bash(python3 -c \"import breeze_connect; import inspect; methods = [m for m in dir\\(breeze_connect.BreezeConnect\\) if not m.startswith\\('_'\\)]; print\\('\\\\n'.join\\(methods\\)\\)\")",
+      "Bash(/Users/sudheer/Desktop/jupyter_env/bin/python -c \"import breeze_connect; methods = [m for m in dir\\(breeze_connect.BreezeConnect\\) if not m.startswith\\('_'\\)]; print\\('\\\\n'.join\\(methods\\)\\)\")",
+      "Bash(/Users/sudheer/Desktop/jupyter_env/bin/python *)",
+      "Bash(/Users/sudheer/Desktop/jupyter_env/bin/playwright install *)",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-create-pages",
+      "mcp__claude_ai_Notion__notion-create-database",
+      "mcp__claude_ai_Notion__notion-create-view",
+      "Bash(python3 *)",
+      "Bash(awk '{print \"  ✓\", $NF}')",
+      "Bash(xargs ls -la)"
+    ]
+  }
+}

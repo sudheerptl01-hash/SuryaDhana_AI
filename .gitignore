@@ -1,0 +1,25 @@
+# Secrets & credentials
+.env
+.session_cache.json
+
+# Data files
+data/market.duckdb
+data/market.duckdb.wal
+data/*.duckdb
+data/*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ML artifacts
+models/*.joblib
+models/*.pkl
+models/*.json
+
+# OS
+.DS_Store
+.gstack/

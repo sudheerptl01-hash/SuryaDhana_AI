@@ -1,0 +1,187 @@
+x-common-env: &common-env
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  DUCKDB_PATH: /data/market.duckdb
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  ICICI_API_KEY: ${ICICI_API_KEY:-}
+  ICICI_API_SECRET: ${ICICI_API_SECRET:-}
+  ICICI_SESSION_TOKEN: ${ICICI_SESSION_TOKEN:-}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+  STOCK_UNIVERSE_PATH: /data/FINAL_100_STOCKS.csv
+  DATA_SERVICE_URL: http://data-service:8001
+  FEATURE_SERVICE_URL: http://feature-service:8002
+  ML_SERVICE_URL: http://ml-service:8003
+  RL_SERVICE_URL: http://rl-service:8004
+  RISK_SERVICE_URL: http://risk-service:8005
+  EXECUTION_SERVICE_URL: http://execution-service:8006
+  MONITORING_SERVICE_URL: http://monitoring-service:8007
+
+x-healthcheck: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 20s
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+  # ── API Gateway ─────────────────────────────────────────────────────────────
+
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+    depends_on:
+      data-service:
+        condition: service_healthy
+      feature-service:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+      rl-service:
+        condition: service_healthy
+      risk-service:
+        condition: service_healthy
+      execution-service:
+        condition: service_healthy
+      monitoring-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+  # ── Data Service ────────────────────────────────────────────────────────────
+
+  data-service:
+    build:
+      context: ..
+      dockerfile: services/data-service/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      <<: *common-env
+    volumes:
+      - market-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+  # ── Feature Service ─────────────────────────────────────────────────────────
+
+  feature-service:
+    build:
+      context: ..
+      dockerfile: services/feature-service/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      <<: *common-env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+  # ── ML Service ──────────────────────────────────────────────────────────────
+
+  ml-service:
+    build:
+      context: ..
+      dockerfile: services/ml-service/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      <<: *common-env
+    volumes:
+      - model-artifacts:/app/services/ml-service/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+  # ── RL Service ──────────────────────────────────────────────────────────────
+
+  rl-service:
+    build:
+      context: ..
+      dockerfile: services/rl-service/Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      <<: *common-env
+    volumes:
+      - model-artifacts:/app/services/rl-service/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+  # ── Risk Service ────────────────────────────────────────────────────────────
+
+  risk-service:
+    build:
+      context: ..
+      dockerfile: services/risk-service/Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      <<: *common-env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/health')"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+  # ── Execution Service ───────────────────────────────────────────────────────
+
+  execution-service:
+    build:
+      context: ..
+      dockerfile: services/execution-service/Dockerfile
+    ports:
+      - "8006:8006"
+    environment:
+      <<: *common-env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/health')"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+  # ── Monitoring Service ──────────────────────────────────────────────────────
+
+  monitoring-service:
+    build:
+      context: ..
+      dockerfile: services/monitoring-service/Dockerfile
+    ports:
+      - "8007:8007"
+    environment:
+      <<: *common-env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')"]
+      <<: *default-healthcheck
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  market-data:
+  model-artifacts:
