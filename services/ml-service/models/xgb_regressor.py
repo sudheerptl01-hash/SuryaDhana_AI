@@ -48,17 +48,43 @@ class ReturnRegressor:
         X_val: pd.DataFrame | None = None,
         y_val: pd.Series | None = None,
     ) -> None:
+        # ── Input validation (Pillar 4) ──────────────────────────────────────
+        if X_train.empty or len(y_train) == 0:
+            raise ValueError(f"Empty training data: X_train shape {X_train.shape}")
+
+        if X_train.shape[0] != len(y_train):
+            raise ValueError(
+                f"Shape mismatch: X_train {X_train.shape[0]} rows vs y_train {len(y_train)} rows"
+            )
+
+        X_train = X_train.replace([np.inf, -np.inf], np.nan)
+        if X_train.isna().any().any():
+            logger.warning("NaN/inf in regressor training data — filling with 0")
+            X_train = X_train.fillna(0)
+
+        if y_train.isna().any() or np.isinf(y_train).any():
+            raise ValueError("Target (return) series contains NaN or inf values — check label generation")
+
+        if X_val is not None and y_val is not None:
+            X_val = X_val.replace([np.inf, -np.inf], np.nan).fillna(0)
+        # ─────────────────────────────────────────────────────────────────────
+
         self._feature_cols = list(X_train.columns)
 
         params = {k: v for k, v in self._params.items() if k != "early_stopping_rounds"}
         early_stop = self._params.get("early_stopping_rounds", 20)
 
-        self._model = XGBRegressor(**params)
+        eval_set_exists = X_val is not None and y_val is not None
+
+        # early_stopping_rounds moved to constructor in XGBoost ≥2.0
+        if eval_set_exists:
+            self._model = XGBRegressor(**params, early_stopping_rounds=early_stop)
+        else:
+            self._model = XGBRegressor(**params)
 
         fit_kwargs: dict[str, Any] = {"verbose": False}
-        if X_val is not None and y_val is not None:
+        if eval_set_exists:
             fit_kwargs["eval_set"] = [(X_val, y_val)]
-            fit_kwargs["early_stopping_rounds"] = early_stop
 
         self._model.fit(X_train, y_train, **fit_kwargs)
         logger.info("ReturnRegressor trained", features=len(self._feature_cols))

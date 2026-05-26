@@ -79,7 +79,40 @@ def walk_forward_validation(
     df = df.copy()
     df[date_col] = pd.to_datetime(df[date_col])
     df = df.sort_values(date_col).reset_index(drop=True)
+
+    # ── Pre-flight validation (Pillar 4) ──────────────────────────────────────
+    missing_cols = [c for c in feature_cols if c not in df.columns]
+    if missing_cols:
+        raise ValueError(f"Missing feature columns: {missing_cols[:5]}{'…' if len(missing_cols) > 5 else ''}")
+
+    if target_col not in df.columns:
+        raise ValueError(f"Target column '{target_col}' not found in dataframe")
+
+    # Report NaN rates and drop them
+    nan_rates = df[feature_cols].isna().mean()
+    high_nan = nan_rates[nan_rates > 0.3]
+    if len(high_nan):
+        logger.warning("Features with >30% NaN will be affected", features=high_nan.to_dict())
+
     df = df.dropna(subset=feature_cols + [target_col])
+
+    # Replace inf/-inf silently
+    df[feature_cols] = df[feature_cols].replace([np.inf, -np.inf], np.nan)
+    df = df.dropna(subset=feature_cols)
+
+    if len(df) < (train_months + test_months) * 21:
+        raise ValueError(
+            f"Insufficient data: {len(df)} rows after cleaning. "
+            f"Need at least {(train_months + test_months) * 21} rows for one fold."
+        )
+
+    class_counts = df[target_col].value_counts()
+    if len(class_counts) < 2:
+        raise ValueError(
+            f"Target column has only one class ({class_counts.index.tolist()}). "
+            "Check label generation — need both UP (1) and DOWN (0) labels."
+        )
+    # ─────────────────────────────────────────────────────────────────────────
 
     result = WalkForwardResult()
     total_days = len(df)

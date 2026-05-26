@@ -172,8 +172,13 @@ export interface ConfigModalProps {
 }
 
 export function ConfigModal({ isDark, initialModelType, onLaunch, onClose }: ConfigModalProps) {
+  const today = new Date().toISOString().slice(0, 10)
+  const fiveYearsAgo = new Date(new Date().setFullYear(new Date().getFullYear() - 5)).toISOString().slice(0, 10)
+
   const [modelType, setModelType]       = useState(initialModelType)
   const [trainingMode, setTrainingMode] = useState<'new' | 'warmstart'>('new')
+  const [trainStart, setTrainStart]     = useState(fiveYearsAgo)
+  const [trainEnd, setTrainEnd]         = useState(today)
   const [selFeats, setSelFeats]         = useState<Set<string>>(new Set(ALL_FEATURES))
   const [showFeatSel, setShowFeatSel]   = useState(false)
   const [n_estimators, setN]            = useState(300)
@@ -237,6 +242,8 @@ export function ConfigModal({ isDark, initialModelType, onLaunch, onClose }: Con
       rows_per_ticker,
       run_walk_forward,
       warm_start: trainingMode === 'warmstart',
+      train_start: trainStart,
+      train_end: trainEnd,
       selected_features: selFeats.size < ALL_FEATURES.length ? [...selFeats] : undefined,
     }
     if (isXGB) {
@@ -261,6 +268,37 @@ export function ConfigModal({ isDark, initialModelType, onLaunch, onClose }: Con
         </div>
 
         <div className="px-8 py-6 space-y-7">
+
+          {/* Date Range — Training window */}
+          <div>
+            <p className="text-rose-400 text-[10px] font-bold uppercase tracking-widest mb-3">Training Date Range</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`text-[11px] font-medium ${mu} block mb-1`}>Start Date</label>
+                <input
+                  type="date"
+                  value={trainStart}
+                  max={trainEnd}
+                  onChange={e => setTrainStart(e.target.value)}
+                  className={`w-full px-3 py-2 text-xs rounded-lg border font-mono ${isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
+                />
+              </div>
+              <div>
+                <label className={`text-[11px] font-medium ${mu} block mb-1`}>End Date</label>
+                <input
+                  type="date"
+                  value={trainEnd}
+                  min={trainStart}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={e => setTrainEnd(e.target.value)}
+                  className={`w-full px-3 py-2 text-xs rounded-lg border font-mono ${isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
+                />
+              </div>
+            </div>
+            <p className={`${mu} text-[10px] mt-1.5`}>
+              Window: {Math.round((new Date(trainEnd).getTime() - new Date(trainStart).getTime()) / (1000 * 60 * 60 * 24 * 30))} months · Never use future data
+            </p>
+          </div>
 
           {/* Training Mode — Bloomberg-style segmented control */}
           <div>
@@ -322,10 +360,10 @@ export function ConfigModal({ isDark, initialModelType, onLaunch, onClose }: Con
               <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-200'} pt-6`}>
                 <p className="text-violet-400 text-[10px] font-bold uppercase tracking-widest mb-4">Model Architecture</p>
                 <div className="grid grid-cols-2 gap-6">
-                  <Slider label="Estimators (trees)" val={n_estimators} setVal={setN} min={50} max={1000} step={50} />
-                  <Slider label="Max Depth" val={max_depth} setVal={setD} min={2} max={10} />
-                  <Slider label="Learning Rate" val={learning_rate} setVal={setLR} min={0.005} max={0.3} step={0.005} fmt={v => v.toFixed(3)} />
-                  <Slider label="Scale Pos Weight" val={scale_pos_weight} setVal={setSPW} min={0.5} max={5} step={0.1} fmt={v => v.toFixed(1)} />
+                  <Slider label="Trees / Iterations (n_estimators)" val={n_estimators} setVal={setN} min={50} max={1000} step={50} />
+                  <Slider label="Max Tree Depth" val={max_depth} setVal={setD} min={2} max={10} />
+                  <Slider label="Learning Rate (eta)" val={learning_rate} setVal={setLR} min={0.005} max={0.3} step={0.005} fmt={v => v.toFixed(3)} />
+                  <Slider label="Class Weight (pos/neg ratio)" val={scale_pos_weight} setVal={setSPW} min={0.5} max={5} step={0.1} fmt={v => v.toFixed(1)} />
                 </div>
               </div>
               <div className={`border-t ${isDark ? 'border-slate-800' : 'border-slate-200'} pt-6`}>

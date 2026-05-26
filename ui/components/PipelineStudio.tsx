@@ -1,10 +1,14 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
-  ResponsiveContainer, AreaChart, Area,
+  ResponsiveContainer,
 } from 'recharts'
+import {
+  createChart, ColorType, CrosshairMode, LineStyle,
+  type IChartApi, type ISeriesApi,
+} from 'lightweight-charts'
 import {
   getPipelineServiceHealth,
   triggerFeatureGeneration,
@@ -16,8 +20,72 @@ import {
   triggerRLTraining,
   getRLTrainingMetrics,
   getDataQuality,
+  getFeatureStats,
+  getFeatureCorrelations,
 } from '@/lib/api'
 import { ModelLab, ConfigModal } from './ModelLab'
+
+// ── TradingView-style line/area chart (lightweight-charts) ────────────────────
+interface LWLineChartProps {
+  data: { time: number | string; value: number }[]
+  color?: string
+  height?: number
+  label?: string
+  fmt?: (v: number) => string
+}
+
+function LWLineChart({ data, color = '#f59e0b', height = 280, label, fmt }: LWLineChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const chartRef     = useRef<IChartApi | null>(null)
+  const seriesRef    = useRef<ISeriesApi<'Area'> | null>(null)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    const chart = createChart(containerRef.current, {
+      width:  containerRef.current.clientWidth,
+      height,
+      layout: { background: { type: ColorType.Solid, color: 'transparent' }, textColor: '#64748b' },
+      grid:   { vertLines: { color: '#1e293b', style: LineStyle.Dashed }, horzLines: { color: '#1e293b', style: LineStyle.Dashed } },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderColor: '#1e293b', scaleMargins: { top: 0.1, bottom: 0.05 } },
+      timeScale: { borderColor: '#1e293b', timeVisible: false },
+      handleScroll: true,
+      handleScale:  true,
+    })
+    const series = chart.addAreaSeries({
+      lineColor:    color,
+      topColor:     color + '44',
+      bottomColor:  color + '00',
+      lineWidth:    2,
+      priceFormat:  fmt
+        ? { type: 'custom', formatter: fmt, minMove: 0.0001 }
+        : { type: 'price', precision: 4, minMove: 0.0001 },
+    })
+    chartRef.current  = chart
+    seriesRef.current = series
+
+    const ro = new ResizeObserver(() => {
+      if (containerRef.current) chart.resize(containerRef.current.clientWidth, height)
+    })
+    ro.observe(containerRef.current)
+    return () => { ro.disconnect(); chart.remove() }
+  }, [color, height])
+
+  useEffect(() => {
+    if (!seriesRef.current || !data?.length) return
+    const pts = data
+      .map((d, i) => ({ time: (i + 1) as any, value: typeof d.value === 'number' ? d.value : 0 }))
+      .filter(d => isFinite(d.value))
+    if (pts.length) seriesRef.current.setData(pts)
+  }, [data])
+
+  return (
+    <div className="relative">
+      {label && <p className="absolute top-0 left-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest z-10">{label}</p>}
+      <div ref={containerRef} style={{ height }} />
+    </div>
+  )
+}
 
 // ── PPO RL Config Modal ───────────────────────────────────────────────────────
 interface RLConfigModalProps {
@@ -27,6 +95,9 @@ interface RLConfigModalProps {
 }
 
 function RLConfigModal({ isDark, onLaunch, onClose }: RLConfigModalProps) {
+  const today = new Date().toISOString().slice(0, 10)
+  const fiveYearsAgo = new Date(new Date().setFullYear(new Date().getFullYear() - 5)).toISOString().slice(0, 10)
+
   const [totalTimesteps, setTotalTimesteps] = useState(100000)
   const [learningRate, setLearningRate]     = useState(0.0003)
   const [nSteps, setNSteps]                 = useState(2048)
@@ -34,6 +105,8 @@ function RLConfigModal({ isDark, onLaunch, onClose }: RLConfigModalProps) {
   const [nEpochs, setNEpochs]               = useState(10)
   const [nCandidates, setNCandidates]       = useState(15)
   const [maxPositions, setMaxPositions]     = useState(5)
+  const [trainStart, setTrainStart]         = useState(fiveYearsAgo)
+  const [trainEnd, setTrainEnd]             = useState(today)
 
   const tx = isDark ? 'text-slate-50'  : 'text-slate-950'
   const mu = isDark ? 'text-slate-500' : 'text-slate-500'
@@ -71,6 +144,29 @@ function RLConfigModal({ isDark, onLaunch, onClose }: RLConfigModalProps) {
 
         <div className="px-8 py-6 space-y-6">
           <div>
+            <p className="text-rose-400 text-[10px] font-bold uppercase tracking-widest mb-3">Training Date Range</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`text-[11px] font-medium ${mu} block mb-1`}>Start Date</label>
+                <input type="date" value={trainStart} max={trainEnd}
+                  onChange={e => setTrainStart(e.target.value)}
+                  className={`w-full px-3 py-2 text-xs rounded-lg border font-mono ${isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
+                />
+              </div>
+              <div>
+                <label className={`text-[11px] font-medium ${mu} block mb-1`}>End Date</label>
+                <input type="date" value={trainEnd} min={trainStart} max={new Date().toISOString().slice(0, 10)}
+                  onChange={e => setTrainEnd(e.target.value)}
+                  className={`w-full px-3 py-2 text-xs rounded-lg border font-mono ${isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-white border-slate-300 text-slate-800'}`}
+                />
+              </div>
+            </div>
+            <p className={`${mu} text-[10px] mt-1`}>
+              Window: {Math.round((new Date(trainEnd).getTime() - new Date(trainStart).getTime()) / (86400000 * 30))} months
+            </p>
+          </div>
+
+          <div className={div}>
             <p className="text-amber-400 text-[10px] font-bold uppercase tracking-widest mb-4">Training Budget</p>
             <div className="grid grid-cols-2 gap-6">
               <Slider label="Total Timesteps" val={totalTimesteps} setVal={setTotalTimesteps} min={10000} max={500000} step={10000} />
@@ -99,7 +195,7 @@ function RLConfigModal({ isDark, onLaunch, onClose }: RLConfigModalProps) {
         <div className={`flex justify-end gap-3 px-8 py-5 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
           <button onClick={onClose} className={`px-6 py-2.5 text-sm font-semibold rounded-xl ${isDark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} transition`}>Cancel</button>
           <button
-            onClick={() => onLaunch({ total_timesteps: totalTimesteps, learning_rate: learningRate, n_steps: nSteps, batch_size: batchSize, n_epochs: nEpochs, n_candidates: nCandidates, max_positions: maxPositions })}
+            onClick={() => onLaunch({ total_timesteps: totalTimesteps, learning_rate: learningRate, n_steps: nSteps, batch_size: batchSize, n_epochs: nEpochs, n_candidates: nCandidates, max_positions: maxPositions, train_start: trainStart, train_end: trainEnd })}
             className="px-6 py-2.5 text-sm font-bold bg-amber-500 hover:bg-amber-400 text-black rounded-xl transition active:scale-95"
           >▶  Launch PPO Training</button>
         </div>
@@ -120,8 +216,203 @@ interface DataQuality {
   readiness: { has_ohlcv: boolean; has_features: boolean; has_labels: boolean; ready_to_train: boolean; feature_col_count: number }
 }
 
-export function PipelineStudio({ isDark }: { isDark: boolean }) {
-  const [activeTab, setActiveTab] = useState<'quality' | 'features' | 'model' | 'rl'>('quality')
+// ── Feature Inspector Tab (Pillar 2) ─────────────────────────────────────────
+function FeatureInspectorTab({
+  isDark, card, tx, mu, featureStats, featureCorr, loading,
+  sort, approved, watchlist, onLoad, onSortChange, onApprove,
+}: {
+  isDark: boolean; card: string; tx: string; mu: string
+  featureStats: any; featureCorr: any; loading: boolean
+  sort: { col: string; asc: boolean }; approved: boolean; watchlist: string[]
+  onLoad: () => void; onSortChange: (col: string) => void; onApprove: () => void
+}) {
+  const features: any[] = featureStats?.features || []
+  const corrMatrix: Record<string, Record<string, number>> = featureCorr?.correlation_matrix || {}
+  const corrFeatures: string[] = featureCorr?.features || []
+
+  const sorted = [...features].sort((a, b) => {
+    const va = a[sort.col] ?? 0
+    const vb = b[sort.col] ?? 0
+    return sort.asc ? va - vb : vb - va
+  })
+
+  const highNaN = features.filter(f => (f.null_pct ?? 0) > 20).length
+  const highCorr = Object.entries(corrMatrix).reduce((acc, [f1, row]) => {
+    return acc + Object.entries(row).filter(([f2, v]) => f1 < f2 && Math.abs(v) > 0.9).length
+  }, 0)
+  const canApprove = features.length > 0 && highNaN === 0
+
+  const Th = ({ col, label }: { col: string; label: string }) => (
+    <th
+      onClick={() => onSortChange(col)}
+      className={`px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap ${mu} hover:text-slate-300`}
+    >
+      {label} {sort.col === col ? (sort.asc ? '↑' : '↓') : '↕'}
+    </th>
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* Header with load button */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className={`${tx} text-xl font-bold`}>Pre-Flight Feature Inspector</h2>
+          <p className={`${mu} text-xs mt-1`}>Audit NaN rates, variance, and correlations before training. Gate training on a clean inspection.</p>
+          {watchlist.length > 0 && (
+            <p className="text-xs mt-1 text-emerald-400">
+              Watchlist: {watchlist.join(', ')} — inspection scoped to these tickers
+            </p>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onLoad}
+            disabled={loading}
+            className={`px-5 py-2.5 text-xs font-bold rounded-xl transition-all active:scale-95 ${
+              loading ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-400 text-black'
+            }`}
+          >
+            {loading ? '⟳ Loading…' : features.length > 0 ? '↻ Refresh Stats' : '⚡ Load Feature Stats'}
+          </button>
+          <button
+            onClick={onApprove}
+            disabled={!canApprove || approved}
+            title={!canApprove ? (features.length === 0 ? 'Load stats first' : `Fix ${highNaN} features with >20% NaNs`) : ''}
+            className={`px-5 py-2.5 text-xs font-bold rounded-xl transition-all active:scale-95 ${
+              approved ? 'bg-emerald-900/60 text-emerald-400 border border-emerald-700/50' :
+              canApprove ? 'bg-emerald-600 hover:bg-emerald-500 text-white' :
+              'bg-slate-700 text-slate-500 cursor-not-allowed'
+            }`}
+          >
+            {approved ? '✓ Approved — Proceed' : '✓ Approve & Go to Training'}
+          </button>
+        </div>
+      </div>
+
+      {/* Summary KPIs */}
+      {features.length > 0 && (
+        <div className="grid grid-cols-4 gap-4">
+          {[
+            { label: 'Total Features', value: features.length, color: 'text-amber-400' },
+            { label: 'High NaN (>20%)', value: highNaN, color: highNaN > 0 ? 'text-rose-400' : 'text-emerald-400' },
+            { label: 'High Correlation (>0.9)', value: highCorr, color: highCorr > 5 ? 'text-amber-400' : 'text-emerald-400' },
+            { label: 'Inspection Status', value: canApprove ? 'CLEAN' : 'ISSUES', color: canApprove ? 'text-emerald-400' : 'text-rose-400' },
+          ].map(k => (
+            <div key={k.label} className={`${card} border rounded-xl p-4`}>
+              <p className={`${mu} text-[10px] font-bold uppercase tracking-widest mb-1`}>{k.label}</p>
+              <p className={`${k.color} text-2xl font-black font-mono`}>{k.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Feature stats table */}
+      {features.length > 0 && (
+        <div className={`${card} border rounded-xl overflow-hidden`}>
+          <div className={`px-6 py-3 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <p className={`${tx} text-xs font-bold uppercase tracking-widest`}>Feature Quality Grid — click headers to sort</p>
+          </div>
+          <div className="overflow-auto max-h-[420px]">
+            <table className="w-full text-[11px]">
+              <thead className={`sticky top-0 ${isDark ? 'bg-slate-900' : 'bg-slate-100'}`}>
+                <tr>
+                  <th className={`px-3 py-2 text-left text-[10px] font-bold uppercase tracking-wider ${mu}`}>Feature</th>
+                  <Th col="null_pct"  label="NaN %" />
+                  <Th col="mean"      label="Mean" />
+                  <Th col="std"       label="Std Dev" />
+                  <Th col="min"       label="Min" />
+                  <Th col="max"       label="Max" />
+                  <Th col="variance"  label="Variance" />
+                </tr>
+              </thead>
+              <tbody className={`divide-y ${isDark ? 'divide-slate-800/50' : 'divide-slate-100'}`}>
+                {sorted.map((f: any) => {
+                  const nanPct = f.null_pct ?? 0
+                  const isHighNaN = nanPct > 20
+                  return (
+                    <tr key={f.feature} className={isHighNaN ? (isDark ? 'bg-rose-950/30' : 'bg-rose-50') : ''}>
+                      <td className={`px-3 py-1.5 font-mono font-bold ${isHighNaN ? 'text-rose-400' : tx}`}>{f.feature}</td>
+                      <td className={`px-3 py-1.5 font-mono ${isHighNaN ? 'text-rose-400 font-bold' : mu}`}>
+                        <div className="flex items-center gap-1.5">
+                          <div className={`h-1 w-12 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-200'} overflow-hidden`}>
+                            <div className={`h-full ${nanPct > 20 ? 'bg-rose-500' : nanPct > 5 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${Math.min(nanPct, 100)}%` }} />
+                          </div>
+                          {nanPct.toFixed(1)}%
+                        </div>
+                      </td>
+                      <td className={`px-3 py-1.5 font-mono ${mu}`}>{(f.mean ?? 0).toFixed(4)}</td>
+                      <td className={`px-3 py-1.5 font-mono ${mu}`}>{(f.std ?? 0).toFixed(4)}</td>
+                      <td className={`px-3 py-1.5 font-mono ${mu}`}>{(f.min ?? 0).toFixed(4)}</td>
+                      <td className={`px-3 py-1.5 font-mono ${mu}`}>{(f.max ?? 0).toFixed(4)}</td>
+                      <td className={`px-3 py-1.5 font-mono ${mu}`}>{(f.variance ?? 0).toFixed(6)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Correlation heatmap */}
+      {corrFeatures.length > 0 && (
+        <div className={`${card} border rounded-xl overflow-hidden`}>
+          <div className={`px-6 py-3 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <p className={`${tx} text-xs font-bold uppercase tracking-widest`}>
+              Correlation Heatmap — top {corrFeatures.length} features
+            </p>
+            <p className={`${mu} text-[10px] mt-0.5`}>Red = high positive, Blue = high negative correlation. Pairs &gt;0.9 may be redundant.</p>
+          </div>
+          <div className="overflow-auto max-h-[400px] p-4">
+            <div style={{ display: 'grid', gridTemplateColumns: `80px repeat(${corrFeatures.length}, 32px)`, gap: 1 }}>
+              {/* Header row */}
+              <div />
+              {corrFeatures.map((f, i) => (
+                <div key={i} style={{ writingMode: 'vertical-lr', transform: 'rotate(180deg)' }}
+                  className={`text-[8px] font-mono ${mu} h-20 flex items-center justify-center truncate`} title={f}>
+                  {f.slice(0, 10)}
+                </div>
+              ))}
+              {/* Data rows */}
+              {corrFeatures.map((rowF, ri) => (
+                <React.Fragment key={rowF}>
+                  <div className={`text-[8px] font-mono ${mu} truncate flex items-center pr-1`} title={rowF}>{rowF.slice(0, 12)}</div>
+                  {corrFeatures.map((colF, ci) => {
+                    const v = corrMatrix[rowF]?.[colF] ?? corrMatrix[colF]?.[rowF] ?? (ri === ci ? 1 : 0)
+                    const abs = Math.abs(v)
+                    const bg = v > 0
+                      ? `rgba(16,185,129,${0.1 + v * 0.85})`
+                      : `rgba(244,63,94,${0.1 + abs * 0.85})`
+                    return (
+                      <div key={colF} title={`${rowF} ↔ ${colF}: ${v.toFixed(2)}`}
+                        style={{ width: 32, height: 32, backgroundColor: bg, borderRadius: 2 }}
+                        className="flex items-center justify-center">
+                        {abs > 0.5 && <span className="text-[7px] font-mono text-white font-bold">{v.toFixed(1)}</span>}
+                      </div>
+                    )
+                  })}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && features.length === 0 && (
+        <div className={`${card} border rounded-2xl py-20 text-center`}>
+          <p className="text-5xl mb-4">🔬</p>
+          <p className={`${tx} text-lg font-semibold`}>No feature data loaded</p>
+          <p className={`${mu} text-sm mt-2`}>Click "Load Feature Stats" to inspect engineered features before training.</p>
+          <p className={`${mu} text-xs mt-1`}>Run Phase 3 (Feature Engineering) first if data is empty.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; watchlist?: string[] }) {
+  const [activeTab, setActiveTab] = useState<'quality' | 'inspector' | 'features' | 'model' | 'rl'>('quality')
   const [serviceHealth, setServiceHealth] = useState<Record<string, ServiceHealth>>({})
   const [featureJob, setFeatureJob] = useState<JobStatus | null>(null)
   const [modelJob, setModelJob] = useState<JobStatus | null>(null)
@@ -134,6 +425,11 @@ export function PipelineStudio({ isDark }: { isDark: boolean }) {
   const [dataQuality, setDataQuality] = useState<DataQuality | null>(null)
   const [showTrainModal, setShowTrainModal] = useState(false)
   const [showRLModal, setShowRLModal] = useState(false)
+  const [featureStats, setFeatureStats] = useState<any>(null)
+  const [featureCorr, setFeatureCorr] = useState<any>(null)
+  const [inspectorLoading, setInspectorLoading] = useState(false)
+  const [inspectorSort, setInspectorSort] = useState<{ col: string; asc: boolean }>({ col: 'null_pct', asc: false })
+  const [inspectorApproved, setInspectorApproved] = useState(false)
 
   const bg = isDark ? 'bg-slate-950' : 'bg-white'
   const card = isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-50 border-slate-200'
@@ -381,12 +677,13 @@ export function PipelineStudio({ isDark }: { isDark: boolean }) {
       </div>
 
       {/* Tab Bar */}
-      <div className={`px-8 flex gap-0 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+      <div className={`px-8 flex gap-0 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'} overflow-x-auto`}>
         {([
-          { key: 'quality',  label: 'Data Quality' },
-          { key: 'features', label: 'Feature Engineering' },
-          { key: 'model',    label: 'Model Studio' },
-          { key: 'rl',       label: 'RL Agent' },
+          { key: 'quality',    label: 'Data Quality' },
+          { key: 'inspector',  label: '🔬 Feature Inspector' },
+          { key: 'features',   label: 'Feature Engineering' },
+          { key: 'model',      label: 'Model Studio' },
+          { key: 'rl',         label: 'RL Agent' },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
@@ -403,6 +700,33 @@ export function PipelineStudio({ isDark }: { isDark: boolean }) {
       </div>
 
       <div className="p-8">
+
+        {/* ── FEATURE INSPECTOR TAB ─────────────────────────────────────── */}
+        {activeTab === 'inspector' && (
+          <FeatureInspectorTab
+            isDark={isDark}
+            card={card}
+            tx={tx}
+            mu={mu}
+            featureStats={featureStats}
+            featureCorr={featureCorr}
+            loading={inspectorLoading}
+            sort={inspectorSort}
+            approved={inspectorApproved}
+            watchlist={watchlist}
+            onLoad={async () => {
+              setInspectorLoading(true)
+              try {
+                const [s, c] = await Promise.all([getFeatureStats(), getFeatureCorrelations()])
+                setFeatureStats(s.data)
+                setFeatureCorr(c.data)
+              } catch {}
+              finally { setInspectorLoading(false) }
+            }}
+            onSortChange={(col) => setInspectorSort(prev => ({ col, asc: prev.col === col ? !prev.asc : false }))}
+            onApprove={() => { setInspectorApproved(true); setActiveTab('features') }}
+          />
+        )}
 
         {/* ── FEATURES TAB ─────────────────────────────────────────────── */}
         {activeTab === 'features' && (
@@ -615,44 +939,25 @@ export function PipelineStudio({ isDark }: { isDark: boolean }) {
               })()}
 
               {trainingMetrics?.metrics?.length > 0 ? (
-                /* Side-by-side charts — pixel-aligned */
+                /* Side-by-side TradingView-style charts */
                 <div className="grid grid-cols-2 gap-6">
                   <div className={`${card} border rounded-xl p-6`}>
                     <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5`}>Reward Convergence</h3>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <AreaChart data={trainingMetrics.metrics} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                        <defs>
-                          <linearGradient id="rlGrad1" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="4 2" stroke={grid} vertical={false} />
-                        <XAxis dataKey="episode" stroke={axis} tick={{ fontSize: 10 }} label={{ value: 'Episode', position: 'insideBottom', offset: -4, fontSize: 10, fill: axis }} />
-                        <YAxis stroke={axis} tick={{ fontSize: 10 }} width={48} />
-                        <Tooltip contentStyle={ttStyle} formatter={(v: any) => [(v as number).toFixed(4), 'Avg Reward']} />
-                        <Area type="monotone" dataKey="avg_reward" stroke="#f59e0b" strokeWidth={2} fill="url(#rlGrad1)" dot={false} isAnimationActive={false} />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    <LWLineChart
+                      height={280}
+                      color="#f59e0b"
+                      data={trainingMetrics.metrics.map((m: any) => ({ time: m.episode ?? m.timestep ?? 0, value: m.avg_reward ?? 0 }))}
+                      fmt={v => v.toFixed(4)}
+                    />
                   </div>
-
                   <div className={`${card} border rounded-xl p-6`}>
                     <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5`}>Portfolio Value</h3>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <AreaChart data={trainingMetrics.metrics} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                        <defs>
-                          <linearGradient id="rlGrad2" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="4 2" stroke={grid} vertical={false} />
-                        <XAxis dataKey="episode" stroke={axis} tick={{ fontSize: 10 }} label={{ value: 'Episode', position: 'insideBottom', offset: -4, fontSize: 10, fill: axis }} />
-                        <YAxis stroke={axis} tick={{ fontSize: 10 }} width={48} tickFormatter={(v: number) => `${v.toFixed(2)}x`} />
-                        <Tooltip contentStyle={ttStyle} formatter={(v: any) => [(v as number).toFixed(4) + 'x', 'Portfolio']} />
-                        <Area type="monotone" dataKey="portfolio_value" stroke="#10b981" strokeWidth={2} fill="url(#rlGrad2)" dot={false} isAnimationActive={false} />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    <LWLineChart
+                      height={280}
+                      color="#10b981"
+                      data={trainingMetrics.metrics.map((m: any) => ({ time: m.episode ?? m.timestep ?? 0, value: m.portfolio_value ?? 1.0 }))}
+                      fmt={v => v.toFixed(3) + 'x'}
+                    />
                   </div>
                 </div>
               ) : (
