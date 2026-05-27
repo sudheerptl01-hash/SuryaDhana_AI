@@ -13,12 +13,21 @@ from fastapi.middleware.cors import CORSMiddleware
 # Load .env from project root (two levels up from services/ui-api/)
 try:
     from dotenv import load_dotenv
-    _root = Path(__file__).resolve().parent.parent.parent
-    load_dotenv(_root / ".env", override=False)
+    candidates = [
+        Path(__file__).resolve().parent.parent.parent / ".env",
+        Path(__file__).resolve().parent / ".env",
+        Path("/app/.env"),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            load_dotenv(candidate, override=False)
+            break
 except ImportError:
     pass
 
-from routers import dashboard, stocks, analytics, performance, positions
+from routers import dashboard, stocks, analytics, performance, positions, config, pipeline, execution, telemetry, lw_scanner
+from routers import monitor
+from routers import data_proxy
 
 
 @asynccontextmanager
@@ -47,6 +56,13 @@ app.include_router(stocks.router,    prefix="/api/stocks",    tags=["stocks"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(performance.router, prefix="/api/performance", tags=["performance"])
 app.include_router(positions.router, prefix="/api/positions", tags=["positions"])
+app.include_router(config.router,   prefix="/api/config",    tags=["config"])
+app.include_router(pipeline.router,   prefix="/api/pipeline",   tags=["pipeline"])
+app.include_router(execution.router,  prefix="/api/execution",  tags=["execution"])
+app.include_router(telemetry.router,  prefix="/api/telemetry",  tags=["telemetry"])
+app.include_router(lw_scanner.router, prefix="/api/lw",         tags=["lw-scanner"])
+app.include_router(monitor.router,     prefix="/api/monitor",  tags=["monitor"])
+app.include_router(data_proxy.router,  prefix="/api/data",     tags=["data-proxy"])
 
 
 @app.get("/health")

@@ -8,12 +8,16 @@ const client = axios.create({
 })
 
 // Dashboard
-export const getDashboardSummary = () => client.get('/api/dashboard/summary')
-export const getEnrichmentStatus = () => client.get('/api/dashboard/enrichment-status')
-export const triggerRefresh = (payload = { universe: 'nse_1000_midcap_500', years: 5 }) =>
-  client.post('/api/dashboard/refresh', payload)
+export const getDashboardSummary  = () => client.get('/api/dashboard/summary')
+export const getEnrichmentStatus  = () => client.get('/api/dashboard/enrichment-status')
+export const getUniverseStatus    = () => client.get('/api/dashboard/universe-status')
+export const bootstrapUniverse    = () => client.post('/api/dashboard/bootstrap-universe', {}, { timeout: 60000 })
+export const triggerRefresh = (payload = { universe: 'nse_1500', years: 5 }) =>
+  client.post('/api/dashboard/refresh', payload, { timeout: 30000 })
 export const getRefreshStatus = () => client.get('/api/dashboard/refresh-status')
 export const getStaleness = () => client.get('/api/dashboard/staleness')
+export const triggerEnrich = () => client.post('/api/dashboard/enrich', {}, { timeout: 30000 })
+export const getEnrichProgress = () => client.get('/api/dashboard/enrich-progress')
 
 // Stocks
 export const listStocks = (skip = 0, limit = 50, search = '') =>
@@ -77,6 +81,13 @@ export const getFeatureDistribution = (feature: string) =>
   client.get('/api/pipeline/feature-distribution', { params: { feature } })
 export const triggerTrainingConfig  = (config: Record<string, any>) =>
   client.post('/api/pipeline/train-config', config)
+export const getFeatureExplorer     = (params: {
+  page?: number; page_size?: number; ticker?: string; sort_by?: string; sort_dir?: string
+}) => client.get('/api/pipeline/features-explorer', { params })
+
+// SSE stream base URLs — append job_id to connect
+export const ML_TRAIN_STREAM_URL  = '/api/pipeline/ml-stream/'
+export const RL_TRAIN_STREAM_URL  = '/api/pipeline/rl-stream/'
 
 // Model Catalog & Registry
 export const getModelCatalog        = () => client.get('/api/pipeline/model-catalog')
@@ -155,5 +166,65 @@ export const getLWScanResults   = (topN = 50)  => client.get('/api/lw/scan-resul
 export const triggerLWScan      = (nStocks = 200) => client.post('/api/lw/run-cycle-scan', null, { params: { n_stocks: nStocks } })
 export const getLWScanJob       = (jobId: string)  => client.get(`/api/lw/job/${jobId}`)
 export const getLWOHLCV         = (ticker: string, days = 120) => client.get(`/api/lw/ohlcv/${ticker}`, { params: { days } })
+
+// ── Data-Service Proxy (all via /api/data/* → ui-api → data-service:8001) ─────
+
+// Health & provider
+export const getDataServiceHealth    = () => client.get('/api/data/health', { timeout: 8000 })
+export const getDataServiceReady     = () => client.get('/api/data/ready',  { timeout: 8000 })
+export const getDataProviderStatus   = () => client.get('/api/data/provider/status', { timeout: 8000 })
+export const configureDataProvider   = (payload: {
+  api_key?: string; api_secret?: string; session_token?: string
+}) => client.post('/api/data/provider/configure', payload, { timeout: 30000 })
+
+// Historical / batch fetch
+export const fetchHistorical = (payload: { tickers: string[]; years?: number }) =>
+  client.post('/api/data/fetch/historical', payload, { timeout: 300000 })
+
+export const fetchRefreshSingle = (payload: { ticker: string; start_date?: string }) =>
+  client.post('/api/data/fetch/refresh', payload, { timeout: 60000 })
+
+export const fetchRefreshBatch = (payload: { tickers: string[]; years?: number }) =>
+  client.post('/api/data/fetch/refresh-batch', payload, { timeout: 300000 })
+
+export const fetchICICIDaily = (payload: {
+  tickers: string[]
+  start_date: string
+  end_date?: string
+  exchange_code?: string
+}) => client.post('/api/data/fetch/icici/daily', payload, { timeout: 300000 })
+
+export const fetchFundamentals = (payload: { tickers: string[] }) =>
+  client.post('/api/data/fetch/fundamentals', payload, { timeout: 300000 })
+
+// OHLCV & live quotes
+export const getDataOHLCV = (ticker: string, start?: string, end?: string) =>
+  client.get(`/api/data/ohlcv/${ticker}`, { params: { start, end }, timeout: 30000 })
+
+export const getDataLiveQuote     = (ticker: string) =>
+  client.get(`/api/data/live/quote/${ticker}`, { timeout: 8000 })
+
+export const getDataLiveNifty     = () =>
+  client.get('/api/data/live/index/nifty', { timeout: 8000 })
+
+export const getDataIntraday = (ticker: string, interval = '5minute') =>
+  client.get(`/api/data/live/intraday/${ticker}`, { params: { interval }, timeout: 30000 })
+
+// ── Monitor REST endpoints ─────────────────────────────────────────────────────
+
+export const monitorSubscribe   = (symbol: string) =>
+  client.post('/api/monitor/subscribe',   { symbol }, { timeout: 5000 })
+
+export const monitorUnsubscribe = (symbol: string) =>
+  client.post('/api/monitor/unsubscribe', { symbol }, { timeout: 5000 })
+
+export const monitorList        = () =>
+  client.get('/api/monitor/list', { timeout: 5000 })
+
+export const monitorLiveNifty   = () =>
+  client.get('/api/monitor/live/nifty', { timeout: 8000 })
+
+// WebSocket URL constant (resolved at runtime in components/hooks)
+export const MONITOR_WS_PATH = '/api/monitor/ws/monitor'
 
 export default client

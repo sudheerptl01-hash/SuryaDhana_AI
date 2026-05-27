@@ -23,8 +23,12 @@ import { LivePortfolio } from '@/components/LivePortfolio'
 import { BacktestPanel } from '@/components/BacktestPanel'
 import { SystemTelemetry } from '@/components/SystemTelemetry'
 import { LWScanner } from '@/components/LWScanner'
+import { DataExplorerTab } from '@/components/DataExplorerTab'
+import { LiveMonitorBar } from '@/components/LiveMonitorBar'
+import { SystemStatusWidget } from '@/components/SystemStatusWidget'
+import { ToastProvider } from '@/context/ToastContext'
 
-type Tab = 'overview' | 'stocks' | 'backtest' | 'positions' | 'pipeline' | 'scanner' | 'system'
+type Tab = 'overview' | 'stocks' | 'backtest' | 'positions' | 'pipeline' | 'scanner' | 'explorer' | 'system'
 
 const FILTERS_INIT = { t1: false, t2: false, t3: false, t4: false, t5: false, t6: false, t7: false, t8: false }
 
@@ -55,21 +59,36 @@ function HomeContent() {
   const [enriching, setEnriching] = useState(false)
   const [enrichProgress, setEnrichProgress] = useState<any>(null)
 
-  // ── Initial load ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    Promise.all([getDashboardSummary(), getEnrichmentStatus(), listStocks(0, 1500)])
-      .then(([dash, enrich, stocksRes]) => {
-        setDashboard(dash.data)
-        setEnrichment(enrich.data)
-        const stocks = stocksRes.data?.stocks || []
-        const total = stocksRes.data?.total || stocks.length
-        setAllStocks(stocks)
-        setDisplayStocks(stocks)
-        setTotalStocks(total)
-      })
-      .catch((err) => console.error('Failed to load dashboard:', err))
-      .finally(() => setPageLoading(false))
+  // ── Initial load (with retry) ─────────────────────────────────────────────
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+
+  const loadDashboard = useCallback(async () => {
+    setPageLoading(true)
+    setLoadError(null)
+    try {
+      const [dash, enrich, stocksRes] = await Promise.all([
+        getDashboardSummary(),
+        getEnrichmentStatus(),
+        listStocks(0, 1500),
+      ])
+      setDashboard(dash.data)
+      setEnrichment(enrich.data)
+      const stocks = stocksRes.data?.stocks || []
+      const total = stocksRes.data?.total || stocks.length
+      setAllStocks(stocks)
+      setDisplayStocks(stocks)
+      setTotalStocks(total)
+    } catch (err: any) {
+      const msg = err?.message || 'Backend unreachable'
+      setLoadError(msg)
+      console.error('Failed to load dashboard:', err)
+    } finally {
+      setPageLoading(false)
+    }
   }, [])
+
+  useEffect(() => { loadDashboard() }, [loadDashboard, retryCount])
 
   // ── Screener filter ───────────────────────────────────────────────────────
   const applyTechnicalFilters = useCallback(async (filters: typeof FILTERS_INIT) => {
@@ -330,6 +349,9 @@ function HomeContent() {
         </div>
       </header>
 
+      {/* ── Live Monitor Bar: NIFTY + Watchlist ticks ───────────────────── */}
+      <LiveMonitorBar isDark={isDark} />
+
       {/* ── Refresh / Setup Panel ───────────────────────────────────────── */}
       {showRefreshPanel && (
         <div className={clsx('border-b', isDark ? 'border-indigo-900/50 bg-indigo-950/30' : 'border-indigo-100 bg-indigo-50')}>
@@ -453,6 +475,7 @@ function HomeContent() {
           { id: 'positions', label: 'Portfolio',    icon: '💰' },
           { id: 'pipeline', label: 'Pipeline',      icon: '⚙️' },
           { id: 'scanner',  label: 'LW Scanner',    icon: '📡' },
+          { id: 'explorer', label: 'Data Explorer', icon: '🔬' },
           { id: 'system',   label: 'System',        icon: '🖥️' },
         ] as { id: Tab; label: string; icon: string }[]).map(({ id, label, icon }) => (
           <button
@@ -496,42 +519,73 @@ function HomeContent() {
               <div key={i} className={clsx('h-28 animate-pulse rounded-xl', isDark ? 'bg-slate-700' : 'bg-gray-200')} />
             ))}
           </div>
-        ) : view === 'overview' ? (
-          <OverviewTab
-            dashboard={dashboard}
-            enrichment={enrichment}
-            totalStocks={totalStocks}
-            isDark={isDark}
-            enriching={enriching}
-            enrichProgress={enrichProgress}
-            onEnrich={handleEnrich}
-          />
-        ) : view === 'stocks' ? (
-          <StocksTab
-            displayStocks={displayStocks}
-            displayCount={displayCount}
-            isFiltered={isFiltered}
-            filterLoading={filterLoading}
-            technicalFilters={technicalFilters}
-            allStocksCount={allStocks.length}
-            totalStocks={totalStocks}
-            onFilterChange={applyTechnicalFilters}
-            onRowClick={setSelectedTicker}
-            onLoadMore={loadMoreStocks}
-            isDark={isDark}
-            watchlist={watchlist}
-            onWatchToggle={(ticker: string) => isWatched(ticker) ? removeFromWatchlist(ticker) : addToWatchlist(ticker)}
-          />
-        ) : view === 'backtest' ? (
-          <BacktestPanel isDark={isDark} watchlist={watchlist} />
-        ) : view === 'positions' ? (
-          <LivePortfolio isDark={isDark} />
-        ) : view === 'scanner' ? (
-          <LWScanner />
-        ) : view === 'system' ? (
-          <SystemTelemetry isDark={isDark} />
+        ) : loadError ? (
+          /* ── Backend unreachable: retry panel ──────────────────────── */
+          <div className="flex flex-col items-center justify-center py-32 gap-6">
+            <div className="text-5xl">⚠️</div>
+            <div className="text-center">
+              <p className={clsx('text-lg font-bold mb-2', isDark ? 'text-slate-200' : 'text-gray-800')}>
+                Backend Unreachable
+              </p>
+              <p className={clsx('text-sm mb-4', isDark ? 'text-slate-400' : 'text-gray-500')}>
+                {loadError} — ui-api may be starting up
+              </p>
+              <button
+                onClick={() => setRetryCount(c => c + 1)}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-md"
+              >
+                Retry Connection
+              </button>
+            </div>
+          </div>
         ) : (
-          <PipelineStudio isDark={isDark} watchlist={watchlist} />
+          <>
+            {view === 'overview' && (
+              <OverviewTab
+                dashboard={dashboard}
+                enrichment={enrichment}
+                totalStocks={totalStocks}
+                isDark={isDark}
+                enriching={enriching}
+                enrichProgress={enrichProgress}
+                onEnrich={handleEnrich}
+              />
+            )}
+            {view === 'stocks' && (
+              <StocksTab
+                displayStocks={displayStocks}
+                displayCount={displayCount}
+                isFiltered={isFiltered}
+                filterLoading={filterLoading}
+                technicalFilters={technicalFilters}
+                allStocksCount={allStocks.length}
+                totalStocks={totalStocks}
+                onFilterChange={applyTechnicalFilters}
+                onRowClick={setSelectedTicker}
+                onLoadMore={loadMoreStocks}
+                isDark={isDark}
+                watchlist={watchlist}
+                onWatchToggle={(ticker: string) => isWatched(ticker) ? removeFromWatchlist(ticker) : addToWatchlist(ticker)}
+              />
+            )}
+            {view === 'backtest' && <BacktestPanel isDark={isDark} watchlist={watchlist} />}
+            {view === 'positions' && <LivePortfolio isDark={isDark} />}
+            {view === 'scanner' && <LWScanner />}
+            {view === 'explorer' && (
+              <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 shadow-xl">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="font-mono text-xs font-semibold tracking-widest text-amber-400">🔬 DATA EXPLORER</span>
+                  <span className="font-mono text-[10px] text-slate-500">Paginated feature grid · sort · filter by ticker · data health stats</span>
+                </div>
+                <DataExplorerTab />
+              </div>
+            )}
+            {view === 'system' && <SystemTelemetry isDark={isDark} />}
+            {/* PipelineStudio stays mounted once first visited — preserves training state */}
+            <div style={{ display: view === 'pipeline' ? 'block' : 'none' }}>
+              <PipelineStudio isDark={isDark} watchlist={watchlist} />
+            </div>
+          </>
         )}
       </main>
 
@@ -579,6 +633,9 @@ function OverviewTab({ dashboard, enrichment, totalStocks, isDark = true, enrich
 
   return (
     <div className="space-y-6">
+
+      {/* ── Row 0: Service Status Widget ─────────────────────────────────── */}
+      <SystemStatusWidget isDark={isDark} />
 
       {/* ── Row 1: Universe & OHLCV KPIs ─────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
@@ -901,7 +958,9 @@ export default function Home() {
   return (
     <ThemeProvider>
       <AppProvider>
-        <HomeContent />
+        <ToastProvider>
+          <HomeContent />
+        </ToastProvider>
       </AppProvider>
     </ThemeProvider>
   )

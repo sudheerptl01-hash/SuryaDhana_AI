@@ -1,55 +1,88 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  ReactNode,
+} from 'react'
+import { monitorWS, buildWsUrl, type LiveQuote } from '@/lib/wsManager'
+import { monitorSubscribe, monitorUnsubscribe, MONITOR_WS_PATH } from '@/lib/api'
 
 // ── ML Config ─────────────────────────────────────────────────────────────────
 export interface MLConfig {
-  model_type: string
-  n_estimators: number
-  max_depth: number
+  model_type:    string
+  n_estimators:  number
+  max_depth:     number
   learning_rate: number
-  subsample: number
-  train_start: string
-  train_end: string
+  subsample:     number
+  train_start:   string
+  train_end:     string
 }
 
 // ── RL Config ─────────────────────────────────────────────────────────────────
 export interface RLConfig {
   total_timesteps: number
-  learning_rate: number
-  n_steps: number
-  batch_size: number
-  n_epochs: number
-  n_candidates: number
-  max_positions: number
-  train_start: string
-  train_end: string
+  learning_rate:   number
+  n_steps:         number
+  batch_size:      number
+  n_epochs:        number
+  n_candidates:    number
+  max_positions:   number
+  train_start:     string
+  train_end:       string
 }
 
 // ── Pipeline state ────────────────────────────────────────────────────────────
 export interface PipelineState {
-  featuresReady: boolean
+  featuresReady:    boolean
   featureInspected: boolean
-  modelTrained: boolean
-  rlTrained: boolean
+  modelTrained:     boolean
+  rlTrained:        boolean
+}
+
+// ── Data-service status (live health checks) ──────────────────────────────────
+export interface DataServiceStatus {
+  health:   'ok' | 'error' | 'unknown'
+  ready:    boolean
+  provider: string | null       // e.g. "ICICIBreezeProvider"
+  connected: boolean            // ICICI connected?
+  lastChecked: number | null    // epoch ms
 }
 
 // ── Context shape ─────────────────────────────────────────────────────────────
 interface AppContextType {
-  watchlist: string[]
-  addToWatchlist: (ticker: string) => void
+  // Watchlist
+  watchlist:           string[]
+  addToWatchlist:      (ticker: string) => void
   removeFromWatchlist: (ticker: string) => void
-  clearWatchlist: () => void
-  isWatched: (ticker: string) => boolean
+  clearWatchlist:      () => void
+  isWatched:           (ticker: string) => boolean
 
-  mlConfig: MLConfig
+  // ML / RL config
+  mlConfig:    MLConfig
   setMLConfig: (cfg: Partial<MLConfig>) => void
 
-  rlConfig: RLConfig
+  rlConfig:    RLConfig
   setRLConfig: (cfg: Partial<RLConfig>) => void
 
-  pipeline: PipelineState
+  // Pipeline state
+  pipeline:    PipelineState
   setPipeline: (s: Partial<PipelineState>) => void
+
+  // Live quotes (keyed by symbol)
+  liveQuotes:      Record<string, LiveQuote>
+  setLiveQuote:    (symbol: string, quote: LiveQuote) => void
+
+  // WebSocket connection state
+  wsConnected:     boolean
+
+  // Data-service health
+  dataServiceStatus:    DataServiceStatus
+  refreshDataStatus:    () => void
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -59,43 +92,142 @@ fiveYearsAgo.setFullYear(today.getFullYear() - 5)
 const fmt = (d: Date) => d.toISOString().slice(0, 10)
 
 const DEFAULT_ML: MLConfig = {
-  model_type: 'xgboost',
-  n_estimators: 300,
-  max_depth: 5,
+  model_type:    'xgboost',
+  n_estimators:  300,
+  max_depth:     5,
   learning_rate: 0.05,
-  subsample: 0.8,
-  train_start: fmt(fiveYearsAgo),
-  train_end: fmt(today),
+  subsample:     0.8,
+  train_start:   fmt(fiveYearsAgo),
+  train_end:     fmt(today),
 }
 
 const DEFAULT_RL: RLConfig = {
   total_timesteps: 100000,
-  learning_rate: 0.0003,
-  n_steps: 2048,
-  batch_size: 64,
-  n_epochs: 10,
-  n_candidates: 15,
-  max_positions: 5,
-  train_start: fmt(fiveYearsAgo),
-  train_end: fmt(today),
+  learning_rate:   0.0003,
+  n_steps:         2048,
+  batch_size:      64,
+  n_epochs:        10,
+  n_candidates:    15,
+  max_positions:   5,
+  train_start:     fmt(fiveYearsAgo),
+  train_end:       fmt(today),
 }
 
 const DEFAULT_PIPELINE: PipelineState = {
-  featuresReady: false,
+  featuresReady:    false,
   featureInspected: false,
-  modelTrained: false,
-  rlTrained: false,
+  modelTrained:     false,
+  rlTrained:        false,
+}
+
+const DEFAULT_DATA_STATUS: DataServiceStatus = {
+  health:      'unknown',
+  ready:       false,
+  provider:    null,
+  connected:   false,
+  lastChecked: null,
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [watchlist, setWatchlist] = useState<string[]>([])
-  const [mlConfig, setMLConfigState] = useState<MLConfig>(DEFAULT_ML)
-  const [rlConfig, setRLConfigState] = useState<RLConfig>(DEFAULT_RL)
-  const [pipeline, setPipelineState] = useState<PipelineState>(DEFAULT_PIPELINE)
+  const [watchlist, setWatchlist]         = useState<string[]>([])
+  const [mlConfig,  setMLConfigState]     = useState<MLConfig>(DEFAULT_ML)
+  const [rlConfig,  setRLConfigState]     = useState<RLConfig>(DEFAULT_RL)
+  const [pipeline,  setPipelineState]     = useState<PipelineState>(DEFAULT_PIPELINE)
+  const [liveQuotes, setLiveQuotes]       = useState<Record<string, LiveQuote>>({})
+  const [wsConnected, setWsConnected]     = useState(false)
+  const [dataServiceStatus, setDSStatus]  = useState<DataServiceStatus>(DEFAULT_DATA_STATUS)
 
+  // Track previous watchlist for diff-based subscribe/unsubscribe
+  const prevWatchlistRef = useRef<string[]>([])
+
+  // ── Live quote updater ──────────────────────────────────────────────────────
+  const setLiveQuote = useCallback((symbol: string, quote: LiveQuote) => {
+    setLiveQuotes(prev => ({ ...prev, [symbol.toUpperCase()]: quote }))
+  }, [])
+
+  // ── Data-service health poll ────────────────────────────────────────────────
+  const refreshDataStatus = useCallback(async () => {
+    try {
+      const { getDataServiceHealth, getDataServiceReady, getDataProviderStatus } =
+        await import('@/lib/api')
+
+      const [h, r, p] = await Promise.allSettled([
+        getDataServiceHealth(),
+        getDataServiceReady(),
+        getDataProviderStatus(),
+      ])
+
+      const health    = h.status === 'fulfilled' ? 'ok'  : 'error'
+      const ready     = r.status === 'fulfilled' ? true  : false
+      const provider  = p.status === 'fulfilled' ? (p.value.data?.provider ?? null)  : null
+      const connected = p.status === 'fulfilled' ? (p.value.data?.connected ?? false) : false
+
+      setDSStatus({ health, ready, provider, connected, lastChecked: Date.now() })
+    } catch {
+      setDSStatus(prev => ({ ...prev, health: 'error', lastChecked: Date.now() }))
+    }
+  }, [])
+
+  // ── WebSocket setup ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const wsUrl = buildWsUrl(MONITOR_WS_PATH)
+
+    // Register a global callback that routes all quotes into liveQuotes state
+    const unsub = monitorWS.subscribeAll((data: any) => {
+      // The WS server publishes: { symbol, ts, payload: { ltp, ... } }
+      const sym = data?.symbol || data?.payload?.symbol
+      if (!sym) return
+      setLiveQuote(sym, {
+        symbol:     sym,
+        ltp:        data?.payload?.ltp ?? data?.payload?.last_price ?? data?.ltp,
+        change:     data?.payload?.change,
+        change_pct: data?.payload?.change_pct,
+        volume:     data?.payload?.volume,
+        ts:         data?.ts,
+        raw:        data?.payload,
+      })
+    })
+
+    monitorWS.connect(wsUrl, setWsConnected)
+
+    // Always subscribe to NIFTY
+    monitorWS.addSymbols(['NIFTY', 'NSEI'])
+
+    return () => {
+      unsub()
+      monitorWS.disconnect()
+    }
+  }, [setLiveQuote]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Sync watchlist changes → WS subscription + Redis set ───────────────────
+  useEffect(() => {
+    const prev = prevWatchlistRef.current
+    const added   = watchlist.filter(t => !prev.includes(t))
+    const removed = prev.filter(t => !watchlist.includes(t))
+
+    if (added.length)   monitorWS.addSymbols(added)
+    if (removed.length) monitorWS.removeSymbols(removed)
+
+    // Fire-and-forget REST calls to maintain the Redis monitored set
+    added.forEach(t   => monitorSubscribe(t).catch(() => { /* best-effort */ }))
+    removed.forEach(t => monitorUnsubscribe(t).catch(() => { /* best-effort */ }))
+
+    prevWatchlistRef.current = watchlist
+  }, [watchlist])
+
+  // ── Poll data-service status every 30s ─────────────────────────────────────
+  useEffect(() => {
+    refreshDataStatus()
+    const id = setInterval(refreshDataStatus, 30_000)
+    return () => clearInterval(id)
+  }, [refreshDataStatus])
+
+  // ── Watchlist helpers ───────────────────────────────────────────────────────
   const addToWatchlist = useCallback((ticker: string) => {
     setWatchlist(prev => prev.includes(ticker) ? prev : [...prev, ticker])
   }, [])
@@ -105,9 +237,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const clearWatchlist = useCallback(() => setWatchlist([]), [])
+  const isWatched      = useCallback((ticker: string) => watchlist.includes(ticker), [watchlist])
 
-  const isWatched = useCallback((ticker: string) => watchlist.includes(ticker), [watchlist])
-
+  // ── Config setters ──────────────────────────────────────────────────────────
   const setMLConfig = useCallback((cfg: Partial<MLConfig>) => {
     setMLConfigState(prev => ({ ...prev, ...cfg }))
   }, [])
@@ -126,11 +258,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       mlConfig, setMLConfig,
       rlConfig, setRLConfig,
       pipeline, setPipeline,
+      liveQuotes, setLiveQuote,
+      wsConnected,
+      dataServiceStatus, refreshDataStatus,
     }}>
       {children}
     </AppContext.Provider>
   )
 }
+
+// ── Hooks ─────────────────────────────────────────────────────────────────────
 
 export function useApp() {
   const ctx = useContext(AppContext)
@@ -157,3 +294,15 @@ export function usePipeline() {
   const { pipeline, setPipeline } = useApp()
   return { pipeline, setPipeline }
 }
+
+export function useLiveQuotes() {
+  const { liveQuotes, wsConnected } = useApp()
+  return { liveQuotes, wsConnected }
+}
+
+export function useDataServiceStatus() {
+  const { dataServiceStatus, refreshDataStatus } = useApp()
+  return { dataServiceStatus, refreshDataStatus }
+}
+
+export type { LiveQuote }
