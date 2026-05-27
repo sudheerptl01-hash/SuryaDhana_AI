@@ -1,6 +1,35 @@
 version: '3.9'
 
 services:
+
+  # ── Master Controller (IST scheduler + telemetry server on :8008) ────────────
+  master-controller:
+    build:
+      context: ..
+      dockerfile: services/master-controller/Dockerfile
+    ports:
+      - "8008:8008"
+    environment:
+      - DATA_SERVICE_URL=http://data-service:8001
+      - ML_SERVICE_URL=http://ml-service:8003
+      - RL_SERVICE_URL=http://rl-service:8004
+      - EXECUTION_SERVICE_URL=http://execution-service:8006
+      - RL_TRAINER_PATH=/app/scripts/rl_trainer.py
+      - PYTHON_BIN=python
+    env_file:
+      - ../.env
+    volumes:
+      - ../data:/app/data
+      - ../scripts:/app/scripts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8008/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── UI API ────────────────────────────────────────────────────────────────────
   ui-api:
     build:
       context: ../services/ui-api
@@ -9,16 +38,37 @@ services:
       - "8010:8000"
     environment:
       - DATABASE_URL=/app/data/market.duckdb
+      - DUCKDB_PATH=/app/data/market.duckdb
+      - DATA_SERVICE_URL=http://data-service:8001
+      - FEATURE_SERVICE_URL=http://feature-service:8002
+      - ML_SERVICE_URL=http://ml-service:8003
+      - RL_SERVICE_URL=http://rl-service:8004
+      - EXECUTION_SERVICE_URL=http://execution-service:8006
+      - MASTER_CONTROLLER_URL=http://master-controller:8008
+      - UI_API_ENV_FILE=/app/.env
+      # Override .env localhost Redis URL with Docker DNS hostname
+      - REDIS_URL=redis://redis:6379/0
     env_file:
       - ../.env
     volumes:
-      - ../data:/app/data:ro
+      - ../data:/app/data
+      - ../.env:/app/.env
+      - ../scripts:/app/scripts
+    depends_on:
+      master-controller:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/health"]
       interval: 5s
       timeout: 3s
       retries: 2
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
 
+  # ── Next.js UI ────────────────────────────────────────────────────────────────
   ui:
     build:
       context: ../ui
@@ -28,7 +78,12 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_BASE=http://ui-api:8000
+      # Route server-side rewrites through the host machine port to avoid
+      # undici DNS failures with Docker's embedded resolver on Docker Desktop Mac.
+      - NEXT_PUBLIC_API_BASE=http://host.docker.internal:8010
+      # Force IPv4-first DNS resolution in undici (Next.js HTTP client)
+      - NODE_OPTIONS=--dns-result-order=ipv4first
     depends_on:
       ui-api:
         condition: service_healthy
+    restart: unless-stopped
