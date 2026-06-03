@@ -1,205 +1,282 @@
 """Stock list and details: data completeness, fundamentals, history."""
+import csv
+import os
+import re
+from functools import lru_cache
 from fastapi import APIRouter, HTTPException, Query
 from datetime import date
+import httpx
 from db import get_conn
 
 router = APIRouter()
+
+DATA_SVC = os.environ.get("DATA_SERVICE_URL", "http://localhost:8001")
+
+
+def _parse_index_metadata(raw_index: str | None) -> dict:
+    index_name = (raw_index or "").strip()
+    # Split on "|" first so "NIFTY1000|NIFTYMIDCAP300" is handled correctly
+    segments = [s.strip() for s in index_name.split("|")]
+
+    nifty_bucket = None
+    midcap_bucket = None
+
+    for seg in segments:
+        normalized = re.sub(r"[^A-Z0-9]", "", seg.upper())
+        if m := re.match(r"^NIFTY(\d+)$", normalized):
+            if nifty_bucket is None:
+                nifty_bucket = m.group(1)
+        if m := re.match(r"^NIFTYMIDCAP(\d+)$", normalized):
+            if midcap_bucket is None:
+                midcap_bucket = m.group(1)
+
+    return {
+        "index_name": index_name or None,
+        "nifty_bucket": nifty_bucket,
+        "midcap_bucket": midcap_bucket,
+    }
+
+
+@lru_cache(maxsize=1)
+def _load_universe_metadata() -> dict[str, dict]:
+    # Docker: WORKDIR=/app, data mounted at /app/data
+    # Local dev: routers/ is under <project>/services/ui-api/routers/
+    _here = os.path.dirname(os.path.abspath(__file__))
+    _app_data  = os.path.join(_here, "..", "data")           # Docker: /app/data
+    _proj_data = os.path.join(_here, "..", "..", "..", "data")  # Local: <project>/data
+    candidates = [
+        os.environ.get("STOCK_UNIVERSE_PATH", "").strip(),
+        os.path.join(_app_data,  "NSE_1500.csv"),
+        os.path.join(_proj_data, "NSE_1500.csv"),
+        os.path.join(_app_data,  "NSE_1000_MIDCAP_500.csv"),
+        os.path.join(_proj_data, "NSE_1000_MIDCAP_500.csv"),
+        os.path.join(_app_data,  "nifty500_universe.csv"),
+        os.path.join(_proj_data, "nifty500_universe.csv"),
+    ]
+
+    metadata: dict[str, dict] = {}
+    seen_paths: set[str] = set()
+    for path in candidates:
+        if not path or path in seen_paths:
+            continue
+        seen_paths.add(path)
+        if not os.path.exists(path):
+            continue
+
+        with open(path, newline="") as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                ticker = (row.get("ticker") or "").strip().upper()
+                if not ticker or ticker in metadata:
+                    continue  # first CSV wins — don't overwrite higher-priority source
+                # Support both new format (isin) and old format (isec_code)
+                isin = (row.get("isin") or row.get("isec_code") or "").strip() or None
+                metadata[ticker] = {
+                    "company_name": (row.get("company_name") or "").strip() or None,
+                    "sector_name": (row.get("sector") or "").strip() or None,
+                    "isin": isin,
+                    "cap_category": (row.get("cap_category") or "").strip() or None,
+                    **_parse_index_metadata(row.get("index")),
+                }
+    return metadata
 
 
 @router.get("/list")
 async def list_stocks(
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=500),
-    sector: str = Query(None),
+    limit: int = Query(50, ge=1, le=2000),
     search: str = Query(None),
+    cap_category: str = Query(None),
+    nifty_bucket: str = Query(None),
+    midcap_bucket: str = Query(None),
 ):
     """
-    Paginated stock list with data quality metrics.
-    Returns row counts, latest date, missing days, etc.
+    Paginated stock list sourced from the universe CSV (all stocks), with OHLCV
+    stats and financial metrics attached where available.
+
+    OHLCV + metrics data is fetched from data-service (/db/ohlcv-meta) instead
+    of opening a second DuckDB connection — data-service holds the persistent
+    RW lock on virtioFS (Docker Desktop Mac), so a concurrent RO connection
+    always falls back to the empty in-memory stub.
     """
-    with get_conn() as conn:
+    try:
+        # ── Step 1: Fetch OHLCV + metrics from data-service ───────────────────
+        ohlcv_map: dict[str, dict] = {}
         try:
-            # Base query: latest price + data stats per ticker
-            base_sql = """
-                WITH stock_stats AS (
-                    SELECT
-                        ticker,
-                        COUNT(*) as total_rows,
-                        MIN(date) as first_date,
-                        MAX(date) as latest_date,
-                        CAST((MAX(date) - MIN(date)) / 365.25 as INT) as years_of_data,
-                        ROUND(100.0 * COUNT(*) / GREATEST(CAST(((MAX(date) - MIN(date)) * 252) / 365 as INT), COUNT(*)), 1) as data_density_pct
-                    FROM ohlcv
-                    GROUP BY ticker
-                ),
-                latest_price AS (
-                    SELECT DISTINCT ON (ticker)
-                        ticker,
-                        close as latest_price,
-                        date as price_date
-                    FROM ohlcv
-                    ORDER BY ticker, date DESC
-                )
-                SELECT
-                    s.ticker,
-                    p.latest_price,
-                    p.price_date,
-                    s.total_rows,
-                    s.first_date,
-                    s.latest_date,
-                    s.years_of_data,
-                    s.data_density_pct,
-                    CAST((CURRENT_DATE - s.latest_date) as INT) as days_since_update
-                FROM stock_stats s
-                JOIN latest_price p ON s.ticker = p.ticker
-            """
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+                resp = await client.get(f"{DATA_SVC}/db/ohlcv-meta")
+            if resp.status_code == 200:
+                rows = resp.json().get("data", [])
+                ohlcv_map = {r["ticker"]: r for r in rows}
+        except Exception:
+            pass  # leave ohlcv_map empty — stocks will show "no_data"
 
+        # ── Step 2: Merge universe CSV + OHLCV + metrics ──────────────────────
+        universe_meta = _load_universe_metadata()
+
+        all_stocks: list[dict] = []
+        for ticker, meta in universe_meta.items():
+            # Search filter (ticker or company name)
             if search:
-                base_sql += f" WHERE s.ticker ILIKE '%{search}%'"
+                term = search.lower()
+                if term not in ticker.lower() and term not in (meta.get("company_name") or "").lower():
+                    continue
 
-            # Get total count
-            count_sql = f"SELECT COUNT(*) FROM ({base_sql}) t"
-            total = conn.execute(count_sql).fetchone()[0]
+            # CSV-level filters
+            if cap_category and meta.get("cap_category") != cap_category:
+                continue
+            if nifty_bucket and meta.get("nifty_bucket") != nifty_bucket:
+                continue
+            if midcap_bucket and meta.get("midcap_bucket") != midcap_bucket:
+                continue
 
-            # Get paginated results
-            sql = base_sql + f" ORDER BY s.ticker LIMIT {limit} OFFSET {skip}"
-            rows = conn.execute(sql).fetchall()
+            stock: dict = {"ticker": ticker, **meta}
 
-            stocks = [
-                {
-                    "ticker": r[0],
-                    "latest_price": float(r[1]) if r[1] else None,
-                    "price_date": str(r[2]),
-                    "total_rows": r[3],
-                    "first_date": str(r[4]),
-                    "latest_date": str(r[5]),
-                    "years_of_data": r[6],
-                    "data_density_pct": float(r[7]) if r[7] else 0,
-                    "days_since_update": r[8],
-                    "data_quality": _classify_quality(r[8], float(r[7]) if r[7] else 0),
-                }
-                for r in rows
-            ]
+            ohlcv = ohlcv_map.get(ticker)
+            if ohlcv:
+                days_stale = ohlcv.get("days_since_update")
+                if days_stale is None:
+                    days_stale = 999
+                density = ohlcv.get("data_density_pct") or 0.0
+                stock.update({
+                    "latest_price":     ohlcv.get("latest_price"),
+                    "price_date":       ohlcv.get("price_date"),
+                    "total_rows":       ohlcv.get("total_rows", 0),
+                    "first_date":       ohlcv.get("first_date"),
+                    "latest_date":      ohlcv.get("latest_date"),
+                    "years_of_data":    ohlcv.get("years_of_data", 0),
+                    "data_density_pct": density,
+                    "days_since_update": days_stale,
+                    "data_quality":     _classify_quality(days_stale, density),
+                    "has_ohlcv":        True,
+                    # financial metrics (may be None for unenriched tickers)
+                    "cmp":          ohlcv.get("cmp"),
+                    "pe_ratio":     ohlcv.get("pe_ratio"),
+                    "mktcap_cr":    ohlcv.get("mktcap_cr"),
+                    "div_yld_pct":  ohlcv.get("div_yld_pct"),
+                    "np_qtr_cr":    ohlcv.get("np_qtr_cr"),
+                    "qtr_pft_var":  ohlcv.get("qtr_pft_var"),
+                    "sales_qtr_cr": ohlcv.get("sales_qtr_cr"),
+                    "qtr_sal_var":  ohlcv.get("qtr_sal_var"),
+                    "roce_pct":     ohlcv.get("roce_pct"),
+                })
+            else:
+                stock.update({
+                    "latest_price": None, "price_date": None,
+                    "total_rows": 0, "first_date": None, "latest_date": None,
+                    "years_of_data": 0, "data_density_pct": 0,
+                    "days_since_update": None, "data_quality": "no_data",
+                    "has_ohlcv": False,
+                })
 
-            return {
-                "total": total,
-                "skip": skip,
-                "limit": limit,
-                "stocks": stocks,
-            }
+            all_stocks.append(stock)
 
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+        # Sort: stocks with OHLCV first, then by ticker
+        all_stocks.sort(key=lambda s: (not s.get("has_ohlcv", False), s["ticker"]))
+
+        total = len(all_stocks)
+        paginated = all_stocks[skip: skip + limit]
+
+        return {"total": total, "skip": skip, "limit": limit, "stocks": paginated}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/reload-universe")
+async def reload_universe():
+    """Clear the in-memory CSV cache so updated universe CSV is picked up immediately."""
+    _load_universe_metadata.cache_clear()
+    return {"status": "cache cleared", "message": "Universe metadata reloaded from CSV"}
 
 
 @router.get("/{ticker}/detail")
 async def get_stock_detail(ticker: str):
     """
-    Deep dive: all data completeness checks, fundamentals, dividends, events.
+    Deep dive: data completeness + metrics for one ticker.
+
+    Sourced from data-service `/db/ohlcv-meta` over HTTP — ui-api must NOT open
+    its own DuckDB connection (virtioFS concurrent-lock on Docker Desktop Mac
+    makes ui-api fall back to an empty in-memory stub, which previously made this
+    endpoint 500 for every ticker). data-service owns the RW lock and the real data.
     """
     ticker = ticker.upper()
-    with get_conn() as conn:
-        try:
-            # OHLCV stats
-            ohlcv_stats = conn.execute(f"""
-                SELECT
-                    COUNT(*) as total_rows,
-                    MIN(date) as first_date,
-                    MAX(date) as latest_date,
-                    AVG(volume) as avg_volume,
-                    AVG(close) as avg_close,
-                    MIN(close) as min_price,
-                    MAX(close) as max_price
-                FROM ohlcv
-                WHERE ticker = '{ticker}'
-            """).fetchone()
 
-            if not ohlcv_stats or ohlcv_stats[0] == 0:
-                raise HTTPException(status_code=404, detail=f"No data for {ticker}")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(90.0)) as client:
+            resp = await client.get(f"{DATA_SVC}/db/ohlcv-meta")
+        resp.raise_for_status()
+        rows = resp.json().get("data", [])
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
 
-            first_date = ohlcv_stats[1]
-            latest_date = ohlcv_stats[2]
-            expected_rows = (latest_date - first_date).days + 1
-            actual_rows = ohlcv_stats[0]
-            missing_rows = expected_rows - actual_rows
-            density = round(100.0 * actual_rows / expected_rows, 1)
+    row = next((r for r in rows if str(r.get("ticker", "")).upper() == ticker), None)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"No data for {ticker}")
 
-            # Fundamentals
-            fund = conn.execute(f"""
-                SELECT
-                    market_cap, trailing_pe, price_to_book, return_on_equity,
-                    debt_to_equity, dividend_yield, sector, analyst_recommendation
-                FROM fundamentals
-                WHERE ticker = '{ticker}'
-                ORDER BY as_of_date DESC
-                LIMIT 1
-            """).fetchone()
+    total_rows = int(row.get("total_rows") or 0)
+    first_date = row.get("first_date")
+    latest_date = row.get("latest_date")
+    density = round(float(row.get("data_density_pct") or 0.0), 1)
+    days_stale_raw = row.get("days_since_update")
+    days_stale = int(days_stale_raw) if days_stale_raw is not None else None
 
-            # Dividends
-            divs = conn.execute(f"""
-                SELECT COUNT(*) FROM dividends WHERE ticker = '{ticker}'
-            """).fetchone()
+    # Best-effort expected/missing trading-day estimate (~252 sessions/year).
+    expected_rows: int | None = None
+    missing_rows = 0
+    try:
+        if first_date and latest_date:
+            fd = date.fromisoformat(str(first_date)[:10])
+            ld = date.fromisoformat(str(latest_date)[:10])
+            expected_rows = int((ld - fd).days * 252 / 365) or total_rows
+            missing_rows = max(0, expected_rows - total_rows)
+    except (ValueError, TypeError):
+        pass
 
-            # Splits
-            splits = conn.execute(f"""
-                SELECT COUNT(*) FROM splits WHERE ticker = '{ticker}'
-            """).fetchone()
+    pe = row.get("pe_ratio")
+    div_yld_pct = row.get("div_yld_pct")
+    mcap_cr = row.get("mktcap_cr")
+    roce_pct = row.get("roce_pct")
+    latest_price = row.get("latest_price") if row.get("latest_price") is not None else row.get("cmp")
+    has_fund = any(v is not None for v in (pe, div_yld_pct, mcap_cr, roce_pct))
 
-            # Corporate events
-            events = conn.execute(f"""
-                SELECT event_type, event_date
-                FROM corporate_events
-                WHERE ticker = '{ticker}'
-                ORDER BY event_date DESC
-                LIMIT 5
-            """).fetchall()
-
-            return {
-                "ticker": ticker,
-                "ohlcv": {
-                    "total_rows": int(ohlcv_stats[0]),
-                    "first_date": str(first_date),
-                    "latest_date": str(latest_date),
-                    "expected_rows": expected_rows,
-                    "missing_rows": missing_rows,
-                    "data_density_pct": density,
-                    "avg_volume": float(ohlcv_stats[4]) if ohlcv_stats[4] else None,
-                    "price_range": {
-                        "min": float(ohlcv_stats[5]) if ohlcv_stats[5] else None,
-                        "max": float(ohlcv_stats[6]) if ohlcv_stats[6] else None,
-                        "latest": float(ohlcv_stats[5]) if ohlcv_stats[5] else None,  # Will be overridden
-                    }
-                },
-                "fundamentals": {
-                    "available": fund is not None,
-                    "market_cap": float(fund[0]) if fund and fund[0] else None,
-                    "trailing_pe": float(fund[1]) if fund and fund[1] else None,
-                    "price_to_book": float(fund[2]) if fund and fund[2] else None,
-                    "roe": float(fund[3]) if fund and fund[3] else None,
-                    "debt_to_equity": float(fund[4]) if fund and fund[4] else None,
-                    "dividend_yield": float(fund[5]) if fund and fund[5] else None,
-                    "sector": fund[6] if fund else None,
-                    "analyst_recommendation": fund[7] if fund else None,
-                } if fund else {"available": False},
-                "dividends": {
-                    "count": int(divs[0]) if divs else 0,
-                },
-                "splits": {
-                    "count": int(splits[0]) if splits else 0,
-                },
-                "upcoming_events": [
-                    {"type": e[0], "date": str(e[1])} for e in events
-                ] if events else [],
-                "data_quality": {
-                    "overall": _classify_quality((date.today() - latest_date).days, density),
-                    "completeness_pct": density,
-                    "last_updated": str(latest_date),
-                    "days_since_update": (date.today() - latest_date).days,
-                },
-            }
-
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+    return {
+        "ticker": ticker,
+        **_load_universe_metadata().get(ticker, {}),
+        "ohlcv": {
+            "total_rows": total_rows,
+            "first_date": str(first_date) if first_date else None,
+            "latest_date": str(latest_date) if latest_date else None,
+            "expected_rows": expected_rows,
+            "missing_rows": missing_rows,
+            "data_density_pct": density,
+            "avg_volume": None,
+            "price_range": {"min": None, "max": None, "latest": latest_price},
+        },
+        "fundamentals": {
+            "available": True,
+            # Metrics sourced from stock_metrics (the live fundamentals table).
+            "market_cap_cr": float(mcap_cr) if mcap_cr is not None else None,
+            "trailing_pe": float(pe) if pe is not None else None,
+            "price_to_book": None,
+            "roe": None,                                  # not stored; ROCE != ROE
+            "roce": float(roce_pct) if roce_pct is not None else None,
+            "debt_to_equity": None,
+            # modal renders dividend_yield as a fraction (×100); div_yld_pct is already a %.
+            "dividend_yield": (float(div_yld_pct) / 100.0) if div_yld_pct is not None else None,
+            "sector": None,
+            "analyst_recommendation": None,
+        } if has_fund else {"available": False},
+        "dividends": {"count": 0},
+        "splits": {"count": 0},
+        "upcoming_events": [],
+        "data_quality": {
+            "overall": _classify_quality(days_stale if days_stale is not None else 999, density),
+            "completeness_pct": density,
+            "last_updated": str(latest_date) if latest_date else None,
+            "days_since_update": days_stale if days_stale is not None else 0,
+        },
+    }
 
 
 @router.get("/{ticker}/ohlcv")
@@ -271,37 +348,54 @@ async def screener(
     T7: Price within 25% of 52-week high
     T8: Relative Strength (RS) ≥70 vs Nifty 500
     """
+    # Delegate screener to data-service to avoid DuckDB concurrent-lock
+    try:
+        params = {
+            "t1": t1, "t2": t2, "t3": t3, "t4": t4,
+            "t5": t5, "t6": t6, "t7": t7, "t8": t8,
+            "skip": skip, "limit": limit,
+        }
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+            resp = await client.get(f"{DATA_SVC}/db/screener", params=params)
+        if resp.status_code == 200:
+            return resp.json()
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # Legacy DuckDB path (unreachable, kept for reference)
     with get_conn() as conn:
         try:
             # Compute all technical indicators via SQL window functions
             sql = """
-            WITH stock_ma AS (
+            WITH recent_ohlcv AS (
+                SELECT ticker, date, close
+                FROM ohlcv
+                WHERE ticker != 'NIFTY500'
+                QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date DESC) <= 260
+            ),
+            stock_ma AS (
                 SELECT
                     ticker,
                     date,
                     close,
-                    volume,
                     AVG(close) OVER (PARTITION BY ticker ORDER BY date ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) as ma50,
                     AVG(close) OVER (PARTITION BY ticker ORDER BY date ROWS BETWEEN 149 PRECEDING AND CURRENT ROW) as ma150,
                     AVG(close) OVER (PARTITION BY ticker ORDER BY date ROWS BETWEEN 199 PRECEDING AND CURRENT ROW) as ma200,
                     MAX(close) OVER (PARTITION BY ticker ORDER BY date ROWS BETWEEN 251 PRECEDING AND CURRENT ROW) as high52w,
                     MIN(close) OVER (PARTITION BY ticker ORDER BY date ROWS BETWEEN 251 PRECEDING AND CURRENT ROW) as low52w,
+                    LAG(close, 63)  OVER (PARTITION BY ticker ORDER BY date) as close_3m_ago,
+                    LAG(close, 126) OVER (PARTITION BY ticker ORDER BY date) as close_6m_ago,
+                    LAG(close, 189) OVER (PARTITION BY ticker ORDER BY date) as close_9m_ago,
+                    LAG(close, 252) OVER (PARTITION BY ticker ORDER BY date) as close_12m_ago,
                     ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY date DESC) as rn
-                FROM ohlcv
-                WHERE ticker != 'NIFTY500'
+                FROM recent_ohlcv
             ),
             stock_with_history AS (
-                SELECT
-                    ticker,
-                    date,
-                    close,
-                    ma50,
-                    ma150,
-                    ma200,
-                    high52w,
-                    low52w,
-                    LAG(ma200, 30) OVER (PARTITION BY ticker ORDER BY date) as ma200_1m_ago,
-                    rn
+                SELECT *,
+                    LAG(ma200, 30) OVER (PARTITION BY ticker ORDER BY date) as ma200_1m_ago
                 FROM stock_ma
             ),
             latest_stats AS (
@@ -310,6 +404,7 @@ async def screener(
                     date,
                     close,
                     ma50, ma150, ma200, high52w, low52w,
+                    close_3m_ago, close_6m_ago, close_9m_ago, close_12m_ago,
                     ma200_1m_ago,
                     (close > ma150 AND close > ma200) as t1_pass,
                     (ma150 > ma200) as t2_pass,
@@ -326,24 +421,42 @@ async def screener(
                     END) as sepa_stage
                 FROM stock_with_history
                 WHERE rn = 1
+            ),
+            rs_scores AS (
+                SELECT
+                    ticker,
+                    (0.4 * COALESCE((close - close_3m_ago)  / NULLIF(close_3m_ago,  0), 0)
+                   + 0.2 * COALESCE((close - close_6m_ago)  / NULLIF(close_6m_ago,  0), 0)
+                   + 0.2 * COALESCE((close - close_9m_ago)  / NULLIF(close_9m_ago,  0), 0)
+                   + 0.2 * COALESCE((close - close_12m_ago) / NULLIF(close_12m_ago, 0), 0)) as composite_rs
+                FROM latest_stats
+            ),
+            rs_ranked AS (
+                SELECT
+                    ticker,
+                    GREATEST(1, LEAST(99,
+                        CAST(PERCENT_RANK() OVER (ORDER BY composite_rs) * 98 + 1 AS INTEGER)
+                    )) as rs_rating
+                FROM rs_scores
             )
             SELECT
-                ticker,
-                close as latest_price,
-                date as price_date,
-                ma50, ma150, ma200,
-                high52w, low52w,
-                CAST(COALESCE(50, 50) as INTEGER) as rs_rating,
-                COALESCE(t1_pass, FALSE) as t1,
-                COALESCE(t2_pass, FALSE) as t2,
-                COALESCE(t3_pass, FALSE) as t3,
-                COALESCE(t4_pass, FALSE) as t4,
-                COALESCE(t5_pass, FALSE) as t5,
-                COALESCE(t6_pass, FALSE) as t6,
-                COALESCE(t7_pass, FALSE) as t7,
-                FALSE as t8,
-                sepa_stage
-            FROM latest_stats
+                s.ticker,
+                s.close as latest_price,
+                s.date as price_date,
+                s.ma50, s.ma150, s.ma200,
+                s.high52w, s.low52w,
+                COALESCE(r.rs_rating, 50) as rs_rating,
+                COALESCE(s.t1_pass, FALSE) as t1,
+                COALESCE(s.t2_pass, FALSE) as t2,
+                COALESCE(s.t3_pass, FALSE) as t3,
+                COALESCE(s.t4_pass, FALSE) as t4,
+                COALESCE(s.t5_pass, FALSE) as t5,
+                COALESCE(s.t6_pass, FALSE) as t6,
+                COALESCE(s.t7_pass, FALSE) as t7,
+                (COALESCE(r.rs_rating, 0) >= 70) as t8,
+                s.sepa_stage
+            FROM latest_stats s
+            LEFT JOIN rs_ranked r ON s.ticker = r.ticker
             """
 
             # Apply filter conditions
