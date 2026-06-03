@@ -142,6 +142,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Track previous watchlist for diff-based subscribe/unsubscribe
   const prevWatchlistRef = useRef<string[]>([])
+  // Guards the persist effect until the watchlist has hydrated from localStorage,
+  // so the empty initial state never clobbers a stored list on first render.
+  const watchlistHydratedRef = useRef(false)
 
   // ── Live quote updater ──────────────────────────────────────────────────────
   const setLiveQuote = useCallback((symbol: string, quote: LiveQuote) => {
@@ -182,14 +185,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // The WS server publishes: { symbol, ts, payload: { ltp, ... } }
       const sym = data?.symbol || data?.payload?.symbol
       if (!sym) return
+
+      // Normalise ICICI Breeze field names → canonical LiveQuote fields
+      // ICICI: ltp_percent_change (vs generic: change_pct)
+      // ICICI: previous_close     (vs generic: prev_close)
+      const p = data?.payload ?? {}
+      const ltp = p?.ltp ?? p?.last_price ?? data?.ltp
+      const prevClose = p?.previous_close ?? p?.prev_close
+      const changePct = p?.change_pct ?? p?.ltp_percent_change ?? p?.changepct
+      const change    = p?.change ?? (
+        ltp != null && prevClose != null ? ltp - prevClose : undefined
+      )
+
       setLiveQuote(sym, {
         symbol:     sym,
-        ltp:        data?.payload?.ltp ?? data?.payload?.last_price ?? data?.ltp,
-        change:     data?.payload?.change,
-        change_pct: data?.payload?.change_pct,
-        volume:     data?.payload?.volume,
+        ltp,
+        change,
+        change_pct: changePct,
+        volume:     p?.volume ?? p?.total_quantity_traded,
         ts:         data?.ts,
-        raw:        data?.payload,
+        raw:        p,
       })
     })
 
@@ -238,6 +253,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const clearWatchlist = useCallback(() => setWatchlist([]), [])
   const isWatched      = useCallback((ticker: string) => watchlist.includes(ticker), [watchlist])
+
+  // ── Persist watchlist across reloads / restarts (localStorage) ──────────────
+  const WATCHLIST_KEY = 'suryadhana.watchlist'
+
+  useEffect(() => {
+    // Hydrate once on mount (client-only; localStorage is undefined during SSR).
+    try {
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem(WATCHLIST_KEY) : null
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          setWatchlist(parsed.filter((t): t is string => typeof t === 'string'))
+        }
+      }
+    } catch { /* ignore corrupt/blocked storage */ }
+    watchlistHydratedRef.current = true
+  }, [])
+
+  useEffect(() => {
+    if (!watchlistHydratedRef.current) return  // don't overwrite store before hydration
+    try { window.localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist)) } catch { /* quota/SSR */ }
+  }, [watchlist])
 
   // ── Config setters ──────────────────────────────────────────────────────────
   const setMLConfig = useCallback((cfg: Partial<MLConfig>) => {
