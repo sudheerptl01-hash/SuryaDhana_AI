@@ -1077,8 +1077,25 @@ async def trigger_training_with_config(background_tasks: BackgroundTasks, config
             if train_end:
                 merged = merged[merged["date"] <= train_end]
             _emit(job_id, f"Date window: {merged['date'].min()} → {merged['date'].max()} | {len(merged):,} rows after filter")
-            feature_pool = selected_features_cfg if selected_features_cfg else FEATURE_COLS
-            valid_cols = [c for c in feature_pool if c in merged.columns]
+            # Feature selection. If the caller passed an explicit `selected_features`
+            # list, honor it. Otherwise use EVERY real feature column in the data
+            # (not the legacy fixed FEATURE_COLS list) — every numeric column except
+            # identifiers, labels, and metadata. All-empty columns are dropped since
+            # they carry no signal.
+            _NON_FEATURE = {
+                "ticker", "date", "created_at", "feature_version", "stock_id",
+                "label_direction", "label_return_pct", "label_return", "fwd_return", "target",
+            }
+            if selected_features_cfg:
+                feature_pool = selected_features_cfg
+            else:
+                feature_pool = [
+                    c for c in merged.columns
+                    if c not in _NON_FEATURE and pd.api.types.is_numeric_dtype(merged[c])
+                ]
+            valid_cols = [c for c in feature_pool if c in merged.columns and merged[c].notna().any()]
+            _emit(job_id, f"Feature pool: {len(valid_cols)} usable columns "
+                          f"({'custom selection' if selected_features_cfg else 'all available'})")
             merged = merged.sort_values("date").groupby("ticker").tail(rows_per_ticker).reset_index(drop=True)
             train_cols = valid_cols + ["ticker", "date", "label_direction", "label_return_pct"]
             payload_df = merged[[c for c in train_cols if c in merged.columns]].copy()
