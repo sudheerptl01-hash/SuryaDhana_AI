@@ -16,6 +16,7 @@ import {
   getEnrichProgress,
 } from '@/lib/api'
 import { KPICard } from '@/components/KPICard'
+import { QuantKPICard } from '@/components/QuantKPICard'
 import { StockTable } from '@/components/StockTable'
 import { StockDetailModal } from '@/components/StockDetailModal'
 import { PipelineStudio } from '@/components/PipelineStudio'
@@ -24,11 +25,15 @@ import { BacktestPanel } from '@/components/BacktestPanel'
 import { SystemTelemetry } from '@/components/SystemTelemetry'
 import { LWScanner } from '@/components/LWScanner'
 import { DataExplorerTab } from '@/components/DataExplorerTab'
-import { LiveMonitorBar } from '@/components/LiveMonitorBar'
+import { WarehouseHealth } from '@/components/WarehouseHealth'
+import { AlphaDiscoveryDesk } from '@/components/AlphaDiscoveryDesk'
 import { SystemStatusWidget } from '@/components/SystemStatusWidget'
+import { LiveMonitorBar } from '@/components/LiveMonitorBar'
+import { MarketCommandHeader } from '@/components/MarketCommandHeader'
 import { ToastProvider } from '@/context/ToastContext'
+import { ErrorCatcher } from '@/components/ErrorCatcher'
 
-type Tab = 'overview' | 'stocks' | 'backtest' | 'positions' | 'pipeline' | 'scanner' | 'explorer' | 'system'
+type Tab = 'overview' | 'stocks' | 'backtest' | 'positions' | 'pipeline' | 'scanner' | 'discovery' | 'explorer' | 'warehouse' | 'system'
 
 const FILTERS_INIT = { t1: false, t2: false, t3: false, t4: false, t5: false, t6: false, t7: false, t8: false }
 
@@ -246,111 +251,62 @@ function HomeContent() {
   const activeFilterCount = Object.values(technicalFilters).filter(Boolean).length
   const displayCount = isFiltered ? filteredTotal : totalStocks
 
+  // Build tab descriptor list for MarketCommandHeader
+  const tabList = [
+    { id: 'overview',  label: 'Overview' },
+    { id: 'stocks',    label: 'Stocks',       badge: activeFilterCount || undefined },
+    { id: 'backtest',  label: 'Backtest' },
+    { id: 'positions', label: 'Portfolio' },
+    { id: 'pipeline',  label: 'Pipeline',     badge: watchlist.length || undefined },
+    { id: 'scanner',   label: 'LW Scanner' },
+    { id: 'discovery', label: 'Alpha Discovery' },
+    { id: 'explorer',  label: 'Data Explorer' },
+    { id: 'warehouse', label: 'Warehouse' },
+    { id: 'system',    label: 'System' },
+  ]
+
   return (
-    <div className={clsx(
-      'min-h-screen transition-colors duration-500 font-mono',
-      isDark
-        ? 'bg-gradient-to-br from-slate-950 via-slate-920 to-slate-950 text-slate-100'
-        : 'bg-gradient-to-br from-slate-50 via-white to-slate-50 text-slate-900'
-    )}>
+    <div
+      className="min-h-screen font-mono"
+      style={{
+        background: isDark
+          ? 'linear-gradient(160deg, #030810 0%, #050D1A 40%, #040B16 100%)'
+          : 'linear-gradient(160deg, #F8FAFC 0%, #F1F5F9 100%)',
+        color: isDark ? '#C8DCF0' : '#1E293B',
+      }}
+    >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-        * { scrollbar-width: thin; scrollbar-color: rgb(100, 116, 139) transparent; }
-        *::-webkit-scrollbar { width: 6px; height: 6px; }
+        * { scrollbar-width: thin; scrollbar-color: #1A2D44 transparent; }
+        *::-webkit-scrollbar { width: 5px; height: 5px; }
         *::-webkit-scrollbar-track { background: transparent; }
-        *::-webkit-scrollbar-thumb { background: rgb(100, 116, 139); border-radius: 3px; }
-        *::-webkit-scrollbar-thumb:hover { background: rgb(148, 163, 184); }
+        *::-webkit-scrollbar-thumb { background: #1A2D44; border-radius: 3px; }
+        *::-webkit-scrollbar-thumb:hover { background: #243D58; }
 
-        body {
-          font-family: 'IBM Plex Mono', 'Courier New', monospace;
-          background-attachment: fixed;
+        body { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-
-        /* Bloomberg terminal aesthetic: subtle grid background */
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        main > * {
-          animation: fadeIn 0.6s ease-out;
-        }
-
-        main > *:nth-child(2) { animation-delay: 0.1s; }
-        main > *:nth-child(3) { animation-delay: 0.2s; }
-        main > *:nth-child(4) { animation-delay: 0.3s; }
+        main > * { animation: fadeUp 0.5s ease-out both; }
+        main > *:nth-child(1) { animation-delay: 0.05s; }
+        main > *:nth-child(2) { animation-delay: 0.12s; }
+        main > *:nth-child(3) { animation-delay: 0.20s; }
+        main > *:nth-child(4) { animation-delay: 0.28s; }
       `}</style>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header className={clsx(
-        'border-b sticky top-0 z-40 shadow-xl transition-all duration-300',
-        isDark
-          ? 'border-slate-700/30 bg-gradient-to-r from-slate-900/60 via-slate-900/50 to-slate-900/60 backdrop-blur-xl'
-          : 'border-gray-200 bg-white/95 backdrop-blur-md'
-      )}>
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xl shadow-md">
-              ☀️
-            </div>
-            <div>
-              <h1 className={clsx('text-2xl font-black tracking-tight', isDark ? 'text-slate-100' : 'text-gray-900')}>
-                SuryaDhana
-              </h1>
-              <p className={clsx('text-xs mt-0.5', isDark ? 'text-slate-400' : 'text-gray-400')}>NSE Quant System · XGBoost + RL</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className={clsx('flex items-center gap-2 px-3 py-1.5 rounded-lg border', isDark ? 'bg-emerald-950/50 border-emerald-700/50' : 'bg-emerald-50 border-emerald-200')}>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className={clsx('text-xs font-semibold', isDark ? 'text-emerald-300' : 'text-emerald-700')}>LIVE</span>
-            </div>
-            <div className={clsx('text-xs', isDark ? 'text-slate-400' : 'text-gray-500')}>
-              <span className={clsx('font-bold', isDark ? 'text-slate-100' : 'text-gray-900')}>{dashboard?.total_stocks ?? totalStocks}</span> stocks ·{' '}
-              <span className={clsx('font-bold', isDark ? 'text-slate-100' : 'text-gray-900')}>{dashboard?.latest_date || '—'}</span>
-            </div>
-            {/* Theme Toggle Button */}
-            <button
-              onClick={toggleTheme}
-              className={clsx(
-                'flex items-center justify-center w-10 h-10 rounded-lg font-semibold transition-all text-sm border',
-                isDark
-                  ? 'bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-500/50 text-amber-400 shadow-lg shadow-amber-500/5'
-                  : 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-600 shadow-md'
-              )}
-              title={isDark ? 'Switch to day view' : 'Switch to night view'}
-            >
-              {isDark ? '☀️' : '🌙'}
-            </button>
-            {/* Refresh Button */}
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className={clsx(
-                'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all',
-                refreshing
-                  ? 'bg-indigo-50 border-indigo-200 text-indigo-400 cursor-not-allowed'
-                  : 'bg-indigo-600 border-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
-              )}
-              title="Refresh all stock data from NSE 1500 universe via yfinance"
-            >
-              <span
-                className={clsx(
-                  'text-sm',
-                  refreshing ? 'inline-block animate-spin' : ''
-                )}
-              >
-                {refreshing ? '↻' : '↻'}
-              </span>
-              {refreshing ? 'Refreshing…' : 'Refresh Data'}
-            </button>
-          </div>
-        </div>
-      </header>
 
-      {/* ── Live Monitor Bar: NIFTY + Watchlist ticks ───────────────────── */}
-      <LiveMonitorBar isDark={isDark} />
+      {/* ── NSE Operations Center Command Header ───────────────────────── */}
+      <MarketCommandHeader
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+        totalStocks={dashboard?.total_stocks ?? totalStocks}
+        latestDate={dashboard?.latest_date}
+        activeTab={view}
+        tabs={tabList}
+        onTabChange={(id) => setView(id as Tab)}
+      />
 
       {/* ── Refresh / Setup Panel ───────────────────────────────────────── */}
       {showRefreshPanel && (
@@ -466,75 +422,51 @@ function HomeContent() {
         </div>
       )}
 
-      {/* ── Navigation ──────────────────────────────────────────────────── */}
-      <nav className={clsx('w-full px-4 sm:px-6 lg:px-8 pt-4 flex gap-2 overflow-x-auto transition-colors duration-300', isDark ? 'bg-gradient-to-r from-slate-900/50 via-slate-900/30 to-transparent' : 'bg-transparent')}>
-        {([
-          { id: 'overview',  label: 'Overview',     icon: '📊' },
-          { id: 'stocks',   label: 'Stocks',        icon: '📈' },
-          { id: 'backtest', label: 'Backtest Lab',  icon: '🧪' },
-          { id: 'positions', label: 'Portfolio',    icon: '💰' },
-          { id: 'pipeline', label: 'Pipeline',      icon: '⚙️' },
-          { id: 'scanner',  label: 'LW Scanner',    icon: '📡' },
-          { id: 'explorer', label: 'Data Explorer', icon: '🔬' },
-          { id: 'system',   label: 'System',        icon: '🖥️' },
-        ] as { id: Tab; label: string; icon: string }[]).map(({ id, label, icon }) => (
-          <button
-            key={id}
-            onClick={() => setView(id)}
-            className={clsx(
-              'flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap border',
-              view === id
-                ? isDark
-                  ? 'bg-gradient-to-br from-amber-500/20 to-amber-500/10 text-amber-300 border-amber-500/40 shadow-lg shadow-amber-500/10'
-                  : 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200'
-                : isDark
-                  ? 'text-slate-400 border-slate-700/30 hover:text-slate-200 hover:bg-slate-700/40 hover:border-slate-600/50'
-                  : 'text-gray-500 border-gray-200 hover:text-gray-800 hover:bg-gray-100'
-            )}
-          >
-            <span>{icon}</span>
-            {label}
-            {id === 'stocks' && activeFilterCount > 0 && (
-              <span className={clsx('ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold', isDark ? 'bg-amber-500/40 text-amber-200' : 'bg-white/30 text-white')}>
-                {activeFilterCount}
-              </span>
-            )}
-            {(id === 'backtest' || id === 'pipeline') && watchlist.length > 0 && (
-              <span className={clsx('ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold', isDark ? 'bg-emerald-500/40 text-emerald-200' : 'bg-emerald-600 text-white')}>
-                {watchlist.length}
-              </span>
-            )}
-          </button>
-        ))}
-      </nav>
+      {/* ── Live Monitor Bar ────────────────────────────────────────────── */}
+      <LiveMonitorBar isDark={isDark} />
 
       {/* ── Main Content ────────────────────────────────────────────────── */}
-      <main className={clsx(
-        'w-full px-2 sm:px-4 lg:px-6 py-8 transition-colors duration-500',
-        isDark ? 'bg-gradient-to-br from-slate-950 via-slate-920 to-slate-950' : 'bg-gradient-to-br from-slate-50 via-white to-slate-50'
-      )}>
+      <main className="w-full px-2 sm:px-4 lg:px-6 py-6">
         {pageLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {Array(8).fill(0).map((_, i) => (
-              <div key={i} className={clsx('h-28 animate-pulse rounded-xl', isDark ? 'bg-slate-700' : 'bg-gray-200')} />
+              <div
+                key={i}
+                className="h-28 animate-pulse rounded-lg"
+                style={{ background: 'rgba(7,14,27,0.9)', border: '1px solid rgba(17,30,48,0.9)' }}
+              />
             ))}
           </div>
         ) : loadError ? (
-          /* ── Backend unreachable: retry panel ──────────────────────── */
+          /* ── Backend unreachable ───────────────────────────────────── */
           <div className="flex flex-col items-center justify-center py-32 gap-6">
-            <div className="text-5xl">⚠️</div>
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center text-3xl"
+              style={{ background: 'rgba(255,59,71,0.08)', border: '1px solid rgba(255,59,71,0.2)' }}
+            >
+              ⚠
+            </div>
             <div className="text-center">
-              <p className={clsx('text-lg font-bold mb-2', isDark ? 'text-slate-200' : 'text-gray-800')}>
-                Backend Unreachable
+              <p
+                className="text-lg font-bold mb-2"
+                style={{ fontFamily: "'Chakra Petch', sans-serif", color: '#C8DCF0' }}
+              >
+                BACKEND UNREACHABLE
               </p>
-              <p className={clsx('text-sm mb-4', isDark ? 'text-slate-400' : 'text-gray-500')}>
+              <p className="text-sm mb-6" style={{ color: '#3D5872' }}>
                 {loadError} — ui-api may be starting up
               </p>
               <button
                 onClick={() => setRetryCount(c => c + 1)}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-md"
+                className="px-6 py-2.5 text-sm font-semibold rounded-lg transition-all"
+                style={{
+                  background: 'rgba(245,166,35,0.1)',
+                  border: '1px solid rgba(245,166,35,0.3)',
+                  color: '#F5A623',
+                  fontFamily: "'Chakra Petch', sans-serif",
+                }}
               >
-                Retry Connection
+                RETRY CONNECTION
               </button>
             </div>
           </div>
@@ -571,6 +503,7 @@ function HomeContent() {
             {view === 'backtest' && <BacktestPanel isDark={isDark} watchlist={watchlist} />}
             {view === 'positions' && <LivePortfolio isDark={isDark} />}
             {view === 'scanner' && <LWScanner />}
+            {view === 'discovery' && <AlphaDiscoveryDesk isDark={isDark} />}
             {view === 'explorer' && (
               <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 shadow-xl">
                 <div className="mb-4 flex items-center gap-3">
@@ -580,6 +513,7 @@ function HomeContent() {
                 <DataExplorerTab />
               </div>
             )}
+            {view === 'warehouse' && <WarehouseHealth isDark={isDark} />}
             {view === 'system' && <SystemTelemetry isDark={isDark} />}
             {/* PipelineStudio stays mounted once first visited — preserves training state */}
             <div style={{ display: view === 'pipeline' ? 'block' : 'none' }}>
@@ -590,17 +524,15 @@ function HomeContent() {
       </main>
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
-      <footer className={clsx(
-        'mt-16 py-6 transition-colors duration-300',
-        isDark
-          ? 'border-t border-slate-700/50 bg-slate-900/30'
-          : 'border-t border-gray-200 bg-white'
-      )}>
-        <div className={clsx(
-          'w-full px-2 sm:px-4 lg:px-6 text-center text-xs',
-          isDark ? 'text-slate-500' : 'text-gray-400'
-        )}>
-          SuryaDhana © 2026 · Enterprise AI Trading System · NSE India · DuckDB + FastAPI + Next.js
+      <footer
+        className="mt-16 py-4"
+        style={{ borderTop: '1px solid rgba(17,30,48,0.9)' }}
+      >
+        <div
+          className="w-full px-4 lg:px-6 text-center text-[10px] tracking-widest uppercase"
+          style={{ fontFamily: "'Chakra Petch', sans-serif", color: '#3D5872' }}
+        >
+          SURYADHANA © 2026 · NSE INDIA · DUCKDB + FASTAPI + NEXTJS · XGBOOST + RL
         </div>
       </footer>
 
@@ -634,192 +566,222 @@ function OverviewTab({ dashboard, enrichment, totalStocks, isDark = true, enrich
   return (
     <div className="space-y-6">
 
-      {/* ── Row 0: Service Status Widget ─────────────────────────────────── */}
-      <SystemStatusWidget isDark={isDark} />
-
       {/* ── Row 1: Universe & OHLCV KPIs ─────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
-        <KPICard
+        <QuantKPICard
           label="Universe"
           value={universeSize.toLocaleString()}
           subtext={universeLabel}
-          color="indigo" icon="🌐" isDark={isDark}
+          accent="indigo" icon="◈" animate
         />
-        <KPICard
-          label="In DB"
+        <QuantKPICard
+          label="In Database"
           value={dbCount.toLocaleString()}
-          subtext={`${coveragePct}% of universe`}
-          color="violet" icon="📦" isDark={isDark}
+          subtext={`${coveragePct}% coverage`}
+          accent="violet" icon="⊞" animate
         />
-        <KPICard
+        <QuantKPICard
           label="Latest Bar"
           value={dashboard?.latest_date ?? '—'}
           subtext={`${stale}d stale`}
-          color={freshnessColor as any} icon="📅" isDark={isDark}
+          accent={freshnessColor === 'emerald' ? 'jade' : freshnessColor === 'amber' ? 'amber' : 'crimson'}
+          icon="▦"
         />
-        <KPICard
-          label="Data Range"
+        <QuantKPICard
+          label="Data Window"
           value={`${dashboard?.data_range?.from?.slice(0,7) ?? '—'}`}
           subtext={`→ ${dashboard?.data_range?.to ?? '—'}`}
-          color="slate" icon="🗓️" isDark={isDark}
+          accent="slate" icon="⬡"
         />
       </div>
 
       {/* ── Row 2: Freshness breakdown ────────────────────────────────────── */}
-      <div className={clsx('rounded-2xl border p-5 shadow-sm', card(isDark))}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className={clsx('text-sm font-bold', isDark ? 'text-slate-200' : 'text-gray-800')}>
-            Data Freshness — {dbCount.toLocaleString()} stocks with OHLCV data
-          </h3>
-          <span className={clsx('text-xs font-semibold px-2 py-1 rounded-full',
-            freshPct >= 95 ? (isDark ? 'bg-emerald-900/50 text-emerald-300' : 'bg-emerald-100 text-emerald-700') :
-            freshPct >= 80 ? (isDark ? 'bg-amber-900/50 text-amber-300' : 'bg-amber-100 text-amber-700') :
-                             (isDark ? 'bg-rose-900/50 text-rose-300' : 'bg-rose-100 text-rose-700')
-          )}>
-            {freshPct}% fresh
-          </span>
-        </div>
-
-        {/* Stacked bar */}
-        <div className="w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-slate-700 flex mb-4">
-          <div className="h-full bg-emerald-500 transition-all duration-700" style={{ width: `${(fresh / Math.max(dbCount, 1)) * 100}%` }} />
-          <div className="h-full bg-amber-400 transition-all duration-700"  style={{ width: `${(staleCount / Math.max(dbCount, 1)) * 100}%` }} />
-          <div className="h-full bg-rose-500 transition-all duration-700"   style={{ width: `${(veryStale / Math.max(dbCount, 1)) * 100}%` }} />
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <div className={clsx('rounded-xl p-3 border text-center', isDark ? 'bg-emerald-900/20 border-emerald-700/40' : 'bg-emerald-50 border-emerald-200')}>
-            <p className={clsx('text-2xl font-black', isDark ? 'text-emerald-300' : 'text-emerald-700')}>{fresh.toLocaleString()}</p>
-            <p className={clsx('text-xs font-semibold mt-0.5', isDark ? 'text-emerald-400' : 'text-emerald-600')}>Fresh (&lt;1 day)</p>
-          </div>
-          <div className={clsx('rounded-xl p-3 border text-center', isDark ? 'bg-amber-900/20 border-amber-700/40' : 'bg-amber-50 border-amber-200')}>
-            <p className={clsx('text-2xl font-black', isDark ? 'text-amber-300' : 'text-amber-700')}>{staleCount.toLocaleString()}</p>
-            <p className={clsx('text-xs font-semibold mt-0.5', isDark ? 'text-amber-400' : 'text-amber-600')}>Stale (1-7 days)</p>
-          </div>
-          <div className={clsx('rounded-xl p-3 border text-center', isDark ? 'bg-rose-900/20 border-rose-700/40' : 'bg-rose-50 border-rose-200')}>
-            <p className={clsx('text-2xl font-black', isDark ? 'text-rose-300' : 'text-rose-700')}>{veryStale.toLocaleString()}</p>
-            <p className={clsx('text-xs font-semibold mt-0.5', isDark ? 'text-rose-400' : 'text-rose-600')}>Very Stale (&gt;7d)</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Row 3: Enrichment status ──────────────────────────────────────── */}
-      <div className={clsx('rounded-2xl border p-5 shadow-sm', card(isDark))}>
+      <div className="rounded-lg p-5" style={{ background: '#070E1B', border: '1px solid #111E30' }}>
+        {/* Header row */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className={clsx('text-sm font-bold', isDark ? 'text-slate-200' : 'text-gray-800')}>
-              Fundamentals Enrichment
+            <h3
+              className="text-xs font-semibold tracking-widest uppercase"
+              style={{ fontFamily: "'Chakra Petch', sans-serif", color: '#3D5872' }}
+            >
+              DATA FRESHNESS
             </h3>
-            <p className={clsx('text-xs mt-0.5', isDark ? 'text-slate-400' : 'text-gray-500')}>
-              PE · MktCap · NP QTR · Sales QTR · ROCE — from Yahoo Finance
+            <p
+              className="mt-0.5 text-sm font-bold tabular-nums"
+              style={{ fontFamily: "'JetBrains Mono', monospace", color: '#C8DCF0' }}
+            >
+              {dbCount.toLocaleString()} stocks with OHLCV data
             </p>
           </div>
-          <button
-            onClick={onEnrich}
-            disabled={enriching}
-            className={clsx(
-              'px-4 py-2 rounded-lg text-xs font-bold border transition-all',
-              enriching
-                ? 'bg-violet-50 border-violet-200 text-violet-400 cursor-not-allowed'
-                : 'bg-violet-600 border-violet-600 text-white hover:bg-violet-700 shadow-sm'
-            )}
+          <span
+            className="text-xs font-bold px-2.5 py-1 rounded tabular-nums"
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              background: freshPct >= 95 ? 'rgba(0,200,150,0.10)' : freshPct >= 80 ? 'rgba(245,166,35,0.10)' : 'rgba(255,59,71,0.08)',
+              color:      freshPct >= 95 ? '#00C896' : freshPct >= 80 ? '#F5A623' : '#FF3B47',
+              border:     `1px solid ${freshPct >= 95 ? 'rgba(0,200,150,0.2)' : freshPct >= 80 ? 'rgba(245,166,35,0.2)' : 'rgba(255,59,71,0.2)'}`,
+            }}
           >
-            {enriching ? '⏳ Enriching…' : enriched === 0 ? '⚡ Enrich Now' : '↻ Re-enrich'}
-          </button>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full h-2.5 rounded-full overflow-hidden bg-gray-200 mb-3">
-          <div
-            className="h-full bg-violet-500 transition-all duration-700"
-            style={{ width: `${enrichPct}%` }}
-          />
-        </div>
-
-        {enriching && enrichProgress && (
-          <p className={clsx('text-xs mb-2', isDark ? 'text-violet-300' : 'text-violet-700')}>
-            {enrichProgress.done?.toLocaleString()} / {enrichProgress.total?.toLocaleString()} enriched · {enrichProgress.pct}%
-          </p>
-        )}
-
-        <div className="grid grid-cols-3 gap-3">
-          <div className={clsx('rounded-xl p-3 border text-center', isDark ? 'bg-violet-900/20 border-violet-700/40' : 'bg-violet-50 border-violet-200')}>
-            <p className={clsx('text-2xl font-black', isDark ? 'text-violet-300' : 'text-violet-700')}>{enriched.toLocaleString()}</p>
-            <p className={clsx('text-xs font-semibold mt-0.5', isDark ? 'text-violet-400' : 'text-violet-600')}>Enriched</p>
-          </div>
-          <div className={clsx('rounded-xl p-3 border text-center', isDark ? 'bg-slate-800/40 border-slate-700/30' : 'bg-gray-50 border-gray-200')}>
-            <p className={clsx('text-2xl font-black', isDark ? 'text-slate-200' : 'text-gray-800')}>{(enrichTotal - enriched).toLocaleString()}</p>
-            <p className={clsx('text-xs font-semibold mt-0.5', isDark ? 'text-slate-400' : 'text-gray-500')}>Pending</p>
-          </div>
-          <div className={clsx('rounded-xl p-3 border text-center', isDark ? 'bg-slate-800/40 border-slate-700/30' : 'bg-gray-50 border-gray-200')}>
-            <p className={clsx('text-2xl font-black', isDark ? 'text-violet-300' : 'text-violet-700')}>{enrichPct}%</p>
-            <p className={clsx('text-xs font-semibold mt-0.5', isDark ? 'text-slate-400' : 'text-gray-500')}>Coverage</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Row 4: System status ──────────────────────────────────────────── */}
-      <div className={clsx('rounded-2xl border p-5 shadow-sm', card(isDark))}>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className={clsx('w-3 h-3 rounded-full animate-pulse',
-                (dashboard?.health?.status === 'healthy') ? 'bg-emerald-500' : 'bg-amber-500'
-              )} />
-              <h3 className={clsx('text-sm font-bold', isDark ? 'text-slate-100' : 'text-gray-900')}>
-                Status: <span className={clsx(
-                  'font-black',
-                  dashboard?.health?.status === 'healthy' ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-amber-400' : 'text-amber-600')
-                )}>
-                  {(dashboard?.health?.status ?? 'unknown').toUpperCase()}
-                </span>
-              </h3>
-            </div>
-            <p className={clsx('text-xs', isDark ? 'text-slate-400' : 'text-gray-500')}>
-              {dbCount.toLocaleString()} stocks · {dashboard?.data_range?.from} → {dashboard?.data_range?.to}
-              · Source: Yahoo Finance v8 API (.NS)
-            </p>
-          </div>
-          <span className={clsx('px-4 py-2 rounded-lg font-bold text-xs',
-            isDark ? 'bg-emerald-900/40 text-emerald-300 border border-emerald-700/50' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-          )}>
-            Phase 1 + 2 Complete ✓
+            {freshPct}% FRESH
           </span>
         </div>
-      </div>
 
-      {/* ── Row 5: Roadmap ────────────────────────────────────────────────── */}
-      <div className={clsx('rounded-2xl border p-5 shadow-sm', card(isDark))}>
-        <h3 className={clsx('text-sm font-bold mb-4', isDark ? 'text-slate-200' : 'text-gray-800')}>16-Week Roadmap</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {/* Segmented progress bar */}
+        <div className="w-full h-2 rounded-sm overflow-hidden flex mb-5" style={{ background: '#0E1828' }}>
+          <div className="h-full transition-all duration-700" style={{ width: `${(fresh / Math.max(dbCount, 1)) * 100}%`, background: '#00C896' }} />
+          <div className="h-full transition-all duration-700" style={{ width: `${(staleCount / Math.max(dbCount, 1)) * 100}%`, background: '#F5A623' }} />
+          <div className="h-full transition-all duration-700" style={{ width: `${(veryStale / Math.max(dbCount, 1)) * 100}%`, background: '#FF3B47' }} />
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
           {[
-            { phase: 'Phase 1', weeks: '1–3', label: 'NSE 1500 Universe', status: 'done' },
-            { phase: 'Phase 2', weeks: '4–6', label: 'DuckDB + 5yr OHLCV', status: 'done' },
-            { phase: 'Phase 3', weeks: '7–9', label: '40+ Features + Labels', status: 'pending' },
-            { phase: 'Phase 4', weeks: '10–12', label: 'XGBoost Models (55%+)', status: 'pending' },
-            { phase: 'Phase 5', weeks: '13–14', label: 'Walk-forward + RL Agent', status: 'pending' },
-            { phase: 'Phase 6', weeks: '15–16', label: 'Paper → Live ₹10K', status: 'pending' },
-          ].map(({ phase, weeks, label, status }) => (
-            <div key={phase} className={clsx(
-              'rounded-xl p-4 border',
-              status === 'done'
-                ? (isDark ? 'border-emerald-700/50 bg-emerald-900/20' : 'border-emerald-200 bg-emerald-50')
-                : (isDark ? 'border-slate-700/30 bg-slate-800/20' : 'border-gray-200 bg-gray-50')
-            )}>
-              <div className="flex items-center justify-between mb-1">
-                <span className={clsx('text-xs font-bold', isDark ? 'text-slate-400' : 'text-gray-400')}>{phase} · Wk {weeks}</span>
-                <span className={clsx('text-xs font-bold',
-                  status === 'done' ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-slate-500' : 'text-gray-400')
-                )}>
-                  {status === 'done' ? '✓ DONE' : '⏸ PENDING'}
-                </span>
-              </div>
-              <p className={clsx('text-sm font-semibold',
-                status === 'done' ? (isDark ? 'text-emerald-300' : 'text-emerald-800') : (isDark ? 'text-slate-300' : 'text-gray-600')
-              )}>{label}</p>
+            { label: 'FRESH', sub: '< 1 day',  value: fresh,      color: '#00C896', bg: 'rgba(0,200,150,0.05)',   border: 'rgba(0,200,150,0.15)' },
+            { label: 'STALE', sub: '1–7 days', value: staleCount, color: '#F5A623', bg: 'rgba(245,166,35,0.05)', border: 'rgba(245,166,35,0.15)' },
+            { label: 'AGED',  sub: '> 7 days', value: veryStale,  color: '#FF3B47', bg: 'rgba(255,59,71,0.04)',  border: 'rgba(255,59,71,0.12)'  },
+          ].map(({ label, sub, value, color, bg, border }) => (
+            <div key={label} className="rounded p-3 text-center" style={{ background: bg, border: `1px solid ${border}` }}>
+              <p className="text-2xl font-black tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace", color }}>
+                {value.toLocaleString()}
+              </p>
+              <p className="text-[9px] font-semibold tracking-widest uppercase mt-1" style={{ fontFamily: "'Chakra Petch', sans-serif", color }}>
+                {label}
+              </p>
+              <p className="text-[9px] mt-0.5" style={{ color: '#3D5872' }}>{sub}</p>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── Row 3 + 4: Enrichment + Mission Roadmap + System Status ──────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* Enrichment */}
+        <div className="rounded-lg p-5" style={{ background: '#070E1B', border: '1px solid #111E30' }}>
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3
+                className="text-xs font-semibold tracking-widest uppercase"
+                style={{ fontFamily: "'Chakra Petch', sans-serif", color: '#3D5872' }}
+              >
+                FUNDAMENTALS ENRICHMENT
+              </h3>
+              <p className="mt-0.5 text-[10px]" style={{ color: '#3D5872' }}>
+                PE · MktCap · NP QTR · Sales QTR · ROCE
+              </p>
+            </div>
+            <button
+              onClick={onEnrich}
+              disabled={enriching}
+              className="text-[10px] font-semibold tracking-wider px-3 py-1.5 rounded transition-all"
+              style={{
+                fontFamily: "'Chakra Petch', sans-serif",
+                background: enriching ? 'rgba(160,96,255,0.05)' : 'rgba(160,96,255,0.10)',
+                border: `1px solid ${enriching ? 'rgba(160,96,255,0.15)' : 'rgba(160,96,255,0.30)'}`,
+                color: enriching ? '#6A40A0' : '#B87AFF',
+                cursor: enriching ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {enriching ? '⏳ ENRICHING…' : enriched === 0 ? '⚡ ENRICH NOW' : '↻ RE-ENRICH'}
+            </button>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full h-1.5 rounded-sm overflow-hidden mb-4" style={{ background: '#0E1828' }}>
+            <div
+              className="h-full transition-all duration-700"
+              style={{ width: `${enrichPct}%`, background: '#A060FF' }}
+            />
+          </div>
+
+          {enriching && enrichProgress && (
+            <p className="text-[10px] mb-3 tabular-nums" style={{ color: '#B87AFF', fontFamily: "'JetBrains Mono', monospace" }}>
+              {enrichProgress.done?.toLocaleString()} / {enrichProgress.total?.toLocaleString()} · {enrichProgress.pct}%
+            </p>
+          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'ENRICHED', value: enriched,                color: '#B87AFF', bg: 'rgba(160,96,255,0.06)', border: 'rgba(160,96,255,0.14)' },
+              { label: 'PENDING',  value: enrichTotal - enriched,  color: '#7DA4BE', bg: 'rgba(61,88,114,0.06)',  border: 'rgba(61,88,114,0.14)'  },
+              { label: 'COVERAGE', value: `${enrichPct}%`,         color: '#B87AFF', bg: 'rgba(160,96,255,0.06)', border: 'rgba(160,96,255,0.14)' },
+            ].map(({ label, value, color, bg, border }) => (
+              <div key={label} className="rounded p-2.5 text-center" style={{ background: bg, border: `1px solid ${border}` }}>
+                <p className="text-xl font-black tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace", color }}>
+                  {typeof value === 'number' ? value.toLocaleString() : value}
+                </p>
+                <p className="text-[9px] font-semibold tracking-widest uppercase mt-1" style={{ fontFamily: "'Chakra Petch', sans-serif", color }}>
+                  {label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* System status + Roadmap */}
+        <div className="rounded-lg p-5" style={{ background: '#070E1B', border: '1px solid #111E30' }}>
+          <h3
+            className="text-xs font-semibold tracking-widest uppercase mb-4"
+            style={{ fontFamily: "'Chakra Petch', sans-serif", color: '#3D5872' }}
+          >
+            MISSION ROADMAP
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              { phase: 'P1', weeks: 'Wk 1–3',   label: 'NSE 1500 Universe',      status: 'done' },
+              { phase: 'P2', weeks: 'Wk 4–6',   label: 'DuckDB + 5yr OHLCV',     status: 'done' },
+              { phase: 'P3', weeks: 'Wk 7–9',   label: '40+ Features + Labels',  status: 'active' },
+              { phase: 'P4', weeks: 'Wk 10–12', label: 'XGBoost Models 55%+',    status: 'pending' },
+              { phase: 'P5', weeks: 'Wk 13–14', label: 'Walk-fwd + RL Agent',    status: 'pending' },
+              { phase: 'P6', weeks: 'Wk 15–16', label: 'Paper → Live ₹10K',      status: 'pending' },
+            ].map(({ phase, weeks, label, status }) => (
+              <div
+                key={phase}
+                className="flex items-center gap-3 rounded p-2.5"
+                style={{
+                  background: status === 'done'   ? 'rgba(0,200,150,0.05)'   :
+                               status === 'active' ? 'rgba(245,166,35,0.05)' : 'rgba(17,30,48,0.4)',
+                  border: `1px solid ${
+                    status === 'done'   ? 'rgba(0,200,150,0.15)'   :
+                    status === 'active' ? 'rgba(245,166,35,0.15)'  : 'rgba(17,30,48,0.8)'
+                  }`,
+                }}
+              >
+                <span
+                  className="text-[9px] font-bold w-5 shrink-0"
+                  style={{
+                    fontFamily: "'Chakra Petch', sans-serif",
+                    color: status === 'done' ? '#00C896' : status === 'active' ? '#F5A623' : '#3D5872',
+                  }}
+                >
+                  {status === 'done' ? '✓' : status === 'active' ? '▶' : '○'}
+                </span>
+                <div className="min-w-0">
+                  <p
+                    className="text-[9px] font-semibold tracking-wider"
+                    style={{
+                      fontFamily: "'Chakra Petch', sans-serif",
+                      color: status === 'done' ? '#00C896' : status === 'active' ? '#F5A623' : '#3D5872',
+                    }}
+                  >
+                    {phase} · {weeks}
+                  </p>
+                  <p
+                    className="text-[11px] font-semibold truncate"
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      color: status === 'done' ? '#C8DCF0' : status === 'active' ? '#C8DCF0' : '#4A6478',
+                    }}
+                  >
+                    {label}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* System Status */}
+        <SystemStatusWidget isDark={isDark} />
       </div>
     </div>
   )
@@ -959,6 +921,7 @@ export default function Home() {
     <ThemeProvider>
       <AppProvider>
         <ToastProvider>
+          <ErrorCatcher />
           <HomeContent />
         </ToastProvider>
       </AppProvider>

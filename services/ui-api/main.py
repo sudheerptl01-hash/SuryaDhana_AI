@@ -28,6 +28,7 @@ except ImportError:
 from routers import dashboard, stocks, analytics, performance, positions, config, pipeline, execution, telemetry, lw_scanner
 from routers import monitor
 from routers import data_proxy
+from routers import alpha
 
 
 @asynccontextmanager
@@ -63,6 +64,7 @@ app.include_router(telemetry.router,  prefix="/api/telemetry",  tags=["telemetry
 app.include_router(lw_scanner.router, prefix="/api/lw",         tags=["lw-scanner"])
 app.include_router(monitor.router,     prefix="/api/monitor",  tags=["monitor"])
 app.include_router(data_proxy.router,  prefix="/api/data",     tags=["data-proxy"])
+app.include_router(alpha.router,       prefix="/api/alpha",    tags=["alpha-discovery"])
 
 
 @app.get("/health")

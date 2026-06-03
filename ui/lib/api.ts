@@ -210,6 +210,17 @@ export const getDataLiveNifty     = () =>
 export const getDataIntraday = (ticker: string, interval = '5minute') =>
   client.get(`/api/data/live/intraday/${ticker}`, { params: { interval }, timeout: 30000 })
 
+// ── Data Warehouse introspection (DuckDB stats via data-service) ─────────────────
+
+export const getWarehouseStats     = () =>
+  client.get('/api/data/db/stats', { timeout: 30000 })
+
+export const getWarehouseOhlcvMeta = () =>
+  client.get('/api/data/db/ohlcv-meta', { timeout: 90000 })
+
+export const getWarehouseMlStats   = () =>
+  client.get('/api/data/db/ml-stats', { timeout: 30000 })
+
 // ── Monitor REST endpoints ─────────────────────────────────────────────────────
 
 export const monitorSubscribe   = (symbol: string) =>
@@ -226,5 +237,75 @@ export const monitorLiveNifty   = () =>
 
 // WebSocket URL constant (resolved at runtime in components/hooks)
 export const MONITOR_WS_PATH = '/api/monitor/ws/monitor'
+
+// ── Alpha Discovery Desk (novel_alpha_engine via /api/alpha/*) ───────────────────
+
+export interface AlphaParamSpec {
+  default: number | boolean
+  min: number | null
+  max: number | null
+  step: number | null
+  type: 'float' | 'int' | 'bool' | string
+  label: string
+}
+
+export interface AlphaStrategyMeta {
+  name: string
+  params: Record<string, AlphaParamSpec>
+  knobs: Record<string, AlphaParamSpec>
+  flags: Record<string, AlphaParamSpec>
+}
+
+export interface AlphaStrategiesResponse {
+  mode: string
+  default: string | null
+  strategies: Record<string, AlphaStrategyMeta>
+}
+
+export interface AlphaScanResult {
+  ticker: string
+  date: string
+  last_close: number | null
+  entry_adj?: number | null
+  exit_adj?: number | null
+  fwd5?: number | null
+  net5?: number | null
+}
+
+export interface AlphaScanResponse {
+  mode: string
+  strategy_id: string
+  strategy_name: string
+  params: Record<string, number | boolean>
+  universe: { total: number; eligible: number; rows_scanned: number }
+  as_of: string
+  n_signals_total: number
+  n_signals_window: number
+  tickers: string[]
+  results: AlphaScanResult[]
+  edge: {
+    n_with_forward: number
+    mean_net5_bps: number
+    median_net5_bps: number
+    win_rate: number
+  } | null
+  latency: { sql_s: number; signal_s: number; total_s: number }
+}
+
+export const getAlphaMode        = () => client.get('/api/alpha/mode', { timeout: 8000 })
+export const getAlphaStrategies  = () =>
+  client.get<AlphaStrategiesResponse>('/api/alpha/strategies', { timeout: 30000 })
+export const getAlphaUniverse    = (days = 400) =>
+  client.get('/api/alpha/universe', { params: { days }, timeout: 120000 })
+export const getAlphaValidated   = () => client.get('/api/alpha/validated', { timeout: 15000 })
+export const runAlphaScan = (payload: {
+  strategy_id: string
+  params: Record<string, number | boolean>
+  days?: number
+  mode?: 'latest' | 'recent' | 'all'
+  recent_days?: number
+  max_results?: number
+  include_diagnostics?: boolean
+}) => client.post<AlphaScanResponse>('/api/alpha/scan', payload, { timeout: 180000 })
 
 export default client

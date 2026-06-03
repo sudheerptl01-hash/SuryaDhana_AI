@@ -200,3 +200,73 @@ async def get_intraday(
         return r.json()
     except httpx.RequestError as exc:
         raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+
+
+# ── DB stats proxy (bridges virtioFS DuckDB concurrent-lock limitation) ────────
+
+@router.get("/db/stats")
+async def db_stats() -> Any:
+    """
+    Proxy data-service /db/stats.
+
+    ui-api cannot open a concurrent read-only DuckDB connection while
+    data-service holds the persistent RW lock on virtioFS (Docker Desktop
+    Mac).  This endpoint bypasses that by fetching stats over HTTP from
+    data-service, which already owns the lock.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
+            r = await client.get(f"{DATA_SVC}/db/stats")
+        _raise_upstream(r)
+        return r.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+
+
+@router.get("/db/ohlcv-meta")
+async def db_ohlcv_meta() -> Any:
+    """
+    Proxy data-service /db/ohlcv-meta.
+    Returns per-ticker OHLCV + metrics stats for the stocks list page.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
+            r = await client.get(f"{DATA_SVC}/db/ohlcv-meta")
+        _raise_upstream(r)
+        return r.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+
+
+@router.get("/db/screener")
+async def db_screener(request: Request) -> Any:
+    """Proxy data-service /db/screener (Minervini T1-T8)."""
+    try:
+        async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
+            r = await client.get(
+                f"{DATA_SVC}/db/screener",
+                params=dict(request.query_params),
+            )
+        _raise_upstream(r)
+        return r.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+
+
+@router.get("/db/ml-stats")
+async def db_ml_stats() -> Any:
+    """
+    Proxy data-service /db/ml-stats.
+
+    Returns ml_features + ml_labels row counts, ticker coverage, freshness and
+    label class-balance stats.  Powers the Warehouse & ML Health console — the
+    ui-api cannot open a concurrent DuckDB RO connection on virtioFS (Docker
+    Desktop Mac), so this bridges to data-service which owns the RW lock.
+    """
+    try:
+        async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
+            r = await client.get(f"{DATA_SVC}/db/ml-stats")
+        _raise_upstream(r)
+        return r.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")

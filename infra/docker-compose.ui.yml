@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
 
   # ── Master Controller (IST scheduler + telemetry server on :8008) ────────────
@@ -39,6 +37,7 @@ services:
     environment:
       - DATABASE_URL=/app/data/market.duckdb
       - DUCKDB_PATH=/app/data/market.duckdb
+      - STOCK_UNIVERSE_PATH=/app/data/NSE_1500.csv
       - DATA_SERVICE_URL=http://data-service:8001
       - FEATURE_SERVICE_URL=http://feature-service:8002
       - ML_SERVICE_URL=http://ml-service:8003
@@ -48,12 +47,19 @@ services:
       - UI_API_ENV_FILE=/app/.env
       # Override .env localhost Redis URL with Docker DNS hostname
       - REDIS_URL=redis://redis:6379/0
+      # Phase 4 Glass-Box — novel alpha engine bind-mounted (not in the image)
+      - ALPHA_ENGINE_PATH=/app/novel_alpha_engine.py
     env_file:
       - ../.env
     volumes:
       - ../data:/app/data
       - ../.env:/app/.env
       - ../scripts:/app/scripts
+      # Phase 4 — Alpha Discovery Desk: bind-mount the engine + validated contract
+      # read-only so the alpha router can import the strategy registry / PARAM_SPEC
+      # without baking them into the image.
+      - ../novel_alpha_engine.py:/app/novel_alpha_engine.py:ro
+      - ../validated_alpha.md:/app/validated_alpha.md:ro
     depends_on:
       master-controller:
         condition: service_healthy
