@@ -18,6 +18,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from shared.config import Settings, get_settings
+from shared.icici import load_icici_credentials
 from shared.logging import configure_logging, get_logger
 from shared.models import OHLCVBatch
 
@@ -38,16 +39,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     configure_logging("data-service", settings.log_level)
     _store = DuckDBStore(settings.duckdb_path)
     _yfinance = DirectYahooProvider()
-    _live = build_live_provider(
-        settings.icici_api_key,
-        settings.icici_api_secret,
-        settings.icici_session_token,
-    )
+    # Auto-connect Breeze from .env (single source of truth via shared loader) —
+    # normalizes the daily session token (accepts bare token or pasted redirect URL).
+    _creds = load_icici_credentials()
+    _live = build_live_provider(_creds.api_key, _creds.api_secret, _creds.session_token)
     try:
         _live.connect()
-        logger.info("ICICI Breeze connected")
+        logger.info("ICICI Breeze connected (auto from .env)")
     except Exception as e:
-        logger.warning(f"ICICI Breeze connection failed: {e}. Continuing with yfinance only.")
+        if _creds.needs_daily_token:
+            logger.warning("ICICI Breeze: api key/secret set but session token missing/expired — "
+                           "refresh ICICI_SESSION_TOKEN in .env (daily). Using yfinance fallback.")
+        else:
+            logger.warning(f"ICICI Breeze connection failed: {e}. Continuing with yfinance only.")
 
     # Start background NIFTY poller task
     _nifty_task: asyncio.Task | None = None
