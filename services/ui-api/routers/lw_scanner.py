@@ -9,35 +9,64 @@ from typing import Optional
 import os
 
 import duckdb
+import httpx
 import pandas as pd
 import numpy as np
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 router = APIRouter()
 
-DB_PATH     = os.getenv("DUCKDB_PATH", "/app/data/market.duckdb")
-DATA_DIR    = Path(os.getenv("DATABASE_URL", "/app/data/market.duckdb")).parent
+_DEFAULT_DB = str(Path(__file__).resolve().parent.parent.parent.parent / "data" / "market.duckdb")
+DB_PATH     = os.getenv("DUCKDB_PATH", os.getenv("DATABASE_URL", _DEFAULT_DB))
+DATA_DIR    = Path(DB_PATH).parent
+DATA_SVC    = os.environ.get("DATA_SERVICE_URL", "http://localhost:8001")
 SCAN_CSV    = DATA_DIR / "larry_williams_scan_results.csv"
-SCRIPTS_DIR = Path("/app/scripts")
+_DEFAULT_SCRIPTS = str(Path(__file__).resolve().parent.parent.parent.parent / "scripts")
+SCRIPTS_DIR = Path(os.getenv("SCRIPTS_DIR", _DEFAULT_SCRIPTS))
 
 _jobs: dict[str, dict] = {}
 
 
-def _load_ohlcv_flat(limit_days: int = 400) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Load OHLCV from DuckDB; returns (df_stocks, df_market_proxy)."""
-    con = duckdb.connect(DB_PATH, read_only=True)
-    try:
-        rows = con.execute(f"""
-            SELECT ticker, date, open, high, low, close, volume
-            FROM ohlcv
-            WHERE date >= (SELECT MAX(date)::DATE - INTERVAL '{limit_days} days' FROM ohlcv)
-            ORDER BY ticker, date
-        """).fetchall()
-    finally:
-        con.close()
+def _fetch_ohlcv_bulk(days: int) -> pd.DataFrame:
+    """Fetch recent OHLCV from data-service over HTTP.
 
-    df = pd.DataFrame(rows, columns=["ticker", "date", "open", "high", "low", "close", "volume"])
+    ui-api must NOT open its own DuckDB connection: on Docker Desktop (Mac,
+    virtioFS) a second connection fails with "Conflicting lock is held in PID 0"
+    even read-only. data-service owns the lock and serves /db/ohlcv-bulk.
+    """
+    fetch_days = max(int(days) + 30, 60)  # headroom for the last-complete-day trim
+    with httpx.Client(timeout=httpx.Timeout(120.0)) as client:
+        r = client.get(f"{DATA_SVC}/db/ohlcv-bulk", params={"days": fetch_days})
+    r.raise_for_status()
+    data = r.json().get("data", [])
+    cols = ["ticker", "date", "open", "high", "low", "close", "volume"]
+    if not data:
+        return pd.DataFrame(columns=cols)
+    df = pd.DataFrame(data)
     df["date"] = pd.to_datetime(df["date"])
+    return df[cols]
+
+
+def _last_complete_date_from_df(df: pd.DataFrame, min_tickers: int = 100) -> pd.Timestamp:
+    """Most recent date with ≥ min_tickers rows (guards against partial days)."""
+    if df.empty:
+        return pd.Timestamp("2020-01-01")
+    counts = df.groupby("date")["ticker"].nunique().sort_index(ascending=False)
+    for d, n in counts.items():
+        if n >= min_tickers:
+            return d
+    return counts.index[0]
+
+
+def _load_ohlcv_flat(limit_days: int = 400) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load OHLCV via data-service; returns (df_stocks, df_market_proxy)."""
+    df = _fetch_ohlcv_bulk(limit_days)
+    if df.empty:
+        return df, df
+    last_full = _last_complete_date_from_df(df)
+    lo = last_full - pd.Timedelta(days=limit_days)
+    df = df[(df["date"] >= lo) & (df["date"] <= last_full)].copy()
+    df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
 
     # Numeric stock_id required by LarryWilliamsMasterScanner
     id_map = {t: i for i, t in enumerate(sorted(df["ticker"].unique()))}
@@ -55,20 +84,15 @@ def _load_ohlcv_flat(limit_days: int = 400) -> tuple[pd.DataFrame, pd.DataFrame]
 
 
 def _load_ohlcv_multiindex(days: int = 500) -> pd.DataFrame:
-    """Load OHLCV as MultiIndex (date, ticker) for the screener."""
-    con = duckdb.connect(DB_PATH, read_only=True)
-    try:
-        rows = con.execute(f"""
-            SELECT date, ticker, open, high, low, close, volume
-            FROM ohlcv
-            WHERE date >= (SELECT MAX(date)::DATE - INTERVAL '{days} days' FROM ohlcv)
-            ORDER BY date, ticker
-        """).fetchall()
-    finally:
-        con.close()
-
-    df = pd.DataFrame(rows, columns=["date", "ticker", "open", "high", "low", "close", "volume"])
-    df["date"] = pd.to_datetime(df["date"])
+    """Load OHLCV as MultiIndex (date, ticker) for the screener, trimmed to the
+    last complete trading day to avoid partial-day distortion.
+    """
+    df = _fetch_ohlcv_bulk(days)
+    if df.empty:
+        return df.set_index(["date", "ticker"])
+    last_full = _last_complete_date_from_df(df)
+    lo = last_full - pd.Timedelta(days=days)
+    df = df[(df["date"] >= lo) & (df["date"] <= last_full)]
     return df.set_index(["date", "ticker"]).sort_index()
 
 
@@ -99,7 +123,26 @@ async def run_screener(days: int = 500):
 
     # Cast numpy scalar types to native Python for JSON serialisation
     filter_counts = {k: int(v) for k, v in results.get("filter_counts", {}).items()}
-    actionable = results.get("actionable", pd.DataFrame())
+
+    # Build per-filter Series so we can build the relaxed union output
+    # The screener's `screen()` requires ALL 4 to pass, which is too strict.
+    # We override: show stocks passing LIQUIDITY AND at least one signal filter.
+    last_date = df.index.get_level_values("date").max()
+    try:
+        f_squeeze  = screener.filter_the_squeeze().loc[last_date]
+        f_oops     = screener.filter_oops_reversal().loc[last_date]
+        f_oversold = screener.filter_extreme_oversold_uptrend().loc[last_date]
+        f_liquid   = screener.filter_liquidity().loc[last_date]
+        any_signal = f_squeeze | f_oops | f_oversold
+        passes_any = f_liquid & any_signal
+        today_data = df.loc[last_date].copy()
+        actionable = today_data[passes_any].copy()
+        actionable["pass_squeeze"]          = f_squeeze[passes_any]
+        actionable["pass_oops"]             = f_oops[passes_any]
+        actionable["pass_oversold_uptrend"] = f_oversold[passes_any]
+        actionable["pass_liquidity"]        = f_liquid[passes_any]
+    except Exception:
+        actionable = results.get("actionable", pd.DataFrame())
 
     out_rows = []
     if not actionable.empty:
@@ -234,38 +277,40 @@ async def get_job_status(job_id: str):
 
 @router.get("/ohlcv/{ticker}")
 async def get_ticker_ohlcv(ticker: str, days: int = 120):
-    """Return OHLCV candles for a ticker in lightweight-charts format (UNIX timestamp)."""
-    import time as _time
+    """Return OHLCV candles for a ticker in lightweight-charts format.
 
-    con = duckdb.connect(DB_PATH, read_only=True)
+    Sourced from data-service /ohlcv/{ticker} over HTTP — ui-api never opens its
+    own DuckDB connection (the virtioFS concurrent-lock made this 500 for every
+    ticker: "Failed to load OHLCV").
+    """
+    from datetime import date as _date, timedelta as _td
+
+    start = (_date.today() - _td(days=int(days) + 10)).isoformat()
     try:
-        rows = con.execute(f"""
-            SELECT date, open, high, low, close, volume
-            FROM ohlcv
-            WHERE ticker = ?
-              AND date >= (SELECT MAX(date)::DATE - INTERVAL '{days} days' FROM ohlcv)
-            ORDER BY date
-        """, [ticker]).fetchall()
-    finally:
-        con.close()
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+            r = await client.get(f"{DATA_SVC}/ohlcv/{ticker}", params={"start": start})
+        if r.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"No OHLCV data for {ticker}")
+        r.raise_for_status()
+        rows = r.json().get("data", [])
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
 
     if not rows:
         raise HTTPException(status_code=404, detail=f"No OHLCV data for {ticker}")
 
     candles = []
-    for date, open_, high, low, close, volume in rows:
-        # lightweight-charts requires UNIX timestamp (seconds) or 'YYYY-MM-DD' string
-        if hasattr(date, "strftime"):
-            ts = date.strftime("%Y-%m-%d")
-        else:
-            ts = str(date)[:10]
-        candles.append({
-            "time":   ts,
-            "open":   round(float(open_),  2),
-            "high":   round(float(high),   2),
-            "low":    round(float(low),    2),
-            "close":  round(float(close),  2),
-            "volume": int(volume) if volume is not None else 0,
-        })
+    for row in rows:
+        try:
+            candles.append({
+                "time":   str(row.get("date"))[:10],   # lightweight-charts wants YYYY-MM-DD
+                "open":   round(float(row["open"]),  2),
+                "high":   round(float(row["high"]),  2),
+                "low":    round(float(row["low"]),   2),
+                "close":  round(float(row["close"]), 2),
+                "volume": int(row["volume"]) if row.get("volume") is not None else 0,
+            })
+        except (KeyError, TypeError, ValueError):
+            continue
 
     return {"ticker": ticker, "days": days, "candles": candles}
