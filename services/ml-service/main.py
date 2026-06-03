@@ -548,6 +548,116 @@ async def predict(req: PredictRequest) -> dict:
     }
 
 
+# ── Batch Inference (called by master_controller every 15 min) ─────────────────
+
+class BatchPredictRequest(BaseModel):
+    tickers: list[str] | None = None  # None = full universe from DuckDB
+
+
+class BatchPredictResponse(BaseModel):
+    signals: list[dict]
+    ticker_count: int
+    signal_count: int
+    model_type: str
+    timestamp_ist: str
+
+
+@app.post("/batch-predict", response_model=BatchPredictResponse)
+async def batch_predict(req: BatchPredictRequest) -> BatchPredictResponse:
+    """
+    Run inference on all tickers using the latest feature row per ticker.
+    Called by master_controller every 15 min during market hours.
+
+    Features are fetched from data-service `/db/latest-features` over HTTP —
+    ml-service must NOT open its own DuckDB connection: on Docker Desktop (Mac,
+    virtioFS) a second connection fails with "Conflicting lock is held in PID 0"
+    even read-only, which previously made every intraday inference cycle 503.
+    """
+    import os
+    import time as _t
+    import pytz
+    import httpx
+
+    if _classifier is None:
+        raise HTTPException(status_code=503, detail="Classifier not loaded. Run /train first.")
+
+    IST = pytz.timezone("Asia/Kolkata")
+    settings = get_settings()
+    data_svc = os.getenv("DATA_SERVICE_URL", "http://data-service:8001")
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
+            resp = await client.get(f"{data_svc}/db/latest-features")
+        resp.raise_for_status()
+        df = pd.DataFrame(resp.json().get("data", []))
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"feature fetch from data-service failed: {exc}")
+
+    if req.tickers and "ticker" in df.columns:
+        df = df[df["ticker"].isin(req.tickers)]
+
+    if df.empty:
+        raise HTTPException(status_code=404, detail="No feature data found. Run feature generation first.")
+
+    feature_cols = _classifier._feature_cols
+    df_cols = set(df.columns)
+    present_cols = [c for c in feature_cols if c in df_cols]
+    missing_cols = [c for c in feature_cols if c not in df_cols]
+    signals: list[dict] = []
+    t0 = _t.perf_counter()
+
+    # Schema-drift guard: if the active model was trained on a materially different
+    # feature set than the current ml_features table, fail loudly (with the exact
+    # gap) rather than silently emit nothing — that means the model needs retraining
+    # on the current schema. A small gap (>50% present) is tolerated: the missing
+    # model features are imputed to 0.0 so predict_single's column order is satisfied.
+    if len(present_cols) < len(feature_cols) * 0.5:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Model/feature schema drift: only {len(present_cols)}/{len(feature_cols)} "
+                f"model features present in ml_features. Retrain the active model on the "
+                f"current schema. Missing: {missing_cols[:10]}"
+            ),
+        )
+    if missing_cols:
+        logger.warning("batch_predict feature gap", missing=missing_cols, imputed_zero=len(missing_cols))
+
+    for _, row in df.iterrows():
+        try:
+            # Provide every model feature (missing ones imputed 0.0) so predict_single's
+            # df[feature_cols] selection never KeyErrors on a partial-schema row.
+            feat_dict = {c: float(row.get(c, 0.0) or 0.0) for c in feature_cols}
+            direction, prob_up, confidence = _classifier.predict_single(feat_dict)
+            if confidence >= settings.min_signal_confidence:
+                signals.append({
+                    "ticker": str(row["ticker"]),
+                    "direction": direction,
+                    "prob_up": round(float(prob_up), 4),
+                    "confidence": round(float(confidence), 4),
+                    "is_high_confidence": True,
+                    "date": str(row.get("date", "")),
+                })
+        except Exception:
+            continue  # single bad row must not abort the full batch
+
+    elapsed_ms = (_t.perf_counter() - t0) * 1000
+    logger.info(
+        "batch_predict complete",
+        tickers_scanned=len(df),
+        signals_emitted=len(signals),
+        elapsed_ms=round(elapsed_ms, 1),
+    )
+
+    return BatchPredictResponse(
+        signals=signals,
+        ticker_count=len(df),
+        signal_count=len(signals),
+        model_type=_model_registry.get(_active_model_id or "", {}).get("model_type", "xgboost"),
+        timestamp_ist=datetime.now(IST).isoformat(),
+    )
+
+
 # ── Classification Analysis (active model) ────────────────────────────────────
 
 def _active_entry() -> dict:
