@@ -19,8 +19,10 @@ export interface BacktestParams {
   stop_loss_pct: number | null
   trailing_stop_pct: number | null
   max_positions: number
+  max_drawdown_halt_pct?: number | null
   scope: 'universe' | 'watchlist'
   tickers?: string[]
+  entry_timing?: 'next_open' | 'close'
   // WFO-only
   in_sample_days?: number
   out_sample_days?: number
@@ -49,6 +51,7 @@ export interface Trade {
   capital_allocated: number
   pnl: number
   is_win: boolean
+  sector?: string
 }
 
 export interface WfoWindow {
@@ -67,7 +70,9 @@ export interface BacktestResult {
     from_date?: string; to_date?: string; forward_days?: number; win_threshold?: number
     starting_capital: number; friction_bps?: number
     stop_loss_pct?: number | null; trailing_stop_pct?: number | null
-    max_positions?: number; scope: string; n_tickers: number; benchmark_label: string
+    max_positions?: number; max_drawdown_halt_pct?: number | null
+    scope: string; entry_timing?: string; n_tickers: number; benchmark_label: string
+    fundamentals_as_of?: string | null
   }
   fundamental_lookahead_active: boolean
   starting_capital: number

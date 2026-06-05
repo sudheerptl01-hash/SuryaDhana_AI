@@ -42,10 +42,10 @@ function kpiRows(r: BacktestResult): (string | number)[][] {
 }
 
 function tradeRows(r: BacktestResult): (string | number)[][] {
-  const header = ['Entry', 'Exit', 'Ticker', 'Entry Px', 'Exit Px', 'Gross %', 'Net %',
+  const header = ['Entry', 'Exit', 'Ticker', 'Sector', 'Entry Px', 'Exit Px', 'Gross %', 'Net %',
     'Hold (d)', 'Exit Reason', 'Capital', 'PnL', 'Win']
   const rows = r.trades.map(t => [
-    t.entry_date, t.exit_date, t.ticker, t.entry_price, t.exit_price,
+    t.entry_date, t.exit_date, t.ticker, t.sector || 'Unknown', t.entry_price, t.exit_price,
     t.gross_return_pct, t.return_pct, t.holding_days, t.exit_reason,
     t.capital_allocated, t.pnl, t.is_win ? 'WIN' : 'LOSS',
   ])

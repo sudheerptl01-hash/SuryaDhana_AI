@@ -232,6 +232,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                   className="px-2 py-1 rounded text-[11px] font-semibold bg-slate-700/40 text-slate-300 hover:bg-slate-600/50">{p.label}</button>
               ))}
             </div>
+            <p className="text-[10px] text-slate-500 leading-snug">⤺ A 250-day+ trailing warm-up is loaded <span className="text-slate-400">before</span> your From date, so MA/RSI/ATR/52-week indicators are fully seeded on day one — no cold-start bias.</p>
           </div>
 
           {/* Capital & risk */}
@@ -245,10 +246,10 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
             </label>
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-[11px] text-slate-400">Friction (bps)
-                <input type="number" value={frictionBps} step={1} min={0}
-                  onChange={e => setFrictionBps(Math.max(0, Number(e.target.value)))}
+                <input type="number" value={frictionBps} step={1} min={15}
+                  onChange={e => setFrictionBps(Math.max(15, Number(e.target.value)))}
                   className="mt-1 w-full px-2 py-1.5 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono focus:border-amber-500 outline-none" />
-                <span className="text-[10px] text-slate-500">{(frictionBps / 100).toFixed(2)}% round-trip</span>
+                <span className="text-[10px] text-slate-500">{(frictionBps / 100).toFixed(2)}% round-trip · min 15 bps</span>
               </label>
               <label className="block text-[11px] text-slate-400">Max Positions
                 <input type="number" value={maxPositions} step={1} min={1} max={50}
@@ -388,10 +389,11 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
             onApplyThreshold={applyThreshold}
           />
 
-          {/* Bias banner */}
+          {/* Bias banner — Pillar 1: fundamental point-in-time alert */}
           {fundamentalActive && (
             <div className="rounded-lg border border-amber-600/50 bg-amber-500/10 px-4 py-2.5 text-[12px] text-amber-200 font-medium">
-              ⚠️ WARNING: Fundamental look-ahead bias active — using point-in-time snapshot data (P/E, ROCE, Mkt-Cap, Div-Yield apply current values to historical dates). Technical filters are trailing and bias-free.
+              [⚠️ WARNING] Fundamental look-ahead bias active: using current point-in-time snapshot metrics over historical dates.
+              <span className="block mt-0.5 text-[11px] text-amber-300/80 font-normal">P/E, ROCE, Mkt-Cap &amp; Div-Yield apply today&apos;s values to past dates. Technical filters (MA/RSI/ATR/52w) are strictly trailing and bias-free.</span>
             </div>
           )}
 

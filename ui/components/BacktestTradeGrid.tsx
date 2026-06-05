@@ -29,7 +29,7 @@ interface Props {
 export function BacktestTradeGrid({ trades, onTradeClick }: Props) {
   const [sortCol, setSortCol] = useState<SortCol>('exit_date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const [groupBy, setGroupBy] = useState<'none' | 'ticker' | 'exit_reason'>('none')
+  const [groupBy, setGroupBy] = useState<'none' | 'ticker' | 'sector' | 'exit_reason'>('none')
   const [tickerFilter, setTickerFilter] = useState('')
   const [reasonFilter, setReasonFilter] = useState<'all' | string>('all')
   const [winFilter, setWinFilter] = useState<'all' | 'win' | 'loss'>('all')
@@ -59,7 +59,7 @@ export function BacktestTradeGrid({ trades, onTradeClick }: Props) {
     if (groupBy === 'none') return filtered.map(t => ({ type: 'trade' as const, t }))
     const groups = new Map<string, Trade[]>()
     for (const t of filtered) {
-      const key = String(t[groupBy])
+      const key = String((groupBy === 'sector' ? (t.sector || 'Unknown') : t[groupBy]) ?? 'Unknown')
       if (!groups.has(key)) groups.set(key, [])
       groups.get(key)!.push(t)
     }
@@ -110,7 +110,7 @@ export function BacktestTradeGrid({ trades, onTradeClick }: Props) {
         </select>
         <div className="flex items-center gap-1 ml-auto">
           <span className="text-slate-500">group:</span>
-          {(['none', 'ticker', 'exit_reason'] as const).map(g => (
+          {(['none', 'ticker', 'sector', 'exit_reason'] as const).map(g => (
             <button key={g} onClick={() => { setGroupBy(g); setPage(0) }}
               className={clsx('px-2 py-1 rounded', groupBy === g ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400 border border-slate-700')}>
               {g === 'none' ? 'off' : g === 'exit_reason' ? 'reason' : g}
@@ -163,7 +163,7 @@ export function BacktestTradeGrid({ trades, onTradeClick }: Props) {
                   className="border-b border-slate-800/60 hover:bg-amber-500/10 cursor-pointer">
                   <td className="px-2 py-1 text-slate-400">{t.entry_date}</td>
                   <td className="px-2 py-1 text-slate-400">{t.exit_date}</td>
-                  <td className="px-2 py-1 font-bold text-slate-100">{t.ticker}</td>
+                  <td className="px-2 py-1"><span className="font-bold text-slate-100">{t.ticker}</span>{t.sector && t.sector !== 'Unknown' && <span className="ml-1.5 text-[9px] text-slate-500 uppercase tracking-wide">{t.sector}</span>}</td>
                   <td className="px-2 py-1 text-right tabular-nums text-slate-300">{num(t.capital_allocated, 0)}</td>
                   <td className={clsx('px-2 py-1 text-right tabular-nums', t.gross_return_pct >= 0 ? 'text-emerald-400/80' : 'text-rose-400/80')}>{t.gross_return_pct >= 0 ? '+' : ''}{num(t.gross_return_pct)}</td>
                   <td className={clsx('px-2 py-1 text-right tabular-nums font-bold', t.return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400')}>{t.return_pct >= 0 ? '+' : ''}{num(t.return_pct)}</td>

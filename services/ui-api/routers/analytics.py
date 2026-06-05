@@ -83,6 +83,41 @@ def _acquire_readonly(progress) -> tuple[duckdb.DuckDBPyConnection, bool]:
     raise HTTPException(status_code=503, detail=f"Market database busy; snapshot unavailable: {last}")
 BENCHMARK_LABEL = "Nifty-50 proxy (top-100 mkt-cap, equal-weight)"
 
+# Mandatory friction floor — CLAUDE.md: never account for < 0.15% round-trip cost.
+# Enforced server-side so a tampered/legacy client payload can't model a fee-free
+# fantasy. 15 bps = 0.15%.
+MIN_FRICTION_BPS = 15.0
+
+# Ticker → sector map for trade-level sector tagging (the blotter's sector grouping).
+# stock_metrics carries no sector column, so it is resolved from the locked universe
+# CSV (data/NSE_1500.csv). Loaded once and cached for the process lifetime.
+_SECTOR_MAP: Optional[dict[str, str]] = None
+
+
+def _sector_map() -> dict[str, str]:
+    global _SECTOR_MAP
+    if _SECTOR_MAP is not None:
+        return _SECTOR_MAP
+    candidates = [
+        os.getenv("STOCK_UNIVERSE_PATH", ""),
+        "/app/data/NSE_1500.csv",
+        os.path.join(os.path.dirname(getattr(db, "DB_PATH", "")), "NSE_1500.csv") if getattr(db, "DB_PATH", "") else "",
+    ]
+    mapping: dict[str, str] = {}
+    for path in candidates:
+        if not path or not os.path.exists(path):
+            continue
+        try:
+            udf = pd.read_csv(path, usecols=["ticker", "sector"])
+            for t, s in zip(udf["ticker"], udf["sector"]):
+                if isinstance(t, str):
+                    mapping[t.upper()] = s.strip() if isinstance(s, str) and s.strip() else "Unknown"
+            break
+        except Exception:
+            continue
+    _SECTOR_MAP = mapping
+    return mapping
+
 
 class FilterCondition(BaseModel):
     field: str
@@ -261,6 +296,9 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
     if req.scope == "watchlist" and not scope_tickers:
         raise HTTPException(status_code=400, detail="Watchlist scope selected but no tickers provided")
 
+    # Compliance floor: clamp friction to >= 15 bps (0.15%) regardless of payload.
+    friction = max(float(req.friction_bps), MIN_FRICTION_BPS)
+
     progress(5, "Connecting to market database")
     con, owns = _acquire_readonly(progress)
     try:
@@ -346,7 +384,7 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
                 continue
             ex = be.resolve_trade_exit(
                 fwd_hi, fwd_lo, fwd_cl, entry_price, req.forward_days,
-                friction_bps=req.friction_bps, stop_loss_pct=req.stop_loss_pct,
+                friction_bps=friction, stop_loss_pct=req.stop_loss_pct,
                 trailing_stop_pct=req.trailing_stop_pct, win_threshold=req.win_threshold,
                 opens=fwd_op,
             )
@@ -383,6 +421,11 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
         max_drawdown_halt_pct=req.max_drawdown_halt_pct,
     )
 
+    # Tag every trade with its sector (for the blotter's sector grouping / export).
+    sec = _sector_map()
+    for t in trades:
+        t["sector"] = sec.get(str(t.get("ticker", "")).upper(), "Unknown")
+
     # Benchmark NAV aligned to equity dates + drawdown profile
     progress(88, "Aligning benchmark & computing analytics")
     equity_dates = [e["date"] for e in equity]
@@ -401,7 +444,7 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
         "config": {
             "from_date": req.from_date, "to_date": req.to_date,
             "forward_days": req.forward_days, "win_threshold": req.win_threshold,
-            "starting_capital": req.starting_capital, "friction_bps": req.friction_bps,
+            "starting_capital": req.starting_capital, "friction_bps": friction,
             "stop_loss_pct": req.stop_loss_pct, "trailing_stop_pct": req.trailing_stop_pct,
             "max_positions": req.max_positions, "max_drawdown_halt_pct": req.max_drawdown_halt_pct,
             "scope": req.scope, "entry_timing": req.entry_timing,
@@ -668,6 +711,7 @@ def _core_factor_profile(req: FactorProfileRequest) -> dict:
         raise HTTPException(status_code=400, detail="Dates must be YYYY-MM-DD")
     from_ts, to_ts = pd.Timestamp(from_dt), pd.Timestamp(to_dt)
     n_deciles = max(2, min(int(req.n_deciles), 20))
+    friction = max(float(req.friction_bps), MIN_FRICTION_BPS)   # same compliance floor as backtest
 
     scope_tickers = [t.upper() for t in req.tickers] if req.scope == "watchlist" else None
     if req.scope == "watchlist" and not scope_tickers:
@@ -688,7 +732,7 @@ def _core_factor_profile(req: FactorProfileRequest) -> dict:
 
     as_of = (df["date"] >= from_ts) & (df["date"] <= to_ts)
     prof = fde.profile_factor(
-        df, col, req.forward_days, req.win_threshold, req.friction_bps,
+        df, col, req.forward_days, req.win_threshold, friction,
         n_deciles=n_deciles, as_of_mask=as_of,
     )
     n_tickers = int(df.loc[as_of, "ticker"].nunique())
@@ -704,7 +748,7 @@ def _core_factor_profile(req: FactorProfileRequest) -> dict:
         "lookahead_bias_present": req.factor in be.FUNDAMENTAL_FIELDS,
         "forward_days": req.forward_days,
         "win_threshold": req.win_threshold,
-        "friction_bps": req.friction_bps,
+        "friction_bps": friction,
         "config": {"scope": req.scope, "n_tickers": n_tickers,
                    "from_date": req.from_date, "to_date": req.to_date},
         **prof,
