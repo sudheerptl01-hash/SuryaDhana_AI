@@ -214,12 +214,15 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
             <div className="rounded-lg border border-slate-700/40 bg-slate-950/50 p-3">
               <div className="flex items-center justify-between mb-1 px-1">
                 <span className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Event Rate % (bars)</span>
-                <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Sample Size (line)</span>
+                <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Sample Size (volume bars)</span>
               </div>
               <ResponsiveContainer width="100%" height={300}>
                 <ComposedChart data={chartData} margin={{ top: 12, right: 12, bottom: 18, left: 4 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis dataKey="name" tick={<CustomTick />} height={40} interval={0} stroke="#334155" />
+                  {/* Hidden twin axis so the volume bars claim the full band width and
+                      sit *behind* the (narrower) event-rate bars instead of grouping beside them. */}
+                  <XAxis dataKey="name" xAxisId="vol" hide />
                   <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }}
                     stroke="#334155" label={{ value: 'Event %', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#64748b' }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }}
@@ -227,14 +230,20 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
                   <ReferenceLine yAxisId="left" y={base} stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.5}
                     label={{ value: `BASE ${fNum(base)}%`, position: 'right', fontSize: 9, fill: '#f59e0b', fontFamily: 'monospace' }} />
-                  <Bar yAxisId="left" dataKey="event_rate" radius={[3, 3, 0, 0]} cursor="pointer"
+                  {/* Volume of records per decile — light full-width backdrop bars (right axis),
+                      drawn first so the colored event-rate bars overlay on top. */}
+                  <Bar yAxisId="right" xAxisId="vol" dataKey="samples" fill="#64748b" fillOpacity={0.16}
+                    radius={[2, 2, 0, 0]} isAnimationActive={false} cursor="pointer"
+                    onClick={(d: any) => { const raw = d?.raw ?? d?.payload?.raw; if (raw) applyDecile(raw) }} />
+                  <Bar yAxisId="left" dataKey="event_rate" barSize={26} radius={[3, 3, 0, 0]} cursor="pointer"
                     onClick={(d: any) => { const raw = d?.raw ?? d?.payload?.raw; if (raw) applyDecile(raw) }}>
                     {chartData.map((d, i) => (
                       <Cell key={i} fill={d.lift >= 0 ? '#10b981' : '#64748b'} fillOpacity={d.lift >= 0 ? 0.9 : 0.55} />
                     ))}
                   </Bar>
-                  <Line yAxisId="right" type="monotone" dataKey="samples" stroke="#818cf8" strokeWidth={2}
-                    dot={{ r: 3, fill: '#818cf8' }} activeDot={{ r: 5 }} />
+                  {/* Crisp crest line tracing the volume histogram. */}
+                  <Line yAxisId="right" xAxisId="vol" type="monotone" dataKey="samples" stroke="#818cf8" strokeWidth={1.5}
+                    dot={{ r: 2.5, fill: '#818cf8' }} activeDot={{ r: 5 }} isAnimationActive={false} />
                 </ComposedChart>
               </ResponsiveContainer>
               <p className="text-[10px] text-slate-500 mt-1 px-1 font-mono">
