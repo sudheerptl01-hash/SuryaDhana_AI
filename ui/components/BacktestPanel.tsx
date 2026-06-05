@@ -8,6 +8,7 @@ import {
 import { StockDetailModal } from './StockDetailModal'
 import { EquityCockpitChart } from './EquityCockpitChart'
 import { BacktestTradeGrid } from './BacktestTradeGrid'
+import { FactorDiagnosticStudio } from './FactorDiagnosticStudio'
 import { streamBacktest, type BacktestParams, type BacktestResult, type Trade } from '@/lib/backtest'
 import { exportBacktestCSV, exportBacktestExcel } from '@/lib/backtestExport'
 
@@ -94,6 +95,9 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
   const [trailEnabled, setTrailEnabled] = useState(false)
   const [trailingPct, setTrailingPct] = useState(5)
   const [maxPositions, setMaxPositions] = useState(5)
+  const [entryTiming, setEntryTiming] = useState<'next_open' | 'close'>('next_open')
+  const [ddHaltEnabled, setDdHaltEnabled] = useState(false)
+  const [ddHaltPct, setDdHaltPct] = useState(20)
 
   // Scope (Pillar 2)
   const [scope, setScope] = useState<'universe' | 'watchlist'>('universe')
@@ -126,6 +130,13 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
   const updateFilter = (id: string, patch: Partial<FilterCond>) =>
     setFilters(filters.map(f => (f.field === id ? { ...f, ...patch } : f)))
 
+  // Factor Diagnostic Studio → upsert a data-derived threshold into Tier-1 filters.
+  const applyThreshold = (field: string, op: 'gte' | 'lte', value: number) =>
+    setFilters(prev =>
+      prev.some(f => f.field === field)
+        ? prev.map(f => (f.field === field ? { ...f, op, value } : f))
+        : [...prev, { field, op, value }])
+
   const setPreset = (days: number) => { setFromDate(ago(days)); setToDate(today) }
 
   const run = async () => {
@@ -140,7 +151,8 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
       filters, starting_capital: startingCapital, friction_bps: frictionBps,
       stop_loss_pct: slEnabled ? stopLossPct : null,
       trailing_stop_pct: trailEnabled ? trailingPct : null,
-      max_positions: maxPositions, scope, tickers: scope === 'watchlist' ? watchlist : [],
+      max_positions: maxPositions, max_drawdown_halt_pct: ddHaltEnabled ? ddHaltPct : null,
+      scope, tickers: scope === 'watchlist' ? watchlist : [], entry_timing: entryTiming,
       ...(wfoMode ? { in_sample_days: inSampleDays, out_sample_days: outSampleDays, monte_carlo_runs: monteCarloRuns } : {}),
     }
 
@@ -262,6 +274,29 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                 className="w-16 px-2 py-1 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono disabled:opacity-40 outline-none" />
               <span className="text-[10px] text-slate-500">%</span>
             </div>
+            {/* Max-drawdown circuit breaker */}
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="ddh" checked={ddHaltEnabled} onChange={e => setDdHaltEnabled(e.target.checked)} className="accent-amber-500" />
+              <label htmlFor="ddh" className="text-[11px] text-slate-300 flex-1" title="Halt new entries once portfolio drawdown breaches this level">DD Circuit Breaker</label>
+              <input type="number" value={ddHaltPct} step={1} min={1} disabled={!ddHaltEnabled}
+                onChange={e => setDdHaltPct(Number(e.target.value))}
+                className="w-16 px-2 py-1 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono disabled:opacity-40 outline-none" />
+              <span className="text-[10px] text-slate-500">%</span>
+            </div>
+            {/* Entry timing — removes same-bar look-ahead */}
+            <div>
+              <label className="block text-[11px] text-slate-400 mb-1">Entry Timing</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['next_open', 'close'] as const).map(et => (
+                  <button key={et} onClick={() => setEntryTiming(et)}
+                    className={clsx('px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors',
+                      entryTiming === et ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:border-slate-600')}>
+                    {et === 'next_open' ? 'Next Open' : 'Same Close'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">{entryTiming === 'next_open' ? 'Enters next bar — no same-bar look-ahead' : 'Enters on the signal-bar close'}</p>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-[11px] text-slate-400">Time-Stop (days)
                 <input type="number" value={forwardDays} step={1} min={1} max={30}
@@ -344,6 +379,15 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
 
         {/* ── Results ───────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-4">
+          {/* Factor Diagnostic Studio — pre-trade threshold discovery (decile IC) */}
+          <FactorDiagnosticStudio
+            config={{
+              fromDate, toDate, forwardDays, winThreshold, frictionBps,
+              scope, watchlist,
+            }}
+            onApplyThreshold={applyThreshold}
+          />
+
           {/* Bias banner */}
           {fundamentalActive && (
             <div className="rounded-lg border border-amber-600/50 bg-amber-500/10 px-4 py-2.5 text-[12px] text-amber-200 font-medium">
@@ -382,7 +426,10 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
               <div className="rounded-xl border border-slate-700/40 bg-slate-900/30 p-3 space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <p className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Returns</p>
-                  <p className="text-[10px] text-slate-500 font-mono">{results.config.scope} · {results.config.n_tickers} tickers · vs {results.config.benchmark_label}</p>
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    {results.config.scope} · {results.config.n_tickers} tickers · {results.config.entry_timing === 'close' ? 'close-entry' : 'next-open'} · vs {results.config.benchmark_label}
+                    {results.config.fundamentals_as_of ? ` · fundamentals @ ${results.config.fundamentals_as_of}` : ''}
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
                   <Kpi label="Total Return" value={fPct(results.total_return_pct)} tone={results.total_return_pct >= 0 ? 'emerald' : 'rose'} sub={`bmk ${fPct(results.benchmark_total_return_pct)}`} />

@@ -8,6 +8,7 @@ the synchronous endpoints, and an NDJSON streaming endpoint for live progress.
 
 MODE = PAPER at all times — nothing here places an order.
 """
+import asyncio
 import json
 import os
 import queue
@@ -18,6 +19,7 @@ from datetime import datetime, timedelta
 from typing import Callable, Optional
 
 import duckdb
+import httpx
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
@@ -25,12 +27,15 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 import backtest_engine as be
+import factor_decile_engine as fde
 import db
 from db import get_conn
 
 router = APIRouter()
 
 MODE = "PAPER"
+
+DATA_SVC = os.getenv("DATA_SERVICE_URL", "http://data-service:8001")
 
 # Analytics reads off an isolated snapshot when data-service holds the live
 # write-lock (DuckDB is single-writer; on Docker Desktop/virtioFS a cross-process
@@ -122,9 +127,12 @@ class BacktestRequest(BaseModel):
     stop_loss_pct: Optional[float] = None
     trailing_stop_pct: Optional[float] = None
     max_positions: int = 5
+    max_drawdown_halt_pct: Optional[float] = None   # circuit breaker: halt new entries past this DD
     # Pillar 2 — scoping
     scope: str = "universe"              # "universe" | "watchlist"
     tickers: list[str] = []
+    # Fidelity
+    entry_timing: str = "next_open"      # "next_open" (no same-bar look-ahead) | "close"
 
 
 class WFOBacktestRequest(BacktestRequest):
@@ -140,17 +148,18 @@ def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Option
     lookback_dt = from_dt - timedelta(days=400)
     lookahead_dt = to_dt + timedelta(days=forward_days * 3 + 25)
 
+    cols = "ticker, date, open, high, low, close, volume, adjusted_close"
     if scope_tickers:
         placeholders = ",".join(["?"] * len(scope_tickers))
         rows = con.execute(
-            f"""SELECT ticker, date, close, volume, high, low FROM ohlcv
+            f"""SELECT {cols} FROM ohlcv
                 WHERE date BETWEEN ? AND ? AND ticker IN ({placeholders})
                 ORDER BY ticker, date""",
             [lookback_dt, lookahead_dt, *[t.upper() for t in scope_tickers]],
         ).fetchall()
     else:
         rows = con.execute(
-            """SELECT ticker, date, close, volume, high, low FROM ohlcv
+            f"""SELECT {cols} FROM ohlcv
                WHERE date BETWEEN ? AND ? ORDER BY ticker, date""",
             [lookback_dt, lookahead_dt],
         ).fetchall()
@@ -158,8 +167,17 @@ def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Option
     if not rows:
         return None
 
-    df = pd.DataFrame(rows, columns=["ticker", "date", "close", "volume", "high", "low"])
+    df = pd.DataFrame(rows, columns=["ticker", "date", "open", "high", "low", "close", "volume", "adjusted_close"])
     df["date"] = pd.to_datetime(df["date"])
+    # Split/dividend adjustment: scale OHLC onto the adjusted-close basis so returns
+    # and indicators are corporate-action-consistent (no split-day jumps). Falls back
+    # to raw prices when adjusted_close is missing.
+    for c in ("open", "high", "low", "close", "adjusted_close"):
+        df[c] = pd.to_numeric(df[c], errors="coerce")
+    adj = (df["adjusted_close"] / df["close"]).where((df["close"] > 0) & df["adjusted_close"].notna(), 1.0)
+    for c in ("open", "high", "low", "close"):
+        df[c] = df[c] * adj
+    df = df.drop(columns=["adjusted_close"])
     df = be.compute_indicators(df)
 
     metrics_rows = con.execute(
@@ -175,29 +193,52 @@ def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Option
     return df
 
 
-def _build_benchmark(con, from_ts, to_ts) -> dict[str, float]:
-    """Equal-weight daily returns of the top-100 stocks by market cap (Nifty proxy)."""
+def _build_benchmark(con, from_ts, to_ts) -> tuple[dict[str, float], str]:
+    """
+    Daily benchmark returns. Prefers a real NIFTY series if it has been ingested
+    into `ohlcv`; otherwise falls back to an equal-weight top-100-by-mkt-cap proxy.
+    Returns (returns_by_date, source_label) so beta/alpha auto-upgrade when the
+    actual index lands.
+    """
+    start, end = from_ts.date() - timedelta(days=7), to_ts.date()
+
+    # 1) Real index, if present
+    nifty_syms = ["NIFTY", "NIFTY50", "NSEI"]
+    ph = ",".join(["?"] * len(nifty_syms))
+    nrows = con.execute(
+        f"SELECT date, close FROM ohlcv WHERE ticker IN ({ph}) AND date BETWEEN ? AND ? ORDER BY date",
+        [*nifty_syms, start, end],
+    ).fetchall()
+    if len(nrows) > 5:
+        ndf = pd.DataFrame(nrows, columns=["date", "close"]).sort_values("date")
+        ndf["date"] = pd.to_datetime(ndf["date"])
+        ndf["ret"] = ndf["close"].pct_change()
+        daily = ndf.set_index("date")["ret"]
+        return ({str(d.date()): (float(r) if pd.notna(r) else 0.0) for d, r in daily.items()},
+                "NIFTY 50 (actual index)")
+
+    # 2) Equal-weight top-100 proxy
     top = con.execute(
         "SELECT ticker FROM stock_metrics WHERE mktcap_cr IS NOT NULL ORDER BY mktcap_cr DESC LIMIT 100"
     ).fetchall()
     tickers = [r[0] for r in top]
     if not tickers:
-        return {}
+        return {}, "none"
     placeholders = ",".join(["?"] * len(tickers))
     rows = con.execute(
         f"""SELECT date, ticker, close FROM ohlcv
-            WHERE ticker IN ({placeholders}) AND date BETWEEN ? AND ?
-            ORDER BY date""",
-        [*tickers, from_ts.date() - timedelta(days=7), to_ts.date()],
+            WHERE ticker IN ({placeholders}) AND date BETWEEN ? AND ? ORDER BY date""",
+        [*tickers, start, end],
     ).fetchall()
     if not rows:
-        return {}
+        return {}, "none"
     bdf = pd.DataFrame(rows, columns=["date", "ticker", "close"])
     bdf["date"] = pd.to_datetime(bdf["date"])
     bdf = bdf.sort_values(["ticker", "date"])
     bdf["ret"] = bdf.groupby("ticker")["close"].pct_change()
     daily = bdf.groupby("date")["ret"].mean()
-    return {str(d.date()): (float(r) if pd.notna(r) else 0.0) for d, r in daily.items()}
+    return ({str(d.date()): (float(r) if pd.notna(r) else 0.0) for d, r in daily.items()},
+            BENCHMARK_LABEL)
 
 
 # ── Core simulation (shared by sync + streaming + WFO) ────────────────────────────
@@ -228,7 +269,11 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
         if df is None or df.empty:
             return _empty_result(req)
         progress(28, "Computing trailing indicators")
-        bench_daily = _build_benchmark(con, from_ts, to_ts)
+        bench_daily, bench_source = _build_benchmark(con, from_ts, to_ts)
+        try:
+            fund_as_of = con.execute("SELECT MAX(as_of_date) FROM stock_metrics").fetchone()[0]
+        except Exception:
+            fund_as_of = None
     finally:
         if owns:
             try:
@@ -246,6 +291,7 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
         gidx = np.array([date_to_gidx[d] for d in sub["date"].values])
         tkr_series[tkr] = {
             "gidx": gidx,
+            "open": sub["open"].values.astype(float),
             "close": sub["close"].values.astype(float),
             "high": sub["high"].values.astype(float),
             "low": sub["low"].values.astype(float),
@@ -278,31 +324,37 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
             candidates = candidates.sort_values("mktcap_cr", ascending=False, na_position="last")
         candidates = candidates.head(req.max_stocks_per_day)
 
-        ei = date_to_gidx[entry_date]
-        resolved: list[dict] = []
+        next_open = (req.entry_timing == "next_open")
+        sig = date_to_gidx[entry_date]   # the day the signal fires (filters evaluated here)
         for _, row in candidates.iterrows():
             tkr = row["ticker"]
             s = tkr_series.get(tkr)
             if not s:
                 continue
-            lp = s["gidx_to_lp"].get(int(ei))
-            if lp is None or lp + 1 >= len(s["close"]):
+            lp_sig = s["gidx_to_lp"].get(int(sig))
+            if lp_sig is None:
                 continue
-            fwd = slice(lp + 1, lp + 1 + req.forward_days)
-            fwd_hi, fwd_lo, fwd_cl = s["high"][fwd], s["low"][fwd], s["close"][fwd]
+            # next_open enters the bar AFTER the signal (no same-bar look-ahead);
+            # "close" enters on the signal bar's close.
+            entry_lp = lp_sig + 1 if next_open else lp_sig
+            if entry_lp + 1 >= len(s["close"]):   # need the entry bar + ≥1 forward bar
+                continue
+            entry_price = float(s["open"][entry_lp]) if next_open else float(s["close"][entry_lp])
+            fwd = slice(entry_lp + 1, entry_lp + 1 + req.forward_days)
+            fwd_hi, fwd_lo, fwd_cl, fwd_op = s["high"][fwd], s["low"][fwd], s["close"][fwd], s["open"][fwd]
             if len(fwd_cl) == 0:
                 continue
-            entry_price = float(s["close"][lp])
             ex = be.resolve_trade_exit(
                 fwd_hi, fwd_lo, fwd_cl, entry_price, req.forward_days,
                 friction_bps=req.friction_bps, stop_loss_pct=req.stop_loss_pct,
                 trailing_stop_pct=req.trailing_stop_pct, win_threshold=req.win_threshold,
+                opens=fwd_op,
             )
-            exit_lp = lp + ex["holding_days"]
-            exit_gidx = int(s["gidx"][exit_lp])
-            resolved.append({
+            entry_gidx = int(s["gidx"][entry_lp])
+            exit_gidx = int(s["gidx"][entry_lp + ex["holding_days"]])
+            entries_by_idx.setdefault(entry_gidx, []).append({
                 "ticker": tkr,
-                "entry_price": entry_price,
+                "entry_price": round(entry_price, 4),
                 "exit_price": ex["exit_price"],
                 "exit_idx": exit_gidx,
                 "net_return_pct": ex["net_return_pct"],
@@ -310,11 +362,9 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
                 "holding_days": ex["holding_days"],
                 "exit_reason": ex["exit_reason"],
                 "win_threshold": req.win_threshold,
-                "entry_date": str(entry_date)[:10],
+                "entry_date": str(all_dates[entry_gidx])[:10],
                 "exit_date": str(all_dates[exit_gidx])[:10],
             })
-        if resolved:
-            entries_by_idx[ei] = resolved
 
         yr = pd.Timestamp(entry_date).year
         if yr != last_year:
@@ -330,6 +380,7 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
     equity, trades = be.simulate_portfolio(
         all_dates, from_idx, to_idx, entries_by_idx, price_at,
         starting_capital=req.starting_capital, max_positions=req.max_positions,
+        max_drawdown_halt_pct=req.max_drawdown_halt_pct,
     )
 
     # Benchmark NAV aligned to equity dates + drawdown profile
@@ -352,9 +403,11 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
             "forward_days": req.forward_days, "win_threshold": req.win_threshold,
             "starting_capital": req.starting_capital, "friction_bps": req.friction_bps,
             "stop_loss_pct": req.stop_loss_pct, "trailing_stop_pct": req.trailing_stop_pct,
-            "max_positions": req.max_positions, "scope": req.scope,
+            "max_positions": req.max_positions, "max_drawdown_halt_pct": req.max_drawdown_halt_pct,
+            "scope": req.scope, "entry_timing": req.entry_timing,
             "n_tickers": int(df["ticker"].nunique()),
-            "benchmark_label": BENCHMARK_LABEL,
+            "benchmark_label": bench_source,
+            "fundamentals_as_of": str(fund_as_of) if fund_as_of else None,
         },
         "fundamental_lookahead_active": fund_active,
         **metrics,
@@ -509,13 +562,160 @@ async def get_signal_coverage():
             "last_signal_time": None, "note": "Signals table empty until ml-service runs"}
 
 
+async def _ml_stats() -> dict:
+    """Live ml_features/ml_labels stats from the data-service (owner of the DB)."""
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.get(f"{DATA_SVC}/db/ml-stats")
+        r.raise_for_status()
+        return r.json()
+
+
 @router.get("/feature-quality")
 async def get_feature_quality():
-    return {"stocks_with_features": 0, "total_feature_rows": 0, "average_features_per_stock": 0,
-            "feature_coverage_pct": 0, "note": "Features table empty until feature-service runs"}
+    try:
+        feat = (await _ml_stats()).get("features", {})
+        rows = int(feat.get("rows", 0) or 0)
+        tickers = int(feat.get("tickers", 0) or 0)
+        universe = tickers
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                ds = await client.get(f"{DATA_SVC}/db/stats")
+                if ds.status_code == 200:
+                    universe = int(ds.json().get("total_stocks", tickers) or tickers)
+        except Exception:
+            pass
+        return {
+            "stocks_with_features": tickers,
+            "total_feature_rows": rows,
+            "average_features_per_stock": round(rows / tickers) if tickers else 0,
+            "feature_coverage_pct": round(tickers / universe * 100, 1) if universe else 0,
+            "latest_date": feat.get("latest_date"),
+        }
+    except Exception as e:
+        return {"stocks_with_features": 0, "total_feature_rows": 0, "average_features_per_stock": 0,
+                "feature_coverage_pct": 0, "note": f"ml-stats unavailable: {e}"}
 
 
 @router.get("/label-distribution")
 async def get_label_distribution():
-    return {"total_labels": 0, "up_labels_pct": 0, "down_labels_pct": 0,
-            "average_return_pct": 0, "note": "Labels table empty until label generation runs"}
+    try:
+        lbl = (await _ml_stats()).get("labels", {})
+        total = int(lbl.get("rows", 0) or 0)
+        up = int(lbl.get("up_labels", 0) or 0)
+        down = int(lbl.get("down_labels", 0) or 0)
+        return {
+            "total_labels": total,
+            "up_labels_pct": round(up / total * 100, 1) if total else 0,
+            "down_labels_pct": round(down / total * 100, 1) if total else 0,
+            "average_return_pct": lbl.get("avg_return_pct", 0),
+            "std_return_pct": lbl.get("std_return_pct", 0),
+            "latest_date": lbl.get("latest_date"),
+        }
+    except Exception as e:
+        return {"total_labels": 0, "up_labels_pct": 0, "down_labels_pct": 0,
+                "average_return_pct": 0, "note": f"ml-stats unavailable: {e}"}
+
+
+# ── Factor Decile Profiler (Pillar 2) ─────────────────────────────────────────────
+# Generalized diagnostic: bucket any numeric factor into deciles and map each
+# bucket against the forward win/loss base rate, so thresholds are chosen from the
+# data instead of guessed. Reuses the *exact* backtest load + indicator path so a
+# decile boundary here equals a filter threshold in the simulation.
+
+class FactorProfileRequest(BaseModel):
+    factor: str                          # numeric field key (must be in backtest_engine.FIELD_MAP)
+    from_date: str
+    to_date: str
+    forward_days: int = 5                # forward holding horizon N (trading bars)
+    win_threshold: float = 0.0           # net % a forward return must clear to be a "win"
+    friction_bps: float = 15.0           # round-trip cost, basis points (matches backtest)
+    scope: str = "universe"              # "universe" | "watchlist"
+    tickers: list[str] = []
+    n_deciles: int = 10
+
+
+def _empty_factor_profile(req: "FactorProfileRequest", reason: str) -> dict:
+    meta = FILTER_CATALOG.get(req.factor, {})
+    return {
+        "mode": MODE,
+        "factor": req.factor,
+        "factor_label": meta.get("label", req.factor),
+        "unit": meta.get("unit", ""),
+        "category": meta.get("category", ""),
+        "lookahead_bias_present": req.factor in be.FUNDAMENTAL_FIELDS,
+        "forward_days": req.forward_days,
+        "win_threshold": req.win_threshold,
+        "friction_bps": req.friction_bps,
+        "config": {"scope": req.scope, "n_tickers": 0,
+                   "from_date": req.from_date, "to_date": req.to_date},
+        "note": reason,
+        **fde._empty_profile(req.n_deciles),
+    }
+
+
+def _core_factor_profile(req: FactorProfileRequest) -> dict:
+    if req.factor not in be.FIELD_MAP:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown or non-numeric factor '{req.factor}'. "
+                   f"Numeric factors: {sorted(be.FIELD_MAP)}",
+        )
+    col = be.FIELD_MAP[req.factor]
+    try:
+        from_dt = datetime.strptime(req.from_date, "%Y-%m-%d").date()
+        to_dt = datetime.strptime(req.to_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Dates must be YYYY-MM-DD")
+    from_ts, to_ts = pd.Timestamp(from_dt), pd.Timestamp(to_dt)
+    n_deciles = max(2, min(int(req.n_deciles), 20))
+
+    scope_tickers = [t.upper() for t in req.tickers] if req.scope == "watchlist" else None
+    if req.scope == "watchlist" and not scope_tickers:
+        raise HTTPException(status_code=400, detail="Watchlist scope selected but no tickers provided")
+
+    conn, owns = _acquire_readonly(lambda *a, **k: None)
+    try:
+        df = _load_prepared(conn, from_dt, to_dt, req.forward_days, scope_tickers)
+    finally:
+        if owns:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    if df is None or df.empty or col not in df.columns:
+        return _empty_factor_profile(req, "No prepared data in the selected window/scope")
+
+    as_of = (df["date"] >= from_ts) & (df["date"] <= to_ts)
+    prof = fde.profile_factor(
+        df, col, req.forward_days, req.win_threshold, req.friction_bps,
+        n_deciles=n_deciles, as_of_mask=as_of,
+    )
+    n_tickers = int(df.loc[as_of, "ticker"].nunique())
+    meta = FILTER_CATALOG.get(req.factor, {})
+    return {
+        "mode": MODE,
+        "factor": req.factor,
+        "factor_label": meta.get("label", req.factor),
+        "unit": meta.get("unit", ""),
+        "category": meta.get("category", ""),
+        # Structural look-ahead guard (Pillar 2): fundamentals are a current snapshot
+        # applied to historical dates, so any decile study over them is bias-prone.
+        "lookahead_bias_present": req.factor in be.FUNDAMENTAL_FIELDS,
+        "forward_days": req.forward_days,
+        "win_threshold": req.win_threshold,
+        "friction_bps": req.friction_bps,
+        "config": {"scope": req.scope, "n_tickers": n_tickers,
+                   "from_date": req.from_date, "to_date": req.to_date},
+        **prof,
+    }
+
+
+@router.post("/factor-profile")
+async def factor_profile(req: FactorProfileRequest):
+    """
+    Pillar 2 — vectorized decile profile of any numeric factor against the
+    friction-aware forward base rate. Heavy DuckDB + pandas work runs in a worker
+    thread so the event loop keeps serving.
+    """
+    return await asyncio.to_thread(_core_factor_profile, req)
