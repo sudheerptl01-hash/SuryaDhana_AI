@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine,
+  Bar, CartesianGrid, ComposedChart, Line, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { fetchFactorProfile, type FactorProfileResult, type FactorDecile } from '@/lib/factorProfile'
@@ -107,9 +107,11 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
     setTimeout(() => setApplied(null), 4000)
   }
 
+  const dec = (v: number) => (Math.abs(v) >= 1000 ? 0 : 1)
   const chartData = (result?.deciles ?? []).map(d => ({
     name: `D${d.decile}`,
-    range: `${fNum(d.lo, d.lo >= 1000 ? 0 : 1)}–${fNum(d.hi, d.hi >= 1000 ? 0 : 1)}`,
+    // Each decile's realised min → max of the factor (what the threshold means).
+    range: `${fNum(d.obs_lo, dec(d.obs_hi))}–${fNum(d.obs_hi, dec(d.obs_hi))}`,
     event_rate: d.event_rate,
     samples: d.samples,
     lift: d.lift,
@@ -128,6 +130,19 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
     )
   }
 
+  // Event-rate marker: fat green dot where the decile spikes above the average
+  // base rate, small rose dot where it lags — so outperformance reads at a glance.
+  const SpikeDot = (props: any) => {
+    const { cx, cy, payload } = props
+    if (cx == null || cy == null) return <g />
+    const up = (payload?.lift ?? 0) >= 0
+    return (
+      <circle cx={cx} cy={cy} r={up ? 5.5 : 3.5} fill={up ? '#34d399' : '#fb7185'}
+        stroke="#0f172a" strokeWidth={1.25} style={{ cursor: 'pointer' }}
+        onClick={() => payload?.raw && applyDecile(payload.raw)} />
+    )
+  }
+
   const ChartTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null
     const d = payload[0]?.payload?.raw as FactorDecile | undefined
@@ -135,9 +150,10 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
     return (
       <div className="rounded-lg border border-slate-700 bg-slate-900/95 px-3 py-2 text-[11px] font-mono shadow-xl">
         <div className="text-amber-300 font-bold mb-1">Decile {d.decile} · {meta.label}</div>
-        <div className="text-slate-300">Range: <span className="text-slate-100">{fNum(d.lo)} → {fNum(d.hi)} {meta.unit}</span></div>
-        <div className="text-slate-300">Event Rate: <span className={d.lift >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{fNum(d.event_rate)}%</span> <span className="text-slate-500">({d.lift >= 0 ? '+' : ''}{fNum(d.lift)} vs base)</span></div>
-        <div className="text-slate-300">Samples: <span className="text-indigo-300">{fInt(d.samples)}</span> · Wins: {fInt(d.positives)}</div>
+        <div className="text-slate-300">Min → Max: <span className="text-slate-100">{fNum(d.obs_lo)} → {fNum(d.obs_hi)} {meta.unit}</span></div>
+        <div className="text-slate-500">Quantile edge: {fNum(d.lo)} → {fNum(d.hi)}</div>
+        <div className="text-slate-300">Event Rate: <span className={d.lift >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{fNum(d.event_rate)}%</span> <span className="text-slate-500">({d.lift >= 0 ? '+' : ''}{fNum(d.lift)} vs avg {fNum(base)}%)</span></div>
+        <div className="text-slate-300">Volume: <span className="text-indigo-300">{fInt(d.samples)}</span> records · Wins: {fInt(d.positives)}</div>
         <div className="mt-1 text-[10px] text-amber-400/80">click to apply boundary →</div>
       </div>
     )
@@ -213,41 +229,36 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
           {result && chartData.length > 0 && !error && (
             <div className="rounded-lg border border-slate-700/40 bg-slate-950/50 p-3">
               <div className="flex items-center justify-between mb-1 px-1">
-                <span className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">Event Rate % (bars)</span>
-                <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">Sample Size (volume bars)</span>
+                <span className="text-[10px] text-emerald-400 uppercase tracking-widest font-bold">● Event Rate % (line)</span>
+                <span className="text-[10px] text-amber-400 uppercase tracking-widest font-bold">- - AVG {fNum(base)}%</span>
+                <span className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">▮ Volume / records (bars)</span>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <ComposedChart data={chartData} margin={{ top: 12, right: 12, bottom: 18, left: 4 }}>
+                <ComposedChart data={chartData} margin={{ top: 14, right: 14, bottom: 18, left: 4 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                   <XAxis dataKey="name" tick={<CustomTick />} height={40} interval={0} stroke="#334155" />
-                  {/* Hidden twin axis so the volume bars claim the full band width and
-                      sit *behind* the (narrower) event-rate bars instead of grouping beside them. */}
-                  <XAxis dataKey="name" xAxisId="vol" hide />
+                  {/* Left = event-rate scale (auto-zoomed so spikes vs AVG read clearly). */}
                   <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }}
-                    stroke="#334155" label={{ value: 'Event %', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#64748b' }} />
+                    stroke="#334155" domain={['auto', 'auto']} tickFormatter={(v: number) => `${fNum(v, 0)}%`}
+                    label={{ value: 'Event %', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#64748b' }} />
+                  {/* Right = record-volume scale. */}
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }}
-                    stroke="#334155" />
-                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.08)' }} />
-                  <ReferenceLine yAxisId="left" y={base} stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.5}
-                    label={{ value: `BASE ${fNum(base)}%`, position: 'right', fontSize: 9, fill: '#f59e0b', fontFamily: 'monospace' }} />
-                  {/* Volume of records per decile — light full-width backdrop bars (right axis),
-                      drawn first so the colored event-rate bars overlay on top. */}
-                  <Bar yAxisId="right" xAxisId="vol" dataKey="samples" fill="#64748b" fillOpacity={0.16}
-                    radius={[2, 2, 0, 0]} isAnimationActive={false} cursor="pointer"
+                    stroke="#334155" tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)} />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.06)' }} />
+                  {/* Volume bars first → sit behind the event-rate line. */}
+                  <Bar yAxisId="right" dataKey="samples" fill="#6366f1" fillOpacity={0.42}
+                    radius={[3, 3, 0, 0]} maxBarSize={48} cursor="pointer" isAnimationActive={false}
                     onClick={(d: any) => { const raw = d?.raw ?? d?.payload?.raw; if (raw) applyDecile(raw) }} />
-                  <Bar yAxisId="left" dataKey="event_rate" barSize={26} radius={[3, 3, 0, 0]} cursor="pointer"
-                    onClick={(d: any) => { const raw = d?.raw ?? d?.payload?.raw; if (raw) applyDecile(raw) }}>
-                    {chartData.map((d, i) => (
-                      <Cell key={i} fill={d.lift >= 0 ? '#10b981' : '#64748b'} fillOpacity={d.lift >= 0 ? 0.9 : 0.55} />
-                    ))}
-                  </Bar>
-                  {/* Crisp crest line tracing the volume histogram. */}
-                  <Line yAxisId="right" xAxisId="vol" type="monotone" dataKey="samples" stroke="#818cf8" strokeWidth={1.5}
-                    dot={{ r: 2.5, fill: '#818cf8' }} activeDot={{ r: 5 }} isAnimationActive={false} />
+                  {/* Average (global base rate) horizontal line — the spike baseline. */}
+                  <ReferenceLine yAxisId="left" y={base} stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.6}
+                    label={{ value: `AVG ${fNum(base)}%`, position: 'insideTopRight', fontSize: 9, fill: '#f59e0b', fontFamily: 'monospace' }} />
+                  {/* Event-rate line with spike-aware dots on top. */}
+                  <Line yAxisId="left" type="monotone" dataKey="event_rate" stroke="#34d399" strokeWidth={2.5}
+                    dot={<SpikeDot />} activeDot={{ r: 7, stroke: '#0f172a', strokeWidth: 1.5 }} isAnimationActive={false} />
                 </ComposedChart>
               </ResponsiveContainer>
               <p className="text-[10px] text-slate-500 mt-1 px-1 font-mono">
-                Green decile = outperforms base rate · click any bar to push its boundary into Tier-1 filters
+                Line dot above the dashed AVG = decile beats the universe win rate (event spike) · bars = records backing each decile, so a spike on a tall bar is a real, liquid edge · click a bar or dot to apply its boundary
                 {result.monotonicity_spearman >= 0 ? ' (≥ lower edge)' : ' (≤ upper edge)'}
               </p>
             </div>
