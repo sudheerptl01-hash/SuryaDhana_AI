@@ -10,6 +10,7 @@ import {
   listStocks,
   screenStocks,
   triggerRefresh,
+  refreshWatchlist,
   getRefreshStatus,
   bootstrapUniverse,
   triggerEnrich,
@@ -27,13 +28,15 @@ import { LWScanner } from '@/components/LWScanner'
 import { DataExplorerTab } from '@/components/DataExplorerTab'
 import { WarehouseHealth } from '@/components/WarehouseHealth'
 import { AlphaDiscoveryDesk } from '@/components/AlphaDiscoveryDesk'
+import { MLEngineWorkspace } from '@/components/MLEngineWorkspace'
+import { GlassBoxStudio } from '@/components/GlassBoxStudio'
 import { SystemStatusWidget } from '@/components/SystemStatusWidget'
 import { LiveMonitorBar } from '@/components/LiveMonitorBar'
 import { MarketCommandHeader } from '@/components/MarketCommandHeader'
 import { ToastProvider } from '@/context/ToastContext'
 import { ErrorCatcher } from '@/components/ErrorCatcher'
 
-type Tab = 'overview' | 'stocks' | 'backtest' | 'positions' | 'pipeline' | 'scanner' | 'discovery' | 'explorer' | 'warehouse' | 'system'
+type Tab = 'overview' | 'stocks' | 'backtest' | 'positions' | 'pipeline' | 'scanner' | 'discovery' | 'glassbox' | 'mlengine' | 'explorer' | 'warehouse' | 'system'
 
 const FILTERS_INIT = { t1: false, t2: false, t3: false, t4: false, t5: false, t6: false, t7: false, t8: false }
 
@@ -260,6 +263,8 @@ function HomeContent() {
     { id: 'pipeline',  label: 'Pipeline',     badge: watchlist.length || undefined },
     { id: 'scanner',   label: 'LW Scanner' },
     { id: 'discovery', label: 'Alpha Discovery' },
+    { id: 'glassbox',  label: 'Glass-Box' },
+    { id: 'mlengine',  label: 'ML Engine' },
     { id: 'explorer',  label: 'Data Explorer' },
     { id: 'warehouse', label: 'Warehouse' },
     { id: 'system',    label: 'System' },
@@ -504,6 +509,24 @@ function HomeContent() {
             {view === 'positions' && <LivePortfolio isDark={isDark} />}
             {view === 'scanner' && <LWScanner />}
             {view === 'discovery' && <AlphaDiscoveryDesk isDark={isDark} />}
+            {view === 'glassbox' && (
+              <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 shadow-xl">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="font-mono text-xs font-semibold tracking-widest text-sky-400">🔬 GLASS-BOX STUDIO</span>
+                  <span className="font-mono text-[10px] text-slate-500">Relative Rotation · Rolling Correlation + Squeeze · Volume Profile</span>
+                </div>
+                <GlassBoxStudio isDark={isDark} />
+              </div>
+            )}
+            {view === 'mlengine' && (
+              <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 shadow-xl">
+                <div className="mb-4 flex items-center gap-3">
+                  <span className="font-mono text-xs font-semibold tracking-widest text-sky-400">⚙ ML ENGINE WORKSPACE</span>
+                  <span className="font-mono text-[10px] text-slate-500">Live XGBoost direction-model training · streaming convergence · kill-switch</span>
+                </div>
+                <MLEngineWorkspace isDark={isDark} />
+              </div>
+            )}
             {view === 'explorer' && (
               <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 shadow-xl">
                 <div className="mb-4 flex items-center gap-3">
@@ -793,6 +816,28 @@ function StocksTab({
   allStocksCount, totalStocks, onFilterChange, onRowClick, onLoadMore, isDark = true,
   watchlist = [], onWatchToggle,
 }: any) {
+  // Scoped refresh — updates ONLY the watchlist tickers (not the full universe)
+  const [wlBusy, setWlBusy] = useState(false)
+  const [wlMsg, setWlMsg]   = useState('')
+  const doRefreshWatchlist = async () => {
+    if (!watchlist.length || wlBusy) return
+    setWlBusy(true); setWlMsg(`Queuing ${watchlist.length}…`)
+    try {
+      await refreshWatchlist(watchlist)
+      const poll = async (n = 0) => {
+        try {
+          const s = (await getRefreshStatus()).data
+          const done = (s.done ?? 0) + (s.current ?? 0)
+          if (s.active && n < 40) { setWlMsg(`${done}/${s.total} updated…`); setTimeout(() => poll(n + 1), 1500) }
+          else { setWlMsg(`✓ ${done || watchlist.length}/${s.total || watchlist.length} updated`); setWlBusy(false) }
+        } catch { setWlMsg('✓ refresh queued'); setWlBusy(false) }
+      }
+      setTimeout(() => poll(), 1200)
+    } catch (e: any) {
+      setWlMsg('⚠ ' + (e?.response?.data?.detail || 'refresh failed')); setWlBusy(false)
+    }
+  }
+
   const FILTERS = [
     { key: 't1', label: 'T1', desc: 'Price > 150/200 MA' },
     { key: 't2', label: 'T2', desc: '150 MA > 200 MA' },
@@ -873,6 +918,18 @@ function StocksTab({
                 <button onClick={() => onWatchToggle(t)} className="ml-0.5 text-emerald-500 hover:text-rose-400 transition-colors">✕</button>
               </span>
             ))}
+            <button
+              onClick={doRefreshWatchlist}
+              disabled={wlBusy}
+              title="Fetch latest OHLCV for ONLY these watchlist tickers (skips the full universe)"
+              className={clsx('ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors',
+                wlBusy ? 'bg-slate-600/40 text-slate-400 cursor-not-allowed'
+                  : isDark ? 'bg-emerald-600/80 text-white hover:bg-emerald-500' : 'bg-emerald-600 text-white hover:bg-emerald-700')}
+            >
+              <span className={clsx(wlBusy && 'animate-spin')}>↻</span>
+              {wlBusy ? 'Refreshing…' : `Refresh Watchlist (${watchlist.length})`}
+            </button>
+            {wlMsg && <span className={clsx('text-xs font-mono', isDark ? 'text-emerald-300' : 'text-emerald-700')}>{wlMsg}</span>}
           </div>
         </div>
       )}

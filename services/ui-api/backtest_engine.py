@@ -28,6 +28,8 @@ TRADING_DAYS = 252
 FUNDAMENTAL_FIELDS: set[str] = {"pe_ratio", "div_yld_pct", "mktcap_cr", "roce_pct"}
 
 # Numeric filter field -> dataframe column produced by compute_indicators()
+# / compute_market_relative(). Every column here is strictly trailing (no
+# look-ahead): the value on day T only consumes prices/volume up to and incl. T.
 FIELD_MAP: dict[str, str] = {
     "pe_ratio": "pe_ratio",
     "div_yld_pct": "div_yld_pct",
@@ -38,7 +40,28 @@ FIELD_MAP: dict[str, str] = {
     "above_52w_low_pct": "above_52w_low_pct",
     "within_52w_high_pct": "within_52w_high_pct",
     "dist_ma200_pct": "dist_ma200_pct",
+    # ── Advanced alpha factors (Pillar 1) ──────────────────────────────────
+    "vmi_ratio": "vmi_ratio",                       # Volume Market Impact ratio
+    "vol_zscore_20": "vol_zscore_20",               # VIPT volume thrust z-score
+    "intraday_intention": "intraday_intention",     # 3-day aggregated close-location value
+    "squeeze_ratio": "squeeze_ratio",               # BB-width / KC-width (<1 ⇒ compression)
+    "sector_rel_mom_14_pct": "sector_rel_mom_14_pct",  # 14d momentum vs sector composite
+    "corr_nifty_30": "corr_nifty_30",               # rolling 30d Pearson corr to market
 }
+
+
+def _boolcol(name: str) -> "Callable[[pd.DataFrame], pd.Series]":
+    """
+    Predicate that reads a *pre-computed* boolean column, degrading to all-False
+    when the column is absent (e.g. compute_market_relative wasn't run). Keeps
+    apply_filters crash-proof on partially-prepared frames.
+    """
+    def _pred(d: pd.DataFrame) -> "pd.Series":
+        if name in d.columns:
+            return d[name].fillna(False).astype(bool)
+        return pd.Series(False, index=d.index)
+    return _pred
+
 
 # Boolean toggle filters -> vectorised predicate over the day's dataframe
 BOOLEAN_FILTERS: dict[str, Callable[[pd.DataFrame], "pd.Series[bool]"]] = {
@@ -46,6 +69,12 @@ BOOLEAN_FILTERS: dict[str, Callable[[pd.DataFrame], "pd.Series[bool]"]] = {
     "price_gt_ma200": lambda d: d["close"] > d["ma200"],
     "ma50_gt_ma200": lambda d: d["ma50"] > d["ma200"],
     "volume_gt_avg": lambda d: d["volume"] > d["vol20"],
+    # ── Advanced alpha factors (Pillar 1) ──────────────────────────────────
+    "vipt_breakout": _boolcol("vipt_breakout"),                # N-day breakout on >3σ volume
+    "squeeze_on": _boolcol("squeeze_on"),                      # Bollinger inside Keltner
+    "intention_pullback": _boolcol("intention_pullback"),      # high CLV during 3-day dip
+    "sector_positive_regime": _boolcol("sector_positive_regime"),  # sector composite mom > 0
+    "decoupled_leader": _boolcol("decoupled_leader"),          # low corr in a market pullback
 }
 
 
@@ -81,23 +110,163 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df["hi52w"] = g["high"].transform(lambda x: x.rolling(252, min_periods=50).max())
     df["rsi_14"] = g["close"].transform(lambda x: pd.Series(_rsi(x.values, 14), index=x.index))
 
-    # ATR(14) from true range. df is pre-sorted by (ticker, date), so iterating
-    # unique tickers and concatenating preserves row order (index-aligned via .index).
-    def _atr_group(s: pd.DataFrame) -> pd.Series:
-        close_prev = np.concatenate([[np.nan], s["close"].values[:-1]])
-        tr = np.maximum.reduce([
-            s["high"].values - s["low"].values,
-            np.abs(s["high"].values - close_prev),
-            np.abs(s["low"].values - close_prev),
-        ])
-        return pd.Series(pd.Series(tr).rolling(14, min_periods=14).mean().values, index=s.index)
-
-    df["atr"] = g[["high", "low", "close"]].apply(_atr_group).reset_index(level=0, drop=True)
+    # ATR(14) from true range. Fully vectorised + per-ticker grouped rolling — robust
+    # for a single-ticker frame (a 1-name watchlist must not crash the sim) and any
+    # ticker count. prev-close is the grouped shift so true range never bleeds across
+    # ticker boundaries.
+    prev_close = g["close"].shift(1)
+    true_range = pd.concat([
+        (df["high"] - df["low"]).abs(),
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    df["atr"] = true_range.groupby(df["ticker"]).transform(
+        lambda x: x.rolling(14, min_periods=14).mean())
     df["atr"] = df["atr"].fillna(0.0)
     df["atr_pct"] = (df["atr"] / df["close"] * 100).fillna(0.0)
     df["dist_ma200_pct"] = ((df["close"] - df["ma200"]) / df["ma200"] * 100).fillna(0.0)
     df["above_52w_low_pct"] = ((df["close"] - df["low52w"]) / df["low52w"] * 100).fillna(0.0)
     df["within_52w_high_pct"] = ((df["hi52w"] - df["close"]) / df["hi52w"] * 100).fillna(0.0)
+
+    _compute_advanced_factors(df, g)
+    return df
+
+
+def _compute_advanced_factors(df: pd.DataFrame, g) -> None:
+    """
+    Attach the Pillar-1 structural alpha factors in place. Every window below is
+    strictly backward-looking. Division-by-zero / flat-bar / warm-up cases resolve
+    to NaN (numeric) or False (boolean) so a degenerate row never breaks the sim.
+
+    `g` is the (ticker)-groupby of `df` created by the caller; we also build a few
+    fresh groupbys for columns added after `g` was constructed.
+    """
+    if df.empty:
+        for c in ("dollar_vol", "vmi_ratio", "vol_zscore_20", "intraday_intention", "squeeze_ratio"):
+            df[c] = pd.Series(dtype=float)
+        for c in ("vipt_breakout", "squeeze_on", "intention_pullback"):
+            df[c] = pd.Series(dtype=bool)
+        return
+
+    # ── Volume Market Impact (VMI) ────────────────────────────────────────────
+    # VMI = (dollarVol_T / mean_20d dollarVol) / ATR%_T. Captures an outsized print
+    # relative to its own liquidity baseline, dampened by the name's volatility.
+    df["dollar_vol"] = df["close"] * df["volume"]
+    gdv = df.groupby("ticker")["dollar_vol"]
+    adv20 = gdv.transform(lambda x: x.rolling(20, min_periods=10).mean()).to_numpy()
+    dv = df["dollar_vol"].to_numpy()
+    atr_pct = df["atr_pct"].to_numpy()
+    rel_dv = np.full(dv.shape, np.nan)
+    np.divide(dv, adv20, out=rel_dv, where=adv20 > 0)
+    vmi = np.full(dv.shape, np.nan)
+    np.divide(rel_dv, atr_pct, out=vmi, where=atr_pct > 0)
+    df["vmi_ratio"] = vmi
+
+    # ── Volume-Induced Price Thrust (VIPT) ────────────────────────────────────
+    # Volume z-score vs the *prior* 20-day baseline (shift(1) → today excluded, so
+    # the spike is measured against an established mean, never against itself).
+    gvol = df.groupby("ticker")["volume"]
+    vmean_prev = gvol.transform(lambda x: x.shift(1).rolling(20, min_periods=10).mean())
+    vstd_prev = gvol.transform(lambda x: x.shift(1).rolling(20, min_periods=10).std())
+    df["vol_zscore_20"] = np.where(vstd_prev > 0, (df["volume"] - vmean_prev) / vstd_prev, np.nan)
+    # Breakout out of an N=20-day consolidation: close clears the prior 20-day high
+    # on a >3σ volume thrust. Prior high uses shift(1) so the break is genuine.
+    prior_high = df.groupby("ticker")["high"].transform(
+        lambda x: x.shift(1).rolling(20, min_periods=10).max())
+    df["vipt_breakout"] = (
+        (df["close"] > prior_high) & (df["vol_zscore_20"] > 3.0)
+    ).fillna(False)
+
+    # ── Intraday Intention (3-day aggregated close-location value) ─────────────
+    # CLV_t = (C-L)/(H-L) ∈ [0,1]; flat bars (H==L) are undefined → NaN. The 3-day
+    # mean skips NaNs (nanmean) and only emits NaN when *all* 3 bars are flat.
+    rng = (df["high"] - df["low"]).to_numpy()
+    clv = np.full(rng.shape, np.nan)
+    np.divide((df["close"].to_numpy() - df["low"].to_numpy()), rng, out=clv, where=rng > 0)
+    df["_clv"] = clv
+
+    def _nanmean3(x: np.ndarray) -> float:
+        return float(np.nanmean(x)) if np.isfinite(x).any() else np.nan
+
+    df["intraday_intention"] = df.groupby("ticker")["_clv"].transform(
+        lambda s: s.rolling(3, min_periods=1).apply(_nanmean3, raw=True))
+    close_3ago = g["close"].transform(lambda x: x.shift(3))
+    # Setup: buyers defending the close (>0.8) through a 3-day price pullback.
+    df["intention_pullback"] = (
+        (df["intraday_intention"] > 0.8) & (df["close"] < close_3ago)
+    ).fillna(False)
+
+    # ── Volatility Compression (the Squeeze: Bollinger inside Keltner) ─────────
+    ma20 = g["close"].transform(lambda x: x.rolling(20, min_periods=20).mean())
+    std20 = g["close"].transform(lambda x: x.rolling(20, min_periods=20).std())
+    bb_w = 4.0 * std20                 # Bollinger(20, 2σ) full width = 4σ
+    kc_w = 3.0 * df["atr"]             # Keltner(20, 1.5·ATR) full width = 3·ATR
+    df["squeeze_ratio"] = np.where(kc_w > 0, bb_w / kc_w, np.nan)
+    bb_u, bb_l = ma20 + 2 * std20, ma20 - 2 * std20
+    kc_u, kc_l = ma20 + 1.5 * df["atr"], ma20 - 1.5 * df["atr"]
+    df["squeeze_on"] = ((bb_u < kc_u) & (bb_l > kc_l)).fillna(False)
+
+    df.drop(columns=["_clv"], inplace=True, errors="ignore")
+
+
+def compute_market_relative(
+    df: pd.DataFrame,
+    sector_of: dict[str, str],
+    mom_window: int = 14,
+    corr_window: int = 30,
+    market_ret_by_date: Optional[dict] = None,
+) -> pd.DataFrame:
+    """
+    Attach reference-relative factors (Sector Momentum Dispersion + Beta-Adjusted
+    Market Coupling). No external index is required: the *market* is the equal-weight
+    daily return of the loaded constituents and each *sector* is the equal-weight
+    return of its members (sector_of: TICKER→sector). A real index can be injected
+    via `market_ret_by_date` (date→daily return) to override the internal proxy.
+
+    Bias note: the day-T market/sector composite uses only day-T constituent returns
+    (a contemporaneous cross-sectional average — not look-ahead). The rolling
+    correlation/momentum windows are strictly trailing.
+    """
+    if df is None or df.empty:
+        return df
+    df = df.sort_values(["ticker", "date"]).copy()
+    g = df.groupby("ticker")
+
+    df["ret_1d"] = g["close"].transform(lambda x: x.pct_change())
+
+    if market_ret_by_date is None:
+        market_ret_by_date = df.groupby("date")["ret_1d"].mean().to_dict()
+    df["mkt_ret_1d"] = df["date"].map(market_ret_by_date).astype(float)
+
+    # Market index level (for a trailing 5-day market return used by the de-coupling
+    # regime flag). Built once from the daily series, then mapped back by date.
+    mser = pd.Series(market_ret_by_date, dtype=float).sort_index()
+    mlevel = (1.0 + mser.fillna(0.0)).cumprod()
+    mret5 = (mlevel / mlevel.shift(5) - 1.0)
+    df["mkt_ret5"] = df["date"].map(mret5.to_dict()).astype(float)
+
+    # ── Sector Momentum Dispersion ────────────────────────────────────────────
+    df["_mom14"] = g["close"].transform(lambda x: x.pct_change(mom_window)) * 100.0
+    df["_sector"] = df["ticker"].astype(str).str.upper().map(sector_of).fillna("Unknown")
+    df["_sector_mom14"] = df.groupby(["_sector", "date"])["_mom14"].transform("mean")
+    df["sector_rel_mom_14_pct"] = (df["_mom14"] - df["_sector_mom14"]).astype(float)
+    df["sector_positive_regime"] = (df["_sector_mom14"] > 0).fillna(False)
+
+    # ── Beta-Adjusted Market Coupling (rolling 30d Pearson corr to the market) ──
+    def _roll_corr(s: pd.DataFrame) -> pd.Series:
+        return s["ret_1d"].rolling(corr_window, min_periods=corr_window).corr(s["mkt_ret_1d"])
+
+    corr = df.groupby("ticker", group_keys=False)[["ret_1d", "mkt_ret_1d"]].apply(_roll_corr)
+    df["corr_nifty_30"] = corr.reindex(df.index).astype(float)
+
+    # De-coupled leader: correlation collapses (<0.2) while the market is pulling
+    # back (5d<0) yet the name itself holds positive idiosyncratic momentum (5d>0).
+    df["_ret5"] = g["close"].transform(lambda x: x.pct_change(5))
+    df["decoupled_leader"] = (
+        (df["corr_nifty_30"] < 0.2) & (df["mkt_ret5"] < 0) & (df["_ret5"] > 0)
+    ).fillna(False)
+
+    df.drop(columns=["_mom14", "_sector", "_sector_mom14", "_ret5"], inplace=True, errors="ignore")
     return df
 
 
@@ -137,6 +306,7 @@ def resolve_trade_exit(
     stop_loss_pct: Optional[float] = None,
     trailing_stop_pct: Optional[float] = None,
     win_threshold: float = 0.0,
+    opens: Optional[np.ndarray] = None,
 ) -> dict:
     """
     Resolve a single trade's exit under real trading physics.
@@ -145,6 +315,10 @@ def resolve_trade_exit(
       1. Stop-loss   — if the day's LOW pierces entry*(1 - sl%), fill at the stop.
       2. Trailing    — else if LOW pierces peak*(1 - trail%), fill at the trail level.
       3. Time-stop   — if neither triggers by day N, exit at the Nth close.
+
+    Gap realism: if `opens` is supplied and the bar OPENS already below the stop
+    level (overnight gap-down), the fill is the open, not the stop — you cannot
+    fill better than where the market reopened.
 
     `peak` trails the highest HIGH seen on *prior* days (conservative: a high that
     occurs the same day as the low cannot be assumed to precede it). Returns are
@@ -158,14 +332,17 @@ def resolve_trade_exit(
 
     for i in range(n):
         hi, lo = float(highs[i]), float(lows[i])
+        op = float(opens[i]) if (opens is not None and i < len(opens)) else None
         sl_price = entry_price * (1 - stop_loss_pct / 100.0) if stop_loss_pct else None
         trail_price = peak * (1 - trailing_stop_pct / 100.0) if trailing_stop_pct else None
 
         if sl_price is not None and lo <= sl_price:
-            exit_price, holding, reason = sl_price, i + 1, "stop_loss"
+            fill = sl_price if (op is None or op >= sl_price) else op   # gap-down → fill at open
+            exit_price, holding, reason = fill, i + 1, "stop_loss"
             break
         if trail_price is not None and lo <= trail_price:
-            exit_price, holding, reason = trail_price, i + 1, "trailing_stop"
+            fill = trail_price if (op is None or op >= trail_price) else op
+            exit_price, holding, reason = fill, i + 1, "trailing_stop"
             break
         peak = max(peak, hi)  # trail off prior peaks only
 
@@ -191,6 +368,7 @@ def simulate_portfolio(
     price_at: Callable[[int, str], Optional[float]],
     starting_capital: float = 10_000_000.0,
     max_positions: int = 5,
+    max_drawdown_halt_pct: Optional[float] = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Event-driven, finite-capital portfolio simulation with daily mark-to-market.
@@ -207,6 +385,7 @@ def simulate_portfolio(
     late entries fully wind down, so every entered trade is realised.
     """
     cash = float(starting_capital)
+    peak_nav = float(starting_capital)
     open_pos: dict[str, dict] = {}
     trades: list[dict] = []
     equity: list[dict] = []
@@ -251,12 +430,18 @@ def simulate_portfolio(
         for p in open_pos.values():
             p["mtm_idx_ticker_idx"] = idx
 
-        # 2) Entries (only within the requested [from, to] window)
-        if from_idx <= idx <= to_idx and len(open_pos) < max_positions:
-            nav = cash
-            for p in open_pos.values():
-                px = price_at(idx, p["ticker"])
-                nav += p["shares"] * (px if px is not None else p["entry_price"])
+        # 2) Risk gate + entries (only within the requested [from, to] window).
+        # Mark-to-market NAV drives both position sizing and the drawdown halt.
+        nav = cash
+        for p in open_pos.values():
+            px = price_at(idx, p["ticker"])
+            nav += p["shares"] * (px if px is not None else p["entry_price"])
+        peak_nav = max(peak_nav, nav)
+        dd_halt = (
+            max_drawdown_halt_pct is not None and peak_nav > 0
+            and (nav / peak_nav - 1) * 100.0 <= -abs(max_drawdown_halt_pct)
+        )
+        if from_idx <= idx <= to_idx and not dd_halt and len(open_pos) < max_positions:
             held = {p["ticker"] for p in open_pos.values()}
             for cand in entries_by_idx.get(idx, []):
                 if len(open_pos) >= max_positions or cash <= 1.0:

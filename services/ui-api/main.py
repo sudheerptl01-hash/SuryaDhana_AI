@@ -29,6 +29,7 @@ from routers import dashboard, stocks, analytics, performance, positions, config
 from routers import monitor
 from routers import data_proxy
 from routers import alpha
+from routers import ml_workspace
 
 
 @asynccontextmanager
@@ -65,6 +66,7 @@ app.include_router(lw_scanner.router, prefix="/api/lw",         tags=["lw-scanne
 app.include_router(monitor.router,     prefix="/api/monitor",  tags=["monitor"])
 app.include_router(data_proxy.router,  prefix="/api/data",     tags=["data-proxy"])
 app.include_router(alpha.router,       prefix="/api/alpha",    tags=["alpha-discovery"])
+app.include_router(ml_workspace.router, prefix="/api/ml",       tags=["ml-workspace"])
 
 
 @app.get("/health")

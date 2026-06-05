@@ -37,9 +37,24 @@ const FILTER_CATALOG: Record<string, Array<{ id: string; label: string; unit?: s
     { id: 'above_52w_low_pct', label: '% above 52w-Low', unit: '%', op: 'gt', val: 30, desc: 'Bounce strength' },
     { id: 'within_52w_high_pct', label: '% within 52w-High', unit: '%', op: 'lt', val: 25, desc: 'Near yearly peak' },
     { id: 'dist_ma200_pct', label: 'Dist 200-MA', unit: '%', op: 'lt', val: 20, desc: 'Over/under-extended' },
+    { id: 'squeeze_ratio', label: 'Squeeze Ratio BB/KC', unit: 'x', op: 'lt', val: 1, desc: 'BB width / KC width (<1 ⇒ squeeze)' },
+    { id: 'squeeze_on', label: 'Squeeze ON', toggle: true, op: 'gt', val: 0, desc: 'Bollinger inside Keltner' },
   ],
   Volume: [
     { id: 'volume_gt_avg', label: 'Vol > 20d-Avg', toggle: true, op: 'gt', val: 0, desc: 'Accumulation' },
+  ],
+  Microstructure: [
+    { id: 'vmi_ratio', label: 'Volume Market Impact', unit: 'x', op: 'gt', val: 1, desc: 'Outsized $-vol vs 20d, vol-normalized' },
+    { id: 'vol_zscore_20', label: 'Volume Thrust z', unit: 'σ', op: 'gt', val: 2, desc: 'Volume vs prior-20d baseline' },
+    { id: 'vipt_breakout', label: 'VIPT Breakout', toggle: true, op: 'gt', val: 0, desc: '20d range breakout on >3σ volume' },
+    { id: 'intraday_intention', label: 'Intraday Intention', unit: '', op: 'gt', val: 0.7, desc: '3-day close-location value' },
+    { id: 'intention_pullback', label: 'Intention on Pullback', toggle: true, op: 'gt', val: 0, desc: 'CLV>0.8 through a 3-day dip' },
+  ],
+  'Relative Strength': [
+    { id: 'sector_rel_mom_14_pct', label: 'Sector-Rel Mom 14d', unit: '%', op: 'gt', val: 0, desc: '14d return vs sector composite' },
+    { id: 'sector_positive_regime', label: 'Positive Sector Regime', toggle: true, op: 'gt', val: 0, desc: 'Sector momentum > 0' },
+    { id: 'corr_nifty_30', label: 'Market Corr 30d', unit: 'ρ', op: 'lt', val: 0.2, desc: 'Rolling 30d corr to market' },
+    { id: 'decoupled_leader', label: 'De-coupled Leader', toggle: true, op: 'gt', val: 0, desc: 'Low corr in a market pullback' },
   ],
 }
 

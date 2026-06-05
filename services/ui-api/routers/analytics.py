@@ -139,6 +139,18 @@ FILTER_CATALOG = {
     "within_52w_high_pct": {"category": "Volatility", "label": "% within 52-week High", "unit": "%", "desc": "Nearness to yearly peak", "fundamental": False},
     "dist_ma200_pct": {"category": "Volatility", "label": "Distance from 200-day MA", "unit": "%", "desc": "Overbought/oversold", "fundamental": False},
     "volume_gt_avg": {"category": "Volume", "label": "Volume > 20-day Avg", "unit": "", "desc": "Accumulation", "fundamental": False},
+    # ── Advanced alpha factors (Pillar 1) — all strictly trailing, zero look-ahead ──
+    "vmi_ratio": {"category": "Microstructure", "label": "Volume Market Impact (VMI)", "unit": "x", "desc": "Dollar-volume vs 20d avg, vol-normalized", "fundamental": False},
+    "vol_zscore_20": {"category": "Microstructure", "label": "Volume Thrust z-score", "unit": "σ", "desc": "Volume vs prior-20d baseline (VIPT core)", "fundamental": False},
+    "vipt_breakout": {"category": "Microstructure", "label": "VIPT Breakout", "unit": "", "desc": "20d range breakout on >3σ volume", "fundamental": False},
+    "intraday_intention": {"category": "Microstructure", "label": "Intraday Intention", "unit": "0-1", "desc": "3-day aggregated close-location value", "fundamental": False},
+    "intention_pullback": {"category": "Microstructure", "label": "Intention on Pullback", "unit": "", "desc": "CLV>0.8 through a 3-day dip", "fundamental": False},
+    "squeeze_ratio": {"category": "Volatility", "label": "Squeeze Ratio (BB/KC)", "unit": "x", "desc": "Bollinger width / Keltner width (<1 ⇒ squeeze)", "fundamental": False},
+    "squeeze_on": {"category": "Volatility", "label": "Squeeze ON", "unit": "", "desc": "Bollinger Bands inside Keltner Channels", "fundamental": False},
+    "sector_rel_mom_14_pct": {"category": "Relative Strength", "label": "Sector-Relative Momentum (14d)", "unit": "%", "desc": "14d return minus sector composite", "fundamental": False},
+    "sector_positive_regime": {"category": "Relative Strength", "label": "Positive Sector Regime", "unit": "", "desc": "Sector composite 14d momentum > 0", "fundamental": False},
+    "corr_nifty_30": {"category": "Relative Strength", "label": "Market Correlation (30d)", "unit": "ρ", "desc": "Rolling 30d Pearson corr to market", "fundamental": False},
+    "decoupled_leader": {"category": "Relative Strength", "label": "De-coupled Leader", "unit": "", "desc": "Low corr in a market pullback, holding up", "fundamental": False},
 }
 
 
@@ -178,8 +190,22 @@ class WFOBacktestRequest(BacktestRequest):
 
 # ── DuckDB load + indicator prep ──────────────────────────────────────────────────
 
-def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Optional[list[str]]):
-    """Load OHLCV (+250d warm-up / forward look) and attach trailing indicators."""
+# Factors whose computation needs the (heavier) cross-sectional market/sector
+# composites. Computed lazily so a vanilla technical backtest stays fast.
+MARKET_RELATIVE_FIELDS: set[str] = {
+    "sector_rel_mom_14_pct", "corr_nifty_30",
+    "sector_positive_regime", "decoupled_leader",
+}
+
+
+def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Optional[list[str]],
+                   need_market_relative: bool = False):
+    """Load OHLCV (+warm-up / forward look) and attach trailing indicators.
+
+    `need_market_relative` gates the cross-sectional sector/market-coupling pass
+    (rolling correlation over the whole frame) so it only runs when a filter or a
+    factor profile actually references those columns.
+    """
     lookback_dt = from_dt - timedelta(days=400)
     lookahead_dt = to_dt + timedelta(days=forward_days * 3 + 25)
 
@@ -225,6 +251,21 @@ def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Option
     # collisions in the sim. Keep only the latest snapshot per ticker.
     mdf = mdf.drop_duplicates(subset=["ticker"], keep="last")
     df = df.merge(mdf, on="ticker", how="left")
+
+    # Attach reference-relative factors (sector momentum dispersion + market
+    # coupling) only when requested. The market proxy is the equal-weight return of
+    # the loaded constituents; sectors come from the locked-universe map. Both are
+    # strictly trailing. Wrapped so a composite failure never breaks the core sim.
+    if need_market_relative:
+        try:
+            df = be.compute_market_relative(df, _sector_map())
+        except Exception:
+            for col in ("sector_rel_mom_14_pct", "corr_nifty_30"):
+                if col not in df.columns:
+                    df[col] = np.nan
+            for col in ("sector_positive_regime", "decoupled_leader"):
+                if col not in df.columns:
+                    df[col] = False
     return df
 
 
@@ -299,11 +340,14 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
     # Compliance floor: clamp friction to >= 15 bps (0.15%) regardless of payload.
     friction = max(float(req.friction_bps), MIN_FRICTION_BPS)
 
+    need_mr = any(fc.field in MARKET_RELATIVE_FIELDS for fc in req.filters)
+
     progress(5, "Connecting to market database")
     con, owns = _acquire_readonly(progress)
     try:
         progress(10, "Loading OHLCV history")
-        df = _load_prepared(con, from_dt, to_dt, req.forward_days, scope_tickers)
+        df = _load_prepared(con, from_dt, to_dt, req.forward_days, scope_tickers,
+                            need_market_relative=need_mr)
         if df is None or df.empty:
             return _empty_result(req)
         progress(28, "Computing trailing indicators")
@@ -719,7 +763,8 @@ def _core_factor_profile(req: FactorProfileRequest) -> dict:
 
     conn, owns = _acquire_readonly(lambda *a, **k: None)
     try:
-        df = _load_prepared(conn, from_dt, to_dt, req.forward_days, scope_tickers)
+        df = _load_prepared(conn, from_dt, to_dt, req.forward_days, scope_tickers,
+                            need_market_relative=req.factor in MARKET_RELATIVE_FIELDS)
     finally:
         if owns:
             try:
@@ -763,3 +808,242 @@ async def factor_profile(req: FactorProfileRequest):
     thread so the event loop keeps serving.
     """
     return await asyncio.to_thread(_core_factor_profile, req)
+
+
+# ── Glass-Box charting endpoints (Pillar 2 visual environments) ────────────────────
+# Premium per-asset visual sub-panels backing the new structural filters:
+#   • factor-series   → Rolling-Correlation panel + Squeeze alert dots (+ VMI/VIPT)
+#   • rrg             → Relative Rotation Graph quadrant trajectories
+#   • volume-profile  → horizontal Volume Profile (HVN/LVN/POC) + anchored VWAP
+
+def _jsafe(v) -> Optional[float]:
+    """NaN/inf → None so the JSON encoder never emits invalid tokens."""
+    try:
+        f = float(v)
+        return None if (np.isnan(f) or np.isinf(f)) else round(f, 6)
+    except Exception:
+        return None
+
+
+def _benchmark_level(con, from_ts, to_ts) -> tuple[dict, str]:
+    """Compound the benchmark daily returns into a price *level* (base 100) keyed by
+    Timestamp, for relative-strength ratios."""
+    daily, label = _build_benchmark(con, from_ts, to_ts)
+    if not daily:
+        return {}, label
+    s = pd.Series({pd.Timestamp(k): v for k, v in daily.items()}).sort_index()
+    level = (1.0 + s.fillna(0.0)).cumprod() * 100.0
+    return level.to_dict(), label
+
+
+class FactorSeriesRequest(BaseModel):
+    ticker: str
+    from_date: str
+    to_date: str
+    corr_window: int = 30
+
+
+def _core_factor_series(req: FactorSeriesRequest) -> dict:
+    from_dt = datetime.strptime(req.from_date, "%Y-%m-%d").date()
+    to_dt = datetime.strptime(req.to_date, "%Y-%m-%d").date()
+    from_ts, to_ts = pd.Timestamp(from_dt), pd.Timestamp(to_dt)
+    tkr = req.ticker.strip().upper()
+    w = max(5, min(int(req.corr_window), 120))
+
+    conn, owns = _acquire_readonly(lambda *a, **k: None)
+    try:
+        df = _load_prepared(conn, from_dt, to_dt, 5, [tkr], need_market_relative=False)
+        bench_daily, bench_src = _build_benchmark(conn, from_ts - pd.Timedelta(days=90), to_ts)
+    finally:
+        if owns:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    if df is None or df.empty:
+        return {"mode": MODE, "ticker": tkr, "benchmark": "none", "corr_window": w, "points": []}
+
+    sub = df[df["ticker"] == tkr].sort_values("date").copy()
+    sub["ret1"] = sub["close"].pct_change()
+    sub["mkt"] = sub["date"].map(lambda d: bench_daily.get(str(pd.Timestamp(d).date()), np.nan))
+    sub["corr30"] = sub["ret1"].rolling(w, min_periods=w).corr(sub["mkt"])
+
+    win = sub[(sub["date"] >= from_ts) & (sub["date"] <= to_ts)]
+    points = [{
+        "date": str(r["date"])[:10],
+        "open": _jsafe(r["open"]), "high": _jsafe(r["high"]),
+        "low": _jsafe(r["low"]), "close": _jsafe(r["close"]),
+        "volume": _jsafe(r["volume"]),
+        "corr30": _jsafe(r.get("corr30")),
+        "squeeze_on": bool(r.get("squeeze_on", False)),
+        "squeeze_ratio": _jsafe(r.get("squeeze_ratio")),
+        "vmi_ratio": _jsafe(r.get("vmi_ratio")),
+        "vol_zscore_20": _jsafe(r.get("vol_zscore_20")),
+        "vipt_breakout": bool(r.get("vipt_breakout", False)),
+    } for _, r in win.iterrows()]
+    return {"mode": MODE, "ticker": tkr, "benchmark": bench_src,
+            "corr_window": w, "n": len(points), "points": points}
+
+
+@router.post("/factor-series")
+async def factor_series(req: FactorSeriesRequest):
+    return await asyncio.to_thread(_core_factor_series, req)
+
+
+class RRGRequest(BaseModel):
+    tickers: list[str]
+    from_date: str
+    to_date: str
+    window: int = 12        # smoothing/normalization window for RS-Ratio / RS-Momentum
+    momentum: int = 5       # lookback for the RS-Ratio rate-of-change
+    tail: int = 12          # trajectory length returned per ticker
+
+
+def _quadrant(ratio: float, mom: float) -> str:
+    if ratio >= 100 and mom >= 100:
+        return "Leading"
+    if ratio >= 100 and mom < 100:
+        return "Weakening"
+    if ratio < 100 and mom < 100:
+        return "Lagging"
+    return "Improving"
+
+
+def _core_rrg(req: RRGRequest) -> dict:
+    tickers = [t.strip().upper() for t in req.tickers if t.strip()][:40]
+    if not tickers:
+        raise HTTPException(status_code=400, detail="Provide at least one ticker")
+    from_dt = datetime.strptime(req.from_date, "%Y-%m-%d").date()
+    to_dt = datetime.strptime(req.to_date, "%Y-%m-%d").date()
+    from_ts, to_ts = pd.Timestamp(from_dt), pd.Timestamp(to_dt)
+    w = max(4, min(int(req.window), 60))
+    m = max(1, min(int(req.momentum), 30))
+    tail = max(1, min(int(req.tail), 40))
+
+    conn, owns = _acquire_readonly(lambda *a, **k: None)
+    try:
+        df = _load_prepared(conn, from_dt, to_dt, 5, tickers, need_market_relative=False)
+        level, bench_src = _benchmark_level(conn, from_ts - pd.Timedelta(days=120), to_ts)
+    finally:
+        if owns:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    if df is None or df.empty or not level:
+        return {"mode": MODE, "benchmark": "none", "window": w, "tickers": {}}
+
+    lvl = pd.Series(level).sort_index()
+    out: dict[str, list] = {}
+    for tkr in tickers:
+        sub = df[df["ticker"] == tkr].sort_values("date").copy()
+        if sub.empty:
+            continue
+        sub = sub.set_index("date")
+        sub["bench"] = lvl.reindex(sub.index)
+        sub = sub[sub["bench"].notna() & (sub["bench"] > 0)]
+        if len(sub) < w + m:
+            continue
+        rs = sub["close"] / sub["bench"] * 100.0
+        # JdK-style normalization: RS-Ratio centred on 100, RS-Momentum = normalized
+        # rate-of-change of the ratio (both unit-less, comparable across names).
+        rs_ratio = 100.0 + (rs - rs.rolling(w).mean()) / rs.rolling(w).std()
+        roc = rs_ratio - rs_ratio.shift(m)
+        rs_mom = 100.0 + (roc - roc.rolling(w).mean()) / roc.rolling(w).std()
+        traj = pd.DataFrame({"rs_ratio": rs_ratio, "rs_mom": rs_mom}).dropna()
+        traj = traj[(traj.index >= from_ts) & (traj.index <= to_ts)].tail(tail)
+        if traj.empty:
+            continue
+        out[tkr] = [{
+            "date": str(idx)[:10],
+            "rs_ratio": _jsafe(row["rs_ratio"]),
+            "rs_mom": _jsafe(row["rs_mom"]),
+            "quadrant": _quadrant(row["rs_ratio"], row["rs_mom"]),
+        } for idx, row in traj.iterrows()]
+    return {"mode": MODE, "benchmark": bench_src, "window": w, "momentum": m, "tickers": out}
+
+
+@router.post("/rrg")
+async def rrg(req: RRGRequest):
+    return await asyncio.to_thread(_core_rrg, req)
+
+
+class VolumeProfileRequest(BaseModel):
+    ticker: str
+    from_date: str
+    to_date: str
+    bins: int = 24
+
+
+def _core_volume_profile(req: VolumeProfileRequest) -> dict:
+    from_dt = datetime.strptime(req.from_date, "%Y-%m-%d").date()
+    to_dt = datetime.strptime(req.to_date, "%Y-%m-%d").date()
+    from_ts, to_ts = pd.Timestamp(from_dt), pd.Timestamp(to_dt)
+    tkr = req.ticker.strip().upper()
+    nbins = max(6, min(int(req.bins), 60))
+
+    conn, owns = _acquire_readonly(lambda *a, **k: None)
+    try:
+        df = _load_prepared(conn, from_dt, to_dt, 5, [tkr], need_market_relative=False)
+    finally:
+        if owns:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    if df is None or df.empty:
+        return {"mode": MODE, "ticker": tkr, "bins": [], "ohlc": []}
+
+    sub = df[(df["ticker"] == tkr) & (df["date"] >= from_ts) & (df["date"] <= to_ts)].sort_values("date").copy()
+    if sub.empty:
+        return {"mode": MODE, "ticker": tkr, "bins": [], "ohlc": []}
+
+    tp = (sub["high"] + sub["low"] + sub["close"]) / 3.0       # typical price per bar
+    lo, hi = float(sub["low"].min()), float(sub["high"].max())
+    if hi <= lo:
+        hi = lo + 1.0
+    edges = np.linspace(lo, hi, nbins + 1)
+    idx = np.clip(np.digitize(tp.to_numpy(), edges) - 1, 0, nbins - 1)
+    vol = sub["volume"].to_numpy(dtype=float)
+    bucket_vol = np.zeros(nbins)
+    for i, v in zip(idx, vol):
+        bucket_vol[i] += v
+
+    total_v = float(bucket_vol.sum()) or 1.0
+    poc_i = int(np.argmax(bucket_vol))
+    mean_v = bucket_vol.mean()
+    bins = [{
+        "price_lo": round(float(edges[i]), 2),
+        "price_hi": round(float(edges[i + 1]), 2),
+        "price_mid": round(float((edges[i] + edges[i + 1]) / 2), 2),
+        "volume": round(float(bucket_vol[i]), 2),
+        "pct": round(bucket_vol[i] / total_v * 100, 2),
+        "node": "HVN" if bucket_vol[i] >= mean_v else "LVN",   # high/low volume node
+        "poc": i == poc_i,                                     # point of control
+    } for i in range(nbins)]
+
+    # Anchored VWAP from the window start (cumulative typical-price × volume).
+    cum_pv = (tp * sub["volume"]).cumsum()
+    cum_v = sub["volume"].cumsum().replace(0, np.nan)
+    avwap = (cum_pv / cum_v)
+    ohlc = [{
+        "date": str(r["date"])[:10],
+        "open": _jsafe(r["open"]), "high": _jsafe(r["high"]),
+        "low": _jsafe(r["low"]), "close": _jsafe(r["close"]),
+        "avwap": _jsafe(a),
+    } for (_, r), a in zip(sub.iterrows(), avwap.to_numpy())]
+
+    return {
+        "mode": MODE, "ticker": tkr, "n_bars": len(sub),
+        "price_lo": round(lo, 2), "price_hi": round(hi, 2),
+        "poc_price": round(float((edges[poc_i] + edges[poc_i + 1]) / 2), 2),
+        "bins": bins, "ohlc": ohlc,
+    }
+
+
+@router.post("/volume-profile")
+async def volume_profile(req: VolumeProfileRequest):
+    return await asyncio.to_thread(_core_volume_profile, req)
