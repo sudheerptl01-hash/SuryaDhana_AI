@@ -884,31 +884,52 @@ def test_survivorship_warning_cleared_when_delistings_applied():
                                          delist_by_ticker={"X": (3, -90.0)})) is None
 
 
-# ── C7a — ATR-scaled stops on by default, capped at the locked -2% floor ──────────
+# ── C7a (revised, §3.4) — true volatility-adaptive ATR stop; -2% is now a FLOOR ───
 
-def test_effective_stop_atr_scaled_tighter_than_floor():
-    # Calm name: ATR 0.5%, k=2 -> 1.0% stop, which is TIGHTER than the -2% floor.
-    # Volatility-aware stop is allowed to go below the floor (more protection).
+def test_effective_stop_atr_scaled_no_floor_default():
+    # Default (no stop_floor_pct): the stop is exactly k·ATR%. Calm name ATR 0.5%,
+    # k=2 -> 1.0% stop. No floor binds; the stop is purely volatility-driven.
     s = be.effective_stop_pct(atr_pct=0.5, atr_stop_mult=2.0, fixed_stop_pct=2.0)
     assert s == pytest.approx(1.0)
 
 
-def test_effective_stop_clamped_to_locked_floor_in_storm():
-    # Storm name: ATR 3.24% (universe median), k=2 -> 6.48% raw, but the locked -2%
-    # rule caps the stop at the floor — it is never LOOSER than -2%.
+def test_effective_stop_widens_in_storm_not_clamped():
+    # APPROVED REVISION: storm name ATR 3.24% (universe median), k=2 -> 6.48% — the
+    # stop now WIDENS to k·ATR% instead of being clamped to the old -2% cap, so
+    # volatility no longer knocks the trade out on noise (audit §3.4).
     s = be.effective_stop_pct(atr_pct=3.24, atr_stop_mult=2.0, fixed_stop_pct=2.0)
-    assert s == pytest.approx(2.0)
-    # Even with a very high-vol name the stop never widens past the floor.
+    assert s == pytest.approx(6.48)
+    # A very-high-vol name gets an even wider stop — no upper clamp at all.
     assert be.effective_stop_pct(atr_pct=10.0, atr_stop_mult=2.0,
-                                 fixed_stop_pct=2.0) == pytest.approx(2.0)
+                                 fixed_stop_pct=2.0) == pytest.approx(20.0)
 
 
-def test_effective_stop_never_looser_than_floor_property():
-    # Property: across the universe ATR range, k·ATR clamped never exceeds the floor.
-    floor = be.LOCKED_STOP_FLOOR_PCT
+def test_effective_stop_floor_is_minimum_width_not_cap():
+    # When stop_floor_pct IS set, it acts as a *minimum* width (floor on protection):
+    # an ultra-calm name (ATR 0.5%, k·ATR=1.0%) is widened up to the 2% floor, while a
+    # storm name (ATR 3.24%, k·ATR=6.48%) is left WIDE — the floor never caps it.
+    assert be.effective_stop_pct(atr_pct=0.5, atr_stop_mult=2.0,
+                                 fixed_stop_pct=2.0, stop_floor_pct=2.0) == pytest.approx(2.0)
+    assert be.effective_stop_pct(atr_pct=3.24, atr_stop_mult=2.0,
+                                 fixed_stop_pct=2.0, stop_floor_pct=2.0) == pytest.approx(6.48)
+
+
+def test_effective_stop_scales_linearly_with_atr_when_unfloored():
+    # Property: with no floor, the stop is strictly monotone increasing in ATR (k·ATR).
+    prev = -1.0
     for atr in [0.1, 0.5, 1.0, 2.0, 3.24, 6.0, 12.0]:
         s = be.effective_stop_pct(atr_pct=atr, atr_stop_mult=2.0, fixed_stop_pct=2.0)
-        assert s is not None and s <= floor + 1e-9
+        assert s is not None and s == pytest.approx(2.0 * atr)
+        assert s > prev
+        prev = s
+
+
+def test_effective_stop_legacy_floor_pct_alias_now_acts_as_floor():
+    # Back-compat: the deprecated `floor_pct` kwarg still maps to stop_floor_pct, but
+    # now carries the NEW floor (min-width) semantics — a storm name is NOT clamped.
+    s = be.effective_stop_pct(atr_pct=3.24, atr_stop_mult=2.0,
+                              fixed_stop_pct=2.0, floor_pct=2.0)
+    assert s == pytest.approx(6.48)
 
 
 def test_effective_stop_falls_back_to_fixed_when_atr_missing():
@@ -939,10 +960,10 @@ def test_effective_stop_none_when_no_stop_configured():
 
 
 def test_effective_stop_no_floor_allows_wide_atr():
-    # When floor_pct is explicitly disabled (None), the ATR stop is uncapped — proves
-    # the floor is the *only* thing preventing a wider storm stop (audit §3.4 intent).
+    # When stop_floor_pct is explicitly None (the default), the ATR stop is the pure
+    # k·ATR% distance — the storm name keeps its wide 6.48% stop (audit §3.4 intent).
     s = be.effective_stop_pct(atr_pct=3.24, atr_stop_mult=2.0,
-                              fixed_stop_pct=2.0, floor_pct=None)
+                              fixed_stop_pct=2.0, stop_floor_pct=None)
     assert s == pytest.approx(6.48)
 
 

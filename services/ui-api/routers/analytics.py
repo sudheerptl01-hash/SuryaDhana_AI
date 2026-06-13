@@ -301,12 +301,16 @@ class BacktestRequest(BaseModel):
     # Fidelity
     entry_timing: str = "next_open"      # "next_open" (no same-bar look-ahead) | "close"
     # Advanced risk sizing (opt-in; all None/False ⇒ identical to plain equal-weight)
-    # C7a — ATR-scaled stops are ON BY DEFAULT (k=2.0). The per-trade stop is
-    # min(k·ATR%, locked -2% floor): volatility-aware but never looser than the
-    # CLAUDE.md -2% protection. Set atr_stop_mult=None (with a fixed stop_loss_pct)
-    # to opt back out to a pure fixed-% stop; names without ATR data fall back to
-    # stop_loss_pct automatically.
-    atr_stop_mult: Optional[float] = 2.0     # per-trade stop = k × signal-day ATR%, capped at -2% floor
+    # C7a (revised, audit §3.4) — true volatility-adaptive ATR stops are ON BY DEFAULT
+    # (k=2.0). The per-trade stop is k·ATR% with NO hard upper cap, so a high-ATR storm
+    # name gets a WIDER stop (median ATR 3.24%·2 ≈ 6.5%) and is not knocked out on noise.
+    # `stop_floor_pct` (default None) is an OPTIONAL *minimum* stop width, not a cap; set
+    # it to guarantee a floor on protection for ultra-calm names. Set atr_stop_mult=None
+    # (with a fixed stop_loss_pct) to opt back out to a pure fixed-% stop; names without
+    # ATR data fall back to stop_loss_pct automatically. NOTE: this affects ONLY the
+    # per-trade stop — the -2% daily-loss halt (C7b) and -20% max-DD e-stop stay HARD.
+    atr_stop_mult: Optional[float] = 2.0     # per-trade stop = k × signal-day ATR% (no upper cap)
+    stop_floor_pct: Optional[float] = None   # optional minimum stop width (% below entry); None ⇒ none
     vol_target_pct: Optional[float] = None   # volatility-target position sizing
     max_position_pct: Optional[float] = None  # hard per-position cap (% of NAV)
     max_sector_pct: Optional[float] = None    # per-sector exposure cap (% of NAV)
@@ -623,11 +627,12 @@ class _SimContext:
                     fwd = slice(entry_lp + 1, entry_lp + 1 + req.forward_days)
                     fwd_hi, fwd_lo, fwd_cl, fwd_op = s["high"][fwd], s["low"][fwd], s["close"][fwd], s["open"][fwd]
                     if len(fwd_cl) > 0:
-                        # Per-trade stop (C7a): volatility-aware k×ATR stop, capped at
-                        # the locked -2% floor, with a graceful fallback to the fixed
-                        # `stop_loss_pct` when ATR is missing or the resolver errors.
-                        # Both inputs are req-level constants, so the resolved exit stays
-                        # cacheable. The whole resolution is delegated to the pure,
+                        # Per-trade stop (C7a, revised §3.4): true volatility-adaptive
+                        # k×ATR stop with NO upper cap (storm names widen, not clamp),
+                        # plus an optional `stop_floor_pct` minimum width, with a graceful
+                        # fallback to the fixed `stop_loss_pct` when ATR is missing or the
+                        # resolver errors. Both inputs are req-level constants, so the
+                        # resolved exit stays cacheable. Delegated to the pure,
                         # edge-case-safe be.effective_stop_pct unit.
                         atr_pct_sig = s["atr_pct_by_gidx"].get(int(sig))
                         try:
@@ -635,6 +640,7 @@ class _SimContext:
                                 atr_pct=atr_pct_sig,
                                 atr_stop_mult=getattr(req, "atr_stop_mult", None),
                                 fixed_stop_pct=req.stop_loss_pct,
+                                stop_floor_pct=getattr(req, "stop_floor_pct", None),
                             )
                         except Exception:
                             # Zero-regression guard: any failure in the new stop math

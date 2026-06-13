@@ -53,10 +53,10 @@ Shared infrastructure: DuckDB (time-series DB), Redis (pub/sub + Celery task que
 - Max 5 simultaneous positions
 - Max 15% of portfolio per stock
 - Max 40% of portfolio per sector
-- Stop-loss: -2% from entry
+- Per-trade stop-loss: **k·ATR volatility-adaptive** (k=2.0 default), optional minimum-width floor (`stop_floor_pct`, default off). _Approved review change (audit §3.4): relaxed from the old fixed -2% cap so high-ATR storm names get a wider stop (≈6.5% on the median name) instead of being knocked out on noise. Applies to the per-trade stop only._
 - Time-stop: exit after 5 trading days
-- Daily loss limit: -2% → halt trading for the day
-- Max drawdown: -20% → emergency stop
+- Daily loss limit: -2% → halt trading for the day (HARD — unchanged)
+- Max drawdown: -20% → emergency stop (HARD — unchanged)
 
 ## Anti-Patterns (Critical)
 

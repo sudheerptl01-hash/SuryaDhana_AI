@@ -392,10 +392,16 @@ def fundamental_filters_active(filters: list[dict]) -> bool:
 # median ATR% ≈ 3.24%, so k=2.0 ⇒ a ~6.5% stop on the median name — wide enough not
 # to be knocked out by ordinary noise in a storm, tight enough to cap a tail loss.
 DEFAULT_ATR_STOP_MULT: float = 2.0
-# Locked protection floor from CLAUDE.md ("Stop-loss: -2% from entry"). The ATR stop
-# is only ever allowed to sit *tighter* (smaller %) than this — never looser — so the
-# mandated downside protection is preserved while the stop becomes volatility-aware.
-LOCKED_STOP_FLOOR_PCT: float = 2.0
+# APPROVED REVIEW CHANGE (audit §3.4): the per-trade stop is now a TRUE volatility-
+# adaptive ATR stop (k·ATR%) with NO hard upper cap, so a high-ATR storm name gets a
+# WIDER stop (≈6.5% on the median name) instead of being knocked out on noise by a
+# rigid -2% clamp. The old -2% behaviour was a *cap*; it is now an optional *floor*
+# (minimum stop width) that is OFF by default. A caller may set `stop_floor_pct` to
+# guarantee the stop is never *tighter* than that width on ultra-calm names. The hard
+# -2% DAILY realised-loss halt (C7b) and the -20% max-drawdown e-stop are unchanged.
+DEFAULT_STOP_FLOOR_PCT: Optional[float] = None   # no minimum stop width by default
+# Back-compat alias for the legacy constant name (referenced by older tests/imports).
+LOCKED_STOP_FLOOR_PCT: Optional[float] = DEFAULT_STOP_FLOOR_PCT
 
 # C6 — block-level participation gate for routing an entry through the live execution
 # scheduler. Below this fraction of ADV the single instantaneous √-law hit and the
@@ -411,19 +417,25 @@ def effective_stop_pct(
     atr_pct: Optional[float],
     atr_stop_mult: Optional[float],
     fixed_stop_pct: Optional[float],
-    floor_pct: float = LOCKED_STOP_FLOOR_PCT,
+    stop_floor_pct: Optional[float] = DEFAULT_STOP_FLOOR_PCT,
+    *,
+    floor_pct: Optional[float] = "__unset__",  # type: ignore[assignment]
 ) -> Optional[float]:
-    """C7a — resolve a single trade's stop distance (% below entry), volatility-aware.
+    """C7a (revised, audit §3.4) — resolve a single trade's stop distance (% below
+    entry) as a TRUE volatility-adaptive ATR stop. Independent, side-effect-free unit.
 
-    Independent, side-effect-free unit. Policy:
+    APPROVED REVIEW CHANGE: the stop is now ``k · ATR%`` with **no hard upper cap**, so
+    a high-ATR storm name gets a *wider* stop (e.g. median ATR 3.24% × k=2 ≈ 6.48%) and
+    volatility no longer stops you out on ordinary noise. The previous -2% behaviour was
+    a *cap*; it is now an optional *floor* on the stop **width** (``stop_floor_pct``,
+    default None ⇒ no floor). Policy:
 
       • If `atr_stop_mult` (k) is set AND a positive signal-day `atr_pct` is available,
-        the volatility-adjusted distance is ``k · ATR%``. To honour the locked -2% rule
-        in CLAUDE.md as a *floor on protection* (never looser than the legacy fixed
-        stop), the effective stop is clamped to ``min(k·ATR%, floor_pct)`` — i.e. the
-        ATR stop can only ever tighten below -2%, it can never widen past it. This
-        preserves the mandated downside cap while letting calm names stop on a smaller,
-        noise-aware distance.
+        the volatility-adjusted distance is ``k · ATR%``. If `stop_floor_pct` is set
+        (>0), the stop is widened to at least that width — i.e. ``max(k·ATR%, floor)`` —
+        so an ultra-calm name (ATR<1%) is never stopped on an unrealistically tight
+        distance. With no floor (the default) the stop is exactly ``k·ATR%``, allowed to
+        widen arbitrarily in a storm.
 
       • If ATR data is missing/degenerate (None, ≤0, NaN), fall back to the legacy
         `fixed_stop_pct` exactly — zero behavioural change for names without ATR.
@@ -431,10 +443,22 @@ def effective_stop_pct(
       • If neither an ATR stop nor a fixed stop applies, return None (no stop, time-stop
         only) — identical to the pre-C7a default when the caller passes nothing.
 
-    Returns the stop distance as a positive percentage (e.g. 2.0 ⇒ stop 2% below entry),
-    or None for "no per-trade stop". Never raises on degenerate input.
+    SCOPE: this governs ONLY the per-trade stop-loss. The -2% daily realised-loss halt
+    (`DailyLossGovernor`, C7b) and the -20% max-drawdown e-stop remain HARD and are not
+    affected by this function.
+
+    Returns the stop distance as a positive percentage (e.g. 6.48 ⇒ stop 6.48% below
+    entry), or None for "no per-trade stop". Never raises on degenerate input.
     """
-    floor = abs(float(floor_pct)) if floor_pct is not None else None
+    # Back-compat: the pre-revision signature used `floor_pct` (a *cap*). Accept it as a
+    # deprecated alias mapping to `stop_floor_pct` so older call sites/imports do not
+    # break; the *semantics* below are the new floor-not-cap behaviour regardless.
+    if floor_pct != "__unset__":
+        stop_floor_pct = floor_pct  # type: ignore[assignment]
+    try:
+        floor = abs(float(stop_floor_pct)) if stop_floor_pct is not None else None
+    except (TypeError, ValueError):
+        floor = None
     # ATR-scaled branch (only when k>0 and a usable ATR% is present).
     if atr_stop_mult is not None:
         try:
@@ -448,8 +472,9 @@ def effective_stop_pct(
         if k > 0 and np.isfinite(a) and a > 0:
             atr_stop = k * a
             if floor is not None and floor > 0:
-                # Clamp: never looser (larger %) than the locked floor.
-                return float(min(atr_stop, floor))
+                # Floor on protection: never *tighter* (smaller %) than the configured
+                # minimum width — but free to WIDEN past it in a high-ATR storm.
+                return float(max(atr_stop, floor))
             return float(atr_stop)
     # Fallback: legacy fixed-% stop (or None for no stop).
     if fixed_stop_pct is not None:
