@@ -1,0 +1,15 @@
+{
+  "_comment": "ILLUSTRATIVE figures for --demo only (approx. FY2024-25 ranges). NOT live data. Use the live NSE fetch for accurate, current numbers.",
+  "RELIANCE":  {"company": "Reliance Industries Ltd", "period": "31-Mar-2025", "promoter_pct": 50.30, "public_pct": 49.70, "pledged_pct": 0.00},
+  "TCS":       {"company": "Tata Consultancy Services Ltd", "period": "31-Mar-2025", "promoter_pct": 71.77, "public_pct": 28.23, "pledged_pct": 0.00},
+  "INFY":      {"company": "Infosys Ltd", "period": "31-Mar-2025", "promoter_pct": 13.04, "public_pct": 86.96, "pledged_pct": 0.00},
+  "HDFCBANK":  {"company": "HDFC Bank Ltd", "period": "31-Mar-2025", "promoter_pct": 0.00, "public_pct": 100.00, "pledged_pct": 0.00},
+  "ITC":       {"company": "ITC Ltd", "period": "31-Mar-2025", "promoter_pct": 0.00, "public_pct": 100.00, "pledged_pct": 0.00},
+  "HINDUNILVR":{"company": "Hindustan Unilever Ltd", "period": "31-Mar-2025", "promoter_pct": 61.90, "public_pct": 38.10, "pledged_pct": 0.00},
+  "MARUTI":    {"company": "Maruti Suzuki India Ltd", "period": "31-Mar-2025", "promoter_pct": 58.19, "public_pct": 41.81, "pledged_pct": 0.00},
+  "ASIANPAINT":{"company": "Asian Paints Ltd", "period": "31-Mar-2025", "promoter_pct": 52.63, "public_pct": 47.37, "pledged_pct": 0.00},
+  "SBIN":      {"company": "State Bank of India", "period": "31-Mar-2025", "promoter_pct": 57.54, "public_pct": 42.46, "pledged_pct": 0.00},
+  "LT":        {"company": "Larsen & Toubro Ltd", "period": "31-Mar-2025", "promoter_pct": 0.00, "public_pct": 100.00, "pledged_pct": 0.00},
+  "BHARTIARTL":{"company": "Bharti Airtel Ltd", "period": "31-Mar-2025", "promoter_pct": 53.18, "public_pct": 46.82, "pledged_pct": 0.96},
+  "TATAMOTORS":{"company": "Tata Motors Ltd", "period": "31-Mar-2025", "promoter_pct": 42.58, "public_pct": 57.42, "pledged_pct": 0.83}
+}
