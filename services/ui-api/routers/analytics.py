@@ -33,6 +33,18 @@ import factor_decile_engine as fde
 import db
 from db import get_conn
 
+# C6 — backtest↔live parity: the scheduled-impact model + realised-slippage persistence.
+# Imported defensively so analytics still loads even if the scheduler / DuckDB writer is
+# unavailable in some deployment (the at-scale path simply falls back to the single hit).
+try:
+    import scheduled_impact as _sched_impact
+    import slippage_store as _slip_store
+    _SCHEDULED_IMPACT_OK = _sched_impact.SCHEDULER_AVAILABLE
+except Exception:   # pragma: no cover - import-environment dependent
+    _sched_impact = None
+    _slip_store = None
+    _SCHEDULED_IMPACT_OK = False
+
 router = APIRouter()
 
 MODE = "PAPER"
@@ -809,6 +821,10 @@ def _auto_impact_status(req: BacktestRequest, ctx: "_SimContext") -> dict:
                                        and ctx.auto_participation is not None),
         "impact_coef_per_name": ctx.impact_coef_map is not None,   # C2 — endogenous per-name Y_i
         "auto_participation_pct": ctx.auto_participation,
+        # C6 — backtest↔live parity: at-scale blocks worked through the live child-order
+        # scheduler (TWAP/VWAP/POV, partial fills, U-shaped liquidity) instead of a single
+        # instantaneous √-law hit. True only when impact is live AND the scheduler imported.
+        "scheduled_impact_parity": bool(_SCHEDULED_IMPACT_OK and temp_on),
     }
 
 
@@ -1006,6 +1022,25 @@ def _simulate_window(ctx: "_SimContext", req: BacktestRequest, filters: list[dic
     if not gidxs:
         return None
     from_idx, to_idx = min(gidxs), max(gidxs)
+
+    # C6 — backtest↔live parity. When the temporary-impact leg is live (the explicit
+    # caller knob or the at-scale auto-safeguard), route at-scale block entries through
+    # the SAME child-order scheduler the live path uses, and persist the realised
+    # implementation shortfall to the `slippage` table for nightly Y_i recalibration.
+    # Activates ONLY when impact is on AND the scheduler imported — otherwise None ⇒ the
+    # engine charges the legacy single instantaneous √-law hit exactly (zero regression).
+    _impact_live = (getattr(req, "impact_coef", None) is not None) or (ctx.auto_impact is not None)
+    scheduled_impact_fn = None
+    slippage_collector = None
+    if _SCHEDULED_IMPACT_OK and _impact_live and _sched_impact is not None:
+        scheduled_impact_fn = _sched_impact.schedule_block_impact
+        if _slip_store is not None:
+            try:
+                slippage_collector = _slip_store.SlippageCollector(
+                    run_id=f"{getattr(req, 'profile', 'bt')}-{int(time.time())}")
+            except Exception:
+                slippage_collector = None
+
     equity, trades = be.simulate_portfolio(
         ctx.all_dates, from_idx, to_idx, entries_by_idx, ctx.price_at,
         starting_capital=req.starting_capital, max_positions=req.max_positions,
@@ -1033,7 +1068,19 @@ def _simulate_window(ctx: "_SimContext", req: BacktestRequest, filters: list[dic
         delist_by_ticker=ctx.delist_by_ticker,
         # C7b — daily realised-loss VaR governor (default -2%, mirrors live kill-switch).
         daily_loss_halt_pct=getattr(req, "daily_loss_halt_pct", None),
+        # C6 — at-scale entries worked through the live scheduler; realised slippage piped
+        # to the collector below. Both None at retail scale / when impact is off.
+        scheduled_impact_fn=scheduled_impact_fn,
+        slippage_sink=(slippage_collector.add if slippage_collector is not None else None),
     )
+
+    # C6 — flush realised-execution slippage once per window (defensive: a write failure
+    # never affects the result already computed above).
+    if slippage_collector is not None and slippage_collector.n_buffered:
+        try:
+            slippage_collector.flush()
+        except Exception:
+            pass
 
     # Tag every trade with its sector (for the blotter's sector grouping / export).
     sec = _sector_map()
