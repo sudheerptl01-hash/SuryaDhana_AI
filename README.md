@@ -42,9 +42,19 @@ python3 nse_historical_ingest.py --build-features
 # Bounded backfill
 python3 nse_historical_ingest.py --start 2023-01-01 --end 2023-03-31
 
+# Split/bonus-adjusted features from a corporate-actions feed
+python3 nse_historical_ingest.py --build-features --ca corp_actions.csv
+
 # Offline synthetic self-test of layers 2-4 (no network)
 python3 nse_historical_ingest.py --demo
 ```
+
+The scraper skips known **NSE trading holidays** (a curated calendar,
+refreshed from NSE's holiday API when online) so it doesn't waste requests on
+closures; pass `--no-holiday-skip` to disable and rely on 404s instead. The
+corporate-actions CSV has columns `ticker,ex_date,ratio` (e.g. a 1:2 split or
+1:1 bonus → `ratio=0.5`); price features/labels are then computed on adjusted
+prices, with raw prints preserved as `*_unadj` columns.
 
 Resulting tables: **`equity_eod`** (raw clean EOD) and **`equity_features`**
 (ML features + `fwd_ret_{2,3,5}d` / `label_up_{2,3,5}d` labels).

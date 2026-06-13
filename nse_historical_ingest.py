@@ -48,6 +48,7 @@ import io
 import logging
 import random
 import sys
+import tempfile
 import time
 import zipfile
 from datetime import date, datetime, timedelta
@@ -353,24 +354,32 @@ def apply_corporate_actions(df: pd.DataFrame, ca_csv: str | None) -> pd.DataFram
 
     NSE bhavcopy prices are RAW (not adjusted). Supply a CSV with columns
     [ticker, ex_date, ratio] where ``ratio`` is the multiplicative price
-    factor on/after ex-date (e.g. a 1:2 split -> 0.5; a 1:1 bonus -> 0.5).
-    Without a feed we return prices unadjusted and flag it, rather than
-    silently fabricating an adjustment.
+    factor applied to all bars *before* the ex-date (e.g. a 1:2 split -> 0.5;
+    a 1:1 bonus -> 0.5). Multiple events compound. Without a feed we leave
+    prices unadjusted (adj_factor = 1.0) and flag it, rather than silently
+    fabricating an adjustment. The adjusted columns (adj_close, ...) are
+    always emitted so downstream feature code can rely on them.
     """
+    df = df.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    df["adj_factor"] = 1.0
+
     if not ca_csv:
         log.warning("No corporate-actions feed: prices are UNADJUSTED.")
-        df["adj_factor"] = 1.0
-        return df
+    else:
+        ca = pd.read_csv(ca_csv, parse_dates=["ex_date"])
+        df = df.sort_values(["ticker", "date"])
+        for tkr, grp in ca.groupby("ticker"):
+            for _, ev in grp.iterrows():
+                ex_ts = pd.Timestamp(ev["ex_date"]).normalize()
+                mask = (df["ticker"] == tkr) & (df["date"] < ex_ts)
+                df.loc[mask, "adj_factor"] *= float(ev["ratio"])
+        n_events = len(ca)
+        log.info("Applied %d corporate-action events from %s.", n_events, ca_csv)
 
-    ca = pd.read_csv(ca_csv, parse_dates=["ex_date"])
-    df = df.sort_values(["ticker", "date"]).copy()
-    df["adj_factor"] = 1.0
-    for tkr, grp in ca.groupby("ticker"):
-        for _, ev in grp.iterrows():
-            mask = (df["ticker"] == tkr) & (df["date"] < ev["ex_date"].date())
-            df.loc[mask, "adj_factor"] *= float(ev["ratio"])
     for col in ("open", "high", "low", "close", "prev_close", "vwap"):
-        df[f"adj_{col}"] = df[col] * df["adj_factor"]
+        if col in df.columns:
+            df[f"adj_{col}"] = df[col] * df["adj_factor"]
     return df
 
 
@@ -395,7 +404,8 @@ def _true_range(df: pd.DataFrame, grp: pd.Series) -> pd.Series:
 
 
 def build_features(con: duckdb.DuckDBPyConnection,
-                   horizons: tuple[int, ...] = (2, 3, 5)) -> int:
+                   horizons: tuple[int, ...] = (2, 3, 5),
+                   ca_csv: str | None = None) -> int:
     """Compute a per-(ticker, date) swing-trading feature & label matrix.
 
     Features target 2-5 day holds: trend (SMA/EMA distance), momentum,
@@ -403,6 +413,10 @@ def build_features(con: duckdb.DuckDBPyConnection,
     sigma), liquidity/micro-structure (volume & delivery z-scores -- the NSE
     delivery signal), and gaps. Labels are forward returns over each horizon
     plus a binary up/down target.
+
+    When ``ca_csv`` is provided, price-derived features and labels are computed
+    on split/bonus-adjusted prices (so corporate actions don't masquerade as
+    returns); raw prices are retained as ``*_unadj`` columns.
     """
     df = con.execute(
         "SELECT date,ticker,open,high,low,close,volume,turnover,deliv_pct "
@@ -413,6 +427,13 @@ def build_features(con: duckdb.DuckDBPyConnection,
         return 0
 
     df["date"] = pd.to_datetime(df["date"])
+    # Layer-4 adjustment: swap OHLC to adjusted prices for feature math,
+    # preserving the raw prints as *_unadj (volume/delivery stay raw).
+    df = apply_corporate_actions(df, ca_csv).sort_values(["ticker", "date"]).reset_index(drop=True)
+    for c in ("open", "high", "low", "close"):
+        df[f"{c}_unadj"] = df[c]
+        df[c] = df[f"adj_{c}"]
+
     g = df.groupby("ticker", group_keys=False)
 
     df["ret_1d"] = g["close"].pct_change()
@@ -471,12 +492,61 @@ def build_features(con: duckdb.DuckDBPyConnection,
 MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
           "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
+# Curated NSE cash-market trading holidays (full-day closures), best-effort.
+# Skipping these avoids wasted requests; the 404 fallback in NSEArchiveSession
+# still covers anything missing or newly announced. Refresh authoritatively
+# from NSE's holiday API at runtime via ``fetch_nse_holidays`` when online.
+NSE_TRADING_HOLIDAYS: set[str] = {
+    # 2023
+    "2023-01-26", "2023-03-07", "2023-03-30", "2023-04-04", "2023-04-07",
+    "2023-04-14", "2023-05-01", "2023-06-28", "2023-08-15", "2023-09-19",
+    "2023-10-02", "2023-10-24", "2023-11-14", "2023-11-27", "2023-12-25",
+    # 2024
+    "2024-01-26", "2024-03-08", "2024-03-25", "2024-03-29", "2024-04-11",
+    "2024-04-17", "2024-05-01", "2024-05-20", "2024-06-17", "2024-07-17",
+    "2024-08-15", "2024-10-02", "2024-11-15", "2024-12-25",
+    # 2025
+    "2025-02-26", "2025-03-14", "2025-03-31", "2025-04-10", "2025-04-14",
+    "2025-04-18", "2025-05-01", "2025-08-15", "2025-08-27", "2025-10-02",
+    "2025-10-21", "2025-10-22", "2025-11-05", "2025-12-25",
+}
 
-def trading_days(start: date, end: date) -> list[date]:
-    """Weekdays in [start, end]. Holiday files simply 404 and are skipped."""
+
+def fetch_nse_holidays(sess: "NSEArchiveSession") -> set[str]:
+    """Augment the static holiday set from NSE's holiday-master API (online).
+
+    Returns ISO date strings; falls back to the static set on any failure.
+    """
+    import json
+    raw = sess.get(NSE_HOME + "/api/holiday-master?type=trading")
+    if not raw:
+        return set()
+    try:
+        data = json.loads(raw)
+        out: set[str] = set()
+        for _segment, rows in data.items():
+            for row in rows:
+                # NSE returns e.g. {"tradingDate": "26-Jan-2024", ...}
+                dt = datetime.strptime(row["tradingDate"], "%d-%b-%Y").date()
+                out.add(dt.isoformat())
+        log.info("Fetched %d NSE holidays from API.", len(out))
+        return out
+    except Exception as exc:  # noqa: BLE001
+        log.debug("Holiday API parse failed: %s", exc)
+        return set()
+
+
+def trading_days(start: date, end: date,
+                 holidays: set[str] | None = None) -> list[date]:
+    """Weekdays in [start, end] minus known NSE holidays.
+
+    Any holiday not in the set still 404s cleanly during fetch, so a stale
+    calendar only costs a wasted request, never a data gap.
+    """
+    hol = holidays if holidays is not None else NSE_TRADING_HOLIDAYS
     days, d = [], start
     while d <= end:
-        if d.weekday() < 5:  # Mon-Fri
+        if d.weekday() < 5 and d.isoformat() not in hol:  # Mon-Fri, non-holiday
             days.append(d)
         d += timedelta(days=1)
     return days
@@ -516,11 +586,17 @@ def run_ingest(args: argparse.Namespace) -> None:
         start = last + timedelta(days=1)
         log.info("Resuming: last loaded date is %s; starting at %s", last, start)
 
-    days = trading_days(start, end)
+    sess = NSEArchiveSession(min_delay=args.min_delay, max_delay=args.max_delay)
+    holidays: set[str] | None
+    if args.no_holiday_skip:
+        holidays = set()  # weekends only; let everything 404 instead
+    else:
+        holidays = set(NSE_TRADING_HOLIDAYS) | fetch_nse_holidays(sess)
+
+    days = trading_days(start, end, holidays)
     if not days:
         log.info("Nothing to ingest for the requested window.")
     else:
-        sess = NSEArchiveSession(min_delay=args.min_delay, max_delay=args.max_delay)
         log.info("Ingesting %d candidate trading days (%s .. %s)", len(days), start, end)
         total = 0
         for i, d in enumerate(days, 1):
@@ -536,7 +612,7 @@ def run_ingest(args: argparse.Namespace) -> None:
         log.info("Ingest complete: %d rows upserted.", total)
 
     if args.build_features:
-        n = build_features(store.con)
+        n = build_features(store.con, ca_csv=args.ca)
         log.info("Built equity_features: %d rows.", n)
     store.close()
 
@@ -592,10 +668,21 @@ def run_demo(args: argparse.Namespace) -> None:
     state = {t: float(rng.uniform(100, 3000)) for t in tickers}
     store = DuckDBStore(":memory:")
 
-    # ~90 weekdays so 50-day / momentum windows populate.
-    days = trading_days(date(2024, 1, 1), date(2024, 5, 31))
+    # ~100 weekdays so 50-day / momentum windows populate. The holiday
+    # calendar drops known NSE closures (e.g. 26-Jan, 08-Mar, 25/29-Mar...).
+    win_start, win_end = date(2024, 1, 1), date(2024, 5, 31)
+    all_wk = trading_days(win_start, win_end, holidays=set())
+    days = trading_days(win_start, win_end)  # default = holiday calendar on
+    print(f"Layer 1 calendar: {len(all_wk)} weekdays -> {len(days)} trading "
+          f"days after dropping {len(all_wk) - len(days)} NSE holidays "
+          f"(saves that many wasted requests).")
+    # Simulate a realistic 1:2 split: RELIANCE's traded price halves on the
+    # ex-date, so back-adjustment should flatten the series (no fake jump).
+    split_day = days[len(days) // 2]
     total = 0
     for d in days:
+        if d == split_day:
+            state["RELIANCE"] *= 0.5  # ex-date price drop in the raw print
         sec = parse_sec_delivery(_synth_sec_csv(d, tickers, rng, state), d)   # Layer 2
         pr = parse_pr_zip(_synth_pr_zip(d, tickers), d)                       # Layer 2 (zip)
         total += store.upsert(merge_sources(sec, pr))                        # Layer 3
@@ -610,8 +697,21 @@ def run_demo(args: argparse.Namespace) -> None:
     print(f"Idempotent upsert check: {before} -> {after} rows "
           f"({'OK, no duplicates' if before == after else 'FAILED'}).")
 
-    n = build_features(store.con)                                            # Layer 4
-    print(f"Layer 4: built {n} feature rows.\n")
+    # Layer 4 with the matching corporate-actions feed (ratio 0.5 on pre-ex
+    # bars). The adjusted series should be continuous across the ex-date.
+    ca_path = Path(tempfile.gettempdir()) / "demo_corp_actions.csv"
+    pd.DataFrame({"ticker": ["RELIANCE"], "ex_date": [split_day],
+                  "ratio": [0.5]}).to_csv(ca_path, index=False)
+    n = build_features(store.con, ca_csv=str(ca_path))                       # Layer 4
+    print(f"\nLayer 4: built {n} feature rows (with split/bonus adjustment).\n")
+
+    print(f"Corporate-action adjustment check (RELIANCE 1:2 split on {split_day}):")
+    print(store.con.execute(
+        "SELECT date, round(close_unadj,1) raw_close, round(close,1) adj_close, "
+        "adj_factor FROM equity_features WHERE ticker='RELIANCE' "
+        f"AND date BETWEEN '{(split_day - timedelta(days=4))}' AND '{(split_day + timedelta(days=4))}' "
+        "ORDER BY date"
+    ).df().to_string(index=False))
 
     print("Sample equity_eod (with ISIN merged from PR zip):")
     print(store.con.execute(
@@ -647,6 +747,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-pr", action="store_true", help="Skip the price-bhavcopy ISIN enrichment")
     p.add_argument("--rebuild", action="store_true", help="Re-ingest even already-loaded days")
     p.add_argument("--build-features", action="store_true", help="Build equity_features after ingest")
+    p.add_argument("--ca", help="Corporate-actions CSV [ticker,ex_date,ratio] for split/bonus adjustment")
+    p.add_argument("--no-holiday-skip", action="store_true",
+                   help="Don't skip known NSE holidays (rely on 404s instead)")
     p.add_argument("--min-delay", type=float, default=1.5, help="Min inter-request delay (s)")
     p.add_argument("--max-delay", type=float, default=3.5, help="Max inter-request delay (s)")
     p.add_argument("--demo", action="store_true", help="Offline synthetic self-test of layers 2-4")

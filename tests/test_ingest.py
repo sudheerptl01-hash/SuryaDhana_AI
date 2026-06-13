@@ -98,9 +98,47 @@ class TestStorageAndFeatures(unittest.TestCase):
 
 class TestDateHelpers(unittest.TestCase):
     def test_trading_days_excludes_weekends(self):
-        days = ing.trading_days(date(2024, 1, 1), date(2024, 1, 7))
+        days = ing.trading_days(date(2024, 1, 1), date(2024, 1, 7), holidays=set())
         self.assertTrue(all(d.weekday() < 5 for d in days))
         self.assertEqual(len(days), 5)  # Mon-Fri of that week
+
+    def test_trading_days_skips_known_holidays(self):
+        # 2024-01-26 (Republic Day) is a weekday but an NSE holiday.
+        rng = ing.trading_days(date(2024, 1, 22), date(2024, 1, 28))
+        self.assertNotIn(date(2024, 1, 26), rng)
+        self.assertIn(date(2024, 1, 25), rng)
+        # With the calendar disabled, the holiday weekday reappears.
+        self.assertIn(date(2024, 1, 26),
+                      ing.trading_days(date(2024, 1, 22), date(2024, 1, 28), holidays=set()))
+
+
+class TestCorporateActions(unittest.TestCase):
+    def test_back_adjustment_halves_pre_ex_bars(self):
+        df = pd.DataFrame({
+            "date": pd.to_datetime(["2024-01-01", "2024-01-02", "2024-01-03"]),
+            "ticker": "AAA",
+            "open": [200.0, 200.0, 100.0], "high": [200.0, 200.0, 100.0],
+            "low": [200.0, 200.0, 100.0], "close": [200.0, 200.0, 100.0],
+        })
+        import tempfile, os
+        with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as fh:
+            fh.write("ticker,ex_date,ratio\nAAA,2024-01-03,0.5\n")
+            ca_path = fh.name
+        out = ing.apply_corporate_actions(df, ca_path).sort_values("date")
+        os.unlink(ca_path)
+        # Bars before the ex-date are halved; ex-date bar unchanged.
+        self.assertAlmostEqual(out.iloc[0]["adj_close"], 100.0)
+        self.assertAlmostEqual(out.iloc[1]["adj_close"], 100.0)
+        self.assertAlmostEqual(out.iloc[2]["adj_close"], 100.0)
+        self.assertAlmostEqual(out.iloc[2]["adj_factor"], 1.0)
+
+    def test_no_feed_leaves_prices_unadjusted(self):
+        df = pd.DataFrame({"date": pd.to_datetime(["2024-01-01"]),
+                           "ticker": ["AAA"], "open": [10.0], "high": [10.0],
+                           "low": [10.0], "close": [10.0]})
+        out = ing.apply_corporate_actions(df, None)
+        self.assertAlmostEqual(out.iloc[0]["adj_factor"], 1.0)
+        self.assertAlmostEqual(out.iloc[0]["adj_close"], 10.0)
 
 
 if __name__ == "__main__":
