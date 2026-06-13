@@ -1225,7 +1225,8 @@ def expected_max_sharpe(sr_variance: float, n_trials: int) -> float:
     return float(np.sqrt(sr_variance) * ((1.0 - gamma) * z1 + gamma * z2))
 
 
-def deflated_sharpe_ratio(returns, trial_sharpes_annual, freq: int = TRADING_DAYS) -> dict:
+def deflated_sharpe_ratio(returns, trial_sharpes_annual, freq: int = TRADING_DAYS,
+                          n_eff: Optional[float] = None) -> dict:
     """Deflated Sharpe Ratio (Bailey & López de Prado 2014): probability the selected
     strategy's true SR exceeds the maximum SR achievable by chance across the trials,
     correcting for trial count, trial-SR dispersion, sample length, skew and kurtosis.
@@ -1233,12 +1234,24 @@ def deflated_sharpe_ratio(returns, trial_sharpes_annual, freq: int = TRADING_DAY
 
     `returns` = the SELECTED strategy's per-period (daily) returns;
     `trial_sharpes_annual` = annualized Sharpes of ALL configurations searched.
+
+    `n_eff` (C4+C9, audit §3.6): OPTIONAL override for the trial count fed to
+    `expected_max_sharpe`. When None (default) the haircut uses the NOMINAL count
+    (len of the dispersion-usable trial Sharpes) — exact legacy behaviour, byte-for-byte.
+    When supplied, it should be the CROSS-CAMPAIGN, correlation-CLUSTER-ADJUSTED effective
+    number of independent trials (from the `research_trials` ledger via
+    `effective_trials.effective_n`). This makes the multiple-testing denominator honest:
+    it counts every config ever searched (C4: parameter sweeps, profile re-runs, WFO
+    per-window selections — not just one run's survivors) while collapsing near-duplicate
+    overlapping combos that nominal N over-counts (C9). `n_eff` is clamped to ≥ 1; the
+    per-run nominal count is still reported in `n_trials` so the legacy figure is never lost.
     """
     r = np.asarray(returns, dtype=float)
     r = r[np.isfinite(r)]
     n = int(len(r))
     out = {"dsr": 0.0, "psr_zero": 0.0, "sr_annual": 0.0, "sr0_annual": 0.0,
-           "n_trials": int(len(trial_sharpes_annual)), "n_obs": n, "skew": 0.0, "kurt": 3.0}
+           "n_trials": int(len(trial_sharpes_annual)), "n_obs": n, "skew": 0.0, "kurt": 3.0,
+           "n_eff": None}
     if n < 3:
         return out
     mu, sd = float(r.mean()), float(r.std(ddof=1))
@@ -1251,13 +1264,23 @@ def deflated_sharpe_ratio(returns, trial_sharpes_annual, freq: int = TRADING_DAY
     trials_d = trials_d[np.isfinite(trials_d)]
     var_sr = float(np.var(trials_d, ddof=1)) if len(trials_d) > 1 else 0.0
     n_trials = max(len(trials_d), 1)
-    sr0_d = expected_max_sharpe(var_sr, n_trials)
+    # Effective-trials override (C4/C9): deflate against the honest cross-campaign +
+    # correlation-clustered count when supplied; else nominal per-run count (legacy).
+    eff = None
+    if n_eff is not None:
+        try:
+            eff = max(1.0, float(n_eff))
+        except (TypeError, ValueError):
+            eff = None
+    n_for_haircut = eff if eff is not None else float(n_trials)
+    sr0_d = expected_max_sharpe(var_sr, n_for_haircut)
     out.update({
         "dsr": probabilistic_sharpe_ratio(sr_d, sr0_d, n, sk, ku),
         "psr_zero": probabilistic_sharpe_ratio(sr_d, 0.0, n, sk, ku),
         "sr_annual": round(sr_d * np.sqrt(freq), 4),
         "sr0_annual": round(sr0_d * np.sqrt(freq), 4),
         "n_trials": n_trials, "n_obs": n, "skew": round(sk, 3), "kurt": round(ku, 3),
+        "n_eff": (round(eff, 3) if eff is not None else None),
     })
     return out
 
