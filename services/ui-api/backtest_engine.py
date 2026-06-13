@@ -514,6 +514,69 @@ def resolve_trade_exit(
     }
 
 
+# ── Portfolio-level tail-risk governor ──────────────────────────────────────────
+
+# Daily realised-loss limit (% of the day-open NAV) that halts NEW entries for the
+# rest of the session. Mirrors the LIVE kill-switch (live_execution.py
+# DAILY_LOSS_LIMIT_PCT=0.02 → 2%) so backtest and live enforce the SAME daily tail
+# limit. The peak-to-trough max_drawdown_halt is a separate, slower control.
+DEFAULT_DAILY_LOSS_HALT_PCT: float = 2.0
+
+
+class DailyLossGovernor:
+    """C7b — per-bar realised-daily-loss VaR governor for `simulate_portfolio`.
+
+    Independent, single-responsibility state machine. One backtest bar = one trading
+    day, so "realised daily loss" is the move from the NAV at the *open* of today's bar
+    (i.e. yesterday's close NAV) to the current intraday MTM NAV. When that loss breaches
+    the configured limit ℓ, the governor *halts new entries* for the remainder of the
+    bar — the same lever the existing drawdown-halt and regime-gate use (open positions
+    are never force-liquidated mid-bar; the sim has no intra-bar exit mechanism). This
+    mirrors the live 2% kill-switch so sim and live share an identical daily tail limit,
+    closing the asymmetry where the backtest could ride a one-day −5% gap that live would
+    have halted.
+
+    Math (audit §3.4):
+        halt new entries if  (NAV_t / NAV_open_of_day − 1)·100  ≤  −ℓ,   ℓ = 2%.
+
+    Disabled (limit None ⇒ inert) the governor is a no-op: it never halts, so passing
+    None reproduces the legacy behaviour byte-for-byte. Never raises on degenerate NAV.
+    """
+
+    __slots__ = ("limit_pct", "_day_open_nav", "days_halted")
+
+    def __init__(self, limit_pct: Optional[float]) -> None:
+        # Store as a positive magnitude; None ⇒ governor inert.
+        self.limit_pct: Optional[float] = (abs(float(limit_pct))
+                                           if limit_pct is not None else None)
+        self._day_open_nav: Optional[float] = None
+        self.days_halted: int = 0
+
+    def open_day(self, nav: float) -> None:
+        """Capture the day-open NAV (called at the top of each bar, pre-entry)."""
+        try:
+            v = float(nav)
+            self._day_open_nav = v if np.isfinite(v) and v > 0 else None
+        except (TypeError, ValueError):
+            self._day_open_nav = None
+
+    def is_halted(self, nav: float) -> bool:
+        """True if today's realised loss breaches the limit ⇒ suppress new entries."""
+        if self.limit_pct is None or self._day_open_nav is None:
+            return False
+        try:
+            cur = float(nav)
+        except (TypeError, ValueError):
+            return False
+        if not np.isfinite(cur) or self._day_open_nav <= 0:
+            return False
+        day_loss_pct = (cur / self._day_open_nav - 1.0) * 100.0
+        halted = day_loss_pct <= -self.limit_pct
+        if halted:
+            self.days_halted += 1
+        return halted
+
+
 # ── Capital-managed compounding portfolio simulation ────────────────────────────
 
 def simulate_portfolio(
@@ -536,6 +599,7 @@ def simulate_portfolio(
     kelly_fraction: Optional[float] = None,
     delist_by_ticker: Optional[dict] = None,
     impact_coef_map: Optional[dict] = None,
+    daily_loss_halt_pct: Optional[float] = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Event-driven, finite-capital portfolio simulation with daily mark-to-market.
@@ -567,6 +631,11 @@ def simulate_portfolio(
       • `regime_scale_by_date` — {date_str → float∈[0,1]}; a *soft* exposure throttle
         (e.g. an HMM P(bull) posterior) that scales each new position's allocation
         instead of a hard on/off — the book de-grosses smoothly as the regime weakens.
+      • `daily_loss_halt_pct` — C7b daily realised-loss VaR governor (% of the
+        day-open NAV). When today's intraday MTM loss breaches this limit, NEW entries
+        are suppressed for the rest of the bar (open positions untouched, like the DD
+        halt). Mirrors the LIVE 2% kill-switch so sim and live share an identical daily
+        tail limit. None ⇒ inert (legacy behaviour exactly).
 
     Liquidity realism (opt-in; needs cand["adv"] = 20-day avg dollar volume):
       • `max_participation_pct` — hard ADV cap: an entry cannot deploy more than
@@ -604,6 +673,9 @@ def simulate_portfolio(
     equity: list[dict] = []
     recent_rets: list[float] = []      # rolling closed-trade returns for fractional Kelly
     _KELLY_LOOKBACK, _KELLY_MIN = 50, 20
+    # C7b — daily realised-loss VaR governor (inert when daily_loss_halt_pct is None).
+    daily_governor = DailyLossGovernor(daily_loss_halt_pct)
+    prev_close_nav = float(starting_capital)   # NAV at the open of the current bar
 
     last_exit_idx = to_idx
     for idx in range(from_idx, to_idx + 1):
@@ -690,6 +762,11 @@ def simulate_portfolio(
             max_drawdown_halt_pct is not None and peak_nav > 0
             and (nav / peak_nav - 1) * 100.0 <= -abs(max_drawdown_halt_pct)
         )
+        # C7b — daily realised-loss VaR governor: halt NEW entries for the rest of the
+        # bar once today's MTM loss (vs the day-open NAV) breaches the limit. Mirrors
+        # the live 2% kill-switch. Inert (always False) when the limit is None.
+        daily_governor.open_day(prev_close_nav)
+        daily_loss_halt = daily_governor.is_halted(nav)
         # Regime gate: block *new* entries on risk-off days (open positions untouched).
         date_str = str(all_dates[idx])[:10]
         regime_ok = True if regime_ok_by_date is None else bool(regime_ok_by_date.get(date_str, True))
@@ -706,7 +783,8 @@ def simulate_portfolio(
                 r_ratio = float(wins.mean()) / abs(float(losses.mean()))
                 f_star = w_rate - (1.0 - w_rate) / r_ratio if r_ratio > 1e-9 else 0.0
                 kelly_cap = max(0.0, float(kelly_fraction) * f_star)   # NAV fraction per bet
-        if from_idx <= idx <= to_idx and not dd_halt and regime_ok and len(open_pos) < max_positions:
+        if (from_idx <= idx <= to_idx and not dd_halt and not daily_loss_halt
+                and regime_ok and len(open_pos) < max_positions):
             held = {p["ticker"] for p in open_pos.values()}
             # Current per-sector $ exposure (MTM) — only needed when the sector cap is on.
             sector_exposure: dict[str, float] = {}
@@ -794,6 +872,8 @@ def simulate_portfolio(
             "cash": round(cash, 2),
             "positions": len(open_pos),
         })
+        # This bar's close NAV is the open NAV for tomorrow's daily-loss governor.
+        prev_close_nav = nav
 
     return equity, trades
 

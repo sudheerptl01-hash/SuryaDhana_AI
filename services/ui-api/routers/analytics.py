@@ -279,6 +279,10 @@ class BacktestRequest(BaseModel):
     trailing_stop_pct: Optional[float] = None
     max_positions: int = 5
     max_drawdown_halt_pct: Optional[float] = None   # circuit breaker: halt new entries past this DD
+    # C7b — daily realised-loss VaR governor, ON BY DEFAULT at -2% (mirrors the live
+    # 2% kill-switch and the CLAUDE.md locked daily-loss rule). Halts NEW entries for
+    # the rest of a bar once today's MTM loss breaches the limit. Set to None to opt out.
+    daily_loss_halt_pct: Optional[float] = 2.0
     # Pillar 2 — scoping
     scope: str = "universe"              # "universe" | "watchlist"
     tickers: list[str] = []
@@ -1027,6 +1031,8 @@ def _simulate_window(ctx: "_SimContext", req: BacktestRequest, filters: list[dic
                      else ctx.auto_amihud),                          # C1 — auto permanent leg at scale
         kelly_fraction=getattr(req, "kelly_fraction", None),
         delist_by_ticker=ctx.delist_by_ticker,
+        # C7b — daily realised-loss VaR governor (default -2%, mirrors live kill-switch).
+        daily_loss_halt_pct=getattr(req, "daily_loss_halt_pct", None),
     )
 
     # Tag every trade with its sector (for the blotter's sector grouping / export).
@@ -1085,6 +1091,7 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
             "starting_capital": req.starting_capital, "friction_bps": ctx.friction,
             "stop_loss_pct": req.stop_loss_pct, "trailing_stop_pct": req.trailing_stop_pct,
             "max_positions": req.max_positions, "max_drawdown_halt_pct": req.max_drawdown_halt_pct,
+            "daily_loss_halt_pct": req.daily_loss_halt_pct,   # C7b daily-VaR governor (default -2%)
             "scope": req.scope, "entry_timing": req.entry_timing,
             "atr_stop_mult": req.atr_stop_mult, "vol_target_pct": req.vol_target_pct,
             "max_position_pct": req.max_position_pct, "max_sector_pct": req.max_sector_pct,
@@ -1397,6 +1404,7 @@ def _core_wfo(req: WFOBacktestRequest, on_progress: Optional[Callable[[dict], No
             "starting_capital": req.starting_capital, "friction_bps": ctx.friction,
             "stop_loss_pct": req.stop_loss_pct, "trailing_stop_pct": req.trailing_stop_pct,
             "max_positions": req.max_positions, "max_drawdown_halt_pct": req.max_drawdown_halt_pct,
+            "daily_loss_halt_pct": req.daily_loss_halt_pct,   # C7b daily-VaR governor (default -2%)
             "scope": req.scope, "entry_timing": req.entry_timing,
             "atr_stop_mult": req.atr_stop_mult, "vol_target_pct": req.vol_target_pct,
             "max_position_pct": req.max_position_pct, "max_sector_pct": req.max_sector_pct,

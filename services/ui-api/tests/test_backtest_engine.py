@@ -952,3 +952,118 @@ def test_effective_stop_handles_garbage_inputs_without_raising():
                                  fixed_stop_pct=2.0) == pytest.approx(2.0)
     assert be.effective_stop_pct(atr_pct=1.0, atr_stop_mult="x",
                                  fixed_stop_pct=2.0) == pytest.approx(2.0)
+
+
+# ── C7b — daily realised-loss VaR governor (mirrors the live 2% kill-switch) ──────
+
+def test_daily_loss_governor_unit_math():
+    # ℓ=2%: a -2.5% day vs day-open NAV trips; a -1.5% day does not.
+    g = be.DailyLossGovernor(2.0)
+    g.open_day(1000.0)
+    assert g.is_halted(975.0) is True       # -2.5% ⇒ halt
+    g2 = be.DailyLossGovernor(2.0)
+    g2.open_day(1000.0)
+    assert g2.is_halted(985.0) is False      # -1.5% ⇒ no halt
+    # Exactly at the limit (-2.0%) trips (≤ boundary, matching live kill-switch ≤).
+    g3 = be.DailyLossGovernor(2.0)
+    g3.open_day(1000.0)
+    assert g3.is_halted(980.0) is True
+
+
+def test_daily_loss_governor_inert_when_none():
+    # None ⇒ governor never halts (legacy behaviour exactly).
+    g = be.DailyLossGovernor(None)
+    g.open_day(1000.0)
+    assert g.is_halted(500.0) is False       # even a -50% day is not halted when off
+    assert g.days_halted == 0
+
+
+def test_daily_loss_governor_degenerate_nav_safe():
+    # Degenerate day-open / current NAV must never raise and never spuriously halt.
+    g = be.DailyLossGovernor(2.0)
+    g.open_day(0.0)                          # zero day-open ⇒ undefined ⇒ no halt
+    assert g.is_halted(900.0) is False
+    g.open_day(float("nan"))
+    assert g.is_halted(900.0) is False
+    g.open_day(1000.0)
+    assert g.is_halted(float("nan")) is False
+    assert g.is_halted("garbage") is False   # type: ignore[arg-type]
+
+
+def test_daily_loss_governor_counts_halt_days():
+    g = be.DailyLossGovernor(2.0)
+    for _ in range(3):
+        g.open_day(1000.0)
+        g.is_halted(960.0)                   # -4% each day
+    assert g.days_halted == 3
+
+
+def test_daily_var_halt_blocks_new_entries_end_to_end():
+    # Bar 1: T1 (held from bar 0) marks down hard so the bar-1 MTM NAV is -3% vs the
+    # bar-0 close. A 2% daily governor must block the bar-1 T2 entry; without it, taken.
+    all_dates = [f"2024-01-0{i+1}" for i in range(4)]
+
+    # T1 opens bar 0 at 100; on bar 1 it trades at 70 (a -3%-of-NAV intraday hole given
+    # full deployment), then recovers. price_at drives the MTM.
+    px = {(0, "T1"): 100.0, (1, "T1"): 70.0, (2, "T1"): 100.0, (3, "T1"): 100.0}
+
+    def price_at(idx, ticker):
+        return px.get((idx, ticker), 100.0)
+
+    entries = {
+        0: [{"ticker": "T1", "entry_price": 100.0, "exit_idx": 2, "net_return_pct": 0.0,
+             "gross_return_pct": 0.0, "exit_price": 100.0, "exit_reason": "time_stop",
+             "holding_days": 2, "win_threshold": 0.0,
+             "entry_date": all_dates[0], "exit_date": all_dates[2]}],
+        1: [{"ticker": "T2", "entry_price": 100.0, "exit_idx": 3, "net_return_pct": 5.0,
+             "gross_return_pct": 5.0, "exit_price": 105.0, "exit_reason": "time_stop",
+             "holding_days": 2, "win_threshold": 0.0,
+             "entry_date": all_dates[1], "exit_date": all_dates[3]}],
+    }
+    # With the 2% daily governor: full capital into T1 at bar 0 (NAV~1000 at bar-0
+    # close), then bar-1 MTM = 700 ⇒ -30% vs day-open ⇒ T2 blocked.
+    _, halted = be.simulate_portfolio(all_dates, 0, 3, entries, price_at,
+                                      starting_capital=1000.0, max_positions=1,
+                                      daily_loss_halt_pct=2.0)
+    _, open_ = be.simulate_portfolio(all_dates, 0, 3, entries, price_at,
+                                     starting_capital=1000.0, max_positions=1)
+    # max_positions=1 means T2 can only be taken after T1 exits (bar 2); the governor
+    # is irrelevant to that race, so use a 2-slot book to isolate the halt effect.
+    entries2 = {
+        0: [dict(entries[0][0])],
+        1: [dict(entries[1][0])],
+    }
+    _, h2 = be.simulate_portfolio(all_dates, 0, 3, entries2, price_at,
+                                  starting_capital=1000.0, max_positions=2,
+                                  daily_loss_halt_pct=2.0)
+    _, o2 = be.simulate_portfolio(all_dates, 0, 3, entries2, price_at,
+                                  starting_capital=1000.0, max_positions=2)
+    assert len(h2) == 1   # T2 blocked on the -30% bar by the daily governor
+    assert len(o2) == 2   # T2 taken when the governor is off
+
+
+def test_daily_var_halt_default_reduces_or_matches_drawdown_vs_off():
+    # Property: with the governor ON (default), a portfolio cannot enter on a
+    # breached day, so its trade count is ≤ the governor-off count on the same path.
+    all_dates = [f"2024-01-0{i+1}" for i in range(5)]
+    px = {(0, "A"): 100.0, (1, "A"): 60.0, (2, "A"): 100.0, (3, "A"): 100.0, (4, "A"): 100.0}
+
+    def price_at(idx, ticker):
+        return px.get((idx, ticker), 100.0)
+
+    e = {
+        0: [{"ticker": "A", "entry_price": 100.0, "exit_idx": 2, "net_return_pct": 0.0,
+             "gross_return_pct": 0.0, "exit_price": 100.0, "exit_reason": "time_stop",
+             "holding_days": 2, "win_threshold": 0.0,
+             "entry_date": all_dates[0], "exit_date": all_dates[2]}],
+        1: [{"ticker": "B", "entry_price": 100.0, "exit_idx": 3, "net_return_pct": 1.0,
+             "gross_return_pct": 1.0, "exit_price": 101.0, "exit_reason": "time_stop",
+             "holding_days": 2, "win_threshold": 0.0,
+             "entry_date": all_dates[1], "exit_date": all_dates[3]}],
+    }
+    _, on = be.simulate_portfolio(all_dates, 0, 4, {0: [dict(e[0][0])], 1: [dict(e[1][0])]},
+                                  price_at, starting_capital=1000.0, max_positions=2,
+                                  daily_loss_halt_pct=2.0)
+    _, off = be.simulate_portfolio(all_dates, 0, 4, {0: [dict(e[0][0])], 1: [dict(e[1][0])]},
+                                   price_at, starting_capital=1000.0, max_positions=2)
+    assert len(on) <= len(off)
