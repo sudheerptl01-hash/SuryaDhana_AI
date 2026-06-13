@@ -142,7 +142,8 @@ def _compute_advanced_factors(df: pd.DataFrame, g) -> None:
     fresh groupbys for columns added after `g` was constructed.
     """
     if df.empty:
-        for c in ("dollar_vol", "vmi_ratio", "vol_zscore_20", "intraday_intention", "squeeze_ratio"):
+        for c in ("dollar_vol", "adv20", "amihud_illiq", "vmi_ratio", "vol_zscore_20",
+                  "intraday_intention", "squeeze_ratio"):
             df[c] = pd.Series(dtype=float)
         for c in ("vipt_breakout", "squeeze_on", "intention_pullback"):
             df[c] = pd.Series(dtype=bool)
@@ -154,6 +155,21 @@ def _compute_advanced_factors(df: pd.DataFrame, g) -> None:
     df["dollar_vol"] = df["close"] * df["volume"]
     gdv = df.groupby("ticker")["dollar_vol"]
     adv20 = gdv.transform(lambda x: x.rolling(20, min_periods=10).mean()).to_numpy()
+    df["adv20"] = adv20      # 20-day avg dollar volume — liquidity base for ADV cap + impact
+
+    # ── Amihud (2002) illiquidity — empirical Kyle-λ proxy ─────────────────────
+    # ILLIQ_t = |ret_t| / dollar_vol_t, rolled 60d. Units: price impact (return) per
+    # rupee traded. Higher ⇒ a given order moves the price more → endogenous, per-name
+    # market-impact coefficient (replaces a single hand-set global scalar).
+    ret1d = df.groupby("ticker")["close"].pct_change().abs().to_numpy()
+    dvv = df["dollar_vol"].to_numpy()
+    daily_illiq = np.full(dvv.shape, np.nan)
+    np.divide(ret1d, dvv, out=daily_illiq, where=dvv > 0)
+    df["_daily_illiq"] = daily_illiq
+    df["amihud_illiq"] = df.groupby("ticker")["_daily_illiq"].transform(
+        lambda x: x.rolling(60, min_periods=20).mean())
+    df.drop(columns=["_daily_illiq"], inplace=True, errors="ignore")
+
     dv = df["dollar_vol"].to_numpy()
     atr_pct = df["atr_pct"].to_numpy()
     rel_dv = np.full(dv.shape, np.nan)
@@ -270,6 +286,82 @@ def compute_market_relative(
     return df
 
 
+# ── Non-linear regime detection (Gaussian HMM, causal forward filter) ──────────────
+# A 2-state Gaussian HMM (Hamilton 1989) on benchmark daily returns. Parameters are
+# fit by Baum-Welch on the full series; the emitted per-day signal is the *forward-
+# filtered* posterior P(bull | data ≤ t) — no backward smoothing, so it is causal and
+# look-ahead-free given the (slowly-varying) parameters. This replaces the laggy,
+# whipsaw-prone SMA(200) crossover with a probabilistic, fast-reacting regime weight.
+
+def gaussian_hmm_regime(returns, n_iter: int = 20, min_obs: int = 100):
+    """Fit a 2-state Gaussian HMM and return (p_bull_filtered, params).
+
+    `p_bull_filtered[t]` = causal P(bull state | returns₀..ₜ). The bull state is the
+    higher-mean component. Returns None when the series is too short. NaN inputs are
+    skipped and re-aligned to the original index (leading gap forward-filled).
+    """
+    r_all = np.asarray(returns, dtype=float)
+    finite = np.isfinite(r_all)
+    r = r_all[finite]
+    T = len(r)
+    if T < min_obs:
+        return None
+    base_sd = float(r.std()) + 1e-9
+    mu = np.array([r.mean() - base_sd, r.mean() + base_sd])       # [bear, bull] init
+    sd = np.array([base_sd * 1.5, base_sd * 0.8])
+    A = np.array([[0.95, 0.05], [0.05, 0.95]])                    # persistent regimes
+    pi = np.array([0.5, 0.5])
+
+    def _emissions(mu, sd):
+        d = r[:, None] - mu[None, :]
+        return np.exp(-0.5 * (d / sd) ** 2) / (sd * np.sqrt(2 * np.pi)) + 1e-300
+
+    def _forward(B, A, pi):
+        alpha = np.zeros((T, 2)); c = np.zeros(T)
+        alpha[0] = pi * B[0]; c[0] = alpha[0].sum() + 1e-300; alpha[0] /= c[0]
+        for t in range(1, T):
+            alpha[t] = (alpha[t - 1] @ A) * B[t]
+            c[t] = alpha[t].sum() + 1e-300
+            alpha[t] /= c[t]
+        return alpha, c
+
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        for _ in range(max(1, int(n_iter))):
+            B = _emissions(mu, sd)
+            alpha, c = _forward(B, A, pi)
+            beta = np.zeros((T, 2)); beta[-1] = 1.0
+            for t in range(T - 2, -1, -1):
+                beta[t] = (A @ (B[t + 1] * beta[t + 1])) / c[t + 1]
+            gamma = alpha * beta
+            gamma /= gamma.sum(1, keepdims=True) + 1e-300
+            xi_sum = np.zeros((2, 2))
+            for t in range(T - 1):
+                num = (alpha[t][:, None] * A) * (B[t + 1] * beta[t + 1])[None, :]
+                xi_sum += num / (num.sum() + 1e-300)
+            pi = gamma[0]
+            A = xi_sum / (xi_sum.sum(1, keepdims=True) + 1e-300)
+            w = gamma.sum(0)
+            mu = (gamma * r[:, None]).sum(0) / (w + 1e-300)
+            var = (gamma * (r[:, None] - mu[None, :]) ** 2).sum(0) / (w + 1e-300)
+            sd = np.sqrt(np.maximum(var, 1e-12)) + 1e-9
+
+        # Causal forward filter only (NO backward pass) → look-ahead-free posterior.
+        B = _emissions(mu, sd)
+        alpha, _ = _forward(B, A, pi)
+
+    bull = int(np.argmax(mu))
+    p_filtered = alpha[:, bull]
+    out = np.full(len(r_all), np.nan)
+    out[np.where(finite)[0]] = p_filtered
+    # forward-fill leading NaNs (pre-first-observation) with the first valid posterior
+    first = next((i for i, v in enumerate(out) if np.isfinite(v)), None)
+    if first is not None:
+        out[:first] = out[first]
+        out = pd.Series(out).ffill().to_numpy()
+    return out, {"mu": [round(float(x), 6) for x in mu], "sd": [round(float(x), 6) for x in sd],
+                 "bull_state": bull, "transition": A.round(4).tolist()}
+
+
 def apply_filters(day_df: pd.DataFrame, filters: list[dict]) -> pd.DataFrame:
     """Apply numeric + boolean filters (AND) to one day's candidate rows."""
     candidates = day_df
@@ -369,15 +461,72 @@ def simulate_portfolio(
     starting_capital: float = 10_000_000.0,
     max_positions: int = 5,
     max_drawdown_halt_pct: Optional[float] = None,
+    vol_target_pct: Optional[float] = None,
+    max_position_pct: Optional[float] = None,
+    max_sector_pct: Optional[float] = None,
+    regime_ok_by_date: Optional[dict] = None,
+    regime_scale_by_date: Optional[dict] = None,
+    impact_coef: Optional[float] = None,
+    max_participation_pct: Optional[float] = None,
+    amihud_coef: Optional[float] = None,
+    kelly_fraction: Optional[float] = None,
+    delist_by_ticker: Optional[dict] = None,
+    impact_coef_map: Optional[dict] = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Event-driven, finite-capital portfolio simulation with daily mark-to-market.
 
     entries_by_idx[idx] = ordered list of candidate dicts, each:
         {ticker, entry_price, exit_idx, net_return_pct, gross_return_pct,
-         exit_price, exit_reason, entry_date, exit_date}
+         exit_price, exit_reason, entry_date, exit_date, [atr_pct], [sector]}
 
-    Sizing: each new position is allocated min(cash, NAV / max_positions).
+    Sizing (all opt-in; defaults reproduce plain equal-weight exactly):
+      • base allocation = min(cash, NAV / max_positions).
+      • `vol_target_pct` — volatility-target sizing: scale the base by
+        (vol_target_pct / σ_i), σ_i = the name's signal-day ATR%, bounded to
+        [0.25×, 2.5×]. Calm names get more capital, jumpy names less — equalising
+        risk contribution and de-grossing the book's tail (the −55% MaxDD fix).
+      • `max_position_pct` — hard cap per position as a % of NAV.
+      • `kelly_fraction` — fractional-Kelly sizing (e.g. 0.5 = half-Kelly). The Kelly
+        fraction f* = W − (1−W)/R is estimated from a rolling window of the strategy's
+        OWN closed trades (W = win rate, R = avg win / |avg loss|) — strictly
+        point-in-time. Per-bet allocation is capped at min(equal-weight, NAV·κ·f*), so
+        Kelly only *de-risks* a weak edge below equal-weight (never over-concentrates a
+        multi-position book). Falls back to equal-weight until enough trades have closed.
+
+    Risk gates (opt-in):
+      • `max_sector_pct` — reject an entry that would push its sector's exposure
+        above this % of NAV (uses cand["sector"]).
+      • `regime_ok_by_date` — {date_str → bool}; entries are blocked on days the
+        regime flag is False (risk-off). Open positions are never force-closed by
+        the regime gate — only *new* entries are suppressed.
+      • `regime_scale_by_date` — {date_str → float∈[0,1]}; a *soft* exposure throttle
+        (e.g. an HMM P(bull) posterior) that scales each new position's allocation
+        instead of a hard on/off — the book de-grosses smoothly as the regime weakens.
+
+    Liquidity realism (opt-in; needs cand["adv"] = 20-day avg dollar volume):
+      • `max_participation_pct` — hard ADV cap: an entry cannot deploy more than
+        this % of the name's average daily dollar volume (you can't fill ₹10M into
+        a microcap). Allocation is clipped down to the cap.
+      • `impact_coef` — vol-scaled square-root *temporary* impact. Round-trip cost in %
+        ≈ 2 · impact_coef · ATR%ᵢ · √(alloc / ADVᵢ), deducted from the realised
+        return so a strategy's edge degrades with size (the flat-friction lie at
+        scale). impact_coef≈1 is a reasonable Almgren-style default.
+      • `amihud_coef` — endogenous *permanent* (Kyle-λ / Amihud) impact, linear in
+        order size: perm% ≈ amihud_coef · ILLIQᵢ · alloc · 100, where ILLIQᵢ is the
+        per-name Amihud illiquidity (cand["amihud"]). Captures that an order in an
+        illiquid name permanently moves the price against you (the temporary √-law
+        leg alone understates impact for thin names). Added to the round-trip cost.
+
+    Survivorship realism (opt-in; G2):
+      • `delist_by_ticker` — {ticker → (delist_gidx, delist_return_pct)}. A held name
+        that reaches its delisting bar is force-closed THAT bar at the terminal
+        delisting return (e.g. −100% for a wipe-out, or a buy-out premium), instead of
+        silently riding to its natural exit. Models that only ever see survivors
+        systematically overstate returns; a real delisting/acquisition path lets a dead
+        name actually hurt (or reward) the book. Positions whose natural exit lands on
+        or before the delist bar are unaffected (already realised).
+
     Positions are capped at `max_positions` concurrent. Exits realise proceeds
     back to cash; the equity curve is the true compounded NAV (cash + MTM longs).
 
@@ -389,6 +538,8 @@ def simulate_portfolio(
     open_pos: dict[str, dict] = {}
     trades: list[dict] = []
     equity: list[dict] = []
+    recent_rets: list[float] = []      # rolling closed-trade returns for fractional Kelly
+    _KELLY_LOOKBACK, _KELLY_MIN = 50, 20
 
     last_exit_idx = to_idx
     for idx in range(from_idx, to_idx + 1):
@@ -409,7 +560,10 @@ def simulate_portfolio(
         # 1) Exits first (free up capital before sizing new entries)
         for pid in [k for k, p in open_pos.items() if p["exit_idx"] == idx]:
             p = open_pos.pop(pid)
-            proceeds = p["alloc"] * (1 + p["net_return_pct"] / 100.0)
+            # Realised return net of round-trip market impact (0 unless impact modelled).
+            impact_pct = p.get("impact_pct", 0.0)
+            eff_return_pct = p["net_return_pct"] - impact_pct
+            proceeds = p["alloc"] * (1 + eff_return_pct / 100.0)
             cash += proceeds
             trades.append({
                 "entry_date": p["entry_date"],
@@ -418,13 +572,44 @@ def simulate_portfolio(
                 "entry_price": round(p["entry_price"], 2),
                 "exit_price": round(p["exit_price"], 2),
                 "gross_return_pct": round(p["gross_return_pct"], 2),
-                "return_pct": round(p["net_return_pct"], 2),
+                "return_pct": round(eff_return_pct, 2),
                 "holding_days": p["holding_days"],
                 "exit_reason": p["exit_reason"],
                 "capital_allocated": round(p["alloc"], 2),
+                "impact_pct": round(impact_pct, 4),
                 "pnl": round(proceeds - p["alloc"], 2),
-                "is_win": bool(p["net_return_pct"] > p["win_threshold"]),
+                "is_win": bool(eff_return_pct > p["win_threshold"]),
+                "sector": p.get("sector", "Unknown"),
             })
+            recent_rets.append(eff_return_pct)   # feed the rolling Kelly estimator
+
+        # 1b) Delisting sweep (G2): any name still open on its delist bar is force-closed
+        # at the terminal delisting return — survivorship is not rewarded. Re-reads
+        # open_pos so a name already exited above is never double-counted.
+        if delist_by_ticker:
+            for pid in [k for k, p in open_pos.items()
+                        if (dl := delist_by_ticker.get(p["ticker"])) is not None and dl[0] == idx]:
+                p = open_pos.pop(pid)
+                dret = float(delist_by_ticker[p["ticker"]][1])
+                proceeds = p["alloc"] * (1 + dret / 100.0)
+                cash += proceeds
+                trades.append({
+                    "entry_date": p["entry_date"],
+                    "exit_date": str(all_dates[idx])[:10],
+                    "ticker": p["ticker"],
+                    "entry_price": round(p["entry_price"], 2),
+                    "exit_price": round(p["entry_price"] * (1 + dret / 100.0), 2),
+                    "gross_return_pct": round(dret, 2),
+                    "return_pct": round(dret, 2),
+                    "holding_days": p["holding_days"],
+                    "exit_reason": "delisted",
+                    "capital_allocated": round(p["alloc"], 2),
+                    "impact_pct": 0.0,
+                    "pnl": round(proceeds - p["alloc"], 2),
+                    "is_win": bool(dret > p["win_threshold"]),
+                    "sector": p.get("sector", "Unknown"),
+                })
+                recent_rets.append(dret)
 
         # update MTM index pointer for open positions to today
         for p in open_pos.values():
@@ -441,17 +626,77 @@ def simulate_portfolio(
             max_drawdown_halt_pct is not None and peak_nav > 0
             and (nav / peak_nav - 1) * 100.0 <= -abs(max_drawdown_halt_pct)
         )
-        if from_idx <= idx <= to_idx and not dd_halt and len(open_pos) < max_positions:
+        # Regime gate: block *new* entries on risk-off days (open positions untouched).
+        date_str = str(all_dates[idx])[:10]
+        regime_ok = True if regime_ok_by_date is None else bool(regime_ok_by_date.get(date_str, True))
+        # Soft regime throttle: scale new-position size by P(bull) ∈ [0,1] (HMM gate).
+        regime_scale = (min(max(float(regime_scale_by_date.get(date_str, 1.0)), 0.0), 1.0)
+                        if regime_scale_by_date is not None else 1.0)
+        # Rolling fractional-Kelly fraction of NAV per bet (point-in-time: closed trades only).
+        kelly_cap = None
+        if kelly_fraction is not None and len(recent_rets) >= _KELLY_MIN:
+            arr = np.asarray(recent_rets[-_KELLY_LOOKBACK:], dtype=float)
+            wins, losses = arr[arr > 0], arr[arr < 0]
+            if len(wins) and len(losses):
+                w_rate = len(wins) / len(arr)
+                r_ratio = float(wins.mean()) / abs(float(losses.mean()))
+                f_star = w_rate - (1.0 - w_rate) / r_ratio if r_ratio > 1e-9 else 0.0
+                kelly_cap = max(0.0, float(kelly_fraction) * f_star)   # NAV fraction per bet
+        if from_idx <= idx <= to_idx and not dd_halt and regime_ok and len(open_pos) < max_positions:
             held = {p["ticker"] for p in open_pos.values()}
+            # Current per-sector $ exposure (MTM) — only needed when the sector cap is on.
+            sector_exposure: dict[str, float] = {}
+            if max_sector_pct is not None:
+                for p in open_pos.values():
+                    px = price_at(idx, p["ticker"]) or p["entry_price"]
+                    sct = p.get("sector", "Unknown")
+                    sector_exposure[sct] = sector_exposure.get(sct, 0.0) + p["shares"] * px
             for cand in entries_by_idx.get(idx, []):
                 if len(open_pos) >= max_positions or cash <= 1.0:
                     break
                 # No double-holding the same name (also makes the open_pos key safe).
                 if cand["ticker"] in held:
                     continue
-                alloc = min(cash, nav / max_positions)
+                base = nav / max_positions * regime_scale
+                # Volatility-target sizing: scale inversely with the name's ATR%.
+                atr_pct = cand.get("atr_pct")
+                if vol_target_pct is not None and atr_pct and atr_pct > 0:
+                    base *= min(max(vol_target_pct / atr_pct, 0.25), 2.5)
+                # Hard per-position cap as a % of NAV.
+                if max_position_pct is not None:
+                    base = min(base, nav * max_position_pct / 100.0)
+                # Fractional-Kelly cap: never bet more than κ·f* of NAV on one position.
+                if kelly_cap is not None:
+                    base = min(base, nav * kelly_cap)
+                alloc = min(cash, base)
+                # ADV participation cap: clip the fill to a slice of avg daily $ volume.
+                adv = cand.get("adv")
+                if max_participation_pct is not None and adv and adv > 0:
+                    alloc = min(alloc, adv * max_participation_pct / 100.0)
                 if alloc < 1.0 or cand["entry_price"] <= 0:
                     continue
+                # Sector exposure cap: skip an entry that would breach max_sector_pct.
+                if max_sector_pct is not None and nav > 0:
+                    sct = cand.get("sector", "Unknown")
+                    if (sector_exposure.get(sct, 0.0) + alloc) / nav * 100.0 > max_sector_pct:
+                        continue
+                    sector_exposure[sct] = sector_exposure.get(sct, 0.0) + alloc
+                # Market impact charged to the trade: vol-scaled √-law TEMPORARY leg
+                # (round-trip) + endogenous Amihud/Kyle-λ PERMANENT leg (linear in size).
+                impact_pct = 0.0
+                # C2 — per-name temporary-leg coefficient Y_i: an endogenous map calibrated
+                # from each name's Amihud illiquidity (microcaps cost more) overrides the flat
+                # scalar when present; falls back to `impact_coef` so legacy callers are exact.
+                _temp_coef = impact_coef
+                if impact_coef_map is not None:
+                    _temp_coef = impact_coef_map.get(cand["ticker"], impact_coef)
+                if _temp_coef is not None and adv and adv > 0:
+                    atrp = cand.get("atr_pct") or 0.0
+                    impact_pct += 2.0 * float(_temp_coef) * float(atrp) * (alloc / adv) ** 0.5
+                if amihud_coef is not None:
+                    illiq = cand.get("amihud")
+                    if illiq and illiq > 0:
+                        impact_pct += float(amihud_coef) * float(illiq) * alloc * 100.0
                 held.add(cand["ticker"])
                 shares = alloc / cand["entry_price"]
                 cash -= alloc
@@ -467,6 +712,8 @@ def simulate_portfolio(
                     "holding_days": cand["holding_days"],
                     "exit_reason": cand["exit_reason"],
                     "win_threshold": cand.get("win_threshold", 0.0),
+                    "sector": cand.get("sector", "Unknown"),
+                    "impact_pct": impact_pct,
                     "alloc": alloc,
                     "shares": shares,
                     "mtm_idx_ticker_idx": idx,
@@ -566,6 +813,115 @@ def beta_alpha(port_rets: np.ndarray, bench_rets: np.ndarray) -> tuple[float, fl
     return round(beta, 3), round(alpha_annual_pct, 2)
 
 
+# ── Factor attribution (Fama-French / Carhart) ─────────────────────────────────────
+# Decompose strategy returns into systematic factor exposures + residual α, so an
+# "edge" can be proven idiosyncratic rather than repackaged market/size/momentum β.
+
+def compute_factor_returns(df: pd.DataFrame) -> pd.DataFrame:
+    """Daily long-short factor returns from the prepared panel.
+
+    MKT = equal-weight market daily return (the internal benchmark proxy).
+    SMB = small-minus-big: bottom-tercile − top-tercile size daily return.
+    UMD = winners-minus-losers: top-tercile − bottom-tercile 12-1 momentum return.
+
+    Price factors (MKT/UMD) are strictly trailing/look-ahead-free. SMB uses `mktcap_cr`
+    as the size proxy where available, and falls back per-bar to trailing dollar volume
+    (`adv20`) where the point-in-time market cap is unavailable (G1 nulls fundamentals
+    before their coverage start) — so the size factor survives over historical windows
+    instead of collapsing to an all-NaN column. HML is omitted until point-in-time
+    book-to-market lands. Returns a DataFrame indexed by date with columns present.
+    """
+    if df is None or df.empty or "close" not in df.columns:
+        return pd.DataFrame()
+    d = df[["ticker", "date", "close"]].copy()
+    # Size proxy: mktcap_cr first, dollar-volume (adv20) as the PIT-safe fallback.
+    size = None
+    if "mktcap_cr" in df.columns:
+        size = pd.to_numeric(df["mktcap_cr"], errors="coerce").to_numpy(dtype=float)
+    if "adv20" in df.columns:
+        adv = pd.to_numeric(df["adv20"], errors="coerce").to_numpy(dtype=float)
+        size = adv if size is None else np.where(np.isfinite(size), size, adv)
+    if size is not None:
+        d["_size"] = size
+    d = d.sort_values(["ticker", "date"])
+    g = d.groupby("ticker")
+    d["ret"] = g["close"].pct_change()
+    # 12-1 momentum: cumulative return from 252 to 21 trading days ago (skip last month).
+    d["mom"] = g["close"].shift(21) / g["close"].shift(252) - 1.0
+
+    out: dict[str, pd.Series] = {}
+    out["MKT"] = d.groupby("date")["ret"].mean()
+    if "_size" in d.columns and d["_size"].notna().any():
+        d["_size_pct"] = d.groupby("date")["_size"].rank(pct=True)
+        small = d[d["_size_pct"] <= 1.0 / 3].groupby("date")["ret"].mean()
+        big = d[d["_size_pct"] >= 2.0 / 3].groupby("date")["ret"].mean()
+        out["SMB"] = (small - big)
+    d["_mom_pct"] = d.groupby("date")["mom"].rank(pct=True)
+    win = d[d["_mom_pct"] >= 2.0 / 3].groupby("date")["ret"].mean()
+    los = d[d["_mom_pct"] <= 1.0 / 3].groupby("date")["ret"].mean()
+    out["UMD"] = (win - los)
+
+    fr = pd.DataFrame(out)
+    fr.index = pd.to_datetime(fr.index)
+    return fr.dropna(how="all")
+
+
+def factor_attribution(port_rets, dates, factor_returns: pd.DataFrame,
+                       freq: int = TRADING_DAYS) -> Optional[dict]:
+    """OLS attribution of strategy excess returns on factor returns (Fama-French 1993 /
+    Carhart 1997). The intercept is the true annualized α (with a t-stat); the slopes
+    are systematic factor loadings. Aligns by date and drops missing rows.
+
+    `port_rets` = per-period strategy returns; `dates` = their dates (len == port_rets);
+    `factor_returns` = DataFrame indexed by date with factor columns.
+    """
+    if factor_returns is None or len(factor_returns) == 0:
+        return None
+    cols = [c for c in ("MKT", "SMB", "HML", "UMD") if c in factor_returns.columns]
+    pr = np.asarray(port_rets, dtype=float)
+    if not cols or len(pr) < 10 or len(pr) != len(dates):
+        return None
+    s = pd.Series(pr, index=pd.to_datetime(list(dates)))
+    # Stitched walk-forward OOS curves can repeat a date at window seams → a non-unique
+    # index that breaks the inner-join reindex. Collapse duplicates (mean) so attribution
+    # works on both the single-backtest (unique) and WFO (stitched) equity paths.
+    if s.index.has_duplicates:
+        s = s.groupby(level=0).mean()
+    fr = factor_returns[cols]
+    if fr.index.has_duplicates:
+        fr = fr.groupby(level=0).mean()
+    aligned = (pd.concat([s.rename("y"), fr], axis=1, join="inner")
+               .replace([np.inf, -np.inf], np.nan).dropna())
+    if len(aligned) < max(10, len(cols) + 2):
+        return None
+    y = aligned["y"].to_numpy(dtype=float)
+    X = np.column_stack([np.ones(len(aligned))] + [aligned[c].to_numpy(dtype=float) for c in cols])
+    # np.errstate guards against benign FP flags some BLAS matmul paths raise.
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+        if not np.all(np.isfinite(beta)):
+            return None
+        resid = y - X @ beta
+        n, k = X.shape
+        dof = max(n - k, 1)
+        sigma2 = float(resid @ resid / dof)
+        xtx_inv = np.linalg.pinv(X.T @ X)
+        se = np.sqrt(np.maximum(np.diag(sigma2 * xtx_inv), 0.0))
+        tstat = np.where(se > 1e-12, beta / se, np.nan)
+        ss_tot = float(np.sum((y - y.mean()) ** 2)) or 1e-12
+        r2 = 1.0 - float(resid @ resid) / ss_tot
+    return {
+        "alpha_annual_pct": round(float(beta[0]) * freq * 100.0, 3),
+        "alpha_tstat": round(float(tstat[0]), 3) if np.isfinite(tstat[0]) else None,
+        "loadings": {c: round(float(beta[i + 1]), 3) for i, c in enumerate(cols)},
+        "loading_tstats": {c: (round(float(tstat[i + 1]), 3) if np.isfinite(tstat[i + 1]) else None)
+                           for i, c in enumerate(cols)},
+        "r_squared": round(r2, 3),
+        "n_obs": int(n),
+        "factors": cols,
+    }
+
+
 def sharpe(port_rets: np.ndarray) -> float:
     if len(port_rets) < 2:
         return 0.0
@@ -622,13 +978,120 @@ def monte_carlo_drawdowns(trade_returns: list[float], n_runs: int = 1000) -> dic
     }
 
 
+# ── Multiple-testing / overfitting statistics (Bailey & López de Prado) ────────────
+# When a grid search or a per-window WFO selects the best of N configurations, the
+# winning Sharpe is upward-biased purely by the number of trials — even pure noise
+# produces a high max-of-N Sharpe. These correct for that.
+
+def probabilistic_sharpe_ratio(sr: float, sr_benchmark: float, n_obs: int,
+                               skew: float = 0.0, kurt: float = 3.0) -> float:
+    """PSR — P(true SR > benchmark) given the observed per-period SR, sample length,
+    and non-normality (Bailey & López de Prado 2012). `sr`/`sr_benchmark` are
+    per-period (non-annualized) Sharpes; `kurt` is non-excess (normal = 3)."""
+    if n_obs < 2:
+        return 0.0
+    denom = 1.0 - skew * sr + (kurt - 1.0) / 4.0 * sr * sr
+    if denom <= 1e-12:
+        return 0.0
+    from scipy.stats import norm
+    z = (sr - sr_benchmark) * np.sqrt(n_obs - 1.0) / np.sqrt(denom)
+    return float(norm.cdf(z))
+
+
+def expected_max_sharpe(sr_variance: float, n_trials: int) -> float:
+    """Expected maximum per-period Sharpe under the null of zero true edge across
+    `n_trials` independent trials (Bailey & López de Prado 2014, eq. for SR₀).
+    `sr_variance` = variance of the per-period trial Sharpes."""
+    if n_trials < 2 or sr_variance <= 0:
+        return 0.0
+    from scipy.stats import norm
+    gamma = 0.5772156649015329  # Euler–Mascheroni
+    z1 = norm.ppf(1.0 - 1.0 / n_trials)
+    z2 = norm.ppf(1.0 - 1.0 / (n_trials * np.e))
+    return float(np.sqrt(sr_variance) * ((1.0 - gamma) * z1 + gamma * z2))
+
+
+def deflated_sharpe_ratio(returns, trial_sharpes_annual, freq: int = TRADING_DAYS) -> dict:
+    """Deflated Sharpe Ratio (Bailey & López de Prado 2014): probability the selected
+    strategy's true SR exceeds the maximum SR achievable by chance across the trials,
+    correcting for trial count, trial-SR dispersion, sample length, skew and kurtosis.
+    DSR ≳ 0.95 ⇒ survives multiple-testing; < 0.5 ⇒ likely a selection artefact.
+
+    `returns` = the SELECTED strategy's per-period (daily) returns;
+    `trial_sharpes_annual` = annualized Sharpes of ALL configurations searched.
+    """
+    r = np.asarray(returns, dtype=float)
+    r = r[np.isfinite(r)]
+    n = int(len(r))
+    out = {"dsr": 0.0, "psr_zero": 0.0, "sr_annual": 0.0, "sr0_annual": 0.0,
+           "n_trials": int(len(trial_sharpes_annual)), "n_obs": n, "skew": 0.0, "kurt": 3.0}
+    if n < 3:
+        return out
+    mu, sd = float(r.mean()), float(r.std(ddof=1))
+    if sd <= 1e-12:
+        return out
+    z = (r - mu) / sd
+    sk, ku = float(np.mean(z ** 3)), float(np.mean(z ** 4))
+    sr_d = mu / sd
+    trials_d = np.asarray(trial_sharpes_annual, dtype=float) / np.sqrt(freq)
+    trials_d = trials_d[np.isfinite(trials_d)]
+    var_sr = float(np.var(trials_d, ddof=1)) if len(trials_d) > 1 else 0.0
+    n_trials = max(len(trials_d), 1)
+    sr0_d = expected_max_sharpe(var_sr, n_trials)
+    out.update({
+        "dsr": probabilistic_sharpe_ratio(sr_d, sr0_d, n, sk, ku),
+        "psr_zero": probabilistic_sharpe_ratio(sr_d, 0.0, n, sk, ku),
+        "sr_annual": round(sr_d * np.sqrt(freq), 4),
+        "sr0_annual": round(sr0_d * np.sqrt(freq), 4),
+        "n_trials": n_trials, "n_obs": n, "skew": round(sk, 3), "kurt": round(ku, 3),
+    })
+    return out
+
+
+def probability_of_backtest_overfitting(perf_matrix) -> Optional[dict]:
+    """PBO via Combinatorially-Symmetric Cross-Validation (Bailey, Borwein, López de
+    Prado & Zhu 2017). `perf_matrix` is (n_blocks, n_configs), higher = better. For
+    every C(S, S/2) split of blocks into in-sample / out-of-sample halves, take the
+    IS-best config and find its OOS rank; PBO = fraction of splits where the IS-best
+    lands at or below the OOS median (logit ≤ 0)."""
+    M = np.asarray(perf_matrix, dtype=float)
+    if M.ndim != 2:
+        return None
+    S, N = M.shape
+    if S % 2 == 1:                # CSCV needs an even number of blocks
+        M, S = M[:S - 1], S - 1
+    if S < 4 or N < 2:
+        return None
+    half = S // 2
+    import itertools as _it
+    logits = []
+    for is_idx in _it.combinations(range(S), half):
+        oos_idx = [i for i in range(S) if i not in is_idx]
+        is_perf = np.nanmean(M[list(is_idx)], axis=0)
+        oos_perf = np.nanmean(M[oos_idx], axis=0)
+        n_star = int(np.nanargmax(is_perf))                  # in-sample-best config
+        order = np.argsort(oos_perf)                          # ascending OOS performance
+        rank = int(np.where(order == n_star)[0][0]) + 1       # 1 (worst) … N (best)
+        w = min(max(rank / (N + 1.0), 1e-6), 1.0 - 1e-6)      # relative OOS rank
+        logits.append(float(np.log(w / (1.0 - w))))
+    logits = np.asarray(logits)
+    return {"pbo": float(np.mean(logits <= 0.0)), "n_splits": int(len(logits)),
+            "n_blocks": int(S), "n_configs": int(N)}
+
+
 def compute_metrics(
     equity_curve: list[dict],
     trades: list[dict],
     bench_nav: list[float],
     starting_capital: float,
+    factor_returns: Optional["pd.DataFrame"] = None,
 ) -> dict:
-    """Assemble the full Bloomberg-style metric matrix from the simulation output."""
+    """Assemble the full Bloomberg-style metric matrix from the simulation output.
+
+    When `factor_returns` is supplied (a date-indexed DataFrame of MKT/SMB/UMD/…),
+    a Fama-French/Carhart `factor_attribution` block is attached so the strategy's
+    α can be proven idiosyncratic rather than repackaged factor β.
+    """
     nav_series = [e["nav"] for e in equity_curve] or [starting_capital]
     p_rets = daily_returns(nav_series)
     b_rets = daily_returns(bench_nav) if bench_nav else np.array([])
@@ -656,6 +1119,13 @@ def compute_metrics(
     for t in trades:
         exit_breakdown[t.get("exit_reason", "time_stop")] = exit_breakdown.get(t.get("exit_reason", "time_stop"), 0) + 1
 
+    # Fama-French/Carhart attribution: the intercept is the *true* α; the loadings are
+    # the systematic exposures. Aligns p_rets (which spans equity_curve[1:]) to factors.
+    attribution = None
+    if factor_returns is not None and len(p_rets) > 10:
+        fa_dates = [e["date"] for e in equity_curve[1:]]   # p_rets aligns to diffs (skip day 0)
+        attribution = factor_attribution(p_rets, fa_dates, factor_returns)
+
     return {
         "starting_capital": round(starting_capital, 2),
         "final_nav": round(final_nav, 2),
@@ -680,4 +1150,5 @@ def compute_metrics(
         "beta": beta,
         "alpha_annual_pct": alpha,
         "exit_breakdown": exit_breakdown,
+        "factor_attribution": attribution,
     }
