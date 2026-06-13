@@ -195,7 +195,9 @@ def _to_float(value: Any) -> float | None:
         return None
     if isinstance(value, (int, float)):
         return float(value)
-    m = re.search(r"-?\d+(?:\.\d+)?", str(value))
+    # Strip thousands separators so "1,234.5%" parses as 1234.5, not 1.
+    text = str(value).replace(",", "")
+    m = re.search(r"-?\d+(?:\.\d+)?", text)
     return float(m.group()) if m else None
 
 
