@@ -388,6 +388,70 @@ def fundamental_filters_active(filters: list[dict]) -> bool:
 
 # ── Trade-level risk engine ─────────────────────────────────────────────────────
 
+# Default ATR-stop multiplier (k) when ATR-scaled stops are active. The universe
+# median ATR% ≈ 3.24%, so k=2.0 ⇒ a ~6.5% stop on the median name — wide enough not
+# to be knocked out by ordinary noise in a storm, tight enough to cap a tail loss.
+DEFAULT_ATR_STOP_MULT: float = 2.0
+# Locked protection floor from CLAUDE.md ("Stop-loss: -2% from entry"). The ATR stop
+# is only ever allowed to sit *tighter* (smaller %) than this — never looser — so the
+# mandated downside protection is preserved while the stop becomes volatility-aware.
+LOCKED_STOP_FLOOR_PCT: float = 2.0
+
+
+def effective_stop_pct(
+    atr_pct: Optional[float],
+    atr_stop_mult: Optional[float],
+    fixed_stop_pct: Optional[float],
+    floor_pct: float = LOCKED_STOP_FLOOR_PCT,
+) -> Optional[float]:
+    """C7a — resolve a single trade's stop distance (% below entry), volatility-aware.
+
+    Independent, side-effect-free unit. Policy:
+
+      • If `atr_stop_mult` (k) is set AND a positive signal-day `atr_pct` is available,
+        the volatility-adjusted distance is ``k · ATR%``. To honour the locked -2% rule
+        in CLAUDE.md as a *floor on protection* (never looser than the legacy fixed
+        stop), the effective stop is clamped to ``min(k·ATR%, floor_pct)`` — i.e. the
+        ATR stop can only ever tighten below -2%, it can never widen past it. This
+        preserves the mandated downside cap while letting calm names stop on a smaller,
+        noise-aware distance.
+
+      • If ATR data is missing/degenerate (None, ≤0, NaN), fall back to the legacy
+        `fixed_stop_pct` exactly — zero behavioural change for names without ATR.
+
+      • If neither an ATR stop nor a fixed stop applies, return None (no stop, time-stop
+        only) — identical to the pre-C7a default when the caller passes nothing.
+
+    Returns the stop distance as a positive percentage (e.g. 2.0 ⇒ stop 2% below entry),
+    or None for "no per-trade stop". Never raises on degenerate input.
+    """
+    floor = abs(float(floor_pct)) if floor_pct is not None else None
+    # ATR-scaled branch (only when k>0 and a usable ATR% is present).
+    if atr_stop_mult is not None:
+        try:
+            k = float(atr_stop_mult)
+        except (TypeError, ValueError):
+            k = 0.0
+        try:
+            a = float(atr_pct) if atr_pct is not None else float("nan")
+        except (TypeError, ValueError):
+            a = float("nan")
+        if k > 0 and np.isfinite(a) and a > 0:
+            atr_stop = k * a
+            if floor is not None and floor > 0:
+                # Clamp: never looser (larger %) than the locked floor.
+                return float(min(atr_stop, floor))
+            return float(atr_stop)
+    # Fallback: legacy fixed-% stop (or None for no stop).
+    if fixed_stop_pct is not None:
+        try:
+            f = float(fixed_stop_pct)
+            return f if f > 0 else None
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def resolve_trade_exit(
     highs: np.ndarray,
     lows: np.ndarray,

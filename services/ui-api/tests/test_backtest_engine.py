@@ -882,3 +882,73 @@ def test_survivorship_warning_cleared_when_delistings_applied():
     import routers.analytics as an
     assert an._survivorship_warning(_Ctx(membership_pit=False,
                                          delist_by_ticker={"X": (3, -90.0)})) is None
+
+
+# ── C7a — ATR-scaled stops on by default, capped at the locked -2% floor ──────────
+
+def test_effective_stop_atr_scaled_tighter_than_floor():
+    # Calm name: ATR 0.5%, k=2 -> 1.0% stop, which is TIGHTER than the -2% floor.
+    # Volatility-aware stop is allowed to go below the floor (more protection).
+    s = be.effective_stop_pct(atr_pct=0.5, atr_stop_mult=2.0, fixed_stop_pct=2.0)
+    assert s == pytest.approx(1.0)
+
+
+def test_effective_stop_clamped_to_locked_floor_in_storm():
+    # Storm name: ATR 3.24% (universe median), k=2 -> 6.48% raw, but the locked -2%
+    # rule caps the stop at the floor — it is never LOOSER than -2%.
+    s = be.effective_stop_pct(atr_pct=3.24, atr_stop_mult=2.0, fixed_stop_pct=2.0)
+    assert s == pytest.approx(2.0)
+    # Even with a very high-vol name the stop never widens past the floor.
+    assert be.effective_stop_pct(atr_pct=10.0, atr_stop_mult=2.0,
+                                 fixed_stop_pct=2.0) == pytest.approx(2.0)
+
+
+def test_effective_stop_never_looser_than_floor_property():
+    # Property: across the universe ATR range, k·ATR clamped never exceeds the floor.
+    floor = be.LOCKED_STOP_FLOOR_PCT
+    for atr in [0.1, 0.5, 1.0, 2.0, 3.24, 6.0, 12.0]:
+        s = be.effective_stop_pct(atr_pct=atr, atr_stop_mult=2.0, fixed_stop_pct=2.0)
+        assert s is not None and s <= floor + 1e-9
+
+
+def test_effective_stop_falls_back_to_fixed_when_atr_missing():
+    # No ATR data for the name -> fall back to the legacy fixed-% stop exactly.
+    assert be.effective_stop_pct(atr_pct=None, atr_stop_mult=2.0,
+                                 fixed_stop_pct=2.0) == pytest.approx(2.0)
+    assert be.effective_stop_pct(atr_pct=0.0, atr_stop_mult=2.0,
+                                 fixed_stop_pct=1.5) == pytest.approx(1.5)
+    # NaN / negative ATR are degenerate -> fixed fallback, never a crash.
+    assert be.effective_stop_pct(atr_pct=float("nan"), atr_stop_mult=2.0,
+                                 fixed_stop_pct=2.0) == pytest.approx(2.0)
+    assert be.effective_stop_pct(atr_pct=-1.0, atr_stop_mult=2.0,
+                                 fixed_stop_pct=2.0) == pytest.approx(2.0)
+
+
+def test_effective_stop_opt_out_to_pure_fixed():
+    # atr_stop_mult=None (opt-out) -> pure fixed-% stop, ATR ignored entirely.
+    assert be.effective_stop_pct(atr_pct=0.5, atr_stop_mult=None,
+                                 fixed_stop_pct=2.0) == pytest.approx(2.0)
+
+
+def test_effective_stop_none_when_no_stop_configured():
+    # No ATR mult and no fixed stop -> None (time-stop only), identical to pre-C7a.
+    assert be.effective_stop_pct(atr_pct=3.0, atr_stop_mult=None,
+                                 fixed_stop_pct=None) is None
+    assert be.effective_stop_pct(atr_pct=None, atr_stop_mult=None,
+                                 fixed_stop_pct=None) is None
+
+
+def test_effective_stop_no_floor_allows_wide_atr():
+    # When floor_pct is explicitly disabled (None), the ATR stop is uncapped — proves
+    # the floor is the *only* thing preventing a wider storm stop (audit §3.4 intent).
+    s = be.effective_stop_pct(atr_pct=3.24, atr_stop_mult=2.0,
+                              fixed_stop_pct=2.0, floor_pct=None)
+    assert s == pytest.approx(6.48)
+
+
+def test_effective_stop_handles_garbage_inputs_without_raising():
+    # Non-numeric inputs must degrade, never raise (zero-regression boundary).
+    assert be.effective_stop_pct(atr_pct="x", atr_stop_mult=2.0,
+                                 fixed_stop_pct=2.0) == pytest.approx(2.0)
+    assert be.effective_stop_pct(atr_pct=1.0, atr_stop_mult="x",
+                                 fixed_stop_pct=2.0) == pytest.approx(2.0)

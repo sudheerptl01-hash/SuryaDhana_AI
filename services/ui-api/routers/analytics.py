@@ -285,7 +285,12 @@ class BacktestRequest(BaseModel):
     # Fidelity
     entry_timing: str = "next_open"      # "next_open" (no same-bar look-ahead) | "close"
     # Advanced risk sizing (opt-in; all None/False ⇒ identical to plain equal-weight)
-    atr_stop_mult: Optional[float] = None    # per-trade stop = k × signal-day ATR%
+    # C7a — ATR-scaled stops are ON BY DEFAULT (k=2.0). The per-trade stop is
+    # min(k·ATR%, locked -2% floor): volatility-aware but never looser than the
+    # CLAUDE.md -2% protection. Set atr_stop_mult=None (with a fixed stop_loss_pct)
+    # to opt back out to a pure fixed-% stop; names without ATR data fall back to
+    # stop_loss_pct automatically.
+    atr_stop_mult: Optional[float] = 2.0     # per-trade stop = k × signal-day ATR%, capped at -2% floor
     vol_target_pct: Optional[float] = None   # volatility-target position sizing
     max_position_pct: Optional[float] = None  # hard per-position cap (% of NAV)
     max_sector_pct: Optional[float] = None    # per-sector exposure cap (% of NAV)
@@ -602,14 +607,24 @@ class _SimContext:
                     fwd = slice(entry_lp + 1, entry_lp + 1 + req.forward_days)
                     fwd_hi, fwd_lo, fwd_cl, fwd_op = s["high"][fwd], s["low"][fwd], s["close"][fwd], s["open"][fwd]
                     if len(fwd_cl) > 0:
-                        # Per-trade stop: a k×ATR stop (from the signal-day ATR%) when
-                        # `atr_stop_mult` is set, else the fixed `stop_loss_pct`. Both
-                        # are req-level constants, so the resolved exit stays cacheable.
+                        # Per-trade stop (C7a): volatility-aware k×ATR stop, capped at
+                        # the locked -2% floor, with a graceful fallback to the fixed
+                        # `stop_loss_pct` when ATR is missing or the resolver errors.
+                        # Both inputs are req-level constants, so the resolved exit stays
+                        # cacheable. The whole resolution is delegated to the pure,
+                        # edge-case-safe be.effective_stop_pct unit.
                         atr_pct_sig = s["atr_pct_by_gidx"].get(int(sig))
-                        stop_pct = req.stop_loss_pct
-                        mult = getattr(req, "atr_stop_mult", None)
-                        if mult and atr_pct_sig and atr_pct_sig > 0:
-                            stop_pct = float(mult) * float(atr_pct_sig)
+                        try:
+                            stop_pct = be.effective_stop_pct(
+                                atr_pct=atr_pct_sig,
+                                atr_stop_mult=getattr(req, "atr_stop_mult", None),
+                                fixed_stop_pct=req.stop_loss_pct,
+                            )
+                        except Exception:
+                            # Zero-regression guard: any failure in the new stop math
+                            # degrades to the legacy fixed-% stop (or None) — the sim
+                            # must never crash on a stop-resolution edge case.
+                            stop_pct = req.stop_loss_pct
                         ex = be.resolve_trade_exit(
                             fwd_hi, fwd_lo, fwd_cl, entry_price, req.forward_days,
                             friction_bps=self.friction, stop_loss_pct=stop_pct,
