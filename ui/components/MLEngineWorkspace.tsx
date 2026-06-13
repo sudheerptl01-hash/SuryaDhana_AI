@@ -12,7 +12,7 @@
  * Telemetry streams over NDJSON (see lib/mlTraining): epoch / log-loss / AUC / Gini
  * render live into a dual-axis convergence chart. MODE = PAPER at all times.
  */
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -46,6 +46,7 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
   const [epochs, setEpochs] = useState<EpochEvent[]>([])
   const [result, setResult] = useState<ResultEvent | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [phase, setPhase] = useState<'none' | 'finalizing' | 'revealed'>('none')
   const abortRef = useRef<AbortController | null>(null)
 
   // Production config
@@ -57,12 +58,16 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
   const [learningRate, setLearningRate] = useState(0.05)
 
   const live = epochs.length ? epochs[epochs.length - 1] : null
+  const total = start?.total_rounds ?? nEstimators
+  const pct = live ? Math.min(100, (live.iteration / Math.max(1, total)) * 100) : 0
+  const rate = live && live.elapsed > 0 ? live.iteration / live.elapsed : 0
+  const etaSec = live && rate > 0 ? Math.max(0, (total - live.iteration) / rate) : null
 
   const launch = useCallback(async (mode: 'sample' | 'production') => {
     abortRef.current?.abort()
     const ac = new AbortController()
     abortRef.current = ac
-    setStatus('TRAINING'); setRunId(null); setStart(null); setEpochs([]); setResult(null); setError(null)
+    setStatus('TRAINING'); setRunId(null); setStart(null); setEpochs([]); setResult(null); setError(null); setPhase('none')
 
     const params = mode === 'sample'
       ? { mode } as const
@@ -93,6 +98,14 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
     // Do NOT abort the fetch yet — let the stream deliver the TERMINATED_BY_USER result.
   }, [runId])
 
+  // Completion choreography — a brief "finalizing" loader, then reveal the result panel.
+  useEffect(() => {
+    if (!result) return
+    setPhase('finalizing')
+    const t = setTimeout(() => setPhase('revealed'), 1100)
+    return () => clearTimeout(t)
+  }, [result])
+
   const isTraining = status === 'TRAINING'
   const chartData = useMemo(() => epochs.map(e => ({
     iteration: e.iteration,
@@ -107,6 +120,7 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
 
   return (
     <div className="font-mono text-slate-200 space-y-4">
+      <style dangerouslySetInnerHTML={{ __html: MLW_CSS }} />
       {/* ── Command bar ─────────────────────────────────────────────────────── */}
       <div className={clsx(card, 'p-4')}>
         <div className="flex flex-wrap items-center gap-3">
@@ -160,6 +174,42 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
       {error && (
         <div className="rounded-lg border border-rose-600/50 bg-rose-950/30 px-4 py-2 text-[11px] text-rose-300">
           ⚠ {error}
+        </div>
+      )}
+
+      {/* ── Live training HUD: progress + ETA + throughput ──────────────────── */}
+      {(isTraining || live) && (
+        <div className={clsx(card, 'p-4 relative overflow-hidden')}>
+          {isTraining && <div className="mlw-scan" />}
+          <div className="flex items-end justify-between mb-2">
+            <div className="flex items-baseline gap-2">
+              <span className={clsx('text-[11px] font-bold tracking-wider',
+                isTraining ? 'text-amber-300' : phase === 'finalizing' ? 'text-sky-300' : 'text-emerald-300')}>
+                {isTraining ? 'TRAINING' : phase === 'finalizing' ? 'FINALIZING' : 'RUN COMPLETE'}
+              </span>
+              <span className="text-[10px] text-slate-500">round</span>
+              <span className="tabular-nums text-lg font-black text-sky-300">{live?.iteration ?? 0}</span>
+              <span className="text-[10px] text-slate-600">/ {total}</span>
+            </div>
+            <span className={clsx('tabular-nums text-2xl font-black', pct >= 100 ? 'text-emerald-300' : 'text-slate-100')}>
+              {pct.toFixed(0)}<span className="text-sm text-slate-500">%</span>
+            </span>
+          </div>
+          <div className="h-3 w-full rounded-full bg-slate-800/80 overflow-hidden border border-slate-700/50">
+            <div
+              className={clsx('h-full relative overflow-hidden transition-[width] duration-300 ease-out', isTraining && 'mlw-shimmer')}
+              style={{ width: `${Math.max(2, pct)}%`, background: 'linear-gradient(90deg,#0ea5e9,#34d399 60%,#a3e635)' }} />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[10px] text-slate-400">
+            <span>throughput <b className="text-slate-200 tabular-nums">{rate.toFixed(1)}</b> rounds/s</span>
+            <span>ETA <b className="text-slate-200 tabular-nums">{etaSec != null && isTraining ? fmtTime(etaSec) : '—'}</b></span>
+            <span>elapsed <b className="text-slate-200 tabular-nums">{live ? fmtTime(live.elapsed) : '0s'}</b></span>
+            {live?.valid_auc != null && (
+              <span>live AUC <b className={clsx('tabular-nums',
+                live.valid_auc >= 0.55 ? 'text-emerald-300' : live.valid_auc >= 0.5 ? 'text-amber-300' : 'text-rose-300')}>
+                {live.valid_auc.toFixed(4)}</b></span>
+            )}
+          </div>
         </div>
       )}
 
@@ -226,11 +276,27 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
         </div>
       </div>
 
+      {/* ── Finalizing loader (brief, before the reveal) ────────────────────── */}
+      {result && phase === 'finalizing' && (
+        <div className={clsx(card, 'p-8 flex flex-col items-center justify-center gap-3')}>
+          <div className="mlw-spinner" />
+          <div className="text-[12px] font-bold tracking-[0.2em] text-slate-300">
+            {result.status === 'TERMINATED_BY_USER' ? 'PRESERVING PARTIAL MODEL…' : 'FINALIZING MODEL…'}
+          </div>
+          <div className="text-[10px] text-slate-500 tabular-nums">
+            {result.rounds_completed}/{result.rounds_requested} rounds · computing confusion matrix + feature gain
+          </div>
+        </div>
+      )}
+
       {/* ── Result panel ────────────────────────────────────────────────────── */}
-      {result && (
-        <div className={clsx(card, 'p-4')}>
+      {result && phase === 'revealed' && (
+        <div className={clsx(card, 'p-4 mlw-reveal')}>
           <div className="flex items-center gap-2 mb-3">
-            <span className={clsx('h-2 w-2 rounded-full', STATUS_STYLE[result.status].dot)} />
+            <span className="relative inline-flex h-2 w-2 items-center justify-center">
+              {result.status === 'COMPLETED' && <span className="mlw-burst" />}
+              <span className={clsx('h-2 w-2 rounded-full', STATUS_STYLE[result.status].dot)} />
+            </span>
             <span className={clsx('text-[12px] font-bold tracking-wide', STATUS_STYLE[result.status].text)}>
               {result.status === 'TERMINATED_BY_USER' ? 'TERMINATED BY USER — partial model preserved' : 'TRAINING COMPLETE'}
             </span>
@@ -319,3 +385,25 @@ function ConfCell({ label, v, tone }: { label: string; v: number; tone: 'emerald
     </div>
   )
 }
+
+function fmtTime(s: number): string {
+  if (!Number.isFinite(s)) return '—'
+  if (s < 60) return `${s.toFixed(1)}s`
+  const m = Math.floor(s / 60)
+  const r = Math.round(s % 60)
+  return `${m}m ${r.toString().padStart(2, '0')}s`
+}
+
+// Self-contained keyframes for the training HUD / completion choreography (no deps).
+const MLW_CSS = `
+@keyframes mlwSpin { to { transform: rotate(360deg); } }
+.mlw-spinner { width:36px; height:36px; border-radius:9999px; border:3px solid rgba(148,163,184,0.18); border-top-color:#34d399; animation: mlwSpin 0.8s linear infinite; }
+@keyframes mlwShimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(240%); } }
+.mlw-shimmer::after { content:''; position:absolute; top:0; bottom:0; left:0; width:45%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.5),transparent); animation: mlwShimmer 1.1s ease-in-out infinite; }
+@keyframes mlwReveal { from { opacity:0; transform: translateY(10px) scale(0.99); } to { opacity:1; transform:none; } }
+.mlw-reveal { animation: mlwReveal 0.5s cubic-bezier(0.2,0.8,0.2,1) both; }
+@keyframes mlwPing { 0% { transform: scale(1); opacity:0.75; } 80%,100% { transform: scale(3.2); opacity:0; } }
+.mlw-burst { position:absolute; height:0.5rem; width:0.5rem; border-radius:9999px; background:#34d399; animation: mlwPing 1s ease-out 2; }
+@keyframes mlwScan { 0% { left:-40%; } 100% { left:100%; } }
+.mlw-scan { position:absolute; top:0; height:2px; width:40%; background:linear-gradient(90deg,transparent,#38bdf8,transparent); animation: mlwScan 1.8s linear infinite; }
+`
