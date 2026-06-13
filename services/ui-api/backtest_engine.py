@@ -21,6 +21,16 @@ from typing import Callable, Optional, Any
 import numpy as np
 import pandas as pd
 
+# Phase 4 / §3.3 — dynamic capital allocation (risk-parity / vol-target / Kelly book).
+# Defensive import so the engine still loads (and legacy equal-weight still works) even
+# if the optional module is absent — sizing_mode then silently stays "equal".
+try:
+    import portfolio_sizing as _psize          # type: ignore
+    _PSIZE_OK = True
+except Exception:  # pragma: no cover - import-guard only
+    _psize = None                              # type: ignore
+    _PSIZE_OK = False
+
 TRADING_DAYS = 252
 
 # Fundamental fields come from a single current snapshot (stock_metrics) and are
@@ -636,6 +646,8 @@ def simulate_portfolio(
     daily_loss_halt_pct: Optional[float] = None,
     scheduled_impact_fn: Optional[Callable[..., Any]] = None,
     slippage_sink: Optional[Callable[[dict], None]] = None,
+    sizing_mode: str = "equal",
+    liquidity_phi: float = 0.10,
 ) -> tuple[list[dict], list[dict]]:
     """
     Event-driven, finite-capital portfolio simulation with daily mark-to-market.
@@ -657,6 +669,23 @@ def simulate_portfolio(
         point-in-time. Per-bet allocation is capped at min(equal-weight, NAV·κ·f*), so
         Kelly only *de-risks* a weak edge below equal-weight (never over-concentrates a
         multi-position book). Falls back to equal-weight until enough trades have closed.
+      • `sizing_mode` (Phase 4, audit §3.3) — book-level capital allocation:
+          - "equal" (default) — every concurrent slot gets NAV/max_positions, exactly
+            as before (bit-for-bit legacy; the per-candidate `vol_target_pct`/`kelly_cap`
+            scaling below still applies on top, unchanged).
+          - "risk_parity" — the bar's candidate slate is weighted wᵢ ∝ 1/σᵢ (inverse-vol,
+            σᵢ = signal-day ATR%), normalised, liquidity-capped (φ·ADVᵢ/NAV) and
+            ≤max_position cap; calm names get more capital, jumpy names less, equalising
+            each name's risk contribution and de-grossing the tail.
+          - "vol_target" — the risk-parity weights are then scaled so the book targets
+            `vol_target_pct` realised σ (independent-name proxy σ_port=√Σwᵢ²σᵢ²; scale
+            clamped ≤1 so it only ever de-grosses).
+        When `kelly_fraction` is set, the resulting slate weights are additionally scaled
+        by the fractional-Kelly *book gross* κ·f* (sizes the whole book, capped at fully
+        invested) — §3.3's "Kelly sizes the book, not just a bet". The weight computation
+        is delegated to the pure `portfolio_sizing` module and wrapped so ANY failure or
+        a missing module degrades to legacy equal-weight (zero regression). `liquidity_phi`
+        is the per-name ADV fraction used for the liquidity cap (default 0.10).
 
     Risk gates (opt-in):
       • `max_sector_pct` — reject an entry that would push its sector's exposure
@@ -824,8 +853,12 @@ def simulate_portfolio(
         # Soft regime throttle: scale new-position size by P(bull) ∈ [0,1] (HMM gate).
         regime_scale = (min(max(float(regime_scale_by_date.get(date_str, 1.0)), 0.0), 1.0)
                         if regime_scale_by_date is not None else 1.0)
-        # Rolling fractional-Kelly fraction of NAV per bet (point-in-time: closed trades only).
+        # Rolling fractional-Kelly stats (point-in-time: closed trades only). `kelly_cap`
+        # is the legacy per-bet NAV-fraction cap (κ·f*); `kelly_gross` is the Phase-4
+        # book-level multiplier (§3.3 — Kelly sizes the *book*, not just a bet) consumed
+        # only by the risk-parity / vol-target slate weights below.
         kelly_cap = None
+        kelly_gross = 1.0
         if kelly_fraction is not None and len(recent_rets) >= _KELLY_MIN:
             arr = np.asarray(recent_rets[-_KELLY_LOOKBACK:], dtype=float)
             wins, losses = arr[arr > 0], arr[arr < 0]
@@ -834,6 +867,10 @@ def simulate_portfolio(
                 r_ratio = float(wins.mean()) / abs(float(losses.mean()))
                 f_star = w_rate - (1.0 - w_rate) / r_ratio if r_ratio > 1e-9 else 0.0
                 kelly_cap = max(0.0, float(kelly_fraction) * f_star)   # NAV fraction per bet
+                if _PSIZE_OK and _psize is not None:
+                    kelly_gross = _psize.kelly_book_gross(
+                        win_rate=w_rate, payoff_ratio=r_ratio, kappa=float(kelly_fraction)
+                    )
         if (from_idx <= idx <= to_idx and not dd_halt and not daily_loss_halt
                 and regime_ok and len(open_pos) < max_positions):
             held = {p["ticker"] for p in open_pos.values()}
@@ -844,22 +881,55 @@ def simulate_portfolio(
                     px = price_at(idx, p["ticker"]) or p["entry_price"]
                     sct = p.get("sector", "Unknown")
                     sector_exposure[sct] = sector_exposure.get(sct, 0.0) + p["shares"] * px
+            # Phase 4 / §3.3 — book-level slate weights (risk-parity / vol-target). When
+            # `sizing_mode != "equal"` the bar's candidate slate is weighted by 1/σ (and
+            # optionally vol-targeted + Kelly-gross-scaled), replacing the flat
+            # NAV/max_positions base. Computed ONCE per bar over the concurrent slate; the
+            # legacy per-bet vol-target/Kelly scaling is then bypassed (the slate weight
+            # already embeds them) to avoid double-counting. ANY failure or a missing
+            # module degrades to legacy equal-weight (zero regression).
+            _slate_w: Optional[dict] = None
+            if sizing_mode != "equal" and _PSIZE_OK and _psize is not None:
+                _slate = entries_by_idx.get(idx, [])
+                if _slate:
+                    _w = _psize.safe_compute_slate_weights(
+                        [c.get("atr_pct") for c in _slate],
+                        sizing_mode=sizing_mode,
+                        max_positions=max_positions,
+                        nav=float(nav),
+                        advs=[c.get("adv") for c in _slate],
+                        vol_target_pct=vol_target_pct,
+                        liquidity_phi=liquidity_phi,
+                        max_position_weight=(max_position_pct / 100.0
+                                             if max_position_pct is not None else 0.15),
+                        kelly_gross=kelly_gross,
+                    )
+                    if _w is not None and len(_w) == len(_slate):
+                        # Key by id() of the candidate dict so order/duplicate names are safe.
+                        _slate_w = {id(c): float(_w[i]) for i, c in enumerate(_slate)}
             for cand in entries_by_idx.get(idx, []):
                 if len(open_pos) >= max_positions or cash <= 1.0:
                     break
                 # No double-holding the same name (also makes the open_pos key safe).
                 if cand["ticker"] in held:
                     continue
-                base = nav / max_positions * regime_scale
-                # Volatility-target sizing: scale inversely with the name's ATR%.
-                atr_pct = cand.get("atr_pct")
-                if vol_target_pct is not None and atr_pct and atr_pct > 0:
-                    base *= min(max(vol_target_pct / atr_pct, 0.25), 2.5)
-                # Hard per-position cap as a % of NAV.
+                _use_slate = _slate_w is not None and id(cand) in _slate_w
+                if _use_slate:
+                    # Slate weight already embeds inverse-vol, vol-target, liquidity cap
+                    # and Kelly book-gross; only the soft regime throttle is applied on top.
+                    base = nav * _slate_w[id(cand)] * regime_scale
+                else:
+                    base = nav / max_positions * regime_scale
+                    # Volatility-target sizing: scale inversely with the name's ATR%.
+                    atr_pct = cand.get("atr_pct")
+                    if vol_target_pct is not None and atr_pct and atr_pct > 0:
+                        base *= min(max(vol_target_pct / atr_pct, 0.25), 2.5)
+                # Hard per-position cap as a % of NAV (always enforced, both paths).
                 if max_position_pct is not None:
                     base = min(base, nav * max_position_pct / 100.0)
-                # Fractional-Kelly cap: never bet more than κ·f* of NAV on one position.
-                if kelly_cap is not None:
+                # Fractional-Kelly per-bet cap (legacy equal-weight path only — the slate
+                # weight already applied the Kelly book gross).
+                if kelly_cap is not None and not _use_slate:
                     base = min(base, nav * kelly_cap)
                 alloc = min(cash, base)
                 # ADV participation cap: clip the fill to a slice of avg daily $ volume.

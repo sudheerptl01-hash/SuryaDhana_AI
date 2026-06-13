@@ -312,6 +312,12 @@ class BacktestRequest(BaseModel):
     atr_stop_mult: Optional[float] = 2.0     # per-trade stop = k × signal-day ATR% (no upper cap)
     stop_floor_pct: Optional[float] = None   # optional minimum stop width (% below entry); None ⇒ none
     vol_target_pct: Optional[float] = None   # volatility-target position sizing
+    # Phase 4 / §3.3 — book-level capital allocation. "equal" (default) = legacy
+    # NAV/max_positions equal-weight (bit-for-bit); "risk_parity" = inverse-vol weights
+    # (wᵢ∝1/σᵢ); "vol_target" = risk-parity scaled to the `vol_target_pct` portfolio σ.
+    # When kelly_fraction is set the slate is additionally scaled by the κ·f* book gross.
+    sizing_mode: str = "equal"                # "equal" | "risk_parity" | "vol_target"
+    liquidity_phi: float = 0.10               # per-name ADV fraction for the liquidity cap
     max_position_pct: Optional[float] = None  # hard per-position cap (% of NAV)
     max_sector_pct: Optional[float] = None    # per-sector exposure cap (% of NAV)
     regime_filter: bool = False               # enable market-regime exposure control
@@ -1071,6 +1077,11 @@ def _simulate_window(ctx: "_SimContext", req: BacktestRequest, filters: list[dic
                      if getattr(req, "amihud_coef", None) is not None
                      else ctx.auto_amihud),                          # C1 — auto permanent leg at scale
         kelly_fraction=getattr(req, "kelly_fraction", None),
+        # Phase 4 / §3.3 — book-level sizing mode (default "equal" ⇒ legacy equal-weight,
+        # bit-for-bit). risk_parity / vol_target tilt the slate by inverse-vol; the engine
+        # falls back to equal-weight on any sizing failure (zero regression).
+        sizing_mode=getattr(req, "sizing_mode", "equal"),
+        liquidity_phi=getattr(req, "liquidity_phi", 0.10),
         delist_by_ticker=ctx.delist_by_ticker,
         # C7b — daily realised-loss VaR governor (default -2%, mirrors live kill-switch).
         daily_loss_halt_pct=getattr(req, "daily_loss_halt_pct", None),
@@ -1146,7 +1157,8 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
             "max_positions": req.max_positions, "max_drawdown_halt_pct": req.max_drawdown_halt_pct,
             "daily_loss_halt_pct": req.daily_loss_halt_pct,   # C7b daily-VaR governor (default -2%)
             "scope": req.scope, "entry_timing": req.entry_timing,
-            "atr_stop_mult": req.atr_stop_mult, "vol_target_pct": req.vol_target_pct,
+            "atr_stop_mult": req.atr_stop_mult, "stop_floor_pct": req.stop_floor_pct,
+            "vol_target_pct": req.vol_target_pct, "sizing_mode": req.sizing_mode,
             "max_position_pct": req.max_position_pct, "max_sector_pct": req.max_sector_pct,
             "regime_filter": req.regime_filter, "regime": ctx.regime_meta,
             "max_participation_pct": req.max_participation_pct, "impact_coef": req.impact_coef,
@@ -1459,7 +1471,8 @@ def _core_wfo(req: WFOBacktestRequest, on_progress: Optional[Callable[[dict], No
             "max_positions": req.max_positions, "max_drawdown_halt_pct": req.max_drawdown_halt_pct,
             "daily_loss_halt_pct": req.daily_loss_halt_pct,   # C7b daily-VaR governor (default -2%)
             "scope": req.scope, "entry_timing": req.entry_timing,
-            "atr_stop_mult": req.atr_stop_mult, "vol_target_pct": req.vol_target_pct,
+            "atr_stop_mult": req.atr_stop_mult, "stop_floor_pct": req.stop_floor_pct,
+            "vol_target_pct": req.vol_target_pct, "sizing_mode": req.sizing_mode,
             "max_position_pct": req.max_position_pct, "max_sector_pct": req.max_sector_pct,
             "regime_filter": req.regime_filter, "regime": ctx.regime_meta,
             "max_participation_pct": req.max_participation_pct, "impact_coef": req.impact_coef,
