@@ -747,6 +747,29 @@ def _calibrate_auto_impact(df: "pd.DataFrame", req: BacktestRequest) -> Optional
     }
 
 
+def _survivorship_warning(ctx: "_SimContext") -> Optional[dict]:
+    """D1 — bounded survivorship-premium caveat, surfaced to the UI so no CAGR is read at
+    face value while the bias is live. Returns None once membership is point-in-time
+    (tables backfilled) or delisting returns were actually applied; otherwise a structured
+    haircut banner the terminal can render (mirrors the membership_pit=False honesty flag).
+    """
+    bias_live = (not ctx.membership_pit) and not ctx.delist_by_ticker
+    if not bias_live:
+        return None
+    # Brown-Goetzmann-Ibbotson-Ross (1992): +1–4%/yr CAGR survivorship premium. This dataset
+    # shows zero observed exits (pure backfill of today's survivors), so the band applies in
+    # full; microcap/illiquid-skewed factors warrant the upper end (highest delisting hazard).
+    return {
+        "active": True,
+        "reason": "membership_pit=False and no delisting returns applied — backtest runs on "
+                  "current survivors only (index_membership/delistings tables empty).",
+        "cagr_haircut_pct_per_year": {"low": 1.0, "central_low": 1.5, "central_high": 3.0, "high": 4.0},
+        "guidance": "Subtract the haircut from every reported CAGR before sizing capital; "
+                    "apply the upper band to microcap-skewed factors (VMI, Intention).",
+        "reference": "Brown-Goetzmann-Ibbotson-Ross (1992)",
+    }
+
+
 def _auto_impact_status(req: BacktestRequest, ctx: "_SimContext") -> dict:
     """Observability dict for the completed at-scale cost stack (C1/C2/C3).
 
@@ -1065,6 +1088,7 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
             "membership_pit": ctx.membership_pit,
             "survivorship_adjusted": bool(ctx.delist_by_ticker),
             "n_delistings": ctx.n_delistings,
+            "survivorship_warning": _survivorship_warning(ctx),   # D1 — bounded CAGR haircut banner
         },
         "fundamental_lookahead_active": be.fundamental_filters_active(filters),
         **metric_only,
@@ -1376,6 +1400,7 @@ def _core_wfo(req: WFOBacktestRequest, on_progress: Optional[Callable[[dict], No
             "membership_pit": ctx.membership_pit,
             "survivorship_adjusted": bool(ctx.delist_by_ticker),
             "n_delistings": ctx.n_delistings,
+            "survivorship_warning": _survivorship_warning(ctx),   # D1 — bounded CAGR haircut banner
         },
         "fundamental_lookahead_active": be.fundamental_filters_active(base + pool),
         **metrics,

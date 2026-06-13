@@ -849,3 +849,36 @@ def test_calibrate_missing_amihud_column_still_enables_caps():
     assert cal is not None
     assert cal["impact_coef_map"] is None
     assert cal["auto_participation"] == 10.0
+
+
+# ── D1: survivorship-premium haircut banner ───────────────────────────────────────
+
+class _Ctx:
+    """Minimal duck-typed _SimContext for the survivorship-warning unit."""
+    def __init__(self, membership_pit=False, delist_by_ticker=None):
+        self.membership_pit = membership_pit
+        self.delist_by_ticker = delist_by_ticker
+
+
+def test_survivorship_warning_active_when_bias_live():
+    # No PIT membership + no delistings applied ⇒ bias is live ⇒ structured haircut banner.
+    import routers.analytics as an
+    w = an._survivorship_warning(_Ctx(membership_pit=False, delist_by_ticker=None))
+    assert w is not None and w["active"] is True
+    band = w["cagr_haircut_pct_per_year"]
+    # BGIR 1–4%/yr band, monotone low ≤ central ≤ high.
+    assert band["low"] == 1.0 and band["high"] == 4.0
+    assert band["low"] <= band["central_low"] <= band["central_high"] <= band["high"]
+
+
+def test_survivorship_warning_cleared_when_membership_pit():
+    # Point-in-time membership (tables backfilled) ⇒ bias mitigated ⇒ no banner.
+    import routers.analytics as an
+    assert an._survivorship_warning(_Ctx(membership_pit=True, delist_by_ticker=None)) is None
+
+
+def test_survivorship_warning_cleared_when_delistings_applied():
+    # Delisting returns actually applied ⇒ survivorship adjusted ⇒ no banner.
+    import routers.analytics as an
+    assert an._survivorship_warning(_Ctx(membership_pit=False,
+                                         delist_by_ticker={"X": (3, -90.0)})) is None
