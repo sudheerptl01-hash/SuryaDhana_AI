@@ -397,6 +397,15 @@ DEFAULT_ATR_STOP_MULT: float = 2.0
 # mandated downside protection is preserved while the stop becomes volatility-aware.
 LOCKED_STOP_FLOOR_PCT: float = 2.0
 
+# C6 — block-level participation gate for routing an entry through the live execution
+# scheduler. Below this fraction of ADV the single instantaneous √-law hit and the
+# multi-session schedule are numerically indistinguishable (a tiny order clears in one
+# slice), so the scheduler is skipped and the legacy term applies exactly — keeping
+# small orders bit-for-bit identical to legacy (zero regression). At/above it the block
+# is worked across sessions for true backtest↔live parity.
+SCHEDULED_IMPACT_TRIGGER: float = 0.01   # alloc/ADV ≥ 1% ⇒ route through the scheduler
+_SCHEDULED_IMPACT_TRIGGER = SCHEDULED_IMPACT_TRIGGER
+
 
 def effective_stop_pct(
     atr_pct: Optional[float],
@@ -600,6 +609,8 @@ def simulate_portfolio(
     delist_by_ticker: Optional[dict] = None,
     impact_coef_map: Optional[dict] = None,
     daily_loss_halt_pct: Optional[float] = None,
+    scheduled_impact_fn: Optional[Callable[..., Any]] = None,
+    slippage_sink: Optional[Callable[[dict], None]] = None,
 ) -> tuple[list[dict], list[dict]]:
     """
     Event-driven, finite-capital portfolio simulation with daily mark-to-market.
@@ -650,6 +661,21 @@ def simulate_portfolio(
         per-name Amihud illiquidity (cand["amihud"]). Captures that an order in an
         illiquid name permanently moves the price against you (the temporary √-law
         leg alone understates impact for thin names). Added to the round-trip cost.
+      • `scheduled_impact_fn` — C6 backtest↔live parity. A callable
+        `(alloc, adv, atr_pct, arrival_price, y_i) → ScheduledFill` (typically
+        `scheduled_impact.schedule_block_impact`) that works the parent block through the
+        LIVE child-order scheduler (TWAP/VWAP/POV, partial fills, U-shaped intraday
+        liquidity) over multiple sessions, replacing the single instantaneous √-law
+        temporary leg with the realised VWAP-style execution cost. Only consulted for an
+        at-scale block (participation alloc/ADV ≥ the scheduler trigger); on ANY failure
+        or a degenerate result the engine transparently falls back to the inline
+        single-hit √-law term (zero regression). None ⇒ legacy single-hit exactly. The
+        PERMANENT Amihud/Kyle-λ leg is unaffected (it is session-independent).
+      • `slippage_sink` — optional callable invoked once per scheduled fill with a dict
+        of realised-execution telemetry (arrival price, realised VWAP, participation,
+        slices, IS bps, per-name Y_i). Used to persist the `slippage` table for nightly
+        Y_i recalibration. Wrapped in try/except by the caller; a write failure never
+        affects the simulation.
 
     Survivorship realism (opt-in; G2):
       • `delist_by_ticker` — {ticker → (delist_gidx, delist_return_pct)}. A held name
@@ -832,9 +858,53 @@ def simulate_portfolio(
                 _temp_coef = impact_coef
                 if impact_coef_map is not None:
                     _temp_coef = impact_coef_map.get(cand["ticker"], impact_coef)
+                atrp = cand.get("atr_pct") or 0.0
                 if _temp_coef is not None and adv and adv > 0:
-                    atrp = cand.get("atr_pct") or 0.0
-                    impact_pct += 2.0 * float(_temp_coef) * float(atrp) * (alloc / adv) ** 0.5
+                    # C6 — backtest↔live parity. Default temporary leg is the single
+                    # instantaneous √-law round-trip hit. When a scheduler is supplied AND
+                    # the block is at-scale, replace it with the realised multi-session
+                    # scheduled cost (worked across thinning intraday liquidity), so the
+                    # backtest charges what the live child-order scheduler would. ANY failure
+                    # or degenerate result transparently falls back to the single hit below
+                    # (zero regression — mirrors the membership_pit=False degradation).
+                    _single_hit = 2.0 * float(_temp_coef) * float(atrp) * (alloc / adv) ** 0.5
+                    _temp_leg = _single_hit
+                    if scheduled_impact_fn is not None and (alloc / adv) >= _SCHEDULED_IMPACT_TRIGGER:
+                        try:
+                            _fill = scheduled_impact_fn(
+                                alloc=float(alloc), adv=float(adv), atr_pct=float(atrp),
+                                arrival_price=float(cand["entry_price"]),
+                                y_i=float(_temp_coef),
+                            )
+                            if _fill is not None and getattr(_fill, "scheduled", False) \
+                                    and getattr(_fill, "fill_ratio", 0.0) > 0.0:
+                                # Scheduler returns a ONE-WAY entry cost; the engine charges a
+                                # round trip, so double it to keep the cost basis identical to
+                                # the legacy single-hit (which is the round-trip 2·Y·…).
+                                _temp_leg = 2.0 * float(_fill.impact_pct)
+                                if slippage_sink is not None:
+                                    try:
+                                        slippage_sink({
+                                            "ticker": cand["ticker"],
+                                            "entry_date": cand.get("entry_date"),
+                                            "arrival_price": float(_fill.arrival_price),
+                                            "realised_vwap": float(_fill.realised_vwap),
+                                            "alloc": float(alloc),
+                                            "adv": float(adv),
+                                            "participation": float(_fill.participation),
+                                            "n_slices": int(_fill.n_slices),
+                                            "n_sessions": int(_fill.n_sessions),
+                                            "fill_ratio": float(_fill.fill_ratio),
+                                            "is_bps": float(_fill.is_bps),
+                                            "y_i": float(_fill.y_i),
+                                            "unfilled_notional": float(_fill.unfilled_notional),
+                                            "atr_pct": float(atrp),
+                                        })
+                                    except Exception:
+                                        pass   # telemetry must never break a backtest
+                        except Exception:
+                            _temp_leg = _single_hit   # graceful fallback to single hit
+                    impact_pct += _temp_leg
                 if amihud_coef is not None:
                     illiq = cand.get("amihud")
                     if illiq and illiq > 0:
