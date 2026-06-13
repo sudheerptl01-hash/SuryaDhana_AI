@@ -5,3 +5,6 @@ promoter_data.csv
 promoter_data.json
 .venv/
 venv/
+*.duckdb
+*.duckdb.wal
+nse_market.duckdb*
