@@ -61,6 +61,8 @@ __all__ = [
     "effective_n_spectral",
     "effective_n_pairwise",
     "effective_n",
+    "stack_return_series",
+    "campaign_effective_n",
 ]
 
 
@@ -168,6 +170,65 @@ def effective_n_pairwise(corr) -> float:
         return float(K)
     n_eff = float(K) / denom
     return float(np.clip(n_eff, 1.0, K))
+
+
+def stack_return_series(series_list) -> Optional[np.ndarray]:
+    """Stack a list of per-trial daily-return arrays (possibly ragged) into a single
+    (T_common × K) matrix, truncating each to the shortest length so the correlation is
+    estimated over the overlapping span. Trials shorter than 2 obs are dropped. Returns
+    None if fewer than 2 usable trials remain.
+    """
+    cleaned: list[np.ndarray] = []
+    for s in series_list or []:
+        a = np.asarray(s, dtype=float).ravel()
+        a = a[np.isfinite(a)]
+        if a.size >= 2:
+            cleaned.append(a)
+    if len(cleaned) < 2:
+        return None
+    t_common = min(a.size for a in cleaned)
+    if t_common < 2:
+        return None
+    # Truncate each series to the common length (tail-align would also work; head-align
+    # is fine for an independence estimate — we only need shared co-movement).
+    return np.column_stack([a[:t_common] for a in cleaned])
+
+
+def campaign_effective_n(series_list, nominal: Optional[int] = None,
+                         method: str = "spectral") -> dict:
+    """Cross-campaign effective number of independent trials for the DSR haircut (C4+C9).
+
+    Estimates the independence ratio from the correlation structure of the supplied
+    per-trial daily-return series (`series_list`, one array per surviving combo), then
+    scales it up to the campaign-wide `nominal` trial count from the `research_trials`
+    ledger. This deflates against the TRUE search intensity (C4) while collapsing
+    near-duplicate overlapping combos (C9) — the two corrections compose in one number.
+
+    Returns a status dict (never raises):
+        {"n_eff": float|None, "n_observed": int, "ratio": float|None,
+         "nominal": int|None, "method": str, "ok": bool}
+    `n_eff=None` ⇒ the caller should fall back to the per-run nominal DSR.
+    """
+    out = {"n_eff": None, "n_observed": 0, "ratio": None,
+           "nominal": (int(nominal) if nominal else None), "method": method, "ok": False}
+    try:
+        R = stack_return_series(series_list)
+        if R is None:
+            return out
+        K = R.shape[1]
+        out["n_observed"] = int(K)
+        n_eff_obs = effective_n(R, method=method)          # in [1, K]
+        ratio = n_eff_obs / K if K >= 1 else 1.0
+        out["ratio"] = round(float(ratio), 4)
+        if nominal and int(nominal) >= 1:
+            n_eff = effective_n(R, method=method, nominal=int(nominal))
+        else:
+            n_eff = n_eff_obs
+        out["n_eff"] = round(float(max(1.0, n_eff)), 3)
+        out["ok"] = True
+        return out
+    except Exception:
+        return out
 
 
 def effective_n(returns_matrix=None, corr=None, method: str = "spectral",

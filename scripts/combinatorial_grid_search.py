@@ -53,6 +53,22 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, "services", "ui-api"))
 import backtest_engine as be  # noqa: E402  (validated trailing-indicator engine)
 
+# C4+C9 (§3.6) — cross-campaign trial ledger + cluster-adjusted effective-N. Imported
+# DEFENSIVELY: if either module is unavailable the grid still produces the per-run
+# nominal-N DSR exactly as before (zero regression). Flags gate every use below.
+try:
+    import trial_ledger as _tl  # noqa: E402
+    _LEDGER_OK = True
+except Exception:               # pragma: no cover - import-environment dependent
+    _tl = None
+    _LEDGER_OK = False
+try:
+    import effective_trials as _et  # noqa: E402
+    _EFF_N_OK = True
+except Exception:               # pragma: no cover
+    _et = None
+    _EFF_N_OK = False
+
 # ── Configuration ─────────────────────────────────────────────────────────────────
 DB_PATH = os.getenv("DATABASE_URL", os.path.join(REPO, "data", "market.duckdb"))
 UNIVERSE_CSV = os.getenv("STOCK_UNIVERSE_PATH", os.path.join(REPO, "data", "NSE_1500.csv"))
@@ -244,6 +260,8 @@ def evaluate(combo: tuple[str, ...], sig, base, net, per_day, fwd_gidx, cal_meta
         "avg_win": avg_win, "avg_loss": avg_loss, "profit_factor": profit_factor,
         "expectancy": expectancy, "total_return": total_return, "cagr": cagr,
         "max_dd": mdd, "sharpe": sharpe, "calmar": calmar, "yoy": yoy,
+        "daily": daily,                 # per-day portfolio returns (for Deflated Sharpe)
+        "dsr": None,                    # filled in main() once the full trial set is known
     }
 
 
@@ -253,7 +271,7 @@ def _pf(x: float) -> str:
 
 
 def write_report(rows: list[dict], unique_years: list[int], n_universe: int, n_dates: int,
-                 elapsed: float, tested: int, surviving: int) -> None:
+                 elapsed: float, tested: int, surviving: int, pbo: dict | None = None) -> None:
     top = rows[:TOP_N]
     lines: list[str] = []
     A = lines.append
@@ -270,7 +288,18 @@ def write_report(rows: list[dict], unique_years: list[int], n_universe: int, n_d
     A(f"- **Anti-curve-fit**: combinations with **< {MIN_TRADES} trades discarded**; ranked by **Sharpe** "
       "(risk-adjusted), not raw return.")
     A(f"- **Search**: all 2⁶−1 = {tested} filter combinations · **{surviving}** cleared the trade floor · "
-      f"engine ran in {elapsed:.1f}s.\n")
+      f"engine ran in {elapsed:.1f}s.")
+    A("- **Multiple-testing correction (Bailey & López de Prado)**: the **Deflated Sharpe Ratio (DSR)** "
+      f"column is P(true SR > expected-max-of-{surviving} under the null) — it deflates each combo's Sharpe "
+      "for the number of trials, sample length, skew and kurtosis. **DSR ≳ 0.95** survives multiple-testing; "
+      "**< 0.5** is likely a selection artefact even if the raw Sharpe looks high. (DSR assumes independent "
+      "trials; these combos overlap heavily, so the effective trial count is < the nominal count and DSR is a "
+      "*conservative lower bound* — the PSR column gives the un-deflated significance for contrast.)")
+    if pbo:
+        A(f"- **Probability of Backtest Overfitting (PBO)** via CSCV over {pbo['n_blocks']} calendar-year blocks × "
+          f"{pbo['n_configs']} combos ({pbo['n_splits']} symmetric splits): **PBO = {pbo['pbo']:.2f}** "
+          f"→ ~{pbo['pbo']*100:.0f}% chance the in-sample-best combo ranks below the out-of-sample median.")
+    A("")
 
     A("## Filter definitions (all strictly trailing — zero look-ahead)\n")
     A("| Filter | Signal |")
@@ -280,12 +309,18 @@ def write_report(rows: list[dict], unique_years: list[int], n_universe: int, n_d
     A("")
 
     A("## Top 20 — Overall metrics (ranked by Sharpe)\n")
-    A("| # | Filter Combination | Trades | Win % | Avg Win % | Avg Loss % | Profit Factor | Expectancy % | Sharpe | Calmar | Max DD % | CAGR % | Total Ret % |")
-    A("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
+    A("_**PSR** = P(SR>0) in isolation; **DSR** = Deflated Sharpe after correcting for the "
+      f"{surviving} trials. PSR high + DSR low ⇒ the Sharpe is real but **eaten by the search** "
+      "(too many combos tried for the signal present)._\n")
+    A("| # | Filter Combination | Trades | Win % | Avg Win % | Avg Loss % | Profit Factor | Expectancy % | Sharpe | PSR | DSR | Calmar | Max DD % | CAGR % | Total Ret % |")
+    A("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
     for i, r in enumerate(top, 1):
+        dsr, psr = r.get("dsr"), r.get("psr")
+        dsr_s = f"{dsr:.2f}" if dsr is not None else "—"
+        psr_s = f"{psr:.2f}" if psr is not None else "—"
         A(f"| {i} | {' + '.join(r['combo'])} | {r['n_trades']:,} | {r['win_rate']:.1f} | "
           f"{r['avg_win']:.2f} | {r['avg_loss']:.2f} | {_pf(r['profit_factor'])} | {r['expectancy']:.3f} | "
-          f"**{r['sharpe']:.2f}** | {r['calmar']:.2f} | {r['max_dd']:.1f} | {r['cagr']:.1f} | {r['total_return']:.1f} |")
+          f"**{r['sharpe']:.2f}** | {psr_s} | {dsr_s} | {r['calmar']:.2f} | {r['max_dd']:.1f} | {r['cagr']:.1f} | {r['total_return']:.1f} |")
     A("")
 
     A("## Top 20 — Year-over-Year return matrix (%)\n")
@@ -306,9 +341,21 @@ def write_report(rows: list[dict], unique_years: list[int], n_universe: int, n_d
         full_years = [y for y in unique_years if 2022 <= y <= 2025]   # exclude partial 2021/2026
         pos_full = sum(1 for y in full_years if best["yoy"].get(y, 0.0) > 0)
         A("## Read-out\n")
+        bdsr, bpsr = best.get("dsr"), best.get("psr")
+        bdsr_s = f"{bdsr:.2f}" if bdsr is not None else "—"
+        bpsr_s = f"{bpsr:.2f}" if bpsr is not None else "—"
         A(f"- **Best risk-adjusted edge**: `{' + '.join(best['combo'])}` — Sharpe **{best['sharpe']:.2f}**, "
-          f"Calmar {best['calmar']:.2f}, {best['n_trades']:,} trades, win {best['win_rate']:.1f}%, "
-          f"PF {_pf(best['profit_factor'])}, MaxDD {best['max_dd']:.1f}%.")
+          f"PSR {bpsr_s}, DSR **{bdsr_s}**, Calmar {best['calmar']:.2f}, {best['n_trades']:,} trades, "
+          f"win {best['win_rate']:.1f}%, PF {_pf(best['profit_factor'])}, MaxDD {best['max_dd']:.1f}%.")
+        if bdsr is not None:
+            verdict = ("survives multiple-testing" if bdsr >= 0.95 else
+                       "is borderline under multiple-testing" if bdsr >= 0.5 else
+                       "does **not** survive the 43-combo search — even the winner's Sharpe is within the "
+                       "expected-max-under-null, i.e. largely trial-count luck given the deep drawdowns")
+            A(f"- **Multiple-testing verdict**: PSR {bpsr_s} (raw significance) vs DSR {bdsr_s} (post-search) → this edge {verdict}.")
+        if pbo:
+            A(f"- **Overfitting probability (PBO)**: **{pbo['pbo']:.2f}** across {pbo['n_splits']} CSCV splits — "
+              f"{'low (robust selection)' if pbo['pbo'] < 0.3 else 'elevated (treat the winner with caution)' if pbo['pbo'] < 0.6 else 'high (the search is overfit)'}.")
         A(f"- **Regime robustness (full years 2022–2025)**: positive in **{pos_full}/{len(full_years)}**.")
         A("- Treat single-filter rows as the baseline edge; multi-filter rows that *raise Sharpe without "
           "collapsing trade count* are the genuine interaction effects worth trading.\n")
@@ -352,7 +399,24 @@ def main() -> None:
     elapsed = time.time() - t_start
     print(f"      {tested} tested · {len(results)} cleared ≥{MIN_TRADES} trades · {elapsed:.1f}s")
 
-    write_report(results, unique_years, n_universe, n_dates, elapsed, tested, len(results))
+    # ── Multiple-testing correction (G3): Deflated Sharpe per combo + portfolio PBO ──
+    # The winning Sharpe is inflated purely by searching 63 combinations. DSR deflates
+    # each combo's SR by the expected max-of-N under the null; PBO (CSCV over the YoY
+    # blocks) estimates the probability the in-sample-best is overfit.
+    trial_sharpes = [r["sharpe"] for r in results]            # SR of every surviving trial
+    for r in results:
+        d = be.deflated_sharpe_ratio(r["daily"], trial_sharpes)
+        r["dsr"] = d["dsr"]            # P(SR robust AFTER correcting for 43 trials)
+        r["psr"] = d["psr_zero"]       # P(SR>0) in isolation, BEFORE the trial haircut
+        r["sr0_annual"] = d["sr0_annual"]
+    # PBO via CSCV on the YoY return matrix (blocks = calendar years, configs = combos).
+    perf = np.array([[r["yoy"].get(y, 0.0) for r in results] for y in unique_years], dtype=float)
+    pbo = be.probability_of_backtest_overfitting(perf)
+    if pbo:
+        print(f"      DSR(top)={results[0]['dsr']:.3f}  ·  PBO={pbo['pbo']:.3f} "
+              f"(CSCV {pbo['n_splits']} splits over {pbo['n_blocks']} years × {pbo['n_configs']} combos)")
+
+    write_report(results, unique_years, n_universe, n_dates, elapsed, tested, len(results), pbo)
 
     print("\nTOP 10 (console):")
     print(f"  {'#':>2}  {'combination':<46}{'trades':>7}{'win%':>6}{'PF':>6}{'sharpe':>8}{'calmar':>7}{'maxDD%':>8}{'CAGR%':>7}")
