@@ -45,6 +45,16 @@ except Exception:   # pragma: no cover - import-environment dependent
     _slip_store = None
     _SCHEDULED_IMPACT_OK = False
 
+# Phase 4 / §3.5 — regime-adaptive filter gate. Disables mean-reversion (dip-buy)
+# filters in crash / breakout regimes. Imported defensively so analytics still loads
+# (and behaves exactly as before) if the optional module is absent.
+try:
+    import regime_filter_gate as _regime_gate
+    _REGIME_GATE_OK = True
+except Exception:   # pragma: no cover - import-environment dependent
+    _regime_gate = None
+    _REGIME_GATE_OK = False
+
 router = APIRouter()
 
 MODE = "PAPER"
@@ -990,9 +1000,36 @@ def _simulate_window(ctx: "_SimContext", req: BacktestRequest, filters: list[dic
     lo = bisect_left(ctx.grouped_keys, from_ts)
     hi = bisect_right(ctx.grouped_keys, to_ts)
 
+    # Phase 4 / §3.5 — regime-adaptive filter gate. Active ONLY when regime_filter=True
+    # and the module imported; otherwise inert (the legacy filter list is used verbatim).
+    # We classify the per-bar regime from the same causal signal that drives the sizing
+    # throttle (HMM P(bull) in ctx.regime_scale, else the SMA boolean gate) and DISABLE
+    # mean-reversion (dip-buy) filters in crash / breakout regimes — leaving trend /
+    # momentum filters live. Defensive: any failure ⇒ the unmodified filter list.
+    _gate_on = bool(getattr(req, "regime_filter", False)) and _REGIME_GATE_OK \
+        and _regime_gate is not None
+    _gate_days = 0          # bars where ≥1 mean-rev filter was disabled (observability)
+    _gate_regimes: dict[str, int] = {}
+
     entries_by_idx: dict[int, list[dict]] = {}
     for entry_date, day_df in ctx.grouped[lo:hi]:
-        candidates = be.apply_filters(day_df, filters)
+        day_filters = filters
+        if _gate_on:
+            date_str = str(getattr(entry_date, "date", lambda: entry_date)())[:10]
+            try:
+                p_bull = (ctx.regime_scale.get(date_str)
+                          if ctx.regime_scale is not None else None)
+                regime_ok = (ctx.regime_ok.get(date_str)
+                             if (p_bull is None and ctx.regime_ok is not None) else None)
+                gated = _regime_gate.gate_filters(
+                    filters, p_bull=p_bull, regime_ok=regime_ok, enabled=True)
+                day_filters = gated["active"]
+                _gate_regimes[gated["regime"]] = _gate_regimes.get(gated["regime"], 0) + 1
+                if gated["gated"]:
+                    _gate_days += 1
+            except Exception:
+                day_filters = filters   # zero-regression: fall back to the full screen
+        candidates = be.apply_filters(day_df, day_filters)
         if candidates.empty:
             continue
         # As-of index membership (G2): drop names that were not constituents on this
@@ -1114,6 +1151,14 @@ def _simulate_window(ctx: "_SimContext", req: BacktestRequest, filters: list[dic
 
     metrics = be.compute_metrics(equity, trades, bench_nav, req.starting_capital,
                                  factor_returns=ctx.factor_returns if attribute else None)
+    # Phase 4 / §3.5 — regime-gate observability: how many bars had mean-reversion
+    # filters disabled and the per-regime bar counts (empty/inert when the gate is off).
+    if _gate_on:
+        metrics["regime_filter_gate"] = {
+            "enabled": True,
+            "bars_mean_reversion_disabled": _gate_days,
+            "regime_bar_counts": _gate_regimes,
+        }
     return {"equity": equity, "trades": trades, "bench_nav": bench_nav, **metrics}
 
 
