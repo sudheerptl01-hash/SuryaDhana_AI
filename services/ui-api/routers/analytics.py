@@ -210,6 +210,63 @@ def _attach_membership(df: pd.DataFrame, mem: Optional[pd.DataFrame]) -> pd.Data
     return df
 
 
+# ── ML propensity (leak-safe out-of-sample P(up·5d)) ────────────────────────────────
+# Produced by scripts/generate_oos_propensity.py: a SINGLE XGBoost model trained on data
+# ≤ 2025-05 (embargoed), scored ONLY for the ~last year (2025-06 → present) and persisted
+# to `ml_oos_predictions`. The score on a bar is leak-free by construction (the model never
+# saw that date). Degrades gracefully like membership/fundamentals: table absent ⇒ prob_up
+# all-NaN and `propensity_pit=False`, so a propensity filter is simply inert.
+
+def _load_oos_propensity(con) -> Optional[pd.DataFrame]:
+    """Return a de-duplicated [ticker, date, prob_up] panel for horizon=5, or None when
+    the `ml_oos_predictions` table is absent/empty (callers stay on the no-signal path)."""
+    if not _table_exists(con, "ml_oos_predictions"):
+        return None
+    try:
+        rows = con.execute(
+            "SELECT ticker, date, prob_up FROM ml_oos_predictions WHERE horizon_days = 5"
+        ).fetchall()
+    except Exception:
+        return None
+    if not rows:
+        return None
+    p = pd.DataFrame(rows, columns=["ticker", "date", "prob_up"])
+    p["ticker"] = p["ticker"].astype(str).str.upper()
+    p["date"] = pd.to_datetime(p["date"], errors="coerce")
+    p["prob_up"] = pd.to_numeric(p["prob_up"], errors="coerce")
+    p = (p.dropna(subset=["date", "prob_up"])
+           .drop_duplicates(subset=["ticker", "date"], keep="last")
+           .sort_values(["ticker", "date"]))
+    return p if len(p) else None
+
+
+def _attach_propensity(df: pd.DataFrame, prop: Optional[pd.DataFrame]) -> pd.DataFrame:
+    """Attach leak-safe ML propensity P(up·5d) per (ticker, date).
+
+    Uses an EXACT (ticker, date) join — NOT merge_asof — on purpose: each OOS prediction is
+    dated to the very bar it scores, so a stale score must never be carried forward onto a
+    bar the model did not score (that would be a soft look-ahead/staleness leak). Bars with
+    no score (outside the ~last-year window, or table absent) get prob_up=NaN; the filter
+    then honours the caller's missing-propensity policy. Records coverage for the banner."""
+    if prop is None:
+        df["prob_up"] = np.nan
+        df.attrs["propensity_pit"] = False
+        df.attrs["propensity_coverage_pct"] = 0.0
+        df.attrs["propensity_coverage_start"] = None
+        return df
+    left = df[["ticker", "date"]].copy()
+    left["_tk"] = left["ticker"].astype(str).str.upper()
+    merged = left.merge(prop.rename(columns={"ticker": "_tk"}), on=["_tk", "date"], how="left")
+    df["prob_up"] = merged["prob_up"].to_numpy()
+    cov = df["prob_up"].notna()
+    scored_dates = df.loc[cov, "date"]
+    df.attrs["propensity_pit"] = True
+    df.attrs["propensity_coverage_pct"] = round(float(cov.mean()) * 100, 1) if len(df) else 0.0
+    df.attrs["propensity_coverage_start"] = (str(scored_dates.min().date())
+                                             if len(scored_dates) else None)
+    return df
+
+
 def _delisting_map(con) -> dict[str, tuple]:
     """{TICKER → (delist_date: Timestamp, delist_return_pct: float)} from the optional
     `delistings` table (or `corporate_events` rows tagged 'delisting'/'acquired').
@@ -277,6 +334,11 @@ FILTER_CATALOG = {
     "sector_positive_regime": {"category": "Relative Strength", "label": "Positive Sector Regime", "unit": "", "desc": "Sector composite 14d momentum > 0", "fundamental": False},
     "corr_nifty_30": {"category": "Relative Strength", "label": "Market Correlation (30d)", "unit": "ρ", "desc": "Rolling 30d Pearson corr to market", "fundamental": False},
     "decoupled_leader": {"category": "Relative Strength", "label": "De-coupled Leader", "unit": "", "desc": "Low corr in a market pullback, holding up", "fundamental": False},
+    # ── ML Signal — leak-safe out-of-sample model propensity ───────────────────────
+    "prob_up": {"category": "ML Signal", "label": "P(up · 5d)", "unit": "prob",
+                "desc": "Holdout XGBoost P(up over next 5d), trained ≤2025-05 — leak-safe, "
+                        "available ~last year only (2025-06 →). Outside that window the "
+                        "missing-propensity policy applies.", "fundamental": False},
 }
 
 
@@ -348,6 +410,12 @@ class BacktestRequest(BaseModel):
     # are inert until the `index_membership` / `delistings` tables are backfilled.
     index_universe: Optional[str] = None
     survivorship_adjust: bool = True
+    # ML Signal (prob_up) — policy for candidates with NO leak-safe propensity score
+    # (outside the ~last-year holdout window, or the table is absent). Default "keep":
+    # an unscored name still qualifies on its OTHER filters, so the propensity gate only
+    # *adds* selectivity where a score exists. "exclude" drops unscored names; "neutral"
+    # treats them as P=0.5. Inert unless a prob_up filter is in `filters`.
+    propensity_missing: str = "keep"          # "keep" | "exclude" | "neutral"
 
 
 class WFOBacktestRequest(BacktestRequest):
@@ -469,6 +537,8 @@ def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Option
     # selection sees the universe as it was, not today's survivors. No-op (all True)
     # when the `index_membership` table is absent.
     df = _attach_membership(df, _load_membership_intervals(con, index_name))
+    # Leak-safe ML propensity P(up·5d), exact-dated per bar (~last-year holdout only).
+    df = _attach_propensity(df, _load_oos_propensity(con))
     df = df.sort_values(["ticker", "date"]).reset_index(drop=True)
 
     # Attach reference-relative factors (sector momentum dispersion + market
@@ -578,6 +648,8 @@ class _SimContext:
         # Amihud/Kyle-λ leg, the physical ADV participation cap, and the per-name
         # temporary-leg coefficient. All None ⇒ retail scale / explicit-knob path.
         "auto_amihud", "auto_participation", "amihud_coef_map", "impact_coef_map",
+        # Leak-safe ML propensity (prob_up) attach + in-window coverage echo.
+        "propensity_pit", "propensity_coverage_pct", "propensity_coverage_start",
     )
 
     def __init__(self, req, all_dates, date_to_gidx, tkr_series, bench_daily,
@@ -609,6 +681,9 @@ class _SimContext:
         self.membership_pit = False             # whether candidates were filtered as-of index membership (G2)
         self.delist_by_ticker = None            # {ticker → (delist_gidx, delist_return_pct)} survivorship adj (G2)
         self.n_delistings = 0                   # count of delisting events intersecting the window
+        self.propensity_pit = False             # whether leak-safe ML propensity (prob_up) was attached
+        self.propensity_coverage_pct = 0.0      # % of in-window bars carrying a prob_up score
+        self.propensity_coverage_start = None   # earliest bar with a propensity score (≈ holdout start)
         self._resolved: dict[tuple, Optional[dict]] = {}
 
     def price_at(self, idx: int, ticker: str) -> Optional[float]:
@@ -930,6 +1005,15 @@ def _load_context(req: BacktestRequest, from_dt, to_dt, need_mr: bool,
     # date is mapped to the first trading bar on/after it (searchsorted) so a name that
     # stops trading mid-window is force-closed on the next available bar.
     ctx.membership_pit = bool(df.attrs.get("membership_pit", False))
+    # Leak-safe ML propensity coverage (config echo + UI banner). Measured over the
+    # IN-WINDOW bars only (in_range), NOT the warm-up-padded prepared frame — the 400-day
+    # indicator look-back precedes the holdout and would understate true in-window coverage.
+    ctx.propensity_pit = bool(df.attrs.get("propensity_pit", False))
+    if ctx.propensity_pit and "prob_up" in in_range.columns and len(in_range):
+        _cov = in_range["prob_up"].notna()
+        ctx.propensity_coverage_pct = round(float(_cov.mean()) * 100, 1)
+        _sd = in_range.loc[_cov, "date"]
+        ctx.propensity_coverage_start = str(_sd.min().date()) if len(_sd) else None
     if raw_delist:
         delist_gidx: dict[str, tuple] = {}
         cal = np.asarray(all_dates)
@@ -1029,7 +1113,8 @@ def _simulate_window(ctx: "_SimContext", req: BacktestRequest, filters: list[dic
                     _gate_days += 1
             except Exception:
                 day_filters = filters   # zero-regression: fall back to the full screen
-        candidates = be.apply_filters(day_df, day_filters)
+        candidates = be.apply_filters(day_df, day_filters,
+                                      propensity_policy=getattr(req, "propensity_missing", "keep"))
         if candidates.empty:
             continue
         # As-of index membership (G2): drop names that were not constituents on this
@@ -1218,6 +1303,10 @@ def _core_backtest(req: BacktestRequest, on_progress: Optional[Callable[[dict], 
             "fundamentals_coverage_start": ctx.fund_cov_start,
             "index_universe": req.index_universe,
             "membership_pit": ctx.membership_pit,
+            "propensity_pit": ctx.propensity_pit,
+            "propensity_coverage_pct": ctx.propensity_coverage_pct,
+            "propensity_coverage_start": ctx.propensity_coverage_start,
+            "propensity_missing_policy": getattr(req, "propensity_missing", "keep"),
             "survivorship_adjusted": bool(ctx.delist_by_ticker),
             "n_delistings": ctx.n_delistings,
             "survivorship_warning": _survivorship_warning(ctx),   # D1 — bounded CAGR haircut banner
@@ -1532,6 +1621,10 @@ def _core_wfo(req: WFOBacktestRequest, on_progress: Optional[Callable[[dict], No
             "fundamentals_coverage_start": ctx.fund_cov_start,
             "index_universe": req.index_universe,
             "membership_pit": ctx.membership_pit,
+            "propensity_pit": ctx.propensity_pit,
+            "propensity_coverage_pct": ctx.propensity_coverage_pct,
+            "propensity_coverage_start": ctx.propensity_coverage_start,
+            "propensity_missing_policy": getattr(req, "propensity_missing", "keep"),
             "survivorship_adjusted": bool(ctx.delist_by_ticker),
             "n_delistings": ctx.n_delistings,
             "survivorship_warning": _survivorship_warning(ctx),   # D1 — bounded CAGR haircut banner

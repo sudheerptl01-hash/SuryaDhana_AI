@@ -19,6 +19,10 @@ venv/
 models/*.joblib
 models/*.pkl
 models/*.json
+# Trained model binaries are reproducible from scripts/ (generate_oos_propensity.py etc.)
+# and OOS predictions live in DuckDB — keep the heavy artifacts out of git.
+services/ui-api/models/**/*.pkl
+services/ui-api/models/**/*.json
 
 # OS
 .DS_Store

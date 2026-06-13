@@ -57,6 +57,11 @@ FIELD_MAP: dict[str, str] = {
     "squeeze_ratio": "squeeze_ratio",               # BB-width / KC-width (<1 ⇒ compression)
     "sector_rel_mom_14_pct": "sector_rel_mom_14_pct",  # 14d momentum vs sector composite
     "corr_nifty_30": "corr_nifty_30",               # rolling 30d Pearson corr to market
+    # ── ML Signal ──────────────────────────────────────────────────────────
+    # Leak-safe out-of-sample propensity P(up over next 5d) from a holdout XGBoost
+    # model trained on data ≤ 2025-05 and scored only for the ~last year. Attached
+    # per-(ticker, date) by analytics._attach_propensity; NaN outside that window.
+    "prob_up": "prob_up",
 }
 
 
@@ -372,21 +377,43 @@ def gaussian_hmm_regime(returns, n_iter: int = 20, min_obs: int = 100):
                  "bull_state": bull, "transition": A.round(4).tolist()}
 
 
-def apply_filters(day_df: pd.DataFrame, filters: list[dict]) -> pd.DataFrame:
-    """Apply numeric + boolean filters (AND) to one day's candidate rows."""
+def apply_filters(day_df: pd.DataFrame, filters: list[dict],
+                  propensity_policy: str = "exclude") -> pd.DataFrame:
+    """Apply numeric + boolean filters (AND) to one day's candidate rows.
+
+    `propensity_policy` governs ONLY the `prob_up` ML-signal filter when a candidate has
+    no score (NaN — i.e. it falls outside the leak-safe ~last-year holdout window, or the
+    `ml_oos_predictions` table is absent). Every other field keeps the legacy NaN→drop
+    semantics, so all pre-existing call sites are unchanged bit-for-bit at the default:
+      • "exclude" (default) — unscored names are dropped (standard numeric-filter behaviour)
+      • "keep"             — unscored names bypass the threshold and qualify on other filters
+      • "neutral"          — unscored names are treated as P=0.5 (a coin-flip) then thresholded
+    """
     candidates = day_df
     for fc in filters:
         field, op, value = fc["field"], fc.get("op", "gt"), fc.get("value", 0.0)
         if field in FIELD_MAP:
             col = FIELD_MAP[field]
+            if col not in candidates.columns:
+                continue   # column never attached (e.g. prob_up table absent) → filter inert
+            policy = propensity_policy if field == "prob_up" else "exclude"
+            series = candidates[col]
+            if field == "prob_up" and policy == "neutral":
+                series = series.fillna(0.5)
             if op == "lt":
-                candidates = candidates[candidates[col] < value]
+                mask = series < value
             elif op == "gt":
-                candidates = candidates[candidates[col] > value]
+                mask = series > value
             elif op == "lte":
-                candidates = candidates[candidates[col] <= value]
+                mask = series <= value
             elif op == "gte":
-                candidates = candidates[candidates[col] >= value]
+                mask = series >= value
+            else:
+                continue
+            if field == "prob_up" and policy == "keep":
+                # Unscored (NaN) names sidestep the propensity gate entirely.
+                mask = mask | candidates[col].isna()
+            candidates = candidates[mask]
         elif field in BOOLEAN_FILTERS:
             candidates = candidates[BOOLEAN_FILTERS[field](candidates)]
     return candidates

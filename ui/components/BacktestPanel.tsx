@@ -56,6 +56,9 @@ const FILTER_CATALOG: Record<string, Array<{ id: string; label: string; unit?: s
     { id: 'corr_nifty_30', label: 'Market Corr 30d', unit: 'ρ', op: 'lt', val: 0.2, desc: 'Rolling 30d corr to market' },
     { id: 'decoupled_leader', label: 'De-coupled Leader', toggle: true, op: 'gt', val: 0, desc: 'Low corr in a market pullback' },
   ],
+  'ML Signal': [
+    { id: 'prob_up', label: 'P(up · 5d)', unit: 'prob', op: 'gt', val: 0.55, desc: 'Leak-safe holdout XGBoost P(up over next 5d); available ~last year only (2025-06 →)' },
+  ],
 }
 
 const PRESETS = [
@@ -115,6 +118,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
   const [ddHaltPct, setDdHaltPct] = useState(20)
 
   // Scope (Pillar 2)
+  const [propensityMissing, setPropensityMissing] = useState<'keep' | 'exclude' | 'neutral'>('keep')
   const [scope, setScope] = useState<'universe' | 'watchlist'>('universe')
 
   // WFO
@@ -132,6 +136,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
   const abortRef = useRef<AbortController | null>(null)
 
   const fundamentalActive = filters.some(f => FUNDAMENTAL.has(f.field))
+  const propensityActive = filters.some(f => f.field === 'prob_up')
   const watchlistEmpty = scope === 'watchlist' && watchlist.length === 0
 
   const toggleFilter = (id: string) => {
@@ -168,6 +173,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
       trailing_stop_pct: trailEnabled ? trailingPct : null,
       max_positions: maxPositions, max_drawdown_halt_pct: ddHaltEnabled ? ddHaltPct : null,
       scope, tickers: scope === 'watchlist' ? watchlist : [], entry_timing: entryTiming,
+      propensity_missing: propensityMissing,
       ...(wfoMode ? { in_sample_days: inSampleDays, out_sample_days: outSampleDays, monte_carlo_runs: monteCarloRuns } : {}),
     }
 
@@ -412,6 +418,28 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
             </div>
           )}
 
+          {/* ML Signal — leak-safe propensity controls + window notice */}
+          {propensityActive && (
+            <div className="rounded-lg border border-indigo-600/50 bg-indigo-500/10 px-4 py-2.5 text-[12px] text-indigo-200">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <span className="font-medium">🧠 ML Signal active — P(up·5d) from a leak-safe holdout model (trained ≤ 2025-05, scored ~last year only).</span>
+                <label className="flex items-center gap-1.5 text-[11px] font-medium shrink-0">
+                  <span className="text-indigo-300/80">Unscored names:</span>
+                  <select
+                    value={propensityMissing}
+                    onChange={e => setPropensityMissing(e.target.value as 'keep' | 'exclude' | 'neutral')}
+                    className="rounded bg-slate-800 border border-indigo-600/40 px-1.5 py-0.5 text-indigo-100 text-[11px] focus:outline-none focus:border-indigo-400"
+                  >
+                    <option value="keep">keep (qualify on other filters)</option>
+                    <option value="exclude">exclude (drop)</option>
+                    <option value="neutral">neutral (P=0.5)</option>
+                  </select>
+                </label>
+              </div>
+              <span className="block mt-0.5 text-[11px] text-indigo-300/70 font-normal">Propensity exists only for 2025-06 → present (the model&apos;s out-of-sample holdout). Outside that window the policy above decides whether a name is kept, dropped, or treated as a coin-flip.</span>
+            </div>
+          )}
+
           {error && <div className="rounded-lg border border-rose-600/50 bg-rose-500/10 px-4 py-2.5 text-[12px] text-rose-200">⛔ {error}</div>}
 
           {/* Progress telemetry */}
@@ -446,6 +474,9 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                   <p className="text-[10px] text-slate-500 font-mono">
                     {results.config.scope} · {results.config.n_tickers} tickers · {results.config.entry_timing === 'close' ? 'close-entry' : 'next-open'} · vs {results.config.benchmark_label}
                     {results.config.fundamentals_as_of ? ` · fundamentals @ ${results.config.fundamentals_as_of}` : ''}
+                    {propensityActive && results.config.propensity_pit
+                      ? ` · ML coverage ${(results.config.propensity_coverage_pct ?? 0).toFixed(0)}%${results.config.propensity_coverage_start ? ` from ${results.config.propensity_coverage_start}` : ''} (${results.config.propensity_missing_policy ?? 'keep'})`
+                      : ''}
                   </p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">

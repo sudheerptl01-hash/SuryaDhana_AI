@@ -23,6 +23,10 @@ export interface BacktestParams {
   scope: 'universe' | 'watchlist'
   tickers?: string[]
   entry_timing?: 'next_open' | 'close'
+  // ML Signal — policy for candidates with no leak-safe propensity score (outside the
+  // ~last-year holdout window). "keep" (default): qualify on other filters; "exclude":
+  // drop unscored; "neutral": treat as P=0.5. Only bites when a prob_up filter is active.
+  propensity_missing?: 'keep' | 'exclude' | 'neutral'
   // WFO-only
   in_sample_days?: number
   out_sample_days?: number
@@ -73,6 +77,11 @@ export interface BacktestResult {
     max_positions?: number; max_drawdown_halt_pct?: number | null
     scope: string; entry_timing?: string; n_tickers: number; benchmark_label: string
     fundamentals_as_of?: string | null
+    // ML Signal (leak-safe holdout propensity) coverage echo
+    propensity_pit?: boolean
+    propensity_coverage_pct?: number
+    propensity_coverage_start?: string | null
+    propensity_missing_policy?: string
   }
   fundamental_lookahead_active: boolean
   starting_capital: number

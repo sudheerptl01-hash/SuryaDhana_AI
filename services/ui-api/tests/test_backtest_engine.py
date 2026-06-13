@@ -362,6 +362,58 @@ def test_boolean_factor_filters_apply_without_market_columns():
     assert out.empty  # column absent → predicate False → no rows, no exception
 
 
+# ── ML Signal (prob_up) — leak-safe propensity filter + missing-data policy ───────
+
+def _prop_day() -> "pd.DataFrame":
+    """One day's candidates: two scored (0.70, 0.40) + one UNSCORED (NaN propensity)."""
+    return pd.DataFrame({
+        "ticker": ["HIGH", "LOW", "UNSCORED"],
+        "prob_up": [0.70, 0.40, np.nan],
+    })
+
+
+def test_propensity_prob_up_in_field_map():
+    assert be.FIELD_MAP.get("prob_up") == "prob_up"
+
+
+def test_propensity_policy_exclude_drops_unscored():
+    out = be.apply_filters(_prop_day(), [{"field": "prob_up", "op": "gte", "value": 0.55}],
+                           propensity_policy="exclude")
+    assert set(out["ticker"]) == {"HIGH"}            # only scored ≥0.55; NaN dropped
+
+
+def test_propensity_policy_keep_passes_unscored():
+    out = be.apply_filters(_prop_day(), [{"field": "prob_up", "op": "gte", "value": 0.55}],
+                           propensity_policy="keep")
+    assert set(out["ticker"]) == {"HIGH", "UNSCORED"}  # scored ≥0.55 + NaN bypasses gate
+
+
+def test_propensity_policy_neutral_treats_unscored_as_half():
+    # P=0.5 fails a 0.55 gate (dropped) but passes a 0.45 gate (kept).
+    out_high = be.apply_filters(_prop_day(), [{"field": "prob_up", "op": "gte", "value": 0.55}],
+                                propensity_policy="neutral")
+    assert set(out_high["ticker"]) == {"HIGH"}
+    out_low = be.apply_filters(_prop_day(), [{"field": "prob_up", "op": "gte", "value": 0.45}],
+                               propensity_policy="neutral")
+    assert set(out_low["ticker"]) == {"HIGH", "UNSCORED"}  # 0.5 ≥ 0.45
+
+
+def test_propensity_policy_does_not_affect_other_fields():
+    # The policy must ONLY touch prob_up; a NaN in another field still drops (exclude).
+    df = pd.DataFrame({"ticker": ["A", "B"], "rsi_14": [60.0, np.nan]})
+    out = be.apply_filters(df, [{"field": "rsi_14", "op": "gt", "value": 50}],
+                           propensity_policy="keep")
+    assert set(out["ticker"]) == {"A"}               # NaN rsi dropped despite keep policy
+
+
+def test_propensity_filter_inert_when_column_absent():
+    # No prob_up column (table never attached) → filter is a no-op, never raises.
+    df = pd.DataFrame({"ticker": ["A", "B"], "rsi_14": [60.0, 70.0]})
+    out = be.apply_filters(df, [{"field": "prob_up", "op": "gte", "value": 0.55}],
+                           propensity_policy="exclude")
+    assert set(out["ticker"]) == {"A", "B"}          # column absent → inert
+
+
 # ── P1/P2: advanced risk sizing + gates in simulate_portfolio ─────────────────────
 
 def _dates(n: int) -> list[str]:
