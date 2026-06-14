@@ -1512,7 +1512,17 @@ def compute_metrics(
     final_nav = nav_series[-1]
     n_days = max(len(nav_series) - 1, 1)
     total_return_pct = (final_nav / starting_capital - 1) * 100.0
-    cagr_pct = ((final_nav / starting_capital) ** (TRADING_DAYS / n_days) - 1) * 100.0
+    # CAGR is a GEOMETRIC rate, so it is only real-valued for a strictly-positive NAV
+    # ratio. A catastrophic run can drive NAV to ≤0 (full wipe-out, or impact/leverage
+    # pushing it negative); ratio**(fractional) would then return a COMPLEX number and the
+    # downstream round() would raise — crashing the whole backtest. Geometrically you can
+    # lose AT MOST everything, so a non-positive terminal ratio ⇒ CAGR = −100% (total
+    # destruction). Guards a NaN/inf ratio to −100% too. Real, finite, never raises.
+    _ratio = final_nav / starting_capital if starting_capital else 0.0
+    if np.isfinite(_ratio) and _ratio > 0:
+        cagr_pct = (_ratio ** (TRADING_DAYS / n_days) - 1) * 100.0
+    else:
+        cagr_pct = -100.0
     mdd = max_drawdown(nav_series)
     beta, alpha = beta_alpha(p_rets, b_rets)
 
