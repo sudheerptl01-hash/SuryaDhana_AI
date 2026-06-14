@@ -8,6 +8,9 @@ data/market.duckdb.wal
 data/*.duckdb
 data/*.csv
 
+# Research result sidecars (regenerable from scripts/ — the committed report is the artifact)
+/decile_optimization_results.csv
+
 # Python
 __pycache__/
 *.py[cod]
