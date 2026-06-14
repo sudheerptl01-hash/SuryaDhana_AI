@@ -341,6 +341,9 @@ FILTER_CATALOG = {
     "sector_positive_regime": {"category": "Relative Strength", "label": "Positive Sector Regime", "unit": "", "desc": "Sector composite 14d momentum > 0", "fundamental": False},
     "corr_nifty_30": {"category": "Relative Strength", "label": "Market Correlation (30d)", "unit": "ρ", "desc": "Rolling 30d Pearson corr to market", "fundamental": False},
     "decoupled_leader": {"category": "Relative Strength", "label": "De-coupled Leader", "unit": "", "desc": "Low corr in a market pullback, holding up", "fundamental": False},
+    # ── SuryaDhana structural alpha (institutional research) — both strictly trailing ──
+    "beta_resid_5d": {"category": "Relative Strength", "label": "Idiosyncratic Momentum (β-residual 5d)", "unit": "%", "desc": "5d return minus 30d-beta-implied Nifty return — market-decoupled catalyst", "fundamental": False},
+    "vol_adj_sector_alpha_14": {"category": "Relative Strength", "label": "Vol-Adjusted Sector Alpha (14d)", "unit": "x", "desc": "(14d return − sector 14d) / 14d ATR% — strongest name in strongest sector, vol-penalized", "fundamental": False},
     # ── ML Signal — leak-safe out-of-sample model propensity ───────────────────────
     "prob_up": {"category": "ML Signal", "label": "P(up · 5d)", "unit": "prob",
                 "desc": "Holdout XGBoost P(up over next 5d), trained ≤2025-05 — leak-safe, "
@@ -456,6 +459,8 @@ class WFOBacktestRequest(BacktestRequest):
 MARKET_RELATIVE_FIELDS: set[str] = {
     "sector_rel_mom_14_pct", "corr_nifty_30",
     "sector_positive_regime", "decoupled_leader",
+    # SuryaDhana structural alpha — both computed in compute_market_relative.
+    "beta_resid_5d", "vol_adj_sector_alpha_14",
 }
 
 
@@ -554,15 +559,52 @@ def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Option
     # strictly trailing. Wrapped so a composite failure never breaks the core sim.
     if need_market_relative:
         try:
-            df = be.compute_market_relative(df, _sector_map())
+            # SuryaDhana: inject the REAL Nifty-50 return series (NIFTY1) so the β-residual
+            # is a genuine market beta and corr_nifty_30/decoupled_leader couple to the
+            # actual index rather than the equal-weight constituent proxy. None ⇒ the
+            # function transparently falls back to its internal proxy.
+            nifty = _nifty_returns(con, from_dt, to_dt)
+            df = be.compute_market_relative(df, _sector_map(), market_ret_by_date=nifty)
         except Exception:
-            for col in ("sector_rel_mom_14_pct", "corr_nifty_30"):
+            for col in ("sector_rel_mom_14_pct", "corr_nifty_30",
+                        "beta_resid_5d", "vol_adj_sector_alpha_14"):
                 if col not in df.columns:
                     df[col] = np.nan
             for col in ("sector_positive_regime", "decoupled_leader"):
                 if col not in df.columns:
                     df[col] = False
     return df
+
+
+# SuryaDhana — real Nifty-50 daily-return series for the β-residual (and to upgrade the
+# market-coupling factors off the equal-weight proxy). The actual index ticker in this
+# DuckDB is `NIFTY1` (an ETF-priced series; its *returns* track Nifty-50 1:1, which is all
+# beta/correlation need). Falls back to NIFTYBEES, then None (⇒ compute_market_relative
+# keeps its internal equal-weight constituent proxy). Strictly trailing: each date maps to
+# that day's close-to-close return, never a future bar.
+_NIFTY_PROXY_TICKERS = ["NIFTY", "NIFTY50", "NSEI", "NIFTY1", "NIFTYBEES"]
+
+
+def _nifty_returns(con, from_dt, to_dt) -> Optional[dict]:
+    """date(Timestamp)→daily Nifty-50 return, from the first available proxy ticker."""
+    lo = from_dt - timedelta(days=400)
+    hi = to_dt + timedelta(days=40)
+    for sym in _NIFTY_PROXY_TICKERS:
+        rows = con.execute(
+            "SELECT date, close, adjusted_close FROM ohlcv WHERE ticker = ? "
+            "AND date BETWEEN ? AND ? ORDER BY date",
+            [sym, lo, hi],
+        ).fetchall()
+        if len(rows) <= 30:
+            continue
+        ndf = pd.DataFrame(rows, columns=["date", "close", "adjusted_close"])
+        ndf["date"] = pd.to_datetime(ndf["date"])
+        # Use the corporate-action-adjusted series for return integrity.
+        px = pd.to_numeric(ndf["adjusted_close"], errors="coerce").fillna(
+            pd.to_numeric(ndf["close"], errors="coerce"))
+        ret = px.pct_change()
+        return {d: (float(r) if pd.notna(r) else 0.0) for d, r in zip(ndf["date"], ret)}
+    return None
 
 
 def _build_benchmark(con, from_ts, to_ts) -> tuple[dict[str, float], str]:

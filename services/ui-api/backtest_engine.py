@@ -57,6 +57,9 @@ FIELD_MAP: dict[str, str] = {
     "squeeze_ratio": "squeeze_ratio",               # BB-width / KC-width (<1 ⇒ compression)
     "sector_rel_mom_14_pct": "sector_rel_mom_14_pct",  # 14d momentum vs sector composite
     "corr_nifty_30": "corr_nifty_30",               # rolling 30d Pearson corr to market
+    # ── SuryaDhana structural alpha (institutional research) ────────────────
+    "beta_resid_5d": "beta_resid_5d",               # idiosyncratic 5d return (β-30d-residual to Nifty)
+    "vol_adj_sector_alpha_14": "vol_adj_sector_alpha_14",  # (14d ret − sector 14d) / 14d ATR%
     # ── ML Signal ──────────────────────────────────────────────────────────
     # Leak-safe out-of-sample propensity P(up over next 5d) from a holdout XGBoost
     # model trained on data ≤ 2025-05 and scored only for the ~last year. Attached
@@ -246,6 +249,7 @@ def compute_market_relative(
     mom_window: int = 14,
     corr_window: int = 30,
     market_ret_by_date: Optional[dict] = None,
+    beta_window: int = 30,
 ) -> pd.DataFrame:
     """
     Attach reference-relative factors (Sector Momentum Dispersion + Beta-Adjusted
@@ -297,7 +301,51 @@ def compute_market_relative(
         (df["corr_nifty_30"] < 0.2) & (df["mkt_ret5"] < 0) & (df["_ret5"] > 0)
     ).fillna(False)
 
-    df.drop(columns=["_mom14", "_sector", "_sector_mom14", "_ret5"], inplace=True, errors="ignore")
+    # ── Idiosyncratic Momentum (Beta-Residual, beta_resid_5d) ──────────────────
+    # SuryaDhana structural feature 2. Surfaces names rising on their OWN catalyst,
+    # decoupled from market float. Two strictly-trailing legs:
+    #   (a) rolling `beta_window`-day OLS beta of stock daily ret vs the market daily
+    #       ret  βᵢ = Cov(rᵢ, r_mkt)/Var(r_mkt)  — needs ≥beta_window obs (min_periods).
+    #   (b) trailing 5-day realised return of stock and market.
+    # residual = ret5_stock − βᵢ · ret5_market  (the market-decoupled 5d return).
+    # Every input is known at close of day T (rolling windows trailing; β uses ret_1d
+    # up to and incl. T). When `market_ret_by_date` is the REAL Nifty (NIFTY1) series,
+    # this is a genuine Nifty-50 beta; otherwise it is beta to the equal-weight proxy.
+    cov = df.groupby("ticker", group_keys=False).apply(
+        lambda s: s["ret_1d"].rolling(beta_window, min_periods=beta_window)
+                             .cov(s["mkt_ret_1d"]))
+    df["_cov_bw"] = cov.reindex(df.index).astype(float)
+    # Var(market) is a per-DATE quantity (the market series is shared) → rolling var of
+    # the de-duplicated daily market return, mapped back by date. Avoids recomputing a
+    # constant-per-day variance once per ticker.
+    mkt_daily = (pd.Series(market_ret_by_date, dtype=float)
+                 .reindex(pd.DatetimeIndex(sorted(set(df["date"]))))
+                 .astype(float))
+    mkt_var = mkt_daily.rolling(beta_window, min_periods=beta_window).var()
+    df["_mkt_var_bw"] = df["date"].map(mkt_var.to_dict()).astype(float)
+    beta = df["_cov_bw"] / df["_mkt_var_bw"].where(df["_mkt_var_bw"].abs() > 1e-12)
+    # Market trailing 5d return (compounded daily market returns), mapped by date.
+    mkt_ret5_lvl = (1.0 + mkt_daily.fillna(0.0)).cumprod()
+    mkt_ret5 = (mkt_ret5_lvl / mkt_ret5_lvl.shift(5) - 1.0)
+    df["_mkt_ret5"] = df["date"].map(mkt_ret5.to_dict()).astype(float)
+    df["beta_resid_5d"] = (df["_ret5"] - beta * df["_mkt_ret5"]).astype(float) * 100.0
+
+    # ── Volatility-Adjusted Sector Alpha (vol_adj_sector_alpha_14) ─────────────
+    # SuryaDhana structural feature 3. (stock 14d ret − sector 14d ret) / stock 14d
+    # ATR%. `_mom14` is the stock's 14d % return; `_sector_mom14` the equal-weight
+    # sector composite of the same — both contemporaneous-cross-section (no look-ahead;
+    # the day-T sector mean uses only day-T member returns). `atr_pct` is the trailing
+    # 14d ATR as % of close (from compute_indicators). Strongest name in the strongest
+    # sector, penalised when its own price action is too erratic. atr_pct≤0 (warm-up /
+    # flat) ⇒ NaN (unrankable, silently dropped), never a divide-by-zero crash.
+    atr_pct = df["atr_pct"] if "atr_pct" in df.columns else pd.Series(np.nan, index=df.index)
+    denom = atr_pct.where(atr_pct > 0)
+    df["vol_adj_sector_alpha_14"] = (
+        (df["_mom14"] - df["_sector_mom14"]) / denom
+    ).astype(float)
+
+    df.drop(columns=["_mom14", "_sector", "_sector_mom14", "_ret5",
+                     "_cov_bw", "_mkt_var_bw", "_mkt_ret5"], inplace=True, errors="ignore")
     return df
 
 

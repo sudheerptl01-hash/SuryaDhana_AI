@@ -1,0 +1,72 @@
+[
+  {
+    "name": "IdioMom(\u03b2-resid) \u00b7 D10",
+    "fields": [
+      "beta_resid_5d"
+    ],
+    "n_windows": 17,
+    "cagr": -5.57,
+    "total_return": -21.94,
+    "maxdd": -22.24,
+    "sharpe": -1.63,
+    "calmar": 0.25,
+    "win": 39.7,
+    "pf": 0.67,
+    "trades": 1082,
+    "alpha": -6.05,
+    "beta": 0.02,
+    "dsr_engine": 0.0,
+    "dsr_n_trials_engine": 1,
+    "efficiency": 0.918,
+    "bench_return": 108.39,
+    "dsr_study": 0.0,
+    "dsr_study_trials": 3
+  },
+  {
+    "name": "VolAdjSectAlpha \u00b7 D10",
+    "fields": [
+      "vol_adj_sector_alpha_14"
+    ],
+    "n_windows": 17,
+    "cagr": -4.8,
+    "total_return": -19.21,
+    "maxdd": -19.88,
+    "sharpe": -1.59,
+    "calmar": 0.24,
+    "win": 39.6,
+    "pf": 0.67,
+    "trades": 1139,
+    "alpha": -5.26,
+    "beta": 0.02,
+    "dsr_engine": 0.0,
+    "dsr_n_trials_engine": 1,
+    "efficiency": 1.0,
+    "bench_return": 110.96,
+    "dsr_study": 0.0,
+    "dsr_study_trials": 3
+  },
+  {
+    "name": "IdioMom \u2229 VolAdjSectAlpha \u00b7 D10\u2229D10",
+    "fields": [
+      "beta_resid_5d",
+      "vol_adj_sector_alpha_14"
+    ],
+    "n_windows": 17,
+    "cagr": -40.21,
+    "total_return": -89.17,
+    "maxdd": -89.39,
+    "sharpe": -1.9,
+    "calmar": 0.45,
+    "win": 39.8,
+    "pf": 0.64,
+    "trades": 1061,
+    "alpha": -50.35,
+    "beta": 0.115,
+    "dsr_engine": 0.0,
+    "dsr_n_trials_engine": 1,
+    "efficiency": 1.075,
+    "bench_return": 108.39,
+    "dsr_study": 0.0,
+    "dsr_study_trials": 3
+  }
+]
