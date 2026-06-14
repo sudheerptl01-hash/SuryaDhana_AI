@@ -306,6 +306,13 @@ class FilterCondition(BaseModel):
     field: str
     op: str = "gt"      # lt | gt | lte | gte
     value: float = 0.0
+    # Pillar A — adaptive cross-sectional thresholds. "absolute" (default) keeps the
+    # legacy static-threshold behaviour bit-for-bit. "decile" re-expresses `value` as a
+    # daily cross-sectional decile cutoff (1..10) of `field` within the day's PIT-active
+    # universe, so the screen tracks the best *relative* names each bar instead of a frozen
+    # absolute number (eradicates the Static-Threshold Fallacy). Unknown values fall back
+    # to "absolute". Optional + defaulted ⇒ existing API clients are unaffected.
+    mode: str = "absolute"   # absolute | decile
 
 
 FILTER_CATALOG = {

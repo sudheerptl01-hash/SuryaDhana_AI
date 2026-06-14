@@ -377,6 +377,32 @@ def gaussian_hmm_regime(returns, n_iter: int = 20, min_obs: int = 100):
                  "bull_state": bull, "transition": A.round(4).tolist()}
 
 
+# ── Pillar A — daily cross-sectional decile ranking ──────────────────────────────
+# Number of equal-population buckets a factor's daily cross-section is split into.
+DECILE_N: int = 10
+
+
+def assign_decile(series: "pd.Series") -> "pd.Series":
+    """Rank a single day's cross-section of one factor into deciles 1..DECILE_N.
+
+    This is the production mirror of `scripts/decile_combinatorial_optimizer.assign_deciles`
+    — *bit-for-bit the same recipe* so a research-discovered band reproduces in the sim:
+        rank(pct=True, method="first") → ceil(r·N) → clip(1, N)
+
+    `apply_filters` is invoked on ONE day's candidate frame at a time (analytics groups the
+    universe by signal date before calling), so ranking here is inherently a same-day
+    cross-section with ZERO look-ahead — no future bar can influence today's decile.
+
+    NaN factor values are NOT ranked: they receive NaN decile and therefore fail every
+    decile comparison (`NaN >= k` is False), i.e. an unrankable name is silently dropped,
+    never crashing. Decile 10 = the highest-factor tenth of the cross-section, 1 = lowest.
+    """
+    vals = pd.to_numeric(series, errors="coerce")
+    r = vals.rank(pct=True, method="first")          # NaN inputs stay NaN (na_option default)
+    dec = np.ceil(r * DECILE_N)
+    return dec.clip(lower=1, upper=DECILE_N)
+
+
 def apply_filters(day_df: pd.DataFrame, filters: list[dict],
                   propensity_policy: str = "exclude") -> pd.DataFrame:
     """Apply numeric + boolean filters (AND) to one day's candidate rows.
@@ -388,10 +414,22 @@ def apply_filters(day_df: pd.DataFrame, filters: list[dict],
       • "exclude" (default) — unscored names are dropped (standard numeric-filter behaviour)
       • "keep"             — unscored names bypass the threshold and qualify on other filters
       • "neutral"          — unscored names are treated as P=0.5 (a coin-flip) then thresholded
+
+    Pillar A — adaptive thresholds: a filter may opt into DAILY CROSS-SECTIONAL DECILE
+    ranking instead of a static absolute threshold by setting `fc["mode"] == "decile"`
+    (default `"absolute"` ⇒ unchanged legacy path). In decile mode the field's value is
+    re-expressed as its rank 1..10 within *this day's* universe, and `value` is interpreted
+    as a decile cutoff (e.g. `op="gte", value=10` ⇒ "top decile of VMI today"; `op="lte",
+    value=1` ⇒ "bottom decile"). This eradicates the Static-Threshold Fallacy (buying
+    hyper-extended parabolic names because "Top 10%" was frozen into an absolute number on a
+    historical date) by re-selecting the best *relative* names every bar. NaN factors are
+    unrankable → dropped, never crash. Boolean filters and absolute-mode numeric filters are
+    untouched, so every existing screen reproduces exactly.
     """
     candidates = day_df
     for fc in filters:
         field, op, value = fc["field"], fc.get("op", "gt"), fc.get("value", 0.0)
+        mode = fc.get("mode", "absolute")
         if field in FIELD_MAP:
             col = FIELD_MAP[field]
             if col not in candidates.columns:
@@ -400,6 +438,11 @@ def apply_filters(day_df: pd.DataFrame, filters: list[dict],
             series = candidates[col]
             if field == "prob_up" and policy == "neutral":
                 series = series.fillna(0.5)
+            # Pillar A: replace the absolute factor value with its same-day decile rank.
+            # Done only for numeric fields and only on opt-in, so the legacy absolute path
+            # is byte-identical when `mode` is unset/"absolute".
+            if mode == "decile":
+                series = assign_decile(series)
             if op == "lt":
                 mask = series < value
             elif op == "gt":
@@ -412,6 +455,8 @@ def apply_filters(day_df: pd.DataFrame, filters: list[dict],
                 continue
             if field == "prob_up" and policy == "keep":
                 # Unscored (NaN) names sidestep the propensity gate entirely.
+                # In decile mode the unranked NaN decile is what's compared, so keep-policy
+                # still pivots on the ORIGINAL raw score's NaN-ness (not the ranked series).
                 mask = mask | candidates[col].isna()
             candidates = candidates[mask]
         elif field in BOOLEAN_FILTERS:
