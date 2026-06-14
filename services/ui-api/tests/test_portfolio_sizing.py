@@ -201,3 +201,43 @@ def test_engine_15pct_cap_binds_under_risk_parity():
     alloc = {t["ticker"]: t["capital_allocated"] for t in rp[1]}
     assert alloc["CALM"] == pytest.approx(0.15 * 1e7)
     assert alloc["JUMP"] == pytest.approx(0.15 * 1e7)
+
+
+# ── Pillar C — unallocated cash is TRACKED and compounds (no forced full investment) ─
+
+def test_risk_parity_unallocated_cash_is_tracked_in_equity_curve():
+    """When inverse-vol weights + the 15% cap under-invest the book, the residual must
+    stay as CASH in the equity curve (never silently forced to full investment), and every
+    bar's NAV must reconcile to cash + mark-to-market longs."""
+    dates, entries = _toy_entries()
+    equity, trades = be.simulate_portfolio(
+        dates, 0, 9, entries, _price_at,
+        starting_capital=1e7, max_positions=5, sizing_mode="risk_parity")  # 15% cap binds
+    # Two names clip to 0.15·NAV ⇒ ₹3M deployed, ₹7M unallocated on the entry bar.
+    deployed = sum(t["capital_allocated"] for t in trades)
+    assert deployed == pytest.approx(3e6)
+    entry_bar = equity[0]
+    assert entry_bar["cash"] == pytest.approx(1e7 - 3e6)        # ₹7M genuinely uninvested
+    assert entry_bar["cash"] > 0                                # NOT forced fully-invested
+    # NAV reconciliation WHILE positions are open (bars 0..4, before the idx-5 exit): a flat
+    # book (price_at=100) ⇒ NAV == starting capital, with ₹3M in longs-at-cost + ₹7M cash —
+    # proving the unallocated cash is carried in NAV, not dropped or force-invested.
+    for e in equity[:5]:
+        assert e["positions"] == 2
+        assert e["cash"] == pytest.approx(7e6)
+        assert e["nav"] == pytest.approx(1e7)
+
+
+def test_risk_parity_cash_compounds_after_winning_exit():
+    """On exit the (impact-free) +10% proceeds return to cash and the NAV steps up — the
+    compounded equity curve reflects realised gains on the deployed sleeve while the
+    unallocated cash is preserved (not leaked)."""
+    dates, entries = _toy_entries()
+    equity, trades = be.simulate_portfolio(
+        dates, 0, 9, entries, _price_at,
+        starting_capital=1e7, max_positions=5, sizing_mode="risk_parity")
+    # Both winners exit at idx 5 at +10% on ₹3M deployed ⇒ +₹300k realised.
+    post_exit = equity[6]   # bar after the idx-5 exit settles to cash
+    assert post_exit["positions"] == 0
+    assert post_exit["cash"] == pytest.approx(1e7 + 0.10 * 3e6)   # ₹10.3M all in cash
+    assert post_exit["nav"] == pytest.approx(1.03e7)             # compounded, not 1e7
