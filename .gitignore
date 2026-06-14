@@ -10,6 +10,8 @@ data/*.csv
 
 # Research result sidecars (regenerable from scripts/ — the committed report is the artifact)
 /decile_optimization_results.csv
+/all_filters_backtest_results.csv
+/direction_aware_results.csv
 
 # Python
 __pycache__/
