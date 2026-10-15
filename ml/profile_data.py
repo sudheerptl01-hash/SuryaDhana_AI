@@ -225,6 +225,12 @@ def label_sanity(df: pd.DataFrame) -> dict:
 
     per_date_med = df.groupby("date")["y_excess_20d"].median()
     max_abs_med = per_date_med.abs().max()  # NaN-only dates (unlabeled tail) skipped
+
+    fwd_nan = df["fwd_ret_5d"].isna()
+    up5 = pd.to_numeric(df["label_up_5d"], errors="coerce")
+    last5 = sorted(df["date"].unique())[-5:]
+    n_forced = int(fwd_nan.sum())
+    n_tail = int((fwd_nan & (df["date"] >= last5[0])).sum())
     return {
         "y_excess_20d": stats(df["y_excess_20d"]),
         "fwd_ret_5d": stats(df["fwd_ret_5d"]),
