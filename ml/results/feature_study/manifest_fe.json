@@ -1,0 +1,429 @@
+{
+ "built_at": "2026-10-15T06:27:30",
+ "builder": "ml/features_ext.py (quant-fe)",
+ "source_dataset": "ml/data/model_dataset.parquet",
+ "rows": 507163,
+ "tickers": 2096,
+ "date_min": "2025-06-02",
+ "date_max": "2026-10-14",
+ "seed": 108,
+ "n_new_features": 23,
+ "new_features": [
+  "cs_rank_atr",
+  "cs_rank_deliv_sma",
+  "cs_rank_52wh",
+  "cs_rank_rsi14",
+  "cs_rank_ret63",
+  "cs_rank_mom121",
+  "sharpe_mom_126",
+  "upday_frac_63",
+  "mom_consistency",
+  "deliv_z_chg_5",
+  "deliv_surge",
+  "deliv_value_z",
+  "ix_deliv_mom",
+  "ix_vol_mom",
+  "ix_52wh_mom",
+  "rev_resid_20",
+  "mkt_ret_20",
+  "mkt_breadth_200",
+  "mkt_vol_20",
+  "corr_mkt_60",
+  "sessions_since_52w_high",
+  "accum_20",
+  "days_listed"
+ ],
+ "groups": {
+  "A_rank_layer": [
+   "cs_rank_atr",
+   "cs_rank_deliv_sma",
+   "cs_rank_52wh",
+   "cs_rank_rsi14",
+   "cs_rank_ret63",
+   "cs_rank_mom121"
+  ],
+  "B_momentum_quality": [
+   "sharpe_mom_126",
+   "upday_frac_63",
+   "mom_consistency"
+  ],
+  "C_delivery_dynamics": [
+   "deliv_z_chg_5",
+   "deliv_surge",
+   "deliv_value_z"
+  ],
+  "D_interactions": [
+   "ix_deliv_mom",
+   "ix_vol_mom",
+   "ix_52wh_mom"
+  ],
+  "E_residual_reversal": [
+   "rev_resid_20"
+  ],
+  "F_market_state": [
+   "mkt_ret_20",
+   "mkt_breadth_200",
+   "mkt_vol_20",
+   "corr_mkt_60"
+  ],
+  "G_structure": [
+   "sessions_since_52w_high",
+   "accum_20",
+   "days_listed"
+  ]
+ },
+ "leak_safety_note": "Every new feature at date t is strictly backward-looking: per-ticker features use only shift(+k)/rolling windows over PAST values of equity_eod EQ+BE rows (the exact rows equity_features was built from, unadjusted prices, sorted ticker/date; same-day EOD prints allowed, matching every existing feature -- labels enter at the NEXT open); cross-sectional pieces (ranks, per-date z, per-date OLS residual) are computed within date t over the dataset's universe rows only; market-state features are same-date aggregates of backward-looking per-name values (one value for all names that date); corr_mkt_60 uses a trailing 60-session window of past daily returns vs past universe median returns. No fwd_*/y_*/label_* column enters any computation -- label columns are dropped from the construction frame and asserted absent; the quick_ic block reads y_excess_20d/y_clean_20d for REPORTING ONLY, after the features are built. Automated truncation check passed: for 5 seed-108 tickers, upday_frac_63 / sessions_since_52w_high / deliv_z_chg_5 recomputed from only data <= an interior date equal the stored values. Calendar/seasonality features deliberately NOT built (2026 archive calendar is simulated -- documented limitation).",
+ "leak_check": {
+  "passed": true,
+  "seed": 108,
+  "n_tickers": 5,
+  "features_checked": [
+   "upday_frac_63",
+   "sessions_since_52w_high",
+   "deliv_z_chg_5"
+  ],
+  "cases": [
+   {
+    "ticker": "NIFTYBETA",
+    "date": "2026-06-05",
+    "stored": {
+     "upday_frac_63": 0.4603174603174603,
+     "sessions_since_52w_high": 103.0,
+     "deliv_z_chg_5": 2.021132372063465
+    },
+    "recomputed_leq_date": {
+     "upday_frac_63": 0.4603174603174603,
+     "sessions_since_52w_high": 103.0,
+     "deliv_z_chg_5": 2.021132372063465
+    },
+    "match": true
+   },
+   {
+    "ticker": "VASCONEQ",
+    "date": "2026-01-09",
+    "stored": {
+     "upday_frac_63": 0.4126984126984127,
+     "sessions_since_52w_high": 61.0,
+     "deliv_z_chg_5": -0.5509163183830624
+    },
+    "recomputed_leq_date": {
+     "upday_frac_63": 0.4126984126984127,
+     "sessions_since_52w_high": 61.0,
+     "deliv_z_chg_5": -0.5509163183830624
+    },
+    "match": true
+   },
+   {
+    "ticker": "SSWL",
+    "date": "2026-03-30",
+    "stored": {
+     "upday_frac_63": 0.42857142857142855,
+     "sessions_since_52w_high": 183.0,
+     "deliv_z_chg_5": 2.849869098808878
+    },
+    "recomputed_leq_date": {
+     "upday_frac_63": 0.42857142857142855,
+     "sessions_since_52w_high": 183.0,
+     "deliv_z_chg_5": 2.849869098808878
+    },
+    "match": true
+   },
+   {
+    "ticker": "CARRARO",
+    "date": "2026-03-30",
+    "stored": {
+     "upday_frac_63": 0.4126984126984127,
+     "sessions_since_52w_high": 30.0,
+     "deliv_z_chg_5": 2.5738924359292192
+    },
+    "recomputed_leq_date": {
+     "upday_frac_63": 0.4126984126984127,
+     "sessions_since_52w_high": 30.0,
+     "deliv_z_chg_5": 2.5738924359292192
+    },
+    "match": true
+   },
+   {
+    "ticker": "AARTIIND",
+    "date": "2026-03-30",
+    "stored": {
+     "upday_frac_63": 0.4603174603174603,
+     "sessions_since_52w_high": 207.0,
+     "deliv_z_chg_5": 0.9047015968678134
+    },
+    "recomputed_leq_date": {
+     "upday_frac_63": 0.4603174603174603,
+     "sessions_since_52w_high": 207.0,
+     "deliv_z_chg_5": 0.9047015968678134
+    },
+    "match": true
+   }
+  ]
+ },
+ "consistency_check": {
+  "max_abs_diff_ret_1d_vs_dataset": 0.0,
+  "max_abs_diff_deliv_pct_z_20_vs_dataset": 0.0
+ },
+ "nan_pct": {
+  "cs_rank_atr": 0.22,
+  "cs_rank_deliv_sma": 3.29,
+  "cs_rank_52wh": 0.56,
+  "cs_rank_rsi14": 0.49,
+  "cs_rank_ret63": 3.92,
+  "cs_rank_mom121": 60.42,
+  "sharpe_mom_126": 23.96,
+  "upday_frac_63": 1.67,
+  "mom_consistency": 23.9,
+  "deliv_z_chg_5": 3.74,
+  "deliv_surge": 3.29,
+  "deliv_value_z": 2.03,
+  "ix_deliv_mom": 61.37,
+  "ix_vol_mom": 60.42,
+  "ix_52wh_mom": 60.42,
+  "rev_resid_20": 60.42,
+  "mkt_ret_20": 0.0,
+  "mkt_breadth_200": 16.88,
+  "mkt_vol_20": 0.0,
+  "corr_mkt_60": 12.69,
+  "sessions_since_52w_high": 2.62,
+  "accum_20": 0.55,
+  "days_listed": 0.0
+ },
+ "high_nan_flags_gt40pct": [
+  "cs_rank_mom121",
+  "ix_deliv_mom",
+  "ix_vol_mom",
+  "ix_52wh_mom",
+  "rev_resid_20"
+ ],
+ "closest_existing_spearman": {
+  "cs_rank_atr": {
+   "closest_existing": "atr_pct",
+   "spearman": 0.9384
+  },
+  "cs_rank_deliv_sma": {
+   "closest_existing": "deliv_pct_sma_20",
+   "spearman": 0.9892
+  },
+  "cs_rank_52wh": {
+   "closest_existing": "dist_52w_high",
+   "spearman": 0.8877
+  },
+  "cs_rank_rsi14": {
+   "closest_existing": "rsi_14",
+   "spearman": 0.8787
+  },
+  "cs_rank_ret63": {
+   "closest_existing": "ret_63d",
+   "spearman": 0.8759
+  },
+  "cs_rank_mom121": {
+   "closest_existing": "mom_12_1",
+   "spearman": 0.987
+  },
+  "sharpe_mom_126": {
+   "closest_existing": "ret_126d",
+   "spearman": 0.956
+  },
+  "upday_frac_63": {
+   "closest_existing": "ret_63d",
+   "spearman": 0.668
+  },
+  "mom_consistency": {
+   "closest_existing": "flag_near_52w_low",
+   "spearman": 0.1837
+  },
+  "deliv_z_chg_5": {
+   "closest_existing": "deliv_pct_z_20",
+   "spearman": 0.6627
+  },
+  "deliv_surge": {
+   "closest_existing": "deliv_pct_sma_20",
+   "spearman": 0.1747
+  },
+  "deliv_value_z": {
+   "closest_existing": "cs_rank_turnover",
+   "spearman": 0.9821
+  },
+  "ix_deliv_mom": {
+   "closest_existing": "deliv_pct_sma_20",
+   "spearman": 0.7052
+  },
+  "ix_vol_mom": {
+   "closest_existing": "cs_rank_vol_20",
+   "spearman": -0.6912
+  },
+  "ix_52wh_mom": {
+   "closest_existing": "dist_52w_high",
+   "spearman": 0.9063
+  },
+  "rev_resid_20": {
+   "closest_existing": "cs_rank_mom_20",
+   "spearman": 0.8001
+  },
+  "mkt_ret_20": {
+   "closest_existing": "mom_20",
+   "spearman": 0.4362
+  },
+  "mkt_breadth_200": {
+   "closest_existing": "ret_126d",
+   "spearman": 0.342
+  },
+  "mkt_vol_20": {
+   "closest_existing": "vol_20",
+   "spearman": 0.313
+  },
+  "corr_mkt_60": {
+   "closest_existing": "ret_126d",
+   "spearman": -0.262
+  },
+  "sessions_since_52w_high": {
+   "closest_existing": "ret_252d",
+   "spearman": -0.7195
+  },
+  "accum_20": {
+   "closest_existing": "mom_20",
+   "spearman": 0.5095
+  },
+  "days_listed": {
+   "closest_existing": "flag_below_200dma",
+   "spearman": 0.3157
+  }
+ },
+ "redundancy_flags_gt095": [
+  {
+   "feature": "cs_rank_deliv_sma",
+   "existing": "deliv_pct_sma_20",
+   "spearman": 0.9892
+  },
+  {
+   "feature": "cs_rank_mom121",
+   "existing": "mom_12_1",
+   "spearman": 0.987
+  },
+  {
+   "feature": "sharpe_mom_126",
+   "existing": "ret_126d",
+   "spearman": 0.956
+  },
+  {
+   "feature": "deliv_value_z",
+   "existing": "cs_rank_turnover",
+   "spearman": 0.9821
+  }
+ ],
+ "quick_ic": {
+  "cs_rank_atr": {
+   "mean_ic": -0.05189,
+   "n_dates": 318
+  },
+  "cs_rank_deliv_sma": {
+   "mean_ic": 0.08113,
+   "n_dates": 318
+  },
+  "cs_rank_52wh": {
+   "mean_ic": 0.07436,
+   "n_dates": 318
+  },
+  "cs_rank_rsi14": {
+   "mean_ic": 0.02517,
+   "n_dates": 318
+  },
+  "cs_rank_ret63": {
+   "mean_ic": 0.03139,
+   "n_dates": 314
+  },
+  "cs_rank_mom121": {
+   "mean_ic": 0.06571,
+   "n_dates": 125
+  },
+  "sharpe_mom_126": {
+   "mean_ic": 0.06673,
+   "n_dates": 251
+  },
+  "upday_frac_63": {
+   "mean_ic": 0.05735,
+   "n_dates": 318
+  },
+  "mom_consistency": {
+   "mean_ic": 0.03513,
+   "n_dates": 251
+  },
+  "deliv_z_chg_5": {
+   "mean_ic": 0.00806,
+   "n_dates": 318
+  },
+  "deliv_surge": {
+   "mean_ic": 0.02596,
+   "n_dates": 318
+  },
+  "deliv_value_z": {
+   "mean_ic": 0.04119,
+   "n_dates": 318
+  },
+  "ix_deliv_mom": {
+   "mean_ic": 0.05018,
+   "n_dates": 125
+  },
+  "ix_vol_mom": {
+   "mean_ic": 0.00879,
+   "n_dates": 125
+  },
+  "ix_52wh_mom": {
+   "mean_ic": 0.04397,
+   "n_dates": 125
+  },
+  "rev_resid_20": {
+   "mean_ic": -0.00843,
+   "n_dates": 125
+  },
+  "mkt_ret_20": {
+   "mean_ic": null,
+   "n_dates": 0
+  },
+  "mkt_breadth_200": {
+   "mean_ic": null,
+   "n_dates": 0
+  },
+  "mkt_vol_20": {
+   "mean_ic": null,
+   "n_dates": 0
+  },
+  "corr_mkt_60": {
+   "mean_ic": -0.00688,
+   "n_dates": 279
+  },
+  "sessions_since_52w_high": {
+   "mean_ic": -0.04329,
+   "n_dates": 318
+  },
+  "accum_20": {
+   "mean_ic": 0.04927,
+   "n_dates": 318
+  },
+  "days_listed": {
+   "mean_ic": -0.00659,
+   "n_dates": 318
+  }
+ },
+ "quick_ic_note": "per-date mean Spearman IC vs y_excess_20d on rows where y_clean_20d, dates with >=50 valid pairs; READS THE LABEL -- reporting only, never used for construction or selection; the lead runs the real harness A/B. Market-state features are constant within a date (null IC).",
+ "conventions": {
+  "eod_source": "equity_eod series IN ('EQ','BE'), read-only -- mirrors nse_historical_ingest.build_features (EQ-only would orphan 10,284 dataset rows); prices unadjusted (ca_csv=None convention)",
+  "join": "per-ticker frame reindexed onto the dataset's (date,ticker); row set and order identical to model_dataset.parquet",
+  "min_periods": {
+   "upday_frac_63": 40,
+   "sessions_since_52w_high": 60,
+   "accum_20": 15,
+   "corr_mkt_60": 40,
+   "rev_resid_20_min_names_per_date": 100
+  },
+  "mom_consistency": "fraction of the 6 non-overlapping trailing 21d block returns whose sign matches the sign of the 126d total return (0..1)",
+  "rev_resid_20": "per-date OLS mom_20 ~ 1 + mom_12_1 + ret_126d.fillna(1.0); residual for rows with mom_20 and mom_12_1 present; NaN when <100 names that date",
+  "sharpe_mom_126": "ret_126d / (vol_20 * sqrt(126)); +-inf -> NaN",
+  "deliv_value_z": "per-date cross-sectional z of log1p(deliv_qty*close)",
+  "mkt_breadth_200": "fraction of universe names with dist_200dma > 0, among names with non-NaN dist_200dma",
+  "days_listed": "log1p(cumulative session count of the ticker in equity_eod EQ/BE)",
+  "sessions_since_52w_high": "sessions since the most recent occurrence of the trailing-252-session max high; 0 = today; capped at 251 by construction",
+  "nan_indicator_columns": "none added for new features -- the champion (LightGBM) handles NaN natively; the existing *_isnan columns are untouched"
+ }
+}

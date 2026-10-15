@@ -64,3 +64,7 @@ Mid-bake-off we found **12 phantom "holiday-echo" days** (2.9% of sessions): the
 4. **Regime coverage** — the ≥0.50 fold floor and decile-spread sign across full bull/bear cycles; decile economics net of costs and turnover.
 5. **up_5d** — re-evaluate with its NaN-label fix, stratified by regime, before trusting any number from it.
 6. **Ingest hygiene** — extend the holiday-echo scan and corporate-action handling to the full 5y history (prices unadjusted; y_clean mask re-audit).
+
+## Feature study (follow-up)
+
+A feature EDA and an A/B of 23 engineered features found no case for rebuilding the feature set before the 5-year run. Every engineered variant scored below the champion on clean data (best 0.5268 against 0.5314; the pass mark fixed in advance was 0.5364). The EDA did find a regime break in March 2026, when 25 of 40 features had their worst month at once. After it the volatility features changed sign and the delivery signal shrank from a monthly IC of +0.107 to +0.020. That makes item 1 above (feature re-selection on the full history) mandatory and adds a delivery-IC alert to production monitoring. Details are in `ml/report/feature_study.html` and the plan changes in `ml/SCALE_UP.md`.

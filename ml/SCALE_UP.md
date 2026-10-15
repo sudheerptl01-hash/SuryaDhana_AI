@@ -57,6 +57,31 @@ regime-diverse, and economically meaningful net of costs.
   caps, and the cost model — this captures the only thing RL was adding,
   deterministically.
 
+## Feature-study changes
+
+A follow-up EDA and an engineered-feature A/B (`ml/report/feature_study.html`,
+outputs in `ml/results/feature_study/`) change this plan in four places.
+
+- **No feature rebuild before the run.** None of the five engineered variants
+  beat the champion (best 0.5268 against 0.5314, pass mark 0.5364). Phase 2
+  starts from the pilot's 10 features.
+- **Re-selection on the full history is required.** The March-2026 regime
+  break flipped the volatility family's sign and shrank the delivery and
+  52-week-high signals, and the pilot's selection saw only the post-break
+  phase. cs_rank_mom_20 (t = 0.42 over 16 months) is the first candidate to
+  drop.
+- **Three queued A/Bs against the re-selected baseline**, each with its pass
+  mark fixed before the run: market-state inputs (median momentum, market
+  drawdown, days since a sell-off), the mom_12_1 × cs_rank_vol_20 product, and
+  listing age built from real listing dates.
+- **A delivery-IC alert in production.** Delivery is the most consistent
+  signal (positive in 15 of 16 months), but its monthly IC fell from +0.107
+  to +0.020 after March 2026.
+
+The linear benchmark (and any neural model) should get log1p on the
+volatility family, ranks on raw returns and a top-decile volatility flag. The
+champion's trees need none of these.
+
 ## Compute
 
 The pilot's full 13-model bake-off ran ~2 h on 4 CPU cores. The 5-year

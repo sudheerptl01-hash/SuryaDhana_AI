@@ -57,8 +57,19 @@ ml/
   data.py              dataset builder (features + labels + splits)
   evaluation.py        shared walk-forward harness (THE protocol)
   feature_selection.py feature ranking / elimination study
+  profile_data.py      data-quality profile
+  eval_aggregate.py    league table + date-block bootstrap significance
+  make_report.py       generates report/index.html (pilot report)
+  eda_features.py      feature EDA: monthly IC, decile shapes, pairs, liquidity
+  features_ext.py      23 engineered features (look-ahead checked)
+  feature_ab.py        engineered-feature A/B through the harness
+  make_feature_study.py generates report/feature_study.html
   models/              one module per model family
   results/             *.json (committed) + preds/ (gitignored)
-  report/              generated HTML report
+  results/feature_study/ feature-study outputs, kept out of the league glob
+  report/              generated HTML reports
   data/                parquet + manifest + splits (gitignored)
 ```
+
+`eval_aggregate.py` reads every JSON directly in `results/` as a league entry,
+so follow-up studies write to their own subfolder.
