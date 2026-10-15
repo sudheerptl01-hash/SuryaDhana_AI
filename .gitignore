@@ -8,3 +8,7 @@ venv/
 *.duckdb
 *.duckdb.wal
 nse_market.duckdb*
+
+# ML evaluation artifacts
+ml/data/
+ml/results/preds/
