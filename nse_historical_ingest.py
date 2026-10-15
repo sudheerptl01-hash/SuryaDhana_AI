@@ -311,6 +311,19 @@ class DuckDBStore:
         row = self.con.execute("SELECT max(date) FROM equity_eod").fetchone()
         return row[0] if row and row[0] is not None else None
 
+    def prev_date(self, d: date) -> date | None:
+        row = self.con.execute(
+            "SELECT max(date) FROM equity_eod WHERE date < ?", [d]).fetchone()
+        return row[0] if row and row[0] is not None else None
+
+    def day_fingerprint(self, d: date) -> tuple | None:
+        """Cheap cross-sectional fingerprint used by the duplicate-day guard."""
+        row = self.con.execute(
+            "SELECT count(*), round(sum(close), 2), round(sum(volume), 0), "
+            "round(sum(turnover), 0) FROM equity_eod WHERE date = ?", [d]
+        ).fetchone()
+        return row if row and row[0] else None
+
     def has_date(self, d: date) -> bool:
         n = self.con.execute(
             "SELECT count(*) FROM equity_eod WHERE date = ?", [d]
@@ -474,11 +487,12 @@ def build_features(con: duckdb.DuckDBPyConnection,
     df["dist_52w_high"] = df["close"] / hi_252 - 1
     df["dist_52w_low"] = df["close"] / lo_252 - 1
 
-    # Forward-looking labels (shift -h within each ticker).
+    # Forward-looking labels (shift -h within each ticker). Rows with no
+    # forward bar stay <NA> -- a plain cast would silently hard-label them 0.
     for h in horizons:
         fwd = g["close"].transform(lambda s, h=h: s.shift(-h) / s - 1)
         df[f"fwd_ret_{h}d"] = fwd
-        df[f"label_up_{h}d"] = (fwd > 0).astype("Int8")
+        df[f"label_up_{h}d"] = (fwd > 0).astype("Int8").where(fwd.notna())
 
     con.register("feat_df", df)
     con.execute("CREATE OR REPLACE TABLE equity_features AS SELECT * FROM feat_df")
@@ -509,6 +523,15 @@ NSE_TRADING_HOLIDAYS: set[str] = {
     "2025-02-26", "2025-03-14", "2025-03-31", "2025-04-10", "2025-04-14",
     "2025-04-18", "2025-05-01", "2025-08-15", "2025-08-27", "2025-10-02",
     "2025-10-21", "2025-10-22", "2025-11-05", "2025-12-25",
+    # 2026 -- detected empirically: some archive mirrors serve the PREVIOUS
+    # session's bhavcopy on these closures instead of 404ing (every ticker
+    # byte-identical to the prior day). Dates line up with the 2026 NSE
+    # holiday calendar (Republic Day, Holi, Good Friday, Ambedkar Jayanti,
+    # May Day, Gandhi Jayanti, ...). The duplicate-day guard below catches
+    # any closure missing from this list.
+    "2026-01-15", "2026-01-26", "2026-03-03", "2026-03-26", "2026-03-31",
+    "2026-04-03", "2026-04-14", "2026-05-01", "2026-05-28", "2026-06-26",
+    "2026-09-14", "2026-10-02", "2026-12-25",
 }
 
 
@@ -550,6 +573,14 @@ def trading_days(start: date, end: date,
             days.append(d)
         d += timedelta(days=1)
     return days
+
+
+def frame_fingerprint(df: pd.DataFrame) -> tuple:
+    """Fingerprint matching DuckDBStore.day_fingerprint for a standardized frame."""
+    return (len(df),
+            round(float(np.nansum(df["close"])), 2),
+            round(float(np.nansum(df["volume"])), 0),
+            round(float(np.nansum(df["turnover"])), 0))
 
 
 def fetch_day(sess: NSEArchiveSession, d: date, use_pr: bool) -> pd.DataFrame | None:
@@ -604,6 +635,17 @@ def run_ingest(args: argparse.Namespace) -> None:
                 continue
             df = fetch_day(sess, d, use_pr=not args.no_pr)
             if df is not None and not df.empty:
+                # Duplicate-day guard: some mirrors answer a market holiday
+                # with the PREVIOUS session's file instead of a 404. An exact
+                # cross-sectional echo of the prior stored day is a phantom
+                # session -- skip it rather than ingesting zero-return bars.
+                if not args.no_dup_guard:
+                    prev = store.prev_date(d)
+                    if prev is not None and store.day_fingerprint(prev) == frame_fingerprint(df):
+                        log.warning("[%d/%d] %s -> identical to %s (holiday echo from mirror); skipped",
+                                    i, len(days), d, prev)
+                        sess._sleep()
+                        continue
                 total += store.upsert(df)
                 log.info("[%d/%d] %s -> %d rows (cumulative %d)", i, len(days), d, len(df), total)
             else:
@@ -750,6 +792,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--ca", help="Corporate-actions CSV [ticker,ex_date,ratio] for split/bonus adjustment")
     p.add_argument("--no-holiday-skip", action="store_true",
                    help="Don't skip known NSE holidays (rely on 404s instead)")
+    p.add_argument("--no-dup-guard", action="store_true",
+                   help="Disable the duplicate-day guard (mirrors echoing the prior session on holidays)")
     p.add_argument("--min-delay", type=float, default=1.5, help="Min inter-request delay (s)")
     p.add_argument("--max-delay", type=float, default=3.5, help="Max inter-request delay (s)")
     p.add_argument("--demo", action="store_true", help="Offline synthetic self-test of layers 2-4")
