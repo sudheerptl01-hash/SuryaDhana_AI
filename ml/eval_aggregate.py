@@ -413,27 +413,46 @@ def main():
     v_lr = pw[(CHAMPION, "lr_l2")]
     v_bl = pw[(CHAMPION, "baseline_mom")]
     v_xgb = pw[(CHAMPION, "xgboost")]
+    above = sorted(m for m, s in sp.items() if s["p_pooled_cv_gt_chance"] >= 0.975)
+    below = sorted(m for m, s in sp.items() if s["p_pooled_cv_gt_chance"] <= 0.025)
+    mid = sorted(m for m, s in sp.items() if 0.025 < s["p_pooled_cv_gt_chance"] < 0.975)
+    lr_sig = v_lr["delta_cv_mean_ci95"][0] > 0
     verdicts = [
-        f"Chance: {CHAMPION} is above 0.5 on pooled CV (AUC {ch['pooled_cv_auc']}, 95% CI "
-        f"{ch['pooled_cv_auc_ci95']}, P(>0.5)={ch['p_pooled_cv_gt_chance']}) and on the holdout "
-        f"(AUC {ch['holdout_auc']}, CI {ch['holdout_auc_ci95']}) -- a real but thin edge of "
-        f"~2-3 AUC points.",
-        f"{CHAMPION} vs lr_l2 (CV mean): delta {v_lr['delta_cv_mean']:+.4f}, 95% CI "
-        f"{v_lr['delta_cv_mean_ci95']}, P(champion better)={v_lr['p_a_gt_b_cv_mean']} -- "
-        f"{'NOT individually significant' if v_lr['delta_cv_mean_ci95'][0] <= 0 else 'significant'}"
-        f" at 95%. On this sample LGBM-on-10-features and regularized logistic are "
-        f"statistically indistinguishable on CV, and both beat chance only marginally.",
-        f"{CHAMPION} vs baseline_mom (CV mean): delta {v_bl['delta_cv_mean']:+.4f}, CI "
-        f"{v_bl['delta_cv_mean_ci95']}, P={v_bl['p_a_gt_b_cv_mean']} -- the champion does "
-        f"beat the free 1-feature momentum floor.",
-        f"CV-vs-holdout tension is itself inside the noise: on the holdout, xgboost leads "
-        f"{CHAMPION} by {-v_xgb['delta_holdout']:.4f} (P(xgb better)="
-        f"{1 - v_xgb['p_a_gt_b_holdout']:.3f}), while on CV mean the order flips "
-        f"(delta {v_xgb['delta_cv_mean']:+.4f}, P(champion better)={v_xgb['p_a_gt_b_cv_mean']}). "
-        f"One 6-week window cannot settle this; the 5-year run will.",
-        "With 4 folds and 88 CV test dates (32 holdout dates), AUC differences of ~0.01-0.02 "
-        "are generally within the 95% intervals -- the league's mid-table ordering is noise; "
-        "do not oversell.",
+        f"Chance (pooled CV, date-block bootstrap): clearly above 0.5 only for "
+        f"{', '.join(above)}; significantly BELOW 0.5 for {', '.join(below)} (1-feature "
+        f"momentum ranked mildly contrarian in this sample); everything else "
+        f"({', '.join(mid)}) is NOT distinguishable from coin-flipping on CV. On the holdout "
+        f"every model clears 0.5 with P=1.000 -- the friendly-window effect, which is exactly "
+        f"why the holdout alone is not trusted.",
+        f"Champion vs chance: {CHAMPION} pooled-CV AUC {ch['pooled_cv_auc']} (95% CI "
+        f"{ch['pooled_cv_auc_ci95']}, P(>0.5)={ch['p_pooled_cv_gt_chance']}); holdout "
+        f"{ch['holdout_auc']} (CI {ch['holdout_auc_ci95']}). A real but thin edge of ~2-3 "
+        f"AUC points.",
+        f"Champion vs lr_l2: paired CV-mean delta {v_lr['delta_cv_mean']:+.4f} (95% CI "
+        f"{v_lr['delta_cv_mean_ci95']}, P={v_lr['p_a_gt_b_cv_mean']}) -- "
+        f"{'significant under date-block resampling' if lr_sig else 'NOT significant'} -- but "
+        f"a dead heat on the holdout (delta {v_lr['delta_holdout']:+.4f}, "
+        f"P={v_lr['p_a_gt_b_holdout']}). CAVEAT: with only 4 CV regime-months the date-block "
+        f"bootstrap conditions on those months and cannot capture fold/regime-level "
+        f"uncertainty, which this sample shows is the dominant risk. The CV gap is treated as "
+        f"suggestive, not settled; the recommendation therefore also rests on stability, "
+        f"cost, interpretability and scale-up headroom.",
+        f"Champion vs the free floor: paired CV-mean delta {v_bl['delta_cv_mean']:+.4f} (CI "
+        f"{v_bl['delta_cv_mean_ci95']}, P={v_bl['p_a_gt_b_cv_mean']}) -- the champion does "
+        f"beat the 1-feature momentum baseline on CV; on the holdout even that gap closes "
+        f"(delta {v_bl['delta_holdout']:+.4f}, P={v_bl['p_a_gt_b_holdout']}).",
+        f"CV-vs-holdout contradiction (the heart of the adjudication): on CV mean the "
+        f"champion beats xgboost by {v_xgb['delta_cv_mean']:+.4f} (CI "
+        f"{v_xgb['delta_cv_mean_ci95']}); on the single holdout xgboost leads by "
+        f"{-v_xgb['delta_holdout']:.4f} (P(xgb better)={1 - v_xgb['p_a_gt_b_holdout']:.3f}). "
+        f"Both directions are 'significant' under date resampling -- so the disagreement is "
+        f"regime-window dependence, not sampling noise. Four monthly windows outvote one "
+        f"6-week window; the 5-year run adjudicates for good.",
+        "Scale of resolvable differences: individual 95% CIs are roughly +/-0.009-0.012 "
+        "wide, so unpaired differences of ~0.01-0.02 (the entire mid-table: lr anchors, "
+        "decision_tree, rl, mlp, lstm, full-feature GBMs on CV) are inside the noise, and "
+        "paired sub-0.01 differences (champion vs lr_l2 on holdout; l1/l2/elastic among "
+        "themselves) are too. The mid-table ordering should not be oversold.",
     ]
 
     # ---- recommendation ---------------------------------------------------
@@ -468,9 +487,11 @@ def main():
              "model_id": "lr_l2",
              "role": "interpretable benchmark + sanity layer, not a production scorer",
              "evidence": [
-                 f"Statistically indistinguishable from the champion on CV "
-                 f"(delta {v_lr['delta_cv_mean']:+.4f}, CI {v_lr['delta_cv_mean_ci95']}), at "
-                 f"near-zero cost, with per-1-sd coefficients for drift monitoring.",
+                 f"Cheapest credible anchor: a dead heat with the champion on the holdout "
+                 f"(delta {v_lr['delta_holdout']:+.4f}, P={v_lr['p_a_gt_b_holdout']}); the "
+                 f"champion's paired CV edge over it ({v_lr['delta_cv_mean']:+.4f}) is real "
+                 f"under date resampling but conditions on only 4 regime-months. Per-1-sd "
+                 f"coefficients give a drift monitor the GBM cannot.",
                  "Improved on cleaned data (0.513->0.517) and tracks the champion on holdout "
                  "AUC (0.523), but its holdout decile spread is negative (-0.023: extremes "
                  "invert economically) and it sat below 0.50 in 2 of 4 folds -- benchmark only.",
@@ -502,8 +523,9 @@ def main():
         ],
         "purpose_note": "The pilot's question was WHICH ALGORITHM, not whether the edge is "
                         "tradable: gradient-boosted trees on a compact selected subset is the "
-                        "decisive answer; the size of the edge (AUC ~0.53, CI overlapping the "
-                        "linear benchmark) is a 5-year question.",
+                        "decisive answer. The SIZE of the edge (pooled-CV AUC ~0.53, and a "
+                        "gap to the linear anchor that vanished on the holdout window) is a "
+                        "5-year question.",
     }
 
     retest_at_5y = [
