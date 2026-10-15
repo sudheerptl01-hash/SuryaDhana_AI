@@ -70,6 +70,7 @@ HP = {
     "optimizer": "Adam", "lr": 1e-3,
     "max_epochs": 45, "patience": 8, "batch_episodes": 8,
     "inner_val": "time-ordered last 15% of train dates, early stop on mean net val reward (deterministic top-K)",
+    "inner_val_frac": 0.15,
     "K": K, "cost_per_unit_turnover": COST,
     "sampler": "Plackett-Luce without replacement via Gumbel top-K; exact sequential log-prob",
     "baseline": ("per-date universe mean y_excess_20d (= exact E[gross reward of a random-K "
@@ -477,8 +478,6 @@ def main(smoke: bool = False):
     log(f"results -> {path}\npreds -> {ppath}")
     log(json.dumps({"cv_aggregate": cv_port, "holdout": ho_port}, indent=1))
 
-
-HP["inner_val_frac"] = 0.15
 
 if __name__ == "__main__":
     main(smoke="--smoke" in sys.argv)
