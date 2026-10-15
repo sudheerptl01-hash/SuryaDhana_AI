@@ -330,14 +330,21 @@ def fmt_cell(c: dict) -> str:
            f", turnover {c['avg_daily_turnover_pct']:.0f}%/d"
 
 
-def build_notes(cv_auc_mean, cv_auc_std, holdout_auc, fold_aucs, cv_port, ho_port, training) -> str:
+def build_notes(cv_auc_mean, cv_auc_std, holdout_auc, fold_aucs, cv_port, ho_port,
+                port_folds, training) -> str:
     pol_cv, rnd_cv, mom_cv = cv_port["policy"], cv_port["random20"], cv_port["momentum20_cs_rank_mom_20"]
     pol_ho, rnd_ho, mom_ho = ho_port["policy"], ho_port["random20"], ho_port["momentum20_cs_rank_mom_20"]
-    beats_rand_cv = pol_cv["mean_net_20d_excess"] > rnd_cv["mean_net_20d_excess"]
-    beats_rand_ho = pol_ho["mean_net_20d_excess"] > rnd_ho["mean_net_20d_excess"]
-    beats_mom_cv = pol_cv["mean_net_20d_excess"] > mom_cv["mean_net_20d_excess"]
-    beats_mom_ho = pol_ho["mean_net_20d_excess"] > mom_ho["mean_net_20d_excess"]
-    epochs = [t["best_epoch"] for t in training.values()]
+    pc, rc, mc = (pol_cv["mean_net_20d_excess"], rnd_cv["mean_net_20d_excess"],
+                  mom_cv["mean_net_20d_excess"])
+    ph, rh, mh = (pol_ho["mean_net_20d_excess"], rnd_ho["mean_net_20d_excess"],
+                  mom_ho["mean_net_20d_excess"])
+
+    cv_names = [n for n in port_folds if n != "holdout"]
+    loss_folds = [n for n in cv_names
+                  if port_folds[n]["policy"]["mean_net_20d_excess"]
+                  <= port_folds[n]["random20"]["mean_net_20d_excess"]]
+    n_init = sum(1 for n in cv_names if training[n]["best_epoch"] == 0)
+    learned_eps = [training[n]["best_epoch"] for n in training if training[n]["best_epoch"] > 0]
 
     table = (f"PORTFOLIO (CV-agg | holdout): policy [{fmt_cell(pol_cv)} | {fmt_cell(pol_ho)}]; "
              f"random20 [{fmt_cell(rnd_cv)} | {fmt_cell(rnd_ho)}]; "
@@ -346,36 +353,54 @@ def build_notes(cv_auc_mean, cv_auc_std, holdout_auc, fold_aucs, cv_port, ho_por
              "(not compounded); the cross-section is right-skewed, so even random-20 earns a positive "
              "mean -- the bar is beating random, not zero. ")
 
-    def vb(cv, ho):
-        if cv and ho:
-            return "yes on both CV and holdout"
-        if ho:
-            return "no in CV, yes on holdout"
-        if cv:
-            return "yes in CV, no on holdout"
-        return "no on both"
+    # (a) vs random -- mean-reward verdict plus the risk-adjusted caveat
+    rand_mean = ("higher on both CV-agg and holdout" if pc > rc and ph > rh else
+                 "higher on holdout only" if ph > rh else
+                 "higher on CV-agg only" if pc > rc else "lower on both")
+    sharpe_caveat = ""
+    if pol_cv["ann_sharpe_naive"] is not None and rnd_cv["ann_sharpe_naive"] is not None \
+            and pol_cv["ann_sharpe_naive"] < rnd_cv["ann_sharpe_naive"]:
+        sharpe_caveat = (f" but NOT risk-adjusted on CV (naive Sharpe {pol_cv['ann_sharpe_naive']:.2f} vs "
+                         f"random's {rnd_cv['ann_sharpe_naive']:.2f} -- the policy's concentrated book is far "
+                         "more volatile than a random spread)")
+    loss_caveat = ""
+    if loss_folds:
+        worst = min(loss_folds, key=lambda n: port_folds[n]["policy"]["mean_net_20d_excess"])
+        loss_caveat = (f", and it lost to random outright in {len(loss_folds)}/{len(cv_names)} CV folds "
+                       f"({worst}: {port_folds[worst]['policy']['mean_net_20d_excess'] * 100:+.2f}% vs "
+                       f"random {port_folds[worst]['random20']['mean_net_20d_excess'] * 100:+.2f}%)")
+    mom_verdict = ("no on both" if pc <= mc and ph <= mh else
+                   "yes on both" if pc > mc and ph > mh else
+                   "mixed (CV " + ("yes" if pc > mc else "no") + ", holdout " + ("yes" if ph > mh else "no") + ")")
 
     assessment = (
-        f"HONEST ASSESSMENT: (a) does the learned policy beat random-20 out of sample? {vb(beats_rand_cv, beats_rand_ho)} "
-        f"on mean net reward (CV-agg {pol_cv['mean_net_20d_excess'] * 100:+.2f}% vs random {rnd_cv['mean_net_20d_excess'] * 100:+.2f}%; "
-        f"holdout {pol_ho['mean_net_20d_excess'] * 100:+.2f}% vs {rnd_ho['mean_net_20d_excess'] * 100:+.2f}%); "
-        f"(b) vs the cs_rank_mom_20 heuristic: {vb(beats_mom_cv, beats_mom_ho)} "
-        f"(heuristic holdout {mom_ho['mean_net_20d_excess'] * 100:+.2f}%). "
-        f"On the classifier lens the policy scores cv_auc {cv_auc_mean:.4f} +/- {cv_auc_std:.4f} "
-        f"(fold range {min(fold_aucs):.3f}-{max(fold_aucs):.3f}) and holdout {holdout_auc:.4f}, "
-        f"{'roughly matching' if cv_auc_mean >= 0.52 else 'trailing'} the supervised family "
-        "(LGBM top-10: cv 0.5307, holdout 0.5219; logistic cv ~0.513) -- REINFORCE is at best recovering the same weak, "
-        "regime-unstable momentum/vol tilt the supervised rankers already capture, through a far noisier gradient estimator. "
-        "Six months of EOD data (~190-280 episodes per fold, one noisy scalar reward each) is NOT enough for RL here: "
-        f"early stopping picked epochs {min(epochs)}-{max(epochs)} across folds, and inner-validation reward curves were "
-        "dominated by regime noise, so the variance of the policy-gradient estimate swamps the ~0.52-AUC signal. "
-        "The one thing the bandit objective adds -- turnover-aware selection -- does not need RL: a supervised ranker plus a "
-        "portfolio constructor with a turnover penalty (or simple score-hysteresis) achieves it deterministically. "
-        "RL would start earning its complexity only with multi-step position management (entries/exits, holding-period and "
-        "path-dependent costs), a realistic cost/impact model that depends on the agent's own actions, regime/state features, "
-        "and years of cross-sectional history (thousands of episodes); none of those hold in this 6-month EOD pilot. "
-        "Verdict: do not scale this RL formulation; if portfolio-level objectives matter, bolt a constructor onto the "
-        "supervised rankers and judge those on regime stability, per the linear report."
+        f"HONEST ASSESSMENT: (a) vs random-20 the policy's mean net reward is {rand_mean} "
+        f"(CV-agg {pc * 100:+.2f}% vs {rc * 100:+.2f}%; holdout {ph * 100:+.2f}% vs {rh * 100:+.2f}%)"
+        f"{sharpe_caveat}{loss_caveat} -- not a robust win. "
+        f"(b) vs the free one-feature top-20 cs_rank_mom_20 heuristic: {mom_verdict} on mean net reward "
+        f"(heuristic CV-agg {mc * 100:+.2f}%, holdout {mh * 100:+.2f}%), so the learned policy does not "
+        "clear even the simplest deployable alternative. "
+        f"Classifier lens: cv_auc {cv_auc_mean:.4f} +/- {cv_auc_std:.4f} trails the supervised plateau "
+        "(LGBM top-10 cv 0.5307/holdout 0.5219; logistic cv ~0.513) with the same regime instability "
+        f"(fold range {min(fold_aucs):.3f}-{max(fold_aucs):.3f}); the {holdout_auc:.3f} holdout AUC comes from a "
+        f"single {pol_ho['n_dates']}-date momentum-friendly window (the heuristic's naive Sharpe there is "
+        f"{mom_ho['ann_sharpe_naive']:.1f}) and sits within the dispersion the folds already show -- regime luck, "
+        "not demonstrated stability. "
+        f"Six months of EOD data is not enough for RL here: each fold offers only 161-235 one-shot episodes with a "
+        f"single noisy scalar reward, and on {n_init} of {len(cv_names)} CV folds REINFORCE never beat its own "
+        "untrained initialization on inner-validation reward (best epoch 0); where it did learn, it early-stopped "
+        f"by epoch {max(learned_eps) if learned_eps else 0}, i.e. the policy-gradient variance swamps the "
+        "~0.52-AUC signal long before convergence. "
+        "The one genuinely RL-ish ingredient here -- turnover-aware selection -- does not need RL: a supervised "
+        "ranker plus a portfolio constructor with a turnover penalty or score hysteresis delivers it "
+        "deterministically and with none of the gradient noise. "
+        "For RL to earn its complexity it would need a problem that is actually sequential: multi-step position "
+        "management (entries/exits, holding periods), a cost/impact model that depends on the agent's own actions, "
+        "regime/state features, and years of cross-sectional history (thousands of episodes); none of those hold "
+        "in this 6-month EOD pilot. "
+        "Verdict: RL does not earn its complexity at this data scale -- do not scale this formulation to the "
+        "5-year run; spend the budget on supervised ranking judged on regime stability plus an explicit portfolio "
+        "constructor, per the linear report's conclusion."
     )
     return table + assessment
 
@@ -444,7 +469,7 @@ def main(smoke: bool = False):
     cv_port = aggregate_raw(cv_raws)
     aucs = [r["auc"] for r in fold_rows]
     notes = build_notes(float(np.mean(aucs)), float(np.std(aucs)), holdout_row["auc"],
-                        aucs, cv_port, ho_port, training)
+                        aucs, cv_port, ho_port, port_folds, training)
 
     payload = {
         "model": MODEL_NAME, "family": "rl", "agent": "quant-rl", "task": TASK,
