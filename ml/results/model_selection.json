@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-15T05:06:42",
+ "generated_at": "2026-10-15T05:14:15",
  "generated_by": "ml/eval_aggregate.py (seed 108, B=1000 date-block bootstrap)",
  "protocol": {
   "primary_task": "beat_mkt_20d (balanced ~0.500 by construction, regime-robust)",
@@ -2140,11 +2140,12 @@
    ]
   },
   "verdicts": [
-   "Chance: lgbm_fs_selected is above 0.5 on pooled CV (AUC 0.5299, 95% CI [0.5216, 0.5388], P(>0.5)=1.0) and on the holdout (AUC 0.5219, CI [0.5141, 0.5301]) -- a real but thin edge of ~2-3 AUC points.",
-   "lgbm_fs_selected vs lr_l2 (CV mean): delta +0.0181, 95% CI [0.0111, 0.0256], P(champion better)=1.0 -- significant at 95%. On this sample LGBM-on-10-features and regularized logistic are statistically indistinguishable on CV, and both beat chance only marginally.",
-   "lgbm_fs_selected vs baseline_mom (CV mean): delta +0.0373, CI [0.0257, 0.049], P=1.0 -- the champion does beat the free 1-feature momentum floor.",
-   "CV-vs-holdout tension is itself inside the noise: on the holdout, xgboost leads lgbm_fs_selected by 0.0426 (P(xgb better)=1.000), while on CV mean the order flips (delta +0.0284, P(champion better)=1.0). One 6-week window cannot settle this; the 5-year run will.",
-   "With 4 folds and 88 CV test dates (32 holdout dates), AUC differences of ~0.01-0.02 are generally within the 95% intervals -- the league's mid-table ordering is noise; do not oversell."
+   "Chance (pooled CV, date-block bootstrap): clearly above 0.5 only for lgbm_fs_selected, lgbm_fs_selected_clean, lr_l2_clean, random_forest; significantly BELOW 0.5 for baseline_mom_clean, gru (1-feature momentum ranked mildly contrarian in this sample); everything else (baseline_mom, decision_tree, lightgbm, lr_elastic, lr_l1, lr_l2, lstm, mlp, rl_reinforce, xgboost) is NOT distinguishable from coin-flipping on CV. On the holdout every model clears 0.5 with P=1.000 -- the friendly-window effect, which is exactly why the holdout alone is not trusted.",
+   "Champion vs chance: lgbm_fs_selected pooled-CV AUC 0.5299 (95% CI [0.5216, 0.5388], P(>0.5)=1.0); holdout 0.5219 (CI [0.5141, 0.5301]). A real but thin edge of ~2-3 AUC points.",
+   "Champion vs lr_l2: paired CV-mean delta +0.0181 (95% CI [0.0111, 0.0256], P=1.0) -- significant under date-block resampling -- but a dead heat on the holdout (delta -0.0008, P=0.462). CAVEAT: with only 4 CV regime-months the date-block bootstrap conditions on those months and cannot capture fold/regime-level uncertainty, which this sample shows is the dominant risk. The CV gap is treated as suggestive, not settled; the recommendation therefore also rests on stability, cost, interpretability and scale-up headroom.",
+   "Champion vs the free floor: paired CV-mean delta +0.0373 (CI [0.0257, 0.049], P=1.0) -- the champion does beat the 1-feature momentum baseline on CV; on the holdout even that gap closes (delta -0.0079, P=0.107).",
+   "CV-vs-holdout contradiction (the heart of the adjudication): on CV mean the champion beats xgboost by +0.0284 (CI [0.0195, 0.0365]); on the single holdout xgboost leads by 0.0426 (P(xgb better)=1.000). Both directions are 'significant' under date resampling -- so the disagreement is regime-window dependence, not sampling noise. Four monthly windows outvote one 6-week window; the 5-year run adjudicates for good.",
+   "Scale of resolvable differences: individual 95% CIs are roughly +/-0.009-0.012 wide, so unpaired differences of ~0.01-0.02 (the entire mid-table: lr anchors, decision_tree, rl, mlp, lstm, full-feature GBMs on CV) are inside the noise, and paired sub-0.01 differences (champion vs lr_l2 on holdout; l1/l2/elastic among themselves) are too. The mid-table ordering should not be oversold."
   ]
  },
  "stability": {
@@ -3711,7 +3712,7 @@
     "model_id": "lr_l2",
     "role": "interpretable benchmark + sanity layer, not a production scorer",
     "evidence": [
-     "Statistically indistinguishable from the champion on CV (delta +0.0181, CI [0.0111, 0.0256]), at near-zero cost, with per-1-sd coefficients for drift monitoring.",
+     "Cheapest credible anchor: a dead heat with the champion on the holdout (delta -0.0008, P=0.462); the champion's paired CV edge over it (+0.0181) is real under date resampling but conditions on only 4 regime-months. Per-1-sd coefficients give a drift monitor the GBM cannot.",
      "Improved on cleaned data (0.513->0.517) and tracks the champion on holdout AUC (0.523), but its holdout decile spread is negative (-0.023: extremes invert economically) and it sat below 0.50 in 2 of 4 folds -- benchmark only."
     ]
    }
@@ -3739,7 +3740,7 @@
    "The re-run feature selection at 5y (long-lookback features fully populated) changes the subset materially -- re-fit and re-adjudicate.",
    "The champion's mildly negative clean-holdout decile spread (-0.004) persists across multiple years -- then the ranking edge is not monetizable as a long-short."
   ],
-  "purpose_note": "The pilot's question was WHICH ALGORITHM, not whether the edge is tradable: gradient-boosted trees on a compact selected subset is the decisive answer; the size of the edge (AUC ~0.53, CI overlapping the linear benchmark) is a 5-year question."
+  "purpose_note": "The pilot's question was WHICH ALGORITHM, not whether the edge is tradable: gradient-boosted trees on a compact selected subset is the decisive answer. The SIZE of the edge (pooled-CV AUC ~0.53, and a gap to the linear anchor that vanished on the holdout window) is a 5-year question."
  },
  "retest_at_5y": [
   "Feature selection: re-run the full ranking/elimination at 5y -- ret_252d, mom_12_1, dist_200dma are 58/58/21% NaN in the pilot and 'switch on' through 2026; the top-10 subset may change.",
@@ -3751,5 +3752,5 @@
   "Data hygiene: extend the holiday-echo duplicate scan and corporate-action handling to the full 5y ingest (unadjusted prices: y_clean_20d masking must be re-audited).",
   "Optional: one MLP re-check at 5y data volume before finalizing the no-deep verdict."
  ],
- "runtime_seconds": 298.0
+ "runtime_seconds": 286.3
 }
