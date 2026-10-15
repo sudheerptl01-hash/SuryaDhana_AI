@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-15T03:29:35",
+ "generated_at": "2026-10-15T03:31:57",
  "generated_by": "ml/profile_data.py (seed 108, read-only)",
  "sources": {
   "duckdb": "/home/user/SuryaDhana_AI/nse_market.duckdb",
@@ -979,6 +979,13 @@
   },
   "label_beat_mkt_20d_nan_pct": 6.727,
   "label_up_5d_nan_pct": 0.0,
+  "label_up_5d_forced_zero": {
+   "n_rows_fwd_ret_5d_nan": 8458,
+   "all_labeled_zero": true,
+   "n_in_final_5_sessions": 8237,
+   "n_mid_sample": 221,
+   "note": "label_up_5d is int8 with no NaN encoding: rows whose 5-day forward close is missing (sample tail + tickers whose series ends within 5 sessions) are hard-labeled 0 instead of NaN. The harness's notna() filter cannot drop them for the up_5d task."
+  },
   "per_date_median_y_excess_20d": {
    "max_abs": 0.0,
    "is_approx_zero": true,
@@ -1059,9 +1066,11 @@
   "note: the 2026 portion has no holiday closures at all (every weekday trades) -- a simulated continuous calendar; do not build calendar/seasonality features on 2026 data.",
   "regime skew: monthly median y_raw_20d swings from -8.61% (2026-02) to +5.67% (2026-03); up_5d monthly base rate ranges 0.18-0.72 -- the SECONDARY up_5d task inherits market beta, so expect fold-to-fold metric swings there; the PRIMARY beat_mkt_20d label is cross-sectionally demeaned (monthly base rate ~0.50 by construction) and is regime-robust.",
   "note: at least one month's median 20d forward return exceeds +/-3% -- economic metrics (top-decile mean fwd) on y_raw are regime-dominated; use y_excess_20d for economics, as the harness does.",
-  "features >10% NaN (5): mom_12_1 (58%), ret_252d (58%), ret_126d (23%), cs_rank_ret_126 (23%), dist_200dma (21%) -- structural, not bugs: 126/252-session lookbacks cannot exist before ~Mar-2026 (DB starts Mar-2025) and deliv_pct is absent for SME/trade-to-trade segments. The harness median-imputes and ships *_isnan indicators; early CV folds see these columns mostly imputed, so treat ret_252d/mom_12_1 importances with suspicion.",
+  "features >10% NaN (5): mom_12_1 (58%), ret_252d (58%), ret_126d (23%), cs_rank_ret_126 (23%), dist_200dma (21%) -- structural, not bugs: the DB starts 2025-03-03, so 126/252-session lookbacks cannot exist before ~Sep-2025/Mar-2026 (dist_200dma needs 120 sessions). The dataset ships *_isnan indicators and the harness median-imputes, but in the early CV folds these columns are mostly imputed constants -- treat ret_252d/mom_12_1/dist_200dma importances and fold-over-fold gains on them with suspicion (they 'switch on' through 2026). All deliv_* NaN rates stay in the 2-4% range.",
   "redundancy: 18 feature pairs with |spearman|>0.85 (momentum/SMA-distance/vol families and cs_rank twins) -- fine for trees, but collinearity will destabilize linear/NN coefficient interpretation; consider dropping one of each pair for linear models.",
   "labels: label_beat_mkt_20d NaN on 6.7% of rows (the unlabeled tail after 2026-09-15 plus short histories) -- harness drops them; y_excess_20d per-date median is exactly 0 (max abs 0.0).",
+  "SECONDARY-task label defect: label_up_5d has no NaN encoding -- all 8,458 rows with fwd_ret_5d NaN are hard-labeled 0 (8,237 sit in the sample's final 5 sessions, outside every test window; 221 mid-sample rows from tickers whose series ends within 5 sessions DO land inside train/test). ~1.6% of rows overall; mask fwd_ret_5d.notna() when training/evaluating up_5d if exactness matters. label_beat_mkt_20d is NaN-encoded correctly and unaffected.",
+  "note: mean_y_clean_20d collapsing to ~0.50 in 2026-09 and 0.0 in 2026-10 is the unlabeled tail (20-session window runs past the last data date; 6.6% of rows sit after 2026-09-15), not corruption -- Sep-2026 has only 73 genuinely-poisoned labeled rows. These tail rows are scoring-only for the primary task.",
   "label cleaning: y_clean_20d masks 7.2% of rows (split/circuit/suspension-poisoned 20d windows; 0.5% of rows sit within 20d of a >22% 1-day move). Prices are UNADJUSTED (no corporate-action feed): the mask is the only defense, so never evaluate on y_clean_20d=False rows.",
   "splits: all folds populated; first fold (2026-04) trains on only 269,271 rows / 189 days vs 404,812 for the holdout -- expect the earliest fold to be the weakest and do not tune on it alone."
  ],

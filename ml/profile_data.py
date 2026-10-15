@@ -235,8 +235,17 @@ def label_sanity(df: pd.DataFrame) -> dict:
         "y_excess_20d": stats(df["y_excess_20d"]),
         "fwd_ret_5d": stats(df["fwd_ret_5d"]),
         "label_beat_mkt_20d_nan_pct": _f(df["label_beat_mkt_20d"].isna().mean() * 100, 3),
-        "label_up_5d_nan_pct": _f(
-            pd.to_numeric(df["label_up_5d"], errors="coerce").isna().mean() * 100, 3),
+        "label_up_5d_nan_pct": _f(up5.isna().mean() * 100, 3),
+        "label_up_5d_forced_zero": {
+            "n_rows_fwd_ret_5d_nan": n_forced,
+            "all_labeled_zero": bool((up5[fwd_nan] == 0).all()) if n_forced else True,
+            "n_in_final_5_sessions": n_tail,
+            "n_mid_sample": n_forced - n_tail,
+            "note": "label_up_5d is int8 with no NaN encoding: rows whose 5-day forward "
+                    "close is missing (sample tail + tickers whose series ends within 5 "
+                    "sessions) are hard-labeled 0 instead of NaN. The harness's "
+                    "notna() filter cannot drop them for the up_5d task.",
+        },
         "per_date_median_y_excess_20d": {
             "max_abs": _f(max_abs_med, 12),
             "is_approx_zero": bool(max_abs_med < 1e-9),
@@ -345,11 +354,13 @@ def build_verdict(pm: list[dict], cal: dict, nan_rates: dict, corr: dict,
     if high:
         v.append(f"features >10% NaN ({len(high)}): "
                  + ", ".join(f"{k} ({pct:.0f}%)" for k, pct in high.items())
-                 + " -- structural, not bugs: 126/252-session lookbacks cannot exist "
-                   "before ~Mar-2026 (DB starts Mar-2025) and deliv_pct is absent for "
-                   "SME/trade-to-trade segments. The harness median-imputes and ships "
-                   "*_isnan indicators; early CV folds see these columns mostly imputed, "
-                   "so treat ret_252d/mom_12_1 importances with suspicion.")
+                 + " -- structural, not bugs: the DB starts 2025-03-03, so 126/252-session "
+                   "lookbacks cannot exist before ~Sep-2025/Mar-2026 (dist_200dma needs "
+                   "120 sessions). The dataset ships *_isnan indicators and the harness "
+                   "median-imputes, but in the early CV folds these columns are mostly "
+                   "imputed constants -- treat ret_252d/mom_12_1/dist_200dma importances "
+                   "and fold-over-fold gains on them with suspicion (they 'switch on' "
+                   "through 2026). All deliv_* NaN rates stay in the 2-4% range.")
 
     # redundancy
     v.append(f"redundancy: {corr['n_pairs_above_threshold']} feature pairs with "
@@ -363,6 +374,25 @@ def build_verdict(pm: list[dict], cal: dict, nan_rates: dict, corr: dict,
              f"of rows (the unlabeled tail after {manifest['last_labeled_date_20d']} plus "
              f"short histories) -- harness drops them; y_excess_20d per-date median is "
              f"exactly 0 (max abs {lab['per_date_median_y_excess_20d']['max_abs']}).")
+    fz = lab["label_up_5d_forced_zero"]
+    v.append(f"SECONDARY-task label defect: label_up_5d has no NaN encoding -- all "
+             f"{fz['n_rows_fwd_ret_5d_nan']:,} rows with fwd_ret_5d NaN are hard-labeled 0 "
+             f"({fz['n_in_final_5_sessions']:,} sit in the sample's final 5 sessions, outside "
+             f"every test window; {fz['n_mid_sample']:,} mid-sample rows from tickers whose "
+             f"series ends within 5 sessions DO land inside train/test). ~1.6% of rows "
+             f"overall; mask fwd_ret_5d.notna() when training/evaluating up_5d if exactness "
+             f"matters. label_beat_mkt_20d is NaN-encoded correctly and unaffected.")
+
+    last_lab = pd.Timestamp(manifest["last_labeled_date_20d"])
+    tail_pct = float((df["date"] > last_lab).mean()) * 100
+    sep = df[(df["date"] >= "2026-09-01") & (df["date"] <= last_lab)]
+    n_sep_poison = int((~sep["y_clean_20d"].astype(bool) & sep["y_raw_20d"].notna()).sum())
+    v.append(f"note: mean_y_clean_20d collapsing to ~0.50 in 2026-09 and 0.0 in 2026-10 is "
+             f"the unlabeled tail (20-session window runs past the last data date; "
+             f"{tail_pct:.1f}% of rows sit after {manifest['last_labeled_date_20d']}), not "
+             f"corruption -- Sep-2026 has only {n_sep_poison} genuinely-poisoned labeled "
+             f"rows. These tail rows are scoring-only for the primary task.")
+
     v.append(f"label cleaning: y_clean_20d masks {100 - integ['pct_rows_y_clean_20d_true']:.1f}% "
              f"of rows (split/circuit/suspension-poisoned 20d windows; "
              f"{integ['pct_rows_flag_split_20d']:.1f}% of rows sit within 20d of a >22% "
