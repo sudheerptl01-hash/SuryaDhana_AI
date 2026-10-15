@@ -72,14 +72,17 @@ class Preprocessor:
         self.mode = mode
 
     def fit(self, X: pd.DataFrame):
+        # A feature can be entirely NaN in an early train window (e.g.
+        # ret_252d before a year of history exists); its *_isnan indicator
+        # carries the signal, the value column falls back to 0.
         self.median_ = X.median()
         if self.mode == "scaled":
             lo = X.quantile(0.01)
             hi = X.quantile(0.99)
             self.lo_, self.hi_ = lo, hi
             Xc = X.fillna(self.median_).clip(lo, hi, axis=1)
-            self.mean_ = Xc.mean()
-            self.std_ = Xc.std().replace(0, 1.0)
+            self.mean_ = Xc.mean().fillna(0.0)
+            self.std_ = Xc.std().replace(0, 1.0).fillna(1.0)
         return self
 
     def transform(self, X: pd.DataFrame) -> np.ndarray:
@@ -87,7 +90,7 @@ class Preprocessor:
         if self.mode == "scaled":
             X = X.clip(self.lo_, self.hi_, axis=1)
             X = (X - self.mean_) / self.std_
-        return X.to_numpy(dtype=np.float32)
+        return X.fillna(0.0).to_numpy(dtype=np.float32)
 
 
 def _task_frame(df: pd.DataFrame, task: str) -> pd.DataFrame:

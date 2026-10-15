@@ -105,7 +105,6 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
                dist_52w_high, dist_52w_low,
                fwd_ret_5d, label_up_5d
         FROM equity_features
-        WHERE series = 'EQ'
         ORDER BY ticker, date
         """
     ).df()
