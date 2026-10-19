@@ -1,0 +1,142 @@
+{
+ "excl_label_block_overnight_dev": {
+  "ann": 0.9456230009330677,
+  "mean_bps": 26.606405512132476,
+  "n_days": 744
+ },
+ "excl_label_block_overnight_hold": {
+  "ann": 0.5495860335447602,
+  "mean_bps": 17.678435501398436,
+  "n_days": 194
+ },
+ "excl_label_block_session_dev": {
+  "ann": -0.3603907304939872,
+  "mean_bps": -17.136435337617716,
+  "n_days": 744
+ },
+ "excl_label_block_session_hold": {
+  "ann": -0.2839304662431773,
+  "mean_bps": -12.777504930807018,
+  "n_days": 194
+ },
+ "excl_label_block_close_to_close_dev": {
+  "ann": 0.2355148644794287,
+  "mean_bps": 9.064214580899286,
+  "n_days": 744
+ },
+ "excl_label_block_close_to_close_hold": {
+  "ann": 0.10310146592982661,
+  "mean_bps": 4.730032521544451,
+  "n_days": 194
+ },
+ "incl_label_block_overnight_dev": {
+  "ann": 0.9328427384079891,
+  "mean_bps": 26.344591293739327,
+  "n_days": 744
+ },
+ "incl_label_block_overnight_hold": {
+  "ann": 0.5422759970181998,
+  "mean_bps": 17.490743229254768,
+  "n_days": 194
+ },
+ "incl_label_block_session_dev": {
+  "ann": -0.36059012349515396,
+  "mean_bps": -17.148499580402586,
+  "n_days": 744
+ },
+ "incl_label_block_session_hold": {
+  "ann": -0.28405731610621365,
+  "mean_bps": -12.78451686181265,
+  "n_days": 194
+ },
+ "incl_label_block_close_to_close_dev": {
+  "ann": 0.2268984278104451,
+  "mean_bps": 8.786709463422774,
+  "n_days": 744
+ },
+ "incl_label_block_close_to_close_hold": {
+  "ann": 0.09757887866821302,
+  "mean_bps": 4.531960079021973,
+  "n_days": 194
+ },
+ "liq_high_overnight_dev": {
+  "ann": 0.7144774692022138,
+  "mean_bps": 21.586410474106124,
+  "n_days": 744
+ },
+ "liq_high_session_dev": {
+  "ann": -0.2762048665976765,
+  "mean_bps": -12.276711774919889,
+  "n_days": 744
+ },
+ "liq_low_overnight_dev": {
+  "ann": 1.169544799605065,
+  "mean_bps": 30.92244732407119,
+  "n_days": 744
+ },
+ "liq_low_session_dev": {
+  "ann": -0.4378219870054316,
+  "mean_bps": -22.187808449099354,
+  "n_days": 744
+ },
+ "median_name_on_dev_mean_bps": 22.39671355206833,
+ "median_name_se_dev_mean_bps": -36.21171629598158,
+ "tax": {
+  "h5_dev": {
+   "close_entry": 0.004463809462327823,
+   "open_entry": 0.0018203606777819465,
+   "gap": 0.0026681708807726567,
+   "fraction": 0.5921957034356367,
+   "annual_gap_drag": 0.13447581239094192
+  },
+  "h5_hold": {
+   "close_entry": 0.0018318534567211885,
+   "open_entry": 6.702964473523982e-05,
+   "gap": 0.0017554243051134846,
+   "fraction": 0.9634088390153134,
+   "annual_gap_drag": 0.08847338497771963
+  },
+  "h10_dev": {
+   "close_entry": 0.008764357241213962,
+   "open_entry": 0.006116310178296032,
+   "gap": 0.0026699965354073972,
+   "fraction": 0.30213819337094316,
+   "annual_gap_drag": 0.06728391269226641
+  },
+  "h10_hold": {
+   "close_entry": 0.005024433166665671,
+   "open_entry": 0.003243537170396022,
+   "gap": 0.0017565386639353483,
+   "fraction": 0.3544471460153768,
+   "annual_gap_drag": 0.04426477433117078
+  },
+  "h15_dev": {
+   "close_entry": 0.013050332780944305,
+   "open_entry": 0.010366400870558713,
+   "gap": 0.002685464073060205,
+   "fraction": 0.20566003606471914,
+   "annual_gap_drag": 0.045115796427411446
+  },
+  "h15_hold": {
+   "close_entry": 0.009737326732545487,
+   "open_entry": 0.007860829677771894,
+   "gap": 0.0018100366200957806,
+   "fraction": 0.19271172738834944,
+   "annual_gap_drag": 0.030408615217609115
+  },
+  "h20_dev": {
+   "close_entry": 0.017700460707915578,
+   "open_entry": 0.014960765272985517,
+   "gap": 0.0027081646981328513,
+   "fraction": 0.1547810240727169,
+   "annual_gap_drag": 0.03412287519647393
+  },
+  "h20_hold": {
+   "close_entry": 0.014952886697414678,
+   "open_entry": 0.013102577904430621,
+   "gap": 0.0018004213536045345,
+   "fraction": 0.12374258097628543,
+   "annual_gap_drag": 0.022685309055417137
+  }
+ }
+}

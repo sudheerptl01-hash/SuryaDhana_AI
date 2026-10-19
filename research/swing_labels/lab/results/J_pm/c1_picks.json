@@ -1,0 +1,268 @@
+{
+ "dev": {
+  "neumom_RANK": {
+   "n_picks": 2900,
+   "share_fno": 0.26448275862068965,
+   "share_mid_liq5": 0.5465517241379311,
+   "share_small_liq2only": 0.1889655172413793,
+   "universe_share_fno": 0.18681109968629042,
+   "universe_share_mid": 0.5887588496879278,
+   "universe_share_small": 0.2244300506257818,
+   "tiered_cost_bps_picks": 53.21379310344828,
+   "tiered_cost_bps_universe": 56.36313028443438,
+   "median_adv_cr": 31.491431364750003,
+   "p10_adv_cr": 5.08673254237,
+   "p25_adv_cr": 10.678691045412501,
+   "capacity": {
+    "Rs1cr": {
+     "median_pct_adv": 0.039693337912154195,
+     "p90_pct_adv": 0.24573732255692451,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs5cr": {
+     "median_pct_adv": 0.198466689560771,
+     "p90_pct_adv": 1.2286866127846228,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs25cr": {
+     "median_pct_adv": 0.9923334478038549,
+     "p90_pct_adv": 6.143433063923113,
+     "share_gt5pct": 0.14172413793103447,
+     "share_gt10pct": 0.030344827586206897
+    },
+    "Rs100cr": {
+     "median_pct_adv": 3.9693337912154196,
+     "p90_pct_adv": 24.573732255692452,
+     "share_gt5pct": 0.4437931034482759,
+     "share_gt10pct": 0.28448275862068967
+    }
+   }
+  },
+  "neu_RANK": {
+   "n_picks": 2900,
+   "share_fno": 0.28206896551724137,
+   "share_mid_liq5": 0.5613793103448276,
+   "share_small_liq2only": 0.15655172413793103,
+   "universe_share_fno": 0.18681109968629042,
+   "universe_share_mid": 0.5887588496879278,
+   "universe_share_small": 0.2244300506257818,
+   "tiered_cost_bps_picks": 51.40344827586207,
+   "tiered_cost_bps_universe": 56.36313028443438,
+   "median_adv_cr": 37.406441502999996,
+   "p10_adv_cr": 5.550730441864999,
+   "p25_adv_cr": 13.6184539703125,
+   "capacity": {
+    "Rs1cr": {
+     "median_pct_adv": 0.03341670537211889,
+     "p90_pct_adv": 0.22519564607458714,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs5cr": {
+     "median_pct_adv": 0.1670835268605944,
+     "p90_pct_adv": 1.1259782303729358,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs25cr": {
+     "median_pct_adv": 0.835417634302972,
+     "p90_pct_adv": 5.629891151864679,
+     "share_gt5pct": 0.1196551724137931,
+     "share_gt10pct": 0.03
+    },
+    "Rs100cr": {
+     "median_pct_adv": 3.341670537211888,
+     "p90_pct_adv": 22.519564607458715,
+     "share_gt5pct": 0.39482758620689656,
+     "share_gt10pct": 0.23413793103448277
+    }
+   }
+  },
+  "neumom_T30": {
+   "n_picks": 2900,
+   "share_fno": 0.11482758620689655,
+   "share_mid_liq5": 0.6472413793103449,
+   "share_small_liq2only": 0.23793103448275862,
+   "universe_share_fno": 0.18681109968629042,
+   "universe_share_mid": 0.5887588496879278,
+   "universe_share_small": 0.2244300506257818,
+   "tiered_cost_bps_picks": 58.410344827586215,
+   "tiered_cost_bps_universe": 56.36313028443438,
+   "median_adv_cr": 20.850570810624998,
+   "p10_adv_cr": 4.312860203970001,
+   "p25_adv_cr": 8.156749579062497,
+   "capacity": {
+    "Rs1cr": {
+     "median_pct_adv": 0.05995039757602002,
+     "p90_pct_adv": 0.2898309018319805,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs5cr": {
+     "median_pct_adv": 0.29975198788010016,
+     "p90_pct_adv": 1.4491545091599025,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs25cr": {
+     "median_pct_adv": 1.4987599394005007,
+     "p90_pct_adv": 7.245772545799513,
+     "share_gt5pct": 0.19,
+     "share_gt10pct": 0.035517241379310345
+    },
+    "Rs100cr": {
+     "median_pct_adv": 5.995039757602003,
+     "p90_pct_adv": 28.98309018319805,
+     "share_gt5pct": 0.5513793103448276,
+     "share_gt10pct": 0.34551724137931034
+    }
+   }
+  }
+ },
+ "hold": {
+  "neumom_RANK": {
+   "n_picks": 700,
+   "share_fno": 0.43142857142857144,
+   "share_mid_liq5": 0.45285714285714285,
+   "share_small_liq2only": 0.11571428571428571,
+   "universe_share_fno": 0.16671532846715328,
+   "universe_share_mid": 0.6309245742092457,
+   "universe_share_small": 0.20236009732360097,
+   "tiered_cost_bps_picks": 46.57857142857143,
+   "tiered_cost_bps_universe": 55.771897810218974,
+   "median_adv_cr": 109.10254058337497,
+   "p10_adv_cr": 7.589389421975006,
+   "p25_adv_cr": 20.5931435756,
+   "capacity": {
+    "Rs1cr": {
+     "median_pct_adv": 0.011457194840070597,
+     "p90_pct_adv": 0.1647161034736754,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs5cr": {
+     "median_pct_adv": 0.05728597420035299,
+     "p90_pct_adv": 0.8235805173683771,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs25cr": {
+     "median_pct_adv": 0.286429871001765,
+     "p90_pct_adv": 4.117902586841885,
+     "share_gt5pct": 0.08285714285714285,
+     "share_gt10pct": 0.018571428571428572
+    },
+    "Rs100cr": {
+     "median_pct_adv": 1.14571948400706,
+     "p90_pct_adv": 16.47161034736754,
+     "share_gt5pct": 0.28285714285714286,
+     "share_gt10pct": 0.16714285714285715
+    }
+   }
+  },
+  "neu_RANK": {
+   "n_picks": 700,
+   "share_fno": 0.4042857142857143,
+   "share_mid_liq5": 0.47,
+   "share_small_liq2only": 0.12571428571428572,
+   "universe_share_fno": 0.16671532846715328,
+   "universe_share_mid": 0.6309245742092457,
+   "universe_share_small": 0.20236009732360097,
+   "tiered_cost_bps_picks": 47.57142857142858,
+   "tiered_cost_bps_universe": 55.771897810218974,
+   "median_adv_cr": 89.52942111599998,
+   "p10_adv_cr": 6.179929867450001,
+   "p25_adv_cr": 17.30790242385,
+   "capacity": {
+    "Rs1cr": {
+     "median_pct_adv": 0.013963412668045372,
+     "p90_pct_adv": 0.2022685678173749,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs5cr": {
+     "median_pct_adv": 0.06981706334022686,
+     "p90_pct_adv": 1.0113428390868746,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs25cr": {
+     "median_pct_adv": 0.3490853167011343,
+     "p90_pct_adv": 5.056714195434373,
+     "share_gt5pct": 0.10142857142857142,
+     "share_gt10pct": 0.02142857142857143
+    },
+    "Rs100cr": {
+     "median_pct_adv": 1.3963412668045372,
+     "p90_pct_adv": 20.226856781737492,
+     "share_gt5pct": 0.32285714285714284,
+     "share_gt10pct": 0.19714285714285715
+    }
+   }
+  },
+  "neumom_T30": {
+   "n_picks": 700,
+   "share_fno": 0.1757142857142857,
+   "share_mid_liq5": 0.6828571428571428,
+   "share_small_liq2only": 0.14142857142857143,
+   "universe_share_fno": 0.16671532846715328,
+   "universe_share_mid": 0.6309245742092457,
+   "universe_share_small": 0.20236009732360097,
+   "tiered_cost_bps_picks": 52.849999999999994,
+   "tiered_cost_bps_universe": 55.771897810218974,
+   "median_adv_cr": 32.235718447625004,
+   "p10_adv_cr": 6.503633567134999,
+   "p25_adv_cr": 14.1159165773375,
+   "capacity": {
+    "Rs1cr": {
+     "median_pct_adv": 0.03877709575772679,
+     "p90_pct_adv": 0.19220058957844774,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs5cr": {
+     "median_pct_adv": 0.19388547878863394,
+     "p90_pct_adv": 0.9610029478922387,
+     "share_gt5pct": 0.0,
+     "share_gt10pct": 0.0
+    },
+    "Rs25cr": {
+     "median_pct_adv": 0.9694273939431696,
+     "p90_pct_adv": 4.805014739461193,
+     "share_gt5pct": 0.09571428571428571,
+     "share_gt10pct": 0.017142857142857144
+    },
+    "Rs100cr": {
+     "median_pct_adv": 3.8777095757726783,
+     "p90_pct_adv": 19.22005895784477,
+     "share_gt5pct": 0.4185714285714286,
+     "share_gt10pct": 0.23
+    }
+   }
+  }
+ },
+ "noise": {
+  "neu_RANK vs dual_REL (same label, beta clip only)": {
+   "spearman": 0.9640056289162764,
+   "top20_overlap": 0.7268965517241379
+  },
+  "neu_T30 vs dual_RUP (same label, beta clip only)": {
+   "spearman": 0.9586712314046403,
+   "top20_overlap": 0.716551724137931
+  },
+  "neu_RANK vs neumom_RANK (neutraliser +mom)": {
+   "spearman": 0.9006905125067666,
+   "top20_overlap": 0.5568965517241379
+  },
+  "neumom_RANK vs neumom_C20 (loss)": {
+   "spearman": 0.8699355796555721,
+   "top20_overlap": 0.46379310344827585
+  },
+  "neumom_RANK vs neumom_T30 (loss)": {
+   "spearman": 0.5775743525278705,
+   "top20_overlap": 0.44206896551724145
+  }
+ }
+}

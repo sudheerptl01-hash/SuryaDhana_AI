@@ -1,0 +1,1288 @@
+<title>NSE Swing Label Study</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+/* Layout: long-form research report — answer first, then evidence by question, then process, then trust. Companion to the label review. */
+:root {
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --chart-surface: #fcfcfb;
+  --fg: #1f2733;
+  --muted: #5c6673;
+  --axis: #898781;
+  --grid: #e1e0d9;
+  --line: #e3e0d8;
+  --accent: #155e63;
+  --accent-soft: #e3efee;
+  --crit: #b3261e; --crit-soft: #f9e7e5;
+  --ok: #1a7a3d;   --ok-soft: #e2f1e6;
+  --warn: #8a6d00; --warn-soft: #f6f0d8;
+  --code-bg: #f0eee8;
+  --viz-up: #2a78d6;
+  --viz-down: #e34948;
+  --viz-flat: #cfcdc4;
+  --viz-ink: #1f2733;
+  --viz-ord-1: #86b6ef; --viz-ord-2: #6da7ec; --viz-ord-3: #5598e7;
+  --viz-ord-4: #3987e5; --viz-ord-5: #2a78d6; --viz-ord-6: #256abf; --viz-ord-7: #1c5cab;
+  --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --sans: "IBM Plex Sans", "Segoe UI", -apple-system, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15181d; --surface: #1c2027; --chart-surface: #1a1a19;
+  --fg: #e5e3dc; --muted: #9aa3ad; --axis: #898781; --grid: #2c2c2a; --line: #2e333b;
+  --accent: #6fc3c3; --accent-soft: #1d3234;
+  --crit: #ef8a84; --crit-soft: #3a2220;
+  --ok: #7cc795; --ok-soft: #1d3124;
+  --warn: #d9c25e; --warn-soft: #33301c;
+  --code-bg: #242931;
+  --viz-up: #3987e5; --viz-down: #e66767; --viz-flat: #4a4945; --viz-ink: #e5e3dc;
+  --viz-ord-1: #184f95; --viz-ord-2: #1c5cab; --viz-ord-3: #256abf;
+  --viz-ord-4: #2a78d6; --viz-ord-5: #3987e5; --viz-ord-6: #5598e7; --viz-ord-7: #6da7ec;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #15181d; --surface: #1c2027; --chart-surface: #1a1a19;
+  --fg: #e5e3dc; --muted: #9aa3ad; --axis: #898781; --grid: #2c2c2a; --line: #2e333b;
+  --accent: #6fc3c3; --accent-soft: #1d3234;
+  --crit: #ef8a84; --crit-soft: #3a2220;
+  --ok: #7cc795; --ok-soft: #1d3124;
+  --warn: #d9c25e; --warn-soft: #33301c;
+  --code-bg: #242931;
+  --viz-up: #3987e5; --viz-down: #e66767; --viz-flat: #4a4945; --viz-ink: #e5e3dc;
+  --viz-ord-1: #184f95; --viz-ord-2: #1c5cab; --viz-ord-3: #256abf;
+  --viz-ord-4: #2a78d6; --viz-ord-5: #3987e5; --viz-ord-6: #5598e7; --viz-ord-7: #6da7ec;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--sans); font-size: 15.5px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+.wrap { max-width: 940px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--serif); text-wrap: balance; line-height: 1.25; }
+h1 { font-size: 2.2rem; font-weight: 600; margin: 0 0 6px; }
+h2 { font-size: 1.45rem; font-weight: 600; margin: 52px 0 14px; padding-top: 28px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.07rem; font-weight: 600; margin: 28px 0 8px; }
+p { margin: 10px 0; max-width: 74ch; }
+code, .loc { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+a { color: var(--accent); }
+a:focus-visible, summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.eyebrow { font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+header.masthead { padding-block: 40px 8px; }
+.lede { font-family: var(--serif); font-size: 1.1rem; color: var(--muted); max-width: 70ch; }
+.meta-grid { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 14px; font-size: 0.86rem; color: var(--muted); }
+.meta-grid b { color: var(--fg); font-weight: 500; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.86rem; margin-top: 18px; }
+.toc a { text-decoration: none; border-bottom: 1px dotted var(--accent); }
+.verdict { border-left: 4px solid var(--accent); background: var(--surface); padding: 18px 22px; margin: 26px 0; border-radius: 0 8px 8px 0; }
+.verdict .rating { font-family: var(--serif); font-size: 1.28rem; font-weight: 600; margin-bottom: 8px; line-height: 1.35; }
+.principle { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 14px 18px; margin: 18px 0; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
+.caution { border-left: 4px solid var(--warn); background: var(--warn-soft); padding: 14px 18px; margin: 18px 0; border-radius: 0 8px 8px 0; font-size: 0.95rem; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 20px 0 4px; }
+.tile { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.tile .n { font-family: var(--serif); font-size: 1.55rem; font-weight: 600; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.tile .lbl { font-size: 0.74rem; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 4px; line-height: 1.35; }
+.tile.bad .n { color: var(--crit); } .tile.good .n { color: var(--ok); } .tile.warn .n { color: var(--warn); } .tile.acc .n { color: var(--accent); }
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+.tablewrap { overflow-x: auto; margin: 14px 0; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.72rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr.hl td { background: var(--accent-soft); }
+caption { caption-side: top; text-align: left; font-weight: 600; font-size: 0.95rem; padding: 0 0 8px; }
+.pill { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.bad { background: var(--crit-soft); color: var(--crit); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.vtag { background: var(--accent-soft); color: var(--accent); }
+.chart-card { background: var(--chart-surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 16px 10px; margin: 18px 0; }
+.chart-card .ct { font-weight: 600; font-size: 0.98rem; }
+.chart-card .cs { font-size: 0.83rem; color: var(--muted); margin: 2px 0 10px; }
+.chart-card svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; color: var(--muted); margin: 8px 0 2px; }
+.legend .chip { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend .ln { width: 18px; height: 0; border-top: 2.5px solid; display: inline-block; }
+.legend .ln.dash { border-top-style: dashed; }
+.chart-note { font-size: 0.82rem; color: var(--muted); margin-top: 8px; max-width: none; }
+.svgtext { font-family: var(--sans); fill: var(--axis); font-size: 11px; }
+.svgtext.strong { fill: var(--fg); font-weight: 600; }
+.svgtext.val { fill: var(--fg); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+ul, ol { padding-left: 22px; margin: 10px 0; }
+li { margin: 6px 0; min-width: 0; }
+.steps { counter-reset: step; list-style: none; padding-left: 0; }
+.steps > li { counter-increment: step; position: relative; padding-left: 40px; margin: 12px 0; }
+.steps > li::before { content: counter(step); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 0.82rem; display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.note { font-size: 0.86rem; color: var(--muted); }
+details { margin: 10px 0; }
+summary { cursor: pointer; color: var(--accent); font-size: 0.88rem; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.two > div { min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.panel h3 { margin-top: 0; }
+.panel p, .panel li { font-size: 0.92rem; }
+.heat { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.dt td:first-child { min-width: 12em; }
+td.grp { background: var(--code-bg); color: var(--muted); font-size: 0.74rem; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; padding: 6px 10px; }
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media (max-width: 520px) { h1 { font-size: 1.75rem; } .tile .n { font-size: 1.3rem; } th, td { padding: 7px 8px; } }
+</style>
+
+<div class="wrap">
+<header class="masthead">
+  <div class="eyebrow">SuryaDhana AI · label research for a 5–20 day swing trader</div>
+  <h1>NSE Swing Label Study</h1>
+  <p class="lede">What should a 5 to 20 day swing trader on NSE train a model on? A team of research agents rebuilt 5.75 years of NSE data from the exchange's own files, tested about 2,000 label and portfolio variants over three rounds, and then tried to break the winner. This page reports what survived, what it can realistically earn, and where it fails.</p>
+  <div class="meta-grid">
+    <span>Data <b>NSE bhavcopies, 1 Jan 2021 – 14 Oct 2026</b></span>
+    <span>Panel <b>3.10 M stock-days · 3,399 companies · 1,434 sessions</b></span>
+    <span>Chosen on <b>2023–2025 only</b></span>
+    <span>Holdout <b>1 Jan – 14 Oct 2026</b></span>
+    <span>Costs <b>50 bps round trip (80 bps stress)</b></span>
+    <span>Date <b>15 Oct 2026</b></span>
+  </div>
+  <nav class="toc" aria-label="Contents">
+    <a href="#answer">The answer</a><a href="#bias">Why direction labels fail</a><a href="#horizon">Why 20 days</a><a href="#families">Every label tested</a><a href="#conditions">Filters and conditions</a><a href="#label">The winning label</a><a href="#results">Results</a><a href="#robust">Robustness</a><a href="#scenarios">Scenarios</a><a href="#updown">Up and down</a><a href="#invest">How to invest</a><a href="#expect">What to expect</a><a href="#trust">How much to trust it</a><a href="#rejected">What we rejected</a><a href="#corrections">Data corrections</a><a href="#glossary">Glossary</a><a href="#reproduce">Reproduce</a>
+  </nav>
+</header>
+
+<section id="answer">
+  <div class="verdict">
+    <div class="rating">Train on a 20-day relative label: rank each stock's market-neutral return against every other stock that day. Do not train on "will it go up?".</div>
+    <p>For each stock on each day, the label takes the return from the next morning's open to the close 20 trading days later. It removes what the stock's market beta, volatility, size and 12-month momentum already explain, and ranks the remainder against all eligible stocks that day. The top 30% are <b>+1</b> (will beat their peers), the bottom 30% are <b>−1</b> (will lag them) and the middle 40% are 0.</p>
+    <p><b>Why this one.</b> It is the only label whose event rate does not depend on the market: exactly 30 / 40 / 30 on every day, in bull and bear markets, for large and small stocks. Every "will it go up?" label we built calls about 13% of stocks "up" on a weak day and 83% on a strong one, and moves 0.71–0.88 with the market, so a model trained on it learns market timing, and none of our timing models could time this market. The relative label also fixes the existing label's defects: an entry price you can actually trade, a blank instead of a zero when the outcome is unknown, and adjusted prices.</p>
+    <p><b>Up and down.</b> Buy from the top of the score. Use the bottom 30% as a never-buy and exit list. Do not short it: those stocks lag their peers but rarely fall, and every short-selling version lost money.</p>
+    <p><b>What it earned.</b> On 2023–2025, where every choice was made, a weekly book of the top 20 made <b>30.3% a year against 12.0%</b> for random picks (an average daily excess worth 15.3% a year, t 4.0). In the 2026 holdout it made 10.2% against 10.2%: no edge, although the model's ranking skill held up and the avoid list kept working.</p>
+    <p><b>What to plan on.</b> The final examiner's verdict is <b>alive but unproven</b>. After correcting for the roughly 2,000 variants tried and weighing in 2026, the best estimate of the edge is about <b>+4.4% a year</b> over random picks (+6.9% over the equal-weight market), with a 90% chance that it is positive, and drawdowns as deep as the small- and mid-cap market's (−27% in early 2025). Keep it under about ₹20 crore, trade it small first, and stop under the pre-set kill rule.</p>
+  </div>
+  <div class="principle"><b>The one idea to carry away:</b> direction and selection are different questions. "Will the market rise?" is a timing decision; "which stocks will beat the others?" is a selection decision. A label that mixes them is mostly a market label. Keep the label relative and make the market decision separately, once, as a fixed level of exposure.</div>
+  <div class="tiles">
+    <div class="tile acc"><div class="n">30 / 40 / 30</div><div class="lbl">+1 / 0 / −1 share on every single day</div></div>
+    <div class="tile"><div class="n">0.07 vs 0.88</div><div class="lbl">Correlation with the market: relative vs direction label</div></div>
+    <div class="tile"><div class="n">0.066 / 0.063</div><div class="lbl">Ranking skill (IC), 2023–25 / 2026</div></div>
+    <div class="tile good"><div class="n">+15.3%</div><div class="lbl">Average yearly excess over random picks, 2023–25 (t 4.0)</div></div>
+    <div class="tile warn"><div class="n">+0.4%</div><div class="lbl">Yearly excess in the 2026 holdout (t 0.06)</div></div>
+    <div class="tile"><div class="n">≈ +4.4%</div><div class="lbl">Yearly planning edge after all corrections (90% chance it is positive)</div></div>
+  </div>
+  <div class="tablewrap"><table>
+    <caption>Your questions, answered</caption>
+    <thead><tr><th>You asked</th><th>Short answer</th><th>Details</th></tr></thead>
+    <tbody>
+      <tr><td>Are the current labels correct?</td><td>No. The repo's label enters at an untradable price, turns unknown outcomes into "down", uses unadjusted prices and, like every direction label, mostly encodes the market.</td><td><a href="#bias">Why direction labels fail</a></td></tr>
+      <tr><td>Should a label count only when two conditions both accept?</td><td>Put conditions on which stocks are considered, never on the label. Requiring "beat peers AND rose" brought the market back (correlation 0.70) and added nothing (+0.5% a year, t 0.25).</td><td><a href="#conditions">Filters and conditions</a></td></tr>
+      <tr><td>What label for a 5–20 day hold?</td><td>The 20-day relative rank above. Five-day holds lose 17% a year to costs and the overnight gap before any skill; ten days barely breaks even.</td><td><a href="#horizon">Why 20 days</a>, <a href="#label">The winning label</a></td></tr>
+      <tr><td>Can I use both up and down?</td><td>Yes: buy the top, avoid and exit the bottom. Shorting the bottom does not work in India.</td><td><a href="#updown">Up and down</a></td></tr>
+      <tr><td>What are the event rates, with and without conditions?</td><td>30 / 40 / 30 for the relative label in every filter, scenario and year. Direction labels swing from 14% to 78% "up" with the market.</td><td><a href="#conditions">Filters</a>, <a href="#scenarios">Scenarios</a></td></tr>
+      <tr><td>How do I invest with it?</td><td>Weekly rotation of four 20-stock sleeves, 20-day holds, no stops, fixed exposure, under ₹20 crore, with weekly monitoring and a pre-set kill rule.</td><td><a href="#invest">How to invest</a>, <a href="#expect">What to expect</a></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="bias">
+  <h2>Why "will it go up?" labels fail at 5 to 20 days</h2>
+  <p>A label is useful only if it describes the stock. Every absolute label we built (the repo's current label, a clean direction label, cost-aware classes, triple barriers) mostly describes the market instead. The chart shows, for each month, the share of eligible stocks that each label calls "up" over the next 20 trading days, against the market's own move over the same 20 days.</p>
+  <div class="chart-card">
+    <div class="ct">Direction labels follow the market; the relative label does not</div>
+    <div class="cs">Monthly share of stocks labelled +1 (left axis) and the average Nifty 500 move over the same 20-day windows (bars, right axis). Eligible stocks, 20-day horizon, Jun 2021 – Sep 2026.</div>
+    <svg id="chart-bias" viewBox="0 0 880 330" role="img" aria-label="Line chart: the direction label's monthly up-share swings between 13 and 77 percent in step with the market's 20-day move; the relative label stays flat at 30 percent"></svg>
+    <div class="legend">
+      <span class="chip"><span class="ln" style="border-color:var(--viz-ink)"></span>Direction label: next open to day-20 close &gt; 0</span>
+      <span class="chip"><span class="ln dash" style="border-color:var(--muted)"></span>Triple barrier, +3.0 / −1.5 ATR</span>
+      <span class="chip"><span class="ln" style="border-color:var(--accent)"></span>Relative label (top 30%)</span>
+      <span class="chip"><span class="sw" style="background:var(--viz-up);opacity:.45"></span><span class="sw" style="background:var(--viz-down);opacity:.45"></span>Nifty 500, average 20-day move</span>
+    </div>
+    <div class="chart-note">Monthly averages: the direction label's up-share runs from <b>12.5%</b> to <b>76.8%</b> and correlates <b>0.89</b> with the market's move over the same windows. The relative label stays at 30% every month (correlation <b>0.03</b>). A model trained on the direction label spends its effort learning the bars, which is market timing.</div>
+  </div>
+
+  <h3>Are the labels right? Eight definitions side by side</h3>
+  <p>Twenty-day horizon, tradable universe, every trading day of 2021–2026. "Weak day" and "strong day" are the 5th and 95th percentile of the daily up-share. The correlation column compares each day's up-share with the Nifty 500's return over the same 20 days: near 1 means the label is the market, near 0 means it is about the stock. Net returns buy at the next open, sell 20 days later and pay 0.5%.</p>
+  <div class="tablewrap" id="tbl-labels8"></div>
+  <p class="note">An absolute label's "up" rows made money by construction (the class is defined by the outcome), so the money columns say nothing about predictability. What matters is the swing column and the correlation column. Every absolute label swings from roughly 10–15% "up" on weak days to 75–83% on strong days and correlates 0.71–0.88 with the market. The dual label (relative AND absolute) inherits that dependence: its correlation is 0.70.</p>
+  <details><summary>The same comparison at 5, 10, 15 and 20 days</summary>
+    <p class="note">Longer horizons do not make absolute labels less market-driven: the same-window correlation stays at 0.85–0.88 for the sign labels at every horizon. The relative labels stay at exactly 30% up with near-zero correlation at every horizon.</p>
+    <div class="tablewrap" id="tbl-labels-h"></div>
+  </details>
+  <details><summary>The repo's current label, defect by defect</summary>
+    <div class="tablewrap" id="tbl-oldlabel"></div>
+    <p class="note">Measured on the tradable universe, 2021–2026, within each company's own price history (kinder than the repo's ticker-keyed shift). The disagreement with the clean label is only 3–6% of rows, but it is concentrated where it matters: unknown futures counted as "not up", split and bonus days counted as crashes (4,261 fake crashes at 20 days), and a close-entry return that nobody can trade.</p>
+  </details>
+
+  <h3>Three more pieces of evidence that direction labels learn the market</h3>
+  <ul>
+    <li><b>The shuffle canary.</b> Shuffling a direction label across stocks within each day destroys all stock information and keeps only the day's base rate. A model trained on the shuffled label scored a pooled AUC of 0.52–0.54, almost the same as the real model. Pooled accuracy on these labels measures timing. Measured stock by stock within each day, the real models reach only about 0.53.</li>
+    <li><b>The 2026 holdout.</b> 2026 was a falling market (Nifty 500 −7.8% to 14 Oct). Every absolute-label book failed or tied random selection there: the clean direction label made 3.5% a year against 6.9% for random picks; the triple barrier made 6.6% against 6.9%.</li>
+    <li><b>The repo's current label adds three defects at these horizons.</b> It enters at the signal day's close, a price you cannot trade after seeing that close; the overnight gap it hands the model is worth about <b>26 bps per trade</b> at every horizon (the 5-day outcome averages 35.7 bps from the close but 10.0 bps from the next open). It turns missing outcomes into "down": 3.8% of its 20-day "not up" class is really "unknown", and in the final month of data every stock is "down". And by default it runs on unadjusted prices, which creates 4,261 fake 20-day crashes on split and bonus days.</li>
+  </ul>
+</section>
+
+<section id="horizon">
+  <h2>Why 20 days: costs choose the horizon</h2>
+  <p>A swing trader pays the round-trip cost on every trade, so a shorter hold pays it more often. The chart shows what a book of 20 randomly chosen eligible stocks earned at each holding period and cost level on 2023–2025. These books have no skill at all; they show what the holding period alone does to returns.</p>
+  <div class="chart-card">
+    <div class="ct">Random top-20 books: annual return by holding period and cost, 2023–2025</div>
+    <div class="cs">Daily marked-to-market, four staggered sleeves, entries at the next open. Dashed line: Nifty 500 price index over the same dates.</div>
+    <svg id="chart-cost" viewBox="0 0 880 300" role="img" aria-label="Grouped bar chart: at 50 bps cost a random book returns minus 16 percent a year at 5 days, plus 1 percent at 10 days, plus 9 percent at 15 days and plus 11 percent at 20 days"></svg>
+    <div class="legend">
+      <span class="chip"><span class="sw" style="background:var(--viz-ord-2)"></span>No cost</span>
+      <span class="chip"><span class="sw" style="background:var(--viz-ord-4)"></span>50 bps round trip</span>
+      <span class="chip"><span class="sw" style="background:var(--viz-ord-7)"></span>80 bps round trip</span>
+      <span class="chip"><span class="ln dash" style="border-color:var(--muted)"></span>Nifty 500 (15.5% a year)</span>
+    </div>
+    <div class="chart-note">Averaged over the five weekly entry days and five random seeds. At 50 bps a random 5-day book loses <b>16.8%</b> a year and a random 10-day book makes <b>1.3%</b>; at 15 and 20 days it makes <b>8.6%</b> and <b>12.0%</b>. The same order holds in 2026 (−20.6%, −3.6%, +5.7%, +10.2%, annualised). Every result on this page is therefore quoted as excess over a random book with the same holding period.</div>
+  </div>
+  <h3>The overnight tax</h3>
+  <p>Indian stock returns arrive almost entirely between one day's close and the next day's open. During trading sessions the average stock drifted down. A label computed at the close can only be acted on at the next open, after that night's gap has already been paid, so every new position gives up one overnight gap.</p>
+  <div class="chart-card">
+    <div class="ct">Where the returns happened: overnight gaps vs trading sessions</div>
+    <div class="cs">Growth of ₹1 in the equal-weight tradable universe from January 2023, earning only the close-to-open gaps, only the open-to-close sessions, or both. Before costs; an illustration, not a strategy.</div>
+    <svg id="chart-overnight" viewBox="0 0 880 300" role="img" aria-label="Line chart on a log scale: one rupee earning only overnight gaps grows to about 10 rupees by October 2026, earning only trading sessions shrinks to about 0.21 rupees, and close-to-close grows to about 2"></svg>
+    <div class="chart-note">Log scale. Overnight-only grew ₹1 to about <b>₹10.0</b>; session-only shrank it to <b>₹0.21</b>; holding throughout gave <b>₹2.01</b>. The pattern holds in every liquidity third (least liquid +117% a year overnight, most liquid +71%, 2023–25), so it is not only an illiquid-stock effect. Part of it may come from how NSE forms its opening (auction) and closing (last-30-minute average) prices.</div>
+  </div>
+  <div class="tablewrap" id="tbl-overnight-tax"></div>
+  <p>The gap given up is the same per trade at every horizon (about 0.27% in 2023–25, 0.18% in 2026), so it hurts short holds most. A 5-day trader gives up about 60% of what a close-entry label promises; a 20-day trader about 15%. Together with costs, this is why 5-day swing trading on next-open entries is a losing game on NSE, whatever the label.</p>
+  <p>Skill points the other way. The relative label at 10 days carries the most raw skill (phase-averaged excess t 4.8 on 2023–2025) but trades twice as often. At 80 bps the 10-day book made 16.2% a year against 25.2% for the 20-day book, and at 130 bps only 2.6%. The 15-day book sits between them on every measure. We chose 20 days because its edge survives realistic costs. The training horizon itself matters little: models trained on 10, 15 and 20-day labels and all held for 20 days earned +18.1%, +15.1% and +18.0% a year over random on 2023–2025.</p>
+  <div class="tablewrap"><table>
+    <caption>The same relative label at three horizons (top-20 book, one weekly calendar, 2023–2025 and 2026)</caption>
+    <thead><tr><th>Horizon</th><th class="num">Random book, 50 bps</th><th class="num">Model book, 50 bps</th><th class="num">Model book, 80 bps</th><th class="num">Excess t</th><th class="num">2026 model</th><th class="num">2026 random</th></tr></thead>
+    <tbody>
+      <tr><td>10 days</td><td class="num">1.2%</td><td class="num">25.1%</td><td class="num">16.2%</td><td class="num">4.36</td><td class="num">8.2%</td><td class="num">−4.0%</td></tr>
+      <tr><td>15 days</td><td class="num">8.5%</td><td class="num">25.6%</td><td class="num">19.6%</td><td class="num">3.20</td><td class="num">7.5%</td><td class="num">2.0%</td></tr>
+      <tr class="hl"><td>20 days</td><td class="num">11.8%</td><td class="num">29.8%</td><td class="num">25.2%</td><td class="num">3.75</td><td class="num">10.1%</td><td class="num">6.9%</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">XR_neu label (the round-1 winner) so that the three horizons are like for like. Single weekly entry calendar; the phase-averaged figures used elsewhere on this page are 0–4 points lower.</p>
+</section>
+
+<section id="families">
+  <h2>Every label family we tested</h2>
+  <p>Five specialists in round 1 and five refiners in round 2 built each family on the same clean data under the same rules: entry at the next open, a blank label (never zero) when the outcome cannot be traded, selection on 2023–2025 only, and every book compared with a random book of the same size and holding period. Returns below are a top-20 book's annual return after 50 bps, with the random book's return after "vs".</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Label family</th><th>What it asks</th><th>Event rate (20 days)</th><th class="num">Tracks market</th><th class="num">2023–25</th><th class="num">2026 holdout</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>Repo's current label</td><td>Did close[t+h] beat close[t]? Raw prices, missing outcome = 0</td><td>48.5% up; monthly 0–76%</td><td class="num">0.87</td><td class="num">not tradable</td><td class="num">–</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Clean direction</td><td>Did it rise from the next open to the day-20 close?</td><td>49.1% up; monthly 13–77%</td><td class="num">0.88</td><td class="num">21.1% vs 11.8%</td><td class="num">3.5% vs 6.9%</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Cost-aware 3-class</td><td>Up more than 50 bps / down more than 50 bps / flat</td><td>47.0 / 4.3 / 48.7%</td><td class="num">0.87</td><td class="num">≈ direction</td><td class="num">–</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Triple barrier, 3.0/1.5 ATR</td><td>Did it hit +3 ATR before −1.5 ATR within 20 days?</td><td>37.5% up; monthly 13–67%; 57% of paths hit the stop</td><td class="num">0.71</td><td class="num">20.7% vs 11.8%</td><td class="num">6.6% vs 6.9%</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Trend scanning (adaptive horizon)</td><td>Is there a significant trend over 5–20 days?</td><td>30 / 35 / 35%</td><td class="num">0.63*</td><td class="num">≈ fixed 20d</td><td class="num">worse</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Market-excess trend scan</td><td>Same, after subtracting the index</td><td>25.7 / 35.7 / 38.7%</td><td class="num">0.18</td><td class="num">24.7% vs 11.8%</td><td class="num">2.9% vs 10.0%</td><td><span class="pill warn">Avoid use only</span></td></tr>
+      <tr><td>Classic setup gates</td><td>Train only where a breakout, pullback, VCP or delivery spike fired</td><td>P(up) 44–47% vs 45% base</td><td class="num">–</td><td class="num">±13 bps per trade</td><td class="num">–</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Capitulation (washout) gate</td><td>Buy breakdowns on volume when ≥5% of stocks are at 20-day lows and the market is falling</td><td>Fires on 16% of days; P(up) 58%</td><td class="num">–</td><td class="num">+7.0%/yr vs matched random (t 4.7)</td><td class="num">t 2.9</td><td><span class="pill warn">Optional sleeve</span></td></tr>
+      <tr><td>"Both conditions accept" (dual)</td><td>Top 30% relative AND up more than 50 bps</td><td>27.2% up; 11.9% when the market falls &gt;5%</td><td class="num">0.70</td><td class="num">+0.5%/yr vs pure relative (t 0.25)</td><td class="num">–</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Relative, raw rank</td><td>Rank of the raw return that day</td><td>30 / 40 / 30% every day</td><td class="num">0.07</td><td class="num">25.2% vs 11.8%</td><td class="num">3.9% vs 6.9%</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Relative, factor-neutral (XR_neu)</td><td>Rank after removing beta, volatility and size</td><td>30 / 40 / 30% every day</td><td class="num">0.07</td><td class="num">29.8% vs 11.8%</td><td class="num">10.1% vs 6.9%</td><td><span class="pill vtag">Fallback</span></td></tr>
+      <tr class="hl"><td><b>Relative, factor- and momentum-neutral (XR_neumom)</b></td><td>Rank after also removing 12-1 month momentum</td><td>30 / 40 / 30% every day</td><td class="num">0.07</td><td class="num">30.9% vs 11.8%</td><td class="num">16.0% vs 6.9%</td><td><span class="pill ok">Adopted</span></td></tr>
+      <tr><td>Relative, binary top 30%</td><td>Is it in the top 30%?</td><td>30 / 70%</td><td class="num">0.07</td><td class="num">30.8% vs 11.8%</td><td class="num">21.8% vs 6.9%</td><td><span class="pill vtag">Challenger</span></td></tr>
+      <tr><td>Dedicated "down" classifier</td><td>Is it in the bottom 30%?</td><td>30 / 70%</td><td class="num">–</td><td class="num">13.5% vs 11.8%</td><td class="num">−4.5% vs 6.9%</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Relative at 10 and 15 days</td><td>Same label, shorter hold</td><td>30 / 40 / 30%</td><td class="num">0.07</td><td class="num">25.1% / 25.6%</td><td class="num">8.2% / 7.5%</td><td><span class="pill bad">Reject (costs)</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">"Tracks market" is the correlation between the daily share of +1 labels and the Nifty 500 return over the same 20-day window (*monthly version where the daily one was not computed). Single weekly entry calendar, so these figures are comparable with each other; the phase-averaged versions of the adopted label are in Results. Round-1 families (trend scanning, setups) were measured on the first lab version and are indicative. The binary top-30% challenger loads on volatility (factor R² 0.31 against 0.05 for the adopted label) and its 2026 gain came from the volatility factor; it is pre-registered as a challenger for fresh data.</p>
+</section>
+
+<section id="conditions">
+  <h2>Filters and conditions: what "both must accept" really does</h2>
+  <p>In the label review you suggested labelling a stock only when conditions accept. A condition can sit in two places, and they behave very differently.</p>
+  <div class="two">
+    <div class="panel">
+      <h3>On the sample (input side)</h3>
+      <p>"Only consider stocks that pass the condition." Eligibility filters and setup gates decide which stock-days exist as training rows and as candidates. They never change a label's value.</p>
+      <p><b>Use them</b> to define what is tradable: EQ series, price ≥ ₹20, 20-day median turnover ≥ ₹2 crore, listed ≥ 120 days, not circuit-locked, ATR 0.5–15%, equity ISIN. Only <b>42.5%</b> of stock-days pass.</p>
+    </div>
+    <div class="panel">
+      <h3>On the label (output side)</h3>
+      <p>"Call it +1 only if it beat its peers AND rose." This puts the market back into the label: whether a stock rose over 20 days depends mostly on the market.</p>
+      <p><b>Avoid them.</b> The dual label's +1 share is about 30% when the market rises over the 20 days, 26% when it falls by up to 5% and 13% when it falls by more.</p>
+    </div>
+  </div>
+  <h3>What each version of your idea did, measured</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Version</th><th>Where the condition sits</th><th class="num">+1 share tracks market</th><th class="num">Gain vs pure relative, 2023–25</th><th class="num">2026</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>Dual label: relative top 30% AND net return &gt; +50 bps</td><td>Label</td><td class="num">0.70</td><td class="num">+0.5%/yr (t 0.25)</td><td class="num">–</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Dual path label: relative top 30% AND triple-barrier win</td><td>Label</td><td class="num">0.57</td><td class="num">−4.6%/yr (0 of 5 calendars positive)</td><td class="num">best calendar only</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Two models, rank-summed (relative + absolute)</td><td>Score</td><td class="num">–</td><td class="num">+1.1%/yr (t 0.41)</td><td class="num">−3.3%/yr</td><td><span class="pill bad">Reject</span></td></tr>
+      <tr><td>Trend gate: close &gt; 200-day average and 60-day relative strength in top 30%</td><td>Sample</td><td class="num">–</td><td class="num">+0.9%/yr (t 0.42)</td><td class="num">+15.5% (not selectable)</td><td><span class="pill warn">No value on 2023–25</span></td></tr>
+      <tr><td>Washout gate (capitulation)</td><td>Sample</td><td class="num">–</td><td class="num">real event effect, episodic</td><td class="num">t 2.9</td><td><span class="pill warn">Separate sleeve at most</span></td></tr>
+      <tr><td>Avoid screen: drop the stocks least likely to be top 30%</td><td>Sample (veto)</td><td class="num">0.07</td><td class="num">+3.3%/yr over equal weight (t 4.6)</td><td class="num">+5.8%</td><td><span class="pill vtag">Same idea as the adopted avoid list</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="principle"><b>How to keep your idea and lose the bias:</b> put conditions on the sample to define what is tradable, keep the label relative, and put any market condition into a separate exposure decision (see How to invest). The absolute leg in the dual label removed only 9.4% of the relative +1 rows, and those rows were removed mainly in bad markets, which is market timing by another name.</div>
+  <h3>Event rates with and without each condition</h3>
+  <p>Each filter below only chooses which stocks are considered; label values never change. The table shows how many stocks survive each condition and how the event rates of each label move inside it (20 days, 2021–2026).</p>
+  <div class="tablewrap" id="tbl-filters"></div>
+  <p class="note">Filters move the relative event rates by at most about 5 points. The trend gate raises both tails (33.3% up and 33.1% down), so it adds volatile names rather than winners. The washout gate, F&amp;O-proxy names and high-delivery stocks tilt slightly towards relative winners (up minus down +5.1, +4.0 and +3.5 points). Among F&amp;O-proxy names the classes are 29.5% up and 25.5% down, so large stocks rarely land among the losers. The washout gate is active on only 16% of days.</p>
+  <div class="tablewrap" id="tbl-filters-money"></div>
+  <p class="note">Inside every filter the relative classes still separate winners from losers by 19–24 points of 20-day return, and about 90% of +1 stocks made money after costs. Filters can narrow the universe without breaking the label.</p>
+</section>
+
+<section id="label">
+  <h2>The winning label: a 20-day relative rank, neutral to market, size, volatility and momentum</h2>
+  <p>The label every later result uses. Each step exists to remove one known source of bias.</p>
+  <ol class="steps">
+    <li><b>Outcome.</b> r = close[t+20] / open[t+1] − 1, on prices adjusted for splits, bonuses, rights and dividends using NSE's own book-closure records. Left blank when the stock cannot be traded through the window (suspension, a corporate action we could not adjust, a data gap), never set to zero.</li>
+    <li><b>Universe.</b> Stocks eligible on day t: EQ series, price ≥ ₹20, 20-day median turnover ≥ ₹2 crore, listed ≥ 120 days, not circuit-locked, ATR between 0.5% and 15%, an equity ISIN (ETFs and fund units excluded).</li>
+    <li><b>Trim outliers.</b> Winsorise r at that day's 1st and 99th percentiles.</li>
+    <li><b>Remove what is already known.</b> Regress r across that day's stocks on shrunk market beta (0.5 × 60-day beta + 0.5), 20-day volatility, log turnover (size and liquidity) and 12-1 month momentum.</li>
+    <li><b>Rank the remainder.</b> The residual is the part of the return those four cannot explain. Rank it against all eligible stocks that day, from 0 to 1. The model is trained on this rank.</li>
+    <li><b>Classes for reporting.</b> +1 above 0.70 (beat peers), −1 at or below 0.30 (lagged peers), 0 in between.</li>
+  </ol>
+  <div class="tablewrap"><table>
+    <caption>Why each neutraliser is there</caption>
+    <thead><tr><th>Removed</th><th>What it would otherwise put into the label</th><th>What happened without it</th></tr></thead>
+    <tbody>
+      <tr><td>Market beta</td><td>The market's direction: high-beta stocks win every up month</td><td>The raw rank tilted +0.09 sd to beta in up markets and −0.23 sd in down markets, and its book lost to random in 2026 (3.9% vs 6.9%)</td></tr>
+      <tr><td>Volatility</td><td>Risk: volatile stocks fill both tails</td><td>Binary top-30% models pick high-volatility names (vol percentile 0.77) and land in both tails</td></tr>
+      <tr><td>Turnover (size)</td><td>The small-cap cycle</td><td>A size-only neutraliser behaved like the raw rank: 2026 −1.8%</td></tr>
+      <tr><td>12-1 month momentum</td><td>A known factor premium, which swings by year</td><td>The XR_neu label kept a +0.07 sd momentum tilt; XR_neumom removes it (−0.02 sd)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Event rates of the winning label</h3>
+  <div class="tiles">
+    <div class="tile acc"><div class="n">30.0 / 40.0 / 30.0</div><div class="lbl">+1 / 0 / −1 share, every single day</div></div>
+    <div class="tile"><div class="n">0.0003</div><div class="lbl">Day-to-day SD of the +1 share</div></div>
+    <div class="tile"><div class="n">29.4 / 30.8 / 29.9%</div><div class="lbl">+1 share by liquidity tercile (low / mid / high)</div></div>
+    <div class="tile warn"><div class="n">29.5 / 25.5%</div><div class="lbl">+1 / −1 share among F&amp;O stocks</div></div>
+  </div>
+  <p>Among F&amp;O stocks the −1 class is under-represented (25.5% instead of 30%), because the largest and most liquid stocks rarely land in the bottom of the cross-section. Anyone who trades only F&amp;O names should rank inside that universe instead of reusing the full-universe classes.</p>
+  <h3>What the classes are worth</h3>
+  <p>Over 2021–2026, a stock labelled +1 returned <b>+12.2%</b> net over its 20 days on average and 90.4% of them made money after costs; a −1 stock returned <b>−9.3%</b>. Those are outcomes, not forecasts: they show the classes mean something in rupees. They also depend on the market. When the Nifty 500 fell more than 5% over the 20 days, +1 stocks averaged only +0.8% and fewer than half made money (see Scenarios). A relative label tells you which stocks will do better than the others, not whether they will rise.</p>
+  <h3>Can a model learn it?</h3>
+  <p>Yes, modestly and consistently. The production score (an average of 10 LightGBM models, described under How to invest) ranks stocks with an out-of-sample rank correlation (IC) of <b>0.066</b> on 2023–2025 (t 9.0) and <b>0.063</b> in 2026 (t 4.8), with no decay into the holdout. The model is better at spotting laggards than leaders: its AUC for the bottom 30% is 0.550 on 2023–25 (t 11.3) and 0.556 in 2026 (t 6.4), against 0.517 (t 3.7) and 0.508 (t 1.8) for the top 30%. That asymmetry is why the avoid list is the most durable part of the process.</p>
+</section>
+
+<section id="results">
+  <h2>Results: what the production book earned</h2>
+  <p>The production book holds four sleeves of 20 stocks. Each week one sleeve sells its holdings and buys the 20 eligible stocks with the highest production score, entering at the next open and holding for 20 trading days. All figures are after 50 bps round-trip costs, averaged over the five possible weekly entry days, and compared with a random 20-stock book run under exactly the same rules.</p>
+  <div class="tablewrap"><table>
+    <caption>Scoreboard (annual rates; 2026 annualised from 1 Jan to 14 Oct)</caption>
+    <thead><tr><th>Period</th><th class="num">Book</th><th class="num">Random 20</th><th class="num">Equal-weight market</th><th class="num">Nifty 500 (price)</th><th class="num">Average excess vs random</th><th class="num">t</th><th class="num">Max drawdown</th></tr></thead>
+    <tbody>
+      <tr><td>2023–2025, 50 bps</td><td class="num"><b>30.3%</b></td><td class="num">12.0%</td><td class="num">11.2%</td><td class="num">16.6%</td><td class="num"><b>+15.3%</b></td><td class="num">4.0</td><td class="num">−26.8%</td></tr>
+      <tr><td>2023–2025, 80 bps</td><td class="num">25.6%</td><td class="num">8.0%</td><td class="num">7.2%</td><td class="num">16.6%</td><td class="num">+15.3%</td><td class="num">4.0</td><td class="num">−27.4%</td></tr>
+      <tr class="hl"><td>2026 holdout, 50 bps</td><td class="num"><b>10.2%</b></td><td class="num">10.2%</td><td class="num">8.6%</td><td class="num">−10.9%</td><td class="num"><b>+0.4%</b></td><td class="num">0.06</td><td class="num">−17.5%</td></tr>
+      <tr><td>2026 holdout, 80 bps</td><td class="num">6.4%</td><td class="num">6.4%</td><td class="num">4.9%</td><td class="num">−10.9%</td><td class="num">+0.4%</td><td class="num">0.06</td><td class="num">−17.9%</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Against the equal-weight market the excess was +16.1% a year on 2023–25 (t 4.4) and +1.9% in 2026 (t 0.27). The equal-weight market is the expected return of a random book; the five-seed random book drawn here happened to sit about 1.5 points above it in 2026, so the true 2026 edge is closer to +1.9% than +0.4%, still indistinguishable from zero. The Nifty 500 is a price index, so it misses about 1.2% a year of dividends that the stock prices here include; the random and equal-weight books are the fair yardsticks.</p>
+  <h3>The final exam</h3>
+  <p>The frozen process was run once on 2026, which was never used to choose anything in round 3, with every alternative score and baseline side by side. A larger random baseline (25 seeds instead of 5) is included because the five-seed one turned out to sit above its own expectation in 2026.</p>
+  <div class="tablewrap" id="tbl-exam"></div>
+  <div class="chart-card">
+    <div class="ct">Growth of ₹1, January 2023 to October 2026</div>
+    <div class="cs">One continuous book, month-end values, after 50 bps. The 2026 holdout starts at the right of the dotted line.</div>
+    <svg id="chart-equity" viewBox="0 0 880 330" role="img" aria-label="Line chart: the production book grows from 1 to 2.25 rupees between January 2023 and October 2026, against about 1.4 for random picks, the equal-weight market and the Nifty 500"></svg>
+    <div class="legend">
+      <span class="chip"><span class="ln" style="border-color:var(--accent)"></span>Production book</span>
+      <span class="chip"><span class="ln dash" style="border-color:var(--accent)"></span>Same book, selling at the next open (carry)</span>
+      <span class="chip"><span class="ln" style="border-color:var(--muted)"></span>Random 20 stocks</span>
+      <span class="chip"><span class="ln dash" style="border-color:var(--muted)"></span>Equal-weight market</span>
+      <span class="chip"><span class="ln" style="border-color:var(--viz-ord-6)"></span>Nifty 500 (price)</span>
+    </div>
+    <div class="chart-note">Almost all of the gap opened in 2023–2025. From January 2026 the book moved with the random and equal-weight books.</div>
+  </div>
+  <div class="chart-card">
+    <div class="ct">Quarter by quarter: book minus random picks</div>
+    <div class="cs">Compounded quarterly return of the book minus the random 20-stock book. Shaded: 2026 holdout.</div>
+    <svg id="chart-quarters" viewBox="0 0 880 270" role="img" aria-label="Bar chart of quarterly excess returns: positive in 10 of 12 quarters of 2023 to 2025, close to zero in the 2026 quarters"></svg>
+    <div class="chart-note">Positive in <b>9 of 12</b> quarters of 2023–2025 (the misses were 2023 Q3, 2023 Q4 and 2025 Q1, all small), with 2024 the strongest year. The four 2026 quarters sit close to zero (+2.0%, −0.9%, −0.6%, −0.1%; the last is two weeks).</div>
+  </div>
+  <div class="tablewrap" id="tbl-years"></div>
+  <h3>What went wrong in 2026</h3>
+  <p>The model still ranked stocks in 2026: its IC held at 0.063 and the bottom-30% list kept underperforming. What failed was the top of the list. Per signal day, the 20 top-ranked stocks beat the equal-weight market by <b>+1.33%</b> per 20-day trade on 2023–25 (t 4.2 with a conservative correction for overlapping trades) but only <b>+0.11%</b> in 2026 (t 0.24). Two things explain most of it. First, 2026 was a momentum year: a plain 12-1 month momentum top-20 beat random picks by 32.9% a year, and this label deliberately removes momentum, so the book was tilted towards large, recently weak stocks. Second, the model's skill was always concentrated in spotting laggards (bottom-30% AUC 0.55) rather than leaders (top-30% AUC 0.52), and in 2026 the leader side fell to near a coin flip (0.508).</p>
+  <p>Averaging ten models did not change this. The single model's 2026 excess (+3.9%) was luck within model noise: three single models scored +3.9%, +2.1% and −1.1%, and every ensemble lands near zero.</p>
+  <div class="tablewrap" id="tbl-variants"></div>
+</section>
+
+<section id="robust">
+  <h2>Robustness: the devil's-advocate audit</h2>
+  <p>After the judges chose the label, an independent agent rebuilt it from scratch with its own code and tried to break it. Its verdict: <b>survives, with caveats</b>.</p>
+  <ul>
+    <li><b>Reproduction.</b> Its own forward windows matched the lab's with 0 mismatches over 3.0 M rows. The rebuilt rank matched the stored label to 3×10⁻⁸, and the retrained model's score correlated 0.9999999999986 with the original. No leakage and no simulator artefact were found.</li>
+    <li><b>New companies.</b> Split into two random halves of companies, both halves beat random on 2023–25 (+10.1%, t 2.4 and +12.1%, t 3.7). A model trained on one half and scored on the other kept its IC (0.055–0.061), so it is not memorising stock names.</li>
+    <li><b>Not a simple factor tilt.</b> Ten single-factor top-20 books (low volatility, reversal, small size, momentum, low beta, delivery, 52-week high, and a composite) earned between −11.3% and +9.3% a year over random on 2023–25. Regressed on six long-short factors, the book's alpha was <b>+17.7% a year (t 4.5)</b> with R² 0.05.</li>
+    <li><b>Smooth, no cliffs.</b> Top-K from 5 to 200 names, rebalancing every 1 to 20 days, costs from 30 to 200 bps: every 2023–25 cell beat random with t between 3.1 and 5.0. Smaller books earn more (K=5: +24–26%, K=20: +16–17%, K=50: +10–11%) and are noisier.</li>
+    <li><b>Not a lottery.</b> The whole trade distribution shifts. The median trade made +1.33% against −0.06% for random picks, and the share of trades losing more than 20% was 1.9% against 2.1%.</li>
+  </ul>
+  <div class="chart-card">
+    <div class="ct">The signal fades quickly: trade it the next morning</div>
+    <div class="cs">Excess return over random picks on 2023–2025 when the score is used L trading days late (phase-averaged, 50 bps).</div>
+    <svg id="chart-lag" viewBox="0 0 880 250" role="img" aria-label="Bar chart: excess return falls from 15.8 percent with no delay to 13.9 percent with one day, 12.7 with two, 11.8 with three, 8.4 with five and 5.5 with ten days of delay"></svg>
+    <div class="chart-note">Each day of delay costs about <b>1.9 points a year</b>; a 5-day delay loses almost half the edge. In 2026 the excess was +2.0% to +4.5% at every delay, none significant.</div>
+  </div>
+  <h3>Where the audit found weaknesses</h3>
+  <ul>
+    <li><b>2026 is weak.</b> In 2026 the single model's phase-averaged excess was +3.9% a year (t 0.60). Across three LightGBM seeds it was +3.9%, +2.1% and −1.1%, and a 3-seed rank ensemble made −0.2%. About 90% of the 2026 excess came in the first quarter.</li>
+    <li><b>2024 carried the selection window.</b> Excess over random by year: 2023 +11.4%, 2024 +27.6%, 2025 +8.0%. Every year is positive, and without 2024 the 2023–25 excess is +9.7%.</li>
+    <li><b>The edge lives in mid and small caps.</b> Re-ranked inside the top 200 stocks by turnover (an F&amp;O proxy) it was only +3.6% a year on 2023–25 (t 1.2). That is also where market impact bites.</li>
+    <li><b>Single models are noisy.</b> Two models trained with different random seeds share only 63% of their top 20 picks. Production must average several models.</li>
+    <li><b>Factor headwinds in 2026.</b> The label neutralises momentum, and 2026 was a momentum year: a plain 12-1 momentum top-20 earned +32.9% over random. The book was tilted to large, recently weak stocks.</li>
+  </ul>
+</section>
+
+<section id="scenarios">
+  <h2>Scenarios: what changes when the market changes</h2>
+  <p>The same 20-day labels, split by market conditions. The first nine scenarios are known on the signal day, so a trader could act on them. The last four use the market's actual next 20 days, which nobody knows in advance; they show what each label does in a crash or a rally.</p>
+  <div class="tablewrap" id="tbl-scenarios"></div>
+  <div class="two">
+    <div class="panel">
+      <h3>Direction labels are a market forecast</h3>
+      <p>Conditions known in advance barely move the direction label (44% to 58% of stocks "up"), so they cannot be used to time it. The market's actual move swings it from <b>14%</b> in a crash to <b>78%</b> in a rally. A model that learns the direction label is learning to forecast the market.</p>
+    </div>
+    <div class="panel">
+      <h3>Relative labels don't stop a falling market</h3>
+      <p>The relative label is 30% up in every row. What changes is what a +1 is worth: in a rally the top 30% averaged <b>+20.1%</b> net, in a crash only <b>+0.8%</b>, and fewer than half made money while the bottom 30% lost <b>19.0%</b>. Picking better stocks is a separate job from deciding how much to hold.</p>
+    </div>
+  </div>
+  <p class="note">2021–2026 holds only about 64 independent 20-day periods, so these splits describe the past; they are not trading rules.</p>
+  <h3>The tradable version: the production score in each scenario</h3>
+  <p>Per signal day: buy the 20 top-ranked stocks at the next open, sell 20 days later, pay 0.5%, and compare with every eligible stock bought the same way. The avoid tail is the bottom 30% of the score.</p>
+  <div class="tablewrap" id="tbl-prod-scen"></div>
+  <p>On 2023–2025 the top 20 beat the market in every condition known in advance (each with t above 2.5, even after a conservative correction for overlapping trades), and the avoid tail lagged in every one. In 2026 the top-20 edge was close to zero in almost every condition, while the avoid tail still lagged in most of them. The one exception was 2026's sharp rebound from mid-March to early April, when the avoid tail beat the market by 1.7% per trade: a rally led by beaten-down, volatile stocks, the names a momentum-neutral label ranks lowest. On the strong-rally days of 2023–25 the avoid tail kept lagging (−0.47%, t −3.9), so this was one episode rather than a rule.</p>
+</section>
+<section id="updown">
+  <h2>Up and down: what to do with the −1 side</h2>
+  <p>You asked for a label where "up is fine and down is fine". The label has both ends: +1 for stocks that will beat their peers and −1 for stocks that will lag them. Both ends carry real information. Whether each end can be turned into money is a separate question, and the answer differs.</p>
+  <div class="tablewrap" id="tbl-classes"></div>
+  <p class="note">These are realised classes, known only after 20 days. They show the label means something in rupees at both ends: 91% of +1 stocks made money after costs, and 71–76% of −1 stocks lost more than 5%.</p>
+  <div class="chart-card">
+    <div class="ct">What the score can actually see: 20-day return by score decile</div>
+    <div class="cs">Each day, all eligible stocks sorted into ten groups by the production score (1 = lowest, the avoid tail; 10 = highest). Average net return over the next 20 trading days after 0.5%.</div>
+    <svg id="chart-deciles" viewBox="0 0 880 280" role="img" aria-label="Grouped bars: on 2023 to 2025 the average 20-day return rises steadily from minus 0.4 percent in the lowest decile to plus 1.4 percent in the highest; in 2026 the lowest decile is still the worst but the top decile is no better than the middle"></svg>
+    <div class="legend">
+      <span class="chip"><span class="sw" style="background:var(--viz-ord-4)"></span>2023–2025</span>
+      <span class="chip"><span class="sw" style="background:var(--viz-ord-7)"></span>2026 (to 14 Oct)</span>
+    </div>
+    <div class="chart-note">On 2023–2025 the ten groups line up perfectly, from <b>−0.39%</b> to <b>+1.41%</b> per 20-day trade (top minus bottom +1.77%, t 2.3). In 2026 the lowest group was still the worst (−0.03%) but the top group (+0.97%) did no better than the middle. Even the lowest group roughly breaks even in absolute terms: a −1 forecast means "worse than the rest", rarely "will fall".</div>
+  </div>
+  <h3>Every way of using the down side, tested</h3>
+  <p>Ten pre-declared strategies, each simulated daily with Indian costs, margin and futures carry: index futures hedges, F&amp;O long/short books, a short overlay and a short-only book. Chosen on 2023–2025; 2026 reported only.</p>
+  <div class="tablewrap" id="tbl-downside"></div>
+  <p class="note">"Gain" is the yearly difference against the unhedged long book (for the avoid veto, against the equal-weight market), with its t-statistic. Adoption needed t ≥ 2 on 2023–25 without a drawdown more than 3 points worse. 2026 figures are annualised over the 185 trading days to 7 October. Sharpe is the plain return-to-volatility ratio; measured over the cash rate, the hedged books score lower than the unhedged one (1.05 and 0.95 against 1.15). Futures shorts earn the cash rate as carry (Nifty 1D Rate) and pay 25 bps per round trip; margin is 15% for index futures and 25% for stock futures, half held in cash.</p>
+  <div class="tablewrap" id="tbl-downside-verdict"></div>
+  <div class="two">
+    <div class="panel">
+      <h3>Use −1 as a veto and exit list</h3>
+      <p>Never buy a stock in the bottom 30% of the score; if you hold one for other reasons, treat it as an exit candidate. As a stand-alone screen this added <b>+3.4% a year</b> over the equal-weight market on 2023–25 (t 3.5) and +1.5% in 2026. It is not just "avoid volatile stocks": a plain high-volatility veto earned +0.3% (2023–25) and −3.5% (2026), and after controlling for volatility, beta, momentum and liquidity at once, the avoid list still kept about <b>3% a year</b> of stock-specific value in both windows (+2.9% on 2023–25, t 5.2; +3.1% in 2026, t 5.9).</p>
+    </div>
+    <div class="panel">
+      <h3>Don't short the −1 stocks</h3>
+      <p>The bottom decile barely falls, and shorting fights India's upward drift: a random F&amp;O short book returned −11.5% a year on 2023–25, 17 points behind cash. The model's shorts beat random shorts on 2023–25 (+8.8% a year, t 1.3) and lost to them badly in 2026 (−17.9%). Inside the F&amp;O list the score is weak (top minus bottom +0.9% per trade, t 1.4) and in 2026 the bottom F&amp;O decile rose the most.</p>
+    </div>
+  </div>
+  <p>An index hedge is a separate tool: it does not use the −1 side at all. Shorting Nifty 50 futures against the book (ex-ante beta) cut the 2023–25 maximum drawdown from −26.8% to −17.0% and its correlation with the market from 0.80 to 0.20, but it gave up about 9 points of annual return, because the hedge also gives up the market's rise. In 2026 the same hedge returned 34.9% a year, a windfall from large caps falling while the book's mid and small caps held up. That is one regime, not a forecast. Use a hedge as a dial for how much market risk you want, not as a source of return.</p>
+</section>
+<section id="invest">
+  <h2>How to invest with it</h2>
+  <p>The process below is the frozen baseline plus the one execution change that passed the pre-registered test. Each rule traces back to evidence on this page. Anything not listed was tested and rejected.</p>
+  <ol class="steps">
+    <li><b>After every close, rebuild and score.</b> Load the day's NSE bhavcopy, delivery file, index file and book-closure records, adjust prices, recompute the 52 features, and score every eligible stock with the production score (the average of ten models' daily ranks). Have the scores ready before the next morning's pre-open session: each day of delay costs about 1.9 points a year.</li>
+    <li><b>Mark the avoid list.</b> The bottom 30% of today's score. Never buy these names. If you hold one for any other reason, treat it as an exit candidate. Never short it.</li>
+    <li><b>Once a week, on a fixed weekday, rotate one sleeve.</b> The book has four sleeves of 20 names, and each week one sleeve is due. In the next morning's opening session, sell its names that are no longer in that evening's top 20, buy the new top-20 names, and leave untouched the names that are still in the top 20. Each name is held for at least 20 trading days. The results on this page average all five weekdays; any single weekday adds luck worth several points a year in either direction (−2.8% to +8.1% in 2026). If your operations allow it, renewing a twentieth of the book every trading day removes that luck.</li>
+    <li><b>Size equally.</b> 1/80 of capital per name (1/20 of a sleeve), capped at 5% of the stock's 20-day median traded value. Anything above the cap waits in a liquid fund.</li>
+    <li><b>Hold for 20 trading days.</b> No stop-losses, profit targets or trailing stops. Exit early only when forced by a suspension or a corporate action that cannot be adjusted (demergers, schemes of arrangement).</li>
+    <li><b>Choose market exposure once, not every week.</b> 100% invested is the default. If the drawdowns below are too deep for you, hold a fixed 80% or 60% with the rest in a liquid fund. Do not time the market with the 200-day average, VIX or breadth.</li>
+    <li><b>Retrain once a year</b> with the same recipe: ten LightGBM models (five seeds × two halves of the training dates), an expanding window, a 22-day embargo, ranks averaged per day.</li>
+    <li><b>Check the dashboard every week</b> and apply the review and kill rules in What to expect.</li>
+  </ol>
+
+  <h3>Why trade at the open and keep what still qualifies</h3>
+  <p>The frozen book sold every position at the close of its 20th day and bought the replacements at the next open, so it was out of the market every rebalance night. Holding through that night, trading only in the next opening session and keeping names that are still in the top 20 added <b>+3.8% a year</b> on 2023–25 (paired t 12.7) and +2.1% in 2026, with no change in drawdown. It also cut orders from about 39 to 36 a week. Random picks gain +3.2% a year from the same timing, and 83% of the gain comes simply from selling at the next open instead of the close, so this is the Indian overnight premium, not stock-picking skill. Measured against a random book traded the same way, the skill is unchanged: +15.9% a year on 2023–25 and +0.4% in 2026. The rule was added after the first carry rule turned out to decide at the close using that same close's signal (not executable). It passes the adoption test's thresholds but was not on the pre-declared list, so treat it as an execution convention, not a finding. The overnight premium also shrank from 0.34% a night in 2024 to 0.13% in 2026, so treat the gain as uncertain and watch your opening fills.</p>
+  <h3>Every add-on, judged by the pre-registered rule</h3>
+  <p>An add-on was adopted only if it was declared in advance (or disclosed as an extra), could be traded as specified, improved the 2023–25 book with a paired t of at least 2, and did not deepen the worst fall by more than 3 points. Twenty-one were judged.</p>
+  <div class="tablewrap" id="tbl-addons"></div>
+  <p class="note">Positive "change in worst fall" means a shallower drawdown. Several rejected ideas cut drawdowns (index hedges, early exits, lower exposure) but gave up return; they remain available as risk dials, not as edges. The avoid veto is not an add-on to the top-20 book, which never holds bottom-30% names; it is the avoid list already in the process.</p>
+
+  <h3>How much money it can run</h3>
+  <div class="chart-card">
+    <div class="ct">Returns after market impact, by fund size (2023–2025)</div>
+    <div class="cs">Each name gets 1/80 of the fund. Impact per side = daily volatility × √(position ÷ 20-day median traded value), on top of 50 bps. Lines for the full liquid universe (≥ ₹2 cr a day) and the more liquid one (≥ ₹5 cr a day), with and without a 5%-of-volume cap.</div>
+    <svg id="chart-capacity" viewBox="0 0 880 300" role="img" aria-label="Line chart: annual return falls from about 28 percent at one crore rupees to between 5 and 14 percent at one hundred crore, crossing the Nifty 500 line near twenty-five crore"></svg>
+    <div class="chart-note">For the frozen book, this conservative impact model brings its return down to the Nifty 500's at about <b>₹25 crore</b> (about ₹21 crore against a Nifty 500 that includes dividends) and to the equal-weight market's at about <b>₹53 crore</b>. A 5% participation cap protects larger funds (13.7% at ₹50 crore instead of 11.8%). With open-session execution the crossings move out to about ₹52 crore and ₹88 crore (₹43 crore against a dividend-inclusive Nifty 500), but then every trade goes through the opening auction, whose depth no model here captures. In 2026 there was no margin to spend on impact at any size.</div>
+  </div>
+  <div class="tablewrap" id="tbl-ops"></div>
+  <p class="note">Keep to about ₹20 crore (₹25 lakh per name) until live fills show the opening session can absorb more. The book places about 39 orders a week (36 with the open-session carry) and holds about 74 names on a typical day.</p>
+
+  <h3>Costs and tax</h3>
+  <p>Turnover is high: about 12.6 round trips a year per slot, or 986 a year for the whole book. At 50 bps that is a cost drag of about 6.2% a year (5.7% with the carry), already inside every return on this page. Slippage beyond about 14 bps per side against the official open uses up the 50 bps budget, and at the 80 bps stress level 2023–25 returns fall by 4.7 points a year. All gains are short-term for an individual, and securities transaction tax is not deductible from capital gains, so tax is due even in flat years.</p>
+  <div class="tablewrap" id="tbl-tax"></div>
+  <p class="note">Illustration only, not tax advice: calendar years, tax paid at year end, short-term losses carried forward, open positions treated as realised at the end. The capital-gains rates shown exclude the 4% health and education cess; with it, the after-tax returns are 20.4% for the frozen book, 24.1% with open-session execution and 9.3% for buy-and-hold Nifty 500. Frequent trading may be assessed as business income (shown at 31.2%, cess included). The Nifty 500 row uses the price index, so its dividends (about 1.2% a year) are missing.</p>
+</section>
+<section id="expect">
+  <h2>What to expect, and when to stop</h2>
+  <p>The planning number is an edge of about <b>+4.4% a year</b> over random picks (90% range −1.1% to +9.9%, a 90% chance it is positive), or <b>+6.9%</b> over the equal-weight market, not the +15% seen on 2023–25. It is the 2023–25 result after the multiple-testing haircut (+5.7%), weighed by precision together with a 2026 exam that showed almost no edge. The ranges below were simulated at a round +5%, close enough to the same picture.</p>
+  <div class="tablewrap" id="tbl-forward"></div>
+  <p>In plain numbers, before tax and after 0.5% costs: if the market repeats 2023–25 (equal-weight market +11.2% a year), the book would make about <b>16–18%</b> a year; in a year like 2026 (+8.6%), about <b>13–16%</b>; in a period like 2021–22 (−2.5%), about <b>2–4%</b>. Selling at the next open adds the overnight premium on top (+3.2% a year on 2023–25, +2.1% in 2026, shrinking). Short-term capital-gains tax, including cess, takes about 4.2% a year (5.0% with the open-session execution).</p>
+  <div class="tablewrap" id="tbl-expect-lead"></div>
+  <p>Even with a real +5% edge, about <b>one year in four</b> ends behind random picks, and a strategy with no edge at all looks like a +5% one about one year in four. One year of live results cannot tell a working book from a dead one. That is why the stop rules below combine money with signal quality. These ranges are for a book that staggers its entries across the week; a book that always buys on the same weekday is a little noisier (about a 26% chance of a year behind random).</p>
+  <div class="tablewrap" id="tbl-expect-rupees"></div>
+  <p class="note">Total return = the equal-weight market plus the edge, resampled together in 40-day blocks of 2023–25 history. The market part keeps its 2023–25 average (11.2% a year after costs), which may be optimistic. The edge moves the middle of the range; market risk sets its width.</p>
+
+  <h3>Drawdowns are market drawdowns</h3>
+  <div class="chart-card">
+    <div class="ct">Fall from the running peak, January 2023 to October 2026</div>
+    <div class="cs">Weekly. The book against random picks, the equal-weight market and the Nifty 500 (price).</div>
+    <svg id="chart-dd" viewBox="0 0 880 280" role="img" aria-label="Line chart of drawdowns: the book's worst fall is minus 27 percent in early 2025, similar to random picks and the equal-weight market, while the Nifty 500 fell about 15 percent"></svg>
+    <div class="legend">
+      <span class="chip"><span class="ln" style="border-color:var(--accent)"></span>Book</span>
+      <span class="chip"><span class="ln" style="border-color:var(--muted)"></span>Random 20 stocks</span>
+      <span class="chip"><span class="ln dash" style="border-color:var(--muted)"></span>Equal-weight market</span>
+      <span class="chip"><span class="ln" style="border-color:var(--viz-ord-6)"></span>Nifty 500 (price)</span>
+    </div>
+  </div>
+  <div class="tablewrap" id="tbl-dd"></div>
+  <p>The worst fall, from December 2024 to March 2025, was a broad small- and mid-cap sell-off: random picks and the equal-weight market fell just as far. The model did not cause it and could not avoid it, and the book took 387 trading days to recover. This is a fully invested mid- and small-cap book. In the six months when the Nifty 500 fell more than 3%, the book averaged −8.1% against −6.4% for the index. Its edge showed up in flat and rising months.</p>
+  <div class="tablewrap" id="tbl-exposure"></div>
+  <p class="note">Holding less of the market scales return and drawdown together: the Sharpe ratio over cash stays at 1.15 for 100%, 80% and 60% invested. The breadth governor looked better on 2023–25, but all of that came from the one sell-off (+12.2% there, −18.8% the rest of the time), and on 2021–22 it switched about ten times a year and did worse than staying invested. It is not part of the process.</p>
+
+  <h3>The weekly dashboard</h3>
+  <div class="tablewrap" id="tbl-dashboard"></div>
+  <p class="note">Hit rates, returns and overlaps are fractions (0.553 = 55.3%); IC is a rank correlation. Every outcome-based measure is known 20 trading days after its signal. 2026 shows the failure mode to watch for: signal quality and the relative hit rate stayed normal while the top 20's lead over the market nearly vanished.</p>
+
+  <h3>Review and kill rules</h3>
+  <div class="tablewrap" id="tbl-killrules"></div>
+  <div class="two">
+    <div class="panel">
+      <h3>Review (investigate, no automatic action)</h3>
+      <p>Any one of: the 6-month lead over random below −5%; the 3-month average IC below 0.02; the 12-month lead over random below zero. Expect at least one review in two years even for a good book (72% chance).</p>
+    </div>
+    <div class="panel">
+      <h3>Kill (stop new entries, let sleeves run off)</h3>
+      <p>Only when the 12-month lead over random is below zero <b>and</b> the 3-month IC is below 0.02 at the same weekly check. False-alarm rate 7.6% within 24 months for a good book; it catches a dead strategy 85.5% of the time, typically after about a year.</p>
+    </div>
+  </div>
+  <p>On the backtest, only the 6-month review fired, in January 2024, and it was a false alarm: the 12-month lead never fell below 6.6%. No rule fired in 2026. At the last check (30 Sep 2026) the 12-month lead was +7.8%, but it still contains the strong final quarter of 2025, so a review is likely in early 2027 unless new excess appears.</p>
+  <h3>The forward test: frozen before any new data arrives</h3>
+  <p>2026 was reported in earlier rounds, so the only clean exam is data after 14 October 2026. The protocol is fixed now:</p>
+  <ol class="steps">
+    <li><b>Frozen specification.</b> The label recipe, the ten-model production score, the four-sleeve top-20 book with open-session execution, 50 bps costs (80 bps stress), the ₹2 crore liquidity universe, the bottom-30% avoid list and 100% exposure. No hedge, no market-timing layer, no event sleeve.</li>
+    <li><b>Clock.</b> Signals from 15 October 2026 count as fresh. Every week the lab recomputes the paper book (all five weekdays averaged), the open-session version, random books with 25 seeds under both timings, the equal-weight market and the Nifty 500 with a dividend proxy. The live account, on its one weekday, is reported alongside.</li>
+    <li><b>Retraining.</b> Once a year in the first week of January, starting January 2027, with the identical recipe: the same ten models, features, parameters and label, trained on everything up to 22 trading days before 1 January.</li>
+    <li><b>Success test.</b> At each annual review, the fresh lead of the paper book over 25-seed random picks. It counts as confirmed when the one-sided t reaches 1.645. The plan is rejected if the fresh lead falls below the planning number by more than its combined uncertainty (about −5.5% a year after 24 months); the planning number is then updated, and an updated estimate at or below zero stops the strategy.</li>
+    <li><b>Review and kill.</b> The rules above, plus two operating checks: review if 3-month average slippage against the official open exceeds 13.85 bps per side and stop adding capital above 28.85 bps; and if the 6-month average overnight move of the names being sold turns negative, go back to selling at the close.</li>
+    <li><b>Challengers in the shadows.</b> A single model, the 3-model average, the weekly avoid-list exit and the ₹5 crore universe are tracked on fresh data only. A challenger replaces the production process only after at least 24 months, with a paired t of at least 2.24 (adjusted for four challengers) and a worst fall no more than 3 points deeper.</li>
+  </ol>
+  <div class="tablewrap" id="tbl-power"></div>
+  <p class="note">Patience is required: with a true edge of +4.4% a year, fresh data alone confirms it with only a 15% chance after 12 months and 22% after 24. The kill rule, not the confirmation test, is what protects the money from a dead strategy. A review is likely by March 2027 (64% chance even with the planned edge), because the strong final quarter of 2025 will drop out of the 12-month window.</p>
+</section>
+
+<section id="trust">
+  <h2>How much to trust it</h2>
+  <p>Testing about 2,000 variants on three years of data guarantees that some look good by luck. These are the corrections we applied, and what is left after them.</p>
+  <div class="tablewrap"><table>
+    <caption>Deflated Sharpe ratio of the selected book's 2023–25 excess (probability that it is real after allowing for N tries)</caption>
+    <thead><tr><th>Number of tries assumed (N)</th><th class="num">Null spread 1.0</th><th class="num">Null spread 1.1</th></tr></thead>
+    <tbody>
+      <tr><td>71 (effective, correlation-adjusted, Li-Ji)</td><td class="num">0.96</td><td class="num">0.94</td></tr>
+      <tr><td>210 (effective, Nyholt)</td><td class="num">0.92</td><td class="num">0.87</td></tr>
+      <tr><td>477 (round-2 relative specs only)</td><td class="num">0.87</td><td class="num">0.79</td></tr>
+      <tr><td>1,469 (all of round 2)</td><td class="num">0.78</td><td class="num">0.67</td></tr>
+      <tr><td>1,991 (whole programme)</td><td class="num">0.76</td><td class="num">0.63</td></tr>
+      <tr><td>3,727 (every run, including reruns)</td><td class="num">0.70</td><td class="num">0.56</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">The usual bar is 0.95. The family-level finding (factor-neutral relative labels beat random at 20 days) clears it easily: 73% of 429 relative specifications had t &gt; 2 on 2023–25. The exact specification does not clear it unless only the correlation-adjusted count of about 71 independent tries is used. A Bonferroni haircut at N = 1,991 cuts the 2023–25 excess from +15.8% to <b>+6.7% a year</b>.</p>
+  <ul>
+    <li><b>Phase luck.</b> A book that buys on one fixed weekday is exposed to which weekday that is. Across the five possible weekly calendars the 2026 excess ranged from −2.0% to +9.2%. Every headline number here is the average over all five (equivalent to staggering entries daily).</li>
+    <li><b>Model noise is as large as the differences between label variants.</b> Two labels that agree on 99.5% of rows produced books 1–4 points a year apart. 2023–25 data cannot tell the rank, 20/60/20 and top-30% encodings apart; the rank won on simplicity, lowest factor loading and best IC.</li>
+    <li><b>The holdout is lightly used.</b> Round 1 reported 2026 numbers, which shaped round 2's focus on relative labels. 2026 is therefore a confirmation, not a clean exam. The clean exam is data after 14 Oct 2026, under the frozen protocol in What to expect.</li>
+    <li><b>Small effective sample.</b> 2023–25 holds only about 37 independent 20-day market windows. Year-level uncertainty is larger than a Newey-West t suggests.</li>
+    <li><b>Selection statistics are weak predictors.</b> Across 22 candidates, the 2023–25 t-statistic predicted the 2026 result poorly (Spearman 0.37); the 2023–25 excess did better (0.73), and structural regime-freeness was the best predictor of holdout survival. One ensemble with the best 2023–25 t (4.37) lost 7% a year in 2026.</li>
+  </ul>
+</section>
+
+<section id="rejected">
+  <h2>What we rejected, and why</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Idea</th><th>Why it was rejected</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>Stop-losses, profit targets, ATR trailing stops</td><td>They sell rebounds and cut winners early</td><td>Fixed 20-day holds captured 81–113% of the natural exit; every stop variant lowered returns</td></tr>
+      <tr><td>Market timing with the 200-day average</td><td>Indian 20-day index returns mean-reverted in this sample</td><td>Cost 20–24 points of annual return in 2026</td></tr>
+      <tr><td>VIX, 60-day momentum, a vote of signals, volatility targeting</td><td>Signs flip between periods</td><td>9 walk-forward timing models all had AUC 0.39–0.47 on 2023–25</td></tr>
+      <tr><td>Shorting single stocks</td><td>No overnight shorts in the cash segment; F&amp;O shorts lost money</td><td>Every short setup had negative expectancy (−66 to −216 bps per trade)</td></tr>
+      <tr><td>5-day holds</td><td>Costs</td><td>A random 5-day book loses 16% a year at 50 bps</td></tr>
+      <tr><td>Dedicated "down" models</td><td>They learn volatility, not losers</td><td>Score correlation −0.73 with idiosyncratic volatility; −2.0 to −2.7%/yr as avoid screens in 2026</td></tr>
+      <tr><td>Ensembles with barrier or trend models</td><td>They add a hidden market bet</td><td>Best 2023–25 t (4.37) but −7% a year in 2026</td></tr>
+      <tr><td>Sector-relative features</td><td>The only sector map was a 2026 snapshot (look-ahead)</td><td>"Has a sector" stocks earned +56 bps per trade in 2021–25 and +12 bps in 2026</td></tr>
+      <tr><td>The capitulation sleeve inside the core book</td><td>It is already partly in the core and lowers the total</td><td>Core plus sleeve 30.6% vs core 30.9% (2023–25), 13.8% vs 16.0% (2026)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="corrections">
+  <h2>Data corrections made during the research</h2>
+  <p>Several things we believed early on turned out to be wrong. Each correction was made before the label was chosen, and the affected results were rebuilt.</p>
+  <ul>
+    <li><b>NSE's PREV_CLOSE is not adjusted for corporate actions.</b> An early check treated close-to-prev-close gaps as corporate actions and found thousands. The real cause was missing weekend sessions (the Muhurat Sunday of 12 Nov 2023, the special Saturday sessions of 20 Jan, 2 Mar and 18 May 2024, and the Budget sessions of 1 Feb 2025 and 1 Feb 2026). We downloaded those sessions and rebuilt adjustments from NSE's book-closure records: 8,545 dividends, 550 of 559 splits and bonuses located on the exact price-gap day, 161 rights issues, and 457 stock-days blocked where no adjustment was possible. The earlier audit and label review were corrected.</li>
+    <li><b>Company identity follows the ISIN, not the ticker.</b> 255 companies changed symbol and 341 ISIN changes were bridged where the symbol continued; 7 reused symbols were kept apart.</li>
+    <li><b>Sector data was a 2026 snapshot.</b> Using it leaked future index membership into 2021–25 (+56 bps per trade that vanished in 2026). Removed.</li>
+    <li><b>ETFs and fund units were in the universe</b> (3.5% of eligible rows). Removed.</li>
+    <li><b>A "next bar exists" eligibility flag looked ahead.</b> Removed; the label is blank anyway when the next bar is missing.</li>
+    <li><b>The first simulator overstated Sharpe by 12–24% and understated drawdowns by 2.6–3.3 points.</b> Replaced by a daily mark-to-market simulator, validated against a hand-calculated trade to the paisa and against foresight canaries.</li>
+  </ul>
+</section>
+
+<section id="glossary">
+  <h2>Glossary</h2>
+  <div class="tablewrap"><table>
+    <tbody>
+      <tr><td><b>Event rate</b></td><td>The share of rows in each label class (for example 30% +1, 40% 0, 30% −1).</td></tr>
+      <tr><td><b>Relative label</b></td><td>A label that compares a stock with the other stocks on the same day, so the market's direction cancels out.</td></tr>
+      <tr><td><b>Residual</b></td><td>The part of a stock's return not explained by its beta, volatility, size and momentum on that day.</td></tr>
+      <tr><td><b>IC</b></td><td>Information coefficient: the rank correlation between the model's score and the realised outcome across stocks on a day, averaged over days. 0.05 is useful in equities.</td></tr>
+      <tr><td><b>AUC</b></td><td>The probability that a randomly chosen stock from a class gets a higher score than one outside it. 0.5 is a coin flip. Measured within each day here.</td></tr>
+      <tr><td><b>Random book</b></td><td>The same portfolio rules with stocks chosen at random (5 seeds). The baseline every result is compared with.</td></tr>
+      <tr><td><b>Equal-weight universe</b></td><td>Holding every eligible stock in equal amounts on the same calendar.</td></tr>
+      <tr><td><b>Excess</b></td><td>The average daily difference between the book and the random book (or the equal-weight market), times 252. It is smaller than the gap between the two compound annual returns: on 2023–25, 15.3% against a compound gap of 18.3 points.</td></tr>
+      <tr><td><b>t (Newey-West)</b></td><td>The t-statistic of the daily excess, corrected for overlapping holding periods. Above about 2 is unlikely to be luck for a single test.</td></tr>
+      <tr><td><b>Phase-averaged</b></td><td>The average of the five possible weekly entry calendars, which equals a book that staggers its entries every day.</td></tr>
+      <tr><td><b>Deflated Sharpe ratio</b></td><td>The probability that a strategy's Sharpe ratio is above zero after allowing for how many strategies were tried.</td></tr>
+      <tr><td><b>Sleeve</b></td><td>One quarter of the book. Each week one sleeve is sold and rebought, so every position is held for 20 trading days.</td></tr>
+      <tr><td><b>Avoid list</b></td><td>The bottom 30% of the score on a day. Never buy these; consider exiting them.</td></tr>
+      <tr><td><b>2023–25 / DEV</b></td><td>The selection window. Every choice was made on it.</td></tr>
+      <tr><td><b>2026 / holdout</b></td><td>1 Jan – 14 Oct 2026. Reported, never used to choose.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="reproduce">
+  <h2>Reproducing the study</h2>
+  <p>Everything runs from one research lab built for this study, separate from the SuryaDhana codebase. The pipeline, in order:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Step</th><th>File</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Download</td><td><code>download.py</code>, <code>download_extra.py</code></td><td>NSE bhavcopies (legacy and UDiFF formats), delivery files, index closes, weekend special sessions and book-closure records, 2021–2026</td></tr>
+      <tr><td>Build the panel</td><td><code>build_panel.py</code>, <code>ca.py</code></td><td>ISIN-based company identity, corporate-action adjustment from book closures, label blocks, segment breaks</td></tr>
+      <tr><td>Features, labels, simulator</td><td><code>lablib.py</code></td><td>52 point-in-time features, eligibility filters, forward windows, walk-forward training, the daily mark-to-market book simulator</td></tr>
+      <tr><td>Production score</td><td><code>build_prod.py</code></td><td>The ten-model ensemble on the frozen label (pre-registered in <code>PREREG_R3.md</code>)</td></tr>
+      <tr><td>Shared round-3 tools</td><td><code>r3common.py</code></td><td>Phase-averaged books, cached random and equal-weight baselines, paired tests</td></tr>
+      <tr><td>Results</td><td><code>results/&lt;agent&gt;/results.json</code></td><td>Every number on this page, by agent and round; briefs in <code>TEAM_BRIEF.md</code>, <code>ROUND2_BRIEF.md</code>, <code>ROUND3_BRIEF.md</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Lab folder: <code>/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab</code>. It lives in the research session's scratch space, so copy it into the repository if you want to keep it.</p>
+</section>
+
+<footer>
+  <p>Prepared for SuryaDhana AI by a team of research agents (round 1: five label specialists and an auditor; round 2: five refiners, a portfolio-manager judge, a statistician judge and a devil's advocate; round 3: four process builders, four adversarial verifiers and a final examiner). All numbers come from the lab's saved results and were reproduced by an independent agent. Data: NSE cash-market bhavcopies (legacy and UDiFF formats), security-wise delivery files, index closing files and book-closure records, 1 Jan 2021 – 14 Oct 2026. This is research, not investment advice.</p>
+</footer>
+</div>
+
+<script type="application/json" id="report-data">__REPORT_DATA__</script>
+<script>
+(function () {
+  "use strict";
+  var DATA = JSON.parse(document.getElementById("report-data").textContent);
+  var NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) {
+      if (k === "text") e.textContent = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    }
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function tip(node, text) { el("title", { text: text }, node); }
+  function fx(v, d) { var s = Math.abs(v).toFixed(d); return (v < 0 && +s !== 0 ? "−" : "") + s; }
+  function pct(v, d) { if (v === null || v === undefined || isNaN(v)) return "–"; return fx(v * 100, d === undefined ? 1 : d) + "%"; }
+  function spct(v, d) { if (v === null || v === undefined || isNaN(v)) return "–"; var s = (v * 100).toFixed(d === undefined ? 1 : d); return (v > 0 ? "+" : v < 0 ? "−" : "") + s.replace("-", "") + "%"; }
+  function ticks(min, max, n) {
+    var span = max - min, step = Math.pow(10, Math.floor(Math.log10(span / n))), err = (n * step) / span;
+    if (err <= 0.15) step *= 10; else if (err <= 0.35) step *= 5; else if (err <= 0.75) step *= 2;
+    var out = [], v = Math.ceil(min / step) * step;
+    for (; v <= max + 1e-12; v += step) out.push(Math.round(v / step) * step);
+    return out;
+  }
+  window.SLS = { el: el, tip: tip, pct: pct, spct: spct, ticks: ticks, DATA: DATA };
+
+  /* ---------- bias chart ---------- */
+  (function () {
+    var svg = document.getElementById("chart-bias"); if (!svg) return;
+    var B = DATA.bias_monthly, n = B.months.length;
+    var W = 880, H = 330, m = { l: 48, r: 56, t: 14, b: 34 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b, bw = iw / n;
+    var x = function (i) { return m.l + bw * (i + 0.5); };
+    var y = function (v) { return m.t + ih * (1 - v); };
+    var mx = 0.16, y2 = function (v) { return m.t + ih * (0.5 - v / (2 * mx)); };
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (t) {
+      el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), style: "stroke:var(--grid);stroke-width:1" }, svg);
+      el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end", "class": "svgtext", text: pct(t, 0) }, svg);
+    });
+    [-0.15, -0.1, -0.05, 0, 0.05, 0.1, 0.15].forEach(function (t) {
+      el("text", { x: W - m.r + 8, y: y2(t) + 4, "class": "svgtext", text: spct(t, 0) }, svg);
+    });
+    B.mkt_fwd20_mean.forEach(function (v, i) {
+      var top = Math.min(y2(v), y2(0)), h = Math.abs(y2(v) - y2(0));
+      var r = el("rect", { x: x(i) - bw * 0.36, y: top, width: bw * 0.72, height: Math.max(h, 0.5), style: "fill:" + (v >= 0 ? "var(--viz-up)" : "var(--viz-down)") + ";opacity:0.4" }, svg);
+      tip(r, B.months[i] + ": Nifty 500 average 20-day move " + spct(v));
+    });
+    function line(vals, style, name) {
+      var d = "", pen = false;
+      vals.forEach(function (v, i) {
+        if (v === null || isNaN(v)) { pen = false; return; }
+        d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); pen = true;
+      });
+      el("path", { d: d, style: "fill:none;" + style }, svg);
+      vals.forEach(function (v, i) {
+        if (v === null || isNaN(v)) return;
+        var c = el("circle", { cx: x(i), cy: y(v), r: 6, style: "fill:transparent" }, svg);
+        tip(c, B.months[i] + " · " + name + ": " + pct(v));
+      });
+    }
+    line(B.barrier_h20, "stroke:var(--muted);stroke-width:1.4;stroke-dasharray:4 3", "Triple barrier up-share");
+    line(B.abs_sign_h20, "stroke:var(--viz-ink);stroke-width:2.2", "Direction label up-share");
+    line(B.relative_h20, "stroke:var(--accent);stroke-width:2.6", "Relative label +1 share");
+    var lastYear = "";
+    B.months.forEach(function (mo, i) {
+      var yr = mo.slice(0, 4);
+      if (yr !== lastYear && mo.slice(5) <= "06") {
+        el("line", { x1: x(i) - bw / 2, x2: x(i) - bw / 2, y1: H - m.b, y2: H - m.b + 5, style: "stroke:var(--axis)" }, svg);
+        el("text", { x: x(i) - bw / 2 + 3, y: H - m.b + 18, "class": "svgtext", text: yr }, svg);
+        lastYear = yr;
+      }
+    });
+    el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, style: "stroke:var(--axis)" }, svg);
+  })();
+
+  /* ---------- grouped bars helper ---------- */
+  function groupedBars(svg, o) {
+    var W = o.W || 880, H = o.H || 300, m = o.m || { l: 52, r: 16, t: 18, b: 36 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b;
+    var lo = o.min, hi = o.max, y = function (v) { return m.t + ih * (hi - v) / (hi - lo); };
+    ticks(lo, hi, 6).forEach(function (t) {
+      el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), style: "stroke:var(--grid);stroke-width:1" }, svg);
+      el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end", "class": "svgtext", text: o.fmt(t) }, svg);
+    });
+    var G = o.groups.length, S = o.series.length, gw = iw / G, bw = Math.min(46, (gw * 0.78) / S);
+    if (o.shadeFrom !== undefined) {
+      el("rect", { x: m.l + gw * o.shadeFrom, y: m.t, width: gw * (G - o.shadeFrom), height: ih, style: "fill:var(--accent-soft);opacity:0.7" }, svg);
+      el("text", { x: m.l + gw * o.shadeFrom + 6, y: m.t + 12, "class": "svgtext strong", text: o.shadeLabel || "" }, svg);
+    }
+    o.groups.forEach(function (g, gi) {
+      var cx = m.l + gw * (gi + 0.5);
+      o.series.forEach(function (s, si) {
+        var v = s.values[gi]; if (v === null || v === undefined) return;
+        var bx = cx - (S * bw) / 2 + si * bw;
+        var r = el("rect", { x: bx + 1, y: Math.min(y(v), y(0)), width: bw - 2, height: Math.max(Math.abs(y(v) - y(0)), 0.8), rx: 2, style: "fill:" + (typeof s.color === "function" ? s.color(v) : s.color) }, svg);
+        tip(r, g + " · " + s.name + ": " + o.fmt(v, 1));
+        if (o.labels !== false) el("text", { x: bx + bw / 2, y: v >= 0 ? y(v) - 4 : y(v) + 12, "text-anchor": "middle", "class": "svgtext val", text: o.fmt(v, o.labelDigits === undefined ? 1 : o.labelDigits) }, svg);
+      });
+      el("text", { x: cx, y: H - m.b + 18, "text-anchor": "middle", "class": "svgtext" + (o.groupLabelClass === undefined ? " strong" : o.groupLabelClass), text: g }, svg);
+    });
+    el("line", { x1: m.l, x2: W - m.r, y1: y(0), y2: y(0), style: "stroke:var(--axis);stroke-width:1" }, svg);
+    (o.refs || []).forEach(function (rf) {
+      el("line", { x1: m.l, x2: W - m.r, y1: y(rf.v), y2: y(rf.v), style: "stroke:var(--muted);stroke-width:1.2;stroke-dasharray:5 4" }, svg);
+      if (rf.label) el("text", { x: W - m.r - 4, y: y(rf.v) - 5, "text-anchor": "end", "class": "svgtext", text: rf.label }, svg);
+    });
+  }
+  window.SLS.groupedBars = groupedBars;
+
+  /* ---------- cost curve (phase-averaged random books, R3_scen) ---------- */
+  (function () {
+    var svg = document.getElementById("chart-cost"); if (!svg) return;
+    var c = DATA.R3_scen && DATA.R3_scen.charts ? DATA.R3_scen.charts.random_book_cagr_by_horizon : null;
+    var C = DATA.cost_curve, hs = ["h5", "h10", "h15", "h20"];
+    var s0 = c ? c.series["No cost, 2023-25"] : hs.map(function (h) { return C[h].c0.dev; });
+    var s50 = c ? c.series["0.5% cost, 2023-25"] : hs.map(function (h) { return C[h].c50.dev; });
+    var s80 = c ? c.series["0.8% cost, 2023-25"] : hs.map(function (h) { return C[h].c80.dev; });
+    groupedBars(svg, {
+      groups: ["5 days", "10 days", "15 days", "20 days"], min: -0.3, max: 0.25,
+      fmt: function (v, d) { return spct(v, d === undefined ? 0 : d); },
+      series: [
+        { name: "No cost", color: "var(--viz-ord-2)", values: s0 },
+        { name: "50 bps", color: "var(--viz-ord-4)", values: s50 },
+        { name: "80 bps", color: "var(--viz-ord-7)", values: s80 }
+      ],
+      refs: [{ v: 0.1545, label: "Nifty 500" }]
+    });
+  })();
+
+  /* ---------- signal lag ---------- */
+  (function () {
+    var svg = document.getElementById("chart-lag"); if (!svg) return;
+    groupedBars(svg, {
+      H: 250, groups: ["same day", "1 day", "2 days", "3 days", "5 days", "10 days"], min: 0, max: 0.18,
+      fmt: function (v, d) { return spct(v, d === undefined ? 0 : d); },
+      series: [{ name: "Excess over random", color: "var(--viz-up)", values: [0.158, 0.139, 0.127, 0.118, 0.084, 0.055] }]
+    });
+  })();
+  /* ---------- generic line chart (categorical or date-like x) ---------- */
+  function lineChart(svg, o) {
+    var W = o.W || 880, H = o.H || 320, m = o.m || { l: 56, r: 92, t: 16, b: 34 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b, n = o.x.length;
+    var all = [];
+    o.series.forEach(function (s) { s.values.forEach(function (v) { if (v !== null && !isNaN(v)) all.push(v); }); });
+    var lo = o.min !== undefined ? o.min : Math.min.apply(null, all), hi = o.max !== undefined ? o.max : Math.max.apply(null, all);
+    var pad = (hi - lo) * 0.06; if (o.min === undefined) lo -= pad; if (o.max === undefined) hi += pad;
+    var x = function (i) { return m.l + (n === 1 ? iw / 2 : iw * i / (n - 1)); };
+    var y = o.log
+      ? function (v) { return m.t + ih * (Math.log(hi) - Math.log(v)) / (Math.log(hi) - Math.log(lo)); }
+      : function (v) { return m.t + ih * (hi - v) / (hi - lo); };
+    (o.tickVals || ticks(lo, hi, o.yTicks || 6)).forEach(function (t) {
+      if (t < lo - 1e-9 || t > hi + 1e-9) return;
+      el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), style: "stroke:var(--grid);stroke-width:1" }, svg);
+      el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end", "class": "svgtext", text: o.fmt(t) }, svg);
+    });
+    if (o.zero !== undefined) el("line", { x1: m.l, x2: W - m.r, y1: y(o.zero), y2: y(o.zero), style: "stroke:var(--axis);stroke-width:1" }, svg);
+    var last = "";
+    o.x.forEach(function (lab, i) {
+      var k = o.xKey ? o.xKey(lab) : lab;
+      if (k !== last) {
+        el("line", { x1: x(i), x2: x(i), y1: H - m.b, y2: H - m.b + 5, style: "stroke:var(--axis)" }, svg);
+        el("text", { x: x(i) + 3, y: H - m.b + 18, "class": "svgtext", text: k }, svg);
+        last = k;
+      }
+    });
+    el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, style: "stroke:var(--axis)" }, svg);
+    var ends = [];
+    o.series.forEach(function (s) {
+      var d = "", pen = false, lastI = -1;
+      s.values.forEach(function (v, i) {
+        if (v === null || isNaN(v)) { pen = false; return; }
+        d += (pen ? "L" : "M") + x(i).toFixed(1) + "," + y(v).toFixed(1); pen = true; lastI = i;
+      });
+      el("path", { d: d, style: "fill:none;stroke:" + s.color + ";stroke-width:" + (s.width || 2) + (s.dash ? ";stroke-dasharray:" + s.dash : "") }, svg);
+      if (lastI >= 0) {
+        el("circle", { cx: x(lastI), cy: y(s.values[lastI]), r: 3, style: "fill:" + s.color }, svg);
+        ends.push({ y: y(s.values[lastI]), text: s.short || s.name, v: s.values[lastI], color: s.color });
+      }
+      s.values.forEach(function (v, i) {
+        if (v === null || isNaN(v) || (n > 60 && i % 2)) return;
+        var c = el("circle", { cx: x(i), cy: y(v), r: 5, style: "fill:transparent" }, svg);
+        tip(c, o.x[i] + " · " + s.name + ": " + o.fmt(v, 2));
+      });
+    });
+    ends.sort(function (a, b) { return a.y - b.y; });
+    for (var i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 13) ends[i].y = ends[i - 1].y + 13;
+    ends.forEach(function (e) {
+      el("text", { x: W - m.r + 8, y: e.y + 4, "class": "svgtext strong", style: "fill:" + e.color, text: o.endFmt ? o.endFmt(e.v) + " " + e.text : e.text }, svg);
+    });
+  }
+  window.SLS.lineChart = lineChart;
+
+  /* ---------- table renderer for agent tables: pick columns, format each ---------- */
+  var FMT = {
+    pct0: function (v) { return pct(v, 0); }, pct1: function (v) { return pct(v, 1); }, pct2: function (v) { return pct(v, 2); },
+    spct1: function (v) { return spct(v, 1); }, spct2: function (v) { return spct(v, 2); },
+    num2: function (v) { return v === null || v === undefined ? "–" : fx(+v, 2); },
+    num3: function (v) { return v === null || v === undefined ? "–" : fx(+v, 3); },
+    int: function (v) { return v === null || v === undefined ? "–" : Math.round(v).toLocaleString("en-IN"); },
+    text: function (v) { return v === null || v === undefined ? "–" : String(v); },
+    date: function (v) {
+      if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return v ? String(v).replace("not yet (open)", "still open") : "–";
+      var M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], p = String(v).split("-");
+      return "<span style=\"white-space:nowrap\">" + (+p[2]) + " " + M[+p[1] - 1] + " " + p[0] + "</span>";
+    }
+  };
+  var NAMES = {
+    "N500 above 200-dma": "Nifty 500 above its 200-day average",
+    "N500 below 200-dma": "Nifty 500 below its 200-day average",
+    "Mkt 20d momentum up": "Market up over the last 20 days",
+    "Mkt 20d momentum down": "Market down over the last 20 days",
+    "Breadth50 >= 50%": "Half or more of stocks above their 50-day average",
+    "Breadth50 < 50%": "Fewer than half above their 50-day average",
+    "VIX low tercile (trailing 1y)": "India VIX low (vs its past year)",
+    "VIX mid tercile": "India VIX middle",
+    "VIX high tercile": "India VIX high",
+    "Ex-post mkt next 20d < -5%": "Market then falls more than 5%",
+    "Ex-post mkt -5%..0": "Market then falls 0–5%",
+    "Ex-post mkt 0..+5%": "Market then rises 0–5%",
+    "Ex-post mkt > +5%": "Market then rises more than 5%",
+    "Old repo label (raw close→close > 0, missing→0)": "Repo's current label",
+    "Clean sign (next-open→close > 0)": "Clean direction",
+    "Cost-aware 3-class (±50 bps)": "Cost-aware 3-class",
+    "Triple barrier 2.0/2.0 ATR": "Triple barrier 2.0/2.0",
+    "Triple barrier 3.0/1.5 ATR": "Triple barrier 3.0/1.5",
+    "Relative XR_neu 30/40/30": "Relative, factor-neutral",
+    "Relative XR_neumom 30/40/30 (frozen label)": "Relative, factor- and momentum-neutral (adopted)",
+    "DUAL: relative AND cost-aware agree": "Dual: relative AND up",
+    "Old repo": "Repo's current label", "Clean sign": "Clean direction", "3-class ±50bp": "Cost-aware 3-class",
+    "Barrier 2/2": "Triple barrier 2.0/2.0", "Barrier 3/1.5": "Triple barrier 3.0/1.5",
+    "XR_neu": "Relative, factor-neutral", "XR_neumom": "Relative, + momentum-neutral (adopted)", "DUAL": "Dual: relative AND up",
+    "No filter (every stock with a valid 20-day future)": "No filter (every listed stock)",
+    "Tradable universe (elig_base, ≥ ₹2 cr/day)": "Tradable universe (≥ ₹2 cr a day)",
+    "Liquid (≥ ₹5 cr/day)": "Liquid (≥ ₹5 cr a day)",
+    "F&O proxy (top-200 by turnover; shortable)": "F&O proxy (top 200 by turnover)",
+    "Trend gate: above 200-day average AND 60-day momentum in top 30%": "Trend gate: above 200-day average and 60-day strength in top 30%",
+    "Washout gate: new 10-day low on volume in a falling, broad sell-off (R2 A1)": "Washout gate: 10-day low on volume in a broad sell-off",
+    "High delivery: top third of delivery % that day": "High delivery: top third of delivery %",
+    "E0 frozen baseline (20-day time exit)": "Frozen baseline: sell at the 20th close",
+    "E1 carry (as specified)": "Carry, decided at the close (not executable)",
+    "X3 carry, executable timing": "Carry, traded at the next open",
+    "E2w weekly early exit": "Exit if it drops into the avoid list (weekly check)",
+    "E2d daily early exit": "Same, checked daily",
+    "E3 -25% stop": "Stop-loss at −25%",
+    "S1 inverse-vol sizing": "Size inversely to volatility",
+    "frozen baseline": "–",
+    "rejected": "No",
+    "idle cash earns the Nifty 1D Rate (control)": "Idle cash earns the overnight rate (a control)",
+    "carry as specified: keep re-picked names, decided and traded at the same close": "Keep re-picked names, decided and traded at the same close",
+    "executable carry: hold through the rebalance close, trade at the next open, keep re-picked names": "Hold through the rebalance night, trade at the next open, keep re-picked names",
+    "weekly early exit when a held name falls into the PROD avoid tail (<=0.30)": "Exit early when a holding falls into the avoid list (weekly check)",
+    "daily early exit on the same avoid-tail test": "Same early exit, checked daily",
+    "catastrophe stop: exit next open if close <= 0.75 x entry": "Stop-loss: exit when a holding is down 25%",
+    "inverse-vol_20 position sizing (cap 2x)": "Size positions inversely to volatility",
+    "avoid veto: equal-weight universe minus PROD bottom 30%": "Avoid veto: equal-weight market minus the bottom 30%",
+    "short Nifty 50 futures, hedge ratio 1.0, weekly": "Hedge with Nifty 50 futures, one-for-one",
+    "short Nifty 50 futures, ex-ante 60-day beta": "Hedge with Nifty 50 futures, sized by beta",
+    "short synthetic Midcap Select futures, ex-ante beta": "Hedge with Midcap Select futures, sized by beta",
+    "F&O long/short K=10, cash long": "F&O long top 10 / short bottom 10 (cash long)",
+    "F&O long/short K=10, futures long": "F&O long top 10 / short bottom 10 (futures long)",
+    "F&O long/short K=20, cash long": "F&O long top 20 / short bottom 20 (cash long)",
+    "F&O long/short K=20, futures long": "F&O long top 20 / short bottom 20 (futures long)",
+    "F&O long/short K=20, beta-matched short (extra)": "F&O long/short 20, beta-matched short (extra)",
+    "frozen book + 50% overlay short of F&O bottom-20": "Book plus a 50% short of the F&O bottom 20",
+    "F&O short-only bottom-20 on cash collateral": "Short only: the F&O bottom 20",
+    "static 80% invested, rest in Nifty 1D Rate": "Stay 80% invested, 20% in cash",
+    "static 60% invested, rest in Nifty 1D Rate": "Stay 60% invested, 40% in cash",
+    "breadth governor: 50% invested when breadth50 < 0.5": "Breadth governor: 50% invested when fewer than half of stocks are above their 50-day average",
+    "yes": "Yes", "yes (declared extra, control)": "Yes (a control)", "yes (declared extra)": "Yes (an extra)",
+    "no: disclosed post-hoc extra (executable form of E1)": "No, disclosed afterwards",
+    "passes, immaterial": "Passes, immaterial",
+    "rejected (not executable)": "No: not executable",
+    "adopted as the execution convention": "Yes, as the execution convention",
+    "not an add-on to the frozen book; kept as the avoid list": "Not an add-on; kept as the avoid list",
+    "rejected as an add-on (risk-appetite dial only)": "No (a risk dial only)",
+    "PROD book (frozen production score) - the exam": "Production book (the exam)",
+    "Single model (devil's)": "Single model",
+    "3-seed ensemble": "3-model average",
+    "Random 20 stocks, 5 seeds (pre-registered yardstick)": "Random 20 stocks, 5 seeds (pre-registered yardstick)",
+    "Overnight cash (Nifty 1D Rate)": "Overnight cash",
+    "random 20 (5 seeds, pre-registered)": "Random picks, 5 seeds (pre-registered)",
+    "all stocks equal weight": "Equal-weight market",
+    "random 20 (25 seeds)": "Random picks, 25 seeds",
+    "PROD book (frozen production score)": "Production score (10-model average)",
+    "Single model (devil)": "Single model",
+    "3-seed ensemble (devil)": "3-model average",
+    "2026 Jan-Oct": "2026 (Jan–Oct)",
+    "2023-2025": "2023–2025",
+    "PROD book (frozen)": "Production book",
+    "PROD book + executable carry": "Production book, selling at the next open",
+    "Short-term capital gains (15% -> 20% from 23-Jul-2024)": "Short-term capital gains (15%, then 20% from 23 Jul 2024)",
+    "Use the -1 side as a VETO/EXIT list (D0); never as a short": "Use −1 as a never-buy and exit list; never short it",
+    "Viable: the only add-on that passes the rule (vs EW); stock-specific, not a vol tilt": "Viable: the only use that passes the rule (against the equal-weight market); stock-specific, not a volatility tilt",
+    "Optional hedge D1b (risk dial, not alpha)": "Optional Nifty 50 futures hedge (a risk dial, not an edge)",
+    "Not adopted: costs ~8-9%/yr in DEV; max drawdown 17% vs 27%; 2026 windfall = large-cap fall": "Not adopted: cost 8–9% a year on 2023–25; worst fall 17% instead of 27%; the 2026 gain was a windfall from large caps falling",
+    "BASE + 50% short of F&O bottom-20 (D3)": "Book plus a 50% short of the F&O bottom 20",
+    "Not adopted: smoother in DEV, but lower return and failed in 2026": "Not adopted: smoother on 2023–25, but lower return, and it failed in 2026",
+    "F&O top-10 vs bottom-10 via futures (D2, best DEV variant)": "F&O long top 10 / short bottom 10 via futures (best 2023–25 version)",
+    "Not viable: below cash over 2023-26, -24% in 2026": "Not viable: below cash over 2023–26, −24% in 2026",
+    "Short F&O bottom-20 on cash collateral (D4)": "Short the F&O bottom 20",
+    "Not viable: loses money in both windows": "Not viable: loses money in both periods"
+  };
+  function cleanText(s) {
+    s = String(s).replace(/[;,]?\s*\(?see table \d+[a-z]?\)?/gi, "");
+    s = s.replace(" (K2); kill only with C2", "; kill only together with the 12-month rule")
+         .replace("Feeds the money rules K1/K3", "Feeds the 6- and 12-month lead rules")
+         .replace("Review if the 13-week average < 0.02 (K2)", "Review if the 13-week average < 0.02");
+    if (/^ADOPTED/.test(s)) return "Yes, as an execution convention";
+    if (/^passes the rule but NOT executable/i.test(s)) return "No: not executable";
+    return s;
+  }
+  function findTable(agent, prefix) {
+    var a = DATA[agent]; if (!a || !a.html_tables) return null;
+    var list = Array.isArray(a.html_tables) ? a.html_tables : Object.keys(a.html_tables).map(function (k) { return a.html_tables[k]; });
+    for (var i = 0; i < list.length; i++) if (list[i] && list[i].title && list[i].title.indexOf(prefix) === 0) return list[i];
+    return null;
+  }
+  function renderTable(id, agent, prefix, spec) {
+    var host = document.getElementById(id); if (!host) return;
+    var t = findTable(agent, prefix); if (!t) { host.innerHTML = "<p class=\"note\">Table not available.</p>"; return; }
+    var h = "<table class=\"" + (spec.cols[0].f === "text" ? "dt" : "dt2") + "\"><thead><tr>";
+    spec.cols.forEach(function (c) { h += "<th" + (c.f !== "text" && c.f !== "date" ? " class=\"num\"" : "") + ">" + c.h + "</th>"; });
+    h += "</tr></thead><tbody>";
+    t.rows.forEach(function (r, ri) {
+      if (spec.rowFilter && !spec.rowFilter(r, ri)) return;
+      if (spec.groupRows && spec.groupRows[ri]) h += "<tr><td colspan=\"" + spec.cols.length + "\" class=\"grp\">" + spec.groupRows[ri] + "</td></tr>";
+      var hl = spec.highlight && spec.highlight(r, ri);
+      h += "<tr" + (hl ? " class=\"hl\"" : "") + ">";
+      spec.cols.forEach(function (c) {
+        var v = r[c.i], s, style = "";
+        if (c.f === "range0") s = (v === null || v === undefined) ? "–" : Math.round(v * 100) + "–" + Math.round(r[c.i2] * 100) + "%";
+        else if (c.f === "text" && NAMES[v]) s = NAMES[v];
+        else if (c.f === "text") s = cleanText(FMT.text(v));
+        else s = FMT[c.f](v);
+        if (c.heat && v !== null && v !== undefined) {
+          var a = Math.min(1, Math.abs(v - (c.heat.mid || 0)) / c.heat.span);
+          style = " style=\"background:color-mix(in srgb," + (v - (c.heat.mid || 0) >= 0 ? "var(--viz-up)" : "var(--viz-down)") + " " + Math.round(a * 42) + "%,transparent)\"";
+        }
+        h += "<td class=\"" + (c.f !== "text" && c.f !== "date" ? "num" : "") + "\"" + style + ">" + s + "</td>";
+      });
+      h += "</tr>";
+    });
+    h += "</tbody></table>";
+    host.innerHTML = h;
+  }
+  function findChart(agent, id) { var a = DATA[agent]; return a && a.charts ? a.charts[id] : null; }
+  window.SLS.renderTable = renderTable; window.SLS.findChart = findChart; window.SLS.findTable = findTable;
+
+  /* ---------- results: equity, quarters, years, variants ---------- */
+  (function () {
+    var svg = document.getElementById("chart-equity"), c = findChart("R3_book", "equity_contiguous_monthly");
+    if (svg && c) {
+      var S = c.series, x = c.x, mEq = { l: 56, r: 112, t: 16, b: 34 };
+      lineChart(svg, {
+        x: x, xKey: function (m) { return m.slice(0, 4); }, min: 0.8, max: 2.7, m: mEq,
+        fmt: function (v, d) { return "₹" + (+v).toFixed(d === undefined ? 1 : d); }, endFmt: function (v) { return "₹" + v.toFixed(2); },
+        series: [
+          { name: "Nifty 500 (price)", short: "Nifty 500", values: S["Nifty 500 (price index)"], color: "var(--viz-ord-6)", width: 1.6 },
+          { name: "Equal-weight market", short: "Equal wt", values: S["Equal-weight universe"], color: "var(--muted)", width: 1.5, dash: "5 4" },
+          { name: "Random 20 stocks", short: "Random", values: S["Random top-20 (5 seeds)"], color: "var(--muted)", width: 1.6 },
+          { name: "Book, selling at next open", short: "Carry", values: S["PROD book + executable carry (X3)"], color: "var(--accent)", width: 1.6, dash: "6 4" },
+          { name: "Production book", short: "Book", values: S["PROD book (frozen)"], color: "var(--accent)", width: 2.6 }
+        ]
+      });
+      var i26 = x.indexOf("2026-01");
+      if (i26 > 0) {
+        var W = 880, xx = mEq.l + (W - mEq.l - mEq.r) * (i26 - 0.5) / (x.length - 1);
+        el("line", { x1: xx, x2: xx, y1: mEq.t, y2: 330 - mEq.b, style: "stroke:var(--axis);stroke-dasharray:2 3" }, svg);
+        el("text", { x: xx + 4, y: mEq.t + 10, "class": "svgtext", text: "holdout" }, svg);
+      }
+    }
+    var q = document.getElementById("chart-quarters"), cq = findChart("R3_book", "quarterly_excess");
+    if (q && cq) {
+      var vals = cq.series["PROD book minus random top-20"], groups = cq.x.map(function (s) { return s.replace("20", "’").replace("Q", " Q"); });
+      groupedBars(q, {
+        H: 270, groups: groups, min: -0.04, max: 0.12, labels: false, groupLabelClass: "",
+        fmt: function (v, d) { return spct(v, d === undefined ? 0 : d); },
+        series: [{ name: "Book minus random", values: vals, color: function (v) { return v >= 0 ? "var(--viz-up)" : "var(--viz-down)"; } }],
+        shadeFrom: cq.x.indexOf("2026Q1"), shadeLabel: "2026 holdout"
+      });
+    }
+    renderTable("tbl-years", "R3_book", "2. Calendar-year", {
+      cols: [{ i: 0, h: "Year", f: "text" }, { i: 1, h: "Book", f: "pct1" }, { i: 2, h: "Random 20", f: "pct1" }, { i: 3, h: "Equal-weight", f: "pct1" }, { i: 4, h: "Nifty 500 (price)", f: "pct1" }, { i: 5, h: "Book − random", f: "spct1", heat: { span: 0.3 } }, { i: 6, h: "Book − equal weight", f: "spct1", heat: { span: 0.3 } }]
+    });
+    var ty = document.querySelector("#tbl-years table");
+    if (ty) { var cap = document.createElement("caption"); cap.textContent = "Calendar-year returns of one continuous book (2026 = 1 Jan to 14 Oct, not annualised)"; ty.insertBefore(cap, ty.firstChild); }
+    renderTable("tbl-variants", "R3_book", "1. Does the stock-picking book", {
+      rowFilter: function (r) { return r[2] === 0.005; },
+      highlight: function (r) { return r[0].indexOf("PROD") === 0; },
+      cols: [{ i: 0, h: "Score", f: "text" }, { i: 1, h: "Period", f: "text" }, { i: 3, h: "Book", f: "pct1" }, { i: 4, h: "Random", f: "pct1" }, { i: 7, h: "Excess vs random", f: "spct1" }, { i: 8, h: "t", f: "num2" }, { i: 11, h: "Max drawdown", f: "pct1" }, { i: 14, h: "Worst entry day", f: "spct1" }, { i: 15, h: "Best entry day", f: "spct1" }]
+    });
+    var tv = document.querySelector("#tbl-variants table");
+    if (tv) { var cap2 = document.createElement("caption"); cap2.textContent = "Production score (10-model average) against one model and a 3-model average, 50 bps"; tv.insertBefore(cap2, tv.firstChild); }
+  })();
+  /* ---------- R3_scen tables and the overnight chart ---------- */
+  (function () {
+    function cap(id, text) { var t = document.querySelector("#" + id + " table"); if (t) { var c = document.createElement("caption"); c.textContent = text; t.insertBefore(c, t.firstChild); } }
+    var isRel = function (r) { return String(r[0]).indexOf("XR_neumom") >= 0; };
+    renderTable("tbl-labels8", "R3_scen", "1. Are the labels right?", {
+      highlight: isRel,
+      cols: [{ i: 0, h: "Label", f: "text" }, { i: 2, h: "Up", f: "pct1" }, { i: 3, h: "Flat", f: "pct1" }, { i: 4, h: "Down", f: "pct1" },
+        { i: 8, i2: 9, h: "Up share, weak to strong day", f: "range0" },
+        { i: 10, h: "Corr. with market", f: "num2", heat: { span: 1 } },
+        { i: 11, h: "Avg net when up", f: "spct1" }, { i: 12, h: "Avg net when down", f: "spct1" }]
+    });
+    renderTable("tbl-labels-h", "R3_scen", "3. Event rates by holding period", {
+      highlight: isRel,
+      cols: [{ i: 0, h: "Label", f: "text" }, { i: 1, h: "Days", f: "int" }, { i: 2, h: "Up", f: "pct1" }, { i: 3, h: "Flat", f: "pct1" }, { i: 4, h: "Down", f: "pct1" },
+        { i: 5, h: "Daily swing (sd)", f: "pct1" }, { i: 6, h: "Corr. with market", f: "num2", heat: { span: 1 } },
+        { i: 8, h: "Avg net up", f: "spct1" }, { i: 9, h: "Avg net down", f: "spct1" }]
+    });
+    renderTable("tbl-oldlabel", "R3_scen", "2. What is wrong with the old repo label", {
+      cols: [{ i: 0, h: "Days", f: "int" }, { i: 1, h: "\"Not up\" only because future is missing", f: "pct2" }, { i: 4, h: "Sign flipped by unadjusted prices", f: "pct2" },
+        { i: 5, h: "Fake split/bonus crashes", f: "int" }, { i: 6, h: "Disagrees with clean label", f: "pct1" },
+        { i: 7, h: "Avg return from signal close (untradable)", f: "spct2" }, { i: 8, h: "Avg return from next open", f: "spct2" }, { i: 9, h: "Phantom return per trade", f: "spct2" }]
+    });
+    renderTable("tbl-overnight-tax", "R3_scen", "10. The 'overnight tax'", {
+      cols: [{ i: 0, h: "Hold (days)", f: "int" }, { i: 1, h: "Period", f: "text" }, { i: 2, h: "Avg return from signal close", f: "spct2" }, { i: 3, h: "Avg return from next open", f: "spct2" },
+        { i: 4, h: "Gap given up per trade", f: "pct2" }, { i: 5, h: "Share of the return given up", f: "pct0" }, { i: 6, h: "Gap given up per year", f: "pct1" }, { i: 7, h: "Cost drag per year at 0.5%", f: "pct1" }]
+    });
+    cap("tbl-overnight-tax", "What a next-open entry gives up against the untradable close-entry label (tradable universe, before costs)");
+    renderTable("tbl-filters", "R3_scen", "4. Conditions (filters)", {
+      highlight: function (r, i) { return i === 1; },
+      cols: [{ i: 0, h: "Condition", f: "text" }, { i: 2, h: "Stocks per day", f: "int" }, { i: 3, h: "Days active", f: "pct0" },
+        { i: 6, h: "Avg net, all, 2023–25", f: "spct1" }, { i: 7, h: "Avg net, all, 2026", f: "spct1" },
+        { i: 10, h: "Direction up", f: "pct1" }, { i: 12, h: "Barrier up", f: "pct1" }, { i: 13, h: "Relative +1", f: "pct1" }, { i: 14, h: "Relative −1", f: "pct1" }, { i: 15, h: "Dual +1", f: "pct1" }]
+    });
+    cap("tbl-filters", "Event rates inside each condition (20 days, 2021–2026)");
+    renderTable("tbl-filters-money", "R3_scen", "5. Conditions × labels", {
+      highlight: function (r, i) { return i === 1; },
+      cols: [{ i: 0, h: "Condition", f: "text" }, { i: 3, h: "Relative +1: avg net", f: "spct1" }, { i: 4, h: "Relative −1: avg net", f: "spct1" },
+        { i: 5, h: "+1 made money", f: "pct0" }, { i: 1, h: "Direction up: avg net", f: "spct1" }, { i: 2, h: "Direction not up: avg net", f: "spct1" }, { i: 6, h: "Dual +1: avg net", f: "spct1" }]
+    });
+    cap("tbl-filters-money", "Does a label still mean money inside each condition? (20 days, after 0.5%)");
+    var grp = { 0: "Known on the signal day", 9: "Known only afterwards: the market's actual next 20 days" };
+    renderTable("tbl-scenarios", "R3_scen", "6. Scenarios", {
+      groupRows: grp,
+      cols: [{ i: 0, h: "Scenario", f: "text" }, { i: 1, h: "Share of days", f: "pct0" },
+        { i: 3, h: "Direction: up share", f: "pct0", heat: { mid: 0.49, span: 0.35 } },
+        { i: 11, h: "Dual: up share", f: "pct0", heat: { mid: 0.27, span: 0.2 } }, { i: 7, h: "Relative: +1 share", f: "pct0" },
+        { i: 8, h: "+1: avg net", f: "spct1", heat: { span: 0.25 } }, { i: 9, h: "+1 made money", f: "pct0" }, { i: 10, h: "−1: avg net", f: "spct1", heat: { span: 0.25 } }]
+    });
+    cap("tbl-scenarios", "Event rates and payoffs by market scenario (20 days, tradable universe, 2021–2026)");
+    renderTable("tbl-prod-scen", "R3_scen", "7. The tradable version", {
+      groupRows: { 0: "Known on the signal day", 9: "Known only afterwards", 13: "All days" },
+      highlight: function (r) { return r[0] === "All days"; },
+      cols: [{ i: 0, h: "Scenario", f: "text" }, { i: 4, h: "2023–25: top 20 − market", f: "spct2", heat: { span: 0.03 } }, { i: 5, h: "t", f: "num2" },
+        { i: 6, h: "2023–25: avoid tail − market", f: "spct2", heat: { span: 0.03 } },
+        { i: 11, h: "2026: top 20 − market", f: "spct2", heat: { span: 0.03 } }, { i: 12, h: "t", f: "num2" },
+        { i: 13, h: "2026: avoid tail − market", f: "spct2", heat: { span: 0.03 } }, { i: 14, h: "2026 IC", f: "num3" }]
+    });
+    cap("tbl-prod-scen", "Production score per signal day, 20-day trades after 0.5% (overlapping trades; the book figures are in Results)");
+    var svg = document.getElementById("chart-overnight"), c = findChart("R3_scen", "overnight_vs_session_growth");
+    if (svg && c) {
+      var S = c.series;
+      lineChart(svg, {
+        H: 300, x: c.x, xKey: function (m) { return m.slice(0, 4); }, log: true, min: 0.15, max: 13, m: { l: 56, r: 130, t: 14, b: 34 },
+        tickVals: [0.2, 0.5, 1, 2, 5, 10],
+        fmt: function (v, d) { return "₹" + (v < 1 ? (+v).toFixed(2) : (+v).toFixed(d === undefined ? 0 : d)); }, endFmt: function (v) { return "₹" + v.toFixed(2); },
+        series: [
+          { name: "Overnight gaps only", short: "overnight only", values: S["Growth of ₹1 earning only overnight gaps"], color: "var(--viz-up)", width: 2.2 },
+          { name: "Close to close", short: "close to close", values: S["Growth of ₹1 close-to-close"], color: "var(--viz-ink)", width: 1.8 },
+          { name: "Trading sessions only", short: "sessions only", values: S["Growth of ₹1 earning only the trading session"], color: "var(--viz-down)", width: 2.2 }
+        ]
+      });
+    }
+  })();
+  /* ---------- up and down (R3_twoway) ---------- */
+  (function () {
+    function cap(id, text) { var t = document.querySelector("#" + id + " table"); if (t) { var c = document.createElement("caption"); c.textContent = text; t.insertBefore(c, t.firstChild); } }
+    renderTable("tbl-classes", "R3_twoway", "What each realised label class", {
+      highlight: function (r) { return String(r[1]).indexOf("+1") === 0; },
+      cols: [{ i: 0, h: "Period", f: "text" }, { i: 1, h: "Class", f: "text" }, { i: 2, h: "Mean net", f: "spct1", heat: { span: 0.15 } }, { i: 3, h: "Median net", f: "spct1" },
+        { i: 4, h: "Made money", f: "pct0" }, { i: 5, h: "Lost more than 5%", f: "pct0" }, { i: 6, h: "Stock-days", f: "int" }]
+    });
+    cap("tbl-classes", "What each class of the label was worth (20-day hold, after 0.5%)");
+    var svg = document.getElementById("chart-deciles"), c = findChart("R3_twoway", "decile_mean_net");
+    if (svg && c) {
+      groupedBars(svg, {
+        H: 280, groups: c.x.map(function (s, i) { return i === 0 ? "1 (avoid)" : i === c.x.length - 1 ? "10 (top)" : String(i + 1); }),
+        min: -0.006, max: 0.016, labels: false,
+        fmt: function (v, d) { return spct(v, d === undefined ? 1 : d); },
+        series: [{ name: "2023–2025", color: "var(--viz-ord-4)", values: c.series["2023-25 (DEV)"] }, { name: "2026", color: "var(--viz-ord-7)", values: c.series["2026 YTD"] }]
+      });
+    }
+    var tDev = findTable("R3_twoway", "Using the down side"), tHold = findTable("R3_twoway", "Same strategies in 2026");
+    var host = document.getElementById("tbl-downside");
+    if (host && tDev && tHold) {
+      var hold = {}; tHold.rows.forEach(function (r) { hold[r[0]] = r; });
+      var keep = ["BASE", "D0", "D1a", "D1b", "D1c", "D2_K10_fut", "D2_K20_cash", "D3", "D4", "EW", "RAND"];
+      var nice = { BASE: "Long book, unhedged (the baseline)", D0: "Avoid veto: equal-weight market minus bottom 30%", D1a: "Long book + short Nifty 50 futures, hedge 1.0", D1b: "Long book + short Nifty 50 futures, beta hedge",
+        D1c: "Long book + short Midcap Select futures, beta hedge", D2_K10_fut: "F&O long top 10 / short bottom 10 (futures)", D2_K20_cash: "F&O long top 20 cash / short bottom 20 futures",
+        D3: "Long book + 50% short of F&O bottom 20", D4: "Short only: F&O bottom 20", EW: "Reference: equal-weight market", RAND: "Reference: random 20 stocks" };
+      var h = "<table class=\"dt\"><caption>Using the down side: 2023–2025 (chosen on) and 2026 (reported), after costs</caption><thead><tr><th>Strategy</th><th class=\"num\">2023–25 CAGR</th><th class=\"num\">Max drawdown</th><th class=\"num\">Sharpe</th><th class=\"num\">Corr. with Nifty 500</th><th class=\"num\">Gain / yr</th><th class=\"num\">t</th><th class=\"num\">2026 CAGR</th><th class=\"num\">2026 max drawdown</th><th>Adopted</th></tr></thead><tbody>";
+      tDev.rows.forEach(function (r) {
+        if (keep.indexOf(r[0]) < 0) return;
+        var z = hold[r[0]] || [];
+        var ad = r[12] === "yes" ? "<span class=\"pill ok\">Yes, as a veto</span>" : r[12] === "no" ? "<span class=\"pill bad\">No</span>" : "<span class=\"note\">–</span>";
+        h += "<tr" + (r[0] === "D0" ? " class=\"hl\"" : "") + "><td>" + nice[r[0]] + "</td><td class=\"num\">" + pct(r[2]) + "</td><td class=\"num\">" + pct(r[5]) + "</td><td class=\"num\">" + fx(+r[4], 2) +
+          "</td><td class=\"num\">" + fx(+r[8], 2) + "</td><td class=\"num\">" + (r[10] === null ? "–" : spct(r[10])) + "</td><td class=\"num\">" + (r[11] === null ? "–" : fx(+r[11], 2)) +
+          "</td><td class=\"num\">" + pct(z[2]) + "</td><td class=\"num\">" + pct(z[5]) + "</td><td>" + ad + "</td></tr>";
+      });
+      host.innerHTML = h + "</tbody></table>";
+    }
+    renderTable("tbl-downside-verdict", "R3_twoway", "Verdict: how an Indian swing trader", {
+      cols: [{ i: 0, h: "Trader", f: "text" }, { i: 1, h: "Use of the −1 side", f: "text" }, { i: 2, h: "2023–25 gain / yr", f: "spct1" }, { i: 3, h: "2026 gain / yr", f: "spct1" }, { i: 4, h: "Verdict", f: "text" }]
+    });
+    cap("tbl-downside-verdict", "What each kind of trader should do with the −1 side");
+  })();
+  /* ---------- invest + expect (R3_book, R3_risk) ---------- */
+  (function () {
+    function cap(id, text) { var t = document.querySelector("#" + id + " table"); if (t) { var c = document.createElement("caption"); c.textContent = text; t.insertBefore(c, t.firstChild); } }
+    renderTable("tbl-addons", "R3_exam", "5. Every add-on tested", {
+      highlight: function (r) { return r[0] === "X3"; },
+      rowFilter: function (r) { return r[0] !== "X2"; },
+      cols: [{ i: 2, h: "Add-on", f: "text" }, { i: 3, h: "Declared in advance?", f: "text" }, { i: 5, h: "Gain / yr, 2023–25", f: "spct1" }, { i: 6, h: "t", f: "num2" },
+        { i: 7, h: "Change in worst fall", f: "spct1" }, { i: 8, h: "2026 gain / yr", f: "spct1" }, { i: 11, h: "Decision", f: "text" }]
+    });
+    cap("tbl-addons", "Twenty add-ons judged against the frozen book (the 21st, a combination, was not run because no early exit passed)");
+    renderTable("tbl-exam", "R3_exam", "1. Final exam", {
+      highlight: function (r) { return String(r[0]).indexOf("PROD") === 0; },
+      cols: [{ i: 0, h: "Book", f: "text" }, { i: 1, h: "Annualised", f: "pct1" }, { i: 2, h: "Over the period", f: "spct1" }, { i: 3, h: "Lead vs random (5 seeds)", f: "spct1" }, { i: 4, h: "t", f: "num2" },
+        { i: 7, h: "Lead vs random (25 seeds)", f: "spct1" }, { i: 5, h: "Lead vs equal weight", f: "spct1" }, { i: 8, h: "Worst fall", f: "pct1" }]
+    });
+    cap("tbl-exam", "2026 exam, 7 January to 7 October (185 trading days), 50 bps");
+    renderTable("tbl-forward", "R3_exam", "4. Best estimate of the forward edge", {
+      highlight: function (r) { return String(r[0]).indexOf("random 20 (5") === 0; },
+      cols: [{ i: 0, h: "Measured against", f: "text" }, { i: 1, h: "2023–25 lead", f: "spct1" }, { i: 2, h: "After the multiple-testing haircut", f: "spct1" }, { i: 4, h: "2026 lead", f: "spct1" },
+        { i: 6, h: "Weight on 2026", f: "pct0" }, { i: 7, h: "Forward estimate", f: "spct1" }, { i: 8, h: "Uncertainty (1 s.e.)", f: "pct1" }, { i: 9, h: "With no haircut", f: "spct1" }]
+    });
+    cap("tbl-forward", "Best estimate of the forward edge: 2023–25 after the haircut, weighed by precision with 2026");
+    renderTable("tbl-power", "R3_exam", "10. How quickly can fresh data settle", {
+      cols: [{ i: 0, h: "Months of fresh data", f: "int" }, { i: 1, h: "Uncertainty of the fresh lead", f: "pct1" }, { i: 4, h: "Chance of confirmation at +4.4%", f: "pct0" },
+        { i: 5, h: "At +6.9%", f: "pct0" }, { i: 3, h: "False confirmation with no edge", f: "pct0" }, { i: 7, h: "Plan rejected if there is no edge", f: "pct0" }]
+    });
+    cap("tbl-power", "How fast fresh data can settle the question");
+    var svg = document.getElementById("chart-capacity"), c = findChart("R3_book", "capacity_cagr_dev");
+    if (svg && c) {
+      var S = c.series;
+      lineChart(svg, {
+        H: 300, x: c.x, xKey: function (s) { return String(s).replace("Rs ", "₹"); }, min: 0, max: 0.32, m: { l: 56, r: 168, t: 14, b: 34 },
+        fmt: function (v, d) { return pct(v, d === undefined ? 0 : d); }, endFmt: function (v) { return pct(v, 1); },
+        series: [
+          { name: "Nifty 500 (price)", short: "Nifty 500", values: S["Nifty 500 price index"], color: "var(--viz-ord-6)", width: 1.4, dash: "5 4" },
+          { name: "Equal-weight market", short: "Equal weight", values: S["Equal-weight universe (no impact)"], color: "var(--muted)", width: 1.4, dash: "5 4" },
+          { name: "≥ ₹5 cr universe, 5% cap", short: "₹5 cr+, cap", values: S["liq5, max 5% of ADV"], color: "var(--viz-ord-4)", width: 1.6, dash: "2 3" },
+          { name: "≥ ₹5 cr universe", short: "₹5 cr+", values: S["liq5 universe, no cap"], color: "var(--viz-ord-4)", width: 1.8 },
+          { name: "≥ ₹2 cr universe, 5% cap", short: "₹2 cr+, cap", values: S["liq2, max 5% of ADV"], color: "var(--accent)", width: 1.8, dash: "2 3" },
+          { name: "≥ ₹2 cr universe (the book)", short: "Book", values: S["liq2 universe, no cap"], color: "var(--accent)", width: 2.4 }
+        ]
+      });
+    }
+    renderTable("tbl-ops", "R3_book", "7. Operations", {
+      cols: [{ i: 0, h: "Period", f: "text" }, { i: 1, h: "Fund size", f: "text" }, { i: 2, h: "Per name (₹ lakh)", f: "num2" }, { i: 4, h: "Median share of daily volume", f: "pct2" },
+        { i: 5, h: "90th percentile", f: "pct1" }, { i: 6, h: "Picks above 10% of volume", f: "pct1" }, { i: 7, h: "Fill under a 5% cap", f: "pct0" }]
+    });
+    cap("tbl-ops", "How big the trades are against what each stock trades in a day");
+    renderTable("tbl-tax", "R3_book", "8. Tax illustration", {
+      cols: [{ i: 0, h: "Strategy", f: "text" }, { i: 1, h: "Tax treatment", f: "text" }, { i: 2, h: "Before tax", f: "pct1" }, { i: 3, h: "After tax", f: "pct1" }, { i: 4, h: "Tax drag / yr", f: "pct1" }]
+    });
+    cap("tbl-tax", "Tax illustration for an individual, Jan 2023 – Oct 2026 (annual rates)");
+    renderTable("tbl-expect-lead", "R3_risk", "What to expect: the strategy's lead", {
+      highlight: function (r) { return String(r[0]).indexOf("Planned") === 0 && r[1] === "12 months"; },
+      cols: [{ i: 0, h: "Assumed true edge", f: "text" }, { i: 1, h: "After", f: "text" }, { i: 2, h: "Bad case (5%)", f: "spct1" }, { i: 3, h: "25%", f: "spct1" }, { i: 4, h: "Middle", f: "spct1" },
+        { i: 5, h: "75%", f: "spct1" }, { i: 6, h: "Good case (95%)", f: "spct1" }, { i: 7, h: "Chance of being behind", f: "pct0" }]
+    });
+    cap("tbl-expect-lead", "The book's lead over random picks after 6, 12 and 24 months (block bootstrap of 2023–25)");
+    renderTable("tbl-expect-rupees", "R3_risk", "What to expect in rupees", {
+      cols: [{ i: 0, h: "Case", f: "text" }, { i: 1, h: "12m bad (5%)", f: "spct1" }, { i: 2, h: "12m middle", f: "spct1" }, { i: 3, h: "12m good (95%)", f: "spct1" },
+        { i: 4, h: "Chance of a 12m loss", f: "pct0" }, { i: 9, h: "Typical worst fall in 2 years", f: "pct0" }, { i: 10, h: "Worst fall beyond −20%", f: "pct0" }, { i: 11, h: "Beyond −30%", f: "pct0" }]
+    });
+    cap("tbl-expect-rupees", "Total return ranges: market plus the edge");
+    var dd = document.getElementById("chart-dd"), cd = findChart("R3_risk", "drawdown_weekly") || findChart("R3_book", "drawdown_weekly");
+    if (dd && cd) {
+      var D = cd.series, keyOf = function (names) { for (var i = 0; i < names.length; i++) if (D[names[i]]) return D[names[i]]; return null; };
+      lineChart(dd, {
+        H: 280, x: cd.x, xKey: function (m) { return m.slice(0, 4); }, min: -0.36, max: 0.0, m: { l: 56, r: 112, t: 14, b: 34 },
+        fmt: function (v, d) { return pct(v, d === undefined ? 0 : d); }, endFmt: function (v) { return pct(v, 0); },
+        series: [
+          { name: "Nifty 500 (price)", short: "Nifty 500", values: keyOf(["Nifty 500 (price)", "Nifty 500 (price index)"]), color: "var(--viz-ord-6)", width: 1.4 },
+          { name: "Equal-weight market", short: "Equal wt", values: keyOf(["All-stock equal-weight", "Equal-weight universe"]), color: "var(--muted)", width: 1.3, dash: "5 4" },
+          { name: "Random 20 stocks", short: "Random", values: keyOf(["Random 20-stock picks", "Random top-20 (5 seeds)"]), color: "var(--muted)", width: 1.4 },
+          { name: "Book", short: "Book", values: keyOf(["Strategy", "PROD book (frozen)"]), color: "var(--accent)", width: 2.2 }
+        ]
+      });
+    }
+    renderTable("tbl-dd", "R3_risk", "The five worst falls", {
+      cols: [{ i: 1, h: "Peak", f: "date" }, { i: 2, h: "Bottom", f: "date" }, { i: 3, h: "Recovered", f: "date" }, { i: 4, h: "Fall", f: "pct1" },
+        { i: 6, h: "Days to recover", f: "int" }, { i: 7, h: "Nifty 500", f: "pct1" }, { i: 8, h: "Equal weight", f: "pct1" }, { i: 9, h: "Random 20", f: "pct1" }]
+    });
+    cap("tbl-dd", "The five worst falls and what the market did over the same days");
+    renderTable("tbl-exposure", "R3_risk", "Exposure choices for the strategy", {
+      highlight: function (r) { return String(r[1]).indexOf("100%") === 0; },
+      groupRows: { 0: "2023–2025", 4: "2026 holdout" },
+      cols: [{ i: 1, h: "Policy", f: "text" }, { i: 2, h: "Annual return", f: "pct1" }, { i: 3, h: "Volatility", f: "pct1" }, { i: 5, h: "Sharpe vs cash", f: "num2" },
+        { i: 6, h: "Worst fall", f: "pct1" }, { i: 8, h: "Average invested", f: "pct0" }]
+    });
+    cap("tbl-exposure", "Exposure choices (50 bps; cash earns the Nifty 1D Rate)");
+    renderTable("tbl-dashboard", "R3_risk", "Weekly monitoring dashboard", {
+      cols: [{ i: 0, h: "Measure", f: "text" }, { i: 1, h: "Known", f: "text" }, { i: 2, h: "2023–25 average", f: "num3" }, { i: 5, h: "13-week low (10%)", f: "num3" }, { i: 6, h: "2026 average", f: "num3" }, { i: 7, h: "Alert", f: "text" }]
+    });
+    cap("tbl-dashboard", "Weekly dashboard: what normal looked like on 2023–25 and what 2026 showed");
+    renderTable("tbl-killrules", "R3_risk", "Kill and review rules", {
+      highlight: function (r) { return String(r[0]).indexOf("KILL") === 0; },
+      cols: [{ i: 0, h: "Rule (checked weekly)", f: "text" }, { i: 1, h: "False alarm, good book (24m)", f: "pct0" }, { i: 4, h: "False alarm if IC only 0.022", f: "pct0" },
+        { i: 6, h: "Catches a dead book (24m)", f: "pct0" }, { i: 7, h: "Median trading days to catch", f: "int" }]
+    });
+    cap("tbl-killrules", "Stop rules: false alarms against detection over the first 24 months");
+  })();
+  /*R3_CHARTS*/
+})();
+</script>

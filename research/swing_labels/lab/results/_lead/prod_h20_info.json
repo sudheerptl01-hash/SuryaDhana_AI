@@ -1,0 +1,23 @@
+{
+ "tags": [
+  "s1_o0",
+  "s2_o0",
+  "s3_o0",
+  "s4_o0",
+  "s5_o0",
+  "s1_o1",
+  "s2_o1",
+  "s3_o1",
+  "s4_o1",
+  "s5_o1"
+ ],
+ "mean_pairwise_rank_corr": 0.9193795068276545,
+ "scored_rows": 1013370,
+ "secs": 370.4,
+ "xs_prod": {
+  "dev_ic_mean": 0.06632461602511419,
+  "dev_ic_t_nonoverlap": 9.049685692798993,
+  "holdout_ic_mean": 0.06263307630635197,
+  "holdout_ic_t_nonoverlap": 4.831635416300352
+ }
+}

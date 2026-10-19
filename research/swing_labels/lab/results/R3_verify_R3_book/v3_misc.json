@@ -1,0 +1,418 @@
+{
+ "single_ens3": {
+  "single_dev": {
+   "cagr": 0.30729371581904874,
+   "excess_vs_random": {
+    "diff_ann": 0.1576083113487834,
+    "nw_t": 4.106065707103096
+   },
+   "PROD_minus": {
+    "diff_ann": -0.004613795219302178,
+    "nw_t": -0.3327397516409734
+   }
+  },
+  "single_hold": {
+   "cagr": 0.13891853234146057,
+   "excess_vs_random": {
+    "diff_ann": 0.038962205650599574,
+    "nw_t": 0.5991001286712645
+   },
+   "PROD_minus": {
+    "diff_ann": -0.03482533551823652,
+    "nw_t": -1.6567220640130997
+   }
+  },
+  "ens3_dev": {
+   "cagr": 0.3045468699346794,
+   "excess_vs_random": {
+    "diff_ann": 0.1550773735667059,
+    "nw_t": 3.8906416575093417
+   },
+   "PROD_minus": {
+    "diff_ann": -0.0020828574372246875,
+    "nw_t": -0.21369281033268953
+   }
+  },
+  "ens3_hold": {
+   "cagr": 0.09538220362023542,
+   "excess_vs_random": {
+    "diff_ann": -0.0015690596504590538,
+    "nw_t": -0.02304984977638907
+   },
+   "PROD_minus": {
+    "diff_ann": 0.005705929782822117,
+    "nw_t": 0.3970333072382769
+   }
+  }
+ },
+ "phase_range": {
+  "dev": {
+   "phase_excess_lablib_def": [
+    0.1610798562477472,
+    0.15176601619206037,
+    0.19010247040732806,
+    0.18931684274392077,
+    0.19713881646444556
+   ],
+   "min": 0.15176601619206037,
+   "max": 0.19713881646444556
+  },
+  "hold": {
+   "phase_excess_lablib_def": [
+    0.08589542585752845,
+    -0.01364280406223392,
+    -0.033066259569862574,
+    -0.03298836934439006,
+    0.0031546982272192547
+   ],
+   "min": -0.033066259569862574,
+   "max": 0.08589542585752845
+  }
+ },
+ "tax_cess": {
+  "E0": {
+   "pre": 0.24622024260462094,
+   "post_no_cess": 0.20568019200890908,
+   "post_with_cess": 0.2040435403739047,
+   "drag_no_cess": 0.04054005059571186,
+   "drag_with_cess": 0.042176702230716234
+  },
+  "X3": {
+   "pre": 0.2907349954015088,
+   "post_no_cess": 0.24295600929735262,
+   "post_with_cess": 0.24102974694539725,
+   "drag_no_cess": 0.04777898610415621,
+   "drag_with_cess": 0.04970524845611157
+  },
+  "N500_bh_50L_no_cess": 0.09387158506546411,
+  "N500_bh_50L_with_cess": 0.0934242758885222
+ },
+ "html_tables_check": {
+  "n_numbers_checked": 861,
+  "n_not_found_verbatim": 46,
+  "not_found": [
+   [
+    0,
+    "Round-trip cost",
+    "PROD book (frozen production score)",
+    "2023-2025",
+    0.005
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "PROD book (frozen production score)",
+    "2023-2025",
+    0.008
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "PROD book (frozen production score)",
+    "2026 Jan-Oct",
+    0.005
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "PROD book (frozen production score)",
+    "2026 Jan-Oct",
+    0.008
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "Single model (devil)",
+    "2023-2025",
+    0.005
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "Single model (devil)",
+    "2023-2025",
+    0.008
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "Single model (devil)",
+    "2026 Jan-Oct",
+    0.005
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "Single model (devil)",
+    "2026 Jan-Oct",
+    0.008
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "3-seed ensemble (devil)",
+    "2023-2025",
+    0.005
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "3-seed ensemble (devil)",
+    "2023-2025",
+    0.008
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "3-seed ensemble (devil)",
+    "2026 Jan-Oct",
+    0.005
+   ],
+   [
+    0,
+    "Round-trip cost",
+    "3-seed ensemble (devil)",
+    "2026 Jan-Oct",
+    0.008
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq2, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    6,
+    "Impact coefficient Y",
+    "liq5, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    7,
+    "Impact coefficient Y",
+    "liq2 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    7,
+    "Impact coefficient Y",
+    "liq2, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    7,
+    "Impact coefficient Y",
+    "liq5 universe, no cap",
+    0.5,
+    0.5
+   ],
+   [
+    7,
+    "Impact coefficient Y",
+    "liq5, max 5% of ADV",
+    0.5,
+    0.5
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2023-2025",
+    "1 cr",
+    0.0008757493805365746
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2023-2025",
+    "5 cr",
+    0.0019582351461331117
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2023-2025",
+    "20 cr",
+    0.003916470292266223
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2023-2025",
+    "50 cr",
+    0.006192483255973301
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2023-2025",
+    "100 cr",
+    0.008757493805365744
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2026",
+    "1 cr",
+    0.0006082830068075254
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2026",
+    "5 cr",
+    0.0013601621527795941
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2026",
+    "20 cr",
+    0.0027203243055591883
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2026",
+    "50 cr",
+    0.00430121038994144
+   ],
+   [
+    8,
+    "Average impact per side (Y=1)",
+    "2026",
+    "100 cr",
+    0.006082830068075253
+   ]
+  ]
+ }
+}

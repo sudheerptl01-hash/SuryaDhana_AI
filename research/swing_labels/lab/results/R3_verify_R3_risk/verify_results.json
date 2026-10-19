@@ -1,0 +1,180 @@
+{
+ "checks": [
+  {
+   "item": "PROD DEV phase-avg CAGR / excess / NW t / maxDD",
+   "theirs": "0.3032 / 0.1530 / 3.97 / -0.2685",
+   "mine": "0.3032 / 0.1530 / 3.97 / -0.2685",
+   "reproduced": true
+  },
+  {
+   "item": "Own simulator vs C.phase_avg (X100 DEV, 2026)",
+   "theirs": "bit-exact (their copy)",
+   "mine": "max abs daily diff 0.0 / 0.0",
+   "reproduced": true
+  },
+  {
+   "item": "Worst episode depth, dates, recovery days",
+   "theirs": "-0.2685, 2024-12-16..2025-03-03, rec 2026-07-10, 387d",
+   "mine": "-0.2685, 2024-12-16..2025-03-03, rec 2026-07-10, 387d",
+   "reproduced": true
+  },
+  {
+   "item": "Same window random / EW / Nifty500",
+   "theirs": "-0.2607 / -0.2646 / -0.1480",
+   "mine": "-0.2607 / -0.2646 / -0.1480",
+   "reproduced": true
+  },
+  {
+   "item": "Contig maxDD book/random/EW/N500",
+   "theirs": "-0.2685/-0.3329/-0.3465/-0.1884",
+   "mine": "-0.2685/-0.3329/-0.3465/-0.1884",
+   "reproduced": true
+  },
+  {
+   "item": "Months beat random DEV / 2026; N500<-3% months book vs N500",
+   "theirs": "0.694 / 0.444; n6 -0.0808 vs -0.0641",
+   "mine": "0.694 / 0.444; n6 -0.0808 vs -0.0641",
+   "reproduced": true
+  },
+  {
+   "item": "G50 DEV CAGR / maxDD / paired vs X100 (t)",
+   "theirs": "0.2837 / -0.1658 / -0.0227 (t -0.62)",
+   "mine": "0.2837 / -0.1658 / -0.0227 (t -0.62)",
+   "reproduced": true
+  },
+  {
+   "item": "X80 / X60 DEV CAGR, maxDD, paired t",
+   "theirs": "0.2557/-0.2169 t-1.96; 0.2080/-0.1629 t-1.96",
+   "mine": "0.2557/-0.2169 t-1.96; 0.2080/-0.1629 t-1.96",
+   "reproduced": true
+  },
+  {
+   "item": "Sharpe vs cash DEV X100/X80/X60/G50",
+   "theirs": "1.152/1.155/1.157/1.350",
+   "mine": "1.1517/1.1547/1.1566/1.3501",
+   "reproduced": true
+  },
+  {
+   "item": "PRE EW book X100 vs G50 CAGR; switches/yr",
+   "theirs": "-0.0247 vs -0.0527; 10.1",
+   "mine": "-0.0247 vs -0.0527; 10.14",
+   "reproduced": true
+  },
+  {
+   "item": "Matured IC DEV / 2026; 13w p10",
+   "theirs": "0.0669 / 0.0626; 0.038",
+   "mine": "0.0669 / 0.0626; 0.0380",
+   "reproduced": true
+  },
+  {
+   "item": "P(neg excess year | +5%), 40d blocks",
+   "theirs": "0.2425",
+   "mine": "0.2441 (CBB), 0.2438 (stationary)",
+   "reproduced": true
+  },
+  {
+   "item": "P(dead book > +5% in a year)",
+   "theirs": "0.2396",
+   "mine": "0.2429",
+   "reproduced": true
+  },
+  {
+   "item": "Absolute P(12m loss); median 24m worst fall",
+   "theirs": "0.223; -0.2101",
+   "mine": "0.220; -0.2097",
+   "reproduced": true
+  },
+  {
+   "item": "C2 false alarm H1a / detection H0 / median days",
+   "theirs": "0.0765 / 0.8554 / 255",
+   "mine": "0.0793 / 0.8497 / 255",
+   "reproduced": true
+  },
+  {
+   "item": "K1 / K2 / K3 false alarm (H1a)",
+   "theirs": "0.516 / 0.236 / 0.613",
+   "mine": "0.515 / 0.234 / 0.614",
+   "reproduced": true
+  },
+  {
+   "item": "C2 false alarm H1b",
+   "theirs": "0.531",
+   "mine": "0.528",
+   "reproduced": true
+  },
+  {
+   "item": "Historical rules: K1 dates; min 12m; last check",
+   "theirs": "2024-01-10, 2024-01-17; 0.0663; -0.016/0.078/0.080",
+   "mine": "2024-01-10, 2024-01-17; 0.0663; -0.016/0.078/0.080",
+   "reproduced": true
+  },
+  {
+   "item": "Excess sums by year; 2025Q4",
+   "theirs": "0.083/0.259/0.119/0.013; 0.0615",
+   "mine": "0.083/0.259/0.119/0.013; 0.0615",
+   "reproduced": true
+  }
+ ],
+ "supplementary": {
+  "single_phase_live_like": {
+   "te_phaseavg": 0.06395096375742189,
+   "te_single_phase": [
+    0.07285843723668163,
+    0.07062707481885969,
+    0.06884967039294307,
+    0.07195371204334772,
+    0.06991483501582431
+   ],
+   "p_neg_year_plus5": 0.26125999999999994,
+   "sd_12m": 0.07662024703036774,
+   "p_dead_above5": 0.25824,
+   "kill_p24_mean": {
+    "H1a": {
+     "K1": 0.57416,
+     "K2": 0.23412000000000002,
+     "K3": 0.63972,
+     "C1": 0.7475800000000001,
+     "C2": 0.07808,
+     "C3": 0.07024
+    },
+    "H1b": {
+     "K1": 0.57416,
+     "K2": 0.99786,
+     "K3": 0.63972,
+     "C1": 0.9985200000000001,
+     "C2": 0.5517399999999999,
+     "C3": 0.49551999999999996
+    },
+    "H0": {
+     "K1": 0.80676,
+     "K2": 1.0,
+     "K3": 0.8692,
+     "C1": 1.0,
+     "C2": 0.8582400000000001,
+     "C3": 0.79484
+    }
+   }
+  },
+  "G50_vs_X80_matched_exposure": {
+   "dev": {
+    "diff_ann": 0.02110417490503366,
+    "nw_t": 0.8801895433710994
+   },
+   "hold": {
+    "diff_ann": -0.020597791422325176,
+    "nw_t": -0.34459050714740197
+   },
+   "EW_pre_cagr_diff": -0.044634611025162974
+  },
+  "K3_fire_prob_given_realised_path": {
+   "plan_5pct": {
+    "2027-03-31": 0.6445,
+    "2027-06-30": 0.70215
+   },
+   "plan_0pct": {
+    "2027-03-31": 0.78705,
+    "2027-06-30": 0.847
+   }
+  }
+ }
+}

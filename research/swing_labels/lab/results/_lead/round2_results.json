@@ -1,0 +1,1911 @@
+{
+ "refined": [
+  {
+   "agent_id": "R2_rel",
+   "headline": "Of the 14 h=20 relative labels, the DEV-only composite picks XR_neumom h=20, the per-date rank of a residual that also removes 12-1 momentum, trained on the continuous rank. Long top-20, step 5, 50 bps: DEV 30.9% vs a horizon-matched random 11.8% (excess +19.1%, NW t 4.25; averaged over all 5 entry phases +15.8%, t 4.11); 26.2% at 80 bps. The 2026 holdout is positive but weak: phase-averaged excess +3.9%/yr (t 0.60), 13.9% vs random 10.2%. The single-phase +9.2% (t 1.54) is the luckiest of the 5 phases. The robust choices are the 20-day hold and the beta/vol/size/momentum neutraliser, not the label form. RANK, 20/60/20 and top-30 binary are tied on DEV. A dedicated bottom-30 avoid classifier and the T50/T10 cuts are cliffs. 477 distinct DEV specs tried; best DEV t 4.25 vs Bonferroni 3.71 (3.91 counting round 1).",
+   "candidates": [
+    {
+     "candidate_id": "h20_neumom_RANK",
+     "family": "relative: factor-neutral residual rank (+12-1 momentum neutralised)",
+     "definition": "r=open[t+1]->close[t+20] (NaN unless fw.ok(20)); per-date winsorise 1/99% over elig_base; per-date OLS residual on [1, 0.5*clip(beta_60,0,3)+0.5, vol_20, log_turn20, mom_12_1 (NaN->date median)]; y = per-date pct rank of residual; LightGBM regression on y-0.5 via walk_forward2; long top-20 every 5 days, 20-day time exit",
+     "horizon": "20",
+     "event_rates": "Exactly 30/40/30 (+1/0/-1) at the 30% cut in every year, regime and month (monthly std 0.0001; corr with Nifty month 0.04). Liquidity terciles +1 29.4/30.8/29.9%; fno_proxy +1 29.5% / -1 25.5%. 3.8% of class assignments differ from neu. P(net>0|+1) 90.4% overall but 37.9% in the worst month (corr 0.43 with Nifty month). Top-20 picks land in +1 30.1/37.2/36.7/33.5% of the time in 2023/24/25/26 (base 30%).",
+     "pros": [
+      "Best mean rank on the 7 DEV criteria; every DEV year positive vs random (+18.3/+35.8/+5.9%)",
+      "Factor R2 0.05; DEV alpha after 6 factors +17.4%/yr (t 3.99)",
+      "Highest DEV IC t of the h=20 models (0.063, t 8.6); 2026 IC 0.061, no decay",
+      "Composition does not depend on market direction (beta-tilt corr 0.06 vs 0.60 unneutralised)",
+      "5.5 sd above a persistence-matched random null on DEV; 98th pct in 2026"
+     ],
+     "cons": [
+      "2026 phase-averaged excess only +3.9% (t 0.60)",
+      "Long-side skill weak: 2026 top-30 AUC 0.508; the edge is mostly avoiding losers",
+      "Short trend / long liquidity: lags momentum or high-vol rallies (2026 dist_sma200 beta -0.51)",
+      "maxDD -25.6% DEV (random about -30%): no absolute drawdown protection",
+      "Clears Bonferroni only narrowly"
+     ],
+     "verdict": "promising",
+     "dev_cagr_50": 0.3088,
+     "dev_cagr_80": 0.2617,
+     "dev_excess_nw_t": 4.25,
+     "dev_maxdd": -0.2561,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.1604,
+     "holdout_excess_nw_t": 1.54,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.0633,
+     "xs_ic_holdout": 0.0609,
+     "xs_auc_note": "IC is vs the common XR_neu h20 residual rank. AUC top30 0.517 DEV / 0.508 2026; AUC bottom30 0.548 / 0.554.",
+     "sensitivity_note": "K smooth slope: DEV excess +32.1/+19.1/+16.9/+11.9% for K=10/20/30/50 (t 4.95-3.66). Step 5 vs 10 equal after phase-averaging (t 4.11/4.43). liq5 +14.3% (t 3.28). Cost about -1.5%/yr per +10 bps. Avoid cut 10/20/30/50%: DEV t 3.6/3.8/3.4/3.2, 2026 t 1.84/1.23/1.02/0.96."
+    },
+    {
+     "candidate_id": "h20_neumom_C20",
+     "family": "relative: neumom residual, 3-class 20/60/20 (multiclass)",
+     "definition": "Same residual as neumom; +1 pct>0.8, -1 pct<=0.2, else 0; LightGBM multiclass, score P(+1)-P(-1)",
+     "horizon": "20",
+     "event_rates": "Exactly 20/60/20 every date. Mean net per class +1570/-56/-1122 bps for the neu 20/60/20 label. P(net>0|+1) 95.3%.",
+     "pros": [
+      "Best phase-averaged DEV t (5.07 at step 5, 5.45 at step 10)",
+      "DEV factor alpha t 4.02",
+      "2026 phase-averaged +8.9% (t 1.32)"
+     ],
+     "cons": [
+      "Single-run S.compare DEV t only 3.69",
+      "Worst DEV year +3.4%",
+      "2026 factor alpha +9.0% (t 1.04); 2026 vol loading 0.62"
+     ],
+     "verdict": "promising",
+     "dev_cagr_50": 0.3012,
+     "dev_cagr_80": 0.2545,
+     "dev_excess_nw_t": 3.69,
+     "dev_maxdd": -0.2817,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.2224,
+     "holdout_excess_nw_t": 1.97,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.0575,
+     "xs_ic_holdout": 0.0604,
+     "xs_auc_note": "AUC top30 0.517/0.509, bottom30 0.543/0.551 (DEV/2026)",
+     "sensitivity_note": "Statistical tie with neumom RANK and neumom T30 (composite mean ranks 2.9/3.3/3.6)."
+    },
+    {
+     "candidate_id": "h20_neumom_T30",
+     "family": "relative: neumom residual, binary top-30% vs rest",
+     "definition": "Same residual; y=1{pct>0.7}; LightGBM binary; score=P(top30)",
+     "horizon": "20",
+     "event_rates": "30/70 fixed per date. Top-20 picks are high-vol (vol pctile 0.77) and land in both tails (+1 about 39%, -1 about 30%).",
+     "pros": [
+      "Best DEV avoid-overlay t (4.87)",
+      "Phase-averaged DEV t 4.57; DEV factor alpha t 4.15",
+      "2026 phase-averaged +11.6% (t 2.14)"
+     ],
+     "cons": [
+      "Low IC (0.039 DEV); score +0.30 correlated with vol_20",
+      "2026 factor alpha only +1.8% (t 0.31): 2026 gains were vol loading",
+      "Factor R2 0.31"
+     ],
+     "verdict": "promising",
+     "dev_cagr_50": 0.3076,
+     "dev_cagr_80": 0.2607,
+     "dev_excess_nw_t": 3.82,
+     "dev_maxdd": -0.2957,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.2181,
+     "holdout_excess_nw_t": 2.16,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.039,
+     "xs_ic_holdout": 0.0812,
+     "xs_auc_note": "AUC top30 0.541/0.557, bottom30 0.490/0.504: learns dispersion, not direction",
+     "sensitivity_note": "Binary cut has a narrow optimum (neu): T10 3.01, T20 3.39, T30 4.26, T50 1.23 phase-averaged DEV t."
+    },
+    {
+     "candidate_id": "h20_neu_RANK (XR_neu, round-1 winner on lab v2)",
+     "family": "relative: factor-neutral residual rank",
+     "definition": "Residual on [shrunk beta, vol_20, log_turn20]; regression on pct-0.5",
+     "horizon": "20",
+     "event_rates": "30/40/30 fixed; neu label still embeds a +0.067 z 12-1 momentum tilt (neumom removes it: -0.021 z)",
+     "pros": [
+      "DEV excess +18.0% (t 3.75); every DEV year positive",
+      "Reproduces round 1 on lab v2"
+     ],
+     "cons": [
+      "2026 phase-averaged only +3.3% (t 0.44); 82nd pct of matched null",
+      "Dominated by neumom on every DEV criterion"
+     ],
+     "verdict": "promising",
+     "dev_cagr_50": 0.2982,
+     "dev_cagr_80": 0.2516,
+     "dev_excess_nw_t": 3.75,
+     "dev_maxdd": -0.2935,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.1008,
+     "holdout_excess_nw_t": 0.49,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.0604,
+     "xs_ic_holdout": 0.0542,
+     "xs_auc_note": "AUC top30 0.517/0.503, bottom30 0.544/0.553",
+     "sensitivity_note": "K20 step 10 2026 excess ranges -12.4..+15.4% across 10 calendar phases (phase luck)."
+    },
+    {
+     "candidate_id": "h20_neu_C20",
+     "family": "relative: neu residual, 3-class 20/60/20",
+     "definition": "Residual on [shrunk beta, vol_20, log_turn20]; +1 top 20%, -1 bottom 20%; multiclass",
+     "horizon": "20",
+     "event_rates": "20/60/20 fixed per date",
+     "pros": [
+      "Phase-averaged DEV t 4.87",
+      "2026 phase-averaged +10.2% (t 1.66)"
+     ],
+     "cons": [
+      "Worst DEV year +5.0%; neumom variant ranks higher"
+     ],
+     "verdict": "promising",
+     "dev_cagr_50": 0.3067,
+     "dev_cagr_80": 0.2599,
+     "dev_excess_nw_t": 3.86,
+     "dev_maxdd": -0.283,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.1902,
+     "holdout_excess_nw_t": 1.87,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.0588,
+     "xs_ic_holdout": 0.0619,
+     "xs_auc_note": "AUC top30 0.517/0.509, bottom30 0.541/0.555",
+     "sensitivity_note": "3-class cut: C20 > C30 (3.61) ~ C33 (3.30) phase-averaged DEV t."
+    },
+    {
+     "candidate_id": "h20_neu_T30",
+     "family": "relative: neu residual, binary top-30%",
+     "definition": "y=1{pct>0.7} of neu residual; binary",
+     "horizon": "20",
+     "event_rates": "30/70 fixed",
+     "pros": [
+      "Phase-averaged DEV t 4.26; 2026 +14.9% (t 2.45)"
+     ],
+     "cons": [
+      "Factor R2 0.30, vol beta 0.47; 2026 factor alpha +7.9% (t 1.12)",
+      "DEV maxDD -32.8%"
+     ],
+     "verdict": "promising",
+     "dev_cagr_50": 0.299,
+     "dev_cagr_80": 0.2524,
+     "dev_excess_nw_t": 3.3,
+     "dev_maxdd": -0.328,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.2787,
+     "holdout_excess_nw_t": 3.17,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.034,
+     "xs_ic_holdout": 0.0797,
+     "xs_auc_note": "AUC top30 0.542/0.564, bottom30 0.492/0.516",
+     "sensitivity_note": "2026 strength follows the vol factor (+17.7% LS in 2026). Not selectable on DEV over neumom."
+    },
+    {
+     "candidate_id": "h20_neu_C30 / C33",
+     "family": "relative: neu residual, 3-class 30/40/30 and 33/33/33",
+     "definition": "Multiclass on neu residual rank classes",
+     "horizon": "20",
+     "event_rates": "30/40/30 or 33.4/33.3/33.3 fixed",
+     "pros": [
+      "Good IC (0.063/0.064 DEV)",
+      "Factor R2 0.02-0.05"
+     ],
+     "cons": [
+      "Weaker long books: DEV t 2.57 / 2.97; 2026 phase-averaged +1.0% / -0.4%"
+     ],
+     "verdict": "weak",
+     "dev_cagr_50": 0.2472,
+     "dev_cagr_80": 0.2025,
+     "dev_excess_nw_t": 2.57,
+     "dev_maxdd": -0.2809,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.1265,
+     "holdout_excess_nw_t": 0.84,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.0631,
+     "xs_ic_holdout": 0.063,
+     "xs_auc_note": "C30 values shown",
+     "sensitivity_note": "Wider middle class dilutes top-tail magnitude."
+    },
+    {
+     "candidate_id": "h20_none_RANK",
+     "family": "relative: raw (= minus index) return rank, no neutralisation",
+     "definition": "Rank of winsorised r_20; regression",
+     "horizon": "20",
+     "event_rates": "30/40/30 fixed; +1 share by liquidity tercile 28.8/30.7/30.7; 10.8% of classes differ from neu; beta tilt +0.09 z up / -0.23 z down markets (corr 0.60)",
+     "pros": [
+      "Simplest; DEV excess +13.4% (t 2.85)"
+     ],
+     "cons": [
+      "Market-direction-dependent composition",
+      "2026 phase-averaged -7.7% (t -0.91)"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.2518,
+     "dev_cagr_80": 0.2068,
+     "dev_excess_nw_t": 2.85,
+     "dev_maxdd": -0.3305,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.0386,
+     "holdout_excess_nw_t": -0.33,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.051,
+     "xs_ic_holdout": 0.0504,
+     "xs_auc_note": "AUC top30 0.521/0.492, bottom30 0.538/0.553",
+     "sensitivity_note": "size-only neutraliser behaves the same: DEV t 2.65, 2026 -1.8%."
+    },
+    {
+     "candidate_id": "h20_neu_B30 (explicit AVOID classifier)",
+     "family": "relative: binary bottom-30% vs rest",
+     "definition": "y=1{pct<=0.3}; binary; score=-P(bottom)",
+     "horizon": "20",
+     "event_rates": "29.9/70.1 fixed; its bottom-30% list is 35.6% -1 in 2026 but earned +138 bps vs universe +84 bps",
+     "pros": [
+      "Highest bottom-30 AUC (0.572 DEV, 0.561 2026)"
+     ],
+     "cons": [
+      "Learns volatility (score corr -0.73 with idio_vol_60)",
+      "Long book useless (DEV t 0.06; 2026 -11.3%)",
+      "Avoid overlay DEV +1.7% (t 1.28), 2026 -2.7%"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.1352,
+     "dev_cagr_80": 0.0943,
+     "dev_excess_nw_t": 0.06,
+     "dev_maxdd": -0.2036,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": -0.0447,
+     "holdout_excess_nw_t": -1.15,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.06,
+     "xs_ic_holdout": 0.0232,
+     "xs_auc_note": "A high tail-class AUC is not a high expected-return rank",
+     "sensitivity_note": "Same failure at h10/h15 (2026 avoid -1.5/-2.0%)."
+    },
+    {
+     "candidate_id": "h20_neu_T50 / T10 / T20",
+     "family": "relative: binary median split and rare top cuts",
+     "definition": "y=1{pct>0.5}, 1{pct>0.9}, 1{pct>0.8}",
+     "horizon": "20",
+     "event_rates": "50/50, 10/90, 20/80 fixed",
+     "pros": [
+      "T50 good IC (0.066)"
+     ],
+     "cons": [
+      "T50 long book fails (DEV t 0.67, 2026 -7.1%); T10/T20 IC about 0 on DEV, vol beta 0.5-0.7, worst DEV year -0.3% for T20"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.1589,
+     "dev_cagr_80": 0.1173,
+     "dev_excess_nw_t": 0.67,
+     "dev_maxdd": -0.2819,
+     "dev_random_cagr_50": 0.1179,
+     "holdout_cagr_50": 0.0205,
+     "holdout_excess_nw_t": -0.56,
+     "holdout_random_cagr_50": 0.0686,
+     "xs_ic_dev": 0.0662,
+     "xs_ic_holdout": 0.0572,
+     "xs_auc_note": "T50 values shown; T10 IC -0.000 DEV",
+     "sensitivity_note": "Cliffs on both sides of the T30 optimum."
+    },
+    {
+     "candidate_id": "h10_neu_RANK",
+     "family": "relative: neu residual rank, 10-day",
+     "definition": "As neu RANK with h=10",
+     "horizon": "10",
+     "event_rates": "30/40/30 fixed; label lag-1 autocorr 0.86; worst-month P(net>0|+1) 56%",
+     "pros": [
+      "Most skill: phase-averaged DEV excess +23.8% (t 4.79); h10 neumom t 4.90"
+     ],
+     "cons": [
+      "Cost-bound: DEV 80bp CAGR 16.2%, 130bp 2.6%; 2026 80bp 0.6%"
+     ],
+     "verdict": "weak",
+     "dev_cagr_50": 0.251,
+     "dev_cagr_80": 0.1615,
+     "dev_excess_nw_t": 4.36,
+     "dev_maxdd": -0.2786,
+     "dev_random_cagr_50": 0.012,
+     "holdout_cagr_50": 0.0815,
+     "holdout_excess_nw_t": 1.13,
+     "holdout_random_cagr_50": -0.0403,
+     "xs_ic_dev": 0.0696,
+     "xs_ic_holdout": 0.0504,
+     "xs_auc_note": "AUC bottom30 0.554 DEV / 0.558 2026",
+     "sensitivity_note": "The training horizon barely matters: h10/h15/h20 scores held 20d earn +18.1/+15.1/+18.0% DEV excess."
+    },
+    {
+     "candidate_id": "h15_neu_RANK",
+     "family": "relative: neu residual rank, 15-day",
+     "definition": "As neu RANK with h=15",
+     "horizon": "15",
+     "event_rates": "30/40/30 fixed; label lag-1 autocorr 0.90",
+     "pros": [
+      "Phase-averaged DEV t 4.04"
+     ],
+     "cons": [
+      "80bp DEV CAGR 19.6% < h20 25.2%; step 10 leaves 25% idle (exposure 0.69)"
+     ],
+     "verdict": "weak",
+     "dev_cagr_50": 0.256,
+     "dev_cagr_80": 0.1958,
+     "dev_excess_nw_t": 3.2,
+     "dev_maxdd": -0.29,
+     "dev_random_cagr_50": 0.0853,
+     "holdout_cagr_50": 0.0748,
+     "holdout_excess_nw_t": 0.6,
+     "holdout_random_cagr_50": 0.0204,
+     "xs_ic_dev": 0.0661,
+     "xs_ic_holdout": 0.0539,
+     "xs_auc_note": "AUC bottom30 0.548/0.556",
+     "sensitivity_note": "In between h10 and h20 on every axis."
+    },
+    {
+     "candidate_id": "AVOID overlay: EW elig minus bottom 30% of h20_neumom_RANK",
+     "family": "avoid overlay (select_quantile=(0.3,1), sizing equal)",
+     "definition": "Hold all elig_base names except the model's bottom 30% (also tested 10/20/50%), 20-day hold, step 5",
+     "horizon": "20",
+     "event_rates": "Drops exactly 30% of the universe each date; the dropped names are 34.6-35.4% -1 class vs 30% base",
+     "pros": [
+      "DEV +3.8% vs random-70% (t 3.40; phase-averaged t 3.58)",
+      "Factor-adjusted alpha +3.1% DEV (t 4.99) and +2.5% 2026 (t 3.73)",
+      "Drop-10% cut: 2026 t 1.84"
+     ],
+     "cons": [
+      "2026 raw excess only +1.2-1.8% (factor drag)",
+      "On DEV a 12-1 momentum avoid filter does as well (+3.7%, t 3.14) and better in 2026 (+5.4%)",
+      "Sim charges full round trips, so absolute CAGR is understated"
+     ],
+     "verdict": "promising",
+     "dev_cagr_50": 0.151,
+     "dev_excess_nw_t": 3.4,
+     "dev_random_cagr_50": 0.112,
+     "holdout_cagr_50": 0.082,
+     "holdout_excess_nw_t": 1.02,
+     "holdout_random_cagr_50": 0.065,
+     "sensitivity_note": "Universe EW: DEV 11.2%, 2026 6.4%."
+    }
+   ],
+   "key_findings": [
+    "Rank labels fix the event rate by design. Every h in {10,15,20} and every neutraliser gives +1 = 30.0% in every year, regime and month (monthly std 0.0001; corr with the Nifty month -0.12..+0.04). What moves is the liquidity-tercile mix (none 28.8/30.7/30.7 vs neu 29.3/30.9/29.9), the F&O sub-universe (-1 only 25.5%) and class churn (vs neu: neumom 3.5-3.8%, size 8.1-8.4%, none 10.8-11.0%).",
+    "Relative is not absolute. P(net>0 | +1) is 89-92% overall but 84-98% by year and falls to 37.9% in the worst month at h=20 (corr 0.42-0.64 with the Nifty month). P(net>0 | -1) is 2.9% in bull_up20 vs 17.4% in bear_dn20 windows.",
+    "Neutralisation removes the market-direction-dependent composition. Without it, the +1 class beta tilt is +0.09 z in up windows and -0.23 z in down windows (corr 0.60-0.67); with neu/neumom it is -0.04..-0.06 z (corr 0.06-0.16). neu still embeds the 12-1 momentum premium (+0.067 z); neumom removes it.",
+    "Horizon is decided by costs. h=10 has the most skill (phase-averaged DEV excess +23.8%, t 4.79), but DEV CAGR at 80 bps is 16.2% / 19.6% / 25.2% for h=10/15/20 and 2.6% / 10.2% / 17.7% at 130 bps. Any training horizon held 20 days earns +15..+18% DEV excess.",
+    "Neutraliser ranking neumom >= neu > none ~ size holds at h=10 and h=20 (phase-averaged DEV t at h=20: 4.11 / 3.81 / 3.27 / 2.90). none/size turn negative in 2026 (-7.7% / -1.8%).",
+    "Label form: continuous rank, 20/60/20 and top-30 binary are tied on DEV. 30/40/30 and 33/33/33 are slightly weaker. T10, T20, T50 and B30 are cliffs. Binary tail labels learn dispersion: B30 has the best bottom-30 AUC (0.572) but its avoid list outperformed in 2026 (+138 vs +84 bps); T30 loads on vol (R2 0.30).",
+    "Selected on DEV: h20_neumom_RANK. Long top-20 step 5 at 50 bps: DEV 30.9% vs random 11.8% (t 4.25; phase-averaged +15.8%, t 4.11), 26.2% at 80 bps, every DEV year positive. 2026: phase-averaged +3.9% (t 0.60), single-phase +9.2% (t 1.54), factor alpha +11.6% (t 1.78), 98th percentile of a persistence-matched null.",
+    "The asymmetry persists. Bottom-30 AUC is 0.538-0.557 DEV and about 0.555 in 2026 vs top-30 AUC of 0.516-0.521 DEV and 0.49-0.51 in 2026. The long books earn mostly by avoiding losers.",
+    "Avoid side: dropping the same score's bottom 10-30% adds +1.7..+3.8%/yr on DEV (t 3.4-3.8) and +1.3..+1.8% in 2026 (t 1.0-1.8), with factor-adjusted alpha +2.5% (t 3.7) in 2026. A plain 12-1 momentum avoid filter matches it on DEV (+3.7%, t 3.14) and beat it in 2026 (+5.4%).",
+    "Factor attribution: the neumom RANK long book has DEV alpha +17.4%/yr (t 3.99, R2 0.05), so it is not a boring tilt. No single-characteristic sort reaches it (best: 12-1 momentum +11.5%, t 1.62). 2026 was a factor storm (momentum LS +26%, vol +18%, trend +18%), and the neutral scores are short trend.",
+    "Phase luck: single-run S.compare holdout figures swing from -12.4% to +15.4% across the 10 calendar phases (neu RANK K20 s10). The selected model's default phase was the best of 5. Phase-averaged books are the robust statistic.",
+    "Luck calibration: an iid random picker has CAGR sd 1.9% on DEV. Constant per-stock random tilts have excess sd 6.7% DEV and NW t sd 1.37-1.54, reaching t 3.9 at the max of 40 draws. A persistence-matched null is calibrated (t sd about 1.05), and every top candidate sits 5.4-5.7 sd above it on DEV.",
+    "Sensitivity plateaus: K has a smooth slope (DEV excess +32/+19/+17/+12% for K=10/20/30/50, t 3.7-5.0, flat maxDD). Step 5 equals step 10 after phase-averaging. liq5 costs about 5 points of excess (t 4.25 to 3.28). Costs take about 1.5%/yr per +10 bps at h=20. 20-day name retention is 8-10%, so Sim's full round-trip charge is realistic for top-K books.",
+    "Variants: 75 label constructions screened, 23 walk-forward models, 477 distinct DEV specs at 50 bps (2088 DEV runs including cost and phase variants). Bonferroni one-sided 5% hurdle is t 3.71, or 3.91 adding round 1's ~600. The best DEV t (4.25) clears it narrowly; the choice among the top-3 forms is at noise level."
+   ],
+   "lab_issues_found": [
+    "Calendar-phase sensitivity: Sim trades 1 of `step` phases, so single-run holdout excess varies from -12.4% to +15.4% across phases (neu RANK K20 s10, 2026). Recommend phase-averaged books (s7_phase.py) for every holdout claim.",
+    "Newey-West t is miscalibrated for persistent tilts: constant per-stock random scores give NW t sd 1.37 (DEV) / 1.54 (2026), max 3.9 in 40 draws. Use a persistence-matched null or a block bootstrap.",
+    "Sim charges a full round trip on re-picked names. That is fine for top-K books (8-10% 20-day retention) but understates absolute CAGR of avoid/EW books by up to about 6%/yr at 50 bps. Excess vs random-70% is unaffected.",
+    "Sim.run filters strategy candidates to finite score but not the random baseline. This is harmless for walk_forward2 scores but changes the universe for characteristic sorts with NaN (mom_12_1 is NaN on 11.8% of elig rows).",
+    "xs_metrics has no down-side AUC; the avoid side needs an inverted score and a bottom-class target. Suggest adding auc_down.",
+    "A rank label built on the full elig cross-section is 29.5/45/25.5, not 30/40/30, inside fno_proxy. Re-rank inside the traded universe when used as a target there.",
+    "The ranking cross-section is conditioned on survival: 1.0/1.6/2.1% of elig rows (h=10/15/20) hit a suspension, segment break or label_block within h days and are NaN. That is correct as a label, and Sim forced exits keep the investability numbers unbiased."
+   ],
+   "recommendation": "Primary selection label: XR_neumom at h=20. This is the per-date percentile rank of the OLS residual of per-date-winsorised open[t+1]->close[t+20] on [0.5*clip(beta_60,0,3)+0.5, vol_20, log_turn20, mom_12_1] over elig_base. Train on the continuous rank (LightGBM regression via walk_forward2). Treat the 20/60/20 and top-30 binary forms of the same residual as equivalent; an equal-weight rank ensemble of the three is the next step for R2_alpha. Avoid label: the bottom tail of the same score; drop the worst 10-30%, with the 10% cut the most robust in 2026. Do not train a dedicated bottom-30 classifier, which learns volatility, and do not use un-neutralised or size-only ranks. Execution: K=20 (10-30 is a plateau), 20-day hold, entries staggered daily or weekly to remove phase luck, liq2 universe, cost stress at 80/130 bps. Expected edge over a horizon-matched random book is about +4% (2026 phase-averaged) to +16%/yr (DEV), with random-like drawdowns (about -25 to -30%). Pair it with a separate regime/exposure layer if absolute drawdowns matter, and consider a 12-1 momentum avoid filter alongside the model's avoid list. Verdict: promising, not proven. The DEV edge is strong and clears Bonferroni narrowly; the 2026 holdout is positive but small once phase luck is removed.",
+   "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/R2_rel/REPORT.md",
+   "variants_tried": 477
+  },
+  {
+   "agent_id": "R2_dual",
+   "headline": "Requiring both conditions doesn't help. The dual label (stock in the top-30% of XR_neu residual ranks AND absolute 20-day return above +50 bp) performs like a pure-relative label trained with the same loss (binary top-30%): +0.5%/yr on DEV, t 0.25, averaged over 5 signal-calendar phases, with no reduction in drawdown. The absolute leg makes the event rate move with the market: the daily +1 share correlates 0.70 with the market's return over the same window, and drops from 30% to 12% of names when the market falls more than 5% in the window. DUAL does beat the XR_neu regression by about 5%/yr, but that gain is a loss-function effect: the pure-relative binary model beats the regression by 4.6%/yr without any absolute leg. The best avoid rule is to drop the 30% of names with the lowest P(relative top-30): +3.3%/yr on DEV and +5.8%/yr in 2026, stable across phases. Avoid overlays built on a dedicated DUAL_down or REL_down model fail in 2026 (about -2.5%/yr).",
+   "candidates": [
+    {
+     "candidate_id": "R2D_DUAL_h20",
+     "family": "label-side AND (relative AND absolute)",
+     "definition": "r=open[t+1]->close[t+20] (adjusted, NaN unless fw.ok(20)). REL = per-date residual rank: r winsorised 1/99 per date, OLS on [1, 0.5*beta_60+0.5, vol_20, log_turn20] over elig_base. DUAL=+1 if REL top-30% AND r>+50bp; -1 if REL bottom-30% AND r<-50bp; else 0. Model: walk_forward2 binary P(DUAL=+1), long top-20, step 5.",
+     "horizon": "20d",
+     "event_rates": "+1 27.2% / 0 45.4% / -1 27.3%. By year, +1 ranges 25.5% (2022) to 29.4% (2023); monthly +1 sd 4.2pp (min 11.4%). Daily +1 share correlates 0.70 with the Nifty 500 return over the same window (REL: 0.04, ABS: 0.87); share rises 10pp per +10% market move. +1 share is 29.7% in up windows, 23.3% in down windows, 11.9% when the window falls more than 5%. The absolute leg removes 9.4% of REL +1 rows (2.3% in 2023, 15.2% in 2022); removed rows have mean net -336 bp. Raising tau to 500bp gives +1 22.7% and market corr 0.83.",
+     "dev_cagr_50": 0.314,
+     "dev_cagr_80": 0.267,
+     "dev_excess_nw_t": 3.55,
+     "dev_maxdd": -0.336,
+     "dev_random_cagr_50": 0.118,
+     "holdout_cagr_50": 0.148,
+     "holdout_excess_nw_t": 1.16,
+     "holdout_random_cagr_50": 0.069,
+     "xs_ic_dev": 0.0385,
+     "xs_ic_holdout": 0.0807,
+     "xs_auc_note": "Per-date AUC on DUAL+1: 0.545 DEV / 0.564 2026. The same-loss pure-relative model M_RUP scores 0.544 / 0.566 on the same event. Per-date rank correlation of M_DUAL vs M_RUP scores is 0.90.",
+     "sensitivity_note": "Averaged over 5 signal-calendar phases: DEV CAGR 34.2% vs RUP 33.6% (diff +0.5%/yr, range -1.7 to +1.9, t 0.25); 2026 holdout +3.0%/yr vs RUP (range -8.9 to +9.6). Beats RUP in 3/8 K x step cells on DEV. Beats REL regression in 8/8 cells (+5.1%/yr phase mean), entirely a loss-function effect. Phase-mean DEV maxDD -32.3% vs RUP -31.0% and REL -29.5%. The tau=300bp model is no better (DEV -0.3%/yr vs RUP).",
+     "pros": [
+      "Maximal label/P&L coherence: every +1 is a net winner, every -1 a net loser",
+      "Executable, NaN-safe, cost-aware",
+      "Learnable cross-sectionally (AUC 0.545-0.564)",
+      "Easy for a discretionary trader to understand"
+     ],
+     "cons": [
+      "91% of +1 labels are identical to REL +1, so it adds almost no stock-selection information",
+      "The changed 9% are chosen by the market's realised path, which re-imports market timing that a fully invested top-K book cannot use",
+      "Higher book beta (1.35 vs 1.26) and deeper DEV maxDD than REL",
+      "Event rate collapses to about 12% in sharp down windows, so the class base rate drifts with regime"
+     ],
+     "verdict": "weak"
+    },
+    {
+     "candidate_id": "R2D_DUALP_h20",
+     "family": "label-side AND, path version",
+     "definition": "+1 if REL top-30% AND long triple barrier +1 (h=20, target 3.0 ATR, stop 1.5 ATR, tau 50bp, stop checked first, gap fills); -1 if REL bottom-30% AND barrier -1; else 0. Binary P(+1) via walk_forward2, long top-20, step 5.",
+     "horizon": "20d",
+     "event_rates": "+1 20.5% / 0 52.2% / -1 27.3%. Daily +1 corr with the window market return 0.57. +1 share 23.3% in up windows, 16.3% in down windows, 8.6% when the window falls more than 5%. By barrier geometry: 2.0/2.0 ATR gives +1 24.2% (corr 0.56); 2.0/1.0 ATR gives 17.2% (corr 0.47). Mean net per +1 row: +1457 bp.",
+     "dev_cagr_50": 0.288,
+     "dev_cagr_80": 0.242,
+     "dev_excess_nw_t": 3.35,
+     "dev_maxdd": -0.318,
+     "dev_random_cagr_50": 0.118,
+     "holdout_cagr_50": 0.29,
+     "holdout_excess_nw_t": 2.64,
+     "holdout_random_cagr_50": 0.069,
+     "xs_ic_dev": 0.0312,
+     "xs_ic_holdout": 0.0759,
+     "xs_auc_note": "AUC on DUALP+1: 0.547 DEV / 0.570 2026",
+     "sensitivity_note": "DEV vs RUP: -4.6%/yr phase mean, 0/5 phases positive, 1/8 K x step cells positive. The phase-0 2026 result (29%) was its best phase; the phase mean is 19.5%. DEV selection would not pick it.",
+     "pros": [
+      "Path-aware and coherent",
+      "Lower bear-day losses than REL"
+     ],
+     "cons": [
+      "Worse than the same-loss pure-relative model on DEV",
+      "2026 strength not selectable and phase-dependent"
+     ],
+     "verdict": "weak"
+    },
+    {
+     "candidate_id": "R2D_RUP_h20",
+     "family": "pure relative, binary top-30% (same-loss control)",
+     "definition": "Binary target REL=+1 (XR_neu residual rank top 30%, h=20); walk_forward2 P(+1); long top-20, step 5.",
+     "horizon": "20d",
+     "event_rates": "Constant 30% per date. Corr with market 0.04. Liquidity terciles 29.4% / 30.9% / 29.9%.",
+     "dev_cagr_50": 0.337,
+     "dev_cagr_80": 0.289,
+     "dev_excess_nw_t": 3.62,
+     "dev_maxdd": -0.326,
+     "dev_random_cagr_50": 0.118,
+     "holdout_cagr_50": 0.252,
+     "holdout_excess_nw_t": 2.32,
+     "holdout_random_cagr_50": 0.069,
+     "xs_ic_dev": 0.0348,
+     "xs_ic_holdout": 0.0786,
+     "xs_auc_note": "AUC on REL+1: 0.542 DEV / 0.563 2026. AUC on REL-1 is 0.49, so the model ignores the loser tail.",
+     "sensitivity_note": "Phase-mean CAGR 33.6% DEV / 17.6% 2026 (2026 range 10.8-25.2%). Beats the REL regression in 8/8 DEV cells (+4.6%/yr phase mean, t 1.34). On liq5: 27.1% DEV / 19.8% 2026.",
+     "pros": [
+      "Regime-free label",
+      "Best or equal-best DEV long book",
+      "The same model gives the best avoid screen"
+     ],
+     "cons": [
+      "Higher beta (1.33) than REL",
+      "Low full-cross-section IC",
+      "DEV excess t 3.6 only modestly clears the luck bar"
+     ],
+     "verdict": "promising"
+    },
+    {
+     "candidate_id": "R2D_SUM_REL_RUP",
+     "family": "pure relative blend (regression + binary top-30)",
+     "definition": "Per-date rank of M_REL (XR_neu regression) + per-date rank of M_RUP (binary top-30); long top-20, step 5.",
+     "horizon": "20d",
+     "event_rates": "Same as REL (constant 30/40/30).",
+     "dev_cagr_50": 0.316,
+     "dev_cagr_80": 0.269,
+     "dev_excess_nw_t": 3.96,
+     "dev_maxdd": -0.305,
+     "dev_random_cagr_50": 0.118,
+     "holdout_cagr_50": 0.246,
+     "holdout_excess_nw_t": 2.59,
+     "holdout_random_cagr_50": 0.069,
+     "xs_auc_note": "Not computed for the blend; components as for REL and RUP.",
+     "sensitivity_note": "Phase mean 33.4% DEV / 19.1% 2026. Beats REL in 8/8 DEV and 7/8 2026 cells. The DUAL analogue SUM_REL_DUAL is only +1.0%/yr better on DEV (5/5 phases, t 0.66) and +1.4% in 2026 (3/5 phases): noise.",
+     "pros": [
+      "Highest DEV excess t among K20 books",
+      "Lower maxDD than RUP",
+      "Pure relative label"
+     ],
+     "cons": [
+      "Two models to maintain",
+      "Gain over REL not individually significant (t about 1)"
+     ],
+     "verdict": "promising"
+    },
+    {
+     "candidate_id": "R2D_REL_h20",
+     "family": "pure relative regression (XR_neu reference)",
+     "definition": "walk_forward2 regression on per-date residual percentile minus 0.5, h=20; long top-20, step 5.",
+     "horizon": "20d",
+     "event_rates": "Constant 30/40/30; monthly sd 0.",
+     "dev_cagr_50": 0.287,
+     "dev_cagr_80": 0.241,
+     "dev_excess_nw_t": 3.18,
+     "dev_maxdd": -0.295,
+     "dev_random_cagr_50": 0.118,
+     "holdout_cagr_50": 0.136,
+     "holdout_excess_nw_t": 0.94,
+     "holdout_random_cagr_50": 0.069,
+     "xs_ic_dev": 0.0632,
+     "xs_ic_holdout": 0.0568,
+     "xs_auc_note": "Driven by the loser tail: AUC REL-1 0.545/0.555 vs REL+1 0.518/0.504.",
+     "sensitivity_note": "Phase-mean 2026 CAGR 14.1% (range 6.6-20.7%). Lowest beta (1.26) and maxDD (-29.5%) of the relative books. Turned contrarian in 2026: only 33% of picks above sma200.",
+     "pros": [
+      "Best full-cross-section IC",
+      "Lowest drawdown"
+     ],
+     "cons": [
+      "Weaker top tail than the binary models (-4.6%/yr)"
+     ],
+     "verdict": "promising"
+    },
+    {
+     "candidate_id": "R2D_ABS_h20",
+     "family": "pure absolute",
+     "definition": "+1 if r>+50bp, -1 if r<-50bp (h=20); binary P(+1); long top-20, step 5.",
+     "horizon": "20d",
+     "event_rates": "+1 47.0% overall; monthly +1 range 11.7-75.3%. Daily +1 corr with the window market return 0.87; +1 share rises 48pp per +10% market move.",
+     "dev_cagr_50": 0.211,
+     "dev_cagr_80": 0.167,
+     "dev_excess_nw_t": 2.06,
+     "dev_maxdd": -0.328,
+     "dev_random_cagr_50": 0.118,
+     "holdout_cagr_50": 0.035,
+     "holdout_excess_nw_t": -0.35,
+     "holdout_random_cagr_50": 0.069,
+     "xs_ic_dev": 0.0521,
+     "xs_ic_holdout": 0.0493,
+     "xs_auc_note": "Raw-return IC 0.066 DEV collapses to 0.034 in 2026.",
+     "sensitivity_note": "Loses to REL in 8/8 DEV and 8/8 2026 cells.",
+     "pros": [
+      "Simple"
+     ],
+     "cons": [
+      "Encodes the market",
+      "Below random in 2026"
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "R2D_BAR_A2_h20",
+     "family": "pure absolute, path",
+     "definition": "Long triple barrier, h=20, target 3.0 ATR, stop 1.5 ATR, tau 50bp; binary P(+1); 20-day time exit.",
+     "horizon": "20d",
+     "event_rates": "+1 36.7% / -1 61.7%. Daily corr with the window market 0.71; +1 is 10.5% when the market falls more than 5%.",
+     "dev_cagr_50": 0.207,
+     "dev_cagr_80": 0.164,
+     "dev_excess_nw_t": 2,
+     "dev_maxdd": -0.275,
+     "dev_random_cagr_50": 0.118,
+     "holdout_cagr_50": 0.066,
+     "holdout_excess_nw_t": -0.06,
+     "holdout_random_cagr_50": 0.069,
+     "xs_ic_dev": 0.0325,
+     "xs_ic_holdout": 0.0441,
+     "pros": [
+      "Path-aware",
+      "Low drawdown"
+     ],
+     "cons": [
+      "Ties random in 2026",
+      "-6.9%/yr vs REL on DEV"
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "R2D_TWO_MODEL_SUM_REL_ABS",
+     "family": "two-model AND (rank-sum)",
+     "definition": "Per-date rank(M_REL) + rank(M_ABS). Siblings: PROD_RUP_ABS = P(top30) x P(r>50bp); AND_REL_ABS50 = REL top-20 among names in the M_ABS top half.",
+     "horizon": "20d",
+     "event_rates": "n/a (score combination)",
+     "dev_cagr_50": 0.302,
+     "dev_cagr_80": 0.256,
+     "dev_excess_nw_t": 3.63,
+     "dev_maxdd": -0.297,
+     "dev_random_cagr_50": 0.118,
+     "holdout_cagr_50": 0.104,
+     "holdout_excess_nw_t": 0.35,
+     "holdout_random_cagr_50": 0.069,
+     "sensitivity_note": "vs REL: +1.1%/yr DEV (t 0.41), -3.3% in 2026, 0/8 2026 cells positive. PROD_RUP_ABS vs RUP: -4.1%/yr DEV (t -1.66). AND_REL_ABS50 vs REL: -0.8%/yr DEV.",
+     "pros": [
+      "No new label needed"
+     ],
+     "cons": [
+      "The absolute model adds only timing; no cross-sectional gain"
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "R2D_AVOID_RUPup",
+     "family": "avoid overlay (pure relative)",
+     "definition": "Equal-weight elig_base minus the 30% with the lowest P(REL top-30) (select_quantile=(0.3,1), sizing='equal'), h=20, step 5.",
+     "horizon": "20d",
+     "event_rates": "Drops 30% of names per date by construction.",
+     "dev_cagr_50": 0.147,
+     "dev_cagr_80": 0.106,
+     "dev_excess_nw_t": 4.61,
+     "dev_maxdd": -0.288,
+     "dev_random_cagr_50": 0.112,
+     "holdout_cagr_50": 0.122,
+     "holdout_excess_nw_t": 5.1,
+     "holdout_random_cagr_50": 0.065,
+     "sensitivity_note": "vs the universe equal-weight book: +3.3%/yr DEV (t 4.6) and +5.8% 2026 (t 6.0), 5/5 phases in both windows, phase range under 1pp. liq5: +2.5% / +5.6%. The DUAL-up version: +3.2% / +5.0%.",
+     "pros": [
+      "Phase-stable",
+      "Positive in both windows",
+      "Holds about 700 names, so capacity is high"
+     ],
+     "cons": [
+      "Small absolute edge (3-6%/yr)",
+      "2026 holdout lightly contaminated"
+     ],
+     "verdict": "strong"
+    },
+    {
+     "candidate_id": "R2D_AVOID_DUALdown",
+     "family": "avoid overlay (DUAL_down model)",
+     "definition": "Equal-weight elig_base minus the 30% with the highest P(DUAL=-1), where DUAL=-1 means bottom-30% residual AND r<-50bp.",
+     "horizon": "20d",
+     "event_rates": "DUAL -1 27.3% overall. -1 share is 29.9% in down windows and 25.6% in up windows; corr -0.63 with the window market.",
+     "dev_cagr_50": 0.135,
+     "dev_cagr_80": 0.094,
+     "dev_excess_nw_t": 1.51,
+     "dev_maxdd": -0.273,
+     "dev_random_cagr_50": 0.112,
+     "holdout_cagr_50": 0.044,
+     "holdout_excess_nw_t": -1.15,
+     "holdout_random_cagr_50": 0.065,
+     "xs_auc_note": "Per-date AUC on DUAL-1: 0.572 DEV / 0.556 2026, so classification is robust. Full-cross-section IC collapses to 0.013 in 2026.",
+     "sensitivity_note": "vs universe: +1.9%/yr DEV (t 1.6), -2.6% 2026 (0/5 phases positive). The REL_down model behaves the same. Avoided names had above-average raw returns in 2026 (+96bp per 20d vs universe +84): residual losers but high-vol names in rebound windows.",
+     "pros": [
+      "Accurate down-event classifier"
+     ],
+     "cons": [
+      "Fails as an overlay in 2026",
+      "Residual-vs-raw mismatch"
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "R2D_INPUT_GATE_trend",
+     "family": "input-side condition (sample filter)",
+     "definition": "Samples restricted to close>sma200 AND xr_mom60>0.7 (label values unchanged); M_REL top-20 inside the gate. RELG = retrained on gate rows only.",
+     "horizon": "20d",
+     "event_rates": "Gate holds 26.3% of U, about 306 names per day (daily share sd 6pp).",
+     "dev_cagr_50": 0.276,
+     "dev_cagr_80": 0.23,
+     "dev_excess_nw_t": 3.44,
+     "dev_maxdd": -0.321,
+     "dev_random_cagr_50": 0.127,
+     "holdout_cagr_50": 0.187,
+     "holdout_excess_nw_t": -0.33,
+     "holdout_random_cagr_50": 0.224,
+     "sensitivity_note": "Random-in-gate vs random-in-U: +0.9%/yr DEV (t 0.42) but +15.5% in 2026 (t 2.08). REL@G_trend roughly equals REL@U on DEV; RELG is worse (-3.7%/yr). G_sma200 alone: +1.8% DEV (t 1.0).",
+     "pros": [
+      "Honest sample filter",
+      "2026 trend tilt was large"
+     ],
+     "cons": [
+      "No DEV value",
+      "Model adds nothing inside the gate in 2026",
+      "Not selectable on DEV"
+     ],
+     "verdict": "weak"
+    }
+   ],
+   "key_findings": [
+    "Event rates: adding the absolute leg (r>+50bp) to the top-30% residual label removes only 9.4% of +1 rows overall (2.3% in 2023 to 15.2% in 2022). The +1 share becomes market-dependent: daily corr 0.70 with the Nifty 500 return over the same window (REL 0.04, ABS 0.87). It is 29.7% in up windows, 23.3% in down windows and 11.9% when the window falls more than 5%. Monthly sd 4.2pp, minimum 11.4%.",
+    "Sensitivity map (tau 0-500bp x q 0.2/0.3/0.4 x h 10/20) is a smooth plateau with no cliffs. Raising tau or widening q always raises market dependence: at q=0.3, h=20, tau 0 to 500bp moves +1 from 27.6% to 22.7% and market corr from 0.67 to 0.83. h=10 behaves the same (11.1% of REL+1 removed).",
+    "Label/P&L coherence is mechanically perfect: DUAL +1 averages +1369bp net (100% hit), DUAL -1 averages -1038bp. That is conditioning on the outcome, not predictability.",
+    "Learnability: the DUAL model's per-date AUC on DUAL+1 is 0.545 DEV / 0.564 2026. The same-loss pure-relative binary model (M_RUP) scores 0.544 / 0.566 on the same event, and the two models' scores have rank correlation 0.90.",
+    "Investability, decisive same-loss test averaged over 5 signal-calendar phases: DUAL minus RUP is +0.5%/yr DEV (t 0.25, range -1.7 to +1.9) and +3.0%/yr 2026 (range -8.9 to +9.6). DUALP minus RUP is -4.6%/yr DEV (0/5 phases). No significant difference anywhere.",
+    "DUAL beats the XR_neu regression by about 5%/yr on DEV (8/8 K x step cells), but RUP beats it by 4.6%/yr (5/5 phases). The gain is from the binary top-tail loss, not the absolute leg.",
+    "Drawdowns: phase-mean DEV maxDD is REL -29.5%, RUP -31.0%, DUAL -32.3%, DUALP -31.8%. Book beta is 1.26 for REL and 1.33-1.35 for the top-tail books. The absolute leg does not cushion drawdowns.",
+    "Two-model alternatives fail. rank(REL)+rank(ABS) is +1.1%/yr DEV and -3.3% 2026 vs REL (0/8 holdout cells). P(top30) x P(abs) is -4.1%/yr DEV vs RUP. 'REL top-20 within ABS top half' is -0.8%/yr. The absolute model's extra content is market timing, which a fully invested cross-sectional book cannot use.",
+    "Input-side gate close>sma200 AND xr_mom60>0.7 (sample filter only): +0.9%/yr gate value on DEV (t 0.4); the model inside the gate is no better than on all of U, and retraining on the gate is worse. In 2026 the gate alone was worth +15.5%/yr (t 2.1). Not DEV-selectable; worth re-testing as a regime-dependent tilt.",
+    "Avoid side: the best overlay drops the 30% with the lowest P(relative top-30): +3.3%/yr DEV (t 4.6) and +5.8%/yr 2026 (t 6.0), phase-stable. Dedicated down models (DUAL_down, REL_down) classify well (AUC 0.556 in 2026) but fail as overlays in 2026 (-2.6%/yr, 0/5 phases), because the avoided names are high-vol residual losers with good raw returns in rebounds.",
+    "Phase noise: shifting the signal calendar by 0-4 days moves a top-20 book's 2026 CAGR by 10-14pp (e.g. REL 6.6-20.7%). A single-phase holdout difference of a few %/yr between label variants is not evidence.",
+    "Variants: 11 walk-forward models, 130 distinct DEV book configs, about 56 label variants screened on event rates. Under the null the expected max t is about 2.6 for 130 tries and about 3.2 for about 730 programme-wide. Relative-book DEV excess t of 3.0-4.0 only modestly clears this; DUAL-vs-relative paired t is at most about 1."
+   ],
+   "recommendation": "Don't add an absolute condition to the stock label. Use the pure-relative XR_neu residual rank at h=20 and train the selection model as a binary top-30% classifier (M_RUP), or rank-blend it with the XR_neu regression (SUM_REL_RUP: phase-mean 33.4% DEV, 19.1% in 2026 vs about 7% random). For avoiding names, drop the bottom 30% by P(relative top-30): +3.3%/yr DEV, +5.8%/yr 2026, stable across phases, high capacity. Don't use separately trained down models (DUAL_down or REL_down) as avoid overlays. The client's \"both must accept\" idea is best served by a separate market/exposure layer (R2_regime), evaluated against the market-dependent event rates quantified here. Judges should compare books averaged over signal-calendar phases, not single-phase holdout CAGRs.",
+   "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/R2_dual/REPORT.md",
+   "lab_issues_found": [
+    "MEDIUM: Sim results for a 20-name book depend on the signal-calendar phase. Shifting the start by 0-4 trading days moves 2026 CAGR by 10-14pp and DEV CAGR by 2-5pp; one phase-0 holdout result (DUAL vs RUP -8.9%/yr) was an extreme draw against a +3.0%/yr phase mean. Fix: S.compare should optionally average over start offsets 0..step-1 (equal-weight avoid overlays are phase-stable, under 1pp).",
+    "MEDIUM (method): the loss function alone (full-rank regression vs binary top-30% classifier on the same XR_neu label) moves DEV CAGR by about 4.6%/yr. Comparisons between labels must hold the loss fixed, or label effects get mis-attributed (DUAL looks better than XR_neu only because of this).",
+    "LOW: L.event_report's by_regime uses the signal-date regime, which barely moves outcome-conditioned labels (DUAL share 26.5-28.9% across regimes). The real dependence is on the realised market over the label window (DUAL +1 falls from 29.7% to 11.9%). Recommend reporting event rates split by same-window market return.",
+    "LOW: Sim's cash_yield defaults to 0. Mask-gated books that go to cash (e.g. a Nifty 500 > 200dma gate) are understated against a 6.5% cash alternative. The G_mkt200 numbers here use 0% cash.",
+    "NOTE: down-event classifiers trained on residual labels (AUC about 0.56 robust) do not make profitable avoid overlays on raw-return books in rebound regimes. The avoided names carry vol/beta exposure that paid in 2026 (+96bp vs +84bp universe per 20d)."
+   ],
+   "variants_tried": 130
+  },
+  {
+   "agent_id": "R2_alpha",
+   "headline": "Ensembling the relative label with an absolute barrier model and a trend-scan model adds no alpha. It adds a hidden regime bet. ENS3, an equal-weight rank average of XR_neu, the A2 barrier (h20, 3.0/1.5 ATR) and TSX trend-scan, won the pre-declared DEV selection with the highest DEV t: +15.4%/yr excess vs random, t 4.37, against 3.81 for XR alone. Paired against XR, though, it adds +0.1%/yr in DEV (t 0.06). In the 2026 holdout it lost -7.0%/yr vs random, with all 5 calendar phases and all 8 K x step cells negative; XR alone made +3.3%. The barrier and trend models put 30-87% of their gain importance in market/regime features. In 2026 they rotated into large, liquid, low-vol names while small and high-vol names led, and alpha after factors is about 0. Feature ablation: NSE delivery data is the only group that adds IC significantly in both windows (dIC -0.0064 DEV, -0.0135 in 2026 when removed). Factor attribution: XR's long edge is not low-vol or reversal. Alpha after factors is +14.1%/yr (t 3.33, R2 0.10), and a static factor composite earns only +2.0%/yr. The avoid side, by contrast, is largely a linear factor (idio-vol) effect, and factor-neutralising the score makes the avoid screen hold in 2026 (t 2.9-3.7).",
+   "candidates": [
+    {
+     "candidate_id": "XR_all (XR_neu regression, h20, 52 features)",
+     "family": "relative, factor-neutral residual rank (alpha source 1)",
+     "definition": "r20 = open[t+1]->close[t+20] (adjusted, NaN unless fw.ok(20)). Per date over U = elig_base: winsorise at 1/99%, OLS on [1, 0.5*clip(beta_60,0,3)+0.5, vol_20, log_turn20], residual pct rank. Target pct-0.5, LightGBM regression via walk_forward2 (date_step 2, n_jobs 2). Long top-20, step 5, 20d time exit. Bit-identical to R2_rel h20_neu_RANK.",
+     "horizon": "20 trading days",
+     "event_rates": "30/40/30 form: +1 30.0% / 0 40.0% / -1 29.9% on U (n=1,289,713). Daily +1 share std 0.03%, corr with N500 same window 0.07. Flat by year (30.0-30.1%), regime (30.0% in all 4) and liquidity tercile (29.4/30.9/29.9%). +1 class nets +1221 bps at 50 bps (P(net>0) 91%); -1 nets -938 bps.",
+     "dev_cagr_50": 0.293,
+     "dev_cagr_80": 0.2467,
+     "dev_random_cagr_50": 0.1184,
+     "dev_excess_nw_t": 3.81,
+     "dev_maxdd": -0.2909,
+     "holdout_cagr_50": 0.1293,
+     "holdout_random_cagr_50": 0.0998,
+     "holdout_excess_nw_t": 0.44,
+     "xs_ic_dev": 0.0604,
+     "xs_ic_holdout": 0.0542,
+     "xs_auc_note": "Per-date AUC top30 0.517 DEV / 0.503 2026; AUC bottom30 (inverted) 0.544 / 0.553. IC by year 0.023/0.088/0.070/0.054. Importance ranking stable across folds (Spearman 0.90-0.97).",
+     "sensitivity_note": "K x step DEV excess runs from +11.3%/yr (K50 s10) to +20.4% (K10 s5), all t>=3.7. 2026 is +2.2% to +7.7% in 8/8 cells, none significant. Excess vs random is identical at 50 and 80 bps (same turnover); absolute CAGR falls about 4.5 pp. All numbers are phase-averaged; phase-0 S.compare gives DEV +18.0% (t 3.75), 2026 +3.2%.",
+     "pros": [
+      "Regime-free label",
+      "Alpha after SIZE/MOM/REV/LOWVOL/LOWBETA/MKT +14.1%/yr (t 3.33, R2 0.10) in DEV",
+      "Positive in 2026 in every K x step cell",
+      "Least exposed of the models to regime tilts (market features 12-19% of gain)"
+     ],
+     "cons": [
+      "2026 edge small and not significant (+3.3%/yr, t 0.44)",
+      "Raw avoid overlay weak in 2026 (+0.6%, t 0.38)",
+      "DEV t 3.81 is below the programme-wide Bonferroni hurdle of 3.93",
+      "maxDD about equal to random (-29%)"
+     ],
+     "verdict": "promising"
+    },
+    {
+     "candidate_id": "BAR_all (A2 triple barrier, binary)",
+     "family": "absolute, path-dependent (alpha source 2)",
+     "definition": "L.barrier_labels(h=20, pt=3.0*atr_pct, sl=1.5*atr_pct, tau=50bp), entry open[t+1], stop checked first, gaps fill at the open. Target 1{BAR=+1}, NaN where invalid; LightGBM binary via walk_forward2. Long top-20 by P(+1), step 5, 20d time exit. Bit-identical to R2_dual M_BAR.",
+     "horizon": "20 trading days (barrier label; executed with a time exit)",
+     "event_rates": "+1 36.7% / 0 1.6% / -1 61.7%. Exits: target 26.6% / stop 56.6% / time 16.8%. Daily +1 share 2%-95% (std 20.7 pp), corr 0.71 with N500 same window, monthly corr 0.63. By year 2021-26: 37.9/35.6/46.4/33.8/32.5/36.0%. Bear regimes 41-42% vs bull 35%. Liquidity terciles 35.9/36.7/37.5%. pt 2->4 ATR (sl 2) moves P(+1) 48.8->40.0%; sl 1.5->3 (pt 3) moves 36.7->48.0%; monthly +1 std is at least 14.7% for every geometry.",
+     "dev_cagr_50": 0.2208,
+     "dev_cagr_80": 0.177,
+     "dev_random_cagr_50": 0.1184,
+     "dev_excess_nw_t": 2.38,
+     "dev_maxdd": -0.2757,
+     "holdout_cagr_50": 0.028,
+     "holdout_random_cagr_50": 0.0998,
+     "holdout_excess_nw_t": -0.87,
+     "xs_ic_dev": 0.0324,
+     "xs_ic_holdout": 0.0437,
+     "xs_auc_note": "Own-class per-date AUC 0.524 DEV / 0.514 2026; AUC bottom30 of XR 0.517 / 0.543.",
+     "sensitivity_note": "Without the 10 market features, the DEV book is -1.8%/yr (t -0.57): the DEV edge was regime timing (paired -10.9%/yr, t -2.99). 2026 becomes +6.6%. Negative in 2026 in 8/8 K x step cells.",
+     "pros": [
+      "Classes cohere with P&L (+1 nets +958 bps)",
+      "Avoid overlay positive in both windows (DEV +2.4%, t 3.52)"
+     ],
+     "cons": [
+      "61%->87% of gain importance is market/regime features",
+      "DEV edge vanishes without market features",
+      "2026 -7.3%/yr vs random; factor regression R2 0.51 in 2026, alpha about 0",
+      "Weakest relative ranker (IC 0.032)"
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "TSX_all (market-excess trend scan TSX_T5, multiclass)",
+     "family": "market-excess trend label (alpha source 3)",
+     "definition": "y_0=0, y_k = log(close[t+k]/open[t+1]) - log(N500 close[date t+k]/N500 open[date t+1]), k=1..L. OLS slope t for L=5..20 (residual-variance floor 1e-6); L* = argmax |t|. Label sign(t*) if |t*|>=5 else 0; NaN unless fw.ok(20). LightGBM multiclass, score P(+1)-P(-1).",
+     "horizon": "adaptive 5-20 bars, executed with a 20d time exit",
+     "event_rates": "+1 25.7% / 0 35.7% / -1 38.7%. Daily +1 share std 8.6 pp (7%-62%), corr 0.18 with N500 same window (monthly 0.05). By year 2021-26: 22.7/25.1/28.8/24.5/22.7/29.7%. Liquidity terciles 23.2/25.6/28.2%. T=3 gives 38.3% +1, T=8 gives 10.9%. L* is 30% at the L=20 boundary.",
+     "dev_cagr_50": 0.2466,
+     "dev_cagr_80": 0.2019,
+     "dev_random_cagr_50": 0.1184,
+     "dev_excess_nw_t": 3.18,
+     "dev_maxdd": -0.2842,
+     "holdout_cagr_50": 0.0286,
+     "holdout_random_cagr_50": 0.0998,
+     "holdout_excess_nw_t": -0.82,
+     "xs_ic_dev": 0.0606,
+     "xs_ic_holdout": 0.0677,
+     "xs_auc_note": "AUC top30 0.528/0.513, bottom30 0.534/0.559 (DEV/2026); IC vs its own t* 0.087/0.096.",
+     "sensitivity_note": "2026 negative in 8/8 K x step cells. Without market features: DEV +8.0% (t 2.12), 2026 +8.4%; paired 2026 +15.4%/yr (t 2.16), holdout-informed. Its 2026 score is 72% explained by 7 factor characteristics (49% in DEV).",
+     "pros": [
+      "Best IC on the XR yardstick in 2026 (0.068)",
+      "Best single-model raw avoid t in DEV (4.19)"
+     ],
+     "cons": [
+      "Long book fails 2026 (-7.0%/yr) despite higher IC: top tail dominated by a defensive large-cap/low-vol rotation",
+      "Market features carry 29%->57% of gain"
+     ],
+     "verdict": "weak"
+    },
+    {
+     "candidate_id": "ENS3 (equal-weight rank average of XR_all, BAR_all, TSX_all)",
+     "family": "ensemble of alpha sources",
+     "definition": "Per date, the mean of the percentile ranks (among U) of the three OOS scores; no fitted weights. Long top-20, step 5, h=20. Selected by the pre-declared DEV rule (highest DEV phase-averaged NW t).",
+     "horizon": "20 trading days",
+     "event_rates": "No label of its own; combines XR (regime-flat 30/40/30), BAR (market-driven, 2%-95% daily +1) and TSX (25.7% +1, daily std 8.6 pp). Score correlations: XR~BAR 0.56, XR~TSX 0.71, BAR~TSX 0.64; top-20 overlap 24-28%.",
+     "dev_cagr_50": 0.2966,
+     "dev_cagr_80": 0.2501,
+     "dev_random_cagr_50": 0.1184,
+     "dev_excess_nw_t": 4.37,
+     "dev_maxdd": -0.2637,
+     "holdout_cagr_50": 0.0296,
+     "holdout_random_cagr_50": 0.0998,
+     "holdout_excess_nw_t": -0.8,
+     "xs_ic_dev": 0.0584,
+     "xs_ic_holdout": 0.0606,
+     "xs_auc_note": "AUC top30 0.523/0.507, bottom30 0.535/0.558.",
+     "sensitivity_note": "DEV +11.3% to +19.2%/yr across K x step (t>=3.9). 2026 is -4.8% to -8.9%/yr in 8/8 cells, with all 5 phases negative. Paired vs XR: DEV +0.1%/yr (t 0.06), 2026 -10.3%/yr (t -1.55). Without market features (ENS3_nomkt): DEV +11.6%, 2026 +6.5%, holdout-informed.",
+     "pros": [
+      "Highest DEV t and Sharpe (1.42 PA)",
+      "Smoothest DEV excess"
+     ],
+     "cons": [
+      "No paired DEV gain over XR",
+      "Fails the 2026 holdout: alpha after factors +1.3% (t 0.21), R2 0.46, losses from negative SIZE and low-vol exposure",
+      "Higher t came from lower tracking variance, not return"
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "ENS_XT / ENS_XB / ENS_BT (pairwise rank averages)",
+     "family": "ensemble",
+     "definition": "Equal-weight per-date rank averages of XR+TSX, XR+BAR and BAR+TSX OOS scores; long top-20, step 5, h=20.",
+     "horizon": "20 trading days",
+     "event_rates": "Component labels as above.",
+     "dev_cagr_50": 0.2977,
+     "dev_cagr_80": 0.2512,
+     "dev_random_cagr_50": 0.1184,
+     "dev_excess_nw_t": 4.21,
+     "dev_maxdd": -0.2748,
+     "holdout_cagr_50": 0.0293,
+     "holdout_random_cagr_50": 0.0998,
+     "holdout_excess_nw_t": -0.77,
+     "xs_ic_dev": 0.0647,
+     "xs_ic_holdout": 0.0638,
+     "xs_auc_note": "Numbers shown are for ENS_XT, which has the best DEV IC of all scores. ENS_XB: DEV t 3.59, 2026 -5.5%. ENS_BT: DEV t 3.88, 2026 -10.3%.",
+     "sensitivity_note": "All three are negative in 2026 at K20; ENS_XT is negative in 8/8 K x step cells. Paired vs XR in DEV: -2.0% to +0.3%/yr.",
+     "pros": [
+      "ENS_XT has the highest DEV IC (0.065)"
+     ],
+     "cons": [
+      "Same 2026 failure as ENS3 (-5.5% to -10.3%/yr)"
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "FN avoid overlay (XR_all_FN / ENS3_FN / TSX_all_FN, drop bottom 30%)",
+     "family": "avoid screen from a factor-neutralised score",
+     "definition": "Per date, regress the score's pct rank on the pct ranks of [log_turn20, mom_12_1, mom_5, vol_20, beta_60, idio_vol_60, dist_sma200] (all PIT, same date) and keep the residual. Hold all U names equal-weight except the bottom 30% of the residual (select_quantile=(0.3,1), sizing equal, step 5, h=20). Compared with random-70% and with the EW universe. Numbers below are for XR_all_FN.",
+     "horizon": "20 trading days",
+     "event_rates": "Screen, not a new label: it removes 30% of names every date by construction. The underlying label is XR_neu (regime-flat 30/40/30).",
+     "dev_cagr_50": 0.137,
+     "dev_cagr_80": 0.0962,
+     "dev_random_cagr_50": 0.1107,
+     "dev_excess_nw_t": 5.55,
+     "dev_maxdd": -0.2799,
+     "holdout_cagr_50": 0.1098,
+     "holdout_random_cagr_50": 0.0845,
+     "holdout_excess_nw_t": 2.93,
+     "xs_ic_dev": 0.0414,
+     "xs_ic_holdout": 0.049,
+     "xs_auc_note": "FN scores have lower IC than raw (0.041 vs 0.060) but similar AUC top (0.520) and a cleaner bottom tail.",
+     "sensitivity_note": "ENS3_FN: DEV +2.9% (t 7.70), 2026 +2.2% (t 3.30). TSX_all_FN: DEV +2.9% (t 8.10), 2026 +2.2% (t 3.70). Raw-score avoid overlays: 2026 t 0.4-0.8. The excess is the same at 80 bps. Built during attribution and not in the pre-declared set, but DEV alone prefers it (highest DEV t of all avoid variants).",
+     "pros": [
+      "Only avoid variants with t>2 in 2026",
+      "DEV t 5.5-8.1",
+      "Alpha after factors about +2-3%/yr with t 2.5-4.3 in both windows"
+     ],
+     "cons": [
+      "Small effect (+2-3%/yr over EW universe)",
+      "Post-hoc construction; needs confirmation on fresh data",
+      "Does not reduce drawdown"
+     ],
+     "verdict": "promising"
+    },
+    {
+     "candidate_id": "No-market and FN long books (XR_no_market, ENS3_nomkt, TSX_all_FN K20)",
+     "family": "diagnostic variants (holdout-informed hypotheses)",
+     "definition": "Same walk-forward models without the 10 market/regime features (mkt_*, vix, breadth50, breadth_ad, dispersion), or a factor-neutralised score; long top-20, step 5. Numbers below are for XR_no_market.",
+     "horizon": "20 trading days",
+     "event_rates": "Same labels as the parent models.",
+     "dev_cagr_50": 0.2692,
+     "dev_cagr_80": 0.2237,
+     "dev_random_cagr_50": 0.1184,
+     "dev_excess_nw_t": 3.16,
+     "dev_maxdd": -0.3045,
+     "holdout_cagr_50": 0.1954,
+     "holdout_random_cagr_50": 0.0998,
+     "holdout_excess_nw_t": 1.62,
+     "xs_ic_dev": 0.0571,
+     "xs_ic_holdout": 0.0821,
+     "xs_auc_note": "XR_no_market 2026 IC 0.082 vs 0.054 with market features (dIC +0.028; NW t 5.45, but non-overlap t only 1.31).",
+     "sensitivity_note": "DEV paired vs XR -1.9%/yr (t -0.90); 2026 +5.8% (t 0.99). TSX_all_FN K20: DEV +8.7% (t 2.90), 2026 +11.0% (t 2.04). Market features helped BAR/TSX/ENS3 books in 8 of 9 DEV model-years, so DEV does not support dropping them.",
+     "pros": [
+      "Better 2026 IC and books",
+      "Much smaller regime tilt"
+     ],
+     "cons": [
+      "DEV-worse or DEV-neutral: selecting them would be holdout-informed"
+     ],
+     "verdict": "weak"
+    }
+   ],
+   "key_findings": [
+    "Reproducibility: my XR_neu label equals R2_rel's pct_neu (max diff 3e-8), and my BAR label equals R2_dual's. The XR_all and BAR_all OOS scores are bit-identical to R2_rel h20_neu_RANK and R2_dual M_BAR. My walk_forward2 copy (adds per-fold gain importance) is bit-identical to L.walk_forward2, and my per-date metrics reproduce L.xs_metrics exactly.",
+    "Primary statistics: phase-averaged excess vs a horizon-matched 5-seed random baseline (signal calendar shifted 0..step-1 days), with NW t lag 20. Phase-0 S.compare numbers are also reported. All 'dev_cagr' figures in the candidate list are phase-averaged; holdout CAGRs are annualised over Jan-Oct 2026.",
+    "Selection (pre-declared before any sim, DEV only): ENS3 won the long book (DEV t 4.37) and ENS_BT won the avoid screen (DEV t 4.33). 2026 exam: ENS3 -7.0%/yr vs random (FAIL); ENS_BT avoid +1.6%/yr (t 0.88, not significant).",
+    "No ensemble beats XR in a paired DEV test (ENS3 +0.1%/yr t 0.06; ENS_XT +0.3% t 0.13). In 2026 every ensemble and every absolute/trend model lags XR by 9-14%/yr (paired t -1.3 to -1.8). A higher DEV t can come from lower tracking variance rather than more return.",
+    "Mechanism: market/regime features carry 61%->87% of BAR's gain importance, 29%->57% of TSX's and 12%->19% of XR's across folds. In 2026 the BAR/TSX/ENS3 top-20 rotated into large, liquid, low-vol names (ENS3 vol pctile 0.38 vs 0.62 in DEV; turnover 0.83). 2026 factors were LOWVOL -18.9%/yr, LOWIDIO -22.9%, SIZE (small-big) +5.6%. Realised factor-neutral skill of the picks stayed positive (XR pct 0.517), so the losses came from the tilt. Removing market features cost DEV 3-11%/yr (in 8 of 9 model-years) and added 13-15%/yr in 2026. It is a factor-timing bet that paid in 2023-25 and failed in 2026.",
+    "Absolute barrier label: its whole DEV edge is regime timing. Without market features BAR's top-20 book is -1.8%/yr in DEV (picks' raw excess -12 bps per trade).",
+    "Feature ablation on XR_neu (drop one group, retrain): delivery is the only group with a significant IC contribution in both windows (dIC when removed -0.0064 DEV, NW t -4.99 / non-overlap -2.44; -0.0135 in 2026, NW t -3.68 / non-overlap -2.85). Its dIC is negative in every year 2023-2026. deliv_pct is the best single feature for the relative target (IC +0.044 DEV, +0.045 2026) and survives controls (partial IC +0.042, t 5.0). Book effect -2.1%/yr K20 (t -1.19) and -1.1%/yr avoid in 2026 (t -2.54). Verdict: NSE delivery data adds value, modestly but robustly.",
+    "Momentum, technicals, volume and the xs-rank copies are redundant for IC (|dIC| <= 0.002 DEV). Momentum still matters for the top tail: dropping it costs the K20 book -3.2%/yr DEV (t -1.70) and -4.4% in 2026. The xs-rank group is a pure duplicate for a per-date rank target. Market features: DEV dIC -0.0033 (n.s.); removing them raised 2026 IC by +0.028.",
+    "Factor attribution (factors built from U with the same Sim, phase-averaged): XR K20 DEV excess +15.2%/yr leaves alpha +14.1%/yr (t 3.33, R2 0.10) after SIZE/MOM/REV/LOWVOL/LOWBETA/MKT, and +12.6% (t 3.15) after adding LOWIDIO/TREND. The book is SHORT low-vol (t -3.4) and weakly long reversal (t +1.2). The edge is not just low-vol or reversal.",
+    "Score decomposition: a static 7-characteristic composite with XR's own DEV loadings reproduces XR's IC (0.059 vs 0.060), but only via the bottom tail (AUC_bot 0.561, AUC_top 0.500). Its K20 book earns +2.0%/yr (t 0.29). The factor-neutral residual keeps 85% of the long excess. So the avoid side is mostly a linear factor (high idio-vol) effect and the long side is model-specific.",
+    "The factor-neutralised avoid screen is the most robust practical output: DEV t 5.5-8.1 and 2026 +2.2-2.3%/yr (t 2.9-3.7) for XR/ENS3/TSX, versus 2026 t 0.4-0.8 for the raw scores. DEV alone prefers it.",
+    "No alpha source reduces drawdowns: K20 maxDD is -25% to -31% in DEV vs -29.7% for random. At 50 vs 80 bps the excess over random is identical (same turnover); only the absolute CAGR falls by about 4.5 pp/yr.",
+    "Variants: 12 walk-forward models, 11 derived scores (4 ensembles, ENS3_nomkt, 6 FN/FC decompositions), 102 distinct DEV strategy specs at 50 bps (46 main + 56 K x step), 10 label variants screened on event rates only, 7 formal candidates. Bonferroni one-sided 5% hurdle: 3.30 for this agent, 3.93 programme-wide (~1190 specs). ENS3 passed both at 4.37 and still failed the holdout."
+   ],
+   "recommendation": "Label stack, from the alpha-source study:\n(1) Primary selection label: XR_neu at h=20, used alone. Do not ensemble it with absolute (barrier) or market-excess (trend-scan) models. They add no paired DEV return, and they import a regime-conditional size/low-vol tilt that cost about 10%/yr in 2026.\n(2) Keep market/regime features out of the stock-selection score. Market timing belongs to the regime/exposure layer, where it can be sized and evaluated explicitly. For XR, dropping them is DEV-neutral (-1.9%/yr, t -0.9).\n(3) AVOID screen: drop the bottom 30% of a factor-neutralised model score (per-date residual on 7 characteristic ranks). It has the highest DEV t of any avoid variant and was the only one significant in 2026. Expect only about +2-3%/yr over the EW universe.\n(4) Keep NSE delivery features: they are the only feature group with a significant every-year IC contribution.\n(5) Drop the xs-rank duplicate features; this is neutral.\n(6) Pre-register for fresh data, without promoting yet, because the 2026 evidence is holdout-informed: the factor-neutral long book and the no-market XR model.\n(7) Drawdown control must come from the regime layer, since no alpha source reduced maxDD.\nJudges should rely on paired difference tests between candidates, not on 'highest DEV t'.",
+   "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/R2_alpha/REPORT.md",
+   "lab_issues_found": [
+    "MEDIUM (definition drift and model noise): R2_dual builds XR_neu with 0.5*beta_60+0.5 without clipping, while R2_rel, round-1 B_relative and R2_alpha clip beta_60 to [0,3] first. The labels barely differ (pct corr 0.99986; 0.47% of rows change 3-class), yet the trained OOS scores correlate only 0.973 (max abs diff 0.08). Score differences of that size are noise. Fix: put a canonical label builder in lablib.",
+    "LOW-MEDIUM (OLS neutralisation is not rank-neutral): the XR_neu pct still has per-date rank IC +0.030 (t 9.7) with log_turn20 and -0.032 (t -5.6) with vol_20, both OLS regressors. OLS removes the mean relation, but illiquid and high-vol names have more right-skewed returns and lower median residuals. The +1 class is therefore slightly more liquid and lower-vol than intended. Fix if exact neutrality matters: neutralise in rank space or within buckets.",
+    "MEDIUM (method): the Newey-West t (Bartlett, lag 20) of per-date IC differences on short windows of overlapping 20d forward returns overstates significance. For 2026, the same dIC gives NW t 5.45 vs non-overlap t 1.31. Report both or block-bootstrap by month; prefer paired daily-book tests, which have no forward-window overlap.",
+    "MEDIUM (method): 'select the highest DEV t' rewards low tracking variance. ENS3's DEV t of 4.37 vs XR's 3.81 came with an identical mean excess (paired +0.1%/yr, t 0.06), and ENS3 then failed the holdout. Selection rules should include paired-difference tests against the incumbent.",
+    "LOW: calendar phase dominates single-run holdout comparisons; one K20 book's 2026 excess ranges +0.4% to +7.2% across the 5 phases for XR and -11.8% to -3.2% for ENS3. Use phase-averaged books.",
+    "LOW: L.event_report still assigns rows with NaN mkt_dist_sma200 to 'bear' (round-1 issue).",
+    "INFO: walk_forward2 exposes no feature importance; I used a verified bit-identical copy (common.wf2_imp) to record per-fold gain."
+   ],
+   "variants_tried": 102
+  },
+  {
+   "agent_id": "R2_regime",
+   "headline": "Timing the market does not reliably help, net of whipsaw. No point-in-time regime signal predicted the next-20-day market return consistently across 2021-22, 2023-25 and 2026, and all 9 walk-forward timing models scored below 0.5 AUC on DEV (0.39-0.47). The best DEV gate, breadth50>0.5, won in one episode (the 2025 drawdown) with null p=0.085, which fails multiple testing. It lost in 2021-22 and only broke even against always-invested in 2026 (EW book +0.6 pp CAGR, XR20 book -3.7 pp). The 200-dma rule cost about 20 pp of 2026 CAGR. The relative edge does not depend on the regime, so the regime layer should be a fixed exposure policy, not a timer.",
+   "candidates": [
+    {
+     "candidate_id": "XR20_ALWAYS_IN",
+     "family": "relative selection (reference book for the regime layer)",
+     "definition": "XR_neu: for each date, take open[t+1]->close[t+20] (NaN unless fw.ok(20)), winsorize 1/99%, regress (OLS) on [0.5*clip(beta_60,0,3)+0.5, vol_20, log_turn20], and rank the residual. Score from L.walk_forward2 regression (52 PIT features). Long top-20, h=20, step=5, slot sizing, always 100% invested, cash 6.5%.",
+     "horizon": "20 trading days",
+     "event_rates": "Rank label defined on 1,289,713 of 1,317,004 elig_base rows. Regime-free by construction: excess over random per 20d trade is +1.21% when the market rises and +1.28% when it falls (DEV). Book exposure 93% (DEV).",
+     "pros": [
+      "Selection edge does not depend on regime: slope of excess on market t=0.39; no regime signal splits it (|t|<=1.02)",
+      "DEV excess over random +17.3 pp/yr (NW t 3.49, phase-averaged)",
+      "Label identical to R2_rel neu (max diff 3e-8)"
+     ],
+     "cons": [
+      "Full beta (1.03 to the EW universe); DEV maxDD -29.2%",
+      "2026 excess over random only +4.8 pp (t 0.64)"
+     ],
+     "verdict": "promising",
+     "dev_cagr_50": 0.289,
+     "dev_cagr_80": 0.243,
+     "dev_excess_nw_t": 3.49,
+     "dev_maxdd": -0.292,
+     "dev_random_cagr_50": 0.116,
+     "holdout_cagr_50": 0.138,
+     "holdout_excess_nw_t": 0.64,
+     "holdout_random_cagr_50": 0.09,
+     "xs_ic_dev": 0.072,
+     "xs_ic_holdout": 0.047,
+     "xs_auc_note": "Top-30% cross-sectional AUC 0.517 on DEV (t 2.55), 0.504 in 2026. Same-date IC vs label pct 0.060 on DEV (t 6.2), 0.055 in 2026 (t 4.1).",
+     "sensitivity_note": "Every regime gate below is applied to this book. Gating halves the excess over random roughly in proportion to exposure (breadth x=0 gives +9.5 pp vs gated random)."
+    },
+    {
+     "candidate_id": "GATE_RBR_x0",
+     "family": "regime exposure gate (breadth)",
+     "definition": "breadth50>0.5 (share of liquid names above their 50d SMA), read at the close of each signal date. The rebalancing sleeve invests 100% if on, otherwise 0% (cash at 6.5%). No extra trades. Numbers are for the XR20 book; random = gated random top-20 at the same exposure.",
+     "horizon": "20d sleeves; signal checked every 5 days",
+     "event_rates": "Risk-on share: DEV 58%, 2026 51%, PRE (2021-09..2022) 56%. By year 67/54/71/68/35/51% for 2021-2026. State flips 15.4/yr daily, 7.1/yr gate changes. Raising the threshold from 0.35 to 0.65 moves the DEV on-share from 78% to 39%.",
+     "pros": [
+      "Selected on DEV by the pre-declared criterion: EW book Sharpe_xs 0.32->0.77, CAGR 10.8%->15.6%, maxDD -28.9%->-12.9%",
+      "Broad DEV threshold plateau (0.45-0.65 all positive)",
+      "2026: beat its circular-shift null (phase-0 p<0.005 for Sharpe and maxDD); EW maxDD -16.7%->-5.5%",
+      "Only signal whose DEV accuracy beats always-risk-on (0.622 vs 0.603)"
+     ],
+     "cons": [
+      "DEV null p 0.085 as a single test across 28 variants per book, so it fails Bonferroni",
+      "The DEV gain is one episode: 2025 -14.2%->+4.2%, but 2024 13.3%->4.2%",
+      "PRE 2021-22: EW CAGR -4.9 pp, Sharpe_xs -0.73, null p 0.915; negative at every threshold",
+      "2026 vs always-in: EW +0.6 pp, XR20 -3.7 pp CAGR",
+      "As pure Nifty-500 timing: -8.3 pp CAGR on DEV, +15.7 pp in 2026, so the sign depends on implementation"
+     ],
+     "verdict": "weak",
+     "dev_cagr_50": 0.257,
+     "dev_cagr_80": 0.229,
+     "dev_excess_nw_t": 2.57,
+     "dev_maxdd": -0.143,
+     "dev_random_cagr_50": 0.161,
+     "holdout_cagr_50": 0.101,
+     "holdout_excess_nw_t": 0.15,
+     "holdout_random_cagr_50": 0.092,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "Date-level timing AUC vs the EW universe up next 20d: DEV 0.61, 2026 0.635, PRE 0.38. By year 0.31/0.39/0.78/0.44/0.57/0.64 (2021-2026). Cross-sectional IC does not apply to a timing signal.",
+     "sensitivity_note": "XR20 vs always-in: DEV -3.2 pp CAGR, +0.27 Sharpe_xs, +14.9 pp maxDD. 2026: -3.7 pp, -0.07, +11.3 pp. 80 bps gives nearly the same deltas. A daily-overlay version is +0.4 pp on DEV after 3.85%/yr switching cost."
+    },
+    {
+     "candidate_id": "GATE_RBR_x50",
+     "family": "regime exposure gate (breadth, partial)",
+     "definition": "Same signal as GATE_RBR_x0, but risk-off means 50% invested instead of 0%. Numbers are for the XR20 book under sleeve gating.",
+     "horizon": "20d sleeves; signal checked every 5 days",
+     "event_rates": "Same states as GATE_RBR_x0. Average signal exposure 74% (DEV), 68% (2026).",
+     "pros": [
+      "Least-bad optional drawdown governor. XR20 vs always-in: DEV -1.3 pp CAGR, +10.8 pp maxDD; 2026 -1.5 pp, +8.0 pp",
+      "Against a static mix with the same exposure: +3.2 pp / -0.0 pp CAGR and +5.2 / +4.3 pp maxDD (DEV / 2026)"
+     ],
+     "cons": [
+      "Not significant (DEV null p 0.09)",
+      "On the EW book in PRE it cost -4.4 pp CAGR against the static mix",
+      "Insurance with uncertain, possibly negative, expected cost; not alpha"
+     ],
+     "verdict": "weak",
+     "dev_cagr_50": 0.276,
+     "dev_cagr_80": 0.239,
+     "dev_excess_nw_t": 3.33,
+     "dev_maxdd": -0.185,
+     "dev_random_cagr_50": 0.14,
+     "holdout_cagr_50": 0.123,
+     "holdout_excess_nw_t": 0.43,
+     "holdout_random_cagr_50": 0.096,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "Same date-level AUCs as GATE_RBR_x0.",
+     "sensitivity_note": "EW book: DEV +2.6 pp CAGR, +0.21 Sharpe_xs; 2026 +0.7 pp, +0.05; PRE -2.3 pp, -0.31."
+    },
+    {
+     "candidate_id": "GATE_RM60_x0",
+     "family": "regime exposure gate (60d index momentum)",
+     "definition": "mkt_mom60>0: 100% invested, otherwise 0%. Sleeve gating on XR20.",
+     "horizon": "20d sleeves",
+     "event_rates": "Risk-on share: DEV 71%, 2026 40%, PRE 58%. 4.6 gate changes/yr. Thresholds -4%..+4% give a DEV on-share of 83%..50%.",
+     "pros": [
+      "Positive on DEV at every threshold (EW +2.5..+5.1 pp)",
+      "Index-timing null p 0.055 on DEV"
+     ],
+     "cons": [
+      "2026: EW -6.5 pp, XR20 -8.4 pp CAGR (Sharpe_xs -0.87 / -0.49); negative at every threshold",
+      "PRE mixed (-5.0..+6.7 pp across thresholds)"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.289,
+     "dev_cagr_80": 0.257,
+     "dev_excess_nw_t": 3.06,
+     "dev_maxdd": -0.172,
+     "dev_random_cagr_50": 0.161,
+     "holdout_cagr_50": 0.054,
+     "holdout_excess_nw_t": 0.75,
+     "holdout_random_cagr_50": 0.016,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "Date-level AUC vs E0: DEV 0.558, 2026 0.500, PRE 0.503.",
+     "sensitivity_note": "XR20 vs always-in: DEV +0.0 pp CAGR, +0.28 Sharpe_xs; 2026 -8.4 pp, -0.49."
+    },
+    {
+     "candidate_id": "GATE_R200_x0",
+     "family": "regime exposure gate (200-dma trend)",
+     "definition": "Nifty 500 close above its 200d SMA: 100%, otherwise 0%. Sleeve gating on XR20.",
+     "horizon": "20d sleeves",
+     "event_rates": "Risk-on share: DEV 83%, 2026 44%, PRE 76%. 2.0 gate changes/yr on DEV, 10/yr in 2026.",
+     "pros": [
+      "Lowest turnover",
+      "Cuts DEV maxDD by about 10-12 pp"
+     ],
+     "cons": [
+      "No DEV return gain (EW -1.0 pp, XR20 -4.2 pp)",
+      "2026: EW -20.3 pp, XR20 -23.7 pp CAGR; date-level AUC 0.31",
+      "PRE -4.3 pp",
+      "Negative in 2026 at every band, hysteresis included"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.247,
+     "dev_cagr_80": 0.21,
+     "dev_excess_nw_t": 3.17,
+     "dev_maxdd": -0.172,
+     "dev_random_cagr_50": 0.105,
+     "holdout_cagr_50": -0.1,
+     "holdout_excess_nw_t": 0.69,
+     "holdout_random_cagr_50": -0.125,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "Date-level AUC vs N0: DEV 0.473, 2026 0.310, PRE 0.414. Indian 20d index returns mean-reverted (2026 bear_dn20 dates were followed by gains 81% of the time).",
+     "sensitivity_note": "As a daily overlay it was +3.2 pp on DEV but -25.9 pp in 2026, so the sign depends on implementation."
+    },
+    {
+     "candidate_id": "GATE_RVIX_x0",
+     "family": "regime exposure gate (VIX vs trailing median)",
+     "definition": "India VIX below its trailing 250d median: 100%, otherwise 0%. Sleeve gating on XR20.",
+     "horizon": "20d sleeves",
+     "event_rates": "Risk-on share: DEV 60%, 2026 31%, PRE 48%.",
+     "pros": [
+      "Helped in PRE (EW +9.9 pp)"
+     ],
+     "cons": [
+      "Anti-predictive on DEV (AUC 0.42) and in 2026 (0.30): high VIX preceded rebounds",
+      "XR20 DEV -11.2 pp, 2026 -17.3 pp CAGR"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.177,
+     "dev_cagr_80": 0.152,
+     "dev_excess_nw_t": 3.15,
+     "dev_maxdd": -0.131,
+     "dev_random_cagr_50": 0.068,
+     "holdout_cagr_50": -0.035,
+     "holdout_excess_nw_t": 0.65,
+     "holdout_random_cagr_50": -0.053,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "Date-level AUC vs E0: DEV 0.421, 2026 0.297, PRE 0.542.",
+     "sensitivity_note": "Every vix_rel threshold from -0.2 to +0.2 is negative on DEV and in 2026 and mostly positive in PRE: the mirror image of the trend rules."
+    },
+    {
+     "candidate_id": "GATE_VOTE_x0",
+     "family": "regime exposure gate (graded composite)",
+     "definition": "Exposure = (number of R200, RBR, RVIX, RM60 that are on) / 4. Sleeve gating on XR20.",
+     "horizon": "20d sleeves",
+     "event_rates": "Mean exposure signal: DEV 68%, 2026 41%. 15.8 gate changes/yr (36 daily).",
+     "pros": [
+      "Lowest DEV maxDD (XR20 -12.1%, EW -11.5%)"
+     ],
+     "cons": [
+      "2026: XR20 -13.5 pp, EW -10.0 pp CAGR",
+      "PRE Sharpe_xs -0.23",
+      "Highest switching"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.244,
+     "dev_cagr_80": 0.214,
+     "dev_excess_nw_t": 3.39,
+     "dev_maxdd": -0.121,
+     "dev_random_cagr_50": 0.125,
+     "holdout_cagr_50": 0.003,
+     "holdout_excess_nw_t": 0.59,
+     "holdout_random_cagr_50": -0.019,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "Date-level AUC vs E0: DEV 0.529, 2026 0.373, PRE 0.454.",
+     "sensitivity_note": "XR20 DEV -4.4 pp CAGR, +0.25 Sharpe_xs. Against a static mix its maxDD is 8 pp better on DEV, about 3.5 pp in 2026."
+    },
+    {
+     "candidate_id": "WF_TIMING_MODELS",
+     "family": "walk-forward date-level timing models",
+     "definition": "9 models: {L2-logit on 4 features, L2-logit on 10 features, LightGBM depth 2 on 10 features} x targets {N500 f20>0, N500 f20>1%, EW f20>0}. Yearly expanding folds 2023-26, 22-day embargo, risk-on = p>=0.5 (pre-declared). The numbers shown are for the best DEV model, LGB10_E0, at 0% risk-off on XR20.",
+     "horizon": "20d",
+     "event_rates": "Target base rates by year: N0 72/50/65/63/63/51%, E0 58/54/75/59/47/65% (2021-2026). Risk-on share on DEV: 42-82% by model. LOG4 models were 93-100% risk-on in 2026.",
+     "pros": [
+      "PIT, embargoed, few parameters",
+      "LOG4 ranks 2025-26 well (AUC vs E0 0.69-0.80), worth re-testing on post-2026 data"
+     ],
+     "cons": [
+      "All 9 have DEV AUC 0.39-0.47 (anti-predictive)",
+      "Coefficients flip sign between folds (breadth50 -0.63 -> +0.22, vix_rel -0.68 -> +0.25)",
+      "Training folds hold only 16-53 independent 20d windows",
+      "Gated XR20 CAGR vs always-in on DEV: -2 to -20 pp"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.24,
+     "dev_cagr_80": 0.207,
+     "dev_excess_nw_t": 3.19,
+     "dev_maxdd": -0.23,
+     "dev_random_cagr_50": 0.107,
+     "holdout_cagr_50": 0.205,
+     "holdout_excess_nw_t": 0.81,
+     "holdout_random_cagr_50": 0.154,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "Date-level DEV AUC vs N0 0.436-0.464, vs E0 0.386-0.470. In 2026 LGB models score 0.47-0.59 vs E0 and LOG4 0.77-0.80, but LOG4 never went risk-off.",
+     "sensitivity_note": "LGB10_E0 x0: XR20 DEV -4.9 pp CAGR, +0.04 Sharpe_xs; 2026 +6.8 pp (DEV null p 0.475, so not selectable)."
+    },
+    {
+     "candidate_id": "VOLT",
+     "family": "risk-based exposure (volatility targeting)",
+     "definition": "x = min(1, trailing 250d median of mkt_vol20 / mkt_vol20), PIT. Sleeve gating. CAGR fields are for XR20; no gated random baseline was computed for this variant.",
+     "horizon": "20d sleeves",
+     "event_rates": "Mean exposure: DEV 82%, 2026 65%. 25-36 gate changes/yr.",
+     "pros": [
+      "Needs no direction forecast"
+     ],
+     "cons": [
+      "EW Sharpe_xs DEV 0.32->0.19 (null p 0.82), 2026 0.15->-0.21",
+      "maxDD no better than a static mix with the same exposure (DEV -25.9% vs -25.7%)",
+      "Sells after vol spikes, which mean-reverted in this sample"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": 0.243,
+     "dev_cagr_80": 0.203,
+     "dev_excess_nw_t": null,
+     "dev_maxdd": -0.26,
+     "dev_random_cagr_50": null,
+     "holdout_cagr_50": 0.087,
+     "holdout_excess_nw_t": null,
+     "holdout_random_cagr_50": null,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "Not a direction signal.",
+     "sensitivity_note": "One variant only."
+    },
+    {
+     "candidate_id": "TIMING_TARGETS_N0_N1_E0",
+     "family": "absolute market-direction labels (date-level)",
+     "definition": "N0 = 1{Nifty 500 open[g+1]->close[g+20] > 0}; N1 = same but > +1%; E0 = 1{equal-weight elig_base open[t+1]->close[t+20] > 0}. NaN where undefined.",
+     "horizon": "20d",
+     "event_rates": "DEV: N0 63%, N1 54%, E0 60%; 2026: 51% / 37% / 65%. By regime (DEV): bull_up20 N0 66%, bear_up20 98%, bear_dn20 55%. 2026: bull_up20 32%, bear_dn20 81%. 33% (N0) and 44% (E0) of DEV months are all-0 or all-1. The daily +1 share of the stock sign label has corr 0.875 (DEV) / 0.948 (2026) with N500 f20 and 0.98 with EW f20.",
+     "pros": [
+      "Clean and executable; they quantify how much of an absolute label is market: 22.9% of 20d return variance and 18.5% of sign-label variance is between-date"
+     ],
+     "cons": [
+      "Only about 37 independent observations on DEV",
+      "The relationship with regime features flips sign across windows",
+      "N500 (price index) and EW (dividend-adjusted, small-cap heavy) diverge (2026: 51% vs 65%)"
+     ],
+     "verdict": "reject",
+     "dev_cagr_50": null,
+     "dev_cagr_80": null,
+     "dev_excess_nw_t": null,
+     "dev_maxdd": null,
+     "dev_random_cagr_50": null,
+     "holdout_cagr_50": null,
+     "holdout_excess_nw_t": null,
+     "holdout_random_cagr_50": null,
+     "xs_ic_dev": null,
+     "xs_ic_holdout": null,
+     "xs_auc_note": "No cross-sectional content by construction (constant per date).",
+     "sensitivity_note": "Use as diagnostics or as targets for a separate timing layer, never as per-stock labels."
+    }
+   ],
+   "key_findings": [
+    "Absolute labels are mostly market. The between-date share of 20d return variance is 22.9% (18.5% for the 0/1 sign label). The daily +1 share of the sign label (6.5%..96.7% on DEV) has Pearson 0.875 (DEV) / 0.948 (2026) with the Nifty 500 next-20d return and 0.979 with the EW-universe return.",
+    "The market part was not forecastable here. Single-feature correlations flip sign between PRE 2021-22, DEV 2023-25 and 2026 (dist_sma200 rho -0.30 / +0.00 / -0.59; vix_rel +0.02 / +0.17 / +0.54). No feature keeps the same sign with |t|>2 in all three windows.",
+    "All 9 walk-forward timing models (logit and depth-2 LGBM x 3 targets) have DEV AUC below 0.5 (0.39-0.47), and their coefficients flip sign between folds. Of the 14 primary signals, only breadth50>0.5 (AUC 0.61 vs E0), mom60>0 (0.56) and the VOTE composite containing them (0.53) beat 0.5 on DEV. Only breadth beats the always-risk-on accuracy (0.622 vs 0.603).",
+    "Sleeve-level gating (scaling new sleeve entries; no extra trades; verified bit-identical to L.Sim) selected breadth50>0.5 with 0% risk-off on DEV. EW book: Sharpe_xs 0.32->0.77, CAGR 10.8%->15.6%, maxDD -28.9%->-12.9%. Circular-shift null p 0.085, which fails Bonferroni over 28 variants. The gain came from one episode (2025 -14.2%->+4.2%; 2024 13.3%->4.2%).",
+    "Out of sample the breadth gate is mixed. PRE 2021-22: EW -4.9 pp CAGR, Sharpe_xs -0.73, null p 0.915. 2026: it beat its random-timing null (p<0.005) but only broke even against always-in (EW +0.6 pp; XR20 -3.7 pp). The 200-dma rule changed 2026 CAGR by -20.3 pp (EW) and -23.7 pp (XR20).",
+    "Drawdown cuts are mostly mechanical. The lab Sim's raw Sharpe rewards holding cash: a static 55% EW mix lifts it from 0.67 to 0.91 with zero skill, while cash-adjusted Sharpe stays at 0.32. A coin-flip timer cuts DEV maxDD by 13.6 pp. Timers beat a static mix with the same exposure by only 4-8 pp of maxDD on DEV.",
+    "Whipsaw and implementation matter. In a noisy-oracle test, sleeve gating needs about 60% block accuracy for a reliable gain; a daily overlay paying 50 bps per round-trip switch needs about 70%. The same rule changes sign across implementations: the 200-dma rule is -1.0 pp as a gate and +3.2 pp as a daily overlay on DEV; breadth as pure index timing is -8.3 pp on DEV and +15.7 pp in 2026.",
+    "The relative edge is regime-independent. XR20 excess over random is +1.21% per 20d trade in up markets and +1.28% in down markets (slope t 0.39). No regime signal splits it (|t|<=1.02). Timing can only scale beta (XR20 beta to EW 1.03).",
+    "Parameter map: each rule family is stable inside a window and unstable across windows. Breadth is positive on DEV at every threshold 0.45-0.65 and negative in PRE at every threshold. mom60 is positive on DEV and negative in 2026 at every threshold. The 200-dma rule is about 0 on DEV and -7 to -20 pp in 2026 at every band. VIX is the mirror image.",
+    "Volatility targeting also fails: EW Sharpe_xs DEV -0.13 (null p 0.82), 2026 -0.36. 20-day index returns mean-reverted after stress in 2021-22 and 2026.",
+    "Variants: 14 primary signals x 2 risk-off levels = 28, plus 40 sensitivity-grid variants and 1 vol target = 69 distinct timing variants, evaluated as 222 book-level DEV specifications (sleeve gating on EW and XR20, daily overlay, index timing). Also 22 single-feature tests, 9 timing models and 1 XR_neu model. Costs (50/80 bps) and the 5 calendar phases are sensitivities, not variants."
+   ],
+   "recommendation": "Do not add a direction-timing regime layer to the label stack. Use a regime-free relative label as primary (XR_neu, or R2_rel's neumom); its edge is the same in up and down markets. Set gross exposure as a fixed, client-chosen policy: static de-risking leaves cash-adjusted Sharpe unchanged and cuts drawdown roughly in proportion. If a drawdown governor is required, the least-bad pre-registered option is breadth50<0.5 => 50% invested, applied only at each sleeve's own 20-day rebalance (no extra trades). On XR20 it changed CAGR by -1.3 pp (DEV) and -1.5 pp (2026) and improved maxDD by 10.8 / 8.0 pp. Treat it as insurance with uncertain, possibly negative, cost: it lost 4.4 pp against a static mix in 2021-22. Never use 200-dma or VIX trend filters (harmful in 2 of 3 windows; about -20 pp in 2026). Never model absolute direction labels per stock: their class mix is about 0.9 correlated with the unforecastable next-20d market. Judges should compare de-risked books on Sharpe in excess of cash, or against same-exposure static mixes, not on the Sim's raw Sharpe. Re-test the LOG4 'buy fear, avoid over-extension' logit on post-2026 data only.",
+   "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/R2_regime/REPORT.md",
+   "variants_tried": 222,
+   "lab_issues_found": [
+    "L.Sim.run's 'sharpe' is not cash-adjusted, so books holding cash look better: a static 55% EW / 45% cash mix lifts the DEV Sharpe from 0.67 to 0.91 with no skill, while Sharpe in excess of 6.5% cash stays at 0.32. Compare de-risked or gated books on excess Sharpe or against same-exposure static mixes.",
+    "Benchmark mismatch: Nifty 500 is a price index while stock series are dividend-adjusted and the elig universe is small-cap heavy. In 2026 the EW-universe mean 20d return was +1.3% versus -0.5% for Nifty 500, and the N0 and E0 base rates were 51% vs 65%. A timer trained on the index target de-risks EW or small-cap books at the wrong times.",
+    "Sim sleeves that have not started yet hold un-yielding cash for the first 15 days of each window (an all-cash book earns 5.85%, not 6.5%, in the 2026 window). Minor, and the same for every variant.",
+    "Results depend on the signal-calendar phase (entry-day grid), so I averaged all metrics over 5 phases; null tests use phase 0. R2_rel saw the same effect.",
+    "The EW-universe target drops rows whose 20d window fails fw.ok (mean coverage 99.84%), so survivorship is negligible. No leakage found: per-date features are constant, the foresight canaries respond (+31 pp / -27 pp DEV CAGR), and the 22-day embargo holds."
+   ]
+  },
+  {
+   "agent_id": "R2_event",
+   "headline": "R1dn capitulation reversal re-validates on lab v2, but only as a market-breadth (washout) effect. Event-weighted DEV excess is +57 bps/10d vs the same-date universe (t 6.2, passes Bonferroni over 720 tests), but day-weighted it is +16 bps (t 0.7): isolated breakdowns keep falling. Gated on >=5% of eligible names at new 20-day lows in a falling market (A1), the day-weighted excess is +36 bps (t 4.4), with 2026 holdout +64 bps (t 2.6). As an L.Sim sleeve (daily calendar, 20 slots/day, 13-22% exposure) it beats count-matched random stocks bought on the same days. That holds for all events (DEV t 2.4) and especially when events are ranked by a walk-forward relative meta-model: 10.4% CAGR, Sharpe 1.35, maxDD -9.6%, +4.4%/yr over all events (t 4.1), +7.0%/yr over matched random (t 4.7). In 2026 the edge over matched random survives (t 2.9), but the DEV-selected h=5 sleeve made only 0.4% absolute (h=10: 7.0%; Nifty 500 -9.9%). It adds nothing to the R2_rel relative core book: overlay 30.6% vs core 30.9% DEV, 13.8% vs 16.0% in 2026. None of the five other reversal families gives an investable long edge.",
+   "candidates": [
+    {
+     "candidate_id": "E1_R1DN_ANCHOR",
+     "family": "event gate (capitulation reversal), round-1 definition re-validated on lab v2",
+     "definition": "U=elig_base & close[t] < min(low[t-20..t-1]) & volz_20 > 1 & Nifty-500 mkt_mom20 < 0. Event label on gated rows: r_10 = open[t+1]->close[t+10] (NaN unless fw.ok(10)); relative view x_10 = r_10 - same-date U mean. Sleeve: L.Sim step=1 (h daily sleeves), top_k=20 slots/sleeve, slot sizing, idle cash 0%, all events (random tie-break, 5 seeds).",
+     "horizon": "10d (5d and 20d also tested)",
+     "event_rates": "DEV 6,673 events on 35% of days (26 per event day); by year 297/2120/1601/1997/3196/2950 (2021-26); P(net50>0) 0.561 (base about 0.45); 57% bull_dn20 / 43% bear_dn20 (fires only in falling markets); liquidity terciles 39/29/32%; monthly P(net>0) mean 0.57, std 0.22, range 0.00-0.99, corr with Nifty month +0.45; monthly event count corr -0.70; excess corr -0.20.",
+     "dev_cagr_50": 0.0292,
+     "dev_cagr_80": 0.0125,
+     "dev_excess_nw_t": 2.25,
+     "dev_maxdd": -0.1453,
+     "dev_random_cagr_50": 0.0086,
+     "holdout_cagr_50": 0.0338,
+     "holdout_excess_nw_t": 0.13,
+     "holdout_random_cagr_50": 0.0319,
+     "xs_ic_dev": 0.0151,
+     "xs_ic_holdout": 0.0111,
+     "xs_auc_note": "Event-indicator xs_metrics IC is tiny by construction (events are about 2% of rows). Per-date AUC of event vs non-event names on x_10: DEV 0.534 event-weighted, 0.526 day-weighted (month t 3.38); 2026 0.541 / 0.502 (t 0.17). Event study, month-cluster t: DEV xs +57 bps (t 6.22, quarter-cluster t 6.50), day-weighted +16 bps (t 0.72); 2026 +76 bps (t 1.66), day-weighted -21 bps.",
+     "sensitivity_note": "Volume threshold (L=20, mom20dn) none/0/0.5/1/2: DEV events 23,780/15,365/10,670/6,673/2,304; event-weighted xs +15/+31/+43/+57/+47 bps; day-weighted t at most 0.93 in every mom20dn cell. Lookback 10/20/40: events 7,555/6,673/5,521, xs +52/+57/+57. By breadth bucket (DEV): <2% -20 bps, 2-5% +25, 5-10% +42, 10-20% +37, >=20% +82; 2026: -112/-35/+19/+145/+97. Sleeve K=5/10 is at or below zero (light days dominate); K=20 is best.",
+     "pros": [
+      "Event-level DEV excess +57 bps/10d (month-cluster t 6.22) passes Bonferroni over all 720 event tests (|z| > 3.98).",
+      "Positive in every calendar year 2021-2026 (+17 to +76 bps), and positive in all 90 lookback x volume x market-filter cells at h=10 in both DEV and 2026.",
+      "Not a fill artefact: the t+1 entry bar is locked for only 0.10% of events, never locked limit-up."
+     ],
+     "cons": [
+      "Day-weighted DEV excess is only +16 bps (t 0.72), and 2026 day-weighted is -21 bps. The edge sits on mass-breakdown days; days with 1-2 events earn -255 bps.",
+      "As a sleeve it barely beats random: DEV 2.9% CAGR (1.3% at 80 bps) vs 0.9% matched (t 2.25); 2026 3.4% vs 3.2% (t 0.13).",
+      "2026 excess is 92% from March 2026 (+10 bps without it); F&O-proxy names -44 bps in 2026.",
+      "Absolute class shares swing with the market (monthly P(net>0) 0.00-0.99)."
+     ],
+     "verdict": "weak"
+    },
+    {
+     "candidate_id": "E2_CAPIT_BREADTH_A1",
+     "family": "event gate (capitulation reversal) + market-breadth washout gate",
+     "definition": "A1 = U & close[t] < min(low[t-10..t-1]) & volz_20 > 0 & Nifty-500 mkt_mom20 < 0 & brd_t >= 5%. brd_t = share of elig_base names closing below their prior 20-day low (point-in-time at close t). Chosen by a pre-declared DEV rule: maximise day-weighted DEV t at h=10 among cells with >=500 events. Label r_h / x_h on event rows. Sleeve: L.Sim step=1, K=20 slots per daily sleeve, all events (random tie-break).",
+     "horizon": "10d (5d similar on DEV; 20d best in 2026)",
+     "event_rates": "DEV 15,788 events on 16% of days (about 133 names per event day; 2.0% of U rows); 2026 7,002 events on 25% of days; by year 1219/5740/3172/5463/7392/7002 (2021-26); P(net50>0) DEV 0.580, 2026 0.502; 57% bull_dn20 / 43% bear_dn20 in DEV, 19/81% in 2026; liquidity terciles 38/31/31%; monthly P(net>0) mean 0.59, std 0.21, range 0.08-0.99, corr with Nifty month +0.47; excess corr -0.18; monthly count corr -0.76; 56 washout episodes (runs with brd>=10%) in 2021-26.",
+     "dev_cagr_50": 0.0431,
+     "dev_cagr_80": 0.0307,
+     "dev_excess_nw_t": 2.37,
+     "dev_maxdd": -0.0953,
+     "dev_random_cagr_50": 0.0293,
+     "holdout_cagr_50": 0.0475,
+     "holdout_excess_nw_t": 1.35,
+     "holdout_random_cagr_50": 0.0254,
+     "xs_ic_dev": 0.0289,
+     "xs_ic_holdout": 0.0335,
+     "xs_auc_note": "Per-date event-vs-rest AUC on x_10: DEV 0.530 event-weighted, 0.527 day-weighted (month t 5.30); 2026 0.540 / 0.529 (t 4.15). Event study: DEV xs +38 bps (t 4.35) and day-weighted +36 bps (t 4.36), both Bonferroni-pass; 2026 +64 bps (t 2.57), day-weighted +45 (t 2.32); PRE +30 (t 2.90). The excess vs matched random is against count-matched universe random (same days, same counts).",
+     "sensitivity_note": "The breadth gate is the parameter that matters. DEV day-weighted t by market filter across 15 lookback x volume cells: none -2.2..-0.3, mom20dn -0.0..0.9, sma200dn 0.3..3.6, brd5 0.6..3.4, brd10 -0.7..3.6, mom20dn_brd5 0.8..4.4 (median 2.8). Gating lowers event days from about 35% to 13-16% of days but raises names per event day from about 26 to 100+. Horizon h=5/10/20: DEV day-weighted t 4.45/4.36/1.99, 2026 xs +30/+64/+92 bps. Sleeve plateau: all 7 breadth-gated masks x 3 h beat matched random in DEV (t 0.93-2.93) and 2026 (t 0.64-2.11). 80 bps costs about 1.2 pp/yr at h=10.",
+     "pros": [
+      "Event-level DEV excess passes Bonferroni both event-weighted (t 4.35) and day-weighted (t 4.36); positive in every year 2021-2026; 2026 +64 bps (t 2.57).",
+      "All 42 breadth-gated sleeve configs (7 masks x 3 h, DEV and 2026) beat count-matched random. 2026 CAGR at h=10/20 was 4.8%/10.3% while Nifty 500 fell 9.9% annualised; maxDD about 5-10%.",
+      "Excess is market-neutral (corr -0.18) even though the gate is regime-conditional; t+1 entries locked for 0.07% of events."
+     ],
+     "cons": [
+      "Small absolute CAGR (4.3% DEV, 3.1% at 80 bps), because exposure is only 14% (step=1 caps each day at 1/h of capital).",
+      "Stand-alone sleeve t vs matched is 2.37 DEV and 1.35 in 2026; fails the portfolio-level Bonferroni (z 3.45).",
+      "Episodic: top-5 DEV months carry 58% of the excess; 2026 excess is March (69%) and January (29%).",
+      "F&O-proxy names -38 bps and the top liquidity tercile -9 bps in 2026, so it is a mid/small-cap effect. Absolute label class shares swing 0.08-0.99 by month."
+     ],
+     "verdict": "promising"
+    },
+    {
+     "candidate_id": "E3_CAPIT_META_A1_WFR10",
+     "family": "event gate A1 + walk_forward2 relative meta-label ranking (top-20 per event day)",
+     "definition": "A1 gate. Score WF_R10 = L.walk_forward2 regression on R2_rel's neumom residual rank at h=10 (pct - 0.5). Trained on U & close < prior-10d-low rows (106,859 rows), date_step=1, min_train=2000, num_leaves 15, min_child_samples 100, 300 trees, features = 52 lab features + brd, bdd10, bdd20. Buy the top-20 events by score each day (L.Sim step=1, K=20, slot sizing), time exit at close t+h, no stops.",
+     "horizon": "5d (DEV-selected by max DEV t vs all events); 10d is the cost-robust near-tie",
+     "event_rates": "Same gate as E2. Inside the gate, P(x_10 > 0) is 0.485 in DEV; top-20 of about 133 events per event day (about 15%).",
+     "dev_cagr_50": 0.1037,
+     "dev_cagr_80": 0.0773,
+     "dev_excess_nw_t": 4.09,
+     "dev_maxdd": -0.0956,
+     "dev_random_cagr_50": 0.057,
+     "holdout_cagr_50": 0.0041,
+     "holdout_excess_nw_t": 1.6,
+     "holdout_random_cagr_50": -0.0416,
+     "xs_ic_dev": 0.0676,
+     "xs_ic_holdout": 0.0449,
+     "xs_auc_note": "The baseline here is random events from the same gate (S.compare semantics). Against count-matched universe random: DEV +7.0%/yr (NW t 4.70, month t 4.43); 2026 +10.3%/yr (t 2.87; matched CAGR -9.2%). Within-event day-weighted IC at h=5 (days with >=10 events, month-cluster t): DEV 0.068 (t 6.31), 2026 0.045 (t 4.36). xs_metrics AUC (days with >=30 events): 0.535 DEV, 0.518 2026. R2_rel's every-bar models rank events as well: EB_XR20 IC 0.074 DEV / 0.055 2026.",
+     "sensitivity_note": "All four model scores (WF_R10, WF_A10 absolute meta-label, EB_XR10, EB_XR20) give DEV t 1.6-4.1 vs all events at h=5/10/20. PIT thresholds (prob > 0.5 / rank > 0) lose the gain (t <= 1.9). Simple rules fail (DEPTH t 0.4, LIQ flips sign in 2026). Horizon h=5/10/20, 50 bps: DEV CAGR 10.4/6.6/3.1%, 2026 0.4/7.0/11.6%. At 130 bps: DEV 3.5/3.3/1.4% (Sharpe 0.49/0.58/0.30), 2026 -9.7/1.8/9.1%. Robust to a 1-day signal lag (DEV t 3.04 vs matched), random entity halves (t 4.32 / 4.34) and dropping the best month (t 4.32). Quarterly excess positive 10/12 (h=5) and 12/12 (h=10) DEV quarters.",
+     "pros": [
+      "DEV 10.4% CAGR (7.7% at 80 bps), Sharpe 1.35, maxDD -9.6% at 13% exposure. +4.4%/yr over all events (NW t 4.09) clears the portfolio Bonferroni hurdle (176 specs, z 3.45).",
+      "The edge over matched random holds in 2026 (+10.3%/yr, t 2.87) and through perturbations: lag-1, both entity halves, best-month drop.",
+      "No special model needed: the general every-bar relative model ranks events about as well. Mean trade +127 bps (h=5) / +172 bps (h=10) net of 50 bps."
+     ],
+     "cons": [
+      "2026 absolute return at the DEV-selected h=5 is only 0.4% (-3.5% at 80 bps), because washouts fell for weeks before rebounding. The lift over all events in 2026 is +4.8%/yr but t 1.60. At h=20 the lift is about zero in 2026.",
+      "The horizon choice depends on the regime (h=5 best in DEV, h=20 best in 2026). Recommending h=10 is a judgment call made after 2026 was visible.",
+      "Does not improve the R2_rel core book: overlay 30.6% vs 30.9% DEV and 13.8% vs 16.0% in 2026.",
+      "Capacity about Rs 5-25 lakh per name (Rs 1 cr = median 5% of ADV); panic-day spreads are likely above 50 bps."
+     ],
+     "verdict": "promising"
+    },
+    {
+     "candidate_id": "E4_QUIET_CRASH_AVOID",
+     "family": "isolated overreaction continuation used as an avoid flag",
+     "definition": "U & r1 <= -3*vol_20[t-1] & volz_20 > 1 & brd_t < 2% (crash day while the market is quiet). Applied as an exclusion from the R2_rel core book together with quiet-day upside blow-offs (r1 >= +3 sigma).",
+     "horizon": "5-20d",
+     "event_rates": "DEV 565 events on 233 days (about 0.8 per day); P(net50>0) 0.375; 2026 119 events.",
+     "dev_cagr_50": 0.3075,
+     "dev_cagr_80": 0.2605,
+     "dev_excess_nw_t": -0.52,
+     "dev_maxdd": -0.2559,
+     "dev_random_cagr_50": 0.3088,
+     "holdout_cagr_50": 0.1674,
+     "holdout_excess_nw_t": 1.61,
+     "holdout_random_cagr_50": 0.1604,
+     "xs_ic_dev": -0.0099,
+     "xs_ic_holdout": -0.0008,
+     "xs_auc_note": "Baseline is the core book itself (t of core-with-exclusion minus core). Event study at h=10: DEV xs -184 bps (t -4.99, Bonferroni-pass), PRE -218 bps, 2026 -28 bps (t -0.26). Event-vs-rest AUC: DEV 0.436, 2026 0.495.",
+     "sensitivity_note": "Every crash or gap variant on quiet days is strongly negative in DEV (Q_CR k3/k4, Q_GR m2: -130 to -250 bps, t -2.5 to -6.0) and PRE (-205 to -460), but near zero or positive in 2026. Quiet-day breakdowns (R1 L20 v1) -38 bps (t -1.4); quiet-day blow-offs about -10 bps.",
+     "pros": [
+      "Event-level continuation passes Bonferroni in DEV and is negative in every year 2021-2026 (-400 to -28 bps at h=10).",
+      "Explains why unconditional R1 has negative day-weighted excess: isolated drops are news-driven and drift."
+     ],
+     "cons": [
+      "Fades in the 2026 holdout (-28 bps, t -0.26).",
+      "Too rare to matter to the core book: excluding these names changes DEV by -0.1%/yr (t -0.52), 2026 +0.6% (t 1.61), so it is not selectable on DEV."
+     ],
+     "verdict": "weak"
+    },
+    {
+     "candidate_id": "E5_OVERSOLD_DOWNMKT",
+     "family": "oversold reversal event",
+     "definition": "U & rsi_14 < 20 & Nifty-500 mkt_mom20 < 0; sleeve L.Sim step=1, K=20, all events, h=5.",
+     "horizon": "5d",
+     "event_rates": "DEV 15,465 events on 35% of days; P(net50>0) 0.521; 2026 7,318 events.",
+     "dev_cagr_50": -0.0157,
+     "dev_cagr_80": -0.0626,
+     "dev_excess_nw_t": 2.48,
+     "dev_maxdd": -0.2601,
+     "dev_random_cagr_50": -0.0586,
+     "holdout_cagr_50": -0.1047,
+     "holdout_excess_nw_t": -0.24,
+     "holdout_random_cagr_50": -0.0945,
+     "xs_auc_note": "Event study at h=5: DEV xs +41 bps (t 4.67), day-weighted +31 (t 3.72), Bonferroni-pass; 2026 +21 bps (t 1.47). Baseline is count-matched universe random.",
+     "sensitivity_note": "rsi<25: DEV +27 bps (t 4.51), 2026 +22 (t 1.99). At h=10 there is no edge (t 1.7 / 1.5 DEV). Without the market filter the effect is small (+26 bps h=5, day-weighted t 1.8).",
+     "pros": [
+      "Event-level DEV excess passes Bonferroni at h=5."
+     ],
+     "cons": [
+      "As a sleeve it loses money: DEV -1.6% CAGR; 2026 -10.5% with excess -1.1%/yr (t -0.24). At h=10 the edge disappears.",
+      "Without the breadth condition it mixes washout and isolated cases."
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "E6_OTHER_REVERSAL_EVENTS",
+     "family": "scan of overreaction/reversal events (Bonferroni over all 720 tests)",
+     "definition": "CR crash day r1 <= -k*vol_20[t-1] (k=3,4) & volz>1; GR gap-down reclaimed gap_open <= -m*ATR[t-1] (m=1,2) & close>open; SL 5-day cross-sectional loser rank(mom_5) <= 1%/3%; LV within 0.5% of the 52-week low & volz>1/2; BO upside blow-off r1 >= +k*sigma & volz>1. Each x market filter none/mom20dn x h 5/10/20 (72 cells).",
+     "horizon": "5/10/20d",
+     "event_rates": "CR k3: 3,941 DEV events (on 79% of days); GR m1: 2,663; SL q3: 22,764 (every day); LV v1: 520; BO k3: 12,015.",
+     "xs_auc_note": "No family has positive DEV excess after Bonferroni. CR/GR are negative day-weighted (continuation: CR k3 -126 bps, t -5.47); SL and LV are about zero; BO k4 is -21 bps DEV (t -1.4) and -65 bps in 2026 (t -3.7).",
+     "sensitivity_note": "Adding mkt_mom20<0 does not rescue CR/GR (day-weighted still -96 to -195 bps). Only the breadth-washout version of overreaction reverses (see E2).",
+     "pros": [
+      "Clean negative result: 5-day losers have no reversal edge on NSE at 5-20 days, and gap-down recoveries do not reverse.",
+      "Upside blow-offs (BO) are a plausible avoid hint (2026 -65 bps at k4)."
+     ],
+     "cons": [
+      "No investable long edge in any family. BO misses Bonferroni in DEV; CR/GR continuation fades in 2026."
+     ],
+     "verdict": "reject"
+    },
+    {
+     "candidate_id": "E7_CORE_PLUS_CAPIT_SLEEVE",
+     "family": "combination: R2_rel relative core book + capitulation sleeve",
+     "definition": "CORE = R2_rel h20_neumom_RANK walk_forward2 OOS score (reused), elig_base, top-20, step 5, h=20 (reproduced: DEV 30.88%). OVL20 = 20% sleeve allocation whose idle capital is parked in the core, with switching cost |dx|*cost/2. MIX20 = 80% core + 20% sleeve (idle cash 0%). Also tested: core tilt +0.3 to A1 events; core with E4 exclusions. Numbers shown: S5_META OVL20.",
+     "horizon": "core 20d + sleeve 5/10/20d",
+     "event_rates": "Sleeve active on 31% of DEV days. The core already holds 25% A1 events on gate days vs a 13% base share (core percentile of events 0.58).",
+     "dev_cagr_50": 0.3056,
+     "dev_cagr_80": 0.2495,
+     "dev_excess_nw_t": -0.7,
+     "dev_maxdd": -0.255,
+     "dev_random_cagr_50": 0.3088,
+     "holdout_cagr_50": 0.1384,
+     "holdout_excess_nw_t": -2.1,
+     "holdout_random_cagr_50": 0.1604,
+     "xs_auc_note": "Baseline is the core alone; t of combo minus core (NW lag 20). Daily correlation sleeve vs core is 0.57-0.70 DEV and 0.70-0.86 2026 (0.78-0.80 on active days); correlation of the two excess streams 0.12-0.26 DEV, 0.08-0.41 2026.",
+     "sensitivity_note": "All 6 sleeves x OVL20 are below the core: DEV t -0.70 to -3.13, 2026 t -1.17 to -2.10, even though each beats its matched-random twin (DEV t 2.6-4.3). MIX20 vs 80% core + 20% cash: +0.3 to +2.0% DEV, -0.4 to +2.1% 2026 (that is 20% x the sleeve CAGR). Core tilt to A1: -1.0%/yr DEV (t -0.76), -1.4% 2026.",
+     "pros": [
+      "MIX20 slightly raises DEV Sharpe (1.50 vs 1.46) and lowers maxDD (-22.1% vs -25.6%), mostly through lower exposure.",
+      "The two selection alphas are nearly independent (excess correlation 0.08-0.41)."
+     ],
+     "cons": [
+      "No incremental return over the core: the core already leans into washout names, and both books are long the same falling market when the sleeve is active.",
+      "In 2026 every overlay is below the core (13.5-15.3% vs 16.0%)."
+     ],
+     "verdict": "reject"
+    }
+   ],
+   "key_findings": [
+    "Re-validation (lab v2, L.Sim, horizon-matched baselines): R1dn (close < prior 20d low, volz>1, Nifty-500 20d momentum<0) at h=10 has DEV event-weighted excess +57 bps vs the same-date universe (month-cluster t 6.22, Bonferroni-pass over 720 tests). Day-weighted it is only +16 bps (t 0.72); 2026 +76 bps event-weighted, -21 bps day-weighted. The edge lives on mass-breakdown days.",
+    "Breadth dose-response, the core structural fact: R1dn excess by share of the universe at new 20d lows (<2 / 2-5 / 5-10 / 10-20 / >=20%) is -20/+25/+42/+37/+82 bps in DEV and -112/-35/+19/+145/+97 bps in 2026. Isolated breakdowns and crashes continue; only market washouts reverse.",
+    "Breadth-gated gate A1 (close < prior 10d low, volz>0, mom20<0, >=5% of the universe at new 20d lows), chosen by a pre-declared DEV rule: DEV +38 bps event-weighted (t 4.35) and +36 bps day-weighted (t 4.36), both Bonferroni-pass; 2026 +64 bps (t 2.57); positive every year 2021-26. It fires on 16% of days with about 133 names per event day; 56 washout episodes in 2021-26.",
+    "Event rates move as expected with parameters. Volume>2 cuts events about 10x; L=40 fires 1.2x less than L=20; the breadth gate cuts event days from 35% to 13-16% but raises names per event day from about 26 to 100+. Event-weighted excess is positive in 264/270 R1 cells in DEV and 268/270 in 2026. Day-weighted excess depends on the market filter: negative with no filter, about 0 with mom20dn alone, median t 2.1-2.8 with breadth gates.",
+    "Sleeve investability (L.Sim step=1, 20 slots per daily sleeve, idle cash 0%) vs a count-matched universe random sleeve on the same days: A1 all events at h=10 makes DEV 4.3% vs 2.9% (t 2.37), 2026 4.8% vs 2.5% (t 1.35), maxDD -9.5%, exposure 14%. All 42 breadth-gated configs beat matched random in DEV and 2026, but none clears the portfolio-level Bonferroni hurdle (z 3.45 over 176 specs). S.compare's same-mask random arm cannot measure an event effect; a count-matched baseline is required.",
+    "Meta-labeling (walk_forward2 on 107k breakdown rows): within-event IC is 0.05-0.10 in DEV (t 3-7) and 0.03-0.055 in 2026 at h=5/10. Top-20 by the relative meta-score at h=5 makes DEV 10.4% (7.7% at 80 bps), Sharpe 1.35, maxDD -9.6%: +4.4%/yr over all events (t 4.09) and +7.0%/yr over matched random (t 4.70). R2_rel's every-bar relative model ranks events about as well, so no special model is needed. PIT thresholds and simple rules (depth, liquidity) fail.",
+    "The horizon depends on the regime. h=5 is best in DEV (fast V-rebounds in 2023-25 corrections) but made 0.4% in 2026; h=20 is weakest in DEV but made 11.6% in 2026 (drawn-out washouts). h=10 is the cost-robust compromise (DEV Sharpe at 130 bps 0.58 vs 0.49; 2026 7.0%). The lift over matched random holds at every h in 2026 (t 1.3-2.9).",
+    "Robustness of the meta sleeve: the edge survives a 1-day signal lag (DEV t 3.04 vs matched), both random entity halves (t 4.32 / 4.34), dropping the best month (t 4.32) and 130 bps costs at h=10. Quarterly excess is positive in 12/12 DEV quarters at h=10. t+1 entry bars are locked for only 0.07% of events. Capacity is about Rs 5-25 lakh per name (Rs 1 cr = median 5% of ADV).",
+    "Combination with the R2_rel core book (h20_neumom_RANK top-20, reproduced at 30.9% DEV): the sleeve adds nothing. Overlay (idle sleeve capital in the core) is below the core in DEV (t -0.7 to -3.1) and 2026 (13.5-15.3% vs 16.0%). Tilting the core toward gate events loses 1.0%/yr. The core already holds 25% gate events on gate days vs a 13% base share. Daily correlation with the core is 0.57-0.86 (both long a falling market); excess correlation is 0.08-0.41. MIX20 vs 80% core + 20% cash: +0.3 to +2.0% DEV, -0.4 to +2.1% 2026.",
+    "Other overreaction events (Bonferroni over 720 tests): crash days and recovered gap-downs continue when the market is quiet (DEV -130 to -250 bps, t up to -6.0, Bonferroni-pass), but this faded in 2026 (-28 bps) and excluding them did not help the core in DEV (t -0.52). Oversold RSI<20 in a falling market passes at h=5 as an event but loses as a sleeve in 2026 (-10.5%). 5-day losers and 52-week lows on volume show no edge. Upside blow-offs are a weak avoid hint (-65 bps in 2026, not Bonferroni in DEV).",
+    "Variants: 538 in total. 360 event-study cells x 2 statistics = 720 tests (Bonferroni |z| 3.98); 176 distinct DEV portfolio specs (one-sided z 3.45); 2 new walk-forward models (WF_R10, WF_A10) plus 2 reused R2_rel OOS scores. 2026 was printed beside DEV in every table, and all selections used DEV only. The h=10 recommendation over the DEV-best h=5 is a flagged post-holdout judgment call."
+   ],
+   "lab_issues_found": [
+    "MEDIUM: S.compare draws its random arm from the same mask. On a sparse event mask it measures only the ranking within events, never the event effect itself. Event sleeves need a count-matched universe baseline (same days, same number of names). This was implemented as matched_mask in R2_event/common.py; suggest adding a baseline_mask / count-matching option to Sim.compare.",
+    "LOW: Sim.run ends its window at the last signal plus one period, so daily series from different (h, step) configs have different lengths (741 vs 743 DEV days). Combining books requires date alignment.",
+    "DESIGN: with step=1 and slot sizing, a sleeve can deploy at most 1/h of capital per day. A mass-capitulation day cannot be sized up beyond that, which structurally caps event-sleeve exposure (13-22% here).",
+    "MEDIUM: xs_metrics needs >= 30 rows per date, so event masks count only mass days. Its non-overlap subsample takes every h-th available date, which is not calendar non-overlap when event dates cluster, so its t-stats are erratic (e.g. 0.71 vs month-cluster 5.19 for the same IC). Use month-cluster t for event masks.",
+    "LOW: walk_forward2 default LightGBM params (num_leaves 31, min_child_samples 400) are too coarse for event-row training sets of 20-60k rows; pass smaller params (15 / 100 used here).",
+    "NOTE: L.Sim is reproduced bit-identically by the SimX subclass (copied run() plus a daily invested-fraction output), and R2_rel's core book reproduces exactly (30.88% DEV)."
+   ],
+   "recommendation": "Event-sleeve slot of the label stack: use the breadth-gated capitulation label E2/A1. The gate is close < prior 10-day low, volz_20 > 0, Nifty-500 20d momentum < 0, and >= 5% of eligible names closing below their prior 20-day low. Rank the gated names with the relative model (R2_rel's every-bar neumom score or the WF_R10 meta-score; they are interchangeable) and buy the top 20 per event day at the next open. Each position gets 1/(20h) of the sleeve. Hold h=10 days with a time exit and no stops. h=5 was DEV-best at 50/80 bps, but h=10 is more cost-robust; that choice is a flagged judgment call. Fund it only from capital that is NOT already in the relative core book, such as a cash buffer or a separate low-exposure sleeve. Do not overlay it on, or tilt, a fully invested relative book: that adds nothing (the core already leans into washout names and is long the same market). Expected profile: about 5-10% CAGR on sleeve capital at 13-22% exposure, maxDD about 5-10%, lumpy (56 episodes in 5.75 years), mid/small-cap, capacity about Rs 5-25 lakh per name. Label-design facts for the judges: (1) buy washouts, never isolated breakdowns or crashes, which continue; (2) report event labels day-weighted as well as event-weighted, because event-weighted stats overstate sparse gates; (3) the quiet-day crash continuation is real in DEV but faded in 2026 and gave no portfolio benefit, so keep it out of the avoid layer for now. Confidence: medium-high that the washout excess is real (Bonferroni-pass, every year, holdout positive); low-medium that a separate sleeve adds money beyond the relative core.",
+   "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/R2_event/REPORT.md",
+   "variants_tried": 538
+  }
+ ],
+ "judges": [
+  {
+   "judge": "J_pm (portfolio manager: real money after costs, drawdowns, capacity, turnover, simplicity, robustness across regimes). Own checks (DEV-confirmatory, no new selection): /tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/J_pm/c1_picks.json (pick liquidity, tiered cost, ADV participation, model noise), c2_vwap.json (open vs day-1 VWAP entry), c3_ewbase.json (phase-averaged excess vs seed-free EW-universe baseline, paired tests), c4_byyear.json (calendar-year excess, tiered-cost drag).",
+   "primary_selection_label": "XR_neumom h=20 continuous residual rank. For signal date t and rows in U_t = elig_base_t, compute r = close[t+20]/open[t+1] - 1 on CA-adjusted prices; r is NaN where fw.ok(20) fails, never 0. Winsorise r at the per-date 1st/99th percentiles over U_t. Run a per-date OLS over U_t of r_w on [1, 0.5*clip(beta_60,0,3)+0.5, vol_20, log_turn20, mom_12_1 (NaN -> that date's median)]. The label is y = per-date percentile rank of the residual, in (0,1]. Reporting classes: +1 if y>0.7, -1 if y<=0.3, else 0 (exactly 30/40/30 on every date). Model: LightGBM regression on y-0.5 via walk_forward2 (yearly expanding refit, embargo 22 days, 52 PIT features, delivery features kept). Book: each week buy the top 20 by score among elig_base into 1 of 4 staggered sleeves (slot weight 1.25%, about 80 positions; K 10-30 per sleeve is a smooth plateau). Use liq2, or switch to liq5 above about Rs 25 cr AUM. Why RANK and not C20/T30/RUP: on DEV they are a statistical tie. Paired vs RANK, phase-averaged: C20 +2.7%/yr (t 1.3), T30 +3.9% (t 1.2), RUP +3.6% (t 1.0). The tie-break is a PM one. RANK has no cut parameter, so no cliff (T10/T20/T50 and B30 are cliffs). It has the lowest factor R2 (0.05) and the best IC (t 8.6). One score serves both the buy side and the avoid side. Its picks are the most liquid of the three. The DEV edge of the tail forms after factors equals RANK's: alpha +17.4% vs +17.8-18.0%.",
+   "avoid_label": "Use the -1 class of the same label: y<=0.3, the bottom 30% of the neumom h=20 residual rank. The operational avoid list is the bottom 10-30% of today's primary RANK score (10% for a tight veto). It is a veto list: never buy these names, and flag them inside discretionary or legacy holdings. It is NOT a short: the cash segment cannot carry overnight shorts, and round-1 F&O shorts lost about 20%/yr. Inside a top-20 book on the same score the avoid list is already excluded by construction. Value as an overlay (EW universe minus bottom 30%, phase-averaged): DEV +3.4%/yr (t 3.6, 5/5 phases), factor-adjusted +3.1% (t 5.0). 2026: +1.2% raw (t 0.8; a big-cap tilt in a small-cap year), factor-adjusted +2.5% (t 3.7). Do NOT train a dedicated down classifier. B30, DUAL_down and REL_down learn volatility (score corr -0.73 with idio-vol) and failed as overlays in 2026 (-2.0 to -2.7%/yr, 0/5 phases). Pre-registered refinement, not selected now: rank the avoid list on the factor-neutralised score (FN: per-date residual on 7 characteristic ranks). DEV prefers it on t (5.55), and it was steadier in 2026 (+2.3%, t 2.9), but it was built post hoc. If the client trades only F&O names, re-rank inside that universe: there the full-universe label is 29.5/45/25.5, not 30/40/30.",
+   "regime_layer": "None as a return source. Set gross exposure as a fixed policy from the client's drawdown budget: 100%, or a static 70-80% with the rest in a liquid fund. Static de-risking keeps the cash-adjusted Sharpe and cuts drawdown in proportion. Evidence: the relative excess does not depend on the regime (+1.21% per trade in up markets vs +1.28% in down; slope t 0.39). All 9 walk-forward timing models are anti-predictive on DEV (AUC 0.39-0.47). Every rule family flips sign across PRE / DEV / 2026, and the 200-dma rule cost about 20-24 pp of CAGR in 2026. Do not use 200-dma, VIX, 60d momentum, a vote of these, vol-targeting or ML timers. If the client insists on a governor, the only pre-registrable one is breadth50<0.5 -> 50% invested, applied only at the sleeve's own rebalance (no extra trades). On XR20 it cost -1.3 pp CAGR and gained +10.8 pp maxDD on DEV, and -1.5 pp / +8.0 pp in 2026. Against a static mix with the same exposure it was +3.2 / -0.0 pp, and it lost on the EW book in PRE 2021-22. Its null p is 0.09, so it fails multiple testing. Treat it as insurance with uncertain and possibly negative cost, not alpha.",
+   "event_sleeve": "None in the stack. The breadth-gated capitulation reversal (A1: close < prior 10d low, volz>0, N500 20d mom<0, >=5% of names at new 20d lows; top 20 events by the relative model) is a real effect: DEV +7.0%/yr vs count-matched random (t 4.7), 2026 t 2.9. As money it is small and awkward. It runs at 13-22% exposure, which gives a 4-10% CAGR sleeve. Capacity is about Rs 5-25 lakh per name on panic days with wide spreads. The best horizon flips with the regime: h=5 was best on DEV but made 0.4% in 2026. It is episodic: 56 washouts in 5.75 years, and the top 5 months carry about 58% of the excess. When active it correlates 0.78 with the core. Adding it lowers the combined book: overlay 30.6% vs core 30.9% on DEV, 13.8% vs 16.0% in 2026. At most it is an optional research sleeve for a static cash buffer (+0.3 to +2%/yr on 20% of capital). Keep the descriptive rule for discretionary use: washouts revert, isolated breakdowns keep falling. Do not buy single-name breakdowns on quiet days.",
+   "horizon_and_exit": "Hold 20 trading days. The signal is formed at close t. Enter at open t+1; books above about Rs 10 cr should work the order over day 1 at VWAP, which my check found costs about 1.4%/yr of excess (DEV +16.0% -> +14.6%, t 3.9). Exit at the close of the 20th bar with a pure time exit: no stops, targets or ATR trails (round 1 showed they destroy value). Forced exit at the last valid close on suspension or label_block. Cadence: each week one of 4 staggered sleeves (20 names each) turns over fully. Spread entries across the days of the week where operationally possible, because a single weekly calendar moved 2026 excess between -2% and +9%. That is about 12.6 round trips a year, roughly 6.3%/yr of cost at 50 bps; each extra 10 bps costs about 1.3%/yr of CAGR (excess vs random unchanged). Use 50 bps as the central cost: my tiered estimate for these picks (F&O 30 / mid 50 / small 95 bps) is 53 bps DEV and 47 bps 2026, against 56 bps for the universe. Stress at 80 bps. Retrain once a year on an expanding window. h=10 has more raw skill but is cost-bound (DEV 80 bps CAGR 16.2%, 130 bps 2.6%). h=15 sits in between. Training horizon barely matters when the hold is 20 days.",
+   "expected_performance": "Selected book: neumom RANK, top-20, step 5, 4 sleeves, 50 bps. Phase-averaged figures equal a daily-staggered book.\n\nDEV 2023-25:\n- CAGR about 30%; 25.5% at 80 bps; 28.7% with day-1 VWAP entry.\n- Baselines: horizon-matched random 11.6-12.0%, seed-free EW universe 11.0%.\n- Excess +15.8 to +16.5%/yr (NW t 4.1-4.5).\n- Nifty 500 (price) 16.3% on the same dates, so about +14 pp.\n- maxDD -26 to -27% (random/EW -29 to -30%).\n- Excess vs EW by year: 2023 +17.5 pp, 2024 +34.5 pp, 2025 +8.0 pp. 2024 supplied about half of it.\n\n2026 holdout (Jan 1 - Oct 14, annualised):\n- CAGR 13.6-13.9%; about 10-12% at 80 bps.\n- Baselines: random 10.2-11.7% (3-5 seed noise of about \u00b12-3%), EW 8.4%.\n- Excess +2.3 to +5.3%/yr (t 0.35-0.81). Positive in sign, not significant. The quoted single-phase +9.2% was the luckiest of 5 phases.\n- Nifty 500 -10.7% annualised (-7.8% YTD), so about +24 pp. Most of that gap is the EW small/mid-cap and dividend effect, not skill.\n- maxDD -18% (EW -17%).\n\nForward planning range after 50 bps:\n- Excess vs random/EW +3 to +10%/yr, central about +6%, with roughly a 1-in-4 chance of a flat or negative year. Recent years (2025: +8 pp; 2026 YTD: +3.8 pp) argue against extrapolating DEV's +16%.\n- Absolute return = EW-universe return + excess, with no drawdown protection: expect -25 to -35% in a bad year at 100% gross.\n- Against Nifty 500, any single year can land between -10 and +25 pp, driven by the small/mid-cap cycle.\n- Avoid overlay alone: +2 to +3.5%/yr over the EW universe.\n- Regime layer and event sleeve: no expected contribution.",
+   "ranking": [
+    {
+     "rank": 1,
+     "candidate_id": "h20_neumom_RANK (XR_neumom continuous residual rank, regression)",
+     "score_0_100": 80,
+     "reason": "Primary. Simplest parameter-free encoding of the relative label. Phase-averaged DEV +16.5%/yr vs the seed-free EW book (t 4.5); every DEV year positive (+17.5/+34.5/+8.0 pp). DEV alpha after 6 factors +17.4% (t 4.0, R2 0.05); best IC (t 8.6), no 2026 decay. Picks more liquid than the universe (tiered cost 47-53 bps). Robust to VWAP entry, 80 bps, K 10-50 and liq5. 2026 only +5.3% vs EW (t 0.8)."
+    },
+    {
+     "rank": 2,
+     "candidate_id": "h20_neumom_C20 (3-class 20/60/20, multiclass)",
+     "score_0_100": 72,
+     "reason": "Statistical tie. Phase-averaged DEV +19.2% vs EW (t 5.5); lowest maxDD (-26.5%); beat RANK in all 4 calendar years by 2-5 pp. But paired DEV t is only 1.3 and the cut was chosen among C20/C30/C33 (C30/C33 weaker). Factor alpha equals RANK's, so the extra is momentum/vol exposure. Weaker than RANK on the single-phase grid (mean t 3.48 vs 3.90). Best alternative or blend partner."
+    },
+    {
+     "rank": 3,
+     "candidate_id": "Same-label blend: rank(neumom RANK)+rank(neumom T30) (or +C20)",
+     "score_0_100": 70,
+     "reason": "Phase-averaged DEV +18.3% vs EW (t 4.87), maxDD -28.4%, 2026 +11.1% (t 1.98). Averages out model noise: the encodings share only 44-46% of their top-20. Paired vs RANK +1.8%/yr DEV (t 0.9), not significant. Two models, and T30 brings vol loading. Pre-register for round 3; do not select now."
+    },
+    {
+     "rank": 4,
+     "candidate_id": "h20_neu_RANK (XR_neu, round-1 winner)",
+     "score_0_100": 65,
+     "reason": "Reproduced on lab v2 (DEV +16.0% vs EW, t 4.2; 2026 +4.7%). neumom edges it on every DEV criterion, but the margin is noise (paired -0.5%/yr). 56% top-20 overlap with neumom. Valid fallback if mom_12_1 coverage is a concern."
+    },
+    {
+     "rank": 5,
+     "candidate_id": "R2D_SUM_REL_RUP (rank blend of XR_neu regression + binary top-30)",
+     "score_0_100": 63,
+     "reason": "Same idea as #3 on the neu residual. Phase-mean DEV 33.4% vs REL 28.3%; beat REL in 8/8 DEV cells and 7/8 2026 cells. Gain over REL t about 1. Lower maxDD than RUP alone. Two models to maintain."
+    },
+    {
+     "rank": 6,
+     "candidate_id": "AVOID: EW elig minus bottom 10-30% of the same neumom RANK score",
+     "score_0_100": 62,
+     "reason": "Recommended avoid implementation; needs no extra model. DEV +3.4%/yr vs EW (phase-averaged t 3.6, 5/5 phases). Factor alpha +3.1% (t 5.0) DEV and +2.5% (t 3.7) 2026. Raw 2026 only +1.2%, dragged by a big-cap tilt. Veto/exit list only, never a short."
+    },
+    {
+     "rank": 7,
+     "candidate_id": "Binary top-30% forms: h20_neumom_T30 / h20_neu_T30 / R2D_RUP",
+     "score_0_100": 56,
+     "reason": "Highest raw DEV (+20.1-20.4% vs EW) and 2026 (+9.5-13.0%), but vol-loaded: score corr +0.31 with vol_20, factor R2 0.31, 2026 factor alpha +1.8%. Higher beta (1.33) and maxDD (-29 to -33%). Less liquid picks (tiered cost about 58 bps). Narrow optimum with cliffs at T20/T50. RUP and neu_T30 are the same label yet sit 3.8 pp of DEV CAGR apart with 72% overlap: pure model noise."
+    },
+    {
+     "rank": 8,
+     "candidate_id": "FN avoid overlay (factor-neutralised score, drop bottom 30%; R2_alpha)",
+     "score_0_100": 55,
+     "reason": "Most consistent avoid result: +2.3%/yr DEV (t 5.5) and +2.3% 2026 (t 2.9), alpha about +2-3% in both, because it strips the factor tilt. Built post hoc during attribution and adds a per-date regression step. Pre-register as the avoid refinement."
+    },
+    {
+     "rank": 9,
+     "candidate_id": "R2D_AVOID_RUPup (drop lowest P(relative top-30))",
+     "score_0_100": 50,
+     "reason": "DEV +3.3% (t 4.6), 2026 +5.8% (t 6.0), 5/5 phases. But it works partly by dropping low-vol names, a vol tilt that paid in 2026. Factor alpha (~+2.6%) is no better than the same-score avoid. Needs the binary model."
+    },
+    {
+     "rank": 10,
+     "candidate_id": "h15_neu_RANK",
+     "score_0_100": 40,
+     "reason": "Same label at h=15: phase-averaged DEV t 4.04, but DEV CAGR at 80 bps is 19.6% vs 25.2% at h=20; costs dominate."
+    },
+    {
+     "rank": 11,
+     "candidate_id": "h20_neu_C30 / h20_neu_C33",
+     "score_0_100": 38,
+     "reason": "Weaker encodings of the same label: phase-averaged DEV t 3.61/3.30, 2026 +1.0% / -0.4%. A wider middle class dilutes the tails."
+    },
+    {
+     "rank": 12,
+     "candidate_id": "h10_neu_RANK / h10_neumom_RANK",
+     "score_0_100": 34,
+     "reason": "Most raw skill (phase-averaged DEV +23.8%, t 4.8), but about 25 round trips a year. DEV CAGR 16.2% at 80 bps and 2.6% at 130 bps; 2026 about 0.6% at 80 bps."
+    },
+    {
+     "rank": 13,
+     "candidate_id": "GATE_RBR_x50 (breadth50<0.5 -> 50% at sleeve rebalance)",
+     "score_0_100": 32,
+     "reason": "Only defensible exposure rule, as optional insurance. DEV -1.3 pp CAGR / +10.8 pp maxDD on XR20; vs a static mix +3.2 / -0.0 pp. Negative in PRE; null p 0.09. Not alpha."
+    },
+    {
+     "rank": 14,
+     "candidate_id": "E3_CAPIT_META_A1_WFR10 (capitulation meta sleeve)",
+     "score_0_100": 30,
+     "reason": "Real event effect (DEV +7.0%/yr vs matched random, t 4.7; 2026 t 2.9). But 13-22% exposure, Rs 5-25 lakh per name capacity, a best horizon that flips with the regime (2026 h=5 made 0.4%), and it lowers the combined book. Optional cash-buffer research only."
+    },
+    {
+     "rank": 15,
+     "candidate_id": "R2D_DUAL (relative top-30 AND r>+50bp)",
+     "score_0_100": 24,
+     "reason": "No gain vs the same-loss pure-relative model (+0.5%/yr, t 0.25). Its +1 share moves with the market (corr 0.70; 12% in sharp falls). Higher beta (1.35) and maxDD (-32%). The absolute condition belongs in the exposure layer, not the label."
+    },
+    {
+     "rank": 16,
+     "candidate_id": "E2_CAPIT_BREADTH_A1 (all events)",
+     "score_0_100": 22,
+     "reason": "Passes Bonferroni at event level, but as a sleeve: t 2.4 DEV / 1.35 2026, 4.3% CAGR at 14% exposure, episodic."
+    },
+    {
+     "rank": 17,
+     "candidate_id": "R2D_INPUT_GATE_trend (close>sma200 & xr_mom60>0.7 sample filter)",
+     "score_0_100": 18,
+     "reason": "Honest filter but no DEV value (+0.9%/yr, t 0.4). The 2026 gain cannot be selected on DEV, and the model adds nothing inside the gate."
+    },
+    {
+     "rank": 18,
+     "candidate_id": "E4_QUIET_CRASH_AVOID",
+     "score_0_100": 16,
+     "reason": "Continuation is real in DEV/PRE but faded in 2026 (-28 bps, t -0.3). Too rare to move the core (-0.1%/yr DEV)."
+    },
+    {
+     "rank": 19,
+     "candidate_id": "h20_none_RANK / h20_size_RANK",
+     "score_0_100": 14,
+     "reason": "Without beta/vol neutralisation the label's composition follows the market (beta-tilt corr 0.60). 2026 phase-averaged -7.7% / -1.8%."
+    },
+    {
+     "rank": 20,
+     "candidate_id": "ENS3 / ENS_XT / ENS_XB / ENS_BT and TSX_all long book",
+     "score_0_100": 8,
+     "reason": "Hidden regime/factor-timing bet. No paired DEV gain over XR (+0.1%/yr, t 0.06). 2026 about -7%/yr in all 8 K x step cells and all 5 phases; 2026 factor R2 0.46."
+    },
+    {
+     "rank": 21,
+     "candidate_id": "Absolute labels: BAR (A2 barrier), ABS (r>50bp), DUALP, two-model REL+ABS / PROD_RUP_ABS",
+     "score_0_100": 8,
+     "reason": "They encode the market: daily +1 share corr 0.71-0.87 with the window's return. BAR's DEV edge vanishes without market features (-1.8%/yr). At or below random in 2026."
+    },
+    {
+     "rank": 22,
+     "candidate_id": "Dedicated down classifiers: h20_neu_B30, R2D_AVOID_DUALdown, REL_down",
+     "score_0_100": 6,
+     "reason": "They learn volatility, not expected return (score corr -0.73 with idio-vol). Long book worthless; avoid overlays -2.0 to -2.7%/yr in 2026 (0/5 phases)."
+    },
+    {
+     "rank": 23,
+     "candidate_id": "Timing rules and models: R200, RVIX, RM60, VOTE, VOLT, LOG4/LOG10/LGB10 walk-forward timers",
+     "score_0_100": 5,
+     "reason": "Anti-predictive or unstable across windows. The 200-dma rule cost 20-24 pp CAGR in 2026. Walk-forward timers score DEV AUC 0.39-0.47 with coefficients that flip sign between folds."
+    }
+   ],
+   "confidence": "medium",
+   "caveats": [
+    "2026 only weakly confirms the selected encoding. Phase-averaged excess is +5.3%/yr vs the seed-free EW book (t 0.8) and +2.3 to +3.9% vs 3-5-seed random. The random baseline itself carries about \u00b12-3%/yr of seed noise over 9.5 months, so use 20+ seeds or the EW expectation for holdout claims. Every neutralised relative variant was positive in 2026: that confirms the family, not the encoding.",
+    "The excess is lumpy and fading. Vs EW by year: +17.5 / +34.5 / +8.0 pp in 2023/24/25 and +3.8 pp in 2026 YTD. 2024 supplied half of the DEV excess. Plan on +3-10%/yr, not +16%.",
+    "Multiple testing: about 1,700 portfolio specs plus 720 event tests programme-wide. The selected phase-averaged DEV t of 4.1-4.5 clears a roughly 2,400-test Bonferroni (z about 4.1) only narrowly. Newey-West t overstates persistent tilts (constant-tilt null: max t 3.9 in 40 draws); the persistence-matched null puts the model 5.5 sd above.",
+    "Variant choice is at noise level. Labels that differ on 0.47% of rows (beta clip or not) share only 72% of their top-20 picks and differ by 1-4 pp of DEV CAGR. RANK vs C20/T30/RUP paired DEV t is at most 1.3. What is robust is the neutraliser (beta/vol/size, plus momentum) and the 20-day hold, not the cut.",
+    "No drawdown protection. maxDD tracks the market (-27% DEV, -18% 2026); beta is about 1.0 to the EW universe and about 1.26 to Nifty 500. A relative +1 name still loses money in up to 62% of cases in a bad month. Drawdown control has to come from static exposure.",
+    "Factor exposures: the neutral score was short trend and long liquidity in 2026 (dist_sma200 beta -0.51), so it lags momentum or high-vol rallies (2026 momentum long-short +26%/yr). Any explicit momentum or size bet is a separate, deliberate decision.",
+    "Costs and turnover: about 12.6 round trips a year, roughly 6.3%/yr at 50 bps; each extra 10 bps costs about 1.3%/yr. 50 bps is fair for RANK picks (tiered 47-53 bps; picks are more liquid than the universe). T30-type books are about 58 bps.",
+    "Capacity uses arithmetic 20d ADV and 80 positions. At Rs 25 cr the median ticket is 1% of ADV and p90 is 6%, with 14% of tickets above 5% of ADV. At Rs 100 cr, 44% of tickets exceed 5% of ADV. R2_rel's geometric-turnover basis is harsher (8.5% of tickets above 10% of ADV at Rs 25 cr). Above about Rs 25 cr, use liq5 (DEV excess about +14%) and VWAP execution (-1.4%/yr). Open-auction fills for large tickets are optimistic.",
+    "Operational load: about 80 positions and about 40 orders a week. A single weekly calendar carries \u00b15-10 pp/yr of phase luck; staggered entries remove it.",
+    "Shorts are not viable in the cash segment, so -1 is avoid/exit only. On F&O names the full-universe label is not 30/40/30 (-1 is about 25.5%).",
+    "The 2026 holdout is lightly contaminated (round 1 reported it). The selection model keeps 10 market/regime features (12-19% of gain). Removing them was DEV-neutral (-1.9%/yr, t -0.9) and better in 2026. That is a pre-registered question, not a selection."
+   ],
+   "open_questions_for_devil": [
+    "Rebuild the neumom h=20 label and model from scratch with a different LightGBM seed or bagging, and with and without the beta clip. How much of the DEV and 2026 excess survives model noise? Near-identical labels shared only 72% of their top-20 (J_pm/c1_picks.json).",
+    "Deflated Sharpe and Bonferroni with the full count (about 1,700 portfolio specs + 720 event tests + round 1). Use a persistence-matched or month-block bootstrap of the phase-averaged excess, not Newey-West t.",
+    "Execution: 1-day signal lag (entry at open t+2); day-1 VWAP entry (J_pm check: DEV +16.0% -> +14.6%, 2026 +2.3% -> +1.5% vs 3-seed random); and opening-auction capacity at Rs 5 lakh / 25 lakh / 1 cr tickets in names with Rs 5-10 cr ADV.",
+    "Boring explanation: does a simple rank-sum rule (high deliv_pct, low idio_vol_60 for a given vol_20, high 12-1 momentum, liquidity floor) replicate the long book? R2_alpha's static composite earned only +2%/yr; test a simpler one.",
+    "Untested exit: sell a holding early when it drops into the bottom 30% of the daily score, vs the pure 20-day time exit.",
+    "Stability: random 50% entity halves, quarter-by-quarter excess, and whether the 2024 concentration (half of the DEV excess) is a single episode.",
+    "Is RANK vs C20 vs the same-label blend a true tie under a paired block bootstrap? C20 beat RANK in all 4 calendar years by 2-5 pp. Is that momentum/vol exposure or skill?",
+    "Should the selection model drop the 10 market/regime features to remove hidden timing? DEV -1.9%/yr (t -0.9); 2026 better. Pre-register on data after Oct 2026.",
+    "Over PRE + DEV + 2026 combined, does static 80% exposure plus the breadth-50% governor beat static 80% alone, net of the extra rule?",
+    "Survivorship and forced exits: is the P&L of picks forced out by suspension or label_block (terminal losses, delistings) fully captured?",
+    "Does adding an explicit 12-1 momentum avoid screen (DEV +3.7%, t 3.1) to the neumom book help on DEV, or double-count the model's avoid side?"
+   ]
+  },
+  {
+   "judge": "J_stat (statistician). Lens: multiple testing, deflated Sharpe, overfitting, leakage, effective sample size, holdout honesty. Independent checks are saved in LAB/results/J_stat/: c1 Sim forced-exit look-ahead, c2/c3 phase-averaged series with dependence-robust inference and model-noise pairs, c4 deflated Sharpe with effective trial count, c5 whether DEV selection predicts 2026, and results.json.",
+   "primary_selection_label": "XR_neumom, h=20, continuous residual rank (R2_rel h20_neumom_RANK).\n\nConstruction, for each signal date t:\n- Return: r = open[t+1] -> close[t+20] on CA-adjusted prices. NaN unless fw.ok(20); never set to 0.\n- Cross-section: V_t = elig_base rows with finite r.\n- Winsorise r per date at the 1st/99th percentile over V_t.\n- Per-date OLS over V_t of the winsorised r on [1, 0.5*clip(beta_60,0,3)+0.5, vol_20, log_turn20, mom_12_1]. Missing mom_12_1 is filled with that date's median.\n- Label y = per-date percentile rank of the residual over V_t, in (0,1].\n- Model: LightGBM regression on y-0.5 via L.walk_forward2 (yearly expanding folds 2023-26, embargo 22 days, the 52 PIT features including NSE delivery). Out-of-sample scores only.\n- Action: long the top-20 names by score.\n\nWhy this one:\n- It won R2_rel's composite rule, which was declared before the last six models were trained and uses DEV data only.\n- It has no cut parameter, the lowest factor loading (R2 0.05), the most stable IC (DEV 0.064, 2026 0.061), and one score serves both the buy side and the avoid side.\n\nStatistical caveats on the choice:\n- neu (the same regression without the mom_12_1 regressor) is indistinguishable: paired DEV +0.5%/yr (t 0.24), 2026 +0.6%. It is an acceptable substitute.\n- DEV data cannot separate RANK from C20 or T30. T30 minus RANK is +3.9%/yr on DEV (t 1.2-1.7). That is inside model noise: two near-identical labels moved books by \u00b13%/yr per year. Two of R2_rel's seven criteria used phase-0 statistics, where RANK had its luckiest of five phases.\n- RANK wins on complexity, not on evidence. Pre-register a RANK+T30 rank blend as the challenger, to be scored only on data after 2026-10-14.",
+   "avoid_label": "The bottom 30% of the same h20_neumom_RANK score on date t. 30% was pre-declared; the DEV plateau runs from 10% to 50% (phase-averaged t 3.2-3.8).\n\nHow to use it:\n- Never buy or keep holding those names.\n- The overlay version is equal-weight elig_base minus those names, rebalanced every 5 days, held 20 days.\n- It is an avoid/exit signal, not a short. F&O shorts lost money in round 1, and the -1 class is under-represented among F&O names (25.5%).\n\nPerformance vs the equal-weight universe:\n- DEV +3.4%/yr (NW t 3.6; 90% block-bootstrap CI +1.8% to +4.9%; 11/12 quarters positive).\n- 2026 +1.2% (t 0.9).\n- After factor adjustment, alpha is +2.5% to +3.1%/yr (t 3.7-5.0) in both windows.\n\nRejected alternatives:\n- Dedicated down classifiers (B30, DUAL_down, REL_down). They learn volatility and lost 2-3%/yr as overlays in 2026.\n- The lowest-P(top30) screen (R2_dual AVOID_RUPup). On DEV it has the same mean (+3.4%) with lower tracking error. But it drops low-vol names that are unlikely winners, not predicted losers: its AUC on the -1 class is 0.49. Its 2026 +6% came from the vol factor (factor alpha about +2.6%), so R2_dual's \"strong\" verdict leans on the holdout.\n- The factor-neutralised avoid (R2_alpha FN). Built after the fact; its higher DEV t comes from lower tracking error on a smaller mean (+2.3%). Pre-register it instead.\n- Do not move the cut to 10% because it looked most robust in 2026. That would be selecting on the holdout.",
+   "regime_layer": "None as a return source. Hold a fixed gross exposure chosen by the client: 100%, or a static 70-80% if drawdown tolerance requires it. A static mix keeps the cash-adjusted Sharpe and cuts maxDD roughly in proportion.\n\nStatistical basis:\n- The best DEV gate (breadth50 > 0.5) has a circular-shift null p of 0.085 as a single test, among 28 primary variants. A Bonferroni pass would need p < 0.0018.\n- That gate's DEV gain is one episode (2025). It is negative in PRE 2021-22 at every threshold and only breaks even in 2026.\n- All 9 walk-forward timers have DEV AUC 0.39-0.47, and their coefficients flip sign between folds.\n- DEV holds only about 37 independent 20-day market observations.\n- The relative edge does not depend on the regime: +1.21% vs +1.28% per trade in up vs down markets (slope t 0.39). A timer can only scale beta.\n- Never use 200-dma or VIX filters: they cost 20-24 pp of CAGR in 2026.\n- A breadth rule that cuts to 50% invested is at most optional insurance with an uncertain, possibly negative, cost. It is not part of the label stack.",
+   "event_sleeve": "None in the core stack.\n\nThe breadth-gated capitulation effect (A1: close below the prior 10-day low, volz > 0, Nifty-500 20-day momentum < 0, and at least 5% of the universe at new 20-day lows) is a genuine event-study fact:\n- Day-weighted t: PRE 2.4, DEV 4.4, 2026 2.3.\n- It passes Bonferroni across 720 tests on DEV.\n\nAs an investable sleeve it is not established:\n- It rests on about 30 DEV washout episodes, and the top 5 months carry 58% of the excess.\n- Exposure is only 13-22%.\n- The best horizon depends on the regime: h=5 on DEV, h=20 in 2026. The DEV-selected h=5 version made 0.4% absolute in 2026.\n- Added to the fully invested core, it lowers return in both windows: 30.6% vs 30.9% on DEV, 13.8% vs 16.0% in 2026.\n\nAt most, run it as a pre-registered paper trade for idle cash only: A1 gate, events ranked by the core score, h=10. Note that the h=10 choice was made after 2026 was visible.",
+   "horizon_and_exit": "Hold 20 trading days.\n- Signal at close t; enter at open t+1; exit on time at the close of the 20th bar.\n- No stops, targets or trailing stops (round 1 showed they destroy value).\n- Stagger entries: at least weekly (step 5, 4 sleeves of 20 names), ideally daily. A single calendar phase moved 2026 excess from -2.0% to +9.2% and the DEV t from 3.2 to 4.25.\n- K=20 names per sleeve (K=10-50 is a smooth plateau).\n- Universe: liq2 (Rs 2 cr 20-day turnover). liq5 is the capacity case; its edge is smaller (phase-0 DEV +14.3% vs +19.1%).\n- Costs: 50 bps central, 80 and 130 bps stress. Each extra 10 bps costs about 1.5%/yr of absolute CAGR; the excess over random is nearly cost-invariant.\n- If a name is still in the top 20 at its sleeve's rebalance, keep it. The simulator charges a full round trip, so live costs are slightly lower.\n- Do not add an early exit when a held name falls into the avoid tail. That rule is untested.\n\nWhy h=20: h=10 has the most raw skill, but its horizon-matched random baseline is about 1% CAGR at 50 bps. DEV CAGR at 80 bps is 16.2% / 19.6% / 25.2% for h = 10 / 15 / 20.",
+   "ranking": [
+    {
+     "rank": 1,
+     "candidate_id": "h20_neumom_RANK",
+     "score_0_100": 74,
+     "reason": "Pre-declared DEV composite winner. Phase-averaged DEV excess +15.8%/yr (NW t 4.11; 3.69 at lag 120; block bootstrap p<0.001 for 20-120 day blocks; 10/12 quarters positive; 5.5 sd above the persistence-matched null). IC holds into 2026 (0.061). Factor R2 0.05, no cut parameter, one score for both sides. Against: 2026 phase-averaged only +3.9% (t 0.60). Spec-level deflated Sharpe 0.80-0.86 for N_eff 150-300. DEV leans on 2024 (+27.6%; +9.7% without 2024)."
+    },
+    {
+     "rank": 2,
+     "candidate_id": "h20_neu_RANK (XR_neu)",
+     "score_0_100": 71,
+     "reason": "Statistically identical to neumom: paired DEV +0.5%/yr (t 0.24), 2026 +0.6%. Most reproduced spec: bit-identical in R2_rel, R2_alpha and R2_regime. Its label keeps a small +0.07 z momentum tilt. Acceptable substitute for the primary."
+    },
+    {
+     "rank": 3,
+     "candidate_id": "AVOID overlay: EW elig minus bottom 30% of h20_neumom_RANK",
+     "score_0_100": 70,
+     "reason": "Recommended avoid label. DEV +3.4%/yr vs equal-weight (t 3.6; CI +1.8% to +4.9%). Factor-adjusted alpha +2.5% to +3.1% (t 3.7-5.0) in both windows. One model with the primary. It targets predicted relative losers (bottom-30 AUC 0.548 DEV, 0.554 in 2026). Raw 2026 excess only +1.2%, and 58-71% of it is factor-explained (size, idio-vol)."
+    },
+    {
+     "rank": 4,
+     "candidate_id": "h20_neumom_C20",
+     "score_0_100": 64,
+     "reason": "Highest phase-averaged DEV t (5.07), but phase-0 t only 3.69. The cut is sensitive: C20 4.87, C30 3.61, C33 3.30 (neu). 2026 +8.9% (t 1.3), factor alpha +9.0% (t 1.0). Tied with RANK within model noise."
+    },
+    {
+     "rank": 5,
+     "candidate_id": "h20_neumom_T30",
+     "score_0_100": 63,
+     "reason": "Paired against RANK on DEV: +3.9%/yr (NW t 1.2-1.7, bootstrap p 0.07-0.12; positive in 2 of 3 years). Vol-loaded (factor R2 0.31). Learns dispersion rather than direction (bottom-30 AUC 0.49). Cliffs at T20 and T50. 2026 +11.6%, but its factor alpha was only +1.8%. Candidate for a pre-registered blend, not the primary."
+    },
+    {
+     "rank": 6,
+     "candidate_id": "R2D_SUM_REL_RUP (rank blend of regression and top-30 binary)",
+     "score_0_100": 60,
+     "reason": "The textbook answer to form uncertainty is to average models. Phase-mean DEV 33.4% vs 28.3% for the regression alone; 2026 19.1%. But it needs two models, was one of about 14 combination variants tried, and its gain over the regression has t of about 1. Pre-register it as the challenger, scored on fresh data only."
+    },
+    {
+     "rank": 7,
+     "candidate_id": "h20_neu_C20",
+     "score_0_100": 58,
+     "reason": "Phase-averaged DEV t 4.87, 2026 +10.2% (t 1.66). Same cut-selection and noise caveats as neumom C20, which ranks above it."
+    },
+    {
+     "rank": 8,
+     "candidate_id": "R2D_AVOID_RUPup (drop lowest P(top30))",
+     "score_0_100": 55,
+     "reason": "Same DEV mean as the RANK avoid (+3.3-3.4%) with lower tracking error (t 4.6-4.9). Its 2026 +6% is the vol factor (factor alpha about +2.6%). It drops low-vol unlikely winners, not predicted losers. Needs a second model. R2_dual's 'strong' verdict relied on the holdout."
+    },
+    {
+     "rank": 9,
+     "candidate_id": "h20_neu_T30 / R2D_RUP_h20",
+     "score_0_100": 54,
+     "reason": "DEV phase-averaged t 4.26; same strengths and weaknesses as neumom T30 (vol loading 0.47; 2026 strength comes from factors)."
+    },
+    {
+     "rank": 10,
+     "candidate_id": "FN avoid overlays (XR_all_FN / ENS3_FN / TSX_all_FN)",
+     "score_0_100": 50,
+     "reason": "Positive in both windows (2026 t 2.9-3.7). But they were built after the fact during attribution, their DEV mean is lower (+2.3-2.9%), and the higher t comes from lower tracking error, the same artefact that misled the ENS3 selection. Pre-register."
+    },
+    {
+     "rank": 11,
+     "candidate_id": "h20_neu_C30 / C33",
+     "score_0_100": 45,
+     "reason": "Good IC (0.063-0.064) but weaker long books (DEV phase-averaged t 3.61 / 3.30); 2026 about 0."
+    },
+    {
+     "rank": 12,
+     "candidate_id": "XR_no_market and FN long books",
+     "score_0_100": 42,
+     "reason": "They look better in 2026, but DEV is neutral or negative (no-market -1.9%/yr, t -0.9), so choosing them would be selecting on the holdout. Valid only as pre-registered challengers."
+    },
+    {
+     "rank": 13,
+     "candidate_id": "h15_neu_RANK",
+     "score_0_100": 40,
+     "reason": "Sits between h10 and h20 on every axis. DEV CAGR at 80 bps 19.6% vs 25.2% at h20; step 10 leaves capital idle."
+    },
+    {
+     "rank": 14,
+     "candidate_id": "h10_neu_RANK",
+     "score_0_100": 38,
+     "reason": "Most raw skill (phase-averaged t 4.79), but cost-bound: random baseline about 1% at 50 bps, and 2026 CAGR at 80 bps is 0.6%."
+    },
+    {
+     "rank": 15,
+     "candidate_id": "E3_CAPIT_META_A1_WFR10",
+     "score_0_100": 35,
+     "reason": "DEV +4.4%/yr over all events (t 4.09). But only about 30 washout episodes, the best horizon flips by regime, 2026 absolute return is 0.4% at the DEV-selected h=5, and it lowers the core when added. Sleeve for idle cash only."
+    },
+    {
+     "rank": 16,
+     "candidate_id": "R2D_DUAL_h20",
+     "score_0_100": 33,
+     "reason": "Against the same-loss pure-relative model: +0.5%/yr (t 0.25). The absolute leg makes the event rate move with the market (corr 0.70), which breaks the regime-free design. Higher beta, deeper drawdown."
+    },
+    {
+     "rank": 17,
+     "candidate_id": "E2_CAPIT_BREADTH_A1 (all events)",
+     "score_0_100": 30,
+     "reason": "The event fact is robust (positive in every year, PRE through 2026), but as a sleeve it has t 2.37 on DEV and 1.35 in 2026, and fails portfolio-level Bonferroni."
+    },
+    {
+     "rank": 18,
+     "candidate_id": "GATE_RBR_x50 (breadth drawdown governor)",
+     "score_0_100": 25,
+     "reason": "Null p 0.085 as a single test among 28 variants; loses in PRE. Insurance with uncertain cost, not alpha."
+    },
+    {
+     "rank": 19,
+     "candidate_id": "R2D_DUALP_h20",
+     "score_0_100": 24,
+     "reason": "Against the same-loss relative model on DEV: -4.6%/yr, 0/5 phases positive. Its 2026 strength is the best phase only and could not be selected on DEV."
+    },
+    {
+     "rank": 20,
+     "candidate_id": "h20_none_RANK / h20_size_RANK",
+     "score_0_100": 20,
+     "reason": "Their label composition follows market direction (beta tilt corr 0.60). Lower DEV t (3.27 / 2.90); 2026 negative (-7.7% / -1.8%)."
+    },
+    {
+     "rank": 21,
+     "candidate_id": "R2D_INPUT_GATE_trend",
+     "score_0_100": 18,
+     "reason": "No value on DEV (+0.9%/yr, t 0.4). Its 2026 gain is a regime tilt that DEV could not select."
+    },
+    {
+     "rank": 22,
+     "candidate_id": "ENS3 / ENS_XT / ENS_XB / ENS_BT",
+     "score_0_100": 15,
+     "reason": "ENS3 had the highest DEV t (4.37), yet zero paired gain over XR (+0.1%/yr, t 0.06), and it failed 2026 (-7.0%/yr, all phases and cells negative). Hidden regime-conditional factor bet. Cautionary example of selecting on DEV t."
+    },
+    {
+     "rank": 23,
+     "candidate_id": "TSX_all (long book)",
+     "score_0_100": 15,
+     "reason": "2026 -7.0%/yr in 8/8 K x step cells; 29-57% of model gain comes from market features."
+    },
+    {
+     "rank": 24,
+     "candidate_id": "h20_neu_T10 / T20 / T50",
+     "score_0_100": 14,
+     "reason": "Cliffs on both sides of T30. T10/T20 IC about 0 on DEV; T50's long book fails (DEV t 0.67)."
+    },
+    {
+     "rank": 25,
+     "candidate_id": "E4_QUIET_CRASH_AVOID",
+     "score_0_100": 14,
+     "reason": "Too rare to matter (DEV -0.1%/yr, t -0.52); continuation faded in 2026."
+    },
+    {
+     "rank": 26,
+     "candidate_id": "Timing rules and models (R200, RM60, RVIX, VOTE, VOLT, WF_TIMING_MODELS, RBR_x0)",
+     "score_0_100": 8,
+     "reason": "Walk-forward DEV AUC 0.39-0.47; signs flip across PRE / DEV / 2026; 200-dma cost 20-24 pp of CAGR in 2026."
+    },
+    {
+     "rank": 27,
+     "candidate_id": "Absolute labels: BAR_all / R2D_BAR_A2 / R2D_ABS / R2D_TWO_MODEL_SUM_REL_ABS",
+     "score_0_100": 8,
+     "reason": "Mostly market (daily +1 share corr 0.71-0.87 with the market). BAR's DEV edge disappears without market features (-1.8%/yr). Negative or tied with random in 2026."
+    },
+    {
+     "rank": 28,
+     "candidate_id": "Dedicated down classifiers (h20_neu_B30, R2D_AVOID_DUALdown, REL_down)",
+     "score_0_100": 6,
+     "reason": "They learn volatility (score corr -0.73 with idio_vol). As avoid overlays: DEV t 1.3-1.6, 2026 -2 to -3%/yr in 0/5 phases. A high tail AUC is not an expected-return rank."
+    },
+    {
+     "rank": 29,
+     "candidate_id": "E5_OVERSOLD_DOWNMKT",
+     "score_0_100": 6,
+     "reason": "Passes as an event study at h=5 but loses money as a sleeve (2026 -10.5% CAGR); no edge at h=10."
+    }
+   ],
+   "confidence": "medium",
+   "caveats": [
+    "Phase luck. The headline S.compare numbers are the best of 5 calendar phases: DEV t 4.25 against a phase range of 3.21-4.25, and 2026 +9.2% against a range of -2.0% to +9.2%. Quote phase-averaged statistics only: DEV +15.8%/yr (t 4.11) and 2026 +3.9%/yr (t 0.60). Two of R2_rel's seven composite criteria used phase-0 values, which favoured RANK.",
+    "Deflation. Programme size is about 1,600-1,700 portfolio specs (round 1 about 520-600, round 2 about 1,100) plus about 720 event-study tests. Over R2_rel's 272 long-book excess series (mean correlation 0.40), the Li-Ji effective trial count is 71 (Nyholt 210). With a null t sd of 1.10, the expected maximum null t is 2.9-3.3 for N_eff 150-300. The selected spec's deflated Sharpe is 0.80-0.86, or 0.68-0.75 using the lag-120 t of 3.69, below the 0.95 bar. Family-level DEV skill clearly passes: 73% of 429 DEV specs have t > 2 and 38% have t > 3. The spec-level magnitude does not.",
+    "2026 sits below the DEV magnitude. The 2026 phase-averaged 90% CI is -3.3% to +11.6% (60-day blocks), which excludes the DEV point estimate of +15.8%; the DEV-minus-2026 gap has z of about 1.9. IC did not decay (0.064 to 0.061). The shortfall is weak conversion on the long side (top-30 AUC 0.508) plus factor headwinds: the book is short trend and momentum, and momentum returned +26% in 2026. The DEV excess also leans on 2024 (+27.6%); without 2024 it is +9.7%.",
+    "Model noise is as large as the variant differences. Near-identical labels (clipped vs unclipped beta, label corr 0.99986) gave books differing by +3.3 / +1.0 / -2.8%/yr by year, and -1.6% in 2026. neumom vs neu and RANK vs C20 vs T30 are all inside that band, so DEV does not identify the label form.",
+    "Holdout contamination. Round 1 reported 2026, and that shaped the round-2 design: the relative focus and the lab-v2 fixes. So 2026 is not a clean test of the relative-vs-absolute decision. Several round-2 recommendations were informed by 2026: R2_event's h=10, R2_alpha's FN and no-market variants, R2_rel's 10% avoid cut, and R2_dual's 'strong' AVOID_RUPup. Only data after 2026-10-14 is a clean exam.",
+    "DEV t is a poor selector across families. R2_alpha's pre-declared winner ENS3 (DEV t 4.37) failed 2026 at -7%/yr; its high t came from low tracking variance. Across 22 candidates, DEV t predicts 2026 weakly (Spearman 0.37) and DEV excess does better (0.73). Structural regime-freeness was the best predictor of holdout survival.",
+    "Effective sample is small. DEV is 3 years, 36 months and about 37 independent 20-day market windows. Yearly excess ranged +8% to +28%, so uncertainty at the year level is larger than the Newey-West t suggests.",
+    "Relative is not absolute. P(net>0 | +1) is 90% overall but 38% in the worst month. The label identifies stocks that beat their peers, not stocks that will rise. The market component (23% of 20-day return variance) was not forecastable here, and the book has no drawdown protection: its maxDD is about the same as random's (about -27% to -30% on DEV).",
+    "Costs and capacity. The edge concentrates in liq2 small and mid caps. At liq5, phase-0 excess is DEV +14.3% (vs +19.1%) and 2026 +4.6% (vs +9.2%). At a Rs 25 cr book, 8.5% of orders exceed 10% of ADV. Real all-in costs for small caps can exceed 80 bps.",
+    "The avoid side is largely factor-explained: R2 0.58-0.71, loading on high idio-vol and small size. Its raw excess therefore swings with those factors (2026 +1.2% raw vs +2.5% factor alpha). A plain 12-1 momentum avoid filter matched it on DEV (+3.7%, t 3.1).",
+    "Checked and cleared: the simulator exits at the last valid close before a label_block row or segment break. For the selected book this happened in 11 + 1 of 2,900 DEV trades and 0 of 700 in 2026. All 11 label_block cases are corporate actions (Reliance-Jio demerger, Raymond, Edelweiss, DB Realty and others), so there is no material look-ahead. The DEV excess is also robust to dependence: NW lag 20-120 gives t 3.7-4.1, and block bootstraps of 20-120 days give p < 0.001."
+   ],
+   "expected_performance": "All figures are after costs, phase-averaged (daily-staggered entries), K=20, step 5, liq2 universe.\n\nDEV 2023-25 (the selection window, so biased upward):\n- CAGR 30.7% at 50 bps, about 26% at 80 bps, vs 12.0% for the horizon-matched random top-20.\n- Excess +15.8%/yr: NW t 4.11 (3.7 at lag 120); 90% block-bootstrap CI +9% to +23%; by year +11.4% / +27.6% / +8.0%; +9.7% excluding 2024.\n- maxDD about -27%, vs about -30% for random.\n- Nifty 500 (price index) about +15.5%/yr.\n\n2026 holdout (Jan 1 - Oct 14, annualised; confirmation only):\n- CAGR 13.9%, about 10% at 80 bps, vs random 10.2%.\n- Excess +3.9%/yr: t 0.60; 90% CI about -3% to +12%; single calendar phases ranged -2.0% to +9.2%.\n- maxDD about -18%, vs about -17% for random.\n- Nifty 500 -7.8% YTD (about -10% annualised). The gap to Nifty is mostly the equal-weight, small-cap and dividend effect (EW universe +8.6%), not skill.\n\nAvoid overlay (EW elig minus bottom 30%) vs the EW universe:\n- DEV +3.4%/yr (t 3.6).\n- 2026 +1.2% (t 0.9).\n- Factor-adjusted alpha +2.5% to +3.1%/yr in both windows.\n\nForward planning value (statistician's shrinkage: pool DEV and 2026, then apply a selection haircut):\n- Excess over a random top-20: +4% to +10%/yr, central about +7%.\n- Absolute return: roughly the equal-weight small/mid universe return plus that excess.\n- maxDD about the market's (-25% to -35%).\n- About a 1-in-4 chance of a negative-excess year.\n- The avoid screen adds about +1% to +3%/yr over equal-weight.",
+   "open_questions_for_devil": [
+    "Retrain h20_neumom_RANK with at least 3 LightGBM seeds (with bagging or feature_fraction), and once on the other half of dates (the opposite date_step offset). What is the model-noise sd of the DEV phase-averaged excess, and does the ordering RANK vs C20 vs T30 vs neu survive?",
+    "Recompute R2_rel's 7-criterion DEV composite using phase-averaged statistics only, replacing the phase-0 S.compare t and the phase-0 K x step grid mean. If the winner changes to C20 or T30, declare the label form undetermined and pre-register the RANK+T30 blend.",
+    "Run leave-2024-out, quarter-by-quarter, 1-day signal lag and random 50% entity-half tests on both the phase-averaged long book and the avoid overlay. R2_event ran these only for the event sleeve.",
+    "Programme-wide deflated Sharpe: estimate N_eff from the cross-agent correlation matrix of DEV excess series (rounds 1 and 2, all agents). Does the selected spec reach a deflated Sharpe of 0.95 under any defensible N_eff? My estimate is 0.80-0.86 for N_eff 150-300.",
+    "Boring-factor test on the long side: does a simple 2-3 characteristic screen earn a material share of the +15.8%? Try high deliv_pct, low idio_vol_60 at a given vol_20, and liquidity, as plain screens rather than the model's own loadings (R2_alpha's composite got only +2.0%).",
+    "Capacity: estimate impact at Rs 5 lakh / 25 lakh / 1 crore per name against 20-day ADV for the actual top-20 picks, using a square-root impact model. Does the liq5 version keep a positive excess at 80-130 bps?",
+    "Avoid overlay: re-test it after neutralising for SIZE and idio-vol, and run a paired test against the 12-1 momentum avoid filter. Is 'avoid' just 'avoid small, illiquid, lottery-like names'?",
+    "Pre-registered forward protocol on data after 2026-10-14: freeze the model and fix success criteria now (for example, phase-averaged excess > 0 and IC > 0.03 after 6-12 months). Evaluate the challengers (RANK+T30 blend, no-market XR, FN avoid) only there.",
+    "Early-exit rule: if a held name falls into the bottom-30% avoid tail mid-holding, does exiting early help or hurt versus the pure 20-day time exit? Untested so far.",
+    "Is the 2026 long-side shortfall fully explained by trend and momentum exposure (dist_sma200 beta -0.51), with IC stable month by month? If so, does a pre-registered trend-neutral long book change the expected excess?"
+   ]
+  }
+ ],
+ "devil": {
+  "verdict": "survives_with_caveats",
+  "reproduced_numbers": "I rebuilt everything from scratch and the headline numbers match exactly. No code errors and no leakage found.\n\nLabel rebuild (own code: own segment and window logic, normal-equation OLS, groupby winsorise and rank):\n- Forward window and return match lablib: 0 mismatches over 3,009,708 rows.\n- The rank matches R2_rel's stored label to a max difference of 3e-8. 0.011% of classes flip, from float32 rounding at the 0.3/0.7 cuts.\n- Class shares are 30.04/40.00/29.96 on every date (daily +1 share sd 0.0003). On fno_proxy names +1 is 29.5% and -1 is 25.5%. Cross-sectional R2 is 0.042.\n\nModel retrain (L.walk_forward2, 4 yearly folds, 52 features): score correlation with R2_rel's score is 0.9999999999986 (max difference 2.5e-6).\n\nL.Sim.compare, top-20, step 5, liq2:\n- DEV, 50 bps: CAGR 30.88% vs random 11.79%; excess +19.09%, NW t 4.25; maxDD -25.6%.\n- DEV, 80 bps: 26.17%.\n- 2026 (Jan 1 - Oct 14), 50 bps: 16.04% vs random 6.86%; excess +9.18%, t 1.54. 80 bps: 12.14%.\n\nPhase-averaged over the 5 entry phases:\n- DEV: 30.7% vs 12.0%; excess +15.76%/yr, t 4.11. Against the equal-weight universe: +16.5%, t 4.50. maxDD -26.9%.\n- 2026: 13.9% vs 10.2%; excess +3.9%, t 0.60. Against equal-weight: +5.3%, t 0.81.\n- Range across phases: DEV +15.0 to +20.4%; 2026 -2.0 to +9.2%.\n- Excess by calendar year vs random: 2023 +11.4, 2024 +27.6, 2025 +8.0, 2026 +3.9.\n\nLearnability: IC is 0.0645 on DEV (t 9.3) and 0.0606 in 2026 (t 4.3). Top-30 AUC is 0.517 / 0.508; bottom-30 AUC is 0.548 / 0.554.\n\nNifty 500: 15.5% CAGR over DEV; -7.8% YTD in 2026.",
+  "perturbation_results": "All books phase-averaged, 50 bps, compared with a 5-seed random baseline on the same mask.\n\n1) Entity halves (md5 hash of entity; full model, re-ranked inside each half):\n- DEV, K20: half A +10.1% (t 2.43), half B +12.1% (t 3.69). K10: A +15.5% (t 2.97), B +16.2% (t 3.36).\n- 2026: K20 A +5.5%, B -5.3%; K10 A +12.5%, B -3.1%.\n\n2) Cross-entity training (train on one half only, score the other):\n- DEV: +12.7% (t 3.60) and +14.3% (t 3.69). 2026: +6.1% and +6.3% (t 1.0-1.3).\n- Out-of-entity IC: DEV 0.055-0.061 (t 7.4); 2026 0.059-0.062 (t 4.3-4.6).\n- So the model does not memorise stock identity.\n\n3) Extra signal lag (score from t-L traded at open t+1), DEV:\n- lag 0: +15.8% (t 4.11)\n- lag 1: +13.9% (t 3.56)\n- lag 2: +12.7% (t 3.35)\n- lag 3: +11.8% (t 3.19)\n- lag 5: +8.4% (t 2.39)\n- lag 10: +5.5% (t 1.60)\n- 2026: +2.0 to +4.5% at every lag, none significant.\n\n4) Quarter by quarter:\n- DEV: 10 of 12 quarters positive. The best quarter (2024Q2, +10.5%) is 23% of the total. Excluding it, excess is +13.3%/yr. Worst quarter: 2023Q4, -2.4%. The rolling 126-day excess is negative in 5.6% of windows.\n- 2026: Q1 +2.6%, Q2 -0.4%, Q3 +0.6%. Q1 supplies 90% of the 2026 excess; Apr-Oct runs at about +0.6%/yr.\n\n5) top_k x step grid, DEV excess: K5 +24 to +26%, K10 +21 to +24%, K20 +16 to +17%, K30 +14 to +15%, K50 +10 to +11%, K100 +8%, K200 +6.4%.\n- Every cell has t 3.1-5.0, and step 1/5/10/20 makes no difference once phase-averaged.\n- 2026: K5-K10 +6 to +12%, K20 +4 to +5.5%, K50 -2 to +2%, K100-K200 +1 to +2%. Every cell has t below 1.6.\n- Excess is cost-invariant. Absolute CAGR at 30/50/80/130/200 bps: DEV 34.0 / 30.7 / 26.0 / 18.4 / 8.6%; 2026 16.6 / 13.9 / 10.0 / 3.8 / -4.3%.\n\n6) LightGBM seed (same data):\n- DEV: +15.8 / +14.1 / +15.4% (t 3.6-4.1). 2026: +3.9 / +2.1 / -1.1%.\n- 3-seed rank ensemble: DEV +15.5% (t 3.89); 2026 -0.2% (t -0.02).\n- Scores across seeds correlate 0.95, but top-20 overlap is only 63-64%.\n\n7) Sub-universes (K20):\n- liq5: DEV +11.5% (t 3.25); 2026 +3.3%.\n- F&O-proxy top-200: DEV +3.6% (t 1.22); 2026 +3.6% (t 0.54).\n\n8) Avoid overlay (equal-weight universe minus the bottom 30%, vs equal-weight):\n- DEV: +3.2 to +3.4% (t 3.3-3.6) across all seeds and the ensemble. Halves +3.0% and +3.7%; lag-1 +3.2%; a 10% cut gives +1.6%.\n- 2026: +0.9 to +1.7% (t 0.9-1.2) in every variant.\n\n9) My own persistence-matched null (40 draws, w 0.20, rho 0.914):\n- DEV null: excess sd 2.7%; NW t sd 1.08, max 2.80. The model is 5.9 sd above the null on excess and 3.9 null-sd on t.\n- 2026: the model sits at the 92.5th percentile of the null (z 1.2).",
+  "issues": [
+   "2026 long-book edge is statistically zero once model noise is included. The quoted phase-averaged +3.9%/yr (t 0.60) is the best of 3 LightGBM seeds (+3.9 / +2.1 / -1.1%). The 3-seed rank ensemble gives -0.2%/yr (t -0.02). The quoted single-phase +9.2% is the best calendar phase of the best seed. The seed-ensemble 2026 result sits 2.1 SE below the DEV estimate (z -2.07), so DEV's +15.8% should not be extrapolated.",
+   "Inside 2026, about 90% of the positive excess came in Q1 (+2.6%). From April to October the book ran at roughly +0.6%/yr vs random, with monthly results between -2.0% and +2.6%.",
+   "Multiple testing. Declared variants: round 1 = 522 (5+66+73+78+300), round 2 = 1,469 (R2_rel 477 + dual 130 + alpha 102 + regime 222 + event 538), total N about 1,991. At that N the deflated Sharpe of the phase-averaged DEV excess (IR 2.44, t 4.11) is 0.76 with null sd 1.0 and 0.63 with the persistence-matched null sd of 1.1. Both are well below 0.95. The one-sided 5% Bonferroni hurdle is t 4.06 / 4.46. A Bonferroni haircut cuts the DEV excess from +15.8% to +6.7%/yr. DSR only reaches 0.87-0.96 if the effective N is 71-210, the correlation-adjusted count J_stat computed for R2_rel's specs.",
+   "The edge lives in mid and small caps. Re-ranked inside the F&O-proxy top-200 it is only +3.6%/yr on DEV (t 1.2). That is exactly where impact bites, so capacity is limited (see capacity_costs).",
+   "The signal decays fast for a 20-day hold. One day of execution delay costs 1.9 pp/yr (12% of the edge); a 5-day delay costs 47%.",
+   "Single-model output is noisy: top-20 picks overlap only 63% across LightGBM seeds. Production should use a seed ensemble, but that does not rescue 2026.",
+   "DEV leans on 2024: +27.6%/yr vs +11.4% (2023) and +8.0% (2025); the best two quarters carry 39% of the DEV excess. Every DEV year is still positive.",
+   "2026 factor headwinds. The label neutralises 12-1 momentum, and the 2026 picks tilted large and short-term-loser. Plain 12-1 momentum top-20 earned +32.9% vs random in 2026, and a 4-factor composite earned +12.6% (t 2.3). Factor-adjusted 2026 alpha is +6.2% (t 1.0). This is a known design bet, not something to tune on the holdout.",
+   "The 2026 left tail was worse: 3.4% of model trades lost more than 20% net, vs 2.3% for random (DEV 1.9% vs 2.1%).",
+   "2026 IC is intact (0.061, t 4.3, out-of-entity 0.059-0.062), but the top-20 book does not monetise it: top-30 AUC is only 0.508. The durable part is the avoid side, and it is small: +0.9 to +1.7%/yr in 2026.",
+   "No leakage or simulator artefact found. Forward windows match lablib exactly. The t+1 entry bar is circuit-locked for 0.1% of picks (DEV) and 0.0% (2026); the exit bar is locked-down for 0.07% / 0.57%. J_stat's forced-exit check (-5.6 bps/trade dodged) stands."
+  ],
+  "boring_explanation_test": "No simple factor tilt reproduces the edge.\n\nTop-20 tilts from the same universe, same Sim, phase-averaged, excess vs random, DEV (2026 in parentheses):\n\n| Tilt | DEV | 2026 |\n|---|---|---|\n| Low vol | -4.2% | -23.5% |\n| Low idio-vol | -2.3% | -20.6% |\n| 5-day reversal | -6.9% (t -2.25) | +1.4% |\n| 20-day reversal | -5.1% | +2.3% |\n| Small size | -3.0% | +9.0% |\n| Large size | +1.1% | -23.0% |\n| 12-1 momentum | +9.3% (t 1.29, maxDD -36%) | +32.9% (t 2.36) |\n| Low beta | -11.3% | -5.7% |\n| High delivery % | +2.6% | -2.5% |\n| Near 52-week high | -1.6% | +1.3% |\n| Equal-weight composite of low-vol + reversal + small + momentum | +3.4% (t 0.86) | +12.6% (t 2.28) |\n\nRegressions of the model's daily excess:\n- On the 4 requested tilts' excesses: DEV alpha +16.3%/yr (t 4.39), R2 0.04.\n- On 6 quintile long-short factors (low-vol, 5-day and 20-day reversal, small, momentum, low-beta): DEV alpha +17.7% (t 4.48), R2 0.05. In 2026: alpha +6.2% (t 1.0), R2 0.33.\n\nThe model's own linear factor projection (per-date OLS of the score on 9 characteristic ranks) explains 41% of its cross-sectional variance. That part earns +1.3% on DEV (t 0.2) and -15.0% in 2026. The residual earns +12.3% on DEV (t 3.38) and +6.3% in 2026.\n\nSingle-feature scan (52 features x 2 signs): the best is 12-1 momentum at +9.3% on DEV. Excluding the date-constant market features, whose ties make the sort meaningless, nothing else exceeds +2.6%.\n\nIt is not a lottery-ticket effect: the whole trade distribution shifts. Median trade is +1.33% vs -0.06% for random; the 5/95-trimmed mean is 2.10% vs 0.82%; the share of trades below -20% is 1.9% vs 2.1%.\n\nPick profile on DEV: vol percentile 0.64, 20-day momentum 0.62, 52-week-high proximity 0.60, size 0.56. In 2026 the tilts flip: 20-day momentum 0.40, size 0.67. The model's tilts are regime-dependent, not a static factor.",
+  "capacity_costs": "Position sizes per name, with ADV = the 20-day median daily traded value of each pick at its signal date. A slot weight of 1/80 means Rs 5L, 25L and 1 Cr per name correspond to roughly Rs 4, 20 and 80 cr AUM.\n\nThe picks are more liquid than random:\n- DEV: median ADV Rs 18.2 cr (p10 2.9, p25 6.1) vs Rs 13.2 cr for random picks.\n- 2026: median ADV Rs 55 cr.\n\nParticipation on DEV (share of ADV):\n\n| Position per name | Median | p90 | Picks >5% | Picks >10% | Picks >20% |\n|---|---|---|---|---|---|\n| Rs 5L | 0.28% | 1.7% | 0% | 0% | 0% |\n| Rs 25L | 1.4% | 8.6% | 21% | 7% | 0.2% |\n| Rs 1 Cr | 5.5% | 34% | 52% | 35% | 21% |\n\nIn 2026 the median participation at Rs 1 Cr is 1.8% (p90 26%).\n\nImpact model: square-root impact per side = Y x vol_20 x sqrt(position/ADV), capped at 10%. Round trip = 50 bps base + 2 x impact. It runs through a per-trade-cost copy of L.Sim, validated bit-exact against L.Sim at a flat cost. The random baseline pays the same impact on its own picks.\n\nMean impact per side at Y=1: DEV 19 / 42 / 85 bps; 2026 14 / 31 / 62 bps.\n\nPhase-averaged CAGR, DEV (no impact 30.7%, random 12.0%):\n- Y=0.5: 27.8% (Rs 5L), 24.2% (Rs 25L), 17.9% (Rs 1 Cr; random 2.0%).\n- Y=1.0: 24.8%, 17.9%, 6.4% (random -7.1%).\n\nPhase-averaged CAGR, 2026 (no impact 13.9%):\n- Y=0.5: 12.1%, 9.9%, 6.1%.\n- Y=1.0: 10.3%, 6.1%, -1.2%.\n\nExcess vs random survives impact (DEV +13.8 to +15.6%), because random picks are less liquid. Absolute returns do not survive it: at Rs 25L per name and Y=1 the DEV CAGR is about Nifty 500's (15.5%). A tiered base cost (30/50/95 bps) changes these numbers by less than 0.5 pp.\n\nPractical cap: about Rs 25L per name (about Rs 20 cr AUM). Use liq5 or a participation cap above that. Rs 1 Cr per name is not viable.",
+  "deflated_sharpe": "Selected series: the phase-averaged DEV daily excess vs random. T = 735 days, annual mean 15.8%, tracking error 6.5%, IR 2.44, skew 0.86, kurtosis 6.4, NW t 4.11 (naive t 4.17). The phase-0 series has t 4.25.\n\nCross-trial dispersion of DEV t over R2_rel's 429 records at 50 bps: mean 2.57, sd 1.19, max 5.54. The persistence-matched null sd is 1.08 (mine) to 1.10 (R2_rel).\n\nTrial counts:\n- Round 1 declared: 522 (brief: ~600).\n- Round 2 declared distinct specs: 1,469.\n- Programme total: 1,991 (2,069 with ~600 for round 1).\n- Every run: 3,727.\n\nDSR (Bailey and Lopez de Prado), phase-averaged series:\n\n| N | null sd 1.0 | null sd 1.1 |\n|---|---|---|\n| 71 (effective, Li-Ji) | 0.96 | 0.94 |\n| 210 (effective, Nyholt) | 0.92 | 0.87 |\n| 477 (R2_rel only) | 0.87 | 0.79 |\n| 1,469 (round 2) | 0.78 | 0.67 |\n| 1,991 (programme) | 0.76 | 0.63 |\n| 3,727 (every run) | 0.70 | 0.56 |\n\nPhase-0 DSR is about 0.04 higher. The expected-max-t hurdle at N=1,991 is 3.45 (sd 1.0) or 3.79 (sd 1.1). The one-sided 5% Bonferroni t is 4.06 / 4.46, so t 4.11 only just clears the sd-1.0 version.\n\nHLZ Bonferroni haircut at N=1,991: Bonferroni p 0.040, t_adj 1.75, a 57% haircut that takes the DEV excess from 15.8% to 6.7%/yr.\n\nPrecision-weighted forward estimate (DEV SE 3.8%, 2026 SE 6.5%):\n- With the raw DEV estimate and the seed-ensemble holdout (-0.2%): +11.5%/yr.\n- With the haircut DEV estimate: +4.9%/yr, SE 3.3%.",
+  "final_recommendation": "The label survives: XR_neumom h=20 continuous residual rank, long top-20, with the bottom-30% avoid list. It reproduces exactly from independent code, carries no leakage, generalises across entity halves (even with half-trained models), is not a simple factor tilt (factor-adjusted DEV alpha +17.7%, t 4.5), and is smooth across K, step, cost and lag. The judges' stack, with no regime layer and no event sleeve, should stand. It survives only with these caveats:\n\n1. Planning numbers. Plan on about +5%/yr excess over the equal-weight universe or random (range 0-10%), not DEV's +16%. 2026 shows intact IC but no measurable long-book profit: seed ensemble -0.2%/yr. Multiple testing at N about 2,000 leaves DSR 0.63-0.76, and the Bonferroni-haircut excess is +6.7%.\n2. Execution. Ship a 3+ seed rank ensemble and stagger entries daily or weekly; never report a single seed and phase. Trade at the next open with no delay: each day of delay costs about 1.9 pp/yr.\n3. Capacity. Hard limit of about Rs 25 lakh per name (about Rs 20 cr AUM), with a participation cap of 5% of 20-day median ADV. Switch to liq5 above that. Rs 1 Cr per name is not viable: DEV CAGR falls to 6-18% depending on the impact coefficient Y.\n4. Avoid veto. Treat the avoid veto (+3.4% DEV, +0.9 to +1.7% in 2026 across all perturbations) as the most reliable component.\n5. Kill rule. Pre-register a paper or small-size live period of at least 6 months (about 25 weekly cohorts) before scaling. Kill or review if rolling 6-month excess vs random falls below -5%, or if the IC drops below 0.02.\n6. Unknown remaining edge. Disclose that the book is short momentum and long liquidity by construction, so momentum-led small-cap rallies like 2026 will look bad on a relative basis.",
+  "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/R3_devil/results.json"
+ }
+}

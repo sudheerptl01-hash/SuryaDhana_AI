@@ -1,0 +1,1242 @@
+[
+ {
+  "agent_id": "E_auditor",
+  "headline": "The lab's label machinery is sound. Next-open entry, NaN handling, segment and suspension guards, ISIN identity, corporate-action adjustment and all point-in-time features passed independent checks (360/360 feature recomputations matched, including rows with later splits). The walk-forward harness catches leaks: shuffled labels give cross-sectional AUC 0.500, and one day of look-ahead gives 0.63-0.65. One high-severity leak: sectors.parquet is a 2026 snapshot, and sec_rel_mom20 carries it into the models. \"Has a sector\" names earn +56 bps per 10-day trade (t=5.6) in every year 2021-25 and only +12 bps in 2026. Sorting on sec_rel_mom20 is the #1 and #2 best of 106 single-feature strategies on 2023-25, with either sign, and both fail in 2026. Three medium issues: ETFs are 3.5% of elig_base; portfolio_sim overstates Sharpe 12-24% and understates maxDD 2.6-3.3pp; duplicate exchange corporate-action records double-apply 7 splits and 30 dividends. Bias budget at h=10: +27 bps phantom close-entry edge; 45% of split windows flip sign on raw prices; monthly P(up) ranges 21-69% (corr 0.66 with market); 1.35M rows carry only ~1,000 independent observations. Luck band: random 20 picks every 5 days at 50 bps made 1.7% \u00b1 3.2% CAGR in 2023-25 against Nifty 500's 15.5%, because costs take about 12.6%/yr. A model with zero selection skill reaches 4.9%, so candidates must beat the persistent-tilt p95 of 8.4% CAGR. The leak-free reference absolute label clears dev (15.5% CAGR) but fails the 2026 holdout (-6.9% vs random -6.5%).",
+  "candidates": [
+   {
+    "candidate_id": "E_ref_abs10_nosec",
+    "family": "absolute fixed-horizon return label (audited reference / calibration point)",
+    "definition": "y = 1{open[t+1]->close[t+10] return > +0.5%}; NaN where fw.ok(10) is false or entry missing; samples = elig_base rows. LightGBM via L.walk_forward (date_step=2, n_jobs=2) on 52 lab features (sec_rel_mom20 removed because of the sector-map leak). Portfolio: long top-20 by OOS score every 5 days, h=10 time exit.",
+    "horizon": "10d (event rates also at 20d)",
+    "sides": "long on all elig_base; long and short on fno_proxy (shorts only realistic there)",
+    "n_samples": 1351823,
+    "class_shares": "h10: 44.8% up (>50bps) / 55.2% not; flat (|r|<=50bps) 6.6%. h20: 47.1% up",
+    "monthly_pos_std": 0.131,
+    "regime_corr": 0.66,
+    "by_year_note": "P(up) by year: 2021 46.0%, 2022 43.6%, 2023 51.1%, 2024 44.5%, 2025 42.1%, 2026 42.7%. By regime: bear 48-50%, bull 43-44%. Monthly range 20.8%-69.0%. Portfolio by year (50bps): 2023 +36.1%, 2024 +24.6%, 2025 -9.0%.",
+    "auc_or_ic": 0.525,
+    "top_decile_vs_base": "Top-decile hit rate vs base rate: 2023 52.1/51.1, 2024 47.8/44.5, 2025 44.7/42.1, 2026 43.8/42.7. Mean daily cross-sectional AUC: 0.515 (t=1.4), 0.540 (5.8), 0.521 (1.9), 0.521 (2.1) for 2023/24/25/26. Pooled AUC (0.517/0.568/0.494/0.546) is mostly market timing: a within-date shuffled label reproduces it.",
+    "cagr_50bps": 0.1545,
+    "sharpe_50bps": 0.949,
+    "maxdd_50bps": -0.285,
+    "cagr_80bps": 0.0724,
+    "random_baseline_cagr": 0.0166,
+    "holdout_2026_note": "2026 (Jan-Sep 10): CAGR -6.9% at 50 bps and -13.4% at 80 bps, against random -6.5%/-13.1% and Nifty 500 -5.7%. Fails the holdout. On F&O names: long -5.2% vs random -7.3%; short +1.6% vs random short -18.2%.",
+    "pros": [
+     "Executable next-open entry; cost-aware 50 bps threshold",
+     "NaN-safe, corporate-action-safe, suspension-safe and survivorship-safe (all verified in this audit)",
+     "Clears the dev persistent-tilt luck band (15.5% CAGR vs p95 8.4%; random mean 1.7%)",
+     "F&O short side beats random shorts by 5.6pp in dev and about 20pp in 2026"
+    ],
+    "cons": [
+     "Regime-dominated: monthly P(up) 21-69%, corr 0.66 with market return",
+     "Only about 1,000 effective independent observations (ICC 0.18, overlap design effect 7.1)",
+     "Path-blind (no stop)",
+     "At 10-day turnover costs are about 12.6%/yr; 80 bps stress roughly halves dev CAGR",
+     "Holdout 2026 at or below random",
+     "Sim Sharpe is overstated: daily mark-to-market Sharpe is about 0.8x"
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "E_ref_abs10_allfeat",
+    "family": "absolute fixed-horizon return label with all 53 lab features (leak-contaminated)",
+    "definition": "Same label as E_ref_abs10_nosec, but the model includes sec_rel_mom20, which is built from the 2026 sector snapshot.",
+    "horizon": "10d",
+    "sides": "long on elig_base; long and short on fno_proxy",
+    "n_samples": 1351823,
+    "class_shares": "44.8% up (>50bps) / 55.2% not",
+    "monthly_pos_std": 0.131,
+    "regime_corr": 0.66,
+    "by_year_note": "Portfolio by year (50bps): 2023 +45.1%, 2024 +19.2%, 2025 -7.6%. 82.5% of picks have a 2026 sector, against 56.7% of the universe and 68% for the nosec model.",
+    "auc_or_ic": 0.532,
+    "top_decile_vs_base": "Top-decile hit vs base: 2023 53.4/51.1, 2024 48.3/44.5, 2025 44.9/42.1, 2026 45.3/42.7. Cross-sectional AUC: 0.523/0.548/0.526/0.530. Removing sec_rel_mom20 cuts the AUC edge by 16-34% in every year.",
+    "cagr_50bps": 0.168,
+    "sharpe_50bps": 1.025,
+    "maxdd_50bps": -0.307,
+    "cagr_80bps": 0.0849,
+    "random_baseline_cagr": 0.0166,
+    "holdout_2026_note": "2026: -4.9% at 50 bps (random -6.5%, Nifty -5.7%). Daily mark-to-market Sharpe is 0.83 in dev (sim 1.03).",
+    "pros": [
+     "Shows how much a single look-ahead feature inflates dev results"
+    ],
+    "cons": [
+     "Contaminated by the 2026 sector-snapshot leak (survivorship and look-ahead)",
+     "Fails the holdout"
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "E_canary_shuffle",
+    "family": "control canary: label permuted within each date",
+    "definition": "The E_ref_abs10 label shuffled across stocks within each date. Each date keeps its base rate, so any predictive skill is pure market timing.",
+    "horizon": "10d",
+    "sides": "long",
+    "n_samples": 1351823,
+    "class_shares": "same as reference (44.8% up)",
+    "monthly_pos_std": 0.131,
+    "regime_corr": 0.66,
+    "by_year_note": "Portfolio: 2023 +33.4%, 2024 +6.7%, 2025 -18.7%.",
+    "auc_or_ic": 0.4996,
+    "top_decile_vs_base": "Cross-sectional AUC 0.499/0.499/0.500/0.501 (t between -0.7 and +0.04). Pooled AUC 0.521/0.545/0.488/0.544 nearly equals the real model's pooled AUC, so pooled AUC on absolute labels measures timing.",
+    "cagr_50bps": 0.0494,
+    "sharpe_50bps": 0.374,
+    "maxdd_50bps": -0.302,
+    "cagr_80bps": -0.0255,
+    "random_baseline_cagr": 0.0166,
+    "holdout_2026_note": "2026: -14.4% (random -6.5%). 10% of 2026 picks were ETFs.",
+    "pros": [
+     "Proves the harness has no cross-sectional leak",
+     "Shows that a skill-less persistent tilt earns +3.2pp CAGR over the iid-random mean, which motivates the persistent-tilt luck band"
+    ],
+    "cons": [
+     "Control only"
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "E_canary_leak_fwdnoise",
+    "family": "control canary: leaked feature",
+    "definition": "Adds a feature equal to the true forward return open[t+1]->close[t+10] plus Gaussian noise with sd equal to the cross-sectional sd.",
+    "horizon": "10d",
+    "sides": "long",
+    "n_samples": 1351823,
+    "class_shares": "44.8% up",
+    "monthly_pos_std": null,
+    "regime_corr": null,
+    "by_year_note": "Detected in every year.",
+    "auc_or_ic": 0.78,
+    "top_decile_vs_base": "Cross-sectional AUC 0.768/0.798/0.775/0.796 (t 39-49). Top-decile hit rate 79-88% vs base 42-51%.",
+    "cagr_50bps": 83.68,
+    "sharpe_50bps": 20.5,
+    "maxdd_50bps": 0,
+    "cagr_80bps": 78.59,
+    "random_baseline_cagr": 0.0166,
+    "holdout_2026_note": "2026 CAGR 12,981%: an obvious leak signature.",
+    "pros": [
+     "The harness and portfolio sim flag gross leakage immediately"
+    ],
+    "cons": [
+     "Control only"
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "E_canary_leak_1day",
+    "family": "control canary: one day of look-ahead",
+    "definition": "Adds a feature equal to the day-1 intraday return close[t+1]/open[t+1]-1, which lies inside the label window.",
+    "horizon": "10d",
+    "sides": "long",
+    "n_samples": 1351823,
+    "class_shares": "44.8% up",
+    "monthly_pos_std": null,
+    "regime_corr": null,
+    "by_year_note": "Detected in every year.",
+    "auc_or_ic": 0.643,
+    "top_decile_vs_base": "Cross-sectional AUC 0.628/0.654/0.646/0.647 (t 16-24). Top-decile hit rate 63-73% vs base 42-51%.",
+    "cagr_50bps": 5.43,
+    "sharpe_50bps": 10.75,
+    "maxdd_50bps": -0.029,
+    "cagr_80bps": 5,
+    "random_baseline_cagr": 0.0166,
+    "holdout_2026_note": "2026 CAGR 508%.",
+    "pros": [
+     "Calibrates the leak tripwire: even 1 day of look-ahead gives cross-sectional AUC above 0.62 and Sharpe around 11, so real candidates (AUC 0.52-0.55) above about 0.58 should be presumed leaky"
+    ],
+    "cons": [
+     "Control only"
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "E_ref_abs20_eventrates",
+    "family": "absolute fixed-horizon return label at 20d (event rates and bias budget only; no model trained)",
+    "definition": "y = 1{open[t+1]->close[t+20] > +0.5%}; NaN where fw.ok(20) is false; samples = elig_base rows.",
+    "horizon": "20d",
+    "sides": "long",
+    "n_samples": 1337462,
+    "class_shares": "47.1% up / 52.9% not; flat (|r|<=50bps) 4.5%",
+    "monthly_pos_std": 0.173,
+    "regime_corr": 0.48,
+    "by_year_note": "P(up) by year: 2021 46.5%, 2022 43.6%, 2023 57.5%, 2024 45.8%, 2025 43.3%, 2026 46.4%. Bear regimes 54-56%, bull 44-45%. Monthly range 11.5%-74.8%.",
+    "auc_or_ic": null,
+    "top_decile_vs_base": "not evaluated",
+    "cagr_50bps": null,
+    "sharpe_50bps": null,
+    "maxdd_50bps": null,
+    "cagr_80bps": null,
+    "random_baseline_cagr": null,
+    "holdout_2026_note": "not evaluated",
+    "pros": [
+     "Fewer round trips, so lower cost drag than h=10"
+    ],
+    "cons": [
+     "Even more regime-driven (monthly std 17%)",
+     "Effective sample only about 490 (overlap design effect 14.6 x cross-sectional design effect 186)",
+     "Raw-price splits make up 40% of the bottom-1% tail if prices are left unadjusted"
+    ],
+    "verdict": "weak"
+   }
+  ],
+  "key_findings": [
+   "REPORT.md was NOT written: the environment rejected the report-file write ('Subagents should return findings as text'), and I did not work around that block. All numbers are in /tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/E_auditor/results.json, under sections s1_* through s8_summary. s8_summary holds the lab-issue list and the multiple-testing protocol. The scripts s1_*.py through s8_summary.py, plus fastsim.py and common.py, are in the same directory.",
+   "ENTITY BRIDGING passes. 264 pure renames: adjusted move on the switch day has median 1.15% and max 11.7%, none above 20%. 341 ISIN-change bridges: 323 coincide with an applied split or bonus (median |adj move| 3.6% vs raw 77.5%). 22 bridges show an adjusted move above 20%: 15 are missing corporate-action records (SHRIRAMFIN 2025-01-10, 360ONE, WEL, SBGLP, MOTISONS, DAVANGERE, NAVKARURB, DOLPHIN, AGIIL, 6 ETFs), 4 are double-applied factors (HAL, LIKHITHA, RPPL, AJMERA), and 3 are genuine +20% upper-circuit days after a split. The 19 defective ones are all label-blocked. The 7 'symbol reuse' cases (BURNPUR, EASTSILK, KAUSHALYA, MBECL, SHEKHAWATI, SUMEETINDS, VERTOZ) are all the same issuer relisting with a new ISIN after a consolidation or long gap. They are correctly not merged, but no cross-company symbol reuse exists in the data, so that guard is untested. 427 entities end early, so the universe is not survivorship-filtered.",
+   "CORPORATE ACTIONS pass, with defects. Of 20 sampled splits/bonuses, raw moves of -26% to -90% become adjusted moves of -5% to +11% (one exception, HAL +97%, from double application). Across 571 split/bonus rows: median |raw move| 66.8%, median |adj move| 4.3% (normal day 1.3%), and 20 of the 45 cases above 15% are exactly +20% upper-circuit closes (genuine). Dividends: 8,717 applied, median yield 0.54%, p99 9.9%, median 0.67% per entity-year. The adjusted series is close to total return while Nifty 500 is a price index. Rights: 162 applied (median factor 0.93), 15 blocked. The 459 label_block rows come from residual jumps above 35% (323), exchange block keywords such as 67 demergers (86), prev-close gaps (27) and other causes (23). Only 81 adjusted moves above 25% remain unblocked, mostly listings, relistings and BE series; they touch only 26 valid h=10 windows (0.002%).",
+   "POINT-IN-TIME passes. I checked 12 features (mom_20, mom_60, dist_sma50, vol_20, rsi_14, volz_20, deliv_z20, hi52_dist, beta_60, atr_pct, max_ret_20, gap_open) on 30 rows, 15 of them with a split later in the segment. Each was recomputed from data truncated at t and re-adjusted with only the corporate-action factors known at t: 360/360 match. Max relative difference is 6e-8, or 6e-5 for volz_20 because of log1p. Back-adjustment does not leak because all features are scale-invariant ratios. Index/panel alignment is perfect: 1,434 = 1,434 sessions, and the median stock return correlates 0.886 with the index at lag 0 vs 0.06/0.005 at lag \u00b11. elig_next uses look-ahead but only excludes 41 rows (0.003%) outside the last date.",
+   "HIGH-SEVERITY LEAK in the sector map. sectors.parquet holds today's (2026) Nifty Total Market constituents, 748 entities. Sector-known vs NA, 10-day forward return, date-demeaned: +38.7, +53.2, +76.4, +68.2 and +72.9 bps in 2021-2025, falling to +9.2 bps in 2026. Pooled it is +56 bps per trade, t=5.6 on non-overlapping dates, and it holds within every liquidity tercile. Ranking on sec_rel_mom20, which is NaN for 43% of rows, is the #1 and #2 of 106 single-feature strategies on 2023-25 with either sign (Sharpe 1.04 and 0.69) and fails in 2026 (-0.07 and 0.14). In the walk-forward model, dropping sec_rel_mom20 reduces the cross-sectional AUC edge by 16-34% in every year. It also cuts the share of picks with a 2026 sector from 82.5% to 68%; the universe share is 56.7%. D_setups' 'sector leader' setup and B_relative's sector-relative label with market-excess fallback for NA names inherit this leak.",
+   "CANARIES. Label: 1{open[t+1]->close[t+10] > 50bps}, walk_forward with date_step=2. 'XS-AUC' below is the mean per-date (cross-sectional) AUC. Shuffling the label within each date gives XS-AUC 0.499/0.499/0.500/0.501 for 2023/24/25/26, but pooled AUC 0.521/0.545/0.488/0.544. The real model's pooled AUC is 0.523/0.568/0.494/0.549, so pooled AUC on absolute labels is almost entirely market timing; teams must report cross-sectional AUC or IC. A forward-return-plus-noise feature gives XS-AUC 0.77-0.80 (t 39-49) and 8,368% CAGR. A single day of look-ahead (day-1 intraday return) gives XS-AUC 0.63-0.65 (t 16-24), Sharpe 10.8 and 543% CAGR. The harness detects leakage at every strength tested.",
+   "BIAS BUDGET, h=10 and h=20 on elig_base. Close vs next-open entry: +27.3 bps phantom edge per trade at both horizons (2021: 42, 2025: 17); 4.0% of labels flip at h=10 and 2.9% at h=20. Unadjusted prices: 4.2% of h10 windows contain a corporate action and 0.20% a split; 44.5% of split windows flip sign; mean raw return in split windows is -62.8% vs +0.25% adjusted; split windows are 20% (h10) and 40% (h20) of the raw bottom-1% tail; dividend windows differ by +87 bps. NaN->0: excluding the data tail, 0.085% of rows at h10 (0.17% at h20) are undefined, but their forced-exit outcome averages -15.8%. Ticker-keyed vs entity-keyed: 780 windows fragmented at renames, 10,149 eligible rows lost to the seasoning reset, 0 cross-company splices. Threshold 0 vs 50 bps: 6.6% of 'up' labels lose money after cost; flat share is 6.6% at \u00b150 bps and 10.4% at \u00b180 bps. Survivorship: survivors-only inflates the 2021-23 mean 10-day return by only +1.3 bps, because non-survivors are 1.6% of eligible rows.",
+   "REGIME AND EFFECTIVE SAMPLE SIZE. Absolute label h10 (>50bps): monthly P(up) mean 45.5%, sd 13.1%, range 20.8%-69.0%, corr 0.66 with the Nifty monthly return. By regime it is 48-50% in bear and 43-44% in bull. By year: 46.0/43.6/51.1/44.5/42.1/42.7% (2021-26). The market-excess label has monthly sd 6.4% and corr 0.08. Overlap: label lag-1 autocorrelation is 0.70 (h10) and 0.79 (h20), giving design effects of 7.05 and 14.6. Within-date ICC is 0.18, so the cross-sectional design effect is about 188. N_eff by label: absolute ~1,021 (h10) and 491 (h20); market-excess 3,722 and 1,895; cross-sectional top-30% rank ~183k (an upper bound). Use date-clustered or non-overlapping inference.",
+   "LUCK BAND. Setup: h=10, top-20, step 5, 20 seeds, 2023-01-01..2025-12-31. iid random at 50 bps: CAGR 1.66% \u00b1 3.21% (p5 -4.3%, p95 5.5%), Sharpe 0.18 \u00b1 0.22 (p95 0.44), maxDD -29%. At 80 bps: -5.6% \u00b1 3.0%. 2026 holdout: -6.5% \u00b1 5.9% at 50 bps and -13.1% at 80 bps. Nifty 500: 15.5% over 2023-25 and -5.7% in 2026. Costs dominate: about 25 round trips per year x 50 bps is roughly 12.6%/yr of drag. A persistent random tilt (fixed random score per entity) is the right null for sticky model picks: CAGR 0.7% \u00b1 5.85% (p95 8.4%), Sharpe sd 0.39 (p95 0.64). The shuffled zero-skill model's 4.9% CAGR and 0.37 Sharpe sit inside that band. Random by year: 2023 +27.9%, 2024 -1.7%, 2025 -16.2%. Six 3-seed averages range from -0.5% to +4.3%.",
+   "SELECTION SHRINKAGE (factor zoo). 106 strategies: each of the 53 lab features with both signs, 50 bps. Dev Sharpe p95 0.48, max 1.04, and the max is the sec_rel_mom20 leak. The top-5 on dev have mean Sharpe 0.68 in dev and 0.02 in 2026. Spearman correlation between dev and 2026 Sharpe is 0.11 (p=0.26), so dev rankings barely persist out of sample.",
+   "PORTFOLIO_SIM STATISTICS ARE OPTIMISTIC. It books each cohort's full h-day return on the signal date, and its two overlapping sleeves make step returns autocorrelated (lag-1 0.31). Against a daily mark-to-market rebuild with identical picks and identical final equity: random baselines show sim Sharpe 0.306 vs MTM 0.278 and maxDD -28.6% vs -31.2%; the walk-forward model in 2023-25 shows Sharpe 1.03 vs 0.83 and maxDD -30.7% vs -34.0%. The Nifty benchmark Sharpe uses daily returns, so it is not comparable with sim Sharpe.",
+   "MULTIPLE-TESTING PROTOCOL. (1) Open the 2026 holdout once, for at most 3 pre-registered finalists. (2) End dev signals at the last date with t+h <= 2025-12-31. (3) Count N team-wide and report it. (4) Use cross-sectional AUC/IC with non-overlapping t-stats, plus excess CAGR and MTM Sharpe over a random baseline of at least 10 seeds from the same mask; never use pooled AUC. (5) Minimum effect: XS-AUC >= 0.52 (IC >= 0.03), t >= 3, above 0.5 in each dev year, and positive excess at 80 bps and in at least 2 of 3 years. (6) Luck hurdle from the persistent-tilt null: dev CAGR above 8.4%, and sim-Sharpe above mu + sigma x Phi^-1(0.95^(1/N)), which is 1.01/1.10/1.19/1.30/1.38 for N=5/10/20/50/100 (iid null: 0.69/0.74/0.79/0.85/0.90; MTM hurdles roughly 0.85-0.9x). (7) Plan for at least a 50% haircut on dev excess. (8) Leak tripwires: XS-AUC above 0.58, top-decile 10-day excess above 300 bps, or Sharpe above 3.",
+   "REFERENCE ABSOLUTE LABEL (leak-free features). Dev 2023-25: CAGR 15.5%, sim Sharpe 0.95, maxDD -28.5%, 7.2% at 80 bps; by year +36.1%, +24.6%, -9.0%. It clears the persistent band but only marginally clears the deflated-Sharpe hurdle for N=1. 2026: -6.9% vs random -6.5%, so it fails the holdout. Top-decile 10-day return in 2026 is 30 bps vs the universe's 33 bps. F&O shorts beat random shorts (dev -21.0% vs -27.1%; 2026 +1.6% vs -18.2%) but still lose money in dev. The binding constraints for the team are regime dependence, effective sample size and transaction costs, not data leakage."
+  ],
+  "lab_issues_found": [
+   "HIGH: sectors.parquet is a 2026 snapshot of Nifty Total Market constituents (748 entities), creating look-ahead and survivorship bias through the feature sec_rel_mom20 (its NaN-ness), F.sector, sector-relative labels and sector-gated setups. Evidence: +56 bps per 10-day trade for sector-known names (t=5.6) in every year 2021-25, +12 bps in 2026; \u00b1sec_rel_mom20 are the top-2 of 106 dev strategies and fail in 2026; model picks are 82.5% sector-known vs 68% without the feature. FIX: remove sec_rel_mom20 from L.FEATURES; never use sector or its NaN-ness as a feature, filter, setup or label split; treat NA as one capped bucket in max_per_sector; rebuild a point-in-time sector map if sectors are needed.",
+   "MEDIUM: ETFs and mutual-fund units (ISIN INF..., e.g. GOLDBEES, SILVERBEES, NIFTYBEES, MON100) are inside elig_base: 48,406 rows (3.5%), 130 instruments, rising to about 5% in 2025-26. They also appear in 2,504 fno_proxy rows and feed the xr_*, breadth and dispersion features. The shuffled model put 10% of its 2026 picks into ETFs. FIX: require ISIN prefix 'INE' and recompute cross-sectional features on equities only.",
+   "MEDIUM: portfolio_sim books cohort P&L at the signal date, and its overlapping sleeves autocorrelate step returns (lag-1 0.31). Result: Sharpe overstated by about 1.12x (random) and 1.24x (model); maxDD too shallow by 2.6-3.3pp; by_year shifted by h days. The Nifty benchmark Sharpe is daily, so the two are not comparable. FIX: build a daily mark-to-market equity curve (s6_sim_audit.py::mtm) and book P&L at exit.",
+   "MEDIUM: duplicate exchange book-closure records whose ex-dates differ by 1-7 days are applied twice. 7 splits/bonuses are double-applied: HAL 2023-09-28 gets factor 0.25 instead of 0.5 (+97% fake jump, label-blocked), AJMERA 0.04 instead of 0.2, and AKSHAR's 1:5 bonus produces a +17% fake jump that is NOT blocked. 30 dividends are applied twice (median extra 0.53%). FIX: de-duplicate events per (entity, kind, desc) within \u00b17 days before locating them.",
+   "MEDIUM-LOW: the corporate-action archive is missing some splits and demergers (SHRIRAMFIN 5:1 Jan-2025, 360ONE, SIEMENS demerger Apr-2025, WEL, SBGLP, MOTISONS, DAVANGERE, NAVKARURB, DOLPHIN, AGIIL, ETF splits). There are 76 unadjusted split-like jumps; all are label-blocked, so labels are safe. Features are not: 1.1% of eligible rows (1.9% of fno_proxy rows) have long-lookback features (mom_60/120, mom_12_1, hi52/lo52_dist, dist_sma200, vol_60, beta_60) whose window spans a block. FIX: infer the factor when a residual jump coincides with an ISIN change, or set those features to NaN when their window spans a label_block row.",
+   "LOW: walk_forward scores only rows with a defined label, so model picks can never land on future-suspended, delisted or demerger windows, while random picks can (0.082% of picks, mean -5.9%). This gives any model strategy about +0.15pp/yr of free CAGR. Those undefined windows have a mean forced-exit outcome of -15.8%. FIX: predict on all mask rows and compute metrics only on labeled rows.",
+   "LOW: elig_next uses look-ahead (it checks that t+1 trades). Apart from the last panel date it excludes only 41 rows (0.003%), whose next-bar mean is -8.9%. FIX: drop it, since labels are already NaN when t+1 is missing.",
+   "LOW: dividend and rights parser gaps. 540 of 9,511 dividend-like records are unparsed ('INTERIM DIVIDEND' or 'DIVIDEND' with no amount; 'AGM/DIV-20 SPLDIV-15' with no 'RS'). 'RIGHTS 1:10 PRM RS 194/-' without '@' is blocked. The rights-adjusted price uses today's face value, which is stale for 16 rights events that had a later split. FIX: parse bare amounts, accept PRM without '@', and use the face value as of the event date.",
+   "LOW: three hygiene items. The dev window end='2025-12-31' lets trades exit in Jan-2026; end dev signals where t+h <= 2025-12-31. Docs are stale: the lablib.py and build_panel.py docstrings still say adjustment comes from PREV_CLOSE, and the brief says ~3.5M rows when there are 3,097,741. The symbol-reuse guard is untested because all 7 cases are same-issuer relistings.",
+   "METHOD: pooled AUC on absolute labels measures market timing, not stock selection. A within-date shuffled label reproduces the pooled AUC (0.521/0.545/0.488/0.544 vs the real 0.523/0.568/0.494/0.549). FIX: report mean daily cross-sectional AUC or IC with non-overlapping t-stats, and report timing AUC separately."
+  ],
+  "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/E_auditor/results.json (REPORT.md not written: the harness blocked report-file writes for subagents; the full findings are in this structured output and in results.json sections s1_* through s8_summary)",
+  "variants_tried": 5
+ },
+ {
+  "agent_id": "A_barrier",
+  "headline": "Correctly built triple-barrier labels are bias-free and their classes match realized P&L, but they mostly track the market: on a given day the share of +1 labels runs from 17% to 82%, with 0.72 correlation to the Nifty 500 return over the same window. Cross-sectionally they are only weakly learnable (xs-AUC 0.53 in 2023-25) and no more learnable than a path-blind 20-day label built the same way. Executing the barrier, specifically the stop, destroys value. Recommended spec within this family, selected on 2023-25 only: A1 = h=20, target and stop each 2.0 x ATR14%, entry at next open, +/-50 bp dead zone at the time barrier. Event rates: +1 48.9% / -1 49.6% / 0 1.6%. Use it only as a ranking target with a 20-day time exit: 2023-25 CAGR 26.1% vs 11.1% for random picks and 15.5% for Nifty 500. In the 2026 holdout it made +3.9% vs +2.9% random, and the per-trade edge was about 0 (t 0.06). Verdict: weak.",
+  "candidates": [
+   {
+    "candidate_id": "A1_B20_f2.0_2.0",
+    "family": "triple barrier, fixed daily-ATR multiples (absolute, path-dependent)",
+    "definition": "Signal at close[t], entry open[t+1]. Target = entry*(1+2.0*atr_pct[t]) (median +7.3%), stop = entry*(1-2.0*atr_pct[t]). Scans bars t+1..t+20. Stop is checked before target on the same bar; a gap through a barrier fills at that bar's open. Time exit at close[t+20]. +1 = target first, or time-exit return > +50 bp. -1 = stop first, or time-exit return < -50 bp. 0 = time exit within +/-50 bp. NaN where fw.ok(20) is false. Model: LightGBM binary (+1 vs rest), L.walk_forward with date_step=2. Portfolio numbers below use the recommended 20-day time exit; barrier-exit numbers are in cons.",
+    "horizon": "20 trading days max (mean 9.7 bars held; median 7 bars to target or stop)",
+    "sides": "long (short mirror measured: unconditional net expectancy negative, all F&O short books lost money)",
+    "class_shares": "+1 48.9% / -1 49.6% / 0 1.6% on elig_base (n=1,337,462). Exits: target 43.7%, stop 41.4%, time 14.9%. Net 50 bp given +1 = +6.7%, given -1 = -7.5%.",
+    "n_samples": 1337462,
+    "auc_or_ic": 0.534,
+    "top_decile_vs_base": "Per-date top-decile P(+1) vs base: 2023 60.6 vs 57.8; 2024 50.7 vs 46.4; 2025 48.3 vs 45.3; 2026 49.2 vs 48.1. xs-AUC 0.527/0.544/0.530/0.513. Pooled AUC 0.499/0.564/0.485/0.541 is dominated by timing. IC vs 20d return 0.049/0.101/0.087/0.048.",
+    "cagr_50bps": 0.212,
+    "cagr_80bps": 0.169,
+    "sharpe_50bps": 1.9,
+    "maxdd_50bps": -0.235,
+    "random_baseline_cagr": 0.095,
+    "monthly_pos_std": 0.145,
+    "regime_corr": 0.65,
+    "by_year_note": "Time exit, 50 bp: 2023 +56.3%, 2024 +25.4%, 2025 +1.2%, 2026 YTD +3.9%. Random: 40.9/6.5/-8.8/2.9. Nifty 500: 25.2/14.9/6.2/-4.0. Selection window 2023-25: CAGR 26.1%, Sharpe 2.21 vs random 11.1%/1.09 and Nifty 15.5%/1.20. P(+1) by year: 50.3/47.0/57.8/46.4/45.3/48.1. Monthly P(+1) range 25.1%-76.6%.",
+    "holdout_2026_note": "Jan to 10 Sep 2026 (Nifty -4.0%): time-exit book +3.9% vs random +2.9%. Barrier-exit book -0.4% vs random -1.2%. Top-20 excess per 20-day trade +0.07% (t 0.06), down from +1.16% (t 2.57) in 2023-25. The bottom decile still lagged the universe by -0.74%. The holdout does not confirm the edge, and with ~8 months it has low power.",
+    "pros": [
+     "Every class maps to a realized P&L sign (100% coherence at tau=50; 99% of +1 labels still profitable at 80 bp)",
+     "85% of labels are decided by a barrier, so the label really is path-aware. Natural holds fall in the 5-20 day window.",
+     "Exactly matches lablib.barrier_labels (0 mismatches). Same-bar ambiguity is only 0.07%; gap-through stop 3.3%.",
+     "Event rate is flat across liquidity terciles (48.1/48.7/49.8%) and ATR terciles (48.3/49.2/49.0%)",
+     "Best of the three geometries on the role's barrier-exit test (2023-25 Sharpe 0.95 vs 0.48 for A2 and 0.01 for A3)"
+    ],
+    "cons": [
+     "Mostly market direction: daily corr with the same-window Nifty return is 0.72; the daily +1 share runs 17-82% (5th-95th pct); monthly corr 0.65",
+     "Executing the barrier itself loses: 2023-25 CAGR 6.0% (Sharpe 0.95) vs Nifty 15.5%; 2.0% at 80 bp. Random barrier book -5.5%. Gross return per day held is 1.0 bp vs 6.6 bp for a 20-day hold.",
+     "The stop is what hurts. Target-only exit: Sharpe 2.25 with maxDD -15.8%. Stop-only: Sharpe 1.24.",
+     "No more learnable than the path-blind 20d control label (control xs-AUC 0.532/0.552/0.548)",
+     "Pooled AUC falls below 0.5 in 2023 and 2025 because the model's implicit market call was wrong",
+     "Overlap is heavy: lag-1 ACF 0.73, variance inflation about 11",
+     "The 2026 holdout edge is about 0"
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "A2_B20_f3.0_1.5",
+    "family": "triple barrier, asymmetric fixed ATR ('big move' label)",
+    "definition": "Same as A1, but target = +3.0*atr_pct (median +11.0%) and stop = -1.5*atr_pct (median -5.5%), h=20, tau=50 bp, entry open[t+1], NaN-safe. Binary +1 vs rest. Portfolio numbers use the 20-day time exit; the gated variant only takes names with P(+1) >= 0.5.",
+    "horizon": "20 trading days max (mean 9.9 bars; median 8 bars to target, 6 to stop)",
+    "sides": "long (short mirror loses money)",
+    "class_shares": "+1 36.7% / -1 61.6% / 0 1.7%. Exits: target 26.5%, stop 56.5%, time 16.9%. Net 50 bp given +1 = +9.0%, given -1 = -6.0%.",
+    "n_samples": 1337462,
+    "auc_or_ic": 0.532,
+    "top_decile_vs_base": "2023 49.1 vs 46.3; 2024 38.5 vs 33.9; 2025 35.5 vs 33.0; 2026 38.1 vs 35.8. xs-AUC 0.529/0.542/0.524/0.520.",
+    "cagr_50bps": 0.252,
+    "cagr_80bps": 0.207,
+    "sharpe_50bps": 2.06,
+    "maxdd_50bps": -0.246,
+    "random_baseline_cagr": 0.095,
+    "monthly_pos_std": 0.147,
+    "regime_corr": 0.64,
+    "by_year_note": "Time exit, 50 bp: 2023 +66.3%, 2024 +32.5%, 2025 -6.5%, 2026 +13.0%. 2023-25: CAGR 27.7%, Sharpe 2.18. Gated with P(+1) >= 0.5 (a priori threshold, not tuned): 2023-25 Sharpe 2.37, full-period CAGR 23.7%, maxDD -13.4%, 2025 -3.7%. Barrier exit: 2023-25 CAGR 3.7%, Sharpe 0.48. P(+1) by year: 37.9/35.6/46.3/33.9/33.0/35.8.",
+    "holdout_2026_note": "Time exit +13.0% vs random +2.9% and Nifty -4.0%. Gated +12.1%. Barrier exit +4.5% vs random -1.8%. Top-20 excess per trade +0.85% (t 0.66), not significant. This did not influence selection.",
+    "pros": [
+     "Calibrated P(+1) works as an exposure gate (only 55% of dates have 20 or more names passing): maxDD roughly halves",
+     "Rarer positive class matches 'which stock will make a big move'",
+     "Same learnability as A1; strongest holdout of the barrier models"
+    ],
+    "cons": [
+     "Barrier-exit execution is poor (Sharpe 0.48 in 2023-25; -0.2% CAGR at 80 bp)",
+     "Equally market-driven (daily corr 0.72, monthly std 14.7pp)",
+     "Holdout outperformance is not statistically significant",
+     "Chosen as the alternative, not the primary, by the 2023-25 rule"
+    ],
+    "verdict": "promising"
+   },
+   {
+    "candidate_id": "A3_B10_f2.0_1.5",
+    "family": "triple barrier, fixed ATR, short swing",
+    "definition": "h=10, target +2.0*atr_pct, stop -1.5*atr_pct, entry open[t+1], tau=50 bp, NaN-safe. Binary. Portfolio numbers use the 10-day time exit.",
+    "horizon": "10 trading days (mean 6.3 bars)",
+    "sides": "long",
+    "class_shares": "+1 42.7% / -1 53.6% / 0 3.8% (target 30.1, stop 41.8, time 28.1)",
+    "n_samples": 1351823,
+    "auc_or_ic": 0.527,
+    "top_decile_vs_base": "2023 51.2 vs 49.1; 2024 44.8 vs 41.6; 2025 41.3 vs 39.8; 2026 42.6 vs 40.9",
+    "cagr_50bps": 0.141,
+    "cagr_80bps": 0.06,
+    "sharpe_50bps": 0.9,
+    "maxdd_50bps": -0.305,
+    "random_baseline_cagr": 0.015,
+    "monthly_pos_std": 0.122,
+    "regime_corr": 0.71,
+    "by_year_note": "Time exit (10d): 2023 +44.9%, 2024 +28.3%, 2025 -10.9%, 2026 -1.4%. 2023-25: CAGR 18.6%, Sharpe 1.11. Barrier exit 2023-25: -0.8% (random -10.2%).",
+    "holdout_2026_note": "Time exit -1.4% vs random -4.8%. Barrier exit -4.1%.",
+    "pros": [
+     "Most frequent turnover; coherent classes"
+    ],
+    "cons": [
+     "Weakest learnability",
+     "Cost drag at 10 days: CAGR 6.0% at 80 bp",
+     "Highest regime corr (daily 0.80)",
+     "Mean hold sits at the bottom of the client's window"
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "A1m_B20_f2.0_2.0_multiclass",
+    "family": "triple barrier A1, 3-class model",
+    "definition": "A1 label in {-1,0,+1}, LightGBM multiclass, score = P(+1) - P(-1). Long uses the top-20; short (F&O) uses the bottom.",
+    "horizon": "20d",
+    "sides": "long and short (short on fno_proxy only)",
+    "class_shares": "same as A1",
+    "n_samples": 1337462,
+    "auc_or_ic": 0.533,
+    "top_decile_vs_base": "2023 60.2 vs 57.8; 2024 50.6 vs 46.4; 2025 48.1 vs 45.3; 2026 48.6 vs 48.1. AUC(-1) inverted is about AUC(+1).",
+    "cagr_50bps": 0.219,
+    "cagr_80bps": 0.176,
+    "sharpe_50bps": 2.06,
+    "maxdd_50bps": -0.239,
+    "random_baseline_cagr": 0.095,
+    "monthly_pos_std": 0.145,
+    "regime_corr": 0.65,
+    "by_year_note": "Time exit: 2023 +55.4%, 2024 +33.3%, 2025 -3.2%, 2026 +5.2%. 2023-25 Sharpe 2.34. F&O short with barrier exit: 2023-25 -2.2%/yr vs random -9.2%. With time exit: -21.2%/yr.",
+    "holdout_2026_note": "Long +5.2% vs random +2.9%. F&O short -6.3% (barrier) and -11.5% (time) in a falling market.",
+    "pros": [
+     "Gives an up and a down score in one model"
+    ],
+    "cons": [
+     "No gain over binary",
+     "Short books lose money"
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "A1x_B20_f2.0_2.0_nomkt",
+    "family": "triple barrier A1, model without the 10 market/regime features (ablation)",
+    "definition": "A1 label, binary, 43 stock-only features (drops mkt_*, vix, breadth*, dispersion).",
+    "horizon": "20d",
+    "sides": "long",
+    "class_shares": "same as A1",
+    "n_samples": 1337462,
+    "auc_or_ic": 0.533,
+    "top_decile_vs_base": "2023 60.3 vs 57.8; 2024 51.0 vs 46.4; 2025 47.7 vs 45.3; 2026 51.8 vs 48.1. Pooled AUC is higher (mean 0.536 vs 0.522).",
+    "cagr_50bps": 0.14,
+    "cagr_80bps": 0.099,
+    "sharpe_50bps": 1.34,
+    "maxdd_50bps": -0.297,
+    "random_baseline_cagr": 0.095,
+    "monthly_pos_std": 0.145,
+    "regime_corr": 0.65,
+    "by_year_note": "Time exit: 2023 +44.8%, 2024 +19.6%, 2025 -16.5%, 2026 +13.1%. 2023-25 Sharpe 1.26 (A1 with full features: 2.21).",
+    "holdout_2026_note": "+13.1% vs random +2.9%. Best 2026 IC (0.075). It loses on the 2023-25 selection rule.",
+    "pros": [
+     "Removes the bad timing component of pooled AUC"
+    ],
+    "cons": [
+     "Halves the 2023-25 portfolio edge; how much market features help is unstable from year to year"
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "A_sqrt_family_B10_s0.75_0.75",
+    "family": "triple barrier, horizon-scaled pt=a*ATR*sqrt(h), sl=b*ATR*sqrt(h)",
+    "definition": "a,b in {0.75,1,1.5}, h in {5,10,15,20}, long and short. Representative: h=10, a=b=0.75 (barrier about 8.7%). Includes the D_setups common label (h=10, 1.5/1.0), which resolves 6.4% target / 11.3% stop / 82.3% time.",
+    "horizon": "5-20d",
+    "sides": "long and short",
+    "class_shares": "h10 0.75/0.75: +1 45.7% / -1 48.9% / 0 5.4% (target 26.0, stop 22.0, time 52.1). Across the family, time exits are 52-91%.",
+    "n_samples": 1351823,
+    "auc_or_ic": null,
+    "top_decile_vs_base": "not walk-forwarded (failed the path-resolved >= 70% screen)",
+    "cagr_50bps": null,
+    "cagr_80bps": null,
+    "sharpe_50bps": null,
+    "maxdd_50bps": null,
+    "random_baseline_cagr": null,
+    "monthly_pos_std": 0.125,
+    "regime_corr": 0.68,
+    "by_year_note": "P(+1) by year (h10 0.75/0.75): 47.4/44.6/52.1/44.8/42.9/44.1",
+    "holdout_2026_note": "event rates only: P(+1) 44.1% in 2026",
+    "pros": [
+     "Horizon-consistent scaling"
+    ],
+    "cons": [
+     "With a >= 0.75 these are time-barrier labels in disguise (ATR is about 1.3-1.5x the daily sigma)",
+     "Most market-driven of all labels (daily corr 0.84-0.87)",
+     "a=1.5 gives a 6-7% target-hit rate, too rare"
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "CTRL_T20_time_pm50",
+    "family": "control: path-blind executable fixed-horizon sign label",
+    "definition": "sign(close[t+20]/open[t+1]-1) with a +/-50 bp dead zone, NaN where fw.ok(20) is false. Binary +1 vs rest, same walk-forward, 20-day time exit.",
+    "horizon": "20d",
+    "sides": "long",
+    "class_shares": "+1 47.1% / -1 48.4% / 0 4.5%",
+    "n_samples": 1337462,
+    "auc_or_ic": 0.544,
+    "top_decile_vs_base": "2023 60.7 vs 57.5; 2024 50.7 vs 45.8; 2025 48.6 vs 43.3; 2026 48.3 vs 46.4. IC vs 20d return 0.053/0.099/0.101/0.047.",
+    "cagr_50bps": 0.219,
+    "cagr_80bps": 0.176,
+    "sharpe_50bps": 2.05,
+    "maxdd_50bps": -0.225,
+    "random_baseline_cagr": 0.095,
+    "monthly_pos_std": 0.173,
+    "regime_corr": 0.48,
+    "by_year_note": "Time exit: 2023 +59.4%, 2024 +26.2%, 2025 +2.0%, 2026 +2.8%. 2023-25 CAGR 27.6%, Sharpe 2.46 (gated P >= 0.5: 35.1%/2.82). P(+1) by year: 46.5/43.6/57.5/45.8/43.3/46.4.",
+    "holdout_2026_note": "+2.8% vs random +2.9%. Top-20 excess +0.01% per trade. No holdout edge.",
+    "pros": [
+     "At least as learnable as every barrier label, with a simpler definition"
+    ],
+    "cons": [
+     "Path-blind; larger monthly swing in P(+1) (std 17.3pp); no holdout edge"
+    ],
+    "verdict": "weak"
+   }
+  ],
+  "key_findings": [
+   "REPORT.md was NOT written. The harness rejected the subagent's Write of a .md report file ('Subagents should return findings as text'), and I did not work around it. The full findings are in this structured output. All tables and numbers are on disk in /tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/A_barrier/: results.json (every number plus a summary block), curated_tables.json (ready-made markdown tables keyed by section: geom_long_h5/10/15/20, geom_short_*, tau_long, shortlist_events, shortlist_regime, exit_econ, time_exit_uncond, invest_summary, gate_short, significance, nifty), tables_autogen.md (machine-generated tables for all 144 configs and per-model investability), grid.csv, events_shortlist.json, invest_*.json, variants_*.json, significance.json, compare_learnability.json. The lead can assemble REPORT.md from curated_tables.json.",
+   "Validation: the vectorized barrier engine (abar.py) reproduces L.barrier_labels exactly on two configurations: h10 long fixed 2/1.5 (1,351,823 rows) and h20 short sqrt 1/0.75 (1,337,462 rows). Both had 0 label mismatches, 0 NaN-pattern mismatches and max |return diff| = 0. All portfolio sims call unmodified lablib.portfolio_sim.",
+   "Geometry: ATR14% (median 3.7%) is about 1.3-1.5x the daily close-to-close sigma. As a result, every sqrt(h)-scaled geometry with a,b >= 0.75 ends at the time barrier 52-91% of the time, at every h. They are path-blind sign labels in disguise. The D_setups common label (h10, 1.5/1.0 x ATR x sqrt10) resolves 6.4% target / 11.3% stop / 82.3% time. Fixed daily-ATR multiples at h >= 15 are genuinely path-dependent: 72-95% resolved by a touch, median 5-9 bars to touch, mean hold 6.7-14.4 bars. At h=5 every geometry is >= 54% time exits.",
+   "Event rates: with tau=50 every long geometry at h >= 10 gives P(+1) of 37-61%. Touch-only (+1 = target hit) gives 6-58%, and sqrt a=1.5 is too rare at 6-7%. Moving tau 0 -> 100 bp lowers P(+1) by only 0.8-1.5 pp for fixed h=20 geometries but by 4-6 pp for sqrt ones. Parameter map at h=20: raising pt 1.5 -> 3 ATR moves P(target) 47.7 -> 26.5% and P(+1) 49.1 -> 36.7%. Raising sl 1.5 -> 3 moves P(+1) 49.1 -> 61.0%. Going h 10 -> 20 (2/2) moves the resolved share 61 -> 85%.",
+   "Coherence: at tau=50 every +1 nets positive at 50 bp (net given +1 between +4.0% and +9.7%) and every -1 nets negative. At tau=0, 90-99% of +1 labels are profitable. At 80 bp, 97-99% of +1 labels (h >= 10) remain profitable. Same-bar ambiguity is 0.00-0.10% (immaterial). Gap-through-stop fills affect 1-4% of rows.",
+   "Regime dependence (the absolute-label problem): for A1, the daily cross-sectional share of +1 runs from 16.8% to 81.5% (5th-95th pct). It correlates 0.72 with the Nifty 500 return over the same executable window (0.84-0.87 for time-dominated sqrt labels). Monthly P(+1) ranges 25.1% (Jan-2025) to 76.6% (Jul-2022), with std 14.5pp, corr 0.65 with same-month and 0.74 with same+next-month index return. By year: 50.3/47.0/57.8/46.4/45.3/48.1 (2021-26). The PIT regime tag works the other way: P(+1) is 53-54% when Nifty is below its 200-dma vs 47% above, because 2021-26 bear phases were followed by rebounds. Liquidity terciles are nearly flat (48.1/48.7/49.8). F&O proxy 50.4%.",
+   "Overlap: lag-1 ACF of the label is 0.67-0.73, lag-5 0.25-0.40, about 0 beyond h. Variance inflation (1 + 2*sum of rho) is about 6 at h=10 and 11 at h=20, so the effective sample is about 1/11 of rows.",
+   "Exit economics drive the investability of the whole family. Unconditional gross return per day held in 2023-25 was 1.0 bp for a 2/2 ATR barrier vs 6.6 bp for a 20-day time exit. Unconditional net per trade (50 bp) was -0.40% for the barrier vs +0.82% for the 20d hold. Wider stops monotonically raise expectancy (h20 1.5/1.5 -> 1.5/3.0: -0.50% -> -0.22%). Random-pick books, 2023-25 CAGR: barrier 2/2 -5.5%, stop-only -1.2%, target-only +4.9%, time exit +11.1%. The stop is the value destroyer.",
+   "Learnability (6 walk-forward runs: A1 binary, A2 binary, A3 binary, A1 multiclass, A1 without market features, path-blind control). Pooled walk_forward AUC is dominated by the date-level timing component: A1 pooled 0.499/0.564/0.485/0.541 vs date-mean-only 'timing AUC' 0.482/0.555/0.471/0.541. Per-date cross-sectional AUC is positive every year at 0.527/0.544/0.530/0.513. 2023-25 mean xs-AUC: A1 0.534, A2 0.532, A3 0.527, multiclass 0.533 (no gain), no-market 0.533. Top-decile P(+1) lift for A1 is +2.8/+4.3/+3.0 pp. IC vs executable 20d return is 0.05-0.10 (non-overlapping t 2.1-5.9) in 2023-25 and 0.048 (t 1.6) in 2026.",
+   "Path dependence adds no learnability. The path-blind control (20d sign, +/-50 bp, next-open entry, NaN-safe) has 2023-25 xs-AUC 0.532/0.552/0.548, IC vs 20d return 0.053/0.099/0.101 and top-decile lift +3.2/+4.9/+5.3 pp, equal to or better than A1 in every selection year. Its 2023-25 time-exit book is the best: 27.6% CAGR, Sharpe 2.46.",
+   "Selection (2023-25 only). A1 (h20 2/2) was best on the barrier-exit test the role specifies: Sharpe 0.95 vs A2 0.48 vs A3 0.01. It tied A2 on time exits (2.21 vs 2.18). A3 was clearly worst. So A1 is the recommended spec and A2 the alternative. The 2026 holdout was never used.",
+   "Investability, A1 (top-20, step 5). Barrier exit: 2023-25 CAGR 6.0%, Sharpe 0.95 (random -5.5%, Nifty 15.5%/1.20); 2.0% at 80 bp. Time exit: 26.1%, Sharpe 2.21 (random 11.1%/1.09); 21.5% at 80 bp. Full period 2023-01..2026-09: CAGR 21.2%, Sharpe 1.90, maxDD -23.5%. Target-only (no stop): 17.5%, Sharpe 2.25, maxDD -15.8%. Stop-only: 11.9%, Sharpe 1.24. Sector cap 4 makes no difference. top_k 10/20/40 (barrier exit): 6.9/6.0/2.7%. 2025 is the weak year for every long book (A1 time exit +1.2%).",
+   "Holdout 2026 (Jan to 10 Sep, Nifty -4.0%): A1 time exit +3.9% vs random +2.9%; A2 +13.0%; multiclass +5.2%; control +2.8%; barrier books -0.4% (A1) to +4.5% (A2). Top-20 minus universe per 20-day trade: A1 +0.07% (t 0.06), A2 +0.85% (t 0.66), control +0.01%, vs 2023-25 values of +1.16% (t 2.57), +1.16% (t 2.54) and +1.45% (t 3.05). The long edge was not confirmed, though 8 months gives expected t of about 1.2 even if the edge persisted. The bottom decile kept underperforming in 2026 (-0.74% to -0.92% vs universe), so the avoid side is the more robust half.",
+   "Gating with the absolute probability, the one advantage over relative labels. Requiring P(+1) >= 0.5 (a priori, not tuned) is ineffective for A1, where 85% of dates still have 20 or more names. For A2 (rarer +1) it acts as an exposure switch: 2023-25 Sharpe 2.18 -> 2.37 and full-period maxDD -24.6% -> -13.4%.",
+   "Shorts (F&O proxy only, since cash shorting is impossible overnight) lost money in every variant. Barrier exit: -2.2% to -5.5%/yr in 2023-25. Time exit: -19% to -23%/yr. 2026 (a down market): -4.7% to -18%. Model shorts beat random shorts by 4-7 pp/yr. Use -1 labels as avoid/exit signals for long books only. The bottom-decile 20d excess is -1.0% to -2.1% in every year.",
+   "Market-feature ablation: dropping the 10 market/regime features raises pooled AUC (0.536 vs 0.522) by removing bad timing but halves the 2023-25 time-exit portfolio edge (Sharpe 1.26 vs 2.21), while 2026 was better (+13.1%). Market features help the model learn which kind of stock wins in which regime, but that value is unstable.",
+   "Multiple testing: 432 label variants screened descriptively (144 barrier configs x 3 tau), 12 deep scorecards plus 1 control label, 6 full walk-forward runs plus one 2-fold timing test (identical numbers, discarded), 66 model x execution variants, about 130 portfolio sims at 50/80 bp with 5-seed random baselines. The SE of an annual Sharpe over 3 years is about 0.6, so the best-of-N null Sharpe excess is about 1.2-1.3 even with effective N of about 10. The observed time-exit Sharpe excess over random (+1.1 to +1.4) is borderline after deflation, consistent with the weak holdout.",
+   "Recommended absolute label spec (A1): entry open[t+1]; target +2.0 x ATR14%[t] and stop -2.0 x ATR14%[t] from entry; vertical barrier close[t+20]; stop checked before target on the same bar, gap fills at the open; +1 = target first or time return > +50 bp, -1 = stop first or time return < -50 bp, 0 otherwise; NaN outside fw.ok(20). Event rates +1 48.9 / -1 49.6 / 0 1.6 (target 43.7 / stop 41.4 / time 14.9), mean hold 9.7 bars. How to invest: rank by OOS P(+1), hold the top-20 for 20 days with a time exit or target-only take-profit, never the symmetric stop, and use the bottom decile as an avoid list. Alternative: A2 (3.0/1.5) with the P(+1) >= 0.5 gate when lower drawdown matters."
+  ],
+  "lab_issues_found": [
+   "MEDIUM: portfolio_sim(exit_rule='barrier') silently drops trades whose barrier window is invalid (tr_ret NaN from later suspension, label_block or segment break). The time-exit branch has a last-available-close fallback; the barrier branch does not. This is a small look-ahead/survivorship filter (about 2% of eligible rows at h=20) affecting model and random books equally. Fix: apply the same forced-exit fallback in the barrier branch.",
+   "LOW-MEDIUM: walk_forward only scores rows whose label is non-NaN (mask & ~isnan(y)), so the investable universe already excludes names whose next-h window breaks (look-ahead, about 2%). Fix: predict on all elig_base rows in the test year and let the simulator force-exit.",
+   "MEDIUM (for comparisons): in portfolio_sim, capital released by early barrier exits sits idle at 0% until that sleeve's next turn. A1 barrier books are invested only about 50% of the time (9.7 of 20 bars), so barrier CAGR is not comparable to time-exit CAGR. Fix: report exposure, add a cash yield (Indian liquid funds about 6.5%), or redeploy.",
+   "LOW-MEDIUM: portfolio_sim books each cohort's whole-trade return at the signal date (no intra-trade mark-to-market), so maxDD is understated and by_year is attributed by entry date. Fix: daily MTM equity.",
+   "METHODOLOGICAL: for absolute labels, walk_forward's pooled AUC is dominated by the date-level timing component. It is about equal to the date-mean-only AUC every year and falls below 0.5 in 2023 and 2025 even though the per-date xs-AUC is 0.53. Fix: add per-date cross-sectional AUC / rank IC to the fold metrics.",
+   "MINOR: event_report's regime split silently labels rows with NaN mkt_dist_sma200 (1.9% of eligible rows, early 2021) as 'bear'.",
+   "MINOR: event_report's corr_monthly_pos_vs_mkt_ret uses the signal month's index return, but the label window spills into the next month. The per-date correlation with L.market_fwd(P,h) over the same window is sharper (0.72-0.87 vs 0.65-0.71). Suggest adding it to the scorecard.",
+   "COSMETIC: lablib.py docstring says prices are adjusted 'using NSE's own PREV_CLOSE field', but adjustment comes from Bc corporate-action records and PREV_CLOSE is not CA-adjusted. The brief says ~3.5M rows and 55 features; actual is 3,097,741 rows and 53 features in L.FEATURES."
+  ],
+  "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/A_barrier/results.json",
+  "variants_tried": 66
+ },
+ {
+  "agent_id": "B_relative",
+  "headline": "Rank labels remove the regime problem; market-excess sign labels only halve it. The best relative label is the per-date rank of the factor-neutral residual return (XR_neu: residual of open[t+1]->close[t+h] after OLS on beta60, vol20, log_turn20), selected on 2023-25. At h=20, long-only top-20 at 50 bps made 29.5% CAGR on dev vs 12.0% random and 15.8% Nifty 500. The 2026 holdout made +12.7% annualised vs 5.7% random and -5.7% Nifty; at 80 bps it was 24.9% dev and 8.9% holdout. Excess over random was positive in every year: +60/+209/+107/+57 bps per cohort for 2023/24/25/26; dev Newey-West t 3.13, holdout t 1.84. Most of the learned edge is the AVOID (-1) side: cross-sectional AUC 0.54-0.57 every year vs 0.48-0.54 for +1. A single-stock F&O long-short is not investable at 50/80 bps for any relative label. Status: promising, not proven (borderline after about 67 portfolio variants).",
+  "candidates": [
+   {
+    "candidate_id": "B_XRneu_h20",
+    "family": "cross-sectional rank, factor-neutral residual (relative)",
+    "definition": "Universe U = elig_base AND ISIN prefix INE (ETFs removed). r = open[t+1] -> close[t+20], adjusted prices, NaN unless fw.ok(20). Each date: OLS of r (y winsorised 1/99 for the fit only) on [1, clip(beta_60,0,3), vol_20, log_turn20] over U; residual e = r - Xb; pct = per-date percentile rank of e. Labels: +1 if pct>0.70, -1 if pct<=0.30, else 0 (20%/10% cuts also measured). Model: LightGBM regression on pct-0.5, 52 PIT features (sec_rel_mom20 excluded), L.walk_forward with date_step=2. Trade: long top-20 by OOS score every 5 days, 4 sleeves, time exit at close[t+20].",
+    "horizon": "20 trading days (step 5; step 10 variant)",
+    "sides": "long-only plus bottom-30% avoid list; for F&O, hedge the long book with index futures (single-stock shorts fail)",
+    "class_shares": "+1 30.0% / 0 40.0% / -1 29.9% in every year, regime and month (monthly std 0.0001); liquidity terciles 0.294/0.309/0.299",
+    "auc_or_ic": 0.06,
+    "cagr_50bps": 0.249,
+    "cagr_80bps": 0.205,
+    "sharpe_50bps": 2.12,
+    "maxdd_50bps": -0.253,
+    "monthly_pos_std": 0.0001,
+    "n_samples": 1289670,
+    "random_baseline_cagr": 0.096,
+    "regime_corr": -0.0001,
+    "top_decile_vs_base": "Top-decile P(+1) was 0.270/0.350/0.351 vs base 0.30 in 2023/24/25 and 0.307 in 2026. Bottom-decile P(-1) was 0.368/0.397/0.382 and 0.407 in 2026. Top-minus-bottom decile 20d return: -4/+269/+252 bps, then +87 bps in 2026.",
+    "by_year_note": "Own-target IC 0.019/0.088/0.072 for 2023/24/25 (t 2.7/5.5/4.0), 0.056 in 2026 (t 3.9). Long-only at 50 bps by signal year: 2023 +51.8%, 2024 +34.9%, 2025 +3.7%, 2026 YTD +8.9%. Random: +40.8/+5.6/-8.8/+4.4%. Nifty 500: +25.2/+14.9/+6.2/-4.0%. Excess per cohort +60/+209/+107/+57 bps. Weakness: 2023 IC only 0.019 with flat deciles, so most strength comes from 2024-25.",
+    "holdout_2026_note": "2026 (Jan-Sep, annualised): 12.7% CAGR at 50 bps and 8.9% at 80 bps vs random 5.7%/2.2% and Nifty -5.7%. Excess +57 bps per cohort, 63% of cohorts positive, Newey-West t 1.84. Step-10 variant: 19.9% vs random 12.5%. Index-hedged variant: 19.9% vs 12.8% for random picks with the same hedge. On the liq5 universe: 11.3% vs random 4.1%. Model never tuned on 2026.",
+    "pros": [
+     "Regime-neutral class balance by construction: 30/40/30 every month; date-clustering eta2 is 0 vs 0.18 for the absolute label, so effective sample size is far larger",
+     "Smallest composition tilt of all constructions: beta tilt -0.02 in up windows and -0.03 in down windows, vol tilt -0.09/-0.11 pp. Raw rank is +0.04/-0.13 and vol-normalised has a vol tilt of -0.26/+0.31 pp",
+     "Selected on dev and confirmed in 2026: the only relative label whose holdout excess stayed clearly positive at both h=10 and h=20",
+     "Survives 80 bps at h=20 (24.9% dev, 8.9% holdout) and survives on the liq5 universe (21.1% full vs random 10.9%)",
+     "Index-hedged long book makes 13.9% CAGR full / 12.9% dev at 50 bps (9.8%/8.9% at 80 bps) vs -0.3%/-2.7% for random-hedged, maxDD -16%",
+     "Picks are not micro-caps: median 20d turnover Rs26.9 cr vs universe Rs15.2 cr; 84% are in liq5"
+    ],
+    "cons": [
+     "Path-blind fixed-horizon label; predicted +1 names still lose money in 42-47% of trades in most regimes (25% in bear_up20) and long-only maxDD is -25% vs -18.8% for Nifty",
+     "Sim Sharpe 2.12 is inflated by 4 overlapping sleeves: adjusted 1.40, and random picks also show a sim Sharpe of 0.93; judge it by excess over random",
+     "Significance is borderline: dev NW t 3.13 (non-overlapping t 1.49, n=37) against a hurdle of about 3.2 for roughly 67 dev variants; holdout t 1.84",
+     "2023 has almost no signal (IC 0.019); the +1 side is weak (XS-AUC 0.478 in 2023, 0.504 in 2026), so the edge is mostly from avoiding losers",
+     "Weak in F&O names (fno-only IC -0.012/0.055/0.048, then -0.004 in 2026); single-stock long-short on fno_proxy is -5.5% at 50 bps and -14.4% in the 2026 holdout",
+     "Overlap is not solved (lag-1 autocorrelation 0.79)",
+     "The a-priori overlay 'cash when Nifty is below its 200dma' hurt: holdout -8.2% vs +12.7% without it"
+    ],
+    "verdict": "promising"
+   },
+   {
+    "candidate_id": "B_XRneu_h10",
+    "family": "cross-sectional rank, factor-neutral residual (relative)",
+    "definition": "Same as B_XRneu_h20 with h=10: residual rank of open[t+1] -> close[t+10]. LightGBM regression on pct-0.5; long top-20, step 5, 2 sleeves.",
+    "horizon": "10 trading days",
+    "sides": "long-only plus avoid list",
+    "class_shares": "30.0/40.0/29.9 in every month; liquidity terciles 0.296/0.308/0.298",
+    "auc_or_ic": 0.067,
+    "cagr_50bps": 0.179,
+    "cagr_80bps": 0.096,
+    "sharpe_50bps": 1.13,
+    "maxdd_50bps": -0.296,
+    "monthly_pos_std": 0.0001,
+    "n_samples": 1303294,
+    "random_baseline_cagr": 0.001,
+    "regime_corr": -0.16,
+    "top_decile_vs_base": "Top-decile P(+1) 0.290/0.353/0.340 in 2023-25 and 0.304 in 2026 (base 0.30). Bottom-decile P(-1) 0.394/0.411/0.386, then 0.408 in 2026. XS-AUC for -1 was 0.555/0.557/0.550 and 0.558 in 2026.",
+    "by_year_note": "Own-target IC 0.043/0.089/0.069 (t 3.4/9.5/6.8), 2026 0.055 (t 4.6). On the common raw-rank yardstick the dev IC is 0.078, best of all h=10 models (absolute control 0.050). Long-only at 50 bps: 2023 +46.2%, 2024 +42.7%, 2025 -12.1%, 2026 YTD +0.9%; random +23.6/-1.2/-14.9/-3.0%. Excess per cohort +68/+153/+14/+26 bps.",
+    "holdout_2026_note": "2026: +1.2% annualised at 50 bps (random -3.9%, Nifty -5.7%) and -5.8% at 80 bps (random -10.6%). The K=50 variant made 7.2% vs random -2.7%, holdout NW t 1.63. Excess +26 bps per cohort, NW t 0.79.",
+    "pros": [
+     "Best h=10 construction on dev for IC, long-only CAGR (22.1% vs 14.8-19.1% for the others) and excess (77 bps per cohort, NW t 3.26)",
+     "Stable IC t-stats every year including 2026",
+     "K=50 version is more robust: dev NW t 4.71 and holdout +41 bps per cohort",
+     "AVOID30 (random picks from the top 70%) made 7.9% on dev vs 1.3% random, and 1.0% vs -3.9% in the holdout"
+    ],
+    "cons": [
+     "Costs dominate at h=10: random long-only is 0.1% CAGR at 50 bps and -7.0% at 80 bps; the model makes only 9.6% full at 80 bps and -5.8% in the 2026 holdout",
+     "2025 long-only was -12.1%",
+     "F&O long-short: -7.5% at 50 bps full, -12.2% in the 2026 holdout; gross spread only +26 bps per cohort on dev and -3 in the holdout",
+     "Index-hedged version is thin: 6.6% at 50 bps and -1.0% at 80 bps"
+    ],
+    "verdict": "promising"
+   },
+   {
+    "candidate_id": "B_XRneu_h5",
+    "family": "cross-sectional rank, factor-neutral residual (relative)",
+    "definition": "Same construction with h=5: open[t+1] -> close[t+5]. Regression on pct-0.5; long top-20 at step 5.",
+    "horizon": "5 trading days",
+    "sides": "avoid/exit signal; not a standalone long strategy",
+    "class_shares": "30.0/40.0/29.9 every month",
+    "auc_or_ic": 0.078,
+    "cagr_50bps": 0.101,
+    "cagr_80bps": -0.051,
+    "sharpe_50bps": 0.54,
+    "maxdd_50bps": -0.345,
+    "monthly_pos_std": 0.0001,
+    "n_samples": 1310140,
+    "random_baseline_cagr": -0.148,
+    "regime_corr": 0.02,
+    "top_decile_vs_base": "Top-decile P(+1) 0.300/0.343/0.331 in 2023-25 and 0.316 in 2026. Bottom-decile P(-1) 0.409/0.424/0.402 and 0.422 in 2026. XS-AUC for -1 was 0.568/0.570/0.556 and 0.567 in 2026, the strongest down-side signal.",
+    "by_year_note": "Own-target IC 0.065/0.094/0.074 (t 8.1/14.5/6.9) and 0.070 in 2026 (t 7.7): the most learnable label. Long-only at 50 bps: +29.4/+36.0/-9.9% for 2023-25, -9.8% 2026 YTD.",
+    "holdout_2026_note": "2026: -13.6% annualised at 50 bps and -25.6% at 80 bps (random -21.2%/-32.1%). Excess +21 bps per cohort (t 0.70). IC holds at 0.070 but turnover cost is about 25% per year.",
+    "pros": [
+     "Highest and most stable IC of all labels, including 2026",
+     "Best bottom-decile / avoid signal",
+     "Dev excess NW t 4.36"
+    ],
+    "cons": [
+     "Not investable at 80 bps (-5.1% full, -25.6% holdout)",
+     "F&O long-short gross 13.5% full turns into -11.4% at 50 bps and -27.7% in the 2026 holdout",
+     "Outside the swing mandate's sweet spot"
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "B_XRraw_h10",
+    "family": "cross-sectional rank of raw (= market-excess) return",
+    "definition": "pct = per-date rank of r = open[t+1] -> close[t+10] among U; +1 top 30%, -1 bottom 30%. This is identical to ranking the excess return r - r_Nifty500 (Spearman 0.9999998). Regression on pct-0.5.",
+    "horizon": "10 trading days",
+    "sides": "long-only",
+    "class_shares": "30.0/40.0/30.0 every month; liquidity terciles 0.290/0.305/0.306",
+    "auc_or_ic": 0.071,
+    "cagr_50bps": 0.126,
+    "cagr_80bps": 0.046,
+    "sharpe_50bps": 0.85,
+    "maxdd_50bps": -0.305,
+    "monthly_pos_std": 0.0001,
+    "n_samples": 1303294,
+    "random_baseline_cagr": 0.001,
+    "regime_corr": -0.16,
+    "top_decile_vs_base": "Top-decile P(+1 raw30) 0.285/0.348/0.340 in 2023-25 and 0.284 in 2026 (base 0.30).",
+    "by_year_note": "IC 0.046/0.102/0.065 (t 2.0/7.5/2.8) and 0.048 in 2026. Long-only at 50 bps: +37.7/+20.0/-3.7% and -2.3% 2026 YTD. Excess per cohort +42/+83/+51/+6 bps.",
+    "holdout_2026_note": "2026: -3.3% at 50 bps vs random -3.9%. Excess +6 bps per cohort (t 0.17), so the edge vanished.",
+    "pros": [
+     "Simplest relative label, level-neutral by construction",
+     "Decent dev IC"
+    ],
+    "cons": [
+     "Composition is pro-cyclical in beta: beta-tilt corr +0.60 (+0.059 in up windows, -0.145 in down windows), so a model partly learns market timing",
+     "Holdout edge about 0",
+     "Index-hedged only 1.6% at 50 bps"
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "B_XRvn_h10",
+    "family": "cross-sectional rank of vol-normalised return",
+    "definition": "pct = per-date rank of r/(vol_20*sqrt(10)), r = open[t+1] -> close[t+10]; 30/40/30 classes; regression on pct-0.5.",
+    "horizon": "10 trading days",
+    "sides": "long-only",
+    "class_shares": "30/40/30 every month; liquidity terciles 0.286/0.299/0.316",
+    "auc_or_ic": 0.048,
+    "cagr_50bps": 0.109,
+    "cagr_80bps": 0.03,
+    "sharpe_50bps": 0.76,
+    "maxdd_50bps": -0.252,
+    "monthly_pos_std": 0.0001,
+    "n_samples": 1303294,
+    "random_baseline_cagr": 0.001,
+    "regime_corr": -0.16,
+    "top_decile_vs_base": "Top-decile P(+1 vn30) 0.277/0.317/0.344 in 2023-25 and 0.298 in 2026.",
+    "by_year_note": "IC 0.023/0.069/0.051 and 0.042 in 2026. Long-only at 50 bps: +40.6/+29.1/-7.6% and -12.2% 2026 YTD.",
+    "holdout_2026_note": "2026: -16.5% at 50 bps vs random -3.9%. Excess -57 bps per cohort. Fails the holdout.",
+    "pros": [
+     "Beta tilt near zero (corr +0.01)"
+    ],
+    "cons": [
+     "Hidden counter-cyclical volatility bet: vol-tilt corr -0.87 (low-vol names top in up markets, high-vol in down)",
+     "Lowest IC; inverted in the 2026 holdout"
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "B_MXdz_h10",
+    "family": "market-excess sign with dead zone",
+    "definition": "ex = r - r_N500, both over open[t+1] -> close[t+10] on the same window; +1 if ex > 50 bps, -1 if ex < -50 bps, else 0. Binary model: +1 vs rest.",
+    "horizon": "10 trading days",
+    "sides": "both (short only realistic on fno names)",
+    "class_shares": "+1 42.1% / 0 7.0% / -1 50.9%. h=5: 40.2/10.1/49.7. h=20: 43.3/4.8/51.9",
+    "auc_or_ic": 0.538,
+    "cagr_50bps": 0.147,
+    "cagr_80bps": 0.065,
+    "sharpe_50bps": 0.91,
+    "maxdd_50bps": -0.318,
+    "monthly_pos_std": 0.068,
+    "n_samples": 1303294,
+    "random_baseline_cagr": 0.001,
+    "regime_corr": 0.09,
+    "top_decile_vs_base": "Top-decile P(+1) 0.471/0.469/0.429 vs base 0.446/0.414/0.388 in 2023-25; 2026 0.488 vs base 0.457.",
+    "by_year_note": "Yearly P(+1) 0.394/0.421/0.446/0.414/0.388/0.457 for 2021-26, monthly range 0.267-0.596. Pooled AUC 0.530/0.571/0.513 and 0.522 in 2026. Long-only at 50 bps: +42.1/+32.2/-8.8% and -2.7% 2026 YTD.",
+    "holdout_2026_note": "2026: -4.0% at 50 bps vs random -3.9%. Excess +5 bps per cohort (t 0.12).",
+    "pros": [
+     "Halves the absolute label's regime swing (monthly std 0.068 vs 0.132) and cuts eta2 from 0.18 to 0.054",
+     "Intuitive cost-aware definition"
+    ],
+    "cons": [
+     "Keeps the equal-weight vs cap-weight size cycle: mean 10d excess by year -14/-3/+70/+15/-48/+77 bps",
+     "Persistent class imbalance (median ex -63 bps); dead zone tau does not reduce instability (monthly std 0.069 at tau=0, 0.064 at 200 bps)",
+     "Composition beta-tilt corr +0.66",
+     "Holdout edge about 0"
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "B_BRdz_h10",
+    "family": "beta-residual sign",
+    "definition": "br = r - clip(beta_60,0,3)*r_N500; +1/0/-1 with a \u00b150 bps dead zone. h=10. No walk-forward run spent.",
+    "horizon": "10 trading days",
+    "sides": "both",
+    "class_shares": "41.9/7.0/51.0",
+    "auc_or_ic": null,
+    "cagr_50bps": null,
+    "cagr_80bps": null,
+    "sharpe_50bps": null,
+    "maxdd_50bps": null,
+    "monthly_pos_std": 0.067,
+    "n_samples": 1303294,
+    "random_baseline_cagr": null,
+    "regime_corr": -0.06,
+    "top_decile_vs_base": "not trained",
+    "by_year_note": "Yearly P(+1) 0.391/0.419/0.446/0.412/0.383/0.461.",
+    "holdout_2026_note": "not evaluated (rejected at the event-rate/tilt screen)",
+    "pros": [
+     "Monthly regime correlation about 0"
+    ],
+    "cons": [
+     "Over-corrects: beta-tilt corr -0.74 (+1 is low-beta in up windows) because estimated betas are noisy and mean-revert; shrinking beta 50% toward 1 gives -0.25 and is near neutral",
+     "Same EW-CW drift as MX"
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "B_SRdz_h10",
+    "family": "sector-relative sign",
+    "definition": "r minus the same-date same-sector median r (F.sector, at least 5 names); sector NA -> r - r_N500; \u00b150 bps dead zone. No walk-forward run spent.",
+    "horizon": "10 trading days",
+    "sides": "both",
+    "class_shares": "42.5/8.9/48.6",
+    "auc_or_ic": null,
+    "cagr_50bps": null,
+    "cagr_80bps": null,
+    "sharpe_50bps": null,
+    "maxdd_50bps": null,
+    "monthly_pos_std": 0.037,
+    "n_samples": 1303294,
+    "random_baseline_cagr": null,
+    "regime_corr": 0.07,
+    "top_decile_vs_base": "not trained",
+    "by_year_note": "Yearly P(+1) 0.418/0.427/0.431/0.420/0.407/0.448. Sector median used for 58% of rows.",
+    "holdout_2026_note": "not evaluated",
+    "pros": [
+     "Most stable of the sign labels (monthly std 0.037, eta2 0.016)"
+    ],
+    "cons": [
+     "F.sector is a 2026 snapshot (auditor HIGH issue), so this has look-ahead and survivorship bias",
+     "Known-sector names get P(+1) 44.6% vs 39.5% for NA names: two benchmark definitions mixed",
+     "Beta-tilt corr +0.62"
+    ],
+    "verdict": "reject"
+   }
+  ],
+  "key_findings": [
+   "REPORT.md could not be written: the harness blocked report-file writes for this subagent. This structured output is the report. All tables with real numbers are in /tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/B_relative/tables_autogen.md, generated from results.json by s9_tables.py.",
+   "Setup: U = elig_base AND ISIN INE* (1,315,736 rows; ETFs removed per auditor issue #2). Entry open[t+1], exit close[t+h], NaN where fw.ok fails. The market leg is Nifty 500 over each stock's own window. Features exclude sec_rel_mom20. Six L.walk_forward runs were used (R10_raw, R10_vn, R10_neu, R5_neu, R20_neu regression on pct-0.5; B10_mx binary). The absolute-label control score was reused from E_auditor wf_nosec. The fast portfolio sim was verified identical to L.portfolio_sim on 5 configs. Random baseline: 10 seeds on the same label-defined mask.",
+   "Event rates at h=10 (P+1 / monthly std / corr with Nifty month / date-clustering eta2): ABS 44.9% / 0.132 (range 0.21-0.69) / 0.65 / 0.183; MX 42.1% / 0.068 / 0.09 / 0.054; BR 41.9% / 0.067 / -0.06 / 0.050; SR 42.5% / 0.037 / 0.07 / 0.016; all rank labels 30.0% / 0.0001 / noise / 0.000. At h=20 the absolute label's monthly std is 0.175 (range 0.117-0.753), MX 0.090, rank 0.000. Rank labels are flat by year and by regime (confirmed). Lag-1 overlap autocorrelation is the same for every family (0.57 / 0.70 / 0.79 for h = 5 / 10 / 20): relative labels do not fix overlap.",
+   "Ranking the excess return is the same as ranking the raw return (Spearman 0.9999998). Market-excess sign labels keep the equal-weight vs cap-weight size cycle: mean 10d excess by year 2021-26 was -14/-3/+70/+15/-48/+77 bps. The dead zone does not help (MX monthly std 0.069 at tau=0, 0.064 at tau=200 bps).",
+   "New diagnostic, composition tilt: the date-level correlation of (mean beta of +1 minus mean beta of -1) with the market window return, on dev at h=10. Raw/excess rank +0.60 (+0.059 in up windows, -0.145 in down). beta_60 residual -0.73 (over-corrects). r/vol rank: beta +0.01 but vol-tilt -0.87. Shrunk-beta W=0.5: -0.25. Factor-neutral residual (neu): +0.21 with the smallest magnitudes (beta -0.022/-0.034, vol -0.08/-0.10 pp). Same pattern at h=5 and h=20.",
+   "Key risk at label level: P(r<=0 | +1) at h=10 is MX 9.9% (bear_dn20 12.5%, 2022 14.8%), BR 12.2%, SR 14.4%, XR_raw_30 8.3%, XR_neu_30 9.2% (2022 13.7%), XR_neu_10 1.3%. At portfolio level the model's predicted top-20 names still lose money in 43-48% of trades at h=10 (random 40-55%) and 42-47% at h=20 (25% in bear_up20). The relative label improves the loss rate by only 2-9 pp per regime, and long-only maxDD stays -25% to -30% vs Nifty's -18.8%.",
+   "Learnability, dev 2023-25 mean IC on the common raw/excess-rank yardstick: R5_neu 0.090, R10_neu 0.078, R20_neu 0.072, R10_raw 0.071, B10_mx 0.063, R10_vn 0.056, absolute control 0.050. In 2026: 0.071 / 0.050 / 0.047 / 0.048 / 0.060 / 0.042 / 0.048. All leak tripwires pass: max XS-AUC 0.571, top-decile excess below 300 bps.",
+   "Asymmetry, the most robust finding: XS-AUC for the -1 (bottom 30%) class is 0.54-0.57 in every year incl. 2026 for all neu models, while +1 is 0.48-0.54 and about 0.50 in 2023 and 2026. Decile curves are monotone only in 2024-25; the bottom decile underperforms every year. Avoid-list test (random picks from names not in the bottom 30%) beat random by +4.0 to +6.6 pp per year on dev and +1.2 to +5.5 pp in the 2026 holdout at h=10. At h=20 the gain is +3.1 to +4.5 pp on dev and +1.8 to +3.2 pp in the holdout.",
+   "Investability, h=10, top-20, step 5, 50 bps (dev / 2026 holdout): R10_neu 22.1% / +1.2%; B10_mx 19.1% / -4.0%; R10_vn 17.9% / -16.5%; R10_raw 16.6% / -3.3%; absolute control 14.8% / -10.6%; random 1.3% / -3.9%; Nifty 500 15.2% / -5.7%. At 80 bps R10_neu makes 13.4% / -5.8% (random -5.9% / -10.6%). Excess per cohort on dev / holdout: neu 77/+26, mx 67/+5, vn 63/-57, raw 58/+6, abs 53/-26. Only neu kept a positive holdout excess.",
+   "Horizon was chosen on dev: h=20 beats h=10 and h=5 net of costs (random long-only CAGR at 50 bps: -14.8% for h=5, 0.1% for h=10, 9.6% for h=20). R20_neu long-only, step 5: dev 29.5% at 50 bps (24.9% at 80) vs random 12.0% (p95 14.7); holdout 12.7% (8.9%) vs random 5.7% and Nifty -5.7%. Step 10: dev 25.1%, holdout 19.9% vs random 12.5%. liq5 universe: 21.1% full vs random 10.9%. R5_neu is the most learnable but not investable: -5.1% at 80 bps, -13.6% in the 2026 holdout at 50 bps.",
+   "Significance and multiple testing: about 67 portfolio variants were evaluated on dev (plus 60 event-rate label variants, 24 tilt screens, 6 walk-forward models). Excess over random on dev: R20_neu Newey-West t 3.13 (non-overlapping 1.49), R10_neu 3.26, R10_neu K50 4.71, R5_neu 4.36. The Bonferroni-style hurdle for about 67 tests is about 3.2, so these are borderline. A 50% haircut on R20_neu's +17.5 pp dev excess gives about +8.7 pp; the holdout realised +7.0 pp (step 5) and +7.4 pp (step 10), with t 1.84.",
+   "F&O long-short (50/50 long top-20 / short bottom-20 on fno_proxy) is not investable for any label. The gross spread is +18 to +37 bps per cohort on dev and -3 to -90 in the 2026 holdout for the neu models. At 50 bps: R10_neu -7.5%, R20_neu -5.5%, B10_mx -6.7%, all worse in 2026. Short-only on fno names loses 21-25% per year. IC within fno names is only 0.02-0.07 (about 0 in 2026 at h=20), vs 0.075-0.088 on non-fno names.",
+   "The realistic F&O variant is the R20_neu long book hedged with Nifty 500 index over the same window, plus 10 bps hedge cost. At 50 bps: 13.9% full / 12.9% dev / 19.9% hold. At 80 bps: 9.8% / 8.9% / 15.9%. The same hedge on random picks gives -0.3% / -2.7% / 12.8% at 50 bps. maxDD -16%. Caveat: no liquid Nifty 500 future exists, so basis risk applies; 2026 had a large small-mid over large-cap drift.",
+   "The fixed a-priori overlay 'cash when Nifty is below its 200dma' made every model worse in the 2026 holdout (e.g. R20_neu -8.2% vs +12.7%; R10_neu -21.3% vs +1.2%). Do not combine relative labels with naive trend filters.",
+   "Recommendation (i), long-only swing trader: XR_neu at h=20 (factor-neutral residual rank; regression target pct-0.5), buy the top-20 every 5 (or 10) days, 20-day hold, and use the -1 class as an avoid list. Expect roughly random + 7 pp with Nifty-like or worse drawdowns. Recommendation (ii), F&O trader: do not short single stocks on this signal. Run the h=20 long book with an index-futures hedge, and use -1 only as exit/avoid. A dedicated fno-only model is the open next step (walk-forward budget exhausted).",
+   "Pick profile for R20_neu: median 20d turnover Rs26.9 cr (p25 Rs8.8 cr) vs universe Rs15.2 cr; 31% fno_proxy, 84% liq5. Capacity suits small books only."
+  ],
+  "lab_issues_found": [
+   "MEDIUM: 'XS rank of excess return' (brief item 4b) is identical to the raw-return rank (Spearman 0.9999998) because the market leg is constant within a date. Fix: use beta- or factor-adjusted ranks (shrunk-beta W\u22480.5, or the factor-neutral residual).",
+   "MEDIUM: the beta-residual with raw beta_60 over-corrects. Composition beta-tilt corr is -0.73 to -0.75 at h=5/10/20 because estimated betas are noisy and mean-revert. Fix: shrink beta about 50% toward 1, or use the per-date OLS neutralisation.",
+   "HIGH (confirms auditor #1) for the label side: the sector-relative label uses the 2026 sector snapshot. Known-sector names have P(+1) 44.6% vs 39.5% for NA names at h=10 (45.9% vs 39.5% at h=20), mixing two benchmarks with survivorship. Fix: do not use SR until a point-in-time sector map exists.",
+   "MEDIUM: market-excess vs the cap-weighted Nifty 500 keeps the equal-weight vs cap-weight size cycle (mean 10d excess by year -48 to +77 bps; monthly P(+1) std 0.068). Fix: use ranks or an equal-weight benchmark.",
+   "MEDIUM (extends auditor #3): portfolio_sim Sharpe is inflated by overlapping sleeves, worst at h=20 step 5. Random picks show sim Sharpe 1.17 vs autocorrelation-adjusted 0.78; R20_neu shows 2.42 vs 1.61. Fix: judge by excess over a same-mask random baseline with Newey-West or non-overlapping t, or use mark-to-market Sharpe.",
+   "LOW: holdout CAGRs are annualised over about 8 months and noisy (random h20 step-10 holdout CAGR sd 7.6 pp across seeds). Report YTD alongside annualised.",
+   "LOW: the random baseline must use the same label-defined mask (auditor #6). Done here (U AND finite r_h); the h=10 random full-window CAGR is 0.1% at 50 bps.",
+   "PROCESS: the harness refused to let this subagent write REPORT.md as the task requested. The report content is in this structured output and the tables are in tables_autogen.md."
+  ],
+  "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/B_relative/tables_autogen.md",
+  "variants_tried": 73
+ },
+ {
+  "agent_id": "C_trendscan",
+  "headline": "Adaptive-horizon (trend-scanning) labels are not better than a plain fixed 20-day label for a 5\u201320 day NSE swing trader. The trend-scan statistic |t*| and the chosen horizon L* are statistically indistinguishable from a driftless random walk: P(|t*|\u22655) is 65.2% on real paths vs 66.7% under the null, and P(L*=20) is 29.8% vs 30.2%. A model trained on TSA_T5 is 0.80 rank-correlated with a model trained on a fixed 20-day label, its IC is only +0.005 higher (t=1.6, not significant), and its top-20 book is worse in dev and in the 2026 holdout. Two variants are worth carrying forward. The market-excess trend scan (TSX_T5) is regime-neutral (monthly P(+1) vs market corr +0.12, against +0.63 for the absolute version) and has the most stable out-of-sample IC (+0.066 dev, +0.065 in 2026, t=2.2). Its usable edge is as an avoid filter, not a concentrated top-20 book. The move-quality label (MQ_vol1.0) has the lowest IC but the best concentrated long top-20 book, and the only one positive in 2026 (+5.4% vs +3.5% random at a 20-day hold); that edge disappears on liquid (\u2265\u20b95 cr) names. The harness blocked writing REPORT.md, so the narrative is in this output: full tables are in tables_autogen.md and report_tables.md, and every number is in results.json.",
+  "candidates": [
+   {
+    "candidate_id": "TSX_T5",
+    "family": "trend-scan, market-excess (adaptive horizon)",
+    "definition": "y_0=0, y_k=log(close[t+k]/open[t+1]) - log(N500 close on the date of row t+k / N500 open on the date of row t+1), k=1..L. OLS slope t-value t_L for L=5..20 (residual-variance floor 1e-6). L*=argmax|t_L|. Label = sign(t*) if |t*|>=5, else 0. NaN unless fw.ok(20). T=5 chosen for class balance only.",
+    "horizon": "adaptive 5-20 bars (label); executed with a fixed 10d or 20d hold",
+    "sides": "both (short side tested only on fno_proxy)",
+    "class_shares": "+1 25.7% / 0 35.7% / -1 38.7% (F&O names: 29.3 / \u2013 / 35.1)",
+    "n_samples": 1290437,
+    "monthly_pos_std": 0.061,
+    "regime_corr": 0.12,
+    "auc_or_ic": 0.066,
+    "top_decile_vs_base": "P(+1) in top score decile vs base rate: 2023 30.7 vs 28.8, 2024 30.4 vs 24.5, 2025 26.3 vs 22.7, 2026 33.0 vs 29.7. Top/bottom decile r10 excess: dev +46/-73 bp, 2026 -6/-76 bp. XS-AUC up 0.546 dev (t 5.5), 0.555 in 2026.",
+    "cagr_50bps": 0.094,
+    "cagr_80bps": 0.016,
+    "sharpe_50bps": 0.68,
+    "maxdd_50bps": -0.315,
+    "random_baseline_cagr": 0.001,
+    "by_year_note": "Long top-20, 10d hold, 50 bp, by year 2023/24/25/26: +37/+28/-12/-10% (random +25/0/-16/-4). Same book with a 20d hold: dev +26.8% vs random +11.5%. Daily IC vs r10 by year: +0.042/+0.099/+0.058/+0.065. IC is positive every year, but the gain over the FX20 control is negative in 2025 (-0.027).",
+    "holdout_2026_note": "2026: IC r10 +0.065 (t 2.2); IC r5 +0.063 (t 3.1). Long top-20 with 20d hold: -0.6% vs random +3.5% (FAIL). Avoid30 overlay (drop bottom 30% of scores, 20 random picks, 20d hold): +8.5% vs +3.5% (PASS); at 80 bp +4.8% vs +0.1%. Short bottom-20 among F&O: -18.7% (random short -21.4%).",
+    "pros": [
+     "Only label in this family with regime-neutral event rates: monthly P(+1) sd 6.1% (absolute version 13.0%), market correlation +0.12 dev and +0.00 in 2026.",
+     "Best and most stable out-of-sample ranking power. IC r10 is +0.066 dev and +0.065 in 2026; it is the only 2026 10-day IC with t>2.",
+     "As an avoid filter it beats random picks in dev (+4.5 pts/yr) and in 2026 (+5.0 pts), at both 50 and 80 bp.",
+     "Picks are liquid: the liq5 universe gives the same results. Label/P&L coherent: the +1 class earns +7.8% net at a fixed 10d hold."
+    ],
+    "cons": [
+     "Its IC gain over the fixed 20-day control is not significant on dev (+0.006, t 1.4) and is negative in 2025. Much of the benefit likely comes from the market-excess construction, not from adaptivity.",
+     "Concentrated top-20 books fail in 2026: -0.6% (20d hold) and -13.1% (10d hold), vs random +3.5% and -5.4%.",
+     "Classes are asymmetric (more -1 than +1) because the median stock underperforms the cap-weighted index. T is a noise-calibrated knob, not a significance level.",
+     "L* is unknowable at entry and equals the null distribution. Executing at a fixed 20d hold captures 83% of the label's oracle move."
+    ],
+    "verdict": "promising"
+   },
+   {
+    "candidate_id": "MQ_vol1.0",
+    "family": "move quality (MFE/MAE)",
+    "definition": "Over bars t+1..t+20 after entry E=open[t+1]: MFE = max(high)/E - 1, MAE = min(low)/E - 1. +1 if MFE >= 1.0*vol_20*sqrt(20) and MFE >= 2|MAE|. -1 if |MAE| >= 1.0*vol_20*sqrt(20) and |MAE| >= 2*MFE. Else 0. NaN unless fw.ok(20). a=1.0 chosen for class balance; the role's 2*atr*sqrt(h) variant gives only a 3% positive class.",
+    "horizon": "20 bars (label); executed with a fixed 10d or 20d hold",
+    "sides": "both (short side weak)",
+    "class_shares": "+1 30.0% / 0 46.0% / -1 24.0%",
+    "n_samples": 1290437,
+    "monthly_pos_std": 0.123,
+    "regime_corr": 0.69,
+    "auc_or_ic": 0.02,
+    "top_decile_vs_base": "P(+1) in top decile vs base: 2023 40.6 vs 39.1, 2024 30.9 vs 28.2, 2025 30.7 vs 25.7, 2026 30.0 vs 29.9. Top/bottom decile r10 excess: dev +46/-34 bp. XS-AUC up 0.519 dev.",
+    "cagr_50bps": 0.159,
+    "cagr_80bps": 0.077,
+    "sharpe_50bps": 0.96,
+    "maxdd_50bps": -0.263,
+    "random_baseline_cagr": 0.001,
+    "by_year_note": "Long top-20, 10d hold, 50 bp, by year: 2023 +49%, 2024 +18%, 2025 -3%, 2026 +2% (random +25/0/-16/-4). With a 20d hold: dev +27.5% vs random +11.5%. 20d excess over random by year: +17, +21, +12, +1.3 pts.",
+    "holdout_2026_note": "2026: long top-20 20d hold +5.4% vs random +3.5%; 10d hold +1.9% vs -5.4%. It is the only label whose concentrated book beat random in 2026. On the liq5 universe (turnover >= Rs5 cr) 2026 is +3.3% vs random +5.5% (FAIL). At 130 bp, 2026 is -3.8%. IC r10 2026 +0.028 (t 1.3).",
+    "pros": [
+     "Best concentrated long top-20 book in dev and the only positive one in 2026, with excess over random in all four years.",
+     "Picks barely overlap other models' top-20 lists (Jaccard 0.07-0.12), so it adds diversification. Picks are momentum plus volume-surge names.",
+     "Coherent label: +1 earns +12.4% net at a 20d hold, and 92.8% of +1 rows are profitable after costs. Highest dev break-even cost (274 bp per trade at a 20d hold)."
+    ],
+    "cons": [
+     "Very low IC (+0.020 dev), significantly below the fixed-horizon controls (-0.040, t -3.8). It picks the tail; it does not rank the universe.",
+     "Tilted to smaller, less liquid names (12% F&O vs 18% universe; median turnover about Rs 8 cr/day), where real costs are 60-130 bp. The 2026 edge vanishes on liquid names.",
+     "Label is strongly regime-dependent (corr +0.69) and ignores path order. FP20 is 89% the same label (kappa 0.83).",
+     "The short side is useless: bottom-20 F&O shorts lose -26.3%/yr."
+    ],
+    "verdict": "promising"
+   },
+   {
+    "candidate_id": "TSA_T5",
+    "family": "trend-scan, absolute (adaptive horizon)",
+    "definition": "y_0=0, y_k=log(close[t+k]/open[t+1]), k=1..L. OLS slope t-value for L=5..20. L*=argmax|t_L|. Label = sign(t*) if |t*|>=5, else 0. NaN unless fw.ok(20). Also screened: T in {2,3,8,10}.",
+    "horizon": "adaptive 5-20 bars; executed with a fixed 10d or 20d hold",
+    "sides": "both",
+    "class_shares": "+1 30.3% / 0 34.8% / -1 34.9%. T=2: 46.9/2.1/51.0. T=3: 43.1/9.4/47.4. T=8: 13.8/69.0/17.2. T=10: 7.4/82.7/9.9.",
+    "n_samples": 1290437,
+    "monthly_pos_std": 0.13,
+    "regime_corr": 0.63,
+    "auc_or_ic": 0.065,
+    "top_decile_vs_base": "P(+1) in top decile vs base: 2023 43.4 vs 38.3, 2024 33.3 vs 29.6, 2025 32.3 vs 26.2, 2026 29.6 vs 29.4. Top/bottom decile r10 excess: dev +29/-74 bp, 2026 -41/-54 bp. XS-AUC up 0.549 dev (t 6.8).",
+    "cagr_50bps": -0.005,
+    "cagr_80bps": -0.076,
+    "sharpe_50bps": 0.03,
+    "maxdd_50bps": -0.361,
+    "random_baseline_cagr": 0.001,
+    "by_year_note": "Long top-20, 10d hold, 50 bp, by year: +19/+10/-16/-11%. 20d hold: dev +12.9% (random +11.5%). Daily IC vs r10 by year: +0.039/+0.066/+0.090/+0.048.",
+    "holdout_2026_note": "2026: IC r10 +0.048 (t 1.7). Long top-20 20d hold: -9.4% vs random +3.5% (FAIL). Avoid30 20d: +4.3% vs +3.5% (marginal).",
+    "pros": [
+     "Learnable and coherent: the +1 class earns +7.6% net at 10d and is profitable 90% of the time.",
+     "Its -1 side gives a decent avoid list in dev (avoid30 20d +15.8% vs +11.5%)."
+    ],
+    "cons": [
+     "The statistic is noise-equivalent: real |t*| and L* distributions match a driftless random walk. T=2 or 3 labels 91-98% of pure-noise paths as trending.",
+     "The model is 0.80 correlated with a fixed 20d-label model and adds no significant IC (+0.005, t 1.6).",
+     "The OLS t-value rewards smooth paths, so top picks are low-vol, large-cap names (70% F&O). The top-20 book roughly matches random picks over the full window and loses in 2026.",
+     "Label is regime-driven: corr +0.63, monthly P(+1) ranges 8-55%."
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "RA10",
+    "family": "risk-adjusted fixed horizon",
+    "definition": "z = r10/(vol_20*sqrt(10)) with r10 = close[t+10]/open[t+1] - 1. +1 if r10 >= max(0.5*vol_20*sqrt(10), 50 bp). -1 mirror. Else 0. NaN unless fw.ok(10). The 50 bp floor never binds on eq.",
+    "horizon": "10d",
+    "sides": "both",
+    "class_shares": "+1 28.9% / 0 41.2% / -1 29.9% (RA20: 30.5/40.4/29.1)",
+    "n_samples": 1304071,
+    "monthly_pos_std": 0.103,
+    "regime_corr": 0.68,
+    "auc_or_ic": 0.049,
+    "top_decile_vs_base": "P(+1) in top decile vs base: 2023 33.0 vs 34.4, 2024 29.6 vs 28.8, 2025 30.4 vs 26.1, 2026 27.6 vs 27.7. Top/bottom decile r10 excess: dev +38/-66 bp.",
+    "cagr_50bps": 0.084,
+    "cagr_80bps": 0.007,
+    "sharpe_50bps": 0.61,
+    "maxdd_50bps": -0.304,
+    "random_baseline_cagr": 0.001,
+    "by_year_note": "Long top-20, 10d hold, 50 bp, by year: +42/+24/-14/-11%.",
+    "holdout_2026_note": "2026: IC r10 +0.042. Long top-20 10d hold -14.6% vs random -5.4% (FAIL). Avoid30 20d +9.9% vs +3.5%.",
+    "pros": [
+     "Coherent and simple to define. Its avoid filter works, as it does for every model."
+    ],
+    "cons": [
+     "Significantly LESS learnable than the raw 10d label: IC -0.015 (t -3.3) vs FX10.",
+     "Vol-normalising does not remove regime dependence (corr +0.68)."
+    ],
+    "verdict": "reject"
+   },
+   {
+    "candidate_id": "FP20",
+    "family": "first passage (symmetric barriers)",
+    "definition": "Barriers at open[t+1]*(1 \u00b1 vol_20*sqrt(20)), scanned over 20 bars, gap-aware. The first barrier touched gives +1/-1. A same-bar double touch (0.03% of rows) or no touch gives 0. FP10 uses \u00b1 vol_20*sqrt(10).",
+    "horizon": "up to 20 bars",
+    "sides": "both",
+    "class_shares": "+1 34.8% / 0 35.8% / -1 29.4% (FP10: 43.5/15.3/41.2)",
+    "n_samples": 1290437,
+    "monthly_pos_std": 0.114,
+    "regime_corr": 0.71,
+    "auc_or_ic": null,
+    "top_decile_vs_base": "not walk-forwarded (89% identical to MQ_vol1.0, kappa 0.83)",
+    "cagr_50bps": null,
+    "cagr_80bps": null,
+    "sharpe_50bps": null,
+    "maxdd_50bps": null,
+    "random_baseline_cagr": 0.001,
+    "by_year_note": "P(+1)/P(-1) by year 2021-2026: 37.5/28.2, 32.1/33.4, 42.9/20.3, 33.4/31.9, 30.9/32.2, 34.3/29.2.",
+    "holdout_2026_note": "Perfect-foresight +1 trades, 20d hold, 2026: +11.39% net per trade. No model was trained.",
+    "pros": [
+     "Path-order-aware and gap-aware. Ambiguous same-bar touches are rare (0.03%)."
+    ],
+    "cons": [
+     "Redundant with MQ_vol1.0. Market correlation +0.71 (regime-driven)."
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "FX20_pm50 (control)",
+    "family": "fixed-horizon control",
+    "definition": "+1 if close[t+20]/open[t+1] - 1 > +50 bp, -1 if < -50 bp, else 0. NaN unless fw.ok(20).",
+    "horizon": "20d",
+    "sides": "both",
+    "class_shares": "+1 47.0% / 0 4.3% / -1 48.7%",
+    "n_samples": 1290437,
+    "monthly_pos_std": 0.175,
+    "regime_corr": 0.6,
+    "auc_or_ic": 0.06,
+    "top_decile_vs_base": "P(+1) in top decile vs base: 2023 59.9 vs 57.6, 2024 49.2 vs 45.7, 2025 48.2 vs 42.5, 2026 46.1 vs 46.6. Top/bottom decile r10 excess: dev +39/-71 bp.",
+    "cagr_50bps": 0.072,
+    "cagr_80bps": -0.004,
+    "sharpe_50bps": 0.56,
+    "maxdd_50bps": -0.302,
+    "random_baseline_cagr": 0.001,
+    "by_year_note": "Long top-20, 10d hold, by year: +27/+16/-8/-5%. 20d hold: dev +19.0%.",
+    "holdout_2026_note": "2026: IC r10 +0.045. Top-20 20d hold -4.9% vs +3.5% (FAIL). Avoid30 20d +9.8% vs +3.5% (PASS).",
+    "pros": [
+     "The bar the adaptive labels had to clear. Its top-20 book beats TSA's in both dev and 2026."
+    ],
+    "cons": [
+     "Absolute label, so regime-driven (monthly P(+1) 12-75%). The concentrated book fails in 2026."
+    ],
+    "verdict": "weak"
+   },
+   {
+    "candidate_id": "FX10_pm50 (control)",
+    "family": "fixed-horizon control",
+    "definition": "+1 if close[t+10]/open[t+1] - 1 > +50 bp, -1 if < -50 bp, else 0. NaN unless fw.ok(10).",
+    "horizon": "10d",
+    "sides": "both",
+    "class_shares": "+1 44.9% / 0 6.3% / -1 48.8%",
+    "n_samples": 1304071,
+    "monthly_pos_std": 0.132,
+    "regime_corr": 0.69,
+    "auc_or_ic": 0.064,
+    "top_decile_vs_base": "P(+1) in top decile vs base: 2023 53.5 vs 51.2, 2024 48.0 vs 44.6, 2025 45.2 vs 41.8, 2026 42.2 vs 43.0.",
+    "cagr_50bps": 0.016,
+    "cagr_80bps": -0.057,
+    "sharpe_50bps": 0.18,
+    "maxdd_50bps": -0.334,
+    "random_baseline_cagr": 0.001,
+    "by_year_note": "Long top-20, 10d hold, by year: +30/+14/-14/-16%.",
+    "holdout_2026_note": "2026: IC r10 +0.042. Top-20 10d hold -21.5% vs random -5.4% (FAIL). Avoid30 20d +8.9% vs +3.5%.",
+    "pros": [
+     "Strong IC (+0.064 dev, t 6.5)."
+    ],
+    "cons": [
+     "The concentrated 10-day book is eaten by costs and fails badly in 2026."
+    ],
+    "verdict": "weak"
+   }
+  ],
+  "key_findings": [
+   "NULL TEST. Trend-scan t-values are not significance tests. On 200k driftless iid random-walk paths, P(|t*|>=2/3/5/8) = 98.0/90.8/66.7/34.6%. On real NSE eq paths: 97.9/90.6/65.2/31.0%. Real paths are slightly LESS trendy than noise, consistent with mild mean reversion. T in {2,3,5} only sets how many rows fall in the 0 class.",
+   "L* is a boundary artefact. Its histogram on real data (8.1% at L=5, 29.8% at L=20) equals the null's (7.8%, 30.2%), and mean L* is about 14 in every year. Trend-scanning does not 'let the data pick the horizon'.",
+   "REGIME. Every absolute label has monthly P(+1) correlated +0.60 to +0.71 with the Nifty 500 in dev, including vol-normalised RA (+0.68). The market-excess trend scan TSX_T5 is the exception: +0.12 dev, +0.00 in 2026, monthly sd 6.1% vs 13.0% for TSA_T5.",
+   "LEARNABILITY (6 walk-forwards, multiclass, 52 PIT features without the leaky sec_rel_mom20, every eq test row scored). Daily IC vs r10, dev: TSX +0.066 (t 6.3), TSA +0.065, FX10 +0.064, FX20 +0.060, RA10 +0.049, MQ +0.020. In 2026: TSX +0.065 (t 2.2), others +0.028 to +0.048. TSA vs FX20: dIC +0.005 (t 1.6), score corr 0.80, so the adaptive label teaches the same thing as a fixed 20d label. RA10 vs FX10: dIC -0.015 (t -3.3); vol normalisation hurts.",
+   "LABEL-EXECUTION MISMATCH. With perfect foresight of the label (dev, net of 50 bp), the oracle exit at L* for TSA_T5 +1 is worth +13.6%. A fixed 20d hold captures +11.0% (81%), fixed 10d +7.4%, ATR 3x trailing stop +9.9%, ATR 2x +8.1%, running trend-scan exit +7.2%. The best executable exit for an adaptive label is simply holding the full 20 bars.",
+   "HOLDING PERIOD AND COST. At 50 bp, 10d holds cost about 12.6%/yr of capital and 20d holds about 6.3%. Random top-20 picks make +0.1% CAGR with 10d holds vs +8.8% with 20d holds (2023-01 to 2026-09). Always compare against the random baseline with the same hold.",
+   "CONCENTRATED TOP-20 LONG BOOKS. In dev, MQ (+27.5%) and TSX (+26.8%) lead at a 20d hold vs random +11.5%. In the 2026 holdout every label except MQ loses to random: TSX -0.6%, FX20 -4.9%, TSA -9.4% vs random +3.5%. MQ makes +5.4%, but on liquid (>= Rs5 cr) names it makes +3.3% vs +5.5% random. No 10-day top-20 config clears the auditor's deflated sim-Sharpe hurdle of 1.30-1.38 (best 1.04).",
+   "ROBUST USE = AVOID SIDE. Pre-registered avoid30 overlay (drop the bottom 30% of scores, pick 20 at random, 20d hold) beats random in dev AND 2026 for all six models. TSX: +16.0% dev / +8.5% 2026 vs random +11.5% / +3.5%; at 80 bp +11.9% / +4.8% vs +7.5% / +0.1%. The fixed-horizon controls do the same (FX20 2026 +9.8%), so this is not unique to adaptive labels.",
+   "EXITS. ATR trailing stops (2x, 3x) lose to the plain 20d hold for every model and for random picks (random 20-bar-max book: atr2 -3.6% vs fixed20 +11.5% dev CAGR). The running trend-scan exit (sell at next open once the realised-path t < 0 after bar 5) cuts maxDD about 40% (-13% to -17% vs -24% to -29%) but roughly halves CAGR. It is a drawdown control, not alpha.",
+   "SHORTS. Bottom-20 shorts among fno_proxy names lose -18% to -34%/yr at 50 bp for every model (random -26%). Bottom-decile excess is real (-34 to -77 bp per 10 days, dev) but far smaller than the up-drift plus costs. Use -1 labels as avoid/exit flags, not as a short book.",
+   "WHAT LABELS TEACH (pick profiles). TSA picks are smooth, low-vol large caps (vol_20 0.019, 70% F&O, 656 unique names). TSX picks are market-relative momentum (mom_60 +9.8%, 16% above SMA200). MQ picks are momentum plus volume surge in smaller names (volz_20 +0.11, 12% F&O, log_turn20 18.2 vs universe 18.8).",
+   "MOVE-QUALITY / FIRST-PASSAGE. MQ_vol1.0 and FP20 are 89% identical (kappa 0.83). The role's literal threshold, MFE >= 2*atr*sqrt(h), gives only a 3.0% positive class, so a = 1.0*vol_20*sqrt(20) was used (30/46/24). MQ's IC is significantly below the fixed controls (-0.040, t -3.8) even though its top tail invests best.",
+   "MULTIPLE TESTING. 22 distinct label definitions screened on event rates, 6 walk-forwards (the full budget), and 78 strategy configurations on dev (13 per model). Cost ladders reuse the same picks. All selection was on 2023-2025. The 2026 holdout (about 8 months; Nifty 500 -4.0% over the period, -5.7% annualised) was read once. Its excess numbers of 2-5 pts are suggestive, not conclusive.",
+   "RECOMMENDATION. Use a fixed executable 20-day horizon (open[t+1] to close[t+20]) rather than an adaptive one. If a trend-quality flavour is wanted, use TSX_T5 with T treated as a class-balance knob. Invest by excluding the bottom 30% of model scores from a broad, staggered 20-day long book held to the time barrier, with no trailing stops. Treat MQ_vol1.0's top-tail picks as a round-2 candidate needing a liquidity-aware cost re-test.",
+   "DELIVERABLE NOTE. The harness blocked writing REPORT.md ('subagents should return findings as text'), so the narrative is in this structured output. Self-contained measured tables are in tables_autogen.md (all sections A-T) and report_tables.md (compact) in the results directory. Every number is in results.json; all scripts are s1-s12, common.py and simlib.py there."
+  ],
+  "lab_issues_found": [
+   "LOW: L.portfolio_sim time exit uses fw.at(close,h), which checks only the segment, not label_block. So 0.06% (h=10) and 0.11% (h=20) of tradeable eq rows span an unadjustable corporate action. Their booked returns average -21% (p5 -87%, p95 +75%) and are fake (demergers, unlocated splits). Fix: force the exit at the last close before a label_block row (treat it like a suspension). Evidence: s12_lb_check.py, results.json s12_label_block_in_sim.",
+   "METHOD: trend-scan |t| thresholds are not significance levels. Under a driftless iid random walk P(|t*|>=2) = 98% and P(|t*|>=5) = 67%, and the L* histogram matches real data (30% at the L=20 boundary). Any use of trend-scanning must calibrate T against this null (s2_null). Note also that the absolute trend-scan t-value rewards low path noise, so its models pick low-vol large caps.",
+   "METHOD: portfolio_sim cannot evaluate variable-holding exits (trailing stops, adaptive exits). simlib.Engine is an exact replica of the time exit, verified to machine precision on CAGR/Sharpe/maxDD/trades for a model score and for random seed 1 (results.json s4_verify). It adds ATR-trail and running trend-scan exits and re-costing without re-picking.",
+   "Adopted the auditor's fixes; they matter. Dropped sec_rel_mom20 (HIGH leak). Excluded INF-prefix ETFs (48,406 elig_base rows). Walk-forward copy (common.wf_all) scores all test-year rows, not only labeled ones. Dev cohorts end so that exits fall on or before 2025-12-31. Report daily cross-sectional AUC as well as pooled AUC, which mixes in market timing: e.g. TSA_T5 2025 pooled AUC 0.494 vs daily XS-AUC 0.563.",
+   "LOW (not fixed): xr_* ranks, breadth50/breadth_ad/dispersion and fno_proxy are still computed with ETFs included. Fixing this needs a features rebuild; it was not done here.",
+   "INFO: the random baseline must match the holding period and sleeve structure. Random top-20 at a 20d hold makes +8.8% CAGR vs +0.1% at a 10d hold because of cost drag. Comparing a 20d strategy with the 10d random baseline (or the auditor's 10d luck band) overstates the edge by about 9 pts/yr. A 20d luck band still needs to be computed."
+  ],
+  "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/C_trendscan/tables_autogen.md",
+  "variants_tried": 78
+ },
+ {
+  "agent_id": "D_setups",
+  "headline": "Gating the label on classic technical setups does not help on NSE at 10 days. Breakouts, pullbacks, VCP, delivery spikes, RS leaders and gap-holds have date-matched excess within \u00b113 bps, and the 20d volume breakout is significantly worse (\u221227 bps, t=\u22122.7). The one gate that changes the label is a reversal gate, R1dn (\"capitulation buy\": close below the prior 20-day low on volume while Nifty-500 20-day momentum is negative). For R1dn, P(+1) rises from 0.450 to 0.557 and date-matched excess is +58 bps per event (month-block t=6.3, passes Bonferroni across 98 configs). It is positive in 2023, 2024 and 2025 and +75 bps in the 2026 holdout, and holds across lookbacks, volume thresholds and 5/10/20-day horizons. The effect is episodic: it sits on mass-breakdown days, the top 5 months give 60% of the excess, and holdout excess outside March 2026 is only +12 bps. Meta-labeling on top of R1dn roughly doubles per-event excess, and the every-bar model ranks gated events as well as a setup-only model. Gate plus score earns about 7\u201313% CAGR at 50 bps (about 5\u201310% at 80) at 25\u201336% exposure. That is the only family here that made money in the 2026 holdout, where the every-bar model lost 13% annualised. Verdict: promising, not proven. The sector-leader setup is a look-ahead leak, and every short setup is net negative.",
+  "candidates": [
+   {
+    "candidate_id": "D_R1dn_capitulation_gate",
+    "family": "setup-gated triple-barrier label (event label, reversal)",
+    "definition": "Gate (PIT at close t): close[t] < min(low[t-20..t-1]) AND volz_20 > 1 AND Nifty-500 mkt_mom20 < 0, on elig_base with ISIN starting INE. Label on gated rows: L.barrier_labels(h=10, pt=1.5*sqrt(10)*atr_pct, sl=1.0*sqrt(10)*atr_pct, tau_bps=50), entry open[t+1]. +1 = target hit or time exit > +50 bps; -1 = stop hit or time exit < -50 bps; 0 = otherwise. NaN outside fw.ok(10).",
+    "horizon": "10d barrier (84% exit on time); the edge holds with time exits at h=5/10/20",
+    "sides": "long only. The mirrored breakdown short is significantly negative.",
+    "class_shares": "All years: +1/0/-1 = 0.549/0.057/0.394 vs base 0.444/0.061/0.494. Dev P(+1) is 0.557 vs 0.450 (lift 1.24). 12,161 events; fires on about 37% of trading days, 9.1 events/day in dev.",
+    "pros": [
+     "Date-matched excess (event minus same-date universe mean) is +58.1 bps per event in dev, month-block bootstrap t=6.29. Only 1 of 98 configs passes the Bonferroni hurdle of 3.48.",
+     "Positive every year. xs 2021-2026: +70/+18/+52/+49/+72/+75 bps; 2026 is the holdout, never used for selection.",
+     "Robust family: all 45 lookback (10/20/55) \u00d7 volume (any/0/0.5/1/2) \u00d7 regime variants have positive dev and holdout xs. Positive at h=5/10/20 (dev xs +41/+57/+64 bps) and against Nifty-500 excess (+111 to +119 bps).",
+     "Not driven by data artefacts (64 events on CA/label_block/-20% rows; edge unchanged without them). Not driven by the sector-snapshot leak (same sector-known share as the universe; beats both subgroups).",
+     "Less regime-loaded than the base label: monthly P(+1) has corr 0.46 with the market vs 0.65 for the base."
+    ],
+    "cons": [
+     "Episodic. The edge lives on mass-capitulation days: dev xs is -28 to -59 bps on days with 1-9 breakdowns and +72/+79 bps on days with 30-99 / 100+ breakdowns. Top 5 months supply 60% of xs and 78% of net P&L. Only about 29 independent capitulation episodes in dev.",
+     "Holdout success is mostly March 2026: excluding that month, holdout xs is +11.7 bps and net is +36 bps.",
+     "Absolute P&L was negative in 2025 (net50 -25 bps/event despite +72 bps xs), when Jan-Mar breakdowns kept falling with the market.",
+     "Large caps (fno_proxy) had holdout xs of -48 bps. The effect is mid/small-cap.",
+     "Trading every event is a poor portfolio: CAGR 1-4%, because light-event days lose and exposure is low. Positions must be sized up on mass-breakdown days.",
+     "Not regime-neutral by design: it only fires in falling markets. Within-entity lag-1 label autocorrelation is 0.68."
+    ],
+    "verdict": "promising",
+    "n_samples": 12161,
+    "auc_or_ic": null,
+    "top_decile_vs_base": "Gate vs base, dev: P(+1) 0.557 vs 0.450 (lift 1.24); net50 +164 vs -16 bps per event; xs +58 bps (t=6.3).",
+    "by_year_note": "P(+1) by year 2021-2026: 0.586/0.549/0.545/0.712/0.467/0.527. Net50 bps: +192/+71/+117/+504/-25/+232. xs is positive every year.",
+    "holdout_2026_note": "2,950 events. P(+1) 0.527 vs base 0.428, net50 +232 bps, xs +75 bps. Excluding March 2026: xs +12 bps, net +36 bps.",
+    "cagr_50bps": 0.043,
+    "cagr_80bps": 0.024,
+    "sharpe_50bps": 0.59,
+    "maxdd_50bps": -0.151,
+    "random_baseline_cagr": -0.003,
+    "monthly_pos_std": 0.221,
+    "regime_corr": 0.46
+   },
+   {
+    "candidate_id": "D_R1dn_x_score_meta",
+    "family": "meta-labeling: setup gate AND walk-forward score",
+    "definition": "Gated rows R1dn ranked by an OOS walk-forward score of the barrier meta-label y=1{label=+1}. Two scorers: (a) every-bar model, L.walk_forward on all U rows, date_step=2, FEATURES minus sec_rel_mom20; (b) setup-only model, verbatim fold logic with min_train lowered to 1,500. Take the top 5 per signal date, or names whose score exceeds the fold's training base rate (PIT filter). Hold 10 days with a time exit.",
+    "horizon": "10d",
+    "sides": "long",
+    "class_shares": "On R1 events, dev: PIT-filtered P(+1) 0.540 (META) / 0.536 (ALLBAR) vs 0.517 for all events. Top tercile 0.580/0.597. Holdout PIT 0.584 / 0.543 vs 0.483.",
+    "pros": [
+     "The score adds PIT-achievable precision. On R1 events, xs rises from +43 to +78 bps (META, PIT filter) and +67 bps (ALLBAR) in dev; in the holdout from +53 to +118 / +88 bps. META PIT-filtered xs is positive every year: +97/+106/+56/+118 bps for 2023-2026.",
+     "Official L.portfolio_sim, top5 within R1dn, 2023-01 to 2026-09: CAGR 10.5% at 50 bps, 7.5% at 80, sim-Sharpe 1.24, maxDD -22.1%. Mean trade +147 bps vs +30 bps for random picks from the same events (3 seeds, CAGR 0.3%) and -1.2% CAGR for universe random.",
+     "Universe-grid slot sim: 13.1% CAGR (10.1% at 80), Sharpe 1.08, maxDD -17.5%. Daily-entry META-PIT version: 7.2% CAGR, Sharpe 1.48, maxDD -13.0%.",
+     "2026 holdout: +7% to +27% CAGR across variants, while the every-bar model lost 7-13% and Nifty-500 lost 5.7% annualised.",
+     "The every-bar model ranks gated events as well as the data-starved setup-only model (3.3k-14k training rows), so no special model is needed."
+    ],
+    "cons": [
+     "Few trades: about 240 dev and 75 holdout (official sim). Results depend on the signal grid (lablib mask-calendar grid vs universe grid differ by several pp CAGR).",
+     "In the official-grid holdout, random picks among R1dn events did as well as the ranked picks (12.1% vs 9.1% CAGR, 75 trades).",
+     "2025 was negative in every variant (-5% to -13%).",
+     "Sim-Sharpe of 1.0-1.5 does not clear the E_auditor luck hurdle for about 100 tested portfolio configs (1.38). portfolio_sim Sharpe is also optimistic by a factor of 1.1-1.24.",
+     "In cash 64-77% of the time. This is an overlay, not a core book."
+    ],
+    "verdict": "promising",
+    "n_samples": 12161,
+    "auc_or_ic": 0.06,
+    "top_decile_vs_base": "R1 events, dev: top-tercile P(+1) 0.58-0.60 vs 0.517 for all events vs 0.450 base. xs +90 bps (top tercile) vs -14 to -15 bps (bottom tercile).",
+    "by_year_note": "Official sim R1dn \u2227 every-bar top5: dev CAGR 9.3%, Sharpe 1.16. Universe-grid slot by year 2023-2026: +16.2% / +26.6% / -9.3% / +18.4%.",
+    "holdout_2026_note": "Universe grid: +27.2% CAGR (80 trades, +237 bps/trade). Daily META-PIT: +11.3%, maxDD -3.5%. Official grid: 9.1% CAGR vs 12.1% for random picks from the same events. Small sample, March-2026 driven.",
+    "cagr_50bps": 0.105,
+    "cagr_80bps": 0.075,
+    "sharpe_50bps": 1.24,
+    "maxdd_50bps": -0.221,
+    "random_baseline_cagr": 0.003,
+    "regime_corr": 0.46
+   },
+   {
+    "candidate_id": "D_R1_breakdown_reversal_nofilter",
+    "family": "setup-gated barrier label (reversal, no regime filter)",
+    "definition": "close < min(low[t-20..t-1]) & volz_20 > 1 (S1_bd20), bought; same barrier label.",
+    "horizon": "10d",
+    "sides": "long",
+    "class_shares": "+1/0/-1 = 0.507/0.063/0.430 (all years). Dev P(+1) 0.518 vs 0.450 (lift 1.15).",
+    "pros": [
+     "Dev xs +42 bps (t=3.0), positive in all 3 dev years (+27/+54/+44) and in the holdout (+53).",
+     "Works in all liquidity terciles in dev (+27/+57/+47 bps)."
+    ],
+    "cons": [
+     "No edge in rising markets (bull_up20 xs -0.4 bps). The regime condition carries the effect.",
+     "Holdout portfolio with all events: -12% CAGR. Isolated breakdowns continue down.",
+     "Universe-grid sims are near random: all events 1.1% CAGR; META-PIT top20 7.6% (5.8% at 80 bps)."
+    ],
+    "verdict": "weak",
+    "n_samples": 18661,
+    "cagr_50bps": 0.011,
+    "cagr_80bps": -0.024,
+    "sharpe_50bps": 0.16,
+    "maxdd_50bps": -0.211,
+    "random_baseline_cagr": -0.003,
+    "monthly_pos_std": 0.168,
+    "regime_corr": 0.43,
+    "top_decile_vs_base": "P(+1) 0.518 vs 0.450; xs +42 bps (t=3.0).",
+    "by_year_note": "xs 2021-2026: +13/+19/+27/+54/+44/+53. Net50 2025 -37 bps.",
+    "holdout_2026_note": "xs +53 bps, but only +4 bps excluding March 2026."
+   },
+   {
+    "candidate_id": "D_every_bar_model_reference",
+    "family": "label every bar (barrier h=10 binary), walk-forward",
+    "definition": "y = 1{barrier label = +1} on all U rows. L.walk_forward with date_step=2 and FEATURES minus sec_rel_mom20. Top 20 by score every 5 days.",
+    "horizon": "10d",
+    "sides": "long",
+    "class_shares": "+1/0/-1 = 0.444/0.061/0.494; monthly P(+1) std 0.131, corr with market 0.65.",
+    "pros": [
+     "Daily cross-sectional AUC 0.516/0.543/0.530/0.519 and IC 0.030/0.068/0.061/0.049 for 2023-2026. Dev pooled XS-AUC t=5.2.",
+     "Strong dev portfolio: CAGR 17.9%, sim-Sharpe 1.05."
+    ],
+    "cons": [
+     "Fails the holdout: 2026 CAGR -13.2% (top20) and -7.2% (daily top5); top-decile xs -10 bps in 2026.",
+     "2025 was -12%. Returns are concentrated in 2023-2024 (+44.6% / +29.3%).",
+     "Fully invested, maxDD about -29%."
+    ],
+    "verdict": "weak",
+    "n_samples": 1303294,
+    "auc_or_ic": 0.529,
+    "cagr_50bps": 0.114,
+    "cagr_80bps": 0.035,
+    "sharpe_50bps": 0.72,
+    "maxdd_50bps": -0.294,
+    "random_baseline_cagr": -0.003,
+    "monthly_pos_std": 0.131,
+    "regime_corr": 0.65,
+    "top_decile_vs_base": "Top-decile P(+1) by year 0.525/0.471/0.444/0.435 vs base 0.510/0.437/0.413/0.428.",
+    "by_year_note": "Portfolio 2023-2026: +44.6% / +29.3% / -12.1% / -8.9%.",
+    "holdout_2026_note": "-13.2% CAGR (top20 at 50 bps) vs universe random -4.5% and Nifty-500 -5.7%."
+   },
+   {
+    "candidate_id": "D_classic_long_setups",
+    "family": "technical setup gates (momentum/breakout/pullback)",
+    "definition": "L1 20d breakout (hi20_dist>0 & volz_20>1); L2 52w high (hi52_dist>-0.01 & volz_20>0.5); L3 pullback in uptrend; L4 VCP (vol_ratio<0.75 & hi20_dist>0); L5 delivery accumulation; L6 RS leader (xr_mom60>0.9 & xr_mom20>0.7); L7 oversold in uptrend (rsi_14<30 & dist_sma200>0); L8b index-relative leader & bull; L9 gap-up hold. Common barrier label.",
+    "horizon": "10d",
+    "sides": "long (L1/L9 as avoid flags)",
+    "class_shares": "Dev P(+1) 0.439-0.470 vs base 0.450 (lift 0.98-1.04). L1: 0.442/0.052/0.506.",
+    "pros": [
+     "L1 breakout is a significant avoid signal: xs -26.5 bps (t=-2.7), also negative at h=5/10/20. L9 gap-hold is -35 bps. Both are useful as avoid flags for long books.",
+     "L7 raises P(+1) by +1.3 pp (t=2.8)."
+    ],
+    "cons": [
+     "No date-matched selection edge: xs within \u00b113 bps except L1 and L9, which are negative.",
+     "They mostly encode regime: monthly P(+1) corr with market 0.46-0.69, and 71-88% of events fall in bull regimes.",
+     "Conjunctions raise lift only at a 5-10x cost in events, and none pass Bonferroni.",
+     "Meta-labeling a neutral gate adds nothing (L3: PIT xs -6 bps).",
+     "Portfolios at or below random: L1 events -5.7% CAGR; L3 \u2227 META -0.2%; L7 \u2227 META-PIT -0.2%."
+    ],
+    "verdict": "reject",
+    "n_samples": 45246,
+    "cagr_50bps": -0.057,
+    "cagr_80bps": -0.114,
+    "sharpe_50bps": -0.38,
+    "maxdd_50bps": -0.369,
+    "random_baseline_cagr": -0.003,
+    "monthly_pos_std": 0.119,
+    "regime_corr": 0.66,
+    "top_decile_vs_base": "L1 P(+1) 0.442 vs base 0.450; xs -26.5 bps.",
+    "by_year_note": "L1 xs 2021-2026: -18/-48/-37/-37/+4/-6 bps.",
+    "holdout_2026_note": "L1 xs -6 bps; L7 events -13.6% CAGR; L6 \u2227 score +25.5% in the holdout but not selectable on dev (dev 10.6% vs every-bar 17.9%)."
+   },
+   {
+    "candidate_id": "D_L8_sector_leader_LEAKY",
+    "family": "setup gate using sector map",
+    "definition": "sec_rel_mom20 in the top decile per date & mkt_dist_sma200 > 0.",
+    "horizon": "10d",
+    "sides": "long",
+    "class_shares": "Dev P(+1) 0.486 vs 0.450.",
+    "pros": [
+     "None that survive. The apparent edge (+76 bps xs, t=5.45) is the leak."
+    ],
+    "cons": [
+     "The sector map is a 2026 snapshot. In 2023-25, sector-known universe rows earn +29 bps xs vs -40 bps for NA rows (t=\u00b15.6), and the gap vanishes in 2026 (-1 vs +2).",
+     "L8b split by sector-known gives +84 vs -58 bps. Holdout net is -177 bps per event."
+    ],
+    "verdict": "reject",
+    "n_samples": 57321,
+    "top_decile_vs_base": "xs +75.8 bps dev (leak).",
+    "holdout_2026_note": "net50 -177 bps/event; xs +28 bps."
+   },
+   {
+    "candidate_id": "D_R3_rslag_x_score",
+    "family": "reversal gate (RS laggard bought) AND every-bar score",
+    "definition": "xr_mom60 < 0.1 & xr_mom20 < 0.3, bought; ranked by the every-bar score; top 5 every 5 days.",
+    "horizon": "10d",
+    "sides": "long",
+    "class_shares": "Dev P(+1) 0.452 vs 0.450; with the mkt_mom20<0 filter, xs +45 bps (t=2.1).",
+    "pros": [
+     "Dev CAGR 25.7% (16.8% at 80 bps), Sharpe 1.25. Meta PIT xs +57-59 bps in dev."
+    ],
+    "cons": [
+     "2023 contributed +86%; 2024 +12.5%, 2025 -5.6%, 2026 -2.6%. A one-year effect.",
+     "Holdout -3.2% CAGR."
+    ],
+    "verdict": "weak",
+    "n_samples": 90674,
+    "cagr_50bps": 0.215,
+    "cagr_80bps": 0.128,
+    "sharpe_50bps": 1.08,
+    "maxdd_50bps": -0.271,
+    "random_baseline_cagr": -0.003,
+    "by_year_note": "2023-2026: +86.3% / +12.5% / +1.1% / -2.6%.",
+    "holdout_2026_note": "-3.2% CAGR, mean trade 0 bps."
+   },
+   {
+    "candidate_id": "D_short_setups_fno",
+    "family": "short setup gates (mirrored barrier)",
+    "definition": "S1 20d breakdown on volume; S2 failed rally in downtrend; S3 RS laggard; S4 52w-low breakdown; S5 gap-down fail. Short barrier, fno_proxy names only.",
+    "horizon": "10d",
+    "sides": "short (F&O proxy only)",
+    "class_shares": "Short base P(+1) 0.473, net -99 bps (stop hit 19% vs target 2%). S1 short P(+1) 0.402.",
+    "pros": [
+     "S5 gap-down-fail short has xs +74 bps (t=2.6) on the universe, but only 297 F&O events."
+    ],
+    "cons": [
+     "Every short setup has negative net expectancy: -66 to -216 bps per event.",
+     "S1 breakdown short is significantly bad: xs -42 bps (t=-3.0). On F&O events, -130 bps per trade.",
+     "Random F&O shorting: -25.9% CAGR."
+    ],
+    "verdict": "reject",
+    "n_samples": 18661,
+    "cagr_50bps": -0.038,
+    "cagr_80bps": -0.046,
+    "sharpe_50bps": -1.04,
+    "maxdd_50bps": -0.137,
+    "random_baseline_cagr": -0.259,
+    "holdout_2026_note": "F&O S1 short -2.2% CAGR at low exposure."
+   }
+  ],
+  "key_findings": [
+   "Label used throughout is the common primary label L.barrier_labels(h=10, pt=4.74\u00b7ATR, sl=3.16\u00b7ATR, tau=50bps), entry open[t+1]. Universe is elig_base with ISIN starting INE; this removes 49,192 ETF rows. Dev window is signals 2023-01-01 to 2025-12-16 (exits \u2264 2025-12-31); holdout is 2026-01-01 to 2026-09-10. Base label all years: +1/0/-1 = 0.444/0.061/0.494. 82% of labels exit on time (pt 6.4%, sl 11.3%), so this barrier behaves almost like a \u00b150 bps sign label. Monthly P(+1) std is 0.131 and its corr with the Nifty-500 monthly return is 0.65 (regime-dominated). Dev net50 is -16 bps per bar.",
+   "Event study, no model, dev. Classic long setups do not change the label once events are compared with other stocks on the same date (xs). Lift in P(+1) is 0.98-1.04. xs bps: L1 20d breakout -26.5 (t=-2.69), L2 52w -8.8, L3 pullback -3.4, L4 VCP -13.4, L5 delivery -0.7, L6 RS leader -2.2, L7 oversold-in-uptrend +3.7, L8b index leader +11.0, L9 gap-hold -35.2. Their monthly P(+1) corr with the market is 0.46-0.69, and 71-88% of events occur in bull regimes. Fresh-event variants (first firing in 10 bars) are no better.",
+   "The sector-leader setup (L8) shows +76 bps xs (t=5.45), but this is the 2026 sector-snapshot leak. Sector-known universe rows earn +29 bps vs -40 bps for NA rows per 10 days in 2023-25 (t=\u00b15.6), and the gap disappears in 2026 (-1 vs +2). L8 is rejected. sec_rel_mom20 was dropped from all models.",
+   "The winning gate is a reversal: R1 = 20-day breakdown on volume (close < prior 20d low & volz_20 > 1), bought. Dev xs is +42 bps (t=3.0), P(+1) 0.518 vs 0.450. With the Nifty-500 20-day-momentum < 0 filter (R1dn): dev n=6,673, P(+1) 0.557 (lift 1.24), net50 +164 bps per event, xs +58 bps (month-block t=6.29). It is the only one of 98 tested configs that passes the Bonferroni hurdle of 3.48. Excess is positive in each dev year (52/49/67) and in the holdout (+75 bps, net +232 bps). In rising markets R1 has zero excess.",
+   "Robustness of R1dn. All 45 parameter variants (lookback 10/20/55, volz any/0/0.5/1/2, regime none / mkt_mom20<0 / below SMA200) have positive dev and holdout xs. Dev xs is +41/+57/+64 bps at time-exit h=5/10/20, and +111 to +119 bps over Nifty-500. Excluding data artefacts (64 events on CA, label_block or -20% rows) changes nothing. Within sector-known and sector-NA groups it beats each group's universe (+39 / +46 bps), so it is not the leak.",
+   "Main caveat: the R1 edge is episodic, a 'stock capitulation inside market capitulation'. Dev xs by number of R1 events that day: 1-2 \u2192 -59, 3-9 \u2192 -28, 10-29 \u2192 +32, 30-99 \u2192 +72, 100+ \u2192 +79 bps (12 days, +454 bps net). Isolated breakdowns continue down. There are 51 capitulation episodes in 2021-26, about 29 in dev. Top 5 months supply 60% of R1dn xs and 78% of net. Holdout excluding March 2026: xs +11.7 bps. Large-cap (fno_proxy) R1dn xs in the holdout is -48 bps. 2025 absolute net was negative (-25 bps per event) although xs was +72.",
+   "Conjunctions ('both conditions accept'): 198 configs (11 blocks + all pairs \u00d7 {none, bull, mkt_dn20}). Pairs raise P(+1) to 0.56-0.63 but cut events 5-10\u00d7, and none pass Bonferroni. Examples: L7&R1 xs +103 bps (t=2.75), R1&R3|dn +102 (t=3.27). The bull filter (mkt_dist_sma200>0) only times the market; it never creates date-matched excess. L1 breakout and its conjunctions are the worst (down to -107 bps).",
+   "Short side: no short setup has positive net expectancy. Short base net is -99 bps per trade because the stop is hit 19% vs the target 2% (positive skew). The S1 breakdown short has xs -42 bps (t=-3.0), and on F&O-proxy events it loses -130 bps per trade. S5 gap-down-fail short has xs +74 bps but only 297 F&O events. The useful down-side information is the avoid list for longs: L1 breakouts (-27), L9 gap-hold (-35), S5 gap-down names held long (-69 bps xs).",
+   "Meta-labeling, 5 walk-forward runs (ALL, R1, L7, R3, L3). On a good gate the score adds PIT precision. On R1 events, a META PIT filter (score > fold training base rate) lifts P(+1) from 0.517 to 0.540 and xs from +43 to +78 bps in dev. In the holdout, P(+1) goes from 0.483 to 0.584 and xs from +53 to +118. The top tercile reaches xs +90 (dev) and +135 (holdout), the bottom tercile -15. Applying the every-bar model to R1 rows does about as well (PIT xs +67 dev, +88 holdout; date-neutral IC 0.06), since the setup-only model has only 3.3k-14k training rows. On a neutral gate (L3 pullback) the meta-model adds nothing (PIT xs -6 bps). So: gate with the setup, and rank inside it with the general model.",
+   "Every-bar model reference: daily cross-sectional AUC 0.516/0.543/0.530/0.519 and IC 0.030/0.068/0.061/0.049 for 2023-26 (dev XS-AUC t=5.2). Pooled AUC 0.518/0.558/0.484/0.544 mostly reflects timing. Top20 portfolio: full CAGR 11.4% at 50 bps (3.5% at 80), Sharpe 0.72, maxDD -29.4%, by year +44.6% / +29.3% / -12.1% / -8.9%. 2026 holdout CAGR -13.2% vs universe random -4.5% and Nifty-500 -5.7%.",
+   "Investability, time exit, 50/80 bps, random baseline \u22653 seeds. Official L.portfolio_sim with R1dn \u2227 every-bar top5: CAGR 10.5% / 7.5%, Sharpe 1.24, maxDD -22.1%, mean trade +147 bps, vs +30 bps and 0.3% CAGR for random picks from the same events and -1.2% for universe random. Universe-grid slot sizing: 13.1% / 10.1%, Sharpe 1.08, maxDD -17.5%, by year +16.2% / +26.6% / -9.3% / +18.4%. Daily-entry META-PIT top5: 7.2% / 5.4%, Sharpe 1.48, maxDD -13.0%, exposure 23%. 2026 holdout: R1dn variants +7% to +27% CAGR while the every-bar model and random lost money. Selecting on dev alone would have picked the every-bar model or R3\u2227score (dev 17.9% / 25.7% CAGR); both lost in 2026.",
+   "Capacity and sizing: trading all R1dn events gives high per-trade expectancy (+98 bps every 5 days, +168 bps daily, dev) but CAGR of only about 1-3%. Equal weight gives light-event days full capital, and slot sizing leaves exposure too small. The edge requires sizing up on mass-breakdown days (\u226530 events) and few or no positions on days with isolated breakdowns.",
+   "Answer to the role question: event-gated labeling beats labeling every bar only for the capitulation-reversal gate. Per trade it gives +106 to +155 bps net vs +53 to +59 bps for the every-bar top-k, with lower drawdown (-13% to -22% vs -29%) and a positive 2026 holdout. It is not 'proven': there are about 29 dev episodes, holdout gains are concentrated in March 2026, 2025 was negative, and sim-Sharpe of 1.0-1.5 does not clear the luck hurdle (1.38 for about 100 portfolio configs; sim Sharpe is overstated \u00d71.1-1.24). Classic technical setups are not worth gating on, and breakouts are worth avoiding.",
+   "How to invest: each evening, gate on close < 20d low & volz_20 > 1 & Nifty-500 20d momentum < 0. Rank gated names with the general model; take the top 5 per day or names whose score exceeds the training base rate. Use fixed slots of 2-4% of capital and scale up on mass-breakdown days. Hold 10 days with a time exit (the barrier exit is 1-3 pp CAGR worse). Run it as an overlay next to a core book, since it is in cash 65-75% of the time. Expect losing years in grinding bear markets such as 2025.",
+   "Variants tried: about 300 label/setup variants (45 event-study configs, 198 conjunctions, 45 sensitivity variants, 12 label-horizon cells), 5 walk-forward models (within the budget of 6), and about 95 portfolio configurations. The holdout was opened once and used for no selection. REPORT.md could not be saved because the harness blocks subagents from writing report files. The full narrative is in this output, the tables are in tables_autogen.md (T1-T16), and the numbers are in results.json (final_summary, s1-s11)."
+  ],
+  "lab_issues_found": [
+   "MEDIUM: L.walk_forward hard-codes tr.sum() < 20000 / tm.sum() < 1000 and silently skips folds. Any event-gated training set with fewer than about 60k total events gets zero folds; R1's 2023 fold has 3.3k rows. Fix: expose min_train/min_test and smaller-capacity default parameters for sparse masks. I used a documented verbatim copy with 1500/100, num_leaves 15, min_child_samples 100.",
+   "MEDIUM: L.portfolio_sim builds its signal calendar from the mask's own dates (cal = np.unique(dates[m])). For sparse setup masks, step=5 then means every 5th date on which the setup fires, not every 5th trading day, and sleeve timing and CAGR become grid-dependent; R1dn results differ by several pp between the two grids. Fix: add a calendar argument (universe trading days) and book empty cohorts as cash.",
+   "MEDIUM: L.portfolio_sim equal-weights whatever picks exist, so 1 event puts 100% of a sleeve in one stock. Event strategies need fixed-slot sizing (each pick 1/top_k, rest in cash), implemented here as sizing='slot'.",
+   "HIGH (confirms E_auditor #1): the sector map is a 2026 snapshot. Sector-known rows earn +29 bps vs NA -40 bps per 10 days in 2023-25 (t=\u00b15.6), and the gap vanishes in 2026. The sector-leader setup's +76 bps (t=5.45) is this leak; sec_rel_mom20 must be dropped.",
+   "MEDIUM (confirms E_auditor #2): elig_base contains 49,192 ETF/MF rows (ISIN INF...). Removed here with ISIN startswith 'INE'.",
+   "LOW: L.event_report by_liquidity_tercile forms terciles within the masked sample. For a setup mask this describes liquidity inside the events, not against the universe; use universe terciles per date instead.",
+   "DESIGN NOTE: the role's common barrier (pt 4.74\u00b7ATR, sl 3.16\u00b7ATR, 10 days) ends 82% of labels at the time barrier, so path-awareness is nominal. On the short side the stop is hit 19% vs the target 2%, giving short base net -99 bps per trade."
+  ],
+  "report_path": "/tmp/claude-0/-home-user-SuryaDhana-AI/09834923-517b-5951-ac02-867e5810ca36/scratchpad/lab/results/D_setups/tables_autogen.md",
+  "variants_tried": 300
+ }
+]

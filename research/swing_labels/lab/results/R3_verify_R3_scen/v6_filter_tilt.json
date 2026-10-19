@@ -1,0 +1,44 @@
+{
+ "elig": {
+  "mean_pct_minus_half": 0.0005016619976692116,
+  "up": 0.3004490146257346,
+  "down": 0.2995588941105502,
+  "date_matched_excess_all": 8.814894299864856e-20,
+  "date_matched_excess_dev": 3.5482783308868923e-19
+ },
+ "liq5": {
+  "mean_pct_minus_half": 0.0032176592235695356,
+  "up": 0.30263718788641014,
+  "down": 0.29361780174885393,
+  "date_matched_excess_all": 0.00019176386723965274,
+  "date_matched_excess_dev": 0.0007665366779781481
+ },
+ "fno": {
+  "mean_pct_minus_half": 0.01364469485641917,
+  "up": 0.29472193401529884,
+  "down": 0.2547823719933881,
+  "date_matched_excess_all": -0.00030533160746858265,
+  "date_matched_excess_dev": 0.0011202224680688553
+ },
+ "trend": {
+  "mean_pct_minus_half": 0.0002571719808242001,
+  "up": 0.3328519791629753,
+  "down": 0.3306519248260628,
+  "date_matched_excess_all": 0.0051889534082422565,
+  "date_matched_excess_dev": 0.001725601766322832
+ },
+ "washout": {
+  "mean_pct_minus_half": 0.01981534536742413,
+  "up": 0.3171758316361168,
+  "down": 0.26629327902240324,
+  "date_matched_excess_all": 0.004603621696019412,
+  "date_matched_excess_dev": 0.0034195267727497127
+ },
+ "deliv": {
+  "mean_pct_minus_half": 0.013563090304155812,
+  "up": 0.30645555051790885,
+  "down": 0.27171671374928796,
+  "date_matched_excess_all": 0.0026236684474223323,
+  "date_matched_excess_dev": 0.0027330823876400997
+ }
+}

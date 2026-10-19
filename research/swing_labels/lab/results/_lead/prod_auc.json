@@ -1,0 +1,22 @@
+{
+ "top30": {
+  "dev_ic_mean": 0.06632461602511419,
+  "dev_ic_t_nonoverlap": 9.049685692798993,
+  "dev_auc_mean": 0.5168815184999772,
+  "dev_auc_t_nonoverlap": 3.7271909896604134,
+  "holdout_ic_mean": 0.06263307630635197,
+  "holdout_ic_t_nonoverlap": 4.831635416300352,
+  "holdout_auc_mean": 0.508422078333419,
+  "holdout_auc_t_nonoverlap": 1.7994633887151597
+ },
+ "bottom30": {
+  "dev_ic_mean": 0.06632461602511419,
+  "dev_ic_t_nonoverlap": 9.049685692798993,
+  "dev_auc_mean": 0.5501702651679429,
+  "dev_auc_t_nonoverlap": 11.258185838512965,
+  "holdout_ic_mean": 0.06263307630635197,
+  "holdout_ic_t_nonoverlap": 4.831635416300352,
+  "holdout_auc_mean": 0.5559506048852016,
+  "holdout_auc_t_nonoverlap": 6.376488153151656
+ }
+}
