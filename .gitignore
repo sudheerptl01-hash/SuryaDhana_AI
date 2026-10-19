@@ -27,3 +27,8 @@ ml/results/improve/*/cache/
 ml/results/improve/*/preds/
 ml/results/improve/**/preds/
 ml/results/improve/**/cache/
+# live progress logs of running streams (final JSON/Markdown reports stay tracked)
+ml/results/improve/**/log.txt
+ml/results/improve/**/*.log
+ml/results/improve/**/download_stdout.txt
+ml/results/improve/**/download_status.json
