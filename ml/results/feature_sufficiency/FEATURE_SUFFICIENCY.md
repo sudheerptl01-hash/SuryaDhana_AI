@@ -1,6 +1,6 @@
 # Feature sufficiency: does the bhavcopy hold information the champion lacks?
 
-*Generated 2026-10-19T07:19:08 by `python3 -m ml.feature_sufficiency` (seed 108). Evidence: `feature_sufficiency.json`; feature definitions and leak checks: `manifest_suff.json`.*
+*Generated 2026-10-19T07:19:55 by `python3 -m ml.feature_sufficiency` (seed 108). Evidence: `feature_sufficiency.json`; feature definitions and leak checks: `manifest_suff.json`.*
 
 ## Verdict
 

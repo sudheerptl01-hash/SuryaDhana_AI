@@ -9282,6 +9282,6 @@
    "amihud_20"
   ]
  },
- "assembled_at": "2026-10-19T07:19:08",
+ "assembled_at": "2026-10-19T07:19:55",
  "provenance": "features + leak checks + champion-residual IC: full run (generated_at); sanity / all-40 / pilot-reference IC blocks: --ic-extras; A/B + bootstrap: --ab-only (control reused: identical subset/config, reproduces the stored lgbm_fs_selected_clean exactly); report: --report-only. A single `python3 -m ml.feature_sufficiency` recomputes everything in one pass."
 }
