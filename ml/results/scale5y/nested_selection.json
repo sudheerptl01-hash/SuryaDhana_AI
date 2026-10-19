@@ -3,7 +3,7 @@
  "generated_by": "ml/scale5y_nested.py (seed 108)",
  "method": {
   "candidates": "50 5-year base features (ml/data_5y manifest; dist_sma_50_isnan absent at 5y because it is <2% missing) + ['deliv_value_share_20', 'amihud_20'] (ml/feature_sufficiency.py definitions, rebuilt from nse_market.duckdb read-only)",
-  "window": "labeled clean rows dated <= train_end of fold <year>-01 (embargo-adjusted); 2023 window extended back to 2022-01-03 with rows rebuilt from DuckDB under ml/data.py definitions (the 5-year dataset has only 43 labeled sessions before 2022-12-01)",
+  "window": "labeled clean rows dated <= train_end of fold <year>-01 (embargo-adjusted); the selection universe is the 5-year dataset plus rows for 2022-01-03..2022-09-30 rebuilt from DuckDB under ml/data.py definitions (bit-identical to the dataset on 2022-10-03..2022-12-01), so every year's window starts 2022-01-03 (the 5-year dataset alone has only 43 labeled sessions before 2022-12-01)",
   "univariate": "fs.univariate_aucs over the last <= 12 21-session blocks of the window inside the 5-year dataset (2023: 2 blocks)",
   "importance": "fs.model_importances: champion-config LightGBM on the 504 sessions before the last 21-session block (22-session embargo, exit-date purge); gain + permutation (AUC drop, 3 repeats, seed 108) on that block",
   "redundancy": "fs.find_redundancy_clusters, |spearman rho| > 0.9, 100k-row sample of the window",
@@ -964,5 +964,6 @@
   "vol_20",
   "vol_ratio_20",
   "vol_z_20"
- ]
+ ],
+ "documentation_correction": "2026-10-19: this 'window' text originally said only the 2023 window was extended; the run used the rebuilt 2022 rows in every year's window (see per_year.*.window.first_date). Text corrected; no number in this file changed."
 }

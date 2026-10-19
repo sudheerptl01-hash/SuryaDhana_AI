@@ -591,7 +591,8 @@ def _outer_job(args):
         score = 1.0 / (1.0 + np.exp(-est.predict(Xte)))     # monotone map (AUC/ranks unchanged)
     elif kind == "catboost":
         from catboost import CatBoostClassifier
-        est = CatBoostClassifier(**CB_PARAMS)
+        # allow_writing_files=False: no catboost_info/ logs in the working directory (training unaffected)
+        est = CatBoostClassifier(**CB_PARAMS, allow_writing_files=False)
         est.fit(Xtr, ytr)
         score = est.predict_proba(Xte)[:, 1]
     else:
@@ -705,7 +706,11 @@ def ensemble(splits: dict) -> None:
         f = base[base["fold"] == s["name"]]
         met = compute_metrics(f["y"].to_numpy(np.float32), f["score"].to_numpy(float),
                               f["fwd"].to_numpy(np.float32))
-        met.update(fold=s["name"], n_train=0, train_seconds=0.0)
+        mm = json.loads((CACHE / "folds" / members[0] / f"{s['name']}.json").read_text())
+        met.update(fold=s["name"], n_train=mm["n_train"], n_train_before_purge=mm["n_train_before_purge"],
+                   n_train_purged_exit_ge_test_start=mm["n_train_purged_exit_ge_test_start"],
+                   n_features=mm["n_features"], train_seconds=0.0,
+                   note="no own fit: n_train / purge = the members' common training window")
         metas.append(met)
     corr = {}
     for a in range(len(members)):

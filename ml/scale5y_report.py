@@ -23,8 +23,8 @@ members) and writes ml/results/scale5y/scale5y_summary.json + tables.md:
    return over the month's signal dates; volatility = annualised std of the EW
    universe's daily close-to-close return over the month's sessions (|ret_1d| >
    22% split days excluded), high = above the median of the 43 CV months; plus
-   calendar year and the two called-out windows (2025-09..2026-02 run, 2026-03
-   crash); fold AUC and top-decile 20d excess vs the EW universe per regime;
+   calendar year and the two called-out windows (2025-09..2026-02 run, the
+   2026-03 AUC crash -- a sharp EW rebound month); fold AUC and top-decile 20d excess vs the EW universe per regime;
    count of months that look like 2026-04 (most features' IC inverted) ->
    regimes_5y.json + regimes_5y.md;
 5. portfolio on the 5-year OOS signal dates through ml/strategy_backtest.py's
@@ -35,7 +35,9 @@ members) and writes ml/results/scale5y/scale5y_summary.json + tables.md:
    annualised return, excess vs EW, Sharpe with month-block CI, max DD,
    turnover, monthly hit vs EW, PSR/DSR with N fixed in TRIALS below before any
    portfolio number is computed -> portfolio_5y.json;
-6. SCALE_UP.md gates 1-5 for nested_lgbm, all51 and nested_ensemble_rank.
+6. SCALE_UP.md gates 1-5 for nested_lgbm, all51 and nested_ensemble_rank
+   (the ensemble = per-date rank average of nested_lgbm, nested_lambdarank and
+   nested_catboost, all on the per-year NESTED feature sets).
 
 Run: cd /home/user/SuryaDhana_AI && python3 -m ml.scale5y_report [--skip-portfolio] [--B 1000]
 """
@@ -272,32 +274,14 @@ def bootstrap(base, scores, splits, models, Bn: int) -> dict:
     hrows = np.flatnonzero(fo == "holdout")
     hcode = np.searchsorted(hd, dts[hrows])
     frows = {f: np.flatnonzero(fo[cvrows] == f) for f in cvf}
-    draws = {}
-    for m in models:
-        if m not in scores:
-            continue
-        sc = scores[m]
-        if not np.isfinite(sc[cvrows]).all():
-            log(f"bootstrap: {m} has missing CV scores -- skipped")
-            continue
-        t1 = time.time()
-        scv, ycv = sc[cvrows], y[cvrows]
-        eng_f = {f: WeightedAUC(scv[frows[f]], ycv[frows[f]]) for f in cvf}
-        eng_p = WeightedAUC(scv, ycv)
-        eng_h = WeightedAUC(sc[hrows], y[hrows])
-        A = np.full((Bn, len(cvf)), np.nan)
-        pooled = np.empty(Bn)
-        ho = np.empty(Bn)
-        for b in range(Bn):
-            w = cnt[b][code_cv]
-            for i, f in enumerate(cvf):
-                if W[b, i] > 0:
-                    A[b, i] = eng_f[f].auc(w[frows[f]])
-            pooled[b] = eng_p.auc(w)
-            ho[b] = eng_h.auc(hcnt[b][hcode])
-        cv_mean = np.nansum(np.nan_to_num(A) * mult, 1) / np.where(W > 0, mult, 0).sum(1)
-        draws[m] = {"cv_mean": cv_mean, "pooled_cv": pooled, "holdout": ho}
-        log(f"bootstrap {m}: {time.time() - t1:.0f}s")
+    global _BT
+    _BT = dict(scores=scores, y=y, cvf=cvf, cvrows=cvrows, frows=frows, hrows=hrows, code_cv=code_cv,
+               hcode=hcode, cnt=cnt, hcnt=hcnt, W=W, mult=mult, Bn=Bn)
+    todo = [m for m in models if m in scores and np.isfinite(scores[m][cvrows]).all()]
+    import multiprocessing as mp
+    with mp.get_context("fork").Pool(min(2, len(todo))) as pool:
+        res = pool.map(_boot_one, todo, chunksize=1)
+    draws = dict(zip(todo, res))
     return {"draws": draws, "design": {
         "B": Bn, "seed": SEED, "block_sessions": BLOCK, "n_cv_dates": M, "n_cv_folds": len(cvf),
         "blocks_per_replicate": int(math.ceil(M / BLOCK)), "n_holdout_dates": int(len(hd)),
@@ -308,6 +292,33 @@ def bootstrap(base, scores, splits, models, Bn: int) -> dict:
               "weighted AUC over all CV rows (scores of 43 fold models pooled, as ml/eval_aggregate.py does)",
         "holdout": "20-session circular blocks inside the 32-date holdout (seed 109): ~2 blocks per replicate, so "
                    "the holdout CI is indicative only"}}
+
+
+_BT: dict = {}
+
+
+def _boot_one(m: str) -> dict:
+    t1 = time.time()
+    g = _BT
+    sc, y, cvf, cvrows, frows = g["scores"][m], g["y"], g["cvf"], g["cvrows"], g["frows"]
+    scv, ycv = sc[cvrows], y[cvrows]
+    eng_f = {f: WeightedAUC(scv[frows[f]], ycv[frows[f]]) for f in cvf}
+    eng_p = WeightedAUC(scv, ycv)
+    eng_h = WeightedAUC(sc[g["hrows"]], y[g["hrows"]])
+    Bn, W, mult = g["Bn"], g["W"], g["mult"]
+    A = np.full((Bn, len(cvf)), np.nan)
+    pooled = np.empty(Bn)
+    ho = np.empty(Bn)
+    for b in range(Bn):
+        w = g["cnt"][b][g["code_cv"]]
+        for i, f in enumerate(cvf):
+            if W[b, i] > 0:
+                A[b, i] = eng_f[f].auc(w[frows[f]])
+        pooled[b] = eng_p.auc(w)
+        ho[b] = eng_h.auc(g["hcnt"][b][g["hcode"]])
+    cv_mean = np.nansum(np.nan_to_num(A) * mult, 1) / np.where(W > 0, mult, 0).sum(1)
+    log(f"bootstrap {m}: {time.time() - t1:.0f}s")
+    return {"cv_mean": cv_mean, "pooled_cv": pooled, "holdout": ho}
 
 
 def ci(x) -> list:
@@ -403,6 +414,34 @@ def ic_block(base, scores, splits) -> tuple[dict, dict]:
     return out, {"dates": dates, "codes": codes, "months": dmon, "series": series, "seg": seg_d}
 
 
+EXPO_FEATS = ["atr_pct", "vol_20", "dist_52w_high", "log_turnover", "amihud_20", "mom_20", "ret_126d",
+              "deliv_pct_sma_20", "deliv_value_share_20"]
+
+
+def exposures(base, scores, icd) -> dict:
+    """Mean per-date Spearman correlation of each model's score with stock characteristics (CV dates; also
+    split by the month's direction). Explains what the extremes of each ranking are made of."""
+    codes, nd = icd["codes"], len(icd["dates"])
+    cvd = icd["seg"] == "cv"
+    yr = base["y_raw_20d"].to_numpy(float)
+    ew_d = np.bincount(codes, yr, nd) / np.bincount(codes, minlength=nd)
+    dmon = icd["months"]
+    mdir = {mo: (ew_d[dmon == mo].mean() > 0) for mo in set(dmon)}
+    up_d = np.array([mdir[mo] for mo in dmon])
+    out = {}
+    for m in ["nested_lgbm", "all51", ENS, "nested_lambdarank", "nested_catboost", "champion10", "lr_l2",
+              "nested_lr_l2", "baseline_mom", HEUR]:
+        if m not in scores:
+            continue
+        e = {}
+        for f in EXPO_FEATS:
+            c = per_date_ic(codes, scores[m], base[f].to_numpy(float), nd)
+            e[f] = {"cv_mean": float(np.nanmean(c[cvd])), "up_months": float(np.nanmean(c[cvd & up_d])),
+                    "down_months": float(np.nanmean(c[cvd & ~up_d])), "holdout": float(np.nanmean(c[icd["seg"] == "holdout"]))}
+        out[m] = e
+    return out
+
+
 # =========================================================================== #
 # regimes
 # =========================================================================== #
@@ -413,7 +452,7 @@ REGIME_DEF = {
                   "universe rows, |ret_1d| > 22% split/CA days excluded) over the month's sessions; high = above "
                   "the median of the 43 CV months (the same threshold classifies the holdout months)",
     "called_out": {"2025-09..2026-02 run": ["2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02"],
-                   "2026-03 crash": ["2026-03"]},
+                   "2026-03 AUC crash (EW rebound month)": ["2026-03"]},
     "fixed_before_looking_at_auc": True,
 }
 REGIME_MODELS = ["nested_lgbm", "all51", ENS, "champion10", "lr_l2", "nested_lr_l2", "baseline_mom", HEUR,
@@ -494,7 +533,7 @@ def regimes(base, scores, icd, feats, lg) -> dict:
         "39 folds 2023-01..2026-03 (config fixed on 2026-04..07)": [mo for mo in cvm if mo <= "2026-03"],
         "POST-HOC: folds 2024-10..2026-07 (full 504-session window)": [mo for mo in cvm if mo >= "2024-10"],
         "2025-09..2026-02 run": REGIME_DEF["called_out"]["2025-09..2026-02 run"],
-        "2026-03 crash": REGIME_DEF["called_out"]["2026-03 crash"],
+        "2026-03 AUC crash (EW rebound month)": REGIME_DEF["called_out"]["2026-03 AUC crash (EW rebound month)"],
         "43 CV months ex 2025-09..2026-03": [mo for mo in cvm if not ("2025-09" <= mo <= "2026-03")],
         "majority-inverted months (>50% of features' IC against their usual sign)":
             [mo for mo in cvm if inv_share[mo] > 0.5],
@@ -585,7 +624,7 @@ def load_prices(base: pd.DataFrame):
     return sessions, tick, O, adv20
 
 
-def portfolio(base, scores) -> dict:
+def portfolio(base, scores, only: list[str] | None = None) -> dict:
     t1 = time.time()
     sessions, tick, O, adv20 = load_prices(base)
     blocks, check = sb.build_blocks(base, sessions, tick, O, adv20)
@@ -610,7 +649,7 @@ def portfolio(base, scores) -> dict:
                                                          rf=sb.RF_ANNUAL)}
     c20 = int(COST_KEY.replace("bps", "")) / 1e4
     books, skill, raw = {}, {}, {}
-    scorers = [s_ for s_ in PORT_SCORERS if s_ in scores and np.isfinite(scores[s_]).all()]
+    scorers = [s_ for s_ in (only or PORT_SCORERS) if s_ in scores and np.isfinite(scores[s_]).all()]
     for sc in scorers:
         for bk in BASKETS:
             r = eng.run(scores[sc], bk)
@@ -675,7 +714,8 @@ def portfolio(base, scores) -> dict:
             del r
     # ---- PSR / DSR (N fixed in TRIALS / N_HEADLINE at the top of this file)
     keys = list(skill)
-    assert len(keys) == TRIALS["5y_portfolio_books"], f"grid has {len(keys)} books, TRIALS says {TRIALS['5y_portfolio_books']}"
+    if only is None:
+        assert len(keys) == TRIALS["5y_portfolio_books"], f"grid has {len(keys)} books, TRIALS says {TRIALS['5y_portfolio_books']}"
     sr = {k: sb.wmoments(skill[k], EX)[0] / sb.wmoments(skill[k], EX)[1] for k in keys}
     srr = {k: sb.wmoments(raw[k], EX)[0] / sb.wmoments(raw[k], EX)[1] for k in raw}
     var_sr = float(np.var(list(sr.values()), ddof=1))
@@ -855,6 +895,14 @@ def write_tables(S: dict) -> None:
                 md.append(f"| *{nm} (passive)* | {pct(c['tranche']['ann_return_252_h'])} | — | {c['daily']['sharpe']:+.2f} "
                           f"[{c['daily']['sharpe_ci95'][0]:+.2f}, {c['daily']['sharpe_ci95'][1]:+.2f}] | — | {pct(c['daily']['max_dd'])} | "
                           f"{100 * P['benchmarks'][nm]['turnover_per_rebalance']:.0f}% | | | | |")
+    ex = S.get("score_exposures_mean_per_date_spearman", {})
+    if ex:
+        md.append("\n## What the rankings are made of: mean per-date Spearman of score with characteristics (43 CV months; up / down months)\n")
+        md.append("| model | " + " | ".join(EXPO_FEATS) + " |")
+        md.append("|---|" + "---|" * len(EXPO_FEATS))
+        for m, e in ex.items():
+            md.append(f"| {m} | " + " | ".join(f"{e[f]['cv_mean']:+.2f} ({e[f]['up_months']:+.2f} / {e[f]['down_months']:+.2f})"
+                                               for f in EXPO_FEATS) + " |")
     md.append("\n## Gates (SCALE_UP.md, pre-registered)\n")
     md.append("| gate | " + " | ".join(S["gates"]) + " |")
     md.append("|---|" + "---|" * len(S["gates"]))
@@ -888,6 +936,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-portfolio", action="store_true")
     ap.add_argument("--B", type=int, default=1000)
+    ap.add_argument("--port-scorers", nargs="+", default=None, help="TEST ONLY: subset of scorers (relaxes the N check)")
     a = ap.parse_args()
     splits = json.loads((DATA_5Y / "splits.json").read_text())
     feats = json.loads((DATA_5Y / "manifest.json").read_text())["features"]
@@ -906,6 +955,8 @@ def main() -> None:
     log("bootstrap_5y.json written")
     ric, icd = ic_block(base, {m: s_ for m, s_ in scores.items() if m in lg}, splits)
     log("rank-IC done")
+    expo = exposures(base, {m: s_ for m, s_ in scores.items() if m in lg}, icd)
+    log("exposures done")
     rg = regimes(base, scores, icd, feats, lg)
     wjson(OUT / "regimes_5y.json", {"generated_at": pd.Timestamp.now().isoformat(timespec="seconds"),
                                     "generated_by": "ml/scale5y_report.py (seed 108)", **rg})
@@ -914,7 +965,9 @@ def main() -> None:
     sel = json.loads((OUT / "nested_selection.json").read_text())
     port = None
     if not a.skip_portfolio:
-        port = portfolio(base, scores)
+        port = portfolio(base, scores, a.port_scorers)
+        if a.port_scorers:
+            port["TEST_SUBSET_ONLY"] = True
         wjson(OUT / "portfolio_5y.json", {"generated_at": pd.Timestamp.now().isoformat(timespec="seconds"),
                                           "generated_by": "ml/scale5y_report.py (seed 108)", **port})
         log("portfolio_5y.json written")
@@ -926,7 +979,7 @@ def main() -> None:
          "dataset": {k: v for k, v in json.loads((DATA_5Y / "manifest.json").read_text()).items() if k != "features"},
          "n_test_rows": int(len(base)), "n_signal_dates": int(base["date"].nunique()),
          "models_present": list(lg), "league": lg,
-         "bootstrap": bs, "rank_ic": ric,
+         "bootstrap": bs, "rank_ic": ric, "score_exposures_mean_per_date_spearman": expo,
          "regimes": {"definition": rg["definition"], "groups": rg["groups"], "counts": rg["counts"],
                      "n_cv_months_majority_inverted": rg["n_cv_months_majority_inverted"],
                      "majority_inverted_months": rg["majority_inverted_months"],
@@ -951,7 +1004,7 @@ def main() -> None:
          "dsr_trials": {"TRIALS": TRIALS, "N_headline": N_HEADLINE, "N_sensitivity": N_SENSITIVITY},
          "gates": G, "posthoc_stability_comparison": posthoc_stability(lg)}
     wjson(OUT / "scale5y_summary.json", S)
-    write_tables(clean(S))
+    write_tables(clean({**S, "portfolio": port}))
     for m, g in G.items():
         log(f"GATES {m}: " + "; ".join(f"{k}={'PASS' if v['pass'] else 'FAIL'}" for k, v in g.items() if isinstance(v, dict)))
     log("wrote scale5y_summary.json + tables.md")
