@@ -35,6 +35,7 @@ import csv
 import html
 import json
 import math
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -251,22 +252,29 @@ def neg(s: str) -> str:
     return s.replace("-", MINUS)
 
 
+def dq(x: float, d: int, scale: int = 1) -> Decimal:
+    """Round half-up on the value as stored (0.0455 -> 0.046, as the Markdown rounds it), not on its
+    binary float expansion (which gives 0.045); a rounded negative zero becomes zero."""
+    q = (Decimal(repr(float(x))) * scale).quantize(Decimal(1).scaleb(-d), rounding=ROUND_HALF_UP)
+    return q + 0
+
+
 def f(x: float, d: int = 4) -> str:
-    return neg(f"{x:.{d}f}")
+    return neg(f"{dq(x, d):.{d}f}")
 
 
 def sg(x: float, d: int = 3) -> str:
-    return neg(f"{x:+.{d}f}")
+    return neg(f"{dq(x, d):+.{d}f}")
 
 
 def pc(x: float, d: int = 1) -> str:
     """Signed percent of a fraction."""
-    return neg(f"{x * 100:+.{d}f}%")
+    return neg(f"{dq(x, d, 100):+.{d}f}%")
 
 
 def pu(x: float, d: int = 0) -> str:
     """Unsigned percent of a fraction."""
-    return neg(f"{x * 100:.{d}f}%")
+    return neg(f"{dq(x, d, 100):.{d}f}%")
 
 
 def n(x) -> str:
