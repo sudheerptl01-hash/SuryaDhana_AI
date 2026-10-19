@@ -184,9 +184,30 @@ def _to_num(series: pd.Series) -> pd.Series:
     )
 
 
+def _read_bhav_table(raw: bytes) -> pd.DataFrame:
+    """Read a bhavcopy body whatever the archive actually served.
+
+    Some days come back as an .xlsx workbook under the .csv name (zip magic
+    'PK'), and a few older CSVs are not valid UTF-8; an HTML error page under
+    HTTP 200 is rejected so the day is skipped rather than ingested.
+    """
+    head = raw[:4]
+    if head.startswith(b"PK"):
+        return pd.read_excel(io.BytesIO(raw))
+    if head.startswith(b"\x1f\x8b"):
+        import gzip
+        raw = gzip.decompress(raw)
+    if raw.lstrip()[:1] == b"<":
+        raise ValueError("HTML body served instead of a bhavcopy")
+    try:
+        return pd.read_csv(io.BytesIO(raw))
+    except UnicodeDecodeError:
+        return pd.read_csv(io.BytesIO(raw), encoding="latin-1")
+
+
 def parse_sec_delivery(raw: bytes, trade_date: date) -> pd.DataFrame:
     """Standardize the security-wise full bhavcopy (OHLC + delivery)."""
-    df = pd.read_csv(io.BytesIO(raw))
+    df = _read_bhav_table(raw)
     df.columns = [c.strip().upper() for c in df.columns]  # NSE pads headers
     df = df[df["SERIES"].astype(str).str.strip().isin(["EQ", "BE", "BZ", "SM", "ST"])].copy()
 
@@ -612,8 +633,10 @@ def run_ingest(args: argparse.Namespace) -> None:
     end = datetime.strptime(args.end, "%Y-%m-%d").date() if args.end else date.today()
 
     # Resume: skip everything already loaded unless --rebuild.
+    # Resume only when extending forward; a backfill window that ends before
+    # the last loaded date keeps its start and skips stored days one by one.
     last = store.last_date()
-    if last and not args.rebuild and last >= start:
+    if last and not args.rebuild and start <= last < end:
         start = last + timedelta(days=1)
         log.info("Resuming: last loaded date is %s; starting at %s", last, start)
 
@@ -633,7 +656,12 @@ def run_ingest(args: argparse.Namespace) -> None:
         for i, d in enumerate(days, 1):
             if not args.rebuild and store.has_date(d):
                 continue
-            df = fetch_day(sess, d, use_pr=not args.no_pr)
+            try:
+                df = fetch_day(sess, d, use_pr=not args.no_pr)
+            except Exception as exc:  # noqa: BLE001 -- one bad file must not end a 5-year run
+                log.warning("[%d/%d] %s -> unreadable file (%s); skipped", i, len(days), d, exc)
+                sess._sleep()
+                continue
             if df is not None and not df.empty:
                 # Duplicate-day guard: some mirrors answer a market holiday
                 # with the PREVIOUS session's file instead of a 404. An exact
