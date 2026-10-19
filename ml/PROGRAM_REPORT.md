@@ -109,9 +109,9 @@ The exact column names, definitions, clean masks, embargo lengths, the ETF exclu
 | **52-week high / low distance** | `dist_52w_high`, `dist_52w_low` | selected in 3 of 4 yearly re-selections at 5 years | Stable carrier of trend and drawdown state. |
 | **Volatility** | `atr_pct`, `vol_20`, `cs_rank_vol_20` | atr_pct averaged −0.147 for 9 months (2025-06 to 2026-02), then +0.091 from March 2026 | A regime variable, not alpha. Every challenger model that drifted off the champion collapsed onto this factor (§6.2). |
 | **Liquidity / size proxies** | `log_turnover`, `cs_rank_turnover`, `amihud_20` | amihud_20 residual IC −0.040 (t −3.07, q 0.089); the only feature selected in all four yearly re-selections | Carries information the pilot's 10 features lacked. |
-| **Short horizon** (mom_5/10, dist_sma_5/10/20, ret_1d, rsi_2, gap_pct, vol_z_20, flag_split_20d) | | all \|t\| < 1, sign consistency ≤ 0.56 | Dead weight. Adding more of them has negative expected value. |
+| **Short horizon** (mom_5/10, dist_sma_5/10/20, ret_1d, rsi_2, gap_pct, vol_z_20, flag_split_20d) | | all \|t\| < 1, sign consistency no better than 0.63 | Dead weight. Adding more of them has negative expected value. |
 
-Other facts that shape the design: edge is not confined to the illiquid tail (composite IC by turnover tercile 0.049 / 0.073 / 0.058 from least to most liquid); the one interaction that earns a slot is momentum × volatility (+1.05 pp double difference, same sign in 86% of months); delivery and momentum are substitutes, not a confirmation pair; daily ICs are nearly fully dependent draws (mom_12_1 lag-1 autocorrelation 0.968), so only date-block significance is honest; **March 2026 is a common-mode inversion month**, the worst IC month for 25 of 40 features at once, which is why every model's April 2026 fold was adversarial and why the 5-year fold for March 2026 is the worst month for every model (§6.3).
+Other facts that shape the design: edge is not confined to the illiquid tail (composite IC by turnover tercile 0.049 / 0.073 / 0.058 from least to most liquid); the one interaction that earns a slot is momentum × volatility (+1.1 pp double difference, same sign in 86% of months); delivery and momentum are substitutes, not a confirmation pair; daily ICs are nearly fully dependent draws (mom_12_1 lag-1 autocorrelation 0.968), so only date-block significance is honest; **March 2026 is a common-mode inversion month**, the worst IC month for 25 of 40 features at once, which is why every model's April 2026 fold was adversarial and why the 5-year fold for March 2026 is the worst month for every model (§6.3).
 
 ### 5.2 Sufficiency: three attempts to improve the features, one modest success
 
@@ -142,9 +142,9 @@ The pilot's 10 features were ranked by univariate AUC on the four CV test months
 | Decision tree | trees | 0.5058 | 0.488 | 0.536 | |
 | LightGBM, all features | GBM | 0.5044 | 0.481 | 0.563 | |
 | MLP | deep | 0.5025 | 0.481 | 0.538 | |
-| XGBoost | GBM | 0.5023 | 0.480 | 0.565 | |
+| XGBoost | GBM | 0.5023 | 0.479 | 0.565 | |
 | LSTM | deep | 0.5018 | 0.482 | 0.542 | |
-| Momentum rule (1 feature) | baseline | 0.4934 | 0.487 | 0.530 | |
+| Momentum rule (1 feature) | baseline | 0.4934 | 0.487 | 0.530 | clean rerun 0.4906 |
 | GRU | deep | 0.4889 | 0.473 | 0.547 | |
 
 Twelve of thirteen candidates scored better on the single holdout than on CV, and the two views rank models in near-opposite order (Spearman −0.60): one regime change sitting on the CV/holdout boundary. That is why the program moved to 43 folds.
@@ -169,7 +169,7 @@ Why trees win here: the signal is weak and lives in a few slow features (IC abou
 |---|---:|---|---|---:|---:|---:|---|
 | LightGBM, all features (`all51`) | 50 | **0.5366 ± 0.043** | [0.5254, 0.5498] | 35 / 43 (81%) | 0.453 (2026-03) | 0.533 (−0.61%) | +1.25% (30 / 43) |
 | LightGBM, nested yearly selection (`nested_lgbm`, exit-date purge) | 5 to 15 | 0.5359 ± 0.041 | [0.5250, 0.5483] | 37 / 43 (86%) | 0.431 (2026-03) | 0.528 (−0.61%) | **+1.32% (33 / 43)** |
-| Rank ensemble (`nested_ensemble_rank`: LightGBM + LambdaRank + CatBoost on the nested sets) | 5 to 15 | 0.5330 ± 0.036 | [0.5232, 0.5438] | **39 / 43 (91%)** | 0.463 (2025-01) | **0.553 (+2.86%)** | |
+| Rank ensemble (`nested_ensemble_rank`: LightGBM + LambdaRank + CatBoost on the nested sets) | 5 to 15 | 0.5330 ± 0.035 | [0.5232, 0.5438] | **39 / 43 (91%)** | 0.463 (2025-01) | **0.552 (+2.86%)** | |
 | CatBoost, 600 fixed trees (ensemble member) | 5 to 15 | 0.5378 ± 0.043 | | 37 / 43 (86%) | 0.426 (2026-03) | 0.529 (−0.51%) | |
 | LambdaRank (ensemble member) | 5 to 15 | 0.5032 ± 0.045 | | 25 / 43 (58%) | 0.361 (2025-01) | 0.572 (+6.68%) | |
 | LightGBM, pilot 10 features (`champion10`) | 10 | 0.5251 ± 0.038 | [0.5150, 0.5362] | 31 / 43 (72%) | 0.449 (2025-05) | 0.529 (−0.43%) | +0.74% (27 / 43) |
@@ -181,7 +181,7 @@ Head-to-head by fold: all features beat the pilot's 10 in 32 of 43; nested beat 
 
 **Paired 20-session block bootstrap** (B = 1000, 45 blocks per replicate over the pooled 881 test dates, identical draws for every model; `bootstrap_5y.json`): nested selection vs all features −0.0007 [−0.0052, +0.0038] (a tie); pilot 10 features vs all features −0.0115 [−0.0159, −0.0071] (a real loss); nested LightGBM vs L2 logistic −0.0056 [−0.0150, +0.0024]; ensemble vs L2 logistic −0.0085 [−0.0222, +0.0027]. The program cannot claim that any machine-learning model beats the linear benchmark on AUC.
 
-**Regimes** (defined from market data before any AUC was split by them; `regimes_5y.md`): models score higher in down months (nested LightGBM 0.571 over 14 months) than in up months (0.519 over 29), and higher in low-volatility months (0.547) than in high-volatility ones (0.524). One episode lifts the five-year mean: the September 2025 to February 2026 run (five of six months down, four low-volatility) carries every model to about 0.60; without it and March 2026, nested LightGBM averages 0.5267 over the other 36 months. March 2026 was a V-shaped rebound after the February sell-off (equal-weight universe +9.2% in 20 days, volatility 33%) in which 62% of features had their IC against its usual sign; six of 43 months had a majority of features inverted (2023-07, 2024-01, 2025-04, 2025-05, 2026-03, 2026-04).
+**Regimes** (defined from market data before any AUC was split by them; `regimes_5y.md`): models score higher in down months (nested LightGBM 0.571 over 14 months) than in up months (0.519 over 29), and higher in low-volatility months (0.547) than in high-volatility ones (0.524). One episode lifts the five-year mean: the September 2025 to February 2026 run (five of six months down, four low-volatility) carries every model to a window mean of 0.58 to 0.63; without it and March 2026, nested LightGBM averages 0.5267 over the other 36 months. March 2026 was a V-shaped rebound after the February sell-off (equal-weight universe +9.2% in 20 days, volatility 33%) in which 62% of features had their IC against its usual sign; six of 43 months had a majority of features inverted (2023-07, 2024-01, 2025-04, 2025-05, 2026-03, 2026-04).
 
 **By calendar year** (mean fold AUC; **the 2023 folds train on short windows** because the dataset starts in October 2022: 41,733 training rows for 2023-01, 292,582 for 2023-12, the full 504-session window of 580k+ rows only from 2024-10):
 
@@ -189,16 +189,16 @@ Head-to-head by fold: all features beat the pilot's 10 in 32 of 43; nested beat 
 |---|---:|---:|---:|---:|---:|---:|
 | 2023 (short training windows) | 12 | 0.517 | 0.509 | 0.498 | 0.515 | 0.502 |
 | 2024 | 12 | 0.536 | 0.551 | 0.538 | 0.549 | 0.500 |
-| 2025 | 12 | 0.557 | 0.552 | 0.534 | 0.573 | 0.489 |
-| 2026 (Jan to Jul) | 7 | 0.533 | 0.533 | 0.534 | 0.521 | 0.488 |
+| 2025 | 12 | 0.557 | 0.552 | 0.534 | 0.573 | 0.488 |
+| 2026 (Jan to Jul) | 7 | 0.532 | 0.532 | 0.534 | 0.521 | 0.487 |
 
-Every model moves together month to month: all of them run 0.60 to 0.66 from September 2025 to February 2026 and all of them crash in March 2026 (0.37 to 0.45), the inversion month the EDA identified. The common component is the market regime, not the algorithm.
+Every model moves together month to month: over the six months from September 2025 to February 2026 every model averages 0.58 to 0.63 (individual months 0.55 to 0.67), and in March 2026, the inversion month the EDA identified, every candidate except the LambdaRank member falls to 0.38 to 0.47 (the worst month for six of the nine). The common component is the market regime, not the algorithm.
 
 **Four findings from the 5-year run.**
 
-1. **Feature selection did not transfer, and is not needed.** The pilot's 10 features lose to all features by 0.0115 AUC [0.0071, 0.0159] and in 32 of 43 months; they average 0.4979 in 2023. Honest yearly re-selection recovers the full-feature score exactly (0.5359 vs 0.5366) at the price of unstable, alternating sets, and it helped only in 2023, with small training sets. LightGBM's own regularisation does the job. The single-model reference uses all 52 features.
+1. **Feature selection did not transfer, and is not needed.** The pilot's 10 features lose to all features by 0.0115 AUC [0.0071, 0.0159] and in 32 of 43 months; they average 0.4979 in 2023. Honest yearly re-selection recovers the full-feature score exactly (0.5359 vs 0.5366) at the price of unstable, alternating sets; it helped in 2023 and 2025 (0.5565 vs 0.5524) and hurt in 2024 (0.5363 vs 0.5505). LightGBM's own regularisation does the job. The single-model reference uses all 52 features.
 2. **The linear model has the highest mean and the worst risk.** L2 logistic scores 0.5415 (0.5430 nested), above LightGBM, so pre-registered gate 1 fails as written. It is the purest defensive-factor ranker in the league: per-date score correlation −0.50 with `atr_pct`, −0.45 with Amihud illiquidity and +0.49 with the 52-week high (LightGBM: −0.30, −0.29, +0.25). AUC rewards that tilt in down months (0.607) and punishes it in rebounds (0.379 in March 2026); its month-to-month spread is 1.4× LightGBM's and its holdout decile spread is −3.6%, with its bottom decile its best decile. Nonlinearity here buys stability and sane tails, not mean accuracy, which matches the literature's modest GBM-over-linear gains (GKX: 0.33 to 0.40% vs 0.11 to 0.27% monthly R²).
-3. **AUC and tradability disagree.** AUC 0.536 with an IC t of 6 coexists with no long-only edge (§7.2). The label "beat the universe median" rewards low-volatility names, which cross the median often but do not beat the mean of a right-skewed, rising universe, so the classifiers' top deciles are defensive: nested LightGBM's trails the equal-weight universe by 0.58% per 20 days in up months, net of costs. The negative holdout decile spreads (every classifier −0.4% to −3.6%, the momentum rule +2.95%) are the same tilt over one 32-day window; across the 43 folds the classifiers' mean decile spreads are positive (+1.25% to +1.32%, positive in 30 to 33 months). The ensemble shows the fix: adding the high-volatility LambdaRank makes the blended score volatility-neutral (correlation with `atr_pct` −0.05), costs 0.003 of AUC and turns −0.7% a year into +7.0% a year over the universe. AUC is necessary, not sufficient; models are judged on net excess over the equal-weight universe.
+3. **AUC and tradability disagree.** AUC 0.536 with an IC t of 6 coexists with no long-only edge (§7.2). The label "beat the universe median" rewards low-volatility names, which cross the median often but do not beat the mean of a right-skewed, rising universe, so the classifiers' top deciles are defensive: nested LightGBM's trails the equal-weight universe by 0.58% per 20 days in up months, net of costs. The negative holdout decile spreads (every classifier −0.4% to −3.6%, the momentum rule +2.95%) are the same tilt over one 32-day window; across the 43 folds the LightGBM models' mean decile spreads are positive (+1.25% to +1.32%, positive in 30 to 33 months). The ensemble shows the fix: adding the high-volatility LambdaRank makes the blended score volatility-neutral (correlation with `atr_pct` −0.05), costs 0.003 of AUC and turns −0.7% a year into +7.0% a year over the universe. AUC is necessary, not sufficient; models are judged on net excess over the equal-weight universe.
 4. **Hyperparameters are a mild contamination of 2026.** The LightGBM configuration (num_leaves 63, learning rate 0.05, 300 trees, feature and bagging fraction 0.8, min_data_in_leaf 200) was chosen in the pilot, which saw April to July 2026. Those 4 folds and the holdout are therefore not fully out-of-sample for the configuration; the 39 folds from 2023-01 to 2026-03 are. Removing those folds leaves the ranking unchanged (39 folds, 2023-01 to 2026-03: all features 0.5376, nested 0.5364, pilot 10 features 0.5240, L2 logistic 0.5441, momentum rule 0.4956; derived from the per-fold JSONs).
 
 ### 6.4 Bifurcation: what is dropped and the evidence
@@ -243,7 +243,7 @@ Same engine and costs as the pilot. **N = 177 trials was fixed in the code befor
 | Equal-weight universe (passive) | +19.4% | | 0.69 [−0.27, 1.80] | | −27.8% | 7% | | | |
 | Nested LightGBM, top decile | +18.7% | −0.7% | 0.73 [−0.19, 1.75] | −0.11 [−1.21, 0.96] | −27.0% | 67% | 20 / 45 | 0.42 | 0.000 |
 | Nested LightGBM, liquid top decile | +16.3% | −3.4% | 0.56 | −0.53 [−1.56, 0.45] | −29.3% | 72% | 18 / 45 | 0.16 | 0.000 |
-| LightGBM all features, top decile | +18.2% | −1.2% | 0.71 | −0.21 [−1.37, 0.94] | −27.9% | 68% | 20 / 45 | 0.35 | 0.000 |
+| LightGBM all features, top decile | +18.2% | −1.2% | 0.71 | −0.21 [−1.37, 0.94] | −27.9% | 68% | 20 / 45 | 0.34 | 0.000 |
 | **Rank ensemble, top decile** | +26.5% | **+7.0%** | 0.99 [0.06, 2.10] | **1.26 [0.32, 2.37]** | −28.9% | 70% | 33 / 45 | 0.99 | 0.163 |
 | Rank ensemble, liquid top decile (the pre-registered paper book) | +25.5% | +5.7% | 0.88 [−0.01, 1.88] | 0.85 [−0.21, 1.99] | −29.1% | 77% | 29 / 45 | 0.94 | 0.040 |
 | Rank ensemble, long-short | +16.0% | | **1.77 [0.82, 2.91]** | | −8.3% | 70% | 34 / 45 | 1.00 | **0.490** |
@@ -326,7 +326,7 @@ Same engine and costs as the pilot. **N = 177 trials was fixed in the code befor
 | L2 logistic coefficient sign flips, top 5 by magnitude | any flip | regime drift, cheap to compute |
 | Feature population stability index | > 0.25 on any champion feature | distribution drift (atr_pct kurtosis ≈ 13,900: tails move) |
 | Paper book active return vs equal-weight universe, trailing 6 months | IR confidence interval entirely below zero | the economics, measured the honest way |
-| Feature-inversion monitor | more than half of the features with IC against their usual sign in a month | 6 of 43 months were inversion months and every model failed in March 2026 |
+| Feature-inversion monitor | more than half of the features with IC against their usual sign in a month | 6 of 43 months were inversion months and every candidate except the LambdaRank member failed in March 2026 |
 | Ensemble score correlation with `atr_pct`, per date | absolute value above 0.20 for a month | the book's edge rests on staying volatility-neutral (−0.05 as tested) |
 | Universe ETF count, split flag rate | ETFs > 0 after the exclusion rule; `flag_split_20d` > 1% | data integrity |
 
@@ -358,11 +358,11 @@ Same engine and costs as the pilot. **N = 177 trials was fixed in the code befor
 - It does not claim a tradable edge. No model passes more than one of five pre-registered gates, and the best Deflated Sharpe in the program is 0.49, for a long-short book that cannot be traded as tested.
 - It does not claim that machine learning beats a linear model on this problem; the logistic benchmark's mean AUC is higher and every paired interval includes zero.
 - It does not claim that the ensemble's +7% a year over the universe is skill rather than a favourable volatility-factor mix over 45 months of one, mostly rising, market.
-- It does not claim that any model is reliable month to month: the single-model candidates fall below 0.50 in 6 to 9 of 43 months, and every candidate did in March 2026.
+- It does not claim that any model is reliable month to month: the single-model candidates fall below 0.50 in 6 to 9 of 43 months, and every candidate except the LambdaRank member did in March 2026.
 - It does not claim the delivery signal is durable. Its IC fell by two-thirds after one regime break and there is no external literature.
-- It does not claim the 2023 fold results are representative: those models trained on 2 to 12 months of data.
+- It does not claim the 2023 fold results are representative: those models trained on 2 to 13 months of data.
 - It does not claim the 2026 folds are fully out-of-sample for the LightGBM configuration, which was tuned on them in the pilot.
-- It does not claim that AUC differences of 0.01 between models are decidable on these samples: the paired block-bootstrap intervals are about ±0.005 to ±0.015 wide.
+- It does not claim that AUC differences of 0.01 between models are decidable on these samples: the paired block-bootstrap intervals are about ±0.004 to ±0.014 wide.
 - It does not claim realistic costs for the illiquid tail or for any short book.
 
 ---

@@ -35,6 +35,7 @@ import csv
 import html
 import json
 import math
+import re
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -255,6 +256,8 @@ def neg(s: str) -> str:
 def dq(x: float, d: int, scale: int = 1) -> Decimal:
     """Round half-up on the value as stored (0.0455 -> 0.046, as the Markdown rounds it), not on its
     binary float expansion (which gives 0.045); a rounded negative zero becomes zero."""
+    if not math.isfinite(x):
+        return Decimal(repr(float(x)))
     q = (Decimal(repr(float(x))) * scale).quantize(Decimal(1).scaleb(-d), rounding=ROUND_HALF_UP)
     return q + 0
 
@@ -264,12 +267,15 @@ def f(x: float, d: int = 4) -> str:
 
 
 def sg(x: float, d: int = 3) -> str:
-    return neg(f"{dq(x, d):+.{d}f}")
+    """Signed, except a value that rounds to zero, which carries no sign."""
+    q = dq(x, d)
+    return neg(f"{q:+.{d}f}") if q else f"{q:.{d}f}"
 
 
 def pc(x: float, d: int = 1) -> str:
-    """Signed percent of a fraction."""
-    return neg(f"{dq(x, d, 100):+.{d}f}%")
+    """Signed percent of a fraction (no sign on a value that rounds to zero)."""
+    q = dq(x, d, 100)
+    return neg(f"{q:+.{d}f}%") if q else f"{q:.{d}f}%"
 
 
 def pu(x: float, d: int = 0) -> str:
@@ -365,6 +371,11 @@ def pending_card(title: str, files: list[str], running: str) -> str:
             f'<p>Waits for {fl}. {E(running)}</p>'
             f'<p class="dim2">Re-run <code>python3 -m ml.make_program_report</code> when it lands; this card '
             f'is then replaced by the numbers.</p></div>')
+
+
+def two(a: str, b: str) -> str:
+    """A table value with a muted detail line under it (keeps wide tables narrow)."""
+    return f'{a}<span class="sub">{b}</span>'
 
 
 def srcs(*paths: str) -> str:
@@ -476,7 +487,7 @@ def compute_gates() -> dict:
         g["4"] = {"num": ", ".join(str(x) for x in D.top10_overlap), "pass": min(D.top10_overlap) >= 7}
         if P.port and f"{m}|{PAPER_BASKET}" in P.port["dsr"]["books"]:
             e = P.port["dsr"]["books"][f"{m}|{PAPER_BASKET}"]["skill"][nh]
-            g["5"] = {"num": f"{e['dsr']:.3f}", "pass": e["dsr"] >= 0.95}
+            g["5"] = {"num": f"{f(e['dsr'], 3)}", "pass": e["dsr"] >= 0.95}
         out[m] = g
     if P.summary is not None:   # cross-check against the scale-up agent's own scoring
         for m, g in out.items():
@@ -488,7 +499,7 @@ def compute_gates() -> dict:
 
 
 def ninth(x: float) -> str:
-    return f"{x:.2f}"
+    return f"{f(x, 2)}"
 
 
 def cap5(x: float) -> str:
@@ -497,7 +508,7 @@ def cap5(x: float) -> str:
 
 # ===================================================================== charts
 def svg_coverage() -> str:
-    W, H = 920, 240
+    W, H = 920, 206
     X0, X1 = 150, 902
 
     def mi(d: str) -> float:
@@ -563,16 +574,15 @@ def svg_coverage() -> str:
     xm = X("2026-03-01")
     p.append(f'<line x1="{xm:.1f}" y1="{y2 - 8}" x2="{xm:.1f}" y2="{y3 + 24}" class="mark"/>')
     p.append(f'<text x="{xm - 5:.1f}" y="{y2 - 11}" class="ax ax-s" text-anchor="end">March 2026 inversion</text>')
-    ky = H - 38
-    keys = [("seg-warm", "training only"), ("seg-cv", "monthly CV folds"), ("seg-ho", "holdout, used once"),
-            ("seg-tail", "unlabelled tail")]
-    x = X0
-    for cls, t in keys:
-        p.append(f'<rect x="{x}" y="{ky - 9}" width="12" height="10" rx="2" class="{cls}"/>'
-                 f'<text x="{x + 17}" y="{ky}" class="ax ax-s">{t}</text>')
-        x += 30 + 6.2 * len(t)
     p.append("</svg>")
     return "".join(p)
+
+
+COV_KEY = ('<ul class="legend sm"><li><span class="chip" style="background:var(--axisc)"></span>training only</li>'
+           '<li><span class="chip" style="background:var(--s1)"></span>monthly CV folds</li>'
+           '<li><span class="chip" style="background:var(--s2)"></span>holdout, used once</li>'
+           '<li><span class="chip tail"></span>unlabelled tail (20-session label window)</li>'
+           '<li><span class="tk"></span>holiday-echo day removed</li></ul>')
 
 
 H_ORDER = [1, 2, 3, 5, 10, 20, 40]
@@ -604,7 +614,7 @@ def svg_horizon_panel(kind: str) -> tuple[str, str]:
         ser = [("excess, next-open", "s1", ex), ("raw > 0, close-to-close", "s2", raw)]
 
         def fmt(v):
-            return f"{v:.3f}"
+            return f"{f(v, 3)}"
     else:
         title = "Break-even cost, bps per side at 100% turnover"
         d0, d1, ticks = 0, 30, [0, 10, 20, 30]
@@ -614,7 +624,7 @@ def svg_horizon_panel(kind: str) -> tuple[str, str]:
         ser = [("excess, next-open", "s1", ex), ("raw > 0, close-to-close", "s2", raw)]
 
         def fmt(v):
-            return f"{v:.1f}"
+            return f"{f(v, 1)}"
 
     def Y(v: float) -> float:
         return lin(v, d0, d1, Y1, Y0)
@@ -623,14 +633,14 @@ def svg_horizon_panel(kind: str) -> tuple[str, str]:
     for t in ticks:
         cls = "chance" if (kind == "auc" and t == 0.50) else ("axisln" if t == 0 else "grid")
         p.append(f'<line x1="{X0}" y1="{Y(t):.1f}" x2="{X1}" y2="{Y(t):.1f}" class="{cls}"/>')
-        tl = f"{t:.2f}" if kind == "auc" else f"{t:d}"
+        tl = f"{f(t, 2)}" if kind == "auc" else f"{t:d}"
         p.append(f'<text x="{X0 - 6}" y="{Y(t) + 4:.1f}" class="ax ax-s" text-anchor="end">{tl}</text>')
     if kind == "be":
         p.append(f'<line x1="{X0}" y1="{Y(20):.1f}" x2="{X1}" y2="{Y(20):.1f}" class="passln"/>')
         p.append(f'<text x="{X0 + 4}" y="{Y(20) - 5:.1f}" class="ax ax-s">20 bps per side assumed</text>')
     for i, h in enumerate(H_ORDER):
         p.append(f'<text x="{X(i):.1f}" y="{Y1 + 16}" class="ax ax-s" text-anchor="middle">{h}</text>')
-    p.append(f'<text x="{(X0 + X1) / 2:.0f}" y="{H - 10}" class="ax" text-anchor="middle">horizon, sessions</text>')
+    p.append(f'<text x="{f((X0 + X1) / 2, 0)}" y="{H - 10}" class="ax" text-anchor="middle">horizon, sessions</text>')
     for name, slot, vals in ser:
         pts = [(X(i), Y(vals[h]), h, vals[h]) for i, h in enumerate(H_ORDER) if h in vals]
         if len(pts) > 1:
@@ -730,7 +740,7 @@ def svg_resid_ic() -> str:
     q_bar = fs["rules"]["bh_q"]
     rows = sorted(((x, fs["ic_summary"][x]["resid_full"]) for x in fs["new_features"]),
                   key=lambda r: (-r[1]["t"], r[0]))
-    W, L, R = 760, 196, 556
+    W, L, R = 540, 150, 404
     top, rh = 24, 22
     H = top + rh * len(rows) + 34
     lo, hi = -0.045, 0.035
@@ -745,17 +755,17 @@ def svg_resid_ic() -> str:
         p.append(f'<text x="{X(t):.1f}" y="{H - 12}" class="ax" text-anchor="middle">{sg(t, 2)}</text>')
     p.append(f'<line x1="{X(0):.1f}" y1="{top - 6}" x2="{X(0):.1f}" y2="{H - 30}" class="axisln"/>')
     p.append(f'<text x="{X(0):.1f}" y="{H - 12}" class="ax" text-anchor="middle">0</text>')
-    p.append(f'<text x="{R + 12}" y="{top - 10}" class="ax ax-s">t {MID} BH q (passes at q ≤ {q_bar:g})</text>')
+    p.append(f'<text x="{R + 10}" y="{top - 10}" class="ax ax-s">t {MID} BH q</text>')
     for i, (x, r) in enumerate(rows):
         y = top + rh * i + rh / 2
         hot = x in surv
-        tip = (f"{x}: residual IC {sg(r['mean_ic'], 4)}, t {sg(r['t'], 2)}, BH q {r['q_bh']:.3f}"
+        tip = (f"{x}: residual IC {sg(r['mean_ic'], 4)}, t {sg(r['t'], 2)}, BH q {f(r['q_bh'], 3)}"
                + (" (passes)" if hot else ""))
         p.append(f'<g data-tip="{E(tip)}"><rect x="0" y="{y - rh / 2:.1f}" width="{W}" height="{rh}" fill="transparent"/>')
         p.append(f'<text x="{L - 10}" y="{y + 4:.1f}" class="{"lbl-em" if hot else "lbl"}" text-anchor="end">{E(x)}</text>')
         p.append(f'<path d="{hbar(X(0), X(r["mean_ic"]), y, 13, 3)}" fill="{"var(--s1)" if hot else "var(--axisc)"}"/></g>')
-        p.append(f'<text x="{R + 12}" y="{y + 4:.1f}" class="{"val-em" if hot else "val"}">t {sg(r["t"], 2)} {MID} '
-                 f'q {r["q_bh"]:.3f}</text>')
+        p.append(f'<text x="{R + 10}" y="{y + 4:.1f}" class="{"val-em" if hot else "val"}">t {sg(r["t"], 2)} {MID} '
+                 f'q {f(r["q_bh"], 3)}</text>')
     p.append("</svg>")
     return "".join(p)
 
@@ -774,7 +784,7 @@ def svg_league_panel(rows: list[dict], title: str, d0: float = 0.44, d1: float =
     while t <= d1 + 1e-9:
         x = X(t)
         p.append(f'<line x1="{x:.1f}" y1="{top - 8}" x2="{x:.1f}" y2="{H - 26}" class="grid"/>')
-        p.append(f'<text x="{x:.1f}" y="{H - 8}" class="ax" text-anchor="middle">{t:.2f}</text>')
+        p.append(f'<text x="{x:.1f}" y="{H - 8}" class="ax" text-anchor="middle">{f(t, 2)}</text>')
         t = round(t + 0.02, 2)
     p.append(f'<line x1="{X(0.5):.1f}" y1="{top - 8}" x2="{X(0.5):.1f}" y2="{H - 26}" class="chance"/>')
     p.append(f'<line x1="{X(D.BAR):.1f}" y1="{top - 24}" x2="{X(D.BAR):.1f}" y2="{H - 26}" class="passln"/>')
@@ -784,8 +794,8 @@ def svg_league_panel(rows: list[dict], title: str, d0: float = 0.44, d1: float =
         p.append(f'<text x="{X(control) - 6:.1f}" y="{top - 28}" class="lbl" text-anchor="end">control {f(control)}</text>')
     for i, r in enumerate(rows):
         y = top + rh * i + rh / 2
-        tip = (f"{r['name']}: CV AUC {f(r['cv'])} ± {r['sd']:.3f}; worst fold {r['worst']:.3f}; "
-               f"holdout {r['ho']:.3f}")
+        tip = (f"{r['name']}: CV AUC {f(r['cv'])} ± {f(r['sd'], 3)}; worst fold {f(r['worst'], 3)}; "
+               f"holdout {f(r['ho'], 3)}")
         p.append(f'<g data-tip="{E(tip)}"><rect x="0" y="{y - rh / 2:.1f}" width="{W}" height="{rh}" fill="transparent"/>')
         p.append(f'<text x="{L - 12}" y="{y + 4:.1f}" class="lbl" text-anchor="end">{E(r["name"])}</text>')
         p.append(f'<line x1="{X(r["cv"] - r["sd"]):.1f}" y1="{y:.1f}" x2="{X(r["cv"] + r["sd"]):.1f}" y2="{y:.1f}" '
@@ -802,15 +812,26 @@ def svg_league_panel(rows: list[dict], title: str, d0: float = 0.44, d1: float =
     return "".join(p)
 
 
+TRI_G = ('<svg class="lg" viewBox="0 0 14 14" aria-hidden="true"><path d="M7,2.5 L12,11.5 L2,11.5 Z" '
+         'fill="var(--surface)" stroke="var(--neg)" stroke-width="1.8"/></svg>')
+DIA_G = ('<svg class="lg" viewBox="0 0 14 14" aria-hidden="true"><path d="M7,1 L13,7 L7,13 L1,7 Z" '
+         'fill="var(--s2)"/></svg>')
 LEAGUE_KEY = ('<ul class="legend"><li><span class="dot" style="background:var(--s1)"></span>CV AUC, mean '
-              '± 1 sd across folds</li><li><span class="tri"></span>worst fold</li>'
-              '<li><span class="dia"></span>holdout</li><li><span class="lk chance-k"></span>chance 0.50</li>'
+              f'± 1 sd across folds</li><li>{TRI_G}worst fold</li>'
+              f'<li>{DIA_G}holdout</li><li><span class="lk chance-k"></span>chance 0.50</li>'
               '<li><span class="lk pass-k"></span>pre-registered bar</li></ul>')
+
+
+def strip_sets() -> tuple[list[str], list[str]]:
+    """(models drawn in the fold strip, the machine-learned ones among them): the run and crash ranges quoted in the
+    chart and in the text are taken over exactly these."""
+    models = [m for m in STRIP if m in D.S5]
+    return models, [m for m in models if m != "baseline_mom"]
 
 
 def svg_strip() -> str:
     S = D.S5
-    models = [m for m in STRIP if m in S]
+    models, ml = strip_sets()
     folds = D.folds
     W, H = 940, 392
     X0, X1, XH = 58, 846, 900
@@ -836,22 +857,21 @@ def svg_strip() -> str:
              f'{n(nt[D.short_folds[-1]])} training rows</text>')
     for t in (0.40, 0.45, 0.55, 0.60, 0.65):
         p.append(f'<line x1="{X0 - 6}" y1="{Y(t):.1f}" x2="{XH + 14}" y2="{Y(t):.1f}" class="grid"/>')
-        p.append(f'<text x="{X0 - 10}" y="{Y(t) + 4:.1f}" class="ax" text-anchor="end">{t:.2f}</text>')
+        p.append(f'<text x="{X0 - 10}" y="{Y(t) + 4:.1f}" class="ax" text-anchor="end">{f(t, 2)}</text>')
     p.append(f'<line x1="{X0 - 6}" y1="{Y(0.5):.1f}" x2="{XH + 14}" y2="{Y(0.5):.1f}" class="chance"/>')
     p.append(f'<text x="{X0 - 10}" y="{Y(0.5) + 4:.1f}" class="ax" text-anchor="end">0.50</text>')
-    ml = [m for m in models if m != "baseline_mom"]
     ir = [folds.index(fo) for fo in D.run]
     rv = [S[m]["auc"][fo] for m in ml for fo in D.run]
     xr0, xr1 = X(ir[0]) - step / 2, X(ir[-1]) + step / 2
     yb = Y0 - 16
     p.append(f'<path d="M{xr0:.1f},{yb + 6:.1f} V{yb:.1f} H{xr1:.1f} V{yb + 6:.1f}" class="bracket"/>')
     p.append(f'<text x="{(xr0 + xr1) / 2:.1f}" y="{yb - 7:.1f}" class="anno-t" text-anchor="middle">'
-             f'{mshort(D.run[0])} to {mshort(D.run[-1])}: {min(rv):.2f} to {max(rv):.2f}</text>')
+             f'{mshort(D.run[0])} to {mshort(D.run[-1])}: {f(min(rv), 2)} to {f(max(rv), 2)}</text>')
     ic = folds.index(D.crash)
     cv = [S[m]["auc"][D.crash] for m in models]
     p.append(f'<line x1="{X(ic):.1f}" y1="{Y0}" x2="{X(ic):.1f}" y2="{Y1}" class="mark"/>')
     p.append(f'<text x="{X(ic) - 7:.1f}" y="{Y(0.352):.1f}" class="anno-t" text-anchor="end">'
-             f'{mshort(D.crash)}: {min(cv):.2f} to {max(cv):.2f}</text>')
+             f'{mshort(D.crash)}: {f(min(cv), 2)} to {f(max(cv), 2)}</text>')
     for i, fo in enumerate(folds):
         if fo.endswith("-01"):
             p.append(f'<text x="{X(i):.1f}" y="{Y1 + 32}" class="ax" text-anchor="middle">{fo[:4]}</text>')
@@ -870,18 +890,19 @@ def svg_strip() -> str:
                 tip = f"{fo}: down month (equal-weight universe 20-day return {pc(r['ew_fwd_20d'])})"
                 p.append(f'<rect x="{X(i) - step / 2 + 1:.1f}" y="{yd}" width="{step - 2:.1f}" height="7" rx="1.5" '
                          f'class="down-cell" data-tip="{E(tip)}"/>')
-        p.append(f'<text x="{X0 - 10}" y="{yd + 7}" class="ax ax-s" text-anchor="end">down month</text>')
+        p.append(f'<text x="{X1 + step / 2 + 8:.1f}" y="{yd + 7}" class="ax ax-s">down month</text>')
     for m in models:
         pts = " ".join(f"{X(i):.1f},{Y(S[m]['auc'][fo]):.1f}" for i, fo in enumerate(folds))
         wd = 2.6 if m == "all51" else 2
         p.append(f'<polyline class="ln" data-m="{m}" points="{pts}" fill="none" stroke="var(--s{SLOT[m]})" '
                  f'stroke-width="{wd}" stroke-linejoin="round" stroke-linecap="round"/>')
-    for m in models:
+    for j, m in enumerate(models):
         ho = S[m]["ho"]
-        p.append(f'<circle class="ln" data-m="{m}" cx="{XH:.1f}" cy="{Y(ho):.1f}" r="4.5" fill="var(--s{SLOT[m]})" '
-                 f'stroke="var(--surface)" stroke-width="2" data-tip="{E(f"{NAME5[m]}: holdout AUC {ho:.4f}")}"/>')
+        xh = XH + (j - (len(models) - 1) / 2) * 6.5
+        p.append(f'<circle class="ln" data-m="{m}" cx="{xh:.1f}" cy="{Y(ho):.1f}" r="4.5" fill="var(--s{SLOT[m]})" '
+                 f'stroke="var(--surface)" stroke-width="2" data-tip="{E(f"{NAME5[m]}: holdout AUC {f(ho, 4)}")}"/>')
     for i, fo in enumerate(folds):
-        vals = f" {MID} ".join(f"{m} {S[m]['auc'][fo]:.3f}" for m in models)
+        vals = f" {MID} ".join(f"{m} {f(S[m]['auc'][fo], 3)}" for m in models)
         p.append(f'<rect x="{X(i) - step / 2:.1f}" y="{Y0}" width="{step:.1f}" height="{Y1 - Y0}" fill="transparent" '
                  f'data-tip="{E(f"{fo} ({n(nt[fo])} training rows): {vals}")}"/>')
     p.append("</svg>")
@@ -944,7 +965,7 @@ def svg_boot_models() -> str:
     for t in (0.48, 0.50, 0.52, 0.54, 0.56, 0.58):
         cls = "chance" if t == 0.50 else "grid"
         p.append(f'<line x1="{X(t):.1f}" y1="{top - 8}" x2="{X(t):.1f}" y2="{H - 26}" class="{cls}"/>')
-        p.append(f'<text x="{X(t):.1f}" y="{H - 8}" class="ax" text-anchor="middle">{t:.2f}</text>')
+        p.append(f'<text x="{X(t):.1f}" y="{H - 8}" class="ax" text-anchor="middle">{f(t, 2)}</text>')
     p.append(f'<text x="{R + 16}" y="{top - 16}" class="ax ax-s">P(CV mean &gt; 0.50)</text>')
     for i, m in enumerate(order):
         b = bm[m]
@@ -960,20 +981,25 @@ def svg_boot_models() -> str:
         p.append(f'<g data-tip="{E(t2)}"><line x1="{X(hl):.1f}" y1="{y + 7:.1f}" x2="{X(hh):.1f}" y2="{y + 7:.1f}" '
                  f'stroke="var(--s2)" stroke-width="2"/><circle cx="{X(b["holdout_auc"]):.1f}" cy="{y + 7:.1f}" r="4.5" '
                  f'fill="var(--surface)" stroke="var(--s2)" stroke-width="2.4"/></g>')
-        p.append(f'<text x="{R + 16}" y="{y + 4:.1f}" class="val">{b["p_cv_mean_gt_050"]:.3f}</text>')
+        p.append(f'<text x="{R + 16}" y="{y + 4:.1f}" class="val">{f(b["p_cv_mean_gt_050"], 3)}</text>')
     p.append("</svg>")
     return "".join(p)
 
 
+PAIR_SHORT = {"all51": "LightGBM all", "nested_lgbm": "LightGBM nested", "champion10": "LightGBM pilot 10",
+              "lr_l2": "L2 logistic", "nested_lr_l2": "L2 logistic nested", "baseline_mom": "Momentum rule",
+              ENS: "Rank ensemble", HEUR: "Momentum rank"}
+
+
 def pair_label(k: str) -> str:
     a, b = k.split(" - ")
-    return f"{NAME5.get(a, a)} {MINUS} {NAME5.get(b, b)}"
+    return f"{PAIR_SHORT.get(a, a)} {MINUS} {PAIR_SHORT.get(b, b)}"
 
 
 def svg_boot_pairs() -> str:
     pr = P.boot["pairs"]
     keys = list(pr)
-    W, L, R = 900, 380, 760
+    W, L, R = 900, 300, 760
     top, rh = 36, 34
     H = top + rh * len(keys) + 44
     allv = [v for k in keys for c in ("cv_mean", "holdout") for v in pr[k][c]["ci95"]]
@@ -1037,7 +1063,13 @@ def svg_monthly_book(key: str, ymax: float) -> str:
             p.append(f'<path d="{path}" fill="{"var(--pos)" if v >= 0 else "var(--neg)"}" data-tip="{E(tip)}"/>')
         if m.endswith("-01"):
             p.append(f'<text x="{xc:.1f}" y="{Y1 + 16}" class="ax ax-s" text-anchor="middle">{m[:4]}</text>')
-    p.append(f'<text x="{X1}" y="{Y1 + 32}" class="ax ax-s" text-anchor="end">{b["months_positive"]} of '
+    ho0 = D.splits5["holdout"]["test_start"][:7]
+    hi_ = [i for i, m in enumerate(mo) if m >= ho0]
+    if hi_:
+        xh = X0 + step * hi_[0]
+        p.append(f'<line x1="{xh:.1f}" y1="{Y0 - 4}" x2="{xh:.1f}" y2="{Y1 + 4}" class="mark"/>')
+        p.append(f'<text x="{xh - 4:.1f}" y="{Y1 + 32}" class="ax ax-s" text-anchor="end">holdout →</text>')
+    p.append(f'<text x="{X0}" y="{Y1 + 32}" class="ax ax-s">{b["months_positive"]} of '
              f'{b["n_months"]} months above 0</text>')
     p.append("</svg>")
     return "".join(p)
@@ -1123,7 +1155,7 @@ def svg_flow() -> str:
 
 
 def minibar(v: float, lim: float = 0.10, label: str = "") -> str:
-    W, H = 132, 16
+    W, H = 96, 16
     x0 = W / 2
 
     def X(t: float) -> float:
@@ -1153,6 +1185,9 @@ def pending_items() -> list[str]:
     return out
 
 
+LEAGUE_LABEL_SHORT = {"nested_lambdarank": "LambdaRank ensemble member", "nested_catboost": "CatBoost ensemble member"}
+
+
 def join_words(xs: list[str]) -> str:
     return xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + " and " + xs[-1]
 
@@ -1174,8 +1209,9 @@ def sec_header() -> str:
   <div class="eyebrow">SuryaDhana {MID} NSE cash equities {MID} end-of-day bhavcopy {MID} research program</div>
   <h1>SuryaDhana Research Program</h1>
   <p class="sub">Final report {MID} {REPORT_DATE} {MID} Program lead: evaluation lead {MID} Scope: NSE cash equities,
-  end-of-day bhavcopy data, 5 years (2021-10 to 2026-10). Every number on this page is read at build time from a
-  committed JSON or CSV artifact; the narrative follows <code>ml/PROGRAM_REPORT.md</code>.</p>
+  end-of-day bhavcopy data, 5 years (2021-10 to 2026-10). Numbers on this page are read at build time from the
+  committed JSON and CSV artifacts, except a few that exist only in Markdown (listed in the <a href="#appendix">appendix</a>);
+  the narrative follows <code>ml/PROGRAM_REPORT.md</code>.</p>
   {ribbon}
   <div class="verdict">
     <div class="vhead">Verdict {MID} {REPORT_DATE}</div>
@@ -1195,7 +1231,7 @@ def sec_verdict() -> str:
     S = D.S5
     a51, nl, bm, c10 = S["all51"], S["nested_lgbm"], S["baseline_mom"], S["champion10"]
     FACTS.update({"n_folds": str(a51["n"]), "all51_cv": f(a51["cv"]), "all51_pct": pu(a51["ge"] / a51["n"]),
-                  "all51_worst": f"{a51['worst']:.3f}", "all51_worst_month": mname(a51["worst_m"]),
+                  "all51_worst": f"{f(a51['worst'], 3)}", "all51_worst_month": mname(a51["worst_m"]),
                   "nested_cv": f(nl["cv"]), "mom_cv": f(bm["cv"]), "c10_cv": f(c10["cv"])})
     pairs = (P.boot or {}).get("pairs", {})
     ric = (P.summary or {}).get("rank_ic", {}).get("nested_lgbm")
@@ -1207,20 +1243,20 @@ def sec_verdict() -> str:
     if ric:
         k, nm = ric["cv_months_ic_positive"].split("/")
         sig_extra += (("; " if sig_extra else "") + f"per-date rank IC {sg(ric['cv_mean_ic'])}, Newey-West t "
-                      f"{ric['cv_nw_t_lag20']:.1f}, positive in {k} of {nm} months")
-        FACTS["rank_ic_5y"] = sg(ric["cv_mean_ic"])
+                      f"{f(ric['cv_nw_t_lag20'], 1)}, positive in {k} of {nm} months")
+        FACTS.update({"rank_ic_5y": sg(ric["cv_mean_ic"]), "nw_t": f(ric["cv_nw_t_lag20"], 1), "ic_pos": f"{k} of {nm}"})
     sig_extra = f" ({sig_extra})" if sig_extra else ""
     p10 = pairs.get("all51 - champion10")
     p10_txt = (f" ({sg(-p10['cv_mean']['delta'], 4)} {ci(-p10['cv_mean']['ci95'][1], -p10['cv_mean']['ci95'][0])} "
                f"against all features)") if p10 else ""
     signal = (f"Over {a51['n']} monthly out-of-sample folds ({fold_span()}), a LightGBM classifier on all end-of-day "
               f"features ranks stocks by 20-session relative performance with mean AUC {f(a51['cv'])}, above 0.50 in "
-              f"{pu(a51['ge'] / a51['n'])} of months, worst month {a51['worst']:.3f} ({mname(a51['worst_m'])}). The "
+              f"{pu(a51['ge'] / a51['n'])} of months, worst month {f(a51['worst'], 3)} ({mname(a51['worst_m'])}). The "
               f"honest nested-selection variant scores {f(nl['cv'])}{sig_extra}. A one-feature momentum rule scores "
               f"{f(bm['cv'])}. The pilot's 10-feature subset, chosen on 2026 data, scores {f(c10['cv'])} at 5 years"
               f"{p10_txt}: its selection did not transfer.")
     ex_ric = [e["oos_all"]["label_return"]["rank_ic_mean"] for k, e in D.lmod["econ"].items() if "_ex_" in k]
-    pil = rng(f"{min(ex_ric):.2f}", f"{max(ex_ric):.2f}")
+    pil = rng(f"{f(min(ex_ric), 2)}", f"{f(max(ex_ric), 2)}")
     FACTS["ic_pilot"] = pil
     size = (f"Per-date rank information coefficient (IC) is {pil} on the pilot"
             + (f" and {f(ric['cv_mean_ic'], 3)} over the five years" if ric else "")
@@ -1232,19 +1268,20 @@ def sec_verdict() -> str:
     econ = econ_text()
     gates = gates_text()
     t1 = D.A["T1"]["null_cv"]
-    FACTS.update({"perm_null": f"{t1['mean']:.3f} ± {t1['sd']:.3f}", "sessions": n(MD_ONLY["store_sessions"]),
-                  "pilot_headline": f"{D.audit['claim_audited']['cv_auc_clean']:.3f}"})
+    FACTS.update({"perm_null": f"{f(t1['mean'], 3)} ± {f(t1['sd'], 3)}", "sessions": n(MD_ONLY["store_sessions"]),
+                  "pilot_headline": f"{f(D.audit['claim_audited']['cv_auc_clean'], 3)}"})
     integ = (f"The pipeline is clean: labels and features recompute exactly from raw data, point-in-time universe "
-             f"verified, label-permutation null {t1['mean']:.3f} ± {t1['sd']:.3f}, no duplicate sessions in "
+             f"verified, label-permutation null {f(t1['mean'], 3)} ± {f(t1['sd'], 3)}, no duplicate sessions in "
              f"{n(MD_ONLY['store_sessions'])} trading days. The pilot's headline (CV AUC "
-             f"{D.audit['claim_audited']['cv_auc_clean']:.3f}, “only model above chance”) was inflated by "
+             f"{f(D.audit['claim_audited']['cv_auc_clean'], 3)}, “only model above chance”) was inflated by "
              f"feature selection on test months and has been corrected in <code>ml/MODEL_SELECTION.md</code>.")
     cards = [("Signal", signal, ["ml/results/scale5y/*.json"]),
              ("Size", size, ["ml/research/SOTA_FORECASTING.md", "ml/results/label_study/model_level.json"]),
              ("Economics", econ[0], econ[1]),
              ("Pre-registered promotion gates", gates, ["ml/SCALE_UP.md", "ml/results/scale5y/scale5y_summary.json"]),
              ("Integrity", integ, ["ml/results/audit/audit.json"])]
-    vc = "".join(f'<div class="vc"><h3>{E(t)}</h3><p>{body}</p>{srcs(*s)}</div>' for t, body, s in cards)
+    vc = "".join(f'<div class="vc{" wide" if t.startswith("Pre-registered") else ""}"><h3>{E(t)}</h3><p>{body}</p>'
+                 f'{srcs(*s)}</div>' for t, body, s in cards)
     return f"""
 <section id="verdict">
   <div class="sec-eyebrow">01 {MID} Verdict board</div>
@@ -1264,8 +1301,8 @@ def econ_text() -> tuple[str, list[str]]:
         da = sm["combined"]["daily_active"]
         txt = (f"On the six-month pilot, the champion's top decile beat the equal-weight universe by "
                f"{pc(da['ann_mean_daily'])} a year net of 20 bps per side, with an information ratio of "
-               f"{da['sharpe']:.2f} and a 95% interval of [{sg(da['sharpe_ci95'][0], 1)}, {sg(da['sharpe_ci95'][1], 1)}]. "
-               f"Its Deflated Sharpe Ratio was {D.ex['champion_top_decile_skill']['dsr']:.2f}. On the holdout it "
+               f"{f(da['sharpe'], 2)} and a 95% interval of [{sg(da['sharpe_ci95'][0], 1)}, {sg(da['sharpe_ci95'][1], 1)}]. "
+               f"Its Deflated Sharpe Ratio was {f(D.ex['champion_top_decile_skill']['dsr'], 2)}. On the holdout it "
                f"trailed the universe. <b>Pending:</b> the 5-year paper portfolio (<code>portfolio_5y.json</code>) "
                f"decides whether this changes.")
         return txt, ["ml/results/strategy/strategy.json"]
@@ -1284,21 +1321,22 @@ def econ_text() -> tuple[str, list[str]]:
     dsr_liq = pt["dsr"]["books"][f"{ENS}|{PAPER_BASKET}"]["skill"][nh]["dsr"]
     months = sorted(pt["direction_by_month"])
     every_year = all(v > 0 for v in e["by_year_20d"].values())
-    FACTS.update({"ew_ann": pc(ew), "lgbm_trail": rng(f"{lgx[0]:.1f}", f"{lgx[-1]:.1f}"),
-                  "ens_excess": pc(ec["excess_ann_vs_ew_252_20"]), "ens_ir": f"{ec['ir']:.2f}",
-                  "ens_ir_ci": f"[{ec['ir_ci95'][0]:.2f}, {ec['ir_ci95'][1]:.2f}]", "dsr_top": f"{dsr_top:.2f}",
-                  "dsr_liq": f"{dsr_liq:.2f}", "N": nh, "n_signal_dates": str(pt["n_signal_dates"])})
+    FACTS.update({"ew_ann": pc(ew), "lgbm_trail": rng(f"{f(lgx[0], 1)}", f"{f(lgx[-1], 1)}"),
+                  "ens_excess": pc(ec["excess_ann_vs_ew_252_20"]), "ens_ir": f"{f(ec['ir'], 2)}",
+                  "ens_ir_ci": f"[{f(ec['ir_ci95'][0], 2)}, {f(ec['ir_ci95'][1], 2)}]", "dsr_top": f"{f(dsr_top, 2)}",
+                  "dsr_liq": f"{f(dsr_liq, 2)}", "N": nh, "n_signal_dates": str(pt["n_signal_dates"]),
+                  "lgbm_months": f"{rng(str(lgm[0]), str(lgm[-1]))} of {lg[0]['n_months']}"})
     txt = (f"Over {n(pt['n_signal_dates'])} out-of-sample signal dates ({mname(months[0])} to {mname(months[-1])}), net "
            f"of 20 bps per side, <b>no single machine-learned model's top decile beats simply holding the universe "
            f"equally weighted</b> ({pc(ew)} a year)" if all(x < 0 for x in single_ex) else
            f"Over {n(pt['n_signal_dates'])} out-of-sample signal dates, net of 20 bps per side, against the "
            f"equal-weight universe ({pc(ew)} a year)")
-    txt += (f": the LightGBM books trail it by {rng(f'{lgx[0]:.1f}', f'{lgx[-1]:.1f}')} points a year and beat it in "
+    txt += (f": the LightGBM books trail it by {rng(f'{f(lgx[0], 1)}', f'{f(lgx[-1], 1)}')} points a year and beat it in "
             f"{rng(str(lgm[0]), str(lgm[-1]))} of {lg[0]['n_months']} months. The pre-registered three-model rank "
             f"ensemble is the one exception: {pc(ec['excess_ann_vs_ew_252_20'])} a year over the universe, information "
-            f"ratio {ec['ir']:.2f} with a 95% interval of [{ec['ir_ci95'][0]:.2f}, {ec['ir_ci95'][1]:.2f}]"
+            f"ratio {f(ec['ir'], 2)} with a 95% interval of [{f(ec['ir_ci95'][0], 2)}, {f(ec['ir_ci95'][1], 2)}]"
             + (", positive in every calendar year" if every_year else "")
-            + f". Its Deflated Sharpe Ratio at an honestly counted {nh} trials is {dsr_top:.2f} ({dsr_liq:.2f} for the "
+            + f". Its Deflated Sharpe Ratio at an honestly counted {nh} trials is {f(dsr_top, 2)} ({f(dsr_liq, 2)} for the "
               f"liquid book pre-registered as the paper portfolio)"
             + (", so it does not survive multiple-testing adjustment." if max(dsr_top, dsr_liq) < 0.95 else "."))
     return txt, ["ml/results/scale5y/portfolio_5y.json", "ml/results/scale5y/SCALE5Y.md"]
@@ -1426,9 +1464,10 @@ def gates_table() -> str:
     rows.append(["", "<b>Gates passed</b>"] + [f"<b>{gc[m][0]} of 5</b>" + (
         f' <span class="dim2">({5 - gc[m][1]} pending)</span>' if gc[m][1] < 5 else "") for m in order])
     tbl = table(head, rows, cls="gates", wrap=tuple(range(len(head))))
+    so = [v["selected_overlap"] for v in D.sel["stability"].values()]
     note = ("Scored exactly as <code>ml/scale5y_report.py</code> scores them (gate 4 uses the consecutive-year "
-            "top-10 overlap; the chosen sets themselves share 2 to 3 features). Gate 5 is scored on the liquid "
-            "top decile pre-registered as the paper book.")
+            f"top-10 overlap; the chosen sets themselves share {rng(str(min(so)), str(max(so)))} features). Gate 5 is "
+            "scored on the liquid top decile pre-registered as the paper book.")
     return f'<div class="card">{tbl}<p class="cap">{note}</p></div>'
 
 
@@ -1442,10 +1481,10 @@ def recommendation() -> str:
         b = P.port["books"][f"{ENS}|{PAPER_BASKET}"]["segments"]["combined"]["20bps"]
         nh = str(P.port["dsr"]["N_headline"])
         trl = P.port["dsr"]["books"][f"{ENS}|{PAPER_BASKET}"]["skill"][nh]["min_track_record_periods_psr95_vs_0"]
-        FACTS.update({"paper_ir": f"{b['ir']:.2f}", "paper_years": str(round(trl / 252))})
+        FACTS.update({"paper_ir": f"{f(b['ir'], 2)}", "paper_years": str(round(trl / 252))})
         body = (f"Commit no capital. Paper-trade the ensemble's liquid-tercile top decile as one frozen, pre-registered "
                 f"strategy from November 2026 (a fresh test with N = 1; at its observed information ratio of "
-                f"{b['ir']:.2f} it needs about {round(trl / 252)} years of track record to reach a 95% probabilistic "
+                f"{f(b['ir'], 2)} it needs about {round(trl / 252)} years of track record to reach a 95% probabilistic "
                 f"Sharpe), with the monitoring in <a href=\"#product\">Product and monitoring</a>. Put the next research "
                 f"effort into volatility-neutral book construction and into data (corporate actions, sector "
                 f"classification, F&amp;O membership, fundamentals) rather than into new model families.")
@@ -1461,7 +1500,7 @@ def sec_status() -> str:
         f"{MD_ONLY['ingest_tests']} tests.",
         "Evaluation harness: purged walk-forward, nested selection, exit-date purging, block bootstraps, "
         "pre-registered pass marks, one result schema that every team used.",
-        f"The signal: delivery and long momentum, AUC {rng(f'{min(lg3):.2f}', f'{max(lg3):.2f}')} over {S['all51']['n']} "
+        f"The signal: delivery and long momentum, AUC {rng(f'{f(min(lg3), 2)}', f'{f(max(lg3), 2)}')} over {S['all51']['n']} "
         f"months, above 0.50 in {rng(pu(pct2[0]), pu(pct2[-1]))} of months, consistent with published frontier numbers.",
         "Model choice: LightGBM with fixed trees on all features; it is the most stable thing in the league and nothing "
         "from deep learning, ranking losses or attention beats it.",
@@ -1484,7 +1523,7 @@ def sec_status() -> str:
                        + (", positive in every year" if every_year else "")
                        + "; the only book in the program with that property.")
         notw.append(f"Tradable edge: not demonstrated. No single model's long-only book beats the equal-weight universe "
-                    f"net of costs over five years; the ensemble's does, with DSR {d_top:.2f} ({d_liq:.2f} for the paper "
+                    f"net of costs over five years; the ensemble's does, with DSR {f(d_top, 2)} ({f(d_liq, 2)} for the paper "
                     f"book) at {nh} trials.")
         unknown.append(f"Whether the ensemble's {pc(ex['excess_ann_vs_ew_252_20'], 0)} a year is skill or a favourable "
                        f"factor mix over {ec['n_months']} months of one, mostly rising, market.")
@@ -1561,7 +1600,7 @@ def sec_data() -> str:
          f"Full-history scan; largest repeat share {MD_ONLY['echo_max_share']} ({MD_ONLY['echo_max_date']})."),
         ("missing", "corporate-actions feed",
          f"Prices unadjusted; the clean mask drops {mask_rng} of labelled rows, <code>flag_split_20d</code> fires on "
-         f"{flag:.2f}% of rows."),
+         f"{f(flag, 2)}% of rows."),
         (f"{etf['etf_tickers']}", "ETFs in the stock universe", f"{pu(etf['etf_row_share'], 1)} of rows; excluded from "
                                                                 f"the label specification."),
     ]
@@ -1577,7 +1616,7 @@ def sec_data() -> str:
   ({n(MD_ONLY['store_tickers'])} ticker codes across all series; {n(MD_ONLY['store_feature_rows'])} feature rows).
   Sessions per calendar year: {sby['2021']} (Q4 2021), {", ".join(str(sby[y]) for y in sorted(sby)[1:-1])},
   {sby['2026']} (to 16 October 2026), consistent with the NSE calendar.</p>
-  <div class="card"><div class="scroll"><div class="wide-svg">{svg_coverage()}</div></div>
+  <div class="card">{COV_KEY}<div class="scroll"><div class="wide-svg">{svg_coverage()}</div></div>
   <p class="cap">Sessions per year ({years}) come from the lead's full-history scan of the store
   (<code>ml/PROGRAM_REPORT.md</code> §3); dataset spans, folds and holdouts from <code>ml/data/manifest.json</code>,
   <code>ml/data/splits.json</code>, <code>manifest_5y.json</code> and <code>splits_5y.json</code>. Ticks under the
@@ -1599,7 +1638,7 @@ def sec_data() -> str:
     <code>.csv</code> name; the reader now detects the body type by magic bytes, falls back to Latin-1, rejects HTML
     bodies and skips a bad day instead of aborting. {MD_ONLY['ingest_tests']} ingest tests pass.</li>
     <li><b>Known gap: corporate actions.</b> Prices are unadjusted. The <code>y_clean_20d</code> mask drops {mask_rng}
-    of labelled rows around splits and suspensions, and <code>flag_split_20d</code> fires on {flag:.2f}% of rows. Over 5
+    of labelled rows around splits and suspensions, and <code>flag_split_20d</code> fires on {f(flag, 2)}% of rows. Over 5
     years this is the single largest data-integrity risk and the first external feed to add
     (<a href="#recs">Recommendations</a>).</li>
     <li><b>Known gap: ETFs.</b> {etf['etf_tickers']} ETFs ({pu(etf['etf_row_share'], 1)} of rows) sit inside the
@@ -1637,6 +1676,7 @@ def sec_labels() -> str:
     br = [v for _, r in raw_runs.values() for v in r["fold_base_rates"].values()]
     ho_raw = sorted(r["holdout_auc"] for _, r in raw_runs.values())
     ratio = [econ[k]["oos_all"]["label_return"]["rank_ic_mean"] / ric[h] for h, (k, _) in raw_runs.items()]
+    FACTS["raw_vs_excess_rank_ic"] = f"{f(min(ratio), 2)} to {f(max(ratio), 2)}"
     e20 = econ[ex_runs[20][0]]["oos_all"]["label_return"]
     short = [econ[ex_runs[h][0]]["oos_all"]["label_return"] for h in ex_runs if h <= 5]
     loss_lo = min(abs(x["ls_net_annual_measured_turnover"]) for x in short)
@@ -1665,10 +1705,10 @@ def sec_labels() -> str:
             nw = lab["n_q_nw_lt_0.05"]
             prim = v == "no_20d"
             trs.append([("<b>" + v + "</b> (primary)") if prim else v, pu(var["coverage_labelable_dates"], 2),
-                        f"{raw['base_rate_month_min']:.2f} to {raw['base_rate_month_max']:.2f}", pu(ex["xs_std_mean"], 1),
-                        f"{raw['per_date_mean_lag1_autocorr']:.2f}",
+                        f"{f(raw['base_rate_month_min'], 2)} to {f(raw['base_rate_month_max'], 2)}", pu(ex["xs_std_mean"], 1),
+                        f"{f(raw['per_date_mean_lag1_autocorr'], 2)}",
                         f"{lab['n_q_lt_0.05']} ({'<b>0</b>' if nw == 0 else nw})", str(vs["n_q_lt_0.05"]),
-                        f"{c['is_ic']:.3f} → {f(c['oos_ic'], 3)} ({f(c['oos_t'], 1)})"])
+                        f"{f(c['is_ic'], 3)} → {f(c['oos_ic'], 3)} ({f(c['oos_t'], 1)})"])
     ltab = table(["Label", "Coverage", "Raw > 0 base rate by month", "Cross-sectional sd (excess)",
                   "Lag-1 autocorrelation of the market mean", "Features q &lt; 0.05 (NW-adjusted)",
                   "q &lt; 0.05, vol-scaled", "Composite IC: in-sample (8 months) → OOS (t)"], trs, cls="plain small-t")
@@ -1694,30 +1734,30 @@ def sec_labels() -> str:
     {f(max(t12), 1)}), {sg(sum(ic5) / len(ic5), 2)} at 5 days (t ≈ {round(sum(t5) / len(t5))}), and about zero from
     10 to 20 days, because of the March-2026 regime break. Delivery is the one pillar that ranks in the top five at
     every horizon and for both entry conventions{"" if deliv_every else " (not at every horizon in the JSON)"} (t
-    {etf20:.1f} at 20 days even with ETFs excluded); at 40 days the single best feature is
-    <code>{top40['feature']}</code> (IC {top40['mean_ic']:.2f}).</li>
+    {f(etf20, 1)} at 20 days even with ETFs excluded); at 40 days the single best feature is
+    <code>{top40['feature']}</code> (IC {f(top40['mean_ic'], 2)}).</li>
     <li><b>The excess label is the most predictable by a model, at any horizon.</b> Model rank-IC is flat at about
-    {sum(ric_3_20) / len(ric_3_20):.3f} from 3 to 20 days; CV AUC sits between {min(cv_ex):.3f} and {max(cv_ex):.3f}
-    at every horizon. The raw &gt; 0 labels post the highest CV AUC ({cv_raw:.3f}) but that is market timing, not stock
-    selection: their fold base rates swing from {min(br):.2f} to {max(br):.2f}, their holdout AUC in a down market is
-    {ho_raw[0]:.2f} to {ho_raw[-1]:.2f} and their cross-sectional rank-IC is a quarter to two-fifths of the excess
-    label's ({min(ratio):.2f} to {max(ratio):.2f} of it).</li>
+    {f(sum(ric_3_20) / len(ric_3_20), 3)} from 3 to 20 days; CV AUC sits between {f(min(cv_ex), 3)} and {f(max(cv_ex), 3)}
+    at every horizon. The raw &gt; 0 labels post the highest CV AUC ({f(cv_raw, 3)}) but that is market timing, not stock
+    selection: their fold base rates swing from {f(min(br), 2)} to {f(max(br), 2)}, their holdout AUC in a down market is
+    {f(ho_raw[0], 2)} to {f(ho_raw[-1], 2)} and their cross-sectional rank-IC is a quarter to two-fifths of the excess
+    label's.</li>
     <li><b>Only the 20-day label clears realistic costs.</b> Its long-short decile spread breaks even at
-    {e20['breakeven_cost_per_side_bps_full_turnover']:.1f} bps per side at 100% turnover and nets
+    {f(e20['breakeven_cost_per_side_bps_full_turnover'], 1)} bps per side at 100% turnover and nets
     {pc(e20['ls_net_annual_full_turnover'])} to {pc(e20['ls_net_annual_measured_turnover'])} a year (at 100% and at
-    measured turnover), with a gross spread t of only {e20['decile_spread_t_nw']:.2f} over {n_months} out-of-sample
-    months; horizons of 5 days or less lose {loss_lo * 100:.0f}% to {loss_hi * 100:.0f}% a year after costs.
+    measured turnover), with a gross spread t of only {f(e20['decile_spread_t_nw'], 2)} over {n_months} out-of-sample
+    months; horizons of 5 days or less lose {f(loss_lo * 100, 0)}% to {f(loss_hi * 100, 0)}% a year after costs.
     {"Long-only, every horizon is negative after costs" if long_neg else "Long-only results are mixed after costs"}
     against the equal-weight universe mean, because the top decile holds a lottery tail that does worse than deciles 7
     to 9.</li>
     <li><b>The universe median is a soft benchmark.</b> Right skew puts the equal-weight universe's own “excess
-    over the median” at {MD_ONLY['univ_excess_range']} per 20 days (about {ew20 * 252 / 20 * 100:.0f}% a year in
+    over the median” at {MD_ONLY['univ_excess_range']} per 20 days (about {f(ew20 * 252 / 20 * 100, 0)}% a year in
     the strategy study). Measured against the universe mean, the pilot champion's top-decile excess was positive in
     {MD_ONLY['champ_vs_mean_windows']} windows, not 5 of 5.</li>
     <li><b>Multiple testing.</b> {n(meta['bh_family_size'])} hypotheses; {sf['observed']['p_lt_0.05']} nominal
     p &lt; 0.05 and {sf['observed']['q_lt_0.05']} BH discoveries observed. Under a dependence-preserving month-sign-flip
-    null the 95th percentile of nominal hits is {sf['null_p95']['p_lt_0.05']:.0f}, so the grid is significant at about
-    p = {sf['p_value_obs_q05']:.3f}. But the evidence is effectively {sf['n_months']} monthly draws, and the selection
+    null the 95th percentile of nominal hits is {f(sf['null_p95']['p_lt_0.05'], 0)}, so the grid is significant at about
+    p = {f(sf['p_value_obs_q05'], 3)}. But the evidence is effectively {sf['n_months']} monthly draws, and the selection
     test shows it does not carry forward beyond about 5 days.</li>
   </ol>
   <h3 class="sub3">Label table (excess family; coverage over labelable dates)</h3>
@@ -1740,9 +1780,9 @@ def sec_labels() -> str:
   formulas for rank-IC, net spread and the equal-weight benchmark are in <code>LABEL_STUDY.md</code>, section
   “Labels to carry to the 5-year run”; that section is the label specification for the production team.</p></div>
   <div class="panel note"><h3>A negative control, not a label</h3>
-  <p><code>up_5d</code> is not a stock-selection label: regime-exposed (monthly base rate {up5['base_rate_month_min']:.2f}
-  to {up5['base_rate_month_max']:.2f}), close-to-close entry, {poison} split-poisoned rows because it is unmasked,
-  holdout AUC {raw5['holdout_auc']:.3f}, rank-IC {raw5_ric:.3f}. It stays only as a negative control: the gap between
+  <p><code>up_5d</code> is not a stock-selection label: regime-exposed (monthly base rate {f(up5['base_rate_month_min'], 2)}
+  to {f(up5['base_rate_month_max'], 2)}), close-to-close entry, {poison} split-poisoned rows because it is unmasked,
+  holdout AUC {f(raw5['holdout_auc'], 3)}, rank-IC {f(raw5_ric, 3)}. It stays only as a negative control: the gap between
   its pooled and cross-sectional AUC measures how much “skill” is market timing.</p></div>
 </section>"""
 
@@ -1780,21 +1820,21 @@ def family_cards() -> tuple[str, str]:
     every = D.sel["features_selected_every_year"]
     tmax = max(abs(IC[x]["t_stat"]) for x in SHORT_H)
     cmax = max(IC[x]["ic_sign_consistency"] for x in SHORT_H)
-    FACTS.update({"short_tmax": f"{tmax:.2f}", "short_cmax": f"{cmax:.3f}"})
+    FACTS.update({"short_tmax": f"{f(tmax, 2)}", "short_cmax": f"{f(cmax, 3)}"})
     dw = dps["worst_month"]
     fams = [
         ("Delivery", "NSE delivery %, the one non-price input", ["deliv_pct", "deliv_pct_sma_20"],
-         f"{sg(dp['mean_ic'])} (t {dp['t_stat']:.2f}, same sign in {same_sign(dp)} of {dp['n_months']} months); "
-         f"{sg(dps['mean_ic'])} (t {dps['t_stat']:.2f}); works in up and down tapes ({sg(sp['up_dates']['mean_ic'])} / "
+         f"{sg(dp['mean_ic'])} (t {f(dp['t_stat'], 2)}, same sign in {same_sign(dp)} of {dp['n_months']} months); "
+         f"{sg(dps['mean_ic'])} (t {f(dps['t_stat'], 2)}); works in up and down tapes ({sg(sp['up_dates']['mean_ic'])} / "
          f"{sg(sp['down_dates']['mean_ic'])})",
          f"The regime anchor and the strongest pillar. Its IC fell from about {sg(mean_over('deliv_pct_sma_20', y25), 2)} "
          f"in 2025 to about {sg(mean_over('deliv_pct_sma_20', cvm), 2)} over the 2026 test months (worst {sg(dw['ic'])} "
          f"in {mname(dw['month'])}). No peer-reviewed study of NSE delivery share exists; the signal is internal "
          f"evidence only."),
         ("Long momentum", "", ["ret_126d", "mom_12_1", "ret_63d"],
-         f"{sg(IC['ret_126d']['mean_ic'])} (t {IC['ret_126d']['t_stat']:.1f}); mom_12_1 daily IC "
+         f"{sg(IC['ret_126d']['mean_ic'])} (t {f(IC['ret_126d']['t_stat'], 1)}); mom_12_1 daily IC "
          f"{sg(mm['up_dates']['mean_ic'])} on up dates vs {sg(mm['down_dates']['mean_ic'])} on down dates (t of "
-         f"difference {mm['t_stat_diff']:.2f}); {shape_txt} deciles",
+         f"difference {f(mm['t_stat_diff'], 2)}); {shape_txt} deciles",
          "Real, state-dependent, textbook (Cooper, Gutierrez &amp; Hameed). Linear terms waste it; trees or an explicit "
          "market-state interaction capture it."),
         ("52-week high / low distance", "", ["dist_52w_high", "dist_52w_low"],
@@ -1806,12 +1846,12 @@ def family_cards() -> tuple[str, str]:
          'A regime variable, not alpha. Every challenger model that drifted off the champion collapsed onto this factor '
          '(<a href="#sota">state-of-the-art challengers</a>).'),
         ("Liquidity / size proxies", "", ["log_turnover", "amihud_20"],
-         f"amihud_20 residual IC {sg(am['mean_ic'])} (t {sg(am['t'], 2)}, q {am['q_bh']:.3f})"
+         f"amihud_20 residual IC {sg(am['mean_ic'])} (t {sg(am['t'], 2)}, q {f(am['q_bh'], 3)})"
          + ("; the only feature selected in all four yearly re-selections" if every == ["amihud_20"] else ""),
          "Carries information the pilot's 10 features lacked."),
         ("Short horizon", ", ".join(SHORT_H), SHORT_H,
-         (f"all |t| &lt; 1 (largest {tmax:.2f}), sign consistency ≤ {cmax:.3f}" if tmax < 1 else
-          f"largest |t| {tmax:.2f}, sign consistency ≤ {cmax:.3f}"),
+         (f"all |t| &lt; 1 (largest {f(tmax, 2)}), sign consistency ≤ {f(cmax, 3)}" if tmax < 1 else
+          f"largest |t| {f(tmax, 2)}, sign consistency ≤ {f(cmax, 3)}"),
          "Dead weight. Adding more of them has negative expected value."),
     ]
     cards, trs = [], []
@@ -1819,13 +1859,13 @@ def family_cards() -> tuple[str, str]:
         rr = []
         for x in reps:
             if x == "amihud_20":
-                rr.append(f'<tr><td><code>{x}</code> <span class="dim2">residual</span></td>'
+                rr.append(f'<tr><td><code>{x}</code><span class="twin">residual IC</span></td>'
                           f'<td>{minibar(am["mean_ic"], 0.10, f"amihud_20 residual IC {sg(am["mean_ic"])}")}</td>'
                           f'<td>{sg(am["mean_ic"])}</td><td>{sg(am["t"], 2)}</td><td>{DASH}</td></tr>')
                 continue
             v = IC[x]
-            twin = f" {MID} {TWINS[x]}" if x in TWINS else ""
-            rr.append(f'<tr><td><code>{x}</code><span class="dim2">{twin}</span></td>'
+            twin = f'<span class="twin">rank twin {TWINS[x]}</span>' if x in TWINS else ""
+            rr.append(f'<tr><td><code>{x}</code>{twin}</td>'
                       f'<td>{minibar(v["mean_ic"], 0.10, f"{x} mean monthly IC {sg(v["mean_ic"])}")}</td>'
                       f'<td>{sg(v["mean_ic"])}</td><td>{sg(v["t_stat"], 2)}</td>'
                       f'<td>{same_sign(v)}/{v["n_months"]}</td></tr>')
@@ -1915,22 +1955,22 @@ def sec_features() -> str:
              f"{D.fe['n_new_features']} engineered features (regime inputs, interactions, listing age, rank twins, "
              f"accumulation) in {len(fab['variants'])} variants",
              f"CV ≥ {f(fab['rebuild_bar_cv'])} (control {f(fab['control_clean_cv'])} + "
-             f"{fab['rebuild_bar_cv'] - fab['control_clean_cv']:.3f}), every fold ≥ 0.50",
+             f"{f(fab['rebuild_bar_cv'] - fab['control_clean_cv'], 3)}), every fold ≥ 0.50",
              f"<b>All {word(len(fab['variants']))} fail.</b> Best <code>{fab['best_variant']}</code> {f(best['cv'])} "
-             f"(worst fold {best['min_fold']:.3f}); all {fab['variants']['lgbm_fe_all']['n_features']} features "
+             f"(worst fold {f(best['min_fold'], 3)}); all {fab['variants']['lgbm_fe_all']['n_features']} features "
              f"{f(fab['variants']['lgbm_fe_all']['cv'])}; regime variant {f(fab['variants']['lgbm_fe_regime']['cv'])}. "
-             f"Cause: redundancy (rank twins correlate {rlo:.2f} to {rhi:.2f} with existing features)."],
+             f"Cause: redundancy (rank twins correlate {f(rlo, 2)} to {f(rhi, 2)} with existing features)."],
             [f"Feature sufficiency (<code>FEATURE_SUFFICIENCY.md</code>)",
              f"{len(fs['new_features'])} features from bhavcopy fields the pilot never read (<code>trades</code>, "
              f"<code>vwap</code>, <code>last</code>, <code>prev_close</code>, delivery value), Amihud illiquidity, "
              f"idiosyncratic vol, a {n_clusters}-cluster sector proxy from return correlations",
              f"residual IC vs the champion's 10 ranks, BH q ≤ {fs['rules']['bh_q']:g}; then the same harness A/B",
-             f"<b>{len(surv)} of {len(fs['new_features'])} pass BH</b>: <code>{surv[0]}</code> (q {q[surv[0]]:.3f}) and "
-             f"<code>{surv[1]}</code> (q {q[surv[1]]:.3f}), both re-expressions of delivery and liquidity. The A/B with "
+             f"<b>{len(surv)} of {len(fs['new_features'])} pass BH</b>: <code>{surv[0]}</code> (q {f(q[surv[0]], 3)}) and "
+             f"<code>{surv[1]}</code> (q {f(q[surv[1]], 3)}), both re-expressions of delivery and liquidity. The A/B with "
              f"the top 5 reached {f(ab_top5['cv'])} ({'pass' if ab_top5['passes'] else 'fail'}), and its selection "
              f"window included the CV months. Fields never read carry no robust signal (lowest q "
-             f"{min(q[x] for x in never):.2f}). The sector proxy is real (recovers IT, PSU banks, private banks, "
-             f"defence, metals) but adds nothing (q ≥ {min(q[x] for x in clus):.2f})."],
+             f"{f(min(q[x] for x in never), 2)}). The sector proxy is real (recovers IT, PSU banks, private banks, "
+             f"defence, metals) but adds nothing (q ≥ {f(min(q[x] for x in clus), 2)})."],
             [f"5-year nested re-selection (<code>nested_selection.json</code>)",
              f"The pilot's selection method re-run inside each training history, once per calendar year, on 50 base "
              f"features + the {len(surv)} BH survivors", "none (descriptive)",
@@ -1955,11 +1995,11 @@ def sec_features() -> str:
   {cards}
   <details><summary>Show as a table</summary><div class="card">{fam_tbl}</div></details>
   <p>Other facts that shape the design: edge is not confined to the illiquid tail (composite IC by turnover tercile
-  {liq['illiquid']['mean_monthly_ic']:.3f} / {liq['mid']['mean_monthly_ic']:.3f} / {liq['liquid']['mean_monthly_ic']:.3f}
+  {f(liq['illiquid']['mean_monthly_ic'], 3)} / {f(liq['mid']['mean_monthly_ic'], 3)} / {f(liq['liquid']['mean_monthly_ic'], 3)}
   from least to most liquid); the one interaction that earns a slot is momentum × volatility
   ({sg(ix['double_difference'] * 100, 2)} pp double difference, same sign in {pu(ix['pct_months_dd_same_sign'])} of
   months); delivery and momentum are substitutes, not a confirmation pair; daily ICs are nearly fully dependent draws
-  (mom_12_1 lag-1 autocorrelation {lag1:.3f}), so only date-block significance is honest; <b>March 2026 is a
+  (mom_12_1 lag-1 autocorrelation {f(lag1, 3)}), so only date-block significance is honest; <b>March 2026 is a
   common-mode inversion month</b>, the worst IC month for {k_crash} of {len(IC)} features at once, which is why every
   model's April 2026 fold was adversarial and {worst_txt} (<a href="#five-year">five-year walk-forward</a>).</p>
   <div class="card" id="inversion"><h3 class="cardh">Monthly IC of every base feature, and the March-2026 inversion</h3>
@@ -1970,7 +2010,7 @@ def sec_features() -> str:
   <div class="card">{supp_tbl}</div>
   <div class="cols2">
     <div class="card"><h3 class="cardh">Residual IC of the {len(fs['new_features'])} new features</h3>
-    <div class="scroll"><div class="wide-svg sm">{svg_resid_ic()}</div></div>
+    <div class="scroll"><div class="wide-svg xs">{svg_resid_ic()}</div></div>
     <p class="cap">Information beyond the champion's 10 ranks (<code>feature_sufficiency.json</code>, residual IC over
     16 months). Highlighted: the {word(len(surv))} that pass Benjamini-Hochberg at q ≤ {fs['rules']['bh_q']:g}.</p></div>
     <div class="card"><h3 class="cardh">Nested yearly selection: which features each year picked</h3>
@@ -1990,8 +2030,8 @@ def sec_features() -> str:
   <h3 class="sub3">What the pilot got wrong about features, and how it was found</h3>
   <p>The pilot's 10 features were ranked by univariate AUC on the four CV test months and by permutation importance on
   the June test month. The red team's honest re-run (<code>AUDIT.md</code>, T11) scored {f(t11['cv_auc_k10'])} instead
-  of {f(D.audit['claim_audited']['cv_auc_frozen'])}, level with random 10-feature subsets ({t12['mean']:.3f} ±
-  {t12['sd']:.3f}). At 5 years the same subset scores {f(c10['cv'])} and loses to all features in {w_c10} of
+  of {f(D.audit['claim_audited']['cv_auc_frozen'])}, level with random 10-feature subsets ({f(t12['mean'], 3)} ±
+  {f(t12['sd'], 3)}). At 5 years the same subset scores {f(c10['cv'])} and loses to all features in {w_c10} of
   {c10['n']} folds. The mechanism is visible in the yearly re-selections: the pilot's set is the 2025/2026 regime's set
   (overlap {ov['2025']} of 10 with the 2025 pick, {ov['2024']} of 10 with 2024's).</p>
 </section>"""
@@ -2028,7 +2068,7 @@ def sec_models() -> str:
     notes = {"t11": f"selection-inflated; honest nested value {f(t11['cv_auc_k10'])}",
              "rl": f"fails to beat its own init on {rl_init} of {len(cvf)} folds"}
     ptab = table(["Model", "Family", "CV AUC", "Worst fold", "Holdout AUC", "Note"],
-                 [[r["name"], r["fam"], f(r["cv"]), f"{r['worst']:.3f}", f"{r['ho']:.3f}", notes.get(r["note"], "")]
+                 [[r["name"], r["fam"], f(r["cv"]), f"{f(r['worst'], 3)}", f"{f(r['ho'], 3)}", notes.get(r["note"], "")]
                   for r in pr], cls="plain", wrap=(5,))
     ten = D.ms["cv_holdout_tension"]
     k, nn = (int(x) for x in ten["models_holdout_above_cv"].split("/"))
@@ -2041,14 +2081,14 @@ def sec_models() -> str:
         if r["passes"]:
             return "yes"
         if r is closest:
-            return f"no, by {D.BAR - r['cv']:.4f}"
+            return f"no, by {f(D.BAR - r['cv'], 4)}"
         if r is stable:
             return "no (most stable)"
         return "no"
 
     stab = table(["Model", "CV AUC ± sd", "Worst fold", "Holdout AUC", "Rank-IC (Newey-West t)", "Pass"],
-                 [[r["label"], f"{f(r['cv'])} ± {r['sd']:.3f}", f"{r['worst']:.3f}", f"{r['ho']:.3f}",
-                   f"{sg(r['ric'])} ({r['nw']:.1f})", passtxt(r)] for r in sr], cls="plain", wrap=(0,))
+                 [[r["label"], f"{f(r['cv'])} ± {f(r['sd'], 3)}", f"{f(r['worst'], 3)}", f"{f(r['ho'], 3)}",
+                   f"{sg(r['ric'])} ({f(r['nw'], 1)})", passtxt(r)] for r in sr], cls="plain", wrap=(0,))
     ex = D.expo["exposures"]
     cvp = cvf
 
@@ -2106,13 +2146,13 @@ def league5_table() -> str:
         s = D.S5[m]
         b = boot.get(m)
         cis = f"[{f(b['cv_mean_ci95'][0])}, {f(b['cv_mean_ci95'][1])}]" if b else ""
-        mds = f"{pc(s['mds'], 2)} ({s['mds_pos']} / {s['n_ds']})" if s["mds"] is not None else ""
-        rows.append([LEAGUE_LABEL[m], s["feats"], f"{f(s['cv'])} ± {s['sd']:.3f}", cis,
-                     f"{s['ge']} / {s['n']} ({pu(s['ge'] / s['n'])})", f"{s['worst']:.3f} ({s['worst_m']})",
-                     f"{s['ho']:.3f} ({pc(s['ho_ds'], 2)})", mds])
+        mds = two(pc(s['mds'], 2), f"{s['mds_pos']} / {s['n_ds']} positive") if s["mds"] is not None else ""
+        rows.append([LEAGUE_LABEL[m], s["feats"], f"{f(s['cv'])} ± {f(s['sd'], 3)}", cis,
+                     two(f"{s['ge']} / {s['n']}", pu(s['ge'] / s['n'])), two(f(s['worst'], 3), s['worst_m']),
+                     two(f(s['ho'], 3), pc(s['ho_ds'], 2)), mds])
         rc.append("nested" if m in MEMBERS else "")
     return table(["Model", "Features", "CV AUC ± sd", "95% CI (20-session blocks)", "Folds ≥ 0.50",
-                  "Worst fold", "Holdout AUC (decile spread)", "Mean fold decile spread (positive folds)"],
+                  "Worst fold (month)", "Holdout AUC (decile spread)", "Mean fold decile spread (positive folds)"],
                  rows, cls="plain league5", wrap=(0,), row_cls=rc)
 
 
@@ -2123,7 +2163,7 @@ def peryear_table() -> str:
     for y in years:
         k = S["all51"]["per_year"][y][1]
         lab = {"2023": "2023 (short training windows)", "2026": "2026 (Jan to Jul)"}.get(y, y)
-        rows.append([lab, str(k)] + [f"{S[m]['per_year'][y][0]:.3f}" for m in YEAR_COLS])
+        rows.append([lab, str(k)] + [f"{f(S[m]['per_year'][y][0], 3)}" for m in YEAR_COLS])
     return table(["Year", "Folds"] + [f"<code>{m}</code>" for m in YEAR_COLS], rows, cls="plain")
 
 
@@ -2163,11 +2203,11 @@ def regime_table() -> str:
         if not c.get("n_months"):
             continue
         rows.append([E(lab), str(c["n_months"]), n(c["mean_n_train"]) if c.get("mean_n_train") else ""]
-                    + [f"{g[m]['mean_auc']:.4f}" if g.get(m, {}).get("n_months") else "" for m in models]
+                    + [f"{f(g[m]['mean_auc'], 4)}" if g.get(m, {}).get("n_months") else "" for m in models]
                     + [pu(c["share_auc_ge_050"]), pc(c["top_decile_excess_vs_ew_20d"], 2), sg(c["mean_ic"], 4)])
-    head = (["Regime or window", "Months", "Mean training rows"] + [E(NAME5[m]) for m in models]
-            + ["nested_lgbm months ≥ 0.50", "nested_lgbm top decile − EW (20 days, gross)", "nested_lgbm mean IC"])
-    return table(head, rows, cls="plain small-t", wrap=(0,))
+    head = (["Regime or window", "Months", "Mean training rows"] + [E(PAIR_SHORT[m]) for m in models]
+            + ["Nested: months ≥ 0.50", "Nested: top decile − EW", "Nested: mean IC"])
+    return table(head, rows, cls="plain small-t regime", wrap=(0,))
 
 
 def sec_five_year() -> str:
@@ -2212,7 +2252,10 @@ def sec_five_year() -> str:
                      f'<div class="scroll"><div class="wide-svg">{svg_boot_pairs()}</div></div>'
                      f'<ul class="legend"><li><span class="dot" style="background:var(--s1)"></span>43-fold CV mean, '
                      f'95% interval</li><li><span class="dot hollow s2"></span>holdout, 95% interval (about 2 blocks: '
-                     f'indicative)</li></ul><p class="cap">{E(bd["holdout"])}.</p></div>')
+                     f'indicative)</li></ul><p class="cap">{E(bd["holdout"])}. Lower panel: A {MINUS} B with short names '
+                     f'(“LightGBM all” is all features, “nested” the yearly re-selection, “pilot 10” the pilot\'s 10 '
+                     f'features, “Momentum rank” the no-fit momentum rank); the right column counts the folds A wins.'
+                     f'</p></div>')
     else:
         boot_p = ""
         boot_card = pending_card("Paired 20-session block bootstrap", ["ml/results/scale5y/bootstrap_5y.json"],
@@ -2235,17 +2278,17 @@ def sec_five_year() -> str:
         mom_run = G[run_k]["baseline_mom"]["mean_auc"]
         cr = pm[D.crash]
         inv = R["majority_inverted_months"]
-        FACTS.update({"reg_down": f"{dn['mean_auc']:.3f}", "reg_up": f"{up['mean_auc']:.3f}",
-                      "reg_ex": f"{nlg[ex_k]['mean_auc']:.4f}", "n_inverted": str(len(inv))})
+        FACTS.update({"reg_down": f"{f(dn['mean_auc'], 3)}", "reg_up": f"{f(up['mean_auc'], 3)}",
+                      "reg_ex": f"{f(nlg[ex_k]['mean_auc'], 4)}", "n_inverted": str(len(inv))})
         reg_p = (f"<p><b>Regimes</b> (defined from market data before any AUC was split by them; "
-                 f"<code>regimes_5y.md</code>): models score higher in down months (nested LightGBM {dn['mean_auc']:.3f} "
-                 f"over {dn['n_months']} months) than in up months ({up['mean_auc']:.3f} over {up['n_months']}), and higher "
-                 f"in low-volatility months ({lo_v['mean_auc']:.3f}) than in high-volatility ones ({hi_v['mean_auc']:.3f}). "
+                 f"<code>regimes_5y.md</code>): models score higher in down months (nested LightGBM {f(dn['mean_auc'], 3)} "
+                 f"over {dn['n_months']} months) than in up months ({f(up['mean_auc'], 3)} over {up['n_months']}), and higher "
+                 f"in low-volatility months ({f(lo_v['mean_auc'], 3)}) than in high-volatility ones ({f(hi_v['mean_auc'], 3)}). "
                  f"One episode lifts the five-year mean: the {mname(D.run[0])} to {mname(D.run[-1])} run "
                  f"({word(run_dirs.count('down'))} of {word(len(D.run))} months down, {word(run_vol.count('low-vol'))} "
-                 f"low-volatility) carries every machine-learned model to {min(run_means):.2f} to {max(run_means):.2f} "
-                 f"(the momentum rule {mom_run:.2f}); without it and {mname(D.crash)}, nested LightGBM averages "
-                 f"{nlg[ex_k]['mean_auc']:.4f} over the other {nlg[ex_k]['n_months']} months. {mname(D.crash)} was a "
+                 f"low-volatility) carries every machine-learned model to {f(min(run_means), 2)} to {f(max(run_means), 2)} "
+                 f"(the momentum rule {f(mom_run, 2)}); without it and {mname(D.crash)}, nested LightGBM averages "
+                 f"{f(nlg[ex_k]['mean_auc'], 4)} over the other {nlg[ex_k]['n_months']} months. {mname(D.crash)} was a "
                  f"V-shaped rebound after the February sell-off (equal-weight universe {pc(cr['ew_fwd_20d'])} in 20 days, "
                  f"volatility {pu(cr['ew_daily_vol_ann'])}) in which {pu(cr['inverted_feature_share'])} of features had "
                  f"their IC against its usual sign; {word(len(inv))} of {nf} months had a majority of features inverted "
@@ -2253,26 +2296,26 @@ def sec_five_year() -> str:
         reg_card = (f'<div class="card"><h3 class="cardh">Mean fold AUC by pre-specified market regime</h3>'
                     f'{regime_table()}<p class="cap">From <code>regimes_5y.json</code>: direction is the sign of the '
                     f'equal-weight universe’s forward 20-day return; volatility is high above the 43-month median '
-                    f'({pu(R["definition"]["vol_threshold_ann"], 1)} a year). Top-decile excess is gross of costs.</p></div>')
+                    f'({pu(R["definition"]["vol_threshold_ann"], 1)} a year). The last three columns are nested LightGBM\'s; its '
+                    f'top-decile excess is the 20-day return over the equal-weight universe, gross of costs.</p></div>')
     else:
         reg_p = ""
         reg_card = pending_card("Regime table by pre-specified market state", ["ml/results/scale5y/regimes_5y.json"],
                                 "ml/scale5y_report.py writes it after the bootstrap.")
     # moves together (JSON numbers; see hand-back)
-    mlm = [m for m in STRIP if m in S and m != "baseline_mom"] + ["nested_lr_l2"]
+    allm, mlm = strip_sets()
     rv = [S[m]["auc"][fo] for m in mlm for fo in D.run]
     rmeans = [sum(S[m]["auc"][fo] for fo in D.run) / len(D.run) for m in mlm]
     mv = [S["baseline_mom"]["auc"][fo] for fo in D.run]
-    allm = [m for m in LEAGUE_ORDER if m in S and m not in MEMBERS]
     cv_ = [S[m]["auc"][D.crash] for m in allm]
     all_crash = all(x < 0.5 for x in cv_)
     together = (f"Every model moves together month to month: from {mname(D.run[0])} to {mname(D.run[-1])} the "
-                f"machine-learned models run {min(rv):.2f} to {max(rv):.2f} (window means {min(rmeans):.2f} to "
-                f"{max(rmeans):.2f}; the momentum rule {min(mv):.2f} to {max(mv):.2f}) and "
-                + ("all of them crash" if all_crash else "most of them crash")
-                + f" in {mname(D.crash)} ({min(cv_):.2f} to {max(cv_):.2f}), the inversion month the EDA identified. "
+                f"{word(len(mlm))} machine-learned models in the fold chart run {f(min(rv), 2)} to {f(max(rv), 2)} "
+                f"(window means {f(min(rmeans), 2)} to {f(max(rmeans), 2)}; the momentum rule {f(min(mv), 2)} to "
+                f"{f(max(mv), 2)}) and " + ("all of them crash" if all_crash else "most of them crash")
+                + f" in {mname(D.crash)} ({f(min(cv_), 2)} to {f(max(cv_), 2)}), the inversion month the EDA identified. "
                   f"The common component is the market regime, not the algorithm.")
-    FACTS.update({"run_range": f"{min(rv):.2f} to {max(rv):.2f}", "crash_range": f"{min(cv_):.2f} to {max(cv_):.2f}"})
+    FACTS.update({"run_range": f"{f(min(rv), 2)} to {f(max(rv), 2)}", "crash_range": f"{f(min(cv_), 2)} to {f(max(cv_), 2)}"})
     nt = a51["ntrain"]
     # four findings
     pr = (P.boot or {}).get("pairs", {})
@@ -2280,7 +2323,8 @@ def sec_five_year() -> str:
     p10_txt = f" {ci(p10['ci95'][0], p10['ci95'][1], signed=False)}" if p10 else ""
     py = {y: (S["nested_lgbm"]["per_year"][y][0], S["all51"]["per_year"][y][0]) for y in S["all51"]["per_year"]}
     ahead = [y for y, (a, b) in py.items() if a > b + 5e-4]
-    ahead_txt = " and ".join(f"{y} ({py[y][0]:.4f} vs {py[y][1]:.4f})" for y in ahead)
+    ahead_txt = " and ".join(f"{y} ({f(py[y][0], 4)} vs {f(py[y][1], 4)}"
+                             + (", with small training sets" if y == "2023" else "") + ")" for y in ahead)
     exp = (P.summary or {}).get("score_exposures_mean_per_date_spearman", {})
     reg = (P.regimes or {}).get("groups", {})
     f2_exp = ""
@@ -2293,8 +2337,8 @@ def sec_five_year() -> str:
                   f"{e3('nested_lgbm', 'amihud_20')}, {e3('nested_lgbm', 'dist_52w_high')}).")
     f2_reg = ""
     if reg:
-        f2_reg = (f" AUC rewards that tilt in down months ({reg['down (EW 20d <= 0)']['lr_l2']['mean_auc']:.3f}) and "
-                  f"punishes it in rebounds ({lr['auc'][D.crash]:.3f} in {mname(D.crash)});")
+        f2_reg = (f" AUC rewards that tilt in down months ({f(reg['down (EW 20d <= 0)']['lr_l2']['mean_auc'], 3)}) and "
+                  f"punishes it in rebounds ({f(lr['auc'][D.crash], 3)} in {mname(D.crash)});")
     best_bottom = lr["ho_dm"] and max(range(10), key=lambda i: lr["ho_dm"][i]) == 0
     worst_lr = sorted([lr["worst"], nlr["worst"]])
     classifiers = [m for m in ("all51", "nested_lgbm", "champion10", "lr_l2", "nested_lr_l2", "nested_catboost") if m in S]
@@ -2311,16 +2355,16 @@ def sec_five_year() -> str:
         e_ex = bk[f"{ENS}|top_decile"]["segments"]["combined"]["20bps"]["excess_ann_vs_ew_252_20"]
         n_ex = bk["nested_lgbm|top_decile"]["segments"]["combined"]["20bps"]["excess_ann_vs_ew_252_20"]
         ens_atr = exp.get(ENS, {}).get("atr_pct", {}).get("cv_mean")
-        f3 = (f"AUC {nl['cv']:.3f}" + (f" with an IC t of {ric['cv_nw_t_lag20']:.0f}" if ric else "")
+        f3 = (f"AUC {f(nl['cv'], 3)}" + (f" with an IC t of {f(ric['cv_nw_t_lag20'], 0)}" if ric else "")
               + f" coexists with no long-only edge (<a href=\"#portfolio5\">five-year portfolio</a>). The label "
                 f"“beat the universe median” rewards low-volatility names, which cross the median often but do "
                 f"not beat the mean of a right-skewed, rising universe, so the classifiers' top deciles are defensive: "
-                f"nested LightGBM's trails the equal-weight universe by {abs(nup) * 100:.2f}% per 20 days in up months, "
+                f"nested LightGBM's trails the equal-weight universe by {f(abs(nup) * 100, 2)}% per 20 days in up months, "
                 f"net of costs. ")
         tail = (f" The ensemble shows the fix: adding the high-volatility LambdaRank makes the blended score "
                 f"volatility-neutral" + (f" (correlation with <code>atr_pct</code> {sg(ens_atr, 2)})" if ens_atr is not None
                                          else "")
-                + f", costs {nl['cv'] - S[ENS]['cv']:.3f} of AUC and turns {pc(n_ex)} a year into {pc(e_ex)} a year over "
+                + f", costs {f(nl['cv'] - S[ENS]['cv'], 3)} of AUC and turns {pc(n_ex)} a year into {pc(e_ex)} a year over "
                   f"the universe. AUC is necessary, not sufficient; models are judged on net excess over the equal-weight "
                   f"universe." if ENS in S else "")
     else:
@@ -2335,16 +2379,16 @@ def sec_five_year() -> str:
     same_rank = sorted(order43, key=lambda m: -S[m]["cv"]) == sorted(order43, key=lambda m: -S[m]["cv39"])
     findings = [
         ("Feature selection did not transfer, and is not needed.",
-         f"The pilot's 10 features lose to all features by {a51['cv'] - c10['cv']:.4f} AUC{p10_txt} and in "
-         f"{w('all51', 'champion10')} of {nf} months; they average {c10['per_year']['2023'][0]:.4f} in 2023. Honest "
+         f"The pilot's 10 features lose to all features by {f(a51['cv'] - c10['cv'], 4)} AUC{p10_txt} and in "
+         f"{w('all51', 'champion10')} of {nf} months; they average {f(c10['per_year']['2023'][0], 4)} in 2023. Honest "
          f"yearly re-selection recovers the full-feature score exactly ({f(nl['cv'])} vs {f(a51['cv'])}) at the price of "
-         f"unstable, alternating sets, and by calendar year it was ahead of all features only in {ahead_txt}"
-         f"{' (2023 with small training sets)' if '2023' in ahead else ''}. LightGBM's own regularisation does the job. "
+         f"unstable, alternating sets, and it helped only in {ahead_txt}. LightGBM's own regularisation does the "
+         f"job. "
          f"The single-model reference uses all {D.n_cand} features."),
         ("The linear model has the highest mean and the worst risk.",
          f"L2 logistic scores {f(lr['cv'])} ({f(nlr['cv'])} nested), above LightGBM, so pre-registered gate 1 fails as "
-         f"written.{f2_exp}{f2_reg} its month-to-month spread is {lr['sd'] / a51['sd']:.1f}× LightGBM's, its worst "
-         f"month is {worst_lr[0]:.2f} to {worst_lr[1]:.2f}, and its holdout decile spread is {pc(lr['ho_ds'])}"
+         f"written.{f2_exp}{f2_reg} its month-to-month spread is {f(lr['sd'] / a51['sd'], 1)}× LightGBM's, its worst "
+         f"month is {f(worst_lr[0], 2)} to {f(worst_lr[1], 2)}, and its holdout decile spread is {pc(lr['ho_ds'])}"
          + (", with its bottom decile its best decile" if best_bottom else "")
          + f". Nonlinearity here buys stability and sane tails, not mean accuracy, which matches the literature's "
            f"modest GBM-over-linear gains (GKX: {MD_ONLY['gkx_r2']} monthly R²)."),
@@ -2398,8 +2442,8 @@ def sec_five_year() -> str:
   <div class="card"><h3 class="cardh">AUC versus tradability</h3><div class="scroll"><div class="wide-svg">{svg_decile()}</div></div>
   <ul class="legend"><li><span class="chip" style="background:var(--s1)"></span>mean fold decile spread, {nf} folds</li>
   <li><span class="chip" style="background:var(--s2)"></span>holdout decile spread (one {hold_n}-session window)</li></ul>
-  <p class="cap">Top-minus-bottom decile 20-day excess return per model, beside its CV AUC. The momentum rule has the
-  lowest AUC and the largest positive holdout spread; L2 logistic has the highest AUC and the most negative one.</p></div>
+  <p class="cap">Top-minus-bottom decile 20-day excess return per model, beside its CV AUC: the mean over the {nf} folds
+  and the one holdout window, from the per-model JSONs (<code>decile_spread</code>).</p></div>
   {"".join(pend_cards)}"""
 
 
@@ -2424,18 +2468,18 @@ def bifurcation() -> str:
         ["Reinforcement learning (REINFORCE contextual bandit)",
          f"CV {f(rl['cv_auc_mean'])}; fails to beat its own initialisation on {rl_init} of {len(cvf)} folds; its own "
          f"portfolio simulation loses to a free momentum heuristic out of sample; its best numbers come from "
-         f"{hold_dates} holdout dates (DSR {best['dsr']:.2f}). Literature: “no decent profitability” for RL in "
+         f"{hold_dates} holdout dates (DSR {f(best['dsr'], 2)}). Literature: “no decent profitability” for RL in "
          f"cross-sectional selection; RL works where a simulator exists (execution, hedging)."],
         ["GRU / LSTM / MLP",
-         f"At or below chance on CV ({p['gru']:.3f} / {p['lstm']:.3f} / {p['mlp']:.3f}). A 20-session temporal view adds "
+         f"At or below chance on CV ({f(p['gru'], 3)} / {f(p['lstm'], 3)} / {f(p['mlp'], 3)}). A 20-session temporal view adds "
          f"nothing the features do not already carry."],
         ["Temporal transformer (PatchTST-lite), DLinear",
-         f"{pt['cv_auc_mean']:.3f} / {dl['cv_auc_mean']:.3f} CV, {pt['holdout']['auc']:.3f} / {dl['holdout']['auc']:.3f} "
-         f"holdout; nearly identical fold paths, so attention adds about {pt['cv_auc_mean'] - dl['cv_auc_mean']:.3f} over "
+         f"{f(pt['cv_auc_mean'], 3)} / {f(dl['cv_auc_mean'], 3)} CV, {f(pt['holdout']['auc'], 3)} / {f(dl['holdout']['auc'], 3)} "
+         f"holdout; nearly identical fold paths, so attention adds about {f(pt['cv_auc_mean'] - dl['cv_auc_mean'], 3)} over "
          f"a two-layer linear model; both are a low-volatility bet in disguise."],
         ["Cross-sectional set-attention transformer",
-         f"{cs['cv_auc_mean']:.3f} ± {cs['cv_auc_std']:.3f}, {below_txt}, holdout {cs['holdout']['auc']:.3f}, rank-IC "
-         f"not significant (Newey-West t {cs_ric['rank_ic_cv_t_nw19']:.2f}). The label is already cross-sectional and the "
+         f"{f(cs['cv_auc_mean'], 3)} ± {f(cs['cv_auc_std'], 3)}, {below_txt}, holdout {f(cs['holdout']['auc'], 3)}, rank-IC "
+         f"not significant. The label is already cross-sectional and the "
          f"rank features already normalise across stocks."],
         ["Time-series foundation models (Chronos, TimesFM)",
          "Not run; literature reports negative zero-shot R² on daily stock returns and direction accuracy near 50%."],
@@ -2479,18 +2523,18 @@ def sec_strategy() -> str:
         r = c(b)
         da = r["daily_active"]
         return [label, pc(r["tranche"]["ann_return_252_h"]), f"<b>{pc(da['ann_mean_daily'])}</b>{active_extra}",
-                f"{da['sharpe']:.2f} [{sg(da['sharpe_ci95'][0], 2)}, {sg(da['sharpe_ci95'][1], 2)}]",
+                f"{f(da['sharpe'], 2)} [{sg(da['sharpe_ci95'][0], 2)}, {sg(da['sharpe_ci95'][1], 2)}]",
                 pc(r["daily"]["max_dd"]) if show_risk else "", pu(b["turnover_per_rebalance"]) if show_risk else ""]
 
     lq_extra = (f" (CV {pc(c(lq, 'cv')['daily_active']['ann_mean_daily'])}, holdout "
                 f"{pc(c(lq, 'holdout')['daily_active']['ann_mean_daily'])})")
     ba_h = c(hm)["beta_alpha_vs_benchmark"]
     ba_c = c(td)["beta_alpha_vs_benchmark"]
-    hm_extra = (f" (beta {ba_h['beta_vs_benchmark']:.2f}; beta-adjusted alpha {pc(ba_h['alpha_ann'])} vs champion "
+    hm_extra = (f" (beta {f(ba_h['beta_vs_benchmark'], 2)}; beta-adjusted alpha {pc(ba_h['alpha_ann'])} vs champion "
                 f"{pc(ba_c['alpha_ann'])})")
     cap_l = lq["capacity"]["aum_cap_rs_crore_p10name_5pct_adv"]
-    books = [row_book(f"Champion top decile, long-only (~{td['basket_size_mean']:.0f} names)", td),
-             row_book(f"Champion liquid-tercile top decile (~{lq['basket_size_mean']:.0f} names, capacity "
+    books = [row_book(f"Champion top decile, long-only (~{f(td['basket_size_mean'], 0)} names)", td),
+             row_book(f"Champion liquid-tercile top decile (~{f(lq['basket_size_mean'], 0)} names, capacity "
                       f"₹{cap_l:,.0f} cr)", lq, lq_extra, show_risk=False),
              row_book("Momentum heuristic (free)", hm, hm_extra),
              ["Equal-weight universe (passive)", pc(ew["combined"]["tranche"]["ann_return_252_h"]), "", "",
@@ -2503,15 +2547,15 @@ def sec_strategy() -> str:
     sc, bk = bs["series"].split("|")
     be = sorted([interp_be("lgbm_fs_selected", "top_decile"), interp_be("lgbm_fs_selected", "liq_top_decile")])
     trl = ch["min_track_record_periods_psr95_vs_0"]
-    FACTS.update({"pilot_active": pc(c(td)["daily_active"]["ann_mean_daily"]), "pilot_ir": f"{c(td)['daily_active']['sharpe']:.2f}",
-                  "pilot_dsr": f"{ch['dsr']:.2f}", "pilot_N": str(ex["n_trials"]["N_used"]),
-                  "breakeven": f"{be[0]:.0f} to {be[1]:.0f}", "trl_days": f"{trl:.0f}"})
-    dsr_p = (f"Deflated Sharpe with N = {ex['n_trials']['N_used']} trials: champion active book PSR {ch['psr_vs_0']:.2f}, "
-             f"<b>DSR {ch['dsr']:.2f}</b>; best cell in the whole grid ({SCORER_LABEL.get(sc, sc)} "
-             f"{BASKET_LABEL.get(bk, bk)}) DSR {bs['dsr']:.2f}. "
+    FACTS.update({"pilot_active": pc(c(td)["daily_active"]["ann_mean_daily"]), "pilot_ir": f"{f(c(td)['daily_active']['sharpe'], 2)}",
+                  "pilot_dsr": f"{f(ch['dsr'], 2)}", "pilot_N": str(ex["n_trials"]["N_used"]),
+                  "breakeven": f"{f(be[0], 0)} to {f(be[1], 0)}", "trl_days": f"{f(trl, 0)}"})
+    dsr_p = (f"Deflated Sharpe with N = {ex['n_trials']['N_used']} trials: champion active book PSR {f(ch['psr_vs_0'], 2)}, "
+             f"<b>DSR {f(ch['dsr'], 2)}</b>; best cell in the whole grid ({SCORER_LABEL.get(sc, sc)} "
+             f"{BASKET_LABEL.get(bk, bk)}) DSR {f(bs['dsr'], 2)}. "
              + ("No cell survives. " if bs["dsr"] < 0.95 else "")
-             + f"At its observed IR the champion needs about {trl:.0f} trading days ({trl / 252:.1f} years) of track "
-               f"record to reach PSR 95%. What does look solid is cost headroom (break-even {be[0]:.0f} to {be[1]:.0f} bps "
+             + f"At its observed IR the champion needs about {f(trl, 0)} trading days ({f(trl / 252, 1)} years) of track "
+               f"record to reach PSR 95%. What does look solid is cost headroom (break-even {f(be[0], 0)} to {f(be[1], 0)} bps "
                f"per side against a realistic {MD_ONLY['cost_realistic']}) and capacity (about "
                f"₹{round(cap_l, -2):,.0f} cr in the liquid book).")
     drows = []
@@ -2520,8 +2564,8 @@ def sec_strategy() -> str:
                      ("best_absolute_long_only", "Best absolute long-only (champion top decile, net − rf)"),
                      ("ew_universe_absolute_reference", "Passive equal-weight universe (net − rf)")):
         e = ex[key]
-        drows.append([lab, f"{e['sr_annualised']:.2f}", sg(e["skew"], 2), f"{e['kurtosis_pearson']:.2f}",
-                      f"{e['psr_vs_0']:.3f}", f"<b>{e['dsr']:.3f}</b>", f"{e['min_track_record_periods_psr95_vs_0']:.0f}"])
+        drows.append([lab, f"{f(e['sr_annualised'], 2)}", sg(e["skew"], 2), f"{f(e['kurtosis_pearson'], 2)}",
+                      f"{f(e['psr_vs_0'], 3)}", f"<b>{f(e['dsr'], 3)}</b>", f"{f(e['min_track_record_periods_psr95_vs_0'], 0)}"])
     dtab = table(["Strategy (combined, 20 bps)", "Sharpe (ann.)", "Skew", "Kurtosis", "PSR (SR* = 0)", "DSR",
                   "Days for PSR 95%"], drows, cls="plain", wrap=(0,))
     ymax = math.ceil(max(abs(float(r["net_active_vs_ew_20bps"])) for r in D.monthly) * 100) / 100
@@ -2549,8 +2593,8 @@ def sec_strategy() -> str:
   (<code>deflated_sharpe</code>); T = {ch['T_periods']} effective daily observations.</p></div>
   <div class="card"><h3 class="cardh">Champion, month by month (net of 20 bps per side)</h3><div class="minis">{minis}</div>
   <p class="cap">Bars: mean 20-day net active return against the equal-weight universe per signal month, from
-  <code>champion_monthly.csv</code>; figures under the bars: share of tranches that beat the universe. All four CV
-  months were up months and both holdout months were down months.</p></div>
+  <code>champion_monthly.csv</code>; figures under the bars: share of that month's tranches that beat the universe;
+  “adv.” marks the months the file flags as adversarial.</p></div>
   <p>Two measurement lessons from this study now bind the whole program: the equal-weight universe beats the universe
   median by {pc(ewm, 2)} per 20 days (skew, not skill), so every “beats the median” hit rate is inflated; and
   the naive fully-invested average would have flipped the champion's active return from
@@ -2584,14 +2628,14 @@ def portfolio5() -> str:
         d = pt["dsr"]["books"][key]["skill"][nh]
         ls = key.endswith("|ls_decile")
         exc = "" if ls else pc(c["excess_ann_vs_ew_252_20"])
-        ir = "" if ls else f"{c['ir']:.2f} [{c['ir_ci95'][0]:.2f}, {c['ir_ci95'][1]:.2f}]"
+        ir = "" if ls else two(f(c['ir'], 2), f"[{f(c['ir_ci95'][0], 2)}, {f(c['ir_ci95'][1], 2)}]")
         return [f"<b>{label}</b>" if em else label, pc(c["ann_return_252_20"]), exc,
-                f"{c['sharpe']:.2f} [{c['sharpe_ci95'][0]:.2f}, {c['sharpe_ci95'][1]:.2f}]", ir, pc(c["max_dd"]),
-                pu(b["turnover_per_rebalance"]), f"{b['months_positive']} / {b['n_months']}", f"{d['psr_vs_0']:.2f}",
-                f"{d['dsr']:.3f}"]
+                two(f(c['sharpe'], 2), f"[{f(c['sharpe_ci95'][0], 2)}, {f(c['sharpe_ci95'][1], 2)}]"), ir, pc(c["max_dd"]),
+                pu(b["turnover_per_rebalance"]), f"{b['months_positive']} / {b['n_months']}", f"{f(d['psr_vs_0'], 2)}",
+                f"{f(d['dsr'], 3)}"]
 
     rows = [["Equal-weight universe (passive)", pc(ew["tranche"]["ann_return_252_h"]), "",
-             f"{ew['daily']['sharpe']:.2f} [{ew['daily']['sharpe_ci95'][0]:.2f}, {ew['daily']['sharpe_ci95'][1]:.2f}]", "",
+             two(f(ew['daily']['sharpe'], 2), f"[{f(ew['daily']['sharpe_ci95'][0], 2)}, {f(ew['daily']['sharpe_ci95'][1], 2)}]"), "",
              pc(ew["daily"]["max_dd"]), pu(pt["benchmarks"]["ew_universe"]["turnover_per_rebalance"]), "", "", ""]]
     spec = [("nested_lgbm|top_decile", "Nested LightGBM, top decile"),
             ("nested_lgbm|liq_top_decile", "Nested LightGBM, liquid top decile"),
@@ -2629,10 +2673,10 @@ def portfolio5() -> str:
                        for v in pt["dsr"]["books"].values())
         n5 = str(pt["dsr"]["N_sensitivity"]["5y_only"])
         ls34 = pt["dsr"]["books"][f"{ENS}|ls_decile"]["skill"][n5]["dsr"]
-        bullets.append(f"<b>Deflation.</b> The expected maximum Sharpe under the null at N = {nh} is {sr0:.2f} a year"
+        bullets.append(f"<b>Deflation.</b> The expected maximum Sharpe under the null at N = {nh} is {f(sr0, 2)} a year"
                        + ("; every book misses it" if all_miss else "")
                        + f". Counting only this run's {n5} trials, the ensemble long-short book's DSR would be "
-                         f"{ls34:.2f}. That book also needs shorts that NSE cash offers only on {MD_ONLY['fno_names']} "
+                         f"{f(ls34, 2)}. That book also needs shorts that NSE cash offers only on {MD_ONLY['fno_names']} "
                          f"F&amp;O names.")
         yrs = sorted(e["by_year_20d"].values())
         beta = es["20bps"]["beta_vs_bench"]
@@ -2640,7 +2684,7 @@ def portfolio5() -> str:
                        f"classifiers lean to low-volatility names (finding 3 above); its excess is "
                        + (f"positive in every calendar year ({pc(yrs[0], 2)} to {pc(yrs[-1], 2)} per 20 days)"
                           if yrs[0] > 0 else f"{pc(yrs[0], 2)} to {pc(yrs[-1], 2)} per 20 days by calendar year")
-                       + f" with a beta of {beta:.2f} to the universe. It is also the best of {n5} trials in this run, "
+                       + f" with a beta of {f(beta, 2)} to the universe. It is also the best of {n5} trials in this run, "
                          f"which is exactly what the DSR charges for.")
     paper = bk.get(f"{ENS}|{PAPER_BASKET}")
     roc = ""
@@ -2652,8 +2696,10 @@ def portfolio5() -> str:
                + ("with an interval clear of zero, and they fail the multiple-testing test. " if clear else
                   "considered, and they fail the multiple-testing test. ")
                + f"The historical record cannot reach DSR 0.95 at N = {nh}; only a fresh, frozen paper track record can "
-                 f"(about {round(trl / 252)} years at IR {pc_['ir']:.2f} for PSR 95%).</p>")
-    ymax = 0.06
+                 f"(about {round(trl / 252)} years at IR {f(pc_['ir'], 2)} for PSR 95%).</p>")
+    keys3 = [k for k in ("nested_lgbm|top_decile", "all51|top_decile", f"{ENS}|top_decile") if k in bk]
+    mx = max(abs(v) for k in keys3 for v in bk[k]["monthly_20bps"].values())
+    ymax = 0.02 * math.ceil(mx / 0.02 - 1e-9)
     charts = "".join(f'<figure class="bookfig"><figcaption>{E(lab)}</figcaption><div class="scroll"><div class="wide-svg">'
                      f'{svg_monthly_book(k, ymax)}</div></div></figure>'
                      for k, lab in (("nested_lgbm|top_decile", "Nested LightGBM, top decile"),
@@ -2671,12 +2717,20 @@ def portfolio5() -> str:
   <div class="card"><h3 class="cardh">Month by month: net return minus the equal-weight universe (gate 3 counts the
   months above zero)</h3>{charts}
   <p class="cap">Per signal month: mean net (20 bps per side) 20-day tranche return minus the equal-weight universe's,
-  from <code>portfolio_5y.json</code> (<code>monthly_20bps</code>); bars are clipped at ±{pu(ymax)}. The last two
-  months are the holdout.</p></div>
+  from <code>portfolio_5y.json</code> (<code>monthly_20bps</code>); the axis spans ±{pu(ymax)}, which holds the largest
+  month of the three books. The months after the dashed line are the holdout.</p></div>
   {roc}"""
 
 
 SUP = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+BON_COLS = [  # audit T7 null-sd sources: (key prefix, column label, what the source is)
+    ("T1_within_date_permutation", "Permutation null (T1)", "the within-date label permutation (T1)"),
+    ("10-session block bootstrap", "10-session blocks (T14)",
+     "a 10-session block bootstrap of the champion's CV mean (T14)"),
+    ("date_block_bootstrap", "Date-block bootstrap", "the date-block bootstrap interval divided by 3.92"),
+    ("fold_to_fold_regime", "Fold to fold (month level)", "the champion's fold standard deviation divided by √4"),
+    ("cross_config_dispersion", "Across configurations", "the spread of the other primary configurations' CV AUC"),
+]
 
 
 def sec_integrity() -> str:
@@ -2704,34 +2758,34 @@ def sec_integrity() -> str:
         else None
     t9 = A["T9"]
     rows = [
-        ["Reproduction", f"champion CV {t0['json_cv']:.6f} and holdout {t0['json_holdout']:.6f} reproduce "
+        ["Reproduction", f"champion CV {f(t0['json_cv'], 6)} and holdout {f(t0['json_holdout'], 6)} reproduce "
                          f"{'exactly' if t0['delta_cv'] == 0 and t0['delta_holdout'] == 0 else 'within ' + str(max(abs(t0['delta_cv']), abs(t0['delta_holdout'])))}"],
         ["Null distribution", f"label permutation within date, {len(t1['null_cv']['values'])} seeds: CV "
-                              f"{t1['null_cv']['mean']:.4f} ± {t1['null_cv']['sd']:.4f} (max {t1['null_cv']['max']:.4f}); "
-                              f"champion z = {t1['z_cv']:.0f} against this null"],
+                              f"{f(t1['null_cv']['mean'], 4)} ± {f(t1['null_cv']['sd'], 4)} (max {f(t1['null_cv']['max'], 4)}); "
+                              f"champion z = {f(t1['z_cv'], 0)} against this null"],
         ["Leakage", f"features shifted by +1 session: {sg(t2['runs']['shift_-1']['cv_auc_mean'] - t2['real_cv'], 3)} AUC only; "
-                    f"by +21 sessions: {t2['runs']['shift_-21']['cv_auc_mean']:.3f} (the detector works); labels recomputed "
+                    f"by +21 sessions: {f(t2['runs']['shift_-21']['cv_auc_mean'], 3)} (the detector works); labels recomputed "
                     f"from raw EOD: {n(t4['full_rows_compared'])} labels, max difference {t4['full_max_abs_diff']:g}; "
                     f"point-in-time universe identical; {t5['d_champion_features_truncated']['mismatches']} of "
                     f"{t5['d_champion_features_truncated']['n_values']} champion feature values change when recomputed "
                     f"from data ≤ t"],
-        ["Embargo", f"{t3['violating_rows']} of {n_tr / 1e6:.2f}M training rows exit on or after test start; "
+        ["Embargo", f"{t3['violating_rows']} of {f(n_tr / 1e6, 2)}M training rows exit on or after test start; "
                     f"{t3['label_horizon']['rows_horizon_gt_21_market_sessions']} labels span more than 21 sessions."
                     + (f" Fixed at 5 years by purging on each label's actual exit date ({purge} rows purged across the "
                        f"{len(D.folds)} folds)" if purge is not None else "")],
         ["Noise control", f"{len(in_noise)} of {len(ca['features'])} pilot champion features sit inside the univariate AUC "
-                          f"range of persistent pure noise (max {pn['noise_univariate_auc']['max']:.3f}); adding {n_iid} iid "
+                          f"range of persistent pure noise (max {f(pn['noise_univariate_auc']['max'], 3)}); adding {n_iid} iid "
                           f"noise features raised CV by {sg(t6['harness_delta_cv'], 3)}"],
         ["Selection bias", f"features chosen on CV test months (T9 {t9['status'].lower()}); honest nested re-selection "
                            f"{f(t11['cv_auc_k10'])} vs claimed {f(ca['cv_auc_frozen'])} (T11); {len(t12['runs'])} random "
-                           f"10-feature sets {t12['cv']['mean']:.3f} ± {t12['cv']['sd']:.3f}, "
+                           f"10-feature sets {f(t12['cv']['mean'], 3)} ± {f(t12['cv']['sd'], 3)}, "
                            f"{t12['n_holdout_ge_champion']} of {len(t12['runs'])} beat the champion on the holdout (T12)"],
         ["Best-of-N", f"{t7['N']['distinct_full_protocol_primary']} full configurations ({nmax} with screens) on the pilot "
                       f"task. Against the permutation σ the champion is distinguishable (P ≈ 10"
-                      f"{str(expo).translate(SUP)}); against month-level σ narrowly (P {min(month):.3f} to "
-                      f"{max(month):.3f}); against the cross-configuration spread it is not (P {cross:.2f})"],
-        ["Dependence", f"10-session block CI for the champion's CV mean [{b10['champion_clean_cv_mean']['ci95'][0]:.3f}, "
-                       f"{b10['champion_clean_cv_mean']['ci95'][1]:.3f}]; champion minus momentum on the holdout "
+                      f"{str(expo).translate(SUP)}); against month-level σ narrowly (P {f(min(month), 3)} to "
+                      f"{f(max(month), 3)}); against the cross-configuration spread it is not (P {f(cross, 2)})"],
+        ["Dependence", f"10-session block CI for the champion's CV mean [{f(b10['champion_clean_cv_mean']['ci95'][0], 3)}, "
+                       f"{f(b10['champion_clean_cv_mean']['ci95'][1], 3)}]; champion minus momentum on the holdout "
                        f"{sg(ch_ho - mom_ho, 3)} [{sg(b10['champion_minus_baseline_mom_clean_holdout']['ci95'][0], 3)}, "
                        f"{sg(b10['champion_minus_baseline_mom_clean_holdout']['ci95'][1], 3)}]"],
     ]
@@ -2740,11 +2794,11 @@ def sec_integrity() -> str:
     def key(t):
         i = t["id"]
         if i == "T0":
-            return f"CV {t['json_cv']:.6f}, holdout {t['json_holdout']:.6f}; difference {t['delta_cv']:g}"
+            return f"CV {f(t['json_cv'], 6)}, holdout {f(t['json_holdout'], 6)}; difference {t['delta_cv']:g}"
         if i == "T1":
-            return f"null {t['null_cv']['mean']:.4f} ± {t['null_cv']['sd']:.4f}; z = {t['z_cv']:.1f}"
+            return f"null {f(t['null_cv']['mean'], 4)} ± {f(t['null_cv']['sd'], 4)}; z = {f(t['z_cv'], 1)}"
         if i == "T2":
-            return f"t+1: {t['runs']['shift_-1']['cv_auc_mean']:.4f}; t+21: {t['runs']['shift_-21']['cv_auc_mean']:.4f}"
+            return f"t+1: {f(t['runs']['shift_-1']['cv_auc_mean'], 4)}; t+21: {f(t['runs']['shift_-21']['cv_auc_mean'], 4)}"
         if i == "T3":
             return f"{t['violating_rows']} of {n(n_tr)} rows; {t['label_horizon']['rows_horizon_gt_21_market_sessions']} long labels"
         if i == "T4":
@@ -2765,24 +2819,33 @@ def sec_integrity() -> str:
         if i == "T11":
             return f"{f(t['cv_auc_k10'])} vs {f(t['claimed_cv'])} (optimism {sg(t['selection_optimism_cv'], 4)})"
         if i == "T12":
-            return f"CV {t['cv']['mean']:.4f} ± {t['cv']['sd']:.4f}; holdout ≥ champion {t['n_holdout_ge_champion']} of 5"
+            return f"CV {f(t['cv']['mean'], 4)} ± {f(t['cv']['sd'], 4)}; holdout ≥ champion {t['n_holdout_ge_champion']} of 5"
         if i == "T13":
             v = t["variant_summary"]
-            return (f"mask off: CV {v['all labelled rows (no y_clean mask)']['cv_auc_mean']:.4f} vs "
-                    f"{v['clean (harness)']['cv_auc_mean']:.4f}")
+            return (f"mask off: CV {f(v['all labelled rows (no y_clean mask)']['cv_auc_mean'], 4)} vs "
+                    f"{f(v['clean (harness)']['cv_auc_mean'], 4)}")
         if i == "T14":
             c = t["bootstrap"]["block_10"]["champion_clean_cv_mean"]["ci95"]
-            return f"10-session CI [{c[0]:.4f}, {c[1]:.4f}]"
+            return f"10-session CI [{f(c[0], 4)}, {f(c[1], 4)}]"
         return ""
 
     trows = [[f"<b>{t['id']}</b>", E(t["name"]), chip(t["status"]), key(t)] for t in D.audit["tests"]]
     ttab = table(["Test", "What it checks", "Status", "Key number"], trows, cls="plain", wrap=(1, 3))
     stat = {s: sum(1 for t in D.audit["tests"] if t["status"] == s) for s in ("PASS", "FAIL", "INFO")}
-    bon = []
-    for nn in sorted(tab):
-        r = tab[nn]
-        bon.append([str(nn)] + [f"{r[k]:.2g}" if r[k] < 1e-3 else f"{r[k]:.3f}" for k in sorted(r)])
-    bhead = ["N trials"] + [E(k.split(" (")[0].replace("_", " ")) for k in sorted(tab[nmax])]
+    def sci(x: float) -> str:
+        if x >= 1e-3:
+            return f(x, 3)
+        e_ = math.floor(math.log10(x))
+        return f"{f(x / 10 ** e_, 1)} × 10{str(e_).translate(SUP)}"
+
+    def bkey(k: str) -> int:
+        return next(i for i, (pre, *_) in enumerate(BON_COLS) if k.startswith(pre))
+
+    nsd = {r["null_sd_source"]: r["null_sd"] for r in t7["table"] if r["N"] == nmax}
+    cols = sorted(tab[nmax], key=lambda k: (nsd[k], bkey(k)))   # narrowest null first
+    bon = [[str(nn)] + [sci(tab[nn][k]) for k in cols] for nn in sorted(tab)]
+    bhead = ["N trials"] + [BON_COLS[bkey(k)][1] for k in cols]
+    bsrc = "; ".join(BON_COLS[bkey(k)][2] for k in cols)
     btab = table(bhead, bon, cls="plain small-t")
     return f"""
 <section id="integrity">
@@ -2792,12 +2855,10 @@ def sec_integrity() -> str:
   {stat['FAIL']} fail, {stat['INFO']} informational).</p>
   <div class="card">{area}</div>
   <div class="card"><h3 class="cardh">The {len(D.audit['tests'])} audit tests</h3>{ttab}
-  <p class="cap">From <code>audit.json</code>. The four failures are the findings that were then corrected: the
-  embargo leak (purged on exit dates at 5 years), the noise-range features, holdout and CV-test use in selection, and
-  the selection optimism that T11 measured.</p></div>
+  <p class="cap">From <code>audit.json</code>: each test's name, status and key number.</p></div>
   <div class="card"><h3 class="cardh">Best-of-N: probability that the best of N pure-noise trials reaches the champion</h3>
-  {btab}<p class="cap">From audit T7. The answer depends on which null standard deviation is honest: the permutation
-  null ignores regime and selection, the cross-configuration spread includes them.</p></div>
+  {btab}<p class="cap">From audit T7 (<code>audit.json</code>). Each column takes the null standard deviation from a
+  different source, narrowest first: {bsrc}.</p></div>
   <p><b>Corrections made.</b> <code>ml/MODEL_SELECTION.md</code> now opens with the correction; the PR description is
   updated with it; the 5-year protocol nests selection inside each training window, purges on exit dates, and reports
   block bootstraps. The allowed wording for the pilot is the audit's: <i>“slightly better than chance … not a
@@ -2815,8 +2876,10 @@ def sec_product() -> str:
     exp = (P.summary or {}).get("score_exposures_mean_per_date_spearman", {}).get(ENS, {}).get("atr_pct", {})
     lm = [m for m in LEAGUE_ORDER if m in D.S5]
     crash_all = all(D.S5[m]["auc"][D.crash] < 0.5 for m in lm)
+    not_failed = [m for m in lm if D.S5[m]["auc"][D.crash] >= 0.5]
     crash_txt = ("every model failed in March 2026" if crash_all else
-                 "every candidate failed in March 2026 (the LambdaRank member did not)")
+                 f"every model but the {join_words([LEAGUE_LABEL_SHORT.get(m, m) for m in not_failed])} failed in "
+                 f"March 2026")
     alerts = [
         ("Delivery monthly IC (<code>deliv_pct_sma_20</code> vs 20-day excess)", "below +0.02 for 2 consecutive months",
          f"the pillar faded from {sg(mean_over('deliv_pct_sma_20', y25), 2)} to {sg(mean_over('deliv_pct_sma_20', cvm), 2)} "
@@ -2832,7 +2895,7 @@ def sec_product() -> str:
     ]
     if inv is not None:
         alerts.append(("Feature-inversion monitor", "more than half of the features with IC against their usual sign in "
-                       "a month", f"{word(len(inv))} of {len(D.folds)} months were inversion months and {crash_txt}"))
+                       "a month", f"{len(inv)} of {len(D.folds)} months were inversion months and {crash_txt}"))
     if exp:
         alerts.append(("Ensemble score correlation with <code>atr_pct</code>, per date",
                        "absolute value above 0.20 for a month",
@@ -2884,12 +2947,12 @@ def sec_recs() -> str:
         recs += [
             f"<b>Paper-trade the ensemble's liquid book as one frozen, pre-registered strategy from November 2026</b> "
             f"with the specification in <a href=\"#product\">Product and monitoring</a> and no new trials (N = 1). At "
-            f"IR {paper['ir']:.2f} it needs about {round(trl / 252)} years ({trl:.0f} sessions) of track record to reach "
+            f"IR {f(paper['ir'], 2)} it needs about {round(trl / 252)} years ({f(trl, 0)} sessions) of track record to reach "
             f"PSR 95%; the clock starts only when the book exists.",
             f"<b>Pre-registered test of volatility-neutral construction:</b> each classifier's score residualised on "
             f"volatility and size per date, pass mark fixed in advance. The ensemble's {pc(e['excess_ann_vs_ew_252_20'], 0)} "
             f"a year says this is where the money is; a deliberate construction should capture it without depending on a "
-            f"LambdaRank member that scores {lam:.3f} on its own." if lam is not None else
+            f"LambdaRank member that scores {f(lam, 3)} on its own." if lam is not None else
             "<b>Pre-registered test of volatility-neutral construction.</b>",
         ]
     else:
@@ -2905,12 +2968,12 @@ def sec_recs() -> str:
         "<b>Delivery validation, pre-registered:</b> IC by year, liquidity tier and market state, orthogonalised against "
         "turnover and volatility. The strongest signal in the program has no external literature.",
         f"<b>Name-level costs:</b> high-low spread estimator plus square-root impact by liquidity tier; asymmetric STT and "
-        f"stamp duty. This is what turns the {be[0]:.0f} to {be[1]:.0f} bps break-even into a real capacity number.",
+        f"stamp duty. This is what turns the {f(be[0], 0)} to {f(be[1], 0)} bps break-even into a real capacity number.",
     ]
     if pt:
         recs.append(f"<b>The short side only where it exists:</b> long-short restricted to F&amp;O names via stock "
                     f"futures, with borrow costs and 40 bps per side. The ensemble long-short book (Sharpe "
-                    f"{ls['sharpe']:.2f}, DSR {ls_d:.2f}) is the only candidate; it is untested under those constraints.")
+                    f"{f(ls['sharpe'], 2)}, DSR {f(ls_d, 2)}) is the only candidate; it is untested under those constraints.")
     recs += [
         "<b>Address the March-2026 failure mode:</b> market-state inputs (trailing universe momentum, drawdown, days since "
         "a sell-off) pre-registered against the full-feature baseline, plus the monthly feature-inversion monitor."
@@ -2935,7 +2998,7 @@ def sec_recs() -> str:
     if pt:
         best = max((v["skill"][nh]["dsr"], k) for k, v in pt["dsr"]["books"].items())
         claims.append(f"It does not claim a tradable edge. No model passes more than {word(max(k for k, _ in gc.values()))} "
-                      f"of five pre-registered gates, and the best Deflated Sharpe in the program is {best[0]:.2f}, for a "
+                      f"of five pre-registered gates, and the best Deflated Sharpe in the program is {f(best[0], 2)}, for a "
                       f"long-short book that cannot be traded as tested.")
     else:
         claims.append("It does not claim a tradable edge.")
@@ -2967,9 +3030,9 @@ def sec_recs() -> str:
                   "tuned on them in the pilot.")
     if P.boot:
         hw = [(v["cv_mean"]["ci95"][1] - v["cv_mean"]["ci95"][0]) / 2 for v in P.boot["pairs"].values()]
-        FACTS["pair_halfwidth"] = f"{min(hw):.3f} to {max(hw):.3f}"
+        FACTS["pair_halfwidth"] = f"{f(min(hw), 3)} to {f(max(hw), 3)}"
         claims.append(f"It does not claim that AUC differences of 0.01 between models are decidable on these samples: the "
-                      f"paired block-bootstrap intervals are about ±{min(hw):.3f} to ±{max(hw):.3f} wide.")
+                      f"paired block-bootstrap intervals are about ±{f(min(hw), 3)} to ±{f(max(hw), 3)} wide.")
     else:
         claims.append("It does not claim that AUC differences of 0.01 between models are decidable on these samples; the "
                       "paired block bootstrap (pending) sets the resolution.")
@@ -3011,7 +3074,7 @@ TEAMS = [
 ]
 
 REPRO = """# data
-python3 nse_historical_ingest.py --start 2021-10-01 --end 2026-10-16          # 5-year store (resume-safe)
+python3 nse_historical_ingest.py --start 2021-10-01 --end 2026-10-16            # 5-year store (resume-safe)
 python3 -m ml.data                                                              # pilot dataset (ml/data/)
 python3 -m ml.build_5y                                                          # 5-year dataset (ml/data_5y/)
 # studies
@@ -3184,6 +3247,7 @@ svg{display:block;width:100%;height:auto}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .wide-svg{min-width:700px}
 .wide-svg.sm{min-width:560px}
+.wide-svg.xs{min-width:420px}
 .cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:12px;margin-top:14px}
 .cols2>.card{margin-top:0}
 
@@ -3192,6 +3256,7 @@ svg{display:block;width:100%;height:auto}
 .vc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;min-width:0}
 .vc h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
 .vc p{font-size:15.5px;margin:0;max-width:none}
+@media (min-width:1040px){.vc.wide{grid-column:span 2}}
 .deliv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
 .dcard{background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:10px;padding:14px 16px}
 .dcard .dk{font:800 15px/1.2 var(--sans);color:var(--ink)}
@@ -3271,7 +3336,7 @@ svg text{font-family:var(--sans)}
 svg .ln{transition:opacity .15s}
 svg.dimmed .ln{opacity:.13}
 svg.dimmed .ln.hot{opacity:1}
-svg.mb{display:inline-block;width:132px;height:16px;vertical-align:middle}
+svg.mb{display:inline-block;width:96px;height:16px;vertical-align:middle}
 
 /* legends */
 .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 4px 0;padding:0;font:13px var(--sans);color:var(--ink2)}
@@ -3289,19 +3354,28 @@ svg.mb{display:inline-block;width:132px;height:16px;vertical-align:middle}
 .dia{width:10px;height:10px;background:var(--s2);transform:rotate(45deg);display:inline-block}
 .lk{width:20px;height:0;display:inline-block;border-top:2px dashed var(--axisc)}
 .lk.pass-k{border-top-color:var(--ink2)}
+.legend svg.lg{display:inline-block;width:14px;height:14px;flex:none}
+.legend .tk{display:inline-block;width:2px;height:12px;background:var(--s2);flex:none;margin-inline:6px}
+.legend .chip.tail{background:transparent;border:1.2px dashed var(--axisc)}
+.famc td .twin{display:block;font:11px/1.3 var(--sans);color:var(--muted)}
 
 /* tables */
 table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:13.6px}
 th,td{padding:7px 10px;text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
-thead th{font-size:11.2px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--axisc);vertical-align:bottom}
+thead th{font-size:11.2px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--axisc);vertical-align:bottom;white-space:normal}
+table.plain td,table.gates td{vertical-align:top}
+td code,th code{overflow-wrap:break-word}
+td .sub{display:block;font-size:11.5px;color:var(--muted);font-weight:400;margin-top:1px}
 tbody tr{border-bottom:1px solid var(--grid)}
 tbody tr:last-child{border-bottom:none}
 .wrapcell{white-space:normal;text-align:left;min-width:150px}
 td.wrapcell{line-height:1.45}
 table.plain td.wrapcell:first-child,table.plain th.wrapcell:first-child{min-width:190px}
 table.small-t{font-size:12.6px}
-table.league5 td.wrapcell:first-child{min-width:240px}
+table.league5 td.wrapcell:first-child{min-width:220px}
+table.regime th,table.regime td{padding-inline:6px}
+table.regime td.wrapcell:first-child,table.regime th.wrapcell:first-child{min-width:150px}
 tr.nested td{color:var(--ink2);font-size:12.6px}
 tr.nested td:first-child{padding-left:26px}
 tr.pend td{color:var(--muted)}
@@ -3367,6 +3441,7 @@ table.ftab thead th{font-size:10.5px}
 .panel.claims{border-left:4px solid var(--bad)}
 ol.lims,ul.lims{padding-left:22px;margin:8px 0}
 .lims li{margin:8px 0;max-width:78ch}
+ol.recs{padding-left:32px}
 ol.recs li::marker{font-family:var(--sans);font-weight:700;color:var(--accent)}
 details{margin-top:12px}
 summary{cursor:pointer;font:600 13.5px var(--sans);color:var(--accent);padding:4px}
@@ -3423,9 +3498,23 @@ JS = """
 """
 
 
+CODE_RX = re.compile(r"(?<!<pre>)<code>([^<]{17,}?)</code>")
+
+
+def wbr_codes(h: str) -> str:
+    """Line-break opportunities after / and _ (and before a file extension) in long code spans, so paths wrap at
+    their joints instead of mid-word; <pre> blocks are left alone."""
+    def one(m: re.Match) -> str:
+        t = re.sub(r"([/_])(?=.)", r"\1<wbr>", m.group(1))
+        t = re.sub(r"(?<=\w)\.(?=(?:json|md|py|csv|html)\b)", "<wbr>.", t)
+        return f"<code>{t}</code>"
+    return CODE_RX.sub(one, h)
+
+
 def page() -> str:
     body = "".join([sec_header(), sec_verdict(), sec_status(), sec_data(), sec_labels(), sec_features(), sec_models(),
                     sec_strategy(), sec_integrity(), sec_product(), sec_recs(), sec_appendix()])
+    body = wbr_codes(body)
     gen = []
     if P.boot:
         gen.append(f"bootstrap {P.boot_at}")
@@ -3438,7 +3527,7 @@ def page() -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="SuryaDhana research program capstone report: NSE end-of-day signal, labels, features, models, strategy and integrity, with every number read from the committed artifacts.">
+<meta name="description" content="SuryaDhana research program capstone report: NSE end-of-day signal, labels, features, models, strategy and integrity, with its numbers read from the committed artifacts.">
 <title>SuryaDhana Research Program</title>
 <style>{CSS}</style>
 </head>

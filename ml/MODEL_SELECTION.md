@@ -126,9 +126,10 @@ respect and confirms it in another.
 - **Confirmed: RL, the RNNs and the MLP stay out.** The SOTA study added the
   transformers, DLinear and the ranking losses to the dropped list; at 5 years
   LambdaRank scores 0.503 and is above 0.50 in 58% of months.
-- **The regime is the common component.** Every model's worst month is
-  March 2026 (0.37 to 0.45) and every model's best stretch is September 2025
-  to February 2026 (0.60 to 0.66).
+- **The regime is the common component.** March 2026 is the worst month
+  for six of the nine candidates (every one except the LambdaRank member
+  scores 0.38 to 0.47) and every model's best stretch is September 2025 to
+  February 2026 (window means 0.58 to 0.63).
 - **The first year of folds trains on short windows** (41,733 rows for the
   2023-01 fold, the full window only from late 2024); 2023 results are
   small-sample.

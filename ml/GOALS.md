@@ -11,7 +11,7 @@ The question from management is "how good does the model have to be?". The answe
 | AUC, LightGBM on all features / nested selection | 0.5366 / 0.5359, 95% block-bootstrap CI [0.5250, 0.5483] | `scale5y_summary.json` |
 | Rank IC per date, nested LightGBM | +0.065, Newey-West t 6.0, positive in 38 of 43 months | `SCALE5Y.md` |
 | Months with AUC ≥ 0.50 | 86% (nested LightGBM), 91% (rank ensemble) | `SCALE5Y.md` |
-| Worst month | 0.431 (March 2026 rebound); every model below 0.50 that month | `regimes_5y.md` |
+| Worst month | 0.431 (March 2026 rebound); every candidate except the LambdaRank member below 0.50 that month | `regimes_5y.md` |
 | Directional hit rate implied by rank IC 0.065 | about 52.1% (Sheppard: ½ + arcsin(IC)/π); the AUC of 0.536 gives Somers' D 0.073 | arithmetic |
 | IC stability (per-month mean/sd) | about 0.9 from the Newey-West t of 6.0 over 43 months; about 1.3 implied by the ensemble's 91% of months above 0.50 | arithmetic |
 | Long-only top decile vs equal-weight universe, net 20 bps | single models −0.7% to −3.4% a year; rank ensemble +7.0% a year, IR 1.26 [0.32, 2.37] | `portfolio_5y.json` |
@@ -82,6 +82,6 @@ The community research derived a five-rung ladder from live competitions, alloca
 
 ## Not goals
 
-- A directional accuracy above 60%, an AUC above 0.60 or a backtest Sharpe above 3 on end-of-day data. Numbers like these appear online in the most-viewed stock-prediction tutorials (0.59 to 1.36 million views each) and in Kaggle notebooks titled "99% accuracy" or "0.99 R²"; all are price-level fits that a repeat-yesterday forecast matches (`ml/research/community/COMMUNITY_CALIBRATION.md` §2). In this program such numbers appeared only in one six-month regime run (0.60 to 0.66 from September 2025 to February 2026) that reversed in March 2026.
+- A directional accuracy above 60%, an AUC above 0.60 or a backtest Sharpe above 3 on end-of-day data. Numbers like these appear online in the most-viewed stock-prediction tutorials (0.59 to 1.36 million views each) and in Kaggle notebooks titled "99% accuracy" or "0.99 R²"; all are price-level fits that a repeat-yesterday forecast matches (`ml/research/community/COMMUNITY_CALIBRATION.md` §2). In this program such numbers appeared only in one six-month regime run (window means of 0.58 to 0.63 from September 2025 to February 2026) that reversed in March 2026.
 - Beating the linear benchmark on AUC. The program could not show it, and the economics do not depend on it.
 - A new model family. The evidence in `PROGRAM_REPORT.md` §6 is against spending on transformers, foundation models or reinforcement learning.
