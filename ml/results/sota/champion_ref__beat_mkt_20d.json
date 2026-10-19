@@ -1,0 +1,230 @@
+{
+ "model": "champion_ref",
+ "family": "reference",
+ "agent": "quant-sota",
+ "task": "beat_mkt_20d",
+ "params": {
+  "num_leaves": 63,
+  "learning_rate": 0.05,
+  "n_estimators": 300,
+  "feature_fraction": 0.8,
+  "bagging_fraction": 0.8,
+  "bagging_freq": 1,
+  "min_data_in_leaf": 200,
+  "num_threads": 2,
+  "random_state": 108,
+  "verbose": -1,
+  "objective": "binary",
+  "fold_detail": {
+   "2026-04": {
+    "train_seconds": 4.3
+   },
+   "2026-05": {
+    "train_seconds": 4.8
+   },
+   "2026-06": {
+    "train_seconds": 5.8
+   },
+   "2026-07": {
+    "train_seconds": 5.5
+   },
+   "holdout": {
+    "train_seconds": 5.8
+   }
+  },
+  "reproducibility": {
+   "rows_matched": 175951,
+   "max_abs_score_diff_vs_clean_preds": 0.0
+  }
+ },
+ "preprocess": "raw",
+ "n_features": 10,
+ "feature_subset": [
+  "atr_pct",
+  "deliv_pct_sma_20",
+  "dist_52w_high",
+  "ret_126d",
+  "mom_12_1",
+  "cs_rank_mom_20",
+  "cs_rank_ret_126",
+  "cs_rank_vol_20",
+  "deliv_pct",
+  "ret_63d"
+ ],
+ "folds": [
+  {
+   "auc": 0.5068647379421386,
+   "pr_auc": 0.49752659496464813,
+   "brier": 0.2655403499633204,
+   "acc": 0.5015395471165566,
+   "n": 31178,
+   "base_rate": 0.5006093978881836,
+   "decile_spread": -0.005712314508855343,
+   "top_decile_mean_fwd": 0.007825118489563465,
+   "decile_means": [
+    0.013537432998418808,
+    0.020376447588205338,
+    0.017175190150737762,
+    0.021835971623659134,
+    0.023810194805264473,
+    0.024547746405005455,
+    0.020962607115507126,
+    0.022506294772028923,
+    0.017502913251519203,
+    0.007825118489563465
+   ],
+   "fold": "2026-04",
+   "n_train": 261997,
+   "train_seconds": 4.3,
+   "rank_ic_mean": 0.012329967209893244,
+   "rank_ic_t_naive": 0.4186184091613403,
+   "n_dates": 20
+  },
+  {
+   "auc": 0.538437441098928,
+   "pr_auc": 0.5254052189926603,
+   "brier": 0.26315396861211515,
+   "acc": 0.5207249481451256,
+   "n": 29409,
+   "base_rate": 0.5014111399650574,
+   "decile_spread": 0.05790276452898979,
+   "top_decile_mean_fwd": 0.04892098903656006,
+   "decile_means": [
+    -0.008981774561107159,
+    0.007449887692928314,
+    0.011250922456383705,
+    0.016868220642209053,
+    0.015822438523173332,
+    0.023190118372440338,
+    0.025299886241555214,
+    0.025404417887330055,
+    0.0310450978577137,
+    0.04892098903656006
+   ],
+   "fold": "2026-05",
+   "n_train": 291661,
+   "train_seconds": 4.8,
+   "rank_ic_mean": 0.08267691666148644,
+   "rank_ic_t_naive": 6.909517910089411,
+   "n_dates": 19
+  },
+  {
+   "auc": 0.5374321943251275,
+   "pr_auc": 0.5176489384655842,
+   "brier": 0.2575218023906258,
+   "acc": 0.5205784893623611,
+   "n": 32291,
+   "base_rate": 0.5017496943473816,
+   "decile_spread": 0.004212094936519861,
+   "top_decile_mean_fwd": 0.006909798830747604,
+   "decile_means": [
+    0.002697703894227743,
+    -5.946546480117831e-06,
+    0.01076781190931797,
+    0.013046509586274624,
+    0.014615706168115139,
+    0.021215878427028656,
+    0.023401357233524323,
+    0.02443392015993595,
+    0.025833401829004288,
+    0.006909798830747604
+   ],
+   "fold": "2026-06",
+   "n_train": 321301,
+   "train_seconds": 5.8,
+   "rank_ic_mean": 0.06602570256161806,
+   "rank_ic_t_naive": 15.498806958429082,
+   "n_dates": 21
+  },
+  {
+   "auc": 0.5430471659235699,
+   "pr_auc": 0.5483567235649827,
+   "brier": 0.2544564729895325,
+   "acc": 0.5268348881645498,
+   "n": 35588,
+   "base_rate": 0.5020793676376343,
+   "decile_spread": 0.024156589061021805,
+   "top_decile_mean_fwd": 0.02918180450797081,
+   "decile_means": [
+    0.005025214981287718,
+    0.010005743242800236,
+    0.012399566359817982,
+    0.010954415425658226,
+    0.014267540536820889,
+    0.01780587248504162,
+    0.020019473508000374,
+    0.017225828021764755,
+    0.0195238646119833,
+    0.02918180450797081
+   ],
+   "fold": "2026-07",
+   "n_train": 353788,
+   "train_seconds": 5.5,
+   "rank_ic_mean": 0.06447924515648924,
+   "rank_ic_t_naive": 7.1537918559667535,
+   "n_dates": 23
+  }
+ ],
+ "cv_auc_mean": 0.531445384822441,
+ "cv_auc_std": 0.014348695626847504,
+ "holdout": {
+  "auc": 0.517995928832537,
+  "pr_auc": 0.516406249661393,
+  "brier": 0.2586471524788346,
+  "acc": 0.5163946509424029,
+  "n": 47485,
+  "base_rate": 0.5021585822105408,
+  "decile_spread": -0.004033230245113373,
+  "top_decile_mean_fwd": 0.015996554866433144,
+  "decile_means": [
+   0.020029785111546516,
+   0.01985611580312252,
+   0.013759255409240723,
+   0.01859426684677601,
+   0.018675485625863075,
+   0.019852692261338234,
+   0.023995881900191307,
+   0.024154774844646454,
+   0.024464325979351997,
+   0.015996554866433144
+  ],
+  "fold": "holdout",
+  "n_train": 389148,
+  "train_seconds": 5.8,
+  "rank_ic_mean": 0.040019604045167516,
+  "rank_ic_t_naive": 5.281183632210322,
+  "n_dates": 30
+ },
+ "train_seconds": 26.2,
+ "notes": "REFERENCE, not a challenger: same-box re-run of the champion config (lgbm_fs_selected) on the clean dataset, for timing and rank-IC on identical footing.",
+ "score_kind": "probability",
+ "train_seconds_per_fold_mean": 5.2,
+ "cv_worst_fold_auc": 0.5068647379421386,
+ "rank_ic": {
+  "definition": "per-date Spearman(score, y_excess_20d) over clean test rows; t_naive = mean/(sd/sqrt(n_dates)); t_nw19 = Newey-West(19 lags) because consecutive 20-session forward windows overlap",
+  "cv": {
+   "mean": 0.05647015847179926,
+   "std": 0.0767295188265958,
+   "t_naive": 6.704950530495916,
+   "t_nw19": 3.25526604133529,
+   "hit_rate": 0.8795180722891566,
+   "n_dates": 83
+  },
+  "holdout": {
+   "mean": 0.040019604045167516,
+   "std": 0.041505165138121254,
+   "t_naive": 5.281183632210322,
+   "t_nw19": 2.573086698456795,
+   "hit_rate": 0.8333333333333334,
+   "n_dates": 30
+  }
+ },
+ "vs_champion": {
+  "champion": "lgbm_fs_selected (clean)",
+  "champion_cv_auc": 0.5314,
+  "pass_mark_cv_auc": 0.5364,
+  "delta_cv_auc": 4.538482244098585e-05,
+  "all_folds_ge_050": true,
+  "passes": false
+ }
+}

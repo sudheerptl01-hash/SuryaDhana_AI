@@ -1,0 +1,67 @@
+[06:30:19] dataset 507163 rows, 51 features; parts=['champ', 'lambdarank', 'lambdarank51', 'huber', 'catboost', 'catboost51', 'ensemble']; torch 2.14.1+cpu threads=2 seed=108
+[06:30:19] === champ (elapsed 0.0 min) ===
+[06:30:26] dataset 507163 rows, 51 features; parts=['champ', 'lambdarank', 'lambdarank51', 'huber', 'catboost', 'catboost51', 'ensemble', 'patchtst', 'cstf', 'dlinear', 'league', 'annotate']; torch 2.14.1+cpu threads=2 seed=108
+[06:30:28] [patchtst_lite] fold=2026-04 train_seq=6001 (pre-cap 261997) fit=4426 val=935 val_start=2026-01-16 test=31178 short_hist_test=0.055
+[06:30:30] [patchtst_lite] fold=2026-04 epoch  1 train_loss=0.68227 val_auc=0.6135 (1.1s)
+[06:30:31] [patchtst_lite] fold=2026-04 test_auc=0.4574 best_ep=1/1 (3s)
+[06:30:32] [dlinear] fold=2026-04 train_seq=6001 (pre-cap 261997) fit=4426 val=935 val_start=2026-01-16 test=31178 short_hist_test=0.055
+[06:30:32] [dlinear] fold=2026-04 epoch  1 train_loss=0.69459 val_auc=0.6137 (0.1s)
+[06:30:33] [dlinear] fold=2026-04 test_auc=0.4786 best_ep=1/1 (1s)
+[06:30:33] [cs_transformer] projected ~21s/epoch (worst fold) at d_model=64
+[06:30:34] [cs_transformer] fold=2026-04 fit_days=12 val_days=28 (val_start=2026-01-16) test_days=20 mean_set=1444
+[06:30:35] [cs_transformer] fold=2026-04 epoch  1 train_loss=0.70088 val_auc=0.5954 (1.3s)
+[06:30:35] [cs_transformer] fold=2026-04 test_auc=0.4949 best_ep=1/1 (1s)
+[06:30:49] [champion_ref] cv_auc=0.5314 (+/-0.0143) worst=0.5069 holdout=0.5180 ho_spread=-0.0040 ic_cv=+0.0565 (t=6.70, nw=3.26) s/fold=5.2 passes=False
+[06:30:50] [champion_ref] rows matched 175951/175951; max |score - clean preds| = 0.00e+00
+[06:30:50] === lambdarank (elapsed 0.5 min) ===
+[06:32:13] dataset 507163 rows, 51 features; parts=['cstf']; torch 2.14.1+cpu threads=2 seed=108
+[06:32:13] === cstf (elapsed 0.1 min) ===
+[06:32:18] [cs_transformer] projected ~80s/epoch (worst fold) at d_model=64
+[06:32:19] [cs_transformer] fold=2026-04 fit_days=136 val_days=28 (val_start=2026-01-16) test_days=20 mean_set=1435
+[06:33:27] [cs_transformer] fold=2026-04 epoch  1 train_loss=0.68345 val_auc=0.5855 (67.4s)
+--- cs_transformer restart: full-spec attempt aborted after epoch 1 (67.4 s/epoch on smallest fold, load ~8.5) ---
+[06:34:18] dataset 507163 rows, 51 features; parts=['cstf']; torch 2.14.1+cpu threads=2 seed=108
+[06:34:18] === cstf (elapsed 0.0 min) ===
+[06:34:18] [cs_transformer] HALVED (measured epoch time > 90.0s under box contention): d_model=32, train set fraction=0.5
+[06:34:26] [cs_transformer] projected ~308s/epoch (worst fold) at d_model=32
+[06:34:28] [cs_transformer] fold=2026-04 fit_days=136 val_days=28 (val_start=2026-01-16) test_days=20 mean_set=1435
+[06:34:54] [cs_transformer] fold=2026-04 epoch  1 train_loss=0.68446 val_auc=0.5913 (26.5s)
+[06:35:06] [cs_transformer] fold=2026-04 epoch  2 train_loss=0.67721 val_auc=0.5947 (11.7s)
+[06:35:24] [cs_transformer] fold=2026-04 epoch  3 train_loss=0.67410 val_auc=0.5890 (18.3s)
+[06:35:33] [lgbm_lambdarank] cv_auc=0.5293 (+/-0.0243) worst=0.4967 holdout=0.5661 ho_spread=+0.0603 ic_cv=+0.0495 (t=6.37, nw=2.13) s/fold=56.0 passes=False
+[06:35:33] === lambdarank51 (elapsed 5.3 min) ===
+[06:35:46] [cs_transformer] fold=2026-04 epoch  4 train_loss=0.67301 val_auc=0.5973 (21.9s)
+[06:35:46] dataset 507163 rows, 51 features; parts=['patchtst', 'dlinear']; torch 2.14.1+cpu threads=2 seed=108
+[06:35:46] === patchtst (elapsed 0.1 min) ===
+[06:35:58] [patchtst_lite] projected 164s/epoch > 90.0s -> cap=60000, d_model=32
+[06:36:01] [patchtst_lite] fold=2026-04 train_seq=60001 (pre-cap 261997) fit=44297 val=9321 val_start=2026-01-16 test=31178 short_hist_test=0.055
+[06:36:02] dataset 507163 rows, 51 features; parts=['catboost', 'ensemble', 'huber', 'lambdarank51', 'catboost51']; torch 2.14.1+cpu threads=2 seed=108
+[06:36:02] === catboost (elapsed 0.0 min) ===
+[06:36:10] [catboost] fold=2026-04 best_it=43 inner_val_auc=0.6006
+[06:36:15] [catboost] fold=2026-05 best_it=0 inner_val_auc=0.4621
+[06:36:18] [cs_transformer] fold=2026-04 epoch  5 train_loss=0.67197 val_auc=0.5957 (32.0s)
+[06:36:21] [catboost] fold=2026-06 best_it=0 inner_val_auc=0.4365
+[06:36:28] [catboost] fold=2026-07 best_it=1 inner_val_auc=0.5135
+[06:36:35] [catboost] fold=holdout best_it=0 inner_val_auc=0.5101
+[06:36:35] [catboost] cv_auc=0.5154 (+/-0.0142) worst=0.4938 holdout=0.5096 ho_spread=-0.0023 ic_cv=+0.0335 (t=3.02, nw=1.54) s/fold=5.9 passes=False
+[06:36:35] === ensemble (elapsed 0.6 min) ===
+[06:36:35] [patchtst_lite] fold=2026-04 epoch  1 train_loss=0.67620 val_auc=0.5969 (34.2s)
+[06:36:36] [ensemble_rank] member per-date rank correlations: {'lgbm_fs_selected (champion, clean) ~ lgbm_lambdarank': 0.264, 'lgbm_fs_selected (champion, clean) ~ catboost': 0.478, 'lgbm_lambdarank ~ catboost': 0.119}
+[06:36:36] [ensemble_rank] cv_auc=0.5324 (+/-0.0083) worst=0.5236 holdout=0.5482 ho_spread=+0.0390 ic_cv=+0.0603 (t=7.09, nw=3.52) s/fold=0.0 passes=False
+[06:36:36] === huber (elapsed 0.6 min) ===
+[06:36:53] [cs_transformer] fold=2026-04 epoch  6 train_loss=0.67098 val_auc=0.5905 (35.4s)
+[06:37:05] [patchtst_lite] fold=2026-04 epoch  2 train_loss=0.67085 val_auc=0.5950 (29.9s)
+[06:37:25] [cs_transformer] fold=2026-04 epoch  7 train_loss=0.67115 val_auc=0.5927 (31.4s)
+[06:37:41] [lgbm_huber] cv_auc=0.5223 (+/-0.0068) worst=0.5128 holdout=0.5303 ho_spread=+0.0117 ic_cv=+0.0455 (t=6.30, nw=3.27) s/fold=11.7 passes=False
+[06:37:41] === lambdarank51 (elapsed 1.7 min) ===
+[06:37:41] [patchtst_lite] fold=2026-04 epoch  3 train_loss=0.66866 val_auc=0.5845 (35.9s)
+[06:38:12] [cs_transformer] fold=2026-04 epoch  8 train_loss=0.66949 val_auc=0.5930 (46.7s)
+[06:38:15] [patchtst_lite] fold=2026-04 epoch  4 train_loss=0.66731 val_auc=0.5858 (34.2s)
+[06:38:18] [patchtst_lite] fold=2026-04 test_auc=0.4516 best_ep=1/4 (135s)
+[06:38:19] [patchtst_lite] fold=2026-05 train_seq=59998 (pre-cap 291661) fit=44661 val=9424 val_start=2026-02-11 test=29409 short_hist_test=0.054
+[06:38:51] [cs_transformer] fold=2026-04 epoch  9 train_loss=0.66892 val_auc=0.5875 (39.8s)
+[06:38:53] [patchtst_lite] fold=2026-05 epoch  1 train_loss=0.67382 val_auc=0.4408 (33.6s)
+[06:38:54] [cs_transformer] fold=2026-04 test_auc=0.4932 best_ep=4/9 (264s)
+[06:38:55] [cs_transformer] fold=2026-05 fit_days=153 val_days=31 (val_start=2026-02-11) test_days=19 mean_set=1432
+[06:39:25] [patchtst_lite] fold=2026-05 epoch  2 train_loss=0.66896 val_auc=0.4429 (31.6s)
+[06:39:28] [cs_transformer] fold=2026-05 epoch  1 train_loss=0.68084 val_auc=0.4724 (33.2s)

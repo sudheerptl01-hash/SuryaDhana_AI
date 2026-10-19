@@ -1,0 +1,80 @@
+{
+ "id": "T5",
+ "name": "point-in-time checks",
+ "status": "PASS",
+ "summary": "(a) universe recompute: 0 dataset rows fail / 0 missing, 100-row trailing recompute failures 0; (b) market-state max|diff| 3.8e-17 over 50 dates; (c) cs_rank max|diff| 0.0e+00; (d) champion features from date<=t history: 0/450 mismatches",
+ "a_universe": {
+  "static_code_check_trailing_only": true,
+  "dataset_rows_not_in_recomputed_universe": 0,
+  "recomputed_universe_rows_not_in_dataset": 0,
+  "sample100_truncated_recompute_failures": 0,
+  "examples": [
+   {
+    "ticker": "RHIM",
+    "date": "2026-02-25",
+    "trailing_med_turnover": 68361500.0,
+    "close": 435.45,
+    "ok": true
+   },
+   {
+    "ticker": "NATCOPHARM",
+    "date": "2026-10-14",
+    "trailing_med_turnover": 400549000.0,
+    "close": 782.65,
+    "ok": true
+   },
+   {
+    "ticker": "TMB",
+    "date": "2026-08-26",
+    "trailing_med_turnover": 136402500.0,
+    "close": 897.6,
+    "ok": true
+   },
+   {
+    "ticker": "LTFOODS",
+    "date": "2026-02-04",
+    "trailing_med_turnover": 169492500.0,
+    "close": 408.9,
+    "ok": true
+   },
+   {
+    "ticker": "MCLEODRUSS",
+    "date": "2026-06-02",
+    "trailing_med_turnover": 28108500.0,
+    "close": 75.32,
+    "ok": true
+   }
+  ]
+ },
+ "b_market_state": {
+  "n_dates": 50,
+  "max_abs_diff": {
+   "mkt_ret_20": 0.0,
+   "mkt_breadth_200": 0.0,
+   "mkt_vol_20": 3.8163916471489756e-17
+  },
+  "nan_mismatch": 0
+ },
+ "c_cs_rank": {
+  "max_abs_diff": {
+   "cs_rank_mom_20": 0.0,
+   "cs_rank_mom_20_nan_mismatch": 0,
+   "cs_rank_ret_126": 0.0,
+   "cs_rank_ret_126_nan_mismatch": 0,
+   "cs_rank_vol_20": 0.0,
+   "cs_rank_vol_20_nan_mismatch": 0,
+   "cs_rank_turnover": 0.0,
+   "cs_rank_turnover_nan_mismatch": 0,
+   "cs_rank_deliv_z": 0.0,
+   "cs_rank_deliv_z_nan_mismatch": 0
+  },
+  "truncated_recompute_mismatch_10dates": 0
+ },
+ "d_champion_features_truncated": {
+  "n_rows": 50,
+  "n_values": 450,
+  "mismatches": 0,
+  "max_rel_diff": 0.0,
+  "examples": []
+ }
+}

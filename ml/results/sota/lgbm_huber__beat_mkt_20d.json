@@ -1,0 +1,233 @@
+{
+ "model": "lgbm_huber",
+ "family": "sota",
+ "agent": "quant-sota",
+ "task": "beat_mkt_20d",
+ "params": {
+  "num_leaves": 63,
+  "learning_rate": 0.05,
+  "n_estimators": 300,
+  "feature_fraction": 0.8,
+  "bagging_fraction": 0.8,
+  "bagging_freq": 1,
+  "min_data_in_leaf": 200,
+  "num_threads": 1,
+  "random_state": 108,
+  "verbose": -1,
+  "objective": "huber",
+  "alpha": 0.9,
+  "target": "clip(y_excess_20d, -0.30, 0.30)",
+  "fold_detail": {
+   "2026-04": {
+    "share_target_clipped": 0.014,
+    "train_seconds": 7.2
+   },
+   "2026-05": {
+    "share_target_clipped": 0.0149,
+    "train_seconds": 9.9
+   },
+   "2026-06": {
+    "share_target_clipped": 0.0164,
+    "train_seconds": 10.8
+   },
+   "2026-07": {
+    "share_target_clipped": 0.0182,
+    "train_seconds": 14.3
+   },
+   "holdout": {
+    "share_target_clipped": 0.0184,
+    "train_seconds": 16.1
+   }
+  }
+ },
+ "preprocess": "raw",
+ "n_features": 10,
+ "feature_subset": [
+  "atr_pct",
+  "deliv_pct_sma_20",
+  "dist_52w_high",
+  "ret_126d",
+  "mom_12_1",
+  "cs_rank_mom_20",
+  "cs_rank_ret_126",
+  "cs_rank_vol_20",
+  "deliv_pct",
+  "ret_63d"
+ ],
+ "folds": [
+  {
+   "auc": 0.5128164907774186,
+   "pr_auc": 0.5205722765442393,
+   "brier": 0.48975888479317314,
+   "acc": 0.4993905959330297,
+   "n": 31178,
+   "base_rate": 0.5006093978881836,
+   "decile_spread": 0.01285942830145359,
+   "top_decile_mean_fwd": 0.03029073402285576,
+   "decile_means": [
+    0.01743130572140217,
+    0.01896084100008011,
+    0.019702577963471413,
+    0.01694871298968792,
+    0.016734560951590538,
+    0.02176431566476822,
+    0.01731225475668907,
+    0.01815621927380562,
+    0.012775655835866928,
+    0.03029073402285576
+   ],
+   "fold": "2026-04",
+   "n_train": 261997,
+   "train_seconds": 7.2,
+   "rank_ic_mean": 0.027500203422759512,
+   "rank_ic_t_naive": 1.25226205663051,
+   "n_dates": 20
+  },
+  {
+   "auc": 0.525257563574031,
+   "pr_auc": 0.5254933825096701,
+   "brier": 0.4903206865099351,
+   "acc": 0.49858886735353125,
+   "n": 29409,
+   "base_rate": 0.5014111399650574,
+   "decile_spread": 0.053212326020002365,
+   "top_decile_mean_fwd": 0.05682852864265442,
+   "decile_means": [
+    0.003616202622652054,
+    0.008111685514450073,
+    0.010966283269226551,
+    0.013734660111367702,
+    0.011743742972612381,
+    0.015078244730830193,
+    0.023022830486297607,
+    0.025971220806241035,
+    0.02719404175877571,
+    0.05682852864265442
+   ],
+   "fold": "2026-05",
+   "n_train": 291661,
+   "train_seconds": 9.9,
+   "rank_ic_mean": 0.05834837642894367,
+   "rank_ic_t_naive": 3.629720023375955,
+   "n_dates": 19
+  },
+  {
+   "auc": 0.5311541971404603,
+   "pr_auc": 0.5145143103677513,
+   "brier": 0.4893574767928853,
+   "acc": 0.4982502864575269,
+   "n": 32291,
+   "base_rate": 0.5017496943473816,
+   "decile_spread": 0.017340976744890213,
+   "top_decile_mean_fwd": 0.02112025022506714,
+   "decile_means": [
+    0.0037792734801769257,
+    0.005330839194357395,
+    0.007666341029107571,
+    0.01137038879096508,
+    0.01012374460697174,
+    0.016229139640927315,
+    0.02126055210828781,
+    0.023807616904377937,
+    0.022227661684155464,
+    0.02112025022506714
+   ],
+   "fold": "2026-06",
+   "n_train": 321301,
+   "train_seconds": 10.8,
+   "rank_ic_mean": 0.06417988047036965,
+   "rank_ic_t_naive": 9.601769143312362,
+   "n_dates": 21
+  },
+  {
+   "auc": 0.5199356937708736,
+   "pr_auc": 0.5165315235579815,
+   "brier": 0.48898467752868907,
+   "acc": 0.4979206474092391,
+   "n": 35588,
+   "base_rate": 0.5020793676376343,
+   "decile_spread": 0.02013639360666275,
+   "top_decile_mean_fwd": 0.02503599412739277,
+   "decile_means": [
+    0.004899599589407444,
+    0.01271903794258833,
+    0.012518782168626785,
+    0.01395547017455101,
+    0.015336597338318825,
+    0.016145968809723854,
+    0.015329875983297825,
+    0.01716422289609909,
+    0.02330329827964306,
+    0.02503599412739277
+   ],
+   "fold": "2026-07",
+   "n_train": 353788,
+   "train_seconds": 14.3,
+   "rank_ic_mean": 0.033306925280592654,
+   "rank_ic_t_naive": 3.571408436354023,
+   "n_dates": 23
+  }
+ ],
+ "cv_auc_mean": 0.5222909863156958,
+ "cv_auc_std": 0.006757783575818759,
+ "holdout": {
+  "auc": 0.5302689234157856,
+  "pr_auc": 0.5288693820829414,
+  "brier": 0.4910516107573044,
+  "acc": 0.497841423607455,
+  "n": 47485,
+  "base_rate": 0.5021585822105408,
+  "decile_spread": 0.011657187715172768,
+  "top_decile_mean_fwd": 0.04094932600855827,
+  "decile_means": [
+   0.029292138293385506,
+   0.010135134682059288,
+   0.013360850512981415,
+   0.009056556969881058,
+   0.0080668143928051,
+   0.013844411820173264,
+   0.015668358653783798,
+   0.02620307356119156,
+   0.03279714658856392,
+   0.04094932600855827
+  ],
+  "fold": "holdout",
+  "n_train": 389148,
+  "train_seconds": 16.1,
+  "rank_ic_mean": 0.06500490257834989,
+  "rank_ic_t_naive": 10.796786140218794,
+  "n_dates": 30
+ },
+ "train_seconds": 58.4,
+ "notes": "LGBMRegressor(objective=huber, alpha=0.9) with the champion's tree hyper-parameters on y_excess_20d clipped to +/-0.30; score = predicted excess return. In LightGBM alpha is the Huber delta: with |target| <= 0.30 every residual is far inside 0.9, so this is effectively least squares on the clipped target. Brier/acc not meaningful (score is a return forecast, not a probability).",
+ "score_kind": "regression",
+ "train_seconds_per_fold_mean": 11.7,
+ "cv_worst_fold_auc": 0.5128164907774186,
+ "rank_ic": {
+  "definition": "per-date Spearman(score, y_excess_20d) over clean test rows; t_naive = mean/(sd/sqrt(n_dates)); t_nw19 = Newey-West(19 lags) because consecutive 20-session forward windows overlap",
+  "cv": {
+   "mean": 0.04545132520405439,
+   "std": 0.06577609214879511,
+   "t_naive": 6.295315909295926,
+   "t_nw19": 3.274693080668281,
+   "hit_rate": 0.7710843373493976,
+   "n_dates": 83
+  },
+  "holdout": {
+   "mean": 0.06500490257834989,
+   "std": 0.032977083206231265,
+   "t_naive": 10.796786140218794,
+   "t_nw19": 4.514312816806697,
+   "hit_rate": 0.9666666666666667,
+   "n_dates": 30
+  }
+ },
+ "vs_champion": {
+  "champion": "lgbm_fs_selected (clean)",
+  "champion_cv_auc": 0.5314,
+  "pass_mark_cv_auc": 0.5364,
+  "delta_cv_auc": -0.009109013684304168,
+  "all_folds_ge_050": true,
+  "passes": false
+ }
+}

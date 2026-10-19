@@ -13,3 +13,4 @@ nse_market.duckdb*
 ml/data/
 ml/results/preds/
 ml/data_5y/
+catboost_info/

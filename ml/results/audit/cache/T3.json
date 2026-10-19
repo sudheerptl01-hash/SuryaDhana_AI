@@ -1,0 +1,90 @@
+{
+ "id": "T3",
+ "name": "embargo verification",
+ "status": "FAIL",
+ "summary": "calendar embargo ok in 5/5 windows (gap [22, 22, 22, 22, 22] sessions); per-row actual exit >= test_start: 3 of 1,617,895 train rows (2 strictly after); test windows disjoint=True; labels spanning >21 market sessions (ticker-row horizon, illiquid names): 81 rows (0.02%), max 37",
+ "folds": [
+  {
+   "fold": "2026-04",
+   "train_end": "2026-02-25",
+   "test_start": "2026-04-01",
+   "embargo_sessions_in_calendar": 22,
+   "last_train_calendar_exit": "2026-03-30",
+   "calendar_ok": true,
+   "n_train_rows": 261997,
+   "n_missing_exit": 0,
+   "max_actual_exit_date": "2026-03-30",
+   "n_rows_exit_on_or_after_test_start": 0,
+   "n_rows_exit_after_test_start": 0,
+   "violating_tickers": []
+  },
+  {
+   "fold": "2026-05",
+   "train_end": "2026-03-27",
+   "test_start": "2026-05-04",
+   "embargo_sessions_in_calendar": 22,
+   "last_train_calendar_exit": "2026-04-30",
+   "calendar_ok": true,
+   "n_train_rows": 291661,
+   "n_missing_exit": 0,
+   "max_actual_exit_date": "2026-04-30",
+   "n_rows_exit_on_or_after_test_start": 0,
+   "n_rows_exit_after_test_start": 0,
+   "violating_tickers": []
+  },
+  {
+   "fold": "2026-06",
+   "train_end": "2026-04-28",
+   "test_start": "2026-06-01",
+   "embargo_sessions_in_calendar": 22,
+   "last_train_calendar_exit": "2026-05-29",
+   "calendar_ok": true,
+   "n_train_rows": 321301,
+   "n_missing_exit": 0,
+   "max_actual_exit_date": "2026-06-03",
+   "n_rows_exit_on_or_after_test_start": 3,
+   "n_rows_exit_after_test_start": 2,
+   "violating_tickers": [
+    "EMBDL"
+   ]
+  },
+  {
+   "fold": "2026-07",
+   "train_end": "2026-05-29",
+   "test_start": "2026-07-01",
+   "embargo_sessions_in_calendar": 22,
+   "last_train_calendar_exit": "2026-06-30",
+   "calendar_ok": true,
+   "n_train_rows": 353788,
+   "n_missing_exit": 0,
+   "max_actual_exit_date": "2026-06-30",
+   "n_rows_exit_on_or_after_test_start": 0,
+   "n_rows_exit_after_test_start": 0,
+   "violating_tickers": []
+  },
+  {
+   "fold": "holdout",
+   "train_end": "2026-07-02",
+   "test_start": "2026-08-03",
+   "embargo_sessions_in_calendar": 22,
+   "last_train_calendar_exit": "2026-07-31",
+   "calendar_ok": true,
+   "n_train_rows": 389148,
+   "n_missing_exit": 0,
+   "max_actual_exit_date": "2026-07-31",
+   "n_rows_exit_on_or_after_test_start": 0,
+   "n_rows_exit_after_test_start": 0,
+   "violating_tickers": []
+  }
+ ],
+ "label_horizon": {
+  "task_rows_with_exit": 469152,
+  "rows_horizon_gt_21_market_sessions": 81,
+  "share": 0.00017265193370165745,
+  "max_horizon_market_sessions": 37
+ },
+ "violating_rows": 3,
+ "violating_rows_strict": 2,
+ "test_windows_disjoint": true,
+ "test_end_le_last_labeled": true
+}

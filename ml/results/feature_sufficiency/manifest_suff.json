@@ -1,0 +1,453 @@
+{
+ "built_at": "2026-10-19T06:31:36",
+ "builder": "ml/feature_sufficiency.py (feature-sufficiency DS)",
+ "rows": 507163,
+ "seed": 108,
+ "source": "ml/data/equity_eod_snapshot.parquet series EQ+BE (DuckDB never opened)",
+ "new_features": [
+  "avg_trade_size_z",
+  "ats_chg_20",
+  "trades_z_20",
+  "close_vs_vwap",
+  "close_vs_vwap_5",
+  "last_vs_close",
+  "deliv_value_share_20",
+  "gap_fill_10",
+  "range_position_20",
+  "amihud_20",
+  "resid_mom_63",
+  "idio_vol_60",
+  "beta_60",
+  "cs_rank_resid_mom_63",
+  "cs_rank_idio_vol_60",
+  "cr_mom_20",
+  "cr_ret_63",
+  "cr_ret_126",
+  "cr_mom_12_1",
+  "cr_deliv_sma_20",
+  "cr_deliv_pct",
+  "cluster_mom_20",
+  "cluster_ret_126"
+ ],
+ "groups": {
+  "A_microstructure": [
+   "avg_trade_size_z",
+   "ats_chg_20",
+   "trades_z_20",
+   "close_vs_vwap",
+   "close_vs_vwap_5",
+   "last_vs_close",
+   "deliv_value_share_20",
+   "gap_fill_10",
+   "range_position_20",
+   "amihud_20"
+  ],
+  "B_residual_market_model": [
+   "resid_mom_63",
+   "idio_vol_60",
+   "beta_60",
+   "cs_rank_resid_mom_63",
+   "cs_rank_idio_vol_60"
+  ],
+  "B_cluster_sector_proxy": [
+   "cr_mom_20",
+   "cr_ret_63",
+   "cr_ret_126",
+   "cr_mom_12_1",
+   "cr_deliv_sma_20",
+   "cr_deliv_pct",
+   "cluster_mom_20",
+   "cluster_ret_126"
+  ]
+ },
+ "extra_columns": [
+  "cluster_id"
+ ],
+ "pilot_overlap": {
+  "avg_trade_size_z": "none: `trades` is never read; nearest is size/liquidity (log_turnover)",
+  "ats_chg_20": "none",
+  "trades_z_20": "yes, in form: vol_z_20 is the same z-score on shares",
+  "close_vs_vwap": "none: `vwap` is never read (close_pos_in_range uses the H-L range)",
+  "close_vs_vwap_5": "none (5d mean of close_vs_vwap)",
+  "last_vs_close": "none: `last` is never read",
+  "deliv_value_share_20": "yes, in form: deliv_pct_sma_20 (quantity share); deliv_value_z (engineered)",
+  "gap_fill_10": "partial: gap_pct is the 1-day gap size, never the retrace",
+  "range_position_20": "yes, in form: close_pos_in_range (1d), accum_20 (engineered), dist_sma_20",
+  "amihud_20": "partial: log_turnover / cs_rank_turnover with vol_20 (Amihud ~ vol/turnover)",
+  "resid_mom_63": "partial: ret_63d is total, not idiosyncratic; rev_resid_20 (engineered) differs",
+  "idio_vol_60": "partial: vol_20 / cs_rank_vol_20 / atr_pct are total vol",
+  "beta_60": "partial: corr_mkt_60 (engineered) is correlation, not beta",
+  "cs_rank_resid_mom_63": "rank-equivalent of resid_mom_63",
+  "cs_rank_idio_vol_60": "rank-equivalent of idio_vol_60",
+  "cr_mom_20": "none: the pilot has no sector information",
+  "cr_ret_63": "none",
+  "cr_ret_126": "none",
+  "cr_mom_12_1": "none",
+  "cr_deliv_sma_20": "none",
+  "cr_deliv_pct": "none",
+  "cluster_mom_20": "none (mkt_ret_20 is the whole-market analogue)",
+  "cluster_ret_126": "none (added: 6-month industry momentum, Moskowitz-Grinblatt)"
+ },
+ "consistency": {
+  "max_abs_diff_ret_1d": 0.0,
+  "universe_identical": true,
+  "max_abs_diff_universe_median_ret": 0.0
+ },
+ "leak_check": {
+  "passed": true,
+  "seed": 108,
+  "n_tickers": 5,
+  "features_checked": [
+   "resid_mom_63",
+   "idio_vol_60",
+   "trades_z_20",
+   "gap_fill_10",
+   "range_position_20"
+  ],
+  "cases": [
+   {
+    "ticker": "NIFTYBETA",
+    "date": "2026-06-05",
+    "stored": {
+     "resid_mom_63": -0.019712772127948867,
+     "idio_vol_60": 0.0060008297964170435,
+     "trades_z_20": -0.7849877522418081,
+     "gap_fill_10": 1.382477748759777,
+     "range_position_20": 0.1303797468354431
+    },
+    "recomputed_from_data_leq_t": {
+     "resid_mom_63": -0.019712772127948867,
+     "idio_vol_60": 0.0060008297964170435,
+     "trades_z_20": -0.7849877522418081,
+     "gap_fill_10": 1.382477748759777,
+     "range_position_20": 0.1303797468354431
+    },
+    "match": true
+   },
+   {
+    "ticker": "VEDL",
+    "date": "2026-03-30",
+    "stored": {
+     "resid_mom_63": -0.08276967905043087,
+     "idio_vol_60": 0.025334103979302743,
+     "trades_z_20": 1.8279250497778745,
+     "gap_fill_10": -0.6650316765993672,
+     "range_position_20": 0.18810068649885542
+    },
+    "recomputed_from_data_leq_t": {
+     "resid_mom_63": -0.08276967905043087,
+     "idio_vol_60": 0.025334103979302743,
+     "trades_z_20": 1.8279250497778745,
+     "gap_fill_10": -0.6650316765993672,
+     "range_position_20": 0.18810068649885542
+    },
+    "match": true
+   },
+   {
+    "ticker": "STARHEALTH",
+    "date": "2026-03-30",
+    "stored": {
+     "resid_mom_63": 0.10369614082177116,
+     "idio_vol_60": 0.013236503921344858,
+     "trades_z_20": 0.6281333589779399,
+     "gap_fill_10": 0.3691681020064597,
+     "range_position_20": 0.5627157652474107
+    },
+    "recomputed_from_data_leq_t": {
+     "resid_mom_63": 0.10369614082177116,
+     "idio_vol_60": 0.013236503921344858,
+     "trades_z_20": 0.6281333589779399,
+     "gap_fill_10": 0.3691681020064597,
+     "range_position_20": 0.5627157652474107
+    },
+    "match": true
+   },
+   {
+    "ticker": "CAPILLARY",
+    "date": "2026-06-19",
+    "stored": {
+     "resid_mom_63": 0.03338003343398704,
+     "idio_vol_60": 0.023480120201608966,
+     "trades_z_20": -0.1866828793956394,
+     "gap_fill_10": 0.2403929173154737,
+     "range_position_20": 0.26784400294334054
+    },
+    "recomputed_from_data_leq_t": {
+     "resid_mom_63": 0.03338003343398704,
+     "idio_vol_60": 0.023480120201608966,
+     "trades_z_20": -0.1866828793956394,
+     "gap_fill_10": 0.2403929173154737,
+     "range_position_20": 0.26784400294334054
+    },
+    "match": true
+   },
+   {
+    "ticker": "AARTIDRUGS",
+    "date": "2026-03-30",
+    "stored": {
+     "resid_mom_63": 0.017147062606948843,
+     "idio_vol_60": 0.013445242855189068,
+     "trades_z_20": 1.3538770088007859,
+     "gap_fill_10": -0.040087504001607724,
+     "range_position_20": 0.015369836695485325
+    },
+    "recomputed_from_data_leq_t": {
+     "resid_mom_63": 0.017147062606948843,
+     "idio_vol_60": 0.013445242855189068,
+     "trades_z_20": 1.3538770088007859,
+     "gap_fill_10": -0.040087504001607724,
+     "range_position_20": 0.015369836695485325
+    },
+    "match": true
+   }
+  ]
+ },
+ "cluster_pit_check": {
+  "identical": true,
+  "refit_on_data_leq": "2026-01-31"
+ },
+ "clusters": {
+  "window": [
+   "2025-08-05",
+   "2026-01-30"
+  ],
+  "n_sessions": 120,
+  "n_tickers": 1637,
+  "method": "KMeans(k=12, n_init=20, seed 108) on per-ticker standardized market-residual daily returns (OLS on the universe-median return over the window; |ret|>22% split/circuit days dropped); tickers = in the PIT universe on >=1 window session with >=100 valid returns",
+  "mean_within_cluster_resid_corr": 0.0674,
+  "mean_between_cluster_resid_corr": -0.0057,
+  "clusters": {
+   "0": {
+    "size": 225,
+    "mean_within_resid_corr": 0.0348,
+    "top_by_turnover": [
+     "POWERINDIA",
+     "POLYCAB",
+     "ATHERENERG",
+     "CGPOWER",
+     "PIDILITIND",
+     "TARIL",
+     "JMFINANCIL",
+     "EDELWEISS"
+    ]
+   },
+   "1": {
+    "size": 190,
+    "mean_within_resid_corr": 0.064,
+    "top_by_turnover": [
+     "ETERNAL",
+     "LT",
+     "TATASTEEL",
+     "SWIGGY",
+     "POWERGRID",
+     "SUZLON",
+     "NTPC",
+     "INDUSINDBK"
+    ]
+   },
+   "2": {
+    "size": 184,
+    "mean_within_resid_corr": 0.0561,
+    "top_by_turnover": [
+     "LIQUIDBEES",
+     "CUMMINSIND",
+     "OLAELEC",
+     "GODFRYPHLP",
+     "UNITDSPR",
+     "RPOWER",
+     "ZEEL",
+     "PATANJALI"
+    ]
+   },
+   "3": {
+    "size": 184,
+    "mean_within_resid_corr": 0.0564,
+    "top_by_turnover": [
+     "ITC",
+     "WAAREEENER",
+     "SAMMAANCAP",
+     "VMM",
+     "BELRISE",
+     "JUBLFOOD",
+     "BAJAJHLDNG",
+     "BLACKBUCK"
+    ]
+   },
+   "4": {
+    "size": 182,
+    "mean_within_resid_corr": 0.0373,
+    "top_by_turnover": [
+     "KAYNES",
+     "POLICYBZR",
+     "LAURUSLABS",
+     "GODREJCP",
+     "GVT&D",
+     "HBLENGINE",
+     "FORCEMOT",
+     "SRF"
+    ]
+   },
+   "5": {
+    "size": 138,
+    "mean_within_resid_corr": 0.0571,
+    "top_by_turnover": [
+     "NETWEB",
+     "ADANIPOWER",
+     "SYRMA",
+     "EXIDEIND",
+     "PFOCUS",
+     "JPPOWER",
+     "QPOWER",
+     "VIKRAN"
+    ]
+   },
+   "6": {
+    "size": 117,
+    "mean_within_resid_corr": 0.0934,
+    "top_by_turnover": [
+     "BHARTIARTL",
+     "M&M",
+     "MARUTI",
+     "DIXON",
+     "TRENT",
+     "HEROMOTOCO",
+     "HINDUNILVR",
+     "BAJAJ-AUTO"
+    ]
+   },
+   "7": {
+    "size": 112,
+    "mean_within_resid_corr": 0.081,
+    "top_by_turnover": [
+     "SBIN",
+     "IDEA",
+     "BAJFINANCE",
+     "CANBK",
+     "INDUSTOWER",
+     "BANKBARODA",
+     "BAJAJFINSV",
+     "YESBANK"
+    ]
+   },
+   "8": {
+    "size": 98,
+    "mean_within_resid_corr": 0.1157,
+    "top_by_turnover": [
+     "INFY",
+     "TCS",
+     "HCLTECH",
+     "SUNPHARMA",
+     "COFORGE",
+     "TECHM",
+     "VBL",
+     "PERSISTENT"
+    ]
+   },
+   "9": {
+    "size": 86,
+    "mean_within_resid_corr": 0.1217,
+    "top_by_turnover": [
+     "BEL",
+     "HAL",
+     "GRSE",
+     "MAZDOCK",
+     "BDL",
+     "RVNL",
+     "SOLARINDS",
+     "COCHINSHIP"
+    ]
+   },
+   "10": {
+    "size": 79,
+    "mean_within_resid_corr": 0.268,
+    "top_by_turnover": [
+     "HDFCBANK",
+     "RELIANCE",
+     "ICICIBANK",
+     "BSE",
+     "AXISBANK",
+     "KOTAKBANK",
+     "SHRIRAMFIN",
+     "INDIGO"
+    ]
+   },
+   "11": {
+    "size": 42,
+    "mean_within_resid_corr": 0.7009,
+    "top_by_turnover": [
+     "SILVERBEES",
+     "VEDL",
+     "MCX",
+     "HINDALCO",
+     "HINDCOPPER",
+     "GOLDBEES",
+     "HINDZINC",
+     "NATIONALUM"
+    ]
+   }
+  },
+  "row_coverage_by_month": {
+   "2025-06": 0.96,
+   "2025-07": 0.973,
+   "2025-08": 0.984,
+   "2025-09": 0.987,
+   "2025-10": 0.973,
+   "2025-11": 0.96,
+   "2025-12": 0.952,
+   "2026-01": 0.942,
+   "2026-02": 0.931,
+   "2026-03": 0.92,
+   "2026-04": 0.908,
+   "2026-05": 0.896,
+   "2026-06": 0.89,
+   "2026-07": 0.877,
+   "2026-08": 0.868,
+   "2026-09": 0.848,
+   "2026-10": 0.838
+  },
+  "row_coverage_overall": 0.925
+ },
+ "nan_pct": {
+  "avg_trade_size_z": 0.0,
+  "ats_chg_20": 0.72,
+  "trades_z_20": 0.56,
+  "close_vs_vwap": 0.0,
+  "close_vs_vwap_5": 0.0,
+  "last_vs_close": 0.0,
+  "deliv_value_share_20": 2.55,
+  "gap_fill_10": 3.39,
+  "range_position_20": 0.28,
+  "amihud_20": 0.42,
+  "resid_mom_63": 12.98,
+  "idio_vol_60": 1.67,
+  "beta_60": 1.67,
+  "cs_rank_resid_mom_63": 12.98,
+  "cs_rank_idio_vol_60": 1.67,
+  "cr_mom_20": 7.65,
+  "cr_ret_63": 9.28,
+  "cr_ret_126": 26.92,
+  "cr_mom_12_1": 61.17,
+  "cr_deliv_sma_20": 9.84,
+  "cr_deliv_pct": 9.15,
+  "cluster_mom_20": 7.53,
+  "cluster_ret_126": 25.81
+ },
+ "definitions": {
+  "avg_trade_size_z": "per-date z (universe) of log(turnover/trades)",
+  "ats_chg_20": "per-date z of [5d-mean log(turnover/trades) minus its value 20 sessions earlier]",
+  "trades_z_20": "(trades - 20d mean)/20d std, window incl. today (vol_z_20 convention)",
+  "close_vs_vwap": "close/vwap - 1",
+  "close_vs_vwap_5": "5-session mean (min 3)",
+  "last_vs_close": "last/close - 1",
+  "deliv_value_share_20": "20d sum(deliv_qty*close) / 20d sum(turnover) on rows with delivery data (min 15)",
+  "gap_fill_10": "10-session mean (min 3 gap days) of (open-close)/(open-prev_close) on days with |gap|>=0.25%, clipped to +-3; prev_close = bhavcopy PREV_CLOSE (CA-adjusted)",
+  "range_position_20": "(close - 20d min low)/(20d max high - 20d min low), min 15 rows",
+  "amihud_20": "per-date z of log(20d mean |ret_1d| / turnover in Rs crore), |ret|>22% days excluded",
+  "resid_mom_63": "63-session sum (min 45) of e_t = r_t - a_t - b_t m_t, (a_t,b_t) = 60-session OLS (min 40) ending at t; m = universe-median ret_1d; |r|>22% excluded",
+  "idio_vol_60": "residual std of that regression (n-2 dof)",
+  "beta_60": "slope of that regression",
+  "cs_rank_*": "per-date percentile rank over the universe",
+  "cr_<x>": "x minus its cluster's per-date universe median (>=5 names)",
+  "cluster_mom_20 / cluster_ret_126": "cluster's per-date median mom_20 / ret_126d (>=5 names)"
+ }
+}

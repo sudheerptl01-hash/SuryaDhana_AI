@@ -1,0 +1,209 @@
+{
+ "model": "ensemble_rank",
+ "family": "ensemble",
+ "agent": "quant-sota",
+ "task": "beat_mkt_20d",
+ "params": {
+  "members": {
+   "lgbm_fs_selected (champion, clean)": "ml/results/preds/lgbm_fs_selected_clean__beat_mkt_20d.parquet",
+   "lgbm_lambdarank": "ml/results/preds/sota/lgbm_lambdarank__beat_mkt_20d.parquet",
+   "catboost": "ml/results/preds/sota/catboost__beat_mkt_20d.parquet"
+  },
+  "combiner": "per-date percentile rank of each member's OOS score, equal-weight mean; NO weights fitted, no refit",
+  "member_rank_corr_mean_per_date": {
+   "lgbm_fs_selected (champion, clean) ~ lgbm_lambdarank": 0.264,
+   "lgbm_fs_selected (champion, clean) ~ catboost": 0.478,
+   "lgbm_lambdarank ~ catboost": 0.119
+  }
+ },
+ "preprocess": "rank_blend",
+ "n_features": 10,
+ "feature_subset": [
+  "atr_pct",
+  "deliv_pct_sma_20",
+  "dist_52w_high",
+  "ret_126d",
+  "mom_12_1",
+  "cs_rank_mom_20",
+  "cs_rank_ret_126",
+  "cs_rank_vol_20",
+  "deliv_pct",
+  "ret_63d"
+ ],
+ "folds": [
+  {
+   "auc": 0.5236190488417745,
+   "pr_auc": 0.5313510843176075,
+   "brier": 0.27924025564850297,
+   "acc": 0.5099429084610944,
+   "n": 31178,
+   "base_rate": 0.5006093978881836,
+   "decile_spread": 0.026076678186655045,
+   "top_decile_mean_fwd": 0.03471584618091583,
+   "decile_means": [
+    0.008639168925583363,
+    0.01953902095556259,
+    0.01792364940047264,
+    0.018650127574801445,
+    0.019615717232227325,
+    0.015862947329878807,
+    0.018565170466899872,
+    0.01467837393283844,
+    0.02188809961080551,
+    0.03471584618091583
+   ],
+   "fold": "2026-04",
+   "n_train": 0,
+   "train_seconds": 0.0,
+   "rank_ic_mean": 0.04107057578878392,
+   "rank_ic_t_naive": 1.4141407865089208,
+   "n_dates": 20
+  },
+  {
+   "auc": 0.5369256471115671,
+   "pr_auc": 0.5399191080270254,
+   "brier": 0.28918883945436824,
+   "acc": 0.5235132102417627,
+   "n": 29409,
+   "base_rate": 0.5014111399650574,
+   "decile_spread": 0.046806056052446365,
+   "top_decile_mean_fwd": 0.044748704880476,
+   "decile_means": [
+    -0.002057352801784873,
+    0.0015525168273597956,
+    0.010410613380372524,
+    0.009762642905116081,
+    0.01893206126987934,
+    0.024013208225369453,
+    0.023137392476201057,
+    0.03827165812253952,
+    0.027499038726091385,
+    0.044748704880476
+   ],
+   "fold": "2026-05",
+   "n_train": 0,
+   "train_seconds": 0.0,
+   "rank_ic_mean": 0.08031189264298862,
+   "rank_ic_t_naive": 6.195669110645534,
+   "n_dates": 19
+  },
+  {
+   "auc": 0.5436284457208076,
+   "pr_auc": 0.5290536543397261,
+   "brier": 0.2770460979978721,
+   "acc": 0.5368988262983494,
+   "n": 32291,
+   "base_rate": 0.5017496943473816,
+   "decile_spread": 0.023961320519447327,
+   "top_decile_mean_fwd": 0.023772170767188072,
+   "decile_means": [
+    -0.000189149723155424,
+    0.004818779416382313,
+    0.00713129760697484,
+    0.009866420179605484,
+    0.011805006302893162,
+    0.017474882304668427,
+    0.020990921184420586,
+    0.02529090829193592,
+    0.02195579558610916,
+    0.023772170767188072
+   ],
+   "fold": "2026-06",
+   "n_train": 0,
+   "train_seconds": 0.0,
+   "rank_ic_mean": 0.07883418491868562,
+   "rank_ic_t_naive": 9.405903390603378,
+   "n_dates": 21
+  },
+  {
+   "auc": 0.5253526219489701,
+   "pr_auc": 0.5296534545264675,
+   "brier": 0.28616370242893086,
+   "acc": 0.5230414746543779,
+   "n": 35588,
+   "base_rate": 0.5020793676376343,
+   "decile_spread": 0.018199637532234192,
+   "top_decile_mean_fwd": 0.03161909058690071,
+   "decile_means": [
+    0.013419452123343945,
+    0.009724373929202557,
+    0.005329355131834745,
+    0.007136729080229998,
+    0.008295317180454731,
+    0.015160366892814636,
+    0.017937667667865753,
+    0.02386482059955597,
+    0.023920491337776184,
+    0.03161909058690071
+   ],
+   "fold": "2026-07",
+   "n_train": 0,
+   "train_seconds": 0.0,
+   "rank_ic_mean": 0.04364716674540303,
+   "rank_ic_t_naive": 4.148779951163249,
+   "n_dates": 23
+  }
+ ],
+ "cv_auc_mean": 0.5323814409057799,
+ "cv_auc_std": 0.008266328356061788,
+ "holdout": {
+  "auc": 0.5482223142340248,
+  "pr_auc": 0.5482373750718723,
+  "brier": 0.2740627618133217,
+  "acc": 0.536990628619564,
+  "n": 47485,
+  "base_rate": 0.5021585822105408,
+  "decile_spread": 0.038979265838861465,
+  "top_decile_mean_fwd": 0.043141890317201614,
+  "decile_means": [
+   0.004162624478340149,
+   0.003836841555312276,
+   0.010526328347623348,
+   0.012965904548764229,
+   0.019800741225481033,
+   0.021976426243782043,
+   0.020565234124660492,
+   0.02771483175456524,
+   0.034685634076595306,
+   0.043141890317201614
+  ],
+  "fold": "holdout",
+  "n_train": 0,
+  "train_seconds": 0.0,
+  "rank_ic_mean": 0.10597840689017494,
+  "rank_ic_t_naive": 18.49813428153575,
+  "n_dates": 30
+ },
+ "train_seconds": 0.0,
+ "notes": "Equal-weight per-date rank average of three already-OOS score sets (champion clean preds, lgbm_lambdarank, catboost); nothing is fitted, so the blend cannot overfit the folds. Score is an average percentile rank: AUC/decile/IC are meaningful, Brier/acc@0.5 are not calibrated probabilities. train_seconds = 0 (cost = sum of the members).",
+ "score_kind": "rank_average",
+ "train_seconds_per_fold_mean": 0.0,
+ "cv_worst_fold_auc": 0.5236190488417745,
+ "rank_ic": {
+  "definition": "per-date Spearman(score, y_excess_20d) over clean test rows; t_naive = mean/(sd/sqrt(n_dates)); t_nw19 = Newey-West(19 lags) because consecutive 20-session forward windows overlap",
+  "cv": {
+   "mean": 0.060322171017218436,
+   "std": 0.07746706295646501,
+   "t_naive": 7.094126347748522,
+   "t_nw19": 3.5184834860594,
+   "hit_rate": 0.8554216867469879,
+   "n_dates": 83
+  },
+  "holdout": {
+   "mean": 0.10597840689017494,
+   "std": 0.03137979386394128,
+   "t_naive": 18.49813428153575,
+   "t_nw19": 11.913286048669988,
+   "hit_rate": 1.0,
+   "n_dates": 30
+  }
+ },
+ "vs_champion": {
+  "champion": "lgbm_fs_selected (clean)",
+  "champion_cv_auc": 0.5314,
+  "pass_mark_cv_auc": 0.5364,
+  "delta_cv_auc": 0.0009814409057798956,
+  "all_folds_ge_050": true,
+  "passes": false
+ }
+}
