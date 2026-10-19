@@ -1,6 +1,6 @@
 # SuryaDhana goals: how good is good enough?
 
-**Date:** 2026-10-19 · **Owner:** program lead · **Inputs:** `ml/PROGRAM_REPORT.md`, `ml/results/scale5y/SCALE5Y.md`, `ml/research/SOTA_FORECASTING.md`, and the community calibration in `ml/research/community/` (external anchors are filled from it; cells marked *[research]* are pending that study).
+**Date:** 2026-10-19 · **Owner:** program lead · **Inputs:** `ml/PROGRAM_REPORT.md`, `ml/results/scale5y/SCALE5Y.md`, `ml/research/SOTA_FORECASTING.md`, and the community calibration `ml/research/community/COMMUNITY_CALIBRATION.md` (every external anchor below is sourced there).
 
 The question from management is "how good does the model have to be?". The answer depends on what it is for. A model can be good enough to **study**, good enough to **paper-trade**, good enough for **small capital**, or good enough to **scale**. Each stage has measurable criteria fixed here, before the next test, so that passing them cannot be arranged after the fact.
 
@@ -30,7 +30,7 @@ A model is worth studying further when its ranking of stocks is distinguishable 
 |---|---|---|---|
 | AUC on a cross-sectional relative-return label | block-bootstrap 95% CI excludes 0.50 over ≥ 36 monthly folds | 0.5359 [0.5250, 0.5483] over 43 folds: met | Published frontier: GKX neural nets imply forecast-return correlation ≈ 0.06; Qlib LightGBM IC 0.045 on CSI300 |
 | Rank IC per date | mean ≥ 0.03 with Newey-West t ≥ 3 | +0.066, t 6.0: met | MSCI Barra (Gleiser and McKenna 2010): "many portfolio managers would view a 'good' IC as 0.05 and a 'very good' IC as 0.10"; the M6 organisers' tiers are 0.05 moderate, 0.10 good, 0.15 exceptional; Quantopian's community bar for keeping a factor was mean IC above 0.01 at p < 0.05 |
-| Null and leakage tests | label-permutation null 0.500 ± 0.001; features and labels recompute exactly; point-in-time universe | all pass (`AUDIT.md`) | An IC of 0.05 implies a 51.6% hit rate and 0.10 implies 53.2%, so a claimed daily directional accuracy far above 55% implies IC above 0.15 and is a leakage warning first *[research A/B: the online examples]* |
+| Null and leakage tests | label-permutation null 0.500 ± 0.001; features and labels recompute exactly; point-in-time universe | all pass (`AUDIT.md`) | An IC of 0.05 implies a 51.6% hit rate and 0.10 implies 53.2%, so a claimed daily directional accuracy far above 55% implies IC above 0.15 and is a leakage warning first. The online examples are all price-level fits or leaks: a 1.36-million-view tutorial's "near-perfect" LSTM, Kaggle notebooks titled "99% accuracy" and "0.99 R²", an LSTM scoring R² 0.89 on a pure random walk, 87.6% direction on about 15 test days, 98% training accuracy from label leakage |
 | Not one regime | mean AUC > 0.50 with the best six-month run and the worst month removed | 0.5267 over the other 36 months: met, narrowly | |
 | Honest selection | features and hyper-parameters chosen inside the training window | nested selection used; hyper-parameters fixed on 2026-04..07 (4 of 43 folds contaminated) | de Prado: no more than about 45 independent configurations on five years of data |
 
@@ -69,6 +69,10 @@ Capital follows a track record the model did not get to choose. The deflated and
 | Short side | F&O-restricted long-short validated with borrow and 40 bps | |
 | Independent data | at least one external feed (corporate actions, sector, F&O membership) in production | |
 
+## Position on the external ladder
+
+The community research derived a five-rung ladder from live competitions, allocator platforms and industry rules of thumb (`COMMUNITY_CALIBRATION.md` §3). On it, SuryaDhana's single models are rung 1 (a real factor whose long-only book does not beat equal weight) and the rank ensemble is rung 2 (a good model that earns a paper book: IC 0.066, stability about 1.3, IR 1.26 with an interval clear of zero, beats equal weight and the momentum baseline over 45 months). Rung 3, allocatable, needs a factor-neutralised IC of at least 0.05, a five-year Sharpe above 1.25, PSR(SR > 1) of 80%, DSR 0.95 and a live record; none of these is in hand. That is the same answer the stages above give.
+
 ## What "good enough" means in plain words
 
 - **To keep researching:** the model must beat chance in a way the red team cannot break. SuryaDhana does: AUC 0.536, rank IC 0.066, clean audit. That is the size of edge the published frontier finds, and it is small.
@@ -78,6 +82,6 @@ Capital follows a track record the model did not get to choose. The deflated and
 
 ## Not goals
 
-- A directional accuracy above 60%, an AUC above 0.60 or a backtest Sharpe above 3 on end-of-day data. Numbers like these appear online *[research: examples and why they are wrong]* and in this program they appeared only in one six-month regime run (0.60 to 0.66 from September 2025 to February 2026) that reversed in March 2026.
+- A directional accuracy above 60%, an AUC above 0.60 or a backtest Sharpe above 3 on end-of-day data. Numbers like these appear online in the most-viewed stock-prediction tutorials (0.59 to 1.36 million views each) and in Kaggle notebooks titled "99% accuracy" or "0.99 R²"; all are price-level fits that a repeat-yesterday forecast matches (`ml/research/community/COMMUNITY_CALIBRATION.md` §2). In this program such numbers appeared only in one six-month regime run (0.60 to 0.66 from September 2025 to February 2026) that reversed in March 2026.
 - Beating the linear benchmark on AUC. The program could not show it, and the economics do not depend on it.
 - A new model family. The evidence in `PROGRAM_REPORT.md` §6 is against spending on transformers, foundation models or reinforcement learning.

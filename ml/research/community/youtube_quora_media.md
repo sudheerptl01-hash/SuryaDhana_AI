@@ -3,7 +3,7 @@
 **Date:** 2026-10-19 · **From:** community research, area B (YouTube, Quora, Medium/TDS/Substack, LinkedIn, X, Kaggle) · **Companion:** `ml/research/community/youtube_quora_media.json` (41 entries; [n] below is the entry number in that file)
 
 **Credibility mix:** 16 A, 14 B, 11 C.
-**Verification:** 26 entries were opened and read (or partly verified via YouTube oEmbed). 9 are "unverified (snippet only)" because the host blocked fetching: Quora, X, most Kaggle pages, and the Medium/TDS article pages. Mixed cases are labelled in the `verification` field.
+**Verification:** 24 entries were opened and read. 7 were partly verified: title and channel via YouTube oEmbed, description from search snippets. 10 are "unverified (snippet only)" because the host blocked fetching: Quora, X, most Kaggle pages, and the TDS article pages. Each entry's status is in its `verification` field.
 
 ## Summary
 
