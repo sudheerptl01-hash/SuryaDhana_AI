@@ -58,8 +58,9 @@ train targets only, never features.
 ```
 ml/
   PROGRAM_REPORT.md    program verdicts, status board, deliverables, recommendations
-  MODEL_SELECTION.md   pilot model-selection memo (with the post-audit correction)
-  SCALE_UP.md          5-year plan and the five pre-registered promotion gates
+  GOALS.md             "how good is good enough": measurable criteria by stage, with external anchors
+  MODEL_SELECTION.md   pilot model-selection memo (with the post-audit correction and 5-year outcome)
+  SCALE_UP.md          5-year plan and the five pre-registered promotion gates (scored)
   data.py              dataset builder (features + labels + splits); parameterised
   build_5y.py          5-year dataset (ml/data_5y/, 43 monthly folds 2023-01..2026-07)
   evaluation.py        shared walk-forward harness (THE protocol)
@@ -79,8 +80,10 @@ ml/
   scale5y_nested.py    nested per-year feature selection + exit-date purge + ensemble
   scale5y_report.py    5-year league, block bootstrap, regimes, portfolio, gates
   make_program_report.py generates report/program_report.html
+  make_community_report.py generates report/community_calibration.html
   models/              one module per model family (incl. models/sota.py)
   research/            literature review (SOTA_FORECASTING.md, sota_map.json)
+  research/community/  what the internet reports (122 graded entries) + COMMUNITY_CALIBRATION.md
   results/             pilot league *.json (committed) + preds/ (gitignored)
   results/feature_study/      feature EDA + A/B outputs
   results/feature_sufficiency/ FEATURE_SUFFICIENCY.md + evidence
@@ -89,7 +92,7 @@ ml/
   results/strategy/           STRATEGY.md + strategy.json + monthly tables
   results/sota/               SOTA_MODELS.md + league_summary.json
   results/scale5y/            5-year results, nested_selection.json, SCALE5Y.md
-  report/              generated HTML reports (index, feature_study, program_report)
+  report/              generated HTML reports (index, feature_study, program_report, community_calibration)
   data/, data_5y/      parquet + manifest + splits (gitignored)
 ```
 
