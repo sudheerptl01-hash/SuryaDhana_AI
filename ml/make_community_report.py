@@ -2471,7 +2471,7 @@ def build_html() -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>How good is good enough? · SuryaDhana</title>
+<title>How good is good enough?</title>
 <meta name="description" content="What the internet reports for ML stock prediction, how good is good enough, and where SuryaDhana sits.">
 <style>{CSS}</style>
 </head>
