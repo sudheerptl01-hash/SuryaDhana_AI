@@ -227,3 +227,4 @@
 [07:18:48] [cs_transformer] fold=2026-07 epoch 19 train_loss=0.66701 val_auc=0.5230 (41.1s)
 [07:19:10] [cs_transformer] fold=2026-07 epoch 20 train_loss=0.66742 val_auc=0.5229 (21.2s)
 [07:19:20] [cs_transformer] fold=2026-07 epoch 21 train_loss=0.66589 val_auc=0.5279 (10.2s)
+[07:19:32] [cs_transformer] fold=2026-07 epoch 22 train_loss=0.66626 val_auc=0.5249 (12.3s)
