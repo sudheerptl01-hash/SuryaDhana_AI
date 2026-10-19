@@ -1,0 +1,11 @@
+2026-10-19 12:57:58 INFO [MainThread] lists: {'ind_nifty500list.csv': 'ok', 'ind_niftymidcap150list.csv': 'ok', 'ind_niftysmallcap250list.csv': 'ok', 'ind_niftymicrocap250_list.csv': 'ok', 'ind_nifty50list.csv': 'ok', 'EQUITY_L.csv': 'ok'}
+2026-10-19 12:58:01 INFO [MainThread] window=main days=1251 (2021-10-01..2026-10-16)
+2026-10-19 12:58:01 INFO [dl-fo] fo worker start: 1251 jobs
+2026-10-19 12:58:01 INFO [dl-indices] indices worker start: 1251 jobs
+2026-10-19 12:58:01 INFO [dl-participant] participant worker start: 1251 jobs
+2026-10-19 12:59:27 INFO [dl-participant] participant progress 50/1251 {'skipped_on_disk': 0, 'skipped_404_known': 0, 'ok': 50, '404': 0, 'failed': 0}
+2026-10-19 12:59:36 INFO [dl-indices] indices progress 50/1251 {'skipped_on_disk': 0, 'skipped_404_known': 0, 'ok': 50, '404': 0, 'failed': 0}
+2026-10-19 12:59:56 INFO [dl-fo] fo progress 50/1251 {'skipped_on_disk': 0, 'skipped_404_known': 0, 'ok': 50, '404': 0, 'failed': 0}
+2026-10-19 13:00:10 INFO [dl-participant] participant fao_participant_oi_05112021.csv 404
+2026-10-19 13:00:22 INFO [dl-indices] indices ind_close_all_05112021.csv 404
+2026-10-19 13:00:46 INFO [dl-fo] fo fo05NOV2021bhav.csv.zip 404

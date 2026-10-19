@@ -1,0 +1,22 @@
+{
+ "days_done": 57,
+ "sessions": 39,
+ "no_session": 18,
+ "echo": 0,
+ "errors": 0,
+ "mto_404": 0,
+ "pr_404": 0,
+ "position": 57,
+ "of": 1826,
+ "current_date": "2016-11-26",
+ "requests": 135,
+ "backoffs": 0,
+ "gap_s": [
+  1.0,
+  2.0
+ ],
+ "elapsed_s": 255,
+ "sec_per_request": 1.89,
+ "final": false,
+ "updated": "2026-10-19T13:00:54+00:00"
+}

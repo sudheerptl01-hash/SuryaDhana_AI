@@ -1,0 +1,3 @@
+2026-10-19 12:56:39 hist.download INFO download start: 1826 calendar days (2016-10-03 .. 2021-09-30, overlap days first: ['2021-10-01', '2021-10-04'])
+2026-10-19 12:58:30 hist.download INFO [25/1826] 2016-10-25 sessions=17 no_session=8 echo=0 errors=0 req=59 gap=1.0-2.0 elapsed=112s
+2026-10-19 13:00:22 hist.download INFO [50/1826] 2016-11-19 sessions=34 no_session=16 echo=0 errors=0 req=118 gap=1.0-2.0 elapsed=223s
