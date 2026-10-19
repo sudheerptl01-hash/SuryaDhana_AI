@@ -94,6 +94,40 @@ Mid-bake-off we found **12 phantom "holiday-echo" days** (2.9% of sessions): the
 5. **up_5d** — re-evaluate with its NaN-label fix, stratified by regime, before trusting any number from it.
 6. **Ingest hygiene** — extend the holiday-echo scan and corporate-action handling to the full 5y history (prices unadjusted; y_clean mask re-audit).
 
+## Five-year outcome (2026-10-19)
+
+The 5-year walk-forward (`ml/results/scale5y/`: 43 monthly folds from
+2023-01 to 2026-07, rolling 504-session training window, 22-session embargo,
+holdout 2026-08-03 to 2026-09-16) supersedes the recommendation above in one
+respect and confirms it in another.
+
+- **Superseded: the 10-feature subset.** At 5 years it scores CV AUC 0.5251
+  against 0.5366 for LightGBM on all features, and loses in 32 of 43 months.
+  Honest yearly re-selection inside each training history recovers 0.5359,
+  but with sets that overlap in only 2 to 3 features from year to year
+  (pre-registered gate 4 fails). Production uses all 52 end-of-day features
+  (the 50 base features plus `deliv_value_share_20` and `amihud_20`) with no
+  hand selection.
+- **Confirmed: LightGBM with fixed trees over the linear benchmark, on
+  stability rather than mean AUC.** L2 logistic has the higher 5-year mean
+  (0.5415), so gate 1 fails as written; but its worst month is 0.379 against
+  0.453, its month-to-month spread is 1.4 times larger, and its holdout
+  decile spread is −3.6% against −0.6%. It stays the drift monitor, not a
+  scorer.
+- **Confirmed: RL, the RNNs and the MLP stay out.** The SOTA study added the
+  transformers, DLinear and the ranking losses to the dropped list; at 5 years
+  LambdaRank scores 0.503 and is above 0.50 in 58% of months.
+- **The regime is the common component.** Every model's worst month is
+  March 2026 (0.37 to 0.45) and every model's best stretch is September 2025
+  to February 2026 (0.60 to 0.66).
+- **The first year of folds trains on short windows** (41,733 rows for the
+  2023-01 fold, the full window only from late 2024); 2023 results are
+  small-sample.
+
+Bootstrap intervals, the regime table, the paper portfolio and the gate
+verdicts are in `ml/results/scale5y/SCALE5Y.md`; the program-level verdict is
+in `ml/PROGRAM_REPORT.md`.
+
 ## Feature study (follow-up)
 
 A feature EDA and an A/B of 23 engineered features found no case for rebuilding the feature set before the 5-year run. Every engineered variant scored below the champion on clean data (best 0.5268 against 0.5314; the pass mark fixed in advance was 0.5364). The EDA did find a regime break in March 2026, when 25 of 40 features had their worst month at once. After it the volatility features changed sign and the delivery signal shrank from a monthly IC of +0.107 to +0.020. That makes item 1 above (feature re-selection on the full history) mandatory and adds a delivery-IC alert to production monitoring. Details are in `ml/report/feature_study.html` and the plan changes in `ml/SCALE_UP.md`.

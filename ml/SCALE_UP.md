@@ -88,6 +88,22 @@ The linear benchmark (and any neural model) should get log1p on the
 volatility family, ranks on raw returns and a top-decile volatility flag. The
 champion's trees need none of these.
 
+## Gate status (2026-10-19, 43 folds landed)
+
+| Gate | Pre-registered rule | Status | Evidence |
+|---|---|---|---|
+| 1 | LightGBM beats lr_l2 on CV mean, bootstrap CI excluding zero | **FAIL** | lr_l2 0.5415 above all-features LightGBM 0.5366 (nested: 0.5430 above 0.5359); the sign is against before any interval |
+| 2 | Fold AUC ≥ 0.50 in ≥ 90% of months | **FAIL** | 86% (nested), 81% (all features) |
+| 3 | Top decile beats the EW universe in ≥ 75% of months, net of 20 bps | PENDING | `ml/results/scale5y/portfolio_5y.json` |
+| 4 | Selected-feature overlap ≥ 7/10 across yearly re-selections | **FAIL** | selected-set overlaps 3 / 2 / 3; top-10 overlaps 4 / 4 / 5 (`nested_selection.json`) |
+| 5 | DSR ≥ 0.95 with N stated before the run | PENDING | `ml/results/scale5y/portfolio_5y.json` |
+
+Three of five gates fail, so the pre-registered decision is **do not promote
+to capital**. Phase 3 becomes paper trading with the monitoring specified in
+`ml/PROGRAM_REPORT.md` §10. Post-hoc observations (a stability-aware
+comparison favours LightGBM over the linear model) are reported as such and
+do not change the verdict.
+
 ## Compute
 
 The pilot's full 13-model bake-off ran ~2 h on 4 CPU cores. The 5-year
