@@ -2,7 +2,7 @@
  "id": "T9",
  "name": "holdout-once check",
  "status": "FAIL",
- "summary": "90 'holdout' lines grepped in models/*.py, feature_selection.py, feature_ab.py; model tuning paths are clean (CV folds 1-2 only); holdout labels entered a selection in 1 code path (feature_ab TOP8 via all-dates quick_ic) + 1 memo-level adjudication; champion feature selection used CV TEST folds (CV AUC is in-sample for selection)",
+ "summary": "97 'holdout' lines grepped in models/*.py, feature_selection.py, feature_ab.py; model tuning paths are clean (CV folds 1-2 only); holdout labels entered a selection in 1 code path (feature_ab TOP8 via all-dates quick_ic) + 1 memo-level adjudication; champion feature selection used CV TEST folds (CV AUC is in-sample for selection)",
  "grep_hits": [
   {
    "file": "ml/models/deep.py",
@@ -271,78 +271,113 @@
   },
   {
    "file": "ml/models/sota.py",
-   "line": 736,
+   "line": 759,
    "text": "# projected epoch time at the largest fold (holdout train ~ 260 dates)"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 749,
+   "line": 772,
    "text": "max_fit_days = int((ud <= np.datetime64(splits[\"holdout\"][\"train_end\"])).sum()"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 918,
+   "line": 953,
    "text": "order = [\"2026-04\", \"2026-05\", \"2026-06\", \"2026-07\", \"holdout\"]"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 948,
+   "line": 983,
    "text": "ho = d[\"holdout\"]"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 954,
+   "line": 989,
    "text": "\"holdout_auc\": round(ho[\"auc\"], 4),"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 955,
+   "line": 990,
    "text": "\"holdout_decile_spread\": round(ho.get(\"decile_spread\", float(\"nan\")), 4),"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 956,
+   "line": 991,
    "text": "\"holdout_top_decile_fwd\": round(ho.get(\"top_decile_mean_fwd\", float(\"nan\")), 4),"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 962,
+   "line": 997,
    "text": "\"rank_ic_holdout_mean\": round(d[\"rank_ic\"][\"holdout\"][\"mean\"], 4),"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 963,
+   "line": 998,
    "text": "\"rank_ic_holdout_t_naive\": round(d[\"rank_ic\"][\"holdout\"][\"t_naive\"], 2),"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 971,
+   "line": 1006,
    "text": "\"(fixed before any run; holdout never used to choose)\","
   },
   {
    "file": "ml/models/sota.py",
-   "line": 974,
+   "line": 1009,
    "text": "print(\"| model | #feat | CV AUC \u00b1 std | worst fold | holdout AUC | holdout spread \""
   },
   {
    "file": "ml/models/sota.py",
-   "line": 975,
+   "line": 1010,
    "text": "\"| rank-IC CV (t / NW-t) | holdout IC | s/fold | passes |\")"
   },
   {
    "file": "ml/models/sota.py",
-   "line": 979,
+   "line": 1014,
    "text": "f\"{r['cv_auc_std']:.4f} | {r['worst_fold']:.4f} | {r['holdout_auc']:.4f} | \""
   },
   {
    "file": "ml/models/sota.py",
-   "line": 980,
+   "line": 1015,
    "text": "f\"{r['holdout_decile_spread'] * 100:+.2f}% | {r['rank_ic_cv_mean']:+.4f} \""
   },
   {
    "file": "ml/models/sota.py",
-   "line": 982,
+   "line": 1017,
    "text": "f\"{r['rank_ic_holdout_mean']:+.4f} | {r['train_s_per_fold']} | \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1036,
+   "text": "\"volatility factor (IC +0.095 Apr, -0.059 Jul, +0.10 holdout) rather than \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1037,
+   "text": "\"stock-specific skill; the 0.566 holdout / +6.0% spread is that vol-friendly \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1044,
+   "text": "\"Holdout 0.564 is the same vol-friendly window as the 10-feature ranker.\"),"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1064,
+   "text": "\"picked few trees. 51 features add noise for CatBoost as for LightGBM; holdout \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1076,
+   "text": "\"fold 0.4516 (April), holdout 0.4480 with a -1.9% decile spread, rank-IC NW t 0.6. \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1084,
+   "text": "\"holdout 0.4605, rank-IC NW t 0.4. Its fold pattern almost duplicates \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1093,
+   "text": "\"0.5069), CV std 0.008 (0.014), better than the champion in 3/4 folds, holdout \""
   },
   {
    "file": "ml/models/trees.py",

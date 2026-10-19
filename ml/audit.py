@@ -1152,7 +1152,8 @@ def t13(ctx, fresh):
            f"no label (ticker stopped) {tot['no_label_ticker_stopped']:,}; champion CV AUC clean "
            f"{s0['cv_auc_mean']:.4f} -> no-mask {s2['cv_auc_mean']:.4f}, holdout "
            f"{s0['holdout_auc']:.4f} -> {s2['holdout_auc']:.4f}")
-    return verdict("T13", "y_clean look-ahead mask sensitivity", "INFO", msg, totals=tot, **r)
+    return verdict("T13", "y_clean look-ahead mask sensitivity", "INFO", msg, totals=tot,
+                   counts=r["counts"], by_variant=r["by_variant"], variant_summary=r["summary"])
 
 
 # =========================================================================== #

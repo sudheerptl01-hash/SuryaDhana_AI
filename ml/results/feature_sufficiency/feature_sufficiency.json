@@ -7262,7 +7262,7 @@
   {
    "data": "Corporate announcements and corporate actions",
    "adds": "event timing (results, buybacks, pledges, insider trades) and price adjustment factors",
-   "mechanism": "event drift and PEAD (Bernard & Thomas 1989), buyback drift (Ikenberry, Lakonishok & Vermaelen 1995), insider-trade signals (Seyhun 1986). CA factors would also replace the unadjusted-price y_clean mask, which drops 7.5% of labelled rows",
+   "mechanism": "event drift and PEAD (Bernard & Thomas 1989), buyback drift (Ikenberry, Lakonishok & Vermaelen 1995), insider-trade signals (Seyhun 1986). CA factors would also remove split artefacts from every rolling feature and from the y_clean mask (which drops 0.6% of labelled rows)",
    "source": "NSE corporate filings (announcements, corporate actions, board meetings), BSE announcements API, SEBI PIT/SAST disclosures carried by both exchanges"
   },
   {
@@ -7290,8 +7290,8 @@
    "source": "NSE daily ASM/GSM lists and sec_list.csv price bands; NSE SLB bhavcopy; SEBI SAST pledge disclosures (NSE 'pledged data')"
   }
  ],
- "strongest_cases_md": "- `deliv_value_share_20`: residual IC +0.0175, t +3.64, q 0.055, sign held in 75% of 16 months; after the quadratic control +0.0094; CV months +0.0165. A/B: not in any variant. **Does not clear the bar.**\n- `amihud_20`: residual IC -0.0395, t -3.07, q 0.089, sign held in 75% of 16 months; after the quadratic control -0.0339; CV months -0.0121. A/B: not in any variant. **Does not clear the bar.**\n- `idio_vol_60`: residual IC -0.0171, t -2.13, q 0.235, sign held in 56% of 16 months; after the quadratic control -0.0175; CV months -0.0056. A/B: not in any variant. **Does not clear the bar.**",
- "limits_md": "- **Can decide:** whether a feature carries a large, steady signal the champion lacks. With 16 monthly ICs and a median monthly residual-IC std of 0.036, the smallest residual IC detectable at 5% is about 0.019. Anything weaker is indistinguishable from zero here. The test also catches gross failures: no variant may sit below 0.50 in any fold.\n- **Cannot decide:** gains of about +0.005 AUC. Four CV folds give a standard error on mean CV AUC of about nan, so the pass mark sits within about one standard error of the control. A pass would still need confirmation and a fail does not prove the gain is zero. The sample also cannot decide anything that needs a cycle. It holds one regime break (March 2026) and only 7 observable months of `mom_12_1`. Signals that pay only in some regimes, such as cluster rotation, are out of reach, as is seasonality, because the archive calendar is simulated.\n- **Adjacent ICs overlap.** Labels span 20 sessions, so adjacent daily ICs share most of their window and monthly t-stats run slightly optimistic. Monthly means are used for that reason. The 5-year walk-forward (~60 monthly folds) is where a +0.005 effect becomes decidable. Re-run this module on that dataset before closing the question.",
+ "strongest_cases_md": "- `deliv_value_share_20`: residual IC +0.0175, t +3.64, q 0.055; against all 40 pilot features +0.0115 (t +2.89); sign held in 75% of 16 months; after the quadratic control +0.0094; CV months +0.0165; before vs from the March-2026 break +0.0208 / +0.0132. A/B: `lgbm_suff_top5` 0.5342 (fail); `lgbm_suff_micro` 0.5309 (fail). **Does not clear the bar.**\n- `amihud_20`: residual IC -0.0395, t -3.07, q 0.089; against all 40 pilot features -0.0174 (t -2.99); sign held in 75% of 16 months; after the quadratic control -0.0339; CV months -0.0121; before vs from the March-2026 break -0.0640 / -0.0080. A/B: `lgbm_suff_top5` 0.5342 (fail); `lgbm_suff_micro` 0.5309 (fail). **Does not clear the bar.**\n- `idio_vol_60`: residual IC -0.0171, t -2.13, q 0.235; against all 40 pilot features -0.0134 (t -1.99); sign held in 56% of 16 months; after the quadratic control -0.0175; CV months -0.0056; before vs from the March-2026 break -0.0305 / +0.0002. A/B: `lgbm_suff_top5` 0.5342 (fail); `lgbm_suff_swap_resid` 0.5276 (fail); `lgbm_suff_swap_resid_rank` 0.5275 (fail). **Does not clear the bar.**",
+ "limits_md": "- **Can decide:** whether a feature carries a large, steady signal the champion lacks. With 16 monthly ICs and a median monthly residual-IC std of 0.036, the smallest residual IC detectable at 5% is about 0.019. Anything weaker is indistinguishable from zero here. The test also catches gross failures: no variant may sit below 0.50 in any fold.\n- **Cannot decide:** gains of about +0.005 AUC. Four CV folds give a standard error on mean CV AUC of about 0.007, so the pass mark sits within about one standard error of the control. A pass would still need confirmation and a fail does not prove the gain is zero. The sample also cannot decide anything that needs a cycle. It holds one regime break (March 2026) and only 7 observable months of `mom_12_1`. Signals that pay only in some regimes, such as cluster rotation, are out of reach, as is seasonality, because the archive calendar is simulated.\n- **Adjacent ICs overlap.** Labels span 20 sessions, so adjacent daily ICs share most of their window and monthly t-stats run slightly optimistic. Monthly means are used for that reason. The 5-year walk-forward (~60 monthly folds) is where a +0.005 effect becomes decidable. Re-run this module on that dataset before closing the question.",
  "ic_reference_pilot_nonchampion": {
   "ret_1d": {
    "raw_full": {
@@ -8947,5 +8947,341 @@
     }
    }
   }
- }
+ },
+ "ab": {
+  "control": {
+   "model": "lgbm_suff_control",
+   "note": "same-session replica of lgbm_fs_selected_clean",
+   "features": [
+    "atr_pct",
+    "deliv_pct_sma_20",
+    "dist_52w_high",
+    "ret_126d",
+    "mom_12_1",
+    "cs_rank_mom_20",
+    "cs_rank_ret_126",
+    "cs_rank_vol_20",
+    "deliv_pct",
+    "ret_63d"
+   ],
+   "n_features": 10,
+   "cv": 0.531445,
+   "cv_std": 0.014349,
+   "folds": {
+    "2026-04": 0.506865,
+    "2026-05": 0.538437,
+    "2026-06": 0.537432,
+    "2026-07": 0.543047
+   },
+   "min_fold": 0.506865,
+   "holdout": 0.517996,
+   "holdout_spread": -0.004033,
+   "cv_mean_spread": 0.02014,
+   "passes": false
+  },
+  "top5": {
+   "model": "lgbm_suff_top5",
+   "note": "(i) champion 10 + top-5 new by |residual t| (selection window <= holdout train_end; sees CV-month labels)",
+   "features": [
+    "atr_pct",
+    "deliv_pct_sma_20",
+    "dist_52w_high",
+    "ret_126d",
+    "mom_12_1",
+    "cs_rank_mom_20",
+    "cs_rank_ret_126",
+    "cs_rank_vol_20",
+    "deliv_pct",
+    "ret_63d",
+    "deliv_value_share_20",
+    "amihud_20",
+    "cs_rank_idio_vol_60",
+    "avg_trade_size_z",
+    "ats_chg_20"
+   ],
+   "n_features": 15,
+   "cv": 0.534179,
+   "cv_std": 0.017319,
+   "folds": {
+    "2026-04": 0.505697,
+    "2026-05": 0.544096,
+    "2026-06": 0.53578,
+    "2026-07": 0.551141
+   },
+   "min_fold": 0.505697,
+   "holdout": 0.533302,
+   "holdout_spread": 0.010841,
+   "cv_mean_spread": 0.01913,
+   "passes": false
+  },
+  "cluster": {
+   "model": "lgbm_suff_cluster",
+   "note": "(ii) champion 10 + cluster-relative set",
+   "features": [
+    "atr_pct",
+    "deliv_pct_sma_20",
+    "dist_52w_high",
+    "ret_126d",
+    "mom_12_1",
+    "cs_rank_mom_20",
+    "cs_rank_ret_126",
+    "cs_rank_vol_20",
+    "deliv_pct",
+    "ret_63d",
+    "cr_mom_20",
+    "cr_ret_63",
+    "cr_ret_126",
+    "cr_mom_12_1",
+    "cr_deliv_sma_20",
+    "cr_deliv_pct",
+    "cluster_mom_20",
+    "cluster_ret_126"
+   ],
+   "n_features": 18,
+   "cv": 0.525726,
+   "cv_std": 0.013822,
+   "folds": {
+    "2026-04": 0.504054,
+    "2026-05": 0.537487,
+    "2026-06": 0.537999,
+    "2026-07": 0.523364
+   },
+   "min_fold": 0.504054,
+   "holdout": 0.507143,
+   "holdout_spread": -0.003012,
+   "cv_mean_spread": 0.014369,
+   "passes": false
+  },
+  "micro": {
+   "model": "lgbm_suff_micro",
+   "note": "(iii) champion 10 + microstructure set (A)",
+   "features": [
+    "atr_pct",
+    "deliv_pct_sma_20",
+    "dist_52w_high",
+    "ret_126d",
+    "mom_12_1",
+    "cs_rank_mom_20",
+    "cs_rank_ret_126",
+    "cs_rank_vol_20",
+    "deliv_pct",
+    "ret_63d",
+    "avg_trade_size_z",
+    "ats_chg_20",
+    "trades_z_20",
+    "close_vs_vwap",
+    "close_vs_vwap_5",
+    "last_vs_close",
+    "deliv_value_share_20",
+    "gap_fill_10",
+    "range_position_20",
+    "amihud_20"
+   ],
+   "n_features": 20,
+   "cv": 0.530907,
+   "cv_std": 0.018433,
+   "folds": {
+    "2026-04": 0.501421,
+    "2026-05": 0.547,
+    "2026-06": 0.529206,
+    "2026-07": 0.546
+   },
+   "min_fold": 0.501421,
+   "holdout": 0.535031,
+   "holdout_spread": 0.01459,
+   "cv_mean_spread": 0.021336,
+   "passes": false
+  },
+  "swap_resid": {
+   "model": "lgbm_suff_swap_resid",
+   "note": "(iv) cs_rank_mom_20/cs_rank_vol_20 -> resid_mom_63/idio_vol_60",
+   "features": [
+    "atr_pct",
+    "deliv_pct_sma_20",
+    "dist_52w_high",
+    "ret_126d",
+    "mom_12_1",
+    "resid_mom_63",
+    "cs_rank_ret_126",
+    "idio_vol_60",
+    "deliv_pct",
+    "ret_63d"
+   ],
+   "n_features": 10,
+   "cv": 0.527574,
+   "cv_std": 0.013845,
+   "folds": {
+    "2026-04": 0.506107,
+    "2026-05": 0.535608,
+    "2026-06": 0.525599,
+    "2026-07": 0.542984
+   },
+   "min_fold": 0.506107,
+   "holdout": 0.533547,
+   "holdout_spread": -0.002186,
+   "cv_mean_spread": 0.018042,
+   "passes": false
+  },
+  "swap_resid_rank": {
+   "model": "lgbm_suff_swap_resid_rank",
+   "note": "(iv-b) same swap with the cs_rank versions",
+   "features": [
+    "atr_pct",
+    "deliv_pct_sma_20",
+    "dist_52w_high",
+    "ret_126d",
+    "mom_12_1",
+    "cs_rank_resid_mom_63",
+    "cs_rank_ret_126",
+    "cs_rank_idio_vol_60",
+    "deliv_pct",
+    "ret_63d"
+   ],
+   "n_features": 10,
+   "cv": 0.527502,
+   "cv_std": 0.013212,
+   "folds": {
+    "2026-04": 0.506256,
+    "2026-05": 0.535253,
+    "2026-06": 0.527331,
+    "2026-07": 0.541167
+   },
+   "min_fold": 0.506256,
+   "holdout": 0.53137,
+   "holdout_spread": -0.001006,
+   "cv_mean_spread": 0.018893,
+   "passes": false
+  }
+ },
+ "bootstrap": {
+  "B": 1000,
+  "seed": 108,
+  "method": "date-block bootstrap within folds, paired across models (identical weights per draw); statistic = mean of 4 CV fold AUCs",
+  "results": {
+   "control": {
+    "cv_point": 0.531445,
+    "cv_ci95": [
+     0.52308,
+     0.54012
+    ],
+    "p_cv_ge_pass_mark": 0.135,
+    "delta_cv_vs_control": 0.0,
+    "delta_cv_ci95": [
+     0.0,
+     0.0
+    ],
+    "p_delta_cv_gt0": 0.0,
+    "delta_holdout": 0.0,
+    "delta_holdout_ci95": [
+     0.0,
+     0.0
+    ]
+   },
+   "top5": {
+    "cv_point": 0.534179,
+    "cv_ci95": [
+     0.525227,
+     0.542882
+    ],
+    "p_cv_ge_pass_mark": 0.316,
+    "delta_cv_vs_control": 0.002733,
+    "delta_cv_ci95": [
+     0.000799,
+     0.004751
+    ],
+    "p_delta_cv_gt0": 0.997,
+    "delta_holdout": 0.015306,
+    "delta_holdout_ci95": [
+     0.012295,
+     0.018432
+    ]
+   },
+   "cluster": {
+    "cv_point": 0.525726,
+    "cv_ci95": [
+     0.516994,
+     0.534781
+    ],
+    "p_cv_ge_pass_mark": 0.011,
+    "delta_cv_vs_control": -0.00572,
+    "delta_cv_ci95": [
+     -0.009377,
+     -0.001899
+    ],
+    "p_delta_cv_gt0": 0.003,
+    "delta_holdout": -0.010853,
+    "delta_holdout_ci95": [
+     -0.015801,
+     -0.005782
+    ]
+   },
+   "micro": {
+    "cv_point": 0.530907,
+    "cv_ci95": [
+     0.521374,
+     0.540028
+    ],
+    "p_cv_ge_pass_mark": 0.135,
+    "delta_cv_vs_control": -0.000539,
+    "delta_cv_ci95": [
+     -0.002799,
+     0.001616
+    ],
+    "p_delta_cv_gt0": 0.313,
+    "delta_holdout": 0.017035,
+    "delta_holdout_ci95": [
+     0.013148,
+     0.021235
+    ]
+   },
+   "swap_resid": {
+    "cv_point": 0.527574,
+    "cv_ci95": [
+     0.520145,
+     0.535446
+    ],
+    "p_cv_ge_pass_mark": 0.016,
+    "delta_cv_vs_control": -0.003871,
+    "delta_cv_ci95": [
+     -0.00736,
+     -0.00045
+    ],
+    "p_delta_cv_gt0": 0.015,
+    "delta_holdout": 0.015551,
+    "delta_holdout_ci95": [
+     0.011497,
+     0.019463
+    ]
+   },
+   "swap_resid_rank": {
+    "cv_point": 0.527502,
+    "cv_ci95": [
+     0.518843,
+     0.536122
+    ],
+    "p_cv_ge_pass_mark": 0.021,
+    "delta_cv_vs_control": -0.003944,
+    "delta_cv_ci95": [
+     -0.007043,
+     -0.000761
+    ],
+    "p_delta_cv_gt0": 0.011,
+    "delta_holdout": 0.013374,
+    "delta_holdout_ci95": [
+     0.009334,
+     0.017591
+    ]
+   }
+  }
+ },
+ "verdict": {
+  "sufficient_for_this_sample": true,
+  "passing_variants": [],
+  "features_new_information_bh": [
+   "deliv_value_share_20",
+   "amihud_20"
+  ]
+ },
+ "assembled_at": "2026-10-19T07:19:08",
+ "provenance": "features + leak checks + champion-residual IC: full run (generated_at); sanity / all-40 / pilot-reference IC blocks: --ic-extras; A/B + bootstrap: --ab-only (control reused: identical subset/config, reproduces the stored lgbm_fs_selected_clean exactly); report: --report-only. A single `python3 -m ml.feature_sufficiency` recomputes everything in one pass."
 }
