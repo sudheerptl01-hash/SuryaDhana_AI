@@ -18,3 +18,4 @@
 2026-10-19T12:57:40 [download] named files done: {'ok': 14, 'udiff:ok': 3} (40s)
 2026-10-19T12:58:37 [download] PR [30/1251] 2021-11-05 -> 404; totals {'ok': 29, '404': 1}; requests 50, back-offs 0, 97s
 2026-10-19T12:59:17 [download] PR [50/1251] 2021-12-06 -> ok; totals {'ok': 49, '404': 1}; requests 70, back-offs 0, 137s
+2026-10-19T13:01:16 [download] PR [100/1251] 2022-02-15 -> ok; totals {'ok': 99, '404': 1}; requests 120, back-offs 0, 256s

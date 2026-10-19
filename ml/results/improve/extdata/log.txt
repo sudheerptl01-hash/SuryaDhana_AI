@@ -9,3 +9,5 @@
 2026-10-19 13:00:10 INFO [dl-participant] participant fao_participant_oi_05112021.csv 404
 2026-10-19 13:00:22 INFO [dl-indices] indices ind_close_all_05112021.csv 404
 2026-10-19 13:00:46 INFO [dl-fo] fo fo05NOV2021bhav.csv.zip 404
+2026-10-19 13:00:56 INFO [dl-participant] participant progress 100/1251 {'skipped_on_disk': 0, 'skipped_404_known': 0, 'ok': 99, '404': 1, 'failed': 0}
+2026-10-19 13:01:08 INFO [dl-indices] indices progress 100/1251 {'skipped_on_disk': 0, 'skipped_404_known': 0, 'ok': 99, '404': 1, 'failed': 0}

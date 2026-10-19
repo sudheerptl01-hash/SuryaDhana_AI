@@ -25,3 +25,6 @@
 2026-10-19T13:00:09 [sessions] fetched cm07MAR2022bhav.csv.zip -> 200
 2026-10-19T13:00:13 [sessions] fetched MTO_07032022.DAT -> 200
 2026-10-19T13:00:16 [sessions] fetched MTO_08032022.DAT -> 200
+2026-10-19T13:01:12 [sessions] fetched cm08MAR2022bhav.csv.zip -> 200
+2026-10-19T13:01:15 [sessions] fetched cm04MAR2022bhav.csv.zip -> 200
+2026-10-19T13:01:16 [download] PR [100/1251] 2022-02-15 -> ok; totals {'ok': 99, '404': 1}; requests 120, back-offs 0, 256s
