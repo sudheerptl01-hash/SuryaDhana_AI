@@ -20,8 +20,11 @@ Stages (each writes to disk as it completes; re-runs skip finished units)
           5-year dataset starts 2022-10-03, i.e. only 43 labeled sessions before
           the 2023-01 fold's train_end -- too few for T11's inner protocol
           (validation blocks of 21 sessions behind a 22-session embargo).  The
-          extension is used ONLY by the 2023 selection; every model trains on
-          the 5-year dataset rows exactly like ml/scale5y.py.
+          rebuilt rows join the SELECTION universe of every year (each window
+          therefore starts 2022-01-03 and ends at that year's first train_end;
+          it matters for 2023 and 2024 -- for 2025/2026 the 504-session inner
+          windows barely reach it); every MODEL trains on the 5-year dataset
+          rows exactly like ml/scale5y.py.
   select  for Y in 2023..2026, window = labeled rows dated <= train_end of fold
           Y-01 (embargo-adjusted, splits_5y.json):
             univariate AUC (fs.univariate_aucs) over the last <=12 21-session
@@ -514,9 +517,11 @@ def select(df: pd.DataFrame, feats: list[str]) -> dict:
             "candidates": f"{len(feats)} 5-year base features (ml/data_5y manifest; dist_sma_50_isnan absent "
                           f"at 5y because it is <2% missing) + {SUFF} (ml/feature_sufficiency.py definitions, "
                           "rebuilt from nse_market.duckdb read-only)",
-            "window": "labeled clean rows dated <= train_end of fold <year>-01 (embargo-adjusted); 2023 window "
-                      f"extended back to {EXT_START} with rows rebuilt from DuckDB under ml/data.py definitions "
-                      "(the 5-year dataset has only 43 labeled sessions before 2022-12-01)",
+            "window": "labeled clean rows dated <= train_end of fold <year>-01 (embargo-adjusted); the selection "
+                      f"universe is the 5-year dataset plus rows for {EXT_START}..2022-09-30 rebuilt from DuckDB under "
+                      "ml/data.py definitions (bit-identical to the dataset on 2022-10-03..2022-12-01), so every "
+                      "year's window starts 2022-01-03 (the 5-year dataset alone has only 43 labeled sessions "
+                      "before 2022-12-01)",
             "univariate": f"fs.univariate_aucs over the last <= {N_UNI_BLOCKS} 21-session blocks of the window "
                           "inside the 5-year dataset (2023: 2 blocks)",
             "importance": "fs.model_importances: champion-config LightGBM on the 504 sessions before the last "
@@ -716,6 +721,7 @@ def ensemble(splits: dict) -> None:
 
 
 def main() -> None:
+    global N_JOBS
     ap = argparse.ArgumentParser()
     ap.add_argument("--stages", default="prep,select,run")
     ap.add_argument("--models", nargs="+", default=["nested_lgbm", "nested_lr_l2"])
@@ -723,7 +729,6 @@ def main() -> None:
     ap.add_argument("--force-prep", action="store_true")
     ap.add_argument("--n-jobs", type=int, default=N_JOBS, help="worker processes (<= 2 on the shared box)")
     a = ap.parse_args()
-    global N_JOBS
     N_JOBS = max(1, min(2, a.n_jobs))
     stages = a.stages.split(",")
     OUT.mkdir(parents=True, exist_ok=True)
