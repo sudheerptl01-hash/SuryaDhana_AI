@@ -41,10 +41,16 @@ regime-diverse, and economically meaningful net of costs.
 - **Pre-registered promotion criteria** (decide before looking):
   1. champion beats lr_l2 on CV mean with a bootstrap CI excluding zero;
   2. monthly fold-AUC floor ≥ 0.50 in ≥ 90% of months;
-  3. top-decile mean excess positive in ≥ 75% of months **and** net of
-     ~20 bps round-trip costs;
+  3. top-decile book beats the **equal-weight universe** (not the universe
+     median, which cross-sectional skew makes a soft bar: the EW universe
+     beat it by +1.8% per 20 days in the pilot) in ≥ 75% of months, net of
+     ~20 bps per side;
   4. selected-feature overlap ≥ 7/10 across yearly re-selections
-     (stability of the signal, not just the score).
+     (stability of the signal, not just the score);
+  5. Deflated Sharpe Ratio ≥ 0.95 for the paper portfolio, with the trial
+     count N stated before the run (the pilot's best book had DSR 0.08 over
+     132 days; the observed edge needs ~2.8 years of track record to reach
+     PSR 95%).
 
 ## Phase 3 — Productionization (after promotion)
 
