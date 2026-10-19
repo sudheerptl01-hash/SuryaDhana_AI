@@ -16,3 +16,12 @@ ml/data_5y/
 catboost_info/
 ml/results/*/preds/
 ml/results/scale5y/cache/
+# improvement phase: raw downloads, staging tables, rebuilt datasets, caches (never committed)
+ml/data_raw/
+ml/data_ext/
+ml/data_hist/
+ml/data_5y_v2/
+ml/data_10y/
+ml/results/improve/cache/
+ml/results/improve/*/cache/
+ml/results/improve/*/preds/
