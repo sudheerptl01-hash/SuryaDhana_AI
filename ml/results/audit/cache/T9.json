@@ -376,7 +376,7 @@
   },
   {
    "file": "ml/models/sota.py",
-   "line": 1093,
+   "line": 1102,
    "text": "\"0.5069), CV std 0.008 (0.014), better than the champion in 3/4 folds, holdout \""
   },
   {

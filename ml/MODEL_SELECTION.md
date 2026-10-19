@@ -4,6 +4,35 @@
 
 **Decision: carry LightGBM on the 10-feature selected subset to the 5-year run, with L2 logistic regression retained as the interpretable benchmark. Drop RL and the RNNs.**
 
+## Correction after the red-team audit (2026-10-19)
+
+The audit (`ml/results/audit/AUDIT.md`) found the pipeline clean — labels and
+features recompute exactly from raw data, no leakage, shuffled labels score
+0.500 ± 0.001 — but the champion's CV AUC of 0.531 is partly in-sample: its 10
+features and k were chosen on the same four CV test months. Re-running the
+identical selection with only pre-fold data gives **CV AUC 0.5132**, level with
+`lr_l2_clean` (0.517) and with random 10-feature subsets (0.513 ± 0.006); on
+the untouched holdout the champion (0.518) was no better than the one-feature
+momentum rule (0.531). The phrase "only model above chance at 95%" was wrong
+by the program's own bootstrap (random forest and `lr_l2_clean` also clear it
+on CV), and "≥ 0.50 in all five windows" fails under honest selection (April
+0.494). The honest reading of the pilot is the audit's wording:
+
+> In a six-month pilot, a LightGBM model on ten price and delivery features
+> ranked NSE stocks by 20-day relative performance slightly better than chance:
+> AUC 0.518 on an untouched six-week holdout, and about 0.513 across four
+> monthly test folds when its features are chosen without seeing those months.
+> The signal is not a data or code artefact. But it is small, rests on five
+> monthly windows, and on the holdout it was no better than a one-feature
+> momentum rule. It justifies the five-year walk-forward test; it is not
+> evidence of a tradable edge.
+
+The model-family ranking below still stands as a comparison run under one
+protocol; the absolute numbers are validation scores, not estimates of live
+performance. The 5-year run nests feature selection inside each training
+window, purges on each label's actual exit date and reports 20-session block
+bootstraps.
+
 ## What we ran
 
 Six-month pilot on the NSE EOD universe (~2,100 tickers, 507k rows), purged walk-forward with a 22-session embargo: four monthly CV folds (Apr–Jul 2026) plus one untouched holdout (Aug 1 → mid-Sep 2026). Primary task `beat_mkt_20d`: will a stock beat the universe median over the next 20 sessions (base rate 0.500 by construction, regime-robust). Headline metric ROC AUC; economics via score-decile spreads of 20-day excess return. The question: **which algorithm earns the 5-year run** — not whether the edge is already tradable.
