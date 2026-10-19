@@ -53,7 +53,7 @@ Capital follows a track record the model did not get to choose. The deflated and
 
 | Criterion | Threshold | SuryaDhana | External anchor |
 |---|---|---|---|
-| Probabilistic Sharpe of the frozen paper book | PSR ≥ 0.95 against SR* = 0, on the live record alone | needs about 4 years at IR 0.85 (994 sessions); shorter if the live IR is higher | QuantConnect Alpha Streams required PSR(true Sharpe > 1) ≥ 80%, and only 9 of 280 strategies (3.2%) passed; Quantopian found in-sample Sharpe explained out-of-sample Sharpe with R² below 0.025 across 888 algorithms |
+| Probabilistic Sharpe of the frozen paper book | PSR ≥ 0.95 against SR* = 0, on the live record alone | needs about 4 years at IR 0.85 (994 sessions); shorter if the live IR is higher | QuantConnect Alpha Streams required PSR(true Sharpe > 1) > 80%, and only 9 of 280 strategies (3.2%) passed; Quantopian found in-sample Sharpe explained out-of-sample Sharpe with R² below 0.025 across 888 algorithms |
 | Deflated Sharpe | DSR ≥ 0.95 with the full trial ledger | 0.04 to 0.49 on the historical record: not met | WorldQuant BRAIN (third-party sources): 5-year Sharpe > 1.25, fitness > 1, daily turnover 1% to 70%; de Prado's worked example: Sharpe 2.5 over 5 years with 100 trials gives DSR 0.90 |
 | Consistency | excess over the universe positive in ≥ 60% of months; relative drawdown ≤ 10% | historical ensemble: 33 of 45 months (73%) | |
 | Monitors | no alarm in the trailing 12 months (delivery IC, inversion, drift, atr_pct neutrality) | not yet running | |
