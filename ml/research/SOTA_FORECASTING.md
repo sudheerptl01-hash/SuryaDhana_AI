@@ -68,7 +68,7 @@ Notation: [n] is a reference. Status is `done`, `partial` or `gap`. "Our derivat
 | Nonlinear GBM + regularized linear benchmark | done | MODEL_SELECTION.md |
 | Rank IC (Newey–West t) as model metric | partial | `sota/*.json` rank_ic; league headline still AUC |
 | Net portfolio economics (Sharpe, turnover, DSR) | done | `strategy/STRATEGY.md` |
-| GKX top families (size, beta, industry, valuation) | partial | absent; `FEATURE_SUFFICIENCY.md` tests Amihud and idiosyncratic volatility |
+| GKX top feature families | partial | trend, volatility, turnover present; size, beta, industry, valuation absent (`FEATURE_SUFFICIENCY.md` adds Amihud, idiosyncratic-vol tests) |
 | Results within liquid / large names | done | STRATEGY.md liquid-tercile book (₹1,129 cr capacity) |
 
 ## 2. Learning-to-rank and target design
@@ -87,11 +87,11 @@ A long-only or long-short book depends only on how stocks are ordered within eac
 | Challenger | CV AUC | Holdout AUC | Holdout decile spread | Rank IC, CV (NW t) |
 |---|---:|---:|---:|---:|
 | `lgbm_lambdarank` | 0.529 | 0.566 | +6.0% | 0.049 (2.1) |
-| `lgbm_huber` | 0.522 | 0.530 | n/a | n/a |
-| `ensemble_rank` (rank average) | 0.5357 | 0.548 | n/a | 0.065 (3.6) |
-| Champion | 0.531 | 0.518 | −0.4% | n/a |
+| `lgbm_huber` | 0.522 | 0.530 | +1.2% | 0.046 (3.3) |
+| `ensemble_rank` (rank average) | 0.5357 | 0.548 | +3.9% | 0.065 (3.6) |
+| Champion | 0.531 | 0.518 | −0.4% | 0.056 (3.3) |
 
-`ensemble_rank` misses the 0.5364 pass mark by 0.0007. CV and holdout disagree, which is the pilot's regime problem again. The table also contradicts the "38% information loss" argument as a CV fact, and fits "gains in the tails" as a holdout fact. Run all three through the net-of-cost strategy layer with the EW benchmark and DSR, then decide at 5 years.
+`ensemble_rank` misses the 0.5364 pass mark by 0.0007. CV and holdout disagree, which is the pilot's regime problem again. On CV, the magnitude-aware losses do not beat the binary champion, contrary to the information-loss argument. On the holdout, `lambdarank`'s +6.0% spread fits the "gains in the tails" expectation. Run all three through the net-of-cost strategy layer with the EW benchmark and DSR, then decide at 5 years.
 
 The STRATEGY finding that the EW universe beats the median by +1.78% per 20 days, which is skew and not skill, is a target-design lesson. Gate 3 now benchmarks against EW.
 
@@ -116,7 +116,7 @@ The STRATEGY finding that the EW universe beats the median by +1.78% per 20 days
 | Alpha360 (raw 60-day) | 0.0400 (0.76) | 0.0400 | 0.0273 / 0.0448 / 0.0493 | 0.0522 (1.37) | n.a. | 0.0114 (−0.34) |
 
 **Cross-asset attention.**
-- MASTER [21] reports CSI300 IC of about 0.064, against about 0.051 for XGBoost.
+- MASTER [21] reports CSI300 IC 0.064 against 0.051 for XGBoost (CSI800: 0.052 vs 0.040; Table 1).
 - AIPM [22] (132 characteristics, US 1963–2022) reports Sharpe 3.6 → 3.9 when a linear model gets attention, and 3.9 → 4.6 for the nonlinear version. These are gross figures, and we found no cost adjustment.
 
 **General tabular benchmarks.**
@@ -296,12 +296,12 @@ The 0.531 CV AUC is therefore a validation score. The honest estimate is the hol
 
 ## Recommended research agenda (ranked by expected value per unit effort)
 
-EV and effort are judgement scores from 1 to 5. Items 1 and 4 gate every later comparison.
+EV and effort are judgement scores from 1 to 5. Items 2 and 4 gate the 5-year promotion decision whatever their rank.
 
 | # | Item | EV | Effort | EV/E | 6-month data | 5-year run |
 |---|---|---:|---:|---:|---|---|
-| 1 | Finish hygiene: nested re-selection (T11) as Phase 2 protocol, purge on label exit, ≥20-session blocks, PBO [57][59][64] | 5 | 1 | 5.0 | build/dry-run only | required |
-| 2 | Push `lambdarank` / `ensemble_rank` / huber through the net strategy layer (EW benchmark, DSR) [11][13] | 3 | 0.5 | 6.0 → done next | runs, cannot decide | decides |
+| 1 | Route `lambdarank`, `ensemble_rank` and huber scores through `strategy_backtest.py`: net, EW benchmark, DSR with N updated [11][13][57] | 3 | 0.5 | 6.0 | runs; cannot decide | decides |
+| 2 | Finish hygiene: nested re-selection (T11) as the Phase 2 protocol, purge on label exit, ≥20-session blocks, PBO [57][59][64] | 5 | 1 | 5.0 | build and dry-run only | required |
 | 3 | Delivery validation: pre-registered IC by year, liquidity tier and state; orthogonalize vs turnover and volatility | 4 | 1.5 | 2.7 | cannot | required |
 | 4 | Name-level costs: spread [70] + √-impact [71] by tier; asymmetric STT/stamp | 4 | 1.5 | 2.7 | yes (illiquid tail) | net Sharpe |
 | 5 | Market-state A/B (already queued) [44][45] | 3 | 1.5 | 2.0 | cannot (one crash) | needs ≥2 sell-offs |
@@ -311,9 +311,9 @@ EV and effort are judgement scores from 1 to 5. Items 1 and 4 gate every later c
 | 9 | Further deep or attention models beyond the running set [21][22] | 1.5 | 4 | 0.4 | no | only after items 1–6 |
 | 10 | RL for execution [39] | 1 | 4 | 0.25 | no | needs live fills |
 
-Item 2 has the highest raw ratio but depends on item 1's inference fixes. It also needs no new research, only routing existing scores through `strategy_backtest.py`.
+Item 1 needs no new research, only routing existing scores through the strategy engine. Its verdict will read "inconclusive" on 6 months, which is still worth knowing before Phase 2.
 
-**Bottom line.** A 6-month window supports plumbing and one-off sanity checks, plus a turnover and cost picture. It cannot support claims that need regime diversity, decisions at 0.01-AUC resolution, or DSR power: the champion needs about 2.8 years to reach PSR 95%. The 5-year run can, if items 1 and 4 land first. The evidence does not justify spending the next unit of effort on transformers, foundation models or RL.
+**Bottom line.** A 6-month window supports plumbing and one-off sanity checks, plus a turnover and cost picture. It cannot support claims that need regime diversity, decisions at 0.01-AUC resolution, or DSR power: the champion needs about 2.8 years to reach PSR 95%. The 5-year run can, if items 2 and 4 land first. The evidence does not justify spending the next unit of effort on transformers, foundation models or RL.
 
 ## References
 
