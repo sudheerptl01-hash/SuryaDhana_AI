@@ -1,0 +1,80 @@
+{
+ "fold": "2026-07",
+ "inner_splits": [
+  {
+   "name": "inner0",
+   "train_end": "2026-02-20",
+   "test_start": "2026-03-25",
+   "test_end": "2026-04-28"
+  },
+  {
+   "name": "inner1",
+   "train_end": "2026-03-24",
+   "test_start": "2026-04-29",
+   "test_end": "2026-05-29"
+  }
+ ],
+ "selection_order": [
+  "atr_pct",
+  "cs_rank_vol_20",
+  "dist_52w_low",
+  "cs_rank_mom_20",
+  "cs_rank_turnover",
+  "deliv_pct_sma_20",
+  "dist_sma_20",
+  "ret_252d_isnan",
+  "ret_63d",
+  "cs_rank_ret_126",
+  "dist_200dma",
+  "mom_20",
+  "vol_5",
+  "dist_sma_10",
+  "dist_52w_high",
+  "vol_ratio_20",
+  "vol_10",
+  "range_pct",
+  "mom_12_1_isnan",
+  "rsi_2",
+  "deliv_pct",
+  "cs_rank_deliv_z",
+  "ret_252d",
+  "ret_126d_isnan",
+  "flag_below_200dma",
+  "close_pos_in_range",
+  "vol_z_20",
+  "dist_sma_50_isnan",
+  "gap_pct",
+  "dist_200dma_isnan",
+  "ret_63d_isnan",
+  "cs_rank_ret_126_isnan",
+  "deliv_pct_sma_20_isnan",
+  "ret_1d",
+  "deliv_pct_isnan",
+  "flag_near_52w_low",
+  "flag_split_20d",
+  "deliv_pct_z_20_isnan",
+  "cs_rank_deliv_z_isnan"
+ ],
+ "inner_k_curve": {},
+ "k_selected": 10,
+ "outer": {
+  "10": {
+   "auc": 0.5310657086631283,
+   "decile_spread": 0.019001606851816177,
+   "features": [
+    "atr_pct",
+    "cs_rank_vol_20",
+    "dist_52w_low",
+    "cs_rank_mom_20",
+    "cs_rank_turnover",
+    "deliv_pct_sma_20",
+    "dist_sma_20",
+    "ret_252d_isnan",
+    "ret_63d",
+    "cs_rank_ret_126"
+   ]
+  }
+ },
+ "overlap_top10_with_champion": 6,
+ "seconds": 756.2002136707306
+}

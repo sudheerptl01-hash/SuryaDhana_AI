@@ -612,11 +612,11 @@ def train_seq_net(tag, net, Mt_t, wt_t, pad_idx, fit_pos, y_fit, va_pos, y_va,
 
 
 def run_seq_model(model_name: str, arch: str, df, features, splits, channels,
-                  ctx, smoke: bool = False) -> dict | None:
+                  ctx, smoke: bool = False, cap0: int = SEQ_CAP) -> dict | None:
     M, pos_of_orig, wt, dates_sorted = ctx
     pad_idx = len(M)
     wt_t = torch.from_numpy(wt)
-    cap, d_model = SEQ_CAP, D_MODEL
+    cap, d_model = cap0, D_MODEL
     n_chan = len(channels)
 
     def make_net():
@@ -706,19 +706,25 @@ def run_seq_model(model_name: str, arch: str, df, features, splits, channels,
         notes = ("PatchTST-lite over per-stock windows of the last 60 sessions x "
                  f"{n_chan} channels (champion 10 + {SEQ_EXTRA}), built from the "
                  "parquet sorted (ticker,date); 10-session patches, stride 10 -> 6 "
-                 "tokens, d_model 64, 2 pre-LN layers, 4 heads, dropout 0.2 "
+                 f"tokens, d_model {d_model}, 2 pre-LN layers, 4 heads, dropout 0.2 "
                  "(attention-probability dropout omitted for the fused SDPA "
                  "kernel), mean-pool -> logit; BCE on label_beat_mkt_20d. Train "
-                 "sequences capped at 120k/fold by per-date random subsampling "
+                 f"sequences capped at {cap // 1000}k/fold by per-date random subsampling "
                  "(seed 108); all test rows kept. Early stopping on inner-val AUC "
-                 "(last 15% of train dates, purged 20 sessions).")
+                 "(last 15% of train dates, purged 20 sessions)." + (
+                     f" HALVING RULE APPLIED (spec 120k / d_model 64): the pre-run "
+                     f"benchmark projected >{EPOCH_SECONDS_LIMIT:.0f} s/epoch under box "
+                     "contention (load ~10-18 on 4 cores), so cap and d_model were "
+                     "halved; epochs unchanged." if cap < SEQ_CAP else ""))
     else:
         params = {"arch": "DLinear (individual per-channel linear on trend and "
                           "remainder) -> Linear(C->1)",
                   "moving_avg_kernel": DLINEAR_KERNEL, **common}
         notes = ("DLinear (Zeng et al. 2022) baseline on the identical 60x14 "
                  "windows, cap, scaling, inner validation and optimiser as "
-                 "patchtst_lite: moving-average(25) trend + remainder, each "
+                 "patchtst_lite (incl. its halved 60k train-sequence cap, for a "
+                 "like-for-like test of what attention adds): moving-average(25) "
+                 "trend + remainder, each "
                  "weighted per channel over the 60 sessions, then a linear "
                  "read-out across channels -> logit (a 2-layer linear model).")
     return summarize(model_name, params, channels, fold_out, notes, "seq_scaled")
@@ -1016,7 +1022,80 @@ def run_league() -> list[dict]:
 # ---------------------------------------------------------------------------
 # post-hoc interpretation (written after the runs; appended to each JSON)
 # ---------------------------------------------------------------------------
-INTERPRETATION: dict[str, str] = {}
+INTERPRETATION: dict[str, str] = {
+    "champion_ref": (
+        "Reference only. Reproduces lgbm_fs_selected_clean exactly (max score diff 0); "
+        "its per-date rank-IC (+0.057, Newey-West t 3.3) and ~5 s/fold are the bar the "
+        "challengers are read against. Score is roughly volatility-neutral (per-date "
+        "Spearman with atr_pct +0.03) and tilted to stocks near their 52-week high (+0.25)."),
+    "lgbm_lambdarank": (
+        "Does not beat the champion: CV 0.5293 (-0.002) and July 0.4967 < 0.50. The "
+        "2^g-1 gains on 10 return grades make the ranker chase the top decile of 20-day "
+        "returns, which is dominated by volatile names: its score has per-date Spearman "
+        "+0.66 with atr_pct (champion +0.03), so its fold pattern follows the sign of the "
+        "volatility factor (IC +0.095 Apr, -0.059 Jul, +0.10 holdout) rather than "
+        "stock-specific skill; the 0.566 holdout / +6.0% spread is that vol-friendly "
+        "window, not evidence. It is the most diverse partner for the champion (per-date "
+        "rank corr 0.26), which is what the ensemble exploits."),
+    "lgbm_lambdarank_f51": (
+        "Does not beat the champion: CV 0.5160, July 0.4943. Adding the other 41 features "
+        "lowers the ranker's CV mean exactly as it lowered the classifier's (pilot "
+        "lightgbm-51 0.504): more capacity to fit the train window's regime structure. "
+        "Holdout 0.564 is the same vol-friendly window as the 10-feature ranker."),
+    "lgbm_huber": (
+        "Does not beat the champion on the mean (CV 0.5223, -0.009) but is the most "
+        "stable model in the study: CV std 0.007, worst fold 0.513, all five windows "
+        ">= 0.51. With alpha=0.9 above the +/-0.30 clip it is least squares on the "
+        "clipped excess return, so it weights stocks by return magnitude rather than by "
+        "the median crossing; its rank-IC t (NW 3.27) equals the champion's (3.26) while "
+        "its AUC is lower -- it is a return forecaster, not a better classifier."),
+    "catboost_es_logloss": (
+        "Superseded diagnostic: Logloss early stopping on the inner tail selected "
+        "43/0/0/1/0 trees, i.e. a 10-44 tree model on most folds; CV 0.5154."),
+    "catboost": (
+        "Does not beat the champion: CV 0.5260, April 0.4938. Early stopping on the "
+        "time-ordered inner tail chose 43/79/0/186/5 trees: on folds whose inner-val "
+        "window sits on the March-2026 break (val AUC never above 0.48/0.44) the "
+        "protocol shuts the model down, while where it allowed 186 trees (July) CatBoost "
+        "scored 0.545 vs the champion's 0.543. The shortfall is the early-stopping "
+        "protocol under a regime break as much as the algorithm -- see catboost_fixed600."),
+    "catboost_f51": (
+        "Does not beat the champion: CV 0.5193, worst fold 0.4888; early stopping again "
+        "picked few trees. 51 features add noise for CatBoost as for LightGBM; holdout "
+        "0.550 is the friendly window."),
+    "catboost_fixed600": (
+        "Diagnostic, not eligible for promotion: with the champion's protocol (no early "
+        "stopping, fixed 600 trees) CatBoost is level with LightGBM -- CV 0.5299 vs "
+        "0.5314, a better floor (0.5115 vs 0.5069) and lower dispersion (0.012 vs 0.014), "
+        "rank-IC NW t 3.51 -- but still below the pass mark. The early-stopped 'catboost' "
+        "shortfall is therefore the protocol (early stopping on a regime-break tail), "
+        "not the algorithm; at this sample size the two GBM implementations are "
+        "interchangeable."),
+    "patchtst_lite": (
+        "Fails clearly: CV 0.5143 +/- 0.044 (the most dispersed model in the study), worst "
+        "fold 0.4516 (April), holdout 0.4480 with a -1.9% decile spread, rank-IC NW t 0.6. "
+        "The 60-session view lets it fit whatever pattern dominated the inner tail (inner-val "
+        "AUC ~0.60 on the pre-break Jan-Feb tail) and that pattern inverted in April; when "
+        "the pattern persisted (July 0.575) it won big. That is a regime bet, not stock "
+        "selection. Run at the halved setting (60k sequences, d_model 32) because of box "
+        "contention; the verdict matches the pilot's GRU/LSTM (0.489/0.502)."),
+    "dlinear": (
+        "The trivial-sequence control fails too: CV 0.5103 +/- 0.039, worst fold 0.4568, "
+        "holdout 0.4605, rank-IC NW t 0.4. Its fold pattern almost duplicates "
+        "patchtst_lite's (0.457/0.518/0.500/0.567 vs 0.452/0.524/0.506/0.575) on the same "
+        "windows, cap, scaling and early stopping, so attention adds ~0.004 CV AUC over a "
+        "2-layer linear model -- nothing beyond noise. What fails is the sequence view "
+        "itself: it re-expresses trailing-return information the point-in-time features "
+        "already summarise, and early stopping on the inner tail locks in the last regime."),
+    "ensemble_rank": (
+        "Misses the pre-registered bar by 0.0007 (CV 0.5357 vs 0.5364), so it does NOT "
+        "pass -- but it is the strongest result here: worst fold 0.5236 (champion "
+        "0.5069), CV std 0.008 (0.014), better than the champion in 3/4 folds, holdout "
+        "0.548 (0.518), rank-IC NW t 3.64 (3.26). The gain is diversification, not a new "
+        "signal: the LambdaRank member's high-vol tilt (rank corr 0.26 with the champion) "
+        "offsets the champion's defensive/near-52w-high tilt in the April and Aug-Sep "
+        "rallies. No weights were fitted, so it cannot have overfit the folds."),
+}
 
 
 def run_annotate() -> None:
@@ -1040,6 +1119,9 @@ def main() -> None:
                          "league,annotate")
     ap.add_argument("--tree-threads", type=int, default=2,
                     help="threads for LightGBM/CatBoost (not a model hyper-parameter)")
+    ap.add_argument("--seq-cap", type=int, default=SEQ_CAP,
+                    help="train-sequence cap for dlinear (pilot: 60000, matching the "
+                         "halved patchtst_lite)")
     ap.add_argument("--cs-halve", action="store_true",
                     help="apply the >90 s/epoch halving rule to cs_transformer")
     ap.add_argument("--smoke", action="store_true",
@@ -1166,7 +1248,8 @@ def main() -> None:
             if part == "patchtst":
                 run_seq_model("patchtst_lite", "patchtst", df, features, splits, channels, ctx)
             else:
-                run_seq_model("dlinear", "dlinear", df, features, splits, channels, ctx)
+                run_seq_model("dlinear", "dlinear", df, features, splits, channels, ctx,
+                              cap0=args.seq_cap)
         elif part == "cstf":
             run_cs_transformer(df, features, splits, feats10, halve=args.cs_halve)
         elif part == "league":

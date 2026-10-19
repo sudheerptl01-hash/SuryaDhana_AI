@@ -45,14 +45,17 @@ Pipeline (seed 108, OMP_NUM_THREADS=2; read-only on ml/data/)
    fallback when the FDR filter selects nothing.
 4. MODEL LEVEL: the pilot champion LightGBM config on all 51 manifest features
    through the shared harness (purged walk-forward, 22-session embargo) for
-   ex>0 next-open at h in {2,3,5,10,20}, raw>0 close-to-close at 5d and 20d,
-   and a control on the existing beat_mkt_20d label. h=40 is skipped at model
+   ex>0 next-open at h in {2,3,5,10,20} and raw>0 close-to-close at 5d and
+   20d (the rebuilt ex>0 next-open 20d label agrees 99.7% with the existing
+   label_beat_mkt_20d, so it doubles as the primary-label control). h=40 is skipped at model
    level: its label looks 41 sessions ahead, the embargo is 22, so train
    labels would overlap the test window (leak).
 5. TRADABILITY: per-date top-minus-bottom decile spread, annualized x 252/h,
    minus 20 bps per side per rebalance (long-short = 4 sides; long-only top
-   decile vs median = 2 sides), at assumed 100% turnover and at measured
-   decile turnover.
+   decile vs the equal-weight universe MEAN = 2 sides), at assumed 100%
+   turnover and at measured decile turnover. Median-based spreads and hit
+   rates are reported too: the cross-section is right-skewed, so rank/median
+   skill and mean-return P&L can disagree in sign.
 
 Outputs: ml/results/label_study/ (JSON/CSV/TABLES.md; LABEL_STUDY.md is the
 hand-written verdict) and ml/results/preds/label_study/ (harness preds +
@@ -522,39 +525,72 @@ def nw_lag_for(h: int) -> int:
 # --------------------------------------------------------------------------- #
 # 2b. the grid
 # --------------------------------------------------------------------------- #
+def _corr_1d(codes: np.ndarray, nd: int, rx: np.ndarray, ry: np.ndarray,
+             min_n: int) -> np.ndarray:
+    """Per-date Pearson of two rank vectors via bincount (contiguous 1D)."""
+    v = ~(np.isnan(rx) | np.isnan(ry))
+    c, x, y = codes[v], rx[v], ry[v]
+    n = np.bincount(c, minlength=nd).astype(np.float64)
+    sx = np.bincount(c, x, nd)
+    sy = np.bincount(c, y, nd)
+    sxx = np.bincount(c, x * x, nd)
+    syy = np.bincount(c, y * y, nd)
+    sxy = np.bincount(c, x * y, nd)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        cov = sxy - sx * sy / n
+        vx = sxx - sx * sx / n
+        vy = syy - sy * sy / n
+        r = cov / np.sqrt(vx * vy)
+    r[(n < min_n) | ~(vx > 1e-9) | ~(vy > 1e-9)] = np.nan
+    return r
+
+
+def _auc_1d(codes: np.ndarray, nd: int, rx: np.ndarray, b: np.ndarray,
+            min_n: int, min_class: int) -> np.ndarray:
+    v = ~np.isnan(rx)
+    c, x, bb = codes[v], rx[v], b[v]
+    n = np.bincount(c, minlength=nd).astype(np.float64)
+    n1 = np.bincount(c, bb, nd)
+    S = np.bincount(c, x * bb, nd)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        auc = (S - n1 * (n1 + 1) / 2.0) / (n1 * (n - n1))
+    auc[(n < min_n) | (n1 < min_class) | ((n - n1) < min_class)] = np.nan
+    return auc
+
+
 def ic_grid(md: pd.DataFrame, feats: list[str], row_filter: np.ndarray | None = None,
             with_auc: bool = True, targets=("ex", "vs"), rankers: dict | None = None) -> dict:
     """Daily IC (and per-date / pooled AUC) for every (h, entry, target).
     All matrices are indexed by the full model calendar (dates_all)."""
-    codes_all = pd.factorize(md["date"], sort=True)[0]
+    codes_all = pd.factorize(md["date"], sort=True)[0].astype(np.int64)
     if np.any(np.diff(codes_all) < 0):
         raise RuntimeError("model rows must be sorted by date")
     dates_all = np.sort(md["date"].unique())
-    Fall = md[feats].to_numpy(np.float64)
-    xvalid = ~np.isnan(Fall)
+    nd = len(dates_all)
+    cols = [md[f].to_numpy(np.float64).copy() for f in feats]
+    xvalid = [~np.isnan(c) for c in cols]
     k = len(feats)
     if rankers is None:
         rankers = {}
     if "date" not in rankers:
-        rankers["date"] = [SortedRanker(codes_all, Fall[:, j]) for j in range(k)]
+        rankers["date"] = [SortedRanker(codes_all, c) for c in cols]
     if with_auc and "pooled" not in rankers:
         zero = np.zeros(len(md), dtype=np.int64)
-        rankers["pooled"] = [SortedRanker(zero, Fall[:, j]) for j in range(k)]
+        rankers["pooled"] = [SortedRanker(zero, c) for c in cols]
     res = {"ic": {}, "auc_xs": {}, "auc_pooled": {}, "dates": dates_all}
 
     def spearman(mask, ycol):
-        RX = np.column_stack([r.rank(mask) for r in rankers["date"]])
+        RX = [r.rank(mask) for r in rankers["date"]]
         yr = SortedRanker(codes_all, np.where(mask, ycol, np.nan))
-        RY = np.empty_like(RX)
         cache = {}
+        out = np.full((nd, k), np.nan)
         for j in range(k):
-            mj = mask & xvalid[:, j]
+            mj = mask & xvalid[j]
             key = hashlib.md5(np.packbits(mj).tobytes()).hexdigest()
             if key not in cache:
                 cache[key] = yr.rank(mj)
-            RY[:, j] = cache[key]
-        _, r = grouped_corr(codes_all, RX, RY, MIN_NAMES)
-        return RX, r
+            out[:, j] = _corr_1d(codes_all, nd, RX[j], cache[key], MIN_NAMES)
+        return RX, out
 
     for h in HORIZONS:
         for e in ENTRIES:
@@ -568,21 +604,26 @@ def ic_grid(md: pd.DataFrame, feats: list[str], row_filter: np.ndarray | None = 
                 res["ic"][f"ex_{v}"] = (dates_all, r)
             if with_auc:
                 if RX is None:
-                    RX = np.column_stack([rr.rank(base) for rr in rankers["date"]])
-                for bn in ("raw", "ex"):
-                    b = np.nan_to_num(md[f"bin_{bn}_{v}"].to_numpy(np.float64), nan=0.0)
-                    _, a = per_date_auc(codes_all, RX, b)
-                    res["auc_xs"][f"bin_{bn}_{v}"] = (dates_all, a)
-                    pa = np.full(k, np.nan)
-                    for j in range(k):
-                        rg = rankers["pooled"][j].rank(base)
-                        ok = ~np.isnan(rg)
+                    RX = [rr.rank(base) for rr in rankers["date"]]
+                bins = {bn: np.nan_to_num(md[f"bin_{bn}_{v}"].to_numpy(np.float64), nan=0.0)
+                        for bn in ("raw", "ex")}
+                for bn, b in bins.items():
+                    A = np.column_stack([_auc_1d(codes_all, nd, RX[j], b, MIN_NAMES, MIN_CLASS)
+                                         for j in range(k)])
+                    res["auc_xs"][f"bin_{bn}_{v}"] = (dates_all, A)
+                pa = {bn: np.full(k, np.nan) for bn in bins}
+                for j in range(k):
+                    rg = rankers["pooled"][j].rank(base)
+                    ok = ~np.isnan(rg)
+                    rgo = rg[ok]
+                    for bn, b in bins.items():
                         bb = b[ok]
                         n1 = bb.sum()
                         n0 = ok.sum() - n1
                         if n1 > 0 and n0 > 0:
-                            pa[j] = (rg[ok][bb == 1].sum() - n1 * (n1 + 1) / 2.0) / (n1 * n0)
-                    res["auc_pooled"][f"bin_{bn}_{v}"] = pa
+                            pa[bn][j] = (rgo @ bb - n1 * (n1 + 1) / 2.0) / (n1 * n0)
+                for bn in bins:
+                    res["auc_pooled"][f"bin_{bn}_{v}"] = pa[bn]
             if "vs" in targets:
                 yv = md[f"vs_{v}"].to_numpy(np.float64)
                 _, r = spearman(base & ~np.isnan(yv), yv)
@@ -727,7 +768,8 @@ def per_date_econ(df: pd.DataFrame, score: str, ret: str, h: int,
                   y: str | None = None) -> dict:
     """Per-date rank-IC, decile spreads, decile turnover and cost-adjusted
     annualization for a score vs an h-session forward return column."""
-    d = df[["date", "ticker", score, ret] + ([y] if y else [])].dropna(subset=[score, ret])
+    d = df[list(dict.fromkeys(["date", "ticker", score, ret] + ([y] if y else [])))]
+    d = d.dropna(subset=[score, ret])
     d = d.sort_values(["date", "ticker"]).reset_index(drop=True)
     codes = pd.factorize(d["date"], sort=True)[0]
     dates = np.sort(d["date"].unique())
@@ -740,8 +782,20 @@ def per_date_econ(df: pd.DataFrame, score: str, ret: str, h: int,
     top_m = d[ret].where(top).groupby(d["date"]).mean()
     bot_m = d[ret].where(bot).groupby(d["date"]).mean()
     med = g[ret].median()
+    uni_mean = g[ret].mean()
     spread = (top_m - bot_m).dropna()
-    top_ex = (top_m - med).dropna()
+    # long-only benchmark = equal-weight universe MEAN: top-minus-median is
+    # positive even for a random score because returns are right-skewed
+    top_ex = (top_m - uni_mean).dropna()
+    # rank/median view of the same deciles: right-skewed returns can make the
+    # MEAN spread and the MEDIAN spread disagree in sign (lottery tail)
+    dec = np.clip(np.ceil(rk.to_numpy() * 10) - 1, 0, 9).astype(int)
+    dec_means = d[ret].groupby([d["date"], dec]).mean().unstack()
+    above = (d[ret] > d.groupby("date")[ret].transform("median")).astype(float)
+    top_med = d[ret].where(top).groupby(d["date"]).median()
+    bot_med = d[ret].where(bot).groupby(d["date"]).median()
+    hit_top = above.where(top).groupby(d["date"]).mean()
+    hit_bot = above.where(bot).groupby(d["date"]).mean()
     out = {"n_dates": int(len(ic_s)),
            "rank_ic_mean": _f(ic_s.mean(), 5),
            "rank_ic_t_daily_naive": _f(ic_s.mean() / (ic_s.std(ddof=1) / math.sqrt(len(ic_s))), 2),
@@ -764,7 +818,13 @@ def per_date_econ(df: pd.DataFrame, score: str, ret: str, h: int,
     out["decile_spread_per_period"] = _f(S, 5)
     out["decile_spread_t_nw"] = _f(nw_tstat(spread.to_numpy(), max(h - 1, 0)) if h > 1 else
                                    S / (spread.std(ddof=1) / math.sqrt(len(spread))), 2)
-    out["top_decile_excess_per_period"] = _f(T, 5)
+    out["top_decile_minus_universe_mean_per_period"] = _f(T, 5)
+    out["top_decile_minus_median_per_period"] = _f((top_m - med).mean(), 5)
+    out["universe_mean_minus_median_per_period"] = _f((uni_mean - med).mean(), 5)
+    out["decile_means_per_period"] = [_f(x, 5) for x in dec_means.mean().tolist()]
+    out["decile_spread_median_per_period"] = _f((top_med - bot_med).mean(), 5)
+    out["hit_rate_top_decile"] = _f(hit_top.mean(), 4)
+    out["hit_rate_bottom_decile"] = _f(hit_bot.mean(), 4)
     # measured turnover on a non-overlapping rebalance grid (every h sessions)
     reb = dates[::h] if h > 1 else dates
     members_top, members_bot = {}, {}
@@ -797,6 +857,37 @@ def per_date_econ(df: pd.DataFrame, score: str, ret: str, h: int,
     return out
 
 
+def composite_econ_all(md: pd.DataFrame, feats: list[str], comp: dict,
+                       ranks_all: np.ndarray) -> dict:
+    """OOS economics of every ex-label composite, rebuilt from its saved
+    selection (features + signs) so it can be recomputed without the grid."""
+    out = {}
+    fidx = {f: j for j, f in enumerate(feats)}
+    for labname, variants in comp.items():
+        if not labname.startswith("ex_"):
+            continue
+        _, e, hd = labname.split("_")
+        h = int(hd[:-1])
+        for vn in ("fdr_q10", "top5_abs_t"):
+            vv = variants[vn]
+            if vv["n_selected"] == 0:
+                continue
+            idx = [fidx[x["feature"]] for x in vv["features"]]
+            signs = np.array([x["sign"] for x in vv["features"]], dtype=float)
+            R = ranks_all[:, idx].astype(np.float64)
+            R = np.where(signs[None, :] > 0, R, 1.0 - R)
+            with np.errstate(invalid="ignore"):
+                score = np.nanmean(R, axis=1)
+            tmp = md[list(dict.fromkeys(["date", "ticker", labname, f"ex_no_{h}d"]))].copy()
+            tmp["score"] = score
+            tmp = tmp[tmp["date"] >= pd.Timestamp(vv["oos_first_date"])]
+            rec = {"label_return": per_date_econ(tmp, "score", labname, h)}
+            if e == "cc":
+                rec["next_open_return"] = per_date_econ(tmp, "score", f"ex_no_{h}d", h)
+            out.setdefault(labname, {})[vn] = rec
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # 4. model level through the harness
 # --------------------------------------------------------------------------- #
@@ -804,8 +895,40 @@ def default_model_specs() -> list[tuple]:
     specs = [(f"bin_ex_no_{h}d", f"ex_no_{h}d", f"clean_no_{h}d", h, "no")
              for h in MODEL_HORIZONS]
     specs += [(f"bin_raw_cc_{h}d", f"raw_cc_{h}d", f"clean_cc_{h}d", h, "cc") for h in (5, 20)]
-    specs += [("beat_mkt_20d", "y_excess_20d", "y_clean_20d", 20, "no")]   # control
     return specs
+
+
+def _spec_of_task(task: str) -> tuple:
+    _, kind, e, hd = task.split("_")
+    h = int(hd[:-1])
+    fwd = f"ex_{e}_{h}d" if kind == "ex" else f"raw_{e}_{h}d"
+    return task, fwd, f"clean_{e}_{h}d", h, e
+
+
+def _run_record(task: str, res: dict) -> dict:
+    _, fwd, clean, h, e = _spec_of_task(task)
+    folds = res["folds"]
+    return {
+        "task": task, "label": task, "fwd": fwd, "clean": clean, "h": h, "entry": e,
+        "cv_auc_mean": _f(res["cv_auc_mean"], 5), "cv_auc_std": _f(res["cv_auc_std"], 5),
+        "fold_aucs": {f["fold"]: _f(f["auc"], 5) for f in folds},
+        "worst_fold_auc": _f(min(f["auc"] for f in folds), 5),
+        "holdout_auc": _f(res["holdout"]["auc"], 5),
+        "holdout_decile_spread_pooled": _f(res["holdout"].get("decile_spread"), 5),
+        "holdout_base_rate": _f(res["holdout"]["base_rate"], 4),
+        "fold_base_rates": {f["fold"]: _f(f["base_rate"], 4) for f in folds},
+        "train_seconds": res["train_seconds"],
+    }
+
+
+def collect_runs() -> dict:
+    """Run records from the harness JSONs on disk, in the default spec order."""
+    out = {}
+    for task, *_ in default_model_specs():
+        fp = OUT_DIR / f"lgbm_lbl_{task}__{task}.json"
+        if fp.exists():
+            out[f"lgbm_lbl_{task}"] = _run_record(task, json.loads(fp.read_text()))
+    return out
 
 
 def model_runs(md: pd.DataFrame, features: list[str], splits: dict,
@@ -821,10 +944,9 @@ def model_runs(md: pd.DataFrame, features: list[str], splits: dict,
     specs = specs or default_model_specs()
     out = {}
     for task, fwd, clean, h, e in specs:
-        if task != "beat_mkt_20d":
-            ev.TASKS[task] = (task, fwd, clean)
-        label = ev.TASKS[task][0]
-        name = f"lgbm_lbl_{task}" if task != "beat_mkt_20d" else "lgbm_lbl_ctrl_beat_mkt_20d"
+        ev.TASKS[task] = (task, fwd, clean)     # runtime registration; evaluation.py untouched
+        label = task
+        name = f"lgbm_lbl_{task}"
         cols = ["date", "ticker"] + features + sorted({label, fwd, clean})
         slim = md[cols]
         log(f"harness run {name} ...")
@@ -835,18 +957,7 @@ def model_runs(md: pd.DataFrame, features: list[str], splits: dict,
             notes=(f"label study: pilot champion LGBM config, all 51 manifest features, "
                    f"label={label} fwd={fwd} clean={clean}"),
             df=slim, features=features, splits=splits)[task]
-        folds = res["folds"]
-        out[name] = {
-            "task": task, "label": label, "fwd": fwd, "clean": clean, "h": h, "entry": e,
-            "cv_auc_mean": _f(res["cv_auc_mean"], 5), "cv_auc_std": _f(res["cv_auc_std"], 5),
-            "fold_aucs": {f["fold"]: _f(f["auc"], 5) for f in folds},
-            "worst_fold_auc": _f(min(f["auc"] for f in folds), 5),
-            "holdout_auc": _f(res["holdout"]["auc"], 5),
-            "holdout_decile_spread_pooled": _f(res["holdout"].get("decile_spread"), 5),
-            "holdout_base_rate": _f(res["holdout"]["base_rate"], 4),
-            "fold_base_rates": {f["fold"]: _f(f["base_rate"], 4) for f in folds},
-            "train_seconds": res["train_seconds"],
-        }
+        out[name] = _run_record(task, res)
     return out
 
 
@@ -856,7 +967,7 @@ def model_econ(md: pd.DataFrame, runs: dict) -> dict:
         p = pd.read_parquet(PRED_DIR / f"{name}__{r['task']}.parquet")
         p["date"] = pd.to_datetime(p["date"])
         h, e = r["h"], r["entry"]
-        same_ex = f"ex_{e}_{h}d" if r["task"] != "beat_mkt_20d" else "y_excess_20d"
+        same_ex = f"ex_{e}_{h}d"
         cols = sorted({same_ex, f"ex_no_{h}d"})
         p = p.merge(md[["date", "ticker"] + cols], on=["date", "ticker"], how="left")
         rec = {}
@@ -947,9 +1058,19 @@ def md_table(headers: list[str], rows: list[list]) -> str:
 # --------------------------------------------------------------------------- #
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--skip-models", action="store_true")
+    ap.add_argument("--skip-models", action="store_true",
+                    help="labels + IC/AUC grid + composites only")
+    ap.add_argument("--models-only", action="store_true",
+                    help="labels + harness runs only (tables rebuilt from saved JSONs)")
+    ap.add_argument("--econ-only", action="store_true",
+                    help="recompute composite + model economics from saved selections/preds")
+    ap.add_argument("--model-specs", default="",
+                    help="comma list of model tasks to run (default: all), in this order")
     ap.add_argument("--null-draws", type=int, default=N_SIGNFLIP)
     args = ap.parse_args()
+    spec_subset = None
+    if args.model_specs:
+        spec_subset = [_spec_of_task(t.strip()) for t in args.model_specs.split(",") if t.strip()]
     t0 = time.time()
     np.random.seed(SEED)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -973,6 +1094,29 @@ def main() -> None:
     log("labels built")
     validation = validate_against_dataset(md)
     validation.update(match)
+    if args.econ_only:
+        lsj = json.loads((OUT_DIR / "label_summary.json").read_text())
+        comp = {k: v["composite"] for k, v in lsj["labels"].items()}
+        ranks_all = md.groupby("date")[base_feats].rank(pct=True).to_numpy(np.float32)
+        comp_econ = composite_econ_all(md, base_feats, comp, ranks_all)
+        (OUT_DIR / "composite_econ.json").write_text(json.dumps(comp_econ, indent=1))
+        runs = collect_runs()
+        if runs:
+            econ = model_econ(md, runs)
+            (OUT_DIR / "model_level.json").write_text(
+                json.dumps({"runs": runs, "econ": econ}, indent=1))
+        write_tables_from_disk()
+        log(f"econ-only done in {time.time() - t0:.0f}s")
+        return
+    if args.models_only:
+        model_runs(md, features, splits, spec_subset)
+        runs = collect_runs()
+        econ = model_econ(md, runs)
+        (OUT_DIR / "model_level.json").write_text(json.dumps({"runs": runs, "econ": econ}, indent=1))
+        log("model runs done")
+        write_tables_from_disk()
+        log(f"done in {time.time() - t0:.0f}s")
+        return
     vstats = variant_stats(md)
     keep = (["date", "ticker"] + [c for c in md.columns if c.split("_")[0] in
                                   ("raw", "ex", "rank", "vs", "bin", "clean")
@@ -1014,32 +1158,18 @@ def main() -> None:
     ranks_all = md.groupby("date")[base_feats].rank(pct=True).to_numpy(np.float32)
     comp = composite_eval(md, base_feats, summary, ranks_all, codes_all, dates_all)
     # composite economics (OOS dates only) for every ex label -> tradability at all h
-    comp_econ = {}
-    for labname, variants in comp.items():
-        if not labname.startswith("ex_"):
-            continue
-        _, e, hd = labname.split("_")
-        h = int(hd[:-1])
-        for vn in ("fdr_q10", "top5_abs_t"):
-            if variants[vn]["n_selected"] == 0:
-                continue
-            tmp = md[["date", "ticker", labname, f"ex_no_{h}d"]].copy()
-            tmp["score"] = variants[vn]["_score"]
-            tmp = tmp[tmp["date"] >= pd.Timestamp(variants[vn]["oos_first_date"])]
-            rec = {"label_return": per_date_econ(tmp, "score", labname, h)}
-            if e == "cc":
-                rec["next_open_return"] = per_date_econ(tmp, "score", f"ex_no_{h}d", h)
-            comp_econ.setdefault(labname, {})[vn] = rec
     for variants in comp.values():
         for vv in variants.values():
             vv.pop("_score", None)
+    comp_econ = composite_econ_all(md, base_feats, comp, ranks_all)
     del ranks_all
     log("composites done")
 
     # ---- 4. model level ----------------------------------------------------------
     runs, econ = {}, {}
     if not args.skip_models:
-        runs = model_runs(md, features, splits)
+        model_runs(md, features, splits, spec_subset)
+        runs = collect_runs()
         econ = model_econ(md, runs)
         log("model runs done")
 
@@ -1142,8 +1272,26 @@ def main() -> None:
     if runs:
         (OUT_DIR / "model_level.json").write_text(json.dumps(
             {"runs": runs, "econ": econ}, indent=1))
-    write_tables(meta, vstats, label_summary, null, runs, econ, comp_econ, validation)
+    write_tables_from_disk()
     log(f"done in {time.time() - t0:.0f}s")
+
+
+def write_tables_from_disk() -> None:
+    """TABLES.md from whatever stage outputs exist (lets stages run separately)."""
+    try:
+        lv = json.loads((OUT_DIR / "label_variants.json").read_text())
+        ls_ = json.loads((OUT_DIR / "label_summary.json").read_text())
+        ce = json.loads((OUT_DIR / "composite_econ.json").read_text())
+    except FileNotFoundError:
+        log("grid outputs not on disk yet; TABLES.md not written")
+        return
+    runs, econ = {}, {}
+    mp = OUT_DIR / "model_level.json"
+    if mp.exists():
+        ml_ = json.loads(mp.read_text())
+        runs, econ = ml_["runs"], ml_["econ"]
+    write_tables(lv["meta"], lv["variants"], ls_["labels"], ls_["meta"]["signflip_null"],
+                 runs, econ, ce, lv["validation_vs_dataset"])
 
 
 def write_tables(meta, vstats, label_summary, null, runs, econ, comp_econ, validation) -> None:
@@ -1183,12 +1331,15 @@ def write_tables(meta, vstats, label_summary, null, runs, econ, comp_econ, valid
             rows.append([name, f"{r['cv_auc_mean']:.4f} ± {r['cv_auc_std']:.4f}", r["worst_fold_auc"],
                          r["holdout_auc"], r["holdout_decile_spread_pooled"], lr.get("xs_auc_mean"),
                          lr["rank_ic_mean"], lr["rank_ic_t_nw"], lr["rank_ic_t_monthly"],
-                         lr["decile_spread_per_period"], lr["ls_net_annual_full_turnover"],
+                         lr["decile_spread_per_period"], lr.get("decile_spread_median_per_period"),
+                         f"{lr.get('hit_rate_top_decile')}/{lr.get('hit_rate_bottom_decile')}",
+                         lr["ls_net_annual_full_turnover"],
                          no["rank_ic_mean"], no["ls_net_annual_full_turnover"],
                          no["ls_net_annual_measured_turnover"], no["long_net_annual_measured_turnover"]])
         L.append("\n## Model level (champion LGBM, 51 features, harness folds + holdout; OOS = 4 CV months + holdout)\n")
         L.append(md_table(["model", "CV AUC", "worst fold", "holdout AUC", "holdout spread (pooled)",
-                           "xs AUC", "rank-IC", "t (NW)", "t (monthly)", "spread/period",
+                           "xs AUC", "rank-IC", "t (NW)", "t (monthly)", "mean spread/period",
+                           "median spread/period", "hit top/bottom",
                            "L/S net ann. (100% TO)", "rank-IC next-open", "L/S net ann. next-open (100% TO)",
                            "L/S net ann. next-open (meas. TO)", "long-only net ann. (meas. TO)"], rows))
     rows = []
@@ -1197,12 +1348,14 @@ def write_tables(meta, vstats, label_summary, null, runs, econ, comp_econ, valid
             lr = rec["label_return"]
             no = rec.get("next_open_return", lr)
             rows.append([labname, vn, lr["rank_ic_mean"], lr["decile_spread_per_period"],
+                         lr.get("decile_spread_median_per_period"),
                          lr["ls_gross_annual"], lr["ls_net_annual_full_turnover"],
                          no["decile_spread_per_period"], no["ls_net_annual_full_turnover"],
                          no["turnover_top_measured"], no["ls_net_annual_measured_turnover"],
                          no["long_net_annual_measured_turnover"]])
     L.append("\n## Feature-composite tradability (OOS months only, after h-session embargo)\n")
-    L.append(md_table(["label", "composite", "rank-IC", "spread/period", "L/S gross ann.",
+    L.append(md_table(["label", "composite", "rank-IC", "mean spread/period",
+                       "median spread/period", "L/S gross ann.",
                        "L/S net ann. (100% TO)", "next-open spread/period", "next-open L/S net (100% TO)",
                        "top-decile TO", "next-open L/S net (meas. TO)", "next-open long-only net (meas. TO)"],
                       rows))

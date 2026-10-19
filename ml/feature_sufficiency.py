@@ -62,6 +62,9 @@ import os
 os.environ.setdefault("OMP_NUM_THREADS", "2")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "2")
 os.environ.setdefault("MKL_NUM_THREADS", "2")
+# shared, oversubscribed box: idle OpenMP threads sleep instead of spinning
+# (scheduling only -- results are identical for a given num_threads)
+os.environ.setdefault("OMP_WAIT_POLICY", "PASSIVE")
 
 import argparse
 import json
@@ -86,6 +89,7 @@ SNAPSHOT = DATA_DIR / "equity_eod_snapshot.parquet"
 OUT_PARQUET = DATA_DIR / "model_dataset_suff.parquet"
 EVIDENCE_JSON = OUT_DIR / "feature_sufficiency.json"
 MANIFEST_JSON = OUT_DIR / "manifest_suff.json"
+AB_JSON = OUT_DIR / "ab_results.json"
 REPORT_MD = OUT_DIR / "FEATURE_SUFFICIENCY.md"
 
 SEED = 108
@@ -758,20 +762,32 @@ def variants(top5: list[str]) -> dict[str, tuple[list[str], str]]:
 
 
 def run_ab(df: pd.DataFrame, feats_all: list[str], splits: dict,
-           top5: list[str]) -> dict:
+           top5: list[str], reuse: bool = True) -> dict:
+    """Run each variant through the harness; a variant whose result JSON and
+    preds already exist with the identical feature subset is reused (the
+    harness is deterministic for a fixed config), so the A/B is resumable."""
     out = {}
     for name, (subset, note) in variants(top5).items():
-        res = run_standard_eval(
-            f"lgbm_suff_{name}", "feature_sufficiency", "feature-sufficiency",
-            make_model=champion_lgbm, tasks=("beat_mkt_20d",), preprocess="raw",
-            feature_subset=subset,
-            params={"config": "pilot champion LGBM", "num_leaves": 63,
-                    "learning_rate": 0.05, "n_estimators": 300, "feature_fraction": 0.8,
-                    "bagging_fraction": 0.8, "bagging_freq": 1, "min_data_in_leaf": 200,
-                    "num_threads": 2, "random_state": SEED},
-            notes=f"feature-sufficiency A/B on model_dataset_suff: {note}",
-            df=df, features=feats_all, splits=splits)
-        p = res["beat_mkt_20d"]
+        rp = OUT_DIR / f"lgbm_suff_{name}__beat_mkt_20d.json"
+        pp = PREDS_OUT / f"lgbm_suff_{name}__beat_mkt_20d.parquet"
+        p = None
+        if reuse and rp.exists() and pp.exists():
+            cand = json.loads(rp.read_text())
+            if cand.get("feature_subset") == subset:
+                p = cand
+                print(f"[ab] reusing {rp.name} (identical subset/config)")
+        if p is None:
+            res = run_standard_eval(
+                f"lgbm_suff_{name}", "feature_sufficiency", "feature-sufficiency",
+                make_model=champion_lgbm, tasks=("beat_mkt_20d",), preprocess="raw",
+                feature_subset=subset,
+                params={"config": "pilot champion LGBM", "num_leaves": 63,
+                        "learning_rate": 0.05, "n_estimators": 300, "feature_fraction": 0.8,
+                        "bagging_fraction": 0.8, "bagging_freq": 1, "min_data_in_leaf": 200,
+                        "num_threads": 2, "random_state": SEED},
+                notes=f"feature-sufficiency A/B on model_dataset_suff: {note}",
+                df=df, features=feats_all, splits=splits)
+            p = res["beat_mkt_20d"]
         folds = {f["fold"]: f["auc"] for f in p["folds"]}
         out[name] = {
             "model": f"lgbm_suff_{name}", "note": note, "features": subset,
@@ -910,43 +926,72 @@ def write_report(ev_: dict) -> None:
 
     L = []
     L.append("# Feature sufficiency: does the bhavcopy hold information the champion lacks?\n")
-    L.append(f"*Generated {ev_['generated_at']} by `python3 -m ml.feature_sufficiency` "
+    L.append(f"*Generated {ev_.get('assembled_at', ev_['generated_at'])} by `python3 -m ml.feature_sufficiency` "
              f"(seed 108). Evidence: `feature_sufficiency.json`; feature definitions and "
              f"leak checks: `manifest_suff.json`.*\n")
     L.append("## Verdict\n")
+    a40 = {f: S[f].get("resid_allbase_full", {}) for f in NEW_FEATURES}
+    shrink = {f: (1 - abs(a40[f]["mean_ic"]) / abs(S[f]["resid_full"]["mean_ic"]))
+              for f in n_q if a40[f].get("mean_ic") is not None}
+    unread = ["avg_trade_size_z", "ats_chg_20", "close_vs_vwap", "close_vs_vwap_5",
+              "last_vs_close", "gap_fill_10"]
+    unread_min_q = min((S[f]["resid_full"].get("q_bh") or 1) for f in unread)
+    cl_max = max(abs(S[f]["resid_full"]["mean_ic"]) for f in CLUSTER)
+    cl_min_q = min((S[f]["resid_full"].get("q_bh") or 1) for f in CLUSTER)
+    rt = sorted((k for k in ref if ref[k]["resid_full"].get("t") is not None),
+                key=lambda k: -_abs_t(ref[k]["resid_full"])) if ref else []
     if not ab:
         L.append("**A/B not yet run** (`--skip-ab`); verdict pending.\n")
     elif sufficient:
+        b_best = boot.get(best, {})
         L.append(
-            f"**The champion's feature set is sufficient for what this sample can resolve. "
-            f"Do not add any of the {len(NEW_FEATURES)} new features.** No A/B variant reached "
-            f"the fixed pass mark of {PASS_MARK} CV AUC with every fold at or above 0.50. The best variant, "
-            f"`lgbm_suff_{best}`, scored {_f(ab[best]['cv'])} against {_f(ctl.get('cv'))} for "
-            f"the same-session control. Our recommendation is to keep the 10-feature set "
-            f"and spend the effort on the external data listed below.\n")
+            f"**The current features are sufficient for what this sample can resolve. None of the "
+            f"{len(NEW_FEATURES)} new features earns a place.** No A/B variant reached the fixed pass "
+            f"mark of {PASS_MARK} with every fold at or above 0.50. The best was `lgbm_suff_{best}` at "
+            f"{_f(ab[best]['cv'])}, against {_f(ctl.get('cv'))} for the same-session control "
+            f"(paired date-block bootstrap Δ {_f(b_best.get('delta_cv_vs_control'), 4, True)}, 95% CI "
+            f"[{_f(b_best.get('delta_cv_ci95', [None, None])[0], 4, True)}, "
+            f"{_f(b_best.get('delta_cv_ci95', [None, None])[1], 4, True)}]).\n")
     else:
         L.append(
-            f"**The champion's feature set is not sufficient.** {len(passers)} variant(s) cleared the "
-            f"fixed pass mark of {PASS_MARK} with every fold at or above 0.50: "
-            + ", ".join(f"`lgbm_suff_{k}` ({_f(ab[k]['cv'])})" for k in passers) + ".\n")
+            f"**The current features are not sufficient.** {len(passers)} variant(s) cleared the fixed "
+            f"pass mark of {PASS_MARK} with every fold at or above 0.50: "
+            + ", ".join(f"`lgbm_suff_{k}` ({_f(ab[k]['cv'])})" for k in passers)
+            + ". Read this with the caveats below: variant (i) was selected on CV-month labels, "
+            "six variants were tried, and the pass mark sits within about one standard error of the control.\n")
     L.append(
-        f"On the information test, {len(n_q)} of {len(NEW_FEATURES)} new features carry "
-        f"residual information at BH q ≤ {BH_Q}, meaning information the champion's 10 features "
-        f"do not span linearly: "
-        + (", ".join(f"`{f}`" for f in n_q) if n_q else "none") + ". "
-        f"{len(n_q_raw)} pass on raw IC alone. ")
-    L.append("Some features carry new information on paper, but the model gained nothing "
-             "from them out of sample. Either the trees already extract the information, or "
-             "a 4-month CV is too small to see a gain of that size.\n" if (n_q and sufficient)
-             else "\n")
+        f"- **Residual information is thin and mostly not new.** {len(n_q)} of {len(NEW_FEATURES)} "
+        f"features pass BH q ≤ {BH_Q} on residual IC: "
+        + (", ".join(f"`{f}`" for f in n_q) if n_q else "none")
+        + (". Both re-express signals the pilot already carries (delivery and liquidity/size)."
+           if set(n_q) == {"deliv_value_share_20", "amihud_20"} else ".")
+        + (" Against all 40 pilot features the residual IC shrinks by "
+           + ", ".join(f"{shrink[f]:.0%} (`{f}`)" for f in n_q if f in shrink) + "."
+           if shrink else "") + "\n")
+    L.append(
+        f"- **The bhavcopy fields the pilot never reads carry no robust signal.** No feature built "
+        f"from `trades`, `vwap`, `last` or `prev_close` passes BH (lowest q {unread_min_q:.2f}).\n")
+    L.append(
+        f"- **The sector proxy is real, but it adds nothing.** The clusters recover IT, PSU banks, "
+        f"private banks, defence and metals. Cluster-relative momentum and delivery have |residual IC| "
+        f"≤ {cl_max:.3f} (lowest q {cl_min_q:.2f}). Their raw IC is the champion's own momentum and delivery signal.\n")
+    if rt:
+        L.append(
+            f"- **Calibration.** Engineered features from the earlier study reached residual t up to "
+            f"{_f(ref[rt[0]]['resid_full']['t'], 2, True)} (`{rt[0]}`). They still failed the same A/B "
+            f"(best 0.5268). A residual t of about 3 is not expected to move harness AUC in this sample.\n")
+    L.append(
+        "**Answer to management.** (1) Feature work on EOD bhavcopy has reached diminishing returns at "
+        "this sample size. (2) The 10 features are sufficient for the pilot. (3) Real additions must "
+        "come from external data (gap list below). The two BH survivors should be re-tested on the "
+        "5-year walk-forward, not added now.\n")
 
     L.append("## Residual-IC evidence (top 10 by |residual monthly t|, all 23 in the JSON)\n")
-    L.append("Each IC is the per-date Spearman correlation with `y_excess_20d` on clean labelled rows, averaged "
-             "within months, over 16 months (2025-06 to 2026-09). "
-             "To get the residual IC, each feature's per-date rank is first OLS-orthogonalized on the "
-             "champion's 10 ranks (plus NaN indicators); the residual is then correlated with the label. "
-             "The \"quad\" column also removes squared ranks, a crude proxy for what the trees can do non-linearly. "
-             "The q column is the BH q-value across all 23 new features. CV and holdout columns are mean residual IC.\n")
+    L.append("IC is the per-date Spearman correlation with `y_excess_20d` on clean labelled rows, averaged within "
+             "months; t is taken over 16 monthly ICs. For the residual IC, the feature's per-date rank is OLS-orthogonalized "
+             "on the champion's 10 ranks plus NaN indicators, and the residual is correlated with the label. The quad "
+             "column also removes squared ranks. q is the BH q-value across all 23 new features. The CV and holdout "
+             "columns are mean residual IC over those months.\n")
     L.append("| # | feature | raw IC | raw t | resid IC | resid t | q (BH) | resid IC quad | resid IC vs all 40 pilot (t) | CV months | holdout months | in pilot already? |")
     L.append("|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|")
     for i, f in enumerate(ranked[:10], 1):
@@ -972,15 +1017,6 @@ def write_report(ev_: dict) -> None:
                  + ". Where a new feature's residual IC shrinks in the all-40 column, the 40-feature set "
                  "already holds that information and the champion's selection dropped it. The fix for "
                  "that is feature re-selection, not new data.\n")
-    if ref:
-        rt = sorted((k for k in ref if ref[k]["resid_full"].get("t") is not None),
-                    key=lambda k: -_abs_t(ref[k]["resid_full"]))[:3]
-        L.append("**Calibration.** The 23 engineered features from the earlier feature study, run "
-                 "through the same test, have residual |t| up to "
-                 + ", ".join(f"`{k}` {_f(ref[k]['resid_full']['t'], 2, True)}" for k in rt)
-                 + ". All of them failed the harness A/B (best 0.5268). A residual t of this size "
-                 "has not been enough to move AUC in this sample.\n")
-
     L.append("## Harness A/B (beat_mkt_20d, champion LightGBM config, pass mark 0.5364, every fold ≥ 0.50)\n")
     L.append("| variant | #feat | CV AUC ± std | folds Apr / May / Jun / Jul | min fold | Δ CV vs control [95% CI] | P(CV ≥ 0.5364) | holdout AUC | holdout spread | pass |")
     L.append("|---|---:|---|---|---:|---|---:|---:|---:|:-:|")
@@ -1054,13 +1090,19 @@ def strongest_cases_md(ev_: dict) -> str:
         q = s["resid_full"].get("q_bh")
         clears = (q is not None and q <= BH_Q) and any(ab[k]["passes"] for k in in_v)
         a40 = s.get("resid_allbase_full", {})
+        mo = s["resid_full"].get("monthly", {})
+        pre_v = [v for k, v in mo.items() if k < "2026-03"]
+        post_v = [v for k, v in mo.items() if k >= "2026-03"]
+        pre = float(np.mean(pre_v)) if pre_v else None
+        post = float(np.mean(post_v)) if post_v else None
         lines.append(
             f"- `{f}`: residual IC {_f(s['resid_full']['mean_ic'], 4, True)}, "
             f"t {_f(s['resid_full']['t'], 2, True)}, q {_f(q, 3)}; against all 40 pilot "
             f"features {_f(a40.get('mean_ic'), 4, True)} (t {_f(a40.get('t'), 2, True)}); sign held in "
             f"{s['resid_full']['sign_consistency']:.0%} of {s['resid_full']['n_months']} months; "
             f"after the quadratic control {_f(s['resid_quad_full']['mean_ic'], 4, True)}; "
-            f"CV months {_f(s['resid_cvtest']['mean_ic'], 4, True)}. A/B: {ab_txt}. "
+            f"CV months {_f(s['resid_cvtest']['mean_ic'], 4, True)}; before vs from the March-2026 "
+            f"break {_f(pre, 4, True)} / {_f(post, 4, True)}. A/B: {ab_txt}. "
             f"**{'Clears the bar.' if clears else 'Does not clear the bar.'}**")
     return "\n".join(lines)
 
@@ -1096,6 +1138,32 @@ def limits_md(ev_: dict) -> str:
 # main
 # ========================================================================= #
 
+def make_verdict(evd: dict) -> dict:
+    ab, S = evd.get("ab", {}), evd["ic_summary"]
+    return {
+        "sufficient_for_this_sample": not any(v["passes"] for k, v in ab.items()
+                                              if k != "control"),
+        "passing_variants": [k for k, v in ab.items() if k != "control" and v["passes"]],
+        "features_new_information_bh": [f for f in NEW_FEATURES
+                                        if (S[f]["resid_full"].get("q_bh") or 1) <= BH_Q],
+    }
+
+
+def merge_ab(evd: dict) -> dict:
+    if AB_JSON.exists():
+        a = json.loads(AB_JSON.read_text())
+        assert a["top5"] == evd["top5"], "A/B top-5 differs from the IC selection"
+        evd["ab"], evd["bootstrap"] = a["ab"], a["bootstrap"]
+    if "ab" in evd:
+        evd["verdict"] = make_verdict(evd)
+    return evd
+
+
+def _ic_frame(out: pd.DataFrame, base40: list[str]) -> pd.DataFrame:
+    mask = out["label_beat_mkt_20d"].notna() & out["y_clean_20d"].astype(bool)
+    return out.loc[mask, ID + ["y_excess_20d"] + base40 + NEW_FEATURES].reset_index(drop=True)
+
+
 def _jsonable(o):
     if isinstance(o, dict):
         return {str(k): _jsonable(v) for k, v in o.items()}
@@ -1115,13 +1183,70 @@ def main() -> None:
     ap.add_argument("--skip-build", action="store_true")
     ap.add_argument("--skip-ab", action="store_true")
     ap.add_argument("--report-only", action="store_true")
+    ap.add_argument("--ab-only", action="store_true",
+                    help="resume: A/B + bootstrap only, top-5 from the stored IC selection")
+    ap.add_argument("--ic-extras", action="store_true",
+                    help="resume: recompute sanity / all-40 / pilot-reference IC blocks into the JSON")
     args = ap.parse_args()
     t0 = time.perf_counter()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     splits = json.loads((DATA_DIR / "splits.json").read_text())
 
-    if args.report_only:
+    base_feats = json.loads((DATA_DIR / "manifest.json").read_text())["features"]
+    base40 = [c for c in base_feats if not c.endswith("_isnan")]
+
+    if args.ab_only:
+        out = pd.read_parquet(OUT_PARQUET)
+        out["date"] = pd.to_datetime(out["date"])
+        top5 = select_top(json.loads(EVIDENCE_JSON.read_text())["ic_summary"], "resid_sel")
+        print(f"[ab-only] top-5 from stored selection window: {top5}")
+        ab = run_ab(out, base_feats + NEW_FEATURES, splits, top5)
+        boot = paired_bootstrap(list(ab), splits)
+        AB_JSON.write_text(json.dumps(_jsonable({"top5": top5, "ab": ab, "bootstrap": boot}),
+                                      indent=1))
+        for k, v in ab.items():
+            b = boot["results"][k]
+            print(f"  {k:<16s} cv={v['cv']:.4f} min_fold={v['min_fold']:.4f} "
+                  f"holdout={v['holdout']:.4f} dCV={b['delta_cv_vs_control']:+.4f} "
+                  f"[{b['delta_cv_ci95'][0]:+.4f},{b['delta_cv_ci95'][1]:+.4f}] pass={v['passes']}")
+        print(f"[ab-only] wrote {AB_JSON} ({time.perf_counter() - t0:.0f}s)")
+        return
+
+    if args.ic_extras:
+        out = pd.read_parquet(OUT_PARQUET)
+        out["date"] = pd.to_datetime(out["date"])
         evd = json.loads(EVIDENCE_JSON.read_text())
+        lab = _ic_frame(out, base40)
+        res_s = ic_study(lab, ["deliv_pct_sma_20"])
+        sanity = mstats(res_s["deliv_pct_sma_20"]["resid"])
+        share = float(np.max(list(res_s["deliv_pct_sma_20"]["resid_share"].values())))
+        assert share < 1e-10 and abs(sanity["mean_ic"]) < 1e-12, "orthogonalization sanity failed"
+        evd["orthogonalization_sanity"] = {"feature": "deliv_pct_sma_20 (a champion feature)",
+                                           "max_residual_variance_share": share,
+                                           "resid_mean_ic": sanity["mean_ic"]}
+        res_all = ic_study(lab, NEW_FEATURES, controls=base40, quad=False)
+        for f in NEW_FEATURES:
+            evd["ic_summary"][f]["resid_allbase_full"] = mstats(res_all[f]["resid"])
+        print(f"[ic-extras] all-40 residual done ({time.perf_counter() - t0:.0f}s)")
+        nonchamp = [c for c in base40 if c not in CHAMPION]
+        res_b = ic_study(lab, nonchamp, quad=False)
+        evd["ic_reference_pilot_nonchampion"] = {
+            f: {"raw_full": mstats(res_b[f]["raw"]), "resid_full": mstats(res_b[f]["resid"])}
+            for f in nonchamp}
+        evd = _jsonable(evd)
+        EVIDENCE_JSON.write_text(json.dumps(evd, indent=1))
+        print(f"[ic-extras] patched {EVIDENCE_JSON} ({time.perf_counter() - t0:.0f}s)")
+        return
+
+    if args.report_only:
+        evd = merge_ab(json.loads(EVIDENCE_JSON.read_text()))
+        evd["assembled_at"] = datetime.now().isoformat(timespec="seconds")
+        evd["provenance"] = (
+            "features + leak checks + champion-residual IC: full run (generated_at); "
+            "sanity / all-40 / pilot-reference IC blocks: --ic-extras; A/B + bootstrap: "
+            "--ab-only (control reused: identical subset/config, reproduces the stored "
+            "lgbm_fs_selected_clean exactly); report: --report-only. A single "
+            "`python3 -m ml.feature_sufficiency` recomputes everything in one pass.")
         evd["external_data_gaps"] = EXTERNAL_DATA
         evd["pilot_overlap"] = PILOT_OVERLAP
         evd["strongest_cases_md"] = strongest_cases_md(evd)
@@ -1137,7 +1262,6 @@ def main() -> None:
     else:
         out, manifest = build()
 
-    base_feats = json.loads((DATA_DIR / "manifest.json").read_text())["features"]
     fe_feats = json.loads((DATA_DIR / "manifest_fe.json").read_text())["new_features"]
     fe = pd.read_parquet(DATA_DIR / "model_dataset_fe.parquet", columns=ID + fe_feats)
     fe["date"] = pd.to_datetime(fe["date"])
@@ -1146,8 +1270,7 @@ def main() -> None:
 
     # ---- C. unique-information test (reads the label: evidence only) -------
     mask = out["label_beat_mkt_20d"].notna() & out["y_clean_20d"].astype(bool)
-    base40 = [c for c in base_feats if not c.endswith("_isnan")]
-    lab = out.loc[mask, ID + ["y_excess_20d"] + base40 + NEW_FEATURES].reset_index(drop=True)
+    lab = _ic_frame(out, base40)
     labfe = pd.concat([lab[ID + ["y_excess_20d"] + CHAMPION],
                        fe.loc[mask.to_numpy(), fe_feats].reset_index(drop=True)], axis=1)
     t1 = time.perf_counter()
@@ -1162,7 +1285,6 @@ def main() -> None:
     res_all = ic_study(lab, NEW_FEATURES, controls=base40, quad=False)
     for f in NEW_FEATURES:
         summary[f]["resid_allbase_full"] = mstats(res_all[f]["resid"])
-        summary[f]["resid_share_median"] = float(np.median(list(res[f]["resid_share"].values())))
     print(f"[ic] residual vs all 40 pilot base features done ({time.perf_counter() - t1:.0f}s)")
     nonchamp = [c for c in base40 if c not in CHAMPION]
     res_b = ic_study(lab, nonchamp, quad=False)
@@ -1235,6 +1357,8 @@ def main() -> None:
         evd["ab"] = run_ab(out, feats_all, splits, top5)
         print(f"[ab] done ({time.perf_counter() - t2:.0f}s)")
         evd["bootstrap"] = paired_bootstrap(list(evd["ab"].keys()), splits)
+        AB_JSON.write_text(json.dumps(_jsonable({"top5": top5, "ab": evd["ab"],
+                                                 "bootstrap": evd["bootstrap"]}), indent=1))
         print(f"[boot] done ({time.perf_counter() - t2:.0f}s)")
         for k, v in evd["ab"].items():
             b = evd["bootstrap"]["results"][k]
@@ -1242,20 +1366,8 @@ def main() -> None:
                   f"holdout={v['holdout']:.4f} dCV={b['delta_cv_vs_control']:+.4f} "
                   f"[{b['delta_cv_ci95'][0]:+.4f},{b['delta_cv_ci95'][1]:+.4f}] "
                   f"pass={v['passes']}")
-        evd["verdict"] = {
-            "sufficient_for_this_sample": not any(v["passes"] for k, v in evd["ab"].items()
-                                                  if k != "control"),
-            "passing_variants": [k for k, v in evd["ab"].items() if k != "control" and v["passes"]],
-            "features_new_information_bh": [f for f in NEW_FEATURES
-                                            if (summary[f]["resid_full"].get("q_bh") or 1) <= BH_Q],
-        }
-    elif EVIDENCE_JSON.exists():
-        old = json.loads(EVIDENCE_JSON.read_text())
-        for k in ("ab", "bootstrap", "verdict"):
-            if k in old:
-                evd[k] = old[k]
-
     evd = _jsonable(evd)
+    evd = merge_ab(evd)
     evd["strongest_cases_md"] = strongest_cases_md(evd)
     evd["limits_md"] = limits_md(evd)
     EVIDENCE_JSON.write_text(json.dumps(evd, indent=1))

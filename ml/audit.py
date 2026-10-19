@@ -1057,7 +1057,9 @@ def t11(ctx, fresh):
     fold10 = {p["fold"]: p["outer"]["10"]["auc"] for p in per}
     foldk = {p["fold"]: p["outer"][str(p["k_selected"])]["auc"] for p in per}
     gap = ctx.real_cv - cvk
-    st = "INFO"
+    # criterion: the claimed CV AUC must survive honest (pre-fold) selection
+    # within 0.005, with no window below 0.50
+    st = "PASS" if (ctx.real_cv - cv10 <= 0.005 and min(fold10.values()) >= 0.5) else "FAIL"
     msg = (f"feature selection re-done per fold on pre-fold data only (k=10): CV AUC {cv10:.4f} vs "
            f"claimed {ctx.real_cv:.4f} -> selection optimism {ctx.real_cv - cv10:+.4f}; holdout "
            f"{ho10:.4f} (champion {ctx.real_ho:.4f}); windows<0.50: "
