@@ -122,7 +122,21 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
     etf = pd.read_csv(DATA_EXT / "etf_list.csv")
     em = pd.read_csv(DATA_EXT / "equity_master.csv")
     tag = "rehearsal" if rehearsal else "write"
+    res: dict = {"db": str(db_path), "rehearsal": rehearsal}
     if not rehearsal:
+        # backup BEFORE the lock (P1 is the only writer; the copy takes > 1 min on this disk),
+        # then verify nothing touched the store while copying
+        st0 = os.stat(db_path)
+        tb = time.time()
+        shutil.copy2(db_path, backup)
+        st1 = os.stat(db_path)
+        if (st0.st_size, st0.st_mtime_ns) != (st1.st_size, st1.st_mtime_ns) or os.path.getsize(backup) != st1.st_size:
+            raise SystemExit("the store changed while it was being backed up; aborting before the lock")
+        res["backup"] = {"path": backup, "bytes": os.path.getsize(backup), "seconds": round(time.time() - tb, 1),
+                         "store_mtime": datetime.fromtimestamp(st1.st_mtime).isoformat(timespec="seconds"),
+                         "taken": "before the lock; store size and mtime verified unchanged"}
+        log(f"backup copied to {backup} ({res['backup']['seconds']}s)", tag)
+        t0 = time.time()                      # the lock window starts here
         LOCK_FILE.write_text(json.dumps({
             "owner": "P1 data-integrity stream", "started": datetime.now().isoformat(timespec="seconds"),
             "doing": f"delete {dele}; upsert {len(up):,} verified rows on {up['date'].dt.date.nunique()} dates; "
@@ -130,13 +144,10 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
                      f"build_features with {len(feed)} corporate-action events",
             "pid": os.getpid()}, indent=1))
         log(f"LOCK created {LOCK_FILE}", tag)
-    res: dict = {"started": datetime.now().isoformat(timespec="seconds"), "db": str(db_path), "rehearsal": rehearsal}
+    res["started"] = datetime.now().isoformat(timespec="seconds")
     try:
-        if not rehearsal:
-            tb = time.time()
-            shutil.copy2(db_path, backup)
-            res["backup"] = {"path": backup, "bytes": os.path.getsize(backup), "seconds": round(time.time() - tb, 1)}
-            log(f"backup copied to {backup} ({res['backup']['seconds']}s)", tag)
+        if not rehearsal and os.stat(db_path).st_mtime_ns != st1.st_mtime_ns:
+            raise SystemExit("the store changed after the backup")
         store = nhi.DuckDBStore(str(db_path))
         con = store.con
         con.execute("SET threads TO 2")
