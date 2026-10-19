@@ -90,19 +90,23 @@ champion's trees need none of these.
 
 ## Gate status (2026-10-19, 43 folds landed)
 
-| Gate | Pre-registered rule | Status | Evidence |
-|---|---|---|---|
-| 1 | LightGBM beats lr_l2 on CV mean, bootstrap CI excluding zero | **FAIL** | lr_l2 0.5415 above all-features LightGBM 0.5366 (nested: 0.5430 above 0.5359); the sign is against before any interval |
-| 2 | Fold AUC ≥ 0.50 in ≥ 90% of months | **FAIL** | 86% (nested), 81% (all features) |
-| 3 | Top decile beats the EW universe in ≥ 75% of months, net of 20 bps | PENDING | `ml/results/scale5y/portfolio_5y.json` |
-| 4 | Selected-feature overlap ≥ 7/10 across yearly re-selections | **FAIL** | selected-set overlaps 3 / 2 / 3; top-10 overlaps 4 / 4 / 5 (`nested_selection.json`) |
-| 5 | DSR ≥ 0.95 with N stated before the run | PENDING | `ml/results/scale5y/portfolio_5y.json` |
+Scored by `ml/scale5y_report.py`; full tables in `ml/results/scale5y/SCALE5Y.md`.
 
-Three of five gates fail, so the pre-registered decision is **do not promote
-to capital**. Phase 3 becomes paper trading with the monitoring specified in
-`ml/PROGRAM_REPORT.md` §10. Post-hoc observations (a stability-aware
-comparison favours LightGBM over the linear model) are reported as such and
-do not change the verdict.
+| Gate | Pre-registered rule | nested_lgbm | all51 | nested_ensemble_rank |
+|---|---|---|---|---|
+| 1 | LightGBM beats lr_l2 on CV mean, bootstrap CI excluding zero | −0.0056 [−0.0150, +0.0024] **FAIL** | −0.0050 [−0.0155, +0.0039] **FAIL** | −0.0085 [−0.0222, +0.0027] **FAIL** |
+| 2 | Fold AUC ≥ 0.50 in ≥ 90% of months | 86% (37/43) **FAIL** | 81% (35/43) **FAIL** | 91% (39/43) **PASS** |
+| 3 | Top decile beats the EW universe in ≥ 75% of months, net of 20 bps | 20/45 = 44% **FAIL** | 20/45 = 44% **FAIL** | 33/45 = 73% **FAIL** |
+| 4 | Selected-feature overlap ≥ 7/10 across yearly re-selections | top-10 overlaps 4, 4, 5 **FAIL** | 4, 4, 5 **FAIL** (selects nothing; scored on the same yearly re-selection) | 4, 4, 5 **FAIL** |
+| 5 | DSR ≥ 0.95 on the liquid top decile, N = 177 fixed before the run | 0.000 **FAIL** | 0.000 **FAIL** | 0.040 **FAIL** |
+
+No model passes more than one gate, so the pre-registered decision is **do
+not promote to capital**. Phase 3 becomes paper trading of the ensemble's
+liquid top decile as one frozen strategy (N = 1), with the monitoring
+specified in `ml/PROGRAM_REPORT.md` §10. Post-hoc observations (a
+stability-aware comparison favours LightGBM over the linear model; the
+ensemble's +7.0%/yr over the EW universe has an interval clear of zero) are
+reported as such and do not change the verdict.
 
 ## Compute
 

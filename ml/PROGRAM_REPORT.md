@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 · **Program lead:** evaluation lead (this session) · **Scope:** NSE cash equities, end-of-day bhavcopy data, 5 years (2021-10 to 2026-10) · **Companion report:** `ml/report/program_report.html` (built by `python3 -m ml.make_program_report`)
 
-**Status: the 5-year walk-forward is complete for the model league; its paper portfolio, block bootstrap, regime table and the rank-ensemble challenger are still running.** Every number below is read from a committed JSON or Markdown artifact named in the text; nothing is estimated from memory. Sections marked **PENDING** will be filled from `ml/results/scale5y/` when those runs finish.
+**Status: complete.** The 5-year walk-forward, its paired block bootstrap, regime table, rank-ensemble challenger and paper portfolio are all in (`ml/results/scale5y/SCALE5Y.md`). Every number below is read from a committed JSON or Markdown artifact named in the text; nothing is estimated from memory.
 
 ---
 
@@ -10,21 +10,21 @@
 
 **There is a real but small cross-sectional signal in NSE end-of-day data, and it is not yet a demonstrated tradable edge.**
 
-- **Signal.** Over 43 monthly out-of-sample folds (January 2023 to July 2026), a LightGBM classifier on all end-of-day features ranks stocks by 20-session relative performance with mean AUC 0.5366, above 0.50 in 81% of months, worst month 0.453 (March 2026). The honest nested-selection variant scores 0.5359. A one-feature momentum rule scores 0.4951. The pilot's 10-feature subset, chosen on 2026 data, scores 0.5251 at 5 years: its selection did not transfer. (`ml/results/scale5y/*.json`)
-- **Size.** Per-date rank information coefficient (IC) is about 0.04 to 0.05. That is the size the literature finds at the frontier: GKX's neural nets imply a forecast-return correlation of about 0.06 on US data, Qlib's LightGBM reaches IC 0.045 on CSI300. (`ml/research/SOTA_FORECASTING.md`)
-- **Economics.** On the six-month pilot, the champion's top decile beat the equal-weight universe by +4.2% a year net of 20 bps per side, with an information ratio of 0.99 and a 95% interval of [−2.4, +4.3]. Its Deflated Sharpe Ratio was 0.08. On the holdout it trailed the universe. **PENDING:** the 5-year paper portfolio decides whether this changes. (`ml/results/strategy/STRATEGY.md`)
-- **Pre-registered promotion gates (`ml/SCALE_UP.md`).** Gate 1 (LightGBM beats L2 logistic on mean CV AUC) **fails**: the logistic model's mean is higher (0.5415 vs 0.5366), although it is far less stable. Gate 2 (fold floor ≥ 0.50 in ≥ 90% of months) **fails**: 81% to 86%. Gate 4 (selected-feature overlap ≥ 7 of 10 across yearly re-selections) **fails**: 2 to 3. Gates 3 (beats the equal-weight universe in ≥ 75% of months net of costs) and 5 (DSR ≥ 0.95) are **PENDING**. Three of five fail already, so **the pre-registered criteria for committing capital are not met.**
+- **Signal.** Over 43 monthly out-of-sample folds (January 2023 to July 2026), a LightGBM classifier on all end-of-day features ranks stocks by 20-session relative performance with mean AUC 0.5366, above 0.50 in 81% of months, worst month 0.453 (March 2026). The honest nested-selection variant scores 0.5359 (20-session block-bootstrap 95% interval [0.5250, 0.5483]; per-date rank IC +0.066, Newey-West t 6.0, positive in 38 of 43 months). A one-feature momentum rule scores 0.4951. The pilot's 10-feature subset, chosen on 2026 data, scores 0.5251 at 5 years (−0.0115 [−0.0159, −0.0071] against all features): its selection did not transfer. (`ml/results/scale5y/*.json`)
+- **Size.** Per-date rank information coefficient (IC) is 0.04 to 0.05 on the pilot and 0.066 over the five years. That is the size the literature finds at the frontier: GKX's neural nets imply a forecast-return correlation of about 0.06 on US data, Qlib's LightGBM reaches IC 0.045 on CSI300. (`ml/research/SOTA_FORECASTING.md`)
+- **Economics.** Over 913 out-of-sample signal dates (January 2023 to September 2026), net of 20 bps per side, **no single machine-learned model's top decile beats simply holding the universe equally weighted** (+19.4% a year): the LightGBM books trail it by 0.7 to 1.2 points a year and beat it in 20 of 45 months. The pre-registered three-model rank ensemble is the one exception: +7.0% a year over the universe, information ratio 1.26 with a 95% interval of [0.32, 2.37], positive in every calendar year. Its Deflated Sharpe Ratio at an honestly counted 177 trials is 0.16 (0.04 for the liquid book pre-registered as the paper portfolio), so it does not survive multiple-testing adjustment. (`ml/results/scale5y/SCALE5Y.md`)
+- **Pre-registered promotion gates (`ml/SCALE_UP.md`).** LightGBM with nested selection passes **0 of 5**, LightGBM on all features **0 of 5**, the rank ensemble **1 of 5**. Gate 1 (beats L2 logistic on mean CV AUC with an interval excluding zero) fails for all three: the logistic model's mean is higher (delta −0.0056 [−0.0150, +0.0024] for nested LightGBM). Gate 2 (fold floor ≥ 0.50 in ≥ 90% of months): 86%, 81%, 91% (the ensemble's one pass). Gate 3 (top decile beats the equal-weight universe in ≥ 75% of months net of 20 bps): 44%, 44%, 73%. Gate 4 (selected-feature overlap ≥ 7 of 10 across yearly re-selections): 4, 4, 5. Gate 5 (DSR ≥ 0.95 on the liquid top decile, N = 177): 0.000, 0.000, 0.040. **The pre-registered criteria for committing capital are not met by any model.**
 - **Integrity.** The pipeline is clean: labels and features recompute exactly from raw data, point-in-time universe verified, label-permutation null 0.500 ± 0.001, no duplicate sessions in 1,245 trading days. The pilot's headline (CV AUC 0.531, "only model above chance") was inflated by feature selection on test months and has been corrected in `ml/MODEL_SELECTION.md`. (`ml/results/audit/AUDIT.md`)
 
 ### The three deliverables
 
 | Deliverable | Decision | Evidence |
 |---|---|---|
-| **Feature set** | All 50 end-of-day base features plus `deliv_value_share_20` and `amihud_20` (52 columns), fed to LightGBM without hand selection. The pilot's 10-feature subset is retired. No further feature engineering on bhavcopy-derived inputs; the next feature gains require external data (corporate actions first). | §5, §6.3 |
+| **Feature set** | The 52 end-of-day candidates: the 50 base features plus `deliv_value_share_20` and `amihud_20`, the two that honest yearly re-selection keeps picking. The single-model reference feeds all 52 to LightGBM without hand selection; the ensemble as tested re-selects 5 to 15 of them each year, which buys nothing on AUC (−0.0007 [−0.0052, +0.0038]). The pilot's 10-feature subset is retired. No further feature engineering on bhavcopy-derived inputs; the next gains require external data (corporate actions first). | §5, §6.3 |
 | **Label set** | Primary `label_beat_mkt_20d` (20-session next-open excess vs the cross-sectional median, clean-masked). Economics judged against the equal-weight universe **mean**, rank-IC and net spread reported beside AUC, ETFs excluded, 40-day label carried as a candidate, `up_5d` demoted to a negative control. | §4 |
-| **Model** | LightGBM binary classifier, fixed 300 trees (champion config), rolling 504-session training window, monthly retrain, 22-session embargo, exit-date purge. L2 logistic (C = 0.01) kept as the drift monitor. Rank-average ensemble (LightGBM + LambdaRank + CatBoost) is the pre-registered challenger (**PENDING** at 5 years). Deep sequence models, transformers, DLinear, time-series foundation models and reinforcement learning are dropped with evidence. | §6 |
+| **Model** | For paper trading only: the pre-registered rank-average ensemble (LightGBM champion config + LambdaRank + CatBoost with fixed tree budgets, per-date rank average), frozen as one strategy. Single-model reference: LightGBM, fixed 300 trees, all features, rolling 504-session window, monthly retrain, 22-session embargo, exit-date purge. L2 logistic (C = 0.01) kept as the drift monitor, not a scorer. Deep sequence models, transformers, DLinear, time-series foundation models and reinforcement learning are dropped with evidence. **Nothing is promoted to capital.** | §6, §7 |
 
-**Recommendation:** commit no capital. Run the model as a nightly paper portfolio (liquid-tercile top decile, long-only, equal-weight benchmark, 20 bps per side) with the monitoring in §10, and put the next unit of effort into data (corporate actions, sector classification, F&O membership, fundamentals) rather than into models.
+**Recommendation:** commit no capital. Paper-trade the ensemble's liquid-tercile top decile as one frozen, pre-registered strategy from November 2026 (a fresh test with N = 1; at its observed information ratio of 0.85 it needs about 4 years of track record to reach a 95% probabilistic Sharpe), with the monitoring in §10. Put the next research effort into volatility-neutral book construction and into data (corporate actions, sector classification, F&O membership, fundamentals) rather than into new model families.
 
 ---
 
@@ -45,7 +45,7 @@ The program ran as a team of specialist agents under one shared evaluation harne
 | Research | Literature review with 71 references, calibration of our numbers against published ones | | `ml/research/SOTA_FORECASTING.md` |
 | Testing (red team) | Leakage, permutation null, point-in-time, best-of-N, honest nested selection | `ml/audit.py` | `ml/results/audit/AUDIT.md` |
 | Portfolio quant | Net-of-cost backtest, capacity, Deflated Sharpe, bifurcation | `ml/strategy_backtest.py` | `ml/results/strategy/STRATEGY.md` |
-| Scale-up | 5-year walk-forward, nested selection, duel, regimes, gates | `ml/scale5y.py`, `ml/scale5y_nested.py`, `ml/scale5y_report.py` | `ml/results/scale5y/SCALE5Y.md` (**PENDING**) |
+| Scale-up | 5-year walk-forward, nested selection, duel, regimes, gates | `ml/scale5y.py`, `ml/scale5y_nested.py`, `ml/scale5y_report.py` | `ml/results/scale5y/SCALE5Y.md` |
 | Analytics / product | This report, the HTML report, monitoring spec | `ml/make_program_report.py` | this file |
 
 ---
@@ -121,7 +121,7 @@ Other facts that shape the design: edge is not confined to the illiquid tail (co
 | Feature sufficiency (`FEATURE_SUFFICIENCY.md`) | 23 features from bhavcopy fields the pilot never read (`trades`, `vwap`, `last`, `prev_close`, delivery value), Amihud illiquidity, idiosyncratic vol, a 12-cluster sector proxy from return correlations | residual IC vs the champion's 10 ranks, BH q ≤ 0.1; then the same harness A/B | **2 of 23 pass BH**: `deliv_value_share_20` (q 0.055) and `amihud_20` (q 0.089), both re-expressions of delivery and liquidity. The A/B with the top 5 reached 0.5342 (fail), and its selection window included the CV months. Fields never read carry no robust signal (lowest q 0.24). The sector proxy is real (recovers IT, PSU banks, private banks, defence, metals) but adds nothing (q ≥ 0.56). |
 | 5-year nested re-selection (`nested_selection.json`) | The pilot's selection method re-run inside each training history, once per calendar year, on 50 base features + the 2 BH survivors | none (descriptive) | `amihud_20` selected every year; `deliv_value_share_20`, `dist_52w_high`, `atr_pct`, `vol_20` in 3 of 4 years. Selected sets overlap in only 2 to 3 features year to year; chosen k alternates 15 / 5 / 15 / 5. The pilot's 10 overlap the yearly picks by 4 / 1 / 8 / 2. |
 
-**Verdict on sufficiency.** The end-of-day bhavcopy has been mined to its resolvable limit at this sample size. Two liquidity and delivery re-expressions carry information the 10-feature champion lacked and earn a place in the production set; nothing else does. Feature selection itself is unstable (gate 4 fails) and, at 5 years, buys nothing over giving LightGBM every feature (0.5359 nested vs 0.5366 all features, 18 of 43 fold wins: a tie). **The production feature set is therefore all 52 end-of-day features without hand selection**, and further engineering on these inputs is stopped. The remaining feature upside is external data, ranked in §11.
+**Verdict on sufficiency.** The end-of-day bhavcopy has been mined to its resolvable limit at this sample size. Two liquidity and delivery re-expressions carry information the 10-feature champion lacked and earn a place in the candidate set; nothing else does. Feature selection itself is unstable (gate 4 fails) and, at 5 years, buys nothing over giving LightGBM every feature (0.5359 nested vs 0.5366 all features, paired delta −0.0007 [−0.0052, +0.0038], 18 of 43 fold wins: a tie). **The candidate set is therefore the 52 end-of-day features; the single-model reference uses all of them without hand selection, and the ensemble as tested re-selects yearly from the same 52** (an all-52 ensemble A/B is queued). Further engineering on these inputs is stopped. The remaining feature upside is external data, ranked in §11.
 
 ### 5.3 What the pilot got wrong about features, and how it was found
 
@@ -165,16 +165,23 @@ Why trees win here: the signal is weak and lives in a few slow features (IC abou
 
 ### 6.3 Five-year walk-forward (43 monthly folds, rolling 504-session training window, 22-session embargo; `ml/results/scale5y/`)
 
-| Model | Features | CV AUC ± sd | Folds ≥ 0.50 | Worst fold | Holdout AUC | Holdout decile spread | Mean fold decile spread (positive folds) |
-|---|---:|---|---:|---:|---:|---:|---|
-| LightGBM, all features (`all51`) | 50 | **0.5366 ± 0.043** | 35 / 43 (81%) | 0.453 (2026-03) | **0.533** | −0.61% | +1.25% (30 / 43) |
-| LightGBM, nested yearly selection (`nested_lgbm`, exit-date purge) | 5 to 15 | 0.5359 ± 0.041 | **37 / 43 (86%)** | 0.431 (2026-03) | 0.528 | −0.61% | **+1.32% (33 / 43)** |
-| LightGBM, pilot 10 features (`champion10`) | 10 | 0.5251 ± 0.038 | 31 / 43 (72%) | 0.449 (2026-03) | 0.529 | −0.43% | +0.74% (27 / 43) |
-| L2 logistic, all features (`lr_l2`) | 50 | **0.5415 ± 0.060** | 35 / 43 (81%) | **0.379** (2026-03) | 0.509 | **−3.62%** | +1.08% (25 / 43) |
-| L2 logistic, nested selection (`nested_lr_l2`) | 5 to 15 | 0.5430 ± 0.064 | 34 / 43 (79%) | 0.367 (2026-03) | 0.517 | −0.90% | |
-| Momentum rule (`baseline_mom`) | 1 | 0.4951 ± 0.035 | 17 / 43 (40%) | 0.407 (2026-03) | 0.530 | **+2.95%** | +0.27% (24 / 43) |
+| Model | Features | CV AUC ± sd | 95% CI (20-session blocks) | Folds ≥ 0.50 | Worst fold | Holdout AUC (decile spread) | Mean fold decile spread (positive folds) |
+|---|---:|---|---|---:|---:|---:|---|
+| LightGBM, all features (`all51`) | 50 | **0.5366 ± 0.043** | [0.5254, 0.5498] | 35 / 43 (81%) | 0.453 (2026-03) | 0.533 (−0.61%) | +1.25% (30 / 43) |
+| LightGBM, nested yearly selection (`nested_lgbm`, exit-date purge) | 5 to 15 | 0.5359 ± 0.041 | [0.5250, 0.5483] | 37 / 43 (86%) | 0.431 (2026-03) | 0.528 (−0.61%) | **+1.32% (33 / 43)** |
+| Rank ensemble (`nested_ensemble_rank`: LightGBM + LambdaRank + CatBoost on the nested sets) | 5 to 15 | 0.5330 ± 0.036 | [0.5232, 0.5438] | **39 / 43 (91%)** | 0.463 (2025-01) | **0.553 (+2.86%)** | |
+| CatBoost, 600 fixed trees (ensemble member) | 5 to 15 | 0.5378 ± 0.043 | | 37 / 43 (86%) | 0.426 (2026-03) | 0.529 (−0.51%) | |
+| LambdaRank (ensemble member) | 5 to 15 | 0.5032 ± 0.045 | | 25 / 43 (58%) | 0.361 (2025-01) | 0.572 (+6.68%) | |
+| LightGBM, pilot 10 features (`champion10`) | 10 | 0.5251 ± 0.038 | [0.5150, 0.5362] | 31 / 43 (72%) | 0.449 (2025-05) | 0.529 (−0.43%) | +0.74% (27 / 43) |
+| L2 logistic, all features (`lr_l2`) | 50 | **0.5415 ± 0.060** | [0.5257, 0.5592] | 35 / 43 (81%) | **0.379** (2026-03) | 0.509 (**−3.62%**) | +1.08% (25 / 43) |
+| L2 logistic, nested selection (`nested_lr_l2`) | 5 to 15 | 0.5430 ± 0.064 | [0.5263, 0.5620] | 34 / 43 (79%) | 0.367 (2026-03) | 0.517 (−0.90%) | |
+| Momentum rule (`baseline_mom`) | 1 | 0.4951 ± 0.035 | [0.4851, 0.5053] | 17 / 43 (40%) | 0.407 (2026-03) | 0.530 (**+2.95%**) | +0.27% (24 / 43) |
 
 Head-to-head by fold: all features beat the pilot's 10 in 32 of 43; nested beat the pilot's 10 in 29 of 43; nested vs all features 18 of 43 (a tie); all features beat the momentum rule in 34 of 43.
+
+**Paired 20-session block bootstrap** (B = 1000, 45 blocks per replicate over the pooled 881 test dates, identical draws for every model; `bootstrap_5y.json`): nested selection vs all features −0.0007 [−0.0052, +0.0038] (a tie); pilot 10 features vs all features −0.0115 [−0.0159, −0.0071] (a real loss); nested LightGBM vs L2 logistic −0.0056 [−0.0150, +0.0024]; ensemble vs L2 logistic −0.0085 [−0.0222, +0.0027]. The program cannot claim that any machine-learning model beats the linear benchmark on AUC.
+
+**Regimes** (defined from market data before any AUC was split by them; `regimes_5y.md`): models score higher in down months (nested LightGBM 0.571 over 14 months) than in up months (0.519 over 29), and higher in low-volatility months (0.547) than in high-volatility ones (0.524). One episode lifts the five-year mean: the September 2025 to February 2026 run (five of six months down, four low-volatility) carries every model to about 0.60; without it and March 2026, nested LightGBM averages 0.5267 over the other 36 months. March 2026 was a V-shaped rebound after the February sell-off (equal-weight universe +9.2% in 20 days, volatility 33%) in which 62% of features had their IC against its usual sign; six of 43 months had a majority of features inverted (2023-07, 2024-01, 2025-04, 2025-05, 2026-03, 2026-04).
 
 **By calendar year** (mean fold AUC; **the 2023 folds train on short windows** because the dataset starts in October 2022: 41,733 training rows for 2023-01, 292,582 for 2023-12, the full 504-session window of 580k+ rows only from 2024-10):
 
@@ -189,12 +196,10 @@ Every model moves together month to month: all of them run 0.60 to 0.66 from Sep
 
 **Four findings from the 5-year run.**
 
-1. **Feature selection did not transfer, and is not needed.** The pilot's 10 features lose to all features by 0.0115 AUC and in 32 of 43 months. Honest yearly re-selection recovers the full-feature score exactly (0.5359 vs 0.5366) at the price of unstable, alternating sets. LightGBM's own regularisation does the job. The production model uses all 52 features.
-2. **The linear model has the highest mean and the worst risk.** L2 logistic scores 0.5415 (0.5430 nested), above LightGBM, so pre-registered gate 1 fails as written. But its spread across months is 1.4× LightGBM's, its worst month is 0.37 to 0.38, and its holdout decile spread is −3.6%: its score extremes invert economically, as they did in the pilot. Nonlinearity here buys stability and sane tails, not mean accuracy. This matches the literature's modest GBM-over-linear gains (GKX: 0.33 to 0.40% vs 0.11 to 0.27% monthly R²).
-3. **AUC and tradability disagree in the tails.** On the holdout every machine-learned model has a negative top-minus-bottom decile spread while the one-feature momentum rule has +2.95%, yet the models' AUCs are higher. Across the 43 folds the models' mean decile spreads are positive (+1.25% to +1.32%, positive in 30 to 33 months), so the pattern is a tail effect in down markets: the top decile holds a lottery tail (§4, finding 3). Portfolio construction must not be "buy the top decile" without a liquidity filter and a benchmark that is the equal-weight universe.
+1. **Feature selection did not transfer, and is not needed.** The pilot's 10 features lose to all features by 0.0115 AUC [0.0071, 0.0159] and in 32 of 43 months; they average 0.4979 in 2023. Honest yearly re-selection recovers the full-feature score exactly (0.5359 vs 0.5366) at the price of unstable, alternating sets, and it helped only in 2023, with small training sets. LightGBM's own regularisation does the job. The single-model reference uses all 52 features.
+2. **The linear model has the highest mean and the worst risk.** L2 logistic scores 0.5415 (0.5430 nested), above LightGBM, so pre-registered gate 1 fails as written. It is the purest defensive-factor ranker in the league: per-date score correlation −0.50 with `atr_pct`, −0.45 with Amihud illiquidity and +0.49 with the 52-week high (LightGBM: −0.30, −0.29, +0.25). AUC rewards that tilt in down months (0.607) and punishes it in rebounds (0.379 in March 2026); its month-to-month spread is 1.4× LightGBM's and its holdout decile spread is −3.6%, with its bottom decile its best decile. Nonlinearity here buys stability and sane tails, not mean accuracy, which matches the literature's modest GBM-over-linear gains (GKX: 0.33 to 0.40% vs 0.11 to 0.27% monthly R²).
+3. **AUC and tradability disagree.** AUC 0.536 with an IC t of 6 coexists with no long-only edge (§7.2). The label "beat the universe median" rewards low-volatility names, which cross the median often but do not beat the mean of a right-skewed, rising universe, so the classifiers' top deciles are defensive: nested LightGBM's trails the equal-weight universe by 0.58% per 20 days in up months, net of costs. The negative holdout decile spreads (every classifier −0.4% to −3.6%, the momentum rule +2.95%) are the same tilt over one 32-day window; across the 43 folds the classifiers' mean decile spreads are positive (+1.25% to +1.32%, positive in 30 to 33 months). The ensemble shows the fix: adding the high-volatility LambdaRank makes the blended score volatility-neutral (correlation with `atr_pct` −0.05), costs 0.003 of AUC and turns −0.7% a year into +7.0% a year over the universe. AUC is necessary, not sufficient; models are judged on net excess over the equal-weight universe.
 4. **Hyperparameters are a mild contamination of 2026.** The LightGBM configuration (num_leaves 63, learning rate 0.05, 300 trees, feature and bagging fraction 0.8, min_data_in_leaf 200) was chosen in the pilot, which saw April to July 2026. Those 4 folds and the holdout are therefore not fully out-of-sample for the configuration; the 39 folds from 2023-01 to 2026-03 are. Removing those folds leaves the ranking unchanged (39 folds, 2023-01 to 2026-03: all features 0.5376, nested 0.5364, pilot 10 features 0.5240, L2 logistic 0.5441, momentum rule 0.4956; derived from the per-fold JSONs).
-
-**PENDING from `ml/scale5y_report.py`:** paired 20-session block bootstrap (confidence intervals around 0.5 and for every pairwise delta), the rank-average ensemble at 5 years, the regime table by pre-specified market state, and `SCALE5Y.md`.
 
 ### 6.4 Bifurcation: what is dropped and the evidence
 
@@ -229,9 +234,28 @@ Deflated Sharpe with N = 96 trials: champion active book PSR 0.75, **DSR 0.08**;
 
 Two measurement lessons from this study now bind the whole program: the equal-weight universe beats the universe median by +1.78% per 20 days (skew, not skill), so every "beats the median" hit rate is inflated; and the naive fully-invested average would have flipped the champion's active return from +4.2% to −5.3% a year, so exposure-weighting is mandatory.
 
-### 7.2 Five years: **PENDING** (`ml/results/scale5y/portfolio_5y.json`)
+### 7.2 Five years (913 signal dates, 2023-01-02 to 2026-09-16; `ml/results/scale5y/portfolio_5y.json`)
 
-The paper portfolio pre-registered in the strategy study (champion liquid-tercile top decile, long-only, equal-weight benchmark, 20 bps per side) is being run over the 43-fold out-of-sample signal dates with PSR/DSR and a stated trial count. Gates 3 and 5 are decided by it. Until it lands, the ROC verdict stands at the pilot's: **no capital.**
+Same engine and costs as the pilot. **N = 177 trials was fixed in the code before any portfolio number existed**: 10 model configurations and 24 books on these folds, plus the pilot's 77 configurations and 66 portfolio cells.
+
+| Book (20 bps per side) | Annualised net | Excess vs equal-weight universe | Sharpe [95% CI] | IR [95% CI] | Max drawdown | Turnover | Months beating the universe | PSR | DSR (N = 177) |
+|---|---:|---:|---|---|---:|---:|---:|---:|---:|
+| Equal-weight universe (passive) | +19.4% | | 0.69 [−0.27, 1.80] | | −27.8% | 7% | | | |
+| Nested LightGBM, top decile | +18.7% | −0.7% | 0.73 [−0.19, 1.75] | −0.11 [−1.21, 0.96] | −27.0% | 67% | 20 / 45 | 0.42 | 0.000 |
+| Nested LightGBM, liquid top decile | +16.3% | −3.4% | 0.56 | −0.53 [−1.56, 0.45] | −29.3% | 72% | 18 / 45 | 0.16 | 0.000 |
+| LightGBM all features, top decile | +18.2% | −1.2% | 0.71 | −0.21 [−1.37, 0.94] | −27.9% | 68% | 20 / 45 | 0.35 | 0.000 |
+| **Rank ensemble, top decile** | +26.5% | **+7.0%** | 0.99 [0.06, 2.10] | **1.26 [0.32, 2.37]** | −28.9% | 70% | 33 / 45 | 0.99 | 0.163 |
+| Rank ensemble, liquid top decile (the pre-registered paper book) | +25.5% | +5.7% | 0.88 [−0.01, 1.88] | 0.85 [−0.21, 1.99] | −29.1% | 77% | 29 / 45 | 0.94 | 0.040 |
+| Rank ensemble, long-short | +16.0% | | **1.77 [0.82, 2.91]** | | −8.3% | 70% | 34 / 45 | 1.00 | **0.490** |
+| L2 logistic, top decile | +16.5% | −2.9% | 0.71 | −0.31 | −20.1% | 43% | 17 / 45 | 0.28 | 0.000 |
+| Momentum rank, top decile | +19.2% | −0.2% | 0.60 | +0.09 | −29.6% | 87% | 25 / 45 | 0.57 | 0.001 |
+
+- **Costs.** At 10 / 40 bps per side the ensemble's top-decile excess is +8.8% / +3.4% a year; nested LightGBM's is +1.0% / −4.1%.
+- **Capacity.** The full ensemble top decile carries about ₹245 crore (30% of its names trade under ₹5 crore a day); the liquid book about ₹1,050 crore.
+- **Deflation.** The expected maximum Sharpe under the null at N = 177 is 1.79 a year; every book misses it. Counting only this run's 34 trials, the ensemble long-short book's DSR would be 0.75. That book also needs shorts that NSE cash offers only on about 200 F&O names.
+- **Why the ensemble and not the classifiers.** It is close to volatility-neutral while the classifiers lean to low-volatility names (§6.3, finding 3); its excess is positive in every calendar year (+0.43% to +0.71% per 20 days) with a beta of 1.01 to the universe. It is also the best of 34 trials in this run, which is exactly what the DSR charges for.
+
+**ROC verdict: no capital.** The ensemble's economics are the one result in the program with an interval clear of zero, and they fail the multiple-testing test. The historical record cannot reach DSR 0.95 at N = 177; only a fresh, frozen paper track record can (about 4 years at IR 0.85 for PSR 95%).
 
 ---
 
@@ -261,24 +285,25 @@ The paper portfolio pre-registered in the strategy study (champion liquid-tercil
 - The signal: delivery and long momentum, AUC 0.53 to 0.54 over 43 months, above 0.50 in 81% to 86% of months, consistent with published frontier numbers.
 - Model choice: LightGBM with fixed trees on all features; it is the most stable thing in the league and nothing from deep learning, ranking losses or attention beats it.
 - Honesty: the one inflated claim was found by the program's own red team and corrected before any capital decision.
+- The ensemble's five-year economics: +7.0% a year over the universe with an interval clear of zero, positive in every year; the only book in the program with that property.
 
 **Not working**
 
-- Tradable edge: not demonstrated (pilot DSR 0.08, holdout trailed the universe); 5-year portfolio pending.
-- Pre-registered gates: 3 of 5 fail on the landed numbers (gate 1 mean-AUC vs logistic, gate 2 fold floor, gate 4 selection stability).
-- Feature selection: unstable year to year; retired in favour of all features.
+- Tradable edge: not demonstrated. No single model's long-only book beats the equal-weight universe net of costs over five years; the ensemble's does, with DSR 0.16 (0.04 for the paper book) at 177 trials.
+- Pre-registered gates: nested LightGBM 0 of 5, all-features LightGBM 0 of 5, ensemble 1 of 5.
+- Machine learning over a linear model: not shown; the logistic model's mean AUC is higher and every paired interval includes zero.
+- Feature selection: unstable year to year; buys nothing on AUC.
 - Extreme-decile economics: the top decile holds a lottery tail in down markets; book construction must change (liquidity filter, equal-weight benchmark, possibly top quintile or rank-weighted rather than top decile).
 - The linear model as a scorer: highest mean, worst tails; demoted to drift monitor.
 - Deep learning, transformers, foundation models, reinforcement learning: nothing beats trees here; stopped.
 
-**Pending (running now)**
+**Pending**
 
-- 5-year block bootstrap, regime table, rank-average ensemble, paper portfolio with DSR, gates 3 and 5, `SCALE5Y.md`.
-
-(The label study is closed: a clean end-to-end rerun reproduced all 13 of its JSON outputs with zero numeric differences and byte-identical CSVs.)
+- Nothing. Every run in the program is complete and committed. (The label study closed with a clean end-to-end rerun that reproduced all 13 of its JSON outputs with zero numeric differences.)
 
 **Unknown (cannot be decided with this data)**
 
+- Whether the ensemble's +7% a year is skill or a favourable factor mix over 45 months of one, mostly rising, market.
 - Whether delivery % is a durable signal or a 2025 artefact: its IC fell by two-thirds after March 2026; it needs the 5-year by-year test and, ideally, independent literature that does not exist.
 - Anything that needs several market cycles: market-state conditioning, seasonality, sector rotation.
 - Realistic costs in the illiquid tail: name-level spread and impact are not modelled.
@@ -287,9 +312,9 @@ The paper portfolio pre-registered in the strategy study (champion liquid-tercil
 
 ## 10. Product and monitoring specification (paper trading, no capital)
 
-**Daily job (after EOD ingest).** Ingest → feature build → score every universe name with the current LightGBM (all 52 features) and the L2 logistic monitor → write ranks, top-decile and liquid-tercile top-decile lists → paper-portfolio mark-to-market with 20 overlapping tranches at 20 bps per side → dashboard.
+**Daily job (after EOD ingest).** Ingest → feature build → score every universe name with the frozen rank ensemble, the LightGBM all-features reference and the L2 logistic monitor → write ranks and the liquid-tercile top-decile paper list → paper-portfolio mark-to-market with 20 overlapping tranches at 20 bps per side → dashboard.
 
-**Monthly job.** Retrain on the trailing 504 sessions (22-session embargo, exit-date purge), champion-challenger against the rank-average ensemble, log the trial count.
+**Monthly job.** Retrain the three ensemble members on the trailing 504 sessions (22-session embargo, exit-date purge) on the year's frozen feature set, re-selected once a year; run the LightGBM reference as champion-challenger; log the trial count (the paper book is N = 1 and stays N = 1).
 
 **Alerts (pre-registered thresholds).**
 
@@ -301,6 +326,8 @@ The paper portfolio pre-registered in the strategy study (champion liquid-tercil
 | L2 logistic coefficient sign flips, top 5 by magnitude | any flip | regime drift, cheap to compute |
 | Feature population stability index | > 0.25 on any champion feature | distribution drift (atr_pct kurtosis ≈ 13,900: tails move) |
 | Paper book active return vs equal-weight universe, trailing 6 months | IR confidence interval entirely below zero | the economics, measured the honest way |
+| Feature-inversion monitor | more than half of the features with IC against their usual sign in a month | 6 of 43 months were inversion months and every model failed in March 2026 |
+| Ensemble score correlation with `atr_pct`, per date | absolute value above 0.20 for a month | the book's edge rests on staying volatility-neutral (−0.05 as tested) |
 | Universe ETF count, split flag rate | ETFs > 0 after the exclusion rule; `flag_split_20d` > 1% | data integrity |
 
 **Dashboard.** The 43-fold AUC strip with live months appended; IC by family; paper book vs equal-weight universe with the DSR trial count; gate table; data-quality tiles (sessions, duplicates, split flags, ETFs).
@@ -311,26 +338,31 @@ The paper portfolio pre-registered in the strategy study (champion liquid-tercil
 
 ## 11. Recommendations, ranked by expected value per unit of effort
 
-1. **Finish the 5-year verdict (running).** Portfolio, DSR with an honest N, bootstrap, regime table. Decides gates 3 and 5.
-2. **Corporate-actions feed** (NSE corporate actions, splits and bonuses, ex-dates and ratios). A data-integrity item, not a feature item: it removes split artefacts from every rolling feature and from the 0.4% to 0.6% of labels the mask drops.
-3. **Paper trading from the next session** with the specification in §10. The observed edge needs about 2.8 years of live track record to reach PSR 95%; the clock only starts when the book exists.
-4. **Delivery validation at 5 years, pre-registered:** IC by year, liquidity tier and market state, orthogonalised against turnover and volatility. The strongest signal in the program has no external literature.
-5. **Name-level costs:** high-low spread estimator plus square-root impact by liquidity tier; asymmetric STT and stamp duty. This is what turns the 39 to 41 bps break-even into a real capacity number.
-6. **External data in order of mechanism strength:** sector / industry classification (industry momentum, sector-neutral ranking); index and F&O membership (shortability, inclusion pressure); fundamentals (value, profitability, accruals, earnings surprise); options-implied volatility and India VIX (the regime conditioner March 2026 called for); institutional flows; surveillance lists, SLB and pledges.
-7. **Market-state conditioning** (trailing universe momentum, drawdown, days since a sell-off), pre-registered against the full-feature baseline. Needs at least two sell-offs to test; the 5-year window has them.
-8. **Book construction research:** top quintile vs top decile, rank-weighting, turnover bands or hysteresis (Novy-Marx & Velikov: a buy/hold spread is the best cost mitigation). Deterministic, cheap, and it replaces the only thing RL was adding.
-9. **Hygiene still open:** probability of backtest overfitting across the candidate set, combinatorial purged CV for the final choice, uniqueness weights for overlapping labels.
-10. **Do not spend the next unit of effort on** transformers, foundation models, reinforcement learning, or more bhavcopy-derived feature engineering. The evidence in §5 and §6 is against all four.
+1. **Paper-trade the ensemble's liquid book as one frozen, pre-registered strategy from November 2026** with the specification in §10 and no new trials (N = 1). At IR 0.85 it needs about 4 years (994 sessions) of track record to reach PSR 95%; the clock starts only when the book exists.
+2. **Pre-registered test of volatility-neutral construction:** each classifier's score residualised on volatility and size per date, pass mark fixed in advance. The ensemble's +7% a year says this is where the money is; a deliberate construction should capture it without depending on a LambdaRank member that scores 0.503 on its own.
+3. **Corporate-actions feed** (NSE corporate actions, splits and bonuses, ex-dates and ratios). A data-integrity item, not a feature item: it removes split artefacts from every rolling feature and from the 0.4% to 0.6% of labels the mask drops.
+4. **Two A/Bs with fixed pass marks:** LightGBM on all 52 features (50 plus `amihud_20` and `deliv_value_share_20`) against the 50; and the ensemble on all 52 without yearly re-selection against the ensemble as tested.
+5. **Delivery validation, pre-registered:** IC by year, liquidity tier and market state, orthogonalised against turnover and volatility. The strongest signal in the program has no external literature.
+6. **Name-level costs:** high-low spread estimator plus square-root impact by liquidity tier; asymmetric STT and stamp duty. This is what turns the 39 to 41 bps break-even into a real capacity number.
+7. **The short side only where it exists:** long-short restricted to F&O names via stock futures, with borrow costs and 40 bps per side. The ensemble long-short book (Sharpe 1.77, DSR 0.49) is the only candidate; it is untested under those constraints.
+8. **Address the March-2026 failure mode:** market-state inputs (trailing universe momentum, drawdown, days since a sell-off) pre-registered against the full-feature baseline, plus the monthly feature-inversion monitor. Six of 43 months were inversion months; the 5-year window has enough sell-offs to test on.
+9. **External data in order of mechanism strength:** sector / industry classification (industry momentum, sector-neutral ranking); index and F&O membership (shortability, inclusion pressure); fundamentals (value, profitability, accruals, earnings surprise); options-implied volatility and India VIX (the regime conditioner); institutional flows; surveillance lists, SLB and pledges.
+10. **Book construction research:** top quintile vs top decile, rank-weighting, turnover bands or hysteresis (Novy-Marx & Velikov: a buy/hold spread is the best cost mitigation). Deterministic, cheap, and it replaces the only thing RL was adding.
+11. **Hygiene still open:** probability of backtest overfitting across the candidate set, combinatorial purged CV for the final choice, uniqueness weights for overlapping labels, history before 2021.
+12. **Do not spend the next unit of effort on** transformers, foundation models, reinforcement learning, or more bhavcopy-derived feature engineering. The evidence in §5 and §6 is against all four.
 
 ---
 
 ## 12. What this program does not claim
 
-- It does not claim a tradable edge. The strategy study's DSR is 0.08 and three of five pre-registered gates fail.
+- It does not claim a tradable edge. No model passes more than one of five pre-registered gates, and the best Deflated Sharpe in the program is 0.49, for a long-short book that cannot be traded as tested.
+- It does not claim that machine learning beats a linear model on this problem; the logistic benchmark's mean AUC is higher and every paired interval includes zero.
+- It does not claim that the ensemble's +7% a year over the universe is skill rather than a favourable volatility-factor mix over 45 months of one, mostly rising, market.
+- It does not claim that any model is reliable month to month: the single-model candidates fall below 0.50 in 6 to 9 of 43 months, and every candidate did in March 2026.
 - It does not claim the delivery signal is durable. Its IC fell by two-thirds after one regime break and there is no external literature.
 - It does not claim the 2023 fold results are representative: those models trained on 2 to 12 months of data.
 - It does not claim the 2026 folds are fully out-of-sample for the LightGBM configuration, which was tuned on them in the pilot.
-- It does not claim that AUC differences of 0.01 between models are decidable on these samples; the paired block bootstrap (pending) sets the resolution.
+- It does not claim that AUC differences of 0.01 between models are decidable on these samples: the paired block-bootstrap intervals are about ±0.005 to ±0.015 wide.
 - It does not claim realistic costs for the illiquid tail or for any short book.
 
 ---
@@ -363,4 +395,4 @@ Seed 108 everywhere; OMP_NUM_THREADS=2 on the shared 4-core box.
 
 ## Appendix B. Trial ledger (for Deflated Sharpe and best-of-N accounting)
 
-Pilot primary task: 38 full-protocol configurations, 151 including hyper-parameter and univariate screens (`AUDIT.md` T7). Strategy grid: 96 trials (60 scorer × basket cells, 6 diagnostics, 30 program configurations). SOTA study: 12 configurations. Feature A/Bs: 5 + 6 variants. Label study: 7 model-level runs, 1,106 feature-label hypotheses. Five-year run: 6 model configurations landed, 4 more in the ensemble stage (**PENDING** final count in `portfolio_5y.json`).
+Pilot primary task: 38 full-protocol configurations, 151 including hyper-parameter and univariate screens (`AUDIT.md` T7). Strategy grid: 96 trials (60 scorer × basket cells, 6 diagnostics, 30 program configurations). SOTA study: 12 configurations. Feature A/Bs: 5 + 6 variants. Label study: 7 model-level runs, 1,106 feature-label hypotheses. Five-year run: N = 177, fixed in the code before any portfolio number existed: 10 model configurations and 24 books on the 43 folds, plus the pilot's 77 configurations and 66 portfolio cells (`portfolio_5y.json`). The paper book from November 2026 is N = 1 and must stay N = 1.

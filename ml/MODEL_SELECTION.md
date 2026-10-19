@@ -114,6 +114,15 @@ respect and confirms it in another.
   0.453, its month-to-month spread is 1.4 times larger, and its holdout
   decile spread is −3.6% against −0.6%. It stays the drift monitor, not a
   scorer.
+- **Superseded: the scorer for paper trading.** No single model's long-only
+  top decile beats the equal-weight universe (+19.4%/yr) net of 20 bps over
+  913 signal dates; nested LightGBM trails it by 0.7%/yr. The pre-registered
+  rank ensemble (LightGBM + LambdaRank + CatBoost) is the one book with
+  economics, +7.0%/yr over the universe (IR 1.26, CI [0.32, 2.37], positive
+  every year), but with DSR 0.16 at N = 177 (0.04 for the liquid paper
+  book) it passes only 1 of the 5 pre-registered gates. It is paper-traded
+  as one frozen strategy; nothing is promoted to capital. LightGBM on all
+  features stays the single-model reference.
 - **Confirmed: RL, the RNNs and the MLP stay out.** The SOTA study added the
   transformers, DLinear and the ranking losses to the dropped list; at 5 years
   LambdaRank scores 0.503 and is above 0.50 in 58% of months.
