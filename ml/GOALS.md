@@ -9,10 +9,10 @@ The question from management is "how good does the model have to be?". The answe
 | Measure (five-year walk-forward, 43 monthly folds, 2023-01 to 2026-07) | Value | Source |
 |---|---|---|
 | AUC, LightGBM on all features / nested selection | 0.5366 / 0.5359, 95% block-bootstrap CI [0.5250, 0.5483] | `scale5y_summary.json` |
-| Rank IC per date, nested LightGBM | +0.066, Newey-West t 6.0, positive in 38 of 43 months | `SCALE5Y.md` |
+| Rank IC per date, nested LightGBM | +0.065, Newey-West t 6.0, positive in 38 of 43 months | `SCALE5Y.md` |
 | Months with AUC ≥ 0.50 | 86% (nested LightGBM), 91% (rank ensemble) | `SCALE5Y.md` |
 | Worst month | 0.431 (March 2026 rebound); every model below 0.50 that month | `regimes_5y.md` |
-| Directional hit rate implied by rank IC 0.066 | about 52.1% (Sheppard: ½ + arcsin(IC)/π); the AUC of 0.536 gives Somers' D 0.073 | arithmetic |
+| Directional hit rate implied by rank IC 0.065 | about 52.1% (Sheppard: ½ + arcsin(IC)/π); the AUC of 0.536 gives Somers' D 0.073 | arithmetic |
 | IC stability (per-month mean/sd) | about 0.9 from the Newey-West t of 6.0 over 43 months; about 1.3 implied by the ensemble's 91% of months above 0.50 | arithmetic |
 | Long-only top decile vs equal-weight universe, net 20 bps | single models −0.7% to −3.4% a year; rank ensemble +7.0% a year, IR 1.26 [0.32, 2.37] | `portfolio_5y.json` |
 | Deflated Sharpe, N = 177 trials | 0.000 (LightGBM books), 0.163 (ensemble top decile), 0.040 (ensemble liquid book), 0.490 (ensemble long-short) | `portfolio_5y.json` |
@@ -29,7 +29,7 @@ A model is worth studying further when its ranking of stocks is distinguishable 
 | Criterion | Threshold | SuryaDhana | External anchor |
 |---|---|---|---|
 | AUC on a cross-sectional relative-return label | block-bootstrap 95% CI excludes 0.50 over ≥ 36 monthly folds | 0.5359 [0.5250, 0.5483] over 43 folds: met | Published frontier: GKX neural nets imply forecast-return correlation ≈ 0.06; Qlib LightGBM IC 0.045 on CSI300 |
-| Rank IC per date | mean ≥ 0.03 with Newey-West t ≥ 3 | +0.066, t 6.0: met | MSCI Barra (Gleiser and McKenna 2010): "many portfolio managers would view a 'good' IC as 0.05 and a 'very good' IC as 0.10"; the M6 organisers' tiers are 0.05 moderate, 0.10 good, 0.15 exceptional; Quantopian's community bar for keeping a factor was mean IC above 0.01 at p < 0.05 |
+| Rank IC per date | mean ≥ 0.03 with Newey-West t ≥ 3 | +0.065, t 6.0: met | MSCI Barra (Gleiser and McKenna 2010): "many portfolio managers would view a 'good' IC as 0.05 and a 'very good' IC as 0.10"; the M6 organisers' tiers are 0.05 moderate, 0.10 good, 0.15 exceptional; Quantopian's community bar for keeping a factor was mean IC above 0.01 at p < 0.05 |
 | Null and leakage tests | label-permutation null 0.500 ± 0.001; features and labels recompute exactly; point-in-time universe | all pass (`AUDIT.md`) | An IC of 0.05 implies a 51.6% hit rate and 0.10 implies 53.2%, so a claimed daily directional accuracy far above 55% implies IC above 0.15 and is a leakage warning first. The online examples are all price-level fits or leaks: a 1.36-million-view tutorial's "near-perfect" LSTM, Kaggle notebooks titled "99% accuracy" and "0.99 R²", an LSTM scoring R² 0.89 on a pure random walk, 87.6% direction on about 15 test days, 98% training accuracy from label leakage |
 | Not one regime | mean AUC > 0.50 with the best six-month run and the worst month removed | 0.5267 over the other 36 months: met, narrowly | |
 | Honest selection | features and hyper-parameters chosen inside the training window | nested selection used; hyper-parameters fixed on 2026-04..07 (4 of 43 folds contaminated) | de Prado: no more than about 45 independent configurations on five years of data |
@@ -71,11 +71,11 @@ Capital follows a track record the model did not get to choose. The deflated and
 
 ## Position on the external ladder
 
-The community research derived a five-rung ladder from live competitions, allocator platforms and industry rules of thumb (`COMMUNITY_CALIBRATION.md` §3). On it, SuryaDhana's single models are rung 1 (a real factor whose long-only book does not beat equal weight) and the rank ensemble is rung 2 (a good model that earns a paper book: IC 0.066, stability about 1.3, IR 1.26 with an interval clear of zero, beats equal weight and the momentum baseline over 45 months). Rung 3, allocatable, needs a factor-neutralised IC of at least 0.05, a five-year Sharpe above 1.25, PSR(SR > 1) of 80%, DSR 0.95 and a live record; none of these is in hand. That is the same answer the stages above give.
+The community research derived a five-rung ladder from live competitions, allocator platforms and industry rules of thumb (`COMMUNITY_CALIBRATION.md` §3). On it, SuryaDhana's single models are rung 1 (a real factor whose long-only book does not beat equal weight) and the rank ensemble is rung 2 (a good model that earns a paper book: IC 0.065, stability about 1.3, IR 1.26 with an interval clear of zero, beats equal weight and the momentum baseline over 45 months). Rung 3, allocatable, needs a factor-neutralised IC of at least 0.05, a five-year Sharpe above 1.25, PSR(SR > 1) of 80%, DSR 0.95 and a live record; none of these is in hand. That is the same answer the stages above give.
 
 ## What "good enough" means in plain words
 
-- **To keep researching:** the model must beat chance in a way the red team cannot break. SuryaDhana does: AUC 0.536, rank IC 0.066, clean audit. That is the size of edge the published frontier finds, and it is small.
+- **To keep researching:** the model must beat chance in a way the red team cannot break. SuryaDhana does: AUC 0.536, rank IC 0.065, clean audit. That is the size of edge the published frontier finds, and it is small.
 - **To paper-trade:** a frozen book must beat holding the whole universe equally weighted, after costs, with an interval clear of zero. One configuration does, the rank ensemble, by about 7% a year over 45 months. Every single model fails this.
 - **For capital:** the book must prove itself on time it did not choose. Four years of paper track record at the observed information ratio, or less if the edge is larger live. Nothing in the program has this yet, and no amount of further backtesting can supply it.
 - **What would make the bar lower:** nothing legitimate. A higher information coefficient per bet (better features, external data) or more independent bets per year (breadth, a shorter horizon only if costs allow) shortens the time to proof; they do not change the proof required.

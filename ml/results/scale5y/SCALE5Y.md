@@ -7,7 +7,7 @@
 
 **No model is promoted.** On the five pre-registered gates, nested_lgbm passes 0, all51 passes 0 and nested_ensemble_rank passes 1.
 
-- **The signal is real and small.** Honest nested LightGBM scores CV AUC **0.5359** over 43 monthly folds (20-session block-bootstrap 95% CI [0.5250, 0.5483]). Its rank-IC is +0.066 (Newey–West t 6.0, positive in 38 of 43 months).
+- **The signal is real and small.** Honest nested LightGBM scores CV AUC **0.5359** over 43 monthly folds (20-session block-bootstrap 95% CI [0.5250, 0.5483]). Its rank-IC is +0.065 (Newey–West t 6.0, positive in 38 of 43 months).
 - **The clean figure is the 39-fold mean.** The configuration was fixed on Apr–Jul 2026, so the folds from 2023-01 to 2026-03 are the only ones it never saw. There it scores 0.5364.
 - **It is no better than the simpler alternatives.** LightGBM on all 50 features scores 0.5366 (Δ −0.0007, CI [−0.0052, +0.0038]). An L2 logistic scores 0.5415 (Δ −0.0056, CI [−0.0150, +0.0024]).
 - **No single machine-learning model's long-only book beats the equal-weight (EW) universe** net of 20 bps. The nested_lgbm top decile trails it by 0.7%/yr and beats it in only 20 of 45 months. Only the one-feature momentum baselines' liquid books edge out EW-liquid (+1.5% to +2.0%/yr, IR ≤ 0.26, CIs spanning zero).
