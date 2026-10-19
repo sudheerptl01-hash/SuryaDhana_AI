@@ -92,3 +92,7 @@ Gates re-scored for any candidate; trial ledger updated to N = 238; `ml/PROGRAM_
 - An A/B passing its pass mark would be the first evidence in this program that information outside the bhavcopy adds to the signal; it would still have to pass the gates.
 - Eight years of folds showing the Stage-0 criteria hold outside the 2025-09..2026-02 episode would move the proof from one regime to several.
 - None of these can supply a live track record. Stage 2 is still decided by the paper book.
+
+## 5. Amendments (each dated, each before its result existed)
+
+- **A1, 2026-10-19 13:00. AB0: LightGBM on 52 features against the 50-feature `all51` on the frozen v1 data.** `ml/PROGRAM_REPORT.md` §11 item 4 queued this A/B; running it on v1 isolates the two sufficiency features from the data fixes of P1. Pass mark: the primary mark of P3 with the sign reversed (52 beats 50 by ≥ +0.003 CV-mean AUC with the paired block-bootstrap 95% CI excluding zero). One configuration: **N = 239**.

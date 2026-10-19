@@ -25,3 +25,5 @@ ml/data_10y/
 ml/results/improve/cache/
 ml/results/improve/*/cache/
 ml/results/improve/*/preds/
+ml/results/improve/**/preds/
+ml/results/improve/**/cache/
