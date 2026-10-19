@@ -12,7 +12,8 @@ The question from management is "how good does the model have to be?". The answe
 | Rank IC per date, nested LightGBM | +0.066, Newey-West t 6.0, positive in 38 of 43 months | `SCALE5Y.md` |
 | Months with AUC ≥ 0.50 | 86% (nested LightGBM), 91% (rank ensemble) | `SCALE5Y.md` |
 | Worst month | 0.431 (March 2026 rebound); every model below 0.50 that month | `regimes_5y.md` |
-| Directional hit rate implied by AUC 0.536 | about 52% | arithmetic |
+| Directional hit rate implied by rank IC 0.066 | about 52.1% (Sheppard: ½ + arcsin(IC)/π); the AUC of 0.536 gives Somers' D 0.073 | arithmetic |
+| IC stability (per-month mean/sd) | about 0.9 from the Newey-West t of 6.0 over 43 months; about 1.3 implied by the ensemble's 91% of months above 0.50 | arithmetic |
 | Long-only top decile vs equal-weight universe, net 20 bps | single models −0.7% to −3.4% a year; rank ensemble +7.0% a year, IR 1.26 [0.32, 2.37] | `portfolio_5y.json` |
 | Deflated Sharpe, N = 177 trials | 0.000 (LightGBM books), 0.163 (ensemble top decile), 0.040 (ensemble liquid book), 0.490 (ensemble long-short) | `portfolio_5y.json` |
 | Pre-registered gates passed | 0 of 5 (LightGBM), 1 of 5 (ensemble) | `SCALE_UP.md` |
@@ -28,8 +29,8 @@ A model is worth studying further when its ranking of stocks is distinguishable 
 | Criterion | Threshold | SuryaDhana | External anchor |
 |---|---|---|---|
 | AUC on a cross-sectional relative-return label | block-bootstrap 95% CI excludes 0.50 over ≥ 36 monthly folds | 0.5359 [0.5250, 0.5483] over 43 folds: met | Published frontier: GKX neural nets imply forecast-return correlation ≈ 0.06; Qlib LightGBM IC 0.045 on CSI300 |
-| Rank IC per date | mean ≥ 0.03 with Newey-West t ≥ 3 | +0.066, t 6.0: met | Grinold and Kahn: IC 0.05 "good", 0.10 "exceptional" *[research: exact quote and page]* |
-| Null and leakage tests | label-permutation null 0.500 ± 0.001; features and labels recompute exactly; point-in-time universe | all pass (`AUDIT.md`) | Practitioner rule: a claimed accuracy far above 55% signals leakage *[research]* |
+| Rank IC per date | mean ≥ 0.03 with Newey-West t ≥ 3 | +0.066, t 6.0: met | MSCI Barra (Gleiser and McKenna 2010): "many portfolio managers would view a 'good' IC as 0.05 and a 'very good' IC as 0.10"; the M6 organisers' tiers are 0.05 moderate, 0.10 good, 0.15 exceptional; Quantopian's community bar for keeping a factor was mean IC above 0.01 at p < 0.05 |
+| Null and leakage tests | label-permutation null 0.500 ± 0.001; features and labels recompute exactly; point-in-time universe | all pass (`AUDIT.md`) | An IC of 0.05 implies a 51.6% hit rate and 0.10 implies 53.2%, so a claimed daily directional accuracy far above 55% implies IC above 0.15 and is a leakage warning first *[research A/B: the online examples]* |
 | Not one regime | mean AUC > 0.50 with the best six-month run and the worst month removed | 0.5267 over the other 36 months: met, narrowly | |
 | Honest selection | features and hyper-parameters chosen inside the training window | nested selection used; hyper-parameters fixed on 2026-04..07 (4 of 43 folds contaminated) | de Prado: no more than about 45 independent configurations on five years of data |
 
@@ -39,12 +40,12 @@ A model earns a frozen paper book when a pre-registered portfolio built from it 
 
 | Criterion | Threshold | SuryaDhana | External anchor |
 |---|---|---|---|
-| Net excess over the equal-weight universe | 95% month-block CI excludes zero over ≥ 36 months, costs ≥ 20 bps per side | ensemble top decile +7.0% a year, IR 1.26 [0.32, 2.37]: met; every single model: not met | Quantopian allocation criteria and WorldQuant BRAIN thresholds *[research]* |
-| Fold floor | AUC ≥ 0.50 in ≥ 90% of months | ensemble 91%: met; LightGBM 86%: not met | |
+| Net excess over the equal-weight universe | 95% month-block CI excludes zero over ≥ 36 months, costs ≥ 20 bps per side | ensemble top decile +7.0% a year, IR 1.26 [0.32, 2.37]: met; every single model: not met | Microsoft Qlib's reference LightGBM earns 9.0% a year excess at IR 1.02 net of 5/15 bps on CSI300; Quantopian's community called "a Q Sharpe of 1 and above … a good candidate"; in the live M6 competition only 28.8% of 163 teams beat the equal-weight portfolio over 12 months and none did in every month |
+| Fold floor | AUC ≥ 0.50 in ≥ 90% of months | ensemble 91%: met; LightGBM 86%: not met | Numerai: a live participant's per-era correlation Sharpe 1.32, Numerai's own example model 2 on validation; 91% of months above 0.50 implies a per-month mean/sd of about 1.3 |
 | Capacity | ≥ ₹500 crore at 5% of 20-day ADV for the liquid book | ≈ ₹1,050 crore: met | |
 | Cost headroom | break-even cost per side ≥ 2 × realistic cost (15 to 25 bps) | ensemble excess still +3.4% a year at 40 bps: met | India statutory charges ≈ 11 bps per side; realistic liquid-name total 15 to 25 bps |
 | Frozen specification | features, model, book rule, rebalance and costs written down; trial count N = 1 thereafter | written in `SCALE5Y.md` and `PROGRAM_REPORT.md` §10: met | |
-| Monitoring live | delivery IC, fold floor, inversion monitor, drift, PSI, paper IR | specified, not yet running | |
+| Monitoring live | delivery IC, fold floor, inversion monitor, drift, PSI, paper IR | specified, not yet running | Quantopian and QuantConnect both treated six months out of sample as the minimum observation period (QuantConnect weights a strategy by days live over 180) |
 
 ### Stage 2: small-capital eligibility (status: **not met**)
 
@@ -52,8 +53,8 @@ Capital follows a track record the model did not get to choose. The deflated and
 
 | Criterion | Threshold | SuryaDhana | External anchor |
 |---|---|---|---|
-| Probabilistic Sharpe of the frozen paper book | PSR ≥ 0.95 against SR* = 0, on the live record alone | needs about 4 years at IR 0.85 (994 sessions); shorter if the live IR is higher | Bailey and López de Prado; the pilot needed 705 sessions at IR 0.99 |
-| Deflated Sharpe | DSR ≥ 0.95 with the full trial ledger | 0.04 to 0.49 on the historical record: not met | WorldQuant BRAIN: Sharpe > 1.25 after their costs *[research: exact criteria]* |
+| Probabilistic Sharpe of the frozen paper book | PSR ≥ 0.95 against SR* = 0, on the live record alone | needs about 4 years at IR 0.85 (994 sessions); shorter if the live IR is higher | QuantConnect Alpha Streams required PSR(true Sharpe > 1) ≥ 80%, and only 9 of 280 strategies (3.2%) passed; Quantopian found in-sample Sharpe explained out-of-sample Sharpe with R² below 0.025 across 888 algorithms |
+| Deflated Sharpe | DSR ≥ 0.95 with the full trial ledger | 0.04 to 0.49 on the historical record: not met | WorldQuant BRAIN (third-party sources): 5-year Sharpe > 1.25, fitness > 1, daily turnover 1% to 70%; de Prado's worked example: Sharpe 2.5 over 5 years with 100 trials gives DSR 0.90 |
 | Consistency | excess over the universe positive in ≥ 60% of months; relative drawdown ≤ 10% | historical ensemble: 33 of 45 months (73%) | |
 | Monitors | no alarm in the trailing 12 months (delivery IC, inversion, drift, atr_pct neutrality) | not yet running | |
 | Data integrity | corporate-action-adjusted prices; ETF exclusion; name-level costs | not done | |
@@ -63,7 +64,7 @@ Capital follows a track record the model did not get to choose. The deflated and
 
 | Criterion | Threshold | External anchor |
 |---|---|---|
-| Live Sharpe after all costs | ≥ 1.0 over ≥ 3 years, DSR ≥ 0.95 | Numerai, WorldQuant and Kaggle finance competitions: typical winning correlations and Sharpes *[research]* |
+| Live Sharpe after all costs | ≥ 1.0 over ≥ 3 years, DSR ≥ 0.95 | Numerai One reported Sharpe 2.75 for 2024 from a meta-model of thousands of signals; Medallion's edge was a 50.75% hit rate over millions of trades; the JPX Kaggle winner's gross Sharpe of 5.96 over three months is within the luck range of 2,033 entrants, so a short record proves nothing at any Sharpe |
 | Capacity | ≥ ₹1,000 crore with name-level impact modelled | |
 | Short side | F&O-restricted long-short validated with borrow and 40 bps | |
 | Independent data | at least one external feed (corporate actions, sector, F&O membership) in production | |
