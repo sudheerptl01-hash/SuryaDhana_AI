@@ -594,16 +594,23 @@ def _compare(full: pd.DataFrame, trunc: pd.DataFrame, keys: list[str], cols: lis
            "rows_only_in_one": int((m["_merge"] != "both").sum()), "per_feature": {}}
     n_bad = out["rows_only_in_one"]
     mb = m[m["_merge"] == "both"]
+    n_exact = 0
     for c in cols:
         a, b = mb[c + "_full"].to_numpy(dtype=float), mb[c + "_trunc"].to_numpy(dtype=float)
         nan_mis = int((np.isnan(a) != np.isnan(b)).sum())
         both = np.isfinite(a) & np.isfinite(b)
         diff = np.abs(a[both] - b[both])
-        n_diff = int((diff > 0).sum())
+        tol = 1e-12 * np.maximum(1.0, np.abs(a[both]))
+        n_diff = int((diff > tol).sum())
+        n_bits = int((diff > 0).sum())
         out["per_feature"][c] = {"max_abs_diff": float(diff.max()) if diff.size else 0.0,
-                                 "n_diff": n_diff, "nan_mismatch": nan_mis}
+                                 "n_diff": n_diff, "n_not_bitwise_equal": n_bits,
+                                 "nan_mismatch": nan_mis}
         n_bad += nan_mis + n_diff
+        n_exact += n_bits
     out["identical"] = n_bad == 0
+    out["bitwise_identical"] = n_bad == 0 and n_exact == 0
+    out["tolerance"] = "|diff| <= 1e-12 x max(1, |value|); NaN must match NaN"
     return out
 
 

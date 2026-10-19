@@ -182,16 +182,22 @@ def _ext_series_on_eod(ser: pd.Series, eod_dates: pd.DatetimeIndex, amap: dict) 
 
 def market_state(base: pd.DataFrame, etf: set, idx: pd.DataFrame, part: pd.DataFrame
                  ) -> tuple[pd.DataFrame, dict]:
-    b = base[~base["ticker"].isin(etf)]
+    b = base[~base["ticker"].isin(etf)].copy()   # sorted (ticker, date)
     dates = pd.DatetimeIndex(sorted(base["date"].unique()))
-    R = b.pivot(index="date", columns="ticker", values="ret_1d").reindex(dates)
-    U = (b.pivot(index="date", columns="ticker", values="universe").reindex(dates)
-         .fillna(False).astype(bool))
-    Uprev = U.shift(1, fill_value=False)
-    valid = Uprev & R.notna() & (R.abs() <= SPLIT_MOVE)
-    r = R.where(valid).mean(axis=1)
-    n_members = valid.sum(axis=1)
-    n_excluded = (Uprev & R.notna() & (R.abs() > SPLIT_MOVE)).sum(axis=1)
+    # member at t-1 = in the universe on the previous EOD session (the
+    # ticker's previous row must be that session). The mean is a group mean on
+    # the long frame (rows in ticker order), so it is bit-for-bit identical
+    # whatever later tickers or dates exist in the input.
+    prev_session = pd.Series(dates[:-1], index=dates[1:])
+    g = b.groupby("ticker", sort=False)
+    prev_row_date = g["date"].shift(1)
+    u_prev = (g["universe"].shift(1).fillna(False).astype(bool)
+              & (prev_row_date == b["date"].map(prev_session)))
+    ok = u_prev & b["ret_1d"].notna()
+    valid = ok & (b["ret_1d"].abs() <= SPLIT_MOVE)
+    r = b.loc[valid].groupby("date")["ret_1d"].mean().reindex(dates)
+    n_members = valid.groupby(b["date"]).sum().reindex(dates).fillna(0).astype(int)
+    n_excluded = (ok & ~valid).groupby(b["date"]).sum().reindex(dates).fillna(0)
     r[n_members == 0] = np.nan
     lr = np.log1p(r)
     ms = pd.DataFrame(index=dates)
