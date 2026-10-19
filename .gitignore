@@ -12,3 +12,4 @@ nse_market.duckdb*
 # ML evaluation artifacts
 ml/data/
 ml/results/preds/
+ml/data_5y/

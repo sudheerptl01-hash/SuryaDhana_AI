@@ -85,7 +85,15 @@ def _fwd_window_max(s: pd.Series, w: int) -> pd.Series:
 
 
 def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
-                  rebuild_features: bool = True) -> dict:
+                  rebuild_features: bool = True,
+                  dataset_start: str = DATASET_START,
+                  fold_months: list[tuple[int, int]] | None = None,
+                  holdout_start: str = "2026-08-01",
+                  out_dir: Path = DATA_DIR) -> dict:
+    """Build the modeling dataset. Defaults reproduce the pilot (6-month window);
+    the 5-year run passes an earlier start, a long list of monthly folds and its
+    own out_dir so the pilot artifacts stay intact."""
+    out_dir = Path(out_dir)
     import duckdb
     import nse_historical_ingest as nhi
 
@@ -151,7 +159,7 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
     # ---- point-in-time universe filter --------------------------------------
     med_turn = g["turnover"].transform(lambda s: s.rolling(20, min_periods=10).median())
     universe = (df["close"] >= MIN_PRICE) & (med_turn >= MIN_MED_TURNOVER)
-    df = df[universe & (df["date"] >= DATASET_START)].copy()
+    df = df[universe & (df["date"] >= dataset_start)].copy()
     print(f"after universe filter: {len(df):,} rows, {df['ticker'].nunique():,} tickers")
 
     # ---- cross-sectional pieces (computed on the universe only) -------------
@@ -212,8 +220,10 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
                 "test_start": str(test_start.date()),
                 "test_end": str(min(test_end, last_labeled).date())}
 
-    folds = [f for f in (month_fold(2026, m) for m in (4, 5, 6, 7)) if f]
-    ho_start = pd.Timestamp("2026-08-01")
+    if fold_months is None:
+        fold_months = [(2026, m) for m in (4, 5, 6, 7)]
+    folds = [f for f in (month_fold(y, m) for y, m in fold_months) if f]
+    ho_start = pd.Timestamp(holdout_start)
     pos = dates.get_loc(dates[dates >= ho_start][0])
     holdout = {"name": "holdout",
                "train_end": str(dates[pos - EMBARGO_SESSIONS].date()),
@@ -225,9 +235,9 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
               "note": "train = labeled rows with date <= train_end; "
                       "embargo covers the 20-session forward label window"}
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    out.to_parquet(DATA_DIR / "model_dataset.parquet", index=False)
-    (DATA_DIR / "splits.json").write_text(json.dumps(splits, indent=1))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out.to_parquet(out_dir / "model_dataset.parquet", index=False)
+    (out_dir / "splits.json").write_text(json.dumps(splits, indent=1))
 
     manifest = {
         "built_at": datetime.now().isoformat(timespec="seconds"),
@@ -251,7 +261,7 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
                       "split-contaminated 20d labels; carry/announcement features need "
                       "F&O/announcement feeds not present in this repo",
     }
-    (DATA_DIR / "manifest.json").write_text(json.dumps(manifest, indent=1))
+    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=1))
     print(json.dumps({k: manifest[k] for k in
                       ("rows", "tickers", "date_min", "date_max", "label_balance")}, indent=1))
     return manifest
