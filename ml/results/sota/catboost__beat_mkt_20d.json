@@ -228,7 +228,7 @@
   "n_dates": 30
  },
  "train_seconds": 92.1,
- "notes": "CatBoostClassifier(depth 6, lr 0.05, <=600 iterations, l2 5, seed 108, 2 threads) on 10 features (harness 'raw' preprocessing). Tree count chosen by early stopping (inner-val AUC, od_wait 50) on the last 15% of train ROWS (time-ordered; 20 sessions before it purged from the inner-fit set), then refit on ALL train rows with that tree count. (A first run that early-stopped on Logloss collapsed to 0-1 trees on 4/5 folds because the inner-val tails straddle the March-2026 regime break; it is kept as catboost_es_logloss.)",
+ "notes": "CatBoostClassifier(depth 6, lr 0.05, <=600 iterations, l2 5, seed 108, 2 threads) on 10 features (harness 'raw' preprocessing). Tree count chosen by early stopping (inner-val AUC, od_wait 50) on the last 15% of train ROWS (time-ordered; 20 sessions before it purged from the inner-fit set), then refit on ALL train rows with that tree count. (A first run that early-stopped on Logloss collapsed to 0-1 trees on 4/5 folds because the inner-val tails straddle the March-2026 regime break; it is kept as catboost_es_logloss.) INTERPRETATION: Does not beat the champion: CV 0.5260, April 0.4938. Early stopping on the time-ordered inner tail chose 43/79/0/186/5 trees: on folds whose inner-val window sits on the March-2026 break (val AUC never above 0.48/0.44) the protocol shuts the model down, while where it allowed 186 trees (July) CatBoost scored 0.545 vs the champion's 0.543. The shortfall is the early-stopping protocol under a regime break as much as the algorithm -- see catboost_fixed600.",
  "score_kind": "probability",
  "train_seconds_per_fold_mean": 18.4,
  "cv_worst_fold_auc": 0.4937600507553889,

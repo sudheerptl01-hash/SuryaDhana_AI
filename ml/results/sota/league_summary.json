@@ -161,6 +161,32 @@
    "passes": false
   },
   {
+   "model": "cs_transformer",
+   "family": "sota",
+   "n_features": 10,
+   "cv_auc_mean": 0.5197,
+   "cv_auc_std": 0.0348,
+   "worst_fold": 0.4926,
+   "fold_aucs": {
+    "2026-04": 0.4932,
+    "2026-05": 0.4926,
+    "2026-06": 0.515,
+    "2026-07": 0.5778
+   },
+   "holdout_auc": 0.501,
+   "holdout_decile_spread": -0.0042,
+   "holdout_top_decile_fwd": 0.0041,
+   "cv_decile_spread_mean": -0.0006,
+   "rank_ic_cv_mean": 0.0268,
+   "rank_ic_cv_t_naive": 1.87,
+   "rank_ic_cv_t_nw19": 0.7,
+   "rank_ic_holdout_mean": -0.0143,
+   "rank_ic_holdout_t_naive": -3.87,
+   "train_s_per_fold": 595.2,
+   "delta_cv_vs_champion": -0.0117,
+   "passes": false
+  },
+  {
    "model": "catboost_f51",
    "family": "sota",
    "n_features": 51,
@@ -262,6 +288,32 @@
    "rank_ic_holdout_t_naive": -15.84,
    "train_s_per_fold": 334.0,
    "delta_cv_vs_champion": -0.0171,
+   "passes": false
+  },
+  {
+   "model": "dlinear",
+   "family": "sota",
+   "n_features": 14,
+   "cv_auc_mean": 0.5103,
+   "cv_auc_std": 0.0394,
+   "worst_fold": 0.4568,
+   "fold_aucs": {
+    "2026-04": 0.4568,
+    "2026-05": 0.5177,
+    "2026-06": 0.5002,
+    "2026-07": 0.5667
+   },
+   "holdout_auc": 0.4605,
+   "holdout_decile_spread": -0.0423,
+   "holdout_top_decile_fwd": 0.0058,
+   "cv_decile_spread_mean": -0.0034,
+   "rank_ic_cv_mean": 0.0155,
+   "rank_ic_cv_t_naive": 1.09,
+   "rank_ic_cv_t_nw19": 0.41,
+   "rank_ic_holdout_mean": -0.093,
+   "rank_ic_holdout_t_naive": -11.54,
+   "train_s_per_fold": 72.1,
+   "delta_cv_vs_champion": -0.0211,
    "passes": false
   }
  ]

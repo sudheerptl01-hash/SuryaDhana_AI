@@ -199,7 +199,7 @@
   "n_dates": 30
  },
  "train_seconds": 58.4,
- "notes": "LGBMRegressor(objective=huber, alpha=0.9) with the champion's tree hyper-parameters on y_excess_20d clipped to +/-0.30; score = predicted excess return. In LightGBM alpha is the Huber delta: with |target| <= 0.30 every residual is far inside 0.9, so this is effectively least squares on the clipped target. Brier/acc not meaningful (score is a return forecast, not a probability).",
+ "notes": "LGBMRegressor(objective=huber, alpha=0.9) with the champion's tree hyper-parameters on y_excess_20d clipped to +/-0.30; score = predicted excess return. In LightGBM alpha is the Huber delta: with |target| <= 0.30 every residual is far inside 0.9, so this is effectively least squares on the clipped target. Brier/acc not meaningful (score is a return forecast, not a probability). INTERPRETATION: Does not beat the champion on the mean (CV 0.5223, -0.009) but is the most stable model in the study: CV std 0.007, worst fold 0.513, all five windows >= 0.51. With alpha=0.9 above the +/-0.30 clip it is least squares on the clipped excess return, so it weights stocks by return magnitude rather than by the median crossing; its rank-IC t (NW 3.27) equals the champion's (3.26) while its AUC is lower -- it is a return forecaster, not a better classifier.",
  "score_kind": "regression",
  "train_seconds_per_fold_mean": 11.7,
  "cv_worst_fold_auc": 0.5128164907774186,

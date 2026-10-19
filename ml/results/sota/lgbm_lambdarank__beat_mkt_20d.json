@@ -204,7 +204,7 @@
   "n_dates": 30
  },
  "train_seconds": 280.1,
- "notes": "LGBMRanker(objective=lambdarank) with the champion's tree hyper-parameters; query group = one date (rows date-sorted); relevance = floor(10*y_rank_20d) clipped to 0..9. LightGBM ranking defaults kept (label_gain 2^g-1, lambdarank_truncation_level=30, so the gradient concentrates on the top ~30 names per date). Score = raw ranker output: AUC, decile spread and rank-IC are valid; Brier and acc@0.5 are NOT meaningful for a non-probability score.",
+ "notes": "LGBMRanker(objective=lambdarank) with the champion's tree hyper-parameters; query group = one date (rows date-sorted); relevance = floor(10*y_rank_20d) clipped to 0..9. LightGBM ranking defaults kept (label_gain 2^g-1, lambdarank_truncation_level=30, so the gradient concentrates on the top ~30 names per date). Score = raw ranker output: AUC, decile spread and rank-IC are valid; Brier and acc@0.5 are NOT meaningful for a non-probability score. INTERPRETATION: Does not beat the champion: CV 0.5293 (-0.002) and July 0.4967 < 0.50. The 2^g-1 gains on 10 return grades make the ranker chase the top decile of 20-day returns, which is dominated by volatile names: its score has per-date Spearman +0.66 with atr_pct (champion +0.03), so its fold pattern follows the sign of the volatility factor (IC +0.095 Apr, -0.059 Jul, +0.10 holdout) rather than stock-specific skill; the 0.566 holdout / +6.0% spread is that vol-friendly window, not evidence. It is the most diverse partner for the champion (per-date rank corr 0.26), which is what the ensemble exploits.",
  "score_kind": "ranker_raw",
  "train_seconds_per_fold_mean": 56.0,
  "cv_worst_fold_auc": 0.49673707956668445,

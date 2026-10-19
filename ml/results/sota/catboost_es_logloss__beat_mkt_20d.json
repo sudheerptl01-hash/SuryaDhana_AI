@@ -228,7 +228,7 @@
   "n_dates": 30
  },
  "train_seconds": 29.7,
- "notes": "CatBoostClassifier(depth 6, lr 0.05, <=600 iterations, l2 5, seed 108, 2 threads) on 10 features (harness 'raw' preprocessing). Tree count chosen by early stopping (Logloss, od_wait 50) on the last 15% of train ROWS (time-ordered; 20 sessions before it purged from the inner-fit set), then refit on ALL train rows with that tree count. SUPERSEDED (kept for transparency): with Logloss early stopping the best_iteration was 43/0/0/1/0 across folds -- the inner-val tails (Jan-May 2026) straddle the March-2026 regime break, so validation logloss never improved on the constant and the refit had 10-44 trees. Re-run as 'catboost' with AUC-based early stopping (the study's common ES metric).",
+ "notes": "CatBoostClassifier(depth 6, lr 0.05, <=600 iterations, l2 5, seed 108, 2 threads) on 10 features (harness 'raw' preprocessing). Tree count chosen by early stopping (Logloss, od_wait 50) on the last 15% of train ROWS (time-ordered; 20 sessions before it purged from the inner-fit set), then refit on ALL train rows with that tree count. SUPERSEDED (kept for transparency): with Logloss early stopping the best_iteration was 43/0/0/1/0 across folds -- the inner-val tails (Jan-May 2026) straddle the March-2026 regime break, so validation logloss never improved on the constant and the refit had 10-44 trees. Re-run as 'catboost' with AUC-based early stopping (the study's common ES metric). INTERPRETATION: Superseded diagnostic: Logloss early stopping on the inner tail selected 43/0/0/1/0 trees, i.e. a 10-44 tree model on most folds; CV 0.5154.",
  "score_kind": "probability",
  "train_seconds_per_fold_mean": 5.9,
  "cv_worst_fold_auc": 0.4937600507553889,

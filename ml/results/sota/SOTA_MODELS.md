@@ -20,11 +20,11 @@ CV covers four monthly folds, Apr–Jul 2026. The holdout (Aug 3 → Sep 11) was
 | lgbm_lambdarank | 10 | 0.5293 ± 0.0243 | 0.4967 | 0.5661 (+6.0%) | +0.050, 6.37 / 2.13 | 56 | no |
 | catboost (early-stopped) | 10 | 0.5260 ± 0.0193 | 0.4938 | 0.5096 (−0.2%) | +0.050, 4.16 / 2.02 | 18 | no |
 | lgbm_huber | 10 | 0.5223 ± **0.0068** | 0.5128 | 0.5303 (+1.2%) | +0.046, 6.30 / 3.27 | 12 | no |
+| cs_transformer (set attention) | 10 | 0.5197 ± 0.0348 | 0.4926 | 0.5010 (−0.4%) | +0.027, 1.87 / 0.70 | 595 | no |
 | catboost_f51 | 51 | 0.5193 ± 0.0180 | 0.4888 | 0.5497 (+1.2%) | +0.037, 3.09 / 1.45 | 92 | no |
 | lgbm_lambdarank_f51 | 51 | 0.5160 ± 0.0167 | 0.4943 | 0.5642 (+6.0%) | +0.029, 4.00 / 1.38 | 93 | no |
 | catboost_es_logloss (superseded) | 10 | 0.5154 ± 0.0142 | 0.4938 | 0.5096 (−0.2%) | +0.034, 3.02 / 1.54 | 6 | no |
 | patchtst_lite | 14 | 0.5143 ± 0.0442 | 0.4516 | 0.4480 (−1.9%) | +0.024, 1.65 / 0.61 | 334 | no |
-%%CS_ROW%%
 | dlinear (sequence control) | 14 | 0.5103 ± 0.0394 | 0.4568 | 0.4605 (−4.2%) | +0.016, 1.09 / 0.41 | 72 | no |
 
 \*Wall-clock was measured while other agents held the 4-core box at a load average of 10–18. Use it for relative cost only; idle-box times are roughly 2–5× lower.
@@ -34,13 +34,13 @@ CV covers four monthly folds, Apr–Jul 2026. The holdout (Aug 3 → Sep 11) was
 - **LambdaRank:** it wins April (0.562) and the holdout but drops below 0.50 in July. Its 2^g − 1 grade gains reward landing in the top return decile, which is mostly volatile names. Its score correlates +0.66 per date with `atr_pct`, against +0.03 for the champion. So its folds follow the sign of the volatility factor's IC (+0.095 Apr, −0.059 Jul, +0.10 holdout), not stock-specific skill. With 51 features it gets worse, as the classifier did.
 - **Huber:** the most stable model here (std 0.007, every window ≥ 0.51), and its NW-t equals the champion's. Its AUC is lower because it forecasts return size, not the median crossing. With α = 0.9 above the ±0.30 clip, it is effectively least squares.
 - **CatBoost:** early stopping on the time-ordered inner tail kept 43/79/0/186/5 trees, and Logloss stopping kept 0–1 trees on 4 of 5 folds. The tails straddle the March-2026 break: on two folds inner-val AUC never rose above 0.5. With the champion's protocol (fixed 600 trees), CatBoost ties LightGBM: 0.5299, floor 0.5115. The gap was the protocol, not the algorithm.
-- **PatchTST-lite and DLinear:** both have nearly identical fold paths (April ≈ 0.45, July ≈ 0.57, holdout < 0.47), so attention adds about 0.004 AUC over a two-layer linear model. The 60-session window repeats trailing-return information the features already carry. Early stopping then locks in whichever regime filled the tail; inner-val AUC was about 0.60 on the pre-break Jan–Feb tail. This matches the pilot's GRU/LSTM.
-%%CS_BULLET%%
+- **PatchTST-lite and DLinear:** both have nearly identical fold paths (April ≈ 0.45, July ≈ 0.57, holdout < 0.47), so attention adds about 0.004 AUC over a two-layer linear model. The 60-session window repeats trailing-return information the features already carry. Early stopping then locks in whichever regime filled the tail; inner-val AUC was about 0.60 on the pre-break Jan–Feb tail. Their scores are essentially a low-volatility, near-52-week-high bet: per date they correlate −0.52 with `atr_pct` and +0.59 to +0.64 with `dist_52w_high`. That is the mirror image of LambdaRank, hence weak in April and strong in July. This matches the pilot's GRU/LSTM.
+- **Cross-sectional transformer:** fails. CV is 0.5197 ± 0.035, with April and May below 0.50 (0.493 and 0.493) and a big July (0.578): the same regime-bet profile as the sequence models. The holdout is a coin flip (0.501), and its rank-IC is not significant (NW-t 0.70). The label is already cross-sectional (beat the median) and the `cs_rank_*` features already normalise across stocks, so attention over about 1,450 names has little to add. Meanwhile 140–210 training dates, one optimiser step each, give it far more capacity than data. It hits the same early-stopping trap: on fold 2026-06 the inner-val AUC never exceeded 0.44. It ends up with the same low-volatility tilt as the sequence models (atr −0.59, 52-week-high +0.56).
 - **ensemble_rank:** the best mean, floor, dispersion, holdout and NW-t in the study, with nothing fitted, yet still 0.0007 short. The gain is diversification. The champion and LambdaRank correlate only 0.26 per date, and their opposite volatility tilts offset each other across months.
 
 ## Why trees still win here
 
-1. **Weak signal in a few slow features.** Per-date IC is about 0.05. Extra capacity (51 features, sequences, attention) mainly buys the ability to fit the train window's regime.
+1. **Weak signal in a few slow features.** Per-date IC is about 0.05. Extra capacity (51 features, sequences, attention) mainly buys the ability to fit the train window's regime. Each challenger family collapsed onto a volatility factor: high-vol for LambdaRank, low-vol for the networks. The champion stays roughly vol-neutral (atr +0.03).
 2. **Tiny effective sample.** There are 140–230 train dates per fold with overlapping 20-day labels, so only about 7–11 independent cross-sections. Most networks' best epoch fell between 1 and 5.
 3. **A regime break against early stopping.** March 2026 flipped the volatility and momentum factors, so any validation tail spanning it misleads model selection. The champion's fixed 300 trees are immune; every early-stopped model here paid for it.
 

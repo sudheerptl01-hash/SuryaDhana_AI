@@ -231,3 +231,25 @@
 [07:19:57] [cs_transformer] fold=2026-07 epoch 23 train_loss=0.66554 val_auc=0.5249 (24.7s)
 [07:20:23] [cs_transformer] fold=2026-07 epoch 24 train_loss=0.66464 val_auc=0.5235 (26.1s)
 [07:20:36] [cs_transformer] fold=2026-07 epoch 25 train_loss=0.66491 val_auc=0.5225 (12.8s)
+[07:20:47] [cs_transformer] fold=2026-07 epoch 26 train_loss=0.66427 val_auc=0.5249 (11.4s)
+[07:20:48] [cs_transformer] fold=2026-07 test_auc=0.5778 best_ep=21/26 (1134s)
+[07:20:49] [cs_transformer] fold=holdout fit_days=207 val_days=40 (val_start=2026-05-06) test_days=30 mean_set=1444
+[07:21:10] [cs_transformer] fold=holdout epoch  1 train_loss=0.68699 val_auc=0.5062 (20.5s)
+[07:21:44] [cs_transformer] fold=holdout epoch  2 train_loss=0.67937 val_auc=0.5201 (33.7s)
+[07:21:44] === league (elapsed 0.0 min) ===
+[07:21:44] === annotate (elapsed 0.0 min) ===
+[07:21:44] ALL DONE (['league', 'annotate']) in 0.0 min
+[07:22:12] [cs_transformer] fold=holdout epoch  3 train_loss=0.67439 val_auc=0.5278 (28.1s)
+[07:22:57] [cs_transformer] fold=holdout epoch  4 train_loss=0.67130 val_auc=0.5201 (44.8s)
+[07:23:15] [cs_transformer] fold=holdout epoch  5 train_loss=0.67140 val_auc=0.5134 (18.0s)
+[07:23:40] [cs_transformer] fold=holdout epoch  6 train_loss=0.66965 val_auc=0.5165 (25.5s)
+[07:24:05] [cs_transformer] fold=holdout epoch  7 train_loss=0.66875 val_auc=0.5117 (25.3s)
+[07:24:22] [cs_transformer] fold=holdout epoch  8 train_loss=0.66756 val_auc=0.5125 (16.8s)
+[07:24:24] [cs_transformer] fold=holdout test_auc=0.5010 best_ep=3/8 (213s)
+[07:24:24] [cs_transformer] cv_auc=0.5197 (+/-0.0348) worst=0.4926 holdout=0.5010 ho_spread=-0.0042 ic_cv=+0.0268 (t=1.87, nw=0.70) s/fold=595.2 passes=False
+[07:24:24] ALL DONE (['cstf']) in 50.1 min
+[07:24:31] === league (elapsed 0.0 min) ===
+[07:24:31] === annotate (elapsed 0.0 min) ===
+[07:24:31] ALL DONE (['league', 'annotate']) in 0.0 min
+[07:25:16] === annotate (elapsed 0.0 min) ===
+[07:25:16] ALL DONE (['annotate']) in 0.0 min

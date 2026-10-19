@@ -175,7 +175,7 @@
   "n_dates": 30
  },
  "train_seconds": 0.0,
- "notes": "Equal-weight per-date rank average of three already-OOS score sets (champion clean preds, lgbm_lambdarank, catboost); nothing is fitted, so the blend cannot overfit the folds. Score is an average percentile rank: AUC/decile/IC are meaningful, Brier/acc@0.5 are not calibrated probabilities. train_seconds = 0 (cost = sum of the members).",
+ "notes": "Equal-weight per-date rank average of three already-OOS score sets (champion clean preds, lgbm_lambdarank, catboost); nothing is fitted, so the blend cannot overfit the folds. Score is an average percentile rank: AUC/decile/IC are meaningful, Brier/acc@0.5 are not calibrated probabilities. train_seconds = 0 (cost = sum of the members). INTERPRETATION: Misses the pre-registered bar by 0.0007 (CV 0.5357 vs 0.5364), so it does NOT pass -- but it is the strongest result here: worst fold 0.5236 (champion 0.5069), CV std 0.008 (0.014), better than the champion in 3/4 folds, holdout 0.548 (0.518), rank-IC NW t 3.64 (3.26). The gain is diversification, not a new signal: the LambdaRank member's high-vol tilt (rank corr 0.26 with the champion) offsets the champion's defensive/near-52w-high tilt in the April and Aug-Sep rallies. No weights were fitted, so it cannot have overfit the folds.",
  "score_kind": "rank_average",
  "train_seconds_per_fold_mean": 0.0,
  "cv_worst_fold_auc": 0.5236190488417745,

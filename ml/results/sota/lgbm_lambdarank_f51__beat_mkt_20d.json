@@ -245,7 +245,7 @@
   "n_dates": 30
  },
  "train_seconds": 464.3,
- "notes": "As lgbm_lambdarank but on all 51 features (harness 'raw' preprocessing = train-median impute, as the champion). Brier/acc not meaningful (ranker score).",
+ "notes": "As lgbm_lambdarank but on all 51 features (harness 'raw' preprocessing = train-median impute, as the champion). Brier/acc not meaningful (ranker score). INTERPRETATION: Does not beat the champion: CV 0.5160, July 0.4943. Adding the other 41 features lowers the ranker's CV mean exactly as it lowered the classifier's (pilot lightgbm-51 0.504): more capacity to fit the train window's regime structure. Holdout 0.564 is the same vol-friendly window as the 10-feature ranker.",
  "score_kind": "ranker_raw",
  "train_seconds_per_fold_mean": 92.9,
  "cv_worst_fold_auc": 0.4943348302020182,

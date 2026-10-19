@@ -1078,7 +1078,9 @@ INTERPRETATION: dict[str, str] = {
         "AUC ~0.60 on the pre-break Jan-Feb tail) and that pattern inverted in April; when "
         "the pattern persisted (July 0.575) it won big. That is a regime bet, not stock "
         "selection. Run at the halved setting (60k sequences, d_model 32) because of box "
-        "contention; the verdict matches the pilot's GRU/LSTM (0.489/0.502)."),
+        "contention; the verdict matches the pilot's GRU/LSTM (0.489/0.502). Its score is "
+        "effectively a low-vol / near-52w-high factor (per-date Spearman atr_pct -0.53, "
+        "dist_52w_high +0.59): the mirror image of LambdaRank's high-vol tilt."),
     "dlinear": (
         "The trivial-sequence control fails too: CV 0.5103 +/- 0.039, worst fold 0.4568, "
         "holdout 0.4605, rank-IC NW t 0.4. Its fold pattern almost duplicates "
@@ -1086,7 +1088,19 @@ INTERPRETATION: dict[str, str] = {
         "windows, cap, scaling and early stopping, so attention adds ~0.004 CV AUC over a "
         "2-layer linear model -- nothing beyond noise. What fails is the sequence view "
         "itself: it re-expresses trailing-return information the point-in-time features "
-        "already summarise, and early stopping on the inner tail locks in the last regime."),
+        "already summarise, and early stopping on the inner tail locks in the last regime. "
+        "Score = low-vol / near-52w-high factor (atr_pct -0.52, dist_52w_high +0.64)."),
+    "cs_transformer": (
+        "Fails: CV 0.5197 +/- 0.035 with April and May below 0.50 (0.493/0.493) and a big "
+        "July (0.578) -- the regime-bet profile of the sequence models, not stable "
+        "selection. The label is already cross-sectional (beat the median) and the "
+        "cs_rank_* features already normalise across stocks, so attention over ~1,450 "
+        "names has little left to add, while 140-210 training dates (one optimiser step "
+        "each) give it far more capacity than data; early stopping on the "
+        "break-straddling tail (fold 2026-06 inner-val AUC <= 0.44) is the same trap. Run "
+        "at the halved setting (d_model 32, 50% of each date's stocks per training step). "
+        "Holdout 0.501, rank-IC NW t 0.70 (not significant); its score is a low-vol / "
+        "near-52w-high factor (atr_pct -0.59, dist_52w_high +0.56)."),
     "ensemble_rank": (
         "Misses the pre-registered bar by 0.0007 (CV 0.5357 vs 0.5364), so it does NOT "
         "pass -- but it is the strongest result here: worst fold 0.5236 (champion "

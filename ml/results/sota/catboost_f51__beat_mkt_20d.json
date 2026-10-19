@@ -269,7 +269,7 @@
   "n_dates": 30
  },
  "train_seconds": 459.6,
- "notes": "CatBoostClassifier(depth 6, lr 0.05, <=600 iterations, l2 5, seed 108, 2 threads) on 51 features (harness 'raw' preprocessing). Tree count chosen by early stopping (inner-val AUC, od_wait 50) on the last 15% of train ROWS (time-ordered; 20 sessions before it purged from the inner-fit set), then refit on ALL train rows with that tree count. (A first run that early-stopped on Logloss collapsed to 0-1 trees on 4/5 folds because the inner-val tails straddle the March-2026 regime break; it is kept as catboost_es_logloss.)",
+ "notes": "CatBoostClassifier(depth 6, lr 0.05, <=600 iterations, l2 5, seed 108, 2 threads) on 51 features (harness 'raw' preprocessing). Tree count chosen by early stopping (inner-val AUC, od_wait 50) on the last 15% of train ROWS (time-ordered; 20 sessions before it purged from the inner-fit set), then refit on ALL train rows with that tree count. (A first run that early-stopped on Logloss collapsed to 0-1 trees on 4/5 folds because the inner-val tails straddle the March-2026 regime break; it is kept as catboost_es_logloss.) INTERPRETATION: Does not beat the champion: CV 0.5193, worst fold 0.4888; early stopping again picked few trees. 51 features add noise for CatBoost as for LightGBM; holdout 0.550 is the friendly window.",
  "score_kind": "probability",
  "train_seconds_per_fold_mean": 91.9,
  "cv_worst_fold_auc": 0.4888296192654525,

@@ -268,7 +268,7 @@
   "n_dates": 30
  },
  "train_seconds": 360.7,
- "notes": "DLinear (Zeng et al. 2022) baseline on the identical 60x14 windows, cap, scaling, inner validation and optimiser as patchtst_lite (incl. its halved 60k train-sequence cap, for a like-for-like test of what attention adds): moving-average(25) trend + remainder, each weighted per channel over the 60 sessions, then a linear read-out across channels -> logit (a 2-layer linear model).",
+ "notes": "DLinear (Zeng et al. 2022) baseline on the identical 60x14 windows, cap, scaling, inner validation and optimiser as patchtst_lite (incl. its halved 60k train-sequence cap, for a like-for-like test of what attention adds): moving-average(25) trend + remainder, each weighted per channel over the 60 sessions, then a linear read-out across channels -> logit (a 2-layer linear model). INTERPRETATION: The trivial-sequence control fails too: CV 0.5103 +/- 0.039, worst fold 0.4568, holdout 0.4605, rank-IC NW t 0.4. Its fold pattern almost duplicates patchtst_lite's (0.457/0.518/0.500/0.567 vs 0.452/0.524/0.506/0.575) on the same windows, cap, scaling and early stopping, so attention adds ~0.004 CV AUC over a 2-layer linear model -- nothing beyond noise. What fails is the sequence view itself: it re-expresses trailing-return information the point-in-time features already summarise, and early stopping on the inner tail locks in the last regime. Score = low-vol / near-52w-high factor (atr_pct -0.52, dist_52w_high +0.64).",
  "score_kind": "probability",
  "train_seconds_per_fold_mean": 72.1,
  "cv_worst_fold_auc": 0.4568091779424414,

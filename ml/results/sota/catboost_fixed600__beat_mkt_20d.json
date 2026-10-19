@@ -194,7 +194,7 @@
   "n_dates": 30
  },
  "train_seconds": 343.1,
- "notes": "DIAGNOSTIC (not in the original spec): CatBoost with the same hyper-parameters as 'catboost' but the champion's protocol -- no early stopping, the spec's full 600 iterations on all train rows. Added because early stopping on the time-ordered inner tail chose 0-186 trees (the tails straddle the March-2026 regime break), which confounds 'CatBoost the algorithm' with 'early stopping on a regime-break tail'. Defined before seeing its test results; not eligible to be promoted on this pilot.",
+ "notes": "DIAGNOSTIC (not in the original spec): CatBoost with the same hyper-parameters as 'catboost' but the champion's protocol -- no early stopping, the spec's full 600 iterations on all train rows. Added because early stopping on the time-ordered inner tail chose 0-186 trees (the tails straddle the March-2026 regime break), which confounds 'CatBoost the algorithm' with 'early stopping on a regime-break tail'. Defined before seeing its test results; not eligible to be promoted on this pilot. INTERPRETATION: Diagnostic, not eligible for promotion: with the champion's protocol (no early stopping, fixed 600 trees) CatBoost is level with LightGBM -- CV 0.5299 vs 0.5314, a better floor (0.5115 vs 0.5069) and lower dispersion (0.012 vs 0.014), rank-IC NW t 3.51 -- but still below the pass mark. The early-stopped 'catboost' shortfall is therefore the protocol (early stopping on a regime-break tail), not the algorithm; at this sample size the two GBM implementations are interchangeable.",
  "score_kind": "probability",
  "train_seconds_per_fold_mean": 68.6,
  "cv_worst_fold_auc": 0.5114952083923827,

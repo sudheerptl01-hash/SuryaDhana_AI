@@ -1,5 +1,42 @@
 {
  "exposures": {
+  "catboost": {
+   "2026-04": {
+    "vs_vol20_rank": -0.722,
+    "vs_atr": -0.631,
+    "vs_mom20_rank": -0.154,
+    "vs_52wh": 0.74,
+    "vs_champion": 0.734
+   },
+   "2026-05": {
+    "vs_vol20_rank": 0.452,
+    "vs_atr": 0.568,
+    "vs_mom20_rank": -0.003,
+    "vs_52wh": -0.464,
+    "vs_champion": 0.749
+   },
+   "2026-06": {
+    "vs_vol20_rank": -0.081,
+    "vs_atr": -0.07,
+    "vs_mom20_rank": 0.055,
+    "vs_52wh": 0.202,
+    "vs_champion": 0.314
+   },
+   "2026-07": {
+    "vs_vol20_rank": 0.116,
+    "vs_atr": 0.224,
+    "vs_mom20_rank": 0.067,
+    "vs_52wh": 0.526,
+    "vs_champion": 0.737
+   },
+   "holdout": {
+    "vs_vol20_rank": -0.071,
+    "vs_atr": -0.114,
+    "vs_mom20_rank": 0.157,
+    "vs_52wh": 0.355,
+    "vs_champion": 0.436
+   }
+  },
   "catboost_es_logloss": {
    "2026-04": {
     "vs_vol20_rank": -0.722,
@@ -35,6 +72,80 @@
     "vs_mom20_rank": 0.157,
     "vs_52wh": 0.355,
     "vs_champion": 0.436
+   }
+  },
+  "catboost_f51": {
+   "2026-04": {
+    "vs_vol20_rank": -0.74,
+    "vs_atr": -0.686,
+    "vs_mom20_rank": -0.18,
+    "vs_52wh": 0.659,
+    "vs_champion": 0.689
+   },
+   "2026-05": {
+    "vs_vol20_rank": 0.476,
+    "vs_atr": 0.587,
+    "vs_mom20_rank": 0.055,
+    "vs_52wh": -0.414,
+    "vs_champion": 0.702
+   },
+   "2026-06": {
+    "vs_vol20_rank": 0.28,
+    "vs_atr": 0.361,
+    "vs_mom20_rank": 0.094,
+    "vs_52wh": 0.104,
+    "vs_champion": 0.533
+   },
+   "2026-07": {
+    "vs_vol20_rank": 0.345,
+    "vs_atr": 0.426,
+    "vs_mom20_rank": 0.167,
+    "vs_52wh": 0.408,
+    "vs_champion": 0.525
+   },
+   "holdout": {
+    "vs_vol20_rank": 0.133,
+    "vs_atr": 0.173,
+    "vs_mom20_rank": 0.213,
+    "vs_52wh": 0.461,
+    "vs_champion": 0.52
+   }
+  },
+  "catboost_fixed600": {
+   "2026-04": {
+    "vs_vol20_rank": -0.563,
+    "vs_atr": -0.455,
+    "vs_mom20_rank": -0.177,
+    "vs_52wh": 0.586,
+    "vs_champion": 0.889
+   },
+   "2026-05": {
+    "vs_vol20_rank": 0.414,
+    "vs_atr": 0.54,
+    "vs_mom20_rank": 0.016,
+    "vs_52wh": -0.342,
+    "vs_champion": 0.81
+   },
+   "2026-06": {
+    "vs_vol20_rank": -0.088,
+    "vs_atr": 0.021,
+    "vs_mom20_rank": -0.014,
+    "vs_52wh": 0.282,
+    "vs_champion": 0.806
+   },
+   "2026-07": {
+    "vs_vol20_rank": 0.077,
+    "vs_atr": 0.148,
+    "vs_mom20_rank": 0.08,
+    "vs_52wh": 0.533,
+    "vs_champion": 0.845
+   },
+   "holdout": {
+    "vs_vol20_rank": -0.136,
+    "vs_atr": -0.103,
+    "vs_mom20_rank": 0.063,
+    "vs_52wh": 0.353,
+    "vs_champion": 0.819
    }
   },
   "champion_ref": {
@@ -74,6 +185,80 @@
     "vs_champion": 1.0
    }
   },
+  "cs_transformer": {
+   "2026-04": {
+    "vs_vol20_rank": -0.778,
+    "vs_atr": -0.747,
+    "vs_mom20_rank": -0.135,
+    "vs_52wh": 0.65,
+    "vs_champion": 0.683
+   },
+   "2026-05": {
+    "vs_vol20_rank": -0.615,
+    "vs_atr": -0.643,
+    "vs_mom20_rank": -0.027,
+    "vs_52wh": 0.354,
+    "vs_champion": -0.273
+   },
+   "2026-06": {
+    "vs_vol20_rank": -0.524,
+    "vs_atr": -0.552,
+    "vs_mom20_rank": 0.009,
+    "vs_52wh": 0.552,
+    "vs_champion": 0.327
+   },
+   "2026-07": {
+    "vs_vol20_rank": -0.385,
+    "vs_atr": -0.414,
+    "vs_mom20_rank": 0.074,
+    "vs_52wh": 0.673,
+    "vs_champion": 0.474
+   },
+   "holdout": {
+    "vs_vol20_rank": 0.079,
+    "vs_atr": 0.12,
+    "vs_mom20_rank": -0.238,
+    "vs_52wh": -0.352,
+    "vs_champion": 0.081
+   }
+  },
+  "dlinear": {
+   "2026-04": {
+    "vs_vol20_rank": -0.744,
+    "vs_atr": -0.789,
+    "vs_mom20_rank": -0.252,
+    "vs_52wh": 0.623,
+    "vs_champion": 0.555
+   },
+   "2026-05": {
+    "vs_vol20_rank": -0.37,
+    "vs_atr": -0.425,
+    "vs_mom20_rank": -0.017,
+    "vs_52wh": 0.687,
+    "vs_champion": -0.27
+   },
+   "2026-06": {
+    "vs_vol20_rank": -0.263,
+    "vs_atr": -0.314,
+    "vs_mom20_rank": 0.03,
+    "vs_52wh": 0.6,
+    "vs_champion": 0.215
+   },
+   "2026-07": {
+    "vs_vol20_rank": -0.478,
+    "vs_atr": -0.539,
+    "vs_mom20_rank": 0.104,
+    "vs_52wh": 0.647,
+    "vs_champion": 0.375
+   },
+   "holdout": {
+    "vs_vol20_rank": -0.628,
+    "vs_atr": -0.687,
+    "vs_mom20_rank": -0.035,
+    "vs_52wh": -0.062,
+    "vs_champion": 0.19
+   }
+  },
   "ensemble_rank": {
    "2026-04": {
     "vs_vol20_rank": -0.393,
@@ -83,11 +268,11 @@
     "vs_champion": 0.866
    },
    "2026-05": {
-    "vs_vol20_rank": 0.448,
-    "vs_atr": 0.59,
-    "vs_mom20_rank": 0.085,
-    "vs_52wh": -0.272,
-    "vs_champion": 0.893
+    "vs_vol20_rank": 0.52,
+    "vs_atr": 0.653,
+    "vs_mom20_rank": 0.104,
+    "vs_52wh": -0.293,
+    "vs_champion": 0.907
    },
    "2026-06": {
     "vs_vol20_rank": 0.209,
@@ -97,11 +282,11 @@
     "vs_champion": 0.768
    },
    "2026-07": {
-    "vs_vol20_rank": 0.283,
-    "vs_atr": 0.353,
-    "vs_mom20_rank": 0.15,
-    "vs_52wh": 0.423,
-    "vs_champion": 0.776
+    "vs_vol20_rank": 0.302,
+    "vs_atr": 0.399,
+    "vs_mom20_rank": 0.135,
+    "vs_52wh": 0.469,
+    "vs_champion": 0.839
    },
    "holdout": {
     "vs_vol20_rank": 0.216,
@@ -183,6 +368,80 @@
     "vs_mom20_rank": 0.217,
     "vs_52wh": 0.167,
     "vs_champion": 0.123
+   }
+  },
+  "lgbm_lambdarank_f51": {
+   "2026-04": {
+    "vs_vol20_rank": 0.156,
+    "vs_atr": 0.246,
+    "vs_mom20_rank": 0.276,
+    "vs_52wh": 0.061,
+    "vs_champion": 0.057
+   },
+   "2026-05": {
+    "vs_vol20_rank": 0.503,
+    "vs_atr": 0.606,
+    "vs_mom20_rank": 0.312,
+    "vs_52wh": -0.141,
+    "vs_champion": 0.414
+   },
+   "2026-06": {
+    "vs_vol20_rank": 0.642,
+    "vs_atr": 0.697,
+    "vs_mom20_rank": 0.41,
+    "vs_52wh": 0.213,
+    "vs_champion": 0.265
+   },
+   "2026-07": {
+    "vs_vol20_rank": 0.716,
+    "vs_atr": 0.774,
+    "vs_mom20_rank": 0.283,
+    "vs_52wh": 0.206,
+    "vs_champion": 0.308
+   },
+   "holdout": {
+    "vs_vol20_rank": 0.674,
+    "vs_atr": 0.758,
+    "vs_mom20_rank": 0.288,
+    "vs_52wh": 0.176,
+    "vs_champion": 0.082
+   }
+  },
+  "patchtst_lite": {
+   "2026-04": {
+    "vs_vol20_rank": -0.678,
+    "vs_atr": -0.736,
+    "vs_mom20_rank": -0.265,
+    "vs_52wh": 0.56,
+    "vs_champion": 0.542
+   },
+   "2026-05": {
+    "vs_vol20_rank": -0.347,
+    "vs_atr": -0.422,
+    "vs_mom20_rank": 0.061,
+    "vs_52wh": 0.682,
+    "vs_champion": -0.231
+   },
+   "2026-06": {
+    "vs_vol20_rank": -0.415,
+    "vs_atr": -0.507,
+    "vs_mom20_rank": 0.057,
+    "vs_52wh": 0.478,
+    "vs_champion": 0.196
+   },
+   "2026-07": {
+    "vs_vol20_rank": -0.402,
+    "vs_atr": -0.447,
+    "vs_mom20_rank": 0.049,
+    "vs_52wh": 0.642,
+    "vs_champion": 0.414
+   },
+   "holdout": {
+    "vs_vol20_rank": -0.136,
+    "vs_atr": -0.161,
+    "vs_mom20_rank": -0.046,
+    "vs_52wh": -0.379,
+    "vs_champion": -0.084
    }
   }
  },

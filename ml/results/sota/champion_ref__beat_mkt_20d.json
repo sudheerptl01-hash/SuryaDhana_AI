@@ -196,7 +196,7 @@
   "n_dates": 30
  },
  "train_seconds": 26.2,
- "notes": "REFERENCE, not a challenger: same-box re-run of the champion config (lgbm_fs_selected) on the clean dataset, for timing and rank-IC on identical footing.",
+ "notes": "REFERENCE, not a challenger: same-box re-run of the champion config (lgbm_fs_selected) on the clean dataset, for timing and rank-IC on identical footing. INTERPRETATION: Reference only. Reproduces lgbm_fs_selected_clean exactly (max score diff 0); its per-date rank-IC (+0.057, Newey-West t 3.3) and ~5 s/fold are the bar the challengers are read against. Score is roughly volatility-neutral (per-date Spearman with atr_pct +0.03) and tilted to stocks near their 52-week high (+0.25).",
  "score_kind": "probability",
  "train_seconds_per_fold_mean": 5.2,
  "cv_worst_fold_auc": 0.5068647379421386,
