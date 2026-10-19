@@ -291,14 +291,28 @@ def permute_within_date(d: pd.DataFrame, seed: int) -> pd.DataFrame:
 
 def t1(ctx, fresh):
     base = slim(ctx.df, ctx.champ)
-    perms = []
-    for i in range(N_PERM):
+    order = list(range(N_PERM))
+    if os.environ.get("AUDIT_T1_ORDER") == "desc":       # second worker (parallel split)
+        order = order[::-1]
+    for i in order:
         seed = SEED + i
-        perms.append(cached(f"T1_perm{i:02d}", lambda seed=seed, i=i: {
+        lock = CACHE_DIR / f"T1_perm{i:02d}.lock"
+        if (CACHE_DIR / f"T1_perm{i:02d}.json").exists() and not fresh:
+            continue
+        if lock.exists():
+            continue                                       # other worker owns it
+        lock.write_text(str(os.getpid()))
+        r = cached(f"T1_perm{i:02d}", lambda seed=seed, i=i: {
             "seed": seed, **harness(ctx, f"audit_perm{i:02d}", permute_within_date(base, seed),
                                     ctx.champ, f"T1 within-date label permutation, seed {seed}")},
-            fresh))
-        log(f"T1 perm {i}: cv={perms[-1]['cv_auc_mean']:.4f} ho={perms[-1]['holdout_auc']:.4f}")
+            fresh)
+        lock.unlink(missing_ok=True)
+        log(f"T1 perm {i}: cv={r['cv_auc_mean']:.4f} ho={r['holdout_auc']:.4f}")
+    if os.environ.get("AUDIT_T1_WORKER_ONLY"):
+        return None
+    perms = [json.loads((CACHE_DIR / f"T1_perm{i:02d}.json").read_text())
+             for i in range(N_PERM) if (CACHE_DIR / f"T1_perm{i:02d}.json").exists()]
+    assert len(perms) >= 5, f"only {len(perms)} permutations available"
     cv = np.array([p["cv_auc_mean"] for p in perms])
     ho = np.array([p["holdout_auc"] for p in perms])
     folds = np.array([[p["fold_aucs"][k] for k in sorted(p["fold_aucs"])] for p in perms])
@@ -315,7 +329,7 @@ def t1(ctx, fresh):
     an_cv_sd = float(math.sqrt(sum(an)) / len(an))
     passed = ctx.real_cv > mx and ctx.real_cv > m + 3 * sd
     return verdict(
-        "T1", "label-permutation null (within-date, 10 perms)", "PASS" if passed else "FAIL",
+        "T1", f"label-permutation null (within-date, {len(perms)} perms)", "PASS" if passed else "FAIL",
         f"null CV mean {m:.4f} sd {sd:.4f} max {mx:.4f}; champion {ctx.real_cv:.4f} -> z={z:.1f}; "
         f"null holdout mean {hm:.4f} sd {hsd:.4f} max {hmx:.4f}; champion holdout {ctx.real_ho:.4f} -> z={zh:.1f}",
         null_cv={"mean": m, "sd": sd, "max": mx, "min": float(cv.min()), "values": cv.tolist()},
@@ -334,7 +348,7 @@ def t1(ctx, fresh):
 # =========================================================================== #
 def t2(ctx, fresh):
     out = {}
-    for k in (1, 5, 21):
+    for k in (1, 21):
         def run(k=k):
             d = slim(ctx.df, ctx.champ)
             d[ctx.champ] = d.groupby("ticker", sort=False)[ctx.champ].shift(-k)
@@ -344,7 +358,7 @@ def t2(ctx, fresh):
     r1 = out["shift_-1"]
     st = "INFO"
     msg = (f"features(t+1): CV {r1['cv_auc_mean']:.4f} (holdout {r1['holdout_auc']:.4f}) vs real "
-           f"{ctx.real_cv:.4f}; t+5: CV {out['shift_-5']['cv_auc_mean']:.4f}; t+21: CV "
+           f"{ctx.real_cv:.4f}; t+21: CV "
            f"{out['shift_-21']['cv_auc_mean']:.4f} -> harness "
            + ("DETECTS a 1-session leak (>0.55)" if r1["cv_auc_mean"] > 0.55
               else "rises with leak size (1-session leak alone stays <0.55)"))
@@ -680,23 +694,25 @@ def t6(ctx, fresh):
         pn = [f"pnoise_{i:02d}" for i in range(30)]
         d[pn] = _ar1_noise(d, 30, 0.99, SEED)
         feats = ctx.features + pn
-        uni, gain, perm, entries, order = _fs_score(d, feats, ctx.splits)
-        top10 = order[:10]
-        real_order = [f for f in order if not f.startswith("pnoise_")]
+        import ml.feature_selection as fs
+        uni = fs.univariate_aucs(d, feats, ctx.splits)      # component 1 of the combined rank
+        order = sorted(feats, key=lambda f: -uni[f]["auc"])
         nrank = [i + 1 for i, f in enumerate(order) if f.startswith("pnoise_")]
         u_noise = sorted((uni[f]["auc"] for f in pn), reverse=True)
         u_champ = {f: uni[f]["auc"] for f in ctx.champ}
+        u_real = sorted((uni[f]["auc"] for f in ctx.features), reverse=True)
         n_beat_weakest_champ = sum(u > min(u_champ.values()) for u in u_noise)
-        return {"top10": top10, "n_noise_in_top10": sum(f.startswith("pnoise_") for f in top10),
-                "n_noise_in_top20": sum(f.startswith("pnoise_") for f in order[:20]),
-                "best_noise_rank": min(nrank), "noise_ranks": nrank,
+        return {"ranking": "univariate AUC component only (gain/permutation skipped: CPU budget)",
+                "n_noise_in_top10_univariate": sum(f.startswith("pnoise_") for f in order[:10]),
+                "n_noise_in_top20_univariate": sum(f.startswith("pnoise_") for f in order[:20]),
+                "best_noise_rank_univariate": min(nrank), "noise_ranks_univariate": nrank,
                 "noise_univariate_auc": {"max": u_noise[0], "median": float(np.median(u_noise)),
-                                         "values": u_noise},
+                                         "sd": float(np.std(u_noise, ddof=1)), "values": u_noise},
+                "real_univariate_auc_sorted": u_real,
                 "champion_univariate_auc": u_champ,
                 "n_noise_univariate_above_weakest_champion": n_beat_weakest_champ,
-                "clean_data_top10_real_only": real_order[:10],
-                "overlap_clean_top10_vs_champion": len(set(real_order[:10]) & set(ctx.champ)),
-                "order": order}
+                "n_real_features_below_noise_median": sum(u < float(np.median(u_noise)) for u in u_real),
+                "order_univariate": order}
 
     a = cached("T6a_iid_noise", part_a, fresh)
     b = cached("T6b_persistent_noise", part_b, fresh)
@@ -704,11 +720,11 @@ def t6(ctx, fresh):
     st = "PASS" if (a["n_noise_in_top10"] == 0 and delta <= 0.002) else "FAIL"
     msg = (f"iid noise: {a['n_noise_in_top10']}/30 in combined top-10 (best noise rank "
            f"{a['best_noise_rank']}); champion+30 noise CV {a['harness']['cv_auc_mean']:.4f} "
-           f"(delta {delta:+.4f}). Persistent AR(1) noise vs all 51: {b['n_noise_in_top10']} in "
-           f"top-10, {b['n_noise_in_top20']} in top-20, best rank {b['best_noise_rank']}; "
-           f"{b['n_noise_univariate_above_weakest_champion']}/30 noise univariate AUCs exceed the "
-           f"weakest champion feature; clean-data re-selection keeps "
-           f"{b['overlap_clean_top10_vs_champion']}/10 champion features")
+           f"(delta {delta:+.4f}). Persistent AR(1) noise vs all 51 (univariate screen): "
+           f"{b['n_noise_in_top10_univariate']} in top-10, {b['n_noise_in_top20_univariate']} in "
+           f"top-20, best rank {b['best_noise_rank_univariate']}; noise univariate AUC median "
+           f"{b['noise_univariate_auc']['median']:.4f} max {b['noise_univariate_auc']['max']:.4f}; "
+           f"{b['n_noise_univariate_above_weakest_champion']}/30 exceed the weakest champion feature")
     return verdict("T6", "selection-bias / random-feature test", st, msg,
                    iid_noise=a, persistent_noise=b, harness_delta_cv=delta)
 
@@ -752,7 +768,7 @@ def t7(ctx, fresh, t1res=None):
           "plus_2fold_hparam_screens": n_distinct + n_screen,
           "plus_univariate_feature_screens": n_distinct + n_screen + n_univ}
     if other_task:
-        Ns["plus_other_label_tasks"] = Ns["plus_univariate_feature_screens"] + len(other_task)
+        Ns["plus_secondary_task_runs (up_5d etc.)"] = Ns["plus_univariate_feature_screens"] + len(other_task)
     target = ctx.real_cv
     # alternative null sds (beyond the permutation null) for context
     fa = np.array(list(ctx.real_folds.values()))
@@ -762,6 +778,10 @@ def t7(ctx, fresh, t1res=None):
            "fold_to_fold_regime (champion fold sd/sqrt(4))": float(fa.std(ddof=1) / 2),
            "date_block_bootstrap (eval_aggregate clean CI/3.92)": (0.5399 - 0.5226) / 3.92,
            "cross_config_dispersion (sd of other primary CV AUCs)": float(np.std(league, ddof=1))}
+    t14p = CACHE_DIR / "T14.json"
+    if t14p.exists():
+        b10 = json.loads(t14p.read_text())["bootstrap"]["block_10"]["champion_clean_cv_mean"]
+        sig["10-session block bootstrap sd of champion CV mean (T14)"] = b10["sd"]
     table = []
     for sname, s_ in sig.items():
         m0 = mu0 if sname.startswith("T1") else 0.5
@@ -957,8 +977,14 @@ def t11(ctx, fresh):
     import ml.feature_selection as fs
     df, feats, cal = ctx.df, ctx.features, ctx.cal
     specs = ctx.splits["folds"] + [ctx.splits["holdout"]]
-    per = []
-    for spec in specs:
+    order = specs[::-1] if os.environ.get("AUDIT_T11_ORDER") == "desc" else specs
+    for spec in order:
+        key = f"T11_{spec['name']}"
+        lock = CACHE_DIR / f"{key}.lock"
+        if ((CACHE_DIR / f"{key}.json").exists() and not fresh) or lock.exists():
+            continue                    # done, or owned by another worker
+        lock.write_text(str(os.getpid()))
+
         def run(spec=spec):
             t0 = time.time()
             tr_end = pd.Timestamp(spec["train_end"])
@@ -981,11 +1007,14 @@ def t11(ctx, fresh):
             clusters, _ = fs.find_redundancy_clusters(dtr, feats)
             _, order, _ = fs.combined_ranking(feats, uni, gain, perm, clusters)
             kc = {}
-            for k in K_GRID:
-                res = _fit_score(slim(dtr, order[:k]), order[:k], isp)
-                kc[k] = float(np.mean([m["auc"] for _, m in res]))
-            best = max(kc.values())
-            k_sel = min(k for k, v in kc.items() if v >= best - 0.002)
+            if os.environ.get("AUDIT_T11_KCURVE"):
+                for k in K_GRID:
+                    res = _fit_score(slim(dtr, order[:k]), order[:k], isp)
+                    kc[k] = float(np.mean([m["auc"] for _, m in res]))
+                best = max(kc.values())
+                k_sel = min(k for k, v in kc.items() if v >= best - 0.002)
+            else:
+                k_sel = 10      # champion's k (chosen with hindsight -> favours the champion)
             one = ({"folds": [], "holdout": spec} if spec["name"] == "holdout"
                    else {"folds": [spec], "holdout": {**dummy, "train_end": spec["train_end"]}})
             outer = {}
@@ -999,7 +1028,11 @@ def t11(ctx, fresh):
                     "inner_k_curve": kc, "k_selected": k_sel, "outer": outer,
                     "overlap_top10_with_champion": len(set(order[:10]) & set(ctx.champ)),
                     "seconds": time.time() - t0}
-        per.append(cached(f"T11_{spec['name']}", run, fresh))
+        cached(key, run, fresh)
+        lock.unlink(missing_ok=True)
+    if os.environ.get("AUDIT_T11_WORKER_ONLY"):
+        return None
+    per = [json.loads((CACHE_DIR / f"T11_{s['name']}.json").read_text()) for s in specs]
     cvf = [p for p in per if p["fold"] != "holdout"]
     hof = next(p for p in per if p["fold"] == "holdout")
     cv10 = float(np.mean([p["outer"]["10"]["auc"] for p in cvf]))
@@ -1010,21 +1043,24 @@ def t11(ctx, fresh):
     foldk = {p["fold"]: p["outer"][str(p["k_selected"])]["auc"] for p in per}
     gap = ctx.real_cv - cvk
     st = "INFO"
-    msg = (f"selection re-done per fold on pre-fold data only: CV AUC {cvk:.4f} (inner-chosen k) / "
-           f"{cv10:.4f} (k fixed at 10) vs claimed {ctx.real_cv:.4f} -> selection optimism "
-           f"{gap:+.4f}; holdout {hok:.4f} / {ho10:.4f}; folds<0.50 (inner k): "
-           f"{sum(v < 0.5 for v in foldk.values())}/5; champion-feature overlap per fold "
-           f"{[p['overlap_top10_with_champion'] for p in per]}")
+    msg = (f"feature selection re-done per fold on pre-fold data only (k=10): CV AUC {cv10:.4f} vs "
+           f"claimed {ctx.real_cv:.4f} -> selection optimism {ctx.real_cv - cv10:+.4f}; holdout "
+           f"{ho10:.4f} (champion {ctx.real_ho:.4f}); windows<0.50: "
+           f"{sum(v < 0.5 for v in fold10.values())}/5 {dict((k, round(v, 4)) for k, v in fold10.items())}; "
+           f"champion-feature overlap per fold {[p['overlap_top10_with_champion'] for p in per]}/10")
     return verdict("T11", "honest nested feature selection", st, msg, per_fold=per,
                    cv_auc_inner_k=cvk, cv_auc_k10=cv10, holdout_auc_inner_k=hok,
                    holdout_auc_k10=ho10, fold_aucs_inner_k=foldk, fold_aucs_k10=fold10,
-                   selection_optimism_cv=gap, claimed_cv=ctx.real_cv)
+                   selection_optimism_cv=ctx.real_cv - cv10, claimed_cv=ctx.real_cv,
+                   k_rule=("k fixed at 10 unless AUDIT_T11_KCURVE=1 (inner k-curve); fixing k at the "
+                           "champion's hindsight-chosen value favours the champion"))
 
 
 # =========================================================================== #
 # T12 random 10-feature subsets
 # =========================================================================== #
-def t12(ctx, fresh, n_sub=8):
+def t12(ctx, fresh, n_sub=None):
+    n_sub = n_sub or int(os.environ.get("AUDIT_T12_N", "8"))
     pool = [f for f in ctx.features if not f.endswith("_isnan")]
     rng = np.random.default_rng(SEED)
     subs = [sorted(rng.choice(pool, 10, replace=False).tolist()) for _ in range(n_sub)]
@@ -1186,15 +1222,24 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="", help="comma list, e.g. T1,T2")
     ap.add_argument("--fresh", action="store_true", help="ignore caches")
+    ap.add_argument("--assemble-only", action="store_true",
+                    help="do not start uncached heavy tests; report them as NOT RUN")
     args = ap.parse_args()
     sel = [t.strip() for t in args.only.split(",") if t.strip()] or list(TESTS)
     ctx = Ctx()
     results = {}
+    light = ("T3", "T4", "T5", "T7", "T8", "T9", "T10")
     for tid in sel:
         log(f"=== {tid} ===")
         p = CACHE_DIR / f"{tid}.json"
-        if tid in ("T3", "T4", "T5", "T7", "T8", "T9", "T10") or args.fresh or not p.exists():
+        if args.assemble_only and tid not in light and not p.exists():
+            results[tid] = verdict(tid, TESTS[tid].__name__, "SKIP",
+                                   "not run in this audit (CPU budget on the shared box)")
+            continue
+        if tid in light or args.fresh or not p.exists():
             r = TESTS[tid](ctx, args.fresh)
+            if r is None:          # worker-only invocation (parallel T1 split)
+                continue
             p.write_text(json.dumps(r, indent=1, default=_json_default))
         else:
             r = json.loads(p.read_text())

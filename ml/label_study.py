@@ -211,7 +211,7 @@ def attach_labels(md: pd.DataFrame, lab: pd.DataFrame) -> tuple[pd.DataFrame, di
     m = keys.merge(lab, on=["date", "ticker"], how="left", validate="one_to_one")
     if len(m) != len(md):
         raise RuntimeError("label merge changed row count")
-    matched = float(m["guard_cc_1d"].notna().mean())
+    matched = float(m[f"guard_{vname(HORIZONS[0], 'cc')}"].notna().mean())
     lab_cols = [c for c in m.columns if c not in ("date", "ticker")]
     md = pd.concat([md.reset_index(drop=True), m[lab_cols].reset_index(drop=True)], axis=1)
     return md, {"model_rows_matched_in_snapshot": matched}
@@ -368,7 +368,13 @@ class SortedRanker:
         return out
 
 
-def grouped_corr(codes: np.ndarray, RX: np.ndarray, RY: np.ndarray, min_n: int):
+def grouped_corr(codes: np.ndarray, RX: np.ndarray, RY: np.ndarray, min_n: int,
+                 chunk: int = 8):
+    """Per-date Pearson of rank columns (column chunks keep temporaries small)."""
+    if RX.ndim == 2 and RX.shape[1] > chunk:
+        parts = [grouped_corr(codes, RX[:, i:i + chunk], RY[:, i:i + chunk], min_n, chunk)[1]
+                 for i in range(0, RX.shape[1], chunk)]
+        return codes[_starts(codes)], np.concatenate(parts, axis=1)
     st = _starts(codes)
     valid = ~(np.isnan(RX) | np.isnan(RY))
     X = np.where(valid, RX, 0.0)
@@ -553,9 +559,9 @@ def ic_grid(md: pd.DataFrame, feats: list[str], row_filter: np.ndarray | None = 
     for h in HORIZONS:
         for e in ENTRIES:
             v = vname(h, e)
-            base = md[f"raw_{v}"].notna().to_numpy()
+            base = md[f"raw_{v}"].notna().to_numpy().copy()
             if row_filter is not None:
-                base &= row_filter
+                base = base & row_filter
             RX = None
             if "ex" in targets:
                 RX, r = spearman(base, md[f"ex_{v}"].to_numpy(np.float64))
@@ -794,7 +800,16 @@ def per_date_econ(df: pd.DataFrame, score: str, ret: str, h: int,
 # --------------------------------------------------------------------------- #
 # 4. model level through the harness
 # --------------------------------------------------------------------------- #
-def model_runs(md: pd.DataFrame, features: list[str], splits: dict) -> dict:
+def default_model_specs() -> list[tuple]:
+    specs = [(f"bin_ex_no_{h}d", f"ex_no_{h}d", f"clean_no_{h}d", h, "no")
+             for h in MODEL_HORIZONS]
+    specs += [(f"bin_raw_cc_{h}d", f"raw_cc_{h}d", f"clean_cc_{h}d", h, "cc") for h in (5, 20)]
+    specs += [("beat_mkt_20d", "y_excess_20d", "y_clean_20d", 20, "no")]   # control
+    return specs
+
+
+def model_runs(md: pd.DataFrame, features: list[str], splits: dict,
+               specs: list[tuple] | None = None) -> dict:
     from lightgbm import LGBMClassifier
 
     ev.RESULTS_DIR = OUT_DIR
@@ -803,10 +818,7 @@ def model_runs(md: pd.DataFrame, features: list[str], splits: dict) -> dict:
     def make(task):
         return LGBMClassifier(verbosity=-1, **LGBM_PARAMS)
 
-    specs = [(f"bin_ex_no_{h}d", f"ex_no_{h}d", f"clean_no_{h}d", h, "no")
-             for h in MODEL_HORIZONS]
-    specs += [(f"bin_raw_cc_{h}d", f"raw_cc_{h}d", f"clean_cc_{h}d", h, "cc") for h in (5, 20)]
-    specs += [("beat_mkt_20d", "y_excess_20d", "y_clean_20d", 20, "no")]   # control
+    specs = specs or default_model_specs()
     out = {}
     for task, fwd, clean, h, e in specs:
         if task != "beat_mkt_20d":

@@ -395,6 +395,12 @@ def run_trees(kind: str, model_name: str, feats: list[str], df, features, splits
                     "inner_purge_start": str(pd.Timestamp(ps).date())}
             log(f"[{model_name}] fold={fold.name} best_it={best_it} "
                 f"inner_val_auc={va_auc:.4f}", to_file=True)
+        elif kind == "catboost_fixed":
+            # diagnostic: champion-style protocol -- no early stopping, the
+            # spec's full 600 iterations on ALL train rows
+            est = CatBoostClassifier(**CB_PARAMS).fit(fold.X_train, fold.y_train)
+            score = est.predict_proba(fold.X_test)[:, 1]
+            info = {"iterations": CB_PARAMS["iterations"]}
         else:
             raise ValueError(kind)
         train_s = time.time() - t0
@@ -1045,8 +1051,8 @@ def main() -> None:
     SOTA_DIR.mkdir(parents=True, exist_ok=True)
     ev.PREDS_DIR.mkdir(parents=True, exist_ok=True)
     order = ["champ", "lambdarank", "lambdarank51", "huber", "catboost",
-             "catboost51", "ensemble", "patchtst", "cstf", "dlinear", "league",
-             "annotate"]
+             "catboost51", "ensemble", "patchtst", "cstf", "dlinear",
+             "catboost_fixed", "league", "annotate"]
     parts = order if args.parts == "all" else [p.strip() for p in args.parts.split(",")]
     unknown = set(parts) - set(order)
     assert not unknown, f"unknown parts {unknown}"
@@ -1141,6 +1147,17 @@ def main() -> None:
                        "eval_metric_for_stopping": "AUC",
                        "inner_val": "last 15% of train rows (date-aligned), 20-session purge",
                        "final_fit": "all train rows, iterations = best_iteration + 1"})
+        elif part == "catboost_fixed":
+            run_trees("catboost_fixed", "catboost_fixed600", feats10, df, features, splits,
+                      "DIAGNOSTIC (not in the original spec): CatBoost with the same "
+                      "hyper-parameters as 'catboost' but the champion's protocol -- no "
+                      "early stopping, the spec's full 600 iterations on all train rows. "
+                      "Added because early stopping on the time-ordered inner tail chose "
+                      "0-186 trees (the tails straddle the March-2026 regime break), which "
+                      "confounds 'CatBoost the algorithm' with 'early stopping on a "
+                      "regime-break tail'. Defined before seeing its test results; not "
+                      "eligible to be promoted on this pilot.",
+                      {**CB_PARAMS, "early_stopping": "none (fixed 600 iterations)"})
         elif part == "ensemble":
             run_ensemble(feats10)
         elif part in ("patchtst", "dlinear"):

@@ -65,3 +65,52 @@
 [06:38:55] [cs_transformer] fold=2026-05 fit_days=153 val_days=31 (val_start=2026-02-11) test_days=19 mean_set=1432
 [06:39:25] [patchtst_lite] fold=2026-05 epoch  2 train_loss=0.66896 val_auc=0.4429 (31.6s)
 [06:39:28] [cs_transformer] fold=2026-05 epoch  1 train_loss=0.68084 val_auc=0.4724 (33.2s)
+[06:39:59] [patchtst_lite] fold=2026-05 epoch  3 train_loss=0.66629 val_auc=0.4419 (34.3s)
+[06:40:22] [cs_transformer] fold=2026-05 epoch  2 train_loss=0.67627 val_auc=0.4740 (54.0s)
+[06:40:43] [patchtst_lite] fold=2026-05 epoch  4 train_loss=0.66372 val_auc=0.4436 (44.0s)
+[06:40:53] [cs_transformer] fold=2026-05 epoch  3 train_loss=0.67145 val_auc=0.4774 (31.0s)
+[06:41:07] [patchtst_lite] fold=2026-05 epoch  5 train_loss=0.66199 val_auc=0.4490 (23.6s)
+[06:41:40] [cs_transformer] fold=2026-05 epoch  4 train_loss=0.67030 val_auc=0.4765 (46.5s)
+[06:41:47] [patchtst_lite] fold=2026-05 epoch  6 train_loss=0.66038 val_auc=0.4474 (40.0s)
+[06:42:37] [cs_transformer] fold=2026-05 epoch  5 train_loss=0.66951 val_auc=0.4753 (56.9s)
+[06:42:39] [patchtst_lite] fold=2026-05 epoch  7 train_loss=0.65919 val_auc=0.4480 (52.0s)
+[06:43:29] [patchtst_lite] fold=2026-05 epoch  8 train_loss=0.65720 val_auc=0.4427 (50.1s)
+[06:43:32] [patchtst_lite] fold=2026-05 test_auc=0.5240 best_ep=5/8 (310s)
+[06:43:33] [patchtst_lite] fold=2026-06 train_seq=60004 (pre-cap 321301) fit=45086 val=9435 val_start=2026-03-09 test=32291 short_hist_test=0.048
+[06:43:38] [cs_transformer] fold=2026-05 epoch  6 train_loss=0.66882 val_auc=0.4708 (61.0s)
+[06:44:15] [patchtst_lite] fold=2026-06 epoch  1 train_loss=0.67721 val_auc=0.3992 (41.9s)
+[06:44:21] [cs_transformer] fold=2026-05 epoch  7 train_loss=0.66843 val_auc=0.4734 (43.3s)
+[06:44:59] [patchtst_lite] fold=2026-06 epoch  2 train_loss=0.67263 val_auc=0.3929 (43.5s)
+[06:45:02] [cs_transformer] fold=2026-05 epoch  8 train_loss=0.66756 val_auc=0.4722 (41.5s)
+[06:45:04] [cs_transformer] fold=2026-05 test_auc=0.4926 best_ep=3/8 (368s)
+[06:45:06] [cs_transformer] fold=2026-06 fit_days=170 val_days=33 (val_start=2026-03-09) test_days=21 mean_set=1434
+[06:45:34] [patchtst_lite] fold=2026-06 epoch  3 train_loss=0.66917 val_auc=0.3942 (35.1s)
+[06:45:38] [lgbm_lambdarank_f51] cv_auc=0.5160 (+/-0.0167) worst=0.4943 holdout=0.5642 ho_spread=+0.0601 ic_cv=+0.0286 (t=4.00, nw=1.38) s/fold=92.9 passes=False
+[06:45:38] === catboost51 (elapsed 9.6 min) ===
+[06:45:52] dataset 507163 rows, 51 features; parts=['catboost', 'ensemble', 'catboost51']; torch 2.14.1+cpu threads=2 seed=108
+[06:45:52] === catboost (elapsed 0.1 min) ===
+[06:46:04] [cs_transformer] fold=2026-06 epoch  1 train_loss=0.68486 val_auc=0.4252 (57.6s)
+[06:46:05] [catboost] fold=2026-04 best_it=43 inner_val_auc=0.6006
+[06:46:22] [patchtst_lite] fold=2026-06 epoch  4 train_loss=0.66869 val_auc=0.4025 (47.7s)
+[06:46:24] [catboost] fold=2026-05 best_it=79 inner_val_auc=0.4844
+[06:46:33] [catboost] fold=2026-06 best_it=0 inner_val_auc=0.4365
+[06:46:42] [cs_transformer] fold=2026-06 epoch  2 train_loss=0.67594 val_auc=0.4266 (37.9s)
+[06:46:58] [patchtst_lite] fold=2026-06 epoch  5 train_loss=0.66719 val_auc=0.4011 (36.8s)
+[06:47:19] [catboost] fold=2026-07 best_it=186 inner_val_auc=0.5300
+[06:47:31] [catboost] fold=holdout best_it=5 inner_val_auc=0.5272
+[06:47:32] [cs_transformer] fold=2026-06 epoch  3 train_loss=0.67449 val_auc=0.4190 (49.6s)
+[06:47:32] [catboost] cv_auc=0.5260 (+/-0.0193) worst=0.4938 holdout=0.5096 ho_spread=-0.0023 ic_cv=+0.0498 (t=4.16, nw=2.02) s/fold=18.4 passes=False
+[06:47:32] === ensemble (elapsed 1.8 min) ===
+[06:47:35] [ensemble_rank] member per-date rank correlations: {'lgbm_fs_selected (champion, clean) ~ lgbm_lambdarank': 0.264, 'lgbm_fs_selected (champion, clean) ~ catboost': 0.58, 'lgbm_lambdarank ~ catboost': 0.201}
+[06:47:36] [ensemble_rank] cv_auc=0.5357 (+/-0.0077) worst=0.5236 holdout=0.5482 ho_spread=+0.0390 ic_cv=+0.0647 (t=7.37, nw=3.64) s/fold=0.0 passes=False
+[06:47:36] === catboost51 (elapsed 1.8 min) ===
+[06:47:58] [patchtst_lite] fold=2026-06 epoch  6 train_loss=0.66526 val_auc=0.3988 (59.2s)
+[06:48:23] [catboost_f51] fold=2026-04 best_it=91 inner_val_auc=0.6124
+[06:48:59] [cs_transformer] fold=2026-06 epoch  4 train_loss=0.67335 val_auc=0.4273 (87.1s)
+[06:49:02] [patchtst_lite] fold=2026-06 epoch  7 train_loss=0.66464 val_auc=0.3987 (64.2s)
+[06:49:06] [patchtst_lite] fold=2026-06 test_auc=0.5063 best_ep=4/7 (329s)
+[06:49:08] [patchtst_lite] fold=2026-07 train_seq=59991 (pre-cap 353788) fit=45169 val=9752 val_start=2026-04-06 test=35588 short_hist_test=0.049
+[06:50:12] [patchtst_lite] fold=2026-07 epoch  1 train_loss=0.67781 val_auc=0.4916 (63.6s)
+[06:50:21] [cs_transformer] fold=2026-06 epoch  5 train_loss=0.67195 val_auc=0.4277 (82.1s)
+[06:51:02] [patchtst_lite] fold=2026-07 epoch  2 train_loss=0.67286 val_auc=0.4963 (50.2s)
+[06:51:28] [cs_transformer] fold=2026-06 epoch  6 train_loss=0.67034 val_auc=0.4314 (66.9s)
