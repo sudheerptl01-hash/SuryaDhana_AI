@@ -1,0 +1,968 @@
+{
+ "generated_at": "2026-10-19T07:53:49",
+ "generated_by": "ml/scale5y_nested.py (seed 108)",
+ "method": {
+  "candidates": "50 5-year base features (ml/data_5y manifest; dist_sma_50_isnan absent at 5y because it is <2% missing) + ['deliv_value_share_20', 'amihud_20'] (ml/feature_sufficiency.py definitions, rebuilt from nse_market.duckdb read-only)",
+  "window": "labeled clean rows dated <= train_end of fold <year>-01 (embargo-adjusted); 2023 window extended back to 2022-01-03 with rows rebuilt from DuckDB under ml/data.py definitions (the 5-year dataset has only 43 labeled sessions before 2022-12-01)",
+  "univariate": "fs.univariate_aucs over the last <= 12 21-session blocks of the window inside the 5-year dataset (2023: 2 blocks)",
+  "importance": "fs.model_importances: champion-config LightGBM on the 504 sessions before the last 21-session block (22-session embargo, exit-date purge); gain + permutation (AUC drop, 3 repeats, seed 108) on that block",
+  "redundancy": "fs.find_redundancy_clusters, |spearman rho| > 0.9, 100k-row sample of the window",
+  "rank": "fs.combined_ranking (mean of the three ranks; one representative per cluster)",
+  "k_rule": "k in [5, 8, 10, 15] by mean AUC over the last 3 21-session blocks, each with its own rolling-504 / 22-session-embargo / exit-purged inner model; smallest k within 0.002 of the best (pilot CV_TOL rule, audit T11 KCURVE)",
+  "outer_test_data_used": "none: every number above uses rows dated <= the year's first train_end"
+ },
+ "pilot10": [
+  "atr_pct",
+  "deliv_pct_sma_20",
+  "dist_52w_high",
+  "ret_126d",
+  "mom_12_1",
+  "cs_rank_mom_20",
+  "cs_rank_ret_126",
+  "cs_rank_vol_20",
+  "deliv_pct",
+  "ret_63d"
+ ],
+ "per_year": {
+  "2023": {
+   "window": {
+    "train_end": "2022-12-01",
+    "first_date": "2022-01-03",
+    "sessions": 227,
+    "labeled_rows": 233599
+   },
+   "k_curve_mean_inner_auc": {
+    "5": 0.509582244639004,
+    "8": 0.5089837627426811,
+    "10": 0.5119383214444675,
+    "15": 0.5153289908610378
+   },
+   "k_curve_blocks": {
+    "5": [
+     0.514616657688499,
+     0.5042074081576287,
+     0.5099226680708845
+    ],
+    "8": [
+     0.5224496337066257,
+     0.5023324276573041,
+     0.5021692268641134
+    ],
+    "10": [
+     0.5275414315418229,
+     0.503523138746256,
+     0.5047503940453237
+    ],
+    "15": [
+     0.5342216554363965,
+     0.5073163797205542,
+     0.5044489374261624
+    ]
+   },
+   "k_selected": 15,
+   "selected": [
+    "cs_rank_mom_20",
+    "macd_norm",
+    "ret_126d",
+    "vol_20",
+    "mom_10",
+    "vol_z_20",
+    "vol_10",
+    "atr_pct",
+    "dist_52w_low",
+    "deliv_pct",
+    "vol_ratio_20",
+    "amihud_20",
+    "mom_20",
+    "deliv_value_share_20",
+    "range_pct"
+   ],
+   "top10": [
+    "cs_rank_mom_20",
+    "macd_norm",
+    "ret_126d",
+    "vol_20",
+    "mom_10",
+    "vol_z_20",
+    "vol_10",
+    "atr_pct",
+    "dist_52w_low",
+    "deliv_pct"
+   ],
+   "selection_order": [
+    "cs_rank_mom_20",
+    "macd_norm",
+    "ret_126d",
+    "vol_20",
+    "mom_10",
+    "vol_z_20",
+    "vol_10",
+    "atr_pct",
+    "dist_52w_low",
+    "deliv_pct",
+    "vol_ratio_20",
+    "amihud_20",
+    "mom_20",
+    "deliv_value_share_20",
+    "range_pct",
+    "dist_sma_5",
+    "mom_5",
+    "mom_12_1",
+    "ret_126d_isnan",
+    "gap_pct",
+    "dist_52w_high",
+    "vol_5",
+    "ret_63d",
+    "cs_rank_ret_126_isnan",
+    "close_pos_in_range",
+    "deliv_pct_z_20",
+    "flag_near_52w_low",
+    "ret_1d",
+    "dist_200dma_isnan",
+    "log_turnover",
+    "deliv_pct_sma_20_isnan",
+    "deliv_pct_z_20_isnan",
+    "cs_rank_deliv_z_isnan",
+    "ret_252d_isnan",
+    "mom_12_1_isnan",
+    "flag_below_200dma",
+    "flag_split_20d",
+    "ret_63d_isnan",
+    "deliv_pct_isnan"
+   ],
+   "overlap_selected_with_pilot10": [
+    "atr_pct",
+    "cs_rank_mom_20",
+    "deliv_pct",
+    "ret_126d"
+   ],
+   "n_overlap_selected_with_pilot10": 4,
+   "n_overlap_top10_with_pilot10": 4,
+   "suff_features_selected": [
+    "deliv_value_share_20",
+    "amihud_20"
+   ],
+   "suff_rank_in_order": {
+    "deliv_value_share_20": 14,
+    "amihud_20": 12
+   },
+   "redundancy_clusters": [
+    {
+     "representative": "deliv_pct_z_20",
+     "members": [
+      "cs_rank_deliv_z",
+      "deliv_pct_z_20"
+     ]
+    },
+    {
+     "representative": "ret_126d",
+     "members": [
+      "cs_rank_ret_126",
+      "dist_200dma",
+      "ret_126d"
+     ]
+    },
+    {
+     "representative": "log_turnover",
+     "members": [
+      "cs_rank_turnover",
+      "log_turnover"
+     ]
+    },
+    {
+     "representative": "vol_20",
+     "members": [
+      "cs_rank_vol_20",
+      "vol_20"
+     ]
+    },
+    {
+     "representative": "deliv_value_share_20",
+     "members": [
+      "deliv_pct_sma_20",
+      "deliv_value_share_20"
+     ]
+    },
+    {
+     "representative": "mom_5",
+     "members": [
+      "dist_sma_10",
+      "mom_5"
+     ]
+    },
+    {
+     "representative": "macd_norm",
+     "members": [
+      "dist_sma_20",
+      "dist_sma_50",
+      "macd_norm",
+      "rsi_14"
+     ]
+    },
+    {
+     "representative": "dist_sma_5",
+     "members": [
+      "dist_sma_5",
+      "rsi_2"
+     ]
+    },
+    {
+     "representative": "ret_1d",
+     "members": [
+      "log_ret_1d",
+      "ret_1d"
+     ]
+    },
+    {
+     "representative": "mom_12_1",
+     "members": [
+      "mom_12_1",
+      "ret_252d"
+     ]
+    }
+   ],
+   "univariate_top10": [
+    "mom_12_1",
+    "mom_10",
+    "dist_sma_20",
+    "mom_20",
+    "cs_rank_mom_20",
+    "rsi_14",
+    "macd_norm",
+    "atr_pct",
+    "dist_sma_50",
+    "dist_sma_10"
+   ],
+   "univariate_blocks": [
+    "2022-11-02..2022-12-01"
+   ],
+   "importance_block": {
+    "name": "imp",
+    "train_end": "2022-09-29",
+    "test_start": "2022-11-02",
+    "test_end": "2022-12-01"
+   },
+   "importance_train_rows_purged": 0
+  },
+  "2024": {
+   "window": {
+    "train_end": "2023-11-29",
+    "first_date": "2022-01-03",
+    "sessions": 472,
+    "labeled_rows": 509839
+   },
+   "k_curve_mean_inner_auc": {
+    "5": 0.5180177160348166,
+    "8": 0.5191949334429055,
+    "10": 0.5142604939705849,
+    "15": 0.5104341619993394
+   },
+   "k_curve_blocks": {
+    "5": [
+     0.5054597433725104,
+     0.5110261821988415,
+     0.5375672225330977
+    ],
+    "8": [
+     0.5113328793362996,
+     0.507634109554316,
+     0.5386178114381011
+    ],
+    "10": [
+     0.5100514316574416,
+     0.5045734731891847,
+     0.5281565770651284
+    ],
+    "15": [
+     0.5123166603141676,
+     0.49274739401327095,
+     0.52623843167058
+    ]
+   },
+   "k_selected": 5,
+   "selected": [
+    "dist_52w_high",
+    "deliv_value_share_20",
+    "amihud_20",
+    "ret_252d",
+    "vol_20"
+   ],
+   "top10": [
+    "dist_52w_high",
+    "deliv_value_share_20",
+    "amihud_20",
+    "ret_252d",
+    "vol_20",
+    "cs_rank_ret_126",
+    "atr_pct",
+    "deliv_pct",
+    "dist_52w_low",
+    "mom_20"
+   ],
+   "selection_order": [
+    "dist_52w_high",
+    "deliv_value_share_20",
+    "amihud_20",
+    "ret_252d",
+    "vol_20",
+    "cs_rank_ret_126",
+    "atr_pct",
+    "deliv_pct",
+    "dist_52w_low",
+    "mom_20",
+    "vol_10",
+    "vol_ratio_20",
+    "cs_rank_turnover",
+    "dist_200dma",
+    "rsi_14",
+    "ret_63d",
+    "cs_rank_deliv_z",
+    "vol_5",
+    "gap_pct",
+    "flag_below_200dma",
+    "mom_5",
+    "vol_z_20",
+    "close_pos_in_range",
+    "log_ret_1d",
+    "cs_rank_mom_20",
+    "dist_sma_5",
+    "flag_near_52w_low",
+    "range_pct",
+    "dist_sma_10",
+    "mom_10",
+    "deliv_pct_isnan",
+    "dist_200dma_isnan",
+    "ret_126d_isnan",
+    "deliv_pct_sma_20_isnan",
+    "deliv_pct_z_20_isnan",
+    "ret_63d_isnan",
+    "cs_rank_deliv_z_isnan",
+    "ret_252d_isnan",
+    "cs_rank_ret_126_isnan",
+    "mom_12_1_isnan",
+    "flag_split_20d"
+   ],
+   "overlap_selected_with_pilot10": [
+    "dist_52w_high"
+   ],
+   "n_overlap_selected_with_pilot10": 1,
+   "n_overlap_top10_with_pilot10": 4,
+   "suff_features_selected": [
+    "deliv_value_share_20",
+    "amihud_20"
+   ],
+   "suff_rank_in_order": {
+    "deliv_value_share_20": 2,
+    "amihud_20": 3
+   },
+   "redundancy_clusters": [
+    {
+     "representative": "cs_rank_deliv_z",
+     "members": [
+      "cs_rank_deliv_z",
+      "deliv_pct_z_20"
+     ]
+    },
+    {
+     "representative": "cs_rank_turnover",
+     "members": [
+      "cs_rank_turnover",
+      "log_turnover"
+     ]
+    },
+    {
+     "representative": "vol_20",
+     "members": [
+      "cs_rank_vol_20",
+      "vol_20"
+     ]
+    },
+    {
+     "representative": "deliv_value_share_20",
+     "members": [
+      "deliv_pct_sma_20",
+      "deliv_value_share_20"
+     ]
+    },
+    {
+     "representative": "dist_200dma",
+     "members": [
+      "dist_200dma",
+      "ret_126d"
+     ]
+    },
+    {
+     "representative": "rsi_14",
+     "members": [
+      "dist_sma_20",
+      "dist_sma_50",
+      "macd_norm",
+      "rsi_14"
+     ]
+    },
+    {
+     "representative": "dist_sma_5",
+     "members": [
+      "dist_sma_5",
+      "rsi_2"
+     ]
+    },
+    {
+     "representative": "log_ret_1d",
+     "members": [
+      "log_ret_1d",
+      "ret_1d"
+     ]
+    },
+    {
+     "representative": "ret_252d",
+     "members": [
+      "mom_12_1",
+      "ret_252d"
+     ]
+    }
+   ],
+   "univariate_top10": [
+    "mom_12_1",
+    "ret_252d",
+    "dist_52w_high",
+    "dist_52w_low",
+    "dist_200dma",
+    "deliv_value_share_20",
+    "cs_rank_ret_126",
+    "ret_126d",
+    "flag_below_200dma",
+    "ret_63d"
+   ],
+   "univariate_blocks": [
+    "2022-11-23..2022-12-21",
+    "2022-12-22..2023-01-19",
+    "2023-01-20..2023-02-20",
+    "2023-02-21..2023-03-22",
+    "2023-03-23..2023-04-26",
+    "2023-04-27..2023-05-26",
+    "2023-05-29..2023-06-26",
+    "2023-06-27..2023-07-26",
+    "2023-07-27..2023-08-25",
+    "2023-08-28..2023-09-26",
+    "2023-09-27..2023-10-27",
+    "2023-10-30..2023-11-29"
+   ],
+   "importance_block": {
+    "name": "imp",
+    "train_end": "2023-09-26",
+    "test_start": "2023-10-30",
+    "test_end": "2023-11-29"
+   },
+   "importance_train_rows_purged": 0
+  },
+  "2025": {
+   "window": {
+    "train_end": "2024-11-29",
+    "first_date": "2022-01-03",
+    "sessions": 719,
+    "labeled_rows": 861446
+   },
+   "k_curve_mean_inner_auc": {
+    "5": 0.5342982600756631,
+    "8": 0.5368188513465745,
+    "10": 0.539093645320922,
+    "15": 0.541627516427623
+   },
+   "k_curve_blocks": {
+    "5": [
+     0.5684993742216549,
+     0.5201816728800502,
+     0.5142137331252841
+    ],
+    "8": [
+     0.5617320416865044,
+     0.5273629143100068,
+     0.5213615980432125
+    ],
+    "10": [
+     0.5630931924750238,
+     0.533951305347253,
+     0.5202364381404895
+    ],
+    "15": [
+     0.5694712248053427,
+     0.5351507544975345,
+     0.5202605699799916
+    ]
+   },
+   "k_selected": 15,
+   "selected": [
+    "dist_52w_high",
+    "amihud_20",
+    "cs_rank_vol_20",
+    "deliv_pct_sma_20",
+    "dist_52w_low",
+    "mom_12_1",
+    "ret_63d",
+    "cs_rank_turnover",
+    "deliv_pct",
+    "dist_sma_20",
+    "atr_pct",
+    "vol_ratio_20",
+    "mom_20",
+    "cs_rank_ret_126",
+    "mom_10"
+   ],
+   "top10": [
+    "dist_52w_high",
+    "amihud_20",
+    "cs_rank_vol_20",
+    "deliv_pct_sma_20",
+    "dist_52w_low",
+    "mom_12_1",
+    "ret_63d",
+    "cs_rank_turnover",
+    "deliv_pct",
+    "dist_sma_20"
+   ],
+   "selection_order": [
+    "dist_52w_high",
+    "amihud_20",
+    "cs_rank_vol_20",
+    "deliv_pct_sma_20",
+    "dist_52w_low",
+    "mom_12_1",
+    "ret_63d",
+    "cs_rank_turnover",
+    "deliv_pct",
+    "dist_sma_20",
+    "atr_pct",
+    "vol_ratio_20",
+    "mom_20",
+    "cs_rank_ret_126",
+    "mom_10",
+    "vol_10",
+    "dist_sma_10",
+    "vol_z_20",
+    "vol_5",
+    "deliv_pct_z_20",
+    "deliv_pct_sma_20_isnan",
+    "range_pct",
+    "flag_below_200dma",
+    "cs_rank_mom_20",
+    "rsi_2",
+    "deliv_pct_z_20_isnan",
+    "gap_pct",
+    "cs_rank_deliv_z_isnan",
+    "deliv_pct_isnan",
+    "ret_63d_isnan",
+    "ret_126d_isnan",
+    "flag_near_52w_low",
+    "ret_1d",
+    "close_pos_in_range",
+    "cs_rank_ret_126_isnan",
+    "ret_252d_isnan",
+    "dist_200dma_isnan",
+    "mom_12_1_isnan",
+    "flag_split_20d"
+   ],
+   "overlap_selected_with_pilot10": [
+    "atr_pct",
+    "cs_rank_ret_126",
+    "cs_rank_vol_20",
+    "deliv_pct",
+    "deliv_pct_sma_20",
+    "dist_52w_high",
+    "mom_12_1",
+    "ret_63d"
+   ],
+   "n_overlap_selected_with_pilot10": 8,
+   "n_overlap_top10_with_pilot10": 6,
+   "suff_features_selected": [
+    "amihud_20"
+   ],
+   "suff_rank_in_order": {
+    "deliv_value_share_20": null,
+    "amihud_20": 2
+   },
+   "redundancy_clusters": [
+    {
+     "representative": "deliv_pct_z_20",
+     "members": [
+      "cs_rank_deliv_z",
+      "deliv_pct_z_20"
+     ]
+    },
+    {
+     "representative": "cs_rank_ret_126",
+     "members": [
+      "cs_rank_ret_126",
+      "dist_200dma",
+      "ret_126d"
+     ]
+    },
+    {
+     "representative": "cs_rank_turnover",
+     "members": [
+      "cs_rank_turnover",
+      "log_turnover"
+     ]
+    },
+    {
+     "representative": "cs_rank_vol_20",
+     "members": [
+      "cs_rank_vol_20",
+      "vol_20"
+     ]
+    },
+    {
+     "representative": "deliv_pct_sma_20",
+     "members": [
+      "deliv_pct_sma_20",
+      "deliv_value_share_20"
+     ]
+    },
+    {
+     "representative": "dist_sma_10",
+     "members": [
+      "dist_sma_10",
+      "mom_5"
+     ]
+    },
+    {
+     "representative": "dist_sma_20",
+     "members": [
+      "dist_sma_20",
+      "dist_sma_50",
+      "macd_norm",
+      "rsi_14"
+     ]
+    },
+    {
+     "representative": "rsi_2",
+     "members": [
+      "dist_sma_5",
+      "rsi_2"
+     ]
+    },
+    {
+     "representative": "ret_1d",
+     "members": [
+      "log_ret_1d",
+      "ret_1d"
+     ]
+    },
+    {
+     "representative": "mom_12_1",
+     "members": [
+      "mom_12_1",
+      "ret_252d"
+     ]
+    }
+   ],
+   "univariate_top10": [
+    "dist_52w_high",
+    "amihud_20",
+    "atr_pct",
+    "deliv_value_share_20",
+    "cs_rank_vol_20",
+    "vol_20",
+    "deliv_pct_sma_20",
+    "cs_rank_turnover",
+    "log_turnover",
+    "deliv_pct"
+   ],
+   "univariate_blocks": [
+    "2023-11-22..2023-12-21",
+    "2023-12-22..2024-01-22",
+    "2024-01-23..2024-02-21",
+    "2024-02-22..2024-03-22",
+    "2024-03-26..2024-04-26",
+    "2024-04-29..2024-05-29",
+    "2024-05-30..2024-06-28",
+    "2024-07-01..2024-07-30",
+    "2024-07-31..2024-08-29",
+    "2024-08-30..2024-09-27",
+    "2024-09-30..2024-10-29",
+    "2024-10-30..2024-11-29"
+   ],
+   "importance_block": {
+    "name": "imp",
+    "train_end": "2024-09-27",
+    "test_start": "2024-10-30",
+    "test_end": "2024-11-29"
+   },
+   "importance_train_rows_purged": 7
+  },
+  "2026": {
+   "window": {
+    "train_end": "2025-12-01",
+    "first_date": "2022-01-03",
+    "sessions": 966,
+    "labeled_rows": 1209437
+   },
+   "k_curve_mean_inner_auc": {
+    "5": 0.6066100006217223,
+    "8": 0.6005093173818697,
+    "10": 0.6035702927323754,
+    "15": 0.604265268956813
+   },
+   "k_curve_blocks": {
+    "5": [
+     0.582759321106483,
+     0.6032851095886165,
+     0.6337855711700675
+    ],
+    "8": [
+     0.5835089737768039,
+     0.5912020276230502,
+     0.6268169507457553
+    ],
+    "10": [
+     0.5873508318575722,
+     0.5991571891242159,
+     0.624202857215338
+    ],
+    "15": [
+     0.5927876763787828,
+     0.5939758071766572,
+     0.6260323233149987
+    ]
+   },
+   "k_selected": 5,
+   "selected": [
+    "deliv_value_share_20",
+    "atr_pct",
+    "dist_52w_high",
+    "amihud_20",
+    "vol_20"
+   ],
+   "top10": [
+    "deliv_value_share_20",
+    "atr_pct",
+    "dist_52w_high",
+    "amihud_20",
+    "vol_20",
+    "dist_52w_low",
+    "vol_10",
+    "mom_12_1",
+    "cs_rank_ret_126",
+    "cs_rank_turnover"
+   ],
+   "selection_order": [
+    "deliv_value_share_20",
+    "atr_pct",
+    "dist_52w_high",
+    "amihud_20",
+    "vol_20",
+    "dist_52w_low",
+    "vol_10",
+    "mom_12_1",
+    "cs_rank_ret_126",
+    "cs_rank_turnover",
+    "mom_20",
+    "deliv_pct",
+    "ret_126d",
+    "cs_rank_mom_20",
+    "dist_sma_20",
+    "range_pct",
+    "ret_63d",
+    "vol_5",
+    "vol_z_20",
+    "vol_ratio_20",
+    "mom_10",
+    "close_pos_in_range",
+    "gap_pct",
+    "cs_rank_deliv_z",
+    "deliv_pct_isnan",
+    "deliv_pct_sma_20_isnan",
+    "ret_252d_isnan",
+    "ret_126d_isnan",
+    "dist_sma_10",
+    "ret_1d",
+    "deliv_pct_z_20_isnan",
+    "cs_rank_deliv_z_isnan",
+    "flag_split_20d",
+    "mom_12_1_isnan",
+    "cs_rank_ret_126_isnan",
+    "rsi_2",
+    "dist_200dma_isnan",
+    "ret_63d_isnan",
+    "flag_near_52w_low",
+    "flag_below_200dma"
+   ],
+   "overlap_selected_with_pilot10": [
+    "atr_pct",
+    "dist_52w_high"
+   ],
+   "n_overlap_selected_with_pilot10": 2,
+   "n_overlap_top10_with_pilot10": 4,
+   "suff_features_selected": [
+    "deliv_value_share_20",
+    "amihud_20"
+   ],
+   "suff_rank_in_order": {
+    "deliv_value_share_20": 1,
+    "amihud_20": 4
+   },
+   "redundancy_clusters": [
+    {
+     "representative": "cs_rank_deliv_z",
+     "members": [
+      "cs_rank_deliv_z",
+      "deliv_pct_z_20"
+     ]
+    },
+    {
+     "representative": "cs_rank_turnover",
+     "members": [
+      "cs_rank_turnover",
+      "log_turnover"
+     ]
+    },
+    {
+     "representative": "vol_20",
+     "members": [
+      "cs_rank_vol_20",
+      "vol_20"
+     ]
+    },
+    {
+     "representative": "deliv_value_share_20",
+     "members": [
+      "deliv_pct_sma_20",
+      "deliv_value_share_20"
+     ]
+    },
+    {
+     "representative": "ret_126d",
+     "members": [
+      "dist_200dma",
+      "ret_126d"
+     ]
+    },
+    {
+     "representative": "dist_sma_10",
+     "members": [
+      "dist_sma_10",
+      "mom_5"
+     ]
+    },
+    {
+     "representative": "dist_sma_20",
+     "members": [
+      "dist_sma_20",
+      "dist_sma_50",
+      "macd_norm",
+      "rsi_14"
+     ]
+    },
+    {
+     "representative": "rsi_2",
+     "members": [
+      "dist_sma_5",
+      "rsi_2"
+     ]
+    },
+    {
+     "representative": "ret_1d",
+     "members": [
+      "log_ret_1d",
+      "ret_1d"
+     ]
+    },
+    {
+     "representative": "mom_12_1",
+     "members": [
+      "mom_12_1",
+      "ret_252d"
+     ]
+    }
+   ],
+   "univariate_top10": [
+    "atr_pct",
+    "cs_rank_vol_20",
+    "vol_20",
+    "deliv_value_share_20",
+    "deliv_pct_sma_20",
+    "vol_10",
+    "amihud_20",
+    "range_pct",
+    "deliv_pct",
+    "vol_5"
+   ],
+   "univariate_blocks": [
+    "2024-11-25..2024-12-23",
+    "2024-12-24..2025-01-22",
+    "2025-01-23..2025-02-20",
+    "2025-02-21..2025-03-25",
+    "2025-03-26..2025-04-29",
+    "2025-04-30..2025-05-29",
+    "2025-05-30..2025-06-27",
+    "2025-06-30..2025-07-28",
+    "2025-07-29..2025-08-28",
+    "2025-08-29..2025-09-26",
+    "2025-09-29..2025-10-30",
+    "2025-10-31..2025-12-01"
+   ],
+   "importance_block": {
+    "name": "imp",
+    "train_end": "2025-09-26",
+    "test_start": "2025-10-31",
+    "test_end": "2025-12-01"
+   },
+   "importance_train_rows_purged": 6
+  }
+ },
+ "stability": {
+  "2023->2024": {
+   "top10_overlap": 4,
+   "selected_overlap": 3,
+   "selected_sizes": [
+    15,
+    5
+   ]
+  },
+  "2024->2025": {
+   "top10_overlap": 4,
+   "selected_overlap": 2,
+   "selected_sizes": [
+    5,
+    15
+   ]
+  },
+  "2025->2026": {
+   "top10_overlap": 5,
+   "selected_overlap": 3,
+   "selected_sizes": [
+    15,
+    5
+   ]
+  }
+ },
+ "features_selected_every_year": [
+  "amihud_20"
+ ],
+ "features_selected_any_year": [
+  "amihud_20",
+  "atr_pct",
+  "cs_rank_mom_20",
+  "cs_rank_ret_126",
+  "cs_rank_turnover",
+  "cs_rank_vol_20",
+  "deliv_pct",
+  "deliv_pct_sma_20",
+  "deliv_value_share_20",
+  "dist_52w_high",
+  "dist_52w_low",
+  "dist_sma_20",
+  "macd_norm",
+  "mom_10",
+  "mom_12_1",
+  "mom_20",
+  "range_pct",
+  "ret_126d",
+  "ret_252d",
+  "ret_63d",
+  "vol_10",
+  "vol_20",
+  "vol_ratio_20",
+  "vol_z_20"
+ ]
+}

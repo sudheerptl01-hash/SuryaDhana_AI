@@ -14,3 +14,5 @@ ml/data/
 ml/results/preds/
 ml/data_5y/
 catboost_info/
+ml/results/*/preds/
+ml/results/scale5y/cache/

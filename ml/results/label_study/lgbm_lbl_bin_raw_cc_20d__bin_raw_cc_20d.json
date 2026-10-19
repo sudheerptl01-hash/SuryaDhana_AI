@@ -141,6 +141,6 @@
   "fold": "holdout",
   "n_train": 389226
  },
- "train_seconds": 266.5,
+ "train_seconds": 168.5,
  "notes": "label study: pilot champion LGBM config, all 51 manifest features, label=bin_raw_cc_20d fwd=raw_cc_20d clean=clean_cc_20d"
 }
