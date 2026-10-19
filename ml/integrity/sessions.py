@@ -50,8 +50,8 @@ import pandas as pd  # noqa: E402
 
 import nse_historical_ingest as nhi  # noqa: E402
 from ml.integrity.common import (DATA_EXT, EOD_EXPORT, MISSING_SESSIONS, OUT, RAW, RAW_CM,  # noqa: E402
-                                 RAW_SEC, SEC_URL, PoliteGetter, atomic_write_bytes, log, pr_name,
-                                 sec_name, wjson)
+                                 RAW_SEC, SEC_URL, PoliteGetter, atomic_write_bytes, bundle_inner_date,
+                                 bundle_ok, log, pr_name, sec_name, wjson)
 
 STAGING = DATA_EXT / "staging"
 RAW_MTO = RAW / "mto"
@@ -324,7 +324,7 @@ def coverage_audit(eod: pd.DataFrame) -> pd.DataFrame:
     by_date = {k: set(v) for k, v in eod.groupby("date")["ticker"]}
     for d in sorted(by_date):
         z = RAW / pr_name(pd.Timestamp(d))
-        if not z.exists():
+        if not z.exists() or not bundle_ok(z):
             continue
         pdf, _ = read_pr_member(z, "pd")
         if pdf is None or pdf.empty:
@@ -399,9 +399,18 @@ def pr_calendar() -> dict:
     man = pd.read_csv(RAW / "_manifest.csv", dtype=str)
     man = man[man["name"].str.match(r"^PR\d{6}\.zip$")]
     absent = {pd.to_datetime(n[2:8], format="%d%m%y").date() for n in man.loc[man["status"] == "404", "name"]}
-    present = {pd.to_datetime(z.stem[2:], format="%d%m%y").date() for z in RAW.glob("PR*.zip")}
+    present, misfiled = set(), {}
+    for z in RAW.glob("PR*.zip"):
+        zd = pd.to_datetime(z.stem[2:], format="%d%m%y").date()
+        if bundle_ok(z):
+            present.add(zd)
+        else:
+            misfiled[zd] = bundle_inner_date(z)
     days = pd.date_range(STORE_START, STORE_END, freq="D").date
-    return {d: ("present" if d in present else "absent" if d in absent else "unknown") for d in days}
+    cal = {d: ("present" if d in present else "misfiled" if d in misfiled else "absent" if d in absent
+               else "unknown") for d in days}
+    cal["_misfiled"] = {str(k): str(v) for k, v in misfiled.items()}
+    return cal
 
 
 def find_file_for(d: date, max_ahead: int = 4) -> tuple[date | None, bytes | None, list]:
@@ -417,15 +426,25 @@ def find_file_for(d: date, max_ahead: int = 4) -> tuple[date | None, bytes | Non
     return None, None, tried
 
 
-def calendar_audit(eod: pd.DataFrame, cont_sessions: set[str]) -> tuple[list[pd.DataFrame], list[str], dict]:
+def calendar_audit(eod: pd.DataFrame, cont_sessions: set[str]) -> tuple[list[tuple[dict, pd.DataFrame]], list[str], dict]:
+    """Returns ([(action, rows)], dates to delete, report).
+
+    Step 1: every stored date S without a PR bundle: its own archive file's DATE1 names
+            the session it really holds; if that is another date D (not stored, PR bundle
+            present) and the stored rows equal the file, S is re-dated to D.
+    Step 2: every remaining PR-bundle date D without stored rows: the archive file whose
+            DATE1 is D is added, unless it is an echo of the previous stored session.
+    """
     cal = pr_calendar()
+    misfiled = cal.pop("_misfiled")
     stored = {pd.Timestamp(x).date() for x in eod["date"].unique()}
     present = {d for d, v in cal.items() if v == "present"}
-    absent = {d for d, v in cal.items() if v == "absent"}
+    absent = {d for d, v in cal.items() if v in ("absent", "misfiled")}
     unknown = sorted(d for d, v in cal.items() if v == "unknown")
     stored_without_pr = sorted(stored & absent)
     sessions_not_stored = sorted(present - stored)
     rep = {"days": len(cal), "pr_present": len(present), "pr_absent": len(absent),
+           "pr_misfiled_by_archive": misfiled,
            "pr_unknown": [str(x) for x in unknown],
            "stored_dates_without_pr_bundle": [str(x) for x in stored_without_pr],
            "pr_bundle_dates_not_stored": [str(x) for x in sessions_not_stored],
@@ -440,56 +459,84 @@ def calendar_audit(eod: pd.DataFrame, cont_sessions: set[str]) -> tuple[list[pd.
         "listed_but_session": [str(d) for d in sorted(hol_w & present)]}
     spc = {date.fromisoformat(x) for x in nhi.SPECIAL_SESSIONS}
     rep["special_sessions_in_window"] = {str(d): cal.get(d) for d in sorted(spc) if lo <= d <= hi}
+    td = set(nhi.trading_days(lo, hi))
     rep["trading_days_vs_pr_calendar"] = {
-        "trading_days_without_pr": [str(d) for d in nhi.trading_days(lo, hi) if d not in present],
-        "pr_sessions_not_in_trading_days": [str(d) for d in sorted(present - set(nhi.trading_days(lo, hi)))]}
-    actions, frames, deletes = [], [], []
-    consumed = set()
+        "trading_days_without_pr": [str(d) for d in sorted(td) if d not in present],
+        "pr_sessions_not_in_trading_days": [str(d) for d in sorted(present - td)]}
+    actions: list[tuple[dict, pd.DataFrame]] = []
+    deletes: list[str] = []
+    consumed: set[date] = set()
+    cols = ["prev_close", "open", "high", "low", "close", "volume", "turnover", "deliv_qty"]
+    # step 1: stored dates without a PR bundle
+    for s_ in stored_without_pr:
+        st, raw = fetch_file(SEC_URL.format(ddmmyyyy=f"{s_:%d%m%Y}"), RAW_SEC / sec_name(s_))
+        d1 = _date1(raw) if st == 200 and raw else None
+        a = {"stored_date": str(s_), "file": sec_name(s_), "date1": d1}
+        true = pd.to_datetime(d1[0], format="%d-%b-%Y").date() if d1 and len(d1) == 1 else None
+        if true is None or true == s_:
+            a["action"] = "unresolved: stored date has no PR bundle but its file names it"
+            actions.append((a, None))
+            continue
+        a["true_session"] = str(true)
+        if true in stored or true not in present:
+            a["action"] = f"unresolved: true date {true} {'already stored' if true in stored else 'has no PR bundle'}"
+            actions.append((a, None))
+            continue
+        rows = nhi.parse_sec_delivery(raw, true)
+        enrich, src = cm_enrichment(true)
+        rows = nhi.merge_sources(rows, enrich)
+        stored_rows = eod[eod["date"] == pd.Timestamp(s_)]
+        cmp_ = compare_frames(stored_rows, rows[rows["series"].isin(["EQ", "BE"])], cols)
+        same = cmp_["only_a"] == 0 and cmp_["only_b"] == 0 and all(
+            v["max_abs_diff"] == 0 and v["nan_mismatch"] == 0 for v in cmp_.values() if isinstance(v, dict))
+        own_st, own_raw = fetch_file(SEC_URL.format(ddmmyyyy=f"{true:%d%m%Y}"), RAW_SEC / sec_name(true))
+        a.update({"session": str(true), "weekday": true.strftime("%A"), "file_used": sec_name(s_),
+                  "own_file_of_true_date": {"file": sec_name(true), "http": own_st,
+                                            "date1": _date1(own_raw) if own_st == 200 and own_raw else None,
+                                            "byte_identical_to_used_file": own_raw == raw},
+                  "rows": int(len(rows)), "rows_eq_be": int(rows["series"].isin(["EQ", "BE"]).sum()),
+                  "by_series": {k: int(v) for k, v in rows["series"].value_counts().items()},
+                  "enrichment_file": src, "isin_filled_pct": round(100 * float(rows["isin"].notna().mean()), 2),
+                  "stored_copy": {"stored_date": str(s_), "identical_to_file": bool(same), "compare": cmp_}})
+        if same:
+            a["action"] = f"re-date stored {s_} -> {true}"
+            deletes.append(str(s_))
+            consumed.add(true)
+            actions.append((a, rows))
+        else:
+            a["action"] = "unresolved: stored copy differs from the file"
+            actions.append((a, None))
+    # step 2: PR-bundle dates without stored rows (not explained by a re-date)
     for d in sessions_not_stored:
+        if d in consumed:
+            continue
         n, raw, tried = find_file_for(d)
         a = {"session": str(d), "weekday": d.strftime("%A"), "files_tried": tried}
         if n is None:
             a["action"] = "unresolved: no archive file names this date"
-            actions.append(a)
+            actions.append((a, None))
             continue
         rows = nhi.parse_sec_delivery(raw, d)
         enrich, src = cm_enrichment(d)
         rows = nhi.merge_sources(rows, enrich)
+        prev = max((x for x in stored if x < d), default=None)
+        prev_rows = eod[eod["date"] == pd.Timestamp(prev)] if prev else eod.iloc[:0]
+        echo = prev is not None and eqbe_fingerprint(rows) == eqbe_fingerprint(prev_rows)
         a.update({"file_used": sec_name(n), "rows": int(len(rows)),
                   "rows_eq_be": int(rows["series"].isin(["EQ", "BE"]).sum()),
                   "by_series": {k: int(v) for k, v in rows["series"].value_counts().items()},
-                  "enrichment_file": src, "isin_filled_pct": round(100 * float(rows["isin"].notna().mean()), 2)})
-        if n in stored_without_pr:
-            st = eod[eod["date"] == pd.Timestamp(n)]
-            cmp_ = compare_frames(st, rows[rows["series"].isin(["EQ", "BE"])],
-                                  ["prev_close", "open", "high", "low", "close", "volume", "turnover", "deliv_qty"])
-            same = cmp_["only_a"] == 0 and cmp_["only_b"] == 0 and all(
-                v["max_abs_diff"] == 0 and v["nan_mismatch"] == 0 for k, v in cmp_.items() if isinstance(v, dict))
-            a["stored_copy"] = {"stored_date": str(n), "identical_to_file": bool(same), "compare": cmp_}
-            if same:
-                a["action"] = f"re-date stored {n} -> {d}"
-                deletes.append(str(n))
-                consumed.add(n)
-                frames.append(rows)
-            else:
-                a["action"] = "unresolved: stored copy differs from the file"
-        elif n == d:
-            prev = max((x for x in stored if x < d), default=None)
-            prev_rows = eod[eod["date"] == pd.Timestamp(prev)] if prev else eod.iloc[:0]
-            echo = prev is not None and eqbe_fingerprint(rows) == eqbe_fingerprint(prev_rows)
-            a["echo_of_prev_stored"] = bool(echo)
-            a["found_by_continuity_scan"] = str(d) in cont_sessions
-            if echo:
-                a["action"] = "skip: echo of the previous stored session"
-            else:
-                a["action"] = "add session"
-                frames.append(rows)
+                  "enrichment_file": src, "isin_filled_pct": round(100 * float(rows["isin"].notna().mean()), 2),
+                  "echo_of_prev_stored": bool(echo), "found_by_continuity_scan": str(d) in cont_sessions})
+        if echo:
+            a["action"] = "skip: echo of the previous stored session"
+            actions.append((a, None))
         else:
-            a["action"] = f"unresolved: file named {n} carries {d}"
-        actions.append(a)
-    rep["actions"] = actions
-    rep["stored_without_pr_unresolved"] = [str(x) for x in stored_without_pr if x not in consumed]
-    return frames, deletes, rep
+            a["action"] = "add session"
+            actions.append((a, rows))
+    rep["actions"] = [a for a, _ in actions]
+    rep["stored_without_pr_unresolved"] = [a["stored_date"] for a, _ in actions
+                                           if "stored_date" in a and a["action"].startswith("unresolved")]
+    return actions, deletes, rep
 
 
 # --------------------------------------------------------------------------- #
@@ -523,8 +570,8 @@ def audit_store_vs_pr(eod: pd.DataFrame, extra_rows: pd.DataFrame | None = None)
     for d in dates:
         d = pd.Timestamp(d).date()
         z = RAW / pr_name(d)
-        if not z.exists():
-            res.append({"date": str(d), "pr": "absent"})
+        if not z.exists() or not bundle_ok(z):
+            res.append({"date": str(d), "pr": "absent or misfiled"})
             continue
         pdf, name = read_pr_member(z, "pd")
         if pdf is None or pdf.empty:
@@ -604,11 +651,11 @@ def main(argv=None) -> int:
                                         for k, v in mm8["stored_prev_date"].value_counts().items()}
     rep["march_2022"] = ev7
     # calendar audit (PR bundle present <=> session): re-dates + cross-check of the additions
-    cal_frames, delete_dates, cal = calendar_audit(eod, set(add_info))
+    cal_pairs, delete_dates, cal = calendar_audit(eod, set(add_info))
     rep["calendar_audit"] = cal
-    added_by_cal = {a["session"] for a in cal["actions"] if a["action"] == "add session"}
-    redated = {a["session"]: a["stored_copy"]["stored_date"] for a in cal["actions"]
-               if a["action"].startswith("re-date")}
+    added_by_cal = {act["session"] for act in cal["actions"] if act["action"] == "add session"}
+    redated = {act["session"]: act["stored_copy"]["stored_date"] for act in cal["actions"]
+               if act["action"].startswith("re-date")}
     rep["redated_sessions"] = redated
     rep["calendar_vs_continuity"] = {"added_by_calendar": sorted(added_by_cal),
                                      "added_by_continuity": sorted(add_info),
@@ -626,9 +673,11 @@ def main(argv=None) -> int:
     rep["coverage"] = cov_rep
     # one frame per session: continuity frames for the additions, calendar frames for re-dates
     add_frames = list(cont_frames.values()) + [rows7] + cov_frames
-    for a, f in zip([a for a in cal["actions"] if a["action"].startswith(("re-date", "add session"))], cal_frames):
-        if a["action"].startswith("re-date") or a["session"] not in cont_frames:
-            add_frames.append(f)
+    for act, frame in cal_pairs:
+        if frame is None:
+            continue
+        if act["action"].startswith("re-date") or act["session"] not in cont_frames:
+            add_frames.append(frame)
     upsert = pd.concat(add_frames, ignore_index=True)
     upsert["date"] = pd.to_datetime(upsert["date"]).astype("datetime64[ns]")
     assert not upsert.duplicated(["date", "ticker", "series"]).any()

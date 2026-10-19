@@ -48,7 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
-from ml.integrity.common import DATA_EXT, OUT, RAW, log, wjson  # noqa: E402
+from ml.integrity.common import DATA_EXT, OUT, RAW, bundle_inner_date, bundle_ok, log, wjson  # noqa: E402
 
 AGREE_TOL = 0.15
 REVISION_WINDOW_DAYS = 120
@@ -125,9 +125,12 @@ def _member(zf: zipfile.ZipFile, prefix: str) -> str | None:
 
 def read_members(prefix: str, columns_upper: bool = True) -> tuple[pd.DataFrame, dict]:
     """Concatenate one member type (bc / etf / pd) over every PR bundle on disk."""
-    frames, stats = [], {"bundles": 0, "with_member": 0, "empty": 0, "unreadable": 0}
+    frames, stats = [], {"bundles": 0, "with_member": 0, "empty": 0, "unreadable": 0, "misfiled_skipped": []}
     for z in sorted(RAW.glob("PR*.zip")):
         stats["bundles"] += 1
+        if not bundle_ok(z):
+            stats["misfiled_skipped"].append(f"{z.name} holds {bundle_inner_date(z)}")
+            continue
         try:
             fdate = pd.Timestamp(pd.to_datetime(z.stem[2:], format="%d%m%y"))
             with zipfile.ZipFile(z) as zf:
@@ -203,6 +206,11 @@ def observed_ratios(eod: pd.DataFrame, keys: pd.DataFrame) -> pd.DataFrame:
     return out.rename(columns={"open": "open_ex", "prev_close_px": "close_prev"})
 
 
+def _strong(ratio: float) -> bool:
+    """A ratio the +-15% band can tell from an ordinary session (<= 0.8 or >= 1.25)."""
+    return bool(np.isfinite(ratio) and ratio > 0 and abs(np.log(ratio)) >= np.log(1.25))
+
+
 def agree(obs, ratio) -> bool:
     return bool(np.isfinite(obs) and np.isfinite(ratio) and ratio > 0 and abs(obs / ratio - 1) <= AGREE_TOL)
 
@@ -266,7 +274,15 @@ def build(eod: pd.DataFrame) -> dict:
                 close_in_time = abs((b["ex_date"] - a["ex_date"]).days) <= REVISION_WINDOW_DAYS
                 if not (same and close_in_time):
                     continue
-                if a["validated"] and not b["validated"]:
+                if a["validated"] and b["validated"]:
+                    # both agree: two genuine events when the ratio is strong; one revised event
+                    # (keep the closer match) when the +-15% band cannot tell a jump from a normal day
+                    if _strong(a["ratio_standard"]):
+                        continue
+                    da = abs(np.log(a["observed_ratio"] / a["ratio"]))
+                    db = abs(np.log(b["observed_ratio"] / b["ratio"]))
+                    ev2.loc[j if da <= db else i, "status"] = "superseded_revised_ex_date"
+                elif a["validated"] and not b["validated"]:
                     ev2.loc[j, "status"] = "superseded_revised_ex_date"
                 elif b["validated"] and not a["validated"]:
                     ev2.loc[i, "status"] = "superseded_revised_ex_date"
@@ -289,6 +305,8 @@ def build(eod: pd.DataFrame) -> dict:
     by_tkr = {t: g.reset_index(drop=True) for t, g in e_sorted.groupby("ticker", sort=False)}
     for i in ev2.index[(ev2["status"] == "ok") & in_store & ~ev2["validated"]]:
         r = ev2.loc[i]
+        if not _strong(r["ratio_standard"]):
+            continue                      # a weak ratio cannot locate a session
         g = by_tkr.get(r["ticker"])
         if g is None:
             continue
@@ -381,6 +399,11 @@ def build(eod: pd.DataFrame) -> dict:
                               "by_kind_evaluated": {k: int(v) for k, v in live["kinds"].value_counts().items()},
                               "bonus_orientation_flips": int(live["bonus_flipped"].sum()),
                               "bonus_events_evaluated": int(live["kinds"].str.contains("bonus").sum())},
+        "I2_by_ratio_strength": {
+            lab: {"events": int(len(x)), "agree": int(x["validated"].sum()),
+                  "rate": float(x["validated"].mean()) if len(x) else None}
+            for lab, x in (("strong_ratio_le_0.8_or_ge_1.25", strict[strict["ratio_standard"].map(_strong)]),
+                           ("weak_ratio", strict[~strict["ratio_standard"].map(_strong)]))},
         "I2": {"rate": i2_rate, "events": strict_n, "agree": strict_agree, "pass_mark": 0.95,
                "pass": bool(i2_rate >= 0.95),
                "rule": "|observed/ratio - 1| <= 0.15, observed = open(ex)/close(ex-1) in the ratio's "

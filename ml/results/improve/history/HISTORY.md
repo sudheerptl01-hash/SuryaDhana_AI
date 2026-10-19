@@ -1,10 +1,10 @@
 # P4 history: NSE cash-market EOD 2016-10-03 to 2021-09-30
 
-Generated 2026-10-19T13:16:09+00:00 from `ml/results/improve/history/history.json` (every number below is quoted from it). Status: PARTIAL (download still running).
+Generated 2026-10-19T13:39:29+00:00 from `ml/results/improve/history/history.json` (every number below is quoted from it). Status: PARTIAL (download still running).
 
 ## What was built
 
-- `ml/data_hist/equity_eod_2016_2021.parquet`: 287,431 rows over 167 sessions, exactly the `EOD_COLUMNS` of `nse_historical_ingest.py`, one row per (date, ticker, series), every series the CM file carries (67 codes; 264,388 EQ/BE rows), `source = cm_mto`.
+- `ml/data_hist/equity_eod_2016_2021.parquet`: 647,984 rows over 367 sessions, exactly the `EOD_COLUMNS` of `nse_historical_ingest.py`, one row per (date, ticker, series), every series the CM file carries (72 codes; 584,485 EQ/BE rows), `source = cm_mto`.
 - `ml/data_hist/bc_records_2016_2021.csv`: 39,944 Bc rows from 167 PR bundles (4,561 distinct events; 54 face-value splits, 46 bonuses, 16 rights), raw columns plus `source_file` and `bundle_date`.
 - `ml/data_hist/etf_records_2016_2021.csv`: 60 ETF symbols with first_seen, last_seen, underlying.
 - Also: `pd_corp_ind_2016_2021.csv` (Pd rows with a CORP_IND flag), `index_close_2016_2021.csv` (Pd index rows incl. Nifty 50 and India VIX), `overlap_cm_mto_2021-10.parquet` (the two overlap days; validation only, not for upsert).
@@ -43,37 +43,42 @@ Systematic differences:
 | Period | Sessions | Expected (reference calendar) | EQ/BE rows | All rows |
 |---|---:|---:|---:|---:|
 | 2016Q4 | 62 | 62 | 97,367 | 104,803 |
-| 2017 | 105 | 105 | 167,021 | 182,628 |
+| 2017 | 248 | 248 | 394,612 | 437,241 |
+| 2018 | 57 | 57 | 92,506 | 105,940 |
 
 Weekday closures not in the reference holiday list: none. Reference holidays that nevertheless carry a non-special session: none. Weekend sessions: 2016-10-30. Mirror echoes or misdated files: 0.
 
 Special sessions:
 
 - 2016-10-30 (Sunday Muhurat): present, 1553 EQ/BE rows, median trades 387.0
+- 2017-10-19 (Muhurat (Diwali holiday)): present, 1576 EQ/BE rows, median trades 419.0
 
 ## prev_close continuity
 
-Rule: (ticker, series) EQ/BE traded on t and on the previous session; mismatch when |prev_close(t) / close(t-1) - 1| > 0.005. Over 166 dates and 259,811 pairs the mismatch share is 0.000% (median day 0.000%, 99th percentile 0.00%, maximum 0.00% on 2016-10-04). Dates above 5%: 0.
+Rule: (ticker, series) EQ/BE traded on t and on the previous session; mismatch when |prev_close(t) / close(t-1) - 1| > 0.005. Over 366 dates and 576,895 pairs the mismatch share is 0.000% (median day 0.000%, 99th percentile 0.00%, maximum 0.00% on 2016-10-04). Dates above 5%: 0.
 
 
-Mismatches falling on a Bc ex-date of the same ticker: 0 of 0 ({}). On 41 split or bonus ex-dates with a previous-session close, prev_close differs from it on 0.
+Mismatches falling on a Bc ex-date of the same ticker: 0 of 0 ({}). On 100 split or bonus ex-dates with a previous-session close, prev_close differs from it on 0.
 
 ## Coverage
 
 | Period | EQ/BE with deliv_pct | EQ with deliv_pct | BE with deliv_pct | EQ/BE with ISIN |
 |---|---:|---:|---:|---:|
 | 2016Q4 | 97.3% | 100.0% | 0.0% | 100.0% |
-| 2017 | 94.0% | 100.0% | 0.0% | 100.0% |
+| 2017 | 93.4% | 100.0% | 0.0% | 100.0% |
+| 2018 | 89.8% | 100.0% | 0.0% | 100.0% |
 
-Periodic call-auction rows (EQ/BE, Pd market G): 2,843 over 45 tickers ({'2016Q4': 1156, '2017': 1687}).
+Periodic call-auction rows (EQ/BE, Pd market G): 4,683 over 46 tickers ({'2016Q4': 1156, '2017': 3146, '2018': 381}).
 
-Distinct tickers: 1,807 (all series), 1,674 (EQ/BE); distinct ISINs on EQ/BE rows: 1,686; EQ/BE tickers with an INF (fund) ISIN: 60. deliv_qty <= volume on 100.000% of rows with delivery; deliv_pct within 0.01 of 100 * deliv_qty / volume on 100.000%.
+Distinct tickers: 2,010 (all series), 1,760 (EQ/BE); distinct ISINs on EQ/BE rows: 1,784; EQ/BE tickers with an INF (fund) ISIN: 65. deliv_qty <= volume on 100.000% of rows with delivery; deliv_pct within 0.01 of 100 * deliv_qty / volume on 100.000%.
 
 Integrity: OHLC ordering holds on 100.000% of EQ/BE rows (0 violations); non-positive closes 0; vwap inside [low, high] on 100.000%; duplicate keys 0; largest share of tickers repeating the previous session's close and volume 0.19% (2017-05-03).
 
-Parser: 287,431 of 287,431 CM rows kept (0 duplicate keys dropped, 0 rows with a TIMESTAMP other than the file date); MTO 273,690 records, 0 without a CM row, MTO traded quantity equals CM volume on 100.000% of matched rows; MTO trade-date mismatches: 1; sessions without MTO: 0, without PR: 0; PR bundles without a Bc / etf / Pd member: 0 / 0 / 0; member names seen: Bc<ddmmyy>.csv, etf<ddmmyy>.csv, Pd<ddmmyy>.csv.
+Parser: 647,984 of 647,984 CM rows kept (0 duplicate keys dropped, 0 rows with a TIMESTAMP other than the file date); MTO 606,638 records, 0 without a CM row, MTO traded quantity equals CM volume on 100.000% of matched rows; MTO trade-date mismatches: 3; sessions without MTO: 0, without PR: 0; PR bundles whose members carry another date (not used): PR020118.zip -> 020119; PR bundles without a Bc / etf / Pd member: 0 / 0 / 0; member names seen: Bc<ddmmyy>.csv, etf<ddmmyy>.csv, Pd<ddmmyy>.csv.
 
-Independent cross-check against the Pd file of each day's PR bundle (security rows of the normal market, the periodic call auction and the block-deal window): 287,431 rows over 167 days; equal close 100.000%, prev_close 100.000%, open 100.000%, high 100.000%, low 100.000%, volume 100.000%, trades 100.000%, turnover within Rs 500 100.000%; CM rows absent from Pd 0, Pd rows absent from CM 0.
+Independent cross-check against the Pd file of each day's PR bundle (security rows of the normal market, the periodic call auction and the block-deal window): 646,128 rows over 366 days; equal close 100.000%, prev_close 100.000%, open 100.000%, high 99.996%, low 99.979%, volume 100.000%, trades 100.000%, turnover within Rs 500 100.000%; CM rows absent from Pd 0, Pd rows absent from CM 0.
+
+Disagreements by day and field: cm10JUL2017bhav.csv.zip high 28 rows; cm10JUL2017bhav.csv.zip low 133 rows. 2017-07-10 is the day NSE halted trading for about three hours after a technical failure; only high and low differ there, and the bundle's Pr file agrees with Pd (for example ACC low 1615.25 in Pd and Pr, 1563.30 in CM). The parquet keeps the CM values (the store's product family); the rows are in `ml/results/improve/history/cm_vs_pd_disagreements.csv`.
 
 ## Sanity events
 
@@ -81,7 +86,7 @@ Independent cross-check against the Pd file of each day's PR bundle (security ro
 |---|---|---|---:|---:|---:|---:|---:|---:|
 | 2016-10-30 (Sun) | Sunday Muhurat | yes | 1553 | 0.82% | -0.21% | 0.87% | -0.14% | -0.25% |
 | 2016-11-09 (Wed) | demonetisation announced the previous evening: gap-down open | yes | 1561 | -7.38% | -14.70% | -3.14% | -1.31% | -6.34% |
-| 2017-10-19 (Thu) | Muhurat (Diwali holiday) | NO |  | n/a | n/a | n/a | n/a | n/a |
+| 2017-10-19 (Thu) | Muhurat (Diwali holiday) | yes | 1576 | 0.49% | -0.93% | 0.11% | -0.63% | -0.86% |
 | 2018-11-07 (Wed) | Muhurat (Diwali holiday) | NO |  | n/a | n/a | n/a | n/a | n/a |
 | 2019-10-27 (Sun) | Sunday Muhurat | NO |  | n/a | n/a | n/a | n/a | n/a |
 | 2020-02-01 (Sat) | Saturday Union Budget session | NO |  | n/a | n/a | n/a | n/a | n/a |
@@ -91,7 +96,7 @@ Independent cross-check against the Pd file of each day's PR bundle (security ro
 
 ## Download
 
-1,824 calendar days requested (CM outcomes {'200': 181, '404': 83, 'not requested yet': 1560}); MTO files 180, PR bundles 180; MTO missing on session days: 0, PR missing: 0; errors left: CM 0, MTO 0, PR 0. 629 requests, 0 back-offs, 1168 s.
+1,824 calendar days requested (CM outcomes {'200': 393, '404': 185, 'not requested yet': 1246}); MTO files 393, PR bundles 392; MTO missing on session days: 0, PR missing: 0; errors left: CM 0, MTO 0, PR 0. 1367 requests, 0 back-offs, 2565 s.
 
 ## Notes for the upsert
 

@@ -82,14 +82,14 @@
    "breakeven": "flat per-side cost at which the mean tranche net excess vs the benchmark is zero (long-short: net L-S return zero)"
   },
   "annualisation": "excess_ann_vs_ew / ann_return = mean tranche value x 252/H (the program's headline); IR = exposure-weighted daily active Sharpe x sqrt(252) with month-block bootstrap CI (B = 1000, seed 108); turnover_annualised = per-rebalance turnover x 252/H",
-  "dsr": "ml/strategy_backtest.py dsr_block on the combined daily net (20 bps) skill series (exposure-weighted moments, T = Kish n_eff), V[SR] across all 66 books, N = 177 / 238 / 239"
+  "dsr": "ml/strategy_backtest.py dsr_block on the combined daily net (20 bps) skill series (exposure-weighted moments, T = Kish n_eff), V[SR] across all 66 books, N = 177 / 238 / 239 / 240"
  },
  "trial_ledger": {
   "scale5y_books_reproduced": 24,
   "p2_grid_scorer_x_neutralisation_x_basket": 36,
   "p2_liquid_buffered_vol_size": 3,
   "p2_hold40_vol_size_top_decile": 3,
-  "note": "N = 238 is this phase's headline (plan section 1: 177 + 61 new trials, of which these 42). Plan amendment A1 (2026-10-19 13:00, AB0) raised the ledger to N = 239; DSR is also reported at 239. The three none|top_decile grid books are the same baskets as the frozen scorer|top_decile books; the plan counts them as trials and V[SR] uses all 66 books as instructed, duplicates included."
+  "note": "N = 238 is this phase's headline (plan section 1: 177 + 61 new trials, of which these 42). Plan amendments A1 (13:00, AB0) and A2 (13:30, AB8) raised the ledger to N = 239 and N = 240; DSR is also reported at both (it moves in the third decimal). The three none|top_decile grid books are the same baskets as the frozen scorer|top_decile books; the plan counts them as trials and V[SR] uses all 66 books as instructed, duplicates included."
  },
  "dsr_common": {
   "var_sr_daily_across_66_books": 0.003868632661070771,
@@ -98,7 +98,8 @@
   "sr0_expected_max_annualised": {
    "177": 2.6909176665928416,
    "238": 2.786258451976683,
-   "239": 2.7875887119105944
+   "239": 2.7875887119105944,
+   "240": 2.7889128862596757
   }
  },
  "direction_by_month": {
@@ -780,7 +781,12 @@
      "rule": "DSR >= 0.95 on the liquid book at N = 238",
      "liquid_book": "nested_lgbm|vol+size|liq_buffered_decile|H20",
      "dsr": 9.906517459624365e-05,
-     "dsr_at_239": 9.808876467978808e-05,
+     "dsr_by_N": {
+      "177": 0.00019839833747507018,
+      "238": 9.906517459624365e-05,
+      "239": 9.808876467978808e-05,
+      "240": 9.712580793639578e-05
+     },
      "pass": false
     },
     "own_dsr_238": 0.05330517273749925
@@ -798,7 +804,12 @@
      "rule": "DSR >= 0.95 on the liquid book at N = 238",
      "liquid_book": "all51|vol+size|liq_buffered_decile|H20",
      "dsr": 0.00018109038652380007,
-     "dsr_at_239": 0.0001793579311246267,
+     "dsr_by_N": {
+      "177": 0.00035508683207911975,
+      "238": 0.00018109038652380007,
+      "239": 0.0001793579311246267,
+      "240": 0.00017764880382944314
+     },
      "pass": false
     },
     "own_dsr_238": 0.0377662102010164
@@ -1601,6 +1612,25 @@
      "dsr": 1.72983353045628e-08,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.0066747059466408356,
+     "sr_annualised": -0.10595767205577367,
+     "skew": 0.482177677551221,
+     "kurtosis_pearson": 14.498401232319367,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.4199568637765285,
+     "dsr": 1.705169286283815e-08,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.4199568637765285,
@@ -1884,6 +1914,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9695797924386258,
      "dsr": 0.00021202903952236365,
+     "min_track_record_periods_psr95_vs_0": 708.5025918838313,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|ls_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.06096947571977764,
+     "sr_annualised": 0.9678604219231346,
+     "skew": 0.6042960983779784,
+     "kurtosis_pearson": 10.593728313672909,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9695797924386258,
+     "dsr": 0.0002099855997668288,
      "min_track_record_periods_psr95_vs_0": 708.5025918838313,
      "min_track_record_periods_dsr95": null
     }
@@ -2281,6 +2330,25 @@
      "dsr": 1.6881262004689713e-10,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|liq_top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.03335537690736006,
+     "sr_annualised": -0.5295001931022087,
+     "skew": 0.4148503205987486,
+     "kurtosis_pearson": 13.453504377594763,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.15804305376655492,
+     "dsr": 1.6611149721751483e-10,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.15804305376655492,
@@ -2676,6 +2744,25 @@
      "dsr": 6.058633637342824e-09,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.013257251012920987,
+     "sr_annualised": -0.21045233549128844,
+     "skew": 0.6808067095453383,
+     "kurtosis_pearson": 13.305657565204738,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.3445837474508467,
+     "dsr": 5.969856252095845e-09,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.3445837474508467,
@@ -2959,6 +3046,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.946751436856358,
      "dsr": 8.156039101841242e-05,
+     "min_track_record_periods_psr95_vs_0": 955.3062819042894,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|ls_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.05264263141007023,
+     "sr_annualised": 0.8356758664264999,
+     "skew": 0.5248814439318934,
+     "kurtosis_pearson": 8.379235667733068,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.946751436856358,
+     "dsr": 8.072851940242476e-05,
      "min_track_record_periods_psr95_vs_0": 955.3062819042894,
      "min_track_record_periods_dsr95": null
     }
@@ -3356,6 +3462,25 @@
      "dsr": 8.864654825712645e-10,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|liq_top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.024489997782420097,
+     "sr_annualised": -0.38876666244484137,
+     "skew": 0.5489527918679457,
+     "kurtosis_pearson": 19.11782400458759,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.2307170464247203,
+     "dsr": 8.728361153515868e-10,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.2307170464247203,
@@ -3751,6 +3876,25 @@
      "dsr": 0.0023226258948166557,
      "min_track_record_periods_psr95_vs_0": 462.07392180911125,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.07913708066672744,
+     "sr_annualised": 1.2562622095669103,
+     "skew": -0.6435631839433924,
+     "kurtosis_pearson": 11.439431348721458,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.989888931629358,
+     "dsr": 0.0023049145093480008,
+     "min_track_record_periods_psr95_vs_0": 462.07392180911125,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.989888931629358,
@@ -4034,6 +4178,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9992698109095984,
      "dsr": 0.03423306767026493,
+     "min_track_record_periods_psr95_vs_0": 246.49831699154694,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|ls_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.11167082728493341,
+     "sr_annualised": 1.7727194261806802,
+     "skew": -0.9051681230152784,
+     "kurtosis_pearson": 10.773053364920521,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9992698109095984,
+     "dsr": 0.034053083897098,
      "min_track_record_periods_psr95_vs_0": 246.49831699154694,
      "min_track_record_periods_dsr95": null
     }
@@ -4431,6 +4594,25 @@
      "dsr": 0.00015244247684456278,
      "min_track_record_periods_psr95_vs_0": 993.9148062370369,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|liq_top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.05350474284173278,
+     "sr_annualised": 0.8493614611301297,
+     "skew": -0.804990282149206,
+     "kurtosis_pearson": 11.53588941702193,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9432261546415454,
+     "dsr": 0.0001509986095699637,
+     "min_track_record_periods_psr95_vs_0": 993.9148062370369,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9432261546415454,
@@ -4826,6 +5008,25 @@
      "dsr": 1.1724594557786428e-10,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "champion10|top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.03633496486449849,
+     "sr_annualised": -0.5767996855663964,
+     "skew": 0.6622855901748197,
+     "kurtosis_pearson": 12.821659798810673,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.1386491620184292,
+     "dsr": 1.1536372705687843e-10,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.1386491620184292,
@@ -5109,6 +5310,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.6547690174039065,
      "dsr": 3.8411598245677407e-07,
+     "min_track_record_periods_psr95_vs_0": 15679.552244537941,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "champion10|ls_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.013091741424047664,
+     "sr_annualised": 0.2078249522207563,
+     "skew": 0.5454958526328403,
+     "kurtosis_pearson": 9.480565788179364,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.6547690174039065,
+     "dsr": 3.791457428833801e-07,
      "min_track_record_periods_psr95_vs_0": 15679.552244537941,
      "min_track_record_periods_dsr95": null
     }
@@ -5506,6 +5726,25 @@
      "dsr": 5.915589614498018e-11,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "champion10|liq_top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.039725791536047474,
+     "sr_annualised": -0.6306273902374574,
+     "skew": 0.5404656932683274,
+     "kurtosis_pearson": 14.846673866993523,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.11733979880864354,
+     "dsr": 5.8190890786051465e-11,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.11733979880864354,
@@ -5901,6 +6140,25 @@
      "dsr": 2.2341088435231943e-09,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "lr_l2|top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.019430021960544108,
+     "sr_annualised": -0.3084420364567402,
+     "skew": 0.7380913680879873,
+     "kurtosis_pearson": 17.808229022005374,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.2794803750608913,
+     "dsr": 2.200571448854215e-09,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.2794803750608913,
@@ -6184,6 +6442,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.8342113089246603,
      "dsr": 5.500309678803945e-06,
+     "min_track_record_periods_psr95_vs_0": 2638.447632872979,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "lr_l2|ls_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.031765341350844224,
+     "sr_annualised": 0.5042591611524622,
+     "skew": 0.5872783586754149,
+     "kurtosis_pearson": 10.100001640484795,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.8342113089246603,
+     "dsr": 5.436090999334956e-06,
      "min_track_record_periods_psr95_vs_0": 2638.447632872979,
      "min_track_record_periods_dsr95": null
     }
@@ -6581,6 +6858,25 @@
      "dsr": 4.532457798130102e-11,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "lr_l2|liq_top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.04423854105942724,
+     "sr_annualised": -0.7022650680453861,
+     "skew": 0.9942087276954606,
+     "kurtosis_pearson": 27.937085021012848,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.09606035578817773,
+     "dsr": 4.45914390256136e-11,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.09606035578817773,
@@ -6976,6 +7272,25 @@
      "dsr": 8.168093766889792e-09,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lr_l2|top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.011460296769283573,
+     "sr_annualised": -0.18192657121512784,
+     "skew": 0.6998854923207082,
+     "kurtosis_pearson": 14.828208337951397,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.3646878319640789,
+     "dsr": 8.049351657028372e-09,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.3646878319640789,
@@ -7259,6 +7574,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.8970294232201896,
      "dsr": 1.965539356930603e-05,
+     "min_track_record_periods_psr95_vs_0": 1555.256579734562,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lr_l2|ls_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.04131128328751621,
+     "sr_annualised": 0.6557962915182404,
+     "skew": 0.5690396197362321,
+     "kurtosis_pearson": 10.17105766234131,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.8970294232201896,
+     "dsr": 1.9439075863855154e-05,
      "min_track_record_periods_psr95_vs_0": 1555.256579734562,
      "min_track_record_periods_dsr95": null
     }
@@ -7656,6 +7990,25 @@
      "dsr": 1.2429247827052064e-10,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lr_l2|liq_top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.03731717380705994,
+     "sr_annualised": -0.5923917691515243,
+     "skew": 0.8880208050735008,
+     "kurtosis_pearson": 22.05982175701236,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.13370400866064497,
+     "dsr": 1.223117395854151e-10,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.13370400866064497,
@@ -8051,6 +8404,25 @@
      "dsr": 2.7618706715470962e-08,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "baseline_mom|top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.0034651521170036776,
+     "sr_annualised": -0.05500758453960433,
+     "skew": -0.5536891809165613,
+     "kurtosis_pearson": 7.705516158969111,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.4581299844417745,
+     "dsr": 2.7229433822511212e-08,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.4581299844417745,
@@ -8334,6 +8706,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.2713879005810566,
      "dsr": 1.1868767803693962e-09,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "baseline_mom|ls_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.019934506532895496,
+     "sr_annualised": -0.31645048076900345,
+     "skew": -0.7397709749910975,
+     "kurtosis_pearson": 7.512600467414833,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.2713879005810566,
+     "dsr": 1.1684905596583237e-09,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
     }
@@ -8731,6 +9122,25 @@
      "dsr": 4.711481956817553e-07,
      "min_track_record_periods_psr95_vs_0": 16312.875801360882,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "baseline_mom|liq_top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.012950862540146619,
+     "sr_annualised": 0.20558856927006128,
+     "skew": -0.8390644152438582,
+     "kurtosis_pearson": 9.490626144396549,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.6518873325399965,
+     "dsr": 4.6515113391731126e-07,
+     "min_track_record_periods_psr95_vs_0": 16312.875801360882,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.6518873325399965,
@@ -9126,6 +9536,25 @@
      "dsr": 1.318035881006975e-07,
      "min_track_record_periods_psr95_vs_0": 89211.51337478236,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "heuristic_mom20|top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.005516017834852975,
+     "sr_annualised": 0.08756406851050753,
+     "skew": -0.5817167170281717,
+     "kurtosis_pearson": 7.539218545929078,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.5662938783782225,
+     "dsr": 1.3004163296574497e-07,
+     "min_track_record_periods_psr95_vs_0": 89211.51337478236,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.5662938783782225,
@@ -9409,6 +9838,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.40550144324683557,
      "dsr": 1.2089022772693256e-08,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "heuristic_mom20|ls_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.007863739881178257,
+     "sr_annualised": -0.12483300060298969,
+     "skew": -0.8016251839988434,
+     "kurtosis_pearson": 7.386927379140295,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.40550144324683557,
+     "dsr": 1.191399106785187e-08,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
     }
@@ -9806,6 +10254,25 @@
      "dsr": 7.918747748131281e-07,
      "min_track_record_periods_psr95_vs_0": 10531.62672807859,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "heuristic_mom20|liq_top_decile skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.016141214382916387,
+     "sr_annualised": 0.25623383469465394,
+     "skew": -0.8394009981215295,
+     "kurtosis_pearson": 9.14947007167568,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.6864853305367496,
+     "dsr": 7.820046346931879e-07,
+     "min_track_record_periods_psr95_vs_0": 10531.62672807859,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.6864853305367496,
@@ -10201,6 +10668,25 @@
      "dsr": 1.72983353045628e-08,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|none|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.0066747059466408356,
+     "sr_annualised": -0.10595767205577367,
+     "skew": 0.482177677551221,
+     "kurtosis_pearson": 14.498401232319367,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.4199568637765285,
+     "dsr": 1.705169286283815e-08,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.4199568637765285,
@@ -10594,6 +11080,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.6739276376969628,
      "dsr": 5.322143153255902e-07,
+     "min_track_record_periods_psr95_vs_0": 12236.78049304951,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|none|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.014851162375149829,
+     "sr_annualised": 0.23575489394931468,
+     "skew": 0.21156887368722244,
+     "kurtosis_pearson": 12.025566365741291,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.6739276376969628,
+     "dsr": 5.254245251158649e-07,
      "min_track_record_periods_psr95_vs_0": 12236.78049304951,
      "min_track_record_periods_dsr95": null
     }
@@ -10995,6 +11500,25 @@
      "dsr": 3.4400127846691905e-08,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|none|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.002404592578545476,
+     "sr_annualised": -0.038171723803577265,
+     "skew": 0.29973632336121986,
+     "kurtosis_pearson": 11.142651844586215,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.47095539394506664,
+     "dsr": 3.391918064976233e-08,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.47095539394506664,
@@ -11390,6 +11914,25 @@
      "dsr": 0.018206737747681397,
      "min_track_record_periods_psr95_vs_0": 280.03657519600654,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.10323948135112103,
+     "sr_annualised": 1.638875958830141,
+     "skew": -0.6889063372399946,
+     "kurtosis_pearson": 11.557749863177541,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9985824304693202,
+     "dsr": 0.01809919618244811,
+     "min_track_record_periods_psr95_vs_0": 280.03657519600654,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9985824304693202,
@@ -11783,6 +12326,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9980887689161877,
      "dsr": 0.014740839991813316,
+     "min_track_record_periods_psr95_vs_0": 298.19217202113697,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.10019243281983344,
+     "sr_annualised": 1.5905055629509515,
+     "skew": -0.7468346848847154,
+     "kurtosis_pearson": 12.101607893825221,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9980887689161877,
+     "dsr": 0.014651235463892494,
      "min_track_record_periods_psr95_vs_0": 298.19217202113697,
      "min_track_record_periods_dsr95": null
     }
@@ -12184,6 +12746,25 @@
      "dsr": 0.02191219478044585,
      "min_track_record_periods_psr95_vs_0": 272.4692253042864,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.10539910394840138,
+     "sr_annualised": 1.6731589047390962,
+     "skew": -0.7784601189557735,
+     "kurtosis_pearson": 12.739921585093635,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9987625305233927,
+     "dsr": 0.021787210112044687,
+     "min_track_record_periods_psr95_vs_0": 272.4692253042864,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9987625305233927,
@@ -12579,6 +13160,25 @@
      "dsr": 0.05303553463345195,
      "min_track_record_periods_psr95_vs_0": 192.73724753234796,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol+size|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.12120608949747506,
+     "sr_annualised": 1.9240870211817407,
+     "skew": -0.17174916791659425,
+     "kurtosis_pearson": 6.528072097604944,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9998415459196062,
+     "dsr": 0.05276820537064948,
+     "min_track_record_periods_psr95_vs_0": 192.73724753234796,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9998415459196062,
@@ -12972,6 +13572,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9997858631919089,
      "dsr": 0.04181048523744566,
+     "min_track_record_periods_psr95_vs_0": 201.4410465940464,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol+size|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.11775775620333133,
+     "sr_annualised": 1.8693464271779299,
+     "skew": -0.07841226650667504,
+     "kurtosis_pearson": 6.220849868795377,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9997858631919089,
+     "dsr": 0.041588112960203066,
      "min_track_record_periods_psr95_vs_0": 201.4410465940464,
      "min_track_record_periods_dsr95": null
     }
@@ -13373,6 +13992,25 @@
      "dsr": 0.06369758185585682,
      "min_track_record_periods_psr95_vs_0": 178.91434431068285,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol+size|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.12473576868400517,
+     "sr_annualised": 1.9801189411941371,
+     "skew": -0.014345570173284222,
+     "kurtosis_pearson": 6.490993873543149,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.999907382661067,
+     "dsr": 0.06338614230346135,
+     "min_track_record_periods_psr95_vs_0": 178.91434431068285,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.999907382661067,
@@ -13768,6 +14406,25 @@
      "dsr": 0.00019395144209913607,
      "min_track_record_periods_psr95_vs_0": 839.5601832751632,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol+size+industry|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.05737541605037756,
+     "sr_annualised": 0.9108064934289768,
+     "skew": -0.17023354802455395,
+     "kurtosis_pearson": 13.808354809579486,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9574597626066792,
+     "dsr": 0.0001921160614678289,
+     "min_track_record_periods_psr95_vs_0": 839.5601832751632,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9574597626066792,
@@ -14161,6 +14818,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9786065696290079,
      "dsr": 0.00049182825563469,
+     "min_track_record_periods_psr95_vs_0": 606.8756324004439,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol+size+industry|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.06685485579151391,
+     "sr_annualised": 1.0612879341685926,
+     "skew": 0.13065431415668582,
+     "kurtosis_pearson": 9.63129271828589,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9786065696290079,
+     "dsr": 0.00048742265129959796,
      "min_track_record_periods_psr95_vs_0": 606.8756324004439,
      "min_track_record_periods_dsr95": null
     }
@@ -14562,6 +15238,25 @@
      "dsr": 0.0005650181583401196,
      "min_track_record_periods_psr95_vs_0": 600.5237932916566,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol+size+industry|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.06756976425556173,
+     "sr_annualised": 1.0726367542048665,
+     "skew": 0.016275208506540198,
+     "kurtosis_pearson": 12.224004689472073,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9791492987032479,
+     "dsr": 0.0005600356454442712,
+     "min_track_record_periods_psr95_vs_0": 600.5237932916566,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9791492987032479,
@@ -14957,6 +15652,25 @@
      "dsr": 6.058633637342824e-09,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|none|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.013257251012920987,
+     "sr_annualised": -0.21045233549128844,
+     "skew": 0.6808067095453383,
+     "kurtosis_pearson": 13.305657565204738,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.3445837474508467,
+     "dsr": 5.969856252095845e-09,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.3445837474508467,
@@ -15350,6 +16064,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.5929319598452147,
      "dsr": 1.696854885603259e-07,
+     "min_track_record_periods_psr95_vs_0": 44988.14009271156,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|none|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.007737744455153657,
+     "sr_annualised": 0.12283288522143333,
+     "skew": 0.5963808204600259,
+     "kurtosis_pearson": 11.932170941164593,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.5929319598452147,
+     "dsr": 1.6742798416120263e-07,
      "min_track_record_periods_psr95_vs_0": 44988.14009271156,
      "min_track_record_periods_dsr95": null
     }
@@ -15751,6 +16484,25 @@
      "dsr": 5.839543544831074e-09,
      "min_track_record_periods_psr95_vs_0": null,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|none|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": -0.013138907868482388,
+     "sr_annualised": -0.20857369631396488,
+     "skew": 0.43562273605092555,
+     "kurtosis_pearson": 9.337915895963022,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.34564681514961526,
+     "dsr": 5.753740899493331e-09,
+     "min_track_record_periods_psr95_vs_0": null,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.34564681514961526,
@@ -16146,6 +16898,25 @@
      "dsr": 0.018085647701506814,
      "min_track_record_periods_psr95_vs_0": 250.17677559636684,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.1055798234098372,
+     "sr_annualised": 1.6760277372512684,
+     "skew": -0.09731764658913243,
+     "kurtosis_pearson": 6.869684441534933,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9992080790795617,
+     "dsr": 0.017975008665219942,
+     "min_track_record_periods_psr95_vs_0": 250.17677559636684,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9992080790795617,
@@ -16539,6 +17310,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9990731324950789,
      "dsr": 0.013417095243884689,
+     "min_track_record_periods_psr95_vs_0": 257.620100365089,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.10261595001628857,
+     "sr_annualised": 1.6289777057504038,
+     "skew": 0.11280472210998475,
+     "kurtosis_pearson": 4.930283027503936,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9990731324950789,
+     "dsr": 0.013330293668665774,
      "min_track_record_periods_psr95_vs_0": 257.620100365089,
      "min_track_record_periods_dsr95": null
     }
@@ -16940,6 +17730,25 @@
      "dsr": 0.0156675692524101,
      "min_track_record_periods_psr95_vs_0": 269.85916128469285,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.102816536168499,
+     "sr_annualised": 1.632161912201557,
+     "skew": -0.29817362853443813,
+     "kurtosis_pearson": 8.508416993462921,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9988212000754298,
+     "dsr": 0.015570832653263365,
+     "min_track_record_periods_psr95_vs_0": 269.85916128469285,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9988212000754298,
@@ -17335,6 +18144,25 @@
      "dsr": 0.037558423376165696,
      "min_track_record_periods_psr95_vs_0": 200.86268487286912,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol+size|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.11671047378826001,
+     "sr_annualised": 1.8527213342415507,
+     "skew": 0.03294141727995429,
+     "kurtosis_pearson": 3.95821133806723,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9997899398727382,
+     "dsr": 0.037352515146837094,
+     "min_track_record_periods_psr95_vs_0": 200.86268487286912,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9997899398727382,
@@ -17728,6 +18556,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9998387990637043,
      "dsr": 0.03585668443981961,
+     "min_track_record_periods_psr95_vs_0": 193.21416698555313,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol+size|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.11701062049334768,
+     "sr_annualised": 1.8574860154725352,
+     "skew": 0.316760231413412,
+     "kurtosis_pearson": 3.8543216440539263,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9998387990637043,
+     "dsr": 0.0356550650643153,
      "min_track_record_periods_psr95_vs_0": 193.21416698555313,
      "min_track_record_periods_dsr95": null
     }
@@ -18129,6 +18976,25 @@
      "dsr": 0.05967363462703251,
      "min_track_record_periods_psr95_vs_0": 178.5450133471747,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol+size|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.12399485737504581,
+     "sr_annualised": 1.9683573387917663,
+     "skew": 0.01703938442428654,
+     "kurtosis_pearson": 3.8731410317196024,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.999908803699522,
+     "dsr": 0.059375604393346285,
+     "min_track_record_periods_psr95_vs_0": 178.5450133471747,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.999908803699522,
@@ -18524,6 +19390,25 @@
      "dsr": 0.0002597951291184653,
      "min_track_record_periods_psr95_vs_0": 696.0007355872218,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol+size+industry|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.061944550690740736,
+     "sr_annualised": 0.9833392572200058,
+     "skew": 0.29191653127154416,
+     "kurtosis_pearson": 4.924763541867096,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9707171285264228,
+     "dsr": 0.00025734210497645535,
+     "min_track_record_periods_psr95_vs_0": 696.0007355872218,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9707171285264228,
@@ -18917,6 +19802,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9884326494204239,
      "dsr": 0.0009194719754417333,
+     "min_track_record_periods_psr95_vs_0": 483.0123625741623,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol+size+industry|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.07404489360468917,
+     "sr_annualised": 1.175426245993467,
+     "skew": 0.40275777173705407,
+     "kurtosis_pearson": 5.812059644785182,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9884326494204239,
+     "dsr": 0.0009115278226895054,
      "min_track_record_periods_psr95_vs_0": 483.0123625741623,
      "min_track_record_periods_dsr95": null
     }
@@ -19318,6 +20222,25 @@
      "dsr": 0.0004462557329532985,
      "min_track_record_periods_psr95_vs_0": 605.4911204834378,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol+size+industry|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.06656178934376815,
+     "sr_annualised": 1.056635648538478,
+     "skew": 0.21081602445788974,
+     "kurtosis_pearson": 4.538009859221875,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9787251416343947,
+     "dsr": 0.0004422075324590709,
+     "min_track_record_periods_psr95_vs_0": 605.4911204834378,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9787251416343947,
@@ -19713,6 +20636,25 @@
      "dsr": 0.0023226258948166557,
      "min_track_record_periods_psr95_vs_0": 462.07392180911125,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|none|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.07913708066672744,
+     "sr_annualised": 1.2562622095669103,
+     "skew": -0.6435631839433924,
+     "kurtosis_pearson": 11.439431348721458,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.989888931629358,
+     "dsr": 0.0023049145093480008,
+     "min_track_record_periods_psr95_vs_0": 462.07392180911125,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.989888931629358,
@@ -20106,6 +21048,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9955025459004562,
      "dsr": 0.006083338705746255,
+     "min_track_record_periods_psr95_vs_0": 365.36893707051127,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|none|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.08960113045636708,
+     "sr_annualised": 1.422373850266816,
+     "skew": -0.6957659053967264,
+     "kurtosis_pearson": 10.405624036628847,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9955025459004562,
+     "dsr": 0.0060416081712551,
      "min_track_record_periods_psr95_vs_0": 365.36893707051127,
      "min_track_record_periods_dsr95": null
     }
@@ -20507,6 +21468,25 @@
      "dsr": 0.002009864189442647,
      "min_track_record_periods_psr95_vs_0": 478.3802113122162,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|none|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.077684101500038,
+     "sr_annualised": 1.2331968803556017,
+     "skew": -0.6605594220817645,
+     "kurtosis_pearson": 9.948147695591352,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9887610937144053,
+     "dsr": 0.0019943124975169875,
+     "min_track_record_periods_psr95_vs_0": 478.3802113122162,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9887610937144053,
@@ -20902,6 +21882,25 @@
      "dsr": 0.12336728137750036,
      "min_track_record_periods_psr95_vs_0": 183.4459979412049,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.13366247354227773,
+     "sr_annualised": 2.121825987687705,
+     "skew": -1.0974138426327105,
+     "kurtosis_pearson": 14.00196647880119,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9998885880620704,
+     "dsr": 0.12289799565580034,
+     "min_track_record_periods_psr95_vs_0": 183.4459979412049,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9998885880620704,
@@ -21295,6 +22294,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9999258157913656,
      "dsr": 0.1374561972018904,
+     "min_track_record_periods_psr95_vs_0": 173.75264082706855,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.1363586877743054,
+     "sr_annualised": 2.164627061723494,
+     "skew": -0.9347612265495838,
+     "kurtosis_pearson": 13.858075054097993,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9999258157913656,
+     "dsr": 0.13694670259466385,
      "min_track_record_periods_psr95_vs_0": 173.75264082706855,
      "min_track_record_periods_dsr95": null
     }
@@ -21696,6 +22714,25 @@
      "dsr": 0.14068292200403443,
      "min_track_record_periods_psr95_vs_0": 174.65818981486296,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.1366872485400128,
+     "sr_annualised": 2.1698428021833025,
+     "skew": -1.0281202874272553,
+     "kurtosis_pearson": 13.563718586501713,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9999227989165529,
+     "dsr": 0.14016789655066536,
+     "min_track_record_periods_psr95_vs_0": 174.65818981486296,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9999227989165529,
@@ -22091,6 +23128,25 @@
      "dsr": 0.4675892948550708,
      "min_track_record_periods_psr95_vs_0": 99.98199815391138,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol+size|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.17279752116058827,
+     "sr_annualised": 2.7430756089560266,
+     "skew": -0.27478968701764717,
+     "kurtosis_pearson": 7.015545277494337,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9999997305967873,
+     "dsr": 0.46662736183378617,
+     "min_track_record_periods_psr95_vs_0": 99.98199815391138,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9999997305967873,
@@ -22484,6 +23540,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9999984160774524,
      "dsr": 0.32290581689335673,
+     "min_track_record_periods_psr95_vs_0": 115.51645990724852,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol+size|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.15983657366692405,
+     "sr_annualised": 2.5373269460120182,
+     "skew": -0.29407576918526285,
+     "kurtosis_pearson": 6.377313416713628,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9999984160774524,
+     "dsr": 0.3220334069842148,
      "min_track_record_periods_psr95_vs_0": 115.51645990724852,
      "min_track_record_periods_dsr95": null
     }
@@ -22885,6 +23960,25 @@
      "dsr": 0.43323053405908213,
      "min_track_record_periods_psr95_vs_0": 101.35827235432873,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol+size|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.16986304632678972,
+     "sr_annualised": 2.6964922651231755,
+     "skew": -0.18781174805739642,
+     "kurtosis_pearson": 6.320046778221061,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9999996778918608,
+     "dsr": 0.4322692877239168,
+     "min_track_record_periods_psr95_vs_0": 101.35827235432873,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9999996778918608,
@@ -23280,6 +24374,25 @@
      "dsr": 0.05977047138310469,
      "min_track_record_periods_psr95_vs_0": 199.21411937899467,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol+size+industry|top_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.12198539221021477,
+     "sr_annualised": 1.9364580682254242,
+     "skew": -0.3886608270637412,
+     "kurtosis_pearson": 12.495046057982897,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9998012578711761,
+     "dsr": 0.059483375059904336,
+     "min_track_record_periods_psr95_vs_0": 199.21411937899467,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9998012578711761,
@@ -23673,6 +24786,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.999975068780384,
      "dsr": 0.12620845308618983,
+     "min_track_record_periods_psr95_vs_0": 152.1179788714449,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol+size+industry|top_quintile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.136958114509954,
+     "sr_annualised": 2.1741426661538705,
+     "skew": -0.0888719055128928,
+     "kurtosis_pearson": 8.576434969175644,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.999975068780384,
+     "dsr": 0.1256971909088926,
      "min_track_record_periods_psr95_vs_0": 152.1179788714449,
      "min_track_record_periods_dsr95": null
     }
@@ -24074,6 +25206,25 @@
      "dsr": 0.06304214894011498,
      "min_track_record_periods_psr95_vs_0": 186.42282532230664,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol+size+industry|buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.12385984010122437,
+     "sr_annualised": 1.9662140060163897,
+     "skew": -0.06657351546921914,
+     "kurtosis_pearson": 12.252901676216363,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9998748115748943,
+     "dsr": 0.06273738060200554,
+     "min_track_record_periods_psr95_vs_0": 186.42282532230664,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9998748115748943,
@@ -24471,6 +25622,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9351265318364277,
      "dsr": 9.808876467978808e-05,
+     "min_track_record_periods_psr95_vs_0": 1084.146247521601,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol+size|liq_buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.05078347201792924,
+     "sr_annualised": 0.8061626260310895,
+     "skew": -0.5487741261257787,
+     "kurtosis_pearson": 8.13646187350242,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9351265318364277,
+     "dsr": 9.712580793639578e-05,
      "min_track_record_periods_psr95_vs_0": 1084.146247521601,
      "min_track_record_periods_dsr95": null
     }
@@ -24872,6 +26042,25 @@
      "dsr": 0.0001793579311246267,
      "min_track_record_periods_psr95_vs_0": 849.9550994801341,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol+size|liq_buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.05691534071309175,
+     "sr_annualised": 0.9035030238681022,
+     "skew": -0.2233975362567868,
+     "kurtosis_pearson": 5.620627925141267,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.956493125167405,
+     "dsr": 0.00017764880382944314,
+     "min_track_record_periods_psr95_vs_0": 849.9550994801341,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.956493125167405,
@@ -25271,6 +26460,25 @@
      "dsr": 0.008857134190095215,
      "min_track_record_periods_psr95_vs_0": 334.6391022487191,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol+size|liq_buffered_decile|H20 skill",
+     "T_periods": 920,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.09396855259307668,
+     "sr_annualised": 1.4917045273318474,
+     "skew": -0.7828405711592245,
+     "kurtosis_pearson": 7.947322826796797,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9968323110528815,
+     "dsr": 0.008799218764170965,
+     "min_track_record_periods_psr95_vs_0": 334.6391022487191,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9968323110528815,
@@ -25663,6 +26871,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9999514405409728,
      "dsr": 0.09417483297778745,
+     "min_track_record_periods_psr95_vs_0": 162.35057203820278,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_lgbm|vol+size|top_decile|H40 skill",
+     "T_periods": 907,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.13129064708796992,
+     "sr_annualised": 2.0841744099810895,
+     "skew": -0.055778354444182804,
+     "kurtosis_pearson": 5.792935932042441,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9999514405409728,
+     "dsr": 0.09375963925069553,
      "min_track_record_periods_psr95_vs_0": 162.35057203820278,
      "min_track_record_periods_dsr95": null
     }
@@ -26059,6 +27286,25 @@
      "dsr": 0.06212836594944779,
      "min_track_record_periods_psr95_vs_0": 182.16309741473066,
      "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "all51|vol+size|top_decile|H40 skill",
+     "T_periods": 907,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.12384731390319023,
+     "sr_annualised": 1.9660151587871608,
+     "skew": -0.1137914649364627,
+     "kurtosis_pearson": 4.377123597742171,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9998826395491196,
+     "dsr": 0.061825663393725,
+     "min_track_record_periods_psr95_vs_0": 182.16309741473066,
+     "min_track_record_periods_dsr95": null
     }
    },
    "psr_vs_0": 0.9998826395491196,
@@ -26451,6 +27697,25 @@
      "sr0_expected_max_annualised": 2.7875887119105944,
      "psr_vs_0": 0.9999994827894003,
      "dsr": 0.3972018293408467,
+     "min_track_record_periods_psr95_vs_0": 103.72072321099893,
+     "min_track_record_periods_dsr95": null
+    },
+    "240": {
+     "series": "nested_ensemble_rank|vol+size|top_decile|H40 skill",
+     "T_periods": 907,
+     "T_note": "Kish effective number of exposure-weighted daily obs",
+     "n_days_raw": 932,
+     "periods_per_year": 252,
+     "sr_per_period": 0.16670827221554438,
+     "sr_annualised": 2.6464117786775354,
+     "skew": -0.12420264683836474,
+     "kurtosis_pearson": 5.958794128242938,
+     "n_trials": 240,
+     "var_sr_across_trials": 0.003868632661070771,
+     "sr0_expected_max_per_period": 0.1756849982206302,
+     "sr0_expected_max_annualised": 2.7889128862596757,
+     "psr_vs_0": 0.9999994827894003,
+     "dsr": 0.3962595605520137,
      "min_track_record_periods_psr95_vs_0": 103.72072321099893,
      "min_track_record_periods_dsr95": null
     }

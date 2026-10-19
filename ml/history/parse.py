@@ -70,7 +70,7 @@ TURNOVER_FACTOR = 1.0
 TURNOVER_LAKH_DECIMALS = 2
 VWAP_DECIMALS = 2          # the store's vwap is sec_bhavdata AVG_PRICE, printed to 2 decimals
 SOURCE = "cm_mto"
-PARSER_VERSION = 8
+PARSER_VERSION = 10
 
 EOD_DIR, AUX_DIR = PARTS / "eod", PARTS / "aux"
 log = get_logger("hist.parse")
@@ -197,6 +197,17 @@ def read_pr(path: Path, d: date) -> tuple[dict, dict]:
         etf = _zip_member(zf, r"etf\d{6}\.csv")
         pdn = _zip_member(zf, r"pd\d{6}\.csv")
         diag.update({"bc_member": bc, "etf_member": etf, "pd_member": pdn})
+        # Archive mis-files exist (PR020118.zip serves the 2019-01-02 bundle): every dated member
+        # must carry this session's ddmmyy, otherwise nothing from the bundle is used.
+        want = f"{d:%d%m%y}"
+        tokens = sorted({m.group(1) for n in (bc, etf, pdn) if n
+                         for m in [re.search(r"(\d{6})\.csv$", Path(n).name)] if m})
+        diag["pr_member_dates"] = tokens
+        if tokens and tokens != [want]:
+            diag["pr_misdated"] = True
+            diag.update({k + "_rows": 0 for k in out})
+            return out, diag
+        diag["pr_misdated"] = False
         if bc:
             df = _read_csv_str(zf.read(bc))
             df = df.apply(lambda s: s.str.strip())
@@ -257,9 +268,15 @@ def build_day(d: date) -> tuple[pd.DataFrame, dict]:
     cm, diag = read_cm(local_path("cm", d), d)
     mp, pp = local_path("mto", d), local_path("pr", d)
     diag["has_mto"], diag["has_pr"] = mp.exists(), pp.exists()
+    mto = None
     if mp.exists():
         mto, dm = read_mto(mp, d)
         diag.update(dm)
+        # A delivery file whose header names another trade date is not joined (archive mis-file guard).
+        diag["mto_rejected"] = dm["mto_trade_date"] is not None and not dm["mto_trade_date_ok"]
+        if diag["mto_rejected"]:
+            mto = None
+    if mto is not None:
         j = cm.merge(mto, on=["ticker", "series"], how="left", indicator=True)
         hit = j["_merge"] == "both"
         diag["mto_matched_rows"] = int(hit.sum())

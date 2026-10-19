@@ -375,6 +375,11 @@ def _parse_all(kind: str, files: list[Path], fn, use_cache: bool = True,
         keep_files = {k.split("|")[0] for k in keep_keys}
         frames.append(old_df[old_df["_file"].isin(keep_files)])
     new_meta = {k: old_meta[k] for k in keep_keys}
+    # cache entries of files outside this run's file list are carried over
+    # unchanged (a main-window run must not drop the history files' entries)
+    listed = {p.name for p in files}
+    carry_meta = {k: v for k, v in old_meta.items() if k.split("|")[0] not in listed}
+    carry_df = old_df[~old_df["_file"].isin(listed)] if old_df is not None else None
     for i, (k, p) in enumerate(todo, 1):
         try:
             df, meta = fn(p)
@@ -389,13 +394,15 @@ def _parse_all(kind: str, files: list[Path], fn, use_cache: bool = True,
             print(f"  {kind}: parsed {i}/{len(todo)} new files", flush=True)
     out = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     if update_cache:
-        out.to_parquet(cpq, index=False)
-        cmeta.write_text(json.dumps(new_meta))
+        allc = pd.concat([out] + ([carry_df] if carry_df is not None and len(carry_df) else []),
+                         ignore_index=True)
+        allc.to_parquet(cpq, index=False)
+        cmeta.write_text(json.dumps({**carry_meta, **new_meta}))
     return out, metas
 
 
 def list_raw(kind: str, max_date: date | None = None,
-             raw_dirs: dict | None = None) -> list[Path]:
+             raw_dirs: dict | None = None, min_date: date | None = None) -> list[Path]:
     dirs = {"fo": C.RAW_FO, "indices": C.RAW_IDX, "participant": C.RAW_PART}
     if raw_dirs:
         dirs.update(raw_dirs)
@@ -409,7 +416,8 @@ def list_raw(kind: str, max_date: date | None = None,
         files = [p for p in dirs["participant"].glob("fao_participant_oi_*.csv")]
         dates = {p: ddmmyyyy_date(PART_RE, p.name) for p in files}
     files = [p for p in files if dates[p] is not None
-             and (max_date is None or dates[p] <= max_date)]
+             and (max_date is None or dates[p] <= max_date)
+             and (min_date is None or dates[p] >= min_date)]
     return sorted(files, key=lambda p: dates[p])
 
 
@@ -440,17 +448,24 @@ def build_fo_daily(fo_frames: pd.DataFrame, eod: pd.DataFrame) -> pd.DataFrame:
 
 
 def run(max_date: date | None = None, write: bool = True, raw_dirs: dict | None = None,
-        use_cache: bool = True) -> dict:
-    """Parse all raw files dated <= max_date. A truncated or no-write run
-    reads the per-file cache but never rewrites it."""
+        use_cache: bool = True, min_date: date | None = C.MAIN_START,
+        hist_spot: pd.DataFrame | None = None) -> dict:
+    """Parse all raw files dated in [min_date, max_date]. The default min_date
+    (2021-10-01) keeps the main-window build independent of the history
+    extension; min_date=None includes 2016-10..2021-09 files. A truncated or
+    no-write run reads the per-file cache but never rewrites it."""
     C.ensure_dirs()
-    report: dict = {"built_at": datetime.now().isoformat(timespec="seconds")}
+    report: dict = {"built_at": datetime.now().isoformat(timespec="seconds"),
+                    "min_date": str(min_date) if min_date else None}
     eod = load_spot()
+    if hist_spot is not None:
+        eod = pd.concat([hist_spot[["date", "ticker", "close", "turnover"]], eod],
+                        ignore_index=True)
     if max_date is not None:
         eod = eod[eod["date"] <= pd.Timestamp(max_date)]
     upd = write and max_date is None and raw_dirs is None and use_cache
 
-    fo_files = list_raw("fo", max_date, raw_dirs)
+    fo_files = list_raw("fo", max_date, raw_dirs, min_date)
     fo_frames, fo_meta = _parse_all("fo", fo_files, aggregate_fo, use_cache, upd)
     bad_fo = {m["file"] for m in fo_meta if not m.get("date_ok")}
     if len(fo_frames):
@@ -461,7 +476,7 @@ def run(max_date: date | None = None, write: bool = True, raw_dirs: dict | None 
                     "dates": int(fo["date"].nunique()) if len(fo) else 0,
                     "meta_sample": fo_meta[:2]}
 
-    idx_files = list_raw("indices", max_date, raw_dirs)
+    idx_files = list_raw("indices", max_date, raw_dirs, min_date)
     idx_frames, idx_meta = _parse_all("indices", idx_files, parse_index_file, use_cache, upd)
     bad_idx = {m["file"] for m in idx_meta if not m.get("date_ok")}
     idx = idx_frames[~idx_frames["_file"].isin(bad_idx)].drop(columns="_file") \
@@ -470,7 +485,7 @@ def run(max_date: date | None = None, write: bool = True, raw_dirs: dict | None 
                          "files_excluded_date_mismatch_or_error": sorted(bad_idx),
                          "rows": int(len(idx))}
 
-    part_files = list_raw("participant", max_date, raw_dirs)
+    part_files = list_raw("participant", max_date, raw_dirs, min_date)
     part_frames, part_meta = _parse_all("participant", part_files, parse_participant_file,
                                         use_cache, upd)
     bad_part = {m["file"] for m in part_meta if not m.get("date_ok")}

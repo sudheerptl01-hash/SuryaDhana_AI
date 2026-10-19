@@ -76,21 +76,29 @@ def build_industry_map(force: bool = False) -> tuple[pd.DataFrame, dict]:
     info.update({"n_symbols": int(len(first)), "conflicts": conflicts,
                  "per_list_rows": allrows.groupby("source_list").size().to_dict(),
                  "industries": first["industry"].value_counts().to_dict()})
+    mine = first[["symbol", "industry", "source_list"]].reset_index(drop=True)
     if dest.exists() and not force:
         kept = pd.read_csv(dest)
-        info["written_by_this_stream"] = False
-        info["note"] = "file already existed (another stream); kept unchanged"
+        same = kept.shape == mine.shape and kept.astype(str).equals(mine.astype(str))
+        info["written_by_this_stream"] = bool(same)
+        info["note"] = ("unchanged since this stream wrote it" if same else
+                        "file already existed (another stream); kept unchanged")
         return kept, info
-    first[["symbol", "industry", "source_list"]].to_csv(dest, index=False)
+    mine.to_csv(dest, index=False)
     info["written_by_this_stream"] = True
-    return first[["symbol", "industry", "source_list"]], info
+    return mine, info
 
 
 def build_equity_master(force: bool = False) -> dict:
     dest = C.EXT / "equity_master.csv"
+    marker = "EQUITY_L.csv (archives.nseindia.com, downloaded 2026-10-19)"
     if dest.exists() and not force:
-        return {"path": str(dest.relative_to(C.REPO)), "written_by_this_stream": False,
-                "note": "file already existed (P1); kept unchanged"}
+        ex = pd.read_csv(dest)
+        mine = "source" in ex.columns and (ex["source"] == marker).all()
+        return {"path": str(dest.relative_to(C.REPO)), "written_by_this_stream": bool(mine),
+                "rows": int(len(ex)),
+                "note": ("unchanged since this stream wrote it" if mine else
+                         "file already existed (P1); kept unchanged")}
     e = pd.read_csv(C.RAW_LISTS / "EQUITY_L.csv")
     e.columns = [c.strip() for c in e.columns]
     e = e.rename(columns={"SYMBOL": "symbol", "NAME OF COMPANY": "company_name",
@@ -102,7 +110,7 @@ def build_equity_master(force: bool = False) -> dict:
             e[c] = e[c].astype(str).str.strip()
     e["listing_date"] = pd.to_datetime(e["listing_date"], format="%d-%b-%Y",
                                        errors="coerce").dt.date
-    e["source"] = "EQUITY_L.csv (archives.nseindia.com, downloaded 2026-10-19)"
+    e["source"] = marker
     e.to_csv(dest, index=False)
     return {"path": str(dest.relative_to(C.REPO)), "written_by_this_stream": True,
             "rows": int(len(e)), "series": e["series"].value_counts().to_dict()}

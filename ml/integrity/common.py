@@ -179,3 +179,40 @@ def pr_name(d) -> str:
 
 def sec_name(d) -> str:
     return f"sec_bhavdata_full_{d:%d%m%Y}.csv"
+
+
+def member_date(name: str):
+    """Date encoded in a PR-bundle member name: Pd050424.csv (ddmmyy) or pd01022026.csv (ddmmyyyy)."""
+    import re
+    from datetime import datetime as _dt
+    m = re.search(r"(\d{8}|\d{6})", Path(name).name)
+    if not m:
+        return None
+    g = m.group(1)
+    try:
+        return (_dt.strptime(g, "%d%m%Y") if len(g) == 8 else _dt.strptime(g, "%d%m%y")).date()
+    except ValueError:
+        return None
+
+
+def bundle_inner_date(zpath: Path):
+    """Date of the bundle's pd member (the zip name is not trusted: the archive mis-files some)."""
+    import zipfile
+    try:
+        with zipfile.ZipFile(zpath) as zf:
+            for n in zf.namelist():
+                if Path(n).name.lower().startswith("pd") and n.lower().endswith(".csv"):
+                    return member_date(n)
+    except zipfile.BadZipFile:
+        return None
+    return None
+
+
+def bundle_ok(zpath: Path) -> bool:
+    """True when the bundle's pd member carries the date in the zip's own name."""
+    from datetime import datetime as _dt
+    try:
+        zd = _dt.strptime(zpath.stem[2:], "%d%m%y").date()
+    except ValueError:
+        return False
+    return bundle_inner_date(zpath) == zd

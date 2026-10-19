@@ -23,6 +23,16 @@ def _f(x, nd=4):
     return str(x)
 
 
+def _dl(xs: list, n: int = 12) -> str:
+    """Date list for a table cell: all of a short list, else count + first n."""
+    xs = list(xs or [])
+    if not xs:
+        return "none"
+    if len(xs) <= n:
+        return ", ".join(xs)
+    return f"{len(xs)} dates: " + ", ".join(xs[:n]) + ", ... (full list in the JSON)"
+
+
 def _pf(ok) -> str:
     return "**PASS**" if ok else ("**FAIL**" if ok is False else "not run")
 
@@ -96,9 +106,9 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     names = {"fo": "F&O bhavcopy", "indices": "ind_close_all", "participant": "participant OI"}
     for k in ("fo", "indices", "participant"):
         s = ps.get(k, {})
-        a(f"| {names[k]} | {_f(s.get('files_ok_in_window'))} | {', '.join(s.get('http_404_dates', [])) or 'none'} | "
+        a(f"| {names[k]} | {_f(s.get('files_ok_in_window'))} | {_dl(s.get('http_404_dates'))} | "
           f"{len(s.get('excluded_content_date_mismatch', []))} | "
-          f"{', '.join(s.get('eod_sessions_without_file', [])) or 'none'} |")
+          f"{_dl(s.get('eod_sessions_without_file'))} |")
     a("")
     a("Files per year (files with a valid internal date / expected sessions):")
     a("")
@@ -365,8 +375,22 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     a("## 11. History extension (2016-10-03..2021-09-30, for P4)")
     a("")
     if hist:
-        for k, v in hist.items():
-            a(f"- {k}: {v}")
+        a(f"Candidate days {hist['candidate_days']} (every weekday plus the weekend special sessions; a 404 marks a holiday). "
+          f"The rows are appended to the same staging tables with the same schema. Spot close for the F&O rows: {hist['spot_source']} "
+          f"(share of futures rows with a spot: {_f(hist.get('hist_fut_rows_with_spot_share'))}). P4 session list: {hist['p4_session_list']}.")
+        a("")
+        a("| Source | Sessions with a file | 404 days | Content-date exclusions | P4 sessions without a file | Files on non-P4 days |")
+        a("|---|---:|---:|---:|---|---|")
+        for k, v in hist["per_source"].items():
+            a(f"| {names[k]} | {_f(v['sessions_with_file'])} | {_f(v['http_404_days'])} | {len(v['excluded_content_date_mismatch'])} | "
+              f"{_dl(v.get('p4_sessions_without_file'))} | {_dl(v.get('files_on_non_p4_days'))} |")
+        a("")
+        a("Files per year: " + "; ".join(
+            f"{names[k]} " + ", ".join(f"{y} {n}" for y, n in v["by_year"].items())
+            for k, v in hist["per_source"].items()) + ".")
+        a("")
+        a("F&O members per day (mean by year): " + ", ".join(
+            f"{y} {v}" for y, v in hist.get("fo_members_per_year_hist", {}).items()) + ".")
     else:
         a("Not run in this build.")
     a("")

@@ -22,6 +22,7 @@ import pandas as pd  # noqa: E402
 from ml.extdata import checks as K  # noqa: E402
 from ml.extdata import common as C  # noqa: E402
 from ml.extdata import features as F  # noqa: E402
+from ml.extdata import history as H  # noqa: E402
 from ml.extdata import lists as L  # noqa: E402
 from ml.extdata import parse as P  # noqa: E402
 from ml.extdata import report as R  # noqa: E402
@@ -33,6 +34,8 @@ def main() -> None:
     ap.add_argument("--pit-month", default="2024-07")
     ap.add_argument("--reuse-json", action="store_true",
                     help="keep PIT results from an existing extdata.json")
+    ap.add_argument("--with-history", action="store_true",
+                    help="also parse the 2016-10..2021-09 files into the staging tables")
     a = ap.parse_args()
     log = C.get_logger("extdata.run")
     t0 = time.perf_counter()
@@ -40,12 +43,30 @@ def main() -> None:
                  "built_at": datetime.now().isoformat(timespec="seconds"),
                  "seed": C.SEED}
 
-    log.info("parse: start")
-    rep = P.run()
+    log.info("parse: start (with_history=%s)", a.with_history)
+    if a.with_history:
+        hs, hs_src = H.hist_spot()
+        rep = P.run(min_date=None, hist_spot=hs)
+    else:
+        rep = P.run()
     fo, idx, part = rep.pop("_frames")
     out["parse"] = rep
     log.info("parse: fo rows %d, index rows %d, participant rows %d", len(fo), len(idx), len(part))
 
+    out["staging_schemas"] = {
+        "fo_daily_stock.parquet": {c: str(t) for c, t in fo.dtypes.items()},
+        "index_daily.parquet": {c: str(t) for c, t in idx.dtypes.items()},
+        "fo_participant_oi.parquet": {c: str(t) for c, t in part.dtypes.items()},
+        "fo_participant_oi_column_map": P.PART_NUMERIC,
+        "fo_participant_oi_layout": "one row per (date, client_type); client_type in Client, DII, "
+                                    "FII, Pro, TOTAL; the 14 numeric columns are contracts",
+        "units": {"fut_oi_total, opt_call_oi, opt_put_oi": "shares (underlying quantity) in both "
+                  "F&O formats", "fut_volume_contracts, opt_call_volume, opt_put_volume":
+                  "contracts", "fut_turnover": "rupees", "spot_close": "rupees (EOD export close)",
+                  "basis_near": "annualised fraction"},
+        "roll_convention": ("near = smallest expiry >= date (the expiring contract is still near "
+                            "on its expiry day, days_to_expiry 0); next = second smallest; "
+                            "calendar days; UDiFF expiry = FininstrmActlXpryDt")}
     ind, ind_info = L.build_industry_map()
     out["industry_map"] = ind_info
     out["equity_master"] = L.build_equity_master()
@@ -70,6 +91,27 @@ def main() -> None:
     log.info("checks: descriptive IC")
     out["monthly_ic_descriptive"] = K.monthly_ic(res)
     out["industry_survivorship_diagnostic"] = K.survivorship_diag(res)
+    out["size_proxy_diagnostic"] = K.size_proxy_diag(res)
+    log.info("checks: partition identifiability (leak-safe vs literal brief)")
+    lit = F.build(write=False, policy={"unclassified": "nan", "secidx_unmapped": "nan"})
+    out["partition_identifiability"] = {"leak_safe": K.partition_identifiability(res),
+                                        "literal_brief": K.partition_identifiability(lit)}
+    out["literal_brief_secidx_nan_indicator"] = \
+        K.survivorship_diag(lit)["secidx_ret_20_nan_indicator"]
+    del lit
+    log.info("placebo F2 (industry labels permuted among classified symbols, seed %d)", C.SEED)
+    plc = F.build(write=False, industry_map=F.placebo_industry_map())
+    plc["extra"].to_parquet(C.EXT / "extra_features_placebo_f2.parquet", index=False)
+    out["placebo_f2"] = {"path": "ml/data_ext/extra_features_placebo_f2.parquet",
+                         "rows": int(len(plc["extra"])),
+                         "construction": ("industry column of industry_map.csv permuted among its "
+                                          f"symbols (numpy default_rng({C.SEED})); same Unclassified "
+                                          "and ETF groups, same coverage; F3 columns identical"),
+                         "status": "not a registered trial; for the lead's decision"}
+    del plc
+
+    if a.with_history:
+        out["history_extension"] = {"spot_source": hs_src, **H.hist_coverage(fo, idx, part)}
 
     old = {}
     jpath = C.OUT / "extdata.json"

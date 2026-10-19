@@ -156,7 +156,7 @@ def narrative(P: dict) -> list[str]:
         "**What changes.** Plan section 4 asked for a single-model book passing B1 and then gates 3 and 5 at N = 238. "
         + ("That happened." if promoted else
            ("B1 passed" if pm["B1"]["pass"] else "B1 failed")
-           + "; gate 3 " + "; ".join(f"{'passed' if v['gate3']['pass'] else 'failed'} for {k.split('|')[0]} "
+           + "; gate 3 " + " and ".join(f"{'passed' if v['gate3']['pass'] else 'failed'} for {k.split('|')[0]} "
                                      f"({v['gate3']['months']})" for k, v in g.items())
            + "; gate 5 failed for both by a wide margin. Nothing is promoted and the verdict stays: no capital, the "
              "paper book decides.")

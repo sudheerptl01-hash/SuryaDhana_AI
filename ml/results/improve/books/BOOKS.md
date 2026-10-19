@@ -82,7 +82,7 @@ Any book passing B1 and gates 3 and 5: **no**.
 | 9 | lgbm|vol+size|top_decile|H40 | +2.08 | +6.7% | 82% | 0.095 |
 | 10 | lgbm|vol+size|buffered_decile|H20 | +1.98 | +7.5% | 61% | 0.064 |
 
-Deflation: V[SR] of the daily skill Sharpe across all 66 books = 0.00387; expected maximum annualised Sharpe of a null book = 2.69 at N = 177, 2.79 at N = 238, 2.79 at N = 239.
+Deflation: V[SR] of the daily skill Sharpe across all 66 books = 0.00387; expected maximum annualised Sharpe of a null book = 2.69 at N = 177, 2.79 at N = 238, 2.79 at N = 239, 2.79 at N = 240.
 
 ## 4. What the result means
 
@@ -98,7 +98,7 @@ Deflation: V[SR] of the daily skill Sharpe across all 66 books = 0.00387; expect
 
 **No book clears the multiple-testing bar.** With the 42 new books in the trial set the cross-book variance of the daily Sharpe rises to 0.0039 (the five-year run's 24 books: 0.0017), so the expected best null Sharpe is 2.79 a year at N = 238 (2.69 at N = 177). The B1 books' DSR at N = 238 is 0.053 (nested_lgbm) and 0.038 (all51); the best book's is 0.469. Gate 3 (months ahead of the universe >= 75%): nested_lgbm 33/45 FAIL, all51 34/45 PASS. Gate 5 (DSR of the liquid book >= 0.95): 0.0001 and 0.0002, FAIL; the liquid neutral books earn +5.0% and +5.2% over the liquid universe with IR CIs [-0.14, +1.93] and [-0.09, +2.03].
 
-**What changes.** Plan section 4 asked for a single-model book passing B1 and then gates 3 and 5 at N = 238. B1 passed; gate 3 failed for nested_lgbm (33/45); passed for all51 (34/45); gate 5 failed for both by a wide margin. Nothing is promoted and the verdict stays: no capital, the paper book decides. What this stream does establish is the mechanism: the ensemble's economics come from removing the volatility tilt, which can be done deliberately on any of the scores; and under the name-level costs the buffer and the 40-session hold add 1.1 to 2.0 points a year to the vol+size top decile. The idea was formed on these same 43 folds (finding 3 was read from them), so the B1 interval is a consistency check, not an independent confirmation; only a frozen forward record can be that.
+**What changes.** Plan section 4 asked for a single-model book passing B1 and then gates 3 and 5 at N = 238. B1 passed; gate 3 failed for nested_lgbm (33/45) and passed for all51 (34/45); gate 5 failed for both by a wide margin. Nothing is promoted and the verdict stays: no capital, the paper book decides. What this stream does establish is the mechanism: the ensemble's economics come from removing the volatility tilt, which can be done deliberately on any of the scores; and under the name-level costs the buffer and the 40-session hold add 1.1 to 2.0 points a year to the vol+size top decile. The idea was formed on these same 43 folds (finding 3 was read from them), so the B1 interval is a consistency check, not an independent confirmation; only a frozen forward record can be that.
 
 
 ## 5. The grid: 42 new books (20 bps per side is the headline; name-level = the pre-specified model)

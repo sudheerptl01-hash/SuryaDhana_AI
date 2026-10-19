@@ -391,9 +391,21 @@ def load_staging(max_date: pd.Timestamp | None = None):
     return fo, idx, part
 
 
+def placebo_industry_map(seed: int = C.SEED) -> pd.DataFrame:
+    """Industry labels permuted among the classified symbols (same coverage,
+    same group sizes): the control that separates industry information from
+    the snapshot-coverage look-ahead."""
+    m = pd.read_csv(C.EXT / "industry_map.csv")
+    rng = np.random.default_rng(seed)
+    m = m.copy()
+    m["industry"] = rng.permutation(m["industry"].to_numpy())
+    return m
+
+
 def build(eod_path: Path = C.EOD_EXPORT, max_date: pd.Timestamp | None = None,
           staging: tuple | None = None, write: bool = True,
-          start: str = C.FEATURE_START, policy: dict | None = None) -> dict:
+          start: str = C.FEATURE_START, policy: dict | None = None,
+          industry_map: pd.DataFrame | None = None) -> dict:
     t0 = time.perf_counter()
     eod = load_eod(eod_path, max_date)
     base = base_features(eod)
@@ -401,7 +413,7 @@ def build(eod_path: Path = C.EOD_EXPORT, max_date: pd.Timestamp | None = None,
     if max_date is not None:
         fo, idx, part = (x[x["date"] <= max_date] for x in (fo, idx, part))
     etf, etf_src = load_etf_set(pd.Index(base["ticker"].unique()))
-    ind_map = pd.read_csv(C.EXT / "industry_map.csv")
+    ind_map = industry_map if industry_map is not None else pd.read_csv(C.EXT / "industry_map.csv")
     smap = pd.read_csv(C.EXT / "sector_index_map.csv").fillna("")
 
     ms, ms_info = market_state(base, etf, idx, part)

@@ -1,0 +1,1419 @@
+{
+ "etf_files": {
+  "bundles": 751,
+  "with_member": 750,
+  "empty": 0,
+  "unreadable": 0,
+  "misfiled_skipped": [
+   "PR060424.zip holds 2024-06-04"
+  ]
+ },
+ "etf_symbols_union": 409,
+ "equity_master_rows": 2619,
+ "equity_master_isin_prefix": {
+  "INE": 2617,
+  "IN9": 2
+ },
+ "etf_symbols_in_equity_master": [],
+ "store_eq_be": {
+  "tickers": 3545,
+  "etf_by_list": 409,
+  "etf_by_regex": 286,
+  "both": 255,
+  "regex_only": [
+   "AONESILVER",
+   "BANK10ADD",
+   "BANK10BETF",
+   "BNKETFAXIS",
+   "FARBEES",
+   "FMCGADD",
+   "GOLDAXIS",
+   "GOLDENTOBC",
+   "GOLDTECH",
+   "GSEC10ADD",
+   "HSBCGOLD",
+   "HYBRIDETF",
+   "INSURADD",
+   "INSUREIETF",
+   "IVZSENSEX",
+   "JETFRE-RE",
+   "JETFREIGHT",
+   "LIQUIDBETA",
+   "MIDBANKADD",
+   "MSCI360",
+   "NIF500BETA",
+   "NIFTYAXIS",
+   "NIFTYJBLK",
+   "NXT100CASE",
+   "SBISMLETF",
+   "SBIVALETF",
+   "SECLEDBETA",
+   "SENSEXAXIS",
+   "SILVER001",
+   "SILVERAXIS",
+   "SMALLIETF"
+  ],
+  "list_only": [
+   "ABGSEC",
+   "ABSLNN50ET",
+   "ABSLPSE",
+   "ALPHA",
+   "AONETMMQ50",
+   "AONETOTAL",
+   "AXISVALUE",
+   "BANKPSU",
+   "BFSI",
+   "CHEMICAL",
+   "CONS",
+   "CONSUMER",
+   "DIVIDEND",
+   "EBANK",
+   "ECAPINSURE",
+   "ELM250",
+   "EMULTIMQ",
+   "ENERGY",
+   "EQUAL200",
+   "EQUAL50",
+   "ESG",
+   "EVINDIA",
+   "GROWEV",
+   "GROWWCAPM",
+   "GROWWCHEM",
+   "GROWWDEFNC",
+   "GROWWEV",
+   "GROWWLOVOL",
+   "GROWWMC150",
+   "GROWWMETAL",
+   "GROWWMOM50",
+   "GROWWN200",
+   "GROWWNET",
+   "GROWWNXT50",
+   "GROWWPOWER",
+   "GROWWRAIL",
+   "GROWWRLTY",
+   "GROWWSC250",
+   "GROWWSLVR",
+   "GSEC10ABSL",
+   "GSEC10YEAR",
+   "HDFCBSE500",
+   "HDFCGROWTH",
+   "HDFCLOWVOL",
+   "HDFCMID150",
+   "HDFCMOMENT",
+   "HDFCNEXT50",
+   "HDFCNIF100",
+   "HDFCNIFBAN",
+   "HDFCNIFIT",
+   "HDFCPSUBK",
+   "HDFCPVTBAN",
+   "HDFCQUAL",
+   "HDFCSML250",
+   "HDFCVALUE",
+   "HEALTHY",
+   "ICICI10GS",
+   "ICICI500",
+   "ICICI5GSEC",
+   "ICICIALPLV",
+   "ICICIAUTO",
+   "ICICIB22",
+   "ICICIBANKN",
+   "ICICIBANKP",
+   "ICICICOMMO",
+   "ICICICONSU",
+   "ICICIFIN",
+   "ICICIFMCG",
+   "ICICIINFRA",
+   "ICICILIQ",
+   "ICICILOVOL",
+   "ICICIM150",
+   "ICICIMCAP",
+   "ICICIMOM30",
+   "ICICINF100",
+   "ICICINV20",
+   "ICICINXT50",
+   "ICICIPHARM",
+   "ICICIQTY30",
+   "ICICISENSX",
+   "ICICITECH",
+   "INTERNET",
+   "IT",
+   "KOTAKALPHA",
+   "KOTAKCONS",
+   "KOTAKIT",
+   "KOTAKLIQ",
+   "KOTAKLOVOL",
+   "KOTAKMID50",
+   "KOTAKMNC",
+   "KOTAKNV20",
+   "KOTAKPSUBK",
+   "LICNFNHGP",
+   "LICNMID100",
+   "LOWVOL",
+   "LOWVOL1",
+   "MAFANG",
+   "MAHKTECH",
+   "MAKEINDIA",
+   "MANV30F",
+   "MANXT50",
+   "MASPTOP50",
+   "METAL",
+   "MID150",
+   "MIDCAP",
+   "MIDSMALL",
+   "MNC",
+   "MOALPHA50",
+   "MOCAPITAL",
+   "MODEFENCE",
+   "MOENERGY",
+   "MOGSEC",
+   "MOHEALTH",
+   "MOINFRA",
+   "MOIPO",
+   "MOLOWVOL",
+   "MOM100",
+   "MOM50",
+   "MOMENTUM",
+   "MOMENTUM30",
+   "MOMENTUM50",
+   "MOMGF",
+   "MOMIDMTM",
+   "MOMNC",
+   "MOMOMENTUM",
+   "MON100",
+   "MON50EQUAL",
+   "MONEXT50",
+   "MONQ50",
+   "MOPSE",
+   "MOQUALITY",
+   "MOREALTY",
+   "MOSERVICE",
+   "MOSMALL250",
+   "MOTOUR",
+   "MOVALUE",
+   "MSCIINDIA",
+   "MULTICAP",
+   "NCPSESDL24",
+   "NEXT50",
+   "NIFMID150",
+   "NPBET",
+   "NV20",
+   "PSUBANK",
+   "PSUBANKICI",
+   "QUALITY30",
+   "SBIBPB",
+   "SELECTIPO",
+   "SMALL250",
+   "SMALLCAP",
+   "TECH",
+   "TOP20",
+   "UTINEXT50",
+   "UTISXN50"
+  ]
+ },
+ "v1_dataset": {
+  "tickers": 2480,
+  "etf_by_list": 208,
+  "etf_by_regex": 156,
+  "both": 150,
+  "regex_only": [
+   "GOLDAXIS",
+   "GOLDTECH",
+   "INSUREIETF",
+   "JETFREIGHT",
+   "NIFTYAXIS",
+   "SILVERAXIS"
+  ],
+  "list_only": [
+   "ABSLPSE",
+   "ALPHA",
+   "BFSI",
+   "CHEMICAL",
+   "ELM250",
+   "ENERGY",
+   "EVINDIA",
+   "GROWWCAPM",
+   "GROWWDEFNC",
+   "GROWWEV",
+   "GROWWMETAL",
+   "GROWWPOWER",
+   "GROWWRAIL",
+   "GROWWSLVR",
+   "HDFCBSE500",
+   "HDFCMID150",
+   "HDFCMOMENT",
+   "HDFCNEXT50",
+   "HDFCNIFBAN",
+   "HDFCNIFIT",
+   "HDFCPSUBK",
+   "HDFCPVTBAN",
+   "HDFCSML250",
+   "ICICIALPLV",
+   "ICICIB22",
+   "ICICIBANKN",
+   "ICICILIQ",
+   "ICICILOVOL",
+   "ICICITECH",
+   "IT",
+   "KOTAKALPHA",
+   "KOTAKPSUBK",
+   "LOWVOL1",
+   "MAFANG",
+   "MAHKTECH",
+   "MAKEINDIA",
+   "MASPTOP50",
+   "METAL",
+   "MIDCAP",
+   "MIDSMALL",
+   "MOCAPITAL",
+   "MODEFENCE",
+   "MOENERGY",
+   "MOM100",
+   "MOMENTUM50",
+   "MOMOMENTUM",
+   "MON100",
+   "MONQ50",
+   "MOREALTY",
+   "MOSMALL250",
+   "MOVALUE",
+   "NEXT50",
+   "PSUBANK",
+   "PSUBANKICI",
+   "SBIBPB",
+   "SMALL250",
+   "SMALLCAP",
+   "UTINEXT50"
+  ],
+  "rows": 1357383,
+  "etf_rows_by_list": 74111,
+  "etf_row_share_by_list": 0.054598444212134674,
+  "etf_rows_by_regex": 58415
+ },
+ "list_only_detail": [
+  {
+   "symbol": "ABGSEC",
+   "security": "BIRLASLAMC - ABGSEC",
+   "underlying": "ADITYA BIRLA SUN LIFE CRISIL BROAD BASED GILT ETF",
+   "first_seen": "2024-07-10",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "ABSLNN50ET",
+   "security": "BIRLASLAMC - ABSLNN50ET",
+   "underlying": "NIFTY NEXT 50",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "ABSLPSE",
+   "security": "BIRLASLAMC-ABSLPSE",
+   "underlying": "ADITYA BIRLA SUN LIFE NIFTY PSE ETF",
+   "first_seen": "2024-05-23",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "ALPHA",
+   "security": "KOTAKMAMC - KOTAKALPHA",
+   "underlying": "NIFTY ALPHA 50 INDEX",
+   "first_seen": "2024-03-20",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "AONETMMQ50",
+   "security": "AONEAMC - AONETMMQ50",
+   "underlying": "NIFTY TOTAL MARKET MOMENTUM QUALITY 50 TRI",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "AONETOTAL",
+   "security": "AONEAMC - AONETOTAL",
+   "underlying": "NIFTY TOTAL MARKET INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "AXISVALUE",
+   "security": "AXISAMC - AXISVALUE",
+   "underlying": "NIFTY500 VALUE 50 TRI",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "BANKPSU",
+   "security": "MIRAEAMC - BANKPSU",
+   "underlying": "NIFTY PSU BANK TOTAL RETURN INDEX",
+   "first_seen": "2025-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "BFSI",
+   "security": "MIRAEAMC - MAFSETF",
+   "underlying": "NIFTY FINANCIAL SERVICES INDEX",
+   "first_seen": "2023-09-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "CHEMICAL",
+   "security": "KOTAKMAMC - CHEMICAL",
+   "underlying": "NIFTY CHEMICALS INDEX (TRI)",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "CONS",
+   "security": "KOTAKMAMC - KOTAKCONS",
+   "underlying": "KOTAK NIFTY INDIA CONSUMPTION ETF",
+   "first_seen": "2024-03-20",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "CONSUMER",
+   "security": "MIRAEAMC - CONSUMER",
+   "underlying": "NIFTY INDIA NEW AGECONSUMPTION",
+   "first_seen": "2025-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "DIVIDEND",
+   "security": "MIRAEAMC - DIVIDEND",
+   "underlying": "BSE 500 DIVIDEND LEADERS",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "EBANK",
+   "security": "EDELWEISS ETF-NIFTY BANK",
+   "underlying": "NIFTY BANK",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-08-01"
+  },
+  {
+   "symbol": "ECAPINSURE",
+   "security": "EDELAMC - ECAPINSURE",
+   "underlying": "BSE CAPITAL MARKETS & INSURANCE TOTAL RETURN INDEX",
+   "first_seen": "2025-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "ELM250",
+   "security": "EDELAMC - ELM250",
+   "underlying": "NIFTY LARGEMIDCAP 250 TRI",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "EMULTIMQ",
+   "security": "EDELAMC - EMULTIMQ",
+   "underlying": "NIFTY500 MULTICAP MOMENTUM QUALITY 50 TOTAL RETURN INDEX",
+   "first_seen": "2025-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "ENERGY",
+   "security": "MIRAEAMC - ENERGY",
+   "underlying": "NIFTY ENERGY",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "EQUAL200",
+   "security": "MIRAEAMC - EQUAL200",
+   "underlying": "BSE 200 EQUAL WEIGHT",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "EQUAL50",
+   "security": "MIRAEAMC - EQUAL50",
+   "underlying": "NIFTY50 EQUAL WEIGHT",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "ESG",
+   "security": "MIRAEAMC - MAESGETF",
+   "underlying": "NIFTY100 ESG SECTOR LEADERS",
+   "first_seen": "2023-09-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "EVINDIA",
+   "security": "MIRAEAMC - EVINDIA",
+   "underlying": "NIFTY EV AND NEW AGE AUTOMOTIVE TOTAL RETURN INDEX",
+   "first_seen": "2024-07-16",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWEV",
+   "security": "GROWWAMC - GROWEV",
+   "underlying": "NIFTY EV & NEW AGE AUTOMOTIVE INDEX-TTL RTN INDX",
+   "first_seen": "2024-08-12",
+   "last_seen": "2024-08-22"
+  },
+  {
+   "symbol": "GROWWCAPM",
+   "security": "GROWWAMC - GROWWCAPM",
+   "underlying": "NIFTY CAPITAL MARKETS INDEX",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWCHEM",
+   "security": "GROWWAMC - GROWWCHEM",
+   "underlying": "NIFTY CHEMICALS INDEX - TRI",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWDEFNC",
+   "security": "GROWWAMC - GROWWDEFNC",
+   "underlying": "NIFTY INDIA DEFENCE INDEX- TOTAL RETURN INDEX",
+   "first_seen": "2025-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWEV",
+   "security": "GROWWAMC - GROWWEV",
+   "underlying": "NIFTY EV AND NEW AGE AUTOMOTIVE INDEX",
+   "first_seen": "2024-08-23",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWLOVOL",
+   "security": "GROWWAMC - GROWWLOVOL",
+   "underlying": "NIFTY 500 LOW VOLATILITY 50 INDEX   TRI",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWMC150",
+   "security": "GROWWAMC - GROWWMC150",
+   "underlying": "NIFTY MIDCAP 150 INDEX - TRI",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWMETAL",
+   "security": "GROWWAMC - GROWWMETAL",
+   "underlying": "NIFTY METAL INDEX",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWMOM50",
+   "security": "GROWWAMC - GROWWMOM50",
+   "underlying": "NIFTY 500 MOMENTUM 50 INDEX- TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWN200",
+   "security": "GROWWAMC - GROWWN200",
+   "underlying": "NIFTY 200 INDEX- TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWNET",
+   "security": "GROWWAMC - GROWWNET",
+   "underlying": "INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWNXT50",
+   "security": "GROWWAMC - GROWWNXT50",
+   "underlying": "INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWPOWER",
+   "security": "GROWWAMC - GROWWPOWER",
+   "underlying": "BSE POWER INDEX - TRI",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWRAIL",
+   "security": "GROWWAMC - GROWWRAIL",
+   "underlying": "NIFTY INDIA RAILWAYS PSU INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWRLTY",
+   "security": "GROWWAMC - GROWWRLTY",
+   "underlying": "INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWSC250",
+   "security": "GROWWAMC - GROWWSC250",
+   "underlying": "NIFTY SMALLCAP 250 INDEX - TRI",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GROWWSLVR",
+   "security": "GROWWAMC - GROWWSLVR",
+   "underlying": "COMMODITY-SILVER",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GSEC10ABSL",
+   "security": "BIRLASLAMC - GSEC10ABSL",
+   "underlying": "CRISIL 10 YEAR GILT ETF",
+   "first_seen": "2024-08-19",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "GSEC10YEAR",
+   "security": "MIRAEAMC - MAGS813ETF",
+   "underlying": "MIRAE ASSET NIFTY 8-13 YR G-SEC ETF",
+   "first_seen": "2023-09-04",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCBSE500",
+   "security": "HDFCAMC - HDFCBSE500",
+   "underlying": "HDFC S&P BSE 500 ETF",
+   "first_seen": "2023-02-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCGROWTH",
+   "security": "HDFCAMC - HDFCGROWTH",
+   "underlying": "HDFC NIFTY GROWTH SECTORS 15 ETF",
+   "first_seen": "2022-09-29",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCLOWVOL",
+   "security": "HDFCAMC - HDFCLOWVOL",
+   "underlying": "HDFC NIFTY100 LOW VOLATILITY 30 ETF",
+   "first_seen": "2022-10-17",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCMID150",
+   "security": "HDFCAMC - HDFCMID150",
+   "underlying": "HDFC NIFTY MIDCAP 150 ETF",
+   "first_seen": "2023-02-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCMOMENT",
+   "security": "HDFCAMC - HDFCMOMENT",
+   "underlying": "HDFC NIFTY200 MOMENTUM 30 ETF",
+   "first_seen": "2022-10-17",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCNEXT50",
+   "security": "HDFCAMC - HDFCNEXT50",
+   "underlying": "HDFC NIFTY NEXT 50 ETF",
+   "first_seen": "2022-08-11",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCNIF100",
+   "security": "HDFCAMC - HDFCNIF100",
+   "underlying": "HDFC NIFTY 100 ETF",
+   "first_seen": "2022-08-11",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCNIFBAN",
+   "security": "HDFCAMC - HDFCNIFBAN",
+   "underlying": "NIFTY BANK",
+   "first_seen": "2023-06-16",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCNIFIT",
+   "security": "HDFCAMC - HDFCNIFIT",
+   "underlying": "HDFC NIFTY IT ETF",
+   "first_seen": "2022-11-22",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCPSUBK",
+   "security": "HDFCAMC HDFCPSUBK",
+   "underlying": "HDFC NIFTY PSU BANK ETF",
+   "first_seen": "2024-02-07",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCPVTBAN",
+   "security": "HDFCAMC - HDFCPVTBAN",
+   "underlying": "HDFC NIFTY PRIVATE BANK ETF",
+   "first_seen": "2022-11-22",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCQUAL",
+   "security": "HDFCAMC - HDFCQUAL",
+   "underlying": "HDFC NIFTY100 QUALITY 30 ETF",
+   "first_seen": "2022-09-29",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCSML250",
+   "security": "HDFCAMC - HDFCSML250",
+   "underlying": "HDFC NIFTY SMALLCAP 250 ETF",
+   "first_seen": "2023-02-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HDFCVALUE",
+   "security": "HDFCAMC - HDFCVALUE",
+   "underlying": "HDFC NIFTY50 VALUE 20 ETF",
+   "first_seen": "2022-09-29",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "HEALTHY",
+   "security": "BIRLASLAMC - HEALTHY",
+   "underlying": "NIFTY HEALTHCARE TRI",
+   "first_seen": "2021-10-28",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "ICICI10GS",
+   "security": "ICICIPRAMC - ICICI10GS",
+   "underlying": "NIFTY 10 YR BENCHMARK G-SEC INDEX",
+   "first_seen": "2022-12-19",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICI500",
+   "security": "ICICIPRAMC - ICICI500",
+   "underlying": "S&P BSE 500 INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICI5GSEC",
+   "security": "ICICIPRAMC - ICICI5GSEC",
+   "underlying": "NIFTY 5 YR BENCHMARK G-SEC INDEX",
+   "first_seen": "2022-03-10",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIALPLV",
+   "security": "ICICIPRAMC - ICICIALPLV",
+   "underlying": "NIFTY ALPHA LOW-VOLATILITY 30 INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIAUTO",
+   "security": "ICICIPRAMC - ICICIAUTO",
+   "underlying": "NIFTY AUTO INDEX",
+   "first_seen": "2022-01-18",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIB22",
+   "security": "ICICIPRAMC - BHARATIWIN",
+   "underlying": "S&P BSE BHARAT 22 INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "ICICIBANKN",
+   "security": "ICICIPRAMC - IPRU5008",
+   "underlying": "NIFTY BANK",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIBANKP",
+   "security": "ICICIPRAMC - ICICIBANKP",
+   "underlying": "NIFTY PRIVATE BANK INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICICOMMO",
+   "security": "ICICIPRAMC - ICICICOMMO",
+   "underlying": "NIFTY COMMODITIES INDEX",
+   "first_seen": "2022-12-21",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICICONSU",
+   "security": "ICICIPRAMC - ICICICONSU",
+   "underlying": "NIFTY INDIA CONSUMPTION INDEX",
+   "first_seen": "2021-11-02",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIFIN",
+   "security": "ICICIPRAMC-ICICIFIN",
+   "underlying": "NIFTY FINANCIAL SERVICES EX-BANK INDEX",
+   "first_seen": "2022-11-30",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIFMCG",
+   "security": "ICICIPRAMC - ICICIFMCG",
+   "underlying": "NIFTY FMCG INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIINFRA",
+   "security": "ICICIPRAMC - ICICIINFRA",
+   "underlying": "NIFTY INFRASTRUCTURE INDEX",
+   "first_seen": "2022-08-23",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICILIQ",
+   "security": "ICICIPRAMC - ICICILIQ",
+   "underlying": "S&P BSE LIQUID RATE INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICILOVOL",
+   "security": "ICICI PR NIF LW VL 30 ETF",
+   "underlying": "NIFTY 100 LOW VOLATILITY 30 INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIM150",
+   "security": "ICICIPRAMC - ICICIM150",
+   "underlying": "NIFTY MIDCAP 150",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIMCAP",
+   "security": "ICICI PRUD MIDCAP SEL ETF",
+   "underlying": "S&P BSE MIDCAP SELECT INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIMOM30",
+   "security": "ICICIPRAMC - ICICIMOM30",
+   "underlying": "NIFTY200 MOMENTUM 30 INDEX",
+   "first_seen": "2022-08-10",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICINF100",
+   "security": "ICICI PRUD NIFTY 100 ETF",
+   "underlying": "NIFTY 100",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICINV20",
+   "security": "ICICI PRUDENTIAL NV20 ETF",
+   "underlying": "NIFTY50 VALUE 20",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICINXT50",
+   "security": "ICICIPRAMC - ICICINXT50",
+   "underlying": "NIFTY NEXT 50 ETF",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIPHARM",
+   "security": "ICICIPRAMC - ICICIPHARM",
+   "underlying": "NIFTY HEALTHCARE INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICIQTY30",
+   "security": "ICICIPRAMC - ICICIQTY30",
+   "underlying": "NIFTY200 QUALITY 30 INDEX",
+   "first_seen": "2023-08-10",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICISENSX",
+   "security": "ICICI PRUD SENSEX ETF",
+   "underlying": "SENSEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "ICICITECH",
+   "security": "ICICIPRAMC - ICICITECH",
+   "underlying": "NIFTY IT INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "INTERNET",
+   "security": "MIRAEAMC - INTERNET",
+   "underlying": "EQUITY INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "IT",
+   "security": "KOTAKMAMC - KOTAKIT",
+   "underlying": "NIFTY IT INDEX",
+   "first_seen": "2024-03-20",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "KOTAKALPHA",
+   "security": "KOTAKMAMC - KOTAKALPHA",
+   "underlying": "NIFTY ALPHA 50 INDEX",
+   "first_seen": "2021-12-29",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "KOTAKCONS",
+   "security": "KOTAKMAMC - KOTAKCONS",
+   "underlying": "NIFTY INDIA CONSUMPTION INDEX",
+   "first_seen": "2022-08-04",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "KOTAKIT",
+   "security": "KOTAKMAMC - KOTAKIT",
+   "underlying": "NIFTY IT",
+   "first_seen": "2021-10-01",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "KOTAKLIQ",
+   "security": "KOTAKMAMC - KOTAKLIQ",
+   "underlying": "NIFTY 1D RATE INDEX",
+   "first_seen": "2023-02-01",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "KOTAKLOVOL",
+   "security": "KOTAKMAMC - KOTAKLOVOL",
+   "underlying": "NIFTY 100 LOW VOLATILITY 30 INDEX",
+   "first_seen": "2022-03-29",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "KOTAKMID50",
+   "security": "KOTAKMAMC - KOTAKMID50",
+   "underlying": "NIFTY MIDCAP 50 INDEX",
+   "first_seen": "2022-02-04",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "KOTAKMNC",
+   "security": "KOTAKMAMC - KOTAKMNC",
+   "underlying": "NIFTY MNC INDEX",
+   "first_seen": "2022-08-16",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "KOTAKNV20",
+   "security": "KOTAKMAMC - KTKNV20ETF",
+   "underlying": "NIFTY50 VALUE 20",
+   "first_seen": "2021-10-01",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "KOTAKPSUBK",
+   "security": "KOTAK PSU BANK",
+   "underlying": "NIFTY PSU BANK INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2024-03-19"
+  },
+  {
+   "symbol": "LICNFNHGP",
+   "security": "LICNAMC - LICNFNHGP",
+   "underlying": "NIFTY 100",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "LICNMID100",
+   "security": "LICNAMC - LICNMID100",
+   "underlying": "LIC MF NIFTY MIDCAP 100 ETF",
+   "first_seen": "2024-02-19",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "LOWVOL",
+   "security": "MIRAEAMC - MANV30F",
+   "underlying": "MIRAE ASSET NIFTY 100 LOW VOLATILITY 30 ETF",
+   "first_seen": "2023-09-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "LOWVOL1",
+   "security": "KOTAKMAMC - KOTAKLOVOL",
+   "underlying": "KOTAK NIFTY 100 LOW VOL 30 ETF",
+   "first_seen": "2024-03-20",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MAFANG",
+   "security": "MIRAEAMC - MAFANG",
+   "underlying": "NYSE FANG+ TOTAL RETURN INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MAHKTECH",
+   "security": "MIRAEAMC - MAHKTECH",
+   "underlying": "HANG SENG TECH TOTAL RETURN INDEX",
+   "first_seen": "2021-12-10",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MAKEINDIA",
+   "security": "MIRAEAMC - MAMFGETF",
+   "underlying": "NIFTY INDIA MANUFACTURING TOTAL RETURN INDEX",
+   "first_seen": "2023-09-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MANV30F",
+   "security": "MIRAEAMC - MANV30F",
+   "underlying": "NIFTY 100 LOW VOLATILITY 30 TOTAL RETURN INDEX",
+   "first_seen": "2023-03-31",
+   "last_seen": "2023-08-31"
+  },
+  {
+   "symbol": "MANXT50",
+   "security": "MIRAEAMC - MANXT50",
+   "underlying": "NIFTY NEXT 50",
+   "first_seen": "2021-10-01",
+   "last_seen": "2023-08-31"
+  },
+  {
+   "symbol": "MASPTOP50",
+   "security": "MIRAEAMC - MASPTOP50",
+   "underlying": "S&P 500 TOP 50 TOTAL RETURN INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "METAL",
+   "security": "MIRAEAMC - METAL",
+   "underlying": "NIFTY METAL TOTAL RETURN INDEX",
+   "first_seen": "2025-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MID150",
+   "security": "KOTAKMAMC - MID150",
+   "underlying": "NIFTY MIDCAP 150 INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MIDCAP",
+   "security": "KOTAKMAMC - KOTAKMID50",
+   "underlying": "NIFTY MIDCAP 50 INDEX",
+   "first_seen": "2024-03-20",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MIDSMALL",
+   "security": "MIRAEAMC - MIDSMALL",
+   "underlying": "MIRAE ASSET NIFTY MIDSMALLCAP400 MOMENTUM QUALITY 100 ETF",
+   "first_seen": "2024-05-28",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MNC",
+   "security": "KOTAKMAMC - KOTAKMNC",
+   "underlying": "KOTAK NIFTY MNC ETF",
+   "first_seen": "2024-03-20",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOALPHA50",
+   "security": "MOTILALAMC - MOALPHA50",
+   "underlying": "NIFTY ALPHA 50 TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOCAPITAL",
+   "security": "MOTILALAMC - MOCAPITAL",
+   "underlying": "NIFTY CAPITAL MARKET TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MODEFENCE",
+   "security": "MOTILALAMC - MODEFENCE",
+   "underlying": "NIFTY INDIA DEFENCE TOTAL RETURN INDEX",
+   "first_seen": "2024-08-27",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOENERGY",
+   "security": "MOTILALAMC - MOENERGY",
+   "underlying": "NIFTY ENERGY INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOGSEC",
+   "security": "MOTILALAMC - G5",
+   "underlying": "NIFTY 5 YR BENCHMARK G-SEC INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOHEALTH",
+   "security": "MOTILALAMC - MOHEALTH",
+   "underlying": "MOTILAL OSWAL S&P BSE HEALTHCARE ETF",
+   "first_seen": "2022-08-04",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOINFRA",
+   "security": "MOTILALAMC - MOINFRA",
+   "underlying": "BSE INDIA INFRASTRUCTURE TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOIPO",
+   "security": "MOTILALAMC - MOIPO",
+   "underlying": "BSE SELECT IPO TOTAL RETURN INDEX",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOLOWVOL",
+   "security": "MOTILALAMC - MOLOWVOL",
+   "underlying": "NIFTY MIDCAP 100 TRI",
+   "first_seen": "2022-03-30",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOM100",
+   "security": "MOTILAL OS MIDCAP100 ETF",
+   "underlying": "NIFTY MIDCAP 100",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOM50",
+   "security": "MOTILAL OSWAL M50 ETF",
+   "underlying": "NIFTY 50",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOMENTUM",
+   "security": "BIRLASLAMC - MOMENTUM",
+   "underlying": "ADITYA BIRLA SUN LIFE NIFTY 200 MOMENTUM 30 ETF",
+   "first_seen": "2022-08-19",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOMENTUM30",
+   "security": "KOTAKMAMC - MOMENTUM30",
+   "underlying": "NIFTY 200 MOMENTUM 30 INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOMENTUM50",
+   "security": "MOTILALAMC - MOMENTUM50",
+   "underlying": "NIFTY 500 MOMENTUM 50 TOTAL RETURN INDEX",
+   "first_seen": "2024-09-30",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOMGF",
+   "security": "MOTILALAMC - MOMGF",
+   "underlying": "NIFTY INDIA MANUFACTURING TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOMIDMTM",
+   "security": "MOTILALAMC - MOMIDMTM",
+   "underlying": "NIFTY MIDCAP 150 MOMENTUM 50 TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOMNC",
+   "security": "MOTILALAMC - MOMNC",
+   "underlying": "NIFTY MNC ETF TOTAL RETURN INDEX",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOMOMENTUM",
+   "security": "MOTILALAMC - MOMOMENTUM",
+   "underlying": "NIFTY 200 MOMENTUM 30 TOTAL RETURN INDEX",
+   "first_seen": "2022-02-17",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MON100",
+   "security": "MOTILAL OS NASDAQ100 ETF",
+   "underlying": "NASDAQ100",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MON50EQUAL",
+   "security": "MOTILALAMC - MON50EQUAL",
+   "underlying": "NIFTY 50 EQUAL WEIGHT TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MONEXT50",
+   "security": "MOTILALAMC - MONEXT50",
+   "underlying": "NIFTY NEXT 50 TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MONQ50",
+   "security": "MOTILALAMC - MONQ50",
+   "underlying": "NASDAQ Q-50 TOTAL RETURN INDEX",
+   "first_seen": "2021-12-29",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOPSE",
+   "security": "MOTILALAMC - MOPSE",
+   "underlying": "NIFTY PSE TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOQUALITY",
+   "security": "MOTILALAMC - MOQUALITY",
+   "underlying": "MOTILAL OSWAL S&P BSE QUALITY ETF",
+   "first_seen": "2022-08-26",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOREALTY",
+   "security": "MOTILALAMC - MOREALTY",
+   "underlying": "MOTILAL OSWAL NIFTY REALTY ETF",
+   "first_seen": "2024-03-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOSERVICE",
+   "security": "MOTILALAMC - MOSERVICE",
+   "underlying": "NIFTY SERVICES SECTOR TOTAL RETURN INDEX",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOSMALL250",
+   "security": "MOTILALAMC - MOSMALL250",
+   "underlying": "MOTILAL OSWAL NIFTY SMALLCAP 250 ETF",
+   "first_seen": "2024-03-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOTOUR",
+   "security": "MOTILALAMC - MOTOUR",
+   "underlying": "NIFTY INDIA TOURISM TOTAL RETURN INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MOVALUE",
+   "security": "MOTILALAMC - MOVALUE",
+   "underlying": "MOTILAL OSWAL S&P BSE ENHANCED VALUE ETF",
+   "first_seen": "2022-08-26",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MSCIINDIA",
+   "security": "KOTAKMAMC - MSCIINDIA",
+   "underlying": "MSCI INDIA INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "MULTICAP",
+   "security": "MIRAEAMC - MULTICAP",
+   "underlying": "NIFTY500 MULTICAP 50:25:25 INDEX",
+   "first_seen": "2024-09-05",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "NCPSESDL24",
+   "security": "NIPPON INDIA- NIMFXX",
+   "underlying": "NIFTY CPSE BOND PLUS SDL SEP 2024 50:50 INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2022-05-09"
+  },
+  {
+   "symbol": "NEXT50",
+   "security": "MIRAEAMC - MANXT50",
+   "underlying": "NIFTY NEXT 50",
+   "first_seen": "2023-09-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "NIFMID150",
+   "security": "UTIAMC - NIFMID150",
+   "underlying": "UTI NIFTY MIDCAP 150 EXCHANGE TRADED FUND (ETF)",
+   "first_seen": "2023-09-05",
+   "last_seen": "2025-10-21"
+  },
+  {
+   "symbol": "NPBET",
+   "security": "TATAAML - NPBET",
+   "underlying": "NIFTY PRIVATE BANK INDEX",
+   "first_seen": "2021-10-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "NV20",
+   "security": "KOTAKMAMC - KTKNV20ETF",
+   "underlying": "NIFTY50 VALUE 20",
+   "first_seen": "2024-03-20",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "PSUBANK",
+   "security": "KOTAK PSU BANK",
+   "underlying": "NIFTY PSU BANK",
+   "first_seen": "2024-03-20",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "PSUBANKICI",
+   "security": "ICICIPRAMC - PSUBANKICI",
+   "underlying": "NIFTY PSU BANK INDEX",
+   "first_seen": "2023-03-21",
+   "last_seen": "2023-12-19"
+  },
+  {
+   "symbol": "QUALITY30",
+   "security": "KOTAKMAMC - QUALITY30",
+   "underlying": "NIFTY200 QUALITY 30 INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "SBIBPB",
+   "security": "SBIAMC - SBIBPB",
+   "underlying": "BSE PSU BANK INDEX TRI",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "SELECTIPO",
+   "security": "MIRAEAMC - SELECTIPO",
+   "underlying": "BSE SELECT IPO INDEX",
+   "first_seen": "2025-10-21",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "SMALL250",
+   "security": "MIRAEAMC - SMALL250",
+   "underlying": "NIFTY SMALLCAP 250",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "SMALLCAP",
+   "security": "MIRAEAMC - SMALLCAP",
+   "underlying": "MIRAE ASSET NIFTY SMALLCAP 250 MOMENTUM QUALITY 100 ETF",
+   "first_seen": "2024-02-29",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "TECH",
+   "security": "BIRLASLAMC - TECH",
+   "underlying": "NIFTY IT TRI INDEX",
+   "first_seen": "2021-11-03",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "TOP20",
+   "security": "MIRAEAMC - TOP20",
+   "underlying": "NIFTY TOP 20 EQUAL WEIGHT",
+   "first_seen": "2026-02-01",
+   "last_seen": "2026-02-01"
+  },
+  {
+   "symbol": "UTINEXT50",
+   "security": "UTIAMC - UTINEXT50",
+   "underlying": "NIFTY NEXT 50",
+   "first_seen": "2021-10-01",
+   "last_seen": "2025-10-21"
+  },
+  {
+   "symbol": "UTISXN50",
+   "security": "UTIAMC - UTISXN50",
+   "underlying": "BSE SENSEX NEXT 50",
+   "first_seen": "2021-10-01",
+   "last_seen": "2025-10-21"
+  }
+ ],
+ "regex_only_detail": [
+  {
+   "symbol": "GOLDENTOBC",
+   "company": "Golden Tobacco Limited",
+   "isin": "INE973A01010"
+  },
+  {
+   "symbol": "GOLDTECH",
+   "company": "AION-TECH SOLUTIONS LIMITED",
+   "isin": "INE805A01014"
+  },
+  {
+   "symbol": "JETFREIGHT",
+   "company": "Jet Freight Logistics Limited",
+   "isin": "INE982V01025"
+  }
+ ],
+ "regex_only_not_in_equity_master": [
+  "AONESILVER",
+  "BANK10ADD",
+  "BANK10BETF",
+  "BNKETFAXIS",
+  "FARBEES",
+  "FMCGADD",
+  "GOLDAXIS",
+  "GSEC10ADD",
+  "HSBCGOLD",
+  "HYBRIDETF",
+  "INSURADD",
+  "INSUREIETF",
+  "IVZSENSEX",
+  "JETFRE-RE",
+  "LIQUIDBETA",
+  "MIDBANKADD",
+  "MSCI360",
+  "NIF500BETA",
+  "NIFTYAXIS",
+  "NIFTYJBLK",
+  "NXT100CASE",
+  "SBISMLETF",
+  "SBIVALETF",
+  "SECLEDBETA",
+  "SENSEXAXIS",
+  "SILVER001",
+  "SILVERAXIS",
+  "SMALLIETF"
+ ],
+ "seconds": 7.8
+}

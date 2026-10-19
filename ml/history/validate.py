@@ -470,11 +470,14 @@ def check_parse_diag(auxes: list[dict]) -> dict:
         "days_without_pr": [d["cm_file"] for d in ds if not d.get("has_pr")],
         "mto_trade_date_mismatch_days": [d.get("mto_file") for d in ds
                                          if d.get("has_mto") and not d.get("mto_trade_date_ok")],
+        "mto_rejected_days": [d.get("mto_file") for d in ds if d.get("mto_rejected")],
         "mto_rows": tot("mto_rows"), "mto_bad_lines": tot("mto_bad_lines"),
         "mto_duplicate_rows_dropped": tot("mto_dup_rows"),
         "mto_rows_matched_to_cm": matched,
         "mto_rows_without_cm_row": tot("mto_unmatched_rows"),
         "mto_qty_equals_cm_volume_share": r(tot("mto_qty_equals_volume") / matched, 6) if matched else None,
+        "pr_misdated_bundles": [{"file": d.get("pr_file"), "member_dates": d.get("pr_member_dates")}
+                                for d in ds if d.get("pr_misdated")],
         "pr_days_without_bc": [d.get("pr_file") for d in ds if d.get("has_pr") and not d.get("bc_member")],
         "pr_days_without_etf": [d.get("pr_file") for d in ds if d.get("has_pr") and not d.get("etf_member")],
         "pr_days_without_pd": [d.get("pr_file") for d in ds if d.get("has_pr") and not d.get("pd_member")],
@@ -488,6 +491,36 @@ def check_parse_diag(auxes: list[dict]) -> dict:
     }
 
 
+def write_pd_disagreements(pc: dict) -> str | None:
+    """Rows where CM and the bundle's Pd file disagree -> CSV (CM values stay in the parquet)."""
+    import zipfile
+    files = sorted({x["file"] for k, v in pc.get("days_with_disagreement", {}).items()
+                    if isinstance(v, list) for x in v})
+    if not files:
+        return None
+    rows = []
+    for f in files:
+        d = datetime.strptime(f[2:11], "%d%b%Y").date()
+        cm = pd.read_parquet(EOD_DIR / f"{d:%Y%m%d}.parquet")
+        with zipfile.ZipFile(local_path("pr", d)) as zf:
+            n = next(x for x in zf.namelist() if re.fullmatch(r"pd\d{6}\.csv", Path(x).name, re.IGNORECASE))
+            pdf = pd.read_csv(zf.open(n), dtype=str, keep_default_na=False)
+        pdf.columns = [c.strip() for c in pdf.columns]
+        pdf = pdf.apply(lambda s: s.str.strip())
+        m = cm.merge(pdf[pdf["MKT"].isin(["N", "G", "O"])], left_on=["ticker", "series"],
+                     right_on=["SYMBOL", "SERIES"])
+        for a, c in (("close", "CLOSE_PRICE"), ("prev_close", "PREV_CL_PR"), ("open", "OPEN_PRICE"),
+                     ("high", "HIGH_PRICE"), ("low", "LOW_PRICE"), ("volume", "NET_TRDQTY"), ("trades", "TRADES")):
+            pv = pd.to_numeric(m[c], errors="coerce")
+            bad = ~np.isclose(m[a].astype(float), pv, rtol=0, atol=1e-6)
+            for _, row in m[bad].iterrows():
+                rows.append({"date": d.isoformat(), "ticker": row["ticker"], "series": row["series"],
+                             "field": a, "cm": row[a], "pd": float(pd.to_numeric(row[c], errors="coerce"))})
+    out = RESULTS / "cm_vs_pd_disagreements.csv"
+    pd.DataFrame(rows).to_csv(out, index=False)
+    return str(out.relative_to(RESULTS.parents[3]))
+
+
 def _pd_cross(ds: list[dict]) -> dict:
     """CM vs the bundle's Pd file (MKT N, G, O): field equality over matched rows and the worst day."""
     dd = [d for d in ds if d.get("pd_matched")]
@@ -498,12 +531,17 @@ def _pd_cross(ds: list[dict]) -> dict:
            "cm_rows_not_in_pd": int(sum(d.get("pd_cm_only", 0) for d in dd)),
            "pd_rows_not_in_cm": int(sum(d.get("pd_only", 0) for d in dd)), "field_match_share": {},
            "worst_day": {}}
+    out["days_with_disagreement"] = {}
     for f in ("close", "prev_close", "open", "high", "low", "volume", "trades", "turnover_500"):
         key = f"pd_eq_{f}"
         out["field_match_share"][f] = r(sum(d.get(key, 0) for d in dd) / tot, 6)
         worst = min(dd, key=lambda d: d.get(key, 0) / d["pd_matched"])
         out["worst_day"][f] = {"file": worst.get("cm_file"),
                                "share": r(worst.get(key, 0) / worst["pd_matched"], 6)}
+        bad = [{"file": d.get("cm_file"), "rows": int(d["pd_matched"] - d.get(key, 0))}
+               for d in dd if d.get(key, 0) < d["pd_matched"]]
+        out["days_with_disagreement"][f] = bad[:20]
+        out["days_with_disagreement"][f + "_n_days"] = len(bad)
     return out
 
 
@@ -616,6 +654,9 @@ def run(final: bool) -> dict:
     res["coverage"] = check_coverage(allrows, auxes)
     res["integrity"] = check_integrity(eqbe)
     res["parse_diagnostics"] = check_parse_diag(auxes)
+    pcx = res["parse_diagnostics"].get("pd_crosscheck") or {}
+    if pcx:
+        pcx["disagreement_rows_csv"] = write_pd_disagreements(pcx)
     res["sanity"] = check_sanity(eqbe, auxes, sessions)
     outs = {}
     for name in ("equity_eod_2016_2021.parquet", "bc_records_2016_2021.csv", "etf_records_2016_2021.csv",
@@ -823,6 +864,8 @@ def render_md(res: dict) -> str:
                  f"MTO traded quantity equals CM volume on {fmt_pct(pdg['mto_qty_equals_cm_volume_share'], 3)} "
                  f"of matched rows; MTO trade-date mismatches: {len(pdg['mto_trade_date_mismatch_days'])}; "
                  f"sessions without MTO: {len(pdg['days_without_mto'])}, without PR: {len(pdg['days_without_pr'])}; "
+                 f"PR bundles whose members carry another date (not used): "
+                 f"{', '.join(x['file'] + ' -> ' + '/'.join(x['member_dates']) for x in pdg['pr_misdated_bundles']) or 'none'}; "
                  f"PR bundles without a Bc / etf / Pd member: {len(pdg['pr_days_without_bc'])} / "
                  f"{len(pdg['pr_days_without_etf'])} / {len(pdg['pr_days_without_pd'])}; member names seen: "
                  f"{', '.join(pdg['bc_member_names_seen'] + pdg['etf_member_names_seen'] + pdg['pd_member_names_seen'])}.")
@@ -838,6 +881,16 @@ def render_md(res: dict) -> str:
                  f"{fmt_pct(fm['volume'], 3)}, trades {fmt_pct(fm['trades'], 3)}, turnover within Rs 500 "
                  f"{fmt_pct(fm['turnover_500'], 3)}; CM rows absent from Pd {pc['cm_rows_not_in_pd']:,}, "
                  f"Pd rows absent from CM {pc['pd_rows_not_in_cm']:,}.")
+        dw = pc.get("days_with_disagreement", {})
+        offs = sorted({(x["file"], f, x["rows"]) for f in ("close", "prev_close", "open", "high", "low", "volume",
+                                                         "trades", "turnover_500") for x in dw.get(f, [])})
+        if offs:
+            L.append("")
+            L.append("Disagreements by day and field: " + "; ".join(f"{a} {b} {c} rows" for a, b, c in offs) +
+                     ". 2017-07-10 is the day of NSE's trading halt after a technical failure; "
+                     "only high and low differ there, and the bundle's Pr file agrees with Pd (for example ACC low "
+                     "1615.25 in Pd and Pr, 1563.30 in CM). The parquet keeps the CM values (the store's product "
+                     f"family); the rows are in `{pc.get('disagreement_rows_csv')}`.")
     L.append("")
     L.append("## Sanity events")
     L.append("")

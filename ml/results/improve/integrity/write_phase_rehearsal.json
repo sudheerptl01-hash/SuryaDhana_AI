@@ -1,0 +1,189 @@
+{
+ "db": "/tmp/claude-0/-home-user-SuryaDhana-AI/a2334483-114a-5057-9fd0-81f0f14285e9/scratchpad/rehearsal/nse_market_copy.duckdb",
+ "rehearsal": true,
+ "started": "2026-10-19T13:37:34",
+ "before": {
+  "equity_eod_rows": 3078294,
+  "equity_eod_dates": 1245,
+  "equity_features_rows": 2722591,
+  "rows_on_delete_dates": {
+   "2021-11-05": 1874
+  }
+ },
+ "overwrites_existing_keys": 0,
+ "upsert": {
+  "rows": 17542,
+  "deleted_dates": [
+   "2021-11-05"
+  ],
+  "seconds": 0.3,
+  "by_date": {
+   "2021-11-04": 1874,
+   "2022-03-07": 275,
+   "2023-11-12": 2279,
+   "2024-03-02": 2307,
+   "2024-05-18": 2374,
+   "2025-02-01": 2635,
+   "2025-10-21": 2843,
+   "2026-02-01": 2955
+  }
+ },
+ "tables": {
+  "corporate_actions": 10185,
+  "etf_list": 409,
+  "equity_master": 2619,
+  "special_sessions": 16
+ },
+ "build_features": {
+  "rows": 2736345,
+  "seconds": 50.5
+ },
+ "after": {
+  "equity_eod_rows": 3093962,
+  "equity_eod_dates": 1251,
+  "eq_be_rows": 2736345,
+  "eq_be_dup_date_ticker": 0,
+  "equity_features_rows": 2736345,
+  "rows_on_delete_dates": {
+   "2021-11-05": 0
+  },
+  "rows_on_upsert_dates": {
+   "2021-11-04": 1874,
+   "2022-03-07": 1989,
+   "2023-11-12": 2279,
+   "2024-03-02": 2307,
+   "2024-05-18": 2374,
+   "2025-02-01": 2635,
+   "2025-10-21": 2843,
+   "2026-02-01": 2955
+  },
+  "adj_factor_ne_1_rows": 80710,
+  "expected_equity_eod_rows": 3093962,
+  "row_count_as_expected": true
+ },
+ "nestleind": {
+  "rows": 1251,
+  "max_abs_log_ret_adjusted": 0.7119389522552946,
+  "max_abs_log_ret_unadjusted": 2.31940946288679,
+  "adj_close_2024-01-04": 2711.6400000000003,
+  "adj_close_2024-01-05": 2666.4,
+  "no_10x_break": false
+ },
+ "continuity_after": {
+  "max_share": 0.04356338717572198,
+  "flagged": [],
+  "top5": [
+   {
+    "date": "2023-08-25",
+    "n_with_prev": 2043,
+    "n_mismatch": 89,
+    "share": 0.04356338717572198,
+    "flagged": false
+   },
+   {
+    "date": "2023-08-14",
+    "n_with_prev": 1983,
+    "n_mismatch": 12,
+    "share": 0.006051437216338881,
+    "flagged": false
+   },
+   {
+    "date": "2023-07-24",
+    "n_with_prev": 2007,
+    "n_mismatch": 10,
+    "share": 0.004982561036372696,
+    "flagged": false
+   },
+   {
+    "date": "2023-08-21",
+    "n_with_prev": 1976,
+    "n_mismatch": 6,
+    "share": 0.003036437246963563,
+    "flagged": false
+   },
+   {
+    "date": "2023-08-07",
+    "n_with_prev": 1985,
+    "n_mismatch": 5,
+    "share": 0.0025188916876574307,
+    "flagged": false
+   }
+  ],
+  "mismatch_rows_total": 183,
+  "mismatch_rows_on_a_parsed_ex_date": 4
+ },
+ "dry_run_equality": {
+  "rows_store": 2736345,
+  "rows_dry": 2736345,
+  "aligned": true,
+  "columns": {
+   "open": {
+    "max_abs_diff": 24750.0,
+    "nan_mismatch": 0
+   },
+   "high": {
+    "max_abs_diff": 24923.7,
+    "nan_mismatch": 0
+   },
+   "low": {
+    "max_abs_diff": 24321.645,
+    "nan_mismatch": 0
+   },
+   "close": {
+    "max_abs_diff": 24635.16,
+    "nan_mismatch": 0
+   },
+   "open_unadj": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "close_unadj": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "adj_factor": {
+    "max_abs_diff": 0.9666666666666667,
+    "nan_mismatch": 0
+   },
+   "ret_1d": {
+    "max_abs_diff": 1.0198992117844683,
+    "nan_mismatch": 0
+   },
+   "dist_sma_20": {
+    "max_abs_diff": 1.2067501503262588,
+    "nan_mismatch": 0
+   },
+   "mom_20": {
+    "max_abs_diff": 1.891364902506964,
+    "nan_mismatch": 0
+   },
+   "vol_20": {
+    "max_abs_diff": 0.19902685517950885,
+    "nan_mismatch": 0
+   },
+   "rsi_14": {
+    "max_abs_diff": 74.17196120614537,
+    "nan_mismatch": 0
+   },
+   "atr_pct": {
+    "max_abs_diff": 3.2682603314568333,
+    "nan_mismatch": 0
+   },
+   "deliv_pct_sma_20": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "dist_52w_high": {
+    "max_abs_diff": 0.9662205226258763,
+    "nan_mismatch": 0
+   },
+   "fwd_ret_5d": {
+    "max_abs_diff": 1.1167516387472687,
+    "nan_mismatch": 0
+   }
+  },
+  "identical": false
+ },
+ "finished": "2026-10-19T13:38:49",
+ "duration_seconds": 75.5
+}

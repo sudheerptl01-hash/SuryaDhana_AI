@@ -137,10 +137,29 @@ def compare(v1: pd.DataFrame, v2: pd.DataFrame, feats: list[str], feed: pd.DataF
     return res
 
 
+def export_v2() -> dict:
+    """Parquet exports of the corrected store with the v1 export schemas (ml/data_ext/)."""
+    t0 = time.time()
+    con = duckdb.connect(str(DB_PATH), read_only=True)
+    eod = con.execute("SELECT date, ticker, series, prev_close, open, high, low, last, close, vwap, volume, "
+                      "turnover, trades, deliv_qty, deliv_pct FROM equity_eod WHERE series IN ('EQ','BE') "
+                      "ORDER BY ticker, date").arrow()
+    fp = con.execute("SELECT date, ticker, open, high, low, close, volume, turnover, deliv_pct, open_unadj, "
+                     "close_unadj, adj_factor FROM equity_features ORDER BY ticker, date").arrow()
+    con.close()
+    import pyarrow.parquet as pq
+    pq.write_table(eod, DATA_EXT / "eod_export_v2.parquet")
+    pq.write_table(fp, DATA_EXT / "features_prices_export_v2.parquet")
+    return {"eod_export_v2_rows": eod.num_rows, "features_prices_export_v2_rows": fp.num_rows,
+            "seconds": round(time.time() - t0, 1)}
+
+
 def main(argv=None) -> int:
     t0 = time.time()
     if LOCK_FILE.exists():
         raise SystemExit("the DuckDB write lock exists; v2 is built after the write phase")
+    exports = export_v2()
+    log(f"v2 exports: {exports}", "v2")
     etf = pd.read_csv(DATA_EXT / "etf_list.csv")
     etfs = set(etf["symbol"].astype(str))
     feed = pd.read_csv(DATA_EXT / "corporate_actions_feed.csv")
@@ -223,7 +242,7 @@ def main(argv=None) -> int:
                                                 "last_labeled_date_20d")},
            "n_features": len(feats), "features_equal_v1_plus_suff": bool(feats_match),
            "comparison": cmp_, "fold_boundaries_vs_v1": manifest["fold_boundaries_vs_v1"],
-           "suff": info, "I3": i3, "I4": i4, "added_or_redated_sessions": added,
+           "suff": info, "I3": i3, "I4": i4, "added_or_redated_sessions": added, "exports": exports,
            "seconds": {"build_dataset": round(t_build, 1), "total": round(time.time() - t0, 1)}}
     wjson(OUT / "v1_vs_v2.json", out)
     log(f"v2: {manifest['rows']:,} rows, {manifest['tickers']} tickers, {len(feats)} features; I3 {i3['pass']}, "

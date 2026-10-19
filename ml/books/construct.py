@@ -10,7 +10,7 @@
    buffered decile under vol+size (3), the vol+size top decile held 40 sessions (3).
 3. Every book (24 + 42 = 66) at 10/20/40 bps per side, 20 bps without netting and the pre-specified name-level cost
    model; break-even flat cost; PSR/DSR on the daily net 20 bps skill series with V[SR] across all 66 books at
-   N = 177 (comparability), N = 238 (this phase's headline) and N = 239 (plan amendment A1).
+   N = 177 (comparability), N = 238 (this phase's headline) and N = 239 / 240 (plan amendments A1, A2).
 4. Pass marks B1, B2, B3 and gates 3 and 5 for any book passing B1.
 
 Outputs (ml/results/improve/books/): reproduction_check.json, books.json, monthly_series.json, BOOKS.md, log.txt.
@@ -45,15 +45,16 @@ SCORERS = ["nested_lgbm", "all51", "nested_ensemble_rank"]
 NEUTS = ["none", "vol", "vol+size", "vol+size+industry"]
 P2_BASKETS = ["top_decile", "top_quintile", "buffered_decile"]
 H_LONG = 40
-N_5Y, N_PHASE, N_AMENDED = 177, 238, 239
-N_LIST = (N_5Y, N_PHASE, N_AMENDED)
+N_5Y, N_PHASE, N_A1, N_A2 = 177, 238, 239, 240
+N_LIST = (N_5Y, N_PHASE, N_A1, N_A2)
 COST_KEYS = ("gross", "10bps", "20bps", "40bps", "20bps_no_netting", E.NAME_KEY)
 YEARS = ("2023", "2024", "2025", "2026")
 TRIAL_LEDGER = {
     "scale5y_books_reproduced": 24, "p2_grid_scorer_x_neutralisation_x_basket": 36,
     "p2_liquid_buffered_vol_size": 3, "p2_hold40_vol_size_top_decile": 3,
     "note": "N = 238 is this phase's headline (plan section 1: 177 + 61 new trials, of which these 42). Plan "
-            "amendment A1 (2026-10-19 13:00, AB0) raised the ledger to N = 239; DSR is also reported at 239. "
+            "amendments A1 (13:00, AB0) and A2 (13:30, AB8) raised the ledger to N = 239 and N = 240; DSR is also "
+            "reported at both (it moves in the third decimal). "
             "The three none|top_decile grid books are the same baskets as the frozen scorer|top_decile books; the "
             "plan counts them as trials and V[SR] uses all 66 books as instructed, duplicates included."}
 
@@ -237,7 +238,7 @@ def pass_marks(books: dict, matched: dict) -> dict:
                           "pass": bool(b["share_months_positive"] >= 0.75)},
                 "gate5": {"rule": f"DSR >= 0.95 on the liquid book at N = {N_PHASE}", "liquid_book": liq,
                           "dsr": books[liq]["dsr"][str(N_PHASE)]["dsr"],
-                          "dsr_at_239": books[liq]["dsr"][str(N_AMENDED)]["dsr"],
+                          "dsr_by_N": {str(N): books[liq]["dsr"][str(N)]["dsr"] for N in N_LIST},
                           "pass": bool(books[liq]["dsr"][str(N_PHASE)]["dsr"] >= 0.95)},
                 "own_dsr_238": b["dsr"][str(N_PHASE)]["dsr"]}
     out["gates_for_B1"] = g
@@ -515,7 +516,7 @@ def main() -> None:
                              "IR = exposure-weighted daily active Sharpe x sqrt(252) with month-block bootstrap CI "
                              "(B = 1000, seed 108); turnover_annualised = per-rebalance turnover x 252/H",
             "dsr": "ml/strategy_backtest.py dsr_block on the combined daily net (20 bps) skill series (exposure-"
-                   "weighted moments, T = Kish n_eff), V[SR] across all 66 books, N = 177 / 238 / 239",
+                   "weighted moments, T = Kish n_eff), V[SR] across all 66 books, N = 177 / 238 / 239 / 240",
         },
         "trial_ledger": TRIAL_LEDGER,
         "dsr_common": {"var_sr_daily_across_66_books": var_sr, "var_sr_daily_of_the_24_five_year_books": var_sr_5y,
