@@ -112,7 +112,11 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only-named", action="store_true", help="named check files only, no PR bundles")
     ap.add_argument("--retry-absent", action="store_true", help="re-request names that 404'd before")
+    ap.add_argument("--all-days", action="store_true",
+                    help="probe a PR bundle for EVERY calendar day of the window (session calendar audit)")
     a = ap.parse_args(argv)
+    if a.all_days:
+        return all_days(a.retry_absent)
     for p in (RAW, RAW_SEC, RAW_CM, RAW_MASTER):
         p.mkdir(parents=True, exist_ok=True)
     g = PoliteGetter(tag="download")
@@ -163,6 +167,30 @@ def main(argv=None) -> int:
                 f"back-offs {g.n_backoffs}, {time.time() - t0:.0f}s", "download")
     log(f"PR bundles done: {res}; requests {g.n_requests}, back-offs {g.n_backoffs}, "
         f"{time.time() - t0:.0f}s", "download")
+    return 0
+
+
+def all_days(retry_absent: bool) -> int:
+    """Calendar audit: a PR bundle exists for a session and 404s on a closure (no echo)."""
+    from datetime import timedelta
+    g = PoliteGetter(tag="download-all")
+    absent = _absent()
+    lo, hi = date.fromisoformat(STORE_START), date.fromisoformat(STORE_END)
+    stored = set(session_dates())          # the main pass fetches these
+    days, d = [], lo
+    while d <= hi:
+        if d not in stored:
+            days.append(d)
+        d += timedelta(days=1)
+    t0, res = time.time(), {}
+    for i, d in enumerate(days, 1):
+        r = fetch_to(g, PR_URL.format(ddmmyy=f"{d:%d%m%y}"), RAW / pr_name(d), absent, retry_absent, True)
+        res[r] = res.get(r, 0) + 1
+        if r == "ok" and d.weekday() >= 5:
+            log(f"PR all-days: weekend bundle exists {d} ({d:%A})", "download-all")
+        if i % 100 == 0 or i == len(days):
+            log(f"PR all-days [{i}/{len(days)}] {d}; totals {res}; requests {g.n_requests}, "
+                f"{time.time() - t0:.0f}s", "download-all")
     return 0
 
 

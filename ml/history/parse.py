@@ -11,11 +11,15 @@ Assembly (any time; the final names only with --final after the download ends):
   ml/data_hist/etf_records_2016_2021.csv       symbol, first_seen, last_seen, underlying, ...
   ml/data_hist/pd_corp_ind_2016_2021.csv       Pd rows with a non-blank CORP_IND
   ml/data_hist/index_close_2016_2021.csv       Pd index rows (Nifty 50, India VIX, ...)
+  ml/data_hist/sessions_2016_2021.csv          one row per session (weekday, special label, row counts)
+  ml/data_hist/call_auction_rows_2016_2021.csv (date, ticker, series) traded in the periodic call
+                                               auction (Pd MKT = G); absent from sec_bhavdata_full
   ml/data_hist/overlap_cm_mto_2021-10.parquet  the overlap days (validation only, not for upsert)
 
 Mapping (legacy CM -> equity_eod): prev_close=PREVCLOSE, open=OPEN, high=HIGH, low=LOW,
-last=LAST, close=CLOSE, volume=TOTTRDQTY, turnover=TOTTRDVAL * TURNOVER_FACTOR (rupees),
-trades=TOTALTRADES, vwap=round(TOTTRDVAL/TOTTRDQTY, 2), isin=ISIN, deliv_qty / deliv_pct
+last=LAST, close=CLOSE, volume=TOTTRDQTY, turnover=round(TOTTRDVAL / 1e5, 2) * 1e5 (rupees, the
+store's 0.01-lakh precision),
+trades=TOTALTRADES, vwap=TOTTRDVAL/TOTTRDQTY rounded half up to 2 decimals, isin=ISIN, deliv_qty / deliv_pct
 from MTO joined on SYMBOL + SERIES (NaN where MTO has no row), source='cm_mto'.
 
 Usage:  OMP_NUM_THREADS=2 python3 -I ml/history/parse.py [--final] [--reparse]
@@ -40,7 +44,8 @@ import pyarrow as pa  # noqa: E402
 import pyarrow.parquet as pq  # noqa: E402
 
 from ml.history.common import (  # noqa: E402
-    OVERLAP_DAYS, PARTS, STAGE, WINDOW_END, WINDOW_START, get_logger, local_path, read_manifest,
+    OVERLAP_DAYS, PARTS, SPECIAL_SESSIONS, STAGE, WINDOW_END, WINDOW_START, get_logger, local_path,
+    read_manifest,
 )
 
 EOD_COLUMNS = [
@@ -59,12 +64,24 @@ SCHEMA = pa.schema([
 # Rupees in both: the legacy TOTTRDVAL is rupees, the store's turnover is TURNOVER_LACS * 1e5.
 # Verified on the overlap days by validate.py (overlap.turnover_factor in history.json).
 TURNOVER_FACTOR = 1.0
+# The store keeps sec_bhavdata's TURNOVER_LACS (2 decimals of a lakh = Rs 1,000 steps); the history
+# is rounded the same way so both sides of the splice carry identical semantics (P1 does the same
+# for the sessions it rebuilds from CM + MTO). The rounding moves a row by at most Rs 500.
+TURNOVER_LAKH_DECIMALS = 2
 VWAP_DECIMALS = 2          # the store's vwap is sec_bhavdata AVG_PRICE, printed to 2 decimals
 SOURCE = "cm_mto"
-PARSER_VERSION = 3
+PARSER_VERSION = 8
 
 EOD_DIR, AUX_DIR = PARTS / "eod", PARTS / "aux"
 log = get_logger("hist.parse")
+
+
+def _half_up(x: pd.Series, k: int) -> pd.Series:
+    """Round half up to k decimals, as NSE prints AVG_PRICE and TURNOVER_LACS (numpy rounds half to
+    even: QNIFTY 2021-10-04 value / qty = 1849.125 is 1849.13 in the store). The 1e-7 guard absorbs
+    float error in value / qty; values are positive."""
+    f = 10.0 ** k
+    return np.floor(x * f + 0.5 + 1e-7) / f
 
 
 def _to_num(series: pd.Series) -> pd.Series:
@@ -119,9 +136,9 @@ def read_cm(path: Path, d: date) -> tuple[pd.DataFrame, dict]:
         "low": _to_num(df["LOW"]),
         "last": _to_num(df["LAST"]),
         "close": _to_num(df["CLOSE"]),
-        "vwap": (val / vol.where(vol > 0)).round(VWAP_DECIMALS),
+        "vwap": _half_up(val / vol.where(vol > 0), VWAP_DECIMALS),
         "volume": vol,
-        "turnover": val * TURNOVER_FACTOR,
+        "turnover": _half_up(val * TURNOVER_FACTOR / 1e5, TURNOVER_LAKH_DECIMALS) * 1e5,
         "trades": _to_num(df["TOTALTRADES"]),
     })
     n_raw = len(out)
@@ -172,7 +189,7 @@ def read_mto(path: Path, d: date) -> tuple[pd.DataFrame, dict]:
 
 # --------------------------------------------------------------------------- PR bundle
 def read_pr(path: Path, d: date) -> tuple[dict, dict]:
-    out: dict[str, list] = {"bc": [], "etf": [], "pd_corp": [], "idx": []}
+    out: dict[str, list] = {"bc": [], "etf": [], "pd_corp": [], "idx": [], "pd_g": []}
     diag: dict = {"pr_file": path.name}
     with zipfile.ZipFile(path) as zf:
         diag["pr_members"] = sorted(Path(n).name for n in zf.namelist())
@@ -198,14 +215,41 @@ def read_pr(path: Path, d: date) -> tuple[dict, dict]:
                 c = df[df["CORP_IND"] != ""].copy()
                 c["bundle_date"] = d.isoformat()
                 out["pd_corp"] = c.to_dict("records")
+            if "MKT" in df.columns and "SYMBOL" in df.columns:
+                # MKT N = normal market, G = periodic call auction for illiquid securities, O = block
+                # deal window (series BL); all are CM bhavcopy rows and enter the cross-check. The G
+                # list is saved because sec_bhavdata_full, the store's source, leaves them out.
+                out["_pd_n"] = df[df["MKT"].isin(["N", "G", "O"])]
+                g = df[df["MKT"] == "G"][["SYMBOL", "SERIES"]].copy()
+                g["date"] = d.isoformat()
+                out["pd_g"] = g.to_dict("records")
             if "IND_SEC" in df.columns:
                 ix = df[(df["IND_SEC"] == "Y")].copy()
                 ix = ix[[k for k in ("SECURITY", "PREV_CL_PR", "OPEN_PRICE", "HIGH_PRICE", "LOW_PRICE",
                                      "CLOSE_PRICE") if k in ix.columns]]
                 ix["date"] = d.isoformat()
                 out["idx"] = ix.to_dict("records")
-    diag.update({k + "_rows": len(v) for k, v in out.items()})
+    diag.update({k + "_rows": len(v) for k, v in out.items() if not k.startswith("_")})
     return out, diag
+
+
+PD_FIELDS = [("close", "CLOSE_PRICE"), ("prev_close", "PREV_CL_PR"), ("open", "OPEN_PRICE"),
+             ("high", "HIGH_PRICE"), ("low", "LOW_PRICE"), ("volume", "NET_TRDQTY"), ("trades", "TRADES")]
+
+
+def pd_crosscheck(cm: pd.DataFrame, pdn: pd.DataFrame) -> dict:
+    """CM rows vs the PR bundle's Pd file (MKT N, G, O), an independent NSE product of the same day."""
+    k = cm.merge(pdn, left_on=["ticker", "series"], right_on=["SYMBOL", "SERIES"], how="outer",
+                 indicator=True)
+    b = k[k["_merge"] == "both"]
+    res = {"pd_matched": int(len(b)), "pd_cm_only": int((k["_merge"] == "left_only").sum()),
+           "pd_only": int((k["_merge"] == "right_only").sum())}
+    for a, c in PD_FIELDS:
+        res[f"pd_eq_{a}"] = int(np.isclose(b[a].astype(float), _to_num(b[c]), rtol=0, atol=1e-6).sum())
+    if "NET_TRDVAL" in b.columns:
+        res["pd_eq_turnover_500"] = int((np.abs(b["turnover"].astype(float) - _to_num(b["NET_TRDVAL"]))
+                                         <= 500.01).sum())
+    return res
 
 
 # --------------------------------------------------------------------------- day
@@ -234,6 +278,9 @@ def build_day(d: date) -> tuple[pd.DataFrame, dict]:
     if pp.exists():
         aux, dp = read_pr(pp, d)
         diag.update(dp)
+        pdn = aux.pop("_pd_n", None)
+        if pdn is not None and len(pdn):
+            diag.update(pd_crosscheck(cm, pdn))
     diag["parser_version"] = PARSER_VERSION
     return cm[EOD_COLUMNS], {"diag": diag, **aux}
 
@@ -340,16 +387,33 @@ def assemble(final: bool) -> dict:
         pq.write_table(pa.concat_tables(ov), p)
         res["overlap"] = {"path": str(p), "rows": sum(t.num_rows for t in ov)}
 
-    bc, etf, pdc, idx = [], [], [], []
+    bc, etf, pdc, idx, pdg, sess = [], [], [], [], [], []
     for ap in sorted(AUX_DIR.glob("*.json")):
         d = datetime.strptime(ap.stem, "%Y%m%d").date()
         if not (WINDOW_START <= d <= WINDOW_END):
             continue
         a = json.loads(ap.read_text())
+        dg = a.get("diag", {})
+        sess.append({"date": d.isoformat(), "weekday": d.strftime("%a"),
+                     "special": SPECIAL_SESSIONS.get(d.isoformat(), ""),
+                     "rows_all_series": dg.get("cm_rows"), "rows_eq_be": dg.get("eqbe_rows"),
+                     "eq_be_with_deliv": dg.get("eqbe_with_deliv"), "has_mto": dg.get("has_mto"),
+                     "has_pr": dg.get("has_pr"), "cm_file": dg.get("cm_file")})
         bc += a.get("bc", [])
         etf += a.get("etf", [])
         pdc += a.get("pd_corp", [])
         idx += a.get("idx", [])
+        pdg += a.get("pd_g", [])
+    if sess:
+        p = STAGE / f"sessions_2016_2021{sfx}.csv"
+        pd.DataFrame(sess).to_csv(p, index=False)
+        res["sessions"] = {"path": str(p), "rows": len(sess)}
+    if pdg:
+        g = pd.DataFrame(pdg).rename(columns={"SYMBOL": "ticker", "SERIES": "series"})
+        g = g[["date", "ticker", "series"]].sort_values(["date", "ticker", "series"])
+        p = STAGE / f"call_auction_rows_2016_2021{sfx}.csv"
+        g.to_csv(p, index=False)
+        res["call_auction"] = {"path": str(p), "rows": len(g)}
     if bc:
         b = pd.DataFrame(bc)
         lead = ["SERIES", "SYMBOL", "SECURITY", "RECORD_DT", "BC_STRT_DT", "BC_END_DT", "EX_DT",

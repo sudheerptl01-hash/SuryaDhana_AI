@@ -1,0 +1,696 @@
+{
+ "stream": "P4 history 2016-10..2021-09",
+ "generated_utc": "2026-10-19T13:16:09+00:00",
+ "final": false,
+ "window": [
+  "2016-10-03",
+  "2021-09-30"
+ ],
+ "sources": {
+  "cm": "archives.nseindia.com/content/historical/EQUITIES/{YYYY}/{MON}/cm{DD}{MON}{YYYY}bhav.csv.zip",
+  "mto": "archives.nseindia.com/archives/equities/mto/MTO_{DDMMYYYY}.DAT",
+  "pr": "archives.nseindia.com/archives/equities/bhavcopy/pr/PR{DDMMYY}.zip"
+ },
+ "mapping": {
+  "prev_close": "PREVCLOSE",
+  "open": "OPEN",
+  "high": "HIGH",
+  "low": "LOW",
+  "last": "LAST",
+  "close": "CLOSE",
+  "volume": "TOTTRDQTY",
+  "turnover": "TOTTRDVAL * 1.0 (rupees), rounded half up to 0.01 lakh like the store",
+  "trades": "TOTALTRADES",
+  "vwap": "TOTTRDVAL / TOTTRDQTY, rounded half up to 2 decimals",
+  "isin": "ISIN",
+  "deliv_qty": "MTO Deliverable Quantity (join SYMBOL + SERIES; NaN when MTO has no row)",
+  "deliv_pct": "MTO % of Deliverable Quantity to Traded Quantity",
+  "source": "cm_mto"
+ },
+ "download": {
+  "calendar_days": 1824,
+  "cm_status_counts": {
+   "200": 181,
+   "404": 83,
+   "not requested yet": 1560
+  },
+  "sessions": 181,
+  "weekday_without_session": [
+   "2016-10-11",
+   "2016-10-12",
+   "2016-10-31",
+   "2016-11-14",
+   "2017-01-26",
+   "2017-02-24",
+   "2017-03-13",
+   "2017-04-04",
+   "2017-04-14",
+   "2017-05-01"
+  ],
+  "weekend_sessions": [
+   "2016-10-30"
+  ],
+  "echo_or_misdated": [],
+  "cm_errors": [],
+  "mto": {
+   "files": 180,
+   "missing_on_session_days": [],
+   "errors": []
+  },
+  "pr": {
+   "files": 180,
+   "missing_on_session_days": [],
+   "errors": []
+  },
+  "requests": 629,
+  "backoffs": 0,
+  "elapsed_s": 1168,
+  "download_final": false
+ },
+ "overlap": {
+  "days": [
+   "2021-10-01",
+   "2021-10-04"
+  ],
+  "store_rows_eq_be": 3594,
+  "history_rows_eq_be": 3608,
+  "history_rows_all_series": 4360,
+  "matched_rows": 3594,
+  "store_only_rows": 0,
+  "history_only_rows": 14,
+  "history_only_in_call_auction": 14,
+  "history_only": [
+   {
+    "date": "2021-10-01",
+    "ticker": "CREATIVEYE",
+    "series": "EQ",
+    "close": 3.7,
+    "volume": 1720,
+    "turnover": 6000.0
+   },
+   {
+    "date": "2021-10-01",
+    "ticker": "DCMFINSERV",
+    "series": "BE",
+    "close": 2.4,
+    "volume": 5097,
+    "turnover": 12000.0
+   },
+   {
+    "date": "2021-10-01",
+    "ticker": "GLFL",
+    "series": "EQ",
+    "close": 2.85,
+    "volume": 2050,
+    "turnover": 6000.0
+   },
+   {
+    "date": "2021-10-01",
+    "ticker": "GTNTEX",
+    "series": "EQ",
+    "close": 7.15,
+    "volume": 5,
+    "turnover": 0.0
+   },
+   {
+    "date": "2021-10-01",
+    "ticker": "NAGREEKCAP",
+    "series": "EQ",
+    "close": 7.7,
+    "volume": 64,
+    "turnover": 0.0
+   },
+   {
+    "date": "2021-10-01",
+    "ticker": "NORBTEAEXP",
+    "series": "EQ",
+    "close": 6.8,
+    "volume": 1103,
+    "turnover": 7000.000000000001
+   },
+   {
+    "date": "2021-10-01",
+    "ticker": "TCIFINANCE",
+    "series": "EQ",
+    "close": 5.55,
+    "volume": 5209,
+    "turnover": 28999.999999999996
+   },
+   {
+    "date": "2021-10-04",
+    "ticker": "CREATIVEYE",
+    "series": "EQ",
+    "close": 3.7,
+    "volume": 23471,
+    "turnover": 88000.0
+   },
+   {
+    "date": "2021-10-04",
+    "ticker": "DCMFINSERV",
+    "series": "BE",
+    "close": 2.4,
+    "volume": 4821,
+    "turnover": 12000.0
+   },
+   {
+    "date": "2021-10-04",
+    "ticker": "GLFL",
+    "series": "EQ",
+    "close": 2.9,
+    "volume": 11049,
+    "turnover": 32000.0
+   },
+   {
+    "date": "2021-10-04",
+    "ticker": "GTNTEX",
+    "series": "EQ",
+    "close": 7.15,
+    "volume": 151,
+    "turnover": 1000.0
+   },
+   {
+    "date": "2021-10-04",
+    "ticker": "NAGREEKCAP",
+    "series": "EQ",
+    "close": 7.7,
+    "volume": 910,
+    "turnover": 7000.000000000001
+   },
+   {
+    "date": "2021-10-04",
+    "ticker": "NORBTEAEXP",
+    "series": "EQ",
+    "close": 6.85,
+    "volume": 1606,
+    "turnover": 11000.0
+   },
+   {
+    "date": "2021-10-04",
+    "ticker": "TCIFINANCE",
+    "series": "EQ",
+    "close": 5.55,
+    "volume": 4161,
+    "turnover": 23000.0
+   }
+  ],
+  "fields": {
+   "prev_close": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 0,
+    "history_nan": 0
+   },
+   "open": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 0,
+    "history_nan": 0
+   },
+   "high": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 0,
+    "history_nan": 0
+   },
+   "low": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 0,
+    "history_nan": 0
+   },
+   "last": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 0,
+    "history_nan": 0
+   },
+   "close": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 0,
+    "history_nan": 0
+   },
+   "volume": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 0,
+    "history_nan": 0
+   },
+   "trades": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 0,
+    "history_nan": 0
+   },
+   "deliv_qty": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 506,
+    "history_nan": 506
+   },
+   "deliv_pct": {
+    "match_share": 1.0,
+    "rule": "exact (NaN = NaN)",
+    "store_nan": 506,
+    "history_nan": 506
+   },
+   "turnover": {
+    "match_share": 1.0,
+    "rule": "exact; TOTTRDVAL / 1e5 rounded half up to 2 decimals, * 1e5 (the store's TURNOVER_LACS * 1e5)",
+    "raw_tottrdval_exact_share": 0.0,
+    "raw_abs_diff_rupees_max": 499.75,
+    "raw_abs_diff_rupees_median": 247.45,
+    "raw_within_500_share": 1.0
+   },
+   "vwap": {
+    "match_share": 1.0,
+    "rule": "exact; TOTTRDVAL / TOTTRDQTY rounded half up to 2 decimals (sec_bhavdata AVG_PRICE)",
+    "within_0.01": 1.0,
+    "rows_off": 0
+   }
+  },
+  "turnover_factor": {
+   "median_store_over_raw_tottrdval": 1.0,
+   "ols_through_origin": 1.0,
+   "rows_used": 2991,
+   "applied": 1.0,
+   "units": "rupees in both (store: TURNOVER_LACS * 1e5; history: TOTTRDVAL)",
+   "precision": "history rounded to 0.01 lakh (Rs 1,000 steps) like the store"
+  },
+  "be_rows_matched": 506,
+  "be_rows_with_deliv_store": 0,
+  "be_rows_with_deliv_history": 0
+ },
+ "calendar": {
+  "sessions_total": 167,
+  "sessions_by_period": {
+   "2016Q4": 62,
+   "2017": 105
+  },
+  "expected_by_period_reference": {
+   "2016Q4": 62,
+   "2017": 105
+  },
+  "sessions_by_quarter": {
+   "2016Q4": 62,
+   "2017Q1": 62,
+   "2017Q2": 43
+  },
+  "weekday_closures": {
+   "2016-10-11": "Dussehra",
+   "2016-10-12": "Moharram",
+   "2016-10-31": "Diwali Balipratipada",
+   "2016-11-14": "Gurunanak Jayanti",
+   "2017-01-26": "Republic Day",
+   "2017-02-24": "Mahashivratri",
+   "2017-03-13": "Holi",
+   "2017-04-04": "Ram Navami",
+   "2017-04-14": "Ambedkar Jayanti / Good Friday",
+   "2017-05-01": "Maharashtra Day"
+  },
+  "weekday_closures_not_in_reference": [],
+  "reference_holidays_with_a_session": [],
+  "reference_holidays_with_a_session_unexpected": [],
+  "weekend_sessions": [
+   "2016-10-30"
+  ],
+  "special_sessions": {
+   "2016-10-30": {
+    "label": "Sunday Muhurat",
+    "present": true
+   }
+  },
+  "special_sessions_all_present": true
+ },
+ "continuity": {
+  "rule": "(ticker, series) EQ/BE traded on t and on the previous session; mismatch when |prev_close(t) / close(t-1) - 1| > 0.005",
+  "dates_scanned": 166,
+  "pairs_scanned": 259811,
+  "mismatch_pairs": 0,
+  "overall_mismatch_share": 0.0,
+  "median_daily_share": 0.0,
+  "p99_daily_share": 0.0,
+  "max_daily_share": 0.0,
+  "max_daily_share_date": "2016-10-04",
+  "dates_above_5pct": [],
+  "top_dates": [
+   {
+    "date": "2016-10-04",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1560
+   },
+   {
+    "date": "2016-10-05",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1557
+   },
+   {
+    "date": "2016-10-06",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1561
+   },
+   {
+    "date": "2016-10-07",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1563
+   },
+   {
+    "date": "2016-10-10",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1559
+   },
+   {
+    "date": "2016-10-13",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1548
+   },
+   {
+    "date": "2016-10-14",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1556
+   },
+   {
+    "date": "2016-10-17",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1566
+   },
+   {
+    "date": "2016-10-18",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1566
+   },
+   {
+    "date": "2016-10-19",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1571
+   },
+   {
+    "date": "2016-10-20",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1573
+   },
+   {
+    "date": "2016-10-21",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1565
+   }
+  ],
+  "mismatches_on_bc_exdate": 0,
+  "mismatches_on_bc_exdate_by_kind": {},
+  "split_bonus_exdates_checked": 41,
+  "split_bonus_exdates_prev_close_differs": 0
+ },
+ "splice": {
+  "status": "history ends 2017-06-05; splice check needs 2021-09-30"
+ },
+ "coverage": {
+  "rows_by_period": {
+   "2016Q4": 104803,
+   "2017": 182628
+  },
+  "rows_eq_be_by_period": {
+   "2016Q4": 97367,
+   "2017": 167021
+  },
+  "delivery": {
+   "2016Q4": {
+    "eq_be_share_with_deliv_pct": 0.9729,
+    "eq_share_with_deliv_pct": 1.0,
+    "be_share_with_deliv_pct": 0.0,
+    "be_rows": 2638
+   },
+   "2017": {
+    "eq_be_share_with_deliv_pct": 0.9403,
+    "eq_share_with_deliv_pct": 1.0,
+    "be_share_with_deliv_pct": 0.0,
+    "be_rows": 9973
+   }
+  },
+  "isin": {
+   "2016Q4": {
+    "eq_be_share_with_isin": 1.0,
+    "all_series_share_with_isin": 1.0
+   },
+   "2017": {
+    "eq_be_share_with_isin": 1.0,
+    "all_series_share_with_isin": 1.0
+   }
+  },
+  "rows_total": 287431,
+  "rows_eq_be_total": 264388,
+  "distinct_tickers_all_series": 1807,
+  "distinct_tickers_eq_be": 1674,
+  "distinct_isin_eq_be": 1686,
+  "series_counts_top": {
+   "EQ": 251777,
+   "BE": 12611,
+   "SM": 3105,
+   "N6": 1839,
+   "N2": 1642,
+   "N5": 1321,
+   "N4": 1233,
+   "N1": 1204,
+   "BZ": 1048,
+   "N3": 1002,
+   "N8": 949,
+   "NA": 904
+  },
+  "n_series_codes": 67,
+  "isin_eq_be_share": 1.0,
+  "isin_inf_prefix_tickers_eq_be": 60,
+  "call_auction_rows_eq_be_by_period": {
+   "2016Q4": 1156,
+   "2017": 1687
+  },
+  "call_auction_rows_eq_be_total": 2843,
+  "call_auction_tickers_eq_be": 45,
+  "deliv_eq_be_share_total": 0.9523,
+  "deliv_eq_share_total": 1.0,
+  "deliv_qty_le_volume_share": 1.0,
+  "deliv_pct_consistent_share": 1.0
+ },
+ "integrity": {
+  "ohlc_order_ok_share": 1.0,
+  "ohlc_order_violations": 0,
+  "nonpositive_close_rows": 0,
+  "zero_volume_rows": 0,
+  "vwap_inside_low_high_share": 1.0,
+  "echo_footprint_max_share": 0.001874,
+  "echo_footprint_max_date": "2017-05-03",
+  "duplicate_keys": 0
+ },
+ "parse_diagnostics": {
+  "days": 167,
+  "cm_rows_raw": 287431,
+  "cm_rows_kept": 287431,
+  "cm_duplicate_rows_dropped": 0,
+  "cm_timestamp_mismatch_rows": 0,
+  "days_without_mto": [],
+  "days_without_pr": [],
+  "mto_trade_date_mismatch_days": [
+   "MTO_30032017.DAT"
+  ],
+  "mto_rows": 273690,
+  "mto_bad_lines": 0,
+  "mto_duplicate_rows_dropped": 0,
+  "mto_rows_matched_to_cm": 273690,
+  "mto_rows_without_cm_row": 0,
+  "mto_qty_equals_cm_volume_share": 1.0,
+  "pr_days_without_bc": [],
+  "pr_days_without_etf": [],
+  "pr_days_without_pd": [],
+  "bc_member_names_seen": [
+   "Bc<ddmmyy>.csv"
+  ],
+  "etf_member_names_seen": [
+   "etf<ddmmyy>.csv"
+  ],
+  "pd_member_names_seen": [
+   "Pd<ddmmyy>.csv"
+  ],
+  "pd_crosscheck": {
+   "days": 167,
+   "matched_rows": 287431,
+   "cm_rows_not_in_pd": 0,
+   "pd_rows_not_in_cm": 0,
+   "field_match_share": {
+    "close": 1.0,
+    "prev_close": 1.0,
+    "open": 1.0,
+    "high": 1.0,
+    "low": 1.0,
+    "volume": 1.0,
+    "trades": 1.0,
+    "turnover_500": 1.0
+   },
+   "worst_day": {
+    "close": {
+     "file": "cm03OCT2016bhav.csv.zip",
+     "share": 1.0
+    },
+    "prev_close": {
+     "file": "cm03OCT2016bhav.csv.zip",
+     "share": 1.0
+    },
+    "open": {
+     "file": "cm03OCT2016bhav.csv.zip",
+     "share": 1.0
+    },
+    "high": {
+     "file": "cm03OCT2016bhav.csv.zip",
+     "share": 1.0
+    },
+    "low": {
+     "file": "cm03OCT2016bhav.csv.zip",
+     "share": 1.0
+    },
+    "volume": {
+     "file": "cm03OCT2016bhav.csv.zip",
+     "share": 1.0
+    },
+    "trades": {
+     "file": "cm03OCT2016bhav.csv.zip",
+     "share": 1.0
+    },
+    "turnover_500": {
+     "file": "cm03OCT2016bhav.csv.zip",
+     "share": 1.0
+    }
+   }
+  }
+ },
+ "sanity": {
+  "2016-10-30": {
+   "label": "Sunday Muhurat",
+   "weekday": "Sunday",
+   "present": true,
+   "rows_eq_be": 1553,
+   "median_open_gap": 0.0082,
+   "median_low_vs_prev_close": -0.0021,
+   "median_close_return": 0.0087,
+   "share_down": 0.2012,
+   "median_trades": 387.0,
+   "nifty50": {
+    "prev_close": 8638.0,
+    "open": 8672.35,
+    "low": 8616.25,
+    "close": 8625.7,
+    "return": -0.0014,
+    "low_vs_prev_close": -0.0025
+   }
+  },
+  "2016-11-09": {
+   "label": "demonetisation announced the previous evening: gap-down open",
+   "weekday": "Wednesday",
+   "present": true,
+   "rows_eq_be": 1561,
+   "median_open_gap": -0.0738,
+   "median_low_vs_prev_close": -0.147,
+   "median_close_return": -0.0314,
+   "share_down": 0.8495,
+   "median_trades": 1518.0,
+   "nifty50": {
+    "prev_close": 8543.55,
+    "open": 8067.5,
+    "low": 8002.25,
+    "close": 8432.0,
+    "return": -0.0131,
+    "low_vs_prev_close": -0.0634
+   }
+  },
+  "2017-10-19": {
+   "label": "Muhurat (Diwali holiday)",
+   "weekday": "Thursday",
+   "present": false
+  },
+  "2018-11-07": {
+   "label": "Muhurat (Diwali holiday)",
+   "weekday": "Wednesday",
+   "present": false
+  },
+  "2019-10-27": {
+   "label": "Sunday Muhurat",
+   "weekday": "Sunday",
+   "present": false
+  },
+  "2020-02-01": {
+   "label": "Saturday Union Budget session",
+   "weekday": "Saturday",
+   "present": false
+  },
+  "2020-03-13": {
+   "label": "market-wide lower circuit at the open, then a rebound",
+   "weekday": "Friday",
+   "present": false
+  },
+  "2020-03-23": {
+   "label": "market-wide lower circuit, Nifty 50 down about 13%",
+   "weekday": "Monday",
+   "present": false
+  },
+  "2020-11-14": {
+   "label": "Saturday Muhurat",
+   "weekday": "Saturday",
+   "present": false
+  }
+ },
+ "outputs": {
+  "equity_eod_2016_2021.parquet": {
+   "path": "ml/data_hist/equity_eod_2016_2021.partial.parquet",
+   "bytes": 9911711
+  },
+  "bc_records_2016_2021.csv": {
+   "path": "ml/data_hist/bc_records_2016_2021.partial.csv",
+   "bytes": 4463626
+  },
+  "etf_records_2016_2021.csv": {
+   "path": "ml/data_hist/etf_records_2016_2021.partial.csv",
+   "bytes": 5129
+  },
+  "pd_corp_ind_2016_2021.csv": {
+   "path": "ml/data_hist/pd_corp_ind_2016_2021.partial.csv",
+   "bytes": 67194
+  },
+  "index_close_2016_2021.csv": {
+   "path": "ml/data_hist/index_close_2016_2021.partial.csv",
+   "bytes": 1090170
+  },
+  "call_auction_rows_2016_2021.csv": {
+   "path": "ml/data_hist/call_auction_rows_2016_2021.partial.csv",
+   "bytes": 64359
+  },
+  "sessions_2016_2021.csv": {
+   "path": "ml/data_hist/sessions_2016_2021.partial.csv",
+   "bytes": 10957
+  },
+  "overlap_cm_mto_2021-10.parquet": {
+   "path": "ml/data_hist/overlap_cm_mto_2021-10.parquet",
+   "bytes": 338755
+  }
+ },
+ "outputs_detail": {
+  "bc": {
+   "rows": 39944,
+   "distinct_events": 4561,
+   "bundles": 167,
+   "distinct_split_events": 54,
+   "distinct_bonus_events": 46,
+   "distinct_rights_events": 16
+  },
+  "etf": {
+   "symbols": 60
+  }
+ }
+}

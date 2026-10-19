@@ -35,6 +35,9 @@ Usage
     # Offline, no-network self-test of layers 2-4 with synthetic data
     python3 nse_historical_ingest.py --demo
 
+    # Read-only session audit of a store: prev_close continuity + calendar
+    python3 nse_historical_ingest.py --check-sessions
+
 NOTE ON NETWORK: NSE serves these files only to browser-like sessions and
 many sandboxes (incl. Claude Code on the web) block nseindia.com via an
 egress allowlist. Run locally, or add ``nseindia.com`` to the allowlist,
@@ -531,19 +534,34 @@ MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
 # Skipping these avoids wasted requests; the 404 fallback in NSEArchiveSession
 # still covers anything missing or newly announced. Refresh authoritatively
 # from NSE's holiday API at runtime via ``fetch_nse_holidays`` when online.
+#
+# Full-day closures only.  A Diwali "Laxmi Pujan" day with a Muhurat session is
+# NOT a closure: it is listed in SPECIAL_SESSIONS below (2025-10-21 was wrongly
+# listed here and its session was never ingested).  Calendar audit 2026-10-19
+# (ml/integrity/, PR bundle present <=> session, for 2021-10-01..2026-10-16):
+# 2023-06-28 was a session (the Bakri Id closure moved to 2023-06-29), and the
+# archive answers the closures 2021-11-05, 2023-06-29 and 2024-01-22 with the
+# PREVIOUS special/moved session's file, which the duplicate-day guard cannot
+# catch when that session itself was never stored.
 NSE_TRADING_HOLIDAYS: set[str] = {
+    # 2021 (Q4)
+    "2021-10-15", "2021-11-05", "2021-11-19",
+    # 2022
+    "2022-01-26", "2022-03-01", "2022-03-18", "2022-04-14", "2022-04-15",
+    "2022-05-03", "2022-08-09", "2022-08-15", "2022-08-31", "2022-10-05",
+    "2022-10-26", "2022-11-08",
     # 2023
     "2023-01-26", "2023-03-07", "2023-03-30", "2023-04-04", "2023-04-07",
-    "2023-04-14", "2023-05-01", "2023-06-28", "2023-08-15", "2023-09-19",
+    "2023-04-14", "2023-05-01", "2023-06-29", "2023-08-15", "2023-09-19",
     "2023-10-02", "2023-10-24", "2023-11-14", "2023-11-27", "2023-12-25",
     # 2024
-    "2024-01-26", "2024-03-08", "2024-03-25", "2024-03-29", "2024-04-11",
+    "2024-01-22", "2024-01-26", "2024-03-08", "2024-03-25", "2024-03-29", "2024-04-11",
     "2024-04-17", "2024-05-01", "2024-05-20", "2024-06-17", "2024-07-17",
-    "2024-08-15", "2024-10-02", "2024-11-15", "2024-12-25",
+    "2024-08-15", "2024-10-02", "2024-11-15", "2024-11-20", "2024-12-25",
     # 2025
     "2025-02-26", "2025-03-14", "2025-03-31", "2025-04-10", "2025-04-14",
     "2025-04-18", "2025-05-01", "2025-08-15", "2025-08-27", "2025-10-02",
-    "2025-10-21", "2025-10-22", "2025-11-05", "2025-12-25",
+    "2025-10-22", "2025-11-05", "2025-12-25",
     # 2026 -- detected empirically: some archive mirrors serve the PREVIOUS
     # session's bhavcopy on these closures instead of 404ing (every ticker
     # byte-identical to the prior day). Dates line up with the 2026 NSE
@@ -553,6 +571,30 @@ NSE_TRADING_HOLIDAYS: set[str] = {
     "2026-01-15", "2026-01-26", "2026-03-03", "2026-03-26", "2026-03-31",
     "2026-04-03", "2026-04-14", "2026-05-01", "2026-05-28", "2026-06-26",
     "2026-09-14", "2026-10-02", "2026-12-25",
+}
+
+# Sessions outside the Monday-Friday, non-holiday rule: Diwali Muhurat sessions
+# (on a weekend or on the Laxmi Pujan closure), Union Budget weekend sessions and
+# the exchange's special Saturday live sessions.  trading_days() always includes
+# them.  Every date from 2021-10 on was confirmed by its own archive file
+# (DATE1 column) and PR bundle; the earlier ones are the history stream's list.
+SPECIAL_SESSIONS: set[str] = {
+    "2016-10-30",  # Sun, Muhurat
+    "2017-10-19",  # Thu, Muhurat (Laxmi Pujan)
+    "2018-11-07",  # Wed, Muhurat (Laxmi Pujan)
+    "2019-10-27",  # Sun, Muhurat
+    "2020-02-01",  # Sat, Union Budget
+    "2020-11-14",  # Sat, Muhurat
+    "2021-11-04",  # Thu, Muhurat (Laxmi Pujan)
+    "2022-10-24",  # Mon, Muhurat (Laxmi Pujan)
+    "2023-11-12",  # Sun, Muhurat
+    "2024-01-20",  # Sat, special full session (2024-01-22 declared a closure)
+    "2024-03-02",  # Sat, special live session (DR site switch-over)
+    "2024-05-18",  # Sat, special live session (DR site switch-over)
+    "2024-11-01",  # Fri, Muhurat (Laxmi Pujan)
+    "2025-02-01",  # Sat, Union Budget
+    "2025-10-21",  # Tue, Muhurat (Laxmi Pujan)
+    "2026-02-01",  # Sun, Union Budget
 }
 
 
@@ -581,19 +623,74 @@ def fetch_nse_holidays(sess: "NSEArchiveSession") -> set[str]:
 
 
 def trading_days(start: date, end: date,
-                 holidays: set[str] | None = None) -> list[date]:
-    """Weekdays in [start, end] minus known NSE holidays.
+                 holidays: set[str] | None = None,
+                 special: set[str] | None = None) -> list[date]:
+    """Weekdays in [start, end] minus known NSE holidays, plus special sessions.
 
     Any holiday not in the set still 404s cleanly during fetch, so a stale
-    calendar only costs a wasted request, never a data gap.
+    calendar only costs a wasted request, never a data gap.  Special sessions
+    (SPECIAL_SESSIONS: Muhurat, Budget-day and special Saturday sessions) are
+    always included, whatever the weekday or holiday set; pass ``special=set()``
+    for the plain weekday rule.
     """
     hol = holidays if holidays is not None else NSE_TRADING_HOLIDAYS
+    spc = special if special is not None else SPECIAL_SESSIONS
     days, d = [], start
     while d <= end:
-        if d.weekday() < 5 and d.isoformat() not in hol:  # Mon-Fri, non-holiday
+        iso = d.isoformat()
+        if iso in spc or (d.weekday() < 5 and iso not in hol):  # Mon-Fri non-holiday, or special
             days.append(d)
         d += timedelta(days=1)
     return days
+
+
+def check_sessions(con: duckdb.DuckDBPyConnection, tol: float = 0.005,
+                   flag_share: float = 0.05) -> pd.DataFrame:
+    """prev_close continuity scan over the stored EQ/BE rows.
+
+    For every (ticker, date) with a stored previous row, a mismatch is
+    |reported prev_close - stored previous close| > ``tol``.  A session whose
+    share of mismatches exceeds ``flag_share`` is flagged: the usual cause is a
+    session missing between the two stored rows (special session not ingested).
+    Returns one row per date: n_with_prev, n_mismatch, share, flagged.
+    """
+    df = con.execute(
+        """
+        WITH x AS (
+            SELECT date, ticker, prev_close,
+                   lag(close) OVER (PARTITION BY ticker ORDER BY date) AS stored_prev
+            FROM equity_eod WHERE series IN ('EQ','BE')
+        )
+        SELECT date,
+               count(*) FILTER (WHERE stored_prev IS NOT NULL AND prev_close IS NOT NULL) AS n_with_prev,
+               count(*) FILTER (WHERE stored_prev IS NOT NULL AND prev_close IS NOT NULL
+                                AND abs(prev_close - stored_prev) > ?) AS n_mismatch
+        FROM x GROUP BY date ORDER BY date
+        """, [tol]).df()
+    df["share"] = df["n_mismatch"] / df["n_with_prev"].where(df["n_with_prev"] > 0)
+    df["flagged"] = df["share"] > flag_share
+    return df
+
+
+def run_check_sessions(args: argparse.Namespace) -> int:
+    """--check-sessions: continuity scan + calendar check on the store (read-only)."""
+    con = duckdb.connect(args.db, read_only=True)
+    scan = check_sessions(con)
+    stored = {pd.Timestamp(x).date() for x in scan["date"]}
+    con.close()
+    flagged = scan[scan["flagged"]]
+    print(f"{len(scan)} sessions scanned; max mismatch share {scan['share'].max():.4f}")
+    for r in flagged.itertuples(index=False):
+        print(f"FLAGGED {pd.Timestamp(r.date).date()}: {r.n_mismatch}/{r.n_with_prev} "
+              f"tickers ({r.share:.1%}) with prev_close != stored previous close")
+    if stored:
+        lo, hi = min(stored), max(stored)
+        want = set(trading_days(lo, hi))
+        missing = sorted(want - stored)
+        extra = sorted(stored - want)
+        print(f"calendar {lo}..{hi}: {len(missing)} expected sessions missing {missing[:20]}; "
+              f"{len(extra)} stored dates outside the calendar {extra[:20]}")
+    return 1 if len(flagged) else 0
 
 
 def frame_fingerprint(df: pd.DataFrame) -> tuple:
@@ -825,6 +922,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--min-delay", type=float, default=1.5, help="Min inter-request delay (s)")
     p.add_argument("--max-delay", type=float, default=3.5, help="Max inter-request delay (s)")
     p.add_argument("--demo", action="store_true", help="Offline synthetic self-test of layers 2-4")
+    p.add_argument("--check-sessions", action="store_true",
+                   help="Read-only prev_close continuity scan + calendar check of --db; exit 1 if a session is flagged")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
 
@@ -832,6 +931,8 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
 
+    if args.check_sessions:
+        return run_check_sessions(args)
     if args.demo:
         run_demo(args)
     else:

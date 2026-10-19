@@ -1,0 +1,100 @@
+{
+ "what": "the 24 five-year books of ml/scale5y_report.py portfolio() rebuilt with prices from ml/results/improve/cache/features_prices_export_v1.parquet (DuckDB not opened) and compared with every number in ml/results/scale5y/portfolio_5y.json",
+ "price_source": "ml/results/improve/cache/features_prices_export_v1.parquet",
+ "base_panel": {
+  "rows": 1248055,
+  "signal_dates": 913,
+  "first": "2023-01-02",
+  "last": "2026-09-16"
+ },
+ "comparison": {
+  "numeric_leaves_compared": 8160,
+  "other_leaves_compared": 213,
+  "max_abs_diff": 0.0,
+  "max_abs_diff_at": null,
+  "max_rel_diff": 0.0,
+  "max_rel_diff_at": null,
+  "max_rel_diff_note": "relative difference over numeric leaves with |frozen value| > 1e-6",
+  "n_beyond_3_decimals": 0,
+  "beyond_3_decimals": [],
+  "missing_keys": [],
+  "structure_mismatches": [],
+  "non_numeric_mismatches": [],
+  "matches_to_3_decimals": true
+ },
+ "headline_numbers": [
+  {
+   "item": "nested_ensemble_rank|top_decile excess vs EW, 20 bps (ann.)",
+   "replica": 0.07034806828130266,
+   "frozen_portfolio_5y": 0.07034806828130266,
+   "quoted_by_lead": 0.07,
+   "abs_diff_vs_frozen": 0.0,
+   "agrees_with_quote": true
+  },
+  {
+   "item": "nested_ensemble_rank|top_decile IR",
+   "replica": 1.2562622095669103,
+   "frozen_portfolio_5y": 1.2562622095669103,
+   "quoted_by_lead": 1.26,
+   "abs_diff_vs_frozen": 0.0,
+   "agrees_with_quote": true
+  },
+  {
+   "item": "nested_ensemble_rank|top_decile IR CI low",
+   "replica": 0.31995635042992415,
+   "frozen_portfolio_5y": 0.31995635042992415,
+   "quoted_by_lead": 0.32,
+   "abs_diff_vs_frozen": 0.0,
+   "agrees_with_quote": true
+  },
+  {
+   "item": "nested_ensemble_rank|top_decile IR CI high",
+   "replica": 2.3707497775022475,
+   "frozen_portfolio_5y": 2.3707497775022475,
+   "quoted_by_lead": 2.37,
+   "abs_diff_vs_frozen": 0.0,
+   "agrees_with_quote": true
+  },
+  {
+   "item": "nested_lgbm|top_decile excess vs EW, 20 bps (ann.)",
+   "replica": -0.007337128778265927,
+   "frozen_portfolio_5y": -0.007337128778265927,
+   "quoted_by_lead": -0.007,
+   "abs_diff_vs_frozen": 0.0,
+   "agrees_with_quote": true
+  },
+  {
+   "item": "EW universe annual return",
+   "replica": 0.19448892739418924,
+   "frozen_portfolio_5y": 0.19448892739418924,
+   "quoted_by_lead": 0.194,
+   "abs_diff_vs_frozen": 0.0,
+   "agrees_with_quote": true
+  },
+  {
+   "item": "signal dates",
+   "replica": 913,
+   "frozen_portfolio_5y": 913,
+   "quoted_by_lead": 913,
+   "abs_diff_vs_frozen": 0,
+   "agrees_with_quote": true
+  },
+  {
+   "item": "nested_lgbm|top_decile turnover per rebalance",
+   "replica": 0.6662726327220648,
+   "frozen_portfolio_5y": 0.6662726327220648,
+   "quoted_by_lead": 0.666,
+   "abs_diff_vs_frozen": 0.0,
+   "agrees_with_quote": true
+  },
+  {
+   "item": "nested_ensemble_rank|top_decile DSR at N=177 (24-book V[SR])",
+   "replica": 0.1634556296409272,
+   "frozen_portfolio_5y": 0.1634556296409272,
+   "quoted_by_lead": 0.163,
+   "abs_diff_vs_frozen": 0.0,
+   "agrees_with_quote": true
+  }
+ ],
+ "verdict": "PASS: reproduces portfolio_5y.json to 3 decimals"
+}

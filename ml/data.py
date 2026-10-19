@@ -89,17 +89,36 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
                   dataset_start: str = DATASET_START,
                   fold_months: list[tuple[int, int]] | None = None,
                   holdout_start: str = "2026-08-01",
-                  out_dir: Path = DATA_DIR) -> dict:
+                  out_dir: Path = DATA_DIR,
+                  exclude_tickers: set[str] | None = None,
+                  ca_csv: str | None = None,
+                  read_only: bool = False,
+                  universe_price_col: str = "close") -> dict:
     """Build the modeling dataset. Defaults reproduce the pilot (6-month window);
     the 5-year run passes an earlier start, a long list of monthly folds and its
-    own out_dir so the pilot artifacts stay intact."""
+    own out_dir so the pilot artifacts stay intact.
+
+    Optional (defaults leave every earlier build unchanged):
+      exclude_tickers  tickers dropped right after equity_features is read, i.e.
+                       before the universe filter and before every cross-sectional
+                       median / rank (the v2 dataset passes the ETF list);
+      ca_csv           corporate-actions feed for build_features when
+                       rebuild_features is True (None = unadjusted, as before);
+      read_only        open the DuckDB read-only (only with rebuild_features=False);
+      universe_price_col  equity_features column tested against MIN_PRICE.  On a
+                       split/bonus-adjusted equity_features pass "close_unadj": the
+                       price floor is about the traded price, and an adjusted close
+                       would let a FUTURE split push past rows below the floor.
+    """
     out_dir = Path(out_dir)
     import duckdb
     import nse_historical_ingest as nhi
 
-    con = duckdb.connect(db_path)
+    if read_only and rebuild_features:
+        raise ValueError("read_only=True cannot rebuild equity_features")
+    con = duckdb.connect(db_path, read_only=read_only)
     if rebuild_features:
-        n = nhi.build_features(con, ca_csv=None)  # repo's existing feature/label logic
+        n = nhi.build_features(con, ca_csv=ca_csv)  # repo's existing feature/label logic
         print(f"equity_features rebuilt: {n} rows")
 
     df = con.execute(
@@ -111,14 +130,23 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
                rsi_14, atr_pct, vol_ratio_20, vol_z_20,
                deliv_pct, deliv_pct_sma_20, deliv_pct_z_20,
                dist_52w_high, dist_52w_low,
-               fwd_ret_5d, label_up_5d
+               fwd_ret_5d, label_up_5d{extra_cols}
         FROM equity_features
         ORDER BY ticker, date
-        """
+        """.format(extra_cols="" if universe_price_col == "close" else f", {universe_price_col}")
     ).df()
     con.close()
     df["date"] = pd.to_datetime(df["date"])
     print(f"loaded equity_features: {len(df):,} rows, {df['ticker'].nunique():,} tickers")
+    excluded = {"tickers_requested": 0, "tickers_present": 0, "rows_removed": 0}
+    if exclude_tickers:
+        drop = df["ticker"].isin(set(exclude_tickers))
+        excluded = {"tickers_requested": int(len(set(exclude_tickers))),
+                    "tickers_present": int(df.loc[drop, "ticker"].nunique()),
+                    "rows_removed": int(drop.sum())}
+        df = df[~drop].reset_index(drop=True)
+        print(f"excluded {excluded['tickers_present']} tickers ({excluded['rows_removed']:,} feature rows) "
+              f"before the universe filter and every cross-sectional step")
 
     g = df.groupby("ticker", group_keys=False)
 
@@ -158,7 +186,7 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
 
     # ---- point-in-time universe filter --------------------------------------
     med_turn = g["turnover"].transform(lambda s: s.rolling(20, min_periods=10).median())
-    universe = (df["close"] >= MIN_PRICE) & (med_turn >= MIN_MED_TURNOVER)
+    universe = (df[universe_price_col] >= MIN_PRICE) & (med_turn >= MIN_MED_TURNOVER)
     df = df[universe & (df["date"] >= dataset_start)].copy()
     print(f"after universe filter: {len(df):,} rows, {df['ticker'].nunique():,} tickers")
 
@@ -250,13 +278,15 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
         "label_cols": LABEL_COLS,
         "primary_task": "beat_mkt_20d (20-session next-open excess vs universe median)",
         "secondary_task": "up_5d (repo's existing 5d close-to-close label)",
-        "universe": {"min_price": MIN_PRICE, "min_median_turnover_20d": MIN_MED_TURNOVER},
+        "universe": {"min_price": MIN_PRICE, "min_median_turnover_20d": MIN_MED_TURNOVER,
+                     **({"price_column": universe_price_col} if universe_price_col != "close" else {})},
         "label_balance": {
             "beat_mkt_20d": float(out["label_beat_mkt_20d"].mean()),
             "up_5d": float(pd.to_numeric(out["label_up_5d"]).mean()),
             "y_clean_20d_pct": float(out["y_clean_20d"].mean()),
         },
         "label_warning": "y_*/fwd_*/label_* use FUTURE prices -- train targets only, never features",
+        **({"excluded_tickers": excluded} if exclude_tickers else {}),
         "known_gaps": "prices unadjusted (no CA feed in sandbox): y_clean_20d masks "
                       "split-contaminated 20d labels; carry/announcement features need "
                       "F&O/announcement feeds not present in this repo",

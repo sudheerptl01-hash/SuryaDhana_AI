@@ -1,0 +1,2 @@
+2026-10-19T13:21:36 [download-all] PR all-days [100/591] 2022-08-09; totals {'404': 99, 'skip': 1}; requests 99, 398s
+2026-10-19T13:28:22 [download-all] PR all-days [200/591] 2023-06-11; totals {'404': 199, 'skip': 1}; requests 199, 803s

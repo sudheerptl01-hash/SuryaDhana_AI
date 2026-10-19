@@ -257,6 +257,8 @@ def main() -> None:
     ap.add_argument("--kinds", default="fo,indices,participant")
     ap.add_argument("--retry-missing", action="store_true")
     ap.add_argument("--lists-only", action="store_true")
+    ap.add_argument("--dates", default="",
+                    help="comma-separated ISO dates to fetch instead of a window")
     a = ap.parse_args()
     C.ensure_dirs()
     log = C.get_logger("extdata.download")
@@ -264,12 +266,15 @@ def main() -> None:
     if a.lists_only:
         download_lists(log)
         return
-    if a.window == "main":
+    if a.dates:
+        days = sorted(date.fromisoformat(x.strip()) for x in a.dates.split(",") if x.strip())
+    elif a.window == "main":
         download_lists(log)
         days = C.main_sessions()
     else:
         days = C.hist_candidate_days()
-    log.info("window=%s days=%d (%s..%s)", a.window, len(days), days[0], days[-1])
+    log.info("window=%s dates=%s days=%d (%s..%s)", a.window, bool(a.dates), len(days),
+             days[0], days[-1])
     jobs = build_jobs(days)
     workers = [Worker(k, jobs[k], a.retry_missing, log)
                for k in a.kinds.split(",") if k in jobs]

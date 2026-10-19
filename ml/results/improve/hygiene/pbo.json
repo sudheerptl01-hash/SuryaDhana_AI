@@ -1,0 +1,5919 @@
+{
+ "generated_by": "ml/hygiene/pbo.py (seed 108)",
+ "generated_at": "2026-10-19T13:25:04",
+ "method": "CSCV (Bailey, Borwein, Lopez de Prado & Zhu 2017): S = 16 contiguous equal blocks (L = T // 16, remainder dropped from the end), all C(16, 8) = 12,870 IS/OOS splits; IS-best = highest IS mean (AUC) or IS Sharpe (returns); OOS relative rank r = (rank - 0.5) / M; logit = ln(r / (1 - r)); PBO = share of logits <= 0. Sensitivity variants (not the reading): remainder dropped from the start; all periods in 16 near-equal blocks; S = 14 equal blocks of 3.",
+ "pre_registered_reading": "PBO above 0.5 means selection among those trials was no better than chance (ml/IMPROVEMENT_PLAN.md P5).",
+ "inputs": [
+  {
+   "path": "ml/results/scale5y/all51__beat_mkt_20d.json",
+   "bytes": 28174,
+   "mtime": "2026-10-19T07:59:49",
+   "sha256": "ea1ccf04fa5a63feb6d0dacf42130bf70d92379ee951d88ac42526dfa8b61280"
+  },
+  {
+   "path": "ml/results/scale5y/nested_lgbm__beat_mkt_20d.json",
+   "bytes": 35035,
+   "mtime": "2026-10-19T07:58:42",
+   "sha256": "715b896894fce2d9c81fe30778e9826ebbd2706468328742c153c64d42155111"
+  },
+  {
+   "path": "ml/results/scale5y/nested_lr_l2__beat_mkt_20d.json",
+   "bytes": 34469,
+   "mtime": "2026-10-19T07:59:24",
+   "sha256": "f280d17bedcdcabb48d5900d165a870487b013f6b137e4256a14b2b716d238fb"
+  },
+  {
+   "path": "ml/results/scale5y/lr_l2__beat_mkt_20d.json",
+   "bytes": 28165,
+   "mtime": "2026-10-19T08:03:15",
+   "sha256": "0559a8c99f5426dd5bc9fd8b07f8b5d982b6ab98706efc5229361f21a4dee4a5"
+  },
+  {
+   "path": "ml/results/scale5y/champion10__beat_mkt_20d.json",
+   "bytes": 28359,
+   "mtime": "2026-10-19T07:32:42",
+   "sha256": "129f7c3ae7016b7a9b551b06f6d537fb143879fedc29b379095ea609fcb1418e"
+  },
+  {
+   "path": "ml/results/scale5y/baseline_mom__beat_mkt_20d.json",
+   "bytes": 28199,
+   "mtime": "2026-10-19T08:03:39",
+   "sha256": "88f99423bae513e0554ba13cd0e250f3512e44c98af05fd30dfdc960701b5543"
+  },
+  {
+   "path": "ml/results/scale5y/nested_ensemble_rank__beat_mkt_20d.json",
+   "bytes": 38057,
+   "mtime": "2026-10-19T10:20:56",
+   "sha256": "f76a482aeb6d5c50821e102cd29ac3a49547e301e1574fcecc23f8a260604b8d"
+  },
+  {
+   "path": "ml/results/scale5y/nested_catboost__beat_mkt_20d.json",
+   "bytes": 34604,
+   "mtime": "2026-10-19T10:20:16",
+   "sha256": "d8359a18b680513f78244a601d533e080c88b03b8b9bec59f7f38247aeb1102b"
+  },
+  {
+   "path": "ml/results/scale5y/nested_lambdarank__beat_mkt_20d.json",
+   "bytes": 34583,
+   "mtime": "2026-10-19T10:07:32",
+   "sha256": "0e113388e22ce15f211f7667369b69736dcb687658ec66f16b2ddbaf698be4d1"
+  },
+  {
+   "path": "ml/results/scale5y/portfolio_5y.json",
+   "bytes": 378668,
+   "mtime": "2026-10-19T10:43:16",
+   "sha256": "f4525d668f03e2c605085f5f33c6a6aa787adefa138f7c4a2e06929dd5fae0e2"
+  }
+ ],
+ "dropped_periods_warning": "With T = 43 (configurations) or 45 (books) and S = 16, equal blocks are 2 periods long and the primary analysis uses 32 periods (2023-01..2025-08): 11 folds (2025-09..2026-07) or 13 months (2025-09..2026-09) are dropped from the end. The dropped stretch holds the 2025-09..2026-02 run and the March-2026 inversion, so the sensitivity variants that keep it are reported next to the reading.",
+ "duplicate_trials_note": "baseline_mom and heuristic_mom20 books are identical in 36 (top_decile), 36 (ls_decile), 39 (liq_top_decile) of 45 months (one-feature logistic on the momentum rank vs the momentum rank itself), so 3 pairs among the 24 books are near-duplicates; OOS ties are average-ranked, which is why some OOS ranks are fractional.",
+ "self_test": {
+  "brute_force_agreement": [
+   {
+    "stat": "mean",
+    "mode": "drop_end",
+    "pbo_fast": 0.9,
+    "pbo_naive": 0.9,
+    "max_abs_logit_diff": 0.0
+   },
+   {
+    "stat": "mean",
+    "mode": "drop_start",
+    "pbo_fast": 0.6,
+    "pbo_naive": 0.6,
+    "max_abs_logit_diff": 0.0
+   },
+   {
+    "stat": "mean",
+    "mode": "near_equal",
+    "pbo_fast": 0.3,
+    "pbo_naive": 0.3,
+    "max_abs_logit_diff": 0.0
+   },
+   {
+    "stat": "sharpe",
+    "mode": "drop_end",
+    "pbo_fast": 0.8,
+    "pbo_naive": 0.8,
+    "max_abs_logit_diff": 0.0
+   },
+   {
+    "stat": "sharpe",
+    "mode": "drop_start",
+    "pbo_fast": 0.45,
+    "pbo_naive": 0.45,
+    "max_abs_logit_diff": 0.0
+   },
+   {
+    "stat": "sharpe",
+    "mode": "near_equal",
+    "pbo_fast": 0.8,
+    "pbo_naive": 0.8,
+    "max_abs_logit_diff": 0.0
+   }
+  ],
+  "null": {
+   "M9_mean": {
+    "reps": 200,
+    "T": 32,
+    "S": 16,
+    "mean_pbo_le0": 0.5706029526029526,
+    "mean_pbo_lt0": 0.4567867132867133,
+    "mean_pbo_mid": 0.513694832944833,
+    "sd_pbo_le0": 0.229056452117869,
+    "expected": {
+     "le_0": 0.5555555555555556,
+     "lt_0": 0.4444444444444444,
+     "mid": 0.5
+    }
+   },
+   "M24_sharpe": {
+    "reps": 200,
+    "T": 32,
+    "S": 16,
+    "mean_pbo_le0": 0.48858430458430463,
+    "mean_pbo_lt0": 0.48858430458430463,
+    "mean_pbo_mid": 0.48858430458430463,
+    "sd_pbo_le0": 0.19155132796306776,
+    "expected": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    }
+   },
+   "M16_sharpe": {
+    "reps": 200,
+    "T": 32,
+    "S": 16,
+    "mean_pbo_le0": 0.540444055944056,
+    "mean_pbo_lt0": 0.540444055944056,
+    "mean_pbo_mid": 0.540444055944056,
+    "sd_pbo_le0": 0.19511516139115984,
+    "expected": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    }
+   }
+  },
+  "skill": {
+   "design": "T = 32, M = 9, trial j has mean 0.15*j and sd 1 (true ordering known)",
+   "reps": 200,
+   "mean_pbo": 0.07476223776223775,
+   "q95_pbo": 0.2741258741258741
+  },
+  "passed": true
+ },
+ "readings": {
+  "a_configurations_auc": {
+   "pbo": 0.2477078477078477,
+   "above_0_5": false,
+   "selection_no_better_than_chance": false,
+   "text": "PBO = 0.248 (not above 0.5): by the pre-registered reading, selection among these 9 model configurations was better than chance. PBO at or below 0.5 says only that the in-sample best usually finished in the out-of-sample top half; it is not by itself evidence of skill. With M = 9 (odd) the chance level of the 'lambda <= 0' rule is 0.556; strict rule PBO = 0.082, mid-rank PBO = 0.165 (chance 0.5).",
+   "sensitivity_pbo": {
+    "primary_S16_drop_end": 0.2477078477078477,
+    "sens_S16_drop_start": 0.13675213675213677,
+    "sens_S16_near_equal_all_periods": 0.24794094794094795,
+    "sens_S14_drop_end": 0.2636946386946387
+   }
+  },
+  "b_books_all24": {
+   "pbo": 0.18414918414918416,
+   "above_0_5": false,
+   "selection_no_better_than_chance": false,
+   "text": "PBO = 0.184 (not above 0.5): by the pre-registered reading, selection among these 24 books was better than chance. PBO at or below 0.5 says only that the in-sample best usually finished in the out-of-sample top half; it is not by itself evidence of skill.",
+   "sensitivity_pbo": {
+    "primary_S16_drop_end": 0.18414918414918416,
+    "sens_S16_drop_start": 0.06076146076146076,
+    "sens_S16_near_equal_all_periods": 0.035742035742035744,
+    "sens_S14_drop_end": 0.06264568764568765
+   }
+  },
+  "c_books_long_only16": {
+   "pbo": 0.22703962703962705,
+   "above_0_5": false,
+   "selection_no_better_than_chance": false,
+   "text": "PBO = 0.227 (not above 0.5): by the pre-registered reading, selection among these 16 long-only books was better than chance. PBO at or below 0.5 says only that the in-sample best usually finished in the out-of-sample top half; it is not by itself evidence of skill.",
+   "sensitivity_pbo": {
+    "primary_S16_drop_end": 0.22703962703962705,
+    "sens_S16_drop_start": 0.1648018648018648,
+    "sens_S16_near_equal_all_periods": 0.04211344211344211,
+    "sens_S14_drop_end": 0.07925407925407925
+   }
+  }
+ },
+ "analyses": {
+  "a_configurations_auc": {
+   "input": "fold AUC, 43 monthly folds 2023-01..2026-07 (holdout excluded) x 9 models",
+   "statistic": "IS/OOS mean of fold AUC",
+   "trial_names": [
+    "all51",
+    "nested_lgbm",
+    "nested_lr_l2",
+    "lr_l2",
+    "champion10",
+    "baseline_mom",
+    "nested_ensemble_rank",
+    "nested_catboost",
+    "nested_lambdarank"
+   ],
+   "primary_S16_drop_end": {
+    "design": {
+     "T_input": 43,
+     "M_trials": 9,
+     "S": 16,
+     "mode": "drop_end",
+     "statistic": "mean",
+     "block_lengths": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 32,
+     "periods_dropped": 11,
+     "first_used": "2023-01",
+     "last_used": "2025-08",
+     "dropped_labels": [
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+      "2026-06",
+      "2026-07"
+     ],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-02"
+      ],
+      [
+       "2023-03",
+       "2023-04"
+      ],
+      [
+       "2023-05",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-08"
+      ],
+      [
+       "2023-09",
+       "2023-10"
+      ],
+      [
+       "2023-11",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-02"
+      ],
+      [
+       "2024-03",
+       "2024-04"
+      ],
+      [
+       "2024-05",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-08"
+      ],
+      [
+       "2024-09",
+       "2024-10"
+      ],
+      [
+       "2024-11",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-02"
+      ],
+      [
+       "2025-03",
+       "2025-04"
+      ],
+      [
+       "2025-05",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-08"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.5,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.2477078477078477,
+    "pbo_strict_lt0": 0.08243978243978244,
+    "pbo_mid_rank": 0.16507381507381508,
+    "share_lambda_eq0": 0.16526806526806526,
+    "chance_level": {
+     "le_0": 0.5555555555555556,
+     "lt_0": 0.4444444444444444,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 1.5595966956872156,
+     "sd": 1.2743781156718301,
+     "min": -1.6094379124341005,
+     "q01": -0.9555114450274363,
+     "q05": -0.45198512374305727,
+     "q25": 0.4519851237430575,
+     "median": 1.6094379124341007,
+     "q75": 2.8332133440562157,
+     "q95": 2.8332133440562157,
+     "q99": 2.8332133440562157,
+     "max": 2.8332133440562157
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.7620305620305621,
+     "sd": 0.2052632876053778,
+     "min": 0.16666666666666666,
+     "q01": 0.2777777777777778,
+     "q05": 0.3888888888888889,
+     "q25": 0.6111111111111112,
+     "median": 0.8333333333333334,
+     "q75": 0.9444444444444444,
+     "q95": 0.9444444444444444,
+     "q99": 0.9444444444444444,
+     "max": 0.9444444444444444
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.16666666666666666,
+      "logit": -1.6094379124341005,
+      "count": 8,
+      "share": 0.0006216006216006216
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.2777777777777778,
+      "logit": -0.9555114450274363,
+      "count": 251,
+      "share": 0.019502719502719503
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.3888888888888889,
+      "logit": -0.45198512374305727,
+      "count": 802,
+      "share": 0.06231546231546232
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.5,
+      "logit": 0.0,
+      "count": 2127,
+      "share": 0.16526806526806526
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.6111111111111112,
+      "logit": 0.4519851237430575,
+      "count": 979,
+      "share": 0.07606837606837606
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.7222222222222222,
+      "logit": 0.9555114450274362,
+      "count": 1087,
+      "share": 0.08445998445998446
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.8333333333333334,
+      "logit": 1.6094379124341007,
+      "count": 1938,
+      "share": 0.15058275058275059
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.9444444444444444,
+      "logit": 2.8332133440562157,
+      "count": 5678,
+      "share": 0.4411810411810412
+     }
+    ],
+    "degradation": {
+     "slope": -0.5799124675376311,
+     "intercept": 0.8414214383500899,
+     "corr": -0.6556521127680682,
+     "r2": 0.42987969297723166,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.5366089961554625,
+      "sd": 0.009605367850597051,
+      "min": 0.5144334291936528,
+      "q01": 0.5181584047695916,
+      "q05": 0.5218960999635478,
+      "q25": 0.5294584210629733,
+      "median": 0.5359388159505216,
+      "q75": 0.5431660709356734,
+      "q95": 0.5534456316203691,
+      "q99": 0.5598625079326449,
+      "max": 0.5696519177349593
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.5302351912866843,
+      "sd": 0.008495774608777635,
+      "min": 0.501484580317112,
+      "q01": 0.510802621285237,
+      "q05": 0.5163753826378703,
+      "q25": 0.5242828665287916,
+      "median": 0.5302342067921298,
+      "q75": 0.5362142317116065,
+      "q95": 0.5442586790730658,
+      "q99": 0.5490023945673066,
+      "max": 0.555327372361297
+     },
+     "share_oos_below_is": 0.6240870240870241,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.0,
+     "zero_skill_level": 0.5,
+     "below_oos_median_of_trials": 0.08243978243978244,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 0.00871104204437545,
+     "x_at_max_violation": 0.5496538029579673,
+     "F_all_at_max_violation": 0.9844513511180177,
+     "max_F_all_minus_F_best": 0.3071484071484071,
+     "share_grid_F_best_le_F_all": 0.9712596045929379,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": 0.5163753826378703,
+      "q25": 0.5242828665287916,
+      "q50": 0.5302342067921298,
+      "q75": 0.5362142317116065,
+      "q95": 0.5442586790730658
+     },
+     "quantiles_oos_all_trials": {
+      "q05": 0.49066703479937995,
+      "q25": 0.5106932319419617,
+      "q50": 0.5227166870017137,
+      "q75": 0.5300694065636105,
+      "q95": 0.5423251091464397
+     },
+     "mean_oos_is_best": 0.5302351912866843,
+     "mean_oos_all_trials": 0.519889440240936,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "all51",
+      "stat_on_used_periods": 0.5269714560168967,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.12564102564102564,
+      "mean_oos_rank_fraction_when_selected": 0.4907922765065622,
+      "share_lambda_le0_when_selected": 0.9288806431663574
+     },
+     {
+      "trial": "nested_lgbm",
+      "stat_on_used_periods": 0.5261256879676042,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0038073038073038073,
+      "mean_oos_rank_fraction_when_selected": 0.4909297052154195,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_lr_l2",
+      "stat_on_used_periods": 0.5355682490260356,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.719036519036519,
+      "mean_oos_rank_fraction_when_selected": 0.8338015993084071,
+      "share_lambda_le0_when_selected": 0.13486060082126647
+     },
+     {
+      "trial": "lr_l2",
+      "stat_on_used_periods": 0.5327229363558867,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.057498057498057496,
+      "mean_oos_rank_fraction_when_selected": 0.7843843843843843,
+      "share_lambda_le0_when_selected": 0.052702702702702706
+     },
+     {
+      "trial": "champion10",
+      "stat_on_used_periods": 0.5145562782724875,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom",
+      "stat_on_used_periods": 0.4992702105126818,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank",
+      "stat_on_used_periods": 0.5214597575671127,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.026573426573426574,
+      "mean_oos_rank_fraction_when_selected": 0.32586094866796617,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_catboost",
+      "stat_on_used_periods": 0.528279443113178,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.06744366744366745,
+      "mean_oos_rank_fraction_when_selected": 0.6702508960573476,
+      "share_lambda_le0_when_selected": 0.009216589861751152
+     },
+     {
+      "trial": "nested_lambdarank",
+      "stat_on_used_periods": 0.49405094333654015,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     }
+    ]
+   },
+   "sens_S16_drop_start": {
+    "design": {
+     "T_input": 43,
+     "M_trials": 9,
+     "S": 16,
+     "mode": "drop_start",
+     "statistic": "mean",
+     "block_lengths": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 32,
+     "periods_dropped": 11,
+     "first_used": "2023-12",
+     "last_used": "2026-07",
+     "dropped_labels": [
+      "2023-01",
+      "2023-02",
+      "2023-03",
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11"
+     ],
+     "blocks": [
+      [
+       "2023-12",
+       "2024-01"
+      ],
+      [
+       "2024-02",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-05"
+      ],
+      [
+       "2024-06",
+       "2024-07"
+      ],
+      [
+       "2024-08",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-11"
+      ],
+      [
+       "2024-12",
+       "2025-01"
+      ],
+      [
+       "2025-02",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-05"
+      ],
+      [
+       "2025-06",
+       "2025-07"
+      ],
+      [
+       "2025-08",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-11"
+      ],
+      [
+       "2025-12",
+       "2026-01"
+      ],
+      [
+       "2026-02",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-05"
+      ],
+      [
+       "2026-06",
+       "2026-07"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.5,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.13675213675213677,
+    "pbo_strict_lt0": 0.05011655011655012,
+    "pbo_mid_rank": 0.09343434343434344,
+    "share_lambda_eq0": 0.08663558663558664,
+    "chance_level": {
+     "le_0": 0.5555555555555556,
+     "lt_0": 0.4444444444444444,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 1.6975156350633076,
+     "sd": 1.143390600494629,
+     "min": -1.6094379124341005,
+     "q01": -0.9555114450274363,
+     "q05": -0.45198512374305727,
+     "q25": 0.9555114450274362,
+     "median": 1.6094379124341007,
+     "q75": 2.8332133440562157,
+     "q95": 2.8332133440562157,
+     "q99": 2.8332133440562157,
+     "max": 2.8332133440562157
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.7938789605456272,
+     "sd": 0.1788285659750402,
+     "min": 0.16666666666666666,
+     "q01": 0.2777777777777778,
+     "q05": 0.3888888888888889,
+     "q25": 0.7222222222222222,
+     "median": 0.8333333333333334,
+     "q75": 0.9444444444444444,
+     "q95": 0.9444444444444444,
+     "q99": 0.9444444444444444,
+     "max": 0.9444444444444444
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.16666666666666666,
+      "logit": -1.6094379124341005,
+      "count": 28,
+      "share": 0.0021756021756021756
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.2777777777777778,
+      "logit": -0.9555114450274363,
+      "count": 270,
+      "share": 0.02097902097902098
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.3888888888888889,
+      "logit": -0.45198512374305727,
+      "count": 347,
+      "share": 0.026961926961926962
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.5,
+      "logit": 0.0,
+      "count": 1115,
+      "share": 0.08663558663558664
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.6111111111111112,
+      "logit": 0.4519851237430575,
+      "count": 1099,
+      "share": 0.08539238539238539
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.7222222222222222,
+      "logit": 0.9555114450274362,
+      "count": 1669,
+      "share": 0.12968142968142968
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.8333333333333334,
+      "logit": 1.6094379124341007,
+      "count": 2794,
+      "share": 0.2170940170940171
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.9444444444444444,
+      "logit": 2.8332133440562157,
+      "count": 5548,
+      "share": 0.43108003108003107
+     }
+    ],
+    "degradation": {
+     "slope": -0.7579957475887847,
+     "intercept": 0.9696428522524059,
+     "corr": -0.8451720368299633,
+     "r2": 0.7143157718393089,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.5545861849666758,
+      "sd": 0.011819887174055924,
+      "min": 0.5243044695306376,
+      "q01": 0.5309514094563178,
+      "q05": 0.5361010281995017,
+      "q25": 0.5458331284189205,
+      "median": 0.5540224098215665,
+      "q75": 0.5627794999922917,
+      "q95": 0.5748465471052483,
+      "q99": 0.5822736981930746,
+      "max": 0.5938462991746927
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.5492688823761784,
+      "sd": 0.010600710653559078,
+      "min": 0.5135014371255906,
+      "q01": 0.524575499005737,
+      "q05": 0.5313692160004961,
+      "q25": 0.5420966069619365,
+      "median": 0.5494753817635147,
+      "q75": 0.5565352053459689,
+      "q95": 0.5664387513669157,
+      "q99": 0.573207366873339,
+      "max": 0.5830432667696457
+     },
+     "share_oos_below_is": 0.574980574980575,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.0,
+     "zero_skill_level": 0.5,
+     "below_oos_median_of_trials": 0.05011655011655012,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 0.003738237071570505,
+     "x_at_max_violation": 0.5764974709127225,
+     "F_all_at_max_violation": 0.9943192609859276,
+     "max_F_all_minus_F_best": 0.31677458344125015,
+     "share_grid_F_best_le_F_all": 0.9855564188897522,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": 0.5313692160004961,
+      "q25": 0.5420966069619365,
+      "q50": 0.5494753817635147,
+      "q75": 0.5565352053459689,
+      "q95": 0.5664387513669157
+     },
+     "quantiles_oos_all_trials": {
+      "q05": 0.4897432999523919,
+      "q25": 0.5265736590816072,
+      "q50": 0.5398278838398181,
+      "q75": 0.5490982999626401,
+      "q95": 0.5631029934741778
+     },
+     "mean_oos_is_best": 0.5492688823761784,
+     "mean_oos_all_trials": 0.5340934057010809,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "all51",
+      "stat_on_used_periods": 0.5470174007494244,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.17000777000777,
+      "mean_oos_rank_fraction_when_selected": 0.6279707495429616,
+      "share_lambda_le0_when_selected": 0.27148080438756855
+     },
+     {
+      "trial": "nested_lgbm",
+      "stat_on_used_periods": 0.5430652382040027,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2",
+      "stat_on_used_periods": 0.5536738681501416,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.7133644133644134,
+      "mean_oos_rank_fraction_when_selected": 0.8520555737089884,
+      "share_lambda_le0_when_selected": 0.08866136586428494
+     },
+     {
+      "trial": "lr_l2",
+      "stat_on_used_periods": 0.5506484925097799,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.09090909090909091,
+      "mean_oos_rank_fraction_when_selected": 0.7586894586894587,
+      "share_lambda_le0_when_selected": 0.11282051282051282
+     },
+     {
+      "trial": "champion10",
+      "stat_on_used_periods": 0.5352274721363072,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0001554001554001554,
+      "mean_oos_rank_fraction_when_selected": 0.2777777777777778,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "baseline_mom",
+      "stat_on_used_periods": 0.49350627498895017,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank",
+      "stat_on_used_periods": 0.5381988137708191,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.016938616938616938,
+      "mean_oos_rank_fraction_when_selected": 0.2956167176350662,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_catboost",
+      "stat_on_used_periods": 0.5450177427236297,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.008624708624708625,
+      "mean_oos_rank_fraction_when_selected": 0.6111111111111112,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_lambdarank",
+      "stat_on_used_periods": 0.5004853480766728,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     }
+    ]
+   },
+   "sens_S16_near_equal_all_periods": {
+    "design": {
+     "T_input": 43,
+     "M_trials": 9,
+     "S": 16,
+     "mode": "near_equal",
+     "statistic": "mean",
+     "block_lengths": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 43,
+     "periods_dropped": 0,
+     "first_used": "2023-01",
+     "last_used": "2026-07",
+     "dropped_labels": [],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-03"
+      ],
+      [
+       "2023-04",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-09"
+      ],
+      [
+       "2023-10",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-11"
+      ],
+      [
+       "2025-12",
+       "2026-01"
+      ],
+      [
+       "2026-02",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-05"
+      ],
+      [
+       "2026-06",
+       "2026-07"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.5,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.24794094794094795,
+    "pbo_strict_lt0": 0.12245532245532245,
+    "pbo_mid_rank": 0.1851981351981352,
+    "share_lambda_eq0": 0.12548562548562547,
+    "chance_level": {
+     "le_0": 0.5555555555555556,
+     "lt_0": 0.4444444444444444,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 1.3593387432539161,
+     "sd": 1.1843009076615156,
+     "min": -1.6094379124341005,
+     "q01": -0.45198512374305727,
+     "q05": -0.45198512374305727,
+     "q25": 0.4519851237430575,
+     "median": 1.6094379124341007,
+     "q75": 2.8332133440562157,
+     "q95": 2.8332133440562157,
+     "q99": 2.8332133440562157,
+     "max": 2.8332133440562157
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.740680307346974,
+     "sd": 0.19877132213648982,
+     "min": 0.16666666666666666,
+     "q01": 0.3888888888888889,
+     "q05": 0.3888888888888889,
+     "q25": 0.6111111111111112,
+     "median": 0.8333333333333334,
+     "q75": 0.9444444444444444,
+     "q95": 0.9444444444444444,
+     "q99": 0.9444444444444444,
+     "max": 0.9444444444444444
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.16666666666666666,
+      "logit": -1.6094379124341005,
+      "count": 12,
+      "share": 0.0009324009324009324
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.2777777777777778,
+      "logit": -0.9555114450274363,
+      "count": 113,
+      "share": 0.00878010878010878
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.3888888888888889,
+      "logit": -0.45198512374305727,
+      "count": 1451,
+      "share": 0.11274281274281274
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.5,
+      "logit": 0.0,
+      "count": 1615,
+      "share": 0.12548562548562547
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.6111111111111112,
+      "logit": 0.4519851237430575,
+      "count": 1002,
+      "share": 0.07785547785547786
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.7222222222222222,
+      "logit": 0.9555114450274362,
+      "count": 1280,
+      "share": 0.09945609945609946
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.8333333333333334,
+      "logit": 1.6094379124341007,
+      "count": 3559,
+      "share": 0.2765345765345765
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.9444444444444444,
+      "logit": 2.8332133440562157,
+      "count": 3838,
+      "share": 0.2982128982128982
+     }
+    ],
+    "degradation": {
+     "slope": -0.7410404225018691,
+     "intercept": 0.9420480796806023,
+     "corr": -0.8267840153004992,
+     "r2": 0.683571807956416,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.5438831846089109,
+      "sd": 0.00999091569438081,
+      "min": 0.5194724924270823,
+      "q01": 0.5238598252483895,
+      "q05": 0.5283456545193973,
+      "q25": 0.5365141575803848,
+      "median": 0.5434428188202953,
+      "q75": 0.5507078913812201,
+      "q95": 0.5611805793056479,
+      "q99": 0.567534589240392,
+      "max": 0.5792333999785344
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.5390086547663524,
+      "sd": 0.0089547841399106,
+      "min": 0.5079197494740922,
+      "q01": 0.5180320001071057,
+      "q05": 0.5243162259354898,
+      "q25": 0.5328230078785798,
+      "median": 0.538999288174754,
+      "q75": 0.5451963877882418,
+      "q95": 0.5538331146053759,
+      "q99": 0.5591203228263091,
+      "max": 0.5665332366806017
+     },
+     "share_oos_below_is": 0.5833721833721833,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.0,
+     "zero_skill_level": 0.5,
+     "below_oos_median_of_trials": 0.12245532245532245,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 0.0047483380816715215,
+     "x_at_max_violation": 0.5616297494348168,
+     "F_all_at_max_violation": 0.9915997582664249,
+     "max_F_all_minus_F_best": 0.27230423897090567,
+     "share_grid_F_best_le_F_all": 0.9787792454459121,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": 0.5243162259354898,
+      "q25": 0.5328230078785798,
+      "q50": 0.538999288174754,
+      "q75": 0.5451963877882418,
+      "q95": 0.5538331146053759
+     },
+     "quantiles_oos_all_trials": {
+      "q05": 0.4933413897574247,
+      "q25": 0.5193615293550469,
+      "q50": 0.5323660900124408,
+      "q75": 0.5403663080634528,
+      "q95": 0.5519380126748336
+     },
+     "mean_oos_is_best": 0.5390086547663524,
+     "mean_oos_all_trials": 0.5280258564866857,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "all51",
+      "stat_on_used_periods": 0.5365634802911465,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.07443667443667444,
+      "mean_oos_rank_fraction_when_selected": 0.4852702389236837,
+      "share_lambda_le0_when_selected": 0.965553235908142
+     },
+     {
+      "trial": "nested_lgbm",
+      "stat_on_used_periods": 0.5359105649498466,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0003108003108003108,
+      "mean_oos_rank_fraction_when_selected": 0.5,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_lr_l2",
+      "stat_on_used_periods": 0.5429521947545929,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.6191142191142192,
+      "mean_oos_rank_fraction_when_selected": 0.8193189424364123,
+      "share_lambda_le0_when_selected": 0.13654618473895583
+     },
+     {
+      "trial": "lr_l2",
+      "stat_on_used_periods": 0.5415161724108675,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.1825951825951826,
+      "mean_oos_rank_fraction_when_selected": 0.7131442080378251,
+      "share_lambda_le0_when_selected": 0.20042553191489362
+     },
+     {
+      "trial": "champion10",
+      "stat_on_used_periods": 0.525061337562431,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom",
+      "stat_on_used_periods": 0.49512737181717137,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank",
+      "stat_on_used_periods": 0.5330255290590032,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.054623154623154625,
+      "mean_oos_rank_fraction_when_selected": 0.37845740477319423,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_catboost",
+      "stat_on_used_periods": 0.5378493864420489,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.06891996891996892,
+      "mean_oos_rank_fraction_when_selected": 0.6712388826255793,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_lambdarank",
+      "stat_on_used_periods": 0.5031928869786194,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     }
+    ]
+   },
+   "sens_S14_drop_end": {
+    "design": {
+     "T_input": 43,
+     "M_trials": 9,
+     "S": 14,
+     "mode": "drop_end",
+     "statistic": "mean",
+     "block_lengths": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+     ],
+     "periods_used": 42,
+     "periods_dropped": 1,
+     "first_used": "2023-01",
+     "last_used": "2026-06",
+     "dropped_labels": [
+      "2026-07"
+     ],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-03"
+      ],
+      [
+       "2023-04",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-09"
+      ],
+      [
+       "2023-10",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-12"
+      ],
+      [
+       "2026-01",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-06"
+      ]
+     ],
+     "n_combinations": 3432,
+     "zero_skill_level": 0.5,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.2636946386946387,
+    "pbo_strict_lt0": 0.13374125874125875,
+    "pbo_mid_rank": 0.19871794871794873,
+    "share_lambda_eq0": 0.12995337995337997,
+    "chance_level": {
+     "le_0": 0.5555555555555556,
+     "lt_0": 0.4444444444444444,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 3432,
+     "mean": 1.248504775851243,
+     "sd": 1.1548519491640548,
+     "min": -1.6094379124341005,
+     "q01": -0.9555114450274363,
+     "q05": -0.45198512374305727,
+     "q25": 0.0,
+     "median": 1.6094379124341007,
+     "q75": 1.6094379124341007,
+     "q95": 2.8332133440562157,
+     "q99": 2.8332133440562157,
+     "max": 2.8332133440562157
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 3432,
+     "mean": 0.7255244755244755,
+     "sd": 0.19852401572929768,
+     "min": 0.16666666666666666,
+     "q01": 0.2777777777777778,
+     "q05": 0.3888888888888889,
+     "q25": 0.5,
+     "median": 0.8333333333333334,
+     "q75": 0.8333333333333334,
+     "q95": 0.9444444444444444,
+     "q99": 0.9444444444444444,
+     "max": 0.9444444444444444
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.16666666666666666,
+      "logit": -1.6094379124341005,
+      "count": 4,
+      "share": 0.0011655011655011655
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.2777777777777778,
+      "logit": -0.9555114450274363,
+      "count": 41,
+      "share": 0.011946386946386946
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.3888888888888889,
+      "logit": -0.45198512374305727,
+      "count": 414,
+      "share": 0.12062937062937062
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.5,
+      "logit": 0.0,
+      "count": 446,
+      "share": 0.12995337995337997
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.6111111111111112,
+      "logit": 0.4519851237430575,
+      "count": 301,
+      "share": 0.0877039627039627
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.7222222222222222,
+      "logit": 0.9555114450274362,
+      "count": 339,
+      "share": 0.09877622377622378
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.8333333333333334,
+      "logit": 1.6094379124341007,
+      "count": 1053,
+      "share": 0.3068181818181818
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.9444444444444444,
+      "logit": 2.8332133440562157,
+      "count": 834,
+      "share": 0.243006993006993
+     }
+    ],
+    "degradation": {
+     "slope": -0.7608561368726583,
+     "intercept": 0.9515056435256606,
+     "corr": -0.8579972957260964,
+     "r2": 0.7361593594732945,
+     "is_best_stat": {
+      "n": 3432,
+      "mean": 0.5433732417202755,
+      "sd": 0.011096931723095095,
+      "min": 0.5203200869791796,
+      "q01": 0.5226179694195512,
+      "q05": 0.5261915007455422,
+      "q25": 0.5348318537669635,
+      "median": 0.5430041036251182,
+      "q75": 0.5514852393450363,
+      "q95": 0.5621199484447154,
+      "q99": 0.568287785416587,
+      "max": 0.5763544534780811
+     },
+     "oos_best_stat": {
+      "n": 3432,
+      "mean": 0.5380767779503985,
+      "sd": 0.009840553861919328,
+      "min": 0.5084562529298291,
+      "q01": 0.5163940793461279,
+      "q05": 0.5218116990537327,
+      "q25": 0.5310030234975315,
+      "median": 0.5382624200653263,
+      "q75": 0.5454574033059549,
+      "q95": 0.553735924196398,
+      "q99": 0.5581701571453352,
+      "max": 0.5626799517890856
+     },
+     "share_oos_below_is": 0.5722610722610723,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.0,
+     "zero_skill_level": 0.5,
+     "below_oos_median_of_trials": 0.13374125874125875,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 0.012529137529137535,
+     "x_at_max_violation": 0.5594791207636476,
+     "F_all_at_max_violation": 0.9842657342657343,
+     "max_F_all_minus_F_best": 0.2631118881118881,
+     "share_grid_F_best_le_F_all": 0.9653587153587153,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": 0.5218116990537327,
+      "q25": 0.5310030234975315,
+      "q50": 0.5382624200653263,
+      "q75": 0.5454574033059549,
+      "q95": 0.553735924196398
+     },
+     "quantiles_oos_all_trials": {
+      "q05": 0.4932489705270935,
+      "q25": 0.5179213211856303,
+      "q50": 0.5306839244943233,
+      "q75": 0.5406528779087524,
+      "q95": 0.5524086859170158
+     },
+     "mean_oos_is_best": 0.5380767779503985,
+     "mean_oos_all_trials": 0.527424709964413,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "all51",
+      "stat_on_used_periods": 0.5360111954806667,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.07721445221445221,
+      "mean_oos_rank_fraction_when_selected": 0.48532494758909855,
+      "share_lambda_le0_when_selected": 0.969811320754717
+     },
+     {
+      "trial": "nested_lgbm",
+      "stat_on_used_periods": 0.5352937954046136,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2",
+      "stat_on_used_periods": 0.5424053532039551,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.5827505827505828,
+      "mean_oos_rank_fraction_when_selected": 0.8017222222222223,
+      "share_lambda_le0_when_selected": 0.1565
+     },
+     {
+      "trial": "lr_l2",
+      "stat_on_used_periods": 0.5411649635879877,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.21416083916083917,
+      "mean_oos_rank_fraction_when_selected": 0.716780045351474,
+      "share_lambda_le0_when_selected": 0.19319727891156463
+     },
+     {
+      "trial": "champion10",
+      "stat_on_used_periods": 0.5243950495698121,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom",
+      "stat_on_used_periods": 0.49525488129569956,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank",
+      "stat_on_used_periods": 0.5323828516890993,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.05623543123543123,
+      "mean_oos_rank_fraction_when_selected": 0.3762233736327001,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_catboost",
+      "stat_on_used_periods": 0.5372737319306384,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.06963869463869464,
+      "mean_oos_rank_fraction_when_selected": 0.6631799163179917,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_lambdarank",
+      "stat_on_used_periods": 0.5026405675172447,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     }
+    ]
+   }
+  },
+  "b_books_all24": {
+   "input": "monthly_20bps, 45 months 2023-01..2026-09 x 24 books; long-only = net 20d return minus the book's EW benchmark (ew_universe or ew_liquid); long-short = own net 20d return",
+   "statistic": "IS/OOS Sharpe (mean / sd, ddof 1) of the monthly series, not annualised",
+   "trial_names": [
+    "nested_lgbm|top_decile",
+    "nested_lgbm|ls_decile",
+    "nested_lgbm|liq_top_decile",
+    "all51|top_decile",
+    "all51|ls_decile",
+    "all51|liq_top_decile",
+    "nested_ensemble_rank|top_decile",
+    "nested_ensemble_rank|ls_decile",
+    "nested_ensemble_rank|liq_top_decile",
+    "champion10|top_decile",
+    "champion10|ls_decile",
+    "champion10|liq_top_decile",
+    "lr_l2|top_decile",
+    "lr_l2|ls_decile",
+    "lr_l2|liq_top_decile",
+    "nested_lr_l2|top_decile",
+    "nested_lr_l2|ls_decile",
+    "nested_lr_l2|liq_top_decile",
+    "baseline_mom|top_decile",
+    "baseline_mom|ls_decile",
+    "baseline_mom|liq_top_decile",
+    "heuristic_mom20|top_decile",
+    "heuristic_mom20|ls_decile",
+    "heuristic_mom20|liq_top_decile"
+   ],
+   "primary_S16_drop_end": {
+    "design": {
+     "T_input": 45,
+     "M_trials": 24,
+     "S": 16,
+     "mode": "drop_end",
+     "statistic": "sharpe",
+     "block_lengths": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 32,
+     "periods_dropped": 13,
+     "first_used": "2023-01",
+     "last_used": "2025-08",
+     "dropped_labels": [
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09"
+     ],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-02"
+      ],
+      [
+       "2023-03",
+       "2023-04"
+      ],
+      [
+       "2023-05",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-08"
+      ],
+      [
+       "2023-09",
+       "2023-10"
+      ],
+      [
+       "2023-11",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-02"
+      ],
+      [
+       "2024-03",
+       "2024-04"
+      ],
+      [
+       "2024-05",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-08"
+      ],
+      [
+       "2024-09",
+       "2024-10"
+      ],
+      [
+       "2024-11",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-02"
+      ],
+      [
+       "2025-03",
+       "2025-04"
+      ],
+      [
+       "2025-05",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-08"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.0,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.18414918414918416,
+    "pbo_strict_lt0": 0.18414918414918416,
+    "pbo_mid_rank": 0.18414918414918416,
+    "share_lambda_eq0": 0.0,
+    "chance_level": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 1.4654695962774862,
+     "sd": 1.7403659719952347,
+     "min": -3.8501476017100584,
+     "q01": -3.357036765521233,
+     "q05": -1.6094379124341005,
+     "q25": 0.4228568508200335,
+     "median": 1.466337068793427,
+     "q75": 2.70805020110221,
+     "q95": 3.8501476017100567,
+     "q99": 3.8501476017100567,
+     "max": 3.8501476017100567
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.7297769360269359,
+     "sd": 0.2532900319953148,
+     "min": 0.020833333333333332,
+     "q01": 0.035208333333333286,
+     "q05": 0.16666666666666666,
+     "q25": 0.6041666666666666,
+     "median": 0.8125,
+     "q75": 0.9375,
+     "q95": 0.9791666666666666,
+     "q99": 0.9791666666666666,
+     "max": 0.9791666666666666
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 1.0,
+      "rank_fraction": 0.020833333333333332,
+      "logit": -3.8501476017100584,
+      "count": 129,
+      "share": 0.010023310023310023
+     },
+     {
+      "oos_rank": 1.5,
+      "rank_fraction": 0.041666666666666664,
+      "logit": -3.1354942159291497,
+      "count": 27,
+      "share": 0.002097902097902098
+     },
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.0625,
+      "logit": -2.70805020110221,
+      "count": 196,
+      "share": 0.01522921522921523
+     },
+     {
+      "oos_rank": 2.5,
+      "rank_fraction": 0.08333333333333333,
+      "logit": -2.3978952727983707,
+      "count": 5,
+      "share": 0.0003885003885003885
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.10416666666666667,
+      "logit": -2.151762203259462,
+      "count": 112,
+      "share": 0.008702408702408702
+     },
+     {
+      "oos_rank": 3.5,
+      "rank_fraction": 0.125,
+      "logit": -1.9459101490553135,
+      "count": 6,
+      "share": 0.0004662004662004662
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.14583333333333334,
+      "logit": -1.7676619176489945,
+      "count": 167,
+      "share": 0.012975912975912976
+     },
+     {
+      "oos_rank": 4.5,
+      "rank_fraction": 0.16666666666666666,
+      "logit": -1.6094379124341005,
+      "count": 4,
+      "share": 0.0003108003108003108
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.1875,
+      "logit": -1.466337068793427,
+      "count": 123,
+      "share": 0.009557109557109558
+     },
+     {
+      "oos_rank": 5.5,
+      "rank_fraction": 0.20833333333333334,
+      "logit": -1.33500106673234,
+      "count": 5,
+      "share": 0.0003885003885003885
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.22916666666666666,
+      "logit": -1.2130226398458541,
+      "count": 134,
+      "share": 0.010411810411810413
+     },
+     {
+      "oos_rank": 6.5,
+      "rank_fraction": 0.25,
+      "logit": -1.0986122886681098,
+      "count": 3,
+      "share": 0.0002331002331002331
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.2708333333333333,
+      "logit": -0.9903987040278771,
+      "count": 162,
+      "share": 0.012587412587412588
+     },
+     {
+      "oos_rank": 7.5,
+      "rank_fraction": 0.2916666666666667,
+      "logit": -0.8873031950009026,
+      "count": 8,
+      "share": 0.0006216006216006216
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.3125,
+      "logit": -0.7884573603642702,
+      "count": 149,
+      "share": 0.011577311577311577
+     },
+     {
+      "oos_rank": 8.5,
+      "rank_fraction": 0.3333333333333333,
+      "logit": -0.6931471805599454,
+      "count": 3,
+      "share": 0.0002331002331002331
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.3541666666666667,
+      "logit": -0.60077386042893,
+      "count": 171,
+      "share": 0.013286713286713287
+     },
+     {
+      "oos_rank": 10.0,
+      "rank_fraction": 0.3958333333333333,
+      "logit": -0.42285685082003377,
+      "count": 200,
+      "share": 0.01554001554001554
+     },
+     {
+      "oos_rank": 10.5,
+      "rank_fraction": 0.4166666666666667,
+      "logit": -0.33647223662121273,
+      "count": 2,
+      "share": 0.0001554001554001554
+     },
+     {
+      "oos_rank": 11.0,
+      "rank_fraction": 0.4375,
+      "logit": -0.25131442828090605,
+      "count": 431,
+      "share": 0.03348873348873349
+     },
+     {
+      "oos_rank": 12.0,
+      "rank_fraction": 0.4791666666666667,
+      "logit": -0.08338160893905089,
+      "count": 333,
+      "share": 0.025874125874125874
+     },
+     {
+      "oos_rank": 13.0,
+      "rank_fraction": 0.5208333333333334,
+      "logit": 0.08338160893905121,
+      "count": 382,
+      "share": 0.029681429681429682
+     },
+     {
+      "oos_rank": 14.0,
+      "rank_fraction": 0.5625,
+      "logit": 0.25131442828090617,
+      "count": 361,
+      "share": 0.02804972804972805
+     },
+     {
+      "oos_rank": 15.0,
+      "rank_fraction": 0.6041666666666666,
+      "logit": 0.4228568508200335,
+      "count": 562,
+      "share": 0.04366744366744367
+     },
+     {
+      "oos_rank": 16.0,
+      "rank_fraction": 0.6458333333333334,
+      "logit": 0.6007738604289304,
+      "count": 623,
+      "share": 0.04840714840714841
+     },
+     {
+      "oos_rank": 17.0,
+      "rank_fraction": 0.6875,
+      "logit": 0.7884573603642703,
+      "count": 605,
+      "share": 0.04700854700854701
+     },
+     {
+      "oos_rank": 18.0,
+      "rank_fraction": 0.7291666666666666,
+      "logit": 0.9903987040278767,
+      "count": 642,
+      "share": 0.049883449883449886
+     },
+     {
+      "oos_rank": 19.0,
+      "rank_fraction": 0.7708333333333334,
+      "logit": 1.2130226398458541,
+      "count": 624,
+      "share": 0.048484848484848485
+     },
+     {
+      "oos_rank": 20.0,
+      "rank_fraction": 0.8125,
+      "logit": 1.466337068793427,
+      "count": 662,
+      "share": 0.05143745143745144
+     },
+     {
+      "oos_rank": 21.0,
+      "rank_fraction": 0.8541666666666666,
+      "logit": 1.767661917648994,
+      "count": 797,
+      "share": 0.061926961926961926
+     },
+     {
+      "oos_rank": 22.0,
+      "rank_fraction": 0.8958333333333334,
+      "logit": 2.1517622032594623,
+      "count": 1239,
+      "share": 0.09627039627039627
+     },
+     {
+      "oos_rank": 23.0,
+      "rank_fraction": 0.9375,
+      "logit": 2.70805020110221,
+      "count": 1365,
+      "share": 0.10606060606060606
+     },
+     {
+      "oos_rank": 24.0,
+      "rank_fraction": 0.9791666666666666,
+      "logit": 3.8501476017100567,
+      "count": 2638,
+      "share": 0.20497280497280498
+     }
+    ],
+    "degradation": {
+     "slope": -0.33496515301416435,
+     "intercept": 0.33437916766388515,
+     "corr": -0.25573259512826163,
+     "r2": 0.06539916021103538,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.5315489097383003,
+      "sd": 0.22469806585711827,
+      "min": 0.030865687857750727,
+      "q01": 0.1429316616371916,
+      "q05": 0.21922881966577817,
+      "q25": 0.3692982177208677,
+      "median": 0.5010107541194633,
+      "q75": 0.662681908229695,
+      "q95": 0.9427217116611094,
+      "q99": 1.189192961612936,
+      "max": 1.8024887843315558
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.15632880577888325,
+      "sd": 0.2943153256395297,
+      "min": -0.9666053231516607,
+      "q01": -0.61957271478808,
+      "q05": -0.3396487262729141,
+      "q25": -0.03693538406485124,
+      "median": 0.17431593532854756,
+      "q75": 0.3589002453625373,
+      "q95": 0.6074739013397928,
+      "q99": 0.8244128480372341,
+      "max": 1.1887543548261592
+     },
+     "share_oos_below_is": 0.8223776223776224,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.29176379176379175,
+     "zero_skill_level": 0.0,
+     "below_oos_median_of_trials": 0.18414918414918416,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 0.0006960631960631902,
+     "x_at_max_violation": 1.1121510226555875,
+     "F_all_at_max_violation": 0.9990708365708366,
+     "max_F_all_minus_F_best": 0.28554778554778554,
+     "share_grid_F_best_le_F_all": 0.997658459909651,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": -0.3396487262729141,
+      "q25": -0.03693538406485124,
+      "q50": 0.17431593532854756,
+      "q75": 0.3589002453625373,
+      "q95": 0.6074739013397928
+     },
+     "quantiles_oos_all_trials": {
+      "q05": -0.5130752629897234,
+      "q25": -0.25093765586442357,
+      "q50": -0.05666389332637508,
+      "q75": 0.15770079008416432,
+      "q95": 0.48498719090458137
+     },
+     "mean_oos_is_best": 0.15632880577888325,
+     "mean_oos_all_trials": -0.0390622646305701,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "nested_lgbm|top_decile",
+      "stat_on_used_periods": -0.10353733450703011,
+      "rank_on_used_periods": 13.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lgbm|ls_decile",
+      "stat_on_used_periods": 0.2358724736429484,
+      "rank_on_used_periods": 22.0,
+      "share_combinations_selected_is_best": 0.06060606060606061,
+      "mean_oos_rank_fraction_when_selected": 0.6670405982905983,
+      "share_lambda_le0_when_selected": 0.0858974358974359
+     },
+     {
+      "trial": "nested_lgbm|liq_top_decile",
+      "stat_on_used_periods": -0.1370064787384742,
+      "rank_on_used_periods": 10.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|top_decile",
+      "stat_on_used_periods": -0.16135015565722816,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|ls_decile",
+      "stat_on_used_periods": 0.14830499966587515,
+      "rank_on_used_periods": 19.0,
+      "share_combinations_selected_is_best": 0.002797202797202797,
+      "mean_oos_rank_fraction_when_selected": 0.4050925925925926,
+      "share_lambda_le0_when_selected": 0.8055555555555556
+     },
+     {
+      "trial": "all51|liq_top_decile",
+      "stat_on_used_periods": -0.14606703579466493,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank|top_decile",
+      "stat_on_used_periods": 0.32970379795902666,
+      "rank_on_used_periods": 23.0,
+      "share_combinations_selected_is_best": 0.05415695415695416,
+      "mean_oos_rank_fraction_when_selected": 0.7650944524151123,
+      "share_lambda_le0_when_selected": 0.0746054519368723
+     },
+     {
+      "trial": "nested_ensemble_rank|ls_decile",
+      "stat_on_used_periods": 0.44331537180945435,
+      "rank_on_used_periods": 24.0,
+      "share_combinations_selected_is_best": 0.5437451437451437,
+      "mean_oos_rank_fraction_when_selected": 0.9051752881775745,
+      "share_lambda_le0_when_selected": 0.002000571591883395
+     },
+     {
+      "trial": "nested_ensemble_rank|liq_top_decile",
+      "stat_on_used_periods": 0.2120148780001824,
+      "rank_on_used_periods": 21.0,
+      "share_combinations_selected_is_best": 0.09875679875679876,
+      "mean_oos_rank_fraction_when_selected": 0.43369722003671646,
+      "share_lambda_le0_when_selected": 0.5900865460267506
+     },
+     {
+      "trial": "champion10|top_decile",
+      "stat_on_used_periods": -0.3261094781246877,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "champion10|ls_decile",
+      "stat_on_used_periods": -0.053929407165690765,
+      "rank_on_used_periods": 15.0,
+      "share_combinations_selected_is_best": 0.0031857031857031857,
+      "mean_oos_rank_fraction_when_selected": 0.14176829268292684,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "champion10|liq_top_decile",
+      "stat_on_used_periods": -0.3171762280018274,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|top_decile",
+      "stat_on_used_periods": -0.1919539528124587,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|ls_decile",
+      "stat_on_used_periods": 0.13576481488169873,
+      "rank_on_used_periods": 18.0,
+      "share_combinations_selected_is_best": 0.06705516705516705,
+      "mean_oos_rank_fraction_when_selected": 0.47501448435689453,
+      "share_lambda_le0_when_selected": 0.5492468134414832
+     },
+     {
+      "trial": "lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.4175381237814754,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|top_decile",
+      "stat_on_used_periods": -0.08376158506185935,
+      "rank_on_used_periods": 14.0,
+      "share_combinations_selected_is_best": 7.77000777000777e-05,
+      "mean_oos_rank_fraction_when_selected": 0.0625,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_lr_l2|ls_decile",
+      "stat_on_used_periods": 0.19374843022007118,
+      "rank_on_used_periods": 20.0,
+      "share_combinations_selected_is_best": 0.11406371406371406,
+      "mean_oos_rank_fraction_when_selected": 0.6200613079019074,
+      "share_lambda_le0_when_selected": 0.15463215258855587
+     },
+     {
+      "trial": "nested_lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.2613138984018678,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|top_decile",
+      "stat_on_used_periods": -0.16637674396137808,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.00473970473970474,
+      "mean_oos_rank_fraction_when_selected": 0.04747267759562841,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "baseline_mom|ls_decile",
+      "stat_on_used_periods": -0.10731167062180265,
+      "rank_on_used_periods": 12.0,
+      "share_combinations_selected_is_best": 0.009945609945609946,
+      "mean_oos_rank_fraction_when_selected": 0.10904947916666666,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "baseline_mom|liq_top_decile",
+      "stat_on_used_periods": 0.01415041472775111,
+      "rank_on_used_periods": 16.0,
+      "share_combinations_selected_is_best": 0.006682206682206682,
+      "mean_oos_rank_fraction_when_selected": 0.19234496124031006,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|top_decile",
+      "stat_on_used_periods": -0.16652937109728191,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.0003885003885003885,
+      "mean_oos_rank_fraction_when_selected": 0.037500000000000006,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|ls_decile",
+      "stat_on_used_periods": -0.1075149737975372,
+      "rank_on_used_periods": 11.0,
+      "share_combinations_selected_is_best": 0.0014763014763014763,
+      "mean_oos_rank_fraction_when_selected": 0.03399122807017544,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|liq_top_decile",
+      "stat_on_used_periods": 0.014272926164011662,
+      "rank_on_used_periods": 17.0,
+      "share_combinations_selected_is_best": 0.03232323232323232,
+      "mean_oos_rank_fraction_when_selected": 0.18785056089743588,
+      "share_lambda_le0_when_selected": 1.0
+     }
+    ]
+   },
+   "sens_S16_drop_start": {
+    "design": {
+     "T_input": 45,
+     "M_trials": 24,
+     "S": 16,
+     "mode": "drop_start",
+     "statistic": "sharpe",
+     "block_lengths": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 32,
+     "periods_dropped": 13,
+     "first_used": "2024-02",
+     "last_used": "2026-09",
+     "dropped_labels": [
+      "2023-01",
+      "2023-02",
+      "2023-03",
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01"
+     ],
+     "blocks": [
+      [
+       "2024-02",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-05"
+      ],
+      [
+       "2024-06",
+       "2024-07"
+      ],
+      [
+       "2024-08",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-11"
+      ],
+      [
+       "2024-12",
+       "2025-01"
+      ],
+      [
+       "2025-02",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-05"
+      ],
+      [
+       "2025-06",
+       "2025-07"
+      ],
+      [
+       "2025-08",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-11"
+      ],
+      [
+       "2025-12",
+       "2026-01"
+      ],
+      [
+       "2026-02",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-05"
+      ],
+      [
+       "2026-06",
+       "2026-07"
+      ],
+      [
+       "2026-08",
+       "2026-09"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.0,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.06076146076146076,
+    "pbo_strict_lt0": 0.06076146076146076,
+    "pbo_mid_rank": 0.06076146076146076,
+    "share_lambda_eq0": 0.0,
+    "chance_level": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 2.4841697998699206,
+     "sd": 1.5842105927059258,
+     "min": -3.8501476017100584,
+     "q01": -2.70805020110221,
+     "q05": -0.08338160893905089,
+     "q25": 1.2130226398458541,
+     "median": 2.70805020110221,
+     "q75": 3.8501476017100567,
+     "q95": 3.8501476017100567,
+     "q99": 3.8501476017100567,
+     "max": 3.8501476017100567
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.8495014245014244,
+     "sd": 0.19122540783508699,
+     "min": 0.020833333333333332,
+     "q01": 0.0625,
+     "q05": 0.4791666666666667,
+     "q25": 0.7708333333333334,
+     "median": 0.9375,
+     "q75": 0.9791666666666666,
+     "q95": 0.9791666666666666,
+     "q99": 0.9791666666666666,
+     "max": 0.9791666666666666
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 1.0,
+      "rank_fraction": 0.020833333333333332,
+      "logit": -3.8501476017100584,
+      "count": 24,
+      "share": 0.0018648018648018648
+     },
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.0625,
+      "logit": -2.70805020110221,
+      "count": 117,
+      "share": 0.00909090909090909
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.10416666666666667,
+      "logit": -2.151762203259462,
+      "count": 40,
+      "share": 0.003108003108003108
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.14583333333333334,
+      "logit": -1.7676619176489945,
+      "count": 38,
+      "share": 0.0029526029526029526
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.1875,
+      "logit": -1.466337068793427,
+      "count": 7,
+      "share": 0.0005439005439005439
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.22916666666666666,
+      "logit": -1.2130226398458541,
+      "count": 9,
+      "share": 0.0006993006993006993
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.2708333333333333,
+      "logit": -0.9903987040278771,
+      "count": 12,
+      "share": 0.0009324009324009324
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.3125,
+      "logit": -0.7884573603642702,
+      "count": 13,
+      "share": 0.00101010101010101
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.3541666666666667,
+      "logit": -0.60077386042893,
+      "count": 31,
+      "share": 0.0024087024087024087
+     },
+     {
+      "oos_rank": 10.0,
+      "rank_fraction": 0.3958333333333333,
+      "logit": -0.42285685082003377,
+      "count": 40,
+      "share": 0.003108003108003108
+     },
+     {
+      "oos_rank": 11.0,
+      "rank_fraction": 0.4375,
+      "logit": -0.25131442828090605,
+      "count": 224,
+      "share": 0.017404817404817405
+     },
+     {
+      "oos_rank": 12.0,
+      "rank_fraction": 0.4791666666666667,
+      "logit": -0.08338160893905089,
+      "count": 227,
+      "share": 0.01763791763791764
+     },
+     {
+      "oos_rank": 13.0,
+      "rank_fraction": 0.5208333333333334,
+      "logit": 0.08338160893905121,
+      "count": 377,
+      "share": 0.029292929292929294
+     },
+     {
+      "oos_rank": 14.0,
+      "rank_fraction": 0.5625,
+      "logit": 0.25131442828090617,
+      "count": 329,
+      "share": 0.025563325563325565
+     },
+     {
+      "oos_rank": 15.0,
+      "rank_fraction": 0.6041666666666666,
+      "logit": 0.4228568508200335,
+      "count": 345,
+      "share": 0.026806526806526808
+     },
+     {
+      "oos_rank": 16.0,
+      "rank_fraction": 0.6458333333333334,
+      "logit": 0.6007738604289304,
+      "count": 405,
+      "share": 0.03146853146853147
+     },
+     {
+      "oos_rank": 17.0,
+      "rank_fraction": 0.6875,
+      "logit": 0.7884573603642703,
+      "count": 372,
+      "share": 0.028904428904428906
+     },
+     {
+      "oos_rank": 18.0,
+      "rank_fraction": 0.7291666666666666,
+      "logit": 0.9903987040278767,
+      "count": 439,
+      "share": 0.03411033411033411
+     },
+     {
+      "oos_rank": 19.0,
+      "rank_fraction": 0.7708333333333334,
+      "logit": 1.2130226398458541,
+      "count": 362,
+      "share": 0.028127428127428127
+     },
+     {
+      "oos_rank": 20.0,
+      "rank_fraction": 0.8125,
+      "logit": 1.466337068793427,
+      "count": 675,
+      "share": 0.05244755244755245
+     },
+     {
+      "oos_rank": 21.0,
+      "rank_fraction": 0.8541666666666666,
+      "logit": 1.767661917648994,
+      "count": 655,
+      "share": 0.050893550893550896
+     },
+     {
+      "oos_rank": 22.0,
+      "rank_fraction": 0.8958333333333334,
+      "logit": 2.1517622032594623,
+      "count": 655,
+      "share": 0.050893550893550896
+     },
+     {
+      "oos_rank": 23.0,
+      "rank_fraction": 0.9375,
+      "logit": 2.70805020110221,
+      "count": 1152,
+      "share": 0.08951048951048951
+     },
+     {
+      "oos_rank": 24.0,
+      "rank_fraction": 0.9791666666666666,
+      "logit": 3.8501476017100567,
+      "count": 6322,
+      "share": 0.49121989121989124
+     }
+    ],
+    "degradation": {
+     "slope": -0.6572534414421122,
+     "intercept": 0.8890931209868781,
+     "corr": -0.5107037104116959,
+     "r2": 0.2608182798282734,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.67572639755523,
+      "sd": 0.2517232613905721,
+      "min": 0.13250662670086874,
+      "q01": 0.2390983385190425,
+      "q05": 0.32101870365116086,
+      "q25": 0.48297989852098255,
+      "median": 0.6477425092632495,
+      "q75": 0.8375263227545968,
+      "q95": 1.1246535598530694,
+      "q99": 1.3543339507353356,
+      "max": 2.0498978816510744
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.44496962072042234,
+      "sd": 0.3239568784542686,
+      "min": -0.8666222831265824,
+      "q01": -0.2782394686173321,
+      "q05": -0.10513569850225932,
+      "q25": 0.259252482699444,
+      "median": 0.44888687663290805,
+      "q75": 0.6337407304659483,
+      "q95": 0.9867925304096035,
+      "q99": 1.2232953125728736,
+      "max": 1.7664798793087086
+     },
+     "share_oos_below_is": 0.6958041958041958,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.1006993006993007,
+     "zero_skill_level": 0.0,
+     "below_oos_median_of_trials": 0.06076146076146076,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 1.9425019424978984e-05,
+     "x_at_max_violation": 1.7664798793087086,
+     "F_all_at_max_violation": 0.999980574980575,
+     "max_F_all_minus_F_best": 0.5008352758352759,
+     "share_grid_F_best_le_F_all": 0.9999805708290427,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": -0.10513569850225932,
+      "q25": 0.259252482699444,
+      "q50": 0.44888687663290805,
+      "q75": 0.6337407304659483,
+      "q95": 0.9867925304096035
+     },
+     "quantiles_oos_all_trials": {
+      "q05": -0.3969665727475087,
+      "q25": -0.14526712026097366,
+      "q50": 0.03910429080370732,
+      "q75": 0.2614888678054183,
+      "q95": 0.6133903509018943
+     },
+     "mean_oos_is_best": 0.44496962072042234,
+     "mean_oos_all_trials": 0.06770628155526498,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "nested_lgbm|top_decile",
+      "stat_on_used_periods": -0.05908883329755789,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lgbm|ls_decile",
+      "stat_on_used_periods": 0.3099528574648127,
+      "rank_on_used_periods": 21.0,
+      "share_combinations_selected_is_best": 0.017016317016317017,
+      "mean_oos_rank_fraction_when_selected": 0.6359398782343988,
+      "share_lambda_le0_when_selected": 0.0867579908675799
+     },
+     {
+      "trial": "nested_lgbm|liq_top_decile",
+      "stat_on_used_periods": -0.34532605037658615,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|top_decile",
+      "stat_on_used_periods": 0.014277892111164326,
+      "rank_on_used_periods": 14.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|ls_decile",
+      "stat_on_used_periods": 0.3974772129948351,
+      "rank_on_used_periods": 22.0,
+      "share_combinations_selected_is_best": 0.047163947163947166,
+      "mean_oos_rank_fraction_when_selected": 0.7244302580999451,
+      "share_lambda_le0_when_selected": 0.04612850082372323
+     },
+     {
+      "trial": "all51|liq_top_decile",
+      "stat_on_used_periods": -0.17598348706204595,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank|top_decile",
+      "stat_on_used_periods": 0.429338509740888,
+      "rank_on_used_periods": 23.0,
+      "share_combinations_selected_is_best": 0.01282051282051282,
+      "mean_oos_rank_fraction_when_selected": 0.8258838383838386,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_ensemble_rank|ls_decile",
+      "stat_on_used_periods": 0.6041378604811973,
+      "rank_on_used_periods": 24.0,
+      "share_combinations_selected_is_best": 0.7355866355866356,
+      "mean_oos_rank_fraction_when_selected": 0.9418132284074505,
+      "share_lambda_le0_when_selected": 0.00031689025034329775
+     },
+     {
+      "trial": "nested_ensemble_rank|liq_top_decile",
+      "stat_on_used_periods": 0.14435804586015824,
+      "rank_on_used_periods": 17.0,
+      "share_combinations_selected_is_best": 0.011965811965811967,
+      "mean_oos_rank_fraction_when_selected": 0.08170995670995672,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "champion10|top_decile",
+      "stat_on_used_periods": -0.0259517270448395,
+      "rank_on_used_periods": 10.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "champion10|ls_decile",
+      "stat_on_used_periods": 0.23894746332676242,
+      "rank_on_used_periods": 18.0,
+      "share_combinations_selected_is_best": 0.01250971250971251,
+      "mean_oos_rank_fraction_when_selected": 0.43517080745341613,
+      "share_lambda_le0_when_selected": 0.7453416149068323
+     },
+     {
+      "trial": "champion10|liq_top_decile",
+      "stat_on_used_periods": -0.08466868974184358,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 7.77000777000777e-05,
+      "mean_oos_rank_fraction_when_selected": 0.020833333333333332,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "lr_l2|top_decile",
+      "stat_on_used_periods": -0.0146388738813377,
+      "rank_on_used_periods": 11.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|ls_decile",
+      "stat_on_used_periods": 0.24610228948791,
+      "rank_on_used_periods": 19.0,
+      "share_combinations_selected_is_best": 0.05337995337995338,
+      "mean_oos_rank_fraction_when_selected": 0.5204087821445901,
+      "share_lambda_le0_when_selected": 0.3988355167394469
+     },
+     {
+      "trial": "lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.15808087865103496,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|top_decile",
+      "stat_on_used_periods": -0.009389234168033498,
+      "rank_on_used_periods": 12.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|ls_decile",
+      "stat_on_used_periods": 0.30968310505536367,
+      "rank_on_used_periods": 20.0,
+      "share_combinations_selected_is_best": 0.10326340326340326,
+      "mean_oos_rank_fraction_when_selected": 0.6418202909455731,
+      "share_lambda_le0_when_selected": 0.07750188111361926
+     },
+     {
+      "trial": "nested_lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.15105037240049998,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|top_decile",
+      "stat_on_used_periods": -0.061452261549713796,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 7.77000777000777e-05,
+      "mean_oos_rank_fraction_when_selected": 0.0625,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "baseline_mom|ls_decile",
+      "stat_on_used_periods": -0.15796782912941765,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|liq_top_decile",
+      "stat_on_used_periods": 0.032826513324249185,
+      "rank_on_used_periods": 15.0,
+      "share_combinations_selected_is_best": 0.003574203574203574,
+      "mean_oos_rank_fraction_when_selected": 0.07789855072463768,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|top_decile",
+      "stat_on_used_periods": 0.008548442134913433,
+      "rank_on_used_periods": 13.0,
+      "share_combinations_selected_is_best": 0.0001554001554001554,
+      "mean_oos_rank_fraction_when_selected": 0.14583333333333334,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|ls_decile",
+      "stat_on_used_periods": -0.06858913481100569,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 7.77000777000777e-05,
+      "mean_oos_rank_fraction_when_selected": 0.0625,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|liq_top_decile",
+      "stat_on_used_periods": 0.05691782983646805,
+      "rank_on_used_periods": 16.0,
+      "share_combinations_selected_is_best": 0.002331002331002331,
+      "mean_oos_rank_fraction_when_selected": 0.14999999999999997,
+      "share_lambda_le0_when_selected": 1.0
+     }
+    ]
+   },
+   "sens_S16_near_equal_all_periods": {
+    "design": {
+     "T_input": 45,
+     "M_trials": 24,
+     "S": 16,
+     "mode": "near_equal",
+     "statistic": "sharpe",
+     "block_lengths": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 45,
+     "periods_dropped": 0,
+     "first_used": "2023-01",
+     "last_used": "2026-09",
+     "dropped_labels": [],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-03"
+      ],
+      [
+       "2023-04",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-09"
+      ],
+      [
+       "2023-10",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-12"
+      ],
+      [
+       "2026-01",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-05"
+      ],
+      [
+       "2026-06",
+       "2026-07"
+      ],
+      [
+       "2026-08",
+       "2026-09"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.0,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.035742035742035744,
+    "pbo_strict_lt0": 0.035742035742035744,
+    "pbo_mid_rank": 0.035742035742035744,
+    "share_lambda_eq0": 0.0,
+    "chance_level": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 3.477012456069643,
+     "sd": 1.0533391622472728,
+     "min": -3.8501476017100584,
+     "q01": -0.7884573603642702,
+     "q05": 0.4228568508200335,
+     "q25": 3.8501476017100567,
+     "median": 3.8501476017100567,
+     "q75": 3.8501476017100567,
+     "q95": 3.8501476017100567,
+     "q99": 3.8501476017100567,
+     "max": 3.8501476017100567
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.9408605283605284,
+     "sd": 0.131796520679318,
+     "min": 0.020833333333333332,
+     "q01": 0.3125,
+     "q05": 0.6041666666666666,
+     "q25": 0.9791666666666666,
+     "median": 0.9791666666666666,
+     "q75": 0.9791666666666666,
+     "q95": 0.9791666666666666,
+     "q99": 0.9791666666666666,
+     "max": 0.9791666666666666
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 1.0,
+      "rank_fraction": 0.020833333333333332,
+      "logit": -3.8501476017100584,
+      "count": 3,
+      "share": 0.0002331002331002331
+     },
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.0625,
+      "logit": -2.70805020110221,
+      "count": 9,
+      "share": 0.0006993006993006993
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.10416666666666667,
+      "logit": -2.151762203259462,
+      "count": 10,
+      "share": 0.000777000777000777
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.14583333333333334,
+      "logit": -1.7676619176489945,
+      "count": 15,
+      "share": 0.0011655011655011655
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.1875,
+      "logit": -1.466337068793427,
+      "count": 20,
+      "share": 0.001554001554001554
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.22916666666666666,
+      "logit": -1.2130226398458541,
+      "count": 17,
+      "share": 0.001320901320901321
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.2708333333333333,
+      "logit": -0.9903987040278771,
+      "count": 25,
+      "share": 0.0019425019425019425
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.3125,
+      "logit": -0.7884573603642702,
+      "count": 52,
+      "share": 0.00404040404040404
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.3541666666666667,
+      "logit": -0.60077386042893,
+      "count": 52,
+      "share": 0.00404040404040404
+     },
+     {
+      "oos_rank": 10.0,
+      "rank_fraction": 0.3958333333333333,
+      "logit": -0.42285685082003377,
+      "count": 69,
+      "share": 0.005361305361305362
+     },
+     {
+      "oos_rank": 11.0,
+      "rank_fraction": 0.4375,
+      "logit": -0.25131442828090605,
+      "count": 92,
+      "share": 0.007148407148407148
+     },
+     {
+      "oos_rank": 12.0,
+      "rank_fraction": 0.4791666666666667,
+      "logit": -0.08338160893905089,
+      "count": 96,
+      "share": 0.007459207459207459
+     },
+     {
+      "oos_rank": 13.0,
+      "rank_fraction": 0.5208333333333334,
+      "logit": 0.08338160893905121,
+      "count": 79,
+      "share": 0.006138306138306139
+     },
+     {
+      "oos_rank": 14.0,
+      "rank_fraction": 0.5625,
+      "logit": 0.25131442828090617,
+      "count": 84,
+      "share": 0.006526806526806527
+     },
+     {
+      "oos_rank": 15.0,
+      "rank_fraction": 0.6041666666666666,
+      "logit": 0.4228568508200335,
+      "count": 65,
+      "share": 0.005050505050505051
+     },
+     {
+      "oos_rank": 16.0,
+      "rank_fraction": 0.6458333333333334,
+      "logit": 0.6007738604289304,
+      "count": 61,
+      "share": 0.00473970473970474
+     },
+     {
+      "oos_rank": 17.0,
+      "rank_fraction": 0.6875,
+      "logit": 0.7884573603642703,
+      "count": 96,
+      "share": 0.007459207459207459
+     },
+     {
+      "oos_rank": 18.0,
+      "rank_fraction": 0.7291666666666666,
+      "logit": 0.9903987040278767,
+      "count": 28,
+      "share": 0.0021756021756021756
+     },
+     {
+      "oos_rank": 19.0,
+      "rank_fraction": 0.7708333333333334,
+      "logit": 1.2130226398458541,
+      "count": 15,
+      "share": 0.0011655011655011655
+     },
+     {
+      "oos_rank": 20.0,
+      "rank_fraction": 0.8125,
+      "logit": 1.466337068793427,
+      "count": 29,
+      "share": 0.0022533022533022533
+     },
+     {
+      "oos_rank": 21.0,
+      "rank_fraction": 0.8541666666666666,
+      "logit": 1.767661917648994,
+      "count": 43,
+      "share": 0.003341103341103341
+     },
+     {
+      "oos_rank": 22.0,
+      "rank_fraction": 0.8958333333333334,
+      "logit": 2.1517622032594623,
+      "count": 140,
+      "share": 0.010878010878010878
+     },
+     {
+      "oos_rank": 23.0,
+      "rank_fraction": 0.9375,
+      "logit": 2.70805020110221,
+      "count": 796,
+      "share": 0.06184926184926185
+     },
+     {
+      "oos_rank": 24.0,
+      "rank_fraction": 0.9791666666666666,
+      "logit": 3.8501476017100567,
+      "count": 10974,
+      "share": 0.8526806526806526
+     }
+    ],
+    "degradation": {
+     "slope": -0.7381611365374534,
+     "intercept": 1.1191274335932018,
+     "corr": -0.5845510883569786,
+     "r2": 0.34169997489932813,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.6833021352256389,
+      "sd": 0.20642990416481113,
+      "min": 0.1831788647526496,
+      "q01": 0.30129500862118813,
+      "q05": 0.3893310784708033,
+      "q25": 0.5354905020352759,
+      "median": 0.6583394282797401,
+      "q75": 0.805321674575498,
+      "q95": 1.0602542141639226,
+      "q99": 1.2596943888614864,
+      "max": 1.8468486822696533
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.6147403528565757,
+      "sd": 0.26067615937883387,
+      "min": -0.7922177908067062,
+      "q01": -0.21187980821918243,
+      "q05": 0.12743164510806917,
+      "q25": 0.48465309902320436,
+      "median": 0.6187220328583907,
+      "q75": 0.767960142852091,
+      "q95": 1.0181941944845248,
+      "q99": 1.2276826534923986,
+      "max": 1.846848682269654
+     },
+     "share_oos_below_is": 0.5646464646464646,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.02665112665112665,
+     "zero_skill_level": 0.0,
+     "below_oos_median_of_trials": 0.035742035742035744,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": true,
+     "max_F_best_minus_F_all": 0.0,
+     "x_at_max_violation": 1.846848682269654,
+     "F_all_at_max_violation": 1.0,
+     "max_F_all_minus_F_best": 0.756510619010619,
+     "share_grid_F_best_le_F_all": 1.0,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": 0.12743164510806917,
+      "q25": 0.48465309902320436,
+      "q50": 0.6187220328583907,
+      "q75": 0.767960142852091,
+      "q95": 1.0181941944845248
+     },
+     "quantiles_oos_all_trials": {
+      "q05": -0.4298453159567862,
+      "q25": -0.18409141983232577,
+      "q50": -0.01105372232260057,
+      "q75": 0.20077825356881074,
+      "q95": 0.560449590547558
+     },
+     "mean_oos_is_best": 0.6147403528565757,
+     "mean_oos_all_trials": 0.01931787662679671,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "nested_lgbm|top_decile",
+      "stat_on_used_periods": -0.057588627234920586,
+      "rank_on_used_periods": 13.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lgbm|ls_decile",
+      "stat_on_used_periods": 0.3038259289907233,
+      "rank_on_used_periods": 21.0,
+      "share_combinations_selected_is_best": 0.001554001554001554,
+      "mean_oos_rank_fraction_when_selected": 0.6416666666666667,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_lgbm|liq_top_decile",
+      "stat_on_used_periods": -0.19077305349130552,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|top_decile",
+      "stat_on_used_periods": -0.08643657932850216,
+      "rank_on_used_periods": 10.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|ls_decile",
+      "stat_on_used_periods": 0.2521112600676527,
+      "rank_on_used_periods": 20.0,
+      "share_combinations_selected_is_best": 0.0030303030303030303,
+      "mean_oos_rank_fraction_when_selected": 0.5710470085470085,
+      "share_lambda_le0_when_selected": 0.02564102564102564
+     },
+     {
+      "trial": "all51|liq_top_decile",
+      "stat_on_used_periods": -0.16752477752219613,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank|top_decile",
+      "stat_on_used_periods": 0.4726775849252879,
+      "rank_on_used_periods": 23.0,
+      "share_combinations_selected_is_best": 0.00473970473970474,
+      "mean_oos_rank_fraction_when_selected": 0.9190573770491803,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_ensemble_rank|ls_decile",
+      "stat_on_used_periods": 0.6568389304205816,
+      "rank_on_used_periods": 24.0,
+      "share_combinations_selected_is_best": 0.9252525252525252,
+      "mean_oos_rank_fraction_when_selected": 0.9750272925764191,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_ensemble_rank|liq_top_decile",
+      "stat_on_used_periods": 0.3196278577213426,
+      "rank_on_used_periods": 22.0,
+      "share_combinations_selected_is_best": 0.04840714840714841,
+      "mean_oos_rank_fraction_when_selected": 0.4983614232209737,
+      "share_lambda_le0_when_selected": 0.47191011235955055
+     },
+     {
+      "trial": "champion10|top_decile",
+      "stat_on_used_periods": -0.21012317362159,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "champion10|ls_decile",
+      "stat_on_used_periods": 0.06234671771595677,
+      "rank_on_used_periods": 16.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "champion10|liq_top_decile",
+      "stat_on_used_periods": -0.26624625725817525,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|top_decile",
+      "stat_on_used_periods": -0.13053705184853182,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|ls_decile",
+      "stat_on_used_periods": 0.1406499589427538,
+      "rank_on_used_periods": 18.0,
+      "share_combinations_selected_is_best": 0.011577311577311577,
+      "mean_oos_rank_fraction_when_selected": 0.40729865771812085,
+      "share_lambda_le0_when_selected": 0.9328859060402684
+     },
+     {
+      "trial": "lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.31294829704940674,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|top_decile",
+      "stat_on_used_periods": -0.08761757168405895,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|ls_decile",
+      "stat_on_used_periods": 0.207117081010427,
+      "rank_on_used_periods": 19.0,
+      "share_combinations_selected_is_best": 0.004817404817404817,
+      "mean_oos_rank_fraction_when_selected": 0.5658602150537634,
+      "share_lambda_le0_when_selected": 0.2903225806451613
+     },
+     {
+      "trial": "nested_lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.2600481128846471,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|top_decile",
+      "stat_on_used_periods": -0.06462792760829128,
+      "rank_on_used_periods": 11.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|ls_decile",
+      "stat_on_used_periods": -0.1299986428073959,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|liq_top_decile",
+      "stat_on_used_periods": 0.0581455429360363,
+      "rank_on_used_periods": 15.0,
+      "share_combinations_selected_is_best": 0.0005439005439005439,
+      "mean_oos_rank_fraction_when_selected": 0.08035714285714286,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|top_decile",
+      "stat_on_used_periods": -0.011607470538927824,
+      "rank_on_used_periods": 14.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "heuristic_mom20|ls_decile",
+      "stat_on_used_periods": -0.06005823530689981,
+      "rank_on_used_periods": 12.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "heuristic_mom20|liq_top_decile",
+      "stat_on_used_periods": 0.07745173561575845,
+      "rank_on_used_periods": 17.0,
+      "share_combinations_selected_is_best": 7.77000777000777e-05,
+      "mean_oos_rank_fraction_when_selected": 0.2708333333333333,
+      "share_lambda_le0_when_selected": 1.0
+     }
+    ]
+   },
+   "sens_S14_drop_end": {
+    "design": {
+     "T_input": 45,
+     "M_trials": 24,
+     "S": 14,
+     "mode": "drop_end",
+     "statistic": "sharpe",
+     "block_lengths": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+     ],
+     "periods_used": 42,
+     "periods_dropped": 3,
+     "first_used": "2023-01",
+     "last_used": "2026-06",
+     "dropped_labels": [
+      "2026-07",
+      "2026-08",
+      "2026-09"
+     ],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-03"
+      ],
+      [
+       "2023-04",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-09"
+      ],
+      [
+       "2023-10",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-12"
+      ],
+      [
+       "2026-01",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-06"
+      ]
+     ],
+     "n_combinations": 3432,
+     "zero_skill_level": 0.0,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.06264568764568765,
+    "pbo_strict_lt0": 0.06264568764568765,
+    "pbo_mid_rank": 0.06264568764568765,
+    "share_lambda_eq0": 0.0,
+    "chance_level": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 3432,
+     "mean": 3.052568299999063,
+     "sd": 1.4298702007351185,
+     "min": -3.8501476017100584,
+     "q01": -1.466337068793427,
+     "q05": -0.25131442828090605,
+     "q25": 2.70805020110221,
+     "median": 3.8501476017100567,
+     "q75": 3.8501476017100567,
+     "q95": 3.8501476017100567,
+     "q99": 3.8501476017100567,
+     "max": 3.8501476017100567
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 3432,
+     "mean": 0.8980186480186481,
+     "sd": 0.18053874520442703,
+     "min": 0.020833333333333332,
+     "q01": 0.1875,
+     "q05": 0.4375,
+     "q25": 0.9375,
+     "median": 0.9791666666666666,
+     "q75": 0.9791666666666666,
+     "q95": 0.9791666666666666,
+     "q99": 0.9791666666666666,
+     "max": 0.9791666666666666
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 1.0,
+      "rank_fraction": 0.020833333333333332,
+      "logit": -3.8501476017100584,
+      "count": 1,
+      "share": 0.0002913752913752914
+     },
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.0625,
+      "logit": -2.70805020110221,
+      "count": 10,
+      "share": 0.002913752913752914
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.10416666666666667,
+      "logit": -2.151762203259462,
+      "count": 9,
+      "share": 0.0026223776223776225
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.14583333333333334,
+      "logit": -1.7676619176489945,
+      "count": 8,
+      "share": 0.002331002331002331
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.1875,
+      "logit": -1.466337068793427,
+      "count": 15,
+      "share": 0.004370629370629371
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.22916666666666666,
+      "logit": -1.2130226398458541,
+      "count": 14,
+      "share": 0.004079254079254079
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.2708333333333333,
+      "logit": -0.9903987040278771,
+      "count": 9,
+      "share": 0.0026223776223776225
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.3125,
+      "logit": -0.7884573603642702,
+      "count": 19,
+      "share": 0.005536130536130536
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.3541666666666667,
+      "logit": -0.60077386042893,
+      "count": 22,
+      "share": 0.00641025641025641
+     },
+     {
+      "oos_rank": 10.0,
+      "rank_fraction": 0.3958333333333333,
+      "logit": -0.42285685082003377,
+      "count": 26,
+      "share": 0.007575757575757576
+     },
+     {
+      "oos_rank": 11.0,
+      "rank_fraction": 0.4375,
+      "logit": -0.25131442828090605,
+      "count": 48,
+      "share": 0.013986013986013986
+     },
+     {
+      "oos_rank": 12.0,
+      "rank_fraction": 0.4791666666666667,
+      "logit": -0.08338160893905089,
+      "count": 34,
+      "share": 0.009906759906759906
+     },
+     {
+      "oos_rank": 13.0,
+      "rank_fraction": 0.5208333333333334,
+      "logit": 0.08338160893905121,
+      "count": 50,
+      "share": 0.014568764568764568
+     },
+     {
+      "oos_rank": 14.0,
+      "rank_fraction": 0.5625,
+      "logit": 0.25131442828090617,
+      "count": 59,
+      "share": 0.017191142191142192
+     },
+     {
+      "oos_rank": 15.0,
+      "rank_fraction": 0.6041666666666666,
+      "logit": 0.4228568508200335,
+      "count": 56,
+      "share": 0.016317016317016316
+     },
+     {
+      "oos_rank": 16.0,
+      "rank_fraction": 0.6458333333333334,
+      "logit": 0.6007738604289304,
+      "count": 44,
+      "share": 0.01282051282051282
+     },
+     {
+      "oos_rank": 17.0,
+      "rank_fraction": 0.6875,
+      "logit": 0.7884573603642703,
+      "count": 42,
+      "share": 0.012237762237762238
+     },
+     {
+      "oos_rank": 18.0,
+      "rank_fraction": 0.7291666666666666,
+      "logit": 0.9903987040278767,
+      "count": 17,
+      "share": 0.004953379953379953
+     },
+     {
+      "oos_rank": 19.0,
+      "rank_fraction": 0.7708333333333334,
+      "logit": 1.2130226398458541,
+      "count": 26,
+      "share": 0.007575757575757576
+     },
+     {
+      "oos_rank": 20.0,
+      "rank_fraction": 0.8125,
+      "logit": 1.466337068793427,
+      "count": 36,
+      "share": 0.01048951048951049
+     },
+     {
+      "oos_rank": 21.0,
+      "rank_fraction": 0.8541666666666666,
+      "logit": 1.767661917648994,
+      "count": 53,
+      "share": 0.015442890442890442
+     },
+     {
+      "oos_rank": 22.0,
+      "rank_fraction": 0.8958333333333334,
+      "logit": 2.1517622032594623,
+      "count": 101,
+      "share": 0.029428904428904428
+     },
+     {
+      "oos_rank": 23.0,
+      "rank_fraction": 0.9375,
+      "logit": 2.70805020110221,
+      "count": 345,
+      "share": 0.10052447552447552
+     },
+     {
+      "oos_rank": 24.0,
+      "rank_fraction": 0.9791666666666666,
+      "logit": 3.8501476017100567,
+      "count": 2388,
+      "share": 0.6958041958041958
+     }
+    ],
+    "degradation": {
+     "slope": -0.6476800377318386,
+     "intercept": 0.9051972433842694,
+     "corr": -0.46030073668976124,
+     "r2": 0.2118767681971369,
+     "is_best_stat": {
+      "n": 3432,
+      "mean": 0.6308543694271385,
+      "sd": 0.19582407048628542,
+      "min": 0.12324273404442992,
+      "q01": 0.24755585977121497,
+      "q05": 0.34501337038519136,
+      "q25": 0.48978517885085937,
+      "median": 0.6124046541546528,
+      "q75": 0.7514310204606891,
+      "q95": 0.9822597397247492,
+      "q99": 1.1641973080192332,
+      "max": 1.4528582154521021
+     },
+     "oos_best_stat": {
+      "n": 3432,
+      "mean": 0.4966054615904053,
+      "sd": 0.27554016592166075,
+      "min": -0.6038616433534069,
+      "q01": -0.2678779410174695,
+      "q05": -0.049220395307646915,
+      "q25": 0.3692058278863359,
+      "median": 0.5263826295930993,
+      "q75": 0.6702825679505182,
+      "q95": 0.8928997897011227,
+      "q99": 1.0644932249512546,
+      "max": 1.452858215452103
+     },
+     "share_oos_below_is": 0.627039627039627,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.06847319347319347,
+     "zero_skill_level": 0.0,
+     "below_oos_median_of_trials": 0.06264568764568765,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": true,
+     "max_F_best_minus_F_all": 0.0,
+     "x_at_max_violation": 1.452858215452103,
+     "F_all_at_max_violation": 1.0,
+     "max_F_all_minus_F_best": 0.6336198523698524,
+     "share_grid_F_best_le_F_all": 1.0,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": -0.049220395307646915,
+      "q25": 0.3692058278863359,
+      "q50": 0.5263826295930993,
+      "q75": 0.6702825679505182,
+      "q95": 0.8928997897011227
+     },
+     "quantiles_oos_all_trials": {
+      "q05": -0.3927537689399494,
+      "q25": -0.1639014705512548,
+      "q50": 0.003804554698800087,
+      "q75": 0.21551312661828295,
+      "q95": 0.547989609357077
+     },
+     "mean_oos_is_best": 0.4966054615904053,
+     "mean_oos_all_trials": 0.03454852710415991,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "nested_lgbm|top_decile",
+      "stat_on_used_periods": -0.00520517805414677,
+      "rank_on_used_periods": 14.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lgbm|ls_decile",
+      "stat_on_used_periods": 0.3349791473422115,
+      "rank_on_used_periods": 22.0,
+      "share_combinations_selected_is_best": 0.007284382284382284,
+      "mean_oos_rank_fraction_when_selected": 0.7374999999999998,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_lgbm|liq_top_decile",
+      "stat_on_used_periods": -0.13341293772498775,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|top_decile",
+      "stat_on_used_periods": -0.037612738669587996,
+      "rank_on_used_periods": 13.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|ls_decile",
+      "stat_on_used_periods": 0.2776517838598518,
+      "rank_on_used_periods": 20.0,
+      "share_combinations_selected_is_best": 0.011946386946386946,
+      "mean_oos_rank_fraction_when_selected": 0.6448170731707318,
+      "share_lambda_le0_when_selected": 0.04878048780487805
+     },
+     {
+      "trial": "all51|liq_top_decile",
+      "stat_on_used_periods": -0.10177906081330633,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank|top_decile",
+      "stat_on_used_periods": 0.4357607977562806,
+      "rank_on_used_periods": 23.0,
+      "share_combinations_selected_is_best": 0.009324009324009324,
+      "mean_oos_rank_fraction_when_selected": 0.8958333333333333,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_ensemble_rank|ls_decile",
+      "stat_on_used_periods": 0.6015624305943561,
+      "rank_on_used_periods": 24.0,
+      "share_combinations_selected_is_best": 0.8403263403263403,
+      "mean_oos_rank_fraction_when_selected": 0.9681576514100786,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_ensemble_rank|liq_top_decile",
+      "stat_on_used_periods": 0.3016723259596385,
+      "rank_on_used_periods": 21.0,
+      "share_combinations_selected_is_best": 0.07954545454545454,
+      "mean_oos_rank_fraction_when_selected": 0.4548992673992674,
+      "share_lambda_le0_when_selected": 0.5384615384615384
+     },
+     {
+      "trial": "champion10|top_decile",
+      "stat_on_used_periods": -0.16609388185870688,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "champion10|ls_decile",
+      "stat_on_used_periods": 0.07457500539701876,
+      "rank_on_used_periods": 17.0,
+      "share_combinations_selected_is_best": 0.0002913752913752914,
+      "mean_oos_rank_fraction_when_selected": 0.22916666666666666,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "champion10|liq_top_decile",
+      "stat_on_used_periods": -0.20571000184372562,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|top_decile",
+      "stat_on_used_periods": -0.09628052655025182,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|ls_decile",
+      "stat_on_used_periods": 0.19864949961528208,
+      "rank_on_used_periods": 18.0,
+      "share_combinations_selected_is_best": 0.03875291375291375,
+      "mean_oos_rank_fraction_when_selected": 0.5164473684210527,
+      "share_lambda_le0_when_selected": 0.40601503759398494
+     },
+     {
+      "trial": "lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.2713359846801483,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|top_decile",
+      "stat_on_used_periods": -0.0560563874566368,
+      "rank_on_used_periods": 12.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|ls_decile",
+      "stat_on_used_periods": 0.22158048703584715,
+      "rank_on_used_periods": 19.0,
+      "share_combinations_selected_is_best": 0.011946386946386946,
+      "mean_oos_rank_fraction_when_selected": 0.5635162601626017,
+      "share_lambda_le0_when_selected": 0.21951219512195122
+     },
+     {
+      "trial": "nested_lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.23151592091319864,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|top_decile",
+      "stat_on_used_periods": -0.11399558086229299,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|ls_decile",
+      "stat_on_used_periods": -0.15400554349561527,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|liq_top_decile",
+      "stat_on_used_periods": 0.0395687121278349,
+      "rank_on_used_periods": 15.0,
+      "share_combinations_selected_is_best": 0.0005827505827505828,
+      "mean_oos_rank_fraction_when_selected": 0.041666666666666664,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|top_decile",
+      "stat_on_used_periods": -0.05768715940358795,
+      "rank_on_used_periods": 11.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "heuristic_mom20|ls_decile",
+      "stat_on_used_periods": -0.07927343178590356,
+      "rank_on_used_periods": 10.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "heuristic_mom20|liq_top_decile",
+      "stat_on_used_periods": 0.060413144654419146,
+      "rank_on_used_periods": 16.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     }
+    ]
+   }
+  },
+  "c_books_long_only16": {
+   "input": "the 16 long-only books of (b): top_decile vs ew_universe, liq_top_decile vs ew_liquid",
+   "statistic": "IS/OOS Sharpe (mean / sd, ddof 1) of the monthly series, not annualised",
+   "trial_names": [
+    "nested_lgbm|top_decile",
+    "nested_lgbm|liq_top_decile",
+    "all51|top_decile",
+    "all51|liq_top_decile",
+    "nested_ensemble_rank|top_decile",
+    "nested_ensemble_rank|liq_top_decile",
+    "champion10|top_decile",
+    "champion10|liq_top_decile",
+    "lr_l2|top_decile",
+    "lr_l2|liq_top_decile",
+    "nested_lr_l2|top_decile",
+    "nested_lr_l2|liq_top_decile",
+    "baseline_mom|top_decile",
+    "baseline_mom|liq_top_decile",
+    "heuristic_mom20|top_decile",
+    "heuristic_mom20|liq_top_decile"
+   ],
+   "primary_S16_drop_end": {
+    "design": {
+     "T_input": 45,
+     "M_trials": 16,
+     "S": 16,
+     "mode": "drop_end",
+     "statistic": "sharpe",
+     "block_lengths": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 32,
+     "periods_dropped": 13,
+     "first_used": "2023-01",
+     "last_used": "2025-08",
+     "dropped_labels": [
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02",
+      "2026-03",
+      "2026-04",
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09"
+     ],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-02"
+      ],
+      [
+       "2023-03",
+       "2023-04"
+      ],
+      [
+       "2023-05",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-08"
+      ],
+      [
+       "2023-09",
+       "2023-10"
+      ],
+      [
+       "2023-11",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-02"
+      ],
+      [
+       "2024-03",
+       "2024-04"
+      ],
+      [
+       "2024-05",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-08"
+      ],
+      [
+       "2024-09",
+       "2024-10"
+      ],
+      [
+       "2024-11",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-02"
+      ],
+      [
+       "2025-03",
+       "2025-04"
+      ],
+      [
+       "2025-05",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-08"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.0,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.22703962703962705,
+    "pbo_strict_lt0": 0.2261072261072261,
+    "pbo_mid_rank": 0.22657342657342658,
+    "share_lambda_eq0": 0.0009324009324009324,
+    "chance_level": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 1.4431058880111785,
+     "sd": 1.8306834291531178,
+     "min": -3.4339872044851463,
+     "q01": -3.4339872044851463,
+     "q05": -2.268683541318364,
+     "q25": 0.125163142954006,
+     "median": 1.6863989535702288,
+     "q75": 3.4339872044851463,
+     "q95": 3.4339872044851463,
+     "q99": 3.4339872044851463,
+     "max": 3.4339872044851463
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.7248106060606061,
+     "sd": 0.2862567282749069,
+     "min": 0.03125,
+     "q01": 0.03125,
+     "q05": 0.09375,
+     "q25": 0.53125,
+     "median": 0.84375,
+     "q75": 0.96875,
+     "q95": 0.96875,
+     "q99": 0.96875,
+     "max": 0.96875
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 1.0,
+      "rank_fraction": 0.03125,
+      "logit": -3.4339872044851463,
+      "count": 311,
+      "share": 0.024164724164724163
+     },
+     {
+      "oos_rank": 1.5,
+      "rank_fraction": 0.0625,
+      "logit": -2.70805020110221,
+      "count": 35,
+      "share": 0.0027195027195027195
+     },
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.09375,
+      "logit": -2.268683541318364,
+      "count": 346,
+      "share": 0.026884226884226883
+     },
+     {
+      "oos_rank": 2.5,
+      "rank_fraction": 0.125,
+      "logit": -1.9459101490553135,
+      "count": 9,
+      "share": 0.0006993006993006993
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.15625,
+      "logit": -1.6863989535702288,
+      "count": 309,
+      "share": 0.02400932400932401
+     },
+     {
+      "oos_rank": 3.5,
+      "rank_fraction": 0.1875,
+      "logit": -1.466337068793427,
+      "count": 16,
+      "share": 0.0012432012432012432
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.21875,
+      "logit": -1.2729656758128873,
+      "count": 388,
+      "share": 0.03014763014763015
+     },
+     {
+      "oos_rank": 4.5,
+      "rank_fraction": 0.25,
+      "logit": -1.0986122886681098,
+      "count": 15,
+      "share": 0.0011655011655011655
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.28125,
+      "logit": -0.9382696385929302,
+      "count": 361,
+      "share": 0.02804972804972805
+     },
+     {
+      "oos_rank": 5.5,
+      "rank_fraction": 0.3125,
+      "logit": -0.7884573603642702,
+      "count": 19,
+      "share": 0.0014763014763014763
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.34375,
+      "logit": -0.6466271649250525,
+      "count": 464,
+      "share": 0.03605283605283605
+     },
+     {
+      "oos_rank": 6.5,
+      "rank_fraction": 0.375,
+      "logit": -0.5108256237659907,
+      "count": 15,
+      "share": 0.0011655011655011655
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.40625,
+      "logit": -0.3794896217049037,
+      "count": 293,
+      "share": 0.022766122766122766
+     },
+     {
+      "oos_rank": 7.5,
+      "rank_fraction": 0.4375,
+      "logit": -0.25131442828090605,
+      "count": 8,
+      "share": 0.0006216006216006216
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.46875,
+      "logit": -0.12516314295400605,
+      "count": 321,
+      "share": 0.024941724941724943
+     },
+     {
+      "oos_rank": 8.5,
+      "rank_fraction": 0.5,
+      "logit": 0.0,
+      "count": 12,
+      "share": 0.0009324009324009324
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.53125,
+      "logit": 0.125163142954006,
+      "count": 353,
+      "share": 0.02742812742812743
+     },
+     {
+      "oos_rank": 9.5,
+      "rank_fraction": 0.5625,
+      "logit": 0.25131442828090617,
+      "count": 5,
+      "share": 0.0003885003885003885
+     },
+     {
+      "oos_rank": 10.0,
+      "rank_fraction": 0.59375,
+      "logit": 0.3794896217049037,
+      "count": 355,
+      "share": 0.027583527583527584
+     },
+     {
+      "oos_rank": 10.5,
+      "rank_fraction": 0.625,
+      "logit": 0.5108256237659907,
+      "count": 1,
+      "share": 7.77000777000777e-05
+     },
+     {
+      "oos_rank": 11.0,
+      "rank_fraction": 0.65625,
+      "logit": 0.6466271649250525,
+      "count": 629,
+      "share": 0.048873348873348876
+     },
+     {
+      "oos_rank": 12.0,
+      "rank_fraction": 0.71875,
+      "logit": 0.9382696385929302,
+      "count": 439,
+      "share": 0.03411033411033411
+     },
+     {
+      "oos_rank": 12.5,
+      "rank_fraction": 0.75,
+      "logit": 1.0986122886681098,
+      "count": 1,
+      "share": 7.77000777000777e-05
+     },
+     {
+      "oos_rank": 13.0,
+      "rank_fraction": 0.78125,
+      "logit": 1.2729656758128876,
+      "count": 936,
+      "share": 0.07272727272727272
+     },
+     {
+      "oos_rank": 14.0,
+      "rank_fraction": 0.84375,
+      "logit": 1.6863989535702288,
+      "count": 852,
+      "share": 0.0662004662004662
+     },
+     {
+      "oos_rank": 15.0,
+      "rank_fraction": 0.90625,
+      "logit": 2.268683541318364,
+      "count": 2677,
+      "share": 0.208003108003108
+     },
+     {
+      "oos_rank": 16.0,
+      "rank_fraction": 0.96875,
+      "logit": 3.4339872044851463,
+      "count": 3700,
+      "share": 0.2874902874902875
+     }
+    ],
+    "degradation": {
+     "slope": -0.42565115556082317,
+     "intercept": 0.25447216406440876,
+     "corr": -0.3068540654272992,
+     "r2": 0.09415941746926122,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.3977381319044886,
+      "sd": 0.21788692393946324,
+      "min": -0.1293439785492162,
+      "q01": -0.0005597873481451105,
+      "q05": 0.08524247271483537,
+      "q25": 0.24237072757258565,
+      "median": 0.3738999637928628,
+      "q75": 0.5267816529939131,
+      "q95": 0.788181467653955,
+      "q99": 1.0123922803870808,
+      "max": 1.642976387466909
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.08517446860865992,
+      "sd": 0.30224080892419813,
+      "min": -1.4830924278883055,
+      "q01": -0.7629491547271515,
+      "q05": -0.5012630583906347,
+      "q25": -0.08255838043134114,
+      "median": 0.1290350696370846,
+      "q75": 0.292000386453874,
+      "q95": 0.49984537013660846,
+      "q99": 0.682295491845126,
+      "max": 1.231123248198244
+     },
+     "share_oos_below_is": 0.762937062937063,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.33084693084693084,
+     "zero_skill_level": 0.0,
+     "below_oos_median_of_trials": 0.22587412587412586,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 0.0032196969696969713,
+     "x_at_max_violation": -0.7428409014538988,
+     "F_all_at_max_violation": 0.009056915306915306,
+     "max_F_all_minus_F_best": 0.3595036907536907,
+     "share_grid_F_best_le_F_all": 0.9729962948517941,
+     "second_order_holds": false,
+     "min_second_order_integral": -0.0008916355476571422,
+     "quantiles_oos_is_best": {
+      "q05": -0.5012630583906347,
+      "q25": -0.08255838043134114,
+      "q50": 0.1290350696370846,
+      "q75": 0.292000386453874,
+      "q95": 0.49984537013660846
+     },
+     "quantiles_oos_all_trials": {
+      "q05": -0.5561428665997883,
+      "q25": -0.3093436623510156,
+      "q50": -0.13355798336127037,
+      "q75": 0.054496649325982124,
+      "q95": 0.3846112502452169
+     },
+     "mean_oos_is_best": 0.08517446860865992,
+     "mean_oos_all_trials": -0.1172944072114638,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "nested_lgbm|top_decile",
+      "stat_on_used_periods": -0.10353733450703011,
+      "rank_on_used_periods": 11.0,
+      "share_combinations_selected_is_best": 0.002331002331002331,
+      "mean_oos_rank_fraction_when_selected": 0.2520833333333333,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_lgbm|liq_top_decile",
+      "stat_on_used_periods": -0.1370064787384742,
+      "rank_on_used_periods": 10.0,
+      "share_combinations_selected_is_best": 0.0002331002331002331,
+      "mean_oos_rank_fraction_when_selected": 0.15625,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "all51|top_decile",
+      "stat_on_used_periods": -0.16135015565722816,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.0001554001554001554,
+      "mean_oos_rank_fraction_when_selected": 0.25,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "all51|liq_top_decile",
+      "stat_on_used_periods": -0.14606703579466493,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.0008547008547008547,
+      "mean_oos_rank_fraction_when_selected": 0.21875,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_ensemble_rank|top_decile",
+      "stat_on_used_periods": 0.32970379795902666,
+      "rank_on_used_periods": 16.0,
+      "share_combinations_selected_is_best": 0.5731157731157731,
+      "mean_oos_rank_fraction_when_selected": 0.9032927738611713,
+      "share_lambda_le0_when_selected": 0.0070498915401301515
+     },
+     {
+      "trial": "nested_ensemble_rank|liq_top_decile",
+      "stat_on_used_periods": 0.2120148780001824,
+      "rank_on_used_periods": 15.0,
+      "share_combinations_selected_is_best": 0.22952602952602952,
+      "mean_oos_rank_fraction_when_selected": 0.6651997291807719,
+      "share_lambda_le0_when_selected": 0.21123899796885579
+     },
+     {
+      "trial": "champion10|top_decile",
+      "stat_on_used_periods": -0.3261094781246877,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0006993006993006993,
+      "mean_oos_rank_fraction_when_selected": 0.059027777777777776,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "champion10|liq_top_decile",
+      "stat_on_used_periods": -0.3171762280018274,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0003108003108003108,
+      "mean_oos_rank_fraction_when_selected": 0.03125,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "lr_l2|top_decile",
+      "stat_on_used_periods": -0.1919539528124587,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.010722610722610723,
+      "mean_oos_rank_fraction_when_selected": 0.08469202898550725,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.4175381237814754,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|top_decile",
+      "stat_on_used_periods": -0.08376158506185935,
+      "rank_on_used_periods": 12.0,
+      "share_combinations_selected_is_best": 0.04700854700854701,
+      "mean_oos_rank_fraction_when_selected": 0.3059400826446281,
+      "share_lambda_le0_when_selected": 0.9785123966942149
+     },
+     {
+      "trial": "nested_lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.2613138984018678,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|top_decile",
+      "stat_on_used_periods": -0.16637674396137808,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.01351981351981352,
+      "mean_oos_rank_fraction_when_selected": 0.11260775862068965,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "baseline_mom|liq_top_decile",
+      "stat_on_used_periods": 0.01415041472775111,
+      "rank_on_used_periods": 13.0,
+      "share_combinations_selected_is_best": 0.026884226884226883,
+      "mean_oos_rank_fraction_when_selected": 0.26679913294797686,
+      "share_lambda_le0_when_selected": 0.8930635838150289
+     },
+     {
+      "trial": "heuristic_mom20|top_decile",
+      "stat_on_used_periods": -0.16652937109728191,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.006216006216006216,
+      "mean_oos_rank_fraction_when_selected": 0.05390625,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|liq_top_decile",
+      "stat_on_used_periods": 0.014272926164011662,
+      "rank_on_used_periods": 14.0,
+      "share_combinations_selected_is_best": 0.08842268842268843,
+      "mean_oos_rank_fraction_when_selected": 0.3304316783831283,
+      "share_lambda_le0_when_selected": 0.7855887521968365
+     }
+    ]
+   },
+   "sens_S16_drop_start": {
+    "design": {
+     "T_input": 45,
+     "M_trials": 16,
+     "S": 16,
+     "mode": "drop_start",
+     "statistic": "sharpe",
+     "block_lengths": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 32,
+     "periods_dropped": 13,
+     "first_used": "2024-02",
+     "last_used": "2026-09",
+     "dropped_labels": [
+      "2023-01",
+      "2023-02",
+      "2023-03",
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01"
+     ],
+     "blocks": [
+      [
+       "2024-02",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-05"
+      ],
+      [
+       "2024-06",
+       "2024-07"
+      ],
+      [
+       "2024-08",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-11"
+      ],
+      [
+       "2024-12",
+       "2025-01"
+      ],
+      [
+       "2025-02",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-05"
+      ],
+      [
+       "2025-06",
+       "2025-07"
+      ],
+      [
+       "2025-08",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-11"
+      ],
+      [
+       "2025-12",
+       "2026-01"
+      ],
+      [
+       "2026-02",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-05"
+      ],
+      [
+       "2026-06",
+       "2026-07"
+      ],
+      [
+       "2026-08",
+       "2026-09"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.0,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.1648018648018648,
+    "pbo_strict_lt0": 0.1648018648018648,
+    "pbo_mid_rank": 0.1648018648018648,
+    "share_lambda_eq0": 0.0,
+    "chance_level": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 2.378755209007452,
+     "sd": 1.933044009330666,
+     "min": -3.4339872044851463,
+     "q01": -3.4339872044851463,
+     "q05": -2.268683541318364,
+     "q25": 2.268683541318364,
+     "median": 3.4339872044851463,
+     "q75": 3.4339872044851463,
+     "q95": 3.4339872044851463,
+     "q99": 3.4339872044851463,
+     "max": 3.4339872044851463
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.8236451048951049,
+     "sd": 0.2900281698976559,
+     "min": 0.03125,
+     "q01": 0.03125,
+     "q05": 0.09375,
+     "q25": 0.90625,
+     "median": 0.96875,
+     "q75": 0.96875,
+     "q95": 0.96875,
+     "q99": 0.96875,
+     "max": 0.96875
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 1.0,
+      "rank_fraction": 0.03125,
+      "logit": -3.4339872044851463,
+      "count": 269,
+      "share": 0.0209013209013209
+     },
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.09375,
+      "logit": -2.268683541318364,
+      "count": 516,
+      "share": 0.04009324009324009
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.15625,
+      "logit": -1.6863989535702288,
+      "count": 366,
+      "share": 0.02843822843822844
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.21875,
+      "logit": -1.2729656758128873,
+      "count": 319,
+      "share": 0.024786324786324785
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.28125,
+      "logit": -0.9382696385929302,
+      "count": 275,
+      "share": 0.021367521367521368
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.34375,
+      "logit": -0.6466271649250525,
+      "count": 169,
+      "share": 0.013131313131313131
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.40625,
+      "logit": -0.3794896217049037,
+      "count": 129,
+      "share": 0.010023310023310023
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.46875,
+      "logit": -0.12516314295400605,
+      "count": 78,
+      "share": 0.006060606060606061
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.53125,
+      "logit": 0.125163142954006,
+      "count": 46,
+      "share": 0.003574203574203574
+     },
+     {
+      "oos_rank": 10.0,
+      "rank_fraction": 0.59375,
+      "logit": 0.3794896217049037,
+      "count": 44,
+      "share": 0.003418803418803419
+     },
+     {
+      "oos_rank": 11.0,
+      "rank_fraction": 0.65625,
+      "logit": 0.6466271649250525,
+      "count": 29,
+      "share": 0.0022533022533022533
+     },
+     {
+      "oos_rank": 12.0,
+      "rank_fraction": 0.71875,
+      "logit": 0.9382696385929302,
+      "count": 188,
+      "share": 0.014607614607614608
+     },
+     {
+      "oos_rank": 13.0,
+      "rank_fraction": 0.78125,
+      "logit": 1.2729656758128876,
+      "count": 122,
+      "share": 0.00947940947940948
+     },
+     {
+      "oos_rank": 14.0,
+      "rank_fraction": 0.84375,
+      "logit": 1.6863989535702288,
+      "count": 534,
+      "share": 0.04149184149184149
+     },
+     {
+      "oos_rank": 15.0,
+      "rank_fraction": 0.90625,
+      "logit": 2.268683541318364,
+      "count": 618,
+      "share": 0.04801864801864802
+     },
+     {
+      "oos_rank": 16.0,
+      "rank_fraction": 0.96875,
+      "logit": 3.4339872044851463,
+      "count": 9168,
+      "share": 0.7123543123543123
+     }
+    ],
+    "degradation": {
+     "slope": -0.8484565028754142,
+     "intercept": 0.6890960368245321,
+     "corr": -0.4686078585076678,
+     "r2": 0.2195933250551424,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.456870260545883,
+      "sd": 0.17706608687534067,
+      "min": -0.028059281031860325,
+      "q01": 0.11115188305899075,
+      "q05": 0.19505022389793303,
+      "q25": 0.328272505218233,
+      "median": 0.442509026823679,
+      "q75": 0.5680138201632312,
+      "q95": 0.7720315337172312,
+      "q99": 0.9245865531034186,
+      "max": 1.2480237566714065
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.3014614932939931,
+      "sd": 0.32059401079298705,
+      "min": -0.9056669467109933,
+      "q01": -0.6023310258743239,
+      "q05": -0.38585905026592376,
+      "q25": 0.2183347007177505,
+      "median": 0.36700739465630716,
+      "q75": 0.501339320617061,
+      "q95": 0.706456071841989,
+      "q99": 0.8519777665239521,
+      "max": 1.2480237566714054
+     },
+     "share_oos_below_is": 0.6178710178710178,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.16216006216006215,
+     "zero_skill_level": 0.0,
+     "below_oos_median_of_trials": 0.1648018648018648,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": true,
+     "max_F_best_minus_F_all": 0.0,
+     "x_at_max_violation": 1.2480237566714054,
+     "F_all_at_max_violation": 1.0,
+     "max_F_all_minus_F_best": 0.5849941724941724,
+     "share_grid_F_best_le_F_all": 1.0,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": -0.38585905026592376,
+      "q25": 0.2183347007177505,
+      "q50": 0.36700739465630716,
+      "q75": 0.501339320617061,
+      "q95": 0.706456071841989
+     },
+     "quantiles_oos_all_trials": {
+      "q05": -0.44146649113591163,
+      "q25": -0.1953475345871919,
+      "q50": -0.0320600222303868,
+      "q75": 0.13690818126235998,
+      "q95": 0.4366035848181597
+     },
+     "mean_oos_is_best": 0.3014614932939931,
+     "mean_oos_all_trials": -0.022916957298658072,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "nested_lgbm|top_decile",
+      "stat_on_used_periods": -0.05908883329755789,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lgbm|liq_top_decile",
+      "stat_on_used_periods": -0.34532605037658615,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|top_decile",
+      "stat_on_used_periods": 0.014277892111164326,
+      "rank_on_used_periods": 12.0,
+      "share_combinations_selected_is_best": 0.010644910644910644,
+      "mean_oos_rank_fraction_when_selected": 0.3505930656934307,
+      "share_lambda_le0_when_selected": 0.9416058394160584
+     },
+     {
+      "trial": "all51|liq_top_decile",
+      "stat_on_used_periods": -0.17598348706204595,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank|top_decile",
+      "stat_on_used_periods": 0.429338509740888,
+      "rank_on_used_periods": 16.0,
+      "share_combinations_selected_is_best": 0.8318570318570319,
+      "mean_oos_rank_fraction_when_selected": 0.949706940033626,
+      "share_lambda_le0_when_selected": 0.0004670278348589576
+     },
+     {
+      "trial": "nested_ensemble_rank|liq_top_decile",
+      "stat_on_used_periods": 0.14435804586015824,
+      "rank_on_used_periods": 15.0,
+      "share_combinations_selected_is_best": 0.051204351204351205,
+      "mean_oos_rank_fraction_when_selected": 0.16848444613050076,
+      "share_lambda_le0_when_selected": 0.9650986342943855
+     },
+     {
+      "trial": "champion10|top_decile",
+      "stat_on_used_periods": -0.0259517270448395,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.004351204351204351,
+      "mean_oos_rank_fraction_when_selected": 0.21986607142857142,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "champion10|liq_top_decile",
+      "stat_on_used_periods": -0.08466868974184358,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.001320901320901321,
+      "mean_oos_rank_fraction_when_selected": 0.06066176470588235,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "lr_l2|top_decile",
+      "stat_on_used_periods": -0.0146388738813377,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.017948717948717947,
+      "mean_oos_rank_fraction_when_selected": 0.3575487012987013,
+      "share_lambda_le0_when_selected": 0.974025974025974
+     },
+     {
+      "trial": "lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.15808087865103496,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0012432012432012432,
+      "mean_oos_rank_fraction_when_selected": 0.08203125,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_lr_l2|top_decile",
+      "stat_on_used_periods": -0.009389234168033498,
+      "rank_on_used_periods": 10.0,
+      "share_combinations_selected_is_best": 0.025252525252525252,
+      "mean_oos_rank_fraction_when_selected": 0.24278846153846154,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.15105037240049998,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.0064491064491064495,
+      "mean_oos_rank_fraction_when_selected": 0.0365210843373494,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "baseline_mom|top_decile",
+      "stat_on_used_periods": -0.061452261549713796,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.0003885003885003885,
+      "mean_oos_rank_fraction_when_selected": 0.05625,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "baseline_mom|liq_top_decile",
+      "stat_on_used_periods": 0.032826513324249185,
+      "rank_on_used_periods": 13.0,
+      "share_combinations_selected_is_best": 0.022766122766122766,
+      "mean_oos_rank_fraction_when_selected": 0.10100255972696245,
+      "share_lambda_le0_when_selected": 0.9965870307167235
+     },
+     {
+      "trial": "heuristic_mom20|top_decile",
+      "stat_on_used_periods": 0.008548442134913433,
+      "rank_on_used_periods": 11.0,
+      "share_combinations_selected_is_best": 0.006526806526806527,
+      "mean_oos_rank_fraction_when_selected": 0.14136904761904762,
+      "share_lambda_le0_when_selected": 0.9880952380952381
+     },
+     {
+      "trial": "heuristic_mom20|liq_top_decile",
+      "stat_on_used_periods": 0.05691782983646805,
+      "rank_on_used_periods": 14.0,
+      "share_combinations_selected_is_best": 0.020046620046620046,
+      "mean_oos_rank_fraction_when_selected": 0.20445736434108527,
+      "share_lambda_le0_when_selected": 0.9651162790697675
+     }
+    ]
+   },
+   "sens_S16_near_equal_all_periods": {
+    "design": {
+     "T_input": 45,
+     "M_trials": 16,
+     "S": 16,
+     "mode": "near_equal",
+     "statistic": "sharpe",
+     "block_lengths": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      2,
+      2,
+      2
+     ],
+     "periods_used": 45,
+     "periods_dropped": 0,
+     "first_used": "2023-01",
+     "last_used": "2026-09",
+     "dropped_labels": [],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-03"
+      ],
+      [
+       "2023-04",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-09"
+      ],
+      [
+       "2023-10",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-12"
+      ],
+      [
+       "2026-01",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-05"
+      ],
+      [
+       "2026-06",
+       "2026-07"
+      ],
+      [
+       "2026-08",
+       "2026-09"
+      ]
+     ],
+     "n_combinations": 12870,
+     "zero_skill_level": 0.0,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.04211344211344211,
+    "pbo_strict_lt0": 0.04211344211344211,
+    "pbo_mid_rank": 0.04211344211344211,
+    "share_lambda_eq0": 0.0,
+    "chance_level": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 12870,
+     "mean": 2.6995774601068003,
+     "sd": 1.1666937588881459,
+     "min": -3.4339872044851463,
+     "q01": -1.6863989535702288,
+     "q05": 0.3794896217049037,
+     "q25": 2.268683541318364,
+     "median": 3.4339872044851463,
+     "q75": 3.4339872044851463,
+     "q95": 3.4339872044851463,
+     "q99": 3.4339872044851463,
+     "max": 3.4339872044851463
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 12870,
+     "mean": 0.8991161616161616,
+     "sd": 0.15548278525944736,
+     "min": 0.03125,
+     "q01": 0.15625,
+     "q05": 0.59375,
+     "q25": 0.90625,
+     "median": 0.96875,
+     "q75": 0.96875,
+     "q95": 0.96875,
+     "q99": 0.96875,
+     "max": 0.96875
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 1.0,
+      "rank_fraction": 0.03125,
+      "logit": -3.4339872044851463,
+      "count": 58,
+      "share": 0.004506604506604507
+     },
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.09375,
+      "logit": -2.268683541318364,
+      "count": 49,
+      "share": 0.0038073038073038073
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.15625,
+      "logit": -1.6863989535702288,
+      "count": 68,
+      "share": 0.005283605283605284
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.21875,
+      "logit": -1.2729656758128873,
+      "count": 58,
+      "share": 0.004506604506604507
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.28125,
+      "logit": -0.9382696385929302,
+      "count": 62,
+      "share": 0.004817404817404817
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.34375,
+      "logit": -0.6466271649250525,
+      "count": 89,
+      "share": 0.006915306915306916
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.40625,
+      "logit": -0.3794896217049037,
+      "count": 68,
+      "share": 0.005283605283605284
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.46875,
+      "logit": -0.12516314295400605,
+      "count": 90,
+      "share": 0.006993006993006993
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.53125,
+      "logit": 0.125163142954006,
+      "count": 89,
+      "share": 0.006915306915306916
+     },
+     {
+      "oos_rank": 10.0,
+      "rank_fraction": 0.59375,
+      "logit": 0.3794896217049037,
+      "count": 87,
+      "share": 0.00675990675990676
+     },
+     {
+      "oos_rank": 11.0,
+      "rank_fraction": 0.65625,
+      "logit": 0.6466271649250525,
+      "count": 285,
+      "share": 0.022144522144522144
+     },
+     {
+      "oos_rank": 12.0,
+      "rank_fraction": 0.71875,
+      "logit": 0.9382696385929302,
+      "count": 196,
+      "share": 0.01522921522921523
+     },
+     {
+      "oos_rank": 13.0,
+      "rank_fraction": 0.78125,
+      "logit": 1.2729656758128876,
+      "count": 326,
+      "share": 0.02533022533022533
+     },
+     {
+      "oos_rank": 14.0,
+      "rank_fraction": 0.84375,
+      "logit": 1.6863989535702288,
+      "count": 398,
+      "share": 0.030924630924630925
+     },
+     {
+      "oos_rank": 15.0,
+      "rank_fraction": 0.90625,
+      "logit": 2.268683541318364,
+      "count": 3171,
+      "share": 0.2463869463869464
+     },
+     {
+      "oos_rank": 16.0,
+      "rank_fraction": 0.96875,
+      "logit": 3.4339872044851463,
+      "count": 7776,
+      "share": 0.6041958041958042
+     }
+    ],
+    "degradation": {
+     "slope": -0.8802248613620152,
+     "intercept": 0.829450258457024,
+     "corr": -0.6715198299908381,
+     "r2": 0.45093888207092414,
+     "is_best_stat": {
+      "n": 12870,
+      "mean": 0.49375740980123967,
+      "sd": 0.15747923344199646,
+      "min": 0.029067746249190122,
+      "q01": 0.16382502731626644,
+      "q05": 0.24474833157373901,
+      "q25": 0.384787849721807,
+      "median": 0.4864853879611767,
+      "q75": 0.5950860502648184,
+      "q95": 0.765573968924784,
+      "q99": 0.8959472766925191,
+      "max": 1.2613757558371943
+     },
+     "oos_best_stat": {
+      "n": 12870,
+      "mean": 0.39483271086825994,
+      "sd": 0.2064229978521545,
+      "min": -1.1566798107771399,
+      "q01": -0.17150923251345737,
+      "q05": 0.03998254917490242,
+      "q25": 0.27227023565928177,
+      "median": 0.40770385340480364,
+      "q75": 0.5307041155810756,
+      "q95": 0.7087628592203116,
+      "q99": 0.8367549875068491,
+      "max": 1.2613757558371939
+     },
+     "share_oos_below_is": 0.6118104118104118,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.03512043512043512,
+     "zero_skill_level": 0.0,
+     "below_oos_median_of_trials": 0.04211344211344211,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 2.9137529137529138e-05,
+     "x_at_max_violation": -1.1566798107771399,
+     "F_all_at_max_violation": 4.856254856254856e-05,
+     "max_F_all_minus_F_best": 0.6944055944055944,
+     "share_grid_F_best_le_F_all": 0.999970827194889,
+     "second_order_holds": true,
+     "min_second_order_integral": 0.0,
+     "quantiles_oos_is_best": {
+      "q05": 0.03998254917490242,
+      "q25": 0.27227023565928177,
+      "q50": 0.40770385340480364,
+      "q75": 0.5307041155810756,
+      "q95": 0.7087628592203116
+     },
+     "quantiles_oos_all_trials": {
+      "q05": -0.48159063697816124,
+      "q25": -0.23985485292785905,
+      "q50": -0.08066955541679918,
+      "q75": 0.091249013365518,
+      "q95": 0.4561860567439483
+     },
+     "mean_oos_is_best": 0.39483271086825994,
+     "mean_oos_all_trials": -0.06151084288427849,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "nested_lgbm|top_decile",
+      "stat_on_used_periods": -0.057588627234920586,
+      "rank_on_used_periods": 11.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lgbm|liq_top_decile",
+      "stat_on_used_periods": -0.19077305349130552,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|top_decile",
+      "stat_on_used_periods": -0.08643657932850216,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|liq_top_decile",
+      "stat_on_used_periods": -0.16752477752219613,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank|top_decile",
+      "stat_on_used_periods": 0.4726775849252879,
+      "rank_on_used_periods": 16.0,
+      "share_combinations_selected_is_best": 0.7991452991452992,
+      "mean_oos_rank_fraction_when_selected": 0.951728852698104,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_ensemble_rank|liq_top_decile",
+      "stat_on_used_periods": 0.3196278577213426,
+      "rank_on_used_periods": 15.0,
+      "share_combinations_selected_is_best": 0.18065268065268064,
+      "mean_oos_rank_fraction_when_selected": 0.7440456989247312,
+      "share_lambda_le0_when_selected": 0.12559139784946236
+     },
+     {
+      "trial": "champion10|top_decile",
+      "stat_on_used_periods": -0.21012317362159,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "champion10|liq_top_decile",
+      "stat_on_used_periods": -0.26624625725817525,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|top_decile",
+      "stat_on_used_periods": -0.13053705184853182,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.000777000777000777,
+      "mean_oos_rank_fraction_when_selected": 0.2,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.31294829704940674,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|top_decile",
+      "stat_on_used_periods": -0.08761757168405895,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 7.77000777000777e-05,
+      "mean_oos_rank_fraction_when_selected": 0.34375,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.2600481128846471,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|top_decile",
+      "stat_on_used_periods": -0.06462792760829128,
+      "rank_on_used_periods": 10.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|liq_top_decile",
+      "stat_on_used_periods": 0.0581455429360363,
+      "rank_on_used_periods": 13.0,
+      "share_combinations_selected_is_best": 0.015617715617715617,
+      "mean_oos_rank_fraction_when_selected": 0.1951181592039801,
+      "share_lambda_le0_when_selected": 0.9651741293532339
+     },
+     {
+      "trial": "heuristic_mom20|top_decile",
+      "stat_on_used_periods": -0.011607470538927824,
+      "rank_on_used_periods": 12.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "heuristic_mom20|liq_top_decile",
+      "stat_on_used_periods": 0.07745173561575845,
+      "rank_on_used_periods": 14.0,
+      "share_combinations_selected_is_best": 0.0037296037296037296,
+      "mean_oos_rank_fraction_when_selected": 0.2421875,
+      "share_lambda_le0_when_selected": 0.9375
+     }
+    ]
+   },
+   "sens_S14_drop_end": {
+    "design": {
+     "T_input": 45,
+     "M_trials": 16,
+     "S": 14,
+     "mode": "drop_end",
+     "statistic": "sharpe",
+     "block_lengths": [
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3,
+      3
+     ],
+     "periods_used": 42,
+     "periods_dropped": 3,
+     "first_used": "2023-01",
+     "last_used": "2026-06",
+     "dropped_labels": [
+      "2026-07",
+      "2026-08",
+      "2026-09"
+     ],
+     "blocks": [
+      [
+       "2023-01",
+       "2023-03"
+      ],
+      [
+       "2023-04",
+       "2023-06"
+      ],
+      [
+       "2023-07",
+       "2023-09"
+      ],
+      [
+       "2023-10",
+       "2023-12"
+      ],
+      [
+       "2024-01",
+       "2024-03"
+      ],
+      [
+       "2024-04",
+       "2024-06"
+      ],
+      [
+       "2024-07",
+       "2024-09"
+      ],
+      [
+       "2024-10",
+       "2024-12"
+      ],
+      [
+       "2025-01",
+       "2025-03"
+      ],
+      [
+       "2025-04",
+       "2025-06"
+      ],
+      [
+       "2025-07",
+       "2025-09"
+      ],
+      [
+       "2025-10",
+       "2025-12"
+      ],
+      [
+       "2026-01",
+       "2026-03"
+      ],
+      [
+       "2026-04",
+       "2026-06"
+      ]
+     ],
+     "n_combinations": 3432,
+     "zero_skill_level": 0.0,
+     "rank_convention": "average ranks of the OOS statistic, 1 = worst, M = best; r = (rank - 0.5) / M; logit = ln(r / (1 - r))"
+    },
+    "pbo": 0.07925407925407925,
+    "pbo_strict_lt0": 0.07925407925407925,
+    "pbo_mid_rank": 0.07925407925407925,
+    "share_lambda_eq0": 0.0,
+    "chance_level": {
+     "le_0": 0.5,
+     "lt_0": 0.5,
+     "mid": 0.5
+    },
+    "logit": {
+     "n": 3432,
+     "mean": 2.4415279585013705,
+     "sd": 1.370544159941578,
+     "min": -3.4339872044851463,
+     "q01": -2.268683541318364,
+     "q05": -0.6466271649250525,
+     "q25": 2.268683541318364,
+     "median": 3.4339872044851463,
+     "q75": 3.4339872044851463,
+     "q95": 3.4339872044851463,
+     "q99": 3.4339872044851463,
+     "max": 3.4339872044851463
+    },
+    "oos_rank_fraction_of_is_best": {
+     "n": 3432,
+     "mean": 0.8659309440559441,
+     "sd": 0.19779131501231142,
+     "min": 0.03125,
+     "q01": 0.09375,
+     "q05": 0.34375,
+     "q25": 0.90625,
+     "median": 0.96875,
+     "q75": 0.96875,
+     "q95": 0.96875,
+     "q99": 0.96875,
+     "max": 0.96875
+    },
+    "oos_rank_distribution": [
+     {
+      "oos_rank": 1.0,
+      "rank_fraction": 0.03125,
+      "logit": -3.4339872044851463,
+      "count": 13,
+      "share": 0.003787878787878788
+     },
+     {
+      "oos_rank": 2.0,
+      "rank_fraction": 0.09375,
+      "logit": -2.268683541318364,
+      "count": 42,
+      "share": 0.012237762237762238
+     },
+     {
+      "oos_rank": 3.0,
+      "rank_fraction": 0.15625,
+      "logit": -1.6863989535702288,
+      "count": 40,
+      "share": 0.011655011655011656
+     },
+     {
+      "oos_rank": 4.0,
+      "rank_fraction": 0.21875,
+      "logit": -1.2729656758128873,
+      "count": 29,
+      "share": 0.00844988344988345
+     },
+     {
+      "oos_rank": 5.0,
+      "rank_fraction": 0.28125,
+      "logit": -0.9382696385929302,
+      "count": 28,
+      "share": 0.008158508158508158
+     },
+     {
+      "oos_rank": 6.0,
+      "rank_fraction": 0.34375,
+      "logit": -0.6466271649250525,
+      "count": 49,
+      "share": 0.014277389277389278
+     },
+     {
+      "oos_rank": 7.0,
+      "rank_fraction": 0.40625,
+      "logit": -0.3794896217049037,
+      "count": 32,
+      "share": 0.009324009324009324
+     },
+     {
+      "oos_rank": 8.0,
+      "rank_fraction": 0.46875,
+      "logit": -0.12516314295400605,
+      "count": 39,
+      "share": 0.011363636363636364
+     },
+     {
+      "oos_rank": 9.0,
+      "rank_fraction": 0.53125,
+      "logit": 0.125163142954006,
+      "count": 36,
+      "share": 0.01048951048951049
+     },
+     {
+      "oos_rank": 10.0,
+      "rank_fraction": 0.59375,
+      "logit": 0.3794896217049037,
+      "count": 38,
+      "share": 0.011072261072261072
+     },
+     {
+      "oos_rank": 11.0,
+      "rank_fraction": 0.65625,
+      "logit": 0.6466271649250525,
+      "count": 66,
+      "share": 0.019230769230769232
+     },
+     {
+      "oos_rank": 12.0,
+      "rank_fraction": 0.71875,
+      "logit": 0.9382696385929302,
+      "count": 53,
+      "share": 0.015442890442890442
+     },
+     {
+      "oos_rank": 13.0,
+      "rank_fraction": 0.78125,
+      "logit": 1.2729656758128876,
+      "count": 122,
+      "share": 0.035547785547785545
+     },
+     {
+      "oos_rank": 14.0,
+      "rank_fraction": 0.84375,
+      "logit": 1.6863989535702288,
+      "count": 122,
+      "share": 0.035547785547785545
+     },
+     {
+      "oos_rank": 15.0,
+      "rank_fraction": 0.90625,
+      "logit": 2.268683541318364,
+      "count": 965,
+      "share": 0.28117715617715616
+     },
+     {
+      "oos_rank": 16.0,
+      "rank_fraction": 0.96875,
+      "logit": 3.4339872044851463,
+      "count": 1758,
+      "share": 0.5122377622377622
+     }
+    ],
+    "degradation": {
+     "slope": -0.9103049330025847,
+     "intercept": 0.7549759249109049,
+     "corr": -0.6589199563673528,
+     "r2": 0.43417550889915413,
+     "is_best_stat": {
+      "n": 3432,
+      "mean": 0.46076123357017007,
+      "sd": 0.15907724471103882,
+      "min": -0.02709466622546328,
+      "q01": 0.12260337253200787,
+      "q05": 0.20574795102993637,
+      "q25": 0.3503658161529052,
+      "median": 0.4553435818846866,
+      "q75": 0.5632947720069518,
+      "q95": 0.7289647099168979,
+      "q99": 0.8488193009279913,
+      "max": 1.0408142372185638
+     },
+     "oos_best_stat": {
+      "n": 3432,
+      "mean": 0.3355427010556225,
+      "sd": 0.21976690672301644,
+      "min": -1.0351639730034838,
+      "q01": -0.26537070148702613,
+      "q05": -0.02614460512224054,
+      "q25": 0.21016557864957594,
+      "median": 0.3526449734826428,
+      "q75": 0.48152961155520146,
+      "q95": 0.6598317368097378,
+      "q99": 0.7799575139152175,
+      "max": 0.9702973817927045
+     },
+     "share_oos_below_is": 0.6287878787878788,
+     "note": "OLS of n*'s OOS statistic on its IS statistic across the combinations; combinations overlap, so no standard errors are given. With complementary halves a single trial's IS and OOS means sum to twice its full-sample mean, so a negative slope is partly mechanical."
+    },
+    "prob_loss": {
+     "below_zero_skill": 0.06381118881118882,
+     "zero_skill_level": 0.0,
+     "below_oos_median_of_trials": 0.07925407925407925,
+     "note": "below_oos_median equals PBO except for combinations where n* sits exactly at the OOS median (possible only for odd M)"
+    },
+    "stochastic_dominance": {
+     "first_order_holds": false,
+     "max_F_best_minus_F_all": 0.0002731643356643357,
+     "x_at_max_violation": -1.0351639730034838,
+     "F_all_at_max_violation": 1.821095571095571e-05,
+     "max_F_all_minus_F_best": 0.627076048951049,
+     "share_grid_F_best_le_F_all": 0.9995076137503419,
+     "second_order_holds": false,
+     "min_second_order_integral": -2.3885255814467397e-05,
+     "quantiles_oos_is_best": {
+      "q05": -0.02614460512224054,
+      "q25": 0.21016557864957594,
+      "q50": 0.3526449734826428,
+      "q75": 0.48152961155520146,
+      "q95": 0.6598317368097378
+     },
+     "quantiles_oos_all_trials": {
+      "q05": -0.4405516755186355,
+      "q25": -0.20906555433979723,
+      "q50": -0.058557367429779766,
+      "q75": 0.10500872448069562,
+      "q95": 0.43307788650366685
+     },
+     "mean_oos_is_best": 0.3355427010556225,
+     "mean_oos_all_trials": -0.04174465998859852,
+     "note": "first-order dominance of n* over all trials <=> F_best(x) <= F_all(x) for every x"
+    },
+    "trials": [
+     {
+      "trial": "nested_lgbm|top_decile",
+      "stat_on_used_periods": -0.00520517805414677,
+      "rank_on_used_periods": 12.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lgbm|liq_top_decile",
+      "stat_on_used_periods": -0.13341293772498775,
+      "rank_on_used_periods": 5.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "all51|top_decile",
+      "stat_on_used_periods": -0.037612738669587996,
+      "rank_on_used_periods": 11.0,
+      "share_combinations_selected_is_best": 0.0020396270396270395,
+      "mean_oos_rank_fraction_when_selected": 0.34375,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "all51|liq_top_decile",
+      "stat_on_used_periods": -0.10177906081330633,
+      "rank_on_used_periods": 7.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_ensemble_rank|top_decile",
+      "stat_on_used_periods": 0.4357607977562806,
+      "rank_on_used_periods": 16.0,
+      "share_combinations_selected_is_best": 0.7462121212121212,
+      "mean_oos_rank_fraction_when_selected": 0.9467615189379148,
+      "share_lambda_le0_when_selected": 0.0
+     },
+     {
+      "trial": "nested_ensemble_rank|liq_top_decile",
+      "stat_on_used_periods": 0.3016723259596385,
+      "rank_on_used_periods": 15.0,
+      "share_combinations_selected_is_best": 0.22494172494172493,
+      "mean_oos_rank_fraction_when_selected": 0.6844235751295337,
+      "share_lambda_le0_when_selected": 0.22409326424870465
+     },
+     {
+      "trial": "champion10|top_decile",
+      "stat_on_used_periods": -0.16609388185870688,
+      "rank_on_used_periods": 4.0,
+      "share_combinations_selected_is_best": 0.0005827505827505828,
+      "mean_oos_rank_fraction_when_selected": 0.03125,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "champion10|liq_top_decile",
+      "stat_on_used_periods": -0.20571000184372562,
+      "rank_on_used_periods": 3.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "lr_l2|top_decile",
+      "stat_on_used_periods": -0.09628052655025182,
+      "rank_on_used_periods": 8.0,
+      "share_combinations_selected_is_best": 0.004370629370629371,
+      "mean_oos_rank_fraction_when_selected": 0.19791666666666666,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.2713359846801483,
+      "rank_on_used_periods": 1.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "nested_lr_l2|top_decile",
+      "stat_on_used_periods": -0.0560563874566368,
+      "rank_on_used_periods": 10.0,
+      "share_combinations_selected_is_best": 0.0017482517482517483,
+      "mean_oos_rank_fraction_when_selected": 0.23958333333333334,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "nested_lr_l2|liq_top_decile",
+      "stat_on_used_periods": -0.23151592091319864,
+      "rank_on_used_periods": 2.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|top_decile",
+      "stat_on_used_periods": -0.11399558086229299,
+      "rank_on_used_periods": 6.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "baseline_mom|liq_top_decile",
+      "stat_on_used_periods": 0.0395687121278349,
+      "rank_on_used_periods": 13.0,
+      "share_combinations_selected_is_best": 0.018356643356643356,
+      "mean_oos_rank_fraction_when_selected": 0.16815476190476192,
+      "share_lambda_le0_when_selected": 1.0
+     },
+     {
+      "trial": "heuristic_mom20|top_decile",
+      "stat_on_used_periods": -0.05768715940358795,
+      "rank_on_used_periods": 9.0,
+      "share_combinations_selected_is_best": 0.0,
+      "mean_oos_rank_fraction_when_selected": null,
+      "share_lambda_le0_when_selected": null
+     },
+     {
+      "trial": "heuristic_mom20|liq_top_decile",
+      "stat_on_used_periods": 0.060413144654419146,
+      "rank_on_used_periods": 14.0,
+      "share_combinations_selected_is_best": 0.0017482517482517483,
+      "mean_oos_rank_fraction_when_selected": 0.22916666666666666,
+      "share_lambda_le0_when_selected": 1.0
+     }
+    ]
+   }
+  }
+ },
+ "seconds": 62.9
+}

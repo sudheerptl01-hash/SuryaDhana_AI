@@ -89,10 +89,12 @@ CONFIGS = {
     "ab6_ensemble_all52": dict(kind="ensemble", members=["control", "ab6_lambdarank52", "ab6_catboost52"],
                                preprocess="rank_blend", family="ensemble"),
     "ab7_subsample5":     dict(kind="lgbm", extra=[], preprocess="raw", family="trees", subsample_dates=5),
+    # AB8 (plan amendment A2): average-uniqueness sample weights (ml/hygiene/uniqueness.py concurrency_uniqueness)
+    "ab8_uniqueness_w":   dict(kind="lgbm", extra=[], preprocess="raw", family="trees", uniqueness_weights=True),
     # AB0 (plan amendment A1): the frozen five-year all-50-feature LightGBM, copied from ml/results/scale5y/ for comparison only
     "all51":              dict(kind="reference", extra=[], preprocess="raw", family="trees"),
 }
-VARIANTS = ["all51", "ab1_mkt", "ab2_sector", "ab3_fo", "ab4_flows", "ab5_all", "ab6_ensemble_all52", "ab7_subsample5",
+VARIANTS = ["all51", "ab1_mkt", "ab2_sector", "ab3_fo", "ab4_flows", "ab5_all", "ab6_ensemble_all52", "ab7_subsample5", "ab8_uniqueness_w",
             "lr_l2", "baseline_mom", "ab6_lambdarank52", "ab6_catboost52"]
 
 T0 = time.time()
@@ -208,7 +210,10 @@ def _fold_job(args):
     kind = cfg["kind"]
     if kind == "lgbm":
         est = s5.make_model("all51", N_THREADS)
-        est.fit(Xtr, ytr)
+        if cfg.get("uniqueness_weights"):
+            est.fit(Xtr, ytr, sample_weight=uniqueness_weights(tr))
+        else:
+            est.fit(Xtr, ytr)
         score = est.predict_proba(Xte)[:, 1]
     elif kind in ("lr", "lr_mom"):
         est = s5.make_model("lr_l2" if kind == "lr" else "baseline_mom", N_THREADS)
@@ -245,6 +250,22 @@ def _fold_job(args):
     log(f"{name} {spec['name']}: auc={met['auc']:.4f} n_train={len(tr):,} purged={n_purged} "
         f"k={len(feats)} ({met['train_seconds']}s)")
     return met
+
+
+def uniqueness_weights(tr: pd.DataFrame) -> np.ndarray:
+    """Average uniqueness of each training row's label span (t+1 .. exit) among its ticker's labels in the
+    window (López de Prado, AFML ch. 4), via ml/hygiene/uniqueness.py; normalised to mean 1."""
+    from ml.hygiene.uniqueness import concurrency_uniqueness
+    dvals = _DATES.values
+    si = np.searchsorted(dvals, tr["date"].to_numpy(dtype="datetime64[ns]"))
+    ex = tr["exit_date"].to_numpy(dtype="datetime64[ns]")
+    ok = ~np.isnat(ex)
+    ei = np.where(ok, np.searchsorted(dvals, np.where(ok, ex, dvals[0])), si + 21)
+    ei = np.minimum(np.maximum(ei, si + 1), len(dvals) + 1)
+    tick, codes = np.unique(tr["ticker"].to_numpy(), return_inverse=True)
+    u, _ = concurrency_uniqueness(codes.astype(np.int64), si.astype(np.int64), ei.astype(np.int64), len(tick), len(dvals) + 1)
+    u = np.where(np.isfinite(u) & (u > 0), u, np.nanmean(u[np.isfinite(u) & (u > 0)]))
+    return (u / u.mean()).astype(np.float64)
 
 
 def write_model(out: Path, name: str, specs: list[dict], feats: list[str], folds_meta: list[dict],
