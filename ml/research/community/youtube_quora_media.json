@@ -728,8 +728,8 @@
   "method_notes": "Code competition; final private scores were computed on later data (competition format, not re-verified here). No verbatim quote captured. The winner averaged 5-fold LightGBM and TabNet on 300 provided plus 100 engineered features. Write-up: https://www.kaggle.com/competitions/ubiquant-market-prediction/writeups/k-i-y-1st-place-solution-our-betting-strategy",
   "out_of_sample": true,
   "costs_included": false,
-  "credibility": "A",
-  "credibility_reason": "True forward test with thousands of competitors; proprietary features and unknown horizon limit comparability.",
+  "credibility": "B",
+  "credibility_reason": "Forward-tested competition, but the scores were seen only in search-result text; proprietary features and an unknown horizon limit comparability.",
   "quote": "",
   "relevance_to_suryadhana": "The best correlation achievable with a fund's own engineered features is about 0.12-0.13. SuryaDhana's 0.04-0.05 on price/volume/delivery data is a different, harder setting, not a failure.",
   "verification": "unverified (snippet only; leaderboard numbers from the search-result text)"
