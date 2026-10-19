@@ -468,7 +468,8 @@ def regimes(base, scores, icd, feats, lg) -> dict:
         v = [rows[m][mo] for mo in sel]
         if not v:
             return {"n_months": 0}
-        nt = [ntr_of[m].get(mo) for mo in sel if ntr_of[m].get(mo)]
+        fk = [mo if mseg[mo] == "cv" else "holdout" for mo in sel]
+        nt = [ntr_of[m].get(k) for k in fk if ntr_of[m].get(k)]
         return {"n_months": len(sel), "mean_auc": float(np.mean([x["auc"] for x in v])),
                 "mean_n_train": float(np.mean(nt)) if nt else None,
                 "share_auc_ge_050": float(np.mean([x["auc"] >= 0.5 for x in v])),
@@ -544,7 +545,8 @@ def regimes_md(rg: dict) -> str:
         c = g.get(CHAMP, {})
         if not c.get("n_months"):
             continue
-        md.append(f"| {lab} | {c['n_months']} | {c['mean_n_train']:,.0f} | " + " | ".join(
+        ntxt = f"{c['mean_n_train']:,.0f}" if c.get("mean_n_train") else "n/a"
+        md.append(f"| {lab} | {c['n_months']} | {ntxt} | " + " | ".join(
             (f"{g[m]['mean_auc']:.4f}" if g.get(m, {}).get("n_months") else "n/a") for m in ms)
             + f" | {100 * c['share_auc_ge_050']:.0f}% | {100 * c['top_decile_excess_vs_ew_20d']:+.2f}% | {c['mean_ic']:+.4f} |")
     md.append(f"\nMonths in which most features' IC ran against its usual sign: {rg['n_cv_months_majority_inverted']} of 43 "
@@ -556,7 +558,7 @@ def regimes_md(rg: dict) -> str:
               + " | ".join(ms[:4]) + " |")
     md.append("|---|---:|---:|---:|---:|---|---:|" + "---:|" * len(ms[:4]))
     for mo, r in rg["per_month"].items():
-        n1, n2 = r.get("n_train_nested_lgbm"), r.get("n_train_all51")
+        n1, n2 = r.get("n_train_nested_lgbm") or 0, r.get("n_train_all51") or 0
         md.append(f"| {mo} | {n1:,} | {n2:,} | {100 * r['ew_fwd_20d']:+.2f}% | {100 * r['ew_daily_vol_ann']:.1f}% | {r['direction']} / "
                   f"{r['vol_state']} | {r['inverted_feature_share']:.2f} | " + " | ".join(
                       f"{r[m]['auc']:.4f}" if m in r else "n/a" for m in ms[:4]) + " |")
