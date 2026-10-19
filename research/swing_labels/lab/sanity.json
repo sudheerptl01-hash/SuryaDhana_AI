@@ -1,0 +1,122 @@
+{
+ "rows": 3097741,
+ "entities": 3399,
+ "elig_base_rows": 1317004,
+ "elig_base_per_day_median": 1035.0,
+ "ca_rows": 9221,
+ "ca_ratio_quantiles": {
+  "0.01": 0.1,
+  "0.05": 0.5,
+  "0.25": 0.987,
+  "0.5": 0.9941,
+  "0.75": 0.9973,
+  "0.95": 0.9991,
+  "0.99": 0.9997
+ },
+ "ca_rows_per_year": {
+  "2021": 1308,
+  "2022": 1446,
+  "2023": 1503,
+  "2024": 1594,
+  "2025": 1691,
+  "2026": 1679
+ },
+ "label_block_rows": 457,
+ "known_splits": {
+  "TATASTEEL": {
+   "raw_jump": -0.8954033771106942,
+   "adj_jump": 0.04596622889305779,
+   "ca_ratio": 0.1,
+   "label_block": false
+  },
+  "IRCTC": {
+   "raw_jump": -0.77882159243611,
+   "adj_jump": 0.10589203781944967,
+   "ca_ratio": 0.2,
+   "label_block": false
+  },
+  "BAJFINANCE": {
+   "raw_jump": -0.8994748687171793,
+   "adj_jump": 0.005251312828206789,
+   "ca_ratio": 0.1,
+   "label_block": false
+  }
+ },
+ "split_bonus_events_checked": 565,
+ "split_raw_jump_median": -0.6681348616712659,
+ "split_adj_jump_median": 0.02377486656962624,
+ "split_adj_abs_jump_p90": 0.11507223593140958,
+ "adj_abs_daily_move_gt_30pct_rows": 435,
+ "renamed_entities": 255,
+ "rename_examples": {
+  "INE00FF01017": [
+   "AMIORG",
+   "ACUTAAS"
+  ],
+  "INE00LM01011": [
+   "SONAMCLOCK",
+   "SONAMLTD"
+  ],
+  "INE00ZE01026": [
+   "AHL",
+   "AFSL"
+  ],
+  "INE010B01027": [
+   "CADILAHC",
+   "ZYDUSLIFE"
+  ],
+  "INE019J01013": [
+   "SASTASUNDR",
+   "HEALTHX"
+  ],
+  "INE02WG01016": [
+   "WFL",
+   "WEL"
+  ],
+  "INE035801013": [
+   "SAH",
+   "AERONEU"
+  ],
+  "INE03Q201024": [
+   "GLS",
+   "ALIVUS"
+  ],
+  "INE03QK01018": [
+   "SUVENPHAR",
+   "COHANCE"
+  ],
+  "INE045A01017": [
+   "ADORWELD",
+   "ADOR"
+  ],
+  "INE055A01016": [
+   "CENTURYTEX",
+   "ABREL"
+  ],
+  "INE055C01020": [
+   "DALALSTCOM",
+   "KEEPLEARN"
+  ]
+ },
+ "h5_valid_share_of_elig": 0.9947669103510696,
+ "h5_exec_ret_mean_bps": 9.995331060231583,
+ "h5_exec_ret_median_bps": -33.17510784893618,
+ "h5_p_up": 0.46825080603795705,
+ "h10_valid_share_of_elig": 0.9895877309408324,
+ "h10_exec_ret_mean_bps": 43.72651433730622,
+ "h10_exec_ret_median_bps": -31.193358384402625,
+ "h10_p_up": 0.47966417323529437,
+ "h20_valid_share_of_elig": 0.9792779672650956,
+ "h20_exec_ret_mean_bps": 107.22212716214025,
+ "h20_exec_ret_median_bps": -19.257221458046647,
+ "h20_p_up": 0.49135195194589804,
+ "nifty500_rows": 1434,
+ "nifty500_first_last": [
+  "2021-01-01",
+  "2026-10-14",
+  11574.85,
+  22038.0
+ ],
+ "sectors": "removed (2026 snapshot = look-ahead)",
+ "fno_proxy_share_of_elig": 0.19570100014882263
+}

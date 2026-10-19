@@ -1,0 +1,85 @@
+{
+ "washout_input_check": {
+  "bdd10_sign_agree": 1.0,
+  "bdd10_finite_mismatch": 0,
+  "brd_day_maxdiff": 0.0
+ },
+ "filters": {
+  "elig": {
+   "rows_valid": 1289713,
+   "xr_up_share": 0.3004490146257346,
+   "xr_down_share": 0.2995588941105502,
+   "mean_net_all": 0.005722212716214021,
+   "mean_net_dev": 0.009114758606790457,
+   "mean_net_2026": 0.008391797794087524,
+   "share_days_active": 0.902370990237099,
+   "xr_up_mean_net": 0.12164997143117263,
+   "xr_down_mean_net": -0.09330351494873966
+  },
+  "liq5": {
+   "rows_valid": 992307,
+   "xr_up_share": 0.30263718788641014,
+   "xr_down_share": 0.29361780174885393,
+   "mean_net_all": 0.005676443893199209,
+   "mean_net_dev": 0.009399242013282212,
+   "mean_net_2026": 0.007375802816647276,
+   "share_days_active": 0.902370990237099,
+   "xr_up_mean_net": 0.11863667878227264,
+   "xr_down_mean_net": -0.09387334078858879
+  },
+  "fno": {
+   "rows_valid": 253483,
+   "xr_up_share": 0.29472193401529884,
+   "xr_down_share": 0.2547823719933881,
+   "mean_net_all": 0.006208239219724265,
+   "mean_net_dev": 0.01151040189663397,
+   "mean_net_2026": 0.002630033896523435,
+   "share_days_active": 0.902370990237099,
+   "xr_up_mean_net": 0.10230203582816587,
+   "xr_down_mean_net": -0.08884878000522196
+  },
+  "trend": {
+   "rows_valid": 338628,
+   "xr_up_share": 0.3328519791629753,
+   "xr_down_share": 0.3306519248260628,
+   "mean_net_all": 0.009257540709268814,
+   "mean_net_dev": 0.010198192076574936,
+   "mean_net_2026": 0.014347534489298742,
+   "share_days_active": 0.8751743375174338,
+   "xr_up_mean_net": 0.13502514024969892,
+   "xr_down_mean_net": -0.10089937824893305
+  },
+  "washout": {
+   "rows_valid": 29460,
+   "xr_up_share": 0.3171758316361168,
+   "xr_down_share": 0.26629327902240324,
+   "mean_net_all": 0.028883034814239508,
+   "mean_net_dev": 0.023193444742917325,
+   "mean_net_2026": 0.05322213674269855,
+   "share_days_active": 0.15690376569037656,
+   "xr_up_mean_net": 0.13651297013204722,
+   "xr_down_mean_net": -0.07642176521158554
+  },
+  "deliv": {
+   "rows_valid": 430095,
+   "xr_up_share": 0.30645555051790885,
+   "xr_down_share": 0.27171671374928796,
+   "mean_net_all": 0.008313643580143859,
+   "mean_net_dev": 0.011857218655528898,
+   "mean_net_2026": 0.009085173082528665,
+   "share_days_active": 0.9016736401673641,
+   "xr_up_mean_net": 0.11529214507796011,
+   "xr_down_mean_net": -0.08974387468458568
+  }
+ },
+ "table_mismatches": [],
+ "chart_monthly_cs_min_max": [
+  0.12505319472308346,
+  0.7677282377919321
+ ],
+ "nifty500": {
+  "dev_cagr_proper_base": 0.15590738942613291,
+  "hold_ann_proper_base": -0.09670757145544462,
+  "hold_ytd_return": -0.07680900486143549
+ }
+}

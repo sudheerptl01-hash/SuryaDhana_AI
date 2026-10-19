@@ -1,0 +1,195 @@
+{
+ "A_uncached_sim": {
+  "random_h5_c0_dev": {
+   "mine_uncached": 0.06970934637274007,
+   "theirs": 0.06970934637274007,
+   "n_days": 735
+  },
+  "random_h5_c0_hold": {
+   "mine_uncached": 0.021390978570350327,
+   "theirs": 0.021390978570350327,
+   "n_days": 185
+  },
+  "random_h5_c50_dev": {
+   "mine_uncached": -0.1683424630428193,
+   "theirs": -0.1683424630428193,
+   "n_days": 735
+  },
+  "ew_h5_c50_dev": {
+   "mine_uncached": -0.1605765163328169,
+   "theirs": -0.1605765163328169
+  },
+  "random_h5_c50_hold": {
+   "mine_uncached": -0.20555724312615065,
+   "theirs": -0.20555724312615065,
+   "n_days": 185
+  },
+  "ew_h5_c50_hold": {
+   "mine_uncached": -0.21063807757489006,
+   "theirs": -0.21063807757489006
+  },
+  "random_h5_c80_dev": {
+   "mine_uncached": -0.2850111674071988,
+   "theirs": -0.2850111674071988,
+   "n_days": 735
+  },
+  "random_h5_c80_hold": {
+   "mine_uncached": -0.31682396285374503,
+   "theirs": -0.31682396285374503,
+   "n_days": 185
+  },
+  "random_h10_c0_dev": {
+   "mine_uncached": 0.1476767432004491,
+   "theirs": 0.1476767432004491,
+   "n_days": 735
+  },
+  "random_h10_c0_hold": {
+   "mine_uncached": 0.08948633473660794,
+   "theirs": 0.08948633473660794,
+   "n_days": 185
+  },
+  "random_h10_c50_dev": {
+   "mine_uncached": 0.01271238369774963,
+   "theirs": 0.01271238369774963,
+   "n_days": 735
+  },
+  "ew_h10_c50_dev": {
+   "mine_uncached": 0.012216212160156337,
+   "theirs": 0.012216212160156337
+  },
+  "random_h10_c50_hold": {
+   "mine_uncached": -0.03592143577686746,
+   "theirs": -0.03592143577686746,
+   "n_days": 185
+  },
+  "ew_h10_c50_hold": {
+   "mine_uncached": -0.047312389018157486,
+   "theirs": -0.047312389018157486
+  },
+  "random_h10_c80_dev": {
+   "mine_uncached": -0.06062183837019719,
+   "theirs": -0.06062183837019719,
+   "n_days": 735
+  },
+  "random_h10_c80_hold": {
+   "mine_uncached": -0.10421771058225338,
+   "theirs": -0.10421771058225338,
+   "n_days": 185
+  },
+  "random_h15_c0_dev": {
+   "mine_uncached": 0.17924518854631022,
+   "theirs": 0.17924518854631022,
+   "n_days": 735
+  },
+  "random_h15_c0_hold": {
+   "mine_uncached": 0.1445921147358693,
+   "theirs": 0.1445921147358693,
+   "n_days": 185
+  },
+  "random_h15_c50_dev": {
+   "mine_uncached": 0.08551789524487674,
+   "theirs": 0.08551789524487674,
+   "n_days": 735
+  },
+  "ew_h15_c50_dev": {
+   "mine_uncached": 0.0758145947543083,
+   "theirs": 0.0758145947543083
+  },
+  "random_h15_c50_hold": {
+   "mine_uncached": 0.057449845504908836,
+   "theirs": 0.057449845504908836,
+   "n_days": 185
+  },
+  "ew_h15_c50_hold": {
+   "mine_uncached": 0.03890415196766428,
+   "theirs": 0.03890415196766428
+  },
+  "random_h15_c80_dev": {
+   "mine_uncached": 0.032814736218067964,
+   "theirs": 0.032814736218067964,
+   "n_days": 735
+  },
+  "random_h15_c80_hold": {
+   "mine_uncached": 0.00830717373259704,
+   "theirs": 0.00830717373259704,
+   "n_days": 185
+  },
+  "random_h20_c0_dev": {
+   "mine_uncached": 0.1916930744336549,
+   "theirs": 0.1916930744336549,
+   "n_days": 735
+  },
+  "random_h20_c0_hold": {
+   "mine_uncached": 0.1671103998887118,
+   "theirs": 0.1671103998887118,
+   "n_days": 185
+  },
+  "random_h20_c50_dev": {
+   "mine_uncached": 0.12036570264587709,
+   "theirs": 0.12036570264587709,
+   "n_days": 735
+  },
+  "ew_h20_c50_dev": {
+   "mine_uncached": 0.11218585623258237,
+   "theirs": 0.11218585623258237
+  },
+  "random_h20_c50_hold": {
+   "mine_uncached": 0.1016842770401658,
+   "theirs": 0.1016842770401658,
+   "n_days": 185
+  },
+  "ew_h20_c50_hold": {
+   "mine_uncached": 0.08597452789971904,
+   "theirs": 0.08597452789971904
+  },
+  "random_h20_c80_dev": {
+   "mine_uncached": 0.07956727970882937,
+   "theirs": 0.07956727970882937,
+   "n_days": 735
+  },
+  "random_h20_c80_hold": {
+   "mine_uncached": 0.0641429059924501,
+   "theirs": 0.0641429059924501,
+   "n_days": 185
+  }
+ },
+ "A_maxdiff": 0.0,
+ "B_own_sim": {
+  "h5_c50_dev": {
+   "own_random_20seeds_x5phases": -0.16358305924609884,
+   "own_ew": -0.1605765163328169,
+   "single_run_cagr_sd": 0.038671490912441014,
+   "single_run_cagr_mean": -0.16970258578581768,
+   "theirs_random": -0.1683424630428193,
+   "theirs_ew": -0.1605765163328169,
+   "n_days": 735
+  },
+  "h5_c50_hold": {
+   "own_random_20seeds_x5phases": -0.18661033947914585,
+   "own_ew": -0.21063807757489006,
+   "single_run_cagr_sd": 0.07005386249275249,
+   "single_run_cagr_mean": -0.20824026511021487,
+   "theirs_random": -0.20555724312615065,
+   "theirs_ew": -0.21063807757489006,
+   "n_days": 185
+  },
+  "h20_c50_dev": {
+   "own_random_20seeds_x5phases": 0.11375258017086898,
+   "own_ew": 0.11218585623258237,
+   "single_run_cagr_sd": 0.02254260628445868,
+   "single_run_cagr_mean": 0.11099309141905303,
+   "theirs_random": 0.12036570264587709,
+   "theirs_ew": 0.11218585623258237,
+   "n_days": 735
+  },
+  "h20_c50_hold": {
+   "own_random_20seeds_x5phases": 0.08648950197077454,
+   "own_ew": 0.08597452789971904,
+   "single_run_cagr_sd": 0.05073791086025359,
+   "single_run_cagr_mean": 0.07717113375117726,
+   "theirs_random": 0.1016842770401658,
+   "theirs_ew": 0.08597452789971904,
+   "n_days": 185
+  }
+ }
+}
