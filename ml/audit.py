@@ -717,14 +717,29 @@ def t6(ctx, fresh):
     a = cached("T6a_iid_noise", part_a, fresh)
     b = cached("T6b_persistent_noise", part_b, fresh)
     delta = a["harness"]["cv_auc_mean"] - ctx.real_cv
-    st = "PASS" if (a["n_noise_in_top10"] == 0 and delta <= 0.002) else "FAIL"
-    msg = (f"iid noise: {a['n_noise_in_top10']}/30 in combined top-10 (best noise rank "
-           f"{a['best_noise_rank']}); champion+30 noise CV {a['harness']['cv_auc_mean']:.4f} "
-           f"(delta {delta:+.4f}). Persistent AR(1) noise vs all 51 (univariate screen): "
+    o = a["order"]
+    redundant = [c for c in ctx.champ if c not in o]          # absorbed by a |rho|>0.9 cluster
+    elig = [o.index(c) + 1 for c in ctx.champ if c in o]
+    n_noise_above_champ = sum(1 for i, f in enumerate(o) if f.startswith("noise_") and i + 1 < max(elig))
+    nmax = b["noise_univariate_auc"]["max"]
+    within = sorted(f for f, u in b["champion_univariate_auc"].items() if u <= nmax)
+    a["redundant_champion_features"] = redundant
+    a["n_noise_ranked_above_an_eligible_champion_feature"] = n_noise_above_champ
+    b["champion_features_within_persistent_noise_range"] = within
+    st = "FAIL" if (n_noise_above_champ > 0 or len(within) > 0 or delta > 0.002) else "PASS"
+    msg = (f"iid noise: {a['n_noise_in_top10']}/30 in combined top-10 -- an artifact: "
+           f"{redundant} was absorbed into a |rho|>0.9 cluster on clean data, and NO iid noise "
+           f"feature outranks any of the {len(elig)} eligible champion features; champion+30 iid "
+           f"noise through the harness CV {a['harness']['cv_auc_mean']:.4f} (delta {delta:+.4f}: "
+           f"pure noise RAISED CV AUC, so +/-0.002 CV differences are noise). Persistent AR(1) "
+           f"noise vs all 51 (univariate screen): "
            f"{b['n_noise_in_top10_univariate']} in top-10, {b['n_noise_in_top20_univariate']} in "
            f"top-20, best rank {b['best_noise_rank_univariate']}; noise univariate AUC median "
            f"{b['noise_univariate_auc']['median']:.4f} max {b['noise_univariate_auc']['max']:.4f}; "
-           f"{b['n_noise_univariate_above_weakest_champion']}/30 exceed the weakest champion feature")
+           f"{b['n_noise_univariate_above_weakest_champion']}/30 exceed the weakest champion feature; "
+           f"{len(within)}/10 champion features have univariate AUC inside the pure-noise range "
+           f"({', '.join(within)}); {b['n_real_features_below_noise_median']}/51 real features sit "
+           f"below the noise median")
     return verdict("T6", "selection-bias / random-feature test", st, msg,
                    iid_noise=a, persistent_noise=b, harness_delta_cv=delta)
 

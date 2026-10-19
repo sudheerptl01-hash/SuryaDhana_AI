@@ -986,7 +986,7 @@ def main() -> None:
     codes_all = pd.factorize(md["date"], sort=True)[0]
     dates_all = np.sort(md["date"].unique())
     ident = {}
-    for v in ("cc_1d", "no_20d"):
+    for v in [x for x in ("cc_1d", "no_20d") if f"raw_{x}" in md.columns]:
         idx = np.flatnonzero(md[f"raw_{v}"].notna().to_numpy())
         X = md[base_feats].to_numpy(np.float64)[idx]
         diffs = []

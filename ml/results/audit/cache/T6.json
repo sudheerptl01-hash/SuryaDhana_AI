@@ -2,7 +2,7 @@
  "id": "T6",
  "name": "selection-bias / random-feature test",
  "status": "FAIL",
- "summary": "iid noise: 1/30 in combined top-10 (best noise rank 10); champion+30 noise CV 0.5337 (delta +0.0022). Persistent AR(1) noise vs all 51 (univariate screen): 1 in top-10, 5 in top-20, best rank 9; noise univariate AUC median 0.5033 max 0.5116; 20/30 exceed the weakest champion feature",
+ "summary": "iid noise: 1/30 in combined top-10 -- an artifact: ['cs_rank_ret_126'] was absorbed into a |rho|>0.9 cluster on clean data, and NO iid noise feature outranks any of the 9 eligible champion features; champion+30 iid noise through the harness CV 0.5337 (delta +0.0022: pure noise RAISED CV AUC, so +/-0.002 CV differences are noise). Persistent AR(1) noise vs all 51 (univariate screen): 1 in top-10, 5 in top-20, best rank 9; noise univariate AUC median 0.5033 max 0.5116; 20/30 exceed the weakest champion feature; 5/10 champion features have univariate AUC inside the pure-noise range (cs_rank_mom_20, cs_rank_ret_126, cs_rank_vol_20, ret_126d, ret_63d); 24/51 real features sit below the noise median",
  "iid_noise": {
   "top10": [
    "atr_pct",
@@ -126,7 +126,11 @@
     "2026-07": 0.022194696590304375
    },
    "seconds": 185.2
-  }
+  },
+  "redundant_champion_features": [
+   "cs_rank_ret_126"
+  ],
+  "n_noise_ranked_above_an_eligible_champion_feature": 0
  },
  "persistent_noise": {
   "ranking": "univariate AUC component only (gain/permutation skipped: CPU budget)",
@@ -351,6 +355,13 @@
    "pnoise_25",
    "flag_near_52w_low",
    "pnoise_22"
+  ],
+  "champion_features_within_persistent_noise_range": [
+   "cs_rank_mom_20",
+   "cs_rank_ret_126",
+   "cs_rank_vol_20",
+   "ret_126d",
+   "ret_63d"
   ]
  },
  "harness_delta_cv": 0.002223720854483413
