@@ -1,7 +1,7 @@
 {
  "stream": "P4 history 2016-10..2021-09",
- "generated_utc": "2026-10-22T13:17:44+00:00",
- "final": false,
+ "generated_utc": "2026-10-22T14:31:32+00:00",
+ "final": true,
  "window": [
   "2016-10-03",
   "2021-09-30"
@@ -23,18 +23,17 @@
   "trades": "TOTALTRADES",
   "vwap": "TOTTRDVAL / TOTTRDQTY, rounded half up to 2 decimals",
   "isin": "ISIN",
-  "deliv_qty": "MTO Deliverable Quantity (join SYMBOL + SERIES; NaN when MTO has no row)",
+  "deliv_qty": "MTO Deliverable Quantity (join SYMBOL + SERIES; NaN when MTO has no row or its traded quantity differs from the CM volume)",
   "deliv_pct": "MTO % of Deliverable Quantity to Traded Quantity",
   "source": "cm_mto"
  },
  "download": {
   "calendar_days": 1824,
   "cm_status_counts": {
-   "200": 753,
-   "404": 362,
-   "not requested yet": 709
+   "200": 1238,
+   "404": 586
   },
-  "sessions": 753,
+  "sessions": 1238,
   "weekday_without_session": [
    "2016-10-11",
    "2016-10-12",
@@ -80,27 +79,60 @@
    "2019-09-10",
    "2019-10-02",
    "2019-10-08",
-   "2019-10-21"
+   "2019-10-21",
+   "2019-10-28",
+   "2019-11-12",
+   "2019-12-25",
+   "2020-02-21",
+   "2020-03-10",
+   "2020-04-02",
+   "2020-04-06",
+   "2020-04-10",
+   "2020-04-14",
+   "2020-05-01",
+   "2020-05-25",
+   "2020-10-02",
+   "2020-11-16",
+   "2020-11-30",
+   "2020-12-25",
+   "2021-01-26",
+   "2021-03-11",
+   "2021-03-29",
+   "2021-04-02",
+   "2021-04-14",
+   "2021-04-21",
+   "2021-05-13",
+   "2021-07-21",
+   "2021-08-19",
+   "2021-09-10"
   ],
   "weekend_sessions": [
-   "2016-10-30"
+   "2016-10-30",
+   "2019-10-27",
+   "2020-02-01",
+   "2020-11-14"
   ],
   "echo_or_misdated": [],
   "cm_errors": [],
   "mto": {
-   "files": 752,
+   "files": 1238,
    "missing_on_session_days": [],
    "errors": []
   },
   "pr": {
-   "files": 752,
+   "files": 1238,
    "missing_on_session_days": [],
    "errors": []
   },
-  "requests": 95,
-  "backoffs": 0,
-  "elapsed_s": 229,
-  "download_final": false
+  "requests_last_run": 1777,
+  "backoffs_last_run": 0,
+  "elapsed_s_last_run": 3610,
+  "download_final": true,
+  "manifest_outcomes": 4306,
+  "runs": 2,
+  "backoff_warnings_logged": [
+   "2026-10-19 14:16:17 hist.download WARNING back-off 60 s after ProxyError: HTTPSConnectionPool(host='archives.nseindia.com', port=443): Max retries exceeded with"
+  ]
  },
  "overlap": {
   "days": [
@@ -317,18 +349,22 @@
   "be_rows_with_deliv_history": 0
  },
  "calendar": {
-  "sessions_total": 734,
+  "sessions_total": 1238,
   "sessions_by_period": {
    "2016Q4": 62,
    "2017": 248,
    "2018": 246,
-   "2019": 178
+   "2019": 245,
+   "2020": 252,
+   "2021Q1-Q3": 185
   },
   "expected_by_period_reference": {
    "2016Q4": 62,
    "2017": 248,
    "2018": 246,
-   "2019": 178
+   "2019": 245,
+   "2020": 252,
+   "2021Q1-Q3": 185
   },
   "sessions_by_quarter": {
    "2016Q4": 62,
@@ -342,7 +378,15 @@
    "2018Q4": 61,
    "2019Q1": 62,
    "2019Q2": 60,
-   "2019Q3": 56
+   "2019Q3": 62,
+   "2019Q4": 61,
+   "2020Q1": 64,
+   "2020Q2": 59,
+   "2020Q3": 66,
+   "2020Q4": 63,
+   "2021Q1": 61,
+   "2021Q2": 61,
+   "2021Q3": 63
   },
   "weekday_closures": {
    "2016-10-11": "Dussehra",
@@ -389,7 +433,32 @@
    "2019-09-10": "Moharram",
    "2019-10-02": "Gandhi Jayanti",
    "2019-10-08": "Dussehra",
-   "2019-10-21": "Maharashtra assembly election"
+   "2019-10-21": "Maharashtra assembly election",
+   "2019-10-28": "Diwali Balipratipada",
+   "2019-11-12": "Gurunanak Jayanti",
+   "2019-12-25": "Christmas",
+   "2020-02-21": "Mahashivratri",
+   "2020-03-10": "Holi",
+   "2020-04-02": "Ram Navami",
+   "2020-04-06": "Mahavir Jayanti",
+   "2020-04-10": "Good Friday",
+   "2020-04-14": "Ambedkar Jayanti",
+   "2020-05-01": "Maharashtra Day",
+   "2020-05-25": "Id-ul-Fitr",
+   "2020-10-02": "Gandhi Jayanti",
+   "2020-11-16": "Diwali Balipratipada",
+   "2020-11-30": "Gurunanak Jayanti",
+   "2020-12-25": "Christmas",
+   "2021-01-26": "Republic Day",
+   "2021-03-11": "Mahashivratri",
+   "2021-03-29": "Holi",
+   "2021-04-02": "Good Friday",
+   "2021-04-14": "Ambedkar Jayanti",
+   "2021-04-21": "Ram Navami",
+   "2021-05-13": "Id-ul-Fitr",
+   "2021-07-21": "Bakri Id",
+   "2021-08-19": "Moharram",
+   "2021-09-10": "Ganesh Chaturthi"
   },
   "weekday_closures_not_in_reference": [],
   "reference_holidays_with_a_session": [
@@ -398,7 +467,10 @@
   ],
   "reference_holidays_with_a_session_unexpected": [],
   "weekend_sessions": [
-   "2016-10-30"
+   "2016-10-30",
+   "2019-10-27",
+   "2020-02-01",
+   "2020-11-14"
   ],
   "special_sessions": {
    "2016-10-30": {
@@ -412,16 +484,28 @@
    "2018-11-07": {
     "label": "Muhurat (Diwali holiday)",
     "present": true
+   },
+   "2019-10-27": {
+    "label": "Sunday Muhurat",
+    "present": true
+   },
+   "2020-02-01": {
+    "label": "Saturday Budget session",
+    "present": true
+   },
+   "2020-11-14": {
+    "label": "Saturday Muhurat",
+    "present": true
    }
   },
   "special_sessions_all_present": true
  },
  "continuity": {
   "rule": "(ticker, series) EQ/BE traded on t and on the previous session; mismatch when |prev_close(t) / close(t-1) - 1| > 0.005",
-  "dates_scanned": 733,
-  "pairs_scanned": 1171887,
-  "mismatch_pairs": 4,
-  "overall_mismatch_share": 3e-06,
+  "dates_scanned": 1237,
+  "pairs_scanned": 2014426,
+  "mismatch_pairs": 5,
+  "overall_mismatch_share": 2e-06,
   "median_daily_share": 0.0,
   "p99_daily_share": 0.0,
   "max_daily_share": 0.001225,
@@ -447,87 +531,148 @@
     "tickers": 1629
    },
    {
-    "date": "2018-09-10",
+    "date": "2020-06-19",
+    "share": 0.0006,
+    "mismatches": 1,
+    "tickers": 1629
+   },
+   {
+    "date": "2020-02-06",
     "share": 0.0,
     "mismatches": 0,
     "tickers": 1640
    },
    {
-    "date": "2018-09-11",
+    "date": "2020-02-05",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1641
+   },
+   {
+    "date": "2020-02-04",
     "share": 0.0,
     "mismatches": 0,
     "tickers": 1643
    },
    {
-    "date": "2018-09-12",
+    "date": "2020-02-03",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1639
+    "tickers": 1626
    },
    {
-    "date": "2018-09-14",
+    "date": "2020-02-01",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1630
+    "tickers": 1625
    },
    {
-    "date": "2018-09-17",
+    "date": "2020-01-31",
+    "share": 0.0,
+    "mismatches": 0,
+    "tickers": 1641
+   },
+   {
+    "date": "2020-01-30",
     "share": 0.0,
     "mismatches": 0,
     "tickers": 1634
    },
    {
-    "date": "2018-09-19",
+    "date": "2020-01-29",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1629
-   },
-   {
-    "date": "2018-09-21",
-    "share": 0.0,
-    "mismatches": 0,
-    "tickers": 1630
-   },
-   {
-    "date": "2018-09-24",
-    "share": 0.0,
-    "mismatches": 0,
-    "tickers": 1634
-   },
-   {
-    "date": "2018-09-07",
-    "share": 0.0,
-    "mismatches": 0,
-    "tickers": 1635
+    "tickers": 1649
    }
   ],
-  "mismatches_on_bc_exdate": 4,
+  "mismatches_on_bc_exdate": 5,
+  "mismatch_list": [
+   {
+    "date": "2018-09-18",
+    "ticker": "CARERATING",
+    "series": "EQ",
+    "prev_close": 1264.05,
+    "previous_close": 1301.05,
+    "dev": -0.02844,
+    "bc_explained": true,
+    "purpose": "AGM/DIV-RS 37 PER SHARE"
+   },
+   {
+    "date": "2018-09-18",
+    "ticker": "CUPID",
+    "series": "EQ",
+    "prev_close": 219.75,
+    "previous_close": 222.25,
+    "dev": -0.01125,
+    "bc_explained": true,
+    "purpose": "DIV RS 2/SPL DIV RE 0.50"
+   },
+   {
+    "date": "2019-05-30",
+    "ticker": "ALLSEC",
+    "series": "BE",
+    "prev_close": 308.0,
+    "previous_close": 318.0,
+    "dev": -0.03145,
+    "bc_explained": true,
+    "purpose": "INTERIM DIVIDEND"
+   },
+   {
+    "date": "2019-07-01",
+    "ticker": "SHRIPISTON",
+    "series": "BE",
+    "prev_close": 907.45,
+    "previous_close": 913.45,
+    "dev": -0.00657,
+    "bc_explained": true,
+    "purpose": "DIV-RS 6 PER SH"
+   },
+   {
+    "date": "2020-06-19",
+    "ticker": "MOTOGENFIN",
+    "series": "BE",
+    "prev_close": 22.9,
+    "previous_close": 45.75,
+    "dev": -0.49945,
+    "bc_explained": true,
+    "purpose": "FVSPLT FRM RS 10 TO RS 5"
+   }
+  ],
   "mismatches_on_bc_exdate_by_kind": {
-   "split": 0,
+   "split": 1,
    "bonus": 0,
    "rights": 0,
    "dividend": 4,
    "demerger/scheme": 0,
    "capital reduction": 0
   },
-  "split_bonus_exdates_checked": 175,
-  "split_bonus_exdates_prev_close_differs": 0
+  "split_bonus_exdates_checked": 267,
+  "split_bonus_exdates_prev_close_differs": 1
  },
  "splice": {
-  "status": "history ends 2019-09-20; splice check needs 2021-09-30"
+  "history_last_session": "2021-09-30",
+  "store_first_session": "2021-10-01",
+  "pairs": 1787,
+  "mismatch_share": 0.0,
+  "exact_share": 1.0,
+  "mismatches": []
  },
  "coverage": {
   "rows_by_period": {
    "2016Q4": 104803,
    "2017": 437241,
    "2018": 463036,
-   "2019": 341677
+   "2019": 472664,
+   "2020": 498644,
+   "2021Q1-Q3": 380309
   },
   "rows_eq_be_by_period": {
    "2016Q4": 97367,
    "2017": 394612,
    "2018": 401775,
-   "2019": 291235
+   "2019": 401795,
+   "2020": 418260,
+   "2021Q1-Q3": 321316
   },
   "delivery": {
    "2016Q4": {
@@ -549,10 +694,22 @@
     "be_rows": 33895
    },
    "2019": {
-    "eq_be_share_with_deliv_pct": 0.9229,
+    "eq_be_share_with_deliv_pct": 0.9112,
+    "eq_share_with_deliv_pct": 0.9933,
+    "be_share_with_deliv_pct": 0.0,
+    "be_rows": 33217
+   },
+   "2020": {
+    "eq_be_share_with_deliv_pct": 0.908,
     "eq_share_with_deliv_pct": 1.0,
     "be_share_with_deliv_pct": 0.0,
-    "be_rows": 22464
+    "be_rows": 38478
+   },
+   "2021Q1-Q3": {
+    "eq_be_share_with_deliv_pct": 0.8883,
+    "eq_share_with_deliv_pct": 1.0,
+    "be_share_with_deliv_pct": 0.0,
+    "be_rows": 35900
    }
   },
   "isin": {
@@ -571,42 +728,52 @@
    "2019": {
     "eq_be_share_with_isin": 1.0,
     "all_series_share_with_isin": 1.0
+   },
+   "2020": {
+    "eq_be_share_with_isin": 1.0,
+    "all_series_share_with_isin": 1.0
+   },
+   "2021Q1-Q3": {
+    "eq_be_share_with_isin": 1.0,
+    "all_series_share_with_isin": 1.0
    }
   },
-  "rows_total": 1346757,
-  "rows_eq_be_total": 1184989,
-  "distinct_tickers_all_series": 2278,
-  "distinct_tickers_eq_be": 1915,
-  "distinct_isin_eq_be": 1931,
+  "rows_total": 2356697,
+  "rows_eq_be_total": 2035125,
+  "distinct_tickers_all_series": 2697,
+  "distinct_tickers_eq_be": 2218,
+  "distinct_isin_eq_be": 2241,
   "series_counts_top": {
-   "EQ": 1099917,
-   "BE": 85072,
-   "SM": 44437,
-   "BZ": 11130,
-   "GB": 8672,
-   "N6": 8635,
-   "N2": 8079,
-   "N4": 6340,
-   "N5": 5754,
-   "N1": 4861,
-   "N3": 4706,
-   "N8": 4556
+   "EQ": 1864922,
+   "BE": 170203,
+   "SM": 75181,
+   "BZ": 30897,
+   "GB": 25981,
+   "N6": 15230,
+   "N2": 13915,
+   "N4": 11010,
+   "N5": 9765,
+   "N8": 7828,
+   "N1": 7760,
+   "N3": 7538
   },
-  "n_series_codes": 104,
+  "n_series_codes": 123,
   "isin_eq_be_share": 1.0,
-  "isin_inf_prefix_tickers_eq_be": 87,
+  "isin_inf_prefix_tickers_eq_be": 129,
   "call_auction_rows_eq_be_by_period": {
    "2016Q4": 1156,
    "2017": 3146,
    "2018": 1452,
-   "2019": 1299
+   "2019": 1926,
+   "2020": 4119,
+   "2021Q1-Q3": 1808
   },
-  "call_auction_rows_eq_be_total": 7053,
-  "call_auction_tickers_eq_be": 62,
-  "deliv_eq_be_share_total": 0.9282,
-  "deliv_eq_share_total": 1.0,
-  "deliv_qty_le_volume_share": 0.999993,
-  "deliv_pct_consistent_share": 0.997753
+  "call_auction_rows_eq_be_total": 13607,
+  "call_auction_tickers_eq_be": 96,
+  "deliv_eq_be_share_total": 0.9151,
+  "deliv_eq_share_total": 0.9987,
+  "deliv_qty_le_volume_share": 1.0,
+  "deliv_pct_consistent_share": 1.0
  },
  "integrity": {
   "ohlc_order_ok_share": 1.0,
@@ -619,14 +786,16 @@
   "duplicate_keys": 0
  },
  "parse_diagnostics": {
-  "days": 734,
-  "cm_rows_raw": 1346757,
-  "cm_rows_kept": 1346757,
+  "days": 1238,
+  "cm_rows_raw": 2356697,
+  "cm_rows_kept": 2356697,
   "cm_duplicate_rows_dropped": 0,
   "cm_timestamp_mismatch_rows": 0,
   "days_without_mto": [],
   "days_without_pr": [],
-  "mto_trade_date_mismatch_days": [
+  "mto_trade_date_mismatch_days": [],
+  "mto_rejected_days": [],
+  "mto_header_quirk_files": [
    "MTO_30032017.DAT",
    "MTO_25102017.DAT",
    "MTO_30112017.DAT",
@@ -635,13 +804,23 @@
    "MTO_25022019.DAT",
    "MTO_28032019.DAT"
   ],
-  "mto_rejected_days": [],
-  "mto_rows": 1249772,
+  "mto_rows": 2154605,
   "mto_bad_lines": 0,
   "mto_duplicate_rows_dropped": 0,
-  "mto_rows_matched_to_cm": 1249640,
-  "mto_rows_without_cm_row": 132,
-  "mto_qty_equals_cm_volume_share": 0.998011,
+  "mto_rows_matched_to_cm": 2154472,
+  "mto_deliv_blanked_rows": 2485,
+  "mto_deliv_blanked_days": [
+   "MTO_17062019.DAT",
+   "MTO_18062019.DAT"
+  ],
+  "mto_rows_without_cm_row": 133,
+  "mto_qty_equals_cm_volume_share": 0.998847,
+  "pr_rows_repaired_total": 6,
+  "pr_rows_repaired_bundles": [
+   "PR111019.zip",
+   "PR141019.zip",
+   "PR151019.zip"
+  ],
   "pr_misdated_bundles": [
    {
     "file": "PR020118.zip",
@@ -663,16 +842,22 @@
    "Pd<ddmmyy>.csv"
   ],
   "pd_crosscheck": {
-   "days": 733,
-   "matched_rows": 1344880,
-   "cm_rows_not_in_pd": 21,
+   "days": 1237,
+   "matched_rows": 2354684,
+   "cm_rows_not_in_pd": 157,
+   "cm_rows_not_in_pd_eq_be": 0,
+   "cm_rows_not_in_pd_series": [
+    "GS",
+    "X1",
+    "X2"
+   ],
    "pd_rows_not_in_cm": 0,
    "field_match_share": {
     "close": 1.0,
     "prev_close": 1.0,
     "open": 1.0,
-    "high": 0.999979,
-    "low": 0.999901,
+    "high": 0.999988,
+    "low": 0.999944,
     "volume": 1.0,
     "trades": 1.0,
     "turnover_500": 1.0
@@ -822,74 +1007,175 @@
   "2019-10-27": {
    "label": "Sunday Muhurat",
    "weekday": "Sunday",
-   "present": false
+   "present": true,
+   "rows_eq_be": 1613,
+   "median_open_gap": 0.0084,
+   "median_low_vs_prev_close": -0.0027,
+   "median_close_return": 0.0115,
+   "share_down": 0.1942,
+   "median_trades": 201.0,
+   "nifty50": {
+    "prev_close": 11583.9,
+    "open": 11662.25,
+    "low": 11604.6,
+    "close": 11627.15,
+    "return": 0.0037,
+    "low_vs_prev_close": 0.0018
+   }
   },
   "2020-02-01": {
    "label": "Saturday Union Budget session",
    "weekday": "Saturday",
-   "present": false
+   "present": true,
+   "rows_eq_be": 1639,
+   "median_open_gap": 0.0,
+   "median_low_vs_prev_close": -0.0381,
+   "median_close_return": -0.0232,
+   "share_down": 0.8212,
+   "median_trades": 933.0,
+   "nifty50": {
+    "prev_close": 11962.1,
+    "open": 11939.0,
+    "low": 11633.3,
+    "close": 11661.85,
+    "return": -0.0251,
+    "low_vs_prev_close": -0.0275
+   }
   },
   "2020-03-13": {
    "label": "market-wide lower circuit at the open, then a rebound",
    "weekday": "Friday",
-   "present": false
+   "present": true,
+   "rows_eq_be": 1640,
+   "median_open_gap": -0.0667,
+   "median_low_vs_prev_close": -0.1451,
+   "median_close_return": 0.0034,
+   "share_down": 0.4349,
+   "median_trades": 1079.0,
+   "nifty50": {
+    "prev_close": 9590.15,
+    "open": 9107.6,
+    "low": 8555.15,
+    "close": 9955.2,
+    "return": 0.0381,
+    "low_vs_prev_close": -0.1079
+   }
   },
   "2020-03-23": {
    "label": "market-wide lower circuit, Nifty 50 down about 13%",
    "weekday": "Monday",
-   "present": false
+   "present": true,
+   "rows_eq_be": 1613,
+   "median_open_gap": -0.0525,
+   "median_low_vs_prev_close": -0.1312,
+   "median_close_return": -0.0988,
+   "share_down": 0.9406,
+   "median_trades": 614.0,
+   "nifty50": {
+    "prev_close": 8745.45,
+    "open": 7945.7,
+    "low": 7583.6,
+    "close": 7610.25,
+    "return": -0.1298,
+    "low_vs_prev_close": -0.1329
+   }
   },
   "2020-11-14": {
    "label": "Saturday Muhurat",
    "weekday": "Saturday",
-   "present": false
+   "present": true,
+   "rows_eq_be": 1678,
+   "median_open_gap": 0.0099,
+   "median_low_vs_prev_close": -0.0028,
+   "median_close_return": 0.0089,
+   "share_down": 0.1812,
+   "median_trades": 421.5,
+   "nifty50": {
+    "prev_close": 12719.95,
+    "open": 12823.35,
+    "low": 12749.45,
+    "close": 12780.25,
+    "return": 0.0047,
+    "low_vs_prev_close": 0.0023
+   }
   }
  },
  "outputs": {
   "equity_eod_2016_2021.parquet": {
-   "path": "ml/data_hist/equity_eod_2016_2021.partial.parquet",
-   "bytes": 43719516
+   "path": "ml/data_hist/equity_eod_2016_2021.parquet",
+   "bytes": 76554448
   },
   "bc_records_2016_2021.csv": {
-   "path": "ml/data_hist/bc_records_2016_2021.partial.csv",
-   "bytes": 43526436
+   "path": "ml/data_hist/bc_records_2016_2021.csv",
+   "bytes": 72654976
   },
   "etf_records_2016_2021.csv": {
-   "path": "ml/data_hist/etf_records_2016_2021.partial.csv",
-   "bytes": 7731
+   "path": "ml/data_hist/etf_records_2016_2021.csv",
+   "bytes": 12141
   },
   "pd_corp_ind_2016_2021.csv": {
-   "path": "ml/data_hist/pd_corp_ind_2016_2021.partial.csv",
-   "bytes": 765719
+   "path": "ml/data_hist/pd_corp_ind_2016_2021.csv",
+   "bytes": 1284577
   },
   "index_close_2016_2021.csv": {
-   "path": "ml/data_hist/index_close_2016_2021.partial.csv",
-   "bytes": 4947143
+   "path": "ml/data_hist/index_close_2016_2021.csv",
+   "bytes": 8645504
   },
   "call_auction_rows_2016_2021.csv": {
-   "path": "ml/data_hist/call_auction_rows_2016_2021.partial.csv",
-   "bytes": 162419
+   "path": "ml/data_hist/call_auction_rows_2016_2021.csv",
+   "bytes": 310401
   },
   "sessions_2016_2021.csv": {
-   "path": "ml/data_hist/sessions_2016_2021.partial.csv",
-   "bytes": 47860
+   "path": "ml/data_hist/sessions_2016_2021.csv",
+   "bytes": 80671
   },
   "overlap_cm_mto_2021-10.parquet": {
    "path": "ml/data_hist/overlap_cm_mto_2021-10.parquet",
    "bytes": 338755
   }
  },
+ "upsert_dry_run": {
+  "columns_equal_EOD_COLUMNS": true,
+  "rows_upserted": 2356697,
+  "rows_in_table": 2356697,
+  "sessions": 1238,
+  "min_date": "2016-10-03",
+  "max_date": "2021-09-30",
+  "rows_with_isin": 2356697,
+  "rows_with_deliv_pct": 2151987,
+  "rows_after_reupserting_last_day": 2356697,
+  "idempotent": true,
+  "column_types": {
+   "date": "DATE",
+   "ticker": "VARCHAR",
+   "series": "VARCHAR",
+   "isin": "VARCHAR",
+   "prev_close": "DOUBLE",
+   "open": "DOUBLE",
+   "high": "DOUBLE",
+   "low": "DOUBLE",
+   "last": "DOUBLE",
+   "close": "DOUBLE",
+   "vwap": "DOUBLE",
+   "volume": "BIGINT",
+   "turnover": "DOUBLE",
+   "trades": "BIGINT",
+   "deliv_qty": "BIGINT",
+   "deliv_pct": "DOUBLE",
+   "source": "VARCHAR"
+  }
+ },
  "outputs_detail": {
   "bc": {
-   "rows": 357496,
-   "distinct_events": 26003,
-   "bundles": 733,
-   "distinct_split_events": 164,
-   "distinct_bonus_events": 272,
-   "distinct_rights_events": 70
+   "rows": 598236,
+   "distinct_events": 44247,
+   "bundles": 1237,
+   "distinct_split_events": 262,
+   "distinct_bonus_events": 513,
+   "distinct_rights_events": 142
   },
   "etf": {
-   "symbols": 87
+   "symbols": 129
   }
  }
 }

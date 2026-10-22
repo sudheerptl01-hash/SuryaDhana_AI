@@ -102,7 +102,8 @@ def coverage(fo: pd.DataFrame, idx: pd.DataFrame, part: pd.DataFrame,
     for kind, frame in (("fo", fo), ("indices", idx), ("participant", part)):
         have = set(pd.to_datetime(frame["date"]).dt.date.unique())
         st = load_status(kind)
-        s404 = sorted({r["date"] for r in st.values() if r.get("status") == "404" and r["date"]})
+        s404_all = sorted({r["date"] for r in st.values() if r.get("status") == "404" and r["date"]})
+        s404 = [d for d in s404_all if C.MAIN_START.isoformat() <= d <= C.MAIN_END.isoformat()]
         excluded = [m for m in meta[kind] if not m.get("date_ok")]
         amap = {s: d for s, d in P.EXT_TO_EOD_ALIAS.items() if s in have and d in eod_s}
         covered_eod = {amap.get(d, d) for d in have}
@@ -118,6 +119,7 @@ def coverage(fo: pd.DataFrame, idx: pd.DataFrame, part: pd.DataFrame,
             "files_ok_in_window": int(sum(1 for d in have if C.MAIN_START <= d <= C.MAIN_END)),
             "files_ok_total": int(len(have)),
             "http_404_dates": s404,
+            "http_404_dates_all_windows": len(s404_all),
             "excluded_content_date_mismatch": [{"file": m["file"], "content_dates":
                                                 m.get("content_dates"), "error": m.get("error")}
                                                for m in excluded],

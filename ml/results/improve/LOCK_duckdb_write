@@ -1,0 +1,6 @@
+{
+ "owner": "P1 data-integrity stream",
+ "started": "2026-10-22T14:33:30",
+ "doing": "delete ['2021-11-05', '2023-06-29', '2024-01-22']; upsert 2,165,802 verified rows on 1276 dates; tables corporate_actions/etf_list/equity_master/special_sessions; build_features with 755 corporate-action events",
+ "pid": 18492
+}

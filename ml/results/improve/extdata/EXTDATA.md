@@ -1,10 +1,8 @@
 # P3 external data: sources, staging tables, feature families F1-F4
 
-Build tag **v1**: prices from `ml/results/improve/cache/eod_export_v1.parquet`, spot and sessions from `ml/results/improve/cache/eod_export_v1.parquet`, comparison dataset `ml/data_5y/model_dataset.parquet`.
+Build tag **v2**: prices from `ml/results/improve/cache/features_prices_export_v2.parquet`, spot and sessions from `ml/results/improve/cache/eod_export_v2.parquet`, comparison dataset `ml/data_5y_v2/model_dataset.parquet`.
 
-Built 2026-10-22T13:43:59 by `ml/extdata/run_all.py` (seed 108). Every number below is quoted from `ml/results/improve/extdata/extdata.json`. The feature families are the pre-registered F1-F4 of `ml/IMPROVEMENT_PLAN.md` section 2-P3; this stream builds them, the lead runs the A/Bs. Nothing here touched `nse_market.duckdb`.
-
-> **Record note.** v1-based record. The PIT checks (a)-(c) ran on the main-window build of 2026-10-22T13:23:16 (ETF list: ml/data_ext/etf_list.csv (P1; 409 rows; sha256 3ef6677579f6e92e)); this record was rebuilt at 2026-10-22T13:43:59 with the 2016-2021 staging rows and P1's final ETF list (ml/data_ext/etf_list.csv (P1; 469 rows; sha256 7b9163f85448f256)). Effect of the ETF-list change: F1 aggregates and F2 group statistics move (60 more symbols leave the ex-ETF universe); F3 unchanged except fut_oi_z_60 (<= 1.3e-11, rolling-variance start dependence, removed afterwards by a window-local z-score). The final files are the v2 build (extdata.json), whose PIT checks ran on the final code.
+Built 2026-10-22T14:29:27 by `ml/extdata/run_all.py` (seed 108). Every number below is quoted from `ml/results/improve/extdata/extdata.json`. The feature families are the pre-registered F1-F4 of `ml/IMPROVEMENT_PLAN.md` section 2-P3; this stream builds them, the lead runs the A/Bs. Nothing here touched `nse_market.duckdb`.
 
 ## 1. Summary
 
@@ -13,32 +11,32 @@ Built 2026-10-22T13:43:59 by `ml/extdata/run_all.py` (seed 108). Every number be
 | (a) 100 random cells of F2/F3 recomputed by an independent code path from raw files dated <= t | **PASS** (900 of 900 values equal) |
 | (b) inputs dated after t removed, every session of 2024-07 | **PASS** (22 sessions) |
 | (c) shift test (future bars appended; rows <= T0 unchanged) | **PASS** (T0 = 2023-12-29, 2025-06-30) |
-| Base series (mom_20, ret_63d, ret_126d, deliv_pct_sma_20, atr_pct) vs the v1 dataset | **exact** (max abs diff 0, identical row set and NaN pattern) |
+| Base series (mom_20, ret_63d, ret_126d, deliv_pct_sma_20, atr_pct) vs the v2 dataset | **exact** on all 1,290,062 dataset rows (max abs diff 0, same NaN pattern); the 74,925 extra rows here are ETF rows the dataset excludes |
 | F&O unit continuity at the 2024-07 format switch | OI identity holds for 542 of 542 futures contracts |
 | F&O stock symbols found in the EOD export on the same date | 1.0000 |
 
-Output rows: `extra_features.parquet` 1,357,383 rows x 18 features (2,480 tickers, 2022-10-03 to 2026-10-16; the row set equals the dataset's row set exactly); `market_state.parquet` one row per EOD date from 2022-10-03 with 14 features.
+Output rows: `extra_features.parquet` 1,364,987 rows x 18 features (2,480 tickers, 2022-10-03 to 2026-10-16; the row set contains every dataset row (0 dataset rows missing) plus 74,925 rows the dataset excludes); `market_state.parquet` one row per EOD date from 2022-10-03 with 14 features.
 
 **The one material finding is a look-ahead in the industry lists (section 8).** The NSE constituent lists are a 2026-10-19 snapshot. Being in them predicts the 20-day label: the snapshot flag's pooled AUC exceeds a point-in-time size flag's by about 0.015 to 0.03 in 2022-2025, roughly five to ten times the A/B pass mark of +0.003. F2 is built so that no NaN pattern marks membership (two deviations from the brief, section 4), but F2 still makes the partition easier to recover. The lead registered the placebo control AB2P as plan amendment A3 (section 8).
 
 ## 2. Sources and coverage
 
-Expected sessions: 1251 = 1245 EOD-export dates + the six special sessions P1 adds (2023-11-12, 2024-03-02, 2024-05-18, 2025-02-01, 2025-10-21, 2026-02-01). Downloads: archives.nseindia.com, browser user agent, one request in flight per file type, random 1.0-2.0 s pause, 60 s back-off with halved rate on 403/429/5xx (log: `ml/results/improve/extdata/log.txt`). Every file's internal date (F&O TIMESTAMP / TradDt, index `Index Date`, participant title line) is checked against its file-name date.
+Expected sessions: 1251 = the 1251 EOD-export dates, which include the six special sessions (2023-11-12, 2024-03-02, 2024-05-18, 2025-02-01, 2025-10-21, 2026-02-01). Downloads: archives.nseindia.com, browser user agent, one request in flight per file type, random 1.0-2.0 s pause, 60 s back-off with halved rate on 403/429/5xx (log: `ml/results/improve/extdata/log.txt`). Every file's internal date (F&O TIMESTAMP / TradDt, index `Index Date`, participant title line) is checked against its file-name date.
 
 | Source | Files in window | HTTP 404 dates | Content-date exclusions | EOD sessions without a file |
 |---|---:|---|---|---|
-| F&O bhavcopy | 1,251 | 75 dates: 2016-10-11, 2016-10-12, 2016-10-31, 2016-11-14, 2017-01-26, 2017-02-24, 2017-03-13, 2017-04-04, 2017-04-14, 2017-05-01, 2017-06-26, 2017-08-15, ... (full list in the JSON) | 0 | none |
-| ind_close_all | 1,251 | 74 dates: 2016-10-11, 2016-10-12, 2016-10-31, 2016-11-14, 2017-01-26, 2017-02-24, 2017-03-13, 2017-04-04, 2017-04-14, 2017-05-01, 2017-06-26, 2017-08-15, ... (full list in the JSON) | 0 | none |
-| participant OI | 1,249 | 76 dates: 2016-10-11, 2016-10-12, 2016-10-31, 2016-11-14, 2017-01-26, 2017-02-24, 2017-03-13, 2017-04-04, 2017-04-14, 2017-05-01, 2017-06-26, 2017-08-15, ... (full list in the JSON) | 92 | 2023-10-31, 2025-09-19 |
+| F&O bhavcopy | 1,251 | 2021-11-05, 2023-06-29, 2024-01-21, 2024-01-22 | 0 | none |
+| ind_close_all | 1,251 | 2021-11-05, 2023-06-29, 2024-01-21, 2024-01-22 | 0 | none |
+| participant OI | 1,249 | 2021-11-05, 2023-06-29, 2023-10-31, 2024-01-21, 2024-01-22, 2025-09-19 | 0 | 2023-10-31, 2025-09-19 |
 
 Files per year (files with a valid internal date / expected sessions):
 
 | Year | F&O bhavcopy | ind_close_all | participant OI |
 |---|---:|---:|---:|
-| 2021 | 62 / 63 | 62 / 63 | 62 / 63 |
+| 2021 | 63 / 63 | 63 / 63 | 63 / 63 |
 | 2022 | 248 / 248 | 248 / 248 | 248 / 248 |
-| 2023 | 245 / 246 | 245 / 246 | 244 / 246 |
-| 2024 | 248 / 249 | 248 / 249 | 248 / 249 |
+| 2023 | 246 / 246 | 246 / 246 | 245 / 246 |
+| 2024 | 249 / 249 | 249 / 249 | 249 / 249 |
 | 2025 | 249 / 249 | 249 / 249 | 248 / 249 |
 | 2026 | 196 / 196 | 196 / 196 | 196 / 196 |
 
@@ -53,7 +51,7 @@ Special sessions (status per source):
 | 2025-10-21 | ok | ok | ok |
 | 2026-02-01 | ok | ok | ok |
 
-**Mis-dated EOD sessions (finding for P1).** Three EOD-export dates hold a session that traded on another day. The bar sequence is continuous, so a prev_close scan cannot see them; the archive does, because every external file for those dates is a 404 while the true date's files exist and carry their own date inside:
+**Mis-dated EOD sessions (found by this stream; P1 re-dated all three in v2).** In the v1 export, three dates hold a session that traded on another day. The bar sequence is continuous, so a prev_close scan cannot see them; the archive does, because every external file for those dates is a 404 while the true date's files exist and carry their own date inside:
 
 | Archive date (true session) | EOD-export date | Evidence |
 |---|---|---|
@@ -75,19 +73,19 @@ F&O membership (stocks with a stock future, per F&O file):
 | 2021 | 163.5 | 140 | 197 | 197 | n/a |
 | 2022 | 196.2 | 191 | 199 | 203 | 0.1836 |
 | 2023 | 186.8 | 183 | 191 | 192 | 0.1605 |
-| 2024 | 184.9 | 178 | 223 | 231 | 0.1279 |
-| 2025 | 216.2 | 208 | 227 | 258 | 0.1517 |
-| 2026 | 209.3 | 206 | 213 | 225 | 0.1353 |
+| 2024 | 184.9 | 178 | 223 | 231 | 0.1280 |
+| 2025 | 216.2 | 208 | 227 | 258 | 0.1518 |
+| 2026 | 209.3 | 206 | 213 | 225 | 0.1354 |
 
 Industry-map coverage of the universe (rows with an NSE industry; `industry_map.csv` has 755 symbols from the Nifty 500, Midcap 150, Smallcap 250, Microcap 250 and Nifty 50 lists, no conflicting labels):
 
 | Year | Universe rows | Share of rows with industry | Same, ex-ETF | ETF-group share | Share of tickers |
 |---|---:|---:|---:|---:|---:|
 | 2022 | 64,791 | 0.5143 | 0.5289 | 0.0275 | 0.4395 |
-| 2023 | 284,086 | 0.4896 | 0.5033 | 0.0272 | 0.3781 |
-| 2024 | 356,596 | 0.4329 | 0.4540 | 0.0466 | 0.3489 |
-| 2025 | 350,554 | 0.4805 | 0.5154 | 0.0677 | 0.3838 |
-| 2026 | 301,356 | 0.4770 | 0.5196 | 0.0819 | 0.3759 |
+| 2023 | 285,285 | 0.4897 | 0.5033 | 0.0271 | 0.3781 |
+| 2024 | 359,043 | 0.4333 | 0.4545 | 0.0465 | 0.3489 |
+| 2025 | 353,128 | 0.4809 | 0.5158 | 0.0676 | 0.3836 |
+| 2026 | 302,740 | 0.4772 | 0.5199 | 0.0820 | 0.3759 |
 
 ## 3. Staging tables (`ml/data_ext/`)
 
@@ -95,14 +93,14 @@ Industry-map coverage of the universe (rows with an NSE industry; `industry_map.
 |---|---:|---|
 | `fo_daily_stock.parquet` | 465,528 | (date, ticker) with a stock future or option: near/next settle and expiry, days to expiry, total futures OI (shares) and its change, futures volume (contracts) and turnover (rupees), call/put OI (shares) and volume (contracts), n_strikes, spot_close (EOD export), basis_near, source_format |
 | `index_daily.parquet` | 247,808 | (date, index_name): open, high, low, close, pct_change, volume, turnover_cr, pe, pb, div_yield |
-| `fo_participant_oi.parquet` | 11,975 | (date, client_type in Client/DII/FII/Pro/TOTAL), 14 numeric columns in contracts (wide in instruments, long in client type) |
+| `fo_participant_oi.parquet` | 12,435 | (date, client_type in Client/DII/FII/Pro/TOTAL), 14 numeric columns in contracts (wide in instruments, long in client type) |
 | `industry_map.csv` | 755 | symbol, industry, source_list (first list wins: Nifty 500, Midcap 150, Smallcap 250, Microcap 250, Nifty 50) |
 | `sector_index_map.csv` | 15 | industry -> index name in ind_close_all (+ fallback) |
 | `equity_master.csv` | 2,619 | EQUITY_L.csv: symbol, company_name, series, listing_date, paid_up_value, market_lot, isin, face_value (kept from P1) |
 
 All three tables carry a `window` column: `main` for rows from 2021-10-01 and `hist` for 2016-10-03..2021-09-30 (section 11). The schemas and the participant column map are in `extdata.json` (`staging_schemas`).
 
-Units and conventions (verified, section 7): open interest is in **shares** in both F&O formats (legacy `OPEN_INT`, UDiFF `OpnIntrst`); traded volume in **contracts** in both (`CONTRACTS`, `TtlTradgVol`); turnover in rupees (`VAL_INLAKH` x 1e5, `TtlTrfVal`). Roll: near = the smallest expiry >= t (on the expiry day the expiring contract is still near, 0 days to expiry); next = the second smallest; days to expiry in calendar days; UDiFF uses `FininstrmActlXpryDt`. basis_near = (near settle / spot close - 1) x 365 / days to expiry, NaN below 2 days. n_strikes = distinct strike prices over all option expiries. Futures rows without a spot close: 219,509 (sessions without an EOD bar in the v1 export).
+Units and conventions (verified, section 7): open interest is in **shares** in both F&O formats (legacy `OPEN_INT`, UDiFF `OpnIntrst`); traded volume in **contracts** in both (`CONTRACTS`, `TtlTradgVol`); turnover in rupees (`VAL_INLAKH` x 1e5, `TtlTrfVal`). Roll: near = the smallest expiry >= t (on the expiry day the expiring contract is still near, 0 days to expiry); next = the second smallest; days to expiry in calendar days; UDiFF uses `FininstrmActlXpryDt`. basis_near = (near settle / spot close - 1) x 365 / days to expiry, NaN below 2 days. n_strikes = distinct strike prices over all option expiries. Futures rows without a spot close: 0 (sessions without an EOD bar in the v2 export).
 
 Sector-index map, checked against all 2,489 parsed index files (share of files containing each index, and its first date in the files):
 
@@ -138,17 +136,17 @@ Definitions are in `extdata.json` (`definitions`) and `ml/data_ext/extra_feature
 Conventions fixed before any IC was computed:
 
 1. Market and industry aggregates exclude ETFs (the v2 universe definition), so stock values are the same joined to v1 or v2. ETF rows (v1 only) get F2 values inside their own `ETF` group. ETF source: ml/data_ext/etf_list.csv (P1; 469 rows; sha256 7b9163f85448f256) (469 tickers).
-2. The EW market return drops single-day moves above 22% (the repo's corporate-action threshold; 424 name-days dropped). cs_dispersion_20 is taken over names with `flag_split_20d` == 0. The median EW membership is 1304.0000 names.
+2. The EW market return drops single-day moves above 22% (the repo's corporate-action threshold; 65 name-days dropped). cs_dispersion_20 is taken over names with `flag_split_20d` == 0. The median EW membership is 1,301 names.
 3. **Deviation from the brief: names without an NSE industry form an explicit `Unclassified` group** (the brief did not say). A NaN would mark today's index members (section 8).
-4. **Deviation from the brief: `secidx_ret_20` for unmapped industries, Unclassified names and ETFs is the Nifty 500 20-session return, not NaN** (796,441 rows). Under the brief, the NaN pattern itself carries the membership look-ahead (section 8). `build(policy={'unclassified': 'nan', 'secidx_unmapped': 'nan'})` reproduces the literal brief.
+4. **Deviation from the brief: `secidx_ret_20` for unmapped industries, Unclassified names and ETFs is the Nifty 500 20-session return, not NaN** (800,606 rows). Under the brief, the NaN pattern itself carries the membership look-ahead (section 8). `build(policy={'unclassified': 'nan', 'secidx_unmapped': 'nan'})` reproduces the literal brief.
 5. Industry groups with fewer than 5 non-NaN names that date give NaN (the brief). This affects Diversified, Forest Materials and Utilities, about 0.4% of rows.
 6. `fo_member` is NaN on a date whose F&O file is missing. The other F3 values are NaN for non-members. Zero futures OI is treated as missing in the log changes and the z-score.
 
 ## 5. Point-in-time checks
 
-**(a) Independent recomputation: **PASS**.** Sample: 25 random dates (seed 108), 2 F2 cells and 2 F3 cells each, 100 cells in total (100 fully equal). 900 of 900 values are equal. Method: independent code path: csv-module readers of the raw F&O zips and ind_close_all files dated <= t, numpy loops over EOD bars dated <= t (Wilder ATR by explicit recursion, medians/ranks by counting). Tolerance: rtol 1e-09, 1e-06 for the rolling z-score, and NaN equals NaN. Runtime 503.2 s.
+**(a) Independent recomputation: **PASS**.** Sample: 25 random dates (seed 108), 2 F2 cells and 2 F3 cells each, 100 cells in total (100 fully equal). 900 of 900 values are equal. Method: independent code path: csv-module readers of the raw F&O zips and ind_close_all files dated <= t, numpy loops over EOD bars dated <= t (Wilder ATR by explicit recursion, medians/ranks by counting). Tolerance: rtol 1e-09, 1e-06 for the rolling z-score, and NaN equals NaN. Runtime 463.6 s.
 
-**(b) File removal, 2024-07: **PASS**.** For each of the 22 sessions t, every raw file dated after t and every EOD bar after t was removed from the input set, and the whole pipeline (parse + features) was re-run. The rows at t were then compared with the full build. For the last session the removal was literal: a directory holding only the files dated <= t, parsed from the raw bytes with no cache. Runtime 373.9 s.
+**(b) File removal, 2024-07: **PASS**.** For each of the 22 sessions t, every raw file dated after t and every EOD bar after t was removed from the input set, and the whole pipeline (parse + features) was re-run. The rows at t were then compared with the full build. For the last session the removal was literal: a directory holding only the files dated <= t, parsed from the raw bytes with no cache. Runtime 338.7 s.
 
 | t | Files removed (F&O / index / participant) | Stock rows at t | Identical (stock / market) |
 |---|---|---:|---|
@@ -175,45 +173,47 @@ Conventions fixed before any IC was computed:
 | 2024-07-30 | 550 / 550 / 549 | 1,520 | yes / yes |
 | 2024-07-31 (literal) | 549 / 549 / 548 | 1,523 | yes / yes |
 
-**(c) Shift test: **PASS**.** Inputs were truncated at T0 and every row dated <= T0 was compared with the full build, for all 32 features. Runtime 20.1 s.
+**(c) Shift test: **PASS**.** Inputs were truncated at T0 and every row dated <= T0 was compared with the full build, for all 32 features. Runtime 18.5 s.
 
 | T0 | Stock rows compared | Identical | Market rows compared | Identical |
 |---|---:|---|---:|---|
-| 2023-12-29 | 348,877 | yes | 307 | yes |
-| 2025-06-30 | 877,128 | yes | 676 | yes |
+| 2023-12-29 | 350,076 | yes | 308 | yes |
+| 2025-06-30 | 882,041 | yes | 680 | yes |
+
+PIT results reused from the build of 2026-10-22T13:52:58 (same inputs and code path; outputs verified bit-for-bit identical).
 
 The static inputs are held fixed in (b) and (c): the industry lists, the sector map and the ETF list. Their point-in-time status is the subject of section 8.
 
-## 6. Base series vs the v1 dataset
+## 6. Base series vs the v2 dataset
 
-Dataset `ml/data_5y/model_dataset.parquet`. Row sets: dataset 1,357,383, this stream 1,357,383, common 1,357,383, only in the dataset 0, only here 0 (rows only here are ETF rows when the dataset excludes ETFs).
+Dataset `ml/data_5y_v2/model_dataset.parquet`. Row sets: dataset 1,290,062, this stream 1,364,987, common 1,290,062, only in the dataset 0, only here 74,925 (rows only here are ETF rows when the dataset excludes ETFs).
 
 | Series | Rows both finite | Max abs diff | Rows with diff > 1e-9 | NaN-pattern mismatches |
 |---|---:|---:|---:|---:|
-| mom_20 | 1,350,680 | 0.0 | 0 | 0 |
-| ret_63d | 1,325,992 | 0.0 | 0 | 0 |
-| ret_126d | 1,291,363 | 0.0 | 0 | 0 |
-| deliv_pct_sma_20 | 1,307,477 | 0.0 | 0 | 0 |
-| atr_pct | 1,354,925 | 0.0 | 0 | 0 |
+| mom_20 | 1,283,881 | 0.0 | 0 | 0 |
+| ret_63d | 1,261,380 | 0.0 | 0 | 0 |
+| ret_126d | 1,230,671 | 0.0 | 0 | 0 |
+| deliv_pct_sma_20 | 1,240,461 | 0.0 | 0 | 0 |
+| atr_pct | 1,287,800 | 0.0 | 0 | 0 |
 
 ## 7. Integrity of the external data
 
 - **Units across the format switch.** For 542 futures contracts, the legacy 2024-07-05 OPEN_INT equals the UDiFF 2024-07-08 OpnIntrst minus ChngInOpnIntrst in 542 cases (max relative deviation 0.0). UDiFF turnover / (contracts x lot x close) has median 1.0007, and UDiFF OI is divisible by the lot size in 1.0000 of rows. OI is in shares in both formats (identity holds across the switch); UDiFF TtlTradgVol is in contracts (turnover = contracts x lot x price).
-- **Symbols.** 246,019 futures rows on EOD dates; the share whose ticker exists in the EOD export the same day is 1.00000 (0 unmatched: {}).
-- **Participant OI.** 2,395 files. Long equals short in the TOTAL row for futures in a share 0.9983 of files. The four client types sum to TOTAL within 1 contract in 0.9491 (exactly in 0.5031; NSE rounds index-option sums by up to 1 contract; max deviation 2.0).
-- **Annualised near-month basis** (median by year, the cost of carry): 2021 0.060, 2022 0.057, 2023 0.074, 2024 0.068, 2025 0.058, 2026 0.047. The 1st-99th percentiles are in the JSON.
+- **Symbols.** 247,210 futures rows on EOD dates; the share whose ticker exists in the EOD export the same day is 1.00000 (0 unmatched: {}).
+- **Participant OI.** 2,487 files. Long equals short in the TOTAL row for futures in a share 0.9984 of files. The four client types sum to TOTAL within 1 contract in 0.9473 (exactly in 0.5094; NSE rounds index-option sums by up to 1 contract; max deviation 2.0).
+- **Annualised near-month basis** (median by year, the cost of carry): 2016 0.061, 2017 0.074, 2018 0.066, 2019 0.069, 2020 0.050, 2021 0.064, 2022 0.057, 2023 0.074, 2024 0.068, 2025 0.058, 2026 0.047. The 1st-99th percentiles are in the JSON.
 
 ## 8. The industry-list look-ahead
 
-The constituent lists exist only as of the download date (2026-10-19), so the industry label is not point in time. The label itself barely changes over time; the problem is *which* names carry one. A name is classified only if it is in one of the five indices today, and names that rose since 2022 are over-represented among them. Reporting-only diagnostics follow (labels from the v1 dataset, ex-ETF universe rows, y_clean_20d):
+The constituent lists exist only as of the download date (2026-10-19), so the industry label is not point in time. The label itself barely changes over time; the problem is *which* names carry one. A name is classified only if it is in one of the five indices today, and names that rose since 2022 are over-represented among them. Reporting-only diagnostics follow (labels from the v2 dataset, ex-ETF universe rows, y_clean_20d):
 
 | Year | Share classified | Beat rate classified | Beat rate unclassified | AUC of snapshot flag | AUC of PIT size flag (top N by turnover) |
 |---|---:|---:|---:|---:|---:|
-| 2022 | 0.5312 | 0.5260 | 0.4638 | 0.5310 | 0.5013 |
-| 2023 | 0.5053 | 0.5360 | 0.4719 | 0.5320 | 0.5174 |
-| 2024 | 0.4546 | 0.5479 | 0.4569 | 0.5451 | 0.5236 |
-| 2025 | 0.5162 | 0.5408 | 0.4297 | 0.5555 | 0.5393 |
-| 2026 | 0.5247 | 0.5105 | 0.4893 | 0.5106 | 0.5079 |
+| 2022 | 0.5302 | 0.5283 | 0.4677 | 0.5302 | 0.5006 |
+| 2023 | 0.5046 | 0.5315 | 0.4683 | 0.5316 | 0.5166 |
+| 2024 | 0.4555 | 0.5499 | 0.4591 | 0.5451 | 0.5232 |
+| 2025 | 0.5168 | 0.5551 | 0.4417 | 0.5566 | 0.5398 |
+| 2026 | 0.5246 | 0.5109 | 0.4882 | 0.5113 | 0.5082 |
 
 Reading: part of the snapshot flag's edge is a genuine size effect, since the PIT top-N flag also exceeds 0.5 in 2023-2025. The gap between the two columns is the future information in the snapshot. It shrinks to almost nothing in 2026, when the snapshot is nearly current.
 
@@ -221,12 +221,12 @@ Can a model recover the partition from the features it would see? LightGBM predi
 
 | Feature set | Leak-safe F2 (this build) | Literal brief (NaN for unclassified/unmapped) |
 |---|---:|---:|
-| base10 | 0.9027 | 0.9027 |
-| base10+F2 | 0.9329 | 0.9973 |
-| base10+F2+F1 | 0.9520 | 0.9974 |
-| F2_only | 0.6745 | 0.9955 |
+| base10 | 0.9022 | 0.9022 |
+| base10+F2 | 0.9302 | 0.9975 |
+| base10+F2+F1 | 0.9491 | 0.9975 |
+| F2_only | 0.6831 | 0.9956 |
 
-Under the literal brief, F2 alone identifies the partition almost perfectly, because its NaN pattern is the partition. The leak-safe build lowers that, but F2 still adds to what the base features already reveal. In this build the non-NaN indicator of secidx_ret_20 has AUC 0.5000 against the label.
+Under the literal brief, F2 alone identifies the partition almost perfectly, because its NaN pattern is the partition. The leak-safe build lowers that, but F2 still adds to what the base features already reveal. Under the literal brief, whether secidx_ret_20 is present would by itself score AUC 0.5365 against the label (NaN share 0.5613). In this build it is never NaN (share 0.0000, so its presence carries nothing: AUC 0.5000).
 
 **Placebo control (plan amendment A3, 2026-10-22).** `ml/data_ext/extra_features_placebo_f2.parquet` holds the F2 columns rebuilt with the industry labels permuted among the classified symbols (seed 108), with the same Unclassified and ETF groups, the same coverage, the same column names and the same F3 columns, so the harness loads it with `--extra`. AB2P = control + these columns. AB2, and the F2 share of AB5, counts as industry information only if AB2 passes the primary mark **and** beats AB2P by >= +0.003 with the paired CI excluding zero. The secondary reading is the AUC on classified rows only. F1, F3 and F4 do not depend on the lists: F&O membership comes from the daily bhavcopy, and the market state from the point-in-time universe.
 
@@ -237,21 +237,21 @@ Under the literal brief, F2 alone identifies the partition almost perfectly, bec
 | ind_mom_20 | 0.0040 | n/a | 2022 0.005, 2023 0.004, 2024 0.004, 2025 0.004, 2026 0.004 |
 | ind_ret_63 | 0.0040 | n/a | 2022 0.005, 2023 0.004, 2024 0.004, 2025 0.004, 2026 0.004 |
 | rel_mom_20 | 0.0089 | n/a | 2022 0.008, 2023 0.008, 2024 0.008, 2025 0.010, 2026 0.009 |
-| rel_ret_126 | 0.0526 | n/a | 2022 0.036, 2023 0.040, 2024 0.053, 2025 0.056, 2026 0.063 |
-| rel_deliv | 0.0406 | n/a | 2022 0.029, 2023 0.031, 2024 0.058, 2025 0.039, 2026 0.034 |
+| rel_ret_126 | 0.0523 | n/a | 2022 0.036, 2023 0.040, 2024 0.052, 2025 0.056, 2026 0.063 |
+| rel_deliv | 0.0406 | n/a | 2022 0.029, 2023 0.031, 2024 0.057, 2025 0.039, 2026 0.034 |
 | indn_rank_mom_20 | 0.0089 | n/a | 2022 0.008, 2023 0.008, 2024 0.008, 2025 0.010, 2026 0.009 |
-| indn_rank_ret_126 | 0.0526 | n/a | 2022 0.036, 2023 0.040, 2024 0.053, 2025 0.056, 2026 0.063 |
-| indn_rank_deliv_sma | 0.0406 | n/a | 2022 0.029, 2023 0.031, 2024 0.058, 2025 0.039, 2026 0.034 |
+| indn_rank_ret_126 | 0.0523 | n/a | 2022 0.036, 2023 0.040, 2024 0.052, 2025 0.056, 2026 0.063 |
+| indn_rank_deliv_sma | 0.0406 | n/a | 2022 0.029, 2023 0.031, 2024 0.057, 2025 0.039, 2026 0.034 |
 | indn_rank_atr | 0.0058 | n/a | 2022 0.006, 2023 0.006, 2024 0.005, 2025 0.006, 2026 0.006 |
 | secidx_ret_20 | 0.0000 | n/a | 2022 0.000, 2023 0.000, 2024 0.000, 2025 0.000, 2026 0.000 |
 | fo_member | 0.0000 | n/a | 2022 0.000, 2023 0.000, 2024 0.000, 2025 0.000, 2026 0.000 |
-| fut_basis_near | 0.8678 | 0.0889 | 2022 0.831, 2023 0.855, 2024 0.884, 2025 0.862, 2026 0.876 |
-| fut_oi_chg_5 | 0.8552 | 0.0024 | 2022 0.816, 2023 0.840, 2024 0.873, 2025 0.849, 2026 0.865 |
-| fut_oi_chg_20 | 0.8563 | 0.0099 | 2022 0.817, 2023 0.840, 2024 0.875, 2025 0.850, 2026 0.866 |
-| fut_oi_z_60 | 0.8577 | 0.0195 | 2022 0.817, 2023 0.840, 2024 0.875, 2025 0.854, 2026 0.867 |
-| pcr_oi | 0.8549 | 0.0000 | 2022 0.816, 2023 0.840, 2024 0.872, 2025 0.848, 2026 0.865 |
-| pcr_chg_5 | 0.8552 | 0.0024 | 2022 0.816, 2023 0.840, 2024 0.873, 2025 0.849, 2026 0.865 |
-| opt_oi_to_turnover | 0.8549 | 0.0000 | 2022 0.816, 2023 0.840, 2024 0.872, 2025 0.848, 2026 0.865 |
+| fut_basis_near | 0.8676 | 0.0884 | 2022 0.831, 2023 0.855, 2024 0.884, 2025 0.862, 2026 0.876 |
+| fut_oi_chg_5 | 0.8551 | 0.0024 | 2022 0.816, 2023 0.840, 2024 0.873, 2025 0.849, 2026 0.865 |
+| fut_oi_chg_20 | 0.8562 | 0.0099 | 2022 0.817, 2023 0.840, 2024 0.875, 2025 0.850, 2026 0.866 |
+| fut_oi_z_60 | 0.8576 | 0.0194 | 2022 0.817, 2023 0.840, 2024 0.875, 2025 0.854, 2026 0.867 |
+| pcr_oi | 0.8548 | 0.0000 | 2022 0.816, 2023 0.840, 2024 0.872, 2025 0.848, 2026 0.865 |
+| pcr_chg_5 | 0.8551 | 0.0024 | 2022 0.816, 2023 0.840, 2024 0.873, 2025 0.849, 2026 0.865 |
+| opt_oi_to_turnover | 0.8548 | 0.0000 | 2022 0.816, 2023 0.840, 2024 0.872, 2025 0.848, 2026 0.865 |
 | mkt_ret_20 (by date) | 0.0000 | - | 0 NaN dates:  |
 | mkt_ret_63 (by date) | 0.0000 | - | 0 NaN dates:  |
 | mkt_dd_252 (by date) | 0.0000 | - | 0 NaN dates:  |
@@ -269,42 +269,61 @@ Under the literal brief, F2 alone identifies the partition almost perfectly, bec
 
 ## 10. Descriptive monthly IC (REPORTING ONLY)
 
-REPORTING ONLY - descriptive; not used to add, drop or transform any feature; family membership fixed in ml/IMPROVEMENT_PLAN.md. Target: y_excess_20d on y_clean_20d rows (v1 dataset). Each value is the mean of daily Spearman ICs within a calendar month (dates with >= 50 pairs). F1 and F4 are one value per date, so they have no cross-sectional IC.
+REPORTING ONLY - descriptive; not used to add, drop or transform any feature; family membership fixed in ml/IMPROVEMENT_PLAN.md. Target: y_excess_20d on y_clean_20d rows (v2 dataset). Each value is the mean of daily Spearman ICs within a calendar month (dates with >= 50 pairs). F1 and F4 are one value per date, so they have no cross-sectional IC.
 
 | Feature | Months | Months > 0 | Mean monthly IC |
 |---|---:|---:|---:|
-| ind_mom_20 | 48 | 31 | 0.0396 |
-| ind_ret_63 | 48 | 31 | 0.0394 |
-| rel_mom_20 | 48 | 24 | -0.0067 |
-| rel_ret_126 | 48 | 27 | 0.0114 |
-| rel_deliv | 48 | 35 | 0.0446 |
-| indn_rank_mom_20 | 48 | 25 | -0.0050 |
-| indn_rank_ret_126 | 48 | 28 | 0.0122 |
-| indn_rank_deliv_sma | 48 | 37 | 0.0454 |
-| indn_rank_atr | 48 | 22 | -0.0087 |
-| secidx_ret_20 | 48 | 29 | 0.0062 |
-| fo_member | 48 | 27 | 0.0257 |
-| fut_basis_near | 48 | 38 | 0.0341 |
+| ind_mom_20 | 48 | 32 | 0.0347 |
+| ind_ret_63 | 48 | 32 | 0.0349 |
+| rel_mom_20 | 48 | 22 | -0.0117 |
+| rel_ret_126 | 48 | 29 | 0.0094 |
+| rel_deliv | 48 | 37 | 0.0467 |
+| indn_rank_mom_20 | 48 | 24 | -0.0099 |
+| indn_rank_ret_126 | 48 | 30 | 0.0107 |
+| indn_rank_deliv_sma | 48 | 37 | 0.0481 |
+| indn_rank_atr | 48 | 19 | -0.0118 |
+| secidx_ret_20 | 48 | 29 | 0.0064 |
+| fo_member | 48 | 27 | 0.0301 |
+| fut_basis_near | 48 | 38 | 0.0339 |
 | fut_oi_chg_5 | 48 | 26 | 0.0061 |
 | fut_oi_chg_20 | 48 | 27 | 0.0096 |
-| fut_oi_z_60 | 48 | 33 | 0.0141 |
-| pcr_oi | 48 | 33 | 0.0367 |
-| pcr_chg_5 | 48 | 29 | 0.0006 |
-| opt_oi_to_turnover | 48 | 25 | 0.0095 |
+| fut_oi_z_60 | 48 | 33 | 0.0142 |
+| pcr_oi | 48 | 33 | 0.0365 |
+| pcr_chg_5 | 48 | 28 | -0.0004 |
+| opt_oi_to_turnover | 48 | 25 | 0.0097 |
 
 ## 11. History extension (2016-10-03..2021-09-30, for P4)
 
-Candidate days 1308 (every weekday plus the weekend special sessions; a 404 marks a holiday). The rows are appended to the same staging tables with the same schema. Spot close for the F&O rows: P4 equity_eod_2016_2021.parquet not final yet: hist spot_close/basis NaN (share of futures rows with a spot: 0.0000). P4 session list: not available at build time.
+Candidate days 1308 (every weekday plus the weekend special sessions; a 404 marks a holiday). The rows are appended to the same staging tables with the same schema. Spot close for the F&O rows: ml/data_hist/equity_eod_2016_2021.parquet (EQ/BE) (share of futures rows with a spot: 1.0000). P4 session list: ml/data_hist/sessions_2016_2021.csv.
 
 | Source | Sessions with a file | 404 days | Content-date exclusions | P4 sessions without a file | Files on non-P4 days |
 |---|---:|---:|---:|---|---|
-| F&O bhavcopy | 1,237 | 71 | 0 | none | none |
+| F&O bhavcopy | 1,237 | 71 | 0 | 2021-03-30 | none |
 | ind_close_all | 1,238 | 70 | 0 | none | none |
-| participant OI | 1,146 | 70 | 92 | none | none |
+| participant OI | 1,238 | 70 | 0 | none | none |
 
-Files per year: F&O bhavcopy 2016 62, 2017 248, 2018 246, 2019 245, 2020 252, 2021 184; ind_close_all 2016 62, 2017 248, 2018 246, 2019 245, 2020 252, 2021 185; participant OI 2016 62, 2017 248, 2018 245, 2019 240, 2020 248, 2021 103.
+Files per year: F&O bhavcopy 2016 62, 2017 248, 2018 246, 2019 245, 2020 252, 2021 184; ind_close_all 2016 62, 2017 248, 2018 246, 2019 245, 2020 252, 2021 185; participant OI 2016 62, 2017 248, 2018 246, 2019 245, 2020 252, 2021 185.
 
 F&O members per day (mean by year): 2016 175.0, 2017 200.3, 2018 206.4, 2019 175.6, 2020 140.2, 2021 155.8.
+
+Sessions missing from one source while another has them: F&O bhavcopy 2021-03-30; ind_close_all none; participant OI none. The F&O bhavcopy for 2021-03-30 is a 404 in the archive (retried). Participant files accepted with a weaker date check: title without a year (month and day match) fao_participant_oi_08062021.csv; no title line, numbers differ from the previous file fao_participant_oi_13062018.csv.
+
+For the 10-year dataset, the F1/F3/F4 values come from `ml/extdata/features.py` run on a full-history export, for example `python3 -I ml/extdata/features.py --eod <10y equity_eod export> [--prices <10y features_prices export>] --start 2017-01-02 --suffix _10y --placebo`. A 2016-2021 equity_eod-schema file can also be stacked in front with `--hist`. The F3 basis is computed from that export's raw close, so the staging spot column is not needed. F2 applies only where the 2026-10-19 industry lists cover a name, and the look-ahead of section 8 is larger the further back the year.
+
+**Provisional 10-year files (raw price basis).** `ml/data_ext/extra_features_10y_raw.parquet` (2,453,769 rows, 2,782 tickers, 2017-01-02 to 2026-10-16), `ml/data_ext/market_state_10y_raw.parquet` and `ml/data_ext/extra_features_placebo_f2_10y_raw.parquet`. They are built with the same code and conventions on P4's `ml/data_hist/equity_eod_2016_2021.parquet` stacked in front of the raw v2 export (ETF exclusion: ml/data_ext/etf_list.csv (P1; 469 rows; sha256 7b9163f85448f256) + ml/data_hist/etf_records_2016_2021.csv (25 more symbols) (identical to P1 ml/data_ext/etf_list_10y.csv, 494 symbols)). F3, F4, vix_close, vix_chg_20 and nifty50_pe do not depend on the price adjustment and can be used as they are. The EW-universe parts of F1 and all of F2 use unadjusted prices here (the v1 convention). Rebuild them with the CLI above once the lead's adjusted 10-year export exists.
+
+| Year | Stock rows | F&O member share | fo_member NaN share | mkt_dd_252 present | fii_idx_fut_net present | ind_mom_20 present |
+|---|---:|---:|---:|---:|---:|---:|
+| 2017 | 182,962 | 0.271 | 0.0000 | 0.706 | 1.000 | 0.991 |
+| 2018 | 173,590 | 0.291 | 0.0000 | 1.000 | 1.000 | 0.989 |
+| 2019 | 130,973 | 0.325 | 0.0000 | 1.000 | 1.000 | 0.982 |
+| 2020 | 163,257 | 0.215 | 0.0000 | 1.000 | 1.000 | 0.984 |
+| 2021 | 244,484 | 0.165 | 0.0036 | 1.000 | 1.000 | 0.995 |
+| 2022 | 258,307 | 0.188 | 0.0000 | 1.000 | 1.000 | 0.996 |
+| 2023 | 285,285 | 0.161 | 0.0000 | 1.000 | 0.996 | 0.996 |
+| 2024 | 359,043 | 0.128 | 0.0000 | 1.000 | 1.000 | 0.997 |
+| 2025 | 353,128 | 0.152 | 0.0000 | 1.000 | 0.996 | 0.996 |
+| 2026 | 302,740 | 0.135 | 0.0000 | 1.000 | 1.000 | 0.996 |
 
 ## 12. Reproduction
 

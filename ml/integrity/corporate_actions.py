@@ -56,16 +56,17 @@ SHIFT_SESSIONS = 3
 JUMP = 0.22
 KNOWN = [("NESTLEIND", "2024-01-05", 0.1), ("IRCTC", "2021-10-28", 0.2),
          ("TATASTEEL", "2022-07-28", 0.1), ("RELIANCE", "2024-10-28", 0.5)]
-UNADJUSTABLE = {"demerger", "scheme_of_arrangement", "capital_reduction", "rights"}
+UNADJUSTABLE = {"demerger", "scheme_of_arrangement", "capital_reduction", "rights", "bonus_other_security"}
 ADJUSTABLE = {"split", "bonus", "consolidation"}
 
 NUM = r"(\d+(?:\.\d+)?)"
 CUR = r"(?:RS|RE|INR)?\.?\s*"
 RE_SPLIT = re.compile(r"(?:FV\s*SPLI?T|FVSPLI?T|SPLIT|SUB[\s-]*DIVISION)\s*(?:FRM|FROM|OF)?\s*(?:FV\s*)?"
                       + CUR + NUM + r"\s*(?:/-)?\s*(?:PER\s*SH(?:ARE)?)?\s*TO\s*" + CUR + NUM)
-RE_CONSOL = re.compile(r"(?:CONSOL\w*|CONSL\w*|FV\s*CONSOL\w*)\s*(?:OF\s*SHARES?\s*)?(?:FRM|FROM)?\s*"
+RE_CONSOL = re.compile(r"(?:CONSOL\w*|CONSL\w*|FV\s*CONSOL\w*)\s*-?\s*(?:OF\s*SHARES?\s*)?(?:FRM|FROM)?\s*"
                        + CUR + NUM + r"\s*(?:/-)?\s*TO\s*" + CUR + NUM)
-RE_BONUS = re.compile(r"BONUS\s*[-:]?\s*(?:ISSUE\s*)?(\d+)\s*[:/]\s*(\d+)")
+# "BONUS 1:1", "BONUS- 1:2", "BON 1:3" (2016-2019 spelling), "BONUS 1.5:1"
+RE_BONUS = re.compile(r"\bBON(?:US)?(?![A-Z])\s*[-:]?\s*(?:ISSUE\s*)?" + NUM + r"\s*[:/]\s*" + NUM)
 # ETF / fund units: "ADD ISSUANCE 9:1" = 9 additional units per 1 held (economically a bonus)
 RE_ADDISSUE = re.compile(r"ADD(?:ITIONAL|L|\.)?\s*ISSU\w*\s*(?:OF\s*UNITS\s*)?(\d+)\s*[:/]\s*(\d+)")
 
@@ -88,6 +89,9 @@ def classify(purpose: str) -> list[dict]:
         a, b = float(m.group(1)), float(m.group(2))
         if a > 0 and b > a:
             comps.append({"kind": "consolidation", "ratio": b / a, "a": a, "b": b})
+    if re.search(r"\bDVR\b", p) and re.search(r"\bBON(?:US)?(?![A-Z])", p):
+        # a bonus paid in a different security (DVR shares): not a share-count change of this line
+        return [{"kind": "bonus_other_security", "ratio": np.nan, "a": np.nan, "b": np.nan}]
     for rx in (RE_BONUS, RE_ADDISSUE):
         for m in rx.finditer(p):
             a, b = float(m.group(1)), float(m.group(2))
@@ -97,15 +101,16 @@ def classify(purpose: str) -> list[dict]:
         return comps
     rules = [
         ("demerger", r"DE-?\s*MERGER"),
-        ("scheme_of_arrangement", r"SCHEME OF ARR|ARRANGEMENT|SCH OF ARR"),
-        ("capital_reduction", r"CAPITAL REDUCTION|REDUCTION OF (SHARE )?CAPITAL|CAP\.? ?RED"),
+        ("scheme_of_arrangement", r"SCHEME OF ARR|ARRANGEMENT|SCH OF ARR|SCH(?:EME)? OF AGMT"),
+        ("capital_reduction", r"CAPITAL REDUCTION|REDUCTION OF (SHARE )?CAPITAL|CAP\.? ?RED|RET(?:URN)?\.? (?:OF )?CAP"),
         ("rights", r"\bRI?GHTS?|\bRIGHT ISSUE"),
-        ("merger", r"\bMERGER\b|AMALGAMATION|AMALG"),
+        ("merger", r"\bMERGER\b|AMALGAMATION|AMALG|AMALAG"),
         ("buyback", r"BUY\s*-?\s*BACK"),
-        ("interest_redemption", r"INTEREST|\bINT\s*PAYMENT|\bINTPAYMENT|\bINT\s*[&/]|REDEMPTI?O?N|REDMPTN|REDEMPTN|\bMATURITY"),
-        ("distribution", r"DISTRI|INCOME DIST"),
+        ("interest_redemption", r"INTEREST|INTERST|\bINT\s*PAYMENT|\bINTPAYMENT|\bINT\s*[&/]|REDEMPTI?O?N|REDMPTN|"
+                                r"REDEMPTN|\bMATURITY"),
+        ("distribution", r"DISTRI|INCOME DIST|DISTBTN"),
         ("call_money", r"\bCALL\b|CALL\s*-|CALL MONEY|FNL ?CALL|FNLCALL"),
-        ("dividend", r"DIV|DIVIDEND|\bINT\s*-\s*RS|\bSPL\s*-\s*RS|\bFIN\s*-\s*RS"),
+        ("dividend", r"DIV|DIVIDEND|\bIDV\b|\bINT\s*-?\s*R[SE]|\bSPL\s*-?\s*R[SE]|\bFIN\s*-?\s*R[SE]"),
         ("meeting", r"\bAGM\b|\bEGM\b|\bEOGM\b|GENERAL ME|GEN\.? MEET|POSTAL BALLOT|\bMEETING"),
         ("book_closure", r"BOOK CLOSURE|\bBC\b"),
     ]
@@ -170,10 +175,24 @@ def _member(zf: zipfile.ZipFile, prefix: str) -> str | None:
     return None
 
 
-def read_members(prefix: str, columns_upper: bool = True) -> tuple[pd.DataFrame, dict]:
+BUNDLE_DIRS: list[Path] = [RAW]          # main() may extend this (e.g. ml/data_raw/hist/pr)
+
+
+def _bundles(dirs: list[Path] | None = None) -> list[Path]:
+    """PR bundles of the given folders (top level only), one per zip name, in date order."""
+    seen, out = set(), []
+    for d in (dirs or BUNDLE_DIRS):
+        for z in Path(d).glob("PR*.zip"):
+            if z.name not in seen:
+                seen.add(z.name)
+                out.append(z)
+    return sorted(out, key=lambda z: (z.stem[6:8], z.stem[4:6], z.stem[2:4]))
+
+
+def read_members(prefix: str, columns_upper: bool = True, dirs: list[Path] | None = None) -> tuple[pd.DataFrame, dict]:
     """Concatenate one member type (bc / etf / pd) over every PR bundle on disk."""
     frames, stats = [], {"bundles": 0, "with_member": 0, "empty": 0, "unreadable": 0, "misfiled_skipped": []}
-    for z in sorted(RAW.glob("PR*.zip")):
+    for z in _bundles(dirs):
         stats["bundles"] += 1
         if not bundle_ok(z):
             stats["misfiled_skipped"].append(f"{z.name} holds {bundle_inner_date(z)}")
@@ -277,7 +296,7 @@ def agree(obs, ratio) -> bool:
     return bool(np.isfinite(obs) and np.isfinite(ratio) and ratio > 0 and abs(obs / ratio - 1) <= AGREE_TOL)
 
 
-def build(eod: pd.DataFrame) -> dict:
+def build(eod: pd.DataFrame, suffix: str = "", window_split: str | None = None) -> dict:
     t0 = time.time()
     ev, stats = load_bc()
     log(f"bc: {stats}", "ca")
@@ -297,18 +316,33 @@ def build(eod: pd.DataFrame) -> dict:
     obs = observed_ratios(eod, adj)
     # ---- per (ticker, ex_date): compound ratio, bonus orientation, validation ----
     groups = []
-    for (tkr, exd), g in adj.groupby(["ticker", "ex_date"]):
+    import itertools
+    for (tkr, exd), g0 in adj.groupby(["ticker", "ex_date"]):
         o = obs[(obs["ticker"] == tkr) & (obs["ex_date"] == exd)].iloc[0]
-        std = float(np.prod(g["component_ratio"]))
-        alt_parts = [(r["a"] / (r["a"] + r["b"]) if r["kind"] == "bonus" else r["component_ratio"])
-                     for _, r in g.iterrows()]
-        alt = float(np.prod(alt_parts))
-        ok_std, ok_alt = agree(o["observed_ratio"], std), agree(o["observed_ratio"], alt)
-        has_bonus = bool((g["kind"] == "bonus").any()) and abs(alt - std) > 1e-12
-        flipped = bool(has_bonus and not ok_std and ok_alt)
+        # two different components of the SAME kind on one ex-date (e.g. "BONUS 1:1" and "BONUS 1:10")
+        # are alternative listings of one action, not two actions: try one per kind, latest first
+        per_kind = [list(k.sort_values("last_seen", ascending=False).index) for _, k in g0.groupby("kind")]
+        combos = list(itertools.product(*per_kind))
+        best = None
+        for combo in combos:
+            g = g0.loc[list(combo)]
+            std = float(np.prod(g["component_ratio"]))
+            alt = float(np.prod([(r["a"] / (r["a"] + r["b"]) if r["kind"] == "bonus" else r["component_ratio"])
+                                 for _, r in g.iterrows()]))
+            ok_std, ok_alt = agree(o["observed_ratio"], std), agree(o["observed_ratio"], alt)
+            has_bonus = bool((g["kind"] == "bonus").any()) and abs(alt - std) > 1e-12
+            flipped = bool(has_bonus and not ok_std and ok_alt)
+            cand = (g, std, alt, ok_std, has_bonus, flipped)
+            if best is None:
+                best = cand                       # latest-announced reading by default
+            if ok_std or flipped:
+                best = cand
+                break
+        g, std, alt, ok_std, has_bonus, flipped = best
         ratio = alt if flipped else std
         groups.append({"ticker": tkr, "ex_date": exd, "kinds": "+".join(sorted(set(g["kind"]))),
-                       "n_components": int(len(g)), "ratio": ratio, "ratio_standard": std,
+                       "n_components": int(len(g)), "n_alternative_readings": int(len(combos)),
+                       "ratio": ratio, "ratio_standard": std,
                        "ratio_flipped_reading": alt if has_bonus else np.nan, "bonus_flipped": flipped,
                        "observed_ratio": float(o["observed_ratio"]) if np.isfinite(o["observed_ratio"]) else np.nan,
                        "observed_close_prev_over_open_ex": o["observed_close_prev_over_open_ex"],
@@ -409,7 +443,7 @@ def build(eod: pd.DataFrame) -> dict:
     feed = feed.sort_values(["ticker", "ex_date"])
     DATA_EXT.mkdir(parents=True, exist_ok=True)
     feed_out = feed.assign(ex_date=feed["ex_date"].dt.strftime("%Y-%m-%d"))
-    feed_out.to_csv(DATA_EXT / "corporate_actions_feed.csv", index=False)
+    feed_out.to_csv(DATA_EXT / f"corporate_actions_feed{suffix}.csv", index=False)
     other = allc[~allc["kind"].isin(ADJUSTABLE)].copy()
     other_obs = observed_ratios(eod, other.dropna(subset=["ex_date"]))
     other = other.merge(other_obs[["ticker", "ex_date", "observed_ratio"]], on=["ticker", "ex_date"], how="left")
@@ -427,7 +461,7 @@ def build(eod: pd.DataFrame) -> dict:
               "record_date"):
         if c in all_out.columns:
             all_out[c] = pd.to_datetime(all_out[c]).dt.strftime("%Y-%m-%d")
-    all_out.to_csv(DATA_EXT / "corporate_actions_all.csv", index=False)
+    all_out.to_csv(DATA_EXT / f"corporate_actions_all{suffix}.csv", index=False)
     brk = other[other["kind"].isin(UNADJUSTABLE) & other["ex_date"].notna()][["ticker", "ex_date", "kind", "purpose"]]
     unv = ev2[ev2["status"].isin(["ok", "ex_date_shifted"]) & in_store & ~ev2["validated"]][
         ["ticker", "ex_date", "kinds", "purpose"]]
@@ -435,7 +469,7 @@ def build(eod: pd.DataFrame) -> dict:
     flags = pd.concat([brk, unv], ignore_index=True).drop_duplicates(["ticker", "ex_date", "kind"])
     flags = flags.sort_values(["ex_date", "ticker"])
     flags.assign(ex_date=flags["ex_date"].dt.strftime("%Y-%m-%d"))[["ticker", "ex_date", "kind", "purpose"]].to_csv(
-        DATA_EXT / "price_break_flags.csv", index=False)
+        DATA_EXT / f"price_break_flags{suffix}.csv", index=False)
     # ---- known events ----
     known = []
     for tkr, d, r in KNOWN:
@@ -460,6 +494,7 @@ def build(eod: pd.DataFrame) -> dict:
                               "evaluated": n_live, "agree": n_agree, "disagree": n_live - n_agree,
                               "by_kind_evaluated": {k: int(v) for k, v in live["kinds"].value_counts().items()},
                               "bonus_orientation_flips": int(live["bonus_flipped"].sum()),
+                              "groups_with_alternative_listings": int((ev2["n_alternative_readings"] > 1).sum()),
                               "bonus_events_evaluated": int(live["kinds"].str.contains("bonus").sum())},
         "I2_by_ratio_strength": {
             lab: {"events": int(len(x)), "agree": int(x["validated"].sum()),
@@ -501,7 +536,21 @@ def build(eod: pd.DataFrame) -> dict:
         "completeness": comp,
         "seconds": round(time.time() - t0, 1),
     }
-    wjson(OUT / "corporate_actions.json", res)
+    if window_split:
+        ws = pd.Timestamp(window_split)
+        res["I2_by_window"] = {}
+        for lab, m in ((f"ex_date < {window_split}", strict["ex_date"] < ws),
+                       (f"ex_date >= {window_split}", strict["ex_date"] >= ws)):
+            x = strict[m]
+            res["I2_by_window"][lab] = {"events": int(len(x)), "agree": int(x["validated"].sum()),
+                                        "rate": float(x["validated"].mean()) if len(x) else None,
+                                        "pass_mark": 0.95,
+                                        "pass": bool(len(x) and x["validated"].mean() >= 0.95)}
+        res["feed_rows_by_window"] = {
+            f"ex_date < {window_split}": int((pd.to_datetime(feed["ex_date"]) < ws).sum()),
+            f"ex_date >= {window_split}": int((pd.to_datetime(feed["ex_date"]) >= ws).sum())}
+    res["bundle_dirs"] = [str(d) for d in BUNDLE_DIRS]
+    wjson(OUT / f"corporate_actions{suffix}.json", res)
     log(f"ca: evaluated {n_live}, agree {n_agree} ({i2_rate:.4f}), feed {len(feed)}, flags {len(flags)}, "
         f"known {[k['ratio_matches'] for k in known]}, completeness gaps {comp['n_missing']}", "ca")
     return res
@@ -545,17 +594,43 @@ def completeness(eod: pd.DataFrame, feed: pd.DataFrame, ev2: pd.DataFrame,
             .to_dict("records")}
 
 
+def load_eod_sources(paths: list[str], before: str | None = None) -> pd.DataFrame:
+    """EQ/BE rows (date, ticker, open, close) from parquet files with the equity_eod columns."""
+    frames = []
+    for p_ in paths:
+        x = pd.read_parquet(p_, columns=["date", "ticker", "series", "open", "close"])
+        x = x[x["series"].isin(["EQ", "BE"])]
+        x["date"] = pd.to_datetime(x["date"]).astype("datetime64[ns]")
+        frames.append(x)
+    e = pd.concat(frames, ignore_index=True)
+    e = e.sort_values(["ticker", "date"]).drop_duplicates(["date", "ticker"], keep="last")
+    return e.reset_index(drop=True)
+
+
 def main(argv=None) -> int:
-    from ml.integrity.sessions import apply_fixes_to_export, load_eod
+    import argparse
     import json
-    eod = load_eod()
-    from ml.integrity.sessions import STAGING
-    up = STAGING / "sessions_upsert.parquet"
-    if up.exists():
-        dele = json.loads((STAGING / "sessions_delete.json").read_text())["delete_dates"]
-        eod = apply_fixes_to_export(eod, pd.read_parquet(up), dele)
-        log(f"ca: using the store preview with P1 session fixes ({len(eod):,} EQ/BE rows)", "ca")
-    build(eod)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--bundle-dirs", nargs="*", default=[], help="extra PR-bundle folders (e.g. ml/data_raw/hist/pr)")
+    ap.add_argument("--eod", nargs="*", default=[], help="EQ/BE price parquet(s) for the observed ratios; "
+                                                         "default: v1 export + P1 session fixes")
+    ap.add_argument("--suffix", default="", help="output suffix, e.g. _10y")
+    ap.add_argument("--window-split", default=None, help="report I2 separately before/after this date")
+    a = ap.parse_args(argv)
+    for d in a.bundle_dirs:
+        BUNDLE_DIRS.append(Path(d))
+    if a.eod:
+        eod = load_eod_sources(a.eod)
+        log(f"ca: observed prices from {a.eod} ({len(eod):,} EQ/BE rows)", "ca")
+    else:
+        from ml.integrity.sessions import STAGING, apply_fixes_to_export, load_eod
+        eod = load_eod()
+        up = STAGING / "sessions_upsert.parquet"
+        if up.exists():
+            dele = json.loads((STAGING / "sessions_delete.json").read_text())["delete_dates"]
+            eod = apply_fixes_to_export(eod, pd.read_parquet(up), dele)
+            log(f"ca: using the store preview with P1 session fixes ({len(eod):,} EQ/BE rows)", "ca")
+    build(eod, suffix=a.suffix, window_split=a.window_split)
     return 0
 
 

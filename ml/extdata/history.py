@@ -69,6 +69,15 @@ def hist_coverage(fo: pd.DataFrame, idx: pd.DataFrame, part: pd.DataFrame) -> di
             rec["files_on_non_p4_days"] = sorted(d.isoformat() for d in have - p4)
         per[kind] = rec
     out["per_source"] = per
+    days = {k: {d for d in pd.to_datetime(f["date"]).dt.date.unique() if C.HIST_START <= d <= C.HIST_END}
+            for k, f in (("fo", fo), ("indices", idx), ("participant", part))}
+    union = set().union(*days.values())
+    out["cross_source_gaps"] = {k: sorted(d.isoformat() for d in union - v) for k, v in days.items()}
+    meta_p = meta.get("participant", [])
+    out["participant_files_title_without_year"] = sorted(m["file"] for m in meta_p
+                                                        if m.get("title_without_year"))
+    out["participant_files_without_title_accepted"] = sorted(
+        m["file"] for m in meta_p if m.get("title_missing") and m.get("date_ok"))
     out["p4_session_list"] = "ml/data_hist/sessions_2016_2021.csv" if p4 is not None else \
         "not available at build time"
     f = fo[(fo["date"] <= pd.Timestamp(C.HIST_END)) & (fo["has_future"] == 1)]

@@ -300,7 +300,8 @@ def parse_index_file(path: Path) -> tuple[pd.DataFrame, dict]:
 # participant-wise OI
 # --------------------------------------------------------------------------- #
 
-TITLE_DATE_RE = re.compile(r"as on\s+([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})", re.I)
+# "as on Oct 16, 2026", "as on Jul 29,2019", "as on Feb 19 ,2021"
+TITLE_DATE_RE = re.compile(r"as on\s+([A-Za-z]{3,9})\.?\s*(\d{1,2})\s*,?\s*(\d{4})", re.I)
 
 
 def parse_participant_file(path: Path) -> tuple[pd.DataFrame, dict]:
@@ -313,13 +314,23 @@ def parse_participant_file(path: Path) -> tuple[pd.DataFrame, dict]:
     hdr = [h.strip() for h in rows[hdr_i]]
     body = rows[hdr_i + 1:]
     m = TITLE_DATE_RE.search(title)
-    tdate = None
+    tdate, partial = None, False
     if m:
         try:
             tdate = datetime.strptime(f"{m.group(1)[:3]} {m.group(2)} {m.group(3)}",
                                       "%b %d %Y").date()
         except ValueError:
             tdate = None
+    else:
+        # a few titles omit the year ("as on Jun 08"): month and day must match
+        m2 = re.search(r"as on\s+([A-Za-z]{3,9})\.?\s*(\d{1,2})\b", title, re.I)
+        if m2:
+            try:
+                md = datetime.strptime(f"{m2.group(1)[:3]} {m2.group(2)} {d.year}", "%b %d %Y").date()
+                if md == d:
+                    tdate, partial = md, True
+            except ValueError:
+                pass
     recs = []
     for r in body:
         if not r or not r[0]:
@@ -336,10 +347,15 @@ def parse_participant_file(path: Path) -> tuple[pd.DataFrame, dict]:
     missing_cols = [v for v in PART_NUMERIC.values() if v not in df.columns]
     for c in missing_cols:
         df[c] = np.nan
+    title_missing = bool(rows) and rows[0] and rows[0][0].lower() == "client type"
     meta = {"file": path.name, "file_date": d.isoformat(), "title": title[:160],
             "title_date": tdate.isoformat() if tdate else None,
-            "date_ok": tdate == d, "client_types": df["client_type"].tolist(),
-            "missing_columns": missing_cols}
+            # a file without a title line has no internal date: provisional,
+            # accepted in run() only if it is not an echo of the previous file
+            "date_ok": (tdate == d) if not title_missing else None,
+            "title_missing": title_missing,
+            "title_without_year": partial,
+            "client_types": df["client_type"].tolist(), "missing_columns": missing_cols}
     return df[["date", "client_type"] + list(PART_NUMERIC.values())], meta
 
 
@@ -499,11 +515,32 @@ def run(max_date: date | None = None, write: bool = True, raw_dirs: dict | None 
     part_files = list_raw("participant", max_date, raw_dirs, min_date)
     part_frames, part_meta = _parse_all("participant", part_files, parse_participant_file,
                                         use_cache, upd)
+    # untitled files: keep only if the numbers differ from the previous file's
+    num = list(PART_NUMERIC.values())
+    unverified = []
+    for m in part_meta:
+        if m.get("date_ok") is None and m.get("title_missing") and len(part_frames):
+            cur = part_frames[part_frames["_file"] == m["file"]]
+            prev_files = [x["file"] for x in part_meta if x.get("date_ok")
+                          and x["file_date"] < m["file_date"]]
+            prev = max(prev_files, key=lambda f: next(x["file_date"] for x in part_meta
+                                                      if x["file"] == f)) if prev_files else None
+            pv = part_frames[part_frames["_file"] == prev] if prev else None
+            echo = (pv is not None and len(pv) == len(cur) and
+                    (pv.sort_values("client_type")[num].to_numpy() ==
+                     cur.sort_values("client_type")[num].to_numpy()).all())
+            m["date_ok"] = not echo
+            m["date_check"] = ("no title line: internal date unverified; numbers differ from the "
+                               f"previous file {prev}" if not echo else
+                               f"no title line and identical to {prev}: excluded as an echo")
+            if not echo:
+                unverified.append(m["file"])
     bad_part = {m["file"] for m in part_meta if not m.get("date_ok")}
     part = part_frames[~part_frames["_file"].isin(bad_part)].drop(columns="_file") \
         if len(part_frames) else pd.DataFrame()
     report["participant"] = {"files_parsed": len(part_files),
                              "files_excluded_date_mismatch_or_error": sorted(bad_part),
+                             "files_accepted_without_title_date": unverified,
                              "rows": int(len(part))}
     fo, idx, part = add_window(fo), add_window(idx), add_window(part)
     if len(idx):

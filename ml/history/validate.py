@@ -32,8 +32,8 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from ml.history.common import (  # noqa: E402
-    EXPORT, OVERLAP_DAYS, RESULTS, SPECIAL_SESSIONS, STAGE, WINDOW_END, WINDOW_START,
-    calendar_days, get_logger, local_path, read_manifest,
+    EXPORT, LOG_PATH, MANIFEST as MANIFEST_PATH, OVERLAP_DAYS, RESULTS, SPECIAL_SESSIONS, STAGE,
+    WINDOW_END, WINDOW_START, calendar_days, get_logger, local_path, read_manifest,
 )
 from ml.history.parse import AUX_DIR, EOD_DIR, TURNOVER_FACTOR, load_parts  # noqa: E402
 
@@ -139,14 +139,19 @@ def check_download() -> dict:
     sp = RESULTS / "download_status.json"
     if sp.exists():
         status = json.loads(sp.read_text())
+    n_manifest = sum(1 for _ in open(MANIFEST_PATH)) if MANIFEST_PATH.exists() else 0
+    logtxt = LOG_PATH.read_text() if LOG_PATH.exists() else ""
+    runs = logtxt.count("hist.download INFO download start")
+    backoff_lines = [ln[:160] for ln in logtxt.splitlines() if "hist.download WARNING back-off" in ln]
     return {
         "calendar_days": len(days), "cm_status_counts": cm_status, "sessions": len(sessions),
         "weekday_without_session": weekday_off, "weekend_sessions": weekend_sessions,
         "echo_or_misdated": echoes, "cm_errors": errors,
         "mto": {"files": mto["200"], "missing_on_session_days": mto["missing"], "errors": mto["error"]},
         "pr": {"files": pr["200"], "missing_on_session_days": pr["missing"], "errors": pr["error"]},
-        "requests": status.get("requests"), "backoffs": status.get("backoffs"),
-        "elapsed_s": status.get("elapsed_s"), "download_final": status.get("final"),
+        "requests_last_run": status.get("requests"), "backoffs_last_run": status.get("backoffs"),
+        "elapsed_s_last_run": status.get("elapsed_s"), "download_final": status.get("final"),
+        "manifest_outcomes": n_manifest, "runs": runs, "backoff_warnings_logged": backoff_lines,
         "_sessions": sessions,
     }
 
@@ -480,8 +485,12 @@ def check_parse_diag(auxes: list[dict]) -> dict:
         "mto_rows": tot("mto_rows"), "mto_bad_lines": tot("mto_bad_lines"),
         "mto_duplicate_rows_dropped": tot("mto_dup_rows"),
         "mto_rows_matched_to_cm": matched,
+        "mto_deliv_blanked_rows": tot("mto_deliv_blanked_rows"),
+        "mto_deliv_blanked_days": [d.get("mto_file") for d in ds if d.get("mto_deliv_blanked_rows")],
         "mto_rows_without_cm_row": tot("mto_unmatched_rows"),
         "mto_qty_equals_cm_volume_share": r(tot("mto_qty_equals_volume") / matched, 6) if matched else None,
+        "pr_rows_repaired_total": tot("pr_rows_repaired"),
+        "pr_rows_repaired_bundles": [d.get("pr_file") for d in ds if d.get("pr_rows_repaired")],
         "pr_misdated_bundles": [{"file": d.get("pr_file"), "member_dates": d.get("pr_member_dates")}
                                 for d in ds if d.get("pr_misdated")],
         "pr_days_without_bc": [d.get("pr_file") for d in ds if d.get("has_pr") and not d.get("bc_member")],
@@ -535,6 +544,8 @@ def _pd_cross(ds: list[dict]) -> dict:
     tot = sum(d["pd_matched"] for d in dd)
     out = {"days": len(dd), "matched_rows": int(tot),
            "cm_rows_not_in_pd": int(sum(d.get("pd_cm_only", 0) for d in dd)),
+           "cm_rows_not_in_pd_eq_be": int(sum(d.get("pd_cm_only_eq_be", 0) for d in dd)),
+           "cm_rows_not_in_pd_series": sorted({x for d in dd for x in d.get("pd_cm_only_series", [])}),
            "pd_rows_not_in_cm": int(sum(d.get("pd_only", 0) for d in dd)), "field_match_share": {},
            "worst_day": {}}
     out["days_with_disagreement"] = {}
@@ -646,7 +657,8 @@ def run(final: bool) -> dict:
             "close": "CLOSE", "volume": "TOTTRDQTY",
             "turnover": f"TOTTRDVAL * {TURNOVER_FACTOR} (rupees), rounded half up to 0.01 lakh like the store",
             "trades": "TOTALTRADES", "vwap": "TOTTRDVAL / TOTTRDQTY, rounded half up to 2 decimals", "isin": "ISIN",
-            "deliv_qty": "MTO Deliverable Quantity (join SYMBOL + SERIES; NaN when MTO has no row)",
+            "deliv_qty": "MTO Deliverable Quantity (join SYMBOL + SERIES; NaN when MTO has no row or its "
+                         "traded quantity differs from the CM volume)",
             "deliv_pct": "MTO % of Deliverable Quantity to Traded Quantity", "source": "cm_mto",
         },
     }
@@ -743,9 +755,11 @@ def render_md(res: dict) -> str:
     if et:
         L.append(f"- `ml/data_hist/etf_records_2016_2021.csv`: {et['symbols']} ETF symbols with first_seen, "
                  f"last_seen, underlying.")
-    L.append("- Also: `pd_corp_ind_2016_2021.csv` (Pd rows with a CORP_IND flag), `index_close_2016_2021.csv` "
-             "(Pd index rows incl. Nifty 50 and India VIX), `overlap_cm_mto_2021-10.parquet` (the two "
-             "overlap days; validation only, not for upsert).")
+    L.append("- Also in `ml/data_hist/`: `pd_corp_ind_2016_2021.csv` (Pd rows with a CORP_IND flag such as XD, XB, "
+             "XR), `index_close_2016_2021.csv` (Pd index rows incl. Nifty 50 and India VIX), "
+             "`sessions_2016_2021.csv` (one row per session), `call_auction_rows_2016_2021.csv` (periodic "
+             "call-auction rows), `overlap_cm_mto_2021-10.parquet` (the two overlap days; validation only, "
+             "not for upsert).")
     L.append("")
     L.append("Mapping: " + ", ".join(f"`{a}` = {b}" for a, b in res["mapping"].items()) + ".")
     L.append("")
@@ -795,6 +809,9 @@ def render_md(res: dict) -> str:
     L.append("")
     L.append("## Calendar")
     L.append("")
+    L.append("Expected counts come from the reference list of NSE weekday closures in `ml/history/validate.py` "
+             "(`NSE_WEEKDAY_HOLIDAYS`) plus the special sessions.")
+    L.append("")
     L.append("| Period | Sessions | Expected (reference calendar) | EQ/BE rows | All rows |")
     L.append("|---|---:|---:|---:|---:|")
     for p in sorted(c["sessions_by_period"]):
@@ -821,7 +838,6 @@ def render_md(res: dict) -> str:
              f"{fmt_pct(k['median_daily_share'], 3)}, 99th percentile {fmt_pct(k['p99_daily_share'], 2)}, "
              f"maximum {fmt_pct(k['max_daily_share'], 2)} on {k['max_daily_share_date']}). Dates above 5%: "
              f"{len(k['dates_above_5pct'])}.")
-    L.append("")
     for f in k["dates_above_5pct"]:
         L.append(f"- {f['date']} (previous session {f['previous_session']}): {f['mismatches']} of {f['tickers']} "
                  f"({fmt_pct(f['share'], 1)}), {f['explained_by_bc_exdate']} on a Bc ex-date.")
@@ -833,9 +849,12 @@ def render_md(res: dict) -> str:
             for m in k["mismatch_list"]) + ".")
         L.append("")
     L.append(f"Mismatches falling on a Bc ex-date of the same ticker: {k['mismatches_on_bc_exdate']} of "
-             f"{k['mismatch_pairs']} ({k['mismatches_on_bc_exdate_by_kind']}). On {k['split_bonus_exdates_checked']} "
-             f"split or bonus ex-dates with a previous-session close, prev_close differs from it on "
-             f"{k['split_bonus_exdates_prev_close_differs']}.")
+             f"{k['mismatch_pairs']} ({k['mismatches_on_bc_exdate_by_kind']}): NSE adjusted the base price for these "
+             f"few dividends and one split. On {k['split_bonus_exdates_checked']} split or bonus ex-dates with a "
+             f"previous-session close, prev_close differs from it on {k['split_bonus_exdates_prev_close_differs']}: "
+             f"the legacy PREVCLOSE is otherwise the unadjusted previous close, so prev_close does not reveal splits "
+             f"and bonuses in this window either, and the Bc feed is needed for adjustment. No session is missing "
+             f"(no date above 5%, every weekday closure is a reference holiday, all special sessions present).")
     if "pairs" in sp:
         L.append("")
         L.append(f"Splice with the store: the store's 2021-10-01 prev_close equals the history's 2021-09-30 close "
@@ -874,10 +893,14 @@ def render_md(res: dict) -> str:
                  f"{pdg['cm_timestamp_mismatch_rows']} rows with a TIMESTAMP other than the file date); "
                  f"MTO {pdg['mto_rows']:,} records, {pdg['mto_rows_without_cm_row']} without a CM row, "
                  f"MTO traded quantity equals CM volume on {fmt_pct(pdg['mto_qty_equals_cm_volume_share'], 3)} "
-                 f"of matched rows; MTO trade-date mismatches: {len(pdg['mto_trade_date_mismatch_days'])} "
+                 f"of matched rows (the exceptions are all in {', '.join(pdg['mto_deliv_blanked_days'])}, which carry "
+                 f"66 records keyed by BSE scrip codes and quantities above the NSE volume, most likely combined "
+                 f"NSE and BSE obligations; delivery is left NaN on those {pdg['mto_deliv_blanked_rows']:,} rows); MTO trade-date mismatches: {len(pdg['mto_trade_date_mismatch_days'])} "
                  f"(files rejected: {len(pdg.get('mto_rejected_days', []))}; headers reading 'rade Date' without "
                  f"the T, date verified: {len(pdg.get('mto_header_quirk_files', []))}); "
                  f"sessions without MTO: {len(pdg['days_without_mto'])}, without PR: {len(pdg['days_without_pr'])}; "
+                 f"bundle CSV rows with an unquoted comma in a text field, re-joined: "
+                 f"{pdg.get('pr_rows_repaired_total', 0)} in {len(pdg.get('pr_rows_repaired_bundles', []))} bundles; "
                  f"PR bundles whose members carry another date (not used): "
                  f"{', '.join(x['file'] + ' -> ' + '/'.join(x['member_dates']) for x in pdg['pr_misdated_bundles']) or 'none'}; "
                  f"PR bundles without a Bc / etf / Pd member: {len(pdg['pr_days_without_bc'])} / "
@@ -893,7 +916,8 @@ def render_md(res: dict) -> str:
                  f"{fmt_pct(fm['close'], 3)}, prev_close {fmt_pct(fm['prev_close'], 3)}, open "
                  f"{fmt_pct(fm['open'], 3)}, high {fmt_pct(fm['high'], 3)}, low {fmt_pct(fm['low'], 3)}, volume "
                  f"{fmt_pct(fm['volume'], 3)}, trades {fmt_pct(fm['trades'], 3)}, turnover within Rs 500 "
-                 f"{fmt_pct(fm['turnover_500'], 3)}; CM rows absent from Pd {pc['cm_rows_not_in_pd']:,}, "
+                 f"{fmt_pct(fm['turnover_500'], 3)}; CM rows absent from Pd {pc['cm_rows_not_in_pd']:,} "
+                 f"({pc['cm_rows_not_in_pd_eq_be']} of them EQ/BE; series {', '.join(pc['cm_rows_not_in_pd_series'])}), "
                  f"Pd rows absent from CM {pc['pd_rows_not_in_cm']:,}.")
         dw = pc.get("days_with_disagreement", {})
         offs = sorted({(x["file"], f, x["rows"]) for f in ("close", "prev_close", "open", "high", "low", "volume",
@@ -924,7 +948,12 @@ def render_md(res: dict) -> str:
              f"{dl['mto']['files']:,}, PR bundles {dl['pr']['files']:,}; MTO missing on session days: "
              f"{len(dl['mto']['missing_on_session_days'])}, PR missing: {len(dl['pr']['missing_on_session_days'])}; "
              f"errors left: CM {len(dl['cm_errors'])}, MTO {len(dl['mto']['errors'])}, PR {len(dl['pr']['errors'])}. "
-             f"{dl['requests']} requests, {dl['backoffs']} back-offs, {dl['elapsed_s']} s.")
+             f"{dl['manifest_outcomes']:,} request outcomes in the manifest over {dl['runs']} runs: the first run "
+             f"stopped at 2019-09-09 when the agent proxy refused connections "
+             f"({len(dl['backoff_warnings_logged'])} back-off logged) and the session ended; the resumed run skipped "
+             f"every completed day without a request and made {dl['requests_last_run']:,} requests with "
+             f"{dl['backoffs_last_run']} back-offs in {dl['elapsed_s_last_run']:,} s. One extra request re-fetched "
+             f"PR020118.zip to confirm the archive mis-file (identical bytes).")
     ud = res.get("upsert_dry_run")
     if ud and "rows_upserted" in ud:
         L.append("")
@@ -942,6 +971,13 @@ def render_md(res: dict) -> str:
              "TOTTRDVAL, which stays in the raw CM files).")
     L.append("- Delivery is NaN on BE rows in both sources; features that need delivery see the same gap "
              "pattern on both sides of the splice.")
+    pdg2 = res.get("parse_diagnostics") or {}
+    pcx2 = pdg2.get("pd_crosscheck") or {}
+    n_hl = sum(x["rows"] for f in ("high", "low") for x in pcx2.get("days_with_disagreement", {}).get(f, []))
+    L.append(f"- Delivery is also NaN on {pdg2.get('mto_deliv_blanked_rows', 0):,} rows of 2019-06-17 and 2019-06-18, "
+             f"where the MTO quantities are not NSE-only (see Parser above). 2017-07-10 high/low come from the CM "
+             f"file and differ from the PR bundle's Pd and Pr files on {n_hl} values (listed in "
+             f"`cm_vs_pd_disagreements.csv`).")
     L.append("- Periodic call-auction rows (Pd market G) are kept; drop them with "
              "`call_auction_rows_2016_2021.csv` if the store's sec_bhavdata coverage must be matched exactly.")
     L.append("")

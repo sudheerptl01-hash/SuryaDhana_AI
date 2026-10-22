@@ -93,7 +93,8 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
                   exclude_tickers: set[str] | None = None,
                   ca_csv: str | None = None,
                   read_only: bool = False,
-                  universe_price_col: str = "close") -> dict:
+                  universe_price_col: str = "close",
+                  isnan_features: list[str] | None = None) -> dict:
     """Build the modeling dataset. Defaults reproduce the pilot (6-month window);
     the 5-year run passes an earlier start, a long list of monthly folds and its
     own out_dir so the pilot artifacts stay intact.
@@ -108,7 +109,10 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
       universe_price_col  equity_features column tested against MIN_PRICE.  On a
                        split/bonus-adjusted equity_features pass "close_unadj": the
                        price floor is about the traded price, and an adjusted close
-                       would let a FUTURE split push past rows below the floor.
+                       would let a FUTURE split push past rows below the floor;
+      isnan_features   pin the NaN-indicator columns (names ending "_isnan") instead of the
+                       "> 2% missing" rule, so a longer or shorter history keeps the same
+                       feature list as the dataset it is compared with.
     """
     out_dir = Path(out_dir)
     import duckdb
@@ -220,11 +224,16 @@ def build_dataset(db_path: str = str(REPO / "nse_market.duckdb"),
 
     # NaN indicators for features that are genuinely unavailable early
     # (e.g. ret_252d before a stock has a year of history) -- PIT information.
-    for c in features.copy():
-        miss = df[c].isna().mean()
-        if miss > 0.02:
-            ind = f"{c}_isnan"
-            df[ind] = df[c].isna().astype("float32")
+    if isnan_features is None:
+        for c in features.copy():
+            miss = df[c].isna().mean()
+            if miss > 0.02:
+                ind = f"{c}_isnan"
+                df[ind] = df[c].isna().astype("float32")
+                features.append(ind)
+    else:
+        for ind in isnan_features:
+            df[ind] = df[ind[: -len("_isnan")]].isna().astype("float32")
             features.append(ind)
 
     out = df[ID_COLS + features + LABEL_COLS].reset_index(drop=True)

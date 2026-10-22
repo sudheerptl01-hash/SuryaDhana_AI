@@ -70,7 +70,7 @@ TURNOVER_FACTOR = 1.0
 TURNOVER_LAKH_DECIMALS = 2
 VWAP_DECIMALS = 2          # the store's vwap is sec_bhavdata AVG_PRICE, printed to 2 decimals
 SOURCE = "cm_mto"
-PARSER_VERSION = 11
+PARSER_VERSION = 13
 
 EOD_DIR, AUX_DIR = PARTS / "eod", PARTS / "aux"
 log = get_logger("hist.parse")
@@ -106,6 +106,57 @@ def _read_csv_str(raw: bytes) -> pd.DataFrame:
     return df.loc[:, [c for c in df.columns if c and not c.startswith("UNNAMED")]]
 
 
+# --------------------------------------------------------------------------- tolerant bundle CSV
+_DATE_OR_BLANK = re.compile(r"^\s*(\d{2}/\d{2}/\d{4})?\s*$")
+_NUM_OR_BLANK = re.compile(r"^\s*-?[\d.]*\s*$")
+# Free-text columns that may carry an unquoted comma (TCS 2019-10: "INT DIV-RS 5, SPL DIV-RS 40"),
+# in the order they are tried, and the columns whose shape must survive the repair.
+_TEXT_COLS = {"bc": ["PURPOSE", "SECURITY"], "etf": ["UNDERLYING", "SECURITY"], "pd": ["SECURITY"]}
+_SHAPE = {"bc": ("date", ["RECORD_DT", "BC_STRT_DT", "BC_END_DT", "EX_DT", "ND_STRT_DT", "ND_END_DT"]),
+          "etf": ("num", ["PREVIOUS CLOSE PRICE", "OPEN PRICE", "HIGH PRICE", "LOW PRICE", "CLOSE PRICE",
+                          "NET TRADED VALUE", "NET TRADED QTY", "TRADES"]),
+          "pd": ("num", ["PREV_CL_PR", "OPEN_PRICE", "HIGH_PRICE", "LOW_PRICE", "CLOSE_PRICE"])}
+
+
+def read_bundle_csv(raw: bytes, kind: str) -> tuple[pd.DataFrame, int]:
+    """Read a Bc / etf / Pd member as text; rows with surplus fields are re-joined into the free-text
+    column that keeps the date / numeric columns well-formed. Returns (frame, repaired rows)."""
+    import csv
+    text = raw.decode("latin-1")
+    rows = [r for r in csv.reader(io.StringIO(text)) if any(x.strip() for x in r)]
+    if not rows:
+        return pd.DataFrame(), 0
+    head = [h.strip().upper() for h in rows[0]]
+    while head and head[-1] == "":
+        head.pop()
+    n = len(head)
+    rx = _DATE_OR_BLANK if _SHAPE[kind][0] == "date" else _NUM_OR_BLANK
+    check = [head.index(c) for c in _SHAPE[kind][1] if c in head]
+    out, repaired = [], 0
+    for r in rows[1:]:
+        if len(r) > n and all(x.strip() == "" for x in r[n:]):
+            r = r[:n]                                  # trailing empty fields only
+        if len(r) < n:
+            r = r + [""] * (n - len(r))
+        elif len(r) > n:
+            extra, fixed = len(r) - n, None
+            for col in _TEXT_COLS[kind]:
+                if col not in head:
+                    continue
+                i = head.index(col)
+                cand = r[:i] + [",".join(r[i:i + extra + 1])] + r[i + extra + 1:]
+                if all(rx.match(cand[j]) for j in check):
+                    fixed = cand
+                    break
+            if fixed is None:
+                continue                               # unrepairable row: dropped, counted below
+            r, repaired = fixed, repaired + 1
+        out.append(r)
+    df = pd.DataFrame(out, columns=head)
+    df = df.loc[:, [c for c in df.columns if c and not c.startswith("UNNAMED")]]
+    return df, repaired
+
+
 # --------------------------------------------------------------------------- CM
 def read_cm(path: Path, d: date) -> tuple[pd.DataFrame, dict]:
     with zipfile.ZipFile(path) as zf:
@@ -120,7 +171,9 @@ def read_cm(path: Path, d: date) -> tuple[pd.DataFrame, dict]:
     if miss:
         raise ValueError(f"{path.name}: missing columns {miss}; got {list(df.columns)}")
     ts = df["TIMESTAMP"].str.strip().str.upper()
-    ts_dates = pd.to_datetime(ts, format="%d-%b-%Y", errors="coerce").dt.date
+    # Mostly 02-JAN-2018; some files print a 2-digit year (13-JUL-20 on 2020-07-13).
+    ts_dates = pd.to_datetime(ts, format="%d-%b-%Y", errors="coerce") \
+        .fillna(pd.to_datetime(ts, format="%d-%b-%y", errors="coerce")).dt.date
     n_ts_bad = int((ts_dates != d).sum())
     vol = _to_num(df["TOTTRDQTY"])
     val = _to_num(df["TOTTRDVAL"])
@@ -222,20 +275,26 @@ def read_pr(path: Path, d: date) -> tuple[dict, dict]:
             diag.update({k + "_rows": 0 for k in out})
             return out, diag
         diag["pr_misdated"] = False
+        diag["pr_rows_repaired"] = 0
         if bc:
-            df = _read_csv_str(zf.read(bc))
+            df, rep = read_bundle_csv(zf.read(bc), "bc")
+            diag["pr_rows_repaired"] += rep
             df = df.apply(lambda s: s.str.strip())
             df["source_file"] = f"{path.name}/{Path(bc).name}"
             df["bundle_date"] = d.isoformat()
             out["bc"] = df.to_dict("records")
         if etf:
-            df = _read_csv_str(zf.read(etf)).apply(lambda s: s.str.strip())
+            df, rep = read_bundle_csv(zf.read(etf), "etf")
+            diag["pr_rows_repaired"] += rep
+            df = df.apply(lambda s: s.str.strip())
             keep = [c for c in ("MARKET", "SERIES", "SYMBOL", "SECURITY", "UNDERLYING") if c in df.columns]
             df = df[keep].copy()
             df["bundle_date"] = d.isoformat()
             out["etf"] = df.to_dict("records")
         if pdn:
-            df = _read_csv_str(zf.read(pdn)).apply(lambda s: s.str.strip())
+            df, rep = read_bundle_csv(zf.read(pdn), "pd")
+            diag["pr_rows_repaired"] += rep
+            df = df.apply(lambda s: s.str.strip())
             if "CORP_IND" in df.columns:
                 c = df[df["CORP_IND"] != ""].copy()
                 c["bundle_date"] = d.isoformat()
@@ -267,7 +326,10 @@ def pd_crosscheck(cm: pd.DataFrame, pdn: pd.DataFrame) -> dict:
     k = cm.merge(pdn, left_on=["ticker", "series"], right_on=["SYMBOL", "SERIES"], how="outer",
                  indicator=True)
     b = k[k["_merge"] == "both"]
-    res = {"pd_matched": int(len(b)), "pd_cm_only": int((k["_merge"] == "left_only").sum()),
+    lo = k[k["_merge"] == "left_only"]
+    res = {"pd_matched": int(len(b)), "pd_cm_only": int(len(lo)),
+           "pd_cm_only_eq_be": int(lo["series"].isin(["EQ", "BE"]).sum()),
+           "pd_cm_only_series": sorted(lo["series"].unique().tolist())[:10],
            "pd_only": int((k["_merge"] == "right_only").sum())}
     for a, c in PD_FIELDS:
         res[f"pd_eq_{a}"] = int(np.isclose(b[a].astype(float), _to_num(b[c]), rtol=0, atol=1e-6).sum())
@@ -295,7 +357,14 @@ def build_day(d: date) -> tuple[pd.DataFrame, dict]:
         hit = j["_merge"] == "both"
         diag["mto_matched_rows"] = int(hit.sum())
         diag["mto_unmatched_rows"] = int(len(mto) - hit.sum())
-        diag["mto_qty_equals_volume"] = int((j.loc[hit, "mto_qty"] == j.loc[hit, "volume"]).sum())
+        same = hit & (j["mto_qty"] == j["volume"])
+        diag["mto_qty_equals_volume"] = int(same.sum())
+        # Delivery is NSE delivery only where MTO's traded quantity is the CM volume. On 2019-06-17 and
+        # 2019-06-18 the MTO files carry larger, most likely combined NSE + BSE quantities (and BSE scrip
+        # codes); those rows get no delivery rather than a figure on another base.
+        blank = hit & ~same
+        diag["mto_deliv_blanked_rows"] = int(blank.sum())
+        j.loc[blank, ["deliv_qty", "deliv_pct"]] = np.nan
         eqbe = j["series"].isin(["EQ", "BE"])
         diag["eqbe_rows"] = int(eqbe.sum())
         diag["eqbe_with_deliv"] = int((eqbe & j["deliv_pct"].notna()).sum())

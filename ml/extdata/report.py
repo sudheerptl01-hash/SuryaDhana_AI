@@ -81,10 +81,12 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     a(f"| (c) shift test (future bars appended; rows <= T0 unchanged) | {_pf(pc['passed'] if pc else None)}"
       + (f" (T0 = {', '.join(pc['cutoffs'])})" if pc else "") + " |")
     exact = all(v.get("max_abs_diff") == 0.0 and v.get("nan_pattern_mismatch") == 0
-                for v in bc.get("features", {}).values()) and bc.get("rows_only_in_v1") == 0 \
-        and bc.get("rows_only_in_ext") == 0
+                for v in bc.get("features", {}).values()) and bc.get("rows_only_in_v1") == 0
+    extra_rows = bc.get("rows_only_in_ext") or 0
     a(f"| Base series (mom_20, ret_63d, ret_126d, deliv_pct_sma_20, atr_pct) vs the {tag} dataset | "
-      f"{'**exact** (max abs diff 0, identical row set and NaN pattern)' if exact else 'see section 6'} |")
+      + ((f"**exact** on all {_f(bc.get('common_rows'))} dataset rows (max abs diff 0, same NaN pattern)"
+          + (f"; the {_f(extra_rows)} extra rows here are ETF rows the dataset excludes" if extra_rows else ""))
+         if exact else "see section 6") + " |")
     uc = j.get("fo_unit_continuity", {})
     if uc.get("available"):
         a(f"| F&O unit continuity at the 2024-07 format switch | OI identity holds for "
@@ -151,10 +153,10 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
                                    for k in ("fo", "indices", "participant")) + " |")
     a("")
     al = cov.get("alias_ext_to_eod", {})
-    a("**Mis-dated EOD sessions (finding for P1).** Three EOD-export dates hold a session that "
-      "traded on another day. The bar sequence is continuous, so a prev_close scan cannot see "
-      "them; the archive does, because every external file for those dates is a 404 while the "
-      "true date's files exist and carry their own date inside:")
+    a("**Mis-dated EOD sessions (found by this stream; P1 re-dated all three in v2).** In the v1 "
+      "export, three dates hold a session that traded on another day. The bar sequence is "
+      "continuous, so a prev_close scan cannot see them; the archive does, because every external "
+      "file for those dates is a 404 while the true date's files exist and carry their own date inside:")
     a("")
     a("| Archive date (true session) | EOD-export date | Evidence |")
     a("|---|---|---|")
@@ -252,7 +254,7 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     a("Conventions fixed before any IC was computed:")
     a("")
     a(f"1. Market and industry aggregates exclude ETFs (the v2 universe definition), so stock values are the same joined to v1 or v2. ETF rows (v1 only) get F2 values inside their own `ETF` group. ETF source: {fb.get('etf_source')} ({_f(fb.get('n_etf_tickers'))} tickers).")
-    a(f"2. The EW market return drops single-day moves above 22% (the repo's corporate-action threshold; {_f(fb.get('market_state', {}).get('ew_excluded_big_moves_total'))} name-days dropped). cs_dispersion_20 is taken over names with `flag_split_20d` == 0. The median EW membership is {_f(fb.get('market_state', {}).get('ew_members_median'))} names.")
+    a(f"2. The EW market return drops single-day moves above 22% (the repo's corporate-action threshold; {_f(fb.get('market_state', {}).get('ew_excluded_big_moves_total'))} name-days dropped). cs_dispersion_20 is taken over names with `flag_split_20d` == 0. The median EW membership is {_f(int(fb.get('market_state', {}).get('ew_members_median') or 0))} names.")
     a("3. **Deviation from the brief: names without an NSE industry form an explicit `Unclassified` group** (the brief did not say). A NaN would mark today's index members (section 8).")
     a(f"4. **Deviation from the brief: `secidx_ret_20` for unmapped industries, Unclassified names and ETFs is the Nifty 500 20-session return, not NaN** ({_f(f2i.get('secidx_rows_on_default_index'))} rows). Under the brief, the NaN pattern itself carries the membership look-ahead (section 8). `build(policy={{'unclassified': 'nan', 'secidx_unmapped': 'nan'}})` reproduces the literal brief.")
     a("5. Industry groups with fewer than 5 non-NaN names that date give NaN (the brief). This affects Diversified, Forest Materials and Utilities, about 0.4% of rows.")
@@ -292,6 +294,9 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
         for r in pc["results"]:
             a(f"| {r['T0']} | {_f(r['extra_rows_compared'])} | {_f(r['extra_identical'])} | "
               f"{_f(r['market_rows_compared'])} | {_f(r['market_identical'])} |")
+        a("")
+    if j.get("pit_note"):
+        a(f"{j['pit_note']}.")
         a("")
     a("The static inputs are held fixed in (b) and (c): the industry lists, the sector map and the ETF list. Their point-in-time status is the subject of section 8.")
     a("")
@@ -359,10 +364,13 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
             a(f"| {k} | {_f(ti[k])} | {_f(tl.get(k))} |")
         a("")
     sn = sd.get("secidx_ret_20_nan_indicator", {})
+    sl = j.get("literal_brief_secidx_nan_indicator", {})
     a(f"Under the literal brief, F2 alone identifies the partition almost perfectly, because its "
       f"NaN pattern is the partition. The leak-safe build lowers that, but F2 still adds to what the "
-      f"base features already reveal. In this build the non-NaN indicator of secidx_ret_20 has AUC "
-      f"{_f(sn.get('auc_of_non_nan_indicator'))} against the label.")
+      f"base features already reveal. Under the literal brief, whether secidx_ret_20 is present "
+      f"would by itself score AUC {_f(sl.get('auc_of_non_nan_indicator'))} against the label (NaN share "
+      f"{_f(sl.get('share_nan'))}). In this build it is never NaN (share {_f(sn.get('share_nan'))}, so its "
+      f"presence carries nothing: AUC {_f(sn.get('auc_of_non_nan_indicator'))}).")
     a("")
     a("**Placebo control (plan amendment A3, 2026-10-22).** `ml/data_ext/extra_features_placebo_f2.parquet` "
       "holds the F2 columns rebuilt with the industry labels permuted among the classified symbols "
@@ -419,9 +427,41 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
         a("")
         a("F&O members per day (mean by year): " + ", ".join(
             f"{y} {v}" for y, v in hist.get("fo_members_per_year_hist", {}).items()) + ".")
+        a("")
+        gaps = hist.get("cross_source_gaps", {})
+        a("Sessions missing from one source while another has them: " + "; ".join(
+            f"{names[k]} {_dl(v)}" for k, v in gaps.items()) + ". The F&O bhavcopy for 2021-03-30 "
+          "is a 404 in the archive (retried). Participant files accepted with a weaker date check: "
+          f"title without a year (month and day match) {_dl(hist.get('participant_files_title_without_year'))}; "
+          f"no title line, numbers differ from the previous file {_dl(hist.get('participant_files_without_title_accepted'))}.")
+        a("")
+        a("For the 10-year dataset, the F1/F3/F4 values come from `ml/extdata/features.py` run on a "
+          "full-history export, for example `python3 -I ml/extdata/features.py --eod <10y equity_eod "
+          "export> [--prices <10y features_prices export>] --start 2017-01-02 --suffix _10y "
+          "--placebo`. A 2016-2021 equity_eod-schema file can also be stacked in front with `--hist`. "
+          "The F3 basis is computed from that export's raw close, so the staging spot column is not "
+          "needed. F2 applies only where the 2026-10-19 industry lists cover a name, and the "
+          "look-ahead of section 8 is larger the further back the year.")
     else:
         a("Not run in this build.")
     a("")
+    t10 = j.get("build_10y_raw")
+    if t10:
+        a(f"**Provisional 10-year files (raw price basis).** `{t10['files']['extra']}` ({_f(t10['rows'])} rows, "
+          f"{_f(t10['tickers'])} tickers, {t10['date_min']} to {t10['date_max']}), `{t10['files']['market']}` and "
+          f"`{t10['files']['placebo']}`. They are built with the same code and conventions on P4's "
+          f"`ml/data_hist/equity_eod_2016_2021.parquet` stacked in front of the raw v2 export (ETF exclusion: {t10['etf_source']}). "
+          "F3, F4, vix_close, vix_chg_20 and nifty50_pe do not depend on the price adjustment and can be used "
+          "as they are. The EW-universe parts of F1 and all of F2 use unadjusted prices here (the v1 convention). "
+          "Rebuild them with the CLI above once the lead's adjusted 10-year export exists.")
+        a("")
+        a("| Year | Stock rows | F&O member share | fo_member NaN share | mkt_dd_252 present | fii_idx_fut_net present | ind_mom_20 present |")
+        a("|---|---:|---:|---:|---:|---:|---:|")
+        for y in sorted(t10["by_year"]):
+            v = t10["by_year"][y]
+            a(f"| {y} | {_f(v['rows'])} | {_f(v['fo_member_share'], 3)} | {_f(v['fo_member_nan'], 4)} | "
+              f"{_f(v['mkt_dd_252_present'], 3)} | {_f(v['fii_present'], 3)} | {_f(v['ind_mom_20_present'], 3)} |")
+        a("")
     a("## 12. Reproduction")
     a("")
     a("```")

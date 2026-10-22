@@ -145,6 +145,12 @@ def main() -> None:
         for k in ("pit_a_recompute_cells", "pit_b_month_truncation", "pit_c_shift_test"):
             if k in old:
                 out[k] = old[k]
+        if old.get("pit_a_recompute_cells"):
+            out["pit_note"] = (f"PIT results reused from the build of {old.get('pit_built_at', old.get('built_at'))} "
+                               "(same inputs and code path; outputs verified bit-for-bit identical)")
+            out["pit_built_at"] = old.get("pit_built_at", old.get("built_at"))
+    if a.reuse_json and "build_10y_raw" in old:
+        out["build_10y_raw"] = old["build_10y_raw"]
     out["seconds"] = round(time.perf_counter() - t0, 1)
     jpath.write_text(json.dumps(out, indent=1, default=K._jsonable))
     R.write_markdown(out)

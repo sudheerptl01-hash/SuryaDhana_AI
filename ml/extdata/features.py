@@ -491,6 +491,13 @@ def build(eod_path: Path = C.EOD_EXPORT, max_date: pd.Timestamp | None = None,
     if max_date is not None:
         fo, idx, part = (x[x["date"] <= max_date] for x in (fo, idx, part))
     etf, etf_src = load_etf_set(pd.Index(base["ticker"].unique()))
+    if hist_paths:
+        # history builds: ETFs that traded only before 2021-10 are in P4's records
+        p4 = C.ML / "data_hist" / "etf_records_2016_2021.csv"
+        if p4.exists():
+            extra_etf = set(pd.read_csv(p4)["symbol"].astype(str).str.strip())
+            etf_src += f" + {p4.relative_to(C.REPO)} ({len(extra_etf - etf)} more symbols)"
+            etf = etf | extra_etf
     ind_map = industry_map if industry_map is not None else pd.read_csv(C.EXT / "industry_map.csv")
     smap = pd.read_csv(C.EXT / "sector_index_map.csv").fillna("")
 

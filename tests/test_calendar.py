@@ -49,6 +49,19 @@ class TestSpecialSessions(unittest.TestCase):
         self.assertIn(date(2023, 6, 28), ing.trading_days(date(2023, 6, 28), date(2023, 6, 28)))
 
 
+class TestHistoryCalendar(unittest.TestCase):
+    def test_2016_2021_sessions_and_closures(self):
+        # 70 weekday closures and 6 special sessions -> 1,238 sessions 2016-10..2021-09
+        days = ing.trading_days(date(2016, 10, 1), date(2021, 9, 30))
+        self.assertEqual(len(days), 1238)
+        for d in (date(2016, 10, 30), date(2019, 10, 27), date(2020, 2, 1), date(2020, 11, 14),
+                  date(2017, 10, 19), date(2018, 11, 7)):
+            self.assertIn(d, days)                     # Muhurat / Budget sessions
+        for d in (date(2016, 10, 31), date(2019, 10, 28), date(2020, 11, 16), date(2019, 4, 29)):
+            self.assertNotIn(d, days)                  # closures (Balipratipada, election day)
+        self.assertIn(date(2020, 7, 13), days)         # an ordinary Monday
+
+
 class TestContinuityCheck(unittest.TestCase):
     @staticmethod
     def _store(skip: date | None = None) -> ing.DuckDBStore:

@@ -64,7 +64,41 @@ def regex_etf(tickers: pd.Series) -> pd.Series:
     return t.str.contains(ETF_PATTERN, regex=True) & ~t.isin(ETF_NAME_EXCEPTIONS)
 
 
+def merge_10y(hist_csv: Path) -> dict:
+    """etf_list_10y.csv = this stream's etf_list.csv (2021-10..2026-10) united with the history
+    stream's etf records (2016-10..2021-09): first_seen min, last_seen max, latest underlying."""
+    a = pd.read_csv(DATA_EXT / "etf_list.csv", dtype=str, keep_default_na=False)
+    b = pd.read_csv(hist_csv, dtype=str, keep_default_na=False)
+    b = b.rename(columns={"n_bundles": "n_days", "series": "series_seen"})
+    a["window"], b["window"] = "2021-10..2026-10", "2016-10..2021-09"
+    cols = ["symbol", "first_seen", "last_seen", "n_days", "underlying", "security", "series_seen", "window"]
+    u = pd.concat([a.reindex(columns=cols), b.reindex(columns=cols)], ignore_index=True)
+    u["n_days"] = pd.to_numeric(u["n_days"], errors="coerce").fillna(0).astype(int)
+    u = u.sort_values(["symbol", "last_seen"])
+    g = u.groupby("symbol")
+    out = pd.DataFrame({
+        "first_seen": g["first_seen"].min(), "last_seen": g["last_seen"].max(), "n_days": g["n_days"].sum(),
+        "underlying": g["underlying"].agg(lambda s: next((x for x in s[::-1] if x), "")),
+        "security": g["security"].last(),
+        "series_seen": g["series_seen"].agg(lambda s: ",".join(sorted({y for x in s for y in str(x).split(",") if y}))),
+        "windows": g["window"].agg(lambda s: "+".join(sorted(set(s))))}).reset_index()
+    out.to_csv(DATA_EXT / "etf_list_10y.csv", index=False)
+    res = {"symbols_2021_10_onward": int(a["symbol"].nunique()), "symbols_2016_2021": int(b["symbol"].nunique()),
+           "symbols_union": int(len(out)), "only_2016_2021": int((out["windows"] == "2016-10..2021-09").sum()),
+           "in_both": int(out["windows"].str.contains("[+]").sum()), "source_hist": str(hist_csv)}
+    log(f"etf 10y: {res}", "etf")
+    return res
+
+
 def main(argv=None) -> int:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--merge-10y", default="", help="history stream's etf_records CSV to merge into etf_list_10y.csv")
+    a = ap.parse_args(argv)
+    if a.merge_10y:
+        res = merge_10y(Path(a.merge_10y))
+        wjson(OUT / "etf_10y.json", res)
+        return 0
     t0 = time.time()
     DATA_EXT.mkdir(parents=True, exist_ok=True)
     etf, st = etf_list()

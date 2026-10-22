@@ -1,0 +1,8 @@
+{
+ "symbols_2021_10_onward": 469,
+ "symbols_2016_2021": 129,
+ "symbols_union": 494,
+ "only_2016_2021": 25,
+ "in_both": 104,
+ "source_hist": "ml/data_hist/etf_records_2016_2021.csv"
+}
