@@ -29,6 +29,7 @@ Every number below is quoted from the stream's JSON/Markdown named in its sectio
 - **ETFs.** 469 symbols from the daily lists; the label study's name rule had missed 61 of the ETFs in the v1 data and wrongly flagged two operating companies. 215 ETF tickers (74,545 rows, 5.5%) leave the universe (I4).
 - **v2 dataset.** 1,290,062 rows, 2,265 tickers, 1,002 sessions (v1: 1,357,383, 2,480, 996), 43 folds and the same holdout; eight fold boundaries move by one or two sessions. `flag_split_20d` falls from 0.557% to 0.095% of rows and `y_clean_20d` coverage rises from 96.67% to 97.23% (I3). The ₹10 price floor is applied to the raw close so that a later split cannot drop past rows from the universe.
 - **Write discipline.** One read-write window of 86 s under a lock file; idempotent (a second run changes nothing); backup taken first.
+- **Ten-year store** (`integrity/INTEGRITY_10Y.md`). The 2016-10..2021-09 staging rows were loaded in a second 127 s write window: 5,237,728 rows over 2,489 sessions (2016-10-03 to 2026-10-16); 2,142,087 history rows (118 non-equity series left out); zero duplicate pairs; nothing dated 2021-10 or later changed except through adjustment factors, and no factor changed. The merged corporate-action feed holds 755 validated events (I2 on the extended window 254 of 266 = 95.5%, narrowly; whole feed 754 of 776 = 97.2%); RELIANCE 2017, YESBANK 2017, TCS 2018, INFY 2018 and HDFCBANK 2019 reduce to ordinary daily moves. I1 over ten years: largest mismatch share 0.31%, no session flagged. The ten-year dataset (`ml/data_10y/`) has 2,226,504 rows, 2,514 tickers, 2,241 sessions, the same 52 features as v2, 103 monthly folds 2018-01..2026-07 (v2's 43 folds identical inside them) and the same holdout; `y_clean_20d` 98.24%, `flag_split_20d` 0.145%, 0 ETF rows. The first fold trains on 32,571 rows over 41 sessions, so 2018 is small-sample exactly as 2023 was in the five-year run.
 
 ## 3. Book construction on the five-year scores (P2; `books/BOOKS.md`, `books/books.json`)
 
@@ -84,5 +85,5 @@ Logistic minus control +0.0037 [−0.0043, +0.0125]: gate 1 still fails for the 
 ## 8. Pending
 
 - AB1 market state, AB2 sector, AB2P placebo, AB3 F&O, AB4 flows, AB5 all, AB6 ensemble on 52 features: training on v2 (`ab/v2/queue_ab.log`).
-- Ten-year store (2016-10 to 2026-10) and dataset (103 folds 2018-01 to 2026-07): P1 loading; re-runs follow.
+- Ten-year re-runs (control, logistic, momentum on 103 folds): queued behind the A/Bs (`ab/10y/queue_10y.log`).
 - Final gate table at N = 241, program report section, goals ladder, HTML page, roadmap.
