@@ -1,8 +1,10 @@
 # P3 external data: sources, staging tables, feature families F1-F4
 
-Build tag **v1**: prices from `/home/user/SuryaDhana_AI/ml/results/improve/cache/eod_export_v1.parquet`, spot and sessions from `/home/user/SuryaDhana_AI/ml/results/improve/cache/eod_export_v1.parquet`, comparison dataset `/home/user/SuryaDhana_AI/ml/data_5y/model_dataset.parquet`.
+Build tag **v1**: prices from `ml/results/improve/cache/eod_export_v1.parquet`, spot and sessions from `ml/results/improve/cache/eod_export_v1.parquet`, comparison dataset `ml/data_5y/model_dataset.parquet`.
 
 Built 2026-10-22T13:43:59 by `ml/extdata/run_all.py` (seed 108). Every number below is quoted from `ml/results/improve/extdata/extdata.json`. The feature families are the pre-registered F1-F4 of `ml/IMPROVEMENT_PLAN.md` section 2-P3; this stream builds them, the lead runs the A/Bs. Nothing here touched `nse_market.duckdb`.
+
+> **Record note.** v1-based record. The PIT checks (a)-(c) ran on the main-window build of 2026-10-22T13:23:16 (ETF list: ml/data_ext/etf_list.csv (P1; 409 rows; sha256 3ef6677579f6e92e)); this record was rebuilt at 2026-10-22T13:43:59 with the 2016-2021 staging rows and P1's final ETF list (ml/data_ext/etf_list.csv (P1; 469 rows; sha256 7b9163f85448f256)). Effect of the ETF-list change: F1 aggregates and F2 group statistics move (60 more symbols leave the ex-ETF universe); F3 unchanged except fut_oi_z_60 (<= 1.3e-11, rolling-variance start dependence, removed afterwards by a window-local z-score). The final files are the v2 build (extdata.json), whose PIT checks ran on the final code.
 
 ## 1. Summary
 
@@ -184,7 +186,7 @@ The static inputs are held fixed in (b) and (c): the industry lists, the sector 
 
 ## 6. Base series vs the v1 dataset
 
-Dataset `/home/user/SuryaDhana_AI/ml/data_5y/model_dataset.parquet`. Row sets: dataset 1,357,383, this stream 1,357,383, common 1,357,383, only in the dataset 0, only here 0 (rows only here are ETF rows when the dataset excludes ETFs).
+Dataset `ml/data_5y/model_dataset.parquet`. Row sets: dataset 1,357,383, this stream 1,357,383, common 1,357,383, only in the dataset 0, only here 0 (rows only here are ETF rows when the dataset excludes ETFs).
 
 | Series | Rows both finite | Max abs diff | Rows with diff > 1e-9 | NaN-pattern mismatches |
 |---|---:|---:|---:|---:|

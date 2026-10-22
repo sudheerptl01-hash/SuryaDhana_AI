@@ -23,6 +23,12 @@ def _f(x, nd=4):
     return str(x)
 
 
+def _rel(x) -> str:
+    """Repo-relative path for display."""
+    t = str(x)
+    return t.replace(str(C.REPO) + "/", "")
+
+
 def _dl(xs: list, n: int = 12) -> str:
     """Date list for a table cell: all of a short list, else count + first n."""
     xs = list(xs or [])
@@ -51,14 +57,18 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     inp = j.get("inputs", {})
     a("# P3 external data: sources, staging tables, feature families F1-F4")
     a("")
-    a(f"Build tag **{tag}**: prices from `{inp.get('prices_export') if inp.get('prices_export') not in (None, 'None') else inp.get('eod_export')}`, "
-      f"spot and sessions from `{inp.get('eod_export')}`, comparison dataset `{inp.get('dataset')}`.")
+    pe = inp.get('prices_export') if inp.get('prices_export') not in (None, 'None') else inp.get('eod_export')
+    a(f"Build tag **{tag}**: prices from `{_rel(pe)}`, spot and sessions from `{_rel(inp.get('eod_export'))}`, "
+      f"comparison dataset `{_rel(inp.get('dataset'))}`.")
     a("")
     a(f"Built {j.get('built_at')} by `ml/extdata/run_all.py` (seed {j.get('seed')}). Every number "
       "below is quoted from `ml/results/improve/extdata/extdata.json`. The feature families are the "
       "pre-registered F1-F4 of `ml/IMPROVEMENT_PLAN.md` section 2-P3; this stream builds them, the "
       "lead runs the A/Bs. Nothing here touched `nse_market.duckdb`.")
     a("")
+    if j.get("record_note"):
+        a(f"> **Record note.** {j['record_note']}")
+        a("")
     a("## 1. Summary")
     a("")
     a("| Check | Result |")
@@ -101,8 +111,11 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
 
     a("## 2. Sources and coverage")
     a("")
-    a(f"Expected sessions: {cov.get('expected_sessions')} = {cov.get('eod_sessions')} EOD-export dates "
-      f"+ the six special sessions P1 adds ({', '.join(cov.get('special_sessions', []))}). Downloads: "
+    sp_in = cov.get("expected_sessions") == cov.get("eod_sessions")
+    a(f"Expected sessions: {cov.get('expected_sessions')} = "
+      + (f"the {cov.get('eod_sessions')} EOD-export dates, which include the six special sessions "
+         if sp_in else f"{cov.get('eod_sessions')} EOD-export dates + the six special sessions P1 adds ")
+      + f"({', '.join(cov.get('special_sessions', []))}). Downloads: "
       "archives.nseindia.com, browser user agent, one request in flight per file type, random "
       "1.0-2.0 s pause, 60 s back-off with halved rate on 403/429/5xx (log: "
       "`ml/results/improve/extdata/log.txt`). Every file's internal date (F&O TIMESTAMP / TradDt, "
@@ -285,7 +298,7 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
 
     a(f"## 6. Base series vs the {tag} dataset")
     a("")
-    a(f"Dataset `{bc.get('dataset')}`. Row sets: dataset {_f(bc.get('v1_rows'))}, this stream {_f(bc.get('ext_rows'))}, common {_f(bc.get('common_rows'))}, "
+    a(f"Dataset `{_rel(bc.get('dataset'))}`. Row sets: dataset {_f(bc.get('v1_rows'))}, this stream {_f(bc.get('ext_rows'))}, common {_f(bc.get('common_rows'))}, "
       f"only in the dataset {_f(bc.get('rows_only_in_v1'))}, only here {_f(bc.get('rows_only_in_ext'))} (rows only here are ETF rows when the dataset excludes ETFs).")
     a("")
     a("| Series | Rows both finite | Max abs diff | Rows with diff > 1e-9 | NaN-pattern mismatches |")

@@ -9637,5 +9637,6 @@
    }
   ]
  },
- "seconds": 314.9
+ "seconds": 314.9,
+ "record_note": "v1-based record. The PIT checks (a)-(c) ran on the main-window build of 2026-10-22T13:23:16 (ETF list: ml/data_ext/etf_list.csv (P1; 409 rows; sha256 3ef6677579f6e92e)); this record was rebuilt at 2026-10-22T13:43:59 with the 2016-2021 staging rows and P1's final ETF list (ml/data_ext/etf_list.csv (P1; 469 rows; sha256 7b9163f85448f256)). Effect of the ETF-list change: F1 aggregates and F2 group statistics move (60 more symbols leave the ex-ETF universe); F3 unchanged except fut_oi_z_60 (<= 1.3e-11, rolling-variance start dependence, removed afterwards by a window-local z-score). The final files are the v2 build (extdata.json), whose PIT checks ran on the final code."
 }
