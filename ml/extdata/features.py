@@ -96,12 +96,15 @@ def load_eod(eod_path: Path = C.EOD_EXPORT, max_date: pd.Timestamp | None = None
 
 
 def load_etf_set(tickers: pd.Index) -> tuple[set, str]:
+    import hashlib
     p = C.EXT / "etf_list.csv"
     if p.exists():
         e = pd.read_csv(p)
         col = next((c for c in e.columns if c.strip().lower() in ("ticker", "symbol")), None)
         if col is not None:
-            return set(e[col].astype(str).str.strip()), "ml/data_ext/etf_list.csv (P1)"
+            sha = hashlib.sha256(p.read_bytes()).hexdigest()[:16]
+            return (set(e[col].astype(str).str.strip()),
+                    f"ml/data_ext/etf_list.csv (P1; {len(e)} rows; sha256 {sha})")
     t = pd.Series(tickers.astype(str))
     m = t.str.contains(ETF_PATTERN, regex=True) & ~t.isin(ETF_NAME_EXCEPTIONS)
     return set(t[m]), "ml/label_study.py name rule (P1 etf_list.csv absent at build time)"
