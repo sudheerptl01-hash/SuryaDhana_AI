@@ -69,6 +69,16 @@ Capital follows a track record the model did not get to choose. The deflated and
 | Short side | F&O-restricted long-short validated with borrow and 40 bps | |
 | Independent data | at least one external feed (corporate actions, sector, F&O membership) in production | |
 
+## Update, 2026-10-22: after the improvement phase
+
+Source: `ml/results/improve/IMPROVEMENT_RESULTS.md` and `ml/PROGRAM_REPORT.md` §13. What moved on the ladder, and what did not:
+
+- **Stage 0 (research-grade signal): still met, now on corrected data.** Nine wrong sessions, 501 unadjusted corporate actions and 215 ETFs were fixed; the LightGBM control on the corrected five-year data scores 0.5359 [0.5274, 0.5456] with rank IC 0.069 (Newey-West t 7.3) and is above 0.50 in 88% of months. The delivery pillar passes its durability test in the residual (3 of 4 and 4 of 4 years, both liquidity halves). The probability of backtest overfitting across the five-year trials is 0.18 to 0.25, so the selection was better than chance. The "not one regime" criterion will be re-read on the ten-year folds when they land.
+- **Stage 1 (paper-trading eligibility): met, and by a deliberate construction, not only by the accidental ensemble blend.** The volatility+size-neutral top decile of a single LightGBM beats the equal-weight universe by +6.9% to +7.8% a year with IR intervals clear of zero (1.9 to 2.0), in up and down months and in every year; its liquid-tercile version earns +5% to +6% a year (IR 0.8 to 1.0) with capacity near ₹900 crore. Cost headroom is the weak criterion for the neutral books: break-even 53 to 56 bps per side against 45 bps under the pessimistic name-level model.
+- **Stage 2 (small capital): not met, and no closer.** Every Deflated Sharpe at N = 241 is far below 0.95 (liquid books at most 0.011; the best full-universe book 0.76 is the sector book whose edge is look-ahead). Gate 1 (beat the linear model) and gate 2 (90% of months) still fail. Only the forward record can move this stage.
+- **What would have lowered the time to proof did not materialise.** Eight external-data A/Bs produced one real but sub-threshold gain (F&O: +0.0020 AUC, interval clear of zero), so the information coefficient per bet is what it was; the honest reading of `ml/COMMUNITY_CALIBRATION.md` §3 is unchanged: rung 2 on the external ladder, not rung 3.
+- **Position on the external ladder:** unchanged, rung 2 (a good model that earns a paper book).
+
 ## Position on the external ladder
 
 The community research derived a five-rung ladder from live competitions, allocator platforms and industry rules of thumb (`COMMUNITY_CALIBRATION.md` §3). On it, SuryaDhana's single models are rung 1 (a real factor whose long-only book does not beat equal weight) and the rank ensemble is rung 2 (a good model that earns a paper book: IC 0.065, stability about 1.3, IR 1.26 with an interval clear of zero, beats equal weight and the momentum baseline over 45 months). Rung 3, allocatable, needs a factor-neutralised IC of at least 0.05, a five-year Sharpe above 1.25, PSR(SR > 1) of 80%, DSR 0.95 and a live record; none of these is in hand. That is the same answer the stages above give.

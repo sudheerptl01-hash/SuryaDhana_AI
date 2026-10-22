@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 · **Program lead:** evaluation lead (this session) · **Scope:** NSE cash equities, end-of-day bhavcopy data, 5 years (2021-10 to 2026-10) · **Companion report:** `ml/report/program_report.html` (built by `python3 -m ml.make_program_report`)
 
-**Status: complete.** The 5-year walk-forward, its paired block bootstrap, regime table, rank-ensemble challenger and paper portfolio are all in (`ml/results/scale5y/SCALE5Y.md`). Every number below is read from a committed JSON or Markdown artifact named in the text; nothing is estimated from memory.
+**Status: complete; improvement phase added 2026-10-22 (§13).** The 5-year walk-forward, its paired block bootstrap, regime table, rank-ensemble challenger and paper portfolio are all in (`ml/results/scale5y/SCALE5Y.md`). Every number below is read from a committed JSON or Markdown artifact named in the text; nothing is estimated from memory.
 
 ---
 
@@ -364,6 +364,78 @@ Same engine and costs as the pilot. **N = 177 trials was fixed in the code befor
 - It does not claim the 2026 folds are fully out-of-sample for the LightGBM configuration, which was tuned on them in the pilot.
 - It does not claim that AUC differences of 0.01 between models are decidable on these samples: the paired block-bootstrap intervals are about ±0.004 to ±0.014 wide.
 - It does not claim realistic costs for the illiquid tail or for any short book.
+- It does not claim that the volatility+size-neutral books of §13.2 are independent evidence: the construction was read from the same 43 folds it is tested on; only the forward record can confirm it.
+- It does not claim that the sector features of §13.4 carry industry information: a placebo with permuted industries earns almost the same book, so the gain is the look-ahead in today's index membership.
+
+---
+
+## 13. Improvement phase (19 to 22 October 2026)
+
+**Governing document:** `ml/IMPROVEMENT_PLAN.md` (hypotheses, pass marks and the trial ledger were fixed before any result; amendments A1-A4 are dated in its §5). **Results of record:** `ml/results/improve/IMPROVEMENT_RESULTS.md`, which quotes every number from a stream's JSON. **Trial ledger:** N = 241 (177 from the five-year run, 64 new configurations and books). **Status:** complete except the ten-year re-runs (§13.6), which are training and fill in automatically.
+
+The phase executed the items of §11 that this environment can reach. The NSE archive host turned out to be reachable, which made three things possible that the program had written off: the corporate-action feed, five more years of history, and derivatives, index and positioning data.
+
+### 13.1 Data: three defects found and fixed (`ml/results/improve/integrity/`)
+
+- **Nine sessions were wrong.** Six trading sessions were never ingested (weekend Budget sessions 2025-02-01 and 2026-02-01, Saturday special sessions 2024-03-02 and 2024-05-18, the Muhurat sessions 2023-11-12 and 2025-10-21, the last wrongly listed as a holiday), and three closures carried another day's file (2021-11-05, 2023-06-29, 2024-01-22 re-dated to 2021-11-04, 2023-06-28, 2024-01-20). One archive file lacked every BE-series row (2022-03-07; rebuilt) and 28 mid-2023 sessions lacked some (1,679 rows rebuilt). Every 20-session window spanning these dates had been off by one. After the fix the ingest calendar matches the archive's own on all 1,842 days (I1: no session with more than 0.15% of names discontinuous, before 99%).
+- **Corporate actions were unadjusted.** The daily `bc` file of the archive's PR bundle is the authoritative feed: 501 split, bonus and consolidation events now adjust 230,722 rows, and 98.0% of them agree with the observed ex-date price ratio within ±15% (I2). Rights issues, demergers and capital reductions (341 dates) are flagged for label masking. `flag_split_20d` falls from 0.557% to 0.095% of rows; label coverage rises from 96.67% to 97.23% (I3).
+- **ETFs were inside the stock universe** because ISIN was empty on every row; the daily ETF lists give 469 symbols, and the label study's name rule had missed 61 of them. 215 ETF tickers (5.5% of rows) are out (I4).
+- **Corrected datasets.** v2 (`ml/data_5y_v2/`): 1,290,062 rows, 2,265 tickers, 52 features, the 43 folds and the holdout unchanged in structure. Ten-year (`ml/data_10y/`): 2016-10 to 2026-10 in the store (5,237,728 rows; a merged feed of 755 validated events), 2,226,504 dataset rows, 103 monthly folds 2018-01 to 2026-07 with v2's 43 identical inside them.
+
+### 13.2 Economics: the ensemble's mechanism, built on purpose (`ml/results/improve/books/BOOKS.md`)
+
+Finding 3 of §6.3 said the classifiers' top deciles trail the universe because the label rewards low-volatility names, and that the rank ensemble beat it by accident of a volatility-neutral blend. The pre-registered test (B1) residualised each score per date on the ranks of `atr_pct` and `log_turnover` and re-ranked:
+
+| Book, net 20 bps vs the equal-weight universe (five-year scores) | Excess/yr | IR [95% CI] | Months ahead | DSR (N = 238) |
+|---|---:|---|---:|---:|
+| nested LightGBM, plain top decile (§7.2) | −0.7% | −0.11 [−1.21, +0.96] | 20/45 | 0.000 |
+| nested LightGBM, volatility+size-neutral top decile | **+6.9%** | +1.92 [+0.99, +3.01] | 33/45 | 0.053 |
+| all-features LightGBM, volatility+size-neutral top decile | +6.5% | +1.85 [+0.93, +2.93] | 34/45 | 0.038 |
+| rank ensemble, volatility+size-neutral top decile | +10.5% | +2.74 [+1.60, +3.90] | 38/45 | 0.469 |
+| nested LightGBM, neutral **liquid** buffered decile (the paper-book shape) | +5.0% | +0.81 [−0.14, +1.93] | 29/45 | 0.000 |
+
+B1 **passes**: the single-model books go from losing to beating the universe, in up and down months and in every year, while keeping 92% of the ranking. On the corrected data the same construction on the LightGBM control earns +7.8%/yr, IR 1.99 [0.91, 3.17] (liquid: +5.9%, IR 1.04 [0.03, 2.15]). The two turnover levers fail their marks: the buffered decile cuts turnover 18% to 26% (bar 30%) at no cost to returns, and the 40-session hold keeps the excess within a point but trades 0.54 times as much, not half (B2, B3 **fail**). Neutral baskets sit in smaller names (median name ADV ₹7 crore against ₹29 crore), so the pre-specified name-level cost model (Corwin-Schultz spread plus square-root impact; pessimistic for large caps) charges about 45 bps a side and leaves +1.5% to +2.0% a year. Adding 42 books raises the cross-trial Sharpe variance, so the expected best null Sharpe is 2.79 a year at N = 238: no book's Deflated Sharpe exceeds 0.47, and every liquid book's is 0.01 or less. The idea was read from the same 43 folds it is tested on; B1 is a consistency check, not an independent confirmation.
+
+### 13.3 Hygiene (`ml/results/improve/hygiene/HYGIENE.md`)
+
+- **Probability of backtest overfitting** (CSCV, 12,870 splits): 0.25 across the nine model configurations, 0.18 across the 24 books, 0.23 across the long-only books, against a chance level of 0.50 to 0.56. Selecting the best from the five-year record was better than a coin toss, but the winner's out-of-sample Sharpe is 21% to 29% of its in-sample figure.
+- **Delivery is durable in its residual.** After per-date regression on turnover, volatility and 12-1 momentum, the IC of `deliv_pct_sma_20` (+0.045, t 5.6) and `deliv_value_share_20` (+0.047, t 6.9) is positive with intervals clear of zero in 3 of 4 and 4 of 4 calendar years and in both liquidity halves (pass mark met), and it did not move after March 2026 (+0.046 to +0.042). The raw IC's fall (+0.059 to +0.012) sits entirely in the part that volatility and turnover explain. §5.1's "works in up and down tapes" does not hold for the raw signal (+0.013 in up months against +0.124 in down months); the residual does.
+- **Overlapping labels neither inflate nor hurt the fit.** Uniqueness weights are not near-constant (87.5% of rows within 10% of 1/21), so the item was tested: every fifth signal date loses 0.0020 AUC [−0.0041, −0.0000]; uniqueness-weighted fitting adds 0.0011 [−0.0002, +0.0023]. Closed.
+
+### 13.4 Features and models: eight A/Bs, none passes (`ml/results/improve/ab/`)
+
+Pass mark for every A/B: paired fold-level CV-mean AUC delta against the control with the 20-session block-bootstrap interval excluding zero **and** at least +0.003.
+
+| A/B (control = LightGBM, 52 features) | Data | Δ AUC | 95% CI | Δ rank IC (NW t) | Verdict |
+|---|---|---:|---|---|---|
+| AB0: the two sufficiency features (52 vs 50) | v1 | +0.0014 | [+0.0002, +0.0026] | +0.0028 (2.4) | fail: real, below the bar |
+| AB7: every fifth signal date | v1 | −0.0020 | [−0.0041, −0.0000] | −0.0037 (−1.8) | fail |
+| AB8: uniqueness weights | v1 | +0.0011 | [−0.0002, +0.0023] | +0.0019 (1.5) | fail |
+| AB1: market state (EW return, drawdown, breadth, dispersion, VIX, P/E) | v2 | −0.0047 | [−0.0115, +0.0018] | −0.0074 (−1.1) | fail; inversion months −0.008 |
+| AB2: sector (NSE industry: relative momentum, industry-neutral ranks, sector index) | v2 | +0.0013 | [−0.0013, +0.0039] | +0.0045 (1.7) | fail |
+| AB2P: the same with industries permuted (placebo) | v2 | −0.0020 | [−0.0062, +0.0014] | −0.0026 (−0.7) | fail |
+| AB3: F&O (membership, basis, OI change, put/call) | v2 | **+0.0020** | **[+0.0006, +0.0032]** | +0.0032 (2.7) | fail: real, below the bar |
+| AB4: flows (FII/DII/client positioning) | v2 | −0.0004 | [−0.0059, +0.0045] | −0.0011 (−0.2) | fail |
+| AB5: all four families | v2 | +0.0024 | [−0.0043, +0.0082] | +0.0075 (1.1) | fail |
+| AB6: rank ensemble on 52 features, no yearly re-selection | v2 | −0.0017 | [−0.0065, +0.0024] | −0.0052 (−1.1) | fail on AUC; see below |
+
+Three readings. (1) Information outside the bhavcopy adds very little to a 20-day cross-sectional ranking: the F&O family is the only real gain, the size of the two delivery and liquidity re-expressions. (2) The NSE industry lists are a 2026 snapshot, and being in them predicts the past label (survivorship: AUC 0.53 to 0.56 for the membership flag against 0.50 to 0.54 for a point-in-time size flag); the sector books look best (+10.9%/yr, IR 3.2) but the placebo book with permuted industries is within a point of them (+10.1%, IR 3.0), so that gain is the partition, not industry information. (3) The ensemble needs no yearly re-selection: on all 52 features its plain top decile earns +7.7%/yr, IR 1.57 [0.62, 2.70] (nested, §7.2: +7.0%, IR 1.26), and its neutral liquid book +9.1%/yr, IR 1.58 [0.42, 2.82], DSR 0.011. §11 item 4 is answered.
+
+### 13.5 The corrected data changes the measurement, not the verdict (`ml/results/improve/ab/v2/`)
+
+LightGBM on 52 features: v1 0.5379 ± 0.0421 (84% of months ≥ 0.50, worst 0.453, holdout 0.5300, rank IC 0.070, NW t 6.2); v2 0.5359 ± 0.0320 (88%, worst 0.466, holdout 0.5203, rank IC 0.069, NW t 7.3). Less dispersion, a better floor, the same signal. The logistic benchmark keeps the higher mean (0.5396) and the worst tails (worst month 0.402, holdout 0.500); gate 1 still fails for the tree model (+0.0037 [−0.0043, +0.0125] for the logistic).
+
+### 13.6 Eight years instead of five (pending)
+
+The ten-year dataset's 103 folds (2018-01 to 2026-07) span the 2018 small-cap bear, the 2020 crash and the 2021 boom. The control, the logistic benchmark and the momentum rule are training on it (`ml/results/improve/ab/10y/`); the by-year table, the Stage-0 criteria over eight years and the gate table are written there when the run ends and will be copied here. The 2018 folds train on short windows (32,571 rows for 2018-01), as 2023 did in the five-year run.
+
+### 13.7 Gates at N = 241 and the verdict
+
+For every configuration on the corrected data (`ml/results/improve/ab/v2/GATES.md`): gate 1 fails (none beats the logistic model with an interval clear of zero), gate 2 fails (best 88% of months ≥ 0.50, bar 90%), gate 5 fails (liquid-book DSR at most 0.011); gate 3 passes for the neutral top decile of the control (34/45 months) and of five other configurations, and for the plain top decile of the all-feature ensemble (34/45); gate 4 does not apply to configurations that select nothing. **Nothing is promoted. The verdict of §1 stands: no capital.** What changes is the paper book: it becomes a deliberate construction (LightGBM on 52 features, score residualised per date on volatility and size ranks, liquid-tercile top decile or buffered decile, 20-session hold, equal-weight benchmark, 20 bps and name-level costs both reported) instead of an accidental blend, with the all-feature rank ensemble as the champion-challenger. The monitoring of §10 gains two alerts: the live score's correlation with `atr_pct` and `log_turnover` after neutralisation (within ±0.05) and the residual delivery IC in place of the raw one.
+
+### 13.8 What this does to §11
+
+Items 2 (neutral construction: done, passes B1), 3 (corporate actions: done), 4 (both A/Bs: done, both fail), 5 (delivery validation: done, durable in the residual), 6 (name-level costs: done, pessimistic model), 8 (market-state inputs: done, fail), 10 (book construction: done, buffer and 40-session hold measured) and 11 (PBO done, uniqueness closed, history before 2021 loaded; combinatorial purged CV still open) are closed. Item 9 is half done: sector, index, F&O and flows are tested; fundamentals, analyst and institutional data need a filings feed this environment does not have. Item 7 (the short side on F&O names) stays open. Item 12 is confirmed by AB0, AB7 and AB8. The ordered list of what remains, with the data each needs, is `ml/ROADMAP.md`.
 
 ---
 

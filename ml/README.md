@@ -109,3 +109,15 @@ selection, where used, is nested inside each training history
 (`scale5y_nested.py`). Significance uses 20-session block bootstraps. The
 first year of folds trains on short windows (the dataset starts 2022-10-03),
 which every per-year table must state.
+
+## Improvement phase (October 2026; `ml/IMPROVEMENT_PLAN.md`, results in `ml/results/improve/`)
+
+Pre-registered plan first, then five streams and a lead-run compute queue:
+
+- `ml/integrity/` – missing and mis-dated sessions, corporate-action feed from the archive's PR bundles, ETF lists, the one writer of `nse_market.duckdb` (lock-file protocol), v2 and ten-year dataset builders (`ml/data_5y_v2/`, `ml/data_10y/`, gitignored); reports in `results/improve/integrity/`.
+- `ml/books/` – book construction on out-of-sample scores: neutralisation, buffered baskets, 40-session hold, name-level costs, DSR; `results/improve/books/`.
+- `ml/extdata/` – F&O, index, VIX, participant-OI and industry data from the archive; feature families F1-F4 and the sector placebo (`ml/data_ext/`, gitignored); `results/improve/extdata/`.
+- `ml/history/` – 2016-10..2021-09 backfill from legacy CM bhavcopy, MTO delivery files and PR bundles (`ml/data_hist/`, gitignored); `results/improve/history/`.
+- `ml/hygiene/` – probability of backtest overfitting (CSCV), delivery durability, label uniqueness; `results/improve/hygiene/`.
+- `ml/improve/ab.py` (A/B harness: walk-forward, exit-date purge, paired block bootstrap, pass marks), `ml/improve/ab_books.py` (every configuration as a book), `ml/improve/gates.py` (the five gates at the phase's N); outputs under `results/improve/ab/<tag>/` (v1, v2, 10y).
+- Results of record: `ml/results/improve/IMPROVEMENT_RESULTS.md`; what stays open: `ml/ROADMAP.md`.

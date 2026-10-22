@@ -108,6 +108,20 @@ stability-aware comparison favours LightGBM over the linear model; the
 ensemble's +7.0%/yr over the EW universe has an interval clear of zero) are
 reported as such and do not change the verdict.
 
+## Gate status, improvement phase (2026-10-22, corrected data, N = 241)
+
+Scored by `python3 -m ml.improve.gates --tag v2 --n-trials 241` from `ml/results/improve/ab/v2/` (full table in `GATES.md` there). The trial ledger grew from 177 to 241 under `ml/IMPROVEMENT_PLAN.md`; gate 4 does not apply to configurations that select nothing.
+
+| Gate | Rule | LightGBM, 52 features (control) | Rank ensemble on 52 features (no re-selection) |
+|---|---|---|---|
+| 1 | beats lr_l2 on CV mean, bootstrap CI excluding zero | −0.0037 [−0.0125, +0.0043] **FAIL** | −0.0054 [−0.0171, +0.0051] **FAIL** |
+| 2 | fold AUC ≥ 0.50 in ≥ 90% of months | 88% (worst 0.466) **FAIL** | 88% (worst 0.452) **FAIL** |
+| 3 | top decile beats the EW universe in ≥ 75% of months, net 20 bps | plain 19/45 **FAIL**; volatility+size-neutral 34/45 = 76% **PASS** | plain 34/45 = 76% **PASS**; neutral 38/45 = 84% **PASS** |
+| 4 | selected-feature overlap ≥ 7/10 | not applicable (no selection) | not applicable |
+| 5 | DSR ≥ 0.95 on the liquid top decile, N = 241 | plain 0.000; neutral 0.000 **FAIL** | plain 0.000; neutral 0.011 **FAIL** |
+
+Decision unchanged: **do not promote to capital.** The paper book of Phase 3 becomes the deliberate volatility+size-neutral construction (`ml/PROGRAM_REPORT.md` §13.7), with the all-feature rank ensemble as champion-challenger.
+
 ## Compute
 
 The pilot's full 13-model bake-off ran ~2 h on 4 CPU cores. The 5-year
