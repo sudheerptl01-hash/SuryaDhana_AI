@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 os.environ.setdefault("OMP_NUM_THREADS", "2")
@@ -74,12 +74,13 @@ def get_logger(name: str = "extdata") -> logging.Logger:
     return log
 
 
-def eod_sessions() -> list[date]:
-    """Every distinct date in the EOD export (2021-10-01..2026-10-16)."""
+def eod_sessions(path: Path | None = None) -> list[date]:
+    """Every distinct date in an EOD export (default v1: 2021-10-01..2026-10-16)."""
     import pyarrow.parquet as pq
-    t = pq.read_table(EOD_EXPORT, columns=["date"])
+    t = pq.read_table(path or EOD_EXPORT, columns=["date"])
     vals = sorted(set(t.column("date").to_pylist()))
-    return [v if isinstance(v, date) else v.date() for v in vals]
+    # date32 columns give datetime.date, timestamp columns give datetime.datetime
+    return [v.date() if isinstance(v, datetime) else v for v in vals]
 
 
 def main_sessions() -> list[date]:

@@ -47,7 +47,12 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     pa, pb, pc = (j.get("pit_a_recompute_cells"), j.get("pit_b_month_truncation"),
                   j.get("pit_c_shift_test"))
     bc = j.get("base_crosscheck_v1", {})
+    tag = j.get("tag", "v1")
+    inp = j.get("inputs", {})
     a("# P3 external data: sources, staging tables, feature families F1-F4")
+    a("")
+    a(f"Build tag **{tag}**: prices from `{inp.get('prices_export') if inp.get('prices_export') not in (None, 'None') else inp.get('eod_export')}`, "
+      f"spot and sessions from `{inp.get('eod_export')}`, comparison dataset `{inp.get('dataset')}`.")
     a("")
     a(f"Built {j.get('built_at')} by `ml/extdata/run_all.py` (seed {j.get('seed')}). Every number "
       "below is quoted from `ml/results/improve/extdata/extdata.json`. The feature families are the "
@@ -68,7 +73,7 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     exact = all(v.get("max_abs_diff") == 0.0 and v.get("nan_pattern_mismatch") == 0
                 for v in bc.get("features", {}).values()) and bc.get("rows_only_in_v1") == 0 \
         and bc.get("rows_only_in_ext") == 0
-    a(f"| Base series (mom_20, ret_63d, ret_126d, deliv_pct_sma_20, atr_pct) vs v1 dataset | "
+    a(f"| Base series (mom_20, ret_63d, ret_126d, deliv_pct_sma_20, atr_pct) vs the {tag} dataset | "
       f"{'**exact** (max abs diff 0, identical row set and NaN pattern)' if exact else 'see section 6'} |")
     uc = j.get("fo_unit_continuity", {})
     if uc.get("available"):
@@ -80,7 +85,9 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     a(f"Output rows: `extra_features.parquet` {_f(fb.get('rows'))} rows x "
       f"{len(j['families']['F2_sector']) + len(j['families']['F3_fo'])} features "
       f"({_f(fb.get('tickers'))} tickers, {fb.get('date_min')} to {fb.get('date_max')}; the row set "
-      "equals the v1 dataset's exactly); `market_state.parquet` one row per EOD date "
+      + ("equals the dataset's row set exactly" if (bc.get("rows_only_in_v1") == 0 and bc.get("rows_only_in_ext") == 0)
+         else f"contains every dataset row ({_f(bc.get('rows_only_in_v1'))} dataset rows missing) plus {_f(bc.get('rows_only_in_ext'))} rows the dataset excludes")
+      + "); `market_state.parquet` one row per EOD date "
       f"from {fb.get('date_min')} with {len(j['families']['F1_market_state']) + len(j['families']['F4_flows'])} features.")
     a("")
     a("**The one material finding is a look-ahead in the industry lists (section 8).** The NSE "
@@ -88,8 +95,8 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
       "snapshot flag's pooled AUC exceeds a point-in-time size flag's by about 0.015 to 0.03 in "
       "2022-2025, roughly five to ten times the A/B pass mark of +0.003. F2 is built so that no "
       "NaN pattern marks membership (two deviations from the brief, section 4), but F2 still "
-      "makes the partition easier to recover. AB2 and AB5 should not be read without the "
-      "placebo control described in section 8.")
+      "makes the partition easier to recover. The lead registered the placebo control AB2P "
+      "as plan amendment A3 (section 8).")
     a("")
 
     a("## 2. Sources and coverage")
@@ -185,6 +192,10 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     em = j.get("equity_master", {})
     a(f"| `equity_master.csv` | {_f(em.get('rows'))} | EQUITY_L.csv: symbol, company_name, series, listing_date, paid_up_value, market_lot, isin, face_value ({'written here' if em.get('written_by_this_stream') else 'kept from P1'}) |")
     a("")
+    a("All three tables carry a `window` column: `main` for rows from 2021-10-01 and `hist` for "
+      "2016-10-03..2021-09-30 (section 11). The schemas and the participant column map are in "
+      "`extdata.json` (`staging_schemas`).")
+    a("")
     a("Units and conventions (verified, section 7): open interest is in **shares** in both F&O "
       "formats (legacy `OPEN_INT`, UDiFF `OpnIntrst`); traded volume in **contracts** in both "
       "(`CONTRACTS`, `TtlTradgVol`); turnover in rupees (`VAL_INLAKH` x 1e5, `TtlTrfVal`). Roll: "
@@ -193,16 +204,20 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
       "`FininstrmActlXpryDt`. basis_near = (near settle / spot close - 1) x 365 / days to expiry, "
       "NaN below 2 days. n_strikes = distinct strike prices over all option expiries. Futures rows "
       f"without a spot close: {_f(j.get('basis_sanity', {}).get('fut_rows_without_spot'))} "
-      "(the special sessions, which have no EOD bars in the v1 export).")
+      f"(sessions without an EOD bar in the {tag} export).")
     a("")
     sim = j.get("sector_index_map", {})
-    a("Sector-index map (every name verified present in every parsed index file, "
-      f"{_f(sim.get('n_index_files'))} files):")
+    chk = sim.get("index_checks", {})
+    full = all(v.get("share_of_files") == 1.0 for v in chk.values()) if chk else False
+    a(f"Sector-index map, checked against all {_f(sim.get('n_index_files'))} parsed index files"
+      + (" (every name is present in every file):" if full else
+         " (share of files containing each index, and its first date in the files):"))
     a("")
-    a("| Industry | Index | Fallback | Share of files with the index |")
-    a("|---|---|---|---:|")
+    a("| Industry | Index | Fallback | Share of files with the index | First date |")
+    a("|---|---|---|---:|---|")
     for r in sim.get("rows", []):
-        a(f"| {r['industry']} | {r['index_name']} | {r['fallback_index_name'] or '-'} | {_f(r['primary_share_of_files'])} |")
+        a(f"| {r['industry']} | {r['index_name']} | {r['fallback_index_name'] or '-'} | "
+          f"{_f(r['primary_share_of_files'])} | {chk.get(r['index_name'], {}).get('first', '-')} |")
     a("")
     a("Unmapped industries (Consumer Services, Services, Telecommunication, Textiles, Utilities, "
       "Diversified, Forest Materials) follow the brief's 'others -> none'. `Nifty Consumer "
@@ -268,10 +283,10 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
     a("The static inputs are held fixed in (b) and (c): the industry lists, the sector map and the ETF list. Their point-in-time status is the subject of section 8.")
     a("")
 
-    a("## 6. Base series vs the v1 dataset")
+    a(f"## 6. Base series vs the {tag} dataset")
     a("")
-    a(f"Row sets: v1 {_f(bc.get('v1_rows'))}, this stream {_f(bc.get('ext_rows'))}, common {_f(bc.get('common_rows'))}, "
-      f"only in v1 {_f(bc.get('rows_only_in_v1'))}, only here {_f(bc.get('rows_only_in_ext'))}.")
+    a(f"Dataset `{bc.get('dataset')}`. Row sets: dataset {_f(bc.get('v1_rows'))}, this stream {_f(bc.get('ext_rows'))}, common {_f(bc.get('common_rows'))}, "
+      f"only in the dataset {_f(bc.get('rows_only_in_v1'))}, only here {_f(bc.get('rows_only_in_ext'))} (rows only here are ETF rows when the dataset excludes ETFs).")
     a("")
     a("| Series | Rows both finite | Max abs diff | Rows with diff > 1e-9 | NaN-pattern mismatches |")
     a("|---|---:|---:|---:|---:|")
@@ -305,7 +320,7 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
       "is not point in time. The label itself barely changes over time; the problem is *which* "
       "names carry one. A name is classified only if it is in one of the five indices today, and "
       "names that rose since 2022 are over-represented among them. Reporting-only diagnostics "
-      "follow (labels from the v1 dataset, ex-ETF universe rows, y_clean_20d):")
+      f"follow (labels from the {tag} dataset, ex-ETF universe rows, y_clean_20d):")
     a("")
     a("| Year | Share classified | Beat rate classified | Beat rate unclassified | AUC of snapshot flag | AUC of PIT size flag (top N by turnover) |")
     a("|---|---:|---:|---:|---:|---:|")
@@ -336,14 +351,14 @@ def write_markdown(j: dict, path: Path | None = None) -> str:
       f"base features already reveal. In this build the non-NaN indicator of secidx_ret_20 has AUC "
       f"{_f(sn.get('auc_of_non_nan_indicator'))} against the label.")
     a("")
-    a("**Recommendation to the lead.** Do not read an AB2 or AB5 gain as industry information "
-      "until it beats a placebo with the same coverage. `ml/data_ext/extra_features_placebo_f2.parquet` "
-      "is that placebo: the F2 columns rebuilt with the industry labels permuted among the "
-      "classified symbols (seed 108), with the same Unclassified and ETF groups, the same coverage "
-      "and the same F3 columns. It is not a registered trial; running it would need an amendment "
-      "(+1 configuration). A cheaper secondary reading is the AUC on classified rows only, where "
-      "the between-partition component cannot help. F1, F3 and F4 do not depend on the lists: "
-      "F&O membership comes from the daily bhavcopy, and the market state from the point-in-time universe.")
+    a("**Placebo control (plan amendment A3, 2026-10-22).** `ml/data_ext/extra_features_placebo_f2.parquet` "
+      "holds the F2 columns rebuilt with the industry labels permuted among the classified symbols "
+      "(seed 108), with the same Unclassified and ETF groups, the same coverage, the same column "
+      "names and the same F3 columns, so the harness loads it with `--extra`. AB2P = control + these "
+      "columns. AB2, and the F2 share of AB5, counts as industry information only if AB2 passes the "
+      "primary mark **and** beats AB2P by >= +0.003 with the paired CI excluding zero. The secondary "
+      "reading is the AUC on classified rows only. F1, F3 and F4 do not depend on the lists: F&O "
+      "membership comes from the daily bhavcopy, and the market state from the point-in-time universe.")
     a("")
 
     a("## 9. NaN share per feature")

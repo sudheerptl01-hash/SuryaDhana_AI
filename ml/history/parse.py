@@ -70,7 +70,7 @@ TURNOVER_FACTOR = 1.0
 TURNOVER_LAKH_DECIMALS = 2
 VWAP_DECIMALS = 2          # the store's vwap is sec_bhavdata AVG_PRICE, printed to 2 decimals
 SOURCE = "cm_mto"
-PARSER_VERSION = 10
+PARSER_VERSION = 11
 
 EOD_DIR, AUX_DIR = PARTS / "eod", PARTS / "aux"
 log = get_logger("hist.parse")
@@ -152,19 +152,31 @@ def read_cm(path: Path, d: date) -> tuple[pd.DataFrame, dict]:
 
 
 # --------------------------------------------------------------------------- MTO
-_TRADE_DATE = re.compile(r"Trade Date\s*<([^>]+)>", re.IGNORECASE)
+# Some files drop the leading 'T' ("rade Date <30-MAR-2017>"); the "10,MTO,<ddmmyyyy>,..." control
+# record is the fallback.
+_TRADE_DATE = re.compile(r"T?rade\s+Date\s*<([^>]+)>", re.IGNORECASE)
+_CTRL_DATE = re.compile(r"^10,MTO,(\d{8})\b")
 
 
 def read_mto(path: Path, d: date) -> tuple[pd.DataFrame, dict]:
     text = path.read_bytes().decode("latin-1")
     lines = text.splitlines()
     m = _TRADE_DATE.search("\n".join(lines[:5]))
-    trade_date = None
+    trade_date, src = None, None
     if m:
         try:
-            trade_date = datetime.strptime(m.group(1).strip().title(), "%d-%b-%Y").date()
+            trade_date, src = datetime.strptime(m.group(1).strip().title(), "%d-%b-%Y").date(), "header"
         except ValueError:
             trade_date = None
+    if trade_date is None:
+        for ln in lines[:5]:
+            c = _CTRL_DATE.match(ln.strip())
+            if c:
+                try:
+                    trade_date, src = datetime.strptime(c.group(1), "%d%m%Y").date(), "control record"
+                except ValueError:
+                    pass
+                break
     recs, bad = [], 0
     for ln in lines:
         if not ln.startswith("20,"):
@@ -182,6 +194,8 @@ def read_mto(path: Path, d: date) -> tuple[pd.DataFrame, dict]:
     mto = mto.drop_duplicates(["ticker", "series"], keep="last")
     diag = {"mto_file": path.name, "mto_rows": len(mto), "mto_bad_lines": bad, "mto_dup_rows": n_dup,
             "mto_trade_date": trade_date.isoformat() if trade_date else None,
+            "mto_trade_date_source": src,
+            "mto_header_quirk": bool(m) and not lines[2].lstrip().upper().startswith("TRADE") if len(lines) > 2 else False,
             "mto_trade_date_ok": trade_date == d,
             "mto_series": mto["series"].value_counts().to_dict()}
     return mto, diag

@@ -35,9 +35,23 @@ def pct(x, d=2):
 
 def build() -> dict:
     ses, ca, etf = _load("sessions"), _load("corporate_actions"), _load("etf")
-    dry, wp, v2 = _load("write_phase_dryrun"), _load("write_phase"), _load("v1_vs_v2")
+    dry, wp, v2 = _load("write_phase_dryrun"), _load("write_phase_real"), _load("v1_vs_v2")
+    reh, reh2, hist = _load("write_phase_rehearsal"), _load("write_phase_rehearsal_rerun"), \
+        _load("history_special_sessions")
     cal = ses.get("calendar_audit", {})
     cont_after = wp.get("continuity_after", {})
+    idem = {}
+    if reh and reh2:
+        keys = ["equity_eod_rows", "equity_eod_dates", "eq_be_rows", "eq_be_dup_date_ticker",
+                "equity_features_rows", "adj_factor_ne_1_rows"]
+        idem = {"first_run_after": {k: reh["after"][k] for k in keys},
+                "second_run_after": {k: reh2["after"][k] for k in keys},
+                "second_run_rows_deleted": reh2["upsert"]["rows_deleted"],
+                "second_run_overwrites_existing_keys": reh2["overwrites_existing_keys"],
+                "second_run_continuity_max_share": reh2["continuity_after"]["max_share"],
+                "second_run_equal_to_dry_run": (reh2.get("dry_run_equality") or {}).get("identical")}
+        idem["identical"] = idem["first_run_after"] == idem["second_run_after"] and \
+            not any(idem["second_run_rows_deleted"].values())
     i1_before = {"max_share": max((r["share"] for r in ses.get("top10_share_before", [])), default=None),
                  "flagged": sorted(ses.get("flagged_before", {}))}
     i1 = {"rule": "no session with > 5% of tickers whose prev_close != stored previous close "
@@ -46,6 +60,9 @@ def build() -> dict:
           "after_store_rescan": {"max_share": cont_after.get("max_share"), "flagged": cont_after.get("flagged"),
                                  "top5": cont_after.get("top5")},
           "after_preview": ses.get("preview_after", {}).get("max_share")}
+    i1["mismatch_rows_after"] = {"total": cont_after.get("mismatch_rows_total"),
+                                 "on_a_parsed_corporate_action_ex_date": cont_after.get(
+                                     "mismatch_rows_on_a_parsed_ex_date")}
     i1["pass"] = bool(cont_after) and not cont_after.get("flagged") and cont_after.get("max_share", 1) <= 0.05
     i2 = dict(ca.get("I2", {}))
     i2["disagreements"] = ca.get("disagreements", [])
@@ -82,12 +99,43 @@ def build() -> dict:
                                                      "feed_by_kind", "price_break_flags", "completeness")},
         "etf": etf,
         "write_phase": {"dry_run": dry, **{k: wp.get(k) for k in (
-            "started", "finished", "duration_seconds", "backup", "before", "overwrites_existing_keys", "upsert",
-            "tables", "build_features", "after", "nestleind", "continuity_after", "dry_run_equality")}},
+            "started", "finished", "duration_seconds", "backup", "staging", "before", "overwrites_existing_keys",
+            "upsert", "tables", "build_features", "after", "nestleind", "known_events", "continuity_after",
+            "dry_run_equality")},
+            "rehearsal_seconds": reh.get("duration_seconds"), "idempotency_check_on_a_copy": idem},
+        "history_special_sessions_pr_check": hist,
+        "exports": (v2.get("exports") or {}),
         "v1_vs_v2": v2,
+        "findings_for_the_lead": [
+            "nse_historical_ingest.parse_pr_zip, UDiFF branch: column names are upper-cased and then looked up "
+            "in mixed case (TckrSymb, SctySrs, ...), so the UDiFF enrichment always fails and ISIN stays empty for "
+            "every UDiFF day (2024-07 onward); not changed (outside P1's edit scope). The three legacy-era added "
+            "sessions and the three re-dated ones carry ISIN from the CM bhavcopy; every other stored row has none.",
+            "The archive serves the preceding special or moved session's file on the closures 2021-11-05, "
+            "2023-06-29 and 2024-01-22, and the ingest's duplicate-day guard cannot catch it because that session "
+            "was never stored; the calendar now lists those closures and the sessions are in SPECIAL_SESSIONS.",
+            "The archive's security-wise files omit BE/BZ rows on 2022-03-07 and a growing set of BE securities "
+            "(weekly from 2023-06-19, daily 2023-07-24..2023-08-24); rebuilt from the CM bhavcopy.",
+            "The archive file PR060424.zip holds the 2024-06-04 bundle (day and month swapped); bundles are "
+            "validated by the date in their member names.",
+            "From mid-2025 the bc files write dates as yyyy-mm-dd instead of dd/mm/yyyy; both are parsed.",
+            "On split/bonus-adjusted equity_features the universe price floor must use the raw close: v2 passes "
+            "universe_price_col='close_unadj' (an adjusted close would let a future split remove past rows: "
+            "7,806 rows of 50 tickers from 2022-10-03 have an adjusted close below Rs 10 but a raw close at or above "
+            "it). This is the one addition to the briefed build call.",
+            "amihud_20 in v2 uses adjusted-close returns (the v1 prep used raw closes); deliv_value_share_20 uses "
+            "raw same-day prints as before.",
+            "The label study's ETF name rule misses ETFs the etf files list and flags operating companies "
+            "(GOLDTECH, JETFREIGHT; at store level also GOLDENTOBC and the rights entitlement JETFRE-RE).",
+            "Unadjustable price breaks (rights, demergers, capital reductions, schemes) and unvalidated "
+            "splits/bonuses are listed in ml/data_ext/price_break_flags.csv for label masking; v2 does not mask "
+            "them beyond y_clean_20d.",
+            "Backup of the pre-write store (1.42 GB): <session scratchpad>/rehearsal/nse_market_backup_pre_p1.duckdb; "
+            "it can be deleted once the lead is satisfied."],
         "timings_seconds": {"sessions": ses.get("seconds"), "corporate_actions": ca.get("seconds"),
                             "etf": etf.get("seconds"), "dry_run": dry.get("seconds"),
-                            "write_phase": wp.get("duration_seconds"),
+                            "write_phase_lock_window": wp.get("duration_seconds"),
+                            "rehearsal": reh.get("duration_seconds"),
                             "v2_build": (v2.get("seconds") or {}).get("total")},
         "outputs": {
             "code": "ml/integrity/",
@@ -96,9 +144,12 @@ def build() -> dict:
             "price_break_flags": "ml/data_ext/price_break_flags.csv",
             "etf_list": "ml/data_ext/etf_list.csv", "equity_master": "ml/data_ext/equity_master.csv",
             "session_staging": "ml/data_ext/staging/sessions_upsert.parquet + sessions_delete.json",
+            "exports_v2": "ml/results/improve/cache/{eod_export_v2.parquet, features_prices_export_v2.parquet}",
+            "write_script": "ml/integrity/write_phase.py (idempotent; --extra-staging for ml/data_hist/ rows)",
             "v2_dataset": "ml/data_5y_v2/{model_dataset.parquet, manifest.json, splits.json}",
             "reports": "ml/results/improve/integrity/{integrity.json, INTEGRITY.md, sessions.json, "
-                       "corporate_actions.json, etf.json, write_phase.json, v1_vs_v2.json}",
+                       "corporate_actions.json, etf.json, write_phase_real.json, write_phase_rehearsal*.json, "
+                       "write_phase_dryrun.json, v1_vs_v2.json, history_special_sessions.json}",
             "raw_downloads": "ml/data_raw/pr/ (PR bundles; sec/, cm/, mto/, master/ check files; _manifest.csv)"},
     }
     wjson(OUT / "integrity.json", out)
@@ -125,8 +176,10 @@ def md(j: dict) -> str:
     i1 = j["I1"]
     L.append(f"| I1 | no session > 5% prev_close mismatches after the fix | before: max {pct(i1['before']['max_share'])} "
              f"({len(i1['before']['flagged'])} sessions flagged); after (written store): max "
-             f"{pct(i1['after_store_rescan']['max_share'])}, flagged {i1['after_store_rescan']['flagged']} | "
-             f"**{word(pf['I1'])}** |")
+             f"{pct(i1['after_store_rescan']['max_share'])}, flagged {i1['after_store_rescan']['flagged']} "
+             f"({i1['mismatch_rows_after']['total']} mismatching rows in all, "
+             f"{i1['mismatch_rows_after']['on_a_parsed_corporate_action_ex_date']} of them on a parsed "
+             f"corporate-action ex-date) | **{word(pf['I1'])}** |")
     i2 = j["I2"]
     L.append(f"| I2 | split/bonus ratio within ±15% of observed for ≥ 95% of events | {i2.get('agree')} of "
              f"{i2.get('events')} = {pct(i2.get('rate'))} (listed ex-dates, no shift) | **{word(pf['I2'])}** |")
@@ -183,7 +236,9 @@ def md(j: dict) -> str:
         L.append(f"**Coverage repair.** Rule (fixed before the repair): {cov.get('rule')}. Before: "
                  f"{ab.get('sessions_ge_rule')} sessions met the rule ({ab.get('missing_total'):,} traded securities "
                  f"missing over all sessions, {ab.get('missing_close_ge_10_total'):,} of them priced ≥ ₹10). "
-                 f"Repaired: {cov.get('n_sessions')} sessions, {cov.get('rows_rebuilt'):,} rows. After: "
+                 f"Repaired: {cov.get('n_sessions')} sessions, {cov.get('rows_rebuilt'):,} BE/BZ rows "
+                 f"({cov.get('not_rebuilt_rows')} EQ call-auction rows, absent from the security-wise file on every "
+                 f"session, left out). After: "
                  f"{aa.get('sessions_ge_rule')} sessions meet the rule, max {aa.get('max_missing')} missing on any "
                  f"session ({aa.get('missing_close_ge_10_total')} priced ≥ ₹10). The residual is penny stocks "
                  "the security-wise file never lists.")
@@ -221,7 +276,7 @@ def md(j: dict) -> str:
     L.append("| Ticker | Ex-date | Purpose | Ratio | Observed | close(ex−1) | open(ex) | Resolved by shift | Same-day unadjustable |")
     L.append("|---|---|---|---:|---:|---:|---:|---|---|")
     for d in i2.get("disagreements", []):
-        L.append(f"| {d['ticker']} | {d['ex_date']} | {d['purpose']} | {d['ratio_standard']:.4f} | "
+        L.append(f"| {d['ticker']} | {d['ex_date']} | {d['purpose'].replace(' | ', ' + ')} | {d['ratio_standard']:.4f} | "
                  f"{d['observed_ratio']:.4f} | {d['close_prev']} | {d['open_ex']} | {d['resolved_by_shift']} | "
                  f"{d['same_day_unadjustable'] or '-'} |")
     L.append("")
@@ -249,13 +304,52 @@ def md(j: dict) -> str:
     L.append("## 4. Write phase (the one read-write window on nse_market.duckdb)")
     L.append("")
     if w.get("duration_seconds") is not None:
-        L.append(f"Lock held {w.get('started')} → {w.get('finished')} (**{w.get('duration_seconds')} s**; "
-                 f"build_features {(w.get('build_features') or {}).get('seconds')} s). Before: {w.get('before')}. "
-                 f"Upsert: {(w.get('upsert') or {}).get('rows')} rows, deleted dates "
-                 f"{(w.get('upsert') or {}).get('deleted_dates')}, overwritten keys {w.get('overwrites_existing_keys')}. "
-                 f"Tables: {w.get('tables')}. After: {w.get('after')}. NESTLEIND: {w.get('nestleind')}. "
-                 f"Equality with the dry run: {(w.get('dry_run_equality') or {}).get('identical')}.")
-    L.append("")
+        b, a, u = w.get("before") or {}, w.get("after") or {}, w.get("upsert") or {}
+        L.append(f"Lock `ml/results/improve/LOCK_duckdb_write` held {w.get('started')} → {w.get('finished')}: "
+                 f"**{w.get('duration_seconds')} s** (build_features {(w.get('build_features') or {}).get('seconds')} s; "
+                 f"the backup copy was taken before the lock with the store's size and mtime verified unchanged). "
+                 f"A rehearsal of the same procedure on a copy took {w.get('rehearsal_seconds')} s.")
+        L.append("")
+        L.append("| | Before | After |")
+        L.append("|---|---:|---:|")
+        L.append(f"| equity_eod rows | {b.get('equity_eod_rows'):,} | {a.get('equity_eod_rows'):,} |")
+        L.append(f"| sessions | {b.get('equity_eod_dates'):,} | {a.get('equity_eod_dates'):,} |")
+        L.append(f"| equity_features rows | {b.get('equity_features_rows'):,} | {a.get('equity_features_rows'):,} |")
+        L.append(f"| EQ/BE (date, ticker) pairs stored twice | – | {a.get('eq_be_dup_date_ticker')} |")
+        L.append(f"| rows with a split/bonus adjustment factor ≠ 1 | 0 | {a.get('adj_factor_ne_1_rows'):,} |")
+        L.append("")
+        L.append(f"Deleted (mis-dated) {u.get('rows_deleted')}; upserted {u.get('rows'):,} rows on {u.get('dates')} dates "
+                 f"(existing keys overwritten: {w.get('overwrites_existing_keys')}); row count as expected: "
+                 f"{a.get('row_count_as_expected')}. Tables written: {w.get('tables')}. equity_features equals the "
+                 f"in-memory dry run: {(w.get('dry_run_equality') or {}).get('identical')}.")
+        L.append("")
+        ke = w.get("known_events") or {}
+        L.append("Known corporate actions, adjusted vs raw close-to-close move on the ex-date:")
+        L.append("")
+        L.append("| Ticker | Ex-date | Adjusted move | Raw move | Largest adjusted daily abs(log move) in the series | Continuous |")
+        L.append("|---|---|---:|---:|---:|---|")
+        for t in ("NESTLEIND", "IRCTC", "TATASTEEL", "RELIANCE"):
+            r = ke.get(t) or {}
+            for d, v in (r.get("ex_dates") or {}).items():
+                if v:
+                    L.append(f"| {t} | {d} | {100 * v['adj_ret_ex']:+.2f}% | {100 * v['raw_ret_ex']:+.2f}% | "
+                             f"{r['max_abs_log_ret_adjusted']:.3f} | {r['continuous']} |")
+        L.append("")
+        idem = w.get("idempotency_check_on_a_copy") or {}
+        if idem:
+            L.append(f"Idempotency (the write run twice on a copy): second run deleted "
+                     f"{idem.get('second_run_rows_deleted')}, overwrote {idem.get('second_run_overwrites_existing_keys'):,} "
+                     f"existing keys in place, and left every count identical ({idem.get('identical')}); "
+                     f"equity_features still equal to the dry run: {idem.get('second_run_equal_to_dry_run')}. "
+                     "The script takes `--extra-staging` (equity_eod-schema parquet, e.g. the 2016-2021 rows of "
+                     "`ml/data_hist/`) and `--ca-csv` for the 10-year rebuild.")
+            L.append("")
+    ex = j.get("exports") or {}
+    if ex:
+        L.append("**Exports for the other streams** (same columns and types as the v1 exports): " + "; ".join(
+            f"`{v['path'].split('SuryaDhana_AI/')[-1]}` {v['rows']:,} rows" for k, v in ex.items() if isinstance(v, dict))
+            + ".")
+        L.append("")
     # v2
     L.append("## 5. v2 dataset (`ml/data_5y_v2/`)")
     L.append("")
@@ -288,14 +382,28 @@ def md(j: dict) -> str:
                      f"{pct(g.get('B_other_before_first_added_session'))} | "
                      f"{pct(g.get('C_other_from_first_added_session'))} |")
         L.append("")
+        dB = {k: f"{100 * v:.3f}%" for k, v in (cmp_.get("per_ticker_features_differing_in_group_B") or {}).items()}
         L.append(f"Per-ticker features identical in group B: {cmp_.get('per_ticker_features_identical_in_group_B')}; "
-                 f"differing in group B: {cmp_.get('per_ticker_features_differing_in_group_B')}.")
+                 f"differing in group B (share of group-B rows; these are the BE tickers whose 2022-03-07 and "
+                 f"2023-06..08 rows were rebuilt, and window features of rows near the re-dated sessions): {dB}. "
+                 "Cross-sectional columns (cs) differ almost everywhere because the universe lost its ETFs; "
+                 "amihud_20 is a per-date z-score, so any change on a date moves every row of that date.")
         L.append("")
-    L.append("## 6. Timings (seconds)")
+    L.append("## 6. Findings for the lead")
+    L.append("")
+    for f_ in j.get("findings_for_the_lead", []):
+        L.append(f"- {f_}")
+    L.append("")
+    hs = j.get("history_special_sessions_pr_check") or {}
+    if hs:
+        L.append("History-stream special sessions confirmed by their PR bundles (member names carry the date): "
+                 + ", ".join(f"{d} ({v['weekday']})" for d, v in hs.items() if v.get("inner_date_ok")) + ".")
+        L.append("")
+    L.append("## 7. Timings (seconds)")
     L.append("")
     L.append(str(j.get("timings_seconds")))
     L.append("")
-    L.append("## 7. Outputs")
+    L.append("## 8. Outputs")
     L.append("")
     for k, v in j["outputs"].items():
         L.append(f"- {k}: `{v}`")
@@ -303,9 +411,23 @@ def md(j: dict) -> str:
     return "\n".join(L)
 
 
+def _scrub(path: Path) -> None:
+    """Replace the session-scratchpad prefix in a report file by a neutral placeholder."""
+    import re
+    t = path.read_text()
+    t2 = re.sub(r"/tmp/[^\s\"']*?/scratchpad", "<session scratchpad>", t)
+    if t2 != t:
+        path.write_text(t2)
+
+
 def main() -> int:
+    for n in ("write_phase_real", "write_phase_rehearsal", "write_phase_rehearsal_rerun", "write_phase_dryrun"):
+        if (OUT / f"{n}.json").exists():
+            _scrub(OUT / f"{n}.json")
     j = build()
     (OUT / "INTEGRITY.md").write_text(md(j))
+    _scrub(OUT / "integrity.json")
+    _scrub(OUT / "INTEGRITY.md")
     print(json.dumps(j["pass_fail"]))
     return 0
 

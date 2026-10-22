@@ -421,12 +421,21 @@ def list_raw(kind: str, max_date: date | None = None,
     return sorted(files, key=lambda p: dates[p])
 
 
-def load_spot() -> pd.DataFrame:
-    """Spot close and 20-session median turnover per (date, ticker) from the
-    EOD export (EQ/BE rows), keyed on the EOD export's own dates."""
-    eod = pd.read_parquet(C.EOD_EXPORT, columns=["date", "ticker", "close", "turnover"])
+def load_spot(eod_path: Path = C.EOD_EXPORT) -> pd.DataFrame:
+    """Raw (unadjusted) spot close and turnover per (date, ticker) from an
+    equity_eod export (EQ/BE rows), keyed on that export's own dates. Futures
+    settle prices are raw, so the spot must be the raw close."""
+    eod = pd.read_parquet(eod_path, columns=["date", "ticker", "close", "turnover"])
     eod["date"] = pd.to_datetime(eod["date"])
     return eod
+
+
+def add_window(df: pd.DataFrame) -> pd.DataFrame:
+    """window = 'hist' for 2016-10-03..2021-09-30 rows, 'main' from 2021-10-01."""
+    if len(df):
+        df = df.copy()
+        df["window"] = np.where(df["date"] < pd.Timestamp(C.MAIN_START), "hist", "main")
+    return df
 
 
 def build_fo_daily(fo_frames: pd.DataFrame, eod: pd.DataFrame) -> pd.DataFrame:
@@ -449,15 +458,17 @@ def build_fo_daily(fo_frames: pd.DataFrame, eod: pd.DataFrame) -> pd.DataFrame:
 
 def run(max_date: date | None = None, write: bool = True, raw_dirs: dict | None = None,
         use_cache: bool = True, min_date: date | None = C.MAIN_START,
-        hist_spot: pd.DataFrame | None = None) -> dict:
+        hist_spot: pd.DataFrame | None = None, eod_path: Path = C.EOD_EXPORT) -> dict:
     """Parse all raw files dated in [min_date, max_date]. The default min_date
     (2021-10-01) keeps the main-window build independent of the history
     extension; min_date=None includes 2016-10..2021-09 files. A truncated or
     no-write run reads the per-file cache but never rewrites it."""
     C.ensure_dirs()
     report: dict = {"built_at": datetime.now().isoformat(timespec="seconds"),
-                    "min_date": str(min_date) if min_date else None}
-    eod = load_spot()
+                    "min_date": str(min_date) if min_date else None,
+                    "spot_source": str(Path(eod_path).relative_to(C.REPO))
+                    if str(eod_path).startswith(str(C.REPO)) else str(eod_path)}
+    eod = load_spot(eod_path)
     if hist_spot is not None:
         eod = pd.concat([hist_spot[["date", "ticker", "close", "turnover"]], eod],
                         ignore_index=True)
@@ -494,12 +505,15 @@ def run(max_date: date | None = None, write: bool = True, raw_dirs: dict | None 
     report["participant"] = {"files_parsed": len(part_files),
                              "files_excluded_date_mismatch_or_error": sorted(bad_part),
                              "rows": int(len(part))}
+    fo, idx, part = add_window(fo), add_window(idx), add_window(part)
+    if len(idx):
+        idx = idx.sort_values(["date", "index_name"]).reset_index(drop=True)
+    if len(part):
+        part = part.sort_values(["date", "client_type"]).reset_index(drop=True)
     if write:
         fo.to_parquet(C.EXT / "fo_daily_stock.parquet", index=False)
-        idx.sort_values(["date", "index_name"]).to_parquet(C.EXT / "index_daily.parquet",
-                                                           index=False)
-        part.sort_values(["date", "client_type"]).to_parquet(
-            C.EXT / "fo_participant_oi.parquet", index=False)
+        idx.to_parquet(C.EXT / "index_daily.parquet", index=False)
+        part.to_parquet(C.EXT / "fo_participant_oi.parquet", index=False)
         (C.OUT / "parse_meta.json").write_text(json.dumps(
             {"fo": fo_meta, "indices": idx_meta, "participant": part_meta}, indent=0))
     report["_frames"] = (fo, idx, part)

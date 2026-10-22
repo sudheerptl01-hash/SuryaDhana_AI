@@ -46,6 +46,23 @@ from ml.extdata import parse as P  # noqa: E402
 RTOL = 1e-9
 RTOL_Z = 1e-6   # rolling sd: pandas' online algorithm vs numpy two-pass
 
+# inputs of the build being checked (run_all.py sets them; default = v1)
+SOURCES = {"eod": C.EOD_EXPORT, "prices": None, "dataset": C.V1_DATASET, "tag": "v1"}
+
+
+def configure(eod=None, prices=None, dataset=None, tag=None) -> None:
+    if eod is not None:
+        SOURCES["eod"] = Path(eod)
+    SOURCES["prices"] = Path(prices) if prices else None
+    if dataset is not None:
+        SOURCES["dataset"] = Path(dataset)
+    if tag is not None:
+        SOURCES["tag"] = tag
+
+
+def _load_prices(max_date=None) -> pd.DataFrame:
+    return F.load_eod(SOURCES["eod"], max_date, SOURCES["prices"])
+
 
 def _jsonable(x):
     if isinstance(x, (np.floating,)):
@@ -73,8 +90,8 @@ def _close(a: float, b: float, rtol: float = RTOL, atol: float = 1e-12) -> bool:
 def coverage(fo: pd.DataFrame, idx: pd.DataFrame, part: pd.DataFrame,
              res: dict) -> dict:
     from ml.extdata.download import load_status
-    sessions = C.main_sessions()
-    eod_s = set(C.eod_sessions())
+    eod_s = set(C.eod_sessions(SOURCES["eod"]))
+    sessions = sorted(eod_s | set(C.SPECIAL_SESSIONS))
     specials = set(C.SPECIAL_SESSIONS)
     meta = json.loads((C.OUT / "parse_meta.json").read_text())
     out: dict = {"expected_sessions": len(sessions), "eod_sessions": len(eod_s),
@@ -178,7 +195,7 @@ def unit_continuity() -> dict:
 
 
 def symbol_match(fo: pd.DataFrame) -> dict:
-    eod = pd.read_parquet(C.EOD_EXPORT, columns=["date", "ticker"])
+    eod = pd.read_parquet(SOURCES["eod"], columns=["date", "ticker"])
     eod["date"] = pd.to_datetime(eod["date"])
     eod_dates = set(eod["date"].dt.date.unique())
     amap = {pd.Timestamp(s): pd.Timestamp(d) for s, d in P.EXT_TO_EOD_ALIAS.items()
@@ -232,11 +249,13 @@ def basis_sanity(fo: pd.DataFrame) -> dict:
 
 def base_crosscheck(res: dict) -> dict:
     uni = res["base_universe"][["date", "ticker"] + F.BASE]
-    v1 = pd.read_parquet(C.V1_DATASET, columns=["date", "ticker"] + F.BASE)
+    v1 = pd.read_parquet(SOURCES["dataset"], columns=["date", "ticker"] + F.BASE)
+    v1["date"] = pd.to_datetime(v1["date"]).astype("datetime64[ns]")
     k1 = pd.MultiIndex.from_frame(v1[["date", "ticker"]])
     k2 = pd.MultiIndex.from_frame(uni[["date", "ticker"]])
     m = v1.merge(uni, on=["date", "ticker"], suffixes=("_v1", "_ext"))
-    out = {"v1_rows": int(len(v1)), "ext_rows": int(len(uni)), "common_rows": int(len(m)),
+    out = {"dataset": str(SOURCES["dataset"]), "v1_rows": int(len(v1)), "ext_rows": int(len(uni)),
+           "common_rows": int(len(m)),
            "rows_only_in_v1": int((~k1.isin(k2)).sum()),
            "rows_only_in_ext": int((~k2.isin(k1)).sum()), "features": {}}
     for f in F.BASE:
@@ -262,7 +281,7 @@ class EodArrays:
         self.d = {}
         for tk, g in eod.groupby("ticker", sort=False):
             self.d[tk] = {c: g[c].to_numpy() for c in
-                          ("date", "close", "high", "low", "turnover", "deliv_pct")}
+                          ("date", "close", "close_raw", "high", "low", "turnover", "deliv_pct")}
         self.by_date = eod.groupby("date")["ticker"].apply(list).to_dict()
 
     def values_at(self, tk: str, t: pd.Timestamp) -> dict | None:
@@ -276,8 +295,9 @@ class EodArrays:
         win = to[max(0, n - 20):n]
         win = win[np.isfinite(win)]
         med = float(np.median(win)) if win.size >= 10 else np.nan
-        out = {"close": float(c[-1]), "med_turn_20": med,
-               "universe": bool(c[-1] >= C.MIN_PRICE and np.isfinite(med) and med >= C.MIN_MED_TURNOVER)}
+        craw = float(a["close_raw"][pos])
+        out = {"close": float(c[-1]), "close_raw": craw, "med_turn_20": med,
+               "universe": bool(craw >= C.MIN_PRICE and np.isfinite(med) and med >= C.MIN_MED_TURNOVER)}
         out["mom_20"] = float(c[-1] / c[-21] - 1) if n >= 21 else np.nan
         out["ret_63d"] = float(c[-1] / c[-64] - 1) if n >= 64 else np.nan
         out["ret_126d"] = float(c[-1] / c[-127] - 1) if n >= 127 else np.nan
@@ -372,6 +392,8 @@ def _indep_secidx(t: pd.Timestamp, industry: str | None, smap: pd.DataFrame,
     v = ret20(prim)
     if np.isnan(v) and fb:
         v = ret20(fb)
+    if np.isnan(v) and default_index and prim != default_index:
+        v = ret20(default_index)   # mapped index without a value that date
     return v
 
 
@@ -465,7 +487,7 @@ def _indep_f3(t: pd.Timestamp, tickers: list[str], fo_files: list[Path], eodA: E
             continue
         r["fo_member"] = 1.0
         ev = eodA.values_at(tk, t)
-        spot = ev["close"] if ev else np.nan
+        spot = ev["close_raw"] if ev else np.nan
         near = sorted(dat["fut"])[0]
         dte = (near[0] - seq[0][1]).days
         if dte >= 2 and near[1] > 0 and spot > 0:
@@ -491,7 +513,7 @@ def pit_recompute_cells(res: dict, n_dates: int = 25, per_date: int = 2) -> dict
     t0 = time.perf_counter()
     rng = np.random.default_rng(C.SEED)
     ex = res["extra"]
-    eod = F.load_eod()
+    eod = _load_prices()
     eodA = EodArrays(eod)
     eod_dates = set(eod["date"].dt.date.unique())
     etf, _ = F.load_etf_set(pd.Index(eod["ticker"].unique()))
@@ -615,9 +637,11 @@ def _compare(full: pd.DataFrame, trunc: pd.DataFrame, keys: list[str], cols: lis
 
 
 def _truncated_build(t: pd.Timestamp, raw_dirs: dict | None = None, use_cache: bool = True):
-    rep = P.run(max_date=t.date(), write=False, raw_dirs=raw_dirs, use_cache=use_cache)
+    rep = P.run(max_date=t.date(), write=False, raw_dirs=raw_dirs, use_cache=use_cache,
+                eod_path=SOURCES["eod"])
     fo, idx, part = rep["_frames"]
-    return F.build(max_date=t, staging=(fo, idx, part), write=False)
+    return F.build(SOURCES["eod"], max_date=t, staging=(fo, idx, part), write=False,
+                   prices_path=SOURCES["prices"])
 
 
 def pit_month_truncation(res: dict, month: str = "2024-07") -> dict:
@@ -717,7 +741,8 @@ def monthly_ic(res: dict) -> dict:
     valid pairs), averaged by calendar month. Market-level features (F1, F4)
     are constant within a date: no cross-sectional IC."""
     from scipy.stats import spearmanr
-    v1 = pd.read_parquet(C.V1_DATASET, columns=["date", "ticker", "y_excess_20d", "y_clean_20d"])
+    v1 = pd.read_parquet(SOURCES["dataset"], columns=["date", "ticker", "y_excess_20d", "y_clean_20d"])
+    v1["date"] = pd.to_datetime(v1["date"]).astype("datetime64[ns]")
     v1 = v1[v1["y_clean_20d"].astype(bool) & v1["y_excess_20d"].notna()]
     m = v1.merge(res["extra"], on=["date", "ticker"], how="inner")
     y = m["y_excess_20d"].to_numpy(dtype=float)
@@ -749,15 +774,17 @@ def monthly_ic(res: dict) -> dict:
                                             "IC undefined"}
     return {"label": "REPORTING ONLY - descriptive; not used to add, drop or transform any "
                      "feature; family membership fixed in ml/IMPROVEMENT_PLAN.md",
-            "target": "y_excess_20d on y_clean_20d rows (v1 dataset)", "min_pairs_per_date": 50,
+            "target": f"y_excess_20d on y_clean_20d rows ({SOURCES['tag']} dataset)",
+            "min_pairs_per_date": 50,
             "features": out}
 
 
 def survivorship_diag(res: dict) -> dict:
     """REPORTING ONLY. How much 'has an industry label' (2026-10-19 lists)
     says about future excess returns, by year, on ex-ETF universe rows."""
-    v1 = pd.read_parquet(C.V1_DATASET, columns=["date", "ticker", "y_excess_20d", "y_clean_20d",
-                                                "label_beat_mkt_20d"])
+    v1 = pd.read_parquet(SOURCES["dataset"], columns=["date", "ticker", "y_excess_20d", "y_clean_20d",
+                                                     "label_beat_mkt_20d"])
+    v1["date"] = pd.to_datetime(v1["date"]).astype("datetime64[ns]")
     g = res["groups"]
     m = v1.merge(g, on=["date", "ticker"])
     m = m[m["y_clean_20d"].astype(bool) & (m["grp"] != F.ETF_GROUP)]
@@ -803,8 +830,9 @@ def size_proxy_diag(res: dict) -> dict:
     20-session median turnover and the top N flagged, N = the number of
     names carrying an industry label that date. AUC of that PIT flag vs the
     AUC of the snapshot 'classified' flag, by year."""
-    v1 = pd.read_parquet(C.V1_DATASET, columns=["date", "ticker", "y_clean_20d",
-                                                "label_beat_mkt_20d"])
+    v1 = pd.read_parquet(SOURCES["dataset"], columns=["date", "ticker", "y_clean_20d",
+                                                     "label_beat_mkt_20d"])
+    v1["date"] = pd.to_datetime(v1["date"]).astype("datetime64[ns]")
     g = res["groups"].merge(res["base_universe"][["date", "ticker", "med_turn_20"]],
                             on=["date", "ticker"])
     g = g[g["grp"] != F.ETF_GROUP].copy()
@@ -839,7 +867,8 @@ def partition_identifiability(res: dict) -> dict:
     from sklearn.metrics import roc_auc_score
     basecols = ["log_turnover", "cs_rank_turnover", "atr_pct", "vol_20", "deliv_pct_sma_20",
                 "mom_20", "ret_126d", "ret_252d", "dist_52w_high", "mom_12_1"]
-    v1 = pd.read_parquet(C.V1_DATASET, columns=["date", "ticker"] + basecols)
+    v1 = pd.read_parquet(SOURCES["dataset"], columns=["date", "ticker"] + basecols)
+    v1["date"] = pd.to_datetime(v1["date"]).astype("datetime64[ns]")
     g = res["groups"]
     m = v1.merge(g, on=["date", "ticker"]).merge(res["extra"][["date", "ticker"] + F.F2],
                                                 on=["date", "ticker"])

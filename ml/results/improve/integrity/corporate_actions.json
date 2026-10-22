@@ -1,55 +1,76 @@
 {
  "bc_stats": {
-  "bundles": 706,
-  "with_member": 706,
+  "bundles": 1252,
+  "with_member": 1251,
   "empty": 1,
   "unreadable": 0,
-  "rows": 182112,
-  "rows_without_ex_date": 19755,
-  "records": 10211
+  "misfiled_skipped": [
+   "PR060424.zip holds 2024-06-04"
+  ],
+  "rows_rejoined": 2,
+  "rows_dropped": 0,
+  "files_with_overlong_rows": [
+   "PR210824.zip/Bc210824.csv"
+  ],
+  "rows": 311551,
+  "rows_without_ex_date": 25110,
+  "records": 21963
  },
  "records_by_kind": {
-  "dividend": 4301,
-  "interest_redemption": 2771,
-  "meeting": 2063,
-  "other": 235,
-  "bonus": 195,
-  "split": 183,
-  "distribution": 144,
-  "rights": 108,
-  "buyback": 89,
-  "demerger": 37,
-  "merger": 35,
-  "capital_reduction": 33,
-  "call_money": 17
+  "interest_redemption": 8872,
+  "dividend": 8334,
+  "meeting": 2843,
+  "bonus": 348,
+  "other": 334,
+  "split": 316,
+  "distribution": 311,
+  "rights": 236,
+  "buyback": 152,
+  "demerger": 73,
+  "merger": 60,
+  "capital_reduction": 57,
+  "call_money": 17,
+  "scheme_of_arrangement": 10
  },
  "adjustable_events": {
-  "ticker_exdate_groups": 352,
-  "superseded_revised_ex_date": 10,
-  "no_price_data_or_outside_store": 55,
-  "evaluated": 288,
-  "agree": 280,
-  "disagree": 8,
+  "ticker_exdate_groups": 628,
+  "superseded_revised_ex_date": 17,
+  "no_price_data_or_outside_store": 104,
+  "evaluated": 510,
+  "agree": 501,
+  "disagree": 9,
   "by_kind_evaluated": {
-   "split": 151,
-   "bonus": 121,
-   "bonus+split": 16
+   "split": 262,
+   "bonus": 220,
+   "bonus+split": 28
   },
-  "bonus_orientation_flips": 0,
-  "bonus_events_evaluated": 137
+  "bonus_orientation_flips": 1,
+  "bonus_events_evaluated": 248
+ },
+ "I2_by_ratio_strength": {
+  "strong_ratio_le_0.8_or_ge_1.25": {
+   "events": 493,
+   "agree": 484,
+   "rate": 0.9817444219066938
+  },
+  "weak_ratio": {
+   "events": 17,
+   "agree": 16,
+   "rate": 0.9411764705882353
+  }
  },
  "I2": {
-  "rate": 0.96875,
-  "events": 288,
-  "agree": 279,
+  "rate": 0.9803921568627451,
+  "events": 510,
+  "agree": 500,
   "pass_mark": 0.95,
   "pass": true,
   "rule": "|observed/ratio - 1| <= 0.15, observed = open(ex)/close(ex-1) in the ratio's orientation, at the LISTED ex-date (no shift); revised duplicates excluded"
  },
  "after_ex_date_shift": {
-  "events": 288,
-  "agree": 280,
-  "rate": 0.9722222222222222,
+  "events": 510,
+  "agree": 501,
+  "rate": 0.9823529411764705,
   "shifted": 1,
   "shift_sessions": {
    "1": 1
@@ -177,22 +198,43 @@
    "same_day_unadjustable": ""
   },
   {
-   "ticker": "AARTECH",
+   "ticker": "SAKUMA",
    "ex_date": "2024-08-09",
-   "kinds": "split",
-   "purpose": "FVSPLT FRM RS 10 TO RS 5",
-   "ratio_standard": 0.5,
-   "observed_ratio": 0.33389766741911214,
-   "observed_close_prev_over_open_ex": 2.9949295774647884,
-   "close_prev": 212.64,
-   "open_ex": 71.0,
+   "kinds": "bonus",
+   "purpose": "BONUS 4:1",
+   "ratio_standard": 0.2,
+   "observed_ratio": 0.2374189564680457,
+   "observed_close_prev_over_open_ex": 4.211963589076723,
+   "close_prev": 32.39,
+   "open_ex": 7.69,
    "prev_row_date": "2024-08-08",
    "ex_row_date": "2024-08-09",
+   "resolved_by_shift": false,
+   "same_day_unadjustable": ""
+  },
+  {
+   "ticker": "AXITA",
+   "ex_date": "2024-09-20",
+   "kinds": "bonus",
+   "purpose": "BONUS 1:3",
+   "ratio_standard": 0.75,
+   "observed_ratio": 0.8661417322834646,
+   "observed_close_prev_over_open_ex": 1.1545454545454545,
+   "close_prev": 21.59,
+   "open_ex": 18.7,
+   "prev_row_date": "2024-09-19",
+   "ex_row_date": "2024-09-20",
    "resolved_by_shift": false,
    "same_day_unadjustable": ""
   }
  ],
  "superseded": [
+  {
+   "ticker": "AJMERA",
+   "ex_date": "2026-01-15",
+   "purpose": "FVSPLT FRM RS 10 TO RS 2",
+   "observed_ratio": 1.0
+  },
   {
    "ticker": "AKSHAR",
    "ex_date": "2024-02-08",
@@ -224,10 +266,22 @@
    "observed_ratio": 1.0153190792168427
   },
   {
+   "ticker": "KBCGLOBAL",
+   "ex_date": "2025-03-28",
+   "purpose": "BONUS 1:1",
+   "observed_ratio": 0.9801980198019802
+  },
+  {
    "ticker": "LIKHITHA",
    "ex_date": "2022-12-01",
    "purpose": "FV SPLT FRM RS 10 TO RS 5",
    "observed_ratio": 1.01841405002661
+  },
+  {
+   "ticker": "MOS",
+   "ex_date": "2025-09-26",
+   "purpose": "BONUS 1:1",
+   "observed_ratio": null
   },
   {
    "ticker": "NDL",
@@ -242,6 +296,18 @@
    "observed_ratio": 1.0202474690663668
   },
   {
+   "ticker": "POWERMECH",
+   "ex_date": "2024-09-27",
+   "purpose": "BONUS 1:1",
+   "observed_ratio": 1.0034155941097966
+  },
+  {
+   "ticker": "RPPL",
+   "ex_date": "2024-09-18",
+   "purpose": "FVSPLT FRM RS 10 TO RS 5",
+   "observed_ratio": 0.9947089947089947
+  },
+  {
    "ticker": "RUBYMILLS",
    "ex_date": "2022-09-22",
    "purpose": "BONUS 1:1",
@@ -252,6 +318,18 @@
    "ex_date": "2023-09-05",
    "purpose": "BONUS 2:1 | FVSPLT FRM RS 10 TO RE 1",
    "observed_ratio": 1.0222709017889742
+  },
+  {
+   "ticker": "USASEEDS",
+   "ex_date": "2025-09-26",
+   "purpose": "BONUS 3:7",
+   "observed_ratio": null
+  },
+  {
+   "ticker": "VSTIND",
+   "ex_date": "2024-09-06",
+   "purpose": "BONUS 10:1",
+   "observed_ratio": 0.10645244533204681
   }
  ],
  "shifted": [
@@ -300,53 +378,58 @@
    "ticker": "RELIANCE",
    "ex_date": "2024-10-28",
    "expected_ratio": 0.5,
-   "found_in_feed": false,
-   "ratio": null,
-   "observed_ratio": null,
-   "purpose": null,
-   "ratio_matches": false
+   "found_in_feed": true,
+   "ratio": 0.5,
+   "observed_ratio": 0.5034454192868171,
+   "purpose": "BONUS 1:1",
+   "ratio_matches": true
   }
  ],
- "known_events_all_found": false,
- "feed_rows": 280,
+ "known_events_all_found": true,
+ "feed_rows": 501,
  "feed_by_kind": {
-  "split": 146,
-  "bonus": 119,
-  "bonus+split": 15
+  "split": 258,
+  "bonus": 216,
+  "bonus+split": 27
  },
  "price_break_flags": {
-  "rights": 107,
-  "demerger": 36,
-  "capital_reduction": 21,
-  "split_unvalidated": 5,
-  "bonus_unvalidated": 2,
+  "rights": 235,
+  "demerger": 71,
+  "capital_reduction": 35,
+  "bonus_unvalidated": 4,
+  "split_unvalidated": 4,
   "bonus+split_unvalidated": 1
  },
  "completeness": {
   "pd_stats": {
-   "bundles": 709,
-   "with_member": 709,
+   "bundles": 1252,
+   "with_member": 1251,
    "empty": 0,
-   "unreadable": 0
+   "unreadable": 0,
+   "misfiled_skipped": [
+    "PR060424.zip holds 2024-06-04"
+   ]
   },
   "corp_ind_codes": {
-   "XD": 2230,
-   "XDO": 1360,
-   "XO": 1271,
-   "XB": 127,
-   "XR": 89
+   "XD": 5769,
+   "XO": 1773,
+   "XDO": 1660,
+   "XB": 229,
+   "XR": 194
   },
-  "corp_ind_rows_eq_be": 5077,
-  "corp_ind_with_abs_ret_gt_22pct": 138,
-  "covered_by_feed": 109,
-  "n_missing": 29,
-  "n_missing_without_any_bc_record": 3,
+  "corp_ind_rows_eq_be": 9625,
+  "corp_ind_with_abs_ret_gt_22pct": 336,
+  "covered_by_feed": 271,
+  "n_missing": 65,
+  "n_missing_without_any_bc_record": 5,
   "missing_by_bc_kind": {
-   "demerger": 12,
-   "rights": 11,
-   "(no bc record)": 3,
-   "dividend": 2,
-   "bonus,demerger": 1
+   "demerger": 34,
+   "rights": 19,
+   "(no bc record)": 5,
+   "dividend": 3,
+   "bonus": 2,
+   "bonus,demerger": 1,
+   "other": 1
   },
   "missing": [
    {
@@ -390,18 +473,18 @@
     "bc_kinds_on_date": "demerger"
    },
    {
-    "ticker": "RSWM",
-    "date": "2022-12-16",
-    "CORP_IND": "XR",
-    "ret_1d": -0.39301310043668125,
-    "parsed_but_unvalidated": false,
-    "bc_kinds_on_date": "rights"
-   },
-   {
     "ticker": "AKG",
     "date": "2022-12-16",
     "CORP_IND": "XR",
     "ret_1d": -0.5352498288843257,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "RSWM",
+    "date": "2022-12-16",
+    "CORP_IND": "XR",
+    "ret_1d": -0.39301310043668125,
     "parsed_but_unvalidated": false,
     "bc_kinds_on_date": "rights"
    },
@@ -580,8 +663,296 @@
     "ret_1d": -0.31269349845201233,
     "parsed_but_unvalidated": false,
     "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "SAKUMA",
+    "date": "2024-08-09",
+    "CORP_IND": "XB",
+    "ret_1d": -0.7601111454152516,
+    "parsed_but_unvalidated": true,
+    "bc_kinds_on_date": "bonus"
+   },
+   {
+    "ticker": "AKSHAR",
+    "date": "2024-08-23",
+    "CORP_IND": "XR",
+    "ret_1d": -0.2727272727272727,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "VSTIND",
+    "date": "2024-09-06",
+    "CORP_IND": "XB",
+    "ret_1d": -0.8920104567536941,
+    "parsed_but_unvalidated": true,
+    "bc_kinds_on_date": "bonus"
+   },
+   {
+    "ticker": "ROSSELLIND",
+    "date": "2024-09-20",
+    "CORP_IND": "XO",
+    "ret_1d": -0.7251668945548138,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "HERCULES",
+    "date": "2024-10-11",
+    "CORP_IND": "XO",
+    "ret_1d": -0.7061422889969067,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "RPEL",
+    "date": "2024-11-29",
+    "CORP_IND": "XB",
+    "ret_1d": -0.5257062418018363,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": ""
+   },
+   {
+    "ticker": "STAR",
+    "date": "2024-12-06",
+    "CORP_IND": "XO",
+    "ret_1d": -0.5403858455944244,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "DHANBANK",
+    "date": "2024-12-27",
+    "CORP_IND": "XR",
+    "ret_1d": -0.2725627686043882,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "CALSOFT",
+    "date": "2025-01-15",
+    "CORP_IND": "XR",
+    "ret_1d": -0.39309138609532135,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "KESORAMIND",
+    "date": "2025-03-10",
+    "CORP_IND": "XO",
+    "ret_1d": -0.9525693630324346,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "SIEMENS",
+    "date": "2025-04-07",
+    "CORP_IND": "XO",
+    "ret_1d": -0.4293091728133275,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "QUESS",
+    "date": "2025-04-15",
+    "CORP_IND": "XO",
+    "ret_1d": -0.5070259547032567,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "NAVKARURB",
+    "date": "2025-04-24",
+    "CORP_IND": "XB",
+    "ret_1d": -0.5804438280166435,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": ""
+   },
+   {
+    "ticker": "STLTECH",
+    "date": "2025-04-24",
+    "CORP_IND": "XO",
+    "ret_1d": -0.25204093365528346,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "CHEMBOND",
+    "date": "2025-05-09",
+    "CORP_IND": "XO",
+    "ret_1d": -0.3758217677136596,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "CPCAP",
+    "date": "2025-05-09",
+    "CORP_IND": "XO",
+    "ret_1d": -0.37511111111111106,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "RAYMOND",
+    "date": "2025-05-14",
+    "CORP_IND": "XO",
+    "ret_1d": -0.6476379211148756,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "ABFRL",
+    "date": "2025-05-22",
+    "CORP_IND": "XO",
+    "ret_1d": -0.6659230340211935,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "SHANKARA",
+    "date": "2025-09-24",
+    "CORP_IND": "XO",
+    "ret_1d": -0.7554265522463403,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "CAPTRUST",
+    "date": "2025-10-10",
+    "CORP_IND": "XR",
+    "ret_1d": -0.3111210162692222,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "TATAMOTORS",
+    "date": "2025-10-14",
+    "CORP_IND": "XO",
+    "ret_1d": -0.4015134317063943,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "SKFINDIA",
+    "date": "2025-10-15",
+    "CORP_IND": "XO",
+    "ret_1d": -0.5475401325772702,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "ALLCARGO",
+    "date": "2025-11-12",
+    "CORP_IND": "XO",
+    "ret_1d": -0.6492471213463241,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "HCC",
+    "date": "2025-12-05",
+    "CORP_IND": "XR",
+    "ret_1d": -0.23284502698535092,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "other"
+   },
+   {
+    "ticker": "DCMSRIND",
+    "date": "2025-12-26",
+    "CORP_IND": "XO",
+    "ret_1d": -0.683317843866171,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "SADHNANIQ",
+    "date": "2026-02-18",
+    "CORP_IND": "XR",
+    "ret_1d": -0.7040998217468806,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "MAHAPEXLTD",
+    "date": "2026-03-20",
+    "CORP_IND": "XR",
+    "ret_1d": -0.5551615445232467,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "VEDL",
+    "date": "2026-04-30",
+    "CORP_IND": "XO",
+    "ret_1d": -0.6489788004136505,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "SETCO",
+    "date": "2026-06-02",
+    "CORP_IND": "XD",
+    "ret_1d": -0.44339622641509435,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "dividend"
+   },
+   {
+    "ticker": "TRIVENI",
+    "date": "2026-07-22",
+    "CORP_IND": "XO",
+    "ret_1d": -0.41569459172852596,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "GENESYS",
+    "date": "2026-08-06",
+    "CORP_IND": "XR",
+    "ret_1d": -0.30331609370246426,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "DUCON",
+    "date": "2026-08-25",
+    "CORP_IND": "XR",
+    "ret_1d": -0.22077922077922085,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "rights"
+   },
+   {
+    "ticker": "INDIAGLYCO",
+    "date": "2026-09-02",
+    "CORP_IND": "XO",
+    "ret_1d": -0.7875326077179096,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "HEG",
+    "date": "2026-09-07",
+    "CORP_IND": "XO",
+    "ret_1d": -0.6262272571232407,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "VERANDA",
+    "date": "2026-10-06",
+    "CORP_IND": "XO",
+    "ret_1d": -0.8603120887384846,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
+   },
+   {
+    "ticker": "BHAGYANGR",
+    "date": "2026-10-08",
+    "CORP_IND": "XO",
+    "ret_1d": -0.9089209107908921,
+    "parsed_but_unvalidated": false,
+    "bc_kinds_on_date": "demerger"
    }
   ]
  },
- "seconds": 34.0
+ "seconds": 57.2
 }

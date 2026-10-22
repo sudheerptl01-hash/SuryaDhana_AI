@@ -317,6 +317,7 @@ def fix_2022_03_07(eod: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 # 4b. coverage: traded EQ/BE securities of the pd file missing from the store
 # --------------------------------------------------------------------------- #
 COVERAGE_MIN_MISSING = 10      # rule fixed before the repair: rebuild a session when >= 10 are missing
+REPAIR_SERIES = ["BE", "BZ"]   # the series the archive's security-wise files dropped (2022-03-07, 2023-06..08)
 
 
 def coverage_audit(eod: pd.DataFrame) -> pd.DataFrame:
@@ -361,6 +362,11 @@ def repair_session(d: date, eod: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         cm_all = rows_from_cm_mto(d, cm_raw, mto_raw, SERIES_KEPT)
         miss = cm_all[[(t, x) not in k_sec for t, x in zip(cm_all["ticker"], cm_all["series"])]]
     both = cm_all[[(t, x) in k_sec for t, x in zip(cm_all["ticker"], cm_all["series"])]]
+    # only the series whose absence is the defect: the security-wise file omits a handful of EQ/SM
+    # call-auction securities on EVERY session, so adding them on these sessions alone would make
+    # those tickers' histories sporadic
+    skipped = miss[~miss["series"].isin(REPAIR_SERIES)]
+    miss = miss[miss["series"].isin(REPAIR_SERIES)]
     chk = compare_frames(both, sec, ["prev_close", "open", "high", "low", "last", "close", "volume", "trades"])
     ok_method = all(v["max_abs_diff"] == 0 and v["nan_mismatch"] == 0 for k, v in chk.items() if isinstance(v, dict))
     stored = eod[eod["date"] == pd.Timestamp(d)]
@@ -368,6 +374,7 @@ def repair_session(d: date, eod: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
           "store_equals_sec_file_eq_be": compare_frames(stored, sec[sec["series"].isin(["EQ", "BE"])],
                                                         ["close", "volume"])["only_a"] == 0,
           "rebuilt_rows_by_series": {k: int(v) for k, v in miss["series"].value_counts().items()},
+          "not_rebuilt_rows_by_series": {k: int(v) for k, v in skipped["series"].value_counts().items()},
           "cm_vs_sec_on_common_rows_identical": bool(ok_method), "used_mto": need_mto}
     return miss, ev
 
@@ -383,8 +390,10 @@ def repair_coverage(eod: pd.DataFrame, cov: pd.DataFrame, skip: set[str]) -> tup
         log(f"coverage repair {pd.Timestamp(d).date()}: {ev.get('rebuilt_rows_by_series')} "
             f"(method identical on common rows: {ev.get('cm_vs_sec_on_common_rows_identical')})", "sessions")
     rep = {"rule": f"rebuild a session when >= {COVERAGE_MIN_MISSING} traded EQ/BE securities of the PR bundle's "
-                   "pd file are missing from the store; rows = CM bhavcopy rows absent from that day's "
-                   "security-wise file (delivery from MTO for EQ/SM; none exists for BE/BZ)",
+                   "pd file are missing from the store; rows = CM bhavcopy rows of series BE/BZ absent from that "
+                   "day's security-wise file (delivery empty, as for every BE/BZ row of the store); the EQ/SM "
+                   "call-auction securities the security-wise file omits on every session are not added",
+           "not_rebuilt_rows": int(sum(sum(e.get("not_rebuilt_rows_by_series", {}).values()) for e in evs)),
            "sessions": evs, "n_sessions": len(evs),
            "rows_rebuilt": int(sum(len(f) for f in frames))}
     return frames, rep

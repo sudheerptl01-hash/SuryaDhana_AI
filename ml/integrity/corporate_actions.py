@@ -115,6 +115,53 @@ def classify(purpose: str) -> list[dict]:
     return [{"kind": "other", "ratio": np.nan, "a": np.nan, "b": np.nan}]
 
 
+# text columns that may contain a comma, and columns that must look like dates / numbers
+_SHAPE = {"bc": {"text": ["SECURITY", "PURPOSE"], "date": ["RECORD_DT", "BC_STRT_DT", "BC_END_DT", "EX_DT",
+                                                          "ND_STRT_DT", "ND_END_DT"], "num": []},
+          "etf": {"text": ["SECURITY", "UNDERLYING"], "date": [],
+                  "num": ["PREVIOUS CLOSE PRICE", "OPEN PRICE", "HIGH PRICE", "LOW PRICE", "CLOSE PRICE"]},
+          "pd": {"text": ["SECURITY"], "date": [], "num": ["PREV_CL_PR", "OPEN_PRICE", "HIGH_PRICE", "LOW_PRICE",
+                                                          "CLOSE_PRICE"]}}
+_DATE_RX = re.compile(r"^\s*(\d{2}/\d{2}/\d{4})?\s*$")
+_NUM_RX = re.compile(r"^\s*-?\d*\.?\d*\s*$")
+
+
+def _robust_read(raw: bytes, prefix: str) -> tuple[pd.DataFrame, int, int]:
+    """csv rows with more fields than the header: re-join the extra fields into the text
+    column whose choice leaves every date / number column well-formed."""
+    import csv
+    text = raw.decode("latin-1")
+    rows = list(csv.reader(io.StringIO(text)))
+    header = [c.strip().upper() for c in rows[0]]
+    shape = _SHAPE[prefix]
+    out, fixed, dropped = [], 0, 0
+    for r in rows[1:]:
+        if not r:
+            continue
+        if len(r) == len(header):
+            out.append(r)
+            continue
+        if len(r) < len(header):
+            dropped += 1
+            continue
+        k = len(r) - len(header)
+        ok = None
+        for tcol in shape["text"]:
+            t = header.index(tcol)
+            cand = r[:t] + [",".join(r[t:t + k + 1])] + r[t + k + 1:]
+            d = dict(zip(header, cand))
+            if all(_DATE_RX.match(d.get(c, "")) for c in shape["date"]) and \
+                    all(_NUM_RX.match(d.get(c, "")) for c in shape["num"]):
+                ok = cand
+                break
+        if ok is None:
+            dropped += 1
+        else:
+            out.append(ok)
+            fixed += 1
+    return pd.DataFrame(out, columns=header), fixed, dropped
+
+
 def _member(zf: zipfile.ZipFile, prefix: str) -> str | None:
     for n in zf.namelist():
         b = Path(n).name.lower()
@@ -147,6 +194,13 @@ def read_members(prefix: str, columns_upper: bool = True) -> tuple[pd.DataFrame,
         except pd.errors.EmptyDataError:
             stats["empty"] += 1
             continue
+        except pd.errors.ParserError:
+            df, fx, dr = _robust_read(raw, prefix)
+            stats.setdefault("rows_rejoined", 0)
+            stats.setdefault("rows_dropped", 0)
+            stats.setdefault("files_with_overlong_rows", []).append(f"{z.name}/{name}")
+            stats["rows_rejoined"] += fx
+            stats["rows_dropped"] += dr
         if columns_upper:
             df.columns = [c.strip().upper() for c in df.columns]
         df = df.apply(lambda s: s.str.strip())
@@ -158,7 +212,15 @@ def read_members(prefix: str, columns_upper: bool = True) -> tuple[pd.DataFrame,
 
 
 def _dt(s: pd.Series) -> pd.Series:
-    return pd.to_datetime(s.replace("", np.nan), format="%d/%m/%Y", errors="coerce").astype("datetime64[ns]")
+    """bc dates: dd/mm/yyyy until mid-2025, ISO yyyy-mm-dd after (both seen in the archive)."""
+    x = s.astype(str).str.strip().replace({"": np.nan, "nan": np.nan})
+    out = pd.to_datetime(x, format="%d/%m/%Y", errors="coerce")
+    for fmt in ("%Y-%m-%d", "%d-%b-%Y", "%d-%m-%Y"):
+        miss = out.isna() & x.notna()
+        if not miss.any():
+            break
+        out = out.where(~miss, pd.to_datetime(x.where(miss), format=fmt, errors="coerce"))
+    return out.astype("datetime64[ns]")
 
 
 def load_bc() -> tuple[pd.DataFrame, dict]:

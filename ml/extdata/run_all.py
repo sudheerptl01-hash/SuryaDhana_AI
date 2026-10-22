@@ -36,19 +36,30 @@ def main() -> None:
                     help="keep PIT results from an existing extdata.json")
     ap.add_argument("--with-history", action="store_true",
                     help="also parse the 2016-10..2021-09 files into the staging tables")
+    ap.add_argument("--eod", default=str(C.EOD_EXPORT),
+                    help="equity_eod export: raw spot close, sessions, universe turnover")
+    ap.add_argument("--prices", default=None,
+                    help="features_prices export with adjusted prices + close_unadj (v2)")
+    ap.add_argument("--dataset", default=str(C.V1_DATASET),
+                    help="model dataset for the base cross-check and the reporting-only ICs")
+    ap.add_argument("--tag", default="v1")
     a = ap.parse_args()
+    K.configure(eod=a.eod, prices=a.prices, dataset=a.dataset, tag=a.tag)
+    eod_path, prices_path = Path(a.eod), (Path(a.prices) if a.prices else None)
     log = C.get_logger("extdata.run")
     t0 = time.perf_counter()
     out: dict = {"stream": "P3 external data (ml/IMPROVEMENT_PLAN.md section 2-P3)",
                  "built_at": datetime.now().isoformat(timespec="seconds"),
-                 "seed": C.SEED}
+                 "seed": C.SEED, "tag": a.tag,
+                 "inputs": {"eod_export": str(eod_path), "prices_export": str(prices_path),
+                            "dataset": a.dataset}}
 
     log.info("parse: start (with_history=%s)", a.with_history)
     if a.with_history:
         hs, hs_src = H.hist_spot()
-        rep = P.run(min_date=None, hist_spot=hs)
+        rep = P.run(min_date=None, hist_spot=hs, eod_path=eod_path)
     else:
-        rep = P.run()
+        rep = P.run(eod_path=eod_path)
     fo, idx, part = rep.pop("_frames")
     out["parse"] = rep
     log.info("parse: fo rows %d, index rows %d, participant rows %d", len(fo), len(idx), len(part))
@@ -74,7 +85,7 @@ def main() -> None:
     out["sector_index_map"] = {"rows": smap.to_dict(orient="records"), **smap_info}
 
     log.info("features: start")
-    res = F.build(write=True)
+    res = F.build(eod_path, write=True, prices_path=prices_path)
     out["features_build"] = res["info"]
     out["families"] = F.FAMILIES
     out["definitions"] = F.DEFINITIONS
@@ -93,14 +104,17 @@ def main() -> None:
     out["industry_survivorship_diagnostic"] = K.survivorship_diag(res)
     out["size_proxy_diagnostic"] = K.size_proxy_diag(res)
     log.info("checks: partition identifiability (leak-safe vs literal brief)")
-    lit = F.build(write=False, policy={"unclassified": "nan", "secidx_unmapped": "nan"})
+    lit = F.build(eod_path, write=False, prices_path=prices_path,
+                  policy={"unclassified": "nan", "secidx_unmapped": "nan"})
     out["partition_identifiability"] = {"leak_safe": K.partition_identifiability(res),
                                         "literal_brief": K.partition_identifiability(lit)}
     out["literal_brief_secidx_nan_indicator"] = \
         K.survivorship_diag(lit)["secidx_ret_20_nan_indicator"]
     del lit
     log.info("placebo F2 (industry labels permuted among classified symbols, seed %d)", C.SEED)
-    plc = F.build(write=False, industry_map=F.placebo_industry_map())
+    plc = F.build(eod_path, write=False, prices_path=prices_path,
+                  industry_map=F.placebo_industry_map())
+    assert list(plc["extra"].columns) == list(res["extra"].columns), "placebo columns differ"
     plc["extra"].to_parquet(C.EXT / "extra_features_placebo_f2.parquet", index=False)
     out["placebo_f2"] = {"path": "ml/data_ext/extra_features_placebo_f2.parquet",
                          "rows": int(len(plc["extra"])),

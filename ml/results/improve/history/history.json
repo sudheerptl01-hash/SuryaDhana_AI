@@ -1,6 +1,6 @@
 {
  "stream": "P4 history 2016-10..2021-09",
- "generated_utc": "2026-10-19T13:39:29+00:00",
+ "generated_utc": "2026-10-22T13:17:44+00:00",
  "final": false,
  "window": [
   "2016-10-03",
@@ -30,11 +30,11 @@
  "download": {
   "calendar_days": 1824,
   "cm_status_counts": {
-   "200": 393,
-   "404": 185,
-   "not requested yet": 1246
+   "200": 753,
+   "404": 362,
+   "not requested yet": 709
   },
-  "sessions": 393,
+  "sessions": 753,
   "weekday_without_session": [
    "2016-10-11",
    "2016-10-12",
@@ -57,7 +57,30 @@
    "2018-03-02",
    "2018-03-29",
    "2018-03-30",
-   "2018-05-01"
+   "2018-05-01",
+   "2018-08-15",
+   "2018-08-22",
+   "2018-09-13",
+   "2018-09-20",
+   "2018-10-02",
+   "2018-10-18",
+   "2018-11-08",
+   "2018-11-23",
+   "2018-12-25",
+   "2019-03-04",
+   "2019-03-21",
+   "2019-04-17",
+   "2019-04-19",
+   "2019-04-29",
+   "2019-05-01",
+   "2019-06-05",
+   "2019-08-12",
+   "2019-08-15",
+   "2019-09-02",
+   "2019-09-10",
+   "2019-10-02",
+   "2019-10-08",
+   "2019-10-21"
   ],
   "weekend_sessions": [
    "2016-10-30"
@@ -65,18 +88,18 @@
   "echo_or_misdated": [],
   "cm_errors": [],
   "mto": {
-   "files": 393,
+   "files": 752,
    "missing_on_session_days": [],
    "errors": []
   },
   "pr": {
-   "files": 392,
+   "files": 752,
    "missing_on_session_days": [],
    "errors": []
   },
-  "requests": 1367,
+  "requests": 95,
   "backoffs": 0,
-  "elapsed_s": 2565,
+  "elapsed_s": 229,
   "download_final": false
  },
  "overlap": {
@@ -294,16 +317,18 @@
   "be_rows_with_deliv_history": 0
  },
  "calendar": {
-  "sessions_total": 367,
+  "sessions_total": 734,
   "sessions_by_period": {
    "2016Q4": 62,
    "2017": 248,
-   "2018": 57
+   "2018": 246,
+   "2019": 178
   },
   "expected_by_period_reference": {
    "2016Q4": 62,
    "2017": 248,
-   "2018": 57
+   "2018": 246,
+   "2019": 178
   },
   "sessions_by_quarter": {
    "2016Q4": 62,
@@ -311,7 +336,13 @@
    "2017Q2": 61,
    "2017Q3": 63,
    "2017Q4": 62,
-   "2018Q1": 57
+   "2018Q1": 60,
+   "2018Q2": 64,
+   "2018Q3": 61,
+   "2018Q4": 61,
+   "2019Q1": 62,
+   "2019Q2": 60,
+   "2019Q3": 56
   },
   "weekday_closures": {
    "2016-10-11": "Dussehra",
@@ -335,11 +366,35 @@
    "2018-03-02": "Holi",
    "2018-03-29": "Mahavir Jayanti",
    "2018-03-30": "Good Friday",
-   "2018-05-01": "Maharashtra Day"
+   "2018-05-01": "Maharashtra Day",
+   "2018-08-15": "Independence Day",
+   "2018-08-22": "Bakri Id",
+   "2018-09-13": "Ganesh Chaturthi",
+   "2018-09-20": "Moharram",
+   "2018-10-02": "Gandhi Jayanti",
+   "2018-10-18": "Dussehra",
+   "2018-11-08": "Diwali Balipratipada",
+   "2018-11-23": "Gurunanak Jayanti",
+   "2018-12-25": "Christmas",
+   "2019-03-04": "Mahashivratri",
+   "2019-03-21": "Holi",
+   "2019-04-17": "Mahavir Jayanti",
+   "2019-04-19": "Good Friday",
+   "2019-04-29": "General election (Mumbai)",
+   "2019-05-01": "Maharashtra Day",
+   "2019-06-05": "Id-ul-Fitr",
+   "2019-08-12": "Bakri Id",
+   "2019-08-15": "Independence Day",
+   "2019-09-02": "Ganesh Chaturthi",
+   "2019-09-10": "Moharram",
+   "2019-10-02": "Gandhi Jayanti",
+   "2019-10-08": "Dussehra",
+   "2019-10-21": "Maharashtra assembly election"
   },
   "weekday_closures_not_in_reference": [],
   "reference_holidays_with_a_session": [
-   "2017-10-19"
+   "2017-10-19",
+   "2018-11-07"
   ],
   "reference_holidays_with_a_session_unexpected": [],
   "weekend_sessions": [
@@ -353,113 +408,126 @@
    "2017-10-19": {
     "label": "Muhurat (Diwali holiday)",
     "present": true
+   },
+   "2018-11-07": {
+    "label": "Muhurat (Diwali holiday)",
+    "present": true
    }
   },
   "special_sessions_all_present": true
  },
  "continuity": {
   "rule": "(ticker, series) EQ/BE traded on t and on the previous session; mismatch when |prev_close(t) / close(t-1) - 1| > 0.005",
-  "dates_scanned": 366,
-  "pairs_scanned": 576895,
-  "mismatch_pairs": 0,
-  "overall_mismatch_share": 0.0,
+  "dates_scanned": 733,
+  "pairs_scanned": 1171887,
+  "mismatch_pairs": 4,
+  "overall_mismatch_share": 3e-06,
   "median_daily_share": 0.0,
   "p99_daily_share": 0.0,
-  "max_daily_share": 0.0,
-  "max_daily_share_date": "2016-10-04",
+  "max_daily_share": 0.001225,
+  "max_daily_share_date": "2018-09-18",
   "dates_above_5pct": [],
   "top_dates": [
    {
-    "date": "2016-10-04",
-    "share": 0.0,
-    "mismatches": 0,
-    "tickers": 1560
+    "date": "2018-09-18",
+    "share": 0.0012,
+    "mismatches": 2,
+    "tickers": 1632
    },
    {
-    "date": "2016-10-05",
-    "share": 0.0,
-    "mismatches": 0,
-    "tickers": 1557
+    "date": "2019-07-01",
+    "share": 0.0006,
+    "mismatches": 1,
+    "tickers": 1608
    },
    {
-    "date": "2016-10-06",
-    "share": 0.0,
-    "mismatches": 0,
-    "tickers": 1561
+    "date": "2019-05-30",
+    "share": 0.0006,
+    "mismatches": 1,
+    "tickers": 1629
    },
    {
-    "date": "2016-10-07",
+    "date": "2018-09-10",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1563
+    "tickers": 1640
    },
    {
-    "date": "2016-10-10",
+    "date": "2018-09-11",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1559
+    "tickers": 1643
    },
    {
-    "date": "2016-10-13",
+    "date": "2018-09-12",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1548
+    "tickers": 1639
    },
    {
-    "date": "2016-10-14",
+    "date": "2018-09-14",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1556
+    "tickers": 1630
    },
    {
-    "date": "2016-10-17",
+    "date": "2018-09-17",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1566
+    "tickers": 1634
    },
    {
-    "date": "2016-10-18",
+    "date": "2018-09-19",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1566
+    "tickers": 1629
    },
    {
-    "date": "2016-10-19",
+    "date": "2018-09-21",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1571
+    "tickers": 1630
    },
    {
-    "date": "2016-10-20",
+    "date": "2018-09-24",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1573
+    "tickers": 1634
    },
    {
-    "date": "2016-10-21",
+    "date": "2018-09-07",
     "share": 0.0,
     "mismatches": 0,
-    "tickers": 1565
+    "tickers": 1635
    }
   ],
-  "mismatches_on_bc_exdate": 0,
-  "mismatches_on_bc_exdate_by_kind": {},
-  "split_bonus_exdates_checked": 100,
+  "mismatches_on_bc_exdate": 4,
+  "mismatches_on_bc_exdate_by_kind": {
+   "split": 0,
+   "bonus": 0,
+   "rights": 0,
+   "dividend": 4,
+   "demerger/scheme": 0,
+   "capital reduction": 0
+  },
+  "split_bonus_exdates_checked": 175,
   "split_bonus_exdates_prev_close_differs": 0
  },
  "splice": {
-  "status": "history ends 2018-03-23; splice check needs 2021-09-30"
+  "status": "history ends 2019-09-20; splice check needs 2021-09-30"
  },
  "coverage": {
   "rows_by_period": {
    "2016Q4": 104803,
    "2017": 437241,
-   "2018": 105940
+   "2018": 463036,
+   "2019": 341677
   },
   "rows_eq_be_by_period": {
    "2016Q4": 97367,
    "2017": 394612,
-   "2018": 92506
+   "2018": 401775,
+   "2019": 291235
   },
   "delivery": {
    "2016Q4": {
@@ -475,10 +543,16 @@
     "be_rows": 26075
    },
    "2018": {
-    "eq_be_share_with_deliv_pct": 0.8978,
+    "eq_be_share_with_deliv_pct": 0.9156,
     "eq_share_with_deliv_pct": 1.0,
     "be_share_with_deliv_pct": 0.0,
-    "be_rows": 9454
+    "be_rows": 33895
+   },
+   "2019": {
+    "eq_be_share_with_deliv_pct": 0.9229,
+    "eq_share_with_deliv_pct": 1.0,
+    "be_share_with_deliv_pct": 0.0,
+    "be_rows": 22464
    }
   },
   "isin": {
@@ -493,41 +567,46 @@
    "2018": {
     "eq_be_share_with_isin": 1.0,
     "all_series_share_with_isin": 1.0
+   },
+   "2019": {
+    "eq_be_share_with_isin": 1.0,
+    "all_series_share_with_isin": 1.0
    }
   },
-  "rows_total": 647984,
-  "rows_eq_be_total": 584485,
-  "distinct_tickers_all_series": 2010,
-  "distinct_tickers_eq_be": 1760,
-  "distinct_isin_eq_be": 1784,
+  "rows_total": 1346757,
+  "rows_eq_be_total": 1184989,
+  "distinct_tickers_all_series": 2278,
+  "distinct_tickers_eq_be": 1915,
+  "distinct_isin_eq_be": 1931,
   "series_counts_top": {
-   "EQ": 546318,
-   "BE": 38167,
-   "SM": 14747,
-   "N6": 4175,
-   "N2": 3889,
-   "BZ": 3007,
-   "GB": 3001,
-   "N4": 2946,
-   "N5": 2916,
-   "N1": 2566,
-   "N8": 2363,
-   "N3": 2281
+   "EQ": 1099917,
+   "BE": 85072,
+   "SM": 44437,
+   "BZ": 11130,
+   "GB": 8672,
+   "N6": 8635,
+   "N2": 8079,
+   "N4": 6340,
+   "N5": 5754,
+   "N1": 4861,
+   "N3": 4706,
+   "N8": 4556
   },
-  "n_series_codes": 72,
+  "n_series_codes": 104,
   "isin_eq_be_share": 1.0,
-  "isin_inf_prefix_tickers_eq_be": 65,
+  "isin_inf_prefix_tickers_eq_be": 87,
   "call_auction_rows_eq_be_by_period": {
    "2016Q4": 1156,
    "2017": 3146,
-   "2018": 381
+   "2018": 1452,
+   "2019": 1299
   },
-  "call_auction_rows_eq_be_total": 4683,
-  "call_auction_tickers_eq_be": 46,
-  "deliv_eq_be_share_total": 0.9347,
+  "call_auction_rows_eq_be_total": 7053,
+  "call_auction_tickers_eq_be": 62,
+  "deliv_eq_be_share_total": 0.9282,
   "deliv_eq_share_total": 1.0,
-  "deliv_qty_le_volume_share": 1.0,
-  "deliv_pct_consistent_share": 1.0
+  "deliv_qty_le_volume_share": 0.999993,
+  "deliv_pct_consistent_share": 0.997753
  },
  "integrity": {
   "ohlc_order_ok_share": 1.0,
@@ -535,14 +614,14 @@
   "nonpositive_close_rows": 0,
   "zero_volume_rows": 0,
   "vwap_inside_low_high_share": 1.0,
-  "echo_footprint_max_share": 0.001874,
-  "echo_footprint_max_date": "2017-05-03",
+  "echo_footprint_max_share": 0.002455,
+  "echo_footprint_max_date": "2018-09-27",
   "duplicate_keys": 0
  },
  "parse_diagnostics": {
-  "days": 367,
-  "cm_rows_raw": 647984,
-  "cm_rows_kept": 647984,
+  "days": 734,
+  "cm_rows_raw": 1346757,
+  "cm_rows_kept": 1346757,
   "cm_duplicate_rows_dropped": 0,
   "cm_timestamp_mismatch_rows": 0,
   "days_without_mto": [],
@@ -550,14 +629,19 @@
   "mto_trade_date_mismatch_days": [
    "MTO_30032017.DAT",
    "MTO_25102017.DAT",
-   "MTO_30112017.DAT"
+   "MTO_30112017.DAT",
+   "MTO_31052018.DAT",
+   "MTO_21092018.DAT",
+   "MTO_25022019.DAT",
+   "MTO_28032019.DAT"
   ],
-  "mto_rows": 606638,
+  "mto_rejected_days": [],
+  "mto_rows": 1249772,
   "mto_bad_lines": 0,
   "mto_duplicate_rows_dropped": 0,
-  "mto_rows_matched_to_cm": 606638,
-  "mto_rows_without_cm_row": 0,
-  "mto_qty_equals_cm_volume_share": 1.0,
+  "mto_rows_matched_to_cm": 1249640,
+  "mto_rows_without_cm_row": 132,
+  "mto_qty_equals_cm_volume_share": 0.998011,
   "pr_misdated_bundles": [
    {
     "file": "PR020118.zip",
@@ -579,16 +663,16 @@
    "Pd<ddmmyy>.csv"
   ],
   "pd_crosscheck": {
-   "days": 366,
-   "matched_rows": 646128,
-   "cm_rows_not_in_pd": 0,
+   "days": 733,
+   "matched_rows": 1344880,
+   "cm_rows_not_in_pd": 21,
    "pd_rows_not_in_cm": 0,
    "field_match_share": {
     "close": 1.0,
     "prev_close": 1.0,
     "open": 1.0,
-    "high": 0.999957,
-    "low": 0.999794,
+    "high": 0.999979,
+    "low": 0.999901,
     "volume": 1.0,
     "trades": 1.0,
     "turnover_500": 1.0
@@ -719,7 +803,21 @@
   "2018-11-07": {
    "label": "Muhurat (Diwali holiday)",
    "weekday": "Wednesday",
-   "present": false
+   "present": true,
+   "rows_eq_be": 1598,
+   "median_open_gap": 0.0096,
+   "median_low_vs_prev_close": -0.0004,
+   "median_close_return": 0.0107,
+   "share_down": 0.1411,
+   "median_trades": 238.0,
+   "nifty50": {
+    "prev_close": 10530.0,
+    "open": 10614.45,
+    "low": 10582.3,
+    "close": 10598.4,
+    "return": 0.0065,
+    "low_vs_prev_close": 0.005
+   }
   },
   "2019-10-27": {
    "label": "Sunday Muhurat",
@@ -750,31 +848,31 @@
  "outputs": {
   "equity_eod_2016_2021.parquet": {
    "path": "ml/data_hist/equity_eod_2016_2021.partial.parquet",
-   "bytes": 9911711
+   "bytes": 43719516
   },
   "bc_records_2016_2021.csv": {
    "path": "ml/data_hist/bc_records_2016_2021.partial.csv",
-   "bytes": 4463626
+   "bytes": 43526436
   },
   "etf_records_2016_2021.csv": {
    "path": "ml/data_hist/etf_records_2016_2021.partial.csv",
-   "bytes": 5129
+   "bytes": 7731
   },
   "pd_corp_ind_2016_2021.csv": {
    "path": "ml/data_hist/pd_corp_ind_2016_2021.partial.csv",
-   "bytes": 67194
+   "bytes": 765719
   },
   "index_close_2016_2021.csv": {
    "path": "ml/data_hist/index_close_2016_2021.partial.csv",
-   "bytes": 1090170
+   "bytes": 4947143
   },
   "call_auction_rows_2016_2021.csv": {
    "path": "ml/data_hist/call_auction_rows_2016_2021.partial.csv",
-   "bytes": 64359
+   "bytes": 162419
   },
   "sessions_2016_2021.csv": {
    "path": "ml/data_hist/sessions_2016_2021.partial.csv",
-   "bytes": 10957
+   "bytes": 47860
   },
   "overlap_cm_mto_2021-10.parquet": {
    "path": "ml/data_hist/overlap_cm_mto_2021-10.parquet",
@@ -783,15 +881,15 @@
  },
  "outputs_detail": {
   "bc": {
-   "rows": 39944,
-   "distinct_events": 4561,
-   "bundles": 167,
-   "distinct_split_events": 54,
-   "distinct_bonus_events": 46,
-   "distinct_rights_events": 16
+   "rows": 357496,
+   "distinct_events": 26003,
+   "bundles": 733,
+   "distinct_split_events": 164,
+   "distinct_bonus_events": 272,
+   "distinct_rights_events": 70
   },
   "etf": {
-   "symbols": 60
+   "symbols": 87
   }
  }
 }

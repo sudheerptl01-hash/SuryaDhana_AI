@@ -358,6 +358,11 @@ def check_continuity(eq: pd.DataFrame, sessions: list[date], auxes: list[dict]) 
         "top_dates": [{"date": str(d), "share": r(v["share"]), "mismatches": int(v["mismatches"]),
                        "tickers": int(v["n"])} for d, v in top.iterrows()],
         "mismatches_on_bc_exdate": int(mis["bc_explained"].sum()),
+        "mismatch_list": mis.sort_values("date").head(60)[
+            ["date", "ticker", "series", "prev_close", "pc_store", "dev", "bc_explained", "purpose"]]
+            .rename(columns={"pc_store": "previous_close"})
+            .assign(date=lambda q: q["date"].astype(str), dev=lambda q: q["dev"].round(5))
+            .to_dict("records"),
         "mismatches_on_bc_exdate_by_kind": kinds,
         "split_bonus_exdates_checked": int(len(on_ex)),
         "split_bonus_exdates_prev_close_differs": int(on_ex["mis"].sum()) if len(on_ex) else 0,
@@ -471,6 +476,7 @@ def check_parse_diag(auxes: list[dict]) -> dict:
         "mto_trade_date_mismatch_days": [d.get("mto_file") for d in ds
                                          if d.get("has_mto") and not d.get("mto_trade_date_ok")],
         "mto_rejected_days": [d.get("mto_file") for d in ds if d.get("mto_rejected")],
+        "mto_header_quirk_files": [d.get("mto_file") for d in ds if d.get("mto_header_quirk")],
         "mto_rows": tot("mto_rows"), "mto_bad_lines": tot("mto_bad_lines"),
         "mto_duplicate_rows_dropped": tot("mto_dup_rows"),
         "mto_rows_matched_to_cm": matched,
@@ -820,6 +826,12 @@ def render_md(res: dict) -> str:
         L.append(f"- {f['date']} (previous session {f['previous_session']}): {f['mismatches']} of {f['tickers']} "
                  f"({fmt_pct(f['share'], 1)}), {f['explained_by_bc_exdate']} on a Bc ex-date.")
     L.append("")
+    if k.get("mismatch_list") and k["mismatch_pairs"] <= 60:
+        L.append("Every mismatching pair: " + "; ".join(
+            f"{m['date']} {m['ticker']} {m['series']} prev_close {m['prev_close']} vs previous close "
+            f"{m['previous_close']}" + (f" (Bc ex-date: {m['purpose']})" if m.get("bc_explained") else " (no Bc ex-date)")
+            for m in k["mismatch_list"]) + ".")
+        L.append("")
     L.append(f"Mismatches falling on a Bc ex-date of the same ticker: {k['mismatches_on_bc_exdate']} of "
              f"{k['mismatch_pairs']} ({k['mismatches_on_bc_exdate_by_kind']}). On {k['split_bonus_exdates_checked']} "
              f"split or bonus ex-dates with a previous-session close, prev_close differs from it on "
@@ -862,7 +874,9 @@ def render_md(res: dict) -> str:
                  f"{pdg['cm_timestamp_mismatch_rows']} rows with a TIMESTAMP other than the file date); "
                  f"MTO {pdg['mto_rows']:,} records, {pdg['mto_rows_without_cm_row']} without a CM row, "
                  f"MTO traded quantity equals CM volume on {fmt_pct(pdg['mto_qty_equals_cm_volume_share'], 3)} "
-                 f"of matched rows; MTO trade-date mismatches: {len(pdg['mto_trade_date_mismatch_days'])}; "
+                 f"of matched rows; MTO trade-date mismatches: {len(pdg['mto_trade_date_mismatch_days'])} "
+                 f"(files rejected: {len(pdg.get('mto_rejected_days', []))}; headers reading 'rade Date' without "
+                 f"the T, date verified: {len(pdg.get('mto_header_quirk_files', []))}); "
                  f"sessions without MTO: {len(pdg['days_without_mto'])}, without PR: {len(pdg['days_without_pr'])}; "
                  f"PR bundles whose members carry another date (not used): "
                  f"{', '.join(x['file'] + ' -> ' + '/'.join(x['member_dates']) for x in pdg['pr_misdated_bundles']) or 'none'}; "

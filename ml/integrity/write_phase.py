@@ -1,23 +1,35 @@
 #!/usr/bin/env python3
-"""The single read-write window of P1 on nse_market.duckdb (ml/IMPROVEMENT_PLAN.md section 3).
+"""The read-write window of P1 on nse_market.duckdb (ml/IMPROVEMENT_PLAN.md section 3).
 
---dry-run  no DuckDB file is opened: an in-memory DuckDB gets the EQ/BE rows of the
-           parquet export with the P1 session fixes applied, and build_features runs on
-           it with the corporate-actions feed.  Times the step and writes
-           ml/data_ext/staging/equity_features_dryrun.parquet for the post-write check.
---write    1. create ml/results/improve/LOCK_duckdb_write (start time, purpose);
-           2. copy the store to the scratch backup path given by --backup (rollback);
-           3. open read-write; delete the mis-dated session dates, upsert the verified
-              sessions with DuckDBStore.upsert (the run_ingest duplicate-day guard is
-              bypassed only for these rows, each verified by its own DATE1 column);
-           4. CREATE OR REPLACE corporate_actions, etf_list, equity_master, special_sessions;
-           5. build_features(con, ca_csv=ml/data_ext/corporate_actions_feed.csv);
-           6. verify row counts, (date, ticker) uniqueness, NESTLEIND continuity, the
-              continuity scan (I1) and the dry-run equality; CHECKPOINT; close;
-           7. remove the lock; record the duration in write_phase.json.
+--dry-run    no DuckDB file is opened: an in-memory DuckDB gets the EQ/BE rows of the
+             parquet export with the P1 session fixes applied and build_features runs on
+             it with the corporate-actions feed (ml/data_ext/staging/equity_features_dryrun.parquet).
+--rehearse P the same write procedure on a scratch COPY P of the store (no lock, no backup).
+--write      the real write:
+             1. copy the store to --backup (before the lock; the store's size and mtime are
+                verified unchanged, P1 being the only writer), then create
+                ml/results/improve/LOCK_duckdb_write (start time, purpose, pid);
+             2. one transaction: delete the mis-dated session dates of sessions_delete.json
+                (each must be an exchange closure whose true session is in the staging), upsert
+                the verified P1 rows plus any --extra-staging parquet (equity_eod schema) with
+                DuckDBStore.upsert on the (date, ticker, series) key; the transaction is rolled
+                back if any EQ/BE (date, ticker) pair would appear twice;
+             3. CREATE OR REPLACE corporate_actions, etf_list, equity_master, special_sessions;
+             4. build_features(con, ca_csv=--ca-csv) (default ml/data_ext/corporate_actions_feed.csv);
+             5. verify: row counts, EQ/BE (date, ticker) uniqueness, the four known events'
+                adjusted series, the continuity re-scan (I1), equality with the dry run;
+                CHECKPOINT; remove the lock; write <--out-name>.json (default write_phase_real).
+
+Idempotent: a second run (e.g. with --extra-staging ml/data_hist/<rows>.parquet and a merged
+--ca-csv for the 10-year dataset) re-applies the same keyed upserts (overwrites, never adds a
+duplicate key), finds the deleted closure dates already empty, replaces the four tables and
+rebuilds equity_features from scratch.  A killed process may leave the lock file behind:
+remove it by hand after checking no writer is alive.
 
 Run: OMP_NUM_THREADS=2 python3 -I ml/integrity/write_phase.py --dry-run
-     OMP_NUM_THREADS=2 python3 -I ml/integrity/write_phase.py --write --backup <path>
+     OMP_NUM_THREADS=2 python3 -I ml/integrity/write_phase.py --rehearse <scratch copy>
+     OMP_NUM_THREADS=2 python3 -I ml/integrity/write_phase.py --write --backup <scratch path>
+         [--extra-staging a.parquet b.parquet] [--ca-csv feed.csv] [--out-name write_phase_hist]
 """
 from __future__ import annotations
 
@@ -96,6 +108,45 @@ def dry_run() -> dict:
     return res
 
 
+KNOWN_EVENTS = [("NESTLEIND", "2024-01-05"), ("NESTLEIND", "2025-08-08"), ("IRCTC", "2021-10-28"),
+                ("TATASTEEL", "2022-07-28"), ("RELIANCE", "2024-10-28")]
+
+
+def known_events_check(ef: pd.DataFrame, feed: pd.DataFrame) -> dict:
+    """Adjusted vs raw close-to-close move on each known ex-date, and the largest adjusted
+    move over the ticker's whole series (a 2x to 10x step would remain if the feed missed it)."""
+    out = {}
+    for tkr in sorted({t for t, _ in KNOWN_EVENTS}):
+        x = ef[ef["ticker"] == tkr].sort_values("date").reset_index(drop=True)
+        x["date"] = pd.to_datetime(x["date"])
+        la = np.log(x["close"] / x["close"].shift(1))
+        lu = np.log(x["close_unadj"] / x["close_unadj"].shift(1))
+        rec = {"rows": int(len(x)), "max_abs_log_ret_adjusted": float(np.nanmax(np.abs(la))),
+               "max_abs_log_ret_raw": float(np.nanmax(np.abs(lu))),
+               "feed_events": feed.loc[feed["ticker"] == tkr, ["ex_date", "ratio"]].astype(str).to_dict("records"),
+               "ex_dates": {}}
+        for t2, d in KNOWN_EVENTS:
+            if t2 != tkr:
+                continue
+            i = x.index[x["date"] >= pd.Timestamp(d)]
+            if len(i) == 0 or i[0] == 0:
+                rec["ex_dates"][d] = None
+                continue
+            j = i[0]
+            rec["ex_dates"][d] = {"session": str(x.loc[j, "date"].date()),
+                                  "raw_close_prev": float(x.loc[j - 1, "close_unadj"]),
+                                  "raw_close_ex": float(x.loc[j, "close_unadj"]),
+                                  "adj_close_prev": float(x.loc[j - 1, "close"]),
+                                  "adj_close_ex": float(x.loc[j, "close"]),
+                                  "adj_ret_ex": float(x.loc[j, "close"] / x.loc[j - 1, "close"] - 1),
+                                  "raw_ret_ex": float(x.loc[j, "close_unadj"] / x.loc[j - 1, "close_unadj"] - 1)}
+        rec["continuous"] = bool(rec["max_abs_log_ret_adjusted"] < np.log(1.5) and all(
+            v is not None and abs(v["adj_ret_ex"]) < 0.15 for v in rec["ex_dates"].values()))
+        out[tkr] = rec
+    out["all_continuous"] = all(v["continuous"] for k, v in out.items() if isinstance(v, dict))
+    return out
+
+
 def nestle_check(ef: pd.DataFrame) -> dict:
     x = ef[ef["ticker"] == "NESTLEIND"].sort_values("date")
     r = x["close"] / x["close"].shift(1)
@@ -108,7 +159,44 @@ def nestle_check(ef: pd.DataFrame) -> dict:
             "no_10x_break": bool(np.nanmax(np.abs(np.log(r))) < np.log(1.5))}
 
 
-def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict:
+def load_extra_staging(paths: list[str]) -> pd.DataFrame:
+    """Additional equity_eod rows (e.g. the history stream's 2016-2021 staging)."""
+    frames = []
+    for p_ in paths:
+        x = pd.read_parquet(p_)
+        miss = [c for c in nhi.EOD_COLUMNS if c not in x.columns]
+        if miss:
+            raise SystemExit(f"{p_}: missing equity_eod columns {miss}")
+        x = x[nhi.EOD_COLUMNS].copy()
+        x["date"] = pd.to_datetime(x["date"]).astype("datetime64[ns]")
+        frames.append(x)
+    if not frames:
+        return pd.DataFrame(columns=nhi.EOD_COLUMNS)
+    out = pd.concat(frames, ignore_index=True)
+    if out.duplicated(["date", "ticker", "series"]).any():
+        raise SystemExit("extra staging has duplicate (date, ticker, series) keys")
+    eqbe = out[out["series"].isin(["EQ", "BE"])]
+    if eqbe.duplicated(["date", "ticker"]).any():
+        raise SystemExit("extra staging has a ticker in both EQ and BE on one date")
+    return out
+
+
+def guarded_deletes(dele: list[str], up: pd.DataFrame) -> list[str]:
+    """Only exchange closures whose true session is being written may be deleted."""
+    ok = []
+    staged = {pd.Timestamp(x).date() for x in up["date"].unique()}
+    for d in dele:
+        dd = date.fromisoformat(d)
+        closure = d in nhi.NSE_TRADING_HOLIDAYS and dd not in set(nhi.trading_days(dd, dd))
+        replaced = any(0 < (dd - x).days <= 4 for x in staged)
+        if not (closure and replaced):
+            raise SystemExit(f"refusing to delete {d}: closure={closure}, true session staged={replaced}")
+        ok.append(d)
+    return ok
+
+
+def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False, extra: list[str] | None = None,
+          ca_csv: Path = FEED, ca_all_csv: Path | None = None, out_name: str = "write_phase_real") -> dict:
     """The write procedure.  rehearsal=True runs it on a scratch COPY of the store
     (db_path), without the shared lock and without a backup, to time and test it."""
     t0 = time.time()
@@ -117,13 +205,25 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
     if Path(str(db_path) + ".wal").exists():
         raise SystemExit("a .wal file exists next to the store: another writer may be active")
     up, dele = staging()
-    feed = pd.read_csv(FEED)
-    ca_all = pd.read_csv(DATA_EXT / "corporate_actions_all.csv")
+    xs = load_extra_staging(extra or [])
+    n_p1 = int(len(up))
+    if len(xs):
+        up = pd.concat([up[nhi.EOD_COLUMNS], xs], ignore_index=True)
+        if up.duplicated(["date", "ticker", "series"]).any():
+            raise SystemExit("extra staging overlaps the P1 staging keys")
+    dele = guarded_deletes(dele, up)
+    feed = pd.read_csv(ca_csv)
+    ca_all = pd.read_csv(ca_all_csv or (DATA_EXT / "corporate_actions_all.csv"))
     etf = pd.read_csv(DATA_EXT / "etf_list.csv")
     em = pd.read_csv(DATA_EXT / "equity_master.csv")
     tag = "rehearsal" if rehearsal else "write"
-    res: dict = {"db": str(db_path), "rehearsal": rehearsal}
+    res: dict = {"db": str(db_path), "rehearsal": rehearsal, "ca_csv": str(ca_csv),
+                 "staging": {"p1_rows": n_p1, "extra_rows": int(len(xs)), "extra_files": list(extra or []),
+                             "delete_dates": dele}}
     if not rehearsal:
+        free = shutil.disk_usage(Path(backup).parent).free
+        if free < 2 * os.path.getsize(db_path):
+            raise SystemExit(f"not enough free space for the backup and the store's growth ({free / 1e9:.1f} GB)")
         # backup BEFORE the lock (P1 is the only writer; the copy takes > 1 min on this disk),
         # then verify nothing touched the store while copying
         st0 = os.stat(db_path)
@@ -164,12 +264,23 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
         con.unregister("k_df")
         tw = time.time()
         con.execute("BEGIN TRANSACTION")
+        deleted = {}
         for d in dele:
+            deleted[d] = q("SELECT count(*) FROM equity_eod WHERE date = ?", d)[0][0]
             con.execute("DELETE FROM equity_eod WHERE date = ?", [d])
         n_up = store.upsert(up)
+        dups = q("SELECT count(*) FROM (SELECT date, ticker FROM equity_eod WHERE series IN ('EQ','BE') "
+                 "GROUP BY 1,2 HAVING count(*) > 1)")[0][0]
+        if dups:
+            con.execute("ROLLBACK")
+            raise SystemExit(f"rolled back: {dups} EQ/BE (date, ticker) pairs would appear twice")
         con.execute("COMMIT")
-        res["upsert"] = {"rows": int(n_up), "deleted_dates": dele, "seconds": round(time.time() - tw, 1),
-                         "by_date": {str(k.date()): int(v) for k, v in up.groupby("date").size().items()}}
+        by_date = up.groupby("date").size()
+        res["upsert"] = {"rows": int(n_up), "deleted_dates": dele, "rows_deleted": deleted,
+                         "seconds": round(time.time() - tw, 1),
+                         "dates": int(len(by_date)),
+                         "by_date": ({str(k.date()): int(v) for k, v in by_date.items()} if len(by_date) <= 120
+                                     else f"{len(by_date)} dates (see the staging files)")}
         log(f"upserted {n_up:,} rows, deleted dates {dele}", tag)
         stored = {r[0] for r in q("SELECT DISTINCT date FROM equity_eod")}
         tables = {"corporate_actions": ca_all, "etf_list": etf, "equity_master": em,
@@ -180,7 +291,7 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
             con.unregister("t_df")
         res["tables"] = {k: int(len(v)) for k, v in tables.items()}
         tf = time.time()
-        n_feat = nhi.build_features(con, ca_csv=str(FEED))
+        n_feat = nhi.build_features(con, ca_csv=str(ca_csv))
         res["build_features"] = {"rows": int(n_feat), "seconds": round(time.time() - tf, 1)}
         log(f"build_features: {n_feat:,} rows ({res['build_features']['seconds']}s)", tag)
         # ---- verification ----
@@ -191,8 +302,10 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
                                             "series IN ('EQ','BE') GROUP BY 1,2 HAVING count(*) > 1)")[0][0],
                  "equity_features_rows": q("SELECT count(*) FROM equity_features")[0][0],
                  "rows_on_delete_dates": {d: q("SELECT count(*) FROM equity_eod WHERE date = ?", d)[0][0] for d in dele},
-                 "rows_on_upsert_dates": {str(k.date()): q("SELECT count(*) FROM equity_eod WHERE date = ?",
-                                                           k.date())[0][0] for k in sorted(up["date"].unique())},
+                 "rows_on_upsert_dates": ({str(pd.Timestamp(k).date()): q(
+                     "SELECT count(*) FROM equity_eod WHERE date = ?", pd.Timestamp(k).date())[0][0]
+                     for k in sorted(up["date"].unique())} if up["date"].nunique() <= 120 else "many"),
+                 "dates_in_feature_table": q("SELECT count(DISTINCT date) FROM equity_features")[0][0],
                  "adj_factor_ne_1_rows": q("SELECT count(*) FROM equity_features WHERE adj_factor <> 1")[0][0]}
         after["expected_equity_eod_rows"] = (res["before"]["equity_eod_rows"]
                                              - sum(res["before"]["rows_on_delete_dates"].values()) + int(n_up)
@@ -201,6 +314,7 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
         res["after"] = after
         ef = con.execute("SELECT * FROM equity_features").df()
         res["nestleind"] = nestle_check(ef)
+        res["known_events"] = known_events_check(ef, feed)
         scan = nhi.check_sessions(con)
         res["continuity_after"] = {"max_share": float(scan["share"].max()),
                                    "flagged": [str(pd.Timestamp(d).date()) for d in scan.loc[scan["flagged"], "date"]],
@@ -223,7 +337,7 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
             """).fetchall()[0]
         res["continuity_after"]["mismatch_rows_total"] = int(ex[0])
         res["continuity_after"]["mismatch_rows_on_a_parsed_ex_date"] = int(ex[1])
-        if DRY.exists():
+        if DRY.exists() and not len(xs):
             res["dry_run_equality"] = compare_dry(ef)
         con.execute("CHECKPOINT")
         store.close()
@@ -233,7 +347,7 @@ def write(backup: str, db_path: Path = DB_PATH, rehearsal: bool = False) -> dict
             log("LOCK removed", tag)
     res["finished"] = datetime.now().isoformat(timespec="seconds")
     res["duration_seconds"] = round(time.time() - t0, 1)
-    wjson(OUT / ("write_phase_rehearsal.json" if rehearsal else "write_phase.json"), res)
+    wjson(OUT / ("write_phase_rehearsal.json" if rehearsal else f"{out_name}.json"), res)
     log(f"{tag} done in {res['duration_seconds']}s", tag)
     return res
 
@@ -264,15 +378,20 @@ def main(argv=None) -> int:
     ap.add_argument("--write", action="store_true")
     ap.add_argument("--backup", default="")
     ap.add_argument("--rehearse", default="", help="path of a scratch COPY of the store to rehearse on")
+    ap.add_argument("--extra-staging", nargs="*", default=[], help="parquet files with the equity_eod columns")
+    ap.add_argument("--ca-csv", default=str(FEED), help="corporate-actions feed for build_features")
+    ap.add_argument("--ca-all", default="", help="all-records CSV for the corporate_actions table")
+    ap.add_argument("--out-name", default="write_phase_real", help="JSON name of a real run")
     a = ap.parse_args(argv)
+    kw = dict(extra=a.extra_staging, ca_csv=Path(a.ca_csv), ca_all_csv=Path(a.ca_all) if a.ca_all else None)
     if a.dry_run:
         dry_run()
     if a.rehearse:
-        write("", db_path=Path(a.rehearse), rehearsal=True)
+        write("", db_path=Path(a.rehearse), rehearsal=True, **kw)
     if a.write:
         if not a.backup:
             raise SystemExit("--write needs --backup <path outside the repo>")
-        write(a.backup)
+        write(a.backup, out_name=a.out_name, **kw)
     return 0
 
 

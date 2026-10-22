@@ -1,0 +1,5671 @@
+{
+ "stream": "P1 data integrity (ml/IMPROVEMENT_PLAN.md section 2, P1)",
+ "built_at": "2026-10-22T13:50:55",
+ "seed": 108,
+ "pass_fail": {
+  "I1": true,
+  "I2": true,
+  "I3": true,
+  "I4": true
+ },
+ "I1": {
+  "rule": "no session with > 5% of tickers whose prev_close != stored previous close (EQ/BE rows, |diff| > 0.005), except mismatches explained by parsed corporate actions",
+  "before": {
+   "max_share": 0.9904382470119522,
+   "flagged": [
+    "2022-03-08",
+    "2023-11-13",
+    "2024-03-04",
+    "2024-05-21",
+    "2025-02-03",
+    "2025-10-23",
+    "2026-02-02"
+   ]
+  },
+  "after_store_rescan": {
+   "max_share": 0.0014985014985014985,
+   "flagged": [],
+   "top5": [
+    {
+     "date": "2022-12-26",
+     "n_with_prev": 2002,
+     "n_mismatch": 3,
+     "share": 0.0014985014985014985,
+     "flagged": false
+    },
+    {
+     "date": "2023-06-26",
+     "n_with_prev": 2027,
+     "n_mismatch": 3,
+     "share": 0.0014800197335964479,
+     "flagged": false
+    },
+    {
+     "date": "2023-06-19",
+     "n_with_prev": 2028,
+     "n_mismatch": 3,
+     "share": 0.0014792899408284023,
+     "flagged": false
+    },
+    {
+     "date": "2023-07-10",
+     "n_with_prev": 2028,
+     "n_mismatch": 3,
+     "share": 0.0014792899408284023,
+     "flagged": false
+    },
+    {
+     "date": "2023-07-03",
+     "n_with_prev": 2032,
+     "n_mismatch": 3,
+     "share": 0.0014763779527559055,
+     "flagged": false
+    }
+   ]
+  },
+  "after_preview": 0.0014985014985014985,
+  "mismatch_rows_after": {
+   "total": 68,
+   "on_a_parsed_corporate_action_ex_date": 7
+  },
+  "pass": true
+ },
+ "I2": {
+  "rate": 0.9803921568627451,
+  "events": 510,
+  "agree": 500,
+  "pass_mark": 0.95,
+  "pass": true,
+  "rule": "|observed/ratio - 1| <= 0.15, observed = open(ex)/close(ex-1) in the ratio's orientation, at the LISTED ex-date (no shift); revised duplicates excluded",
+  "disagreements": [
+   {
+    "ticker": "KRITIKA",
+    "ex_date": "2022-08-29",
+    "kinds": "split",
+    "purpose": "FVSPLT FRM RS 10 TO RS 2",
+    "ratio_standard": 0.2,
+    "observed_ratio": 1.0496824803884945,
+    "observed_close_prev_over_open_ex": 0.9526690391459074,
+    "close_prev": 133.85,
+    "open_ex": 140.5,
+    "prev_row_date": "2022-08-26",
+    "ex_row_date": "2022-08-29",
+    "resolved_by_shift": true,
+    "same_day_unadjustable": ""
+   },
+   {
+    "ticker": "DANGEE",
+    "ex_date": "2022-09-06",
+    "kinds": "bonus+split",
+    "purpose": "BONUS 1:2 | FVSPLT FRM RS 10 TO RE1",
+    "ratio_standard": 0.06666666666666667,
+    "observed_ratio": 0.0799064269884265,
+    "observed_close_prev_over_open_ex": 12.514637904468412,
+    "close_prev": 406.1,
+    "open_ex": 32.45,
+    "prev_row_date": "2022-09-05",
+    "ex_row_date": "2022-09-06",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": ""
+   },
+   {
+    "ticker": "AHLEAST",
+    "ex_date": "2022-10-06",
+    "kinds": "bonus",
+    "purpose": "BONUS 1:2",
+    "ratio_standard": 0.6666666666666666,
+    "observed_ratio": 0.5280433851862423,
+    "observed_close_prev_over_open_ex": 1.8937837837837839,
+    "close_prev": 350.35,
+    "open_ex": 185.0,
+    "prev_row_date": "2022-10-04",
+    "ex_row_date": "2022-10-06",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": "demerger"
+   },
+   {
+    "ticker": "VCL",
+    "ex_date": "2023-02-15",
+    "kinds": "split",
+    "purpose": "FVSPLT FRM RS 2 TO RE 1",
+    "ratio_standard": 0.5,
+    "observed_ratio": 0.5798319327731093,
+    "observed_close_prev_over_open_ex": 1.7246376811594202,
+    "close_prev": 5.95,
+    "open_ex": 3.45,
+    "prev_row_date": "2023-02-14",
+    "ex_row_date": "2023-02-15",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": ""
+   },
+   {
+    "ticker": "SADHNANIQ",
+    "ex_date": "2023-07-05",
+    "kinds": "bonus",
+    "purpose": "BONUS 2:9",
+    "ratio_standard": 0.8181818181818182,
+    "observed_ratio": 0.9473254389546754,
+    "observed_close_prev_over_open_ex": 1.055603448275862,
+    "close_prev": 122.45,
+    "open_ex": 116.0,
+    "prev_row_date": "2023-07-04",
+    "ex_row_date": "2023-07-05",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": ""
+   },
+   {
+    "ticker": "ALPL30IETF",
+    "ex_date": "2024-05-10",
+    "kinds": "split",
+    "purpose": "FVSPLT FRM RS 10 TO RE 1",
+    "ratio_standard": 0.1,
+    "observed_ratio": 0.11980980193942117,
+    "observed_close_prev_over_open_ex": 8.3465625,
+    "close_prev": 267.09,
+    "open_ex": 32.0,
+    "prev_row_date": "2024-05-09",
+    "ex_row_date": "2024-05-10",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": ""
+   },
+   {
+    "ticker": "MIDSELIETF",
+    "ex_date": "2024-05-10",
+    "kinds": "split",
+    "purpose": "FVSPLT FRM RS 10 TO RE 1",
+    "ratio_standard": 0.1,
+    "observed_ratio": 0.12160228898426323,
+    "observed_close_prev_over_open_ex": 8.223529411764707,
+    "close_prev": 153.78,
+    "open_ex": 18.7,
+    "prev_row_date": "2024-05-09",
+    "ex_row_date": "2024-05-10",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": ""
+   },
+   {
+    "ticker": "NIF100IETF",
+    "ex_date": "2024-05-10",
+    "kinds": "split",
+    "purpose": "FVSPLT FRM RS 10 TO RE 1",
+    "ratio_standard": 0.1,
+    "observed_ratio": 0.11963936649778593,
+    "observed_close_prev_over_open_ex": 8.358452817605869,
+    "close_prev": 250.67,
+    "open_ex": 29.99,
+    "prev_row_date": "2024-05-09",
+    "ex_row_date": "2024-05-10",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": ""
+   },
+   {
+    "ticker": "SAKUMA",
+    "ex_date": "2024-08-09",
+    "kinds": "bonus",
+    "purpose": "BONUS 4:1",
+    "ratio_standard": 0.2,
+    "observed_ratio": 0.2374189564680457,
+    "observed_close_prev_over_open_ex": 4.211963589076723,
+    "close_prev": 32.39,
+    "open_ex": 7.69,
+    "prev_row_date": "2024-08-08",
+    "ex_row_date": "2024-08-09",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": ""
+   },
+   {
+    "ticker": "AXITA",
+    "ex_date": "2024-09-20",
+    "kinds": "bonus",
+    "purpose": "BONUS 1:3",
+    "ratio_standard": 0.75,
+    "observed_ratio": 0.8661417322834646,
+    "observed_close_prev_over_open_ex": 1.1545454545454545,
+    "close_prev": 21.59,
+    "open_ex": 18.7,
+    "prev_row_date": "2024-09-19",
+    "ex_row_date": "2024-09-20",
+    "resolved_by_shift": false,
+    "same_day_unadjustable": ""
+   }
+  ],
+  "after_ex_date_shift": {
+   "events": 510,
+   "agree": 501,
+   "rate": 0.9823529411764705,
+   "shifted": 1,
+   "shift_sessions": {
+    "1": 1
+   }
+  }
+ },
+ "I3": {
+  "flag_split_20d_v1": 0.005573224276304245,
+  "flag_split_20d_v2": 0.0009472413221374154,
+  "y_clean_20d_v1": 0.9667477786299077,
+  "y_clean_20d_v2": 0.9722959051580466,
+  "pass": true
+ },
+ "I4": {
+  "v2_tickers_in_etf_union": 0,
+  "v2_rows_whose_ticker_is_in_that_dates_etf_file": 0,
+  "pass": true
+ },
+ "sessions": {
+  "flagged_by_continuity_scan_before": {
+   "2022-03-08": {
+    "share": 0.11015583019881783,
+    "n_mismatch": 205,
+    "n_with_prev": 1861,
+    "prev_stored_session": "2022-03-07",
+    "gap_days": []
+   },
+   "2023-11-13": {
+    "share": 0.9655502392344497,
+    "n_mismatch": 2018,
+    "n_with_prev": 2090,
+    "prev_stored_session": "2023-11-10",
+    "gap_days": [
+     "2023-11-11",
+     "2023-11-12"
+    ]
+   },
+   "2024-03-04": {
+    "share": 0.962634283045306,
+    "n_mismatch": 2061,
+    "n_with_prev": 2141,
+    "prev_stored_session": "2024-03-01",
+    "gap_days": [
+     "2024-03-02",
+     "2024-03-03"
+    ]
+   },
+   "2024-05-21": {
+    "share": 0.9685912240184757,
+    "n_mismatch": 2097,
+    "n_with_prev": 2165,
+    "prev_stored_session": "2024-05-17",
+    "gap_days": [
+     "2024-05-18",
+     "2024-05-19",
+     "2024-05-20"
+    ]
+   },
+   "2025-02-03": {
+    "share": 0.9802284710017575,
+    "n_mismatch": 2231,
+    "n_with_prev": 2276,
+    "prev_stored_session": "2025-01-31",
+    "gap_days": [
+     "2025-02-01",
+     "2025-02-02"
+    ]
+   },
+   "2025-10-23": {
+    "share": 0.9811243331965531,
+    "n_mismatch": 2391,
+    "n_with_prev": 2437,
+    "prev_stored_session": "2025-10-20",
+    "gap_days": [
+     "2025-10-21",
+     "2025-10-22"
+    ]
+   },
+   "2026-02-02": {
+    "share": 0.9904382470119522,
+    "n_mismatch": 2486,
+    "n_with_prev": 2510,
+    "prev_stored_session": "2026-01-30",
+    "gap_days": [
+     "2026-01-31",
+     "2026-02-01"
+    ]
+   }
+  },
+  "added": {
+   "2023-11-12": {
+    "rows": 2279,
+    "rows_eq_be": 2070,
+    "by_series": {
+     "EQ": 1805,
+     "BE": 265,
+     "SM": 169,
+     "BZ": 24,
+     "ST": 16
+    },
+    "enrichment_file": "cm12NOV2023bhav.csv.zip",
+    "isin_filled_pct": 100.0
+   },
+   "2024-03-02": {
+    "rows": 2307,
+    "rows_eq_be": 2107,
+    "by_series": {
+     "EQ": 1783,
+     "BE": 324,
+     "SM": 158,
+     "BZ": 22,
+     "ST": 20
+    },
+    "enrichment_file": "cm02MAR2024bhav.csv.zip",
+    "isin_filled_pct": 100.0
+   },
+   "2024-05-18": {
+    "rows": 2374,
+    "rows_eq_be": 2137,
+    "by_series": {
+     "EQ": 1892,
+     "BE": 245,
+     "SM": 202,
+     "BZ": 18,
+     "ST": 17
+    },
+    "enrichment_file": "cm18MAY2024bhav.csv.zip",
+    "isin_filled_pct": 100.0
+   },
+   "2025-02-01": {
+    "rows": 2635,
+    "rows_eq_be": 2262,
+    "by_series": {
+     "EQ": 2007,
+     "BE": 255,
+     "SM": 194,
+     "ST": 151,
+     "BZ": 28
+    },
+    "enrichment_file": "BhavCopy_NSE_CM_0_0_0_20250201_F_0000.csv.zip (parse failed)",
+    "isin_filled_pct": 0.0
+   },
+   "2025-10-21": {
+    "rows": 2843,
+    "rows_eq_be": 2430,
+    "by_series": {
+     "EQ": 2291,
+     "SM": 324,
+     "BE": 139,
+     "ST": 59,
+     "BZ": 30
+    },
+    "enrichment_file": "BhavCopy_NSE_CM_0_0_0_20251021_F_0000.csv.zip (parse failed)",
+    "isin_filled_pct": 0.0
+   },
+   "2026-02-01": {
+    "rows": 2955,
+    "rows_eq_be": 2507,
+    "by_series": {
+     "EQ": 2411,
+     "SM": 358,
+     "BE": 96,
+     "ST": 56,
+     "BZ": 34
+    },
+    "enrichment_file": "BhavCopy_NSE_CM_0_0_0_20260201_F_0000.csv.zip (parse failed)",
+    "isin_filled_pct": 0.0
+   }
+  },
+  "added_match_lead_list": true,
+  "redated": {
+   "2021-11-04": "2021-11-05",
+   "2023-06-28": "2023-06-29",
+   "2024-01-20": "2024-01-22"
+  },
+  "redate_evidence": [
+   {
+    "stored_date": "2021-11-05",
+    "file": "sec_bhavdata_full_05112021.csv",
+    "date1": [
+     "04-Nov-2021"
+    ],
+    "true_session": "2021-11-04",
+    "session": "2021-11-04",
+    "weekday": "Thursday",
+    "file_used": "sec_bhavdata_full_05112021.csv",
+    "own_file_of_true_date": {
+     "file": "sec_bhavdata_full_04112021.csv",
+     "http": 200,
+     "date1": [
+      "03-Nov-2021"
+     ],
+     "byte_identical_to_used_file": false
+    },
+    "rows": 1874,
+    "rows_eq_be": 1794,
+    "by_series": {
+     "EQ": 1665,
+     "BE": 129,
+     "SM": 44,
+     "BZ": 34,
+     "ST": 2
+    },
+    "enrichment_file": "cm04NOV2021bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "stored_copy": {
+     "stored_date": "2021-11-05",
+     "identical_to_file": true,
+     "compare": {
+      "rows_a": 1794,
+      "rows_b": 1794,
+      "only_a": 0,
+      "only_b": 0,
+      "prev_close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "open": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "high": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "low": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "volume": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "turnover": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "deliv_qty": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      }
+     }
+    },
+    "action": "re-date stored 2021-11-05 -> 2021-11-04"
+   },
+   {
+    "stored_date": "2023-06-29",
+    "file": "sec_bhavdata_full_29062023.csv",
+    "date1": [
+     "28-Jun-2023"
+    ],
+    "true_session": "2023-06-28",
+    "session": "2023-06-28",
+    "weekday": "Wednesday",
+    "file_used": "sec_bhavdata_full_29062023.csv",
+    "own_file_of_true_date": {
+     "file": "sec_bhavdata_full_28062023.csv",
+     "http": 200,
+     "date1": [
+      "28-Jun-2023"
+     ],
+     "byte_identical_to_used_file": true
+    },
+    "rows": 2153,
+    "rows_eq_be": 1999,
+    "by_series": {
+     "EQ": 1773,
+     "BE": 226,
+     "SM": 127,
+     "BZ": 22,
+     "ST": 5
+    },
+    "enrichment_file": "cm28JUN2023bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "stored_copy": {
+     "stored_date": "2023-06-29",
+     "identical_to_file": true,
+     "compare": {
+      "rows_a": 1999,
+      "rows_b": 1999,
+      "only_a": 0,
+      "only_b": 0,
+      "prev_close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "open": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "high": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "low": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "volume": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "turnover": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "deliv_qty": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      }
+     }
+    },
+    "action": "re-date stored 2023-06-29 -> 2023-06-28"
+   },
+   {
+    "stored_date": "2024-01-22",
+    "file": "sec_bhavdata_full_22012024.csv",
+    "date1": [
+     "20-Jan-2024"
+    ],
+    "true_session": "2024-01-20",
+    "session": "2024-01-20",
+    "weekday": "Saturday",
+    "file_used": "sec_bhavdata_full_22012024.csv",
+    "own_file_of_true_date": {
+     "file": "sec_bhavdata_full_20012024.csv",
+     "http": 200,
+     "date1": [
+      "20-Jan-2024"
+     ],
+     "byte_identical_to_used_file": true
+    },
+    "rows": 2341,
+    "rows_eq_be": 2098,
+    "by_series": {
+     "EQ": 1792,
+     "BE": 306,
+     "SM": 204,
+     "ST": 23,
+     "BZ": 16
+    },
+    "enrichment_file": "cm20JAN2024bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "stored_copy": {
+     "stored_date": "2024-01-22",
+     "identical_to_file": true,
+     "compare": {
+      "rows_a": 2098,
+      "rows_b": 2098,
+      "only_a": 0,
+      "only_b": 0,
+      "prev_close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "open": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "high": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "low": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "volume": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "turnover": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "deliv_qty": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      }
+     }
+    },
+    "action": "re-date stored 2024-01-22 -> 2024-01-20"
+   }
+  ],
+  "calendar_vs_continuity": {
+   "added_by_calendar": [
+    "2023-11-12",
+    "2024-03-02",
+    "2024-05-18",
+    "2025-02-01",
+    "2025-10-21",
+    "2026-02-01"
+   ],
+   "added_by_continuity": [
+    "2023-11-12",
+    "2024-03-02",
+    "2024-05-18",
+    "2025-02-01",
+    "2025-10-21",
+    "2026-02-01"
+   ],
+   "identical": true
+  },
+  "march_2022": {
+   "archive_sec_file_rows_by_series": {
+    "2022-03-07": {
+     "EQ": 1653,
+     "SM": 59,
+     "ST": 2
+    },
+    "2022-03-08": {
+     "EQ": 1651,
+     "BE": 210,
+     "SM": 60,
+     "BZ": 26,
+     "ST": 1
+    }
+   },
+   "stored_vs_archive_sec_2022-03-07": {
+    "rows_a": 1653,
+    "rows_b": 1653,
+    "only_a": 0,
+    "only_b": 0,
+    "prev_close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "open": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "high": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "low": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "volume": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "turnover": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_qty": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    }
+   },
+   "stored_vs_archive_sec_2022-03-08": {
+    "rows_a": 1861,
+    "rows_b": 1861,
+    "only_a": 0,
+    "only_b": 0,
+    "prev_close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "open": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "high": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "low": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "volume": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "turnover": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_qty": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    }
+   },
+   "construction_check_2022-03-08_BE_BZ": {
+    "rows_a": 236,
+    "rows_b": 236,
+    "only_a": 0,
+    "only_b": 0,
+    "prev_close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "open": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "high": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "low": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "last": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "vwap": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "volume": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "turnover": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "trades": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_qty": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_pct": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    }
+   },
+   "construction_check_2022-03-08_all_series": {
+    "rows_a": 1950,
+    "rows_b": 1948,
+    "only_a": 2,
+    "only_b": 0,
+    "prev_close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "open": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "high": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "low": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "last": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "vwap": {
+     "max_abs_diff": 0.00999999999999801,
+     "nan_mismatch": 0
+    },
+    "volume": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "turnover": {
+     "max_abs_diff": 1000.0,
+     "nan_mismatch": 0
+    },
+    "trades": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_qty": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_pct": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    }
+   },
+   "cm_vs_archive_sec_2022-03-07_EQ_SM_ST": {
+    "rows_a": 1714,
+    "rows_b": 1714,
+    "only_a": 0,
+    "only_b": 0,
+    "prev_close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "open": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "high": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "low": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "last": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "vwap": {
+     "max_abs_diff": 0.010000000000001563,
+     "nan_mismatch": 0
+    },
+    "volume": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "turnover": {
+     "max_abs_diff": 1000.0000000004657,
+     "nan_mismatch": 0
+    },
+    "trades": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_qty": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_pct": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    }
+   },
+   "rows_rebuilt_2022-03-07": {
+    "BE": 241,
+    "BZ": 34
+   },
+   "deliv_missing_in_rebuilt": 275,
+   "rebuilt_BE_close_vs_0308_prev_close": {
+    "tickers": 210,
+    "equal_within_0.005": 210
+   },
+   "mismatch_rows_2022-03-08": 205,
+   "mismatch_by_series": {
+    "BE": 205
+   },
+   "mismatch_stored_prev_date": {
+    "2022-03-04": 203,
+    "2022-03-02": 1,
+    "2022-02-28": 1
+   }
+  },
+  "coverage_repair": {
+   "rule": "rebuild a session when >= 10 traded EQ/BE securities of the PR bundle's pd file are missing from the store; rows = CM bhavcopy rows of series BE/BZ absent from that day's security-wise file (delivery empty, as for every BE/BZ row of the store); the EQ/SM call-auction securities the security-wise file omits on every session are not added",
+   "not_rebuilt_rows": 108,
+   "sessions": [
+    {
+     "date": "2023-06-19",
+     "sec_rows": 2191,
+     "stored_eq_be": 2024,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 6
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-06-26",
+     "sec_rows": 2168,
+     "stored_eq_be": 2010,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 17
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-03",
+     "sec_rows": 2187,
+     "stored_eq_be": 2015,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 19
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-10",
+     "sec_rows": 2180,
+     "stored_eq_be": 2004,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 26
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-17",
+     "sec_rows": 2184,
+     "stored_eq_be": 2007,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 38,
+      "BZ": 1
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-24",
+     "sec_rows": 2180,
+     "stored_eq_be": 2007,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 38,
+      "BZ": 1
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-25",
+     "sec_rows": 2138,
+     "stored_eq_be": 1982,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 42,
+      "BZ": 1
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-26",
+     "sec_rows": 2135,
+     "stored_eq_be": 1980,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 44,
+      "BZ": 2
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-27",
+     "sec_rows": 2126,
+     "stored_eq_be": 1978,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 46,
+      "BZ": 2
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-28",
+     "sec_rows": 2132,
+     "stored_eq_be": 1976,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 48,
+      "BZ": 2
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-07-31",
+     "sec_rows": 2172,
+     "stored_eq_be": 1999,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 49,
+      "BZ": 2
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-01",
+     "sec_rows": 2145,
+     "stored_eq_be": 1980,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 53,
+      "BZ": 2
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-02",
+     "sec_rows": 2144,
+     "stored_eq_be": 1977,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 59,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 3
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-03",
+     "sec_rows": 2131,
+     "stored_eq_be": 1971,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 63,
+      "BZ": 4
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 3
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-04",
+     "sec_rows": 2131,
+     "stored_eq_be": 1966,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 67,
+      "BZ": 4
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-07",
+     "sec_rows": 2163,
+     "stored_eq_be": 1988,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 66,
+      "BZ": 4
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-08",
+     "sec_rows": 2134,
+     "stored_eq_be": 1967,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 69,
+      "BZ": 4
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-09",
+     "sec_rows": 2137,
+     "stored_eq_be": 1962,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 76,
+      "BZ": 4
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 3
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-10",
+     "sec_rows": 2125,
+     "stored_eq_be": 1960,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 79,
+      "BZ": 4
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-11",
+     "sec_rows": 2123,
+     "stored_eq_be": 1955,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 81,
+      "BZ": 4
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-14",
+     "sec_rows": 2153,
+     "stored_eq_be": 1984,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 70,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-16",
+     "sec_rows": 2132,
+     "stored_eq_be": 1965,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 73,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-17",
+     "sec_rows": 2124,
+     "stored_eq_be": 1958,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 76,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-18",
+     "sec_rows": 2133,
+     "stored_eq_be": 1959,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 79,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 3
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-21",
+     "sec_rows": 2170,
+     "stored_eq_be": 1980,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 76,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-22",
+     "sec_rows": 2130,
+     "stored_eq_be": 1960,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 79,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-23",
+     "sec_rows": 2130,
+     "stored_eq_be": 1956,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 84,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    },
+    {
+     "date": "2023-08-24",
+     "sec_rows": 2118,
+     "stored_eq_be": 1951,
+     "store_equals_sec_file_eq_be": true,
+     "rebuilt_rows_by_series": {
+      "BE": 88,
+      "BZ": 3
+     },
+     "not_rebuilt_rows_by_series": {
+      "EQ": 4
+     },
+     "cm_vs_sec_on_common_rows_identical": true,
+     "used_mto": true
+    }
+   ],
+   "n_sessions": 28,
+   "rows_rebuilt": 1679,
+   "audit_before": {
+    "sessions": 1242,
+    "sessions_with_any_missing": 470,
+    "sessions_ge_rule": 29,
+    "missing_total": 4049,
+    "missing_close_ge_10_total": 1416,
+    "stored_not_in_pd_total": 5
+   },
+   "audit_after_preview": {
+    "sessions": 1251,
+    "sessions_with_any_missing": 471,
+    "sessions_ge_rule": 0,
+    "max_missing": 9,
+    "missing_total": 2208,
+    "missing_close_ge_10_total": 105
+   }
+  },
+  "upsert_rows": {
+   "total": 23715,
+   "by_date": {
+    "2021-11-04": 1874,
+    "2022-03-07": 275,
+    "2023-06-19": 6,
+    "2023-06-26": 17,
+    "2023-06-28": 2153,
+    "2023-07-03": 19,
+    "2023-07-10": 26,
+    "2023-07-17": 39,
+    "2023-07-24": 39,
+    "2023-07-25": 43,
+    "2023-07-26": 46,
+    "2023-07-27": 48,
+    "2023-07-28": 50,
+    "2023-07-31": 51,
+    "2023-08-01": 55,
+    "2023-08-02": 62,
+    "2023-08-03": 67,
+    "2023-08-04": 71,
+    "2023-08-07": 70,
+    "2023-08-08": 73,
+    "2023-08-09": 80,
+    "2023-08-10": 83,
+    "2023-08-11": 85,
+    "2023-08-14": 73,
+    "2023-08-16": 76,
+    "2023-08-17": 79,
+    "2023-08-18": 82,
+    "2023-08-21": 79,
+    "2023-08-22": 82,
+    "2023-08-23": 87,
+    "2023-08-24": 91,
+    "2023-11-12": 2279,
+    "2024-01-20": 2341,
+    "2024-03-02": 2307,
+    "2024-05-18": 2374,
+    "2025-02-01": 2635,
+    "2025-10-21": 2843,
+    "2026-02-01": 2955
+   }
+  },
+  "delete_dates": [
+   "2021-11-05",
+   "2023-06-29",
+   "2024-01-22"
+  ],
+  "candidates_checked": [
+   {
+    "date": "2023-11-11",
+    "weekday": "Saturday",
+    "http": 404,
+    "verdict": "no file",
+    "flagged_date": "2023-11-13"
+   },
+   {
+    "date": "2023-11-12",
+    "weekday": "Sunday",
+    "http": 200,
+    "bytes": 275265,
+    "sha256": "56aacfae262690d8cbb0c20dee02891eaa2796026c597194f2e6aecf1588a96c",
+    "date1": [
+     "12-Nov-2023"
+    ],
+    "fingerprint_eqbe": [
+     2070,
+     1631497.9,
+     998908543.0,
+     139741438000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2075,
+     1618310.1,
+     3386197210.0,
+     579264565000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2279,
+    "rows_by_series": {
+     "EQ": 1805,
+     "BE": 265,
+     "SM": 169,
+     "BZ": 24,
+     "ST": 16
+    },
+    "verdict": "session: add",
+    "flagged_date": "2023-11-13"
+   },
+   {
+    "date": "2024-03-02",
+    "weekday": "Saturday",
+    "http": 200,
+    "bytes": 270120,
+    "sha256": "7998bd8468b0ef0b736d4b77180107caf375b3283f598ab81e7ccaa6424387d9",
+    "date1": [
+     "02-Mar-2024"
+    ],
+    "fingerprint_eqbe": [
+     2107,
+     1849556.25,
+     690525151.0,
+     103316847000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2128,
+     1851328.12,
+     3990334687.0,
+     917778732000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2307,
+    "rows_by_series": {
+     "EQ": 1783,
+     "BE": 324,
+     "SM": 158,
+     "BZ": 22,
+     "ST": 20
+    },
+    "verdict": "session: add",
+    "flagged_date": "2024-03-04"
+   },
+   {
+    "date": "2024-03-03",
+    "weekday": "Sunday",
+    "http": 200,
+    "bytes": 270120,
+    "sha256": "7998bd8468b0ef0b736d4b77180107caf375b3283f598ab81e7ccaa6424387d9",
+    "date1": [
+     "02-Mar-2024"
+    ],
+    "fingerprint_eqbe": [
+     2107,
+     1849556.25,
+     690525151.0,
+     103316847000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2128,
+     1851328.12,
+     3990334687.0,
+     917778732000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2307,
+    "rows_by_series": {
+     "EQ": 1783,
+     "BE": 324,
+     "SM": 158,
+     "BZ": 22,
+     "ST": 20
+    },
+    "verdict": "echo or mis-dated: skip",
+    "flagged_date": "2024-03-04"
+   },
+   {
+    "date": "2024-05-18",
+    "weekday": "Saturday",
+    "http": 200,
+    "bytes": 275074,
+    "sha256": "cfde519a78d4d52839ab3647b924b4f60c60b9b1678c6b4f7736dcc73f5a200a",
+    "date1": [
+     "18-May-2024"
+    ],
+    "fingerprint_eqbe": [
+     2137,
+     1933181.83,
+     754960742.0,
+     153108935000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2148,
+     1930401.56,
+     3702976163.0,
+     1105255013000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2374,
+    "rows_by_series": {
+     "EQ": 1892,
+     "BE": 245,
+     "SM": 202,
+     "BZ": 18,
+     "ST": 17
+    },
+    "verdict": "session: add",
+    "flagged_date": "2024-05-21"
+   },
+   {
+    "date": "2024-05-19",
+    "weekday": "Sunday",
+    "http": 200,
+    "bytes": 275074,
+    "sha256": "cfde519a78d4d52839ab3647b924b4f60c60b9b1678c6b4f7736dcc73f5a200a",
+    "date1": [
+     "18-May-2024"
+    ],
+    "fingerprint_eqbe": [
+     2137,
+     1933181.83,
+     754960742.0,
+     153108935000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2148,
+     1930401.56,
+     3702976163.0,
+     1105255013000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2374,
+    "rows_by_series": {
+     "EQ": 1892,
+     "BE": 245,
+     "SM": 202,
+     "BZ": 18,
+     "ST": 17
+    },
+    "verdict": "echo or mis-dated: skip",
+    "flagged_date": "2024-05-21"
+   },
+   {
+    "date": "2024-05-20",
+    "weekday": "Monday",
+    "http": 200,
+    "bytes": 275074,
+    "sha256": "cfde519a78d4d52839ab3647b924b4f60c60b9b1678c6b4f7736dcc73f5a200a",
+    "date1": [
+     "18-May-2024"
+    ],
+    "fingerprint_eqbe": [
+     2137,
+     1933181.83,
+     754960742.0,
+     153108935000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2148,
+     1930401.56,
+     3702976163.0,
+     1105255013000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2374,
+    "rows_by_series": {
+     "EQ": 1892,
+     "BE": 245,
+     "SM": 202,
+     "BZ": 18,
+     "ST": 17
+    },
+    "verdict": "echo or mis-dated: skip",
+    "flagged_date": "2024-05-21"
+   },
+   {
+    "date": "2025-02-01",
+    "weekday": "Saturday",
+    "http": 200,
+    "bytes": 310952,
+    "sha256": "90a024c4c9169b075b9f6750af229788e73c8806fd72db6c22501884b13f5787",
+    "date1": [
+     "01-Feb-2025"
+    ],
+    "fingerprint_eqbe": [
+     2262,
+     1975452.94,
+     3955485976.0,
+     1015592459000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2264,
+     1968969.91,
+     3272972350.0,
+     1035084688000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2635,
+    "rows_by_series": {
+     "EQ": 2007,
+     "BE": 255,
+     "SM": 194,
+     "ST": 151,
+     "BZ": 28
+    },
+    "verdict": "session: add",
+    "flagged_date": "2025-02-03"
+   },
+   {
+    "date": "2025-02-02",
+    "weekday": "Sunday",
+    "http": 200,
+    "bytes": 310952,
+    "sha256": "90a024c4c9169b075b9f6750af229788e73c8806fd72db6c22501884b13f5787",
+    "date1": [
+     "01-Feb-2025"
+    ],
+    "fingerprint_eqbe": [
+     2262,
+     1975452.94,
+     3955485976.0,
+     1015592459000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2264,
+     1968969.91,
+     3272972350.0,
+     1035084688000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2635,
+    "rows_by_series": {
+     "EQ": 2007,
+     "BE": 255,
+     "SM": 194,
+     "ST": 151,
+     "BZ": 28
+    },
+    "verdict": "echo or mis-dated: skip",
+    "flagged_date": "2025-02-03"
+   },
+   {
+    "date": "2025-10-21",
+    "weekday": "Tuesday",
+    "http": 200,
+    "bytes": 332840,
+    "sha256": "2ff512dd89d84f1890c7236a81dc533cfaccbdb192dd2a7d77005e2f8e95f0bd",
+    "date1": [
+     "21-Oct-2025"
+    ],
+    "fingerprint_eqbe": [
+     2430,
+     2133316.09,
+     1111804885.0,
+     195503808000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2451,
+     2127136.97,
+     4237247230.0,
+     996324410000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2843,
+    "rows_by_series": {
+     "EQ": 2291,
+     "SM": 324,
+     "BE": 139,
+     "ST": 59,
+     "BZ": 30
+    },
+    "verdict": "session: add",
+    "flagged_date": "2025-10-23"
+   },
+   {
+    "date": "2025-10-22",
+    "weekday": "Wednesday",
+    "http": 200,
+    "bytes": 332840,
+    "sha256": "2ff512dd89d84f1890c7236a81dc533cfaccbdb192dd2a7d77005e2f8e95f0bd",
+    "date1": [
+     "21-Oct-2025"
+    ],
+    "fingerprint_eqbe": [
+     2430,
+     2133316.09,
+     1111804885.0,
+     195503808000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2451,
+     2127136.97,
+     4237247230.0,
+     996324410000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2843,
+    "rows_by_series": {
+     "EQ": 2291,
+     "SM": 324,
+     "BE": 139,
+     "ST": 59,
+     "BZ": 30
+    },
+    "verdict": "echo or mis-dated: skip",
+    "flagged_date": "2025-10-23"
+   },
+   {
+    "date": "2026-01-31",
+    "weekday": "Saturday",
+    "http": 404,
+    "verdict": "no file",
+    "flagged_date": "2026-02-02"
+   },
+   {
+    "date": "2026-02-01",
+    "weekday": "Sunday",
+    "http": 200,
+    "bytes": 349303,
+    "sha256": "18aef3b3e75af4eb4d9b199b2fb1af692f4ac1798ceebc5f8a0a9c3cc0102247",
+    "date1": [
+     "01-Feb-2026"
+    ],
+    "fingerprint_eqbe": [
+     2507,
+     1910217.88,
+     5258641338.0,
+     1166911106000.0
+    ],
+    "fingerprint_prev_stored_eqbe": [
+     2502,
+     1935149.5,
+     8969639057.0,
+     1722430371000.0
+    ],
+    "echo_of_prev_stored": false,
+    "rows_all_series": 2955,
+    "rows_by_series": {
+     "EQ": 2411,
+     "SM": 358,
+     "BE": 96,
+     "ST": 56,
+     "BZ": 34
+    },
+    "verdict": "session: add",
+    "flagged_date": "2026-02-02"
+   }
+  ]
+ },
+ "calendar": {
+  "days": 1842,
+  "pr_present": 1251,
+  "pr_absent": 591,
+  "pr_unknown": [],
+  "stored_dates_without_pr_bundle": [
+   "2021-11-05",
+   "2023-06-29",
+   "2024-01-22"
+  ],
+  "pr_bundle_dates_not_stored": [
+   "2021-11-04",
+   "2023-06-28",
+   "2023-11-12",
+   "2024-01-20",
+   "2024-03-02",
+   "2024-05-18",
+   "2025-02-01",
+   "2025-10-21",
+   "2026-02-01"
+  ],
+  "weekend_sessions": [
+   "2023-11-12",
+   "2024-01-20",
+   "2024-03-02",
+   "2024-05-18",
+   "2025-02-01",
+   "2026-02-01"
+  ],
+  "weekday_closures": [
+   "2021-10-15",
+   "2021-11-05",
+   "2021-11-19",
+   "2022-01-26",
+   "2022-03-01",
+   "2022-03-18",
+   "2022-04-14",
+   "2022-04-15",
+   "2022-05-03",
+   "2022-08-09",
+   "2022-08-15",
+   "2022-08-31",
+   "2022-10-05",
+   "2022-10-26",
+   "2022-11-08",
+   "2023-01-26",
+   "2023-03-07",
+   "2023-03-30",
+   "2023-04-04",
+   "2023-04-07",
+   "2023-04-14",
+   "2023-05-01",
+   "2023-06-29",
+   "2023-08-15",
+   "2023-09-19",
+   "2023-10-02",
+   "2023-10-24",
+   "2023-11-14",
+   "2023-11-27",
+   "2023-12-25",
+   "2024-01-22",
+   "2024-01-26",
+   "2024-03-08",
+   "2024-03-25",
+   "2024-03-29",
+   "2024-04-11",
+   "2024-04-17",
+   "2024-05-01",
+   "2024-05-20",
+   "2024-06-17",
+   "2024-07-17",
+   "2024-08-15",
+   "2024-10-02",
+   "2024-11-15",
+   "2024-11-20",
+   "2024-12-25",
+   "2025-02-26",
+   "2025-03-14",
+   "2025-03-31",
+   "2025-04-10",
+   "2025-04-14",
+   "2025-04-18",
+   "2025-05-01",
+   "2025-08-15",
+   "2025-08-27",
+   "2025-10-02",
+   "2025-10-22",
+   "2025-11-05",
+   "2025-12-25",
+   "2026-01-15",
+   "2026-01-26",
+   "2026-03-03",
+   "2026-03-26",
+   "2026-03-31",
+   "2026-04-03",
+   "2026-04-14",
+   "2026-05-01",
+   "2026-05-28",
+   "2026-06-26",
+   "2026-09-14",
+   "2026-10-02"
+  ],
+  "holiday_list_vs_closures": {
+   "closures_not_in_list": [],
+   "listed_but_session": []
+  },
+  "special_sessions_in_window": {
+   "2021-11-04": "present",
+   "2022-10-24": "present",
+   "2023-11-12": "present",
+   "2024-01-20": "present",
+   "2024-03-02": "present",
+   "2024-05-18": "present",
+   "2024-11-01": "present",
+   "2025-02-01": "present",
+   "2025-10-21": "present",
+   "2026-02-01": "present"
+  },
+  "trading_days_vs_pr_calendar": {
+   "trading_days_without_pr": [],
+   "pr_sessions_not_in_trading_days": []
+  },
+  "stored_without_pr_unresolved": []
+ },
+ "corporate_actions": {
+  "bc_stats": {
+   "bundles": 1252,
+   "with_member": 1251,
+   "empty": 1,
+   "unreadable": 0,
+   "misfiled_skipped": [
+    "PR060424.zip holds 2024-06-04"
+   ],
+   "rows_rejoined": 2,
+   "rows_dropped": 0,
+   "files_with_overlong_rows": [
+    "PR210824.zip/Bc210824.csv"
+   ],
+   "rows": 311551,
+   "rows_without_ex_date": 25110,
+   "records": 21963
+  },
+  "records_by_kind": {
+   "interest_redemption": 8872,
+   "dividend": 8334,
+   "meeting": 2843,
+   "bonus": 348,
+   "other": 334,
+   "split": 316,
+   "distribution": 311,
+   "rights": 236,
+   "buyback": 152,
+   "demerger": 73,
+   "merger": 60,
+   "capital_reduction": 57,
+   "call_money": 17,
+   "scheme_of_arrangement": 10
+  },
+  "adjustable_events": {
+   "ticker_exdate_groups": 628,
+   "superseded_revised_ex_date": 17,
+   "no_price_data_or_outside_store": 104,
+   "evaluated": 510,
+   "agree": 501,
+   "disagree": 9,
+   "by_kind_evaluated": {
+    "split": 262,
+    "bonus": 220,
+    "bonus+split": 28
+   },
+   "bonus_orientation_flips": 1,
+   "bonus_events_evaluated": 248
+  },
+  "after_ex_date_shift": {
+   "events": 510,
+   "agree": 501,
+   "rate": 0.9823529411764705,
+   "shifted": 1,
+   "shift_sessions": {
+    "1": 1
+   }
+  },
+  "shifted": [
+   {
+    "ticker": "KRITIKA",
+    "ex_date": "2022-08-29",
+    "effective_ex_date": "2022-08-30",
+    "shift_sessions": 1,
+    "purpose": "FVSPLT FRM RS 10 TO RS 2",
+    "ratio": 0.2,
+    "observed_ratio": 0.2099644128113879
+   }
+  ],
+  "superseded": [
+   {
+    "ticker": "AJMERA",
+    "ex_date": "2026-01-15",
+    "purpose": "FVSPLT FRM RS 10 TO RS 2",
+    "observed_ratio": 1.0
+   },
+   {
+    "ticker": "AKSHAR",
+    "ex_date": "2024-02-08",
+    "purpose": "BONUS 1:5",
+    "observed_ratio": 1.010989010989011
+   },
+   {
+    "ticker": "APTECHT",
+    "ex_date": "2023-07-06",
+    "purpose": "BONUS 2:5",
+    "observed_ratio": 1.003269309358398
+   },
+   {
+    "ticker": "CLOUD",
+    "ex_date": "2023-05-09",
+    "purpose": "BONUS 1:1 | FVSPLT FRM RS 10 TO RS 5",
+    "observed_ratio": null
+   },
+   {
+    "ticker": "HAL",
+    "ex_date": "2023-09-29",
+    "purpose": "FV SPLT FRM RS 10 TO RS 5",
+    "observed_ratio": 1.0046846465341555
+   },
+   {
+    "ticker": "INOXWIND",
+    "ex_date": "2024-05-17",
+    "purpose": "BONUS 3:1",
+    "observed_ratio": 1.0153190792168427
+   },
+   {
+    "ticker": "KBCGLOBAL",
+    "ex_date": "2025-03-28",
+    "purpose": "BONUS 1:1",
+    "observed_ratio": 0.9801980198019802
+   },
+   {
+    "ticker": "LIKHITHA",
+    "ex_date": "2022-12-01",
+    "purpose": "FV SPLT FRM RS 10 TO RS 5",
+    "observed_ratio": 1.01841405002661
+   },
+   {
+    "ticker": "MOS",
+    "ex_date": "2025-09-26",
+    "purpose": "BONUS 1:1",
+    "observed_ratio": null
+   },
+   {
+    "ticker": "NDL",
+    "ex_date": "2022-03-17",
+    "purpose": "BONUS 2:1",
+    "observed_ratio": 1.0235578375113257
+   },
+   {
+    "ticker": "ONEPOINT",
+    "ex_date": "2022-01-13",
+    "purpose": "BONUS 1:2 | FVSPLT FRM RS 10 TO RS 2",
+    "observed_ratio": 1.0202474690663668
+   },
+   {
+    "ticker": "POWERMECH",
+    "ex_date": "2024-09-27",
+    "purpose": "BONUS 1:1",
+    "observed_ratio": 1.0034155941097966
+   },
+   {
+    "ticker": "RPPL",
+    "ex_date": "2024-09-18",
+    "purpose": "FVSPLT FRM RS 10 TO RS 5",
+    "observed_ratio": 0.9947089947089947
+   },
+   {
+    "ticker": "RUBYMILLS",
+    "ex_date": "2022-09-22",
+    "purpose": "BONUS 1:1",
+    "observed_ratio": 0.9949894308306585
+   },
+   {
+    "ticker": "SARVESHWAR",
+    "ex_date": "2023-09-05",
+    "purpose": "BONUS 2:1 | FVSPLT FRM RS 10 TO RE 1",
+    "observed_ratio": 1.0222709017889742
+   },
+   {
+    "ticker": "USASEEDS",
+    "ex_date": "2025-09-26",
+    "purpose": "BONUS 3:7",
+    "observed_ratio": null
+   },
+   {
+    "ticker": "VSTIND",
+    "ex_date": "2024-09-06",
+    "purpose": "BONUS 10:1",
+    "observed_ratio": 0.10645244533204681
+   }
+  ],
+  "known_events": [
+   {
+    "ticker": "NESTLEIND",
+    "ex_date": "2024-01-05",
+    "expected_ratio": 0.1,
+    "found_in_feed": true,
+    "ratio": 0.1,
+    "observed_ratio": 0.10156215426826569,
+    "purpose": "FVSPLT FRM RS 10 TO RE 1",
+    "ratio_matches": true
+   },
+   {
+    "ticker": "IRCTC",
+    "ex_date": "2021-10-28",
+    "expected_ratio": 0.2,
+    "found_in_feed": true,
+    "ratio": 0.2,
+    "observed_ratio": 0.19781363872982824,
+    "purpose": "FVSPLT FRM RS 10 TO RS 2",
+    "ratio_matches": true
+   },
+   {
+    "ticker": "TATASTEEL",
+    "ex_date": "2022-07-28",
+    "expected_ratio": 0.1,
+    "found_in_feed": true,
+    "ratio": 0.1,
+    "observed_ratio": 0.1022514071294559,
+    "purpose": "FVSPLT FRM RS 10 TO RE 1",
+    "ratio_matches": true
+   },
+   {
+    "ticker": "RELIANCE",
+    "ex_date": "2024-10-28",
+    "expected_ratio": 0.5,
+    "found_in_feed": true,
+    "ratio": 0.5,
+    "observed_ratio": 0.5034454192868171,
+    "purpose": "BONUS 1:1",
+    "ratio_matches": true
+   }
+  ],
+  "known_events_all_found": true,
+  "feed_rows": 501,
+  "feed_by_kind": {
+   "split": 258,
+   "bonus": 216,
+   "bonus+split": 27
+  },
+  "price_break_flags": {
+   "rights": 235,
+   "demerger": 71,
+   "capital_reduction": 35,
+   "bonus_unvalidated": 4,
+   "split_unvalidated": 4,
+   "bonus+split_unvalidated": 1
+  },
+  "completeness": {
+   "pd_stats": {
+    "bundles": 1252,
+    "with_member": 1251,
+    "empty": 0,
+    "unreadable": 0,
+    "misfiled_skipped": [
+     "PR060424.zip holds 2024-06-04"
+    ]
+   },
+   "corp_ind_codes": {
+    "XD": 5769,
+    "XO": 1773,
+    "XDO": 1660,
+    "XB": 229,
+    "XR": 194
+   },
+   "corp_ind_rows_eq_be": 9625,
+   "corp_ind_with_abs_ret_gt_22pct": 336,
+   "covered_by_feed": 271,
+   "n_missing": 65,
+   "n_missing_without_any_bc_record": 5,
+   "missing_by_bc_kind": {
+    "demerger": 34,
+    "rights": 19,
+    "(no bc record)": 5,
+    "dividend": 3,
+    "bonus": 2,
+    "bonus,demerger": 1,
+    "other": 1
+   },
+   "missing": [
+    {
+     "ticker": "PATINTLOG",
+     "date": "2021-10-28",
+     "CORP_IND": "XR",
+     "ret_1d": -0.40827338129496404,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "PEL",
+     "date": "2022-08-30",
+     "CORP_IND": "XO",
+     "ret_1d": -0.4479366727225539,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "KAMDHENU",
+     "date": "2022-09-06",
+     "CORP_IND": "XO",
+     "ret_1d": -0.46562500000000007,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "AHLEAST",
+     "date": "2022-10-06",
+     "CORP_IND": "XO",
+     "ret_1d": -0.49835878407306977,
+     "parsed_but_unvalidated": true,
+     "bc_kinds_on_date": "bonus,demerger"
+    },
+    {
+     "ticker": "NXTDIGITAL",
+     "date": "2022-11-22",
+     "CORP_IND": "XO",
+     "ret_1d": -0.8422438465941614,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "AKG",
+     "date": "2022-12-16",
+     "CORP_IND": "XR",
+     "ret_1d": -0.5352498288843257,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "RSWM",
+     "date": "2022-12-16",
+     "CORP_IND": "XR",
+     "ret_1d": -0.39301310043668125,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "HERITGFOOD",
+     "date": "2023-01-20",
+     "CORP_IND": "XR",
+     "ret_1d": -0.46842105263157896,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "ROML",
+     "date": "2023-02-09",
+     "CORP_IND": "XR",
+     "ret_1d": -0.22932917316692658,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "TVTODAY",
+     "date": "2023-02-13",
+     "CORP_IND": "XD",
+     "ret_1d": -0.24963432471964897,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "dividend"
+    },
+    {
+     "ticker": "MIRZAINT",
+     "date": "2023-03-29",
+     "CORP_IND": "XO",
+     "ret_1d": -0.862962230571485,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "SCI",
+     "date": "2023-03-31",
+     "CORP_IND": "XO",
+     "ret_1d": -0.22420223787816007,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "PRAXIS",
+     "date": "2023-05-30",
+     "CORP_IND": "XR",
+     "ret_1d": -0.28165374677002586,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "EDELWEISS",
+     "date": "2023-06-02",
+     "CORP_IND": "XO",
+     "ret_1d": -0.4473684210526315,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "NIITLTD",
+     "date": "2023-06-08",
+     "CORP_IND": "XO",
+     "ret_1d": -0.7613468179575728,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "KAMOPAINTS",
+     "date": "2023-08-01",
+     "CORP_IND": "XB",
+     "ret_1d": -0.47852161785216185,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": ""
+    },
+    {
+     "ticker": "NINSYS",
+     "date": "2023-08-03",
+     "CORP_IND": "XB",
+     "ret_1d": -0.4167041873030166,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": ""
+    },
+    {
+     "ticker": "ESSENTIA",
+     "date": "2024-01-11",
+     "CORP_IND": "XB",
+     "ret_1d": -0.4775510204081632,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": ""
+    },
+    {
+     "ticker": "ADROITINFO",
+     "date": "2024-01-19",
+     "CORP_IND": "XR",
+     "ret_1d": -0.2988115449915111,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "NAGREEKEXP",
+     "date": "2024-01-30",
+     "CORP_IND": "XR",
+     "ret_1d": -0.4609618988132417,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "BALKRISHNA",
+     "date": "2024-03-15",
+     "CORP_IND": "XR",
+     "ret_1d": -0.2736572890025576,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "MHLXMIRU",
+     "date": "2024-04-19",
+     "CORP_IND": "XO",
+     "ret_1d": -0.27472527472527475,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "ASTERDM",
+     "date": "2024-04-23",
+     "CORP_IND": "XD",
+     "ret_1d": -0.22177851368462065,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "dividend"
+    },
+    {
+     "ticker": "SEMAC",
+     "date": "2024-05-03",
+     "CORP_IND": "XO",
+     "ret_1d": -0.35341113237033894,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "VIJIFIN",
+     "date": "2024-05-15",
+     "CORP_IND": "XR",
+     "ret_1d": -0.23376623376623373,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "SANOFI",
+     "date": "2024-06-13",
+     "CORP_IND": "XO",
+     "ret_1d": -0.35339260274108597,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "OCCL",
+     "date": "2024-07-01",
+     "CORP_IND": "XO",
+     "ret_1d": -0.7412941467028895,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "RAYMOND",
+     "date": "2024-07-11",
+     "CORP_IND": "XO",
+     "ret_1d": -0.3658946167738665,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "GATECHDVR",
+     "date": "2024-07-16",
+     "CORP_IND": "XR",
+     "ret_1d": -0.31269349845201233,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "SAKUMA",
+     "date": "2024-08-09",
+     "CORP_IND": "XB",
+     "ret_1d": -0.7601111454152516,
+     "parsed_but_unvalidated": true,
+     "bc_kinds_on_date": "bonus"
+    },
+    {
+     "ticker": "AKSHAR",
+     "date": "2024-08-23",
+     "CORP_IND": "XR",
+     "ret_1d": -0.2727272727272727,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "VSTIND",
+     "date": "2024-09-06",
+     "CORP_IND": "XB",
+     "ret_1d": -0.8920104567536941,
+     "parsed_but_unvalidated": true,
+     "bc_kinds_on_date": "bonus"
+    },
+    {
+     "ticker": "ROSSELLIND",
+     "date": "2024-09-20",
+     "CORP_IND": "XO",
+     "ret_1d": -0.7251668945548138,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "HERCULES",
+     "date": "2024-10-11",
+     "CORP_IND": "XO",
+     "ret_1d": -0.7061422889969067,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "RPEL",
+     "date": "2024-11-29",
+     "CORP_IND": "XB",
+     "ret_1d": -0.5257062418018363,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": ""
+    },
+    {
+     "ticker": "STAR",
+     "date": "2024-12-06",
+     "CORP_IND": "XO",
+     "ret_1d": -0.5403858455944244,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "DHANBANK",
+     "date": "2024-12-27",
+     "CORP_IND": "XR",
+     "ret_1d": -0.2725627686043882,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "CALSOFT",
+     "date": "2025-01-15",
+     "CORP_IND": "XR",
+     "ret_1d": -0.39309138609532135,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "KESORAMIND",
+     "date": "2025-03-10",
+     "CORP_IND": "XO",
+     "ret_1d": -0.9525693630324346,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "SIEMENS",
+     "date": "2025-04-07",
+     "CORP_IND": "XO",
+     "ret_1d": -0.4293091728133275,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "QUESS",
+     "date": "2025-04-15",
+     "CORP_IND": "XO",
+     "ret_1d": -0.5070259547032567,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "NAVKARURB",
+     "date": "2025-04-24",
+     "CORP_IND": "XB",
+     "ret_1d": -0.5804438280166435,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": ""
+    },
+    {
+     "ticker": "STLTECH",
+     "date": "2025-04-24",
+     "CORP_IND": "XO",
+     "ret_1d": -0.25204093365528346,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "CHEMBOND",
+     "date": "2025-05-09",
+     "CORP_IND": "XO",
+     "ret_1d": -0.3758217677136596,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "CPCAP",
+     "date": "2025-05-09",
+     "CORP_IND": "XO",
+     "ret_1d": -0.37511111111111106,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "RAYMOND",
+     "date": "2025-05-14",
+     "CORP_IND": "XO",
+     "ret_1d": -0.6476379211148756,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "ABFRL",
+     "date": "2025-05-22",
+     "CORP_IND": "XO",
+     "ret_1d": -0.6659230340211935,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "SHANKARA",
+     "date": "2025-09-24",
+     "CORP_IND": "XO",
+     "ret_1d": -0.7554265522463403,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "CAPTRUST",
+     "date": "2025-10-10",
+     "CORP_IND": "XR",
+     "ret_1d": -0.3111210162692222,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "TATAMOTORS",
+     "date": "2025-10-14",
+     "CORP_IND": "XO",
+     "ret_1d": -0.4015134317063943,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "SKFINDIA",
+     "date": "2025-10-15",
+     "CORP_IND": "XO",
+     "ret_1d": -0.5475401325772702,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "ALLCARGO",
+     "date": "2025-11-12",
+     "CORP_IND": "XO",
+     "ret_1d": -0.6492471213463241,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "HCC",
+     "date": "2025-12-05",
+     "CORP_IND": "XR",
+     "ret_1d": -0.23284502698535092,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "other"
+    },
+    {
+     "ticker": "DCMSRIND",
+     "date": "2025-12-26",
+     "CORP_IND": "XO",
+     "ret_1d": -0.683317843866171,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "SADHNANIQ",
+     "date": "2026-02-18",
+     "CORP_IND": "XR",
+     "ret_1d": -0.7040998217468806,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "MAHAPEXLTD",
+     "date": "2026-03-20",
+     "CORP_IND": "XR",
+     "ret_1d": -0.5551615445232467,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "VEDL",
+     "date": "2026-04-30",
+     "CORP_IND": "XO",
+     "ret_1d": -0.6489788004136505,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "SETCO",
+     "date": "2026-06-02",
+     "CORP_IND": "XD",
+     "ret_1d": -0.44339622641509435,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "dividend"
+    },
+    {
+     "ticker": "TRIVENI",
+     "date": "2026-07-22",
+     "CORP_IND": "XO",
+     "ret_1d": -0.41569459172852596,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "GENESYS",
+     "date": "2026-08-06",
+     "CORP_IND": "XR",
+     "ret_1d": -0.30331609370246426,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "DUCON",
+     "date": "2026-08-25",
+     "CORP_IND": "XR",
+     "ret_1d": -0.22077922077922085,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "rights"
+    },
+    {
+     "ticker": "INDIAGLYCO",
+     "date": "2026-09-02",
+     "CORP_IND": "XO",
+     "ret_1d": -0.7875326077179096,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "HEG",
+     "date": "2026-09-07",
+     "CORP_IND": "XO",
+     "ret_1d": -0.6262272571232407,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "VERANDA",
+     "date": "2026-10-06",
+     "CORP_IND": "XO",
+     "ret_1d": -0.8603120887384846,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    },
+    {
+     "ticker": "BHAGYANGR",
+     "date": "2026-10-08",
+     "CORP_IND": "XO",
+     "ret_1d": -0.9089209107908921,
+     "parsed_but_unvalidated": false,
+     "bc_kinds_on_date": "demerger"
+    }
+   ]
+  }
+ },
+ "etf": {
+  "etf_files": {
+   "bundles": 1252,
+   "with_member": 1251,
+   "empty": 0,
+   "unreadable": 0,
+   "misfiled_skipped": [
+    "PR060424.zip holds 2024-06-04"
+   ]
+  },
+  "etf_symbols_union": 469,
+  "equity_master_rows": 2619,
+  "equity_master_isin_prefix": {
+   "INE": 2617,
+   "IN9": 2
+  },
+  "etf_symbols_in_equity_master": [],
+  "store_eq_be": {
+   "tickers": 3545,
+   "etf_by_list": 469,
+   "etf_by_regex": 286,
+   "both": 282,
+   "regex_only": [
+    "GOLDENTOBC",
+    "GOLDTECH",
+    "JETFRE-RE",
+    "JETFREIGHT"
+   ],
+   "list_only": [
+    "ABGSEC",
+    "ABSL10BANK",
+    "ABSLMSCIN",
+    "ABSLNN50ET",
+    "ABSLPSE",
+    "ALPHA",
+    "AONETMMQ50",
+    "AONETOTAL",
+    "AXISVALUE",
+    "BANKPSU",
+    "BFSI",
+    "CEMNTGROWW",
+    "CHEMICAL",
+    "CONS",
+    "CONSUMAXIS",
+    "CONSUMER",
+    "DEFENCE",
+    "DIVIDEND",
+    "EBANK",
+    "EBANK10",
+    "ECAPINSURE",
+    "ELM250",
+    "ELMDIV",
+    "EMETAL",
+    "EMULTIMQ",
+    "ENERGY",
+    "ENERGYAXIS",
+    "ENEXT50",
+    "EQUAL200",
+    "EQUAL50",
+    "ESG",
+    "EVINDIA",
+    "GROWEV",
+    "GROWWCAPM",
+    "GROWWCHEM",
+    "GROWWDEFNC",
+    "GROWWEV",
+    "GROWWHOSPI",
+    "GROWWLOVOL",
+    "GROWWMC150",
+    "GROWWMETAL",
+    "GROWWMOM50",
+    "GROWWN200",
+    "GROWWNET",
+    "GROWWNXT50",
+    "GROWWPOWER",
+    "GROWWPSE",
+    "GROWWPSUBK",
+    "GROWWRAIL",
+    "GROWWRLTY",
+    "GROWWSC250",
+    "GROWWSLVR",
+    "GSEC10ABSL",
+    "GSEC10YEAR",
+    "HDFCBSE500",
+    "HDFCGROWTH",
+    "HDFCLOWVOL",
+    "HDFCMID150",
+    "HDFCMOMENT",
+    "HDFCNEXT50",
+    "HDFCNIF100",
+    "HDFCNIFBAN",
+    "HDFCNIFIT",
+    "HDFCNIMEG",
+    "HDFCPSUBK",
+    "HDFCPVTBAN",
+    "HDFCQUAL",
+    "HDFCSML250",
+    "HDFCVALUE",
+    "HEALTHAXIS",
+    "HEALTHCARE",
+    "HEALTHY",
+    "HFTSEINDIA",
+    "ICICI10GS",
+    "ICICI500",
+    "ICICI5GSEC",
+    "ICICIALPLV",
+    "ICICIAUTO",
+    "ICICIB22",
+    "ICICIBANKN",
+    "ICICIBANKP",
+    "ICICICOMMO",
+    "ICICICONSU",
+    "ICICIFIN",
+    "ICICIFMCG",
+    "ICICIINFRA",
+    "ICICILIQ",
+    "ICICILOVOL",
+    "ICICIM150",
+    "ICICIMCAP",
+    "ICICIMOM30",
+    "ICICINF100",
+    "ICICINV20",
+    "ICICINXT50",
+    "ICICIPHARM",
+    "ICICIQTY30",
+    "ICICISENSX",
+    "ICICITECH",
+    "INFRA",
+    "INTERNET",
+    "IT",
+    "ITAXIS",
+    "IVZBANKNF",
+    "KOTAKALPHA",
+    "KOTAKCONS",
+    "KOTAKIT",
+    "KOTAKLIQ",
+    "KOTAKLOVOL",
+    "KOTAKMID50",
+    "KOTAKMNC",
+    "KOTAKNV20",
+    "KOTAKPSUBK",
+    "LARGEMID50",
+    "LICNFNHGP",
+    "LICNMID100",
+    "LOWVOL",
+    "LOWVOL1",
+    "MAFANG",
+    "MAHKTECH",
+    "MAKEINDIA",
+    "MANV30F",
+    "MANXT50",
+    "MASPTOP50",
+    "METAL",
+    "MID150",
+    "MIDCAP",
+    "MIDSMALL",
+    "MNC",
+    "MOALPHA50",
+    "MOBANK10",
+    "MOCAPITAL",
+    "MODEFENCE",
+    "MOENERGY",
+    "MOGSEC",
+    "MOHEALTH",
+    "MOINFRA",
+    "MOIPO",
+    "MOLOWVOL",
+    "MOM100",
+    "MOM50",
+    "MOMENTUM",
+    "MOMENTUM30",
+    "MOMENTUM50",
+    "MOMETAL",
+    "MOMGF",
+    "MOMIDMTM",
+    "MOMMIDCAP",
+    "MOMNC",
+    "MOMOMENTUM",
+    "MON100",
+    "MON50EQUAL",
+    "MONEXT50",
+    "MONQ50",
+    "MOOILGAS",
+    "MOPSE",
+    "MOQUALITY",
+    "MOREALTY",
+    "MOSERVICE",
+    "MOSMALL250",
+    "MOTOUR",
+    "MOVALUE",
+    "MSCIINDIA",
+    "MULTICAP",
+    "NCPSESDL24",
+    "NEXT50",
+    "NIFMID150",
+    "NPBET",
+    "NV20",
+    "PSUBANK",
+    "PSUBANKICI",
+    "PVTBANK",
+    "PVTBKGROWW",
+    "QUALITY",
+    "QUALITY30",
+    "SBIBPB",
+    "SBIMIDMOM",
+    "SBINMID150",
+    "SELECTIPO",
+    "SMALL250",
+    "SMALLCAP",
+    "SMALLGROWW",
+    "TECH",
+    "TOP20",
+    "UTINEXT50",
+    "UTISXN50",
+    "VALUE",
+    "VALUEAXIS"
+   ]
+  },
+  "v1_dataset": {
+   "tickers": 2480,
+   "etf_by_list": 215,
+   "etf_by_regex": 156,
+   "both": 154,
+   "regex_only": [
+    "GOLDTECH",
+    "JETFREIGHT"
+   ],
+   "list_only": [
+    "ABSLPSE",
+    "ALPHA",
+    "BFSI",
+    "CHEMICAL",
+    "DEFENCE",
+    "ELM250",
+    "ENERGY",
+    "EVINDIA",
+    "GROWWCAPM",
+    "GROWWDEFNC",
+    "GROWWEV",
+    "GROWWHOSPI",
+    "GROWWMETAL",
+    "GROWWPOWER",
+    "GROWWRAIL",
+    "GROWWSLVR",
+    "HDFCBSE500",
+    "HDFCMID150",
+    "HDFCMOMENT",
+    "HDFCNEXT50",
+    "HDFCNIFBAN",
+    "HDFCNIFIT",
+    "HDFCPSUBK",
+    "HDFCPVTBAN",
+    "HDFCSML250",
+    "ICICIALPLV",
+    "ICICIB22",
+    "ICICIBANKN",
+    "ICICILIQ",
+    "ICICILOVOL",
+    "ICICITECH",
+    "IT",
+    "KOTAKALPHA",
+    "KOTAKPSUBK",
+    "LOWVOL1",
+    "MAFANG",
+    "MAHKTECH",
+    "MAKEINDIA",
+    "MASPTOP50",
+    "METAL",
+    "MIDCAP",
+    "MIDSMALL",
+    "MOCAPITAL",
+    "MODEFENCE",
+    "MOENERGY",
+    "MOM100",
+    "MOMENTUM50",
+    "MOMMIDCAP",
+    "MOMOMENTUM",
+    "MON100",
+    "MONQ50",
+    "MOREALTY",
+    "MOSMALL250",
+    "MOVALUE",
+    "NEXT50",
+    "PSUBANK",
+    "PSUBANKICI",
+    "SBIBPB",
+    "SMALL250",
+    "SMALLCAP",
+    "UTINEXT50"
+   ],
+   "rows": 1357383,
+   "etf_rows_by_list": 74545,
+   "etf_row_share_by_list": 0.05491817710992402,
+   "etf_rows_by_regex": 58415
+  },
+  "list_only_detail": [
+   {
+    "symbol": "ABGSEC",
+    "security": "BIRLASLAMC - ABGSEC",
+    "underlying": "ADITYA BIRLA SUN LIFE CRISIL BROAD BASED GILT ETF",
+    "first_seen": "2024-07-10",
+    "last_seen": "2026-10-15"
+   },
+   {
+    "symbol": "ABSL10BANK",
+    "security": "BIRLASLAMC - ABSL10BANK",
+    "underlying": "BSE TOP 10 BANKS INDEX",
+    "first_seen": "2026-03-04",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ABSLMSCIN",
+    "security": "BIRLASLAMC - ABSLMSCIN",
+    "underlying": "MSCI INDIA INDEX",
+    "first_seen": "2026-02-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ABSLNN50ET",
+    "security": "BIRLASLAMC - ABSLNN50ET",
+    "underlying": "NIFTY NEXT 50",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ABSLPSE",
+    "security": "BIRLASLAMC-ABSLPSE",
+    "underlying": "ADITYA BIRLA SUN LIFE NIFTY PSE ETF",
+    "first_seen": "2024-05-23",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ALPHA",
+    "security": "KOTAKMAMC - KOTAKALPHA",
+    "underlying": "NIFTY ALPHA 50 INDEX",
+    "first_seen": "2024-03-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "AONETMMQ50",
+    "security": "AONEAMC - AONETMMQ50",
+    "underlying": "NIFTY TOTAL MARKET MOMENTUM QUALITY 50 TRI",
+    "first_seen": "2025-11-27",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "AONETOTAL",
+    "security": "AONEAMC - AONETOTAL",
+    "underlying": "NIFTY TOTAL MARKET INDEX",
+    "first_seen": "2025-03-05",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "AXISVALUE",
+    "security": "AXISAMC - AXISVALUE",
+    "underlying": "NIFTY500 VALUE 50 TRI",
+    "first_seen": "2025-03-20",
+    "last_seen": "2026-07-02"
+   },
+   {
+    "symbol": "BANKPSU",
+    "security": "MIRAEAMC - BANKPSU",
+    "underlying": "NIFTY PSU BANK TOTAL RETURN INDEX",
+    "first_seen": "2024-10-08",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "BFSI",
+    "security": "MIRAEAMC - MAFSETF",
+    "underlying": "NIFTY FINANCIAL SERVICES INDEX",
+    "first_seen": "2023-09-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "CEMNTGROWW",
+    "security": "GROWWAMC - CEMNTGROWW",
+    "underlying": "NIFTY CEMENTS INDEX TRI",
+    "first_seen": "2026-07-28",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "CHEMICAL",
+    "security": "KOTAKMAMC - CHEMICAL",
+    "underlying": "NIFTY CHEMICALS INDEX (TRI)",
+    "first_seen": "2025-11-19",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "CONS",
+    "security": "KOTAKMAMC - KOTAKCONS",
+    "underlying": "KOTAK NIFTY INDIA CONSUMPTION ETF",
+    "first_seen": "2024-03-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "CONSUMAXIS",
+    "security": "AXISAMC-CONSUMAXIS",
+    "underlying": "NIFTY INDIA CONSUMPTION INDEX",
+    "first_seen": "2026-07-03",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "CONSUMER",
+    "security": "MIRAEAMC - CONSUMER",
+    "underlying": "NIFTY INDIA NEW AGECONSUMPTION",
+    "first_seen": "2025-01-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "DEFENCE",
+    "security": "MIRAEAMC - DEFENCE",
+    "underlying": "BSE INDIA DEFENCE",
+    "first_seen": "2026-02-19",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "DIVIDEND",
+    "security": "MIRAEAMC - DIVIDEND",
+    "underlying": "BSE 500 DIVIDEND LEADERS",
+    "first_seen": "2025-12-19",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "EBANK",
+    "security": "EDELWEISS ETF-NIFTY BANK",
+    "underlying": "NIFTY BANK",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-08-01"
+   },
+   {
+    "symbol": "EBANK10",
+    "security": "EDELAMC - EBANK10",
+    "underlying": "BSE TOP 10 BANK TOTAL RETURN INDEX",
+    "first_seen": "2026-08-05",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ECAPINSURE",
+    "security": "EDELAMC - ECAPINSURE",
+    "underlying": "BSE CAPITAL MARKETS & INSURANCE TOTAL RETURN INDEX",
+    "first_seen": "2025-01-06",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ELM250",
+    "security": "EDELAMC - ELM250",
+    "underlying": "NIFTY LARGEMIDCAP 250 TRI",
+    "first_seen": "2025-09-09",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ELMDIV",
+    "security": "EDELAMC - ELMDIV",
+    "underlying": "INDEX (BSE LARGEMID (60:40) STABLE DIVIDEND 50)",
+    "first_seen": "2026-08-05",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "EMETAL",
+    "security": "EDELAMC - EMETAL",
+    "underlying": "NIFTY METAL TOTAL RETURN INDEX",
+    "first_seen": "2026-07-28",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "EMULTIMQ",
+    "security": "EDELAMC - EMULTIMQ",
+    "underlying": "NIFTY500 MULTICAP MOMENTUM QUALITY 50 TOTAL RETURN INDEX",
+    "first_seen": "2024-11-07",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ENERGY",
+    "security": "MIRAEAMC - ENERGY",
+    "underlying": "NIFTY ENERGY",
+    "first_seen": "2025-11-13",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ENERGYAXIS",
+    "security": "AXISAMC - ENERGYAXIS",
+    "underlying": "NIFTY ENERGY",
+    "first_seen": "2026-09-02",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ENEXT50",
+    "security": "EDELAMC - ENEXT50",
+    "underlying": "NIFTY NEXT 50 TOTAL RETURN INDEX",
+    "first_seen": "2026-05-25",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "EQUAL200",
+    "security": "MIRAEAMC - EQUAL200",
+    "underlying": "BSE 200 EQUAL WEIGHT",
+    "first_seen": "2025-03-17",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "EQUAL50",
+    "security": "MIRAEAMC - EQUAL50",
+    "underlying": "NIFTY50 EQUAL WEIGHT",
+    "first_seen": "2025-05-15",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ESG",
+    "security": "MIRAEAMC - MAESGETF",
+    "underlying": "NIFTY100 ESG SECTOR LEADERS",
+    "first_seen": "2023-09-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "EVINDIA",
+    "security": "MIRAEAMC - EVINDIA",
+    "underlying": "NIFTY EV AND NEW AGE AUTOMOTIVE TOTAL RETURN INDEX",
+    "first_seen": "2024-07-16",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWEV",
+    "security": "GROWWAMC - GROWEV",
+    "underlying": "NIFTY EV & NEW AGE AUTOMOTIVE INDEX-TTL RTN INDX",
+    "first_seen": "2024-08-12",
+    "last_seen": "2024-08-22"
+   },
+   {
+    "symbol": "GROWWCAPM",
+    "security": "GROWWAMC - GROWWCAPM",
+    "underlying": "NIFTY CAPITAL MARKETS INDEX",
+    "first_seen": "2025-12-04",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWCHEM",
+    "security": "GROWWAMC - GROWWCHEM",
+    "underlying": "NIFTY CHEMICALS INDEX - TRI",
+    "first_seen": "2026-01-16",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWDEFNC",
+    "security": "GROWWAMC - GROWWDEFNC",
+    "underlying": "NIFTY INDIA DEFENCE INDEX- TOTAL RETURN INDEX",
+    "first_seen": "2024-10-11",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWEV",
+    "security": "GROWWAMC - GROWWEV",
+    "underlying": "NIFTY EV AND NEW AGE AUTOMOTIVE INDEX",
+    "first_seen": "2024-08-23",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWHOSPI",
+    "security": "GROWWAMC - GROWWHOSPI",
+    "underlying": "BSE HOSPITALS INDEX",
+    "first_seen": "2026-03-05",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWLOVOL",
+    "security": "GROWWAMC - GROWWLOVOL",
+    "underlying": "NIFTY 500 LOW VOLATILITY 50 INDEX   TRI",
+    "first_seen": "2025-06-17",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWMC150",
+    "security": "GROWWAMC - GROWWMC150",
+    "underlying": "NIFTY MIDCAP 150 INDEX - TRI",
+    "first_seen": "2025-11-17",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWMETAL",
+    "security": "GROWWAMC - GROWWMETAL",
+    "underlying": "NIFTY METAL INDEX",
+    "first_seen": "2025-12-23",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWMOM50",
+    "security": "GROWWAMC - GROWWMOM50",
+    "underlying": "NIFTY 500 MOMENTUM 50 INDEX- TOTAL RETURN INDEX",
+    "first_seen": "2025-04-24",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWN200",
+    "security": "GROWWAMC - GROWWN200",
+    "underlying": "NIFTY 200 INDEX- TOTAL RETURN INDEX",
+    "first_seen": "2025-02-28",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWNET",
+    "security": "GROWWAMC - GROWWNET",
+    "underlying": "INDEX",
+    "first_seen": "2025-07-03",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWNXT50",
+    "security": "GROWWAMC - GROWWNXT50",
+    "underlying": "INDEX",
+    "first_seen": "2025-08-26",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWPOWER",
+    "security": "GROWWAMC - GROWWPOWER",
+    "underlying": "BSE POWER INDEX - TRI",
+    "first_seen": "2025-08-07",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWPSE",
+    "security": "GROWWAMC - GROWWPSE",
+    "underlying": "NIFTY PSE INDEX - TRI",
+    "first_seen": "2026-02-11",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWPSUBK",
+    "security": "GROWWAMC - GROWWPSUBK",
+    "underlying": "NIFTY PSU BANK INDEX - TRI",
+    "first_seen": "2026-03-27",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWRAIL",
+    "security": "GROWWAMC - GROWWRAIL",
+    "underlying": "NIFTY INDIA RAILWAYS PSU INDEX",
+    "first_seen": "2025-02-07",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWRLTY",
+    "security": "GROWWAMC - GROWWRLTY",
+    "underlying": "INDEX",
+    "first_seen": "2025-10-09",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWSC250",
+    "security": "GROWWAMC - GROWWSC250",
+    "underlying": "NIFTY SMALLCAP 250 INDEX - TRI",
+    "first_seen": "2025-10-30",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GROWWSLVR",
+    "security": "GROWWAMC - GROWWSLVR",
+    "underlying": "COMMODITY-SILVER",
+    "first_seen": "2025-05-23",
+    "last_seen": "2026-09-04"
+   },
+   {
+    "symbol": "GSEC10ABSL",
+    "security": "BIRLASLAMC - GSEC10ABSL",
+    "underlying": "CRISIL 10 YEAR GILT ETF",
+    "first_seen": "2024-08-19",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "GSEC10YEAR",
+    "security": "MIRAEAMC - MAGS813ETF",
+    "underlying": "MIRAE ASSET NIFTY 8-13 YR G-SEC ETF",
+    "first_seen": "2023-09-04",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCBSE500",
+    "security": "HDFCAMC - HDFCBSE500",
+    "underlying": "HDFC S&P BSE 500 ETF",
+    "first_seen": "2023-02-21",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCGROWTH",
+    "security": "HDFCAMC - HDFCGROWTH",
+    "underlying": "HDFC NIFTY GROWTH SECTORS 15 ETF",
+    "first_seen": "2022-09-29",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCLOWVOL",
+    "security": "HDFCAMC - HDFCLOWVOL",
+    "underlying": "HDFC NIFTY100 LOW VOLATILITY 30 ETF",
+    "first_seen": "2022-10-17",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCMID150",
+    "security": "HDFCAMC - HDFCMID150",
+    "underlying": "HDFC NIFTY MIDCAP 150 ETF",
+    "first_seen": "2023-02-21",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCMOMENT",
+    "security": "HDFCAMC - HDFCMOMENT",
+    "underlying": "HDFC NIFTY200 MOMENTUM 30 ETF",
+    "first_seen": "2022-10-17",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCNEXT50",
+    "security": "HDFCAMC - HDFCNEXT50",
+    "underlying": "HDFC NIFTY NEXT 50 ETF",
+    "first_seen": "2022-08-11",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCNIF100",
+    "security": "HDFCAMC - HDFCNIF100",
+    "underlying": "HDFC NIFTY 100 ETF",
+    "first_seen": "2022-08-11",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCNIFBAN",
+    "security": "HDFCAMC - HDFCNIFBAN",
+    "underlying": "NIFTY BANK",
+    "first_seen": "2023-06-16",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCNIFIT",
+    "security": "HDFCAMC - HDFCNIFIT",
+    "underlying": "HDFC NIFTY IT ETF",
+    "first_seen": "2022-11-22",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCNIMEG",
+    "security": "HDFCAMC - HDFCNIMEG",
+    "underlying": "NIFTY METAL INDEX TRI",
+    "first_seen": "2026-07-31",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCPSUBK",
+    "security": "HDFCAMC HDFCPSUBK",
+    "underlying": "HDFC NIFTY PSU BANK ETF",
+    "first_seen": "2024-02-07",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCPVTBAN",
+    "security": "HDFCAMC - HDFCPVTBAN",
+    "underlying": "HDFC NIFTY PRIVATE BANK ETF",
+    "first_seen": "2022-11-22",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCQUAL",
+    "security": "HDFCAMC - HDFCQUAL",
+    "underlying": "HDFC NIFTY100 QUALITY 30 ETF",
+    "first_seen": "2022-09-29",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCSML250",
+    "security": "HDFCAMC - HDFCSML250",
+    "underlying": "HDFC NIFTY SMALLCAP 250 ETF",
+    "first_seen": "2023-02-21",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HDFCVALUE",
+    "security": "HDFCAMC - HDFCVALUE",
+    "underlying": "HDFC NIFTY50 VALUE 20 ETF",
+    "first_seen": "2022-09-29",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HEALTHAXIS",
+    "security": "AXISAMC-HEALTHAXIS",
+    "underlying": "NIFTY HEALTHCARE INDEX",
+    "first_seen": "2026-07-03",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HEALTHCARE",
+    "security": "MIRAEAMC - HEALTHCARE",
+    "underlying": "NIFTY 500 HEALTHCARE INDEX",
+    "first_seen": "2026-02-16",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HEALTHY",
+    "security": "BIRLASLAMC - HEALTHY",
+    "underlying": "NIFTY HEALTHCARE TRI",
+    "first_seen": "2021-10-28",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "HFTSEINDIA",
+    "security": "HDFCAMC - HFTSEINDIA",
+    "underlying": "FTSE INDIA EQUITY",
+    "first_seen": "2026-10-16",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ICICI10GS",
+    "security": "ICICIPRAMC - ICICI10GS",
+    "underlying": "NIFTY 10 YR BENCHMARK G-SEC INDEX",
+    "first_seen": "2022-12-19",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICI500",
+    "security": "ICICIPRAMC - ICICI500",
+    "underlying": "S&P BSE 500 INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICI5GSEC",
+    "security": "ICICIPRAMC - ICICI5GSEC",
+    "underlying": "NIFTY 5 YR BENCHMARK G-SEC INDEX",
+    "first_seen": "2022-03-10",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIALPLV",
+    "security": "ICICIPRAMC - ICICIALPLV",
+    "underlying": "NIFTY ALPHA LOW-VOLATILITY 30 INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIAUTO",
+    "security": "ICICIPRAMC - ICICIAUTO",
+    "underlying": "NIFTY AUTO INDEX",
+    "first_seen": "2022-01-18",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIB22",
+    "security": "ICICIPRAMC - BHARATIWIN",
+    "underlying": "S&P BSE BHARAT 22 INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ICICIBANKN",
+    "security": "ICICIPRAMC - IPRU5008",
+    "underlying": "NIFTY BANK",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIBANKP",
+    "security": "ICICIPRAMC - ICICIBANKP",
+    "underlying": "NIFTY PRIVATE BANK INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICICOMMO",
+    "security": "ICICIPRAMC - ICICICOMMO",
+    "underlying": "NIFTY COMMODITIES INDEX",
+    "first_seen": "2022-12-21",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICICONSU",
+    "security": "ICICIPRAMC - ICICICONSU",
+    "underlying": "NIFTY INDIA CONSUMPTION INDEX",
+    "first_seen": "2021-11-02",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIFIN",
+    "security": "ICICIPRAMC-ICICIFIN",
+    "underlying": "NIFTY FINANCIAL SERVICES EX-BANK INDEX",
+    "first_seen": "2022-11-30",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIFMCG",
+    "security": "ICICIPRAMC - ICICIFMCG",
+    "underlying": "NIFTY FMCG INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIINFRA",
+    "security": "ICICIPRAMC - ICICIINFRA",
+    "underlying": "NIFTY INFRASTRUCTURE INDEX",
+    "first_seen": "2022-08-23",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICILIQ",
+    "security": "ICICIPRAMC - ICICILIQ",
+    "underlying": "S&P BSE LIQUID RATE INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICILOVOL",
+    "security": "ICICI PR NIF LW VL 30 ETF",
+    "underlying": "NIFTY 100 LOW VOLATILITY 30 INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIM150",
+    "security": "ICICIPRAMC - ICICIM150",
+    "underlying": "NIFTY MIDCAP 150",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIMCAP",
+    "security": "ICICI PRUD MIDCAP SEL ETF",
+    "underlying": "S&P BSE MIDCAP SELECT INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIMOM30",
+    "security": "ICICIPRAMC - ICICIMOM30",
+    "underlying": "NIFTY200 MOMENTUM 30 INDEX",
+    "first_seen": "2022-08-10",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICINF100",
+    "security": "ICICI PRUD NIFTY 100 ETF",
+    "underlying": "NIFTY 100",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICINV20",
+    "security": "ICICI PRUDENTIAL NV20 ETF",
+    "underlying": "NIFTY50 VALUE 20",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICINXT50",
+    "security": "ICICIPRAMC - ICICINXT50",
+    "underlying": "NIFTY NEXT 50 ETF",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIPHARM",
+    "security": "ICICIPRAMC - ICICIPHARM",
+    "underlying": "NIFTY HEALTHCARE INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICIQTY30",
+    "security": "ICICIPRAMC - ICICIQTY30",
+    "underlying": "NIFTY200 QUALITY 30 INDEX",
+    "first_seen": "2023-08-10",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICISENSX",
+    "security": "ICICI PRUD SENSEX ETF",
+    "underlying": "SENSEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "ICICITECH",
+    "security": "ICICIPRAMC - ICICITECH",
+    "underlying": "NIFTY IT INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "INFRA",
+    "security": "MIRAEAMC - INFRA",
+    "underlying": "NIFTY INDIA INFRASTRUCTURE & LOGISTICS",
+    "first_seen": "2026-02-18",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "INTERNET",
+    "security": "MIRAEAMC - INTERNET",
+    "underlying": "EQUITY INDEX",
+    "first_seen": "2025-07-08",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "IT",
+    "security": "KOTAKMAMC - KOTAKIT",
+    "underlying": "NIFTY IT INDEX",
+    "first_seen": "2024-03-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "ITAXIS",
+    "security": "AXISAMC-ITAXIS",
+    "underlying": "NIFTY IT INDEX",
+    "first_seen": "2026-07-03",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "IVZBANKNF",
+    "security": "RELIGARAMC - IVZBANKNF",
+    "underlying": "NIFTY BANK TRI",
+    "first_seen": "2026-08-21",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "KOTAKALPHA",
+    "security": "KOTAKMAMC - KOTAKALPHA",
+    "underlying": "NIFTY ALPHA 50 INDEX",
+    "first_seen": "2021-12-29",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "KOTAKCONS",
+    "security": "KOTAKMAMC - KOTAKCONS",
+    "underlying": "NIFTY INDIA CONSUMPTION INDEX",
+    "first_seen": "2022-08-04",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "KOTAKIT",
+    "security": "KOTAKMAMC - KOTAKIT",
+    "underlying": "NIFTY IT",
+    "first_seen": "2021-10-01",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "KOTAKLIQ",
+    "security": "KOTAKMAMC - KOTAKLIQ",
+    "underlying": "NIFTY 1D RATE INDEX",
+    "first_seen": "2023-02-01",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "KOTAKLOVOL",
+    "security": "KOTAKMAMC - KOTAKLOVOL",
+    "underlying": "NIFTY 100 LOW VOLATILITY 30 INDEX",
+    "first_seen": "2022-03-29",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "KOTAKMID50",
+    "security": "KOTAKMAMC - KOTAKMID50",
+    "underlying": "NIFTY MIDCAP 50 INDEX",
+    "first_seen": "2022-02-04",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "KOTAKMNC",
+    "security": "KOTAKMAMC - KOTAKMNC",
+    "underlying": "NIFTY MNC INDEX",
+    "first_seen": "2022-08-16",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "KOTAKNV20",
+    "security": "KOTAKMAMC - KTKNV20ETF",
+    "underlying": "NIFTY50 VALUE 20",
+    "first_seen": "2021-10-01",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "KOTAKPSUBK",
+    "security": "KOTAK PSU BANK",
+    "underlying": "NIFTY PSU BANK INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2024-03-19"
+   },
+   {
+    "symbol": "LARGEMID50",
+    "security": "MIRAEAMC - LARGEMID50",
+    "underlying": "BSE LARGEMID (60:40) STABLE DIVIDEND 50 TRI (TOTAL RETURN INDEX)",
+    "first_seen": "2026-08-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "LICNFNHGP",
+    "security": "LICNAMC - LICNFNHGP",
+    "underlying": "NIFTY 100",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "LICNMID100",
+    "security": "LICNAMC - LICNMID100",
+    "underlying": "LIC MF NIFTY MIDCAP 100 ETF",
+    "first_seen": "2024-02-19",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "LOWVOL",
+    "security": "MIRAEAMC - MANV30F",
+    "underlying": "MIRAE ASSET NIFTY 100 LOW VOLATILITY 30 ETF",
+    "first_seen": "2023-09-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "LOWVOL1",
+    "security": "KOTAKMAMC - KOTAKLOVOL",
+    "underlying": "KOTAK NIFTY 100 LOW VOL 30 ETF",
+    "first_seen": "2024-03-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MAFANG",
+    "security": "MIRAEAMC - MAFANG",
+    "underlying": "NYSE FANG+ TOTAL RETURN INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MAHKTECH",
+    "security": "MIRAEAMC - MAHKTECH",
+    "underlying": "HANG SENG TECH TOTAL RETURN INDEX",
+    "first_seen": "2021-12-10",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MAKEINDIA",
+    "security": "MIRAEAMC - MAMFGETF",
+    "underlying": "NIFTY INDIA MANUFACTURING TOTAL RETURN INDEX",
+    "first_seen": "2023-09-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MANV30F",
+    "security": "MIRAEAMC - MANV30F",
+    "underlying": "NIFTY 100 LOW VOLATILITY 30 TOTAL RETURN INDEX",
+    "first_seen": "2023-03-31",
+    "last_seen": "2023-08-31"
+   },
+   {
+    "symbol": "MANXT50",
+    "security": "MIRAEAMC - MANXT50",
+    "underlying": "NIFTY NEXT 50",
+    "first_seen": "2021-10-01",
+    "last_seen": "2023-08-31"
+   },
+   {
+    "symbol": "MASPTOP50",
+    "security": "MIRAEAMC - MASPTOP50",
+    "underlying": "S&P 500 TOP 50 TOTAL RETURN INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "METAL",
+    "security": "MIRAEAMC - METAL",
+    "underlying": "NIFTY METAL TOTAL RETURN INDEX",
+    "first_seen": "2024-10-09",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MID150",
+    "security": "KOTAKMAMC - MID150",
+    "underlying": "NIFTY MIDCAP 150 INDEX",
+    "first_seen": "2025-03-28",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MIDCAP",
+    "security": "KOTAKMAMC - KOTAKMID50",
+    "underlying": "NIFTY MIDCAP 50 INDEX",
+    "first_seen": "2024-03-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MIDSMALL",
+    "security": "MIRAEAMC - MIDSMALL",
+    "underlying": "MIRAE ASSET NIFTY MIDSMALLCAP400 MOMENTUM QUALITY 100 ETF",
+    "first_seen": "2024-05-28",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MNC",
+    "security": "KOTAKMAMC - KOTAKMNC",
+    "underlying": "KOTAK NIFTY MNC ETF",
+    "first_seen": "2024-03-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOALPHA50",
+    "security": "MOTILALAMC - MOALPHA50",
+    "underlying": "NIFTY ALPHA 50 TOTAL RETURN INDEX",
+    "first_seen": "2025-07-10",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOBANK10",
+    "security": "MOTILALAMC - MOBANK10",
+    "underlying": "BSE TOP 10 BANKS TOTAL RETURN INDEX",
+    "first_seen": "2026-04-10",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOCAPITAL",
+    "security": "MOTILALAMC - MOCAPITAL",
+    "underlying": "NIFTY CAPITAL MARKET TOTAL RETURN INDEX",
+    "first_seen": "2025-03-13",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MODEFENCE",
+    "security": "MOTILALAMC - MODEFENCE",
+    "underlying": "NIFTY INDIA DEFENCE TOTAL RETURN INDEX",
+    "first_seen": "2024-08-27",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOENERGY",
+    "security": "MOTILALAMC - MOENERGY",
+    "underlying": "NIFTY ENERGY INDEX",
+    "first_seen": "2025-10-16",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOGSEC",
+    "security": "MOTILALAMC - G5",
+    "underlying": "NIFTY 5 YR BENCHMARK G-SEC INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOHEALTH",
+    "security": "MOTILALAMC - MOHEALTH",
+    "underlying": "MOTILAL OSWAL S&P BSE HEALTHCARE ETF",
+    "first_seen": "2022-08-04",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOINFRA",
+    "security": "MOTILALAMC - MOINFRA",
+    "underlying": "BSE INDIA INFRASTRUCTURE TOTAL RETURN INDEX",
+    "first_seen": "2025-05-21",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOIPO",
+    "security": "MOTILALAMC - MOIPO",
+    "underlying": "BSE SELECT IPO TOTAL RETURN INDEX",
+    "first_seen": "2025-11-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOLOWVOL",
+    "security": "MOTILALAMC - MOLOWVOL",
+    "underlying": "NIFTY MIDCAP 100 TRI",
+    "first_seen": "2022-03-30",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOM100",
+    "security": "MOTILAL OS MIDCAP100 ETF",
+    "underlying": "NIFTY MIDCAP 100",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOM50",
+    "security": "MOTILAL OSWAL M50 ETF",
+    "underlying": "NIFTY 50",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMENTUM",
+    "security": "BIRLASLAMC - MOMENTUM",
+    "underlying": "ADITYA BIRLA SUN LIFE NIFTY 200 MOMENTUM 30 ETF",
+    "first_seen": "2022-08-19",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMENTUM30",
+    "security": "KOTAKMAMC - MOMENTUM30",
+    "underlying": "NIFTY 200 MOMENTUM 30 INDEX",
+    "first_seen": "2025-10-17",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMENTUM50",
+    "security": "MOTILALAMC - MOMENTUM50",
+    "underlying": "NIFTY 500 MOMENTUM 50 TOTAL RETURN INDEX",
+    "first_seen": "2024-09-30",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMETAL",
+    "security": "MOTILALAMC - MOMETAL",
+    "underlying": "NIFTY METAL INDEX",
+    "first_seen": "2026-08-06",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMGF",
+    "security": "MOTILALAMC - MOMGF",
+    "underlying": "NIFTY INDIA MANUFACTURING TOTAL RETURN INDEX",
+    "first_seen": "2025-05-28",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMIDMTM",
+    "security": "MOTILALAMC - MOMIDMTM",
+    "underlying": "NIFTY MIDCAP 150 MOMENTUM 50 TOTAL RETURN INDEX",
+    "first_seen": "2025-07-03",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMMIDCAP",
+    "security": "MIRAEAMC - MOMMIDCAP",
+    "underlying": "BSE MIDCAP 150 MOMENTUM 30 TRI",
+    "first_seen": "2026-07-22",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMNC",
+    "security": "MOTILALAMC - MOMNC",
+    "underlying": "NIFTY MNC ETF TOTAL RETURN INDEX",
+    "first_seen": "2025-12-04",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOMOMENTUM",
+    "security": "MOTILALAMC - MOMOMENTUM",
+    "underlying": "NIFTY 200 MOMENTUM 30 TOTAL RETURN INDEX",
+    "first_seen": "2022-02-17",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MON100",
+    "security": "MOTILAL OS NASDAQ100 ETF",
+    "underlying": "NASDAQ100",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MON50EQUAL",
+    "security": "MOTILALAMC - MON50EQUAL",
+    "underlying": "NIFTY 50 EQUAL WEIGHT TOTAL RETURN INDEX",
+    "first_seen": "2025-05-07",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MONEXT50",
+    "security": "MOTILALAMC - MONEXT50",
+    "underlying": "NIFTY NEXT 50 TOTAL RETURN INDEX",
+    "first_seen": "2025-05-14",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MONQ50",
+    "security": "MOTILALAMC - MONQ50",
+    "underlying": "NASDAQ Q-50 TOTAL RETURN INDEX",
+    "first_seen": "2021-12-29",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOOILGAS",
+    "security": "MOTILALAMC - MOOILGAS",
+    "underlying": "NIFTY OIL & GAS ETF TOTAL RETURN INDEX",
+    "first_seen": "2026-08-06",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOPSE",
+    "security": "MOTILALAMC - MOPSE",
+    "underlying": "NIFTY PSE TOTAL RETURN INDEX",
+    "first_seen": "2025-06-05",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOQUALITY",
+    "security": "MOTILALAMC - MOQUALITY",
+    "underlying": "MOTILAL OSWAL S&P BSE QUALITY ETF",
+    "first_seen": "2022-08-26",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOREALTY",
+    "security": "MOTILALAMC - MOREALTY",
+    "underlying": "MOTILAL OSWAL NIFTY REALTY ETF",
+    "first_seen": "2024-03-21",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOSERVICE",
+    "security": "MOTILALAMC - MOSERVICE",
+    "underlying": "NIFTY SERVICES SECTOR TOTAL RETURN INDEX",
+    "first_seen": "2025-11-27",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOSMALL250",
+    "security": "MOTILALAMC - MOSMALL250",
+    "underlying": "MOTILAL OSWAL NIFTY SMALLCAP 250 ETF",
+    "first_seen": "2024-03-21",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOTOUR",
+    "security": "MOTILALAMC - MOTOUR",
+    "underlying": "NIFTY INDIA TOURISM TOTAL RETURN INDEX",
+    "first_seen": "2025-06-12",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MOVALUE",
+    "security": "MOTILALAMC - MOVALUE",
+    "underlying": "MOTILAL OSWAL S&P BSE ENHANCED VALUE ETF",
+    "first_seen": "2022-08-26",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MSCIINDIA",
+    "security": "KOTAKMAMC - MSCIINDIA",
+    "underlying": "MSCI INDIA INDEX",
+    "first_seen": "2025-02-27",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "MULTICAP",
+    "security": "MIRAEAMC - MULTICAP",
+    "underlying": "NIFTY500 MULTICAP 50:25:25 INDEX",
+    "first_seen": "2024-09-05",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "NCPSESDL24",
+    "security": "NIPPON INDIA- NIMFXX",
+    "underlying": "NIFTY CPSE BOND PLUS SDL SEP 2024 50:50 INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2022-05-09"
+   },
+   {
+    "symbol": "NEXT50",
+    "security": "MIRAEAMC - MANXT50",
+    "underlying": "NIFTY NEXT 50",
+    "first_seen": "2023-09-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "NIFMID150",
+    "security": "UTIAMC - NIFMID150",
+    "underlying": "UTI NIFTY MIDCAP 150 EXCHANGE TRADED FUND (ETF)",
+    "first_seen": "2023-09-05",
+    "last_seen": "2025-12-23"
+   },
+   {
+    "symbol": "NPBET",
+    "security": "TATAAML - NPBET",
+    "underlying": "NIFTY PRIVATE BANK INDEX",
+    "first_seen": "2021-10-01",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "NV20",
+    "security": "KOTAKMAMC - KTKNV20ETF",
+    "underlying": "NIFTY50 VALUE 20",
+    "first_seen": "2024-03-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "PSUBANK",
+    "security": "KOTAK PSU BANK",
+    "underlying": "NIFTY PSU BANK",
+    "first_seen": "2024-03-20",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "PSUBANKICI",
+    "security": "ICICIPRAMC - PSUBANKICI",
+    "underlying": "NIFTY PSU BANK INDEX",
+    "first_seen": "2023-03-21",
+    "last_seen": "2023-12-19"
+   },
+   {
+    "symbol": "PVTBANK",
+    "security": "KOTAKMAMC - PVTBANK",
+    "underlying": "NIFTY PRIVATE BANK",
+    "first_seen": "2026-07-22",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "PVTBKGROWW",
+    "security": "GROWWAMC - PVTBKGROWW",
+    "underlying": "NIFTY PRIVATE BANK INDEX - TRI",
+    "first_seen": "2026-05-26",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "QUALITY",
+    "security": "KOTAKMAMC - QUALITY",
+    "underlying": "NIFTY200 QUALITY 30 INDEX",
+    "first_seen": "2025-07-18",
+    "last_seen": "2025-07-18"
+   },
+   {
+    "symbol": "QUALITY30",
+    "security": "KOTAKMAMC - QUALITY30",
+    "underlying": "NIFTY200 QUALITY 30 INDEX",
+    "first_seen": "2025-07-21",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "SBIBPB",
+    "security": "SBIAMC - SBIBPB",
+    "underlying": "BSE PSU BANK INDEX TRI",
+    "first_seen": "2025-03-27",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "SBIMIDMOM",
+    "security": "SBIAMC - SBIMIDMOM",
+    "underlying": "NIFTY MIDCAP 150 MOMENTUM 50 INDEX",
+    "first_seen": "2026-03-06",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "SBINMID150",
+    "security": "SBIAMC - SBINMID150",
+    "underlying": "NIFTY MIDCAP 150 INDEX",
+    "first_seen": "2026-04-06",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "SELECTIPO",
+    "security": "MIRAEAMC - SELECTIPO",
+    "underlying": "BSE SELECT IPO INDEX",
+    "first_seen": "2025-03-17",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "SMALL250",
+    "security": "MIRAEAMC - SMALL250",
+    "underlying": "NIFTY SMALLCAP 250",
+    "first_seen": "2025-11-13",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "SMALLCAP",
+    "security": "MIRAEAMC - SMALLCAP",
+    "underlying": "MIRAE ASSET NIFTY SMALLCAP 250 MOMENTUM QUALITY 100 ETF",
+    "first_seen": "2024-02-29",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "SMALLGROWW",
+    "security": "GROWWAMC - SMALLGROWW",
+    "underlying": "NIFTY SMALLCAP 250 MOMENTUM QUALITY 100 INDEX TRI",
+    "first_seen": "2026-06-18",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "TECH",
+    "security": "BIRLASLAMC - TECH",
+    "underlying": "NIFTY IT TRI INDEX",
+    "first_seen": "2021-11-03",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "TOP20",
+    "security": "MIRAEAMC - TOP20",
+    "underlying": "NIFTY TOP 20 EQUAL WEIGHT",
+    "first_seen": "2025-12-19",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "UTINEXT50",
+    "security": "UTIAMC - UTINEXT50",
+    "underlying": "NIFTY NEXT 50",
+    "first_seen": "2021-10-01",
+    "last_seen": "2025-12-23"
+   },
+   {
+    "symbol": "UTISXN50",
+    "security": "UTIAMC - UTISXN50",
+    "underlying": "BSE SENSEX NEXT 50",
+    "first_seen": "2021-10-01",
+    "last_seen": "2025-12-23"
+   },
+   {
+    "symbol": "VALUE",
+    "security": "MIRAEAMC - VALUE",
+    "underlying": "NIFTY 500 VALUE 50",
+    "first_seen": "2026-03-27",
+    "last_seen": "2026-10-16"
+   },
+   {
+    "symbol": "VALUEAXIS",
+    "security": "AXISAMC-VALUEAXIS",
+    "underlying": "NIFTY500 VALUE 50 TRI",
+    "first_seen": "2026-07-03",
+    "last_seen": "2026-10-16"
+   }
+  ],
+  "regex_only_detail": [
+   {
+    "symbol": "GOLDENTOBC",
+    "company": "Golden Tobacco Limited",
+    "isin": "INE973A01010"
+   },
+   {
+    "symbol": "GOLDTECH",
+    "company": "AION-TECH SOLUTIONS LIMITED",
+    "isin": "INE805A01014"
+   },
+   {
+    "symbol": "JETFREIGHT",
+    "company": "Jet Freight Logistics Limited",
+    "isin": "INE982V01025"
+   }
+  ],
+  "regex_only_not_in_equity_master": [
+   "JETFRE-RE"
+  ],
+  "seconds": 13.8
+ },
+ "write_phase": {
+  "dry_run": {
+   "rows_eq_be": 2737956,
+   "equity_features_rows": 2737956,
+   "build_features_seconds": 56.7,
+   "seconds": 124.5,
+   "nestleind": {
+    "rows": 1251,
+    "max_abs_log_ret_adjusted": 0.0808262225612259,
+    "max_abs_log_ret_unadjusted": 2.31940946288679,
+    "adj_close_2024-01-04": 1355.8200000000002,
+    "adj_close_2024-01-05": 1333.2,
+    "no_10x_break": true
+   }
+  },
+  "started": "2026-10-22T13:39:15",
+  "finished": "2026-10-22T13:40:41",
+  "duration_seconds": 86.2,
+  "backup": {
+   "path": "<session scratchpad>/rehearsal/nse_market_backup_pre_p1.duckdb",
+   "bytes": 1423192064,
+   "seconds": 1.0,
+   "store_mtime": "2026-10-19T06:49:34",
+   "taken": "before the lock; store size and mtime verified unchanged"
+  },
+  "staging": {
+   "p1_rows": 23715,
+   "extra_rows": 0,
+   "extra_files": [],
+   "delete_dates": [
+    "2021-11-05",
+    "2023-06-29",
+    "2024-01-22"
+   ]
+  },
+  "before": {
+   "equity_eod_rows": 3078294,
+   "equity_eod_dates": 1245,
+   "equity_features_rows": 2722591,
+   "rows_on_delete_dates": {
+    "2021-11-05": 1874,
+    "2023-06-29": 2153,
+    "2024-01-22": 2341
+   }
+  },
+  "overwrites_existing_keys": 0,
+  "upsert": {
+   "rows": 23715,
+   "deleted_dates": [
+    "2021-11-05",
+    "2023-06-29",
+    "2024-01-22"
+   ],
+   "rows_deleted": {
+    "2021-11-05": 1874,
+    "2023-06-29": 2153,
+    "2024-01-22": 2341
+   },
+   "seconds": 0.7,
+   "dates": 38,
+   "by_date": {
+    "2021-11-04": 1874,
+    "2022-03-07": 275,
+    "2023-06-19": 6,
+    "2023-06-26": 17,
+    "2023-06-28": 2153,
+    "2023-07-03": 19,
+    "2023-07-10": 26,
+    "2023-07-17": 39,
+    "2023-07-24": 39,
+    "2023-07-25": 43,
+    "2023-07-26": 46,
+    "2023-07-27": 48,
+    "2023-07-28": 50,
+    "2023-07-31": 51,
+    "2023-08-01": 55,
+    "2023-08-02": 62,
+    "2023-08-03": 67,
+    "2023-08-04": 71,
+    "2023-08-07": 70,
+    "2023-08-08": 73,
+    "2023-08-09": 80,
+    "2023-08-10": 83,
+    "2023-08-11": 85,
+    "2023-08-14": 73,
+    "2023-08-16": 76,
+    "2023-08-17": 79,
+    "2023-08-18": 82,
+    "2023-08-21": 79,
+    "2023-08-22": 82,
+    "2023-08-23": 87,
+    "2023-08-24": 91,
+    "2023-11-12": 2279,
+    "2024-01-20": 2341,
+    "2024-03-02": 2307,
+    "2024-05-18": 2374,
+    "2025-02-01": 2635,
+    "2025-10-21": 2843,
+    "2026-02-01": 2955
+   }
+  },
+  "tables": {
+   "corporate_actions": 21927,
+   "etf_list": 469,
+   "equity_master": 2619,
+   "special_sessions": 16
+  },
+  "build_features": {
+   "rows": 2737956,
+   "seconds": 59.2
+  },
+  "after": {
+   "equity_eod_rows": 3095641,
+   "equity_eod_dates": 1251,
+   "eq_be_rows": 2737956,
+   "eq_be_dup_date_ticker": 0,
+   "equity_features_rows": 2737956,
+   "rows_on_delete_dates": {
+    "2021-11-05": 0,
+    "2023-06-29": 0,
+    "2024-01-22": 0
+   },
+   "rows_on_upsert_dates": {
+    "2021-11-04": 1874,
+    "2022-03-07": 1989,
+    "2023-06-19": 2197,
+    "2023-06-26": 2185,
+    "2023-06-28": 2153,
+    "2023-07-03": 2206,
+    "2023-07-10": 2206,
+    "2023-07-17": 2223,
+    "2023-07-24": 2219,
+    "2023-07-25": 2181,
+    "2023-07-26": 2181,
+    "2023-07-27": 2174,
+    "2023-07-28": 2182,
+    "2023-07-31": 2223,
+    "2023-08-01": 2200,
+    "2023-08-02": 2206,
+    "2023-08-03": 2198,
+    "2023-08-04": 2202,
+    "2023-08-07": 2233,
+    "2023-08-08": 2207,
+    "2023-08-09": 2217,
+    "2023-08-10": 2208,
+    "2023-08-11": 2208,
+    "2023-08-14": 2226,
+    "2023-08-16": 2208,
+    "2023-08-17": 2203,
+    "2023-08-18": 2215,
+    "2023-08-21": 2249,
+    "2023-08-22": 2212,
+    "2023-08-23": 2217,
+    "2023-08-24": 2209,
+    "2023-11-12": 2279,
+    "2024-01-20": 2341,
+    "2024-03-02": 2307,
+    "2024-05-18": 2374,
+    "2025-02-01": 2635,
+    "2025-10-21": 2843,
+    "2026-02-01": 2955
+   },
+   "dates_in_feature_table": 1251,
+   "adj_factor_ne_1_rows": 230722,
+   "expected_equity_eod_rows": 3095641,
+   "row_count_as_expected": true
+  },
+  "nestleind": {
+   "rows": 1251,
+   "max_abs_log_ret_adjusted": 0.0808262225612259,
+   "max_abs_log_ret_unadjusted": 2.31940946288679,
+   "adj_close_2024-01-04": 1355.8200000000002,
+   "adj_close_2024-01-05": 1333.2,
+   "no_10x_break": true
+  },
+  "known_events": {
+   "IRCTC": {
+    "rows": 1251,
+    "max_abs_log_ret_adjusted": 0.2071240776211423,
+    "max_abs_log_ret_raw": 1.5087856290900665,
+    "feed_events": [
+     {
+      "ex_date": "2021-10-28",
+      "ratio": "0.2"
+     }
+    ],
+    "ex_dates": {
+     "2021-10-28": {
+      "session": "2021-10-28",
+      "raw_close_prev": 4130.15,
+      "raw_close_ex": 913.5,
+      "adj_close_prev": 826.03,
+      "adj_close_ex": 913.5,
+      "adj_ret_ex": 0.10589203781944967,
+      "raw_ret_ex": -0.77882159243611
+     }
+    },
+    "continuous": true
+   },
+   "NESTLEIND": {
+    "rows": 1251,
+    "max_abs_log_ret_adjusted": 0.0808262225612259,
+    "max_abs_log_ret_raw": 2.31940946288679,
+    "feed_events": [
+     {
+      "ex_date": "2024-01-05",
+      "ratio": "0.1"
+     },
+     {
+      "ex_date": "2025-08-08",
+      "ratio": "0.5"
+     }
+    ],
+    "ex_dates": {
+     "2024-01-05": {
+      "session": "2024-01-05",
+      "raw_close_prev": 27116.4,
+      "raw_close_ex": 2666.4,
+      "adj_close_prev": 1355.8200000000002,
+      "adj_close_ex": 1333.2,
+      "adj_ret_ex": -0.016683630570429764,
+      "raw_ret_ex": -0.901668363057043
+     },
+     "2025-08-08": {
+      "session": "2025-08-08",
+      "raw_close_prev": 2234.6,
+      "raw_close_ex": 1096.5,
+      "adj_close_prev": 1117.3,
+      "adj_close_ex": 1096.5,
+      "adj_ret_ex": -0.018616307169068258,
+      "raw_ret_ex": -0.5093081535845341
+     }
+    },
+    "continuous": true
+   },
+   "RELIANCE": {
+    "rows": 1251,
+    "max_abs_log_ret_adjusted": 0.08133818432377164,
+    "max_abs_log_ret_raw": 0.6882639915310772,
+    "feed_events": [
+     {
+      "ex_date": "2024-10-28",
+      "ratio": "0.5"
+     }
+    ],
+    "ex_dates": {
+     "2024-10-28": {
+      "session": "2024-10-28",
+      "raw_close_prev": 2655.7,
+      "raw_close_ex": 1334.35,
+      "adj_close_prev": 1327.85,
+      "adj_close_ex": 1334.35,
+      "adj_ret_ex": 0.004895131227171667,
+      "raw_ret_ex": -0.49755243438641417
+     }
+    },
+    "continuous": true
+   },
+   "TATASTEEL": {
+    "rows": 1251,
+    "max_abs_log_ret_adjusted": 0.1348258279552849,
+    "max_abs_log_ret_raw": 2.2576440138256166,
+    "feed_events": [
+     {
+      "ex_date": "2022-07-28",
+      "ratio": "0.1"
+     }
+    ],
+    "ex_dates": {
+     "2022-07-28": {
+      "session": "2022-07-28",
+      "raw_close_prev": 959.4,
+      "raw_close_ex": 100.35,
+      "adj_close_prev": 95.94,
+      "adj_close_ex": 100.35,
+      "adj_ret_ex": 0.045966228893058236,
+      "raw_ret_ex": -0.8954033771106942
+     }
+    },
+    "continuous": true
+   },
+   "all_continuous": true
+  },
+  "continuity_after": {
+   "max_share": 0.0014985014985014985,
+   "flagged": [],
+   "top5": [
+    {
+     "date": "2022-12-26",
+     "n_with_prev": 2002,
+     "n_mismatch": 3,
+     "share": 0.0014985014985014985,
+     "flagged": false
+    },
+    {
+     "date": "2023-06-26",
+     "n_with_prev": 2027,
+     "n_mismatch": 3,
+     "share": 0.0014800197335964479,
+     "flagged": false
+    },
+    {
+     "date": "2023-06-19",
+     "n_with_prev": 2028,
+     "n_mismatch": 3,
+     "share": 0.0014792899408284023,
+     "flagged": false
+    },
+    {
+     "date": "2023-07-10",
+     "n_with_prev": 2028,
+     "n_mismatch": 3,
+     "share": 0.0014792899408284023,
+     "flagged": false
+    },
+    {
+     "date": "2023-07-03",
+     "n_with_prev": 2032,
+     "n_mismatch": 3,
+     "share": 0.0014763779527559055,
+     "flagged": false
+    }
+   ],
+   "mismatch_rows_total": 68,
+   "mismatch_rows_on_a_parsed_ex_date": 7
+  },
+  "dry_run_equality": {
+   "rows_store": 2737956,
+   "rows_dry": 2737956,
+   "aligned": true,
+   "columns": {
+    "open": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "high": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "low": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "close": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "open_unadj": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "close_unadj": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "adj_factor": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "ret_1d": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "dist_sma_20": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "mom_20": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "vol_20": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "rsi_14": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "atr_pct": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "deliv_pct_sma_20": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "dist_52w_high": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    },
+    "fwd_ret_5d": {
+     "max_abs_diff": 0.0,
+     "nan_mismatch": 0
+    }
+   },
+   "identical": true
+  },
+  "rehearsal_seconds": 107.2,
+  "idempotency_check_on_a_copy": {
+   "first_run_after": {
+    "equity_eod_rows": 3095641,
+    "equity_eod_dates": 1251,
+    "eq_be_rows": 2737956,
+    "eq_be_dup_date_ticker": 0,
+    "equity_features_rows": 2737956,
+    "adj_factor_ne_1_rows": 230722
+   },
+   "second_run_after": {
+    "equity_eod_rows": 3095641,
+    "equity_eod_dates": 1251,
+    "eq_be_rows": 2737956,
+    "eq_be_dup_date_ticker": 0,
+    "equity_features_rows": 2737956,
+    "adj_factor_ne_1_rows": 230722
+   },
+   "second_run_rows_deleted": {
+    "2021-11-05": 0,
+    "2023-06-29": 0,
+    "2024-01-22": 0
+   },
+   "second_run_overwrites_existing_keys": 23715,
+   "second_run_continuity_max_share": 0.0014985014985014985,
+   "second_run_equal_to_dry_run": true,
+   "identical": true
+  }
+ },
+ "history_special_sessions_pr_check": {
+  "2016-10-30": {
+   "http": 200,
+   "inner_date_ok": true,
+   "inner": "2016-10-30",
+   "weekday": "Sunday"
+  },
+  "2017-10-19": {
+   "http": 200,
+   "inner_date_ok": true,
+   "inner": "2017-10-19",
+   "weekday": "Thursday"
+  },
+  "2018-11-07": {
+   "http": 200,
+   "inner_date_ok": true,
+   "inner": "2018-11-07",
+   "weekday": "Wednesday"
+  },
+  "2019-10-27": {
+   "http": 200,
+   "inner_date_ok": true,
+   "inner": "2019-10-27",
+   "weekday": "Sunday"
+  },
+  "2020-02-01": {
+   "http": 200,
+   "inner_date_ok": true,
+   "inner": "2020-02-01",
+   "weekday": "Saturday"
+  },
+  "2020-11-14": {
+   "http": 200,
+   "inner_date_ok": true,
+   "inner": "2020-11-14",
+   "weekday": "Saturday"
+  }
+ },
+ "exports": {
+  "eod_export_v2.parquet": {
+   "rows": 2737956,
+   "columns": [
+    "date",
+    "ticker",
+    "series",
+    "prev_close",
+    "open",
+    "high",
+    "low",
+    "last",
+    "close",
+    "vwap",
+    "volume",
+    "turnover",
+    "trades",
+    "deliv_qty",
+    "deliv_pct"
+   ],
+   "path": "/home/user/SuryaDhana_AI/ml/results/improve/cache/eod_export_v2.parquet"
+  },
+  "features_prices_export_v2.parquet": {
+   "rows": 2737956,
+   "columns": [
+    "date",
+    "ticker",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "turnover",
+    "deliv_pct",
+    "open_unadj",
+    "close_unadj"
+   ],
+   "path": "/home/user/SuryaDhana_AI/ml/results/improve/cache/features_prices_export_v2.parquet"
+  },
+  "seconds": 4.7
+ },
+ "v1_vs_v2": {
+  "dataset": {
+   "rows": 1290062,
+   "tickers": 2265,
+   "sessions": 1002,
+   "date_min": "2022-10-03",
+   "date_max": "2026-10-16",
+   "last_labeled_date_20d": "2026-09-16"
+  },
+  "n_features": 52,
+  "features_equal_v1_plus_suff": true,
+  "comparison": {
+   "v1": {
+    "rows": 1357383,
+    "tickers": 2480,
+    "sessions": 996,
+    "label_beat_mkt_20d_mean": 0.49979626490712253,
+    "label_up_5d_mean": 0.4872406549003701,
+    "y_clean_20d_share": 0.9667477786299077,
+    "labeled_rows": 1320342,
+    "labeled_clean_rows": 1312247,
+    "flag_split_20d_rate": 0.005573224276304245,
+    "etf_tickers_by_list": 215,
+    "etf_rows_by_list": 74545
+   },
+   "v2": {
+    "rows": 1290062,
+    "tickers": 2265,
+    "sessions": 1002,
+    "label_beat_mkt_20d_mean": 0.4997858154063217,
+    "label_up_5d_mean": 0.48370639528080667,
+    "y_clean_20d_share": 0.9722959051580466,
+    "labeled_rows": 1255926,
+    "labeled_clean_rows": 1254322,
+    "flag_split_20d_rate": 0.0009472413221374154,
+    "etf_tickers_by_list": 0,
+    "etf_rows_by_list": 0
+   },
+   "etf_rows_removed_from_v1": 74545,
+   "rows_only_v1": 78126,
+   "rows_only_v2": 10805,
+   "rows_only_v1_that_are_etf": 74545,
+   "common_rows": 1279257,
+   "common_rows_by_group": {
+    "A_ticker_with_adjusted_ca": 257005,
+    "B_other_before_first_added_session": 233742,
+    "C_other_from_first_added_session": 788510
+   },
+   "per_feature": {
+    "ret_1d": {
+     "max_abs_diff": 1.0799275945293645,
+     "share_rows_differing": 0.0063755758225282335,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.007381179354487267,
+      "B_other_before_first_added_session": 1.2834663860153503e-05,
+      "C_other_from_first_added_session": 0.007933951376647094
+     }
+    },
+    "log_ret_1d": {
+     "max_abs_diff": 2.995732273553991,
+     "share_rows_differing": 0.0063755758225282335,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.007381179354487267,
+      "B_other_before_first_added_session": 1.2834663860153503e-05,
+      "C_other_from_first_added_session": 0.007933951376647094
+     }
+    },
+    "gap_pct": {
+     "max_abs_diff": 1.0221096269000471,
+     "share_rows_differing": 0.0063755758225282335,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.007381179354487267,
+      "B_other_before_first_added_session": 1.2834663860153503e-05,
+      "C_other_from_first_added_session": 0.007933951376647094
+     }
+    },
+    "range_pct": {
+     "max_abs_diff": 2.1510571102112408e-16,
+     "share_rows_differing": 0.0,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.0,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0
+     }
+    },
+    "close_pos_in_range": {
+     "max_abs_diff": 3.2307490016592055e-14,
+     "share_rows_differing": 0.0,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.0,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0
+     }
+    },
+    "dist_sma_5": {
+     "max_abs_diff": 1.1516112883886993,
+     "share_rows_differing": 0.025444457212272436,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.02930293184957491,
+      "B_other_before_first_added_session": 4.706043415389618e-05,
+      "C_other_from_first_added_session": 0.03171551407084248
+     }
+    },
+    "dist_sma_10": {
+     "max_abs_diff": 1.3344971148505238,
+     "share_rows_differing": 0.057122220163735665,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.06552790801735375,
+      "B_other_before_first_added_session": 0.00010267731088122802,
+      "C_other_from_first_added_session": 0.07128508199008256
+     }
+    },
+    "dist_sma_20": {
+     "max_abs_diff": 1.5126194355527227,
+     "share_rows_differing": 0.12011190870950872,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.13680667691290052,
+      "B_other_before_first_added_session": 0.00018396351532886686,
+      "C_other_from_first_added_session": 0.15022130347110374
+     }
+    },
+    "dist_sma_50": {
+     "max_abs_diff": 1.8174776104756614,
+     "share_rows_differing": 0.308661199430607,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.34191163596038987,
+      "B_other_before_first_added_session": 0.000774358052895928,
+      "C_other_from_first_added_session": 0.38909208507184434
+     }
+    },
+    "macd_norm": {
+     "max_abs_diff": 6.305579315894109,
+     "share_rows_differing": 0.7552884213258164,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.8136767767164063,
+      "B_other_before_first_added_session": 0.0053905588212644715,
+      "C_other_from_first_added_session": 0.9585534742742641
+     }
+    },
+    "mom_5": {
+     "max_abs_diff": 1.6129813514168079,
+     "share_rows_differing": 0.03176844058699698,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.036559600007781946,
+      "B_other_before_first_added_session": 6.417331930076752e-05,
+      "C_other_from_first_added_session": 0.039605077931795414
+     }
+    },
+    "mom_10": {
+     "max_abs_diff": 1.7628374801482265,
+     "share_rows_differing": 0.06334458205036204,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.07263282815509425,
+      "B_other_before_first_added_session": 0.00011123375345466369,
+      "C_other_from_first_added_session": 0.07906177473969893
+     }
+    },
+    "mom_20": {
+     "max_abs_diff": 2.114221724524076,
+     "share_rows_differing": 0.12615995065885902,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.14363144685901053,
+      "B_other_before_first_added_session": 0.00019679817918902037,
+      "C_other_from_first_added_session": 0.15780522758113405
+     }
+    },
+    "vol_5": {
+     "max_abs_diff": 0.4486560089489468,
+     "share_rows_differing": 0.03185677311126693,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.03663741950545709,
+      "B_other_before_first_added_session": 6.417331930076752e-05,
+      "C_other_from_first_added_session": 0.03972302190206846
+     }
+    },
+    "vol_10": {
+     "max_abs_diff": 0.2946071907839602,
+     "share_rows_differing": 0.06354860673031298,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.07280014007509582,
+      "B_other_before_first_added_session": 0.00011123375345466369,
+      "C_other_from_first_added_session": 0.07933824555173682
+     }
+    },
+    "vol_20": {
+     "max_abs_diff": 0.19325325412907957,
+     "share_rows_differing": 0.1265680000187609,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.14400108947296744,
+      "B_other_before_first_added_session": 0.00019679817918902037,
+      "C_other_from_first_added_session": 0.15834675527260275
+     }
+    },
+    "rsi_14": {
+     "max_abs_diff": 85.77126510203856,
+     "share_rows_differing": 0.7664832007954617,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.8348592439835801,
+      "B_other_before_first_added_session": 0.010922298944990631,
+      "C_other_from_first_added_session": 0.968171614817821
+     }
+    },
+    "atr_pct": {
+     "max_abs_diff": 2.1738707465703104,
+     "share_rows_differing": 0.7510234456407118,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.8068558977451801,
+      "B_other_before_first_added_session": 0.004329559942158448,
+      "C_other_from_first_added_session": 0.9541717923678837
+     }
+    },
+    "vol_ratio_20": {
+     "max_abs_diff": 7.522408832539147,
+     "share_rows_differing": 0.11633315275976602,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.11732067469504484,
+      "B_other_before_first_added_session": 0.0001882417366155847,
+      "C_other_from_first_added_session": 0.15044070462010628
+     }
+    },
+    "vol_z_20": {
+     "max_abs_diff": 4.039022776718456,
+     "share_rows_differing": 0.11633315275976602,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.11732067469504484,
+      "B_other_before_first_added_session": 0.0001882417366155847,
+      "C_other_from_first_added_session": 0.15044070462010628
+     }
+    },
+    "deliv_pct": {
+     "max_abs_diff": 0.0,
+     "share_rows_differing": 0.0,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.0,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0
+     }
+    },
+    "deliv_pct_sma_20": {
+     "max_abs_diff": 4.39200000000001,
+     "share_rows_differing": 0.11231128694234231,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.11204451275267018,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.14569124044083145
+     }
+    },
+    "deliv_pct_z_20": {
+     "max_abs_diff": 1.4730800487352185,
+     "share_rows_differing": 0.11231128694234231,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.11204451275267018,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.14569124044083145
+     }
+    },
+    "dist_52w_high": {
+     "max_abs_diff": 0.9521387974872869,
+     "share_rows_differing": 0.07853543111352917,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.27859769265189394,
+      "B_other_before_first_added_session": 0.00029091904749681274,
+      "C_other_from_first_added_session": 0.03652204791315265
+     }
+    },
+    "dist_52w_low": {
+     "max_abs_diff": 80.69473684210526,
+     "share_rows_differing": 0.0899365803743892,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.21597634287270676,
+      "B_other_before_first_added_session": 0.0006331767504342394,
+      "C_other_from_first_added_session": 0.07532815056245323
+     }
+    },
+    "rsi_2": {
+     "max_abs_diff": 99.11672979971371,
+     "share_rows_differing": 0.21577603249386168,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.2454115678683294,
+      "B_other_before_first_added_session": 0.00035509236679758026,
+      "C_other_from_first_added_session": 0.26997501616973785
+     }
+    },
+    "ret_63d": {
+     "max_abs_diff": 7.196950444726809,
+     "share_rows_differing": 0.38017380401279804,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.41823699928016966,
+      "B_other_before_first_added_session": 0.0010310513300989981,
+      "C_other_from_first_added_session": 0.48015878048471167
+     }
+    },
+    "ret_126d": {
+     "max_abs_diff": 40.121849283780925,
+     "share_rows_differing": 0.5837169544509039,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.6400653683780472,
+      "B_other_before_first_added_session": 0.0008599224786302847,
+      "C_other_from_first_added_session": 0.7381301441960153
+     }
+    },
+    "ret_252d": {
+     "max_abs_diff": 50.62593144560357,
+     "share_rows_differing": 0.7031589430427193,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.7883971128966363,
+      "B_other_before_first_added_session": 0.00845376526255444,
+      "C_other_from_first_added_session": 0.8813115876780256
+     }
+    },
+    "mom_12_1": {
+     "max_abs_diff": 26.24346607749097,
+     "share_rows_differing": 0.7028353176883144,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.7845294838621817,
+      "B_other_before_first_added_session": 0.00845376526255444,
+      "C_other_from_first_added_session": 0.8820471522238146
+     }
+    },
+    "dist_200dma": {
+     "max_abs_diff": 3.4122962307876294,
+     "share_rows_differing": 0.7401663621930542,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.7945876539366938,
+      "B_other_before_first_added_session": 0.0048215553901309995,
+      "C_other_from_first_added_session": 0.9404103942879608
+     }
+    },
+    "flag_below_200dma": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.022669408883437808,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.10491235579074337,
+      "B_other_before_first_added_session": 8.128620444763885e-05,
+      "C_other_from_first_added_session": 0.0025592573334517
+     }
+    },
+    "flag_near_52w_low": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.0051639350028962125,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.024664889788136416,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0003386133340097145
+     }
+    },
+    "flag_split_20d": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.004547170740515784,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.0222797221843933,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.00011540754080480907
+     }
+    },
+    "log_turnover": {
+     "max_abs_diff": 0.0,
+     "share_rows_differing": 0.0,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.0,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0
+     }
+    },
+    "cs_rank_mom_20": {
+     "max_abs_diff": 0.999113475177305,
+     "share_rows_differing": 0.9944655374174227,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.9975914865469543,
+      "B_other_before_first_added_session": 0.9953025130271839,
+      "C_other_from_first_added_session": 0.993198564380921
+     }
+    },
+    "cs_rank_ret_126": {
+     "max_abs_diff": 0.9955727072948491,
+     "share_rows_differing": 0.9534096745220076,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.9813544483570359,
+      "B_other_before_first_added_session": 0.9661678260646354,
+      "C_other_from_first_added_session": 0.9405194607550951
+     }
+    },
+    "cs_rank_vol_20": {
+     "max_abs_diff": 0.9989909182643795,
+     "share_rows_differing": 0.9951393660538891,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.9984591739460322,
+      "B_other_before_first_added_session": 0.9958372906880235,
+      "C_other_from_first_added_session": 0.993850426754258
+     }
+    },
+    "cs_rank_turnover": {
+     "max_abs_diff": 0.029186108619629725,
+     "share_rows_differing": 0.9992136060228711,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.9979416742864925,
+      "B_other_before_first_added_session": 0.9995165609946008,
+      "C_other_from_first_added_session": 0.9995383698367808
+     }
+    },
+    "cs_rank_deliv_z": {
+     "max_abs_diff": 0.32416019593109013,
+     "share_rows_differing": 0.9608890160460329,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.9557129238730764,
+      "B_other_before_first_added_session": 0.9774794431467173,
+      "C_other_from_first_added_session": 0.9576581146719763
+     }
+    },
+    "deliv_pct_isnan": {
+     "max_abs_diff": 0.0,
+     "share_rows_differing": 0.0,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.0,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0
+     }
+    },
+    "deliv_pct_sma_20_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.0001258543044908099,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 9.727437209392813e-05,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0001724772038401542
+     }
+    },
+    "deliv_pct_z_20_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.0001258543044908099,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 9.727437209392813e-05,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0001724772038401542
+     }
+    },
+    "ret_63d_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.00019151741987731943,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 4.66916986050855e-05,
+      "B_other_before_first_added_session": 3.850399158046051e-05,
+      "C_other_from_first_added_session": 0.00028408010044260695
+     }
+    },
+    "ret_126d_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.00035176668957058666,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.00011672924651271377,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.000532650188329888
+     }
+    },
+    "ret_252d_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.0006011301872884025,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.00034240578977062704,
+      "B_other_before_first_added_session": 8.984264702107452e-05,
+      "C_other_from_first_added_session": 0.0008370217245183954
+     }
+    },
+    "mom_12_1_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.0006011301872884025,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.00034240578977062704,
+      "B_other_before_first_added_session": 8.984264702107452e-05,
+      "C_other_from_first_added_session": 0.0008370217245183954
+     }
+    },
+    "dist_200dma_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.00033847772574236454,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.00010894729674519951,
+      "B_other_before_first_added_session": 4.2782212867178345e-06,
+      "C_other_from_first_added_session": 0.0005123587525839875
+     }
+    },
+    "cs_rank_ret_126_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.00035176668957058666,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.00011672924651271377,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.000532650188329888
+     }
+    },
+    "cs_rank_deliv_z_isnan": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.0001258543044908099,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 9.727437209392813e-05,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.0001724772038401542
+     }
+    },
+    "deliv_value_share_20": {
+     "max_abs_diff": 0.48345244963528367,
+     "share_rows_differing": 0.11312973077340988,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.11286939942802669,
+      "B_other_before_first_added_session": 0.0,
+      "C_other_from_first_added_session": 0.14675019974382061
+     }
+    },
+    "amihud_20": {
+     "max_abs_diff": 2.2887526116529395,
+     "share_rows_differing": 0.9974086520534967,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.9992218050232485,
+      "B_other_before_first_added_session": 0.9977753249309067,
+      "C_other_from_first_added_session": 0.9967089827649618
+     }
+    },
+    "y_raw_20d": {
+     "max_abs_diff": 1.8767507002801118,
+     "share_rows_differing": 0.13360567892143643,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.15016439368883874,
+      "B_other_before_first_added_session": 0.08688211789066577,
+      "C_other_from_first_added_session": 0.14205907344231525
+     }
+    },
+    "y_excess_20d": {
+     "max_abs_diff": 1.8750975070481928,
+     "share_rows_differing": 0.9659818160072605,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.9701795684908854,
+      "B_other_before_first_added_session": 0.9834176142926817,
+      "C_other_from_first_added_session": 0.9594450292323496
+     }
+    },
+    "label_beat_mkt_20d": {
+     "max_abs_diff": 1.0,
+     "share_rows_differing": 0.0242844088404441,
+     "cross_sectional": true,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.03250131320402327,
+      "B_other_before_first_added_session": 0.01305713136706283,
+      "C_other_from_first_added_session": 0.024934369887509352
+     }
+    },
+    "fwd_ret_5d": {
+     "max_abs_diff": 1.6129813514168079,
+     "share_rows_differing": 0.03218587039195408,
+     "cross_sectional": false,
+     "share_differing_by_group": {
+      "A_ticker_with_adjusted_ca": 0.03680473142545865,
+      "B_other_before_first_added_session": 0.021087352722232205,
+      "C_other_from_first_added_session": 0.03397039986810567
+     }
+    }
+   },
+   "per_ticker_features_identical_in_group_B": [
+    "close_pos_in_range",
+    "deliv_pct",
+    "deliv_pct_isnan",
+    "deliv_pct_sma_20",
+    "deliv_pct_sma_20_isnan",
+    "deliv_pct_z_20",
+    "deliv_pct_z_20_isnan",
+    "deliv_value_share_20",
+    "flag_near_52w_low",
+    "flag_split_20d",
+    "log_turnover",
+    "range_pct",
+    "ret_126d_isnan"
+   ],
+   "per_ticker_features_differing_in_group_B": {
+    "ret_1d": 1.2834663860153503e-05,
+    "log_ret_1d": 1.2834663860153503e-05,
+    "gap_pct": 1.2834663860153503e-05,
+    "dist_sma_5": 4.706043415389618e-05,
+    "dist_sma_10": 0.00010267731088122802,
+    "dist_sma_20": 0.00018396351532886686,
+    "dist_sma_50": 0.000774358052895928,
+    "macd_norm": 0.0053905588212644715,
+    "mom_5": 6.417331930076752e-05,
+    "mom_10": 0.00011123375345466369,
+    "mom_20": 0.00019679817918902037,
+    "vol_5": 6.417331930076752e-05,
+    "vol_10": 0.00011123375345466369,
+    "vol_20": 0.00019679817918902037,
+    "rsi_14": 0.010922298944990631,
+    "atr_pct": 0.004329559942158448,
+    "vol_ratio_20": 0.0001882417366155847,
+    "vol_z_20": 0.0001882417366155847,
+    "dist_52w_high": 0.00029091904749681274,
+    "dist_52w_low": 0.0006331767504342394,
+    "rsi_2": 0.00035509236679758026,
+    "ret_63d": 0.0010310513300989981,
+    "ret_126d": 0.0008599224786302847,
+    "ret_252d": 0.00845376526255444,
+    "mom_12_1": 0.00845376526255444,
+    "dist_200dma": 0.0048215553901309995,
+    "flag_below_200dma": 8.128620444763885e-05,
+    "ret_63d_isnan": 3.850399158046051e-05,
+    "ret_252d_isnan": 8.984264702107452e-05,
+    "mom_12_1_isnan": 8.984264702107452e-05,
+    "dist_200dma_isnan": 4.2782212867178345e-06
+   }
+  },
+  "fold_boundaries_vs_v1": {
+   "folds_changed": [
+    {
+     "name": "2023-12",
+     "train_end": {
+      "v1": "2023-10-30",
+      "v2": "2023-10-31"
+     }
+    },
+    {
+     "name": "2024-04",
+     "train_end": {
+      "v1": "2024-02-26",
+      "v2": "2024-02-27"
+     }
+    },
+    {
+     "name": "2024-06",
+     "train_end": {
+      "v1": "2024-04-30",
+      "v2": "2024-05-02"
+     }
+    },
+    {
+     "name": "2025-02",
+     "test_start": {
+      "v1": "2025-02-03",
+      "v2": "2025-02-01"
+     }
+    },
+    {
+     "name": "2025-03",
+     "train_end": {
+      "v1": "2025-01-29",
+      "v2": "2025-01-30"
+     }
+    },
+    {
+     "name": "2025-11",
+     "train_end": {
+      "v1": "2025-09-29",
+      "v2": "2025-09-30"
+     }
+    },
+    {
+     "name": "2026-02",
+     "test_start": {
+      "v1": "2026-02-02",
+      "v2": "2026-02-01"
+     }
+    },
+    {
+     "name": "2026-03",
+     "train_end": {
+      "v1": "2026-01-29",
+      "v2": "2026-01-30"
+     }
+    }
+   ],
+   "holdout_changed": {}
+  },
+  "suff": {
+   "exit_date_missing_on_labeled_rows": 0,
+   "suff_nan_pct": {
+    "deliv_value_share_20": 3.06,
+    "amihud_20": 0.26
+   },
+   "amihud_adjusted_vs_rawclose": {
+    "rows_differing_gt_1e-9": 1280069,
+    "share_differing": 0.9948635167462255,
+    "max_abs_diff": 0.8841798763154909,
+    "nan_mismatch": 1
+   }
+  },
+  "I3": {
+   "flag_split_20d_v1": 0.005573224276304245,
+   "flag_split_20d_v2": 0.0009472413221374154,
+   "y_clean_20d_v1": 0.9667477786299077,
+   "y_clean_20d_v2": 0.9722959051580466,
+   "pass": true
+  },
+  "I4": {
+   "v2_tickers_in_etf_union": 0,
+   "v2_rows_whose_ticker_is_in_that_dates_etf_file": 0,
+   "pass": true
+  },
+  "added_or_redated_sessions": [
+   "2023-11-12",
+   "2024-03-02",
+   "2024-05-18",
+   "2025-02-01",
+   "2025-10-21",
+   "2026-02-01",
+   "2021-11-04",
+   "2023-06-28",
+   "2024-01-20"
+  ],
+  "exports": {
+   "eod_export_v2.parquet": {
+    "rows": 2737956,
+    "columns": [
+     "date",
+     "ticker",
+     "series",
+     "prev_close",
+     "open",
+     "high",
+     "low",
+     "last",
+     "close",
+     "vwap",
+     "volume",
+     "turnover",
+     "trades",
+     "deliv_qty",
+     "deliv_pct"
+    ],
+    "path": "/home/user/SuryaDhana_AI/ml/results/improve/cache/eod_export_v2.parquet"
+   },
+   "features_prices_export_v2.parquet": {
+    "rows": 2737956,
+    "columns": [
+     "date",
+     "ticker",
+     "open",
+     "high",
+     "low",
+     "close",
+     "volume",
+     "turnover",
+     "deliv_pct",
+     "open_unadj",
+     "close_unadj"
+    ],
+    "path": "/home/user/SuryaDhana_AI/ml/results/improve/cache/features_prices_export_v2.parquet"
+   },
+   "seconds": 4.7
+  },
+  "seconds": {
+   "build_dataset": 69.3,
+   "total": 148.3
+  }
+ },
+ "findings_for_the_lead": [
+  "nse_historical_ingest.parse_pr_zip, UDiFF branch: column names are upper-cased and then looked up in mixed case (TckrSymb, SctySrs, ...), so the UDiFF enrichment always fails and ISIN stays empty for every UDiFF day (2024-07 onward); not changed (outside P1's edit scope). The three legacy-era added sessions and the three re-dated ones carry ISIN from the CM bhavcopy; every other stored row has none.",
+  "The archive serves the preceding special or moved session's file on the closures 2021-11-05, 2023-06-29 and 2024-01-22, and the ingest's duplicate-day guard cannot catch it because that session was never stored; the calendar now lists those closures and the sessions are in SPECIAL_SESSIONS.",
+  "The archive's security-wise files omit BE/BZ rows on 2022-03-07 and a growing set of BE securities (weekly from 2023-06-19, daily 2023-07-24..2023-08-24); rebuilt from the CM bhavcopy.",
+  "The archive file PR060424.zip holds the 2024-06-04 bundle (day and month swapped); bundles are validated by the date in their member names.",
+  "From mid-2025 the bc files write dates as yyyy-mm-dd instead of dd/mm/yyyy; both are parsed.",
+  "On split/bonus-adjusted equity_features the universe price floor must use the raw close: v2 passes universe_price_col='close_unadj' (an adjusted close would let a future split remove past rows: 7,806 rows of 50 tickers from 2022-10-03 have an adjusted close below Rs 10 but a raw close at or above it). This is the one addition to the briefed build call.",
+  "amihud_20 in v2 uses adjusted-close returns (the v1 prep used raw closes); deliv_value_share_20 uses raw same-day prints as before.",
+  "The label study's ETF name rule misses ETFs the etf files list and flags operating companies (GOLDTECH, JETFREIGHT; at store level also GOLDENTOBC and the rights entitlement JETFRE-RE).",
+  "Unadjustable price breaks (rights, demergers, capital reductions, schemes) and unvalidated splits/bonuses are listed in ml/data_ext/price_break_flags.csv for label masking; v2 does not mask them beyond y_clean_20d.",
+  "Backup of the pre-write store (1.42 GB): <session scratchpad>/rehearsal/nse_market_backup_pre_p1.duckdb; it can be deleted once the lead is satisfied."
+ ],
+ "timings_seconds": {
+  "sessions": 214.8,
+  "corporate_actions": 57.2,
+  "etf": 13.8,
+  "dry_run": 124.5,
+  "write_phase_lock_window": 86.2,
+  "rehearsal": 107.2,
+  "v2_build": 148.3
+ },
+ "outputs": {
+  "code": "ml/integrity/",
+  "corporate_actions_feed": "ml/data_ext/corporate_actions_feed.csv",
+  "corporate_actions_all": "ml/data_ext/corporate_actions_all.csv",
+  "price_break_flags": "ml/data_ext/price_break_flags.csv",
+  "etf_list": "ml/data_ext/etf_list.csv",
+  "equity_master": "ml/data_ext/equity_master.csv",
+  "session_staging": "ml/data_ext/staging/sessions_upsert.parquet + sessions_delete.json",
+  "exports_v2": "ml/results/improve/cache/{eod_export_v2.parquet, features_prices_export_v2.parquet}",
+  "write_script": "ml/integrity/write_phase.py (idempotent; --extra-staging for ml/data_hist/ rows)",
+  "v2_dataset": "ml/data_5y_v2/{model_dataset.parquet, manifest.json, splits.json}",
+  "reports": "ml/results/improve/integrity/{integrity.json, INTEGRITY.md, sessions.json, corporate_actions.json, etf.json, write_phase_real.json, write_phase_rehearsal*.json, write_phase_dryrun.json, v1_vs_v2.json, history_special_sessions.json}",
+  "raw_downloads": "ml/data_raw/pr/ (PR bundles; sec/, cm/, mto/, master/ check files; _manifest.csv)"
+ }
+}

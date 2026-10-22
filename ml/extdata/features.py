@@ -84,11 +84,40 @@ BASE = ["mom_20", "ret_63d", "ret_126d", "deliv_pct_sma_20", "atr_pct"]
 # inputs
 # ========================================================================= #
 
-def load_eod(eod_path: Path = C.EOD_EXPORT, max_date: pd.Timestamp | None = None
-             ) -> pd.DataFrame:
-    cols = ["date", "ticker", "high", "low", "close", "turnover", "deliv_pct"]
-    eod = pd.read_parquet(eod_path, columns=cols)
-    eod["date"] = pd.to_datetime(eod["date"])
+def load_eod(eod_path: Path = C.EOD_EXPORT, max_date: pd.Timestamp | None = None,
+             prices_path: Path | None = None, hist_paths: list | None = None) -> pd.DataFrame:
+    """Per-ticker price frame, sorted (ticker, date), columns date, ticker,
+    high, low, close, close_raw, turnover, deliv_pct.
+
+    * eod_path only (v1): an equity_eod export, raw prices; close_raw = close.
+    * prices_path (v2): a features_prices export (equity_features rows):
+      split/bonus-adjusted high/low/close for every return, SMA and ATR, and
+      close_raw = close_unadj for the price floor and the option notional
+      (P1's v2 convention: the floor on adjusted prices would be a look-ahead).
+    * hist_paths: earlier equity_eod-schema files (e.g. P4's 2016-2021 staging)
+      stacked in front, raw prices; on overlapping (date, ticker) the main
+      source wins.
+    """
+    if prices_path is not None:
+        fp = pd.read_parquet(prices_path, columns=["date", "ticker", "high", "low", "close",
+                                                   "turnover", "deliv_pct", "close_unadj"])
+        fp = fp.rename(columns={"close_unadj": "close_raw"})
+    else:
+        fp = pd.read_parquet(eod_path, columns=["date", "ticker", "high", "low", "close",
+                                                "turnover", "deliv_pct"])
+        fp["close_raw"] = fp["close"]
+    fp["date"] = pd.to_datetime(fp["date"])
+    frames = []
+    for hp in hist_paths or []:
+        h = pd.read_parquet(hp)
+        h["date"] = pd.to_datetime(h["date"])
+        if "series" in h.columns:
+            h = h[h["series"].isin(["EQ", "BE"])]
+            h = h.sort_values(["date", "ticker", "series"]).drop_duplicates(["date", "ticker"])
+        h = h[["date", "ticker", "high", "low", "close", "turnover", "deliv_pct"]].copy()
+        h["close_raw"] = h["close"]
+        frames.append(h[h["date"] < fp["date"].min()])
+    eod = pd.concat(frames + [fp], ignore_index=True) if frames else fp
     if max_date is not None:
         eod = eod[eod["date"] <= max_date]
     assert not eod.duplicated(["date", "ticker"]).any(), "duplicate (date, ticker)"
@@ -149,7 +178,7 @@ def base_features(eod: pd.DataFrame) -> pd.DataFrame:
            .reset_index(level=0, drop=True).sort_index())
     df["atr_pct"] = atr / df["close"]
     df["med_turn_20"] = roll("turnover", 20, 10, "median")
-    df["universe"] = (df["close"] >= C.MIN_PRICE) & (df["med_turn_20"] >= C.MIN_MED_TURNOVER)
+    df["universe"] = (df["close_raw"] >= C.MIN_PRICE) & (df["med_turn_20"] >= C.MIN_MED_TURNOVER)
     sma200 = roll("close", 200, 120, "mean")
     df["dist_200dma"] = df["close"] / sma200 - 1.0
     absret = df["ret_1d"].abs()
@@ -318,14 +347,21 @@ def sector_features(uni: pd.DataFrame, ind_map: pd.DataFrame, smap: pd.DataFrame
     vals = merged["secidx_ret_20"].to_numpy()
     mapped = u["industry"].isin(set(smap["industry"])).to_numpy()
     n_default = 0
+    n_missing_mapped = 0
     if pol["secidx_unmapped"] == "default_index" and SECIDX_DEFAULT_INDEX in piv.columns:
         dflt = piv[SECIDX_DEFAULT_INDEX].reindex(u["date"]).to_numpy()
-        vals = np.where(mapped, vals, dflt)
+        # unmapped / Unclassified / ETF rows, and mapped rows whose index (and
+        # fallback) has no value that date (e.g. before the index existed),
+        # take the broad-market return: no NaN marks the classified names
+        miss = mapped & ~np.isfinite(vals) & np.isfinite(dflt)
+        n_missing_mapped = int(miss.sum())
+        vals = np.where(mapped & ~miss, vals, dflt)
         n_default = int((~mapped).sum())
     out["secidx_ret_20"] = vals
     info = {"group_rows": u["grp"].value_counts(dropna=False).to_dict(),
             "classified_row_share": float(u["industry"].notna().mean()),
             "policy": pol, "secidx_rows_on_default_index": n_default,
+            "secidx_mapped_rows_without_index_value_on_default": n_missing_mapped,
             "secidx_default_index": SECIDX_DEFAULT_INDEX}
     return out, info, u[["date", "ticker", "industry", "grp"]]
 
@@ -334,10 +370,36 @@ def sector_features(uni: pd.DataFrame, ind_map: pd.DataFrame, smap: pd.DataFrame
 # F3 F&O
 # ========================================================================= #
 
+def _rolling_z(w: pd.DataFrame, window: int, min_obs: int, chunk: int = 64) -> pd.DataFrame:
+    """(x_t - mean) / sd (ddof 1) over the trailing `window` rows incl. t, at
+    least `min_obs` finite values, computed window by window (numpy two-pass),
+    so a value depends only on its own window -- not on where the series
+    starts (pandas' online rolling variance carries ~1e-11 path dependence)."""
+    from numpy.lib.stride_tricks import sliding_window_view
+    x = w.to_numpy(dtype=float)
+    n, k = x.shape
+    out = np.full((n, k), np.nan)
+    pad = np.vstack([np.full((window - 1, k), np.nan), x])
+    for j0 in range(0, k, chunk):
+        blk = pad[:, j0:j0 + chunk]
+        win = sliding_window_view(blk, window, axis=0)       # (n, cols, window)
+        cnt = np.isfinite(win).sum(axis=2)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            s1 = np.nansum(win, axis=2)
+            mu = s1 / cnt
+            dev = win - mu[..., None]
+            var = np.nansum(dev * dev, axis=2) / (cnt - 1)
+            sd = np.sqrt(var)
+            z = (x[:, j0:j0 + chunk] - mu) / sd
+        ok = (cnt >= min_obs) & (sd > 0) & np.isfinite(x[:, j0:j0 + chunk])
+        out[:, j0:j0 + chunk] = np.where(ok, z, np.nan)
+    return pd.DataFrame(out, index=w.index, columns=w.columns)
+
+
 def fo_features(keys: pd.DataFrame, fo: pd.DataFrame, med_turn: pd.Series,
                 amap: dict) -> tuple[pd.DataFrame, dict]:
-    """keys: universe rows (date, ticker) with spot close in 'close' and
-    the EOD 20-session median turnover in med_turn (aligned to keys)."""
+    """keys: universe rows (date, ticker) with the raw spot close in
+    'close_raw' and the EOD 20-session median turnover in med_turn (aligned)."""
     f = fo.copy()
     f["date"] = f["date"].map(lambda t: amap.get(t, t))
     cal = pd.DatetimeIndex(sorted(f["date"].unique()))
@@ -347,9 +409,7 @@ def fo_features(keys: pd.DataFrame, fo: pd.DataFrame, med_turn: pd.Series,
     with np.errstate(divide="ignore", invalid="ignore"):
         chg5 = np.log(oi / oi.shift(5))
         chg20 = np.log(oi / oi.shift(20))
-    mu = oi.rolling(60, min_periods=40).mean()
-    sd = oi.rolling(60, min_periods=40).std()
-    z60 = ((oi - mu) / sd).where(sd > 0)
+    z60 = _rolling_z(oi, 60, 40)
     pcr_long = (fut["opt_put_oi"] / fut["opt_call_oi"]).where(fut["opt_call_oi"] > 0)
     pcr = (fut.assign(pcr=pcr_long).pivot(index="date", columns="ticker", values="pcr")
            .reindex(cal))
@@ -363,19 +423,27 @@ def fo_features(keys: pd.DataFrame, fo: pd.DataFrame, med_turn: pd.Series,
     long = pd.concat([stack(chg5, "fut_oi_chg_5"), stack(chg20, "fut_oi_chg_20"),
                       stack(z60, "fut_oi_z_60"), stack(pcr, "pcr_oi"),
                       stack(pcr_chg5, "pcr_chg_5")], axis=1)
-    lvl = fut.set_index(["date", "ticker"])[["basis_near", "opt_call_oi", "opt_put_oi"]]
+    lvl = fut.set_index(["date", "ticker"])[["fut_near_settle", "fut_near_days_to_expiry",
+                                             "opt_call_oi", "opt_put_oi"]]
     mi = pd.MultiIndex.from_frame(keys[["date", "ticker"]])
     out = pd.DataFrame(index=keys.index)
     in_fut = mi.isin(lvl.index)
     date_has_file = keys["date"].isin(set(cal)).to_numpy()
     out["fo_member"] = np.where(in_fut, 1.0, np.where(date_has_file, 0.0, np.nan))
     lv = lvl.reindex(mi)
-    out["fut_basis_near"] = lv["basis_near"].to_numpy()
+    # basis from the build's own raw close (same expression as the staging
+    # table's basis_near), so any export -- incl. a 10-year one -- is self-contained
+    spot = keys["close_raw"].to_numpy(dtype=float)
+    settle = lv["fut_near_settle"].to_numpy(dtype=float)
+    dte = lv["fut_near_days_to_expiry"].to_numpy(dtype=float)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        b = (settle / spot - 1.0) * 365.0 / dte
+    out["fut_basis_near"] = np.where((dte >= 2) & (spot > 0) & (settle > 0), b, np.nan)
     lg = long.reindex(mi)
     for c in ["fut_oi_chg_5", "fut_oi_chg_20", "fut_oi_z_60", "pcr_oi", "pcr_chg_5"]:
         out[c] = lg[c].to_numpy()
     opt_oi = lv[["opt_call_oi", "opt_put_oi"]].sum(axis=1, min_count=1).to_numpy()
-    notional = opt_oi * keys["close"].to_numpy()  # NaN when the stock has no options
+    notional = opt_oi * keys["close_raw"].to_numpy()  # raw close; NaN without options
     mt = med_turn.to_numpy()
     with np.errstate(divide="ignore", invalid="ignore"):
         out["opt_oi_to_turnover"] = np.where(mt > 0, notional / mt, np.nan)
@@ -414,9 +482,10 @@ def placebo_industry_map(seed: int = C.SEED) -> pd.DataFrame:
 def build(eod_path: Path = C.EOD_EXPORT, max_date: pd.Timestamp | None = None,
           staging: tuple | None = None, write: bool = True,
           start: str = C.FEATURE_START, policy: dict | None = None,
-          industry_map: pd.DataFrame | None = None) -> dict:
+          industry_map: pd.DataFrame | None = None, prices_path: Path | None = None,
+          hist_paths: list | None = None, suffix: str = "") -> dict:
     t0 = time.perf_counter()
-    eod = load_eod(eod_path, max_date)
+    eod = load_eod(eod_path, max_date, prices_path, hist_paths)
     base = base_features(eod)
     fo, idx, part = staging if staging is not None else load_staging(max_date)
     if max_date is not None:
@@ -433,22 +502,27 @@ def build(eod_path: Path = C.EOD_EXPORT, max_date: pd.Timestamp | None = None,
     uni = uni.sort_values(["date", "ticker"]).reset_index(drop=True)
     # aggregates exclude ETFs; ETF rows keep their own group
     f2, f2_info, groups = sector_features(uni, ind_map, smap, idx, etf, amap, policy)
-    f3, f3_info = fo_features(uni[["date", "ticker", "close"]], fo, uni["med_turn_20"], amap)
+    f3, f3_info = fo_features(uni[["date", "ticker", "close_raw"]], fo, uni["med_turn_20"], amap)
 
     extra = pd.concat([uni[["date", "ticker"]], f2[F2], f3[F3]], axis=1)
     ms_out = ms[ms["date"] >= pd.Timestamp(start)][["date"] + F1 + F4].reset_index(drop=True)
     res = {"extra": extra, "market_state": ms_out, "market_state_full": ms,
            "base_universe": uni, "groups": groups,
            "info": {"etf_source": etf_src, "n_etf_tickers": len(etf),
+                    "price_source": str(prices_path or eod_path),
+                    "price_basis": ("split/bonus-adjusted (features_prices export); floor and "
+                                    "option notional on close_unadj") if prices_path else
+                                   "raw equity_eod export (no adjustment)",
+                    "hist_sources": [str(x) for x in (hist_paths or [])],
                     "market_state": ms_info, "f2": f2_info, "f3": f3_info,
                     "rows": int(len(extra)), "tickers": int(extra["ticker"].nunique()),
                     "date_min": str(extra["date"].min().date()),
                     "date_max": str(extra["date"].max().date()),
                     "seconds": round(time.perf_counter() - t0, 1)}}
     if write:
-        extra.to_parquet(C.EXT / "extra_features.parquet", index=False)
-        ms_out.to_parquet(C.EXT / "market_state.parquet", index=False)
-        write_manifest(res["info"])
+        extra.to_parquet(C.EXT / f"extra_features{suffix}.parquet", index=False)
+        ms_out.to_parquet(C.EXT / f"market_state{suffix}.parquet", index=False)
+        write_manifest(res["info"], suffix)
     return res
 
 
@@ -472,7 +546,7 @@ DEFINITIONS = {
     "indn_rank_ret_126": "same for ret_126d",
     "indn_rank_deliv_sma": "same for deliv_pct_sma_20",
     "indn_rank_atr": "same for atr_pct",
-    "secidx_ret_20": "20-session return (index's own file calendar) of the sector index mapped to the stock's industry (sector_index_map.csv; Healthcare falls back to Nifty Pharma where the Healthcare index return is missing); names in unmapped industries, Unclassified names and ETFs take the Nifty 500 20-session return (leak-safe deviation from the brief's NaN: a NaN here would mark membership of today's index lists)",
+    "secidx_ret_20": "20-session return (index's own file calendar) of the sector index mapped to the stock's industry (sector_index_map.csv; Healthcare falls back to Nifty Pharma where the Healthcare index return is missing); names in unmapped industries, Unclassified names, ETFs, and mapped names on dates when their index has no value (e.g. before it existed) take the Nifty 500 20-session return (leak-safe deviation from the brief's NaN: a NaN here would mark membership of today's index lists)",
     "fo_member": "1 if the stock has a stock future in that day's F&O bhavcopy, 0 if the file exists and it has none, NaN if the day's file is missing",
     "fut_basis_near": "(near-month futures settle / spot close - 1) x 365 / calendar days to expiry; NaN if days to expiry < 2",
     "fut_oi_chg_5": "log(fut_oi_total_t / fut_oi_total 5 F&O sessions earlier); NaN unless a member at both dates",
@@ -488,14 +562,14 @@ DEFINITIONS = {
 }
 
 
-def write_manifest(info: dict) -> None:
+def write_manifest(info: dict, suffix: str = "") -> None:
     man = {
         "built_at": datetime.now().isoformat(timespec="seconds"),
         "builder": "ml/extdata/features.py (P3 external-data stream)",
         "families": FAMILIES,
         "n_features": {k: len(v) for k, v in FAMILIES.items()},
-        "files": {"extra_features": "ml/data_ext/extra_features.parquet (key date, ticker; F2 + F3)",
-                  "market_state": "ml/data_ext/market_state.parquet (key date; F1 + F4)"},
+        "files": {"extra_features": f"ml/data_ext/extra_features{suffix}.parquet (key date, ticker; F2 + F3)",
+                  "market_state": f"ml/data_ext/market_state{suffix}.parquet (key date; F1 + F4)"},
         "definitions": DEFINITIONS,
         "base_series": "mom_20, ret_63d, ret_126d, deliv_pct_sma_20, atr_pct recomputed from the EOD export with the ml/data.py / build_features definitions (unadjusted prices)",
         "universe": "close >= 10 and trailing 20-session median turnover >= 1e7 (min 10 obs), EOD-export EQ/BE rows, from 2022-10-03",
@@ -507,17 +581,33 @@ def write_manifest(info: dict) -> None:
         ],
         "info": info,
     }
-    (C.EXT / "extra_features_manifest.json").write_text(json.dumps(man, indent=1, default=str))
+    (C.EXT / f"extra_features{suffix}_manifest.json").write_text(
+        json.dumps(man, indent=1, default=str))
 
 
 def main() -> None:
+    """Build on any export, e.g. the 10-year dataset:
+    python3 -I ml/extdata/features.py --eod <export> [--prices <features_prices export>]
+        [--hist ml/data_hist/equity_eod_2016_2021.parquet] --start 2017-01-02 --suffix _10y
+    (the staging tables must hold the matching window: run_all.py --with-history)."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--eod", default=str(C.EOD_EXPORT))
+    ap.add_argument("--prices", default=None)
+    ap.add_argument("--hist", action="append", default=[])
+    ap.add_argument("--start", default=C.FEATURE_START)
+    ap.add_argument("--suffix", default="")
     ap.add_argument("--max-date", default=None)
+    ap.add_argument("--placebo", action="store_true")
     a = ap.parse_args()
     md = pd.Timestamp(a.max_date) if a.max_date else None
-    res = build(Path(a.eod), md)
+    kw = dict(prices_path=Path(a.prices) if a.prices else None,
+              hist_paths=[Path(x) for x in a.hist], start=a.start)
+    res = build(Path(a.eod), md, suffix=a.suffix, **kw)
     print(json.dumps(res["info"], indent=1, default=str))
+    if a.placebo:
+        plc = build(Path(a.eod), md, write=False, industry_map=placebo_industry_map(), **kw)
+        plc["extra"].to_parquet(C.EXT / f"extra_features_placebo_f2{a.suffix}.parquet",
+                                index=False)
 
 
 if __name__ == "__main__":

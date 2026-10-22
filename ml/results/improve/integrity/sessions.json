@@ -875,74 +875,1022 @@
    "2022-02-28": 1
   }
  },
- "nov_2021": {
-  "file_04112021_byte_identical_to_03112021": true,
-  "date1_in_file_03112021": [
-   "03-Nov-2021"
-  ],
-  "date1_in_file_04112021": [
-   "03-Nov-2021"
-  ],
-  "date1_in_file_05112021": [
-   "04-Nov-2021"
-  ],
-  "PR051121_http": 404,
-  "PR041121_on_disk": true,
-  "stored_2021-11-05_vs_file_05112021": {
-   "rows_a": 1794,
-   "rows_b": 1794,
-   "only_a": 0,
-   "only_b": 0,
-   "prev_close": {
-    "max_abs_diff": 0.0,
-    "nan_mismatch": 0
-   },
-   "open": {
-    "max_abs_diff": 0.0,
-    "nan_mismatch": 0
-   },
-   "high": {
-    "max_abs_diff": 0.0,
-    "nan_mismatch": 0
-   },
-   "low": {
-    "max_abs_diff": 0.0,
-    "nan_mismatch": 0
-   },
-   "close": {
-    "max_abs_diff": 0.0,
-    "nan_mismatch": 0
-   },
-   "volume": {
-    "max_abs_diff": 0.0,
-    "nan_mismatch": 0
-   },
-   "turnover": {
-    "max_abs_diff": 0.0,
-    "nan_mismatch": 0
-   },
-   "deliv_qty": {
-    "max_abs_diff": 0.0,
-    "nan_mismatch": 0
-   }
+ "calendar_audit": {
+  "days": 1842,
+  "pr_present": 1251,
+  "pr_absent": 591,
+  "pr_misfiled_by_archive": {
+   "2024-04-06": "2024-06-04"
   },
-  "stored_has_2021-11-04": false,
-  "enrichment_file": "cm04NOV2021bhav.csv.zip",
-  "rows_redated": 1874,
-  "rows_redated_by_series": {
-   "EQ": 1665,
-   "BE": 129,
-   "SM": 44,
-   "BZ": 34,
-   "ST": 2
+  "pr_unknown": [],
+  "stored_dates_without_pr_bundle": [
+   "2021-11-05",
+   "2023-06-29",
+   "2024-01-22"
+  ],
+  "pr_bundle_dates_not_stored": [
+   "2021-11-04",
+   "2023-06-28",
+   "2023-11-12",
+   "2024-01-20",
+   "2024-03-02",
+   "2024-05-18",
+   "2025-02-01",
+   "2025-10-21",
+   "2026-02-01"
+  ],
+  "weekend_sessions": [
+   "2023-11-12",
+   "2024-01-20",
+   "2024-03-02",
+   "2024-05-18",
+   "2025-02-01",
+   "2026-02-01"
+  ],
+  "weekday_closures": [
+   "2021-10-15",
+   "2021-11-05",
+   "2021-11-19",
+   "2022-01-26",
+   "2022-03-01",
+   "2022-03-18",
+   "2022-04-14",
+   "2022-04-15",
+   "2022-05-03",
+   "2022-08-09",
+   "2022-08-15",
+   "2022-08-31",
+   "2022-10-05",
+   "2022-10-26",
+   "2022-11-08",
+   "2023-01-26",
+   "2023-03-07",
+   "2023-03-30",
+   "2023-04-04",
+   "2023-04-07",
+   "2023-04-14",
+   "2023-05-01",
+   "2023-06-29",
+   "2023-08-15",
+   "2023-09-19",
+   "2023-10-02",
+   "2023-10-24",
+   "2023-11-14",
+   "2023-11-27",
+   "2023-12-25",
+   "2024-01-22",
+   "2024-01-26",
+   "2024-03-08",
+   "2024-03-25",
+   "2024-03-29",
+   "2024-04-11",
+   "2024-04-17",
+   "2024-05-01",
+   "2024-05-20",
+   "2024-06-17",
+   "2024-07-17",
+   "2024-08-15",
+   "2024-10-02",
+   "2024-11-15",
+   "2024-11-20",
+   "2024-12-25",
+   "2025-02-26",
+   "2025-03-14",
+   "2025-03-31",
+   "2025-04-10",
+   "2025-04-14",
+   "2025-04-18",
+   "2025-05-01",
+   "2025-08-15",
+   "2025-08-27",
+   "2025-10-02",
+   "2025-10-22",
+   "2025-11-05",
+   "2025-12-25",
+   "2026-01-15",
+   "2026-01-26",
+   "2026-03-03",
+   "2026-03-26",
+   "2026-03-31",
+   "2026-04-03",
+   "2026-04-14",
+   "2026-05-01",
+   "2026-05-28",
+   "2026-06-26",
+   "2026-09-14",
+   "2026-10-02"
+  ],
+  "holiday_list_vs_closures": {
+   "closures_not_in_list": [],
+   "listed_but_session": []
+  },
+  "special_sessions_in_window": {
+   "2021-11-04": "present",
+   "2022-10-24": "present",
+   "2023-11-12": "present",
+   "2024-01-20": "present",
+   "2024-03-02": "present",
+   "2024-05-18": "present",
+   "2024-11-01": "present",
+   "2025-02-01": "present",
+   "2025-10-21": "present",
+   "2026-02-01": "present"
+  },
+  "trading_days_vs_pr_calendar": {
+   "trading_days_without_pr": [],
+   "pr_sessions_not_in_trading_days": []
+  },
+  "actions": [
+   {
+    "stored_date": "2021-11-05",
+    "file": "sec_bhavdata_full_05112021.csv",
+    "date1": [
+     "04-Nov-2021"
+    ],
+    "true_session": "2021-11-04",
+    "session": "2021-11-04",
+    "weekday": "Thursday",
+    "file_used": "sec_bhavdata_full_05112021.csv",
+    "own_file_of_true_date": {
+     "file": "sec_bhavdata_full_04112021.csv",
+     "http": 200,
+     "date1": [
+      "03-Nov-2021"
+     ],
+     "byte_identical_to_used_file": false
+    },
+    "rows": 1874,
+    "rows_eq_be": 1794,
+    "by_series": {
+     "EQ": 1665,
+     "BE": 129,
+     "SM": 44,
+     "BZ": 34,
+     "ST": 2
+    },
+    "enrichment_file": "cm04NOV2021bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "stored_copy": {
+     "stored_date": "2021-11-05",
+     "identical_to_file": true,
+     "compare": {
+      "rows_a": 1794,
+      "rows_b": 1794,
+      "only_a": 0,
+      "only_b": 0,
+      "prev_close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "open": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "high": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "low": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "volume": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "turnover": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "deliv_qty": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      }
+     }
+    },
+    "action": "re-date stored 2021-11-05 -> 2021-11-04"
+   },
+   {
+    "stored_date": "2023-06-29",
+    "file": "sec_bhavdata_full_29062023.csv",
+    "date1": [
+     "28-Jun-2023"
+    ],
+    "true_session": "2023-06-28",
+    "session": "2023-06-28",
+    "weekday": "Wednesday",
+    "file_used": "sec_bhavdata_full_29062023.csv",
+    "own_file_of_true_date": {
+     "file": "sec_bhavdata_full_28062023.csv",
+     "http": 200,
+     "date1": [
+      "28-Jun-2023"
+     ],
+     "byte_identical_to_used_file": true
+    },
+    "rows": 2153,
+    "rows_eq_be": 1999,
+    "by_series": {
+     "EQ": 1773,
+     "BE": 226,
+     "SM": 127,
+     "BZ": 22,
+     "ST": 5
+    },
+    "enrichment_file": "cm28JUN2023bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "stored_copy": {
+     "stored_date": "2023-06-29",
+     "identical_to_file": true,
+     "compare": {
+      "rows_a": 1999,
+      "rows_b": 1999,
+      "only_a": 0,
+      "only_b": 0,
+      "prev_close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "open": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "high": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "low": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "volume": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "turnover": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "deliv_qty": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      }
+     }
+    },
+    "action": "re-date stored 2023-06-29 -> 2023-06-28"
+   },
+   {
+    "stored_date": "2024-01-22",
+    "file": "sec_bhavdata_full_22012024.csv",
+    "date1": [
+     "20-Jan-2024"
+    ],
+    "true_session": "2024-01-20",
+    "session": "2024-01-20",
+    "weekday": "Saturday",
+    "file_used": "sec_bhavdata_full_22012024.csv",
+    "own_file_of_true_date": {
+     "file": "sec_bhavdata_full_20012024.csv",
+     "http": 200,
+     "date1": [
+      "20-Jan-2024"
+     ],
+     "byte_identical_to_used_file": true
+    },
+    "rows": 2341,
+    "rows_eq_be": 2098,
+    "by_series": {
+     "EQ": 1792,
+     "BE": 306,
+     "SM": 204,
+     "ST": 23,
+     "BZ": 16
+    },
+    "enrichment_file": "cm20JAN2024bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "stored_copy": {
+     "stored_date": "2024-01-22",
+     "identical_to_file": true,
+     "compare": {
+      "rows_a": 2098,
+      "rows_b": 2098,
+      "only_a": 0,
+      "only_b": 0,
+      "prev_close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "open": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "high": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "low": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "close": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "volume": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "turnover": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      },
+      "deliv_qty": {
+       "max_abs_diff": 0.0,
+       "nan_mismatch": 0
+      }
+     }
+    },
+    "action": "re-date stored 2024-01-22 -> 2024-01-20"
+   },
+   {
+    "session": "2023-11-12",
+    "weekday": "Sunday",
+    "files_tried": [
+     {
+      "file_date": "2023-11-12",
+      "http": 200,
+      "date1": [
+       "12-Nov-2023"
+      ]
+     }
+    ],
+    "file_used": "sec_bhavdata_full_12112023.csv",
+    "rows": 2279,
+    "rows_eq_be": 2070,
+    "by_series": {
+     "EQ": 1805,
+     "BE": 265,
+     "SM": 169,
+     "BZ": 24,
+     "ST": 16
+    },
+    "enrichment_file": "cm12NOV2023bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "echo_of_prev_stored": false,
+    "found_by_continuity_scan": true,
+    "action": "add session"
+   },
+   {
+    "session": "2024-03-02",
+    "weekday": "Saturday",
+    "files_tried": [
+     {
+      "file_date": "2024-03-02",
+      "http": 200,
+      "date1": [
+       "02-Mar-2024"
+      ]
+     }
+    ],
+    "file_used": "sec_bhavdata_full_02032024.csv",
+    "rows": 2307,
+    "rows_eq_be": 2107,
+    "by_series": {
+     "EQ": 1783,
+     "BE": 324,
+     "SM": 158,
+     "BZ": 22,
+     "ST": 20
+    },
+    "enrichment_file": "cm02MAR2024bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "echo_of_prev_stored": false,
+    "found_by_continuity_scan": true,
+    "action": "add session"
+   },
+   {
+    "session": "2024-05-18",
+    "weekday": "Saturday",
+    "files_tried": [
+     {
+      "file_date": "2024-05-18",
+      "http": 200,
+      "date1": [
+       "18-May-2024"
+      ]
+     }
+    ],
+    "file_used": "sec_bhavdata_full_18052024.csv",
+    "rows": 2374,
+    "rows_eq_be": 2137,
+    "by_series": {
+     "EQ": 1892,
+     "BE": 245,
+     "SM": 202,
+     "BZ": 18,
+     "ST": 17
+    },
+    "enrichment_file": "cm18MAY2024bhav.csv.zip",
+    "isin_filled_pct": 100.0,
+    "echo_of_prev_stored": false,
+    "found_by_continuity_scan": true,
+    "action": "add session"
+   },
+   {
+    "session": "2025-02-01",
+    "weekday": "Saturday",
+    "files_tried": [
+     {
+      "file_date": "2025-02-01",
+      "http": 200,
+      "date1": [
+       "01-Feb-2025"
+      ]
+     }
+    ],
+    "file_used": "sec_bhavdata_full_01022025.csv",
+    "rows": 2635,
+    "rows_eq_be": 2262,
+    "by_series": {
+     "EQ": 2007,
+     "BE": 255,
+     "SM": 194,
+     "ST": 151,
+     "BZ": 28
+    },
+    "enrichment_file": "BhavCopy_NSE_CM_0_0_0_20250201_F_0000.csv.zip (parse failed)",
+    "isin_filled_pct": 0.0,
+    "echo_of_prev_stored": false,
+    "found_by_continuity_scan": true,
+    "action": "add session"
+   },
+   {
+    "session": "2025-10-21",
+    "weekday": "Tuesday",
+    "files_tried": [
+     {
+      "file_date": "2025-10-21",
+      "http": 200,
+      "date1": [
+       "21-Oct-2025"
+      ]
+     }
+    ],
+    "file_used": "sec_bhavdata_full_21102025.csv",
+    "rows": 2843,
+    "rows_eq_be": 2430,
+    "by_series": {
+     "EQ": 2291,
+     "SM": 324,
+     "BE": 139,
+     "ST": 59,
+     "BZ": 30
+    },
+    "enrichment_file": "BhavCopy_NSE_CM_0_0_0_20251021_F_0000.csv.zip (parse failed)",
+    "isin_filled_pct": 0.0,
+    "echo_of_prev_stored": false,
+    "found_by_continuity_scan": true,
+    "action": "add session"
+   },
+   {
+    "session": "2026-02-01",
+    "weekday": "Sunday",
+    "files_tried": [
+     {
+      "file_date": "2026-02-01",
+      "http": 200,
+      "date1": [
+       "01-Feb-2026"
+      ]
+     }
+    ],
+    "file_used": "sec_bhavdata_full_01022026.csv",
+    "rows": 2955,
+    "rows_eq_be": 2507,
+    "by_series": {
+     "EQ": 2411,
+     "SM": 358,
+     "BE": 96,
+     "ST": 56,
+     "BZ": 34
+    },
+    "enrichment_file": "BhavCopy_NSE_CM_0_0_0_20260201_F_0000.csv.zip (parse failed)",
+    "isin_filled_pct": 0.0,
+    "echo_of_prev_stored": false,
+    "found_by_continuity_scan": true,
+    "action": "add session"
+   }
+  ],
+  "stored_without_pr_unresolved": []
+ },
+ "redated_sessions": {
+  "2021-11-04": "2021-11-05",
+  "2023-06-28": "2023-06-29",
+  "2024-01-20": "2024-01-22"
+ },
+ "calendar_vs_continuity": {
+  "added_by_calendar": [
+   "2023-11-12",
+   "2024-03-02",
+   "2024-05-18",
+   "2025-02-01",
+   "2025-10-21",
+   "2026-02-01"
+  ],
+  "added_by_continuity": [
+   "2023-11-12",
+   "2024-03-02",
+   "2024-05-18",
+   "2025-02-01",
+   "2025-10-21",
+   "2026-02-01"
+  ],
+  "identical": true
+ },
+ "coverage": {
+  "rule": "rebuild a session when >= 10 traded EQ/BE securities of the PR bundle's pd file are missing from the store; rows = CM bhavcopy rows of series BE/BZ absent from that day's security-wise file (delivery empty, as for every BE/BZ row of the store); the EQ/SM call-auction securities the security-wise file omits on every session are not added",
+  "not_rebuilt_rows": 108,
+  "sessions": [
+   {
+    "date": "2023-06-19",
+    "sec_rows": 2191,
+    "stored_eq_be": 2024,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 6
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-06-26",
+    "sec_rows": 2168,
+    "stored_eq_be": 2010,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 17
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-03",
+    "sec_rows": 2187,
+    "stored_eq_be": 2015,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 19
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-10",
+    "sec_rows": 2180,
+    "stored_eq_be": 2004,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 26
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-17",
+    "sec_rows": 2184,
+    "stored_eq_be": 2007,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 38,
+     "BZ": 1
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-24",
+    "sec_rows": 2180,
+    "stored_eq_be": 2007,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 38,
+     "BZ": 1
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-25",
+    "sec_rows": 2138,
+    "stored_eq_be": 1982,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 42,
+     "BZ": 1
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-26",
+    "sec_rows": 2135,
+    "stored_eq_be": 1980,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 44,
+     "BZ": 2
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-27",
+    "sec_rows": 2126,
+    "stored_eq_be": 1978,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 46,
+     "BZ": 2
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-28",
+    "sec_rows": 2132,
+    "stored_eq_be": 1976,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 48,
+     "BZ": 2
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-07-31",
+    "sec_rows": 2172,
+    "stored_eq_be": 1999,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 49,
+     "BZ": 2
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-01",
+    "sec_rows": 2145,
+    "stored_eq_be": 1980,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 53,
+     "BZ": 2
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-02",
+    "sec_rows": 2144,
+    "stored_eq_be": 1977,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 59,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 3
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-03",
+    "sec_rows": 2131,
+    "stored_eq_be": 1971,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 63,
+     "BZ": 4
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 3
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-04",
+    "sec_rows": 2131,
+    "stored_eq_be": 1966,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 67,
+     "BZ": 4
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-07",
+    "sec_rows": 2163,
+    "stored_eq_be": 1988,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 66,
+     "BZ": 4
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-08",
+    "sec_rows": 2134,
+    "stored_eq_be": 1967,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 69,
+     "BZ": 4
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-09",
+    "sec_rows": 2137,
+    "stored_eq_be": 1962,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 76,
+     "BZ": 4
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 3
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-10",
+    "sec_rows": 2125,
+    "stored_eq_be": 1960,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 79,
+     "BZ": 4
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-11",
+    "sec_rows": 2123,
+    "stored_eq_be": 1955,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 81,
+     "BZ": 4
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-14",
+    "sec_rows": 2153,
+    "stored_eq_be": 1984,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 70,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-16",
+    "sec_rows": 2132,
+    "stored_eq_be": 1965,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 73,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-17",
+    "sec_rows": 2124,
+    "stored_eq_be": 1958,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 76,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-18",
+    "sec_rows": 2133,
+    "stored_eq_be": 1959,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 79,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 3
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-21",
+    "sec_rows": 2170,
+    "stored_eq_be": 1980,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 76,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-22",
+    "sec_rows": 2130,
+    "stored_eq_be": 1960,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 79,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-23",
+    "sec_rows": 2130,
+    "stored_eq_be": 1956,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 84,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   },
+   {
+    "date": "2023-08-24",
+    "sec_rows": 2118,
+    "stored_eq_be": 1951,
+    "store_equals_sec_file_eq_be": true,
+    "rebuilt_rows_by_series": {
+     "BE": 88,
+     "BZ": 3
+    },
+    "not_rebuilt_rows_by_series": {
+     "EQ": 4
+    },
+    "cm_vs_sec_on_common_rows_identical": true,
+    "used_mto": true
+   }
+  ],
+  "n_sessions": 28,
+  "rows_rebuilt": 1679,
+  "audit_before": {
+   "sessions": 1242,
+   "sessions_with_any_missing": 470,
+   "sessions_ge_rule": 29,
+   "missing_total": 4049,
+   "missing_close_ge_10_total": 1416,
+   "stored_not_in_pd_total": 5
+  },
+  "audit_after_preview": {
+   "sessions": 1251,
+   "sessions_with_any_missing": 471,
+   "sessions_ge_rule": 0,
+   "max_missing": 9,
+   "missing_total": 2208,
+   "missing_close_ge_10_total": 105
   }
  },
  "upsert_rows": {
-  "total": 17542,
+  "total": 23715,
   "by_date": {
    "2021-11-04": 1874,
    "2022-03-07": 275,
+   "2023-06-19": 6,
+   "2023-06-26": 17,
+   "2023-06-28": 2153,
+   "2023-07-03": 19,
+   "2023-07-10": 26,
+   "2023-07-17": 39,
+   "2023-07-24": 39,
+   "2023-07-25": 43,
+   "2023-07-26": 46,
+   "2023-07-27": 48,
+   "2023-07-28": 50,
+   "2023-07-31": 51,
+   "2023-08-01": 55,
+   "2023-08-02": 62,
+   "2023-08-03": 67,
+   "2023-08-04": 71,
+   "2023-08-07": 70,
+   "2023-08-08": 73,
+   "2023-08-09": 80,
+   "2023-08-10": 83,
+   "2023-08-11": 85,
+   "2023-08-14": 73,
+   "2023-08-16": 76,
+   "2023-08-17": 79,
+   "2023-08-18": 82,
+   "2023-08-21": 79,
+   "2023-08-22": 82,
+   "2023-08-23": 87,
+   "2023-08-24": 91,
    "2023-11-12": 2279,
+   "2024-01-20": 2341,
    "2024-03-02": 2307,
    "2024-05-18": 2374,
    "2025-02-01": 2635,
@@ -951,67 +1899,48 @@
   }
  },
  "delete_dates": [
-  "2021-11-05"
+  "2021-11-05",
+  "2023-06-29",
+  "2024-01-22"
  ],
  "preview_after": {
-  "max_share": 0.04356338717572198,
+  "max_share": 0.0014985014985014985,
   "dates_over_5pct": [],
   "top10": [
-   {
-    "date": "2023-08-25",
-    "n_with_prev": 2043,
-    "n_mismatch": 89,
-    "n_rows": 2044,
-    "share": 0.04356338717572198
-   },
-   {
-    "date": "2023-08-14",
-    "n_with_prev": 1983,
-    "n_mismatch": 12,
-    "n_rows": 1984,
-    "share": 0.006051437216338881
-   },
-   {
-    "date": "2023-07-24",
-    "n_with_prev": 2007,
-    "n_mismatch": 10,
-    "n_rows": 2007,
-    "share": 0.004982561036372696
-   },
-   {
-    "date": "2023-08-21",
-    "n_with_prev": 1976,
-    "n_mismatch": 6,
-    "n_rows": 1980,
-    "share": 0.003036437246963563
-   },
-   {
-    "date": "2023-08-07",
-    "n_with_prev": 1985,
-    "n_mismatch": 5,
-    "n_rows": 1988,
-    "share": 0.0025188916876574307
-   },
-   {
-    "date": "2023-07-10",
-    "n_with_prev": 2002,
-    "n_mismatch": 4,
-    "n_rows": 2004,
-    "share": 0.001998001998001998
-   },
-   {
-    "date": "2023-07-31",
-    "n_with_prev": 1995,
-    "n_mismatch": 3,
-    "n_rows": 1999,
-    "share": 0.0015037593984962407
-   },
    {
     "date": "2022-12-26",
     "n_with_prev": 2002,
     "n_mismatch": 3,
     "n_rows": 2002,
     "share": 0.0014985014985014985
+   },
+   {
+    "date": "2023-06-26",
+    "n_with_prev": 2027,
+    "n_mismatch": 3,
+    "n_rows": 2027,
+    "share": 0.0014800197335964479
+   },
+   {
+    "date": "2023-06-19",
+    "n_with_prev": 2028,
+    "n_mismatch": 3,
+    "n_rows": 2030,
+    "share": 0.0014792899408284023
+   },
+   {
+    "date": "2023-07-10",
+    "n_with_prev": 2028,
+    "n_mismatch": 3,
+    "n_rows": 2030,
+    "share": 0.0014792899408284023
+   },
+   {
+    "date": "2023-07-03",
+    "n_with_prev": 2032,
+    "n_mismatch": 3,
+    "n_rows": 2034,
+    "share": 0.0014763779527559055
    },
    {
     "date": "2022-01-10",
@@ -1026,8 +1955,58 @@
     "n_mismatch": 2,
     "n_rows": 1873,
     "share": 0.0010678056593699946
+   },
+   {
+    "date": "2022-03-21",
+    "n_with_prev": 1898,
+    "n_mismatch": 2,
+    "n_rows": 1898,
+    "share": 0.001053740779768177
+   },
+   {
+    "date": "2023-08-25",
+    "n_with_prev": 2044,
+    "n_mismatch": 2,
+    "n_rows": 2044,
+    "share": 0.0009784735812133072
+   },
+   {
+    "date": "2023-08-28",
+    "n_with_prev": 2061,
+    "n_mismatch": 2,
+    "n_rows": 2063,
+    "share": 0.0009704027171276079
    }
   ]
  },
- "seconds": 46.9
+ "store_vs_pr_audit_before": {
+  "sessions": 1245,
+  "with_pd": 1242,
+  "absent_or_unreadable": [
+   {
+    "date": "2021-11-05",
+    "pr": "absent or misfiled"
+   },
+   {
+    "date": "2023-06-29",
+    "pr": "absent or misfiled"
+   },
+   {
+    "date": "2024-01-22",
+    "pr": "absent or misfiled"
+   }
+  ],
+  "share_equal_min": 1.0,
+  "share_equal_median": 1.0,
+  "sessions_below_0.99": []
+ },
+ "store_vs_pr_audit_after_preview": {
+  "sessions": 1251,
+  "with_pd": 1251,
+  "absent_or_unreadable": [],
+  "share_equal_min": 1.0,
+  "share_equal_median": 1.0,
+  "sessions_below_0.99": []
+ },
+ "seconds": 214.8
 }

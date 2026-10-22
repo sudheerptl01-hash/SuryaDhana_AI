@@ -39,7 +39,7 @@ import pandas as pd  # noqa: E402
 
 from ml.build_5y import FOLDS  # noqa: E402
 from ml.data import ID_COLS, LABEL_COLS, build_dataset  # noqa: E402
-from ml.integrity.common import DATA_EXT, DATA_V1, DATA_V2, DB_PATH, LOCK_FILE, OUT, log, wjson  # noqa: E402
+from ml.integrity.common import CACHE, DATA_EXT, DATA_V1, DATA_V2, DB_PATH, LOCK_FILE, OUT, log, wjson  # noqa: E402
 from ml.scale5y_nested import cs_z_log, suff_per_ticker  # noqa: E402
 
 SUFF = ["deliv_value_share_20", "amihud_20"]
@@ -141,17 +141,33 @@ def export_v2() -> dict:
     """Parquet exports of the corrected store with the v1 export schemas (ml/data_ext/)."""
     t0 = time.time()
     con = duckdb.connect(str(DB_PATH), read_only=True)
-    eod = con.execute("SELECT date, ticker, series, prev_close, open, high, low, last, close, vwap, volume, "
-                      "turnover, trades, deliv_qty, deliv_pct FROM equity_eod WHERE series IN ('EQ','BE') "
-                      "ORDER BY ticker, date").arrow()
-    fp = con.execute("SELECT date, ticker, open, high, low, close, volume, turnover, deliv_pct, open_unadj, "
-                     "close_unadj, adj_factor FROM equity_features ORDER BY ticker, date").arrow()
+    def table(sql: str):
+        r = con.execute(sql).arrow()
+        return r.read_all() if hasattr(r, "read_all") else r     # duckdb >= 1.4 returns a reader:
+                                                                   # read it before the next query
+    eod = table("SELECT date, ticker, series, prev_close, open, high, low, last, close, vwap, volume, "
+                "turnover, trades, deliv_qty, deliv_pct FROM equity_eod WHERE series IN ('EQ','BE') "
+                "ORDER BY ticker, date")
+    fp = table("SELECT date, ticker, open, high, low, close, volume, turnover, deliv_pct, open_unadj, "
+               "close_unadj FROM equity_features ORDER BY ticker, date")
     con.close()
     import pyarrow.parquet as pq
-    pq.write_table(eod, DATA_EXT / "eod_export_v2.parquet")
-    pq.write_table(fp, DATA_EXT / "features_prices_export_v2.parquet")
-    return {"eod_export_v2_rows": eod.num_rows, "features_prices_export_v2_rows": fp.num_rows,
-            "seconds": round(time.time() - t0, 1)}
+    if eod.num_rows == 0 or fp.num_rows == 0:
+        raise SystemExit("empty export")
+    CACHE.mkdir(parents=True, exist_ok=True)
+    out = {}
+    for name, tab in (("eod_export_v2.parquet", eod), ("features_prices_export_v2.parquet", fp)):
+        v1 = pq.read_schema(CACHE / name.replace("_v2", "_v1"))
+        if tab.schema.names != v1.names:
+            raise SystemExit(f"{name}: columns {tab.schema.names} differ from v1 {v1.names}")
+        if tab.schema != v1:                      # same columns; align types to the v1 export
+            tab = tab.cast(v1)
+        tmp = CACHE / (name + ".tmp")
+        pq.write_table(tab, tmp)
+        tmp.replace(CACHE / name)
+        out[name] = {"rows": tab.num_rows, "columns": tab.schema.names, "path": str(CACHE / name)}
+    out["seconds"] = round(time.time() - t0, 1)
+    return out
 
 
 def main(argv=None) -> int:
