@@ -24,8 +24,17 @@ Inputs (read-only; nothing is retrained and no prediction parquet is opened):
   A file that is absent, unreadable, partial (fewer than 43 folds) or from a smoke run
   (bootstrap B < 1000) renders a muted "pending" card naming the file; the build never fails on them.
 
+Improvement-phase outputs (report §13; narrative ml/PROGRAM_REPORT.md §13, results of record
+ml/results/improve/IMPROVEMENT_RESULTS.md), consumed when present, each with its own pending card:
+  ml/results/improve/integrity/{integrity,integrity_10y}.json, books/{books,monthly_series}.json,
+  hygiene/{pbo,delivery_durability,uniqueness}.json, ab/v1/compare.json, ab/v2/{compare,books,gates}.json,
+  ab/10y/{compare,books,gates}.json (the ten-year re-runs; a compare.json with fewer folds than the
+  ten-year dataset is treated as partial), extdata/extdata.json, history/history.json.
+
 Run:  cd /home/user/SuryaDhana_AI && python3 -m ml.make_program_report
-      [--pending-dir DIR] [--out FILE]   (QA only: read the 5-year outputs from DIR / write FILE)
+      [--pending-dir DIR] [--improve-dir DIR] [--out FILE]
+      (QA only: read the 5-year outputs from DIR / the improvement outputs from a tree laid out like
+      ml/results/improve/ / write FILE)
 Deterministic: identical inputs give byte-identical HTML (no clock, fixed orderings).
 """
 from __future__ import annotations
@@ -36,6 +45,7 @@ import html
 import json
 import math
 import re
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -111,6 +121,11 @@ MD_ONLY_SOURCES = [
     ("Naive fully-invested flip to " + MINUS + "5.3%; realistic costs 15 to 25 bps; about 200 F&O names",
      "ml/results/strategy/STRATEGY.md"),
     ("140 to 230 training dates; 7 to 11 independent cross-sections", "ml/results/sota/SOTA_MODELS.md"),
+    ("Improvement phase: what each added session was (Budget, Saturday special, Muhurat; the dates come from "
+     "integrity.json), the new neutrality alert band ±0.05", "ml/PROGRAM_REPORT.md §13.1, §13.7"),
+    ("Stage-0 criteria read on the ten-year folds: interval excluding 0.50 over at least 36 folds, rank IC at least "
+     "0.03 with Newey-West t at least 3, mean AUC above 0.50 without the best six-month run and the worst month",
+     "ml/GOALS.md"),
 ]
 
 D = SimpleNamespace()   # closed artifacts and derived data
