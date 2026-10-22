@@ -81,6 +81,8 @@ CONFIGS = {
     "baseline_mom":       dict(kind="lr_mom", feats=["cs_rank_mom_20"], preprocess="scaled", family="baseline"),
     "ab1_mkt":            dict(kind="lgbm", extra=["F1"], preprocess="raw", family="trees"),
     "ab2_sector":         dict(kind="lgbm", extra=["F2"], preprocess="raw", family="trees"),
+    # AB2P (plan amendment A3): same F2 columns from the permuted-industry placebo parquet (pass it as --extra)
+    "ab2p_sector_placebo": dict(kind="lgbm", extra=["F2"], preprocess="raw", family="trees", placebo=True),
     "ab3_fo":             dict(kind="lgbm", extra=["F3"], preprocess="raw", family="trees"),
     "ab4_flows":          dict(kind="lgbm", extra=["F4"], preprocess="raw", family="trees"),
     "ab5_all":            dict(kind="lgbm", extra=["F1", "F2", "F3", "F4"], preprocess="raw", family="trees"),
@@ -94,7 +96,7 @@ CONFIGS = {
     # AB0 (plan amendment A1): the frozen five-year all-50-feature LightGBM, copied from ml/results/scale5y/ for comparison only
     "all51":              dict(kind="reference", extra=[], preprocess="raw", family="trees"),
 }
-VARIANTS = ["all51", "ab1_mkt", "ab2_sector", "ab3_fo", "ab4_flows", "ab5_all", "ab6_ensemble_all52", "ab7_subsample5", "ab8_uniqueness_w",
+VARIANTS = ["all51", "ab1_mkt", "ab2_sector", "ab2p_sector_placebo", "ab3_fo", "ab4_flows", "ab5_all", "ab6_ensemble_all52", "ab7_subsample5", "ab8_uniqueness_w",
             "lr_l2", "baseline_mom", "ab6_lambdarank52", "ab6_catboost52"]
 
 T0 = time.time()
