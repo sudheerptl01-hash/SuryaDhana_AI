@@ -980,6 +980,11 @@ def render_md(res: dict) -> str:
              f"`cm_vs_pd_disagreements.csv`).")
     L.append("- Periodic call-auction rows (Pd market G) are kept; drop them with "
              "`call_auction_rows_2016_2021.csv` if the store's sec_bhavdata coverage must be matched exactly.")
+    L.append("- Corporate actions over this window: P1's parser reads the PR bundles directly, e.g. "
+             "`python3 -I ml/integrity/corporate_actions.py --bundle-dirs ml/data_raw/hist/pr --eod "
+             "ml/data_hist/equity_eod_2016_2021.parquet ...` (its folder scan is top level only, so the "
+             "`recheck/` copy is ignored, and its misfile guard skips PR020118.zip as this stream does); "
+             "`bc_records_2016_2021.csv` holds the same Bc rows as a flat file.")
     L.append("")
     L.append("Upsert recipe (lead, inside P1's write window):")
     L.append("")

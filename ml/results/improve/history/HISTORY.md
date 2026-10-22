@@ -1,6 +1,6 @@
 # P4 history: NSE cash-market EOD 2016-10-03 to 2021-09-30
 
-Generated 2026-10-22T14:31:32+00:00 from `ml/results/improve/history/history.json` (every number below is quoted from it). Status: final.
+Generated 2026-10-22T14:34:22+00:00 from `ml/results/improve/history/history.json` (every number below is quoted from it). Status: final.
 
 ## What was built
 
@@ -123,6 +123,7 @@ Upsert dry run (`DuckDBStore.upsert` into an in-memory DuckDB, not the store): c
 - Delivery is NaN on BE rows in both sources; features that need delivery see the same gap pattern on both sides of the splice.
 - Delivery is also NaN on 2,485 rows of 2019-06-17 and 2019-06-18, where the MTO quantities are not NSE-only (see Parser above). 2017-07-10 high/low come from the CM file and differ from the PR bundle's Pd and Pr files on 161 values (listed in `cm_vs_pd_disagreements.csv`).
 - Periodic call-auction rows (Pd market G) are kept; drop them with `call_auction_rows_2016_2021.csv` if the store's sec_bhavdata coverage must be matched exactly.
+- Corporate actions over this window: P1's parser reads the PR bundles directly, e.g. `python3 -I ml/integrity/corporate_actions.py --bundle-dirs ml/data_raw/hist/pr --eod ml/data_hist/equity_eod_2016_2021.parquet ...` (its folder scan is top level only, so the `recheck/` copy is ignored, and its misfile guard skips PR020118.zip as this stream does); `bc_records_2016_2021.csv` holds the same Bc rows as a flat file.
 
 Upsert recipe (lead, inside P1's write window):
 
