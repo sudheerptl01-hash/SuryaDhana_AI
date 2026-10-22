@@ -79,6 +79,24 @@ def build() -> dict:
                     "dataset": "ml/data_10y/{model_dataset.parquet, manifest.json, splits.json}",
                     "reports": "ml/results/improve/integrity/{integrity_10y.json, INTEGRITY_10Y.md, "
                                "corporate_actions_10y.json, etf_10y.json, write_phase_hist.json, v2_vs_10y.json}"}}
+    fill = _load("hist_fill")
+    out["findings"] = [
+        "The history stream's first final assembly lacked 2019-10-11, 2019-10-14 and 2019-10-15 (its parser dropped a "
+        "day when the bc member had an over-long CSV row); it re-parsed them before setting final. P1's independent "
+        f"CM + MTO construction (ml/integrity/hist_fill.py) reproduces P4's final rows exactly on the three re-parsed "
+        f"days and their six neighbours ({fill.get('crosscheck_identical')}).",
+        "A second archive mis-file: PR020118.zip holds the 2019-01-02 bundle (2018-01-02 is a session; its rows come "
+        "from its CM file).",
+        "Calendar: the 70 weekday closures of 2016-10..2021-09 were added to NSE_TRADING_HOLIDAYS; trading_days() now "
+        "equals the stored sessions over the whole store (2016-10-03..2026-10-16), and --check-sessions reports 0 "
+        "missing and 0 extra sessions.",
+        "2016-2019 bc spellings now parsed: 'BON 1:3', 'BONUS2:1', 'BONUS 1.5:1', 'CONSOLIDATION-RE1 TO RS10', "
+        "'INT RS 5/-', 'RET CAP' (capital reduction), 'SCH OF AGMT', 'BON 1 DVR : 4 EQ' (a bonus in another security: "
+        "flagged, not adjusted); two different same-kind listings on one ex-date are treated as alternatives.",
+        "Rows of the 118 non-equity series in the history parquet (bonds, gold bonds, funds, ...) were not loaded: the "
+        "store keeps EQ/BE/BZ/SM/ST, as the ingest does.",
+        "Backups of the store before each write are in the session scratchpad (rehearsal/nse_market_backup_pre_p1.duckdb, "
+        "rehearsal/nse_market_backup_pre_hist.duckdb)."]
     wjson(OUT / "integrity_10y.json", out)
     return out
 
@@ -151,9 +169,12 @@ def md(j: dict) -> str:
                  f"rows whose adjustment factor changed {fv.get('adjustment_factor_differs_rows')} "
                  f"(tickers {fv.get('adjustment_factor_differs_tickers')}); rows only in one {fv.get('rows_only_in_one')}.")
         hc = j.get("history_calendar") or {}
+        mf = hc.get("misfiled_bundles") or {}
         L += ["", f"Sessions before 2021-10-01 vs the history PR calendar (bundle present, member names carrying its date): "
                   f"identical **{hc.get('identical')}**; stored but no bundle {hc.get('stored_not_in_pr_calendar')}; bundle but "
-                  f"not stored {hc.get('pr_calendar_not_stored')}. Special sessions stored: {hc.get('special_sessions_stored')}.", ""]
+                  f"not stored {hc.get('pr_calendar_not_stored')}. Archive bundles holding another day (their own date "
+                  f"is decided by its CM file instead): {mf}. Special sessions stored: {hc.get('special_sessions_stored')}.",
+              ""]
         L.append("| Year | Stored sessions | PR calendar |")
         L.append("|---|---:|---:|")
         for y, v in (hc.get("sessions_by_year") or {}).items():
@@ -198,8 +219,16 @@ def md(j: dict) -> str:
                      f"{pct(r['share_differing_from_2023_10_02'])} | {r['max_abs_diff_from_2023_10_02']:.3g} | "
                      f"{r['v2_nan_filled_in_10y']:,} |")
         L.append("")
-    L += ["## 4. Outputs", ""] + [f"- {k}: `{v}`" for k, v in j["outputs"].items()] + [""]
-    text = "\n".join(L)
+        L.append("Why the differing columns differ: the store now starts in 2016-10 instead of 2021-10, so (i) long "
+                 "windows that v2 could not fill for names with little history (ret_252d, mom_12_1, ret_126d, ret_63d, "
+                 "dist_200dma) now have values; (ii) the exponentially weighted features (rsi_14, macd_norm, atr_pct) "
+                 "start five years earlier, a difference that has decayed to the 1e-4 level by 2023-10; (iii) "
+                 "cs_rank_ret_126 ranks over the filled ret_126d values; (iv) no adjustment factor differs from 2021-10 "
+                 "on (the merged feed equals the v2 feed there, and the write phase found 0 rows with a changed factor).")
+        L.append("")
+    L += ["## 4. Findings", ""] + [f"- {f_}" for f_ in j.get("findings", [])] + [""]
+    L += ["## 5. Outputs", ""] + [f"- {k}: `{v}`" for k, v in j["outputs"].items()] + [""]
+    text = "\n".join(L).replace(str(Path(__file__).resolve().parents[2]) + "/", "")
     return re.sub(r"/tmp/[^\s\"']*?/scratchpad", "<session scratchpad>", text)
 
 

@@ -71,7 +71,30 @@ def rows_p4_convention(d: date) -> pd.DataFrame:
     return nhi._finalize(out)
 
 
+def crosscheck(days: list[date]) -> dict:
+    """Rebuild the given days with P4's conventions and compare with P4's final rows."""
+    e = pd.read_parquet(HIST)
+    e["date"] = pd.to_datetime(e["date"])
+    out = {}
+    for d in days:
+        mine = rows_p4_convention(d)
+        p4 = e[(e["date"] == pd.Timestamp(d)) & e["series"].isin(SERIES)]
+        c = compare_frames(mine, p4, COLS)
+        out[str(d)] = {"rows_p1": c["rows_a"], "rows_p4": c["rows_b"],
+                       "identical": bool(c["only_a"] == 0 and c["only_b"] == 0 and all(
+                           v["max_abs_diff"] == 0 and v["nan_mismatch"] == 0 for v in c.values() if isinstance(v, dict)))}
+    return out
+
+
 def main(argv=None) -> int:
+    if argv is None and len(sys.argv) > 1 and sys.argv[1] == "--crosscheck":
+        days = [date.fromisoformat(x) for x in sys.argv[2:]]
+        prev = json.loads((OUT / "hist_fill.json").read_text()) if (OUT / "hist_fill.json").exists() else {}
+        prev["crosscheck_with_p4_final"] = crosscheck(days)
+        prev["crosscheck_identical"] = all(v["identical"] for v in prev["crosscheck_with_p4_final"].values())
+        wjson(OUT / "hist_fill.json", prev)
+        print(json.dumps(prev["crosscheck_with_p4_final"], indent=1))
+        return 0
     t0 = time.time()
     e = pd.read_parquet(HIST)
     e["date"] = pd.to_datetime(e["date"])

@@ -1,6 +1,6 @@
 {
  "stream": "P1 data integrity, ten-year extension (2016-10..2026-10, with the P4 history rows)",
- "built_at": "2026-10-22T14:41:13",
+ "built_at": "2026-10-22T14:42:50",
  "seed": 108,
  "pass_fail": {
   "I1_10y": true,
@@ -2741,5 +2741,13 @@
   "exports": "ml/results/improve/cache/{eod_export_10y.parquet, features_prices_export_10y.parquet}",
   "dataset": "ml/data_10y/{model_dataset.parquet, manifest.json, splits.json}",
   "reports": "ml/results/improve/integrity/{integrity_10y.json, INTEGRITY_10Y.md, corporate_actions_10y.json, etf_10y.json, write_phase_hist.json, v2_vs_10y.json}"
- }
+ },
+ "findings": [
+  "The history stream's first final assembly lacked 2019-10-11, 2019-10-14 and 2019-10-15 (its parser dropped a day when the bc member had an over-long CSV row); it re-parsed them before setting final. P1's independent CM + MTO construction (ml/integrity/hist_fill.py) reproduces P4's final rows exactly on the three re-parsed days and their six neighbours (True).",
+  "A second archive mis-file: PR020118.zip holds the 2019-01-02 bundle (2018-01-02 is a session; its rows come from its CM file).",
+  "Calendar: the 70 weekday closures of 2016-10..2021-09 were added to NSE_TRADING_HOLIDAYS; trading_days() now equals the stored sessions over the whole store (2016-10-03..2026-10-16), and --check-sessions reports 0 missing and 0 extra sessions.",
+  "2016-2019 bc spellings now parsed: 'BON 1:3', 'BONUS2:1', 'BONUS 1.5:1', 'CONSOLIDATION-RE1 TO RS10', 'INT RS 5/-', 'RET CAP' (capital reduction), 'SCH OF AGMT', 'BON 1 DVR : 4 EQ' (a bonus in another security: flagged, not adjusted); two different same-kind listings on one ex-date are treated as alternatives.",
+  "Rows of the 118 non-equity series in the history parquet (bonds, gold bonds, funds, ...) were not loaded: the store keeps EQ/BE/BZ/SM/ST, as the ingest does.",
+  "Backups of the store before each write are in the session scratchpad (rehearsal/nse_market_backup_pre_p1.duckdb, rehearsal/nse_market_backup_pre_hist.duckdb)."
+ ]
 }

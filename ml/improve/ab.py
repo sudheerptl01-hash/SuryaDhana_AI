@@ -494,6 +494,19 @@ def compare(a) -> None:
                  "pass_ab1_inversion": (bool(inv_delta >= PASS_INVERSION) if (n == "ab1_mkt" and inv_delta is not None) else None),
                  "PASS": primary}
         res["pairs"][f"{n} - control"] = entry
+    # gate 1 needs every configuration against the linear benchmark (SCALE_UP.md gate 1), not only against the control
+    if "lr_l2" in names:
+        res["pairs_vs_lr_l2"] = {}
+        falr = {x["fold"]: x["auc"] for x in lg["lr_l2"]["folds"]}
+        for n in names:
+            if n == "lr_l2":
+                continue
+            fa = {x["fold"]: x["auc"] for x in lg[n]["folds"]}
+            diffs = np.array([fa[f] - falr[f] for f in folds_present])
+            dd = draws[n] - draws["lr_l2"]
+            res["pairs_vs_lr_l2"][f"{n} - lr_l2"] = {"delta_cv_mean": float(diffs.mean()), "ci95": ci(dd),
+                                                     "folds_won": f"{int((diffs > 0).sum())}/{len(diffs)}",
+                                                     "gate1_pass": bool(diffs.mean() > 0 and ci(dd)[0] > 0)}
     wjson(out / "compare.json", res)
     write_md(out, res, a.tag)
     log("compare written")

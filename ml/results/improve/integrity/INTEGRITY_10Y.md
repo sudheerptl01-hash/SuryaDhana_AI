@@ -1,6 +1,6 @@
 # P1 data integrity: ten-year extension (2016-10..2026-10)
 
-Source of every number: `ml/results/improve/integrity/integrity_10y.json` (built 2026-10-22T14:41:13). History rows: stream P4 (`ml/data_hist/equity_eod_2016_2021.parquet`, CM bhavcopy + MTO delivery). Rules: `ml/IMPROVEMENT_PLAN.md`, P1 (I1, I2). No model was trained.
+Source of every number: `ml/results/improve/integrity/integrity_10y.json` (built 2026-10-22T14:42:50). History rows: stream P4 (`ml/data_hist/equity_eod_2016_2021.parquet`, CM bhavcopy + MTO delivery). Rules: `ml/IMPROVEMENT_PLAN.md`, P1 (I1, I2). No model was trained.
 
 ## Pass marks on the extended window
 
@@ -12,7 +12,7 @@ Source of every number: `ml/results/improve/integrity/integrity_10y.json` (built
 
 ## 1. Corporate actions 2016-10..2026-10
 
-PR bundles from ['/home/user/SuryaDhana_AI/ml/data_raw/pr', 'ml/data_raw/hist/pr']: {'bundles': 2490, 'with_member': 2488, 'empty': 1, 'unreadable': 0, 'misfiled_skipped': ['PR020118.zip holds 2019-01-02', 'PR060424.zip holds 2024-06-04'], 'rows_rejoined': 8, 'rows_dropped': 0, 'files_with_overlong_rows': ['PR111019.zip/Bc111019.csv', 'PR141019.zip/Bc141019.csv', 'PR151019.zip/Bc151019.csv', 'PR210824.zip/Bc210824.csv'], 'rows': 909787, 'rows_without_ex_date': 101976, 'records': 45549}. Split/bonus/consolidation (ticker, ex-date) groups 971, evaluated 776; alternative listings resolved 2; superseded by a revised ex-date 22. Feed: 755 validated events {'ex_date < 2021-10-01': 254, 'ex_date >= 2021-10-01': 501} by kind {'split': 371, 'bonus': 348, 'bonus+split': 36}. Price-break flags: {'rights': 306, 'demerger': 106, 'capital_reduction': 63, 'scheme_of_arrangement': 41, 'split_unvalidated': 11, 'bonus_unvalidated': 9, 'bonus_other_security': 1, 'bonus+split_unvalidated': 1}.
+PR bundles from ['ml/data_raw/pr', 'ml/data_raw/hist/pr']: {'bundles': 2490, 'with_member': 2488, 'empty': 1, 'unreadable': 0, 'misfiled_skipped': ['PR020118.zip holds 2019-01-02', 'PR060424.zip holds 2024-06-04'], 'rows_rejoined': 8, 'rows_dropped': 0, 'files_with_overlong_rows': ['PR111019.zip/Bc111019.csv', 'PR141019.zip/Bc141019.csv', 'PR151019.zip/Bc151019.csv', 'PR210824.zip/Bc210824.csv'], 'rows': 909787, 'rows_without_ex_date': 101976, 'records': 45549}. Split/bonus/consolidation (ticker, ex-date) groups 971, evaluated 776; alternative listings resolved 2; superseded by a revised ex-date 22. Feed: 755 validated events {'ex_date < 2021-10-01': 254, 'ex_date >= 2021-10-01': 501} by kind {'split': 371, 'bonus': 348, 'bonus+split': 36}. Price-break flags: {'rights': 306, 'demerger': 106, 'capital_reduction': 63, 'scheme_of_arrangement': 41, 'split_unvalidated': 11, 'bonus_unvalidated': 9, 'bonus_other_security': 1, 'bonus+split_unvalidated': 1}.
 
 Disagreements with ex-dates in 2016-10..2021-09 (listed ex-date; observed = open(ex)/close(ex−1)):
 
@@ -50,7 +50,7 @@ Lock held 2026-10-22T14:33:30 → 2026-10-22T14:35:37: **127.1 s** (build_featur
 equity_eod rows dated from 2021-10-01 unchanged by the load: **True** (count, sums of close/volume/turnover/prev_close, sessions, tickers: [3095641.0, 2270341992.0601, 4850951077780.0, 1120440911430000.0, 2269853857.5301, 1251.0, 4219.0]).
 equity_features from 2021-10-01 vs the v2 export: raw columns identical True; rows whose adjustment factor changed 0 (tickers []); rows only in one 0.
 
-Sessions before 2021-10-01 vs the history PR calendar (bundle present, member names carrying its date): identical **True**; stored but no bundle []; bundle but not stored []. Special sessions stored: {'2016-10-30': True, '2017-10-19': True, '2018-11-07': True, '2019-10-27': True, '2020-02-01': True, '2020-11-14': True}.
+Sessions before 2021-10-01 vs the history PR calendar (bundle present, member names carrying its date): identical **True**; stored but no bundle []; bundle but not stored []. Archive bundles holding another day (their own date is decided by its CM file instead): {'2018-01-02': {'holds': '2019-01-02', 'stored': True}}. Special sessions stored: {'2016-10-30': True, '2017-10-19': True, '2018-11-07': True, '2019-10-27': True, '2020-02-01': True, '2020-11-14': True}.
 
 | Year | Stored sessions | PR calendar |
 |---|---:|---:|
@@ -105,7 +105,18 @@ First fold 2018-01: train_end 2017-11-29, 32,571 rows (32,424 labeled and clean,
 | dist_200dma_isnan | 0.00% | 0.02% | 0.00% | 1 | 0 |
 | cs_rank_ret_126_isnan | 0.01% | 0.02% | 0.00% | 1 | 0 |
 
-## 4. Outputs
+Why the differing columns differ: the store now starts in 2016-10 instead of 2021-10, so (i) long windows that v2 could not fill for names with little history (ret_252d, mom_12_1, ret_126d, ret_63d, dist_200dma) now have values; (ii) the exponentially weighted features (rsi_14, macd_norm, atr_pct) start five years earlier, a difference that has decayed to the 1e-4 level by 2023-10; (iii) cs_rank_ret_126 ranks over the filled ret_126d values; (iv) no adjustment factor differs from 2021-10 on (the merged feed equals the v2 feed there, and the write phase found 0 rows with a changed factor).
+
+## 4. Findings
+
+- The history stream's first final assembly lacked 2019-10-11, 2019-10-14 and 2019-10-15 (its parser dropped a day when the bc member had an over-long CSV row); it re-parsed them before setting final. P1's independent CM + MTO construction (ml/integrity/hist_fill.py) reproduces P4's final rows exactly on the three re-parsed days and their six neighbours (True).
+- A second archive mis-file: PR020118.zip holds the 2019-01-02 bundle (2018-01-02 is a session; its rows come from its CM file).
+- Calendar: the 70 weekday closures of 2016-10..2021-09 were added to NSE_TRADING_HOLIDAYS; trading_days() now equals the stored sessions over the whole store (2016-10-03..2026-10-16), and --check-sessions reports 0 missing and 0 extra sessions.
+- 2016-2019 bc spellings now parsed: 'BON 1:3', 'BONUS2:1', 'BONUS 1.5:1', 'CONSOLIDATION-RE1 TO RS10', 'INT RS 5/-', 'RET CAP' (capital reduction), 'SCH OF AGMT', 'BON 1 DVR : 4 EQ' (a bonus in another security: flagged, not adjusted); two different same-kind listings on one ex-date are treated as alternatives.
+- Rows of the 118 non-equity series in the history parquet (bonds, gold bonds, funds, ...) were not loaded: the store keeps EQ/BE/BZ/SM/ST, as the ingest does.
+- Backups of the store before each write are in the session scratchpad (rehearsal/nse_market_backup_pre_p1.duckdb, rehearsal/nse_market_backup_pre_hist.duckdb).
+
+## 5. Outputs
 
 - feed: `ml/data_ext/corporate_actions_feed_10y.csv`
 - all_records: `ml/data_ext/corporate_actions_all_10y.csv`
