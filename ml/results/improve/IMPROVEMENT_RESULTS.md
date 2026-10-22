@@ -1,6 +1,6 @@
 # SuryaDhana improvement phase: results against the pre-registered plan
 
-**Dates:** 2026-10-19 (plan fixed, streams started) to 2026-10-22 · **Plan:** `ml/IMPROVEMENT_PLAN.md` (pass marks fixed before any result; amendments A1-A4 dated in its section 5) · **Trial ledger:** N = 241 (177 from the five-year run + 64 new configurations and books) · **Status: PARTIAL. Pending: AB1-AB6 and AB2P on the corrected data (training), the ten-year re-runs, the final gate table.**
+**Dates:** 2026-10-19 (plan fixed, streams started) to 2026-10-22 · **Plan:** `ml/IMPROVEMENT_PLAN.md` (pass marks fixed before any result; amendments A1-A4 dated in its section 5) · **Trial ledger:** N = 241 (177 from the five-year run + 64 new configurations and books) · **Status: PARTIAL. Pending: the ten-year re-runs (training) and their gate table.**
 
 Every number below is quoted from the stream's JSON/Markdown named in its section. "PASS" and "FAIL" refer to the pass marks written in the plan before the result existed.
 
@@ -17,8 +17,8 @@ Every number below is quoted from the stream's JSON/Markdown named in its sectio
 | Do the two sufficiency features earn their place? | AB0: 52 vs 50 features, +0.003 with CI > 0 | +0.0014 [+0.0002, +0.0026] | **FAIL** (real but below the bar) |
 | Do overlapping labels distort the fit? | AB7 (every fifth date), AB8 (uniqueness weights) vs control | −0.0020 [−0.0041, −0.0000]; +0.0011 [−0.0002, +0.0023] | **FAIL both; item closed** |
 | Does the corrected data change the signal? | re-run on v2 (descriptive) | control 0.5359 ± 0.032 (v1 0.5379 ± 0.042), worst month 0.466 (0.453), 88% of months ≥ 0.50 (84%), rank IC 0.069 (NW t 7.3) | **same signal, less dispersion** |
-| Does information outside the bhavcopy add signal? | AB1-AB6, AB2P: +0.003 with CI > 0 | *pending (training)* | |
-| Does the signal hold across eight years and three cycles? | ten-year re-runs, Stage-0 criteria | *pending (history loaded, dataset building)* | |
+| Does information outside the bhavcopy add signal? | AB1-AB6, AB2P: +0.003 with CI > 0 | market state −0.0047; sector +0.0013 (placebo −0.0020); F&O **+0.0020 [+0.0006, +0.0032]**; flows −0.0004; all +0.0024 [−0.0043, +0.0082]; ensemble on 52 features −0.0017 | **all FAIL** (F&O real but below the bar) |
+| Does the signal hold across eight years and three cycles? | ten-year re-runs, Stage-0 criteria | *pending (103-fold re-runs training)* | |
 
 **Provisional reading.** The data are now clean enough to trust and the economics have a mechanism: the equal-weight universe is beaten by a deliberately volatility- and size-neutral book built from any of the LightGBM scores, on the frozen data and on the corrected data alike (+7.8%/yr, IR 1.99 [0.91, 3.17] for the v2 control). What has not changed is the proof: the liquid, capacity-bearing versions of those books earn +5% to +6% a year with intervals that barely clear or include zero, every Deflated Sharpe is far below 0.95 at N = 241, and the neutralisation idea was read from the same 43 folds it is tested on. The verdict stays **no capital; paper-trade one frozen construction**, now a deliberate one.
 
@@ -82,8 +82,45 @@ As books (vol+size-neutral top decile): AB7 +6.9%/yr IR 2.19, AB8 +7.8%/yr IR 2.
 
 Logistic minus control +0.0037 [−0.0043, +0.0125]: gate 1 still fails for the tree model, and the logistic model still has the worst tails (worst month 0.402, holdout 0.500). Books on v2: control plain top decile −0.0%/yr (19/45 months); **vol+size-neutral top decile +7.8%/yr, IR 1.99 [0.91, 3.17], 34/45 months, capacity ₹214 crore, DSR 0.062**; liquid neutral book +5.9%/yr, IR 1.04 [0.03, 2.15], capacity ₹912 crore, DSR 0.000.
 
-## 8. Pending
+## 8. External-data A/Bs on the corrected data (`ab/v2/AB.md`, `ab/v2/BOOKS_AB.md`, `ab/v2/GATES.md`)
 
-- AB1 market state, AB2 sector, AB2P placebo, AB3 F&O, AB4 flows, AB5 all, AB6 ensemble on 52 features: training on v2 (`ab/v2/queue_ab.log`).
-- Ten-year re-runs (control, logistic, momentum on 103 folds): queued behind the A/Bs (`ab/10y/queue_10y.log`).
-- Final gate table at N = 241, program report section, goals ladder, HTML page, roadmap.
+Control = LightGBM on the 52 features, v2 data, 43 folds; every variant adds one fixed family (plan P3) and is scored on identical folds with identical bootstrap draws.
+
+| Variant | Features | CV AUC ± sd | Δ vs control | 95% CI | Folds won | Δ rank IC (NW t) | Holdout | Primary | Secondary |
+|---|---:|---|---:|---|---:|---|---:|---|---|
+| control | 52 | 0.5359 ± 0.0320 | | | | | 0.5203 | | |
+| AB1 market state | 62 | 0.5312 ± 0.0363 | −0.0047 | [−0.0115, +0.0018] | 22/43 | −0.0074 (−1.1) | 0.5184 | FAIL | FAIL |
+| AB2 sector (industry snapshot) | 62 | 0.5372 ± 0.0332 | +0.0013 | [−0.0013, +0.0039] | 22/43 | +0.0045 (1.7) | 0.5223 | FAIL | FAIL |
+| AB2P sector placebo (industries permuted) | 62 | 0.5339 ± 0.0341 | −0.0020 | [−0.0062, +0.0014] | 22/43 | −0.0026 (−0.7) | 0.5290 | FAIL | FAIL |
+| AB3 F&O (membership, basis, OI, put/call) | 60 | 0.5379 ± 0.0319 | **+0.0020** | **[+0.0006, +0.0032]** | 26/43 | +0.0032 (2.7) | 0.5198 | FAIL (below +0.003) | **PASS** |
+| AB4 flows (FII/DII/client positioning) | 56 | 0.5355 ± 0.0406 | −0.0004 | [−0.0059, +0.0045] | 22/43 | −0.0011 (−0.2) | 0.5595 | FAIL | FAIL |
+| AB5 all four families | 84 | 0.5383 ± 0.0396 | +0.0024 | [−0.0043, +0.0082] | 29/43 | +0.0075 (1.1) | 0.5291 | FAIL | FAIL |
+| AB6 rank ensemble on 52 features, no re-selection | 52 | 0.5343 ± 0.0301 | −0.0017 | [−0.0065, +0.0024] | 23/43 | −0.0052 (−1.1) | 0.5557 | FAIL | FAIL |
+| AB6 member: CatBoost, 52 features | 52 | 0.5376 ± 0.0351 | +0.0017 | [+0.0002, +0.0031] | 29/43 | +0.0024 (1.7) | 0.5211 | FAIL | FAIL |
+| AB6 member: LambdaRank, 52 features | 52 | 0.5054 ± 0.0389 | −0.0305 | [−0.0469, −0.0167] | 16/43 | −0.0609 (−3.9) | 0.5926 | FAIL | FAIL |
+
+- **No family passes the primary mark.** The one real addition is the F&O family: +0.0020 AUC with an interval clear of zero and a rank-IC gain with Newey-West t 2.7, the same size as the two sufficiency features (AB0) and below the +0.003 the plan demanded. Market state hurts (and the inversion months get worse, −0.008, not the +0.02 required); flows add nothing; everything together adds +0.0024 with an interval that includes zero.
+- **The sector family is the look-ahead, not industry information.** AB2 beats the placebo by +0.0033 on AUC, but the plan's reading requires the primary mark first, which it fails; and the placebo's *book* is almost as good as the real sector book (below), which is what index-membership survivorship predicts.
+- **The ensemble does not need yearly re-selection.** On 52 features without selection it scores 0.5343 (the five-year nested ensemble 0.5330) and its plain top decile earns +7.7%/yr, IR 1.57 [0.62, 2.70] (nested: +7.0%, IR 1.26). Item 4 of the program report's §11 is answered: selection buys nothing for the ensemble either.
+
+**As books** (P2 construction: per-date volatility+size-neutral top decile; liquid-tercile version in brackets; net 20 bps vs the equal-weight universe; DSR at N = 241):
+
+| Configuration | Plain top decile | Neutral top decile | Neutral, liquid tercile |
+|---|---|---|---|
+| control | −0.0%/yr, IR +0.01 | **+7.8%/yr, IR 1.99 [0.91, 3.17], 34/45 months, DSR 0.062** | +5.9%/yr, IR 1.04 [0.03, 2.15], DSR 0.000 |
+| AB1 market state | +0.6%, IR 0.13 | +7.8%, IR 2.27 [1.31, 3.26], DSR 0.158 | +4.2%, IR 0.78 [−0.23, 1.88] |
+| AB2 sector | +2.8%, IR 0.58 | +10.9%, IR 3.16 [2.19, 4.19], DSR 0.758 | +6.1%, IR 1.14 [0.12, 2.27] |
+| AB2P placebo | +1.4%, IR 0.31 | +10.1%, IR 2.99 [2.00, 3.97], DSR 0.647 | +5.0%, IR 0.97 [−0.07, 2.08] |
+| AB3 F&O | +0.7%, IR 0.16 | +8.1%, IR 2.12 [1.15, 3.18], DSR 0.099 | +5.7%, IR 1.13 [0.20, 2.13] |
+| AB4 flows | +4.4%, IR 0.82 | +6.1%, IR 1.83 [0.64, 3.03], DSR 0.035 | +2.7%, IR 0.52 [−0.42, 1.54] |
+| AB5 all | +5.2%, IR 1.01 | +10.4%, IR 3.18 [2.20, 4.26], DSR 0.759 | +6.3%, IR 1.27 [0.38, 2.31], DSR 0.002 |
+| AB6 ensemble on 52 | +7.7%, IR 1.57 [0.62, 2.70] | +10.8%, IR 2.87 [1.76, 3.96], DSR 0.561 | **+9.1%, IR 1.58 [0.42, 2.82], DSR 0.011** |
+
+The sector and all-family books look best, but the placebo book (industries permuted) is within a point of them: those gains are the partition of today's index members, which the live book could not know. Every liquid book's DSR is at most 0.011.
+
+**Gates at N = 241** (`ab/v2/GATES.md`; gate 4 does not apply to configurations that select nothing): every configuration fails gate 1 (none beats the logistic benchmark with an interval clear of zero), gate 2 (best 88% of months ≥ 0.50, bar 90%) and gate 5 (liquid-book DSR ≤ 0.011). Gate 3 passes for the neutral top decile of the control (34/45), AB1, AB2, AB2P, AB5 and both AB6 ensemble books, and for the plain top decile of the ensemble (34/45). **Nothing is promoted.**
+
+## 9. Pending
+
+- Ten-year re-runs (control, logistic, momentum on 103 folds 2018-01..2026-07): training (`ab/10y/queue_10y.log`); compare, books and gates follow automatically.
+- Program report section, goals ladder, HTML page, pull request.
