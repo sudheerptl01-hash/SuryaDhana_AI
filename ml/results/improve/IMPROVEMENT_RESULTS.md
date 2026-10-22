@@ -1,10 +1,10 @@
 # SuryaDhana improvement phase: results against the pre-registered plan
 
-**Dates:** 2026-10-19 (plan fixed, streams started) to 2026-10-22 · **Plan:** `ml/IMPROVEMENT_PLAN.md` (pass marks fixed before any result; amendments A1-A4 dated in its section 5) · **Trial ledger:** N = 241 (177 from the five-year run + 64 new configurations and books) · **Status: PARTIAL. Pending: the ten-year re-runs (training) and their gate table.**
+**Dates:** 2026-10-19 (plan fixed, streams started) to 2026-10-22 · **Plan:** `ml/IMPROVEMENT_PLAN.md` (pass marks fixed before any result; amendments A1-A4 dated in its section 5) · **Trial ledger:** N = 241 (177 from the five-year run + 64 new configurations and books) · **Status: complete (every pre-registered test has a result).**
 
 Every number below is quoted from the stream's JSON/Markdown named in its section. "PASS" and "FAIL" refer to the pass marks written in the plan before the result existed.
 
-## 1. One-page summary (provisional until the pending runs land)
+## 1. One-page summary
 
 | Question the plan asked | Pre-registered test | Result | Verdict |
 |---|---|---|---|
@@ -18,9 +18,9 @@ Every number below is quoted from the stream's JSON/Markdown named in its sectio
 | Do overlapping labels distort the fit? | AB7 (every fifth date), AB8 (uniqueness weights) vs control | −0.0020 [−0.0041, −0.0000]; +0.0011 [−0.0002, +0.0023] | **FAIL both; item closed** |
 | Does the corrected data change the signal? | re-run on v2 (descriptive) | control 0.5359 ± 0.032 (v1 0.5379 ± 0.042), worst month 0.466 (0.453), 88% of months ≥ 0.50 (84%), rank IC 0.069 (NW t 7.3) | **same signal, less dispersion** |
 | Does information outside the bhavcopy add signal? | AB1-AB6, AB2P: +0.003 with CI > 0 | market state −0.0047; sector +0.0013 (placebo −0.0020); F&O **+0.0020 [+0.0006, +0.0032]**; flows −0.0004; all +0.0024 [−0.0043, +0.0082]; ensemble on 52 features −0.0017 | **all FAIL** (F&O real but below the bar) |
-| Does the signal hold across eight years and three cycles? | ten-year re-runs, Stage-0 criteria | *pending (103-fold re-runs training)* | |
+| Does the signal hold across eight years and three cycles? | ten-year re-runs, Stage-0 criteria | 103 folds: AUC 0.5455 [0.5359, 0.5549], above 0.50 in every calendar year 2018-2026, 0.5434 without the best six-month run and the worst month; rank IC 0.088 (NW t 9.8) | **met over eight years** |
 
-**Provisional reading.** The data are now clean enough to trust and the economics have a mechanism: the equal-weight universe is beaten by a deliberately volatility- and size-neutral book built from any of the LightGBM scores, on the frozen data and on the corrected data alike (+7.8%/yr, IR 1.99 [0.91, 3.17] for the v2 control). What has not changed is the proof: the liquid, capacity-bearing versions of those books earn +5% to +6% a year with intervals that barely clear or include zero, every Deflated Sharpe is far below 0.95 at N = 241, and the neutralisation idea was read from the same 43 folds it is tested on. The verdict stays **no capital; paper-trade one frozen construction**, now a deliberate one.
+**Reading.** The data are now clean enough to trust, the signal holds over eight years and three market cycles, and the economics have a mechanism: a deliberately volatility- and size-neutral top decile built from the LightGBM score beats the equal-weight universe net of 20 bps in every calendar year from 2018 to 2026 (+10.5% a year over 105 months, IR 2.32 [1.51, 3.10]). What has not changed is the proof, and one thing got worse: the liquid, capacity-bearing version of that book earned nothing over 2018-2022 (−0.08% per 20 sessions, 30 of 60 months ahead) and +0.37% per 20 sessions over 2023-2026, so its ten-year excess is +1.2% a year with an interval that includes zero. The economics sit in names trading under ₹5 to 10 crore a day, where costs are least known and capacity is ₹150 to 250 crore. Every Deflated Sharpe is far below 0.95 at N = 241, and the construction was read from the five-year folds it was first tested on. The verdict stays **no capital; paper-trade one frozen construction**, now a deliberate one, with its small-cap nature stated.
 
 ## 2. Data integrity (P1; `integrity/INTEGRITY.md`, `integrity/integrity.json`)
 
@@ -120,7 +120,38 @@ The sector and all-family books look best, but the placebo book (industries perm
 
 **Gates at N = 241** (`ab/v2/GATES.md`; gate 4 does not apply to configurations that select nothing): every configuration fails gate 1 (none beats the logistic benchmark with an interval clear of zero), gate 2 (best 88% of months ≥ 0.50, bar 90%) and gate 5 (liquid-book DSR ≤ 0.011). Gate 3 passes for the neutral top decile of the control (34/45), AB1, AB2, AB2P, AB5 and both AB6 ensemble books, and for the plain top decile of the ensemble (34/45). **Nothing is promoted.**
 
-## 9. Pending
+## 9. Eight years instead of five (`ab/10y/AB.md`, `ab/10y/BOOKS_AB.md`, `ab/10y/GATES.md`)
 
-- Ten-year re-runs (control, logistic, momentum on 103 folds 2018-01..2026-07): training (`ab/10y/queue_10y.log`); compare, books and gates follow automatically.
-- Program report section, goals ladder, HTML page, pull request.
+The ten-year dataset's 103 monthly folds (2018-01 to 2026-07; 2,126 CV dates) span the 2018 small-cap bear, the 2020 crash and the 2021 boom. Same protocol, same configurations, no tuning.
+
+| Configuration | CV AUC ± sd | 95% CI | Months ≥ 0.50 | Worst | Holdout | Rank IC (NW t) | IC months positive |
+|---|---|---|---:|---:|---:|---|---:|
+| LightGBM, 52 features (control) | **0.5455 ± 0.0491** | [0.5359, 0.5549] | 84% | 0.399 (2020-11) | 0.5193 | +0.088 (9.8) | 87/103 |
+| L2 logistic, 52 features | 0.5423 ± 0.0681 | [0.5297, 0.5545] | 74% | 0.341 | 0.5003 | +0.082 (6.6) | 79/103 |
+| momentum rule | 0.5000 ± 0.0420 | [0.4930, 0.5073] | 47% | 0.369 | 0.4690 | +0.001 (0.1) | |
+
+Mean fold AUC by calendar year (control / logistic / momentum): 2018 0.548 / 0.558 / 0.500; 2019 0.575 / 0.566 / 0.518; 2020 0.561 / 0.530 / 0.510; 2021 0.527 / 0.516 / 0.498; 2022 0.528 / 0.530 / 0.500; 2023 0.535 / 0.534 / 0.494; 2024 0.553 / 0.553 / 0.494; 2025 0.544 / 0.561 / 0.479; 2026 (7 months) 0.534 / 0.525 / 0.510. The 2018 folds train on short windows (32,571 rows for 2018-01), as 2023 did in the five-year run.
+
+- **Stage-0 "not one regime" criterion: met.** The control's best six-month run is 2019-09 to 2020-02 (mean 0.603); without it and the worst month the other 96 folds average 0.5434. It is above 0.50 in 82% of the 2018-2022 months and 88% of the 2023-2026 months; the 2018-2022 half (0.5478) is as strong as the 2023-2026 half (0.5359 on v2).
+- **The tree model now has the higher mean**, +0.0032 over the logistic [−0.0033, +0.0104], 55 of 103 folds: gate 1 still fails (interval includes zero), and the logistic still has the worst tails (worst month 0.341, 74% of months ≥ 0.50, holdout 0.500).
+
+**Books over 105 signal months** (2018-01 to 2026-09; net 20 bps vs the equal-weight universe; per-20-session figures by period):
+
+| Control book | Excess/yr | IR [95% CI] | Months ahead | 2018-2022 | 2023-2026 | Capacity | DSR (N = 241) |
+|---|---:|---|---:|---:|---:|---:|---:|
+| plain top decile | +7.5% | +1.37 [+0.51, +2.21] | 69/105 | +0.95% (45/60) | +0.07% (24/45) | ₹168 cr | 0.000 |
+| volatility+size-neutral top decile | **+10.5%** | **+2.32 [+1.51, +3.10]** | 83/105 | +0.90% (47/60) | +0.74% (36/45) | ₹157 cr | 0.081 |
+| plain, liquid tercile | −0.0% | +0.01 [−0.73, +0.71] | 52/105 | +0.12% (33/60) | −0.23% (19/45) | ₹785 cr | 0.000 |
+| neutral, liquid tercile | +1.2% | +0.21 [−0.52, +0.93] | 55/105 | −0.08% (30/60) | +0.37% (25/45) | ₹603 cr | 0.000 |
+
+The neutral top decile is ahead of the universe in every calendar year 2018-2026 (per 20 sessions: +0.21, +0.81, +1.56, +0.97, +0.94, +0.41, +0.88, +0.35, +1.52%) and in up and down months (+0.98% / +0.60%). The plain decile worked before 2023 (+0.95% per 20 sessions) and stopped (+0.07%): the volatility tilt's cost is a 2023-2026 phenomenon, which is why the five-year run saw it and the ten-year run dilutes it. **The liquid book does not work over ten years**: whatever its 2023-2026 excess was, 2018-2022 took it back. The logistic model's neutral top decile is also positive in both halves (+9.5%/yr, IR 1.92 [1.05, 2.78]).
+
+**Gates at N = 241 (ten-year control):** gate 1 fail (+0.0032 [−0.0033, +0.0104]); gate 2 fail (84%); gate 3 plain fail (66%), neutral pass (79%); gate 5 fail (liquid-book DSR 0.000, plain and neutral). **Nothing is promoted.**
+
+## 10. What this phase changes, and what it does not
+
+1. **The data are fixed** and the fixes are reproducible from the archive (sessions, corporate actions, ETFs, ten years of history). This is the one unconditional gain.
+2. **The paper book is now a deliberate construction** with a stated mechanism and eight years of in-sample support, not an accidental blend read off 43 folds. Its specification: LightGBM on 52 features, score residualised per date on volatility and size ranks, top decile (or the buffered decile), 20-session hold, equal-weight universe benchmark, 20 bps and name-level costs both reported. The all-feature rank ensemble is the champion-challenger.
+3. **Its economics are a small-cap effect.** The liquid-tercile version earns nothing over ten years; the paper book that is worth watching has capacity of ₹150 to 250 crore and costs that the pessimistic name-level model puts at about 45 bps a side (leaving +2% to +4% a year). Any capital decision would need the liquid book to work, and the record says it has not.
+4. **Information outside the bhavcopy adds little**: the F&O family is real (+0.0020 AUC, interval clear of zero) and below the bar; sector gains are look-ahead; market state and flows add nothing. The next information gain, if any, is fundamentals and filings, which need a feed this environment does not have (`ml/ROADMAP.md`).
+5. **Nothing passes the capital gates**, and the trial ledger now stands at N = 241. The forward record remains the only route to Stage 2.

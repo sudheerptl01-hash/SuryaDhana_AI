@@ -120,6 +120,8 @@ Scored by `python3 -m ml.improve.gates --tag v2 --n-trials 241` from `ml/results
 | 4 | selected-feature overlap ≥ 7/10 | not applicable (no selection) | not applicable |
 | 5 | DSR ≥ 0.95 on the liquid top decile, N = 241 | plain 0.000; neutral 0.000 **FAIL** | plain 0.000; neutral 0.011 **FAIL** |
 
+Ten-year control (103 folds, `ml/results/improve/ab/10y/GATES.md`): gate 1 +0.0032 [−0.0033, +0.0104] **FAIL**; gate 2 84% (worst 0.399) **FAIL**; gate 3 plain 69/105 = 66% **FAIL**, neutral 83/105 = 79% **PASS**; gate 5 DSR 0.000 **FAIL**.
+
 Decision unchanged: **do not promote to capital.** The paper book of Phase 3 becomes the deliberate volatility+size-neutral construction (`ml/PROGRAM_REPORT.md` §13.7), with the all-feature rank ensemble as champion-challenger.
 
 ## Compute
