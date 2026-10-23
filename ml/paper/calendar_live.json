@@ -1,0 +1,133 @@
+{
+ "note": "Calendar decisions of the paper book's ingest (ml/paper/SPEC.md 2.6). A closure is a weekday whose archive files echo the previous session and whose PR bundle is absent; it is never ingested.",
+ "closures": {
+  "2026-10-20": {
+   "weekday": "Tuesday",
+   "sec_bytes": 397312,
+   "sec_sha256": "c9be4a9270c402f4b1296440d523fad34940a42a2b150ac3201b39dd54e93f44",
+   "date1": [
+    "19-Oct-2026"
+   ],
+   "date1_ok": false,
+   "fingerprint": [
+    3404,
+    2411080.21,
+    5285660152.0,
+    961693084000.0
+   ],
+   "previous_session": "2026-10-19",
+   "fingerprint_previous": [
+    3404,
+    2411080.21,
+    5285660152.0,
+    961693084000.0
+   ],
+   "duplicate_day_guard_echo": true,
+   "byte_identical_to_previous_sec_file": true,
+   "rows_all_series": 3404,
+   "rows_eq_be": 2922,
+   "isin_filled_share": 0.0,
+   "pr_bundle": "absent",
+   "decision": "closure: holiday echo of the previous session (duplicate-day guard) and no PR bundle"
+  }
+ },
+ "special_sessions": {},
+ "sessions": {
+  "2026-10-19": {
+   "weekday": "Monday",
+   "sec_bytes": 397312,
+   "sec_sha256": "c9be4a9270c402f4b1296440d523fad34940a42a2b150ac3201b39dd54e93f44",
+   "date1": [
+    "19-Oct-2026"
+   ],
+   "date1_ok": true,
+   "fingerprint": [
+    3404,
+    2411080.21,
+    5285660152.0,
+    961693084000.0
+   ],
+   "previous_session": "2026-10-16",
+   "fingerprint_previous": [
+    3397,
+    2438927.85,
+    6173771187,
+    1224566506000.0
+   ],
+   "duplicate_day_guard_echo": false,
+   "byte_identical_to_previous_sec_file": null,
+   "rows_all_series": 3404,
+   "rows_eq_be": 2922,
+   "isin_filled_share": 0.0,
+   "pr_bundle": "present",
+   "pr_bundle_inner_date": "2026-10-19",
+   "pr_bundle_ok": true,
+   "pr_sha256": "e080c1544bf5568c49e215e6c2a9aecd8bcbf07553166b7d4058c52d1ea9adee",
+   "decision": "session: ingest"
+  },
+  "2026-10-21": {
+   "weekday": "Wednesday",
+   "sec_bytes": 400625,
+   "sec_sha256": "1e05e1696d50babd9d1a6b6e0b9aaf156e7a1d7a7c30da703002f540eff63120",
+   "date1": [
+    "21-Oct-2026"
+   ],
+   "date1_ok": true,
+   "fingerprint": [
+    3422,
+    2363604.83,
+    5827002308.0,
+    1095147788000.0
+   ],
+   "previous_session": "2026-10-19",
+   "fingerprint_previous": [
+    3404,
+    2411080.21,
+    5285660152.0,
+    961693084000.0
+   ],
+   "duplicate_day_guard_echo": false,
+   "byte_identical_to_previous_sec_file": false,
+   "rows_all_series": 3422,
+   "rows_eq_be": 2916,
+   "isin_filled_share": 0.0,
+   "pr_bundle": "present",
+   "pr_bundle_inner_date": "2026-10-21",
+   "pr_bundle_ok": true,
+   "pr_sha256": "5d12ba070a583f8921c2f53fa5ecb872735e9f754f6d0c546771e294072f9774",
+   "decision": "session: ingest"
+  },
+  "2026-10-22": {
+   "weekday": "Thursday",
+   "sec_bytes": 396002,
+   "sec_sha256": "ed7f4f4347f5a9c07580356f6907aad630f34ff7715b69e7b530c6aa7c1f66cb",
+   "date1": [
+    "22-Oct-2026"
+   ],
+   "date1_ok": true,
+   "fingerprint": [
+    3392,
+    2237664.29,
+    6155473384.0,
+    1076963778000.0
+   ],
+   "previous_session": "2026-10-21",
+   "fingerprint_previous": [
+    3422,
+    2363604.83,
+    5827002308.0,
+    1095147788000.0
+   ],
+   "duplicate_day_guard_echo": false,
+   "byte_identical_to_previous_sec_file": false,
+   "rows_all_series": 3392,
+   "rows_eq_be": 2915,
+   "isin_filled_share": 0.0,
+   "pr_bundle": "present",
+   "pr_bundle_inner_date": "2026-10-22",
+   "pr_bundle_ok": true,
+   "pr_sha256": "a9666e1d31ba57ffebee861cae1b6febc191db8180bf717da39bc224b07e003c",
+   "decision": "session: ingest"
+  }
+ }
+}

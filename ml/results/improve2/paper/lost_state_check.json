@@ -1,0 +1,32 @@
+{
+ "test": "ml/paper/state/models/2026-10/ (all four model files) and ml/paper/state/scores/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest",
+ "model_2026_10_retrained": true,
+ "retrain_equal_to_committed_metadata": {
+  "training_frame_sha256": true,
+  "reference_prediction_sha256": true,
+  "model_contents_sha256": true
+ },
+ "note_catboost": "CatBoost .cbm bytes carry train_finish_time and a random model_guid; its identity is the SHA-256 of the model exported without model_info (content_sha256); predictions of the original and the retrained CatBoost on 83,754 rows (2026-08-01..2026-10-22) differ by 0.0",
+ "lgbm_lambdarank_logistic_preprocess_files_byte_identical": true,
+ "regenerated_score_files": [
+  "2026-10-19"
+ ],
+ "regenerated_scores_file_byte_identical": true,
+ "ledger_and_model_metadata_sha256_before": {
+  "ml/paper/models/2026-09.json": "13a472eaca855b086b963e1dc86197c65da181ddeff074631d3c27836465d377",
+  "ml/paper/models/2026-10.json": "382f38be3a3f81b6457c15961a2bc6370d307e7fb0303e509ab360f8909e126d",
+  "ml/paper/ledger/marks.csv": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+  "ml/paper/ledger/monitors.csv": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+  "ml/paper/ledger/signals.csv": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+  "ml/paper/ledger/state.json": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
+ },
+ "after": {
+  "ml/paper/models/2026-09.json": "13a472eaca855b086b963e1dc86197c65da181ddeff074631d3c27836465d377",
+  "ml/paper/models/2026-10.json": "382f38be3a3f81b6457c15961a2bc6370d307e7fb0303e509ab360f8909e126d",
+  "ml/paper/ledger/marks.csv": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+  "ml/paper/ledger/monitors.csv": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+  "ml/paper/ledger/signals.csv": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+  "ml/paper/ledger/state.json": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
+ },
+ "unchanged": true
+}

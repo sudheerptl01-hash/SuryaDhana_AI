@@ -1,0 +1,29 @@
+{
+ "note": "ml/paper/job.py --prove-idempotency, run after the first full run on the same store",
+ "before": {
+  "signals": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+  "marks": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+  "monitors": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+  "state": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
+ },
+ "after": {
+  "signals": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+  "marks": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+  "monitors": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+  "state": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
+ },
+ "identical": true,
+ "rows_appended": 0,
+ "recomputed_signal_date": "2026-10-22",
+ "recomputed_signals_equal_ledger": true,
+ "recomputed_scores_max_abs_diff": 0.0,
+ "recomputed_marks_equal_ledger": true,
+ "recomputed_marks_max_abs_diff": 0.0,
+ "frame_rebuilt_in_this_run": true,
+ "ingest_decisions_in_this_run": [
+  [
+   "2026-10-23",
+   "pending: file not yet published"
+  ]
+ ]
+}

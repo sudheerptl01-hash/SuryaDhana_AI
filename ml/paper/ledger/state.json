@@ -1,0 +1,63 @@
+{
+ "spec_hash": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+ "research_end": "2026-10-16",
+ "inception_signal_date": "2026-10-19",
+ "last_store_session": "2026-10-22",
+ "store_rows": {
+  "equity_eod": 5247946,
+  "equity_features": 4781834
+ },
+ "last_signal_date": "2026-10-22",
+ "signal_dates": 3,
+ "last_mark_session": "2026-10-22",
+ "last_monitor_session": "2026-10-22",
+ "models": {
+  "2026-09": {
+   "role": "monitor only (logistic sign-flip baseline)",
+   "members": [
+    "logistic"
+   ],
+   "trained_as_of": "2026-09-01",
+   "training_frame_sha256": "be1369cd5db35848a6ea49070c0798ff54aa9e04362edf40bfccb9b597e7c1e2",
+   "files_sha256": {
+    "logistic": "9b41df134af3ebd1b411266b9d653cf34120345f0eeef153bd047a7b8a340c02"
+   },
+   "metadata": "ml/paper/models/2026-09.json"
+  },
+  "2026-10": {
+   "role": "paper model",
+   "members": [
+    "lgbm",
+    "lambdarank",
+    "catboost",
+    "logistic"
+   ],
+   "trained_as_of": "2026-10-01",
+   "training_frame_sha256": "519aa6e4d2d5274891eaf3ba4113cf52b65c80f39002e2878af73b9c2eb2b20a",
+   "files_sha256": {
+    "lgbm": "e3fe831ac5e2f2f538a95f4379c4b7434e9353387fc93d8ea3fd7e9e876717fa",
+    "lambdarank": "d2ebacec039c5c6fa9afd08bbb34fd97afed46f2afd1d15ddfe4004d02dfab30",
+    "catboost": "b4704a7bd9ac2a28dd6e68846326333c7c0994bdd5f96f39955d954c4609340e",
+    "logistic": "f6f0e7c572e50eb1b049d47c21ac1fa81b40aa6a7f6e7cf76b0ba8361a262103"
+   },
+   "metadata": "ml/paper/models/2026-10.json"
+  }
+ },
+ "closures_recorded": [
+  "2026-10-20"
+ ],
+ "ledger_rows": {
+  "signals": 1521,
+  "marks": 8,
+  "monitors": 48
+ },
+ "scores_sha256": {
+  "2026-10-19": "432c046d4374dfc4474e2a5699efb3f0bd9400a13d88924295e6f63e33001663",
+  "2026-10-21": "104cefb1273a2ca3d2b9aa92b08fb18a09c1753352ac4d2d07f07eb70438d240",
+  "2026-10-22": "fe909a0cf676f5bf168d3d17fe48faa4f9443e5d9bf47465c646e67517a0ebd8"
+ },
+ "inputs": {
+  "ca_feed_live_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
+  "etf_list_live_sha256": "6b7788c8f392b955b6e76b68c86ca4f3cbf4da185681422aa728177786016a7a"
+ }
+}

@@ -1,0 +1,395 @@
+{
+ "split": "s00_g0g1",
+ "test_groups": [
+  0,
+  1
+ ],
+ "sample_frac": 0.2,
+ "metrics": {
+  "split": "s00_g0g1",
+  "test_groups": [
+   0,
+   1
+  ],
+  "sample_frac": 0.2,
+  "clean_labelled_outside_test_and_holdout": 1816291,
+  "purged_overlap_g0": 17806,
+  "embargoed_after_g0": 0,
+  "purged_overlap_g1": 0,
+  "embargoed_after_g1": 11956,
+  "purged_exit_in_or_after_holdout": 30004,
+  "n_train": 1756525,
+  "n_test": 323822,
+  "train_sessions": 1590,
+  "n_train_used": 351062,
+  "auc_pooled": 0.5854941547039044,
+  "auc_by_group": {
+   "0": 0.5901214400634028,
+   "1": 0.579608865770933
+  },
+  "seconds": {
+   "rows": 0.6,
+   "preprocess": 0.9,
+   "fit": 19.4,
+   "predict": 4.4,
+   "total": 25.2
+  },
+  "worker_maxrss_gb": 2.25
+ },
+ "train_rows_by_split": {
+  "s00_g0g1": {
+   "clean_labelled_outside_test_and_holdout": 1816291,
+   "purged_overlap_g0": 17806,
+   "embargoed_after_g0": 0,
+   "purged_overlap_g1": 0,
+   "embargoed_after_g1": 11956,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1756525,
+   "n_test": 323822,
+   "train_sessions": 1590
+  },
+  "s01_g0g2": {
+   "clean_labelled_outside_test_and_holdout": 1771637,
+   "purged_overlap_g0": 17806,
+   "embargoed_after_g0": 11322,
+   "purged_overlap_g2": 12263,
+   "embargoed_after_g2": 18449,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1681793,
+   "n_test": 368476,
+   "train_sessions": 1542
+  },
+  "s02_g0g3": {
+   "clean_labelled_outside_test_and_holdout": 1684871,
+   "purged_overlap_g0": 17806,
+   "embargoed_after_g0": 11322,
+   "purged_overlap_g3": 18387,
+   "embargoed_after_g3": 22548,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1584804,
+   "n_test": 455242,
+   "train_sessions": 1545
+  },
+  "s03_g0g4": {
+   "clean_labelled_outside_test_and_holdout": 1689885,
+   "purged_overlap_g0": 17806,
+   "embargoed_after_g0": 11322,
+   "purged_overlap_g4": 22717,
+   "embargoed_after_g4": 24569,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1583467,
+   "n_test": 450228,
+   "train_sessions": 1543
+  },
+  "s04_g0g5": {
+   "clean_labelled_outside_test_and_holdout": 1614834,
+   "purged_overlap_g0": 17806,
+   "embargoed_after_g0": 11322,
+   "purged_overlap_g5": 21844,
+   "embargoed_after_g5": 31558,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1502301,
+   "n_test": 525279,
+   "train_sessions": 1544
+  },
+  "s05_g0g6": {
+   "clean_labelled_outside_test_and_holdout": 1589593,
+   "purged_overlap_g0": 17806,
+   "embargoed_after_g0": 11322,
+   "purged_overlap_g6": 27999,
+   "embargoed_after_g6": 28672,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1473791,
+   "n_test": 550520,
+   "train_sessions": 1540
+  },
+  "s06_g0g7": {
+   "clean_labelled_outside_test_and_holdout": 1622167,
+   "purged_overlap_g0": 17806,
+   "embargoed_after_g0": 11322,
+   "purged_overlap_g7": 27920,
+   "embargoed_after_g7": 0,
+   "purged_exit_in_or_after_holdout": 0,
+   "n_train": 1565119,
+   "n_test": 517946,
+   "train_sessions": 1609
+  },
+  "s07_g1g2": {
+   "clean_labelled_outside_test_and_holdout": 1815025,
+   "purged_overlap_g1": 11044,
+   "embargoed_after_g1": 0,
+   "purged_overlap_g2": 0,
+   "embargoed_after_g2": 18449,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1755528,
+   "n_test": 325088,
+   "train_sessions": 1589
+  },
+  "s08_g1g3": {
+   "clean_labelled_outside_test_and_holdout": 1728259,
+   "purged_overlap_g1": 11044,
+   "embargoed_after_g1": 11956,
+   "purged_overlap_g3": 18386,
+   "embargoed_after_g3": 22548,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1634321,
+   "n_test": 411854,
+   "train_sessions": 1549
+  },
+  "s09_g1g4": {
+   "clean_labelled_outside_test_and_holdout": 1733273,
+   "purged_overlap_g1": 11044,
+   "embargoed_after_g1": 11956,
+   "purged_overlap_g4": 22717,
+   "embargoed_after_g4": 24569,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1632983,
+   "n_test": 406840,
+   "train_sessions": 1547
+  },
+  "s10_g1g5": {
+   "clean_labelled_outside_test_and_holdout": 1658222,
+   "purged_overlap_g1": 11044,
+   "embargoed_after_g1": 11956,
+   "purged_overlap_g5": 21844,
+   "embargoed_after_g5": 31558,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1551817,
+   "n_test": 481891,
+   "train_sessions": 1548
+  },
+  "s11_g1g6": {
+   "clean_labelled_outside_test_and_holdout": 1632981,
+   "purged_overlap_g1": 11044,
+   "embargoed_after_g1": 11956,
+   "purged_overlap_g6": 27999,
+   "embargoed_after_g6": 28672,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1523307,
+   "n_test": 507132,
+   "train_sessions": 1544
+  },
+  "s12_g1g7": {
+   "clean_labelled_outside_test_and_holdout": 1665555,
+   "purged_overlap_g1": 11044,
+   "embargoed_after_g1": 11956,
+   "purged_overlap_g7": 27920,
+   "embargoed_after_g7": 0,
+   "purged_exit_in_or_after_holdout": 0,
+   "n_train": 1614635,
+   "n_test": 474558,
+   "train_sessions": 1613
+  },
+  "s13_g2g3": {
+   "clean_labelled_outside_test_and_holdout": 1683605,
+   "purged_overlap_g2": 12263,
+   "embargoed_after_g2": 0,
+   "purged_overlap_g3": 0,
+   "embargoed_after_g3": 22548,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1618790,
+   "n_test": 456508,
+   "train_sessions": 1587
+  },
+  "s14_g2g4": {
+   "clean_labelled_outside_test_and_holdout": 1688619,
+   "purged_overlap_g2": 12263,
+   "embargoed_after_g2": 18449,
+   "purged_overlap_g4": 22717,
+   "embargoed_after_g4": 24569,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1580617,
+   "n_test": 451494,
+   "train_sessions": 1542
+  },
+  "s15_g2g5": {
+   "clean_labelled_outside_test_and_holdout": 1613568,
+   "purged_overlap_g2": 12263,
+   "embargoed_after_g2": 18449,
+   "purged_overlap_g5": 21844,
+   "embargoed_after_g5": 31558,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1499451,
+   "n_test": 526545,
+   "train_sessions": 1543
+  },
+  "s16_g2g6": {
+   "clean_labelled_outside_test_and_holdout": 1588327,
+   "purged_overlap_g2": 12263,
+   "embargoed_after_g2": 18449,
+   "purged_overlap_g6": 27999,
+   "embargoed_after_g6": 28672,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1470941,
+   "n_test": 551786,
+   "train_sessions": 1539
+  },
+  "s17_g2g7": {
+   "clean_labelled_outside_test_and_holdout": 1620901,
+   "purged_overlap_g2": 12263,
+   "embargoed_after_g2": 18449,
+   "purged_overlap_g7": 27920,
+   "embargoed_after_g7": 0,
+   "purged_exit_in_or_after_holdout": 0,
+   "n_train": 1562269,
+   "n_test": 519212,
+   "train_sessions": 1608
+  },
+  "s18_g3g4": {
+   "clean_labelled_outside_test_and_holdout": 1601853,
+   "purged_overlap_g3": 18387,
+   "embargoed_after_g3": 0,
+   "purged_overlap_g4": 0,
+   "embargoed_after_g4": 24569,
+   "purged_exit_in_or_after_holdout": 30004,
+   "n_train": 1528893,
+   "n_test": 538260,
+   "train_sessions": 1588
+  },
+  "s19_g3g5": {
+   "clean_labelled_outside_test_and_holdout": 1526802,
+   "purged_overlap_g3": 18387,
+   "embargoed_after_g3": 22548,
+   "purged_overlap_g5": 21844,
+   "embargoed_after_g5": 31558,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1402462,
+   "n_test": 613311,
+   "train_sessions": 1546
+  },
+  "s20_g3g6": {
+   "clean_labelled_outside_test_and_holdout": 1501561,
+   "purged_overlap_g3": 18387,
+   "embargoed_after_g3": 22548,
+   "purged_overlap_g6": 27999,
+   "embargoed_after_g6": 28672,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1373952,
+   "n_test": 638552,
+   "train_sessions": 1542
+  },
+  "s21_g3g7": {
+   "clean_labelled_outside_test_and_holdout": 1534135,
+   "purged_overlap_g3": 18387,
+   "embargoed_after_g3": 22548,
+   "purged_overlap_g7": 27920,
+   "embargoed_after_g7": 0,
+   "purged_exit_in_or_after_holdout": 0,
+   "n_train": 1465280,
+   "n_test": 605978,
+   "train_sessions": 1611
+  },
+  "s22_g4g5": {
+   "clean_labelled_outside_test_and_holdout": 1531816,
+   "purged_overlap_g4": 22717,
+   "embargoed_after_g4": 0,
+   "purged_overlap_g5": 0,
+   "embargoed_after_g5": 31558,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1447538,
+   "n_test": 608297,
+   "train_sessions": 1587
+  },
+  "s23_g4g6": {
+   "clean_labelled_outside_test_and_holdout": 1506575,
+   "purged_overlap_g4": 22717,
+   "embargoed_after_g4": 24569,
+   "purged_overlap_g6": 27999,
+   "embargoed_after_g6": 28672,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1372615,
+   "n_test": 633538,
+   "train_sessions": 1540
+  },
+  "s24_g4g7": {
+   "clean_labelled_outside_test_and_holdout": 1539149,
+   "purged_overlap_g4": 22717,
+   "embargoed_after_g4": 24569,
+   "purged_overlap_g7": 27920,
+   "embargoed_after_g7": 0,
+   "purged_exit_in_or_after_holdout": 0,
+   "n_train": 1463943,
+   "n_test": 600964,
+   "train_sessions": 1609
+  },
+  "s25_g5g6": {
+   "clean_labelled_outside_test_and_holdout": 1431524,
+   "purged_overlap_g5": 21844,
+   "embargoed_after_g5": 0,
+   "purged_overlap_g6": 0,
+   "embargoed_after_g6": 28672,
+   "purged_exit_in_or_after_holdout": 30003,
+   "n_train": 1351005,
+   "n_test": 708589,
+   "train_sessions": 1584
+  },
+  "s26_g5g7": {
+   "clean_labelled_outside_test_and_holdout": 1464098,
+   "purged_overlap_g5": 21844,
+   "embargoed_after_g5": 31558,
+   "purged_overlap_g7": 27917,
+   "embargoed_after_g7": 0,
+   "purged_exit_in_or_after_holdout": 0,
+   "n_train": 1382779,
+   "n_test": 676015,
+   "train_sessions": 1610
+  },
+  "s27_g6g7": {
+   "clean_labelled_outside_test_and_holdout": 1438857,
+   "purged_overlap_g6": 27999,
+   "embargoed_after_g6": 0,
+   "purged_overlap_g7": 0,
+   "embargoed_after_g7": 0,
+   "purged_exit_in_or_after_holdout": 0,
+   "n_train": 1410858,
+   "n_test": 701256,
+   "train_sessions": 1649
+  }
+ },
+ "n_train_range": [
+  1351005,
+  1756525
+ ],
+ "n_train_mean": 1528278.0,
+ "estimate": {
+  "per_split_seconds_line": [
+   60,
+   58,
+   57,
+   57,
+   56,
+   56,
+   58,
+   60,
+   58,
+   58,
+   57,
+   56,
+   58,
+   58,
+   57,
+   56,
+   56,
+   57,
+   57,
+   55,
+   54,
+   56,
+   56,
+   54,
+   56,
+   55,
+   55,
+   56
+  ],
+  "fit_full_minutes_at_2_workers_line": 13.2,
+  "fit_full_minutes_at_2_workers_5x_smoke": 21.8,
+  "basis": {
+   "smoke_rows": 351062,
+   "smoke_preprocess_fit_seconds": 20.299999999999997,
+   "walk_forward_rows_mean_last24": 648956,
+   "walk_forward_train_seconds_mean_last24": 27.6
+  },
+  "note": "the walk-forward train_seconds were measured with two workers on this box; the smoke ran one worker"
+ }
+}

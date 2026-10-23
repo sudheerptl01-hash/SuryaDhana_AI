@@ -1,0 +1,28 @@
+{
+ "generated_at": "2026-10-23T03:37:52",
+ "ab_py_existing_behaviour": {
+  "check": "python3 -m ml.improve.ab compare --data ml/data_5y --tag v1 --v1-extra with the modified ml/improve/ab.py, outputs redirected to a scratch folder (the v1 tag folder is read-only), diffed against the committed file",
+  "reference": "ml/results/improve/ab/v1/compare.json",
+  "reference_sha256": "aa3253eb8fc60bc73c19bc966540ba0124bde4cdad124b4f9159f555c9189672",
+  "rerun_sha256": "aa3253eb8fc60bc73c19bc966540ba0124bde4cdad124b4f9159f555c9189672",
+  "byte_identical": true,
+  "ab_md_byte_identical": true,
+  "also_identical_with_unmodified_code": true
+ },
+ "ab_books_default_behaviour": {
+  "check": "python3 -m ml.improve.ab_books --tag 10y --data ml/data_10y --prices ml/results/improve/cache/features_prices_export_10y.parquet --price-start 2017-10-02 with the modified ml/improve/ab_books.py, written via --out-dir to a scratch folder",
+  "reference": "ml/results/improve/ab/10y/books.json",
+  "reference_sha256": "30f3faca0168500b02cde63d667ceb34bc7ada699103625c572bacbd17fce455",
+  "rerun_sha256": "30f3faca0168500b02cde63d667ceb34bc7ada699103625c572bacbd17fce455",
+  "byte_identical": true,
+  "books_ab_md_byte_identical": true
+ },
+ "q7_tuned_equals_control_with_incumbent": {
+  "check": "q7_tuned on fold 2026-07 of ml/data_10y with a scratch selection file giving every year the incumbent (nl63_mdl200_ff0.8)",
+  "q7_tuned_auc": 0.5473562945750852,
+  "control_auc": 0.5473562945750852,
+  "auc_equal": true,
+  "n_rows": 32841,
+  "scores_bit_identical": true
+ }
+}

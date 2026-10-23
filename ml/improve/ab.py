@@ -6,6 +6,8 @@ walk-forward folds from the dataset's splits.json, rolling 504-session training 
 22-session embargo (in the splits), EXIT-DATE PURGE of training rows whose label window
 reaches the test month, untouched holdout scored once.  The champion LightGBM
 configuration is used unchanged (ml/scale5y.make_model("all51")).  Nothing is tuned here.
+Phase 2 (ml/IMPROVEMENT_PLAN_2.md) adds ae1_events (control + family E, Q6) and q7_tuned (the control with
+the per-calendar-year LightGBM setting that ml/improve/tune.py selected on training data only, Q7).
 
 Configurations are fixed in CONFIGS / FAMILIES below (pre-registered in the plan); a run
 writes one JSON + one predictions parquet per configuration in the scale5y schema, and
@@ -74,7 +76,12 @@ FAMILIES = {
     "F3": ["fo_member", "fut_basis_near", "fut_oi_chg_5", "fut_oi_chg_20", "fut_oi_z_60", "pcr_oi", "pcr_chg_5",
            "opt_oi_to_turnover"],
     "F4": ["fii_idx_fut_net", "fii_idx_fut_net_chg_5", "fii_stk_fut_net", "client_idx_pcr"],
+    # phase 2 (ml/IMPROVEMENT_PLAN_2.md Q6): company events from the exchange's announcement files
+    "E": ["sess_since_results", "results_last_5", "results_last_20", "ear_3d", "ear_vol_z", "ann_count_20",
+          "rating_20", "mgmt_change_60", "orders_20", "insolvency_60"],
 }
+# phase 2 Q7: per-calendar-year LightGBM settings chosen on training data only by ml/improve/tune.py
+TUNED_PARAMS = ML_DIR / "results" / "improve2" / "tune" / "selected_params.json"
 CONFIGS = {
     "control":            dict(kind="lgbm", extra=[], preprocess="raw", family="trees"),
     "lr_l2":              dict(kind="lr", extra=[], preprocess="scaled", family="linear"),
@@ -95,9 +102,13 @@ CONFIGS = {
     "ab8_uniqueness_w":   dict(kind="lgbm", extra=[], preprocess="raw", family="trees", uniqueness_weights=True),
     # AB0 (plan amendment A1): the frozen five-year all-50-feature LightGBM, copied from ml/results/scale5y/ for comparison only
     "all51":              dict(kind="reference", extra=[], preprocess="raw", family="trees"),
+    # AE1 (phase-2 plan Q6): control + family E (pass the events feature parquet as --extra)
+    "ae1_events":         dict(kind="lgbm", extra=["E"], preprocess="raw", family="trees"),
+    # Q7 (phase-2 plan): the control with each calendar year's LightGBM setting from TUNED_PARAMS
+    "q7_tuned":           dict(kind="tuned", extra=[], preprocess="raw", family="trees"),
 }
 VARIANTS = ["all51", "ab1_mkt", "ab2_sector", "ab2p_sector_placebo", "ab3_fo", "ab4_flows", "ab5_all", "ab6_ensemble_all52", "ab7_subsample5", "ab8_uniqueness_w",
-            "lr_l2", "baseline_mom", "ab6_lambdarank52", "ab6_catboost52"]
+            "lr_l2", "baseline_mom", "ab6_lambdarank52", "ab6_catboost52", "ae1_events", "q7_tuned"]
 
 T0 = time.time()
 _DF: pd.DataFrame | None = None
@@ -196,7 +207,10 @@ def _fold_job(args):
     ck = cache / "folds" / name / f"{spec['name']}.json"
     pk = ck.with_suffix(".parquet")
     if ck.exists() and pk.exists():
-        return json.loads(ck.read_text())
+        cached = json.loads(ck.read_text())
+        # a tuned fold is reused only if it was fitted with the setting the selection file now gives its year
+        if CONFIGS[name]["kind"] != "tuned" or cached.get("lgbm_setting") == tuned_setting(spec):
+            return cached
     t0 = time.time()
     tr, te, n_before, n_purged = window_rows(_DF, _DD, _DATES, spec, TRAIN_SESSIONS)
     cfg = CONFIGS[name]
@@ -216,6 +230,11 @@ def _fold_job(args):
             est.fit(Xtr, ytr, sample_weight=uniqueness_weights(tr))
         else:
             est.fit(Xtr, ytr)
+        score = est.predict_proba(Xte)[:, 1]
+    elif kind == "tuned":
+        setting = tuned_setting(spec)
+        est = s5.make_model("all51", N_THREADS).set_params(**setting["params"])
+        est.fit(Xtr, ytr)
         score = est.predict_proba(Xte)[:, 1]
     elif kind in ("lr", "lr_mom"):
         est = s5.make_model("lr_l2" if kind == "lr" else "baseline_mom", N_THREADS)
@@ -244,6 +263,8 @@ def _fold_job(args):
     met.update(fold=spec["name"], n_train=int(len(tr)), n_train_before_purge=n_before,
                n_train_purged_exit_ge_test_start=n_purged, n_features=len(feats),
                train_seconds=round(time.time() - t0, 1))
+    if kind == "tuned":
+        met["lgbm_setting"] = setting
     preds = te[["date", "ticker"]].copy()
     preds["score"], preds["y"], preds["fwd"], preds["fold"] = score, yte, te[FWD].to_numpy(), spec["name"]
     ck.parent.mkdir(parents=True, exist_ok=True)
@@ -268,6 +289,25 @@ def uniqueness_weights(tr: pd.DataFrame) -> np.ndarray:
     u, _ = concurrency_uniqueness(codes.astype(np.int64), si.astype(np.int64), ei.astype(np.int64), len(tick), len(dvals) + 1)
     u = np.where(np.isfinite(u) & (u > 0), u, np.nanmean(u[np.isfinite(u) & (u > 0)]))
     return (u / u.mean()).astype(np.float64)
+
+
+_TUNED: dict | None = None
+
+
+def tuned_setting(spec: dict) -> dict:
+    """Q7: the LightGBM setting ml/improve/tune.py selected for the calendar year of this fold's test window
+    (the holdout's test window starts 2026-08, so it takes the 2026 setting).  The selection file must be complete
+    (every year 2018..2026); only num_leaves, min_data_in_leaf and feature_fraction differ from the control."""
+    global _TUNED
+    if _TUNED is None:
+        assert TUNED_PARAMS.exists(), f"{TUNED_PARAMS} missing: run python3 -m ml.improve.tune select first"
+        sel = json.loads(TUNED_PARAMS.read_text())
+        assert sel.get("complete") is True, f"{TUNED_PARAMS} is not complete"
+        _TUNED = sel
+    year = str(pd.Timestamp(spec["test_start"]).year)
+    y = _TUNED["years"][year]
+    return {"year": year, "setting": y["setting"],
+            "params": {k: y["params"][k] for k in ("num_leaves", "min_data_in_leaf", "feature_fraction")}}
 
 
 def write_model(out: Path, name: str, specs: list[dict], feats: list[str], folds_meta: list[dict],
@@ -329,8 +369,17 @@ def run(a) -> None:
             params["lgbm"] = s5.make_model("all51", N_THREADS).get_params()
         elif cfg["kind"] == "catboost":
             params["catboost"] = {k: v for k, v in CB_PARAMS.items() if k != "verbose"}
+        elif cfg["kind"] == "tuned":
+            params["lgbm_base"] = s5.make_model("all51", N_THREADS).get_params()
+            params["tuned_params_source"] = str(TUNED_PARAMS.relative_to(ML_DIR.parent)
+                                                if TUNED_PARAMS.is_relative_to(ML_DIR.parent) else TUNED_PARAMS)
+            params["tuned_setting_by_year"] = {m["lgbm_setting"]["year"]: m["lgbm_setting"] for m in metas}
         notes = (f"improvement-phase A/B ({a.tag}): walk-forward on {data.name} splits, rolling {TRAIN_SESSIONS}-session "
                  "window, exit-date purge, champion configuration unchanged; see ml/IMPROVEMENT_PLAN.md")
+        if cfg["kind"] == "tuned":
+            notes = (f"phase-2 Q7 ({a.tag}): walk-forward on {data.name} splits, rolling {TRAIN_SESSIONS}-session window, "
+                     "exit-date purge; the control except num_leaves / min_data_in_leaf / feature_fraction, chosen per "
+                     "calendar year on training data only (ml/improve/tune.py); see ml/IMPROVEMENT_PLAN_2.md Q7")
         write_model(out, name, specs, fl, metas, preds, params, notes)
 
 

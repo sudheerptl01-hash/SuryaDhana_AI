@@ -1,0 +1,749 @@
+{
+ "stream": "Q3",
+ "built_at": "2026-10-23T03:19:26",
+ "source": "ml/data_10y/model_dataset.parquet",
+ "source_rows": 2226504,
+ "source_manifest_built_at": "2026-10-22T14:40:44",
+ "label_rule": "ml/data.py lines 198-202 applied to the restricted universe's rows: per-date median of y_raw_20d over every universe row with a non-missing y_raw_20d (clean or not; pandas skipna), y_excess = y_raw - median, y_rank = per-date pct rank of y_excess, label = 1(y_excess > 0) where y_excess is not NaN",
+ "identity_test_full_universe": {
+  "y_excess_20d": {
+   "nan_pattern_equal": true,
+   "max_abs_diff": 0.0,
+   "n_compared": 2190950
+  },
+  "y_rank_20d": {
+   "nan_pattern_equal": true,
+   "max_abs_diff": 0.0,
+   "n_compared": 2190950
+  },
+  "label_beat_mkt_20d": {
+   "nan_pattern_equal": true,
+   "max_abs_diff": 0.0,
+   "n_compared": 2190950
+  },
+  "reproduces_stored_labels": true
+ },
+ "sets": {
+  "L1": {
+   "dir": "ml/data_10y_liq",
+   "row_filter": "cs_rank_turnover >= 0.67",
+   "universe": "liquid tercile (cs_rank_turnover >= 0.67)",
+   "rows": 735860,
+   "share_of_source_rows": 0.33050019222961197,
+   "tickers": 2144,
+   "sessions": 2241,
+   "names_per_date": {
+    "mean": 328.3623382418563,
+    "min": 151,
+    "max": 507
+   },
+   "labeled_rows": 724117,
+   "labeled_clean_rows": 721859,
+   "label_balance_all_labeled": 0.4992342397706448,
+   "label_balance_labeled_clean": 0.4999909954714148,
+   "label_balance_per_date_labeled": {
+    "min": 0.4915254237288136,
+    "p05": 0.4971751412429379,
+    "median": 0.5,
+    "p95": 0.5,
+    "max": 0.5
+   },
+   "label_balance_per_date_labeled_clean": {
+    "min": 0.483739837398374,
+    "p05": 0.4964788732394366,
+    "median": 0.5,
+    "p95": 0.5045871559633027,
+    "max": 0.5602409638554217
+   },
+   "labeled_dates": 2220,
+   "share_labeled_dates_balance_within_0_45_0_55": 1.0,
+   "share_labeled_dates_balance_within_0_45_0_55_clean": 0.9972972972972973,
+   "share_labeled_dates_balance_within_0_48_0_52_clean": 0.9905405405405405,
+   "rows_per_year": {
+    "2017": {
+     "rows": 16679,
+     "labeled": 16679,
+     "labeled_clean": 16547,
+     "sessions": 62,
+     "names_per_date_mean": 269.01612903225805,
+     "label_mean": 0.4991306433239403
+    },
+    "2018": {
+     "rows": 56938,
+     "labeled": 56897,
+     "labeled_clean": 56519,
+     "sessions": 246,
+     "names_per_date_mean": 231.45528455284554,
+     "label_mean": 0.49900697752078316
+    },
+    "2019": {
+     "rows": 42437,
+     "labeled": 42368,
+     "labeled_clean": 41913,
+     "sessions": 245,
+     "names_per_date_mean": 173.21224489795918,
+     "label_mean": 0.49858383685800606
+    },
+    "2020": {
+     "rows": 52525,
+     "labeled": 52388,
+     "labeled_clean": 51754,
+     "sessions": 252,
+     "names_per_date_mean": 208.43253968253967,
+     "label_mean": 0.49896922959456363
+    },
+    "2021": {
+     "rows": 78824,
+     "labeled": 78732,
+     "labeled_clean": 78703,
+     "sessions": 248,
+     "names_per_date_mean": 317.83870967741933,
+     "label_mean": 0.4991490118376264
+    },
+    "2022": {
+     "rows": 83075,
+     "labeled": 82904,
+     "labeled_clean": 82860,
+     "sessions": 248,
+     "names_per_date_mean": 334.97983870967744,
+     "label_mean": 0.49921596062916146
+    },
+    "2023": {
+     "rows": 91713,
+     "labeled": 91558,
+     "labeled_clean": 91437,
+     "sessions": 246,
+     "names_per_date_mean": 372.8170731707317,
+     "label_mean": 0.49923545730575153
+    },
+    "2024": {
+     "rows": 113098,
+     "labeled": 112817,
+     "labeled_clean": 112589,
+     "sessions": 249,
+     "names_per_date_mean": 454.20883534136544,
+     "label_mean": 0.4994194137408369
+    },
+    "2025": {
+     "rows": 108769,
+     "labeled": 108608,
+     "labeled_clean": 108438,
+     "sessions": 249,
+     "names_per_date_mean": 436.82329317269074,
+     "label_mean": 0.49946596935769005
+    },
+    "2026": {
+     "rows": 91802,
+     "labeled": 81166,
+     "labeled_clean": 81099,
+     "sessions": 196,
+     "names_per_date_mean": 468.3775510204082,
+     "label_mean": 0.49945790109159005
+    }
+   },
+   "median_y_raw_restricted_minus_full_per_date": {
+    "mean": 0.0031251900174588294,
+    "sd": 0.014416220350905451,
+    "min": -0.059745856279783016,
+    "p05": -0.021707046115475824,
+    "median": 0.003530563562607003,
+    "p95": 0.025317907784799445,
+    "max": 0.05227793349980947
+   },
+   "share_labeled_rows_whose_label_differs_from_full_universe_label": 0.05446357425664637,
+   "hand_check_dates": [
+    "2017-10-17",
+    "2019-03-01",
+    "2023-06-02",
+    "2025-05-30",
+    "2026-04-24"
+   ],
+   "hand_check": [
+    {
+     "date": "2017-10-17",
+     "rows": 252,
+     "rows_with_y_raw": 252,
+     "clean_rows": 246,
+     "median_y_raw_by_hand": -0.012250867481070182,
+     "median_implied_by_stored": -0.012250867481070182,
+     "rows_above_median": 126,
+     "rows_at_median": 0,
+     "rows_below_median": 126,
+     "label_mean": 0.5,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "63MOONS",
+       "y_raw_20d": -0.09618320610687014,
+       "y_excess_20d": -0.08393233862579996,
+       "y_rank_20d": 0.15873015873015872,
+       "label": 0.0
+      },
+      {
+       "ticker": "ABCAPITAL",
+       "y_raw_20d": 0.04469426926240749,
+       "y_excess_20d": 0.056945136743477676,
+       "y_rank_20d": 0.753968253968254,
+       "label": 1.0
+      },
+      {
+       "ticker": "ACC",
+       "y_raw_20d": -0.0176795580110497,
+       "y_excess_20d": -0.0054286905299795185,
+       "y_rank_20d": 0.4880952380952381,
+       "label": 0.0
+      }
+     ]
+    },
+    {
+     "date": "2019-03-01",
+     "rows": 173,
+     "rows_with_y_raw": 173,
+     "clean_rows": 172,
+     "median_y_raw_by_hand": 0.08553198827384034,
+     "median_implied_by_stored": 0.08553198827384034,
+     "rows_above_median": 86,
+     "rows_at_median": 1,
+     "rows_below_median": 86,
+     "label_mean": 0.49710982658959535,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "ACC",
+       "y_raw_20d": 0.09867044610919895,
+       "y_excess_20d": 0.013138457835358608,
+       "y_rank_20d": 0.5838150289017341,
+       "label": 1.0
+      },
+      {
+       "ticker": "ADANIENT",
+       "y_raw_20d": 0.13433962264150945,
+       "y_excess_20d": 0.048807634367669106,
+       "y_rank_20d": 0.7283236994219653,
+       "label": 1.0
+      },
+      {
+       "ticker": "ADANIPORTS",
+       "y_raw_20d": 0.14118529632408094,
+       "y_excess_20d": 0.0556533080502406,
+       "y_rank_20d": 0.7630057803468208,
+       "label": 1.0
+      }
+     ]
+    },
+    {
+     "date": "2023-06-02",
+     "rows": 354,
+     "rows_with_y_raw": 352,
+     "clean_rows": 352,
+     "median_y_raw_by_hand": 0.04076031067720276,
+     "median_implied_by_stored": 0.04076031067720276,
+     "rows_above_median": 176,
+     "rows_at_median": 0,
+     "rows_below_median": 176,
+     "label_mean": 0.5,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "AARTIIND",
+       "y_raw_20d": -0.015661478599221845,
+       "y_excess_20d": -0.056421789276424605,
+       "y_rank_20d": 0.19602272727272727,
+       "label": 0.0
+      },
+      {
+       "ticker": "AAVAS",
+       "y_raw_20d": 0.09637784090909096,
+       "y_excess_20d": 0.0556175302318882,
+       "y_rank_20d": 0.7784090909090909,
+       "label": 1.0
+      },
+      {
+       "ticker": "ABB",
+       "y_raw_20d": 0.09324659231722432,
+       "y_excess_20d": 0.05248628164002156,
+       "y_rank_20d": 0.7698863636363636,
+       "label": 1.0
+      }
+     ]
+    },
+    {
+     "date": "2025-05-30",
+     "rows": 433,
+     "rows_with_y_raw": 432,
+     "clean_rows": 432,
+     "median_y_raw_by_hand": 0.03009129722095949,
+     "median_implied_by_stored": 0.03009129722095949,
+     "rows_above_median": 216,
+     "rows_at_median": 0,
+     "rows_below_median": 216,
+     "label_mean": 0.5,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "360ONE",
+       "y_raw_20d": 0.200497512437811,
+       "y_excess_20d": 0.1704062152168515,
+       "y_rank_20d": 0.9629629629629629,
+       "label": 1.0
+      },
+      {
+       "ticker": "AARTIDRUGS",
+       "y_raw_20d": 0.015232974910394326,
+       "y_excess_20d": -0.014858322310565164,
+       "y_rank_20d": 0.42592592592592593,
+       "label": 0.0
+      },
+      {
+       "ticker": "ABB",
+       "y_raw_20d": 0.02181208053691286,
+       "y_excess_20d": -0.00827921668404663,
+       "y_rank_20d": 0.4675925925925926,
+       "label": 0.0
+      }
+     ]
+    },
+    {
+     "date": "2026-04-24",
+     "rows": 473,
+     "rows_with_y_raw": 473,
+     "clean_rows": 472,
+     "median_y_raw_by_hand": 0.006521739130434856,
+     "median_implied_by_stored": 0.006521739130434856,
+     "rows_above_median": 236,
+     "rows_at_median": 1,
+     "rows_below_median": 236,
+     "label_mean": 0.4989429175475687,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "360ONE",
+       "y_raw_20d": 0.11315102908493557,
+       "y_excess_20d": 0.10662928995450072,
+       "y_rank_20d": 0.854122621564482,
+       "label": 1.0
+      },
+      {
+       "ticker": "AARTIIND",
+       "y_raw_20d": 0.009100418410041833,
+       "y_excess_20d": 0.002578679279606977,
+       "y_rank_20d": 0.5158562367864693,
+       "label": 1.0
+      },
+      {
+       "ticker": "ABB",
+       "y_raw_20d": -0.07850760521110434,
+       "y_excess_20d": -0.08502934434153919,
+       "y_rank_20d": 0.12684989429175475,
+       "label": 0.0
+      }
+     ]
+    }
+   ],
+   "hand_check_ok": true,
+   "benchmark_vs_control_ew_liquid": {
+    "rows_set": 705312,
+    "rows_control": 705312,
+    "rows_only_in_set": 0,
+    "rows_only_in_control": 0,
+    "y_raw_20d_max_abs_diff_on_common_rows": 0.0,
+    "signal_dates_set": 2158,
+    "signal_dates_control": 2158,
+    "signal_dates_common": 2158,
+    "tranche_bench_max_abs_diff": 0.0,
+    "identical": true,
+    "benchmark_in_set_books": "ew_universe",
+    "control_benchmark": "ew_liquid of ml/data_10y"
+   },
+   "files": {
+    "manifest.json": {
+     "bytes": 4427
+    },
+    "model_dataset.parquet": {
+     "bytes": 246034219
+    },
+    "splits.json": {
+     "bytes": 12635
+    }
+   },
+   "manifest_features": 52,
+   "splits_identical_to_source": true
+  },
+  "L2": {
+   "dir": "ml/data_10y_liq2",
+   "row_filter": "cs_rank_turnover >= 0.33",
+   "universe": "top two terciles (cs_rank_turnover >= 0.33)",
+   "rows": 1492914,
+   "share_of_source_rows": 0.6705193433292732,
+   "tickers": 2408,
+   "sessions": 2241,
+   "names_per_date": {
+    "mean": 666.182061579652,
+    "min": 305,
+    "max": 1029
+   },
+   "labeled_rows": 1469066,
+   "labeled_clean_rows": 1465982,
+   "label_balance_all_labeled": 0.49960791414408884,
+   "label_balance_labeled_clean": 0.5001807662031321,
+   "label_balance_per_date_labeled": {
+    "min": 0.49572649572649574,
+    "p05": 0.49859154929577465,
+    "median": 0.49948186528497407,
+    "p95": 0.5,
+    "max": 0.5
+   },
+   "label_balance_per_date_labeled_clean": {
+    "min": 0.4910891089108911,
+    "p05": 0.4982266348653492,
+    "median": 0.5,
+    "p95": 0.5028901734104047,
+    "max": 0.5252808988764045
+   },
+   "labeled_dates": 2220,
+   "share_labeled_dates_balance_within_0_45_0_55": 1.0,
+   "share_labeled_dates_balance_within_0_45_0_55_clean": 1.0,
+   "share_labeled_dates_balance_within_0_48_0_52_clean": 0.995945945945946,
+   "rows_per_year": {
+    "2017": {
+     "rows": 33822,
+     "labeled": 33822,
+     "labeled_clean": 33647,
+     "sessions": 62,
+     "names_per_date_mean": 545.516129032258,
+     "label_mean": 0.4994973685766661
+    },
+    "2018": {
+     "rows": 115432,
+     "labeled": 115336,
+     "labeled_clean": 114910,
+     "sessions": 246,
+     "names_per_date_mean": 469.2357723577236,
+     "label_mean": 0.49937573697717974
+    },
+    "2019": {
+     "rows": 86064,
+     "labeled": 85921,
+     "labeled_clean": 85354,
+     "sessions": 245,
+     "names_per_date_mean": 351.28163265306125,
+     "label_mean": 0.4992609490113011
+    },
+    "2020": {
+     "rows": 106510,
+     "labeled": 106253,
+     "labeled_clean": 105581,
+     "sessions": 252,
+     "names_per_date_mean": 422.6587301587302,
+     "label_mean": 0.49938354681750163
+    },
+    "2021": {
+     "rows": 159908,
+     "labeled": 159733,
+     "labeled_clean": 159700,
+     "sessions": 248,
+     "names_per_date_mean": 644.7903225806451,
+     "label_mean": 0.4995774198193235
+    },
+    "2022": {
+     "rows": 168552,
+     "labeled": 168194,
+     "labeled_clean": 168123,
+     "sessions": 248,
+     "names_per_date_mean": 679.6451612903226,
+     "label_mean": 0.49964921459742917
+    },
+    "2023": {
+     "rows": 186085,
+     "labeled": 185716,
+     "labeled_clean": 185436,
+     "sessions": 246,
+     "names_per_date_mean": 756.4430894308944,
+     "label_mean": 0.4996930797561869
+    },
+    "2024": {
+     "rows": 229501,
+     "labeled": 229065,
+     "labeled_clean": 228656,
+     "sessions": 249,
+     "names_per_date_mean": 921.6907630522088,
+     "label_mean": 0.4997140549625652
+    },
+    "2025": {
+     "rows": 220729,
+     "labeled": 220384,
+     "labeled_clean": 220076,
+     "sessions": 249,
+     "names_per_date_mean": 886.4618473895582,
+     "label_mean": 0.49971867286191374
+    },
+    "2026": {
+     "rows": 186311,
+     "labeled": 164642,
+     "labeled_clean": 164499,
+     "sessions": 196,
+     "names_per_date_mean": 950.5663265306123,
+     "label_mean": 0.4997145321363929
+    }
+   },
+   "median_y_raw_restricted_minus_full_per_date": {
+    "mean": 0.0013346192201154612,
+    "sd": 0.006128417279444185,
+    "min": -0.029549490822987412,
+    "p05": -0.009518026122751383,
+    "median": 0.0013597049810425976,
+    "p95": 0.011040920299659014,
+    "max": 0.0264374708726951
+   },
+   "share_labeled_rows_whose_label_differs_from_full_universe_label": 0.020700227219199136,
+   "hand_check_dates": [
+    "2017-10-17",
+    "2019-03-01",
+    "2023-06-02",
+    "2025-05-30",
+    "2026-04-24"
+   ],
+   "hand_check": [
+    {
+     "date": "2017-10-17",
+     "rows": 512,
+     "rows_with_y_raw": 512,
+     "clean_rows": 504,
+     "median_y_raw_by_hand": -0.009027695480078646,
+     "median_implied_by_stored": -0.009027695480078646,
+     "rows_above_median": 256,
+     "rows_at_median": 0,
+     "rows_below_median": 256,
+     "label_mean": 0.5,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "63MOONS",
+       "y_raw_20d": -0.09618320610687014,
+       "y_excess_20d": -0.0871555106267915,
+       "y_rank_20d": 0.142578125,
+       "label": 0.0
+      },
+      {
+       "ticker": "8KMILES",
+       "y_raw_20d": 0.6620565243535781,
+       "y_excess_20d": 0.6710842198336567,
+       "y_rank_20d": 1.0,
+       "label": 1.0
+      },
+      {
+       "ticker": "ABAN",
+       "y_raw_20d": 0.026344086021505397,
+       "y_excess_20d": 0.03537178150158404,
+       "y_rank_20d": 0.650390625,
+       "label": 1.0
+      }
+     ]
+    },
+    {
+     "date": "2019-03-01",
+     "rows": 351,
+     "rows_with_y_raw": 350,
+     "clean_rows": 349,
+     "median_y_raw_by_hand": 0.08033046804812316,
+     "median_implied_by_stored": 0.08033046804812316,
+     "rows_above_median": 175,
+     "rows_at_median": 0,
+     "rows_below_median": 175,
+     "label_mean": 0.5,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "3MINDIA",
+       "y_raw_20d": 0.057198782079164845,
+       "y_excess_20d": -0.023131685968958315,
+       "y_rank_20d": 0.37142857142857144,
+       "label": 0.0
+      },
+      {
+       "ticker": "AARTIIND",
+       "y_raw_20d": 0.11668669163898504,
+       "y_excess_20d": 0.03635622359086188,
+       "y_rank_20d": 0.6828571428571428,
+       "label": 1.0
+      },
+      {
+       "ticker": "AAVAS",
+       "y_raw_20d": 0.07441860465116279,
+       "y_excess_20d": -0.005911863396960371,
+       "y_rank_20d": 0.4657142857142857,
+       "label": 0.0
+      }
+     ]
+    },
+    {
+     "date": "2023-06-02",
+     "rows": 717,
+     "rows_with_y_raw": 714,
+     "clean_rows": 713,
+     "median_y_raw_by_hand": 0.044979948697568606,
+     "median_implied_by_stored": 0.044979948697568606,
+     "rows_above_median": 357,
+     "rows_at_median": 0,
+     "rows_below_median": 357,
+     "label_mean": 0.5,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "360ONE",
+       "y_raw_20d": 0.12542853765220485,
+       "y_excess_20d": 0.08044858895463625,
+       "y_rank_20d": 0.8095238095238095,
+       "label": 1.0
+      },
+      {
+       "ticker": "3MINDIA",
+       "y_raw_20d": 0.04174573055028463,
+       "y_excess_20d": -0.0032342181472839737,
+       "y_rank_20d": 0.48599439775910364,
+       "label": 0.0
+      },
+      {
+       "ticker": "AARTIDRUGS",
+       "y_raw_20d": 0.0030312872144635516,
+       "y_excess_20d": -0.041948661483105054,
+       "y_rank_20d": 0.28431372549019607,
+       "label": 0.0
+      }
+     ]
+    },
+    {
+     "date": "2025-05-30",
+     "rows": 880,
+     "rows_with_y_raw": 878,
+     "clean_rows": 878,
+     "median_y_raw_by_hand": 0.023598737422489524,
+     "median_implied_by_stored": 0.023598737422489524,
+     "rows_above_median": 439,
+     "rows_at_median": 0,
+     "rows_below_median": 439,
+     "label_mean": 0.5,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "360ONE",
+       "y_raw_20d": 0.200497512437811,
+       "y_excess_20d": 0.17689877501532147,
+       "y_rank_20d": 0.9646924829157175,
+       "label": 1.0
+      },
+      {
+       "ticker": "3MINDIA",
+       "y_raw_20d": -0.01997268692386478,
+       "y_excess_20d": -0.043571424346354304,
+       "y_rank_20d": 0.24829157175398633,
+       "label": 0.0
+      },
+      {
+       "ticker": "63MOONS",
+       "y_raw_20d": 0.17947674418604653,
+       "y_excess_20d": 0.155878006763557,
+       "y_rank_20d": 0.9544419134396356,
+       "label": 1.0
+      }
+     ]
+    },
+    {
+     "date": "2026-04-24",
+     "rows": 961,
+     "rows_with_y_raw": 959,
+     "clean_rows": 958,
+     "median_y_raw_by_hand": 0.010622685023411904,
+     "median_implied_by_stored": 0.010622685023411904,
+     "rows_above_median": 479,
+     "rows_at_median": 1,
+     "rows_below_median": 479,
+     "label_mean": 0.4994786235662148,
+     "max_abs_diff_y_excess": 0.0,
+     "max_abs_diff_y_rank": 0.0,
+     "label_mismatches": 0,
+     "nan_pattern_equal": true,
+     "example_rows": [
+      {
+       "ticker": "360ONE",
+       "y_raw_20d": 0.11315102908493557,
+       "y_excess_20d": 0.10252834406152367,
+       "y_rank_20d": 0.8269030239833159,
+       "label": 1.0
+      },
+      {
+       "ticker": "3MINDIA",
+       "y_raw_20d": 0.04654011022657678,
+       "y_excess_20d": 0.03591742520316488,
+       "y_rank_20d": 0.6465067778936392,
+       "label": 1.0
+      },
+      {
+       "ticker": "63MOONS",
+       "y_raw_20d": -0.06510208530116979,
+       "y_excess_20d": -0.07572477032458169,
+       "y_rank_20d": 0.16475495307612095,
+       "label": 0.0
+      }
+     ]
+    }
+   ],
+   "hand_check_ok": true,
+   "benchmark_vs_control_ew_liquid": {
+    "rows_set": 705312,
+    "rows_control": 705312,
+    "rows_only_in_set": 0,
+    "rows_only_in_control": 0,
+    "y_raw_20d_max_abs_diff_on_common_rows": 0.0,
+    "signal_dates_set": 2158,
+    "signal_dates_control": 2158,
+    "signal_dates_common": 2158,
+    "tranche_bench_max_abs_diff": 0.0,
+    "identical": true,
+    "benchmark_in_set_books": "ew_liquid",
+    "control_benchmark": "ew_liquid of ml/data_10y"
+   },
+   "files": {
+    "manifest.json": {
+     "bytes": 4431
+    },
+    "model_dataset.parquet": {
+     "bytes": 493665634
+    },
+    "splits.json": {
+     "bytes": 12635
+    }
+   },
+   "manifest_features": 52,
+   "splits_identical_to_source": true
+  }
+ },
+ "build_seconds": 42.6
+}

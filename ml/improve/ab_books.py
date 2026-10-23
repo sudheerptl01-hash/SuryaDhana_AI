@@ -11,6 +11,10 @@ every book in the phase is deflated against the same yardstick.
 
     python3 -m ml.improve.ab_books --tag v2 --data ml/data_5y_v2 \
         --prices ml/results/improve/cache/features_prices_export_v2.parquet
+
+Phase-2 hooks (ml/improve/cpcv.py; all off by default, so the default run is unchanged): --preds-dir reads
+<config>__beat_mkt_20d.parquet from another folder, --out-dir / --out-name write <out-name>.json / <out-name>.md
+elsewhere, --folds-only scores the CV fold months only (a CPCV path has no holdout predictions).
 """
 from __future__ import annotations
 
@@ -38,6 +42,8 @@ N_DEFAULT = 241
 NEUTS = ("none", "vol+size")
 BASKETS = ("top_decile", "liq_top_decile")
 T0 = time.time()
+# --folds-only: a holdout window that matches no row (the CPCV paths never score the holdout)
+NO_HOLDOUT = {"name": "holdout", "train_end": "2000-01-01", "test_start": "2100-01-01", "test_end": "2000-01-01"}
 
 
 def log(msg: str) -> None:
@@ -52,14 +58,28 @@ def main() -> None:
     ap.add_argument("--price-start", default="2022-10-03")
     ap.add_argument("--configs", nargs="+", default=None)
     ap.add_argument("--n-trials", type=int, default=N_DEFAULT)
+    ap.add_argument("--preds-dir", default=None, help="read the preds parquets from here instead of <tag>/preds")
+    ap.add_argument("--out-dir", default=None, help="write the outputs here instead of the tag folder")
+    ap.add_argument("--out-name", default=None, help="output stem: <out-name>.json / <out-name>.md "
+                                                      "instead of books.json / BOOKS_AB.md")
+    ap.add_argument("--folds-only", action="store_true",
+                    help="CV fold months only, no holdout rows; the engine's second segment ('holdout') is then a "
+                         "placeholder holding the last fold month, and only the 'combined' segment is a reading")
     a = ap.parse_args()
     out = OUT_ROOT / a.tag
-    D.DATA_5Y, D.PREDS, D.PRICES_PARQUET, D.PRICE_START = Path(a.data), out / "preds", Path(a.prices), a.price_start
-    names = a.configs or [n for n in ["control"] + VARIANTS if (out / "preds" / f"{n}__{TASK}.parquet").exists()]
-    names = [n for n in names if (out / "preds" / f"{n}__{TASK}.parquet").exists()]
+    pdir = Path(a.preds_dir).resolve() if a.preds_dir else out / "preds"     # absolute: ml/books records it repo-relative
+    dest = Path(a.out_dir) if a.out_dir else out
+    D.DATA_5Y, D.PREDS, D.PRICES_PARQUET, D.PRICE_START = Path(a.data), pdir, Path(a.prices), a.price_start
+    names = a.configs or [n for n in ["control"] + VARIANTS if (pdir / f"{n}__{TASK}.parquet").exists()]
+    names = [n for n in names if (pdir / f"{n}__{TASK}.parquet").exists()]
     var_sr = json.loads(BOOKS_JSON.read_text())["dsr_common"]["var_sr_daily_across_66_books"]
     splits = D.load_splits()
+    if a.folds_only:
+        splits = {**splits, "holdout": dict(NO_HOLDOUT)}
     base = D.load_base(splits)
+    if a.folds_only:
+        last_fold = splits["folds"][-1]["name"]
+        base["segment"] = np.where(base["fold"] == last_fold, "holdout", "cv")
     scores, smeta = D.load_scores(base, names)
     raw = D.read_price_parquet()
     sessions, tick, O, adv20 = D.load_prices(base, raw)
@@ -93,11 +113,17 @@ def main() -> None:
     res = {"tag": a.tag, "data": a.data, "prices": a.prices, "n_trials": a.n_trials, "var_sr_source": str(BOOKS_JSON),
            "var_sr_daily": var_sr, "n_signal_dates": len(blocks), "path_check": check, "scores_meta": smeta,
            "benchmark_ew_universe_ann": None, "books": books}
+    if a.folds_only:
+        res["folds_only"] = {"signal_months": int(base["month"].nunique()), "placeholder_segment_holdout": last_fold,
+                             "note": "no holdout rows; read segments.combined only (the engine needs a non-empty "
+                                     "second segment, so 'holdout' here holds the last fold month)",
+                             "preds_dir": str(pdir)}
     b = eng.bench["ew_universe"]
     x = eng.cal.seg_series(b["D"], "combined")
     st = sb.series_stats(x, expo, eng.cal.month_codes["combined"], eng.cal.draws["combined"], rf=sb.RF_ANNUAL)
     res["benchmark_ew_universe_ann"] = {"ann_mean_daily": st["ann_mean_daily"], "sharpe": st["sharpe"]}
-    (out / "books.json").write_text(json.dumps(res, indent=1, default=_jd))
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / (f"{a.out_name}.json" if a.out_name else "books.json")).write_text(json.dumps(res, indent=1, default=_jd))
     L = [f"# A/B configurations as long-only books ({a.tag})", "",
          f"P2 construction (ml/books) on {len(blocks)} signal dates; equal-weight universe benchmark; 20 bps per side headline; "
          f"DSR at N = {a.n_trials} with V[SR] = {var_sr:.3g} (P2's 66-book cross-trial variance).", "",
@@ -110,7 +136,7 @@ def main() -> None:
                  f"{c['ir']:+.2f} [{c['ir_ci95'][0]:+.2f}, {c['ir_ci95'][1]:+.2f}] | {s['months_positive']}/{s['n_months']} | "
                  f"{100 * s['turnover_per_rebalance']:.0f}% | {cap:,.0f} | {100 * cn['excess_ann_vs_ew']:+.1f}% | "
                  f"{s['dsr'][str(a.n_trials)]['dsr']:.3f} |")
-    (out / "BOOKS_AB.md").write_text("\n".join(L) + "\n")
+    (dest / (f"{a.out_name}.md" if a.out_name else "BOOKS_AB.md")).write_text("\n".join(L) + "\n")
     log("written")
 
 

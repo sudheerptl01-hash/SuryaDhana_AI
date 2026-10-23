@@ -1,0 +1,617 @@
+{
+ "coverage": {
+  "parquet": {
+   "rows": 2226504,
+   "columns": [
+    "date",
+    "ticker",
+    "sess_since_results",
+    "results_last_5",
+    "results_last_20",
+    "ear_3d",
+    "ear_vol_z",
+    "ann_count_20",
+    "rating_20",
+    "mgmt_change_60",
+    "orders_20",
+    "insolvency_60"
+   ],
+   "row_set_and_order_equal_dataset": true,
+   "duplicate_keys": 0
+  },
+  "rebuild_equals_parquet": {
+   "rows_compared": 2226504,
+   "cells_differing_by_column": {
+    "sess_since_results": 0,
+    "results_last_5": 0,
+    "results_last_20": 0,
+    "ear_3d": 0,
+    "ear_vol_z": 0,
+    "ann_count_20": 0,
+    "rating_20": 0,
+    "mgmt_change_60": 0,
+    "orders_20": 0,
+    "insolvency_60": 0
+   },
+   "unchanged": true
+  },
+  "by_year": {
+   "2016": {
+    "bundles_parsed": 62,
+    "records_all": 243270,
+    "records_non_nav": 11487,
+    "records_non_routine": 10607,
+    "symbols_non_nav": 1941,
+    "symbols_matched_to_dataset_tickers": 1179,
+    "dataset_rows": 0,
+    "share_rows_release_in_past_126": null,
+    "share_rows_release_in_past_126_of_known": null,
+    "share_rows_sess_since_results_nan": null
+   },
+   "2017": {
+    "bundles_parsed": 248,
+    "records_all": 837960,
+    "records_non_nav": 64102,
+    "records_non_routine": 59632,
+    "symbols_non_nav": 3809,
+    "symbols_matched_to_dataset_tickers": 1379,
+    "dataset_rows": 50437,
+    "share_rows_release_in_past_126": 0.987,
+    "share_rows_release_in_past_126_of_known": 0.987,
+    "share_rows_sess_since_results_nan": 0.0
+   },
+   "2018": {
+    "bundles_parsed": 245,
+    "records_all": 715533,
+    "records_non_nav": 73196,
+    "records_non_routine": 65115,
+    "symbols_non_nav": 3121,
+    "symbols_matched_to_dataset_tickers": 1484,
+    "dataset_rows": 172120,
+    "share_rows_release_in_past_126": 0.98,
+    "share_rows_release_in_past_126_of_known": 0.98,
+    "share_rows_sess_since_results_nan": 0.0
+   },
+   "2019": {
+    "bundles_parsed": 245,
+    "records_all": 787837,
+    "records_non_nav": 89941,
+    "records_non_routine": 72414,
+    "symbols_non_nav": 2767,
+    "symbols_matched_to_dataset_tickers": 1524,
+    "dataset_rows": 128253,
+    "share_rows_release_in_past_126": 0.9853,
+    "share_rows_release_in_past_126_of_known": 0.9853,
+    "share_rows_sess_since_results_nan": 0.0
+   },
+   "2020": {
+    "bundles_parsed": 252,
+    "records_all": 642522,
+    "records_non_nav": 93993,
+    "records_non_routine": 69777,
+    "symbols_non_nav": 2746,
+    "symbols_matched_to_dataset_tickers": 1567,
+    "dataset_rows": 158782,
+    "share_rows_release_in_past_126": 0.9788,
+    "share_rows_release_in_past_126_of_known": 0.9788,
+    "share_rows_sess_since_results_nan": 0.0
+   },
+   "2021": {
+    "bundles_parsed": 248,
+    "records_all": 483236,
+    "records_non_nav": 112411,
+    "records_non_routine": 77014,
+    "symbols_non_nav": 3175,
+    "symbols_matched_to_dataset_tickers": 1667,
+    "dataset_rows": 238480,
+    "share_rows_release_in_past_126": 0.9709,
+    "share_rows_release_in_past_126_of_known": 0.9709,
+    "share_rows_sess_since_results_nan": 0.0
+   },
+   "2022": {
+    "bundles_parsed": 248,
+    "records_all": 184315,
+    "records_non_nav": 21572,
+    "records_non_routine": 14035,
+    "symbols_non_nav": 2792,
+    "symbols_matched_to_dataset_tickers": 1714,
+    "dataset_rows": 251377,
+    "share_rows_release_in_past_126": 0.1554,
+    "share_rows_release_in_past_126_of_known": 0.9655,
+    "share_rows_sess_since_results_nan": 0.839
+   },
+   "2023": {
+    "bundles_parsed": 246,
+    "records_all": 232848,
+    "records_non_nav": 131535,
+    "records_non_routine": 90045,
+    "symbols_non_nav": 2449,
+    "symbols_matched_to_dataset_tickers": 1834,
+    "dataset_rows": 277552,
+    "share_rows_release_in_past_126": 0.7381,
+    "share_rows_release_in_past_126_of_known": 0.9907,
+    "share_rows_sess_since_results_nan": 0.255
+   },
+   "2024": {
+    "bundles_parsed": 249,
+    "records_all": 273859,
+    "records_non_nav": 175511,
+    "records_non_routine": 111293,
+    "symbols_non_nav": 2666,
+    "symbols_matched_to_dataset_tickers": 1943,
+    "dataset_rows": 342347,
+    "share_rows_release_in_past_126": 0.8087,
+    "share_rows_release_in_past_126_of_known": 0.994,
+    "share_rows_sess_since_results_nan": 0.1864
+   },
+   "2025": {
+    "bundles_parsed": 249,
+    "records_all": 244134,
+    "records_non_nav": 138948,
+    "records_non_routine": 108072,
+    "symbols_non_nav": 2982,
+    "symbols_matched_to_dataset_tickers": 2105,
+    "dataset_rows": 329243,
+    "share_rows_release_in_past_126": 0.9881,
+    "share_rows_release_in_past_126_of_known": 0.9881,
+    "share_rows_sess_since_results_nan": 0.0
+   },
+   "2026": {
+    "bundles_parsed": 196,
+    "records_all": 310691,
+    "records_non_nav": 225325,
+    "records_non_routine": 175042,
+    "symbols_non_nav": 3119,
+    "symbols_matched_to_dataset_tickers": 2182,
+    "dataset_rows": 277913,
+    "share_rows_release_in_past_126": 0.9825,
+    "share_rows_release_in_past_126_of_known": 0.9825,
+    "share_rows_sess_since_results_nan": 0.0
+   }
+  },
+  "results_quarterly_liquid": {
+   "2017Q4": {
+    "names": 736,
+    "share_with_release": 0.9864,
+    "share_with_announcement_record_R1_R3": 0.5856
+   },
+   "2018Q1": {
+    "names": 727,
+    "share_with_release": 0.9587,
+    "share_with_announcement_record_R1_R3": 0.5818
+   },
+   "2018Q2": {
+    "names": 564,
+    "share_with_release": 0.7465,
+    "share_with_announcement_record_R1_R3": 0.5585
+   },
+   "2018Q3": {
+    "names": 493,
+    "share_with_release": 0.9554,
+    "share_with_announcement_record_R1_R3": 0.5862
+   },
+   "2018Q4": {
+    "names": 409,
+    "share_with_release": 0.9902,
+    "share_with_announcement_record_R1_R3": 0.6064
+   },
+   "2019Q1": {
+    "names": 387,
+    "share_with_release": 0.9845,
+    "share_with_announcement_record_R1_R3": 0.6641
+   },
+   "2019Q2": {
+    "names": 379,
+    "share_with_release": 0.9815,
+    "share_with_announcement_record_R1_R3": 0.7309
+   },
+   "2019Q3": {
+    "names": 324,
+    "share_with_release": 0.9722,
+    "share_with_announcement_record_R1_R3": 0.6636
+   },
+   "2019Q4": {
+    "names": 393,
+    "share_with_release": 0.972,
+    "share_with_announcement_record_R1_R3": 0.6565
+   },
+   "2020Q1": {
+    "names": 467,
+    "share_with_release": 0.9657,
+    "share_with_announcement_record_R1_R3": 0.6274
+   },
+   "2020Q2": {
+    "names": 433,
+    "share_with_release": 0.9423,
+    "share_with_announcement_record_R1_R3": 0.6236
+   },
+   "2020Q3": {
+    "names": 599,
+    "share_with_release": 0.9666,
+    "share_with_announcement_record_R1_R3": 0.6444
+   },
+   "2020Q4": {
+    "names": 650,
+    "share_with_release": 0.9646,
+    "share_with_announcement_record_R1_R3": 0.6615
+   },
+   "2021Q1": {
+    "names": 724,
+    "share_with_release": 0.9655,
+    "share_with_announcement_record_R1_R3": 0.6367
+   },
+   "2021Q2": {
+    "names": 866,
+    "share_with_release": 0.9746,
+    "share_with_announcement_record_R1_R3": 0.5716
+   },
+   "2021Q3": {
+    "names": 930,
+    "share_with_release": 0.9656,
+    "share_with_announcement_record_R1_R3": 0.6753
+   },
+   "2021Q4": {
+    "names": 844,
+    "share_with_release": 0.9656,
+    "share_with_announcement_record_R1_R3": 0.673
+   },
+   "2022Q1": {
+    "names": 871,
+    "share_with_release": 0.9736,
+    "share_with_announcement_record_R1_R3": 0.6808
+   },
+   "2022Q2": {
+    "names": 830,
+    "share_with_release": 0.0,
+    "share_with_announcement_record_R1_R3": 0.0
+   },
+   "2022Q3": {
+    "names": 833,
+    "share_with_release": 0.0,
+    "share_with_announcement_record_R1_R3": 0.0
+   },
+   "2022Q4": {
+    "names": 877,
+    "share_with_release": 0.0103,
+    "share_with_announcement_record_R1_R3": 0.0103
+   },
+   "2023Q1": {
+    "names": 833,
+    "share_with_release": 0.958,
+    "share_with_announcement_record_R1_R3": 0.6074
+   },
+   "2023Q2": {
+    "names": 937,
+    "share_with_release": 0.9616,
+    "share_with_announcement_record_R1_R3": 0.7951
+   },
+   "2023Q3": {
+    "names": 1066,
+    "share_with_release": 0.9634,
+    "share_with_announcement_record_R1_R3": 0.6529
+   },
+   "2023Q4": {
+    "names": 1071,
+    "share_with_release": 0.7946,
+    "share_with_announcement_record_R1_R3": 0.5733
+   },
+   "2024Q1": {
+    "names": 1134,
+    "share_with_release": 0.6199,
+    "share_with_announcement_record_R1_R3": 0.3695
+   },
+   "2024Q2": {
+    "names": 1097,
+    "share_with_release": 0.9863,
+    "share_with_announcement_record_R1_R3": 0.8131
+   },
+   "2024Q3": {
+    "names": 1239,
+    "share_with_release": 0.9863,
+    "share_with_announcement_record_R1_R3": 0.6602
+   },
+   "2024Q4": {
+    "names": 1097,
+    "share_with_release": 0.9827,
+    "share_with_announcement_record_R1_R3": 0.5533
+   },
+   "2025Q1": {
+    "names": 968,
+    "share_with_release": 0.9824,
+    "share_with_announcement_record_R1_R3": 0.4855
+   },
+   "2025Q2": {
+    "names": 1080,
+    "share_with_release": 0.9824,
+    "share_with_announcement_record_R1_R3": 0.675
+   },
+   "2025Q3": {
+    "names": 1148,
+    "share_with_release": 0.9895,
+    "share_with_announcement_record_R1_R3": 0.7404
+   },
+   "2025Q4": {
+    "names": 1158,
+    "share_with_release": 0.9888,
+    "share_with_announcement_record_R1_R3": 0.9853
+   },
+   "2026Q1": {
+    "names": 1109,
+    "share_with_release": 0.9937,
+    "share_with_announcement_record_R1_R3": 0.9883
+   },
+   "2026Q2": {
+    "names": 1239,
+    "share_with_release": 0.9839,
+    "share_with_announcement_record_R1_R3": 0.9798
+   },
+   "2026Q3": {
+    "names": 1344,
+    "share_with_release": 0.9725,
+    "share_with_announcement_record_R1_R3": 0.9717
+   },
+   "2026Q4": {
+    "names": 873,
+    "share_with_release": 0.11,
+    "share_with_announcement_record_R1_R3": 0.1042
+   }
+  },
+  "results_quarterly_all_dataset_names": {
+   "2017Q4": {
+    "names": 1006,
+    "share_with_release": 0.9841,
+    "share_with_announcement_record_R1_R3": 0.5924
+   },
+   "2018Q1": {
+    "names": 1056,
+    "share_with_release": 0.9612,
+    "share_with_announcement_record_R1_R3": 0.5672
+   },
+   "2018Q2": {
+    "names": 877,
+    "share_with_release": 0.7891,
+    "share_with_announcement_record_R1_R3": 0.5747
+   },
+   "2018Q3": {
+    "names": 803,
+    "share_with_release": 0.9577,
+    "share_with_announcement_record_R1_R3": 0.6052
+   },
+   "2018Q4": {
+    "names": 748,
+    "share_with_release": 0.9853,
+    "share_with_announcement_record_R1_R3": 0.6123
+   },
+   "2019Q1": {
+    "names": 703,
+    "share_with_release": 0.9787,
+    "share_with_announcement_record_R1_R3": 0.6728
+   },
+   "2019Q2": {
+    "names": 712,
+    "share_with_release": 0.986,
+    "share_with_announcement_record_R1_R3": 0.7163
+   },
+   "2019Q3": {
+    "names": 618,
+    "share_with_release": 0.9644,
+    "share_with_announcement_record_R1_R3": 0.6748
+   },
+   "2019Q4": {
+    "names": 644,
+    "share_with_release": 0.9752,
+    "share_with_announcement_record_R1_R3": 0.6755
+   },
+   "2020Q1": {
+    "names": 711,
+    "share_with_release": 0.9592,
+    "share_with_announcement_record_R1_R3": 0.6442
+   },
+   "2020Q2": {
+    "names": 707,
+    "share_with_release": 0.925,
+    "share_with_announcement_record_R1_R3": 0.604
+   },
+   "2020Q3": {
+    "names": 846,
+    "share_with_release": 0.9681,
+    "share_with_announcement_record_R1_R3": 0.656
+   },
+   "2020Q4": {
+    "names": 910,
+    "share_with_release": 0.9626,
+    "share_with_announcement_record_R1_R3": 0.6549
+   },
+   "2021Q1": {
+    "names": 986,
+    "share_with_release": 0.9625,
+    "share_with_announcement_record_R1_R3": 0.644
+   },
+   "2021Q2": {
+    "names": 1142,
+    "share_with_release": 0.9667,
+    "share_with_announcement_record_R1_R3": 0.5692
+   },
+   "2021Q3": {
+    "names": 1247,
+    "share_with_release": 0.9623,
+    "share_with_announcement_record_R1_R3": 0.6872
+   },
+   "2021Q4": {
+    "names": 1193,
+    "share_with_release": 0.9589,
+    "share_with_announcement_record_R1_R3": 0.6672
+   },
+   "2022Q1": {
+    "names": 1268,
+    "share_with_release": 0.97,
+    "share_with_announcement_record_R1_R3": 0.6979
+   },
+   "2022Q2": {
+    "names": 1207,
+    "share_with_release": 0.0,
+    "share_with_announcement_record_R1_R3": 0.0
+   },
+   "2022Q3": {
+    "names": 1192,
+    "share_with_release": 0.0,
+    "share_with_announcement_record_R1_R3": 0.0
+   },
+   "2022Q4": {
+    "names": 1228,
+    "share_with_release": 0.0081,
+    "share_with_announcement_record_R1_R3": 0.0081
+   },
+   "2023Q1": {
+    "names": 1187,
+    "share_with_release": 0.9537,
+    "share_with_announcement_record_R1_R3": 0.6251
+   },
+   "2023Q2": {
+    "names": 1243,
+    "share_with_release": 0.9598,
+    "share_with_announcement_record_R1_R3": 0.786
+   },
+   "2023Q3": {
+    "names": 1369,
+    "share_with_release": 0.9606,
+    "share_with_announcement_record_R1_R3": 0.6479
+   },
+   "2023Q4": {
+    "names": 1442,
+    "share_with_release": 0.8148,
+    "share_with_announcement_record_R1_R3": 0.5777
+   },
+   "2024Q1": {
+    "names": 1549,
+    "share_with_release": 0.6469,
+    "share_with_announcement_record_R1_R3": 0.3777
+   },
+   "2024Q2": {
+    "names": 1501,
+    "share_with_release": 0.9833,
+    "share_with_announcement_record_R1_R3": 0.8048
+   },
+   "2024Q3": {
+    "names": 1597,
+    "share_with_release": 0.9843,
+    "share_with_announcement_record_R1_R3": 0.6625
+   },
+   "2024Q4": {
+    "names": 1559,
+    "share_with_release": 0.9801,
+    "share_with_announcement_record_R1_R3": 0.5542
+   },
+   "2025Q1": {
+    "names": 1491,
+    "share_with_release": 0.9826,
+    "share_with_announcement_record_R1_R3": 0.4702
+   },
+   "2025Q2": {
+    "names": 1480,
+    "share_with_release": 0.9818,
+    "share_with_announcement_record_R1_R3": 0.6689
+   },
+   "2025Q3": {
+    "names": 1507,
+    "share_with_release": 0.9854,
+    "share_with_announcement_record_R1_R3": 0.7339
+   },
+   "2025Q4": {
+    "names": 1532,
+    "share_with_release": 0.9856,
+    "share_with_announcement_record_R1_R3": 0.9824
+   },
+   "2026Q1": {
+    "names": 1502,
+    "share_with_release": 0.9907,
+    "share_with_announcement_record_R1_R3": 0.9854
+   },
+   "2026Q2": {
+    "names": 1579,
+    "share_with_release": 0.9747,
+    "share_with_announcement_record_R1_R3": 0.9709
+   },
+   "2026Q3": {
+    "names": 1675,
+    "share_with_release": 0.9606,
+    "share_with_announcement_record_R1_R3": 0.96
+   },
+   "2026Q4": {
+    "names": 1579,
+    "share_with_release": 0.0678,
+    "share_with_announcement_record_R1_R3": 0.0646
+   }
+  },
+  "release_sessions_total": 72835,
+  "release_sessions_by_rules_observed": {
+   "R4": 50524,
+   "R3+R4": 11239,
+   "R2+R4": 6115,
+   "R2+R3+R4": 1914,
+   "R2": 1248,
+   "R1": 645,
+   "R1+R3+R4": 413,
+   "R3": 286,
+   "R1+R4": 249,
+   "R1+R2+R4": 133,
+   "R1+R2+R3+R4": 47,
+   "R1+R2": 16,
+   "R1+R3": 4,
+   "R2+R3": 2
+  },
+  "results_observations_by_rule": {
+   "R4": 72215,
+   "R3": 40161,
+   "R2": 26062,
+   "R1": 3534
+  },
+  "release_spacing_sessions_histogram": {
+   "edges": [
+    6,
+    11,
+    21,
+    41,
+    51,
+    56,
+    61,
+    66,
+    71,
+    91,
+    127,
+    1000000
+   ],
+   "counts": [
+    675,
+    966,
+    3179,
+    4761,
+    7590,
+    10219,
+    18049,
+    9272,
+    6938,
+    3312,
+    4254
+   ],
+   "median": 63.0
+  },
+  "universe_rule_vs_dataset_rows": {
+   "both": 2226504,
+   "left_only": 0,
+   "right_only": 0
+  },
+  "files": {
+   "covered_sessions": 2251,
+   "uncovered_sessions": 238,
+   "gap_sessions_full_runs": 232,
+   "min_company_records_covered": 53,
+   "max_company_records_uncovered_with_file": 6,
+   "sessions_without_records": [
+    "2018-01-02",
+    "2024-01-20"
+   ]
+  }
+ },
+ "seed": 108
+}

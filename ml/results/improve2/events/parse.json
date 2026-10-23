@@ -1,0 +1,279 @@
+{
+ "sources": [
+  "data_raw/hist/pr",
+  "data_raw/pr"
+ ],
+ "bundles_found": 2492,
+ "bundles_with_member": 2492,
+ "bundle_errors": [],
+ "dates_selected": 2488,
+ "selection_decisions": [
+  {
+   "member_date": "2019-01-02",
+   "bundle": "data_raw/hist/pr/PR020118.zip",
+   "action": "skipped",
+   "reason": "file name disagrees with member date; true date present in data_raw/hist/pr/PR020119.zip",
+   "identical_bytes": true
+  },
+  {
+   "member_date": "2021-10-01",
+   "bundle": "data_raw/hist/pr/PR011021.zip",
+   "action": "skipped",
+   "reason": "duplicate of data_raw/pr/PR011021.zip",
+   "identical_bytes": true
+  },
+  {
+   "member_date": "2021-10-04",
+   "bundle": "data_raw/hist/pr/PR041021.zip",
+   "action": "skipped",
+   "reason": "duplicate of data_raw/pr/PR041021.zip",
+   "identical_bytes": true
+  },
+  {
+   "member_date": "2024-06-04",
+   "bundle": "data_raw/pr/PR060424.zip",
+   "action": "skipped",
+   "reason": "file name disagrees with member date; true date present in data_raw/pr/PR040624.zip",
+   "identical_bytes": true
+  }
+ ],
+ "name_vs_member_date_mismatches": [
+  {
+   "bundle": "data_raw/hist/pr/PR020118.zip",
+   "bundle_date": "2018-01-02",
+   "member": "An020119.txt",
+   "member_date": "2019-01-02"
+  },
+  {
+   "bundle": "data_raw/pr/PR060424.zip",
+   "bundle_date": "2024-04-06",
+   "member": "An040624.txt",
+   "member_date": "2024-06-04"
+  }
+ ],
+ "member_generated_after_next_open": [
+  {
+   "member_date": "2026-06-15",
+   "member_time": "2026-06-16 17:23:10",
+   "next_session": "2026-06-16"
+  }
+ ],
+ "sessions_in_calendar": 2489,
+ "sessions_without_file": [
+  "2018-01-02"
+ ],
+ "files_on_non_session_dates": [],
+ "records": 4956205,
+ "board_meeting_list_rows": 91226,
+ "records_after_last_session": 0,
+ "encodings": {
+  "cp1252": 2187,
+  "utf-8": 301
+ },
+ "dictionary_categories": 570,
+ "dictionary_rule": "explicit categories seen >= 3 times plus spliced-layout categories seen >= 5 times that look like a category (build_dictionary)",
+ "vocabulary": "events/vocabulary.json",
+ "known_symbols": 11701,
+ "text_max_chars": 1500,
+ "by_year": {
+  "2016": {
+   "bundles_parsed": 62,
+   "records": 243270,
+   "continuation_lines": 4479,
+   "layout_wide": 243270,
+   "layout_narrow": 0,
+   "cat_method": {
+    "dict_prefix": 235156,
+    "dict_spliced": 7928,
+    "dict_spliced_loose": 125,
+    "derived": 51,
+    "none": 7,
+    "cat_sym": 3
+   },
+   "symbols": 5737,
+   "symbols_in_bhavcopy": 1536,
+   "records_symbol_in_bhavcopy": 12113,
+   "board_meeting_list_rows": 1953
+  },
+  "2017": {
+   "bundles_parsed": 248,
+   "records": 837960,
+   "continuation_lines": 21386,
+   "layout_wide": 837960,
+   "layout_narrow": 0,
+   "cat_method": {
+    "dict_prefix": 793496,
+    "dict_spliced": 41877,
+    "dict_spliced_loose": 2303,
+    "derived": 231,
+    "none": 38,
+    "cat_sym": 15
+   },
+   "symbols": 6820,
+   "symbols_in_bhavcopy": 1790,
+   "records_symbol_in_bhavcopy": 63834,
+   "board_meeting_list_rows": 8374
+  },
+  "2018": {
+   "bundles_parsed": 245,
+   "records": 715533,
+   "continuation_lines": 54381,
+   "layout_wide": 715533,
+   "layout_narrow": 0,
+   "cat_method": {
+    "cat_sym": 359618,
+    "dict_prefix": 341344,
+    "dict_spliced": 13030,
+    "dict_spliced_loose": 1507,
+    "none": 17,
+    "derived": 17
+   },
+   "symbols": 6123,
+   "symbols_in_bhavcopy": 1875,
+   "records_symbol_in_bhavcopy": 75819,
+   "board_meeting_list_rows": 8033
+  },
+  "2019": {
+   "bundles_parsed": 245,
+   "records": 787837,
+   "continuation_lines": 49465,
+   "layout_wide": 787837,
+   "layout_narrow": 0,
+   "cat_method": {
+    "cat_sym": 561980,
+    "dict_prefix": 225857
+   },
+   "symbols": 5547,
+   "symbols_in_bhavcopy": 1895,
+   "records_symbol_in_bhavcopy": 95893,
+   "board_meeting_list_rows": 8727
+  },
+  "2020": {
+   "bundles_parsed": 252,
+   "records": 642522,
+   "continuation_lines": 31944,
+   "layout_wide": 642522,
+   "layout_narrow": 0,
+   "cat_method": {
+    "cat_sym": 495450,
+    "dict_prefix": 147015,
+    "derived": 55,
+    "none": 2
+   },
+   "symbols": 5006,
+   "symbols_in_bhavcopy": 1957,
+   "records_symbol_in_bhavcopy": 105119,
+   "board_meeting_list_rows": 8815
+  },
+  "2021": {
+   "bundles_parsed": 248,
+   "records": 483236,
+   "continuation_lines": 21935,
+   "layout_wide": 483236,
+   "layout_narrow": 0,
+   "cat_method": {
+    "cat_sym": 377216,
+    "dict_prefix": 105935,
+    "derived": 84,
+    "none": 1
+   },
+   "symbols": 4147,
+   "symbols_in_bhavcopy": 2074,
+   "records_symbol_in_bhavcopy": 130655,
+   "board_meeting_list_rows": 8822
+  },
+  "2022": {
+   "bundles_parsed": 248,
+   "records": 184315,
+   "continuation_lines": 4132,
+   "layout_wide": 184315,
+   "layout_narrow": 0,
+   "cat_method": {
+    "cat_sym": 116587,
+    "dict_prefix": 67712,
+    "derived": 15,
+    "none": 1
+   },
+   "symbols": 3273,
+   "symbols_in_bhavcopy": 2114,
+   "records_symbol_in_bhavcopy": 50172,
+   "board_meeting_list_rows": 2046
+  },
+  "2023": {
+   "bundles_parsed": 246,
+   "records": 232848,
+   "continuation_lines": 15511,
+   "layout_wide": 232848,
+   "layout_narrow": 0,
+   "cat_method": {
+    "cat_sym": 157932,
+    "dict_prefix": 65603,
+    "xbrl": 9217,
+    "derived": 78,
+    "none": 17,
+    "dict_spliced_loose": 1
+   },
+   "symbols": 2861,
+   "symbols_in_bhavcopy": 2251,
+   "records_symbol_in_bhavcopy": 161138,
+   "board_meeting_list_rows": 9102
+  },
+  "2024": {
+   "bundles_parsed": 249,
+   "records": 273859,
+   "continuation_lines": 11656,
+   "layout_wide": 273856,
+   "layout_narrow": 3,
+   "cat_method": {
+    "cat_sym": 164895,
+    "dict_prefix": 67943,
+    "xbrl": 40866,
+    "derived": 107,
+    "none": 46,
+    "dict_spliced_loose": 2
+   },
+   "symbols": 3130,
+   "symbols_in_bhavcopy": 2426,
+   "records_symbol_in_bhavcopy": 206208,
+   "board_meeting_list_rows": 10267
+  },
+  "2025": {
+   "bundles_parsed": 249,
+   "records": 244134,
+   "continuation_lines": 8687,
+   "layout_wide": 171001,
+   "layout_narrow": 73133,
+   "cat_method": {
+    "cat_sym": 151287,
+    "dict_prefix": 76537,
+    "xbrl": 16234,
+    "derived": 57,
+    "none": 19
+   },
+   "symbols": 3491,
+   "symbols_in_bhavcopy": 2677,
+   "records_symbol_in_bhavcopy": 182967,
+   "board_meeting_list_rows": 13720
+  },
+  "2026": {
+   "bundles_parsed": 196,
+   "records": 310691,
+   "continuation_lines": 16651,
+   "layout_wide": 259,
+   "layout_narrow": 310432,
+   "cat_method": {
+    "cat_sym": 187612,
+    "dict_prefix": 88509,
+    "xbrl": 33865,
+    "none": 419,
+    "derived": 285,
+    "dict_spliced_loose": 1
+   },
+   "symbols": 3574,
+   "symbols_in_bhavcopy": 2819,
+   "records_symbol_in_bhavcopy": 260375,
+   "board_meeting_list_rows": 11367
+  }
+ },
+ "seconds": 144.8
+}

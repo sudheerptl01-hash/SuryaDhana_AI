@@ -1,0 +1,420 @@
+{
+ "writes": [
+  {
+   "run_today_ist": "2026-10-23",
+   "today_ist": "2026-10-23",
+   "store_before": {
+    "last_session": "2026-10-16",
+    "equity_eod_rows": 5237728,
+    "equity_eod_eq_be_rows": 4773081,
+    "equity_eod_sessions": 2489,
+    "equity_features_rows": 4773081,
+    "equity_features_last": "2026-10-16 00:00:00"
+   },
+   "candidates": [
+    "2026-10-19",
+    "2026-10-20",
+    "2026-10-21",
+    "2026-10-22",
+    "2026-10-23"
+   ],
+   "decisions": [
+    {
+     "date": "2026-10-19",
+     "weekday": "Monday",
+     "sec_bytes": 397312,
+     "sec_sha256": "c9be4a9270c402f4b1296440d523fad34940a42a2b150ac3201b39dd54e93f44",
+     "date1": [
+      "19-Oct-2026"
+     ],
+     "date1_ok": true,
+     "fingerprint": [
+      3404,
+      2411080.21,
+      5285660152.0,
+      961693084000.0
+     ],
+     "previous_session": "2026-10-16",
+     "fingerprint_previous": [
+      3397,
+      2438927.85,
+      6173771187,
+      1224566506000.0
+     ],
+     "duplicate_day_guard_echo": false,
+     "byte_identical_to_previous_sec_file": null,
+     "rows_all_series": 3404,
+     "rows_eq_be": 2922,
+     "isin_filled_share": 0.0,
+     "pr_bundle": "present",
+     "pr_bundle_inner_date": "2026-10-19",
+     "pr_bundle_ok": true,
+     "pr_sha256": "e080c1544bf5568c49e215e6c2a9aecd8bcbf07553166b7d4058c52d1ea9adee",
+     "decision": "session: ingest"
+    },
+    {
+     "date": "2026-10-20",
+     "weekday": "Tuesday",
+     "sec_bytes": 397312,
+     "sec_sha256": "c9be4a9270c402f4b1296440d523fad34940a42a2b150ac3201b39dd54e93f44",
+     "date1": [
+      "19-Oct-2026"
+     ],
+     "date1_ok": false,
+     "fingerprint": [
+      3404,
+      2411080.21,
+      5285660152.0,
+      961693084000.0
+     ],
+     "previous_session": "2026-10-19",
+     "fingerprint_previous": [
+      3404,
+      2411080.21,
+      5285660152.0,
+      961693084000.0
+     ],
+     "duplicate_day_guard_echo": true,
+     "byte_identical_to_previous_sec_file": true,
+     "rows_all_series": 3404,
+     "rows_eq_be": 2922,
+     "isin_filled_share": 0.0,
+     "pr_bundle": "absent",
+     "decision": "closure: holiday echo of the previous session (duplicate-day guard) and no PR bundle"
+    },
+    {
+     "date": "2026-10-21",
+     "weekday": "Wednesday",
+     "sec_bytes": 400625,
+     "sec_sha256": "1e05e1696d50babd9d1a6b6e0b9aaf156e7a1d7a7c30da703002f540eff63120",
+     "date1": [
+      "21-Oct-2026"
+     ],
+     "date1_ok": true,
+     "fingerprint": [
+      3422,
+      2363604.83,
+      5827002308.0,
+      1095147788000.0
+     ],
+     "previous_session": "2026-10-19",
+     "fingerprint_previous": [
+      3404,
+      2411080.21,
+      5285660152.0,
+      961693084000.0
+     ],
+     "duplicate_day_guard_echo": false,
+     "byte_identical_to_previous_sec_file": false,
+     "rows_all_series": 3422,
+     "rows_eq_be": 2916,
+     "isin_filled_share": 0.0,
+     "pr_bundle": "present",
+     "pr_bundle_inner_date": "2026-10-21",
+     "pr_bundle_ok": true,
+     "pr_sha256": "5d12ba070a583f8921c2f53fa5ecb872735e9f754f6d0c546771e294072f9774",
+     "decision": "session: ingest"
+    },
+    {
+     "date": "2026-10-22",
+     "weekday": "Thursday",
+     "sec_bytes": 396002,
+     "sec_sha256": "ed7f4f4347f5a9c07580356f6907aad630f34ff7715b69e7b530c6aa7c1f66cb",
+     "date1": [
+      "22-Oct-2026"
+     ],
+     "date1_ok": true,
+     "fingerprint": [
+      3392,
+      2237664.29,
+      6155473384.0,
+      1076963778000.0
+     ],
+     "previous_session": "2026-10-21",
+     "fingerprint_previous": [
+      3422,
+      2363604.83,
+      5827002308.0,
+      1095147788000.0
+     ],
+     "duplicate_day_guard_echo": false,
+     "byte_identical_to_previous_sec_file": false,
+     "rows_all_series": 3392,
+     "rows_eq_be": 2915,
+     "isin_filled_share": 0.0,
+     "pr_bundle": "present",
+     "pr_bundle_inner_date": "2026-10-22",
+     "pr_bundle_ok": true,
+     "pr_sha256": "a9666e1d31ba57ffebee861cae1b6febc191db8180bf717da39bc224b07e003c",
+     "decision": "session: ingest"
+    },
+    {
+     "date": "2026-10-23",
+     "weekday": "Friday",
+     "decision": "pending: file not yet published"
+    }
+   ],
+   "accepted": [
+    "2026-10-19",
+    "2026-10-21",
+    "2026-10-22"
+   ],
+   "corporate_actions": {
+    "seconds": 36.5,
+    "bundle_dirs": [
+     "/home/user/SuryaDhana_AI/ml/data_raw/pr",
+     "/home/user/SuryaDhana_AI/ml/data_raw/hist/pr",
+     "/home/user/SuryaDhana_AI/ml/paper/state/raw/pr"
+    ],
+    "eod_sources": [
+     "/home/user/SuryaDhana_AI/ml/results/improve/cache/eod_export_10y.parquet",
+     "/home/user/SuryaDhana_AI/ml/paper/state/ca/staged_new_sessions.parquet"
+    ],
+    "I2_rebuilt_feed": {
+     "rate": 0.9716859716859717,
+     "events": 777,
+     "agree": 755,
+     "pass_mark": 0.95,
+     "pass": true,
+     "rule": "|observed/ratio - 1| <= 0.15, observed = open(ex)/close(ex-1) in the ratio's orientation, at the LISTED ex-date (no shift); revised duplicates excluded"
+    },
+    "feed_10y_rows": 755,
+    "rebuilt_feed_rows_through_research_end": 755,
+    "rebuilt_vs_10y_through_research_end": {
+     "only_in_rebuilt": [],
+     "only_in_10y": [],
+     "identical": true
+    },
+    "new_validated_events": [
+     {
+      "ticker": "JSWDULUX",
+      "ex_date": "2026-10-22",
+      "ratio": 0.1,
+      "kind": "split",
+      "source": "PR151026.zip/bc15102026.csv"
+     }
+    ],
+    "unvalidated_adjustable_events_in_window": [],
+    "price_breaks_in_window": [],
+    "upcoming_adjustable_events": [
+     {
+      "ticker": "AZADIND",
+      "ex_date": "2026-10-23",
+      "kind": "split",
+      "purpose": "FVSPLT FRM RS 10 TO RS 2"
+     }
+    ],
+    "live_feed": {
+     "path": "ml/data_ext/corporate_actions_feed_live.csv",
+     "rows": 756,
+     "sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da"
+    },
+    "completeness_live_bundles": {
+     "corp_ind_with_abs_ret_gt_22pct": 1,
+     "covered_by_feed": 1,
+     "n_missing": 0,
+     "missing": []
+    }
+   },
+   "etf": {
+    "etf_10y_symbols": 494,
+    "live_bundle_etf_symbols": 310,
+    "new_symbols": [],
+    "live_list_symbols": 494,
+    "path": "ml/data_ext/etf_list_live.csv",
+    "sha256": "6b7788c8f392b955b6e76b68c86ca4f3cbf4da185681422aa728177786016a7a",
+    "read_stats": {
+     "bundles": 3,
+     "with_member": 3,
+     "empty": 0,
+     "unreadable": 0,
+     "misfiled_skipped": []
+    }
+   },
+   "write": {
+    "sessions": [
+     "2026-10-19",
+     "2026-10-21",
+     "2026-10-22"
+    ],
+    "fingerprint_seconds": 3.4,
+    "before": {
+     "equity_eod_rows": 5237728,
+     "equity_features_rows": 4773081,
+     "overwrites_existing_keys": 0
+    },
+    "backup": {
+     "path": "/tmp/claude-0/-home-user-SuryaDhana-AI/a2334483-114a-5057-9fd0-81f0f14285e9/scratchpad/q1/nse_market_backup_pre_q1_20261019.duckdb",
+     "bytes": 2807312384,
+     "seconds": 73.6,
+     "free_bytes_before": 12853452800,
+     "deleted_after_verification": true
+    },
+    "lock": {
+     "path": "ml/results/improve/LOCK_duckdb_write",
+     "created": true,
+     "window_seconds": 89.0,
+     "removed": true
+    },
+    "upsert": {
+     "rows": 10218,
+     "by_date": {
+      "2026-10-19": 3404,
+      "2026-10-21": 3422,
+      "2026-10-22": 3392
+     }
+    },
+    "build_features": {
+     "rows": 4781834,
+     "seconds": 85.0,
+     "ca_csv": "ml/data_ext/corporate_actions_feed_live.csv"
+    },
+    "after": {
+     "equity_eod_rows": 5247946,
+     "equity_features_rows": 4781834,
+     "eq_be_dup_date_ticker": 0,
+     "rows_on_new_dates": {
+      "2026-10-19": 3404,
+      "2026-10-21": 3422,
+      "2026-10-22": 3392
+     },
+     "features_rows_on_new_dates": {
+      "2026-10-19": 2922,
+      "2026-10-21": 2916,
+      "2026-10-22": 2915
+     },
+     "expected_equity_eod_rows": 5247946,
+     "row_count_as_expected": true,
+     "continuity_new_sessions": [
+      {
+       "date": "2026-10-19",
+       "n_with_prev": 2922,
+       "n_mismatch": 1,
+       "share": 0.00034223134839151266,
+       "flagged": false
+      },
+      {
+       "date": "2026-10-21",
+       "n_with_prev": 2915,
+       "n_mismatch": 0,
+       "share": 0.0,
+       "flagged": false
+      },
+      {
+       "date": "2026-10-22",
+       "n_with_prev": 2912,
+       "n_mismatch": 0,
+       "share": 0.0,
+       "flagged": false
+      }
+     ],
+     "continuity_store": {
+      "max_share": 0.0030525030525030525,
+      "flagged": []
+     },
+     "fingerprint_through_research_end": {
+      "tickers_compared": 3935,
+      "non_forward_columns": 48,
+      "tickers_with_changed_non_forward_rows": [
+       "JSWDULUX"
+      ],
+      "changed_tickers_explained_by_new_corporate_actions": [
+       "JSWDULUX"
+      ],
+      "changed_tickers_unexplained": [],
+      "non_forward_unchanged_except_new_ca_tickers": true,
+      "tickers_with_changed_forward_label_columns": 2930,
+      "forward_columns": [
+       "fwd_ret_2d",
+       "label_up_2d",
+       "fwd_ret_3d",
+       "label_up_3d",
+       "fwd_ret_5d",
+       "label_up_5d"
+      ],
+      "equity_eod_through_boundary": {
+       "before": [
+        5237728.0,
+        3381217548.25,
+        7335373916200.0,
+        1625999973940000.0,
+        3380188334.22,
+        2489.0,
+        4611.0
+       ],
+       "after": [
+        5237728.0,
+        3381217548.25,
+        7335373916200.0,
+        1625999973940000.0,
+        3380188334.22,
+        2489.0,
+        4611.0
+       ],
+       "identical": true
+      }
+     },
+     "forward_label_changes_through_research_end": {
+      "rows_changed": 14704,
+      "rows_last5_of_ticker_previously_nan": 14610,
+      "rows_of_new_corporate_action_tickers": 94,
+      "rows_unexplained": 0,
+      "unexplained_examples": [],
+      "first_date": "2026-04-15",
+      "last_date": "2026-10-16",
+      "rows_only_in_one": 0,
+      "note": "classified after the write from the same before-write snapshot (ml/paper/state/cache/forward_columns_before_write.parquet); the in-run check of this first write listed the changed dates only"
+     },
+     "new_events_check": {
+      "JSWDULUX": {
+       "rows": 131,
+       "max_abs_log_ret_adjusted": 0.08133380878099686,
+       "max_abs_log_ret_raw": 2.293543680517891,
+       "feed_events": [
+        {
+         "ex_date": "2026-10-22",
+         "ratio": "0.1"
+        }
+       ],
+       "ex_dates": {
+        "2026-10-22": {
+         "session": "2026-10-22",
+         "raw_close_prev": 2994.8,
+         "raw_close_ex": 302.2,
+         "adj_close_prev": 299.48,
+         "adj_close_ex": 302.2,
+         "adj_ret_ex": 0.00908240950981698,
+         "raw_ret_ex": -0.8990917590490183
+        }
+       },
+       "largest_adjusted_move": {
+        "date": "2026-05-29",
+        "log_ret": 0.08133380878099686
+       },
+       "continuous": true
+      },
+      "all_continuous": true
+     }
+    },
+    "verified": true
+   },
+   "store_after": {
+    "last_session": "2026-10-22",
+    "equity_eod_rows": 5247946,
+    "equity_eod_eq_be_rows": 4781834,
+    "equity_eod_sessions": 2492,
+    "equity_features_rows": 4781834,
+    "equity_features_last": "2026-10-22 00:00:00"
+   },
+   "store_changed": true
+  }
+ ],
+ "last_store": {
+  "last_session": "2026-10-22",
+  "equity_eod_rows": 5247946,
+  "equity_eod_eq_be_rows": 4781834,
+  "equity_eod_sessions": 2492,
+  "equity_features_rows": 4781834,
+  "equity_features_last": "2026-10-22 00:00:00"
+ }
+}

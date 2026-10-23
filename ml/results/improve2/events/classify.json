@@ -1,0 +1,2884 @@
+{
+ "rules": [
+  {
+   "class": "routine",
+   "id": "RT1",
+   "where": "category",
+   "patterns": [
+    "^Declaration of NAV",
+    "^Trading Window",
+    "^Copy of Newspaper Publication",
+    "^Loss of Share Certificates?$",
+    "^Loss/Duplicate-Share Certificate$",
+    "^Issue of Duplicate Share Certificate$",
+    "^Certificate under SEBI \\(Depositories and Participants\\) Regulations",
+    "^Code of Conduct under SEBI ?\\(PIT\\)",
+    "^Structural Digital Database$",
+    "^Annual Secretarial Compliance Report",
+    "^Quarterly Compliance Report on Corporate governance",
+    "^Registrar & Share Transfer Agent Update$",
+    "^E-mail ID for Investor's Grievance Redressal$",
+    "^Interest Rates Updates$",
+    "^Disclosure of Unitholding pattern",
+    "^Disclosure of all complaints including SCORES",
+    "^Statement of deviation\\(s\\) or variation\\(s\\) under Reg\\. ?32",
+    "^Monitoring Agency Report$",
+    "^Daily Buy-Back of equity shares$"
+   ]
+  },
+  {
+   "class": "routine",
+   "id": "RT2",
+   "where": "text, when the category is generic (Updates / General Updates / Others / none)",
+   "patterns": [
+    "news\\s*paper|advertisement|publication of|published in",
+    "loss of (the )?share certificates?|duplicate share certificates?|issue of duplicate",
+    "regulation\\s*74\\s*\\(\\s*5\\s*\\)|depositories and participants",
+    "trading window",
+    "regulation\\s*(7\\s*\\(\\s*3\\s*\\)|40\\s*\\(\\s*(9|10)\\s*\\)|13\\s*\\(\\s*3\\s*\\))",
+    "reconciliation of share capital|investor complaints|investor grievance",
+    "(change|changes) in (the )?name of (the )?(registrar|rta|share transfer agent)|link intime|mufg intime",
+    "structural digital database|secretarial compliance report|compliance certificate"
+   ]
+  },
+  {
+   "class": "results",
+   "id": "R1",
+   "where": "category, and text not matching the results exclusions",
+   "patterns": [
+    "^Financial Results? Updates$",
+    "^Results$",
+    "^Results/Others$",
+    "^Publish Audited Results$",
+    "^Consolidated Result Updates - IFRS$",
+    "^Limited Review Report$",
+    "^Integrated Filing- ?Financial$"
+   ]
+  },
+  {
+   "class": "results",
+   "id": "R2",
+   "where": "category in ^Outcome of Board Meeting | ^Updates$ | ^General Updates$ | ^Press Release | ^Investor Presentation$ | ^Dividend$ | ^Others$ | ^$; text matches RESULTS_TEXT and not the exclusions",
+   "patterns": [
+    "financial\\s*results?|financial\\s+statements?\\s*/\\s*results?|\\bresults?\\s+(of the company\\s+)?for\\s+the\\s+(quarter|half|year|period|nine|first|second|third|fourth|q[1-4])|\\b(q[1-4]|quarterly|annual|half[- ]yearly)\\s+(fy\\s*\\d+\\s+)?results?\\b|\\bearnings release\\b"
+   ]
+  },
+  {
+   "class": "results",
+   "id": "R2x",
+   "where": "results exclusions (intimation, newspaper, calls, clarification, re-submission, delay)",
+   "patterns": [
+    "to\\s+(inter[\\s-]*alia\\s*,?\\s*)?consider|will\\s+be\\s+(held|considered)|to\\s+be\\s+held|is\\s+scheduled|scheduled\\s+(on|to|for)|(to|will)\\s+announce|announce\\w*\\s+(the\\s+)?(date|schedule)|intimation\\s+of\\s+(the\\s+)?(date|board|meeting)|intimation\\s+(to|under|regarding|about|pursuant)|prior\\s+intimation|board\\s+meeting\\s+intimation|notice\\s+of\\s+(the\\s+)?(board\\s+)?meeting|prior\\s+notice|news\\s*paper|advertis|publication|published|publishing|con(ference)?\\.?\\s*call|earnings\\s+call|transcript|recording|audio|video|webcast|investor\\s+meet|analyst|non[-\\s]*submission|delay|reasons\\s+for|clarification|relaxation|applicability|option\\s+to\\s+submit|rectif|discrepanc|corrigendum|machine[\\s-]*readable|searchable|re-?submi|\\brevis(ed|ion)\\b|trading\\s+window"
+   ]
+  },
+  {
+   "class": "results",
+   "id": "R3",
+   "where": "category ^Outcome of Board Meeting (or a generic category whose text is an outcome of a board meeting), not R1/R2, matched to a results-purpose board meeting intimated earlier for the same symbol: meeting date within 3 days of the 'held on' date in the text, or within the 7 days up to the file date when the text has no date",
+   "patterns": [
+    "outcome\\s+of\\s+(the\\s+)?board\\s+meeting|board\\s+meeting\\s+outcome"
+   ]
+  },
+  {
+   "class": "results",
+   "id": "R4",
+   "where": "a board meeting intimated for financial results (board-meeting list of the bundles, or a Board Meeting Intimation record): the first session on or after the meeting date, if the intimation was filed on or before that date and not superseded before it by another intimated date or a cancellation / postponement record",
+   "patterns": [
+    "^Board [Mm]eeting (Cancelled|Postponed|Adjourned|Deferred|Rescheduled)"
+   ]
+  },
+  {
+   "class": "results",
+   "id": "RD",
+   "where": "release session: a results session with another within the previous 5 sessions is the same release",
+   "patterns": []
+  },
+  {
+   "class": "rating",
+   "id": "CR1",
+   "where": "category",
+   "patterns": [
+    "^Credit Rating"
+   ]
+  },
+  {
+   "class": "rating",
+   "id": "CR2",
+   "where": "text, generic category, not ESG / large-corporate boilerplate",
+   "patterns": [
+    "credit\\s+rating|rating\\s+agenc|\\b(crisil|icra|care ratings|india ratings|brickwork|acuite|infomerics)\\b.{0,80}\\brating"
+   ]
+  },
+  {
+   "class": "mgmt_change",
+   "id": "M1",
+   "where": "category",
+   "patterns": [
+    "^Resignation",
+    "^Cessation",
+    "^Change in Management",
+    "^Change in Director",
+    "^Change in Directors/ ?Key Managerial",
+    "^Change in Auditors?",
+    "^Appointment of Auditors?",
+    "^Change in Company Secretary",
+    "^Change in\\s+Managing Director",
+    "^Appointment of (Director|Chairman|Managing Director|Chief|Company Secretary|Compliance Officer|Independent)",
+    "^Retirement$",
+    "^Demise$"
+   ]
+  },
+  {
+   "class": "mgmt_change",
+   "id": "M2",
+   "where": "category Appointment and text names a director / KMP-level officer",
+   "patterns": [
+    "\\b(director|managing director|chief executive|ceo|chief financial|cfo|company secretary|compliance officer|key managerial|kmp|chairman|chairperson|whole[- ]time|auditors?|chief operating|coo|president)\\b"
+   ]
+  },
+  {
+   "class": "mgmt_change",
+   "id": "M3",
+   "where": "text, generic category: resignation / cessation of a director / KMP-level officer",
+   "patterns": [
+    "\\b(resign(ation|ed|s)?|cessation|ceased\\s+to\\s+be)\\b"
+   ]
+  },
+  {
+   "class": "orders",
+   "id": "O1",
+   "where": "category",
+   "patterns": [
+    "(Bagging|Receiving|Awarding).{0,20}(order|contract)"
+   ]
+  },
+  {
+   "class": "orders",
+   "id": "O2",
+   "where": "text, generic or press-release category, not court / regulator / tax orders",
+   "patterns": [
+    "\\b(receiv\\w*|receipt\\s+of|bag(s|ged|ging)?|secur(ed|es|ing)|wins?|winning|won|award\\w*)\\b[^.]{0,80}\\b(orders?|contracts?|loa|loi)\\b|letter\\s+of\\s+(award|acceptance|intent)|\\bl-?1\\s+bidder|lowest\\s+bidder"
+   ]
+  },
+  {
+   "class": "orders",
+   "id": "O2x",
+   "where": "orders exclusions",
+   "patterns": [
+    "court|tribunal|nclt|nclat|\\bsebi\\b|\\btax\\b|income[- ]tax|\\bgst\\b|assessment|penalt|demand\\s+notice|show[- ]cause|arbitra|order\\s+passed|regulatory|interim\\s+order|stay\\s+order|adjudicat|order[-\\s]+in[-\\s]+original|commissioner|directorate|enforcement|credit\\s+rating"
+   ]
+  },
+  {
+   "class": "insolvency",
+   "id": "IN1",
+   "where": "category",
+   "patterns": [
+    "^Corporate Insolvency Resolution Process",
+    "^BIFR$"
+   ]
+  },
+  {
+   "class": "insolvency",
+   "id": "IN2",
+   "where": "text, generic category",
+   "patterns": [
+    "corporate\\s+insolvency\\s+resolution|\\bcirp\\b|insolvency\\s+and\\s+bankruptcy\\s+code|interim\\s+resolution\\s+professional|resolution\\s+professional|admitted.{0,60}(section\\s*(7|9|10)|insolvency)|nclt.{0,60}admit"
+   ]
+  }
+ ],
+ "constants": {
+  "R3_DAYS_HELD_ON": 3,
+  "R3_DAYS_NO_DATE": 7,
+  "DEDUP_SESSIONS": 5
+ },
+ "class_counts_by_year_all_symbols": {
+  "routine": {
+   "2016": 232663,
+   "2017": 778328,
+   "2018": 650418,
+   "2019": 715423,
+   "2020": 572745,
+   "2021": 406222,
+   "2022": 170280,
+   "2023": 142803,
+   "2024": 162566,
+   "2025": 136062,
+   "2026": 135649
+  },
+  "results": {
+   "2016": 738,
+   "2017": 4822,
+   "2018": 5665,
+   "2019": 6540,
+   "2020": 6324,
+   "2021": 6591,
+   "2022": 1740,
+   "2023": 7340,
+   "2024": 6961,
+   "2025": 9886,
+   "2026": 13150
+  },
+  "rating": {
+   "2016": 155,
+   "2017": 788,
+   "2018": 930,
+   "2019": 1201,
+   "2020": 1337,
+   "2021": 1326,
+   "2022": 201,
+   "2023": 1102,
+   "2024": 1171,
+   "2025": 1361,
+   "2026": 2316
+  },
+  "mgmt_change": {
+   "2016": 591,
+   "2017": 3011,
+   "2018": 3514,
+   "2019": 4867,
+   "2020": 4315,
+   "2021": 4655,
+   "2022": 782,
+   "2023": 9398,
+   "2024": 16627,
+   "2025": 13779,
+   "2026": 23722
+  },
+  "orders": {
+   "2016": 83,
+   "2017": 336,
+   "2018": 408,
+   "2019": 320,
+   "2020": 286,
+   "2021": 411,
+   "2022": 87,
+   "2023": 439,
+   "2024": 740,
+   "2025": 2666,
+   "2026": 5394
+  },
+  "insolvency": {
+   "2016": 10,
+   "2017": 113,
+   "2018": 341,
+   "2019": 645,
+   "2020": 648,
+   "2021": 803,
+   "2022": 166,
+   "2023": 811,
+   "2024": 983,
+   "2025": 599,
+   "2026": 903
+  },
+  "non_routine": {
+   "2016": 10607,
+   "2017": 59632,
+   "2018": 65115,
+   "2019": 72414,
+   "2020": 69777,
+   "2021": 77014,
+   "2022": 14035,
+   "2023": 90045,
+   "2024": 111293,
+   "2025": 108072,
+   "2026": 175042
+  }
+ },
+ "class_counts_by_year_bhavcopy_symbols": {
+  "routine": {
+   "2016": 2727,
+   "2017": 10995,
+   "2018": 15359,
+   "2019": 27953,
+   "2020": 40024,
+   "2021": 58752,
+   "2022": 38380,
+   "2023": 76510,
+   "2024": 105380,
+   "2025": 88537,
+   "2026": 107184
+  },
+  "results": {
+   "2016": 710,
+   "2017": 4641,
+   "2018": 5425,
+   "2019": 6317,
+   "2020": 6102,
+   "2021": 6354,
+   "2022": 1713,
+   "2023": 6871,
+   "2024": 6321,
+   "2025": 8753,
+   "2026": 12099
+  },
+  "rating": {
+   "2016": 153,
+   "2017": 781,
+   "2018": 914,
+   "2019": 1195,
+   "2020": 1326,
+   "2021": 1298,
+   "2022": 198,
+   "2023": 1055,
+   "2024": 1123,
+   "2025": 1313,
+   "2026": 2208
+  },
+  "mgmt_change": {
+   "2016": 578,
+   "2017": 2934,
+   "2018": 3394,
+   "2019": 4679,
+   "2020": 4139,
+   "2021": 4498,
+   "2022": 760,
+   "2023": 8799,
+   "2024": 15206,
+   "2025": 11995,
+   "2026": 20353
+  },
+  "orders": {
+   "2016": 83,
+   "2017": 334,
+   "2018": 402,
+   "2019": 317,
+   "2020": 281,
+   "2021": 395,
+   "2022": 83,
+   "2023": 404,
+   "2024": 563,
+   "2025": 1902,
+   "2026": 3714
+  },
+  "insolvency": {
+   "2016": 10,
+   "2017": 106,
+   "2018": 331,
+   "2019": 624,
+   "2020": 600,
+   "2021": 784,
+   "2022": 161,
+   "2023": 725,
+   "2024": 959,
+   "2025": 582,
+   "2026": 870
+  },
+  "non_routine": {
+   "2016": 9386,
+   "2017": 52839,
+   "2018": 60460,
+   "2019": 67940,
+   "2020": 65095,
+   "2021": 71903,
+   "2022": 11792,
+   "2023": 84628,
+   "2024": 100828,
+   "2025": 94430,
+   "2026": 153191
+  }
+ },
+ "results_rule_counts_by_year": {
+  "R1": {
+   "2016": 93,
+   "2017": 629,
+   "2018": 356,
+   "2019": 336,
+   "2020": 593,
+   "2021": 682,
+   "2022": 179,
+   "2023": 154,
+   "2024": 77,
+   "2025": 259,
+   "2026": 176
+  },
+  "R2": {
+   "2016": 185,
+   "2017": 958,
+   "2018": 1275,
+   "2019": 1495,
+   "2020": 1495,
+   "2021": 1382,
+   "2022": 370,
+   "2023": 1665,
+   "2024": 1444,
+   "2025": 6267,
+   "2026": 9526
+  },
+  "R3": {
+   "2016": 460,
+   "2017": 3235,
+   "2018": 4034,
+   "2019": 4709,
+   "2020": 4236,
+   "2021": 4527,
+   "2022": 1191,
+   "2023": 5521,
+   "2024": 5440,
+   "2025": 3360,
+   "2026": 3448
+  }
+ },
+ "category_frequency_by_year_bhavcopy_symbols": {
+  "years": [
+   2016,
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "n_categories": 315,
+  "top": [
+   {
+    "category": "Declaration of NAV",
+    "total": 290089,
+    "by_year": {
+     "2016": 1858,
+     "2017": 6652,
+     "2018": 6041,
+     "2019": 8285,
+     "2020": 13803,
+     "2021": 21355,
+     "2022": 28795,
+     "2023": 34176,
+     "2024": 43882,
+     "2025": 61078,
+     "2026": 64164
+    }
+   },
+   {
+    "category": "Updates",
+    "total": 130970,
+    "by_year": {
+     "2016": 1700,
+     "2017": 8628,
+     "2018": 14212,
+     "2019": 20693,
+     "2020": 20185,
+     "2021": 14966,
+     "2022": 2610,
+     "2023": 14340,
+     "2024": 15173,
+     "2025": 7972,
+     "2026": 10491
+    }
+   },
+   {
+    "category": "Analysts/Institutional Investor Meet/Con. Call Updates",
+    "total": 113598,
+    "by_year": {
+     "2016": 1627,
+     "2017": 7699,
+     "2018": 8739,
+     "2019": 8880,
+     "2020": 8324,
+     "2021": 11665,
+     "2022": 2350,
+     "2023": 15909,
+     "2024": 14675,
+     "2025": 14290,
+     "2026": 19440
+    }
+   },
+   {
+    "category": "Trading Window",
+    "total": 75103,
+    "by_year": {
+     "2016": 539,
+     "2017": 2414,
+     "2018": 3191,
+     "2019": 6492,
+     "2020": 6683,
+     "2021": 7100,
+     "2022": 1547,
+     "2023": 6191,
+     "2024": 13337,
+     "2025": 11551,
+     "2026": 16058
+    }
+   },
+   {
+    "category": "Outcome of Board Meeting",
+    "total": 66449,
+    "by_year": {
+     "2016": 663,
+     "2017": 4637,
+     "2018": 5950,
+     "2019": 6317,
+     "2020": 5693,
+     "2021": 6183,
+     "2022": 1476,
+     "2023": 7180,
+     "2024": 7136,
+     "2025": 8648,
+     "2026": 12566
+    }
+   },
+   {
+    "category": "Shareholders meeting",
+    "total": 59919,
+    "by_year": {
+     "2016": 173,
+     "2017": 6145,
+     "2018": 6130,
+     "2019": 6452,
+     "2020": 5582,
+     "2021": 6594,
+     "2022": 572,
+     "2023": 4967,
+     "2024": 6737,
+     "2025": 5708,
+     "2026": 10859
+    }
+   },
+   {
+    "category": "Copy of Newspaper Publication",
+    "total": 55803,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 4,
+     "2020": 4087,
+     "2021": 9074,
+     "2022": 1510,
+     "2023": 8997,
+     "2024": 8403,
+     "2025": 8971,
+     "2026": 14757
+    }
+   },
+   {
+    "category": "Press Release",
+    "total": 46101,
+    "by_year": {
+     "2016": 1020,
+     "2017": 4512,
+     "2018": 5166,
+     "2019": 5112,
+     "2020": 4629,
+     "2021": 5003,
+     "2022": 1070,
+     "2023": 4113,
+     "2024": 4040,
+     "2025": 4623,
+     "2026": 6813
+    }
+   },
+   {
+    "category": "Loss of Share Certificates",
+    "total": 45767,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 33,
+     "2020": 3033,
+     "2021": 10374,
+     "2022": 2395,
+     "2023": 16252,
+     "2024": 13478,
+     "2025": 125,
+     "2026": 77
+    }
+   },
+   {
+    "category": "Board Meeting Intimation",
+    "total": 31858,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 6971,
+     "2024": 8745,
+     "2025": 6242,
+     "2026": 9900
+    }
+   },
+   {
+    "category": "Change in Directors/ Key Managerial Personnel/ Auditor/ Compliance Officer/ Share Transfer Agent",
+    "total": 27609,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 4357,
+     "2024": 8364,
+     "2025": 5628,
+     "2026": 9260
+    }
+   },
+   {
+    "category": "Certificate under SEBI (Depositories and Participants) Regulations, 2018",
+    "total": 26475,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 11,
+     "2020": 1106,
+     "2021": 4198,
+     "2022": 1251,
+     "2023": 3321,
+     "2024": 3740,
+     "2025": 4165,
+     "2026": 8683
+    }
+   },
+   {
+    "category": "General Updates",
+    "total": 26017,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 1530,
+     "2025": 9405,
+     "2026": 15082
+    }
+   },
+   {
+    "category": "Disclosure under SEBI Takeover Regulations",
+    "total": 22037,
+    "by_year": {
+     "2016": 175,
+     "2017": 897,
+     "2018": 593,
+     "2019": 1008,
+     "2020": 3698,
+     "2021": 3966,
+     "2022": 143,
+     "2023": 2172,
+     "2024": 2820,
+     "2025": 2133,
+     "2026": 4432
+    }
+   },
+   {
+    "category": "Investor Presentation",
+    "total": 21314,
+    "by_year": {
+     "2016": 300,
+     "2017": 1393,
+     "2018": 1833,
+     "2019": 1965,
+     "2020": 1921,
+     "2021": 2500,
+     "2022": 610,
+     "2023": 2653,
+     "2024": 2154,
+     "2025": 2437,
+     "2026": 3548
+    }
+   },
+   {
+    "category": "Loss/Duplicate-Share Certificate",
+    "total": 21236,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 1291,
+     "2024": 19657,
+     "2025": 189,
+     "2026": 99
+    }
+   },
+   {
+    "category": "Appointment",
+    "total": 13843,
+    "by_year": {
+     "2016": 15,
+     "2017": 547,
+     "2018": 1082,
+     "2019": 1275,
+     "2020": 1258,
+     "2021": 1430,
+     "2022": 283,
+     "2023": 1321,
+     "2024": 1592,
+     "2025": 2046,
+     "2026": 2994
+    }
+   },
+   {
+    "category": "Notice Of Shareholders Meetings",
+    "total": 12593,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 2349,
+     "2024": 3626,
+     "2025": 2257,
+     "2026": 4361
+    }
+   },
+   {
+    "category": "Resignation",
+    "total": 11113,
+    "by_year": {
+     "2016": 18,
+     "2017": 454,
+     "2018": 884,
+     "2019": 1147,
+     "2020": 934,
+     "2021": 917,
+     "2022": 161,
+     "2023": 1123,
+     "2024": 1180,
+     "2025": 1274,
+     "2026": 3021
+    }
+   },
+   {
+    "category": "Alteration Of Capital and Fund Raising",
+    "total": 10555,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 1597,
+     "2024": 3289,
+     "2025": 2222,
+     "2026": 3447
+    }
+   },
+   {
+    "category": "Related Party Transactions",
+    "total": 10433,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 2809,
+     "2020": 2926,
+     "2021": 2677,
+     "2022": 30,
+     "2023": 1645,
+     "2024": 281,
+     "2025": 41,
+     "2026": 24
+    }
+   },
+   {
+    "category": "Dividend",
+    "total": 10206,
+    "by_year": {
+     "2016": 91,
+     "2017": 1241,
+     "2018": 1309,
+     "2019": 1304,
+     "2020": 928,
+     "2021": 964,
+     "2022": 155,
+     "2023": 1180,
+     "2024": 1011,
+     "2025": 778,
+     "2026": 1245
+    }
+   },
+   {
+    "category": "Credit Rating",
+    "total": 9972,
+    "by_year": {
+     "2016": 142,
+     "2017": 750,
+     "2018": 889,
+     "2019": 1145,
+     "2020": 1292,
+     "2021": 1275,
+     "2022": 195,
+     "2023": 1034,
+     "2024": 1003,
+     "2025": 842,
+     "2026": 1405
+    }
+   },
+   {
+    "category": "Change in Director(s)",
+    "total": 9071,
+    "by_year": {
+     "2016": 84,
+     "2017": 563,
+     "2018": 744,
+     "2019": 1165,
+     "2020": 1044,
+     "2021": 1108,
+     "2022": 176,
+     "2023": 775,
+     "2024": 1409,
+     "2025": 820,
+     "2026": 1183
+    }
+   },
+   {
+    "category": "ESOP/ESOS/ESPS",
+    "total": 8795,
+    "by_year": {
+     "2016": 0,
+     "2017": 260,
+     "2018": 348,
+     "2019": 331,
+     "2020": 696,
+     "2021": 1552,
+     "2022": 288,
+     "2023": 1261,
+     "2024": 1259,
+     "2025": 1127,
+     "2026": 1673
+    }
+   },
+   {
+    "category": "Disc. under Reg.30 of SEBI (SAST) Reg.2011",
+    "total": 8704,
+    "by_year": {
+     "2016": 7,
+     "2017": 3203,
+     "2018": 2767,
+     "2019": 2692,
+     "2020": 27,
+     "2021": 5,
+     "2022": 0,
+     "2023": 3,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Acquisition",
+    "total": 8465,
+    "by_year": {
+     "2016": 34,
+     "2017": 166,
+     "2018": 307,
+     "2019": 459,
+     "2020": 365,
+     "2021": 653,
+     "2022": 151,
+     "2023": 1206,
+     "2024": 2069,
+     "2025": 1497,
+     "2026": 1558
+    }
+   },
+   {
+    "category": "Record Date",
+    "total": 7779,
+    "by_year": {
+     "2016": 168,
+     "2017": 728,
+     "2018": 770,
+     "2019": 777,
+     "2020": 961,
+     "2021": 1075,
+     "2022": 233,
+     "2023": 1031,
+     "2024": 1048,
+     "2025": 988,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Daily Buy-Back of equity shares",
+    "total": 6383,
+    "by_year": {
+     "2016": 86,
+     "2017": 538,
+     "2018": 734,
+     "2019": 1195,
+     "2020": 1983,
+     "2021": 877,
+     "2022": 135,
+     "2023": 666,
+     "2024": 2,
+     "2025": 0,
+     "2026": 167
+    }
+   },
+   {
+    "category": "Analyst/Investor Meet Para A",
+    "total": 6341,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 6341
+    }
+   },
+   {
+    "category": "Allotment of Securities",
+    "total": 6329,
+    "by_year": {
+     "2016": 114,
+     "2017": 451,
+     "2018": 350,
+     "2019": 333,
+     "2020": 556,
+     "2021": 885,
+     "2022": 189,
+     "2023": 862,
+     "2024": 940,
+     "2025": 656,
+     "2026": 993
+    }
+   },
+   {
+    "category": "Change in Management",
+    "total": 5784,
+    "by_year": {
+     "2016": 1,
+     "2017": 1,
+     "2018": 17,
+     "2019": 30,
+     "2020": 48,
+     "2021": 64,
+     "2022": 6,
+     "2023": 478,
+     "2024": 1492,
+     "2025": 1342,
+     "2026": 2305
+    }
+   },
+   {
+    "category": "Book Closure",
+    "total": 5588,
+    "by_year": {
+     "2016": 7,
+     "2017": 246,
+     "2018": 455,
+     "2019": 288,
+     "2020": 1355,
+     "2021": 1436,
+     "2022": 16,
+     "2023": 899,
+     "2024": 883,
+     "2025": 3,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Corporate Insolvency Resolution Process",
+    "total": 5216,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 211,
+     "2019": 571,
+     "2020": 540,
+     "2021": 721,
+     "2022": 156,
+     "2023": 667,
+     "2024": 939,
+     "2025": 566,
+     "2026": 845
+    }
+   },
+   {
+    "category": "Clarification",
+    "total": 5174,
+    "by_year": {
+     "2016": 299,
+     "2017": 1063,
+     "2018": 850,
+     "2019": 1016,
+     "2020": 700,
+     "2021": 941,
+     "2022": 134,
+     "2023": 101,
+     "2024": 68,
+     "2025": 2,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Clarification - Financial Results",
+    "total": 4807,
+    "by_year": {
+     "2016": 0,
+     "2017": 452,
+     "2018": 834,
+     "2019": 725,
+     "2020": 559,
+     "2021": 426,
+     "2022": 6,
+     "2023": 392,
+     "2024": 310,
+     "2025": 330,
+     "2026": 773
+    }
+   },
+   {
+    "category": "Reply to Clarification- Financial results",
+    "total": 4570,
+    "by_year": {
+     "2016": 0,
+     "2017": 363,
+     "2018": 812,
+     "2019": 634,
+     "2020": 526,
+     "2021": 413,
+     "2022": 39,
+     "2023": 404,
+     "2024": 346,
+     "2025": 289,
+     "2026": 744
+    }
+   },
+   {
+    "category": "Reply to Clarification Sought",
+    "total": 4528,
+    "by_year": {
+     "2016": 299,
+     "2017": 955,
+     "2018": 784,
+     "2019": 810,
+     "2020": 584,
+     "2021": 847,
+     "2022": 94,
+     "2023": 88,
+     "2024": 67,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Statement of deviation(s) or variation(s) under Reg. 32",
+    "total": 3998,
+    "by_year": {
+     "2016": 31,
+     "2017": 174,
+     "2018": 329,
+     "2019": 264,
+     "2020": 307,
+     "2021": 373,
+     "2022": 127,
+     "2023": 589,
+     "2024": 820,
+     "2025": 430,
+     "2026": 554
+    }
+   },
+   {
+    "category": "AGM/Book Closure",
+    "total": 3896,
+    "by_year": {
+     "2016": 25,
+     "2017": 1319,
+     "2018": 1147,
+     "2019": 1381,
+     "2020": 24,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Allotment of ESOP/ESPS",
+    "total": 3720,
+    "by_year": {
+     "2016": 115,
+     "2017": 986,
+     "2018": 1122,
+     "2019": 1093,
+     "2020": 384,
+     "2021": 14,
+     "2022": 0,
+     "2023": 3,
+     "2024": 3,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Cessation",
+    "total": 3581,
+    "by_year": {
+     "2016": 27,
+     "2017": 148,
+     "2018": 202,
+     "2019": 457,
+     "2020": 294,
+     "2021": 289,
+     "2022": 60,
+     "2023": 215,
+     "2024": 574,
+     "2025": 475,
+     "2026": 840
+    }
+   },
+   {
+    "category": "Monitoring Agency Report",
+    "total": 2896,
+    "by_year": {
+     "2016": 3,
+     "2017": 20,
+     "2018": 53,
+     "2019": 63,
+     "2020": 44,
+     "2021": 100,
+     "2022": 45,
+     "2023": 246,
+     "2024": 493,
+     "2025": 722,
+     "2026": 1107
+    }
+   },
+   {
+    "category": "Change in Auditors",
+    "total": 2871,
+    "by_year": {
+     "2016": 7,
+     "2017": 326,
+     "2018": 137,
+     "2019": 179,
+     "2020": 166,
+     "2021": 259,
+     "2022": 13,
+     "2023": 205,
+     "2024": 371,
+     "2025": 470,
+     "2026": 738
+    }
+   },
+   {
+    "category": "Bagging/Receiving of orders/contracts",
+    "total": 2783,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 83,
+     "2025": 730,
+     "2026": 1970
+    }
+   },
+   {
+    "category": "Financial Results Updates",
+    "total": 2705,
+    "by_year": {
+     "2016": 31,
+     "2017": 690,
+     "2018": 374,
+     "2019": 304,
+     "2020": 520,
+     "2021": 622,
+     "2022": 164,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Declaration of NAV ICICIB22   :",
+    "total": 2033,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 165,
+     "2019": 243,
+     "2020": 209,
+     "2021": 247,
+     "2022": 244,
+     "2023": 238,
+     "2024": 243,
+     "2025": 249,
+     "2026": 195
+    }
+   },
+   {
+    "category": "Dividend Updates",
+    "total": 1947,
+    "by_year": {
+     "2016": 7,
+     "2017": 85,
+     "2018": 95,
+     "2019": 103,
+     "2020": 289,
+     "2021": 502,
+     "2022": 66,
+     "2023": 390,
+     "2024": 410,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Declaration of NAV BSLNIFTY   :",
+    "total": 1939,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 142,
+     "2019": 242,
+     "2020": 247,
+     "2021": 246,
+     "2022": 238,
+     "2023": 204,
+     "2024": 207,
+     "2025": 218,
+     "2026": 195
+    }
+   },
+   {
+    "category": "Awarding or Bagging of Orders/Contracts",
+    "total": 1927,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 781,
+     "2026": 1146
+    }
+   },
+   {
+    "category": "Code of Conduct under SEBI(PIT) Reg., 2015",
+    "total": 1778,
+    "by_year": {
+     "2016": 5,
+     "2017": 35,
+     "2018": 50,
+     "2019": 912,
+     "2020": 228,
+     "2021": 263,
+     "2022": 29,
+     "2023": 139,
+     "2024": 117,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "News Clarification",
+    "total": 1744,
+    "by_year": {
+     "2016": 126,
+     "2017": 484,
+     "2018": 851,
+     "2019": 277,
+     "2020": 6,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Committee Meeting Updates",
+    "total": 1737,
+    "by_year": {
+     "2016": 0,
+     "2017": 151,
+     "2018": 275,
+     "2019": 172,
+     "2020": 248,
+     "2021": 174,
+     "2022": 16,
+     "2023": 159,
+     "2024": 193,
+     "2025": 110,
+     "2026": 239
+    }
+   },
+   {
+    "category": "Action(s) taken or orders passed",
+    "total": 1674,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 163,
+     "2025": 679,
+     "2026": 832
+    }
+   },
+   {
+    "category": "Annual Secretarial Compliance Report",
+    "total": 1595,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 1595,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Change in Company Secretary/Compliance Officer",
+    "total": 1559,
+    "by_year": {
+     "2016": 24,
+     "2017": 105,
+     "2018": 118,
+     "2019": 193,
+     "2020": 170,
+     "2021": 189,
+     "2022": 34,
+     "2023": 168,
+     "2024": 187,
+     "2025": 160,
+     "2026": 211
+    }
+   },
+   {
+    "category": "Amendment to AOA/MOA",
+    "total": 1455,
+    "by_year": {
+     "2016": 0,
+     "2017": 68,
+     "2018": 146,
+     "2019": 123,
+     "2020": 117,
+     "2021": 136,
+     "2022": 24,
+     "2023": 152,
+     "2024": 195,
+     "2025": 211,
+     "2026": 283
+    }
+   },
+   {
+    "category": "Corrigendum",
+    "total": 1432,
+    "by_year": {
+     "2016": 13,
+     "2017": 121,
+     "2018": 145,
+     "2019": 147,
+     "2020": 131,
+     "2021": 160,
+     "2022": 17,
+     "2023": 160,
+     "2024": 177,
+     "2025": 128,
+     "2026": 233
+    }
+   },
+   {
+    "category": "Scheme of Arrangement",
+    "total": 1407,
+    "by_year": {
+     "2016": 27,
+     "2017": 104,
+     "2018": 129,
+     "2019": 194,
+     "2020": 126,
+     "2021": 165,
+     "2022": 39,
+     "2023": 201,
+     "2024": 133,
+     "2025": 124,
+     "2026": 165
+    }
+   },
+   {
+    "category": "Declaration of NAV ICICIMCAP  :",
+    "total": 1339,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 165,
+     "2019": 243,
+     "2020": 209,
+     "2021": 247,
+     "2022": 244,
+     "2023": 231,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Declaration of NAV ICICIGOLD  :",
+    "total": 1339,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 165,
+     "2019": 243,
+     "2020": 209,
+     "2021": 247,
+     "2022": 244,
+     "2023": 231,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Declaration of NAV ICICINV20  :",
+    "total": 1339,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 165,
+     "2019": 243,
+     "2020": 209,
+     "2021": 247,
+     "2022": 244,
+     "2023": 231,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Amalgamation/Merger",
+    "total": 1335,
+    "by_year": {
+     "2016": 38,
+     "2017": 118,
+     "2018": 140,
+     "2019": 155,
+     "2020": 121,
+     "2021": 124,
+     "2022": 28,
+     "2023": 121,
+     "2024": 121,
+     "2025": 130,
+     "2026": 239
+    }
+   },
+   {
+    "category": "Monthly Business Updates",
+    "total": 1331,
+    "by_year": {
+     "2016": 19,
+     "2017": 96,
+     "2018": 108,
+     "2019": 154,
+     "2020": 132,
+     "2021": 181,
+     "2022": 29,
+     "2023": 131,
+     "2024": 137,
+     "2025": 130,
+     "2026": 214
+    }
+   },
+   {
+    "category": "Declaration of NAV ICICI500   :",
+    "total": 1325,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 153,
+     "2019": 243,
+     "2020": 209,
+     "2021": 246,
+     "2022": 243,
+     "2023": 231,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Integrated Filing- Financial",
+    "total": 1323,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 1080,
+     "2026": 243
+    }
+   },
+   {
+    "category": "Registrar & Share Transfer Agent Update",
+    "total": 1302,
+    "by_year": {
+     "2016": 19,
+     "2017": 225,
+     "2018": 270,
+     "2019": 306,
+     "2020": 133,
+     "2021": 130,
+     "2022": 17,
+     "2023": 50,
+     "2024": 82,
+     "2025": 26,
+     "2026": 44
+    }
+   },
+   {
+    "category": "Declaration of NAV ICICILIQ   :",
+    "total": 1237,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 63,
+     "2019": 243,
+     "2020": 209,
+     "2021": 247,
+     "2022": 244,
+     "2023": 231,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Declaration of NAV EBANK      :",
+    "total": 1233,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 147,
+     "2019": 242,
+     "2020": 249,
+     "2021": 247,
+     "2022": 232,
+     "2023": 116,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Defaults on Payment of Interest/Principal",
+    "total": 1183,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 221,
+     "2021": 525,
+     "2022": 102,
+     "2023": 166,
+     "2024": 120,
+     "2025": 20,
+     "2026": 29
+    }
+   },
+   {
+    "category": "Update-Acquisition/Scheme/Sale/Disposal",
+    "total": 1174,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 205,
+     "2024": 465,
+     "2025": 341,
+     "2026": 163
+    }
+   },
+   {
+    "category": "Agreements,Contracts,Arrangements,MOU",
+    "total": 1166,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 137,
+     "2024": 302,
+     "2025": 279,
+     "2026": 448
+    }
+   },
+   {
+    "category": "Pendency of Litigation(s)/dispute(s) or the outcome impacting the Company",
+    "total": 1150,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 59,
+     "2025": 463,
+     "2026": 628
+    }
+   },
+   {
+    "category": "Declaration of NAV MAN50ETF   :",
+    "total": 1138,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 26,
+     "2019": 218,
+     "2020": 247,
+     "2021": 246,
+     "2022": 237,
+     "2023": 164,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Sale or disposal",
+    "total": 1100,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 65,
+     "2024": 253,
+     "2025": 263,
+     "2026": 519
+    }
+   },
+   {
+    "category": "Incorporation",
+    "total": 1070,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 115,
+     "2024": 364,
+     "2025": 385,
+     "2026": 206
+    }
+   },
+   {
+    "category": "Issue of Securities",
+    "total": 1063,
+    "by_year": {
+     "2016": 29,
+     "2017": 114,
+     "2018": 85,
+     "2019": 81,
+     "2020": 117,
+     "2021": 116,
+     "2022": 13,
+     "2023": 73,
+     "2024": 84,
+     "2025": 162,
+     "2026": 189
+    }
+   },
+   {
+    "category": "Acquisition (including agreement to acquire)",
+    "total": 991,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 991
+    }
+   },
+   {
+    "category": "Strikes/Lockouts/Disturbances",
+    "total": 957,
+    "by_year": {
+     "2016": 4,
+     "2017": 41,
+     "2018": 88,
+     "2019": 94,
+     "2020": 485,
+     "2021": 110,
+     "2022": 10,
+     "2023": 41,
+     "2024": 30,
+     "2025": 17,
+     "2026": 37
+    }
+   },
+   {
+    "category": "Action(s) initiated or orders passed",
+    "total": 910,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 85,
+     "2025": 395,
+     "2026": 430
+    }
+   },
+   {
+    "category": "Disclosure of material issue",
+    "total": 889,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 47,
+     "2024": 190,
+     "2025": 270,
+     "2026": 382
+    }
+   },
+   {
+    "category": "Agreements",
+    "total": 872,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 75,
+     "2025": 275,
+     "2026": 522
+    }
+   },
+   {
+    "category": "Limited Review Report",
+    "total": 856,
+    "by_year": {
+     "2016": 57,
+     "2017": 157,
+     "2018": 112,
+     "2019": 107,
+     "2020": 133,
+     "2021": 129,
+     "2022": 38,
+     "2023": 83,
+     "2024": 40,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Declaration of NAV EQ30       :",
+    "total": 821,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 147,
+     "2019": 242,
+     "2020": 249,
+     "2021": 183,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Declaration of NAV NIFTYEES   :",
+    "total": 821,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 147,
+     "2019": 242,
+     "2020": 249,
+     "2021": 183,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Retirement",
+    "total": 744,
+    "by_year": {
+     "2016": 12,
+     "2017": 36,
+     "2018": 45,
+     "2019": 72,
+     "2020": 58,
+     "2021": 52,
+     "2022": 10,
+     "2023": 56,
+     "2024": 123,
+     "2025": 106,
+     "2026": 174
+    }
+   },
+   {
+    "category": "Buyback",
+    "total": 724,
+    "by_year": {
+     "2016": 34,
+     "2017": 70,
+     "2018": 107,
+     "2019": 100,
+     "2020": 97,
+     "2021": 113,
+     "2022": 23,
+     "2023": 69,
+     "2024": 40,
+     "2025": 14,
+     "2026": 57
+    }
+   },
+   {
+    "category": "Address Change",
+    "total": 707,
+    "by_year": {
+     "2016": 32,
+     "2017": 92,
+     "2018": 71,
+     "2019": 90,
+     "2020": 57,
+     "2021": 85,
+     "2022": 9,
+     "2023": 62,
+     "2024": 56,
+     "2025": 58,
+     "2026": 95
+    }
+   },
+   {
+    "category": "Date of payment of dividend",
+    "total": 690,
+    "by_year": {
+     "2016": 21,
+     "2017": 77,
+     "2018": 75,
+     "2019": 83,
+     "2020": 123,
+     "2021": 117,
+     "2022": 24,
+     "2023": 90,
+     "2024": 80,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Memorandum of Understanding/Agreements",
+    "total": 663,
+    "by_year": {
+     "2016": 3,
+     "2017": 28,
+     "2018": 54,
+     "2019": 63,
+     "2020": 53,
+     "2021": 64,
+     "2022": 9,
+     "2023": 138,
+     "2024": 135,
+     "2025": 44,
+     "2026": 72
+    }
+   },
+   {
+    "category": "Press Release (Revised)",
+    "total": 647,
+    "by_year": {
+     "2016": 14,
+     "2017": 57,
+     "2018": 58,
+     "2019": 73,
+     "2020": 68,
+     "2021": 77,
+     "2022": 15,
+     "2023": 67,
+     "2024": 52,
+     "2025": 51,
+     "2026": 115
+    }
+   },
+   {
+    "category": "Diversification/Disinvestment",
+    "total": 642,
+    "by_year": {
+     "2016": 7,
+     "2017": 25,
+     "2018": 53,
+     "2019": 89,
+     "2020": 82,
+     "2021": 120,
+     "2022": 15,
+     "2023": 82,
+     "2024": 71,
+     "2025": 39,
+     "2026": 59
+    }
+   },
+   {
+    "category": "Actions initiated/taken or orders passed",
+    "total": 618,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 618
+    }
+   },
+   {
+    "category": "Demise",
+    "total": 610,
+    "by_year": {
+     "2016": 11,
+     "2017": 63,
+     "2018": 79,
+     "2019": 57,
+     "2020": 79,
+     "2021": 112,
+     "2022": 11,
+     "2023": 59,
+     "2024": 40,
+     "2025": 32,
+     "2026": 67
+    }
+   },
+   {
+    "category": "Reappointment",
+    "total": 595,
+    "by_year": {
+     "2016": 4,
+     "2017": 90,
+     "2018": 151,
+     "2019": 269,
+     "2020": 81,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Credit Rating- Revision",
+    "total": 583,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 50,
+     "2025": 201,
+     "2026": 332
+    }
+   },
+   {
+    "category": "Interest Rates Updates",
+    "total": 578,
+    "by_year": {
+     "2016": 14,
+     "2017": 70,
+     "2018": 83,
+     "2019": 133,
+     "2020": 103,
+     "2021": 51,
+     "2022": 12,
+     "2023": 67,
+     "2024": 45,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Options to purchase securities",
+    "total": 574,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 49,
+     "2025": 148,
+     "2026": 377
+    }
+   },
+   {
+    "category": "Declaration for audit reports with unmodified opinion(s)",
+    "total": 553,
+    "by_year": {
+     "2016": 1,
+     "2017": 171,
+     "2018": 68,
+     "2019": 62,
+     "2020": 63,
+     "2021": 85,
+     "2022": 1,
+     "2023": 43,
+     "2024": 59,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Bonus",
+    "total": 544,
+    "by_year": {
+     "2016": 8,
+     "2017": 58,
+     "2018": 45,
+     "2019": 69,
+     "2020": 58,
+     "2021": 94,
+     "2022": 22,
+     "2023": 57,
+     "2024": 60,
+     "2025": 40,
+     "2026": 33
+    }
+   },
+   {
+    "category": "",
+    "total": 534,
+    "by_year": {
+     "2016": 7,
+     "2017": 31,
+     "2018": 17,
+     "2019": 0,
+     "2020": 2,
+     "2021": 1,
+     "2022": 1,
+     "2023": 17,
+     "2024": 43,
+     "2025": 18,
+     "2026": 397
+    }
+   },
+   {
+    "category": "Structural Digital Database",
+    "total": 507,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 185,
+     "2026": 322
+    }
+   },
+   {
+    "category": "Capacity addition",
+    "total": 470,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 26,
+     "2025": 113,
+     "2026": 331
+    }
+   },
+   {
+    "category": "Rights Issue",
+    "total": 461,
+    "by_year": {
+     "2016": 4,
+     "2017": 23,
+     "2018": 24,
+     "2019": 20,
+     "2020": 39,
+     "2021": 73,
+     "2022": 14,
+     "2023": 81,
+     "2024": 83,
+     "2025": 57,
+     "2026": 43
+    }
+   },
+   {
+    "category": "Awarding of order(s)/contract(s)",
+    "total": 457,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 33,
+     "2025": 139,
+     "2026": 285
+    }
+   },
+   {
+    "category": "Qualified Institutional Placement",
+    "total": 448,
+    "by_year": {
+     "2016": 12,
+     "2017": 122,
+     "2018": 47,
+     "2019": 26,
+     "2020": 23,
+     "2021": 65,
+     "2022": 6,
+     "2023": 33,
+     "2024": 62,
+     "2025": 9,
+     "2026": 43
+    }
+   },
+   {
+    "category": "Preferential issue",
+    "total": 442,
+    "by_year": {
+     "2016": 12,
+     "2017": 41,
+     "2018": 39,
+     "2019": 46,
+     "2020": 31,
+     "2021": 64,
+     "2022": 14,
+     "2023": 51,
+     "2024": 59,
+     "2025": 32,
+     "2026": 53
+    }
+   },
+   {
+    "category": "Reasons for Delayed/Non-submission of Financial Results",
+    "total": 429,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 23,
+     "2019": 112,
+     "2020": 64,
+     "2021": 55,
+     "2022": 4,
+     "2023": 40,
+     "2024": 29,
+     "2025": 48,
+     "2026": 54
+    }
+   },
+   {
+    "category": "Public Announcement - Buyback of Shares",
+    "total": 424,
+    "by_year": {
+     "2016": 22,
+     "2017": 55,
+     "2018": 84,
+     "2019": 67,
+     "2020": 51,
+     "2021": 47,
+     "2022": 9,
+     "2023": 34,
+     "2024": 22,
+     "2025": 8,
+     "2026": 25
+    }
+   },
+   {
+    "category": "Amalgamation OR Merger",
+    "total": 391,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 40,
+     "2024": 115,
+     "2025": 71,
+     "2026": 165
+    }
+   },
+   {
+    "category": "Annual General Meeting Updates",
+    "total": 384,
+    "by_year": {
+     "2016": 382,
+     "2017": 2,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "ESOPs/ESOS/ESPS",
+    "total": 384,
+    "by_year": {
+     "2016": 192,
+     "2017": 192,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Publish Audited Results",
+    "total": 383,
+    "by_year": {
+     "2016": 0,
+     "2017": 3,
+     "2018": 44,
+     "2019": 139,
+     "2020": 54,
+     "2021": 52,
+     "2022": 3,
+     "2023": 55,
+     "2024": 33,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Credit Rating- New",
+    "total": 380,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 18,
+     "2025": 112,
+     "2026": 250
+    }
+   },
+   {
+    "category": "Issue of Duplicate Share Certificate",
+    "total": 371,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 314,
+     "2025": 40,
+     "2026": 17
+    }
+   },
+   {
+    "category": "Regulation 44(3) of SEBI (LODR), Reg., 2015",
+    "total": 361,
+    "by_year": {
+     "2016": 361,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 0,
+     "2025": 0,
+     "2026": 0
+    }
+   },
+   {
+    "category": "Commencement of commercial production/operations",
+    "total": 358,
+    "by_year": {
+     "2016": 0,
+     "2017": 0,
+     "2018": 0,
+     "2019": 0,
+     "2020": 0,
+     "2021": 0,
+     "2022": 0,
+     "2023": 0,
+     "2024": 26,
+     "2025": 124,
+     "2026": 208
+    }
+   },
+   {
+    "category": "Suspension of Trading",
+    "total": 355,
+    "by_year": {
+     "2016": 7,
+     "2017": 38,
+     "2018": 30,
+     "2019": 54,
+     "2020": 34,
+     "2021": 52,
+     "2022": 12,
+     "2023": 29,
+     "2024": 17,
+     "2025": 29,
+     "2026": 53
+    }
+   },
+   {
+    "category": "Extension of Annual General Meeting",
+    "total": 349,
+    "by_year": {
+     "2016": 4,
+     "2017": 42,
+     "2018": 51,
+     "2019": 61,
+     "2020": 108,
+     "2021": 40,
+     "2022": 0,
+     "2023": 15,
+     "2024": 14,
+     "2025": 4,
+     "2026": 10
+    }
+   },
+   {
+    "category": "Redemption",
+    "total": 348,
+    "by_year": {
+     "2016": 8,
+     "2017": 36,
+     "2018": 19,
+     "2019": 66,
+     "2020": 65,
+     "2021": 58,
+     "2022": 18,
+     "2023": 29,
+     "2024": 40,
+     "2025": 2,
+     "2026": 7
+    }
+   }
+  ]
+ },
+ "category_to_class_share_top": {
+  "Declaration of NAV": {
+   "routine": 1.0
+  },
+  "Updates": {
+   "routine": 0.172,
+   "results": 0.018,
+   "rating": 0.002,
+   "mgmt_change": 0.005,
+   "orders": 0.013,
+   "insolvency": 0.004,
+   "non_routine": 0.828
+  },
+  "Analysts/Institutional Investor Meet/Con. Call Updates": {
+   "non_routine": 1.0
+  },
+  "Trading Window": {
+   "routine": 1.0
+  },
+  "Outcome of Board Meeting": {
+   "results": 0.773,
+   "non_routine": 1.0
+  },
+  "Shareholders meeting": {
+   "non_routine": 1.0
+  },
+  "Copy of Newspaper Publication": {
+   "routine": 1.0
+  },
+  "Press Release": {
+   "results": 0.157,
+   "orders": 0.032,
+   "non_routine": 1.0
+  },
+  "Loss of Share Certificates": {
+   "routine": 1.0
+  },
+  "Board Meeting Intimation": {
+   "non_routine": 1.0
+  },
+  "Change in Directors/ Key Managerial Personnel/ Auditor/ Compliance Officer/ Share Transfer Agent": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "Certificate under SEBI (Depositories and Participants) Regulations, 2018": {
+   "routine": 1.0
+  },
+  "General Updates": {
+   "routine": 0.023,
+   "results": 0.016,
+   "rating": 0.002,
+   "mgmt_change": 0.004,
+   "orders": 0.005,
+   "insolvency": 0.001,
+   "non_routine": 0.977
+  },
+  "Disclosure under SEBI Takeover Regulations": {
+   "non_routine": 1.0
+  },
+  "Investor Presentation": {
+   "results": 0.023,
+   "non_routine": 1.0
+  },
+  "Loss/Duplicate-Share Certificate": {
+   "routine": 1.0
+  },
+  "Appointment": {
+   "mgmt_change": 0.907,
+   "non_routine": 1.0
+  },
+  "Notice Of Shareholders Meetings": {
+   "non_routine": 1.0
+  },
+  "Resignation": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "Alteration Of Capital and Fund Raising": {
+   "non_routine": 1.0
+  },
+  "Related Party Transactions": {
+   "non_routine": 1.0
+  },
+  "Dividend": {
+   "results": 0.024,
+   "non_routine": 1.0
+  },
+  "Credit Rating": {
+   "rating": 1.0,
+   "non_routine": 1.0
+  },
+  "Change in Director(s)": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "ESOP/ESOS/ESPS": {
+   "non_routine": 1.0
+  },
+  "Disc. under Reg.30 of SEBI (SAST) Reg.2011": {
+   "non_routine": 1.0
+  },
+  "Acquisition": {
+   "non_routine": 1.0
+  },
+  "Record Date": {
+   "non_routine": 1.0
+  },
+  "Daily Buy-Back of equity shares": {
+   "routine": 1.0
+  },
+  "Analyst/Investor Meet Para A": {
+   "non_routine": 1.0
+  },
+  "Allotment of Securities": {
+   "non_routine": 1.0
+  },
+  "Change in Management": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "Book Closure": {
+   "non_routine": 1.0
+  },
+  "Corporate Insolvency Resolution Process": {
+   "insolvency": 1.0,
+   "non_routine": 1.0
+  },
+  "Clarification": {
+   "non_routine": 1.0
+  },
+  "Clarification - Financial Results": {
+   "non_routine": 1.0
+  },
+  "Reply to Clarification- Financial results": {
+   "non_routine": 1.0
+  },
+  "Reply to Clarification Sought": {
+   "non_routine": 1.0
+  },
+  "Statement of deviation(s) or variation(s) under Reg. 32": {
+   "routine": 1.0
+  },
+  "AGM/Book Closure": {
+   "non_routine": 1.0
+  },
+  "Allotment of ESOP/ESPS": {
+   "non_routine": 1.0
+  },
+  "Cessation": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "Monitoring Agency Report": {
+   "routine": 1.0
+  },
+  "Change in Auditors": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "Bagging/Receiving of orders/contracts": {
+   "orders": 1.0,
+   "non_routine": 1.0
+  },
+  "Financial Results Updates": {
+   "results": 0.65,
+   "non_routine": 1.0
+  },
+  "Declaration of NAV ICICIB22   :": {
+   "routine": 1.0
+  },
+  "Dividend Updates": {
+   "non_routine": 1.0
+  },
+  "Declaration of NAV BSLNIFTY   :": {
+   "routine": 1.0
+  },
+  "Awarding or Bagging of Orders/Contracts": {
+   "orders": 1.0,
+   "non_routine": 1.0
+  },
+  "Code of Conduct under SEBI(PIT) Reg., 2015": {
+   "routine": 1.0
+  },
+  "News Clarification": {
+   "non_routine": 1.0
+  },
+  "Committee Meeting Updates": {
+   "non_routine": 1.0
+  },
+  "Action(s) taken or orders passed": {
+   "non_routine": 1.0
+  },
+  "Annual Secretarial Compliance Report": {
+   "routine": 1.0
+  },
+  "Change in Company Secretary/Compliance Officer": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "Amendment to AOA/MOA": {
+   "non_routine": 1.0
+  },
+  "Corrigendum": {
+   "non_routine": 1.0
+  },
+  "Scheme of Arrangement": {
+   "non_routine": 1.0
+  },
+  "Declaration of NAV ICICIMCAP  :": {
+   "routine": 1.0
+  },
+  "Declaration of NAV ICICIGOLD  :": {
+   "routine": 1.0
+  },
+  "Declaration of NAV ICICINV20  :": {
+   "routine": 1.0
+  },
+  "Amalgamation/Merger": {
+   "non_routine": 1.0
+  },
+  "Monthly Business Updates": {
+   "non_routine": 1.0
+  },
+  "Declaration of NAV ICICI500   :": {
+   "routine": 1.0
+  },
+  "Integrated Filing- Financial": {
+   "results": 0.29,
+   "non_routine": 1.0
+  },
+  "Registrar & Share Transfer Agent Update": {
+   "routine": 1.0
+  },
+  "Declaration of NAV ICICILIQ   :": {
+   "routine": 1.0
+  },
+  "Declaration of NAV EBANK      :": {
+   "routine": 1.0
+  },
+  "Defaults on Payment of Interest/Principal": {
+   "non_routine": 1.0
+  },
+  "Update-Acquisition/Scheme/Sale/Disposal": {
+   "non_routine": 1.0
+  },
+  "Agreements,Contracts,Arrangements,MOU": {
+   "non_routine": 1.0
+  },
+  "Pendency of Litigation(s)/dispute(s) or the outcome impacting the Company": {
+   "non_routine": 1.0
+  },
+  "Declaration of NAV MAN50ETF   :": {
+   "routine": 1.0
+  },
+  "Sale or disposal": {
+   "non_routine": 1.0
+  },
+  "Incorporation": {
+   "non_routine": 1.0
+  },
+  "Issue of Securities": {
+   "non_routine": 1.0
+  },
+  "Acquisition (including agreement to acquire)": {
+   "non_routine": 1.0
+  },
+  "Strikes/Lockouts/Disturbances": {
+   "non_routine": 1.0
+  },
+  "Action(s) initiated or orders passed": {
+   "non_routine": 1.0
+  },
+  "Disclosure of material issue": {
+   "non_routine": 1.0
+  },
+  "Agreements": {
+   "non_routine": 1.0
+  },
+  "Limited Review Report": {
+   "results": 0.985,
+   "non_routine": 1.0
+  },
+  "Declaration of NAV EQ30       :": {
+   "routine": 1.0
+  },
+  "Declaration of NAV NIFTYEES   :": {
+   "routine": 1.0
+  },
+  "Retirement": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "Buyback": {
+   "non_routine": 1.0
+  },
+  "Address Change": {
+   "non_routine": 1.0
+  },
+  "Date of payment of dividend": {
+   "non_routine": 1.0
+  },
+  "Memorandum of Understanding/Agreements": {
+   "non_routine": 1.0
+  },
+  "Press Release (Revised)": {
+   "results": 0.003,
+   "orders": 0.011,
+   "non_routine": 1.0
+  },
+  "Diversification/Disinvestment": {
+   "non_routine": 1.0
+  },
+  "Actions initiated/taken or orders passed": {
+   "non_routine": 1.0
+  },
+  "Demise": {
+   "mgmt_change": 1.0,
+   "non_routine": 1.0
+  },
+  "Reappointment": {
+   "non_routine": 1.0
+  },
+  "Credit Rating- Revision": {
+   "rating": 1.0,
+   "non_routine": 1.0
+  },
+  "Interest Rates Updates": {
+   "routine": 1.0
+  },
+  "Options to purchase securities": {
+   "non_routine": 1.0
+  },
+  "Declaration for audit reports with unmodified opinion(s)": {
+   "non_routine": 1.0
+  },
+  "Bonus": {
+   "non_routine": 1.0
+  },
+  "": {
+   "routine": 0.002,
+   "insolvency": 0.002,
+   "non_routine": 0.998
+  },
+  "Structural Digital Database": {
+   "routine": 1.0
+  },
+  "Capacity addition": {
+   "non_routine": 1.0
+  },
+  "Rights Issue": {
+   "non_routine": 1.0
+  },
+  "Awarding of order(s)/contract(s)": {
+   "orders": 1.0,
+   "non_routine": 1.0
+  },
+  "Qualified Institutional Placement": {
+   "non_routine": 1.0
+  },
+  "Preferential issue": {
+   "non_routine": 1.0
+  },
+  "Reasons for Delayed/Non-submission of Financial Results": {
+   "non_routine": 1.0
+  },
+  "Public Announcement - Buyback of Shares": {
+   "non_routine": 1.0
+  },
+  "Amalgamation OR Merger": {
+   "non_routine": 1.0
+  },
+  "Annual General Meeting Updates": {
+   "non_routine": 1.0
+  },
+  "ESOPs/ESOS/ESPS": {
+   "non_routine": 1.0
+  },
+  "Publish Audited Results": {
+   "results": 0.475,
+   "non_routine": 1.0
+  },
+  "Credit Rating- New": {
+   "rating": 1.0,
+   "non_routine": 1.0
+  },
+  "Issue of Duplicate Share Certificate": {
+   "routine": 1.0
+  },
+  "Regulation 44(3) of SEBI (LODR), Reg., 2015": {
+   "non_routine": 1.0
+  },
+  "Commencement of commercial production/operations": {
+   "non_routine": 1.0
+  },
+  "Suspension of Trading": {
+   "non_routine": 1.0
+  },
+  "Extension of Annual General Meeting": {
+   "non_routine": 1.0
+  },
+  "Redemption": {
+   "non_routine": 1.0
+  }
+ },
+ "seconds": 65.5
+}

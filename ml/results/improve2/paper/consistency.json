@@ -1,0 +1,332 @@
+{
+ "features": 52,
+ "research_end": "2026-10-16",
+ "rule": "exact equality per cell (NaN equals NaN); max_abs_diff over finite pairs",
+ "corporate_actions_added_after_research_end": [
+  {
+   "ticker": "JSWDULUX",
+   "ex_date": "2026-10-22",
+   "ratio": 0.1
+  }
+ ],
+ "explained_difference_rule": "a cell of a ticker whose pre-ex prices the new event rescales, or a cross-sectional feature (ranks, amihud_20 z-score) on a date where that ticker is in the universe",
+ "research_end_rows": {
+  "rows_frame": 1527,
+  "rows_10y": 1527,
+  "rows_common": 1527,
+  "rows_only_frame": 0,
+  "rows_only_10y": 0,
+  "max_abs_diff_all_features": 3.410605131648481e-13,
+  "cells_differing": 16,
+  "nan_mismatch_cells": 0,
+  "per_feature_differing": {
+   "gap_pct": {
+    "max_abs_diff": 1.497554250745603e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "range_pct": {
+    "max_abs_diff": 1.1275702593849246e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "close_pos_in_range": {
+    "max_abs_diff": 3.9968028886505635e-15,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "dist_sma_5": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "dist_sma_20": {
+    "max_abs_diff": 1.1102230246251565e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "macd_norm": {
+    "max_abs_diff": 1.1188966420050406e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "mom_20": {
+    "max_abs_diff": 1.1102230246251565e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "vol_10": {
+    "max_abs_diff": 1.0408340855860843e-17,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "vol_20": {
+    "max_abs_diff": 6.938893903907228e-18,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "rsi_14": {
+    "max_abs_diff": 1.4210854715202004e-14,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "atr_pct": {
+    "max_abs_diff": 3.8163916471489756e-17,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "dist_52w_high": {
+    "max_abs_diff": 1.1102230246251565e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "rsi_2": {
+    "max_abs_diff": 3.410605131648481e-13,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "ret_63d": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "ret_126d": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "amihud_20": {
+    "max_abs_diff": 1.609823385706477e-15,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   }
+  },
+  "tickers_with_differences": [
+   "JSWDULUX"
+  ],
+  "n_tickers_with_differences": 1,
+  "n_dates_with_differences": 1,
+  "dates_with_differences_last": [
+   "2026-10-16"
+  ],
+  "identical": false,
+  "cells_differing_unexplained": 0,
+  "equal_except_new_corporate_action_rounding": true
+ },
+ "all_dates_through_research_end": {
+  "rows_frame": 2226504,
+  "rows_10y": 2226504,
+  "rows_common": 2226504,
+  "rows_only_frame": 0,
+  "rows_only_10y": 0,
+  "max_abs_diff_all_features": 5.755396159656812e-13,
+  "cells_differing": 3204,
+  "nan_mismatch_cells": 0,
+  "per_feature_differing": {
+   "ret_1d": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 49,
+    "nan_mismatch": 0
+   },
+   "log_ret_1d": {
+    "max_abs_diff": 2.2201749987071917e-16,
+    "rows_differing": 49,
+    "nan_mismatch": 0
+   },
+   "gap_pct": {
+    "max_abs_diff": 1.5439038936193583e-16,
+    "rows_differing": 90,
+    "nan_mismatch": 0
+   },
+   "range_pct": {
+    "max_abs_diff": 1.5612511283791264e-16,
+    "rows_differing": 97,
+    "nan_mismatch": 0
+   },
+   "close_pos_in_range": {
+    "max_abs_diff": 1.354472090042691e-14,
+    "rows_differing": 113,
+    "nan_mismatch": 0
+   },
+   "dist_sma_5": {
+    "max_abs_diff": 4.440892098500626e-16,
+    "rows_differing": 67,
+    "nan_mismatch": 0
+   },
+   "dist_sma_10": {
+    "max_abs_diff": 4.440892098500626e-16,
+    "rows_differing": 69,
+    "nan_mismatch": 0
+   },
+   "dist_sma_20": {
+    "max_abs_diff": 4.440892098500626e-16,
+    "rows_differing": 64,
+    "nan_mismatch": 0
+   },
+   "dist_sma_50": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 47,
+    "nan_mismatch": 0
+   },
+   "macd_norm": {
+    "max_abs_diff": 7.008282842946301e-16,
+    "rows_differing": 116,
+    "nan_mismatch": 0
+   },
+   "mom_5": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 43,
+    "nan_mismatch": 0
+   },
+   "mom_10": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 49,
+    "nan_mismatch": 0
+   },
+   "mom_20": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 35,
+    "nan_mismatch": 0
+   },
+   "vol_5": {
+    "max_abs_diff": 1.231653667943533e-16,
+    "rows_differing": 115,
+    "nan_mismatch": 0
+   },
+   "vol_10": {
+    "max_abs_diff": 6.245004513516506e-17,
+    "rows_differing": 116,
+    "nan_mismatch": 0
+   },
+   "vol_20": {
+    "max_abs_diff": 6.245004513516506e-17,
+    "rows_differing": 92,
+    "nan_mismatch": 0
+   },
+   "rsi_14": {
+    "max_abs_diff": 9.947598300641403e-14,
+    "rows_differing": 89,
+    "nan_mismatch": 0
+   },
+   "atr_pct": {
+    "max_abs_diff": 5.551115123125783e-17,
+    "rows_differing": 107,
+    "nan_mismatch": 0
+   },
+   "dist_52w_high": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 53,
+    "nan_mismatch": 0
+   },
+   "dist_52w_low": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 63,
+    "nan_mismatch": 0
+   },
+   "rsi_2": {
+    "max_abs_diff": 5.755396159656812e-13,
+    "rows_differing": 109,
+    "nan_mismatch": 0
+   },
+   "ret_63d": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 35,
+    "nan_mismatch": 0
+   },
+   "ret_126d": {
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 1,
+    "nan_mismatch": 0
+   },
+   "dist_200dma": {
+    "max_abs_diff": 1.1102230246251565e-16,
+    "rows_differing": 3,
+    "nan_mismatch": 0
+   },
+   "amihud_20": {
+    "max_abs_diff": 5.051514762044462e-15,
+    "rows_differing": 1533,
+    "nan_mismatch": 0
+   }
+  },
+  "tickers_with_differences": [
+   "20MICRONS",
+   "360ONE",
+   "3MINDIA",
+   "5PAISA",
+   "63MOONS",
+   "AADHARHFC",
+   "AARTIDRUGS",
+   "AARTIIND",
+   "AARTIPHARM",
+   "AAVAS",
+   "ABB",
+   "ABBOTINDIA",
+   "ABCAPITAL",
+   "ABCOTS",
+   "ABDL",
+   "ABFRL",
+   "ABLBL",
+   "ABREL",
+   "ABSLAMC",
+   "ACC",
+   "ACE",
+   "ACI",
+   "ACMESOLAR",
+   "ACUTAAS",
+   "ADANIENSOL",
+   "ADANIENT",
+   "ADANIGREEN",
+   "ADANIPORTS",
+   "ADANIPOWER",
+   "ADFFOODS",
+   "ADOR",
+   "ADSL",
+   "ADVAIT",
+   "ADVANCE",
+   "ADVENTHTL",
+   "ADVENZYMES",
+   "AEGISLOG",
+   "AEGISVOPAK",
+   "AEQUS",
+   "AEROENTER",
+   "AEROFLEX",
+   "AETHER",
+   "AFCONS",
+   "AFFLE",
+   "AGARIND",
+   "AGARWALEYE",
+   "AGI",
+   "AGIIL",
+   "AHCL",
+   "AHLUCONT",
+   "AIAENG",
+   "AIIL",
+   "AJANTPHARM",
+   "AJAXENGG",
+   "AJMERA",
+   "AKUMS",
+   "ALEMBICLTD",
+   "ALGOQUANT",
+   "ALIVUS",
+   "ALKEM"
+  ],
+  "n_tickers_with_differences": 1428,
+  "n_dates_with_differences": 119,
+  "dates_with_differences_last": [
+   "2026-10-12",
+   "2026-10-13",
+   "2026-10-14",
+   "2026-10-15",
+   "2026-10-16"
+  ],
+  "identical": false,
+  "cells_differing_unexplained": 0,
+  "equal_except_new_corporate_action_rounding": true
+ },
+ "frame_dates_after_research_end": [
+  "2026-10-19",
+  "2026-10-21",
+  "2026-10-22"
+ ]
+}

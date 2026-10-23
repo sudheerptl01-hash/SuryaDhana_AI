@@ -1,0 +1,293 @@
+{
+ "stream": "Q5 (ml/IMPROVEMENT_PLAN_2.md \u00a72): the 40-day horizon",
+ "generated_by": "python3 -m ml.improve.h40 compare",
+ "definitions_and_deviations": "ml/results/improve2/h40/H40.md",
+ "trial_ledger": {
+  "configurations": 1,
+  "books": 4,
+  "trials": 5,
+  "phase_N": 261
+ },
+ "dsr": {
+  "N": 261,
+  "var_sr_daily": 0.003868632661070771,
+  "source": "ml/results/improve/books/books.json"
+ },
+ "pass_mark_rule": "the 40-day model's vol+size full-universe top-decile 40-session book beats the 20-day control's with the paired monthly net-20-bps-excess difference's 95% CI (months resampled, B = 1000, seed 108) entirely above zero, AND its flat break-even cost per side is higher (no positive break-even = 0 bps); 3-month-block CI reported beside it, strict reading = both CIs",
+ "dataset": {
+  "rows": 2226504,
+  "tickers": 2514,
+  "sessions": 2241,
+  "labeled_rows_40d": 2157713,
+  "labeled_clean_rows_40d": 2150979,
+  "y_clean_share_40d": 0.9660791087732158,
+  "label_balance_40d": 0.4997374534982178,
+  "last_labeled_date_40d": "2026-08-18",
+  "labeled_clean_rows_20d": 2187230,
+  "clean_overlap": {
+   "both": 2150910,
+   "clean_40_not_20": 69,
+   "clean_20_not_40": 36320
+  },
+  "rows_40d_clean_with_a_missing_market_session_in_window": 558,
+  "share_40d_clean_with_a_missing_market_session_in_window": 0.00025941675860154844,
+  "max_market_sessions_spanned_by_a_clean_40d_label": 737,
+  "first_fold": {
+   "fold": {
+    "name": "2018-01",
+    "train_end": "2017-11-01",
+    "test_start": "2018-01-01",
+    "test_end": "2018-01-31"
+   },
+   "train_rows": 16136,
+   "train_labeled_clean_rows": 15986,
+   "train_sessions": 21
+  },
+  "holdout": {
+   "name": "holdout",
+   "train_end": "2026-06-03",
+   "test_start": "2026-08-03",
+   "test_end": "2026-08-18"
+  },
+  "label_column_differs_from_data_10y": {
+   "y_raw_20d": true,
+   "y_excess_20d": true,
+   "y_rank_20d": true,
+   "label_beat_mkt_20d": true,
+   "y_clean_20d": true,
+   "exit_date": true
+  },
+  "features_identical_to_data_10y": true
+ },
+ "comparison_code_self_test": {
+  "pair": "control20 - control20 (self-test)",
+  "book_a": "control20|vol+size|top_decile|H40",
+  "book_b": "control20|vol+size|top_decile|H40",
+  "metric": "per signal month: mean over the month's signal dates of (net 20 bps 40-session tranche return - EW universe tranche return); difference a - b; same blocks and benchmark for both books",
+  "n_months": 104,
+  "first_month": "2018-01",
+  "last_month": "2026-08",
+  "mean_diff_per_tranche": 0.0,
+  "mean_diff_ann": 0.0,
+  "ci95_months_resampled": [
+   0.0,
+   0.0
+  ],
+  "ci95_months_resampled_ann": [
+   0.0,
+   0.0
+  ],
+  "ci95_3month_blocks": [
+   0.0,
+   0.0
+  ],
+  "ci95_3month_blocks_ann": [
+   0.0,
+   0.0
+  ],
+  "p_gt0_months_resampled": 0.0,
+  "p_gt0_3month_blocks": 0.0,
+  "months_a_ahead": "0/104",
+  "months_tied": 104,
+  "t_naive_months": null,
+  "cv_months_only": {
+   "n_months": 103,
+   "mean_diff_ann": 0.0,
+   "ci95_months_resampled_ann": [
+    0.0,
+    0.0
+   ]
+  },
+  "excess_ann_20bps": {
+   "a": 0.0694714312332816,
+   "b": 0.0694714312332816
+  },
+  "ir_20bps": {
+   "a": 1.7987193999775315,
+   "b": 1.7987193999775315,
+   "a_ci95": [
+    1.0693111697696216,
+    2.523685225991928
+   ],
+   "b_ci95": [
+    1.0693111697696216,
+    2.523685225991928
+   ]
+  },
+  "breakeven_flat_cost_bps_per_side": {
+   "a": 83.09792684248889,
+   "b": 83.09792684248889,
+   "a_used": 83.09792684248889,
+   "b_used": 83.09792684248889
+  },
+  "ci_excludes_zero_above": false,
+  "ci_3month_blocks_excludes_zero_above": false,
+  "breakeven_higher": false,
+  "PASS": false,
+  "PASS_strict_both_cis": false,
+  "ok": true
+ },
+ "books": {
+  "control20": {
+   "control20|vol+size|top_decile|H40": {
+    "excess_ann_vs_ew_20bps": 0.0694714312332816,
+    "ir_20bps": 1.7987193999775315,
+    "ir_ci95": [
+     1.0693111697696216,
+     2.523685225991928
+    ],
+    "excess_ann_10bps": 0.08051571092054872,
+    "excess_ann_40bps": 0.04741092935470917,
+    "excess_ann_gross": 0.09156934310646977,
+    "excess_ann_name_level": 0.03373972100255885,
+    "name_level_cost_bps_per_side": 52.14477212427472,
+    "months_positive": "77/104",
+    "years_positive": "8/9",
+    "turnover_per_rebalance": 0.844822301208088,
+    "turnover_annualised": 5.322380497610954,
+    "breakeven_flat_cost_bps_per_side": 83.09792684248889,
+    "capacity_rs_crore": 305.73828,
+    "dsr": 0.0015202401893165056,
+    "dsr_N": 261,
+    "psr_vs_0": 0.9999999211065128,
+    "holdout_excess_ann_20bps": 0.22822912022339384
+   },
+   "control20|vol+size|liq_top_decile|H40": {
+    "excess_ann_vs_ew_20bps": 0.0020242183933794956,
+    "ir_20bps": 0.08684777748315793,
+    "ir_ci95": [
+     -0.5945705401770262,
+     0.7581922405721786
+    ],
+    "excess_ann_10bps": 0.01330894163874612,
+    "excess_ann_40bps": -0.02051559882492657,
+    "excess_ann_gross": 0.024603541308255088,
+    "excess_ann_name_level": -0.020645643959328653,
+    "name_level_cost_bps_per_side": 40.522974268611186,
+    "months_positive": "53/104",
+    "years_positive": "4/9",
+    "turnover_per_rebalance": 0.8733242587605333,
+    "turnover_annualised": 5.50194283019136,
+    "breakeven_flat_cost_bps_per_side": 21.794695061809378,
+    "capacity_rs_crore": 1229.0009,
+    "dsr": 8.200409590848025e-16,
+    "dsr_N": 261,
+    "psr_vs_0": 0.6000778910879598,
+    "holdout_excess_ann_20bps": 0.30283380828447254
+   }
+  }
+ },
+ "books_meta": {
+  "control20": {
+   "base_panel": {
+    "rows_40d_clean_in_test_windows": 2100832,
+    "rows_dropped_not_20d_clean": 69,
+    "rows": 2100763,
+    "signal_dates": 2138,
+    "first": "2018-01-01",
+    "last": "2026-08-18",
+    "folds_restricted_to": null
+   },
+   "hold40_screen": {
+    "rule": "P2 H_LONG screen: ticker's |ret_1d| <= 22% on grid sessions t+1..t+41 and the t+41 session exists (applied on top of the dataset's 40-day clean mask)",
+    "rows_in": 2100763,
+    "rows_not_eligible_no_exit_session": 0,
+    "rows_removed_by_absret_screen": 7,
+    "of_which_absret_gt_22pct": 0,
+    "of_which_no_trade_in_grid_window": 7,
+    "removal_note": "P2's rule drops a row whose ticker has no own return on grid sessions t+1..t+41 (max is NaN): the ticker did not trade in the 41 sessions after the signal date (its dataset label enters at a later row t+1, the gap the ml/data.py span rule does not see)",
+    "H": 40,
+    "rows": 2100756,
+    "signal_dates": 2138,
+    "signal_dates_dropped_no_exit_session": 0,
+    "entry_open_backfilled": 45,
+    "first": "2018-01-01",
+    "last": "2026-08-18",
+    "exit_mark_matches_40d_label_frac": 0.9997724628657493,
+    "note": "no label pin: the exit mark is the grid open of session t+41 (forward-filled); it differs from the dataset label only where the ticker misses grid sessions"
+   },
+   "block_set_hash": "92a4a3c42d2c148c",
+   "bench_R_hash": "2ef3919057068da8",
+   "benchmarks_H40": {
+    "ew_universe": {
+     "ann_return_tranche": 0.15211232622909693,
+     "ann_mean_daily": 0.14273999091497644,
+     "sharpe": 0.38866070697408445,
+     "names_mean": 982.5799812909261,
+     "turnover_per_rebalance": 0.12797300587044907
+    },
+    "ew_liquid": {
+     "ann_return_tranche": 0.14372330097103136,
+     "ann_mean_daily": 0.14135270564409114,
+     "sharpe": 0.3889392289677095,
+     "names_mean": 323.91440598690366,
+     "turnover_per_rebalance": 0.26388221733956096
+    }
+   },
+   "descriptive_on_40d_label": {
+    "what": "the scorer's raw score against the 40-day label on the base panel (same label for both scorers)",
+    "rank_ic_vs_40d_excess_mean": 0.08741592536970823,
+    "rank_ic_nw_t_lag40": 6.710348375952387,
+    "fold_auc_vs_40d_label_mean": 0.5446794292061041
+   },
+   "preds": {
+    "source": "ml/results/improve/ab/10y/preds/control__beat_mkt_20d.parquet",
+    "coverage": 1.0,
+    "n_pred_rows": 2137000
+   },
+   "n_signal_dates": 2138,
+   "n_holdout_signal_dates": 12
+  }
+ },
+ "context_20session_books_of_the_control": {
+  "control|vol+size|top_decile (20-session hold, 20-day label)": {
+   "excess_ann_vs_ew_20bps": 0.10473684592951253,
+   "ir_20bps": 2.3171118607291423,
+   "ir_ci95": [
+    1.5079353401921671,
+    3.1025140852857285
+   ],
+   "excess_ann_10bps": 0.12491572971734491,
+   "excess_ann_40bps": 0.0644266896483357,
+   "excess_ann_gross": 0.1451104839366732,
+   "excess_ann_name_level": 0.03940198674212322,
+   "name_level_cost_bps_per_side": 52.106502395812676,
+   "months_positive": "83/105",
+   "years_positive": null,
+   "turnover_per_rebalance": 0.7837450382599079,
+   "turnover_annualised": 9.875187482074839,
+   "breakeven_flat_cost_bps_per_side": 72.03110332122847,
+   "capacity_rs_crore": 157.276345,
+   "dsr": 0.08097507952841299,
+   "dsr_N": 241,
+   "psr_vs_0": 0.9999999999962919,
+   "holdout_excess_ann_20bps": 0.24407016259282593
+  },
+  "control|vol+size|liq_top_decile (20-session hold, 20-day label)": {
+   "excess_ann_vs_ew_20bps": 0.01173741045057961,
+   "ir_20bps": 0.2054784030110875,
+   "ir_ci95": [
+    -0.521449046647312,
+    0.9262018642663377
+   ],
+   "excess_ann_10bps": 0.032665399816387074,
+   "excess_ann_40bps": -0.03006699048834492,
+   "excess_ann_gross": 0.053610581779757895,
+   "excess_ann_name_level": -0.030880700627352903,
+   "name_level_cost_bps_per_side": 40.71403505511623,
+   "months_positive": "55/105",
+   "years_positive": null,
+   "turnover_per_rebalance": 0.8194446302445102,
+   "turnover_annualised": 10.325002341080829,
+   "breakeven_flat_cost_bps_per_side": 25.612073853827273,
+   "capacity_rs_crore": 603.453485,
+   "dsr": 1.889615483972267e-14,
+   "dsr_N": 241,
+   "psr_vs_0": 0.7262991472788102,
+   "holdout_excess_ann_20bps": 0.27010897039697757
+  }
+ },
+ "model_40d": null,
+ "status": "awaiting the 40-day model (books_h40.json): comparator books and self-test only",
+ "verdict": null
+}
