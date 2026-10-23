@@ -1,6 +1,6 @@
 {
  "plan": "ml/IMPROVEMENT_PLAN_2.md Q7",
- "generated_at": "2026-10-23T04:18:23",
+ "generated_at": "2026-10-23T05:58:23",
  "design": {
   "dataset": "ml/data_10y",
   "features": 52,
@@ -94,7 +94,7 @@
   "train_sessions": 504,
   "min_train_sessions": 120,
   "margin": 0.002,
-  "outer_test_data_used": "inner rows are dated <= the year's anchor (fold Y-01 train_end); 9 inner scoring rows (tickers with missing sessions) have labels that exit on or after the outer test start, and audit_inner_exit shows that no year's choice depends on them"
+  "outer_test_data_used": "none: every inner row is dated <= the year's anchor (fold Y-01 train_end)"
  },
  "per_year": {
   "2018": {
@@ -4073,24 +4073,5 @@
   },
   "n_rows_total": 9,
   "all_choices_unchanged": true
- },
- "select_runtime": {
-  "inner_fits": 216,
-  "fit_seconds_sum": 5997,
-  "workers": 2,
-  "runs": [
-   {
-    "wall_seconds": 1883,
-    "fitted": 104,
-    "cached_at_start": 9
-   },
-   {
-    "wall_seconds": 990,
-    "fitted": 103,
-    "cached_at_start": 113
-   }
-  ],
-  "wall_minutes_total": 47.9,
-  "note": "more than one run means the selection was stopped (container restart) and resumed from the cache"
  }
 }

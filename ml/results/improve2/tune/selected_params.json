@@ -1,6 +1,6 @@
 {
  "complete": true,
- "generated_at": "2026-10-23T04:18:23",
+ "generated_at": "2026-10-23T05:58:23",
  "generated_by": "ml/improve/tune.py select (seed 108)",
  "plan": "ml/IMPROVEMENT_PLAN_2.md Q7",
  "rule": "mean AUC over the last 3 21-session blocks before the anchor (each block: rolling 504-session training window ending 22 sessions before its first session, exit-date purge against that session); best mean wins (ties: grid order, incumbent first) but the incumbent is kept unless the best beats it by >= 0.002; a year without 3 blocks whose training windows hold >= 120 sessions keeps the incumbent",

@@ -2,7 +2,7 @@
 # Phase 2 compute queue B (ml/IMPROVEMENT_PLAN_2.md Q6, Q5, Q7). One job at a time after the tuning selection.
 cd /home/user/SuryaDhana_AI
 export OMP_NUM_THREADS=2
-while pgrep -f "ml.improve.tune select" > /dev/null; do sleep 60; done
+# (wait removed: the tuning selection had already finished)
 echo "tune select finished $(date)"; tail -3 ml/results/improve2/tune/select.log
 python3 -m ml.improve.tune select --n-jobs 2 > ml/results/improve2/tune/select_final.log 2>&1   # re-assembles from cache (builder's note)
 echo "== Q6 events A/B $(date)"
