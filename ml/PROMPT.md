@@ -30,10 +30,11 @@ NON-NEGOTIABLE RULES
 2. Pre-register. Before any result exists, commit ml/IMPROVEMENT_PLAN_<n>.md with: each
    configuration and book you will score, the primary metric, the pass mark, secondary readings,
    and the new cumulative trial count N. Later changes are dated amendments that add to N.
-3. Use the existing harness unchanged: ml/improve/ab.py (purged monthly walk-forward, rolling
-   504-session window, embargo >= label horizon + 1, exit-date purge, holdout scored once,
-   paired 20-session block bootstrap), ml/improve/ab_books.py and ml/books/ (book engine,
-   neutralisation, costs), ml/improve/gates.py (the five capital gates at N).
+3. Use the existing harness unchanged: ml/improve/ab.py (purged monthly walk-forward, embargo >= label
+   horizon + 1, exit-date purge, holdout scored once, paired 20-session block bootstrap),
+   ml/improve/ab_books.py and ml/books/ (book engine, neutralisation, costs), ml/improve/gates.py (the five
+   capital gates at N). The training window (rolling 504 sessions or expanding) is a model choice, not part
+   of the harness: state which one the control uses.
 4. Never choose a feature, parameter, threshold or rule by looking at test-month results.
    Nested selection on training data only.
 5. Report signal and economics separately: AUC, months >= 0.50, worst month, rank IC with
@@ -41,7 +42,9 @@ NON-NEGOTIABLE RULES
    ratio, interval, months ahead, turnover, capacity, break-even cost and Deflated Sharpe at N.
    Never report "accuracy".
 6. Where a feature could carry look-ahead (snapshots, survivorship), register a placebo with the
-   same coverage; the feature counts only if it beats the placebo.
+   same coverage; the feature counts only if it beats the placebo. A book-level comparison between two
+   configurations must be calibrated for model randomness: average seed replicates of each configuration
+   (or register seed replicates of the control) before reading a paired book test.
 7. One writer for nse_market.duckdb (lock file ml/results/improve/LOCK_duckdb_write); everyone
    else reads the parquet exports in ml/results/improve/cache/.
 8. Work in streams with explicit owned paths. For each stream, before its main compute, run two
@@ -63,8 +66,10 @@ DELIVERABLES
   the next action.
 
 STOP CONDITIONS
-Stop when every pre-registered mark has a result. Do not add trials to rescue a failed mark;
-propose them for the next cycle instead.
+Stop when every pre-registered mark has a result. Do not add trials to rescue a failed mark. A new
+hypothesis that a result suggests may be tested in the same cycle only as a dated amendment, committed
+before its job starts, added to N, reviewed like any stream, and reported as exploratory (a pass is
+evidence for a forward test, not a promotion); otherwise propose it for the next cycle.
 ```
 
 ---
@@ -72,18 +77,29 @@ propose them for the next cycle instead.
 ## 2. The daily paper book (forward record)
 
 ```text
-Run the SuryaDhana paper book for today. Follow ml/paper/RUNBOOK.md exactly.
+Run the SuryaDhana paper book for today. Follow ml/paper/RUNBOOK.md exactly; where this prompt and the
+runbook differ, the runbook wins.
 
-1. Run the daily job: python3 -m ml.paper.job (it ingests new sessions, rebuilds features,
-   scores with the frozen specification, appends the ledger and recomputes the monitors;
-   it is idempotent).
-2. If the job reports a holiday echo, a corporate action, a failed download or a monitor alert,
-   follow the runbook's response for it; do not change the frozen specification.
-3. Never retrain outside the monthly schedule, never change parameters, features, the
-   neutralisation or the basket rule. The paper book is one trial (N = 1) and stays one.
-4. Commit only ml/paper/ledger/ and ml/results/improve2/paper/PAPER.md with the message
-   "Paper book <session date>", push, and report in three lines: sessions processed,
-   today's baskets (size, turnover), and any alert.
+PRECONDITIONS (the job depends on state that exists only on the machine that holds it):
+- nse_market.duckdb, ml/paper/state/ and the live CSVs in ml/data_ext/ (corporate_actions_feed_live.csv,
+  etf_list_live.csv) must be present; a fresh clone cannot run the job.
+- Special sessions (Muhurat, weekend Budget sessions) must be in ml/paper/calendar_live.json BEFORE that
+  evening's run (for example the Muhurat session expected on Sunday 2026-11-08); check the runbook's calendar
+  section first.
+- About 5.5 GB of free disk (the store backup taken before each write).
+
+1. Run after about 19:00 IST on a trading day:
+   cd /home/user/SuryaDhana_AI && OMP_NUM_THREADS=2 python3 -I ml/paper/job.py
+   It ingests new sessions under the lock file, rebuilds features, retrains on the first session of a month,
+   scores with the frozen specification, appends the ledger, recomputes the monitors. It is idempotent.
+2. If the job exits non-zero, stop: the exit message is the alert. Never pass --accept-unverified-write and never
+   run ingest.py --rebuild-features yourself; both are a person's decision (runbook section 5).
+3. Never change parameters, features, neutralisation, the basket rule or ml/paper/config.py, and never edit the
+   ledger by hand. Each forward book is one trial and stays one.
+4. Check that the ledger diff contains only added lines (runbook section 2), then commit ml/paper/ledger/,
+   ml/paper/models/*.json, ml/paper/calendar_live.json and ml/results/improve2/paper/ with the message
+   "Paper book <session date>", push, and report: sessions processed, basket sizes and turnover per book, every
+   monitor row with status ALERT, and any ingest decision left unresolved.
 ```
 
 ---

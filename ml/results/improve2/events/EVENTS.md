@@ -345,3 +345,11 @@ Every family-E column over all rows with a value:
 | orders | O2x | orders exclusions | `court\|tribunal\|nclt\|nclat\|\bsebi\b\|\btax\b\|income[- ]tax\|\bgst\b\|assessment\|penalt\|demand\s+notice\|show[- ]cause\|arbitra\|order\s+passed\|regulatory\|interim\s+order\|stay\s+order\|adjudicat\|order[-\s]+in[-\s]+original\|commissioner\|directorate\|enforcement\|credit\s+rating` |
 | insolvency | IN1 | category | `^Corporate Insolvency Resolution Process`; `^BIFR$` |
 | insolvency | IN2 | text, generic category | `corporate\s+insolvency\s+resolution\|\bcirp\b\|insolvency\s+and\s+bankruptcy\s+code\|interim\s+resolution\s+professional\|resolution\s+professional\|admitted.{0,60}(section\s*(7\|9\|10)\|insolvency)\|nclt.{0,60}admit` |
+
+## 8. Verdict against the plan (added by the lead after the A/B; numbers from `ml/results/improve/ab/10y_p2/compare.json` and `books.json`)
+
+**Q6 primary mark: FAIL.** AE1 (control + family E, 62 features) minus control over 103 folds: Δ CV-mean AUC -0.0008, paired 20-session block-bootstrap 95% CI [-0.0035, +0.0017], folds won 51/103, Δ rank IC -0.0004 (Newey-West t -0.2). CV AUC: control 0.5455, AE1 0.5447.
+
+The two Q6 books (the trials) are the volatility+size-neutral top decile and the neutral liquid-tercile top decile: AE1 +11.2%/yr, IR +2.46 [+1.71, +3.20] and +3.6%/yr, IR +0.55 [-0.16, +1.28]; control +10.5%/yr, IR +2.32 and +1.2%/yr, IR +0.21. They are not a pass mark.
+
+Reading (independent verification, `ml/results/improve2/IMPROVEMENT_RESULTS.md`): the earnings-announcement-return drift is real in the data (rank IC of `ear_3d` among names with results in the last 60 sessions +0.042, Newey-West t 7.9, positive every year), and about 17% of it is already spanned by the control's score. The incremental gain a model can extract is about +0.002 AUC at best (a post-hoc blend, descriptive only), below the +0.003 bar. The source has three coverage gaps (2022-02..2022-12, 2023-09/10, 2024-01) whose folds carry most of the negative point estimate. FAIL means "below the bar", not "no information".

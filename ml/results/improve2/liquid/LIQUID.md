@@ -172,3 +172,7 @@ cd /home/user/SuryaDhana_AI && python3 -m ml.improve.ab compare --data ml/data_1
 cd /home/user/SuryaDhana_AI && python3 -m ml.improve.ab compare --data ml/data_10y_liq2 --tag 10y_liq2
 cd /home/user/SuryaDhana_AI && python3 -m ml.improve.liquid compare
 ```
+
+## Lead's note on books not in the plan
+
+`ml/results/improve/ab/10y_liq2/BOOKS_AB.md` and `books.json` also hold L2's top-decile books over the whole top-two-tercile universe (`control|none|top_decile` and `control|vol+size|top_decile`, measured against that universe's equal weight). The label 'control' there means the L2 model, not the program's control. They were computed by the books harness, never registered, and are now counted as two trials (ml/IMPROVEMENT_PLAN_2.md section 4, ledger corrections; N = 270). They are context, not a capacity result: the Q3 mark is read on the liquid-tercile book only.
