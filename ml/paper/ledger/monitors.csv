@@ -47,3 +47,18 @@ session,monitor,scope,value,threshold,status,detail
 2026-10-22,universe_etf_count,signal date,0,0,ok,1527 universe names
 2026-10-22,split_flag_rate,signal date,0.00196464,0.01,ok,3 of 1527 universe names
 2026-10-22,data_quality,store,0,0.05,ok,continuity mismatches 0 of 2912; per-name prev_close breaks > 22%: 0; duplicate EQ/BE pairs 0; write verified True; unvalidated split/bonus on this date 0; price breaks 0; recorded closures to date ['2026-10-20']
+2026-10-19,live_model_auc_expanding,pre-inception,0.540147,0.5,warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it),"Q9 research walk-forward (expanding window): fold 2026-07 0.5659, holdout 2026-08-03..2026-09-16 0.5401"
+2026-10-19,rank_ic_nw_t_12m_expanding,pre-inception,5.40661,2,ok,"225 matured signal dates in the trailing 12 months (0 live), mean IC +0.1211; last matured date 2026-09-16; Q9 research walk-forward before inception"
+2026-10-19,paper_active_ir_6m,challenger_expanding,,0,warming up (no marks yet),
+2026-10-19,paper_active_ir_6m,capacity_expanding,,0,warming up (no marks yet),
+2026-10-19,neutral_score_corr,challenger_expanding,0.0478881,0.05,ok,"atr_pct -0.0090, log_turnover +0.0479"
+2026-10-21,live_model_auc_expanding,pre-inception,0.540147,0.5,warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it),"Q9 research walk-forward (expanding window): fold 2026-07 0.5659, holdout 2026-08-03..2026-09-16 0.5401"
+2026-10-21,rank_ic_nw_t_12m_expanding,pre-inception,5.3592,2,ok,"223 matured signal dates in the trailing 12 months (0 live), mean IC +0.1205; last matured date 2026-09-16; Q9 research walk-forward before inception"
+2026-10-21,paper_active_ir_6m,challenger_expanding,,0,warming up (needs 6 months of marks; 1 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0284%; benchmark ew_universe
+2026-10-21,paper_active_ir_6m,capacity_expanding,,0,warming up (needs 6 months of marks; 1 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0345%; benchmark ew_liquid
+2026-10-21,neutral_score_corr,challenger_expanding,0.0580667,0.05,ALERT,"atr_pct -0.0075, log_turnover +0.0581"
+2026-10-22,live_model_auc_expanding,pre-inception,0.540147,0.5,warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it),"Q9 research walk-forward (expanding window): fold 2026-07 0.5659, holdout 2026-08-03..2026-09-16 0.5401"
+2026-10-22,rank_ic_nw_t_12m_expanding,pre-inception,5.3592,2,ok,"223 matured signal dates in the trailing 12 months (0 live), mean IC +0.1205; last matured date 2026-09-16; Q9 research walk-forward before inception"
+2026-10-22,paper_active_ir_6m,challenger_expanding,,0,warming up (needs 6 months of marks; 2 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0026%; benchmark ew_universe
+2026-10-22,paper_active_ir_6m,capacity_expanding,,0,warming up (needs 6 months of marks; 2 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0392%; benchmark ew_liquid
+2026-10-22,neutral_score_corr,challenger_expanding,0.055575,0.05,ALERT,"atr_pct -0.0037, log_turnover +0.0556"

@@ -4,6 +4,12 @@ Every monitor is evaluated "as of" a session s with the information available at
 when their exit date is <= s; marks only up to s.  A monitor that needs live data that does not exist yet reports
 status "warming up (needs ...)"; when its latest complete window predates inception it is computed on the research
 record (the frame's matured labels, the ten-year walk-forward scores) with scope "pre-inception".
+
+Extension 1 (SPEC.md amendment 10): evaluate_ext adds, per session and after the frozen monitors' rows, the
+expanding-window model's live AUC and trailing rank-IC t (pre-inception: the Q9 research walk-forward), the paper
+active IR of the two extension books, and the neutral-score correlation of the expanding score (config.EXT_MONITORS).
+The data monitors (delivery IC, PSI, inversion, logistic flips, ETF, split flags, data quality) are shared: they
+read the same store and frame, and their rows are the frozen ones.
 """
 from __future__ import annotations
 
@@ -16,8 +22,9 @@ import pandas as pd
 import ml.strategy_backtest as sb
 from ml.books.construct import per_date_spearman
 from ml.paper.common import fnum
-from ml.paper.config import (BOOK_ORDER, BOOKS, CONTROL_10Y_PREDS, ETF_LIVE, H, INCEPTION_SIGNAL_DATE,
-                             MODELS_META_DIR, MONITORS, N_TRIALS_DSR, SEED, VAR_SR_DSR)
+from ml.paper.config import (ALL_BOOKS, BOOK_ORDER, CONTROL_10Y_PREDS, ETF_LIVE, EXT_BOOK_ORDER, EXT_MONITORS,
+                             EXT_N_TRIALS_DSR, H, INCEPTION_SIGNAL_DATE, MODELS_META_DIR, MONITORS, N_TRIALS_DSR,
+                             Q9_JSON, Q9_PREDS, SEED, VAR_SR_DSR)
 
 LABEL, FWD, CLEAN = "label_beat_mkt_20d", "y_excess_20d", "y_clean_20d"
 INCEPTION_MONTH = INCEPTION_SIGNAL_DATE[:7]
@@ -28,8 +35,14 @@ def _status(alert: bool) -> str:
 
 
 def _row(s, mon, scope, value, status, detail="") -> dict:
+    thr = (MONITORS.get(mon) or EXT_MONITORS[mon])["threshold"]
     return {"session": s, "monitor": mon, "scope": scope, "value": fnum(value, 6) if value is not None else "",
-            "threshold": fnum(MONITORS[mon]["threshold"], 6), "status": status, "detail": detail}
+            "threshold": fnum(thr, 6), "status": status, "detail": detail}
+
+
+def is_ext_row(r: dict) -> bool:
+    """A monitors-ledger row written by evaluate_ext (extension 1)."""
+    return r["monitor"].endswith("_expanding") or r["scope"] in EXT_BOOK_ORDER
 
 
 def nw_t(x: np.ndarray, L: int = 20) -> float:
@@ -59,6 +72,8 @@ class Context:
         self.dd = df["date"].to_numpy(dtype="datetime64[ns]")
         self.month_cache: dict = {}
         self.wf = None
+        self.scores_ext: dict = {}              # extension 1: signal date (str) -> expanding-window score frame
+        self.wf_ext = None
 
     def model_meta(self, month: str) -> dict | None:
         p = MODELS_META_DIR / f"{month}.json"
@@ -77,6 +92,15 @@ class Context:
             w["date"] = pd.to_datetime(w["date"])
             self.wf = w
         return self.wf
+
+    def walk_forward_ext(self) -> pd.DataFrame:
+        """The Q9 research walk-forward (expanding window), the registered file (config.check_extension_inputs)."""
+        if self.wf_ext is None:
+            lo = self.sessions[-1] - pd.Timedelta(days=400)
+            w = pd.read_parquet(Q9_PREDS, columns=["date", "ticker", "score", "fwd", "fold"], filters=[("date", ">=", lo)])
+            w["date"] = pd.to_datetime(w["date"])
+            self.wf_ext = w
+        return self.wf_ext
 
     def train_window(self, month: str) -> pd.DataFrame:
         if month not in self.month_cache:
@@ -290,10 +314,10 @@ def m_split(ctx: Context, s: pd.Timestamp, sd: str) -> list[dict]:
                  f"{int(u.sum())} of {len(u)} universe names")]
 
 
-def m_paper_ir(ctx: Context, s: pd.Timestamp, sd: str) -> list[dict]:
+def m_paper_ir(ctx: Context, s: pd.Timestamp, sd: str, books=BOOK_ORDER) -> list[dict]:
     mk = ctx.marks[pd.to_datetime(ctx.marks["session"]) <= s] if len(ctx.marks) else ctx.marks
     out = []
-    for book in BOOK_ORDER:
+    for book in books:
         x = mk[mk["book"] == book] if len(mk) else mk
         if x is None or len(x) == 0:
             out.append(_row(sd, "paper_active_ir_6m", book, None, "warming up (no marks yet)"))
@@ -317,11 +341,11 @@ def m_paper_ir(ctx: Context, s: pd.Timestamp, sd: str) -> list[dict]:
             out.append(_row(sd, "paper_active_ir_6m", book, None,
                             f"warming up (needs 6 months of marks; {len(x)} sessions in {len(uniq)} month(s))",
                             f"IR not reported before 6 months; cumulative active net 20 bps (fixed capital) {cum:+.4%}; "
-                            f"benchmark {BOOKS[book]['benchmark']}"))
+                            f"benchmark {ALL_BOOKS[book]['benchmark']}"))
             continue
         out.append(_row(sd, "paper_active_ir_6m", book, ir, _status(ci[1] < 0),
                         f"IR {ir:+.2f} CI [{ci[0]:+.2f}, {ci[1]:+.2f}]; cumulative active (fixed capital) {cum:+.4%}; "
-                        f"benchmark {BOOKS[book]['benchmark']}"))
+                        f"benchmark {ALL_BOOKS[book]['benchmark']}"))
     return out
 
 
@@ -389,10 +413,82 @@ def evaluate(ctx: Context, s: pd.Timestamp) -> list[dict]:
     return rows
 
 
-def dsr_paper(marks: pd.DataFrame) -> dict:
-    """Deflated Sharpe of each book's daily active net-20 bps series (N = 261, V[SR] = 0.00387)."""
+# --------------------------------------------------------------------------- extension 1 monitors
+def m_live_auc_ext(ctx: Context, s: pd.Timestamp, sd: str, mature: np.ndarray, months: list[str]) -> list[dict]:
+    from sklearn.metrics import roc_auc_score
+    live = [m for m in months if m >= INCEPTION_MONTH]
+    if not live:
+        q9 = json.loads(Q9_JSON.read_text())
+        last = q9["folds"][-1]
+        return [_row(sd, "live_model_auc_expanding", "pre-inception", q9["holdout"]["auc"],
+                     f"warming up (needs every {INCEPTION_MONTH} signal date's 20-session label; the month's last "
+                     "signal date's label exits 21 sessions after it)",
+                     f"Q9 research walk-forward (expanding window): fold {last['fold']} {last['auc']:.4f}, holdout "
+                     f"2026-08-03..2026-09-16 {q9['holdout']['auc']:.4f}")]
+    lab = ctx.df.loc[mature, ["date", "ticker", LABEL]]
+    out = []
+    for m in live[-1:]:
+        sc = pd.concat([v[["date", "ticker", "lgbm_expanding"]] for k, v in ctx.scores_ext.items() if k[:7] == m and k <= sd])
+        j = sc.merge(lab, on=["date", "ticker"])
+        auc = float(roc_auc_score(j[LABEL], j["lgbm_expanding"])) if j[LABEL].nunique() == 2 else float("nan")
+        out.append(_row(sd, "live_model_auc_expanding", "live", auc, _status(auc < 0.5), f"month {m}, {len(j)} matured rows"))
+    return out
+
+
+def m_rank_ic_ext(ctx: Context, s: pd.Timestamp, sd: str, mature: np.ndarray) -> list[dict]:
+    lo = s - pd.Timedelta(days=365)
+    w = ctx.walk_forward_ext()
+    w = w[(w["date"] > lo) & (w["date"] <= s)]
+    parts = [w[["date", "score", "fwd"]]]
+    lab = ctx.df.loc[mature, ["date", "ticker", FWD]]
+    live = [v[["date", "ticker", "lgbm_expanding"]] for k, v in ctx.scores_ext.items() if k <= sd]
+    n_live = 0
+    if live:
+        j = pd.concat(live).merge(lab, on=["date", "ticker"])
+        n_live = int(j["date"].nunique())
+        parts.append(j.rename(columns={"lgbm_expanding": "score", FWD: "fwd"})[["date", "score", "fwd"]])
+    x = pd.concat(parts)
+    ic = _per_date_ic(x["date"].to_numpy(), x["score"].to_numpy(float), x["fwd"].to_numpy(float))
+    t = nw_t(ic.to_numpy()) if len(ic) > 20 else float("nan")
+    scope = "pre-inception" if n_live == 0 else "walk-forward + live"
+    st = (_status(t < EXT_MONITORS["rank_ic_nw_t_12m_expanding"]["threshold"]) if math.isfinite(t)
+          else "warming up (needs > 20 dates)")
+    return [_row(sd, "rank_ic_nw_t_12m_expanding", scope, t, st,
+                 f"{len(ic)} matured signal dates in the trailing 12 months ({n_live} live), mean IC "
+                 f"{ic.mean():+.4f}; last matured date {str(ic.index.max().date()) if len(ic) else 'none'}; Q9 research "
+                 "walk-forward before inception")]
+
+
+def m_neutral_ext(ctx: Context, s: pd.Timestamp, sd: str) -> list[dict]:
+    v = ctx.scores_ext.get(sd)
+    if v is None:
+        return []
+    r = {c: float(pd.Series(v["neutral_lgbm_expanding"].to_numpy()).rank().corr(pd.Series(v[c].to_numpy()).rank()))
+         for c in ("atr_pct", "log_turnover")}
+    mx = max(abs(x) for x in r.values())
+    return [_row(sd, "neutral_score_corr", "challenger_expanding", mx,
+                 _status(mx > EXT_MONITORS["neutral_score_corr"]["threshold"]),
+                 f"atr_pct {r['atr_pct']:+.4f}, log_turnover {r['log_turnover']:+.4f}")]
+
+
+def evaluate_ext(ctx: Context, s: pd.Timestamp) -> list[dict]:
+    sd = str(s.date())
+    mature = ctx.matured(s)
+    months = _complete_months(ctx, s, mature)
+    rows = []
+    rows += m_live_auc_ext(ctx, s, sd, mature, months)
+    rows += m_rank_ic_ext(ctx, s, sd, mature)
+    rows += m_paper_ir(ctx, s, sd, EXT_BOOK_ORDER)
+    rows += m_neutral_ext(ctx, s, sd)
+    assert all(is_ext_row(r) for r in rows)
+    return rows
+
+
+def dsr_paper(marks: pd.DataFrame, books=BOOK_ORDER, n_trials: int = N_TRIALS_DSR) -> dict:
+    """Deflated Sharpe of each book's daily active net-20 bps series (N = 261 for the frozen books, 270 for the
+    extension's; V[SR] = 0.00387)."""
     out = {}
-    for book in BOOK_ORDER:
+    for book in books:
         x = marks[marks["book"] == book] if len(marks) else marks
         if x is None or len(x) < 3:
             out[book] = {"status": "warming up (needs marks)"}
@@ -402,10 +498,10 @@ def dsr_paper(marks: pd.DataFrame) -> dict:
         if np.std(act) == 0:
             out[book] = {"status": "warming up (constant series)"}
             continue
-        r = sb.dsr_block(act, e, VAR_SR_DSR, N_TRIALS_DSR, f"{book} active net 20 bps", sb.PPY)
+        r = sb.dsr_block(act, e, VAR_SR_DSR, n_trials, f"{book} active net 20 bps", sb.PPY)
         r["status"] = f"{len(x)} sessions: not informative before months of marks"
         out[book] = r
     return out
 
 
-__all__ = ["Context", "evaluate", "dsr_paper", "H"]
+__all__ = ["Context", "evaluate", "evaluate_ext", "is_ext_row", "dsr_paper", "H", "EXT_N_TRIALS_DSR"]

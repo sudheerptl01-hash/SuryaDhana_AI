@@ -1,28 +1,29 @@
 {
- "procedure": "ml/paper/prove.py: the job (--no-ingest) run from an empty ledger in ml/paper/state/regen/ with the same store, scoring frame and month models; every write redirected to the sandbox",
+ "procedure": "ml/paper/prove.py: the job (--no-ingest) run from an empty ledger in ml/paper/state/regen/ with the same store, scoring frame and month models (frozen and expanding-window); every write redirected to the sandbox; the rebuild covers the four frozen books and the two books of extension 1",
  "spec_hash": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+ "extension_spec_hash": "a8d20cae4d930197ecc3e07c1f3bc4ac13484ebd4b627b852c0c73258349764f",
  "ledger_files": {
   "signals": {
-   "committed": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
-   "regenerated": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+   "committed": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+   "regenerated": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
    "identical": true,
    "path": "ml/paper/ledger/signals.csv"
   },
   "marks": {
-   "committed": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
-   "regenerated": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+   "committed": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+   "regenerated": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
    "identical": true,
    "path": "ml/paper/ledger/marks.csv"
   },
   "monitors": {
-   "committed": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
-   "regenerated": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+   "committed": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+   "regenerated": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
    "identical": true,
    "path": "ml/paper/ledger/monitors.csv"
   },
   "state": {
-   "committed": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
-   "regenerated": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
+   "committed": "43f32fbc4937815f0b289310986c0bfb72afe7795ead9d3f296bdb9377390ac8",
+   "regenerated": "43f32fbc4937815f0b289310986c0bfb72afe7795ead9d3f296bdb9377390ac8",
    "identical": true,
    "path": "ml/paper/ledger/state.json"
   }
@@ -40,16 +41,89 @@
   }
  },
  "score_files_identical": true,
+ "score_files_expanding": {
+  "scores_2026-10-19.parquet": {
+   "identical": true
+  },
+  "scores_2026-10-21.parquet": {
+   "identical": true
+  },
+  "scores_2026-10-22.parquet": {
+   "identical": true
+  }
+ },
+ "score_files_identical_expanding": true,
  "committed_ledger_untouched": true,
  "regenerated_rows_appended": {
   "signals": 1521,
   "marks": 8,
-  "monitors": 48
+  "monitors": 48,
+  "signals_expanding": 607,
+  "marks_expanding": 4,
+  "monitors_expanding": 15
  },
  "regenerated_signal_dates": [
   "2026-10-19",
   "2026-10-21",
   "2026-10-22"
  ],
- "seconds": 64.2
+ "regenerated_signal_dates_expanding": [
+  "2026-10-19",
+  "2026-10-21",
+  "2026-10-22"
+ ],
+ "frozen_only": {
+  "procedure": "the same job with the extension switched off (ml/paper/state/regen_frozen/), compared with the committed ledger's frozen-book rows",
+  "files": {
+   "signals": {
+    "regenerated_sha256": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+    "committed_frozen_rows_sha256": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+    "identical": true,
+    "csv_writer_reproduces_committed_file": true,
+    "pre_amendment_sha256": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+    "pre_amendment_bytes": 97188,
+    "pre_amendment_ledger_is_prefix": true,
+    "equal_to_pre_amendment_ledger": true
+   },
+   "marks": {
+    "regenerated_sha256": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+    "committed_frozen_rows_sha256": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+    "identical": true,
+    "csv_writer_reproduces_committed_file": true,
+    "pre_amendment_sha256": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+    "pre_amendment_bytes": 858,
+    "pre_amendment_ledger_is_prefix": true,
+    "equal_to_pre_amendment_ledger": true
+   },
+   "monitors": {
+    "regenerated_sha256": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+    "committed_frozen_rows_sha256": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+    "identical": true,
+    "csv_writer_reproduces_committed_file": true,
+    "pre_amendment_sha256": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+    "pre_amendment_bytes": 7956,
+    "pre_amendment_ledger_is_prefix": true,
+    "equal_to_pre_amendment_ledger": true
+   },
+   "state": {
+    "regenerated_sha256": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
+    "committed_without_extension_sha256": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
+    "identical": true,
+    "pre_amendment_sha256": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
+    "equal_to_pre_amendment_state": true,
+    "rule": "committed state.json without its 'extension' key, written by the ledger's JSON writer"
+   }
+  },
+  "identical_to_committed_frozen_rows": true,
+  "pre_amendment_ledger_is_prefix": true,
+  "identical_to_pre_amendment_ledger": true,
+  "state_identical_to_committed_without_extension": true,
+  "state_equal_to_pre_amendment_state": true,
+  "rows_appended": {
+   "signals": 1521,
+   "marks": 8,
+   "monitors": 48
+  }
+ },
+ "seconds": 144.4
 }

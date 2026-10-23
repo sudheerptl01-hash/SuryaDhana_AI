@@ -59,5 +59,45 @@
  "inputs": {
   "ca_feed_live_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
   "etf_list_live_sha256": "6b7788c8f392b955b6e76b68c86ca4f3cbf4da185681422aa728177786016a7a"
+ },
+ "extension": {
+  "name": "expanding",
+  "spec_hash": "a8d20cae4d930197ecc3e07c1f3bc4ac13484ebd4b627b852c0c73258349764f",
+  "extends_spec_hash": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+  "registered_utc": "2026-10-23T09:17:13Z",
+  "amendment": "ml/paper/SPEC.md section 5 (amendment 10)",
+  "books": [
+   "challenger_expanding",
+   "capacity_expanding"
+  ],
+  "backfill_through": "2026-10-22",
+  "last_signal_date": "2026-10-22",
+  "signal_dates": 3,
+  "models": {
+   "2026-10": {
+    "role": "expanding-window challenger model (SPEC.md amendment 10)",
+    "members": [
+     "lgbm"
+    ],
+    "trained_as_of": "2026-10-01",
+    "training_rows": 2170733,
+    "training_frame_sha256": "7ef5c788fe2e4492c0e5ecacd812c6d636763aaa92dc5e207024df5c971986d3",
+    "files_sha256": {
+     "lgbm": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3"
+    },
+    "metadata": "ml/paper/models/expanding/2026-10.json"
+   }
+  },
+  "ledger_rows": {
+   "signals": 607,
+   "marks": 4,
+   "monitors": 15
+  },
+  "last_mark_session": "2026-10-22",
+  "scores_sha256": {
+   "2026-10-19": "2f721cad51a4a6dacd3a41920466d50dd388c51edbd97780e5c0ac6fe43c34c1",
+   "2026-10-21": "a1780ca0485ff5312b10aed47af058a472e895a36f15c2f52c00c82142396975",
+   "2026-10-22": "8bf98927a69455bb2a8fa318d8431478d22c1f8eae4a28c68c79205b1dcb9ea9"
+  }
  }
 }

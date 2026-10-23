@@ -1,16 +1,16 @@
 {
  "note": "ml/paper/job.py --prove-idempotency, run after the first full run on the same store",
  "before": {
-  "signals": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
-  "marks": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
-  "monitors": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
-  "state": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319"
+  "signals": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+  "marks": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+  "monitors": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+  "state": "43f32fbc4937815f0b289310986c0bfb72afe7795ead9d3f296bdb9377390ac8"
  },
  "after": {
-  "signals": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
-  "marks": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
-  "monitors": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
-  "state": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319"
+  "signals": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+  "marks": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+  "monitors": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+  "state": "43f32fbc4937815f0b289310986c0bfb72afe7795ead9d3f296bdb9377390ac8"
  },
  "identical": true,
  "rows_appended": 0,
@@ -19,11 +19,9 @@
  "recomputed_scores_max_abs_diff": 0.0,
  "recomputed_marks_equal_ledger": true,
  "recomputed_marks_max_abs_diff": 0.0,
+ "recomputed_signal_date_expanding": "2026-10-22",
+ "recomputed_signals_equal_ledger_expanding": true,
+ "recomputed_scores_max_abs_diff_expanding": 0.0,
  "frame_rebuilt_in_this_run": false,
- "ingest_decisions_in_this_run": [
-  [
-   "2026-10-23",
-   "pending: file not yet published"
-  ]
- ]
+ "ingest_decisions_in_this_run": null
 }

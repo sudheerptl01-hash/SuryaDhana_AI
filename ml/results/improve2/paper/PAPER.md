@@ -1,12 +1,13 @@
 # Paper book: forward record
 
-Source of every number: `ml/results/improve2/paper/paper.json` (spec hash `327a8d3801b37d58`, as of session 2026-10-22). Specification and definitions: `ml/paper/SPEC.md`; daily procedure: `ml/paper/RUNBOOK.md`. No capital; the paper book is N = 1 and adds no trial.
+Source of every number: `ml/results/improve2/paper/paper.json` (spec hash `327a8d3801b37d58`; extension 1 spec hash `a8d20cae4d930197`, as of session 2026-10-22). Specification and definitions: `ml/paper/SPEC.md`; daily procedure: `ml/paper/RUNBOOK.md`. No capital; the paper book is N = 1 and adds no trial.
 
 ## Status
 
 - Inception signal date 2026-10-19; last store session 2026-10-22; last signal date 2026-10-22; last marked session 2026-10-22.
-- Ledger rows: signals 1521, marks 8, monitors 48.
+- Ledger rows: signals 1521, marks 8, monitors 48 (the four frozen books); extension 1: signals 607, marks 4, monitors 15.
 - Models: 2026-09 (monitor only (logistic sign-flip baseline), logistic, trained as of 2026-09-01 on 682,669 rows 2024-07-19..2026-07-31); 2026-10 (paper model, lgbm, lambdarank, catboost, logistic, trained as of 2026-10-01 on 683,106 rows 2024-08-20..2026-08-31)
+- Extension 1 (SPEC.md amendment 10, registered 2026-10-23T09:17:13Z, spec hash `a8d20cae4d930197`; the frozen books' spec hash `327a8d3801b37d58` is unchanged): books challenger_expanding, capacity_expanding; expanding-window models: 2026-10 (lgbm, trained as of 2026-10-01 on 2,170,733 rows 2017-10-03..2026-08-31).
 
 ## Sessions ingested after the research data, and store writes
 
@@ -70,8 +71,49 @@ Model 2026-10; universe 1523 names, liquid tercile 503. Scores: neutralised perc
 | capacity | 50 | 1: MARINE, 2: KARAMTARA, 3: AYE, 4: DIACABS, 5: XPROINDIA, 6: POLICYBZR, 7: ENTERO, 8: KMEW, 9: AEQUS, 10: NEOGEN |
 | challenger | 152 | 1: GLOBAL, 2: KIRLFER, 3: KOVAI, 4: IIFLCAPS, 5: MANGLMCEM, 6: ULTRAMAR, 7: KAPSTON, 8: MANBA, 9: AAREYDRUGS, 10: MENONBE |
 | control_plain | 152 | 1: KOVAI, 2: HAL, 3: MENONBE, 4: POWERGRID, 5: ICICIBANK, 6: GAIL, 7: INDHOTEL, 8: IIFLCAPS, 9: POLICYBZR, 10: ONEPOINT |
+| challenger_expanding (model 2026-10 expanding) | 152 | 1: CNL, 2: GLOBAL, 3: ARROWGREEN, 4: AAREYDRUGS, 5: MMFL, 6: KAPSTON, 7: INDOTECH, 8: DHARMAJ, 9: MODIS, 10: YASHO |
+| capacity_expanding (model 2026-10 expanding) | 50 | 1: AUGMONT, 2: ENTERO, 3: XPROINDIA, 4: AKUMS, 5: UNIMECH, 6: AETHER, 7: SENORES, 8: KMEW, 9: QPOWER, 10: SHADOWFAX |
 
-Latest signal date 2026-10-22: primary 153 names, capacity 50 names, challenger 153 names, control_plain 153 names.
+Latest signal date 2026-10-22: primary 153 names, capacity 50 names, challenger 153 names, control_plain 153 names, challenger_expanding 153 names, capacity_expanding 50 names.
+
+## Extension 1: expanding-window challenger (SPEC.md amendment 10)
+
+Registered 2026-10-23T09:17:13Z; extension spec hash `a8d20cae4d930197`; the frozen books' spec hash `327a8d3801b37d58` and their rows are unchanged byte for byte.
+
+Why: Plan 2 amendment A1 (Q9): the control with an expanding training window passed the primary AUC mark (delta CV-mean AUC +0.0079, 95% CI [+0.0047, +0.0113], ml/results/improve2/expanding/EXPANDING.md); the plan says a pass is evidence for a forward test, not a promotion, and until this amendment no forward book ran it. The hypothesis was formed after the CPCV reading was seen, so this record, not the backtest, is the test.
+
+What: challenger_expanding is the primary book in every respect (LightGBM champion configuration, the 52 features, per-date vol+size neutralisation on the full universe, full-universe top decile, 20 overlapping tranches, entry at the next open, 20-session hold, 20 bps and name-level costs, equal-weight universe benchmark) except the monthly model's training window: every labelled clean row whose label exit date is before the model date, from the first dataset row (2017-10-03), with no 504-session cap (ml/improve/ab.py q9_expanding). capacity_expanding is its liquid-tercile version, as the capacity book is to the primary (benchmark: the equal-weight liquid tercile).
+
+Backfill: The two books were added on 2026-10-23 and backfilled from inception (signal dates 2026-10-19, 2026-10-21 and 2026-10-22) with the 2026-10 expanding-window model, trained as of 2026-10-01 on the data available then: rows dated up to 2026-08-31 (train_end, 22 sessions before the model date) whose label exit date is before 2026-10-01 (exit-date purge), exactly as the frozen October model was trained but with the expanding window. This is legitimate: the three signal dates are after the research data (which end 2026-10-16), the model uses no data dated after its model date, and every choice in the books' definition was fixed by amendment A1 before Q9 ran. The frozen books' first three signal dates were themselves scored in one catch-up run on 2026-10-23; the extension's were scored the same day, after the frozen books' first two marked sessions (2026-10-21, 2026-10-22) were in the ledger. No parameter of the extension depends on those marks.
+
+Model 2026-10 (`ml/paper/models/expanding/2026-10.json`): trained as of 2026-10-01 (train_end 2026-08-31), 2,170,733 rows, 2209 sessions 2017-10-03..2026-08-31, 2451 tickers, 0 rows removed by the exit-date purge, label mean 0.5002; fit 96.8 s with two threads; LightGBM file SHA-256 `2bff7d9757ea4fd2`.
+
+Trainer reproduction: the paper's expanding-window trainer on the research holdout fold (train end 2026-07-02, 2,110,109 training rows 2017-10-03..2026-07-02, the same rows as Q9's fold) scores 47,117 holdout rows; max |score - Q9 score| = 5.98e-05; bit-identical (every holdout row the research data could label (label exit on or before the research end) is present in both and scores exactly the same): False. Not compared: 3 test rows whose label exits after the research end (CCAVENUE 2026-09-10, CCAVENUE 2026-09-11, CCAVENUE 2026-09-15).
+
+Why not bit-identical: the same trainer on the research frame (`ml/data_10y`, the frame Q9 ran on) reproduces Q9's holdout scores exactly (47,117 rows, max |diff| 0.0), so the trainer is Q9's. The paper frame carries the live corporate-action feed's rescaling (consistency proof above): 1,949 training cells differ from the research frame (at most 6.1e-13, in 136 rows of 2 tickers; label cells differing 0); LightGBM's bin boundaries and split thresholds come from the training values, so the fitted trees differ slightly (the frozen trainer's 504-session reproduction happened to come out exact). Effect on the holdout: AUC 0.54009 on the paper frame vs 0.54009 for Q9; per-date Spearman correlation with Q9's scores min 0.99999998, mean 1.00000000; per-date top-decile overlap min 100.0%, mean 100.0% (32 dates).
+
+Lost-state check (`ml/results/improve2/paper/lost_state_check_expanding.json`): extension 1: ml/paper/state/models/expanding/2026-10/ (lgbm.txt, preprocess.pkl) and ml/paper/state/scores_expanding/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest (no ingest, store and frame unchanged): the model was retrained in a child process and equals the committed metadata ({'reference_predictions': True, 'model_contents': True, 'training_frame_sha256_equal': True, 'training_rows_equal': True, 'training_window_equal': True}); regenerated score files ['2026-10-19']; every file byte-identical to before True (the retrained LightGBM text model and the pickled preprocessor are byte-identical to the deleted ones; the regenerated score file is byte-identical and its baskets equal the ledger's; the ledger, state.json and the committed metadata are unchanged).
+
+Backfill proof (`ml/results/improve2/paper/extension_backfill.json`): the run appended {'signals': 607, 'marks': 4, 'monitors': 15} rows ({'signals': {'challenger_expanding': 457, 'capacity_expanding': 150}, 'marks': {'challenger_expanding': 2, 'capacity_expanding': 2}, 'monitors': {'extension': 15, 'frozen': 0}}) for signal dates ['2026-10-19', '2026-10-21', '2026-10-22'] and marked sessions ['2026-10-21', '2026-10-22']; only extension rows appended True; the existing rows {'signals': 1521, 'marks': 8, 'monitors': 48} are unchanged byte for byte True; ingest run False, frame rebuilt False.
+
+| File | Bytes before | SHA-256 before | SHA-256 of the same bytes after | Unchanged |
+|---|---:|---|---|---|
+| signals | 97188 | `d673191e6e44e480` | `d673191e6e44e480` | True |
+| marks | 858 | `d82156ed4411ac17` | `d82156ed4411ac17` | True |
+| monitors | 7956 | `5258b13a813a9c4d` | `5258b13a813a9c4d` | True |
+
+Overlap with the frozen books (names in both baskets on the signal date):
+
+| Signal date | Book | Names | Shared with primary | Share | Shared with counterpart | Share |
+|---|---|---:|---:|---:|---:|---:|
+| 2026-10-19 | challenger_expanding | 152 | 87 of 152 | 57% | 87 of 152 (primary) | 57% |
+| 2026-10-19 | capacity_expanding | 50 | 11 of 152 | 22% | 23 of 50 (capacity) | 46% |
+| 2026-10-21 | challenger_expanding | 152 | 85 of 152 | 56% | 85 of 152 (primary) | 56% |
+| 2026-10-21 | capacity_expanding | 50 | 15 of 152 | 30% | 23 of 50 (capacity) | 46% |
+| 2026-10-22 | challenger_expanding | 153 | 76 of 153 | 50% | 76 of 153 (primary) | 50% |
+| 2026-10-22 | capacity_expanding | 50 | 10 of 153 | 20% | 16 of 50 (capacity) | 32% |
+
+Score agreement with the primary model (Spearman over the date's universe): 2026-10-19 raw 0.858, neutralised 0.817 (1523 names); 2026-10-21 raw 0.836, neutralised 0.780 (1524 names); 2026-10-22 raw 0.801, neutralised 0.751 (1527 names).
 
 ## Marks (fixed capital: 1/20 per tranche, idle capital at zero)
 
@@ -81,6 +123,8 @@ Latest signal date 2026-10-22: primary 153 names, capacity 50 names, challenger 
 | capacity | 2 (2026-10-21..2026-10-22) | 0.10 | -0.24% | -0.26% | -0.28% | -0.21% (ew_liquid) | -0.05% |
 | challenger | 2 (2026-10-21..2026-10-22) | 0.10 | -0.18% | -0.20% | -0.23% | -0.23% (ew_universe) | +0.03% |
 | control_plain | 2 (2026-10-21..2026-10-22) | 0.10 | -0.15% | -0.17% | -0.19% | -0.23% (ew_universe) | +0.05% |
+| challenger_expanding | 2 (2026-10-21..2026-10-22) | 0.10 | -0.21% | -0.23% | -0.26% | -0.23% (ew_universe) | -0.00% |
+| capacity_expanding | 2 (2026-10-21..2026-10-22) | 0.10 | -0.23% | -0.25% | -0.27% | -0.21% (ew_liquid) | -0.04% |
 
 A few sessions of a ramping book say nothing about the strategy; these lines exist so that the record starts on the day it should.
 
@@ -104,19 +148,25 @@ A few sessions of a ramping book say nothing about the strategy; these lines exi
 | universe_etf_count | signal date | 0 | 0 | ok | 1527 universe names |
 | split_flag_rate | signal date | 0.00196464 | 0.01 | ok | 3 of 1527 universe names |
 | data_quality | store | 0 | 0.05 | ok | continuity mismatches 0 of 2912; per-name prev_close breaks > 22%: 0; duplicate EQ/BE pairs 0; write verified True; unvalidated split/bonus on this date 0; price breaks 0; recorded closures to date ['2026-10-20'] |
+| live_model_auc_expanding | pre-inception | 0.540147 | 0.5 | warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it) | Q9 research walk-forward (expanding window): fold 2026-07 0.5659, holdout 2026-08-03..2026-09-16 0.5401 |
+| rank_ic_nw_t_12m_expanding | pre-inception | 5.3592 | 2 | ok | 223 matured signal dates in the trailing 12 months (0 live), mean IC +0.1205; last matured date 2026-09-16; Q9 research walk-forward before inception |
+| paper_active_ir_6m | challenger_expanding |  | 0 | warming up (needs 6 months of marks; 2 sessions in 1 month(s)) | IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0026%; benchmark ew_universe |
+| paper_active_ir_6m | capacity_expanding |  | 0 | warming up (needs 6 months of marks; 2 sessions in 1 month(s)) | IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0392%; benchmark ew_liquid |
+| neutral_score_corr | challenger_expanding | 0.055575 | 0.05 | ALERT | atr_pct -0.0037, log_turnover +0.0556 |
 
 Deflated Sharpe of the daily active net-20 bps series (N = 261, V[SR] = 0.00387): primary warming up (needs marks); capacity warming up (needs marks); challenger warming up (needs marks); control_plain warming up (needs marks).
+Extension books (N = 270, the trial ledger at registration; V[SR] = 0.00387): challenger_expanding warming up (needs marks); capacity_expanding warming up (needs marks).
 
 ## Idempotency proof
 
-A second run on the same data (ml/paper/job.py --prove-idempotency, run after the first full run on the same store; scoring frame rebuilt from the store in this run: False; ingest decisions [['2026-10-23', 'pending: file not yet published']]): ledger SHA-256 before and after identical True; rows appended 0; recomputed signals of 2026-10-22 equal the ledger True; recomputed marks equal the ledger True.
+A second run on the same data (ml/paper/job.py --prove-idempotency, run after the first full run on the same store; scoring frame rebuilt from the store in this run: False; ingest decisions None): ledger SHA-256 before and after identical True; rows appended 0; recomputed signals of 2026-10-22 equal the ledger True; recomputed marks equal the ledger True; recomputed extension signals of 2026-10-22 equal the ledger True (expanding scores max |diff| 0.0).
 
 | File | SHA-256 before | SHA-256 after |
 |---|---|---|
-| signals | `d673191e6e44e480` | `d673191e6e44e480` |
-| marks | `d82156ed4411ac17` | `d82156ed4411ac17` |
-| monitors | `5258b13a813a9c4d` | `5258b13a813a9c4d` |
-| state | `56c6baae4f208931` | `56c6baae4f208931` |
+| signals | `9fb7aeb776dedd47` | `9fb7aeb776dedd47` |
+| marks | `989c4c89ee8b3457` | `989c4c89ee8b3457` |
+| monitors | `aa6653fc5b51a334` | `aa6653fc5b51a334` |
+| state | `43f32fbc4937815f` | `43f32fbc4937815f` |
 
 ## Lost-state check
 
@@ -126,12 +176,14 @@ Live corporate-action feed: ml/data_ext/corporate_actions_feed_live.csv deleted;
 
 ## Determinism proof (ledger regenerated from inception)
 
-ml/paper/prove.py: the job (--no-ingest) run from an empty ledger in ml/paper/state/regen/ with the same store, scoring frame and month models; every write redirected to the sandbox. Rows regenerated: {'signals': 1521, 'marks': 8, 'monitors': 48} for signal dates ['2026-10-19', '2026-10-21', '2026-10-22']; ledger byte-identical to the committed files True; per-date score files identical True; committed ledger untouched True.
+ml/paper/prove.py: the job (--no-ingest) run from an empty ledger in ml/paper/state/regen/ with the same store, scoring frame and month models (frozen and expanding-window); every write redirected to the sandbox; the rebuild covers the four frozen books and the two books of extension 1. Rows regenerated: {'signals': 1521, 'marks': 8, 'monitors': 48, 'signals_expanding': 607, 'marks_expanding': 4, 'monitors_expanding': 15} for signal dates ['2026-10-19', '2026-10-21', '2026-10-22']; ledger byte-identical to the committed files True; per-date score files identical True (extension score files identical True); committed ledger untouched True.
 
 | File | Committed SHA-256 | Regenerated SHA-256 |
 |---|---|---|
-| signals | `d673191e6e44e480` | `d673191e6e44e480` |
-| marks | `d82156ed4411ac17` | `d82156ed4411ac17` |
-| monitors | `5258b13a813a9c4d` | `5258b13a813a9c4d` |
-| state | `56c6baae4f208931` | `56c6baae4f208931` |
+| signals | `9fb7aeb776dedd47` | `9fb7aeb776dedd47` |
+| marks | `989c4c89ee8b3457` | `989c4c89ee8b3457` |
+| monitors | `aa6653fc5b51a334` | `aa6653fc5b51a334` |
+| state | `43f32fbc4937815f` | `43f32fbc4937815f` |
+
+Frozen books without the extension: the same job with the extension switched off (ml/paper/state/regen_frozen/), compared with the committed ledger's frozen-book rows. The regenerated files equal the committed ledger's frozen-book rows byte for byte: True (signals True, marks True, monitors True, state True); and equal the ledger as it stood before the amendment: True. state.json without its `extension` key is the file the job writes with the extension off: True (equal to the pre-amendment state.json: True).
 

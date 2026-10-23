@@ -7,7 +7,9 @@ import numpy as np
 import pandas as pd
 
 from ml.paper.common import read_csv_rows, wjson, wtext
-from ml.paper.config import BOOK_ORDER, BOOKS, INCEPTION_SIGNAL_DATE, MODELS_META_DIR, RESULTS_DIR, SPEC_HASH
+from ml.paper.config import (ALL_BOOKS, BOOK_ORDER, EXT_BACKFILL_THROUGH, EXT_BOOK_ORDER, EXT_COUNTERPART, EXT_NAME,
+                             EXT_N_TRIALS_DSR, EXT_REGISTERED_UTC, INCEPTION_SIGNAL_DATE, MODELS_META_DIR,
+                             N_TRIALS_DSR, RESULTS_DIR, SPEC_EXT_HASH, SPEC_HASH)
 
 PAPER_JSON = RESULTS_DIR / "paper.json"
 PAPER_MD = RESULTS_DIR / "PAPER.md"
@@ -24,6 +26,30 @@ INCEPTION_NOTE = ("signal dates 2026-10-19, 2026-10-21 and 2026-10-22 were score
                   "information. From 2026-10-23 on, each session is scored on its own evening.")
 SUPERSEDED_DIR = RESULTS_DIR / "superseded_2026-10-23"
 
+# Extension 1 (ml/paper/SPEC.md amendment 10)
+EXT_MOTIVATION = ("Plan 2 amendment A1 (Q9): the control with an expanding training window passed the primary AUC mark "
+                  "(delta CV-mean AUC +0.0079, 95% CI [+0.0047, +0.0113], ml/results/improve2/expanding/EXPANDING.md); "
+                  "the plan says a pass is evidence for a forward test, not a promotion, and until this amendment no "
+                  "forward book ran it. The hypothesis was formed after the CPCV reading was seen, so this record, not "
+                  "the backtest, is the test.")
+EXT_DEFINITION = ("challenger_expanding is the primary book in every respect (LightGBM champion configuration, the 52 "
+                  "features, per-date vol+size neutralisation on the full universe, full-universe top decile, 20 "
+                  "overlapping tranches, entry at the next open, 20-session hold, 20 bps and name-level costs, "
+                  "equal-weight universe benchmark) except the monthly model's training window: every labelled clean row "
+                  "whose label exit date is before the model date, from the first dataset row (2017-10-03), with no "
+                  "504-session cap (ml/improve/ab.py q9_expanding). capacity_expanding is its liquid-tercile version, "
+                  "as the capacity book is to the primary (benchmark: the equal-weight liquid tercile).")
+EXT_BACKFILL_NOTE = ("The two books were added on 2026-10-23 and backfilled from inception (signal dates 2026-10-19, "
+                     "2026-10-21 and 2026-10-22) with the 2026-10 expanding-window model, trained as of 2026-10-01 on the "
+                     "data available then: rows dated up to 2026-08-31 (train_end, 22 sessions before the model date) "
+                     "whose label exit date is before 2026-10-01 (exit-date purge), exactly as the frozen October model "
+                     "was trained but with the expanding window. This is legitimate: the three signal dates are after the "
+                     "research data (which end 2026-10-16), the model uses no data dated after its model date, and every "
+                     "choice in the books' definition was fixed by amendment A1 before Q9 ran. The frozen books' first "
+                     "three signal dates were themselves scored in one catch-up run on 2026-10-23; the extension's were "
+                     "scored the same day, after the frozen books' first two marked sessions (2026-10-21, 2026-10-22) "
+                     "were in the ledger. No parameter of the extension depends on those marks.")
+
 def _load(name: str) -> dict:
     p = RESULTS_DIR / name
     return json.loads(p.read_text()) if p.exists() else {}
@@ -31,7 +57,7 @@ def _load(name: str) -> dict:
 
 def marks_summary(marks: pd.DataFrame) -> dict:
     out = {}
-    for book in BOOK_ORDER:
+    for book in BOOK_ORDER + [b for b in EXT_BOOK_ORDER if (marks["book"] == b).any()]:
         x = marks[marks["book"] == book]
         if x.empty:
             out[book] = {"sessions": 0}
@@ -46,11 +72,12 @@ def marks_summary(marks: pd.DataFrame) -> dict:
                      "cum_fixed_capital_net_name_level": float(np.prod(1 + e * nl) - 1),
                      "cum_fixed_capital_benchmark": float(np.prod(1 + e * b) - 1),
                      "cum_active_net_20bps": float(np.prod(1 + e * n) - np.prod(1 + e * b)),
-                     "benchmark": BOOKS[book]["benchmark"]}
+                     "benchmark": ALL_BOOKS[book]["benchmark"]}
     return out
 
 
-def build(state: dict, marks: pd.DataFrame, inception: dict, latest: dict, dsr: dict, marks_info: dict) -> dict:
+def build(state: dict, marks: pd.DataFrame, inception: dict, latest: dict, dsr: dict, marks_info: dict,
+          ext: dict | None = None) -> dict:
     ing = _load("ingest.json")
     cons = _load("consistency.json")
     rep = _load("trainer_reproduction.json")
@@ -142,8 +169,29 @@ def build(state: dict, marks: pd.DataFrame, inception: dict, latest: dict, dsr: 
         "regeneration_from_inception": {k: regen.get(k) for k in ("procedure", "ledger_files", "ledger_identical",
                                                                   "score_files_identical", "committed_ledger_untouched",
                                                                   "regenerated_rows_appended",
-                                                                  "regenerated_signal_dates")} if regen else {},
+                                                                  "regenerated_signal_dates",
+                                                                  "score_files_identical_expanding",
+                                                                  "frozen_only")} if regen else {},
     }
+    if ext is not None:
+        xm = {}
+        for p in sorted((MODELS_META_DIR / EXT_NAME).glob("*.json")):
+            m = json.loads(p.read_text())
+            xm[m["month"]] = {"role": m["role"], "members": m["members"], "trained_as_of": m["trained_as_of"],
+                              "spec": m["spec"], "training_window": m["training_window"],
+                              "training_frame_sha256": m["training_frame_sha256"], "files_sha256": m["files_sha256"],
+                              "fit_seconds": m["fit_seconds"], "metadata": f"ml/paper/models/{EXT_NAME}/{p.name}"}
+        out["extension"] = {"name": EXT_NAME, "spec_hash": SPEC_EXT_HASH, "extends_spec_hash": SPEC_HASH,
+                            "registered_utc": EXT_REGISTERED_UTC, "amendment": "ml/paper/SPEC.md section 5 (amendment 10)",
+                            "books": EXT_BOOK_ORDER, "counterpart": EXT_COUNTERPART,
+                            "backfill_through": EXT_BACKFILL_THROUGH, "motivation": EXT_MOTIVATION,
+                            "definition": EXT_DEFINITION, "backfill_note": EXT_BACKFILL_NOTE, "models": xm,
+                            "trainer_reproduction": _load("trainer_reproduction_expanding.json"),
+                            "backfill_proof": _load("extension_backfill.json"),
+                            "lost_state_check": _load("lost_state_check_expanding.json"),
+                            "inception_baskets": ext.get("inception"), "basket_overlap": ext.get("overlap"),
+                            "score_agreement": ext.get("score_agreement"), "dsr_paper": ext.get("dsr"),
+                            "dsr_n_trials": EXT_N_TRIALS_DSR}
     wjson(PAPER_JSON, out)
     wtext(PAPER_MD, markdown(out))
     return out
@@ -156,17 +204,30 @@ def _p(x, d=2):
 def markdown(j: dict) -> str:
     st = j["state"]
     L = ["# Paper book: forward record", "",
-         f"Source of every number: `ml/results/improve2/paper/paper.json` (spec hash `{j['spec_hash'][:16]}`, as of session "
+         f"Source of every number: `ml/results/improve2/paper/paper.json` (spec hash `{j['spec_hash'][:16]}`"
+         + (f"; extension 1 spec hash `{j['extension']['spec_hash'][:16]}`" if j.get("extension") else "")
+         + f", as of session "
          f"{j['as_of_session']}). Specification and definitions: `ml/paper/SPEC.md`; daily procedure: `ml/paper/RUNBOOK.md`. "
          "No capital; the paper book is N = 1 and adds no trial.", "",
          "## Status", "",
          f"- Inception signal date {j['inception_signal_date']}; last store session {st.get('last_store_session')}; "
          f"last signal date {st.get('last_signal_date')}; last marked session {st.get('last_mark_session')}.",
          f"- Ledger rows: signals {st.get('ledger_rows', {}).get('signals')}, marks {st.get('ledger_rows', {}).get('marks')}, "
-         f"monitors {st.get('ledger_rows', {}).get('monitors')}.",
+         f"monitors {st.get('ledger_rows', {}).get('monitors')}"
+         + (" (the four frozen books); extension 1: signals {signals}, marks {marks}, monitors {monitors}".format(
+             **st["extension"]["ledger_rows"]) if st.get("extension") else "") + ".",
          f"- Models: " + "; ".join(f"{m} ({v['role']}, {', '.join(v['members'])}, trained as of {v['trained_as_of']} on "
                                   f"{v['training_window']['rows']:,} rows {v['training_window']['first_date']}.."
-                                  f"{v['training_window']['last_date']})" for m, v in j["models"].items()), ""]
+                                  f"{v['training_window']['last_date']})" for m, v in j["models"].items())]
+    xj = j.get("extension") or {}
+    if xj:
+        L += [f"- Extension 1 (SPEC.md amendment 10, registered {xj['registered_utc']}, spec hash "
+              f"`{xj['spec_hash'][:16]}`; the frozen books' spec hash `{xj['extends_spec_hash'][:16]}` is unchanged): books "
+              + ", ".join(xj["books"]) + "; expanding-window models: "
+              + "; ".join(f"{m} ({', '.join(v['members'])}, trained as of {v['trained_as_of']} on "
+                          f"{v['training_window']['rows']:,} rows {v['training_window']['first_date']}.."
+                          f"{v['training_window']['last_date']})" for m, v in xj["models"].items()) + "."]
+    L.append("")
     ing = j["ingest"]
     L += ["## Sessions ingested after the research data, and store writes", ""]
     for w in ing["writes"]:
@@ -302,17 +363,25 @@ def markdown(j: dict) -> str:
         for b in BOOK_ORDER:
             x = inc.get(b, {})
             L.append(f"| {b} | {x.get('size')} | " + ", ".join(f"{t['rank']}: {t['ticker']}" for t in x.get("top", [])) + " |")
+        xi = (xj.get("inception_baskets") or {}) if xj else {}
+        for b in (EXT_BOOK_ORDER if xi else []):
+            x = xi.get(b, {})
+            L.append(f"| {b} (model {xi.get('model_month_expanding')} expanding) | {x.get('size')} | "
+                     + ", ".join(f"{t['rank']}: {t['ticker']}" for t in x.get("top", [])) + " |")
         L.append("")
     lt = j["latest_baskets"]
     if lt:
-        L += [f"Latest signal date {lt.get('signal_date')}: " + ", ".join(f"{b} {lt[b]['size']} names" for b in BOOK_ORDER
+        L += [f"Latest signal date {lt.get('signal_date')}: " + ", ".join(f"{b} {lt[b]['size']} names"
+                                                                          for b in BOOK_ORDER + EXT_BOOK_ORDER
                                                                           if b in lt) + ".", ""]
+    if xj:
+        L += _extension_md(xj)
     mk = j["marks"]
     if mk:
         L += ["## Marks (fixed capital: 1/20 per tranche, idle capital at zero)", "",
               "| Book | Sessions | Exposure (last) | Gross | Net 20 bps | Net name-level | Benchmark | Active net 20 bps |",
               "|---|---:|---:|---:|---:|---:|---:|---:|"]
-        for b in BOOK_ORDER:
+        for b in BOOK_ORDER + EXT_BOOK_ORDER:
             x = mk.get(b, {})
             if not x.get("sessions"):
                 continue
@@ -331,9 +400,15 @@ def markdown(j: dict) -> str:
         L.append("")
     ds = j["dsr_paper"]
     if ds:
-        L += ["Deflated Sharpe of the daily active net-20 bps series (N = 261, V[SR] = 0.00387): "
+        L += [f"Deflated Sharpe of the daily active net-20 bps series (N = {N_TRIALS_DSR}, V[SR] = 0.00387): "
               + "; ".join(f"{b} {v.get('dsr', float('nan')):.3f} ({v.get('status')})" if "dsr" in v else f"{b} {v.get('status')}"
-                          for b, v in ds.items()) + ".", ""]
+                          for b, v in ds.items()) + "."]
+        dx = (xj.get("dsr_paper") or {}) if xj else {}
+        if dx:
+            L += [f"Extension books (N = {xj['dsr_n_trials']}, the trial ledger at registration; V[SR] = 0.00387): "
+                  + "; ".join(f"{b} {v.get('dsr', float('nan')):.3f} ({v.get('status')})" if "dsr" in v
+                              else f"{b} {v.get('status')}" for b, v in dx.items()) + "."]
+        L.append("")
     idem = j["idempotency"]
     if idem:
         L += ["## Idempotency proof", "",
@@ -342,7 +417,11 @@ def markdown(j: dict) -> str:
               f"ledger SHA-256 before and after identical "
               f"{idem.get('identical')}; rows appended {idem.get('rows_appended')}; recomputed signals of "
               f"{idem.get('recomputed_signal_date')} equal the ledger {idem.get('recomputed_signals_equal_ledger')}; "
-              f"recomputed marks equal the ledger {idem.get('recomputed_marks_equal_ledger')}.", "",
+              f"recomputed marks equal the ledger {idem.get('recomputed_marks_equal_ledger')}"
+              + (f"; recomputed extension signals of {idem.get('recomputed_signal_date_expanding')} equal the ledger "
+                 f"{idem.get('recomputed_signals_equal_ledger_expanding')} (expanding scores max |diff| "
+                 f"{idem.get('recomputed_scores_max_abs_diff_expanding')})"
+                 if idem.get("recomputed_signal_date_expanding") else "") + ".", "",
               "| File | SHA-256 before | SHA-256 after |", "|---|---|---|"]
         for k in idem.get("before", {}):
             L.append(f"| {k} | `{(idem['before'][k] or '')[:16]}` | `{(idem['after'].get(k) or '')[:16]}` |")
@@ -363,10 +442,103 @@ def markdown(j: dict) -> str:
         L += ["## Determinism proof (ledger regenerated from inception)", "",
               f"{rg.get('procedure')}. Rows regenerated: {rg.get('regenerated_rows_appended')} for signal dates "
               f"{rg.get('regenerated_signal_dates')}; ledger byte-identical to the committed files "
-              f"{rg.get('ledger_identical')}; per-date score files identical {rg.get('score_files_identical')}; committed "
-              f"ledger untouched {rg.get('committed_ledger_untouched')}.", "",
+              f"{rg.get('ledger_identical')}; per-date score files identical {rg.get('score_files_identical')}"
+              + (f" (extension score files identical {rg.get('score_files_identical_expanding')})"
+                 if rg.get("score_files_identical_expanding") is not None else "")
+              + f"; committed ledger untouched {rg.get('committed_ledger_untouched')}.", "",
               "| File | Committed SHA-256 | Regenerated SHA-256 |", "|---|---|---|"]
         for k, v in (rg.get("ledger_files") or {}).items():
             L.append(f"| {k} | `{(v.get('committed') or '')[:16]}` | `{(v.get('regenerated') or '')[:16]}` |")
         L.append("")
+        fo = rg.get("frozen_only") or {}
+        if fo:
+            L += [f"Frozen books without the extension: {fo.get('procedure')}. The regenerated files equal the committed "
+                  f"ledger's frozen-book rows byte for byte: {fo.get('identical_to_committed_frozen_rows')} ("
+                  + ", ".join(f"{k} {v.get('identical')}" for k, v in (fo.get('files') or {}).items())
+                  + f"); and equal the ledger as it stood before the amendment: {fo.get('identical_to_pre_amendment_ledger')}. "
+                  f"state.json without its `extension` key is the file the job writes with the extension off: "
+                  f"{fo.get('state_identical_to_committed_without_extension')} (equal to the pre-amendment state.json: "
+                  f"{fo.get('state_equal_to_pre_amendment_state')}).",
+                  ""]
     return "\n".join(L) + "\n"
+
+
+def _extension_md(x: dict) -> list[str]:
+    L = ["## Extension 1: expanding-window challenger (SPEC.md amendment 10)", "",
+         f"Registered {x['registered_utc']}; extension spec hash `{x['spec_hash'][:16]}`; the frozen books' spec hash "
+         f"`{x['extends_spec_hash'][:16]}` and their rows are unchanged byte for byte.", "",
+         f"Why: {x['motivation']}", "", f"What: {x['definition']}", "", f"Backfill: {x['backfill_note']}", ""]
+    for m, v in (x.get("models") or {}).items():
+        tw = v["training_window"]
+        L += [f"Model {m} (`{v['metadata']}`): trained as of {v['trained_as_of']} (train_end {v['spec']['train_end']}), "
+              f"{tw['rows']:,} rows, {tw['sessions']} sessions {tw['first_date']}..{tw['last_date']}, {tw['tickers']} tickers, "
+              f"{tw['rows_purged_exit_ge_test_start']} rows removed by the exit-date purge, label mean {tw['label_mean']:.4f}; "
+              f"fit {v['fit_seconds'].get('lgbm')} s with two threads; LightGBM file SHA-256 "
+              f"`{v['files_sha256'].get('lgbm', '')[:16]}`.", ""]
+    rp = x.get("trainer_reproduction") or {}
+    if rp:
+        L += [f"Trainer reproduction: the paper's expanding-window trainer on the research holdout fold (train end "
+              f"{rp['fold']['train_end']}, {rp['train_rows']:,} training rows {rp['training_window']['first_date']}.."
+              f"{rp['training_window']['last_date']}, the same rows as Q9's fold) scores {rp['rows_matched']:,} holdout rows; "
+              f"max |score - Q9 score| = {rp['max_abs_score_diff']:.3g}; bit-identical ({rp['identical_rule']}): "
+              f"{rp['identical']}."
+              + (f" Not compared: {len(rp['test_rows_label_exit_after_research_end'])} test rows whose label exits after "
+                 "the research end (" + ", ".join(f"{t['ticker']} {t['date']}" for t in rp["test_rows_label_exit_after_research_end"])
+                 + ")." if rp.get("test_rows_label_exit_after_research_end") else ""), ""]
+        ex = rp.get("explanation") or {}
+        if ex:
+            rr, pp = ex.get("on_research_frame") or {}, ex.get("on_paper_frame") or {}
+            cc = ex.get("training_cells_paper_vs_research_frame") or {}
+            how = "exactly" if rr.get("identical") else "not exactly"
+            L += [f"Why not bit-identical: the same trainer on the research frame (`ml/data_10y`, the frame Q9 ran on) "
+                  f"reproduces Q9's holdout scores {how} ({rr.get('rows_matched'):,} rows, max |diff| "
+                  f"{rr.get('max_abs_score_diff')}), so the trainer is Q9's. The paper frame carries the live "
+                  f"corporate-action feed's rescaling (consistency proof above): {cc.get('feature_cells_differing'):,} "
+                  f"training cells differ from the research frame (at most {cc.get('max_abs_feature_diff', 0):.2g}, in "
+                  f"{cc.get('rows_with_a_differing_cell')} rows of {cc.get('tickers_with_a_differing_cell')} tickers; "
+                  f"label cells differing {cc.get('label_cells_differing')}); LightGBM's bin boundaries and split "
+                  f"thresholds come from the training values, so the fitted trees differ slightly (the frozen trainer's "
+                  f"504-session reproduction happened to come out exact). Effect on the holdout: AUC "
+                  f"{pp.get('auc_paper_frame', 0):.5f} on the paper frame vs {pp.get('auc_q9', 0):.5f} for Q9; per-date "
+                  f"Spearman correlation with Q9's scores min {pp.get('per_date_spearman_min', 0):.8f}, mean "
+                  f"{pp.get('per_date_spearman_mean', 0):.8f}; per-date top-decile overlap min "
+                  f"{100 * pp.get('per_date_top_decile_overlap_min', 0):.1f}%, mean "
+                  f"{100 * pp.get('per_date_top_decile_overlap_mean', 0):.1f}% ({pp.get('dates')} dates).", ""]
+    lc = x.get("lost_state_check") or {}
+    if lc:
+        L += [f"Lost-state check (`ml/results/improve2/paper/lost_state_check_expanding.json`): {lc.get('test')}: the model "
+              f"was retrained in a child process and equals the committed metadata ({lc.get('retrain_equal_to_committed_metadata')}); "
+              f"regenerated score files {lc.get('regenerated_score_files_expanding')}; every file byte-identical to before "
+              f"{lc.get('all_identical')} ({lc.get('note')}).", ""]
+    bp = x.get("backfill_proof") or {}
+    if bp:
+        er = bp.get("existing_rows") or {}
+        L += [f"Backfill proof (`ml/results/improve2/paper/extension_backfill.json`): the run appended "
+              f"{bp.get('rows_appended')} rows ({bp.get('appended_rows_by_book')}) for signal dates "
+              f"{bp.get('appended_signal_dates')} and marked sessions {bp.get('appended_mark_sessions')}; only extension rows "
+              f"appended {bp.get('only_extension_rows_appended')}; the existing rows {bp.get('rows_before')} are unchanged "
+              f"byte for byte {bp.get('existing_rows_unchanged')}; ingest run {bp.get('ingest_run')}, frame rebuilt "
+              f"{bp.get('frame_rebuilt')}.", "",
+              "| File | Bytes before | SHA-256 before | SHA-256 of the same bytes after | Unchanged |", "|---|---:|---|---|---|"]
+        for k, v in er.items():
+            L.append(f"| {k} | {v.get('bytes_before')} | `{(v.get('sha256_before') or '')[:16]}` | "
+                     f"`{(v.get('sha256_of_first_bytes_after') or '')[:16]}` | {v.get('existing_rows_unchanged')} |")
+        L.append("")
+    ov = x.get("basket_overlap") or []
+    if ov:
+        L += ["Overlap with the frozen books (names in both baskets on the signal date):", "",
+              "| Signal date | Book | Names | Shared with primary | Share | Shared with counterpart | Share |",
+              "|---|---|---:|---:|---:|---:|---:|"]
+        for r in ov:
+            cp = x["counterpart"][r["book"]]
+            L.append(f"| {r['signal_date']} | {r['book']} | {r['names']} | {r['shared_with_primary']} of "
+                     f"{r['names_of_primary']} | {100 * r['share_of_book_shared_with_primary']:.0f}% | "
+                     f"{r[f'shared_with_{cp}']} of {r[f'names_of_{cp}']} ({cp}) | "
+                     f"{100 * r[f'share_of_book_shared_with_{cp}']:.0f}% |")
+        L.append("")
+    sa = x.get("score_agreement") or []
+    if sa:
+        L += ["Score agreement with the primary model (Spearman over the date's universe): "
+              + "; ".join(f"{r['signal_date']} raw {r['spearman_raw']:.3f}, neutralised {r['spearman_neutral']:.3f} "
+                          f"({r['universe']} names)" for r in sa) + ".", ""]
+    return L

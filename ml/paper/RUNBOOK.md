@@ -1,7 +1,9 @@
 # Paper book: runbook
 
 The paper book is the forward record of the frozen construction (`ml/paper/SPEC.md`). It holds no capital and
-places no orders. Everything below is done by one command; this page says when to run it, what to check, and what
+places no orders. Since amendment 10 (`SPEC.md` section 5, 2026-10-23 09:17:13 UTC) it also records extension 1, the
+expanding-window challenger (`challenger_expanding`) and its liquid-tercile version (`capacity_expanding`); section 8
+is their part of the procedure. Everything below is done by one command; this page says when to run it, what to check, and what
 to do when something is off.
 
 ## 1. The daily run
@@ -36,18 +38,24 @@ What it does, in order (each step is skipped when there is nothing new):
    store, the live feed or the ETF list changed.
 3. **Signals**: for each new session, the month's models (trained at the month's first session if they do not exist
    yet, about 10-15 minutes, CatBoost dominating), scores, the four baskets, rows appended to `ledger/signals.csv`.
-4. **Marks**: every book from the first entry open to the last session; new sessions appended to `ledger/marks.csv`;
-   all earlier sessions are recomputed and compared with the ledger (never rewritten).
-5. **Monitors** as of each new session, appended to `ledger/monitors.csv`.
+   Extension 1: the month's expanding-window model (trained in a child process on the whole frame on the first session
+   of a month, section 8), its scores (`ml/paper/state/scores_expanding/`), the two extension baskets, appended after
+   the frozen books' rows of the same session.
+4. **Marks**: every book (six since amendment 10) from the first entry open to the last session; new sessions appended
+   to `ledger/marks.csv`; all earlier (session, book) rows are recomputed and compared with the ledger (never
+   rewritten).
+5. **Monitors** as of each new session, appended to `ledger/monitors.csv` (the frozen monitors, then the extension's).
 6. `ledger/state.json`, `ml/results/improve2/paper/paper.json` and `PAPER.md`.
 
 Typical duration: 6-10 minutes on an ordinary day (the 3.4 GB backup copy is about 110 s, the lock window about
 100 s, the frame about 2 minutes), plus model training on the first session of a month (4-5 minutes for the four
-members with two threads). Disk: the backup needs the store's size free (3.4 GB) plus headroom; check `df -h /`.
+members with two threads, plus about 2 minutes for the expanding-window model, section 8). Disk: the backup needs
+the store's size free (3.4 GB) plus headroom; check `df -h /`.
 
 Memory: the ingest write (`build_features`) and the frame build (`ml.data.build_dataset` over 4.8 million rows) run in
-child processes and peak at about 8 GB; the scoring, marks and monitors process stays near 1.6 GB. On the shared box
-run the job when about 9 GB is free (`free -g`); an out-of-memory kill leaves nothing half-written that the next run
+child processes and peak at about 8 GB; the scoring, marks and monitors process stays near 1.6 GB. The expanding-window
+training (first session of a month only) runs in its own child process after the frame step and peaks at about
+3 GB. On the shared box run the job when about 9 GB is free (`free -g`); an out-of-memory kill leaves nothing half-written that the next run
 does not repair (the write is one transaction plus a rebuild the next run redoes if needed; ledger rows are appended
 only after a step completes).
 
@@ -62,14 +70,15 @@ Read the summary the job prints and `ml/results/improve2/paper/PAPER.md`.
 | Continuity on new sessions | share of mismatching `prev_close` well under 5% | over 5%: a session is missing or mis-dated, section 4 |
 | Per-name `prev_close` breaks | every name whose `prev_close` is more than 22% away from its stored previous close is `explained_by_feed` (a split, bonus or consolidation in the live feed) | `unexplained`: verification fails and the job stops, section 5; `recorded_price_break` (rights, demerger, scheme, capital reduction): alert, recorded, not adjusted |
 | Duplicate EQ/BE pairs | 0 | the transaction rolls back by itself; nothing was written |
-| Basket sizes | about 10% of the universe for primary, challenger and control (about 150-160 names), about 10% of the liquid tercile for capacity (about 50) | a much smaller universe means a partial file: compare the day's EQ/BE row count with the previous session's |
+| Basket sizes | about 10% of the universe for primary, challenger, control and challenger_expanding (about 150-160 names), about 10% of the liquid tercile for capacity and capacity_expanding (about 50) | a much smaller universe means a partial file: compare the day's EQ/BE row count with the previous session's |
 | Exposure | rises by 0.05 per session until 1.00 on the 20th entry, then stays at 1.00 | a gap means a missed session, section 6 |
-| Ledger diff | only added lines: `git diff ml/paper/ledger | grep '^-[^-]'` prints nothing except `state.json` changes | a removed or changed ledger line is a bug: restore the file from git and stop |
+| Ledger diff | only added lines: `git diff ml/paper/ledger | grep '^-[^-]'` prints nothing except `state.json` changes; the run record's `append_only` (in `ml/paper/state/runs.jsonl`) says `existing_rows_unchanged: true` for each file (the job stops otherwise) | a removed or changed ledger line is a bug: restore the file from git and stop |
+| Extension 1 | six books per new signal date; `challenger_expanding` shares about half of its names with `primary` (50-57% on the first three signal dates; `PAPER.md`, overlap table) | a basket size or overlap far off: section 8 |
 | Monitors | `ok`, `warming up (...)` or `ALERT` | `ALERT`: section 3 |
 
 Then commit the ledger, the model metadata, the calendar and the results (the lead commits; the job never does):
-`ml/paper/ledger/`, `ml/paper/models/*.json`, `ml/paper/calendar_live.json`, `ml/results/improve2/paper/*.json`,
-`ml/results/improve2/paper/PAPER.md`.
+`ml/paper/ledger/`, `ml/paper/models/*.json`, `ml/paper/models/expanding/*.json`, `ml/paper/calendar_live.json`,
+`ml/results/improve2/paper/*.json`, `ml/results/improve2/paper/PAPER.md`.
 
 ## 3. Alert responses (thresholds fixed in `ml/paper/config.py`, from `ml/PROGRAM_REPORT.md` §10 and §13.7)
 
@@ -90,6 +99,10 @@ construction changes only through a new pre-registered plan.
 | `universe_etf_count` | any ETF in the universe | an ETF missing from `etf_list_live.csv`: the next run adds every symbol of the bundles' etf files; if it persists, check the bundle's etf member. |
 | `split_flag_rate` | more than 1% of the universe with `flag_split_20d` | an unadjusted split or bonus: check the corporate-action section of `ingest.json` for unvalidated events. |
 | `data_quality` | duplicates, continuity above 5%, a per-name `prev_close` break that is unexplained or a recorded unadjustable action, an unvalidated split/bonus on the date, or an unverified write | section 4 or 5. |
+| `live_model_auc_expanding` | a live month's AUC of the expanding-window model below 0.50 | as `live_model_auc`; compare with the primary model's AUC of the same month (both rows are in the ledger). |
+| `rank_ic_nw_t_12m_expanding` | trailing 12-month Newey-West t of the expanding score below 2.0 | as `rank_ic_nw_t_12m`. |
+| `paper_active_ir_6m` (scope `challenger_expanding`, `capacity_expanding`) | the book's 6-month IR interval entirely below zero | as for the frozen books; the extension is a forward test of Q9, so a failing record is a result to report, not a reason to change it. |
+| `neutral_score_corr` (scope `challenger_expanding`) | the neutralised expanding score's correlation with `atr_pct` or `log_turnover` beyond ±0.05 | as for the frozen books. |
 
 ## 4. Holiday echoes, mis-dated files and special sessions
 
@@ -180,8 +193,13 @@ construction changes only through a new pre-registered plan.
   (`--prove-idempotency` records the ledger hashes before and after in `ml/results/improve2/paper/idempotency.json`).
 * The ledger is deterministic: `OMP_NUM_THREADS=2 python3 -I ml/paper/prove.py` regenerates it from inception in a
   sandbox (`ml/paper/state/regen/`) with the current code and compares it byte for byte with the committed files
-  (`ml/results/improve2/paper/regeneration.json`). The committed ledger is not touched. Run it after any code change
-  to `ml/paper/` and before committing that change: a difference means the code no longer reproduces the record.
+  (`ml/results/improve2/paper/regeneration.json`). The rebuild covers the six books, in the ledger order of `SPEC.md`
+  section 5. It then regenerates the ledger a second time with the extension switched off
+  (`ml/paper/state/regen_frozen/`): those files must equal the committed rows of the four frozen books byte for byte,
+  the ledger as it stood before amendment 10 must be their prefix, and its `state.json` must equal the committed one
+  without the `extension` key. The committed ledger is not touched. Run it
+  after any code change to `ml/paper/` and before committing that change: a difference means the code no longer
+  reproduces the record. It takes about two and a half minutes (two job runs without training).
 * `--no-ingest` skips the network and the store write (useful when the archive is unreachable).
 * `--force-frame` rebuilds the scoring frame even when the store did not change.
 * **Lost state.** `ml/paper/state/` (models, raw files, frame, per-date scores) is not in git. A run without it
@@ -193,7 +211,9 @@ construction changes only through a new pre-registered plan.
   depends on the store at the training run, and a later corporate action on a training-window ticker changes it at
   rounding level without changing the model (`SPEC.md` 2.1). A mismatch stops the job instead of scoring with a
   different model. Missing per-date score files of ledger dates are regenerated and checked against the ledger's
-  baskets. This path was tested on 2026-10-23 after the CCAVENUE repair
+  baskets. The expanding-window model of extension 1 takes the same path (section 8): its state files are checked
+  against `ml/paper/models/expanding/<YYYY-MM>.json`, and a missing model is retrained in a child process and must
+  match. This path was tested on 2026-10-23 after the CCAVENUE repair
   (`ml/results/improve2/paper/lost_state_check.json`): the October model files came back byte-identical (CatBoost
   equal in content and in its predictions on 83,754 rows), the training-frame hash differed as expected, and the
   regenerated score file was byte-identical.
@@ -230,3 +250,53 @@ A scheduled task could run the daily job without a person at the keyboard. What 
   ledger by hand, must never pass `--accept-unverified-write` or run `ml/paper/ingest.py --rebuild-features` (both
   are a person's decision, section 5), and must stop (not retry in a loop) when the job exits non-zero; the exit
   message is the alert.
+
+## 8. Extension 1: the expanding-window challenger (`SPEC.md` section 5, amendment 10)
+
+* **What runs.** Nothing extra to type: the daily command covers `challenger_expanding` and `capacity_expanding`. On
+  each new session the job scores the universe with the month's expanding-window model, writes
+  `ml/paper/state/scores_expanding/scores_<date>.parquet`, and appends the two baskets after the frozen books' rows.
+  Marks and monitors of the two books are appended with the frozen books' (frozen rows first).
+* **Training cost each month.** On the first session of a month the job trains the month's expanding-window model:
+  LightGBM on every labelled clean row from 2017-10-03 to `train_end` (22 sessions before the month's first session),
+  exit-date purge at the first session. That is about 2.2 million rows (2,170,733 for 2026-10, 2017-10-03..2026-08-31;
+  about 30,000 more each month) and 52 features. It runs in a child process that reads the whole frame (2.2 million rows, every date),
+  after the frame step: about 2 minutes on the shared box with two threads (2026-10: LightGBM fit 97 s, 111 s with
+  saving and the reload check, while the research queue held the other cores), peak memory about 3 GB. The frozen
+  models' training (504 sessions, 4-5 minutes) is unchanged and happens in the main process as before. On the first run that
+  finds no `ml/results/improve2/paper/trainer_reproduction_expanding.json`, the child first re-runs the trainer on the
+  research holdout fold and compares with Q9's holdout scores (one more fit of the same size). The paper frame
+  carries the live corporate-action feed's rounding-level rescaling, so that comparison is close, not bit-exact; the
+  diagnostic `python3 -I -c "import sys; sys.path.insert(0, '.'); from ml.paper import models as M;
+  M.explain_reproduction_expanding()"` (two fits) re-runs it on the research frame, where it is exact, and records why
+  (`explanation` in the same file).
+* **Files.** Model `ml/paper/state/models/expanding/<YYYY-MM>/` (`lgbm.txt`, `preprocess.pkl`; gitignored); metadata
+  `ml/paper/models/expanding/<YYYY-MM>.json` (commit it, like the frozen models'); `ledger/state.json` carries the
+  extension's spec hash, model files and score-file hashes under `extension`.
+* **Checks after a run.** As section 2, plus: both extension baskets present for the session (about 150-160 and
+  about 50 names); the extension's monitor rows present (`live_model_auc_expanding`, `rank_ic_nw_t_12m_expanding`,
+  `paper_active_ir_6m` for both books, `neutral_score_corr` for `challenger_expanding`); `PAPER.md`'s overlap table
+  (names shared with the primary book) not collapsing to 100% or to a handful.
+* **`neutral_score_corr` of `challenger_expanding`.** At inception it read 0.048, 0.058 and 0.056 (the
+  `log_turnover` term; ALERT on 2026-10-21 and 2026-10-22), against 0.034-0.043 for the primary book on the same dates.
+  The expanding-window model's raw score leans further towards liquid names (Spearman with `log_turnover` 0.47-0.49,
+  the primary model's 0.37-0.42), and the rank-OLS neutralisation followed by a re-rank leaves a slightly larger rank
+  correlation. The threshold is the frozen one and is not changed; the alert is recorded. If it persists, report it in
+  the monthly review with the raw-score tilt next to it.
+* **The research record it reads.** Before live months mature, the expanding model's AUC and rank-IC monitors read
+  Q9's walk-forward (`ml/results/improve/ab/10y_p2/preds/q9_expanding__beat_mkt_20d.parquet`, gitignored, and
+  `ml/results/improve/ab/10y_p2/q9_expanding__beat_mkt_20d.json`). Both are hashed in `config.SPEC_EXT`; a run stops
+  when either differs ("the Q9 research record registered in SPEC_EXT changed or is missing"). Restore the JSON from
+  git. The predictions file is not in git: if it is lost, re-assemble it with `python3 -m ml.improve.ab run --data
+  ml/data_10y --tag 10y_p2 --configs q9_expanding` (it reuses the fold cache in
+  `ml/results/improve/ab/10y_p2/cache/folds/q9_expanding/`) and compare its SHA-256 with `config.Q9_PREDS_SHA256`
+  before running the job. Do not edit the hashes to make the run pass: that changes the extension's specification and
+  needs a new amendment.
+* **Order of the ledger.** The extension's rows for 2026-10-19..22 are one block after the frozen rows of those dates
+  (appended once, by `ml/paper/job.py --no-ingest --extension-backfill-proof` on 2026-10-23; the proof is
+  `ml/results/improve2/paper/extension_backfill.json`). From 2026-10-23 on each session's rows are written together. A
+  run refuses to append a row that sorts before the ledger's last row ("a pending row ... sorts before the ledger's last
+  row"): this means a session of one group is missing while a later one exists; it is the "missed session" case of
+  section 6 and needs the program lead.
+* **Switching it off** is not an operating option: the books are a registered forward record. `job.EXTENSION = False`
+  exists only for `prove.py`'s frozen-only regeneration.

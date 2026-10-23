@@ -156,3 +156,116 @@ def check_code_matches_spec() -> dict:
     if bad:
         raise SystemExit(f"research code no longer matches the frozen paper specification: {bad}")
     return {"lgbm": "match", "catboost": "match", "logistic": "match", "strategy_backtest": "match"}
+
+
+# =====================================================================================================================
+# Extension 1 (ml/paper/SPEC.md section 5, amendment 10; registered 2026-10-23T09:17:13Z, before the expanding model
+# was trained and before any row of the two new books existed).  SPEC and SPEC_HASH above are unchanged: they cover
+# the four frozen books.  The extension has its own specification (SPEC_EXT) and hash (SPEC_EXT_HASH).
+# Source: ml/IMPROVEMENT_PLAN_2.md section 4, A1 (Q9, the control with an expanding training window: "a pass is
+# evidence for a forward test, not a promotion"); result ml/results/improve2/expanding/EXPANDING.md.
+# =====================================================================================================================
+EXT_NAME = "expanding"
+EXT_REGISTERED_UTC = "2026-10-23T09:17:13Z"
+EXT_TRAIN_SESSIONS = 0                    # 0 = expanding: every labelled clean row from the frame's first session
+EXT_FIRST_DATASET_SESSION = "2017-10-03"  # the first row of the dataset (DATASET_START 2017-10-02 was a closure)
+EXT_FIRST_SIGNAL_DATE = INCEPTION_SIGNAL_DATE
+EXT_BACKFILL_THROUGH = "2026-10-22"       # the ledger's last signal date and marked session when the extension was added
+EXT_N_TRIALS_DSR = 270                    # the trial ledger at registration (plan 2 section 4, A2)
+EXT_BOOKS = {
+    "challenger_expanding": {"scorer": "lgbm_expanding", "neutralisation": "vol+size", "basket": "top_decile",
+                             "benchmark": "ew_universe"},
+    "capacity_expanding":   {"scorer": "lgbm_expanding", "neutralisation": "vol+size", "basket": "liq_top_decile",
+                             "benchmark": "ew_liquid"},
+}
+EXT_BOOK_ORDER = list(EXT_BOOKS)
+ALL_BOOKS = {**BOOKS, **EXT_BOOKS}
+ALL_BOOK_ORDER = BOOK_ORDER + EXT_BOOK_ORDER
+EXT_COUNTERPART = {"challenger_expanding": "primary", "capacity_expanding": "capacity"}
+
+# The research record of Q9 (pre-inception readings of the extension's model monitors).  Both files are hashed into
+# SPEC_EXT; a run stops when either differs (ml/paper/RUNBOOK.md section 8).
+Q9_DIR = ML_DIR / "results" / "improve" / "ab" / "10y_p2"
+Q9_PREDS = Q9_DIR / "preds" / "q9_expanding__beat_mkt_20d.parquet"
+Q9_JSON = Q9_DIR / "q9_expanding__beat_mkt_20d.json"
+Q9_PREDS_SHA256 = "191c396f7c542f60603d8f773d8ecb9b0f3f85f6cb7b20ecd54eae2363fe4067"
+Q9_JSON_SHA256 = "bb5794fe0f389073263b28cf25877ab04169eeaf917733a20087aa7073323256"
+
+EXT_MONITORS = {
+    "live_model_auc_expanding": {"rule": "AUC of the month's expanding-window model on its month's signal dates "
+                                         "(matured labels); before a live month matures, the Q9 research walk-forward "
+                                         "(last fold, holdout)", "threshold": 0.50, "alert": "below threshold"},
+    "rank_ic_nw_t_12m_expanding": {"rule": "per-date rank IC of the expanding-window model score vs y_excess_20d, "
+                                           "trailing 12 months of matured signal dates (the Q9 research walk-forward "
+                                           "before inception, live scores after), Newey-West t (20 lags)",
+                                   "threshold": 2.0, "alert": "below threshold"},
+    "paper_active_ir_6m": {"books": EXT_BOOK_ORDER, "rule": "as the frozen monitor of the same name, per extension book "
+                                                            "(benchmark of the book)", "threshold": 0.0,
+                           "alert": "CI entirely below zero"},
+    "neutral_score_corr": {"books": ["challenger_expanding"], "rule": "per-date Spearman correlation of the "
+                                                                      "neutralised expanding-window score with atr_pct "
+                                                                      "and log_turnover", "threshold": 0.05,
+                           "alert": "absolute value above threshold"},
+}
+for _k in ("paper_active_ir_6m", "neutral_score_corr"):
+    assert EXT_MONITORS[_k]["threshold"] == MONITORS[_k]["threshold"], _k
+
+SPEC_EXT = {
+    "name": "SuryaDhana paper book, extension 1: expanding-window challenger",
+    "version": 1,
+    "registered_utc": EXT_REGISTERED_UTC,
+    "amendment": "ml/paper/SPEC.md section 5 (amendment 10)",
+    "extends_spec_hash": SPEC_HASH,
+    "frozen_books_unchanged": BOOK_ORDER,
+    "sources": ["ml/IMPROVEMENT_PLAN_2.md section 4 A1 (Q9)", "ml/results/improve2/expanding/EXPANDING.md",
+                "ml/improve/ab.py q9_expanding"],
+    "books": EXT_BOOKS, "counterpart": EXT_COUNTERPART, "top_frac": TOP_FRAC, "liq_cut": LIQ_CUT,
+    "model": {"member": "lgbm", "params": LGBM_PARAMS, "construction": 'ml.scale5y.make_model("all51")',
+              "preprocess": "raw (median impute)", "features": "the 52 features of the frozen specification",
+              "threads": N_THREADS, "seed": SEED},
+    "training": {"retrain": "first session of each calendar month", "train_sessions": EXT_TRAIN_SESSIONS,
+                 "window": "every labelled clean row (y_clean_20d) from the first dataset session "
+                           f"({EXT_FIRST_DATASET_SESSION}) to train_end; no 504-session cap",
+                 "embargo_sessions": EMBARGO_SESSIONS, "exit_date_purge": True,
+                 "window_rule": "ml.scale5y_nested.window_rows(train_sessions=0), as ml/improve/ab.py q9_expanding"},
+    "neutralisation": "ml.books.engine.neutralise(kind='vol+size') on the date's full universe, as the primary book",
+    "tranches": SPEC["tranches"], "costs": SPEC["costs"],
+    "first_signal_date": EXT_FIRST_SIGNAL_DATE,
+    "backfill": {"through": EXT_BACKFILL_THROUGH, "signal_dates": ["2026-10-19", "2026-10-21", "2026-10-22"],
+                 "model": "the 2026-10 expanding-window model, trained as of 2026-10-01 (train_end 2026-08-31, exit-date "
+                          "purge at 2026-10-01)"},
+    "ledger_order": "signals, marks, monitors: the rows of the frozen books for dates up to the backfill date first "
+                    "(the ledger as it stood at the amendment), then the extension books' rows for the same dates (the "
+                    "backfill block), then from the next date on every date's rows in (date, book, rank) order over "
+                    "the six books, frozen books first; per monitor session the frozen monitors' rows, then the "
+                    "extension's",
+    "dsr": {"N": EXT_N_TRIALS_DSR, "var_sr": VAR_SR_DSR},
+    "monitors": EXT_MONITORS,
+    "reference_record": {"q9_walk_forward_preds": {"path": "ml/results/improve/ab/10y_p2/preds/q9_expanding__beat_mkt_20d.parquet",
+                                                   "sha256": Q9_PREDS_SHA256},
+                         "q9_summary": {"path": "ml/results/improve/ab/10y_p2/q9_expanding__beat_mkt_20d.json",
+                                        "sha256": Q9_JSON_SHA256}},
+}
+SPEC_EXT_HASH = spec_hash(SPEC_EXT)
+
+
+def ext_block(date: str, book_or_group: str) -> int:
+    """Ledger block of a row (SPEC_EXT['ledger_order']): 0 = frozen rows up to the backfill date, 1 = extension rows
+    up to it (the backfill block), 2 = every row after it."""
+    if date > EXT_BACKFILL_THROUGH:
+        return 2
+    return 1 if book_or_group in EXT_BOOKS or book_or_group == EXT_NAME else 0
+
+
+def check_extension_inputs() -> dict:
+    """The research record the extension's pre-inception monitor readings use must be the registered one."""
+    from ml.paper.common import sha256_file
+    bad = {}
+    for p, h in ((Q9_PREDS, Q9_PREDS_SHA256), (Q9_JSON, Q9_JSON_SHA256)):
+        got = sha256_file(p) if p.exists() else None
+        if got != h:
+            bad[str(p.relative_to(REPO))] = got
+    if bad:
+        raise SystemExit(f"the Q9 research record registered in SPEC_EXT changed or is missing: {bad}; see "
+                         "ml/paper/RUNBOOK.md section 8")
+    return {"q9_preds": "match", "q9_summary": "match"}

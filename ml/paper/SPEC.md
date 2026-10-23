@@ -6,7 +6,9 @@ The machine-readable copy of everything below is `ml/paper/config.py` (`SPEC`, h
 `SPEC_HASH`); `ml/paper/ledger/state.json` carries that hash, so a change to the specification
 is visible in the ledger. The paper book is N = 1 and adds no trial; Deflated Sharpe readings use
 N = 261 and V[SR] = 0.00387 (`ml/results/improve/books/books.json`,
-`dsr_common.var_sr_daily_across_66_books`).
+`dsr_common.var_sr_daily_across_66_books`). Section 5 (amendment 10, 2026-10-23 09:17:13 UTC) adds two books, the
+expanding-window challenger and its liquid-tercile version, with their own machine-readable specification
+(`config.SPEC_EXT`, hashed into `SPEC_EXT_HASH`); it changes nothing in sections 1-4 and leaves `SPEC_HASH` as it was.
 
 ## 1. What is frozen (unchanged from the plan)
 
@@ -202,3 +204,90 @@ Made on 2026-10-23 after an adversarial review, before the store repair and the 
    size plus max(2 GB, half the store).
 9. **Monitor detail.** `paper_active_ir_6m` reports the cumulative active return from the first marked session (it
    printed `nan` for a single session); `data_quality` reports the per-name break count of its session.
+
+## 5. Amendment 10: extension 1, the expanding-window challenger (registered 2026-10-23 09:17:13 UTC)
+
+Registered on 2026-10-23 at 09:17:13 UTC (system clock, the moment `config.SPEC_EXT` was written), before the
+expanding-window model was trained and before any ledger row of the two new books existed. This is a dated amendment
+to the frozen specification. It adds two books; it changes no definition, no parameter and no row of the four
+existing books.
+
+**Unchanged byte for byte.** The primary book, the capacity book, the ensemble challenger and the plain reference
+are unchanged: `config.SPEC` and `SPEC_HASH` (`327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643`)
+are as frozen, their scores, baskets, marks and monitors are computed by the same code paths with the same models, and
+their per-date score files are not touched (the extension writes its own, `ml/paper/state/scores_expanding/`). Proofs:
+the backfill run hashes the ledger files before it and the same bytes after it
+(`ml/results/improve2/paper/extension_backfill.json`); `ml/paper/prove.py` rebuilds the six-book ledger from inception
+and compares it byte for byte, and rebuilds it a second time with the extension switched off, whose files must equal the
+committed ledger's rows of the four frozen books byte for byte, with the pre-amendment ledger as their prefix
+(`ml/results/improve2/paper/regeneration.json`). `ledger/state.json` keeps the frozen books' fields as they were (counts
+of the four frozen books' rows) and carries the extension's spec hash, models and score files under `extension`;
+without that key it is the file the job writes with the extension off, which `prove.py` also checks. The book
+benchmark tranches already hold every universe name of each
+signal date, so the extension adds no column to the price and cost grids that the frozen books' marks are computed on.
+
+**Why.** Plan 2 amendment A1 (Q9): the control with an expanding training window passed the primary AUC mark (delta
+CV-mean AUC +0.0079, 95% CI [+0.0047, +0.0113], `ml/results/improve2/expanding/EXPANDING.md`). The plan says that a pass
+"is evidence for a forward test, not a promotion", and no forward book ran the expanding window. The hypothesis was
+formed after the CPCV reading was seen, so the forward record, not the backtest, is the test. The seed calibration of
+amendment A2 (Q10) is still running and decides nothing here; the extension is a forward record either way.
+
+**Definition (machine-readable: `config.SPEC_EXT`; hash `SPEC_EXT_HASH` =
+`a8d20cae4d930197ecc3e07c1f3bc4ac13484ebd4b627b852c0c73258349764f`).**
+
+| Item | Value |
+|---|---|
+| `challenger_expanding` | identical to the primary book (LightGBM `ml.scale5y.make_model("all51")`, the 52 features, raw preprocessing, per-date vol+size neutralisation on the full universe, full-universe top decile, 20 overlapping tranches, entry at the next open, 20-session hold, 20 bps and name-level costs, equal-weight universe benchmark) **except** the monthly model's training window |
+| `capacity_expanding` | the liquid-tercile version (`cs_rank_turnover` >= 0.67, top decile of the same neutralised score, neutralised on the full universe), as the capacity book is to the primary; benchmark the equal-weight liquid tercile |
+| Training window | every labelled clean row (`y_clean_20d`) from the first dataset row (2017-10-03) to `train_end` (22 sessions before the month's first session), exit-date purge at the month's first session (`exit_date >= test_start` removed), no 504-session cap: `ml.scale5y_nested.window_rows(train_sessions=0)`, exactly `ml/improve/ab.py` `q9_expanding` |
+| Retraining | one model per calendar month, at the month's first session (the LightGBM member only; seed 108, two threads) |
+| First signal date | 2026-10-19 (the frozen inception) |
+| Backfill | signal dates 2026-10-19, 2026-10-21, 2026-10-22, all with the 2026-10 expanding-window model trained as of 2026-10-01 (train_end 2026-08-31, exit-date purge at 2026-10-01) |
+| Deflated Sharpe | N = 270 (the trial ledger at registration, plan 2 section 4, A2), V[SR] = 0.00387; the frozen books keep N = 261 |
+| Files | models `ml/paper/state/models/expanding/<YYYY-MM>/` (gitignored), committed metadata `ml/paper/models/expanding/<YYYY-MM>.json` (same fields as the frozen models', plus `variant`, `train_sessions` and `extension_spec_hash`); scores `ml/paper/state/scores_expanding/` |
+| Research record | `ml/results/improve/ab/10y_p2/preds/q9_expanding__beat_mkt_20d.parquet` and `q9_expanding__beat_mkt_20d.json`, hashed into `SPEC_EXT`; a run stops when either differs |
+
+**Backfill from inception, and why it is legitimate.** The three signal dates are after the research data (which end
+2026-10-16), and the October model uses no data dated after its model date: rows dated up to 2026-08-31 whose label
+exit date is before 2026-10-01, the same rows and rule the frozen October model was trained with, without the
+504-session cap. Every choice in the definition was fixed by amendment A1 before Q9 ran. The frozen books' three
+signal dates were themselves scored in one catch-up run on 2026-10-23; the extension's were scored later the same
+day, when the frozen books' first two marked sessions (2026-10-21, 2026-10-22) were already in the ledger. No parameter
+of the extension depends on those marks. The model is trained once per month on the frame as the store stands at the
+run, as the frozen models are (section 2.1, amendment 6). Proof that the trainer is Q9's
+(`ml/results/improve2/paper/trainer_reproduction_expanding.json`): on the research holdout fold and the research frame
+(`ml/data_10y`) it reproduces Q9's holdout scores exactly (2,110,109 training rows, 47,117 holdout rows, max |diff| 0).
+On the paper frame, whose training cells of two tickers carry the live corporate-action feed's rounding-level rescaling
+(1,949 cells, at most 6.1e-13, no label), the same fit gives scores within 6e-05 of Q9's, the same holdout AUC to five
+decimals and the same top decile on every holdout date. The frozen trainer's reproduction came out exact; this one is
+exact on the research frame and equal for every book-relevant purpose on the paper frame.
+
+**Ledger order (extends 2.9 for the new rows only).** The new books' rows go into the same three ledger files. The
+frozen books' rows for dates up to 2026-10-22 come first (the ledger as it stood at the amendment, unchanged), then the
+extension books' rows for those dates (the backfill block, appended once), then from 2026-10-23 on every date's rows in
+(date, book, rank) order over the six books, frozen books first (`primary, capacity, challenger, control_plain,
+challenger_expanding, capacity_expanding`). Marks follow the same blocks by session. Monitors: per session, the frozen
+monitors' rows first, then the extension's. A regeneration from inception writes the same order
+(`ml.paper.book.signal_key`, `mark_key`; `ml.paper.job.process_monitors`); a run refuses to append a row that sorts
+before the ledger's last row.
+
+**Monitors of the new books (`config.EXT_MONITORS`, thresholds as their frozen counterparts).**
+`live_model_auc_expanding` (AUC of the month's expanding-window model on its month's matured signal dates, alert below
+0.50; before a live month matures, the Q9 research walk-forward: fold 2026-07 and the holdout),
+`rank_ic_nw_t_12m_expanding` (trailing 12-month per-date rank IC of the expanding score, Newey-West t with 20 lags, alert
+below 2.0; Q9's walk-forward before inception), `paper_active_ir_6m` for `challenger_expanding` and
+`capacity_expanding` (each book's own benchmark, alert when the 6-month month-block IR interval is entirely below zero),
+and `neutral_score_corr` for `challenger_expanding` (the neutralised expanding score's per-date Spearman correlation with
+`atr_pct` and `log_turnover`, alert above 0.05 in absolute value). The data monitors (delivery IC, PSI, feature
+inversion, logistic sign flips, ETF count, split flags, data quality) watch the store and the frame, not a book; they
+are shared and their rows are the frozen ones. PSI and inversion stay referenced to the primary model's 504-session
+window: against a nine-year window every market-wide feature would read as drifted, and the question they answer (has
+the market moved away from recent training data) is the same for both models.
+
+**Operating cost.** The expanding-window model is trained on the first session of each month on about 2.2 million rows
+(2,170,733 for 2026-10, growing by about 30,000 a month), in a child process that reads the whole frame; see
+`ml/paper/RUNBOOK.md` section 8.
+
+**What it is not.** Not a promotion and not a new trial: the books are the forward record of Q9's configuration, whose
+books are already counted (N = 264, then 270). The frozen books remain the paper book of record; nothing in them is
+re-tuned in response to the extension's record.

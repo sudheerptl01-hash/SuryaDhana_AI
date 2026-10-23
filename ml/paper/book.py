@@ -11,6 +11,10 @@ mean over the active slots of the slot's compounded marks (an exiting and an ent
 the roll session); exposure = active slots / 20.  Costs: 20 bps per side on ml.strategy_backtest.trade_fracs
 traded weight, and the name-level model ml.books.engine.name_cost_fracs, both with 20 empty predecessor
 tranches so that the first 20 tranches are bought in full.
+
+Extension 1 (SPEC.md amendment 10): the expanding-window model's score, neutralised the same way on the same universe,
+in its own per-date score file (ml/paper/state/scores_expanding/), and the books challenger_expanding (full-universe top
+decile) and capacity_expanding (liquid-tercile top decile), marked by the same code with the same benchmarks and costs.
 """
 from __future__ import annotations
 
@@ -23,11 +27,13 @@ import ml.strategy_backtest as sb
 from ml.books import data as BD
 from ml.books import engine as E
 from ml.paper.common import (MARKS_COLS, SIGNALS_COLS, fnum, log, read_csv_rows)
-from ml.paper.config import (BOOK_ORDER, BOOKS, COST_BPS, COST_PRICE_START, H, INCEPTION_SIGNAL_DATE, LIQ_CUT,
-                             STATE_DIR)
+from ml.paper.config import (ALL_BOOK_ORDER, ALL_BOOKS, BOOK_ORDER, BOOKS, COST_BPS, COST_PRICE_START, EXT_BOOK_ORDER,
+                             EXT_BOOKS, H, INCEPTION_SIGNAL_DATE, LIQ_CUT, STATE_DIR, ext_block)
 
 SCORES_DIR = STATE_DIR / "scores"
+SCORES_EXT_DIR = STATE_DIR / "scores_expanding"       # extension 1: per-date expanding-window scores
 MEMBERS3 = ("lgbm", "lambdarank", "catboost")
+EXT_SCORE_COLS = ["lgbm_expanding", "neutral_lgbm_expanding"]
 
 
 # --------------------------------------------------------------------------- signals
@@ -70,12 +76,12 @@ def baskets(sd: pd.DataFrame) -> dict[str, np.ndarray]:
     return out
 
 
-def signal_rows(sd: pd.DataFrame, bk: dict) -> list[dict]:
+def signal_rows(sd: pd.DataFrame, bk: dict, books=BOOK_ORDER, score_of=None) -> list[dict]:
     rows = []
     d = str(pd.Timestamp(sd["date"].iat[0]).date())
-    for book in BOOK_ORDER:
+    for book in books:
         idx = bk[book]
-        s = book_score(sd, book)
+        s = (score_of or book_score)(sd, book)
         w = 1.0 / len(idx)
         for r, i in enumerate(idx, 1):
             rows.append({"signal_date": d, "book": book, "ticker": sd["ticker"].iat[i], "rank": r,
@@ -83,15 +89,56 @@ def signal_rows(sd: pd.DataFrame, bk: dict) -> list[dict]:
     return rows
 
 
+# --------------------------------------------------------------------------- extension 1: expanding-window scores
+def score_date_ext(rows: pd.DataFrame, mm) -> pd.DataFrame:
+    """All universe rows of one signal date with the expanding-window model's raw and neutralised score."""
+    rows = rows.sort_values("ticker", kind="stable").reset_index(drop=True)
+    sc = mm.score(rows)
+    codes = np.zeros(len(rows), dtype=np.int64)
+    out = rows[["date", "ticker", "cs_rank_turnover", "atr_pct", "log_turnover"]].copy()
+    out["lgbm_expanding"] = np.asarray(sc["lgbm"], float)
+    atr, lt = out["atr_pct"].to_numpy(float), out["log_turnover"].to_numpy(float)
+    out["neutral_lgbm_expanding"] = E.neutralise(out["lgbm_expanding"].to_numpy(float), "vol+size", codes, atr, lt, None)
+    out["liquid"] = out["cs_rank_turnover"].to_numpy(float) >= LIQ_CUT
+    out["model_month"] = mm.month
+    return out
+
+
+def book_score_ext(sd: pd.DataFrame, book: str) -> np.ndarray:
+    b = EXT_BOOKS[book]
+    assert b["scorer"] == "lgbm_expanding"
+    return sd["neutral_lgbm_expanding" if b["neutralisation"] == "vol+size" else "lgbm_expanding"].to_numpy(float)
+
+
+def baskets_ext(sd: pd.DataFrame) -> dict[str, np.ndarray]:
+    ci = np.arange(len(sd))
+    liq = sd["liquid"].to_numpy(bool)
+    return {book: sb.select(book_score_ext(sd, book), ci, liq, EXT_BOOKS[book]["basket"])[0] for book in EXT_BOOK_ORDER}
+
+
+def signal_rows_ext(sd: pd.DataFrame, bk: dict) -> list[dict]:
+    return signal_rows(sd, bk, EXT_BOOK_ORDER, book_score_ext)
+
+
+def signal_key(r: dict) -> tuple:
+    """Ledger order of a signals row (config.SPEC_EXT['ledger_order'])."""
+    return (ext_block(r["signal_date"], r["book"]), r["signal_date"], ALL_BOOK_ORDER.index(r["book"]), int(r["rank"]))
+
+
+def mark_key(r: dict) -> tuple:
+    return (ext_block(r["session"], r["book"]), r["session"], ALL_BOOK_ORDER.index(r["book"]))
+
+
 # --------------------------------------------------------------------------- tranches from the ledger
-def tranches_from_ledger(signals_path, sessions: pd.DatetimeIndex) -> dict[str, list[dict]]:
+def tranches_from_ledger(signals_path, sessions: pd.DatetimeIndex, books=BOOK_ORDER) -> dict[str, list[dict]]:
     rows = read_csv_rows(signals_path)
     by = {}
     for r in rows:
-        by.setdefault((r["book"], r["signal_date"]), []).append(r["ticker"])
+        if r["book"] in books:
+            by.setdefault((r["book"], r["signal_date"]), []).append(r["ticker"])
     pos = {str(d.date()): i for i, d in enumerate(sessions)}
-    out = {b: [] for b in BOOK_ORDER}
-    for (book, d), tick in sorted(by.items(), key=lambda kv: (kv[0][1], BOOK_ORDER.index(kv[0][0]))):
+    out = {b: [] for b in books}
+    for (book, d), tick in sorted(by.items(), key=lambda kv: (kv[0][1], ALL_BOOK_ORDER.index(kv[0][0]))):
         out[book].append({"signal_date": d, "p": pos[d], "tickers": tick})
     return out
 
@@ -215,12 +262,20 @@ def book_session_marks(tr: list[dict], G: np.ndarray, col_of: dict, last: int, c
     return out
 
 
-def compute_marks(signals_path, feat_prices: pd.DataFrame, sessions: pd.DatetimeIndex) -> tuple[pd.DataFrame, dict]:
-    """Marks of every book on every session from the first entry open to the last stored session."""
-    trs = tranches_from_ledger(signals_path, sessions)
+def compute_marks(signals_path, feat_prices: pd.DataFrame, sessions: pd.DatetimeIndex,
+                  books=BOOK_ORDER) -> tuple[pd.DataFrame, dict]:
+    """Marks of every book on every session from the first entry open to the last stored session.  ``books``: the
+    frozen four (default) or ALL_BOOK_ORDER with extension 1.  The benchmark tranches hold every universe name of
+    each signal date, so the extension's names add no column to the price and cost grids: the frozen books' marks do
+    not depend on whether the extension is computed."""
+    trs = tranches_from_ledger(signals_path, sessions, books)
     sig_dates = [t["signal_date"] for t in trs[BOOK_ORDER[0]]]
     if not sig_dates:
         return pd.DataFrame(columns=MARKS_COLS), {}
+    for b in books:
+        if b in EXT_BOOKS and [t["signal_date"] for t in trs[b]] != sig_dates:
+            raise SystemExit(f"book {b}'s signal dates differ from the frozen books' in the ledger "
+                             f"({len(trs[b])} vs {len(sig_dates)}); see ml/paper/RUNBOOK.md section 8")
     bts = benchmark_tranches(sig_dates, sessions)
     tick = np.array(sorted({z for v in list(trs.values()) + list(bts.values()) for t in v for z in t["tickers"]}))
     col_of = {t: i for i, t in enumerate(tick)}
@@ -232,10 +287,10 @@ def compute_marks(signals_path, feat_prices: pd.DataFrame, sessions: pd.Datetime
     info = {"books": {}}
     bench = {b: book_session_marks(bts[b], G, col_of, last, None) for b in ("ew_universe", "ew_liquid")}
     rows = []
-    for book in BOOK_ORDER:
+    for book in books:
         costs = cost_fracs(trs[book], col_of, comp, pos_cost)
         m = book_session_marks(trs[book], G, col_of, last, costs)
-        bm = bench[BOOKS[book]["benchmark"]].set_index("s")
+        bm = bench[ALL_BOOKS[book]["benchmark"]].set_index("s")
         info["books"][book] = {"tranches": len(trs[book]),
                                "basket_sizes": [len(t["tickers"]) for t in trs[book]],
                                "turnover_per_rebalance_after_inception": [fnum(x, 6) for x in costs["buy_raw"][H:]]
@@ -249,7 +304,7 @@ def compute_marks(signals_path, feat_prices: pd.DataFrame, sessions: pd.Datetime
     df = pd.DataFrame(rows)
     if len(df):
         assert (df["_bench_active"] == df["_active"]).all(), "book and benchmark slots disagree"
-        df["_o"] = df["book"].map({b: i for i, b in enumerate(BOOK_ORDER)})
+        df["_o"] = df["book"].map({b: i for i, b in enumerate(ALL_BOOK_ORDER)})
         df = df.sort_values(["session", "_o"], kind="stable").drop(columns=["_o", "_bench_active", "_active"])
     info["first_entry_session"] = str(sessions[trs[BOOK_ORDER[0]][0]["p"] + 1].date()) \
         if trs[BOOK_ORDER[0]][0]["p"] + 1 <= last else None
@@ -263,7 +318,7 @@ def marks_ledger_rows(df: pd.DataFrame) -> list[dict]:
             for r in df.itertuples(index=False)]
 
 
-def inception_summary(signals_path, n_top: int = 10) -> dict:
+def inception_summary(signals_path, n_top: int = 10, books=BOOK_ORDER) -> dict:
     rows = read_csv_rows(signals_path)
     if not rows:
         return {}
@@ -275,7 +330,10 @@ def inception_summary(signals_path, n_top: int = 10) -> dict:
         out["universe"] = int(len(sd))
         out["liquid_tercile"] = int(sd["liquid"].sum())
         out["model_month"] = str(sd["model_month"].iat[0])
-    for book in BOOK_ORDER:
+    sx = SCORES_EXT_DIR / f"scores_{first}.parquet"
+    if any(b in EXT_BOOKS for b in books) and sx.exists():
+        out["model_month_expanding"] = str(pd.read_parquet(sx, columns=["model_month"])["model_month"].iat[0])
+    for book in books:
         x = [r for r in rows if r["signal_date"] == first and r["book"] == book]
         x.sort(key=lambda r: int(r["rank"]))
         out[book] = {"size": len(x), "top": [{"rank": int(r["rank"]), "ticker": r["ticker"], "score": float(r["score"])}
@@ -283,5 +341,45 @@ def inception_summary(signals_path, n_top: int = 10) -> dict:
     return out
 
 
+def basket_overlap(signals_path) -> list[dict]:
+    """Per signal date: names each extension book shares with the primary book and with its frozen counterpart."""
+    from ml.paper.config import EXT_COUNTERPART
+    rows = read_csv_rows(signals_path)
+    by = {}
+    for r in rows:
+        by.setdefault((r["signal_date"], r["book"]), set()).add(r["ticker"])
+    out = []
+    for d in sorted({r["signal_date"] for r in rows}):
+        for book in EXT_BOOK_ORDER:
+            if (d, book) not in by:
+                continue
+            x = by[(d, book)]
+            rec = {"signal_date": d, "book": book, "names": len(x)}
+            for ref in dict.fromkeys(["primary", EXT_COUNTERPART[book]]):
+                y = by.get((d, ref), set())
+                rec[f"shared_with_{ref}"] = len(x & y)
+                rec[f"share_of_book_shared_with_{ref}"] = len(x & y) / len(x) if x else None
+                rec[f"names_of_{ref}"] = len(y)
+            out.append(rec)
+    return out
+
+
+def score_agreement(signal_dates: list[str]) -> list[dict]:
+    """Per signal date: Spearman correlation of the expanding-window score with the primary model's score on the
+    date's universe (raw and neutralised)."""
+    out = []
+    for d in signal_dates:
+        a, b = SCORES_DIR / f"scores_{d}.parquet", SCORES_EXT_DIR / f"scores_{d}.parquet"
+        if not (a.exists() and b.exists()):
+            continue
+        x = pd.read_parquet(a, columns=["ticker", "lgbm", "neutral_lgbm"]).merge(
+            pd.read_parquet(b, columns=["ticker"] + EXT_SCORE_COLS), on="ticker", validate="one_to_one")
+        sp = lambda u, v: float(pd.Series(x[u].to_numpy()).rank().corr(pd.Series(x[v].to_numpy()).rank()))  # noqa: E731
+        out.append({"signal_date": d, "universe": int(len(x)), "spearman_raw": sp("lgbm_expanding", "lgbm"),
+                    "spearman_neutral": sp("neutral_lgbm_expanding", "neutral_lgbm")})
+    return out
+
+
 __all__ = ["score_date", "baskets", "signal_rows", "compute_marks", "marks_ledger_rows", "inception_summary",
+           "score_agreement", "score_date_ext", "baskets_ext", "signal_rows_ext", "signal_key", "mark_key", "basket_overlap",
            "SIGNALS_COLS", "MARKS_COLS", "INCEPTION_SIGNAL_DATE", "log"]
