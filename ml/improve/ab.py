@@ -108,9 +108,15 @@ CONFIGS = {
     "q7_tuned":           dict(kind="tuned", extra=[], preprocess="raw", family="trees"),
     # Q9 (phase-2 amendment A1): the control with an expanding training window (train_sessions 0 = every row up to train_end)
     "q9_expanding":       dict(kind="lgbm", extra=[], preprocess="raw", family="trees", train_sessions=0),
+    # Q10 (phase-2 amendment A2): seed replicates of the control and of Q9 (LightGBM random_state only)
+    "control_s109":      dict(kind="lgbm", extra=[], preprocess="raw", family="trees", seed=109),
+    "control_s110":      dict(kind="lgbm", extra=[], preprocess="raw", family="trees", seed=110),
+    "control_s111":      dict(kind="lgbm", extra=[], preprocess="raw", family="trees", seed=111),
+    "q9_expanding_s109": dict(kind="lgbm", extra=[], preprocess="raw", family="trees", train_sessions=0, seed=109),
+    "q9_expanding_s110": dict(kind="lgbm", extra=[], preprocess="raw", family="trees", train_sessions=0, seed=110),
 }
 VARIANTS = ["all51", "ab1_mkt", "ab2_sector", "ab2p_sector_placebo", "ab3_fo", "ab4_flows", "ab5_all", "ab6_ensemble_all52", "ab7_subsample5", "ab8_uniqueness_w",
-            "lr_l2", "baseline_mom", "ab6_lambdarank52", "ab6_catboost52", "ae1_events", "q7_tuned", "q9_expanding"]
+            "lr_l2", "baseline_mom", "ab6_lambdarank52", "ab6_catboost52", "ae1_events", "q7_tuned", "q9_expanding", "control_s109", "control_s110", "control_s111", "q9_expanding_s109", "q9_expanding_s110"]
 
 T0 = time.time()
 _DF: pd.DataFrame | None = None
@@ -233,6 +239,8 @@ def _fold_job(args):
     kind = cfg["kind"]
     if kind == "lgbm":
         est = s5.make_model("all51", N_THREADS)
+        if cfg.get("seed") is not None:
+            est.set_params(random_state=cfg["seed"])
         if cfg.get("uniqueness_weights"):
             est.fit(Xtr, ytr, sample_weight=uniqueness_weights(tr))
         else:
