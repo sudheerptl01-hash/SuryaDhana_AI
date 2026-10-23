@@ -106,9 +106,11 @@ CONFIGS = {
     "ae1_events":         dict(kind="lgbm", extra=["E"], preprocess="raw", family="trees"),
     # Q7 (phase-2 plan): the control with each calendar year's LightGBM setting from TUNED_PARAMS
     "q7_tuned":           dict(kind="tuned", extra=[], preprocess="raw", family="trees"),
+    # Q9 (phase-2 amendment A1): the control with an expanding training window (train_sessions 0 = every row up to train_end)
+    "q9_expanding":       dict(kind="lgbm", extra=[], preprocess="raw", family="trees", train_sessions=0),
 }
 VARIANTS = ["all51", "ab1_mkt", "ab2_sector", "ab2p_sector_placebo", "ab3_fo", "ab4_flows", "ab5_all", "ab6_ensemble_all52", "ab7_subsample5", "ab8_uniqueness_w",
-            "lr_l2", "baseline_mom", "ab6_lambdarank52", "ab6_catboost52", "ae1_events", "q7_tuned"]
+            "lr_l2", "baseline_mom", "ab6_lambdarank52", "ab6_catboost52", "ae1_events", "q7_tuned", "q9_expanding"]
 
 T0 = time.time()
 _DF: pd.DataFrame | None = None
@@ -202,6 +204,11 @@ def features_for(name: str, base_feats: list[str], df_cols: set[str]) -> list[st
 
 
 # ----------------------------------------------------------------------------- one fold
+def cfg_train_sessions(name: str) -> int:
+    """Rolling window in sessions for a configuration; 0 means expanding (every row up to train_end)."""
+    return CONFIGS[name].get("train_sessions", TRAIN_SESSIONS)
+
+
 def _fold_job(args):
     name, spec, feats, cache = args
     ck = cache / "folds" / name / f"{spec['name']}.json"
@@ -212,7 +219,7 @@ def _fold_job(args):
         if CONFIGS[name]["kind"] != "tuned" or cached.get("lgbm_setting") == tuned_setting(spec):
             return cached
     t0 = time.time()
-    tr, te, n_before, n_purged = window_rows(_DF, _DD, _DATES, spec, TRAIN_SESSIONS)
+    tr, te, n_before, n_purged = window_rows(_DF, _DD, _DATES, spec, cfg_train_sessions(name))
     cfg = CONFIGS[name]
     n_sub = cfg.get("subsample_dates")
     if n_sub:

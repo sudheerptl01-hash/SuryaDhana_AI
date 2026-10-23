@@ -75,7 +75,27 @@ Added after the selection ran (post-hoc audit; no choice was revised); `tune.jso
 
 9 rows in all (where the bound cannot rule out a flip, every setting is refitted on each affected block (same seed, rows and threads; the refit must reproduce the cached AUC) and the block is re-scored without the rows; the selection rule is then re-applied). Every year's choice is the same without them: yes.
 
-## Outer walk-forward
+## Outer walk-forward (103 folds + holdout)
 
-Not run yet. The selection is complete (`selected_params.json`); the outer run is `python3 -m ml.improve.ab run --data ml/data_10y --tag 10y_p2 --configs q7_tuned --n-jobs 2`, then compare, the books (`ab_books --configs control q7_tuned --out-dir ml/results/improve2/tune --out-name books_q7 --n-trials 261`) and `python3 -m ml.improve.tune report`.
+Source: `ml/results/improve/ab/10y_p2/compare.json`. Pass mark: primary: paired fold-level CV-mean AUC delta vs the control >= +0.003 with the 20-session block-bootstrap 95% CI excluding zero (ml/IMPROVEMENT_PLAN_2.md section 1).
+
+| Model | CV AUC ± sd | 95% CI | Folds >= 0.50 | Worst fold | Holdout AUC | Rank IC (NW t) |
+|---|---|---|---:|---:|---:|---|
+| control | 0.5455 ± 0.0491 | [0.5359, 0.5549] | 84% | 0.399 | 0.5193 | +0.0878 (9.8) |
+| q7_tuned | 0.5459 ± 0.0509 | [0.5364, 0.5555] | 84% | 0.399 | 0.5230 | +0.0891 (9.6) |
+
+q7_tuned - control: delta CV mean +0.0004, 95% CI [-0.0006, +0.0014], folds won 34/103, rank-IC delta +0.0013 (NW t 1.3), holdout delta +0.0037. **Primary mark: FAIL.**
+
+Books (P2 construction, 20 bps, DSR at N = 261; trial books: q7_tuned|vol+size|top_decile, q7_tuned|vol+size|liq_top_decile):
+
+| Book | Excess vs EW | IR [95% CI] | Months beating EW | Turnover | Name-level excess | DSR |
+|---|---:|---|---:|---:|---:|---:|
+| control|none|top_decile | +7.5% | +1.37 [+0.51, +2.21] | 69/105 | 72% | +2.8% | 0.000 |
+| control|none|liq_top_decile | -0.0% | +0.01 [-0.73, +0.71] | 52/105 | 76% | -2.8% | 0.000 |
+| control|vol+size|top_decile | +10.5% | +2.32 [+1.51, +3.10] | 83/105 | 78% | +3.9% | 0.070 |
+| control|vol+size|liq_top_decile | +1.2% | +0.21 [-0.52, +0.93] | 55/105 | 82% | -3.1% | 0.000 |
+| q7_tuned|none|top_decile | +8.1% | +1.45 [+0.57, +2.28] | 70/105 | 71% | +3.4% | 0.000 |
+| q7_tuned|none|liq_top_decile | +0.4% | +0.08 [-0.61, +0.75] | 52/105 | 75% | -2.4% | 0.000 |
+| q7_tuned|vol+size|top_decile | +11.8% | +2.61 [+1.82, +3.38] | 82/105 | 78% | +5.3% | 0.271 |
+| q7_tuned|vol+size|liq_top_decile | +2.8% | +0.45 [-0.24, +1.14] | 57/105 | 82% | -1.5% | 0.000 |
 

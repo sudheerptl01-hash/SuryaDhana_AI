@@ -1,6 +1,6 @@
 # Q3. A model for the liquid universe
 
-**Verdict: PENDING (full runs not yet done)** · Plan: `ml/IMPROVEMENT_PLAN_2.md` §2 Q3 (2 configurations, 4 books = 6 trials) · Code: `ml/improve/liquid.py` · JSON: `ml/results/improve2/liquid/build.json`, `liquid.json`, `selftest.json`, `smoke.json`
+**Verdict: FAIL** · Plan: `ml/IMPROVEMENT_PLAN_2.md` §2 Q3 (2 configurations, 4 books = 6 trials) · Code: `ml/improve/liquid.py` · JSON: `ml/results/improve2/liquid/build.json`, `liquid.json`, `selftest.json`, `smoke.json`
 
 **Pass mark (fixed):** for L1 or L2, the neutral liquid book's IR ≥ 0.5 with its month-block 95% CI excluding zero over the 105 signal months **and** its paired monthly excess over the control's neutral liquid book has a bootstrap 95% CI excluding zero.
 
@@ -101,11 +101,45 @@ Per-date median of `y_raw_20d`, restricted minus full universe: L1 mean +0.31% p
 
 ## Pass mark (`liquid.json`)
 
-Pending: the lead's full runs (see the commands below), then `python3 -m ml.improve.liquid compare`.
+Cost 20 bps per side. IR interval month blocks: 106 calendar months (2018-01..2026-10, 2177 return days) for 105 signal months. Paired CI: B = 1000, seed 108. DSR at N = 261, V[SR] = 0.00387.
+
+| Book | Benchmark | Excess vs EW liquid /yr | IR [95% CI] | Months beating EW | Turnover / rebalance | Break-even bps/side | Capacity ₹ cr | Name-level excess /yr | DSR (N = 261) |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|
+| control (full-universe model), neutral (`control|vol+size|liq_top_decile`) | EW liquid tercile (`ew_liquid`) | +1.2% | +0.21 [-0.52, +0.93] | 55/105 | 82% | 26 | 603 | -3.1% | 0.000 |
+| control (full-universe model), plain (`control|none|liq_top_decile`) | EW liquid tercile (`ew_liquid`) | -0.0% | +0.01 [-0.73, +0.71] | 52/105 | 76% | 20 | 785 | -2.8% | 0.000 |
+| L1, neutral (`control|vol+size|top_decile`) | EW liquid tercile (L1's `ew_universe`) | +1.2% | +0.27 [-0.49, +1.02] | 50/105 | 84% | 26 | 671 | -2.8% | 0.000 |
+| L1, plain (`control|none|top_decile`) | EW liquid tercile (L1's `ew_universe`) | +2.1% | +0.39 [-0.36, +1.10] | 53/105 | 79% | 31 | 806 | -0.7% | 0.000 |
+| L2, neutral (`control|vol+size|liq_top_decile`) | EW liquid tercile (`ew_liquid`) | +2.3% | +0.40 [-0.30, +1.14] | 60/105 | 83% | 31 | 617 | -1.9% | 0.000 |
+| L2, plain (`control|none|liq_top_decile`) | EW liquid tercile (`ew_liquid`) | +2.1% | +0.34 [-0.39, +1.02] | 57/105 | 77% | 31 | 809 | -0.7% | 0.000 |
+
+| Set | Paired vs control neutral liquid: mean /yr | iid 95% CI (/tranche) | 3-month block 95% CI | Months set > control | Part 1 (IR ≥ 0.5, CI > 0) | Part 2 (paired CI > 0) | Readings agree | Benchmark identical | **Result** |
+|---|---:|---|---|---:|---|---|---|---|---|
+| L1 | +0.04% | [-0.0021, +0.0021] | [-0.0023, +0.0018] | 49/105 | FAIL | FAIL | True | True | **FAIL** |
+| L2 | +1.08% | [-0.0004, +0.0021] | [-0.0002, +0.0020] | 57/105 | FAIL | FAIL | True | True | **FAIL** |
+
+Plain liquid books, paired against the control's plain liquid book (descriptive, not a pass mark): L1 +2.39%/yr, iid CI [+0.0001, +0.0036] per tranche; L2 +2.21%/yr, iid CI [+0.0006, +0.0029] per tranche.
+
+Neutral liquid books by signal year: excess vs EW liquid per year (mean of the signal months x 252/20, 20 bps), and the paired difference against the control (descriptive):
+
+| Year | Control | L1 | L1 − control | L2 | L2 − control |
+|---|---:|---:|---:|---:|---:|
+| 2018 | -6.7% | -0.8% | +5.9% | -4.6% | +2.1% |
+| 2019 | -5.3% | -10.7% | -5.4% | -5.6% | -0.4% |
+| 2020 | -1.4% | -1.2% | +0.2% | +1.0% | +2.4% |
+| 2021 | +4.3% | +5.6% | +1.3% | +4.5% | +0.3% |
+| 2022 | +4.1% | -4.6% | -8.6% | +3.4% | -0.7% |
+| 2023 | -3.6% | +2.5% | +6.1% | -0.4% | +3.3% |
+| 2024 | +3.1% | +5.4% | +2.3% | +5.3% | +2.2% |
+| 2025 | +4.1% | +6.7% | +2.6% | +6.4% | +2.3% |
+| 2026 | +18.5% | +13.0% | -5.4% | +15.8% | -2.7% |
+
+Models (descriptive, each on its own restricted label): L1 CV AUC 0.5305 [+0.5218, +0.5390], holdout 0.4948, rank IC +0.0603 (NW t 6.9); L2 CV AUC 0.5403 [+0.5305, +0.5499], holdout 0.5093, rank IC +0.0767 (NW t 8.3).
+
+**Verdict: FAIL.**
 
 ## Code-path test (`selftest.json`)
 
-Control's liquid books against themselves: difference identically zero **True**, benchmark identical True, iid CI [+0.0000, +0.0000], part 2 False (expected False); IR month blocks 106.
+Control's liquid books against themselves: difference identically zero **True**, benchmark identical True, iid CI [+0.0000, +0.0000], block CI [+0.0000, +0.0000], part 2 False (expected False).
 
 ## Smoke run (`smoke.json`; code path and runtime only, outputs deleted)
 
