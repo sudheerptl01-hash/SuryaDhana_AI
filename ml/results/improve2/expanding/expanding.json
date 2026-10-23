@@ -74,10 +74,10 @@
    "holdout_segment_excess_ann_20bps": -0.19552566224494325,
    "dsr_264": {
     "n_trials": 264,
-    "dsr": 7.8342615578065e-06,
+    "dsr": 7.78162604452732e-06,
     "psr_vs_0": 0.9999793431953663,
     "sr_annualised": 1.3728229233469589,
-    "source": "books.json"
+    "source": "re-deflated from the moments stored at N = 270"
    }
   },
   "q9_expanding|none|top_decile": {
@@ -114,10 +114,10 @@
    "holdout_segment_excess_ann_20bps": -0.05036054816183096,
    "dsr_264": {
     "n_trials": 264,
-    "dsr": 0.00029322435306675733,
+    "dsr": 0.00029161333170007537,
     "psr_vs_0": 0.999999718525238,
     "sr_annualised": 1.670934012900072,
-    "source": "books.json"
+    "source": "re-deflated from the moments stored at N = 270"
    }
   },
   "control|vol+size|top_decile": {
@@ -154,10 +154,10 @@
    "holdout_segment_excess_ann_20bps": 0.24407016259282593,
    "dsr_264": {
     "n_trials": 264,
-    "dsr": 0.0689609668408508,
+    "dsr": 0.06876573694995969,
     "psr_vs_0": 0.9999999999962919,
     "sr_annualised": 2.3171118607291423,
-    "source": "books.json"
+    "source": "re-deflated from the moments stored at N = 270"
    }
   },
   "q9_expanding|vol+size|top_decile": {
@@ -194,10 +194,10 @@
    "holdout_segment_excess_ann_20bps": 0.25847994260556095,
    "dsr_264": {
     "n_trials": 264,
-    "dsr": 0.7671154973971485,
+    "dsr": 0.7666633780556804,
     "psr_vs_0": 1.0,
     "sr_annualised": 3.0648457015477737,
-    "source": "books.json"
+    "source": "re-deflated from the moments stored at N = 270"
    }
   },
   "control|none|liq_top_decile": {
@@ -234,10 +234,10 @@
    "holdout_segment_excess_ann_20bps": -0.256575696852552,
    "dsr_264": {
     "n_trials": 264,
-    "dsr": 8.596083482985985e-17,
+    "dsr": 8.491826301276597e-17,
     "psr_vs_0": 0.5084353918970288,
     "sr_annualised": 0.007215580389650642,
-    "source": "books.json"
+    "source": "re-deflated from the moments stored at N = 270"
    }
   },
   "q9_expanding|none|liq_top_decile": {
@@ -274,10 +274,10 @@
    "holdout_segment_excess_ann_20bps": -0.10752501610307799,
    "dsr_264": {
     "n_trials": 264,
-    "dsr": 5.70377884496215e-15,
+    "dsr": 5.63866036044118e-15,
     "psr_vs_0": 0.7111152650449084,
     "sr_annualised": 0.18953450577347716,
-    "source": "books.json"
+    "source": "re-deflated from the moments stored at N = 270"
    }
   },
   "control|vol+size|liq_top_decile": {
@@ -314,10 +314,10 @@
    "holdout_segment_excess_ann_20bps": 0.27010897039697757,
    "dsr_264": {
     "n_trials": 264,
-    "dsr": 9.847576008137523e-15,
+    "dsr": 9.736462066267919e-15,
     "psr_vs_0": 0.7262991472788102,
     "sr_annualised": 0.2054784030110875,
-    "source": "books.json"
+    "source": "re-deflated from the moments stored at N = 270"
    }
   },
   "q9_expanding|vol+size|liq_top_decile": {
@@ -354,10 +354,10 @@
    "holdout_segment_excess_ann_20bps": 0.28599857601184225,
    "dsr_264": {
     "n_trials": 264,
-    "dsr": 1.1762417484203332e-09,
+    "dsr": 1.1657497342719615e-09,
     "psr_vs_0": 0.9892367228288893,
     "sr_annualised": 0.7835305361074559,
-    "source": "books.json"
+    "source": "re-deflated from the moments stored at N = 270"
    }
   }
  },
