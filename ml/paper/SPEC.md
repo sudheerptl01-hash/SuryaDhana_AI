@@ -292,7 +292,7 @@ the market moved away from recent training data) is the same for both models.
 books are already counted (N = 264, then 270). The frozen books remain the paper book of record; nothing in them is
 re-tuned in response to the extension's record.
 
-## 6. Amendment 11: the champion-challenger decision rule, and an erratum to amendment 10 (registered 2026-10-23; the exact time is the commit time of this section, recorded below)
+## 6. Amendment 11: the champion-challenger decision rule, and an erratum to amendment 10 (registered 2026-10-23 12:55:56 UTC, commit 3792bd9)
 
 Registered when the extension's live record held two marked sessions (2026-10-21, 2026-10-22), before any live month
 had matured, so no live comparison could inform it. It changes no book, no parameter, no definition, no ledger row and
