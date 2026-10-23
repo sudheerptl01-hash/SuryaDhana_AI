@@ -4,6 +4,10 @@
     OMP_NUM_THREADS=2 python3 -I ml/paper/job.py                       # the daily run
     OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --prove-idempotency   # a second run that records the ledger hashes
     OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest           # no network, no store write
+    OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --accept-unverified-write "REASON"   # RUNBOOK section 5 only
+
+A run stops before scoring when the latest store write failed its verification (ingest.json), until a later verified
+write supersedes it or an operator records an acceptance with --accept-unverified-write.
 
 Steps: (1) ingest new sessions (ml/paper/ingest.py; the only writer of nse_market.duckdb in phase 2);
 (2) rebuild the scoring frame when the store changed (ml/paper/frame.py) and the consistency proof;
@@ -292,6 +296,14 @@ def run(a) -> dict:
     rec = {"started": datetime.now().isoformat(timespec="seconds"), "args": vars(a), "ledger_before": before}
     if not a.no_ingest:
         rec["ingest"] = run_child("ingest")
+    if a.accept_unverified_write:
+        rec["operator_acceptance"] = I.accept_unverified_write(a.accept_unverified_write)
+    bad = I.unverified_write()
+    if bad is not None:
+        raise SystemExit(f"the store write of {bad.get('accepted')} failed verification (ml/results/improve2/paper/"
+                         "ingest.json; backup kept in the scratchpad): nothing is scored on an unverified store. "
+                         "See ml/paper/RUNBOOK.md section 5 (restore the backup and re-run, or accept the write with "
+                         "--accept-unverified-write REASON).")
     fr = run_child("frame", force=bool(a.force_frame))
     rec["frame_rebuilt"] = fr.get("rebuilt")
     df, feats, splits, dates, darr = load_frame(frame_lower_bound())
@@ -335,6 +347,9 @@ def main(argv=None) -> int:
     ap.add_argument("--force-frame", action="store_true", help="rebuild the scoring frame even if the store is unchanged")
     ap.add_argument("--prove-idempotency", action="store_true",
                     help="record ledger hashes before/after in ml/results/improve2/paper/idempotency.json")
+    ap.add_argument("--accept-unverified-write", metavar="REASON", default=None,
+                    help="record an operator's acceptance of the latest store write whose verification failed "
+                         "(RUNBOOK section 5); without it the job stops on such a write")
     a = ap.parse_args(argv)
     rec = run(a)
     print(json.dumps({k: rec[k] for k in ("ingest", "frame_rebuilt", "signals", "marks", "monitors", "ledger_unchanged",

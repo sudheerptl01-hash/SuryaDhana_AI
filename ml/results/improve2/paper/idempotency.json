@@ -19,7 +19,7 @@
  "recomputed_scores_max_abs_diff": 0.0,
  "recomputed_marks_equal_ledger": true,
  "recomputed_marks_max_abs_diff": 0.0,
- "frame_rebuilt_in_this_run": true,
+ "frame_rebuilt_in_this_run": false,
  "ingest_decisions_in_this_run": [
   [
    "2026-10-23",

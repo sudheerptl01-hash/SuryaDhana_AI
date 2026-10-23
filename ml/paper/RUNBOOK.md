@@ -8,8 +8,9 @@ to do when something is off.
 
 **When.** On every NSE trading day after about 19:00 IST. The exchange publishes the day's
 `sec_bhavdata_full` file and PR bundle in the evening; a run before that finds the day "pending" and does nothing
-for it (on 2026-10-23 at 08:15 IST the day's file returned 404, as expected). Running on a weekend or holiday is
-harmless: no candidate session, or a closure recorded, nothing appended.
+for it (on 2026-10-23 the day's file returned 404 on every attempt from 08:30 IST on, as expected). Running on a
+weekend or holiday is harmless: there is no candidate session, or the holiday shows as `pending` until the next
+session is published, when it is recorded as a closure (section 4); nothing is appended.
 
 **Command** (from the repository root, shared 4-core box: two threads):
 
@@ -52,8 +53,8 @@ Read the summary the job prints and `ml/results/improve2/paper/PAPER.md`.
 
 | Check | Expected | If not |
 |---|---|---|
-| Ingest decisions | each new weekday is `session: ingest` or a recorded `closure`; today may be `pending` | `unresolved`: section 4 |
-| Write | `verified: true`, lock file absent, backup deleted | section 5 |
+| Ingest decisions | each new weekday is `session: ingest` or a recorded `closure`; today, or a holiday not yet followed by a published session, may be `pending` | `unresolved`: section 4 |
+| Write | `verified: true`, lock file absent, backup deleted | the job stops before scoring; section 5 |
 | Continuity on new sessions | share of mismatching `prev_close` well under 5% (a few names on an ex-date are normal) | over 5%: a session is missing or mis-dated, section 4 |
 | Duplicate EQ/BE pairs | 0 | the transaction rolls back by itself; nothing was written |
 | Basket sizes | about 10% of the universe for primary, challenger and control (about 150-160 names), about 10% of the liquid tercile for capacity (about 50) | a much smaller universe means a partial file: compare the day's EQ/BE row count with the previous session's |
@@ -91,6 +92,16 @@ construction changes only through a new pre-registered plan.
   (2026-10-20, Dussehra: `sec_bhavdata_full_20102026.csv` is byte-identical to 19-Oct's, its `DATE1` says
   19-Oct-2026, and the PR bundle `PR201026.zip` is absent). The job records such a date as a closure in
   `ml/paper/calendar_live.json` with the evidence and never ingests it.
+* **A closure is recorded only once the archive has moved on.** A recorded closure joins the holiday set of every
+  later run, so a mistake would silently drop a session from the forward record. The job therefore records a closure
+  (an echo with no PR bundle, or no file and no PR bundle) only when a later weekday of the same run is accepted as a
+  session; 2026-10-20 was confirmed by 2026-10-21. Until then the date is reported as
+  `pending: ... recorded as a closure only once a later session is published`, and the files fetched for it are
+  dropped from `ml/paper/state/raw/` so the next run fetches them again rather than re-reading a stale copy. This
+  covers a run after midnight IST that finds a late file missing, and an echo served on the evening itself. If a
+  session's file is so late that the next session is published first, that date is recorded as a closure; the next
+  session's `prev_close` continuity check then flags it (over 5% of names), verification fails and the job stops
+  (section 5): remove the wrong closure from `calendar_live.json`, restore the backup and re-run.
 * **Unresolved date.** The evidence disagrees (for example the file names the right date but the PR bundle is
   missing, or the PR bundle exists but the file is an echo). The job ingests nothing from that date on. Check the
   exchange's holiday calendar and the files in `ml/paper/state/raw/`; if it is a closure, add it to
@@ -98,8 +109,13 @@ construction changes only through a new pre-registered plan.
   re-run later. Do not edit `nse_historical_ingest.NSE_TRADING_HOLIDAYS` for this.
 * **Special sessions** (Muhurat on a weekend, Budget-day Saturdays). `trading_days` only proposes a weekend date
   when it is listed. Before the evening of such a session add it to `calendar_live.json` under
-  `"special_sessions"` (date: description). The 2026 Muhurat session is expected on Sunday 2026-11-08; the
-  exchange's calendar lists 2026-11-10 and 2026-11-24 as closures, which the job will find on its own.
+  `"special_sessions"` (date: description). The 2026 Muhurat session is expected on Sunday 2026-11-08 (Diwali);
+  confirm the date and timing from the exchange's circular.
+* **Weekday closures not in the ingest's list.** `nse_historical_ingest.NSE_TRADING_HOLIDAYS` has no closure between
+  2026-10-02 and 2026-12-25 (it lacked Dussehra on 2026-10-20 too). The November 2026 closures, expected on
+  2026-11-10 (Diwali Balipratipada) and 2026-11-24 (Guru Nanak Jayanti) (confirm from the exchange's holiday
+  circular), are decided from the archive's evidence as above. Each shows as `pending` on its own evening and is
+  recorded as a closure on the next session's run.
 * **A file served under the wrong date** (seen in 2021-2024: a closure answered with the next session's file). The
   `DATE1` check rejects it; the PR bundle's `pd` member date is checked too.
 
@@ -119,9 +135,15 @@ construction changes only through a new pre-registered plan.
 * **Corrections** are appended, never substituted: a row in `ledger/monitors.csv` with `monitor = correction`, the
   affected session and book in `scope`, the corrected value in `value` and the reason in `detail` (use
   `ml.paper.common.append_rows` with `MONITORS_COLS`).
-* **The write failed or verification failed.** The lock is removed in every case. If verification failed the
-  backup is kept in the scratchpad (`.../scratchpad/q1/nse_market_backup_pre_q1_<date>.duckdb`): compare, and if the
-  store is wrong copy the backup back over `nse_market.duckdb` (nobody else writes it) and re-run. A run killed between
+* **The write failed or verification failed.** The lock is removed in every case. If verification failed, the
+  backup is kept in the scratchpad (`.../scratchpad/q1/nse_market_backup_pre_q1_<date>.duckdb`) and the job stops
+  before it scores anything. It keeps stopping on every later run while the latest write in `ingest.json` is
+  unverified. Read `write.after` in `ingest.json` (continuity, duplicates, row counts, fingerprints) to see which
+  check failed. If the store is wrong, copy the backup back over `nse_market.duckdb` (nobody else writes it), fix the
+  cause (e.g. a wrong closure in `calendar_live.json`) and re-run: the re-ingest makes a new, verified write, which
+  supersedes the failed one. If the store is right and the failed check is understood, record that once with
+  `OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --accept-unverified-write "<reason>"`; the reason is kept in
+  `ingest.json` next to the write. A run killed between
   the upsert and `build_features` leaves `equity_features` behind `equity_eod`; the next run detects it and rebuilds
   the features under the lock. A lock file left by a killed process: check that no `python3` process holds the store
   (`fuser nse_market.duckdb`), then delete the lock.
@@ -130,6 +152,10 @@ construction changes only through a new pre-registered plan.
 
 * The job is idempotent: running it again on the same data appends nothing and rewrites nothing
   (`--prove-idempotency` records the ledger hashes before and after in `ml/results/improve2/paper/idempotency.json`).
+* The ledger is deterministic: `OMP_NUM_THREADS=2 python3 -I ml/paper/prove.py` regenerates it from inception in a
+  sandbox (`ml/paper/state/regen/`) with the current code and compares it byte for byte with the committed files
+  (`ml/results/improve2/paper/regeneration.json`). The committed ledger is not touched. Run it after any code change
+  to `ml/paper/` and before committing that change: a difference means the code no longer reproduces the record.
 * `--no-ingest` skips the network and the store write (useful when the archive is unreachable).
 * `--force-frame` rebuilds the scoring frame even when the store did not change.
 * **Lost state.** `ml/paper/state/` (models, raw files, frame, per-date scores) is not in git. A run without it
@@ -140,6 +166,14 @@ construction changes only through a new pre-registered plan.
   different model. Missing per-date score files of ledger dates are regenerated and checked against the ledger's
   baskets. This path was tested on 2026-10-23 (`ml/results/improve2/paper/lost_state_check.json`): the October models
   came back equal on all three checks and the regenerated score file was byte-identical.
+* **Local inputs outside git.** `ml/data_ext/` is gitignored, like the store: `corporate_actions_feed_live.csv`
+  (the ten-year feed plus the validated events after 2026-10-16) and `etf_list_live.csv` exist only on this machine.
+  `ingest.json` records each write's new events and the feed's SHA-256, and `state.json` records both files' hashes.
+  If the live feed is missing, the next run rebuilds it from the store's EQ/BE rows and every PR bundle on disk, with
+  the same code path, and checks it against `state.json`. A mismatch stops the job and removes the rebuilt file:
+  the store's `equity_features` were built with the recorded feed, so recover that file (from a backup, or from the
+  ten-year feed plus the events listed in `ingest.json`) before running again. A missing ETF list is rebuilt from
+  the ten-year list and the PR bundles in `ml/paper/state/raw/pr/`.
 * **A missed session** (the job was not run for a few days) is simply caught up: every new session is processed in
   date order. A signal date can never be inserted before the ledger's last one; if that is ever needed the
   ledger has to be rebuilt from inception, which is a decision for the program lead, not the job.
@@ -159,4 +193,5 @@ A scheduled task could run the daily job without a person at the keyboard. What 
   working branch and push; finish with a short message listing new sessions, basket sizes and every monitor row
   whose status is `ALERT` or an ingest decision that is `unresolved`.
 * **Guard rails**: the task must not create or change any other schedule, must not edit `ml/paper/config.py` or the
-  ledger by hand, and must stop (not retry in a loop) when the job exits non-zero; the exit message is the alert.
+  ledger by hand, must never pass `--accept-unverified-write` (that is a person's decision, section 5), and must stop
+  (not retry in a loop) when the job exits non-zero; the exit message is the alert.

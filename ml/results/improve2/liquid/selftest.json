@@ -1,7 +1,7 @@
 {
  "stream": "Q3",
  "plan": "ml/IMPROVEMENT_PLAN_2.md section 2, Q3",
- "written_at": "2026-10-23T03:27:11",
+ "written_at": "2026-10-23T04:33:54",
  "self_test": true,
  "pass_mark_text": "for L1 or L2, the neutral liquid book's IR >= 0.5 with its month-block 95% CI excluding zero over the 105 signal months AND its paired monthly excess over the control's neutral liquid book has a bootstrap 95% CI excluding zero",
  "design": {
@@ -350,5 +350,6 @@
    "self_test_difference_identically_zero": true
   }
  },
- "verdict": "FAIL"
+ "verdict": "FAIL",
+ "verdict_notes": []
 }

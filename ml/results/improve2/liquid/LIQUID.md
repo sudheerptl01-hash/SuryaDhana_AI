@@ -1,6 +1,6 @@
 # Q3. A model for the liquid universe
 
-**Verdict: PENDING (full runs not yet done)** · Plan: `ml/IMPROVEMENT_PLAN_2.md` §2 Q3 (2 configurations, 4 books = 6 trials) · Code: `ml/improve/liquid.py` · JSON: `ml/results/improve2/liquid/build.json`, `liquid.json`, `selftest.json`
+**Verdict: PENDING (full runs not yet done)** · Plan: `ml/IMPROVEMENT_PLAN_2.md` §2 Q3 (2 configurations, 4 books = 6 trials) · Code: `ml/improve/liquid.py` · JSON: `ml/results/improve2/liquid/build.json`, `liquid.json`, `selftest.json`, `smoke.json`
 
 **Pass mark (fixed):** for L1 or L2, the neutral liquid book's IR ≥ 0.5 with its month-block 95% CI excluding zero over the 105 signal months **and** its paired monthly excess over the control's neutral liquid book has a bootstrap 95% CI excluding zero.
 
@@ -106,6 +106,25 @@ Pending: the lead's full runs (see the commands below), then `python3 -m ml.impr
 ## Code-path test (`selftest.json`)
 
 Control's liquid books against themselves: difference identically zero **True**, benchmark identical True, iid CI [+0.0000, +0.0000], part 2 False (expected False); IR month blocks 106.
+
+## Smoke run (`smoke.json`; code path and runtime only, outputs deleted)
+
+- `python3 -m ml.improve.ab run --data ml/data_10y_liq --tag 10y_liq --configs control --folds 2025-06 2025-07 --skip-holdout --n-jobs 1`: ran (33 s). Seconds per fold [15.1, 13.9], training rows [217634, 215915].
+- `python3 -m ml.improve.ab run --data ml/data_10y_liq2 --tag 10y_liq2 --configs control --folds 2025-06 2025-07 --skip-holdout --n-jobs 1`: ran (46 s). Seconds per fold [20.6, 19.6], training rows [441853, 438336].
+- `python3 -m ml.improve.ab_books --tag <tag> --data <scratch dir> --prices ml/results/improve/cache/features_prices_export_10y.parquet --price-start 2017-10-02 --n-trials 261 --folds-only`: ran (10y_liq 13 s, 10y_liq2 14 s).
+  - L1: top_decile and liq_top_decile baskets coincide (every L1 row is liquid), benchmark ew_universe = EW liquid tercile.
+  - L2: liq_top_decile with benchmark ew_liquid.
+  - base 19,415 (L1) / 39,423 (L2) rows, 44 signal dates, exit-mark/label match 1.00000.
+  - Smoke-only deviation: ml/books/data.py load_scores asserts a finite score on every base row, and a two-fold run scores 2 of the 103 fold months, so ab_books on the tag with --data ml/data_10y_liq* stops (685,897 rows without a score). The smoke therefore pointed --data at a scratch folder holding a symbolic link to the set's model_dataset.parquet and a splits.json cut to the two smoke folds, with ab_books' own --folds-only hook (no holdout rows). The full runs use the real dataset folder and splits; nothing in ab_books or ml/books was changed.
+- `python3 -m ml.improve.ab compare --data ml/data_10y_liq* --tag 10y_liq*`: ran (6 s).
+  - compare.json carries every key liquid.py reads (cv_auc_mean, cv_mean_ci95, holdout_auc, rank_ic_cv_mean, rank_ic_nw_t, rank_ic_months_positive, pct_folds_ge_050).
+- `python3 -m ml.improve.liquid compare --allow-partial --out <scratch>`: ran (53 s).
+  - self-test on the control's own liquid books: difference identically zero, iid and block CIs [0, 0], part 2 False.
+  - benchmark rows of L1 (ew_universe) and of L2 (ew_liquid) equal the control's ew_liquid rows: 705,312 = 705,312, no row only on one side, y_raw_20d identical, 2,158 = 2,158 signal dates.
+  - coverage check reports the partial smoke months (2 of 105) and, without --allow-partial, the run would stop.
+  - LIQUID.md pass-mark section rendered from the smoke JSON in a scratch copy (tables, by-year table, model line, verdict line, verdict note when the iid and block readings disagree).
+
+Deleted: `ml/results/improve/ab/10y_liq/`, `ml/results/improve/ab/10y_liq2/`. Full-run estimate: about 33 minutes (ab run L1 (104 fits, n-jobs 2) 11; ab run L2 (104 fits, n-jobs 2) 15; ab_books L1 1; ab_books L2 2; ab compare x2 2; liquid compare 2); on a busy shared box add 20-30%. Basis: control 10y full run: 1,005 s wall for 104 fits at --n-jobs 2 (mean 19.3 s per fit per process) against 28 s on the 2025-06/07 folds, so a mean fit is about 0.69 of a 2025 fit; L1 and L2 2025 fits took 15 s and 20 s.
 
 ## Reproduce
 

@@ -139,6 +139,11 @@ def render(ev: dict) -> str:
         L.append(f"- **100 random cells recomputed from files dated <= t:** {pc['cells_all_equal']}/{pc['n_cells']} cells equal on all ten columns "
                  f"(mismatches by column: " + ", ".join(f"{k} {v}" for k, v in pc["mismatches_by_column"].items()) + "; non-NaN cells by column: "
                  + ", ".join(f"{k} {v}" for k, v in pc["non_nan_cells_by_column"].items()) + "). " + pc["method"] + ".")
+    ps = ck.get("pit_cells_stratified")
+    if ps:
+        L.append(f"- **Stratified supplement ({ps['per_stratum']} random cells per stratum):** {ps['cells_all_equal']}/{ps['n_cells']} cells equal on all ten columns; "
+                 + "; ".join(f"{k}: {v['all_equal']}/{v['cells']}" for k, v in ps["strata"].items())
+                 + " (mismatches by column: " + ", ".join(f"{k} {v}" for k, v in ps["mismatches_by_column"].items()) + ").")
     dfu = ck.get("delete_future")
     if dfu:
         L.append(f"- **Delete-the-future ({dfu['month']}):** files after the month-end and prices after it removed ({dfu['files_kept']} files and "
@@ -151,8 +156,11 @@ def render(ev: dict) -> str:
                  + f"; unchanged: {sh['unchanged']}.")
     aj = ck.get("ab_join")
     if aj:
-        L.append(f"- **A/B join:** {aj['path']}; {aj['rows']:,} rows, all ten columns present: {aj['all_ten_present']}; non-NaN share: "
-                 + ", ".join(f"{k} {v:.3f}" for k, v in aj["coverage"].items()) + ".")
+        L.append(f"- **A/B join:** {aj['path']}; {aj['rows']:,} rows, all ten columns present: {aj['all_ten_present']}; "
+                 + (f"family E in `ml/improve/ab.py` equals the parquet's columns: {aj['family_E_in_ab_equals_parquet_columns']}; "
+                    f"`ae1_events` resolves to {aj['ae1_events_features']} features (control {aj['control_features']}; added: "
+                    + ", ".join(f"`{c}`" for c in aj["ae1_minus_control"]) + "); " if "ae1_events_features" in aj else "")
+                 + "non-NaN share: " + ", ".join(f"{k} {v:.3f}" for k, v in aj["coverage"].items()) + ".")
     # 7.6 IC
     L += ["", "### 7.6 Descriptive rank IC (last step; `ic`)", ""]
     if ic:

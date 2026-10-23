@@ -8,6 +8,9 @@ Steps (each runs in its own process under `all`, to keep memory low on the share
   pit        every raw zip re-parsed from scratch with the fixed vocabulary (per-file digests must equal
              events_raw), then 100 random dataset cells recomputed by an independent, loop-based implementation of
              the definitions from the re-parsed files dated <= t and prices dated <= t
+  pit_strata supplement: the same recompute on --per-stratum random cells from each stratum of STRATA (cells
+             where a rare value is present: ratings, orders, insolvency, management changes, a release in the last
+             5 sessions, the release session itself, a finite ear_vol_z, >= 5 announcements)
   delete     the whole build re-run with every file and price after one month-end removed
   shift      the build on bundles up to T0, then with the later bundles appended (prices unchanged)
   abjoin     the parquet joined through ml.improve.ab.load_frame (the lead's A/B path)
@@ -307,11 +310,36 @@ def recompute_cell(t: pd.Timestamp, k: str, recs: pd.DataFrame, company_records:
     return out
 
 
-def step_pit(n_cells: int, workers: int = 2) -> dict:
+STRATA = {  # supplement to the 100 random cells: cells where a rare value is present (seed 108, per stratum)
+    "rating_20>0": lambda f: f["rating_20"] > 0,
+    "orders_20>0": lambda f: f["orders_20"] > 0,
+    "insolvency_60==1": lambda f: f["insolvency_60"] == 1,
+    "mgmt_change_60>0": lambda f: f["mgmt_change_60"] > 0,
+    "results_last_5==1": lambda f: f["results_last_5"] == 1,
+    "sess_since_results==0": lambda f: f["sess_since_results"] == 0,
+    "ear_vol_z finite": lambda f: np.isfinite(f["ear_vol_z"]),
+    "ann_count_20>=5": lambda f: f["ann_count_20"] >= 5,
+}
+
+
+def step_pit(n_cells: int, workers: int = 2, per_stratum: int = 0) -> dict:
+    """per_stratum = 0: n_cells random dataset cells (section pit_cells).  per_stratum > 0: that many random cells
+    from each stratum of STRATA (section pit_cells_stratified), the same recompute."""
     global _VOCAB, _WANT
     feats = load_feats()
     rng = np.random.default_rng(SEED)
-    pick = np.sort(rng.choice(len(feats), size=n_cells, replace=False))
+    strata = None
+    if per_stratum > 0:
+        picks, strata = [], []
+        for name, fn in STRATA.items():
+            idx = np.flatnonzero(fn(feats).to_numpy())
+            p_ = np.sort(rng.choice(idx, size=min(per_stratum, len(idx)), replace=False))
+            picks.append(p_)
+            strata += [name] * len(p_)
+        pick = np.concatenate(picks)
+        n_cells = len(pick)
+    else:
+        pick = np.sort(rng.choice(len(feats), size=n_cells, replace=False))
     cells = feats.iloc[pick].reset_index(drop=True)
     _WANT = set(cells["ticker"].astype(str))
     _VOCAB = P.load_vocabulary()
@@ -349,6 +377,7 @@ def step_pit(n_cells: int, workers: int = 2) -> dict:
         for c in F.FEATURES:
             mismatch[c] += int(not ok[c])
         rows.append({"date": str(t.date()), "ticker": k, "all_equal": all(ok.values()),
+                     **({"stratum": strata[j]} if strata is not None else {}),
                      "parquet": {c: _jd(r[c]) for c in F.FEATURES}, "recomputed": {c: _jd(got[c]) for c in F.FEATURES}})
         if (j + 1) % 20 == 0:
             log(f"pit cells {j + 1}/{n_cells}: mismatching so far {sum(not x['all_equal'] for x in rows)}")
@@ -359,6 +388,15 @@ def step_pit(n_cells: int, workers: int = 2) -> dict:
                      "re-parsed with the fixed vocabulary, restricted to files dated <= t and prices dated <= t; the "
                      "classification rules re-run on that restricted set; tolerance rtol 1e-5",
            "cells": rows}
+    if strata is not None:
+        pit["per_stratum"] = per_stratum
+        pit["strata"] = {s: {"cells": int(sum(x.get("stratum") == s for x in rows)),
+                             "all_equal": int(sum(x["all_equal"] for x in rows if x.get("stratum") == s))} for s in STRATA}
+        pit["method"] = ("supplement to the random cells: per_stratum random cells (seed 108) from each stratum "
+                         "(rows where the named value is present), same recompute as pit_cells: " + pit["method"])
+        save("reparse_stratified_run", reparse)
+        save("pit_cells_stratified", pit)
+        return pit
     save("reparse", reparse)
     save("pit_cells", pit)
     return pit
@@ -403,9 +441,15 @@ def step_shift() -> dict:
 
 def step_abjoin() -> dict:
     from ml.improve import ab
-    df, _, _ = ab.load_frame(ML / "data_10y", F.OUT, None, False)
+    df, base_feats, _ = ab.load_frame(ML / "data_10y", F.OUT, None, False)
     cols = [c for c in F.FEATURES if c in df.columns]
+    ae1 = ab.features_for("ae1_events", base_feats, set(df.columns))
+    ctl = ab.features_for("control", base_feats, set(df.columns))
     res = {"rows": int(len(df)), "columns_joined": cols, "all_ten_present": len(cols) == len(F.FEATURES),
+           "family_E_in_ab_equals_parquet_columns": list(ab.FAMILIES["E"]) == F.FEATURES,
+           "ae1_events_features": len(ae1), "control_features": len(ctl),
+           "ae1_minus_control": [c for c in ae1 if c not in ctl],
+           "dtypes": {c: str(df[c].dtype) for c in cols},
            "coverage": {c: round(float(df[c].notna().mean()), 4) for c in cols},
            "path": "ml.improve.ab.load_frame(ml/data_10y, extra=ml/data_ext/event_features_10y.parquet): merge on date, "
                    "ticker, validate one_to_one, row count unchanged"}
@@ -415,16 +459,19 @@ def step_abjoin() -> dict:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("step", choices=["all", "coverage", "pit", "delete", "shift", "abjoin"])
+    ap.add_argument("step", choices=["all", "coverage", "pit", "pit_strata", "delete", "shift", "abjoin"])
     ap.add_argument("--cells", type=int, default=100)
+    ap.add_argument("--per-stratum", type=int, default=10)
     a = ap.parse_args()
     if a.step == "all":
-        for st in ("coverage", "pit", "delete", "shift", "abjoin"):
-            cmd = [sys.executable, "-m", "ml.events.checks", st] + (["--cells", str(a.cells)] if st == "pit" else [])
+        for st in ("coverage", "pit", "pit_strata", "delete", "shift", "abjoin"):
+            cmd = [sys.executable, "-m", "ml.events.checks", st] + (["--cells", str(a.cells)] if st == "pit" else []) \
+                + (["--per-stratum", str(a.per_stratum)] if st == "pit_strata" else [])
             log("running " + " ".join(cmd[2:]))
             subprocess.run(cmd, check=True, cwd=str(ML.parent))
         return
-    {"coverage": step_coverage, "pit": lambda: step_pit(a.cells), "delete": step_delete, "shift": step_shift,
+    {"coverage": step_coverage, "pit": lambda: step_pit(a.cells),
+     "pit_strata": lambda: step_pit(0, per_stratum=a.per_stratum), "delete": step_delete, "shift": step_shift,
      "abjoin": step_abjoin}[a.step]()
 
 

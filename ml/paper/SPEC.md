@@ -101,3 +101,24 @@ N = 261 and V[SR] = 0.00387 (`ml/results/improve/books/books.json`,
 None of substance. Items 2-4 above are the nearest faithful live versions of rules that were written
 for a backtest (a label-window path, a clean-label universe, a median cost at sample ends); they
 change no definition of the books or of the models.
+
+## 4. Amendments (operations only; no definition, book, ledger row or recorded decision changes)
+
+Made on 2026-10-23 during the verification pass after the restart, after the ledger's first rows existed. Each was
+checked against the recorded record before any run that could produce a result: the 2026-10-20 closure decision is
+the same under the amended rule (confirmed by the 2026-10-21 session of the same run), and the ledger was regenerated
+from inception with the amended code and compared byte for byte (`ml/results/improve2/paper/regeneration.json`).
+`SPEC_HASH` is unchanged; it covers the construction, not the operating procedure.
+
+1. **Closure confirmation (item 6).** A closure, whether an echo with no PR bundle or no file and no PR bundle, is
+   recorded in `calendar_live.json` only when a later candidate of the same run is accepted as a session. Until
+   then the date is `pending` and its fetched files are dropped from the disk cache. Reason: a recorded closure is
+   permanent, and a late file (a run after midnight IST) or an echo served on the evening itself would otherwise drop
+   a real session from the forward record.
+2. **Unverified write stops the job.** When the latest store write in `ingest.json` failed verification, the job
+   stops before scoring, on that run and every later one, until a verified write supersedes it or an operator
+   records an acceptance (`--accept-unverified-write`). Before, the failure was recorded and alerted (the
+   `data_quality` monitor), but the run went on to score.
+3. **Missing live feed.** When `ml/data_ext/corporate_actions_feed_live.csv` is missing after the store has sessions
+   past the research end, it is rebuilt by the same code path and checked against the hash in `state.json`. Before,
+   the ten-year feed was copied in its place, which is right only before the first write.

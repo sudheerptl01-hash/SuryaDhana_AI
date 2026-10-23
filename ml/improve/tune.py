@@ -22,11 +22,15 @@ Stages
           fitted trees honour num_leaves / min_data_in_leaf / feature_fraction -> smoke/smoke.json
   select  every inner fit (cache/<Y>/<setting>__<block>.json, resume-safe), then selected_params.json (read by
           ml/improve/ab.py, config q7_tuned), tune.json (every inner AUC) and TUNE.md.  Writes select.pid while it runs.
+  audit   (added after the selection ran) inner scoring rows whose label exits on or after the outer fold Y-01's
+          first test session: counts, the largest AUC change their removal could cause, and whether any year's choice
+          could flip -> tune.json "audit_inner_exit" and a TUNE.md section
   report  after the outer run: folds the 'q7_tuned - control' pair of ml/results/improve/ab/10y_p2/compare.json and
           the Q7 books (books_q7.json, ml/improve/ab_books --out-name books_q7) into tune.json / TUNE.md
 
     python3 -m ml.improve.tune smoke --year 2026 --block blk00 --n-jobs 2
     nohup python3 -m ml.improve.tune select --n-jobs 2 > ml/results/improve2/tune/select.log 2>&1 &
+    python3 -m ml.improve.tune audit --n-jobs 2
     python3 -m ml.improve.tune report
 
 Seed 108; OMP_NUM_THREADS=2; at most two worker processes (shared 4-core box).
@@ -322,11 +326,164 @@ def write_selection(plans: dict, res: dict) -> None:
                       "settings_by_year": {y: v["setting"] for y, v in years.items()},
                       "inner_fits": int(sum(len(v["inner"]["auc_by_setting_block"]) * N_BLOCKS
                                             for v in per_year.values() if v["inner"]))}}
-    if "outer" in old:
-        tj["outer"] = old["outer"]
+    for k in ("audit_inner_exit", "outer"):
+        if k in old:
+            tj[k] = old[k]
     wjson(OUT / "tune.json", tj)
     write_md(tj)
     log("selected: " + "; ".join(f"{y}: {v['setting']}" + (" (switched)" if v["switched"] else "") for y, v in years.items()))
+
+
+AUDIT_RULE = ("an inner block that ends at the anchor can hold rows whose label exit date (the ticker's row t+21) is on "
+              "or after the first test session of the outer fold Y-01 (tickers with missing sessions); the outer fold "
+              "purges such rows from its training, the inner scoring (every clean labelled row of the block, as the "
+              "design defines it) keeps them.  Removing k_pos of P positives and k_neg of N negatives changes a block's "
+              "AUC by at most k_pos/P + k_neg/N; a setting's 3-block mean by at most B = the mean of that over the 3 "
+              "blocks; a difference of two settings' means by at most 2B.  A kept incumbent cannot flip if every "
+              "(setting - incumbent) + 2B < margin; a switch cannot flip if (best - incumbent) - 2B >= margin and the "
+              "best leads every other setting by more than 2B")
+
+
+def _audit_job(args) -> dict:
+    """Refit one setting on one block (same seed, data and threads as the selection fit) and score the block twice:
+    every clean labelled row (must reproduce the cached AUC) and only the rows whose label exits before ts."""
+    year, blk, setting, ts = args
+    p = CACHE / str(year) / f"{setting}__{blk['name']}__audit.json"
+    if p.exists():
+        return json.loads(p.read_text())
+    t0 = time.time()
+    spec = {k: blk[k] for k in ("name", "train_end", "test_start", "test_end")}
+    tr, te, _, _ = window_rows(_DF, _DD, _DATES, spec, TRAIN_SESSIONS)
+    prep = Preprocessor("raw").fit(tr[_FEATS])
+    est = model(setting)
+    est.fit(prep.transform(tr[_FEATS]), tr[LABEL].to_numpy(np.float32))
+    sc = est.predict_proba(prep.transform(te[_FEATS]))[:, 1]
+    yv, fv = te[LABEL].to_numpy(np.float32), te[FWD].to_numpy(np.float32)
+    keep = te["exit_date"].to_numpy(dtype="datetime64[ns]") < pd.Timestamp(ts).to_datetime64()
+    out = {"year": year, "setting": setting, "block": spec, "outer_test_start": ts,
+           "auc_all_rows": compute_metrics(yv, sc, fv)["auc"],
+           "auc_exit_before_outer_test": compute_metrics(yv[keep], sc[keep], fv[keep])["auc"],
+           "n_scored": int(len(te)), "n_kept": int(keep.sum()), "seconds": round(time.time() - t0, 1)}
+    wjson(p, out)
+    log(f"audit {year} {blk['name']} {setting}: all {out['auc_all_rows']:.6f} kept {out['auc_exit_before_outer_test']:.6f}")
+    return out
+
+
+def select_runtime(tj: dict) -> dict:
+    """Measured cost of the selection: fit seconds from the cache, wall seconds of each run from select.log (a run
+    stopped part-way resumes from the cache; the fits are deterministic, so resuming changes no number)."""
+    secs = [json.loads(p.read_text())["seconds"] for p in CACHE.glob("*/*.json") if not p.name.endswith("__audit.json")]
+    runs, cur = [], None
+    lp = OUT / "select.log"
+    for ln in (lp.read_text().splitlines() if lp.exists() else []):
+        if "] frame:" in ln:
+            cur = {"wall_seconds": 0, "fitted": 0, "cached_at_start": None}
+            runs.append(cur)
+        if cur is None or not ln.startswith("[tune +"):
+            continue
+        cur["wall_seconds"] = int(ln.split("+", 1)[1].split("s]", 1)[0])
+        if " inner fits, " in ln:
+            cur["cached_at_start"] = int(ln.split(" inner fits, ")[1].split(" cached")[0])
+        if ": auc=" in ln:
+            cur["fitted"] += 1
+    return {"inner_fits": len(secs), "fit_seconds_sum": round(float(np.sum(secs))), "workers": 2, "runs": runs,
+            "wall_minutes_total": round(sum(r["wall_seconds"] for r in runs) / 60, 1),
+            "note": "more than one run means the selection was stopped (container restart) and resumed from the cache"}
+
+
+def _choose(means: dict) -> tuple[str, bool]:
+    best = max(SETTINGS, key=lambda s: means[s])
+    switch = bool(best != INC and means[best] - means[INC] >= MARGIN)
+    return (best if switch else INC), switch
+
+
+def audit(a) -> None:
+    """Post-selection audit (added after the selection ran; no choice is revised here).  Bounds the effect of the
+    inner scoring rows whose label exits inside the outer test window; where the bound cannot rule out a different
+    choice, refits the affected blocks and re-applies the rule without those rows."""
+    splits = load()
+    tj = json.loads((OUT / "tune.json").read_text())
+    sel = json.loads((OUT / "selected_params.json").read_text())
+    years = {}
+    for y in YEARS:
+        pl = year_plan(y, splits)
+        if not pl["eligible"]:
+            continue
+        ts = pd.Timestamp(next(f for f in splits["folds"] if f["name"] == f"{y}-01")["test_start"])
+        blocks, B = {}, 0.0
+        for b in pl["blocks"]:
+            _, te, _, _ = window_rows(_DF, _DD, _DATES, b, TRAIN_SESSIONS)
+            yv = te[LABEL].to_numpy(float)
+            hit = te["exit_date"].to_numpy(dtype="datetime64[ns]") >= ts.to_datetime64()
+            P, N = int((yv == 1).sum()), int((yv == 0).sum())
+            kp, kn = int((hit & (yv == 1)).sum()), int((hit & (yv == 0)).sum())
+            bound = kp / P + kn / N
+            B += bound / N_BLOCKS
+            blocks[b["name"]] = {"n_scored": int(len(te)), "n_pos": P, "n_neg": N, "k_pos": kp, "k_neg": kn,
+                                 "block_auc_bound": bound,
+                                 "rows": [{"date": str(r.date.date()), "ticker": r.ticker, "exit_date": str(r.exit_date.date()),
+                                           "label": int(getattr(r, LABEL))} for r in te[hit].itertuples(index=False)]
+                                 if hit.any() else []}
+        means = tj["per_year"][str(y)]["inner"]["mean_auc_by_setting"]
+        s = sel["years"][str(y)]
+        lead_inc = max(means[k] - means[INC] for k in SETTINGS if k != INC)
+        if s["switched"]:
+            best = s["setting"]
+            gap = means[best] - max(means[k] for k in SETTINGS if k != best)
+            safe = bool(means[best] - means[INC] - 2 * B >= MARGIN and gap > 2 * B)
+        else:
+            gap = None
+            safe = bool(lead_inc + 2 * B < MARGIN)
+        years[str(y)] = {"outer_test_start": str(ts.date()), "anchor": pl["anchor"], "blocks": blocks,
+                         "n_rows": int(sum(v["k_pos"] + v["k_neg"] for v in blocks.values())),
+                         "mean_auc_bound_B": B, "difference_bound_2B": 2 * B, "chosen": s["setting"],
+                         "switched": s["switched"], "best_setting_minus_incumbent": lead_inc,
+                         "chosen_lead_over_runner_up": gap, "choice_cannot_flip": safe, "exact": None}
+    # exact check where the bound is not enough: refit every setting on the affected blocks
+    jobs = [(int(y), b, st, v["outer_test_start"]) for y, v in years.items() if not v["choice_cannot_flip"]
+            for b in year_plan(int(y), splits)["blocks"] if v["blocks"][b["name"]]["k_pos"] + v["blocks"][b["name"]]["k_neg"]
+            for st in SETTINGS]
+    if jobs:
+        log(f"audit: {len(jobs)} refits for years {sorted({j[0] for j in jobs})} on {a.n_jobs} workers")
+        with mp.get_context("fork").Pool(a.n_jobs) as pool:
+            got = pool.map(_audit_job, jobs, chunksize=1)
+        for y in sorted({j[0] for j in jobs}):
+            v, inner = years[str(y)], tj["per_year"][str(y)]["inner"]
+            rs = [r for r in got if r["year"] == y]
+            repro = max(abs(r["auc_all_rows"] - inner["auc_by_setting_block"][r["setting"]][
+                [b["name"] for b in tj["per_year"][str(y)]["blocks"]].index(r["block"]["name"])]) for r in rs)
+            aucs = {st: list(inner["auc_by_setting_block"][st]) for st in SETTINGS}
+            bn = [b["name"] for b in tj["per_year"][str(y)]["blocks"]]
+            for r in rs:
+                aucs[r["setting"]][bn.index(r["block"]["name"])] = r["auc_exit_before_outer_test"]
+            means = {st: float(np.mean(x)) for st, x in aucs.items()}
+            ch, sw = _choose(means)
+            v["exact"] = {"blocks_refitted": sorted({r["block"]["name"] for r in rs}),
+                          "refit_max_abs_diff_vs_cached_auc": repro, "mean_auc_by_setting_without_rows": means,
+                          "best_without_rows": max(SETTINGS, key=lambda st: means[st]),
+                          "best_minus_incumbent_without_rows": max(means[k] - means[INC] for k in SETTINGS if k != INC),
+                          "chosen_without_rows": ch, "switched_without_rows": sw, "same_choice": ch == v["chosen"]}
+    au = {"added": "after the selection ran (post-hoc audit; no choice was revised)", "rule": AUDIT_RULE,
+          "exact_rule": "where the bound cannot rule out a flip, every setting is refitted on each affected block "
+                        "(same seed, rows and threads; the refit must reproduce the cached AUC) and the block is "
+                        "re-scored without the rows; the selection rule is then re-applied",
+          "years": years, "n_rows_total": int(sum(v["n_rows"] for v in years.values())),
+          "all_choices_unchanged": bool(all(v["choice_cannot_flip"] or (v["exact"] or {}).get("same_choice")
+                                            for v in years.values()))}
+    tj["audit_inner_exit"] = au
+    tj["design"]["outer_test_data_used"] = (
+        f"inner rows are dated <= the year's anchor (fold Y-01 train_end); {au['n_rows_total']} inner scoring rows "
+        "(tickers with missing sessions) have labels that exit on or after the outer test start, and "
+        "audit_inner_exit shows that no year's choice depends on them")
+    tj["select_runtime"] = select_runtime(tj)
+    wjson(OUT / "tune.json", tj)
+    write_md(tj)
+    log(f"audit: {au['n_rows_total']} inner scoring rows exit on/after the outer test start; every choice unchanged: "
+        f"{au['all_choices_unchanged']}; " + ", ".join(
+            f"{y}: {v['n_rows']} rows 2B={v['difference_bound_2B']:.5f} "
+            + ("bound ok" if v["choice_cannot_flip"] else f"exact -> {v['exact']['chosen_without_rows']} "
+               f"(same {v['exact']['same_choice']}, refit diff {v['exact']['refit_max_abs_diff_vs_cached_auc']:.1e})")
+            for y, v in years.items()))
 
 
 def report(a) -> None:
@@ -372,7 +529,9 @@ def write_md(tj: dict) -> None:
          "as `ml/scale5y.make_model(\"all51\")`. The fitted trees were checked to honour the three overrides (smoke).",
          f"- Rule: {d['rule']}.",
          "- Anchor for year Y: `train_end` of fold Y-01 in `ml/data_10y/splits.json`. The anchor is embargo-adjusted, so "
-         "every label of an inner row has exited before the first test session of year Y: no outer test data is used.",
+         "an inner row's label exits before the first test session of year Y unless its ticker has missing sessions "
+         "(sentence corrected after the selection: such rows exist; the audit below counts them and shows that no "
+         "choice depends on them).",
          "- The outer run (`python3 -m ml.improve.ab run --data ml/data_10y --tag 10y_p2 --configs q7_tuned`) trains each "
          "fold exactly like the control with its calendar year's setting; the holdout (test window from 2026-08-03) "
          "takes the 2026 setting.", "",
@@ -400,6 +559,13 @@ def write_md(tj: dict) -> None:
               f"{z['n_jobs']} workers ({e['method']}); the smoke's 9 fits are reused from the cache.", ""]
         if z.get("tree_check_note"):
             L[-1:-1] = [f"- Note: {z['tree_check_note']}."]
+    rt = tj.get("select_runtime")
+    if rt:
+        L[-1:-1] = [f"- Measured (`tune.json` `select_runtime`): {rt['inner_fits']} inner fits, {rt['fit_seconds_sum']:,} fit "
+                    f"seconds, {rt['wall_minutes_total']} min wall at {rt['workers']} workers over {len(rt['runs'])} run(s) ("
+                    + "; ".join(f"{r['cached_at_start']} cached at start, {r['fitted']} fitted, {r['wall_seconds']} s"
+                                for r in rt["runs"])
+                    + ")" + (f"; {rt['note']}" if len(rt["runs"]) > 1 else "") + "."]
     hc = OUT / "harness_check.json"
     if hc.exists():
         h = json.loads(hc.read_text())
@@ -434,6 +600,24 @@ def write_md(tj: dict) -> None:
             L.append(f"| {s}{' (incumbent)' if s == INC else ''} | " + " | ".join(
                 f"{v['inner']['mean_auc_by_setting'][s]:.4f}" for v in py.values() if v["inner"]) + " |")
         L += ["", f"Years that switched away from the incumbent: {tj['summary']['switched_years'] or 'none'}.", ""]
+    au = tj.get("audit_inner_exit")
+    if au:
+        L += ["### Audit: inner scoring rows whose label exits inside the outer test window", "",
+              f"Added {au['added']}; `tune.json` `audit_inner_exit`. Rule: {au['rule']}.", "",
+              "| Year | Outer test start | Rows (block: k_pos + k_neg) | 2B | Best - incumbent | Chosen | Bound rules out a flip | "
+              "Exact check without the rows |", "|---|---|---|---:|---:|---|---|---|"]
+        for y, v in au["years"].items():
+            rb = ", ".join(f"{n}: {b['k_pos']} + {b['k_neg']}" for n, b in v["blocks"].items() if b["k_pos"] + b["k_neg"])
+            e = v.get("exact")
+            ex = ("" if not e else
+                  f"refit {', '.join(e['blocks_refitted'])} (max diff vs cached AUC {e['refit_max_abs_diff_vs_cached_auc']:.1e}): "
+                  f"best {e['best_without_rows']}, best - incumbent {e['best_minus_incumbent_without_rows']:+.5f}, "
+                  f"chosen {e['chosen_without_rows']}: {'same choice' if e['same_choice'] else 'DIFFERENT CHOICE'}")
+            L.append(f"| {y} | {v['outer_test_start']} | {rb or 'none'} | {v['difference_bound_2B']:.5f} | "
+                     f"{v['best_setting_minus_incumbent']:+.5f} | {v['chosen']} | {'yes' if v['choice_cannot_flip'] else 'no'} | "
+                     f"{ex} |")
+        L += ["", f"{au['n_rows_total']} rows in all ({au['exact_rule']}). Every year's choice is the same without them: "
+                  f"{'yes' if au['all_choices_unchanged'] else 'NO (see the table)'}.", ""]
     o = tj.get("outer")
     if o:
         p, m = o["pair"], o["models"]
@@ -460,14 +644,17 @@ def write_md(tj: dict) -> None:
                          f"{100 * x['name_level_excess_ann_vs_ew']:+.1f}% | {x['dsr']:.3f} |")
             L.append("")
     else:
-        L += ["## Outer walk-forward", "", "Not run yet: the lead runs it after the selection finishes.", ""]
+        L += ["## Outer walk-forward", "", "Not run yet. The selection is complete (`selected_params.json`); the outer run "
+              "is `python3 -m ml.improve.ab run --data ml/data_10y --tag 10y_p2 --configs q7_tuned --n-jobs 2`, then "
+              "compare, the books (`ab_books --configs control q7_tuned --out-dir ml/results/improve2/tune --out-name "
+              "books_q7 --n-trials 261`) and `python3 -m ml.improve.tune report`.", ""]
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "TUNE.md").write_text("\n".join(L) + "\n")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["doc", "smoke", "select", "report"])
+    ap.add_argument("stage", choices=["doc", "smoke", "select", "audit", "report"])
     ap.add_argument("--n-jobs", type=int, default=2)
     ap.add_argument("--year", type=int, default=2026)
     ap.add_argument("--block", default="blk00", help="smoke: inner block name (blk00 = the block ending at the anchor)")
@@ -477,7 +664,7 @@ def main() -> None:
     if a.stage == "doc":                      # design section only, before any result exists
         write_md({"design": {"rule": RULE}})
         return
-    {"smoke": smoke, "select": select, "report": report}[a.stage](a)
+    {"smoke": smoke, "select": select, "audit": audit, "report": report}[a.stage](a)
 
 
 if __name__ == "__main__":

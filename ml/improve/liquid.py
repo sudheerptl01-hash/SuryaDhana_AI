@@ -509,6 +509,17 @@ def run_compare(sets: dict, out_path: Path | None, allow_partial: bool, self_tes
     vs = [e["pass_mark"]["PASS"] for e in res["sets"].values()]
     res["verdict"] = ("PASS" if any(v is True for v in vs) else
                       "UNDETERMINED (benchmark mismatch)" if any(v is None for v in vs) else "FAIL")
+    # definition 6: the verdict line says so when the binding (iid) and the 3-month-block readings disagree
+    notes = []
+    for n, e in res["sets"].items():
+        pm, pn = e["pass_mark"], e["paired_vs_control_neutral"]
+        if not pm["readings_agree_iid_vs_block3"]:
+            notes.append(f"{n}: the iid paired CI {'excludes' if pm['paired_iid_ci_excludes_0_above'] else 'does not exclude'} "
+                         f"zero on the positive side but the {BLOCK_MONTHS}-month block CI "
+                         f"{'does' if pm['paired_block3_ci_excludes_0_above'] else 'does not'}; the iid reading is binding")
+        if e["benchmark_check"].get("correction"):
+            notes.append(f"{n}: {e['benchmark_check']['correction']}")
+    res["verdict_notes"] = notes
     if out_path is not None:
         wjson(out_path, res)
     return res
@@ -625,7 +636,8 @@ def write_md() -> None:
     status = lj["verdict"] if lj else "PENDING (full runs not yet done)"
     L = ["# Q3. A model for the liquid universe", "",
          f"**Verdict: {status}** · Plan: `ml/IMPROVEMENT_PLAN_2.md` §2 Q3 (2 configurations, 4 books = 6 trials) · "
-         "Code: `ml/improve/liquid.py` · JSON: `ml/results/improve2/liquid/build.json`, `liquid.json`, `selftest.json`", "",
+         "Code: `ml/improve/liquid.py` · JSON: `ml/results/improve2/liquid/build.json`, `liquid.json`, `selftest.json`, "
+         "`smoke.json`", "",
          "**Pass mark (fixed):** for L1 or L2, the neutral liquid book's IR ≥ 0.5 with its month-block 95% CI excluding "
          "zero over the 105 signal months **and** its paired monthly excess over the control's neutral liquid book has a "
          "bootstrap 95% CI excluding zero.", "", DEFINITIONS]
@@ -727,7 +739,8 @@ def write_md() -> None:
             L += ["Models (descriptive, each on its own restricted label): " + "; ".join(
                 f"{n} CV AUC {m['cv_auc_mean']:.4f} {_ci(m['cv_mean_ci95'], 4)}, holdout {'n/a' if m['holdout_auc'] is None else format(m['holdout_auc'], '.4f')}, rank IC "
                 f"{m['rank_ic_cv_mean']:+.4f} (NW t {m['rank_ic_nw_t']:.1f})" for n, m in md) + ".", ""]
-        L += [f"**Verdict: {lj['verdict']}.**", ""]
+        notes = lj.get("verdict_notes") or []
+        L += [f"**Verdict: {lj['verdict']}.**" + ("" if not notes else " " + " ".join(f"Note: {x}." for x in notes)), ""]
     L += ["## Code-path test (`selftest.json`)", ""]
     st = (lj or {}).get("self_test") if lj and isinstance(lj.get("self_test"), dict) else None
     if st:
@@ -743,6 +756,23 @@ def write_md() -> None:
               f"{sj['design']['ir_interval_month_blocks']['n_month_blocks']}.", ""]
     else:
         L += ["Not run yet.", ""]
+    smk = json.loads((OUT / "smoke.json").read_text()) if (OUT / "smoke.json").exists() else None
+    if smk:
+        rt = smk["runtime_estimate_full"]
+        L += ["## Smoke run (`smoke.json`; code path and runtime only, outputs deleted)", ""]
+        for s in smk["steps"]:
+            w = s["wall_seconds"]
+            w = ", ".join(f"{k} {v} s" for k, v in w.items()) if isinstance(w, dict) else f"{w} s"
+            extra = f" Seconds per fold {s['seconds_per_fold']}, training rows {s['train_rows_per_fold']}." \
+                if "seconds_per_fold" in s else ""
+            L.append(f"- `{s['cmd']}`: {'ran' if s['ok'] else 'FAILED'} ({w}).{extra}")
+            for c in s.get("checked", []):
+                L.append(f"  - {c}.")
+            if s.get("deviation_smoke_only"):
+                L.append(f"  - Smoke-only deviation: {s['deviation_smoke_only']}")
+        L += ["", f"Deleted: {', '.join(f'`{d}`' for d in smk['deleted'])}. Full-run estimate: about "
+              f"{rt['total_minutes']} minutes ({'; '.join(f'{k} {v}' for k, v in rt['minutes'].items())}); {rt['note']}. "
+              f"Basis: {rt['basis']}.", ""]
     L += ["## Reproduce", "", "```",
           "cd /home/user/SuryaDhana_AI && python3 -m ml.improve.liquid build",
           "cd /home/user/SuryaDhana_AI && python3 -m ml.improve.ab run --data ml/data_10y_liq --tag 10y_liq --configs control --n-jobs 2",

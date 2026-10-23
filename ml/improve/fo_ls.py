@@ -10,6 +10,11 @@ aggregated daily with ml/strategy_backtest.py's Calendar; costs 20 bps per side 
 10 bps per roll. Every convention is fixed in ml/results/improve2/fo_ls/FO_LS.md section 1 (written before any
 result); this module implements it and writes fo_ls.json and the results section of FO_LS.md.
 
+Added after the results of record existed (the primary books are unchanged, number for number): drawdown peak /
+trough / recovery dates; an independent recomputation of a seeded sample of short-leg paths from the raw futures
+rows; a split/bonus check of the futures adjustment; and a total-return sensitivity (FO_LS.md 2.7: cash dividends
+credited to the long leg, the dividend added back on contracts NSE adjusted for it), which is not a pass-mark input.
+
 Reused, not reimplemented: ml/books/data.py (base panel, scores, price grid, name-level cost inputs),
 ml/strategy_backtest.py (build_blocks, leg, trade_fracs, Calendar, series_stats, beta_alpha, tranche_stats,
 dsr_block, wmoments), ml/books/engine.py (neutralise, BookEngine.run_members, _order),
@@ -30,6 +35,7 @@ import argparse
 import dataclasses
 import json
 import math
+import re
 import time
 from pathlib import Path
 
@@ -51,6 +57,7 @@ FO_PARQUET = ML_DIR / "data_ext" / "fo_daily_stock.parquet"
 INDEX_PARQUET = ML_DIR / "data_ext" / "index_daily.parquet"
 CA_FEED = ML_DIR / "data_ext" / "corporate_actions_feed_10y.csv"
 BREAK_FLAGS = ML_DIR / "data_ext" / "price_break_flags_10y.csv"
+CA_ALL = ML_DIR / "data_ext" / "corporate_actions_all_10y.csv"     # every bc record, dividends included
 BOOKS_JSON = ML_DIR / "results" / "improve" / "books" / "books.json"
 OUT = ML_DIR / "results" / "improve2" / "fo_ls"
 MD_MARKER = "<!-- RESULTS"
@@ -69,6 +76,13 @@ BOOKS = {"plain": "none", "neutral": "vol+size"}
 VARIANTS = ("net", "gross", "no_netting")
 SMOKE_RANGE = ("2019-01-01", "2019-03-31")
 NIFTY = "Nifty 50"
+# total-return sensitivity (added after the results of record; FO_LS.md 2.7): a stock-futures contract counts as
+# adjusted for a dividend when the dividend is at least DIV_ADJ_MIN of the previous unadjusted close and the
+# ex-date futures-minus-cash return gap is below DIV_ADJ_SHARE of the dividend yield (an unadjusted contract does
+# not fall on the ex-date, so the gap is about the whole yield; an adjusted one falls with the cash, gap about 0)
+DIV_ADJ_MIN, DIV_ADJ_SHARE = 0.02, 0.5
+DIV_AMT = re.compile(r"(?:RS|RE|DIV|DV)\.?\s*[-:]?\s*(\d+(?:\.\d+)?)(?!\s*%)")
+N_CHECK = 400                       # independent short-path recomputation: sampled name-windows
 
 T0 = time.time()
 _LOG: Path | None = None
@@ -304,9 +318,12 @@ def universe_mask(base: pd.DataFrame, G: FutGrid, sessions: pd.DatetimeIndex) ->
 
 
 # --------------------------------------------------------------------------- short-leg paths
-def short_paths(blocks, tick: np.ndarray, G: FutGrid):
+def short_paths(blocks, tick: np.ndarray, G: FutGrid, div_add: np.ndarray | None = None):
     """Per block: futures value path (H+1, n) of every universe name (chain-linked across rolls, split-adjusted),
-    the matching cash-close path (same alive pattern), a (H, n) roll mask, and the contract bookkeeping."""
+    the matching cash-close path (same alive pattern), a (H, n) roll mask, and the contract bookkeeping.
+    div_add (S, J), total-return sensitivity only: the split-adjusted dividend NSE took out of an adjusted contract's
+    price on its ex-date session, added back to that session's settle in the return (the position is adjusted, so
+    the holder neither gains nor loses the dividend)."""
     jmap = np.array([G.col[t] for t in tick])
     fut, spot, rolls, info = [], [], [], []
     cnt = {"entry_settle_backfilled": 0, "entry_never_quoted_flat": 0, "settle_carried_forward": 0,
@@ -330,7 +347,8 @@ def short_paths(blocks, tick: np.ndarray, G: FutGrid):
             enter = pending & (c == c0) & np.isfinite(cur)
             cnt["settle_carried_forward"] += int((alive & ~np.isfinite(cur)).sum())
             cur = np.where(np.isfinite(cur), cur, prev)
-            V = np.where(alive, V * cur / prev, V)
+            add = 0.0 if div_add is None else div_add[d, cols]
+            V = np.where(alive, V * (cur + add) / prev, V)
             Vs = np.where(alive, Vs * s_cur / s_prev, Vs)
             P[i], Ps[i] = V, Vs
             prev = np.where(enter, cur, prev)
@@ -385,9 +403,205 @@ def close_marked(blocks, sessions: pd.DatetimeIndex, tick: np.ndarray, O: pd.Dat
     return out, {"interior_marks_unavailable_carried": n_fill}
 
 
+# --------------------------------------------------------------------------- total-return sensitivity (post-result)
+def dividends(sessions: pd.DatetimeIndex, G: FutGrid):
+    """Cash dividends of the F&O stocks from the bc records (corporate_actions_all_10y.csv, kind 'dividend'):
+    amount = sum of the rupee amounts in the purpose text of the record(s) still listed last before the ex-date
+    (earlier records are preliminary notices, often without an amount); ex-date -> first price session on or after it.
+    Returns DV (S, J): split-adjusted dividend per share on its ex-date session (long-leg credit), FA (S, J): the
+    same restricted to contracts NSE adjusted for the dividend (short-leg add-back), and the event accounting."""
+    ca = pd.read_csv(CA_ALL, parse_dates=["ex_date", "last_seen"])
+    d = ca[(ca["kind"] == "dividend") & ca["ticker"].isin(G.col) & ca["ex_date"].notna()].copy()
+
+    def amount(p) -> float:
+        v = DIV_AMT.findall(str(p).upper())
+        return float(sum(float(x) for x in v)) if v else float("nan")
+
+    d["amt"] = d["purpose"].map(amount)
+    n_events = int(d.groupby(["ticker", "ex_date"]).ngroups)
+    d = d[d["amt"].notna()]
+    d = d[d["last_seen"] == d.groupby(["ticker", "ex_date"])["last_seen"].transform("max")]
+    d = d.drop_duplicates(["ticker", "ex_date", "purpose"])
+    ev = d.groupby(["ticker", "ex_date"], as_index=False)["amt"].sum()
+    S, J = G.present.shape
+    sv = sessions.values
+    DV, FA = np.zeros((S, J)), np.zeros((S, J))
+    by_year, n_in, n_adj, n_large, n_conf, n_nonmem = {}, 0, 0, 0, 0, 0
+    for t, e, a in ev.itertuples(index=False):
+        x = int(np.searchsorted(sv, np.datetime64(e), side="left"))
+        if x <= 0 or x >= S:
+            continue
+        j = G.col[t]
+        DV[x, j] += a * G.fac[x, j]
+        n_in += 1
+        cu_prev = G.cadj[x - 1, j] / G.fac[x - 1, j]
+        dy = a / cu_prev if np.isfinite(cu_prev) and cu_prev > 0 else float("nan")
+        if not (np.isfinite(dy) and dy >= DIV_ADJ_MIN):
+            continue
+        n_large += 1
+        if not (G.present[x, j] or G.present[x - 1, j]):
+            n_nonmem += 1                                 # not an F&O member around the ex-date: no short exposure
+            continue
+        yr = by_year.setdefault(str(sessions[x].year), {"member_events_ge_2pct": 0, "futures_adjusted": 0})
+        yr["member_events_ge_2pct"] += 1
+        if not (G.present[x, j] and G.present[x - 1, j]) or G.fac[x, j] != G.fac[x - 1, j]:
+            n_conf += 1                                   # member, but no quote on one side or a split the same day
+            continue
+        c = G.Nc[x - 1] if G.Nc[x - 1] >= x else G.Xc[x - 1]
+        s0 = G.SN[x - 1, j] if G.Nc[x - 1] == c else G.SX[x - 1, j]
+        s1 = G.SN[x, j] if G.Nc[x] == c else G.SX[x, j]
+        gap = (s1 / s0 - 1.0) - (G.cadj[x, j] / G.cadj[x - 1, j] - 1.0)
+        if np.isfinite(gap) and gap / dy < DIV_ADJ_SHARE:
+            FA[x, j] = a * G.fac[x, j]
+            n_adj += 1
+            yr["futures_adjusted"] += 1
+    meta = {"source": rel(CA_ALL), "fo_dividend_events": n_events, "events_with_amount_in_span": n_in,
+            "share_events_with_amount": float(len(ev) / max(n_events, 1)),
+            "events_ge_2pct_of_price": n_large, "events_ge_2pct_not_fo_member": n_nonmem,
+            "events_ge_2pct_member_unclassifiable": n_conf,
+            "futures_adjusted_events": n_adj, "by_year_ge_2pct": dict(sorted(by_year.items())),
+            "rule": f"adjusted if dividend >= {DIV_ADJ_MIN:.0%} of the previous unadjusted close and the ex-date "
+                    f"futures-minus-cash return gap < {DIV_ADJ_SHARE} x the dividend yield"}
+    return DV, FA, meta
+
+
+def with_dividends(cblocks, tick: np.ndarray, G: FutGrid, O: pd.DataFrame, DV: np.ndarray):
+    """Long paths credited with cash dividends whose ex-date session is t+2 .. t+21 (bought at the open of t+1 cum
+    dividend, sold at the open of t+21), added (not reinvested) from the ex-date's mark on, per rupee of entry."""
+    jmap = np.array([G.col[t] for t in tick])
+    Ob = O.bfill().to_numpy(float)
+    out = []
+    for b in cblocks:
+        a = b.pos + 1
+        cum = np.cumsum(DV[a + 1:a + 1 + H][:, jmap[b.ci]], axis=0) / Ob[a, b.ci][None, :]
+        P = b.path.copy()
+        P[1:] += cum
+        out.append(dataclasses.replace(b, path=P))
+    return out
+
+
+def split_check(G: FutGrid, sessions: pd.DatetimeIndex) -> dict:
+    """Every validated split/bonus ex-date of an F&O stock with a futures quote on both sides: the same contract's
+    split-adjusted settle return against the adjusted cash close return on the ex-date session."""
+    ca = pd.read_csv(CA_FEED, parse_dates=["ex_date"])
+    ca = ca[ca["ticker"].isin(G.col) & (ca["ex_date"] >= sessions[0]) & (ca["ex_date"] <= sessions[-1])]
+    sv, rows = sessions.values, []
+    for t, d in zip(ca["ticker"], ca["ex_date"]):
+        i = int(np.searchsorted(sv, np.datetime64(d), side="left"))
+        if i <= 0 or i >= len(sessions) or sessions[i] != d:
+            continue
+        j = G.col[t]
+        if not (G.present[i, j] and G.present[i - 1, j]):
+            continue
+        c = G.Nc[i - 1] if G.Nc[i - 1] >= i else G.Xc[i - 1]
+        s0 = G.SN[i - 1, j] if G.Nc[i - 1] == c else G.SX[i - 1, j]
+        s1 = G.SN[i, j] if G.Nc[i] == c else G.SX[i, j]
+        raw_r = s1 / s0 - 1.0
+        adj_r = (s1 * G.fac[i, j]) / (s0 * G.fac[i - 1, j]) - 1.0
+        cash_r = G.cadj[i, j] / G.cadj[i - 1, j] - 1.0
+        if np.isfinite(adj_r) and np.isfinite(cash_r):
+            rows.append((raw_r, abs(adj_r - cash_r)))
+    r = np.array(rows)
+    return {"events": int(len(r)), "median_abs_unadjusted_futures_return": float(np.median(np.abs(r[:, 0]))),
+            "max_abs_gap_adjusted_futures_vs_cash": float(r[:, 1].max()),
+            "share_gap_gt_2pt": float((r[:, 1] > 0.02).mean())} if len(r) else {"events": 0}
+
+
+# --------------------------------------------------------------------------- independent check of the short paths
+def independent_short_check(blocks, tick: np.ndarray, fut, sessions: pd.DatetimeIndex, n: int = N_CHECK) -> dict:
+    """Recompute the futures value at exit for a seeded sample of name-windows directly from the raw futures rows
+    of each stock (no grid, no common calendar): the stock's own near expiry at t+1 (next month if < 3 sessions),
+    settles of the contract with that expiry, split factor close / close_unadj of the price export, roll at the
+    expiry session into the stock's own next expiry. Windows with a gap or a flat tail are skipped (counted)."""
+    f = pd.read_parquet(FO_PARQUET, columns=["date", "ticker", "fut_near_settle", "fut_near_expiry",
+                                            "fut_next_settle", "fut_next_expiry"])
+    f["date"] = pd.to_datetime(f["date"])
+    px = pd.read_parquet(PRICES, columns=["date", "ticker", "close", "close_unadj"])
+    px["date"] = pd.to_datetime(px["date"])
+    sv = sessions.values
+    rng = np.random.default_rng(sb.SEED)
+    ks = rng.choice(len(blocks), min(n, len(blocks)), replace=False)
+    picks = [(k, int(rng.integers(len(blocks[k].ci)))) for k in ks]
+    need = {tick[blocks[k].ci[j]] for k, j in picks}
+    fr = {t: g.set_index("date") for t, g in f[f["ticker"].isin(need)].groupby("ticker")}
+    pr = {t: g.set_index("date") for t, g in px[px["ticker"].isin(need)].groupby("ticker")}
+
+    def es(e) -> int:
+        return int(np.searchsorted(sv, np.datetime64(e), side="right") - 1)
+
+    diffs, n_roll, skipped = [], 0, 0
+    for k, j in picks:
+        b, t = blocks[k], tick[blocks[k].ci[j]]
+        g, p = fr[t], pr[t]
+        a, e_ = b.pos + 1, b.pos + 1 + H
+
+        def settle(i, c):
+            d = sessions[i]
+            if d not in g.index or d not in p.index:
+                return None
+            r, q = g.loc[d], p.loc[d]
+            if pd.notna(r["fut_near_expiry"]) and es(r["fut_near_expiry"]) == c:
+                v = r["fut_near_settle"]
+            elif pd.notna(r["fut_next_expiry"]) and es(r["fut_next_expiry"]) == c:
+                v = r["fut_next_settle"]
+            else:
+                return None
+            v = v * q["close"] / q["close_unadj"]
+            return v if np.isfinite(v) else None
+
+        if sessions[a] not in g.index:
+            skipped += 1
+            continue
+        r0 = g.loc[sessions[a]]
+        c = es(r0["fut_near_expiry"])
+        if c - a < NEXT_IF_LT:
+            c = es(r0["fut_next_expiry"])
+        prev, V, ok, rolled = settle(a, c), 1.0, True, False
+        ok = prev is not None
+        for d in range(a + 1, e_ + 1):
+            if not ok:
+                break
+            cur = settle(d, c)
+            if cur is None:
+                ok = False
+                break
+            V *= cur / prev
+            prev = cur
+            if d == c and d < e_:
+                rr = g.loc[sessions[d]] if sessions[d] in g.index else None
+                if rr is None or pd.isna(rr["fut_next_expiry"]):
+                    ok = False
+                    break
+                c = es(rr["fut_next_expiry"])
+                prev = settle(d, c)
+                ok = prev is not None
+                rolled = True
+        if not ok:
+            skipped += 1
+            continue
+        n_roll += rolled
+        diffs.append(abs(V - fut[k][-1, j]))
+    diffs = np.array(diffs)
+    return {"sampled_name_windows": len(picks), "checked": int(diffs.size), "checked_with_roll": int(n_roll),
+            "skipped_gap_or_flat": skipped, "max_abs_diff_exit_value": float(diffs.max()) if diffs.size else None,
+            "share_abs_diff_gt_1e_9": float((diffs > 1e-9).mean()) if diffs.size else None,
+            "seed": sb.SEED}
+
+
 # --------------------------------------------------------------------------- statistics
 def wmean(x: np.ndarray, e: np.ndarray) -> float:
     return float((e * x).sum() / e.sum())
+
+
+def drawdown_dates(x: np.ndarray, e: np.ndarray, dates: pd.DatetimeIndex) -> dict:
+    """Peak, trough and recovery sessions of the largest drawdown of the fixed-capital NAV (sb.series_stats' NAV)."""
+    nav = np.cumprod(1.0 + e * x)
+    run = np.maximum.accumulate(nav)
+    tr = int(np.argmin(nav / run - 1.0))
+    pk = int(np.argmax(nav[:tr + 1]))
+    rec = np.flatnonzero(nav[tr:] >= nav[pk])
+    return {"max_dd_peak": str(dates[pk].date()), "max_dd_trough": str(dates[tr].date()),
+            "max_dd_recovered": str(dates[tr + rec[0]].date()) if rec.size else None}
 
 
 def dimson_beta(x: np.ndarray, m: np.ndarray, m_lag: np.ndarray, e: np.ndarray) -> dict:
@@ -409,11 +623,12 @@ def seg_stats(cal, seg: str, DL, DS, DSb, R, Rg, nifty: np.ndarray) -> dict:
     ba = sb.beta_alpha(x, m, e)
     dj = dimson_beta(x, m, m1, e)
     t = sb.tranche_stats(R, Rg, H=H)
+    dd = drawdown_dates(x, e, cal.day_dates[cols])
     return {"ann_net_return": st["ann_mean_daily"], "ann_return_tranche": t["ann_return_252_h"],
             "ann_excess_over_rf": st["ann_mean_daily"] - RF, "ann_vol": st["ann_vol"],
             "sharpe": st["sharpe"], "sharpe_ci95": st["sharpe_ci95"], "p_sharpe_gt0": st["p_sharpe_gt0"],
             "sharpe_rf0": st0["sharpe"], "sharpe_rf0_ci95": st0["sharpe_ci95"],
-            "max_dd": st["max_dd"], "cum_return_fixed_capital": st["cum_return_fixed_capital"],
+            "max_dd": st["max_dd"], **dd, "cum_return_fixed_capital": st["cum_return_fixed_capital"],
             "n_days": st["n_days"], "n_month_blocks": st["n_month_blocks"], "mean_exposure": st["mean_exposure"],
             "beta_plain": ba["beta_vs_benchmark"], "alpha_ann_plain": ba["alpha_ann"],
             "beta_dimson": dj["beta_dimson"], "beta_dimson_lag0": dj["lag0"], "beta_dimson_lag1": dj["lag1"],
@@ -612,7 +827,12 @@ def write_md(res: dict, md_path: Path) -> None:
                                             f"[{f_num(b['segments']['combined']['net']['sharpe_rf0_ci95'][0])}, "
                                             f"{f_num(b['segments']['combined']['net']['sharpe_rf0_ci95'][1])}]"),
         ("Gross Sharpe, rf 5.5%", lambda b: f_num(b["segments"]["combined"]["gross"]["sharpe"])),
-        ("Max drawdown (fixed capital)", lambda b: f_pct(b["segments"]["combined"]["net"]["max_dd"])),
+        ("Max drawdown (fixed capital); peak → trough", lambda b: f"{f_pct(b['segments']['combined']['net']['max_dd'])}; "
+                                                                  f"{b['segments']['combined']['net']['max_dd_peak']} → "
+                                                                  f"{b['segments']['combined']['net']['max_dd_trough']}"),
+        ("Max drawdown gross; peak → trough", lambda b: f"{f_pct(b['segments']['combined']['gross']['max_dd'])}; "
+                                                        f"{b['segments']['combined']['gross']['max_dd_peak']} → "
+                                                        f"{b['segments']['combined']['gross']['max_dd_trough']}"),
         ("Months positive (excess over rf)", lambda b: f"{b['months']['months_positive_excess_over_rf']}/{b['months']['n_months']}"),
         ("Months positive (net > 0)", lambda b: f"{b['months']['months_positive_net']}/{b['months']['n_months']}"),
         ("Beta to Nifty 50, plain", lambda b: f_num(b["segments"]["combined"]["net"]["beta_plain"])),
@@ -691,7 +911,49 @@ def write_md(res: dict, md_path: Path) -> None:
           f"- Long paths: exit mark matches the label on {100 * dd['long_paths']['exit_mark_matches_label_frac']:.3f}% of rows; entry "
           f"open back-filled {dd['long_paths']['entry_open_backfilled']}; interior close marks carried forward "
           f"{dd['long_paths']['interior_marks_unavailable_carried']}.",
-          f"- Nifty 50 sessions missing on the price calendar (forward-filled): {dd['nifty_missing_sessions']}.", ""]
+          f"- Nifty 50 sessions missing on the price calendar (forward-filled): {dd['nifty_missing_sessions']}."]
+    ic, sc_ = dd["independent_short_check"], dd["split_bonus_check"]
+    L += [f"- Independent recomputation of the short leg (seeded sample of {ic['sampled_name_windows']} name-windows, "
+          f"straight from each stock's raw futures rows without the common calendar): {ic['checked']} checked "
+          f"({ic['checked_with_roll']} with a roll, {ic['skipped_gap_or_flat']} skipped for a gap or a flat tail), "
+          f"largest difference in the exit value {ic['max_abs_diff_exit_value']:.1e}.",
+          f"- Split/bonus adjustment of the futures: {sc_['events']} validated ex-dates of F&O stocks with quotes on both "
+          f"sides; the unadjusted settle moves by a median {100 * sc_['median_abs_unadjusted_futures_return']:.0f}% on the "
+          f"ex-date, the adjusted settle stays within {100 * sc_['max_abs_gap_adjusted_futures_vs_cash']:.1f} points of "
+          f"the adjusted cash close ({100 * sc_['share_gap_gt_2pt']:.1f}% of events above 2 points).", ""]
+    tr = res["sensitivity_total_return"]
+    dm = tr["dividends"]
+    L += ["### 2.7 Sensitivity added after the results of record: dividends (total return)", "",
+          "This sensitivity was added after §2.1-2.6 existed. It changes no convention, book or pass mark. "
+          "The primary long leg is price-only (the engine's convention) and the futures short owes no dividends, so "
+          "the book misses the long leg's dividends. Separately, NSE adjusts a stock-futures contract on the ex-date "
+          "of a large dividend, and the unadjusted settle chain books that adjustment as a gain to the short. "
+          "The sensitivity corrects both. Cash dividends with ex-date t+2..t+21 are credited to the long leg. "
+          "On contracts classified as adjusted, the dividend is added back to the ex-date settle. "
+          f"Rule: {dm['rule']}.", "",
+          f"- Dividend events of F&O stocks with a parsed amount: {100 * dm['share_events_with_amount']:.1f}% "
+          f"({dm['events_with_amount_in_span']:,} in the price span). Events at or above 2% of price: "
+          f"{dm['events_ge_2pct_of_price']}, of which {dm['events_ge_2pct_not_fo_member']} fall outside the stock's F&O "
+          f"membership (no short exposure possible) and {dm['events_ge_2pct_member_unclassifiable']} are members without "
+          f"a quote on one side or with a split the same day (left unadjusted). Classified as adjusted contracts: "
+          f"{dm['futures_adjusted_events']}. By year (member events at or above 2% / classified adjusted): "
+          + ", ".join(f"{y} {v['member_events_ge_2pct']}/{v['futures_adjusted']}" for y, v in dm["by_year_ge_2pct"].items())
+          + ".",
+          f"- Cross-check: the dividend credit of the equal-weight F&O universe is "
+          f"{f_pct(dm['ew_fo_universe_dividend_credit_ann'], 2)} a year. The Nifty 50's own dividend yield "
+          f"averages {f_pct(dm['nifty50_div_yield_mean_over_pnl_sessions'], 2)} over the same sessions.", "",
+          "| Book | Net ann. | Long-leg dividends | Short-leg add-back | Net Sharpe [95% CI] | Sharpe rf 0 | "
+          "Beta plain / Dimson | DSR | Verdict under the same rule |",
+          "|---|---:|---:|---:|---|---:|---|---:|---|"]
+    for name in BOOKS:
+        t_ = tr[name]
+        c = t_["combined"]["net"]
+        L.append(f"| {name} | {f_pct(c['ann_net_return'])} | {f_pct(t_['long_leg_dividend_credit_ann'], 2)} | "
+                 f"{f_pct(t_['short_leg_adjusted_dividend_addback_ann'], 2)} | {f_num(c['sharpe'])} "
+                 f"[{f_num(c['sharpe_ci95'][0])}, {f_num(c['sharpe_ci95'][1])}] | {f_num(c['sharpe_rf0'])} | "
+                 f"{f_num(c['beta_plain'])} / {f_num(c['beta_dimson'])} | {t_['dsr']['dsr']:.3f} | "
+                 f"{'PASS' if t_['pass_mark']['pass'] else 'FAIL'} |")
+    L.append("")
     md_path.write_text(head + "\n".join(L) + "\n" + MD_END + tail)
 
 
@@ -730,7 +992,7 @@ def main() -> None:
     comp = D.cost_components(raw, sessions, tick, adv20)
     eng = E.BookEngine(blocks, sessions, len(tick), H, comp)
     # ---- Nifty 50 close-to-close on the price calendar
-    ix = pd.read_parquet(INDEX_PARQUET, columns=["date", "index_name", "close"])
+    ix = pd.read_parquet(INDEX_PARQUET, columns=["date", "index_name", "close", "div_yield"])
     ix = ix[ix["index_name"] == NIFTY].copy()
     ix["date"] = pd.to_datetime(ix["date"])
     nc = ix.set_index("date")["close"].sort_index()
@@ -788,6 +1050,36 @@ def main() -> None:
                            "it; with interior close marks (amendment A2) the two estimators should agree"}
     log(f"context: top quintile plain excess {ctx['plain|top_quintile']['combined']['20bps']['excess_ann_vs_ew']:+.4f}, "
         f"neutral {ctx['neutral|top_quintile']['combined']['20bps']['excess_ann_vs_ew']:+.4f}; beta check {beta_sanity}")
+    # ---- checks and the total-return sensitivity (added after the results of record; FO_LS.md 2.7)
+    ichk = independent_short_check(blocks, tick, fut, sessions)
+    schk = split_check(G, sessions)
+    log(f"independent short-path check {ichk}; split check {schk}")
+    DV, FA, dmeta = dividends(sessions, G)
+    cblocks_tr = with_dividends(cblocks, tick, G, O, DV)
+    fut_tr = short_paths(blocks, tick, G, div_add=FA)[0]
+    sblocks_tr = [dataclasses.replace(b, path=P) for b, P in zip(blocks, fut_tr)]
+    Ltr, _, _ = sb.leg(cblocks_tr, allm, len(tick), H)
+    ndy = ix.set_index("date").reindex(cal.day_dates)["div_yield"]
+    dmeta["ew_fo_universe_dividend_credit_ann"] = float((Ltr[:, H] - Lc[:, H]).mean() * PPY / H)
+    dmeta["nifty50_div_yield_mean_over_pnl_sessions"] = float(ndy.mean() / 100.0)
+    tr = {"note": "added after the results of record existed; changes no convention, book or pass mark",
+          "long_leg": "cash dividends with ex-date session t+2..t+21 credited per rupee of entry (not reinvested)",
+          "short_leg": "on contracts NSE adjusted for a dividend, the dividend is added back to the ex-date settle",
+          "dividends": dmeta}
+    for name, sc in scs.items():
+        so = run_book(name, sc, blocks, cblocks_tr, sblocks_tr, spblocks, rolls, binfo, eng, nifty, var_sr)
+        c, c0 = so["segments"]["combined"]["net"], books[name]["segments"]["combined"]["net"]
+        tr[name] = {"combined": {v: {k: so["segments"]["combined"][v][k] for k in
+                                     ("ann_net_return", "ann_vol", "sharpe", "sharpe_ci95", "sharpe_rf0", "sharpe_rf0_ci95",
+                                      "beta_plain", "beta_dimson", "long_leg_ann", "short_leg_ann", "max_dd")}
+                                 for v in VARIANTS},
+                    "long_leg_dividend_credit_ann": c["long_leg_ann"] - c0["long_leg_ann"],
+                    "short_leg_adjusted_dividend_addback_ann": c["short_leg_ann"] - c0["short_leg_ann"],
+                    "dsr": so["dsr"][str(N_TRIALS)], "pass_mark": so["pass_mark"],
+                    "months": {k: so["months"][k] for k in ("n_months", "months_positive_excess_over_rf", "months_positive_net")}}
+        log(f"{name} [total-return sensitivity]: net {c['ann_net_return']:+.4f} Sharpe {c['sharpe']:+.2f} "
+            f"{[round(v, 2) for v in c['sharpe_ci95']]} beta {c['beta_plain']:+.3f} -> "
+            f"{'PASS' if so['pass_mark']['pass'] else 'FAIL'}")
     res = {
         "stream": "Q4", "title": "Market-neutral long-short on F&O names via stock futures",
         "plan": "ml/IMPROVEMENT_PLAN_2.md section 2 Q4", "conventions": "ml/results/improve2/fo_ls/FO_LS.md section 1",
@@ -806,12 +1098,14 @@ def main() -> None:
                      "last_signal": str(blocks[-1].date.date()),
                      "last_pnl_session": str(cal.day_dates[-1].date()), "n_months": len(set(month_of))},
         "data": {"universe": uinfo, "futures": G.meta, "short_paths": scnt, "long_paths": check,
-                 "nifty_missing_sessions": nifty_missing},
+                 "nifty_missing_sessions": nifty_missing, "independent_short_check": ichk,
+                 "split_bonus_check": schk},
         "amendments": {"A1": "futures/cash break screen kept as a diagnostic, not an exclusion",
                        "A2": "long leg's interior daily marks at adjusted closes (entry and exit at opens unchanged)",
                        "doc": "ml/results/improve2/fo_ls/FO_LS.md section 1.8"},
         "books": books,
         "sensitivity_open_marks": sens,
+        "sensitivity_total_return": tr,
         "pass_mark": {"rule": "net annualised Sharpe (rf 5.5%) >= 1.0 with its month-block 95% CI lower bound > 0, and beta to "
                               "the Nifty 50 within +-0.2 on both the plain and the Dimson estimator",
                       **{n: books[n]["pass_mark"] for n in BOOKS}},

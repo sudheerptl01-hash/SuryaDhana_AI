@@ -27,7 +27,8 @@ Signal dates 2019-01-01 to 2019-03-29 (62), P&L sessions to 2019-05-03. Universe
 | Sharpe, rf 5.5% [95% CI] | +2.62 [+1.34, +4.43] | +0.82 [-2.57, +6.47] |
 | Sharpe, rf 0 [95% CI] | +3.09 [+1.87, +4.86] | +1.72 [-1.76, +7.53] |
 | Gross Sharpe, rf 5.5% | +3.72 | +2.94 |
-| Max drawdown (fixed capital) | -3.1% | -2.2% |
+| Max drawdown (fixed capital); peak → trough | -3.1%; 2019-03-25 → 2019-04-01 | -2.2%; 2019-01-21 → 2019-02-15 |
+| Max drawdown gross; peak → trough | -2.8%; 2019-03-25 → 2019-04-01 | -1.7%; 2019-02-08 → 2019-02-15 |
 | Months positive (excess over rf) | 3/3 | 2/3 |
 | Months positive (net > 0) | 3/3 | 2/3 |
 | Beta to Nifty 50, plain | -0.33 | -0.03 |
@@ -74,4 +75,19 @@ Tranche returns are identical to the primary books; only the daily marks, and so
 - Short paths: 11,922 name-windows; entry settle back-filled 0, never quoted (flat) 0; settles carried forward 0; names flat after a final settlement with no roll target 34; exiting tranche not in the next entry's near contract 0.
 - Long paths: exit mark matches the label on 100.000% of rows; entry open back-filled 0; interior close marks carried forward 0.
 - Nifty 50 sessions missing on the price calendar (forward-filled): [].
+- Independent recomputation of the short leg (seeded sample of 62 name-windows, straight from each stock's raw futures rows without the common calendar): 62 checked (55 with a roll, 0 skipped for a gap or a flat tail), largest difference in the exit value 1.3e-15.
+- Split/bonus adjustment of the futures: 76 validated ex-dates of F&O stocks with quotes on both sides; the unadjusted settle moves by a median 51% on the ex-date, the adjusted settle stays within 4.0 points of the adjusted cash close (2.6% of events above 2 points).
 
+### 2.7 Sensitivity added after the results of record: dividends (total return)
+
+This sensitivity was added after §2.1-2.6 existed. It changes no convention, book or pass mark. The primary long leg is price-only (the engine's convention) and the futures short owes no dividends, so the book misses the long leg's dividends. Separately, NSE adjusts a stock-futures contract on the ex-date of a large dividend, and the unadjusted settle chain books that adjustment as a gain to the short. The sensitivity corrects both. Cash dividends with ex-date t+2..t+21 are credited to the long leg. On contracts classified as adjusted, the dividend is added back to the ex-date settle. Rule: adjusted if dividend >= 2% of the previous unadjusted close and the ex-date futures-minus-cash return gap < 0.5 x the dividend yield.
+
+- Dividend events of F&O stocks with a parsed amount: 99.4% (3,423 in the price span). Events at or above 2% of price: 444, of which 158 fall outside the stock's F&O membership (no short exposure possible) and 12 are members without a quote on one side or with a split the same day (left unadjusted). Classified as adjusted contracts: 139. By year (member events at or above 2% / classified adjusted): 2017 1/0, 2018 31/3, 2019 32/4, 2020 37/10, 2021 34/9, 2022 46/11, 2023 41/40, 2024 18/17, 2025 23/23, 2026 23/22.
+- Cross-check: the dividend credit of the equal-weight F&O universe is +1.71% a year. The Nifty 50's own dividend yield averages +1.20% over the same sessions.
+
+| Book | Net ann. | Long-leg dividends | Short-leg add-back | Net Sharpe [95% CI] | Sharpe rf 0 | Beta plain / Dimson | DSR | Verdict under the same rule |
+|---|---:|---:|---:|---|---:|---|---:|---|
+| plain | +36.7% | +1.23% | -0.44% | +2.69 [+1.50, +4.45] | +3.16 | -0.33 / -0.13 | 0.473 | FAIL |
+| neutral | +11.6% | +1.51% | -0.44% | +1.00 [-2.26, +6.57] | +1.90 | -0.03 / +0.08 | 0.172 | FAIL |
+
+<!-- END OF GENERATED RESULTS -->

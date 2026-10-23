@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""LAST STEP ONLY. Descriptive per-date rank IC of family E against y_excess_20d (EVENTS.md section 7.7).
+"""LAST STEP ONLY. Descriptive per-date rank IC of family E against y_excess_20d (EVENTS.md section 7.6).
 
 Descriptive, not a pass mark (the Q6 pass mark is the primary A/B mark, run by the lead):
   ear_3d       among rows with a results release in the last 60 sessions (sess_since_results <= 59) and a finite

@@ -28,5 +28,24 @@
   "ml/paper/ledger/signals.csv": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
   "ml/paper/ledger/state.json": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
  },
- "unchanged": true
+ "unchanged": true,
+ "live_feed_regeneration": {
+  "test": "ml/data_ext/corporate_actions_feed_live.csv deleted; ml.paper.ingest.regenerate_live_feed (the path a run takes when the feed is missing after the research end) rebuilt it from the store's EQ/BE rows and every PR bundle on disk",
+  "original_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
+  "regenerated_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
+  "byte_identical": true,
+  "equals_state_json": true,
+  "rows": 756,
+  "new_validated_events": [
+   {
+    "ticker": "JSWDULUX",
+    "ex_date": "2026-10-22",
+    "ratio": 0.1,
+    "kind": "split",
+    "source": "PR151026.zip/bc15102026.csv"
+   }
+  ],
+  "error": null,
+  "original_restored": false
+ }
 }

@@ -192,7 +192,22 @@
    "exit_mark_matches_label_frac": 1.0,
    "interior_marks_unavailable_carried": 0
   },
-  "nifty_missing_sessions": []
+  "nifty_missing_sessions": [],
+  "independent_short_check": {
+   "sampled_name_windows": 400,
+   "checked": 390,
+   "checked_with_roll": 318,
+   "skipped_gap_or_flat": 10,
+   "max_abs_diff_exit_value": 1.5543122344752192e-15,
+   "share_abs_diff_gt_1e_9": 0.0,
+   "seed": 108
+  },
+  "split_bonus_check": {
+   "events": 76,
+   "median_abs_unadjusted_futures_return": 0.5082992252069234,
+   "max_abs_gap_adjusted_futures_vs_cash": 0.040445066444562916,
+   "share_gap_gt_2pt": 0.02631578947368421
+  }
  },
  "amendments": {
   "A1": "futures/cash break screen kept as a diagnostic, not an exclusion",
@@ -243,6 +258,9 @@
        0.5822870186877557
       ],
       "max_dd": -0.42752545633194106,
+      "max_dd_peak": "2020-10-15",
+      "max_dd_trough": "2026-01-16",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": -0.19297775426800257,
       "n_days": 2145,
       "n_month_blocks": 104,
@@ -278,6 +296,9 @@
        1.5808145465419088
       ],
       "max_dd": -0.29326657486375196,
+      "max_dd_peak": "2020-10-15",
+      "max_dd_trough": "2021-10-18",
+      "max_dd_recovered": "2024-05-02",
       "cum_return_fixed_capital": 1.0192716670334652,
       "n_days": 2145,
       "n_month_blocks": 104,
@@ -313,6 +334,9 @@
        0.12264137405432443
       ],
       "max_dd": -0.5598179738990874,
+      "max_dd_peak": "2020-09-24",
+      "max_dd_trough": "2026-01-16",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": -0.48285552964787815,
       "n_days": 2145,
       "n_month_blocks": 104,
@@ -350,6 +374,9 @@
        3.1063155897164747
       ],
       "max_dd": -0.020139644364555287,
+      "max_dd_peak": "2026-08-19",
+      "max_dd_trough": "2026-08-28",
+      "max_dd_recovered": "2026-09-02",
       "cum_return_fixed_capital": 0.009222349790908302,
       "n_days": 51,
       "n_month_blocks": 3,
@@ -385,6 +412,9 @@
        4.43105656453598
       ],
       "max_dd": -0.01826633551302481,
+      "max_dd_peak": "2026-08-19",
+      "max_dd_trough": "2026-08-28",
+      "max_dd_recovered": "2026-08-31",
       "cum_return_fixed_capital": 0.02129820327237608,
       "n_days": 51,
       "n_month_blocks": 3,
@@ -420,6 +450,9 @@
        2.021497680069167
       ],
       "max_dd": -0.021782779297778165,
+      "max_dd_peak": "2026-08-05",
+      "max_dd_trough": "2026-08-28",
+      "max_dd_recovered": "2026-09-09",
       "cum_return_fixed_capital": 0.0006287436787046907,
       "n_days": 51,
       "n_month_blocks": 3,
@@ -457,6 +490,9 @@
        0.5822724505950361
       ],
       "max_dd": -0.42752545633194117,
+      "max_dd_peak": "2020-10-15",
+      "max_dd_trough": "2026-01-16",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": -0.18558640557010997,
       "n_days": 2177,
       "n_month_blocks": 106,
@@ -492,6 +528,9 @@
        1.5400147702119844
       ],
       "max_dd": -0.29326657486375196,
+      "max_dd_peak": "2020-10-15",
+      "max_dd_trough": "2021-10-18",
+      "max_dd_recovered": "2024-05-02",
       "cum_return_fixed_capital": 1.0621562178989832,
       "n_days": 2177,
       "n_month_blocks": 106,
@@ -527,6 +566,9 @@
        0.1264136060837181
       ],
       "max_dd": -0.5612114069749476,
+      "max_dd_peak": "2020-09-24",
+      "max_dd_trough": "2026-08-28",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": -0.4825637436476877,
       "n_days": 2177,
       "n_month_blocks": 106,
@@ -846,6 +888,9 @@
        0.20780141206449299
       ],
       "max_dd": -0.34013986768829774,
+      "max_dd_peak": "2020-10-08",
+      "max_dd_trough": "2025-06-04",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": -0.27529505946917443,
       "n_days": 2145,
       "n_month_blocks": 104,
@@ -881,6 +926,9 @@
        1.881156206472887
       ],
       "max_dd": -0.20992762056259784,
+      "max_dd_peak": "2020-10-08",
+      "max_dd_trough": "2021-05-27",
+      "max_dd_recovered": "2024-02-02",
       "cum_return_fixed_capital": 0.9041199592916918,
       "n_days": 2145,
       "n_month_blocks": 104,
@@ -916,6 +964,9 @@
        -0.4361186908826683
       ],
       "max_dd": -0.5344793393233613,
+      "max_dd_peak": "2018-01-24",
+      "max_dd_trough": "2026-01-27",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": -0.5125234125005009,
       "n_days": 2145,
       "n_month_blocks": 104,
@@ -953,6 +1004,9 @@
        3.2355221659071813
       ],
       "max_dd": -0.013773297920535721,
+      "max_dd_peak": "2026-09-09",
+      "max_dd_trough": "2026-09-17",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": 0.00991832603776266,
       "n_days": 51,
       "n_month_blocks": 3,
@@ -988,6 +1042,9 @@
        4.5704136973232865
       ],
       "max_dd": -0.01239690836710794,
+      "max_dd_peak": "2026-09-11",
+      "max_dd_trough": "2026-09-17",
+      "max_dd_recovered": "2026-10-01",
       "cum_return_fixed_capital": 0.0232332550277079,
       "n_days": 51,
       "n_month_blocks": 3,
@@ -1023,6 +1080,9 @@
        2.56079860626892
       ],
       "max_dd": -0.015025142121999902,
+      "max_dd_peak": "2026-09-09",
+      "max_dd_trough": "2026-09-17",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": 0.0025326845353510485,
       "n_days": 51,
       "n_month_blocks": 3,
@@ -1060,6 +1120,9 @@
        0.26628403984608856
       ],
       "max_dd": -0.34013986768829774,
+      "max_dd_peak": "2020-10-08",
+      "max_dd_trough": "2025-06-04",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": -0.2681321063133534,
       "n_days": 2177,
       "n_month_blocks": 106,
@@ -1095,6 +1158,9 @@
        1.8980129177781309
       ],
       "max_dd": -0.20992762056259784,
+      "max_dd_peak": "2020-10-08",
+      "max_dd_trough": "2021-05-27",
+      "max_dd_recovered": "2024-02-02",
       "cum_return_fixed_capital": 0.9482898284387336,
       "n_days": 2177,
       "n_month_blocks": 106,
@@ -1130,6 +1196,9 @@
        -0.41553872409136144
       ],
       "max_dd": -0.5344793393233613,
+      "max_dd_peak": "2018-01-24",
+      "max_dd_trough": "2026-01-27",
+      "max_dd_recovered": null,
       "cum_return_fixed_capital": -0.511304869888986,
       "n_days": 2177,
       "n_month_blocks": 106,
@@ -1428,6 +1497,9 @@
       0.2544117175288334
      ],
      "max_dd": -0.504182496644852,
+     "max_dd_peak": "2020-10-15",
+     "max_dd_trough": "2026-01-28",
+     "max_dd_recovered": null,
      "cum_return_fixed_capital": -0.360081699368314,
      "n_days": 2177,
      "n_month_blocks": 106,
@@ -1463,6 +1535,9 @@
       0.6718482727737991
      ],
      "max_dd": -0.32043841903312154,
+     "max_dd_peak": "2020-10-15",
+     "max_dd_trough": "2021-10-26",
+     "max_dd_recovered": "2024-06-04",
      "cum_return_fixed_capital": 0.6207151018803647,
      "n_days": 2177,
      "n_month_blocks": 106,
@@ -1498,6 +1573,9 @@
       0.04908238481032648
      ],
      "max_dd": -0.6278964937875875,
+     "max_dd_peak": "2020-03-12",
+     "max_dd_trough": "2026-08-28",
+     "max_dd_recovered": null,
      "cum_return_fixed_capital": -0.5934655730514555,
      "n_days": 2177,
      "n_month_blocks": 106,
@@ -1534,6 +1612,9 @@
      1.6896987289635357
     ],
     "max_dd": -0.03470694929459106,
+    "max_dd_peak": "2026-09-15",
+    "max_dd_trough": "2026-09-18",
+    "max_dd_recovered": null,
     "cum_return_fixed_capital": 0.008184197185991726,
     "n_days": 51,
     "n_month_blocks": 3,
@@ -1612,6 +1693,9 @@
       0.09815791467575961
      ],
      "max_dd": -0.49166149296164596,
+     "max_dd_peak": "2018-02-02",
+     "max_dd_trough": "2025-04-07",
+     "max_dd_recovered": null,
      "cum_return_fixed_capital": -0.4298347464036886,
      "n_days": 2177,
      "n_month_blocks": 106,
@@ -1647,6 +1731,9 @@
       0.5652606767917812
      ],
      "max_dd": -0.23471821708305096,
+     "max_dd_peak": "2020-10-15",
+     "max_dd_trough": "2021-05-27",
+     "max_dd_recovered": "2024-06-04",
      "cum_return_fixed_capital": 0.5182548775336602,
      "n_days": 2177,
      "n_month_blocks": 106,
@@ -1682,6 +1769,9 @@
       -0.08712671043653869
      ],
      "max_dd": -0.647246879685436,
+     "max_dd_peak": "2018-02-02",
+     "max_dd_trough": "2026-01-28",
+     "max_dd_recovered": null,
      "cum_return_fixed_capital": -0.6193125166840523,
      "n_days": 2177,
      "n_month_blocks": 106,
@@ -1718,6 +1808,9 @@
      1.862916559850487
     ],
     "max_dd": -0.04214371818912788,
+    "max_dd_peak": "2026-09-15",
+    "max_dd_trough": "2026-09-17",
+    "max_dd_recovered": null,
     "cum_return_fixed_capital": 0.008745593842029997,
     "n_days": 51,
     "n_month_blocks": 3,
@@ -1775,6 +1868,268 @@
     "pass": false
    },
    "tranche_returns_identical_to_primary": true
+  }
+ },
+ "sensitivity_total_return": {
+  "note": "added after the results of record existed; changes no convention, book or pass mark",
+  "long_leg": "cash dividends with ex-date session t+2..t+21 credited per rupee of entry (not reinvested)",
+  "short_leg": "on contracts NSE adjusted for a dividend, the dividend is added back to the ex-date settle",
+  "dividends": {
+   "source": "ml/data_ext/corporate_actions_all_10y.csv",
+   "fo_dividend_events": 3799,
+   "events_with_amount_in_span": 3423,
+   "share_events_with_amount": 0.9939457752040011,
+   "events_ge_2pct_of_price": 444,
+   "events_ge_2pct_not_fo_member": 158,
+   "events_ge_2pct_member_unclassifiable": 12,
+   "futures_adjusted_events": 139,
+   "by_year_ge_2pct": {
+    "2017": {
+     "member_events_ge_2pct": 1,
+     "futures_adjusted": 0
+    },
+    "2018": {
+     "member_events_ge_2pct": 31,
+     "futures_adjusted": 3
+    },
+    "2019": {
+     "member_events_ge_2pct": 32,
+     "futures_adjusted": 4
+    },
+    "2020": {
+     "member_events_ge_2pct": 37,
+     "futures_adjusted": 10
+    },
+    "2021": {
+     "member_events_ge_2pct": 34,
+     "futures_adjusted": 9
+    },
+    "2022": {
+     "member_events_ge_2pct": 46,
+     "futures_adjusted": 11
+    },
+    "2023": {
+     "member_events_ge_2pct": 41,
+     "futures_adjusted": 40
+    },
+    "2024": {
+     "member_events_ge_2pct": 18,
+     "futures_adjusted": 17
+    },
+    "2025": {
+     "member_events_ge_2pct": 23,
+     "futures_adjusted": 23
+    },
+    "2026": {
+     "member_events_ge_2pct": 23,
+     "futures_adjusted": 22
+    }
+   },
+   "rule": "adjusted if dividend >= 2% of the previous unadjusted close and the ex-date futures-minus-cash return gap < 0.5 x the dividend yield",
+   "ew_fo_universe_dividend_credit_ann": 0.01481649208305703,
+   "nifty50_div_yield_mean_over_pnl_sessions": 0.012733027101515845
+  },
+  "plain": {
+   "combined": {
+    "net": {
+     "ann_net_return": -0.008369235876859015,
+     "ann_vol": 0.11153602169941802,
+     "sharpe": -0.5681504047870274,
+     "sharpe_ci95": [
+      -1.3389416009656894,
+      0.18620955730133681
+     ],
+     "sharpe_rf0": -0.07503616992377184,
+     "sharpe_rf0_ci95": [
+      -0.8357898023169931,
+      0.6679433694075807
+     ],
+     "beta_plain": -0.15124051535013047,
+     "beta_dimson": -0.11457068876059162,
+     "long_leg_ann": 0.1166733152979486,
+     "short_leg_ann": -0.12504255117480764,
+     "max_dd": -0.40091419900961744
+    },
+    "gross": {
+     "ann_net_return": 0.10012023414322953,
+     "ann_vol": 0.11145001618138521,
+     "sharpe": 0.40484726417442796,
+     "sharpe_ci95": [
+      -0.3628102498371311,
+      1.1471879261796074
+     ],
+     "sharpe_rf0": 0.8983420332598566,
+     "sharpe_rf0_ci95": [
+      0.12374806880562143,
+      1.6360346347702377
+     ],
+     "beta_plain": -0.15131437471689457,
+     "beta_dimson": -0.11466570610360052,
+     "long_leg_ann": 0.14872656552923172,
+     "short_leg_ann": -0.048606331386002205,
+     "max_dd": -0.28324910001190573
+    },
+    "no_netting": {
+     "ann_net_return": -0.061327814797860626,
+     "ann_vol": 0.1115055148511064,
+     "sharpe": -1.0432471878471075,
+     "sharpe_ci95": [
+      -1.8288746422581648,
+      -0.2894530072401194
+     ],
+     "sharpe_rf0": -0.5499980416193032,
+     "sharpe_rf0_ci95": [
+      -1.3175116032056744,
+      0.20250157769354013
+     ],
+     "beta_plain": -0.15118095067464885,
+     "beta_dimson": -0.11455396806033281,
+     "long_leg_ann": 0.09832656552923168,
+     "short_leg_ann": -0.15965438032709228,
+     "max_dd": -0.5392821651397055
+    }
+   },
+   "long_leg_dividend_credit_ann": 0.013863632539898182,
+   "short_leg_adjusted_dividend_addback_ann": -0.004471820885900854,
+   "dsr": {
+    "series": "plain net daily minus rf",
+    "T_periods": 2165,
+    "T_note": "Kish effective number of exposure-weighted daily obs",
+    "n_days_raw": 2177,
+    "periods_per_year": 252,
+    "sr_per_period": -0.03579011138921799,
+    "sr_annualised": -0.5681504047870274,
+    "skew": 0.11017275771174392,
+    "kurtosis_pearson": 6.765395195083331,
+    "n_trials": 261,
+    "var_sr_across_trials": 0.003868632661070771,
+    "sr0_expected_max_per_period": 0.1773537591629612,
+    "sr0_expected_max_annualised": 2.8154036449658295,
+    "psr_vs_0": 0.048445665715673124,
+    "dsr": 2.379050331993739e-23,
+    "min_track_record_periods_psr95_vs_0": null,
+    "min_track_record_periods_dsr95": null
+   },
+   "pass_mark": {
+    "sharpe": -0.5681504047870274,
+    "sharpe_ci95": [
+     -1.3389416009656894,
+     0.18620955730133681
+    ],
+    "beta_plain": -0.15124051535013047,
+    "beta_dimson": -0.11457068876059162,
+    "sharpe_ge_1": false,
+    "ci_lower_gt_0": false,
+    "beta_plain_within_0_2": true,
+    "beta_dimson_within_0_2": true,
+    "pass": false
+   },
+   "months": {
+    "n_months": 105,
+    "months_positive_excess_over_rf": 42,
+    "months_positive_net": 50
+   }
+  },
+  "neutral": {
+   "combined": {
+    "net": {
+     "ann_net_return": -0.024454845321982083,
+     "ann_vol": 0.07294696385239105,
+     "sharpe": -1.08921387712256,
+     "sharpe_ci95": [
+      -1.7540075223280578,
+      -0.41109909445133647
+     ],
+     "sharpe_rf0": -0.33524144159675695,
+     "sharpe_rf0_ci95": [
+      -1.0444777181855518,
+      0.38654140306313073
+     ],
+     "beta_plain": -0.04995556288029702,
+     "beta_dimson": 0.002663888416712841,
+     "long_leg_ann": 0.10728545785817119,
+     "short_leg_ann": -0.13174030318015326,
+     "max_dd": -0.3206230201013702
+    },
+    "gross": {
+     "ann_net_return": 0.08988838639204379,
+     "ann_vol": 0.07294027918480943,
+     "sharpe": 0.4783144071007293,
+     "sharpe_ci95": [
+      -0.28168272656461857,
+      1.2352433934002607
+     ],
+     "sharpe_rf0": 1.2323559410061042,
+     "sharpe_rf0_ci95": [
+      0.42877956924194455,
+      2.0373739602437695
+     ],
+     "beta_plain": -0.05012915386266423,
+     "beta_dimson": 0.002415821118325917,
+     "long_leg_ann": 0.1422488596777493,
+     "short_leg_ann": -0.0523604732857055,
+     "max_dd": -0.20552091029188602
+    },
+    "no_netting": {
+     "ann_net_return": -0.07160270270730715,
+     "ann_vol": 0.07297000173432305,
+     "sharpe": -1.7349965697994054,
+     "sharpe_ci95": [
+      -2.3744597342789913,
+      -1.080818128066234
+     ],
+     "sharpe_rf0": -0.9812621763119302,
+     "sharpe_rf0_ci95": [
+      -1.6589779179892883,
+      -0.2905354898527537
+     ],
+     "beta_plain": -0.04999623924783844,
+     "beta_dimson": 0.0025270774490815176,
+     "long_leg_ann": 0.09184885967774925,
+     "short_leg_ann": -0.1634515623850564,
+     "max_dd": -0.4986170421142204
+    }
+   },
+   "long_leg_dividend_credit_ann": 0.01374354123412179,
+   "short_leg_adjusted_dividend_addback_ann": -0.004407769552772028,
+   "dsr": {
+    "series": "neutral net daily minus rf",
+    "T_periods": 2165,
+    "T_note": "Kish effective number of exposure-weighted daily obs",
+    "n_days_raw": 2177,
+    "periods_per_year": 252,
+    "sr_per_period": -0.06861402484349426,
+    "sr_annualised": -1.08921387712256,
+    "skew": -0.7418315609436352,
+    "kurtosis_pearson": 11.330618600750652,
+    "n_trials": 261,
+    "var_sr_across_trials": 0.003868632661070771,
+    "sr0_expected_max_per_period": 0.1773537591629612,
+    "sr0_expected_max_annualised": 2.8154036449658295,
+    "psr_vs_0": 0.0005659097762973893,
+    "dsr": 9.02589377277555e-32,
+    "min_track_record_periods_psr95_vs_0": null,
+    "min_track_record_periods_dsr95": null
+   },
+   "pass_mark": {
+    "sharpe": -1.08921387712256,
+    "sharpe_ci95": [
+     -1.7540075223280578,
+     -0.41109909445133647
+    ],
+    "beta_plain": -0.04995556288029702,
+    "beta_dimson": 0.002663888416712841,
+    "sharpe_ge_1": false,
+    "ci_lower_gt_0": false,
+    "beta_plain_within_0_2": true,
+    "beta_dimson_within_0_2": true,
+    "pass": false
+   },
+   "months": {
+    "n_months": 105,
+    "months_positive_excess_over_rf": 41,
+    "months_positive_net": 51
+   }
   }
  },
  "pass_mark": {
@@ -2385,5 +2740,5 @@
   "ew_fo_universe_close_marks_beta_dimson": 1.032877271138433,
   "note": "cash equal-weight F&O universe against the Nifty 50 close-to-close return. With the engine's open-to-open marks the same-session beta understates the exposure and the Dimson sum recovers it; with interior close marks (amendment A2) the two estimators should agree"
  },
- "runtime_s": 50.225369453430176
+ "runtime_s": 66.19546961784363
 }

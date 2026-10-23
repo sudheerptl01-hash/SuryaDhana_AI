@@ -613,5 +613,5528 @@
    ]
   }
  },
- "seed": 108
+ "seed": 108,
+ "reparse": {
+  "files_reparsed": 2488,
+  "records_reparsed": 5047431,
+  "records_stored": 5047431,
+  "files_with_digest_mismatch": [],
+  "equal": true,
+  "method": "each zip re-parsed independently with ml/events/vocabulary.json; per-file sum of row hashes over file_date, symbol, company, category_raw, text, text_len, cat_method, layout, n_cont, line_no, bundle, bm_date compared with events_raw.parquet"
+ },
+ "pit_cells": {
+  "n_cells": 100,
+  "seed": 108,
+  "cells_all_equal": 100,
+  "mismatches_by_column": {
+   "sess_since_results": 0,
+   "results_last_5": 0,
+   "results_last_20": 0,
+   "ear_3d": 0,
+   "ear_vol_z": 0,
+   "ann_count_20": 0,
+   "rating_20": 0,
+   "mgmt_change_60": 0,
+   "orders_20": 0,
+   "insolvency_60": 0
+  },
+  "non_nan_cells_by_column": {
+   "sess_since_results": 84,
+   "results_last_5": 87,
+   "results_last_20": 87,
+   "ear_3d": 74,
+   "ear_vol_z": 73,
+   "ann_count_20": 85,
+   "rating_20": 85,
+   "mgmt_change_60": 79,
+   "orders_20": 85,
+   "insolvency_60": 79
+  },
+  "method": "independent loop implementation of EVENTS.md section 4 (checks.recompute_cell) on the raw zips re-parsed with the fixed vocabulary, restricted to files dated <= t and prices dated <= t; the classification rules re-run on that restricted set; tolerance rtol 1e-5",
+  "cells": [
+   {
+    "date": "2017-10-23",
+    "ticker": "BAJAJCORP",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 6.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.002629617229104042,
+     "ear_vol_z": 0.4706208109855652,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 6.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.0026296171404886076,
+     "ear_vol_z": 0.470620799944427,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2017-12-12",
+    "ticker": "MONTECARLO",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 25.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.039283595979213715,
+     "ear_vol_z": 0.7257543206214905,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 25.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.039283596817702854,
+     "ear_vol_z": 0.7257543098298468,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-01-15",
+    "ticker": "TRIVENI",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 48.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.014909142628312111,
+     "ear_vol_z": -0.16887246072292328,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 48.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.014909142167399945,
+     "ear_vol_z": -0.168872462189946,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-01-25",
+    "ticker": "PEL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 57.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.01953401230275631,
+     "ear_vol_z": 7.2885918617248535,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 57.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.019534011905556998,
+     "ear_vol_z": 7.288591679607869,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-02-05",
+    "ticker": "INTELLECT",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 4.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.03681337460875511,
+     "ear_vol_z": 1.0949351787567139,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 4.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.036813373416103946,
+     "ear_vol_z": 1.094935226033804,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-02-23",
+    "ticker": "BHARATWIRE",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 7.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.012270426377654076,
+     "ear_vol_z": -0.8254327774047852,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 7.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.012270426838256975,
+     "ear_vol_z": -0.8254327676537605,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-05-21",
+    "ticker": "SKIPPER",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.08617501705884933,
+     "ear_vol_z": 5.329892635345459,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0861750140224295,
+     "ear_vol_z": 5.3298924258788825,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-06-28",
+    "ticker": "SANGHIIND",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 28.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.014324918389320374,
+     "ear_vol_z": 6.261096477508545,
+     "ann_count_20": 3.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 28.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.01432491879653968,
+     "ear_vol_z": 6.26109670431829,
+     "ann_count_20": 3.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-07-25",
+    "ticker": "ITI",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 47.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.09101768583059311,
+     "ear_vol_z": 1.3341785669326782,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 47.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.091017684983066,
+     "ear_vol_z": 1.3341786176334103,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-08-20",
+    "ticker": "AKZOINDIA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 11.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.019245512783527374,
+     "ear_vol_z": -0.09767056256532669,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 11.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.01924551229582093,
+     "ear_vol_z": -0.09767056162050264,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-11-05",
+    "ticker": "ONGC",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-12-27",
+    "ticker": "SBIN",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 35.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.006884090136736631,
+     "ear_vol_z": 1.93252694606781,
+     "ann_count_20": 24.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 35.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.006884090022665115,
+     "ear_vol_z": 1.932526886556713,
+     "ann_count_20": 24.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-01-18",
+    "ticker": "NHPC",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 45.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.033265773206949234,
+     "ear_vol_z": 2.4835503101348877,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 45.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.033265773784493684,
+     "ear_vol_z": 2.4835501922721575,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-03-13",
+    "ticker": "KRBL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 22.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.054920561611652374,
+     "ear_vol_z": -0.6457221508026123,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 22.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.054920562861246754,
+     "ear_vol_z": -0.6457221282189454,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-04-15",
+    "ticker": "CYIENT",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 60.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 60.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-05-03",
+    "ticker": "PETRONET",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 60.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 60.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-05-14",
+    "ticker": "VGUARD",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 67.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 67.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-06-11",
+    "ticker": "HUDCO",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 11.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.033202674239873886,
+     "ear_vol_z": 9.464902877807617,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 11.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.033202673821247024,
+     "ear_vol_z": 9.46490308171599,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-10-24",
+    "ticker": "CESC",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 45.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.057805176824331284,
+     "ear_vol_z": 4.207441806793213,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 45.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.05780517830516835,
+     "ear_vol_z": 4.207441570144519,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-11-05",
+    "ticker": "MUTHOOTFIN",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 54.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.04007968679070473,
+     "ear_vol_z": 4.405980110168457,
+     "ann_count_20": 8.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 54.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.0400796870131058,
+     "ear_vol_z": 4.4059802385864915,
+     "ann_count_20": 8.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-01-06",
+    "ticker": "CARBORUNIV",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 49.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.0031873653642833233,
+     "ear_vol_z": -0.045143112540245056,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 49.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.0031873653396130427,
+     "ear_vol_z": -0.045143113446197175,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-06-25",
+    "ticker": "PERSISTENT",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 36.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.09666839241981506,
+     "ear_vol_z": 0.1179940402507782,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 36.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.09666839532448607,
+     "ear_vol_z": 0.11799403706271322,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-12-08",
+    "ticker": "VALIANTORG",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 126.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 126.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-12-31",
+    "ticker": "IOLCP",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 37.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.03979792073369026,
+     "ear_vol_z": 3.490175485610962,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 37.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.039797919230053436,
+     "ear_vol_z": 3.4901753782459464,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-01-29",
+    "ticker": "TIMKEN",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 53.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.012289437465369701,
+     "ear_vol_z": 1.2104071378707886,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 53.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.012289437470420151,
+     "ear_vol_z": 1.210407181932195,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-02-12",
+    "ticker": "JCHAC",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.02679736353456974,
+     "ear_vol_z": 2.918503999710083,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.026797363633047595,
+     "ear_vol_z": 2.9185040690681263,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-04-26",
+    "ticker": "IMFA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 49.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.07296627759933472,
+     "ear_vol_z": -0.8259702324867249,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 49.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.07296627775735405,
+     "ear_vol_z": -0.8259702165531252,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-05-14",
+    "ticker": "SCI",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-05-31",
+    "ticker": "NACLIND",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.07137219607830048,
+     "ear_vol_z": 0.211740180850029,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.07137219547354252,
+     "ear_vol_z": 0.21174018697750352,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-06-25",
+    "ticker": "5PAISA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06487816572189331,
+     "ear_vol_z": 0.49525561928749084,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06487816462864925,
+     "ear_vol_z": 0.4952556319225257,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-08-25",
+    "ticker": "RPGLIFE",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 19.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.0014851108426228166,
+     "ear_vol_z": 1.3012056350708008,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 19.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.0014851107898252803,
+     "ear_vol_z": 1.301205595336893,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-09-08",
+    "ticker": "ORISSAMINE",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 17.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.023525957018136978,
+     "ear_vol_z": -0.37420034408569336,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 17.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.023525957274946052,
+     "ear_vol_z": -0.3742003387911421,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2021-10-13",
+    "ticker": "SALASAR",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 40.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.0013725472381338477,
+     "ear_vol_z": -0.4028354585170746,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 40.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.0013725472142755227,
+     "ear_vol_z": -0.40283545999238923,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-11-10",
+    "ticker": "MANGCHEFER",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.023731321096420288,
+     "ear_vol_z": -0.24685466289520264,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.023731321193723502,
+     "ear_vol_z": -0.2468546694787553,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-11-11",
+    "ticker": "CRISIL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.07059711217880249,
+     "ear_vol_z": 0.161614790558815,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.07059711137058765,
+     "ear_vol_z": 0.16161479238085857,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-12-03",
+    "ticker": "IRB",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 26.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.07943889498710632,
+     "ear_vol_z": 0.4250376522541046,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 26.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.07943889415797409,
+     "ear_vol_z": 0.42503764453886983,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2022-01-31",
+    "ticker": "GOCOLORS",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 126.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 126.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2022-02-14",
+    "ticker": "PRESTIGE",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0025660956744104624,
+     "ear_vol_z": -1.0135129690170288,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.002566095680341049,
+     "ear_vol_z": -1.0135129986186802,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2022-02-16",
+    "ticker": "RATEGAIN",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.03956609219312668,
+     "ear_vol_z": -0.8263305425643921,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.039566090393662906,
+     "ear_vol_z": -0.8263305164152092,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2022-02-24",
+    "ticker": "JINDWORLD",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-03-09",
+    "ticker": "ELGIEQUIP",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-03-10",
+    "ticker": "LUPIN",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-04-05",
+    "ticker": "KALYANKJIL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-04-18",
+    "ticker": "RENUKA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-06-15",
+    "ticker": "MFL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-08-02",
+    "ticker": "JINDALSAW",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-08-25",
+    "ticker": "BECTORFOOD",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-09-01",
+    "ticker": "EVERESTIND",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-10-27",
+    "ticker": "SPICEJET",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-12-08",
+    "ticker": "TANLA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2022-12-20",
+    "ticker": "LAOPALA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2023-03-31",
+    "ticker": "SCPL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 47.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.05413542687892914,
+     "ear_vol_z": 0.8055973649024963,
+     "ann_count_20": 1.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 47.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.054135425312732965,
+     "ear_vol_z": 0.8055973463765899,
+     "ann_count_20": 1.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-06-27",
+    "ticker": "PGHH",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 34.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.010192709974944592,
+     "ear_vol_z": 1.5573610067367554,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 34.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.010192710433216052,
+     "ear_vol_z": 1.5573610239292799,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-08-11",
+    "ticker": "VENUSPIPES",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 6.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.020297156646847725,
+     "ear_vol_z": -0.30577537417411804,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 6.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.020297156423435284,
+     "ear_vol_z": -0.3057753756712387,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-08-23",
+    "ticker": "KHADIM",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 8.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.013728773221373558,
+     "ear_vol_z": -0.5854761600494385,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 8.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.013728773211756815,
+     "ear_vol_z": -0.5854761610262949,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-09-04",
+    "ticker": "DBL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 20.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.012490399181842804,
+     "ear_vol_z": 0.03898224979639053,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 20.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.012490399572268841,
+     "ear_vol_z": 0.038982248620114866,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-09-11",
+    "ticker": "GILLETTE",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 9.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.003076018299907446,
+     "ear_vol_z": 9.918265342712402,
+     "ann_count_20": 11.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 9.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0030760182442961803,
+     "ear_vol_z": 9.918265345305114,
+     "ann_count_20": 11.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-09-13",
+    "ticker": "MANKIND",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 29.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.07954712957143784,
+     "ear_vol_z": 2.1085879802703857,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 29.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.0795471262121805,
+     "ear_vol_z": 2.108587873792679,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-10-05",
+    "ticker": "TMB",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": null,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2023-11-12",
+    "ticker": "GODREJIND",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.014690140262246132,
+     "ear_vol_z": 0.4501078426837921,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.014690140694372775,
+     "ear_vol_z": 0.4501078469908142,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-01-05",
+    "ticker": "MANYAVAR",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.008121133781969547,
+     "ear_vol_z": 5.805566310882568,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.008121133718159939,
+     "ear_vol_z": 5.80556626168054,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-02-02",
+    "ticker": "PONNIERODE",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-02-12",
+    "ticker": "RKEC",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": null,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": null,
+     "rating_20": null,
+     "mgmt_change_60": null,
+     "orders_20": null,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-03-01",
+    "ticker": "GODREJAGRO",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 20.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06722944229841232,
+     "ear_vol_z": 0.5746752023696899,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 20.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06722943922142088,
+     "ear_vol_z": 0.5746751750475186,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-03-19",
+    "ticker": "SURAJEST",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 26.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.013871917501091957,
+     "ear_vol_z": -0.42859917879104614,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 26.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.013871917826089382,
+     "ear_vol_z": -0.42859916406918547,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-04-08",
+    "ticker": "EROSMEDIA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 36.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.027518700808286667,
+     "ear_vol_z": -0.445893257856369,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 36.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.02751869995618426,
+     "ear_vol_z": -0.44589325628471765,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-04-16",
+    "ticker": "GRANULES",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-04-26",
+    "ticker": "WSI",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 51.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.019440164789557457,
+     "ear_vol_z": 2.9165456295013428,
+     "ann_count_20": 12.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 51.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.01944016494059135,
+     "ear_vol_z": 2.916545525075352,
+     "ann_count_20": 12.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-05-21",
+    "ticker": "REDINGTON",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 4.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.006774614565074444,
+     "ear_vol_z": -0.5508989691734314,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 4.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0067746146707849935,
+     "ear_vol_z": -0.5508989647168191,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-06-07",
+    "ticker": "CAPITALSFB",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 21.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.017574457451701164,
+     "ear_vol_z": -0.08812777698040009,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 21.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.017574456735230122,
+     "ear_vol_z": -0.08812777674643742,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-10-10",
+    "ticker": "POWERINDIA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 54.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.005253918003290892,
+     "ear_vol_z": -0.098106749355793,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 54.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.0052539178798810884,
+     "ear_vol_z": -0.0981067525345528,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-11-05",
+    "ticker": "BBL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 76.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 76.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-11-13",
+    "ticker": "EPL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.03266718611121178,
+     "ear_vol_z": -0.8344873189926147,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.032667184846128516,
+     "ear_vol_z": -0.8344872898159826,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-01-03",
+    "ticker": "RAINBOW",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.013549690134823322,
+     "ear_vol_z": 3.9456119537353516,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.013549690293210986,
+     "ear_vol_z": 3.945612038257672,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-01-20",
+    "ticker": "SASKEN",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 58.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.029138175770640373,
+     "ear_vol_z": -0.2014850527048111,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 58.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.02913817515919339,
+     "ear_vol_z": -0.20148506010828937,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-03-03",
+    "ticker": "RAYMONDLSL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 22.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.15562154352664948,
+     "ear_vol_z": 2.8090004920959473,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 22.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.15562154444269086,
+     "ear_vol_z": 2.809000414228031,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-03-10",
+    "ticker": "BFINVEST",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 16.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.03139492869377136,
+     "ear_vol_z": 0.4637494683265686,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 16.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.031394926921095724,
+     "ear_vol_z": 0.4637494565792298,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-03-11",
+    "ticker": "ADSL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 27.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.03385138139128685,
+     "ear_vol_z": -0.6681589484214783,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 27.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.033851380888706234,
+     "ear_vol_z": -0.6681589454574839,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-05-14",
+    "ticker": "SUPRIYA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 72.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 72.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-05-19",
+    "ticker": "SAKSOFT",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 68.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 68.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-05-27",
+    "ticker": "CREDITACC",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 7.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.08404479175806046,
+     "ear_vol_z": -0.48766258358955383,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 7.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.08404479141959362,
+     "ear_vol_z": -0.48766258302340826,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-08-11",
+    "ticker": "AMBUJACEM",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 7.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.006296029780060053,
+     "ear_vol_z": 3.0409953594207764,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 7.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.006296029574701979,
+     "ear_vol_z": 3.040995374429837,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-09-01",
+    "ticker": "SUMICHEM",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0009629531414248049,
+     "ear_vol_z": 2.170931339263916,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0009629531325408549,
+     "ear_vol_z": 2.170931251522618,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-10-30",
+    "ticker": "EUROPRATIK",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 12.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.0028443036135286093,
+     "ear_vol_z": null,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 12.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.0028443037029841495,
+     "ear_vol_z": null,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-11-14",
+    "ticker": "RRKABEL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 9.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.01573430374264717,
+     "ear_vol_z": -0.13423490524291992,
+     "ann_count_20": 15.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 9.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.015734302847705137,
+     "ear_vol_z": -0.1342349020319451,
+     "ann_count_20": 15.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-12-08",
+    "ticker": "MGL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 27.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.020134374499320984,
+     "ear_vol_z": -0.8254502415657043,
+     "ann_count_20": 6.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 27.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.020134374762705277,
+     "ear_vol_z": -0.8254502683051153,
+     "ann_count_20": 6.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-02-03",
+    "ticker": "TDPOWERSYS",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 4.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.1063242256641388,
+     "ear_vol_z": 0.5416867136955261,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 4.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.1063242256735895,
+     "ear_vol_z": 0.5416867329116116,
+     "ann_count_20": 10.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-02-16",
+    "ticker": "ELECON",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 26.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.14588092267513275,
+     "ear_vol_z": 0.549342691898346,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 26.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.14588092659975138,
+     "ear_vol_z": 0.549342719930706,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-03-09",
+    "ticker": "NMDC",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 23.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.007999338209629059,
+     "ear_vol_z": 0.32061755657196045,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 23.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.007999338342182631,
+     "ear_vol_z": 0.3206175447086228,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-04-17",
+    "ticker": "RML",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 47.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.11423846334218979,
+     "ear_vol_z": 3.1710240840911865,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 47.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.11423846104759407,
+     "ear_vol_z": 3.171024192511539,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-04-20",
+    "ticker": "LICHSGFIN",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 52.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.024899037554860115,
+     "ear_vol_z": -0.3631885349750519,
+     "ann_count_20": 11.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 52.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.024899038131583985,
+     "ear_vol_z": -0.3631885387583807,
+     "ann_count_20": 11.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-04-21",
+    "ticker": "COHANCE",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 43.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.089076466858387,
+     "ear_vol_z": 0.6472681164741516,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 43.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.08907646531093272,
+     "ear_vol_z": 0.647268118029457,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-05-22",
+    "ticker": "SANDHAR",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.16392795741558075,
+     "ear_vol_z": 69.08930206298828,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.16392796031211995,
+     "ear_vol_z": 69.08930518341872,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-05-29",
+    "ticker": "PACEDIGITK",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.04029921814799309,
+     "ear_vol_z": 0.08127779513597488,
+     "ann_count_20": 18.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 4.0,
+     "orders_20": 4.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.040299219923654594,
+     "ear_vol_z": 0.08127779521798192,
+     "ann_count_20": 18.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 4.0,
+     "orders_20": 4.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-06-02",
+    "ticker": "VARROC",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.01076809223741293,
+     "ear_vol_z": 3.4729909896850586,
+     "ann_count_20": 14.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.010768092090149329,
+     "ear_vol_z": 3.4729908823944218,
+     "ann_count_20": 14.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-07-14",
+    "ticker": "VTL",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.062024906277656555,
+     "ear_vol_z": -0.06540273874998093,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.062024904827600195,
+     "ear_vol_z": -0.06540273504465594,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-07-17",
+    "ticker": "TASTYBITE",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 34.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.03934662416577339,
+     "ear_vol_z": -0.43068498373031616,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 34.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.039346625555729986,
+     "ear_vol_z": -0.4306849908273985,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-07-24",
+    "ticker": "CHOLAHLDNG",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 53.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.01817205920815468,
+     "ear_vol_z": -0.21509522199630737,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 53.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.01817205918901728,
+     "ear_vol_z": -0.21509521940169007,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-10-15",
+    "ticker": "DLINKINDIA",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 51.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.03817993402481079,
+     "ear_vol_z": -0.5294451117515564,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 51.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.038179932508190864,
+     "ear_vol_z": -0.5294451300066735,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-10-15",
+    "ticker": "NDRAUTO",
+    "all_equal": true,
+    "parquet": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.00037228342262096703,
+     "ear_vol_z": 19.394935607910156,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.0003722834314275746,
+     "ear_vol_z": 19.39493533523571,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   }
+  ]
+ },
+ "delete_future": {
+  "rows_compared": 1418427,
+  "cells_differing_by_column": {
+   "sess_since_results": 0,
+   "results_last_5": 0,
+   "results_last_20": 0,
+   "ear_3d": 0,
+   "ear_vol_z": 0,
+   "ann_count_20": 0,
+   "rating_20": 0,
+   "mgmt_change_60": 0,
+   "orders_20": 0,
+   "insolvency_60": 0
+  },
+  "unchanged": true,
+  "month": "2024-05",
+  "month_rows": 28962,
+  "month_cells_differing_by_column": {
+   "sess_since_results": 0,
+   "results_last_5": 0,
+   "results_last_20": 0,
+   "ear_3d": 0,
+   "ear_vol_z": 0,
+   "ann_count_20": 0,
+   "rating_20": 0,
+   "mgmt_change_60": 0,
+   "orders_20": 0,
+   "insolvency_60": 0
+  },
+  "files_kept": 1897,
+  "price_sessions_kept": 1899,
+  "method": "every file and every price row dated after the month-end removed, the whole pipeline (classification, results rules, coverage, features) re-run, rows <= month-end compared exactly"
+ },
+ "shift": {
+  "rows_compared": 370772,
+  "cells_differing_by_column": {
+   "sess_since_results": 0,
+   "results_last_5": 0,
+   "results_last_20": 0,
+   "ear_3d": 0,
+   "ear_vol_z": 0,
+   "ann_count_20": 0,
+   "rating_20": 0,
+   "mgmt_change_60": 0,
+   "orders_20": 0,
+   "insolvency_60": 0
+  },
+  "unchanged": true,
+  "T0": "2020-02-14",
+  "files_up_to_T0": 834,
+  "method": "build 1: bundles dated <= T0 with all prices; build 2: the full parquet (every later bundle appended); rows dated <= T0 compared exactly"
+ },
+ "ab_join": {
+  "rows": 2226504,
+  "columns_joined": [
+   "sess_since_results",
+   "results_last_5",
+   "results_last_20",
+   "ear_3d",
+   "ear_vol_z",
+   "ann_count_20",
+   "rating_20",
+   "mgmt_change_60",
+   "orders_20",
+   "insolvency_60"
+  ],
+  "all_ten_present": true,
+  "family_E_in_ab_equals_parquet_columns": true,
+  "ae1_events_features": 62,
+  "control_features": 52,
+  "ae1_minus_control": [
+   "sess_since_results",
+   "results_last_5",
+   "results_last_20",
+   "ear_3d",
+   "ear_vol_z",
+   "ann_count_20",
+   "rating_20",
+   "mgmt_change_60",
+   "orders_20",
+   "insolvency_60"
+  ],
+  "dtypes": {
+   "sess_since_results": "float32",
+   "results_last_5": "float32",
+   "results_last_20": "float32",
+   "ear_3d": "float32",
+   "ear_vol_z": "float32",
+   "ann_count_20": "float32",
+   "rating_20": "float32",
+   "mgmt_change_60": "float32",
+   "orders_20": "float32",
+   "insolvency_60": "float32"
+  },
+  "coverage": {
+   "sess_since_results": 0.8448,
+   "results_last_5": 0.8892,
+   "results_last_20": 0.8734,
+   "ear_3d": 0.7598,
+   "ear_vol_z": 0.7546,
+   "ann_count_20": 0.8638,
+   "rating_20": 0.8638,
+   "mgmt_change_60": 0.7985,
+   "orders_20": 0.8638,
+   "insolvency_60": 0.7989
+  },
+  "path": "ml.improve.ab.load_frame(ml/data_10y, extra=ml/data_ext/event_features_10y.parquet): merge on date, ticker, validate one_to_one, row count unchanged"
+ },
+ "reparse_stratified_run": {
+  "files_reparsed": 2488,
+  "records_reparsed": 5047431,
+  "records_stored": 5047431,
+  "files_with_digest_mismatch": [],
+  "equal": true,
+  "method": "each zip re-parsed independently with ml/events/vocabulary.json; per-file sum of row hashes over file_date, symbol, company, category_raw, text, text_len, cat_method, layout, n_cont, line_no, bundle, bm_date compared with events_raw.parquet"
+ },
+ "pit_cells_stratified": {
+  "n_cells": 80,
+  "seed": 108,
+  "cells_all_equal": 80,
+  "mismatches_by_column": {
+   "sess_since_results": 0,
+   "results_last_5": 0,
+   "results_last_20": 0,
+   "ear_3d": 0,
+   "ear_vol_z": 0,
+   "ann_count_20": 0,
+   "rating_20": 0,
+   "mgmt_change_60": 0,
+   "orders_20": 0,
+   "insolvency_60": 0
+  },
+  "non_nan_cells_by_column": {
+   "sess_since_results": 78,
+   "results_last_5": 80,
+   "results_last_20": 80,
+   "ear_3d": 63,
+   "ear_vol_z": 62,
+   "ann_count_20": 80,
+   "rating_20": 80,
+   "mgmt_change_60": 74,
+   "orders_20": 80,
+   "insolvency_60": 74
+  },
+  "method": "supplement to the random cells: per_stratum random cells (seed 108) from each stratum (rows where the named value is present), same recompute as pit_cells: independent loop implementation of EVENTS.md section 4 (checks.recompute_cell) on the raw zips re-parsed with the fixed vocabulary, restricted to files dated <= t and prices dated <= t; the classification rules re-run on that restricted set; tolerance rtol 1e-5",
+  "cells": [
+   {
+    "date": "2017-10-18",
+    "ticker": "ADANITRANS",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.07803843170404434,
+     "ear_vol_z": 4.5915751457214355,
+     "ann_count_20": 3.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 46.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.07803843338418126,
+     "ear_vol_z": 4.591575017121457,
+     "ann_count_20": 3.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-03-28",
+    "ticker": "MERCATOR",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 29.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06999082118272781,
+     "ear_vol_z": 0.2598690390586853,
+     "ann_count_20": 5.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 29.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06999082396827429,
+     "ear_vol_z": 0.25986903262325745,
+     "ann_count_20": 5.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-05-20",
+    "ticker": "ASHOKLEY",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 61.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 5.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 61.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 5.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-12-17",
+    "ticker": "YESBANK",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 31.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.07026199996471405,
+     "ear_vol_z": 0.30476903915405273,
+     "ann_count_20": 10.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 31.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.07026199878774865,
+     "ear_vol_z": 0.3047690353789424,
+     "ann_count_20": 10.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-11-09",
+    "ticker": "BSOFT",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.028823666274547577,
+     "ear_vol_z": -0.5443627834320068,
+     "ann_count_20": 11.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.028823666484709087,
+     "ear_vol_z": -0.5443627923861374,
+     "ann_count_20": 11.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-10-05",
+    "ticker": "IBULHSGFIN",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 41.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.004441143479198217,
+     "ear_vol_z": -0.3313836455345154,
+     "ann_count_20": 23.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 41.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.004441143552937576,
+     "ear_vol_z": -0.33138365803775544,
+     "ann_count_20": 23.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-12-19",
+    "ticker": "PGIL",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 25.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.015692664310336113,
+     "ear_vol_z": 0.5022912621498108,
+     "ann_count_20": 3.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 25.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.015692664165905153,
+     "ear_vol_z": 0.5022912448500093,
+     "ann_count_20": 3.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-04-28",
+    "ticker": "ELGIEQUIP",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 49.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.043921347707509995,
+     "ear_vol_z": -0.42748314142227173,
+     "ann_count_20": 5.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 49.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.04392134712373313,
+     "ear_vol_z": -0.4274831363121682,
+     "ann_count_20": 5.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-05-13",
+    "ticker": "EMSLIMITED",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 57.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.12271221727132797,
+     "ear_vol_z": 0.36073610186576843,
+     "ann_count_20": 10.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 3.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 57.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.1227122191474387,
+     "ear_vol_z": 0.3607360896681899,
+     "ann_count_20": 10.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 3.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-09-08",
+    "ticker": "UTLSOLAR",
+    "all_equal": true,
+    "stratum": "rating_20>0",
+    "parquet": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.09030598402023315,
+     "ear_vol_z": 4.348387718200684,
+     "ann_count_20": 26.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.09030598129988267,
+     "ear_vol_z": 4.348387577457432,
+     "ann_count_20": 26.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-01-07",
+    "ticker": "NBCC",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 37.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.04045970365405083,
+     "ear_vol_z": -0.19638733565807343,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 1.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 37.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.04045970298930265,
+     "ear_vol_z": -0.1963873288139816,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 1.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2023-12-01",
+    "ticker": "LT",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 22.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.009721923619508743,
+     "ear_vol_z": -0.6502658724784851,
+     "ann_count_20": 12.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 1.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 22.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.009721923644562798,
+     "ear_vol_z": -0.6502658613821825,
+     "ann_count_20": 12.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 1.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-08-12",
+    "ticker": "KEC",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 11.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0299507025629282,
+     "ear_vol_z": -0.29765692353248596,
+     "ann_count_20": 13.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 11.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.029950703233921964,
+     "ear_vol_z": -0.29765691043183834,
+     "ann_count_20": 13.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-09-30",
+    "ticker": "HGINFRA",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 39.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.03108906000852585,
+     "ear_vol_z": 0.26339244842529297,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 39.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.031089059667375102,
+     "ear_vol_z": 0.26339245665778666,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-11-05",
+    "ticker": "PREMIERENE",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 126.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 2.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 126.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 2.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-07-22",
+    "ticker": "PNCINFRA",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 37.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.05499737709760666,
+     "ear_vol_z": 1.640724778175354,
+     "ann_count_20": 2.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 37.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.05499737637758851,
+     "ear_vol_z": 1.6407247712070885,
+     "ann_count_20": 2.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-08-04",
+    "ticker": "KEC",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 5.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.0003112205886282027,
+     "ear_vol_z": -0.5420203804969788,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 5.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.00031122058972717407,
+     "ear_vol_z": -0.5420203618802021,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-09-03",
+    "ticker": "NETWEB",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 22.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.07778152078390121,
+     "ear_vol_z": 0.3532528877258301,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 22.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.07778152107647361,
+     "ear_vol_z": 0.3532528950571062,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-11-11",
+    "ticker": "CROMPTON",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.005918901413679123,
+     "ear_vol_z": -0.6890692114830017,
+     "ann_count_20": 14.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.005918901463724402,
+     "ear_vol_z": -0.6890691866253631,
+     "ann_count_20": 14.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 1.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-01-27",
+    "ticker": "DCXINDIA",
+    "all_equal": true,
+    "stratum": "orders_20>0",
+    "parquet": {
+     "sess_since_results": 51.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.05736391991376877,
+     "ear_vol_z": 0.19894954562187195,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 2.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 51.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.05736392124307791,
+     "ear_vol_z": 0.1989495496153876,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 2.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-04-30",
+    "ticker": "ICICIBANK",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 59.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.012203012593090534,
+     "ear_vol_z": 0.553673267364502,
+     "ann_count_20": 21.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 59.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.012203012194068242,
+     "ear_vol_z": 0.553673266626241,
+     "ann_count_20": 21.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2018-07-05",
+    "ticker": "BHUSANSTL",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 30.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.08840001374483109,
+     "ear_vol_z": -0.9227477312088013,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 30.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.08840001149003153,
+     "ear_vol_z": -0.922747725517238,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2020-05-29",
+    "ticker": "RELIANCE",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 19.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.03224697709083557,
+     "ear_vol_z": 0.5414594411849976,
+     "ann_count_20": 19.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 19.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.03224697565942306,
+     "ear_vol_z": 0.5414594385290717,
+     "ann_count_20": 19.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2020-08-10",
+    "ticker": "DHFL",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 14.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0007519427454099059,
+     "ear_vol_z": 0.4750121235847473,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 14.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.0007519427581254299,
+     "ear_vol_z": 0.47501212219506556,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2020-09-22",
+    "ticker": "DHFL",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 21.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.035715941339731216,
+     "ear_vol_z": 1.4846042394638062,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 21.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.03571594002269447,
+     "ear_vol_z": 1.4846042007469487,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2020-12-11",
+    "ticker": "BALAJITELE",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 23.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.008569289930164814,
+     "ear_vol_z": 0.2548767030239105,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 23.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.008569289937247555,
+     "ear_vol_z": 0.2548767171198289,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2023-09-15",
+    "ticker": "CONCOR",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 25.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.038353677839040756,
+     "ear_vol_z": -0.5864095091819763,
+     "ann_count_20": 12.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 4.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 25.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.03835367893437614,
+     "ear_vol_z": -0.5864094800992583,
+     "ann_count_20": 12.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 4.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2024-07-09",
+    "ticker": "RPOWER",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 30.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.04849749803543091,
+     "ear_vol_z": 5.246777534484863,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 30.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.04849749780509595,
+     "ear_vol_z": 5.246777296233099,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2025-09-10",
+    "ticker": "FIRSTCRY",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.00992569699883461,
+     "ear_vol_z": 0.27237656712532043,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.009925696566456347,
+     "ear_vol_z": 0.27237655866177185,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2026-04-15",
+    "ticker": "JSWENERGY",
+    "all_equal": true,
+    "stratum": "insolvency_60==1",
+    "parquet": {
+     "sess_since_results": 53.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.08341271430253983,
+     "ear_vol_z": -0.14468832314014435,
+     "ann_count_20": 8.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    },
+    "recomputed": {
+     "sess_since_results": 53.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.08341271214354105,
+     "ear_vol_z": -0.1446883269967733,
+     "ann_count_20": 8.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 1.0
+    }
+   },
+   {
+    "date": "2019-02-27",
+    "ticker": "CUMMINSIND",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 15.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.04914049059152603,
+     "ear_vol_z": 0.7205074429512024,
+     "ann_count_20": 19.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 15.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.04914048924283284,
+     "ear_vol_z": 0.7205074357529351,
+     "ann_count_20": 19.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-08-24",
+    "ticker": "IDBI",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.01180898118764162,
+     "ear_vol_z": 1.2971659898757935,
+     "ann_count_20": 12.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.011808981072788043,
+     "ear_vol_z": 1.297165944454881,
+     "ann_count_20": 12.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-11-24",
+    "ticker": "AEGISCHEM",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.02932359091937542,
+     "ear_vol_z": -0.554175853729248,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 18.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.02932359016709704,
+     "ear_vol_z": -0.5541758427282867,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-06-09",
+    "ticker": "LUMAXIND",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 9.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.06309396028518677,
+     "ear_vol_z": 7.759271621704102,
+     "ann_count_20": 15.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 9.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.06309396253754458,
+     "ear_vol_z": 7.759271739873411,
+     "ann_count_20": 15.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 5.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-07-11",
+    "ticker": "ROSSARI",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 49.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.005479428917169571,
+     "ear_vol_z": 0.1275501400232315,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 4.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 49.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.005479428995100569,
+     "ear_vol_z": 0.12755013671360288,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 4.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-10-07",
+    "ticker": "CLEAN",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 45.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.028956007212400436,
+     "ear_vol_z": 4.07765007019043,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 45.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.028956006532030093,
+     "ear_vol_z": 4.077650015086176,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-07-18",
+    "ticker": "CRISIL",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 56.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.08004284650087357,
+     "ear_vol_z": 7.983960151672363,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 56.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.08004284502168768,
+     "ear_vol_z": 7.9839603123373974,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-12-15",
+    "ticker": "JAMNAAUTO",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 23.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.06796492636203766,
+     "ear_vol_z": 10.927204132080078,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 23.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.06796492884530377,
+     "ear_vol_z": 10.927204174050024,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-02-12",
+    "ticker": "KIOCL",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-10-15",
+    "ticker": "VGUARD",
+    "all_equal": true,
+    "stratum": "mgmt_change_60>0",
+    "parquet": {
+     "sess_since_results": 54.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.08244599401950836,
+     "ear_vol_z": 117.76066589355469,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 54.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.08244599166396965,
+     "ear_vol_z": 117.76066476802045,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-05-29",
+    "ticker": "POWERGRID",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-01-28",
+    "ticker": "INDIGO",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.06107701361179352,
+     "ear_vol_z": 1.5612924098968506,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.061077014572936725,
+     "ear_vol_z": 1.5612924276093438,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 3.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-02-01",
+    "ticker": "ASTEC",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 4.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.10212493687868118,
+     "ear_vol_z": -0.8349520564079285,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 4.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.10212493906156536,
+     "ear_vol_z": -0.8349520831962141,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-11-04",
+    "ticker": "GILLETTE",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.011631526984274387,
+     "ear_vol_z": 2.826131820678711,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.011631526898587761,
+     "ear_vol_z": 2.826131829268253,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-08-17",
+    "ticker": "PFIZER",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.03852793201804161,
+     "ear_vol_z": -0.2623121440410614,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.03852793137996808,
+     "ear_vol_z": -0.2623121488968882,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-05-18",
+    "ticker": "KOPRAN",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.007729370146989822,
+     "ear_vol_z": 18.34123992919922,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.007729369980104678,
+     "ear_vol_z": 18.34123987495464,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-07-24",
+    "ticker": "STANLEY",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.023298466578125954,
+     "ear_vol_z": null,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 3.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.02329846569176766,
+     "ear_vol_z": null,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-08-01",
+    "ticker": "DWARKESH",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.03293490409851074,
+     "ear_vol_z": 1.5710645914077759,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 1.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.032934902921144316,
+     "ear_vol_z": 1.5710646093579717,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-05-19",
+    "ticker": "GODFRYPHLP",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.04922553896903992,
+     "ear_vol_z": -0.0530407689511776,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.04922554077866009,
+     "ear_vol_z": -0.05304076986818998,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-05-11",
+    "ticker": "CANBK",
+    "all_equal": true,
+    "stratum": "results_last_5==1",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 17.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 4.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 17.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 4.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-02-08",
+    "ticker": "AIAENG",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 2.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-10-28",
+    "ticker": "TITAN",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2022-02-08",
+    "ticker": "MEDICAMEQ",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-02-09",
+    "ticker": "BOMDYEING",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 1.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 1.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-03-20",
+    "ticker": "MEDICAMEQ",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2026-05-07",
+    "ticker": "GCSL",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-05-07",
+    "ticker": "PIDILITIND",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-05-15",
+    "ticker": "CUBEXTUB",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-05-22",
+    "ticker": "JINDRILL",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-08-10",
+    "ticker": "MEDIASSIST",
+    "all_equal": true,
+    "stratum": "sess_since_results==0",
+    "parquet": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 17.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 0.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 17.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-01-18",
+    "ticker": "WOCKPHARMA",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 47.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.018264062702655792,
+     "ear_vol_z": 11.331932067871094,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 47.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.01826406302180008,
+     "ear_vol_z": 11.331932426536554,
+     "ann_count_20": 3.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-09-14",
+    "ticker": "OFSS",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 24.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.012611456215381622,
+     "ear_vol_z": 0.3265310823917389,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 24.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.012611456148733678,
+     "ear_vol_z": 0.32653107088016725,
+     "ann_count_20": 4.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-10-14",
+    "ticker": "UPL",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 52.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.051473233848810196,
+     "ear_vol_z": 5.176661968231201,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 52.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.05147323499439706,
+     "ear_vol_z": 5.176661844654479,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2021-11-18",
+    "ticker": "MTARTECH",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 11.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.011594765819609165,
+     "ear_vol_z": 0.06956023722887039,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 11.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.011594765516302842,
+     "ear_vol_z": 0.06956023894065597,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-05-30",
+    "ticker": "IRCTC",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.04318280518054962,
+     "ear_vol_z": 0.17465448379516602,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 2.0,
+     "results_last_5": 1.0,
+     "results_last_20": 1.0,
+     "ear_3d": -0.04318280626988484,
+     "ear_vol_z": 0.1746544878441723,
+     "ann_count_20": 9.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2024-10-09",
+    "ticker": "IOB",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 55.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.019643275067210197,
+     "ear_vol_z": 0.3521302342414856,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 55.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.019643274837418387,
+     "ear_vol_z": 0.35213024661130515,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-01-28",
+    "ticker": "AVONMORE",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 51.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06840500235557556,
+     "ear_vol_z": 1.0654391050338745,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 51.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06840500257740698,
+     "ear_vol_z": 1.0654390886245566,
+     "ann_count_20": 1.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2025-12-24",
+    "ticker": "NPST",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 30.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.007149143144488335,
+     "ear_vol_z": -0.8337702751159668,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 30.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.007149143281610722,
+     "ear_vol_z": -0.8337702633019638,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-03-06",
+    "ticker": "RELTD",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 34.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06681384146213531,
+     "ear_vol_z": 0.11446467787027359,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 34.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.06681384067889543,
+     "ear_vol_z": 0.11446468065066089,
+     "ann_count_20": 0.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2026-09-23",
+    "ticker": "SPMLINFRA",
+    "all_equal": true,
+    "stratum": "ear_vol_z finite",
+    "parquet": {
+     "sess_since_results": 29.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.003930340055376291,
+     "ear_vol_z": 0.5963664054870605,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 29.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.003930340084862368,
+     "ear_vol_z": 0.59636641195245,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2018-04-02",
+    "ticker": "MANINDS",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": 31.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.04861196130514145,
+     "ear_vol_z": 3.027617931365967,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 31.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": -0.04861196248022415,
+     "ear_vol_z": 3.027617902732669,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-02-21",
+    "ticker": "CHOLAFIN",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": 16.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.040645550936460495,
+     "ear_vol_z": 0.8086080551147461,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 16.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.040645552788180654,
+     "ear_vol_z": 0.8086080406063593,
+     "ann_count_20": 7.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 0.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2019-05-30",
+    "ticker": "PNBHOUSING",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": 15.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.13065840303897858,
+     "ear_vol_z": -0.8610130548477173,
+     "ann_count_20": 16.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 15.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.13065839852575406,
+     "ear_vol_z": -0.8610130672245013,
+     "ann_count_20": 16.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2020-12-04",
+    "ticker": "SEQUENT",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": 19.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.01948626898229122,
+     "ear_vol_z": 6.065699100494385,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 19.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.019486269448614035,
+     "ear_vol_z": 6.065699003592594,
+     "ann_count_20": 5.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-05-09",
+    "ticker": "GLOBAL",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": 6.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.36169469356536865,
+     "ear_vol_z": 4.401453971862793,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 6.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.3616947010526574,
+     "ear_vol_z": 4.401453817024618,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 1.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-08-21",
+    "ticker": "IFGLEXPOR",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": 9.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.015773462131619453,
+     "ear_vol_z": 1.0101193189620972,
+     "ann_count_20": 11.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 9.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.015773462118233723,
+     "ear_vol_z": 1.0101193080460755,
+     "ann_count_20": 11.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   },
+   {
+    "date": "2023-11-17",
+    "ticker": "JINDALSAW",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 9.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 9.0,
+     "rating_20": 1.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-01-01",
+    "ticker": "LUPIN",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": 36.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.012430638074874878,
+     "ear_vol_z": 1.924782156944275,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": 36.0,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": 0.012430637711193657,
+     "ear_vol_z": 1.9247822127182102,
+     "ann_count_20": 8.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2024-02-23",
+    "ticker": "ISEC",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    },
+    "recomputed": {
+     "sess_since_results": null,
+     "results_last_5": 0.0,
+     "results_last_20": 0.0,
+     "ear_3d": null,
+     "ear_vol_z": null,
+     "ann_count_20": 6.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": null,
+     "orders_20": 0.0,
+     "insolvency_60": null
+    }
+   },
+   {
+    "date": "2026-08-20",
+    "ticker": "MAXHEALTH",
+    "all_equal": true,
+    "stratum": "ann_count_20>=5",
+    "parquet": {
+     "sess_since_results": 5.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.0018091037636622787,
+     "ear_vol_z": 2.3358395099639893,
+     "ann_count_20": 31.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    },
+    "recomputed": {
+     "sess_since_results": 5.0,
+     "results_last_5": 0.0,
+     "results_last_20": 1.0,
+     "ear_3d": 0.0018091037682591653,
+     "ear_vol_z": 2.335839608407528,
+     "ann_count_20": 31.0,
+     "rating_20": 0.0,
+     "mgmt_change_60": 2.0,
+     "orders_20": 0.0,
+     "insolvency_60": 0.0
+    }
+   }
+  ],
+  "per_stratum": 10,
+  "strata": {
+   "rating_20>0": {
+    "cells": 10,
+    "all_equal": 10
+   },
+   "orders_20>0": {
+    "cells": 10,
+    "all_equal": 10
+   },
+   "insolvency_60==1": {
+    "cells": 10,
+    "all_equal": 10
+   },
+   "mgmt_change_60>0": {
+    "cells": 10,
+    "all_equal": 10
+   },
+   "results_last_5==1": {
+    "cells": 10,
+    "all_equal": 10
+   },
+   "sess_since_results==0": {
+    "cells": 10,
+    "all_equal": 10
+   },
+   "ear_vol_z finite": {
+    "cells": 10,
+    "all_equal": 10
+   },
+   "ann_count_20>=5": {
+    "cells": 10,
+    "all_equal": 10
+   }
+  }
+ }
 }

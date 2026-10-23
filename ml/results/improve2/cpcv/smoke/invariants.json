@@ -1,0 +1,395 @@
+{
+ "checks": [
+  "train and test disjoint; every row clean and labelled",
+  "no training row dated inside a test group's [first, last] test date",
+  "no training row whose [date, exit_date] intersects a test group's span (purge)",
+  "no training row dated in the 22 sessions after a test group (embargo; fewer only at the end of the calendar)",
+  "no training row dated in the holdout window or with its label exit on or after the holdout start",
+  "test rows per month equal the walk-forward control's CV rows for that month",
+  "paths: every (split, group) test occurrence used by exactly one path; each path holds every group once"
+ ],
+ "all_passed": true,
+ "n_splits": 28,
+ "splits": {
+  "s00_g0g1": {
+   "n_train": 1756525,
+   "n_test": 323822,
+   "g0_embargo_sessions": 22,
+   "g0_first_trainable_after": "2019-03-06",
+   "g1_embargo_sessions": 22,
+   "g1_first_trainable_after": "2020-04-03",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 32424,
+   "n_train_after_a_test_group": 1724101
+  },
+  "s01_g0g2": {
+   "n_train": 1681793,
+   "n_test": 368476,
+   "g0_embargo_sessions": 22,
+   "g0_first_trainable_after": "2019-03-06",
+   "g2_embargo_sessions": 22,
+   "g2_first_trainable_after": "2021-05-06",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 32424,
+   "n_train_after_a_test_group": 1649369
+  },
+  "s02_g0g3": {
+   "n_train": 1584804,
+   "n_test": 455242,
+   "g0_embargo_sessions": 22,
+   "g0_first_trainable_after": "2019-03-06",
+   "g3_embargo_sessions": 22,
+   "g3_first_trainable_after": "2022-06-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 32424,
+   "n_train_after_a_test_group": 1552380
+  },
+  "s03_g0g4": {
+   "n_train": 1583467,
+   "n_test": 450228,
+   "g0_embargo_sessions": 22,
+   "g0_first_trainable_after": "2019-03-06",
+   "g4_embargo_sessions": 22,
+   "g4_first_trainable_after": "2023-07-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 32424,
+   "n_train_after_a_test_group": 1551043
+  },
+  "s04_g0g5": {
+   "n_train": 1502301,
+   "n_test": 525279,
+   "g0_embargo_sessions": 22,
+   "g0_first_trainable_after": "2019-03-06",
+   "g5_embargo_sessions": 22,
+   "g5_first_trainable_after": "2024-08-01",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 32424,
+   "n_train_after_a_test_group": 1469877
+  },
+  "s05_g0g6": {
+   "n_train": 1473791,
+   "n_test": 550520,
+   "g0_embargo_sessions": 22,
+   "g0_first_trainable_after": "2019-03-06",
+   "g6_embargo_sessions": 22,
+   "g6_first_trainable_after": "2025-09-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 32424,
+   "n_train_after_a_test_group": 1441367
+  },
+  "s06_g0g7": {
+   "n_train": 1565119,
+   "n_test": 517946,
+   "g0_embargo_sessions": 22,
+   "g0_first_trainable_after": "2019-03-06",
+   "g7_embargo_sessions": 22,
+   "g7_first_trainable_after": "2026-09-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 32424,
+   "n_train_after_a_test_group": 1532695
+  },
+  "s07_g1g2": {
+   "n_train": 1755528,
+   "n_test": 325088,
+   "g1_embargo_sessions": 22,
+   "g1_first_trainable_after": "2020-04-03",
+   "g2_embargo_sessions": 22,
+   "g2_first_trainable_after": "2021-05-06",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1532737
+  },
+  "s08_g1g3": {
+   "n_train": 1634321,
+   "n_test": 411854,
+   "g1_embargo_sessions": 22,
+   "g1_first_trainable_after": "2020-04-03",
+   "g3_embargo_sessions": 22,
+   "g3_first_trainable_after": "2022-06-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1411530
+  },
+  "s09_g1g4": {
+   "n_train": 1632983,
+   "n_test": 406840,
+   "g1_embargo_sessions": 22,
+   "g1_first_trainable_after": "2020-04-03",
+   "g4_embargo_sessions": 22,
+   "g4_first_trainable_after": "2023-07-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1410192
+  },
+  "s10_g1g5": {
+   "n_train": 1551817,
+   "n_test": 481891,
+   "g1_embargo_sessions": 22,
+   "g1_first_trainable_after": "2020-04-03",
+   "g5_embargo_sessions": 22,
+   "g5_first_trainable_after": "2024-08-01",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1329026
+  },
+  "s11_g1g6": {
+   "n_train": 1523307,
+   "n_test": 507132,
+   "g1_embargo_sessions": 22,
+   "g1_first_trainable_after": "2020-04-03",
+   "g6_embargo_sessions": 22,
+   "g6_first_trainable_after": "2025-09-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1300516
+  },
+  "s12_g1g7": {
+   "n_train": 1614635,
+   "n_test": 474558,
+   "g1_embargo_sessions": 22,
+   "g1_first_trainable_after": "2020-04-03",
+   "g7_embargo_sessions": 22,
+   "g7_first_trainable_after": "2026-09-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1391844
+  },
+  "s13_g2g3": {
+   "n_train": 1618790,
+   "n_test": 456508,
+   "g2_embargo_sessions": 22,
+   "g2_first_trainable_after": "2021-05-06",
+   "g3_embargo_sessions": 22,
+   "g3_first_trainable_after": "2022-06-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1257001
+  },
+  "s14_g2g4": {
+   "n_train": 1580617,
+   "n_test": 451494,
+   "g2_embargo_sessions": 22,
+   "g2_first_trainable_after": "2021-05-06",
+   "g4_embargo_sessions": 22,
+   "g4_first_trainable_after": "2023-07-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1218828
+  },
+  "s15_g2g5": {
+   "n_train": 1499451,
+   "n_test": 526545,
+   "g2_embargo_sessions": 22,
+   "g2_first_trainable_after": "2021-05-06",
+   "g5_embargo_sessions": 22,
+   "g5_first_trainable_after": "2024-08-01",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1137662
+  },
+  "s16_g2g6": {
+   "n_train": 1470941,
+   "n_test": 551786,
+   "g2_embargo_sessions": 22,
+   "g2_first_trainable_after": "2021-05-06",
+   "g6_embargo_sessions": 22,
+   "g6_first_trainable_after": "2025-09-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1109152
+  },
+  "s17_g2g7": {
+   "n_train": 1562269,
+   "n_test": 519212,
+   "g2_embargo_sessions": 22,
+   "g2_first_trainable_after": "2021-05-06",
+   "g7_embargo_sessions": 22,
+   "g7_first_trainable_after": "2026-09-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 1200480
+  },
+  "s18_g3g4": {
+   "n_train": 1528893,
+   "n_test": 538260,
+   "g3_embargo_sessions": 22,
+   "g3_first_trainable_after": "2022-06-02",
+   "g4_embargo_sessions": 22,
+   "g4_first_trainable_after": "2023-07-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 988357
+  },
+  "s19_g3g5": {
+   "n_train": 1402462,
+   "n_test": 613311,
+   "g3_embargo_sessions": 22,
+   "g3_first_trainable_after": "2022-06-02",
+   "g5_embargo_sessions": 22,
+   "g5_first_trainable_after": "2024-08-01",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 861926
+  },
+  "s20_g3g6": {
+   "n_train": 1373952,
+   "n_test": 638552,
+   "g3_embargo_sessions": 22,
+   "g3_first_trainable_after": "2022-06-02",
+   "g6_embargo_sessions": 22,
+   "g6_first_trainable_after": "2025-09-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 833416
+  },
+  "s21_g3g7": {
+   "n_train": 1465280,
+   "n_test": 605978,
+   "g3_embargo_sessions": 22,
+   "g3_first_trainable_after": "2022-06-02",
+   "g7_embargo_sessions": 22,
+   "g7_first_trainable_after": "2026-09-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 924744
+  },
+  "s22_g4g5": {
+   "n_train": 1447538,
+   "n_test": 608297,
+   "g4_embargo_sessions": 22,
+   "g4_first_trainable_after": "2023-07-04",
+   "g5_embargo_sessions": 22,
+   "g5_first_trainable_after": "2024-08-01",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 639695
+  },
+  "s23_g4g6": {
+   "n_train": 1372615,
+   "n_test": 633538,
+   "g4_embargo_sessions": 22,
+   "g4_first_trainable_after": "2023-07-04",
+   "g6_embargo_sessions": 22,
+   "g6_first_trainable_after": "2025-09-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 564772
+  },
+  "s24_g4g7": {
+   "n_train": 1463943,
+   "n_test": 600964,
+   "g4_embargo_sessions": 22,
+   "g4_first_trainable_after": "2023-07-04",
+   "g7_embargo_sessions": 22,
+   "g7_first_trainable_after": "2026-09-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 656100
+  },
+  "s25_g5g6": {
+   "n_train": 1351005,
+   "n_test": 708589,
+   "g5_embargo_sessions": 22,
+   "g5_first_trainable_after": "2024-08-01",
+   "g6_embargo_sessions": 22,
+   "g6_first_trainable_after": "2025-09-04",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 275666
+  },
+  "s26_g5g7": {
+   "n_train": 1382779,
+   "n_test": 676015,
+   "g5_embargo_sessions": 22,
+   "g5_first_trainable_after": "2024-08-01",
+   "g7_embargo_sessions": 22,
+   "g7_first_trainable_after": "2026-09-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 307440
+  },
+  "s27_g6g7": {
+   "n_train": 1410858,
+   "n_test": 701256,
+   "g6_embargo_sessions": 22,
+   "g6_first_trainable_after": "2025-09-04",
+   "g7_embargo_sessions": 22,
+   "g7_first_trainable_after": "2026-09-02",
+   "test_rows_equal_walk_forward_rows": true,
+   "n_train_warmup_before_2018": 50230,
+   "n_train_after_a_test_group": 0
+  }
+ },
+ "path_assignment": {
+  "path1": {
+   "g0": "s00_g0g1",
+   "g1": "s00_g0g1",
+   "g2": "s01_g0g2",
+   "g3": "s02_g0g3",
+   "g4": "s03_g0g4",
+   "g5": "s04_g0g5",
+   "g6": "s05_g0g6",
+   "g7": "s06_g0g7"
+  },
+  "path2": {
+   "g0": "s01_g0g2",
+   "g1": "s07_g1g2",
+   "g2": "s07_g1g2",
+   "g3": "s08_g1g3",
+   "g4": "s09_g1g4",
+   "g5": "s10_g1g5",
+   "g6": "s11_g1g6",
+   "g7": "s12_g1g7"
+  },
+  "path3": {
+   "g0": "s02_g0g3",
+   "g1": "s08_g1g3",
+   "g2": "s13_g2g3",
+   "g3": "s13_g2g3",
+   "g4": "s14_g2g4",
+   "g5": "s15_g2g5",
+   "g6": "s16_g2g6",
+   "g7": "s17_g2g7"
+  },
+  "path4": {
+   "g0": "s03_g0g4",
+   "g1": "s09_g1g4",
+   "g2": "s14_g2g4",
+   "g3": "s18_g3g4",
+   "g4": "s18_g3g4",
+   "g5": "s19_g3g5",
+   "g6": "s20_g3g6",
+   "g7": "s21_g3g7"
+  },
+  "path5": {
+   "g0": "s04_g0g5",
+   "g1": "s10_g1g5",
+   "g2": "s15_g2g5",
+   "g3": "s19_g3g5",
+   "g4": "s22_g4g5",
+   "g5": "s22_g4g5",
+   "g6": "s23_g4g6",
+   "g7": "s24_g4g7"
+  },
+  "path6": {
+   "g0": "s05_g0g6",
+   "g1": "s11_g1g6",
+   "g2": "s16_g2g6",
+   "g3": "s20_g3g6",
+   "g4": "s23_g4g6",
+   "g5": "s25_g5g6",
+   "g6": "s25_g5g6",
+   "g7": "s26_g5g7"
+  },
+  "path7": {
+   "g0": "s06_g0g7",
+   "g1": "s12_g1g7",
+   "g2": "s17_g2g7",
+   "g3": "s21_g3g7",
+   "g4": "s24_g4g7",
+   "g5": "s26_g5g7",
+   "g6": "s27_g6g7",
+   "g7": "s27_g6g7"
+  }
+ }
+}

@@ -12,6 +12,15 @@ from ml.paper.config import BOOK_ORDER, BOOKS, INCEPTION_SIGNAL_DATE, MODELS_MET
 PAPER_JSON = RESULTS_DIR / "paper.json"
 PAPER_MD = RESULTS_DIR / "PAPER.md"
 
+# The stream started on 2026-10-23, so the first three signal dates were scored in one catch-up run.
+INCEPTION_NOTE = ("signal dates 2026-10-19, 2026-10-21 and 2026-10-22 were scored on 2026-10-23 (the day this stream "
+                  "started) from the store as of 2026-10-22. Every feature looks back only, so a date's frame rows do "
+                  "not depend on later sessions except through a corporate action added later, which rescales that "
+                  "ticker's earlier prices (here JSWDULUX, ex 2026-10-22): the consistency proof above is exactly that "
+                  "check at 2026-10-16 (a frame built through 2026-10-22 against the research frame built through "
+                  "2026-10-16), and it differs only by floating-point rounding in that one ticker. From 2026-10-23 on, "
+                  "each session is scored on its own evening.")
+
 
 def _load(name: str) -> dict:
     p = RESULTS_DIR / name
@@ -45,6 +54,7 @@ def build(state: dict, marks: pd.DataFrame, inception: dict, latest: dict, dsr: 
     rep = _load("trainer_reproduction.json")
     idem = _load("idempotency.json")
     lost = _load("lost_state_check.json")
+    regen = _load("regeneration.json")
     cal = json.loads((MODELS_META_DIR.parent / "calendar_live.json").read_text()) \
         if (MODELS_META_DIR.parent / "calendar_live.json").exists() else {}
     mon = read_csv_rows(MODELS_META_DIR.parent / "ledger" / "monitors.csv")
@@ -89,7 +99,10 @@ def build(state: dict, marks: pd.DataFrame, inception: dict, latest: dict, dsr: 
                               for w in writes]},
         "consistency_proof": {k: cons.get(k) for k in ("research_end", "rule", "research_end_rows",
                                                       "all_dates_through_research_end",
-                                                      "frame_dates_after_research_end")},
+                                                      "frame_dates_after_research_end",
+                                                      "corporate_actions_added_after_research_end",
+                                                      "explained_difference_rule")},
+        "inception_point_in_time_note": INCEPTION_NOTE,
         "trainer_reproduction": rep,
         "models": models,
         "inception_baskets": inception,
@@ -101,7 +114,12 @@ def build(state: dict, marks: pd.DataFrame, inception: dict, latest: dict, dsr: 
         "idempotency": idem,
         "lost_state_check": {k: lost.get(k) for k in ("test", "retrain_equal_to_committed_metadata",
                                                       "regenerated_score_files", "regenerated_scores_file_byte_identical",
-                                                      "unchanged", "note_catboost")} if lost else {},
+                                                      "unchanged", "note_catboost", "live_feed_regeneration")}
+        if lost else {},
+        "regeneration_from_inception": {k: regen.get(k) for k in ("procedure", "ledger_files", "ledger_identical",
+                                                                  "score_files_identical", "committed_ledger_untouched",
+                                                                  "regenerated_rows_appended",
+                                                                  "regenerated_signal_dates")} if regen else {},
     }
     wjson(PAPER_JSON, out)
     wtext(PAPER_MD, markdown(out))
@@ -174,15 +192,21 @@ def markdown(j: dict) -> str:
     L.append("")
     ev = c.get("corporate_actions_added_after_research_end") or []
     if r0.get("cells_differing"):
-        evs = ", ".join("{} {:g} ex {}".format(e["ticker"], e["ratio"], e["ex_date"]) for e in ev)
-        L += [f"Why not bit-identical: the live feed adds {evs}, "
+        evs = ", ".join("{} (price ratio {:g}, ex {})".format(e["ticker"], e["ratio"], e["ex_date"]) for e in ev) \
+            or "a corporate action"
+        L += [f"Why not bit-identical: the live corporate-action feed adds {evs} after the research end, "
               f"so build_features rescales that ticker's earlier prices by the ratio; every price ratio is unchanged up to "
               f"floating-point rounding. On {c.get('research_end')} the {r0.get('cells_differing')} differing cells are all "
               f"in {', '.join(r0.get('tickers_with_differences') or [])} ({len(r0.get('per_feature_differing') or {})} "
-              f"features, at most {r0.get('max_abs_diff_all_features', 0):.2g}); over every date, "
-              f"{ra.get('cells_differing')} cells differ, all of them that ticker's rows or a cross-sectional feature "
-              f"(`amihud_20` z-score, ranks) on one of its {ra.get('n_dates_with_differences')} dates in the universe. "
-              f"Rule of explanation: {c.get('explained_difference_rule')}.", ""]
+              f"features, at most {r0.get('max_abs_diff_all_features', 0):.2g}); the other "
+              f"{(r0.get('rows_common') or 0) - len(r0.get('tickers_with_differences') or [])} rows of that date are "
+              f"bit-identical. Over every date, {ra.get('cells_differing')} cells differ (at most "
+              f"{ra.get('max_abs_diff_all_features', 0):.2g}) on {ra.get('n_dates_with_differences')} dates, every one "
+              f"of them that ticker's own row or a cross-sectional feature (`amihud_20` z-score, ranks) on a date where "
+              f"that ticker is in the universe; {ra.get('cells_differing_unexplained')} are unexplained. Rule of "
+              f"explanation: {c.get('explained_difference_rule')}.", ""]
+    if j.get("inception_point_in_time_note"):
+        L += [f"Point in time: {j['inception_point_in_time_note']}", ""]
     rp = j["trainer_reproduction"]
     if rp:
         L += [f"Trainer reproduction: the paper trainer on the research holdout fold (train end {rp['fold']['train_end']}, "
@@ -250,4 +274,19 @@ def markdown(j: dict) -> str:
               f"({ls.get('retrain_equal_to_committed_metadata')}); regenerated score files {ls.get('regenerated_score_files')} "
               f"byte-identical {ls.get('regenerated_scores_file_byte_identical')}; ledger and model metadata unchanged "
               f"{ls.get('unchanged')}. {ls.get('note_catboost')}.", ""]
+        lf = ls.get("live_feed_regeneration") or {}
+        if lf:
+            L += [f"Live corporate-action feed: {lf.get('test')}; byte-identical to the original {lf.get('byte_identical')}, "
+                  f"equal to the hash in state.json {lf.get('equals_state_json')} ({lf.get('rows')} rows).", ""]
+    rg = j.get("regeneration_from_inception") or {}
+    if rg:
+        L += ["## Determinism proof (ledger regenerated from inception)", "",
+              f"{rg.get('procedure')}. Rows regenerated: {rg.get('regenerated_rows_appended')} for signal dates "
+              f"{rg.get('regenerated_signal_dates')}; ledger byte-identical to the committed files "
+              f"{rg.get('ledger_identical')}; per-date score files identical {rg.get('score_files_identical')}; committed "
+              f"ledger untouched {rg.get('committed_ledger_untouched')}.", "",
+              "| File | Committed SHA-256 | Regenerated SHA-256 |", "|---|---|---|"]
+        for k, v in (rg.get("ledger_files") or {}).items():
+            L.append(f"| {k} | `{(v.get('committed') or '')[:16]}` | `{(v.get('regenerated') or '')[:16]}` |")
+        L.append("")
     return "\n".join(L) + "\n"

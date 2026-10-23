@@ -24,6 +24,11 @@ Plan: `ml/IMPROVEMENT_PLAN_2.md` Q2 (1 trial of N = 261). Code: `ml/improve/cpcv
 - Split s00 (g0+g1, the largest training set, 1,756,525 rows) fitted on a 20% sample (351,062 rows, seed 108) in one forked worker: preprocess 0.9 s, fit 19.4 s, predict 4.4 s on 323,822 test rows; worker peak RSS 2.25 GB (shared frame pages included).
 - Full-run estimate for the 28 fits at 2 workers: 13 min (a line through the smoke point and the walk-forward control's measured fold times) to 22 min (5 x the smoke fit, scaled by each split's rows); on a busy shared box allow 20-35 min. The paths, books (8 scorers x 4 books) and report stages add about 10 min.
 
+## Design check (row masks of all 28 splits, no fitting; `smoke/invariants.json`)
+
+All passed: True. Asserted on every split: train and test disjoint; every row clean and labelled; no training row dated inside a test group's [first, last] test date; no training row whose [date, exit_date] intersects a test group's span (purge); no training row dated in the 22 sessions after a test group (embargo; fewer only at the end of the calendar); no training row dated in the holdout window or with its label exit on or after the holdout start; test rows per month equal the walk-forward control's CV rows for that month; paths: every (split, group) test occurrence used by exactly one path; each path holds every group once.
+Training rows per split 1,351,005..1,756,525; warm-up rows (before 2018-01) used in training 32,424..50,230 per split; training rows dated after the earlier test group 0..1,724,101 per split (CPCV trains on later months by design).
+
 ## Results
 
 Not run yet: the lead queues `fit`, `paths`, `books` and `report`.

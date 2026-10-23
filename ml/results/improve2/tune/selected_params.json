@@ -1,0 +1,180 @@
+{
+ "complete": true,
+ "generated_at": "2026-10-23T04:18:23",
+ "generated_by": "ml/improve/tune.py select (seed 108)",
+ "plan": "ml/IMPROVEMENT_PLAN_2.md Q7",
+ "rule": "mean AUC over the last 3 21-session blocks before the anchor (each block: rolling 504-session training window ending 22 sessions before its first session, exit-date purge against that session); best mean wins (ties: grid order, incumbent first) but the incumbent is kept unless the best beats it by >= 0.002; a year without 3 blocks whose training windows hold >= 120 sessions keeps the incumbent",
+ "grid": {
+  "nl63_mdl200_ff0.8": {
+   "num_leaves": 63,
+   "min_data_in_leaf": 200,
+   "feature_fraction": 0.8
+  },
+  "nl31_mdl200_ff0.5": {
+   "num_leaves": 31,
+   "min_data_in_leaf": 200,
+   "feature_fraction": 0.5
+  },
+  "nl31_mdl200_ff0.8": {
+   "num_leaves": 31,
+   "min_data_in_leaf": 200,
+   "feature_fraction": 0.8
+  },
+  "nl31_mdl2000_ff0.5": {
+   "num_leaves": 31,
+   "min_data_in_leaf": 2000,
+   "feature_fraction": 0.5
+  },
+  "nl31_mdl2000_ff0.8": {
+   "num_leaves": 31,
+   "min_data_in_leaf": 2000,
+   "feature_fraction": 0.8
+  },
+  "nl127_mdl200_ff0.5": {
+   "num_leaves": 127,
+   "min_data_in_leaf": 200,
+   "feature_fraction": 0.5
+  },
+  "nl127_mdl200_ff0.8": {
+   "num_leaves": 127,
+   "min_data_in_leaf": 200,
+   "feature_fraction": 0.8
+  },
+  "nl127_mdl2000_ff0.5": {
+   "num_leaves": 127,
+   "min_data_in_leaf": 2000,
+   "feature_fraction": 0.5
+  },
+  "nl127_mdl2000_ff0.8": {
+   "num_leaves": 127,
+   "min_data_in_leaf": 2000,
+   "feature_fraction": 0.8
+  }
+ },
+ "incumbent": "nl63_mdl200_ff0.8",
+ "years": {
+  "2018": {
+   "setting": "nl63_mdl200_ff0.8",
+   "params": {
+    "num_leaves": 63,
+    "min_data_in_leaf": 200,
+    "feature_fraction": 0.8
+   },
+   "switched": false,
+   "basis": "incumbent kept: no eligible inner blocks",
+   "reason": "only 41 labelled sessions up to the anchor 2017-11-29 (data start 2017-10-03): 3 blocks of 21 sessions behind a 22-session embargo with >= 120 training sessions need >= 204; 0 block(s) formable"
+  },
+  "2019": {
+   "setting": "nl31_mdl2000_ff0.5",
+   "params": {
+    "num_leaves": 31,
+    "min_data_in_leaf": 2000,
+    "feature_fraction": 0.5
+   },
+   "switched": true,
+   "basis": "best setting beats the incumbent by >= 0.002",
+   "best_setting": "nl31_mdl2000_ff0.5",
+   "best_mean_inner_auc": 0.5819222467940198,
+   "incumbent_mean_inner_auc": 0.5748122202162554,
+   "best_minus_incumbent": 0.007110026577764383
+  },
+  "2020": {
+   "setting": "nl63_mdl200_ff0.8",
+   "params": {
+    "num_leaves": 63,
+    "min_data_in_leaf": 200,
+    "feature_fraction": 0.8
+   },
+   "switched": false,
+   "basis": "incumbent kept: best setting beats it by < 0.002",
+   "best_setting": "nl31_mdl200_ff0.8",
+   "best_mean_inner_auc": 0.5759739397935464,
+   "incumbent_mean_inner_auc": 0.5741535562683437,
+   "best_minus_incumbent": 0.0018203835252026401
+  },
+  "2021": {
+   "setting": "nl127_mdl2000_ff0.5",
+   "params": {
+    "num_leaves": 127,
+    "min_data_in_leaf": 2000,
+    "feature_fraction": 0.5
+   },
+   "switched": true,
+   "basis": "best setting beats the incumbent by >= 0.002",
+   "best_setting": "nl127_mdl2000_ff0.5",
+   "best_mean_inner_auc": 0.4879242079798593,
+   "incumbent_mean_inner_auc": 0.4836219753910133,
+   "best_minus_incumbent": 0.004302232588845989
+  },
+  "2022": {
+   "setting": "nl31_mdl200_ff0.5",
+   "params": {
+    "num_leaves": 31,
+    "min_data_in_leaf": 200,
+    "feature_fraction": 0.5
+   },
+   "switched": true,
+   "basis": "best setting beats the incumbent by >= 0.002",
+   "best_setting": "nl31_mdl200_ff0.5",
+   "best_mean_inner_auc": 0.5351459178678525,
+   "incumbent_mean_inner_auc": 0.5327900027046468,
+   "best_minus_incumbent": 0.0023559151632056574
+  },
+  "2023": {
+   "setting": "nl31_mdl200_ff0.8",
+   "params": {
+    "num_leaves": 31,
+    "min_data_in_leaf": 200,
+    "feature_fraction": 0.8
+   },
+   "switched": true,
+   "basis": "best setting beats the incumbent by >= 0.002",
+   "best_setting": "nl31_mdl200_ff0.8",
+   "best_mean_inner_auc": 0.5425169735097479,
+   "incumbent_mean_inner_auc": 0.5380595802913378,
+   "best_minus_incumbent": 0.0044573932184100995
+  },
+  "2024": {
+   "setting": "nl31_mdl2000_ff0.5",
+   "params": {
+    "num_leaves": 31,
+    "min_data_in_leaf": 2000,
+    "feature_fraction": 0.5
+   },
+   "switched": true,
+   "basis": "best setting beats the incumbent by >= 0.002",
+   "best_setting": "nl31_mdl2000_ff0.5",
+   "best_mean_inner_auc": 0.5204610796591557,
+   "incumbent_mean_inner_auc": 0.5182864588843533,
+   "best_minus_incumbent": 0.0021746207748023494
+  },
+  "2025": {
+   "setting": "nl63_mdl200_ff0.8",
+   "params": {
+    "num_leaves": 63,
+    "min_data_in_leaf": 200,
+    "feature_fraction": 0.8
+   },
+   "switched": false,
+   "basis": "incumbent kept: best setting beats it by < 0.002",
+   "best_setting": "nl31_mdl200_ff0.5",
+   "best_mean_inner_auc": 0.5478307076996161,
+   "incumbent_mean_inner_auc": 0.5459570022738928,
+   "best_minus_incumbent": 0.0018737054257232932
+  },
+  "2026": {
+   "setting": "nl31_mdl200_ff0.5",
+   "params": {
+    "num_leaves": 31,
+    "min_data_in_leaf": 200,
+    "feature_fraction": 0.5
+   },
+   "switched": true,
+   "basis": "best setting beats the incumbent by >= 0.002",
+   "best_setting": "nl31_mdl200_ff0.5",
+   "best_mean_inner_auc": 0.593810400875448,
+   "incumbent_mean_inner_auc": 0.5847087916478185,
+   "best_minus_incumbent": 0.009101609227629481
+  }
+ }
+}

@@ -30,7 +30,9 @@ Rule: exact equality per cell (NaN equals NaN); max_abs_diff over finite pairs.
 | 2026-10-16 | 1527 | 0 | 0 | 3.4e-13 | 16 | 0 | False | True |
 | every date through 2026-10-16 | 2226504 | 0 | 0 | 5.8e-13 | 3204 | 0 | False | True |
 
-Why not bit-identical: the live feed adds , so build_features rescales that ticker's earlier prices by the ratio; every price ratio is unchanged up to floating-point rounding. On 2026-10-16 the 16 differing cells are all in JSWDULUX (16 features, at most 3.4e-13); over every date, 3204 cells differ, all of them that ticker's rows or a cross-sectional feature (`amihud_20` z-score, ranks) on one of its 119 dates in the universe. Rule of explanation: None.
+Why not bit-identical: the live corporate-action feed adds JSWDULUX (price ratio 0.1, ex 2026-10-22) after the research end, so build_features rescales that ticker's earlier prices by the ratio; every price ratio is unchanged up to floating-point rounding. On 2026-10-16 the 16 differing cells are all in JSWDULUX (16 features, at most 3.4e-13); the other 1526 rows of that date are bit-identical. Over every date, 3204 cells differ (at most 5.8e-13) on 119 dates, every one of them that ticker's own row or a cross-sectional feature (`amihud_20` z-score, ranks) on a date where that ticker is in the universe; 0 are unexplained. Rule of explanation: a cell of a ticker whose pre-ex prices the new event rescales, or a cross-sectional feature (ranks, amihud_20 z-score) on a date where that ticker is in the universe.
+
+Point in time: signal dates 2026-10-19, 2026-10-21 and 2026-10-22 were scored on 2026-10-23 (the day this stream started) from the store as of 2026-10-22. Every feature looks back only, so a date's frame rows do not depend on later sessions except through a corporate action added later, which rescales that ticker's earlier prices (here JSWDULUX, ex 2026-10-22): the consistency proof above is exactly that check at 2026-10-16 (a frame built through 2026-10-22 against the research frame built through 2026-10-16), and it differs only by floating-point rounding in that one ticker. From 2026-10-23 on, each session is scored on its own evening.
 
 Trainer reproduction: the paper trainer on the research holdout fold (train end 2026-07-02, 682,309 training rows) scores 47,117 holdout rows; max |score − ten-year control score| = 0.0; identical True.
 
@@ -83,7 +85,7 @@ Deflated Sharpe of the daily active net-20 bps series (N = 261, V[SR] = 0.00387)
 
 ## Idempotency proof
 
-A second run on the same data (ml/paper/job.py --prove-idempotency, run after the first full run on the same store; scoring frame rebuilt from the store in this run: True; ingest decisions [['2026-10-23', 'pending: file not yet published']]): ledger SHA-256 before and after identical True; rows appended 0; recomputed signals of 2026-10-22 equal the ledger True; recomputed marks equal the ledger True.
+A second run on the same data (ml/paper/job.py --prove-idempotency, run after the first full run on the same store; scoring frame rebuilt from the store in this run: False; ingest decisions [['2026-10-23', 'pending: file not yet published']]): ledger SHA-256 before and after identical True; rows appended 0; recomputed signals of 2026-10-22 equal the ledger True; recomputed marks equal the ledger True.
 
 | File | SHA-256 before | SHA-256 after |
 |---|---|---|
@@ -95,4 +97,17 @@ A second run on the same data (ml/paper/job.py --prove-idempotency, run after th
 ## Lost-state check
 
 ml/paper/state/models/2026-10/ (all four model files) and ml/paper/state/scores/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest: the October models were retrained and equal the committed metadata ({'training_frame_sha256': True, 'reference_prediction_sha256': True, 'model_contents_sha256': True}); regenerated score files ['2026-10-19'] byte-identical True; ledger and model metadata unchanged True. CatBoost .cbm bytes carry train_finish_time and a random model_guid; its identity is the SHA-256 of the model exported without model_info (content_sha256); predictions of the original and the retrained CatBoost on 83,754 rows (2026-08-01..2026-10-22) differ by 0.0.
+
+Live corporate-action feed: ml/data_ext/corporate_actions_feed_live.csv deleted; ml.paper.ingest.regenerate_live_feed (the path a run takes when the feed is missing after the research end) rebuilt it from the store's EQ/BE rows and every PR bundle on disk; byte-identical to the original True, equal to the hash in state.json True (756 rows).
+
+## Determinism proof (ledger regenerated from inception)
+
+ml/paper/prove.py: the job (--no-ingest) run from an empty ledger in ml/paper/state/regen/ with the same store, scoring frame and month models; every write redirected to the sandbox. Rows regenerated: {'signals': 1521, 'marks': 8, 'monitors': 48} for signal dates ['2026-10-19', '2026-10-21', '2026-10-22']; ledger byte-identical to the committed files True; per-date score files identical True; committed ledger untouched True.
+
+| File | Committed SHA-256 | Regenerated SHA-256 |
+|---|---|---|
+| signals | `3534d3d7961f3677` | `3534d3d7961f3677` |
+| marks | `823d5bec0929e5cc` | `823d5bec0929e5cc` |
+| monitors | `6ce48f110ab264f3` | `6ce48f110ab264f3` |
+| state | `43e6bb1abfd9abf7` | `43e6bb1abfd9abf7` |
 

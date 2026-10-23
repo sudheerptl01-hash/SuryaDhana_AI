@@ -599,8 +599,17 @@
    "2026-10-19",
    "2026-10-21",
    "2026-10-22"
-  ]
+  ],
+  "corporate_actions_added_after_research_end": [
+   {
+    "ticker": "JSWDULUX",
+    "ex_date": "2026-10-22",
+    "ratio": 0.1
+   }
+  ],
+  "explained_difference_rule": "a cell of a ticker whose pre-ex prices the new event rescales, or a cross-sectional feature (ranks, amihud_20 z-score) on a date where that ticker is in the universe"
  },
+ "inception_point_in_time_note": "signal dates 2026-10-19, 2026-10-21 and 2026-10-22 were scored on 2026-10-23 (the day this stream started) from the store as of 2026-10-22. Every feature looks back only, so a date's frame rows do not depend on later sessions except through a corporate action added later, which rescales that ticker's earlier prices (here JSWDULUX, ex 2026-10-22): the consistency proof above is exactly that check at 2026-10-16 (a frame built through 2026-10-22 against the research frame built through 2026-10-16), and it differs only by floating-point rounding in that one ticker. From 2026-10-23 on, each session is scored on its own evening.",
  "trainer_reproduction": {
   "fold": {
    "name": "holdout",
@@ -1192,7 +1201,7 @@
   "recomputed_scores_max_abs_diff": 0.0,
   "recomputed_marks_equal_ledger": true,
   "recomputed_marks_max_abs_diff": 0.0,
-  "frame_rebuilt_in_this_run": true,
+  "frame_rebuilt_in_this_run": false,
   "ingest_decisions_in_this_run": [
    [
     "2026-10-23",
@@ -1212,6 +1221,67 @@
   ],
   "regenerated_scores_file_byte_identical": true,
   "unchanged": true,
-  "note_catboost": "CatBoost .cbm bytes carry train_finish_time and a random model_guid; its identity is the SHA-256 of the model exported without model_info (content_sha256); predictions of the original and the retrained CatBoost on 83,754 rows (2026-08-01..2026-10-22) differ by 0.0"
+  "note_catboost": "CatBoost .cbm bytes carry train_finish_time and a random model_guid; its identity is the SHA-256 of the model exported without model_info (content_sha256); predictions of the original and the retrained CatBoost on 83,754 rows (2026-08-01..2026-10-22) differ by 0.0",
+  "live_feed_regeneration": {
+   "test": "ml/data_ext/corporate_actions_feed_live.csv deleted; ml.paper.ingest.regenerate_live_feed (the path a run takes when the feed is missing after the research end) rebuilt it from the store's EQ/BE rows and every PR bundle on disk",
+   "original_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
+   "regenerated_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
+   "byte_identical": true,
+   "equals_state_json": true,
+   "rows": 756,
+   "new_validated_events": [
+    {
+     "ticker": "JSWDULUX",
+     "ex_date": "2026-10-22",
+     "ratio": 0.1,
+     "kind": "split",
+     "source": "PR151026.zip/bc15102026.csv"
+    }
+   ],
+   "error": null,
+   "original_restored": false
+  }
+ },
+ "regeneration_from_inception": {
+  "procedure": "ml/paper/prove.py: the job (--no-ingest) run from an empty ledger in ml/paper/state/regen/ with the same store, scoring frame and month models; every write redirected to the sandbox",
+  "ledger_files": {
+   "signals": {
+    "committed": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+    "regenerated": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+    "identical": true,
+    "path": "ml/paper/ledger/signals.csv"
+   },
+   "marks": {
+    "committed": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+    "regenerated": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+    "identical": true,
+    "path": "ml/paper/ledger/marks.csv"
+   },
+   "monitors": {
+    "committed": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+    "regenerated": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+    "identical": true,
+    "path": "ml/paper/ledger/monitors.csv"
+   },
+   "state": {
+    "committed": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9",
+    "regenerated": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9",
+    "identical": true,
+    "path": "ml/paper/ledger/state.json"
+   }
+  },
+  "ledger_identical": true,
+  "score_files_identical": true,
+  "committed_ledger_untouched": true,
+  "regenerated_rows_appended": {
+   "signals": 1521,
+   "marks": 8,
+   "monitors": 48
+  },
+  "regenerated_signal_dates": [
+   "2026-10-19",
+   "2026-10-21",
+   "2026-10-22"
+  ]
  }
 }

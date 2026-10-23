@@ -30,12 +30,14 @@ Design (fixed in the plan and the stream brief)
             through the same hook as the reference (wf_control).
 
 Stages (each resume-safe; outputs under ml/results/improve2/cpcv/)
+  check   the design's invariants asserted on all 28 splits' row masks, no fitting -> smoke/invariants.json
   smoke   one split on a 20% sample of its training rows (seed 108): timing, memory and the full-run estimate
   fit     the 28 splits -> cache/splits/<split>.parquet + .json
   paths   preds/path<j>__beat_mkt_20d.parquet (j = 1..7) and preds/wf_control__beat_mkt_20d.parquet; AUC / IC -> paths.json
   books   ml/improve/ab_books on wf_control + path1..path7 -> books_paths.json, books_paths.md
   report  readings and verdicts -> cpcv.json, CPCV.md
 
+    python3 -m ml.improve.cpcv check
     python3 -m ml.improve.cpcv smoke --n-jobs 1
     python3 -m ml.improve.cpcv fit --n-jobs 2
     python3 -m ml.improve.cpcv paths
@@ -277,6 +279,60 @@ def smoke(a) -> None:
         f"{est['fit_full_minutes_at_2_workers_5x_smoke']} min (5x smoke) for 28 fits at 2 workers")
 
 
+def check(a) -> None:
+    """Design invariants on every split's row masks (no fitting) -> smoke/invariants.json.  Asserts, then records."""
+    splits = load()
+    S = _S
+    dd, lab, ex, grp, sess = S["dd"], S["lab"], S["ex"], S["grp"], S["sess"]
+    wf = pd.read_parquet(WF_PREDS, columns=["fold"])
+    wf_rows = wf[wf["fold"] != "holdout"]["fold"].value_counts().to_dict()
+    month = S["month"]
+    out = {}
+    for s in SPLITS:
+        train, test, cnt = masks(s)
+        r = {"n_train": int(train.sum()), "n_test": int(test.sum())}
+        assert not (train & test).any()
+        assert lab[train].all() and lab[test].all()
+        for g in s:
+            sp = S["span"][g]
+            g0, g1, e1 = sp["first_test_date"], sp["last_test_date"], sp["embargo_last_date"]
+            assert not (train & (dd >= g0) & (dd <= g1)).any(), (s, g, "train row inside a test span")
+            assert not (train & (dd <= g1) & (ex >= g0)).any(), (s, g, "train label overlaps a test span")
+            assert not (train & (dd > g1) & (dd <= e1)).any(), (s, g, "train row inside the embargo")
+            n_emb = int(((sess > g1) & (sess <= e1)).sum())
+            r[f"g{g}_embargo_sessions"] = n_emb
+            assert n_emb == EMBARGO or e1 == sess[-1], (s, g, n_emb)
+            nxt = sess[sess > e1]
+            r[f"g{g}_first_trainable_after"] = str(pd.Timestamp(nxt[0]).date()) if nxt.size else None
+        assert not (train & (dd >= S["ho0"])).any() and not (train & (ex >= S["ho0"])).any()
+        tm = pd.Series(month[test]).value_counts().to_dict()
+        assert tm == {m: wf_rows[m] for m in tm} and set(tm) == {f["name"] for g in s for f in make_groups(splits)[g]}, s
+        r["test_rows_equal_walk_forward_rows"] = True
+        r["n_train_warmup_before_2018"] = int((train & (dd < np.datetime64("2018-01-01"))).sum())
+        r["n_train_after_a_test_group"] = int((train & (dd > S["span"][min(s)]["last_test_date"])).sum())
+        out[split_name(s)] = r
+    assign = path_assignment()
+    used = [(split_name(sp), g) for j, v in assign.items() for g, sp in enumerate(v)]
+    assert len(used) == len(set(used)) == K_TEST * len(SPLITS)
+    assert all(g in sp for v in assign.values() for g, sp in enumerate(v))
+    res = {"checks": ["train and test disjoint; every row clean and labelled",
+                      "no training row dated inside a test group's [first, last] test date",
+                      "no training row whose [date, exit_date] intersects a test group's span (purge)",
+                      f"no training row dated in the {EMBARGO} sessions after a test group (embargo; fewer only at "
+                      "the end of the calendar)",
+                      "no training row dated in the holdout window or with its label exit on or after the holdout start",
+                      "test rows per month equal the walk-forward control's CV rows for that month",
+                      "paths: every (split, group) test occurrence used by exactly one path; each path holds every "
+                      "group once"],
+           "all_passed": True, "n_splits": len(SPLITS), "splits": out,
+           "path_assignment": {f"path{j + 1}": {f"g{g}": split_name(sp) for g, sp in enumerate(v)}
+                               for j, v in assign.items()}}
+    wjson(OUT / "smoke" / "invariants.json", res)
+    write_md(json.loads((OUT / "cpcv.json").read_text()) if (OUT / "cpcv.json").exists() else None)
+    log(f"check: all invariants hold on {len(SPLITS)} splits; train rows {min(v['n_train'] for v in out.values()):,}.."
+        f"{max(v['n_train'] for v in out.values()):,}")
+
+
 def fit(a) -> None:
     load()
     jobs = [(s, 1.0, None) for s in SPLITS]
@@ -484,6 +540,17 @@ DESIGN_MD = [
 
 def write_md(res: dict | None) -> None:
     L = list(DESIGN_MD)
+    iv = OUT / "smoke" / "invariants.json"
+    if iv.exists():
+        z = json.loads(iv.read_text())
+        sp = z["splits"].values()
+        L += ["## Design check (row masks of all 28 splits, no fitting; `smoke/invariants.json`)", "",
+              f"All passed: {z['all_passed']}. Asserted on every split: " + "; ".join(z["checks"]) + ".",
+              f"Training rows per split {min(v['n_train'] for v in sp):,}..{max(v['n_train'] for v in sp):,}; warm-up rows "
+              f"(before 2018-01) used in training {min(v['n_train_warmup_before_2018'] for v in sp):,}.."
+              f"{max(v['n_train_warmup_before_2018'] for v in sp):,} per split; training rows dated after the earlier "
+              f"test group {min(v['n_train_after_a_test_group'] for v in sp):,}.."
+              f"{max(v['n_train_after_a_test_group'] for v in sp):,} per split (CPCV trains on later months by design).", ""]
     if res is not None:
         L += ["## Verdict", "",
               f"- Full-universe neutral top decile: positive net excess in "
@@ -529,14 +596,14 @@ def write_md(res: dict | None) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["doc", "smoke", "fit", "paths", "books", "report"])
+    ap.add_argument("stage", choices=["doc", "check", "smoke", "fit", "paths", "books", "report"])
     ap.add_argument("--n-jobs", type=int, default=2)
     a = ap.parse_args()
     assert 1 <= a.n_jobs <= 2, "shared box: at most two worker processes"
     if a.stage == "doc":
         write_md(None)
         return
-    {"smoke": smoke, "fit": fit, "paths": paths, "books": books, "report": report}[a.stage](a)
+    {"check": check, "smoke": smoke, "fit": fit, "paths": paths, "books": books, "report": report}[a.stage](a)
 
 
 if __name__ == "__main__":
