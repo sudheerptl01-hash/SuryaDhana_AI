@@ -32,3 +32,12 @@ ml/results/improve/**/log.txt
 ml/results/improve/**/*.log
 ml/results/improve/**/download_stdout.txt
 ml/results/improve/**/download_status.json
+# improvement phase 2: derived datasets, model state, predictions, caches, live logs
+ml/data_10y_liq/
+ml/data_10y_liq2/
+ml/data_10y_h40/
+ml/paper/state/
+ml/results/improve2/**/preds/
+ml/results/improve2/**/cache/
+ml/results/improve2/**/log.txt
+ml/results/improve2/**/*.log
