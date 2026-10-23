@@ -41,3 +41,4 @@ ml/results/improve2/**/preds/
 ml/results/improve2/**/cache/
 ml/results/improve2/**/log.txt
 ml/results/improve2/**/*.log
+ml/results/improve2/**/*.pid
