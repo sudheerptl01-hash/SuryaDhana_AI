@@ -1,0 +1,38 @@
+{
+ "2016-10-30": {
+  "http": 200,
+  "inner_date_ok": true,
+  "inner": "2016-10-30",
+  "weekday": "Sunday"
+ },
+ "2017-10-19": {
+  "http": 200,
+  "inner_date_ok": true,
+  "inner": "2017-10-19",
+  "weekday": "Thursday"
+ },
+ "2018-11-07": {
+  "http": 200,
+  "inner_date_ok": true,
+  "inner": "2018-11-07",
+  "weekday": "Wednesday"
+ },
+ "2019-10-27": {
+  "http": 200,
+  "inner_date_ok": true,
+  "inner": "2019-10-27",
+  "weekday": "Sunday"
+ },
+ "2020-02-01": {
+  "http": 200,
+  "inner_date_ok": true,
+  "inner": "2020-02-01",
+  "weekday": "Saturday"
+ },
+ "2020-11-14": {
+  "http": 200,
+  "inner_date_ok": true,
+  "inner": "2020-11-14",
+  "weekday": "Saturday"
+ }
+}

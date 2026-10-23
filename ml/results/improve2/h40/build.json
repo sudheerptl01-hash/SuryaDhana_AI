@@ -1,0 +1,97 @@
+{
+ "what": "ml/data_10y_h40 build: horizon-20 reproduction of ml/data_10y (the code-path proof), then horizon 40",
+ "verification_h20": {
+  "y_raw_20d": {
+   "identical": true,
+   "n_nan_mismatch": 0,
+   "n_value_not_bitwise_equal": 0,
+   "max_abs_diff": 0.0
+  },
+  "y_excess_20d": {
+   "identical": true,
+   "n_nan_mismatch": 0,
+   "n_value_not_bitwise_equal": 0,
+   "max_abs_diff": 0.0
+  },
+  "y_rank_20d": {
+   "identical": true,
+   "n_nan_mismatch": 0,
+   "n_value_not_bitwise_equal": 0,
+   "max_abs_diff": 0.0
+  },
+  "label_beat_mkt_20d": {
+   "identical": true,
+   "n_nan_mismatch": 0,
+   "n_value_not_bitwise_equal": 0,
+   "max_abs_diff": 0.0
+  },
+  "y_clean_20d": {
+   "identical": true,
+   "n_mismatch": 0
+  },
+  "exit_date": {
+   "identical": true,
+   "n_mismatch": 0
+  },
+  "ret_1d (feature, recomputed from the export)": {
+   "identical": true,
+   "n_nan_mismatch": 0,
+   "n_value_not_bitwise_equal": 0,
+   "max_abs_diff": 0.0
+  },
+  "splits": {
+   "identical": true,
+   "n_folds": 103
+  },
+  "all_identical": true
+ },
+ "verdict": "PASS: horizon-20 code path reproduces ml/data_10y exactly; dataset written",
+ "dataset": {
+  "rows": 2226504,
+  "tickers": 2514,
+  "sessions": 2241,
+  "labeled_rows_40d": 2157713,
+  "labeled_clean_rows_40d": 2150979,
+  "y_clean_share_40d": 0.9660791087732158,
+  "label_balance_40d": 0.4997374534982178,
+  "last_labeled_date_40d": "2026-08-18",
+  "labeled_clean_rows_20d": 2187230,
+  "clean_overlap": {
+   "both": 2150910,
+   "clean_40_not_20": 69,
+   "clean_20_not_40": 36320
+  },
+  "rows_40d_clean_with_a_missing_market_session_in_window": 558,
+  "share_40d_clean_with_a_missing_market_session_in_window": 0.00025941675860154844,
+  "max_market_sessions_spanned_by_a_clean_40d_label": 737,
+  "first_fold": {
+   "fold": {
+    "name": "2018-01",
+    "train_end": "2017-11-01",
+    "test_start": "2018-01-01",
+    "test_end": "2018-01-31"
+   },
+   "train_rows": 16136,
+   "train_labeled_clean_rows": 15986,
+   "train_sessions": 21
+  },
+  "holdout": {
+   "name": "holdout",
+   "train_end": "2026-06-03",
+   "test_start": "2026-08-03",
+   "test_end": "2026-08-18"
+  },
+  "label_column_differs_from_data_10y": {
+   "y_raw_20d": true,
+   "y_excess_20d": true,
+   "y_rank_20d": true,
+   "label_beat_mkt_20d": true,
+   "y_clean_20d": true,
+   "exit_date": true
+  },
+  "features_identical_to_data_10y": true
+ },
+ "splits_file": "ml/data_10y_h40/splits.json",
+ "manifest": "ml/data_10y_h40/manifest.json",
+ "seconds": 35.9
+}

@@ -1,0 +1,238 @@
+{
+ "model": "lgbm_lambdarank",
+ "family": "sota",
+ "agent": "quant-sota",
+ "task": "beat_mkt_20d",
+ "params": {
+  "num_leaves": 63,
+  "learning_rate": 0.05,
+  "n_estimators": 300,
+  "feature_fraction": 0.8,
+  "bagging_fraction": 0.8,
+  "bagging_freq": 1,
+  "min_data_in_leaf": 200,
+  "num_threads": 2,
+  "random_state": 108,
+  "verbose": -1,
+  "objective": "lambdarank",
+  "relevance": "floor(10*y_rank_20d) clipped 0..9",
+  "query": "date",
+  "fold_detail": {
+   "2026-04": {
+    "n_queries": 184,
+    "mean_query_size": 1423.9,
+    "train_seconds": 18.1
+   },
+   "2026-05": {
+    "n_queries": 204,
+    "mean_query_size": 1429.7,
+    "train_seconds": 21.8
+   },
+   "2026-06": {
+    "n_queries": 223,
+    "mean_query_size": 1440.8,
+    "train_seconds": 29.9
+   },
+   "2026-07": {
+    "n_queries": 244,
+    "mean_query_size": 1450.0,
+    "train_seconds": 108.0
+   },
+   "holdout": {
+    "n_queries": 267,
+    "mean_query_size": 1457.5,
+    "train_seconds": 102.3
+   }
+  }
+ },
+ "preprocess": "raw",
+ "n_features": 10,
+ "feature_subset": [
+  "atr_pct",
+  "deliv_pct_sma_20",
+  "dist_52w_high",
+  "ret_126d",
+  "mom_12_1",
+  "cs_rank_mom_20",
+  "cs_rank_ret_126",
+  "cs_rank_vol_20",
+  "deliv_pct",
+  "ret_63d"
+ ],
+ "folds": [
+  {
+   "auc": 0.5619358450304786,
+   "pr_auc": 0.5469638952577593,
+   "brier": 0.4948229091189763,
+   "acc": 0.5018282122009109,
+   "n": 31178,
+   "base_rate": 0.5006093978881836,
+   "decile_spread": 0.04723096638917923,
+   "top_decile_mean_fwd": 0.038664963096380234,
+   "decile_means": [
+    -0.008566005155444145,
+    -0.0031079857144504786,
+    0.004827705677598715,
+    0.011953029781579971,
+    0.019449394196271896,
+    0.02644149772822857,
+    0.029453428462147713,
+    0.03661684691905975,
+    0.034346602857112885,
+    0.038664963096380234
+   ],
+   "fold": "2026-04",
+   "n_train": 261997,
+   "train_seconds": 18.1,
+   "rank_ic_mean": 0.10948932289078672,
+   "rank_ic_t_naive": 8.22830334243147,
+   "n_dates": 20
+  },
+  {
+   "auc": 0.5400684466703769,
+   "pr_auc": 0.5370849279274419,
+   "brier": 0.49772837075259957,
+   "acc": 0.49971097283144617,
+   "n": 29409,
+   "base_rate": 0.5014111399650574,
+   "decile_spread": 0.054454222321510315,
+   "top_decile_mean_fwd": 0.05462745204567909,
+   "decile_means": [
+    0.0001732311793603003,
+    0.005620985757559538,
+    0.006502026226371527,
+    0.01356810238212347,
+    0.01925978995859623,
+    0.0164803359657526,
+    0.01914731226861477,
+    0.025099433958530426,
+    0.03578925132751465,
+    0.05462745204567909
+   ],
+   "fold": "2026-05",
+   "n_train": 291661,
+   "train_seconds": 21.8,
+   "rank_ic_mean": 0.0730613838194753,
+   "rank_ic_t_naive": 11.079992794274405,
+   "n_dates": 19
+  },
+  {
+   "auc": 0.5182942963336371,
+   "pr_auc": 0.5068464623470306,
+   "brier": 0.5004365735478653,
+   "acc": 0.4958966894800409,
+   "n": 32291,
+   "base_rate": 0.5017496943473816,
+   "decile_spread": 0.01398712582886219,
+   "top_decile_mean_fwd": 0.01349717192351818,
+   "decile_means": [
+    -0.000489954138174653,
+    0.0027415305376052856,
+    0.010448209010064602,
+    0.012660077773034573,
+    0.020862091332674026,
+    0.015932787209749222,
+    0.018781417980790138,
+    0.02302800491452217,
+    0.025455793365836143,
+    0.01349717192351818
+   ],
+   "fold": "2026-06",
+   "n_train": 321301,
+   "train_seconds": 29.9,
+   "rank_ic_mean": 0.031047955891688375,
+   "rank_ic_t_naive": 2.525286873596391,
+   "n_dates": 21
+  },
+  {
+   "auc": 0.49673707956668445,
+   "pr_auc": 0.5053529481995749,
+   "brier": 0.4980059254114281,
+   "acc": 0.49814544228391594,
+   "n": 35588,
+   "base_rate": 0.5020793676376343,
+   "decile_spread": 0.02156057208776474,
+   "top_decile_mean_fwd": 0.03185560181736946,
+   "decile_means": [
+    0.010295030660927296,
+    0.013835684396326542,
+    0.009760287590324879,
+    0.014833107590675354,
+    0.01235044002532959,
+    0.016007931903004646,
+    0.012654364109039307,
+    0.011834773235023022,
+    0.022981123998761177,
+    0.03185560181736946
+   ],
+   "fold": "2026-07",
+   "n_train": 353788,
+   "train_seconds": 108.0,
+   "rank_ic_mean": -0.005316953779680657,
+   "rank_ic_t_naive": -0.36581270063995147,
+   "n_dates": 23
+  }
+ ],
+ "cv_auc_mean": 0.5292589169002943,
+ "cv_auc_std": 0.024302882409294947,
+ "holdout": {
+  "auc": 0.5660951766892711,
+  "pr_auc": 0.5637979697784915,
+  "brier": 0.4969263249010951,
+  "acc": 0.49931557333894916,
+  "n": 47485,
+  "base_rate": 0.5021585822105408,
+  "decile_spread": 0.06033800169825554,
+  "top_decile_mean_fwd": 0.06287919729948044,
+  "decile_means": [
+   0.002541195135563612,
+   -0.00960707850754261,
+   -0.003886676160618663,
+   0.006469944957643747,
+   0.010885285213589668,
+   0.01891510747373104,
+   0.02851763553917408,
+   0.03647501766681671,
+   0.04618607461452484,
+   0.06287919729948044
+  ],
+  "fold": "holdout",
+  "n_train": 389148,
+  "train_seconds": 102.3,
+  "rank_ic_mean": 0.14353980181960224,
+  "rank_ic_t_naive": 20.105785037806147,
+  "n_dates": 30
+ },
+ "train_seconds": 280.1,
+ "notes": "LGBMRanker(objective=lambdarank) with the champion's tree hyper-parameters; query group = one date (rows date-sorted); relevance = floor(10*y_rank_20d) clipped to 0..9. LightGBM ranking defaults kept (label_gain 2^g-1, lambdarank_truncation_level=30, so the gradient concentrates on the top ~30 names per date). Score = raw ranker output: AUC, decile spread and rank-IC are valid; Brier and acc@0.5 are NOT meaningful for a non-probability score. INTERPRETATION: Does not beat the champion: CV 0.5293 (-0.002) and July 0.4967 < 0.50. The 2^g-1 gains on 10 return grades make the ranker chase the top decile of 20-day returns, which is dominated by volatile names: its score has per-date Spearman +0.66 with atr_pct (champion +0.03), so its fold pattern follows the sign of the volatility factor (IC +0.095 Apr, -0.059 Jul, +0.10 holdout) rather than stock-specific skill; the 0.566 holdout / +6.0% spread is that vol-friendly window, not evidence. It is the most diverse partner for the champion (per-date rank corr 0.26), which is what the ensemble exploits.",
+ "score_kind": "ranker_raw",
+ "train_seconds_per_fold_mean": 56.0,
+ "cv_worst_fold_auc": 0.49673707956668445,
+ "rank_ic": {
+  "definition": "per-date Spearman(score, y_excess_20d) over clean test rows; t_naive = mean/(sd/sqrt(n_dates)); t_nw19 = Newey-West(19 lags) because consecutive 20-session forward windows overlap",
+  "cv": {
+   "mean": 0.049489998640705614,
+   "std": 0.07082458206850538,
+   "t_naive": 6.366085507034535,
+   "t_nw19": 2.1250747227949054,
+   "hit_rate": 0.7590361445783133,
+   "n_dates": 83
+  },
+  "holdout": {
+   "mean": 0.14353980181960224,
+   "std": 0.039103167177299086,
+   "t_naive": 20.105785037806147,
+   "t_nw19": 25.693528025334313,
+   "hit_rate": 1.0,
+   "n_dates": 30
+  }
+ },
+ "vs_champion": {
+  "champion": "lgbm_fs_selected (clean)",
+  "champion_cv_auc": 0.5314,
+  "pass_mark_cv_auc": 0.5364,
+  "delta_cv_auc": -0.0021410830997057317,
+  "all_folds_ge_050": false,
+  "passes": false
+ }
+}

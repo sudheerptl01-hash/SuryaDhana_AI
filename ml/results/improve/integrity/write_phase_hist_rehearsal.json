@@ -1,0 +1,510 @@
+{
+ "db": "/tmp/claude-0/-home-user-SuryaDhana-AI/a2334483-114a-5057-9fd0-81f0f14285e9/scratchpad/rehearsal/nse_market_copy10y.duckdb",
+ "rehearsal": true,
+ "ca_csv": "ml/data_ext/corporate_actions_feed_10y.csv",
+ "staging": {
+  "p1_rows": 23715,
+  "extra_rows": 2142087,
+  "extra_files": [
+   "ml/data_hist/equity_eod_2016_2021.parquet"
+  ],
+  "extra_file_stats": {
+   "ml/data_hist/equity_eod_2016_2021.parquet": {
+    "rows_in_file": 2356697,
+    "rows_other_series_dropped": 214610,
+    "series_dropped": 118,
+    "date_min": "2016-10-03",
+    "date_max": "2021-09-30"
+   }
+  },
+  "extra_before": "2021-10-01",
+  "delete_dates": [
+   "2021-11-05",
+   "2023-06-29",
+   "2024-01-22"
+  ]
+ },
+ "etf_list": "ml/data_ext/etf_list_10y.csv",
+ "started": "2026-10-22T14:30:55",
+ "before": {
+  "equity_eod_rows": 3095641,
+  "equity_eod_dates": 1251,
+  "equity_features_rows": 2737956,
+  "rows_on_delete_dates": {
+   "2021-11-05": 0,
+   "2023-06-29": 0,
+   "2024-01-22": 0
+  }
+ },
+ "overwrites_existing_keys": 23715,
+ "upsert": {
+  "rows": 2165802,
+  "deleted_dates": [
+   "2021-11-05",
+   "2023-06-29",
+   "2024-01-22"
+  ],
+  "rows_deleted": {
+   "2021-11-05": 0,
+   "2023-06-29": 0,
+   "2024-01-22": 0
+  },
+  "seconds": 20.2,
+  "dates": 1276,
+  "by_date": "1276 dates (see the staging files)"
+ },
+ "tables": {
+  "corporate_actions": 45504,
+  "etf_list": 494,
+  "equity_master": 2619,
+  "special_sessions": 16
+ },
+ "build_features": {
+  "rows": 4773081,
+  "seconds": 86.0
+ },
+ "after": {
+  "equity_eod_rows": 5237728,
+  "equity_eod_dates": 2489,
+  "eq_be_rows": 4773081,
+  "eq_be_dup_date_ticker": 0,
+  "equity_features_rows": 4773081,
+  "rows_on_delete_dates": {
+   "2021-11-05": 0,
+   "2023-06-29": 0,
+   "2024-01-22": 0
+  },
+  "rows_on_upsert_dates": "many",
+  "dates_in_feature_table": 2489,
+  "adj_factor_ne_1_rows": 589221,
+  "expected_equity_eod_rows": 5237728,
+  "row_count_as_expected": true,
+  "rows_from_boundary_unchanged": {
+   "boundary": "2021-10-01",
+   "before": [
+    3095641.0,
+    2270341992.0601,
+    4850951077780.0,
+    1120440911430000.0,
+    2269853857.5301,
+    1251.0,
+    4219.0
+   ],
+   "after": [
+    3095641.0,
+    2270341992.0601,
+    4850951077780.0,
+    1120440911430000.0,
+    2269853857.5301,
+    1251.0,
+    4219.0
+   ],
+   "identical": true
+  },
+  "history_calendar": {
+   "sessions_by_year": {
+    "2016": {
+     "stored": 62,
+     "pr_calendar": 62
+    },
+    "2017": {
+     "stored": 248,
+     "pr_calendar": 248
+    },
+    "2018": {
+     "stored": 246,
+     "pr_calendar": 245
+    },
+    "2019": {
+     "stored": 245,
+     "pr_calendar": 245
+    },
+    "2020": {
+     "stored": 252,
+     "pr_calendar": 252
+    },
+    "2021": {
+     "stored": 185,
+     "pr_calendar": 187
+    }
+   },
+   "stored_not_in_pr_calendar": [],
+   "pr_calendar_not_stored": [
+    "2021-10-01",
+    "2021-10-04"
+   ],
+   "misfiled_bundles": {
+    "2018-01-02": {
+     "holds": "2019-01-02",
+     "stored": true
+    }
+   },
+   "identical": false,
+   "special_sessions_stored": {
+    "2016-10-30": true,
+    "2017-10-19": true,
+    "2018-11-07": true,
+    "2019-10-27": true,
+    "2020-02-01": true,
+    "2020-11-14": true
+   }
+  }
+ },
+ "nestleind": {
+  "rows": 2489,
+  "max_abs_log_ret_adjusted": 0.12048164947576828,
+  "max_abs_log_ret_unadjusted": 2.31940946288679,
+  "adj_close_2024-01-04": 1355.8200000000002,
+  "adj_close_2024-01-05": 1333.2,
+  "no_10x_break": true
+ },
+ "known_events": {
+  "HDFCBANK": {
+   "rows": 2489,
+   "max_abs_log_ret_adjusted": 0.13475383223159348,
+   "max_abs_log_ret_raw": 0.7019943067158014,
+   "feed_events": [
+    {
+     "ex_date": "2019-09-19",
+     "ratio": "0.5"
+    },
+    {
+     "ex_date": "2025-08-26",
+     "ratio": "0.5"
+    }
+   ],
+   "ex_dates": {
+    "2019-09-19": {
+     "session": "2019-09-19",
+     "raw_close_prev": 2187.75,
+     "raw_close_ex": 1101.05,
+     "adj_close_prev": 546.9375,
+     "adj_close_ex": 550.525,
+     "adj_ret_ex": 0.0065592503713860495,
+     "raw_ret_ex": -0.496720374814307
+    }
+   },
+   "largest_adjusted_move": {
+    "date": "2020-03-23",
+    "log_ret": -0.13475383223159348
+   },
+   "continuous": true
+  },
+  "INFY": {
+   "rows": 2489,
+   "max_abs_log_ret_adjusted": 0.17659467747631524,
+   "max_abs_log_ret_raw": 0.6656059441861517,
+   "feed_events": [
+    {
+     "ex_date": "2018-09-04",
+     "ratio": "0.5"
+    }
+   ],
+   "ex_dates": {
+    "2018-09-04": {
+     "session": "2018-09-04",
+     "raw_close_prev": 1434.25,
+     "raw_close_ex": 737.15,
+     "adj_close_prev": 717.125,
+     "adj_close_ex": 737.15,
+     "adj_ret_ex": 0.02792400209168555,
+     "raw_ret_ex": -0.4860379989541572
+    }
+   },
+   "largest_adjusted_move": {
+    "date": "2019-10-22",
+    "log_ret": -0.17659467747631524
+   },
+   "continuous": true
+  },
+  "IRCTC": {
+   "rows": 1742,
+   "max_abs_log_ret_adjusted": 0.2071240776211423,
+   "max_abs_log_ret_raw": 1.5087856290900665,
+   "feed_events": [
+    {
+     "ex_date": "2021-10-28",
+     "ratio": "0.2"
+    }
+   ],
+   "ex_dates": {
+    "2021-10-28": {
+     "session": "2021-10-28",
+     "raw_close_prev": 4130.15,
+     "raw_close_ex": 913.5,
+     "adj_close_prev": 826.03,
+     "adj_close_ex": 913.5,
+     "adj_ret_ex": 0.10589203781944967,
+     "raw_ret_ex": -0.77882159243611
+    }
+   },
+   "largest_adjusted_move": {
+    "date": "2021-10-20",
+    "log_ret": -0.2071240776211423
+   },
+   "continuous": true
+  },
+  "NESTLEIND": {
+   "rows": 2489,
+   "max_abs_log_ret_adjusted": 0.12048164947576828,
+   "max_abs_log_ret_raw": 2.31940946288679,
+   "feed_events": [
+    {
+     "ex_date": "2024-01-05",
+     "ratio": "0.1"
+    },
+    {
+     "ex_date": "2025-08-08",
+     "ratio": "0.5"
+    }
+   ],
+   "ex_dates": {
+    "2024-01-05": {
+     "session": "2024-01-05",
+     "raw_close_prev": 27116.4,
+     "raw_close_ex": 2666.4,
+     "adj_close_prev": 1355.8200000000002,
+     "adj_close_ex": 1333.2,
+     "adj_ret_ex": -0.016683630570429764,
+     "raw_ret_ex": -0.901668363057043
+    },
+    "2025-08-08": {
+     "session": "2025-08-08",
+     "raw_close_prev": 2234.6,
+     "raw_close_ex": 1096.5,
+     "adj_close_prev": 1117.3,
+     "adj_close_ex": 1096.5,
+     "adj_ret_ex": -0.018616307169068258,
+     "raw_ret_ex": -0.5093081535845341
+    }
+   },
+   "largest_adjusted_move": {
+    "date": "2020-04-07",
+    "log_ret": 0.12048164947576828
+   },
+   "continuous": true
+  },
+  "RELIANCE": {
+   "rows": 2489,
+   "max_abs_log_ret_adjusted": 0.14103245786658777,
+   "max_abs_log_ret_raw": 0.6987542162151774,
+   "feed_events": [
+    {
+     "ex_date": "2017-09-07",
+     "ratio": "0.5"
+    },
+    {
+     "ex_date": "2024-10-28",
+     "ratio": "0.5"
+    }
+   ],
+   "ex_dates": {
+    "2024-10-28": {
+     "session": "2024-10-28",
+     "raw_close_prev": 2655.7,
+     "raw_close_ex": 1334.35,
+     "adj_close_prev": 1327.85,
+     "adj_close_ex": 1334.35,
+     "adj_ret_ex": 0.004895131227171667,
+     "raw_ret_ex": -0.49755243438641417
+    },
+    "2017-09-07": {
+     "session": "2017-09-07",
+     "raw_close_prev": 1645.4,
+     "raw_close_ex": 818.1,
+     "adj_close_prev": 411.35,
+     "adj_close_ex": 409.05,
+     "adj_ret_ex": -0.005591345569466388,
+     "raw_ret_ex": -0.5027956727847331
+    }
+   },
+   "largest_adjusted_move": {
+    "date": "2020-03-23",
+    "log_ret": -0.14103245786658777
+   },
+   "continuous": true
+  },
+  "TATASTEEL": {
+   "rows": 2489,
+   "max_abs_log_ret_adjusted": 0.1348258279552849,
+   "max_abs_log_ret_raw": 2.2576440138256166,
+   "feed_events": [
+    {
+     "ex_date": "2022-07-28",
+     "ratio": "0.1"
+    }
+   ],
+   "ex_dates": {
+    "2022-07-28": {
+     "session": "2022-07-28",
+     "raw_close_prev": 959.4,
+     "raw_close_ex": 100.35,
+     "adj_close_prev": 95.94,
+     "adj_close_ex": 100.35,
+     "adj_ret_ex": 0.045966228893058236,
+     "raw_ret_ex": -0.8954033771106942
+    }
+   },
+   "largest_adjusted_move": {
+    "date": "2022-05-23",
+    "log_ret": -0.1348258279552849
+   },
+   "continuous": true
+  },
+  "TCS": {
+   "rows": 2489,
+   "max_abs_log_ret_adjusted": 0.09883021338355193,
+   "max_abs_log_ret_raw": 0.7022950674575701,
+   "feed_events": [
+    {
+     "ex_date": "2018-05-31",
+     "ratio": "0.5"
+    }
+   ],
+   "ex_dates": {
+    "2018-05-31": {
+     "session": "2018-05-31",
+     "raw_close_prev": 3514.1,
+     "raw_close_ex": 1741.05,
+     "adj_close_prev": 1757.05,
+     "adj_close_ex": 1741.05,
+     "adj_ret_ex": -0.00910617227739674,
+     "raw_ret_ex": -0.5045530861386984
+    }
+   },
+   "largest_adjusted_move": {
+    "date": "2020-03-12",
+    "log_ret": -0.09883021338355193
+   },
+   "continuous": true
+  },
+  "YESBANK": {
+   "rows": 2489,
+   "max_abs_log_ret_adjusted": 0.8235777955062198,
+   "max_abs_log_ret_raw": 1.6067024412500834,
+   "feed_events": [
+    {
+     "ex_date": "2017-09-21",
+     "ratio": "0.2"
+    }
+   ],
+   "ex_dates": {
+    "2017-09-21": {
+     "session": "2017-09-21",
+     "raw_close_prev": 1880.1,
+     "raw_close_ex": 377.05,
+     "adj_close_prev": 376.02,
+     "adj_close_ex": 377.05,
+     "adj_ret_ex": 0.0027392159991490583,
+     "raw_ret_ex": -0.7994521568001702
+    }
+   },
+   "largest_adjusted_move": {
+    "date": "2020-03-06",
+    "log_ret": -0.8235777955062198
+   },
+   "continuous": true
+  },
+  "all_continuous": true
+ },
+ "features_from_boundary_vs_v2_export": {
+  "rows_only_in_one": 0,
+  "columns": {
+   "open_unadj": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   },
+   "close_unadj": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   },
+   "volume": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   },
+   "turnover": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   },
+   "deliv_pct": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   },
+   "open": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   },
+   "high": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   },
+   "low": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   },
+   "close": {
+    "max_abs_diff": 0.0,
+    "rows_differing": 0,
+    "nan_mismatch": 0
+   }
+  },
+  "raw_columns_identical": true,
+  "adjustment_factor_differs_rows": 0,
+  "adjustment_factor_differs_tickers": [],
+  "rows_new": 2737956,
+  "rows_v2": 2737956
+ },
+ "continuity_after": {
+  "max_share": 0.0030525030525030525,
+  "flagged": [],
+  "top5": [
+   {
+    "date": "2019-05-02",
+    "n_with_prev": 1638,
+    "n_mismatch": 5,
+    "share": 0.0030525030525030525,
+    "flagged": false
+   },
+   {
+    "date": "2022-01-10",
+    "n_with_prev": 1871,
+    "n_mismatch": 5,
+    "share": 0.002672367717797969,
+    "flagged": false
+   },
+   {
+    "date": "2019-03-18",
+    "n_with_prev": 1640,
+    "n_mismatch": 4,
+    "share": 0.0024390243902439024,
+    "flagged": false
+   },
+   {
+    "date": "2018-09-18",
+    "n_with_prev": 1640,
+    "n_mismatch": 4,
+    "share": 0.0024390243902439024,
+    "flagged": false
+   },
+   {
+    "date": "2022-12-26",
+    "n_with_prev": 2002,
+    "n_mismatch": 3,
+    "share": 0.0014985014985014985,
+    "flagged": false
+   }
+  ],
+  "mismatch_rows_total": 141,
+  "mismatch_rows_on_a_parsed_ex_date": 18
+ },
+ "finished": "2026-10-22T14:32:50",
+ "duration_seconds": 128.9
+}

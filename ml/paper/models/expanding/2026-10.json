@@ -1,0 +1,133 @@
+{
+ "month": "2026-10",
+ "role": "expanding-window challenger model (SPEC.md amendment 10)",
+ "members": [
+  "lgbm"
+ ],
+ "trained_as_of": "2026-10-01",
+ "spec": {
+  "name": "2026-10",
+  "train_end": "2026-08-31",
+  "test_start": "2026-10-01",
+  "test_end": "2026-10-22"
+ },
+ "training_window": {
+  "first_date": "2017-10-03",
+  "last_date": "2026-08-31",
+  "sessions": 2209,
+  "rows": 2170733,
+  "labelled_clean_rows_before_purge": 2170733,
+  "rows_purged_exit_ge_test_start": 0,
+  "tickers": 2451,
+  "label_mean": 0.5002172077358201,
+  "rule": "ml.scale5y_nested.window_rows with train_sessions = 0 (ml/improve/ab.py q9_expanding): every labelled clean row from the frame's first session (2017-10-03) to train_end (train_end 22 sessions before the month's first session), exit-date purge at the first session; no 504-session cap"
+ },
+ "training_frame_sha256": "7ef5c788fe2e4492c0e5ecacd812c6d636763aaa92dc5e207024df5c971986d3",
+ "features": [
+  "ret_1d",
+  "log_ret_1d",
+  "gap_pct",
+  "range_pct",
+  "close_pos_in_range",
+  "dist_sma_5",
+  "dist_sma_10",
+  "dist_sma_20",
+  "dist_sma_50",
+  "macd_norm",
+  "mom_5",
+  "mom_10",
+  "mom_20",
+  "vol_5",
+  "vol_10",
+  "vol_20",
+  "rsi_14",
+  "atr_pct",
+  "vol_ratio_20",
+  "vol_z_20",
+  "deliv_pct",
+  "deliv_pct_sma_20",
+  "deliv_pct_z_20",
+  "dist_52w_high",
+  "dist_52w_low",
+  "rsi_2",
+  "ret_63d",
+  "ret_126d",
+  "ret_252d",
+  "mom_12_1",
+  "dist_200dma",
+  "flag_below_200dma",
+  "flag_near_52w_low",
+  "flag_split_20d",
+  "log_turnover",
+  "cs_rank_mom_20",
+  "cs_rank_ret_126",
+  "cs_rank_vol_20",
+  "cs_rank_turnover",
+  "cs_rank_deliv_z",
+  "deliv_pct_isnan",
+  "deliv_pct_sma_20_isnan",
+  "deliv_pct_z_20_isnan",
+  "ret_63d_isnan",
+  "ret_126d_isnan",
+  "ret_252d_isnan",
+  "mom_12_1_isnan",
+  "dist_200dma_isnan",
+  "cs_rank_ret_126_isnan",
+  "cs_rank_deliv_z_isnan",
+  "deliv_value_share_20",
+  "amihud_20"
+ ],
+ "n_features": 52,
+ "params": {
+  "lgbm": {
+   "boosting_type": "gbdt",
+   "class_weight": null,
+   "colsample_bytree": 1.0,
+   "importance_type": "split",
+   "learning_rate": 0.05,
+   "max_depth": -1,
+   "min_child_samples": 20,
+   "min_child_weight": 0.001,
+   "min_split_gain": 0.0,
+   "n_estimators": 300,
+   "n_jobs": null,
+   "num_leaves": 63,
+   "objective": null,
+   "random_state": 108,
+   "reg_alpha": 0.0,
+   "reg_lambda": 0.0,
+   "subsample": 1.0,
+   "subsample_for_bin": 200000,
+   "subsample_freq": 0,
+   "feature_fraction": 0.8,
+   "bagging_fraction": 0.8,
+   "bagging_freq": 1,
+   "min_data_in_leaf": 200,
+   "num_threads": 2,
+   "verbosity": -1
+  },
+  "preprocess": "raw (train-window median impute)"
+ },
+ "files_sha256": {
+  "lgbm": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3"
+ },
+ "content_sha256": {
+  "lgbm": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3"
+ },
+ "reference_set": {
+  "date": "2026-08-31",
+  "rows": 1496
+ },
+ "reference_prediction_sha256": {
+  "lgbm": "10b2252d465b5fd40573bb1b4ecbff62de96480eb8f62492911221558250c6aa"
+ },
+ "seed": 108,
+ "threads": 2,
+ "spec_hash": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+ "fit_seconds": {
+  "lgbm": 96.8
+ },
+ "variant": "expanding",
+ "extension_spec_hash": "a8d20cae4d930197ecc3e07c1f3bc4ac13484ebd4b627b852c0c73258349764f",
+ "train_sessions": 0
+}

@@ -1,0 +1,381 @@
+{
+ "db": "<session scratchpad>/rehearsal/nse_market_copy.duckdb",
+ "rehearsal": true,
+ "ca_csv": "/home/user/SuryaDhana_AI/ml/data_ext/corporate_actions_feed.csv",
+ "staging": {
+  "p1_rows": 23715,
+  "extra_rows": 0,
+  "extra_files": [],
+  "delete_dates": [
+   "2021-11-05",
+   "2023-06-29",
+   "2024-01-22"
+  ]
+ },
+ "started": "2026-10-22T13:35:13",
+ "before": {
+  "equity_eod_rows": 3078294,
+  "equity_eod_dates": 1245,
+  "equity_features_rows": 2722591,
+  "rows_on_delete_dates": {
+   "2021-11-05": 1874,
+   "2023-06-29": 2153,
+   "2024-01-22": 2341
+  }
+ },
+ "overwrites_existing_keys": 0,
+ "upsert": {
+  "rows": 23715,
+  "deleted_dates": [
+   "2021-11-05",
+   "2023-06-29",
+   "2024-01-22"
+  ],
+  "rows_deleted": {
+   "2021-11-05": 1874,
+   "2023-06-29": 2153,
+   "2024-01-22": 2341
+  },
+  "seconds": 0.7,
+  "dates": 38,
+  "by_date": {
+   "2021-11-04": 1874,
+   "2022-03-07": 275,
+   "2023-06-19": 6,
+   "2023-06-26": 17,
+   "2023-06-28": 2153,
+   "2023-07-03": 19,
+   "2023-07-10": 26,
+   "2023-07-17": 39,
+   "2023-07-24": 39,
+   "2023-07-25": 43,
+   "2023-07-26": 46,
+   "2023-07-27": 48,
+   "2023-07-28": 50,
+   "2023-07-31": 51,
+   "2023-08-01": 55,
+   "2023-08-02": 62,
+   "2023-08-03": 67,
+   "2023-08-04": 71,
+   "2023-08-07": 70,
+   "2023-08-08": 73,
+   "2023-08-09": 80,
+   "2023-08-10": 83,
+   "2023-08-11": 85,
+   "2023-08-14": 73,
+   "2023-08-16": 76,
+   "2023-08-17": 79,
+   "2023-08-18": 82,
+   "2023-08-21": 79,
+   "2023-08-22": 82,
+   "2023-08-23": 87,
+   "2023-08-24": 91,
+   "2023-11-12": 2279,
+   "2024-01-20": 2341,
+   "2024-03-02": 2307,
+   "2024-05-18": 2374,
+   "2025-02-01": 2635,
+   "2025-10-21": 2843,
+   "2026-02-01": 2955
+  }
+ },
+ "tables": {
+  "corporate_actions": 21927,
+  "etf_list": 469,
+  "equity_master": 2619,
+  "special_sessions": 16
+ },
+ "build_features": {
+  "rows": 2737956,
+  "seconds": 63.5
+ },
+ "after": {
+  "equity_eod_rows": 3095641,
+  "equity_eod_dates": 1251,
+  "eq_be_rows": 2737956,
+  "eq_be_dup_date_ticker": 0,
+  "equity_features_rows": 2737956,
+  "rows_on_delete_dates": {
+   "2021-11-05": 0,
+   "2023-06-29": 0,
+   "2024-01-22": 0
+  },
+  "rows_on_upsert_dates": {
+   "2021-11-04": 1874,
+   "2022-03-07": 1989,
+   "2023-06-19": 2197,
+   "2023-06-26": 2185,
+   "2023-06-28": 2153,
+   "2023-07-03": 2206,
+   "2023-07-10": 2206,
+   "2023-07-17": 2223,
+   "2023-07-24": 2219,
+   "2023-07-25": 2181,
+   "2023-07-26": 2181,
+   "2023-07-27": 2174,
+   "2023-07-28": 2182,
+   "2023-07-31": 2223,
+   "2023-08-01": 2200,
+   "2023-08-02": 2206,
+   "2023-08-03": 2198,
+   "2023-08-04": 2202,
+   "2023-08-07": 2233,
+   "2023-08-08": 2207,
+   "2023-08-09": 2217,
+   "2023-08-10": 2208,
+   "2023-08-11": 2208,
+   "2023-08-14": 2226,
+   "2023-08-16": 2208,
+   "2023-08-17": 2203,
+   "2023-08-18": 2215,
+   "2023-08-21": 2249,
+   "2023-08-22": 2212,
+   "2023-08-23": 2217,
+   "2023-08-24": 2209,
+   "2023-11-12": 2279,
+   "2024-01-20": 2341,
+   "2024-03-02": 2307,
+   "2024-05-18": 2374,
+   "2025-02-01": 2635,
+   "2025-10-21": 2843,
+   "2026-02-01": 2955
+  },
+  "dates_in_feature_table": 1251,
+  "adj_factor_ne_1_rows": 230722,
+  "expected_equity_eod_rows": 3095641,
+  "row_count_as_expected": true
+ },
+ "nestleind": {
+  "rows": 1251,
+  "max_abs_log_ret_adjusted": 0.0808262225612259,
+  "max_abs_log_ret_unadjusted": 2.31940946288679,
+  "adj_close_2024-01-04": 1355.8200000000002,
+  "adj_close_2024-01-05": 1333.2,
+  "no_10x_break": true
+ },
+ "known_events": {
+  "IRCTC": {
+   "rows": 1251,
+   "max_abs_log_ret_adjusted": 0.2071240776211423,
+   "max_abs_log_ret_raw": 1.5087856290900665,
+   "feed_events": [
+    {
+     "ex_date": "2021-10-28",
+     "ratio": "0.2"
+    }
+   ],
+   "ex_dates": {
+    "2021-10-28": {
+     "session": "2021-10-28",
+     "raw_close_prev": 4130.15,
+     "raw_close_ex": 913.5,
+     "adj_close_prev": 826.03,
+     "adj_close_ex": 913.5,
+     "adj_ret_ex": 0.10589203781944967,
+     "raw_ret_ex": -0.77882159243611
+    }
+   },
+   "continuous": true
+  },
+  "NESTLEIND": {
+   "rows": 1251,
+   "max_abs_log_ret_adjusted": 0.0808262225612259,
+   "max_abs_log_ret_raw": 2.31940946288679,
+   "feed_events": [
+    {
+     "ex_date": "2024-01-05",
+     "ratio": "0.1"
+    },
+    {
+     "ex_date": "2025-08-08",
+     "ratio": "0.5"
+    }
+   ],
+   "ex_dates": {
+    "2024-01-05": {
+     "session": "2024-01-05",
+     "raw_close_prev": 27116.4,
+     "raw_close_ex": 2666.4,
+     "adj_close_prev": 1355.8200000000002,
+     "adj_close_ex": 1333.2,
+     "adj_ret_ex": -0.016683630570429764,
+     "raw_ret_ex": -0.901668363057043
+    },
+    "2025-08-08": {
+     "session": "2025-08-08",
+     "raw_close_prev": 2234.6,
+     "raw_close_ex": 1096.5,
+     "adj_close_prev": 1117.3,
+     "adj_close_ex": 1096.5,
+     "adj_ret_ex": -0.018616307169068258,
+     "raw_ret_ex": -0.5093081535845341
+    }
+   },
+   "continuous": true
+  },
+  "RELIANCE": {
+   "rows": 1251,
+   "max_abs_log_ret_adjusted": 0.08133818432377164,
+   "max_abs_log_ret_raw": 0.6882639915310772,
+   "feed_events": [
+    {
+     "ex_date": "2024-10-28",
+     "ratio": "0.5"
+    }
+   ],
+   "ex_dates": {
+    "2024-10-28": {
+     "session": "2024-10-28",
+     "raw_close_prev": 2655.7,
+     "raw_close_ex": 1334.35,
+     "adj_close_prev": 1327.85,
+     "adj_close_ex": 1334.35,
+     "adj_ret_ex": 0.004895131227171667,
+     "raw_ret_ex": -0.49755243438641417
+    }
+   },
+   "continuous": true
+  },
+  "TATASTEEL": {
+   "rows": 1251,
+   "max_abs_log_ret_adjusted": 0.1348258279552849,
+   "max_abs_log_ret_raw": 2.2576440138256166,
+   "feed_events": [
+    {
+     "ex_date": "2022-07-28",
+     "ratio": "0.1"
+    }
+   ],
+   "ex_dates": {
+    "2022-07-28": {
+     "session": "2022-07-28",
+     "raw_close_prev": 959.4,
+     "raw_close_ex": 100.35,
+     "adj_close_prev": 95.94,
+     "adj_close_ex": 100.35,
+     "adj_ret_ex": 0.045966228893058236,
+     "raw_ret_ex": -0.8954033771106942
+    }
+   },
+   "continuous": true
+  },
+  "all_continuous": true
+ },
+ "continuity_after": {
+  "max_share": 0.0014985014985014985,
+  "flagged": [],
+  "top5": [
+   {
+    "date": "2022-12-26",
+    "n_with_prev": 2002,
+    "n_mismatch": 3,
+    "share": 0.0014985014985014985,
+    "flagged": false
+   },
+   {
+    "date": "2023-06-26",
+    "n_with_prev": 2027,
+    "n_mismatch": 3,
+    "share": 0.0014800197335964479,
+    "flagged": false
+   },
+   {
+    "date": "2023-06-19",
+    "n_with_prev": 2028,
+    "n_mismatch": 3,
+    "share": 0.0014792899408284023,
+    "flagged": false
+   },
+   {
+    "date": "2023-07-10",
+    "n_with_prev": 2028,
+    "n_mismatch": 3,
+    "share": 0.0014792899408284023,
+    "flagged": false
+   },
+   {
+    "date": "2023-07-03",
+    "n_with_prev": 2032,
+    "n_mismatch": 3,
+    "share": 0.0014763779527559055,
+    "flagged": false
+   }
+  ],
+  "mismatch_rows_total": 68,
+  "mismatch_rows_on_a_parsed_ex_date": 7
+ },
+ "dry_run_equality": {
+  "rows_store": 2737956,
+  "rows_dry": 2737956,
+  "aligned": true,
+  "columns": {
+   "open": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "high": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "low": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "close": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "open_unadj": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "close_unadj": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "adj_factor": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "ret_1d": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "dist_sma_20": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "mom_20": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "vol_20": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "rsi_14": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "atr_pct": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "deliv_pct_sma_20": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "dist_52w_high": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   },
+   "fwd_ret_5d": {
+    "max_abs_diff": 0.0,
+    "nan_mismatch": 0
+   }
+  },
+  "identical": true
+ },
+ "finished": "2026-10-22T13:37:00",
+ "duration_seconds": 107.2
+}

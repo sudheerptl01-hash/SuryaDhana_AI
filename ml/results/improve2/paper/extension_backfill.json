@@ -1,0 +1,93 @@
+{
+ "note": "ml/paper/job.py --no-ingest --extension-backfill-proof: the run that added extension 1 (SPEC.md amendment 10) and backfilled its books from inception; no ingest, no store write",
+ "extension_spec_hash": "a8d20cae4d930197ecc3e07c1f3bc4ac13484ebd4b627b852c0c73258349764f",
+ "spec_hash_frozen_books": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+ "rows_before": {
+  "signals": 1521,
+  "marks": 8,
+  "monitors": 48
+ },
+ "rows_appended": {
+  "signals": 607,
+  "marks": 4,
+  "monitors": 15
+ },
+ "appended_rows_by_book": {
+  "signals": {
+   "challenger_expanding": 457,
+   "capacity_expanding": 150
+  },
+  "marks": {
+   "challenger_expanding": 2,
+   "capacity_expanding": 2
+  },
+  "monitors": {
+   "extension": 15,
+   "frozen": 0
+  }
+ },
+ "appended_signal_dates": [
+  "2026-10-19",
+  "2026-10-21",
+  "2026-10-22"
+ ],
+ "appended_mark_sessions": [
+  "2026-10-21",
+  "2026-10-22"
+ ],
+ "existing_rows": {
+  "signals": {
+   "bytes_before": 97188,
+   "bytes_after": 140662,
+   "sha256_before": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+   "sha256_of_first_bytes_after": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+   "existing_rows_unchanged": true
+  },
+  "marks": {
+   "bytes_before": 858,
+   "bytes_after": 1277,
+   "sha256_before": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+   "sha256_of_first_bytes_after": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+   "existing_rows_unchanged": true
+  },
+  "monitors": {
+   "bytes_before": 7956,
+   "bytes_after": 10891,
+   "sha256_before": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+   "sha256_of_first_bytes_after": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+   "existing_rows_unchanged": true
+  }
+ },
+ "existing_rows_unchanged": true,
+ "only_extension_rows_appended": true,
+ "expanding_models": {
+  "2026-10": {
+   "trained_as_of": "2026-10-01",
+   "spec": {
+    "name": "2026-10",
+    "train_end": "2026-08-31",
+    "test_start": "2026-10-01",
+    "test_end": "2026-10-22"
+   },
+   "training_window": {
+    "first_date": "2017-10-03",
+    "last_date": "2026-08-31",
+    "sessions": 2209,
+    "rows": 2170733,
+    "labelled_clean_rows_before_purge": 2170733,
+    "rows_purged_exit_ge_test_start": 0,
+    "tickers": 2451,
+    "label_mean": 0.5002172077358201,
+    "rule": "ml.scale5y_nested.window_rows with train_sessions = 0 (ml/improve/ab.py q9_expanding): every labelled clean row from the frame's first session (2017-10-03) to train_end (train_end 22 sessions before the month's first session), exit-date purge at the first session; no 504-session cap"
+   },
+   "files_sha256": {
+    "lgbm": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3"
+   },
+   "fit_seconds": {
+    "lgbm": 96.8
+   }
+  }
+ },
+ "ingest_run": false,
+ "frame_rebuilt": false
+}

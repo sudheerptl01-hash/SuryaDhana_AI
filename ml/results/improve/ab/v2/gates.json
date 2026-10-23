@@ -1,0 +1,386 @@
+{
+ "tag": "v2",
+ "n_trials": 241,
+ "gates": {
+  "control": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0037 [-0.0125, +0.0043]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "88% (worst 0.466)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "19/45 = 42%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "34/45 = 76%",
+    "pass": true
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR -0.34/yr, PSR 0.260)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +1.04/yr, PSR 0.976)",
+    "pass": false
+   },
+   "n_pass": "1 of 6 scored (gate 4 not applicable)"
+  },
+  "ab1_mkt": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0084 [-0.0211, +0.0025]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "84% (worst 0.421)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "24/45 = 53%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "34/45 = 76%",
+    "pass": true
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR -0.09/yr, PSR 0.435)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +0.78/yr, PSR 0.932)",
+    "pass": false
+   },
+   "n_pass": "1 of 6 scored (gate 4 not applicable)"
+  },
+  "ab2_sector": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0024 [-0.0124, +0.0067]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "84% (worst 0.467)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "24/45 = 53%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "35/45 = 78%",
+    "pass": true
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR -0.37/yr, PSR 0.241)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.001 (SR +1.14/yr, PSR 0.985)",
+    "pass": false
+   },
+   "n_pass": "1 of 6 scored (gate 4 not applicable)"
+  },
+  "ab2p_sector_placebo": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0057 [-0.0169, +0.0035]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "81% (worst 0.447)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "28/45 = 62%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "36/45 = 80%",
+    "pass": true
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR -0.10/yr, PSR 0.427)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +0.97/yr, PSR 0.968)",
+    "pass": false
+   },
+   "n_pass": "1 of 6 scored (gate 4 not applicable)"
+  },
+  "ab3_fo": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0018 [-0.0100, +0.0059]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "88% (worst 0.468)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "21/45 = 47%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "33/45 = 73%",
+    "pass": false
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR -0.09/yr, PSR 0.433)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.001 (SR +1.13/yr, PSR 0.985)",
+    "pass": false
+   },
+   "n_pass": "0 of 6 scored (gate 4 not applicable)"
+  },
+  "ab4_flows": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0042 [-0.0140, +0.0048]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "84% (worst 0.437)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "26/45 = 58%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "28/45 = 62%",
+    "pass": false
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +0.05/yr, PSR 0.539)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +0.52/yr, PSR 0.840)",
+    "pass": false
+   },
+   "n_pass": "0 of 6 scored (gate 4 not applicable)"
+  },
+  "ab5_all": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0013 [-0.0139, +0.0087]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "86% (worst 0.429)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "28/45 = 62%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "38/45 = 84%",
+    "pass": true
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +0.39/yr, PSR 0.771)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.002 (SR +1.27/yr, PSR 0.992)",
+    "pass": false
+   },
+   "n_pass": "1 of 6 scored (gate 4 not applicable)"
+  },
+  "ab6_ensemble_all52": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0054 [-0.0171, +0.0051]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "88% (worst 0.452)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "34/45 = 76%",
+    "pass": true
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "38/45 = 84%",
+    "pass": true
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +0.79/yr, PSR 0.931)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.011 (SR +1.58/yr, PSR 0.998)",
+    "pass": false
+   },
+   "n_pass": "2 of 6 scored (gate 4 not applicable)"
+  },
+  "ab6_lambdarank52": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0343 [-0.0573, -0.0156]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "58% (worst 0.387)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "29/45 = 64%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "31/45 = 69%",
+    "pass": false
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +0.87/yr, PSR 0.950)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +0.77/yr, PSR 0.926)",
+    "pass": false
+   },
+   "n_pass": "0 of 6 scored (gate 4 not applicable)"
+  },
+  "ab6_catboost52": {
+   "1": {
+    "name": "beats the L2 logistic on CV mean, paired block-bootstrap CI excluding zero",
+    "number": "-0.0021 [-0.0102, +0.0053]",
+    "pass": false
+   },
+   "2": {
+    "name": "fold AUC >= 0.50 in >= 90% of months",
+    "number": "86% (worst 0.465)",
+    "pass": false
+   },
+   "3 (plain)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "21/45 = 47%",
+    "pass": false
+   },
+   "3 (vol+size-neutral)": {
+    "name": "top decile beats the EW universe in >= 75% of months, net 20 bps",
+    "number": "35/45 = 78%",
+    "pass": true
+   },
+   "4": {
+    "name": "selected-feature overlap >= 7/10 across yearly re-selections",
+    "number": "not applicable: the configuration selects nothing (all features, no yearly re-selection)",
+    "pass": null
+   },
+   "5 (plain)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR -0.17/yr, PSR 0.370)",
+    "pass": false
+   },
+   "5 (vol+size-neutral)": {
+    "name": "Deflated Sharpe >= 0.95 on the liquid-tercile top decile, N = 241",
+    "number": "DSR 0.000 (SR +1.04/yr, PSR 0.976)",
+    "pass": false
+   },
+   "n_pass": "1 of 6 scored (gate 4 not applicable)"
+  }
+ }
+}

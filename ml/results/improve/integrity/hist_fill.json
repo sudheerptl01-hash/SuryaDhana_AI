@@ -1,0 +1,122 @@
+{
+ "history_parquet_sessions": 1235,
+ "calendar_sessions": 1238,
+ "missing_sessions": [
+  "2019-10-11",
+  "2019-10-14",
+  "2019-10-15"
+ ],
+ "checks": {
+  "2019-10-07": {
+   "identical_to_p4_rows": true,
+   "rows": 1768,
+   "worst": {}
+  },
+  "2019-10-09": {
+   "identical_to_p4_rows": true,
+   "rows": 1753,
+   "worst": {}
+  },
+  "2019-10-10": {
+   "identical_to_p4_rows": true,
+   "rows": 1747,
+   "worst": {}
+  },
+  "2019-10-16": {
+   "identical_to_p4_rows": true,
+   "rows": 1746,
+   "worst": {}
+  },
+  "2019-10-17": {
+   "identical_to_p4_rows": true,
+   "rows": 1751,
+   "worst": {}
+  },
+  "2019-10-18": {
+   "identical_to_p4_rows": true,
+   "rows": 1750,
+   "worst": {}
+  }
+ },
+ "built": {
+  "2019-10-11": {
+   "rows": 1753,
+   "by_series": {
+    "EQ": 1500,
+    "BE": 148,
+    "SM": 70,
+    "BZ": 35
+   }
+  },
+  "2019-10-14": {
+   "rows": 1752,
+   "by_series": {
+    "EQ": 1496,
+    "BE": 152,
+    "SM": 60,
+    "BZ": 44
+   }
+  },
+  "2019-10-15": {
+   "rows": 1747,
+   "by_series": {
+    "EQ": 1494,
+    "BE": 150,
+    "SM": 66,
+    "BZ": 35,
+    "ST": 2
+   }
+  }
+ },
+ "construction_identical_on_all_neighbours": true,
+ "rows_total": 5252,
+ "seconds": 4.3,
+ "crosscheck_with_p4_final": {
+  "2019-10-07": {
+   "rows_p1": 1768,
+   "rows_p4": 1768,
+   "identical": true
+  },
+  "2019-10-09": {
+   "rows_p1": 1753,
+   "rows_p4": 1753,
+   "identical": true
+  },
+  "2019-10-10": {
+   "rows_p1": 1747,
+   "rows_p4": 1747,
+   "identical": true
+  },
+  "2019-10-11": {
+   "rows_p1": 1753,
+   "rows_p4": 1753,
+   "identical": true
+  },
+  "2019-10-14": {
+   "rows_p1": 1752,
+   "rows_p4": 1752,
+   "identical": true
+  },
+  "2019-10-15": {
+   "rows_p1": 1747,
+   "rows_p4": 1747,
+   "identical": true
+  },
+  "2019-10-16": {
+   "rows_p1": 1746,
+   "rows_p4": 1746,
+   "identical": true
+  },
+  "2019-10-17": {
+   "rows_p1": 1751,
+   "rows_p4": 1751,
+   "identical": true
+  },
+  "2019-10-18": {
+   "rows_p1": 1750,
+   "rows_p4": 1750,
+   "identical": true
+  }
+ },
+ "crosscheck_identical": true
+}

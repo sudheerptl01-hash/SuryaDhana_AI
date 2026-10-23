@@ -8,3 +8,37 @@ venv/
 *.duckdb
 *.duckdb.wal
 nse_market.duckdb*
+
+# ML evaluation artifacts
+ml/data/
+ml/results/preds/
+ml/data_5y/
+catboost_info/
+ml/results/*/preds/
+ml/results/scale5y/cache/
+# improvement phase: raw downloads, staging tables, rebuilt datasets, caches (never committed)
+ml/data_raw/
+ml/data_ext/
+ml/data_hist/
+ml/data_5y_v2/
+ml/data_10y/
+ml/results/improve/cache/
+ml/results/improve/*/cache/
+ml/results/improve/*/preds/
+ml/results/improve/**/preds/
+ml/results/improve/**/cache/
+# live progress logs of running streams (final JSON/Markdown reports stay tracked)
+ml/results/improve/**/log.txt
+ml/results/improve/**/*.log
+ml/results/improve/**/download_stdout.txt
+ml/results/improve/**/download_status.json
+# improvement phase 2: derived datasets, model state, predictions, caches, live logs
+ml/data_10y_liq/
+ml/data_10y_liq2/
+ml/data_10y_h40/
+ml/paper/state/
+ml/results/improve2/**/preds/
+ml/results/improve2/**/cache/
+ml/results/improve2/**/log.txt
+ml/results/improve2/**/*.log
+ml/results/improve2/**/*.pid

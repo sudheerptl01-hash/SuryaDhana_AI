@@ -1,0 +1,206 @@
+[
+ {
+  "practice": "Nonlinear GBM scorer with regularized linear benchmark",
+  "status": "done",
+  "evidence_file_or_citation": "ml/MODEL_SELECTION.md; Gu, Kelly & Xiu 2020 (RFS) https://doi.org/10.1093/rfs/hhaa009",
+  "recommendation": "Keep LightGBM champion + lr_l2 anchor for the 5-year run."
+ },
+ {
+  "practice": "Per-date rank IC / ICIR (Newey-West t) as headline model metric",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/results/sota/champion_ref__beat_mkt_20d.json (rank IC CV 0.057, holdout 0.040); league still ranks on AUC (ml/eval_aggregate.py)",
+  "recommendation": "Make per-date rank IC/ICIR with NW t the league headline alongside AUC; AUC 0.531 ~ IC 0.06-0.07."
+ },
+ {
+  "practice": "Net-of-cost portfolio economics (long-only and long-short Sharpe, turnover, month-block CIs, DSR)",
+  "status": "done",
+  "evidence_file_or_citation": "ml/results/strategy/STRATEGY.md (champion active +4.2%/yr vs EW, IR CI [-2.4,+4.3], DSR 0.08, turnover 80%)",
+  "recommendation": "Keep as the promotion layer; re-run at 5y with N trials stated in advance (SCALE_UP gate 5)."
+ },
+ {
+  "practice": "GKX top feature families (price trend, liquidity, volatility, size, beta, industry momentum, valuation)",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/README.md feature list; ml/results/feature_sufficiency/FEATURE_SUFFICIENCY.md; Gu, Kelly & Xiu 2020 https://doi.org/10.1093/rfs/hhaa009",
+  "recommendation": "Add beta and idiosyncratic volatility (computable from bhavcopy) now; size (shares outstanding), industry momentum (sector map) and fundamentals need new data."
+ },
+ {
+  "practice": "Model results within liquid / large names (capacity)",
+  "status": "done",
+  "evidence_file_or_citation": "ml/results/strategy/STRATEGY.md liquid-tercile book (capacity ~Rs 1,129 cr, breakeven ~39 bps/side); Avramov, Cheng & Metzker 2023 https://doi.org/10.1287/mnsc.2022.4449",
+  "recommendation": "Carry the liquid-tercile long-only book as the pre-registered paper portfolio."
+ },
+ {
+  "practice": "Cross-sectionally relative target",
+  "status": "done",
+  "evidence_file_or_citation": "ml/README.md (beat_mkt_20d vs universe median)",
+  "recommendation": "Keep; it is regime-robust by construction."
+ },
+ {
+  "practice": "Ranking loss or magnitude-aware target (LambdaRank, Huber regression)",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/results/sota/lgbm_lambdarank__beat_mkt_20d.json (CV 0.529, holdout 0.566, spread +6.0%); lgbm_huber (CV 0.522); interim; Poh et al. 2021 https://doi.org/10.3905/jfds.2021.1.060",
+  "recommendation": "Route lambdarank/huber/ensemble_rank through strategy_backtest.py (net, EW benchmark, DSR); decide at 5y, not on 4 folds."
+ },
+ {
+  "practice": "Benchmark active returns against the equal-weight universe, not the median",
+  "status": "done",
+  "evidence_file_or_citation": "ml/results/strategy/STRATEGY.md (EW beats median +1.78%/20d from skew); ml/SCALE_UP.md gate 3",
+  "recommendation": "Keep; report hit rates vs EW only."
+ },
+ {
+  "practice": "Risk-adjusted or neutralized target (vol-scaled, beta/sector-neutral)",
+  "status": "gap",
+  "evidence_file_or_citation": "none in program; Gu, Kelly & Xiu 2020 (Huber), Poh et al. 2021 (vol-normalised returns)",
+  "recommendation": "Optional 5y A/B: vol-scaled excess-return target; low priority vs items below."
+ },
+ {
+  "practice": "Deep models benchmarked against GBM under the identical purged protocol",
+  "status": "done",
+  "evidence_file_or_citation": "ml/MODEL_SELECTION.md (MLP 0.5025, LSTM 0.5018, GRU 0.4889 CV AUC)",
+  "recommendation": "Keep the no-deep verdict; literature (Grinsztajn 2022; McElfresh 2023; Qlib) agrees for engineered heavy-tailed features."
+ },
+ {
+  "practice": "Heavy-tail transforms (log1p / ranks) for neural-net inputs",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/results/feature_study/eda_features.json insights (atr_pct kurtosis ~13,900); McElfresh et al. 2023 https://arxiv.org/abs/2305.02997",
+  "recommendation": "Apply before any further neural run."
+ },
+ {
+  "practice": "Cross-sectional (stock-to-stock) attention model",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/models/sota.py cs_transformer, interim fold 2026-05 test AUC 0.493 (ml/results/sota/train_log.txt); AIPM (NBER w33351), MASTER (arXiv 2312.15235)",
+  "recommendation": "Let the running job finish under the fixed pass mark; no further deep search before 5y."
+ },
+ {
+  "practice": "Temporal transformer / DLinear baselines",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/models/sota.py patchtst_lite interim fold 2026-05 test AUC 0.524; DLinear queued; Zeng et al. 2023 https://arxiv.org/abs/2205.13504",
+  "recommendation": "Finish as planned; expect no gain over GBM on this data (Qlib: Transformer IC 0.026 vs LightGBM 0.045)."
+ },
+ {
+  "practice": "Time-series foundation model zero-shot baseline (Chronos/TimesFM/Moirai)",
+  "status": "gap",
+  "evidence_file_or_citation": "not tried; Rahimikia, Ni & Wang 2025 https://arxiv.org/abs/2511.18578 (zero-shot R2 -1.37%/-2.80%); Noguer i Alonso & Franklin 2026 https://arxiv.org/abs/2606.27100",
+  "recommendation": "Low priority: at most one zero-shot sanity baseline on the 5y data."
+ },
+ {
+  "practice": "RL for selection/allocation tested and dropped on evidence",
+  "status": "done",
+  "evidence_file_or_citation": "ml/MODEL_SELECTION.md; ml/results/strategy/STRATEGY.md (RL gains from 30 holdout dates, DSR 0.38); Pricope 2021 https://arxiv.org/abs/2106.00123",
+  "recommendation": "Keep dropped; revisit only for order execution once live fills exist."
+ },
+ {
+  "practice": "Explicit turnover-penalized construction (no-trade bands / hysteresis)",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/SCALE_UP.md Phase 3 (planned, not built); Novy-Marx & Velikov 2016 https://doi.org/10.1093/rfs/hhv063",
+  "recommendation": "Build buy/hold bands into strategy_backtest.py and measure turnover and net-return change."
+ },
+ {
+  "practice": "Momentum conditioned on market state",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/results/feature_study/eda_features.json (mom_12_1 IC +0.099 up vs +0.013 down); ml/SCALE_UP.md queued A/B; Cooper, Gutierrez & Hameed 2004; Daniel & Moskowitz 2016",
+  "recommendation": "Run the queued market-state A/B on 5y data only (6 months holds one crash)."
+ },
+ {
+  "practice": "Low-volatility / beta effect",
+  "status": "partial",
+  "evidence_file_or_citation": "vol features in champion; beta only measured in ml/results/strategy/STRATEGY.md (0.83); Joshipura & Joshipura 2016 (not significant after beta)",
+  "recommendation": "Add a rolling beta and idiosyncratic-vol feature; test whether vol features are beta proxies."
+ },
+ {
+  "practice": "Size (market capitalisation) feature",
+  "status": "gap",
+  "evidence_file_or_citation": "ml/README.md (turnover proxy only; bhavcopy lacks shares outstanding); Agarwalla, Jacob & Varma 2014 (SMB ~0% in India)",
+  "recommendation": "Acquire shares outstanding/free float for 5y; expect small value given near-zero Indian SMB."
+ },
+ {
+  "practice": "NSE delivery-% signal validated externally",
+  "status": "partial",
+  "evidence_file_or_citation": "eda_features.json (deliv_pct sign 15/16 months, t=4.35; IC +0.107 -> +0.020); FEATURE_SUFFICIENCY.md (deliv_value_share_20 q=0.055); no peer-reviewed study found",
+  "recommendation": "Pre-register a 5y delivery-IC test by year, liquidity tier and market state; orthogonalize vs turnover/volatility; keep the production IC alert."
+ },
+ {
+  "practice": "India-realistic cost model (STT 10 bps/side, stamp 1.5 bps buys, spread, impact)",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/results/strategy/STRATEGY.md (flat 10/20/40 bps per side; breakeven ~39-41 bps/side); broker schedules (ref [52]); NSE impact-cost rule (ref [53])",
+  "recommendation": "Add name-level spread (Corwin-Schultz) and square-root impact by liquidity tier; asymmetric buy/sell statutory costs."
+ },
+ {
+  "practice": "Capacity and short-sale feasibility (SLB / F&O-only shorts)",
+  "status": "done",
+  "evidence_file_or_citation": "ml/results/strategy/STRATEGY.md (5% ADV capacity; short leg dropped as non-implementable)",
+  "recommendation": "Keep long-only; revisit shorts only as an F&O-futures overlay."
+ },
+ {
+  "practice": "Purged walk-forward with embargo >= label horizon",
+  "status": "done",
+  "evidence_file_or_citation": "ml/data.py (22 sessions); ml/results/audit/cache/T3.json (3 of 1.6M train rows cross; 81 illiquid labels span >21 sessions)",
+  "recommendation": "Purge on each row's actual label exit date (AFML ch.7) in the 5y build."
+ },
+ {
+  "practice": "Leakage and null tests (label permutation, PIT recompute, integrity)",
+  "status": "done",
+  "evidence_file_or_citation": "ml/results/audit/cache/T1.json (null CV 0.5000 +/- 0.0011, champion z=28.3), T4.json, T5.json, T8.json",
+  "recommendation": "Re-run T1/T4/T5/T8 on the 5y dataset."
+ },
+ {
+  "practice": "Holdout used exactly once",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/results/audit/cache/T9.json (holdout labels entered feature_ab TOP8 via all-dates quick_ic; one memo-level adjudication)",
+  "recommendation": "Firewall holdout dates in every screening utility; reserve the 5y final 6 months untouched."
+ },
+ {
+  "practice": "Feature selection and hyperparameter tuning nested inside training windows",
+  "status": "gap",
+  "evidence_file_or_citation": "ml/results/audit/cache/T9.json FAIL; ml/feature_selection.py (CV test folds, fold 2026-06 test rows); ml/models/trees.py (screens on 2026-04/05); audit T11 pending",
+  "recommendation": "Make nested re-selection the Phase 2 protocol; treat pilot CV AUC 0.531 as a validation score, holdout 0.518 as the estimate."
+ },
+ {
+  "practice": "Overlap-aware significance (block bootstrap >= label horizon, HAC)",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/results/audit/cache/T14.json (10-session blocks widen SD x1.7; month-level t=3.80); rank-IC t 6.70 naive vs 3.26 Newey-West; ml/eval_aggregate.py still iid dates; Politis & Romano 1994",
+  "recommendation": "Use >=20-session (or month) blocks in eval_aggregate.py for all significance claims."
+ },
+ {
+  "practice": "Trial ledger and Deflated Sharpe Ratio",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/results/audit/cache/T7.json (N=28 full-protocol, 155 incl. screens); STRATEGY.md DSR with N=96; SCALE_UP gate 5 (DSR >= 0.95); Bailey & Lopez de Prado 2014 https://doi.org/10.3905/jpm.2014.40.5.094",
+  "recommendation": "Freeze N before the 5y run and log every configuration automatically."
+ },
+ {
+  "practice": "Probability of backtest overfitting (PBO/CSCV), CPCV, uniqueness weights",
+  "status": "gap",
+  "evidence_file_or_citation": "none in program; Bailey et al. 2017 https://doi.org/10.21314/JCF.2016.322; Lopez de Prado 2018 AFML",
+  "recommendation": "Add PBO across the candidate set and CPCV for the final model choice at 5y; uniqueness weights for overlapping labels."
+ },
+ {
+  "practice": "Pre-registered decision rules",
+  "status": "done",
+  "evidence_file_or_citation": "ml/results/feature_study/feature_ab_verdict.json; ml/SCALE_UP.md gates 1-5; Arnott, Harvey & Markowitz 2019 https://doi.org/10.3905/jfds.2019.1.064",
+  "recommendation": "Keep; publish gates and N before looking at 5y results."
+ },
+ {
+  "practice": "Data integrity (calendar, duplicates, survivorship, corporate actions)",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/MODEL_SELECTION.md holiday-echo fix; ml/results/audit/cache/T8.json (29 pre-fix preds files still contain phantom days); ml/SCALE_UP.md Phase 1 corporate actions pending",
+  "recommendation": "Corporate-action adjustment is gating for the 5y run; retire pre-fix preds files."
+ },
+ {
+  "practice": "Cost/impact model inside selection (cost-aware scoring)",
+  "status": "gap",
+  "evidence_file_or_citation": "flat costs only (STRATEGY.md); Cornell 2020; Kling 2020 (Medallion edge ~50-51% after costs)",
+  "recommendation": "Feed per-name expected cost into ranking (score minus cost) once the name-level cost model exists."
+ },
+ {
+  "practice": "Continuous monitoring (IC decay, drift, PSI)",
+  "status": "partial",
+  "evidence_file_or_citation": "ml/SCALE_UP.md Phase 3 (delivery-IC alert, PSI, coefficient drift planned)",
+  "recommendation": "Implement with the 5y run; alert on delivery IC and top-feature sign flips."
+ },
+ {
+  "practice": "Many weak signals combined in one model",
+  "status": "partial",
+  "evidence_file_or_citation": "10-feature LGBM; ml/results/sota/ensemble_rank (interim CV 0.5357, holdout 0.548); Grinold 1989 https://doi.org/10.3905/jpm.1989.409211",
+  "recommendation": "Prefer rank-averaged ensembles of low-correlation scorers (member rank corr 0.20-0.58) once validated at 5y."
+ }
+]

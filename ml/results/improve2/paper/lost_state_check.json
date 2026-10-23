@@ -1,0 +1,80 @@
+{
+ "test": "ml/paper/state/models/2026-10/ (the four model files) and ml/paper/state/scores/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest (repaired store, scoring frame rebuilt after the CCAVENUE repair)",
+ "job_exit_code": 0,
+ "model_2026_10_retrained": true,
+ "retrain_equal_to_committed_metadata": {
+  "reference_prediction_sha256": true,
+  "model_contents_sha256": true,
+  "training_window_and_rows": true,
+  "training_frame_sha256 (information only)": false
+ },
+ "training_frame_sha256": {
+  "committed_metadata": "519aa6e4d2d5274891eaf3ba4113cf52b65c80f39002e2878af73b9c2eb2b20a",
+  "retrained_on_the_repaired_frame": "8451ef7324b4f5343552958ed7acc9ff35e558ec9f379190337c5e80de045564",
+  "why_different": "the committed hash was taken on the store after the JSWDULUX split rescale of 2026-10-22; the repaired store also rescales CCAVENUE's earlier prices by 10 (training window 2024-08-20..2026-08-31): ratios change at rounding level, the fitted models do not (SPEC.md 2.1, amendment 6)"
+ },
+ "note_catboost": "CatBoost .cbm bytes carry train_finish_time and a random model_guid; its identity is the SHA-256 of the model exported without model_info (content_sha256); predictions of the original and the retrained CatBoost on 83,754 rows (2026-08-03..2026-10-22) differ by 0.0",
+ "content_sha256_equal": {
+  "lgbm": true,
+  "lambdarank": true,
+  "catboost": true,
+  "logistic": true
+ },
+ "regenerated_score_files": [
+  "2026-10-19"
+ ],
+ "regenerated_scores_file_byte_identical": true,
+ "ledger_and_model_metadata_sha256_before": {
+  "ml/paper/models/2026-09.json": "9a81e4045b1392210a3b80e875ac4ab0b254d1d3cdd27c979ffb17c4c7898ca9",
+  "ml/paper/models/2026-10.json": "c1fa97ce276db99326134250795cb64f72a4904f1209a716fb9f6117e0df410c",
+  "ml/paper/ledger/marks.csv": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+  "ml/paper/ledger/monitors.csv": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+  "ml/paper/ledger/signals.csv": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+  "ml/paper/ledger/state.json": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319"
+ },
+ "after": {
+  "ml/paper/models/2026-09.json": "9a81e4045b1392210a3b80e875ac4ab0b254d1d3cdd27c979ffb17c4c7898ca9",
+  "ml/paper/models/2026-10.json": "c1fa97ce276db99326134250795cb64f72a4904f1209a716fb9f6117e0df410c",
+  "ml/paper/ledger/marks.csv": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+  "ml/paper/ledger/monitors.csv": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+  "ml/paper/ledger/signals.csv": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+  "ml/paper/ledger/state.json": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319"
+ },
+ "unchanged": true,
+ "live_feed_regeneration": {
+  "test": "ml/data_ext/corporate_actions_feed_live.csv deleted; ml.paper.ingest.regenerate_live_feed (the path a run takes when the feed is missing after the research end) rebuilt it from the store's EQ/BE rows and every PR bundle on disk",
+  "original_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+  "regenerated_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+  "byte_identical": true,
+  "equals_state_json": true,
+  "rows": 757,
+  "starts_with_ten_year_feed_bytes": true,
+  "new_validated_events": [
+   {
+    "ticker": "CCAVENUE",
+    "ex_date": "2026-10-13",
+    "ratio": 10.0,
+    "kind": "consolidation",
+    "source": "PR121026.zip/bc12102026.csv"
+   },
+   {
+    "ticker": "JSWDULUX",
+    "ex_date": "2026-10-22",
+    "ratio": 0.1,
+    "kind": "split",
+    "source": "PR151026.zip/bc15102026.csv"
+   }
+  ],
+  "error": null,
+  "original_restored": false
+ },
+ "files_byte_identical": {
+  "lgbm.txt": true,
+  "lambdarank.txt": true,
+  "logistic.pkl": true,
+  "preprocess.pkl": false,
+  "catboost.cbm": "not comparable (fit timestamp and random GUID); content hash equal"
+ },
+ "preprocess_difference": "preprocess.pkl differs only in the logistic monitor's scaler (Preprocessor 'scaled'): mean_ of 2 of 52 features by at most 9.8e-19, from CCAVENUE's rescaled rows; the raw preprocessor of the three paper members is identical, and the reference predictions of all four members and the regenerated score file are identical",
+ "after_the_test": "the original state files (the ones that produced the regenerated ledger) were put back, so the determinism and idempotency proofs run on exactly that state"
+}

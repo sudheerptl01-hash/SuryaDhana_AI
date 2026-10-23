@@ -1,0 +1,105 @@
+{
+ "fold": {
+  "name": "holdout",
+  "train_end": "2026-07-02",
+  "test_start": "2026-08-03",
+  "test_end": "2026-09-16"
+ },
+ "variant": "expanding",
+ "train_sessions": 0,
+ "training_window": {
+  "first_date": "2017-10-03",
+  "last_date": "2026-07-02",
+  "sessions": 2167
+ },
+ "train_rows": 2110109,
+ "train_rows_before_purge": 2110110,
+ "train_rows_purged": 1,
+ "test_rows": 47120,
+ "rows_q9": 47117,
+ "test_rows_label_exit_after_research_end": [
+  {
+   "date": "2026-09-10",
+   "ticker": "CCAVENUE",
+   "exit_date": "2026-10-19"
+  },
+  {
+   "date": "2026-09-11",
+   "ticker": "CCAVENUE",
+   "exit_date": "2026-10-21"
+  },
+  {
+   "date": "2026-09-15",
+   "ticker": "CCAVENUE",
+   "exit_date": "2026-10-22"
+  }
+ ],
+ "rows_matched": 47117,
+ "rows_only_trainer": 0,
+ "rows_only_q9": 0,
+ "max_abs_score_diff": 5.9829847673109615e-05,
+ "rows_with_diff_gt_1e-12": 47116,
+ "identical": false,
+ "identical_rule": "every holdout row the research data could label (label exit on or before the research end) is present in both and scores exactly the same",
+ "seconds": 104.9,
+ "reference": "ml/results/improve/ab/10y_p2/preds/q9_expanding__beat_mkt_20d.parquet (fold holdout)",
+ "explanation": {
+  "on_research_frame": {
+   "frame": "ml/data_10y (the research frame Q9 ran on)",
+   "train_rows": 2110109,
+   "rows_matched": 47117,
+   "max_abs_score_diff": 0.0,
+   "identical": true,
+   "fit_seconds": 104.4
+  },
+  "on_paper_frame": {
+   "frame": "ml/paper/state/frame (the paper frame, live corporate-action feed)",
+   "train_rows": 2110109,
+   "rows_matched": 47117,
+   "max_abs_score_diff": 5.9829847673109615e-05,
+   "identical": false,
+   "fit_seconds": 106.4,
+   "auc_paper_frame": 0.5400871800395081,
+   "auc_q9": 0.5400871043641421,
+   "per_date_spearman_min": 0.9999999837901823,
+   "per_date_spearman_mean": 0.999999996911471,
+   "per_date_top_decile_overlap_min": 1.0,
+   "per_date_top_decile_overlap_mean": 1.0,
+   "dates": 32
+  },
+  "training_cells_paper_vs_research_frame": {
+   "training_rows_same_keys": true,
+   "feature_cells_differing": 1949,
+   "max_abs_feature_diff": 6.110667527536862e-13,
+   "rows_with_a_differing_cell": 136,
+   "tickers_with_a_differing_cell": 2,
+   "per_feature": {
+    "ret_1d": 52,
+    "log_ret_1d": 52,
+    "gap_pct": 109,
+    "range_pct": 119,
+    "close_pos_in_range": 133,
+    "dist_sma_5": 78,
+    "dist_sma_10": 76,
+    "dist_sma_20": 65,
+    "dist_sma_50": 36,
+    "macd_norm": 135,
+    "mom_5": 54,
+    "mom_10": 52,
+    "mom_20": 47,
+    "vol_5": 128,
+    "vol_10": 129,
+    "vol_20": 105,
+    "rsi_14": 106,
+    "atr_pct": 111,
+    "dist_52w_high": 63,
+    "dist_52w_low": 54,
+    "rsi_2": 120,
+    "ret_63d": 18,
+    "amihud_20": 107
+   },
+   "label_cells_differing": 0
+  },
+  "reading": "the trainer reproduces Q9 exactly on the research frame; on the paper frame the training cells that the live corporate-action feed rescales differ at rounding level, LightGBM's bin boundaries and split thresholds are taken from the training values, so the fitted trees and the scores differ slightly"
+ }
+}

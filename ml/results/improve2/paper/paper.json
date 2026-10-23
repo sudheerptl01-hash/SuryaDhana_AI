@@ -1,0 +1,2566 @@
+{
+ "spec_hash": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+ "inception_signal_date": "2026-10-19",
+ "as_of_session": "2026-10-22",
+ "state": {
+  "spec_hash": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+  "research_end": "2026-10-16",
+  "inception_signal_date": "2026-10-19",
+  "last_store_session": "2026-10-22",
+  "store_rows": {
+   "equity_eod": 5247946,
+   "equity_features": 4781834
+  },
+  "last_signal_date": "2026-10-22",
+  "signal_dates": 3,
+  "last_mark_session": "2026-10-22",
+  "last_monitor_session": "2026-10-22",
+  "models": {
+   "2026-09": {
+    "role": "monitor only (logistic sign-flip baseline)",
+    "members": [
+     "logistic"
+    ],
+    "trained_as_of": "2026-09-01",
+    "training_frame_sha256": "be1369cd5db35848a6ea49070c0798ff54aa9e04362edf40bfccb9b597e7c1e2",
+    "files_sha256": {
+     "logistic": "9b41df134af3ebd1b411266b9d653cf34120345f0eeef153bd047a7b8a340c02"
+    },
+    "metadata": "ml/paper/models/2026-09.json"
+   },
+   "2026-10": {
+    "role": "paper model",
+    "members": [
+     "lgbm",
+     "lambdarank",
+     "catboost",
+     "logistic"
+    ],
+    "trained_as_of": "2026-10-01",
+    "training_frame_sha256": "519aa6e4d2d5274891eaf3ba4113cf52b65c80f39002e2878af73b9c2eb2b20a",
+    "files_sha256": {
+     "lgbm": "e3fe831ac5e2f2f538a95f4379c4b7434e9353387fc93d8ea3fd7e9e876717fa",
+     "lambdarank": "d2ebacec039c5c6fa9afd08bbb34fd97afed46f2afd1d15ddfe4004d02dfab30",
+     "catboost": "b4704a7bd9ac2a28dd6e68846326333c7c0994bdd5f96f39955d954c4609340e",
+     "logistic": "f6f0e7c572e50eb1b049d47c21ac1fa81b40aa6a7f6e7cf76b0ba8361a262103"
+    },
+    "metadata": "ml/paper/models/2026-10.json"
+   }
+  },
+  "closures_recorded": [
+   "2026-10-20"
+  ],
+  "ledger_rows": {
+   "signals": 1521,
+   "marks": 8,
+   "monitors": 48
+  },
+  "scores_sha256": {
+   "2026-10-19": "3b918d7d64badebefc593d7ded445d5b3b918f125b7003862cfaa6040ab7a299",
+   "2026-10-21": "e848777e3b175dc4667db4caa9f363f02747aedc9dfd1f89de4e03cdbe129219",
+   "2026-10-22": "117280305f88bffdbbd9d6f6c8c8d9cea835984ef992cf2882adf23aac408dbb"
+  },
+  "inputs": {
+   "ca_feed_live_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+   "etf_list_live_sha256": "6b7788c8f392b955b6e76b68c86ca4f3cbf4da185681422aa728177786016a7a"
+  },
+  "extension": {
+   "name": "expanding",
+   "spec_hash": "a8d20cae4d930197ecc3e07c1f3bc4ac13484ebd4b627b852c0c73258349764f",
+   "extends_spec_hash": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+   "registered_utc": "2026-10-23T09:17:13Z",
+   "amendment": "ml/paper/SPEC.md section 5 (amendment 10)",
+   "books": [
+    "challenger_expanding",
+    "capacity_expanding"
+   ],
+   "backfill_through": "2026-10-22",
+   "last_signal_date": "2026-10-22",
+   "signal_dates": 3,
+   "models": {
+    "2026-10": {
+     "role": "expanding-window challenger model (SPEC.md amendment 10)",
+     "members": [
+      "lgbm"
+     ],
+     "trained_as_of": "2026-10-01",
+     "training_rows": 2170733,
+     "training_frame_sha256": "7ef5c788fe2e4492c0e5ecacd812c6d636763aaa92dc5e207024df5c971986d3",
+     "files_sha256": {
+      "lgbm": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3"
+     },
+     "metadata": "ml/paper/models/expanding/2026-10.json"
+    }
+   },
+   "ledger_rows": {
+    "signals": 607,
+    "marks": 4,
+    "monitors": 15
+   },
+   "last_mark_session": "2026-10-22",
+   "scores_sha256": {
+    "2026-10-19": "2f721cad51a4a6dacd3a41920466d50dd388c51edbd97780e5c0ac6fe43c34c1",
+    "2026-10-21": "a1780ca0485ff5312b10aed47af058a472e895a36f15c2f52c00c82142396975",
+    "2026-10-22": "8bf98927a69455bb2a8fa318d8431478d22c1f8eae4a28c68c79205b1dcb9ea9"
+   }
+  }
+ },
+ "ingest": {
+  "sessions_ingested_by_this_stream": [
+   "2026-10-19",
+   "2026-10-21",
+   "2026-10-22"
+  ],
+  "closures_recorded": {
+   "2026-10-20": {
+    "weekday": "Tuesday",
+    "sec_bytes": 397312,
+    "sec_sha256": "c9be4a9270c402f4b1296440d523fad34940a42a2b150ac3201b39dd54e93f44",
+    "date1": [
+     "19-Oct-2026"
+    ],
+    "date1_ok": false,
+    "fingerprint": [
+     3404,
+     2411080.21,
+     5285660152.0,
+     961693084000.0
+    ],
+    "previous_session": "2026-10-19",
+    "fingerprint_previous": [
+     3404,
+     2411080.21,
+     5285660152.0,
+     961693084000.0
+    ],
+    "duplicate_day_guard_echo": true,
+    "byte_identical_to_previous_sec_file": true,
+    "rows_all_series": 3404,
+    "rows_eq_be": 2922,
+    "isin_filled_share": 0.0,
+    "pr_bundle": "absent",
+    "decision": "closure: holiday echo of the previous session (duplicate-day guard) and no PR bundle"
+   }
+  },
+  "writes": [
+   {
+    "kind": "sessions",
+    "run_today_ist": "2026-10-23",
+    "reason": null,
+    "checks": null,
+    "checked_sessions": null,
+    "feed_lines_added": null,
+    "price_breaks": {
+     "by": "the later features_rebuild write of 2026-10-23",
+     "rule": "|prev_close / stored previous close - 1| > 22%; explained when the live feed's events in (stored previous session, session] agree within +-15%",
+     "sessions": {
+      "2026-10-19": {
+       "names_with_prev": 2922,
+       "breaks": 1,
+       "explained_by_feed": 1,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      },
+      "2026-10-21": {
+       "names_with_prev": 2915,
+       "breaks": 0,
+       "explained_by_feed": 0,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      },
+      "2026-10-22": {
+       "names_with_prev": 2912,
+       "breaks": 0,
+       "explained_by_feed": 0,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      }
+     },
+     "breaks": [
+      {
+       "date": "2026-10-19",
+       "ticker": "CCAVENUE",
+       "prev_close": 138.3,
+       "stored_previous_close": 13.83,
+       "stored_previous_date": "2026-10-12",
+       "calendar_days_since_stored_previous": 7,
+       "prev_close_over_stored_close": 10.0,
+       "feed_events": [
+        {
+         "ex_date": "2026-10-13",
+         "ratio": 10.0
+        }
+       ],
+       "status": "explained_by_feed"
+      }
+     ],
+     "n_unexplained": 0,
+     "n_recorded_price_break": 0
+    },
+    "parser_extension": null,
+    "live_feed": {
+     "path": "ml/data_ext/corporate_actions_feed_live.csv",
+     "rows": 756,
+     "sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da"
+    },
+    "sessions": [
+     "2026-10-19",
+     "2026-10-21",
+     "2026-10-22"
+    ],
+    "decisions": [
+     {
+      "date": "2026-10-19",
+      "weekday": "Monday",
+      "decision": "session: ingest",
+      "date1": [
+       "19-Oct-2026"
+      ],
+      "duplicate_day_guard_echo": false,
+      "byte_identical_to_previous_sec_file": null,
+      "pr_bundle": "present",
+      "rows_eq_be": 2922
+     },
+     {
+      "date": "2026-10-20",
+      "weekday": "Tuesday",
+      "decision": "closure: holiday echo of the previous session (duplicate-day guard) and no PR bundle",
+      "date1": [
+       "19-Oct-2026"
+      ],
+      "duplicate_day_guard_echo": true,
+      "byte_identical_to_previous_sec_file": true,
+      "pr_bundle": "absent",
+      "rows_eq_be": 2922
+     },
+     {
+      "date": "2026-10-21",
+      "weekday": "Wednesday",
+      "decision": "session: ingest",
+      "date1": [
+       "21-Oct-2026"
+      ],
+      "duplicate_day_guard_echo": false,
+      "byte_identical_to_previous_sec_file": false,
+      "pr_bundle": "present",
+      "rows_eq_be": 2916
+     },
+     {
+      "date": "2026-10-22",
+      "weekday": "Thursday",
+      "decision": "session: ingest",
+      "date1": [
+       "22-Oct-2026"
+      ],
+      "duplicate_day_guard_echo": false,
+      "byte_identical_to_previous_sec_file": false,
+      "pr_bundle": "present",
+      "rows_eq_be": 2915
+     },
+     {
+      "date": "2026-10-23",
+      "weekday": "Friday",
+      "decision": "pending: file not yet published",
+      "date1": null,
+      "duplicate_day_guard_echo": null,
+      "byte_identical_to_previous_sec_file": null,
+      "pr_bundle": null,
+      "rows_eq_be": null
+     }
+    ],
+    "verified": true,
+    "lock_window_seconds": 89.0,
+    "upsert_rows": 10218,
+    "continuity_new_sessions": [
+     {
+      "date": "2026-10-19",
+      "n_with_prev": 2922,
+      "n_mismatch": 1,
+      "share": 0.00034223134839151266,
+      "flagged": false
+     },
+     {
+      "date": "2026-10-21",
+      "n_with_prev": 2915,
+      "n_mismatch": 0,
+      "share": 0.0,
+      "flagged": false
+     },
+     {
+      "date": "2026-10-22",
+      "n_with_prev": 2912,
+      "n_mismatch": 0,
+      "share": 0.0,
+      "flagged": false
+     }
+    ],
+    "eq_be_duplicates": 0,
+    "fingerprint_through_research_end": {
+     "tickers_compared": 3935,
+     "non_forward_columns": 48,
+     "tickers_with_changed_non_forward_rows": [
+      "JSWDULUX"
+     ],
+     "changed_tickers_explained_by_new_corporate_actions": [
+      "JSWDULUX"
+     ],
+     "changed_tickers_unexplained": [],
+     "non_forward_unchanged_except_new_ca_tickers": true,
+     "tickers_with_changed_forward_label_columns": 2930,
+     "forward_columns": [
+      "fwd_ret_2d",
+      "label_up_2d",
+      "fwd_ret_3d",
+      "label_up_3d",
+      "fwd_ret_5d",
+      "label_up_5d"
+     ],
+     "equity_eod_through_boundary": {
+      "before": [
+       5237728.0,
+       3381217548.25,
+       7335373916200.0,
+       1625999973940000.0,
+       3380188334.22,
+       2489.0,
+       4611.0
+      ],
+      "after": [
+       5237728.0,
+       3381217548.25,
+       7335373916200.0,
+       1625999973940000.0,
+       3380188334.22,
+       2489.0,
+       4611.0
+      ],
+      "identical": true
+     }
+    },
+    "forward_label_changes_through_research_end": {
+     "rows_changed": 14704,
+     "rows_last5_of_ticker_previously_nan": 14610,
+     "rows_of_new_corporate_action_tickers": 94,
+     "rows_unexplained": 0,
+     "unexplained_examples": [],
+     "first_date": "2026-04-15",
+     "last_date": "2026-10-16",
+     "rows_only_in_one": 0,
+     "note": "classified after the write from the same before-write snapshot (ml/paper/state/cache/forward_columns_before_write.parquet); the in-run check of this first write listed the changed dates only"
+    },
+    "new_corporate_actions": [
+     {
+      "ticker": "JSWDULUX",
+      "ex_date": "2026-10-22",
+      "ratio": 0.1,
+      "kind": "split",
+      "source": "PR151026.zip/bc15102026.csv"
+     }
+    ],
+    "upcoming_corporate_actions": [
+     {
+      "ticker": "AZADIND",
+      "ex_date": "2026-10-23",
+      "kind": "split",
+      "purpose": "FVSPLT FRM RS 10 TO RS 2"
+     }
+    ],
+    "unvalidated_in_window": [],
+    "price_breaks_in_window": [],
+    "rebuilt_ca_feed_vs_10y": {
+     "only_in_rebuilt": [],
+     "only_in_10y": [],
+     "identical": true
+    },
+    "new_etf_symbols": [],
+    "backup_deleted": true
+   },
+   {
+    "kind": "features_rebuild",
+    "run_today_ist": "2026-10-23",
+    "reason": "CCAVENUE 10:1 consolidation (record date 2026-10-13, suspended 13-16 Oct, first print 2026-10-19) unadjusted: parser extension and widened live window (SPEC.md amendment 4)",
+    "checks": {
+     "row_count_as_expected": true,
+     "equity_features_rows_equal_eq_be_rows": true,
+     "no_duplicate_eq_be_pairs": true,
+     "continuity_share_below_5pct": true,
+     "no_unexplained_price_break": true,
+     "non_forward_unchanged_except_changed_ca_tickers": true,
+     "equity_eod_through_research_end_identical": true,
+     "forward_label_changes_explained": true
+    },
+    "checked_sessions": [
+     "2026-10-19",
+     "2026-10-21",
+     "2026-10-22"
+    ],
+    "feed_lines_added": [
+     {
+      "ticker": "CCAVENUE",
+      "ex_date": "2026-10-13"
+     }
+    ],
+    "price_breaks": {
+     "by": "this write",
+     "rule": "|prev_close / stored previous close - 1| > 22%; explained when the live feed's events in (stored previous session, session] agree within +-15%",
+     "sessions": {
+      "2026-10-19": {
+       "names_with_prev": 2922,
+       "breaks": 1,
+       "explained_by_feed": 1,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      },
+      "2026-10-21": {
+       "names_with_prev": 2915,
+       "breaks": 0,
+       "explained_by_feed": 0,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      },
+      "2026-10-22": {
+       "names_with_prev": 2912,
+       "breaks": 0,
+       "explained_by_feed": 0,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      }
+     },
+     "breaks": [
+      {
+       "date": "2026-10-19",
+       "ticker": "CCAVENUE",
+       "prev_close": 138.3,
+       "stored_previous_close": 13.83,
+       "stored_previous_date": "2026-10-12",
+       "calendar_days_since_stored_previous": 7,
+       "prev_close_over_stored_close": 10.0,
+       "feed_events": [
+        {
+         "ex_date": "2026-10-13",
+         "ratio": 10.0
+        }
+       ],
+       "status": "explained_by_feed"
+      }
+     ],
+     "n_unexplained": 0,
+     "n_recorded_price_break": 0
+    },
+    "parser_extension": {
+     "purposes_read_by_extension": [
+      "CNSLDATN RE 1 TO RS 10",
+      "CNSLDATNRE1 TO RS10",
+      "CNSLDATNRS10 TO RS1000"
+     ],
+     "ex_date_from_record_date": [
+      {
+       "ticker": "CCAVENUE",
+       "ex_date": "2026-10-13",
+       "purpose": "CNSLDATNRE1 TO RS10",
+       "source": "PR121026.zip/bc12102026.csv"
+      },
+      {
+       "ticker": "KAUSHALYA",
+       "ex_date": "2024-01-12",
+       "purpose": "CNSLDATNRS10 TO RS1000",
+       "source": "PR090124.zip/Bc090124.csv"
+      },
+      {
+       "ticker": "SIGNET",
+       "ex_date": "2018-08-14",
+       "purpose": "CONSOLIDATION-RE1 TO RS10",
+       "source": "PR080818.zip/Bc080818.csv"
+      }
+     ],
+     "note": "ml/paper/ingest.py ca_extension (SPEC.md 2.7): CNSLDATN spelling and record date as ex-date; events still pass the module's validation"
+    },
+    "live_feed": {
+     "path": "ml/data_ext/corporate_actions_feed_live.csv",
+     "rows": 757,
+     "sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+     "staged": "ml/paper/state/ca/corporate_actions_feed_live.staged.csv",
+     "starts_with_ten_year_feed_bytes": true,
+     "lines_appended": 2
+    },
+    "sessions": null,
+    "decisions": [],
+    "verified": true,
+    "lock_window_seconds": 98.5,
+    "upsert_rows": null,
+    "continuity_new_sessions": [],
+    "eq_be_duplicates": 0,
+    "fingerprint_through_research_end": {
+     "tickers_compared": 3935,
+     "non_forward_columns": 48,
+     "tickers_with_changed_non_forward_rows": [
+      "CCAVENUE"
+     ],
+     "changed_tickers_explained_by_new_corporate_actions": [
+      "CCAVENUE"
+     ],
+     "changed_tickers_unexplained": [],
+     "non_forward_unchanged_except_new_ca_tickers": true,
+     "tickers_with_changed_forward_label_columns": 1,
+     "forward_columns": [
+      "fwd_ret_2d",
+      "label_up_2d",
+      "fwd_ret_3d",
+      "label_up_3d",
+      "fwd_ret_5d",
+      "label_up_5d"
+     ],
+     "equity_eod_through_boundary": {
+      "before": [
+       5237728.0,
+       3381217548.25,
+       7335373916200.0,
+       1625999973940000.0,
+       3380188334.22,
+       2489.0,
+       4611.0
+      ],
+      "after": [
+       5237728.0,
+       3381217548.25,
+       7335373916200.0,
+       1625999973940000.0,
+       3380188334.22,
+       2489.0,
+       4611.0
+      ],
+      "identical": true
+     }
+    },
+    "forward_label_changes_through_research_end": {
+     "rows_changed": 132,
+     "rows_last5_of_ticker_previously_nan": 0,
+     "rows_of_new_corporate_action_tickers": 132,
+     "rows_unexplained": 0,
+     "unexplained_examples": [],
+     "first_date": "2026-02-03",
+     "last_date": "2026-10-12",
+     "rows_only_in_one": 0
+    },
+    "new_corporate_actions": [
+     {
+      "ticker": "CCAVENUE",
+      "ex_date": "2026-10-13",
+      "ratio": 10.0,
+      "kind": "consolidation",
+      "source": "PR121026.zip/bc12102026.csv",
+      "first_print_on_or_after_ex": "2026-10-19",
+      "window": "ex-date on/before the research end, first print after it (suspension)"
+     },
+     {
+      "ticker": "JSWDULUX",
+      "ex_date": "2026-10-22",
+      "ratio": 0.1,
+      "kind": "split",
+      "source": "PR151026.zip/bc15102026.csv",
+      "first_print_on_or_after_ex": "2026-10-22",
+      "window": "ex-date after the research end"
+     }
+    ],
+    "upcoming_corporate_actions": [
+     {
+      "ticker": "AZADIND",
+      "ex_date": "2026-10-23",
+      "kind": "split",
+      "purpose": "FVSPLT FRM RS 10 TO RS 2"
+     }
+    ],
+    "unvalidated_in_window": [],
+    "price_breaks_in_window": [],
+    "rebuilt_ca_feed_vs_10y": {
+     "only_in_rebuilt": [
+      [
+       "CCAVENUE",
+       "2026-10-13",
+       10.0
+      ],
+      [
+       "KAUSHALYA",
+       "2024-01-12",
+       100.0
+      ],
+      [
+       "SHEKHAWATI",
+       "2024-08-28",
+       10.0
+      ],
+      [
+       "VERTOZ",
+       "2025-06-25",
+       10.0
+      ]
+     ],
+     "only_in_10y": [],
+     "only_in_rebuilt_from_parser_extension": [
+      [
+       "CCAVENUE",
+       "2026-10-13",
+       10.0
+      ],
+      [
+       "KAUSHALYA",
+       "2024-01-12",
+       100.0
+      ],
+      [
+       "SHEKHAWATI",
+       "2024-08-28",
+       10.0
+      ],
+      [
+       "VERTOZ",
+       "2025-06-25",
+       10.0
+      ]
+     ],
+     "identical": false,
+     "identical_apart_from_parser_extension": true,
+     "note": "research-period events found by the parser extension are reported, not applied: the live feed adds only events of the live window, so equity_features through the research end keep the ten-year feed's adjustments"
+    },
+    "new_etf_symbols": null,
+    "backup_deleted": true
+   }
+  ]
+ },
+ "superseded_ledger": {
+  "reason": "The first ledger (written on 2026-10-23 for signal dates 2026-10-19, 2026-10-21 and 2026-10-22, held only in work-in-progress commits) was built before CCAVENUE's 10:1 consolidation was adjusted: its bc record ('CNSLDATNRE1 TO RS10', EX_DT empty, record date 2026-10-13, PR121026.zip) was not read by the corporate-action parser, and the live window kept only ex-dates after 2026-10-16 while CCAVENUE was suspended 13-16 October and first printed again on 2026-10-19. Its features on all three signal dates carried ret_1d = +8.40 (true -0.060), and it sat in every book. The store was repaired (ml/paper/ingest.py --rebuild-features, verified) and the ledger regenerated from inception with the same frozen construction and the same October models (ml/paper/SPEC.md section 3 and amendment 4).",
+  "folder": "ml/results/improve2/paper/superseded_2026-10-23",
+  "rows": {
+   "signals": 1521,
+   "marks": 8,
+   "monitors": 48
+  },
+  "superseded_sha256": {
+   "marks.csv": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+   "monitors.csv": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+   "signals.csv": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+   "state.json": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
+  },
+  "regenerated_sha256": {
+   "marks.csv": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+   "monitors.csv": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+   "signals.csv": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+   "state.json": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319"
+  },
+  "models_unchanged": {
+   "lgbm": true,
+   "lambdarank": true,
+   "catboost": true,
+   "logistic": true
+  },
+  "ccavenue_neutral_lgbm": {
+   "2026-10-19": {
+    "old": 0.9789888378200919,
+    "new": 0.39198949441891007
+   },
+   "2026-10-21": {
+    "old": 0.9671916010498688,
+    "new": 0.4284776902887139
+   },
+   "2026-10-22": {
+    "old": 0.9777341191879503,
+    "new": 0.26195153896529144
+   }
+  },
+  "ccavenue_rows_in_books": {
+   "old": [
+    "2026-10-19 primary rank 33",
+    "2026-10-19 control_plain rank 88",
+    "2026-10-21 primary rank 51",
+    "2026-10-21 capacity rank 1",
+    "2026-10-21 control_plain rank 25",
+    "2026-10-22 primary rank 35",
+    "2026-10-22 control_plain rank 62"
+   ],
+   "new": []
+  },
+  "raw_member_scores_of_other_names_max_abs_diff": {
+   "2026-10-19": {
+    "lgbm": 0.020644761959271785,
+    "lambdarank": 0.03471252962888438,
+    "catboost": 0.016320403590821653,
+    "raw_scores_identical_for_other_names": false
+   },
+   "2026-10-21": {
+    "lgbm": 0.03523713344549745,
+    "lambdarank": 0.05949552462921681,
+    "catboost": 0.023161204848046624,
+    "raw_scores_identical_for_other_names": false
+   },
+   "2026-10-22": {
+    "lgbm": 0.024887302208235706,
+    "lambdarank": 0.080970729962695,
+    "catboost": 0.011054271502173085,
+    "raw_scores_identical_for_other_names": false
+   }
+  },
+  "basket_changes": [
+   {
+    "signal_date": "2026-10-19",
+    "book": "primary",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "CCAVENUE"
+    ],
+    "in": [
+     "NORTHARC"
+    ]
+   },
+   {
+    "signal_date": "2026-10-19",
+    "book": "capacity",
+    "n_old": 50,
+    "n_new": 50,
+    "out": [
+     "GAIL"
+    ],
+    "in": [
+     "GMRAIRPORT"
+    ]
+   },
+   {
+    "signal_date": "2026-10-19",
+    "book": "challenger",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "THERMAX",
+     "TIMEX"
+    ],
+    "in": [
+     "STARHEALTH",
+     "STEELCAS"
+    ]
+   },
+   {
+    "signal_date": "2026-10-19",
+    "book": "control_plain",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "AUGMONT",
+     "CCAVENUE"
+    ],
+    "in": [
+     "COFORGE",
+     "WELENT"
+    ]
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "primary",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "CCAVENUE"
+    ],
+    "in": [
+     "SHILPAMED"
+    ]
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "capacity",
+    "n_old": 50,
+    "n_new": 50,
+    "out": [
+     "ASTRAMICRO",
+     "CCAVENUE"
+    ],
+    "in": [
+     "MANORAMA",
+     "NBCC"
+    ]
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "challenger",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "UNIPARTS"
+    ],
+    "in": [
+     "ELGIEQUIP"
+    ]
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "control_plain",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "CCAVENUE",
+     "SKYGOLD"
+    ],
+    "in": [
+     "CCL",
+     "IFBIND"
+    ]
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "primary",
+    "n_old": 153,
+    "n_new": 153,
+    "out": [
+     "CCAVENUE",
+     "KIMS"
+    ],
+    "in": [
+     "CUPID",
+     "GREENPLY"
+    ]
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "capacity",
+    "n_old": 50,
+    "n_new": 50,
+    "out": [
+     "SBCL"
+    ],
+    "in": [
+     "ACMESOLAR"
+    ]
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "challenger",
+    "n_old": 153,
+    "n_new": 153,
+    "out": [
+     "RANEHOLDIN"
+    ],
+    "in": [
+     "WESTLIFE"
+    ]
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "control_plain",
+    "n_old": 153,
+    "n_new": 153,
+    "out": [
+     "CCAVENUE",
+     "GLAND"
+    ],
+    "in": [
+     "FOSECOIND",
+     "PVRINOX"
+    ]
+   }
+  ],
+  "books_changed": 12,
+  "books_total": 12
+ },
+ "consistency_proof": {
+  "research_end": "2026-10-16",
+  "rule": "exact equality per cell (NaN equals NaN); max_abs_diff over finite pairs",
+  "research_end_rows": {
+   "rows_frame": 1527,
+   "rows_10y": 1527,
+   "rows_common": 1527,
+   "rows_only_frame": 0,
+   "rows_only_10y": 0,
+   "max_abs_diff_all_features": 3.410605131648481e-13,
+   "cells_differing": 16,
+   "nan_mismatch_cells": 0,
+   "per_feature_differing": {
+    "gap_pct": {
+     "max_abs_diff": 1.497554250745603e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "range_pct": {
+     "max_abs_diff": 1.1275702593849246e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "close_pos_in_range": {
+     "max_abs_diff": 3.9968028886505635e-15,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "dist_sma_5": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "dist_sma_20": {
+     "max_abs_diff": 1.1102230246251565e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "macd_norm": {
+     "max_abs_diff": 1.1188966420050406e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "mom_20": {
+     "max_abs_diff": 1.1102230246251565e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "vol_10": {
+     "max_abs_diff": 1.0408340855860843e-17,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "vol_20": {
+     "max_abs_diff": 6.938893903907228e-18,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "rsi_14": {
+     "max_abs_diff": 1.4210854715202004e-14,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "atr_pct": {
+     "max_abs_diff": 3.8163916471489756e-17,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "dist_52w_high": {
+     "max_abs_diff": 1.1102230246251565e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "rsi_2": {
+     "max_abs_diff": 3.410605131648481e-13,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "ret_63d": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "ret_126d": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    },
+    "amihud_20": {
+     "max_abs_diff": 1.609823385706477e-15,
+     "rows_differing": 1,
+     "nan_mismatch": 0
+    }
+   },
+   "tickers_with_differences": [
+    "JSWDULUX"
+   ],
+   "n_tickers_with_differences": 1,
+   "n_dates_with_differences": 1,
+   "dates_with_differences_last": [
+    "2026-10-16"
+   ],
+   "identical": false,
+   "cells_differing_unexplained": 0,
+   "equal_except_new_corporate_action_rounding": true
+  },
+  "all_dates_through_research_end": {
+   "rows_frame": 2226504,
+   "rows_10y": 2226504,
+   "rows_common": 2226504,
+   "rows_only_frame": 0,
+   "rows_only_10y": 0,
+   "max_abs_diff_all_features": 6.110667527536862e-13,
+   "cells_differing": 5438,
+   "nan_mismatch_cells": 0,
+   "per_feature_differing": {
+    "ret_1d": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 116,
+     "nan_mismatch": 0
+    },
+    "log_ret_1d": {
+     "max_abs_diff": 2.3592239273284576e-16,
+     "rows_differing": 116,
+     "nan_mismatch": 0
+    },
+    "gap_pct": {
+     "max_abs_diff": 1.8735013540549517e-16,
+     "rows_differing": 226,
+     "nan_mismatch": 0
+    },
+    "range_pct": {
+     "max_abs_diff": 1.8735013540549517e-16,
+     "rows_differing": 245,
+     "nan_mismatch": 0
+    },
+    "close_pos_in_range": {
+     "max_abs_diff": 1.354472090042691e-14,
+     "rows_differing": 272,
+     "nan_mismatch": 0
+    },
+    "dist_sma_5": {
+     "max_abs_diff": 4.440892098500626e-16,
+     "rows_differing": 153,
+     "nan_mismatch": 0
+    },
+    "dist_sma_10": {
+     "max_abs_diff": 4.440892098500626e-16,
+     "rows_differing": 162,
+     "nan_mismatch": 0
+    },
+    "dist_sma_20": {
+     "max_abs_diff": 4.440892098500626e-16,
+     "rows_differing": 151,
+     "nan_mismatch": 0
+    },
+    "dist_sma_50": {
+     "max_abs_diff": 3.3306690738754696e-16,
+     "rows_differing": 119,
+     "nan_mismatch": 0
+    },
+    "macd_norm": {
+     "max_abs_diff": 9.26342336171615e-16,
+     "rows_differing": 273,
+     "nan_mismatch": 0
+    },
+    "mom_5": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 111,
+     "nan_mismatch": 0
+    },
+    "mom_10": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 121,
+     "nan_mismatch": 0
+    },
+    "mom_20": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 97,
+     "nan_mismatch": 0
+    },
+    "vol_5": {
+     "max_abs_diff": 1.97758476261356e-16,
+     "rows_differing": 266,
+     "nan_mismatch": 0
+    },
+    "vol_10": {
+     "max_abs_diff": 1.0408340855860843e-16,
+     "rows_differing": 269,
+     "nan_mismatch": 0
+    },
+    "vol_20": {
+     "max_abs_diff": 6.938893903907228e-17,
+     "rows_differing": 237,
+     "nan_mismatch": 0
+    },
+    "rsi_14": {
+     "max_abs_diff": 9.947598300641403e-14,
+     "rows_differing": 213,
+     "nan_mismatch": 0
+    },
+    "atr_pct": {
+     "max_abs_diff": 5.551115123125783e-17,
+     "rows_differing": 238,
+     "nan_mismatch": 0
+    },
+    "dist_52w_high": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 140,
+     "nan_mismatch": 0
+    },
+    "dist_52w_low": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 126,
+     "nan_mismatch": 0
+    },
+    "rsi_2": {
+     "max_abs_diff": 6.110667527536862e-13,
+     "rows_differing": 243,
+     "nan_mismatch": 0
+    },
+    "ret_63d": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 80,
+     "nan_mismatch": 0
+    },
+    "ret_126d": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 14,
+     "nan_mismatch": 0
+    },
+    "dist_200dma": {
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 26,
+     "nan_mismatch": 0
+    },
+    "amihud_20": {
+     "max_abs_diff": 5.051514762044462e-15,
+     "rows_differing": 1424,
+     "nan_mismatch": 0
+    }
+   },
+   "tickers_with_differences": [
+    "20MICRONS",
+    "360ONE",
+    "3BBLACKBIO",
+    "3IINFOLTD",
+    "3MINDIA",
+    "5PAISA",
+    "63MOONS",
+    "AADHARHFC",
+    "AARTIDRUGS",
+    "AARTIIND",
+    "AARTIPHARM",
+    "AASTHA",
+    "AAVAS",
+    "ABB",
+    "ABBOTINDIA",
+    "ABCAPITAL",
+    "ABDL",
+    "ABFRL",
+    "ABINFRA",
+    "ABSLAMC",
+    "ACE",
+    "ACMESOLAR",
+    "ACUTAAS",
+    "ADANIENSOL",
+    "ADANIENT",
+    "ADANIGREEN",
+    "ADANIPOWER",
+    "ADFFOODS",
+    "ADOR",
+    "ADVAIT",
+    "ADVANCE",
+    "ADVENTHTL",
+    "ADVENZYMES",
+    "AEQUS",
+    "AEROENTER",
+    "AETHER",
+    "AFCONS",
+    "AFFLE",
+    "AGARIND",
+    "AGIIL",
+    "AGL",
+    "AHCL",
+    "AHLUCONT",
+    "AIIL",
+    "AJANTPHARM",
+    "AJMERA",
+    "AKUMS",
+    "ALEMBICLTD",
+    "ALGOQUANT",
+    "ALIVUS",
+    "ALKEM",
+    "ALKYLAMINE",
+    "ALLTIME",
+    "ALOKINDS",
+    "AMAGI",
+    "AMBER",
+    "AMBIKCO",
+    "AMBUJACEM",
+    "AMRUTANJAN",
+    "ANDHRSUGAR"
+   ],
+   "n_tickers_with_differences": 1188,
+   "n_dates_with_differences": 165,
+   "dates_with_differences_last": [
+    "2026-10-12",
+    "2026-10-13",
+    "2026-10-14",
+    "2026-10-15",
+    "2026-10-16"
+   ],
+   "identical": false,
+   "cells_differing_unexplained": 0,
+   "equal_except_new_corporate_action_rounding": true
+  },
+  "frame_dates_after_research_end": [
+   "2026-10-19",
+   "2026-10-21",
+   "2026-10-22"
+  ],
+  "corporate_actions_added_to_ten_year_feed": [
+   {
+    "ticker": "CCAVENUE",
+    "ex_date": "2026-10-13",
+    "ratio": 10.0
+   },
+   {
+    "ticker": "JSWDULUX",
+    "ex_date": "2026-10-22",
+    "ratio": 0.1
+   }
+  ],
+  "explained_difference_rule": "a cell of a ticker whose pre-ex prices the new event rescales, or a cross-sectional feature (ranks, amihud_20 z-score) on a date where that ticker is in the universe"
+ },
+ "inception_point_in_time_note": "signal dates 2026-10-19, 2026-10-21 and 2026-10-22 were scored on 2026-10-23 (the day this stream started) from the store as of 2026-10-22, after the corporate-action repair of that day. Every feature looks back only, so a date's frame rows do not depend on later sessions except through a corporate action added later, which rescales that ticker's earlier prices (here JSWDULUX, split ex 2026-10-22): the consistency proof above is exactly that check at 2026-10-16 (a frame built through 2026-10-22 against the research frame built through 2026-10-16), and it differs only by floating-point rounding in that one ticker. CCAVENUE's consolidation (record date 2026-10-13) was announced in the 2026-10-12 bundle, so adjusting it before scoring 2026-10-19 uses no later information. From 2026-10-23 on, each session is scored on its own evening.",
+ "trainer_reproduction": {
+  "fold": {
+   "name": "holdout",
+   "train_end": "2026-07-02",
+   "test_start": "2026-08-03",
+   "test_end": "2026-09-16"
+  },
+  "train_rows": 682309,
+  "test_rows": 47120,
+  "rows_10y": 47117,
+  "test_rows_label_exit_after_research_end": [
+   {
+    "date": "2026-09-10",
+    "ticker": "CCAVENUE",
+    "exit_date": "2026-10-19"
+   },
+   {
+    "date": "2026-09-11",
+    "ticker": "CCAVENUE",
+    "exit_date": "2026-10-21"
+   },
+   {
+    "date": "2026-09-15",
+    "ticker": "CCAVENUE",
+    "exit_date": "2026-10-22"
+   }
+  ],
+  "rows_matched": 47117,
+  "rows_only_trainer": 0,
+  "rows_only_10y": 0,
+  "max_abs_score_diff": 0.0,
+  "rows_with_diff_gt_1e-12": 0,
+  "identical": true,
+  "identical_rule": "every holdout row the research data could label (label exit on or before the research end) is present in both and scores exactly the same",
+  "seconds": 28.9,
+  "reference": "ml/results/improve/ab/10y/preds/control__beat_mkt_20d.parquet (fold holdout)"
+ },
+ "models": {
+  "2026-09": {
+   "role": "monitor only (logistic sign-flip baseline)",
+   "members": [
+    "logistic"
+   ],
+   "trained_as_of": "2026-09-01",
+   "training_window": {
+    "first_date": "2024-07-19",
+    "last_date": "2026-07-31",
+    "sessions": 505,
+    "rows": 682669,
+    "labelled_clean_rows_before_purge": 682669,
+    "rows_purged_exit_ge_test_start": 0,
+    "tickers": 2019,
+    "label_mean": 0.5002893056517873,
+    "rule": "ml.scale5y_nested.window_rows: 504 sessions back from train_end (505 sessions inclusive, the research walk-forward's convention; train_end 22 sessions before the month's first session), labelled clean rows, exit-date purge at the first session"
+   },
+   "training_frame_sha256": "be1369cd5db35848a6ea49070c0798ff54aa9e04362edf40bfccb9b597e7c1e2",
+   "files_sha256": {
+    "logistic": "9b41df134af3ebd1b411266b9d653cf34120345f0eeef153bd047a7b8a340c02"
+   }
+  },
+  "2026-10": {
+   "role": "paper model",
+   "members": [
+    "lgbm",
+    "lambdarank",
+    "catboost",
+    "logistic"
+   ],
+   "trained_as_of": "2026-10-01",
+   "training_window": {
+    "first_date": "2024-08-20",
+    "last_date": "2026-08-31",
+    "sessions": 505,
+    "rows": 683106,
+    "labelled_clean_rows_before_purge": 683106,
+    "rows_purged_exit_ge_test_start": 0,
+    "tickers": 2030,
+    "label_mean": 0.5002986359364432,
+    "rule": "ml.scale5y_nested.window_rows: 504 sessions back from train_end (505 sessions inclusive, the research walk-forward's convention; train_end 22 sessions before the month's first session), labelled clean rows, exit-date purge at the first session"
+   },
+   "training_frame_sha256": "519aa6e4d2d5274891eaf3ba4113cf52b65c80f39002e2878af73b9c2eb2b20a",
+   "files_sha256": {
+    "lgbm": "e3fe831ac5e2f2f538a95f4379c4b7434e9353387fc93d8ea3fd7e9e876717fa",
+    "lambdarank": "d2ebacec039c5c6fa9afd08bbb34fd97afed46f2afd1d15ddfe4004d02dfab30",
+    "catboost": "b4704a7bd9ac2a28dd6e68846326333c7c0994bdd5f96f39955d954c4609340e",
+    "logistic": "f6f0e7c572e50eb1b049d47c21ac1fa81b40aa6a7f6e7cf76b0ba8361a262103"
+   }
+  }
+ },
+ "inception_baskets": {
+  "signal_date": "2026-10-19",
+  "universe": 1523,
+  "liquid_tercile": 503,
+  "model_month": "2026-10",
+  "primary": {
+   "size": 152,
+   "top": [
+    {
+     "rank": 1,
+     "ticker": "MENONBE",
+     "score": 1.0
+    },
+    {
+     "rank": 2,
+     "ticker": "GLOBAL",
+     "score": 0.999343401182
+    },
+    {
+     "rank": 3,
+     "ticker": "UNITEDPOLY",
+     "score": 0.998686802364
+    },
+    {
+     "rank": 4,
+     "ticker": "KIRLFER",
+     "score": 0.998030203546
+    },
+    {
+     "rank": 5,
+     "ticker": "MANGLMCEM",
+     "score": 0.997373604728
+    },
+    {
+     "rank": 6,
+     "ticker": "ULTRAMAR",
+     "score": 0.996717005909
+    },
+    {
+     "rank": 7,
+     "ticker": "ARROWGREEN",
+     "score": 0.996060407091
+    },
+    {
+     "rank": 8,
+     "ticker": "BLISSGVS",
+     "score": 0.995403808273
+    },
+    {
+     "rank": 9,
+     "ticker": "MANBA",
+     "score": 0.994747209455
+    },
+    {
+     "rank": 10,
+     "ticker": "SWANDEF",
+     "score": 0.994090610637
+    }
+   ]
+  },
+  "capacity": {
+   "size": 50,
+   "top": [
+    {
+     "rank": 1,
+     "ticker": "MARINE",
+     "score": 0.973079448457
+    },
+    {
+     "rank": 2,
+     "ticker": "KARAMTARA",
+     "score": 0.96520026264
+    },
+    {
+     "rank": 3,
+     "ticker": "AYE",
+     "score": 0.961917268549
+    },
+    {
+     "rank": 4,
+     "ticker": "DIACABS",
+     "score": 0.961260669731
+    },
+    {
+     "rank": 5,
+     "ticker": "XPROINDIA",
+     "score": 0.960604070913
+    },
+    {
+     "rank": 6,
+     "ticker": "POLICYBZR",
+     "score": 0.951411687459
+    },
+    {
+     "rank": 7,
+     "ticker": "ENTERO",
+     "score": 0.950098489823
+    },
+    {
+     "rank": 8,
+     "ticker": "KMEW",
+     "score": 0.948128693368
+    },
+    {
+     "rank": 9,
+     "ticker": "AEQUS",
+     "score": 0.94747209455
+    },
+    {
+     "rank": 10,
+     "ticker": "NEOGEN",
+     "score": 0.941562705187
+    }
+   ]
+  },
+  "challenger": {
+   "size": 152,
+   "top": [
+    {
+     "rank": 1,
+     "ticker": "GLOBAL",
+     "score": 1.0
+    },
+    {
+     "rank": 2,
+     "ticker": "KIRLFER",
+     "score": 0.999343401182
+    },
+    {
+     "rank": 3,
+     "ticker": "KOVAI",
+     "score": 0.998686802364
+    },
+    {
+     "rank": 4,
+     "ticker": "IIFLCAPS",
+     "score": 0.998030203546
+    },
+    {
+     "rank": 5,
+     "ticker": "MANGLMCEM",
+     "score": 0.997373604728
+    },
+    {
+     "rank": 6,
+     "ticker": "ULTRAMAR",
+     "score": 0.996717005909
+    },
+    {
+     "rank": 7,
+     "ticker": "KAPSTON",
+     "score": 0.996060407091
+    },
+    {
+     "rank": 8,
+     "ticker": "MANBA",
+     "score": 0.995403808273
+    },
+    {
+     "rank": 9,
+     "ticker": "AAREYDRUGS",
+     "score": 0.994747209455
+    },
+    {
+     "rank": 10,
+     "ticker": "MENONBE",
+     "score": 0.994090610637
+    }
+   ]
+  },
+  "control_plain": {
+   "size": 152,
+   "top": [
+    {
+     "rank": 1,
+     "ticker": "KOVAI",
+     "score": 0.779543709809
+    },
+    {
+     "rank": 2,
+     "ticker": "HAL",
+     "score": 0.707178506263
+    },
+    {
+     "rank": 3,
+     "ticker": "MENONBE",
+     "score": 0.705704133476
+    },
+    {
+     "rank": 4,
+     "ticker": "POWERGRID",
+     "score": 0.697060770373
+    },
+    {
+     "rank": 5,
+     "ticker": "ICICIBANK",
+     "score": 0.68361508851
+    },
+    {
+     "rank": 6,
+     "ticker": "GAIL",
+     "score": 0.681207555476
+    },
+    {
+     "rank": 7,
+     "ticker": "INDHOTEL",
+     "score": 0.680938629643
+    },
+    {
+     "rank": 8,
+     "ticker": "IIFLCAPS",
+     "score": 0.679935129226
+    },
+    {
+     "rank": 9,
+     "ticker": "POLICYBZR",
+     "score": 0.678725956357
+    },
+    {
+     "rank": 10,
+     "ticker": "ONEPOINT",
+     "score": 0.67550552175
+    }
+   ]
+  }
+ },
+ "latest_baskets": {
+  "signal_date": "2026-10-22",
+  "primary": {
+   "size": 153
+  },
+  "capacity": {
+   "size": 50
+  },
+  "challenger": {
+   "size": 153
+  },
+  "control_plain": {
+   "size": 153
+  },
+  "challenger_expanding": {
+   "size": 153
+  },
+  "capacity_expanding": {
+   "size": 50
+  }
+ },
+ "marks": {
+  "primary": {
+   "sessions": 2,
+   "first_session": "2026-10-21",
+   "last_session": "2026-10-22",
+   "exposure_last": 0.1,
+   "cum_fixed_capital_gross": -0.0020618208177880515,
+   "cum_fixed_capital_net_20bps": -0.002258475683612482,
+   "cum_fixed_capital_net_name_level": -0.002560043011822666,
+   "cum_fixed_capital_benchmark": -0.0022691675916338694,
+   "cum_active_net_20bps": 1.069190802138742e-05,
+   "benchmark": "ew_universe"
+  },
+  "capacity": {
+   "sessions": 2,
+   "first_session": "2026-10-21",
+   "last_session": "2026-10-22",
+   "exposure_last": 0.1,
+   "cum_fixed_capital_gross": -0.002401126459656844,
+   "cum_fixed_capital_net_20bps": -0.002597428399136237,
+   "cum_fixed_capital_net_name_level": -0.0027813177150474155,
+   "cum_fixed_capital_benchmark": -0.0020731418741062324,
+   "cum_active_net_20bps": -0.0005242865250300044,
+   "benchmark": "ew_liquid"
+  },
+  "challenger": {
+   "sessions": 2,
+   "first_session": "2026-10-21",
+   "last_session": "2026-10-22",
+   "exposure_last": 0.1,
+   "cum_fixed_capital_gross": -0.0017843866229673155,
+   "cum_fixed_capital_net_20bps": -0.001981316372828945,
+   "cum_fixed_capital_net_name_level": -0.0022852581345766954,
+   "cum_fixed_capital_benchmark": -0.0022691675916338694,
+   "cum_active_net_20bps": 0.00028785121880492426,
+   "benchmark": "ew_universe"
+  },
+  "control_plain": {
+   "sessions": 2,
+   "first_session": "2026-10-21",
+   "last_session": "2026-10-22",
+   "exposure_last": 0.1,
+   "cum_fixed_capital_gross": -0.001527785070910781,
+   "cum_fixed_capital_net_20bps": -0.0017252357598548373,
+   "cum_fixed_capital_net_name_level": -0.0018927277027254163,
+   "cum_fixed_capital_benchmark": -0.0022691675916338694,
+   "cum_active_net_20bps": 0.000543931831779032,
+   "benchmark": "ew_universe"
+  },
+  "challenger_expanding": {
+   "sessions": 2,
+   "first_session": "2026-10-21",
+   "last_session": "2026-10-22",
+   "exposure_last": 0.1,
+   "cum_fixed_capital_gross": -0.002098261417635916,
+   "cum_fixed_capital_net_20bps": -0.0022948009542301806,
+   "cum_fixed_capital_net_name_level": -0.002619864529148086,
+   "cum_fixed_capital_benchmark": -0.0022691675916338694,
+   "cum_active_net_20bps": -2.5633362596311215e-05,
+   "benchmark": "ew_universe"
+  },
+  "capacity_expanding": {
+   "sessions": 2,
+   "first_session": "2026-10-21",
+   "last_session": "2026-10-22",
+   "exposure_last": 0.1,
+   "cum_fixed_capital_gross": -0.002268455744549591,
+   "cum_fixed_capital_net_20bps": -0.0024650005686913667,
+   "cum_fixed_capital_net_name_level": -0.0026795805455374078,
+   "cum_fixed_capital_benchmark": -0.0020731418741062324,
+   "cum_active_net_20bps": -0.00039185869458513434,
+   "benchmark": "ew_liquid"
+  }
+ },
+ "marks_info": {
+  "books": {
+   "primary": {
+    "tranches": 3,
+    "basket_sizes": [
+     152,
+     152,
+     153
+    ],
+    "turnover_per_rebalance_after_inception": [],
+    "name_level_trade_weighted_bps_per_side": 50.14718090514805
+   },
+   "capacity": {
+    "tranches": 3,
+    "basket_sizes": [
+     50,
+     50,
+     50
+    ],
+    "turnover_per_rebalance_after_inception": [],
+    "name_level_trade_weighted_bps_per_side": 36.42396176324887
+   },
+   "challenger": {
+    "tranches": 3,
+    "basket_sizes": [
+     152,
+     152,
+     153
+    ],
+    "turnover_per_rebalance_after_inception": [],
+    "name_level_trade_weighted_bps_per_side": 50.10492696615533
+   },
+   "control_plain": {
+    "tranches": 3,
+    "basket_sizes": [
+     152,
+     152,
+     153
+    ],
+    "turnover_per_rebalance_after_inception": [],
+    "name_level_trade_weighted_bps_per_side": 37.55547041883167
+   },
+   "challenger_expanding": {
+    "tranches": 3,
+    "basket_sizes": [
+     152,
+     152,
+     153
+    ],
+    "turnover_per_rebalance_after_inception": [],
+    "name_level_trade_weighted_bps_per_side": 52.600245334676785
+   },
+   "capacity_expanding": {
+    "tranches": 3,
+    "basket_sizes": [
+     50,
+     50,
+     50
+    ],
+    "turnover_per_rebalance_after_inception": [],
+    "name_level_trade_weighted_bps_per_side": 40.267301950870795
+   }
+  },
+  "first_entry_session": "2026-10-21"
+ },
+ "monitors_last_session": {
+  "session": "2026-10-22",
+  "rows": [
+   {
+    "session": "2026-10-22",
+    "monitor": "delivery_resid_ic",
+    "scope": "pre-inception",
+    "value": "0.0823414",
+    "threshold": "0.02",
+    "status": "ok",
+    "detail": "months 2026-07 +0.0407, 2026-08 +0.0823 (raw IC +0.0522, +0.0294)"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "live_model_auc",
+    "scope": "pre-inception",
+    "value": "0.519292",
+    "threshold": "0.5",
+    "status": "warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it)",
+    "detail": "research walk-forward: fold 2026-07 0.5474, holdout 2026-08-03..2026-09-16 0.5193"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "rank_ic_nw_t_12m",
+    "scope": "pre-inception",
+    "value": "4.02305",
+    "threshold": "2",
+    "status": "ok",
+    "detail": "223 matured signal dates in the trailing 12 months (0 live), mean IC +0.0865; last matured date 2026-09-16"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "logistic_sign_flips",
+    "scope": "2026-09 -> 2026-10",
+    "value": "0",
+    "threshold": "0",
+    "status": "ok",
+    "detail": "top 5: log_turnover -0.1719 (prev -0.2024), cs_rank_turnover +0.1688 (prev +0.1867), macd_norm -0.1612 (prev -0.1872), dist_52w_high +0.1263 (prev +0.1314), amihud_20 -0.1244 (prev -0.1351)"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "feature_psi",
+    "scope": "trailing 20 sessions vs 2026-10 training window",
+    "value": "0.259106",
+    "threshold": "0.25",
+    "status": "ALERT",
+    "detail": "highest: ret_126d 0.259, dist_sma_50 0.141, dist_sma_20 0.134, rsi_14 0.133, mom_20 0.129; features above 0.25: 1"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "paper_active_ir_6m",
+    "scope": "primary",
+    "value": "",
+    "threshold": "0",
+    "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0011%; benchmark ew_universe"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "paper_active_ir_6m",
+    "scope": "capacity",
+    "value": "",
+    "threshold": "0",
+    "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0525%; benchmark ew_liquid"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "paper_active_ir_6m",
+    "scope": "challenger",
+    "value": "",
+    "threshold": "0",
+    "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0288%; benchmark ew_universe"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "paper_active_ir_6m",
+    "scope": "control_plain",
+    "value": "",
+    "threshold": "0",
+    "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0545%; benchmark ew_universe"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "feature_inversion",
+    "scope": "pre-inception",
+    "value": "0.634615",
+    "threshold": "0.5",
+    "status": "ALERT",
+    "detail": "month 2026-08: 33 of 52 features against their training-window sign (gap_pct, range_pct, dist_sma_5, dist_sma_10, dist_sma_20, dist_sma_50, macd_norm, mom_5 ...)"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "ensemble_atr_corr",
+    "scope": "month 2026-10 to date",
+    "value": "0.0755509",
+    "threshold": "0.2",
+    "status": "ok",
+    "detail": "3 signal dates; per-date range +0.043..+0.093"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "neutral_score_corr",
+    "scope": "primary",
+    "value": "0.0395689",
+    "threshold": "0.05",
+    "status": "ok",
+    "detail": "atr_pct -0.0099, log_turnover +0.0396"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "neutral_score_corr",
+    "scope": "challenger",
+    "value": "0.0397487",
+    "threshold": "0.05",
+    "status": "ok",
+    "detail": "atr_pct +0.0104, log_turnover +0.0397"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "universe_etf_count",
+    "scope": "signal date",
+    "value": "0",
+    "threshold": "0",
+    "status": "ok",
+    "detail": "1527 universe names"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "split_flag_rate",
+    "scope": "signal date",
+    "value": "0.00196464",
+    "threshold": "0.01",
+    "status": "ok",
+    "detail": "3 of 1527 universe names"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "data_quality",
+    "scope": "store",
+    "value": "0",
+    "threshold": "0.05",
+    "status": "ok",
+    "detail": "continuity mismatches 0 of 2912; per-name prev_close breaks > 22%: 0; duplicate EQ/BE pairs 0; write verified True; unvalidated split/bonus on this date 0; price breaks 0; recorded closures to date ['2026-10-20']"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "live_model_auc_expanding",
+    "scope": "pre-inception",
+    "value": "0.540147",
+    "threshold": "0.5",
+    "status": "warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it)",
+    "detail": "Q9 research walk-forward (expanding window): fold 2026-07 0.5659, holdout 2026-08-03..2026-09-16 0.5401"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "rank_ic_nw_t_12m_expanding",
+    "scope": "pre-inception",
+    "value": "5.3592",
+    "threshold": "2",
+    "status": "ok",
+    "detail": "223 matured signal dates in the trailing 12 months (0 live), mean IC +0.1205; last matured date 2026-09-16; Q9 research walk-forward before inception"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "paper_active_ir_6m",
+    "scope": "challenger_expanding",
+    "value": "",
+    "threshold": "0",
+    "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0026%; benchmark ew_universe"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "paper_active_ir_6m",
+    "scope": "capacity_expanding",
+    "value": "",
+    "threshold": "0",
+    "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0392%; benchmark ew_liquid"
+   },
+   {
+    "session": "2026-10-22",
+    "monitor": "neutral_score_corr",
+    "scope": "challenger_expanding",
+    "value": "0.055575",
+    "threshold": "0.05",
+    "status": "ALERT",
+    "detail": "atr_pct -0.0037, log_turnover +0.0556"
+   }
+  ]
+ },
+ "dsr_paper": {
+  "primary": {
+   "status": "warming up (needs marks)"
+  },
+  "capacity": {
+   "status": "warming up (needs marks)"
+  },
+  "challenger": {
+   "status": "warming up (needs marks)"
+  },
+  "control_plain": {
+   "status": "warming up (needs marks)"
+  }
+ },
+ "idempotency": {
+  "note": "ml/paper/job.py --prove-idempotency, run after the first full run on the same store",
+  "before": {
+   "signals": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+   "marks": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+   "monitors": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+   "state": "43f32fbc4937815f0b289310986c0bfb72afe7795ead9d3f296bdb9377390ac8"
+  },
+  "after": {
+   "signals": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+   "marks": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+   "monitors": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+   "state": "43f32fbc4937815f0b289310986c0bfb72afe7795ead9d3f296bdb9377390ac8"
+  },
+  "identical": true,
+  "rows_appended": 0,
+  "recomputed_signal_date": "2026-10-22",
+  "recomputed_signals_equal_ledger": true,
+  "recomputed_scores_max_abs_diff": 0.0,
+  "recomputed_marks_equal_ledger": true,
+  "recomputed_marks_max_abs_diff": 0.0,
+  "recomputed_signal_date_expanding": "2026-10-22",
+  "recomputed_signals_equal_ledger_expanding": true,
+  "recomputed_scores_max_abs_diff_expanding": 0.0,
+  "frame_rebuilt_in_this_run": false,
+  "ingest_decisions_in_this_run": null
+ },
+ "lost_state_check": {
+  "test": "ml/paper/state/models/2026-10/ (the four model files) and ml/paper/state/scores/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest (repaired store, scoring frame rebuilt after the CCAVENUE repair)",
+  "retrain_equal_to_committed_metadata": {
+   "reference_prediction_sha256": true,
+   "model_contents_sha256": true,
+   "training_window_and_rows": true,
+   "training_frame_sha256 (information only)": false
+  },
+  "regenerated_score_files": [
+   "2026-10-19"
+  ],
+  "regenerated_scores_file_byte_identical": true,
+  "unchanged": true,
+  "note_catboost": "CatBoost .cbm bytes carry train_finish_time and a random model_guid; its identity is the SHA-256 of the model exported without model_info (content_sha256); predictions of the original and the retrained CatBoost on 83,754 rows (2026-08-03..2026-10-22) differ by 0.0",
+  "live_feed_regeneration": {
+   "test": "ml/data_ext/corporate_actions_feed_live.csv deleted; ml.paper.ingest.regenerate_live_feed (the path a run takes when the feed is missing after the research end) rebuilt it from the store's EQ/BE rows and every PR bundle on disk",
+   "original_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+   "regenerated_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+   "byte_identical": true,
+   "equals_state_json": true,
+   "rows": 757,
+   "starts_with_ten_year_feed_bytes": true,
+   "new_validated_events": [
+    {
+     "ticker": "CCAVENUE",
+     "ex_date": "2026-10-13",
+     "ratio": 10.0,
+     "kind": "consolidation",
+     "source": "PR121026.zip/bc12102026.csv"
+    },
+    {
+     "ticker": "JSWDULUX",
+     "ex_date": "2026-10-22",
+     "ratio": 0.1,
+     "kind": "split",
+     "source": "PR151026.zip/bc15102026.csv"
+    }
+   ],
+   "error": null,
+   "original_restored": false
+  }
+ },
+ "regeneration_from_inception": {
+  "procedure": "ml/paper/prove.py: the job (--no-ingest) run from an empty ledger in ml/paper/state/regen/ with the same store, scoring frame and month models (frozen and expanding-window); every write redirected to the sandbox; the rebuild covers the four frozen books and the two books of extension 1",
+  "ledger_files": {
+   "signals": {
+    "committed": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+    "regenerated": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+    "identical": true,
+    "path": "ml/paper/ledger/signals.csv"
+   },
+   "marks": {
+    "committed": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+    "regenerated": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+    "identical": true,
+    "path": "ml/paper/ledger/marks.csv"
+   },
+   "monitors": {
+    "committed": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+    "regenerated": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+    "identical": true,
+    "path": "ml/paper/ledger/monitors.csv"
+   },
+   "state": {
+    "committed": "43f32fbc4937815f0b289310986c0bfb72afe7795ead9d3f296bdb9377390ac8",
+    "regenerated": "43f32fbc4937815f0b289310986c0bfb72afe7795ead9d3f296bdb9377390ac8",
+    "identical": true,
+    "path": "ml/paper/ledger/state.json"
+   }
+  },
+  "ledger_identical": true,
+  "score_files_identical": true,
+  "committed_ledger_untouched": true,
+  "regenerated_rows_appended": {
+   "signals": 1521,
+   "marks": 8,
+   "monitors": 48,
+   "signals_expanding": 607,
+   "marks_expanding": 4,
+   "monitors_expanding": 15
+  },
+  "regenerated_signal_dates": [
+   "2026-10-19",
+   "2026-10-21",
+   "2026-10-22"
+  ],
+  "score_files_identical_expanding": true,
+  "frozen_only": {
+   "procedure": "the same job with the extension switched off (ml/paper/state/regen_frozen/), compared with the committed ledger's frozen-book rows",
+   "files": {
+    "signals": {
+     "regenerated_sha256": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+     "committed_frozen_rows_sha256": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+     "identical": true,
+     "csv_writer_reproduces_committed_file": true,
+     "pre_amendment_sha256": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+     "pre_amendment_bytes": 97188,
+     "pre_amendment_ledger_is_prefix": true,
+     "equal_to_pre_amendment_ledger": true
+    },
+    "marks": {
+     "regenerated_sha256": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+     "committed_frozen_rows_sha256": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+     "identical": true,
+     "csv_writer_reproduces_committed_file": true,
+     "pre_amendment_sha256": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+     "pre_amendment_bytes": 858,
+     "pre_amendment_ledger_is_prefix": true,
+     "equal_to_pre_amendment_ledger": true
+    },
+    "monitors": {
+     "regenerated_sha256": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+     "committed_frozen_rows_sha256": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+     "identical": true,
+     "csv_writer_reproduces_committed_file": true,
+     "pre_amendment_sha256": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+     "pre_amendment_bytes": 7956,
+     "pre_amendment_ledger_is_prefix": true,
+     "equal_to_pre_amendment_ledger": true
+    },
+    "state": {
+     "regenerated_sha256": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
+     "committed_without_extension_sha256": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
+     "identical": true,
+     "pre_amendment_sha256": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
+     "equal_to_pre_amendment_state": true,
+     "rule": "committed state.json without its 'extension' key, written by the ledger's JSON writer"
+    }
+   },
+   "identical_to_committed_frozen_rows": true,
+   "pre_amendment_ledger_is_prefix": true,
+   "identical_to_pre_amendment_ledger": true,
+   "state_identical_to_committed_without_extension": true,
+   "state_equal_to_pre_amendment_state": true,
+   "rows_appended": {
+    "signals": 1521,
+    "marks": 8,
+    "monitors": 48
+   }
+  }
+ },
+ "extension": {
+  "name": "expanding",
+  "spec_hash": "a8d20cae4d930197ecc3e07c1f3bc4ac13484ebd4b627b852c0c73258349764f",
+  "extends_spec_hash": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+  "registered_utc": "2026-10-23T09:17:13Z",
+  "amendment": "ml/paper/SPEC.md section 5 (amendment 10)",
+  "books": [
+   "challenger_expanding",
+   "capacity_expanding"
+  ],
+  "counterpart": {
+   "challenger_expanding": "primary",
+   "capacity_expanding": "capacity"
+  },
+  "backfill_through": "2026-10-22",
+  "motivation": "Plan 2 amendment A1 (Q9): the control with an expanding training window passed the primary AUC mark (delta CV-mean AUC +0.0079, 95% CI [+0.0047, +0.0113], ml/results/improve2/expanding/EXPANDING.md); the plan says a pass is evidence for a forward test, not a promotion, and until this amendment no forward book ran it. The hypothesis was formed after the CPCV reading was seen, so this record, not the backtest, is the test.",
+  "definition": "challenger_expanding is the primary book in every respect (LightGBM champion configuration, the 52 features, per-date vol+size neutralisation on the full universe, full-universe top decile, 20 overlapping tranches, entry at the next open, 20-session hold, 20 bps and name-level costs, equal-weight universe benchmark) except the monthly model's training window: every labelled clean row whose label exit date is before the model date, from the first dataset row (2017-10-03), with no 504-session cap (ml/improve/ab.py q9_expanding). capacity_expanding is its liquid-tercile version, as the capacity book is to the primary (benchmark: the equal-weight liquid tercile).",
+  "backfill_note": "The two books were added on 2026-10-23 and backfilled from inception (signal dates 2026-10-19, 2026-10-21 and 2026-10-22) with the 2026-10 expanding-window model, trained as of 2026-10-01 on the data available then: rows dated up to 2026-08-31 (train_end, 22 sessions before the model date) whose label exit date is before 2026-10-01 (exit-date purge), exactly as the frozen October model was trained but with the expanding window. This is legitimate: the three signal dates are after the research data (which end 2026-10-16), the model uses no data dated after its model date, and every choice in the books' definition was fixed by amendment A1 before Q9 ran. The frozen books' first three signal dates were themselves scored in one catch-up run on 2026-10-23; the extension's were scored the same day, after the frozen books' first two marked sessions (2026-10-21, 2026-10-22) were in the ledger. No parameter of the extension depends on those marks.",
+  "models": {
+   "2026-10": {
+    "role": "expanding-window challenger model (SPEC.md amendment 10)",
+    "members": [
+     "lgbm"
+    ],
+    "trained_as_of": "2026-10-01",
+    "spec": {
+     "name": "2026-10",
+     "train_end": "2026-08-31",
+     "test_start": "2026-10-01",
+     "test_end": "2026-10-22"
+    },
+    "training_window": {
+     "first_date": "2017-10-03",
+     "last_date": "2026-08-31",
+     "sessions": 2209,
+     "rows": 2170733,
+     "labelled_clean_rows_before_purge": 2170733,
+     "rows_purged_exit_ge_test_start": 0,
+     "tickers": 2451,
+     "label_mean": 0.5002172077358201,
+     "rule": "ml.scale5y_nested.window_rows with train_sessions = 0 (ml/improve/ab.py q9_expanding): every labelled clean row from the frame's first session (2017-10-03) to train_end (train_end 22 sessions before the month's first session), exit-date purge at the first session; no 504-session cap"
+    },
+    "training_frame_sha256": "7ef5c788fe2e4492c0e5ecacd812c6d636763aaa92dc5e207024df5c971986d3",
+    "files_sha256": {
+     "lgbm": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3"
+    },
+    "fit_seconds": {
+     "lgbm": 96.8
+    },
+    "metadata": "ml/paper/models/expanding/2026-10.json"
+   }
+  },
+  "trainer_reproduction": {
+   "fold": {
+    "name": "holdout",
+    "train_end": "2026-07-02",
+    "test_start": "2026-08-03",
+    "test_end": "2026-09-16"
+   },
+   "variant": "expanding",
+   "train_sessions": 0,
+   "training_window": {
+    "first_date": "2017-10-03",
+    "last_date": "2026-07-02",
+    "sessions": 2167
+   },
+   "train_rows": 2110109,
+   "train_rows_before_purge": 2110110,
+   "train_rows_purged": 1,
+   "test_rows": 47120,
+   "rows_q9": 47117,
+   "test_rows_label_exit_after_research_end": [
+    {
+     "date": "2026-09-10",
+     "ticker": "CCAVENUE",
+     "exit_date": "2026-10-19"
+    },
+    {
+     "date": "2026-09-11",
+     "ticker": "CCAVENUE",
+     "exit_date": "2026-10-21"
+    },
+    {
+     "date": "2026-09-15",
+     "ticker": "CCAVENUE",
+     "exit_date": "2026-10-22"
+    }
+   ],
+   "rows_matched": 47117,
+   "rows_only_trainer": 0,
+   "rows_only_q9": 0,
+   "max_abs_score_diff": 5.9829847673109615e-05,
+   "rows_with_diff_gt_1e-12": 47116,
+   "identical": false,
+   "identical_rule": "every holdout row the research data could label (label exit on or before the research end) is present in both and scores exactly the same",
+   "seconds": 104.9,
+   "reference": "ml/results/improve/ab/10y_p2/preds/q9_expanding__beat_mkt_20d.parquet (fold holdout)",
+   "explanation": {
+    "on_research_frame": {
+     "frame": "ml/data_10y (the research frame Q9 ran on)",
+     "train_rows": 2110109,
+     "rows_matched": 47117,
+     "max_abs_score_diff": 0.0,
+     "identical": true,
+     "fit_seconds": 104.4
+    },
+    "on_paper_frame": {
+     "frame": "ml/paper/state/frame (the paper frame, live corporate-action feed)",
+     "train_rows": 2110109,
+     "rows_matched": 47117,
+     "max_abs_score_diff": 5.9829847673109615e-05,
+     "identical": false,
+     "fit_seconds": 106.4,
+     "auc_paper_frame": 0.5400871800395081,
+     "auc_q9": 0.5400871043641421,
+     "per_date_spearman_min": 0.9999999837901823,
+     "per_date_spearman_mean": 0.999999996911471,
+     "per_date_top_decile_overlap_min": 1.0,
+     "per_date_top_decile_overlap_mean": 1.0,
+     "dates": 32
+    },
+    "training_cells_paper_vs_research_frame": {
+     "training_rows_same_keys": true,
+     "feature_cells_differing": 1949,
+     "max_abs_feature_diff": 6.110667527536862e-13,
+     "rows_with_a_differing_cell": 136,
+     "tickers_with_a_differing_cell": 2,
+     "per_feature": {
+      "ret_1d": 52,
+      "log_ret_1d": 52,
+      "gap_pct": 109,
+      "range_pct": 119,
+      "close_pos_in_range": 133,
+      "dist_sma_5": 78,
+      "dist_sma_10": 76,
+      "dist_sma_20": 65,
+      "dist_sma_50": 36,
+      "macd_norm": 135,
+      "mom_5": 54,
+      "mom_10": 52,
+      "mom_20": 47,
+      "vol_5": 128,
+      "vol_10": 129,
+      "vol_20": 105,
+      "rsi_14": 106,
+      "atr_pct": 111,
+      "dist_52w_high": 63,
+      "dist_52w_low": 54,
+      "rsi_2": 120,
+      "ret_63d": 18,
+      "amihud_20": 107
+     },
+     "label_cells_differing": 0
+    },
+    "reading": "the trainer reproduces Q9 exactly on the research frame; on the paper frame the training cells that the live corporate-action feed rescales differ at rounding level, LightGBM's bin boundaries and split thresholds are taken from the training values, so the fitted trees and the scores differ slightly"
+   }
+  },
+  "backfill_proof": {
+   "note": "ml/paper/job.py --no-ingest --extension-backfill-proof: the run that added extension 1 (SPEC.md amendment 10) and backfilled its books from inception; no ingest, no store write",
+   "extension_spec_hash": "a8d20cae4d930197ecc3e07c1f3bc4ac13484ebd4b627b852c0c73258349764f",
+   "spec_hash_frozen_books": "327a8d3801b37d580ece4446a2d5d101e7cd0c1c8663ff266335285959ed8643",
+   "rows_before": {
+    "signals": 1521,
+    "marks": 8,
+    "monitors": 48
+   },
+   "rows_appended": {
+    "signals": 607,
+    "marks": 4,
+    "monitors": 15
+   },
+   "appended_rows_by_book": {
+    "signals": {
+     "challenger_expanding": 457,
+     "capacity_expanding": 150
+    },
+    "marks": {
+     "challenger_expanding": 2,
+     "capacity_expanding": 2
+    },
+    "monitors": {
+     "extension": 15,
+     "frozen": 0
+    }
+   },
+   "appended_signal_dates": [
+    "2026-10-19",
+    "2026-10-21",
+    "2026-10-22"
+   ],
+   "appended_mark_sessions": [
+    "2026-10-21",
+    "2026-10-22"
+   ],
+   "existing_rows": {
+    "signals": {
+     "bytes_before": 97188,
+     "bytes_after": 140662,
+     "sha256_before": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+     "sha256_of_first_bytes_after": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+     "existing_rows_unchanged": true
+    },
+    "marks": {
+     "bytes_before": 858,
+     "bytes_after": 1277,
+     "sha256_before": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+     "sha256_of_first_bytes_after": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+     "existing_rows_unchanged": true
+    },
+    "monitors": {
+     "bytes_before": 7956,
+     "bytes_after": 10891,
+     "sha256_before": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+     "sha256_of_first_bytes_after": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+     "existing_rows_unchanged": true
+    }
+   },
+   "existing_rows_unchanged": true,
+   "only_extension_rows_appended": true,
+   "expanding_models": {
+    "2026-10": {
+     "trained_as_of": "2026-10-01",
+     "spec": {
+      "name": "2026-10",
+      "train_end": "2026-08-31",
+      "test_start": "2026-10-01",
+      "test_end": "2026-10-22"
+     },
+     "training_window": {
+      "first_date": "2017-10-03",
+      "last_date": "2026-08-31",
+      "sessions": 2209,
+      "rows": 2170733,
+      "labelled_clean_rows_before_purge": 2170733,
+      "rows_purged_exit_ge_test_start": 0,
+      "tickers": 2451,
+      "label_mean": 0.5002172077358201,
+      "rule": "ml.scale5y_nested.window_rows with train_sessions = 0 (ml/improve/ab.py q9_expanding): every labelled clean row from the frame's first session (2017-10-03) to train_end (train_end 22 sessions before the month's first session), exit-date purge at the first session; no 504-session cap"
+     },
+     "files_sha256": {
+      "lgbm": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3"
+     },
+     "fit_seconds": {
+      "lgbm": 96.8
+     }
+    }
+   },
+   "ingest_run": false,
+   "frame_rebuilt": false
+  },
+  "lost_state_check": {
+   "test": "extension 1: ml/paper/state/models/expanding/2026-10/ (lgbm.txt, preprocess.pkl) and ml/paper/state/scores_expanding/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest (no ingest, store and frame unchanged)",
+   "job_exit_code": 0,
+   "model_2026_10_retrained_in_child_process": true,
+   "retrain_equal_to_committed_metadata": {
+    "reference_predictions": true,
+    "model_contents": true,
+    "training_frame_sha256_equal": true,
+    "training_rows_equal": true,
+    "training_window_equal": true
+   },
+   "regenerated_score_files_expanding": [
+    "2026-10-19"
+   ],
+   "sha256_before_and_after": {
+    "ml/paper/state/models/expanding/2026-10/lgbm.txt": {
+     "before": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3",
+     "after": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3",
+     "identical": true
+    },
+    "ml/paper/state/models/expanding/2026-10/preprocess.pkl": {
+     "before": "2176169d7e979ca04c1c8974683289c1cc2780a958817b313af4b1002f6e7ceb",
+     "after": "2176169d7e979ca04c1c8974683289c1cc2780a958817b313af4b1002f6e7ceb",
+     "identical": true
+    },
+    "ml/paper/state/scores_expanding/scores_2026-10-19.parquet": {
+     "before": "2f721cad51a4a6dacd3a41920466d50dd388c51edbd97780e5c0ac6fe43c34c1",
+     "after": "2f721cad51a4a6dacd3a41920466d50dd388c51edbd97780e5c0ac6fe43c34c1",
+     "identical": true
+    },
+    "ml/paper/models/expanding/2026-10.json": {
+     "before": "adc2179d9ea4225f01623c36bb59d1ee32d5e547876ddfd24d805015014efbb8",
+     "after": "adc2179d9ea4225f01623c36bb59d1ee32d5e547876ddfd24d805015014efbb8",
+     "identical": true
+    },
+    "ml/paper/ledger/marks.csv": {
+     "before": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+     "after": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+     "identical": true
+    },
+    "ml/paper/ledger/monitors.csv": {
+     "before": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+     "after": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+     "identical": true
+    },
+    "ml/paper/ledger/signals.csv": {
+     "before": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+     "after": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+     "identical": true
+    },
+    "ml/paper/ledger/state.json": {
+     "before": "029836aa7baa69de53d6ce7aa4479e167c4cd54c1f662b5071c9e6ed1e4164a5",
+     "after": "029836aa7baa69de53d6ce7aa4479e167c4cd54c1f662b5071c9e6ed1e4164a5",
+     "identical": true
+    }
+   },
+   "all_identical": true,
+   "note": "the retrained LightGBM text model and the pickled preprocessor are byte-identical to the deleted ones; the regenerated score file is byte-identical and its baskets equal the ledger's; the ledger, state.json and the committed metadata are unchanged"
+  },
+  "inception_baskets": {
+   "signal_date": "2026-10-19",
+   "universe": 1523,
+   "liquid_tercile": 503,
+   "model_month": "2026-10",
+   "model_month_expanding": "2026-10",
+   "challenger_expanding": {
+    "size": 152,
+    "top": [
+     {
+      "rank": 1,
+      "ticker": "CNL",
+      "score": 1.0
+     },
+     {
+      "rank": 2,
+      "ticker": "GLOBAL",
+      "score": 0.999343401182
+     },
+     {
+      "rank": 3,
+      "ticker": "ARROWGREEN",
+      "score": 0.998686802364
+     },
+     {
+      "rank": 4,
+      "ticker": "AAREYDRUGS",
+      "score": 0.998030203546
+     },
+     {
+      "rank": 5,
+      "ticker": "MMFL",
+      "score": 0.997373604728
+     },
+     {
+      "rank": 6,
+      "ticker": "KAPSTON",
+      "score": 0.996717005909
+     },
+     {
+      "rank": 7,
+      "ticker": "INDOTECH",
+      "score": 0.996060407091
+     },
+     {
+      "rank": 8,
+      "ticker": "DHARMAJ",
+      "score": 0.995403808273
+     },
+     {
+      "rank": 9,
+      "ticker": "MODIS",
+      "score": 0.994747209455
+     },
+     {
+      "rank": 10,
+      "ticker": "YASHO",
+      "score": 0.994090610637
+     }
+    ]
+   },
+   "capacity_expanding": {
+    "size": 50,
+    "top": [
+     {
+      "rank": 1,
+      "ticker": "AUGMONT",
+      "score": 0.975049244911
+     },
+     {
+      "rank": 2,
+      "ticker": "ENTERO",
+      "score": 0.970453053185
+     },
+     {
+      "rank": 3,
+      "ticker": "XPROINDIA",
+      "score": 0.952068286277
+     },
+     {
+      "rank": 4,
+      "ticker": "AKUMS",
+      "score": 0.94747209455
+     },
+     {
+      "rank": 5,
+      "ticker": "UNIMECH",
+      "score": 0.946815495732
+     },
+     {
+      "rank": 6,
+      "ticker": "AETHER",
+      "score": 0.943532501641
+     },
+     {
+      "rank": 7,
+      "ticker": "SENORES",
+      "score": 0.933026920552
+     },
+     {
+      "rank": 8,
+      "ticker": "KMEW",
+      "score": 0.932370321733
+     },
+     {
+      "rank": 9,
+      "ticker": "QPOWER",
+      "score": 0.931713722915
+     },
+     {
+      "rank": 10,
+      "ticker": "SHADOWFAX",
+      "score": 0.930400525279
+     }
+    ]
+   }
+  },
+  "basket_overlap": [
+   {
+    "signal_date": "2026-10-19",
+    "book": "challenger_expanding",
+    "names": 152,
+    "shared_with_primary": 87,
+    "share_of_book_shared_with_primary": 0.5723684210526315,
+    "names_of_primary": 152
+   },
+   {
+    "signal_date": "2026-10-19",
+    "book": "capacity_expanding",
+    "names": 50,
+    "shared_with_primary": 11,
+    "share_of_book_shared_with_primary": 0.22,
+    "names_of_primary": 152,
+    "shared_with_capacity": 23,
+    "share_of_book_shared_with_capacity": 0.46,
+    "names_of_capacity": 50
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "challenger_expanding",
+    "names": 152,
+    "shared_with_primary": 85,
+    "share_of_book_shared_with_primary": 0.5592105263157895,
+    "names_of_primary": 152
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "capacity_expanding",
+    "names": 50,
+    "shared_with_primary": 15,
+    "share_of_book_shared_with_primary": 0.3,
+    "names_of_primary": 152,
+    "shared_with_capacity": 23,
+    "share_of_book_shared_with_capacity": 0.46,
+    "names_of_capacity": 50
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "challenger_expanding",
+    "names": 153,
+    "shared_with_primary": 76,
+    "share_of_book_shared_with_primary": 0.49673202614379086,
+    "names_of_primary": 153
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "capacity_expanding",
+    "names": 50,
+    "shared_with_primary": 10,
+    "share_of_book_shared_with_primary": 0.2,
+    "names_of_primary": 153,
+    "shared_with_capacity": 16,
+    "share_of_book_shared_with_capacity": 0.32,
+    "names_of_capacity": 50
+   }
+  ],
+  "score_agreement": [
+   {
+    "signal_date": "2026-10-19",
+    "universe": 1523,
+    "spearman_raw": 0.8576240768598149,
+    "spearman_neutral": 0.8172688247442323
+   },
+   {
+    "signal_date": "2026-10-21",
+    "universe": 1524,
+    "spearman_raw": 0.836142873936502,
+    "spearman_neutral": 0.7795026884784835
+   },
+   {
+    "signal_date": "2026-10-22",
+    "universe": 1527,
+    "spearman_raw": 0.8011708530349598,
+    "spearman_neutral": 0.750609772315944
+   }
+  ],
+  "dsr_paper": {
+   "challenger_expanding": {
+    "status": "warming up (needs marks)"
+   },
+   "capacity_expanding": {
+    "status": "warming up (needs marks)"
+   }
+  },
+  "dsr_n_trials": 270
+ }
+}

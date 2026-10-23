@@ -1,0 +1,49 @@
+{
+ "control_clean_cv": 0.5314,
+ "rebuild_bar_cv": 0.5364,
+ "variants": {
+  "lgbm_fe_all": {
+   "cv": 0.513458604581252,
+   "cv_std": 0.01558682269924072,
+   "min_fold": 0.48746463203989066,
+   "holdout": 0.5024745155099613,
+   "spread": -0.023319130763411522,
+   "n_features": 74
+  },
+  "lgbm_fe_top18": {
+   "cv": 0.5267708561056337,
+   "cv_std": 0.02020868021048123,
+   "min_fold": 0.4937834709700442,
+   "holdout": 0.5165614831616627,
+   "spread": -0.0002662111073732376,
+   "n_features": 18
+  },
+  "lgbm_fe_newaxes": {
+   "cv": 0.5232460679672786,
+   "cv_std": 0.01596859499832856,
+   "min_fold": 0.4959675752138044,
+   "holdout": 0.5300062994969982,
+   "spread": 0.0030291806906461716,
+   "n_features": 16
+  },
+  "lgbm_fe_regime": {
+   "cv": 0.51389564067243,
+   "cv_std": 0.016331856933415333,
+   "min_fold": 0.49272964566694555,
+   "holdout": 0.49973849902731227,
+   "spread": -0.030042674392461777,
+   "n_features": 14
+  },
+  "lr_rank_fe": {
+   "cv": 0.5067765680489915,
+   "cv_std": 0.03335286566902175,
+   "min_fold": 0.47261711855962957,
+   "holdout": 0.5194308863042798,
+   "spread": -0.0046943966299295425,
+   "n_features": 11
+  }
+ },
+ "best_variant": "lgbm_fe_top18",
+ "rebuild_warranted": false,
+ "rule": "pre-registered: CV >= control+0.005 AND every fold >= 0.50"
+}

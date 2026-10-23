@@ -1,0 +1,355 @@
+{
+ "stream": "Q3",
+ "plan": "ml/IMPROVEMENT_PLAN_2.md section 2, Q3",
+ "written_at": "2026-10-23T04:33:54",
+ "self_test": true,
+ "pass_mark_text": "for L1 or L2, the neutral liquid book's IR >= 0.5 with its month-block 95% CI excluding zero over the 105 signal months AND its paired monthly excess over the control's neutral liquid book has a bootstrap 95% CI excluding zero",
+ "design": {
+  "cost": "20 bps per side (the phase headline)",
+  "B": 1000,
+  "seed": 108,
+  "paired_binding_reading": "months resampled with replacement (iid), CI lower bound > 0 and mean > 0",
+  "paired_robustness_reading": "3-month moving-block bootstrap, reported beside it",
+  "ir_interval": "ml/strategy_backtest.py series_stats on the daily active series (exposure-weighted, month-block bootstrap, B = 1000, seed 108), as written by ml/improve/ab_books.py",
+  "ir_interval_month_blocks": {
+   "n_month_blocks": 106,
+   "first": "2018-01",
+   "last": "2026-10",
+   "n_days": 2177
+  },
+  "n_trials": 261,
+  "var_sr_daily": 0.003868632661070771,
+  "var_sr_source": "ml/results/improve/books/books.json"
+ },
+ "control": {
+  "books_json": "ml/results/improve/ab/10y/books.json",
+  "neutral_liquid_book": {
+   "key": "control|vol+size|liq_top_decile",
+   "benchmark": "ew_liquid",
+   "n_signal_dates": 2158,
+   "n_months": 105,
+   "basket_size_mean": 32.67191844300278,
+   "excess_ann_vs_ew_20bps": 0.01173741045057961,
+   "ir_20bps": 0.2054784030110875,
+   "ir_ci95": [
+    -0.521449046647312,
+    0.9262018642663377
+   ],
+   "p_ir_gt0": 0.697,
+   "months_positive": 55,
+   "turnover_per_rebalance": 0.8194446302445102,
+   "excess_ann_vs_ew_name_level": -0.030880700627352903,
+   "ir_name_level": -0.44834598590508495,
+   "breakeven_flat_cost_bps_per_side": 25.612073853827273,
+   "capacity_rs_crore": 603.453485,
+   "by_year_excess_ann_from_monthly": {
+    "2018": -0.06725378675393821,
+    "2019": -0.05283000291515446,
+    "2020": -0.014009190079345762,
+    "2021": 0.04262392166707044,
+    "2022": 0.0407531735189024,
+    "2023": -0.03649448720622005,
+    "2024": 0.030785360386425507,
+    "2025": 0.041320120271328434,
+    "2026": 0.18478646410558555
+   },
+   "cv_segment_ir_20bps": 0.1441046999422708,
+   "holdout_segment_excess_ann_20bps": 0.27010897039697757,
+   "dsr_261": {
+    "n_trials": 261,
+    "dsr": 1.0686842161074169e-14,
+    "psr_vs_0": 0.7262991472788102,
+    "sr_annualised": 0.2054784030110875,
+    "source": "re-deflated from the moments stored at N = 241"
+   }
+  },
+  "plain_liquid_book": {
+   "key": "control|none|liq_top_decile",
+   "benchmark": "ew_liquid",
+   "n_signal_dates": 2158,
+   "n_months": 105,
+   "basket_size_mean": 32.67191844300278,
+   "excess_ann_vs_ew_20bps": -0.0004801681892494902,
+   "ir_20bps": 0.007215580389650642,
+   "ir_ci95": [
+    -0.7318282559554974,
+    0.7065718548931231
+   ],
+   "p_ir_gt0": 0.491,
+   "months_positive": 52,
+   "turnover_per_rebalance": 0.7581430612658181,
+   "excess_ann_vs_ew_name_level": -0.027627141075192575,
+   "ir_name_level": -0.3939038187677269,
+   "breakeven_flat_cost_bps_per_side": 19.751765551340917,
+   "capacity_rs_crore": 785.4997275,
+   "by_year_excess_ann_from_monthly": {
+    "2018": -0.05538279279189988,
+    "2019": 0.05615277400290325,
+    "2020": 0.06729670302753438,
+    "2021": -0.008914502819372944,
+    "2022": 0.019170426154048622,
+    "2023": -0.03879983766744706,
+    "2024": -0.0003686171055965294,
+    "2025": 0.005549842364971348,
+    "2026": -0.09728847622886386
+   },
+   "cv_segment_ir_20bps": 0.0674096115437475,
+   "holdout_segment_excess_ann_20bps": -0.256575696852552,
+   "dsr_261": {
+    "n_trials": 261,
+    "dsr": 9.386402778011779e-17,
+    "psr_vs_0": 0.5084353918970288,
+    "sr_annualised": 0.007215580389650642,
+    "source": "re-deflated from the moments stored at N = 241"
+   }
+  }
+ },
+ "sets": {
+  "control_vs_itself": {
+   "set": "control_vs_itself",
+   "books_json": "ml/results/improve/ab/10y/books.json",
+   "benchmark_check": {
+    "rows_set": 705312,
+    "rows_control": 705312,
+    "rows_only_in_set": 0,
+    "rows_only_in_control": 0,
+    "y_raw_20d_max_abs_diff_on_common_rows": 0.0,
+    "signal_dates_set": 2158,
+    "signal_dates_control": 2158,
+    "signal_dates_common": 2158,
+    "tranche_bench_max_abs_diff": 0.0,
+    "identical": true,
+    "benchmark_in_set_books": "ew_liquid",
+    "control_benchmark": "ew_liquid of ml/data_10y",
+    "definition": "equal-weight liquid tercile (cs_rank_turnover >= 0.67), labeled clean rows of the fold windows and the holdout"
+   },
+   "neutral_liquid_book": {
+    "key": "control|vol+size|liq_top_decile",
+    "benchmark": "ew_liquid",
+    "n_signal_dates": 2158,
+    "n_months": 105,
+    "basket_size_mean": 32.67191844300278,
+    "excess_ann_vs_ew_20bps": 0.01173741045057961,
+    "ir_20bps": 0.2054784030110875,
+    "ir_ci95": [
+     -0.521449046647312,
+     0.9262018642663377
+    ],
+    "p_ir_gt0": 0.697,
+    "months_positive": 55,
+    "turnover_per_rebalance": 0.8194446302445102,
+    "excess_ann_vs_ew_name_level": -0.030880700627352903,
+    "ir_name_level": -0.44834598590508495,
+    "breakeven_flat_cost_bps_per_side": 25.612073853827273,
+    "capacity_rs_crore": 603.453485,
+    "by_year_excess_ann_from_monthly": {
+     "2018": -0.06725378675393821,
+     "2019": -0.05283000291515446,
+     "2020": -0.014009190079345762,
+     "2021": 0.04262392166707044,
+     "2022": 0.0407531735189024,
+     "2023": -0.03649448720622005,
+     "2024": 0.030785360386425507,
+     "2025": 0.041320120271328434,
+     "2026": 0.18478646410558555
+    },
+    "cv_segment_ir_20bps": 0.1441046999422708,
+    "holdout_segment_excess_ann_20bps": 0.27010897039697757,
+    "dsr_261": {
+     "n_trials": 261,
+     "dsr": 1.0686842161074169e-14,
+     "psr_vs_0": 0.7262991472788102,
+     "sr_annualised": 0.2054784030110875,
+     "source": "re-deflated from the moments stored at N = 241"
+    }
+   },
+   "plain_liquid_book": {
+    "key": "control|none|liq_top_decile",
+    "benchmark": "ew_liquid",
+    "n_signal_dates": 2158,
+    "n_months": 105,
+    "basket_size_mean": 32.67191844300278,
+    "excess_ann_vs_ew_20bps": -0.0004801681892494902,
+    "ir_20bps": 0.007215580389650642,
+    "ir_ci95": [
+     -0.7318282559554974,
+     0.7065718548931231
+    ],
+    "p_ir_gt0": 0.491,
+    "months_positive": 52,
+    "turnover_per_rebalance": 0.7581430612658181,
+    "excess_ann_vs_ew_name_level": -0.027627141075192575,
+    "ir_name_level": -0.3939038187677269,
+    "breakeven_flat_cost_bps_per_side": 19.751765551340917,
+    "capacity_rs_crore": 785.4997275,
+    "by_year_excess_ann_from_monthly": {
+     "2018": -0.05538279279189988,
+     "2019": 0.05615277400290325,
+     "2020": 0.06729670302753438,
+     "2021": -0.008914502819372944,
+     "2022": 0.019170426154048622,
+     "2023": -0.03879983766744706,
+     "2024": -0.0003686171055965294,
+     "2025": 0.005549842364971348,
+     "2026": -0.09728847622886386
+    },
+    "cv_segment_ir_20bps": 0.0674096115437475,
+    "holdout_segment_excess_ann_20bps": -0.256575696852552,
+    "dsr_261": {
+     "n_trials": 261,
+     "dsr": 9.386402778011779e-17,
+     "psr_vs_0": 0.5084353918970288,
+     "sr_annualised": 0.007215580389650642,
+     "source": "re-deflated from the moments stored at N = 241"
+    }
+   },
+   "paired_vs_control_neutral": {
+    "coverage": {
+     "months_set": 105,
+     "months_control": 105,
+     "months_common": 105,
+     "same_signal_months": true,
+     "same_n_signal_dates": true,
+     "n_signal_dates": [
+      2158,
+      2158
+     ],
+     "expected_signal_months": 105,
+     "months_equal_expected": true
+    },
+    "metric": "monthly_net_20bps of the set's book minus the control's (per 20-session tranche, mean by signal month, both vs the same EW liquid benchmark)",
+    "n_months": 105,
+    "months_set_beats_control": 0,
+    "mean_per_tranche": 0.0,
+    "mean_annualised_x12_6": 0.0,
+    "sd_per_tranche": 0.0,
+    "max_abs": 0.0,
+    "iid_months": {
+     "block_months": 1,
+     "B": 1000,
+     "seed": 108,
+     "mean": 0.0,
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "p_gt_0": 0.0,
+     "ci_excludes_0": false,
+     "ci_above_0": false
+    },
+    "block_3_months": {
+     "block_months": 3,
+     "B": 1000,
+     "seed": 108,
+     "mean": 0.0,
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "p_gt_0": 0.0,
+     "ci_excludes_0": false,
+     "ci_above_0": false
+    },
+    "by_year_ann": {
+     "2018": 0.0,
+     "2019": 0.0,
+     "2020": 0.0,
+     "2021": 0.0,
+     "2022": 0.0,
+     "2023": 0.0,
+     "2024": 0.0,
+     "2025": 0.0,
+     "2026": 0.0
+    },
+    "benchmark_correction_applied": false
+   },
+   "paired_vs_control_plain_descriptive": {
+    "coverage": {
+     "months_set": 105,
+     "months_control": 105,
+     "months_common": 105,
+     "same_signal_months": true,
+     "same_n_signal_dates": true,
+     "n_signal_dates": [
+      2158,
+      2158
+     ],
+     "expected_signal_months": 105,
+     "months_equal_expected": true
+    },
+    "metric": "monthly_net_20bps of the set's book minus the control's (per 20-session tranche, mean by signal month, both vs the same EW liquid benchmark)",
+    "n_months": 105,
+    "months_set_beats_control": 0,
+    "mean_per_tranche": 0.0,
+    "mean_annualised_x12_6": 0.0,
+    "sd_per_tranche": 0.0,
+    "max_abs": 0.0,
+    "iid_months": {
+     "block_months": 1,
+     "B": 1000,
+     "seed": 108,
+     "mean": 0.0,
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "p_gt_0": 0.0,
+     "ci_excludes_0": false,
+     "ci_above_0": false
+    },
+    "block_3_months": {
+     "block_months": 3,
+     "B": 1000,
+     "seed": 108,
+     "mean": 0.0,
+     "ci95": [
+      0.0,
+      0.0
+     ],
+     "p_gt_0": 0.0,
+     "ci_excludes_0": false,
+     "ci_above_0": false
+    },
+    "by_year_ann": {
+     "2018": 0.0,
+     "2019": 0.0,
+     "2020": 0.0,
+     "2021": 0.0,
+     "2022": 0.0,
+     "2023": 0.0,
+     "2024": 0.0,
+     "2025": 0.0,
+     "2026": 0.0
+    },
+    "benchmark_correction_applied": false
+   },
+   "pass_mark": {
+    "ir_ge_0_5": false,
+    "ir_ci_excludes_0": false,
+    "part_1_ir": false,
+    "paired_mean_gt_0": false,
+    "paired_iid_ci_excludes_0_above": false,
+    "paired_block3_ci_excludes_0_above": false,
+    "part_2_paired": false,
+    "readings_agree_iid_vs_block3": true,
+    "PASS": false
+   },
+   "model_descriptive": {
+    "cv_auc_mean": 0.5455168410125237,
+    "cv_mean_ci95": [
+     0.5359388519933854,
+     0.5548788784154697
+    ],
+    "holdout_auc": 0.5192915628677192,
+    "rank_ic_cv_mean": 0.08781006357015912,
+    "rank_ic_nw_t": 9.753968994179926,
+    "rank_ic_months_positive": "87/103",
+    "pct_folds_ge_050": 0.8446601941747572,
+    "note": "AUC and rank IC on the set's own restricted label; not comparable with the control's full-universe 0.5455"
+   },
+   "self_test_difference_identically_zero": true
+  }
+ },
+ "verdict": "FAIL",
+ "verdict_notes": []
+}

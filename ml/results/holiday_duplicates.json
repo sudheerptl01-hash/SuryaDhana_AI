@@ -1,0 +1,46 @@
+{
+ "finding": "Archive mirror serves the PREVIOUS session bhavcopy on 2026 NSE holidays instead of 404ing",
+ "detection": "cross-sectional exact-duplicate scan: for 12 dates every ticker matches the prior session on OHLC+volume",
+ "phantom_days": [
+  "2026-01-15",
+  "2026-01-26",
+  "2026-03-03",
+  "2026-03-26",
+  "2026-03-31",
+  "2026-04-03",
+  "2026-04-14",
+  "2026-05-01",
+  "2026-05-28",
+  "2026-06-26",
+  "2026-09-14",
+  "2026-10-02"
+ ],
+ "share_of_sample": "12 of 410 ingested days (2.9%)",
+ "impact": "phantom zero-return bars dampen short-horizon features and dilute label horizons near holidays; contamination is common-mode across all models so the algorithm ranking stands; champion re-validated on cleaned data (see model_selection)",
+ "fix": "nse_historical_ingest.py: 2026 holiday calendar entries + duplicate-day guard (frame vs stored-day fingerprint); phantom days purged and dataset rebuilt for champion re-validation",
+ "cross_validation_vs_production": {
+  "RELIANCE_2026-10-14": {
+   "rsi_2": {
+    "pilot": 67.31,
+    "production": 67.12
+   },
+   "dist_52w_high": {
+    "pilot": -0.2712,
+    "production": -0.2623
+   },
+   "flag_below_200dma": {
+    "pilot": true,
+    "production": true
+   }
+  },
+  "breadth_above_both_50_200dma": {
+   "pilot": "28.2%",
+   "production": "29%"
+  },
+  "nh_nl_10d_avg": {
+   "pilot_proper_defn": -66.9,
+   "production": -35,
+   "note": "same sign/order; universe and history-window differences"
+  }
+ }
+}

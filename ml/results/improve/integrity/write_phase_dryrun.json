@@ -1,0 +1,14 @@
+{
+ "rows_eq_be": 2737956,
+ "equity_features_rows": 2737956,
+ "build_features_seconds": 56.7,
+ "seconds": 124.5,
+ "nestleind": {
+  "rows": 1251,
+  "max_abs_log_ret_adjusted": 0.0808262225612259,
+  "max_abs_log_ret_unadjusted": 2.31940946288679,
+  "adj_close_2024-01-04": 1355.8200000000002,
+  "adj_close_2024-01-05": 1333.2,
+  "no_10x_break": true
+ }
+}

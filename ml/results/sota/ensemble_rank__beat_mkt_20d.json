@@ -1,0 +1,209 @@
+{
+ "model": "ensemble_rank",
+ "family": "ensemble",
+ "agent": "quant-sota",
+ "task": "beat_mkt_20d",
+ "params": {
+  "members": {
+   "lgbm_fs_selected (champion, clean)": "ml/results/preds/lgbm_fs_selected_clean__beat_mkt_20d.parquet",
+   "lgbm_lambdarank": "ml/results/preds/sota/lgbm_lambdarank__beat_mkt_20d.parquet",
+   "catboost": "ml/results/preds/sota/catboost__beat_mkt_20d.parquet"
+  },
+  "combiner": "per-date percentile rank of each member's OOS score, equal-weight mean; NO weights fitted, no refit",
+  "member_rank_corr_mean_per_date": {
+   "lgbm_fs_selected (champion, clean) ~ lgbm_lambdarank": 0.264,
+   "lgbm_fs_selected (champion, clean) ~ catboost": 0.58,
+   "lgbm_lambdarank ~ catboost": 0.201
+  }
+ },
+ "preprocess": "rank_blend",
+ "n_features": 10,
+ "feature_subset": [
+  "atr_pct",
+  "deliv_pct_sma_20",
+  "dist_52w_high",
+  "ret_126d",
+  "mom_12_1",
+  "cs_rank_mom_20",
+  "cs_rank_ret_126",
+  "cs_rank_vol_20",
+  "deliv_pct",
+  "ret_63d"
+ ],
+ "folds": [
+  {
+   "auc": 0.5236190488417745,
+   "pr_auc": 0.5313510843176075,
+   "brier": 0.27924025564850297,
+   "acc": 0.5099429084610944,
+   "n": 31178,
+   "base_rate": 0.5006093978881836,
+   "decile_spread": 0.026076678186655045,
+   "top_decile_mean_fwd": 0.03471584618091583,
+   "decile_means": [
+    0.008639168925583363,
+    0.01953902095556259,
+    0.01792364940047264,
+    0.018650127574801445,
+    0.019615717232227325,
+    0.015862947329878807,
+    0.018565170466899872,
+    0.01467837393283844,
+    0.02188809961080551,
+    0.03471584618091583
+   ],
+   "fold": "2026-04",
+   "n_train": 0,
+   "train_seconds": 0.0,
+   "rank_ic_mean": 0.04107057578878392,
+   "rank_ic_t_naive": 1.4141407865089208,
+   "n_dates": 20
+  },
+  {
+   "auc": 0.5409822610887423,
+   "pr_auc": 0.5392313017264498,
+   "brier": 0.2933751443216529,
+   "acc": 0.5277636097793192,
+   "n": 29409,
+   "base_rate": 0.5014111399650574,
+   "decile_spread": 0.05927979201078415,
+   "top_decile_mean_fwd": 0.051261089742183685,
+   "decile_means": [
+    -0.008018704131245613,
+    0.0025918243918567896,
+    0.011369065381586552,
+    0.011764860711991787,
+    0.01844640262424946,
+    0.02201349474489689,
+    0.024936353787779808,
+    0.02980356477200985,
+    0.03210185095667839,
+    0.051261089742183685
+   ],
+   "fold": "2026-05",
+   "n_train": 0,
+   "train_seconds": 0.0,
+   "rank_ic_mean": 0.08704453178982642,
+   "rank_ic_t_naive": 6.163252905515528,
+   "n_dates": 19
+  },
+  {
+   "auc": 0.5436284457208076,
+   "pr_auc": 0.5290536543397261,
+   "brier": 0.2770460979978721,
+   "acc": 0.5368988262983494,
+   "n": 32291,
+   "base_rate": 0.5017496943473816,
+   "decile_spread": 0.023961320519447327,
+   "top_decile_mean_fwd": 0.023772170767188072,
+   "decile_means": [
+    -0.000189149723155424,
+    0.004818779416382313,
+    0.00713129760697484,
+    0.009866420179605484,
+    0.011805006302893162,
+    0.017474882304668427,
+    0.020990921184420586,
+    0.02529090829193592,
+    0.02195579558610916,
+    0.023772170767188072
+   ],
+   "fold": "2026-06",
+   "n_train": 0,
+   "train_seconds": 0.0,
+   "rank_ic_mean": 0.07883418491868562,
+   "rank_ic_t_naive": 9.405903390603378,
+   "n_dates": 21
+  },
+  {
+   "auc": 0.5345619127678725,
+   "pr_auc": 0.5319220209075408,
+   "brier": 0.29287067749484313,
+   "acc": 0.5295324266606721,
+   "n": 35588,
+   "base_rate": 0.5020793676376343,
+   "decile_spread": 0.01937158778309822,
+   "top_decile_mean_fwd": 0.031035011634230614,
+   "decile_means": [
+    0.011663423851132393,
+    0.004478898365050554,
+    0.00523576932027936,
+    0.005963223986327648,
+    0.01187216117978096,
+    0.015154851600527763,
+    0.022183392196893692,
+    0.0240801852196455,
+    0.024741606786847115,
+    0.031035011634230614
+   ],
+   "fold": "2026-07",
+   "n_train": 0,
+   "train_seconds": 0.0,
+   "rank_ic_mean": 0.0539481381169822,
+   "rank_ic_t_naive": 4.3092996310875735,
+   "n_dates": 23
+  }
+ ],
+ "cv_auc_mean": 0.5356979171047992,
+ "cv_auc_std": 0.00771374001115843,
+ "holdout": {
+  "auc": 0.5482223142340248,
+  "pr_auc": 0.5482373750718723,
+  "brier": 0.2740627618133217,
+  "acc": 0.536990628619564,
+  "n": 47485,
+  "base_rate": 0.5021585822105408,
+  "decile_spread": 0.038979265838861465,
+  "top_decile_mean_fwd": 0.043141890317201614,
+  "decile_means": [
+   0.004162624478340149,
+   0.003836841555312276,
+   0.010526328347623348,
+   0.012965904548764229,
+   0.019800741225481033,
+   0.021976426243782043,
+   0.020565234124660492,
+   0.02771483175456524,
+   0.034685634076595306,
+   0.043141890317201614
+  ],
+  "fold": "holdout",
+  "n_train": 0,
+  "train_seconds": 0.0,
+  "rank_ic_mean": 0.10597840689017494,
+  "rank_ic_t_naive": 18.49813428153575,
+  "n_dates": 30
+ },
+ "train_seconds": 0.0,
+ "notes": "Equal-weight per-date rank average of three already-OOS score sets (champion clean preds, lgbm_lambdarank, catboost); nothing is fitted, so the blend cannot overfit the folds. Score is an average percentile rank: AUC/decile/IC are meaningful, Brier/acc@0.5 are not calibrated probabilities. train_seconds = 0 (cost = sum of the members). INTERPRETATION: Misses the pre-registered bar by 0.0007 (CV 0.5357 vs 0.5364), so it does NOT pass -- but it is the strongest result here: worst fold 0.5236 (champion 0.5069), CV std 0.008 (0.014), better than the champion in 3/4 folds, holdout 0.548 (0.518), rank-IC NW t 3.64 (3.26). The gain is diversification, not a new signal: the LambdaRank member's high-vol tilt (rank corr 0.26 with the champion) offsets the champion's defensive/near-52w-high tilt in the April and Aug-Sep rallies. No weights were fitted, so it cannot have overfit the folds.",
+ "score_kind": "rank_average",
+ "train_seconds_per_fold_mean": 0.0,
+ "cv_worst_fold_auc": 0.5236190488417745,
+ "rank_ic": {
+  "definition": "per-date Spearman(score, y_excess_20d) over clean test rows; t_naive = mean/(sd/sqrt(n_dates)); t_nw19 = Newey-West(19 lags) because consecutive 20-session forward windows overlap",
+  "cv": {
+   "mean": 0.06471786361163095,
+   "std": 0.08001937166476901,
+   "t_naive": 7.368313266542139,
+   "t_nw19": 3.64126378709862,
+   "hit_rate": 0.8433734939759037,
+   "n_dates": 83
+  },
+  "holdout": {
+   "mean": 0.10597840689017494,
+   "std": 0.03137979386394128,
+   "t_naive": 18.49813428153575,
+   "t_nw19": 11.913286048669988,
+   "hit_rate": 1.0,
+   "n_dates": 30
+  }
+ },
+ "vs_champion": {
+  "champion": "lgbm_fs_selected (clean)",
+  "champion_cv_auc": 0.5314,
+  "pass_mark_cv_auc": 0.5364,
+  "delta_cv_auc": 0.004297917104799209,
+  "all_folds_ge_050": true,
+  "passes": false
+ }
+}

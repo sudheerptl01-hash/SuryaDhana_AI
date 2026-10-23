@@ -1,0 +1,59 @@
+{
+ "test": "extension 1: ml/paper/state/models/expanding/2026-10/ (lgbm.txt, preprocess.pkl) and ml/paper/state/scores_expanding/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest (no ingest, store and frame unchanged)",
+ "job_exit_code": 0,
+ "model_2026_10_retrained_in_child_process": true,
+ "retrain_equal_to_committed_metadata": {
+  "reference_predictions": true,
+  "model_contents": true,
+  "training_frame_sha256_equal": true,
+  "training_rows_equal": true,
+  "training_window_equal": true
+ },
+ "regenerated_score_files_expanding": [
+  "2026-10-19"
+ ],
+ "sha256_before_and_after": {
+  "ml/paper/state/models/expanding/2026-10/lgbm.txt": {
+   "before": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3",
+   "after": "2bff7d9757ea4fd2fd171cc3cfae3f59c54bbb0d43d77902b3f5f5d74dcb3df3",
+   "identical": true
+  },
+  "ml/paper/state/models/expanding/2026-10/preprocess.pkl": {
+   "before": "2176169d7e979ca04c1c8974683289c1cc2780a958817b313af4b1002f6e7ceb",
+   "after": "2176169d7e979ca04c1c8974683289c1cc2780a958817b313af4b1002f6e7ceb",
+   "identical": true
+  },
+  "ml/paper/state/scores_expanding/scores_2026-10-19.parquet": {
+   "before": "2f721cad51a4a6dacd3a41920466d50dd388c51edbd97780e5c0ac6fe43c34c1",
+   "after": "2f721cad51a4a6dacd3a41920466d50dd388c51edbd97780e5c0ac6fe43c34c1",
+   "identical": true
+  },
+  "ml/paper/models/expanding/2026-10.json": {
+   "before": "adc2179d9ea4225f01623c36bb59d1ee32d5e547876ddfd24d805015014efbb8",
+   "after": "adc2179d9ea4225f01623c36bb59d1ee32d5e547876ddfd24d805015014efbb8",
+   "identical": true
+  },
+  "ml/paper/ledger/marks.csv": {
+   "before": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+   "after": "989c4c89ee8b3457ece23db8a9fcba5ff55cdb61cfcbbc24df689c75c97523a4",
+   "identical": true
+  },
+  "ml/paper/ledger/monitors.csv": {
+   "before": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+   "after": "aa6653fc5b51a3348dc1d222325f569c6860ca7beba4460f3a8e696288a08db3",
+   "identical": true
+  },
+  "ml/paper/ledger/signals.csv": {
+   "before": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+   "after": "9fb7aeb776dedd4710fbbd2dc6b10afda45f0badef0e170e713a6b2b29c54405",
+   "identical": true
+  },
+  "ml/paper/ledger/state.json": {
+   "before": "029836aa7baa69de53d6ce7aa4479e167c4cd54c1f662b5071c9e6ed1e4164a5",
+   "after": "029836aa7baa69de53d6ce7aa4479e167c4cd54c1f662b5071c9e6ed1e4164a5",
+   "identical": true
+  }
+ },
+ "all_identical": true,
+ "note": "the retrained LightGBM text model and the pickled preprocessor are byte-identical to the deleted ones; the regenerated score file is byte-identical and its baskets equal the ledger's; the ledger, state.json and the committed metadata are unchanged"
+}

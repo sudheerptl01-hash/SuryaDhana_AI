@@ -1,0 +1,193 @@
+{
+ "generated_by": "ml/hygiene/uniqueness.py",
+ "generated_at": "2026-10-19T13:22:54",
+ "method": {
+  "fold": "2025-01",
+  "train_end": "2024-11-29",
+  "test_start": "2025-01-01",
+  "window_first_session": "2022-11-15",
+  "train_sessions_back": 504,
+  "window_sessions_inclusive": 505,
+  "rows": "labeled (label_beat_mkt_20d present), y_clean_20d True, first <= date <= train_end, exit-date purge (exit >= test_start dropped); all tickers (cheap)",
+  "span": "sessions t+1 .. exit (exit = ticker's own row t+21) on the dataset's session calendar",
+  "concurrency": "per ticker, number of that ticker's training rows whose span contains the session",
+  "uniqueness": "mean over the row's span of 1 / concurrency",
+  "pre_stated_reading": "near-constant iff share of training rows within +-10% of 1/21 >= 0.95"
+ },
+ "inputs": [
+  {
+   "path": "ml/data_5y/model_dataset.parquet",
+   "bytes": 427364626,
+   "mtime": "2026-10-19T06:50:46",
+   "sha256_first_64MB": "b10035ccfed5b334feb4abb33cf0cb4e653a2e2dd37c2c63a263b567bc78fbdb"
+  },
+  {
+   "path": "ml/results/scale5y/cache/extra_5y.parquet",
+   "bytes": 24142366,
+   "mtime": "2026-10-19T07:38:58",
+   "sha256": "f19dd94b6b8fc4959da23b92cee5853a8c48e23262d6637a9863c513d454aeb7"
+  },
+  {
+   "path": "ml/data_5y/splits.json",
+   "bytes": 5435,
+   "mtime": "2026-10-19T06:50:46",
+   "sha256": "6877c3993b1d04bc1dbba8b7fad23e92579963d7a1023b6bec74f3600b821964"
+  }
+ ],
+ "window": {
+  "rows_in_window": 646651,
+  "labeled_clean": 641034,
+  "purged_exit_ge_test_start": 4,
+  "training_rows": 641030,
+  "tickers": 1957,
+  "span_length_sessions_counts": {
+   "21": 640889,
+   "22": 42,
+   "23": 21,
+   "24": 1,
+   "25": 1,
+   "28": 2,
+   "30": 39,
+   "31": 21,
+   "32": 1,
+   "34": 1,
+   "36": 1,
+   "39": 1,
+   "40": 1,
+   "43": 1,
+   "44": 2,
+   "45": 2,
+   "48": 1,
+   "56": 2,
+   "140": 1
+  },
+  "share_span_21": 0.9997800414957179
+ },
+ "distribution_training_rows": {
+  "n_rows": 641030,
+  "mean": 0.05293291106428239,
+  "sd": 0.022664914200808916,
+  "cv": 0.42818189563170556,
+  "min": 0.04761904761903679,
+  "p01": 0.04761904761904745,
+  "p05": 0.04761904761904745,
+  "p25": 0.04761904761904745,
+  "median": 0.04761904761904745,
+  "p75": 0.04761904761904747,
+  "p95": 0.08345245532883735,
+  "p99": 0.1735885097506061,
+  "max": 1.0000000000000002,
+  "share_within_10pct_of_1_over_21": 0.8746720122303169,
+  "share_exactly_1_over_21": 0.8203906213437748,
+  "share_above_1.5_over_21": 0.06327784971062196,
+  "kish_weight_efficiency": 0.8450660545634648,
+  "effective_labels_sum_u": 33931.58397953694
+ },
+ "by_position_in_window": {
+  "window_start_20_sessions": {
+   "share_of_rows": 0.03207026192221893,
+   "mean_u": 0.07575243590446486,
+   "share_within_10pct": 0.31841618834516977,
+   "p99_u": 0.19133794644508959
+  },
+  "interior": {
+   "share_of_rows": 0.9245729529039203,
+   "mean_u": 0.05113099354079353,
+   "share_within_10pct": 0.9195972862207029,
+   "p99_u": 0.12921390778533598
+  },
+  "window_end_20_sessions": {
+   "share_of_rows": 0.043356785173860816,
+   "mean_u": 0.07447915955272841,
+   "share_within_10pct": 0.32810419889900333,
+   "p99_u": 0.17358850975060744
+  }
+ },
+ "interior_rows_deviating": {
+  "rows": 47653,
+  "share_of_all_rows": 0.0743381745004134,
+  "share_with_span_not_21": 0.0009443266950664176,
+  "note": "interior deviations come from the ticker's own gaps: universe entry or exit, masked (unclean) labels, listing, or spans longer than 21 sessions"
+ },
+ "who_is_up_weighted": {
+  "share_illiquid_half_among_deviating_rows": 0.7272433064887539,
+  "share_illiquid_half_among_other_rows": 0.46656893012372236,
+  "share_illiquid_half_among_interior_deviating_rows": 0.8718653599983212,
+  "mean_weight_multiplier_window_edges": 1.5754312223993785,
+  "mean_weight_multiplier_deviating_rows": 1.8748628073234201
+ },
+ "brute_force_check_max_abs_error_25_tickers": 3.372302437298913e-15,
+ "sensitivity_concurrency_all_labeled_rows": {
+  "n_rows": 641030,
+  "mean": 0.050859395453206266,
+  "sd": 0.018738110192382494,
+  "cv": 0.36842966821386414,
+  "min": 0.04761904761904745,
+  "p01": 0.04761904761904745,
+  "p05": 0.04761904761904745,
+  "p25": 0.04761904761904745,
+  "median": 0.04761904761904745,
+  "p75": 0.04761904761904745,
+  "p95": 0.062307330612286216,
+  "p99": 0.12823703582770513,
+  "max": 1.0000000000000002,
+  "share_within_10pct_of_1_over_21": 0.9265900191878695,
+  "share_exactly_1_over_21": 0.8978284947662356,
+  "share_above_1.5_over_21": 0.03802786141054241,
+  "kish_weight_efficiency": 0.8804830474163361,
+  "effective_labels_sum_u": 32602.39826736881
+ },
+ "possible_effect_without_fit": {
+  "label_base_rate": {
+   "unweighted": 0.5025615025817824,
+   "uniqueness_weighted": 0.49813532516406883
+  },
+  "univariate_auc": {
+   "n_features": 50,
+   "max_abs_delta": 0.005226388006183358,
+   "mean_abs_delta": 0.001195744813980877,
+   "mean_abs_auc_minus_half_unweighted": 0.008839774069067264,
+   "spearman_feature_order_weighted_vs_unweighted": 0.9814583533480641,
+   "largest_deltas": [
+    {
+     "feature": "atr_pct",
+     "auc_unweighted": 0.48158754857259695,
+     "auc_weighted": 0.4763611605664136,
+     "delta": -0.005226388006183358
+    },
+    {
+     "feature": "vol_20",
+     "auc_unweighted": 0.4825499573849719,
+     "auc_weighted": 0.47778530275914377,
+     "delta": -0.004764654625828146
+    },
+    {
+     "feature": "cs_rank_vol_20",
+     "auc_unweighted": 0.4824526079086645,
+     "auc_weighted": 0.4777679696816142,
+     "delta": -0.004684638227050286
+    },
+    {
+     "feature": "log_turnover",
+     "auc_unweighted": 0.515864857825803,
+     "auc_weighted": 0.5202503482725084,
+     "delta": 0.004385490446705331
+    },
+    {
+     "feature": "cs_rank_turnover",
+     "auc_unweighted": 0.515912576185462,
+     "auc_weighted": 0.5201903877181229,
+     "delta": 0.004277811532660825
+    }
+   ]
+  },
+  "note": "computed on the 2025-01 training rows only, weights = uniqueness / mean uniqueness; no model is fitted and no test month is used, so this is not a trial"
+ },
+ "reading": {
+  "criterion": "near-constant iff share of training rows within +-10% of 1/21 >= 0.95",
+  "share_within_10pct": 0.8746720122303169,
+  "near_constant": false,
+  "item_closes": false
+ },
+ "seconds": 20.7
+}

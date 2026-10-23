@@ -1,0 +1,521 @@
+{
+ "id": "T9",
+ "name": "holdout-once check",
+ "status": "FAIL",
+ "summary": "97 'holdout' lines grepped in models/*.py, feature_selection.py, feature_ab.py; model tuning paths are clean (CV folds 1-2 only); holdout labels entered a selection in 1 code path (feature_ab TOP8 via all-dates quick_ic) + 1 memo-level adjudication; champion feature selection used CV TEST folds (CV AUC is in-sample for selection)",
+ "grep_hits": [
+  {
+   "file": "ml/models/deep.py",
+   "line": 20,
+   "text": "* The holdout fold is produced by the harness fold iterator and is NEVER"
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 237,
+   "text": "\"{128-64, 256-128} x dropout {0.25, 0.4}; holdout untouched \""
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 244,
+   "text": "# schema untouched). Folds are created in order: 4 CV folds then holdout,"
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 246,
+   "text": "fold_names = [s[\"name\"] for s in splits[\"folds\"]] + [\"holdout\"]"
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 423,
+   "text": "holdout = None"
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 459,
+   "text": "if fold.is_holdout:"
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 460,
+   "text": "holdout = m"
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 488,
+   "text": "\"of train DATES (never test rows). Holdout never used for tuning. \""
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 511,
+   "text": "\"holdout\": holdout,"
+  },
+  {
+   "file": "ml/models/deep.py",
+   "line": 518,
+   "text": "f\"(+/-{payload['cv_auc_std']:.4f}) holdout_auc={holdout['auc']:.4f} \""
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 15,
+   "text": "folds only (2026-04, 2026-05). The holdout is produced by the harness and is"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 20,
+   "text": "linear model refit on the holdout's train window (date <= holdout"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 51,
+   "text": "TUNE_FOLD_NAMES = [\"2026-04\", \"2026-05\"]   # cheap screen -- never the holdout"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 155,
+   "text": "assert not any(f.is_holdout for f in tune_folds)"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 177,
+   "text": "# ---- full protocol runs (both tasks, all folds + holdout, full rows)"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 250,
+   "text": "# ---- coefficient dump: best full-feature model, holdout train window"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 260,
+   "text": "hold = f                   # last yielded fold IS the holdout"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 261,
+   "text": "assert hold is not None and hold.is_holdout"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 262,
+   "text": "log(f\"holdout train window (date <= {splits['holdout']['train_end']}): \""
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 284,
+   "text": "\"refit_train_end\": splits[\"holdout\"][\"train_end\"],"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 302,
+   "text": "\"2026-04 and 2026-05 only; holdout never used\","
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 325,
+   "text": "if d.get(\"cv_auc_mean\") is None or d.get(\"holdout\") is None:"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 326,
+   "text": "problems.append(f\"{p.name}: null cv_auc_mean or holdout\")"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 328,
+   "text": "h = d[\"holdout\"]"
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 330,
+   "text": "f\"+/-{d['cv_auc_std']:.4f} holdout_auc={h['auc']:.4f} \""
+  },
+  {
+   "file": "ml/models/logistic.py",
+   "line": 331,
+   "text": "f\"holdout_spread={h.get('decile_spread', float('nan')):.4f}\")"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 333,
+   "text": "def build_notes(cv_auc_mean, cv_auc_std, holdout_auc, fold_aucs, cv_port, ho_port,"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 342,
+   "text": "cv_names = [n for n in port_folds if n != \"holdout\"]"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 349,
+   "text": "table = (f\"PORTFOLIO (CV-agg | holdout): policy [{fmt_cell(pol_cv)} | {fmt_cell(pol_ho)}]; \""
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 357,
+   "text": "rand_mean = (\"higher on both CV-agg and holdout\" if pc > rc and ph > rh else"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 358,
+   "text": "\"higher on holdout only\" if ph > rh else"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 374,
+   "text": "\"mixed (CV \" + (\"yes\" if pc > mc else \"no\") + \", holdout \" + (\"yes\" if ph > mh else \"no\") + \")\")"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 378,
+   "text": "f\"(CV-agg {pc * 100:+.2f}% vs {rc * 100:+.2f}%; holdout {ph * 100:+.2f}% vs {rh * 100:+.2f}%)\""
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 381,
+   "text": "f\"(heuristic CV-agg {mc * 100:+.2f}%, holdout {mh * 100:+.2f}%), so the learned policy does not \""
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 384,
+   "text": "\"(LGBM top-10 cv 0.5307/holdout 0.5219; logistic cv ~0.513) with the same regime instability \""
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 385,
+   "text": "f\"(fold range {min(fold_aucs):.3f}-{max(fold_aucs):.3f}); the {holdout_auc:.3f} holdout AUC comes from a \""
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 420,
+   "text": "holdout_row = None"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 448,
+   "text": "if fold.is_holdout:"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 449,
+   "text": "holdout_row = m"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 471,
+   "text": "notes = build_notes(float(np.mean(aucs)), float(np.std(aucs)), holdout_row[\"auc\"],"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 481,
+   "text": "\"holdout\": holdout_row,"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 495,
+   "text": "\"holdout\": ho_port,"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 502,
+   "text": "f\"holdout_auc={holdout_row['auc']:.4f} ({train_seconds}s)\")"
+  },
+  {
+   "file": "ml/models/rl.py",
+   "line": 504,
+   "text": "log(json.dumps({\"cv_aggregate\": cv_port, \"holdout\": ho_port}, indent=1))"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 8,
+   "text": "The holdout is reported but never used to tune, select or early-stop."
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 28,
+   "text": "Inner validation (early stopping only -- never test rows, never the holdout):"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 191,
+   "text": "fold_rows, frames, holdout = [], [], None"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 202,
+   "text": "if fo[\"name\"] == \"holdout\":"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 203,
+   "text": "holdout, ic_ho = m, ic"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 222,
+   "text": "\"holdout\": holdout,"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 235,
+   "text": "\"holdout\": ic_block(ic_ho) if ic_ho is not None else None,"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 247,
+   "text": "ho = holdout or {}"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 249,
+   "text": "f\"worst={worst:.4f} holdout={ho.get('auc', float('nan')):.4f} \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 759,
+   "text": "# projected epoch time at the largest fold (holdout train ~ 260 dates)"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 772,
+   "text": "max_fit_days = int((ud <= np.datetime64(splits[\"holdout\"][\"train_end\"])).sum()"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 953,
+   "text": "order = [\"2026-04\", \"2026-05\", \"2026-06\", \"2026-07\", \"holdout\"]"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 983,
+   "text": "ho = d[\"holdout\"]"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 989,
+   "text": "\"holdout_auc\": round(ho[\"auc\"], 4),"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 990,
+   "text": "\"holdout_decile_spread\": round(ho.get(\"decile_spread\", float(\"nan\")), 4),"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 991,
+   "text": "\"holdout_top_decile_fwd\": round(ho.get(\"top_decile_mean_fwd\", float(\"nan\")), 4),"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 997,
+   "text": "\"rank_ic_holdout_mean\": round(d[\"rank_ic\"][\"holdout\"][\"mean\"], 4),"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 998,
+   "text": "\"rank_ic_holdout_t_naive\": round(d[\"rank_ic\"][\"holdout\"][\"t_naive\"], 2),"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1006,
+   "text": "\"(fixed before any run; holdout never used to choose)\","
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1009,
+   "text": "print(\"| model | #feat | CV AUC \u00b1 std | worst fold | holdout AUC | holdout spread \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1010,
+   "text": "\"| rank-IC CV (t / NW-t) | holdout IC | s/fold | passes |\")"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1014,
+   "text": "f\"{r['cv_auc_std']:.4f} | {r['worst_fold']:.4f} | {r['holdout_auc']:.4f} | \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1015,
+   "text": "f\"{r['holdout_decile_spread'] * 100:+.2f}% | {r['rank_ic_cv_mean']:+.4f} \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1017,
+   "text": "f\"{r['rank_ic_holdout_mean']:+.4f} | {r['train_s_per_fold']} | \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1036,
+   "text": "\"volatility factor (IC +0.095 Apr, -0.059 Jul, +0.10 holdout) rather than \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1037,
+   "text": "\"stock-specific skill; the 0.566 holdout / +6.0% spread is that vol-friendly \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1044,
+   "text": "\"Holdout 0.564 is the same vol-friendly window as the 10-feature ranker.\"),"
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1064,
+   "text": "\"picked few trees. 51 features add noise for CatBoost as for LightGBM; holdout \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1076,
+   "text": "\"fold 0.4516 (April), holdout 0.4480 with a -1.9% decile spread, rank-IC NW t 0.6. \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1084,
+   "text": "\"holdout 0.4605, rank-IC NW t 0.4. Its fold pattern almost duplicates \""
+  },
+  {
+   "file": "ml/models/sota.py",
+   "line": 1102,
+   "text": "\"0.5069), CV std 0.008 (0.014), better than the champion in 3/4 folds, holdout \""
+  },
+  {
+   "file": "ml/models/trees.py",
+   "line": 13,
+   "text": "The holdout is never touched for tuning -- only run_standard_eval sees it."
+  },
+  {
+   "file": "ml/models/trees.py",
+   "line": 193,
+   "text": "# Gain importances from the best GBM, refit on the holdout train window"
+  },
+  {
+   "file": "ml/models/trees.py",
+   "line": 199,
+   "text": "if f.is_holdout:"
+  },
+  {
+   "file": "ml/models/trees.py",
+   "line": 217,
+   "text": "\"window\": f\"holdout-fold train (date <= {splits['holdout']['train_end']})\","
+  },
+  {
+   "file": "ml/models/trees.py",
+   "line": 267,
+   "text": "\"AUC); holdout untouched for tuning. preprocess=raw (median \""
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 13,
+   "text": "recorded). The 4 CV folds only -- holdout never touched."
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 30,
+   "text": "best k's -- chosen on cv_auc_mean ONLY (holdout numbers"
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 98,
+   "text": "if fold.is_holdout:"
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 255,
+   "text": "\"holdout_auc\": pl[\"holdout\"][\"auc\"] if pl[\"holdout\"] else None,"
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 318,
+   "text": "f\"k was chosen on cv_auc_mean only; the harness-reported holdout for \""
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 319,
+   "text": "f\"the selected subset is {pm['holdout']['auc']:.4f} on \""
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 320,
+   "text": "f\"{PRIMARY} and {sel_res['up_5d']['holdout']['auc']:.4f} on up_5d, \""
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 373,
+   "text": "\"(chosen on CV only, never holdout)\"),"
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 388,
+   "text": "\"only. All holdout numbers come from run_standard_eval and are \""
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 389,
+   "text": "\"reported for the record; the holdout was never used to choose \""
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 432,
+   "text": "\"only, never holdout\"),"
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 437,
+   "text": "\"holdout_auc\": sel_res[t][\"holdout\"][\"auc\"],"
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 438,
+   "text": "\"holdout_decile_spread\":"
+  },
+  {
+   "file": "ml/feature_selection.py",
+   "line": 439,
+   "text": "sel_res[t][\"holdout\"].get(\"decile_spread\"),"
+  },
+  {
+   "file": "ml/feature_ab.py",
+   "line": 7,
+   "text": "primary task while keeping every fold at AUC >= 0.50. Holdout is reported"
+  },
+  {
+   "file": "ml/feature_ab.py",
+   "line": 99,
+   "text": "\"holdout\": p[\"holdout\"][\"auc\"],"
+  },
+  {
+   "file": "ml/feature_ab.py",
+   "line": 100,
+   "text": "\"spread\": p[\"holdout\"].get(\"decile_spread\"),"
+  }
+ ],
+ "findings": [
+  {
+   "where": "models/trees.py screen(), models/logistic.py screen_C(), models/deep.py screen_mlp()",
+   "use": "hyper-parameter choice on CV folds 2026-04/05 only; logistic asserts no holdout fold",
+   "holdout_in_selection": false
+  },
+  {
+   "where": "models/trees.py write_gain_importances(), models/logistic.py coefficient dump",
+   "use": "refit on the holdout fold's TRAIN window (date <= 2026-07-02) for reporting only; no holdout test labels",
+   "holdout_in_selection": false
+  },
+  {
+   "where": "feature_selection.py",
+   "use": "univariate screen skips holdout; k chosen on cv_auc_mean only. BUT every selection signal (univariate AUC on the 4 CV TEST folds, permutation importance on fold 2026-06 TEST rows, k by CV AUC) uses the same CV test rows that later report the champion's CV AUC -> the CV number is in-sample for feature selection",
+   "holdout_in_selection": false,
+   "cv_test_in_selection": true
+  },
+  {
+   "where": "feature_ab.py TOP8_NEW (lgbm_fe_top18)",
+   "use": "the 8 'new' features = top-8 by |quick_ic| from features_ext._quick_ic, computed over ALL labelled dates incl. the holdout window Aug-Sep 2026 (and the CV test months)",
+   "holdout_in_selection": true
+  },
+  {
+   "where": "ml/MODEL_SELECTION.md / eval_aggregate adjudication",
+   "use": "after seeing that 12/13 models scored higher on the holdout, the memo chose to discount the holdout as a 'friendly window' and adjudicate on CV -- a human selection decision taken with holdout results in view (the holdout favoured other models)",
+   "holdout_in_selection": true
+  }
+ ]
+}

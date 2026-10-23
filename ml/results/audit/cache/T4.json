@@ -1,0 +1,17 @@
+{
+ "id": "T4",
+ "name": "label construction recompute",
+ "status": "PASS",
+ "summary": "300-row y_raw max|diff|=0.00e+00 (NaN mismatches 0); full 471,867 rows max|diff|=0.00e+00, NaN mismatches 0; y_excess max|diff|=0.00e+00; label mismatches 300-row=0, full=0; y_clean mismatches=0",
+ "sample_n": 300,
+ "sample_max_abs_diff": 0.0,
+ "sample_nan_mismatch": 0,
+ "sample_label_mismatch": 0,
+ "sample_excess_max_abs_diff": 0.0,
+ "full_rows_compared": 471867,
+ "full_max_abs_diff": 0.0,
+ "full_nan_mismatch": 0,
+ "full_excess_max_abs_diff": 0.0,
+ "full_label_mismatch": 0,
+ "y_clean_mismatch": 0
+}

@@ -1,0 +1,107 @@
+{
+ "id": "T10",
+ "name": "preds sanity",
+ "status": "PASS",
+ "summary": "clean champion holdout AUC from parquet 0.517996 vs JSON 0.517996 (max |diff| over all folds, both runs = 0.0e+00); per-fold base rates 0.5006-0.5022",
+ "runs": {
+  "clean": {
+   "2026-04": {
+    "auc_from_parquet": 0.5068647379421386,
+    "auc_json": 0.5068647379421386,
+    "abs_diff": 0.0,
+    "base_rate": 0.5006093978881836,
+    "n": 31178,
+    "decile_spread_parquet": -0.005712314508855343,
+    "decile_spread_json": -0.005712314508855343
+   },
+   "2026-05": {
+    "auc_from_parquet": 0.538437441098928,
+    "auc_json": 0.538437441098928,
+    "abs_diff": 0.0,
+    "base_rate": 0.5014111399650574,
+    "n": 29409,
+    "decile_spread_parquet": 0.05790276452898979,
+    "decile_spread_json": 0.05790276452898979
+   },
+   "2026-06": {
+    "auc_from_parquet": 0.5374321943251275,
+    "auc_json": 0.5374321943251275,
+    "abs_diff": 0.0,
+    "base_rate": 0.5017496943473816,
+    "n": 32291,
+    "decile_spread_parquet": 0.004212094936519861,
+    "decile_spread_json": 0.004212094936519861
+   },
+   "2026-07": {
+    "auc_from_parquet": 0.5430471659235699,
+    "auc_json": 0.5430471659235699,
+    "abs_diff": 0.0,
+    "base_rate": 0.5020793676376343,
+    "n": 35588,
+    "decile_spread_parquet": 0.024156589061021805,
+    "decile_spread_json": 0.024156589061021805
+   },
+   "holdout": {
+    "auc_from_parquet": 0.517995928832537,
+    "auc_json": 0.517995928832537,
+    "abs_diff": 0.0,
+    "base_rate": 0.5021585822105408,
+    "n": 47485,
+    "decile_spread_parquet": -0.004033230245113373,
+    "decile_spread_json": -0.004033230245113373
+   }
+  },
+  "frozen": {
+   "2026-04": {
+    "auc_from_parquet": 0.5014044746535462,
+    "auc_json": 0.5014044746535462,
+    "abs_diff": 0.0,
+    "base_rate": 0.5006080865859985,
+    "n": 34534,
+    "decile_spread_parquet": -0.0035477513447403908,
+    "decile_spread_json": -0.0035477513447403908
+   },
+   "2026-05": {
+    "auc_from_parquet": 0.5478158421458177,
+    "auc_json": 0.5478158421458177,
+    "abs_diff": 0.0,
+    "base_rate": 0.5014008283615112,
+    "n": 32481,
+    "decile_spread_parquet": 0.05378963425755501,
+    "decile_spread_json": 0.05378963425755501
+   },
+   "2026-06": {
+    "auc_from_parquet": 0.5290034928532125,
+    "auc_json": 0.5290034928532125,
+    "abs_diff": 0.0,
+    "base_rate": 0.5017122030258179,
+    "n": 33874,
+    "decile_spread_parquet": 0.005361456423997879,
+    "decile_spread_json": 0.005361456423997879
+   },
+   "2026-07": {
+    "auc_from_parquet": 0.5445542217054878,
+    "auc_json": 0.5445542217054878,
+    "abs_diff": 0.0,
+    "base_rate": 0.5020492672920227,
+    "n": 35622,
+    "decile_spread_parquet": 0.026106365025043488,
+    "decile_spread_json": 0.026106365025043488
+   },
+   "holdout": {
+    "auc_from_parquet": 0.5219089191241787,
+    "auc_json": 0.5219089191241787,
+    "abs_diff": 0.0,
+    "base_rate": 0.502059817314148,
+    "n": 50733,
+    "decile_spread_parquet": 0.008574958890676498,
+    "decile_spread_json": 0.008574958890676498
+   }
+  }
+ },
+ "max_abs_diff": 0.0,
+ "base_rate_range": [
+  0.5006080865859985,
+  0.5021585822105408
+ ]
+}
