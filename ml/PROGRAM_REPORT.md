@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 · **Program lead:** evaluation lead (this session) · **Scope:** NSE cash equities, end-of-day bhavcopy data, 5 years (2021-10 to 2026-10) · **Companion report:** `ml/report/program_report.html` (built by `python3 -m ml.make_program_report`)
 
-**Status: complete; improvement phase added 2026-10-22 (§13).** The 5-year walk-forward, its paired block bootstrap, regime table, rank-ensemble challenger and paper portfolio are all in (`ml/results/scale5y/SCALE5Y.md`). Every number below is read from a committed JSON or Markdown artifact named in the text; nothing is estimated from memory.
+**Status: complete; improvement phases added 2026-10-22 (§13) and 2026-10-23 (§14). Verdict unchanged: no capital; one model-side gain above the bar (an expanding training window, exploratory) now runs in the forward record as a challenger.** The 5-year walk-forward, its paired block bootstrap, regime table, rank-ensemble challenger and paper portfolio are all in (`ml/results/scale5y/SCALE5Y.md`). Every number below is read from a committed JSON or Markdown artifact named in the text; nothing is estimated from memory.
 
 ---
 
@@ -447,6 +447,66 @@ For every configuration on the corrected data (`ml/results/improve/ab/v2/GATES.m
 
 Items 2 (neutral construction: done, passes B1), 3 (corporate actions: done), 4 (both A/Bs: done, both fail), 5 (delivery validation: done, durable in the residual), 6 (name-level costs: done, pessimistic model), 8 (market-state inputs: done, fail), 10 (book construction: done, buffer and 40-session hold measured) and 11 (PBO done, uniqueness closed, history before 2021 loaded; combinatorial purged CV still open) are closed. Item 9 is half done: sector, index, F&O and flows are tested; fundamentals, analyst and institutional data need a filings feed this environment does not have. Item 7 (the short side on F&O names) stays open. Item 12 is confirmed by AB0, AB7 and AB8. The ordered list of what remains, with the data each needs, is `ml/ROADMAP.md`.
 
+## 14. Improvement phase 2 (22 to 23 October 2026)
+
+**Governing document:** `ml/IMPROVEMENT_PLAN_2.md` (fixed before any result; amendments A1 and A2, ledger corrections and errata dated in its section 4). **Results of record:** `ml/results/improve2/IMPROVEMENT_RESULTS.md`, which quotes every number from a stream's JSON. **Trial ledger:** N = 270 (241 after §13; 20 planned; 4 found by review and counted; 5 from the two amendments). **Status:** complete. Every headline was recomputed independently from the raw predictions and price data by an adversarial verifier.
+
+The phase asked the questions §13 left open: can the book carry capital (a liquid-universe model, a futures-hedged long-short), is the horizon right (40 days), does a new data source help (the exchange's announcement files), is the model mis-tuned, and is the construction robust to which months train it (CPCV). It also started the forward record.
+
+### 14.1 What passed and what failed
+
+| Question | Pre-registered mark | Result | Verdict |
+|---|---|---|---|
+| Q3: a model trained on liquid names | liquid neutral book IR ≥ 0.5 with CI > 0, and a paired gain over the control's liquid book with CI > 0 | L1 (liquid tercile) IR 0.27 [−0.49, +1.02], paired +0.04 pp/yr; L2 (top two terciles) IR 0.40 [−0.30, +1.14], paired +1.08 pp/yr [−0.44, +2.65] | **FAIL** |
+| Q4: F&O long-short through stock futures | net Sharpe ≥ 1.0 with CI > 0, beta within ±0.2 | plain −0.65 [−1.43, +0.12], neutral −1.22 [−1.87, −0.53]; betas −0.15 and −0.05 | **FAIL** |
+| Q5: a 40-day horizon | paired gain of the 40-session book with CI > 0 and a higher break-even | +0.33 pp/yr [−0.83, +1.48]; break-even 88 vs 83 bps | **FAIL** |
+| Q6: company announcements (5,047,431 records, 2,488 PR bundles) | ΔAUC ≥ +0.003 with CI > 0 | −0.0008 [−0.0035, +0.0017] | **FAIL** |
+| Q7: nested hyper-parameter tuning | ΔAUC ≥ +0.003 with CI > 0 | +0.0004 [−0.0006, +0.0014] | **FAIL** |
+| Q2: combinatorial purged CV (8 groups, 28 splits, 7 paths) | net excess > 0 in ≥ 6 of 7 paths | full-universe neutral +14.3% to +17.1%/yr, liquid neutral +4.8% to +8.7%/yr, 7/7 each | **ROBUST** |
+| Q9 (amendment A1): an expanding training window | ΔAUC ≥ +0.003 with CI > 0; the Q3 rule on the liquid book | **+0.0079 [+0.0047, +0.0113]**; liquid neutral book IR 0.78 [0.06, 1.54], paired +4.06 pp/yr [+1.71, +6.39] | **PASS, both** (exploratory) |
+| Q10 (amendment A2): is the Q9 book gain one seed draw? | seed-averaged paired CI > 0 and every Q9 seed above every control seed | liquid neutral **+3.54 pp/yr [+1.30, +5.67]**; full-universe neutral +4.44 [+2.90, +5.97]; both orderings hold | **REAL** |
+
+The failures are informative. A liquid-only model throws information away: on the same liquid rows the full-universe model ranks as well as the liquid-only one (AUC 0.5322 against 0.5305). The futures hedge works (each leg's beta near one, the book's near zero), but the short leg loses net of carry and costs. Training on the 40-day label does not rank 40-day outcomes better (rank IC 0.079 against 0.087 for the 20-day model). The earnings-announcement drift is real (`ear_3d` rank IC +0.042, Newey-West t 7.9, positive in every year) but already mostly inside the model. Tuning moved six of nine years off the incumbent setting and bought nothing: the configuration was not the bottleneck.
+
+### 14.2 The one lever that worked: training history
+
+CPCV beat the walk-forward control by a wide margin on the same months. The verifier decomposed the gap: about 38% of the liquid gain sits in 2018, where CPCV trains on later data (look-ahead by construction), but the last group, which has no later data, gains as much as the others. That pointed at the amount of history, not at future knowledge, and amendment A1 tested it before its job started: the same LightGBM, the same 52 features and folds, trained on every eligible row before the embargo instead of the last 504 sessions.
+
+| 103 folds, ten-year data | CV AUC [95% CI] | Months ≥ 0.50 | Worst | Holdout | Rank IC (NW t) |
+|---|---|---:|---:|---:|---|
+| control, rolling 504 sessions | 0.5455 [0.5359, 0.5549] | 84% | 0.399 | 0.5193 | +0.088 (9.8) |
+| **expanding window** | **0.5534 [0.5435, 0.5624]** | 86% | 0.414 | 0.5401 | **+0.103 (11.4)** |
+
+| Book, net 20 bps vs the equal-weight universe, 105 months | Excess/yr | IR [95% CI] | Capacity (₹ cr) | Name-level excess | DSR (N = 270) |
+|---|---:|---|---:|---:|---:|
+| control, neutral top decile | +10.5% | +2.32 [+1.51, +3.10] | 157 | +3.9% | 0.066 |
+| **expanding, neutral top decile** | **+14.9%** | **+3.06 [+2.29, +3.86]** | 147 | +8.2% | 0.761 |
+| control, neutral liquid top decile | +1.2% | +0.21 [−0.52, +0.93] | 603 | −3.1% | 0.000 |
+| **expanding, neutral liquid top decile** | **+5.2%** | **+0.78 [+0.06, +1.54]** | 555 | +0.6% | 0.000 |
+
+Seed calibration (Q10) was registered because the verifier found that paired book tests against the seed-108 control also "passed" for configurations with no ranking gain. With seeds 108-111 for the control and 108-110 for the expanding window, the AUC gain is untouched (seed sd 0.0003 and 0.0001; seed-averaged +0.0078 [+0.0044, +0.0116]) and both neutral book gains survive. The seed-108 control turned out to be its own unluckiest liquid book (+1.2% against +1.8% to +2.3%), so every earlier paired comparison against it was slightly flattered.
+
+What keeps this from changing the capital verdict:
+1. **It is exploratory.** The hypothesis was formed after reading CPCV on the same months.
+2. **It is regime-concentrated.** +0.024 AUC in 25 down months against +0.004 in 55 up months; +0.0043 without the 8 best folds. A model trained on two bull years generalises badly into a sell-off; one that remembers earlier sell-offs does better.
+3. **The liquid book's interval is fragile.** It leans on 2026 (without 2026 and the holdout: IR 0.51, interval including zero), it includes zero for one of three seeds, and its edge after name-level costs is +0.6% a year.
+4. **Deflation.** No liquid book's Deflated Sharpe exceeds 0.001 at N = 270.
+
+### 14.3 Gates at N = 270 (`ml/results/improve/ab/10y_p2/GATES.md`)
+
+The expanding window passes gate 1 on all three seeds (+0.0112 [+0.0049, +0.0179] over the logistic benchmark): the first gate-1 pass in the program. The logistic benchmark ran on the rolling window; whether an expanding logistic model closes the gap is untested. It also passes gate 3 for the neutral top decile (80% to 82% of months), and fails gate 2 (86% to 87% of months ≥ 0.50, bar 90%) and gate 5 (liquid DSR 0.000). The control passes 0 or 1 of the applicable gates depending on the seed; the event and tuned configurations pass 1. **Nothing is promoted. The verdict of §1 stands: no capital.**
+
+### 14.4 The forward record (`ml/paper/`, `ml/results/improve2/paper/PAPER.md`)
+
+The frozen construction of §13.7 started its forward record on 2026-10-19: one command a day (`ml/paper/RUNBOOK.md`), an append-only ledger with a specification hash, and a byte-identical rebuild proof. Since spec amendment 10 (2026-10-23) it runs six books: primary (neutral full-universe top decile, about 152 names), capacity (its liquid-tercile version, about 50 names), the rank-ensemble challenger, the plain reference, and the expanding-window challenger with its capacity version, backfilled from inception without changing a byte of the existing rows. Review caught one data defect in the live window: CCAVENUE's consolidation is spelled "CNSLDATN" with an empty ex-date and was missed, giving a fake +840% day; the parser was extended, the store repaired under the lock and the ledger re-issued once, with the superseded rows kept. Three research-period consolidations with the same spelling remain unadjusted (none is a universe row of the ten-year dataset). The research books exclude rows failing the forward-looking `y_clean_20d` screen (0.33% of rows, mostly crashes; about 0.4 pp a year of flattery); the live books hold every name, so live and backtest are not like-for-like. The first tranche exits on 2026-11-18.
+
+### 14.5 What this does to §11 and the roadmap
+
+- **Closed with evidence:** a liquid-only model, a futures-hedged long-short (§11 item 7), a 40-day horizon, announcement-event features, hyper-parameter tuning, and combinatorial purged CV (§11 item 11). None should be retried without new information.
+- **New leading candidate:** the expanding-window construction. It is in the forward record as a challenger, not promoted; six to twelve months of live comparison decide, not another backtest.
+- **Process:** paired book comparisons need seed calibration; in-cycle follow-ups are dated amendments committed before their job and reviewed like any stream. Both are written into `ml/PROCESS.md` and `ml/PROMPT.md`.
+- **Still open:** fundamentals and analyst data (no filings feed reachable here), the three research-store consolidations, a logistic benchmark on an expanding window. The ordered list is `ml/ROADMAP.md`.
+
 ---
 
 ## Appendix A. Reproduction
@@ -471,10 +531,13 @@ python3 -m ml.scale5y_nested --stages run --ensemble
 python3 -m ml.scale5y_report
 # this report
 python3 -m ml.make_program_report
+# improvement phase 2 (ml/IMPROVEMENT_PLAN_2.md; queue scripts in ml/results/improve2/queue/)
+sh ml/results/improve2/queue/queue_e.sh      # Q9 and Q10: seed replicates, books at N = 270, readings, gates (queues B-D hold the earlier streams)
+OMP_NUM_THREADS=2 python3 -I ml/paper/job.py                                    # the daily forward record (ml/paper/RUNBOOK.md)
 ```
 
 Seed 108 everywhere; OMP_NUM_THREADS=2 on the shared 4-core box.
 
 ## Appendix B. Trial ledger (for Deflated Sharpe and best-of-N accounting)
 
-Pilot primary task: 38 full-protocol configurations, 151 including hyper-parameter and univariate screens (`AUDIT.md` T7). Strategy grid: 96 trials (60 scorer × basket cells, 6 diagnostics, 30 program configurations). SOTA study: 12 configurations. Feature A/Bs: 5 + 6 variants. Label study: 7 model-level runs, 1,106 feature-label hypotheses. Five-year run: N = 177, fixed in the code before any portfolio number existed: 10 model configurations and 24 books on the 43 folds, plus the pilot's 77 configurations and 66 portfolio cells (`portfolio_5y.json`). The paper book from November 2026 is N = 1 and must stay N = 1.
+Pilot primary task: 38 full-protocol configurations, 151 including hyper-parameter and univariate screens (`AUDIT.md` T7). Strategy grid: 96 trials (60 scorer × basket cells, 6 diagnostics, 30 program configurations). SOTA study: 12 configurations. Feature A/Bs: 5 + 6 variants. Label study: 7 model-level runs, 1,106 feature-label hypotheses. Five-year run: N = 177, fixed in the code before any portfolio number existed: 10 model configurations and 24 books on the 43 folds, plus the pilot's 77 configurations and 66 portfolio cells (`portfolio_5y.json`). Improvement phase 1: N = 241 (`ml/IMPROVEMENT_PLAN.md`); phase 2: N = 270 (`ml/IMPROVEMENT_PLAN_2.md` section 4 lists every addition). Each forward book of `ml/paper/` is one trial and must stay one trial.

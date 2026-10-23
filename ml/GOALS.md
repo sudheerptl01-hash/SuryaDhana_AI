@@ -79,6 +79,16 @@ Source: `ml/results/improve/IMPROVEMENT_RESULTS.md` and `ml/PROGRAM_REPORT.md` �
 - **What would have lowered the time to proof did not materialise.** Eight external-data A/Bs produced one real but sub-threshold gain (F&O: +0.0020 AUC, interval clear of zero), so the information coefficient per bet is what it was; the honest reading of `ml/COMMUNITY_CALIBRATION.md` §3 is unchanged: rung 2 on the external ladder, not rung 3.
 - **Position on the external ladder:** unchanged, rung 2 (a good model that earns a paper book).
 
+## Update, 2026-10-23: after improvement phase 2
+
+Source: `ml/results/improve2/IMPROVEMENT_RESULTS.md` and `ml/PROGRAM_REPORT.md` §14. Ten-year data, 103 folds, N = 270.
+
+- **Stage 0: met, and stronger.** Training the same model on an expanding window instead of the last 504 sessions raises the fold AUC from 0.5455 to 0.5534 (paired +0.0079 [+0.0047, +0.0113], every seed) and the rank IC from 0.088 to 0.103 (Newey-West t 11.4): the "very good" IC level of the Barra rule of thumb above, though the gain sits mostly in falling markets.
+- **Stage 1: the capacity criterion is now met by a book with economics, on most seeds.** The expanding window's volatility+size-neutral liquid-tercile book earns +5.2% a year over the equal-weight liquid tercile, IR 0.78 [0.06, 1.54], capacity ₹555 crore (at least ₹500 crore). Its interval is clear of zero for two of three seeds and leans on 2026. Cost headroom is still the weak criterion: break-even 45 bps per side, and +0.6% a year after the pessimistic name-level costs. The full-universe neutral book earns +14.9% a year, IR 3.06 [2.29, 3.86], capacity ₹147 crore. A liquid-only model, a futures-hedged long-short and a 40-day horizon all failed to improve capacity.
+- **Stage 2: not met.** The best Deflated Sharpe of a book with no known look-ahead is 0.761 (the expanding full-universe neutral book); every liquid book is at 0.000. Gate 1 (beat the linear model) now passes for the expanding window, the first gate-1 pass in the program; gate 2 (90% of months) and gate 5 still fail. The forward record started on 2026-10-19 and runs the expanding-window construction as a challenger since 2026-10-23; only that record can move this stage.
+- **"Not goals" amended:** beating the linear benchmark on AUC was listed as something the program could not show. The expanding window shows it against a rolling-window logistic model; it is evidence, not a goal, and the economics still do not depend on it.
+- **Position on the external ladder:** rung 2, unchanged. Rung 3 needs DSR 0.95 and a live record.
+
 ## Position on the external ladder
 
 The community research derived a five-rung ladder from live competitions, allocator platforms and industry rules of thumb (`COMMUNITY_CALIBRATION.md` §3). On it, SuryaDhana's single models are rung 1 (a real factor whose long-only book does not beat equal weight) and the rank ensemble is rung 2 (a good model that earns a paper book: IC 0.065, stability about 1.3, IR 1.26 with an interval clear of zero, beats equal weight and the momentum baseline over 45 months). Rung 3, allocatable, needs a factor-neutralised IC of at least 0.05, a five-year Sharpe above 1.25, PSR(SR > 1) of 80%, DSR 0.95 and a live record; none of these is in hand. That is the same answer the stages above give.

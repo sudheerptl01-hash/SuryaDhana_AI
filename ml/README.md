@@ -61,6 +61,10 @@ ml/
   GOALS.md             "how good is good enough": measurable criteria by stage, with external anchors
   MODEL_SELECTION.md   pilot model-selection memo (with the post-audit correction and 5-year outcome)
   SCALE_UP.md          5-year plan and the five pre-registered promotion gates (scored)
+  PROCESS.md           the improvement cycle: steps, the failure each prevents, what moved the numbers
+  PROMPT.md            the cycle, the daily paper book and a single A/B as agent prompts
+  ROADMAP.md           what is open, the next action and the data each item needs
+  IMPROVEMENT_PLAN*.md pre-registrations (phase 1, phase 2) with dated amendments and the trial ledger
   data.py              dataset builder (features + labels + splits); parameterised
   build_5y.py          5-year dataset (ml/data_5y/, 43 monthly folds 2023-01..2026-07)
   evaluation.py        shared walk-forward harness (THE protocol)
@@ -121,3 +125,10 @@ Pre-registered plan first, then five streams and a lead-run compute queue:
 - `ml/hygiene/` – probability of backtest overfitting (CSCV), delivery durability, label uniqueness; `results/improve/hygiene/`.
 - `ml/improve/ab.py` (A/B harness: walk-forward, exit-date purge, paired block bootstrap, pass marks), `ml/improve/ab_books.py` (every configuration as a book), `ml/improve/gates.py` (the five gates at the phase's N); outputs under `results/improve/ab/<tag>/` (v1, v2, 10y).
 - Results of record: `ml/results/improve/IMPROVEMENT_RESULTS.md`; what stays open: `ml/ROADMAP.md`.
+
+## Improvement phase 2 (October 2026; `ml/IMPROVEMENT_PLAN_2.md`, results in `ml/results/improve2/`)
+
+- `ml/paper/` – the forward record (paper book, no capital): `job.py` (the one daily command), `ingest.py` (store writes under the lock, with the consolidation-spelling extension), `frame.py`, `models.py`, `book.py`, `monitors.py`, `report.py`, `prove.py` (byte-identical rebuild), `SPEC.md` (frozen specification and its dated amendments), `RUNBOOK.md`, `ledger/` (append-only, committed), `state/` (gitignored); report in `results/improve2/paper/`.
+- `ml/events/` – announcement records from the PR bundles' `an` files: parser, rule-based classifier (`vocabulary.json`), ten point-in-time event features, checks, IC study; `results/improve2/events/`.
+- `ml/improve/liquid.py` (Q3, liquid-universe models), `fo_ls.py` (Q4, F&O long-short through stock futures), `h40.py` (Q5, 40-day horizon), `tune.py` (Q7, nested tuning), `cpcv.py` (Q2, combinatorial purged CV), `q9.py` (expanding training window), `q10.py` (seed calibration); outputs under `results/improve2/<stream>/`, the A/B tag `results/improve/ab/10y_p2/` (configurations, seed replicates, books and gates at N = 270), queue scripts in `results/improve2/queue/`.
+- Results of record: `ml/results/improve2/IMPROVEMENT_RESULTS.md`. The method as a reusable cycle: `ml/PROCESS.md`; the same as prompts an agent team can run: `ml/PROMPT.md`.

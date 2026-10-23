@@ -124,6 +124,22 @@ Ten-year control (103 folds, `ml/results/improve/ab/10y/GATES.md`): gate 1 +0.00
 
 Decision unchanged: **do not promote to capital.** The paper book of Phase 3 becomes the deliberate volatility+size-neutral construction (`ml/PROGRAM_REPORT.md` §13.7), with the all-feature rank ensemble as champion-challenger.
 
+## Gate status, improvement phase 2 (2026-10-23, ten-year data, N = 270)
+
+Scored by `python3 -m ml.improve.gates --tag 10y_p2 --n-trials 270` from `ml/results/improve/ab/10y_p2/` (full table, every seed replicate, in `GATES.md` there). The trial ledger grew from 241 to 270 under `ml/IMPROVEMENT_PLAN_2.md`. The control and the expanding-window configuration were each scored on several seeds (108-111 and 108-110) so that no gate reading rests on one draw of tree randomness.
+
+| Gate | Rule | LightGBM control, rolling 504 sessions (seeds 108-111) | Same model, expanding window (seeds 108-110) |
+|---|---|---|---|
+| 1 | beats lr_l2 on CV mean, bootstrap CI excluding zero | +0.0032 to +0.0038, every CI includes zero **FAIL** | +0.0112 [+0.0049, +0.0179] (seed 108), +0.0113 and +0.0112 on the others **PASS** |
+| 2 | fold AUC ≥ 0.50 in ≥ 90% of months | 83% to 84% **FAIL** | 86% to 87% **FAIL** |
+| 3 | top decile beats the EW universe in ≥ 75% of months, net 20 bps | plain 65% to 67% **FAIL**; neutral 74% to 79%, **PASS** on 2 of 4 seeds | plain 68% to 70% **FAIL**; neutral 80% to 82% **PASS** |
+| 4 | selected-feature overlap ≥ 7/10 | not applicable | not applicable |
+| 5 | DSR ≥ 0.95 on the liquid top decile, N = 270 | 0.000 **FAIL** | 0.000 **FAIL** (neutral liquid PSR against zero 0.985 to 0.994; the deflation at N = 270 removes it) |
+
+The expanding window is the first configuration in the program to pass gate 1. The logistic benchmark it beats was trained on the rolling window; a logistic model on an expanding window has not been scored. The event-feature and tuned configurations pass 1 of the 6 scored checks each.
+
+Decision unchanged: **do not promote to capital.** The expanding-window construction is exploratory (its hypothesis came from the CPCV reading on the same months) and runs in the forward record as a challenger beside the frozen book (`ml/paper/SPEC.md` amendment 10).
+
 ## Compute
 
 The pilot's full 13-model bake-off ran ~2 h on 4 CPU cores. The 5-year
