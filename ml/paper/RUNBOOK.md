@@ -242,8 +242,9 @@ A scheduled task could run the daily job without a person at the keyboard. What 
   where they persist (this machine, or a cloud environment with a persistent volume holding both). A fresh clone
   alone cannot run the job.
 * **Network**: `archives.nseindia.com` reachable from the environment (it is from this sandbox through the proxy).
-* **Steps**: `cd` to the repository, `OMP_NUM_THREADS=2 python3 -I ml/paper/job.py`, then commit
-  `ml/paper/ledger/`, `ml/paper/models/*.json`, `ml/paper/calendar_live.json` and `ml/results/improve2/paper/` to the
+* **Steps**: `cd` to the repository, `OMP_NUM_THREADS=2 python3 -I ml/paper/job.py`, then commit the files of
+  section 2 (`ml/paper/ledger/`, `ml/paper/models/*.json`, `ml/paper/models/expanding/*.json`,
+  `ml/paper/calendar_live.json`, `ml/results/improve2/paper/*.json`, `ml/results/improve2/paper/PAPER.md`) to the
   working branch and push; finish with a short message listing new sessions, basket sizes and every monitor row
   whose status is `ALERT` or an ingest decision that is `unresolved`.
 * **Guard rails**: the task must not create or change any other schedule, must not edit `ml/paper/config.py` or the

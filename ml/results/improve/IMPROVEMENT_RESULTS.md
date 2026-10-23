@@ -2,6 +2,8 @@
 
 **Dates:** 2026-10-19 (plan fixed, streams started) to 2026-10-22 · **Plan:** `ml/IMPROVEMENT_PLAN.md` (pass marks fixed before any result; amendments A1-A4 dated in its section 5) · **Trial ledger:** N = 241 (177 from the five-year run + 64 new configurations and books) · **Status: complete (every pre-registered test has a result).**
 
+**Corrections (2026-10-23, from improvement phase 2; `ml/results/improve2/IMPROVEMENT_RESULTS.md` sections 2 and 10):** (1) research books exclude the 0.33% of rows that fail the forward-looking `y_clean_20d` screen (mostly crashes), which flatters their excess by about 0.4 pp a year; the live paper books hold every name. (2) The seed-108 control's liquid neutral book is its unluckiest of four seeds (+1.2% a year against +1.8% to +2.3% on the ten-year data), so paired book comparisons against it were slightly flattered; ranking (AUC) comparisons are not affected (seed sd 0.0003). (3) Three research-period consolidations (KAUSHALYA 2024-01-12, SHEKHAWATI 2024-08-28, VERTOZ 2025-06-25) remain unadjusted in the research store because the parser missed the "CNSLDATN" spelling; their jump rows are not universe rows of the ten-year dataset (`ml/ROADMAP.md` section 3).
+
 Every number below is quoted from the stream's JSON/Markdown named in its section. "PASS" and "FAIL" refer to the pass marks written in the plan before the result existed.
 
 ## 1. One-page summary

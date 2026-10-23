@@ -1,6 +1,6 @@
 # SuryaDhana improvement phase 2: results against the pre-registered plan
 
-**Dates:** 2026-10-23 (plan fixed 02:3x UTC before any result; amendments and errata dated in its section 4) · **Plan:** `ml/IMPROVEMENT_PLAN_2.md` · **Trial ledger:** N = 270 (241 after phase 1; 20 planned here; ledger corrections +4; amendments A1 and A2 +3 and +2) · **Status: complete.** Every pre-registered mark has a result, and every headline was recomputed independently by an adversarial verifier from the raw predictions and price data (no implementation error that could hide a real effect was found).
+**Dates:** 2026-10-23 (plan fixed at 02:34:27 UTC, commit 7c74bef, before any result; amendments and errata dated in its section 4) · **Plan:** `ml/IMPROVEMENT_PLAN_2.md` · **Trial ledger:** N = 270 (241 after phase 1; 20 planned here; ledger corrections +4; amendments A1 and A2 +3 and +2) · **Status: complete.** Every pre-registered mark has a result, and every headline was recomputed independently by an adversarial verifier from the raw predictions and price data (no implementation error that could hide a real effect was found).
 
 Every number below is quoted from the stream's JSON named in its section. "PASS" and "FAIL" refer to marks written before the result existed. Books are net of 20 bps per side against the equal-weight benchmark of the same universe (whole universe or liquid tercile), over 105 signal months 2018-01..2026-09 on the ten-year data, unless stated.
 
@@ -28,7 +28,7 @@ Every number below is quoted from the stream's JSON named in its section. "PASS"
 - **Books.** Primary: the frozen construction (LightGBM, 52 features, rolling 504 sessions, volatility+size-neutral full-universe top decile, about 152 names). Capacity: its liquid-tercile version (about 50 names). Challenger: the rank ensemble, neutralised. Reference: the plain control. Added by dated spec amendment 10, backfilled from inception with the existing rows byte-identical: **challenger_expanding** (the same construction with an expanding window; its October model trained on 2,170,733 rows) and its capacity version.
 - **Proofs.** The paper trainer reproduces the research holdout predictions exactly. A from-inception rebuild in a sandbox reproduces every ledger file byte for byte. A second run appends nothing.
 - **What the forward record cannot match.** The research books exclude rows that fail the forward-looking label screen (`y_clean_20d`): 0.33% of rows, mostly crashes (mean 20-day return −30%). That flatters research excess by about 0.4 pp a year. The live books hold every name, so live and backtest are not like-for-like.
-- **Operations due.** The first tranche exits on 2026-11-18 (2026-11-19 if the 2026-11-08 Muhurat session is not added to `ml/paper/calendar_live.json` beforehand). Free disk must stay above about 5.5 GB for the backup taken before each write. Two monitors were already at alert at inception: feature drift on `ret_126d` and a pre-inception inversion month (2026-08).
+- **Operations due.** The first tranche exits on 2026-11-18 (2026-11-19 if the 2026-11-08 Muhurat session is not added to `ml/paper/calendar_live.json` beforehand). Free disk must stay above about 5.5 GB for the backup taken before each write. Two monitors were already at alert at inception: feature drift on `ret_126d` and a pre-inception inversion month (2026-08). Since amendment 10 a third is at alert: the expanding challenger's `neutral_score_corr` (0.048 to 0.058 against 0.05, the `log_turnover` term; ALERT on 2026-10-21 and 2026-10-22; `ml/paper/RUNBOOK.md` section 8).
 
 ## 3. Q3. A model for the liquid universe: FAIL (`ml/results/improve2/liquid/LIQUID.md`)
 
@@ -44,16 +44,16 @@ Both fail both parts of the mark. The verifier rebuilt every step independently 
 
 Long the top quintile of F&O names in cash, short the bottom quintile through near-month futures, rolled at expiry, 20-session tranches. Costs: 20 bps a side long, 40 bps a side plus 10 bps a roll short.
 
-| Book | Net Sharpe (rf 5.5%) [95% CI] | Beta to Nifty 50 (daily / Dimson) | DSR (N = 261) |
+| Book | Net Sharpe (rf 5.5%) [95% CI] | Beta to Nifty 50 (daily / Dimson) | DSR (N = 270) |
 |---|---|---|---:|
 | plain score | −0.65 [−1.43, +0.12] | −0.15 / −0.11 | 0.000 |
 | neutral score | −1.22 [−1.87, −0.53] | −0.05 / +0.00 | 0.000 |
 
-The hedge works: each leg carries a beta near one and they cancel. The returns do not. The score separates the quintiles (about 6 points a year gross), but the short leg loses net of carry and costs. The verifier tried every reasonable convention: risk-free rate 0, open-to-open marks, statutory-level costs, dividends, and dropping the look-ahead screen within hindsight bounds. None reaches a Sharpe of 1.0 except stacks that combine near-zero costs with rf 0. The stream's own conventions Q4-a and Q4-b, one of them chosen after a smoke run's betas, are recorded as amendments and counted (+2 trials); both conventions fail.
+The hedge works: each leg carries a beta near one and they cancel. The returns do not. The score separates the quintiles (about 5 to 6 points a year gross), but the short leg loses net of carry and costs. The verifier tried every reasonable convention: risk-free rate 0, open-to-open marks, statutory-level costs, dividends, and dropping the look-ahead screen within hindsight bounds. None reaches a Sharpe of 1.0 except stacks that combine near-zero costs with rf 0. The stream's own conventions Q4-a and Q4-b, one of them chosen after a smoke run's betas, are recorded as amendments and counted (+2 trials); both conventions fail.
 
 ## 5. Q5. The 40-day horizon: FAIL (`ml/results/improve2/h40/H40.md`)
 
-| 40-session neutral book | Excess/yr | IR [95% CI] | Break-even (bps/side) | Years positive |
+| 40-session neutral book (104 signal months) | Excess/yr | IR [95% CI] | Break-even (bps/side) | Years positive |
 |---|---:|---|---:|---:|
 | 20-day control's score | +6.9% | +1.80 [+1.07, +2.52] | 83 | 8/9 |
 | 40-day model | +7.3% | +1.81 [+1.06, +2.50] | 88 | 9/9 |
@@ -62,7 +62,7 @@ Paired difference +0.33 pp/yr, CI [−0.83, +1.48] (months) and [−0.82, +1.58]
 
 ## 6. Q6. Company events from the exchange's announcement files: FAIL (`ml/results/improve2/events/EVENTS.md`)
 
-All 2,488 PR bundles (2016-10..2026-10) were parsed: 5,047,431 announcement records, classified by rules fixed from text alone. Ten point-in-time features came out of this: sessions since the results release, the earnings-announcement return (`ear_3d`) and volume reaction, announcement counts, rating, management-change, order-win and insolvency flags. All point-in-time checks passed (100 random cells, 80 rare-value cells, delete-the-future, shift test).
+All 2,488 PR bundles (2016-10..2026-10) were parsed: 4,956,205 announcement records and 91,226 board-meeting list rows, classified by rules fixed from text alone. Ten point-in-time features came out of this: sessions since the results release, the earnings-announcement return (`ear_3d`) and volume reaction, announcement counts, rating, management-change, order-win and insolvency flags. All point-in-time checks passed (100 random cells, 80 rare-value cells, delete-the-future, shift test).
 
 - **Primary mark:** AE1 (control + family E) − control = −0.0008 AUC [−0.0035, +0.0017], 51/103 folds: FAIL.
 - **Why, given a real anomaly:** `ear_3d` has rank IC +0.042 (Newey-West t 7.9) among the 75% of rows with a results release in the last 60 sessions, positive in every year. About 17% of it is already spanned by the control's score, and the most a model can add is about +0.002 AUC (a post-hoc blend, descriptive only). The source has three coverage gaps (2022-02..2022-12, 2023-09/10, 2024-01) whose folds carry most of the negative point estimate. FAIL means "below the bar", not "no information".
@@ -81,7 +81,7 @@ The 103 fold months were split into 8 groups, giving 28 splits and 7 paths. Trai
 | full-universe neutral book | +14.3% to +17.1%/yr, IR 2.91 to 3.55; positive 7/7 | +10.3%, IR 2.26 |
 | liquid neutral book | +4.8% to +8.7%/yr; positive 7/7; IR CI above 0 on 5 to 7 of 7 depending on the bootstrap seed | +0.8%, IR 0.14 |
 
-**ROBUST** by the registered reading for both books. That means the result does not depend on which months train the model. It does not mean seven independent confirmations: the paths share 28 models, and their monthly returns correlate 0.89 to 0.93. The verifier decomposed the CPCV-over-walk-forward gain. About 38% of the liquid gain sits in 2018, where CPCV trains on 2019-2025 data and walk-forward had only a few months, so that part is look-ahead by construction. The last group (2025-26), which has no later-dated training rows, gains at least as much as the others. **More history, not knowledge of the future, explains most of the rest.** That is what motivated Q9.
+**ROBUST** by the registered reading for both books. That means the result does not depend on which months train the model. It does not mean seven independent confirmations: the paths share 28 models, and their monthly returns correlate 0.89 to 0.93. The verifier decomposed the CPCV-over-walk-forward gain. About 38% of the liquid gain sits in the first group (2018-01..2019-01), where CPCV trains on 2019-2026 data and walk-forward had only a few months, so that part is look-ahead by construction. The last group (2025-26), which has no later-dated training rows, gains at least as much as the others. **More history, not knowledge of the future, explains most of the rest.** That is what motivated Q9.
 
 ## 9. Q9. An expanding training window (amendment A1): PASS, exploratory (`ml/results/improve2/expanding/EXPANDING.md`)
 
@@ -130,12 +130,12 @@ Gate 4 does not apply (nothing is selected). The logistic benchmark ran on the r
 
 ## 12. Trial ledger
 
-N = 270 = 241 (phase 1) + 20 (planned: Q2 1, Q3 6, Q4 2, Q5 5, Q6 3, Q7 3) + 2 (L2's unregistered top-two-tercile books) + 2 (Q4's open-mark books under its stream amendments) + 3 (A1: Q9 and two books) + 2 (A2: two seed-averaged books). Not counted, as in phase 1: plain books of AE1, Q7 and Q9; smoke runs; seed replicates (measurement of noise in counted configurations); the verifiers' post-hoc variants (none may be cited as a result). Stream reports quote DSR at N = 261 or 264 where they ran earlier; at N = 270 the values change in the third decimal. V[SR] is still the phase-1 cross-trial variance (0.00387); it does not include phase-2 books.
+N = 270 = 241 (phase 1) + 20 (planned: Q2 1, Q3 6, Q4 2, Q5 5, Q6 3, Q7 3) + 2 (L2's unregistered top-two-tercile books) + 2 (Q4's open-mark books under its stream amendments) + 3 (A1: Q9 and two books) + 2 (A2: two seed-averaged books). Not counted, as in phase 1: plain books of AE1, Q7 and Q9; smoke runs; seed replicates (measurement of noise in counted configurations); the verifiers' post-hoc variants (none may be cited as a result). Stream reports quote DSR at N = 261 or 264 where they ran earlier; at N = 270 the values fall by at most about 0.01. V[SR] is still the phase-1 cross-trial variance (0.00387); it does not include phase-2 books.
 
 ## 13. What this phase changes
 
 1. **The training window is a model choice, and the expanding window is better.** That is the only model-side gain above the bar in either phase. It is calibrated against seed noise and verified for leakage, but it is exploratory and regime-concentrated. The forward record now runs it beside the frozen book; after six to twelve months the live comparison decides, not another backtest.
-2. **Capacity moved, but not enough to clear the gates.** The expanding liquid book earns +5.2% a year with capacity ₹555 crore. That is the first capacity-bearing book in the program with an IR interval above zero (on two of three seeds). Its Deflated Sharpe is 0.000 at N = 270, and its edge after name-level costs is +0.6% a year.
+2. **Capacity moved, but not enough to clear the gates.** The expanding liquid book earns +5.2% a year with capacity ₹555 crore. That is the first capacity-bearing book on the ten-year walk-forward with an IR interval above zero (on two of three seeds). Its Deflated Sharpe is 0.000 at N = 270, and its edge after name-level costs is +0.6% a year.
 3. **Five ideas were closed with evidence:** a liquid-only model, a futures-hedged long-short, a 40-day horizon, announcement-event features, and hyper-parameter tuning. None should be retried without new information.
-4. **Two process lessons.** Paired book tests need seed calibration. In-cycle follow-ups must be dated amendments committed before their job starts, and reviewed like any stream; Q9 met the first condition only. Both lessons are now written into `ml/PROCESS.md` and `ml/PROMPT.md`.
+4. **Two process lessons.** Paired book tests need seed calibration. In-cycle follow-ups must be dated amendments committed before their job starts, and reviewed like any stream; Q9 met neither strictly: its amendment was committed 20 s after its job started (though before its first result), and it ran without the two reviews; an independent post-hoc verification stands in for them. Both lessons are now written into `ml/PROCESS.md` and `ml/PROMPT.md`.
 5. **Integrity work is never finished.** A consolidation spelling the parser missed was caught by review in the live book, and three research-period cases remain to fix.

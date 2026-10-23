@@ -291,3 +291,33 @@ the market moved away from recent training data) is the same for both models.
 **What it is not.** Not a promotion and not a new trial: the books are the forward record of Q9's configuration, whose
 books are already counted (N = 264, then 270). The frozen books remain the paper book of record; nothing in them is
 re-tuned in response to the extension's record.
+
+## 6. Amendment 11: the champion-challenger decision rule, and an erratum to amendment 10 (registered 2026-10-23; the exact time is the commit time of this section, recorded below)
+
+Registered when the extension's live record held two marked sessions (2026-10-21, 2026-10-22), before any live month
+had matured, so no live comparison could inform it. It changes no book, no parameter, no definition, no ledger row and
+neither `SPEC_HASH` nor `SPEC_EXT_HASH`; it fixes how the forward record will be read.
+
+**Decision rule (owner: the program lead; management decides on the lead's report).** "Live month" means a calendar
+month of signal dates whose 20-session marks have all matured.
+
+| Read | When | What is computed | What it decides |
+|---|---|---|---|
+| Six months | first trading day after 2027-04-19 | paired monthly net (20 bps) excess `challenger_expanding` − `primary` and `capacity_expanding` − `capacity`, with month-block 95% intervals; per live month, the mean per-date rank IC (Spearman, universe names, raw score against the realised 20-session excess) of the expanding and the rolling LightGBM scores; every monitor row | nothing: descriptive only, no switch |
+| Twelve months | first trading day after 2027-10-19 | the same, over twelve live months | the expanding window replaces the rolling window in the book of record (by a new pre-registered plan and a dated amendment, never by editing this specification) only if all three hold: (i) the mean paired monthly excess `challenger_expanding` − `primary` is above zero; (ii) the expanding score's monthly rank IC is above the rolling score's in at least 7 of the 12 live months; (iii) neither `challenger_expanding` nor `capacity_expanding` has a `paper_active_ir_6m` alert at the read. Otherwise both books run on. |
+| Twenty-four months | first trading day after 2028-10-19, if the twelve-month read did not switch | the same, over twenty-four live months | switch only if the paired month-block 95% interval of `challenger_expanding` − `primary` lies above zero; if the mean paired excess is at or below zero, the expanding books are stopped as challengers (their rows stay in the ledger); otherwise both run on |
+
+**Why these thresholds.** The seed-averaged backtest gain of the full-universe expanding book is +4.44 pp a year
+[+2.90, +5.97] over 105 months (`ml/results/improve2/seeds/seeds.json`): at twelve live months its interval would be
+about ±4.5 pp, so requiring it to exclude zero at twelve months would usually fail even if the gain is real. The
+twelve-month rule therefore asks for agreement in sign on the book and a majority of months on the ranking, and the
+interval test waits for twenty-four months. The capacity pair (`capacity_expanding` − `capacity`) is reported at every
+read but decides nothing: at the backtest IR of about 0.8 its interval is uninformative for years. A switch changes the
+paper book of record only; capital stays governed by Stage 2 of `ml/GOALS.md` and the five gates of `ml/SCALE_UP.md`.
+
+**Erratum to amendment 10 (section 5).** "Every choice in the definition was fixed by amendment A1 before Q9 ran"
+is not exact. Plan 2's amendment A1 was committed at 07:55:02 UTC, 20 s after the Q9 job started (07:54:42 UTC,
+`ml/results/improve2/queue/queue_d.log`) and before its first fold result (about 07:56:28); plan 2 section 4, erratum
+(i). The correct statement is: every choice in the definition was fixed by amendment A1 before Q9 produced any result.
+The same sentence in `ml/paper/report.py` (`EXT_BACKFILL_NOTE`) is corrected with this amendment; `PAPER.md` and
+`paper.json` carry the corrected sentence from the next run of the job.

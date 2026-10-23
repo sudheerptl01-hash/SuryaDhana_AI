@@ -29,7 +29,7 @@ each study's own verdict file is listed in the layout below.
   Apr, May, Jun, Jul 2026; **holdout = Aug-1 → mid-Sep 2026**, used once,
   never for tuning. Tune on the four CV folds only (or inner splits of
   train).
-- **Metrics**: ROC AUC (headline), PR AUC, Brier, accuracy@0.5, decile
+- **Metrics**: ROC AUC (headline), PR AUC, Brier, hit rate at 0.5, decile
   spread and top-decile mean forward return (economic view).
 - **Seeds**: 108 everywhere. **CPU**: shared 4-core box — keep `n_jobs ≤ 2`.
 

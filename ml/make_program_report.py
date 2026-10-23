@@ -31,10 +31,18 @@ ml/results/improve/IMPROVEMENT_RESULTS.md), consumed when present, each with its
   ab/10y/{compare,books,gates}.json (the ten-year re-runs; a compare.json with fewer folds than the
   ten-year dataset is treated as partial), extdata/extdata.json, history/history.json.
 
+Improvement phase 2 (report §14; narrative ml/PROGRAM_REPORT.md §14, results of record
+ml/results/improve2/IMPROVEMENT_RESULTS.md), consumed when present, each with its own pending card:
+  ml/results/improve2/liquid/liquid.json, fo_ls/fo_ls.json, h40/h40.json, events/events.json (it carries the parse,
+  checks and ic blocks that parse.json, checks.json and ic.json hold), tune/tune.json, cpcv/cpcv.json,
+  expanding/expanding.json, seeds/seeds.json, paper/paper.json (a stream JSON without its verdict or summary is treated
+  as partial), and the phase's A/B tag ml/results/improve/ab/10y_p2/{compare,books,gates}.json (a compare.json with
+  fewer folds than the ten-year dataset, or a books/gates file tagged otherwise, is not used).
+
 Run:  cd /home/user/SuryaDhana_AI && python3 -m ml.make_program_report
-      [--pending-dir DIR] [--improve-dir DIR] [--out FILE]
+      [--pending-dir DIR] [--improve-dir DIR] [--improve2-dir DIR] [--out FILE]
       (QA only: read the 5-year outputs from DIR / the improvement outputs from a tree laid out like
-      ml/results/improve/ / write FILE)
+      ml/results/improve/ / the phase-2 outputs from a tree laid out like ml/results/improve2/ / write FILE)
 Deterministic: identical inputs give byte-identical HTML (no clock, fixed orderings).
 """
 from __future__ import annotations
@@ -110,6 +118,14 @@ MD_ONLY = {
     "univ_excess_range": "+1.4% to +2.0%", "champ_vs_mean_windows": "3 of 5",
     "naive_flip": MINUS + "5.3%", "cost_realistic": "15 to 25", "fno_names": "about 200",
     "train_dates": "140 to 230", "indep_xs": "7 to 11", "lit_refs": 71,
+    # improvement phase 2: the verifier's readings and the operations note that no JSON carries
+    "p2_auc_down": "+0.024", "p2_n_down": 25, "p2_auc_up": "+0.004", "p2_n_up": 55, "p2_liq_ir_ex2026": "0.51",
+    "p2_cpcv_2018": "about 38%", "p2_liq_full_auc": "0.5322", "p2_yclean": "0.33%",
+    "p2_yclean_pp": "about 0.4 pp a year", "p2_first_exit": "2026-11-18", "p2_first_exit_late": "2026-11-19",
+    # ml/IMPROVEMENT_PLAN_2.md section 4, errata (i) and (ii): when A1 was committed against when the Q9 job ran
+    "p2_q9_start": "07:54:42", "p2_a1_commit": "07:55:02", "p2_q9_first": "about 07:56:28",
+    # ml/paper/SPEC.md section 6 (amendment 11): when the champion-challenger comparison is read
+    "p2_read_6m": "2027-04-19", "p2_read_12m": "2027-10-19", "p2_read_24m": "2028-10-19",
 }
 MD_ONLY_SOURCES = [
     ("Data store: 3,078,294 rows, 1,245 sessions, 4,219 tickers, 2,722,591 feature rows, sessions per "
@@ -126,6 +142,21 @@ MD_ONLY_SOURCES = [
     ("Stage-0 criteria read on the ten-year folds: interval excluding 0.50 over at least 36 folds, rank IC at least "
      "0.03 with Newey-West t at least 3, mean AUC above 0.50 without the best six-month run and the worst month",
      "ml/GOALS.md"),
+    (f"Improvement phase 2, the verifier's readings: the expanding window's AUC gain in down and up months "
+     f"({MD_ONLY['p2_auc_down']} in {MD_ONLY['p2_n_down']}, {MD_ONLY['p2_auc_up']} in {MD_ONLY['p2_n_up']}), its liquid "
+     f"book's IR without 2026 and the holdout ({MD_ONLY['p2_liq_ir_ex2026']}), the share of the CPCV liquid gain in the "
+     f"first group "
+     f"({MD_ONLY['p2_cpcv_2018']}), the full-universe model's AUC on the liquid rows ({MD_ONLY['p2_liq_full_auc']}); the "
+     f"y_clean_20d screen ({MD_ONLY['p2_yclean']} of rows, {MD_ONLY['p2_yclean_pp']}); the first tranche's exit "
+     f"({MD_ONLY['p2_first_exit']}, or {MD_ONLY['p2_first_exit_late']} without the Muhurat session)",
+     "ml/results/improve2/IMPROVEMENT_RESULTS.md §2, §3, §8, §9; ml/PROGRAM_REPORT.md §14.1, §14.2, §14.4"),
+    (f"Improvement phase 2, amendment A1's timing: the Q9 job started at {MD_ONLY['p2_q9_start']} UTC, A1 was "
+     f"committed at {MD_ONLY['p2_a1_commit']} (commit 569a740) and the first fold result was logged at "
+     f"{MD_ONLY['p2_q9_first']}; Q9 ran without the two pre-compute reviews",
+     "ml/IMPROVEMENT_PLAN_2.md section 4, errata (i) and (ii); ml/results/improve2/queue/queue_d.log"),
+    (f"The forward record's champion-challenger reads: six months after {MD_ONLY['p2_read_6m']} (descriptive), "
+     f"twelve months after {MD_ONLY['p2_read_12m']}, twenty-four months after {MD_ONLY['p2_read_24m']}",
+     "ml/paper/SPEC.md section 6 (amendment 11)"),
 ]
 
 D = SimpleNamespace()   # closed artifacts and derived data
@@ -1216,10 +1247,14 @@ def sec_header() -> str:
     else:
         tail = (' The ten-year re-runs of <a href="#improve-10y">§13.6</a> are training and fill in when they land.'
                 if ten_pending() else "")
-        ribbon = (f'<div class="ribbon done"><span class="pulse"></span><span><b>Status: complete; improvement phase '
-                  f'added {IMPROVE_DATE} (<a href="#improve">§13</a>).</b> The 5-year walk-forward, its paired block '
-                  f'bootstrap, regime table, rank-ensemble challenger and paper portfolio are all in '
-                  f'(<code>ml/results/scale5y/SCALE5Y.md</code>).{tail}</span></div>')
+        p2 = p2_status_line()
+        phases = (f'improvement phases added {IMPROVE_DATE} (<a href="#improve">§13</a>) and {IMPROVE2_DATE} '
+                  f'(<a href="#improve2">§14</a>). {p2}' if p2 else
+                  f'improvement phase added {IMPROVE_DATE} (<a href="#improve">§13</a>).')
+        sup = p2_superseded() if p2 else ""
+        ribbon = (f'<div class="ribbon done"><span class="pulse"></span><span><b>Status: complete; {phases}</b>{sup} The '
+                  f'5-year walk-forward, its paired block bootstrap, regime table, rank-ensemble challenger and paper '
+                  f'portfolio are all in (<code>ml/results/scale5y/SCALE5Y.md</code>).{tail}</span></div>')
     gc = gate_counts()
     gb = f" {MID} ".join(f"{NAME5[m]} <b>{k} of 5</b>" for m, (k, _) in gc.items())
     return f"""
@@ -1564,10 +1599,12 @@ def sec_status() -> str:
         "Deep learning, transformers, foundation models, reinforcement learning: nothing beats trees here; stopped.",
     ]
     pend = pending_items()
+    si2 = status_imp2()     # improvement phase 2 (§14): lines it adds, each only when its evidence is loaded
     if pend:
         pending = [f"5-year {x} (<code>ml/results/scale5y/</code>)" for x in pend]
     else:
-        pending = [f"Nothing. Every run in the program is complete and committed. (The label study closed with a clean "
+        lead = "No research run is pending: every run" if si2["pending"] else "Nothing. Every run"
+        pending = [f"{lead} in the program is complete and committed. (The label study closed with a clean "
                    f"end-to-end rerun that reproduced all {D.n_label_json} of its JSON outputs with zero numeric "
                    f"differences.)"]
     unknown += [
@@ -1582,6 +1619,12 @@ def sec_status() -> str:
     if si["pending"]:
         pending = (pending if pend else []) + si["pending"]
     unknown = [u + "".join(f'<span class="upd">{v}</span>' for k, v in si["unknown"].items() if u.startswith(k))
+               for u in unknown]
+    working += si2["working"]
+    notw = [u + "".join(f'<span class="upd">{v}</span>' for k, v in si2["not_upd"].items() if u.startswith(k))
+            for u in notw] + si2["not"]
+    pending += si2["pending"]
+    unknown = [u + "".join(f'<span class="upd">{v}</span>' for k, v in si2["unknown"].items() if u.startswith(k))
                for u in unknown]
 
     def col(cls, title, items):
@@ -3077,16 +3120,22 @@ def sec_recs() -> str:
                           f'({pc(bp["excess_ann_vs_ew"])} against {pc(bs["excess_ann_vs_ew"])} a year), so the gain is the '
                           f'look-ahead in today\'s index membership.')
     rs = rec_status() if pt else {}     # item numbers match ml/PROGRAM_REPORT.md §11 only once the portfolio is in
+    rs2 = rec_status2() if pt else {}   # what improvement phase 2 did to the items it answers (§14.5)
     lis = []
     for i, r in enumerate(recs, 1):
-        if i in rs:
-            cls, txt, outcome = rs[i]
-            lis.append(f'<li class="{"closed" if txt == "closed" else "marked"}"><span class="rtxt">{r}</span>'
-                       f'<span class="rstat">{chip(cls, txt)}{outcome}</span></li>')
+        stats = ([rs[i]] if i in rs else []) + ([rs2[i]] if i in rs2 else [])
+        if stats:
+            lis.append(f'<li class="{"closed" if any(t == "closed" for _, t, _ in stats) else "marked"}"><span '
+                       f'class="rtxt">{r}</span>'
+                       + "".join(f'<span class="rstat">{chip(c, t)}{o}</span>' for c, t, o in stats) + "</li>")
         else:
             lis.append(f"<li>{r}</li>")
-    lede = (f'<p class="lede">As written on {REPORT_DATE}; each item is marked with what the improvement phase did to it '
-            f'(<a href="#improve-recs">§13.8</a>).</p>' if rs else "")
+    if rs and rs2:
+        lede = (f'<p class="lede">As written on {REPORT_DATE}; each item is marked with what the two improvement phases '
+                f'did to it (<a href="#improve-recs">§13.8</a>, <a href="#improve2-recs">§14.5</a>).</p>')
+    else:
+        lede = (f'<p class="lede">As written on {REPORT_DATE}; each item is marked with what the improvement phase did to '
+                f'it (<a href="#improve-recs">§13.8</a>).</p>' if rs else "")
     return f"""
 <section id="recs">
   <div class="sec-eyebrow">10 {MID} Recommendations</div>
@@ -3142,7 +3191,15 @@ python3 -m ml.scale5y_nested --stages prep,select,run --n-jobs 2
 python3 -m ml.scale5y_nested --stages run --ensemble
 python3 -m ml.scale5y_report
 # this report
-python3 -m ml.make_program_report"""
+python3 -m ml.make_program_report
+# improvement phase 2 (ml/IMPROVEMENT_PLAN_2.md; queue scripts in ml/results/improve2/queue/; the streams' data builds come first, see each stream's report)
+mkdir -p ml/results/improve/ab/10y_p2/preds && cp ml/results/improve/ab/10y/control__beat_mkt_20d.json ml/results/improve/ab/10y_p2/ && cp ml/results/improve/ab/10y/preds/control__beat_mkt_20d.parquet ml/results/improve/ab/10y_p2/preds/   # the ten-year control, copied byte for byte
+sh ml/results/improve2/queue/queue_b.sh      # Q6, Q5, Q7
+sh ml/results/improve2/queue/queue_c.sh      # Q3, Q2 (waits for queue B)
+sh ml/results/improve2/queue/queue_d.sh      # Q9 (amendment A1)
+cp ml/results/improve/ab/10y/lr_l2__beat_mkt_20d.json ml/results/improve/ab/10y_p2/ && cp ml/results/improve/ab/10y/preds/lr_l2__beat_mkt_20d.parquet ml/results/improve/ab/10y_p2/preds/   # the logistic benchmark for gate 1, copied byte for byte
+sh ml/results/improve2/queue/queue_e.sh      # Q10: seed replicates, compare, books at N = 270, readings, gates
+OMP_NUM_THREADS=2 python3 -I ml/paper/job.py                                    # the daily forward record (ml/paper/RUNBOOK.md)"""
 
 
 def sec_appendix() -> str:
@@ -3185,7 +3242,16 @@ def sec_appendix() -> str:
                    f"Deflated Sharpe of the phase uses N = {np_}. ")
     else:
         ledger += "Improvement phase: the ledger is pending (<code>ml/results/improve/ab/v2/gates.json</code>). "
-    ledger += "The paper book from November 2026 is N = 1 and must stay N = 1."
+    n2 = p2_n()
+    if n2:
+        ledger += (f'Improvement phase 2 (<a href="#improve2">§14</a>): N = {n2}, fixed in <code>ml/IMPROVEMENT_PLAN_2.md</code> '
+                   f"before any of its results"
+                   + (f", {n2 - np_} over phase 1" if np_ else "")
+                   + "; its section 4 lists every addition, the ones review found and the two amendments included. ")
+    elif len(j_missing(*j_all())) < len(j_all()):
+        ledger += "Improvement phase 2: the ledger is pending (<code>ml/results/improve/ab/10y_p2/gates.json</code>). "
+    ledger += ("Each forward book of <code>ml/paper/</code> is one trial and must stay one trial." if J.paper is not None
+               else "The paper book from November 2026 is N = 1 and must stay N = 1.")
     inputs = "".join(f"<li><code>{E(k)}</code>: {E(v)}</li>" for k, v in sorted(LOADED.items()))
     mdo = "".join(f"<li>{E(a)} ({E(b)})</li>" for a, b in MD_ONLY_SOURCES)
     return f"""
@@ -3723,14 +3789,17 @@ def gate_cell(cfg: str, key: str, g: dict, cj: dict | None, bj: dict | None, N: 
     return num, ok
 
 
-def gate_grid(gj: dict, cj: dict | None, bj: dict | None) -> tuple[str, dict]:
+def gate_grid(gj: dict, cj: dict | None, bj: dict | None, labels: dict[str, tuple[str, bool]] | None = None,
+              order: list[str] | None = None) -> tuple[str, dict]:
+    """labels: {configuration: (row label, indented)}; order: the rows to show, in order (default: gates.json's)."""
     N = str(gj["n_trials"])
     first = next(iter(gj["gates"].values()))
     cols = [c for c in GATE_COLS if c[0] in first]
     head = ["Configuration"] + [f'Gate {s}<div class="gsub">{E(d)}</div>' for _, s, d in cols] + ["Passed"]
     rows, rc, counts = [], [], {}
-    for cfg, g in gj["gates"].items():
-        lab, member = cfg_label(cfg, cj), CONFIG.get(cfg, (cfg, False))[1]
+    for cfg in (order or list(gj["gates"])):
+        g = gj["gates"][cfg]
+        lab, member = labels[cfg] if labels else (cfg_label(cfg, cj), CONFIG.get(cfg, (cfg, False))[1])
         cells = [E(lab)]
         k_pass = k_scored = 0
         for key, _, _ in cols:
@@ -4885,6 +4954,1134 @@ def sec_improve() -> str:
 </section>"""
 
 
+# ===================================================================== improvement phase 2 (report §14)
+IMP2 = RES / "improve2"
+IMPROVE2_DATE = "2026-10-23"         # the day §14 entered ml/PROGRAM_REPORT.md (a document date, like IMPROVE_DATE)
+J = SimpleNamespace()                # phase-2 outputs; any of them may be pending
+_I2DIR = [IMP2]
+IMP2_FILES = {
+    "liquid": "liquid/liquid.json", "fo": "fo_ls/fo_ls.json", "h40": "h40/h40.json", "events": "events/events.json",
+    "tune": "tune/tune.json", "cpcv": "cpcv/cpcv.json", "exp": "expanding/expanding.json", "seeds": "seeds/seeds.json",
+    "paper": "paper/paper.json",
+}
+P2_TAG = "10y_p2"                    # the phase's A/B tag; it lives in the phase-1 tree, ml/results/improve/ab/10y_p2/
+P2_AB_FILES = {"cmp": "compare.json", "books": "books.json", "gates": "gates.json"}
+P2_COMPLETE = {  # what a finished stream JSON carries; one without it is partial and renders pending
+    "liquid": ("verdict", "sets", "pass_mark_text"), "fo": ("pass_mark", "books"), "h40": ("verdict", "pass_mark", "books_meta"),
+    "events": ("parse", "checks", "ic"), "tune": ("outer", "summary"), "cpcv": ("readings", "verdict", "design"),
+    "exp": ("primary", "models", "books", "book_mark"), "seeds": ("seed_averaged", "spread", "auc", "seeds"),
+    "paper": ("inception_signal_date", "marks", "latest_baskets"),
+}
+P2_DROP_BEST = 8                     # IMPROVEMENT_RESULTS.md §9: the gain "without the 8 best folds" (the verifier's reading)
+P2_SHORT = {"Q3": "a liquid-only model", "Q4": "a futures-hedged long-short", "Q5": "a 40-day horizon",
+            "Q6": "announcement-event features", "Q7": "hyper-parameter tuning", "Q2": "combinatorial purged CV",
+            "Q9": "an expanding training window", "Q10": "seed calibration"}
+P2_LEVERS = ("Q3", "Q4", "Q5", "Q6", "Q7", "Q9")     # the ways to raise the signal or the economics; Q2 and Q10 test them
+P2_MODEL_SIDE = ("Q3", "Q5", "Q6", "Q7", "Q9")       # marks read on the model itself (Q4 is a book construction)
+P2_REC_ITEM = {"Q4": 7, "Q2": 11}                    # ml/PROGRAM_REPORT.md §14.5: the recommendation items these close
+P2_CFG_WORD = {"ae1_events": "event", "q7_tuned": "tuned"}
+P2_SEED_BOOKS = [("vol+size|liq_top_decile", "neutral liquid top decile", "Neutral, liquid"),
+                 ("vol+size|top_decile", "neutral full-universe top decile", "Neutral, full universe"),
+                 ("none|liq_top_decile", "plain liquid top decile", "Plain, liquid"),
+                 ("none|top_decile", "plain full-universe top decile", "Plain, full universe")]
+PAPER_BOOKS = [  # ml/paper/SPEC.md: the forward books, in the ledger's order
+    ("primary", "the frozen construction of §13.7: LightGBM, volatility+size-neutral full-universe top decile"),
+    ("capacity", "its liquid-tercile version"),
+    ("challenger", "the rank ensemble, neutralised"),
+    ("control_plain", "the plain reference"),
+    ("challenger_expanding", "the primary construction with an expanding training window"),
+    ("capacity_expanding", "its liquid-tercile version"),
+]
+BENCH_WORD = {"ew_universe": "equal-weight universe", "ew_liquid": "equal-weight liquid tercile"}
+
+
+def j_label(attr: str) -> str:
+    if attr in P2_AB_FILES:
+        return f"ml/results/improve/ab/{P2_TAG}/{P2_AB_FILES[attr]}"
+    return f"ml/results/improve2/{IMP2_FILES[attr]}"
+
+
+def load_improve2(i2dir: Path, idir: Path) -> None:
+    """The phase-2 stream JSONs under i2dir (laid out like ml/results/improve2/) and the phase's A/B tag under
+    idir/ab/10y_p2/ (idir laid out like ml/results/improve/). Absent, partial or mis-tagged files are left out; each
+    subsection that needs one renders a pending card."""
+    _I2DIR[0] = i2dir
+    for attr, relp in IMP2_FILES.items():
+        setattr(J, attr, load_json(i2dir / relp, j_label(attr), required=False))
+    for attr, relp in P2_AB_FILES.items():
+        setattr(J, attr, load_json(idir / "ab" / P2_TAG / relp, j_label(attr), required=False))
+
+    def drop(attr: str, why: str) -> None:
+        LOADED[j_label(attr)] = why
+        setattr(J, attr, None)
+
+    for attr, keys in P2_COMPLETE.items():
+        js = getattr(J, attr)
+        if js is not None and not all(k in js for k in keys):
+            drop(attr, "partial (no verdict or summary yet), not used")
+    if J.fo is not None and J.fo.get("smoke"):
+        drop("fo", "from a smoke run, not used")
+    if J.h40 is not None and J.h40.get("status") != "complete":
+        drop("h40", f"status {J.h40.get('status')!r}, not used")
+    want = ((I.integ10 or {}).get("dataset_10y") or {}).get("folds")
+    if J.cmp is not None:
+        k = len((J.cmp.get("design") or {}).get("folds", []))
+        if want is not None and k != want:
+            drop("cmp", f"partial ({k} folds), not used")
+        elif "control" not in J.cmp.get("models", {}):
+            drop("cmp", "no control model, not used")
+    for attr in ("books", "gates"):
+        js = getattr(J, attr)
+        if js is not None and js.get("tag") != P2_TAG:
+            drop(attr, f"tagged {js.get('tag')!r}, not used")
+    if J.gates is not None and J.cmp is None:
+        drop("gates", "no usable compare.json beside it, not used")
+
+
+def j_missing(*attrs: str) -> list[str]:
+    return [j_label(a) for a in attrs if getattr(J, a, None) is None]
+
+
+def j_pend(title: str, attrs: tuple[str, ...], running: str = "Not found when this page was built.") -> str:
+    return pending_card(title, j_missing(*attrs), running)
+
+
+def j_all() -> tuple[str, ...]:
+    return tuple(IMP2_FILES) + tuple(P2_AB_FILES)
+
+
+def p2_n() -> int | None:
+    for js in (J.gates, J.books):
+        if js and js.get("n_trials"):
+            return int(js["n_trials"])
+    return None
+
+
+def pp(x: float, d: int = 2) -> str:
+    """Signed percentage points of a fraction, without the % sign (no sign on a value that rounds to zero)."""
+    q = dq(x, d, 100)
+    return neg(f"{q:+.{d}f}") if q else f"{q:.{d}f}"
+
+
+def cipp(lo: float, hi: float, d: int = 2) -> str:
+    return f"[{pp(lo, d)}, {pp(hi, d)}]"
+
+
+def ann_pair(p: dict) -> dict:
+    """A paired monthly reading annualised as its own JSON annualised it (the factor in its mean_annualised_x key):
+    mean, iid-month interval and 3-month-block interval, as fractions a year."""
+    k = next(k for k in p if k.startswith("mean_annualised_x"))
+    fac = float(k[len("mean_annualised_x"):].replace("_", "."))
+    assert abs(p[k] - p["mean_per_tranche"] * fac) < 1e-12, k
+    return {"mean": p[k], "iid": tuple(x * fac for x in p["iid_months"]["ci95"]),
+            "block": tuple(x * fac for x in p["block_3_months"]["ci95"]), "ahead": p["months_set_beats_control"],
+            "n": p["n_months"]}
+
+
+def p2_seed(cfg: str) -> int | None:
+    s = ((J.seeds or {}).get("seeds") or {}).get(cfg)
+    if s is None:
+        m = re.search(r"_s(\d+)$", cfg)
+        s = int(m.group(1)) if m else None
+    return s
+
+
+def p2_base(cfg: str) -> str:
+    return re.sub(r"_s\d+$", "", cfg)
+
+
+def p2_bar() -> float | None:
+    """The primary AUC mark as written in the A/B tag's compare.json (or in tune.json's own pass-mark text)."""
+    if J.cmp is not None:
+        return rule_num(J.cmp["design"]["pass_marks"]["primary"], r"delta >= ([0-9.]+)")
+    if J.tune is not None:
+        return rule_num(J.tune["outer"]["pass_mark"], r">= \+([0-9.]+)")
+    return None
+
+
+def vchip(ok: bool, yes: str = "pass", no: str = "fail") -> str:
+    return chip("pass" if ok else "fail", yes if ok else no)
+
+
+def p2_first_gate1() -> bool:
+    """True when no configuration before phase 2 (the five-year run, the corrected and the ten-year data) passed gate 1."""
+    prev = [g.get("1", {}).get("pass") for g in D.gates.values()]
+    for gj in (I.gates2, I.gates10):
+        if gj:
+            prev += [g.get("1", {}).get("pass") for g in gj["gates"].values()]
+    return not any(prev)
+
+
+def p2_questions() -> list[dict]:
+    """Every pre-registered question of phase 2 with its mark, result and verdict, each read from its stream's JSON and
+    checked against the stream's own flags (ml/PROGRAM_REPORT.md §14.1). ok is None while a question's JSON is pending."""
+    bar = p2_bar()
+    qs: list[dict] = []
+
+    def add(qid: str, title: str, need: tuple[str, ...] = (), **kw) -> None:
+        qs.append({"id": qid, "title": title, "files": j_missing(*need), "ok": None, "mark": DASH, "result": "",
+                   "chip": chip("pending"), "why": "", "note": "", **kw})
+
+    if J.liquid is not None:
+        L = J.liquid
+        irbar = rule_num(L["pass_mark_text"], r"IR >= ([0-9.]+)")
+        res = []
+        for s, what in (("L1", "liquid tercile"), ("L2", "top two terciles")):
+            st = L["sets"][s]
+            c, pa = st["neutral_liquid_book"], ann_pair(st["paired_vs_control_neutral"])
+            res.append(f"{s} ({what}) IR {f(c['ir_20bps'], 2)} {ci(*c['ir_ci95'], d=2)}, paired {pp(pa['mean'])} pp/yr "
+                       f"{cipp(*pa['iid'])}")
+        ok = any(st["pass_mark"]["PASS"] for st in L["sets"].values())
+        assert ok == (L["verdict"] == "PASS")
+        add("Q3", "a model trained on liquid names", ok=ok, chip=vchip(ok),
+            mark=f"liquid neutral book IR ≥ {f(irbar, 1)} with CI &gt; 0, and a paired gain over the control's liquid book "
+                 f"with CI &gt; 0",
+            result="; ".join(res),
+            why=f"A liquid-only model throws information away: on the same liquid rows the full-universe model ranks as "
+                f"well as the liquid-only one (AUC {MD_ONLY['p2_liq_full_auc']} against "
+                f"{f(L['sets']['L1']['model_descriptive']['cv_auc_mean'], 4)}).")
+    else:
+        add("Q3", "a model trained on liquid names", ("liquid",))
+    if J.fo is not None:
+        pm = J.fo["pass_mark"]
+        srbar = rule_num(pm["rule"], r">= ([0-9.]+) with")
+        bbar = rule_num(pm["rule"], r"within \+-([0-9.]+)")
+        pl, nt = pm["plain"], pm["neutral"]
+        ok = pl["pass"] or nt["pass"]
+        hedged = all(abs(x[b]) <= bbar for x in (pl, nt) for b in ("beta_plain", "beta_dimson"))
+        add("Q4", "F&amp;O long-short through stock futures", ok=ok, chip=vchip(ok),
+            mark=f"net Sharpe ≥ {f(srbar, 1)} with CI &gt; 0, beta within ±{f(bbar, 1)}",
+            result=f"plain {sg(pl['sharpe'], 2)} {ci(*pl['sharpe_ci95'], d=2)}, neutral {sg(nt['sharpe'], 2)} "
+                   f"{ci(*nt['sharpe_ci95'], d=2)}; betas {sg(pl['beta_plain'], 2)} and {sg(nt['beta_plain'], 2)}",
+            why=(f"The futures hedge works (the book's beta to the Nifty 50 is inside ±{f(bbar, 1)} on both estimators "
+                 f"for both scores), but the short leg loses net of carry and costs." if hedged else
+                 "Neither the hedge nor the returns meet the mark."))
+    else:
+        add("Q4", "F&amp;O long-short through stock futures", ("fo",))
+    if J.h40 is not None:
+        H_ = J.h40
+        pmk = H_["pass_mark"]
+        be = pmk["breakeven_flat_cost_bps_per_side"]
+        ok = pmk["PASS"]
+        assert ok == (H_["verdict"] == "PASS")
+        dd = {k: H_["books_meta"][k]["descriptive_on_40d_label"]["rank_ic_vs_40d_excess_mean"] for k in ("h40", "control20")}
+        add("Q5", "a 40-day horizon", ok=ok, chip=vchip(ok),
+            mark="paired gain of the 40-session book with CI &gt; 0 and a higher break-even",
+            result=f"{pp(pmk['mean_diff_ann'])} pp/yr {cipp(*pmk['ci95_months_resampled_ann'])}; break-even "
+                   f"{f(be['a'], 0)} vs {f(be['b'], 0)} bps",
+            why=f"Training on the 40-day label does not rank 40-day outcomes better (rank IC {f(dd['h40'], 3)} against "
+                f"{f(dd['control20'], 3)} for the 20-day model).")
+    else:
+        add("Q5", "a 40-day horizon", ("h40",))
+    if J.events is not None and J.cmp is not None and bar is not None and "ae1_events - control" in J.cmp["pairs"]:
+        ev = J.events
+        pr = J.cmp["pairs"]["ae1_events - control"]
+        lo, hi = pr["ci95"]
+        ok = pr["delta_cv_mean"] >= bar and lo > 0
+        assert ok == pr["pass_primary"]
+        ic = ev["ic"]["ear_3d_recent_release"]
+        every = all(v["mean"] > 0 for v in ic["by_year"].values())
+        ps_ = ev["parse"]
+        assert ps_["records"] + ps_["board_meeting_list_rows"] == ev["checks"]["reparse"]["records_stored"]
+        add("Q6", f"company announcements ({n(ps_['dates_selected'])} PR bundles: {n(ps_['records'])} announcement "
+                  f"records, {n(ps_['board_meeting_list_rows'])} board-meeting list rows)", ok=ok, chip=vchip(ok),
+            mark=f"ΔAUC ≥ {sg(bar, 3)} with CI &gt; 0", result=f"{sg(pr['delta_cv_mean'], 4)} {cik(lo, hi)}",
+            note=f"folds won {pr['folds_won'].replace('/', ' of ')}",
+            why=f"The earnings-announcement drift is real (<code>ear_3d</code> rank IC {sg(ic['mean'], 3)}, Newey-West t "
+                f"{f(ic['nw_t'], 1)}, positive in {'every year' if every else 'most years'}) but already mostly inside the "
+                f"model.")
+    else:
+        add("Q6", "company announcements", ("events", "cmp"))
+    if J.tune is not None:
+        T = J.tune
+        pr = T["outer"]["pair"]
+        b7 = rule_num(T["outer"]["pass_mark"], r">= \+([0-9.]+)")
+        lo, hi = pr["ci95"]
+        ok = T["outer"]["PASS"]
+        assert ok == (pr["delta_cv_mean"] >= b7 and lo > 0)
+        if J.cmp is not None and "q7_tuned - control" in J.cmp["pairs"]:
+            assert abs(J.cmp["pairs"]["q7_tuned - control"]["delta_cv_mean"] - pr["delta_cv_mean"]) < 1e-12
+        sw, sy = T["summary"]["switched_years"], T["summary"]["settings_by_year"]
+        add("Q7", "nested hyper-parameter tuning", ok=ok, chip=vchip(ok), mark=f"ΔAUC ≥ {sg(b7, 3)} with CI &gt; 0",
+            result=f"{sg(pr['delta_cv_mean'], 4)} {cik(lo, hi)}",
+            why=f"Tuning moved {word(len(sw))} of {word(len(sy))} years off the incumbent setting and bought nothing: the "
+                f"configuration was not the bottleneck.")
+    else:
+        add("Q7", "nested hyper-parameter tuning", ("tune",))
+    if J.cpcv is not None:
+        C = J.cpcv
+        dz = C["design"]
+        need = int(rule_num(dz["robust_rule"], r">= (\d+) of \d+ paths"))
+        fu, lq = C["readings"]["full"], C["readings"]["liquid"]
+        for x in (fu, lq):
+            assert x["ROBUST"] == (x["n_paths_positive_net_excess"] >= need)
+        ok = fu["ROBUST"] and lq["ROBUST"]
+        kk = (f"{fu['n_paths_positive_net_excess']}/{fu['n_paths']} each"
+              if fu["n_paths_positive_net_excess"] == lq["n_paths_positive_net_excess"] else
+              f"{fu['n_paths_positive_net_excess']}/{fu['n_paths']} and {lq['n_paths_positive_net_excess']}/{lq['n_paths']}")
+        ea, eb = fu["excess_across_paths"], lq["excess_across_paths"]
+        add("Q2", f"combinatorial purged CV ({len(dz['groups'])} groups, {dz['n_splits']} splits, {dz['n_paths']} paths)",
+            ok=ok, chip=vchip(ok, "robust", "not robust"),
+            mark=f"net excess &gt; 0 in ≥ {need} of {dz['n_paths']} paths",
+            result=f"full-universe neutral {pc(ea['min'])} to {pc(ea['max'])}/yr, liquid neutral {pc(eb['min'])} to "
+                   f"{pc(eb['max'])}/yr, {kk}",
+            note="path dependence only: CPCV trains on later months by design")
+    else:
+        add("Q2", "combinatorial purged CV", ("cpcv",))
+    if J.exp is not None:
+        X = J.exp
+        pr = X["primary"]
+        bm = X["book_mark"]
+        k1 = next(k for k in bm if k.startswith("part1_"))
+        irbar = rule_num(k1, r"ir_ge_([0-9.]+)_")
+        b = X["books"]["q9_expanding|vol+size|liq_top_decile"]
+        pa = ann_pair(X["paired_vol+size|liq_top_decile"])
+        lo, hi = pr["ci95"]
+        if bar is not None:
+            assert pr["pass_primary"] == (pr["delta_cv_mean"] >= bar and lo > 0)
+        assert bm[k1] == (b["ir_20bps"] >= irbar and b["ir_ci95"][0] > 0)
+        assert bm["part2_paired_iid_ci_above_0"] == (pa["iid"][0] > 0 and pa["mean"] > 0)
+        assert bm["PASS"] == (bm[k1] and bm["part2_paired_iid_ci_above_0"])
+        ok = pr["pass_primary"] and bm["PASS"]
+        am = re.search(r"amendment (A\d+)", X["plan"])
+        add("Q9", "an expanding training window", ok=ok, amend=f" (amendment {am.group(1)})" if am else "",
+            chip=(chip("pass", "pass, both") if ok else
+                  chip("pass", "AUC pass") if pr["pass_primary"] else chip("fail")),
+            mark=(f"ΔAUC ≥ {sg(bar, 3)} with CI &gt; 0" if bar is not None else "the primary AUC mark")
+                 + "; the Q3 rule on the liquid book",
+            result=f"<b>{sg(pr['delta_cv_mean'], 4)} {cik(lo, hi)}</b>; liquid neutral book IR {f(b['ir_20bps'], 2)} "
+                   f"{ci(*b['ir_ci95'], d=2)}, paired {pp(pa['mean'])} pp/yr {cipp(*pa['iid'])}",
+            note="exploratory: the hypothesis came from the CPCV reading")
+    else:
+        add("Q9", "an expanding training window", ("exp",))
+    if J.seeds is not None:
+        S = J.seeds["seed_averaged"]
+        lq, fu = S["vol+size|liq_top_decile"], S["vol+size|top_decile"]
+        for x in S.values():
+            assert x["both_cis_above_0"] == (x["paired_iid_ci_ann"][0] > 0 and x["paired_block3_ci_ann"][0] > 0)
+            assert x["REAL"] == (x["both_cis_above_0"] and x["min_q9_seed_gt_max_control_seed"])
+        ok = lq["REAL"]
+        order = all(x["min_q9_seed_gt_max_control_seed"] for x in (lq, fu))
+        am = re.search(r"amendment (A\d+)", J.seeds["plan"])
+        add("Q10", "is the Q9 book gain one seed draw?", ok=ok, amend=f" (amendment {am.group(1)})" if am else "",
+            chip=vchip(ok, "real", "not shown"),
+            mark="seed-averaged paired CI &gt; 0 and every Q9 seed above every control seed",
+            result=f"liquid neutral <b>{pp(lq['paired_mean_ann'])} pp/yr {cipp(*lq['paired_iid_ci_ann'])}</b>; "
+                   f"full-universe neutral {pp(fu['paired_mean_ann'])} {cipp(*fu['paired_iid_ci_ann'])}; "
+                   + ("both orderings hold" if order else "the seed ordering does not hold for both"))
+    else:
+        add("Q10", "is the Q9 book gain one seed draw?", ("seeds",))
+    for q in qs:
+        q.setdefault("amend", "")
+    return qs
+
+
+def p2_paper_books() -> list[str]:
+    return [k for k in (J.paper or {}).get("latest_baskets", {}) if k != "signal_date"]
+
+
+def p2_superseded() -> str:
+    """The header's correction of section 1 (ml/PROGRAM_REPORT.md status line): which paper book is the book of
+    record since the forward record started, or '' while paper.json is pending."""
+    books = p2_paper_books()
+    if J.paper is None or "primary" not in books:
+        return ""
+    ext = J.paper.get("extension") or {}
+    s = (f' <a href="#verdict">Section 1</a>\'s recommendation, the Model row of its deliverables table and '
+         f'<a href="#recs">§11</a> item 1 are superseded: since {J.paper["inception_signal_date"]} the paper book of '
+         f'record is the volatility+size-neutral LightGBM construction of <a href="#improve-gates">§13.7</a> (primary: '
+         f'full-universe top decile; capacity: its liquid-tercile version), with the rank ensemble as challenger, the '
+         f'plain score as reference')
+    if "challenger_expanding" in books and ext.get("registered_utc"):
+        s += (f' and, since {ext["registered_utc"][:10]}, the expanding-window challenger and its capacity version '
+              f'(<a href="#improve2-paper">§14.4</a>)')
+    return s + "."
+
+
+def p2_status_line() -> str:
+    """The header's phase-2 clause (ml/PROGRAM_REPORT.md status line), or '' while the phase's gates are pending."""
+    if J.gates is None:
+        return ""
+    promoted = [k for k, g in J.gates["gates"].items()
+                if all(v["pass"] for v in g.values() if isinstance(v, dict) and v.get("pass") is not None)]
+    s = "Verdict unchanged: no capital" if not promoted else f"Passing every scored gate: {join_words(promoted)}"
+    gains = [q for q in p2_questions() if q["id"] in P2_MODEL_SIDE and q["ok"]]
+    if gains:
+        desc = ", ".join(P2_SHORT[q["id"]] + (", exploratory" if q["id"] == "Q9" else "") for q in gains)
+        s += f"; {word(len(gains))} model-side gain{'s' if len(gains) > 1 else ''} above the bar ({desc})"
+        if "challenger_expanding" in p2_paper_books() and any(q["id"] == "Q9" for q in gains):
+            s += " now runs in the forward record as a challenger"
+    s += "."
+    if j_missing(*j_all()):
+        s += " Some phase-2 outputs are pending."
+    return s
+
+
+# ----------------------------------------------------------------- phase-2 charts
+def svg_p2_years(rows: list[tuple[str, float, float, int]], win: int) -> str:
+    """Mean fold AUC per calendar year: the rolling-window control (hollow) and the expanding window (filled), joined
+    per year, with the difference under each year."""
+    W, H = 470, 284
+    X0, X1, Y0, Y1 = 50, 462, 22, 212
+    vals = [v for _, a, b, _ in rows for v in (a, b)]
+    step = 0.02
+    d0 = min(0.5, math.floor(min(vals) / step + 1e-9) * step)
+    d1 = math.ceil(max(vals) / step - 1e-9) * step
+    band = (X1 - X0) / len(rows)
+
+    def Y(v: float) -> float:
+        return lin(v, d0, d1, Y1, Y0)
+
+    p = [svg_open(W, H, "Mean fold AUC by calendar year: the rolling-window control against the expanding window")]
+    t = d0
+    while t <= d1 + 1e-9:
+        p.append(f'<line x1="{X0}" y1="{Y(t):.1f}" x2="{X1}" y2="{Y(t):.1f}" '
+                 f'class="{"chance" if abs(t - 0.5) < 1e-9 else "grid"}"/>')
+        p.append(f'<text x="{X0 - 8}" y="{Y(t) + 4:.1f}" class="ax" text-anchor="end">{f(t, 2)}</text>')
+        t = round(t + step, 9)
+    for i, (y, a, b, k) in enumerate(rows):
+        xc = X0 + band * (i + 0.5)
+        xa, xb = xc - 7, xc + 7
+        tip = (f"{y}, {k} folds: control {f(a, 4)}, expanding window {f(b, 4)}, difference {sg(b - a, 4)}"
+               + (f"; identical, the expanding window is still under {win} sessions" if a == b else ""))
+        p.append(f'<g data-tip="{E(tip)}"><rect x="{xc - band / 2:.1f}" y="{Y0}" width="{band:.1f}" height="{Y1 - Y0}" '
+                 f'fill="transparent"/><line x1="{xa:.1f}" y1="{Y(a):.1f}" x2="{xb:.1f}" y2="{Y(b):.1f}" '
+                 f'stroke="var(--axisc)" stroke-width="1.5"/><circle cx="{xa:.1f}" cy="{Y(a):.1f}" r="4.5" '
+                 f'fill="var(--surface)" stroke="var(--muted)" stroke-width="2"/><circle cx="{xb:.1f}" cy="{Y(b):.1f}" '
+                 f'r="5" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/></g>')
+        p.append(f'<text x="{xc:.1f}" y="{Y1 + 18}" class="ax" text-anchor="middle">{y}</text>')
+        p.append(f'<text x="{xc:.1f}" y="{Y1 + 34}" class="anno-t" text-anchor="middle">{sg(b - a, 3)}</text>')
+    p.append(f'<text x="{X0 - 8}" y="{Y1 + 34}" class="ax ax-s" text-anchor="end">Δ</text>')
+    p.append(f'<text x="{(X0 + X1) / 2:.1f}" y="{H - 4}" class="ax ax-s" text-anchor="middle">mean fold AUC per calendar '
+             f'year; Δ = expanding minus control</text></svg>')
+    return "".join(p)
+
+
+def svg_p2_seeds(rows: list[tuple[str, list[tuple[int, dict]], list[tuple[int, dict]], float]]) -> str:
+    """One dot per seed's book (net excess a year): control seeds hollow, expanding-window seeds filled; under each
+    book's name, the seed-averaged paired difference."""
+    W, L, R = 470, 150, 450
+    top, gh = 18, 50
+    H = top + gh * len(rows) + 38
+    yb = H - 32
+    vals = [v["excess_ann"] for _, c, e, _ in rows for _, v in c + e]
+    step = 0.04
+    d0 = min(0.0, math.floor(min(vals) / step - 1e-9) * step)
+    d1 = max(step, math.ceil(max(vals) / step + 1e-9) * step)
+
+    def X(v: float) -> float:
+        return lin(v, d0, d1, L, R)
+
+    p = [svg_open(W, H, "Net excess a year of each seed's book: control seeds against expanding-window seeds")]
+    t = d0
+    while t <= d1 + 1e-9:
+        zero = abs(t) < 1e-9
+        p.append(f'<line x1="{X(t):.1f}" y1="{top - 6}" x2="{X(t):.1f}" y2="{yb}" class="{"axisln" if zero else "grid"}"/>')
+        p.append(f'<text x="{X(t):.1f}" y="{yb + 15}" class="ax" text-anchor="middle">{"0" if zero else pc(t, 0)}</text>')
+        t = round(t + step, 9)
+    for i, (lab, ctl, exp, dpp) in enumerate(rows):
+        yc = top + gh * i + gh / 2
+        p.append(f'<text x="{L - 12}" y="{yc - 2:.1f}" class="lbl" text-anchor="end">{E(lab)}</text>')
+        p.append(f'<text x="{L - 12}" y="{yc + 13:.1f}" class="ax ax-s" text-anchor="end">Δ {pp(dpp)} points a year</text>')
+        for (s, v), y, filled in [(sv, yc - 7, False) for sv in ctl] + [(sv, yc + 7, True) for sv in exp]:
+            tip = (f"{lab}, {'expanding window' if filled else 'control'}, seed {s}: {pc(v['excess_ann'])} a year, IR "
+                   f"{f(v['ir'], 2)} {ci(*v['ir_ci95'], d=2)}, ahead in {v['months_positive']} months")
+            if filled:
+                p.append(f'<circle cx="{X(v["excess_ann"]):.1f}" cy="{y:.1f}" r="5" fill="var(--s1)" '
+                         f'stroke="var(--surface)" stroke-width="2" data-tip="{E(tip)}"/>')
+            else:
+                p.append(f'<circle cx="{X(v["excess_ann"]):.1f}" cy="{y:.1f}" r="4.5" fill="var(--surface)" '
+                         f'stroke="var(--muted)" stroke-width="2" data-tip="{E(tip)}"/>')
+    p.append(f'<text x="{W / 2:.1f}" y="{H - 4}" class="ax ax-s" text-anchor="middle">net excess over the equal-weight '
+             f'benchmark, % a year (one dot per seed)</text></svg>')
+    return "".join(p)
+
+
+# ----------------------------------------------------------------- §14 subsections
+def p2_intro() -> str:
+    N, n1 = p2_n(), n_phase()
+    ledger = (f"N = {N} ({n1} after §13, {N - n1} added in phase 2; <code>ml/IMPROVEMENT_PLAN_2.md</code> section 4 lists "
+              f"every addition)" if N and n1 else "pending (<code>ab/10y_p2/gates.json</code>)")
+    miss = j_missing(*j_all())
+    status = ("complete. Every headline was recomputed independently from the raw predictions and price data by an "
+              "adversarial verifier" if not miss else
+              f"partial: {len(miss)} of {len(j_all())} outputs pending, each marked below")
+    out = [f'<p class="lede"><b>Governing document:</b> <code>ml/IMPROVEMENT_PLAN_2.md</code> (fixed before any result; '
+           f'amendments A1 and A2, ledger corrections and errata dated in its section 4). <b>Results of record:</b> '
+           f'<code>ml/results/improve2/IMPROVEMENT_RESULTS.md</code>, which quotes every number from a stream\'s JSON; this '
+           f'section reads the same JSON. <b>Trial ledger:</b> {ledger}. <b>Status:</b> {status}.</p>'
+           f'<p>The phase asked the questions <a href="#improve">§13</a> left open: can the book carry capital (a '
+           f'liquid-universe model, a futures-hedged long-short), is the horizon right (40 days), does a new data source '
+           f'help (the exchange\'s announcement files), is the model mis-tuned, and is the construction robust to which '
+           f'months train it (CPCV). It also started the forward record.</p>']
+    qs = p2_questions()
+    lev = [q for q in qs if q["id"] in P2_LEVERS and q["ok"] is not None]
+    lev_pend = [q for q in qs if q["id"] in P2_LEVERS and q["ok"] is None]
+    tiles = []
+    if N and n1:
+        tiles.append((f"N = {N}", "trial ledger", f"{n1} after §13, {N - n1} added in phase 2; the gates and the "
+                                                  f"phase's books are deflated at N = {N}", ""))
+    if lev:
+        bad = [q for q in lev if q["ok"] is False]
+        tiles.append((f"{len(bad)} of {len(lev)}",
+                      f"scored levers failed their marks ({len(lev_pend)} pending)" if lev_pend else "levers failed their marks",
+                      join_words([P2_SHORT[q["id"]] for q in bad]) if bad else "every scored lever passed its mark",
+                      chip("fail", f"{len(bad)} fail") if bad else chip("pass", "none fail")))
+    if J.exp is not None:
+        pr, m = J.exp["primary"], J.exp["models"]
+        tiles.append((sg(pr["delta_cv_mean"], 4), "expanding window, Δ AUC",
+                      f"{cik(*pr['ci95'])}; rank IC {f(m['control']['rank_ic_cv_mean'], 3)} → "
+                      f"{f(m['q9_expanding']['rank_ic_cv_mean'], 3)}", vchip(pr["pass_primary"], "Q9 pass", "Q9 fail")))
+    if J.gates is not None and "q9_expanding" in J.gates["gates"]:
+        g = J.gates["gates"]["q9_expanding"]
+        sc = [k for k, v in g.items() if isinstance(v, dict) and v.get("pass") is not None]
+        ps = [k for k in sc if g[k]["pass"]]
+        okg = sorted({k.split(" ")[0] for k in ps})
+        fl = sorted({k.split(" ")[0] for k in sc if not g[k]["pass"]} - set(okg))
+
+        def gw(xs: list[str]) -> str:
+            return f"gate{'s' if len(xs) > 1 else ''} {join_words(xs)}"
+
+        tiles.append((f"{len(ps)} of {len(sc)}", "gates passed, expanding window",
+                      (f"{gw(okg)} pass" if okg else "none passes") + (f"; {gw(fl)} fail" if fl else ""),
+                      chip("fail", "not promoted") if len(ps) < len(sc) else chip("pass", "all scored gates")))
+    if tiles:
+        out.append('<div class="tiles">' + "".join(
+            f'<div class="tile"><div class="v">{v}</div><div class="k">{k}</div><div class="d">{d}</div>'
+            + (f'<div class="tchip">{c}</div>' if c else "") + "</div>" for v, k, d, c in tiles) + "</div>")
+    if N:
+        FACTS["p2_N"] = str(N)
+    return "".join(out)
+
+
+def p2_marks() -> str:
+    h = imp_h3("improve2-marks", "14.1", "What passed and what failed",
+               "<code>ml/results/improve2/IMPROVEMENT_RESULTS.md</code>; every number below from the stream's own JSON.")
+    qs = p2_questions()
+    rows = []
+    for q in qs:
+        qcell = f"<b>{q['id']}</b>{q['amend']}: {q['title']}"
+        if q["ok"] is None:
+            rows.append([qcell, q["mark"], '<span class="dim2">needs ' + ", ".join(f"<code>{E(x)}</code>" for x in q["files"])
+                         + "</span>", chip("pending")])
+            continue
+        rows.append([qcell, q["mark"], q["result"] + (f'<span class="sub">{q["note"]}</span>' if q["note"] else ""),
+                     q["chip"]])
+    tab = table(["Question", "Pre-registered mark", "Result", "Verdict"], rows, cls="plain p2q", wrap=(0, 1, 2))
+    nm = (J.exp or {}).get("books", {}).get("control|vol+size|top_decile", {}).get("n_months")
+    nm40 = ((J.h40 or {}).get("pass_mark") or {}).get("n_months")
+    ncp = p2_cpcv_months()
+    cap = ("PASS and FAIL refer to marks written before the result existed. Books are net of 20 bps per side against the "
+           "equal-weight benchmark of the same universe (whole universe or liquid tercile)"
+           + (f" over {nm} signal months on the ten-year data" if nm else "")
+           + (" (" + ", ".join(x for x in (f"{nm40} for the 40-session books" if nm40 and nm40 != nm else "",
+                                             f"{ncp} for the CPCV paths" if ncp and ncp != nm else "") if x) + ")"
+              if (nm40 and nm40 != nm) or (ncp and ncp != nm) else "")
+           + "; pp/yr is percentage points a year; intervals are 95%. AUC deltas are paired against the control on "
+             "identical folds and bootstrap draws (<code>ab/10y_p2/compare.json</code>).")
+    fails = [q for q in qs if q["ok"] is False and q["why"]]
+    expl = ("<p>The failures are informative.</p><ul class=\"lims\">"
+            + "".join(f"<li><b>{q['id']}</b>: {q['why']}</li>" for q in fails) + "</ul>"
+            if fails else "")
+    FACTS["p2_verdicts"] = ", ".join(f"{q['id']} {'pending' if q['ok'] is None else ('ok' if q['ok'] else 'fail')}"
+                                     for q in qs)
+    return (h + f'<div class="card">{tab}<p class="cap">{cap}</p></div>' + expl
+            + srcs(*[j_label(a) for a in ("liquid", "fo", "h40", "events", "tune", "cpcv", "exp", "seeds", "cmp")]))
+
+
+def p2_a1_timing() -> str:
+    """When A1 was committed against when the Q9 job ran (ml/IMPROVEMENT_PLAN_2.md section 4, errata (i), (ii))."""
+    lag = p2_hms(MD_ONLY["p2_a1_commit"]) - p2_hms(MD_ONLY["p2_q9_start"])
+    return (f"A1 was committed {lag} s after the Q9 job started ({MD_ONLY['p2_a1_commit']} against "
+            f"{MD_ONLY['p2_q9_start']} UTC), before its first fold result ({MD_ONLY['p2_q9_first']}), and Q9 ran without "
+            f"the two pre-compute reviews (plan 2, errata (i) and (ii))")
+
+
+def p2_cpcv_months() -> int | None:
+    """Signal months of the CPCV books (cpcv.json: the walk-forward reference on the same months)."""
+    ref = (((J.cpcv or {}).get("readings") or {}).get("liquid") or {}).get("reference_walk_forward_same_months") or {}
+    m = re.fullmatch(r"\d+/(\d+)", str(ref.get("months_positive", "")))
+    return int(m.group(1)) if m else None
+
+
+def p2_hms(t: str) -> int:
+    h, m, s_ = (int(x) for x in re.search(r"(\d\d):(\d\d):(\d\d)", t).groups())
+    return 3600 * h + 60 * m + s_
+
+
+def p2_window() -> str:
+    qs = {q["id"]: q for q in p2_questions()}
+    won = [q for q in qs.values() if q["id"] in P2_LEVERS and q["ok"]]
+    title = ("The one lever that worked: training history" if [q["id"] for q in won] == ["Q9"] else
+             "Training history: an expanding window")
+    h = imp_h3("improve2-window", "14.2", title,
+               "<code>ml/results/improve2/expanding/EXPANDING.md</code> and <code>seeds/SEEDS.md</code>; numbers from "
+               "<code>expanding.json</code>, <code>seeds.json</code> and the A/B tag's <code>compare.json</code> and "
+               "<code>books.json</code>.")
+    if J.exp is None:
+        return h + j_pend("The expanding training window (amendment A1)", ("exp",))
+    X = J.exp
+    M, pr = X["models"], X["primary"]
+    win = D.m5["all51"]["params"]["train_sessions"]
+    nfold = int(pr["folds_won"].split("/")[1])
+    out = [h]
+    nf = ((J.cmp or {}).get("models", {}).get("q9_expanding") or {}).get("n_features")
+    how = (f"the same LightGBM, the same {nf} features and {nfold} folds, trained on every eligible row before the "
+           f"embargo instead of the last {win} sessions.") if nf else (
+        f"the same LightGBM on the same features and {nfold} folds, trained on every eligible row before the embargo "
+        f"instead of the last {win} sessions.")
+    if J.cpcv is not None:
+        C = J.cpcv
+        am, wf = C["auc_across_paths"], C["reference_metrics"]["wf_control"]
+        lq = C["readings"]["liquid"]
+        groups = list(C["design"]["groups"].values())
+        ncp = p2_cpcv_months()
+        nwf = (X.get("books", {}).get("control|vol+size|top_decile") or {}).get("n_months")
+        out.append(f"<p>CPCV (Q2) beat the walk-forward control by a wide margin on the same "
+                   + (f"{ncp} " if ncp else "") + f"months: mean fold AUC "
+                   f"{f(am['min'])} to {f(am['max'])} on the {C['design']['n_paths']} paths against {f(wf['cv_auc_mean'])}, "
+                   f"and the liquid neutral book {pc(lq['excess_across_paths']['min'])} to "
+                   f"{pc(lq['excess_across_paths']['max'])} a year against "
+                   f"{pc(lq['reference_walk_forward_same_months']['excess_ann_vs_ew_20bps'])}"
+                   + (f" (the CPCV books run on {ncp} signal months, the walk-forward book table below on {nwf})"
+                      if ncp and nwf and ncp != nwf else "")
+                   + f". The verifier decomposed the "
+                   f"gap: {MD_ONLY['p2_cpcv_2018']} of the liquid gain sits in the first group ({groups[0][0]}.."
+                   f"{groups[0][-1]}), where CPCV trains on "
+                   f"later data (look-ahead by construction), but the last group ({groups[-1][0][:4]}-"
+                   f"{groups[-1][-1][2:4]}), which has no later data, gains as much as the others. That pointed at the "
+                   f"amount of history, not at future knowledge, and amendment A1 tested it. {p2_a1_timing()}: "
+                   f"{how}</p>")
+    else:
+        out.append(f"<p>Amendment A1 tested whether the amount of history matters. {p2_a1_timing()}: {how}</p>")
+    if J.cmp is not None:
+        for k in ("control", "q9_expanding"):
+            if k in J.cmp["models"]:
+                for fld in ("cv_auc_mean", "min_fold_auc", "holdout_auc", "rank_ic_cv_mean", "pct_folds_ge_050"):
+                    assert abs(J.cmp["models"][k][fld] - M[k][fld]) < 1e-12, (k, fld)
+    rows = []
+    for k, lab, em in (("control", f"control, rolling {win} sessions", False), ("q9_expanding", "expanding window", True)):
+        m = M[k]
+        auc = f"{f(m['cv_auc_mean'])} {ci(*m['cv_mean_ci95'], signed=False)}"
+        ric = f"{sg(m['rank_ic_cv_mean'], 3)} ({f(m['rank_ic_nw_t'], 1)})"
+        rows.append([f"<b>{lab}</b>" if em else lab, f"<b>{auc}</b>" if em else auc, pu(m["pct_folds_ge_050"]),
+                     f(m["min_fold_auc"], 3), f(m["holdout_auc"]), f"<b>{ric}</b>" if em else ric])
+    tab = table([f"{nfold} folds, ten-year data", "CV AUC [95% CI]", "Months ≥ 0.50", "Worst", "Holdout",
+                 "Rank IC (NW t)"], rows, cls="plain", wrap=(0,))
+    bar = p2_bar()
+    pills = [f'<div class="pm">{vchip(pr["pass_primary"], "primary pass", "primary fail")}Δ CV-mean AUC '
+             f'{sg(pr["delta_cv_mean"], 4)} {cik(*pr["ci95"])}, folds won {pr["folds_won"].replace("/", " of ")}, Δ rank '
+             f'IC {sg(pr["rank_ic_delta_mean"], 4)} (Newey-West t {f(pr["rank_ic_delta_nw_t"], 1)}), Δ holdout AUC '
+             f'{sg(pr["holdout_auc_delta"], 4)}' + (f"; the mark is ≥ {sg(bar, 3)} with the interval clear of zero"
+                                                   if bar is not None else "") + ".</div>"]
+    if J.seeds is not None:
+        au = J.seeds["auc"]
+        sd = J.seeds["seeds"]
+        cs = sorted(v for k, v in sd.items() if p2_base(k) == "control")
+        es = sorted(v for k, v in sd.items() if p2_base(k) == "q9_expanding")
+        lo, hi = au["fold_block3_ci"]
+        pills.append(f'<div class="pm">{vchip(lo > 0, "every seed", "seed-sensitive")}Seed-averaged over seeds '
+                     f'{es[0]}-{es[-1]} against {cs[0]}-{cs[-1]}: {sg(au["seed_averaged_delta"], 4)} {cik(lo, hi)} over '
+                     f'3-fold blocks; the seed standard deviation is {f(au["control_seed_sd"], 4)} (control) and '
+                     f'{f(au["q9_seed_sd"], 4)} (expanding), so the AUC gain is not a seed artefact.</div>')
+    out.append(f'<div class="card"><h3 class="cardh">Ranking quality over {nfold} monthly folds</h3>{tab}'
+               f'<div class="pm-row">{"".join(pills)}</div></div>')
+    FACTS.update({"p2_q9_delta": sg(pr["delta_cv_mean"], 4), "p2_q9_ci": cik(*pr["ci95"]),
+                  "p2_q9_cv": f(M["q9_expanding"]["cv_auc_mean"])})
+    # two views of the gain: ranking by calendar year, books by seed
+    figs = []
+    nd = None
+    if J.cmp is not None and "q9_expanding" in J.cmp["models"]:
+        c = J.cmp
+        folds = c["design"]["folds"]
+        fa, fb = c["models"]["control"]["fold_aucs"], c["models"]["q9_expanding"]["fold_aucs"]
+        assert abs(sum(fb[x] - fa[x] for x in folds) / len(folds) - pr["delta_cv_mean"]) < 1e-12
+        yrows = []
+        for y in sorted({x[:4] for x in folds}):
+            fy = [x for x in folds if x[:4] == y]
+            yrows.append((y, sum(fa[x] for x in fy) / len(fy), sum(fb[x] for x in fy) / len(fy), len(fy)))
+        diff = [x for x in folds if fa[x] != fb[x]]
+        nd = len(diff)
+        same = [x for x in folds if x < diff[0]] if diff else folds
+        ytab = table(["Year", "Folds", "Control", "Expanding", "Difference"],
+                     [[y, str(k), f(a, 3), f(b, 3), sg(b - a, 3)] for y, a, b, k in yrows], cls="plain small-t")
+        figs.append(f'<div class="card"><h3 class="cardh">Mean fold AUC by calendar year</h3><div class="scroll">'
+                    f'<div class="wide-svg xs">{svg_p2_years(yrows, win)}</div></div><ul class="legend sm"><li><span '
+                    f'class="dot hollow"></span>control, rolling {win} sessions</li><li><span class="dot" '
+                    f'style="background:var(--s1)"></span>expanding window</li><li><span class="lk"></span>0.50</li></ul>'
+                    f'<details><summary>Show as a table</summary>{ytab}</details><p class="cap">Mean of the monthly fold '
+                    f'AUCs in each calendar year (<code>fold_aucs</code> of the A/B tag\'s <code>compare.json</code>). The '
+                    + (f'folds {same[0]} to {same[-1]} are identical because the expanding window is still shorter than '
+                       f'{win} sessions; the two differ on the other {nd}.' if same and diff else
+                       f'The two differ on {nd} folds.') + '</p></div>')
+    else:
+        figs.append(j_pend("Mean fold AUC by calendar year", ("cmp",)))
+    if J.seeds is not None:
+        sp = J.seeds["spread"]
+        srows = []
+        for key, _, short in P2_SEED_BOOKS:
+            ctl = [(p2_seed(k), v) for k, v in sp[key].items() if p2_base(k) == "control"]
+            exp = [(p2_seed(k), v) for k, v in sp[key].items() if p2_base(k) == "q9_expanding"]
+            srows.append((short, ctl, exp, J.seeds["seed_averaged"][key]["paired_mean_ann"]))
+        cs = sorted(s for s, _ in srows[0][1])
+        es = sorted(s for s, _ in srows[0][2])
+        figs.append(f'<div class="card"><h3 class="cardh">The books, seed by seed</h3><div class="scroll"><div '
+                    f'class="wide-svg xs">{svg_p2_seeds(srows)}</div></div><ul class="legend sm"><li><span class="dot '
+                    f'hollow"></span>control, seeds {cs[0]} to {cs[-1]}</li><li><span class="dot" '
+                    f'style="background:var(--s1)"></span>expanding window, seeds {es[0]} to {es[-1]}</li></ul>'
+                    f'<p class="cap">Each seed\'s book, net of 20 bps per side against the equal-weight benchmark of the '
+                    f'same universe (<code>seeds.json</code>). Δ is the seed-averaged paired difference, expanding minus '
+                    f'control; the table below gives its intervals.</p></div>')
+    else:
+        figs.append(j_pend("The books, seed by seed (Q10)", ("seeds",)))
+    out.append('<div class="cols2">' + "".join(figs) + "</div>")
+    # the four books
+    if J.books is not None:
+        N = str(J.books["n_trials"])
+        bk = J.books["books"]
+        spec = [("control|vol+size|top_decile", "control, neutral top decile", False),
+                ("q9_expanding|vol+size|top_decile", "expanding, neutral top decile", True),
+                ("control|vol+size|liq_top_decile", "control, neutral liquid top decile", False),
+                ("q9_expanding|vol+size|liq_top_decile", "expanding, neutral liquid top decile", True)]
+        trs = []
+        for k, lab, em in spec:
+            b = bk[k]
+            c = c20(b)
+            xb = X["books"][k]
+            assert abs(xb["excess_ann_vs_ew_20bps"] - c["excess_ann_vs_ew"]) < 1e-12 and abs(xb["ir_20bps"] - c["ir"]) < 1e-12
+            ex, ir_ = pc(c["excess_ann_vs_ew"]), f"{sg(c['ir'], 2)} {ci(*c['ir_ci95'], d=2)}"
+            trs.append([f"<b>{lab}</b>" if em else lab, f"<b>{ex}</b>" if em else ex, f"<b>{ir_}</b>" if em else ir_,
+                        f"{b['months_positive']}/{b['n_months']}",
+                        f(b["capacity"]["aum_cap_rs_crore_p10name_5pct_adv"], 0),
+                        pc(b["segments"]["combined"]["name_level"]["excess_ann_vs_ew"]),
+                        f(b["breakeven_flat_cost_bps_per_side"], 0), f(b["dsr"][N]["dsr"], 3)])
+        nm = bk[spec[0][0]]["n_months"]
+        btab = table([f"Book, net 20 bps vs the equal-weight benchmark, {nm} months", "Excess/yr", "IR [95% CI]",
+                      "Months ahead", "Capacity (₹ cr)", "Name-level excess", "Break-even (bps/side)", f"DSR (N = {N})"],
+                     trs, cls="plain", wrap=(0,))
+        bm = X["book_mark"]
+        k1 = next(k for k in bm if k.startswith("part1_"))
+        irbar = rule_num(k1, r"ir_ge_([0-9.]+)_")
+        lb = X["books"]["q9_expanding|vol+size|liq_top_decile"]
+        pa = ann_pair(X["paired_vol+size|liq_top_decile"])
+        pf = ann_pair(X["paired_vol+size|top_decile"])
+        bpills = (f'<div class="pm">{vchip(bm[k1], "part 1 pass", "part 1 fail")}The liquid neutral book\'s IR must reach '
+                  f'{f(irbar, 1)} with its interval above zero: IR {f(lb["ir_20bps"], 2)} {ci(*lb["ir_ci95"], d=2)}.</div>'
+                  f'<div class="pm">{vchip(bm["part2_paired_iid_ci_above_0"], "part 2 pass", "part 2 fail")}Its paired '
+                  f'gain over the control\'s liquid book: {pp(pa["mean"])} points a year, {cipp(*pa["iid"])} (months) and '
+                  f'{cipp(*pa["block"])} (3-month blocks), ahead in {pa["ahead"]} of {pa["n"]} months.</div>')
+        FACTS.update({"p2_liq_ex": pc(c20(bk["q9_expanding|vol+size|liq_top_decile"])["excess_ann_vs_ew"]),
+                      "p2_liq_paired": f"{pp(pa['mean'])} {cipp(*pa['iid'])}"})
+        out.append(f'<div class="card"><h3 class="cardh">The four books (the Q3 book rule applied to the expanding '
+                   f'window)</h3>{btab}<div class="pm-row">{bpills}</div><p class="cap">From the A/B tag\'s '
+                   f'<code>books.json</code> ({n(J.books["n_signal_dates"])} signal dates; DSR at N = {N}) and checked '
+                   f'against <code>expanding.json</code>. The full-universe neutral book\'s paired gain is {pp(pf["mean"])} '
+                   f'points a year, {cipp(*pf["iid"])}. Capacity is the book size at which the tenth-percentile name it '
+                   f'buys trades 5% of its 20-day average value; name-level excess applies the pessimistic spread and '
+                   f'impact model of <a href="#improve-econ">§13.2</a>.</p></div>')
+    else:
+        out.append(j_pend("The four books at the phase-2 ledger", ("books",)))
+    # Q10: the seed table
+    if J.seeds is not None:
+        sd = J.seeds
+        cs = sorted(v for k, v in sd["seeds"].items() if p2_base(k) == "control")
+        es = sorted(v for k, v in sd["seeds"].items() if p2_base(k) == "q9_expanding")
+        trs = []
+        for key, lab, _ in P2_SEED_BOOKS:
+            sa, sp = sd["seed_averaged"][key], sd["spread"][key]
+            cv = [v["excess_ann"] for k, v in sp.items() if p2_base(k) == "control"]
+            ev_ = [v["excess_ann"] for k, v in sp.items() if p2_base(k) == "q9_expanding"]
+            assert (min(cv), max(cv)) == tuple(sa["control_seed_range"]) and (min(ev_), max(ev_)) == tuple(sa["q9_seed_range"])
+            assert (min(ev_) > max(cv)) == sa["min_q9_seed_gt_max_control_seed"]
+            em = sa["REAL"]
+            paired = f"{pp(sa['paired_mean_ann'])}"
+            trs.append([f"<b>{lab}</b>" if em else lab,
+                        two(pc(sa["control_mean_excess_ann"]), rng(pc(sa["control_seed_range"][0]), pc(sa["control_seed_range"][1]))),
+                        two(pc(sa["q9_mean_excess_ann"]), rng(pc(sa["q9_seed_range"][0]), pc(sa["q9_seed_range"][1]))),
+                        two(f"<b>{paired}</b>" if em else paired,
+                            f"{cipp(*sa['paired_iid_ci_ann'])} {cipp(*sa['paired_block3_ci_ann'])}"),
+                        "yes" if sa["min_q9_seed_gt_max_control_seed"] else "no", vchip(em, "real", "not shown")])
+        stab = table(["Book", f"Control, seeds {cs[0]}-{cs[-1]}: mean (range)",
+                      f"Expanding, seeds {es[0]}-{es[-1]}: mean (range)",
+                      "Seed-averaged paired, pp a year [months] [3-month blocks]",
+                      "Every expanding seed above every control seed", "Reading"], trs, cls="plain", wrap=(0, 4))
+        liq = sd["spread"]["vol+size|liq_top_decile"]
+        others = [v["excess_ann"] for k, v in liq.items() if p2_base(k) == "control" and k != "control"]
+        notes = [f"Seed calibration was registered because the verifier found that paired book tests against the "
+                 f"seed-{p2_seed('control')} control also “passed” for configurations with no ranking gain. Fixed seeds "
+                 f"carry one tree-randomness draw through every fold."]
+        if others and liq["control"]["excess_ann"] < min(others):
+            notes.append(f"The seed-{p2_seed('control')} control turned out to be its own unluckiest liquid book "
+                         f"({pc(liq['control']['excess_ann'])} against {pc(min(others))} to {pc(max(others))}), so every "
+                         f"earlier paired comparison against it was slightly flattered.")
+        out.append(f'<div class="card"><h3 class="cardh">Q10: is the book gain one seed draw?</h3>{stab}<p class="cap">'
+                   f'From <code>seeds.json</code>. The registered reading: the seed-averaged paired difference must clear '
+                   f'zero on both intervals (months resampled, and 3-month blocks) and every expanding seed must beat every '
+                   f'control seed; the neutral liquid book decides.</p></div><p>{" ".join(notes)}</p>')
+    else:
+        out.append(j_pend("Seed calibration (amendment A2)", ("seeds",)))
+    # what keeps it from changing the capital verdict
+    cav = ["<b>It is exploratory.</b> The hypothesis was formed after reading CPCV on the same months: a pass is "
+           "evidence for a forward test, not a promotion."]
+    reg = (f"<b>It is regime-concentrated.</b> {MD_ONLY['p2_auc_down']} AUC in {MD_ONLY['p2_n_down']} down months "
+           f"against {MD_ONLY['p2_auc_up']} in {MD_ONLY['p2_n_up']} up months")
+    if J.cmp is not None and "q9_expanding" in J.cmp["models"]:
+        c = J.cmp
+        folds = c["design"]["folds"]
+        fa, fb = c["models"]["control"]["fold_aucs"], c["models"]["q9_expanding"]["fold_aucs"]
+        dd = sorted((fb[x] - fa[x] for x in folds), reverse=True)
+        assert MD_ONLY["p2_n_down"] + MD_ONLY["p2_n_up"] == nd, "the down/up split must cover the folds that differ"
+        reg += (f" (the {nd} folds where the two windows differ); {sg(sum(dd[P2_DROP_BEST:]) / len(dd[P2_DROP_BEST:]), 4)} "
+                f"without the {P2_DROP_BEST} best folds")
+    cav.append(reg + ". A model trained on two bull years generalises badly into a sell-off; one that remembers earlier "
+                     "sell-offs does better.")
+    fr = [f"it leans on 2026 (without 2026 and the holdout: IR {MD_ONLY['p2_liq_ir_ex2026']}, interval including zero)"]
+    if J.seeds is not None:
+        liq = J.seeds["spread"]["vol+size|liq_top_decile"]
+        qs_ = [(p2_seed(k), v["ir_ci95"]) for k, v in liq.items() if p2_base(k) == "q9_expanding"]
+        z = [(s, c_) for s, c_ in qs_ if c_[0] <= 0]
+        if z:
+            fr.append(f"it includes zero for {word(len(z))} of {word(len(qs_))} seeds ("
+                      + "; ".join(f"seed {s}: {ci(*c_, d=2)}" for s, c_ in z) + ")")
+        else:
+            fr.append(f"it clears zero on all {word(len(qs_))} seeds")
+    if J.books is not None:
+        fr.append(f"its edge after name-level costs is "
+                  f"{pc(J.books['books']['q9_expanding|vol+size|liq_top_decile']['segments']['combined']['name_level']['excess_ann_vs_ew'])} a year")
+    cav.append("<b>The liquid book's interval is fragile:</b> " + join_words(fr) + ".")
+    if J.books is not None:
+        N = str(J.books["n_trials"])
+        bk = J.books["books"]
+        liqd = max(v["dsr"][N]["dsr"] for k, v in bk.items() if "|liq_" in k)
+        full = bk["q9_expanding|vol+size|top_decile"]["dsr"][N]["dsr"]
+        fs = sorted(v["dsr"][N]["dsr"] for k, v in bk.items()
+                    if p2_base(k.split("|")[0]) == "q9_expanding" and k.endswith("|vol+size|top_decile"))
+        g5 = rule_num(next(iter(J.gates["gates"].values()))["5 (plain)"]["name"], r"Sharpe >= ([0-9.]+)") if J.gates else None
+        cav.append(f"<b>Deflation.</b> At N = {N} every liquid book's Deflated Sharpe is {f(liqd, 3)} to three decimals; "
+                   f"the expanding window's full-universe neutral book reaches {f(full, 3)}"
+                   + (f" ({rng(f(fs[0], 3), f(fs[-1], 3))} across the seeds)" if len(fs) > 1 else "")
+                   + (f", below the {f(g5, 2)} the gates require." if g5 is not None else "."))
+    out.append('<div class="panel claims"><h3>What keeps this from changing the capital verdict</h3><ol class="lims">'
+               + "".join(f"<li>{x}</li>" for x in cav) + "</ol></div>")
+    out.append(srcs(j_label("exp"), j_label("seeds"), j_label("cmp"), j_label("books"), j_label("cpcv")))
+    return "".join(out)
+
+
+def p2_gate_order(G: dict) -> list[str]:
+    fam = ["control", "ae1_events", "q7_tuned", "q9_expanding"]
+    out = []
+    for b in fam + sorted({p2_base(k) for k in G} - set(fam)):
+        out += sorted((k for k in G if p2_base(k) == b), key=lambda k: (k != b, p2_seed(k) or 0, k))
+    return out
+
+
+def p2_cfg_label(cfg: str, G: dict) -> tuple[str, bool]:
+    b, s = p2_base(cfg), p2_seed(cfg)
+    if b != cfg:
+        return f"seed {s}", True
+    m = (J.cmp or {}).get("models", {})
+    nf, nc = m.get(cfg, {}).get("n_features"), m.get("control", {}).get("n_features")
+    lab = {"control": f"Control: LightGBM, {nc} features, rolling window",
+           "ae1_events": f"AE1: control + {nf - nc} event features" if nf and nc else "AE1: control + event features",
+           "q7_tuned": "Q7: nested tuning", "q9_expanding": "Q9: expanding window"}.get(cfg, cfg)
+    seeded = any(p2_base(k) == cfg and k != cfg for k in G)
+    return lab + (f", seed {s}" if seeded and s is not None else ""), False
+
+
+def p2_gates() -> str:
+    N = p2_n()
+    h = imp_h3("improve2-gates", "14.3", f"Gates at N = {N}" if N else "Gates",
+               f"<code>ml/results/improve/ab/{P2_TAG}/GATES.md</code>; verdicts from <code>gates.json</code>, numbers from "
+               f"<code>compare.json</code> and <code>books.json</code>.")
+    if J.gates is None:
+        return h + j_pend("Gates at the phase-2 ledger", ("gates", "cmp", "books"))
+    G = J.gates["gates"]
+    order = p2_gate_order(G)
+    grid, counts = gate_grid(J.gates, J.cmp, J.books, labels={k: p2_cfg_label(k, G) for k in order}, order=order)
+    q9 = [k for k in order if p2_base(k) == "q9_expanding"]
+    ctl = [k for k in order if p2_base(k) == "control"]
+    others = [k for k in order if k not in q9 and k not in ctl]
+    parts = []
+    if q9:
+        g1 = all(G[k]["1"]["pass"] for k in q9)
+        p1 = (J.cmp.get("pairs_vs_lr_l2") or {}).get("q9_expanding - lr_l2")
+        num = f" ({sg(p1['delta_cv_mean'], 4)} {cik(*p1['ci95'])} over the logistic benchmark, seed {p2_seed('q9_expanding')})" if p1 else ""
+        parts.append(f"The expanding window {'passes gate 1 on all ' + word(len(q9)) + ' seeds' if g1 else 'does not pass gate 1 on every seed'}"
+                     f"{num}" + (": the first gate-1 pass in the program." if g1 and p2_first_gate1() else "."))
+        bk = (J.books or {}).get("books", {})
+        g3 = [bk[f"{k}|vol+size|top_decile"]["share_months_positive"] for k in q9 if f"{k}|vol+size|top_decile" in bk]
+        g3ok = all(G[k]["3 (vol+size-neutral)"]["pass"] for k in q9)
+        g2 = [J.cmp["models"][k]["pct_folds_ge_050"] for k in q9]
+        g2bar = rule_num(G[q9[0]]["2"]["name"], r">= (\d+)% of months")
+        g2ok = all(G[k]["2"]["pass"] for k in q9)
+        g5 = [bk[f"{k}|{nt}|liq_top_decile"]["dsr"][str(N)]["dsr"] for k in q9 for nt in ("none", "vol+size")
+              if f"{k}|{nt}|liq_top_decile" in bk]
+        g5ok = all(G[k][g]["pass"] for k in q9 for g in ("5 (plain)", "5 (vol+size-neutral)") if g in G[k])
+        t3 = "gate 3 for the neutral top decile" + (f" ({rng(pu(min(g3)), pu(max(g3)))} of months)" if g3 else "")
+        t2 = f"gate 2 ({rng(pu(min(g2)), pu(max(g2)))} of months ≥ 0.50, bar {g2bar:g}%)"
+        t5 = f"gate 5 (liquid DSR {f(max(g5), 3)})" if g5 else ""
+        ok_, bad_ = [t for t, o in ((t3, g3ok), (t2, g2ok), (t5, g5ok)) if t and o], \
+            [t for t, o in ((t3, g3ok), (t2, g2ok), (t5, g5ok)) if t and not o]
+        parts.append((f"It also passes {join_words(ok_)}" if ok_ else "It passes no other gate")
+                     + (f"; it fails {join_words(bad_)}." if bad_ else "."))
+    if ctl:
+        cc = sorted({counts[k][0] for k in ctl})
+        parts.append(f"The control passes {' or '.join(str(x) for x in cc)} of the applicable gates"
+                     + (" depending on the seed" if len(cc) > 1 else "")
+                     + (f"; the {join_words([P2_CFG_WORD.get(k, k) for k in others])} configurations pass "
+                        f"{' or '.join(str(x) for x in sorted({counts[k][0] for k in others}))}." if others else "."))
+    promoted = [k for k, (p_, s_) in counts.items() if p_ == s_ and s_ > 0]
+    verdict = (" ".join(parts) + " Gate 4 does not apply (nothing is selected). The logistic benchmark ran on the rolling "
+               "window; whether a logistic model with an expanding window would close the gate-1 gap is untested. "
+               + ("<b>Nothing is promoted. The verdict of §1 stands: no capital.</b>" if not promoted else
+                  f"<b>Passing every scored gate: {join_words(promoted)}.</b>"))
+    FACTS["p2_gates"] = "; ".join(f"{k} {p_}/{s_}" for k, (p_, s_) in counts.items())
+    nfold = len(J.cmp["design"]["folds"])
+    return (h + f'<div class="card">{grid}<p class="cap">Gate 1: difference in CV-mean AUC against the L2 logistic with '
+                f'its interval; gate 2: share of {nfold} months with AUC ≥ 0.50 and the worst month; gate 3: months the '
+                f'top decile beats the equal-weight universe net of 20 bps; gate 5: Deflated Sharpe of the liquid-tercile '
+                f'top decile at N = {N}, with its Sharpe a year and PSR. Indented rows are seed replicates of the row '
+                f'above. Every verdict is recomputed here from <code>compare.json</code> and <code>books.json</code> and '
+                f'checked against <code>gates.json</code>.</p></div>'
+            + f'<div class="panel decision"><h3>Verdict</h3><p>{verdict}</p></div>'
+            + srcs(j_label("gates"), j_label("cmp"), j_label("books")))
+
+
+def p2_paper() -> str:
+    h = imp_h3("improve2-paper", "14.4", "The forward record",
+               "<code>ml/paper/</code>, <code>ml/results/improve2/paper/PAPER.md</code>; numbers from "
+               "<code>paper.json</code>.")
+    if J.paper is None:
+        return h + j_pend("The forward record (Q1)", ("paper",))
+    P_ = J.paper
+    inc, asof = P_["inception_signal_date"], P_["as_of_session"]
+    ext = P_.get("extension") or {}
+    am = re.search(r"amendment (\d+)", ext.get("amendment", ""))
+    books = p2_paper_books()
+    out = [h]
+    intro = (f"<p>The frozen construction of <a href=\"#improve-gates\">§13.7</a> started its forward record on {inc}: "
+             f"one command a day (<code>ml/paper/RUNBOOK.md</code>), an append-only ledger with a specification hash, "
+             f"and a byte-identical rebuild proof.")
+    if am and ext.get("books"):
+        xm = ext.get("models") or {}
+        exm = xm[max(xm)].get("training_window", {}) if xm else {}
+        intro += (f" Since spec amendment {am.group(1)} ({ext['registered_utc'][:10]}) it runs {word(len(books))} books, "
+                  f"the expanding-window challenger and its capacity version among them, backfilled from inception"
+                  + (" without changing a byte of the existing rows" if (ext.get("backfill_proof") or {}).get("existing_rows_unchanged") else "")
+                  + (f"; the challenger's October model trained on {n(exm['rows'])} rows" if exm.get("rows") else "")
+                  + ".")
+    out.append(intro + "</p>")
+    rows = []
+    inb = {**P_.get("inception_baskets", {}), **(ext.get("inception_baskets") or {})}
+    for k, what in PAPER_BOOKS:
+        if k not in books:
+            continue
+        since = (f"amendment {am.group(1)}, backfilled from {inc}" if k in (ext.get("books") or []) and am else inc)
+        rows.append([f"<code>{k}</code>", what, two(str(P_["latest_baskets"][k]["size"]),
+                                                    f"{inb[k]['size']} at inception" if k in inb and isinstance(inb[k], dict) else ""),
+                     BENCH_WORD.get(P_["marks"][k]["benchmark"], P_["marks"][k]["benchmark"]), since])
+    tab = table(["Book", "What it holds", f"Names ({P_['latest_baskets']['signal_date']})", "Benchmark", "Since"], rows,
+                cls="plain", wrap=(1, 3, 4))
+    mk = P_["marks"][books[0]]
+    out.append(f'<div class="card"><h3 class="cardh">{word(len(books), cap=True)} forward books as of {asof}</h3>{tab}'
+               f'<p class="cap">From <code>paper.json</code>. Each forward book is one trial and stays one trial. '
+               f'{word(mk["sessions"], cap=True)} sessions are marked so far ({mk["first_session"]} to '
+               f'{mk["last_session"]}); a few sessions of a ramping book say nothing about the strategy, so no return is '
+               f'quoted here.</p></div>')
+    items = []
+    tr, rg, idp = P_.get("trainer_reproduction") or {}, P_.get("regeneration_from_inception") or {}, P_.get("idempotency") or {}
+    if tr and rg and idp:
+        items.append(f"<b>Proofs.</b> The paper trainer reproduces the research holdout predictions "
+                     f"{'exactly' if tr.get('identical') else 'not exactly'} ({n(tr['rows_matched'])} rows); a "
+                     f"from-inception rebuild in a sandbox reproduces every ledger file "
+                     f"{'byte for byte' if rg.get('ledger_identical') else 'with differences'}; a second run appends "
+                     f"{'nothing' if idp.get('rows_appended') == 0 else str(idp.get('rows_appended')) + ' rows'}.")
+    sl = P_.get("superseded_ledger")
+    wr = next((w for w in (P_.get("ingest") or {}).get("writes", []) if w.get("kind") == "features_rebuild"), None)
+    research = []
+    if sl and wr:
+        live = {x["ticker"] for x in wr["feed_lines_added"]}
+        ev = next(x for x in wr["new_corporate_actions"] if x["ticker"] in live)
+        fake = rule_num(sl["reason"], r"ret_1d = \+([0-9.]+)")
+        true_ = rule_num(sl["reason"], r"\(true (-?[0-9.]+)\)")
+        pur = re.search(r"\('([^']+)', EX_DT empty", sl["reason"])
+        research = [x for x in wr["rebuilt_ca_feed_vs_10y"]["only_in_rebuilt_from_parser_extension"] if x[0] not in live]
+        old = sl["ccavenue_rows_in_books"]["old"] if "ccavenue_rows_in_books" in sl else []
+        items.append(f"<b>A data defect caught by review.</b> {ev['ticker']}'s {ev['ratio']:g}-for-1 consolidation is "
+                     + (f"spelled <code>{E(pur.group(1))}</code> " if pur else "")
+                     + f"in the exchange feed with an empty ex-date field. It was missed, giving a fake {pc(fake, 0)} "
+                       f"one-day return (true {pc(true_, 1)}), and it sat in {len(old)} baskets of the first ledger. The "
+                       f"parser was "
+                       f"extended, the store repaired under the lock ({'verified' if wr.get('verified') else 'not verified'}) "
+                       f"and the ledger re-issued once from inception, with the superseded rows kept byte for byte in "
+                       f"<code>{E(sl['folder'])}</code>."
+                     + (f" The same spelling gap leaves {word(len(research))} research-period consolidations unadjusted in "
+                        f"the research store (" + ", ".join(f"{t} {d}" for t, d, *_ in research) + "); their jump rows "
+                        f"are not universe rows of the ten-year dataset, and the fix is on the roadmap." if research else ""))
+    items.append(f"<b>What the forward record cannot match.</b> The research books exclude rows that fail the "
+                 f"forward-looking <code>y_clean_20d</code> screen ({MD_ONLY['p2_yclean']} of rows, mostly crashes; "
+                 f"{MD_ONLY['p2_yclean_pp']} of flattery). The live books hold every name, so live and backtest are not "
+                 f"like-for-like.")
+    al = [r for r in (P_.get("monitors_last_session") or {}).get("rows", []) if r.get("status") == "ALERT"]
+    note = P_.get("inception_point_in_time_note") or ""
+    cm = re.match(r"signal dates (.+?) were scored on (\d{4}-\d\d-\d\d)", note)
+    if cm:
+        sd = re.findall(r"\d{4}-\d\d-\d\d", cm.group(1))
+        items.append(f"<b>Scored after the fact.</b> The first {word(len(sd))} signal dates ({', '.join(sd)}) were "
+                     f"scored in one catch-up run on {cm.group(2)}, under the specification written that day before the "
+                     f"job produced any number; the construction is <a href=\"#improve-gates\">§13.7</a>'s and the "
+                     f"expanding books are Q9's configuration as amendment A1 registered it, so no parameter depends on "
+                     f"those sessions (<code>ml/paper/SPEC.md</code>, header and section 5).")
+    op = (f"<b>Operations.</b> The first tranche exits on {MD_ONLY['p2_first_exit']} ({MD_ONLY['p2_first_exit_late']} "
+          f"if the Muhurat session is not added to <code>ml/paper/calendar_live.json</code> in time).")
+    if al:
+        op += (f" Monitors at alert on {P_['monitors_last_session']['session']}: "
+               + ", ".join(f"<code>{E(r['monitor'])}</code>"
+                           + (f" of <code>{E(r['scope'])}</code>" if r["scope"] in books else "")
+                           + f" {f(float(r['value']), 3)} (threshold {E(r['threshold'])})" for r in al) + ".")
+    items.append(op)
+    out.append('<ul class="lims">' + "".join(f"<li>{x}</li>" for x in items) + "</ul>")
+    FACTS["p2_paper"] = f"{inc}, {len(books)} books"
+    out.append(srcs(j_label("paper"), "ml/results/improve2/paper/PAPER.md", "ml/paper/SPEC.md"))
+    return "".join(out)
+
+
+def p2_research_consolidations() -> int | None:
+    P_ = J.paper or {}
+    wr = next((w for w in (P_.get("ingest") or {}).get("writes", []) if w.get("kind") == "features_rebuild"), None)
+    if not wr:
+        return None
+    live = {x["ticker"] for x in wr["feed_lines_added"]}
+    return len([x for x in wr["rebuilt_ca_feed_vs_10y"]["only_in_rebuilt_from_parser_extension"] if x[0] not in live])
+
+
+def rec_status2() -> dict[int, tuple[str, str, str]]:
+    """What phase 2 did to the recommendations it answers (ml/PROGRAM_REPORT.md §14.5), from its JSON:
+    {item: (chip class, chip text, outcome)}. Items whose evidence is not loaded are left out."""
+    st: dict[int, tuple[str, str, str]] = {}
+    qs = {q["id"]: q for q in p2_questions()}
+    if J.paper is not None:
+        st[1] = ("info", "started", f'Phase 2, <a href="#improve2-paper">§14.4</a>: the forward record started on '
+                                    f'{J.paper["inception_signal_date"]} and runs {word(len(p2_paper_books()))} books'
+                                    + (", the expanding-window challenger among them" if "challenger_expanding" in
+                                       p2_paper_books() else "") + ".")
+    if qs["Q4"]["ok"] is not None:
+        pm = J.fo["pass_mark"]
+        st[P2_REC_ITEM["Q4"]] = ("done", "closed", f'Phase 2, <a href="#improve2-marks">§14.1</a> (Q4): the F&amp;O '
+                                                   f'long-short through stock futures {"passes" if qs["Q4"]["ok"] else "fails"} '
+                                                   f'its mark, net Sharpe {sg(pm["plain"]["sharpe"], 2)} (plain score) and '
+                                                   f'{sg(pm["neutral"]["sharpe"], 2)} (neutral).')
+    if qs["Q2"]["ok"] is not None:
+        rd = J.cpcv["readings"]
+        st[P2_REC_ITEM["Q2"]] = ("done", "closed", f'Phase 2, <a href="#improve2-marks">§14.1</a> (Q2): combinatorial purged '
+                                                   f'CV done, {"robust" if qs["Q2"]["ok"] else "not robust"}: positive net '
+                                                   f'excess in {rd["full"]["n_paths_positive_net_excess"]} of '
+                                                   f'{rd["full"]["n_paths"]} paths for the full-universe and '
+                                                   f'{rd["liquid"]["n_paths_positive_net_excess"]} of {rd["liquid"]["n_paths"]} '
+                                                   f'for the liquid neutral book.')
+    return st
+
+
+def status_imp2() -> dict:
+    """Status-board lines phase 2 adds, each only when its evidence is loaded. 'unknown' and 'not_upd' map the opening
+    words of an existing Unknown / Not-working item to the dated note appended to it (as in status_imp)."""
+    out: dict = {"working": [], "not": [], "pending": [], "unknown": {}, "not_upd": {}}
+    qs = {q["id"]: q for q in p2_questions()}
+    if J.gates is not None and J.cmp is not None:
+        q9 = [k for k in J.gates["gates"] if p2_base(k) == "q9_expanding"]
+        p1 = (J.cmp.get("pairs_vs_lr_l2") or {}).get("q9_expanding - lr_l2")
+        if q9 and p1 and all(J.gates["gates"][k]["1"]["pass"] for k in q9):
+            out["not_upd"]["Machine learning over a linear model"] = (
+                f'{chip("info", "§14.3")}the expanding window beats the logistic benchmark on every seed '
+                f'({sg(p1["delta_cv_mean"], 4)} {cik(*p1["ci95"])} for seed {p2_seed("q9_expanding")}), against a logistic '
+                f'model on the rolling window: evidence, not a goal; an expanding-window logistic model is untested.')
+    if J.exp is not None and qs["Q9"]["ok"]:
+        m, pr = J.exp["models"], J.exp["primary"]
+        s = (f'Training history (<a href="#improve2-window">§14.2</a>): the same LightGBM on an expanding window raises the '
+             f'ten-year CV AUC from {f(m["control"]["cv_auc_mean"])} to {f(m["q9_expanding"]["cv_auc_mean"])} '
+             f'({sg(pr["delta_cv_mean"], 4)} {cik(*pr["ci95"])}) and the rank IC from {f(m["control"]["rank_ic_cv_mean"], 3)} '
+             f'to {f(m["q9_expanding"]["rank_ic_cv_mean"], 3)}')
+        if J.seeds is not None and qs["Q10"]["ok"]:
+            sa = J.seeds["seed_averaged"]
+            s += (f'; its neutral books gain {pp(sa["vol+size|top_decile"]["paired_mean_ann"])} (full universe) and '
+                  f'{pp(sa["vol+size|liq_top_decile"]["paired_mean_ann"])} (liquid) points a year, seed-averaged, with '
+                  f'intervals clear of zero')
+        if J.gates is not None:
+            q9 = [k for k in J.gates["gates"] if p2_base(k) == "q9_expanding"]
+            if q9 and all(J.gates["gates"][k]["1"]["pass"] for k in q9) and p2_first_gate1():
+                s += "; the first configuration in the program to pass gate 1"
+        s += (". Exploratory and concentrated in falling markets"
+              + ("; in the forward record as a challenger, not promoted." if "challenger_expanding" in p2_paper_books()
+                 else "; not promoted."))
+        out["working"].append(s)
+    bad = [q for q in qs.values() if q["id"] in P2_LEVERS and q["ok"] is False]
+    if bad:
+        out["not"].append(f'Phase 2 levers (<a href="#improve2-marks">§14.1</a>): '
+                          + join_words([P2_SHORT[q["id"]] for q in bad])
+                          + f' {"each fail" if len(bad) > 1 else "fails"} the pre-registered mark; none should be retried '
+                            f'without new information.')
+    if J.exp is not None:
+        out["unknown"]["Anything that needs several"] = (
+            f'{chip("info", "§14.2")}the expanding window\'s AUC gain sits mostly in falling markets '
+            f'({MD_ONLY["p2_auc_down"]} in {MD_ONLY["p2_n_down"]} down months against {MD_ONLY["p2_auc_up"]} in '
+            f'{MD_ONLY["p2_n_up"]} up months): a model that remembers earlier sell-offs does better in the next one.')
+    if J.paper is not None:
+        out["pending"].append(f'The forward record (<a href="#improve2-paper">§14.4</a>): {word(len(p2_paper_books()))} '
+                              f'books since {J.paper["inception_signal_date"]}; the first tranche exits on '
+                              f'{MD_ONLY["p2_first_exit"]}, and the live comparison between the frozen book and the expanding-window '
+                              f'challenger is read under a rule registered before any live month matured: descriptive '
+                              f'after {MD_ONLY["p2_read_6m"]}, a decision after {MD_ONLY["p2_read_12m"]}, an interval '
+                              f'test after {MD_ONLY["p2_read_24m"]} (<code>ml/paper/SPEC.md</code> section 6).')
+    return out
+
+
+def p2_after() -> str:
+    h = imp_h3("improve2-recs", "14.5", "What this does to the recommendations and the roadmap")
+    qs = p2_questions()
+    by = {q["id"]: q for q in qs}
+    closed = [q for q in qs if (q["id"] in P2_LEVERS and q["ok"] is False) or (q["id"] == "Q2" and q["ok"] is not None)]
+    items = []
+    if closed:
+        items.append(f"{chip('done', 'closed')} <b>Closed with evidence:</b> "
+                     + join_words([P2_SHORT[q["id"]] + (f' (<a href="#recs">recommendation {P2_REC_ITEM[q["id"]]}</a>)'
+                                                        if q["id"] in P2_REC_ITEM else "")
+                                   for q in closed])
+                     + ". None should be retried without new information.")
+    if by["Q9"]["ok"]:
+        fwd = "challenger_expanding" in p2_paper_books()
+        items.append(f"{chip('info', 'candidate')} <b>New leading candidate:</b> the expanding-window construction. "
+                     + ("It is in the forward record as a challenger (<code>challenger_expanding</code>, "
+                        "<code>capacity_expanding</code>), not promoted; " if fwd else "It is not promoted; ")
+                     + f"the live comparison decides, not another backtest, under the rule registered in "
+                     f"<code>ml/paper/SPEC.md</code> section 6 before any live month matured: the twelve-month read "
+                     f"after {MD_ONLY['p2_read_12m']} switches the book of record only if the expanding book's mean paired "
+                     f"excess is above zero, its score's monthly rank IC beats the rolling score's in at least 7 of 12 "
+                     f"months and neither expanding book has a six-month IR alert; otherwise an interval test after "
+                     f"{MD_ONLY['p2_read_24m']}.")
+    items.append(f"{chip('info', 'process')} <b>Process:</b> paired book comparisons need seed calibration; in-cycle "
+                 f"follow-ups are dated amendments committed before their job and reviewed like any stream. Both are "
+                 f"written into <code>ml/PROCESS.md</code> and <code>ml/PROMPT.md</code>.")
+    nr = p2_research_consolidations()
+    items.append(f"{chip('open', 'open')} <b>Still open:</b> fundamentals and analyst data (no filings feed reachable here), "
+                 + (f"the {word(nr)} research-store consolidations, " if nr else "")
+                 + "a logistic benchmark on an expanding window. The ordered list is <code>ml/ROADMAP.md</code>.")
+    marked = sorted(rec_status2())
+    lead = ('<p>Each recommendation phase 2 answers is marked in place in <a href="#recs">the recommendations</a> '
+            f'(item{"s" if len(marked) > 1 else ""} {join_words([str(k) for k in marked])}); in short:</p>'
+            if marked and P.port else "<p>In short:</p>")
+    return h + lead + '<ul class="lims statl">' + "".join(f"<li>{x}</li>" for x in items) + "</ul>"
+
+
+def sec_improve2() -> str:
+    body = [p2_intro(), p2_marks(), p2_window(), p2_gates(), p2_paper(), p2_after()]
+    return f"""
+<section id="improve2">
+  <div class="sec-eyebrow">12 {MID} Improvement phase 2 {MID} report §14</div>
+  <h2>Improvement phase 2 ({int(IMPROVE2_DATE[8:])} {MONTHS[int(IMPROVE2_DATE[5:7]) - 1]} {IMPROVE2_DATE[:4]})</h2>
+  {"".join(body)}
+</section>"""
+
+
 # ===================================================================== page
 CSS = """
 /* Layout: one reading column of evidence cards on a soft page plane; serif prose,
@@ -5218,6 +6415,12 @@ text.schip-pass{fill:var(--good)}
 .schip-t{font-size:10.5px;font-weight:700;letter-spacing:.06em}
 .dot.hollow.s1{border-color:var(--s1)}
 
+/* improvement phase 2 (§14) */
+table.p2q{min-width:860px}
+table.p2q td.wrapcell:first-child{min-width:180px}
+table.p2q td:nth-child(3){min-width:280px}
+table.p2q td:last-child{white-space:nowrap}
+
 /* tooltip */
 #tip{position:fixed;z-index:50;max-width:320px;background:var(--ink);color:var(--bg);
   font:12.5px/1.45 var(--sans);padding:7px 10px;border-radius:7px;pointer-events:none;
@@ -5279,7 +6482,8 @@ def wbr_codes(h: str) -> str:
 
 def page() -> str:
     body = "".join([sec_header(), sec_verdict(), sec_status(), sec_data(), sec_labels(), sec_features(), sec_models(),
-                    sec_strategy(), sec_integrity(), sec_product(), sec_recs(), sec_improve(), sec_appendix()])
+                    sec_strategy(), sec_integrity(), sec_product(), sec_recs(), sec_improve(), sec_improve2(),
+                    sec_appendix()])
     body = wbr_codes(body)
     gen = []
     if P.boot:
@@ -5290,12 +6494,13 @@ def page() -> str:
         gen.append(f"regimes {P.regimes.get('generated_at', '')}")
     imp_n = sum(1 for a in IMP_FILES if getattr(I, a, None) is not None)
     imp_txt = f"{imp_n} of {len(IMP_FILES)} read" + ("; ten-year re-runs pending" if ten_pending() else "")
+    imp2_txt = f"{len(j_all()) - len(j_missing(*j_all()))} of {len(j_all())} read"
     return f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="SuryaDhana research program capstone report: NSE end-of-day signal, labels, features, models, strategy, integrity and the improvement phase, with its numbers read from the committed artifacts.">
+<meta name="description" content="SuryaDhana research program capstone report: NSE end-of-day signal, labels, features, models, strategy, integrity and both improvement phases, with its numbers read from the committed artifacts.">
 <title>SuryaDhana Research Program</title>
 <style>{CSS}</style>
 </head>
@@ -5303,9 +6508,9 @@ def page() -> str:
 <div class="wrap">
 {body}
 <footer>
-  <p>SuryaDhana research program {MID} {REPORT_DATE}, improvement phase {IMPROVE_DATE} {MID} built by
-  <code>ml/make_program_report.py</code> from the committed artifacts listed in the appendix (5-year outputs:
-  {E("; ".join(gen) or "pending")}; improvement-phase outputs: {E(imp_txt)}). Narrative of record:
+  <p>SuryaDhana research program {MID} {REPORT_DATE}, improvement phases {IMPROVE_DATE} and {IMPROVE2_DATE} {MID} built
+  by <code>ml/make_program_report.py</code> from the committed artifacts listed in the appendix (5-year outputs:
+  {E("; ".join(gen) or "pending")}; improvement-phase outputs: {E(imp_txt)}; phase-2 outputs: {E(imp2_txt)}). Narrative of record:
   <code>ml/PROGRAM_REPORT.md</code>. Inline SVG, no external resources; deterministic for identical inputs. Companion
   reports: <code>ml/report/index.html</code> (pilot) and <code>ml/report/feature_study.html</code>.</p>
 </footer>
@@ -5317,7 +6522,7 @@ def page() -> str:
 """
 
 
-def build(pending_dir: Path = S5, improve_dir: Path = IMP) -> tuple[str, dict]:
+def build(pending_dir: Path = S5, improve_dir: Path = IMP, improve2_dir: Path = IMP2) -> tuple[str, dict]:
     FACTS.clear()
     LOADED.clear()
     _PDIR[0] = pending_dir
@@ -5326,6 +6531,7 @@ def build(pending_dir: Path = S5, improve_dir: Path = IMP) -> tuple[str, dict]:
     load_pending(pending_dir)
     derive()
     load_improve(improve_dir)
+    load_improve2(improve2_dir, improve_dir)
     return page(), dict(FACTS)
 
 
@@ -5334,9 +6540,12 @@ def main() -> None:
     ap.add_argument("--pending-dir", type=Path, default=S5, help="QA only: where to read the 5-year outputs")
     ap.add_argument("--improve-dir", type=Path, default=IMP,
                     help="QA only: a tree laid out like ml/results/improve/ to read the improvement-phase outputs from")
+    ap.add_argument("--improve2-dir", type=Path, default=IMP2,
+                    help="QA only: a tree laid out like ml/results/improve2/ to read the phase-2 stream outputs from (the "
+                         "phase's A/B tag is read from --improve-dir, under ab/10y_p2/)")
     ap.add_argument("--out", type=Path, default=OUT, help="QA only: output file")
     a = ap.parse_args()
-    html_s, _ = build(a.pending_dir, a.improve_dir)
+    html_s, _ = build(a.pending_dir, a.improve_dir, a.improve2_dir)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(html_s)
     pend = pending_items()
@@ -5344,6 +6553,8 @@ def main() -> None:
     print("5-year outputs: " + ("all present" if not pend else "pending: " + ", ".join(pend)))
     ipend = imp_missing(*IMP_FILES)
     print("improvement outputs: " + ("all present" if not ipend else "pending: " + ", ".join(ipend)))
+    i2pend = j_missing(*j_all())
+    print("phase-2 outputs: " + ("all present" if not i2pend else "pending: " + ", ".join(i2pend)))
     for k, v in sorted(LOADED.items()):
         if v != "read":
             print(f"  {k}: {v}")

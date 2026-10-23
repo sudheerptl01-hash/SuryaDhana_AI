@@ -45,7 +45,8 @@ EXT_BACKFILL_NOTE = ("The two books were added on 2026-10-23 and backfilled from
                      "whose label exit date is before 2026-10-01 (exit-date purge), exactly as the frozen October model "
                      "was trained but with the expanding window. This is legitimate: the three signal dates are after the "
                      "research data (which end 2026-10-16), the model uses no data dated after its model date, and every "
-                     "choice in the books' definition was fixed by amendment A1 before Q9 ran. The frozen books' first "
+                     "choice in the books' definition was fixed by amendment A1 before Q9 produced any result (SPEC.md section 6, "
+                     "erratum). The frozen books' first "
                      "three signal dates were themselves scored in one catch-up run on 2026-10-23; the extension's were "
                      "scored the same day, after the frozen books' first two marked sessions (2026-10-21, 2026-10-22) "
                      "were in the ledger. No parameter of the extension depends on those marks.")

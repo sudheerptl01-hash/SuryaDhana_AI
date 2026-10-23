@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-19 · **Program lead:** evaluation lead (this session) · **Scope:** NSE cash equities, end-of-day bhavcopy data, 5 years (2021-10 to 2026-10) · **Companion report:** `ml/report/program_report.html` (built by `python3 -m ml.make_program_report`)
 
-**Status: complete; improvement phases added 2026-10-22 (§13) and 2026-10-23 (§14). Verdict unchanged: no capital; one model-side gain above the bar (an expanding training window, exploratory) now runs in the forward record as a challenger.** The 5-year walk-forward, its paired block bootstrap, regime table, rank-ensemble challenger and paper portfolio are all in (`ml/results/scale5y/SCALE5Y.md`). Every number below is read from a committed JSON or Markdown artifact named in the text; nothing is estimated from memory.
+**Status: complete; improvement phases added 2026-10-22 (§13) and 2026-10-23 (§14). Verdict unchanged: no capital; one model-side gain above the bar (an expanding training window, exploratory) now runs in the forward record as a challenger.** Section 1's recommendation, the Model row of its deliverables table and §11 item 1 are superseded: since 2026-10-19 the paper book of record is the volatility+size-neutral LightGBM construction of §13.7 (primary: full-universe top decile; capacity: its liquid-tercile version), with the rank ensemble as challenger, the plain score as reference and, since 2026-10-23, the expanding-window challenger and its capacity version (§14.4). The 5-year walk-forward, its paired block bootstrap, regime table, rank-ensemble challenger and paper portfolio are all in (`ml/results/scale5y/SCALE5Y.md`). Every number below is read from a committed JSON or Markdown artifact named in the text; nothing is estimated from memory.
 
 ---
 
@@ -447,7 +447,7 @@ For every configuration on the corrected data (`ml/results/improve/ab/v2/GATES.m
 
 Items 2 (neutral construction: done, passes B1), 3 (corporate actions: done), 4 (both A/Bs: done, both fail), 5 (delivery validation: done, durable in the residual), 6 (name-level costs: done, pessimistic model), 8 (market-state inputs: done, fail), 10 (book construction: done, buffer and 40-session hold measured) and 11 (PBO done, uniqueness closed, history before 2021 loaded; combinatorial purged CV still open) are closed. Item 9 is half done: sector, index, F&O and flows are tested; fundamentals, analyst and institutional data need a filings feed this environment does not have. Item 7 (the short side on F&O names) stays open. Item 12 is confirmed by AB0, AB7 and AB8. The ordered list of what remains, with the data each needs, is `ml/ROADMAP.md`.
 
-## 14. Improvement phase 2 (22 to 23 October 2026)
+## 14. Improvement phase 2 (23 October 2026)
 
 **Governing document:** `ml/IMPROVEMENT_PLAN_2.md` (fixed before any result; amendments A1 and A2, ledger corrections and errata dated in its section 4). **Results of record:** `ml/results/improve2/IMPROVEMENT_RESULTS.md`, which quotes every number from a stream's JSON. **Trial ledger:** N = 270 (241 after §13; 20 planned; 4 found by review and counted; 5 from the two amendments). **Status:** complete. Every headline was recomputed independently from the raw predictions and price data by an adversarial verifier.
 
@@ -460,7 +460,7 @@ The phase asked the questions §13 left open: can the book carry capital (a liqu
 | Q3: a model trained on liquid names | liquid neutral book IR ≥ 0.5 with CI > 0, and a paired gain over the control's liquid book with CI > 0 | L1 (liquid tercile) IR 0.27 [−0.49, +1.02], paired +0.04 pp/yr; L2 (top two terciles) IR 0.40 [−0.30, +1.14], paired +1.08 pp/yr [−0.44, +2.65] | **FAIL** |
 | Q4: F&O long-short through stock futures | net Sharpe ≥ 1.0 with CI > 0, beta within ±0.2 | plain −0.65 [−1.43, +0.12], neutral −1.22 [−1.87, −0.53]; betas −0.15 and −0.05 | **FAIL** |
 | Q5: a 40-day horizon | paired gain of the 40-session book with CI > 0 and a higher break-even | +0.33 pp/yr [−0.83, +1.48]; break-even 88 vs 83 bps | **FAIL** |
-| Q6: company announcements (5,047,431 records, 2,488 PR bundles) | ΔAUC ≥ +0.003 with CI > 0 | −0.0008 [−0.0035, +0.0017] | **FAIL** |
+| Q6: company announcements (2,488 PR bundles: 4,956,205 announcement records, 91,226 board-meeting list rows) | ΔAUC ≥ +0.003 with CI > 0 | −0.0008 [−0.0035, +0.0017] | **FAIL** |
 | Q7: nested hyper-parameter tuning | ΔAUC ≥ +0.003 with CI > 0 | +0.0004 [−0.0006, +0.0014] | **FAIL** |
 | Q2: combinatorial purged CV (8 groups, 28 splits, 7 paths) | net excess > 0 in ≥ 6 of 7 paths | full-universe neutral +14.3% to +17.1%/yr, liquid neutral +4.8% to +8.7%/yr, 7/7 each | **ROBUST** |
 | Q9 (amendment A1): an expanding training window | ΔAUC ≥ +0.003 with CI > 0; the Q3 rule on the liquid book | **+0.0079 [+0.0047, +0.0113]**; liquid neutral book IR 0.78 [0.06, 1.54], paired +4.06 pp/yr [+1.71, +6.39] | **PASS, both** (exploratory) |
@@ -470,7 +470,7 @@ The failures are informative. A liquid-only model throws information away: on th
 
 ### 14.2 The one lever that worked: training history
 
-CPCV beat the walk-forward control by a wide margin on the same months. The verifier decomposed the gap: about 38% of the liquid gain sits in 2018, where CPCV trains on later data (look-ahead by construction), but the last group, which has no later data, gains as much as the others. That pointed at the amount of history, not at future knowledge, and amendment A1 tested it before its job started: the same LightGBM, the same 52 features and folds, trained on every eligible row before the embargo instead of the last 504 sessions.
+CPCV beat the walk-forward control by a wide margin on the same 103 months (liquid neutral book +4.8% to +8.7% a year against +0.8%; the CPCV books run on 103 signal months, the walk-forward book table below on 105). The verifier decomposed the gap: about 38% of the liquid gain sits in the first group (2018-01..2019-01), where CPCV trains on later data (look-ahead by construction), but the last group, which has no later data, gains as much as the others. That pointed at the amount of history, not at future knowledge, and amendment A1 tested it. A1 was committed 20 s after the Q9 job started (07:55:02 against 07:54:42 UTC), before its first fold result (about 07:56:28), and Q9 ran without the two pre-compute reviews (plan 2, errata (i) and (ii)): the same LightGBM, the same 52 features and folds, trained on every eligible row before the embargo instead of the last 504 sessions.
 
 | 103 folds, ten-year data | CV AUC [95% CI] | Months ≥ 0.50 | Worst | Holdout | Rank IC (NW t) |
 |---|---|---:|---:|---:|---|
@@ -498,7 +498,7 @@ The expanding window passes gate 1 on all three seeds (+0.0112 [+0.0049, +0.0179
 
 ### 14.4 The forward record (`ml/paper/`, `ml/results/improve2/paper/PAPER.md`)
 
-The frozen construction of §13.7 started its forward record on 2026-10-19: one command a day (`ml/paper/RUNBOOK.md`), an append-only ledger with a specification hash, and a byte-identical rebuild proof. Since spec amendment 10 (2026-10-23) it runs six books: primary (neutral full-universe top decile, about 152 names), capacity (its liquid-tercile version, about 50 names), the rank-ensemble challenger, the plain reference, and the expanding-window challenger with its capacity version, backfilled from inception without changing a byte of the existing rows. Review caught one data defect in the live window: CCAVENUE's consolidation is spelled "CNSLDATN" with an empty ex-date and was missed, giving a fake +840% day; the parser was extended, the store repaired under the lock and the ledger re-issued once, with the superseded rows kept. Three research-period consolidations with the same spelling remain unadjusted (none is a universe row of the ten-year dataset). The research books exclude rows failing the forward-looking `y_clean_20d` screen (0.33% of rows, mostly crashes; about 0.4 pp a year of flattery); the live books hold every name, so live and backtest are not like-for-like. The first tranche exits on 2026-11-18.
+The frozen construction of §13.7 started its forward record on 2026-10-19: one command a day (`ml/paper/RUNBOOK.md`), an append-only ledger with a specification hash, and a byte-identical rebuild proof. Since spec amendment 10 (2026-10-23) it runs six books: primary (neutral full-universe top decile, about 152 names), capacity (its liquid-tercile version, about 50 names), the rank-ensemble challenger, the plain reference, and the expanding-window challenger with its capacity version, backfilled from inception without changing a byte of the existing rows. Review caught one data defect in the live window: CCAVENUE's consolidation is spelled "CNSLDATN" with an empty ex-date and was missed, giving a fake +840% day; the parser was extended, the store repaired under the lock and the ledger re-issued once, with the superseded rows kept. Three research-period consolidations with the same spelling remain unadjusted (none is a universe row of the ten-year dataset). The research books exclude rows failing the forward-looking `y_clean_20d` screen (0.33% of rows, mostly crashes; about 0.4 pp a year of flattery); the live books hold every name, so live and backtest are not like-for-like. The first three signal dates (2026-10-19, 2026-10-21, 2026-10-22) were scored in one catch-up run on 2026-10-23, under the specification written that day before the job produced any number; the construction is §13.7's and the expanding books are Q9's configuration as amendment A1 registered it (research data through 2026-10-16), so no parameter depends on those sessions (`ml/paper/SPEC.md`, header and section 5). Three monitors were at alert on 2026-10-22: feature drift (`feature_psi` 0.259, threshold 0.25, on `ret_126d`), a pre-inception inversion month (`feature_inversion` 0.635, threshold 0.5, 2026-08) and, since amendment 10, the expanding challenger's `neutral_score_corr` (0.048, 0.058 and 0.056 on the three dates against 0.05, the `log_turnover` term; `ml/paper/RUNBOOK.md` section 8). The first tranche exits on 2026-11-18 (2026-11-19 if the Muhurat session is not added to `ml/paper/calendar_live.json` in time).
 
 ### 14.5 What this does to §11 and the roadmap
 
@@ -531,8 +531,13 @@ python3 -m ml.scale5y_nested --stages run --ensemble
 python3 -m ml.scale5y_report
 # this report
 python3 -m ml.make_program_report
-# improvement phase 2 (ml/IMPROVEMENT_PLAN_2.md; queue scripts in ml/results/improve2/queue/)
-sh ml/results/improve2/queue/queue_e.sh      # Q9 and Q10: seed replicates, books at N = 270, readings, gates (queues B-D hold the earlier streams)
+# improvement phase 2 (ml/IMPROVEMENT_PLAN_2.md; queue scripts in ml/results/improve2/queue/; the streams' data builds come first, see each stream's report)
+mkdir -p ml/results/improve/ab/10y_p2/preds && cp ml/results/improve/ab/10y/control__beat_mkt_20d.json ml/results/improve/ab/10y_p2/ && cp ml/results/improve/ab/10y/preds/control__beat_mkt_20d.parquet ml/results/improve/ab/10y_p2/preds/   # the ten-year control, copied byte for byte
+sh ml/results/improve2/queue/queue_b.sh      # Q6, Q5, Q7
+sh ml/results/improve2/queue/queue_c.sh      # Q3, Q2 (waits for queue B)
+sh ml/results/improve2/queue/queue_d.sh      # Q9 (amendment A1)
+cp ml/results/improve/ab/10y/lr_l2__beat_mkt_20d.json ml/results/improve/ab/10y_p2/ && cp ml/results/improve/ab/10y/preds/lr_l2__beat_mkt_20d.parquet ml/results/improve/ab/10y_p2/preds/   # the logistic benchmark for gate 1, copied byte for byte
+sh ml/results/improve2/queue/queue_e.sh      # Q10: seed replicates, compare, books at N = 270, readings, gates
 OMP_NUM_THREADS=2 python3 -I ml/paper/job.py                                    # the daily forward record (ml/paper/RUNBOOK.md)
 ```
 
