@@ -20,7 +20,7 @@
   "rows_purged_exit_ge_test_start": 0,
   "tickers": 2019,
   "label_mean": 0.5002893056517873,
-  "rule": "ml.scale5y_nested.window_rows: 504 sessions ending at train_end (22 sessions before the month's first session), labelled clean rows, exit-date purge at the first session"
+  "rule": "ml.scale5y_nested.window_rows: 504 sessions back from train_end (505 sessions inclusive, the research walk-forward's convention; train_end 22 sessions before the month's first session), labelled clean rows, exit-date purge at the first session"
  },
  "training_frame_sha256": "be1369cd5db35848a6ea49070c0798ff54aa9e04362edf40bfccb9b597e7c1e2",
  "features": [

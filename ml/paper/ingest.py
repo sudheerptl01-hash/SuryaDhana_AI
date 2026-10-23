@@ -36,17 +36,20 @@ import json
 import os
 import re
 import shutil
+import sys
 import time
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import numpy as np
-import pandas as pd
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # run as a script: the repository root
 
-import nse_historical_ingest as nhi
-from ml.paper.common import dumps, log, repo_rel, sha256_file, wjson
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+
+import nse_historical_ingest as nhi  # noqa: E402
+from ml.paper.common import dumps, log, repo_rel, sha256_file, wjson  # noqa: E402
 from ml.paper.config import (CA_FEED_10Y, CA_FEED_LIVE, CALENDAR_LIVE, DB_PATH, ETF_10Y, ETF_LIVE, LOCK_FILE,
                              PR_DIRS_RESEARCH, RESEARCH_END, RESULTS_DIR, STATE_DIR)
 
@@ -550,6 +553,7 @@ def price_breaks(eqbe: pd.DataFrame, sessions: list[str], feed: pd.DataFrame, al
         R = float(np.prod(ev["ratio"].astype(float))) if len(ev) else float("nan")
         rec = {"date": str(r.date.date()), "ticker": r.ticker, "prev_close": float(r.prev_close),
                "stored_previous_close": float(r.stored_prev), "stored_previous_date": str(r.stored_prev_date.date()),
+               "calendar_days_since_stored_previous": int((r.date - r.stored_prev_date).days),
                "prev_close_over_stored_close": float(r.obs),
                "feed_events": [{"ex_date": x.ex_date, "ratio": float(x.ratio)} for x in ev.itertuples(index=False)]}
         if len(ev) and abs(r.obs / R - 1) <= AGREE_TOL:
@@ -819,36 +823,43 @@ def write_store(frames: list[tuple[date, pd.DataFrame]], changed_ca_tickers: set
     res["feed_lines_added"] = [{"ticker": t, "ex_date": d} for t, d in added]
     res["live_feed_sha256"] = promote_feed()       # the store is now built with it
     # ---- read-only verification after the lock (the store is no longer written) ----
-    con = duckdb.connect(str(DB_PATH), read_only=True)
-    con.execute("SET threads TO 2")
-    fp_after = fingerprints(con, RESEARCH_END)
-    after["fingerprint_through_research_end"] = compare_fingerprints(fp_before, fp_after, changed_ca_tickers)
-    after["forward_label_changes_through_research_end"] = forward_change_dates(con, RESEARCH_END, fwd_before,
-                                                                          changed_ca_tickers)
-    feed = pd.read_csv(CA_FEED_LIVE)
-    if added:                                       # adjusted close-to-close move on each added ex-date (info)
-        from ml.integrity.write_phase import known_events_check
-        fd = pd.read_csv(CA_FEED_LIVE, dtype={"ex_date": str})
-        ev = [(t, d) for t, d in added]
-        tk = sorted({t for t, _ in added})
-        ef = con.execute("SELECT date, ticker, close, close_unadj FROM equity_features WHERE ticker IN ("
-                         + ",".join("?" * len(tk)) + ") ORDER BY ticker, date", tk).df()
-        after["new_events_check"] = known_events_check(ef, fd, ev)
-    chk = checked_sessions if checked_sessions is not None else [str(d) for d, _ in frames]
-    res["checked_sessions"] = chk
-    after["price_breaks"] = price_breaks(eq_be_rows_store(con), chk, feed, ca_all_live())
-    con.close()
-    a = res["after"]
-    checks = {"row_count_as_expected": bool(a["row_count_as_expected"]),
-              "equity_features_rows_equal_eq_be_rows": bool(a["equity_features_rows_equal_eq_be_rows"]),
-              "no_duplicate_eq_be_pairs": a["eq_be_dup_date_ticker"] == 0,
-              "continuity_share_below_5pct": all(not x["flagged"] for x in a["continuity_new_sessions"]),
-              "no_unexplained_price_break": a["price_breaks"]["n_unexplained"] == 0,
-              "non_forward_unchanged_except_changed_ca_tickers":
-                  bool(a["fingerprint_through_research_end"]["non_forward_unchanged_except_new_ca_tickers"]),
-              "equity_eod_through_research_end_identical":
-                  bool(a["fingerprint_through_research_end"]["equity_eod_through_boundary"]["identical"]),
-              "forward_label_changes_explained": a["forward_label_changes_through_research_end"]["rows_unexplained"] == 0}
+    # an exception here must not leave the write unrecorded: it becomes a failed check, the backup is kept and the
+    # job stops on the unresolved write (RUNBOOK section 5)
+    try:
+        con = duckdb.connect(str(DB_PATH), read_only=True)
+        con.execute("SET threads TO 2")
+        fp_after = fingerprints(con, RESEARCH_END)
+        after["fingerprint_through_research_end"] = compare_fingerprints(fp_before, fp_after, changed_ca_tickers)
+        after["forward_label_changes_through_research_end"] = forward_change_dates(con, RESEARCH_END, fwd_before,
+                                                                              changed_ca_tickers)
+        feed = pd.read_csv(CA_FEED_LIVE)
+        if added:                                       # adjusted close-to-close move on each added ex-date (info)
+            from ml.integrity.write_phase import known_events_check
+            fd = pd.read_csv(CA_FEED_LIVE, dtype={"ex_date": str})
+            ev = [(t, d) for t, d in added]
+            tk = sorted({t for t, _ in added})
+            ef = con.execute("SELECT date, ticker, close, close_unadj FROM equity_features WHERE ticker IN ("
+                             + ",".join("?" * len(tk)) + ") ORDER BY ticker, date", tk).df()
+            after["new_events_check"] = known_events_check(ef, fd, ev)
+        chk = checked_sessions if checked_sessions is not None else [str(d) for d, _ in frames]
+        res["checked_sessions"] = chk
+        after["price_breaks"] = price_breaks(eq_be_rows_store(con), chk, feed, ca_all_live())
+        con.close()
+        a = res["after"]
+        checks = {"row_count_as_expected": bool(a["row_count_as_expected"]),
+                  "equity_features_rows_equal_eq_be_rows": bool(a["equity_features_rows_equal_eq_be_rows"]),
+                  "no_duplicate_eq_be_pairs": a["eq_be_dup_date_ticker"] == 0,
+                  "continuity_share_below_5pct": all(not x["flagged"] for x in a["continuity_new_sessions"]),
+                  "no_unexplained_price_break": a["price_breaks"]["n_unexplained"] == 0,
+                  "non_forward_unchanged_except_changed_ca_tickers":
+                      bool(a["fingerprint_through_research_end"]["non_forward_unchanged_except_new_ca_tickers"]),
+                  "equity_eod_through_research_end_identical":
+                      bool(a["fingerprint_through_research_end"]["equity_eod_through_boundary"]["identical"]),
+                  "forward_label_changes_explained": a["forward_label_changes_through_research_end"]["rows_unexplained"] == 0}
+    except Exception as exc:  # noqa: BLE001
+        res["verification_error"] = repr(exc)
+        log(f"verification raised {exc!r}", "write")
+        checks = {"verification_completed": False}
     res["checks"] = checks
     ok = all(checks.values())
     res["verified"] = bool(ok)

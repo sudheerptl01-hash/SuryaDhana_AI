@@ -28,6 +28,7 @@ from ml.paper.config import (CONTROL_10Y_PREDS, DATA_10Y, EMBARGO_SESSIONS, MODE
 MODELS_STATE = STATE_DIR / "models"
 LABEL, CLEAN, FWD = "label_beat_mkt_20d", "y_clean_20d", "y_excess_20d"
 REPRO_JSON = RESULTS_DIR / "trainer_reproduction.json"
+LOST_STATE_LOG = STATE_DIR / "lost_state_retrains.jsonl"      # gitignored: every lost-state retrain and its checks
 MEMBERS_ALL = ("lgbm", "lambdarank", "catboost", "logistic")
 
 
@@ -231,9 +232,10 @@ def train_month(df: pd.DataFrame, feats: list[str], dates: pd.DatetimeIndex, dar
                                 "labelled_clean_rows_before_purge": int(n_before),
                                 "rows_purged_exit_ge_test_start": int(n_purged),
                                 "tickers": int(tr["ticker"].nunique()), "label_mean": float(tr[LABEL].mean()),
-                                "rule": f"ml.scale5y_nested.window_rows: {TRAIN_SESSIONS} sessions ending at train_end "
-                                        f"({EMBARGO_SESSIONS} sessions before the month's first session), labelled "
-                                        f"clean rows, exit-date purge at the first session"},
+                                "rule": f"ml.scale5y_nested.window_rows: {TRAIN_SESSIONS} sessions back from train_end "
+                                        f"({TRAIN_SESSIONS + 1} sessions inclusive, the research walk-forward's "
+                                        f"convention; train_end {EMBARGO_SESSIONS} sessions before the month's first "
+                                        f"session), labelled clean rows, exit-date purge at the first session"},
             "training_frame_sha256": sha256_frame(tr, ["date", "ticker"] + feats + [LABEL, "y_rank_20d"]),
             "features": feats, "n_features": len(feats),
             "params": {k: v for k, v in params.items() if k in fit or k == "preprocess"},
@@ -270,14 +272,24 @@ def ensure_month(df, feats, dates, darr, month: str) -> dict:
         old = meta
         new = train_month(df, feats, dates, darr, month, members=tuple(old["members"]), role=old["role"])
         wjson(MODELS_META_DIR / f"{month}.json", old)            # the committed metadata stays the record
-        checks = {"training_frame": new["training_frame_sha256"] == old["training_frame_sha256"],
-                  "reference_predictions": new["reference_prediction_sha256"] == old["reference_prediction_sha256"],
+        # identity of a model: its contents and its reference predictions.  The training-frame hash depends on the
+        # store at the training run (a later corporate action rescales a ticker's earlier prices at rounding level),
+        # so it is compared and reported, not required (SPEC.md 2.1, amendment 6).
+        checks = {"reference_predictions": new["reference_prediction_sha256"] == old["reference_prediction_sha256"],
                   "model_contents": new["content_sha256"] == (old.get("content_sha256") or old["files_sha256"])}
-        same = all(checks.values())
-        log(f"model {month} retrained from a lost state; equal to the committed metadata: {checks}", "models")
+        info = {"training_frame_sha256_equal": new["training_frame_sha256"] == old["training_frame_sha256"],
+                "training_rows_equal": new["training_window"]["rows"] == old["training_window"]["rows"],
+                "training_window_equal": all(new["training_window"][k] == old["training_window"][k]
+                                             for k in ("first_date", "last_date", "sessions"))}
+        same = all(checks.values()) and info["training_rows_equal"] and info["training_window_equal"]
+        log(f"model {month} retrained from a lost state; equal to the committed metadata: {checks}; {info}", "models")
+        LOST_STATE_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with open(LOST_STATE_LOG, "a") as fh:
+            fh.write(json.dumps({"month": month, "checks": checks, "info": info,
+                                 "new_training_frame_sha256": new["training_frame_sha256"]}) + "\n")
         if not same:
-            raise SystemExit(f"retrained {month} differs from its committed metadata (training frame, predictions or "
-                             "files); see ml/paper/RUNBOOK.md, 'lost state'")
+            raise SystemExit(f"retrained {month} differs from its committed metadata (model contents, reference "
+                             f"predictions or training window): {checks} {info}; see ml/paper/RUNBOOK.md, 'lost state'")
         return old
     return train_month(df, feats, dates, darr, month)
 
@@ -293,19 +305,27 @@ def reproduce_research_holdout(df, feats, dates, darr) -> dict:
     t0 = time.time()
     fit = fit_members(tr, feats, ("lgbm",))
     s = fit["lgbm"].predict_proba(fit["prep"].transform(te[feats]))[:, 1]
+    from ml.paper.config import RESEARCH_END
     ref = pd.read_parquet(CONTROL_10Y_PREDS)
     ref = ref[ref["fold"] == "holdout"]
     ref["date"] = pd.to_datetime(ref["date"])
-    mine = te[["date", "ticker"]].assign(score=s)
+    # test rows whose label exits after the research end could not be labelled in the research data (here: rows of a
+    # ticker whose 20-row label window crosses a suspension into the new sessions); they are listed, not compared
+    late = (pd.to_datetime(te["exit_date"]) > pd.Timestamp(RESEARCH_END)).to_numpy()
+    mine = te[["date", "ticker"]].assign(score=s)[~late]
     j = mine.merge(ref[["date", "ticker", "score"]], on=["date", "ticker"], how="outer", suffixes=("", "_10y"),
                    indicator=True)
     both = j[j["_merge"] == "both"]
     d = np.abs(both["score"].to_numpy(float) - both["score_10y"].to_numpy(float))
     res = {"fold": spec, "train_rows": int(len(tr)), "test_rows": int(len(te)), "rows_10y": int(len(ref)),
+           "test_rows_label_exit_after_research_end": te.loc[late, ["date", "ticker", "exit_date"]].astype(str).to_dict(
+               "records"),
            "rows_matched": int(len(both)), "rows_only_trainer": int((j["_merge"] == "left_only").sum()),
            "rows_only_10y": int((j["_merge"] == "right_only").sum()), "max_abs_score_diff": float(d.max()),
            "rows_with_diff_gt_1e-12": int((d > 1e-12).sum()),
            "identical": bool(d.max() == 0.0 and (j["_merge"] != "both").sum() == 0),
+           "identical_rule": "every holdout row the research data could label (label exit on or before the research "
+                             "end) is present in both and scores exactly the same",
            "seconds": round(time.time() - t0, 1),
            "reference": "ml/results/improve/ab/10y/preds/control__beat_mkt_20d.parquet (fold holdout)"}
     wjson(REPRO_JSON, res)

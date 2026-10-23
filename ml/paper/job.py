@@ -6,8 +6,10 @@
     OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest           # no network, no store write
     OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --accept-unverified-write "REASON"   # RUNBOOK section 5 only
 
-A run stops before scoring when the latest store write failed its verification (ingest.json), until a later verified
-write supersedes it or an operator records an acceptance with --accept-unverified-write.
+A run stops before scoring while a store write that failed its verification is unresolved (ingest.json): until a later
+verified write re-checks its sessions (a re-ingest after restoring the backup, or `ml/paper/ingest.py
+--rebuild-features REASON`) or an operator records an acceptance with --accept-unverified-write; the ingest holds new
+sessions meanwhile.
 
 Steps: (1) ingest new sessions (ml/paper/ingest.py; the only writer of nse_market.duckdb in phase 2);
 (2) rebuild the scoring frame when the store changed (ml/paper/frame.py) and the consistency proof;
@@ -300,10 +302,11 @@ def run(a) -> dict:
         rec["operator_acceptance"] = I.accept_unverified_write(a.accept_unverified_write)
     bad = I.unverified_write()
     if bad is not None:
-        raise SystemExit(f"the store write of {bad.get('accepted')} failed verification (ml/results/improve2/paper/"
-                         "ingest.json; backup kept in the scratchpad): nothing is scored on an unverified store. "
-                         "See ml/paper/RUNBOOK.md section 5 (restore the backup and re-run, or accept the write with "
-                         "--accept-unverified-write REASON).")
+        failed = [k for k, v in ((bad.get("write") or {}).get("checks") or {}).items() if not v]
+        raise SystemExit(f"the store write of {bad.get('accepted') or bad.get('kind')} failed verification {failed} "
+                         "(ml/results/improve2/paper/ingest.json; backup kept): nothing is scored on an unverified store. "
+                         "See ml/paper/RUNBOOK.md section 5 (restore the backup and re-run, repair with ml/paper/ingest.py "
+                         "--rebuild-features REASON, or accept the write with --accept-unverified-write REASON).")
     fr = run_child("frame", force=bool(a.force_frame))
     rec["frame_rebuilt"] = fr.get("rebuilt")
     df, feats, splits, dates, darr = load_frame(frame_lower_bound())

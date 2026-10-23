@@ -2,7 +2,12 @@
  "features": 52,
  "research_end": "2026-10-16",
  "rule": "exact equality per cell (NaN equals NaN); max_abs_diff over finite pairs",
- "corporate_actions_added_after_research_end": [
+ "corporate_actions_added_to_ten_year_feed": [
+  {
+   "ticker": "CCAVENUE",
+   "ex_date": "2026-10-13",
+   "ratio": 10.0
+  },
   {
    "ticker": "JSWDULUX",
    "ex_date": "2026-10-22",
@@ -119,139 +124,141 @@
   "rows_common": 2226504,
   "rows_only_frame": 0,
   "rows_only_10y": 0,
-  "max_abs_diff_all_features": 5.755396159656812e-13,
-  "cells_differing": 3204,
+  "max_abs_diff_all_features": 6.110667527536862e-13,
+  "cells_differing": 5438,
   "nan_mismatch_cells": 0,
   "per_feature_differing": {
    "ret_1d": {
     "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 49,
+    "rows_differing": 116,
     "nan_mismatch": 0
    },
    "log_ret_1d": {
-    "max_abs_diff": 2.2201749987071917e-16,
-    "rows_differing": 49,
+    "max_abs_diff": 2.3592239273284576e-16,
+    "rows_differing": 116,
     "nan_mismatch": 0
    },
    "gap_pct": {
-    "max_abs_diff": 1.5439038936193583e-16,
-    "rows_differing": 90,
+    "max_abs_diff": 1.8735013540549517e-16,
+    "rows_differing": 226,
     "nan_mismatch": 0
    },
    "range_pct": {
-    "max_abs_diff": 1.5612511283791264e-16,
-    "rows_differing": 97,
+    "max_abs_diff": 1.8735013540549517e-16,
+    "rows_differing": 245,
     "nan_mismatch": 0
    },
    "close_pos_in_range": {
     "max_abs_diff": 1.354472090042691e-14,
-    "rows_differing": 113,
+    "rows_differing": 272,
     "nan_mismatch": 0
    },
    "dist_sma_5": {
     "max_abs_diff": 4.440892098500626e-16,
-    "rows_differing": 67,
+    "rows_differing": 153,
     "nan_mismatch": 0
    },
    "dist_sma_10": {
     "max_abs_diff": 4.440892098500626e-16,
-    "rows_differing": 69,
+    "rows_differing": 162,
     "nan_mismatch": 0
    },
    "dist_sma_20": {
     "max_abs_diff": 4.440892098500626e-16,
-    "rows_differing": 64,
+    "rows_differing": 151,
     "nan_mismatch": 0
    },
    "dist_sma_50": {
-    "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 47,
+    "max_abs_diff": 3.3306690738754696e-16,
+    "rows_differing": 119,
     "nan_mismatch": 0
    },
    "macd_norm": {
-    "max_abs_diff": 7.008282842946301e-16,
-    "rows_differing": 116,
+    "max_abs_diff": 9.26342336171615e-16,
+    "rows_differing": 273,
     "nan_mismatch": 0
    },
    "mom_5": {
     "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 43,
+    "rows_differing": 111,
     "nan_mismatch": 0
    },
    "mom_10": {
     "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 49,
+    "rows_differing": 121,
     "nan_mismatch": 0
    },
    "mom_20": {
     "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 35,
+    "rows_differing": 97,
     "nan_mismatch": 0
    },
    "vol_5": {
-    "max_abs_diff": 1.231653667943533e-16,
-    "rows_differing": 115,
+    "max_abs_diff": 1.97758476261356e-16,
+    "rows_differing": 266,
     "nan_mismatch": 0
    },
    "vol_10": {
-    "max_abs_diff": 6.245004513516506e-17,
-    "rows_differing": 116,
+    "max_abs_diff": 1.0408340855860843e-16,
+    "rows_differing": 269,
     "nan_mismatch": 0
    },
    "vol_20": {
-    "max_abs_diff": 6.245004513516506e-17,
-    "rows_differing": 92,
+    "max_abs_diff": 6.938893903907228e-17,
+    "rows_differing": 237,
     "nan_mismatch": 0
    },
    "rsi_14": {
     "max_abs_diff": 9.947598300641403e-14,
-    "rows_differing": 89,
+    "rows_differing": 213,
     "nan_mismatch": 0
    },
    "atr_pct": {
     "max_abs_diff": 5.551115123125783e-17,
-    "rows_differing": 107,
+    "rows_differing": 238,
     "nan_mismatch": 0
    },
    "dist_52w_high": {
     "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 53,
+    "rows_differing": 140,
     "nan_mismatch": 0
    },
    "dist_52w_low": {
     "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 63,
+    "rows_differing": 126,
     "nan_mismatch": 0
    },
    "rsi_2": {
-    "max_abs_diff": 5.755396159656812e-13,
-    "rows_differing": 109,
+    "max_abs_diff": 6.110667527536862e-13,
+    "rows_differing": 243,
     "nan_mismatch": 0
    },
    "ret_63d": {
     "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 35,
+    "rows_differing": 80,
     "nan_mismatch": 0
    },
    "ret_126d": {
     "max_abs_diff": 2.220446049250313e-16,
-    "rows_differing": 1,
+    "rows_differing": 14,
     "nan_mismatch": 0
    },
    "dist_200dma": {
-    "max_abs_diff": 1.1102230246251565e-16,
-    "rows_differing": 3,
+    "max_abs_diff": 2.220446049250313e-16,
+    "rows_differing": 26,
     "nan_mismatch": 0
    },
    "amihud_20": {
     "max_abs_diff": 5.051514762044462e-15,
-    "rows_differing": 1533,
+    "rows_differing": 1424,
     "nan_mismatch": 0
    }
   },
   "tickers_with_differences": [
    "20MICRONS",
    "360ONE",
+   "3BBLACKBIO",
+   "3IINFOLTD",
    "3MINDIA",
    "5PAISA",
    "63MOONS",
@@ -259,60 +266,58 @@
    "AARTIDRUGS",
    "AARTIIND",
    "AARTIPHARM",
+   "AASTHA",
    "AAVAS",
    "ABB",
    "ABBOTINDIA",
    "ABCAPITAL",
-   "ABCOTS",
    "ABDL",
    "ABFRL",
-   "ABLBL",
-   "ABREL",
+   "ABINFRA",
    "ABSLAMC",
-   "ACC",
    "ACE",
-   "ACI",
    "ACMESOLAR",
    "ACUTAAS",
    "ADANIENSOL",
    "ADANIENT",
    "ADANIGREEN",
-   "ADANIPORTS",
    "ADANIPOWER",
    "ADFFOODS",
    "ADOR",
-   "ADSL",
    "ADVAIT",
    "ADVANCE",
    "ADVENTHTL",
    "ADVENZYMES",
-   "AEGISLOG",
-   "AEGISVOPAK",
    "AEQUS",
    "AEROENTER",
-   "AEROFLEX",
    "AETHER",
    "AFCONS",
    "AFFLE",
    "AGARIND",
-   "AGARWALEYE",
-   "AGI",
    "AGIIL",
+   "AGL",
    "AHCL",
    "AHLUCONT",
-   "AIAENG",
    "AIIL",
    "AJANTPHARM",
-   "AJAXENGG",
    "AJMERA",
    "AKUMS",
    "ALEMBICLTD",
    "ALGOQUANT",
    "ALIVUS",
-   "ALKEM"
+   "ALKEM",
+   "ALKYLAMINE",
+   "ALLTIME",
+   "ALOKINDS",
+   "AMAGI",
+   "AMBER",
+   "AMBIKCO",
+   "AMBUJACEM",
+   "AMRUTANJAN",
+   "ANDHRSUGAR"
   ],
-  "n_tickers_with_differences": 1428,
-  "n_dates_with_differences": 119,
+  "n_tickers_with_differences": 1188,
+  "n_dates_with_differences": 165,
   "dates_with_differences_last": [
    "2026-10-12",
    "2026-10-13",

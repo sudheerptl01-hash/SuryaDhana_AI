@@ -56,12 +56,12 @@
    "monitors": 48
   },
   "scores_sha256": {
-   "2026-10-19": "432c046d4374dfc4474e2a5699efb3f0bd9400a13d88924295e6f63e33001663",
-   "2026-10-21": "104cefb1273a2ca3d2b9aa92b08fb18a09c1753352ac4d2d07f07eb70438d240",
-   "2026-10-22": "fe909a0cf676f5bf168d3d17fe48faa4f9443e5d9bf47465c646e67517a0ebd8"
+   "2026-10-19": "3b918d7d64badebefc593d7ded445d5b3b918f125b7003862cfaa6040ab7a299",
+   "2026-10-21": "e848777e3b175dc4667db4caa9f363f02747aedc9dfd1f89de4e03cdbe129219",
+   "2026-10-22": "117280305f88bffdbbd9d6f6c8c8d9cea835984ef992cf2882adf23aac408dbb"
   },
   "inputs": {
-   "ca_feed_live_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
+   "ca_feed_live_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
    "etf_list_live_sha256": "6b7788c8f392b955b6e76b68c86ca4f3cbf4da185681422aa728177786016a7a"
   }
  },
@@ -104,6 +104,65 @@
   },
   "writes": [
    {
+    "kind": "sessions",
+    "run_today_ist": "2026-10-23",
+    "reason": null,
+    "checks": null,
+    "checked_sessions": null,
+    "feed_lines_added": null,
+    "price_breaks": {
+     "by": "the later features_rebuild write of 2026-10-23",
+     "rule": "|prev_close / stored previous close - 1| > 22%; explained when the live feed's events in (stored previous session, session] agree within +-15%",
+     "sessions": {
+      "2026-10-19": {
+       "names_with_prev": 2922,
+       "breaks": 1,
+       "explained_by_feed": 1,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      },
+      "2026-10-21": {
+       "names_with_prev": 2915,
+       "breaks": 0,
+       "explained_by_feed": 0,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      },
+      "2026-10-22": {
+       "names_with_prev": 2912,
+       "breaks": 0,
+       "explained_by_feed": 0,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      }
+     },
+     "breaks": [
+      {
+       "date": "2026-10-19",
+       "ticker": "CCAVENUE",
+       "prev_close": 138.3,
+       "stored_previous_close": 13.83,
+       "stored_previous_date": "2026-10-12",
+       "calendar_days_since_stored_previous": 7,
+       "prev_close_over_stored_close": 10.0,
+       "feed_events": [
+        {
+         "ex_date": "2026-10-13",
+         "ratio": 10.0
+        }
+       ],
+       "status": "explained_by_feed"
+      }
+     ],
+     "n_unexplained": 0,
+     "n_recorded_price_break": 0
+    },
+    "parser_extension": null,
+    "live_feed": {
+     "path": "ml/data_ext/corporate_actions_feed_live.csv",
+     "rows": 756,
+     "sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da"
+    },
     "sessions": [
      "2026-10-19",
      "2026-10-21",
@@ -275,8 +334,491 @@
     },
     "new_etf_symbols": [],
     "backup_deleted": true
+   },
+   {
+    "kind": "features_rebuild",
+    "run_today_ist": "2026-10-23",
+    "reason": "CCAVENUE 10:1 consolidation (record date 2026-10-13, suspended 13-16 Oct, first print 2026-10-19) unadjusted: parser extension and widened live window (SPEC.md amendment 4)",
+    "checks": {
+     "row_count_as_expected": true,
+     "equity_features_rows_equal_eq_be_rows": true,
+     "no_duplicate_eq_be_pairs": true,
+     "continuity_share_below_5pct": true,
+     "no_unexplained_price_break": true,
+     "non_forward_unchanged_except_changed_ca_tickers": true,
+     "equity_eod_through_research_end_identical": true,
+     "forward_label_changes_explained": true
+    },
+    "checked_sessions": [
+     "2026-10-19",
+     "2026-10-21",
+     "2026-10-22"
+    ],
+    "feed_lines_added": [
+     {
+      "ticker": "CCAVENUE",
+      "ex_date": "2026-10-13"
+     }
+    ],
+    "price_breaks": {
+     "by": "this write",
+     "rule": "|prev_close / stored previous close - 1| > 22%; explained when the live feed's events in (stored previous session, session] agree within +-15%",
+     "sessions": {
+      "2026-10-19": {
+       "names_with_prev": 2922,
+       "breaks": 1,
+       "explained_by_feed": 1,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      },
+      "2026-10-21": {
+       "names_with_prev": 2915,
+       "breaks": 0,
+       "explained_by_feed": 0,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      },
+      "2026-10-22": {
+       "names_with_prev": 2912,
+       "breaks": 0,
+       "explained_by_feed": 0,
+       "recorded_price_break": 0,
+       "unexplained": 0
+      }
+     },
+     "breaks": [
+      {
+       "date": "2026-10-19",
+       "ticker": "CCAVENUE",
+       "prev_close": 138.3,
+       "stored_previous_close": 13.83,
+       "stored_previous_date": "2026-10-12",
+       "calendar_days_since_stored_previous": 7,
+       "prev_close_over_stored_close": 10.0,
+       "feed_events": [
+        {
+         "ex_date": "2026-10-13",
+         "ratio": 10.0
+        }
+       ],
+       "status": "explained_by_feed"
+      }
+     ],
+     "n_unexplained": 0,
+     "n_recorded_price_break": 0
+    },
+    "parser_extension": {
+     "purposes_read_by_extension": [
+      "CNSLDATN RE 1 TO RS 10",
+      "CNSLDATNRE1 TO RS10",
+      "CNSLDATNRS10 TO RS1000"
+     ],
+     "ex_date_from_record_date": [
+      {
+       "ticker": "CCAVENUE",
+       "ex_date": "2026-10-13",
+       "purpose": "CNSLDATNRE1 TO RS10",
+       "source": "PR121026.zip/bc12102026.csv"
+      },
+      {
+       "ticker": "KAUSHALYA",
+       "ex_date": "2024-01-12",
+       "purpose": "CNSLDATNRS10 TO RS1000",
+       "source": "PR090124.zip/Bc090124.csv"
+      },
+      {
+       "ticker": "SIGNET",
+       "ex_date": "2018-08-14",
+       "purpose": "CONSOLIDATION-RE1 TO RS10",
+       "source": "PR080818.zip/Bc080818.csv"
+      }
+     ],
+     "note": "ml/paper/ingest.py ca_extension (SPEC.md 2.7): CNSLDATN spelling and record date as ex-date; events still pass the module's validation"
+    },
+    "live_feed": {
+     "path": "ml/data_ext/corporate_actions_feed_live.csv",
+     "rows": 757,
+     "sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+     "staged": "ml/paper/state/ca/corporate_actions_feed_live.staged.csv",
+     "starts_with_ten_year_feed_bytes": true,
+     "lines_appended": 2
+    },
+    "sessions": null,
+    "decisions": [],
+    "verified": true,
+    "lock_window_seconds": 98.5,
+    "upsert_rows": null,
+    "continuity_new_sessions": [],
+    "eq_be_duplicates": 0,
+    "fingerprint_through_research_end": {
+     "tickers_compared": 3935,
+     "non_forward_columns": 48,
+     "tickers_with_changed_non_forward_rows": [
+      "CCAVENUE"
+     ],
+     "changed_tickers_explained_by_new_corporate_actions": [
+      "CCAVENUE"
+     ],
+     "changed_tickers_unexplained": [],
+     "non_forward_unchanged_except_new_ca_tickers": true,
+     "tickers_with_changed_forward_label_columns": 1,
+     "forward_columns": [
+      "fwd_ret_2d",
+      "label_up_2d",
+      "fwd_ret_3d",
+      "label_up_3d",
+      "fwd_ret_5d",
+      "label_up_5d"
+     ],
+     "equity_eod_through_boundary": {
+      "before": [
+       5237728.0,
+       3381217548.25,
+       7335373916200.0,
+       1625999973940000.0,
+       3380188334.22,
+       2489.0,
+       4611.0
+      ],
+      "after": [
+       5237728.0,
+       3381217548.25,
+       7335373916200.0,
+       1625999973940000.0,
+       3380188334.22,
+       2489.0,
+       4611.0
+      ],
+      "identical": true
+     }
+    },
+    "forward_label_changes_through_research_end": {
+     "rows_changed": 132,
+     "rows_last5_of_ticker_previously_nan": 0,
+     "rows_of_new_corporate_action_tickers": 132,
+     "rows_unexplained": 0,
+     "unexplained_examples": [],
+     "first_date": "2026-02-03",
+     "last_date": "2026-10-12",
+     "rows_only_in_one": 0
+    },
+    "new_corporate_actions": [
+     {
+      "ticker": "CCAVENUE",
+      "ex_date": "2026-10-13",
+      "ratio": 10.0,
+      "kind": "consolidation",
+      "source": "PR121026.zip/bc12102026.csv",
+      "first_print_on_or_after_ex": "2026-10-19",
+      "window": "ex-date on/before the research end, first print after it (suspension)"
+     },
+     {
+      "ticker": "JSWDULUX",
+      "ex_date": "2026-10-22",
+      "ratio": 0.1,
+      "kind": "split",
+      "source": "PR151026.zip/bc15102026.csv",
+      "first_print_on_or_after_ex": "2026-10-22",
+      "window": "ex-date after the research end"
+     }
+    ],
+    "upcoming_corporate_actions": [
+     {
+      "ticker": "AZADIND",
+      "ex_date": "2026-10-23",
+      "kind": "split",
+      "purpose": "FVSPLT FRM RS 10 TO RS 2"
+     }
+    ],
+    "unvalidated_in_window": [],
+    "price_breaks_in_window": [],
+    "rebuilt_ca_feed_vs_10y": {
+     "only_in_rebuilt": [
+      [
+       "CCAVENUE",
+       "2026-10-13",
+       10.0
+      ],
+      [
+       "KAUSHALYA",
+       "2024-01-12",
+       100.0
+      ],
+      [
+       "SHEKHAWATI",
+       "2024-08-28",
+       10.0
+      ],
+      [
+       "VERTOZ",
+       "2025-06-25",
+       10.0
+      ]
+     ],
+     "only_in_10y": [],
+     "only_in_rebuilt_from_parser_extension": [
+      [
+       "CCAVENUE",
+       "2026-10-13",
+       10.0
+      ],
+      [
+       "KAUSHALYA",
+       "2024-01-12",
+       100.0
+      ],
+      [
+       "SHEKHAWATI",
+       "2024-08-28",
+       10.0
+      ],
+      [
+       "VERTOZ",
+       "2025-06-25",
+       10.0
+      ]
+     ],
+     "identical": false,
+     "identical_apart_from_parser_extension": true,
+     "note": "research-period events found by the parser extension are reported, not applied: the live feed adds only events of the live window, so equity_features through the research end keep the ten-year feed's adjustments"
+    },
+    "new_etf_symbols": null,
+    "backup_deleted": true
    }
   ]
+ },
+ "superseded_ledger": {
+  "reason": "The first ledger (written on 2026-10-23 for signal dates 2026-10-19, 2026-10-21 and 2026-10-22, held only in work-in-progress commits) was built before CCAVENUE's 10:1 consolidation was adjusted: its bc record ('CNSLDATNRE1 TO RS10', EX_DT empty, record date 2026-10-13, PR121026.zip) was not read by the corporate-action parser, and the live window kept only ex-dates after 2026-10-16 while CCAVENUE was suspended 13-16 October and first printed again on 2026-10-19. Its features on all three signal dates carried ret_1d = +8.40 (true -0.060), and it sat in every book. The store was repaired (ml/paper/ingest.py --rebuild-features, verified) and the ledger regenerated from inception with the same frozen construction and the same October models (ml/paper/SPEC.md section 3 and amendment 4).",
+  "folder": "ml/results/improve2/paper/superseded_2026-10-23",
+  "rows": {
+   "signals": 1521,
+   "marks": 8,
+   "monitors": 48
+  },
+  "superseded_sha256": {
+   "marks.csv": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+   "monitors.csv": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+   "signals.csv": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+   "state.json": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
+  },
+  "regenerated_sha256": {
+   "marks.csv": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+   "monitors.csv": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+   "signals.csv": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+   "state.json": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319"
+  },
+  "models_unchanged": {
+   "lgbm": true,
+   "lambdarank": true,
+   "catboost": true,
+   "logistic": true
+  },
+  "ccavenue_neutral_lgbm": {
+   "2026-10-19": {
+    "old": 0.9789888378200919,
+    "new": 0.39198949441891007
+   },
+   "2026-10-21": {
+    "old": 0.9671916010498688,
+    "new": 0.4284776902887139
+   },
+   "2026-10-22": {
+    "old": 0.9777341191879503,
+    "new": 0.26195153896529144
+   }
+  },
+  "ccavenue_rows_in_books": {
+   "old": [
+    "2026-10-19 primary rank 33",
+    "2026-10-19 control_plain rank 88",
+    "2026-10-21 primary rank 51",
+    "2026-10-21 capacity rank 1",
+    "2026-10-21 control_plain rank 25",
+    "2026-10-22 primary rank 35",
+    "2026-10-22 control_plain rank 62"
+   ],
+   "new": []
+  },
+  "raw_member_scores_of_other_names_max_abs_diff": {
+   "2026-10-19": {
+    "lgbm": 0.020644761959271785,
+    "lambdarank": 0.03471252962888438,
+    "catboost": 0.016320403590821653,
+    "raw_scores_identical_for_other_names": false
+   },
+   "2026-10-21": {
+    "lgbm": 0.03523713344549745,
+    "lambdarank": 0.05949552462921681,
+    "catboost": 0.023161204848046624,
+    "raw_scores_identical_for_other_names": false
+   },
+   "2026-10-22": {
+    "lgbm": 0.024887302208235706,
+    "lambdarank": 0.080970729962695,
+    "catboost": 0.011054271502173085,
+    "raw_scores_identical_for_other_names": false
+   }
+  },
+  "basket_changes": [
+   {
+    "signal_date": "2026-10-19",
+    "book": "primary",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "CCAVENUE"
+    ],
+    "in": [
+     "NORTHARC"
+    ]
+   },
+   {
+    "signal_date": "2026-10-19",
+    "book": "capacity",
+    "n_old": 50,
+    "n_new": 50,
+    "out": [
+     "GAIL"
+    ],
+    "in": [
+     "GMRAIRPORT"
+    ]
+   },
+   {
+    "signal_date": "2026-10-19",
+    "book": "challenger",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "THERMAX",
+     "TIMEX"
+    ],
+    "in": [
+     "STARHEALTH",
+     "STEELCAS"
+    ]
+   },
+   {
+    "signal_date": "2026-10-19",
+    "book": "control_plain",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "AUGMONT",
+     "CCAVENUE"
+    ],
+    "in": [
+     "COFORGE",
+     "WELENT"
+    ]
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "primary",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "CCAVENUE"
+    ],
+    "in": [
+     "SHILPAMED"
+    ]
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "capacity",
+    "n_old": 50,
+    "n_new": 50,
+    "out": [
+     "ASTRAMICRO",
+     "CCAVENUE"
+    ],
+    "in": [
+     "MANORAMA",
+     "NBCC"
+    ]
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "challenger",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "UNIPARTS"
+    ],
+    "in": [
+     "ELGIEQUIP"
+    ]
+   },
+   {
+    "signal_date": "2026-10-21",
+    "book": "control_plain",
+    "n_old": 152,
+    "n_new": 152,
+    "out": [
+     "CCAVENUE",
+     "SKYGOLD"
+    ],
+    "in": [
+     "CCL",
+     "IFBIND"
+    ]
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "primary",
+    "n_old": 153,
+    "n_new": 153,
+    "out": [
+     "CCAVENUE",
+     "KIMS"
+    ],
+    "in": [
+     "CUPID",
+     "GREENPLY"
+    ]
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "capacity",
+    "n_old": 50,
+    "n_new": 50,
+    "out": [
+     "SBCL"
+    ],
+    "in": [
+     "ACMESOLAR"
+    ]
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "challenger",
+    "n_old": 153,
+    "n_new": 153,
+    "out": [
+     "RANEHOLDIN"
+    ],
+    "in": [
+     "WESTLIFE"
+    ]
+   },
+   {
+    "signal_date": "2026-10-22",
+    "book": "control_plain",
+    "n_old": 153,
+    "n_new": 153,
+    "out": [
+     "CCAVENUE",
+     "GLAND"
+    ],
+    "in": [
+     "FOSECOIND",
+     "PVRINOX"
+    ]
+   }
+  ],
+  "books_changed": 12,
+  "books_total": 12
  },
  "consistency_proof": {
   "research_end": "2026-10-16",
@@ -390,139 +932,141 @@
    "rows_common": 2226504,
    "rows_only_frame": 0,
    "rows_only_10y": 0,
-   "max_abs_diff_all_features": 5.755396159656812e-13,
-   "cells_differing": 3204,
+   "max_abs_diff_all_features": 6.110667527536862e-13,
+   "cells_differing": 5438,
    "nan_mismatch_cells": 0,
    "per_feature_differing": {
     "ret_1d": {
      "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 49,
+     "rows_differing": 116,
      "nan_mismatch": 0
     },
     "log_ret_1d": {
-     "max_abs_diff": 2.2201749987071917e-16,
-     "rows_differing": 49,
+     "max_abs_diff": 2.3592239273284576e-16,
+     "rows_differing": 116,
      "nan_mismatch": 0
     },
     "gap_pct": {
-     "max_abs_diff": 1.5439038936193583e-16,
-     "rows_differing": 90,
+     "max_abs_diff": 1.8735013540549517e-16,
+     "rows_differing": 226,
      "nan_mismatch": 0
     },
     "range_pct": {
-     "max_abs_diff": 1.5612511283791264e-16,
-     "rows_differing": 97,
+     "max_abs_diff": 1.8735013540549517e-16,
+     "rows_differing": 245,
      "nan_mismatch": 0
     },
     "close_pos_in_range": {
      "max_abs_diff": 1.354472090042691e-14,
-     "rows_differing": 113,
+     "rows_differing": 272,
      "nan_mismatch": 0
     },
     "dist_sma_5": {
      "max_abs_diff": 4.440892098500626e-16,
-     "rows_differing": 67,
+     "rows_differing": 153,
      "nan_mismatch": 0
     },
     "dist_sma_10": {
      "max_abs_diff": 4.440892098500626e-16,
-     "rows_differing": 69,
+     "rows_differing": 162,
      "nan_mismatch": 0
     },
     "dist_sma_20": {
      "max_abs_diff": 4.440892098500626e-16,
-     "rows_differing": 64,
+     "rows_differing": 151,
      "nan_mismatch": 0
     },
     "dist_sma_50": {
-     "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 47,
+     "max_abs_diff": 3.3306690738754696e-16,
+     "rows_differing": 119,
      "nan_mismatch": 0
     },
     "macd_norm": {
-     "max_abs_diff": 7.008282842946301e-16,
-     "rows_differing": 116,
+     "max_abs_diff": 9.26342336171615e-16,
+     "rows_differing": 273,
      "nan_mismatch": 0
     },
     "mom_5": {
      "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 43,
+     "rows_differing": 111,
      "nan_mismatch": 0
     },
     "mom_10": {
      "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 49,
+     "rows_differing": 121,
      "nan_mismatch": 0
     },
     "mom_20": {
      "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 35,
+     "rows_differing": 97,
      "nan_mismatch": 0
     },
     "vol_5": {
-     "max_abs_diff": 1.231653667943533e-16,
-     "rows_differing": 115,
+     "max_abs_diff": 1.97758476261356e-16,
+     "rows_differing": 266,
      "nan_mismatch": 0
     },
     "vol_10": {
-     "max_abs_diff": 6.245004513516506e-17,
-     "rows_differing": 116,
+     "max_abs_diff": 1.0408340855860843e-16,
+     "rows_differing": 269,
      "nan_mismatch": 0
     },
     "vol_20": {
-     "max_abs_diff": 6.245004513516506e-17,
-     "rows_differing": 92,
+     "max_abs_diff": 6.938893903907228e-17,
+     "rows_differing": 237,
      "nan_mismatch": 0
     },
     "rsi_14": {
      "max_abs_diff": 9.947598300641403e-14,
-     "rows_differing": 89,
+     "rows_differing": 213,
      "nan_mismatch": 0
     },
     "atr_pct": {
      "max_abs_diff": 5.551115123125783e-17,
-     "rows_differing": 107,
+     "rows_differing": 238,
      "nan_mismatch": 0
     },
     "dist_52w_high": {
      "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 53,
+     "rows_differing": 140,
      "nan_mismatch": 0
     },
     "dist_52w_low": {
      "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 63,
+     "rows_differing": 126,
      "nan_mismatch": 0
     },
     "rsi_2": {
-     "max_abs_diff": 5.755396159656812e-13,
-     "rows_differing": 109,
+     "max_abs_diff": 6.110667527536862e-13,
+     "rows_differing": 243,
      "nan_mismatch": 0
     },
     "ret_63d": {
      "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 35,
+     "rows_differing": 80,
      "nan_mismatch": 0
     },
     "ret_126d": {
      "max_abs_diff": 2.220446049250313e-16,
-     "rows_differing": 1,
+     "rows_differing": 14,
      "nan_mismatch": 0
     },
     "dist_200dma": {
-     "max_abs_diff": 1.1102230246251565e-16,
-     "rows_differing": 3,
+     "max_abs_diff": 2.220446049250313e-16,
+     "rows_differing": 26,
      "nan_mismatch": 0
     },
     "amihud_20": {
      "max_abs_diff": 5.051514762044462e-15,
-     "rows_differing": 1533,
+     "rows_differing": 1424,
      "nan_mismatch": 0
     }
    },
    "tickers_with_differences": [
     "20MICRONS",
     "360ONE",
+    "3BBLACKBIO",
+    "3IINFOLTD",
     "3MINDIA",
     "5PAISA",
     "63MOONS",
@@ -530,60 +1074,58 @@
     "AARTIDRUGS",
     "AARTIIND",
     "AARTIPHARM",
+    "AASTHA",
     "AAVAS",
     "ABB",
     "ABBOTINDIA",
     "ABCAPITAL",
-    "ABCOTS",
     "ABDL",
     "ABFRL",
-    "ABLBL",
-    "ABREL",
+    "ABINFRA",
     "ABSLAMC",
-    "ACC",
     "ACE",
-    "ACI",
     "ACMESOLAR",
     "ACUTAAS",
     "ADANIENSOL",
     "ADANIENT",
     "ADANIGREEN",
-    "ADANIPORTS",
     "ADANIPOWER",
     "ADFFOODS",
     "ADOR",
-    "ADSL",
     "ADVAIT",
     "ADVANCE",
     "ADVENTHTL",
     "ADVENZYMES",
-    "AEGISLOG",
-    "AEGISVOPAK",
     "AEQUS",
     "AEROENTER",
-    "AEROFLEX",
     "AETHER",
     "AFCONS",
     "AFFLE",
     "AGARIND",
-    "AGARWALEYE",
-    "AGI",
     "AGIIL",
+    "AGL",
     "AHCL",
     "AHLUCONT",
-    "AIAENG",
     "AIIL",
     "AJANTPHARM",
-    "AJAXENGG",
     "AJMERA",
     "AKUMS",
     "ALEMBICLTD",
     "ALGOQUANT",
     "ALIVUS",
-    "ALKEM"
+    "ALKEM",
+    "ALKYLAMINE",
+    "ALLTIME",
+    "ALOKINDS",
+    "AMAGI",
+    "AMBER",
+    "AMBIKCO",
+    "AMBUJACEM",
+    "AMRUTANJAN",
+    "ANDHRSUGAR"
    ],
-   "n_tickers_with_differences": 1428,
-   "n_dates_with_differences": 119,
+   "n_tickers_with_differences": 1188,
+   "n_dates_with_differences": 165,
    "dates_with_differences_last": [
     "2026-10-12",
     "2026-10-13",
@@ -600,7 +1142,12 @@
    "2026-10-21",
    "2026-10-22"
   ],
-  "corporate_actions_added_after_research_end": [
+  "corporate_actions_added_to_ten_year_feed": [
+   {
+    "ticker": "CCAVENUE",
+    "ex_date": "2026-10-13",
+    "ratio": 10.0
+   },
    {
     "ticker": "JSWDULUX",
     "ex_date": "2026-10-22",
@@ -609,7 +1156,7 @@
   ],
   "explained_difference_rule": "a cell of a ticker whose pre-ex prices the new event rescales, or a cross-sectional feature (ranks, amihud_20 z-score) on a date where that ticker is in the universe"
  },
- "inception_point_in_time_note": "signal dates 2026-10-19, 2026-10-21 and 2026-10-22 were scored on 2026-10-23 (the day this stream started) from the store as of 2026-10-22. Every feature looks back only, so a date's frame rows do not depend on later sessions except through a corporate action added later, which rescales that ticker's earlier prices (here JSWDULUX, ex 2026-10-22): the consistency proof above is exactly that check at 2026-10-16 (a frame built through 2026-10-22 against the research frame built through 2026-10-16), and it differs only by floating-point rounding in that one ticker. From 2026-10-23 on, each session is scored on its own evening.",
+ "inception_point_in_time_note": "signal dates 2026-10-19, 2026-10-21 and 2026-10-22 were scored on 2026-10-23 (the day this stream started) from the store as of 2026-10-22, after the corporate-action repair of that day. Every feature looks back only, so a date's frame rows do not depend on later sessions except through a corporate action added later, which rescales that ticker's earlier prices (here JSWDULUX, split ex 2026-10-22): the consistency proof above is exactly that check at 2026-10-16 (a frame built through 2026-10-22 against the research frame built through 2026-10-16), and it differs only by floating-point rounding in that one ticker. CCAVENUE's consolidation (record date 2026-10-13) was announced in the 2026-10-12 bundle, so adjusting it before scoring 2026-10-19 uses no later information. From 2026-10-23 on, each session is scored on its own evening.",
  "trainer_reproduction": {
   "fold": {
    "name": "holdout",
@@ -618,15 +1165,33 @@
    "test_end": "2026-09-16"
   },
   "train_rows": 682309,
-  "test_rows": 47117,
+  "test_rows": 47120,
   "rows_10y": 47117,
+  "test_rows_label_exit_after_research_end": [
+   {
+    "date": "2026-09-10",
+    "ticker": "CCAVENUE",
+    "exit_date": "2026-10-19"
+   },
+   {
+    "date": "2026-09-11",
+    "ticker": "CCAVENUE",
+    "exit_date": "2026-10-21"
+   },
+   {
+    "date": "2026-09-15",
+    "ticker": "CCAVENUE",
+    "exit_date": "2026-10-22"
+   }
+  ],
   "rows_matched": 47117,
   "rows_only_trainer": 0,
   "rows_only_10y": 0,
   "max_abs_score_diff": 0.0,
   "rows_with_diff_gt_1e-12": 0,
   "identical": true,
-  "seconds": 29.7,
+  "identical_rule": "every holdout row the research data could label (label exit on or before the research end) is present in both and scores exactly the same",
+  "seconds": 28.9,
   "reference": "ml/results/improve/ab/10y/preds/control__beat_mkt_20d.parquet (fold holdout)"
  },
  "models": {
@@ -645,7 +1210,7 @@
     "rows_purged_exit_ge_test_start": 0,
     "tickers": 2019,
     "label_mean": 0.5002893056517873,
-    "rule": "ml.scale5y_nested.window_rows: 504 sessions ending at train_end (22 sessions before the month's first session), labelled clean rows, exit-date purge at the first session"
+    "rule": "ml.scale5y_nested.window_rows: 504 sessions back from train_end (505 sessions inclusive, the research walk-forward's convention; train_end 22 sessions before the month's first session), labelled clean rows, exit-date purge at the first session"
    },
    "training_frame_sha256": "be1369cd5db35848a6ea49070c0798ff54aa9e04362edf40bfccb9b597e7c1e2",
    "files_sha256": {
@@ -670,7 +1235,7 @@
     "rows_purged_exit_ge_test_start": 0,
     "tickers": 2030,
     "label_mean": 0.5002986359364432,
-    "rule": "ml.scale5y_nested.window_rows: 504 sessions ending at train_end (22 sessions before the month's first session), labelled clean rows, exit-date purge at the first session"
+    "rule": "ml.scale5y_nested.window_rows: 504 sessions back from train_end (505 sessions inclusive, the research walk-forward's convention; train_end 22 sessions before the month's first session), labelled clean rows, exit-date purge at the first session"
    },
    "training_frame_sha256": "519aa6e4d2d5274891eaf3ba4113cf52b65c80f39002e2878af73b9c2eb2b20a",
    "files_sha256": {
@@ -747,52 +1312,52 @@
     {
      "rank": 1,
      "ticker": "MARINE",
-     "score": 0.972422849639
+     "score": 0.973079448457
     },
     {
      "rank": 2,
      "ticker": "KARAMTARA",
-     "score": 0.964543663821
+     "score": 0.96520026264
     },
     {
      "rank": 3,
-     "ticker": "AUGMONT",
-     "score": 0.961260669731
+     "ticker": "AYE",
+     "score": 0.961917268549
     },
     {
      "rank": 4,
      "ticker": "DIACABS",
-     "score": 0.959947472095
+     "score": 0.961260669731
     },
     {
      "rank": 5,
      "ticker": "XPROINDIA",
-     "score": 0.959290873276
+     "score": 0.960604070913
     },
     {
      "rank": 6,
-     "ticker": "AYE",
-     "score": 0.958634274458
+     "ticker": "POLICYBZR",
+     "score": 0.951411687459
     },
     {
      "rank": 7,
-     "ticker": "KMEW",
-     "score": 0.952068286277
+     "ticker": "ENTERO",
+     "score": 0.950098489823
     },
     {
      "rank": 8,
-     "ticker": "POLICYBZR",
-     "score": 0.948785292186
+     "ticker": "KMEW",
+     "score": 0.948128693368
     },
     {
      "rank": 9,
-     "ticker": "ENTERO",
-     "score": 0.946815495732
+     "ticker": "AEQUS",
+     "score": 0.94747209455
     },
     {
      "rank": 10,
-     "ticker": "AEQUS",
-     "score": 0.94418910046
+     "ticker": "NEOGEN",
+     "score": 0.941562705187
     }
    ]
   },
@@ -831,12 +1396,12 @@
     },
     {
      "rank": 7,
-     "ticker": "MANBA",
+     "ticker": "KAPSTON",
      "score": 0.996060407091
     },
     {
      "rank": 8,
-     "ticker": "KAPSTON",
+     "ticker": "MANBA",
      "score": 0.995403808273
     },
     {
@@ -872,7 +1437,7 @@
     {
      "rank": 4,
      "ticker": "POWERGRID",
-     "score": 0.692967739107
+     "score": 0.697060770373
     },
     {
      "rank": 5,
@@ -928,11 +1493,11 @@
    "first_session": "2026-10-21",
    "last_session": "2026-10-22",
    "exposure_last": 0.1,
-   "cum_fixed_capital_gross": -0.0020961137353691095,
-   "cum_fixed_capital_net_20bps": -0.002292719634204965,
-   "cum_fixed_capital_net_name_level": -0.00259244843783768,
+   "cum_fixed_capital_gross": -0.0020618208177880515,
+   "cum_fixed_capital_net_20bps": -0.002258475683612482,
+   "cum_fixed_capital_net_name_level": -0.002560043011822666,
    "cum_fixed_capital_benchmark": -0.0022691675916338694,
-   "cum_active_net_20bps": -2.3552042571095555e-05,
+   "cum_active_net_20bps": 1.069190802138742e-05,
    "benchmark": "ew_universe"
   },
   "capacity": {
@@ -940,11 +1505,11 @@
    "first_session": "2026-10-21",
    "last_session": "2026-10-22",
    "exposure_last": 0.1,
-   "cum_fixed_capital_gross": -0.002402756068316081,
-   "cum_fixed_capital_net_20bps": -0.002599034842603487,
-   "cum_fixed_capital_net_name_level": -0.002784569214406063,
+   "cum_fixed_capital_gross": -0.002401126459656844,
+   "cum_fixed_capital_net_20bps": -0.002597428399136237,
+   "cum_fixed_capital_net_name_level": -0.0027813177150474155,
    "cum_fixed_capital_benchmark": -0.0020731418741062324,
-   "cum_active_net_20bps": -0.0005258929684972546,
+   "cum_active_net_20bps": -0.0005242865250300044,
    "benchmark": "ew_liquid"
   },
   "challenger": {
@@ -952,11 +1517,11 @@
    "first_session": "2026-10-21",
    "last_session": "2026-10-22",
    "exposure_last": 0.1,
-   "cum_fixed_capital_gross": -0.0018099144122867283,
-   "cum_fixed_capital_net_20bps": -0.0020068180764293286,
-   "cum_fixed_capital_net_name_level": -0.0023121348363486227,
+   "cum_fixed_capital_gross": -0.0017843866229673155,
+   "cum_fixed_capital_net_20bps": -0.001981316372828945,
+   "cum_fixed_capital_net_name_level": -0.0022852581345766954,
    "cum_fixed_capital_benchmark": -0.0022691675916338694,
-   "cum_active_net_20bps": 0.00026234951520454075,
+   "cum_active_net_20bps": 0.00028785121880492426,
    "benchmark": "ew_universe"
   },
   "control_plain": {
@@ -964,11 +1529,11 @@
    "first_session": "2026-10-21",
    "last_session": "2026-10-22",
    "exposure_last": 0.1,
-   "cum_fixed_capital_gross": -0.0015870854812902735,
-   "cum_fixed_capital_net_20bps": -0.0017844424785578017,
-   "cum_fixed_capital_net_name_level": -0.0019480813044724377,
+   "cum_fixed_capital_gross": -0.001527785070910781,
+   "cum_fixed_capital_net_20bps": -0.0017252357598548373,
+   "cum_fixed_capital_net_name_level": -0.0018927277027254163,
    "cum_fixed_capital_benchmark": -0.0022691675916338694,
-   "cum_active_net_20bps": 0.0004847251130760677,
+   "cum_active_net_20bps": 0.000543931831779032,
    "benchmark": "ew_universe"
   }
  },
@@ -982,7 +1547,7 @@
      153
     ],
     "turnover_per_rebalance_after_inception": [],
-    "name_level_trade_weighted_bps_per_side": 49.992978426729266
+    "name_level_trade_weighted_bps_per_side": 50.14718090514805
    },
    "capacity": {
     "tranches": 3,
@@ -992,7 +1557,7 @@
      50
     ],
     "turnover_per_rebalance_after_inception": [],
-    "name_level_trade_weighted_bps_per_side": 36.653126978325126
+    "name_level_trade_weighted_bps_per_side": 36.42396176324887
    },
    "challenger": {
     "tranches": 3,
@@ -1002,7 +1567,7 @@
      153
     ],
     "turnover_per_rebalance_after_inception": [],
-    "name_level_trade_weighted_bps_per_side": 50.17786400983961
+    "name_level_trade_weighted_bps_per_side": 50.10492696615533
    },
    "control_plain": {
     "tranches": 3,
@@ -1012,7 +1577,7 @@
      153
     ],
     "turnover_per_rebalance_after_inception": [],
-    "name_level_trade_weighted_bps_per_side": 37.246179498174946
+    "name_level_trade_weighted_bps_per_side": 37.55547041883167
    }
   },
   "first_entry_session": "2026-10-21"
@@ -1060,7 +1625,7 @@
     "session": "2026-10-22",
     "monitor": "feature_psi",
     "scope": "trailing 20 sessions vs 2026-10 training window",
-    "value": "0.259355",
+    "value": "0.259106",
     "threshold": "0.25",
     "status": "ALERT",
     "detail": "highest: ret_126d 0.259, dist_sma_50 0.141, dist_sma_20 0.134, rsi_14 0.133, mom_20 0.129; features above 0.25: 1"
@@ -1072,7 +1637,7 @@
     "value": "",
     "threshold": "0",
     "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
-    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0023%; benchmark ew_universe"
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0011%; benchmark ew_universe"
    },
    {
     "session": "2026-10-22",
@@ -1081,7 +1646,7 @@
     "value": "",
     "threshold": "0",
     "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
-    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0526%; benchmark ew_liquid"
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0525%; benchmark ew_liquid"
    },
    {
     "session": "2026-10-22",
@@ -1090,7 +1655,7 @@
     "value": "",
     "threshold": "0",
     "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
-    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0263%; benchmark ew_universe"
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0288%; benchmark ew_universe"
    },
    {
     "session": "2026-10-22",
@@ -1099,7 +1664,7 @@
     "value": "",
     "threshold": "0",
     "status": "warming up (needs 6 months of marks; 2 sessions in 1 month(s))",
-    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0485%; benchmark ew_universe"
+    "detail": "IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0545%; benchmark ew_universe"
    },
    {
     "session": "2026-10-22",
@@ -1114,28 +1679,28 @@
     "session": "2026-10-22",
     "monitor": "ensemble_atr_corr",
     "scope": "month 2026-10 to date",
-    "value": "0.0770095",
+    "value": "0.0755509",
     "threshold": "0.2",
     "status": "ok",
-    "detail": "3 signal dates; per-date range +0.045..+0.094"
+    "detail": "3 signal dates; per-date range +0.043..+0.093"
    },
    {
     "session": "2026-10-22",
     "monitor": "neutral_score_corr",
     "scope": "primary",
-    "value": "0.0394913",
+    "value": "0.0395689",
     "threshold": "0.05",
     "status": "ok",
-    "detail": "atr_pct -0.0095, log_turnover +0.0395"
+    "detail": "atr_pct -0.0099, log_turnover +0.0396"
    },
    {
     "session": "2026-10-22",
     "monitor": "neutral_score_corr",
     "scope": "challenger",
-    "value": "0.0399362",
+    "value": "0.0397487",
     "threshold": "0.05",
     "status": "ok",
-    "detail": "atr_pct +0.0105, log_turnover +0.0399"
+    "detail": "atr_pct +0.0104, log_turnover +0.0397"
    },
    {
     "session": "2026-10-22",
@@ -1150,10 +1715,10 @@
     "session": "2026-10-22",
     "monitor": "split_flag_rate",
     "scope": "signal date",
-    "value": "0.00261952",
+    "value": "0.00196464",
     "threshold": "0.01",
     "status": "ok",
-    "detail": "4 of 1527 universe names"
+    "detail": "3 of 1527 universe names"
    },
    {
     "session": "2026-10-22",
@@ -1162,7 +1727,7 @@
     "value": "0",
     "threshold": "0.05",
     "status": "ok",
-    "detail": "continuity mismatches 0 of 2912; duplicate EQ/BE pairs 0; write verified True; unvalidated split/bonus on this date 0; price breaks 0; recorded closures to date ['2026-10-20']"
+    "detail": "continuity mismatches 0 of 2912; per-name prev_close breaks > 22%: 0; duplicate EQ/BE pairs 0; write verified True; unvalidated split/bonus on this date 0; price breaks 0; recorded closures to date ['2026-10-20']"
    }
   ]
  },
@@ -1183,16 +1748,16 @@
  "idempotency": {
   "note": "ml/paper/job.py --prove-idempotency, run after the first full run on the same store",
   "before": {
-   "signals": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
-   "marks": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
-   "monitors": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
-   "state": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
+   "signals": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+   "marks": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+   "monitors": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+   "state": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319"
   },
   "after": {
-   "signals": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
-   "marks": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
-   "monitors": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
-   "state": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9"
+   "signals": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+   "marks": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+   "monitors": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+   "state": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319"
   },
   "identical": true,
   "rows_appended": 0,
@@ -1210,26 +1775,35 @@
   ]
  },
  "lost_state_check": {
-  "test": "ml/paper/state/models/2026-10/ (all four model files) and ml/paper/state/scores/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest",
+  "test": "ml/paper/state/models/2026-10/ (the four model files) and ml/paper/state/scores/scores_2026-10-19.parquet deleted; then OMP_NUM_THREADS=2 python3 -I ml/paper/job.py --no-ingest (repaired store, scoring frame rebuilt after the CCAVENUE repair)",
   "retrain_equal_to_committed_metadata": {
-   "training_frame_sha256": true,
    "reference_prediction_sha256": true,
-   "model_contents_sha256": true
+   "model_contents_sha256": true,
+   "training_window_and_rows": true,
+   "training_frame_sha256 (information only)": false
   },
   "regenerated_score_files": [
    "2026-10-19"
   ],
   "regenerated_scores_file_byte_identical": true,
   "unchanged": true,
-  "note_catboost": "CatBoost .cbm bytes carry train_finish_time and a random model_guid; its identity is the SHA-256 of the model exported without model_info (content_sha256); predictions of the original and the retrained CatBoost on 83,754 rows (2026-08-01..2026-10-22) differ by 0.0",
+  "note_catboost": "CatBoost .cbm bytes carry train_finish_time and a random model_guid; its identity is the SHA-256 of the model exported without model_info (content_sha256); predictions of the original and the retrained CatBoost on 83,754 rows (2026-08-03..2026-10-22) differ by 0.0",
   "live_feed_regeneration": {
    "test": "ml/data_ext/corporate_actions_feed_live.csv deleted; ml.paper.ingest.regenerate_live_feed (the path a run takes when the feed is missing after the research end) rebuilt it from the store's EQ/BE rows and every PR bundle on disk",
-   "original_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
-   "regenerated_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
+   "original_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+   "regenerated_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
    "byte_identical": true,
    "equals_state_json": true,
-   "rows": 756,
+   "rows": 757,
+   "starts_with_ten_year_feed_bytes": true,
    "new_validated_events": [
+    {
+     "ticker": "CCAVENUE",
+     "ex_date": "2026-10-13",
+     "ratio": 10.0,
+     "kind": "consolidation",
+     "source": "PR121026.zip/bc12102026.csv"
+    },
     {
      "ticker": "JSWDULUX",
      "ex_date": "2026-10-22",
@@ -1246,26 +1820,26 @@
   "procedure": "ml/paper/prove.py: the job (--no-ingest) run from an empty ledger in ml/paper/state/regen/ with the same store, scoring frame and month models; every write redirected to the sandbox",
   "ledger_files": {
    "signals": {
-    "committed": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
-    "regenerated": "3534d3d7961f3677b196c9c4b66f5ef65c39b101a1a526bfb9b5b54e39ef679f",
+    "committed": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
+    "regenerated": "d673191e6e44e48049b4fd99952bf4b03c213b075cca068b673015c227414e8e",
     "identical": true,
     "path": "ml/paper/ledger/signals.csv"
    },
    "marks": {
-    "committed": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
-    "regenerated": "823d5bec0929e5cc3e9c4d91b41c0d410cd4e4e04f6b1dda39b276878eea5a5c",
+    "committed": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
+    "regenerated": "d82156ed4411ac17db457966846446c1e652996993c6194f07997b4b953481dc",
     "identical": true,
     "path": "ml/paper/ledger/marks.csv"
    },
    "monitors": {
-    "committed": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
-    "regenerated": "6ce48f110ab264f380895d04206816c31545887d2c45880819939bdd9c85bd74",
+    "committed": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
+    "regenerated": "5258b13a813a9c4d7fa5bcc5844278af04e08cb2ec7c6ec498a9aa23e72bed55",
     "identical": true,
     "path": "ml/paper/ledger/monitors.csv"
    },
    "state": {
-    "committed": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9",
-    "regenerated": "43e6bb1abfd9abf75f52f6f28798e16a6e4d32015dbc040bf92c180d9da145b9",
+    "committed": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
+    "regenerated": "56c6baae4f208931d6090d101f1e8d1fe5ad7a2896766f626c7d844321ae1319",
     "identical": true,
     "path": "ml/paper/ledger/state.json"
    }

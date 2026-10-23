@@ -6,14 +6,32 @@
   "test_end": "2026-09-16"
  },
  "train_rows": 682309,
- "test_rows": 47117,
+ "test_rows": 47120,
  "rows_10y": 47117,
+ "test_rows_label_exit_after_research_end": [
+  {
+   "date": "2026-09-10",
+   "ticker": "CCAVENUE",
+   "exit_date": "2026-10-19"
+  },
+  {
+   "date": "2026-09-11",
+   "ticker": "CCAVENUE",
+   "exit_date": "2026-10-21"
+  },
+  {
+   "date": "2026-09-15",
+   "ticker": "CCAVENUE",
+   "exit_date": "2026-10-22"
+  }
+ ],
  "rows_matched": 47117,
  "rows_only_trainer": 0,
  "rows_only_10y": 0,
  "max_abs_score_diff": 0.0,
  "rows_with_diff_gt_1e-12": 0,
  "identical": true,
- "seconds": 29.7,
+ "identical_rule": "every holdout row the research data could label (label exit on or before the research end) is present in both and scores exactly the same",
+ "seconds": 28.9,
  "reference": "ml/results/improve/ab/10y/preds/control__beat_mkt_20d.parquet (fold holdout)"
 }

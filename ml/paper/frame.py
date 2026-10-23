@@ -98,8 +98,8 @@ CROSS_SECTIONAL = {"cs_rank_mom_20", "cs_rank_ret_126", "cs_rank_vol_20", "cs_ra
 
 def _cmp(x: pd.DataFrame, y: pd.DataFrame, feats: list[str], ca_tickers: set[str]) -> dict:
     """Cell-by-cell comparison.  A differing cell is explained when it belongs to a ticker with a corporate action
-    added after the research end (its pre-ex prices were rescaled), or is a cross-sectional feature on a date where
-    such a ticker is in the universe (the rescaled ticker enters that date's ranks or z-scores)."""
+    the live feed adds to the ten-year feed (its pre-ex prices were rescaled), or is a cross-sectional feature on a
+    date where such a ticker is in the universe (the rescaled ticker enters that date's ranks or z-scores)."""
     j = x.merge(y, on=["date", "ticker"], suffixes=("_f", "_t"), how="outer", indicator=True)
     both = j[j["_merge"] == "both"]
     is_ca = both["ticker"].isin(ca_tickers).to_numpy()
@@ -158,7 +158,7 @@ def consistency_proof() -> dict:
     ca_t = set(new_ev["ticker"])
     out = {"features": len(feats), "research_end": RESEARCH_END,
            "rule": "exact equality per cell (NaN equals NaN); max_abs_diff over finite pairs",
-           "corporate_actions_added_after_research_end": new_ev[["ticker", "ex_date", "ratio"]].to_dict("records"),
+           "corporate_actions_added_to_ten_year_feed": new_ev[["ticker", "ex_date", "ratio"]].to_dict("records"),
            "explained_difference_rule": "a cell of a ticker whose pre-ex prices the new event rescales, or a "
                                         "cross-sectional feature (ranks, amihud_20 z-score) on a date where that ticker "
                                         "is in the universe"}

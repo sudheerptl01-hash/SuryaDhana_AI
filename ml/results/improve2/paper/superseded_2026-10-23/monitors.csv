@@ -1,0 +1,49 @@
+session,monitor,scope,value,threshold,status,detail
+2026-10-19,delivery_resid_ic,pre-inception,0.0823414,0.02,ok,"months 2026-07 +0.0407, 2026-08 +0.0823 (raw IC +0.0522, +0.0294)"
+2026-10-19,live_model_auc,pre-inception,0.519292,0.5,warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it),"research walk-forward: fold 2026-07 0.5474, holdout 2026-08-03..2026-09-16 0.5193"
+2026-10-19,rank_ic_nw_t_12m,pre-inception,4.06322,2,ok,"225 matured signal dates in the trailing 12 months (0 live), mean IC +0.0867; last matured date 2026-09-16"
+2026-10-19,logistic_sign_flips,2026-09 -> 2026-10,0,0,ok,"top 5: log_turnover -0.1719 (prev -0.2024), cs_rank_turnover +0.1688 (prev +0.1867), macd_norm -0.1612 (prev -0.1872), dist_52w_high +0.1263 (prev +0.1314), amihud_20 -0.1244 (prev -0.1351)"
+2026-10-19,feature_psi,trailing 20 sessions vs 2026-10 training window,0.332118,0.25,ALERT,"highest: ret_126d 0.332, dist_sma_50 0.112, mom_20 0.110, dist_sma_20 0.106, macd_norm 0.101; features above 0.25: 1"
+2026-10-19,paper_active_ir_6m,primary,,0,warming up (no marks yet),
+2026-10-19,paper_active_ir_6m,capacity,,0,warming up (no marks yet),
+2026-10-19,paper_active_ir_6m,challenger,,0,warming up (no marks yet),
+2026-10-19,paper_active_ir_6m,control_plain,,0,warming up (no marks yet),
+2026-10-19,feature_inversion,pre-inception,0.634615,0.5,ALERT,"month 2026-08: 33 of 52 features against their training-window sign (gap_pct, range_pct, dist_sma_5, dist_sma_10, dist_sma_20, dist_sma_50, macd_norm, mom_5 ...)"
+2026-10-19,ensemble_atr_corr,month 2026-10 to date,0.0447273,0.2,ok,1 signal dates; per-date range +0.045..+0.045
+2026-10-19,neutral_score_corr,primary,0.0334333,0.05,ok,"atr_pct -0.0105, log_turnover +0.0334"
+2026-10-19,neutral_score_corr,challenger,0.0344601,0.05,ok,"atr_pct +0.0070, log_turnover +0.0345"
+2026-10-19,universe_etf_count,signal date,0,0,ok,1523 universe names
+2026-10-19,split_flag_rate,signal date,0.0026264,0.01,ok,4 of 1523 universe names
+2026-10-19,data_quality,store,0.000342231,0.05,ok,continuity mismatches 1 of 2922; duplicate EQ/BE pairs 0; write verified True; unvalidated split/bonus on this date 0; price breaks 0; recorded closures to date []
+2026-10-21,delivery_resid_ic,pre-inception,0.0823414,0.02,ok,"months 2026-07 +0.0407, 2026-08 +0.0823 (raw IC +0.0522, +0.0294)"
+2026-10-21,live_model_auc,pre-inception,0.519292,0.5,warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it),"research walk-forward: fold 2026-07 0.5474, holdout 2026-08-03..2026-09-16 0.5193"
+2026-10-21,rank_ic_nw_t_12m,pre-inception,4.02305,2,ok,"223 matured signal dates in the trailing 12 months (0 live), mean IC +0.0865; last matured date 2026-09-16"
+2026-10-21,logistic_sign_flips,2026-09 -> 2026-10,0,0,ok,"top 5: log_turnover -0.1719 (prev -0.2024), cs_rank_turnover +0.1688 (prev +0.1867), macd_norm -0.1612 (prev -0.1872), dist_52w_high +0.1263 (prev +0.1314), amihud_20 -0.1244 (prev -0.1351)"
+2026-10-21,feature_psi,trailing 20 sessions vs 2026-10 training window,0.294432,0.25,ALERT,"highest: ret_126d 0.294, dist_sma_50 0.125, mom_20 0.118, dist_sma_20 0.117, rsi_14 0.106; features above 0.25: 1"
+2026-10-21,paper_active_ir_6m,primary,,0,warming up (needs 6 months of marks; 1 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +nan%; benchmark ew_universe
+2026-10-21,paper_active_ir_6m,capacity,,0,warming up (needs 6 months of marks; 1 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +nan%; benchmark ew_liquid
+2026-10-21,paper_active_ir_6m,challenger,,0,warming up (needs 6 months of marks; 1 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +nan%; benchmark ew_universe
+2026-10-21,paper_active_ir_6m,control_plain,,0,warming up (needs 6 months of marks; 1 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +nan%; benchmark ew_universe
+2026-10-21,feature_inversion,pre-inception,0.634615,0.5,ALERT,"month 2026-08: 33 of 52 features against their training-window sign (gap_pct, range_pct, dist_sma_5, dist_sma_10, dist_sma_20, dist_sma_50, macd_norm, mom_5 ...)"
+2026-10-21,ensemble_atr_corr,month 2026-10 to date,0.0694586,0.2,ok,2 signal dates; per-date range +0.045..+0.094
+2026-10-21,neutral_score_corr,primary,0.0433762,0.05,ok,"atr_pct -0.0081, log_turnover +0.0434"
+2026-10-21,neutral_score_corr,challenger,0.0431802,0.05,ok,"atr_pct +0.0101, log_turnover +0.0432"
+2026-10-21,universe_etf_count,signal date,0,0,ok,1524 universe names
+2026-10-21,split_flag_rate,signal date,0.00262467,0.01,ok,4 of 1524 universe names
+2026-10-21,data_quality,store,0,0.05,ok,continuity mismatches 0 of 2915; duplicate EQ/BE pairs 0; write verified True; unvalidated split/bonus on this date 0; price breaks 0; recorded closures to date ['2026-10-20']
+2026-10-22,delivery_resid_ic,pre-inception,0.0823414,0.02,ok,"months 2026-07 +0.0407, 2026-08 +0.0823 (raw IC +0.0522, +0.0294)"
+2026-10-22,live_model_auc,pre-inception,0.519292,0.5,warming up (needs every 2026-10 signal date's 20-session label; the month's last signal date's label exits 21 sessions after it),"research walk-forward: fold 2026-07 0.5474, holdout 2026-08-03..2026-09-16 0.5193"
+2026-10-22,rank_ic_nw_t_12m,pre-inception,4.02305,2,ok,"223 matured signal dates in the trailing 12 months (0 live), mean IC +0.0865; last matured date 2026-09-16"
+2026-10-22,logistic_sign_flips,2026-09 -> 2026-10,0,0,ok,"top 5: log_turnover -0.1719 (prev -0.2024), cs_rank_turnover +0.1688 (prev +0.1867), macd_norm -0.1612 (prev -0.1872), dist_52w_high +0.1263 (prev +0.1314), amihud_20 -0.1244 (prev -0.1351)"
+2026-10-22,feature_psi,trailing 20 sessions vs 2026-10 training window,0.259355,0.25,ALERT,"highest: ret_126d 0.259, dist_sma_50 0.141, dist_sma_20 0.134, rsi_14 0.133, mom_20 0.129; features above 0.25: 1"
+2026-10-22,paper_active_ir_6m,primary,,0,warming up (needs 6 months of marks; 2 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0023%; benchmark ew_universe
+2026-10-22,paper_active_ir_6m,capacity,,0,warming up (needs 6 months of marks; 2 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) -0.0526%; benchmark ew_liquid
+2026-10-22,paper_active_ir_6m,challenger,,0,warming up (needs 6 months of marks; 2 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0263%; benchmark ew_universe
+2026-10-22,paper_active_ir_6m,control_plain,,0,warming up (needs 6 months of marks; 2 sessions in 1 month(s)),IR not reported before 6 months; cumulative active net 20 bps (fixed capital) +0.0485%; benchmark ew_universe
+2026-10-22,feature_inversion,pre-inception,0.634615,0.5,ALERT,"month 2026-08: 33 of 52 features against their training-window sign (gap_pct, range_pct, dist_sma_5, dist_sma_10, dist_sma_20, dist_sma_50, macd_norm, mom_5 ...)"
+2026-10-22,ensemble_atr_corr,month 2026-10 to date,0.0770095,0.2,ok,3 signal dates; per-date range +0.045..+0.094
+2026-10-22,neutral_score_corr,primary,0.0394913,0.05,ok,"atr_pct -0.0095, log_turnover +0.0395"
+2026-10-22,neutral_score_corr,challenger,0.0399362,0.05,ok,"atr_pct +0.0105, log_turnover +0.0399"
+2026-10-22,universe_etf_count,signal date,0,0,ok,1527 universe names
+2026-10-22,split_flag_rate,signal date,0.00261952,0.01,ok,4 of 1527 universe names
+2026-10-22,data_quality,store,0,0.05,ok,continuity mismatches 0 of 2912; duplicate EQ/BE pairs 0; write verified True; unvalidated split/bonus on this date 0; price breaks 0; recorded closures to date ['2026-10-20']

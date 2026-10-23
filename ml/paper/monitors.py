@@ -306,12 +306,12 @@ def m_paper_ir(ctx: Context, s: pd.Timestamp, sd: str) -> list[dict]:
         uniq = sorted(set(mon))
         codes = np.array([uniq.index(m) for m in mon])
         draws = np.random.default_rng(SEED).integers(0, len(uniq), size=(sb.N_BOOT, len(uniq)))
+        cum = float(np.prod(1 + e * act) - 1) if len(x) else float("nan")
         if len(x) >= 2 and np.std(act) > 0:
             st = sb.series_stats(act, e, codes, draws, rf=0.0)
             ir, ci = st["sharpe"], st["sharpe_ci95"]
-            cum = float(np.prod(1 + e * act) - 1)
         else:
-            ir, ci, cum = float("nan"), [float("nan"), float("nan")], float("nan")
+            ir, ci = float("nan"), [float("nan"), float("nan")]
         warm = len(uniq) < 6
         if warm:
             out.append(_row(sd, "paper_active_ir_6m", book, None,
@@ -323,6 +323,21 @@ def m_paper_ir(ctx: Context, s: pd.Timestamp, sd: str) -> list[dict]:
                         f"IR {ir:+.2f} CI [{ci[0]:+.2f}, {ci[1]:+.2f}]; cumulative active (fixed capital) {cum:+.4%}; "
                         f"benchmark {BOOKS[book]['benchmark']}"))
     return out
+
+
+def _name_breaks(ctx: Context, sd: str) -> dict | None:
+    """Per-name prev_close breaks of session sd on the store as scored (ml.paper.ingest.price_breaks: the live
+    export's EQ/BE rows, the live corporate-action feed, the PR bundles' unadjustable actions)."""
+    from ml.paper import ingest as I
+    if not (I.EOD_LIVE.exists() and I.CA_FEED_LIVE.exists()):
+        return None
+    if getattr(ctx, "_eqbe", None) is None:
+        e = pd.read_parquet(I.EOD_LIVE, columns=["date", "ticker", "prev_close", "close"])
+        e["date"] = pd.to_datetime(e["date"]).astype("datetime64[ns]")
+        ctx._eqbe = e
+        ctx._feed = pd.read_csv(I.CA_FEED_LIVE)
+        ctx._ca_all = I.ca_all_live()
+    return I.price_breaks(ctx._eqbe, [sd], ctx._feed, ctx._ca_all)
 
 
 def m_data(ctx: Context, s: pd.Timestamp, sd: str) -> list[dict]:
@@ -337,12 +352,19 @@ def m_data(ctx: Context, s: pd.Timestamp, sd: str) -> list[dict]:
     ca = wr.get("corporate_actions", {})
     unv = [e for e in ca.get("unvalidated_adjustable_events_in_window", []) if e["ex_date"] == sd]
     brk = [e for e in ca.get("price_breaks_in_window", []) if e["ex_date"] == sd]
+    nb = _name_breaks(ctx, sd)
+    nbs = (nb or {}).get("sessions", {}).get(sd, {})
+    n_unexpl = nbs.get("unexplained", 0) + nbs.get("recorded_price_break", 0)
     alert = (a["eq_be_dup_date_ticker"] > 0 or (cont is not None and cont["share"] > MONITORS["data_quality"]["threshold"])
-             or bool(unv) or not wr["write"].get("verified", False))
+             or bool(unv) or not wr["write"].get("verified", False) or n_unexpl > 0)
     closures = [d for d, v in ctx.calendar.get("closures", {}).items() if d <= sd]
+    names = ", ".join(f"{b['ticker']} x{b['prev_close_over_stored_close']:.4g} {b['status']}"
+                      for b in (nb or {}).get("breaks", []))
     return [_row(sd, "data_quality", "store", cont["share"] if cont else None, _status(alert),
                  f"continuity mismatches {cont['n_mismatch'] if cont else 'n/a'} of {cont['n_with_prev'] if cont else 'n/a'}; "
-                 f"duplicate EQ/BE pairs {a['eq_be_dup_date_ticker']}; write verified {wr['write'].get('verified')}; "
+                 f"per-name prev_close breaks > 22%: {nbs.get('breaks', 'n/a')}"
+                 + (f" ({names})" if names else "")
+                 + f"; duplicate EQ/BE pairs {a['eq_be_dup_date_ticker']}; write verified {wr['write'].get('verified')}; "
                  f"unvalidated split/bonus on this date {len(unv)}; price breaks {len(brk)}; "
                  f"recorded closures to date {closures}")]
 

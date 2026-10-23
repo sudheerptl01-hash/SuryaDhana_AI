@@ -14,13 +14,15 @@ PAPER_MD = RESULTS_DIR / "PAPER.md"
 
 # The stream started on 2026-10-23, so the first three signal dates were scored in one catch-up run.
 INCEPTION_NOTE = ("signal dates 2026-10-19, 2026-10-21 and 2026-10-22 were scored on 2026-10-23 (the day this stream "
-                  "started) from the store as of 2026-10-22. Every feature looks back only, so a date's frame rows do "
-                  "not depend on later sessions except through a corporate action added later, which rescales that "
-                  "ticker's earlier prices (here JSWDULUX, ex 2026-10-22): the consistency proof above is exactly that "
-                  "check at 2026-10-16 (a frame built through 2026-10-22 against the research frame built through "
-                  "2026-10-16), and it differs only by floating-point rounding in that one ticker. From 2026-10-23 on, "
-                  "each session is scored on its own evening.")
-
+                  "started) from the store as of 2026-10-22, after the corporate-action repair of that day. Every "
+                  "feature looks back only, so a date's frame rows do not depend on later sessions except through a "
+                  "corporate action added later, which rescales that ticker's earlier prices (here JSWDULUX, split ex "
+                  "2026-10-22): the consistency proof above is exactly that check at 2026-10-16 (a frame built "
+                  "through 2026-10-22 against the research frame built through 2026-10-16), and it differs only by "
+                  "floating-point rounding in that one ticker. CCAVENUE's consolidation (record date 2026-10-13) was "
+                  "announced in the 2026-10-12 bundle, so adjusting it before scoring 2026-10-19 uses no later "
+                  "information. From 2026-10-23 on, each session is scored on its own evening.")
+SUPERSEDED_DIR = RESULTS_DIR / "superseded_2026-10-23"
 
 def _load(name: str) -> dict:
     p = RESULTS_DIR / name
@@ -67,12 +69,32 @@ def build(state: dict, marks: pd.DataFrame, inception: dict, latest: dict, dsr: 
                               "files_sha256": m["files_sha256"]}
     writes = ing.get("writes", [])
     sessions_ingested = [d for w in writes for d in w.get("accepted", [])]
+    sup = _load(SUPERSEDED_DIR.name + "/supersession.json")
+
+    def breaks_of(i: int, w: dict) -> dict | None:
+        """Per-name breaks of a write's sessions: its own check, else the first later write that re-checked them."""
+        own = (w.get("write") or {}).get("after", {}).get("price_breaks")
+        if own is not None:
+            return {"by": "this write", **own}
+        need = set(w.get("accepted") or [])
+        for v in writes[i + 1:]:
+            pb = (v.get("write") or {}).get("after", {}).get("price_breaks")
+            if pb is not None and need <= set(pb.get("sessions", {})):
+                return {"by": f"the later {v.get('kind', 'sessions')} write of {v.get('run_today_ist')}", **pb}
+        return None
     out = {
         "spec_hash": SPEC_HASH, "inception_signal_date": INCEPTION_SIGNAL_DATE, "as_of_session": state.get("last_store_session"),
         "state": state,
         "ingest": {"sessions_ingested_by_this_stream": sessions_ingested,
                    "closures_recorded": cal.get("closures", {}),
-                   "writes": [{"sessions": w.get("accepted"), "decisions": [{k: d.get(k) for k in
+                   "writes": [{"kind": w.get("kind", "sessions"), "run_today_ist": w.get("run_today_ist"),
+                               "reason": w.get("reason"), "checks": w.get("write", {}).get("checks"),
+                               "checked_sessions": w.get("write", {}).get("checked_sessions"),
+                               "feed_lines_added": w.get("write", {}).get("feed_lines_added"),
+                               "price_breaks": breaks_of(i, w),
+                               "parser_extension": w.get("corporate_actions", {}).get("parser_extension"),
+                               "live_feed": w.get("corporate_actions", {}).get("live_feed"),
+                               "sessions": w.get("accepted"), "decisions": [{k: d.get(k) for k in
                                                                             ("date", "weekday", "decision", "date1",
                                                                              "duplicate_day_guard_echo",
                                                                              "byte_identical_to_previous_sec_file",
@@ -96,11 +118,12 @@ def build(state: dict, marks: pd.DataFrame, inception: dict, latest: dict, dsr: 
                                    "rebuilt_vs_10y_through_research_end"),
                                "new_etf_symbols": w.get("etf", {}).get("new_symbols"),
                                "backup_deleted": w.get("write", {}).get("backup", {}).get("deleted_after_verification")}
-                              for w in writes]},
+                              for i, w in enumerate(writes)]},
+        "superseded_ledger": sup,
         "consistency_proof": {k: cons.get(k) for k in ("research_end", "rule", "research_end_rows",
                                                       "all_dates_through_research_end",
                                                       "frame_dates_after_research_end",
-                                                      "corporate_actions_added_after_research_end",
+                                                      "corporate_actions_added_to_ten_year_feed",
                                                       "explained_difference_rule")},
         "inception_point_in_time_note": INCEPTION_NOTE,
         "trainer_reproduction": rep,
@@ -145,8 +168,48 @@ def markdown(j: dict) -> str:
                                   f"{v['training_window']['rows']:,} rows {v['training_window']['first_date']}.."
                                   f"{v['training_window']['last_date']})" for m, v in j["models"].items()), ""]
     ing = j["ingest"]
-    L += ["## Sessions ingested after the research data", ""]
+    L += ["## Sessions ingested after the research data, and store writes", ""]
     for w in ing["writes"]:
+        cont = w.get("continuity_new_sessions") or []
+        fp = w.get("fingerprint_through_research_end") or {}
+        fl = w.get("forward_label_changes_through_research_end") or {}
+        pb = w.get("price_breaks") or {}
+        brk_txt = ""
+        if pb:
+            per = pb.get("sessions", {})
+            items = "; ".join(f"{b['date']} {b['ticker']} prev_close {b['prev_close']:g} vs stored close "
+                              f"{b['stored_previous_close']:g} of {b['stored_previous_date']} (x{b['prev_close_over_stored_close']:.4g}): "
+                              f"{b['status'].replace('_', ' ')}" for b in pb.get("breaks", []))
+            brk_txt = (f" Per-name prev_close breaks above 22% (checked by {pb.get('by')}): "
+                       + ", ".join(f"{d} {v['breaks']} of {v['names_with_prev']}" for d, v in per.items())
+                       + (f" ({items})" if items else "") + f"; unexplained {pb.get('n_unexplained')}.")
+        common = (f"equity_eod through {j['consistency_proof'].get('research_end')}: identical "
+                  f"{(fp.get('equity_eod_through_boundary') or {}).get('identical')}; equity_features non-label columns of "
+                  f"{fp.get('tickers_compared')} tickers unchanged except the tickers whose feed lines changed "
+                  f"{fp.get('non_forward_unchanged_except_new_ca_tickers')} (changed: "
+                  f"{fp.get('tickers_with_changed_non_forward_rows')}); forward label columns (fwd_ret_2d..5d, "
+                  f"label_up_2d..5d) changed on {fl.get('rows_changed')} rows dated {fl.get('first_date')}.."
+                  f"{fl.get('last_date')}: {fl.get('rows_last5_of_ticker_previously_nan')} were each ticker's last 5 rows "
+                  f"(NaN before; build_features shifts by rows, so they now reach the new sessions), "
+                  f"{fl.get('rows_of_new_corporate_action_tickers')} belong to the tickers whose feed lines changed, "
+                  f"{fl.get('rows_unexplained')} unexplained.")
+        if w.get("kind") == "features_rebuild":
+            lf = w.get("live_feed") or {}
+            px = w.get("parser_extension") or {}
+            L += [f"**Repair write ({w.get('run_today_ist')}, no new session): `ml/paper/ingest.py --rebuild-features`.** "
+                  f"Reason: {w.get('reason')}. Live feed lines added: {w.get('feed_lines_added')}; the live feed is the "
+                  f"ten-year feed's bytes plus {lf.get('lines_appended')} lines ({lf.get('rows')} rows, starts with the "
+                  f"ten-year bytes {lf.get('starts_with_ten_year_feed_bytes')}). Parser extension: purposes read "
+                  f"{px.get('purposes_read_by_extension')}, ex-dates taken from the record date "
+                  f"{[(e['ticker'], e['ex_date']) for e in px.get('ex_date_from_record_date') or []]}. "
+                  f"Lock held {w.get('lock_window_seconds')} s, verified {w.get('verified')} ({w.get('checks')}), backup "
+                  f"deleted after verification {w.get('backup_deleted')}. Sessions re-checked: {w.get('checked_sessions')}."
+                  + brk_txt + " " + common,
+                  f"Research-period events the parser extension finds and the ten-year feed lacks (reported, not applied): "
+                  f"{[e for e in (w.get('rebuilt_ca_feed_vs_10y') or {}).get('only_in_rebuilt_from_parser_extension', []) if (e[0], e[1]) not in {(x['ticker'], x['ex_date']) for x in (w.get('new_corporate_actions') or [])}]}; "
+                  f"rebuilt feed equals the ten-year feed apart from the extension: "
+                  f"{(w.get('rebuilt_ca_feed_vs_10y') or {}).get('identical_apart_from_parser_extension')}.", ""]
+            continue
         L.append("| Date | Weekday | Decision | DATE1 | Echo of previous | PR bundle | EQ/BE rows |")
         L.append("|---|---|---|---|---|---|---:|")
         for d in w["decisions"]:
@@ -154,29 +217,37 @@ def markdown(j: dict) -> str:
                     f"{d.get('duplicate_day_guard_echo')} (file bytes identical: {d.get('byte_identical_to_previous_sec_file')})")
             L.append(f"| {d['date']} | {d['weekday']} | {d['decision']} | {', '.join(d.get('date1') or [])} | "
                      f"{echo} | {d.get('pr_bundle') or ''} | {d.get('rows_eq_be') if d.get('rows_eq_be') is not None else ''} |")
-        cont = w.get("continuity_new_sessions") or []
-        fp = w.get("fingerprint_through_research_end") or {}
-        fl = w.get("forward_label_changes_through_research_end") or {}
-        L += ["", f"Write: {w.get('upsert_rows')} rows upserted, lock held {w.get('lock_window_seconds')} s, verified "
-                  f"{w.get('verified')}, backup deleted after verification {w.get('backup_deleted')}. "
-                  f"Continuity on the new sessions: " + ", ".join(f"{c['date']} {c['n_mismatch']} of {c['n_with_prev']} "
-                                                                  f"({100 * c['share']:.2f}%)" for c in cont)
-                  + f"; duplicate EQ/BE pairs {w.get('eq_be_duplicates')}. "
-                  f"equity_eod through {j['consistency_proof'].get('research_end')}: identical "
-                  f"{(fp.get('equity_eod_through_boundary') or {}).get('identical')}; equity_features non-label columns of "
-                  f"{fp.get('tickers_compared')} tickers unchanged except new corporate-action tickers "
-                  f"{fp.get('non_forward_unchanged_except_new_ca_tickers')} (changed: "
-                  f"{fp.get('tickers_with_changed_non_forward_rows')}); forward label columns (fwd_ret_2d..5d, "
-                  f"label_up_2d..5d) changed on {fl.get('rows_changed')} rows dated {fl.get('first_date')}.."
-                  f"{fl.get('last_date')}: {fl.get('rows_last5_of_ticker_previously_nan')} were each ticker's last 5 rows "
-                  f"(NaN before; build_features shifts by rows, so they now reach the new sessions), "
-                  f"{fl.get('rows_of_new_corporate_action_tickers')} belong to the new corporate-action ticker, "
-                  f"{fl.get('rows_unexplained')} unexplained.",
-              f"New validated corporate actions: {w.get('new_corporate_actions')}. Unvalidated split/bonus in the window: "
-              f"{w.get('unvalidated_in_window')}. Price breaks: {len(w.get('price_breaks_in_window') or [])}. Upcoming "
-              f"split/bonus ex-dates: {[(e['ticker'], e['ex_date']) for e in (w.get('upcoming_corporate_actions') or [])]}. "
-              f"Rebuilt feed equals the ten-year feed through the research end: "
-              f"{(w.get('rebuilt_ca_feed_vs_10y') or {}).get('identical')}. New ETF symbols: {w.get('new_etf_symbols')}.", ""]
+        rb = w.get("rebuilt_ca_feed_vs_10y") or {}
+        L += ["", f"Write ({w.get('run_today_ist')}): {w.get('upsert_rows')} rows upserted, lock held "
+                  f"{w.get('lock_window_seconds')} s, verified {w.get('verified')}, backup deleted after verification "
+                  f"{w.get('backup_deleted')}. Continuity scan on the new sessions (share of names whose prev_close differs "
+                  "from the stored previous close): " + ", ".join(f"{c['date']} {c['n_mismatch']} of {c['n_with_prev']} "
+                                                                 f"({100 * c['share']:.2f}%)" for c in cont)
+                  + f"; duplicate EQ/BE pairs {w.get('eq_be_duplicates')}." + brk_txt + " " + common,
+              f"New validated corporate actions (cumulative since the research end, as of this write): "
+              f"{[(e['ticker'], e['ex_date'], e['ratio']) for e in (w.get('new_corporate_actions') or [])]}. "
+              f"Unvalidated split/bonus in the window: {w.get('unvalidated_in_window')}. Price breaks (unadjustable "
+              f"actions): {len(w.get('price_breaks_in_window') or [])}. Upcoming split/bonus ex-dates: "
+              f"{[(e['ticker'], e['ex_date']) for e in (w.get('upcoming_corporate_actions') or [])]}. Rebuilt feed equals "
+              f"the ten-year feed through the research end: {rb.get('identical')}"
+              + (f" (apart from the parser extension: {rb.get('identical_apart_from_parser_extension')})"
+                 if rb.get("identical_apart_from_parser_extension") is not None else "")
+              + f". New ETF symbols: {w.get('new_etf_symbols')}.", ""]
+    sp = j.get("superseded_ledger") or {}
+    if sp:
+        L += ["## Superseded first ledger (regenerated from inception on 2026-10-23)", "",
+              f"{sp.get('reason')}", "",
+              f"Superseded files: `{sp.get('folder')}` ({sp.get('rows')}). The regenerated ledger uses the same frozen "
+              f"construction, the same October models (content hashes {sp.get('models_unchanged')}) and the repaired "
+              f"store. CCAVENUE's neutral LightGBM score: "
+              + ", ".join(f"{d} {v['old']:.3f} -> {v['new']:.3f}" for d, v in (sp.get("ccavenue_neutral_lgbm") or {}).items())
+              + ".", "",
+              "| Signal date | Book | Names before | Names after | Left the book | Entered the book |",
+              "|---|---|---:|---:|---|---|"]
+        for r in sp.get("basket_changes", []):
+            L.append(f"| {r['signal_date']} | {r['book']} | {r['n_old']} | {r['n_new']} | {', '.join(r['out']) or '-'} | "
+                     f"{', '.join(r['in']) or '-'} |")
+        L.append("")
     c = j["consistency_proof"]
     r0, ra = c.get("research_end_rows") or {}, c.get("all_dates_through_research_end") or {}
     L += ["## Consistency proof (scoring frame vs `ml/data_10y`)", "",
@@ -190,20 +261,23 @@ def markdown(j: dict) -> str:
                  f"{r.get('cells_differing_unexplained')} | {r.get('identical')} | "
                  f"{r.get('equal_except_new_corporate_action_rounding')} |")
     L.append("")
-    ev = c.get("corporate_actions_added_after_research_end") or []
+    ev = c.get("corporate_actions_added_to_ten_year_feed") or []
     if r0.get("cells_differing"):
         evs = ", ".join("{} (price ratio {:g}, ex {})".format(e["ticker"], e["ratio"], e["ex_date"]) for e in ev) \
             or "a corporate action"
-        L += [f"Why not bit-identical: the live corporate-action feed adds {evs} after the research end, "
-              f"so build_features rescales that ticker's earlier prices by the ratio; every price ratio is unchanged up to "
+        L += [f"Why not bit-identical: the live corporate-action feed adds {evs} to the ten-year feed, "
+              f"so build_features rescales those tickers' earlier prices by the ratio; every price ratio is unchanged up to "
               f"floating-point rounding. On {c.get('research_end')} the {r0.get('cells_differing')} differing cells are all "
               f"in {', '.join(r0.get('tickers_with_differences') or [])} ({len(r0.get('per_feature_differing') or {})} "
               f"features, at most {r0.get('max_abs_diff_all_features', 0):.2g}); the other "
               f"{(r0.get('rows_common') or 0) - len(r0.get('tickers_with_differences') or [])} rows of that date are "
               f"bit-identical. Over every date, {ra.get('cells_differing')} cells differ (at most "
-              f"{ra.get('max_abs_diff_all_features', 0):.2g}) on {ra.get('n_dates_with_differences')} dates, every one "
-              f"of them that ticker's own row or a cross-sectional feature (`amihud_20` z-score, ranks) on a date where "
-              f"that ticker is in the universe; {ra.get('cells_differing_unexplained')} are unexplained. Rule of "
+              f"{ra.get('max_abs_diff_all_features', 0):.2g}) on {ra.get('n_dates_with_differences')} dates in "
+              f"{ra.get('n_tickers_with_differences')} tickers (cells by feature: "
+              + ", ".join(f"{k} {v['rows_differing']}" for k, v in (ra.get('per_feature_differing') or {}).items())
+              + f"), every one of them a rescaled ticker's own row or a cross-sectional feature (`amihud_20` z-score, "
+              f"ranks) on a date where a rescaled ticker is in the universe, which is why so many tickers carry a "
+              f"rounding-level `amihud_20` difference; {ra.get('cells_differing_unexplained')} are unexplained. Rule of "
               f"explanation: {c.get('explained_difference_rule')}.", ""]
     if j.get("inception_point_in_time_note"):
         L += [f"Point in time: {j['inception_point_in_time_note']}", ""]
@@ -211,7 +285,13 @@ def markdown(j: dict) -> str:
     if rp:
         L += [f"Trainer reproduction: the paper trainer on the research holdout fold (train end {rp['fold']['train_end']}, "
               f"{rp['train_rows']:,} training rows) scores {rp['rows_matched']:,} holdout rows; max |score − ten-year control "
-              f"score| = {rp['max_abs_score_diff']}; identical {rp['identical']}.", ""]
+              f"score| = {rp['max_abs_score_diff']}; identical {rp['identical']} ({rp.get('identical_rule', 'every row')})."
+              + (f" Not compared: {len(rp['test_rows_label_exit_after_research_end'])} test rows whose label exits after "
+                 f"the research end, so the research data could not label them ("
+                 + ", ".join(f"{x['ticker']} {x['date']} exit {x['exit_date']}"
+                             for x in rp["test_rows_label_exit_after_research_end"])
+                 + "; a 20-row label window that crosses a trading suspension into the sessions after the research end)."
+                 if rp.get("test_rows_label_exit_after_research_end") else ""), ""]
     inc = j["inception_baskets"]
     if inc:
         L += [f"## Inception baskets (signal date {inc['signal_date']}, entry at the next session's open)", "",

@@ -162,13 +162,13 @@
    "corporate_actions": {
     "seconds": 36.5,
     "bundle_dirs": [
-     "/home/user/SuryaDhana_AI/ml/data_raw/pr",
-     "/home/user/SuryaDhana_AI/ml/data_raw/hist/pr",
-     "/home/user/SuryaDhana_AI/ml/paper/state/raw/pr"
+     "ml/data_raw/pr",
+     "ml/data_raw/hist/pr",
+     "ml/paper/state/raw/pr"
     ],
     "eod_sources": [
-     "/home/user/SuryaDhana_AI/ml/results/improve/cache/eod_export_10y.parquet",
-     "/home/user/SuryaDhana_AI/ml/paper/state/ca/staged_new_sessions.parquet"
+     "ml/results/improve/cache/eod_export_10y.parquet",
+     "ml/paper/state/ca/staged_new_sessions.parquet"
     ],
     "I2_rebuilt_feed": {
      "rate": 0.9716859716859717,
@@ -244,11 +244,12 @@
      "overwrites_existing_keys": 0
     },
     "backup": {
-     "path": "/tmp/claude-0/-home-user-SuryaDhana-AI/a2334483-114a-5057-9fd0-81f0f14285e9/scratchpad/q1/nse_market_backup_pre_q1_20261019.duckdb",
+     "path": "a session scratch folder outside the repository: nse_market_backup_pre_q1_20261019.duckdb (deleted after verification)",
      "bytes": 2807312384,
      "seconds": 73.6,
      "free_bytes_before": 12853452800,
-     "deleted_after_verification": true
+     "deleted_after_verification": true,
+     "path_note": "path replaced on 2026-10-23 by a neutral description; backups now go to ml/paper/state/backup/ or $PAPER_BACKUP_DIR"
     },
     "lock": {
      "path": "ml/results/improve/LOCK_duckdb_write",
@@ -395,6 +396,373 @@
       },
       "all_continuous": true
      }
+    },
+    "verified": true
+   },
+   "store_after": {
+    "last_session": "2026-10-22",
+    "equity_eod_rows": 5247946,
+    "equity_eod_eq_be_rows": 4781834,
+    "equity_eod_sessions": 2492,
+    "equity_features_rows": 4781834,
+    "equity_features_last": "2026-10-22 00:00:00"
+   },
+   "store_changed": true
+  },
+  {
+   "run_today_ist": "2026-10-23",
+   "kind": "features_rebuild",
+   "reason": "CCAVENUE 10:1 consolidation (record date 2026-10-13, suspended 13-16 Oct, first print 2026-10-19) unadjusted: parser extension and widened live window (SPEC.md amendment 4)",
+   "store_before": {
+    "last_session": "2026-10-22",
+    "equity_eod_rows": 5247946,
+    "equity_eod_eq_be_rows": 4781834,
+    "equity_eod_sessions": 2492,
+    "equity_features_rows": 4781834,
+    "equity_features_last": "2026-10-22 00:00:00"
+   },
+   "corporate_actions": {
+    "seconds": 39.2,
+    "bundle_dirs": [
+     "ml/data_raw/pr",
+     "ml/data_raw/hist/pr",
+     "ml/paper/state/raw/pr"
+    ],
+    "eod_sources": [
+     "ml/paper/state/cache/eod_export_live.parquet"
+    ],
+    "I2_rebuilt_feed": {
+     "rate": 0.971830985915493,
+     "events": 781,
+     "agree": 759,
+     "pass_mark": 0.95,
+     "pass": true,
+     "rule": "|observed/ratio - 1| <= 0.15, observed = open(ex)/close(ex-1) in the ratio's orientation, at the LISTED ex-date (no shift); revised duplicates excluded"
+    },
+    "parser_extension": {
+     "purposes_read_by_extension": [
+      "CNSLDATN RE 1 TO RS 10",
+      "CNSLDATNRE1 TO RS10",
+      "CNSLDATNRS10 TO RS1000"
+     ],
+     "ex_date_from_record_date": [
+      {
+       "ticker": "CCAVENUE",
+       "ex_date": "2026-10-13",
+       "purpose": "CNSLDATNRE1 TO RS10",
+       "source": "PR121026.zip/bc12102026.csv"
+      },
+      {
+       "ticker": "KAUSHALYA",
+       "ex_date": "2024-01-12",
+       "purpose": "CNSLDATNRS10 TO RS1000",
+       "source": "PR090124.zip/Bc090124.csv"
+      },
+      {
+       "ticker": "SIGNET",
+       "ex_date": "2018-08-14",
+       "purpose": "CONSOLIDATION-RE1 TO RS10",
+       "source": "PR080818.zip/Bc080818.csv"
+      }
+     ],
+     "note": "ml/paper/ingest.py ca_extension (SPEC.md 2.7): CNSLDATN spelling and record date as ex-date; events still pass the module's validation"
+    },
+    "feed_10y_rows": 755,
+    "rebuilt_feed_rows_through_research_end": 759,
+    "rebuilt_vs_10y_through_research_end": {
+     "only_in_rebuilt": [
+      [
+       "CCAVENUE",
+       "2026-10-13",
+       10.0
+      ],
+      [
+       "KAUSHALYA",
+       "2024-01-12",
+       100.0
+      ],
+      [
+       "SHEKHAWATI",
+       "2024-08-28",
+       10.0
+      ],
+      [
+       "VERTOZ",
+       "2025-06-25",
+       10.0
+      ]
+     ],
+     "only_in_10y": [],
+     "only_in_rebuilt_from_parser_extension": [
+      [
+       "CCAVENUE",
+       "2026-10-13",
+       10.0
+      ],
+      [
+       "KAUSHALYA",
+       "2024-01-12",
+       100.0
+      ],
+      [
+       "SHEKHAWATI",
+       "2024-08-28",
+       10.0
+      ],
+      [
+       "VERTOZ",
+       "2025-06-25",
+       10.0
+      ]
+     ],
+     "identical": false,
+     "identical_apart_from_parser_extension": true,
+     "note": "research-period events found by the parser extension are reported, not applied: the live feed adds only events of the live window, so equity_features through the research end keep the ten-year feed's adjustments"
+    },
+    "new_validated_events": [
+     {
+      "ticker": "CCAVENUE",
+      "ex_date": "2026-10-13",
+      "ratio": 10.0,
+      "kind": "consolidation",
+      "source": "PR121026.zip/bc12102026.csv",
+      "first_print_on_or_after_ex": "2026-10-19",
+      "window": "ex-date on/before the research end, first print after it (suspension)"
+     },
+     {
+      "ticker": "JSWDULUX",
+      "ex_date": "2026-10-22",
+      "ratio": 0.1,
+      "kind": "split",
+      "source": "PR151026.zip/bc15102026.csv",
+      "first_print_on_or_after_ex": "2026-10-22",
+      "window": "ex-date after the research end"
+     }
+    ],
+    "new_events_from_parser_extension": [
+     "CCAVENUE"
+    ],
+    "tickers_whose_feed_lines_change": [
+     "CCAVENUE"
+    ],
+    "unvalidated_adjustable_events_in_window": [],
+    "price_breaks_in_window": [],
+    "upcoming_adjustable_events": [
+     {
+      "ticker": "AZADIND",
+      "ex_date": "2026-10-23",
+      "kind": "split",
+      "purpose": "FVSPLT FRM RS 10 TO RS 2"
+     }
+    ],
+    "live_feed": {
+     "path": "ml/data_ext/corporate_actions_feed_live.csv",
+     "rows": 757,
+     "sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+     "staged": "ml/paper/state/ca/corporate_actions_feed_live.staged.csv",
+     "starts_with_ten_year_feed_bytes": true,
+     "lines_appended": 2
+    },
+    "completeness_live_bundles": {
+     "corp_ind_with_abs_ret_gt_22pct": 1,
+     "covered_by_feed": 1,
+     "n_missing": 0,
+     "missing": []
+    }
+   },
+   "live_feed_before_sha256": "1b86c9577c4bfb126bbc7f09dac716ed49def20f99b41a22529691d00e73e0da",
+   "write": {
+    "kind": "features_rebuild",
+    "sessions": [],
+    "reason": "CCAVENUE 10:1 consolidation (record date 2026-10-13, suspended 13-16 Oct, first print 2026-10-19) unadjusted: parser extension and widened live window (SPEC.md amendment 4)",
+    "fingerprint_seconds": 25.2,
+    "before": {
+     "equity_eod_rows": 5247946,
+     "equity_features_rows": 4781834,
+     "overwrites_existing_keys": 0
+    },
+    "backup": {
+     "path": "ml/paper/state/backup/nse_market_backup_pre_q1_rebuild_20261023_after_2026-10-22.duckdb",
+     "bytes": 3479711744,
+     "seconds": 112.3,
+     "free_bytes_before": 8067248128,
+     "deleted_after_verification": true
+    },
+    "lock": {
+     "path": "ml/results/improve/LOCK_duckdb_write",
+     "created": true,
+     "window_seconds": 98.5,
+     "removed": true
+    },
+    "build_features": {
+     "rows": 4781834,
+     "seconds": 95.5,
+     "ca_csv": "ml/data_ext/corporate_actions_feed_live.csv (staged in ml/paper/state/ca/corporate_actions_feed_live.staged.csv, promoted after the write)"
+    },
+    "after": {
+     "equity_eod_rows": 5247946,
+     "equity_features_rows": 4781834,
+     "eq_be_dup_date_ticker": 0,
+     "rows_on_new_dates": {},
+     "features_rows_on_new_dates": {},
+     "expected_equity_eod_rows": 5247946,
+     "row_count_as_expected": true,
+     "equity_features_rows_equal_eq_be_rows": true,
+     "continuity_new_sessions": [],
+     "continuity_store": {
+      "max_share": 0.0030525030525030525,
+      "flagged": []
+     },
+     "fingerprint_through_research_end": {
+      "tickers_compared": 3935,
+      "non_forward_columns": 48,
+      "tickers_with_changed_non_forward_rows": [
+       "CCAVENUE"
+      ],
+      "changed_tickers_explained_by_new_corporate_actions": [
+       "CCAVENUE"
+      ],
+      "changed_tickers_unexplained": [],
+      "non_forward_unchanged_except_new_ca_tickers": true,
+      "tickers_with_changed_forward_label_columns": 1,
+      "forward_columns": [
+       "fwd_ret_2d",
+       "label_up_2d",
+       "fwd_ret_3d",
+       "label_up_3d",
+       "fwd_ret_5d",
+       "label_up_5d"
+      ],
+      "equity_eod_through_boundary": {
+       "before": [
+        5237728.0,
+        3381217548.25,
+        7335373916200.0,
+        1625999973940000.0,
+        3380188334.22,
+        2489.0,
+        4611.0
+       ],
+       "after": [
+        5237728.0,
+        3381217548.25,
+        7335373916200.0,
+        1625999973940000.0,
+        3380188334.22,
+        2489.0,
+        4611.0
+       ],
+       "identical": true
+      }
+     },
+     "forward_label_changes_through_research_end": {
+      "rows_changed": 132,
+      "rows_last5_of_ticker_previously_nan": 0,
+      "rows_of_new_corporate_action_tickers": 132,
+      "rows_unexplained": 0,
+      "unexplained_examples": [],
+      "first_date": "2026-02-03",
+      "last_date": "2026-10-12",
+      "rows_only_in_one": 0
+     },
+     "new_events_check": {
+      "CCAVENUE": {
+       "rows": 173,
+       "max_abs_log_ret_adjusted": 0.09502335920864009,
+       "max_abs_log_ret_raw": 2.241078846217994,
+       "feed_events": [
+        {
+         "ex_date": "2026-10-13",
+         "ratio": "10.0"
+        }
+       ],
+       "ex_dates": {
+        "2026-10-13": {
+         "session": "2026-10-19",
+         "raw_close_prev": 13.83,
+         "raw_close_ex": 130.05,
+         "adj_close_prev": 138.3,
+         "adj_close_ex": 130.05,
+         "adj_ret_ex": -0.05965292841648595,
+         "raw_ret_ex": 8.403470715835141
+        }
+       },
+       "largest_adjusted_move": {
+        "date": "2026-08-03",
+        "log_ret": 0.09502335920864009
+       },
+       "continuous": true
+      },
+      "all_continuous": true
+     },
+     "price_breaks": {
+      "rule": "|prev_close / stored previous close - 1| > 22%; explained when the live feed's events in (stored previous session, session] agree within +-15%",
+      "sessions": {
+       "2026-10-19": {
+        "names_with_prev": 2922,
+        "breaks": 1,
+        "explained_by_feed": 1,
+        "recorded_price_break": 0,
+        "unexplained": 0
+       },
+       "2026-10-21": {
+        "names_with_prev": 2915,
+        "breaks": 0,
+        "explained_by_feed": 0,
+        "recorded_price_break": 0,
+        "unexplained": 0
+       },
+       "2026-10-22": {
+        "names_with_prev": 2912,
+        "breaks": 0,
+        "explained_by_feed": 0,
+        "recorded_price_break": 0,
+        "unexplained": 0
+       }
+      },
+      "breaks": [
+       {
+        "date": "2026-10-19",
+        "ticker": "CCAVENUE",
+        "prev_close": 138.3,
+        "stored_previous_close": 13.83,
+        "stored_previous_date": "2026-10-12",
+        "calendar_days_since_stored_previous": 7,
+        "prev_close_over_stored_close": 10.0,
+        "feed_events": [
+         {
+          "ex_date": "2026-10-13",
+          "ratio": 10.0
+         }
+        ],
+        "status": "explained_by_feed"
+       }
+      ],
+      "n_unexplained": 0,
+      "n_recorded_price_break": 0
+     }
+    },
+    "feed_lines_added": [
+     {
+      "ticker": "CCAVENUE",
+      "ex_date": "2026-10-13"
+     }
+    ],
+    "live_feed_sha256": "092e218e66373055c91d76bb872683d73dcff414daaf5d8bf74c9386041044af",
+    "checked_sessions": [
+     "2026-10-19",
+     "2026-10-21",
+     "2026-10-22"
+    ],
+    "checks": {
+     "row_count_as_expected": true,
+     "equity_features_rows_equal_eq_be_rows": true,
+     "no_duplicate_eq_be_pairs": true,
+     "continuity_share_below_5pct": true,
+     "no_unexplained_price_break": true,
+     "non_forward_unchanged_except_changed_ca_tickers": true,
+     "equity_eod_through_research_end_identical": true,
+     "forward_label_changes_explained": true
     },
     "verified": true
    },
