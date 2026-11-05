@@ -1,0 +1,5 @@
+quadrant,n,fwd1_mean_%,fwd1_hit_%,fwd1_t,fwd4_mean_%,fwd4_hit_%,fwd4_t,fwd13_mean_%,fwd13_hit_%,fwd13_t
+P↑ OI↑ new longs,380,0.16,56.3,-0.63,0.87,56.2,-0.0,2.98,61.3,0.26
+P↑ OI↓ short covering,210,0.38,57.6,0.82,1.04,58.4,0.41,2.77,60.2,0.03
+P↓ OI↑ new shorts,167,0.11,53.9,-0.63,0.29,53.3,-1.57,1.03,57.7,-2.03
+P↓ OI↓ long liquidation,300,0.3,57.0,0.44,1.06,58.9,0.55,3.38,65.0,0.64

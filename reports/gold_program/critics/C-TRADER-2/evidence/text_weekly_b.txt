@@ -1,0 +1,294 @@
+GOLD
+GOLD TERMINAL
+spot, COMEX, MCX, positioning (COT), physical, macro, contracts, health check, pre-open fair value · 03:50 IST
+LIVE · YAHOO (CACHED FET…
+PAPER · CONTEXT
+↻
+COMEX DEC-26
+settle — $4,072.2 last Wed 04 Nov · Yahoo, not settlement
+last $4,072.2 ▲+3.28 % Yahoo, not settlement · 03:29 IST
+LIVE · YAHOO (CACHED FET…
+USD/INR
+94.63
+Yahoo INR=X · 00:13 IST
+10-Y REAL
+2.62 %
+TIPS · Mon 02 Nov
+MCX GOLD DEC-26
+₹1,40,186
+Tue 03 Nov settlement · basis +1.58 % at the at the Tue 03 Nov settlement vs that session's duty-paid landed vs that session's duty-paid
+COT FUNDS NET (MANAGED MONEY)
++105,562
++1,356 w/w · as of Tue 27 Oct
+◷ MCX opens in 5h09m
+spot proxy · COMEX front GC1 · COMEX matched month GCZ26 · MCX GOLD DEC-26
+CONTRACT
+MCX
+NSE (n/a)
+BSE (n/a)
+GOLD
+GOLDM
+GOLDTEN
+GOLDGUINEA
+GOLDPETAL
+front (by OI)
+DEC-26 · 2026-12-04 · OI 16,282
+FEB-27 · 2027-02-05 · OI 1,180
+APR-27 · 2027-04-05 · OI 70
+JUN-27 · 2027-06-04 · OI 2
+AUG-27 · 2027-08-05 · OI 0
+OCT-27 · 2027-10-05 · OI 0
+OPTIONS
+↔ COMEX DEC-26 ↔ GC1
+UNIT
+$/oz
+₹/10 g
+₹/g
+$/g
+₹/tola
+WINDOW
+D
+W
+M
+LAYER
+[B]
+[P]
+HEALTH
+DAILY
+WEEKLY
+MONTHLY
+POSITIONING
+PHYSICAL
+MACRO
+CONTRACTS
+LEARN
+60 SESSIONS · COMEX GC FRONT
+MCX ₹
+ARITHMETIC
+DELAYED · DATA-SERVICE GOLD…
+?
+daily candles $/oz · 20 d cyan · 50 d amber · MCX GOLD settle ₹/10 g dashed, right axis (PROXY) · Mondays shaded · as of Wed 04 Nov
+[B]This week against the last twelve: candles are the COMEX front future in dollars, the dashed line is what MCX settled at in rupees.
+	
+	
+
+
+	
+	
+THIS WEEK · MON ▸ FRI
+‹
+›
+ARITHMETIC
+DELAYED · DATA-SERVICE GOLD…
+?
+week of Mon 02 Nov · week +4.41 % · as of Wed 04 Nov
+[B]One row per session, one unit per column: dollars for COMEX, lots for MCX open interest, rupees for the IBJA rate, tonnes for GLD. The CSV button on hover exports it.
+DAY	OPEN $/OZ	HIGH $/OZ	LOW $/OZ	CLOSE $/OZ	Δ % ↕	RANGE %	COMEX VOL	COMEX OI Δ	MCX GOLD OI Δ LOTS	IBJA 999 PM ₹/10 G	GLD Δ T	COT (FRI RELEASE)
+Mon 11-02	3,890.0	3,980.8	3,889.0	3,969.6	+1.81 %	2.31 %	172,512	—	—	₹1,37,524	−1.14	—
+Tue 11-03	3,960.5	3,981.7	3,904.1	3,940.4	−0.74 %	1.97 %	172,512 ?	—	+863	₹1,37,576	−2.85	—
+Wed 11-04	3,940.8	4,081.2	3,928.2	4,070.8	+3.31 %	3.76 %	225,876	—	—	—	—	—
+Thu 11-05	—	—	—	—	—	—	—	—	—	—	—	—
+Fri 11-06	—	—	—	—	—	—	—	—	—	—	—	—
+26 WEEKS · DAILY Δ %
+CONTEXT
+DELAYED · DATA-SERVICE GOLD…
+?
+as of Wed 04 Nov
+[B]Each row is a week, Monday to Friday, with the week's total on the right. Green and red are price changes, nothing else.
+Mon
+Tue
+Wed
+Thu
+Fri
+week
+11 May
+0.0
+−0.9
++0.4
+−0.5
+−2.6
+−3.6 %
+18 May
+−0.1
+−1.0
++0.5
++0.2
+−0.4
+−0.8 %
+25 May
+·
+−0.5
+−1.2
++1.1
++2.1
++1.5 %
+01 Jun
+−1.9
++0.3
+−1.2
++0.9
+−3.1
+−5.0 %
+08 Jun
+0.0
+−1.8
+−3.6
+−0.5
++3.0
+−2.9 %
+15 Jun
++2.7
++0.1
++0.6
+−3.1
+·
++0.2 %
+22 Jun
+−1.0
+−1.3
+−3.4
++1.0
++1.2
+−3.5 %
+29 Jun
+−1.4
+0.0
++1.1
++1.1
+·
++0.7 %
+06 Jul
++1.0
+−0.2
+−1.8
++1.4
+−0.7
+−0.3 %
+13 Jul
+−2.6
++1.6
+−0.4
+−1.5
++0.7
+−2.3 %
+20 Jul
+−0.1
++1.5
++1.9
+−2.4
++0.5
++1.3 %
+27 Jul
++0.2
+−0.9
+−0.1
++1.6
++0.2
++0.9 %
+03 Aug
+−0.4
++1.5
++3.7
+−0.1
++2.3
++7.1 %
+10 Aug
++0.5
++0.5
++0.6
+−1.1
++0.4
++0.9 %
+17 Aug
++0.8
+−1.2
++2.8
++0.6
++2.4
++5.5 %
+24 Aug
++0.4
+−0.1
+−0.9
++0.2
+−2.9
+−3.2 %
+31 Aug
+−1.1
+−1.9
++0.4
++2.8
+−1.4
+−1.2 %
+07 Sep
+·
+−0.8
++0.5
+−1.2
+0.0
+−1.5 %
+14 Sep
+−1.3
+−0.4
++1.3
++0.3
++0.6
++0.4 %
+21 Sep
+−0.9
+−0.2
+−1.3
+−0.5
++0.5
+−2.3 %
+28 Sep
+−3.5
++0.3
++0.2
++0.4
+−1.0
+−3.7 %
+05 Oct
+−0.1
++0.7
+−1.1
++0.4
++1.4
++1.3 %
+12 Oct
+−0.6
+−0.3
+−1.7
++1.5
++0.3
+−0.8 %
+19 Oct
+−0.5
+−0.4
++0.2
+−2.2
+−1.3
+−4.1 %
+26 Oct
++0.8
++0.9
+−0.6
+−0.5
+−3.3
+−2.7 %
+02 Nov
++1.8
+−0.7
++3.3
+·
+·
++4.4 %
+WHO DID WHAT THIS WEEK
+POSITIONING ›
+CONTEXT · G-STUDY 26 Oct 2026
+DELAYED · CFTC (DATA-SERVIC…
+?
+as of Tue 27 Oct
+[B]The funds' (managed money) net bet from the weekly COT report and what they did this week, in one line; the full decomposition is on POSITIONING. The driver word is the bigger of the two moves; when price fell and the net still rose, funds bought the dip.
+COT · funds (MM) net +105,562 (+1,356 w/w) · new 1,538 longs, new 182 shorts · driver: funds bought the dip · OI 396,810 (−5,469) · as of Tue 27 Oct · released Sat 31 Oct 01:00 IST · next Sat 07 Nov 02:00 IST
+crowdedness, not a signal — no forecasting power 2006–2026 (G-STUDY)

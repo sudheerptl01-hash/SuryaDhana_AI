@@ -1,0 +1,236 @@
+COMMAND   PID    USER   FD      TYPE             DEVICE SIZE/OFF                NODE NAME
+Python  75525 sudheer  cwd       DIR               1,16     1024             4381019 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api
+Python  75525 sudheer  txt       REG               1,16    33568            13297998 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/Resources/Python.app/Contents/MacOS/Python
+Python  75525 sudheer  txt       REG               1,16    51920            13298864 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_heapq.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    52624            13298905 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/fcntl.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    54720            13298877 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_posixsubprocess.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   115504            13298884 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_socket.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    93792            13298907 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/math.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  2562000 1152921500312573255 /usr/lib/dyld
+Python  75525 sudheer  txt       REG               1,16    74912            13298912 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/select.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    96560            13298902 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/array.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  5044864            13297991 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/Python
+Python  75525 sudheer  txt       REG               1,16    54368            13298903 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/binascii.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    77088            13298888 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_struct.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   204816            13298886 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_ssl.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    54832            13298874 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_opcode.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    50688            13298853 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_contextvars.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    54256            13298878 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_queue.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   100320            13298843 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_asyncio.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    72800            13298868 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_json.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    53248            13298906 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/grp.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    53040            13298844 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_bisect.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    32768            17835005 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/data/ui_prefs.sqlite-shm
+Python  75525 sudheer  txt       REG               1,16   151632            13298875 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_pickle.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    53952            13298879 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_random.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    55056            13298846 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_bz2.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   888928            13283465 /opt/homebrew/Cellar/openssl@3/3.6.4/lib/libssl.3.dylib
+Python  75525 sudheer  txt       REG               1,16   117600            13298859 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_datetime.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    55920            13298873 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_multiprocessing.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    76112            13298919 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/zlib.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    74384            13298870 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_lzma.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    66592             3959698 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/charset_normalizer/cd.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    50640            13298899 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_uuid.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    74224            13298901 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_zoneinfo.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  4872736            13283462 /opt/homebrew/Cellar/openssl@3/3.6.4/lib/libcrypto.3.dylib
+Python  75525 sudheer  txt       REG               1,16   185472             1391828 /opt/homebrew/Cellar/xz/5.8.3/lib/liblzma.5.dylib
+Python  75525 sudheer  txt       REG               1,16   177056            13298861 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_decimal.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   189472             1711519 /opt/homebrew/Cellar/mpdecimal/4.0.1/lib/libmpdec.4.0.1.dylib
+Python  75525 sudheer  txt       REG               1,16    80320            13298863 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_hashlib.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    71504            13298845 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_blake2.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   737000             3959688 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/81d243bd2c585b0f4821__mypyc.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   915920             9592640 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/watchfiles/_rust_notify.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   253936             3958144 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/orjson/orjson.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    78672            13298872 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_multibytecodec.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    54320            13298849 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_codecs_iso2022.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    53344            13298880 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_scproxy.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   151280            13298852 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_codecs_tw.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   151776            13298851 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_codecs_kr.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    54128            13298914 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/termios.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    73664            13298854 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_csv.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  4169216             3115856 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pydantic_core/_pydantic_core.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   733888            13298915 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/unicodedata.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   184816            13298848 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_codecs_hk.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   284736            13298850 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_codecs_jp.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   168208            13298847 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_codecs_cn.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    55680            13298908 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/mmap.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    72984            17750250 /Library/Preferences/Logging/.plist-cache.EwmFq8h7
+Python  75525 sudheer  txt       REG               1,16    67200             2582231 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/tornado/speedups.abi3.so
+Python  75525 sudheer  txt       REG               1,16    55368             4769620 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/psutil/_psutil_posix.abi3.so
+Python  75525 sudheer  txt       REG               1,16   279776             4346810 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/greenlet/_greenlet.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   143552            13298855 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_ctypes.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    51360            13243315 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/websockets/speedups.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  3346360             5430744 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/_core/_multiarray_umath.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   154752             5430668 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/linalg/_umath_linalg.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   133472             5431434 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/_mt19937.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   211680             5431442 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/bit_generator.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    97584             5431454 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/_sfc64.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   116256             5431435 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/_philox.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    70416            13245229 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/pandas_parser.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   218848             5431452 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/_common.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   133840             5431430 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/_pcg64.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    70040            13245237 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/pandas_datetime.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   282104             5431436 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/_bounded_integers.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   100016            13245297 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/ccalendar.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    81544            13245303 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/base.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   195440            13245268 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/missing.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   102240            13245234 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/properties.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  3506456             4719331 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/lib.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  1975888             4719340 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/libarrow_python.2400.dylib
+Python  75525 sudheer  txt       REG               1,16  2737920             4719337 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/libarrow_dataset.2400.dylib
+Python  75525 sudheer  txt       REG               1,16   663040             5431450 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/mtrand.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   160784            13245305 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/dtypes.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   120768            13245301 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/vectorized.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  4768464             4719348 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/libarrow_substrait.2400.dylib
+Python  75525 sudheer  txt       REG               1,16  2220288             4719335 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/libarrow_acero.2400.dylib
+Python  75525 sudheer  txt       REG               1,16   790720             5431444 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/numpy/random/_generator.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  1006512            13245247 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/interval.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    79840            13245241 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/ops_dispatch.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    93800            13245260 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/json.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   178944            13245249 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/_cyutility.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   158208            13245311 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/np_datetime.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   178656            13245285 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/conversion.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  4774184             4719349 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/libparquet.2400.dylib
+Python  75525 sudheer  txt       REG               1,16   174048            13245312 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/timezones.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   212944            13245282 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/nattype.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   469008            13245310 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/timestamps.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   177936            13245287 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/tzconversion.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   213840            13245284 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/fields.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   135256            13245263 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/ops.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   100304            13245269 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/hashing.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   140336            13245274 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/arrays.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  1838304            13245261 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/hashtable.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   977904            13245289 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/offsets.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   443216            13245293 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/timedeltas.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   250464            13245302 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/parsing.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   215584            13245304 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/strptime.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   365616            13245313 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslibs/period.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    99264            13245262 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/indexing.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   155736            13245256 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/tslib.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   119856            13245239 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/writers.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    70800            13298904 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/cmath.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   557048            13245226 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/lib.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   118192            13245224 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/testing.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   198448            13245278 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/window/indexers.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  1615496            13245248 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/algos.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   283744            13245230 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/internals.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   377344            13245280 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/window/aggregations.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   174768            13245223 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/reshape.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16 54149344             4350898 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/duckdb/duckdb.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16 15689296             4719336 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/libarrow_compute.2400.dylib
+Python  75525 sudheer  txt       REG               1,16    79648             4719346 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/libarrow_python_parquet_encryption.2400.dylib
+Python  75525 sudheer  txt       REG               1,16  1121104             4718740 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_compute.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   719808            13245272 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/sparse.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    82944             4769622 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/psutil/_psutil_osx.abi3.so
+Python  75525 sudheer  txt       REG               1,16   148400            13298885 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_sqlite3.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   101440            13298909 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/pyexpat.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    91904             3967373 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/aiohttp/_http_writer.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   686504            13245252 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/index.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   383680            13245264 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/parsers.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   128656             9592609 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/httptools/parser/url_parser.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   207952             9592612 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/httptools/parser/parser.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   121280             3958362 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/multidict/_multidict.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   952744            13245225 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/join.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   127728             3959790 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/yarl/_quoting_c.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16    85240             3967418 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/aiohttp/_websocket/mask.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   100224            13298862 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_elementtree.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   157936             3958101 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/propcache/_helpers_c.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   143920             3959276 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/frozenlist/_frozenlist.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   109344             4718752 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_dataset_orc.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  2026368            13245265 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pandas/_libs/groupby.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   159520            13298857 /opt/homebrew/Cellar/python@3.13/3.13.15/Frameworks/Python.framework/Versions/3.13/lib/python3.13/lib-dynload/_curses.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  1276320            13297965 /opt/homebrew/Cellar/sqlite/3.53.4/lib/libsqlite3.3.53.4.dylib
+Python  75525 sudheer  txt       REG               1,16   256240             3967420 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/aiohttp/_websocket/reader_c.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16  3941248             3957275 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/uvloop/loop.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   453744             3967385 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/aiohttp/_http_parser.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16 45756120             4719334 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/libarrow.2400.dylib
+Python  75525 sudheer  txt       REG               1,16   145200             4718738 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_azurefs.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   151896             4718770 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_hdfs.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   147296             4718767 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_gcsfs.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   546608             4718778 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_parquet.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   415000             4718764 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_fs.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   185752             4718787 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_s3fs.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   165896             4718772 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_json.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   307856             4718735 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_acero.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   221216             4718789 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_substrait.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   911904             4718749 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_dataset.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   150592             4718757 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_dataset_parquet_encryption.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   369560             4718744 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_csv.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   325112             4718754 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_dataset_parquet.cpython-313-darwin.so
+Python  75525 sudheer  txt       REG               1,16   323304             4718781 /Users/sudheer/Desktop/jupyter_env/lib/python3.13/site-packages/pyarrow/_parquet_encryption.cpython-313-darwin.so
+Python  75525 sudheer    0r      CHR                3,2      0t0                 336 /dev/null
+Python  75525 sudheer    1w      REG               1,16  3857073            12577153 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/.logs/ui-api.log
+Python  75525 sudheer    2w      REG               1,16  3857073            12577153 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/.logs/ui-api.log
+Python  75525 sudheer    3u   KQUEUE                                                 count=40, state=0x8
+Python  75525 sudheer    4      PIPE 0xe1404e4c6da8acee    16384                     ->0x63534402f7339b18
+Python  75525 sudheer    5      PIPE 0x63534402f7339b18    16384                     ->0xe1404e4c6da8acee
+Python  75525 sudheer    6      PIPE 0x7b1c4240fc42a97d    16384                     ->0xd3e0c4deacef35e0
+Python  75525 sudheer    7      PIPE 0xd3e0c4deacef35e0    16384                     ->0x7b1c4240fc42a97d
+Python  75525 sudheer    8u     unix 0x9b01cd29d39df927      0t0                     ->0xc8a2ee674cf8987
+Python  75525 sudheer    9u     unix  0xc8a2ee674cf8987      0t0                     ->0x9b01cd29d39df927
+Python  75525 sudheer   10u     IPv4 0xccff417f1d3f9ec5      0t0                 TCP 127.0.0.1:8010 (LISTEN)
+Python  75525 sudheer   11r      CHR                3,2      0t0                 336 /dev/null
+Python  75525 sudheer   12   NPOLICY                                                 
+Python  75525 sudheer   13u    systm 0x604dd331080d3a0f      0t0                     [ctl com.apple.netsrc id 7 unit 68]
+Python  75525 sudheer   14u     unix  0xd8766f565e23631      0t0                     ->0xd9635f8ccfa15534
+Python  75525 sudheer   15u     IPv4  0x89b0bdde0f9de2f      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58610 (CLOSED)
+Python  75525 sudheer   16w      REG               1,16  6054591             4447244 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/logs/apiLogs.log
+Python  75525 sudheer   17u     IPv4 0x6614459b1bc95f6f      0t0                 TCP 127.0.0.1:8010->127.0.0.1:54104 (ESTABLISHED)
+Python  75525 sudheer   18w      REG               1,16        0             4447245 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/logs/websocketLogs.log
+Python  75525 sudheer   19u     IPv6 0xaa93a18c6d0817bd      0t0                 TCP [::1]:54106->[::1]:6379 (ESTABLISHED)
+Python  75525 sudheer   20u     IPv4 0x5539d620e059bece      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58569 (CLOSED)
+Python  75525 sudheer   21u     IPv4 0xd7b9f439c40b8a54      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58709 (ESTABLISHED)
+Python  75525 sudheer   22u     IPv4 0x898c1b9fc10b940f      0t0                 TCP 127.0.0.1:8010->127.0.0.1:54129 (CLOSED)
+Python  75525 sudheer   23u     IPv4 0x72af896a725e2db4      0t0                 TCP 127.0.0.1:8010->127.0.0.1:57426 (ESTABLISHED)
+Python  75525 sudheer   24u     IPv4 0x451ad3f10ae6eb8c      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58844 (CLOSED)
+Python  75525 sudheer   25u      REG               1,16     4096            17835002 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/data/ui_prefs.sqlite
+Python  75525 sudheer   26u      REG               1,16    12392            17835004 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/data/ui_prefs.sqlite-wal
+Python  75525 sudheer   27u     IPv4 0x7c038f70580d7d69      0t0                 TCP 127.0.0.1:8010->127.0.0.1:55635 (CLOSED)
+Python  75525 sudheer   28u      REG               1,16    32768            17835005 /Users/sudheer/MahaKubera_108/SuryaDhana_AI/data/ui_prefs.sqlite-shm
+Python  75525 sudheer   29u     IPv4 0x9fe3eed50240ba7d      0t0                 TCP 127.0.0.1:8010->127.0.0.1:59820 (CLOSED)
+Python  75525 sudheer   30u     IPv4 0xf102d9a0df7a84dd      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58720 (ESTABLISHED)
+Python  75525 sudheer   31u     IPv4 0xd76bd1b7c30e5328      0t0                 TCP 127.0.0.1:8010->127.0.0.1:57839 (ESTABLISHED)
+Python  75525 sudheer   32u     IPv4 0xda61ad44f71813c2      0t0                 TCP 127.0.0.1:8010->127.0.0.1:57902 (ESTABLISHED)
+Python  75525 sudheer   33u     IPv4 0x42dcfcf49812d2a9      0t0                 TCP 127.0.0.1:8010->127.0.0.1:59051 (CLOSED)
+Python  75525 sudheer   34u     IPv4 0x2ba16d7f2c7c3880      0t0                 TCP 127.0.0.1:8010->127.0.0.1:56788 (CLOSED)
+Python  75525 sudheer   35u     IPv4 0xe4e27e40181dac06      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58721 (ESTABLISHED)
+Python  75525 sudheer   36u     IPv4 0x636c247d05b05f20      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58909 (ESTABLISHED)
+Python  75525 sudheer   37u     IPv4 0x6379f1cf5b5fc2fe      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58694 (ESTABLISHED)
+Python  75525 sudheer   38u     IPv6 0x7414044f8849ea2e      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:58818->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   39u     IPv4 0x9dedd579baecade4      0t0                 TCP 127.0.0.1:8010->127.0.0.1:59053 (ESTABLISHED)
+Python  75525 sudheer   40u     IPv6 0x6a1be22d5a5ad28e      0t0                 TCP [::1]:59054->[::1]:6379 (ESTABLISHED)
+Python  75525 sudheer   41u     IPv4 0x317d3c5edadb97d6      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58234 (ESTABLISHED)
+Python  75525 sudheer   42u     IPv6 0xf9acf15c005587f4      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:59076->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   43u     IPv4  0xaec8988e253fded      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58697 (ESTABLISHED)
+Python  75525 sudheer   44u     IPv6 0x62a7d207de723b23      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:58819->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   45u     IPv6 0xcd02e6a7dbf17477      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:59077->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   46u     IPv4 0x88f3f96cf642f7dc      0t0                 TCP 127.0.0.1:59115->127.0.0.1:8001 (ESTABLISHED)
+Python  75525 sudheer   47u     IPv6 0x19a8e1068d90f2d8      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:59074->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   48u     IPv6 0x9ac87b903f247988      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:59078->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   49u     IPv6 0x9c1090e7ba578bfc      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:59075->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   50u     IPv6 0x778c108503c348b4      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:59079->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   51u     IPv4 0xb13feaea2b9ac3e3      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58048 (ESTABLISHED)
+Python  75525 sudheer   52u     IPv4 0x41b470deeedb8a45      0t0                 TCP 127.0.0.1:59116->127.0.0.1:8001 (ESTABLISHED)
+Python  75525 sudheer   53u     IPv4 0xde018e610f1ebdf7      0t0                 TCP 127.0.0.1:59095->127.0.0.1:8001 (CLOSED)
+Python  75525 sudheer   54u     IPv4 0x31c915b14141032d      0t0                 TCP 127.0.0.1:59092->127.0.0.1:8001 (CLOSED)
+Python  75525 sudheer   55u     IPv4 0x8cbd729f66da5b08      0t0                 TCP 127.0.0.1:59106->127.0.0.1:8001 (CLOSED)
+Python  75525 sudheer   56u     IPv4 0xc8d7a07d822ffbf6      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58926 (ESTABLISHED)
+Python  75525 sudheer   57u     IPv4 0x8b1d4765882af087      0t0                 TCP 127.0.0.1:8010->127.0.0.1:59107 (ESTABLISHED)
+Python  75525 sudheer   58u     IPv4 0x63e0018635a925bb      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58781 (ESTABLISHED)
+Python  75525 sudheer   60u     IPv4  0x2796f86fd260fa4      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58783 (ESTABLISHED)
+Python  75525 sudheer   61u     IPv4 0x4d62dbc1a1e63d67      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58784 (ESTABLISHED)
+Python  75525 sudheer   62u     IPv4 0x65bbd9334e63c25f      0t0                 TCP 127.0.0.1:59117->127.0.0.1:8001 (ESTABLISHED)
+Python  75525 sudheer   63u     IPv4 0x58201e52bb42a4c9      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58782 (ESTABLISHED)
+Python  75525 sudheer   64u     IPv6 0x164d4a3bb5ac67fb      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:58821->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   65u     IPv6 0x1032c12b36383a29      0t0                 TCP [::1]:59119->[::1]:6379 (ESTABLISHED)
+Python  75525 sudheer   66u     IPv4 0x2c69a38fc202452f      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58129 (CLOSED)
+Python  75525 sudheer   69u     IPv6 0x9670c5f8df6bb887      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:58822->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   70u     IPv6 0xdb378ff908410545      0t0                 TCP [2409:40f2:116c:d9a0:8c3b:5f02:178f:e4c]:58823->[2406:8600:f03f:1fa::2000]:443 (CLOSE_WAIT)
+Python  75525 sudheer   71u     IPv6 0xbe8a920b1590db87      0t0                 TCP [::1]:58863->[::1]:6379 (ESTABLISHED)
+Python  75525 sudheer   73u     IPv4 0x2b575b3361757bf8      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58853 (CLOSED)
+Python  75525 sudheer   77u     IPv4 0xce333c1f3fe8e686      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58845 (CLOSED)
+Python  75525 sudheer   78u     IPv4 0x81e8924b411a7686      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58846 (CLOSED)
+Python  75525 sudheer   79u     IPv4 0xd0223ac0e9468fb4      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58847 (CLOSED)
+Python  75525 sudheer   80u     IPv4 0x721d8bca7cf2355b      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58848 (CLOSED)
+Python  75525 sudheer   81u     IPv4 0x249d004aa1aa6d69      0t0                 TCP 127.0.0.1:8010->127.0.0.1:58849 (CLOSED)
+Python  75525 sudheer   86u     IPv4 0x8041f7e4936d4dbb      0t0                 TCP 192.168.31.62:58897->27.123.42.204:443 (CLOSE_WAIT)

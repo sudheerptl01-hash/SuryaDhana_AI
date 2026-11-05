@@ -1,0 +1,137 @@
+{
+  "desk": {
+    "name": "Decision Desk",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/desk.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "overview": {
+    "name": "Overview",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/overview.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "stocks": {
+    "name": "Stocks",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/stocks.png",
+    "load_s": 8.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "backtest": {
+    "name": "Backtest",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/backtest.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "positions": {
+    "name": "Portfolio",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/positions.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "broker": {
+    "name": "Broker Account",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/broker.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "pipeline": {
+    "name": "Pipeline",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/pipeline.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "scanner": {
+    "name": "LW Scanner",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/scanner.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "discovery": {
+    "name": "Alpha Discovery",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/discovery.png",
+    "load_s": 8.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "commodity": {
+    "name": "Commodity",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/commodity.png",
+    "load_s": 10.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "glassbox": {
+    "name": "Glass-Box",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/glassbox.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "mlengine": {
+    "name": "ML Engine",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/mlengine.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "explorer": {
+    "name": "Data Explorer",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/explorer.png",
+    "load_s": 8.0,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "warehouse": {
+    "name": "Warehouse",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/warehouse.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "system": {
+    "name": "System",
+    "ok": true,
+    "screenshot": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/ui_audit/after/system.png",
+    "load_s": 27.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  }
+}

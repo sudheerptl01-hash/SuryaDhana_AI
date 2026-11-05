@@ -1,0 +1,109 @@
+◉ SURYADHANA ▸ WATCH
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:40:26
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,127.30
+−1.20%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:40 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+WTCH
+WATCH MONITOR
+watchlist · pins · ICICI holdings · Desk · quotes every 60 s
++ ADD
+↻
+NAMES
+0
+HELD 0 · DESK 0 · WATCH 0 · PIN 0
+UP / DOWN TODAY
+0 / 0
+AVERAGE DAY MOVE
+—
+equal weight
+BEST / WORST
+—
+MONITOR
+DELAYED · YAHOO
+ALL
+STOCK ↕	NAME	LAST ↕	DAY ▼	POSITION ↕	P/E · PROFIT Y/Y ↕	1M	DAY RANGE	52W ↕	NEXT EVENT	ALERT	
+
+Nothing to watch yet: add a ticker above, ☆ PIN a stock from any chart, or connect ICICI to see your holdings.
+Prices: Yahoo Finance (about 1 minute delayed); day change vs NSE's official previous close (bhavcopy). ICICI live quotes, when connected, are on the Broker tab. Range markers: green near the high, red near the low.
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

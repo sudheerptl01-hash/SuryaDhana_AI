@@ -1,0 +1,276 @@
+{
+ "fixer": "W2-RUST",
+ "summary": "Wave 2, desktop shell: done. Every brief item and the PM's 'ui-api not responding' item has an outcome: 16 fixed, 1 partly fixed (C1-trader-ux-14: the UI half belongs to W2-UI-SHELL). The rejected round-1 trust guard is rebuilt. It identifies the listener in-process with libproc and touches nothing on disk (nothing under ~/Desktop). It has a hard 5 s timeout and a component-wise CPython rule that survives brew upgrade, and an Unknown verdict never evicts windows. New state: a ui-api that holds its port but whose /health times out on 2 polls in a row is NOT RESPONDING, never 'starting' or 'down'. The boot page shows UI-API NOT RESPONDING with how long it has lasted and offers no Start. It says the watchdog restarts a hung ui-api (W2-OPS' rule: 2 failed runs, about 4 min, diagnostics saved to .logs/hangs/), or that nothing will when the agent is not loaded. It names ./start-local.sh restart ui-api. Open windows keep their state. Gates: cargo test 124 passed, clippy 0 (default and devtools), fmt clean, boot_check 52/52 (the round-1 boot.js fails 11/52 as negative control), T's desktop pytest 103 passed. The final build 0ae66db-dirty-fc2248df-20261025T0933Z is signed (8.2 MB). Self-test against a stub-backed scratch server: 48/49 (1 skipped, screen locked). Hung-listener mode passes in both a normal and a login start; closed port is still 'down'. The relaunch drill in an isolated HOME passes 36/36. Install, rollback and roll-forward were exercised in a scratch HOME. The installed app, ~/Library/LaunchAgents and the live stack were never touched.",
+ "findings": [
+  {
+   "id": "C2-security-04",
+   "outcome": "fixed",
+   "what_changed": "Brief item 1, the round-1 REJECT. trust.rs is rewritten. It finds LISTEN sockets on the ui port in-process with libproc (proc_listallpids, PROC_PIDLISTFDS, PROC_PIDFDSOCKETINFO; struct offsets checked with clang and by a unit test that finds its own socket). The owner uid and executable come from proc_pidinfo / proc_pidpath. Nothing is read, stat'ed or canonicalized, so nothing under ~/Desktop is touched (TCC). When no listener is visible, the guard connects once and lists again: a port that answers with no visible holder is Foreign (another account or root); a closed port is Unknown (a restart race). policy::is_trusted_python_exe is a pure rule on path components. It accepts the same uid AND a CPython at /opt/homebrew|/usr/local Cellar/python@3.N/<any 3.N.x[_r]>/Frameworks/Python.framework/Versions/3.N/(Resources/Python.app/Contents/MacOS/Python | bin/python3[.N]), or the opt/ spelling, or /Library/Frameworks/Python.framework. Rejected: CLT/Xcode/system Python, '..', and version mismatches between keg and framework. config trusted_python_prefixes (default []) replaces stack_python. The whole probe runs on the blocking pool under tokio::time::timeout (5 s); an overrun is Unknown. New exec.rs: every external program the shell runs (launchctl, plutil) goes through run_bounded, which kills it at its time limit. Verdicts: only a definitive Foreign keeps new windows on the boot page and pulls open terminal windows back (health::evicts). Unknown never evicts or holds a window back, is retried within 5 s, and the tray says 'port not verified (retrying)'. The residual risk is documented in README: a same-user process running Homebrew or python.org CPython passes, including a sandboxed app that execs Homebrew python as a child; closing that needs a ui-api shared secret. PLAN patch request included.",
+   "tests": "policy: trusted_python_locations_survive_a_brew_upgrade (3.13.15 -> 3.13.16: the old running path is still trusted; a round-1 negative control shows the old prefix rule judged it foreign; Homebrew revision _1, /usr/local, python.org), untrusted_executables (CLT/system Python, '..', keg/framework version mismatches, relative and lookalike paths), listener_trust_rule. trust.rs: raw_socket_info_decoding, listeners_this_test_owns_are_found_v4_and_v6, a_listener_is_judged_by_its_executable_never_by_files, probing_is_fast_enough_for_the_poll_loop. health: a_stuck_or_panicking_probe_is_abandoned_as_unknown; evicts() only for Foreign. Built-copy self-test: listener_verified PASS (Trusted: /opt/homebrew/Cellar/python@3.13/3.13.15/.../Python, kernel facts only). Squatter run by the CLT /usr/bin/python3: boot_untrusted_listener PASS (pid and exe named).",
+   "user_visible_change": "No more false 'TERMINAL PORT NOT TRUSTED' after brew upgrade. The app never triggers a Desktop-folder privacy prompt. A failed or slow check shows 'port not verified (retrying)' in the menu-bar item instead of pulling windows back.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C2-security-11",
+   "outcome": "fixed",
+   "what_changed": "Brief item 2. WebKit downloads (on_download, DownloadEvent::Finished) are now charged to the same app-wide ByteBudget (200 MB/hour) as shell_save_download, through Downloads::charge_finished(bytes, free). Over budget, or leaving less than 5 GB free on the Downloads volume after the file landed: the file is removed and the 'Could not save' notice gives the reason. A download is refused at admit while the budget is exhausted.",
+   "tests": "downloads: webkit_downloads_are_charged_to_the_same_byte_budget, limits_rate_bytes_and_free_space; policy: byte_budget_sliding_window.",
+   "user_visible_change": "A WebKit (link) download that exceeds the hourly budget or fills the disk is removed with a notice that says why.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-desktop-native-01",
+   "outcome": "fixed",
+   "what_changed": "Brief item 3. crash.rs: a run marker (run.json) whose 'started' is earlier than kern.boottime belongs to the previous boot (power cut, panic, forced restart). It is not a crash: the login start keeps its grace and it is not counted in the crash loop. Logged as 'the previous run ended with the previous boot ... not a crash'.",
+   "tests": "crash: an_unclean_end_before_this_boot_keeps_the_login_grace. Relaunch drill step 6b, 'W2 power-cut marker: not a crash, the login start keeps its grace': PASS.",
+   "user_visible_change": "After a power cut, the next login shows 'Starting the stack after login', not a red STACK DOWN.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C2-reliability-ops-03",
+   "outcome": "fixed",
+   "what_changed": "Brief item 4. The 'watchdog run' starting state shows the run's own elapsed time: the age of .pids/watchdog/lock (stack::Activity.watchdog_run_secs), not app uptime.",
+   "tests": "commands: watchdog_runs_are_timed_by_their_lock_not_the_app_uptime; boot_check fixtures for a watchdog run in progress.",
+   "user_visible_change": "'The watchdog is starting the stack \u00b7 30 s' instead of '312 min 05 s (taking longer than usual)' in an app that has run for hours.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-desktop-native-10",
+   "outcome": "fixed",
+   "what_changed": "Brief item 5. shell_request_notification_permission opens System Settings \u203a Notifications only when macOS says 'denied', and at most once a minute (RateLimiter(1, 60 s), NOTIFICATION_SETTINGS_MIN_GAP). The limiter is consulted and charged only on 'denied'. Pure decision function: should_open_notification_settings.",
+   "tests": "commands unit test denied_opens_system_settings_at_most_once_a_minute: a looping page calls the request 100 times in 10 s and System Settings opens once.",
+   "user_visible_change": "A looping or buggy page can no longer keep pulling System Settings to the front.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-desktop-native-18",
+   "outcome": "fixed",
+   "what_changed": "Brief item 6. SuryaDhana \u25b8 Settings\u2026 \u2318, no longer opens the SYS telemetry page. It opens a native dialog that explains what config.json holds (urls, NIFTY/notifications, startup_grace_secs, frame_hosts / verify_ui_listener / trusted_python_prefixes) and where the two real toggles live: Launch at Login in the SuryaDhana menu, page zoom in View. 'Edit config.json\u2026' opens the file in TextEdit, creating it atomically with the current values if missing. My call against a full native Preferences window: the only interactive settings (Launch at Login, zoom) already have native menu items; a second window would duplicate them and add webview or IPC surface. Changes apply on the next start, and the dialog says so.",
+   "tests": "menu: parses_actions_and_rejects_unknown (app:settings -> Settings), shortcut_list_names_the_cmd_keys; lib: settings_text_and_version. The self-test never opens the dialog.",
+   "user_visible_change": "\u2318, shows a Settings dialog with an 'Edit config.json\u2026' button instead of jumping to the System telemetry page.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "FX-RUST-check-login-grace-needs-watchdog",
+   "outcome": "fixed",
+   "what_changed": "Brief item 7. startup_phase grants the Login / StartRequested grace only when the watchdog LaunchAgent is loaded or installed. boot.js watchdogPresent(): without the agent, the boot page goes straight to the down state with the install command (scripts/install_launch_agents.sh install) and Start/Stop visible.",
+   "tests": "lib: no_login_grace_without_the_watchdog_agent, startup_phase_hides_down_state_only_while_starting, login_start_rules. boot_check 6b 'a login grace without the watchdog agent never hides the install command' (the round-1 boot.js fails it).",
+   "user_visible_change": "With no watchdog installed, a login start no longer hides Start and the install command behind 'Starting the stack'.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "FX-RUST-check-health-robustness",
+   "outcome": "fixed",
+   "what_changed": "Brief item 8. (1) health snapshot() recovers a poisoned RwLock with into_inner() instead of returning Default, so a panic can no longer leave readers stuck on 'checking'. Outside tests, every lock in the shell is taken with unwrap_or_else(into_inner). (2) On crash-loop stand-down, run.json is removed so the next manual launch does not count the same end twice. (3) The SIGTERM fallback removes the run marker (before_hard_exit) and flushes the log before the hard exit.",
+   "tests": "health: a_poisoned_snapshot_lock_still_returns_the_last_state; crash: repeated_crashes_make_the_login_job_stand_down, sigterm_becomes_a_quit_not_a_kill. Drill 'clean exit removed the run marker' PASS.",
+   "user_visible_change": "None in normal use. After a crash loop, the next manual launch is not miscounted.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "completeness-03",
+   "outcome": "fixed",
+   "what_changed": "Brief item 9. Launch at Login / KeepAlive changes take effect now. reconcile_launchd runs launchctl bootout + bootstrap of the app's OWN job (label SuryaDhana only), on a bounded thread, after a first-run enable, a toggle, or a repair of a stale entry. An instance that itself runs under the login job (XPC_SERVICE_NAME) never boots itself out: the change is deferred to the next login and the menu says so. Toggling back to the state the running job already has needs no reload. New CLI modes: --version, --login-item-sync [--start] (used by build_desktop.sh --install/--rollback); --login-item-sync refuses while an instance runs from the same HOME. With a HOME that is not the account's home (a drill), launchd is never touched unless the drill's recorder is given.",
+   "tests": "autostart: launchd_reconcile_plans_never_boot_out_the_running_job, under_job_detection_and_benign_outcomes, launchctl_tool_is_the_system_one_only_for_the_real_home, run_launchd_with_a_recorder. Relaunch drill with a recording launchctl: first-run enable reconciled at once, only the app's own label named, the under-login-job repair defers, repair reloads now, --login-item-sync and --start, the refusal while the app runs, CLI modes open no app: all PASS.",
+   "user_visible_change": "Turning Launch at Login on or off applies immediately (crash relaunch in force now), not at the next login.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "completeness-04",
+   "outcome": "fixed",
+   "what_changed": "Brief item 10. build.rs bakes a build id <sha7>[-dirty]-<source hash>-<UTC time> (for example 0ae66db-dirty-fc2248df-20261025T0933Z), and CFBundleVersion is the UTC time (yyyymmddHHMM, monotonic). It is shown in About, the tray ('SuryaDhana 1.0.0 \u00b7 <build id>'), shell_info.build_id (additive) and SuryaDhana --version. build_desktop.sh --install keeps the replaced app as ~/Library/Application Support/ai.suryadhana.terminal/previous/SuryaDhana.app.previous, with its id in previous/BUILD and installed-build; --rollback swaps the two (again = roll forward). Both rewrite the Launch-at-Login entry for the installed copy. Install/rollback quit only the copy at the install path, by pid (Apple Event, then SIGTERM, never kill -9). The script was replaced atomically (temp + mv).",
+   "tests": "Scratch HOME + SURYADHANA_INSTALL_DIR: install over the morning copy ('kept the previous app for --rollback: pre-wave-2 build, sha256 1f48af96a3fd'), rollback, roll forward: all OK, launchd not touched. Self-test ipc_round_trip_remote shows build_id. Drill '--version' PASS.",
+   "user_visible_change": "About and the menu-bar item show a distinct build id. scripts/build_desktop.sh --rollback restores the previous app.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "K3-zoom",
+   "outcome": "fixed",
+   "what_changed": "Brief item 11. View \u25b8 Zoom In \u2318= / Zoom Out \u2318- / Actual Size \u23180 set the focused window's webview zoom (0.5\u20132.0, steps of 0.1). It is saved per window with the session and restored. The page gets {type:'zoom', factor} on change, and the init script sets window.__SURYADHANA_ZOOM__ before page scripts (a non-finite factor becomes 1).",
+   "tests": "windows: zoom_steps_events_and_limits, init-script clamp and rounding asserts. Self-test zoom_published PASS ([{factor:1.1}] then [{factor:1}], __SURYADHANA_ZOOM__ = 1).",
+   "user_visible_change": "\u2318= / \u2318- / \u23180 zoom each window, and the zoom is remembered.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "K4-deep-link",
+   "outcome": "fixed",
+   "what_changed": "Brief item 11. shell_new_window takes an optional 'sym', validated in Rust (policy::validate_symbol, ^[A-Z0-9&_.-]{1,20}$, ASCII only). The window opens http://<ui>/?tab=<tab>&sym=<SYM> (URL-encoded). New menu item File \u25b8 'Open Current Page in New Window' (duplicate window). The PLAN contract text is a patch request.",
+   "tests": "policy: symbols_for_deep_links, new_window_routing; windows: deep_links_carry_a_validated_symbol. Self-test new_window_open_close PASS (term-1 loaded /?tab=risk&sym=M%26M in 105 ms and closed); validation_rejects_bad_args PASS.",
+   "user_visible_change": "New 'Open Current Page in New Window' menu item. The UI can open a stock in its own window.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-trader-ux-09",
+   "outcome": "fixed",
+   "what_changed": "Brief item 11. Go \u25b8 Back \u2318[ / Forward \u2318] run history back/forward in the focused window. Back only acts when history.length > 1, so it never leaves the terminal for the boot page.",
+   "tests": "windows: history_steps_never_leave_the_page_by_themselves. Self-test history_back_stays_in_terminal PASS.",
+   "user_visible_change": "\u2318[ and \u2318] go back and forward through a window's pages.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "W2-RUST-help-shortcuts",
+   "outcome": "fixed",
+   "what_changed": "Brief item 11. Help \u25b8 Keyboard Shortcuts shows the native app's keys with their \u2318 glyphs (menu::SHORTCUTS: \u2318N, \u2318K, \u23181\u2013\u23189, \u2318[ / \u2318], \u2318= \u2318- \u23180, \u2318,, \u2325\u2318L, ...). It points to the GO bar help for the terminal's own keys.",
+   "tests": "menu: shortcut_list_names_the_cmd_keys.",
+   "user_visible_change": "New Help \u25b8 Keyboard Shortcuts.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-trader-ux-13",
+   "outcome": "fixed",
+   "what_changed": "Brief item 12. Verified the round-1 tray change: the title is '\u2600 NIFTY 22,600.0 \u25bc0.39% \u00b7 closed' outside NSE hours, 'NIFTY \u2014 stale' for a frozen quote or a down data-service, no suffix when live. The tooltip now gives the last close with a short month date ('25 Oct') and 'NIFTY quote stale (data-service?)'.",
+   "tests": "tray: lines_render, closed_market_tooltip_names_the_session.",
+   "user_visible_change": "The tooltip shows the date of the last close in short month form.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-trader-ux-14",
+   "outcome": "partially-fixed",
+   "what_changed": "Brief item 12, shell half. The traffic lights sit at a fixed (14, 18) pt in screen points (they do not scale with page zoom). The K3 zoom event and window.__SURYADHANA_ZOOM__ give the page the factor, so the title strip can keep the inset at 84 px / factor. README note corrected.",
+   "tests": "Self-test zoom_published PASS (the page receives the factor).",
+   "user_visible_change": "None by itself. The UI uses the factor.",
+   "reason_if_not_fixed": "The title-strip inset (84 px / factor, wordmark never under the native buttons) is W2-UI-SHELL's half under contract K3."
+  },
+  {
+   "id": "PM-25Oct-ui-api-not-responding",
+   "outcome": "fixed",
+   "what_changed": "PM items, 14:48 and 14:55. Each /health probe is classified (SvcProbe): 200 = Up; refused = down; a timeout on a port that still accepts a TCP connection (confirmed by a plain connect, 500 ms; a full accept backlog that times out also counts as held) = Hung; anything else = Failed. StallTracker: 2 Hung probes in a row = NOT RESPONDING since the first. UiState::NotResponding wins over the login, Start and watchdog-run graces. It never evicts, so open windows keep their state and the UI's own banner covers them. ShellStatus is unchanged (up:false). boot_status rows gain state ('up'|'down'|'not_responding') and stalled_secs. The boot page heading is UI-API NOT RESPONDING, the row reads '\u25cc NOT RESPONDING', and the text gives how long ('has not answered /health for 1 min 10 s'). With the watchdog agent loaded or installed (new stack::Activity::watchdog_active), it says the watchdog restarts a hung ui-api once it has failed two checks in a row (about 4 min, diagnostics to .logs/hangs/: W2-OPS' rule, health::HUNG_RESTART_NOTE). Without the agent, it says nothing restarts it automatically. Remedy: cd <repo> && ./start-local.sh restart ui-api. Logs / Retry are offered, no Start. Tray: '\u25cc ui-api :8010 \u2014 NOT RESPONDING (port held, no /health answer)', with Start Stack disabled when the only problem is a hung service. The notification title is 'ui-api is not responding', and the body has the same watchdog sentence and the restart command; for data-service / master-controller it adds the freeze windows and the ICICI-login caveat. If Start is pressed from the tray for a mixed case, its message says Start does not restart a hung service and gives the command.",
+   "tests": "Unit tests: StallTracker (a blip does not count, the count resets on Up/Refused), probe classification against real sockets (hung listener, closed port, 200), ui_state_of not_responding with !evicts, down_note with and without the watchdog plus the freeze/ICICI caveat, watchdog_active truth table, row_state, starting_applies, start_useful. boot_check 4b: 9 checks (state, heading, row, how long + watchdog sentence, command, no Start, login grace, no-watchdog variant, closed-port control). Negative control: the round-1 boot.js shows 'The watchdog is starting the stack' for a hung ui-api, which reproduces the live 14:40 symptom. Built copy against a scratch hung listener (127.0.0.1:18765, jupyter_env CPython, listen() and never accept): boot_not_responding_state PASS in a normal start and with --autostart (180 s grace). progress='ui-api holds port 18765 but has not answered /health for 33 s ... The watchdog restarts a hung ui-api once it has failed two checks in a row (usually within about 4 min, after saving diagnostics to .logs/hangs/); this window opens by itself as soon as it answers. To restart it now:'. Closed-port control on the same build: boot_down_state PASS (still 'down' with Start).",
+   "user_visible_change": "A hung ui-api is shown as UI-API NOT RESPONDING with its duration, the watchdog note and the restart command, instead of 'The watchdog is starting the stack'. There is no Start button in that state, the tray line and notification name it 'not responding', and open windows are not moved.",
+   "reason_if_not_fixed": ""
+  }
+ ],
+ "files_changed": [
+  "desktop/src-tauri/src/trust.rs",
+  "desktop/src-tauri/src/exec.rs (new)",
+  "desktop/src-tauri/src/policy.rs",
+  "desktop/src-tauri/src/config.rs",
+  "desktop/src-tauri/src/health.rs",
+  "desktop/src-tauri/src/stack.rs",
+  "desktop/src-tauri/src/crash.rs",
+  "desktop/src-tauri/src/downloads.rs",
+  "desktop/src-tauri/src/windows.rs",
+  "desktop/src-tauri/src/instance.rs",
+  "desktop/src-tauri/src/autostart.rs",
+  "desktop/src-tauri/src/menu.rs",
+  "desktop/src-tauri/src/tray.rs",
+  "desktop/src-tauri/src/commands.rs",
+  "desktop/src-tauri/src/lib.rs",
+  "desktop/src-tauri/src/selftest.rs",
+  "desktop/src-tauri/build.rs",
+  "desktop/boot/boot.js",
+  "desktop/boot/boot.css",
+  "desktop/scripts/boot_check.mjs",
+  "desktop/scripts/relaunch_drill.sh",
+  "desktop/scripts/stub_backend.py (new)",
+  "desktop/README.md",
+  "scripts/build_desktop.sh"
+ ],
+ "tests_run": [
+  {
+   "command": "cd desktop/src-tauri && cargo test --offline",
+   "result": "124 passed, 0 failed (95 after round 1)"
+  },
+  {
+   "command": "cargo clippy --offline --all-targets  /  --features devtools",
+   "result": "0 warnings/errors, both feature sets"
+  },
+  {
+   "command": "cargo fmt --check",
+   "result": "clean"
+  },
+  {
+   "command": "node desktop/scripts/boot_check.mjs",
+   "result": "PASSED 52/52. Negative control (round-1 boot.js + new checks): FAILED 41/52, the 11 wave-2 checks fail as expected"
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest tests/integration/test_desktop_contract.py tests/integration/test_desktop_qa_harness.py -q",
+   "result": "103 passed, 1 warning"
+  },
+  {
+   "command": "bash -n scripts/build_desktop.sh desktop/scripts/relaunch_drill.sh; ruff check --line-length 130 desktop/scripts/stub_backend.py",
+   "result": "ok; All checks passed"
+  },
+  {
+   "command": "scripts/build_desktop.sh",
+   "result": "exit 0: codesign --verify --deep --strict passed (ad-hoc), 8.2 MB, build 0ae66db-dirty-fc2248df-20261025T0933Z, CFBundleVersion 202610250933"
+  },
+  {
+   "command": "SURYADHANA_UI_URL=http://127.0.0.1:18772 scripts/build_desktop.sh --no-build --test (scratch_server.py --block-mutations backed by desktop/scripts/stub_backend.py; no live load)",
+   "result": "PASSED 48/49, 1 skipped (boot_page_painted: screen locked). listener_verified Trusted, zoom_published, new_window_open_close ?tab=risk&sym=M%26M, status_heartbeat largest gap 8.0 s, history_back_stays_in_terminal, app_total_rss 331.5 MB < 500 MB"
+  },
+  {
+   "command": "SURYADHANA_UI_URL=http://127.0.0.1:18765 (hung listener) --no-build --test, and with SELFTEST_ARGS=--autostart",
+   "result": "boot_not_responding_state PASS in both (terminal_loaded FAIL by design: the listener never answers); 14/16, 1 skipped"
+  },
+  {
+   "command": "SURYADHANA_UI_URL=http://127.0.0.1:18764 (closed port) --no-build --test",
+   "result": "boot_down_state PASS (state down, Start shown); terminal_loaded FAIL by design"
+  },
+  {
+   "command": "squatter (CLT /usr/bin/python3 on 18763), no-release (18762), login grace (SURYADHANA_STARTUP_GRACE_S=20) modes",
+   "result": "boot_untrusted_listener, boot_no_release_state, boot_startup_grace PASS (builds 145d364d and 97c6e068; the hung change did not touch those paths)"
+  },
+  {
+   "command": "desktop/scripts/relaunch_drill.sh --ui http://127.0.0.1:18772 (isolated HOME, recording launchctl)",
+   "result": "exit 0, 36 PASS / 0 FAIL on the final build"
+  },
+  {
+   "command": "install / --rollback / roll forward with HOME and SURYADHANA_INSTALL_DIR in scratch",
+   "result": "all OK. The previous copy was kept with its id, launchd not touched, the real /Applications app (pid 42755) untouched"
+  }
+ ],
+ "patch_requests": [
+  {
+   "file": "reports/desktop_app/PLAN.md",
+   "why": "completeness-04: shell_info gains the additive build_id field.",
+   "old": "| `shell_info` | \u2014 | `{version, build, autostart, windows, ui_api_url}` | \u2014 |",
+   "new": "| `shell_info` | \u2014 | `{version, build, build_id, autostart, windows, ui_api_url}` | `build_id` (additive, completeness-04): `<sha7>[-dirty]-<source hash>-<UTC time>`, also in About, the menu-bar item and `SuryaDhana --version` |"
+  },
+  {
+   "file": "reports/desktop_app/PLAN.md",
+   "why": "C1-desktop-native-10: the rule now enforced in Rust.",
+   "old": "| `shell_request_notification_permission` | \u2014 | same | \u2014 |",
+   "new": "| `shell_request_notification_permission` | \u2014 | same | opens System Settings \u203a Notifications only when macOS says `denied`, at most once a minute |"
+  },
+  {
+   "file": "reports/desktop_app/PLAN.md",
+   "why": "Contract K4: optional validated 'sym' on shell_new_window.",
+   "old": "| `shell_new_window` | `{tab?}` | `{label}` | tab must be one of the 42 ids; \u2264 8 windows |",
+   "new": "| `shell_new_window` | `{tab?, sym?}` | `{label}` | tab must be one of the 42 ids; `sym` (K4) an NSE symbol `^[A-Z0-9&_.-]{1,20}$`, validated in Rust; the window opens `http://127.0.0.1:8010/?tab=<tab>&sym=<SYM>` (URL-encoded); \u2264 8 windows |"
+  },
+  {
+   "file": "reports/desktop_app/PLAN.md",
+   "why": "Contract K3: the additive zoom event and initial value.",
+   "old": "- `{type:'build-changed', build}`: the served UI build differs from the page's own build",
+   "new": "- `{type:'build-changed', build}`: the served UI build differs from the page's own build\n- `{type:'zoom', factor}` (K3, additive): the window's page zoom after \u2318= / \u2318\u2212 / \u23180 (0.5\u20132.0, steps of 0.1, saved per window with the session); the init script also sets `window.__SURYADHANA_ZOOM__` before page scripts. Traffic lights stay at (14, 18) screen pt, so the title strip keeps its inset at 84 px / factor"
+  },
+  {
+   "file": "reports/desktop_app/PLAN.md",
+   "why": "PM 25 Oct: record the 'not responding' state of the boot page (boot-only; ShellStatus unchanged).",
+   "old": "`open_logs`, `open_terminal {tab?}`.",
+   "new": "`open_logs`, `open_terminal {tab?}`. `boot_status` service rows carry `state` (`up`|`down`|`not_responding`) and `stalled_secs`. `ui_state:'not_responding'` = ui-api holds its port but `/health` timed out on two polls in a row (hung). The boot page then shows UI-API NOT RESPONDING with how long, never 'starting' or 'down', and offers no Start. It says the watchdog restarts a hung core service after two failed runs (scripts/stack_watchdog.sh) and names `./start-local.sh restart ui-api`. Open windows are never moved, and `ShellStatus` keeps `up:false`."
+  },
+  {
+   "file": "reports/desktop_app/PLAN.md",
+   "why": "C2-security-04 (wave 2): the new trust rule, Unknown never evicting, and the residual risk stated honestly (brief item 1).",
+   "old": "| Port squatting: any local process (even a same-user sandboxed app) could bind :8010 while ui-api is down; a window on that origin would show its pages (fake credential forms, fake notifications) with the 9 remote commands | Guard (desktop/src-tauri/src/trust.rs): before any window gets the terminal origin, every listener on the port must be this user's process running inside the stack interpreter's prefix; otherwise the boot page names the pid and executable and open windows are pulled back. Downloads are extension-limited and quarantined either way (C2-security-04/05) |",
+   "new": "| Port squatting: any local process (even a same-user sandboxed app) could bind :8010 while ui-api is down; a window on that origin would show its pages (fake credential forms, fake notifications) with the 9 remote commands | Guard (desktop/src-tauri/src/trust.rs, wave 2): before any window gets the terminal origin, the shell lists the port's LISTEN sockets in-process from kernel facts (libproc). Nothing on disk is read or canonicalized and nothing under ~/Desktop is touched; there is a hard 5 s timeout. Every listener must be this user's process whose executable is a CPython in a Homebrew keg (any python@3.N patch version, so `brew upgrade` never makes the running ui-api look foreign) or a python.org framework. A definitive Foreign verdict keeps new windows on the boot page (it names the pid and executable) and pulls open terminal windows back. An Unknown verdict (probe failed or timed out) never evicts or holds a window back and is retried. Residual risk: a same-user process running Homebrew or python.org CPython passes, including a sandboxed app that execs Homebrew python as a child; closing that needs a shared secret between ui-api and the shell. Downloads are extension-limited and quarantined either way (C2-security-04/05) |"
+  }
+ ],
+ "deploy_notes": [
+  "DEPLOY ORDER: the hung-state texts (boot page, notification, tray Start message) say the watchdog restarts a hung ui-api. That is W2-OPS' hang rule, currently only in W2-OPS' draft (scratchpad/W2-OPS/work/stack_watchdog.sh; scripts/stack_watchdog.sh in the tree is still the 12:16 version without it). Land W2-OPS' watchdog first, or together with this app. If its numbers change (WATCHDOG_HANG_RUNS default 2, about 4 min), update health::HUNG_RESTART_NOTE (health.rs) and the 'notresponding' text in desktop/boot/boot.js.",
+  "Install (the owner or PM, not me): scripts/build_desktop.sh --install [--relaunch]. It quits the installed SuryaDhana (pid 42755 now) by pid, keeps the morning copy under ~/Library/Application Support/ai.suryadhana.terminal/previous/, rewrites the Launch-at-Login entry for the installed copy and reloads its launchd job (--login-item-sync). Rollback: scripts/build_desktop.sh --rollback (again = roll forward). Not a stack restart, so the IST freeze windows do not apply, but avoid 07:45\u201309:20 out of habit.",
+  "After install, check that About / the menu-bar item show build 0ae66db-dirty-fc2248df-\u2026 (or the source hash of whatever tree is built then), then run scripts/build_desktop.sh --install --test once with the screen UNLOCKED to measure boot_page_painted (< 500 ms budget). Every run here had the screen locked, so it was skipped.",
+  "Config: the round-1 key stack_python is ignored (a warning when it is set); trusted_python_prefixes (default []) is the new opt-in for a non-Homebrew / non-python.org interpreter. No action needed on this Mac (the live ui-api runs Homebrew python@3.13).",
+  "Apply the six PLAN.md patch requests (K3, K4, shell_info.build_id, notification-permission rule, the not-responding boot state, the trust-guard row with its residual risk).",
+  "Reusable for future drills: desktop/scripts/stub_backend.py behind scripts/desktop_qa/scratch_server.py --backend keeps every shell drill off the live ui-api."
+ ],
+ "open_issues": [
+  "The watchdog sentence in the hung state is only true once W2-OPS' hang rule is in scripts/stack_watchdog.sh (see deploy_notes). Until then the boot page's manual command is the only real remedy.",
+  "Residual port-squatting risk, documented and not closed: a same-user sandboxed app can exec Homebrew python as a child and serve :8010 while ui-api is down. Closing it needs a ui-api \u2194 shell shared secret, which is a ui-api change outside my files.",
+  "boot_page_painted (< 500 ms) was not measured in wave 2: the session was locked for every self-test.",
+  "C1-trader-ux-14 needs W2-UI-SHELL's title-strip half (84 px / factor) to be complete.",
+  "Settings stays a config.json dialog (changes apply on the next start), by choice (see C1-desktop-native-18). A native Preferences window can come later if more interactive settings appear.",
+  "None of wave 2 is installed yet: /Applications/SuryaDhana.app is still the morning build."
+ ]
+}

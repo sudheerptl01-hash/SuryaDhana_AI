@@ -1,0 +1,906 @@
+{
+ "data": {
+  "gold_source": "COMEX GC=F front close (USD/oz)",
+  "daily_rows": 6049,
+  "first": "2003-01-02",
+  "last": "2026-10-25"
+ },
+ "levels": [
+  {
+   "period": "2003-2009",
+   "n": 1779,
+   "ry_beta_pct_per_100bp": -18.3,
+   "ry_t_hac": -1.25,
+   "ry_r2": 0.036,
+   "dxy_beta_elasticity": -3.71,
+   "dxy_t_hac": -13.72,
+   "dxy_r2": 0.664,
+   "both_r2": 0.683,
+   "both_ry_beta": 14.7,
+   "both_dxy_beta": -3.99
+  },
+  {
+   "period": "2010-2021",
+   "n": 3027,
+   "ry_beta_pct_per_100bp": -20.4,
+   "ry_t_hac": -14.41,
+   "ry_r2": 0.682,
+   "dxy_beta_elasticity": -0.34,
+   "dxy_t_hac": -1.66,
+   "dxy_r2": 0.038,
+   "both_r2": 0.759,
+   "both_ry_beta": -21.1,
+   "both_dxy_beta": -0.49
+  },
+  {
+   "period": "2022-2026",
+   "n": 1243,
+   "ry_beta_pct_per_100bp": 24.1,
+   "ry_t_hac": 4.18,
+   "ry_r2": 0.28,
+   "dxy_beta_elasticity": -5.59,
+   "dxy_t_hac": -3.22,
+   "dxy_r2": 0.32,
+   "both_r2": 0.693,
+   "both_ry_beta": 28.1,
+   "both_dxy_beta": -6.4
+  },
+  {
+   "period": "2010-2026",
+   "n": 4270,
+   "ry_beta_pct_per_100bp": 18.1,
+   "ry_t_hac": 3.75,
+   "ry_r2": 0.218,
+   "dxy_beta_elasticity": 1.34,
+   "dxy_t_hac": 4.6,
+   "dxy_r2": 0.141,
+   "both_r2": 0.261,
+   "both_ry_beta": 14.6,
+   "both_dxy_beta": 0.81
+  }
+ ],
+ "changes": [
+  {
+   "horizon": "weekly",
+   "period": "2003-2009",
+   "n": 364,
+   "ry_beta_pct_per_100bp": -3.3,
+   "ry_t": -2.88,
+   "ry_r2": 0.022,
+   "ry_corr": -0.15,
+   "dxy_beta": -1.23,
+   "dxy_t": -11.64,
+   "dxy_r2": 0.272,
+   "dxy_corr": -0.522,
+   "both_r2": 0.275,
+   "both_ry_beta": 1.3,
+   "both_ry_t": 1.24,
+   "both_dxy_beta": -1.28,
+   "both_dxy_t": -11.22,
+   "nominal10y_beta": -3.0,
+   "nominal10y_t": -2.48,
+   "breakeven_beta": 4.1,
+   "breakeven_t": 2.51,
+   "nom_bei_r2": 0.024
+  },
+  {
+   "horizon": "weekly",
+   "period": "2010-2021",
+   "n": 627,
+   "ry_beta_pct_per_100bp": -9.9,
+   "ry_t": -12.16,
+   "ry_r2": 0.191,
+   "ry_corr": -0.437,
+   "dxy_beta": -1.02,
+   "dxy_t": -13.21,
+   "dxy_r2": 0.218,
+   "dxy_corr": -0.467,
+   "both_r2": 0.33,
+   "both_ry_beta": -7.8,
+   "both_ry_t": -10.19,
+   "both_dxy_beta": -0.84,
+   "both_dxy_t": -11.36,
+   "nominal10y_beta": -9.4,
+   "nominal10y_t": -11.23,
+   "breakeven_beta": 12.7,
+   "breakeven_t": 9.95,
+   "nom_bei_r2": 0.202
+  },
+  {
+   "horizon": "weekly",
+   "period": "2022-2026",
+   "n": 252,
+   "ry_beta_pct_per_100bp": -5.0,
+   "ry_t": -3.98,
+   "ry_r2": 0.06,
+   "ry_corr": -0.244,
+   "dxy_beta": -0.97,
+   "dxy_t": -6.37,
+   "dxy_r2": 0.139,
+   "dxy_corr": -0.373,
+   "both_r2": 0.162,
+   "both_ry_beta": -3.2,
+   "both_ry_t": -2.61,
+   "both_dxy_beta": -0.86,
+   "both_dxy_t": -5.53,
+   "nominal10y_beta": -5.0,
+   "nominal10y_t": -3.97,
+   "breakeven_beta": 4.3,
+   "breakeven_t": 1.81,
+   "nom_bei_r2": 0.059
+  },
+  {
+   "horizon": "weekly",
+   "period": "2010-2026",
+   "n": 879,
+   "ry_beta_pct_per_100bp": -7.9,
+   "ry_t": -11.55,
+   "ry_r2": 0.132,
+   "ry_corr": -0.363,
+   "dxy_beta": -1.01,
+   "dxy_t": -14.43,
+   "dxy_r2": 0.192,
+   "dxy_corr": -0.438,
+   "both_r2": 0.261,
+   "both_ry_beta": -6.0,
+   "both_ry_t": -9.09,
+   "both_dxy_beta": -0.85,
+   "both_dxy_t": -12.39,
+   "nominal10y_beta": -7.6,
+   "nominal10y_t": -10.95,
+   "breakeven_beta": 10.0,
+   "breakeven_t": 8.73,
+   "nom_bei_r2": 0.137
+  },
+  {
+   "horizon": "monthly",
+   "period": "2003-2009",
+   "n": 83,
+   "ry_beta_pct_per_100bp": -10.1,
+   "ry_t": -4.88,
+   "ry_r2": 0.227,
+   "ry_corr": -0.477,
+   "dxy_beta": -1.21,
+   "dxy_t": -5.7,
+   "dxy_r2": 0.286,
+   "dxy_corr": -0.535,
+   "both_r2": 0.349,
+   "both_ry_beta": -6.0,
+   "both_ry_t": -2.77,
+   "both_dxy_beta": -0.9,
+   "both_dxy_t": -3.86,
+   "nominal10y_beta": -9.5,
+   "nominal10y_t": -4.52,
+   "breakeven_beta": 12.3,
+   "breakeven_t": 4.22,
+   "nom_bei_r2": 0.239
+  },
+  {
+   "horizon": "monthly",
+   "period": "2010-2021",
+   "n": 144,
+   "ry_beta_pct_per_100bp": -13.8,
+   "ry_t": -7.14,
+   "ry_r2": 0.264,
+   "ry_corr": -0.514,
+   "dxy_beta": -0.81,
+   "dxy_t": -4.7,
+   "dxy_r2": 0.135,
+   "dxy_corr": -0.367,
+   "both_r2": 0.343,
+   "both_ry_beta": -12.4,
+   "both_ry_t": -6.68,
+   "both_dxy_beta": -0.63,
+   "both_dxy_t": -4.1,
+   "nominal10y_beta": -13.5,
+   "nominal10y_t": -6.93,
+   "breakeven_beta": 15.9,
+   "breakeven_t": 5.75,
+   "nom_bei_r2": 0.27
+  },
+  {
+   "horizon": "monthly",
+   "period": "2022-2026",
+   "n": 58,
+   "ry_beta_pct_per_100bp": -6.9,
+   "ry_t": -3.12,
+   "ry_r2": 0.148,
+   "ry_corr": -0.385,
+   "dxy_beta": -1.21,
+   "dxy_t": -4.53,
+   "dxy_r2": 0.269,
+   "dxy_corr": -0.518,
+   "both_r2": 0.279,
+   "both_ry_beta": -2.2,
+   "both_ry_t": -0.88,
+   "both_dxy_beta": -1.04,
+   "both_dxy_t": -3.15,
+   "nominal10y_beta": -7.0,
+   "nominal10y_t": -3.11,
+   "breakeven_beta": 4.9,
+   "breakeven_t": 0.98,
+   "nom_bei_r2": 0.15
+  },
+  {
+   "horizon": "monthly",
+   "period": "2010-2026",
+   "n": 202,
+   "ry_beta_pct_per_100bp": -9.6,
+   "ry_t": -6.64,
+   "ry_r2": 0.181,
+   "ry_corr": -0.425,
+   "dxy_beta": -0.93,
+   "dxy_t": -6.4,
+   "dxy_r2": 0.17,
+   "dxy_corr": -0.412,
+   "both_r2": 0.265,
+   "both_ry_beta": -7.3,
+   "both_ry_t": -5.07,
+   "both_dxy_beta": -0.69,
+   "both_dxy_t": -4.77,
+   "nominal10y_beta": -9.4,
+   "nominal10y_t": -6.48,
+   "breakeven_beta": 11.0,
+   "breakeven_t": 4.54,
+   "nom_bei_r2": 0.182
+  }
+ ],
+ "rolling_corr_yearend": {
+  "2003": {
+   "corr_gold_realyield": -0.178,
+   "corr_gold_dxy": -0.583
+  },
+  "2004": {
+   "corr_gold_realyield": -0.261,
+   "corr_gold_dxy": -0.719
+  },
+  "2005": {
+   "corr_gold_realyield": -0.09,
+   "corr_gold_dxy": -0.492
+  },
+  "2006": {
+   "corr_gold_realyield": -0.186,
+   "corr_gold_dxy": -0.422
+  },
+  "2007": {
+   "corr_gold_realyield": -0.013,
+   "corr_gold_dxy": -0.524
+  },
+  "2008": {
+   "corr_gold_realyield": -0.057,
+   "corr_gold_dxy": -0.532
+  },
+  "2009": {
+   "corr_gold_realyield": -0.058,
+   "corr_gold_dxy": -0.263
+  },
+  "2010": {
+   "corr_gold_realyield": -0.158,
+   "corr_gold_dxy": -0.228
+  },
+  "2011": {
+   "corr_gold_realyield": -0.227,
+   "corr_gold_dxy": -0.245
+  },
+  "2012": {
+   "corr_gold_realyield": -0.165,
+   "corr_gold_dxy": -0.47
+  },
+  "2013": {
+   "corr_gold_realyield": -0.205,
+   "corr_gold_dxy": -0.366
+  },
+  "2014": {
+   "corr_gold_realyield": -0.242,
+   "corr_gold_dxy": -0.372
+  },
+  "2015": {
+   "corr_gold_realyield": -0.235,
+   "corr_gold_dxy": -0.311
+  },
+  "2016": {
+   "corr_gold_realyield": -0.365,
+   "corr_gold_dxy": -0.447
+  },
+  "2017": {
+   "corr_gold_realyield": -0.523,
+   "corr_gold_dxy": -0.434
+  },
+  "2018": {
+   "corr_gold_realyield": -0.176,
+   "corr_gold_dxy": -0.59
+  },
+  "2019": {
+   "corr_gold_realyield": -0.54,
+   "corr_gold_dxy": -0.431
+  },
+  "2020": {
+   "corr_gold_realyield": -0.316,
+   "corr_gold_dxy": -0.29
+  },
+  "2021": {
+   "corr_gold_realyield": -0.345,
+   "corr_gold_dxy": -0.437
+  },
+  "2022": {
+   "corr_gold_realyield": -0.451,
+   "corr_gold_dxy": -0.472
+  },
+  "2023": {
+   "corr_gold_realyield": -0.477,
+   "corr_gold_dxy": -0.505
+  },
+  "2024": {
+   "corr_gold_realyield": -0.303,
+   "corr_gold_dxy": -0.311
+  },
+  "2025": {
+   "corr_gold_realyield": -0.03,
+   "corr_gold_dxy": -0.423
+  },
+  "2026": {
+   "corr_gold_realyield": -0.149,
+   "corr_gold_dxy": -0.383
+  }
+ },
+ "mispricing_gauge": {
+  "fit_window": "2010-2021",
+  "model": "ln(gold) = a + b1*DFII10 + b2*ln(DXY)",
+  "a": 9.4832,
+  "b1_pct_per_100bp": -21.1,
+  "b2_dxy_elasticity": -0.49,
+  "r2_in_window": 0.759,
+  "as_of": "2026-10-25",
+  "gold": 4002.0,
+  "dfii10": 2.64,
+  "dxy": 101.69,
+  "fair_value_2010_21_model": 788.0,
+  "residual_pct": 407.9,
+  "residual_pct_at_year_end": {
+   "2003": -57.3,
+   "2004": -59.5,
+   "2005": -44.9,
+   "2006": -30.2,
+   "2007": -23.8,
+   "2008": -9.5,
+   "2009": -4.5,
+   "2010": 12.8,
+   "2011": -0.1,
+   "2012": -6.1,
+   "2013": -7.9,
+   "2014": -9.9,
+   "2015": -11.4,
+   "2016": -6.7,
+   "2017": -0.7,
+   "2018": 11.2,
+   "2019": 11.1,
+   "2020": 3.8,
+   "2021": 3.7,
+   "2022": 87.0,
+   "2023": 116.2,
+   "2024": 218.0,
+   "2025": 366.5,
+   "2026": 407.9
+  }
+ },
+ "mispricing_gauge_trailing_3y": {
+  "fit_window": "2023-11-22..2026-10-25",
+  "b1_pct_per_100bp": 38.8,
+  "b1_t_hac": 4.16,
+  "b2_dxy_elasticity": -7.14,
+  "b2_t_hac": -4.61,
+  "r2": 0.62,
+  "fair_value": 4079.0,
+  "residual_pct": -1.9,
+  "residual_in_sd": -0.11,
+  "resid_sd_pct": 17.8
+ },
+ "levels_2022_2026_both": {
+  "n": 1243,
+  "b1_pct_per_100bp": 28.1,
+  "b1_t_hac": 7.85,
+  "b2_dxy": -6.4,
+  "b2_t_hac": -6.05,
+  "r2": 0.693
+ },
+ "H5_residual_predicts_fwd3m_oos": {
+  "n_months": 55,
+  "beta_pct_fwd_per_1pct_resid": 0.003,
+  "t_hac": 0.15,
+  "r2": 0.002
+ },
+ "seasonality": {
+  "source": "World Bank CMO monthly avg 1971\u21922024-12-31 + GC=F month-end after",
+  "first_year": 1971,
+  "last_year": 2026,
+  "months": [
+   {
+    "month": 1,
+    "mean_pct": 2.55,
+    "median_pct": 1.67,
+    "hit_rate_pct": 67.0,
+    "t": 2.72,
+    "n": 55,
+    "h1": {
+     "years": "1971-2000",
+     "mean": 2.38,
+     "t": 1.42,
+     "hit": 55.0,
+     "n": 29
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 2.74,
+     "t": 3.86,
+     "hit": 81.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 2,
+    "mean_pct": 1.35,
+    "median_pct": 0.98,
+    "hit_rate_pct": 59.0,
+    "t": 2.2,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": 0.88,
+     "t": 0.92,
+     "hit": 57.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 1.89,
+     "t": 2.56,
+     "hit": 62.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 3,
+    "mean_pct": -0.14,
+    "median_pct": 0.28,
+    "hit_rate_pct": 54.0,
+    "t": -0.19,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": -0.41,
+     "t": -0.35,
+     "hit": 57.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 0.18,
+     "t": 0.21,
+     "hit": 50.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 4,
+    "mean_pct": 0.42,
+    "median_pct": -0.48,
+    "hit_rate_pct": 46.0,
+    "t": 0.82,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": -0.03,
+     "t": -0.04,
+     "hit": 43.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 0.93,
+     "t": 1.18,
+     "hit": 50.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 5,
+    "mean_pct": 0.49,
+    "median_pct": -0.4,
+    "hit_rate_pct": 38.0,
+    "t": 0.91,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": 0.4,
+     "t": 0.52,
+     "hit": 33.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 0.6,
+     "t": 0.78,
+     "hit": 42.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 6,
+    "mean_pct": 0.0,
+    "median_pct": 0.07,
+    "hit_rate_pct": 52.0,
+    "t": 0.0,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": 0.67,
+     "t": 0.63,
+     "hit": 50.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": -0.77,
+     "t": -0.97,
+     "hit": 54.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 7,
+    "mean_pct": 0.1,
+    "median_pct": 0.2,
+    "hit_rate_pct": 54.0,
+    "t": 0.2,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": -0.02,
+     "t": -0.02,
+     "hit": 60.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 0.25,
+     "t": 0.37,
+     "hit": 46.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 8,
+    "mean_pct": 1.12,
+    "median_pct": 0.81,
+    "hit_rate_pct": 59.0,
+    "t": 1.87,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": 0.57,
+     "t": 0.67,
+     "hit": 50.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 1.76,
+     "t": 2.08,
+     "hit": 69.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 9,
+    "mean_pct": 1.15,
+    "median_pct": -0.15,
+    "hit_rate_pct": 48.0,
+    "t": 1.64,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": 1.13,
+     "t": 1.01,
+     "hit": 40.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 1.18,
+     "t": 1.47,
+     "hit": 58.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 10,
+    "mean_pct": 0.73,
+    "median_pct": 0.02,
+    "hit_rate_pct": 52.0,
+    "t": 1.46,
+    "n": 56,
+    "h1": {
+     "years": "1971-2000",
+     "mean": 1.23,
+     "t": 1.62,
+     "hit": 57.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 0.16,
+     "t": 0.25,
+     "hit": 46.0,
+     "n": 26
+    }
+   },
+   {
+    "month": 11,
+    "mean_pct": 0.09,
+    "median_pct": 0.08,
+    "hit_rate_pct": 51.0,
+    "t": 0.15,
+    "n": 55,
+    "h1": {
+     "years": "1971-2000",
+     "mean": -0.6,
+     "t": -0.67,
+     "hit": 43.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 0.92,
+     "t": 1.17,
+     "hit": 60.0,
+     "n": 25
+    }
+   },
+   {
+    "month": 12,
+    "mean_pct": 0.5,
+    "median_pct": 0.43,
+    "hit_rate_pct": 55.0,
+    "t": 0.83,
+    "n": 55,
+    "h1": {
+     "years": "1971-2000",
+     "mean": 0.44,
+     "t": 0.46,
+     "hit": 53.0,
+     "n": 30
+    },
+    "h2": {
+     "years": "2001-2026",
+     "mean": 0.57,
+     "t": 0.84,
+     "hit": 56.0,
+     "n": 25
+    }
+   }
+  ],
+  "note": "monthly log returns, all available years; halves 1971-2000 / 2001-2026; no month is declared PASS unless t>=2 in both halves"
+ },
+ "seasonality_gcf_2001_2026": [
+  {
+   "month": 1,
+   "mean_pct": 2.8,
+   "hit_rate_pct": 65.0,
+   "t": 3.04,
+   "n": 26
+  },
+  {
+   "month": 2,
+   "mean_pct": 1.12,
+   "hit_rate_pct": 58.0,
+   "t": 1.24,
+   "n": 26
+  },
+  {
+   "month": 3,
+   "mean_pct": 0.11,
+   "hit_rate_pct": 46.0,
+   "t": 0.12,
+   "n": 26
+  },
+  {
+   "month": 4,
+   "mean_pct": 1.17,
+   "hit_rate_pct": 62.0,
+   "t": 1.28,
+   "n": 26
+  },
+  {
+   "month": 5,
+   "mean_pct": 0.19,
+   "hit_rate_pct": 50.0,
+   "t": 0.23,
+   "n": 26
+  },
+  {
+   "month": 6,
+   "mean_pct": -1.01,
+   "hit_rate_pct": 42.0,
+   "t": -0.96,
+   "n": 26
+  },
+  {
+   "month": 7,
+   "mean_pct": 0.86,
+   "hit_rate_pct": 58.0,
+   "t": 1.16,
+   "n": 26
+  },
+  {
+   "month": 8,
+   "mean_pct": 2.38,
+   "hit_rate_pct": 73.0,
+   "t": 2.8,
+   "n": 26
+  },
+  {
+   "month": 9,
+   "mean_pct": 0.27,
+   "hit_rate_pct": 48.0,
+   "t": 0.25,
+   "n": 27
+  },
+  {
+   "month": 10,
+   "mean_pct": -0.16,
+   "hit_rate_pct": 48.0,
+   "t": -0.16,
+   "n": 27
+  },
+  {
+   "month": 11,
+   "mean_pct": 1.19,
+   "hit_rate_pct": 58.0,
+   "t": 1.13,
+   "n": 26
+  },
+  {
+   "month": 12,
+   "mean_pct": 1.34,
+   "hit_rate_pct": 65.0,
+   "t": 1.48,
+   "n": 26
+  }
+ ],
+ "H3_months_passing_both_halves": [],
+ "gpr": {
+  "gpr_column": "GPR",
+  "n_months": 500,
+  "first": "1985-02-28",
+  "last": "2026-09-30",
+  "latest_gpr": 146.2,
+  "latest_gpr_percentile_since_1985": 90.0,
+  "contemporaneous": {
+   "beta_pct_per_100pct_gpr_change": 0.54,
+   "t": 0.79,
+   "r2": 0.001
+  },
+  "predictive_next_month": {
+   "beta": 0.7,
+   "t": 1.01,
+   "r2": 0.002
+  },
+  "level_predicts_next_month": {
+   "beta_per_log_gpr": 0.69,
+   "t": 1.5
+  },
+  "mean_ret_when_gpr_top_decile": 0.64,
+  "mean_ret_all": 0.53,
+  "mean_next_month_ret_after_top_decile": 0.68
+ },
+ "kgx_last_sessions": {
+  "2026-10-21": {
+   "gold_usd_pct": 0.18,
+   "usd_vs_basket_pct": -0.17,
+   "usd_effect_on_gold_pct": 0.17,
+   "pure_gold_pct": 0.01
+  },
+  "2026-10-22": {
+   "gold_usd_pct": -2.18,
+   "usd_vs_basket_pct": -0.1,
+   "usd_effect_on_gold_pct": 0.1,
+   "pure_gold_pct": -2.29
+  },
+  "2026-10-23": {
+   "gold_usd_pct": -1.3,
+   "usd_vs_basket_pct": -0.12,
+   "usd_effect_on_gold_pct": 0.12,
+   "pure_gold_pct": -1.42
+  },
+  "2026-10-25": {
+   "gold_usd_pct": -0.15,
+   "usd_vs_basket_pct": -0.0,
+   "usd_effect_on_gold_pct": 0.0,
+   "pure_gold_pct": -0.15
+  },
+  "2026-10-26": {
+   "gold_usd_pct": 0.0,
+   "usd_vs_basket_pct": 0.12,
+   "usd_effect_on_gold_pct": -0.12,
+   "pure_gold_pct": 0.12
+  }
+ },
+ "gold_in_currencies": {
+  "as_of": "2026-10-26",
+  "EUR": {
+   "level": 3566.6,
+   "ytd_pct": -3.5,
+   "1y_pct": 0.1
+  },
+  "JPY": {
+   "level": 628746.2,
+   "ytd_pct": -7.4,
+   "1y_pct": -0.4
+  },
+  "GBP": {
+   "level": 2991.9,
+   "ytd_pct": -7.2,
+   "1y_pct": -3.6
+  },
+  "CNY": {
+   "level": 26655.7,
+   "ytd_pct": -12.2,
+   "1y_pct": -9.6
+  },
+  "INR": {
+   "level": 379909.9,
+   "ytd_pct": -2.5,
+   "1y_pct": 4.6
+  },
+  "USD": {
+   "level": 4002.0,
+   "ytd_pct": -7.8,
+   "1y_pct": -3.3
+  },
+  "inr_per_10g_landed_no_duty": 122144.0
+ },
+ "ratios": {
+  "as_of": "2026-10-25",
+  "gold_silver": {
+   "now": 74.1,
+   "median_since_2000": 70.2,
+   "percentile": 60.0,
+   "min": 32.0,
+   "max": 125.9
+  },
+  "gold_platinum": {
+   "now": 2.58,
+   "median_since_2000": 1.1,
+   "percentile": 95.0
+  }
+ },
+ "gvz": {
+  "as_of": "2026-10-22",
+  "gvz": 24.15,
+  "percentile_since_2008": 84.0,
+  "implied_1day_1sd_pct": 1.52,
+  "implied_1day_1sd_usd": 60.9,
+  "implied_1day_1sd_inr_per_10g_landed": 1858.0,
+  "implied_1day_1sd_rupees_per_1kg_lot": 185818.0,
+  "realised_20d_vol_pct": 14.9
+ },
+ "gold_m2": {
+  "as_of": "2026-08-31",
+  "gold_per_bn_m2": 0.192,
+  "percentile_since_1975": 98.0,
+  "m2_latest": "2026-08-01",
+  "note": "gold($/oz) / M2($bn); a popular 'monetary debasement' chart; context only"
+ },
+ "fed_funds_futures": {
+  "as_of": "2026-10-25",
+  "zq_front_price": 96.1,
+  "implied_rate_pct": 3.9,
+  "effr_latest": 3.88,
+  "effr_date": "2026-10-22"
+ },
+ "real_yield_proxy": {
+  "corr_daily_change_dfii10_vs_dgs10_minus_t10yie": 1.0,
+  "mean_abs_gap_bp": 0.0,
+  "note": "intraday: ^TNX (live) minus the last T10YIE approximates the real yield when breakevens are quiet"
+ }
+}

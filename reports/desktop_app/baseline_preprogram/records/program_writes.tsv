@@ -1,0 +1,33 @@
+timestamp	agent	tool	path	write_content_sha256
+2026-10-24T05:40:00.423Z	D3 platform bridge + prefs sync	Write	ui/lib/platform/types.ts	a1e1786deb9e71796c61a048e24c111f52b3e973f797f590eecf35efe7baf6d3
+2026-10-24T05:40:24.521Z	D3 platform bridge + prefs sync	Write	ui/lib/platform/invoke.ts	b1d8b56c9f1566a023a5cdc8a46029e5c4d9e1deb6140f4ae62077c63a82a4de
+2026-10-24T05:44:45.949Z	D1 web-serve (static UI in ui-api)	Write	ui/scripts/print-next-config.mjs	3f9c55ae937f6b632ab278d64b2de043a276ead7be3b9a5ba281ebb73a9ec55e
+2026-10-24T05:45:15.008Z	D1 web-serve (static UI in ui-api)	Write	ui/next.config.js	5d0f48155f1de3ce6fb14b5c16caa4988017bdcb5e59195851171ef154d52524
+2026-10-24T05:45:46.326Z	D3 platform bridge + prefs sync	Write	ui/lib/platform/links.ts	a76c3197bffc8a7fef06b88e459cfe6f7657af3c30d69586fd15d74dfc631750
+2026-10-24T05:45:54.058Z	D3 platform bridge + prefs sync	Write	ui/lib/platform/encoding.ts	5879d80b9e583a1a134948f0072dc2ec05f3bb2abbdb82f079d35709cf6935c5
+2026-10-24T05:46:02.786Z	D3 platform bridge + prefs sync	Write	ui/lib/prefs/sync.ts	af18261acf35fed432a9c41ae8b75ce870a51f940c50a4a1967961be730721a7
+2026-10-24T05:47:14.330Z	D3 platform bridge + prefs sync	Write	ui/lib/platform/index.ts	44de13c9f27afbc81d5b715409969cf7f1a85e1433a8af38ada8910f28d26402
+2026-10-24T05:47:50.841Z	D1 web-serve (static UI in ui-api)	Write	ui/scripts/release.mjs	cc0f8c6a8c7a88277519fd820d1268c8ed1f909353290c4a34cdb2a486993946
+2026-10-24T05:48:01.434Z	D1 web-serve (static UI in ui-api)	Edit	ui/scripts/release.mjs	
+2026-10-24T05:52:31.804Z	D3 platform bridge + prefs sync	Write	ui/lib/prefs/keys.ts	e155a26b3f202488262b4f0d379dfab8399244a70f20222edc2873032fa25887
+2026-10-24T05:52:49.583Z	D3 platform bridge + prefs sync	Write	ui/lib/prefs/merge.ts	88aeb7f1d64cf759fde44df206957be2778f25507126d2a129ca2127a8f0370a
+2026-10-24T05:53:56.684Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/session.ts	6ee5aa1dbfa23ffab348f9b6f81feb3b39fc90789b86b5fe8a389b4d6e52afbc
+2026-10-24T05:54:11.223Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/pages.ts	f650f5b708e8a54e730ad668028bf4e0cfaf5ceb1a8adb60fde9e0e6cf3add7b
+2026-10-24T05:54:46.434Z	D3 platform bridge + prefs sync	Write	ui/lib/prefs/sync.ts	c342d02a7a00097a530c282cf6336de1febea50ea0ab59910626dc6368bbbad3
+2026-10-24T05:55:11.344Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/health.ts	35af34beb335746c8f6f5f71decd67b7c2ea3ecaa1c0f2467f033f63775cf43a
+2026-10-24T05:55:22.609Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/build.ts	254f7bc1e6e8352a99165f770f74c7497fbd0d124bd270ecebe37c8d5a7cd01f
+2026-10-24T05:55:34.598Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/chunkRecovery.ts	ceaad7a7c8e8d9f348b5f98219fdfb95c3946500dff90838a03dce81d91e2edb
+2026-10-24T05:55:42.524Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/location.ts	e104ce2643c4954f164e4501eacacb341d398d6ece0fe674b2db988c5f45c778
+2026-10-24T05:57:09.819Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/TitleStrip.tsx	3dc7850fd0138e8f624ad6f857c363077ae1fed5d8c21bdeece90f8f0cf05c8d
+2026-10-24T05:57:27.957Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/ShellNotices.tsx	a42a51ae69ebb425c49cc1ae392d670d64ed1fe33426dca447b9d81d35495dd7
+2026-10-24T05:57:31.718Z	D3 platform bridge + prefs sync	Write	ui/lib/__tests__/prefs.check.ts	8db0c2df13a9219e2665a1fcf57ef335e0955201f455264e2c69af7b129c792b
+2026-10-24T05:58:05.341Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/PlatformShell.tsx	3a5b80d52e12daa10fa191a23321acdec8b2beae557bcd8343f73df8a42b6c76
+2026-10-24T05:58:12.650Z	D1 web-serve (static UI in ui-api)	Write	ui/scripts/testdata/fake-next.mjs	571e27c8476f7627ff72b7a8df899882d5667f36fb1ed3ac000baca2a0fb3c20
+2026-10-24T05:58:41.365Z	D4 desktop UX + fonts + perf	Write	ui/app/global-error.tsx	73989c2b6879c403138e96a27e3aaf0e4c857fe969ee20ebd6954c263be8d163
+2026-10-24T05:58:59.282Z	D1 web-serve (static UI in ui-api)	Write	ui/scripts/release.test.mjs	aed5260a3936df0e8b7ae8ba95d23da667fcb893cdfb654aa38f48ddd8aeba5d
+2026-10-24T05:59:37.623Z	D3 platform bridge + prefs sync	Write	ui/lib/__tests__/platform.check.ts	6217c8cd4d754d5842ad6a6ec539aa6af433c4c54c09b3b8d52524fa2e8ca543
+2026-10-24T06:00:11.556Z	D1 web-serve (static UI in ui-api)	Write	ui/scripts/build_ui.test.mjs	64f9ba1dff9882feb50d6fbbf0e2e52ce25f3b2a538ef963afc0d8a68d948112
+2026-10-24T06:01:01.073Z	D4 desktop UX + fonts + perf	Write	ui/app/layout.tsx	60686d60ab3406fc4a65fe487072200a4625313c80ce1f07e01bdb5e4e204307
+2026-10-24T06:02:03.588Z	D4 desktop UX + fonts + perf	Write	ui/public/fonts/README.md	c775606b8af7cedf127d75fe5964f203b0645ca34cbdaf045dff26e99bc615c6
+2026-10-24T06:03:10.790Z	D4 desktop UX + fonts + perf	Write	ui/components/desktop/__tests__/desktop.check.ts	de2880dbb984f6780cb9f3e879defc863402694ba3b10fb0aa926e0ec9d52b3e
+2026-10-25T05:35:11.040Z	PM (main session)	Edit	ui/scripts/build_ui.test.mjs	

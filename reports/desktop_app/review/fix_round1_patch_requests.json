@@ -1,0 +1,156 @@
+{
+ "FX-OPS": [
+  {
+   "file": "tests/integration/test_desktop_qa_harness.py",
+   "old": "    assert args.base == \"http://localhost:3000\" and args.wait == 6.0 and args.browser == \"chromium\"",
+   "new": "    assert args.base == \"http://127.0.0.1:8010\" and args.wait == 6.0 and args.browser == \"chromium\"",
+   "why": "C3-logic-unchanged-09: ui_audit.py now defaults to the live terminal on :8010. Without this edit the core suite has 1 failure (test_ui_audit_cli_is_backward_compatible). The rest of the CLI is unchanged, and :3000 can still be chosen with --base."
+  },
+  {
+   "file": "CLAUDE.md",
+   "old": "- **Terminal**: Bloomberg-style UI on :3000 (42 pages via GO bar; incl. CHRT charts, DERV, OSTR, MCXG gold, RSK risk) backed by ui-api + data-service; Telegram bot for phone control",
+   "new": "- **Terminal**: Bloomberg-style UI on http://127.0.0.1:8010, a static release served by ui-api (ui/dist/current, `./start-local.sh build-ui`) and wrapped by the SuryaDhana.app desktop shell (42 pages via GO bar; incl. CHRT charts, DERV, OSTR, MCXG gold, RSK risk) backed by ui-api + data-service; Telegram bot for phone control",
+   "why": "C2-reliability-ops-06: CLAUDE.md still describes :3000 as the terminal."
+  },
+  {
+   "file": "CLAUDE.md",
+   "old": "Local stack (the real spine, 4 processes \u2014 see reports/production_review/architecture_reality.md):",
+   "new": "Local stack (the real spine, 3 processes, all on 127.0.0.1 only \u2014 see reports/production_review/architecture_reality.md and reports/desktop_app/PLAN.md):",
+   "why": "C2-reliability-ops-06: the core is 3 processes since the switchover, and ui-api is loopback-only."
+  },
+  {
+   "file": "CLAUDE.md",
+   "old": "| Next.js terminal | 3000 | the UI (prod build via UI_MODE=prod; dist dir ui/.next-prod) |",
+   "new": "| (optional) Next dev server | 3000 | dev UI with hot reload, and the one-time settings migration (docs/RUNBOOK_RESTORE.md \u00a78); not the terminal |",
+   "why": "C2-reliability-ops-06: :3000 is optional, not part of the core."
+  },
+  {
+   "file": "CLAUDE.md",
+   "old": "./start-local.sh start            # data-service, ui-api, master-controller, frontend",
+   "new": "./start-local.sh start            # data-service, ui-api (serves the terminal UI), master-controller",
+   "why": "C2-reliability-ops-06: `start` no longer starts the frontend."
+  },
+  {
+   "file": "CLAUDE.md",
+   "old": "launches only the 4 core services (`start legacy` for ml/feature/rl); ui-api hot reload is opt-in",
+   "new": "launches only the 3 core services (`start legacy` for ml/feature/rl); ui-api hot reload is opt-in",
+   "why": "C2-reliability-ops-06: there are 3 core services now."
+  },
+  {
+   "file": "CLAUDE.md",
+   "old": "# Terminal page audit (42 pages, console + API errors)\n$P scripts/ui_audit.py",
+   "new": "# Terminal page audit (42 pages, console + API errors; default --base http://127.0.0.1:8010)\n$P scripts/ui_audit.py --tabs all --browser both",
+   "why": "C3-logic-unchanged-09 / C2-reliability-ops-06: the documented command targeted :3000, and with no --tabs it covers only the 15 default tabs, not 42."
+  }
+ ],
+ "FX-PY": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/.env.example",
+   "old": "EXECUTION_MODE=paper\nINITIAL_EQUITY=10000\nPAPER_PRICE_GUARD_PCT=0.05\nPAPER_TRADES_DB=data/paper_trades.db\n",
+   "new": "EXECUTION_MODE=PAPER\nINITIAL_EQUITY=10000\nPAPER_PRICE_GUARD_PCT=0.05\nPAPER_TRADES_DB=data/paper_trades.db\n# PAPER ONLY guard (ui-api routers/execution.py): LIVE mode is refused, and a LIVE mode restored from\n# paper_trades.db is switched back to PAPER at start, unless this is exactly 1. Leave it unset.\n# EXECUTION_LIVE_ALLOWED=\n\n# \u2500\u2500 Local HTTP guard (shared/http_guard.py: ui-api, data-service, master-controller) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n# The services answer only to Host 127.0.0.1 / localhost / [::1]. Extra names, comma list, optional :port\n# (a Tailscale Serve name, the Mac's LAN IP when UI_API_HOST=0.0.0.0, Docker service names):\n# GUARD_ALLOWED_HOSTS=\n# Extra browser origins allowed to send writes (comma list), e.g. https://mac.tailnet-x.ts.net\n# GUARD_ALLOWED_ORIGINS=\n# 1 = clients on other machines may write (only with a LAN bind; not recommended)\n# GUARD_ALLOW_REMOTE_WRITES=\n# Max concurrent /api/monitor/ws/monitor sockets (each holds a Redis connection and a thread)\n# MONITOR_WS_MAX=32\n",
+   "why": "Documents the new env vars (EXECUTION_LIVE_ALLOWED, GUARD_ALLOWED_HOSTS, GUARD_ALLOWED_ORIGINS, GUARD_ALLOW_REMOTE_WRITES, MONITOR_WS_MAX). It also fixes a latent trap: 'EXECUTION_MODE=paper' (lower case) is not a valid ExecutionMode value ('PAPER'/'LIVE'), so a .env copied from the example makes live_execution.get_engine() raise ValueError and every /api/execution route return 500. The live .env has no EXECUTION_MODE key, so it is unaffected. scripts/tests/test_env_example.py stays green: the new keys are commented out and EXECUTION_MODE is in its overlap allowlist."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_qa_harness.py",
+   "old": "    assert args.base == \"http://localhost:3000\" and args.wait == 6.0 and args.browser == \"chromium\"",
+   "new": "    assert args.base == \"http://127.0.0.1:8010\" and args.wait == 6.0 and args.browser == \"chromium\"",
+   "why": "The only failure in the core suite. Another fixer changed scripts/ui_audit.py's --base default to http://127.0.0.1:8010 (C3-logic-unchanged-09, second half; file mtime 12:22), and this test still asserts the old :3000 default. Not caused by FX-PY; whoever owns the ui_audit.py change should confirm and apply it."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/infra/docker-compose.yml",
+   "old": "  MASTER_CONTROLLER_URL: http://master-controller:8008\n",
+   "new": "  MASTER_CONTROLLER_URL: http://master-controller:8008\n  # shared/http_guard.py: containers call each other by service name and are never loopback peers\n  GUARD_ALLOWED_HOSTS: data-service,ui-api,master-controller,host.docker.internal\n  GUARD_ALLOW_REMOTE_WRITES: \"1\"\n",
+   "why": "Legacy, dormant Docker stack only. Inside Docker the services reach each other through service DNS names, which are not in the default Host allowlist, and their peers are bridge IPs, which are never loopback. Without these lines, inter-container calls get 400 and writes get 403. The Origin check still applies. Optional: only matters if the Docker stack is ever brought back."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/infra/docker-compose.ui.yml",
+   "old": "      - MASTER_CONTROLLER_URL=http://master-controller:8008\n      - UI_API_ENV_FILE=/app/.env\n",
+   "new": "      - MASTER_CONTROLLER_URL=http://master-controller:8008\n      - UI_API_ENV_FILE=/app/.env\n      # shared/http_guard.py: the ui container reaches ui-api as host.docker.internal / ui-api, and container\n      # peers are never loopback (the Origin check still applies)\n      - GUARD_ALLOWED_HOSTS=ui-api,host.docker.internal\n      - GUARD_ALLOW_REMOTE_WRITES=1\n",
+   "why": "Same as the docker-compose.yml request, for the ui-api service of the legacy compose UI stack: the Next container's NEXT_PUBLIC_API_BASE is http://host.docker.internal:8010. Optional, Docker-only."
+  }
+ ],
+ "FX-UI": [
+  {
+   "file": "services/ui-api/routers/prefs.py",
+   "old": "    def all(self) -> dict[str, dict[str, Any]]:\n        def q(conn: sqlite3.Connection):\n            rows = conn.execute(\"SELECT key, value, updated_at, deleted FROM prefs ORDER BY key\").fetchall()\n            return {r[0]: _record(r) for r in rows}\n        return self._run(q)",
+   "new": "    def all(self) -> dict[str, dict[str, Any]]:\n        \"\"\"Every record, plus its provenance (`provisional`, `origin`) for the UI's one-time migration notice.\"\"\"\n        def q(conn: sqlite3.Connection):\n            rows = conn.execute(\n                \"SELECT key, value, updated_at, deleted, provisional, origin FROM prefs ORDER BY key\").fetchall()\n            return {r[0]: {**(_record(r) or {}), \"provisional\": bool(r[4]), \"origin\": r[5]} for r in rows}\n        return self._run(q)",
+   "why": "For FX-PY/PM (C3-01 UI side). The migration notice must hide once a legacy import exists, but GET /api/prefs exposes only {value, updated_at, deleted}. The exact fields needed: per record in GET /api/prefs only, `provisional: bool` and `origin: str | null`, both already stored in the table, so no schema change. The client (ui/lib/prefs/migration.ts summarizeServerPrefs) treats a live record with provisional=false whose origin is on port 3000 as 'imported'; records without the fields count as 'no evidence', so the notice shows until dismissed. The client ignores extra fields (merge.ts sanitizeServerPrefs), so the change is backwards compatible both ways. Tests to update: services/ui-api/tests/test_prefs.py asserts the exact GET record shape at lines 89, 137 and 344; add the two keys there. The PUT, 409 and import response shapes stay unchanged."
+  },
+  {
+   "file": "services/ui-api/routers/prefs.py",
+   "old": "GET    /api/prefs                          -> {prefs: {key: {value, updated_at, deleted}}, server_time}",
+   "new": "GET    /api/prefs                          -> {prefs: {key: {value, updated_at, deleted, provisional, origin}}, server_time}",
+   "why": "Keeps the module docstring in line with the GET change above."
+  },
+  {
+   "file": "reports/desktop_app/prefs_inventory.md",
+   "old": "- **Multi-window.** All windows of one origin share localStorage. The window that writes is the one that uploads. Native\n  `storage` events are never listened to, so windows cannot ping-pong. If two windows send the same queued write, the\n  server treats the identical replay as idempotent.",
+   "new": "- **Multi-window.** All windows of one origin share localStorage. The window that writes is the one that uploads. The\n  sync engine itself never listens to native `storage` events, so windows cannot ping-pong through it. The components\n  that cache a SYNC key (AppContext watchlist, pins, TradeTicket, GoldPreOpen, FundamentalsScreen, Brief) adopt other\n  windows' writes and the engine's server-applied values through `useExternalPrefChange`\n  (`ui/lib/prefs/useExternalChange.ts`), and never write an adopted value back (C3-02, 25 Oct). The navigation hand-off\n  keys (`suryadhana.omon.v1`, `suryadhana.comp.v1`, `suryadhana.rsch.sel.v1`) are re-read on every mount but not\n  live-adopted, so side-by-side windows keep their own view. If two windows send the same queued write, the server\n  treats the identical replay as idempotent.",
+   "why": "PM-owned doc. The old text says native storage events are never listened to; after the C3-02 fix the consumers do listen."
+  },
+  {
+   "file": "reports/desktop_app/prefs_inventory.md",
+   "old": "## LOCAL (6 app keys + 6 bookkeeping keys)",
+   "new": "## LOCAL (7 app keys + 6 bookkeeping keys)",
+   "why": "New LOCAL key suryadhana.migrate.notice.v1 (see the next patch)."
+  },
+  {
+   "file": "reports/desktop_app/prefs_inventory.md",
+   "old": "| `newsTerminal.seenVersion` | `components/news/NewsDock.tsx` (`SEEN_KEY`) | number | This device's news badge |",
+   "new": "| `newsTerminal.seenVersion` | `components/news/NewsDock.tsx` (`SEEN_KEY`) | number | This device's news badge |\n| `suryadhana.migrate.notice.v1` | `lib/prefs/migration.ts` (`MIGRATE_NOTICE_KEY`) | `'dismissed'` / `'imported'` | Per origin: the one-time \"settings not imported yet\" notice is done here. Syncing it would hide the notice on an origin that has not migrated |",
+   "why": "Documents the new LOCAL key (already classified in ui/lib/prefs/keys.ts LOCAL_KEYS; the prefs.check guard enforces it). Also worth noting in the inventory: the three per-device seen markers are now set to the newest existing item on a device's first visit (C3-05)."
+  },
+  {
+   "file": "reports/desktop_app/patches/D3.md",
+   "old": "pre-existing limitation, not a regression. The patch makes multi-window (\u2318N) correct. The re-set value equals",
+   "new": "pre-existing limitation, not a regression. The patch fixes server-applied changes only: same-origin multi-window (\u2318N)\nneeded the native `storage` listener added in the 25 Oct fix round (C3-02, `ui/lib/prefs/useExternalChange.ts`). The re-set value equals",
+   "why": "C3-02 asked for the D3.md claim to be corrected; it was wrong, as the negative-control E2E on the pre-fix build shows."
+  },
+  {
+   "file": "scripts/desktop_qa/e2e_multiwin.py",
+   "old": "",
+   "new": "(new file: full, lint-clean content at /private/tmp/claude-501/-Users-sudheer-MahaKubera-108-SuryaDhana-AI/a24906e4-7b64-46ba-b24b-14c536f43922/scratchpad/FX-UI/repo_e2e_multiwin.py. Copy it verbatim; it imports desktop_qa.probe via parents[1], like parity.py does)",
+   "why": "For FX-QA/T, who own scripts/desktop_qa/**. This is the C3-02 two-pages-in-ONE-context browser E2E: watchlist and MCXG gold scenarios, Chromium and WebKit, prefs mode 'sync' only. It refuses a server whose /api/prefs is not a local scratch store (scratch_server.py --prefs-db). Verified: PASS in both engines on this round's export with the stock scratch_server.py --block-mutations --prefs-db, and FAIL in both scenarios on the pre-fix live release. Optionally also wrap it in tests/integration as a skipped-by-default browser test."
+  }
+ ],
+ "FX-QA": [
+  {
+   "file": "reports/desktop_app/patches/D3.md",
+   "old": "  const blob = new Blob(['\ufeff' + lines.join('\\n')], { type: 'text/csv;charset=utf-8' })",
+   "new": "  const blob = new Blob(['\ufeff' + lines.join('\\n')], { type: 'text/csv;charset=utf-8' })",
+   "why": "D3.md \u00a72f shows the CSV byte-order mark as a literal U+FEFF character, but ui/components/terminal/index.tsx and the script D3 actually ran contain the 6-character JS escape \ufeff. The documented old/new pair therefore does not match the source byte for byte, and an applier working from D3.md would fail on \u00a72f. The old text occurs TWICE (lines 279 and 287, in the old block and the new block); replace both. Documentation only, no code impact."
+  }
+ ],
+ "FX-RUST": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/PLAN.md",
+   "old": "   \u2514\u2500 SuryaDhana.app autostart (LaunchAgent written by tauri-plugin-autostart)",
+   "new": "   \u2514\u2500 SuryaDhana.app autostart (LaunchAgent written by the app: RunAtLoad + KeepAlive{SuccessfulExit:false}, relaunched after a crash, never after Quit)",
+   "why": "The plugin was replaced by desktop/src-tauri/src/autostart.rs (C2-reliability-ops-12 / C1-desktop-native-09/13)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/PLAN.md",
+   "old": "- `{type:'status', status: ShellStatus}`: on change and at most every 5 s",
+   "new": "- `{type:'status', status: ShellStatus}`: on change (at most every 5 s) and a heartbeat at least every 10 s (the shell sends every 8 s, checked by a 1 s ticker; UI side ui/components/desktop/status.ts SHELL_STATUS_MAX_INTERVAL_MS). `nifty` is null while the quote is stale",
+   "why": "C1-desktop-native-03 cadence contract note (brief point c); the contract text should match what both sides now implement."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/PLAN.md",
+   "old": "| Port squatting: any local process could bind :8010 while ui-api is down and receive the remote capability | The remote capability is limited to the 9 validated commands, none of which touch processes or arbitrary files; covered in C2's analysis |",
+   "new": "| Port squatting: any local process (even a same-user sandboxed app) could bind :8010 while ui-api is down; a window on that origin would show its pages (fake credential forms, fake notifications) with the 9 remote commands | Guard (desktop/src-tauri/src/trust.rs): before any window gets the terminal origin, every listener on the port must be this user's process running inside the stack interpreter's prefix; otherwise the boot page names the pid and executable and open windows are pulled back. Downloads are extension-limited and quarantined either way (C2-security-04/05) |",
+   "why": "C2-security-04: the old text understated what a squatter gets, and the guard now exists."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/PLAN.md",
+   "old": "| TCC: the stack's Python lives in ~/Desktop | The app never runs Python itself. Start stack clears the paused markers and kickstarts the watchdog LaunchAgent (already granted) |",
+   "new": "| TCC: the stack's Python lives in ~/Desktop | The app never runs Python itself. Start stack clears the paused markers and kickstarts the watchdog LaunchAgent without -k (a run in progress is left alone); an unloaded agent is loaded with launchctl bootstrap; without the agent, Start refuses and names scripts/install_launch_agents.sh install |",
+   "why": "C2-reliability-ops-03/13, C1-desktop-native-12: the fallback start-local.sh spawn is gone and -k was dropped."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_contract.py",
+   "old": "    text = csp if isinstance(csp, str) else json.dumps(csp)\n    assert \"default-src\" in text, f\"CSP has no default-src: {text[:200]}\"\n",
+   "new": "    text = csp if isinstance(csp, str) else json.dumps(csp)\n    assert \"default-src\" in text, f\"CSP has no default-src: {text[:200]}\"\n\n\ndef test_status_heartbeat_is_inside_the_ui_contract():\n    \"\"\"C1-desktop-native-03: the shell's status heartbeat (health.rs STATUS_HEARTBEAT, plus its 1 s ticker) must\n    stay within the interval the UI relies on (ui/components/desktop/status.ts SHELL_STATUS_MAX_INTERVAL_MS).\"\"\"\n    health = SRC_TAURI / \"src\" / \"health.rs\"\n    status = ROOT / \"ui\" / \"components\" / \"desktop\" / \"status.ts\"\n    need(health, \"D2 shell\")\n    need(status, \"D4 desktop UX\")\n    m = re.search(r\"pub const STATUS_HEARTBEAT: Duration = Duration::from_secs\\((\\d+)\\);\", health.read_text())\n    assert m, \"health.rs has no STATUS_HEARTBEAT constant\"\n    heartbeat_ms = int(m.group(1)) * 1000 + 1000  # + the 1 s ticker that checks it\n    m = re.search(r\"export const SHELL_STATUS_MAX_INTERVAL_MS = ([\\d_]+)\", status.read_text())\n    assert m, \"status.ts has no SHELL_STATUS_MAX_INTERVAL_MS\"\n    contract_ms = int(m.group(1).replace(\"_\", \"\"))\n    assert heartbeat_ms <= contract_ms, f\"shell heartbeat {heartbeat_ms} ms exceeds the UI contract {contract_ms} ms\"\n",
+   "why": "The critic asked for a contract test that the shell's interval is shorter than the UI's stale threshold. The logic was validated standalone against the current files (9000 \u2264 10000); the test file is T's."
+  }
+ ]
+}

@@ -1,0 +1,3588 @@
+{
+ "INDEX_SOURCE_NOTE": {
+  "nse_rows": 227,
+  "nse_last": "2026-10-30",
+  "yahoo_rows": 229,
+  "yahoo_missing_sessions_vs_nse": [
+   "2026-02-01"
+  ],
+  "max_abs_diff_common_pts": 0.0
+ },
+ "NIFTY50": {
+  "index": "NIFTY 50",
+  "sessions": 229,
+  "first": "2025-12-02",
+  "last": "2026-11-04",
+  "fit": {
+   "n": 229,
+   "mae_pts": 9.44,
+   "rmse_pts": 13.31,
+   "mean_abs_actual_pts": 164.96,
+   "r2": 0.9963,
+   "explained_share_median": 1.003
+  },
+  "horizons": {
+   "1d": {
+    "sessions": 1,
+    "from": "2026-11-04",
+    "index_move_pts": 149.8,
+    "explained_pts": 148.8,
+    "top5_add": [
+     [
+      "HDFCBANK",
+      36.0
+     ],
+     [
+      "TITAN",
+      16.8
+     ],
+     [
+      "ITC",
+      15.9
+     ],
+     [
+      "BAJFINANCE",
+      14.1
+     ],
+     [
+      "BEL",
+      13.3
+     ]
+    ],
+    "top5_drag": [
+     [
+      "INFY",
+      -14.5
+     ],
+     [
+      "TCS",
+      -13.4
+     ],
+     [
+      "ETERNAL",
+      -9.5
+     ],
+     [
+      "KOTAKBANK",
+      -8.1
+     ],
+     [
+      "HCLTECH",
+      -7.5
+     ]
+    ],
+    "top5_abs_share": 0.34,
+    "hhi_contrib": 0.0437,
+    "weight_hhi": 0.0406,
+    "effective_n": 24.6,
+    "top5_weight_pct": 36.64,
+    "sector_pts": [
+     [
+      "Financial Services",
+      67.4
+     ],
+     [
+      "Metals & Mining",
+      27.7
+     ],
+     [
+      "Fast Moving Consumer Goods",
+      17.8
+     ],
+     [
+      "Automobile and Auto Components",
+      15.6
+     ],
+     [
+      "Consumer Durables",
+      14.9
+     ],
+     [
+      "Capital Goods",
+      13.3
+     ],
+     [
+      "Services",
+      12.5
+     ],
+     [
+      "Healthcare",
+      10.5
+     ],
+     [
+      "Construction Materials",
+      6.7
+     ],
+     [
+      "Oil Gas & Consumable Fuels",
+      3.2
+     ],
+     [
+      "Power",
+      2.8
+     ],
+     [
+      "Telecommunication",
+      1.6
+     ],
+     [
+      "Construction",
+      -1.1
+     ],
+     [
+      "Consumer Services",
+      -7.8
+     ],
+     [
+      "Information Technology",
+      -36.2
+     ]
+    ],
+    "members_up": 35,
+    "members_down": 15,
+    "equal_weight_ret_pct": 0.9,
+    "index_ret_pct": 0.63,
+    "ew_minus_cw_pp": 0.27
+   },
+   "5d": {
+    "sessions": 5,
+    "from": "2026-10-29",
+    "index_move_pts": 1261.8,
+    "explained_pts": 1243.8,
+    "top5_add": [
+     [
+      "RELIANCE",
+      213.5
+     ],
+     [
+      "HDFCBANK",
+      164.9
+     ],
+     [
+      "BHARTIARTL",
+      75.6
+     ],
+     [
+      "ICICIBANK",
+      69.4
+     ],
+     [
+      "ITC",
+      53.5
+     ]
+    ],
+    "top5_drag": [
+     [
+      "TCS",
+      -5.1
+     ],
+     [
+      "TECHM",
+      0.8
+     ],
+     [
+      "HCLTECH",
+      1.0
+     ],
+     [
+      "BAJAJ-AUTO",
+      3.0
+     ],
+     [
+      "EICHERMOT",
+      3.5
+     ]
+    ],
+    "top5_abs_share": 0.46,
+    "hhi_contrib": 0.0648,
+    "weight_hhi": 0.0406,
+    "effective_n": 24.6,
+    "top5_weight_pct": 36.64,
+    "sector_pts": [
+     [
+      "Financial Services",
+      409.4
+     ],
+     [
+      "Oil Gas & Consumable Fuels",
+      228.2
+     ],
+     [
+      "Fast Moving Consumer Goods",
+      104.7
+     ],
+     [
+      "Metals & Mining",
+      77.9
+     ],
+     [
+      "Telecommunication",
+      75.6
+     ],
+     [
+      "Consumer Durables",
+      48.9
+     ],
+     [
+      "Consumer Services",
+      45.7
+     ],
+     [
+      "Services",
+      45.4
+     ],
+     [
+      "Automobile and Auto Components",
+      41.8
+     ],
+     [
+      "Construction",
+      41.0
+     ],
+     [
+      "Construction Materials",
+      36.6
+     ],
+     [
+      "Healthcare",
+      34.7
+     ],
+     [
+      "Power",
+      28.0
+     ],
+     [
+      "Capital Goods",
+      25.8
+     ],
+     [
+      "Information Technology",
+      0.3
+     ]
+    ],
+    "members_up": 49,
+    "members_down": 1,
+    "equal_weight_ret_pct": 5.27,
+    "index_ret_pct": 5.56,
+    "ew_minus_cw_pp": -0.28
+   },
+   "1m": {
+    "sessions": 21,
+    "from": "2026-10-06",
+    "index_move_pts": 1404.8,
+    "explained_pts": 1360.1,
+    "top5_add": [
+     [
+      "BHARTIARTL",
+      182.2
+     ],
+     [
+      "RELIANCE",
+      173.8
+     ],
+     [
+      "ICICIBANK",
+      137.5
+     ],
+     [
+      "HDFCBANK",
+      102.3
+     ],
+     [
+      "INFY",
+      78.2
+     ]
+    ],
+    "top5_drag": [
+     [
+      "SHRIRAMFIN",
+      -24.5
+     ],
+     [
+      "COALINDIA",
+      -12.7
+     ],
+     [
+      "ADANIENT",
+      -11.4
+     ],
+     [
+      "NESTLEIND",
+      -7.3
+     ],
+     [
+      "TMPV",
+      -4.5
+     ]
+    ],
+    "top5_abs_share": 0.454,
+    "hhi_contrib": 0.0572,
+    "weight_hhi": 0.0406,
+    "effective_n": 24.6,
+    "top5_weight_pct": 36.64,
+    "sector_pts": [
+     [
+      "Financial Services",
+      363.9
+     ],
+     [
+      "Information Technology",
+      221.1
+     ],
+     [
+      "Telecommunication",
+      182.2
+     ],
+     [
+      "Oil Gas & Consumable Fuels",
+      172.0
+     ],
+     [
+      "Consumer Services",
+      79.0
+     ],
+     [
+      "Fast Moving Consumer Goods",
+      63.0
+     ],
+     [
+      "Construction",
+      55.7
+     ],
+     [
+      "Automobile and Auto Components",
+      54.4
+     ],
+     [
+      "Healthcare",
+      43.4
+     ],
+     [
+      "Construction Materials",
+      37.4
+     ],
+     [
+      "Services",
+      31.8
+     ],
+     [
+      "Metals & Mining",
+      21.4
+     ],
+     [
+      "Consumer Durables",
+      20.1
+     ],
+     [
+      "Capital Goods",
+      9.8
+     ],
+     [
+      "Power",
+      4.9
+     ]
+    ],
+    "members_up": 43,
+    "members_down": 7,
+    "equal_weight_ret_pct": 5.19,
+    "index_ret_pct": 6.23,
+    "ew_minus_cw_pp": -1.03
+   },
+   "3m": {
+    "sessions": 63,
+    "from": "2026-08-05",
+    "index_move_pts": -654.3,
+    "explained_pts": -689.3,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      94.1
+     ],
+     [
+      "BHARTIARTL",
+      62.2
+     ],
+     [
+      "ETERNAL",
+      61.4
+     ],
+     [
+      "ADANIPORTS",
+      33.2
+     ],
+     [
+      "RELIANCE",
+      28.2
+     ]
+    ],
+    "top5_drag": [
+     [
+      "BAJFINANCE",
+      -90.7
+     ],
+     [
+      "M&M",
+      -89.2
+     ],
+     [
+      "SHRIRAMFIN",
+      -69.7
+     ],
+     [
+      "MARUTI",
+      -58.8
+     ],
+     [
+      "SBIN",
+      -54.6
+     ]
+    ],
+    "top5_abs_share": 0.294,
+    "hhi_contrib": 0.0344,
+    "weight_hhi": 0.0406,
+    "effective_n": 24.6,
+    "top5_weight_pct": 36.64,
+    "sector_pts": [
+     [
+      "Telecommunication",
+      62.2
+     ],
+     [
+      "Consumer Services",
+      50.2
+     ],
+     [
+      "Services",
+      23.0
+     ],
+     [
+      "Oil Gas & Consumable Fuels",
+      11.8
+     ],
+     [
+      "Capital Goods",
+      4.8
+     ],
+     [
+      "Construction Materials",
+      -5.8
+     ],
+     [
+      "Information Technology",
+      -9.6
+     ],
+     [
+      "Construction",
+      -13.1
+     ],
+     [
+      "Power",
+      -41.4
+     ],
+     [
+      "Consumer Durables",
+      -49.4
+     ],
+     [
+      "Healthcare",
+      -57.1
+     ],
+     [
+      "Metals & Mining",
+      -57.7
+     ],
+     [
+      "Fast Moving Consumer Goods",
+      -89.1
+     ],
+     [
+      "Automobile and Auto Components",
+      -220.1
+     ],
+     [
+      "Financial Services",
+      -298.1
+     ]
+    ],
+    "members_up": 11,
+    "members_down": 39,
+    "equal_weight_ret_pct": -4.19,
+    "index_ret_pct": -2.66,
+    "ew_minus_cw_pp": -1.53
+   },
+   "60s": {
+    "sessions": 60,
+    "from": "2026-08-10",
+    "index_move_pts": -610.1,
+    "explained_pts": -628.4,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      105.2
+     ],
+     [
+      "BHARTIARTL",
+      68.6
+     ],
+     [
+      "ETERNAL",
+      56.5
+     ],
+     [
+      "ADANIPORTS",
+      35.4
+     ],
+     [
+      "DRREDDY",
+      25.8
+     ]
+    ],
+    "top5_drag": [
+     [
+      "M&M",
+      -102.3
+     ],
+     [
+      "SBIN",
+      -101.0
+     ],
+     [
+      "SHRIRAMFIN",
+      -80.5
+     ],
+     [
+      "MARUTI",
+      -55.2
+     ],
+     [
+      "BAJFINANCE",
+      -49.2
+     ]
+    ],
+    "top5_abs_share": 0.335,
+    "hhi_contrib": 0.038,
+    "weight_hhi": 0.0406,
+    "effective_n": 24.6,
+    "top5_weight_pct": 36.64,
+    "sector_pts": [
+     [
+      "Telecommunication",
+      68.6
+     ],
+     [
+      "Consumer Services",
+      56.8
+     ],
+     [
+      "Services",
+      26.3
+     ],
+     [
+      "Capital Goods",
+      -2.3
+     ],
+     [
+      "Information Technology",
+      -9.1
+     ],
+     [
+      "Construction Materials",
+      -21.8
+     ],
+     [
+      "Power",
+      -29.2
+     ],
+     [
+      "Construction",
+      -31.9
+     ],
+     [
+      "Oil Gas & Consumable Fuels",
+      -44.6
+     ],
+     [
+      "Consumer Durables",
+      -46.2
+     ],
+     [
+      "Healthcare",
+      -49.8
+     ],
+     [
+      "Metals & Mining",
+      -61.3
+     ],
+     [
+      "Fast Moving Consumer Goods",
+      -83.1
+     ],
+     [
+      "Financial Services",
+      -167.9
+     ],
+     [
+      "Automobile and Auto Components",
+      -233.0
+     ]
+    ],
+    "members_up": 12,
+    "members_down": 38,
+    "equal_weight_ret_pct": -3.79,
+    "index_ret_pct": -2.48,
+    "ew_minus_cw_pp": -1.31
+   },
+   "ytd": {
+    "sessions": 208,
+    "from": "2026-01-01",
+    "index_move_pts": -2169.0,
+    "explained_pts": -2131.9,
+    "top5_add": [
+     [
+      "ICICIBANK",
+      131.7
+     ],
+     [
+      "ETERNAL",
+      131.0
+     ],
+     [
+      "BSE",
+      77.1
+     ],
+     [
+      "ADANIPORTS",
+      65.4
+     ],
+     [
+      "TITAN",
+      58.0
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -775.4
+     ],
+     [
+      "RELIANCE",
+      -375.4
+     ],
+     [
+      "INFY",
+      -323.8
+     ],
+     [
+      "ITC",
+      -322.8
+     ],
+     [
+      "TCS",
+      -153.7
+     ]
+    ],
+    "top5_abs_share": 0.551,
+    "hhi_contrib": 0.0871,
+    "weight_hhi": 0.0406,
+    "effective_n": 24.6,
+    "top5_weight_pct": 36.64,
+    "sector_pts": [
+     [
+      "Consumer Services",
+      130.6
+     ],
+     [
+      "Metals & Mining",
+      87.9
+     ],
+     [
+      "Services",
+      70.1
+     ],
+     [
+      "Construction Materials",
+      28.7
+     ],
+     [
+      "Consumer Durables",
+      23.6
+     ],
+     [
+      "Healthcare",
+      19.7
+     ],
+     [
+      "Capital Goods",
+      0.6
+     ],
+     [
+      "Telecommunication",
+      -14.2
+     ],
+     [
+      "Power",
+      -17.7
+     ],
+     [
+      "Construction",
+      -41.6
+     ],
+     [
+      "Automobile and Auto Components",
+      -268.5
+     ],
+     [
+      "Oil Gas & Consumable Fuels",
+      -384.9
+     ],
+     [
+      "Fast Moving Consumer Goods",
+      -408.2
+     ],
+     [
+      "Information Technology",
+      -490.4
+     ],
+     [
+      "Financial Services",
+      -867.5
+     ]
+    ],
+    "members_up": 21,
+    "members_down": 29,
+    "equal_weight_ret_pct": -2.75,
+    "index_ret_pct": -8.3,
+    "ew_minus_cw_pp": 5.55
+   }
+  },
+  "monthly": [
+   {
+    "month": "2025-12",
+    "sessions": 21,
+    "index_move_pts": -46.2,
+    "explained_pts": -97.6,
+    "top5_add": [
+     [
+      "SHRIRAMFIN",
+      42.8
+     ],
+     [
+      "INFY",
+      38.4
+     ],
+     [
+      "HINDALCO",
+      23.2
+     ],
+     [
+      "TATASTEEL",
+      20.1
+     ],
+     [
+      "KOTAKBANK",
+      16.6
+     ]
+    ],
+    "top5_drag": [
+     [
+      "ICICIBANK",
+      -71.1
+     ],
+     [
+      "ETERNAL",
+      -45.0
+     ],
+     [
+      "HDFCBANK",
+      -35.3
+     ],
+     [
+      "INDIGO",
+      -34.9
+     ],
+     [
+      "HINDUNILVR",
+      -28.0
+     ]
+    ],
+    "leader_abs": "ICICIBANK",
+    "leader_pts": -71.1,
+    "leader_share_of_abs": 0.109,
+    "leader_changed": false,
+    "top5_abs_share": 0.357
+   },
+   {
+    "month": "2026-01",
+    "sessions": 20,
+    "index_move_pts": -808.9,
+    "explained_pts": -804.2,
+    "top5_add": [
+     [
+      "SBIN",
+      83.2
+     ],
+     [
+      "AXISBANK",
+      61.6
+     ],
+     [
+      "BEL",
+      37.7
+     ],
+     [
+      "ONGC",
+      31.7
+     ],
+     [
+      "NTPC",
+      26.6
+     ]
+    ],
+    "top5_drag": [
+     [
+      "RELIANCE",
+      -251.8
+     ],
+     [
+      "ITC",
+      -214.5
+     ],
+     [
+      "HDFCBANK",
+      -200.8
+     ],
+     [
+      "BHARTIARTL",
+      -84.9
+     ],
+     [
+      "MARUTI",
+      -59.0
+     ]
+    ],
+    "leader_abs": "RELIANCE",
+    "leader_pts": -251.8,
+    "leader_share_of_abs": 0.146,
+    "leader_changed": true,
+    "top5_abs_share": 0.483
+   },
+   {
+    "month": "2026-02",
+    "sessions": 21,
+    "index_move_pts": -142.0,
+    "explained_pts": -69.7,
+    "top5_add": [
+     [
+      "SBIN",
+      97.8
+     ],
+     [
+      "LT",
+      91.1
+     ],
+     [
+      "KOTAKBANK",
+      51.3
+     ],
+     [
+      "POWERGRID",
+      36.5
+     ],
+     [
+      "BAJFINANCE",
+      35.6
+     ]
+    ],
+    "top5_drag": [
+     [
+      "INFY",
+      -225.7
+     ],
+     [
+      "HDFCBANK",
+      -121.9
+     ],
+     [
+      "TCS",
+      -95.1
+     ],
+     [
+      "HCLTECH",
+      -62.4
+     ],
+     [
+      "BHARTIARTL",
+      -50.5
+     ]
+    ],
+    "leader_abs": "INFY",
+    "leader_pts": -225.7,
+    "leader_share_of_abs": 0.165,
+    "leader_changed": true,
+    "top5_abs_share": 0.461
+   },
+   {
+    "month": "2026-03",
+    "sessions": 19,
+    "index_move_pts": -2847.2,
+    "explained_pts": -2913.6,
+    "top5_add": [
+     [
+      "COALINDIA",
+      8.6
+     ],
+     [
+      "ONGC",
+      4.9
+     ],
+     [
+      "SUNPHARMA",
+      4.2
+     ],
+     [
+      "TECHM",
+      2.9
+     ],
+     [
+      "BSE",
+      -1.8
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -459.7
+     ],
+     [
+      "KOTAKBANK",
+      -435.6
+     ],
+     [
+      "ICICIBANK",
+      -236.5
+     ],
+     [
+      "LT",
+      -203.6
+     ],
+     [
+      "SBIN",
+      -174.7
+     ]
+    ],
+    "leader_abs": "HDFCBANK",
+    "leader_pts": -459.7,
+    "leader_share_of_abs": 0.156,
+    "leader_changed": true,
+    "top5_abs_share": 0.511
+   },
+   {
+    "month": "2026-04",
+    "sessions": 20,
+    "index_move_pts": 1666.1,
+    "explained_pts": 1773.5,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      211.1
+     ],
+     [
+      "LT",
+      134.4
+     ],
+     [
+      "HDFCBANK",
+      118.6
+     ],
+     [
+      "RELIANCE",
+      112.4
+     ],
+     [
+      "ICICIBANK",
+      78.9
+     ]
+    ],
+    "top5_drag": [
+     [
+      "INFY",
+      -45.8
+     ],
+     [
+      "HCLTECH",
+      -29.0
+     ],
+     [
+      "HDFCLIFE",
+      -0.8
+     ],
+     [
+      "SBILIFE",
+      3.6
+     ],
+     [
+      "APOLLOHOSP",
+      4.3
+     ]
+    ],
+    "leader_abs": "KOTAKBANK",
+    "leader_pts": 211.1,
+    "leader_share_of_abs": 0.11,
+    "leader_changed": true,
+    "top5_abs_share": 0.34
+   },
+   {
+    "month": "2026-05",
+    "sessions": 19,
+    "index_move_pts": -449.8,
+    "explained_pts": -419.1,
+    "top5_add": [
+     [
+      "BSE",
+      43.2
+     ],
+     [
+      "ADANIENT",
+      37.2
+     ],
+     [
+      "HINDALCO",
+      26.9
+     ],
+     [
+      "GRASIM",
+      26.3
+     ],
+     [
+      "TMPV",
+      23.2
+     ]
+    ],
+    "top5_drag": [
+     [
+      "RELIANCE",
+      -155.1
+     ],
+     [
+      "SBIN",
+      -89.4
+     ],
+     [
+      "HDFCBANK",
+      -87.3
+     ],
+     [
+      "ITC",
+      -73.3
+     ],
+     [
+      "TCS",
+      -46.0
+     ]
+    ],
+    "leader_abs": "RELIANCE",
+    "leader_pts": -155.1,
+    "leader_share_of_abs": 0.151,
+    "leader_changed": true,
+    "top5_abs_share": 0.439
+   },
+   {
+    "month": "2026-06",
+    "sessions": 21,
+    "index_move_pts": 318.0,
+    "explained_pts": 285.4,
+    "top5_add": [
+     [
+      "ICICIBANK",
+      177.8
+     ],
+     [
+      "HDFCBANK",
+      171.7
+     ],
+     [
+      "BAJFINANCE",
+      56.9
+     ],
+     [
+      "SBIN",
+      53.5
+     ],
+     [
+      "INDIGO",
+      45.5
+     ]
+    ],
+    "top5_drag": [
+     [
+      "INFY",
+      -116.5
+     ],
+     [
+      "HINDALCO",
+      -51.6
+     ],
+     [
+      "TCS",
+      -48.6
+     ],
+     [
+      "RELIANCE",
+      -38.5
+     ],
+     [
+      "TATASTEEL",
+      -34.8
+     ]
+    ],
+    "leader_abs": "ICICIBANK",
+    "leader_pts": 177.8,
+    "leader_share_of_abs": 0.133,
+    "leader_changed": true,
+    "top5_abs_share": 0.431
+   },
+   {
+    "month": "2026-07",
+    "sessions": 23,
+    "index_move_pts": 517.8,
+    "explained_pts": 465.7,
+    "top5_add": [
+     [
+      "INFY",
+      93.8
+     ],
+     [
+      "ICICIBANK",
+      89.8
+     ],
+     [
+      "BAJFINANCE",
+      80.1
+     ],
+     [
+      "BHARTIARTL",
+      76.1
+     ],
+     [
+      "ETERNAL",
+      72.4
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -159.8
+     ],
+     [
+      "AXISBANK",
+      -69.3
+     ],
+     [
+      "LT",
+      -58.7
+     ],
+     [
+      "TRENT",
+      -29.1
+     ],
+     [
+      "DRREDDY",
+      -26.7
+     ]
+    ],
+    "leader_abs": "HDFCBANK",
+    "leader_pts": -159.8,
+    "leader_share_of_abs": 0.113,
+    "leader_changed": true,
+    "top5_abs_share": 0.354
+   },
+   {
+    "month": "2026-08",
+    "sessions": 21,
+    "index_move_pts": -303.2,
+    "explained_pts": -322.2,
+    "top5_add": [
+     [
+      "ETERNAL",
+      49.0
+     ],
+     [
+      "KOTAKBANK",
+      44.5
+     ],
+     [
+      "AXISBANK",
+      41.9
+     ],
+     [
+      "LT",
+      30.2
+     ],
+     [
+      "SBIN",
+      27.7
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -125.0
+     ],
+     [
+      "BHARTIARTL",
+      -101.0
+     ],
+     [
+      "ITC",
+      -66.2
+     ],
+     [
+      "BAJFINANCE",
+      -49.2
+     ],
+     [
+      "RELIANCE",
+      -42.8
+     ]
+    ],
+    "leader_abs": "HDFCBANK",
+    "leader_pts": -125.0,
+    "leader_share_of_abs": 0.119,
+    "leader_changed": false,
+    "top5_abs_share": 0.373
+   },
+   {
+    "month": "2026-09",
+    "sessions": 21,
+    "index_move_pts": -1460.0,
+    "explained_pts": -1422.1,
+    "top5_add": [
+     [
+      "ADANIPORTS",
+      33.5
+     ],
+     [
+      "ITC",
+      18.9
+     ],
+     [
+      "COALINDIA",
+      11.6
+     ],
+     [
+      "DRREDDY",
+      10.0
+     ],
+     [
+      "ADANIENT",
+      3.4
+     ]
+    ],
+    "top5_drag": [
+     [
+      "ICICIBANK",
+      -197.6
+     ],
+     [
+      "RELIANCE",
+      -125.4
+     ],
+     [
+      "INFY",
+      -101.5
+     ],
+     [
+      "SBIN",
+      -86.0
+     ],
+     [
+      "LT",
+      -81.6
+     ]
+    ],
+    "leader_abs": "ICICIBANK",
+    "leader_pts": -197.6,
+    "leader_share_of_abs": 0.125,
+    "leader_changed": true,
+    "top5_abs_share": 0.375
+   },
+   {
+    "month": "2026-10",
+    "sessions": 20,
+    "index_move_pts": 432.6,
+    "explained_pts": 405.9,
+    "top5_add": [
+     [
+      "INFY",
+      138.6
+     ],
+     [
+      "BHARTIARTL",
+      137.2
+     ],
+     [
+      "ICICIBANK",
+      113.9
+     ],
+     [
+      "TCS",
+      96.1
+     ],
+     [
+      "KOTAKBANK",
+      68.4
+     ]
+    ],
+    "top5_drag": [
+     [
+      "SHRIRAMFIN",
+      -62.3
+     ],
+     [
+      "HDFCBANK",
+      -51.1
+     ],
+     [
+      "RELIANCE",
+      -30.9
+     ],
+     [
+      "TATASTEEL",
+      -29.1
+     ],
+     [
+      "ADANIENT",
+      -24.6
+     ]
+    ],
+    "leader_abs": "INFY",
+    "leader_pts": 138.6,
+    "leader_share_of_abs": 0.11,
+    "leader_changed": true,
+    "top5_abs_share": 0.439
+   },
+   {
+    "month": "2026-11",
+    "sessions": 3,
+    "index_move_pts": 907.5,
+    "explained_pts": 888.6,
+    "top5_add": [
+     [
+      "RELIANCE",
+      203.9
+     ],
+     [
+      "HDFCBANK",
+      140.8
+     ],
+     [
+      "BHARTIARTL",
+      59.4
+     ],
+     [
+      "ICICIBANK",
+      39.0
+     ],
+     [
+      "ITC",
+      37.5
+     ]
+    ],
+    "top5_drag": [
+     [
+      "INFY",
+      -41.2
+     ],
+     [
+      "TCS",
+      -14.2
+     ],
+     [
+      "HCLTECH",
+      -5.1
+     ],
+     [
+      "KOTAKBANK",
+      -3.4
+     ],
+     [
+      "POWERGRID",
+      -2.8
+     ]
+    ],
+    "leader_abs": "RELIANCE",
+    "leader_pts": 203.9,
+    "leader_share_of_abs": 0.199,
+    "leader_changed": true,
+    "top5_abs_share": 0.472
+   }
+  ],
+  "rolling20": {
+   "as_of": "2026-11-04",
+   "leader_abs": "BHARTIARTL",
+   "leader_pos": "BHARTIARTL",
+   "leader_neg": "SHRIRAMFIN",
+   "leader_share": 0.125,
+   "top5_share": 0.444,
+   "leader_changes": 63,
+   "events": [
+    {
+     "date": "2026-01-01",
+     "from": "ICICIBANK",
+     "to": "ITC",
+     "to_pts_20s": -96.9,
+     "leader_share": 0.109
+    },
+    {
+     "date": "2026-01-09",
+     "from": "ITC",
+     "to": "HDFCBANK",
+     "to_pts_20s": -198.9,
+     "leader_share": 0.19
+    },
+    {
+     "date": "2026-01-16",
+     "from": "HDFCBANK",
+     "to": "ITC",
+     "to_pts_20s": -187.0,
+     "leader_share": 0.133
+    },
+    {
+     "date": "2026-01-19",
+     "from": "ITC",
+     "to": "RELIANCE",
+     "to_pts_20s": -188.2,
+     "leader_share": 0.139
+    },
+    {
+     "date": "2026-01-22",
+     "from": "RELIANCE",
+     "to": "HDFCBANK",
+     "to_pts_20s": -253.2,
+     "leader_share": 0.161
+    },
+    {
+     "date": "2026-01-27",
+     "from": "HDFCBANK",
+     "to": "RELIANCE",
+     "to_pts_20s": -257.5,
+     "leader_share": 0.146
+    },
+    {
+     "date": "2026-01-28",
+     "from": "RELIANCE",
+     "to": "ITC",
+     "to_pts_20s": -216.1,
+     "leader_share": 0.125
+    },
+    {
+     "date": "2026-01-30",
+     "from": "ITC",
+     "to": "RELIANCE",
+     "to_pts_20s": -251.8,
+     "leader_share": 0.146
+    },
+    {
+     "date": "2026-02-06",
+     "from": "RELIANCE",
+     "to": "KOTAKBANK",
+     "to_pts_20s": 88.6,
+     "leader_share": 0.09
+    },
+    {
+     "date": "2026-02-12",
+     "from": "KOTAKBANK",
+     "to": "INFY",
+     "to_pts_20s": -137.4,
+     "leader_share": 0.111
+    },
+    {
+     "date": "2026-03-04",
+     "from": "INFY",
+     "to": "HDFCBANK",
+     "to_pts_20s": -235.3,
+     "leader_share": 0.149
+    },
+    {
+     "date": "2026-03-10",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -260.0,
+     "leader_share": 0.14
+    },
+    {
+     "date": "2026-03-20",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -397.5,
+     "leader_share": 0.157
+    },
+    {
+     "date": "2026-03-25",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -398.7,
+     "leader_share": 0.172
+    },
+    {
+     "date": "2026-03-27",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -445.5,
+     "leader_share": 0.161
+    },
+    {
+     "date": "2026-03-30",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -501.4,
+     "leader_share": 0.153
+    },
+    {
+     "date": "2026-04-01",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -428.2,
+     "leader_share": 0.162
+    },
+    {
+     "date": "2026-04-02",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -388.3,
+     "leader_share": 0.166
+    },
+    {
+     "date": "2026-04-09",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -126.4,
+     "leader_share": 0.154
+    },
+    {
+     "date": "2026-04-10",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -121.9,
+     "leader_share": 0.154
+    },
+    {
+     "date": "2026-04-13",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -115.4,
+     "leader_share": 0.128
+    },
+    {
+     "date": "2026-04-15",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 111.9,
+     "leader_share": 0.104
+    },
+    {
+     "date": "2026-04-16",
+     "from": "ICICIBANK",
+     "to": "LT",
+     "to_pts_20s": 179.4,
+     "leader_share": 0.125
+    },
+    {
+     "date": "2026-04-20",
+     "from": "LT",
+     "to": "HDFCBANK",
+     "to_pts_20s": -146.8,
+     "leader_share": 0.114
+    },
+    {
+     "date": "2026-04-21",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 135.8,
+     "leader_share": 0.107
+    },
+    {
+     "date": "2026-04-23",
+     "from": "ICICIBANK",
+     "to": "LT",
+     "to_pts_20s": 163.2,
+     "leader_share": 0.119
+    },
+    {
+     "date": "2026-04-30",
+     "from": "LT",
+     "to": "KOTAKBANK",
+     "to_pts_20s": 211.1,
+     "leader_share": 0.11
+    },
+    {
+     "date": "2026-05-06",
+     "from": "KOTAKBANK",
+     "to": "RELIANCE",
+     "to_pts_20s": 173.2,
+     "leader_share": 0.097
+    },
+    {
+     "date": "2026-05-11",
+     "from": "RELIANCE",
+     "to": "INFY",
+     "to_pts_20s": -103.0,
+     "leader_share": 0.086
+    },
+    {
+     "date": "2026-05-12",
+     "from": "INFY",
+     "to": "HDFCBANK",
+     "to_pts_20s": -181.9,
+     "leader_share": 0.135
+    },
+    {
+     "date": "2026-05-13",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": -161.7,
+     "leader_share": 0.117
+    },
+    {
+     "date": "2026-05-14",
+     "from": "ICICIBANK",
+     "to": "INFY",
+     "to_pts_20s": -145.0,
+     "leader_share": 0.106
+    },
+    {
+     "date": "2026-05-15",
+     "from": "INFY",
+     "to": "ICICIBANK",
+     "to_pts_20s": -140.7,
+     "leader_share": 0.101
+    },
+    {
+     "date": "2026-05-22",
+     "from": "ICICIBANK",
+     "to": "SBIN",
+     "to_pts_20s": -122.6,
+     "leader_share": 0.108
+    },
+    {
+     "date": "2026-05-29",
+     "from": "SBIN",
+     "to": "RELIANCE",
+     "to_pts_20s": -148.1,
+     "leader_share": 0.136
+    },
+    {
+     "date": "2026-06-12",
+     "from": "RELIANCE",
+     "to": "ICICIBANK",
+     "to_pts_20s": 141.9,
+     "leader_share": 0.136
+    },
+    {
+     "date": "2026-06-23",
+     "from": "ICICIBANK",
+     "to": "INFY",
+     "to_pts_20s": -101.0,
+     "leader_share": 0.103
+    },
+    {
+     "date": "2026-06-24",
+     "from": "INFY",
+     "to": "ICICIBANK",
+     "to_pts_20s": 141.4,
+     "leader_share": 0.125
+    },
+    {
+     "date": "2026-07-06",
+     "from": "ICICIBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": 266.1,
+     "leader_share": 0.16
+    },
+    {
+     "date": "2026-07-14",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 119.7,
+     "leader_share": 0.119
+    },
+    {
+     "date": "2026-07-16",
+     "from": "ICICIBANK",
+     "to": "LT",
+     "to_pts_20s": -124.0,
+     "leader_share": 0.118
+    },
+    {
+     "date": "2026-07-17",
+     "from": "LT",
+     "to": "ICICIBANK",
+     "to_pts_20s": 152.3,
+     "leader_share": 0.156
+    },
+    {
+     "date": "2026-07-23",
+     "from": "ICICIBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -147.4,
+     "leader_share": 0.127
+    },
+    {
+     "date": "2026-08-20",
+     "from": "HDFCBANK",
+     "to": "LT",
+     "to_pts_20s": 82.5,
+     "leader_share": 0.084
+    },
+    {
+     "date": "2026-08-21",
+     "from": "LT",
+     "to": "ETERNAL",
+     "to_pts_20s": 91.7,
+     "leader_share": 0.093
+    },
+    {
+     "date": "2026-08-24",
+     "from": "ETERNAL",
+     "to": "LT",
+     "to_pts_20s": 81.1,
+     "leader_share": 0.096
+    },
+    {
+     "date": "2026-08-26",
+     "from": "LT",
+     "to": "HDFCBANK",
+     "to_pts_20s": -67.1,
+     "leader_share": 0.08
+    },
+    {
+     "date": "2026-09-04",
+     "from": "HDFCBANK",
+     "to": "BHARTIARTL",
+     "to_pts_20s": -75.5,
+     "leader_share": 0.083
+    },
+    {
+     "date": "2026-09-07",
+     "from": "BHARTIARTL",
+     "to": "INFY",
+     "to_pts_20s": -69.2,
+     "leader_share": 0.071
+    },
+    {
+     "date": "2026-09-08",
+     "from": "INFY",
+     "to": "HDFCBANK",
+     "to_pts_20s": -83.1,
+     "leader_share": 0.083
+    },
+    {
+     "date": "2026-09-10",
+     "from": "HDFCBANK",
+     "to": "INFY",
+     "to_pts_20s": -100.5,
+     "leader_share": 0.086
+    },
+    {
+     "date": "2026-09-11",
+     "from": "INFY",
+     "to": "BHARTIARTL",
+     "to_pts_20s": -101.5,
+     "leader_share": 0.088
+    },
+    {
+     "date": "2026-09-15",
+     "from": "BHARTIARTL",
+     "to": "RELIANCE",
+     "to_pts_20s": -112.3,
+     "leader_share": 0.091
+    },
+    {
+     "date": "2026-09-21",
+     "from": "RELIANCE",
+     "to": "ICICIBANK",
+     "to_pts_20s": -112.2,
+     "leader_share": 0.107
+    },
+    {
+     "date": "2026-10-01",
+     "from": "ICICIBANK",
+     "to": "RELIANCE",
+     "to_pts_20s": -202.7,
+     "leader_share": 0.124
+    },
+    {
+     "date": "2026-10-15",
+     "from": "RELIANCE",
+     "to": "KOTAKBANK",
+     "to_pts_20s": 50.5,
+     "leader_share": 0.058
+    },
+    {
+     "date": "2026-10-16",
+     "from": "KOTAKBANK",
+     "to": "INFY",
+     "to_pts_20s": 74.5,
+     "leader_share": 0.068
+    },
+    {
+     "date": "2026-10-19",
+     "from": "INFY",
+     "to": "TCS",
+     "to_pts_20s": 75.7,
+     "leader_share": 0.068
+    },
+    {
+     "date": "2026-10-21",
+     "from": "TCS",
+     "to": "HDFCBANK",
+     "to_pts_20s": -104.3,
+     "leader_share": 0.074
+    },
+    {
+     "date": "2026-10-28",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 112.8,
+     "leader_share": 0.085
+    },
+    {
+     "date": "2026-10-30",
+     "from": "ICICIBANK",
+     "to": "INFY",
+     "to_pts_20s": 138.6,
+     "leader_share": 0.11
+    },
+    {
+     "date": "2026-11-02",
+     "from": "INFY",
+     "to": "RELIANCE",
+     "to_pts_20s": 184.5,
+     "leader_share": 0.131
+    },
+    {
+     "date": "2026-11-03",
+     "from": "RELIANCE",
+     "to": "BHARTIARTL",
+     "to_pts_20s": 180.5,
+     "leader_share": 0.127
+    }
+   ],
+   "leader_tenure_sessions": 2,
+   "ranking_20s": [
+    [
+     "BHARTIARTL",
+     162.8
+    ],
+    [
+     "RELIANCE",
+     129.7
+    ],
+    [
+     "ICICIBANK",
+     121.4
+    ],
+    [
+     "INFY",
+     83.0
+    ],
+    [
+     "HDFCBANK",
+     81.0
+    ],
+    [
+     "TCS",
+     71.5
+    ],
+    [
+     "LT",
+     50.0
+    ],
+    [
+     "HCLTECH",
+     44.3
+    ],
+    [
+     "KOTAKBANK",
+     42.2
+    ],
+    [
+     "ITC",
+     34.7
+    ]
+   ]
+  },
+  "breadth_div": {
+   "as_of": "2026-11-04",
+   "ew20_pct": 4.25,
+   "cw20_pct": 5.2,
+   "ew_minus_cw_pp": -0.95,
+   "pct_members_up_last_session": 70.0,
+   "series_tail": [
+    [
+     "2026-10-22",
+     -1.49
+    ],
+    [
+     "2026-10-23",
+     -1.8
+    ],
+    [
+     "2026-10-26",
+     -1.66
+    ],
+    [
+     "2026-10-27",
+     -1.27
+    ],
+    [
+     "2026-10-28",
+     -1.15
+    ],
+    [
+     "2026-10-29",
+     -1.3
+    ],
+    [
+     "2026-10-30",
+     -1.01
+    ],
+    [
+     "2026-11-02",
+     -0.93
+    ],
+    [
+     "2026-11-03",
+     -1.24
+    ],
+    [
+     "2026-11-04",
+     -0.95
+    ]
+   ],
+   "min": [
+    "2026-10-23",
+    -1.8
+   ],
+   "max": [
+    "2026-05-08",
+    3.51
+   ]
+  },
+  "calibration_top10": {
+   "date": "2026-11-04",
+   "rows": [
+    {
+     "symbol": "HDFCBANK",
+     "official_pct": 10.2,
+     "rebuilt_pct": 9.78,
+     "diff_pp": -0.42,
+     "implied_iwf_correction": 1.043
+    },
+    {
+     "symbol": "ICICIBANK",
+     "official_pct": 9.22,
+     "rebuilt_pct": 8.94,
+     "diff_pp": -0.28,
+     "implied_iwf_correction": 1.031
+    },
+    {
+     "symbol": "RELIANCE",
+     "official_pct": 7.91,
+     "rebuilt_pct": 7.67,
+     "diff_pp": -0.24,
+     "implied_iwf_correction": 1.031
+    },
+    {
+     "symbol": "BHARTIARTL",
+     "official_pct": 5.68,
+     "rebuilt_pct": 5.49,
+     "diff_pp": -0.19,
+     "implied_iwf_correction": 1.034
+    },
+    {
+     "symbol": "LT",
+     "official_pct": 4.17,
+     "rebuilt_pct": 4.75,
+     "diff_pp": 0.58,
+     "implied_iwf_correction": 0.878
+    },
+    {
+     "symbol": "SBIN",
+     "official_pct": 3.65,
+     "rebuilt_pct": 3.49,
+     "diff_pp": -0.16,
+     "implied_iwf_correction": 1.046
+    },
+    {
+     "symbol": "INFY",
+     "official_pct": 3.6,
+     "rebuilt_pct": 3.5,
+     "diff_pp": -0.1,
+     "implied_iwf_correction": 1.028
+    },
+    {
+     "symbol": "AXISBANK",
+     "official_pct": 3.2,
+     "rebuilt_pct": 3.09,
+     "diff_pp": -0.11,
+     "implied_iwf_correction": 1.035
+    },
+    {
+     "symbol": "KOTAKBANK",
+     "official_pct": 3.05,
+     "rebuilt_pct": 3.0,
+     "diff_pp": -0.05,
+     "implied_iwf_correction": 1.018
+    },
+    {
+     "symbol": "BAJFINANCE",
+     "official_pct": 2.45,
+     "rebuilt_pct": 2.39,
+     "diff_pp": -0.06,
+     "implied_iwf_correction": 1.024
+    }
+   ],
+   "official_top10_sum": 53.13,
+   "rebuilt_top10_sum": 52.11,
+   "mae_pp": 0.22
+  }
+ },
+ "NIFTYBANK": {
+  "index": "NIFTY BANK",
+  "sessions": 226,
+  "first": "2025-12-02",
+  "last": "2026-10-30",
+  "fit": {
+   "n": 226,
+   "mae_pts": 90.73,
+   "rmse_pts": 120.5,
+   "mean_abs_actual_pts": 442.44,
+   "r2": 0.9622,
+   "explained_share_median": 0.988
+  },
+  "horizons": {
+   "1d": {
+    "sessions": 1,
+    "from": "2026-10-30",
+    "index_move_pts": -222.7,
+    "explained_pts": 80.2,
+    "top5_add": [
+     [
+      "HDFCBANK",
+      198.3
+     ],
+     [
+      "ICICIBANK",
+      110.8
+     ],
+     [
+      "KOTAKBANK",
+      35.7
+     ],
+     [
+      "UNIONBANK",
+      -1.8
+     ],
+     [
+      "PNB",
+      -6.8
+     ]
+    ],
+    "top5_drag": [
+     [
+      "SBIN",
+      -60.1
+     ],
+     [
+      "AXISBANK",
+      -40.7
+     ],
+     [
+      "FEDERALBNK",
+      -37.4
+     ],
+     [
+      "INDUSINDBK",
+      -37.0
+     ],
+     [
+      "IDFCFIRSTB",
+      -22.4
+     ]
+    ],
+    "top5_abs_share": 0.734,
+    "hhi_contrib": 0.1679,
+    "weight_hhi": 0.1681,
+    "effective_n": 6.0,
+    "top5_weight_pct": 83.92,
+    "sector_pts": [
+     [
+      "Financial Services",
+      80.2
+     ]
+    ],
+    "members_up": 3,
+    "members_down": 11,
+    "equal_weight_ret_pct": -1.03,
+    "index_ret_pct": -0.41,
+    "ew_minus_cw_pp": -0.62
+   },
+   "5d": {
+    "sessions": 5,
+    "from": "2026-10-26",
+    "index_move_pts": 399.6,
+    "explained_pts": 453.1,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      435.9
+     ],
+     [
+      "ICICIBANK",
+      38.6
+     ],
+     [
+      "BANKBARODA",
+      27.3
+     ],
+     [
+      "UNIONBANK",
+      26.1
+     ],
+     [
+      "SBIN",
+      19.5
+     ]
+    ],
+    "top5_drag": [
+     [
+      "AUBANK",
+      -76.3
+     ],
+     [
+      "YESBANK",
+      -38.6
+     ],
+     [
+      "FEDERALBNK",
+      -5.1
+     ],
+     [
+      "IDFCFIRSTB",
+      -4.7
+     ],
+     [
+      "AXISBANK",
+      -2.6
+     ]
+    ],
+    "top5_abs_share": 0.871,
+    "hhi_contrib": 0.4014,
+    "weight_hhi": 0.1681,
+    "effective_n": 6.0,
+    "top5_weight_pct": 83.92,
+    "sector_pts": [
+     [
+      "Financial Services",
+      453.1
+     ]
+    ],
+    "members_up": 8,
+    "members_down": 5,
+    "equal_weight_ret_pct": 0.46,
+    "index_ret_pct": 0.74,
+    "ew_minus_cw_pp": -0.28
+   },
+   "1m": {
+    "sessions": 21,
+    "from": "2026-09-30",
+    "index_move_pts": 427.0,
+    "explained_pts": 824.5,
+    "top5_add": [
+     [
+      "ICICIBANK",
+      1030.9
+     ],
+     [
+      "KOTAKBANK",
+      775.9
+     ],
+     [
+      "FEDERALBNK",
+      91.9
+     ],
+     [
+      "UNIONBANK",
+      73.6
+     ],
+     [
+      "PNB",
+      73.0
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -602.4
+     ],
+     [
+      "YESBANK",
+      -329.7
+     ],
+     [
+      "AUBANK",
+      -155.7
+     ],
+     [
+      "IDFCFIRSTB",
+      -121.6
+     ],
+     [
+      "INDUSINDBK",
+      -49.5
+     ]
+    ],
+    "top5_abs_share": 0.853,
+    "hhi_contrib": 0.1908,
+    "weight_hhi": 0.1681,
+    "effective_n": 6.0,
+    "top5_weight_pct": 83.92,
+    "sector_pts": [
+     [
+      "Financial Services",
+      824.5
+     ]
+    ],
+    "members_up": 7,
+    "members_down": 7,
+    "equal_weight_ret_pct": -0.41,
+    "index_ret_pct": 0.79,
+    "ew_minus_cw_pp": -1.2
+   },
+   "3m": {
+    "sessions": 63,
+    "from": "2026-07-31",
+    "index_move_pts": -2460.6,
+    "explained_pts": -2039.4,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      1015.0
+     ],
+     [
+      "PNB",
+      74.3
+     ],
+     [
+      "UNIONBANK",
+      58.8
+     ],
+     [
+      "BANKBARODA",
+      -9.8
+     ],
+     [
+      "CANBK",
+      -41.2
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -1235.3
+     ],
+     [
+      "YESBANK",
+      -439.2
+     ],
+     [
+      "SBIN",
+      -376.9
+     ],
+     [
+      "ICICIBANK",
+      -361.9
+     ],
+     [
+      "INDUSINDBK",
+      -215.1
+     ]
+    ],
+    "top5_abs_share": 0.791,
+    "hhi_contrib": 0.1682,
+    "weight_hhi": 0.1681,
+    "effective_n": 6.0,
+    "top5_weight_pct": 83.92,
+    "sector_pts": [
+     [
+      "Financial Services",
+      -2039.4
+     ]
+    ],
+    "members_up": 3,
+    "members_down": 11,
+    "equal_weight_ret_pct": -5.14,
+    "index_ret_pct": -4.31,
+    "ew_minus_cw_pp": -0.83
+   },
+   "60s": {
+    "sessions": 60,
+    "from": "2026-08-05",
+    "index_move_pts": -3220.2,
+    "explained_pts": -2596.5,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      891.0
+     ],
+     [
+      "PNB",
+      58.5
+     ],
+     [
+      "UNIONBANK",
+      45.3
+     ],
+     [
+      "BANKBARODA",
+      -22.0
+     ],
+     [
+      "CANBK",
+      -65.6
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -990.2
+     ],
+     [
+      "ICICIBANK",
+      -559.3
+     ],
+     [
+      "SBIN",
+      -478.3
+     ],
+     [
+      "YESBANK",
+      -467.5
+     ],
+     [
+      "INDUSINDBK",
+      -233.8
+     ]
+    ],
+    "top5_abs_share": 0.738,
+    "hhi_contrib": 0.1312,
+    "weight_hhi": 0.1681,
+    "effective_n": 6.0,
+    "top5_weight_pct": 83.92,
+    "sector_pts": [
+     [
+      "Financial Services",
+      -2596.5
+     ]
+    ],
+    "members_up": 3,
+    "members_down": 11,
+    "equal_weight_ret_pct": -6.81,
+    "index_ret_pct": -5.56,
+    "ew_minus_cw_pp": -1.25
+   },
+   "ytd": {
+    "sessions": 205,
+    "from": "2026-01-01",
+    "index_move_pts": -4894.9,
+    "explained_pts": -5153.1,
+    "top5_add": [
+     [
+      "ICICIBANK",
+      732.1
+     ],
+     [
+      "FEDERALBNK",
+      437.0
+     ],
+     [
+      "UNIONBANK",
+      140.7
+     ],
+     [
+      "PNB",
+      6.0
+     ],
+     [
+      "SBIN",
+      -18.9
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -4988.5
+     ],
+     [
+      "YESBANK",
+      -404.2
+     ],
+     [
+      "CANBK",
+      -243.9
+     ],
+     [
+      "BANKBARODA",
+      -196.6
+     ],
+     [
+      "IDFCFIRSTB",
+      -178.7
+     ]
+    ],
+    "top5_abs_share": 0.874,
+    "hhi_contrib": 0.4287,
+    "weight_hhi": 0.1681,
+    "effective_n": 6.0,
+    "top5_weight_pct": 83.92,
+    "sector_pts": [
+     [
+      "Financial Services",
+      -5153.1
+     ]
+    ],
+    "members_up": 4,
+    "members_down": 10,
+    "equal_weight_ret_pct": -6.08,
+    "index_ret_pct": -8.22,
+    "ew_minus_cw_pp": 2.13
+   }
+  },
+  "monthly": [
+   {
+    "month": "2025-12",
+    "sessions": 21,
+    "index_move_pts": -99.5,
+    "explained_pts": -270.1,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      163.5
+     ],
+     [
+      "IDFCFIRSTB",
+      75.0
+     ],
+     [
+      "SBIN",
+      57.5
+     ],
+     [
+      "FEDERALBNK",
+      53.9
+     ],
+     [
+      "AUBANK",
+      53.3
+     ]
+    ],
+    "top5_drag": [
+     [
+      "ICICIBANK",
+      -452.9
+     ],
+     [
+      "HDFCBANK",
+      -176.8
+     ],
+     [
+      "YESBANK",
+      -55.4
+     ],
+     [
+      "AXISBANK",
+      -29.8
+     ],
+     [
+      "PNB",
+      -12.3
+     ]
+    ],
+    "leader_abs": "ICICIBANK",
+    "leader_pts": -452.9,
+    "leader_share_of_abs": 0.381,
+    "leader_changed": false,
+    "top5_abs_share": 0.78
+   },
+   {
+    "month": "2026-01",
+    "sessions": 20,
+    "index_move_pts": 28.6,
+    "explained_pts": 95.9,
+    "top5_add": [
+     [
+      "AXISBANK",
+      621.1
+     ],
+     [
+      "SBIN",
+      609.9
+     ],
+     [
+      "FEDERALBNK",
+      178.9
+     ],
+     [
+      "ICICIBANK",
+      136.4
+     ],
+     [
+      "UNIONBANK",
+      108.5
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -1095.3
+     ],
+     [
+      "KOTAKBANK",
+      -342.5
+     ],
+     [
+      "CANBK",
+      -66.2
+     ],
+     [
+      "YESBANK",
+      -45.2
+     ],
+     [
+      "IDFCFIRSTB",
+      -27.2
+     ]
+    ],
+    "leader_abs": "HDFCBANK",
+    "leader_pts": -1095.3,
+    "leader_share_of_abs": 0.335,
+    "leader_changed": true,
+    "top5_abs_share": 0.871
+   },
+   {
+    "month": "2026-02",
+    "sessions": 21,
+    "index_move_pts": 918.6,
+    "explained_pts": 867.1,
+    "top5_add": [
+     [
+      "SBIN",
+      881.0
+     ],
+     [
+      "KOTAKBANK",
+      242.1
+     ],
+     [
+      "ICICIBANK",
+      153.3
+     ],
+     [
+      "BANKBARODA",
+      69.8
+     ],
+     [
+      "UNIONBANK",
+      69.3
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -607.7
+     ],
+     [
+      "IDFCFIRSTB",
+      -142.3
+     ],
+     [
+      "YESBANK",
+      -35.6
+     ],
+     [
+      "AUBANK",
+      -21.6
+     ],
+     [
+      "PNB",
+      24.1
+     ]
+    ],
+    "leader_abs": "SBIN",
+    "leader_pts": 881.0,
+    "leader_share_of_abs": 0.355,
+    "leader_changed": true,
+    "top5_abs_share": 0.817
+   },
+   {
+    "month": "2026-03",
+    "sessions": 19,
+    "index_move_pts": -10253.7,
+    "explained_pts": -9806.2,
+    "top5_add": [
+     [
+      "AUBANK",
+      -109.6
+     ],
+     [
+      "UNIONBANK",
+      -120.6
+     ],
+     [
+      "PNB",
+      -163.4
+     ],
+     [
+      "FEDERALBNK",
+      -163.4
+     ],
+     [
+      "YESBANK",
+      -179.5
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -2304.6
+     ],
+     [
+      "KOTAKBANK",
+      -2186.7
+     ],
+     [
+      "SBIN",
+      -1502.6
+     ],
+     [
+      "ICICIBANK",
+      -1187.0
+     ],
+     [
+      "AXISBANK",
+      -1044.9
+     ]
+    ],
+    "leader_abs": "HDFCBANK",
+    "leader_pts": -2304.6,
+    "leader_share_of_abs": 0.235,
+    "leader_changed": true,
+    "top5_abs_share": 0.839
+   },
+   {
+    "month": "2026-04",
+    "sessions": 20,
+    "index_move_pts": 4588.0,
+    "explained_pts": 4043.0,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      1059.9
+     ],
+     [
+      "SBIN",
+      603.3
+     ],
+     [
+      "HDFCBANK",
+      579.6
+     ],
+     [
+      "AXISBANK",
+      508.3
+     ],
+     [
+      "ICICIBANK",
+      381.6
+     ]
+    ],
+    "top5_drag": [
+     [
+      "UNIONBANK",
+      6.6
+     ],
+     [
+      "BANKBARODA",
+      49.3
+     ],
+     [
+      "PNB",
+      50.1
+     ],
+     [
+      "CANBK",
+      62.5
+     ],
+     [
+      "FEDERALBNK",
+      111.9
+     ]
+    ],
+    "leader_abs": "KOTAKBANK",
+    "leader_pts": 1059.9,
+    "leader_share_of_abs": 0.262,
+    "leader_changed": true,
+    "top5_abs_share": 0.775
+   },
+   {
+    "month": "2026-05",
+    "sessions": 19,
+    "index_move_pts": -624.2,
+    "explained_pts": -935.2,
+    "top5_add": [
+     [
+      "YESBANK",
+      197.6
+     ],
+     [
+      "AXISBANK",
+      91.9
+     ],
+     [
+      "IDFCFIRSTB",
+      28.5
+     ],
+     [
+      "BANKBARODA",
+      18.4
+     ],
+     [
+      "KOTAKBANK",
+      14.0
+     ]
+    ],
+    "top5_drag": [
+     [
+      "SBIN",
+      -602.2
+     ],
+     [
+      "HDFCBANK",
+      -550.5
+     ],
+     [
+      "ICICIBANK",
+      -67.3
+     ],
+     [
+      "AUBANK",
+      -34.8
+     ],
+     [
+      "CANBK",
+      -24.8
+     ]
+    ],
+    "leader_abs": "SBIN",
+    "leader_pts": -602.2,
+    "leader_share_of_abs": 0.36,
+    "leader_changed": true,
+    "top5_abs_share": 0.903
+   },
+   {
+    "month": "2026-06",
+    "sessions": 21,
+    "index_move_pts": 3303.7,
+    "explained_pts": 3480.9,
+    "top5_add": [
+     [
+      "ICICIBANK",
+      1135.6
+     ],
+     [
+      "HDFCBANK",
+      1092.2
+     ],
+     [
+      "SBIN",
+      374.7
+     ],
+     [
+      "AXISBANK",
+      299.5
+     ],
+     [
+      "FEDERALBNK",
+      196.5
+     ]
+    ],
+    "top5_drag": [
+     [
+      "CANBK",
+      -34.5
+     ],
+     [
+      "PNB",
+      4.3
+     ],
+     [
+      "INDUSINDBK",
+      13.2
+     ],
+     [
+      "BANKBARODA",
+      13.9
+     ],
+     [
+      "UNIONBANK",
+      17.0
+     ]
+    ],
+    "leader_abs": "ICICIBANK",
+    "leader_pts": 1135.6,
+    "leader_share_of_abs": 0.32,
+    "leader_changed": true,
+    "top5_abs_share": 0.873
+   },
+   {
+    "month": "2026-07",
+    "sessions": 23,
+    "index_move_pts": -278.1,
+    "explained_pts": -860.7,
+    "top5_add": [
+     [
+      "ICICIBANK",
+      555.6
+     ],
+     [
+      "FEDERALBNK",
+      142.7
+     ],
+     [
+      "INDUSINDBK",
+      115.3
+     ],
+     [
+      "IDFCFIRSTB",
+      88.0
+     ],
+     [
+      "PNB",
+      42.0
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -985.2
+     ],
+     [
+      "AXISBANK",
+      -602.3
+     ],
+     [
+      "BANKBARODA",
+      -109.1
+     ],
+     [
+      "YESBANK",
+      -88.8
+     ],
+     [
+      "KOTAKBANK",
+      -28.3
+     ]
+    ],
+    "leader_abs": "HDFCBANK",
+    "leader_pts": -985.2,
+    "leader_share_of_abs": 0.354,
+    "leader_changed": true,
+    "top5_abs_share": 0.864
+   },
+   {
+    "month": "2026-08",
+    "sessions": 21,
+    "index_move_pts": 760.1,
+    "explained_pts": 476.3,
+    "top5_add": [
+     [
+      "KOTAKBANK",
+      411.9
+     ],
+     [
+      "AXISBANK",
+      367.0
+     ],
+     [
+      "SBIN",
+      192.5
+     ],
+     [
+      "ICICIBANK",
+      182.1
+     ],
+     [
+      "UNIONBANK",
+      64.6
+     ]
+    ],
+    "top5_drag": [
+     [
+      "HDFCBANK",
+      -815.4
+     ],
+     [
+      "BANKBARODA",
+      -13.7
+     ],
+     [
+      "FEDERALBNK",
+      -10.6
+     ],
+     [
+      "YESBANK",
+      3.6
+     ],
+     [
+      "INDUSINDBK",
+      5.3
+     ]
+    ],
+    "leader_abs": "HDFCBANK",
+    "leader_pts": -815.4,
+    "leader_share_of_abs": 0.378,
+    "leader_changed": false,
+    "top5_abs_share": 0.913
+   },
+   {
+    "month": "2026-09",
+    "sessions": 21,
+    "index_move_pts": -3391.9,
+    "explained_pts": -3043.8,
+    "top5_add": [
+     [
+      "HDFCBANK",
+      10.6
+     ],
+     [
+      "PNB",
+      -7.8
+     ],
+     [
+      "BANKBARODA",
+      -28.5
+     ],
+     [
+      "KOTAKBANK",
+      -31.1
+     ],
+     [
+      "CANBK",
+      -47.6
+     ]
+    ],
+    "top5_drag": [
+     [
+      "ICICIBANK",
+      -1304.4
+     ],
+     [
+      "SBIN",
+      -597.9
+     ],
+     [
+      "AXISBANK",
+      -376.9
+     ],
+     [
+      "FEDERALBNK",
+      -183.5
+     ],
+     [
+      "INDUSINDBK",
+      -142.9
+     ]
+    ],
+    "leader_abs": "ICICIBANK",
+    "leader_pts": -1304.4,
+    "leader_share_of_abs": 0.426,
+    "leader_changed": true,
+    "top5_abs_share": 0.85
+   },
+   {
+    "month": "2026-10",
+    "sessions": 20,
+    "index_move_pts": 53.9,
+    "explained_pts": 529.5,
+    "top5_add": [
+     [
+      "ICICIBANK",
+      746.1
+     ],
+     [
+      "KOTAKBANK",
+      621.1
+     ],
+     [
+      "FEDERALBNK",
+      105.1
+     ],
+     [
+      "PNB",
+      64.4
+     ],
+     [
+      "UNIONBANK",
+      55.2
+     ]
+    ],
+    "top5_drag": [
+     [
+      "YESBANK",
+      -344.1
+     ],
+     [
+      "HDFCBANK",
+      -312.3
+     ],
+     [
+      "AUBANK",
+      -161.4
+     ],
+     [
+      "IDFCFIRSTB",
+      -154.2
+     ],
+     [
+      "INDUSINDBK",
+      -78.8
+     ]
+    ],
+    "leader_abs": "ICICIBANK",
+    "leader_pts": 746.1,
+    "leader_share_of_abs": 0.272,
+    "leader_changed": false,
+    "top5_abs_share": 0.796
+   }
+  ],
+  "rolling20": {
+   "as_of": "2026-10-30",
+   "leader_abs": "ICICIBANK",
+   "leader_pos": "ICICIBANK",
+   "leader_neg": "YESBANK",
+   "leader_share": 0.272,
+   "top5_share": 0.796,
+   "leader_changes": 44,
+   "events": [
+    {
+     "date": "2026-01-02",
+     "from": "ICICIBANK",
+     "to": "SBIN",
+     "to_pts_20s": 314.0,
+     "leader_share": 0.224
+    },
+    {
+     "date": "2026-01-05",
+     "from": "SBIN",
+     "to": "HDFCBANK",
+     "to_pts_20s": -434.2,
+     "leader_share": 0.327
+    },
+    {
+     "date": "2026-02-04",
+     "from": "HDFCBANK",
+     "to": "AXISBANK",
+     "to_pts_20s": 339.5,
+     "leader_share": 0.199
+    },
+    {
+     "date": "2026-02-05",
+     "from": "AXISBANK",
+     "to": "SBIN",
+     "to_pts_20s": 437.7,
+     "leader_share": 0.223
+    },
+    {
+     "date": "2026-03-04",
+     "from": "SBIN",
+     "to": "HDFCBANK",
+     "to_pts_20s": -1168.4,
+     "leader_share": 0.386
+    },
+    {
+     "date": "2026-03-10",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -1302.1,
+     "leader_share": 0.319
+    },
+    {
+     "date": "2026-03-20",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -1988.4,
+     "leader_share": 0.268
+    },
+    {
+     "date": "2026-03-25",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -2004.7,
+     "leader_share": 0.264
+    },
+    {
+     "date": "2026-03-27",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -2235.0,
+     "leader_share": 0.255
+    },
+    {
+     "date": "2026-03-30",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -2517.6,
+     "leader_share": 0.237
+    },
+    {
+     "date": "2026-04-01",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -2148.6,
+     "leader_share": 0.242
+    },
+    {
+     "date": "2026-04-02",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -1950.3,
+     "leader_share": 0.24
+    },
+    {
+     "date": "2026-04-09",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -638.1,
+     "leader_share": 0.318
+    },
+    {
+     "date": "2026-04-10",
+     "from": "HDFCBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": -613.9,
+     "leader_share": 0.294
+    },
+    {
+     "date": "2026-04-13",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -584.0,
+     "leader_share": 0.248
+    },
+    {
+     "date": "2026-04-15",
+     "from": "HDFCBANK",
+     "to": "AXISBANK",
+     "to_pts_20s": 566.9,
+     "leader_share": 0.273
+    },
+    {
+     "date": "2026-04-20",
+     "from": "AXISBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -736.8,
+     "leader_share": 0.271
+    },
+    {
+     "date": "2026-04-21",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 688.6,
+     "leader_share": 0.262
+    },
+    {
+     "date": "2026-04-23",
+     "from": "ICICIBANK",
+     "to": "AXISBANK",
+     "to_pts_20s": 775.6,
+     "leader_share": 0.325
+    },
+    {
+     "date": "2026-04-29",
+     "from": "AXISBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": 564.6,
+     "leader_share": 0.205
+    },
+    {
+     "date": "2026-05-08",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -478.0,
+     "leader_share": 0.224
+    },
+    {
+     "date": "2026-05-13",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": -876.5,
+     "leader_share": 0.245
+    },
+    {
+     "date": "2026-05-18",
+     "from": "ICICIBANK",
+     "to": "SBIN",
+     "to_pts_20s": -829.0,
+     "leader_share": 0.253
+    },
+    {
+     "date": "2026-05-20",
+     "from": "SBIN",
+     "to": "ICICIBANK",
+     "to_pts_20s": -1120.2,
+     "leader_share": 0.268
+    },
+    {
+     "date": "2026-05-22",
+     "from": "ICICIBANK",
+     "to": "SBIN",
+     "to_pts_20s": -865.4,
+     "leader_share": 0.277
+    },
+    {
+     "date": "2026-06-04",
+     "from": "SBIN",
+     "to": "HDFCBANK",
+     "to_pts_20s": -855.3,
+     "leader_share": 0.358
+    },
+    {
+     "date": "2026-06-10",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 503.4,
+     "leader_share": 0.314
+    },
+    {
+     "date": "2026-07-06",
+     "from": "ICICIBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": 1677.7,
+     "leader_share": 0.356
+    },
+    {
+     "date": "2026-07-14",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 764.4,
+     "leader_share": 0.313
+    },
+    {
+     "date": "2026-07-23",
+     "from": "ICICIBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -909.6,
+     "leader_share": 0.263
+    },
+    {
+     "date": "2026-08-24",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": -297.8,
+     "leader_share": 0.264
+    },
+    {
+     "date": "2026-08-25",
+     "from": "ICICIBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": 232.9,
+     "leader_share": 0.216
+    },
+    {
+     "date": "2026-08-26",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -433.4,
+     "leader_share": 0.282
+    },
+    {
+     "date": "2026-09-04",
+     "from": "HDFCBANK",
+     "to": "SBIN",
+     "to_pts_20s": -475.6,
+     "leader_share": 0.266
+    },
+    {
+     "date": "2026-09-07",
+     "from": "SBIN",
+     "to": "HDFCBANK",
+     "to_pts_20s": -427.5,
+     "leader_share": 0.263
+    },
+    {
+     "date": "2026-09-11",
+     "from": "HDFCBANK",
+     "to": "SBIN",
+     "to_pts_20s": -426.7,
+     "leader_share": 0.211
+    },
+    {
+     "date": "2026-09-15",
+     "from": "SBIN",
+     "to": "ICICIBANK",
+     "to_pts_20s": -642.7,
+     "leader_share": 0.312
+    },
+    {
+     "date": "2026-10-09",
+     "from": "ICICIBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": 446.1,
+     "leader_share": 0.207
+    },
+    {
+     "date": "2026-10-12",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": -444.1,
+     "leader_share": 0.204
+    },
+    {
+     "date": "2026-10-13",
+     "from": "ICICIBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": 281.5,
+     "leader_share": 0.182
+    },
+    {
+     "date": "2026-10-16",
+     "from": "KOTAKBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 478.2,
+     "leader_share": 0.201
+    },
+    {
+     "date": "2026-10-19",
+     "from": "ICICIBANK",
+     "to": "KOTAKBANK",
+     "to_pts_20s": 414.6,
+     "leader_share": 0.179
+    },
+    {
+     "date": "2026-10-21",
+     "from": "KOTAKBANK",
+     "to": "HDFCBANK",
+     "to_pts_20s": -665.5,
+     "leader_share": 0.246
+    },
+    {
+     "date": "2026-10-28",
+     "from": "HDFCBANK",
+     "to": "ICICIBANK",
+     "to_pts_20s": 738.3,
+     "leader_share": 0.254
+    }
+   ],
+   "leader_tenure_sessions": 3,
+   "ranking_20s": [
+    [
+     "ICICIBANK",
+     746.1
+    ],
+    [
+     "KOTAKBANK",
+     621.1
+    ],
+    [
+     "FEDERALBNK",
+     105.1
+    ],
+    [
+     "PNB",
+     64.4
+    ],
+    [
+     "UNIONBANK",
+     55.2
+    ],
+    [
+     "BANKBARODA",
+     28.9
+    ],
+    [
+     "SBIN",
+     16.2
+    ],
+    [
+     "CANBK",
+     -11.5
+    ],
+    [
+     "AXISBANK",
+     -45.5
+    ],
+    [
+     "INDUSINDBK",
+     -78.8
+    ]
+   ]
+  },
+  "breadth_div": {
+   "as_of": "2026-10-30",
+   "ew20_pct": -1.48,
+   "cw20_pct": 0.1,
+   "ew_minus_cw_pp": -1.58,
+   "pct_members_up_last_session": 21.4,
+   "series_tail": [
+    [
+     "2026-10-16",
+     -2.48
+    ],
+    [
+     "2026-10-19",
+     -1.37
+    ],
+    [
+     "2026-10-21",
+     -1.25
+    ],
+    [
+     "2026-10-22",
+     -1.19
+    ],
+    [
+     "2026-10-23",
+     -1.99
+    ],
+    [
+     "2026-10-26",
+     -2.0
+    ],
+    [
+     "2026-10-27",
+     -1.53
+    ],
+    [
+     "2026-10-28",
+     -1.25
+    ],
+    [
+     "2026-10-29",
+     -0.62
+    ],
+    [
+     "2026-10-30",
+     -1.58
+    ]
+   ],
+   "min": [
+    "2026-07-08",
+    -2.83
+   ],
+   "max": [
+    "2026-01-16",
+    3.34
+   ]
+  }
+ },
+ "DESK_ILLUSTRATIVE": {
+  "note": "Desk is risk-off (NIFTY < 200-DMA at the 30 Oct signal), book = 100 % liquid fund; this uses the 30 Oct plan's ranked watchlist as a hypothetical 66 %-equity equal-weight book over the last 60 sessions. ILLUSTRATIVE, not P&L.",
+  "names": [
+   "CUPID",
+   "LAURUSLABS",
+   "SHREEJISPG",
+   "SHILPAMED",
+   "WELCORP",
+   "SANSERA",
+   "TFCILTD",
+   "RATNAVEER",
+   "CPPLUS",
+   "SKYGOLD",
+   "ATHERENERG",
+   "GLAND",
+   "DIVISLAB",
+   "AEROFLEX",
+   "SONACOMS",
+   "SYRMA",
+   "ACUTAAS",
+   "PAISALO",
+   "SAILIFE",
+   "FCL"
+  ],
+  "sessions": 60,
+  "from": "2026-08-10",
+  "to": "2026-11-04",
+  "book_ret_pct_approx": 16.92,
+  "nifty_ret_pct": -2.48,
+  "active_pp": 19.4,
+  "top5_contrib_pp": [
+   [
+    "RATNAVEER",
+    2.15
+   ],
+   [
+    "AEROFLEX",
+    1.12
+   ],
+   [
+    "TFCILTD",
+    1.09
+   ],
+   [
+    "WELCORP",
+    1.04
+   ],
+   [
+    "FCL",
+    0.98
+   ]
+  ],
+  "bottom5_contrib_pp": [
+   [
+    "SYRMA",
+    0.31
+   ],
+   [
+    "SONACOMS",
+    0.33
+   ],
+   [
+    "CPPLUS",
+    0.34
+   ],
+   [
+    "SAILIFE",
+    0.45
+   ],
+   [
+    "PAISALO",
+    0.46
+   ]
+  ],
+  "names_up": 20,
+  "nifty_top5_same_window": [
+   [
+    "KOTAKBANK",
+    105.2
+   ],
+   [
+    "BHARTIARTL",
+    68.6
+   ],
+   [
+    "ETERNAL",
+    56.5
+   ],
+   [
+    "ADANIPORTS",
+    35.4
+   ],
+   [
+    "DRREDDY",
+    25.8
+   ]
+  ]
+ },
+ "DATA_FLAGS": []
+}

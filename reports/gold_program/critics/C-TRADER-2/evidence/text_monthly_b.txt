@@ -1,0 +1,270 @@
+GOLD
+GOLD TERMINAL
+spot, COMEX, MCX, positioning (COT), physical, macro, contracts, health check, pre-open fair value · 03:50 IST
+LIVE · YAHOO (CACHED FET…
+PAPER · CONTEXT
+↻
+COMEX DEC-26
+settle — $4,072.2 last Wed 04 Nov · Yahoo, not settlement
+last $4,072.2 ▲+3.28 % Yahoo, not settlement · 03:29 IST
+LIVE · YAHOO (CACHED FET…
+USD/INR
+94.63
+Yahoo INR=X · 00:13 IST
+10-Y REAL
+2.62 %
+TIPS · Mon 02 Nov
+MCX GOLD DEC-26
+₹1,40,186
+Tue 03 Nov settlement · basis +1.58 % at the at the Tue 03 Nov settlement vs that session's duty-paid landed vs that session's duty-paid
+COT FUNDS NET (MANAGED MONEY)
++105,562
++1,356 w/w · as of Tue 27 Oct
+◷ MCX opens in 5h09m
+spot proxy · COMEX front GC1 · COMEX matched month GCZ26 · MCX GOLD DEC-26
+CONTRACT
+MCX
+NSE (n/a)
+BSE (n/a)
+GOLD
+GOLDM
+GOLDTEN
+GOLDGUINEA
+GOLDPETAL
+front (by OI)
+DEC-26 · 2026-12-04 · OI 16,282
+FEB-27 · 2027-02-05 · OI 1,180
+APR-27 · 2027-04-05 · OI 70
+JUN-27 · 2027-06-04 · OI 2
+AUG-27 · 2027-08-05 · OI 0
+OCT-27 · 2027-10-05 · OI 0
+OPTIONS
+↔ COMEX DEC-26 ↔ GC1
+UNIT
+$/oz
+₹/10 g
+₹/g
+$/g
+₹/tola
+WINDOW
+D
+W
+M
+LAYER
+[B]
+[P]
+HEALTH
+DAILY
+WEEKLY
+MONTHLY
+POSITIONING
+PHYSICAL
+MACRO
+CONTRACTS
+LEARN
+MONTHLY CANDLES SINCE 2000
+LOG
+₹
+ARITHMETIC
+DELAYED · DATA-SERVICE GOLD…
+?
+$/oz · log axis · COMEX front (continuous) · as of Wed 04 Nov
+[B]The whole move since 2000, one candle per month. The ₹ toggle shows what the same ounce cost to land in India before duty.
+	
+	
+
+	
+	
+RETURN LADDER
+CONTEXT
+DELAYED · DATA-SERVICE GOLD…
+?
+to Wed 04 Nov · USD/INR now 94.63 · as of Wed 04 Nov
+[B]How gold did over each horizon in dollars, as the landed price in India (₹/10 g before duty), and with the dollar's own move taken out (the DXY basket).
+HORIZON	GOLD $/OZ	LANDED ₹/10 G	IN THE DXY BASKET	PATH
+3 d	+4.4 %	+3.8 %	+4.0 %	
+
+7 d	+0.5 %	−0.1 %	−0.2 %	
+
+30 d	−2.1 %	−3.8 %	−2.7 %	
+
+60 d	−9.1 %	−8.9 %	−6.9 %	
+
+6 m	−13.3 %	−13.8 %	−10.2 %	
+
+1 y	+2.8 %	+9.6 %	+4.1 %	
+
+5 y	+127.0 %	+188.6 %	+144.2 %	
+
+10 y	+212.3 %	+343.2 %	+226.7 %	
+
+15 y	+131.9 %	+347.4 %	+206.1 %	
+SEASONALITY
+CONTEXT · G-STUDY / G-MACRO H3
+DELAYED · DATA-SERVICE GOLD…
+?
+since 2000 · as of Wed 04 Nov
+[B]The average month, month by month, with how often it was positive (the hit rate). Hover a cell for the spread of outcomes — it dwarfs the average; no month is a rule.
+Jan
++3.0%
+65 %
+Feb
++1.2%
+58 %
+Mar
++0.2%
+46 %
+Apr ✦
++1.3%
+62 %
+May
++0.3%
+50 %
+Jun
+−0.9%
+42 %
+Jul
++0.9%
+58 %
+Aug
++2.5%
+73 %
+Sep
++0.4%
+48 %
+Oct ✦
+−0.1%
+48 %
+Nov ✦
++1.4%
+59 %
+Dec
++1.4%
+65 %
+Mean monthly return and hit rate since 2000 (GC=F); ✦ = Indian festival month. Dec/Jan strong historically; no month passes in both halves — in USD (G-MACRO H3) or in rupees once the +1 %/month drift is removed (GS-P4, 26 Oct 2026); festival months do not pass; walk-forward best-6-months +0.3 %/yr USD, +1.1 %/yr rupees after costs — both FAIL. Context, not a signal.
+OFFICIAL SECTOR · NET PURCHASES
+CONTEXT
+STALE
+?
+Δ m/m and Δ 12 m in tonnes per central bank · PBoC streak 1 month (to 2026-09) · holdings table on PHYSICAL · as of Wed 01 Jul
+[B]Who among the central banks bought or sold last month and over the year, each bar with the month the data describes (the IMF publishes one to two months late). How much each holds is the table on PHYSICAL — the same table is not printed twice.
+CTRY
+MONTH
+Δ m/m (t)
+Δ m/m t
+Δ 12 m t
+POL
+2026-09
++24.9
++157.5
+CHN
+2026-09
++23.0
++106.1
+TUR
+2026-08
++18.9
+−5.8
+RUS
+2026-09
+−6.2
+−65.3
+KAZ
+2026-09
++4.8
++57.5
+AUT
+2026-09
+0.0
+0.0
+BRA
+2026-09
+0.0
++27.3
+CHE
+2026-09
+0.0
+0.0
+DEU
+2026-09
+0.0
+−1.2
+ESP
+2026-09
+0.0
+0.0
+FRA
+2026-09
+0.0
+0.0
+GBR
+2026-09
+0.0
+0.0
+IND
+2026-08
+0.0
++0.5
+ITA
+2026-09
+0.0
+0.0
+JPN
+2026-09
+0.0
+0.0
+NLD
+2026-09
+0.0
+0.0
+PRT
+2026-09
+0.0
+0.0
+SAU
+2026-08
+0.0
+0.0
+USA
+2026-07
+0.0
+0.0
+PHYSICAL FLOWS · MONTHLY
+CONTEXT
+DELAYED · SGE · PIB · SWISS…
+?
+[B]Where metal moved last month: SGE withdrawals, India's import bill, Swiss exports to India, Indian gold-ETF money.
+SGE WITHDRAWALS
+92.1 t
+INDIA GOLD IMPORTS
+—
+SWISS EXPORTS TO INDIA
+—
+AMFI GOLD-ETF NET FLOW
+₹4,451 cr
+AMFI GOLD-ETF AUM
+₹1,86,310 cr ≈ 130.8 t
+Sources: Shanghai Gold Exchange, PIB, Swiss Federal Customs, AMFI — displayed with attribution on this private terminal; not re-served.
+SUPPLY AND DEMAND · WGC QUARTERLY
+CONTEXT
+DELAYED · WORLD GOLD COUNCIL
+?
+[B]Each bar is a quarter of demand by use; the dashed line is that quarter's supply (mine, recycled, hedging). A quarter where the bar rises above the line was balanced by OTC and stock changes.
+2024-12-31
+2026-06-30
+jewellery
+technology
+bar coin
+etf
+central banks
+otc other
+supply (mine + recycled + hedging)
+Source: World Gold Council (Goldhub) — displayed with attribution on this private terminal; not re-served or exported.
+LIQUIDITY AND INFLATION CONTEXT
+EXPAND
+CONTEXT
+DELAYED · FRED · GPR
+?
+[B]Slow-moving context: how expensive gold is against the money supply, how stressed credit is, how tense the world is, what inflation is expected to be — each as a percentile of its own stored history, printed only once 60 observations exist.
+gold / M2: 0.174 · 14 months since 2025-10 — too few for a percentile · HY OAS (bp): 3.40 · 14 obs. since 2025-10 — too few for a percentile · GPR monthly: 150.52 · 13 obs. since 2025-10 — too few for a percentile · 10-y inflation expectation (Cleveland Fed): 2.73 · 13 obs. since 2025-10 — too few for a percentile · 5y5y forward inflation: 2.21 · 14 obs. since 2025-10 — too few for a percentile
+Prices: $4,070.8 last stored close ≈ ₹1,23,851 landed ₹/10 g at today's USD/INR (no duty).

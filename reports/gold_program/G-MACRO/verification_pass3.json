@@ -1,0 +1,68 @@
+[
+ {
+  "name": "SPDR GLD historical data page",
+  "url": "https://www.spdrgoldshares.com/usa/historical-data/",
+  "status": 200,
+  "latency_ms": 1146,
+  "hits": []
+ },
+ {
+  "name": "SPDR GLD home",
+  "url": "https://www.spdrgoldshares.com/usa/",
+  "status": 200,
+  "latency_ms": 557,
+  "hits": []
+ },
+ {
+  "name": "Atlanta Fed MPT download links",
+  "url": "https://www.atlantafed.org/cenfis/market-probability-tracker",
+  "status": 200,
+  "latency_ms": 1331,
+  "hits": [
+   "/-/media/Project/Atlanta/FRBA/Documents/research-and-data/data/market-probability-tracker/mpt_histdata.xlsx"
+  ]
+ },
+ {
+  "name": "BEA release schedule (dates)",
+  "url": "https://www.bea.gov/news/schedule",
+  "status": 200,
+  "latency_ms": 1798,
+  "hits": []
+ },
+ {
+  "name": "FRED releases calendar (HTML, no key)",
+  "url": "https://fred.stlouisfed.org/releases/calendar",
+  "status": "ERR",
+  "note": "[Errno 60] Operation timed out"
+ },
+ {
+  "name": "BLS schedule via api (no) / alt: BLS economic news release schedule JSON?",
+  "url": "https://www.bls.gov/schedule/news_release/2026_sched.htm",
+  "status": 403,
+  "latency_ms": 796,
+  "hits": []
+ },
+ {
+  "name": "US Treasury XML feed real yields",
+  "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_real_yield_curve&field_tdr_date_value=2026",
+  "status": 200,
+  "latency_ms": 1592,
+  "hits": []
+ },
+ {
+  "name": "iShares IAU product page",
+  "url": "https://www.ishares.com/us/products/239561/ishares-gold-trust-fund",
+  "status": 200,
+  "latency_ms": 1429,
+  "hits": []
+ },
+ {
+  "name": "WGC goldhub ETF flows: any public csv/json",
+  "url": "https://www.gold.org/goldhub/data/gold-etfs-holdings-and-flows",
+  "status": 200,
+  "latency_ms": 236,
+  "hits": [
+   "https://www.gold.org/sites/default/files/downloads/2026-01/template%20%282%29_0.xlsx"
+  ]
+ }
+]

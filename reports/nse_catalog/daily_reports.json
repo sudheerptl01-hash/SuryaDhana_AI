@@ -1,0 +1,748 @@
+{
+ "CM": {
+  "VaR Begin Day File": {
+   "file": "C_VAR1_25092026_1.DAT",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/var/",
+   "date": "25-Sep-2026"
+  },
+  "VaR 1st Intra-day File": {
+   "file": "C_VAR1_25092026_2.DAT",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/var/",
+   "date": "25-Sep-2026"
+  },
+  "VaR 2nd Intra-day File": {
+   "file": "C_VAR1_25092026_3.DAT",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/var/",
+   "date": "25-Sep-2026"
+  },
+  "VaR 3rd Intra-day File": {
+   "file": "C_VAR1_25092026_4.DAT",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/var/",
+   "date": "25-Sep-2026"
+  },
+  "VaR 4th Intra-day File": {
+   "file": "C_VAR1_25092026_5.DAT",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/var/",
+   "date": "25-Sep-2026"
+  },
+  "VaR End of Day File": {
+   "file": "C_VAR1_25092026_6.DAT",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/var/",
+   "date": "25-Sep-2026"
+  },
+  "Haircut for Approved Securities(csv)": {
+   "file": "APPSEC_COLLVAL_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "Haircut for Mutual Funds(csv)": {
+   "file": "MF_VAR_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/equities/mf_haircut/",
+   "date": "25-Sep-2026"
+  },
+  "Bhavcopy (PR)(zip)": {
+   "file": "PR250926.zip",
+   "path": "https://nsearchives.nseindia.com//archives/equities/bhavcopy/pr/",
+   "date": "25-Sep-2026"
+  },
+  "Corporate Bonds Traded Report (csv)": {
+   "file": "corpbond25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/equities/corpbond/",
+   "date": "25-Sep-2026"
+  },
+  "Market Activity Report (csv)": {
+   "file": "MA250926.csv",
+   "path": "https://nsearchives.nseindia.com//archives/equities/mkt/",
+   "date": "25-Sep-2026"
+  },
+  "Security-wise Delivery Positions (DAT)": {
+   "file": "MTO_25092026.DAT",
+   "path": "https://nsearchives.nseindia.com//archives/equities/mto/",
+   "date": "25-Sep-2026"
+  },
+  "Latest change (csv)": {
+   "file": "series_change.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "List of securities for auction (csv)": {
+   "file": "AUB_2026181_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/nsccl/",
+   "date": "25-Sep-2026"
+  },
+  "Daily Volatility (CSV)": {
+   "file": "CMVOLT_25092026.CSV",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/volt/",
+   "date": "25-Sep-2026"
+  },
+  "Bulk Deals (csv)": {
+   "file": "bulk.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "Block Deals (csv)": {
+   "file": "block.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "Short Selling (csv)": {
+   "file": "shortselling_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/equities/shortSelling/",
+   "date": "25-Sep-2026"
+  },
+  "Margin Trading Disclosure (csv)": {
+   "file": "mrg_trading_240926.zip",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "Price Band changes from next trade date (csv)": {
+   "file": "eq_band_changes_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "STT Non-applicability Report (csv)": {
+   "file": "C_STT_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "STT Equity Oriented Funds (csv)": {
+   "file": "C_STT_IND_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "Settlement Statistics - Current Settlement (doc)": {
+   "file": "Daily_Settlement_Statistics_25092026.doc",
+   "path": "https://nsearchives.nseindia.com//content/nsccl/",
+   "date": "25-Sep-2026"
+  },
+  "CM-Close out prices (.csv)": {
+   "file": "CSQR_M2026181_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/equities/csqr/",
+   "date": "25-Sep-2026"
+  },
+  "Full Bhavcopy and Security Deliverable data": {
+   "file": "sec_bhavdata_full_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//products/content/",
+   "date": "25-Sep-2026"
+  },
+  "52 Week High Low Report": {
+   "file": "CM_52_wk_High_low_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/",
+   "date": "25-Sep-2026"
+  },
+  "CM - Price Band complete list": {
+   "file": "sec_list_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "Latency Statistics (csv)": {
+   "file": "CM_Latency_stats24092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/",
+   "date": "25-Sep-2026"
+  },
+  "Update Circuit breaker": {
+   "file": "circuit_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//products/content/equities/equities/",
+   "date": "25-Sep-2026"
+  },
+  "Bhavcopy File (DAT)": {
+   "file": "FCM_INTRM_BC25092026.DAT",
+   "path": "https://nsearchives.nseindia.com//content/trdops/",
+   "date": "25-Sep-2026"
+  },
+  "CM-UDiFF Common Bhavcopy Final (zip)": {
+   "file": "BhavCopy_NSE_CM_0_0_0_20260925_F_0000.csv.zip",
+   "path": "https://nsearchives.nseindia.com//content/cm/",
+   "date": "25-Sep-2026"
+  },
+  "Surveillance Indicator": {
+   "file": "REG_IND250926.csv",
+   "path": "https://nsearchives.nseindia.com//content/cm/",
+   "date": "25-Sep-2026"
+  },
+  "Surveillance Indicator New": {
+   "file": "REG1_IND250926.csv",
+   "path": "https://nsearchives.nseindia.com//content/cm/",
+   "date": "25-Sep-2026"
+  },
+  "CM - MII - Security File (.gz) (NSE Listed securities)": {
+   "file": "NSE_CM_security_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/cm/",
+   "date": "25-Sep-2026"
+  },
+  "PE Ratio": {
+   "file": "PE_250926.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/peDetail/",
+   "date": "25-Sep-2026"
+  },
+  "CM - MII - Security File (.gz) (NSE Listed and BSE Exclusive securities)": {
+   "file": "NSE_CM_security_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/cm/interop/",
+   "date": "25-Sep-2026"
+  },
+  "Haircut for All Approved Securities": {
+   "file": "APPSEC_ALL_25092026.CSV",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "SME - Bhavcopy file (csv)": {
+   "file": "sme25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/sme/bhavcopy/",
+   "date": "25-Sep-2026"
+  },
+  "SME-Band-Complete (csv)": {
+   "file": "sme_bands_complete_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//sme/content/price_band/archieves/",
+   "date": "25-Sep-2026"
+  }
+ },
+ "INDEX": {
+  "NIFTY 50 Top 10 Holdings (csv)": {
+   "file": "top10nifty50_250926.csv",
+   "path": "https://nsearchives.nseindia.com//content/indices/",
+   "date": "25-Sep-2026"
+  },
+  "Daily Snapshot (csv)": {
+   "file": "ind_close_all_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/indices/",
+   "date": "25-Sep-2026"
+  }
+ },
+ "FO": {
+  "F&O-Begin day SPAN   file": {
+   "file": "nsccl.20260925.i1.zip",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/span/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-1st Intra-day SPAN  file": {
+   "file": "nsccl.20260925.i2.zip",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/span/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-2nd Intra-day SPAN  file": {
+   "file": "nsccl.20260925.i3.zip",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/span/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-3rd Intra-day SPAN  file": {
+   "file": "nsccl.20260925.i4.zip",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/span/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-4th Intra-day SPAN  file": {
+   "file": "nsccl.20260925.i5.zip",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/span/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-End of day SPAN  file": {
+   "file": "nsccl.20260925.s.zip",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/span/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Haircut for Approved Securities(csv)": {
+   "file": "APPSEC_COLLVAL_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Haircut for Mutual Funds(csv)": {
+   "file": "MF_VAR_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/fo/mf_haircut/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Security in ban period for F&O segment (csv)": {
+   "file": "fo_secban_28092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/fo/sec_ban/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Bhavcopy (zip)": {
+   "file": "fo.zip",
+   "path": "https://nsearchives.nseindia.com//content/fo/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-NCL Open Interest (zip)": {
+   "file": "ncloi_25092026.zip",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/mwpl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Combine Open Interest across exchanges (zip)": {
+   "file": "combineoi_25092026.zip",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/mwpl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Clients Position % greater than equal to 3% of Stock MWPL(xls)": {
+   "file": "mwpl_cli_24092026.xls",
+   "path": "https://nsearchives.nseindia.com//content/nsccl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Participant wise Trading Volumes (csv)": {
+   "file": "fao_participant_vol_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/nsccl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Participant wise Open Interest (csv)": {
+   "file": "fao_participant_oi_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/nsccl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Top 10 Clearing Member Volumes (csv)": {
+   "file": "fao_top10cm_to_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/nsccl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Market Activity Report (zip)": {
+   "file": "fo25092026.zip",
+   "path": "https://nsearchives.nseindia.com//archives/fo/mkt/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Daily Settlement Prices (csv)": {
+   "file": "FOSett_prce_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/sett/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Daily Volatility (csv)": {
+   "file": "FOVOLT_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/volt/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Client-wise Position Limits (lst)": {
+   "file": "oi_cli_limit_25-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//content/nsccl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-FII derivatives statistics (xls)": {
+   "file": "fii_stats_25-Sep-2026.xls",
+   "path": "https://nsearchives.nseindia.com//content/fo/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Category-Wise Turnover (xls)": {
+   "file": "fo_cat_turnover_250926.xls",
+   "path": "https://nsearchives.nseindia.com//archives/fo/cat/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Exposure Limit file (csv)": {
+   "file": "ael_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/exp_lim/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Latency Statistics (csv)": {
+   "file": "FO_Latency_stats24092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Bhavcopy File (DAT)": {
+   "file": "FNO_BC25092026.DAT",
+   "path": "https://nsearchives.nseindia.com//content/trdops/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Combined Delta Equivalent Open Interest across exchanges (csv)": {
+   "file": "combineoi_deleq_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/nsccl/mwpl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-UDiFF Common Bhavcopy Final (zip)": {
+   "file": "BhavCopy_NSE_FO_0_0_0_20260925_F_0000.csv.zip",
+   "path": "https://nsearchives.nseindia.com//content/fo/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-MII \u2013 Contract File (.gz) (NSE Exclusive contract)": {
+   "file": "NSE_FO_contract_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/fo/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-MII - Spd Contract File (.gz)": {
+   "file": "NSE_FO_spdcontract_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/fo/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-NCL Contract Delta (csv)": {
+   "file": "Contract_Delta_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/nsccl/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-MII \u2013 Contract File (.gz) (NSE and BSE Exclusive Contract)": {
+   "file": "NSE_FO_contract_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/fo/interop/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Haircut for All Approved Securities": {
+   "file": "APPSEC_ALL_25092026.CSV",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "F&O-Contract wise ELM file": {
+   "file": "F_AEL_OPT_CONTRACTS_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/fo/",
+   "date": "25-Sep-2026"
+  }
+ },
+ "SLB": {},
+ "CD": {
+  "CD-Begin day SPAN   file": {
+   "file": "nsccl_x.20260925.i1.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/span/",
+   "date": "25-Sep-2026"
+  },
+  "CD-1st Intra-day SPAN  file": {
+   "file": "nsccl_x.20260925.i2.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/span/",
+   "date": "25-Sep-2026"
+  },
+  "CD-2nd Intra-day SPAN  file": {
+   "file": "nsccl_x.20260925.i3.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/span/",
+   "date": "25-Sep-2026"
+  },
+  "CD-3rd Intra-day SPAN  file": {
+   "file": "nsccl_x.20260925.i4.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/span/",
+   "date": "25-Sep-2026"
+  },
+  "CD-4th Intra-day SPAN  file": {
+   "file": "nsccl_x.20260925.i5.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/span/",
+   "date": "25-Sep-2026"
+  },
+  "CD-5th Intra-day SPAN  file": {
+   "file": "nsccl_x.20260925.i6.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/span/",
+   "date": "25-Sep-2026"
+  },
+  "CD-End of day SPAN  file": {
+   "file": "nsccl_x.20260925.s.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/span/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Haircut for Approved Securities(csv)": {
+   "file": "APPSEC_COLLVAL_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Daily Settlement Prices(csv)": {
+   "file": "CDSett_prce_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/cd/sett/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Cross Currency - Settlement Prices": {
+   "file": "CCRSett_prce_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/cd/sett/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Haircut for Mutual Funds(csv)": {
+   "file": "MF_VAR_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/cd/mf_haircut/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Daily Clientwise OI Limits(lst)": {
+   "file": "x_oi_cli_limit_25-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//archives/cd/cli/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Daily Trading Memberwise OI Limits(lst)": {
+   "file": "x_oi_tm_limit_25-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//archives/cd/cli/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Daily Proprietarywise OI Limits(lst)": {
+   "file": "x_oi_pro_limit_25-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//archives/cd/cli/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Daily Proprietary wise OI Limits in INR (csv)": {
+   "file": "x_oi_pro_single_INR_limit_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/cd/cli/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Daily Market Activity Report(zip)": {
+   "file": "cd25092026.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/mkt_act/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Daily Volatility(csv)": {
+   "file": "X_VOLT_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/cd/volt/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Latency Statistics (csv)": {
+   "file": "CD_Latency_stats24092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/",
+   "date": "25-Sep-2026"
+  },
+  "CD-UDiFF Common Bhavcopy Final (zip)": {
+   "file": "BhavCopy_NSE_CD_0_0_0_20260925_F_0000.csv.zip",
+   "path": "https://nsearchives.nseindia.com//archives/cd/bhav/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Bhavcopy File (DAT)": {
+   "file": "CD_BC25092026.DAT",
+   "path": "https://nsearchives.nseindia.com//content/trdops/",
+   "date": "25-Sep-2026"
+  },
+  "CD-MII - Contract Files (.gz)": {
+   "file": "NSE_CD_contract_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/cd/",
+   "date": "25-Sep-2026"
+  },
+  "CD-MII - Spd Contract Files (.gz)": {
+   "file": "NSE_CD_spdcontract_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/cd/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Participant wise Open Interest (csv)": {
+   "file": "cds_participant_oi_250926.csv",
+   "path": "https://nsearchives.nseindia.com//content/cd/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Participant wise Trading Volumes (xlsx)": {
+   "file": "cds_cat_turnover_250926.xlsx",
+   "path": "https://nsearchives.nseindia.com//content/cd/",
+   "date": "25-Sep-2026"
+  },
+  "CD-Haircut for All Approved Securities": {
+   "file": "APPSEC_ALL_25092026.CSV",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  }
+ },
+ "COM": {
+  "COM-Begin day SPAN   file": {
+   "file": "nsccl_o.20260925.i1.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-1st Intra-day SPAN  file": {
+   "file": "nsccl_o.20260925.i2.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-2nd Intra-day SPAN  file": {
+   "file": "nsccl_o.20260925.i3.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-3rd Intra-day SPAN  file": {
+   "file": "nsccl_o.20260925.i4.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-4th Intra-day SPAN  file": {
+   "file": "nsccl_o.20260925.i5.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-5th Intra-day SPAN  file": {
+   "file": "nsccl_o.20260925.i6.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-6th Intra-day SPAN  file": {
+   "file": "nsccl_o.20260925.i7.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-7th Intra-day SPAN  file": {
+   "file": "nsccl_o.20260925.i8.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-8th Intra-day SPAN  file": {
+   "file": "nsccl_o.20260925.i9.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-End of day SPAN  file": {
+   "file": "nsccl_o.20260925.s.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/span/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Bhavcopy (zip)": {
+   "file": "com.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/bhavcopy/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Daily Market Activity Report": {
+   "file": "comm25092026.zip",
+   "path": "https://nsearchives.nseindia.com//archives/com/mkt_act/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Daily Volatility (csv)": {
+   "file": "CO_VOLT_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/com/volt/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Daily Settlement Prices (csv)": {
+   "file": "CO_sett_prce_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/com/sett/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Client-wise OI Limits (lst)": {
+   "file": "CO_oi_cli_limit_25-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//archives/com/cli/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Trading Member OI Limits (lst)": {
+   "file": "CO_oi_tm_limit_25-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//archives/com/cli/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Haircut for Approved Securities(csv)": {
+   "file": "APPSEC_COLLVAL_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Haircut for Mutual Funds(csv)": {
+   "file": "MF_VAR_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/fo/mf_haircut/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Commodity wise Percentage of overall deposits held in Warehouse": {
+   "file": "Com_wise_percentage-deposits_25092026.pdf",
+   "path": "https://nsearchives.nseindia.com//archives/com/comp_reports/",
+   "date": "25-Sep-2026"
+  },
+  "COM-UDiFF Common Bhavcopy Final (zip)": {
+   "file": "BhavCopy_NSE_CO_0_0_0_20260925_F_0000.csv.zip",
+   "path": "https://nsearchives.nseindia.com//content/com/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Bhavcopy File (DAT)": {
+   "file": "CO_BC25092026.DAT",
+   "path": "https://nsearchives.nseindia.com//content/trdops/",
+   "date": "25-Sep-2026"
+  },
+  "COM-MII - Contract Files (.gz)": {
+   "file": "NSE_COM_contract_25092026.csv.gz",
+   "path": "https://nsearchives.nseindia.com//content/com/",
+   "date": "25-Sep-2026"
+  },
+  "COM-Haircut for All Approved Securities": {
+   "file": "APPSEC_ALL_25092026.CSV",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  }
+ },
+ "WDM": {
+  "Securities available for trading(csv)": {
+   "file": "wdmlist_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//content/historical/WDM/2026/SEP/",
+   "date": "25-Sep-2026"
+  },
+  "Daily Report(zip)": {
+   "file": "dly25092026.zip",
+   "path": "https://nsearchives.nseindia.com//content/debt/",
+   "date": "25-Sep-2026"
+  },
+  "Begin day SPAN  file": {
+   "file": "nsccl_d.20260925.i1.zip",
+   "path": "https://nsearchives.nseindia.com//debt/products/content/",
+   "date": "25-Sep-2026"
+  },
+  "1st Intra-day SPAN  file": {
+   "file": "nsccl_d.20260925.i2.zip",
+   "path": "https://nsearchives.nseindia.com//debt/products/content/",
+   "date": "25-Sep-2026"
+  },
+  "2nd Intra-day SPAN  file": {
+   "file": "nsccl_d.20260925.i3.zip",
+   "path": "https://nsearchives.nseindia.com//debt/products/content/",
+   "date": "25-Sep-2026"
+  },
+  "3rd Intra-day SPAN  file": {
+   "file": "nsccl_d.20260925.i4.zip",
+   "path": "https://nsearchives.nseindia.com//debt/products/content/",
+   "date": "25-Sep-2026"
+  },
+  "4th Intra-day SPAN  file": {
+   "file": "nsccl_d.20260925.i5.zip",
+   "path": "https://nsearchives.nseindia.com//debt/products/content/",
+   "date": "25-Sep-2026"
+  },
+  "End of day SPAN  file": {
+   "file": "nsccl_d.20260925.s.zip",
+   "path": "https://nsearchives.nseindia.com//debt/products/content/",
+   "date": "25-Sep-2026"
+  }
+ },
+ "NBF": {
+  "IRD-Begin day SPAN   file": {
+   "file": "nsccl_ix.20260925.i1.zip",
+   "path": "https://nsearchives.nseindia.com//archives/ird/span/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-1st Intra-day SPAN  file": {
+   "file": "nsccl_ix.20260925.i2.zip",
+   "path": "https://nsearchives.nseindia.com//archives/ird/span/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-2nd Intra-day SPAN  file": {
+   "file": "nsccl_ix.20260925.i3.zip",
+   "path": "https://nsearchives.nseindia.com//archives/ird/span/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-3rd Intra-day SPAN  file": {
+   "file": "nsccl_ix.20260925.i4.zip",
+   "path": "https://nsearchives.nseindia.com//archives/ird/span/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-4th Intra-day SPAN  file": {
+   "file": "nsccl_ix.20260925.i5.zip",
+   "path": "https://nsearchives.nseindia.com//archives/ird/span/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-5th Intra-day SPAN  file": {
+   "file": "nsccl_ix.20260925.i6.zip",
+   "path": "https://nsearchives.nseindia.com//archives/ird/span/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-End of day SPAN  file": {
+   "file": "nsccl_ix.20260925.s.zip",
+   "path": "https://nsearchives.nseindia.com//archives/ird/span/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-Daily Settlement Prices(csv)": {
+   "file": "CDSett_prce_IRF_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/ird/sett/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-Daily FII Gross Long position(csv)": {
+   "file": "fii_longpos_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/ird/fii/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-FPI Combined Long Position": {
+   "file": "Combined_FPI_long_psn_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/ird/fii/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-Exchange Level Overall Position Limit(CSV)": {
+   "file": "EWPL_25092026.CSV",
+   "path": "https://nsearchives.nseindia.com//archives/ird/ewpl/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-Tenure - Bond Grouping(lst)": {
+   "file": "TENURE_SYMBOL_MAP_28-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//content/equities/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-Daily Clientwise OI Limits(lst)": {
+   "file": "i_oi_cli_limit_25-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//archives/ird/cli/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-Daily Trading Memberwise / FII OI limits(lst)": {
+   "file": "i_oi_tm_limit_25-SEP-2026.lst",
+   "path": "https://nsearchives.nseindia.com//archives/ird/cli/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-Daily Bhavcopy(zip)": {
+   "file": "IRF_Bhavcopy250926.zip",
+   "path": "https://nsearchives.nseindia.com//archives/ird/bhav/",
+   "date": "25-Sep-2026"
+  },
+  "IRD-Daily Volatility(csv)": {
+   "file": "I_VOLT_25092026.csv",
+   "path": "https://nsearchives.nseindia.com//archives/ird/volt/",
+   "date": "25-Sep-2026"
+  }
+ },
+ "MF": {}
+}

@@ -1,0 +1,42 @@
+{
+ "fo_2022_legacy": {
+  "url": "https://nsearchives.nseindia.com/content/historical/DERIVATIVES/2022/APR/fo01APR2022bhav.csv.zip",
+  "status": 200,
+  "ctype": "application/zip",
+  "clen": "788691",
+  "last_modified": "Fri, 01 Apr 2022 12:27:34 GMT",
+  "zip_names": [
+   "fo01APR2022bhav.csv"
+  ],
+  "head": "INSTRUMENT,SYMBOL,EXPIRY_DT,STRIKE_PR,OPTION_TYP,OPEN,HIGH,LOW,CLOSE,SETTLE_PR,CONTRACTS,VAL_INLAKH,OPEN_INT,CHG_IN_OI,TIMESTAMP,\nFUTIDX,BANKNIFTY,28-Apr-2022,0,XX,36407,37250,36337.05,37201.65,37201.65,216798,2001372.37,2865725,-840725,01-APR-2022,\nFUTIDX,BANKNIFTY,26-May-2022,0,XX,36515.6,37374.4,36438.7,37310.2,37310.2,57224,531064.21,1047875,-1004200,01-APR-2022,\nFUTIDX,BANKNIFTY,30-Jun-2022,0"
+ },
+ "vix_history_api": {
+  "status": 200,
+  "ctype": "application/json; charset=utf-8",
+  "head": "{\"data\":[{\"EOD_TIMESTAMP\":\"01-OCT-2026\",\"EOD_INDEX_NAME\":\"INDIA VIX\",\"EOD_OPEN_INDEX_VAL\":13.49,\"EOD_HIGH_INDEX_VAL\":15.6875,\"EOD_LOW_INDEX_VAL\":13.49,\"EOD_CLOSE_INDEX_VAL\":14.46,\"EOD_PREV_CLOSE\":13.49,\"VIX_PTS_CHG\":0.97,\"VIX_PERC_CHG\":7.19,\"HI_TIMESTAMP_ORDER\":\"2026-09-30T18:30:00.000Z\"},{\"EOD_TIMESTAMP\":\"05-OCT-2026\",\"EOD_INDEX_NAME\":\"INDIA VIX\",\"EOD_OPEN_INDEX_VAL\":14.455,\"EOD_HIGH_INDEX_VAL\":15.3525,\"EOD_LOW_INDEX_VAL\":13.4975,\"EOD_CLOSE_INDEX_VAL\":14.78,\"EOD_PREV_CLOSE\":14.455,\"VIX_PTS_CHG\":0.33,\"VIX_PERC_CHG\":2.25,\"HI_TIMESTAMP_ORDER\":\"2026-10-04T18:30:00.000Z\"},{\"EOD_TIMESTAMP\":\"06-OCT-"
+ },
+ "contract_delta": {
+  "url": "https://nsearchives.nseindia.com/content/nsccl/Contract_Delta_03112026.csv",
+  "status": 200,
+  "ctype": "text/csv",
+  "clen": null,
+  "last_modified": "Tue, 03 Nov 2026 12:58:03 GMT",
+  "head": "Date,Symbol,Expiry day,Strike Price,Option Type,Delta Factor\n03-11-2026,BANKEX,28-01-2027,0,FF,1.00000000\n03-11-2026,FINNIFTY,23-11-2026,0,FF,1.00000000\n03-11-2026,BANKNIFTY,23-11-2026,0,FF,1.00000000\n03-11-2026,BANKNIFTY,25-01-2027,0,FF,1.00000000\n03-11-2026,FOCIT,28-01-2027,0,FF,1.00000000\n03-11-2026,SENSEX50,26-11-2026,0,FF,1.00000000\n03-11-2026,SENSEX50,28-01-2027,0,FF,1.00000000\n03-11-2026,SX40,25-01-2027,0,FF,1.00000000\n03-11-2026,360ONE,26-11-2026,0,FF,1.00000000\n03-11-2026,ABB,29-12-2026"
+ },
+ "fovolt": {
+  "url": "https://nsearchives.nseindia.com/archives/nsccl/volt/FOVOLT_03112026.csv",
+  "status": 200,
+  "ctype": "text/csv",
+  "clen": "14907",
+  "last_modified": "Tue, 03 Nov 2026 11:28:10 GMT",
+  "head": "Date, Symbol, Underlying Close Price (A), Underlying Previous Day Close Price (B), Underlying Log Returns (C) = LN(A/B), Previous Day Underlying Volatility (D), Current Day Underlying Daily Volatility (E) = Sqrt (0.995*D*D + 0.005* C*C), Underlying Annualised Volatility (F) = E*sqrt(365), Futures Close Price (G), Futures Previous Day Close Price (H), Futures Log Returns (I) = LN(G/H), Previous Day Futures Volatility (J), Current Day Futures Daily Volatility (K) = Sqrt (0.995*J*J + 0.005* I*I), F"
+ },
+ "ind_close_all": {
+  "url": "https://nsearchives.nseindia.com/content/indices/ind_close_all_03112026.csv",
+  "status": 200,
+  "ctype": "text/csv",
+  "clen": "7394",
+  "last_modified": "Tue, 03 Nov 2026 17:50:11 GMT",
+  "head": "Index Name,Index Date,Open Index Value,High Index Value,Low Index Value,Closing Index Value,Points Change,Change(%),Volume,Turnover (Rs. Cr.),P/E,P/B,Div Yield\nNifty 50,03-11-2026,23582.25,23810.85,23482.8,23810.85,370.05,1.58,408375815,40323.17,19.71,2.92,1.46\nNifty Next 50,03-11-2026,69360.7,69698.95,69001.95,69624.35,661.7,.96,463185951,11454.21,16.97,3.34,1.47\nNifty 100,03-11-2026,24528.1,24739.8,24420.85,24739.5,357.4,1.47,871561766,51777.38,19.15,2.99,1.46\nNifty 200,03-11-2026,13477.2,1358"
+ }
+}

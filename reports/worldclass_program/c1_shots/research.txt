@@ -1,0 +1,528 @@
+◉ SURYADHANA ▸ RESEARCH
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:41:35
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,125.40
+−1.24%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:41 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+RSCH
+RESEARCH LIBRARY
+69 studies · pre-registered tests, real ICICI costs, out-of-sample holdouts
+ALL 69
+ADOPTED 1
+PASS 3
+PROMISING 2
+FAIL 5
+NO EDGE 6
+REFERENCE 18
+STUDIES
+REFERENCE
+WHAT'S NEW
+today
+Improvement log: terminal polish sprint (11–15 Oct 2026)
+The 11–14 Oct 2026 terminal sprint. Start here: what to know first (surveillance flags on your holdings, the results release-time fix), the Bloomberg function map, then every new function (FA, FUND, MEMB, SEAG, ECO, HP, valuation history, options into results, short selling…) with how each was checked.
+REFERENCE
+ENGINEERING
+today
+BLOOMBERG VERDICT — Phase 5 adversarial critique (15 Oct 2026, 00:00–00:25 IST)
+Bloomberg program (14–15 Oct 2026): analyze→design→build→test→adversarial critique. Critic's verdict NO with two criticals — tick wire-key mismatch (UI could never render a tick; fixed + contract-pinned same night, chips now earn LIVE from row truth) and zero repo protection (no git remote, frozen files untracked — OWNER ACTION). Live feed: CONNECTING→LIVE 3/3 subscribed in market session, honest DISCONNECTED after midnight rollover. 781 tests, 37/37 pages, 178 rps p95 185 ms, event-loop 1.2× under contention. Full trail: reports/bloomberg_program/ (REQUIREMENTS → … → test_report, REPORT).
+REFERENCE
+ENGINEERING
+today
+Production review — SuryaDhana terminal (14 Oct 2026, evening)
+Production review (14 Oct 2026): six parallel audits — health (37/37 pages, 738 tests green), design system + live design review, duplicate-function removal (~233 LOC + 2 latent bugs), backend↔frontend contract, scale & latency (warm routes 7–50 ms; the real debts named), operator DevEx (5/10). Consolidated priority actions at the end.
+PASS
+SYNTHESIS
+today
+Evidence → probability: findings (14 Oct 2026)
+Every condition from every study, re-measured on one frame (1,945 liquid NSE stocks, 2011–2026) as a probability of beating the market, then merged. A liquid stock beats the average over 20 sessions ~45% of the time; the best evidence lifts that to ~50%, the worst cuts it to ~41% (high volatility: 32% chance of the worst fifth vs 20%). The logistic merge ranks twice as well as momentum alone, is calibrated out of sample, and as a Desk veto adds +0.9 to +1.4 pts/yr (paper shadow first). Pays at 60 sessions, about break-even at 20, loses at 5. Label recipe for short / swing / long inside.
+REFERENCE
+SYNTHESIS
+today
+Evidence → probability: one frame for every condition, merged and tested
+Full tables: 38 conditions × 3 horizons × 2 universes, credibility, merged-model calibration and buckets, Desk book test, market regime, label diagnostics, today's readings.
+REFERENCE
+SYNTHESIS
+today
+Evidence → probability: plan (pre-registered 14 Oct 2026, 18:10 IST, before any number below was computed)
+Pre-registered plan for the evidence → probability study (14 Oct 2026, 18:10, before any number).
+REFERENCE
+SYNTHESIS
+today
+Evidence → probability: one frame for every condition, merged and tested
+First run, kept for the record: the merged model used coverage flags chosen with hindsight (stocks whose data were fetched because they are liquid today) and rewarded membership; corrected the same evening.
+ADOPTED
+STRATEGY
+17 days ago
+Phase B extended: the untouched decade (Feb 2011 → Oct 2020)
+Momentum held across 16 years incl. an unseen decade (2011–2020), after real ICICI costs and tax. Basis of the Decision Desk rules (66% equity share, worst drawdown ≈ −22%).
+PROMISING
+STRATEGY
+17 days ago
+Phase B: monthly allocator after real costs and tax
+Monthly momentum beat NIFTY after costs and tax in 2019–2026; promoted only after the 2011–2020 check.
+REFERENCE
+COSTS
+17 days ago
+Capital viability: yearly cost drag by trading style
+Yearly cost drag by style: 5-day swing loses ~48–108%/yr to charges; monthly momentum 3–20%; a position needs ≥ ₹25.5k for a ≤ 1% round trip on ICICI MoneySaver.
+PASS
+STRATEGY
+16 days ago
+Decision Desk candidate filter: avoid non-institutional bulk buys
+Skipping stocks with a non-institutional bulk-deal net buy in the last 20 sessions passed the holdout. OFF until the owner reviews it (DESK_AVOID_BULK_BUY_DAYS).
+FAIL
+SWING
+3 days ago
+SuryaDhana Scanner Handbook — rules-only backtest, 2020-01-01 → 2026-10-09
+SuryaDhana Scanner Handbook rules, 2020 → today: −17.8% CAGR after ICICI costs (gross ≈ break-even) vs Nifty 500 +12.4% and Desk +18.5%. Failed every pre-registered measure; 2011 run skipped.
+FAIL
+SWING
+3 days ago
+Handbook swing backtest — post-mortem
+Why it failed: median hold 3 sessions, 21% of capital used, regime-4 entries worst; holding winners 40–60 sessions turns positive in R but ≈ 0 vs the universe.
+PASS
+RESULTS
+yesterday
+Post-results drift on NSE: findings (11 Oct 2026)
+Strong bad results keep hurting: after a ≤ −5% vs-market results reaction stocks lag another 2.0–3.7% over 60 sessions (t ≤ −2.8 both periods), a valid avoid-filter. Good-news drift fails the discovery bar. Re-run 14 Oct on corrected 2025–26 release times (governance filings had been taken as results): verdicts unchanged.
+REFERENCE
+RESULTS
+yesterday
+Post-results drift on NSE (PEAD)
+Post-results drift re-run on corrected release times (14 Oct 2026): 16,271 events, same plan.
+FAIL
+STRATEGY
+yesterday
+Desk filter "skip after bad results": findings (11 Oct 2026)
+As a Decision Desk filter, skipping stocks after a ≤ −5% results reaction changes nothing material. On corrected release times (14 Oct) holdout CAGR is 3.86% vs 3.98% without it (was 4.30% before the fix): no benefit.
+NO EDGE
+FLOWS
+3 days ago
+FII index-futures positioning vs NIFTY: findings (12 Oct 2026)
+FII index-futures positioning does not predict NIFTY over 5–20 sessions: flow terciles −0.53% (t −1.34), extreme FII shorting +0.05% (t 0.07). Context, not a timing signal.
+NO EDGE
+RESULTS
+yesterday
+Earnings-growth drift: findings
+What the numbers said (profit ≥ +30% & revenue ≥ +10% y/y, from NSE filings) does not predict the next 60 sessions. The pre-registered broad re-run (5,785 filings, 1,142 companies incl. 16 since delisted) removed the first run's selection bias: strong growth +1.3% (t 0.9) / +1.0%, ≈ 0 after costs, H1 FAIL.
+REFERENCE
+RESULTS
+yesterday
+Earnings-growth drift: report (broad run)
+Broad re-run tables: 5,785 filings from 1,142 companies by growth bucket, 20 / 60 sessions.
+REFERENCE
+RESULTS
+yesterday
+Earnings-growth drift: report
+Full tables: 1,691 filings from 241 companies by growth bucket, 20 / 60 sessions.
+REFERENCE
+RESULTS
+yesterday
+Earnings-growth drift on NSE: pre-registered plan
+Pre-registered plan for the earnings-growth drift study (13 Oct 2026, before the data).
+REFERENCE
+RESULTS
+3 days ago
+Post-results drift on NSE (PEAD)
+Full PEAD tables: 16,247 NSE results 2015–2026 by reaction bucket, timing, liquidity and year.
+REFERENCE
+RESULTS
+3 days ago
+Post-results drift on NSE: pre-registered plan
+The pre-registered plan for the post-results drift study (written before any result).
+PROMISING
+FLOWS
+15 days ago
+Held-overnight study — findings (H1–H6, updated 2026-09-28)
+Six NSE-flow hypotheses: only insider open-market buys (H4) look promising (forward test from Oct-2026); retail bulk-deal buying is a negative filter. Delivery %, OI build-up, MTF: no edge.
+REFERENCE
+FLOWS
+16 days ago
+Held-overnight study (H1–H6)
+Full tables behind the held-overnight findings (H1–H6, discovery vs holdout, Newey-West t).
+FAIL
+ML
+15 days ago
+ML labels and NSE features — findings (2026-09-29)
+New 20-session excess-rank labels beat the old 5-day labels on every measure, but the ML top-20 book still trails plain Desk momentum after costs; NSE flow features add nothing.
+FAIL
+ML
+15 days ago
+ML labels and features: audit and walk-forward test
+Audit of the production labels (v2 flaws) and the walk-forward comparison tables.
+NO EDGE
+IDEAS
+18 days ago
+Quant Idea Lab: out-of-the-box stock selection on NSE
+Eight India-specific ideas (circuits, overnight momentum, lottery, dividends, splits…) on 1,374 stocks: none survives the holdout after costs. Circuit rebound was removed.
+NO EDGE
+PRICE ACTION
+19 days ago
+Value-Area Breakout → POC Return Study
+Upside value-area breakouts fail back to the POC more than chance and lag the market: usable only as a veto.
+NO EDGE
+PRICE ACTION
+19 days ago
+What changes the POC magnet? Conditional study + strategy gauntlet
+No value-area event beats a random entry into the same stocks; moving averages only shift trend drift.
+NO EDGE
+NEWS
+today
+News scanner track record
+199 news-scanner picks (25 Sep – 7 Oct 2026) performed like random stocks of similar liquidity; too few days to judge.
+REFERENCE
+DATA
+17 days ago
+NSE bhavcopy panel: data-quality check
+NSE bhavcopy panel vs Yahoo: 0.13% of days differ by > 1 point; 1,064 corporate actions applied; 1,922 delisted symbols restored (survivorship-free).
+REFERENCE
+DATA
+17 days ago
+NSE panel spot-check 2010–2019 (classic CM bhavcopy era)
+Spot-check of the 2010–2019 classic bhavcopy era.
+REFERENCE
+PLAN
+17 days ago
+SuryaDhana: from analysis tool to money-making process
+The product plan: sleeves, Decision Desk, promotion gates, phases A–E.
+REFERENCE
+DATA
+2 days ago
+NSE free data dictionary
+Every free NSE dataset, verified live: files, APIs, publication timing, access traps.
+—
+OTHER
+today
+DESIGN — Systems (B1 · B2 · B3 · S1–S8) — Phase 2, 14 Oct 2026 ~22:40 IST
+—
+OTHER
+today
+DESIGN_UIX — Phase 2 UI/UX design for workstreams B4 + B5 (14 Oct 2026, ~22:40 IST)
+—
+OTHER
+today
+Bloomberg-grade program — charter (14 Oct 2026, 22:05 IST)
+—
+OTHER
+today
+Bloomberg Program — Final Report to the Owner
+—
+OTHER
+today
+REQUIREMENTS — Bloomberg-grade program, Phase 1 (14 Oct 2026, ~22:15 IST)
+—
+OTHER
+today
+BUILD B1 — Reliability / Ops (final report)
+—
+OTHER
+today
+Build report — B2 (Backend scale: caches, error contract, event-loop purity, payload budgets)
+—
+OTHER
+today
+Build report — B3 Live data (14 Oct 2026, ~22:4x IST)
+—
+OTHER
+today
+build_b4 — Frontend/design workstream (B4)
+—
+OTHER
+today
+Build report — B5 Docs/architecture truth (14 Oct 2026, ~22:35 IST)
+—
+OTHER
+today
+Red-team design review — Phase 2 gate (14 Oct 2026, ~22:55 IST)
+—
+OTHER
+today
+Phase 3→4 integration record (PM, 14 Oct 2026 ~23:10 IST)
+—
+OTHER
+today
+QuantLab Channel Review vs the real SuryaDhana — what's actually missing (14 Oct 2026, ~22:50 IST)
+—
+OTHER
+today
+Phase 4 TEST report (PM, 14 Oct 2026 23:00 → 15 Oct 00:00 IST)
+—
+OTHER
+3 days ago
+Does FII index-futures positioning predict NIFTY? Pre-registered plan
+—
+OTHER
+3 days ago
+Does FII index-futures positioning predict NIFTY?
+—
+OTHER
+today
+Architecture reality check (PM pass, 14 Oct 2026 ~21:30)
+—
+OTHER
+today
+Backend ↔ frontend contract audit (agent CON, 14 Oct 2026 ~22:00 IST)
+—
+OTHER
+today
+SuryaDhana Terminal — Design System Audit + Live Design Review
+—
+OTHER
+today
+DevEx (operator) audit — /devex-review, live
+—
+OTHER
+today
+Duplicate-intent functions: findings and consolidations (agent DUP, 14 Oct 2026)
+—
+OTHER
+today
+Scale & latency review — SuryaDhana stack (agent SCALE, 14 Oct 2026 ~21:4x IST)
+—
+OTHER
+3 days ago
+Decision Desk candidate filter: skip stocks after bad results (pre-registered plan)
+—
+OTHER
+3 days ago
+Decision Desk candidate filter: skip stocks after bad results
+—
+OTHER
+today
+GAPS — what an Indian-market + MCX-gold trader needs vs what the terminal has (15 Oct 2026, 03:00)
+—
+OTHER
+today
+World-Class Program — charter (15 Oct 2026, 03:00 IST)
+—
+OTHER
+today
+W1 — CHRT Chart Studio (build report, 15 Oct 2026)
+—
+OTHER
+today
+Build W2 — DERV, the NSE F&O analytics desk (15 Oct 2026, ~03:30 IST)
+—
+OTHER
+today
+W3 — OSTR options strategy builder (build report, 15 Oct 2026)
+—
+OTHER
+today
+W4 — MCXG: the MCX gold desk (build report, 15 Oct 2026 ~03:45 IST)
+—
+OTHER
+today
+Build W5 — RSK · portfolio risk dashboard (15 Oct 2026)
+—
+OTHER
+today
+W6 — TICKS: tick persistence + intraday bars/VWAP (build report, 15 Oct 2026)
+—
+OTHER
+today
+W7 — FLAWS: bulk cache, payload trims, LOW defects (15 Oct 2026, ~03:20 IST)
+—
+OTHER
+today
+W8 — QuantLab adoptions A1 (MC drawdown lens) + A2 (Friday decision journal) · build report, 15 Oct 2026
+WHAT'S NEW
+docs/IMPROVEMENT_LOG.md · 1708 lines · updated today
+REFERENCE
+BOTTOM LINE
+The 11–14 Oct 2026 terminal sprint. Start here: what to know first (surveillance flags on your holdings, the results release-time fix), the Bloomberg function map, then every new function (FA, FUND, MEMB, SEAG, ECO, HP, valuation history, options into results, short selling…) with how each was checked.
+Improvement log: terminal polish sprint (11–15 Oct 2026)
+
+Last updated Wed 15 Oct, 01:00. Everything below was run and checked against live data; all 37 pages load with no errors and the script tests (117) pass.
+
+15 Oct ~01:00: the Bloomberg program (analyze→design→build→test→critique). Five parallel builders + red-team gates, then an adversarial critic with license to break things. Shipped & verified: Breeze-websocket live tick engine (lazy, kill-switched LIVE_TICKS, zero REST quota; CONNECTING→LIVE 3/3 subscribed in a valid session, honest DISCONNECTED — broker session not connected after midnight) · bounded caches + error contract + purity scanner (/health p95 0.8 ms while 4 screener scans ran) · shared 19:20 evening snapshot + verified 02:15 DuckDB backups + restore runbook + CI · page chunk −70 % · CLAUDE.md rewritten to the real 4-process stack. Phase 4: 37/37 pages, 148/152 routes within latency bounds, 178 rps load 0 errors. Critic's verdict: NO (FAST 6 · LIVE 3 · NEVER-LIES 6.5 · SURVIVES 3 · SCALES 7 · DISCIPLINED 7.5) — and it was right twice: (1) the tick wire key (quotes vs the UI's ticks) meant the terminal could never render a tick and the LIVE chip lit from connected alone — fixed same night (key renamed + contract-pinned test; chips now earn LIVE from row truth; request ledger bounded; 781 tests green after); (2) no git remote, last commit 14 Jun, 481 files untracked — OWNER ACTION: commit + private remote + copy .env out-of-band. Full trail: reports/bloomberg_program/ (REPORT.md is the summary; bloomberg_verdict.md is the critique); RSCH → "Bloomberg program". To go live on prices: LIVE_TICKS=1 in .env.
+
+14 Oct ~21:45: production review (six parallel audits). Health 37/37 pages · 738 tests · tsc clean. Design B+ (AI-slop A — no template smell; 72/100 token discipline; 4 HIGH findings incl. the news-pill chart overlay and missing tabular-nums). Contract tight (0 broken frontend calls; the one real bug — /api/stocks/{t}/ohlcv opening DuckDB inside ui-api with f-string SQL — FIXED as a data-service proxy). Duplicates: −233 LOC, two latent bugs (ordinal 110–113, even-count median) died with their copies; dead indicators package deleted. Scale: warm routes 7–50 ms; real debts = unbounded news cache, orphaned 352 MB parquet routes, 20–28 GB/day snapshot copies (a 3.16 GB orphan removed); the "dev build in prod" alarm disproven (.next-prod dist dir, 102 kB shared JS). Operator DevEx 5/10 — .env.example missing the 3 ICICI keys, no DB backup/restore, no CI. Full report + ranked priorities: RSCH → "Production review" (reports/production_review/REPORT.md).
+
+14 Oct ~21:15: S1 paper shadow STARTED (owner's decision). S1 + hedged S1H run forward from 15 Oct, in parallel with the Desk's paper book: nightly 19:50 job replays the gated engine, Telegram messages fills and a Friday NAV line, /shadow on the bot any time. Flat until the October month-end signal. Paper only.
+
+14 Oct night: the Alpha Lab. A self-contained strategy lab (alpha_lab/) built by six parallel specialist agents: three deterministic strategies gate-tested under a pre-registered protocol (2020–26, then 2011–19). S1 — momentum top-20 minus five robust avoid-flags with the crash filter — passed both gates: 28.0%/yr after costs 2020–26 (NIFTY 9.6%, equal-weight universe 24.2%, maxDD −16.5%) and 15.8%/yr 2011–19; full 2011–26 = 21.0%/yr. Hedged variants pass the modern window only; the 5-day leader-dip FAILS on delivery costs (the pre-registered "stay away" verdict). New: excess carry — stocks whose futures trade at a discount lag robustly — the first F&O-derived signal to pass a pre-registered bar here. Your two research documents are reconciled claim-by-claim in alpha_lab/reports/claims_matrix.md. Monthly flow: alpha_lab/run_today.py. Research only; nothing trades. Start at alpha_lab/reports/FINDINGS.md.
+
+14 Oct evening: every study as a probability. One frame for all 38 conditions the studies tested, merged into P(beat the market) and P(worst fifth), checked out of sample, plus how to label a model for short / swing / long holds. RSCH → "Evidence → probability", or reports/evidence_probability/FINDINGS.md. See "Evidence → probability" below.
+
+14 Oct afternoon: ICICI login from your phone works. The account uses Google Authenticator; the login now asks ICICI for an SMS instead and you reply on Telegram (first success 14:43). Live ICICI quotes reconnect after every login.
+
+14 Oct morning: the Telegram bot. 20 commands from your phone (/brief, /book, /quote TCS, /alert …, /login …) and an ICICI login whose SMS OTP you answer in the chat. See "Telegram bot: 20 commands" below.
+
+Overnight (13 → 14 Oct): what you should know first
+
+Your book: CUPID and PCJEWELLER are under NSE surveillance (ASM stage 1), now shown as ⚑ on every page. The book's 1-day 95% VaR is about ₹4,600. AEROFLEX's board meeting today is about expansion plans, not results.
+Fixed, important: results release times for 2025–26 were often a governance filing taken for the results (about 41% of quarters checked). The data is repaired and the results-drift study re-run (verdicts hold; the avoid-filter is stronger). The ⚠ BAD RESULTS flag now covers 42 stocks.
+Fixed: an expiring ICICI session wiped the saved holdings at 00:11. They are restored and guarded.
+Fixed: MKT's Nifty 500 (21,823, "0.00% today") and India VIX (14.12) were stale Yahoo values for 13 Oct; they now come from NSE (22,090, +1.22%; VIX 14.04).
+Market valuation: NIFTY's P/E is at its 1st percentile since 2021 (P/B 2nd since 2012), while the small-cap premium is at its 99th percentile (1.77× NIFTY's P/E).
+New functions:
+MEMB (index members), SEAG (seasonality), ECO (economic calendar with NSE holidays; NSE is closed Tue 20 Oct).
+EVTS → options into results, OMON pricer, HP (history, dividends, drawdowns), DEAL → short selling.
+ALRT ± % move alerts, and MKT equity vs bonds.
+The scheduler now skips session jobs on NSE holidays.
+A Bloomberg function map of what's here and what's missing.
+
+New on 13 Oct evening: market valuation against 14 years of NSE history (NIFTY's P/E is at its 1st percentile since 2021), an economic calendar (ECO), historical prices for any stock (HP), and a fix for world moves measured from the wrong session (KOSPI showed −8.9%, the truth was −5.5%).
+
+Earlier on 13 Oct (read "New (13 Oct, during the session)"): quarterly financials from NSE's own filings (FA, P/E, P/B, peers RV, the FUND screener, numbers on every results filing), intraday charts without ICICI, market internals through the day, your last-known holdings priced live, hover quotes, keyboard tables, CSV on every table, a 15:40 closing note. Fixed: two-day moves shown as "today" (Yahoo skipped a session), a stale NIFTY on the tape, earnings-call notices counted as results, a test wiping the saved holdings.
+
+Goal: make SuryaDhana feel like a Bloomberg terminal for NSE, fill the most important gaps, polish everything. Each entry says what changed, where, and how it was checked.
+
+Open the app at http://localhost:3000. Press / (or Ctrl/⌘+K, or ⌕ GO at the right of the tab strip) and type a function code or a ticker. Press ? for every code and shortcut.
+
+If you have 10 minutes
+BRIEF: the top strip says what needs you. In the morning it lists results filed overnight with what the numbers said; in session the NIFTY intraday chart and breadth take the gold slot.
+WTCH: your four holdings priced live even with ICICI logged out (P&L, today's ₹ move, P/E, profit growth), their NSE surveillance flags (CUPID and PCJEWELLER are under ASM), and the book's risk in rupees (VaR).
+/ → CUPID FA: twelve quarters of your holding's revenue and profit from its NSE filings, with P/E, P/B and peers. (It is at ~355× trailing earnings: checked, real.)
+EVTS: Reacting today (move vs normal + what the numbers said), the Q2 FY27 season scorecard, and every upcoming company's last quarter.
+FUND: screen the market on P/E, growth and margin; industry medians on top. Hover any ticker for a quote; click a table and use ↑ ↓ Enter.
+MOV (in session): intraday index charts, who moved NIFTY (points per stock), and market internals (is the rally broad or narrow?).
+RSCH → Earnings-growth drift: a pre-registered study whose first "pass" was a selection bias; the broad re-run on 1,142 companies says NO EDGE.
+🔔 (top right): the 08:50 morning note, the 15:40 closing note, move / filing / results-numbers alerts.
+MKT → Valuation · NSE: click NIFTY, BANK, IT… to see 14 years of P/E, P/B and yield, and where today sits; below it, equity vs bonds. (NIFTY's P/E is at its 1st percentile since 2021.)
+MEMB: NIFTY 50 member by member: weight, points today, YTD contribution, distance from the high, P/E against its own history. Then ECO for this month's data dates and holidays (NSE is shut Tue 20 Oct), and SEAG for seasonality.
+Start here: the 32 things to try
+BRIEF (the landing page): everything you need before 09:15 on one screen.
+PRE (from 09:00): the pre-open auction: gaps and which side of the order book is left over.
+MOV (09:15–15:30): live movers, the sector board, volume surges, 52-week highs/lows and OI spurts.
+/ → TCS → Profile: Bloomberg-style DES. Price, ownership, insiders, deals, F&O, results history, peers, and a trade ticket with real ICICI costs.
+MKT: market regime, breadth, a heatmap of 250 stocks (live during the session), industry rotation, FII/DII positioning, movers. Click an industry to drill in.
+EVTS: the results season calendar, a scoreboard of how the market took each result, and each stock's typical results-day move.
+OMON: the NIFTY option chain (live in market hours) with OI walls, the IV smile, a year of IV/PCR history, and the move priced in by expiry.
+INSD: promoter and director open-market buying (after this morning's data repair).
+WTCH: your watchlist, live, with price alerts (🔔) that fire as Mac notifications even with the terminal closed.
+RSCH: all 23 studies with honest verdicts, including tonight's two new ones.
+News (Shift+N) → TRACK RECORD: how the news scanner's picks actually did.
+DEAL: today's block and bulk deals; click a client to see everything they traded.
+CF: today's company filings, live, by category (results, orders, ratings…), with your stocks highlighted.
+MRGN: where retail leverage (margin-funded positions) is building, and which stocks are most crowded.
+HDS: who bought and sold last quarter (mutual funds vs foreign investors vs promoters vs retail).
+IPO: open issues with live subscription, and how the last 2 years of listings did.
+WRAP: the end-of-day market wrap (Friday's is there; tonight's is written at 21:00).
+WEI: world markets (US, Asia, Europe, FX, crude, gold, yields) before the open.
+Commodity → Gold desk: the fair open is recorded at 08:45 every weekday, with an accuracy log.
+EVTS → Reacting today · live (also on BRIEF): results filed since yesterday's close, today's move, and how big that is against the stock's usual results-day move.
+Any stock → Chart → ⚡ Today: a real 5-minute intraday chart (works without ICICI), and NIFTY intraday on BRIEF (from 09:15) and MOV.
+Hover any amber ticker for a quote card (price, day move, ranges, sparkline).
+/ → TCS FA: 12 quarters of revenue and profit from NSE's own filings, P/E, P/B, and peers side by side (RV).
+FUND: screen companies on P/E, growth and margin (COMP TCS INFY adds the same fundamentals to Compare).
+ALRT: every price alert in one place (distance to each level, add / remove), what fired, and the full inbox.
+MOV → Who moved the index: each stock's contribution to NIFTY / BANK / IT in points.
+/ → TCS FA → P/E history: today's P/E against the stock's own range (point-in-time), plus dividends (DVD).
+ECO: India's CPI, WPI, IIP and GDP release dates with the RBI and Fed decisions (WPI is due tomorrow at 12:00).
+/ → TCS HP: every session as traded (OHLC, VWAP, volume, delivery %), with CSV export.
+MKT → Valuation · NSE: index P/E, P/B and yield against their history since 2012; click a row to chart it.
+MEMB: every NIFTY 50 member's weight, points today, returns, distance from its high, P/E and growth.
+SEAG (or TCS SEAG): average return by calendar month and every year behind it.
+
+Needs you (2 minutes each):
+
+~~ICICI login~~ done 14 Oct 14:43 from your phone (SMS OTP via Telegram). Each weekday at 08:00 the bot asks for that day's SMS code. Optional: ICICI_TOTP_SECRET (the Google Authenticator setup key) removes even that step.
+~~Telegram~~ done 14 Oct 07:32: @SURYADHANA_bot is connected (token and chat ID in .env).
+Start after a restart: run scripts/install_autostart.sh once. It adds a per-user launch agent so the stack starts ~20 s after you log in; --remove undoes it. On 13 Oct the Mac restarted overnight and nothing came back up until it was started by hand, so the 08:45–09:10 jobs were missed.
+Desk industry cap: decide how to treat the 5 "Unknown"-industry names in the Desk's top 20. Capital Goods is already at 7 of the 8 allowed (DESK → Watchlist risk).
+
+Honest notes on the data (13 Oct):
+
+Results release times for 2025–26 were wrong for about three quarters of companies until 14 Oct, 02:45 (a governance filing was taken for the results). Fixed and repaired. Anything computed before then that used results timing (typical reactions, the ⚠ BAD RESULTS flag, the results-drift study's holdout) has been redone; the study's verdicts held. Details: "Fixed (14 Oct, 02:30)" below.
+Day changes before 16:50 on 13 Oct were wrong for most NSE stocks: Yahoo skipped 12 Oct, so they were two-day moves. Fixed (official NSE previous close). The 15:40 closing note and the morning's move alerts were affected; a correction is in the inbox.
+Quarterly financials (FA, FUND) are as filed with NSE. Q4 FY25 is missing for about 1 company in 8 (an NSE feed gap), EPS is not adjusted for bonuses or splits, and a few filers make typos (the share count is cross-checked).
+FUND now covers 1,832 companies (tonight's sweep finished at 22:10), 1,405 of them with a P/E-vs-own-history percentile. It is a screen; the related study found NO EDGE.
+ICICI is logged out, so holdings are the last known book (12 Oct 18:30) priced at live prices.
+
+BRIEF shows these items too, as an amber NEEDS YOU strip at the top with the exact fix for each. It goes away by itself as each is done (GET /api/config/setup-status returns yes/no and reasons, never a secret).
+
+Most important findings:
+
+Your book is two stocks. CUPID (52%) and AEROFLEX (41%) are 93% of the ICICI holdings by value: it behaves like 2.3 equal positions, with 42% volatility (3× NIFTY) and a value-weighted P/E of 116×. WTCH → Your book · X-ray.
+Earnings-growth drift (13 Oct): NO EDGE. Strong reported growth does not beat the market over the next 60 sessions once every company is included (1,142 companies, delisted ones too): about +1% before costs, about zero after. The afternoon's "pass" (+6.4%) was selection bias, as the plan warned. RSCH has the detail.
+CUPID (your holding) is priced at ~355× trailing earnings and 108× book after a +635% year. That is a fact about the price, not a recommendation.
+Your ICICI holdings run 3× NIFTY's volatility (42% vs 14%, beta 1.22). See Broker → Holdings risk.
+IPOs: heavy institutional demand (QIB ≥ 100×) is priced in on day 1 (+36% average listing gain), and those stocks then lost 12% over 60 sessions from the day-1 close. Under 10× QIB they listed flat and gained 8%. Descriptive, in-sample. See IPO.
+Retail leverage is rising into a falling market: the NSE margin (MTF) book grew from about ₹1.0 to ₹1.5 lakh crore over a year in which NIFTY fell 11% (MRGN).
+After a strong bad results reaction, stocks keep lagging (PASS). That's shown as a ⚠ BAD RESULTS flag; it is not a Desk rule.
+FII positioning does not predict NIFTY.
+NSE's insider feed had silently died in May. It is now repaired and alarmed.
+Our bhavcopy's prev_close is not split-adjusted. Every "move since" figure now uses adjusted closes (some showed fake −80% crashes before).
+New research: post-results drift (pre-registered, tonight)
+
+Earlier research had skipped earnings drift ("no earnings dates in DB"). Exact NSE release times are now stored, so I ran the classic test on 16,247 quarterly results of 651 stocks (2015 → Oct 2026). The stock list was the top-300 traded of each year, delisted names included. The plan was fixed in reports/results_drift/PLAN.md before any number existed.
+
+HYPOTHESIS	VERDICT	60-SESSION EXCESS VS MARKET (2015–21 / 2022–26)
+Strong bad results (≤ −5% reaction) keep hurting	PASS	−3.7% (t −2.8) / −1.8% (t −2.5); corrected data 14 Oct: −2.0% (t −3.0)
+Strong good results (≥ +5%) keep drifting up	FAIL (2015–21 t 1.4 < 2.0)	+2.7% / +3.6% (2022–26 t 4.0)
+Spread good − bad	PASS	+7.4% / +5.4%
+
+Use: don't buy a stock within ~3 months of a strong negative results reaction (an avoid-filter, like the bulk-deal one). The terminal now shows this as a red ⚠ BAD RESULTS flag wherever you pick stocks: the Desk watchlist, Watch, the stock Profile (with the details) and the EVTS scoreboard. It covers stocks whose last results reaction was ≤ −5% vs NIFTY within 60 sessions

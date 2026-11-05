@@ -1,0 +1,19 @@
+{
+    "header": {
+        "status": {
+            "name": "Fail",
+            "code": 1,
+            "description": "Validation error",
+            "message": [
+                "Table ID (56) is not defined"
+            ],
+            "apiHelp": "https:\/\/www.censtatd.gov.hk\/en\/web_table.html?id=56&api_popup=1"
+        },
+        "count": {
+            "noOfRecords": 0,
+            "started": "2026-10-26T00:14:21+00:00",
+            "finished": "2026-10-26T00:14:21+00:00",
+            "durationSeconds": 0.000165
+        }
+    }
+}

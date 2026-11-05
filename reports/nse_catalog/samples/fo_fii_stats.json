@@ -1,0 +1,137 @@
+[
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": NaN,
+  "Unnamed: 1": "BUY",
+  "Unnamed: 2": "BUY",
+  "Unnamed: 3": "SELL",
+  "Unnamed: 4": "SELL",
+  "Unnamed: 5": "OPEN INTEREST AT THE END OF THE DAY",
+  "Unnamed: 6": NaN
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": NaN,
+  "Unnamed: 1": "No. of contracts",
+  "Unnamed: 2": "Amt in Crores",
+  "Unnamed: 3": "No. of contracts",
+  "Unnamed: 4": "Amt in Crores",
+  "Unnamed: 5": "No. of contracts",
+  "Unnamed: 6": "Amt in Crores"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "INDEX FUTURES",
+  "Unnamed: 1": "63979",
+  "Unnamed: 2": "10090.38",
+  "Unnamed: 3": "66158",
+  "Unnamed: 4": "10529.78",
+  "Unnamed: 5": "404611",
+  "Unnamed: 6": "62706.27"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "BANKNIFTY FUTURES",
+  "Unnamed: 1": "17532",
+  "Unnamed: 2": "2934.21",
+  "Unnamed: 3": "23994",
+  "Unnamed: 4": "4024.01",
+  "Unnamed: 5": "68938",
+  "Unnamed: 6": "11549.08"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "FINNIFTY FUTURES",
+  "Unnamed: 1": "39",
+  "Unnamed: 2": "5.87",
+  "Unnamed: 3": "12",
+  "Unnamed: 4": "1.81",
+  "Unnamed: 5": "359",
+  "Unnamed: 6": "54.16"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "MIDCPNIFTY FUTURES",
+  "Unnamed: 1": "9570",
+  "Unnamed: 2": "1606.24",
+  "Unnamed: 3": "8638",
+  "Unnamed: 4": "1449.82",
+  "Unnamed: 5": "26450",
+  "Unnamed: 6": "4455.51"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "NIFTY FUTURES",
+  "Unnamed: 1": "36704",
+  "Unnamed: 2": "5520.00",
+  "Unnamed: 3": "33380",
+  "Unnamed: 4": "5030.03",
+  "Unnamed: 5": "308371",
+  "Unnamed: 6": "46558.80"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "NIFTYFPI FUTURES",
+  "Unnamed: 1": "0",
+  "Unnamed: 2": "0.00",
+  "Unnamed: 3": "0",
+  "Unnamed: 4": "0.00",
+  "Unnamed: 5": "0",
+  "Unnamed: 6": "0.00"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "NIFTYNXT50 FUTURES",
+  "Unnamed: 1": "134",
+  "Unnamed: 2": "24.06",
+  "Unnamed: 3": "134",
+  "Unnamed: 4": "24.10",
+  "Unnamed: 5": "493",
+  "Unnamed: 6": "88.73"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": NaN,
+  "Unnamed: 1": NaN,
+  "Unnamed: 2": NaN,
+  "Unnamed: 3": NaN,
+  "Unnamed: 4": NaN,
+  "Unnamed: 5": NaN,
+  "Unnamed: 6": NaN
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "INDEX OPTIONS",
+  "Unnamed: 1": "6306501",
+  "Unnamed: 2": "965642.37",
+  "Unnamed: 3": "6288849",
+  "Unnamed: 4": "963829.61",
+  "Unnamed: 5": "4075000",
+  "Unnamed: 6": "627722.15"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "BANKNIFTY OPTIONS",
+  "Unnamed: 1": "664601",
+  "Unnamed: 2": "111510.94",
+  "Unnamed: 3": "655568",
+  "Unnamed: 4": "110178.44",
+  "Unnamed: 5": "797958",
+  "Unnamed: 6": "133052.47"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "FINNIFTY OPTIONS",
+  "Unnamed: 1": "34005",
+  "Unnamed: 2": "5111.30",
+  "Unnamed: 3": "33342",
+  "Unnamed: 4": "5013.27",
+  "Unnamed: 5": "20935",
+  "Unnamed: 6": "3152.16"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "MIDCPNIFTY OPTIONS",
+  "Unnamed: 1": "163202",
+  "Unnamed: 2": "27491.49",
+  "Unnamed: 3": "165518",
+  "Unnamed: 4": "27915.62",
+  "Unnamed: 5": "97027",
+  "Unnamed: 6": "16332.79"
+ },
+ {
+  "FII DERIVATIVES STATISTICS FOR 25-Sep-2026": "NIFTY OPTIONS",
+  "Unnamed: 1": "5444383",
+  "Unnamed: 2": "821472.64",
+  "Unnamed: 3": "5434183",
+  "Unnamed: 4": "820679.33",
+  "Unnamed: 5": "3158466",
+  "Unnamed: 6": "475075.11"
+ }
+]

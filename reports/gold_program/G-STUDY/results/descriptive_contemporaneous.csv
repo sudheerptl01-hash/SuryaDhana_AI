@@ -1,0 +1,14 @@
+series,n,pearson_same_week,spearman_same_week,R2_%,pct_move_per_1k_contracts,t,same_sign_%,spearman_NEXT_week
+Managed-money net,1056,0.557,0.65,31.0,0.078,21.2,76.2,-0.015
+Managed-money gross long,1056,0.54,0.627,29.2,0.104,19.2,75.5,-0.02
+Managed-money gross short,1056,-0.344,-0.399,11.8,-0.104,-13.2,34.6,0.001
+Commercial net (producer/merchant + swap),1056,-0.58,-0.661,33.7,-0.078,-20.6,22.8,0.013
+Producer/merchant net,1056,-0.52,-0.54,27.1,-0.135,-17.0,30.9,0.012
+Swap-dealer net,1056,-0.472,-0.575,22.3,-0.097,-16.2,26.1,0.025
+Other reportables net,1056,-0.058,-0.065,0.3,-0.023,-1.4,45.3,0.013
+Non-reportable (small) net,1056,0.325,0.301,10.6,0.211,8.6,61.6,-0.025
+Open interest,1056,0.343,0.392,11.7,0.04,11.2,64.3,-0.012
+"10-y real yield change, bp (same week)",1056,-0.375,-0.395,14.1,,,33.6,-0.011
+DXY % change (same week),1056,-0.457,-0.449,20.9,,,32.9,0.031
+GLD tonnes % change (same week),1056,0.395,0.317,15.6,,,55.9,0.029
+USD/INR % change (same week),1056,-0.179,-0.22,3.2,,,42.1,-0.022

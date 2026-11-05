@@ -1,0 +1,382 @@
+GOLD
+GOLD TERMINAL
+spot, COMEX, MCX, positioning (COT), physical, macro, contracts, health check, pre-open fair value · 03:51 IST
+LIVE · YAHOO (CACHED FET…
+PAPER · CONTEXT
+↻
+COMEX DEC-26
+settle — $4,072.2 last Wed 04 Nov · Yahoo, not settlement
+last $4,072.2 ▲+3.28 % Yahoo, not settlement · 03:29 IST
+LIVE · YAHOO (CACHED FET…
+USD/INR
+94.63
+Yahoo INR=X · 00:13 IST
+10-Y REAL
+2.62 %
+TIPS · Mon 02 Nov
+MCX GOLD DEC-26
+₹1,40,186
+Tue 03 Nov settlement · basis +1.58 % at the at the Tue 03 Nov settlement vs that session's duty-paid landed vs that session's duty-paid
+COT FUNDS NET (MANAGED MONEY)
++105,562
++1,356 w/w · as of Tue 27 Oct
+◷ MCX opens in 5h08m
+spot proxy · COMEX front GC1 · COMEX matched month GCZ26 · MCX GOLD DEC-26
+CONTRACT
+MCX
+NSE (n/a)
+BSE (n/a)
+GOLD
+GOLDM
+GOLDTEN
+GOLDGUINEA
+GOLDPETAL
+front (by OI)
+DEC-26 · 2026-12-04 · OI 16,282
+FEB-27 · 2027-02-05 · OI 1,180
+APR-27 · 2027-04-05 · OI 70
+JUN-27 · 2027-06-04 · OI 2
+AUG-27 · 2027-08-05 · OI 0
+OCT-27 · 2027-10-05 · OI 0
+OPTIONS
+↔ COMEX DEC-26 ↔ GC1
+UNIT
+$/oz
+₹/10 g
+₹/g
+$/g
+₹/tola
+WINDOW
+D
+W
+M
+LAYER
+[B]
+[P]
+HEALTH
+DAILY
+WEEKLY
+MONTHLY
+POSITIONING
+PHYSICAL
+MACRO
+CONTRACTS
+LEARN
+VERDICT
+RULES · LEARN ›
+CONTEXT · G-STUDY 26 Oct 2026
+DELAYED · STORED SERIES
+?
+window W · week to date (since the Fri 30 Oct close) · as of 05 Nov, 03:51 IST
+[P]Every clause maps to a rule id and a threshold (listed under LEARN › health rules); stale or unavailable gauges add no clause and the driver word is omitted when a leg is missing; there is no score and no composite (PLAN §f.4).
+STRONG WEEK, GOLD-SPECIFIC · gold +4.4 % week to date (since the Fri 30 Oct close) · of which the dollar +0.3 % · real yield +2 bp · funds +1.3 % w/w (bought the dip) · India basis +1.6 % vs duty-paid landed · roll DEC-26→FEB-27 costs +0.81 % (+5.2 %/yr), FND in 25 d · GLD −2.9 t on the day · DESCRIBES, DOES NOT PREDICT
+H1/H2
+STRONG WEEK, GOLD-SPECIFIC
+COMEX_GC_FRONT · 4.41 vs weak_pct -2, strong_pct 2, flat_pct 0.5
+H2
+gold +4.4 % week to date (since the Fri 30 Oct close) · of which the dollar +0.3 % · real yield +2 bp
+FRED_DFII10 · 0.35 vs usd_share 0.4, min_move_pct 0.5, real_yield_bp 5
+H3
+funds +1.3 % w/w (bought the dip)
+COT_DISAGG_F · 1,05,562.00
+H4
+India basis +1.6 % vs duty-paid landed
+MCX_BASIS_PCT · 1.58
+H5
+roll DEC-26→FEB-27 costs +0.81 % (+5.2 %/yr), FND in 25 d
+COMEX_CARRY_ANN_PCT · 0.81
+H6
+GLD -2.9 t on the day
+GLD_TONNES · −2.85 vs notable_t 5
+EIGHT GAUGES
+CONTEXT
+DELAYED
+?
+window W · week to date (since the Fri 30 Oct close) · 60-day sparks · as of 05 Nov, 03:51 IST
+[P]Each tile: the direction rule, the publisher's lag and the percentile window (1 y / 3 y once history exists; printed only with ≥ 60 observations). Each Δ carries its own unit (bp for yields, $/oz for the Shanghai premium, % for the price). Curve/roll is arithmetic; the rest is context.
+TREND
+$4,070.80
+▲+4.41 % W
+close vs 20-day / 200-day average; drawdown from the 52-week high
+PRICE ABOVE ITS AVERAGES = UPTREND (A DESCRIPTION) · 12th percentile (1 y) · 69th percentile (3 y)
+CONTEXT
+DELAYED · YAHOO GC=F (STORE…
+Wed 04 Nov
+REAL YIELD
+2.62 %
+▲+2 bp W
+10-y TIPS yield; Δ in bp over the window; contemporaneous only (G-MACRO H1)
+FALLING = SUPPORTIVE · 88th percentile (1 y)
+CONTEXT
+DELAYED · FRED, FEDERAL RES…
+Mon 02 Nov
+DOLLAR
+101.5 index
+▼−0.35 % W
+Δ % over the window; the KGX split takes −Δln(DXY) as the dollar effect
+RISING = HEADWIND · 90th percentile (1 y)
+CONTEXT
+DELAYED · YAHOO DX-Y.NYB (S…
+Wed 04 Nov
+POSITIONING
++105,562
+▲+1,356 contracts W
+net = long − short; Δ w/w; 3-y percentile once 156 reports are stored
+long, not crowded
+CONTEXT
+DELAYED · CFTC DISAGGREGATE…
+Tue 27 Oct
+INDIA BASIS
+1.58 %
+live MCX ÷ duty-paid landed now − 1 while a quote exists, else settle ÷ that session's duty-paid − 1; IBJA premium at its fix minute beside it when stored
+CONTEXT
+SETTLEMENT · PROXY · Tue 03 Nov
+SHANGHAI PREMIUM
+−$1.55
+▼−$76.89/oz W
+SGE PM (CNY/g → $/oz) − LBMA PM of the same date; Δ in $/oz over the window
+CONTEXT
+DELAYED · SURYADHANA (DERIV…
+Tue 03 Nov
+ETF HOLDINGS
+1,037.7 t
+▼−2.85 t D
+tonnes in trust; Δ d/d; contemporaneous with price, no lead (G-STUDY, G-MACRO)
+CONTEXT
+DELAYED · SPDR GOLD SHARES…
+Tue 03 Nov
+CURVE / ROLL
+0.81 %
+(F2/F1 − 1) and × 365/days; contango is the normal state
+ARITHMETIC
+DELAYED · YAHOO PER-MONTH P…
+Wed 04 Nov
+TODAY'S OPEN
+↻
+ARITHMETIC
+LIVE · YAHOO (CACHED FET…
+?
+GOLD DEC-26 ↔ COMEX GCZ26 · updated 05 Nov, 03:51 IST · every 60 s · as of 05 Nov, 03:29 IST
+[P]Multiplicative: settlement × COMEX ratio × USD/INR ratio; references are 30-min averages before the MCX close; settlement = ICICI band midpoint (PROXY). The OK / WAIT strip is a house rule (₹300) that has missed by ₹1,360 on a typical morning and is worse than ‘open = yesterday’s settlement’ so far (6 days scored) — arithmetic to read, not advice. After 09:15 the panel shows the 08:45 snapshot against the captured open, never the live fair value.
+◷
+WAITING FOR THE OPEN
+Trade the open only if MCX opens within ₹300 of ₹1,44,618.
+HEURISTIC · measured miss
+⚠ EVENT WORDS · 3
+BASELINE · MCX SETTLEMENT
+₹1,40,186
+Tue 03 Nov settlement · MCX settlement 03 Nov (price-band midpoint)
+FAIR OPEN (MODEL)
+₹1,44,618
++3.16% vs baseline
+EXPECTED GAP
++₹4,432
++₹4,43,200 per 1 kg lot · +₹44,320 per Gold Mini
+MCX NOW VS FAIR
+—
+enter the MCX price at the open
+CHASE LIMIT
+₹300
+≈ $8.4 on COMEX · +₹30,000 per lot
+WHAT MOVED SINCE THE MCX CLOSE
+COMEX +₹4,600 · rupee −₹168 → fair ₹1,44,618
+COMEX +₹4,600
+Rupee −₹168
+Gap +₹4,432
+Rule of thumb today: ₹35.6 per $1 on COMEX · ₹1,480 per ₹1 on USD/INR · COMEX GCZ26 4,072.2 vs 3,942.8 at the close · ₹/$ 94.630 vs 94.740. Today's MCX band ₹1,35,981 – ₹1,44,391 (±3%).
+YOUR INPUTS
+saved for today · synced
+MCX CLOSE OVERRIDE (₹ / 10 G)
+MCX PRICE NOW / PRE-OPEN (₹)
+CHASE LIMIT (₹)
+EUR/USD TRIGGER
+Leave the close empty to use the Tue 03 Nov settlement. Connect ICICI on BRKR and the MCX price fills itself.
+HEADLINES
+HEURISTIC · 3 risk words
+DELAYED · GOOGLE NEWS
+?
+last 24 h · gold topics · as of 05 Nov, 03:51 IST
+[P]Headline topics are a prefs list (gold.triggers.v1); the tally is a house heuristic with no study behind it.
+IRAN / HORMUZ
+Vance says the Iran war cost Republicans the midterms · Axios
+18m
+FED
+Fed Chairman Warsh Faces Critics in Dem-Led Senate · Newsmax
+19m
+IRAN / HORMUZ
+JD Vance Throws Iran War Into Spotlight, Says Trump Himself Blamed It For GOP Defeat · The Times of India
+37m
+IRAN / HORMUZ
+Oil Slides on Hopes of Iran Peace Deal · TradingView
+40m
+IRAN / HORMUZ
+Vance repudiates Iran war after US electoral defeat · Reuters
+57m
+CHINA GOLD
+Chinese Yuan: PBoC slows Yuan gains – MUFG · www.tmgm.com
+58m
+FED
+Election stiffens the Fed's guardrails, but independence risks remain · Reuters
+2h
+GOLD
+Gold Prices Are Above $4,000 After Democrats Win Big in Midterm Elections · Barron's
+2h
+FED
+Swearing-in ceremony for incoming Federal Reserve Chair Kevin Warsh · The Lufkin Daily News
+2h
+CHINA GOLD
+Chinese Yuan: PBoC cools appreciation trend – Commerzbank · Mitrade
+3h
+GOLD
+Spot Gold Breaks Above $4,000 an Ounce, Rising 1.78% on Nov. 4 · www.tokenpost.com
+3h
+FED
+Trump Can’t Pack the Federal Reserve Board Now · Political Wire
+3h
+GOLD
+Spot Gold Moves Above $4,000 Per Ounce With a 1.78% Daily Gain · www.tokenpost.com
+3h
+GOLD
+Gold prices surge Rs13,900 per tola · The News Pakistan
+3h
+RUPEE
+Despite gains since October, rupee still trails its Asian peers in 2026 · Business Standard
+4h
+RUPEE
+Rupee Crash Alert: Indian Rupee Could Fall to 106 Against U… · theopenpress.in
+6h
+CHINA GOLD
+Gold bar, coin demand lifts China's gold consumption in first 9 months · Xinhua
+12h
+CHINA GOLD
+USD/CNH: PBOC lifts FX reserve ratio to 6%, yuan weakens · Forextraders.com
+12h
+ACCURACY LOG
+FULL LOG ›
+↻
+ARITHMETIC
+DELAYED · GOLD_PREOPEN_LOG
+?
+fair open recorded 08:45 IST vs the actual MCX open · naive = open at yesterday's settlement
+[P]Need ≈20 rows before the chase limit means anything; the 15 Oct row looks like a stale baseline (band-midpoint settlement from an older file).
+DAYS MEASURED
+6
+need ≈20 to size the chase limit
+TYPICAL MODEL MISS
+₹1,360
+mean ₹1,878 · p90 ₹3,518
+WITHIN ₹300
+0%
+bias −₹743 (+ = opens above fair)
+MODEL VS NAIVE
+WORSE
+naive = settlement · mean miss ₹1,467
+STALE BASELINES
+0
+none flagged
+Baseline is the Tue 03 Nov settlement: ICICI publishes the file with the Wed 04 Nov settlement at about 07:30 IST on the next trading day. Until then the expected gap also includes Wed's move; the fair open itself stays valid (it scales the older settlement by every COMEX and rupee move since).
+USD/INR last updated 05 Nov 00:13 IST: the market may be closed.
+METHOD Fair open = MCX settlement × COMEX ratio × USD/INR ratio, references averaged over the last 30 minutes before MCX closed (03 Nov, 23:55 IST). Settlement = midpoint of MCX's ±3% daily band from ICICI's public contract file (PROXY). USD/INR before 09:00 is the offshore quote. Research tool, not advice.
+DELAYED · YAHOO
+EVENT RISK · NEXT 7 DAYS
+ARITHMETIC
+DELAYED · GOLD_EVENTS
+?
+IST · High → Medium → roll / holiday → Low, then time · ★ High impact or an FOMC decision · 22 rows · as of 05 Nov, 03:51 IST
+[P]Impact from the Forex Factory calendar (High / Medium / Low), roll and holiday rows between Medium and Low; rows already behind the IST clock are dropped. FOMC decision 00:30 IST (winter); US CPI/NFP/PCE 18:00/19:00; COT release Sat 01:00/02:00; MCX expiries; COMEX FND/LTD; in-session = 09:00–23:30/23:55 IST.
+Fri 06 Nov 19:00
+HIGH
+★ Average Hourly Earnings m/m · High
+IN SESSION
+Fri 06 Nov 19:00
+HIGH
+★ Non-Farm Employment Change · High
+IN SESSION
+Fri 06 Nov 19:00
+HIGH
+★ Unemployment Rate · High
+IN SESSION
+Thu 05 Nov 19:00
+MEDIUM
+Unemployment Claims · Medium
+IN SESSION
+Fri 06 Nov 20:30
+MEDIUM
+Prelim UoM Consumer Sentiment · Medium
+IN SESSION
+Fri 06 Nov 20:30
+MEDIUM
+Prelim UoM Inflation Expectations · Medium
+IN SESSION
+Thu 05 Nov 23:30
+CONTEXT
+MCX GOLDM Nov-26 expiry · rule: 5th (GOLD/GOLDM) or month end (TEN/GUINEA/PETAL)
+IN SESSION
+Fri 06 Nov
+CONTEXT
+Dhanteras · peak retail gold demand day
+AFTER CLOSE
+Sat 07 Nov 02:00
+CONTEXT
+CFTC COT (positions as of Tue 03 Nov) · Friday 15:30 ET; Monday after US holidays; verified catch-up dates
+AFTER CLOSE
+Sat 07 Nov 02:00
+CONTEXT
+CFTC COT release (Tue 03 Nov positions) · Fri 06 Nov 15:30 ET = Sat 07 Nov 02:00 IST
+AFTER CLOSE
+Sun 08 Nov 14:20
+CONTEXT
+Muhurat trading (Diwali Laxmi Pujan) · circular MCX/TRD/590/2026: special 14:05–14:19, trading 14:20–15:30
+IN SESSION
+Tue 10 Nov
+CONTEXT
+MCX morning closure: Diwali-Balipratipada · shared/mcx_specs
+AFTER CLOSE
+Thu 05 Nov 16:00
+LOW
+Challenger Job Cuts y/y · Low
+IN SESSION
+Thu 05 Nov 19:00
+LOW
+Prelim Nonfarm Productivity q/q · Low
+IN SESSION
+Thu 05 Nov 19:00
+LOW
+Prelim Unit Labor Costs q/q · Low
+IN SESSION
+Thu 05 Nov 19:20
+LOW
+FOMC Member Hammack Speaks · Low
+IN SESSION
+Thu 05 Nov 19:40
+LOW
+FOMC Member Barkin Speaks · Low
+IN SESSION
+Thu 05 Nov 21:00
+LOW
+Natural Gas Storage · Low
+IN SESSION
+Fri 06 Nov 15:00
+LOW
+FOMC Member Williams Speaks · Low
+IN SESSION
+Fri 06 Nov 19:40
+LOW
+FOMC Member Musalem Speaks · Low
+IN SESSION
+Fri 06 Nov 22:45
+LOW
+FOMC Member Bowman Speaks · Low
+IN SESSION
+Sat 07 Nov 01:30
+LOW
+Consumer Credit m/m · Low
+AFTER CLOSE
+AUTOMATED BRIEF
+CONTEXT
+DELAYED · GOLD_BRIEF_DOCS
+?
+2026-11-04 · written 22:24
+[P]Schema-validated document from gold_brief_docs (sha256-deduped); bias and confidence are the writer's own top-level fields, unscored here; the document's open_signal is never rendered (PLAN 0.1 #7).
+automated brief · bias neutral · confidence 45 %
+The document carries no summary, plan or risk list for this date; the bias and confidence above are its only headline fields.

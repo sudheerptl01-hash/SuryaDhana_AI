@@ -1,0 +1,114 @@
+[
+ {
+  "url": ":8010/api/market/indices-live?names=NIFTY%2050,NIFTY%20BANK,INDIA%20VIX",
+  "p50_ms": 7,
+  "max_ms": 10,
+  "bytes": 575,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/market/monitor",
+  "p50_ms": 34,
+  "max_ms": 39,
+  "bytes": 79465,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/market/index-valuation",
+  "p50_ms": 43,
+  "max_ms": 52,
+  "bytes": 4326,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/market/results-reacting",
+  "p50_ms": 6,
+  "max_ms": 15,
+  "bytes": 6545,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/market/eco-calendar?back=0&ahead=7",
+  "p50_ms": 8,
+  "max_ms": 50,
+  "bytes": 1123,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/market/events",
+  "p50_ms": 29,
+  "max_ms": 30,
+  "bytes": 239429,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/market/surveillance?symbols=CUPID,AEROFLEX,PCJEWELLER,SYNCOMF",
+  "p50_ms": 13,
+  "max_ms": 17,
+  "bytes": 665,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/news-scanner/quotes?symbols=TCS.NS,INFY.NS,RELIANCE.NS,HDFCBANK.NS,ICICIBANK.NS",
+  "p50_ms": 16,
+  "max_ms": 509,
+  "bytes": 3269,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/positions/open-positions",
+  "p50_ms": 1,
+  "max_ms": 875,
+  "bytes": 43,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/desk/status",
+  "p50_ms": 2,
+  "max_ms": 2,
+  "bytes": 6197,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/research",
+  "p50_ms": 7,
+  "max_ms": 27,
+  "bytes": 26478,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/stocks/TCS/profile",
+  "p50_ms": 27,
+  "max_ms": 35,
+  "bytes": 6566,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/data/live/quote/TCS",
+  "p50_ms": 295,
+  "max_ms": 301,
+  "bytes": 496,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/data/live/index/nifty",
+  "p50_ms": 8,
+  "max_ms": 27,
+  "bytes": 679,
+  "code": 200
+ },
+ {
+  "url": ":8010/api/alerts",
+  "p50_ms": 1,
+  "max_ms": 2,
+  "bytes": 26,
+  "code": 200
+ },
+ {
+  "url": ":3000/",
+  "p50_ms": 2,
+  "max_ms": 3,
+  "bytes": 26389,
+  "code": 200
+ }
+]

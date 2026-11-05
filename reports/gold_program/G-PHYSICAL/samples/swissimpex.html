@@ -1,0 +1,315 @@
+	
+	
+
+
+
+
+
+
+
+
+
+		<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+		"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html lang="en" xml:lang="en">
+
+<head>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
+	<meta name="description" content="With eIAM, the Federal Administration provides a federal identity and access management solution. This enables the offices to make several login procedures available to internal and/or external users for their specialist applications." />
+	<meta name="keywords" content="SSO E-Access E-ID eIAM" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<!-- // Stylesheets & Favicon // -->
+	<!--
+	<link rel="stylesheet" type="text/css" media="screen" href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/styles/screen.css" />
+	-->
+	<!--[if lte IE 7]>
+    <link rel="stylesheet" type="text/css" media="screen" href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/styles/screen_ie7.css" />
+	<![endif]-->
+	<!--[if IE 6]>
+    <link rel="stylesheet" type="text/css" media="screen" href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/styles/screen_ie6.css" />
+	<![endif]-->
+	<!--
+	<link rel="stylesheet" type="text/css" media="screen" href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/customize/_default/styles/screen__default.css" />
+        <link rel="stylesheet" type="text/css" media="screen" href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/customize/_default/styles/screen__default_nevisIdm.css" />
+	<link rel="stylesheet" type="text/css" media="screen" href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/styles/jquery-ui.min.css">
+ 	-->
+	<!-- ObliqueUI - Favicon & CSS -->
+	<link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/images/favicon.png" rel="shortcut icon" />
+	<link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/css/noto-sans.css" rel="stylesheet" />
+	<link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/css/oblique-bootstrap.css" rel="stylesheet" />
+	<link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/css/oblique-components.css" rel="stylesheet" />
+	<link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/css/oblique-utilities.css" rel="stylesheet" />
+	<link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/css/oblique-core.css" rel="stylesheet" />
+	<link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/css/oblique-master-layout.css" rel="stylesheet" />
+	<link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/css/eiam.css" rel="stylesheet" />
+	<!-- Internet Explorer 10 in Windows 8 and Windows Phone 8 viewport fix. -->
+
+	<!-- See: http://getbootstrap.com/getting-started/#support-ie10-width -->
+	<style type="text/css">
+		@-webkit-viewport {
+			width: device-width;
+		}
+
+		@-moz-viewport {
+			width: device-width;
+		}
+
+		@-ms-viewport {
+			width: device-width;
+		}
+
+		@-o-viewport {
+			width: device-width;
+		}
+
+		@viewport {
+			width: device-width;
+		}
+	</style>
+	<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+
+	<script src="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/js/jquery-3.6.0.min.js"></script>
+	<script>
+		//used in validation.js
+		var validationMessages = {
+			'success': 'validation.input.success',
+			'failed': 'validation.input.failed'
+		};
+	</script>
+	<script src="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/js/validation.js"></script>
+	<script src="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/js/input-trim.js"></script>
+
+	<script type="text/javascript">
+		if (navigator.userAgent.match(/IEMobile\/10\.0/)) {
+			var msViewportStyle = document.createElement('style');
+			msViewportStyle.appendChild(
+					document.createTextNode('@-ms-viewport{width:auto!important}')
+			);
+			document.querySelector('head').appendChild(msViewportStyle);
+		}
+	</script>
+	<script src="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/scripts/navigation.js"></script>
+	<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+	<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+
+	<!--[if lt IE 9]>
+    <script src="/oblique-ui/support/html5shiv-printshiv.min.js"></script>
+    <script src="/oblique-ui/support/respond.min.js"></script>
+	<![endif]-->
+
+
+		<title>Page not found</title>
+</head>
+<body class="has-overlay">
+<div class="application application-fixed offcanvas" aria-hidden="false" id="application">
+
+
+<header class="application-header offcanvas-main">
+    <script src="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/js/header-control.js"></script>
+
+    <link href="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/css/env-banner.css" rel="stylesheet" />
+    <p class="env-banner env-banner-old"></p>
+    <script>
+        let bannerTag = document.querySelector('.env-banner');
+        let bannerType = "$gui.getGuiElem('stage').value";
+
+        if(bannerType.indexOf('stage') !== -1) {
+            bannerType = "PROD";
+        }
+
+        bannerTag.addEventListener('click', () => {
+            bannerTag.style.display = 'none';
+        });
+
+        if(bannerType) {
+            if(bannerType !== "PROD") {
+                bannerTag.innerHTML = bannerType;
+            }
+
+            switch (bannerType) {
+                case 'DEV' :
+                case 'DEVINT':
+                case 'DEV2' :
+                case 'DEVTEST':
+                    bannerTag.classList.add('dev');
+                    break;
+                case 'REF' :
+                    bannerTag.classList.add('ref');
+                    break;
+                case 'TEST' :
+                    bannerTag.classList.add('test');
+                    break;
+                case 'ABN' :
+                    bannerTag.classList.add('abn');
+                    break;
+                default:
+                    bannerTag.innerHTML = '';
+                    break;
+            }
+        }
+    </script>
+
+    <div class="header">
+        <div class="application-header-title">
+
+            <div class="application-brand">
+                <a class="application-brand-logo" tabindex="-1">
+                    <img alt="header.app.logo.backToHome.alt" tabindex="1" src="/login/resources//nevislogrend/applications/srd_arm_pep/webdata/images/logo.svg" />
+                </a>
+                <span class="application-brand-app-title" data-version="1.3.0">
+                    <a id="app-header" tabindex="2" class="application-brand-link">eIAM</a>
+                </span>
+            </div>
+            <ul class="header-controls header-toggle">
+                <li class="nav-item">
+                    <a role="button" tabindex="0" class="control-link" data-toggle="header" onclick="toggleNav()">
+                        <div class="application-header-toggle">
+                            <span class="first-line"></span>
+                            <span class="second-line"></span>
+                            <span class="third-line"></span>
+                        </div>
+                        <span class="sr-only">Toggle header & navigation</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="application-header-controls justify-content-end">
+            <!-- <oblique-ui:header-controls> -->
+
+            <h1 style="font-size: 0rem" id="Navigation_header" tabindex="3">idpPrivate.header.navigation</h1>
+
+            <h2 class="sr-only" tabindex="4">idpPrivate.header.controls.language</h2>
+            <ul class="header-controls header-locale text-uppercase mr-2 ml-2" role="menu" aria-label="Sprache wÃ¤hlen">
+                <li class="control-item" role="none">
+                    <a id="lang-de" class="control-locale" href="?login&amp;language=de" tabindex="5" aria-label="idpPrivate.header.controls.languageMenuListDE">de</a>
+                </li>
+                <li class="control-item" role="none">
+					<a id="lang-fr" class="control-locale" href="?login&amp;language=fr" tabindex="6" aria-label="idpPrivate.header.controls.languageMenuListFR">fr</a>
+                </li>
+                <li class="control-item" role="none">
+					<a id="lang-it" class="control-locale" href="?login&amp;language=it" tabindex="7" aria-label="idpPrivate.header.controls.languageMenuListIT">it</a>
+                </li>
+                <li class="control-item" role="none">
+					<a id="lang-en" class="control-locale active" href="?login&amp;language=en" tabindex="8" aria-label="idpPrivate.header.controls.languageMenuListEN">en</a>
+                </li>
+                	                	            </ul>
+
+        </div>
+    </div>
+    <div class="application-navigation">
+        <div role="navigation"><!-- Do not remove! --></div>
+    </div>
+</header>
+
+	<div class="application-content offcanvas-main" id="content" role="main">
+		<noscript>
+			&lt;div class="callout callout-danger"&gt;
+			&lt;span class="sr-only"&gt;Error&lt;/span&gt;
+			&lt;h4&gt;Javascript required!&lt;/h4&gt;
+			&lt;p class="lead"&gt;JavaScript must be enabled to use this app.&lt;/p&gt;
+			&lt;p&gt;Please enable JavaScript in your browser and refresh the page.&lt;/p&gt;
+			&lt;/div&gt;
+		</noscript>
+		<div class="alert-compatibility default-layout">
+			<div class="callout callout-danger">
+				<span class="sr-only">Error</span>
+				<h4>Unsupported browser!</h4>
+				<p class="lead">Please note that your browser, Internet Explorer 8 or earlier, is deprecated.</p>
+				<p>We recommend upgrading to the
+					<a href="http://ie.microsoft.com" target="_blank">latest version</a>.</p>
+				<p>If you are using IE 9 or above, make sure you
+					<a href="http://windows.microsoft.com/en-us/internet-explorer/use-compatibility-view"
+							target="_blank">turn
+						off "Compatibility View".</a>
+				</p>
+			</div>
+		</div>
+
+		<div class="application-content-viewport">
+			<div class="default-layout">
+				<div class="absoluteCenter">
+
+
+
+
+
+
+
+
+
+
+<div id="guiInfo" style="visibility:hidden">
+	<div>
+		Rendering GUI=404
+	</div>
+	<div>
+		CICD Code=_default
+	</div>
+	<div>
+		appName=nevisIdm
+	</div>
+</div>
+
+<div id="standardLayouterror" class="standardLayouterrorclass">
+	<div><h1>http error 404</h1></div>
+	<div>ErrorId: 31c644200855530d264a8dfccdb79fa6.603b1e8faed9ccad</div>
+	<div>Timestamp: Mon, 26 Oct 2026 00:14:11 GMT</div>
+	<br>
+	<div>The requested page could not be found. It may no longer exist, or the link to the page is invalid.</div>
+	<div>If you have any questions, please contact your service desk.</div>
+	<br>
+</div>
+
+
+<div id="functionsarea" class="functionsareaclass">
+
+
+
+
+
+
+
+</div>
+
+
+
+
+
+</div> </div> </div> </div> 
+
+<footer class="application-footer offcanvas-main">
+	<div class="footer-item footer-item-info department" tabindex="900">
+        Federal Office of Information Technology, Systems and Telecommunication FOITT
+	</div>
+	<div class="footer-item footer-item-links">
+		<div>
+			<a title="Click here for Disclaimer" class="link" tabindex="901"
+			   href="http://www.disclaimer.admin.ch/terms_and_conditions.html" target="_blank"
+			   data-original-title="Legal framework">Legal framework</a>
+		</div>
+	</div>
+		<div>
+		<a href="#application" accesskey="0"></a>
+		<a href="#Navigation_header" accesskey="1"></a>
+		<a href="#Content_header" accesskey="2"></a>
+	</div>
+</footer>
+
+<script type="text/javascript">
+	$(document).ready(function () {
+
+						
+		$("form [type=button]").click(function(){
+			this.type = "submit";
+		});
+
+	});
+
+</script>
+</div> </body>
+
+</html>
+

@@ -1,0 +1,204 @@
+◉ SURYADHANA ▸ MCXG
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:40:53
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,127.30
+−1.20%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:40 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MCXG ▾
+⌕ GO
+/
+MCXG
+MCX GOLD DESK
+session clock · live quotes (degrade-honest) · contract specs · COMEX overlay · paper ticket
+■ CLOSED
+opens in 5h 19m 6s
+SESSION
+Mon–Fri 09:00 → 23:30 IST · as of 15 Oct, 03:40
+STATE
+CLOSED
+OPENS
+15 Oct, 09:00
+in 5h 19m 6s
+EVENING CLOSE
+23:30 IST
+US-linked: 23:30 in NY summer, 23:55 in winter
+MCX evening close is US-linked: 23:30 IST while New York is on daylight saving time, 23:55 IST otherwise. Continuous trading from 09:00; the 17:00 split only matters on partial holidays.
+MCX HOLIDAYS AHEAD
+MCX's own calendar — not NSE's
+DATE	MCX HOLIDAY	CLOSURE
+2026-10-20 Tue	Dussehra	EVE ONLY (17:00→)
+2026-11-10 Tue	Diwali-Balipratipada	EVE ONLY (17:00→)
+2026-11-24 Tue	Guru Nanak Jayanti	EVE ONLY (17:00→)
+2026-12-25 Fri	Christmas	FULL DAY
+◆ 2026-11-08: Muhurat trading (Diwali Laxmi Pujan) — Sunday evening special session; exact timings by MCX circular
+QUOTE
+GOLD 2026-12-04 (observed) · lot 1 kg · tick ₹100
+GOLD
+GOLDM
+GOLDPETAL
+GOLDGUINEA
+front (by OI)
+2026-12-04
+2027-02-05
+2027-04-05
+Broker quote unavailable — Breeze gave no MCX GOLD quote (Object reference not set to an instance of an object.) — commodity segment not verified for this account, or MCX futures unsupported by get_quotes (it answered HTTP 500 on 12 Oct 2026) LIVE-VERIFY PENDING · after the 08:00 login
+PREV SETTLEMENT · PRICE BAND
+₹1,49,543
+band ₹1,45,057–₹1,54,029 · OI 17,548 lots
+FAIR VALUE · COMEX×INR MODEL
+₹1,47,569
+vs settlement −₹1,974
+DESK PRICE IN USE
+₹1,47,569
+fair value (COMEX × USD/INR model)
+COMEX × RUPEE OVERLAY
+GC GCZ26 · updated 15 Oct, 03:40
+COMEX GOLD
+$4,126.1
+GCZ26.CMX
+USD / INR
+95.14
+offshore before 09:00
+LANDED (NO DUTY)
+₹1,26,210
+COMEX × USD/INR × 10 g/oz — no import duty or local premium
+FAIR VALUE (MODEL)
+₹1,47,569
+MCX premium ≈ 16.9% over landed
+Premium vs fair appears when a live broker quote exists — never computed against the model itself.
+CONTRACT SPECS — MCX GOLD FAMILY
+expiries cross-checked vs ICICI master (2026-10-14)
+CONTRACT	LOT	QUOTE	TICK ↕	DELIVERY	MARGIN*	CYCLE	NEXT EXPIRIES
+GOLD
+Gold (1 kg)
+	1 kg	₹ per 10 g	₹1 = ₹100	1 kg (995)	6%
+≈₹8,97,258/lot
+	Feb/Apr/Jun/Aug/Oct/Dec	2026-12-04 · 2027-02-05
+observed (ICICI master)
+
+GOLDM
+Gold Mini (100 g)
+	100 g	₹ per 10 g	₹1 = ₹10	100 g (995)	6%
+≈₹88,976/lot
+	monthly	2026-11-05 · 2026-12-04
+observed (ICICI master)
+
+GOLDPETAL
+Gold Petal (1 g)
+	1 g	₹ per 1 g	₹1 = ₹1	8 g (coins; trading unit 1 g) (999)	6%
+≈₹896/lot
+	monthly	2026-10-30 · 2026-11-30
+observed (ICICI master)
+
+GOLDGUINEA
+Gold Guinea (8 g)
+	8 g	₹ per 8 g	₹1 = ₹1	8 g (999)	6%
+≈₹7,173/lot
+	monthly	2026-10-30 · 2026-11-30
+observed (ICICI master)
+*SPAN+exposure margins are revised daily by MCX (bullion typically ≈6–12%); the % here is indicative for paper sizing only.
+Computed: GOLD = 5th of Feb/Apr/Jun/Aug/Oct/Dec, GOLDM = 5th monthly, PETAL/GUINEA = month-end, each moved to the previous business day when MCX is closed (morning closures included — observed 30 Mar 2026). The exchange circular is the legal source; 'observed' rows come from ICICI's master.
+PAPER GOLD TICKET
+prices the trade — PAPER, records nothing, no order API exists on this desk
+CONTRACT
+GOLD (1 kg)
+GOLDM (100 g)
+GOLDPETAL (1 g)
+GOLDGUINEA (8 g)
+LOTS
+PRICE (₹, BLANK = DESK PRICE)
+BROKERAGE / ORDER (₹)
+NOTIONAL
+₹1,47,56,900
+1 × 1 kg @ ₹1,47,569
+INDICATIVE MARGIN*
+₹8,85,414
+6% SPAN+exposure — exchange revises daily
+TICK VALUE
+₹100
+₹100 per lot
+ROUND-TRIP COST
+₹2,584.21
+0.0175% of notional · breakeven 25.8 ticks (₹25.8)
+LEG	BROKERAGE	EXCH 0.0021%	CTT 0.01% (SELL)	STAMP (BUY)	SEBI	GST 18%	TOTAL
+BUY	₹20.00	₹309.89	₹0.00	₹295.14	₹14.76	₹62.04	₹701.83
+SELL	₹20.00	₹309.89	₹1,475.69	₹0.00	₹14.76	₹62.04	₹1,882.38
+Indicative: exchange margins move daily; costs assume a squared-off trade (CTT 0.01% sell side), flat brokerage, GST 18% on brokerage+txn+SEBI. This ticket prices the trade — nothing is sent anywhere. Rates: exchange txn ₹2.10/lakh (0.0021%), CTT 0.01% sell side (squared-off futures), SEBI ₹10/crore, stamp 0.002% buy side, GST 18% on brokerage+txn+SEBI — indicative, see shared/mcx_specs.py for citations.
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

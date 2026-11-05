@@ -1,0 +1,472 @@
+{
+ "src": "/private/tmp/claude-501/-Users-sudheer-MahaKubera-108-SuryaDhana-AI/a24906e4-7b64-46ba-b24b-14c536f43922/scratchpad/fx-qa/ui_start",
+ "dest": "/private/tmp/claude-501/-Users-sudheer-MahaKubera-108-SuryaDhana-AI/a24906e4-7b64-46ba-b24b-14c536f43922/scratchpad/fx-qa/baseline_ui",
+ "files": 134,
+ "tree_sha256": "948a92da6e08783f7907a57cf73235206c39265a9b3127164c01314b86f2322a",
+ "modified_vs_snapshot": {
+  "app/global-error.tsx": {
+   "added": 47,
+   "removed": 4,
+   "records": [
+    "D4.write"
+   ]
+  },
+  "app/globals.css": {
+   "added": 163,
+   "removed": 0,
+   "records": [
+    "D4.globals-append"
+   ]
+  },
+  "app/layout.tsx": {
+   "added": 26,
+   "removed": 9,
+   "records": [
+    "D4.write"
+   ]
+  },
+  "app/page.tsx": {
+   "added": 31,
+   "removed": 3,
+   "records": [
+    "D4.P1",
+    "D4.P7",
+    "D4.P8"
+   ]
+  },
+  "components/AlphaDiscoveryDesk.tsx": {
+   "added": 1,
+   "removed": 1,
+   "records": [
+    "D4.P10"
+   ]
+  },
+  "components/CommandBar.tsx": {
+   "added": 4,
+   "removed": 5,
+   "records": [
+    "D3.2#10",
+    "D3.2#11",
+    "D4.P9e"
+   ]
+  },
+  "components/Compare.tsx": {
+   "added": 2,
+   "removed": 1,
+   "records": [
+    "D4.P9b"
+   ]
+  },
+  "components/DealsMonitor.tsx": {
+   "added": 2,
+   "removed": 1,
+   "records": [
+    "D4.P9d"
+   ]
+  },
+  "components/ErrorCatcher.tsx": {
+   "added": 1,
+   "removed": 1,
+   "records": [
+    "D4.P6"
+   ]
+  },
+  "components/MarketCommandHeader.tsx": {
+   "added": 1,
+   "removed": 1,
+   "records": [
+    "D4.P2"
+   ]
+  },
+  "components/OptionChain.tsx": {
+   "added": 2,
+   "removed": 1,
+   "records": [
+    "D4.P9c"
+   ]
+  },
+  "components/ResearchLibrary.tsx": {
+   "added": 3,
+   "removed": 1,
+   "records": [
+    "D3.2#8",
+    "D3.2#9"
+   ]
+  },
+  "components/StockDetailModal.tsx": {
+   "added": 1,
+   "removed": 1,
+   "records": [
+    "D4.P4"
+   ]
+  },
+  "components/WatchMonitor.tsx": {
+   "added": 3,
+   "removed": 1,
+   "records": [
+    "D3.2#2",
+    "D3.2#3",
+    "D3.2#4"
+   ]
+  },
+  "components/news/NewsTerminal.tsx": {
+   "added": 1,
+   "removed": 1,
+   "records": [
+    "D4.P3"
+   ]
+  },
+  "components/terminal/index.tsx": {
+   "added": 2,
+   "removed": 5,
+   "records": [
+    "D3.2#12",
+    "D3.2#13"
+   ]
+  },
+  "context/AppContext.tsx": {
+   "added": 14,
+   "removed": 0,
+   "records": [
+    "D3.1d"
+   ]
+  },
+  "context/ToastContext.tsx": {
+   "added": 2,
+   "removed": 1,
+   "records": [
+    "D4.P5"
+   ]
+  },
+  "lib/alerts.ts": {
+   "added": 2,
+   "removed": 3,
+   "records": [
+    "D3.2#0",
+    "D3.2#1"
+   ]
+  },
+  "lib/backtestExport.ts": {
+   "added": 8,
+   "removed": 9,
+   "records": [
+    "D3.2#5",
+    "D3.2#6",
+    "D3.2#7"
+   ]
+  },
+  "next.config.js": {
+   "added": 41,
+   "removed": 1,
+   "records": [
+    "D1.write"
+   ]
+  },
+  "tailwind.config.ts": {
+   "added": 1,
+   "removed": 0,
+   "records": [
+    "D4.P11"
+   ]
+  }
+ },
+ "program_new_removed": [
+  "components/desktop/PlatformShell.tsx",
+  "components/desktop/ShellNotices.tsx",
+  "components/desktop/TitleStrip.tsx",
+  "components/desktop/__tests__/desktop.check.ts",
+  "components/desktop/build.ts",
+  "components/desktop/chunkRecovery.ts",
+  "components/desktop/health.ts",
+  "components/desktop/location.ts",
+  "components/desktop/pages.ts",
+  "components/desktop/session.ts",
+  "lib/__tests__/platform.check.ts",
+  "lib/__tests__/prefs.check.ts",
+  "lib/pageKeys.ts",
+  "lib/platform/encoding.ts",
+  "lib/platform/index.ts",
+  "lib/platform/invoke.ts",
+  "lib/platform/links.ts",
+  "lib/platform/types.ts",
+  "lib/prefs/keys.ts",
+  "lib/prefs/merge.ts",
+  "lib/prefs/sync.ts",
+  "public/fonts/OFL-ChakraPetch.txt",
+  "public/fonts/OFL-JetBrainsMono.txt",
+  "public/fonts/README.md",
+  "public/fonts/chakra-petch-v13-500-latin-ext.woff2",
+  "public/fonts/chakra-petch-v13-500-latin.woff2",
+  "public/fonts/chakra-petch-v13-600-latin-ext.woff2",
+  "public/fonts/chakra-petch-v13-600-latin.woff2",
+  "public/fonts/chakra-petch-v13-700-latin-ext.woff2",
+  "public/fonts/chakra-petch-v13-700-latin.woff2",
+  "public/fonts/jetbrains-mono-v24-latin-ext.woff2",
+  "public/fonts/jetbrains-mono-v24-latin.woff2",
+  "scripts/build_ui.test.mjs",
+  "scripts/print-next-config.mjs",
+  "scripts/release.mjs",
+  "scripts/release.test.mjs",
+  "scripts/testdata/fake-next.mjs"
+ ],
+ "not_source_left_out": [
+  ".gstack/browse-audit.jsonl",
+  "tsconfig.tsbuildinfo"
+ ],
+ "steps": [
+  {
+   "step": 1,
+   "id": "D4.P11",
+   "file": "tailwind.config.ts",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P10",
+   "file": "components/AlphaDiscoveryDesk.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P9e",
+   "file": "components/CommandBar.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P9d",
+   "file": "components/DealsMonitor.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P9c",
+   "file": "components/OptionChain.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P9b",
+   "file": "components/Compare.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P9a",
+   "file": "lib/pageKeys.ts",
+   "action": "delete new file (content verified)"
+  },
+  {
+   "step": 1,
+   "id": "D4.P8",
+   "file": "app/page.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P7",
+   "file": "app/page.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P6",
+   "file": "components/ErrorCatcher.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P5",
+   "file": "context/ToastContext.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P4",
+   "file": "components/StockDetailModal.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P3",
+   "file": "components/news/NewsTerminal.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P2",
+   "file": "components/MarketCommandHeader.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D4.P1",
+   "file": "app/page.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 1,
+   "id": "D3.1d",
+   "file": "context/AppContext.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#13",
+   "file": "components/terminal/index.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#12",
+   "file": "components/terminal/index.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#11",
+   "file": "components/CommandBar.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#10",
+   "file": "components/CommandBar.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#9",
+   "file": "components/ResearchLibrary.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#8",
+   "file": "components/ResearchLibrary.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#7",
+   "file": "lib/backtestExport.ts",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#6",
+   "file": "lib/backtestExport.ts",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#5",
+   "file": "lib/backtestExport.ts",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#4",
+   "file": "components/WatchMonitor.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#3",
+   "file": "components/WatchMonitor.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#2",
+   "file": "components/WatchMonitor.tsx",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#1",
+   "file": "lib/alerts.ts",
+   "action": "reverse replace"
+  },
+  {
+   "step": 2,
+   "id": "D3.2#0",
+   "file": "lib/alerts.ts",
+   "action": "reverse replace"
+  },
+  {
+   "step": 3,
+   "id": "D4.write",
+   "file": "app/layout.tsx",
+   "action": "restore the original D4 printed before its Write"
+  },
+  {
+   "step": 3,
+   "id": "D4.write",
+   "file": "app/global-error.tsx",
+   "action": "restore the original D4 printed before its Write"
+  },
+  {
+   "step": 5,
+   "id": "D1.write",
+   "file": "next.config.js",
+   "action": "restore the original D1 printed before its Write"
+  },
+  {
+   "step": 4,
+   "id": "D4.globals-append",
+   "file": "app/globals.css",
+   "action": "drop D4's appended section (163 lines)"
+  }
+ ],
+ "checks": {
+  "records_pinned": "fe76707bc328d5a03b3b472b5f8a585ecd2a7f891b348c393cc55ea8c9cc39f4",
+  "pm_backup_equal_after_step1": [
+   "app/page.tsx",
+   "components/AlphaDiscoveryDesk.tsx",
+   "components/CommandBar.tsx",
+   "components/Compare.tsx",
+   "components/DealsMonitor.tsx",
+   "components/ErrorCatcher.tsx",
+   "components/MarketCommandHeader.tsx",
+   "components/OptionChain.tsx",
+   "components/StockDetailModal.tsx",
+   "components/news/NewsTerminal.tsx",
+   "context/AppContext.tsx",
+   "context/ToastContext.tsx",
+   "tailwind.config.ts"
+  ],
+  "d3_section2_pairs_match_doc": 14,
+  "forward_replay_reproduces_snapshot": [
+   "app/page.tsx",
+   "components/AlphaDiscoveryDesk.tsx",
+   "components/CommandBar.tsx",
+   "components/Compare.tsx",
+   "components/DealsMonitor.tsx",
+   "components/ErrorCatcher.tsx",
+   "components/MarketCommandHeader.tsx",
+   "components/OptionChain.tsx",
+   "components/ResearchLibrary.tsx",
+   "components/StockDetailModal.tsx",
+   "components/WatchMonitor.tsx",
+   "components/news/NewsTerminal.tsx",
+   "components/terminal/index.tsx",
+   "context/AppContext.tsx",
+   "context/ToastContext.tsx",
+   "lib/alerts.ts",
+   "lib/backtestExport.ts",
+   "lib/pageKeys.ts",
+   "tailwind.config.ts"
+  ],
+  "inventory_matches_0539Z_listing": {
+   "app": 6,
+   "components": 80,
+   "lib": 22,
+   "public": 0,
+   "top": 14
+  },
+  "untouched_files_predate_program": true,
+  "touched_files_dated_at_their_last_record": true,
+  "pm_backup_mtimes_predate_program_or_match_records": true
+ }
+}

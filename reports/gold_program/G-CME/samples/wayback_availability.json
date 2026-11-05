@@ -1,0 +1,32 @@
+{
+ "gold_stocks_xls": {
+  "url": "https://www.cmegroup.com/delivery_reports/Gold_Stocks.xls",
+  "api_status": 429,
+  "body": "<html><body><h1>429 Too Many Requests</h1>\nYou have sent too many requests in a "
+ },
+ "issues_stops_pdf": {
+  "url": "https://www.cmegroup.com/delivery_reports/MetalsIssuesAndStopsReport.pdf",
+  "api_status": 429,
+  "body": "<html><body><h1>429 Too Many Requests</h1>\nYou have sent too many requests in a "
+ },
+ "settle_json": {
+  "url": "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/437/FUT?tradeDate=",
+  "api_status": 429,
+  "body": "<html><body><h1>429 Too Many Requests</h1>\nYou have sent too many requests in a "
+ },
+ "voi_json": {
+  "url": "https://www.cmegroup.com/CmeWS/mvc/Volume/Details/F/437/",
+  "api_status": 429,
+  "body": "<html><body><h1>429 Too Many Requests</h1>\nYou have sent too many requests in a "
+ },
+ "data_terms": {
+  "url": "https://www.cmegroup.com/market-data/terms-of-use.html",
+  "api_status": 429,
+  "body": "<html><body><h1>429 Too Many Requests</h1>\nYou have sent too many requests in a "
+ },
+ "gc_specs": {
+  "url": "https://www.cmegroup.com/markets/metals/precious/gold.contractSpecs.html",
+  "api_status": 429,
+  "body": "<html><body><h1>429 Too Many Requests</h1>\nYou have sent too many requests in a "
+ }
+}

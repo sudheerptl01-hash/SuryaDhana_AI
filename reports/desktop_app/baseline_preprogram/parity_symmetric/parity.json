@@ -1,0 +1,5822 @@
+{
+  "meta": {
+    "a": "http://127.0.0.1:8097",
+    "b": "http://127.0.0.1:8098",
+    "tabs": [
+      "ostrategy",
+      "discovery",
+      "mcxgold",
+      "brief"
+    ],
+    "engines": [
+      "chromium",
+      "webkit"
+    ],
+    "wait_s": 3.0,
+    "retries": 1,
+    "label_a": "pre-program baseline (:8097, --block-mutations)",
+    "label_b": "copy of live release 20261025-114737-0ae66db (:8098, --block-mutations)",
+    "seam_exclusion": true,
+    "observe_s": 12.0,
+    "started_at": "2026-10-25T12:51:43+05:30",
+    "finished_at": "2026-10-25T12:55:02+05:30",
+    "elapsed_s": 198.7
+  },
+  "engines": {
+    "chromium": {
+      "browser_version": "155.0.8059.85",
+      "tabs": {
+        "ostrategy": {
+          "code": "OSTR",
+          "verdict": "PARITY",
+          "reasons": [],
+          "diff": {
+            "platform_seams": {
+              "a": {
+                "api": {},
+                "failed": []
+              },
+              "b": {
+                "api": {
+                  "GET /api/prefs": [
+                    "2xx"
+                  ]
+                },
+                "failed": []
+              }
+            }
+          },
+          "notes": [
+            "platform seams differ (set aside): A {} [] \u00b7 B {'GET /api/prefs': ['2xx']} []"
+          ],
+          "attempts": 1,
+          "a": {
+            "url": "http://127.0.0.1:8097/?tab=ostrategy",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8097/api/options/strategy/analyze \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 411,
+              "ready_ms": 859,
+              "ready": true,
+              "idle_ms": 1771,
+              "total_ms": 12005
+            },
+            "nav_timing": {
+              "ttfb_ms": 1,
+              "dcl_ms": 408,
+              "load_ms": 650,
+              "fcp_ms": 416,
+              "resources": 36,
+              "js_files": 10,
+              "js_transfer_kb": 387
+            },
+            "fingerprint": {
+              "title": "SuryaDhana Terminal",
+              "page_headers": [
+                "OSTR Options strategies"
+              ],
+              "panels": [
+                "Legs (#/#)",
+                "Payoff"
+              ],
+              "headings": [],
+              "tables": 0,
+              "table_headers": [],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [
+                "\u25b2 blocked by desktop-qa scratch server (--block-mutations)"
+              ],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 3831
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/market/option-chain/{sym}": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/option-chain/NIFTY"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/options/strategy/analyze": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/options/strategy/analyze"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8097/api/options/strategy/analyze",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8097/api/options/strategy/analyze",
+                "status": 403,
+                "failure": null,
+                "resource_type": "xhr",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8097/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/options/strategy/analyze"
+            ],
+            "error": null
+          },
+          "b": {
+            "url": "http://127.0.0.1:8098/?tab=ostrategy",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8098/api/options/strategy/analyze \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 25,
+              "ready_ms": 536,
+              "ready": true,
+              "idle_ms": 1431,
+              "total_ms": 12006
+            },
+            "nav_timing": {
+              "ttfb_ms": 3,
+              "dcl_ms": 16,
+              "load_ms": 62,
+              "fcp_ms": 116,
+              "resources": 85,
+              "js_files": 53,
+              "js_transfer_kb": 637
+            },
+            "fingerprint": {
+              "title": "OSTR \u00b7 SuryaDhana",
+              "page_headers": [
+                "OSTR Options strategies"
+              ],
+              "panels": [
+                "Legs (#/#)",
+                "Payoff"
+              ],
+              "headings": [],
+              "tables": 0,
+              "table_headers": [],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [
+                "\u25b2 blocked by desktop-qa scratch server (--block-mutations)"
+              ],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 3831
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/market/option-chain/{sym}": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/option-chain/NIFTY"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/prefs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/prefs"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/options/strategy/analyze": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/options/strategy/analyze"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8098/api/options/strategy/analyze",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8098/api/options/strategy/analyze",
+                "status": 403,
+                "failure": null,
+                "resource_type": "xhr",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8098/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/options/strategy/analyze"
+            ],
+            "error": null
+          },
+          "a_pass": false,
+          "b_pass": false
+        },
+        "discovery": {
+          "code": "ALFA",
+          "verdict": "PARITY",
+          "reasons": [],
+          "diff": {
+            "platform_seams": {
+              "a": {
+                "api": {},
+                "failed": []
+              },
+              "b": {
+                "api": {
+                  "GET /api/prefs": [
+                    "2xx"
+                  ]
+                },
+                "failed": []
+              }
+            }
+          },
+          "notes": [
+            "platform seams differ (set aside): A {} [] \u00b7 B {'GET /api/prefs': ['2xx']} []"
+          ],
+          "attempts": 1,
+          "a": {
+            "url": "http://127.0.0.1:8097/?tab=discovery",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8097/api/alpha/scan \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 31,
+              "ready_ms": 461,
+              "ready": true,
+              "idle_ms": 1113,
+              "total_ms": 12005
+            },
+            "nav_timing": {
+              "ttfb_ms": 2,
+              "dcl_ms": 26,
+              "load_ms": 26,
+              "fcp_ms": 20,
+              "resources": 47,
+              "js_files": 14,
+              "js_transfer_kb": 38
+            },
+            "fingerprint": {
+              "title": "SuryaDhana Terminal",
+              "page_headers": [
+                "ALFA Alpha Discovery Desk"
+              ],
+              "panels": [
+                "System status"
+              ],
+              "headings": [
+                "\u2699 Data Pipeline",
+                "\u25c8 Strategy Knobs",
+                "\u25c8 Matched Setups"
+              ],
+              "tables": 0,
+              "table_headers": [],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 2,
+              "body_text_len": 1820
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/alpha/strategies": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alpha/strategies"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/alpha/scan": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/alpha/scan"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8097/api/alpha/scan",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8097/api/alpha/scan",
+                "status": 403,
+                "failure": null,
+                "resource_type": "xhr",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8097/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/alpha/scan"
+            ],
+            "error": null
+          },
+          "b": {
+            "url": "http://127.0.0.1:8098/?tab=discovery",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8098/api/alpha/scan \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 30,
+              "ready_ms": 467,
+              "ready": true,
+              "idle_ms": 1061,
+              "total_ms": 12003
+            },
+            "nav_timing": {
+              "ttfb_ms": 3,
+              "dcl_ms": 22,
+              "load_ms": 23,
+              "fcp_ms": 44,
+              "resources": 85,
+              "js_files": 53,
+              "js_transfer_kb": 0
+            },
+            "fingerprint": {
+              "title": "ALFA \u00b7 SuryaDhana",
+              "page_headers": [
+                "ALFA Alpha Discovery Desk"
+              ],
+              "panels": [
+                "System status"
+              ],
+              "headings": [
+                "\u2699 Data Pipeline",
+                "\u25c8 Strategy Knobs",
+                "\u25c8 Matched Setups"
+              ],
+              "tables": 0,
+              "table_headers": [],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 2,
+              "body_text_len": 1820
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/alpha/strategies": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alpha/strategies"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/prefs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/prefs"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/alpha/scan": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/alpha/scan"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8098/api/alpha/scan",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8098/api/alpha/scan",
+                "status": 403,
+                "failure": null,
+                "resource_type": "xhr",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8098/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/alpha/scan"
+            ],
+            "error": null
+          },
+          "a_pass": false,
+          "b_pass": false
+        },
+        "mcxgold": {
+          "code": "MCXG",
+          "verdict": "PARITY",
+          "reasons": [],
+          "diff": {
+            "platform_seams": {
+              "a": {
+                "api": {},
+                "failed": []
+              },
+              "b": {
+                "api": {
+                  "GET /api/prefs": [
+                    "2xx"
+                  ]
+                },
+                "failed": []
+              }
+            }
+          },
+          "notes": [
+            "platform seams differ (set aside): A {} [] \u00b7 B {'GET /api/prefs': ['2xx']} []"
+          ],
+          "attempts": 1,
+          "a": {
+            "url": "http://127.0.0.1:8097/?tab=mcxgold",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8097/api/mcx/ticket \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 21,
+              "ready_ms": 505,
+              "ready": true,
+              "idle_ms": 2290,
+              "total_ms": 12006
+            },
+            "nav_timing": {
+              "ttfb_ms": 3,
+              "dcl_ms": 15,
+              "load_ms": 16,
+              "fcp_ms": 24,
+              "resources": 44,
+              "js_files": 10,
+              "js_transfer_kb": 5
+            },
+            "fingerprint": {
+              "title": "SuryaDhana Terminal",
+              "page_headers": [
+                "MCXG MCX gold desk"
+              ],
+              "panels": [
+                "Session",
+                "MCX holidays ahead",
+                "Quote",
+                "COMEX \u00d7 rupee overlay",
+                "Contract specs \u2014 MCX gold family",
+                "Paper gold ticket"
+              ],
+              "headings": [],
+              "tables": 2,
+              "table_headers": [
+                "Date | MCX holiday | Closure",
+                "Contract | Lot | Quote | Tick \u2195 | Delivery | Margin* | Cycle | Next expiries"
+              ],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 3997
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/mcx/overlay?contract": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/overlay?contract"
+                ]
+              },
+              "GET /api/mcx/quote?contract": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/quote?contract"
+                ]
+              },
+              "GET /api/mcx/session": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/session"
+                ]
+              },
+              "GET /api/mcx/specs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/specs"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/mcx/ticket": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/mcx/ticket"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8097/api/mcx/ticket",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8097/api/mcx/ticket",
+                "status": 403,
+                "failure": null,
+                "resource_type": "fetch",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8097/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/mcx/ticket"
+            ],
+            "error": null
+          },
+          "b": {
+            "url": "http://127.0.0.1:8098/?tab=mcxgold",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8098/api/mcx/ticket \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 19,
+              "ready_ms": 453,
+              "ready": true,
+              "idle_ms": 1373,
+              "total_ms": 12004
+            },
+            "nav_timing": {
+              "ttfb_ms": 3,
+              "dcl_ms": 14,
+              "load_ms": 14,
+              "fcp_ms": 48,
+              "resources": 90,
+              "js_files": 53,
+              "js_transfer_kb": 0
+            },
+            "fingerprint": {
+              "title": "MCXG \u00b7 SuryaDhana",
+              "page_headers": [
+                "MCXG MCX gold desk"
+              ],
+              "panels": [
+                "Session",
+                "MCX holidays ahead",
+                "Quote",
+                "COMEX \u00d7 rupee overlay",
+                "Contract specs \u2014 MCX gold family",
+                "Paper gold ticket"
+              ],
+              "headings": [],
+              "tables": 2,
+              "table_headers": [
+                "Date | MCX holiday | Closure",
+                "Contract | Lot | Quote | Tick \u2195 | Delivery | Margin* | Cycle | Next expiries"
+              ],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 3995
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/mcx/overlay?contract": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/overlay?contract"
+                ]
+              },
+              "GET /api/mcx/quote?contract": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/quote?contract"
+                ]
+              },
+              "GET /api/mcx/session": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/session"
+                ]
+              },
+              "GET /api/mcx/specs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/specs"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/prefs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/prefs"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/mcx/ticket": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/mcx/ticket"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8098/api/mcx/ticket",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8098/api/mcx/ticket",
+                "status": 403,
+                "failure": null,
+                "resource_type": "fetch",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8098/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/mcx/ticket"
+            ],
+            "error": null
+          },
+          "a_pass": false,
+          "b_pass": false
+        },
+        "brief": {
+          "code": "BRF",
+          "verdict": "PARITY",
+          "reasons": [],
+          "diff": {
+            "platform_seams": {
+              "a": {
+                "api": {},
+                "failed": []
+              },
+              "b": {
+                "api": {
+                  "GET /api/prefs": [
+                    "2xx"
+                  ]
+                },
+                "failed": []
+              }
+            }
+          },
+          "notes": [
+            "platform seams differ (set aside): A {} [] \u00b7 B {'GET /api/prefs': ['2xx']} []"
+          ],
+          "attempts": 1,
+          "a": {
+            "url": "http://127.0.0.1:8097/?tab=brief",
+            "pass": true,
+            "failures": [],
+            "timing": {
+              "nav_ms": 20,
+              "ready_ms": 462,
+              "ready": true,
+              "idle_ms": 2212,
+              "total_ms": 12006
+            },
+            "nav_timing": {
+              "ttfb_ms": 3,
+              "dcl_ms": 14,
+              "load_ms": 16,
+              "fcp_ms": 32,
+              "resources": 69,
+              "js_files": 9,
+              "js_transfer_kb": 0
+            },
+            "fingerprint": {
+              "title": "SuryaDhana Terminal",
+              "page_headers": [
+                "BRF Morning Brief"
+              ],
+              "panels": [
+                "Market",
+                "Your book",
+                "Market today",
+                "This week",
+                "News scanner",
+                "Headlines",
+                "System",
+                "Gold open (MCX)"
+              ],
+              "headings": [],
+              "tables": 1,
+              "table_headers": [
+                ""
+              ],
+              "canvas": 7,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 6999
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/commodity/gold-preopen": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/commodity/gold-preopen"
+                ]
+              },
+              "GET /api/commodity/gold-preopen/log?threshold": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/commodity/gold-preopen/log?threshold"
+                ]
+              },
+              "GET /api/config/setup-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/config/setup-status"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/desk/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/desk/status"
+                ]
+              },
+              "GET /api/market/announcements?fields": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/announcements?fields"
+                ]
+              },
+              "GET /api/market/crash-filter": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/crash-filter"
+                ]
+              },
+              "GET /api/market/eco-calendar?ahead,back": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/eco-calendar?ahead,back"
+                ]
+              },
+              "GET /api/market/events?fields": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/events?fields"
+                ]
+              },
+              "GET /api/market/fii-dii-cash?days": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/fii-dii-cash?days"
+                ]
+              },
+              "GET /api/market/financials-latest?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/financials-latest?symbols"
+                ]
+              },
+              "GET /api/market/fomc": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/fomc"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/headlines": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/headlines"
+                ]
+              },
+              "GET /api/market/index-contribution?index": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-contribution?index"
+                ]
+              },
+              "GET /api/market/index-intraday?index,minutes": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-intraday?index,minutes"
+                ]
+              },
+              "GET /api/market/index-valuation": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-valuation"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/insider-buys?days,min_value": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/insider-buys?days,min_value"
+                ]
+              },
+              "GET /api/market/internals": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/internals"
+                ]
+              },
+              "GET /api/market/monitor": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/monitor"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/market/option-chain/{sym}": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/option-chain/NIFTY"
+                ]
+              },
+              "GET /api/market/preopen?key": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/preopen?key"
+                ]
+              },
+              "GET /api/market/rbi-mpc": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/rbi-mpc"
+                ]
+              },
+              "GET /api/market/results-reacting": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/results-reacting"
+                ]
+              },
+              "GET /api/market/results-recent?days": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/results-recent?days"
+                ]
+              },
+              "GET /api/market/surveillance?all_flagged,symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/surveillance?all_flagged,symbols"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scan?date": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scan?date"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/news-scanner/track-record": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/track-record"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/positions/connection-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/positions/connection-status"
+                ]
+              },
+              "GET /api/positions/open-positions": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/positions/open-positions"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "GET /api/telemetry/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/telemetry/status"
+                ]
+              }
+            },
+            "console_errors": [],
+            "console_detail": [],
+            "page_errors": [],
+            "failed_requests": [],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8097/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [],
+            "error": null
+          },
+          "b": {
+            "url": "http://127.0.0.1:8098/?tab=brief",
+            "pass": true,
+            "failures": [],
+            "timing": {
+              "nav_ms": 23,
+              "ready_ms": 214,
+              "ready": true,
+              "idle_ms": 1518,
+              "total_ms": 12004
+            },
+            "nav_timing": {
+              "ttfb_ms": 3,
+              "dcl_ms": 16,
+              "load_ms": 16,
+              "fcp_ms": 44,
+              "resources": 117,
+              "js_files": 53,
+              "js_transfer_kb": 0
+            },
+            "fingerprint": {
+              "title": "BRF \u00b7 SuryaDhana",
+              "page_headers": [
+                "BRF Morning Brief"
+              ],
+              "panels": [
+                "Market",
+                "Your book",
+                "Market today",
+                "This week",
+                "News scanner",
+                "Headlines",
+                "System",
+                "Gold open (MCX)"
+              ],
+              "headings": [],
+              "tables": 1,
+              "table_headers": [
+                ""
+              ],
+              "canvas": 7,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 6999
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/commodity/gold-preopen": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/commodity/gold-preopen"
+                ]
+              },
+              "GET /api/commodity/gold-preopen/log?threshold": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/commodity/gold-preopen/log?threshold"
+                ]
+              },
+              "GET /api/config/setup-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/config/setup-status"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/desk/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/desk/status"
+                ]
+              },
+              "GET /api/market/announcements?fields": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/announcements?fields"
+                ]
+              },
+              "GET /api/market/crash-filter": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/crash-filter"
+                ]
+              },
+              "GET /api/market/eco-calendar?ahead,back": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/eco-calendar?ahead,back"
+                ]
+              },
+              "GET /api/market/events?fields": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/events?fields"
+                ]
+              },
+              "GET /api/market/fii-dii-cash?days": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/fii-dii-cash?days"
+                ]
+              },
+              "GET /api/market/financials-latest?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/financials-latest?symbols"
+                ]
+              },
+              "GET /api/market/fomc": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/fomc"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/headlines": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/headlines"
+                ]
+              },
+              "GET /api/market/index-contribution?index": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-contribution?index"
+                ]
+              },
+              "GET /api/market/index-intraday?index,minutes": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-intraday?index,minutes"
+                ]
+              },
+              "GET /api/market/index-valuation": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-valuation"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/insider-buys?days,min_value": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/insider-buys?days,min_value"
+                ]
+              },
+              "GET /api/market/internals": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/internals"
+                ]
+              },
+              "GET /api/market/monitor": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/monitor"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/market/option-chain/{sym}": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/option-chain/NIFTY"
+                ]
+              },
+              "GET /api/market/preopen?key": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/preopen?key"
+                ]
+              },
+              "GET /api/market/rbi-mpc": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/rbi-mpc"
+                ]
+              },
+              "GET /api/market/results-reacting": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/results-reacting"
+                ]
+              },
+              "GET /api/market/results-recent?days": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/results-recent?days"
+                ]
+              },
+              "GET /api/market/surveillance?all_flagged,symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/surveillance?all_flagged,symbols"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scan?date": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scan?date"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/news-scanner/track-record": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/track-record"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/positions/connection-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/positions/connection-status"
+                ]
+              },
+              "GET /api/positions/open-positions": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/positions/open-positions"
+                ]
+              },
+              "GET /api/prefs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/prefs"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "GET /api/telemetry/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/telemetry/status"
+                ]
+              }
+            },
+            "console_errors": [],
+            "console_detail": [],
+            "page_errors": [],
+            "failed_requests": [],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8098/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [],
+            "error": null
+          },
+          "a_pass": true,
+          "b_pass": true
+        }
+      },
+      "summary": {
+        "tabs": 4,
+        "parity": 4,
+        "diff": [],
+        "a_failed": [
+          "ostrategy",
+          "discovery",
+          "mcxgold"
+        ],
+        "b_failed": [
+          "ostrategy",
+          "discovery",
+          "mcxgold"
+        ],
+        "resolved_on_retry": [],
+        "seam_differences": [
+          "ostrategy",
+          "discovery",
+          "mcxgold",
+          "brief"
+        ],
+        "a_failures_non_seam": [
+          "ostrategy",
+          "discovery",
+          "mcxgold"
+        ],
+        "b_failures_non_seam": [
+          "ostrategy",
+          "discovery",
+          "mcxgold"
+        ]
+      }
+    },
+    "webkit": {
+      "browser_version": "26.4",
+      "tabs": {
+        "ostrategy": {
+          "code": "OSTR",
+          "verdict": "PARITY",
+          "reasons": [],
+          "diff": {
+            "platform_seams": {
+              "a": {
+                "api": {},
+                "failed": []
+              },
+              "b": {
+                "api": {
+                  "GET /api/prefs": [
+                    "2xx"
+                  ]
+                },
+                "failed": []
+              }
+            }
+          },
+          "notes": [
+            "platform seams differ (set aside): A {} [] \u00b7 B {'GET /api/prefs': ['2xx']} []"
+          ],
+          "attempts": 1,
+          "a": {
+            "url": "http://127.0.0.1:8097/?tab=ostrategy",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8097/api/options/strategy/analyze \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 364,
+              "ready_ms": 861,
+              "ready": true,
+              "idle_ms": 1776,
+              "total_ms": 12007
+            },
+            "nav_timing": {
+              "ttfb_ms": 2,
+              "dcl_ms": 0,
+              "load_ms": 500,
+              "fcp_ms": 510,
+              "resources": 35,
+              "js_files": 10,
+              "js_transfer_kb": 387
+            },
+            "fingerprint": {
+              "title": "SuryaDhana Terminal",
+              "page_headers": [
+                "OSTR Options strategies"
+              ],
+              "panels": [
+                "Legs (#/#)",
+                "Payoff"
+              ],
+              "headings": [],
+              "tables": 0,
+              "table_headers": [],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [
+                "\u25b2 blocked by desktop-qa scratch server (--block-mutations)"
+              ],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 1390
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/market/option-chain/{sym}": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/option-chain/NIFTY"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/options/strategy/analyze": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/options/strategy/analyze"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8097/api/options/strategy/analyze",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8097/api/options/strategy/analyze",
+                "status": 403,
+                "failure": null,
+                "resource_type": "xhr",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8097/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/options/strategy/analyze"
+            ],
+            "error": null
+          },
+          "b": {
+            "url": "http://127.0.0.1:8098/?tab=ostrategy",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8098/api/options/strategy/analyze \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 19,
+              "ready_ms": 518,
+              "ready": true,
+              "idle_ms": 1448,
+              "total_ms": 12003
+            },
+            "nav_timing": {
+              "ttfb_ms": 1,
+              "dcl_ms": 0,
+              "load_ms": 44,
+              "fcp_ms": 98,
+              "resources": 84,
+              "js_files": 53,
+              "js_transfer_kb": 637
+            },
+            "fingerprint": {
+              "title": "OSTR \u00b7 SuryaDhana",
+              "page_headers": [
+                "OSTR Options strategies"
+              ],
+              "panels": [
+                "Legs (#/#)",
+                "Payoff"
+              ],
+              "headings": [],
+              "tables": 0,
+              "table_headers": [],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [
+                "\u25b2 blocked by desktop-qa scratch server (--block-mutations)"
+              ],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 1390
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/market/option-chain/{sym}": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/option-chain/NIFTY"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/prefs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/prefs"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/options/strategy/analyze": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/options/strategy/analyze"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8098/api/options/strategy/analyze",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8098/api/options/strategy/analyze",
+                "status": 403,
+                "failure": null,
+                "resource_type": "xhr",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8098/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/options/strategy/analyze"
+            ],
+            "error": null
+          },
+          "a_pass": false,
+          "b_pass": false
+        },
+        "discovery": {
+          "code": "ALFA",
+          "verdict": "PARITY",
+          "reasons": [],
+          "diff": {
+            "platform_seams": {
+              "a": {
+                "api": {},
+                "failed": []
+              },
+              "b": {
+                "api": {
+                  "GET /api/prefs": [
+                    "2xx"
+                  ]
+                },
+                "failed": []
+              }
+            }
+          },
+          "notes": [
+            "platform seams differ (set aside): A {} [] \u00b7 B {'GET /api/prefs': ['2xx']} []"
+          ],
+          "attempts": 1,
+          "a": {
+            "url": "http://127.0.0.1:8097/?tab=discovery",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8097/api/alpha/scan \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 16,
+              "ready_ms": 454,
+              "ready": true,
+              "idle_ms": 1091,
+              "total_ms": 12005
+            },
+            "nav_timing": {
+              "ttfb_ms": 1,
+              "dcl_ms": 0,
+              "load_ms": 28,
+              "fcp_ms": 25,
+              "resources": 40,
+              "js_files": 14,
+              "js_transfer_kb": 38
+            },
+            "fingerprint": {
+              "title": "SuryaDhana Terminal",
+              "page_headers": [
+                "ALFA Alpha Discovery Desk"
+              ],
+              "panels": [
+                "System status"
+              ],
+              "headings": [
+                "\u2699 Data Pipeline",
+                "\u25c8 Strategy Knobs",
+                "\u25c8 Matched Setups"
+              ],
+              "tables": 0,
+              "table_headers": [],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 2,
+              "body_text_len": 1821
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/alpha/strategies": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alpha/strategies"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/alpha/scan": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/alpha/scan"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8097/api/alpha/scan",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8097/api/alpha/scan",
+                "status": 403,
+                "failure": null,
+                "resource_type": "xhr",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8097/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/alpha/scan"
+            ],
+            "error": null
+          },
+          "b": {
+            "url": "http://127.0.0.1:8098/?tab=discovery",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8098/api/alpha/scan \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 13,
+              "ready_ms": 537,
+              "ready": true,
+              "idle_ms": 1136,
+              "total_ms": 12005
+            },
+            "nav_timing": {
+              "ttfb_ms": 1,
+              "dcl_ms": 0,
+              "load_ms": 24,
+              "fcp_ms": 46,
+              "resources": 83,
+              "js_files": 53,
+              "js_transfer_kb": 0
+            },
+            "fingerprint": {
+              "title": "ALFA \u00b7 SuryaDhana",
+              "page_headers": [
+                "ALFA Alpha Discovery Desk"
+              ],
+              "panels": [
+                "System status"
+              ],
+              "headings": [
+                "\u2699 Data Pipeline",
+                "\u25c8 Strategy Knobs",
+                "\u25c8 Matched Setups"
+              ],
+              "tables": 0,
+              "table_headers": [],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 2,
+              "body_text_len": 1821
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/alpha/strategies": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alpha/strategies"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/prefs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/prefs"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/alpha/scan": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/alpha/scan"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8098/api/alpha/scan",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8098/api/alpha/scan",
+                "status": 403,
+                "failure": null,
+                "resource_type": "xhr",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8098/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/alpha/scan"
+            ],
+            "error": null
+          },
+          "a_pass": false,
+          "b_pass": false
+        },
+        "mcxgold": {
+          "code": "MCXG",
+          "verdict": "PARITY",
+          "reasons": [],
+          "diff": {
+            "platform_seams": {
+              "a": {
+                "api": {},
+                "failed": []
+              },
+              "b": {
+                "api": {
+                  "GET /api/prefs": [
+                    "2xx"
+                  ]
+                },
+                "failed": []
+              }
+            }
+          },
+          "notes": [
+            "platform seams differ (set aside): A {} [] \u00b7 B {'GET /api/prefs': ['2xx']} []"
+          ],
+          "attempts": 1,
+          "a": {
+            "url": "http://127.0.0.1:8097/?tab=mcxgold",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8097/api/mcx/ticket \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 13,
+              "ready_ms": 138,
+              "ready": true,
+              "idle_ms": 1743,
+              "total_ms": 12005
+            },
+            "nav_timing": {
+              "ttfb_ms": 1,
+              "dcl_ms": 0,
+              "load_ms": 22,
+              "fcp_ms": 20,
+              "resources": 39,
+              "js_files": 10,
+              "js_transfer_kb": 5
+            },
+            "fingerprint": {
+              "title": "SuryaDhana Terminal",
+              "page_headers": [
+                "MCXG MCX gold desk"
+              ],
+              "panels": [
+                "Session",
+                "MCX holidays ahead",
+                "Quote",
+                "COMEX \u00d7 rupee overlay",
+                "Contract specs \u2014 MCX gold family",
+                "Paper gold ticket"
+              ],
+              "headings": [],
+              "tables": 2,
+              "table_headers": [
+                "Date | MCX holiday | Closure",
+                "Contract | Lot | Quote | Tick \u2195 | Delivery | Margin* | Cycle | Next expiries"
+              ],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 3853
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/mcx/overlay?contract": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/overlay?contract"
+                ]
+              },
+              "GET /api/mcx/quote?contract": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/quote?contract"
+                ]
+              },
+              "GET /api/mcx/session": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/session"
+                ]
+              },
+              "GET /api/mcx/specs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/specs"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/mcx/ticket": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/mcx/ticket"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8097/api/mcx/ticket",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8097/api/mcx/ticket",
+                "status": 403,
+                "failure": null,
+                "resource_type": "fetch",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8097/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/mcx/ticket"
+            ],
+            "error": null
+          },
+          "b": {
+            "url": "http://127.0.0.1:8098/?tab=mcxgold",
+            "pass": false,
+            "failures": [
+              "console_error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+              "failed_request: POST http://127.0.0.1:8098/api/mcx/ticket \u2192 HTTP 403"
+            ],
+            "timing": {
+              "nav_ms": 25,
+              "ready_ms": 501,
+              "ready": true,
+              "idle_ms": 1375,
+              "total_ms": 12005
+            },
+            "nav_timing": {
+              "ttfb_ms": 4,
+              "dcl_ms": 0,
+              "load_ms": 28,
+              "fcp_ms": 53,
+              "resources": 87,
+              "js_files": 53,
+              "js_transfer_kb": 0
+            },
+            "fingerprint": {
+              "title": "MCXG \u00b7 SuryaDhana",
+              "page_headers": [
+                "MCXG MCX gold desk"
+              ],
+              "panels": [
+                "Session",
+                "MCX holidays ahead",
+                "Quote",
+                "COMEX \u00d7 rupee overlay",
+                "Contract specs \u2014 MCX gold family",
+                "Paper gold ticket"
+              ],
+              "headings": [],
+              "tables": 2,
+              "table_headers": [
+                "Date | MCX holiday | Closure",
+                "Contract | Lot | Quote | Tick \u2195 | Delivery | Margin* | Cycle | Next expiries"
+              ],
+              "canvas": 0,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 3853
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/mcx/overlay?contract": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/overlay?contract"
+                ]
+              },
+              "GET /api/mcx/quote?contract": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/quote?contract"
+                ]
+              },
+              "GET /api/mcx/session": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/session"
+                ]
+              },
+              "GET /api/mcx/specs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/mcx/specs"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/prefs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/prefs"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "POST /api/mcx/ticket": {
+                "count": 1,
+                "statuses": [
+                  "4xx"
+                ],
+                "paths": [
+                  "POST /api/mcx/ticket"
+                ]
+              }
+            },
+            "console_errors": [
+              "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+            ],
+            "console_detail": [
+              {
+                "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+                "url": "http://127.0.0.1:8098/api/mcx/ticket",
+                "seam": false
+              }
+            ],
+            "page_errors": [],
+            "failed_requests": [
+              {
+                "method": "POST",
+                "url": "http://127.0.0.1:8098/api/mcx/ticket",
+                "status": 403,
+                "failure": null,
+                "resource_type": "fetch",
+                "kind": "http",
+                "reason": "HTTP 403",
+                "seam": false
+              }
+            ],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8098/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [
+              "POST /api/mcx/ticket"
+            ],
+            "error": null
+          },
+          "a_pass": false,
+          "b_pass": false
+        },
+        "brief": {
+          "code": "BRF",
+          "verdict": "PARITY",
+          "reasons": [],
+          "diff": {
+            "platform_seams": {
+              "a": {
+                "api": {},
+                "failed": []
+              },
+              "b": {
+                "api": {
+                  "GET /api/prefs": [
+                    "2xx"
+                  ]
+                },
+                "failed": []
+              }
+            }
+          },
+          "notes": [
+            "platform seams differ (set aside): A {} [] \u00b7 B {'GET /api/prefs': ['2xx']} []"
+          ],
+          "attempts": 1,
+          "a": {
+            "url": "http://127.0.0.1:8097/?tab=brief",
+            "pass": true,
+            "failures": [],
+            "timing": {
+              "nav_ms": 24,
+              "ready_ms": 468,
+              "ready": true,
+              "idle_ms": 1799,
+              "total_ms": 12004
+            },
+            "nav_timing": {
+              "ttfb_ms": 2,
+              "dcl_ms": 0,
+              "load_ms": 36,
+              "fcp_ms": 33,
+              "resources": 64,
+              "js_files": 9,
+              "js_transfer_kb": 0
+            },
+            "fingerprint": {
+              "title": "SuryaDhana Terminal",
+              "page_headers": [
+                "BRF Morning Brief"
+              ],
+              "panels": [
+                "Market",
+                "Your book",
+                "Market today",
+                "This week",
+                "News scanner",
+                "Headlines",
+                "System",
+                "Gold open (MCX)"
+              ],
+              "headings": [],
+              "tables": 1,
+              "table_headers": [
+                ""
+              ],
+              "canvas": 7,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 6990
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/commodity/gold-preopen": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/commodity/gold-preopen"
+                ]
+              },
+              "GET /api/commodity/gold-preopen/log?threshold": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/commodity/gold-preopen/log?threshold"
+                ]
+              },
+              "GET /api/config/setup-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/config/setup-status"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/desk/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/desk/status"
+                ]
+              },
+              "GET /api/market/announcements?fields": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/announcements?fields"
+                ]
+              },
+              "GET /api/market/crash-filter": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/crash-filter"
+                ]
+              },
+              "GET /api/market/eco-calendar?ahead,back": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/eco-calendar?ahead,back"
+                ]
+              },
+              "GET /api/market/events?fields": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/events?fields"
+                ]
+              },
+              "GET /api/market/fii-dii-cash?days": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/fii-dii-cash?days"
+                ]
+              },
+              "GET /api/market/financials-latest?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/financials-latest?symbols"
+                ]
+              },
+              "GET /api/market/fomc": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/fomc"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/headlines": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/headlines"
+                ]
+              },
+              "GET /api/market/index-contribution?index": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-contribution?index"
+                ]
+              },
+              "GET /api/market/index-intraday?index,minutes": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-intraday?index,minutes"
+                ]
+              },
+              "GET /api/market/index-valuation": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-valuation"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/insider-buys?days,min_value": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/insider-buys?days,min_value"
+                ]
+              },
+              "GET /api/market/internals": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/internals"
+                ]
+              },
+              "GET /api/market/monitor": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/monitor"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/market/option-chain/{sym}": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/option-chain/NIFTY"
+                ]
+              },
+              "GET /api/market/preopen?key": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/preopen?key"
+                ]
+              },
+              "GET /api/market/rbi-mpc": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/rbi-mpc"
+                ]
+              },
+              "GET /api/market/results-reacting": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/results-reacting"
+                ]
+              },
+              "GET /api/market/results-recent?days": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/results-recent?days"
+                ]
+              },
+              "GET /api/market/surveillance?all_flagged,symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/surveillance?all_flagged,symbols"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scan?date": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scan?date"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/news-scanner/track-record": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/track-record"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/positions/connection-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/positions/connection-status"
+                ]
+              },
+              "GET /api/positions/open-positions": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/positions/open-positions"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "GET /api/telemetry/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/telemetry/status"
+                ]
+              }
+            },
+            "console_errors": [],
+            "console_detail": [],
+            "page_errors": [],
+            "failed_requests": [],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8097/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [],
+            "error": null
+          },
+          "b": {
+            "url": "http://127.0.0.1:8098/?tab=brief",
+            "pass": true,
+            "failures": [],
+            "timing": {
+              "nav_ms": 24,
+              "ready_ms": 454,
+              "ready": true,
+              "idle_ms": 1197,
+              "total_ms": 12003
+            },
+            "nav_timing": {
+              "ttfb_ms": 3,
+              "dcl_ms": 0,
+              "load_ms": 28,
+              "fcp_ms": 53,
+              "resources": 115,
+              "js_files": 53,
+              "js_transfer_kb": 0
+            },
+            "fingerprint": {
+              "title": "BRF \u00b7 SuryaDhana",
+              "page_headers": [
+                "BRF Morning Brief"
+              ],
+              "panels": [
+                "Market",
+                "Your book",
+                "Market today",
+                "This week",
+                "News scanner",
+                "Headlines",
+                "System",
+                "Gold open (MCX)"
+              ],
+              "headings": [],
+              "tables": 1,
+              "table_headers": [
+                ""
+              ],
+              "canvas": 7,
+              "recharts": 0,
+              "iframes": [],
+              "error_boxes": [],
+              "skeleton": false,
+              "loading_bars": 0,
+              "body_text_len": 6990
+            },
+            "api": {
+              "GET /api/alerts/feed?limit": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/alerts/feed?limit"
+                ]
+              },
+              "GET /api/commodity/gold-preopen": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/commodity/gold-preopen"
+                ]
+              },
+              "GET /api/commodity/gold-preopen/log?threshold": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/commodity/gold-preopen/log?threshold"
+                ]
+              },
+              "GET /api/config/setup-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/config/setup-status"
+                ]
+              },
+              "GET /api/dashboard/enrichment-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/enrichment-status"
+                ]
+              },
+              "GET /api/dashboard/summary": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/dashboard/summary"
+                ]
+              },
+              "GET /api/data/health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/health"
+                ]
+              },
+              "GET /api/data/live/index/nifty": {
+                "count": 3,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/live/index/nifty"
+                ]
+              },
+              "GET /api/data/provider/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/provider/status"
+                ]
+              },
+              "GET /api/data/ready": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/data/ready"
+                ]
+              },
+              "GET /api/desk/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/desk/status"
+                ]
+              },
+              "GET /api/market/announcements?fields": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/announcements?fields"
+                ]
+              },
+              "GET /api/market/crash-filter": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/crash-filter"
+                ]
+              },
+              "GET /api/market/eco-calendar?ahead,back": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/eco-calendar?ahead,back"
+                ]
+              },
+              "GET /api/market/events?fields": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/events?fields"
+                ]
+              },
+              "GET /api/market/fii-dii-cash?days": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/fii-dii-cash?days"
+                ]
+              },
+              "GET /api/market/financials-latest?symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/financials-latest?symbols"
+                ]
+              },
+              "GET /api/market/fomc": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/fomc"
+                ]
+              },
+              "GET /api/market/gift-nifty": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/gift-nifty"
+                ]
+              },
+              "GET /api/market/headlines": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/headlines"
+                ]
+              },
+              "GET /api/market/index-contribution?index": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-contribution?index"
+                ]
+              },
+              "GET /api/market/index-intraday?index,minutes": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-intraday?index,minutes"
+                ]
+              },
+              "GET /api/market/index-valuation": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/index-valuation"
+                ]
+              },
+              "GET /api/market/indices-live?names": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/indices-live?names"
+                ]
+              },
+              "GET /api/market/insider-buys?days,min_value": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/insider-buys?days,min_value"
+                ]
+              },
+              "GET /api/market/internals": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/internals"
+                ]
+              },
+              "GET /api/market/monitor": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/monitor"
+                ]
+              },
+              "GET /api/market/nifty-live": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/nifty-live"
+                ]
+              },
+              "GET /api/market/option-chain/{sym}": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/option-chain/NIFTY"
+                ]
+              },
+              "GET /api/market/preopen?key": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/preopen?key"
+                ]
+              },
+              "GET /api/market/rbi-mpc": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/rbi-mpc"
+                ]
+              },
+              "GET /api/market/results-reacting": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/results-reacting"
+                ]
+              },
+              "GET /api/market/results-recent?days": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/results-recent?days"
+                ]
+              },
+              "GET /api/market/surveillance?all_flagged,symbols": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/market/surveillance?all_flagged,symbols"
+                ]
+              },
+              "GET /api/news-scanner/quotes?symbols": {
+                "count": 2,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/quotes?symbols"
+                ]
+              },
+              "GET /api/news-scanner/scan?date": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scan?date"
+                ]
+              },
+              "GET /api/news-scanner/scans": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/scans"
+                ]
+              },
+              "GET /api/news-scanner/track-record": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/news-scanner/track-record"
+                ]
+              },
+              "GET /api/pipeline/data-quality": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/data-quality"
+                ]
+              },
+              "GET /api/pipeline/feature-importance": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/feature-importance"
+                ]
+              },
+              "GET /api/pipeline/model-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/model-metrics"
+                ]
+              },
+              "GET /api/pipeline/rl-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-status"
+                ]
+              },
+              "GET /api/pipeline/rl-training-metrics": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/rl-training-metrics"
+                ]
+              },
+              "GET /api/pipeline/service-health": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/pipeline/service-health"
+                ]
+              },
+              "GET /api/positions/connection-status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/positions/connection-status"
+                ]
+              },
+              "GET /api/positions/open-positions": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/positions/open-positions"
+                ]
+              },
+              "GET /api/prefs": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/prefs"
+                ]
+              },
+              "GET /api/stocks/list?limit,search,skip": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/stocks/list?limit,search,skip"
+                ]
+              },
+              "GET /api/telemetry/status": {
+                "count": 1,
+                "statuses": [
+                  "2xx"
+                ],
+                "paths": [
+                  "GET /api/telemetry/status"
+                ]
+              }
+            },
+            "console_errors": [],
+            "console_detail": [],
+            "page_errors": [],
+            "failed_requests": [],
+            "allowed_aborts": [],
+            "third_party_failures": [],
+            "websockets": [
+              {
+                "url": "ws://127.0.0.1:8098/api/monitor/ws/monitor",
+                "errors": [],
+                "frames_received": 1,
+                "frames_sent": 1,
+                "closed": true
+              }
+            ],
+            "non_get_api": [],
+            "error": null
+          },
+          "a_pass": true,
+          "b_pass": true
+        }
+      },
+      "summary": {
+        "tabs": 4,
+        "parity": 4,
+        "diff": [],
+        "a_failed": [
+          "ostrategy",
+          "discovery",
+          "mcxgold"
+        ],
+        "b_failed": [
+          "ostrategy",
+          "discovery",
+          "mcxgold"
+        ],
+        "resolved_on_retry": [],
+        "seam_differences": [
+          "ostrategy",
+          "discovery",
+          "mcxgold",
+          "brief"
+        ],
+        "a_failures_non_seam": [
+          "ostrategy",
+          "discovery",
+          "mcxgold"
+        ],
+        "b_failures_non_seam": [
+          "ostrategy",
+          "discovery",
+          "mcxgold"
+        ]
+      }
+    }
+  },
+  "ok": true
+}

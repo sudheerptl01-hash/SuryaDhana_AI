@@ -1,0 +1,196 @@
+{
+ "F3-API": [
+  {
+   "file": "ui/lib/prefs/migration.ts",
+   "old": "  if (i.server.legacyOrigins.length || i.server.legacyImport?.at != null) return 'imported'",
+   "new": "  if (i.server.legacyOrigins.length || (i.server.legacyImport?.at != null && isLegacyBrowserOrigin(i.server.legacyImport.origin))) return 'imported'",
+   "why": "RAPI-02, UI half (defence in depth): the server now writes and reports the migration block only for a legacy :3000 origin, but an older ui-api, or a block written before the fix, could still say 'migrated from http://127.0.0.1:8010'. Treat legacyImport.at as proof only when its origin is a legacy browser origin, the same rule as the backfill. Add a migration.check case: legacyImport {at: <ms>, origin: 'http://127.0.0.1:8010'} with no legacyOrigins should give 'show', not 'imported'."
+  },
+  {
+   "file": "tests/integration/test_qa_tool_defaults.py",
+   "old": "class FakeContext:\n    def __init__(self, **kwargs: Any) -> None:\n        self.kwargs = kwargs\n        self.scripts: list[str] = []\n\n    def add_init_script(self, script: str) -> None:\n        self.scripts.append(script)\n",
+   "new": "class FakeContext:\n    def __init__(self, **kwargs: Any) -> None:\n        self.kwargs = kwargs\n        self.scripts: list[str] = []\n        self.ws_routes: list[Any] = []\n\n    def add_init_script(self, script: str) -> None:\n        self.scripts.append(script)\n\n    def route_web_socket(self, url: Any, handler: Any) -> None:\n        self.ws_routes.append(url)\n",
+   "why": "The core suite's only 2 failures: scripts/desktop_qa/probe.py:118 new_qa_context now mocks every WebSocket (C-PERF-07 / R-OPS-09, another fixer), and this test double lacks route_web_socket. Optionally also assert ctx.ws_routes is non-empty, so ui_perf contexts are proven to mock sockets. Skip this if F3-OPS already updated the test."
+  }
+ ],
+ "F3-OPS": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_qa_tool_defaults.py",
+   "old": "        self.scripts: list[str] = []\n\n    def add_init_script(self, script: str) -> None:\n        self.scripts.append(script)\n",
+   "new": "        self.scripts: list[str] = []\n        self.ws_routes: list[tuple[Any, Any]] = []\n\n    def add_init_script(self, script: str) -> None:\n        self.scripts.append(script)\n\n    def route_web_socket(self, url: Any, handler: Any) -> None:\n        self.ws_routes.append((url, handler))\n",
+   "why": "REQUIRED, apply first: since R-OPS-09, probe.new_qa_context (which ui_perf.new_perf_context uses) mocks every WebSocket with context.route_web_socket. This file's FakeContext lacks that method, so `pytest tests` has 2 failures (test_ui_perf_contexts_are_readonly_by_default, test_ui_perf_prefs_mode_flag) until this is applied. The file is outside F3-OPS's brief. Verified in scratch: 4 passed."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_qa_tool_defaults.py",
+   "old": "    assert ctx.scripts[1] == ui_perf.INIT_SCRIPT\n",
+   "new": "    assert ctx.scripts[1] == ui_perf.INIT_SCRIPT\n    assert len(ctx.ws_routes) == 1      # every WebSocket mocked (R-OPS-09): a perf run opens 0 live monitor sockets\n",
+   "why": "R-OPS-09: locks in that ui_perf contexts mock WebSockets too."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/.env.example",
+   "old": "TELEGRAM_CHAT_ID=your-chat-id\n",
+   "new": "TELEGRAM_CHAT_ID=your-chat-id\n\n# \u2500\u2500 Off-machine dead-man ping (strongly recommended) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n# A free healthchecks.io check (Period 5 min, Grace 10 min). scripts/stack_watchdog.sh pings it every 2 min while\n# the stack is healthy and <url>/fail when it is not, so you are told when this Mac is off, frozen or waiting at\n# the FileVault screen (every other alert is sent FROM this Mac). Read on every watchdog run: no restart needed.\n# Treat it like a password. Steps: docs/RUNBOOK_RESTORE.md 'Off-machine dead-man ping'.\nHEALTHCHECK_PING_URL=\n",
+   "why": "SECREL-02 (verified major): the dead-man key is missing from .env.example. The day the owner sets it in .env, test_env_example.py::test_every_live_key_is_documented_in_the_example fails. Apply together with the next patch."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_env_example.py",
+   "old": "               \"TELEGRAM_CHAT_ID\", \"DISCORD_WEBHOOK_URL\", \"FRED_API_KEY\", \"EIA_API_KEY\"}\n",
+   "new": "               \"TELEGRAM_CHAT_ID\", \"DISCORD_WEBHOOK_URL\", \"FRED_API_KEY\", \"EIA_API_KEY\",\n               \"HEALTHCHECK_PING_URL\"}\n\n\ndef test_the_dead_man_ping_key_is_documented_empty():\n    \"\"\"SECREL-02: the off-machine dead-man key is in the example, with no value and a pointer to the RUNBOOK.\"\"\"\n    text = (ROOT / \".env.example\").read_text()\n    assert \"\\nHEALTHCHECK_PING_URL=\\n\" in text\n    assert \"'Off-machine dead-man ping'\" in text\n",
+   "why": "SECREL-02: guards the .env.example entry and treats the ping URL as a secret. Apply ONLY together with the .env.example patch (verified: 4 passed with it; the new test fails without it)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/.gitignore",
+   "old": "data/ticks/\n",
+   "new": "data/ticks/\n\n# Service logs, hang diagnostics (.logs/hangs: stack samples, open-file lists, log tails) and pid / watchdog\n# state written by start-local.sh and scripts/stack_watchdog.sh: host-specific runtime files (desktop review\n# R-OPS-14). The Next dev build and node_modules are rebuilt by npm (once: git rm -r --cached ui/node_modules\n# ui/.next, see docs/RUNBOOK_RESTORE.md 'Version control and off-machine backup').\n.logs/\n.pids/\nui/node_modules/\nui/.next/\n",
+   "why": "R-OPS-14: .logs/, .logs/hangs/, .pids/, ui/node_modules/ and ui/.next/ are not ignored. The RUNBOOK's commit procedure (completeness-final-01) runs `git add -A`, which would commit service logs, hang captures (process samples, lsof lists) and pid/watchdog state."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/CLAUDE.md",
+   "old": "**SuryaDhana.app** starts at login (`~/Library/LaunchAgents/SuryaDhana.plist`, relaunched after a crash, never after Quit).",
+   "new": "**SuryaDhana.app** starts at login (`~/Library/LaunchAgents/SuryaDhana.plist`); launchd relaunches the copy it started after a crash, never after Quit. A copy reopened by hand after \u2318Q is not supervised until the next login (`./start-local.sh status` desktop-app row says which; RUNBOOK \u00a75).",
+   "why": "SECREL-06: CLAUDE.md states crash relaunch without the qualification that desktop/README.md, RUNBOOK \u00a75 and the status row make. Text only. Owner or PM decision, since it is the project instruction file."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/desktop/src-tauri/src/health.rs",
+   "old": "    /// process is there but hung (event loop blocked). Not \"down\", never \"starting\" (the watchdog never\n    /// restarts a running service): the boot page says so and names `./start-local.sh restart ui-api`.\n",
+   "new": "    /// process is there but hung (event loop blocked). Not \"down\", never \"starting\": the watchdog restarts a\n    /// hung core service by itself about 3.5\u20135.5 min after it hangs (two hung runs in a row,\n    /// scripts/stack_watchdog.sh); the boot page says so and names `./start-local.sh restart ui-api`.\n",
+   "why": "R-OPS-12: the docstring still says the watchdog never restarts a running service. Comment only. (health.rs was being edited by F3-RUST at 18:11; re-check the old string.)"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/desktop/src-tauri/src/health.rs",
+   "old": "/// `start-local.sh restart <svc>`; ui-api at any time, data-service / master-controller never inside the\n/// restart freeze windows or while an ICICI login runs (it alerts instead).\npub const HUNG_RESTART_NOTE: &str = \"The watchdog restarts a hung core service once it has failed two checks in a \\\n     row (usually within about 4 min), after saving diagnostics to .logs/hangs/\";\n",
+   "new": "/// `start-local.sh restart <svc>`; ui-api at any time, data-service / master-controller never inside the\n/// restart freeze windows, master-controller not while an ICICI login runs (at most 10 min), and at most 3 hang\n/// restarts per service per hour (it alerts instead).\npub const HUNG_RESTART_NOTE: &str = \"The watchdog restarts a hung core service once it has failed two checks in a \\\n     row (about 3.5\u20135.5 min after it hangs), after saving diagnostics to .logs/hangs/\";\n",
+   "why": "R-OPS-12: 'usually within about 4 min' understates the timing. Two hung runs 2 min apart, each with 8+30+8 s of probes, then a last probe, the capture and the restart: the service is back about 3.3\u20135.6 min after it hangs, median about 4.4 min. The doc comment also describes the old login rule and has no hourly cap. Same wording as the RUNBOOK, `status` and /status."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/desktop/src-tauri/src/health.rs",
+   "old": "                && b.contains(\"about 4 min\"),\n",
+   "new": "                && b.contains(\"about 3.5\u20135.5 min\"),\n",
+   "why": "R-OPS-12: the existing test follows HUNG_RESTART_NOTE's new wording (apply with the previous patch)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/desktop/src-tauri/src/lib.rs",
+   "old": "\"the watchdog restarts a hung service after two failed checks, usually within about 4 min\"",
+   "new": "\"the watchdog restarts a hung service after two failed checks, about 3.5\u20135.5 min after it hangs\"",
+   "why": "R-OPS-12: same timing everywhere (text only)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/desktop/boot/boot.js",
+   "old": "'The watchdog restarts a hung ui-api once it has failed two checks in a row (usually within about 4 min, ' +",
+   "new": "'The watchdog restarts a hung ui-api once it has failed two checks in a row (about 3.5\u20135.5 min after it hung, ' +",
+   "why": "R-OPS-12: same timing as the RUNBOOK, `status` and /status. Text only; boot_check.mjs does not match this sentence."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/desktop/README.md",
+   "old": "agent is loaded it also says the watchdog restarts a hung ui-api once it has failed two checks in a row (usually\n  within about 4 min, diagnostics saved to `.logs/hangs/` first: the hang rule in `scripts/stack_watchdog.sh`, W2-OPS,\n  25 Oct; data-service / master-controller never inside the restart freeze windows or during an ICICI login); without\n",
+   "new": "agent is loaded it also says the watchdog restarts a hung ui-api once it has failed two checks in a row (about\n  3.5\u20135.5 min after it hangs, diagnostics saved to `.logs/hangs/` first: the hang rule in `scripts/stack_watchdog.sh`;\n  data-service / master-controller never inside the restart freeze windows, master-controller not during an ICICI\n  login (at most 10 min), at most 3 hang restarts per service per hour); without\n",
+   "why": "R-OPS-12: timing and the round-3 hang rules (the login wait applies only to master-controller and is capped; hourly cap)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/desktop/README.md",
+   "old": "The watchdog restarts it after two failed checks (about 4 min; diagnostics in `.logs/hangs/`)",
+   "new": "The watchdog restarts it after two failed checks (about 3.5\u20135.5 min after it hangs; diagnostics in `.logs/hangs/`)",
+   "why": "R-OPS-12: same timing everywhere (text only)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/data-service/main.py",
+   "old": "@asynccontextmanager\nasync def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:\n",
+   "new": "def _register_stack_dump_signal() -> None:\n    \"\"\"R-OPS-07: ``kill -USR1 <pid>`` writes every Python thread's stack to stderr (.logs/data-service.log). A C-level\n    handler, so it works while the event loop is stuck. scripts/stack_watchdog.sh sends USR1 before a hang restart,\n    but only once it finds the JSON line below in the log since the last start (with no handler, USR1 kills).\"\"\"\n    import faulthandler\n    import signal\n\n    try:\n        faulthandler.register(signal.SIGUSR1, file=sys.stderr, all_threads=True, chain=False)\n    except (AttributeError, RuntimeError, ValueError, OSError):\n        return\n    print(json.dumps({\"event\": \"stack_dump_ready\", \"stack_dump_signal\": \"SIGUSR1\", \"pid\": os.getpid()}),\n          file=sys.stderr, flush=True)\n\n\n@asynccontextmanager\nasync def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:\n",
+   "why": "R-OPS-07: hang captures of data-service have only C frames. With this, the watchdog's existing capture adds py-stacks-<pid>.txt. Verified end to end with the real watchdog functions on a scratch process: the dump arrived and the process stayed alive. Diagnostics only, no logic change."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/data-service/main.py",
+   "old": "    configure_logging(\"data-service\", settings.log_level)\n    _store = DuckDBStore(settings.duckdb_path)\n",
+   "new": "    configure_logging(\"data-service\", settings.log_level)\n    _register_stack_dump_signal()\n    _store = DuckDBStore(settings.duckdb_path)\n",
+   "why": "R-OPS-07: register at start, before the DuckDB open, so even a start that wedges there can be dumped. Takes effect at the next data-service restart (outside freeze windows)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "@asynccontextmanager\nasync def lifespan(app: FastAPI) -> AsyncIterator[None]:\n    global scheduler\n",
+   "new": "def _register_stack_dump_signal() -> None:\n    \"\"\"R-OPS-07: ``kill -USR1 <pid>`` writes every Python thread's stack to stderr (.logs/master-controller.log). A C-level\n    handler, so it works while the event loop is stuck. scripts/stack_watchdog.sh sends USR1 before a hang restart,\n    but only once it finds the JSON line below in the log since the last start (with no handler, USR1 kills).\"\"\"\n    import faulthandler\n    import signal\n\n    try:\n        faulthandler.register(signal.SIGUSR1, file=sys.stderr, all_threads=True, chain=False)\n    except (AttributeError, RuntimeError, ValueError, OSError):\n        return\n    print(json.dumps({\"event\": \"stack_dump_ready\", \"stack_dump_signal\": \"SIGUSR1\", \"pid\": os.getpid()}),\n          file=sys.stderr, flush=True)\n\n\n@asynccontextmanager\nasync def lifespan(app: FastAPI) -> AsyncIterator[None]:\n    global scheduler\n    _register_stack_dump_signal()\n",
+   "why": "R-OPS-07: same as for data-service. master_controller.py is F3-OPS's only for Telegram /status, so this is a patch request. Diagnostics only."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/reconstruct_report.json",
+   "old": " \"checks\": {\n  \"pm_backup_equal_after_step1\": [\n",
+   "new": " \"checks\": {\n  \"records_pinned\": \"fe76707bc328d5a03b3b472b5f8a585ecd2a7f891b348c393cc55ea8c9cc39f4\",\n  \"pm_backup_equal_after_step1\": [\n",
+   "why": "R-OPS-13: regenerated with `$P reports/desktop_app/baseline_preprogram/tools/reconstruct.py --src scratchpad/fx-qa/ui_start --dest scratchpad/F3-OPS/recon2/tree --report-dir scratchpad/F3-OPS/recon2/report --pm-backup ~/.suryadhana_pm_backups/desktop_integration_20261025-110448` (exit 0). MANIFEST.sha256 and diff_vs_snapshot.patch are byte-identical; the report differs only by these check lines and its scratch dest. Copying scratchpad/F3-OPS/recon2/report/reconstruct_report.json over the file does the same."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/reconstruct_report.json",
+   "old": "  \"untouched_files_predate_program\": true\n }\n",
+   "new": "  \"untouched_files_predate_program\": true,\n  \"touched_files_dated_at_their_last_record\": true,\n  \"pm_backup_mtimes_predate_program_or_match_records\": true\n }\n",
+   "why": "R-OPS-13: the two drift checks that README lines 52-56 rely on (same regenerated run)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/qa_harness.md",
+   "old": "and `/health /ready /live /metrics /version` to `--backend` (live :8010). `--block-mutations` 403s every\nnon-GET/HEAD/OPTIONS `/api` call. Stop every scratch server you start.\n",
+   "new": "and `/health /ready /live /metrics /version` to `--backend` (live :8010). Against the live :8010 backend (the\ndefault) it forwards no writes: every non-GET/HEAD/OPTIONS `/api` call is answered 403 here (a same-origin write\nrelayed with X-Forwarded-Host would pass the live guard), unless `--allow-mutations`; and it accepts then closes\n(1008) a page's WebSocket instead of relaying it, unless `--allow-live-ws` (R-OPS-08/-09; `/__qa/health` shows\nboth). `--block-mutations` forces the write block against any backend. Every browser context from\n`probe.new_qa_context` (ui_audit, parity, ui_perf, e2e_multiwin, e2e_compare, delta_probe) mocks every WebSocket,\nso a run opens 0 live monitor sockets (`parity.py --live-websockets` opts out, scratch backends only). The\ncompute-only POSTs below therefore get 403 behind a default scratch server against live. Stop every scratch\nserver you start.\n",
+   "why": "R-OPS-08/-09: the harness doc still describes the old scratch_server defaults (writes and WebSockets relayed to the live ui-api unless --block-mutations). Text only."
+  }
+ ],
+ "F3-UI-PAGES": [],
+ "F3-UI-SHELL": [],
+ "F3-RUST": [
+  {
+   "file": "scripts/master_controller.py",
+   "old": "def _notify_mac(title: str, body: str, kind: str = \"alert\") -> None:\n    \"\"\"macOS desktop notification: the alert channel that works before Telegram is configured (local stack only).\n    Every notification is also recorded for the UI's inbox.\"\"\"\n    _record_notification(kind, title, body)\n    if sys.platform != \"darwin\":\n        return\n",
+   "new": "_APP_SINK = Path(os.environ.get(\n    \"SURYADHANA_NOTIFY_SINK\",\n    str(Path.home() / \"Library\" / \"Application Support\" / \"ai.suryadhana.terminal\" / \"notify-sink.alive\")))\n\n\ndef _app_is_notification_sink(max_age_s: float = 180.0) -> bool:\n    \"\"\"SuryaDhana.app shows the notification feed as native banners while it touches this file (at most once a\n    minute, only after a successful poll of /api/notifications/feed): then the osascript banner would be a duplicate\n    shown as 'Script Editor'. osascript stays the fallback when the app is closed or the feed is not served.\"\"\"\n    try:\n        return _time.time() - _APP_SINK.stat().st_mtime < max_age_s\n    except OSError:\n        return False\n\n\ndef _notify_mac(title: str, body: str, kind: str = \"alert\") -> None:\n    \"\"\"macOS desktop notification: the alert channel that works before Telegram is configured (local stack only).\n    Every notification is also recorded for the UI's inbox (and the app's notification feed).\"\"\"\n    _record_notification(kind, title, body)\n    if sys.platform != \"darwin\" or _app_is_notification_sink():\n        return\n",
+   "why": "completeness-final-02 / K5: the app now posts the feed natively (desktop/src-tauri/src/feed.rs). While its notify-sink.alive heartbeat is under 180 s old, the scheduler's osascript banner is a duplicate shown as 'Script Editor'. Read-only stat; fails closed to the old behaviour. Uses existing imports (os, Path, time as _time). Test: scripts/tests/test_notify_sink.py below. Deploy with or after the app; restart master-controller outside the freeze windows."
+  },
+  {
+   "file": "scripts/tests/test_notify_sink.py",
+   "old": "",
+   "new": "\"\"\"K5 / completeness-final-02 (round 3): while SuryaDhana.app posts the notification feed as native banners (its\nnotify-sink.alive heartbeat is fresh), the scheduler skips its own osascript banner, which would be a duplicate\nshown as 'Script Editor'; osascript stays the fallback when the app is closed or the feed is not served.\"\"\"\nimport os\nimport sys\nimport time\nfrom pathlib import Path\n\nROOT = Path(__file__).resolve().parents[2]\nsys.path.insert(0, str(ROOT))\nsys.path.insert(0, str(ROOT / \"scripts\"))\nimport master_controller as mc  # noqa: E402\n\n\ndef _wire(monkeypatch, tmp_path):\n    sink = tmp_path / \"notify-sink.alive\"\n    monkeypatch.setattr(mc, \"_APP_SINK\", sink)\n    monkeypatch.setattr(mc.sys, \"platform\", \"darwin\")\n    recorded, ran = [], []\n    monkeypatch.setattr(mc, \"_record_notification\", lambda kind, title, body: recorded.append((kind, title)))\n    monkeypatch.setattr(mc.subprocess, \"run\", lambda cmd, **kw: ran.append(cmd[0]))\n    return sink, recorded, ran\n\n\ndef test_osascript_runs_when_the_app_is_not_the_sink(monkeypatch, tmp_path):\n    sink, recorded, ran = _wire(monkeypatch, tmp_path)\n    mc._notify_mac(\"ALERT RELIANCE\", \"rose above 1,500\", kind=\"price\")      # no heartbeat file at all\n    assert ran == [\"/usr/bin/osascript\"] and recorded == [(\"price\", \"ALERT RELIANCE\")]\n    sink.write_text(\"{}\")\n    old = time.time() - 600\n    os.utime(sink, (old, old))                                             # the app stopped 10 min ago\n    mc._notify_mac(\"ALERT TCS\", \"fell below 3,000\", kind=\"price\")\n    assert ran == [\"/usr/bin/osascript\"] * 2\n\n\ndef test_a_fresh_heartbeat_skips_the_duplicate_banner_but_still_records_it(monkeypatch, tmp_path):\n    sink, recorded, ran = _wire(monkeypatch, tmp_path)\n    sink.write_text('{\"pid\": 1}')\n    mc._notify_mac(\"ALERT INFY\", \"rose above 1,900\", kind=\"price\")\n    assert ran == [], \"the app shows it from the feed\"\n    assert recorded == [(\"price\", \"ALERT INFY\")], \"the feed (and the in-page inbox) still get the record\"\n\n\ndef test_the_default_sink_path_is_the_apps_config_dir():\n    if \"SURYADHANA_NOTIFY_SINK\" in os.environ:\n        return\n    assert mc._APP_SINK == Path.home() / \"Library/Application Support/ai.suryadhana.terminal/notify-sink.alive\"\n",
+   "why": "New file (old is empty). Unit test for the master_controller patch above. Verified: 3 passed against a scratch copy of master_controller.py with the patch applied, 3 failed against the unpatched file (negative control). Scratch copy: /private/tmp/claude-501/-Users-sudheer-MahaKubera-108-SuryaDhana-AI/a24906e4-7b64-46ba-b24b-14c536f43922/scratchpad/F3-RUST/r3/mctest/test_notify_sink.py"
+  },
+  {
+   "file": "ui/lib/platform/types.ts",
+   "old": "  readonly platform: 'macos'\n}",
+   "new": "  readonly platform: 'macos'\n  /** Round 3 (additive): what the shell does beyond v1, e.g. 'notification_feed' (it posts the stack's notification\n   *  feed as native banners itself). Absent on older apps. */\n  readonly features?: readonly string[]\n}",
+   "why": "K5: the shell now announces SHELL_FEATURES = ['notification_feed'] in __SURYADHANA_SHELL__ (windows.rs init_script; verified live by the self-test). Type only. Must land together with the WatchMonitor patches, or tsc rejects `.features`."
+  },
+  {
+   "file": "ui/components/WatchMonitor.tsx",
+   "old": "import { isDesktop, notificationPermission, requestNotificationPermission } from '@/lib/platform'\n",
+   "new": "import { isDesktop, notificationPermission, requestNotificationPermission, shellMarker } from '@/lib/platform'\n",
+   "why": "K5: needed by the next patch (shellMarker is already exported by ui/lib/platform/index.ts)."
+  },
+  {
+   "file": "ui/components/WatchMonitor.tsx",
+   "old": "      notifyHits(hits)   // one native notification per check, with a count (C3-logic-unchanged-07)\n",
+   "new": "      // the app (round 3, K5) posts the scheduler's price alerts natively from its notification feed whatever page is\n      // open: a second banner from this page would be a duplicate. An older app without the feature, and the browser,\n      // keep the page's own notification.\n      if (!shellMarker()?.features?.includes('notification_feed')) notifyHits(hits)   // one per check, with a count (C3-logic-unchanged-07)\n",
+   "why": "completeness-final-02 fix point 3: with the shell's feed consumer, every WTCH crossing would otherwise give two SuryaDhana banners while WTCH is the active page. Gated on the shell's announced feature, so a UI release paired with an older app (or rolled back) never loses the banner. Toasts and the browser are unchanged. Add a node check: marker with the feature -> notifyHits not called; without -> called."
+  },
+  {
+   "file": "CLAUDE.md",
+   "old": "**SuryaDhana.app** starts at login (`~/Library/LaunchAgents/SuryaDhana.plist`, relaunched after a crash, never after Quit).",
+   "new": "**SuryaDhana.app** starts at login (`~/Library/LaunchAgents/SuryaDhana.plist`, relaunched after a crash, never after Quit; a copy opened by hand after \u2318Q is relaunched by its crash guard; the menu-bar item says which applies).",
+   "why": "SECREL-06: CLAUDE.md:116 claimed crash relaunch with no qualification. With the round-3 crash guard it is now true for a copy opened by hand too, and the tray line names the mechanism."
+  },
+  {
+   "file": "docs/RUNBOOK_RESTORE.md",
+   "old": "- **Crash relaunch covers only the copy launchd started** (the Launch at Login job; label `SuryaDhana`). A copy\n  you reopen from the Dock or Finder after \u2318Q runs outside that job: if it crashes, nothing relaunches it until\n  your next login. The status row says which one runs (`supervised by launchd`, or `opened by hand: not relaunched\n  after a crash`). To reopen it supervised: quit it, then\n  `launchctl kickstart gui/$(id -u)/SuryaDhana` (or log out and in).",
+   "new": "- **Crash relaunch.** launchd relaunches the copy it started (the Launch at Login job; label `SuryaDhana`). A copy\n  you reopen from the Dock or Finder after \u2318Q runs outside that job, so it starts a small crash guard\n  (`suryadhana-crash-guard` in `ps`): when the app ends without a clean quit, the guard asks launchd to start it\n  again (within about 15\u201320 s), supervised by launchd from then on. The menu-bar item says which applies\n  (*Relaunch after a crash: on (login item)* / *on (crash guard for this copy)* / *off (\u2026)*); with Launch at Login\n  off nothing relaunches the app.",
+   "why": "SECREL-06 / R-RUST-05: the runbook describes the round-2 gap, which the round-3 crash guard closes (desktop/README.md 'A copy opened by hand is relaunched too')."
+  },
+  {
+   "file": "start-local.sh",
+   "old": "    elif [ \"$login\" = \"on\" ]; then\n      sup=\" \u00b7 opened by hand: not relaunched after a crash\"\n    else",
+   "new": "    elif [ \"$login\" = \"on\" ] && pgrep -f -- \"suryadhana-crash-guard $pid \" > /dev/null 2>&1; then\n      sup=\" \u00b7 opened by hand: its crash guard relaunches it through launchd\"\n    elif [ \"$login\" = \"on\" ]; then\n      sup=\" \u00b7 opened by hand: not relaunched after a crash\"\n    else",
+   "why": "SECREL-06: a copy opened by hand now runs a crash guard (/bin/sh with $0 suryadhana-crash-guard and the app pid as $1), so the status row should say so instead of 'not relaunched'. The guard's executable is /bin/sh, so app_procs (matched on the executable path) never lists it as a copy."
+  },
+  {
+   "file": "start-local.sh",
+   "old": "  if [ -n \"$pid\" ] && [ \"$login\" = \"on\" ] && [ \"$job\" != \"$pid\" ]; then",
+   "new": "  if [ -n \"$pid\" ] && [ \"$login\" = \"on\" ] && [ \"$job\" != \"$pid\" ] && ! pgrep -f -- \"suryadhana-crash-guard $pid \" > /dev/null 2>&1; then",
+   "why": "SECREL-06: the 'quit and kickstart' hint is only needed when no crash guard watches the copy."
+  },
+  {
+   "file": "scripts/desktop_qa/run_selftest.py",
+   "old": "        res.detail = \"; \".join(problems) or (\n            f\"peak RSS {rss} MB \u00b7 footprint {res.evidence.get('footprint_mb_peak')} MB \u00b7 CPU {cpu}% over \"\n            f\"{res.evidence['seconds']}s \u00b7 app + {len(helpers)} WebKit helper(s)\"\n            + (\"\" if helpers else f\" (no helper attributed: responsible pid {resp} != app {a})\"))",
+   "new": "        res.detail = (\"; \".join(problems) or (\n            f\"peak RSS {rss} MB \u00b7 footprint {res.evidence.get('footprint_mb_peak')} MB \u00b7 CPU {cpu}% over \"\n            f\"{res.evidence['seconds']}s \u00b7 app + {len(helpers)} WebKit helper(s)\"\n            + (\"\" if helpers else f\" (no helper attributed: responsible pid {resp} != app {a})\"))) + (\n            f\" \u00b7 a START-UP sample ({args.warmup:g} s after launch), not idle: AC-13's idle number comes from \"\n            \"desktop/scripts/measure_idle.py on the running app (screen unlocked, >= 5 min after launch)\")\n        res.evidence[\"sample_kind\"] = \"startup\"",
+   "why": "C-PERF-03: the harness samples 12 s after its own launch (often with the screen locked), which is start-up, not idle. Label it so nobody signs AC-13 off with it, and point to the honest sampler. `args` is in scope (live_checks parameter)."
+  }
+ ]
+}

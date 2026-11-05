@@ -1,0 +1,51 @@
+{
+ "nse_home": {
+  "url": "https://www.nseindia.com/",
+  "status": 403,
+  "bytes": 370,
+  "ctype": "text/html",
+  "note": ""
+ },
+ "api_equity_stockIndices": {
+  "url": "https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050",
+  "status": 404,
+  "bytes": 385,
+  "ctype": "text/html; charset=utf-8",
+  "note": ""
+ },
+ "top10_2026-11-04": {
+  "url": "https://nsearchives.nseindia.com/content/indices/top10nifty50_041126.csv",
+  "status": 200,
+  "bytes": 370,
+  "ctype": "text/csv",
+  "note": ""
+ },
+ "const_nifty50": {
+  "url": "https://niftyindices.com/IndexConstituent/ind_nifty50list.csv",
+  "status": 200,
+  "bytes": 3344,
+  "ctype": "application/octet-stream",
+  "note": ""
+ },
+ "const_niftybank": {
+  "url": "https://niftyindices.com/IndexConstituent/ind_niftybanklist.csv",
+  "status": 200,
+  "bytes": 916,
+  "ctype": "application/octet-stream",
+  "note": ""
+ },
+ "ind_close_all": {
+  "url": "https://nsearchives.nseindia.com/content/indices/ind_close_all_04112026.csv",
+  "status": 200,
+  "bytes": 15707,
+  "ctype": "text/csv",
+  "note": ""
+ },
+ "factsheet_nifty50_pdf": {
+  "url": "https://www.niftyindices.com/Factsheet/ind_nifty50.pdf",
+  "status": 200,
+  "bytes": 262903,
+  "ctype": "application/pdf",
+  "note": ""
+ }
+}

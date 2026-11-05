@@ -1,0 +1,148 @@
+◉ SURYADHANA ▸ ECO
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:40:15
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,127.30
+−1.20%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:40 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+ECO ▾
+⌕ GO
+/
+ECO
+ECONOMIC CALENDAR
+India data releases from the official release calendars · RBI and Fed decisions · times in IST
+CLOSED · IN
+NSE closed · Dussehra
+Tue, 20 Oct · all day · in 5 days
+CORE · IN
+Core industries index · Sep 2026
+Tue, 20 Oct · 17:00 IST · in 5 days
+IIP · IN
+Industrial production (IIP) · Sep 2026
+Wed, 28 Oct · 16:00 IST · in 13 days
+FED · US
+US Fed rate decision
+Wed, 28 Oct · 23:30 IST · in 13 days
+CALENDAR · 33
+last 30 days and the next 4 months · hover a release for why it matters
+ALL
+FED
+CORE
+IIP
+CLOSED
+RBI
+CPI
+WPI
+GDP
+DATE ↕	IST	WHEN		TYPE ↕	RELEASE	WHY IT MATTERS	SOURCE
+Wed, 16 Sept	23:30	29 days ago	US	FED	US Fed rate decision + projections	US rates: drives FII flows and the rupee	federalreserve.gov
+Mon, 21 Sept	17:00	24 days ago	IN	CORE	Core industries index · Aug 2026 · moved from weekend	core industries (coal, steel, cement, power…): an early read on IIP	DPIIT
+Mon, 28 Sept	16:00	17 days ago	IN	IIP	Industrial production (IIP) · Aug 2026	factory, mining and power output	MoSPI
+Fri, 02 Oct	—	13 days ago	IN	CLOSED	NSE closed · Mahatma Gandhi Jayanti	NSE equity market holiday: no trading, no settlement	NSE
+Wed, 07 Oct	10:00	8 days ago	IN	RBI	RBI policy decision (repo rate)	repo rate and stance: moves banks, NBFCs, rate-sensitive sectors	RBI
+Mon, 12 Oct	16:00	3 days ago	IN	CPI	CPI inflation · Sep 2026	retail inflation: the RBI targets 4% (2–6% band)	MoSPI
+Wed, 14 Oct	12:00	yesterday	IN	WPI	Wholesale inflation (WPI) · Sep 2026	wholesale prices: input-cost pressure on margins	DPIIT
+Tue, 20 Oct	—	in 5 days	IN	CLOSED	NSE closed · Dussehra	NSE equity market holiday: no trading, no settlement	NSE
+Tue, 20 Oct	17:00	in 5 days	IN	CORE	Core industries index · Sep 2026	core industries (coal, steel, cement, power…): an early read on IIP	DPIIT
+Wed, 28 Oct	16:00	in 13 days	IN	IIP	Industrial production (IIP) · Sep 2026	factory, mining and power output	MoSPI
+Wed, 28 Oct	23:30	in 13 days	US	FED	US Fed rate decision	US rates: drives FII flows and the rupee	federalreserve.gov
+Tue, 10 Nov	—	in 26 days	IN	CLOSED	NSE closed · Diwali-Balipratipada	NSE equity market holiday: no trading, no settlement	NSE
+Thu, 12 Nov	16:00	in 28 days	IN	CPI	CPI inflation · Oct 2026	retail inflation: the RBI targets 4% (2–6% band)	MoSPI
+Mon, 16 Nov	12:00	in 32 days	IN	WPI	Wholesale inflation (WPI) · Oct 2026 · moved from weekend	wholesale prices: input-cost pressure on margins	DPIIT
+Fri, 20 Nov	17:00	in 36 days	IN	CORE	Core industries index · Oct 2026	core industries (coal, steel, cement, power…): an early read on IIP	DPIIT
+Tue, 24 Nov	—	in 40 days	IN	CLOSED	NSE closed · Prakash Gurpurb Sri Guru Nanak Dev	NSE equity market holiday: no trading, no settlement	NSE
+Mon, 30 Nov	16:00	in 46 days	IN	IIP	Industrial production (IIP) · Oct 2026 · moved from weekend	factory, mining and power output	MoSPI
+Mon, 30 Nov	16:00	in 46 days	IN	GDP	GDP · Q2 FY27 (Jul–Sep)	quarterly growth	MoSPI
+Fri, 04 Dec	10:00	in 50 days	IN	RBI	RBI policy decision (repo rate)	repo rate and stance: moves banks, NBFCs, rate-sensitive sectors	RBI
+Thu, 10 Dec	00:30	in 56 days	US	FED	US Fed rate decision + projections	US rates: drives FII flows and the rupee	federalreserve.gov
+Mon, 14 Dec	12:00	in 60 days	IN	WPI	Wholesale inflation (WPI) · Nov 2026	wholesale prices: input-cost pressure on margins	DPIIT
+Mon, 14 Dec	16:00	in 60 days	IN	CPI	CPI inflation · Nov 2026 · moved from weekend	retail inflation: the RBI targets 4% (2–6% band)	MoSPI
+Mon, 21 Dec	17:00	in 67 days	IN	CORE	Core industries index · Nov 2026 · moved from weekend	core industries (coal, steel, cement, power…): an early read on IIP	DPIIT
+Fri, 25 Dec	—	in 71 days	IN	CLOSED	NSE closed · Christmas	NSE equity market holiday: no trading, no settlement	NSE
+Mon, 28 Dec	16:00	in 74 days	IN	IIP	Industrial production (IIP) · Nov 2026	factory, mining and power output	MoSPI
+Thu, 07 Jan	16:00	in 84 days	IN	GDP	GDP · first advance estimate FY27	quarterly growth	MoSPI
+Tue, 12 Jan	16:00	in 89 days	IN	CPI	CPI inflation · Dec 2026	retail inflation: the RBI targets 4% (2–6% band)	MoSPI
+Thu, 14 Jan	12:00	in 91 days	IN	WPI	Wholesale inflation (WPI) · Dec 2026	wholesale prices: input-cost pressure on margins	DPIIT
+Wed, 20 Jan	17:00	in 97 days	IN	CORE	Core industries index · Dec 2026	core industries (coal, steel, cement, power…): an early read on IIP	DPIIT
+Thu, 28 Jan	00:30	in 105 days	US	FED	US Fed rate decision	US rates: drives FII flows and the rupee	federalreserve.gov
+Thu, 28 Jan	16:00	in 105 days	IN	IIP	Industrial production (IIP) · Dec 2026	factory, mining and power output	MoSPI
+Fri, 05 Feb	10:00	in 113 days	IN	RBI	RBI policy decision (repo rate)	repo rate and stance: moves banks, NBFCs, rate-sensitive sectors	RBI
+Fri, 12 Feb	16:00	in 120 days	IN	CPI	CPI inflation · Jan 2027	retail inflation: the RBI targets 4% (2–6% band)	MoSPI
+CPI, IIP and GDP: MoSPI Advance Release Calendar 2026-27 (updated 25 May 2026); released at 16:00 IST since Nov 2024; on a holiday the release moves to the next working day. WPI (14th, 12:00) and the core-industries index (20th, 17:00) follow DPIIT's fixed-day rule, also moving to the next working day. Add FY 2027-28 when MoSPI publishes it (usually Feb–Mar). MoSPI calendar ↗DPIIT calendar ↗ Market holidays come from NSE; a government release falls on its planned day unless the government is also closed (MoSPI published CPI on 14 Sep, an NSE holiday). Dates only: no forecasts or consensus figures (no free source for those).
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

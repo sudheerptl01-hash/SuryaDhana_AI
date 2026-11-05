@@ -1,0 +1,69 @@
+{
+ "fixer": "W2-OPS-followup",
+ "summary": "scripts/stack_watchdog.sh now recovers a HUNG core service. A hung service is one whose port has a listener that is its own uvicorn (start-local's `python -m uvicorn <app> --port <port>`, or its reload worker) while /health returns no 200. The existing in-run 30 s debounce is kept; on 2 consecutive runs, plus one more probe right before acting, the watchdog captures diagnostics and runs `./start-local.sh restart <svc>`. Diagnostics go to .logs/hangs/<YYYYmmdd-HHMMSS>-<svc>/: summary.txt (what it saw, ps of each listener, pidfile, established connection count), sample-<pid>.txt (/usr/bin/sample <pid> 3 -file), lsof-<pid>.txt (lsof -nP -p) and log-tail.txt (last 200 lines). Only the newest 10 captures are kept, and only capture-named dirs are ever pruned. Telegram, throttled 30 min per service through the existing tg helper: '<svc> was hung (listening, /health timed out): restarted.' plus the capture path; for an HTTP error it says 'answered HTTP <code>'; a failed restart gets its own alert. Freeze windows: data-service and master-controller are never restarted 07:45-09:20 or 18:30-21:15 IST (ends included); the watchdog alerts instead and restarts on the first hung run after the window. ui-api may be restarted any time. ICICI login: while a Python process runs scripts/daily_session_refresh.py or icici_session_helper.py, no hang restart happens (alert every 15 min): a master-controller tree stop would kill it, the controller relays its OTP, and the login hands its token to ui-api, after which the controller reconnects data-service. A port held by another program (e.g. Docker's forwarder) is reported hourly and never stopped. The hung path replaces the old 'already running' then 'FAILED to start' loop; dead services are started as before. WATCHDOG_DRY_RUN=1 logs the hang decisions only. bash 3.2 compatible; installed atomically. scratch_server.py: the bounded graceful shutdown (3 s) and the lifespan close of the upstream httpx client were already in; added close_timeout=2 on the upstream WebSocket (default 10 s) and a WebSocket SIGTERM regression test. RUNBOOK 'After an outage' gains a 'A hung service' bullet and an `ls -t .logs/hangs` line in the manual recipe.",
+ "files_changed": [
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/stack_watchdog.sh (installed 15:15:46 IST, sha256 d71b4533c39a045c9e9baa9cc209e115f89d99b538cfa76b646cfed4048646f1)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ops.py (watchdog section: 25 tests; module docstring; DESKTOP_OPS_WATCHDOG negative-control switch)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_qa_harness.py (+ test_scratch_server_exits_promptly_on_sigterm_with_a_relayed_websocket_open)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/scratch_server.py (upstream websockets.connect close_timeout=2)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/docs/RUNBOOK_RESTORE.md (After an outage: 'A hung service' bullet; manual recipe line)"
+ ],
+ "tests_run": [
+  {
+   "command": "DESKTOP_OPS_WATCHDOG=<new watchdog> pytest tests/integration/test_desktop_ops.py -q",
+   "result": "53 passed (25 watchdog tests: 2-run restart with capture; HTTP 503 named in the alert and every listener captured; failed restart retried only after another full count; recovery just before restart left alone; freeze boundaries 07:44/07:45/09:20/09:21/18:29/18:30/21:15/21:16/02:15; freeze alerts instead of restarting, then restarts after the window; a running login defers; login regex on real processes (3 login forms match; look-alike name, test_*.py, `python -c` with the path as an argument, and tail -f do not); real-process ownership (ours, --reload supervisor child, other, '--port 80100', wrong service); foreign port reported and never stopped; dry run; pruning keeps 10 and leaves non-capture files; main() hung plus dead; paused and recovered lose the count; real sample/lsof capture; end to end with a real hung listener, real curl/lsof/ps/sample and real main(): run 1 counts, run 2 captures and restarts, run 3 idle; 11.7 s)"
+  },
+  {
+   "command": "NEGATIVE CONTROL: DESKTOP_OPS_WATCHDOG=<12:16 watchdog snapshot> pytest tests/integration/test_desktop_ops.py -k <the 25 watchdog tests>",
+   "result": "20 failed, 5 passed. The 5 passes are the 'not frozen' freeze-window cases, which an absent in_freeze also satisfies. The end-to-end log under the old script reproduces the 14:40 incident: 'ui-api is down \u2014 starting' / 'ui-api already running on <port>' / 'ui-api FAILED to start', and the hung process stays alive"
+  },
+  {
+   "command": "scripts/tests/test_ops_shell.py against the new watchdog (scratch tree), then in-repo after install",
+   "result": "19 passed both times"
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest tests -q",
+   "result": "612 passed, 9 skipped (was 586 + 25 watchdog + 1 WebSocket test)"
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest scripts/tests -q",
+   "result": "175 passed, 1 failed: the known test_ci_workflow job-set assertion that PR-W2-OPS-1 fixes (unchanged by this follow-up)"
+  },
+  {
+   "command": "pytest tests/integration/test_desktop_qa_harness.py -k sigterm (new code; then the pre-change scratch_server)",
+   "result": "New code: 2 passed (SSE 4.4 s, WebSocket 0.6 s). Pre-change: SSE FAILS (process outlives SIGTERM), WebSocket passes (that path already closed upstream on disconnect, so this test is a regression guard)"
+  },
+  {
+   "command": "macOS pgrep -f with LOGIN_RX against real processes",
+   "result": "Matches the controller form `<Python> /abs/scripts/daily_session_refresh.py --headless`, `python -u scripts/icici_session_helper.py` and `python scripts/daily_session_refresh.py --force`; does not match pytest on test_daily_session_refresh.py, tail -f on the script, or not_daily_session_refresh.py"
+  },
+  {
+   "command": "Live read-only check of the new functions (sourced from a throwaway tree): listener_pid / listener_is_ours / health_code / in_freeze / login_running",
+   "result": "data-service 75449, ui-api 70501, master-controller 75622: all 'ours', health 200, not frozen at 15:1x; no login running; next-server on :3000 is 'not ours' (not a core service)"
+  },
+  {
+   "command": "/bin/bash -n (bash 3.2.57); ruff check --line-length 130 (2 test files + scratch_server.py); mypy scratch_server.py",
+   "result": "OK; All checks passed; no issues"
+  },
+  {
+   "command": "launchctl print gui/$UID/com.suryadhana.watchdog after install",
+   "result": "First run of the new script at 15:16:26 IST: last exit code 0, last_all_up updated, nothing logged (healthy stack)"
+  }
+ ],
+ "deploy_notes": [
+  "scripts/stack_watchdog.sh is live: written to scripts/.stack_watchdog.sh.tmp-<pid>, chmod 755, bash -n, then mv -f, after confirming the live file was still the 12:16 version. A running instance keeps the old inode. Rollback: the 12:16 copy is at scratchpad/W2-OPS-followup/stack_watchdog.pre-followup.sh (sha256 55e70b02\u2026); install it the same atomic way.",
+  "I started, stopped or restarted nothing. The LaunchAgent picked the new script up on its next run (15:16:26, exit 0).",
+  "Timing: a hang is restarted about 2.5-4.5 min after it starts (2 runs, 2 min apart, each with the 30 s recheck), plus about 5 s of capture and the restart (stop up to 20 s, then health wait up to 60 s).",
+  "Env knobs (defaults match the brief; set in the LaunchAgent environment only if needed): WATCHDOG_HANG_RUNS=2, WATCHDOG_HANG_KEEP=10, WATCHDOG_DEBOUNCE_S=30, WATCHDOG_HEALTH_TIMEOUT_S=8, WATCHDOG_DRY_RUN=0, WATCHDOG_PYTHON (preflight interpreter).",
+  "The scratch_server change applies only to scratch servers started from now on. Ones still running the old code (W2-UI-SHELL :8093, W2-RUST :18761, W2-UI-PAGES :8121-8123 earlier) still wait forever after SIGTERM: stop them with SIGKILL, or restart them on the new code.",
+  "CI: the new watchdog tests live in tests/integration/test_desktop_ops.py, which ci.yml already runs in the macOS desktop job; the /usr/bin/sample tests skip elsewhere.",
+  "The 14:52 draft in scratchpad/W2-OPS/work/stack_watchdog.sh is superseded by the installed version."
+ ],
+ "open_issues": [
+  "The root cause of the 14:40 ui-api wedge is still unknown. The next hang will leave a capture in .logs/hangs; /usr/bin/sample shows C-level stacks (enough to see a blocked event loop, a lock or a socket read), but not Python frames. py-spy would show them but needs sudo on macOS, so it is not included.",
+  "The login deferral has no time limit by design ('never kill a running login'): a login process that never exits blocks every hang restart, with an alert every 15 min.",
+  "The freeze and login alerts say '/health not answering' rather than the exact status, because no extra probe is made in those cases.",
+  "Pre-existing, theoretical: the watchdog's 20-minute stale-lock window is shorter than a worst-case run (several 300 s start/restart timeouts in one run).",
+  "The ownership check relies on start-local.sh's command line containing 'uvicorn' and '--port <port>'. If start_py_service ever changes how it launches uvicorn, listener_is_ours must change with it (test_listener_ownership_is_the_services_own_uvicorn_or_its_child pins the pattern)."
+ ]
+}

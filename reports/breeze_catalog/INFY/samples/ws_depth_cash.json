@@ -1,0 +1,297 @@
+[
+ {
+  "_recv": 1790575029.985335,
+  "symbol": "4.2!1594",
+  "time": "Mon Sep 28 11:27:09 2026",
+  "depth": [
+   {
+    "BestBuyRate-1": 991.4,
+    "BestBuyQty-1": 118,
+    "BuyNoOfOrders-1": 3,
+    "BuyFlag-1": "",
+    "BestSellRate-1": 991.5,
+    "BestSellQty-1": 602,
+    "SellNoOfOrders-1": 8,
+    "SellFlag-1": ""
+   },
+   {
+    "BestBuyRate-2": 991.2,
+    "BestBuyQty-2": 431,
+    "BuyNoOfOrders-2": 5,
+    "BuyFlag-2": "",
+    "BestSellRate-2": 991.6,
+    "BestSellQty-2": 114,
+    "SellNoOfOrders-2": 4,
+    "SellFlag-2": ""
+   },
+   {
+    "BestBuyRate-3": 991.1,
+    "BestBuyQty-3": 1136,
+    "BuyNoOfOrders-3": 13,
+    "BuyFlag-3": "",
+    "BestSellRate-3": 991.7,
+    "BestSellQty-3": 496,
+    "SellNoOfOrders-3": 8,
+    "SellFlag-3": ""
+   },
+   {
+    "BestBuyRate-4": 991,
+    "BestBuyQty-4": 3471,
+    "BuyNoOfOrders-4": 46,
+    "BuyFlag-4": "",
+    "BestSellRate-4": 991.8,
+    "BestSellQty-4": 979,
+    "SellNoOfOrders-4": 15,
+    "SellFlag-4": ""
+   },
+   {
+    "BestBuyRate-5": 990.9,
+    "BestBuyQty-5": 1953,
+    "BuyNoOfOrders-5": 16,
+    "BuyFlag-5": "",
+    "BestSellRate-5": 991.9,
+    "BestSellQty-5": 1135,
+    "SellNoOfOrders-5": 16,
+    "SellFlag-5": ""
+   }
+  ],
+  "quotes": "Market Depth",
+  "stock_name": "INFOSYS LTD"
+ },
+ {
+  "_recv": 1790575031.129041,
+  "symbol": "4.2!1594",
+  "time": "Mon Sep 28 11:26:44 2026",
+  "depth": [
+   {
+    "BestBuyRate-1": 991.1,
+    "BestBuyQty-1": 86,
+    "BuyNoOfOrders-1": 2,
+    "BuyFlag-1": "",
+    "BestSellRate-1": 991.4,
+    "BestSellQty-1": 43,
+    "SellNoOfOrders-1": 1,
+    "SellFlag-1": ""
+   },
+   {
+    "BestBuyRate-2": 991,
+    "BestBuyQty-2": 2158,
+    "BuyNoOfOrders-2": 36,
+    "BuyFlag-2": "",
+    "BestSellRate-2": 991.5,
+    "BestSellQty-2": 1261,
+    "SellNoOfOrders-2": 15,
+    "SellFlag-2": ""
+   },
+   {
+    "BestBuyRate-3": 990.9,
+    "BestBuyQty-3": 1463,
+    "BuyNoOfOrders-3": 14,
+    "BuyFlag-3": "",
+    "BestSellRate-3": 991.6,
+    "BestSellQty-3": 541,
+    "SellNoOfOrders-3": 11,
+    "SellFlag-3": ""
+   },
+   {
+    "BestBuyRate-4": 990.8,
+    "BestBuyQty-4": 1372,
+    "BuyNoOfOrders-4": 11,
+    "BuyFlag-4": "",
+    "BestSellRate-4": 991.7,
+    "BestSellQty-4": 733,
+    "SellNoOfOrders-4": 10,
+    "SellFlag-4": ""
+   },
+   {
+    "BestBuyRate-5": 990.7,
+    "BestBuyQty-5": 1185,
+    "BuyNoOfOrders-5": 17,
+    "BuyFlag-5": "",
+    "BestSellRate-5": 991.8,
+    "BestSellQty-5": 687,
+    "SellNoOfOrders-5": 11,
+    "SellFlag-5": ""
+   }
+  ],
+  "quotes": "Market Depth",
+  "stock_name": "INFOSYS LTD"
+ },
+ {
+  "_recv": 1790575033.604461,
+  "symbol": "4.2!1594",
+  "time": "Mon Sep 28 11:27:10 2026",
+  "depth": [
+   {
+    "BestBuyRate-1": 991.4,
+    "BestBuyQty-1": 87,
+    "BuyNoOfOrders-1": 3,
+    "BuyFlag-1": "",
+    "BestSellRate-1": 991.5,
+    "BestSellQty-1": 485,
+    "SellNoOfOrders-1": 9,
+    "SellFlag-1": ""
+   },
+   {
+    "BestBuyRate-2": 991.2,
+    "BestBuyQty-2": 325,
+    "BuyNoOfOrders-2": 3,
+    "BuyFlag-2": "",
+    "BestSellRate-2": 991.6,
+    "BestSellQty-2": 150,
+    "SellNoOfOrders-2": 5,
+    "SellFlag-2": ""
+   },
+   {
+    "BestBuyRate-3": 991.1,
+    "BestBuyQty-3": 1136,
+    "BuyNoOfOrders-3": 13,
+    "BuyFlag-3": "",
+    "BestSellRate-3": 991.7,
+    "BestSellQty-3": 711,
+    "SellNoOfOrders-3": 10,
+    "SellFlag-3": ""
+   },
+   {
+    "BestBuyRate-4": 991,
+    "BestBuyQty-4": 3371,
+    "BuyNoOfOrders-4": 45,
+    "BuyFlag-4": "",
+    "BestSellRate-4": 991.8,
+    "BestSellQty-4": 902,
+    "SellNoOfOrders-4": 14,
+    "SellFlag-4": ""
+   },
+   {
+    "BestBuyRate-5": 990.9,
+    "BestBuyQty-5": 1953,
+    "BuyNoOfOrders-5": 16,
+    "BuyFlag-5": "",
+    "BestSellRate-5": 991.9,
+    "BestSellQty-5": 1135,
+    "SellNoOfOrders-5": 16,
+    "SellFlag-5": ""
+   }
+  ],
+  "quotes": "Market Depth",
+  "stock_name": "INFOSYS LTD"
+ },
+ {
+  "_recv": 1790575033.660042,
+  "symbol": "4.2!1594",
+  "time": "Mon Sep 28 11:27:11 2026",
+  "depth": [
+   {
+    "BestBuyRate-1": 991.2,
+    "BestBuyQty-1": 714,
+    "BuyNoOfOrders-1": 11,
+    "BuyFlag-1": "",
+    "BestSellRate-1": 991.5,
+    "BestSellQty-1": 448,
+    "SellNoOfOrders-1": 7,
+    "SellFlag-1": ""
+   },
+   {
+    "BestBuyRate-2": 991.1,
+    "BestBuyQty-2": 929,
+    "BuyNoOfOrders-2": 15,
+    "BuyFlag-2": "",
+    "BestSellRate-2": 991.6,
+    "BestSellQty-2": 200,
+    "SellNoOfOrders-2": 3,
+    "SellFlag-2": ""
+   },
+   {
+    "BestBuyRate-3": 991,
+    "BestBuyQty-3": 3295,
+    "BuyNoOfOrders-3": 44,
+    "BuyFlag-3": "",
+    "BestSellRate-3": 991.7,
+    "BestSellQty-3": 356,
+    "SellNoOfOrders-3": 5,
+    "SellFlag-3": ""
+   },
+   {
+    "BestBuyRate-4": 990.9,
+    "BestBuyQty-4": 1986,
+    "BuyNoOfOrders-4": 17,
+    "BuyFlag-4": "",
+    "BestSellRate-4": 991.8,
+    "BestSellQty-4": 1003,
+    "SellNoOfOrders-4": 16,
+    "SellFlag-4": ""
+   },
+   {
+    "BestBuyRate-5": 990.8,
+    "BestBuyQty-5": 2331,
+    "BuyNoOfOrders-5": 14,
+    "BuyFlag-5": "",
+    "BestSellRate-5": 991.9,
+    "BestSellQty-5": 1073,
+    "SellNoOfOrders-5": 16,
+    "SellFlag-5": ""
+   }
+  ],
+  "quotes": "Market Depth",
+  "stock_name": "INFOSYS LTD"
+ },
+ {
+  "_recv": 1790575033.784601,
+  "symbol": "4.2!1594",
+  "time": "Mon Sep 28 11:27:13 2026",
+  "depth": [
+   {
+    "BestBuyRate-1": 991.2,
+    "BestBuyQty-1": 203,
+    "BuyNoOfOrders-1": 3,
+    "BuyFlag-1": "",
+    "BestSellRate-1": 991.5,
+    "BestSellQty-1": 574,
+    "SellNoOfOrders-1": 10,
+    "SellFlag-1": ""
+   },
+   {
+    "BestBuyRate-2": 991.1,
+    "BestBuyQty-2": 923,
+    "BuyNoOfOrders-2": 13,
+    "BuyFlag-2": "",
+    "BestSellRate-2": 991.6,
+    "BestSellQty-2": 200,
+    "SellNoOfOrders-2": 3,
+    "SellFlag-2": ""
+   },
+   {
+    "BestBuyRate-3": 991,
+    "BestBuyQty-3": 3772,
+    "BuyNoOfOrders-3": 46,
+    "BuyFlag-3": "",
+    "BestSellRate-3": 991.7,
+    "BestSellQty-3": 606,
+    "SellNoOfOrders-3": 9,
+    "SellFlag-3": ""
+   },
+   {
+    "BestBuyRate-4": 990.9,
+    "BestBuyQty-4": 1788,
+    "BuyNoOfOrders-4": 18,
+    "BuyFlag-4": "",
+    "BestSellRate-4": 991.8,
+    "BestSellQty-4": 1069,
+    "SellNoOfOrders-4": 16,
+    "SellFlag-4": ""
+   },
+   {
+    "BestBuyRate-5": 990.8,
+    "BestBuyQty-5": 2331,
+    "BuyNoOfOrders-5": 14,
+    "BuyFlag-5": "",
+    "BestSellRate-5": 991.9,
+    "BestSellQty-5": 1073,
+    "SellNoOfOrders-5": 16,
+    "SellFlag-5": ""
+   }
+  ],
+  "quotes": "Market Depth",
+  "stock_name": "INFOSYS LTD"
+ }
+]

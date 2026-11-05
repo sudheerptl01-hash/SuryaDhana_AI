@@ -1,0 +1,382 @@
+{
+  "brief": {
+    "name": "brief",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/brief.png",
+    "load_s": 10.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "watch": {
+    "name": "watch",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/watch.png",
+    "load_s": 7.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "charts": {
+    "name": "charts",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/charts.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "world": {
+    "name": "world",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/world.png",
+    "load_s": 9.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "eco": {
+    "name": "eco",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/eco.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "memb": {
+    "name": "memb",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/memb.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "seag": {
+    "name": "seag",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/seag.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "preopen": {
+    "name": "preopen",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/preopen.png",
+    "load_s": 7.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "movers": {
+    "name": "movers",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/movers.png",
+    "load_s": 8.0,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "filings": {
+    "name": "filings",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/filings.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "options": {
+    "name": "options",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/options.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "ostrategy": {
+    "name": "ostrategy",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/ostrategy.png",
+    "load_s": 7.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "derivatives": {
+    "name": "derivatives",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/derivatives.png",
+    "load_s": 7.4,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "deals": {
+    "name": "deals",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/deals.png",
+    "load_s": 7.5,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "margin": {
+    "name": "margin",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/margin.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "screen": {
+    "name": "screen",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/screen.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "alerts": {
+    "name": "alerts",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/alerts.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "holders": {
+    "name": "holders",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/holders.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "insiders": {
+    "name": "insiders",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/insiders.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "ipo": {
+    "name": "ipo",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/ipo.png",
+    "load_s": 27.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "wrap": {
+    "name": "wrap",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/wrap.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [
+      "FAILED GET http://localhost:3000/api/market/ipo?months=24&kind=Mainboard net::ERR_ABORTED"
+    ],
+    "error_text": false
+  },
+  "compare": {
+    "name": "compare",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/compare.png",
+    "load_s": 7.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "markets": {
+    "name": "markets",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/markets.png",
+    "load_s": 8.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "events": {
+    "name": "events",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/events.png",
+    "load_s": 8.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "research": {
+    "name": "research",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/research.png",
+    "load_s": 8.4,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "risk": {
+    "name": "risk",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/risk.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "desk": {
+    "name": "Decision Desk",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/desk.png",
+    "load_s": 7.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "overview": {
+    "name": "Overview",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/overview.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "stocks": {
+    "name": "Stocks",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/stocks.png",
+    "load_s": 8.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "backtest": {
+    "name": "Backtest",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/backtest.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "positions": {
+    "name": "Portfolio",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/positions.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "broker": {
+    "name": "Broker Account",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/broker.png",
+    "load_s": 9.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "pipeline": {
+    "name": "Pipeline",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/pipeline.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "scanner": {
+    "name": "LW Scanner",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/scanner.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "discovery": {
+    "name": "Alpha Discovery",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/discovery.png",
+    "load_s": 8.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "commodity": {
+    "name": "Commodity",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/commodity.png",
+    "load_s": 8.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "mcxgold": {
+    "name": "mcxgold",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/mcxgold.png",
+    "load_s": 8.0,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "glassbox": {
+    "name": "Glass-Box",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/glassbox.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "mlengine": {
+    "name": "ML Engine",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/mlengine.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "explorer": {
+    "name": "Data Explorer",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/explorer.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "warehouse": {
+    "name": "Warehouse",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/warehouse.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "system": {
+    "name": "System",
+    "ok": true,
+    "screenshot": "reports/ui_audit/worldclass/system.png",
+    "load_s": 27.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  }
+}

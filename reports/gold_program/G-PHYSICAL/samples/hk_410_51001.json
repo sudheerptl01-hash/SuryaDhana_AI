@@ -1,0 +1,19 @@
+{
+    "header": {
+        "status": {
+            "name": "Fail",
+            "code": 1,
+            "description": "Validation error",
+            "message": [
+                "Parameter is not defined"
+            ],
+            "apiHelp": "https:\/\/www.censtatd.gov.hk\/en\/web_table.html?id=410-51001&api_popup=1"
+        },
+        "count": {
+            "noOfRecords": 0,
+            "started": "2026-10-26T00:20:52+00:00",
+            "finished": "2026-10-26T00:20:53+00:00",
+            "durationSeconds": 0.043091
+        }
+    }
+}

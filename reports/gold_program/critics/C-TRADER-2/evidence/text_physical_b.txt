@@ -1,0 +1,313 @@
+GOLD
+GOLD TERMINAL
+spot, COMEX, MCX, positioning (COT), physical, macro, contracts, health check, pre-open fair value · 03:50 IST
+LIVE · YAHOO (CACHED FET…
+PAPER · CONTEXT
+↻
+COMEX DEC-26
+settle — $4,072.2 last Wed 04 Nov · Yahoo, not settlement
+last $4,072.2 ▲+3.28 % Yahoo, not settlement · 03:29 IST
+LIVE · YAHOO (CACHED FET…
+USD/INR
+94.63
+Yahoo INR=X · 00:13 IST
+10-Y REAL
+2.62 %
+TIPS · Mon 02 Nov
+MCX GOLD DEC-26
+₹1,40,186
+Tue 03 Nov settlement · basis +1.58 % at the at the Tue 03 Nov settlement vs that session's duty-paid landed vs that session's duty-paid
+COT FUNDS NET (MANAGED MONEY)
++105,562
++1,356 w/w · as of Tue 27 Oct
+◷ MCX opens in 5h09m
+spot proxy · COMEX front GC1 · COMEX matched month GCZ26 · MCX GOLD DEC-26
+CONTRACT
+MCX
+NSE (n/a)
+BSE (n/a)
+GOLD
+GOLDM
+GOLDTEN
+GOLDGUINEA
+GOLDPETAL
+front (by OI)
+DEC-26 · 2026-12-04 · OI 16,282
+FEB-27 · 2027-02-05 · OI 1,180
+APR-27 · 2027-04-05 · OI 70
+JUN-27 · 2027-06-04 · OI 2
+AUG-27 · 2027-08-05 · OI 0
+OCT-27 · 2027-10-05 · OI 0
+OPTIONS
+↔ COMEX DEC-26 ↔ GC1
+UNIT
+$/oz
+₹/10 g
+₹/g
+$/g
+₹/tola
+WINDOW
+D
+W
+M
+LAYER
+[B]
+[P]
+HEALTH
+DAILY
+WEEKLY
+MONTHLY
+POSITIONING
+PHYSICAL
+MACRO
+CONTRACTS
+LEARN
+THE INDIA PRICE STACK
+ARITHMETIC · identity
+DELAYED · IBJA (DISPLAYED W…
+?
+as of Tue 03 Nov
+[B]what a rupee gold price is made of and where demand shows up: above the duty-paid landed price = local demand exceeds importable supply; below = discount. The basis is the MCX futures over that landed price.
+$4,072.2
+COMEX $/oz
+now · Thu 05 Nov 03:29 IST
+Yahoo (cached fetcher)
+→
+94.63
+× USD/INR
+now · Thu 05 Nov 00:13 IST
+Yahoo INR=X
+→
+₹1,23,894
+landed ₹/10 g
+now · Thu 05 Nov 03:29 IST
+M5
+→
+15 %
++ duty
+Wed 13 May 2026
+CBIC (confirm: O-3)
+→
+₹1,42,478
+duty-paid landed
+now · Thu 05 Nov 03:29 IST
+M6
+→
+₹1,37,576
+IBJA 999 PM
+PM fix · Tue 03 Nov
+IBJA (displayed with attribution)
+→
+₹1,40,186
+MCX front settle
+Tue 03 Nov settlement
+ICICI band midpoint (proxy)
+duty 15 % since Wed 13 May 2026 · Notification 16/2026-Customs (BCD 10 % + AIDC 5 %) · confirm at CBIC (O-3)
+IBJA premium vs duty-paid −0.71% · Tue 03 Nov, both legs at the IBJA fix minute (stored)
+MCX basis +1.58% · at the Tue 03 Nov settlement vs that session's duty-paid (the close reference)
+999 ÷ 995 = 1.00402 applied where the purities differ
+[B]the 4 bars on the left (COMEX $/oz, × USD/INR, landed ₹/10 g, duty-paid landed) are now; IBJA is its PM fix of Tue 03 Nov; MCX is the Tue 03 Nov settlement — do not divide across clocks: a premium or basis read between a live bar and a fixed one is clock error, not demand (G-INDIA §5.3).
+Source: India Bullion and Jewellers Association (ibjarates.com) — displayed with attribution on this private terminal; not re-served or exported (O-1)
+INDIA PREMIUM HISTORY
+CONTEXT · GS-PREMIUM pending
+DELAYED · IBJA (DISPLAYED W…
+?
+as of Tue 03 Nov
+[B]above landed = local demand exceeds importable supply; below = discount (post-duty-hike inventory, smuggling, weak demand).
+IBJA premium vs duty-paid landed %
+MCX basis %
+−1.0
+0.0
+1.0
+parity
+26 Oct 26
+27 Oct 26
+28 Oct 26
+29 Oct 26
+30 Oct 26
+02 Nov 26
+03 Nov 26
+duty step: 6 → 15 % on Wed 13 May 2026 (a premium read across the step is a duty change, not demand)
+WGC WEEKLY INDIA PREMIUM (REFERENCE)
+$2.9/oz · wk Fri 30 Oct
+Reuters weekly survey (sanity line, paywalled) ↗
+Source: India Bullion and Jewellers Association (ibjarates.com) — displayed with attribution on this private terminal; not re-served or exported (O-1)
+Source: World Gold Council (Goldhub) — displayed with attribution on this private terminal; not re-served or exported (O-1)
+SHANGHAI PREMIUM
+CONTEXT · GS-P3 pending
+DELAYED · SGE × LBMA (VIEW-…
+?
+as of Wed 04 Nov
+[B]positive = China pulling metal (import quotas permitting); read the sign flips and the changes, not the level.
+PREMIUM $/OZ (LAST SAME-DAY PAIR)
+−1.55
+−0.04% · Tue 03 Nov (stored) · awaiting the LBMA PM of Wed 04 Nov
+SGE AU99.99 PM
+865.47 CNY/g
+= $3,935.1 at USDCNY 6.6643 (Yahoo CNY=X) · Wed 04 Nov
+REFERENCE LEG
+$3,936.7
+LBMA PM (WGC-served, PROVISIONAL until O-1) · Tue 03 Nov
+SGE Wed 04 Nov · reference Tue 03 Nov — SGE PM 14:15 Beijing → LBMA PM 15:00 London: 8 h 45 min apart (UK on GMT); the two legs are on different dates, so no premium is divided across them (a cross-date pair after a big day is an artefact, not Shanghai)
+Shanghai premium $/oz
+−200
+0
+200
+05 Nov 25
+10 Dec 25
+22 Jan 26
+06 Mar 26
+14 Apr 26
+22 May 26
+30 Jun 26
+04 Aug 26
+09 Sept 26
+03 Nov 26
+WGC weekly China premium (reference): $6.7/oz · wk Fri 30 Oct
+Source: Shanghai Gold Exchange (sge.com.cn) — displayed with attribution on this private terminal; not re-served or exported (O-1)
+Source: World Gold Council (Goldhub) — displayed with attribution on this private terminal; not re-served or exported (O-1)
+ETF HOLDINGS AND FLOWS
+CONTEXT · G-STUDY / G-MACRO / GS-P1
+DELAYED · SPDR / ISHARES
+?
+as of Tue 03 Nov
+[B]Western investment demand; a divergence (price up, tonnes down) means the buying is outside the ETFs — central banks, Asia.
+GLD TONNES
+1,037.66
+Δ day −2.85 t · 5 d −4.0 t
+GLD CHANGE OVER THE LAST 30 STORED POINTS
+−19.2 t
+1 m −18.0 t · YTD −32.9 t
+IAU TONNES
+461.2
+Tue 03 Nov
+WGC INDIA ETF TONNES
+124.4
+WGC country table · wk Fri 23 Oct
+GLD tonnes (last 30 stored points)
+1,040
+1,050
+1,060
+23 Sept 26
+30 Sept 26
+07 Oct 26
+14 Oct 26
+21 Oct 26
+03 Nov 26
+GLD daily Δ tonnes
+−10.0
+−5.0
+0.0
+5.0
+24 Sept 26
+01 Oct 26
+08 Oct 26
+15 Oct 26
+22 Oct 26
+03 Nov 26
+WGC weekly flows by region, tonnes (26 weeks)
+NA
+EU
+ASIA
+OTHER
+−25.0
+0.0
+25.0
+50.0
+01 May 26
+05 Jun 26
+10 Jul 26
+14 Aug 26
+18 Sept 26
+23 Oct 26
+Source: SPDR® Gold Trust (spdrgoldshares.com) — displayed with attribution on this private terminal; not re-served or exported (O-1)
+Source: World Gold Council (Goldhub) — displayed with attribution on this private terminal; not re-served or exported (O-1)
+OFFICIAL SECTOR
+CONTEXT · GS-P5 pending (not yet pre-regi…
+STALE
+?
+as of data month Sep 2026
+[B]who is buying at the official level and in which data month; explains the regime, never the week.
+COUNTRY	DATA MONTH	MOZ ▼	TONNES ↕	Δ MOZ M/M ↕
+USA	2026-07	261.50	8,134	0.00
+DEU	2026-09	107.68	3,349	0.00
+ITA	2026-09	78.83	2,452	0.00
+FRA	2026-09	78.35	2,437	0.00
+CHN	2026-09	77.47	2,410	+0.74
+RUS	2026-09	72.80	2,264	−0.20
+CHE	2026-09	33.44	1,040	0.00
+IND	2026-08	28.31	881	0.00
+JPN	2026-09	27.20	846	0.00
+TUR	2026-08	25.44	791	+0.61
+POL	2026-09	21.63	673	+0.80
+NLD	2026-09	19.69	612	0.00
+PRT	2026-09	12.30	383	0.00
+KAZ	2026-09	12.28	382	+0.15
+SAU	2026-08	10.39	323	0.00
+GBR	2026-09	9.98	310	0.00
+ESP	2026-09	9.05	282	0.00
+AUT	2026-09	9.00	280	0.00
+BRA	2026-09	5.54	172	0.00
+PBOC LATEST
+77.47 Moz = 2,410 t (Sep 2026) · Δ +0.74 Moz m/m
+RBI GOLD (WSS)
+$103,150 mn · wk Fri 23 Oct
+RBI GOLD SHARE OF RESERVES
+14.3% · tonnes: the IMF IND row above (RBI publishes value, not weight)
+Source: IMF IRFCL (api.imf.org) — public data, attributed
+Source: Reserve Bank of India Weekly Statistical Supplement — public
+OTC WINDOW
+CONTEXT · activity, not positions
+STALE
+?
+as of Fri 16 Oct
+[B]there is no COT for London. The OTC market is where most gold trades; this is how much traded and how much sits in the vaults, never who holds it.
+LBMA TRADE REPORTING WEEKLY TURNOVER, GOLD (12-WK MA)
+$964.2 bn · week ending Fri 16 Oct
+LONDON VAULTS
+9,821 t · Sep 2026
+CME EFP
+3,141 round turns · Tue 03 Nov · 20-d avg —
+EFP SHARE OF VOLUME
+1.6%
+Source: LBMA (lbma.org.uk) — public headline / monthly file, attributed
+Source: CME Group daily files (ftp.cmegroup.com) — public FTP, paced; www.cmegroup.com is never fetched
+COMEX WAREHOUSE STOCKS AND DELIVERIES
+CONTEXT
+?
+LINK-ONLY until O-2
+LINK-ONLY: the publisher blocks scripts or its terms forbid automated access, so nothing is fetched by the stack; the tile opens the page in your browser. www.cmegroup.com blocks scripts and its Data Terms forbid automated downloads; the owner decides whether a once-daily browser download is acceptable personal use (O-2). Until then: registered / eligible / pledged and the coverage ratio are read on the CME page.
+Gold warehouse stocks (XLS) · registered · eligible · pledged, daily
+COMEX vault gold with a warehouse receipt: deliverable today.
+↗ OPEN
+Metals issues and stops (PDF) · delivery notices MTD
+Registered oz ÷ (OI × 100 oz). Deliveries are 1–3% of OI a month: context only.
+↗ OPEN
+LINKED SOURCES (NO FREE FEED)
+?
+LINK-ONLY: the publisher blocks scripts or its terms forbid automated access, so nothing is fetched by the stack; the tile opens the page in your browser.
+Sprott Physical Gold Trust (PHYS) · closed-end trust tonnes
+no free feed
+↗ OPEN
+US Mint bullion sales · coin demand, monthly
+HTML tables, link only
+↗ OPEN
+Swiss customs (SwissImpex) · refinery flows to India / China
+the monthly zip is ingested; the dashboard is a link
+↗ OPEN
+LBMA Good Delivery list · accredited refiners
+reference
+↗ OPEN
+WGC Gold Demand Trends · quarterly report
+registration; the balance sheet JSON feeds MONTHLY
+↗ OPEN
+SAFE (China official reserves) · PBoC ~7th of the month
+no table in the HTML; IMF carries it a month later
+↗ OPEN
+HK Census & Statistics (gold trade with China) · HK → mainland flows
+table id to capture (O-11)
+↗ OPEN
+Kitco gold charts · the chart the owner named
+personal viewing only; never embedded or scraped
+↗ OPEN
+Monthly physical series (SGE withdrawals, India imports, Swiss exports, AMFI) and the WGC balance sheet live on MONTHLY (m.physical, m.balance); the official-sector holders table lives here and MONTHLY keeps the net-purchase bars — nothing is repeated.

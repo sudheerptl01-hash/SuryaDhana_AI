@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Error - St. Louis Fed</title>
+    <meta name="description" content="">
+    <meta name="keywords" content="">    
+    <link rel="stylesheet" type="text/css" href="/assets/bootstrap/di
+...
+rch-fred/fred-account-react/dist/1792642174.vendor.dist.js"></script>
+
+<script type="text/javascript">
+    // update mobile footer filter bar active filter count to content.tagsDrawers tags-number
+    $('.filter-button-inner .badge').text($('.tags-number').text());
+</script>
+<script type="text/javascript"  src="/t5i03Pa0s8TRc4wjcg/m33iNwmtQGm2LmYzEi/QWkwVg/ODp0M/0Y8CCM"></script></body>
+</html>

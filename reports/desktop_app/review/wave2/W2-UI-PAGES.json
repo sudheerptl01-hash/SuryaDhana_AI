@@ -1,0 +1,197 @@
+{
+ "fixer": "W2-UI-PAGES",
+ "summary": "All 8 findings in my brief have a fix in ui/**. 6 are fixed (C1-trader-ux-04, -05, -08, -17, C2-performance-01, C3-logic-unchanged-02) and 2 are partly fixed because the rest lives in files I don't own: C1-trader-ux-15 (the dim/muted tokens are in news/format.ts and app/globals.css, so PR-1/PR-2) and C1-trader-ux-18 (menu.rs, strip chip, LAN note, and the MCXG doubled parenthesis, which ui-api's routers/mcx.py builds, so PR-3). Prices now print exactly 2 decimals with Indian grouping everywhere a price is shown. 11 SVG charts plus the market map are drawn in CSS px, so axis text no longer swells to ~17 px. OI-by-strike has a strike axis, ticks are round and OSTR breakeven labels no longer overlap. The stock window legend has its own row above the plot. PORT can no longer show LIVE on a PAPER ONLY terminal, and PORT/BRKR never print the ICICI login URL. EQS rows are memoized: a WebKit hover went from 176 to 37 ms, and with 1 Hz ticks Chromium's main thread went from 36% busy to 8%. COMP keeps both edits across two windows. Resumed after the 14:55 interruption: every browser check since then mocks every WebSocket (0 live sockets, 0 WebSocket requests in any scratch-server log), and all scratch servers are stopped. Gates: tsc clean; pages.check 116 passed / 0 failed / 1 pending (T1 waits for PR-1/2); desktop, alerts, platform, prefs and ws checks unchanged and green. WS-mocked audit of the 30 touched tabs is 27/30 in Chromium and 27/30 in WebKit. The 3 failing tabs (ostrategy, discovery, mcxgold) fail only because the GET-only scratch server answers their POSTs with 403, the same as in round 1; the full gate needs the PM's run on :8010.",
+ "findings": [
+  {
+   "id": "C1-trader-ux-08",
+   "outcome": "fixed",
+   "what_changed": "New ui/lib/format/index.ts (fmtPx, fmtInrPx, fmtIdx, fmtFixed, fmtSigned, unicodeMinus, asciiMinus, indianGrouping), re-exported by the kit. Every price now prints exactly 2 decimals with Indian grouping: DESK Last and order price, EQS CMP, PRE IEP and prev close, MEMB close, DEAL avg, ALRT last and hit price, MOV prices and the NIFTY tile, HP paid price, ALFA LTP (\u20b93,910.30). Index levels always 2 dp: IndexIntraday (BRF/MOV intraday, VIX included), BRF lines and crash filter, MEMB index stat. CMDT's server-built verdict sentences are re-grouped the Indian way on the client (\u20b9144,376 \u2192 \u20b91,44,376). The OSTR payoff axis uses one \u20b9 unit per axis (see C1-17). The tray already prints NIFTY with 2 dp (desktop/src-tauri/src/tray.rs, another fixer).",
+   "tests": "pages.check \u00a71\u20132 (F1/F2: 2 dp, Indian grouping, U+2212, no \u22120, missing values, Western-to-Indian re-grouping that leaves dates and times alone), with negative controls: the old DESK formatter turns 311.65 into 311.7; the old EQS formatter gives 1,125.3 / 33,100. Browser: the WS-mocked 30-tab audit in both engines, plus screenshots (EQS \u20b91,393.30 / \u20b96,804.00; stock window \u20b9174.94).",
+   "user_visible_change": "DESK shows \u20b9311.65 instead of \u20b9311.7 and \u20b9125.99 instead of \u20b9126.0. Price columns line up on 2 decimals (\u20b933,100.00, \u20b91,125.30). NIFTY reads 22,600.00 everywhere on a page. The gold verdict reads \u20b91,44,376.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-trader-ux-17",
+   "outcome": "fixed",
+   "what_changed": "New components/terminal/chart.ts (chartHeight, niceStep/niceTicks/niceAxis, pickAxisLabels, pickRoundLabels, staggerRows, rupeeAxisUnit/fmtAxisRupees, textWidth) and a kit hook, useChartSize: a ResizeObserver plus useLayoutEffect measure the container before paint (CHART_BOX). 11 SVG charts now draw in CSS px (1 unit = 1 px) instead of a viewBox scaled with height:auto: OptionChain, DerivativesDesk, StrategyBuilder, DecisionDesk, RiskDashboard, MarketMonitor, Compare, RotationChart, MarginMonitor, ParticipantPositioning and MarketMap. OI-by-strike gets a strike axis: labels on round strikes, with ATM and the two OI walls always labelled and at least 40 px apart. All ticks are round (DERV was 70/16/\u221238; OSTR x ticks were 19865/20948/\u2026, now multiples of 500). OSTR breakeven labels that would overlap move to a second row, and the payoff axis uses one \u20b9 unit (was \u20b91.3L next to \u20b988.9k). Stock window chart (IndicatorPriceChart): the legend moved to its own row above the plot, so it no longer covers the SMA 200 line. The volume series no longer draws its '14.91M' tag on the price axis; the last volume shows in the legend in Indian units ('VOL 1.84 L'). The square stock-window corners come from globals.css:422 (`.terminal .md\\:rounded-2xl`), which another fixer landed.",
+   "tests": "pages.check \u00a74: chart maths (nice ticks, zero included, no \u22120, distinct tick decimals, strike labels keep ATM and walls and stay apart, round strike labels, BE stagger, one rupee unit per axis), negative control (old OSTR axis mixed L and k), source guards on all 11 charts (useChartSize and no viewBox+height:auto), and 2 stock-chart guards that fail on the old file and pass on the new one. Browser, sockets mocked: the market map SVG renders 1:1 (width attribute 1570 = rendered 1570 px in Chromium at 1600 wide; 1070 = 1070 in WebKit at 1100), with tile symbols capped at 13 px (was about 17 px at 1600). In the stock window, the legend's bottom edge sits above the chart canvas in Chromium and WebKit, with 0 console errors. OSTR before/after screenshots.",
+   "user_visible_change": "Chart axis text matches the 9\u201311 px UI at any window width instead of growing to about 17 px. OMON's OI chart shows which strike holds each wall. Ticks are round numbers. OSTR breakevens are readable. The stock-window legend no longer covers the lines, and no volume tag covers the price axis.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-trader-ux-04",
+   "outcome": "fixed",
+   "what_changed": "New components/portfolio/policy.ts: executionPolicy() reads live_allowed and mode_policy from /api/execution/status (both are live on :8010 today: PAPER, live_allowed false, PAPER_ONLY). It fails closed: either signal means PAPER ONLY. On PORT the header chip reads PAPER ONLY, LIVE is never drawn as selected or green, and the LIVE button is disabled and struck through with a tooltip. The LIVE confirm dialog can't be reached. The liquidate button reads 'LIQUIDATE & HALT \u00b7 PAPER' and its confirm says nothing goes to the broker. If the engine ever reports LIVE on a PAPER ONLY terminal, an amber warning appears and liquidate is disabled, because the server refuses it. An older ui-api without these fields keeps the previous behaviour.",
+   "tests": "pages.check \u00a75 (P1: label, never-selected LIVE, mismatch warning, liquidate rules, fail-closed on either signal, owner opt-in path, older API, null status) plus source guards: PORT uses the policy for the chip, toggle and liquidate; it no longer prints the raw engine mode; the LIVE confirm is gated. Browser: PORT screenshots in both engines show PAPER ONLY, LIVE struck through and LIQUIDATE & HALT \u00b7 PAPER.",
+   "user_visible_change": "PORT shows PAPER ONLY and a disabled, struck-through LIVE, and a note says ui-api refuses LIVE. There is no green LIVE and no path to 'Yes, Go LIVE'.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-trader-ux-05",
+   "outcome": "fixed",
+   "what_changed": "PORT (LivePortfolio) and BRKR (PortfolioSummary) never render login_url as text, in an href, or in a log. A 'LOG IN TO ICICI \u2197' button calls openExternal(login_url), and BRKR shows numbered steps (1 \u00b7 log in, 2 \u00b7 paste the redirect URL or token). The absolute dev path is gone from BRKR's copy. .gitignore already ignores reports/ui_audit, reports/desktop_app and reports/worldclass_program PNGs (lines 76\u201379, another fixer).",
+   "tests": "pages.check \u00a76 (L1, per file: no {status.login_url} text, no href, button opens it externally, no console log; no /Users/ path). Browser: the final audit's positions.png and broker.png in both engines show the button and no URL.",
+   "user_visible_change": "The ICICI login URL with its api_key is no longer on screen. 'LOG IN TO ICICI \u2197' opens it in the browser.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C1-trader-ux-15",
+   "outcome": "partially-fixed",
+   "what_changed": "The token change is in two files I don't own, so it is PR-1 (news/format.ts) and PR-2 (app/globals.css): dim #475063 \u2192 #747e92 (4.59\u20135.05:1 on strip, bg, panel, panel2 and table head; was 2.32\u20132.55) and muted #6f7a8e \u2192 #8691a5 (5.90\u20136.49:1), so muted stays brighter than dim. In my files, hard-coded copies of the old hex are gone (QuantKPICard uses var(--t-muted); EQS has no #475063). Every audit and screenshot in this report used a build with PR-1/2 applied.",
+   "tests": "pages.check \u00a77 T1 stays PENDING until PR-1/2 land. Then it checks 3 things: dim \u2265 4.5:1 on all 5 backgrounds, muted \u2265 dim, and the CSS variables mirror the TS tokens. The guard against a hard-coded old hex in EQS passes now.",
+   "user_visible_change": "Once PR-1/2 land, the 9\u201310 px dim labels (as-of times, closed-market notes, units) become clearly readable, and muted text gets slightly brighter.",
+   "reason_if_not_fixed": "The tokens live in ui/components/news/format.ts and ui/app/globals.css, which I don't own (PR-1/PR-2). The critic's 10 px floor for informational text is not applied: about 115 sites use 9/9.5 px, which needs its own typography pass."
+  },
+  {
+   "id": "C1-trader-ux-18",
+   "outcome": "partially-fixed",
+   "what_changed": "PIPE steps renumbered (Feature Inspector \u2462, Model Studio \u2463, RL Agent \u2464). GBOX and MLEW default date ranges now end today (IST) via trailingRange/shiftMonthsISO instead of 2026-05-31 and 2025-12-31. Dev paths are gone from RSK, DESK, WRAP and MCXG copy; RSK shows user-facing wording. Emoji replaced with kit glyphs (EQS, PORT, BRKR, MLEW, PIPE, SYS, ModelLab, LWScanner). The kit's fmtPct prints U+2212 for losses, while CSV export keeps the ASCII minus through asciiMinus. One 'cr' casing (kit, BacktestPanel, StockProfile, OptionChain). Market map tiles, hover line and industry averages now go through fmtPct.",
+   "tests": "pages.check \u00a72\u20133 and \u00a710 (Y1: unique PIPE step numbers, no dev paths in RSK/DESK, no emoji in 8 files, kit U+2212, CSV ASCII, no ' Cr'); F3 checks the date ranges and that GBOX/MLEW have no stale hard-coded defaults.",
+   "user_visible_change": "No duplicate step number on PIPE. GBOX and MLEW open on a range ending today. No emoji and no developer file paths in the copy. Losses print '\u22121.23%'.",
+   "reason_if_not_fixed": "The rest belongs to other owners. menu.rs '(\u2318K in the terminal)' and the strip's 'UI' build chip are desktop shell. The MCXG doubled 'auto-login).)' is built by ui-api routers/mcx.py, which wraps a message that already ends in ').' (PR-3). The LAN/iPad note belongs in the switchover notes and start-local print_urls (ops/PM). About 72 hand-rolled `'+' : ''` sign prints in ~30 other components still print an ASCII '-' for losses."
+  },
+  {
+   "id": "C2-performance-01",
+   "outcome": "fixed",
+   "what_changed": "StockTable: a memoized StockRow gets only its own live value, flash and watched flag. Click and watch callbacks are stable (ref-backed useCallback). Hover is pure CSS (no hover state, no onMouseEnter). Index ticks no longer flash the table. CMP prints with exactly 2 decimals. Mounting is incremental: a screenful first, then the rest in startTransition chunks, so all rows still mount.",
+   "tests": "pages.check \u00a78 (E1 source guards). Perf harness, pre-fix build vs fixed build, 1,500 rows: hover across rows p50 123 \u2192 48 ms (Chromium) and 176 \u2192 37 ms (WebKit). 1 Hz ticks for 30 s: Chromium main thread 36.1% \u2192 8.4% busy, long tasks 91 \u2192 0; WebKit event-loop lag 9.6 s \u2192 0. First screen after a tab switch: 421 \u2192 55 ms (Chromium) and 1,071 \u2192 384 ms (WebKit). Cold first screen, medians: 1.63 s \u2192 0.96 s (Chromium) and 2.76 s \u2192 0.65 s (WebKit).",
+   "user_visible_change": "EQS shows its first rows about 0.4 s after a switch in WebKit instead of about 1.1 s. Hovering and live ticks no longer make the table stutter.",
+   "reason_if_not_fixed": ""
+  },
+  {
+   "id": "C3-logic-unchanged-02",
+   "outcome": "fixed",
+   "what_changed": "The COMP leftover from round 1. New components/compareSet.ts (pure compareAdd, compareRemove, sameList). Compare adopts external changes of suryadhana.comp.v1 through useExternalPrefChange, never writes an adopted value back (no ping-pong), and applies each add or remove to the latest saved set (merge on write) instead of its own mount-time copy.",
+   "tests": "pages.check \u00a79 (M1, with a negative control showing the stale write loses WIPRO). Browser E2E: two pages in one context, prefs 'sync' against a scratch --prefs-db store, every socket mocked. Page 1 adds WIPRO, then page 2 removes INFY. Fixed build: PASS in Chromium and WebKit (chips, localStorage and server all read TCS/HCLTECH/WIPRO, and stay quiet afterwards). Pre-fix build: FAIL in both engines (WIPRO lost).",
+   "user_visible_change": "With two windows on COMP, an edit in either window survives and the other window updates at once. This means COMP windows share one compare set, as the round-1 check asked.",
+   "reason_if_not_fixed": ""
+  }
+ ],
+ "files_changed": [
+  "ui/components/__tests__/pages.check.ts",
+  "ui/components/AlertsCenter.tsx",
+  "ui/components/AlphaDiscoveryDesk.tsx",
+  "ui/components/BacktestPanel.tsx",
+  "ui/components/Brief.tsx",
+  "ui/components/Compare.tsx",
+  "ui/components/compareSet.ts",
+  "ui/components/DailyWrap.tsx",
+  "ui/components/DealsMonitor.tsx",
+  "ui/components/DecisionDesk.tsx",
+  "ui/components/DerivativesDesk.tsx",
+  "ui/components/GlassBoxStudio.tsx",
+  "ui/components/GoldPreOpen.tsx",
+  "ui/components/IndexIntraday.tsx",
+  "ui/components/IndexMembers.tsx",
+  "ui/components/IndicatorPriceChart.tsx",
+  "ui/components/LiveMovers.tsx",
+  "ui/components/LivePortfolio.tsx",
+  "ui/components/LWScanner.tsx",
+  "ui/components/MarginMonitor.tsx",
+  "ui/components/MarketMap.tsx",
+  "ui/components/MarketMonitor.tsx",
+  "ui/components/McxGoldDesk.tsx",
+  "ui/components/MLEngineWorkspace.tsx",
+  "ui/components/ModelLab.tsx",
+  "ui/components/OptionChain.tsx",
+  "ui/components/ParticipantPositioning.tsx",
+  "ui/components/PipelineStudio.tsx",
+  "ui/components/portfolio/policy.ts",
+  "ui/components/PortfolioSummary.tsx",
+  "ui/components/PreOpen.tsx",
+  "ui/components/PriceHistory.tsx",
+  "ui/components/QuantKPICard.tsx",
+  "ui/components/RiskDashboard.tsx",
+  "ui/components/RotationChart.tsx",
+  "ui/components/StockProfile.tsx",
+  "ui/components/StockTable.tsx",
+  "ui/components/StrategyBuilder.tsx",
+  "ui/components/SystemStatusWidget.tsx",
+  "ui/components/terminal/chart.ts",
+  "ui/components/terminal/index.tsx",
+  "ui/lib/format/index.ts"
+ ],
+ "tests_run": [
+  {
+   "command": "cd ui && npx tsc --noEmit",
+   "result": "clean (rc 0)"
+  },
+  {
+   "command": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON ui/components/__tests__/pages.check.ts",
+   "result": "116 passed, 0 failed, 1 pending (T1 waits for PR-1/2)"
+  },
+  {
+   "command": "node ui/components/desktop/__tests__/desktop.check.ts; node ui/lib/__tests__/{alerts,platform,prefs,ws}.check.ts",
+   "result": "desktop 222, alerts 18, platform 120, prefs 160, ws 66: all pass, 0 failed"
+  },
+  {
+   "command": "node --test ui/scripts/build_ui.test.mjs ui/scripts/release.test.mjs",
+   "result": "26 pass, 0 fail"
+  },
+  {
+   "command": "cd services/ui-api && pytest tests/test_mcx.py -q",
+   "result": "25 passed (mcx.py unchanged; PR-3 keeps its 'session invalid' assertion true)"
+  },
+  {
+   "command": "scratch audit_wsmock.py (scripts/ui_audit.py + route_web_socket mock) --tabs <30 touched tabs> --browser chromium, then webkit, on the scratch export (14:00 snapshot + my files + PR-1/2 preview), GET-only scratch server",
+   "result": "Chromium 27/30, WebKit 27/30; the only failures are the 3 POSTs that --block-mutations refuses with 403 (/api/options/strategy/analyze, /api/alpha/scan, /api/mcx/ticket); 0 console or page errors elsewhere; 60 sockets mocked, 0 WebSocket requests among 1,964 logged HTTP requests"
+  },
+  {
+   "command": "audit_wsmock.py --tabs markets,stocks,scanner,compare --browser both (after the last two edits)",
+   "result": "4/4 Chromium, 4/4 WebKit, 8 sockets mocked"
+  },
+  {
+   "command": "scratch stockwin.py (EQS \u2192 first row \u2192 stock window, both engines, sockets mocked)",
+   "result": "legend row above the chart canvas in both engines, 0 console errors"
+  },
+  {
+   "command": "scratch qa_scripts/desktop_qa/e2e_compare.py (offered as PR-4), fixed build and pre-fix build",
+   "result": "fixed PASS in Chromium and WebKit; pre-fix FAIL in both (WIPRO lost); 0 live sockets"
+  },
+  {
+   "command": "scratch perf harness (perf/c2h.py, perf/mount.py), pre-fix vs fixed build, 1,500 EQS rows",
+   "result": "numbers quoted under C2-performance-01"
+  }
+ ],
+ "patch_requests": [
+  {
+   "file": "ui/components/news/format.ts",
+   "why": "C1-trader-ux-15: T.dim #475063 is 2.3\u20132.55:1 on the terminal backgrounds and is used for 9\u201310 px labels. #747e92 gives 4.59\u20135.05:1 on strip, bg, panel, panel2 and table head. Muted rises to #8691a5 so it stays brighter than dim. About 19 non-text uses (dashed median lines, the idle .sd-dot) also get slightly brighter, which is acceptable. Apply together with PR-2; pages.check T1 turns from PENDING to 3 checks.",
+   "old": "  muted: '#6f7a8e',\n  dim: '#475063',",
+   "new": "  muted: '#8691a5',\n  dim: '#747e92',"
+  },
+  {
+   "file": "ui/app/globals.css",
+   "why": "C1-trader-ux-15: the CSS variables mirror the TS tokens (PR-1). pages.check T1 asserts they match.",
+   "old": "  --t-muted: #6f7a8e;\n  --t-dim: #475063;",
+   "new": "  --t-muted: #8691a5;\n  --t-dim: #747e92;"
+  },
+  {
+   "file": "services/ui-api/routers/mcx.py",
+   "why": "C1-trader-ux-18: MCXG shows '\u2026(or set up TOTP auto-login).) \u2014 live after\u2026' because this line wraps icici_admin's message, which already ends in ').', in another pair of parentheses. The new text reads 'ICICI session invalid: <message>. Live after the ~08:00 IST login'. test_mcx.py:221 still passes. Needs a ui-api restart.",
+   "old": "                \"reason\": f\"ICICI session invalid ({err or 'not connected'}) \u2014 live after the ~08:00 IST login\"}",
+   "new": "                \"reason\": f\"ICICI session invalid: {(err or 'not connected').rstrip('. ')}. Live after the ~08:00 IST login\"}"
+  },
+  {
+   "file": "scripts/desktop_qa/e2e_compare.py",
+   "why": "New file, for FX-QA/T, who own scripts/desktop_qa/**. This is the C3-02 COMP browser E2E: two pages in one context, prefs mode 'sync' only, against a scratch --prefs-db store (it refuses any other). Every WebSocket is mocked. Fixed build: PASS in Chromium and WebKit. Pre-fix build: FAIL in both.",
+   "old": "",
+   "new": "\"\"\"C3-02 (COMP leftover) E2E: two pages in ONE browser context (= two windows of one origin sharing localStorage).\n\ncompare: page 1 adds WIPRO to the compare set, page 2 (open since before the edit) later removes INFY.\nBoth edits must survive in both pages, in localStorage and on the (scratch) prefs server, and nothing ping-pongs.\nPrefs mode 'sync' ONLY against a scratch server whose /api/prefs is a local scratch SQLite file (scratch_server.py --prefs-db).\n\n    $P scripts/desktop_qa/scratch_server.py --ui <export> --port 8093 --block-mutations --prefs-db <scratch>/prefs.sqlite\n    $P scripts/desktop_qa/e2e_compare.py --base http://127.0.0.1:8093 --out <dir> [--engines chromium,webkit]\nEvery WebSocket is mocked (route_web_socket, never forwarded): the run opens 0 live sockets.\nExit 0 = every engine passed, 1 = a lost edit (or any other failed assertion), 2 = refused.\n\"\"\"\nfrom __future__ import annotations\n\nimport argparse\nimport json\nimport re\nimport sys\nimport time\nimport urllib.request\nfrom pathlib import Path\n\nsys.path.insert(0, str(Path(__file__).resolve().parents[1]))\n\nfrom desktop_qa.probe import launch_browser, new_qa_context\nfrom playwright.sync_api import sync_playwright\n\nKEY = \"suryadhana.comp.v1\"\nSEED = {\"syms\": [\"TCS\", \"INFY\", \"HCLTECH\"], \"period\": \"1y\"}\nWANT = [\"TCS\", \"HCLTECH\", \"WIPRO\"]\nINPUT = 'input[placeholder=\"Add ticker + Enter\"]'\nCHIPS_JS = \"\"\"() => [...document.querySelectorAll('span[role=\"button\"]')].filter(b => b.textContent === '\u2715')\n    .map(b => (b.previousElementSibling?.textContent || '').replace(' (no data)', '').trim()).filter(Boolean)\"\"\"\n\n\ndef http(base: str, method: str, path: str, body: dict | None = None) -> dict:\n    data = json.dumps(body).encode() if body is not None else None\n    req = urllib.request.Request(base + path, data=data, method=method, headers={\"Content-Type\": \"application/json\"})\n    with urllib.request.urlopen(req, timeout=10) as r:\n        return json.loads(r.read() or b\"{}\")\n\n\ndef server_syms(base: str) -> list[str] | None:\n    rec = http(base, \"GET\", \"/api/prefs\")[\"prefs\"].get(KEY)\n    return json.loads(rec[\"value\"]).get(\"syms\") if rec and not rec[\"deleted\"] else None\n\n\ndef local_syms(page) -> list[str] | None:\n    raw = page.evaluate(f\"() => localStorage.getItem('{KEY}')\")\n    return json.loads(raw).get(\"syms\") if raw else None\n\n\ndef wait_chips(page, pred, timeout_s: float) -> list[str]:\n    end = time.time() + timeout_s\n    got = page.evaluate(CHIPS_JS)\n    while time.time() < end and not pred(got):\n        page.wait_for_timeout(200)\n        got = page.evaluate(CHIPS_JS)\n    return got\n\n\ndef run_compare(engine: str, base: str, out: Path) -> dict:\n    http(base, \"PUT\", f\"/api/prefs/{KEY}\", {\"value\": json.dumps(SEED), \"updated_at\": int(time.time() * 1000), \"origin\": \"e2e-seed\"})\n    res: dict = {\"engine\": engine, \"scenario\": \"compare\", \"ok\": False, \"steps\": []}\n    with sync_playwright() as pw:\n        browser = launch_browser(pw, engine)\n        try:\n            ctx = new_qa_context(browser, prefs_mode=\"sync\", viewport={\"width\": 1440, \"height\": 900})\n            mocked: list[str] = []\n            ctx.route_web_socket(re.compile(r\".*\"), lambda ws: mocked.append(ws.url))   # 0 live sockets\n            p1, p2 = ctx.new_page(), ctx.new_page()\n            for p in (p1, p2):\n                p.goto(base + \"/?tab=compare\", wait_until=\"domcontentloaded\", timeout=60_000)\n                p.wait_for_selector(INPUT, timeout=30_000)\n            c1 = wait_chips(p1, lambda c: c == SEED[\"syms\"], 15)\n            c2 = wait_chips(p2, lambda c: c == SEED[\"syms\"], 15)\n            res[\"steps\"].append({\"hydrated\": [c1, c2]})\n            p1.fill(INPUT, \"WIPRO\")                                # page 1 adds\n            p1.press(INPUT, \"Enter\")\n            c2 = wait_chips(p2, lambda c: \"WIPRO\" in c, 8)\n            res[\"steps\"].append({\"p2_after_p1_add\": c2})\n            p2.wait_for_timeout(1000)\n            p2.evaluate(\"\"\"() => { const b = [...document.querySelectorAll('span[role=\"button\"]')]\n                .find(x => x.textContent === '\u2715' && (x.previousElementSibling?.textContent || '').startsWith('INFY')); b && b.click() }\"\"\")\n            c1 = wait_chips(p1, lambda c: \"INFY\" not in c, 8)         # page 2 removes INFY later\n            res[\"steps\"].append({\"p1_after_p2_remove\": c1})\n            p1.wait_for_timeout(3500)  # debounce + flush (300 ms, max 2 s) and any refetch\n            f1, f2 = p1.evaluate(CHIPS_JS), p2.evaluate(CHIPS_JS)\n            l1, l2, srv = local_syms(p1), local_syms(p2), server_syms(base)\n            res.update({\"chips\": [f1, f2], \"localStorage\": [l1, l2], \"server\": srv})\n            p1.screenshot(path=str(out / f\"compare-{engine}-page1.png\"))\n            p2.screenshot(path=str(out / f\"compare-{engine}-page2.png\"))\n            ok = f1 == WANT and f2 == WANT and l1 == WANT and l2 == WANT and srv == WANT\n            p1.wait_for_timeout(4000)                                  # no ping-pong: quiet afterwards\n            res[\"server_after_quiet\"] = server_syms(base)\n            res[\"ok\"] = ok and res[\"server_after_quiet\"] == WANT\n            res[\"ws_mocked\"] = len(mocked)\n            ctx.close()\n        finally:\n            browser.close()\n    return res\n\n\ndef main() -> int:\n    ap = argparse.ArgumentParser()\n    ap.add_argument(\"--base\", required=True)\n    ap.add_argument(\"--out\", type=Path, required=True)\n    ap.add_argument(\"--engines\", default=\"chromium,webkit\")\n    a = ap.parse_args()\n    a.out.mkdir(parents=True, exist_ok=True)\n    qa = http(a.base, \"GET\", \"/__qa/health\")\n    if not str(qa.get(\"prefs\", \"\")).startswith(\"local:\"):\n        print(\"refusing: the server's /api/prefs is not a local scratch store\", file=sys.stderr)\n        return 2\n    results = [run_compare(e, a.base, a.out) for e in a.engines.split(\",\")]\n    (a.out / \"compare_multiwin.json\").write_text(json.dumps(results, indent=2))\n    for r in results:\n        detail = {k: v for k, v in r.items() if k not in (\"engine\", \"scenario\", \"ok\", \"steps\")}\n        print(f\"[{r['engine']}] {r['scenario']}: {'PASS' if r['ok'] else 'FAIL'} {json.dumps(detail, default=str)[:600]}\")\n    return 0 if all(r[\"ok\"] for r in results) else 1\n\n\nif __name__ == \"__main__\":\n    sys.exit(main())\n"
+  }
+ ],
+ "deploy_notes": [
+  "UI-only changes in ui/**: ship them in the next UI build (static export on :8010 and the prod Next on :3000). No API contract change.",
+  "PORT's PAPER ONLY display reads live_allowed and mode_policy from /api/execution/status, which the running ui-api already serves. An older ui-api without these fields keeps the previous PORT behaviour.",
+  "PR-1 and PR-2 must land together (TS tokens plus their CSS mirror). After that, pages.check reports 0 pending.",
+  "PR-3 needs a ui-api restart. Avoid the stack's restart freeze windows (07:45\u201309:20 and 18:30\u201321:15 IST).",
+  "The EQS rows now mount in chunks. Anything that counts rows right after navigation must wait for all 1,500 rows; that takes about the same time as before, only the first screen is faster."
+ ],
+ "open_issues": [
+  "C1-trader-ux-05 remainder (PM): the old captures reports/desktop_app/switchover/audit_8010/{chromium,webkit}/{positions,broker}.png still show the full login URL with its api_key on disk. Git ignores them now; delete or redact them. New captures can't contain the URL.",
+  "C1-trader-ux-04 remainder (shell): PORT still sits in the Alt+0 slot, and the strip/menu label 'Portfolio' differs from the page title 'Execution Engine' (tab list in page.tsx / MarketCommandHeader).",
+  "C1-trader-ux-15: there is no 10 px floor for informational text (about 115 sites use 9/9.5 px). It needs a typography pass.",
+  "C1-trader-ux-18: about 72 hand-rolled signed-number prints in ~30 components (CommodityTab, OptionChain, LiveMovers, WatchMonitor, \u2026) still use an ASCII '-'. menu.rs \u2318K label, the strip 'UI' build chip and the LAN/iPad note go to their owners.",
+  "Disclosure: before the PM's 14:55 socket rule, my 14:21 screenshot pass, the first partial audit, the EQS hover and mount perf runs and the first COMP E2E let the scratch server relay /api/monitor/ws/monitor to ui-api (one socket per page). The tick perf test mocked it from the start. Every run since mocks every socket, and the audit, E2E and stock-window evidence above comes from those mocked reruns.",
+  "Pre-existing, not mine: ui/lib/__tests__/errors.check.ts (14 Oct) fails under plain node with ERR_MODULE_NOT_FOUND because it imports '../errors' without an extension."
+ ]
+}

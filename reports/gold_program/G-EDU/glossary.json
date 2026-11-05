@@ -1,0 +1,2022 @@
+{
+ "version": "2026-11-05",
+ "agent": "G-EDU",
+ "count": 160,
+ "start_here": [
+  "troy ounce",
+  "spot",
+  "futures",
+  "COMEX",
+  "MCX",
+  "open interest",
+  "COT",
+  "managed money",
+  "net position",
+  "basis",
+  "roll",
+  "real yield"
+ ],
+ "terms": [
+  {
+   "term": "troy ounce",
+   "short": "31.1034768 g. The unit gold is priced in worldwide ($/oz). Not the kitchen ounce (28.35 g).",
+   "long": "Apothecaries' weight kept by the bullion trade. ₹ per 10 g = $/oz × USD/INR × 10 ÷ 31.1034768. One kg = 32.1507 ozt; one COMEX contract = 100 ozt.",
+   "see_also": [
+    "fineness",
+    "landed price",
+    "tola"
+   ],
+   "aliases": [
+    "oz",
+    "ozt",
+    "ounce",
+    "$/oz"
+   ]
+  },
+  {
+   "term": "tola",
+   "short": "11.6638 g = 3/8 troy oz. Traditional Indian and Gulf jewellery unit; a 10-tola bar is 116.638 g.",
+   "long": "Still quoted in Dubai and by older Indian jewellers; MCX and IBJA quote per 10 g, not per tola.",
+   "see_also": [
+    "troy ounce"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "fineness",
+   "short": "Parts of gold per 1,000 by mass: 999 = 99.9% gold, 995 = 99.5%, 916 = 22 karat.",
+   "long": "Bullion speaks in fineness, jewellery in karat (fineness = K/24 × 1000). LBMA Good Delivery minimum 995; kilobars 999.9; MCX GOLD/GOLDM 995, PETAL/GUINEA 999.",
+   "see_also": [
+    "karat",
+    "995 vs 999",
+    "hallmark (BIS, HUID)"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "karat",
+   "short": "Gold content in 24ths: 24K ≈ pure, 22K = 916, 18K = 750, 14K = 585.",
+   "long": "A jewellery convention; convert to fineness before comparing with bullion prices.",
+   "see_also": [
+    "fineness"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "995 vs 999",
+   "short": "Same gold, different purity stamp. Price ratio 999/995 = 1.00402: a 999 quote is 0.40% above a 995 quote.",
+   "long": "MCX GOLD and GOLDM are 995; IBJA publishes both; jewellers quote 999 or 916. Always convert before computing a premium or basis.",
+   "see_also": [
+    "fineness",
+    "IBJA rate",
+    "basis"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "hallmark (BIS, HUID)",
+   "short": "BIS mark certifying fineness on Indian jewellery, with a 6-character HUID; mandatory since 2023.",
+   "long": "Certifies purity, not price. Grades: 14K585, 18K750, 20K833, 22K916, 23K958, 24K999.",
+   "see_also": [
+    "fineness"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "Good Delivery bar",
+   "short": "LBMA-standard ~400 oz (350–430 oz) bar, ≥ 995 fine, from a listed refiner; the unit of the London market and ETF vaults.",
+   "long": "Serial number, refiner mark, year, fineness stamp. Only GD bars settle loco London; converting them to kilobars/100 oz bars is the refinery bottleneck seen in 2020.",
+   "see_also": [
+    "loco London",
+    "kilobar",
+    "EFP"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "kilobar",
+   "short": "1,000 g bar, usually 999.9. The Asian standard (SGE, SHFE, Dubai, India imports); three kilobars = one COMEX delivery.",
+   "long": "Priced off the London price plus a kilobar premium that widens when Asian demand or refinery capacity is tight.",
+   "see_also": [
+    "Good Delivery bar",
+    "SGE premium"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "spot",
+   "short": "Price for gold delivered now (T+2, loco London), $/oz. The reference every futures and local price is compared with.",
+   "long": "Quoted continuously by bullion banks; benchmarked twice daily by the LBMA Gold Price auction.",
+   "see_also": [
+    "futures",
+    "LBMA Gold Price",
+    "basis"
+   ],
+   "aliases": [
+    "spot price",
+    "spot proxy",
+    "XAU",
+    "XAUUSD"
+   ]
+  },
+  {
+   "term": "futures",
+   "short": "A standardised contract to buy/sell a fixed quantity of gold on a date, traded on an exchange with margin.",
+   "long": "COMEX GC (100 oz), MCX GOLD (1 kg). Price = spot + carry. Leveraged, dated, rolled; no coupon; MCX contracts carry the rupee.",
+   "see_also": [
+    "spot",
+    "contango",
+    "roll",
+    "margin"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "loco London",
+   "short": "Gold deliverable in an LBMA-approved London vault; the settlement location of the world OTC market.",
+   "long": "Loco = location. Other locos (Zurich, New York, Shanghai) trade at a location premium/discount reflecting transport and refining.",
+   "see_also": [
+    "unallocated gold",
+    "LBMA"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "unallocated gold",
+   "short": "A claim on a bank's pool of gold, not specific bars. Most OTC trading. You are an unsecured creditor of the bank.",
+   "long": "Cheap (no storage fee) but carries bank credit risk; allocated gold (numbered bars) does not.",
+   "see_also": [
+    "allocated gold",
+    "loco London"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "allocated gold",
+   "short": "Specific numbered bars held in your name in a vault, for a storage fee. No bank credit risk.",
+   "long": "ETFs such as GLD hold allocated Good Delivery bars; central banks hold allocated metal at the Bank of England.",
+   "see_also": [
+    "unallocated gold",
+    "ETF (gold-backed)"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "LBMA",
+   "short": "London Bullion Market Association: sets Good Delivery standards and oversees the London OTC market and its benchmarks.",
+   "long": "Publishes weekly trade turnover (LBMA-i) and monthly London vault holdings; price data tables need an IBA licence.",
+   "see_also": [
+    "LBMA Gold Price",
+    "LBMA-i trade data",
+    "London vault holdings"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "LBMA Gold Price",
+   "short": "The twice-daily benchmark auction (ICE Benchmark Administration) that replaced the 1919–2015 'fix': 10:30 and 15:00 London.",
+   "long": "IST: 16:00 / 20:30 while the UK is on GMT (from 25 Oct 2026), 15:00 / 19:30 on BST. Used by central banks, refiners, SGB redemption. Data redistribution requires an IBA licence: link only.",
+   "see_also": [
+    "spot",
+    "IBA"
+   ],
+   "aliases": [
+    "fix",
+    "the fix",
+    "London PM",
+    "LBMA PM",
+    "PM fix",
+    "AM fix"
+   ]
+  },
+  {
+   "term": "IBA",
+   "short": "ICE Benchmark Administration: runs the LBMA Gold/Silver Price auctions since 2015 and licenses the data.",
+   "long": "Why the app links to the fix instead of showing it: the historical tables moved behind the MyLBMA portal and an IBA licence.",
+   "see_also": [
+    "LBMA Gold Price"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "LBMA-i trade data",
+   "short": "Weekly published turnover of the London OTC gold market (12-week average daily value, $bn); daily T+1 data is licensed.",
+   "long": "The only public window on 'over-the-counter deals'. Activity, not positions: London has no COT.",
+   "see_also": [
+    "LBMA",
+    "COT"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "London vault holdings",
+   "short": "Monthly tonnes of gold in London vaults (incl. the Bank of England); 9,821 t at end-Sep 2026, ~1 month lag.",
+   "long": "Rising London stock with falling COMEX stock = metal moving back from New York; read with COMEX warehouse stocks.",
+   "see_also": [
+    "COMEX warehouse stocks",
+    "LBMA"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "LPMCL",
+   "short": "London Precious Metals Clearing Ltd: the bank-owned clearing house that nets loco London transfers daily.",
+   "long": "Its monthly clearing statistics (ounces transferred per day) are a second public OTC activity gauge.",
+   "see_also": [
+    "loco London"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "COMEX",
+   "short": "CME Group's New York metals exchange; its GC gold future is the world's reference futures price, trading ~23 h a day.",
+   "long": "Globex Sun 18:00 → Fri 17:00 ET with a 60-min daily break. MCX follows it during overlap and gaps at 09:00 IST after it.",
+   "see_also": [
+    "GC contract",
+    "Globex hours",
+    "daily settlement"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "GC contract",
+   "short": "COMEX gold future: 100 troy oz, tick $0.10 = $10, ≥ 995, delivery of one 100 oz bar or three kilobars; liquid months Feb/Apr/Jun/Aug/Oct/Dec.",
+   "long": "The app matches the MCX month to the same COMEX month (GOLD Dec-26 ↔ GCZ26). Yahoo symbol GC=F is the continuous front month, GCZ26.CMX the Dec contract.",
+   "see_also": [
+    "first notice day",
+    "active month",
+    "MGC"
+   ],
+   "aliases": [
+    "GC1",
+    "GC=F",
+    "GC",
+    "COMEX front",
+    "front month",
+    "continuous front"
+   ]
+  },
+  {
+   "term": "MGC",
+   "short": "Micro gold future: 10 oz (1/10 of GC); reported as a separate line in the COT (code 088695).",
+   "long": "Do not add micro and full COT positions without scaling by 0.1.",
+   "see_also": [
+    "GC contract",
+    "COT"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "4GC",
+   "short": "COMEX 'Gold (Enhanced Delivery)' future (2020): 400 oz, deliverable in 100 oz, 400 oz or kilobars — CME's answer to the 2020 bar-logistics squeeze.",
+   "long": "Illiquid; matters as the mechanism that reconnected London bars to New York delivery.",
+   "see_also": [
+    "EFP",
+    "Good Delivery bar"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "first notice day",
+   "short": "First day a COMEX long can be assigned delivery: the last business day before the delivery month (Dec-26: 30 Nov 2026).",
+   "long": "Brokers force retail out before it; the roll happens in the two weeks before. Front-month OI collapses mechanically.",
+   "see_also": [
+    "last trading day",
+    "roll",
+    "active month"
+   ],
+   "aliases": [
+    "FND"
+   ]
+  },
+  {
+   "term": "last trading day",
+   "short": "Third-last business day of the COMEX delivery month; the contract stops trading (Dec-26 ≈ 29 Dec 2026).",
+   "long": "A long that is still open after first notice day can be assigned delivery before the last trading day; the roll is done before FND, not LTD.",
+   "see_also": [
+    "first notice day"
+   ],
+   "aliases": [
+    "LTD"
+   ]
+  },
+  {
+   "term": "active month",
+   "short": "The COMEX contract month with the most open interest; usually the next even month until ~2 weeks before its first notice day.",
+   "long": "The MCX front contract should be compared with the matching COMEX month, not with GC=F, to keep carry out of the premium.",
+   "see_also": [
+    "GC contract",
+    "roll"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "Globex hours",
+   "short": "CME electronic session: Sun 18:00 → Fri 17:00 ET, 60-min break daily at 17:00 ET. IST: 03:30 → 02:30 (04:30 → 03:30 in US winter).",
+   "long": "MCX misses ~8.5 h of COMEX every night and ~58 h over a weekend: the source of gap risk.",
+   "see_also": [
+    "gap risk",
+    "COMEX"
+   ],
+   "aliases": [
+    "Globex",
+    "COMEX hours",
+    "maintenance break"
+   ]
+  },
+  {
+   "term": "daily settlement",
+   "short": "The official closing price used for margin: COMEX = VWAP 13:29–13:30 ET (23:00 IST on DST); MCX = VWAP of the last 30 minutes before close.",
+   "long": "The app's fair-open model uses the same 30-minute window to read COMEX and USD/INR 'at the MCX close'.",
+   "see_also": [
+    "mark-to-market",
+    "fair open"
+   ],
+   "aliases": [
+    "settlement",
+    "settle"
+   ]
+  },
+  {
+   "term": "COMEX warehouse stocks",
+   "short": "Daily report of gold in COMEX-approved vaults: registered (deliverable, with warrant), eligible (meets spec, no warrant), pledged.",
+   "long": "Inflows = metal wanted in New York (EFP stress, 2020 and Jan–Feb 2025). Deliveries are 1–3% of OI a month: 'coverage' is context only. Bot-blocked; browser only.",
+   "see_also": [
+    "registered",
+    "eligible",
+    "EFP"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "registered",
+   "short": "COMEX warehouse gold with a warehouse receipt issued: deliverable against a short futures position today.",
+   "long": "",
+   "see_also": [
+    "eligible",
+    "COMEX warehouse stocks"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "eligible",
+   "short": "Gold in a COMEX vault that meets contract specs but has no warrant; can be registered within a day.",
+   "long": "",
+   "see_also": [
+    "registered"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "pledged",
+   "short": "Registered COMEX metal posted as clearing collateral, reported separately; not available for delivery while pledged.",
+   "long": "",
+   "see_also": [
+    "registered"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "delivery notices",
+   "short": "Daily COMEX tally of shorts giving notice to deliver; the real physical demand through the exchange.",
+   "long": "Spikes at first notice day; compare with registered stock.",
+   "see_also": [
+    "first notice day",
+    "registered"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "SGE",
+   "short": "Shanghai Gold Exchange: China's physical spot market (Au99.99 kilobars, CNY/g) and the Shanghai Gold Benchmark Price (10:15 / 14:15 Beijing).",
+   "long": "The EN daily table (close, VWAP, volume, OI, Au(T+D) direction) and the benchmark JSON are fetchable once a day; view-only, attributed.",
+   "see_also": [
+    "SGE premium",
+    "Au(T+D)",
+    "Au(T+D) direction",
+    "SGE withdrawals"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "Au(T+D)",
+   "short": "SGE's margined spot-deferred contract; a daily deferral fee is paid by the side in excess (longs or shorts).",
+   "long": "China's lease-rate signal: fee paid by longs = metal wanted now.",
+   "see_also": [
+    "SGE",
+    "lease rate"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "SGE premium",
+   "short": "SGE Au99.99 converted to $/oz minus the London/COMEX price. Positive = China pulling metal in; spikes when import quotas are tight.",
+   "long": "Formula: CNY/g × 31.1035 ÷ USDCNY − spot. Typical −$5 to +$30; +$50–120 in late 2023. Context only.",
+   "see_also": [
+    "SGE",
+    "premium / discount (India)"
+   ],
+   "aliases": [
+    "Shanghai premium",
+    "China premium"
+   ]
+  },
+  {
+   "term": "SGE withdrawals",
+   "short": "Monthly tonnes withdrawn from SGE vaults; the standard proxy for Chinese wholesale demand.",
+   "long": "",
+   "see_also": [
+    "SGE"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "SHFE",
+   "short": "Shanghai Futures Exchange gold future (1 kg, CNY/g) with a night session 21:00–02:30 Beijing (18:30–00:00 IST): the Asian price during MCX's evening.",
+   "long": "POSITIONING shows its front-contract open interest and change (stored daily); SGE Au(T+D) beside it says which side pays the deferred fee.",
+   "see_also": [
+    "SGE",
+    "COMEX"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "MCX",
+   "short": "Multi Commodity Exchange, Mumbai: India's gold futures venue; prices in ₹ per 10 g, duty-paid, ex-GST, ex-Ahmedabad; 09:00–23:30/23:55 IST.",
+   "long": "Follows COMEX × USD/INR tick for tick, plus duty and local premium. Site blocks non-browser clients; the app reads ICICI's public security master instead.",
+   "see_also": [
+    "GOLD / GOLDM / GOLDGUINEA / GOLDPETAL",
+    "price band",
+    "tender period",
+    "landed price"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "GOLD / GOLDM / GOLDGUINEA / GOLDPETAL",
+   "short": "MCX gold family: 1 kg (₹100 per ₹1), 100 g (₹10), 8 g (₹1), 1 g (₹1), plus GOLDTEN 10 g. GOLD/GOLDM are 995, 5th; TEN/GUINEA/PETAL 999, month-end.",
+   "long": "GOLD runs Feb/Apr/Jun/Aug/Oct/Dec; the others monthly. Liquidity in metal terms: GOLD ≫ GOLDM ≫ others. Choose by risk budget, not by habit.",
+   "see_also": [
+    "GOLDTEN",
+    "lot",
+    "multiplier",
+    "contract chooser"
+   ],
+   "aliases": [
+    "GOLDM",
+    "GOLDGUINEA",
+    "GOLDPETAL",
+    "Mini",
+    "Guinea",
+    "Petal",
+    "MCX gold family"
+   ]
+  },
+  {
+   "term": "lot",
+   "short": "The fixed quantity in one futures contract (GOLD 1 kg, GOLDM 100 g, GOLDTEN 10 g, GUINEA 8 g, PETAL 1 g).",
+   "long": "You trade whole lots; the price is quoted per 10 g (or 8 g / 1 g) but you own the whole lot, which is why a ₹1 move is ₹100 on GOLD and ₹10 on GOLDM.",
+   "see_also": [
+    "multiplier",
+    "notional"
+   ],
+   "aliases": [
+    "lot size",
+    "contract size"
+   ]
+  },
+  {
+   "term": "multiplier",
+   "short": "₹ of P&L per ₹1 move in the quote = lot grams ÷ quote grams (GOLD 1000/10 = 100).",
+   "long": "GOLDM 100/10 = 10; GOLDTEN 10/10 = 1; GUINEA 8/8 = 1; PETAL 1/1 = 1. Multiply any ₹ change on the quote by it to get the ₹ change on one lot.",
+   "see_also": [
+    "tick value",
+    "lot"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "tick value",
+   "short": "Smallest price step × multiplier: GOLD ₹1 × 100 = ₹100 per lot; GOLDM ₹10; GUINEA and PETAL ₹1.",
+   "long": "Round-trip costs on one GOLD lot ≈ ₹2,560 ≈ 26 ticks; a 1% day ≈ 1,460 ticks.",
+   "see_also": [
+    "multiplier",
+    "round-trip cost"
+   ],
+   "aliases": [
+    "tick"
+   ]
+  },
+  {
+   "term": "notional",
+   "short": "Full value of the position = price × multiplier × lots (GOLD at ₹1,46,079 ≈ ₹1.46 crore per lot).",
+   "long": "What the margin is a fraction of, and what a 1% move is 1% of.",
+   "see_also": [
+    "margin",
+    "leverage"
+   ],
+   "aliases": [
+    "contract value",
+    "exposure"
+   ]
+  },
+  {
+   "term": "price band",
+   "short": "MCX daily limit around the previous settlement: ±3%, widened to 6% then 9% after cooling periods when hit.",
+   "long": "On a shock the band can lock MCX while COMEX keeps moving; ICICI's master publishes the band, whose midpoint is yesterday's settlement.",
+   "see_also": [
+    "daily settlement",
+    "gap risk"
+   ],
+   "aliases": [
+    "band",
+    "circuit",
+    "limit up",
+    "limit down"
+   ]
+  },
+  {
+   "term": "settlement by session",
+   "short": "An MCX settlement is labelled by the session it belongs to ('Thu 22 Oct settlement'), never by the date of the ICICI file that carried it (published the next morning).",
+   "long": "ICICI's security master is published ~01:58 UTC with the previous session's band; before ~07:30 the band can still be the session-before-last. The proxy settlement is the band midpoint and wears a PROXY chip until official bhavcopy rows exist (O-8).",
+   "see_also": [
+    "daily settlement",
+    "price band"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "margin",
+   "short": "Deposit the exchange requires per lot (SPAN + exposure, NRML): 9.25% of notional on every MCX gold contract on 25 Oct 2026 (Zerodha mirror, dated), revised daily.",
+   "long": "Indicative on the desk; the broker's number is the real one. Special margins by circular; delivery margins rise in the tender period.",
+   "see_also": [
+    "leverage",
+    "mark-to-market",
+    "special margin"
+   ],
+   "aliases": [
+    "NRML",
+    "SPAN",
+    "initial margin",
+    "margin %"
+   ]
+  },
+  {
+   "term": "leverage",
+   "short": "Notional ÷ margin: ~10–17× on MCX gold. A 1% move is 10–17% of your margin.",
+   "long": "At the 9.25 % NRML margin of 25 Oct 2026 one GOLD lot (≈ ₹1.46 crore) is held with ≈ ₹13.3 lakh: a 1 % day is −11 % of that deposit. Leverage, not cost, is what ends a gold trade.",
+   "see_also": [
+    "margin",
+    "position sizing"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "special margin",
+   "short": "Extra margin MCX imposes by circular on volatile days; a cash call the next morning on open positions.",
+   "long": "The Pre-Open desk links MCX circulars as a manual check for this reason.",
+   "see_also": [
+    "margin"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "mark-to-market",
+   "short": "Daily cash settlement of gains/losses at the settlement price. Losses are debited in cash; margin itself can be collateral.",
+   "long": "Keep cash headroom of ~3 ATR per lot beyond the initial margin.",
+   "see_also": [
+    "daily settlement",
+    "margin"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "tender period",
+   "short": "The final sessions before an MCX expiry in which delivery intentions are matched; brokers without delivery facilities square off clients before it.",
+   "long": "ICICI's cut-off date for GOLD is not in the repo: confirm and print it on the specs table.",
+   "see_also": [
+    "due date rate",
+    "contract chooser"
+   ],
+   "aliases": [
+    "tender",
+    "delivery period"
+   ]
+  },
+  {
+   "term": "due date rate",
+   "short": "MCX final settlement price for gold: a polled spot price (995, ex-Ahmedabad, duty-paid, ex-GST) on expiry day.",
+   "long": "",
+   "see_also": [
+    "tender period"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "devolvement",
+   "short": "MCX gold options are European and in-the-money options turn into futures positions at option expiry (a few sessions before futures expiry).",
+   "long": "The pitfall: a 1 kg futures position and its margin appear in your account.",
+   "see_also": [
+    "GOLD / GOLDM / GOLDGUINEA / GOLDPETAL",
+    "margin"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "Muhurat trading",
+   "short": "Diwali special session on MCX: Sun 8 Nov 2026, special session 14:05–14:19, trading 14:20–15:30 (circular MCX/TRD/590/2026).",
+   "long": "",
+   "see_also": [
+    "MCX"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "landed price",
+   "short": "World price converted to ₹ per 10 g before duty: $/oz × USD/INR × 10 ÷ 31.1035 (₹1,22,211 on 26 Oct 2026 at $4,004 and 94.93).",
+   "long": "The ladder's first rupee bar. Add the 995 adjustment, 15% duty (dated) and the MCX basis to reach the MCX price.",
+   "see_also": [
+    "duty-paid landed",
+    "customs duty (BCD + AIDC)",
+    "MCX basis",
+    "troy ounce"
+   ],
+   "aliases": [
+    "landed",
+    "landed cost",
+    "landed ₹/10 g"
+   ]
+  },
+  {
+   "term": "customs duty (BCD + AIDC)",
+   "short": "Import duty on gold: BCD 10% + AIDC 5% = 15% since 13 May 2026 (Notification 16/2026-Customs; was 6% from 24 Jul 2024). A dated policy input.",
+   "long": "Charged on the CBIC tariff value, not the invoice. Stored as a dated constant (GOLD_IMPORT_DUTY_PCT); the primary CBIC page is unreadable to scripts, so the owner confirms it in a browser (O-3).",
+   "see_also": [
+    "AIDC",
+    "tariff value",
+    "duty-paid landed",
+    "Union Budget"
+   ],
+   "aliases": [
+    "duty",
+    "import duty",
+    "BCD"
+   ]
+  },
+  {
+   "term": "tariff value",
+   "short": "CBIC's notified $/10 g value, updated ~fortnightly, on which gold import duty is computed.",
+   "long": "Between notifications the embedded duty lags the market by up to ±0.5%: not a premium signal.",
+   "see_also": [
+    "customs duty (BCD + AIDC)"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "GST on gold",
+   "short": "3% on the gold value (plus 5% on making charges) when physical gold is sold. MCX futures prices exclude GST.",
+   "long": "",
+   "see_also": [
+    "landed price"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "IBJA rate",
+   "short": "India Bullion & Jewellers Association daily AM/PM rates for 999/995/916/750/585 (₹/g); the domestic spot reference (SGB redemption uses the 999 rate).",
+   "long": "ibjarates.com, free page (redistribution terms unknown). 26 Oct 2026 morning board: 999 ₹14,163/g, 995 ₹14,106/g.",
+   "see_also": [
+    "995 vs 999",
+    "basis",
+    "premium / discount (India)"
+   ],
+   "aliases": [
+    "IBJA",
+    "IBJA 999",
+    "IBJA PM",
+    "IBJA fix"
+   ]
+  },
+  {
+   "term": "premium / discount (India)",
+   "short": "Dealer price over/under the official duty-paid price, in $/oz (Reuters survey). Discount = weak demand; premium = import friction or festive pull.",
+   "long": "A different quantity from the app's duty-inclusive implied premium. Define each on the panel.",
+   "see_also": [
+    "implied premium",
+    "SGE premium",
+    "IBJA rate"
+   ],
+   "aliases": [
+    "India premium",
+    "IBJA premium",
+    "dealer premium",
+    "premium",
+    "discount"
+   ]
+  },
+  {
+   "term": "implied premium",
+   "short": "Old overlay metric (deprecated alias): MCX ÷ landed-before-duty − 1, e.g. 18.0% on 26 Oct 2026 = 0.995 purity × 1.15 duty × 1.031 basis. Now split into duty (dated) + MCX basis.",
+   "long": "A position in itself: cut by a Budget duty change in a minute, by a rupee rally over weeks. Read `basis_pct` (vs duty-paid landed) instead; `implied_premium_pct` stays one release as an alias.",
+   "see_also": [
+    "MCX basis",
+    "customs duty (BCD + AIDC)",
+    "landed price",
+    "fair open"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "FBIL reference rate",
+   "short": "Official USD/INR reference fixed by Financial Benchmarks India at ~13:30 IST daily.",
+   "long": "",
+   "see_also": [
+    "USD/INR"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "NDF",
+   "short": "Non-deliverable forward: the offshore rupee market that trades while onshore India is closed; Yahoo INR=X before 09:00 is its proxy.",
+   "long": "Why the desk's rupee leg before the open is 'offshore'.",
+   "see_also": [
+    "USD/INR",
+    "fair open"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "USD/INR",
+   "short": "Rupees per dollar. MCX gold ≈ COMEX × USD/INR: a 1% rupee fall is a 1% MCX rise with gold flat (≈ ₹1,539 per ₹1 per 10 g on 26 Oct 2026).",
+   "long": "Hedge with NSE/BSE USD/INR futures ($1,000 lots): ≈ 129 lots per GOLD lot at $4,004.",
+   "see_also": [
+    "rupee hedge",
+    "NDF",
+    "FBIL reference rate"
+   ],
+   "aliases": [
+    "USDINR",
+    "rupee",
+    "INR=X",
+    "INR"
+   ]
+  },
+  {
+   "term": "rupee hedge",
+   "short": "Short USD/INR futures against a long MCX gold lot to strip the currency leg: lots = lot_g/31.1035 × $/oz ÷ 1,000.",
+   "long": "Currency futures close at 17:00 IST: the hedge is off during MCX's evening session.",
+   "see_also": [
+    "USD/INR",
+    "cross-exchange decomposition"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "Union Budget",
+   "short": "1 Feb, 11:00 IST: the scheduled event where gold import duty can change; MCX gaps against COMEX (23 Jul 2024: −5–6% in minutes).",
+   "long": "No open MCX position through the speech without a decision about duty; the Feb/Apr calendar spread is the cleaner expression.",
+   "see_also": [
+    "customs duty (BCD + AIDC)",
+    "calendar spread"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "contango",
+   "short": "Later months priced above nearer months: the normal state for gold because dollar rates exceed the gold lease rate.",
+   "long": "Annualised carry = ln(F2/F1) × 365/days. A long pays it at every roll (no coupon, made explicit).",
+   "see_also": [
+    "backwardation",
+    "cost of carry",
+    "roll"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "backwardation",
+   "short": "Later months priced below nearer months. Rare in gold; signals physical tightness (Nov 2008, 2013, Jan–Feb 2025) or, on MCX into Feb, an expected duty cut.",
+   "long": "Read the calendar before the curve: MCX Feb below Dec ahead of 1 Feb is a Budget duty-cut expectation, not a shortage; COMEX front above London spot is the EFP under stress.",
+   "see_also": [
+    "contango",
+    "EFP",
+    "Union Budget"
+   ],
+   "aliases": [
+    "inverted curve"
+   ]
+  },
+  {
+   "term": "cost of carry",
+   "short": "F = S × exp((r − lease + storage) × T): the funding rate of the currency minus what metal lending earns, plus storage.",
+   "long": "On MCX the rupee rate makes contango steeper than COMEX's: interest differential, not bullishness.",
+   "see_also": [
+    "contango",
+    "lease rate",
+    "implied lease rate"
+   ],
+   "aliases": [
+    "carry",
+    "annualised carry",
+    "carry p.a.",
+    "implied carry"
+   ]
+  },
+  {
+   "term": "roll",
+   "short": "Closing the expiring month and opening the next (sell Dec, buy Feb) before expiry/first notice. Everyone rolls in the same two weeks.",
+   "long": "Front-month OI collapses, next-month OI rises, continuous price series jump by the spread. The app picks 'front by OI, > 5 days to expiry'.",
+   "see_also": [
+    "first notice day",
+    "calendar spread",
+    "open interest"
+   ],
+   "aliases": [
+    "rollover",
+    "roll over",
+    "roll ratio"
+   ]
+  },
+  {
+   "term": "calendar spread",
+   "short": "Long one month, short another (Dec/Feb). Fair = carry; trades the change in carry, duty expectations (MCX) or tightness, with reduced margin.",
+   "long": "₹100 per ₹1 of spread per GOLD lot pair.",
+   "see_also": [
+    "contango",
+    "roll",
+    "Union Budget"
+   ],
+   "aliases": [
+    "spread",
+    "Dec/Feb"
+   ]
+  },
+  {
+   "term": "basis",
+   "short": "The gap between a futures price and the reference it is compared with. On this page: MCX basis = MCX front settle ÷ duty-paid landed − 1 (%); on COMEX: futures − London spot in $/oz.",
+   "long": "Fair basis = the carry to expiry (§3.3); the residual (actual − fair) is the stress or premium gauge. Both legs must share a clock: a settlement divided by a live price is clock error, not basis.",
+   "see_also": [
+    "MCX basis",
+    "EFP",
+    "cost of carry",
+    "IBJA rate"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "EFP",
+   "short": "Exchange for physical: swapping a COMEX futures position for loco London metal; its price is the New York–London spread.",
+   "long": "Blew out to $70+ (Mar 2020, bar logistics) and $40–60 (Jan–Feb 2025, tariffs): futures detach from spot when bars cannot move.",
+   "see_also": [
+    "basis",
+    "Good Delivery bar",
+    "COMEX warehouse stocks"
+   ],
+   "aliases": [
+    "exchange for physical",
+    "EFP prints",
+    "EFRP"
+   ]
+  },
+  {
+   "term": "lease rate",
+   "short": "Interest paid, in gold, to borrow gold. High lease rate = metal wanted now. Not published directly since GOFO ended.",
+   "long": "",
+   "see_also": [
+    "GOFO",
+    "implied lease rate",
+    "Au(T+D)"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "GOFO",
+   "short": "Gold Forward Offered Rate: the LBMA's daily swap benchmark (lease ≈ LIBOR − GOFO), discontinued 30 Jan 2015 under benchmark regulation.",
+   "long": "Replaced by nothing official; practitioners infer the lease rate from futures spreads.",
+   "see_also": [
+    "lease rate",
+    "implied lease rate"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "implied lease rate",
+   "short": "USD rate (SOFR) minus the annualised COMEX calendar carry. Rising/positive spikes = physical tightness.",
+   "long": "Use the 2nd/3rd month pair in roll weeks; storage ignored.",
+   "see_also": [
+    "GOFO",
+    "cost of carry",
+    "term structure"
+   ],
+   "aliases": [
+    "lease",
+    "implied lease"
+   ]
+  },
+  {
+   "term": "term structure",
+   "short": "The curve of futures prices by month; read as annualised carry between adjacent months on MCX and COMEX.",
+   "long": "One convention per page: carry is stated against the front month ('vs front') unless a column says 'to next month'. Yahoo per-month prices are last trades, not settlements (LAST TRADE chip).",
+   "see_also": [
+    "contango",
+    "implied lease rate"
+   ],
+   "aliases": [
+    "curve",
+    "forward curve",
+    "futures curve"
+   ]
+  },
+  {
+   "term": "COT",
+   "short": "CFTC Commitments of Traders: weekly positions of trader categories in COMEX gold as of Tuesday, released Friday 15:30 ET (Sat 01:00/02:00 IST).",
+   "long": "Free, public domain, Socrata API. Futures-only and futures+options versions; COMEX only (no London/MCX). Context, not a timing tool, until a G-STUDY passes.",
+   "see_also": [
+    "legacy COT",
+    "disaggregated COT",
+    "COT index",
+    "net position"
+   ],
+   "aliases": [
+    "Commitments of Traders",
+    "CFTC",
+    "CFTC report"
+   ]
+  },
+  {
+   "term": "legacy COT",
+   "short": "Three groups: non-commercial (speculators above the reporting level), commercial (hedgers), non-reportable (small). Spreads shown separately.",
+   "long": "20 Oct 2026: NC 237,142 L / 37,277 S / 54,199 spread; Comm 59,531 L / 295,113 S; NR 51,407 L / 15,690 S; OI 402,279.",
+   "see_also": [
+    "COT",
+    "disaggregated COT",
+    "spreading"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "disaggregated COT",
+   "short": "Splits commercials into producer/merchant and swap dealers, speculators into managed money and other reportables.",
+   "long": "Gold sits in the CFTC 'Other' group file (other_lf.htm) and the 72hh-3qpy dataset.",
+   "see_also": [
+    "producer / merchant",
+    "swap dealer",
+    "managed money",
+    "other reportables"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "producer / merchant",
+   "short": "Miners, refiners, jewellers, physical dealers hedging inventory or output. Structurally short; small in gold (−14,783 net on 20 Oct 2026).",
+   "long": "The 'commercial short' people quote is mostly swap dealers, not producers: miners de-hedged in the 2000s and the hedge book stayed small.",
+   "see_also": [
+    "disaggregated COT",
+    "swap dealer"
+   ],
+   "aliases": [
+    "producer/merchant",
+    "producers",
+    "hedgers"
+   ]
+  },
+  {
+   "term": "swap dealer",
+   "short": "Banks hedging OTC swaps/forwards sold to clients; the bulk of the commercial short in gold (−220,799 net on 20 Oct 2026).",
+   "long": "'Commercials are short' in gold means 'bullion banks are hedging client longs', not 'miners are selling'.",
+   "see_also": [
+    "disaggregated COT",
+    "Bank Participation Report"
+   ],
+   "aliases": [
+    "SD",
+    "swap dealers",
+    "bullion banks"
+   ]
+  },
+  {
+   "term": "managed money",
+   "short": "CTAs, CPOs, hedge funds trading for clients: the swing speculative long (+104,206 net on 20 Oct 2026; record ≈ 219k in our 3-year pull).",
+   "long": "Trend-following; its net is the most-watched COT line.",
+   "see_also": [
+    "COT index",
+    "disaggregated COT",
+    "other reportables"
+   ],
+   "aliases": [
+    "MM",
+    "funds",
+    "managed-money",
+    "hedge funds",
+    "CTAs"
+   ]
+  },
+  {
+   "term": "other reportables",
+   "short": "Reportable traders in no other category: family offices, prop desks, unregistered funds. A second structural long in 2025–26 (+95,659 net on 20 Oct 2026).",
+   "long": "An opaque CFTC bucket: the page shows its net and change like the other four groups and infers nothing about who sits in it.",
+   "see_also": [
+    "disaggregated COT"
+   ],
+   "aliases": [
+    "OR",
+    "other reportable"
+   ]
+  },
+  {
+   "term": "non-reportable",
+   "short": "Positions below the CFTC reporting level (200 contracts for gold): retail and small pros, inferred as OI minus reportables.",
+   "long": "Not reported by anyone — the CFTC computes it as what is left of open interest after the reportable groups; sentiment-driven and usually net long.",
+   "see_also": [
+    "reporting level",
+    "COT"
+   ],
+   "aliases": [
+    "NR",
+    "small specs",
+    "small traders",
+    "retail"
+   ]
+  },
+  {
+   "term": "reporting level",
+   "short": "Position size at which a trader must be reported to the CFTC (gold: 200 contracts); changes shift COT history.",
+   "long": "",
+   "see_also": [
+    "non-reportable"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "spreading",
+   "short": "COT column for positions long one month and short another; excluded from net. Swells in roll weeks (20 Oct 2026: +8,304 while longs −8,158).",
+   "long": "The commonest COT misread: a drop in outright longs with a rise in spreads is a roll, not a liquidation.",
+   "see_also": [
+    "roll",
+    "legacy COT"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "net position",
+   "short": "Long minus short for a category, spreads excluded. Nets across all categories sum to zero.",
+   "long": "Managed money +104,206 on 20 Oct 2026 means funds held 104,206 more contracts long than short (10.4 Moz ≈ 324 t). The w/w change in net is the number the strip narrates; the level is context only.",
+   "see_also": [
+    "COT index",
+    "COT"
+   ],
+   "aliases": [
+    "net",
+    "funds net",
+    "MM net",
+    "net long",
+    "net short"
+   ]
+  },
+  {
+   "term": "COT index",
+   "short": "100 × (net − min) ÷ (max − min) over N reports (26/52/156). Managed money 20 Oct 2026: 26 (52w), 38 (3y). Crowdedness, not a signal.",
+   "long": "No forecasting power 2006–2026 (G-STUDY, 26 Oct 2026): crowded weeks (≥ 90) even did slightly better than washed-out ones (≤ 10) at 4 weeks. Shown as a neutral gauge, never coloured.",
+   "see_also": [
+    "net position",
+    "managed money",
+    "context"
+   ],
+   "aliases": [
+    "crowded",
+    "crowdedness",
+    "washed out",
+    "stochastic"
+   ]
+  },
+  {
+   "term": "who closed what",
+   "short": "Per category: negative Δlong = longs closed; negative Δshort = shorts covered; positive = new positions. Weekly from COT, daily only via total OI.",
+   "long": "20 Oct 2026: managed money closed 3,777 longs and covered 894 shorts; producers covered 2,325 shorts.",
+   "see_also": [
+    "short covering",
+    "long unwinding",
+    "COT"
+   ],
+   "aliases": [
+    "who did what",
+    "closed longs",
+    "covered shorts",
+    "who closed"
+   ]
+  },
+  {
+   "term": "Bank Participation Report",
+   "short": "CFTC monthly report of US and non-US banks' futures positions by market, first Friday after 15:30 ET using the first Tuesday's data.",
+   "long": "The named-institution view of the 'bullion bank short'.",
+   "see_also": [
+    "swap dealer",
+    "COT"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "open interest",
+   "short": "Contracts outstanding (one long + one short = one). Sum all months; single-month OI is destroyed by the roll and expiry.",
+   "long": "COMEX gold OI 402,279 on 20 Oct 2026 = 40.2 Moz ≈ 1,251 t. MCX OI per contract from the bhavcopy or ICICI's master (yesterday's only).",
+   "see_also": [
+    "OI quadrants",
+    "roll"
+   ],
+   "aliases": [
+    "OI"
+   ]
+  },
+  {
+   "term": "OI quadrants",
+   "short": "Price up + OI up = long build-up; price up + OI down = short covering; price down + OI up = short build-up; price down + OI down = long unwinding.",
+   "long": "A description of who is entering/leaving, not a forecast. Grey out roll weeks and expiry days.",
+   "see_also": [
+    "short covering",
+    "long unwinding",
+    "open interest"
+   ],
+   "aliases": [
+    "quadrant",
+    "quadrants",
+    "long build-up",
+    "short build-up",
+    "build-up"
+   ]
+  },
+  {
+   "term": "short covering",
+   "short": "Rally driven by shorts closing (price up, OI down, COT shorts falling sharply): no new buyers, fades unless longs follow.",
+   "long": "On the weekly COT it is the fund-driver word for an up-week whose larger leg was a fall in short contracts; on the daily OI tape it is the price-up / OI-down quadrant.",
+   "see_also": [
+    "OI quadrants",
+    "who closed what",
+    "fund-driver label"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "long unwinding",
+   "short": "Decline driven by longs closing (price down, OI down, COT longs falling): a crowded trade leaving (late Oct 2025 washout).",
+   "long": "The COT strip calls the same thing 'long liquidation': a down-week whose larger leg was a fall in long contracts. Daily OI shows the exit, only the weekly COT says who left.",
+   "see_also": [
+    "OI quadrants",
+    "who closed what",
+    "fund-driver label"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "GOLDTEN",
+   "short": "MCX 10 g gold future (Breeze code GOLDTE): ₹/10 g, 999 purity, month-end expiry, tick ₹1 = ₹1 per lot; OI 25,655 on 23 Oct 2026.",
+   "long": "Missing from the app's specs until phase 2; sits between GOLDM (100 g) and GUINEA (8 g) in granularity. Round trip ≈ 0.05% of notional at flat brokerage.",
+   "see_also": [
+    "GOLD / GOLDM / GOLDGUINEA / GOLDPETAL",
+    "contract chooser"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "AIDC",
+   "short": "Agriculture Infrastructure and Development Cess: the 5% cess on gold imports on top of the 10% basic customs duty since 13 May 2026 (15% together).",
+   "long": "",
+   "see_also": [
+    "customs duty (BCD + AIDC)"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "duty-paid landed",
+   "short": "Landed ₹/10 g × (1 + duty): what imported gold costs after the border. Duty 15% since 13 May 2026, printed and dated on the ladder.",
+   "long": "26 Oct 2026 at $4,004.2 and 94.93: landed 999 ₹1,22,211 → 995 ₹1,21,600 → duty-paid ₹1,39,840. The base for the India premium (IBJA) and the MCX basis.",
+   "see_also": [
+    "landed price",
+    "customs duty (BCD + AIDC)",
+    "MCX basis"
+   ],
+   "aliases": [
+    "duty-paid",
+    "duty paid"
+   ]
+  },
+  {
+   "term": "MCX basis",
+   "short": "MCX front settle ÷ duty-paid landed − 1 (995 purity, 15% duty); minus carry to expiry = carry-adjusted basis. Replaces the old 'implied premium 18%'.",
+   "long": "26 Oct 2026: 1,44,228 ÷ 1,39,840 − 1 = +3.1%, of which ≈ 1% is six weeks of rupee carry; the rest is local premium and expectation. Context, never a signal.",
+   "see_also": [
+    "duty-paid landed",
+    "implied premium",
+    "premium / discount (India)",
+    "context"
+   ],
+   "aliases": [
+    "India basis",
+    "basis vs duty-paid",
+    "basis %"
+   ]
+  },
+  {
+   "term": "EFP price vs volume",
+   "short": "CME publishes how many EFPs printed (round turns per contract month, daily), never the price at which futures were swapped for metal.",
+   "long": "The EFP price (futures − spot differential) is the physical-tightness number and is not free; basis minus theoretical carry is the proxy shown.",
+   "see_also": [
+    "EFP",
+    "basis"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "FND / LTD",
+   "short": "First Notice Day and Last Trading Day of a COMEX month: GCZ26 FND 30 Nov 2026, LTD 29 Dec 12:30 CT (23:00 IST; 24:00 after 1 Nov). Leave the front before FND.",
+   "long": "The matched COMEX month rolls GCZ26 → GCG27 around 25 Nov while MCX GOLD Dec trades to 4 Dec: mind the mismatch when reading a premium.",
+   "see_also": [
+    "first notice day",
+    "last trading day",
+    "roll",
+    "active month"
+   ],
+   "aliases": [
+    "first notice"
+   ]
+  },
+  {
+   "term": "registered / eligible / pledged",
+   "short": "The three COMEX warehouse buckets: registered = warranted, deliverable; eligible = bar-standard, no warrant; pledged = warrants lodged as collateral.",
+   "long": "23 Oct 2026 (archive copy): registered 14.81 Moz, pledged 1.75, eligible 8.47 ≈ 724 t. LINK-ONLY tiles until the owner resolves CME's block (O-2).",
+   "see_also": [
+    "registered",
+    "eligible",
+    "pledged",
+    "COMEX warehouse stocks"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "Au(T+D) direction",
+   "short": "SGE's daily note of which side pays the deferred fee: 'Short to Long' = shorts pay = metal wanted now; 'Long to Short' = longs pay = ample metal.",
+   "long": "23 Oct 2026: Long to Short, OI 260,054 lots of 1 kg. A tightness read for Shanghai; history starts the day the job starts.",
+   "see_also": [
+    "Au(T+D)",
+    "SGE premium"
+   ],
+   "aliases": [
+    "Short to Long",
+    "Long to Short",
+    "deferred fee"
+   ]
+  },
+  {
+   "term": "KGX",
+   "short": "The Kitco Gold Index idea: split a gold move into the part due to the dollar (DXY weights EUR 57.6 / JPY 13.6 / GBP 11.9 / CAD 9.1 / SEK 4.2 / CHF 3.6) and the 'pure' part.",
+   "long": "usd_move = −Σ wᵢ Δln fᵢ; pure_gold = gold_usd + usd_move. 22 Oct 2026: −2.18% = −2.29% pure + 0.10% USD. Replicated on MACRO as 'Gold or the dollar?'; Kitco's numbers stay a link.",
+   "see_also": [
+    "KGX rupee leg",
+    "DXY",
+    "cross-exchange decomposition"
+   ],
+   "aliases": [
+    "gold or the dollar",
+    "Kitco Gold Index",
+    "USD effect",
+    "pure gold"
+   ]
+  },
+  {
+   "term": "KGX rupee leg",
+   "short": "Our extension for MCX: the day's move splits three ways — pure gold, the dollar basket, and USD/INR. Arithmetic (an identity), never a forecast.",
+   "long": "",
+   "see_also": [
+    "KGX",
+    "USD/INR",
+    "arithmetic"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "point-in-time",
+   "short": "Every stored observation keeps report_date (the period it describes), release_at (when it became public) and first_seen_at; a revision is a new row.",
+   "long": "So a study can only see what was knowable on the day: COT dated at its Friday release, IMF months checked by TIME_PERIOD, WGC quarterly revisions kept as vintages.",
+   "see_also": [
+    "COT release schedule",
+    "accuracy log"
+   ],
+   "aliases": [
+    "PIT",
+    "report_date",
+    "release_at",
+    "as of"
+   ]
+  },
+  {
+   "term": "COT release schedule",
+   "short": "Tuesday positions, released Friday 15:30 ET = Sat 01:00 IST (02:00 from 7 Nov 2026); holiday Mondays 16 Nov, 30 Nov, 28 Dec 2026; shutdowns delay for weeks.",
+   "long": "The job retries hourly Saturday morning and catches up Monday/Tuesday; a 10-day-old report shows a STALE banner.",
+   "see_also": [
+    "COT",
+    "point-in-time"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "evidence badge",
+   "short": "Every gold number wears one of four: signal (none today), context, arithmetic, heuristic. No composite score, no 'N of 7 supportive', anywhere.",
+   "long": "A badge moves from context to signal only by a PASS row in reports/gold_program/FINDINGS.md from a pre-registered, point-in-time study (PLAN §f).",
+   "see_also": [
+    "signal",
+    "context",
+    "arithmetic",
+    "heuristic"
+   ],
+   "aliases": [
+    "badge",
+    "badges"
+   ]
+  },
+  {
+   "term": "signal",
+   "short": "Badge for a metric a pre-registered study found to forecast gold (|t| ≥ 2 in the full sample and in both halves, after costs). None exists today (G-STUDY, 26 Oct 2026).",
+   "long": "",
+   "see_also": [
+    "evidence badge",
+    "context"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "context",
+   "short": "Badge for a metric that describes what happened — COT 'who did what', premiums, flows, every health gauge: PASS as description, FAIL as forecast. Never coloured bullish/bearish.",
+   "long": "The chip names the study and date ('context · G-STUDY 26 Oct 2026: no forecasting power').",
+   "see_also": [
+    "evidence badge",
+    "signal"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "arithmetic",
+   "short": "Badge for an identity, cost or spec: fair value, landed cost, duty-paid price, carry, tick value, the KGX split. Makes no claim about the future.",
+   "long": "",
+   "see_also": [
+    "evidence badge"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "heuristic",
+   "short": "Badge for a house rule with no evidence yet: the ₹300 chase limit (0% within it over 3 scored mornings), the headline risk count. The chip carries the measured error.",
+   "long": "",
+   "see_also": [
+    "evidence badge",
+    "chase limit",
+    "event risk flag"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "health verdict",
+   "short": "One rule-based sentence on GOLD › HEALTH: every clause is a threshold on a stored series (table in LEARN Part 8.4). It ends 'describes, does not predict'.",
+   "long": "No score behind it: 0 of 69 walk-forward rules beat buy-and-hold (G-STUDY), so a count of 'supportive' drivers would read as a forecast it cannot be.",
+   "see_also": [
+    "evidence badge",
+    "context"
+   ],
+   "aliases": [
+    "verdict",
+    "describes, does not predict"
+   ]
+  },
+  {
+   "term": "proxy settlement",
+   "short": "MCX settlement read as the midpoint of ICICI's ±3% price band because the official bhavcopy is bot-blocked. Labelled PROXY; official rows coexist once O-8 unblocks.",
+   "long": "",
+   "see_also": [
+    "price band",
+    "session label",
+    "daily settlement"
+   ],
+   "aliases": [
+    "PROXY",
+    "band midpoint"
+   ]
+  },
+  {
+   "term": "session label",
+   "short": "A settlement is named by the session it belongs to ('Thu 22 Oct settlement'), never by the file date: Monday's ICICI file is Friday's, carrying Thursday's settlement.",
+   "long": "",
+   "see_also": [
+    "proxy settlement"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "four instruments",
+   "short": "The four prices the page keeps apart: spot proxy (COMEX front GC=F — not spot), continuous front GC1, the matched month (GCZ26), MCX GOLD Dec-26.",
+   "long": "Mixing them adds carry or a roll jump to a 'premium'. The header strip names each one; a Yahoo 'spot' symbol does not exist (XAUUSD=X is 404).",
+   "see_also": [
+    "GC contract",
+    "active month",
+    "FND / LTD",
+    "MCX"
+   ],
+   "aliases": [
+    "matched month",
+    "GCZ26",
+    "instruments"
+   ]
+  },
+  {
+   "term": "ETF (gold-backed)",
+   "short": "A listed fund holding allocated bars; units are created/redeemed by authorised participants, so tonnage tracks investor flows daily.",
+   "long": "GLD, IAU (US); GOLDBEES (NSE). Flows are contemporaneous with price, not leading (G-STUDY: 4-week change forecasts nothing). WGC aggregates weekly/monthly.",
+   "see_also": [
+    "GLD",
+    "WGC",
+    "allocated gold"
+   ],
+   "aliases": [
+    "gold ETF",
+    "GOLDBEES",
+    "IAU"
+   ]
+  },
+  {
+   "term": "GLD",
+   "short": "SPDR Gold Shares, the largest gold ETF: 1,045.64 t on 22 Oct 2026 (−11.98 t d/d), daily XLSX archive since 2004 (display-only, attributed).",
+   "long": "Its tonnes move when investors create or redeem units, so the daily change is the cleanest read of Western investor demand — contemporaneous with price, never leading it (G-STUDY).",
+   "see_also": [
+    "ETF (gold-backed)"
+   ],
+   "aliases": [
+    "SPDR",
+    "SPDR Gold Shares",
+    "GLD tonnes"
+   ]
+  },
+  {
+   "term": "WGC",
+   "short": "World Gold Council: publishes Gold Demand Trends (quarterly), central-bank reserves (monthly, IMF-based), ETF flows (weekly/monthly) on Goldhub; xlsx needs a free login.",
+   "long": "",
+   "see_also": [
+    "ETF (gold-backed)",
+    "central-bank reserves"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "central-bank reserves",
+   "short": "Official-sector gold (~36,000 t); net buyers every year since 2010, > 1,000 t/yr in 2022–24. The reason the real-yield rule broke.",
+   "long": "PBoC reports ~7th monthly; RBI weekly $ value (WSS), tonnes half-yearly (≈ 880 t by 2025). Lag 1–2 months. Context only.",
+   "see_also": [
+    "WGC",
+    "real yield",
+    "PBoC"
+   ],
+   "aliases": [
+    "central banks",
+    "official sector",
+    "official holdings",
+    "reserves"
+   ]
+  },
+  {
+   "term": "PBoC",
+   "short": "People's Bank of China; its monthly reserve print (~7th) and buying streaks/pauses are headline events for gold in Asian hours.",
+   "long": "",
+   "see_also": [
+    "central-bank reserves"
+   ],
+   "aliases": [
+    "People's Bank of China",
+    "SAFE"
+   ]
+  },
+  {
+   "term": "RBI WSS",
+   "short": "Reserve Bank of India Weekly Statistical Supplement (Friday): forex reserves incl. gold in $; tonnes in the half-yearly reserve-management report.",
+   "long": "",
+   "see_also": [
+    "central-bank reserves"
+   ],
+   "aliases": [
+    "RBI",
+    "WSS",
+    "RBI gold"
+   ]
+  },
+  {
+   "term": "supply and demand (gold)",
+   "short": "Stock ≈ 216,000 t; annual mine ≈ 3,600 t (1.7% of stock) + recycling ≈ 1,200 t; demand = jewellery ~2,000 t, bars/coins ~1,200 t, central banks ~1,000 t, tech ~300 t, ± ETFs.",
+   "long": "Gold is a stock market: price is set by who wants to hold the existing stock (investors, central banks), not by this year's mine output.",
+   "see_also": [
+    "central-bank reserves",
+    "ETF (gold-backed)",
+    "WGC"
+   ],
+   "aliases": [
+    "supply",
+    "demand",
+    "above-ground stock",
+    "what is gold"
+   ]
+  },
+  {
+   "term": "real yield",
+   "short": "Nominal Treasury yield minus expected inflation; 10-year TIPS yield (FRED DFII10, T+1). The opportunity cost of holding gold.",
+   "long": "2.64% on 22 Oct 2026 with gold ≈ $4,000 vs −1.1% in Aug 2020 at $2,075: the level link broke in 2022; the daily direction still bites.",
+   "see_also": [
+    "TIPS",
+    "breakeven inflation",
+    "central-bank reserves"
+   ],
+   "aliases": [
+    "TIPS yield",
+    "DFII10",
+    "real rate",
+    "real rates"
+   ]
+  },
+  {
+   "term": "TIPS",
+   "short": "US Treasury Inflation-Protected Securities; their yield is the market real yield. Daily close only (no free intraday feed).",
+   "long": "The 10-year TIPS yield (FRED DFII10, T+1) is the 'real yield' on the strip; it is yesterday's close, which the chip says.",
+   "see_also": [
+    "real yield"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "breakeven inflation",
+   "short": "Nominal yield minus TIPS yield (FRED T10YIE, 2.34% on 23 Oct 2026): the market's expected inflation. Moves gold through the real-yield channel.",
+   "long": "",
+   "see_also": [
+    "real yield"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "DXY",
+   "short": "ICE dollar index (57.6% euro). Dollar down → gold up in $ terms, usually; both can rise in a liquidity crisis.",
+   "long": "FRED's broad dollar index (DTWEXBGS) is the trade-weighted alternative, ~1 week lag.",
+   "see_also": [
+    "USD/INR"
+   ],
+   "aliases": [
+    "dollar index",
+    "USDX",
+    "dollar"
+   ]
+  },
+  {
+   "term": "safe haven",
+   "short": "Gold's tendency to hold or rise in extreme equity sell-offs — after the first liquidation wave, and only for ~15 trading days (Baur & Lucey 2010).",
+   "long": "The first move on a shock is noise; wait for the real-yield read.",
+   "see_also": [
+    "real yield"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "gold/silver ratio",
+   "short": "Ounces of silver per ounce of gold; ≈ 60–80 for most of 2005–26, 32 (2011) to 125 (Mar 2020). Rising = risk-off/deflation; falling = reflation.",
+   "long": "Trade as a dollar-neutral spread (MCX GOLD vs SILVER). Context only.",
+   "see_also": [
+    "DXY"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "GVZ",
+   "short": "Cboe Gold ETF Volatility Index (implied vol of GLD options): normal 14–20, stress > 30. Free, delayed (Yahoo ^GVZ).",
+   "long": "",
+   "see_also": [
+    "realised volatility",
+    "risk reversal"
+   ],
+   "aliases": [
+    "gold vol",
+    "implied vol",
+    "implied volatility",
+    "gold VIX"
+   ]
+  },
+  {
+   "term": "realised volatility",
+   "short": "Standard deviation of daily log returns (20-day), annualised × √252; gold ran 12–20% in 2024–26 with event spikes.",
+   "long": "",
+   "see_also": [
+    "GVZ",
+    "ATR"
+   ],
+   "aliases": [
+    "realized volatility",
+    "realised vol",
+    "20-day vol"
+   ]
+  },
+  {
+   "term": "risk reversal",
+   "short": "25-delta call IV minus 25-delta put IV. Gold's is usually positive (calls bid) in bull/crisis phases; it flips negative in liquidation phases.",
+   "long": "Vol-surface data is paid; GVZ is the free scalar.",
+   "see_also": [
+    "GVZ"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "ATR",
+   "short": "Average True Range (14-day): the typical daily price range in quote units — ≈ ₹1,750 per 10 g at 1.2% of ₹1,46,000. The unit of every stop and size.",
+   "long": "",
+   "see_also": [
+    "position sizing",
+    "realised volatility"
+   ],
+   "aliases": [
+    "ATR14",
+    "average true range"
+   ]
+  },
+  {
+   "term": "regime",
+   "short": "A multi-year period with one dominant driver: 2001–11 dollar/real yields/ETFs; 2011–15 rising real yields; 2016–19 range; 2020–21 QE; 2022–25 central banks.",
+   "long": "The next regime's driver is the one the current rule ignores.",
+   "see_also": [
+    "real yield",
+    "central-bank reserves"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "position sizing",
+   "short": "lots = floor(account × risk% ÷ (k × ATR × multiplier)). At 1% risk and 1.5 ATR, one GOLDM needs ≈ ₹26 lakh, one GOLD ≈ ₹2.6 crore.",
+   "long": "PETAL/GUINEA exist for small accounts. Margin ≤ 35% of account; cash headroom ≥ 3 ATR per lot.",
+   "see_also": [
+    "ATR",
+    "leverage",
+    "contract chooser"
+   ],
+   "aliases": [
+    "sizing",
+    "lots",
+    "max lots",
+    "how many lots"
+   ]
+  },
+  {
+   "term": "vol targeting",
+   "short": "notional = (target vol ÷ realised vol) × account; a second road to the same lot count as ATR sizing.",
+   "long": "",
+   "see_also": [
+    "position sizing",
+    "realised volatility"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "gap risk",
+   "short": "The move MCX cannot trade: ~8.5 h of COMEX each night, ~58 h each weekend, plus band locks. Size for the gap, not the session.",
+   "long": "The Pre-Open desk exists to price the overnight gap before 09:00.",
+   "see_also": [
+    "Globex hours",
+    "price band",
+    "fair open"
+   ],
+   "aliases": [
+    "gap",
+    "overnight gap"
+   ]
+  },
+  {
+   "term": "round-trip cost",
+   "short": "All charges to open and close: exchange 0.0021%/side, CTT 0.01% on sell, stamp 0.002% on buy, SEBI ₹10/crore, brokerage, GST 18% — ≈ ₹2,560 on one GOLD lot.",
+   "long": "26 ticks. Costs are small in gold futures; leverage and gaps are the risk.",
+   "see_also": [
+    "tick value",
+    "leverage"
+   ],
+   "aliases": [
+    "costs",
+    "brokerage",
+    "CTT",
+    "round trip"
+   ]
+  },
+  {
+   "term": "contract chooser",
+   "short": "GOLD for size and liquidity; GOLDM for ₹5–20 lakh accounts; PETAL/GUINEA for learning or small risk budgets; match the MCX month to the COMEX active month.",
+   "long": "Never a far month for a short trade; be out before the broker's tender cut-off.",
+   "see_also": [
+    "GOLD / GOLDM / GOLDGUINEA / GOLDPETAL",
+    "position sizing",
+    "tender period"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "cross-exchange decomposition",
+   "short": "MCX = COMEX × USD/INR × 10/31.1035 × 0.995 × (1 + duty) × (1 + local premium) × (1 + carry). Not an arbitrage: a long MCX lot is long gold, long USD/INR and long the premium.",
+   "long": "",
+   "see_also": [
+    "rupee hedge",
+    "MCX basis",
+    "customs duty (BCD + AIDC)",
+    "KGX rupee leg"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "fair open",
+   "short": "App model: MCX settlement × (COMEX now ÷ COMEX at the MCX close) × (USD/INR now ÷ USD/INR at the close); references = last-30-minute averages.",
+   "long": "Tells you where MCX should open, not where it will close. Accuracy log: 3 days, 0% within ₹300, worse than naive so far.",
+   "see_also": [
+    "chase limit",
+    "accuracy log",
+    "daily settlement"
+   ],
+   "aliases": [
+    "fair value",
+    "fair"
+   ]
+  },
+  {
+   "term": "chase limit",
+   "short": "The desk's tolerance (default ₹300) between the MCX open and fair value for 'OK to trade the open'. Unsupported by evidence yet (3 logged days, 0% within).",
+   "long": "Wears the `heuristic` badge with the measured miss (median ≈ ₹2.9k) until ≥ 20 scored mornings exist; re-decide the limit then.",
+   "see_also": [
+    "fair open",
+    "accuracy log",
+    "heuristic"
+   ],
+   "aliases": [
+    "₹300",
+    "OK / WAIT",
+    "OK/WAIT",
+    "chase"
+   ]
+  },
+  {
+   "term": "accuracy log",
+   "short": "Daily record of the 08:45 fair open vs the actual 09:00 open and the naive forecast (open = yesterday's settlement); needs ~20 days.",
+   "long": "'Model vs naive WORSE' means the fair-open arithmetic has missed by more than simply assuming the open equals yesterday's settlement; the chase-limit verdict is re-decided at 20 scored rows.",
+   "see_also": [
+    "fair open",
+    "chase limit"
+   ],
+   "aliases": [
+    "naive",
+    "model vs naive"
+   ]
+  },
+  {
+   "term": "event risk flag",
+   "short": "A count of headlines carrying war/strike/sanction/margin/halt words. A keyword tally with a `heuristic` badge: no study, no sizing advice.",
+   "long": "",
+   "see_also": [
+    "safe haven",
+    "heuristic"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "SGB",
+   "short": "Sovereign Gold Bond: government paper indexed to the IBJA 999 price with a 2.5% coupon; no new tranches since early 2024; thin secondary market.",
+   "long": "",
+   "see_also": [
+    "IBJA rate"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "IIBX",
+   "short": "India International Bullion Exchange (GIFT City): $-denominated bullion spot for qualified jewellers; the intended institutional import channel. Link only.",
+   "long": "",
+   "see_also": [
+    "MCX"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "DGCI&S",
+   "short": "Directorate General of Commercial Intelligence & Statistics: India's monthly trade data (gold imports, ~15th); tradestat.commerce.gov.in, browser only.",
+   "long": "",
+   "see_also": [
+    "premium / discount (India)"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "Dhanteras / Akshaya Tritiya",
+   "short": "Indian gold-buying festivals (Dhanteras ≈ 6 Nov 2026; Akshaya Tritiya Apr/May). Move the Indian premium and volumes, not the world price. Folklore, context only.",
+   "long": "",
+   "see_also": [
+    "premium / discount (India)",
+    "Muhurat trading"
+   ],
+   "aliases": [
+    "Diwali",
+    "festival",
+    "seasonality",
+    "wedding season"
+   ]
+  },
+  {
+   "term": "FOMC",
+   "short": "Fed rate decision, 14:00 ET (23:30 IST on DST, 00:30 in winter) + press conference: real yields and the dollar move first, gold within seconds; MCX is at or near its close.",
+   "long": "Eight scheduled meetings a year; 'next FOMC' on MACRO is the next decision, not a speech by a Fed member (speakers are listed separately). In US winter the move arrives as a gap at the 09:00 MCX open.",
+   "see_also": [
+    "real yield",
+    "DXY"
+   ],
+   "aliases": [
+    "Fed",
+    "Fed decision",
+    "Fed meeting",
+    "rate decision"
+   ]
+  },
+  {
+   "term": "CPI / NFP",
+   "short": "US inflation and payrolls, 08:30 ET (18:00 IST on DST, 19:00 in winter): the MCX evening session is open; expect 0.7–2% swings and possible band locks.",
+   "long": "CPI lands around the 12th, NFP on the first Friday; both move gold through the real-yield channel in the first minute. They are the High-impact rows on the event strip.",
+   "see_also": [
+    "real yield",
+    "price band"
+   ],
+   "aliases": [
+    "CPI",
+    "NFP",
+    "payrolls",
+    "non-farm",
+    "nonfarm"
+   ]
+  },
+  {
+   "term": "Kitco",
+   "short": "Retail gold-news site with a 24-hour spot chart. Terms (verified 26 Oct 2026): personal, non-commercial use only; redistribution prohibited. Link, never embed.",
+   "long": "Build the 24-h session-shaded chart from the app's own Yahoo bars instead.",
+   "see_also": [
+    "COMEX"
+   ],
+   "aliases": []
+  },
+  {
+   "term": "w/w · d/d · m/m",
+   "short": "Week on week, day on day, month on month: the change versus the previous report, session or month, in % or in units — the page prints which.",
+   "long": "COT changes are w/w (Tuesday to Tuesday); GLD and OI changes d/d; vault and official-sector rows m/m. A w/w % on a net position is the change ÷ the earlier level, so it explodes near zero — read the units first.",
+   "see_also": [
+    "net position",
+    "who closed what"
+   ],
+   "aliases": [
+    "w/w",
+    "d/d",
+    "m/m",
+    "week on week",
+    "week-on-week",
+    "day on day",
+    "month on month"
+   ]
+  },
+  {
+   "term": "bp vs pp",
+   "short": "bp = basis point = 0.01 percentage point: a yield moving 2.60 % → 2.64 % moved +4 bp. pp = percentage point: the gap between two percentages (2 % → 3 % is +1 pp, or +50 %).",
+   "long": "Yields and spreads are quoted in bp on this page (real yield −4 bp); a change between two percentages (a share of OI, a premium %) is in pp; a change of a price is in %. 'bp' never means the 'basis' of §3.6.",
+   "see_also": [
+    "real yield",
+    "basis"
+   ],
+   "aliases": [
+    "bp",
+    "basis point",
+    "basis points",
+    "pp",
+    "percentage point",
+    "percentage points"
+   ]
+  },
+  {
+   "term": "percentile",
+   "short": "Where a value sits in its own history, 0–100: the 93rd percentile means 93 % of the stored observations were lower. The window is named next to it; over a short history it is noise.",
+   "long": "A percentile is only as good as its window: '14th percentile of 14 months' says almost nothing. COT percentiles use the reports in the window the label names (all history since 2006 when the full panel is read, else the fetched 3 years). Context, never a signal (G-STUDY).",
+   "see_also": [
+    "COT index",
+    "z-score",
+    "context"
+   ],
+   "aliases": [
+    "pct",
+    "pctile",
+    "percentile rank",
+    "rank"
+   ]
+  },
+  {
+   "term": "z-score",
+   "short": "How many standard deviations a value sits from its average over a window (z52 = the last 52 reports). |z| ≥ 2 is unusual for that window; it says nothing about next week.",
+   "long": "z = (value − mean) ÷ standard deviation over N observations. POSITIONING shows z52 and z156 for managed-money net as a crowdedness read; G-STUDY (26 Oct 2026) found no forecasting power at 1/4/13 weeks.",
+   "see_also": [
+    "COT index",
+    "percentile",
+    "managed money"
+   ],
+   "aliases": [
+    "z",
+    "z52",
+    "z156",
+    "zscore",
+    "standard deviations",
+    "sigma"
+   ]
+  },
+  {
+   "term": "Moz",
+   "short": "Million troy ounces: COMEX gold OI 402,279 contracts × 100 oz = 40.2 Moz ≈ 1,251 t (1 Moz = 31.1035 t). IMF official-sector holdings are reported in ounces; the page shows Moz and tonnes.",
+   "long": "1 Moz = 1,000,000 × 31.1034768 g = 31.10 t; 1 t = 32,150.7 oz; contracts ÷ 10,000 = Moz. Check the unit before comparing an IMF ounce figure with a tonnes table.",
+   "see_also": [
+    "troy ounce",
+    "open interest",
+    "central-bank reserves"
+   ],
+   "aliases": [
+    "million ounces",
+    "million troy ounces",
+    "tonnes"
+   ]
+  },
+  {
+   "term": "fund-driver label",
+   "short": "Six words for the week's dominant fund move: new longs · short covering · funds sold into it (price up); long liquidation · new shorts · funds bought the dip (price down). The larger leg wins.",
+   "long": "ΔL / ΔS = managed money's w/w change in long / short contracts. Down-week: long liquidation if ΔL < 0 and |ΔL| ≥ |ΔS|; new shorts if ΔS > 0 and ΔS ≥ |ΔL|; else funds bought the dip (price down, net up). Up-week, mirrored: short covering if ΔS < 0 and |ΔS| ≥ |ΔL|; new longs if ΔL > 0 and ΔL ≥ |ΔS|; else funds sold into it (price up, net down). Ties go to the leg moving with the price. 27 Oct 2026: +1,538 longs, +182 shorts, price −1.64 % → funds bought the dip. Narration of the week that ended (G-STUDY §5.2, right ≈ 3 weeks in 4); never a forecast.",
+   "see_also": [
+    "who closed what",
+    "short covering",
+    "long unwinding",
+    "managed money"
+   ],
+   "aliases": [
+    "driver",
+    "driver label",
+    "fund driver",
+    "new longs",
+    "new shorts",
+    "long liquidation",
+    "funds bought the dip",
+    "funds sold into it",
+    "bought the dip",
+    "sold into it"
+   ]
+  },
+  {
+   "term": "India price ladder",
+   "short": "The PHYSICAL stack: COMEX $/oz → × USD/INR → landed ₹/10 g → + duty 15 % (dated) → duty-paid landed → IBJA 999 → MCX front; each bar carries its own timestamp and source.",
+   "long": "A premium or basis is honest only when both legs share a clock: the IBJA premium at the fix minute, the MCX basis at the settlement session. Never divide a live bar by yesterday's settlement; the panel prints the clock each derived number used.",
+   "see_also": [
+    "landed price",
+    "duty-paid landed",
+    "premium / discount (India)",
+    "MCX basis"
+   ],
+   "aliases": [
+    "ladder",
+    "price ladder",
+    "price stack",
+    "India ladder",
+    "rupee ladder"
+   ]
+  },
+  {
+   "term": "T+1",
+   "short": "Published one business day after the day it describes: FRED yields, CME's daily OI file (≈ 15:30 IST next day), GLD tonnes. The page shows the data's date, never a clock.",
+   "long": "T+1 is why a daily OI quadrant has no label until the next afternoon and why the real yield on the strip is yesterday's. T+2 is spot settlement loco London; the COT is T+3 (Tuesday data, Friday release).",
+   "see_also": [
+    "point-in-time",
+    "COT release schedule",
+    "spot"
+   ],
+   "aliases": [
+    "T+2",
+    "T+3",
+    "lag",
+    "one-day lag",
+    "publication lag"
+   ]
+  },
+  {
+   "term": "lag chip (LIVE / DELAYED / STALE / OFFLINE)",
+   "short": "LIVE (Breeze) · DELAYED (Yahoo, ≈ 1 min) · STALE (older than the series' allowed age; the last stored value stays, dated) · OFFLINE (no source). PROXY and LAST TRADE name a stand-in.",
+   "long": "A STALE chip names the series and its age; nothing is guessed to fill the gap. Daily data shows its date, never a clock.",
+   "see_also": [
+    "proxy settlement",
+    "point-in-time",
+    "evidence badge"
+   ],
+   "aliases": [
+    "STALE",
+    "DELAYED",
+    "OFFLINE",
+    "LIVE",
+    "LAST TRADE",
+    "chip",
+    "freshness"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+run,period,cagr_pct,max_dd_pct,sharpe,vol_pct,fees_rs,taxes_rs,trades,months_with_blocked_names,blocked_name_months
+approved rules,full,13.21,-22.0,0.61,12.31,,,,,
+approved rules,discovery,15.56,-22.0,0.75,12.97,,,,,
+approved rules,holdout,3.98,-7.9,-0.16,9.13,,,,,
+approved rules,costs & activity,,,,,382927.0,497686.0,1446.0,0.0,0.0
++ skip after bad results (60 sessions),full,13.16,-22.0,0.61,12.28,,,,,
++ skip after bad results (60 sessions),discovery,15.53,-22.0,0.75,12.95,,,,,
++ skip after bad results (60 sessions),holdout,3.86,-7.91,-0.17,9.07,,,,,
++ skip after bad results (60 sessions),costs & activity,,,,,380325.0,488833.0,1446.0,132.0,2137.0
+"+ skip after bad results (20 sessions, sensitivity)",full,13.17,-22.0,0.61,12.3,,,,,
+"+ skip after bad results (20 sessions, sensitivity)",discovery,15.52,-22.0,0.75,12.96,,,,,
+"+ skip after bad results (20 sessions, sensitivity)",holdout,3.92,-7.92,-0.16,9.13,,,,,
+"+ skip after bad results (20 sessions, sensitivity)",costs & activity,,,,,381994.0,494855.0,1448.0,88.0,717.0

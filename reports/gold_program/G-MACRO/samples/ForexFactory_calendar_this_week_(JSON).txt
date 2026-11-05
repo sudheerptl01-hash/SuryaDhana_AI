@@ -1,0 +1,42 @@
+[
+ {
+  "title": "Bank Holiday",
+  "country": "NZD",
+  "date": "2026-10-25T15:00:00-04:00",
+  "impact": "Holiday",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "RBA Assist Gov Jones Speaks",
+  "country": "AUD",
+  "date": "2026-10-25T17:10:00-04:00",
+  "impact": "Low",
+  "forecast": "",
+  "previous": ""
+ },
+ {
+  "title": "German ifo Business Climate",
+  "country": "EUR",
+  "date": "2026-10-26T05:00:00-04:00",
+  "impact": "Low",
+  "forecast": "90.0",
+  "previous": "89.9"
+ },
+ {
+  "title": "CBI Realized Sales",
+  "country": "GBP",
+  "date": "2026-10-26T07:00:00-04:00",
+  "impact": "Low",
+  "forecast": "-47",
+  "previous": "-55"
+ },
+ {
+  "title": "SPPI y/y",
+  "country": "JPY",
+  "date": "2026-10-26T19:50:00-04:00",
+  "impact": "Low",
+  "forecast": "3.7%",
+  "previous": "3.7%"
+ }
+]

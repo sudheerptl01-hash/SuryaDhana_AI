@@ -1,0 +1,327 @@
+◉ SURYADHANA ▸ DESK
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:41:58
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,125.40
+−1.24%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:41 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+DESK
+DECISION DESK
+PAPER
+Monthly momentum · top 20 · crash filter · 66% equity · costs icici_moneysaver
+↻ REFRESH
+▶ PREVIEW NOW
+BOOK VALUE
+₹5,01,389
+start ₹5,00,000
+RETURN
++0.28%
+since the book opened
+NIFTY SAME PERIOD
+−2.24%
+price index
+DRAWDOWN
+0.00%
+stop at −20%
+LIQUID FUND
+₹5,01,389
+earns ~6%/yr (paper)
+POSITIONS
+0
+max 20
+THIS MONTH’S BRIEF
+signal 2026-09-30 · mom_nse|N20|nifty200_vt|sc40 · EXECUTED
+0 TRADES · CHARGES ₹0
+CRASH FILTER ON: NIFTY 22,620.45 is below its 200-day average (24,372.85). Stay in the liquid fund. The watchlist shows what it will buy once NIFTY recovers.
+Today (2026-10-14): NIFTY 22,623 vs 200-DMA 24,222 · needs +7.1% by the next signal (2026-10-30) to invest
+ACTION ↕	STOCK ↕	RANK ↕	INDUSTRY ↕	SHARES ↕	PRICE	VALUE ↕	CHARGES ↕	WHY
+
+✓
+NO TRADES THIS MONTH
+Executes at the next session’s open · paper fill at NSE’s official opening price · charges from shared/trading_costs.py
+MOMENTUM WATCHLIST
+top 20 within the 300 most liquid NSE stocks
+# ↕	STOCK ↕	INDUSTRY ↕	6M ↕	12M ↕	LAST ↕	P/E ↕	PROFIT Y/Y ↕	NEXT EVENT
+1	
+CUPID
+⚑ ASM LT 1
+	Fast Moving Consumer Goods	+268%	+608%	₹311.7	348×	+194%	
+—
+
+2	
+WELCORP
+⚑ ASM LT 1
+	Capital Goods	+232%	+208%	₹2,717.0	30×	+200%	
+—
+
+3	
+SHILPAMED
+⚑ ASM LT 1
+	Healthcare	+200%	+154%	₹1,047.2	63×	+115%	
+—
+
+4	
+MOREPENLAB
+⚑ ASM LT 4
+⚑ BAND 5%
++1
+	Unknown	+249%	+142%	₹126.0	50×	+425%	
+—
+
+5	
+LAURUSLABS
+	Healthcare	+96%	+118%	₹1,980.0	88×	+124%	
+RESULTS 29 OCT · 14d
+
+6	
+SANSERA
+⚑ ASM LT 1
+	Automobile and Auto Components	+110%	+203%	₹4,537.5	75×	+39%	
+—
+
+7	
+SKYGOLD
+⚑ ASM LT 1
+	Consumer Durables	+147%	+180%	₹810.7	40×	+141%	
+—
+
+8	
+CPPLUS
+	Capital Goods	+111%	+176%	₹3,846.5	109×	+333%	
+—
+
+9	
+FCL
+	Unknown	+185%	+140%	₹57.5	57×	+93%	
+—
+
+10	
+SYRMA
+	Capital Goods	+118%	+118%	₹1,782.9	81×	+112%	
+—
+
+11	
+SONACOMS
+	Automobile and Auto Components	+70%	+97%	₹830.0	73×	+47%	
+RESULTS 26 OCT · 11d
+
+12	
+PAISALO
+⚑ ASM LT 1
+	Unknown	+123%	+90%	₹76.4	25×	+30%	
+RESULTS 22 OCT · 7d
+
+13	
+AVALON
+⚑ ASM LT 1
+	Capital Goods	+138%	+127%	₹2,296.7	114×	+145%	
+—
+
+14	
+AEROFLEX
+	Unknown	+123%	+178%	₹536.6	112×	+162%	
+—
+
+15	
+RRKABEL
+	Capital Goods	+92%	+95%	₹2,518.6	50×	+129%	
+—
+
+16	
+LLOYDSENGG
+	Capital Goods	+153%	+58%	₹98.6	85×	+127%	
+—
+
+17	
+DIVISLAB
+	Healthcare	+55%	+54%	₹9,291.5	82×	+66%	
+—
+
+18	
+AEGISLOG
+	Oil Gas & Consumable Fuels	+126%	+76%	₹1,380.1	42×	+211%	
+—
+
+19	
+TDPOWERSYS
+	Capital Goods	+85%	+184%	₹786.1	45×	+72%	
+—
+
+20	
+TFCILTD
+	Unknown	+119%	+95%	₹141.9	48×	+100%	
+—
+BOOK VS NIFTY
+green = book · dashed = NIFTY
+−3.9%
++0.0%
+BOOK +0.3%
+NIFTY −2.2%
+25 Sept
+14 Oct
+RULES
+owner-approved 2026-09-27
+REBALANCE
+Monthly · signal at last close · execute at next open
+SIGNAL
+NSE momentum (6m & 12m return ÷ 1-yr vol)
+UNIVERSE
+300 most liquid EQ stocks · ≥ ₹20 · no ETFs
+POSITIONS
+Up to 20 · equal weight · keep while rank ≤ 30
+CAPS
+15% per stock · 40% per NSE industry
+CRASH FILTER
+NIFTY < 200-DMA → liquid fund · 15% vol target
+EMERGENCY
+−20% from peak → sell all at next open
+WATCHLIST RISK · WHAT THE DESK WOULD HOLD
+equal weight · 2025-10-15 → 2026-10-14 · split-adjusted · describes the basket, not a forecast
+VOLATILITY
+24%
+NIFTY 14% · stocks avg 47%
+BETA TO NIFTY
+1.13
+1.0 = moves with NIFTY
+MAX DRAWDOWN
+-12%
+NIFTY -16%
+AVG CORRELATION
+0.22
+tightest SYRMA/AVALON 0.53
+DIVERSIFICATION
+2.0×
+avg stock vol ÷ basket vol
+1-DAY VAR 95%
+−2.3%
+worst 5% of days average −3.0% · worst day −4.3% · NIFTY VaR −1.6%
+INDUSTRY CONCENTRATION · Desk cap 40% = 8 of 20
+Capital Goods
+7
+Healthcare
+3
+Automobile and Auto Components
+2
+Fast Moving Consumer Goods
+1
+Consumer Durables
+1
+Oil Gas & Consumable Fuels
+1
+Unknown
+5
+5 names have no NSE industry in the reference list, so the 40% cap cannot count them (decision pending: see the improvement log).
+STOCK ↕	VOL ▼	BETA ↕	1Y ↕	MAX DD ↕
+FCL	62%	1.51	+146%	-40%
+AEROFLEX	62%	1.67	+236%	-23%
+CUPID⚑	59%	0.75	+611%	-28%
+MOREPENLAB⚑	58%	1.51	+166%	-31%
+TDPOWERSYS	55%	0.93	+161%	-24%
+AVALON⚑	55%	1.38	+99%	-35%
+LLOYDSENGG	52%	1.91	+58%	-38%
+TFCILTD	51%	1.04	+119%	-26%
+SKYGOLD⚑	48%	1.29	+198%	-19%
+AEGISLOG	47%	1.15	+84%	-28%
+CPPLUS	44%	0.67	+228%	-20%
+WELCORP⚑	44%	1.10	+219%	-25%
+PAISALO⚑	44%	0.84	+115%	-23%
+SYRMA	44%	1.26	+111%	-29%
+SHILPAMED⚑	43%	0.88	+173%	-33%
+SANSERA⚑	43%	1.31	+200%	-17%
+RRKABEL	40%	0.91	+112%	-19%
+SONACOMS	31%	1.18	+78%	-13%
+LAURUSLABS	29%	0.74	+132%	-18%
+DIVISLAB	24%	0.60	+38%	-15%
+HOLDINGS
+◇
+ALL IN THE LIQUID FUND (₹5,01,389)
+ACTIVITY
+2026-10-01 19:30
+FILL
+2026-10-REB-eb4121 @ 2026-10-01 open: 0 fills, 0 pending (per-name target ₹16,515, rules mom_nse|N20|nifty200_vt|sc40)
+2026-09-30 19:30
+PLAN
+REBALANCE brief 2026-10-REB-eb4121: 0 orders, signal 2026-09-30
+2026-09-27 15:48
+INIT
+Paper book opened with ₹500,000; rules mom_nse|N20|nifty200_vt|sc40, equity share 66%
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

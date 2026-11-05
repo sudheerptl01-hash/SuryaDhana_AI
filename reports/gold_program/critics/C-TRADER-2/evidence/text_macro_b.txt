@@ -1,0 +1,270 @@
+GOLD
+GOLD TERMINAL
+spot, COMEX, MCX, positioning (COT), physical, macro, contracts, health check, pre-open fair value · 03:51 IST
+LIVE · YAHOO (CACHED FET…
+PAPER · CONTEXT
+↻
+COMEX DEC-26
+settle — $4,072.2 last Wed 04 Nov · Yahoo, not settlement
+last $4,072.2 ▲+3.28 % Yahoo, not settlement · 03:29 IST
+LIVE · YAHOO (CACHED FET…
+USD/INR
+94.63
+Yahoo INR=X · 00:13 IST
+10-Y REAL
+2.62 %
+TIPS · Mon 02 Nov
+MCX GOLD DEC-26
+₹1,40,186
+Tue 03 Nov settlement · basis +1.58 % at the at the Tue 03 Nov settlement vs that session's duty-paid landed vs that session's duty-paid
+COT FUNDS NET (MANAGED MONEY)
++105,562
++1,356 w/w · as of Tue 27 Oct
+◷ MCX opens in 5h08m
+spot proxy · COMEX front GC1 · COMEX matched month GCZ26 · MCX GOLD DEC-26
+CONTRACT
+MCX
+NSE (n/a)
+BSE (n/a)
+GOLD
+GOLDM
+GOLDTEN
+GOLDGUINEA
+GOLDPETAL
+front (by OI)
+DEC-26 · 2026-12-04 · OI 16,282
+FEB-27 · 2027-02-05 · OI 1,180
+APR-27 · 2027-04-05 · OI 70
+JUN-27 · 2027-06-04 · OI 2
+AUG-27 · 2027-08-05 · OI 0
+OCT-27 · 2027-10-05 · OI 0
+OPTIONS
+↔ COMEX DEC-26 ↔ GC1
+UNIT
+$/oz
+₹/10 g
+₹/g
+$/g
+₹/tola
+WINDOW
+D
+W
+M
+LAYER
+[B]
+[P]
+HEALTH
+DAILY
+WEEKLY
+MONTHLY
+POSITIONING
+PHYSICAL
+MACRO
+CONTRACTS
+LEARN
+DRIVERS
+CONTEXT · G-MACRO H1/H2
+DELAYED · FRED / TREASURY /…
+?
+supportive / headwind = the server's sign rule, printed on each tile, applied to the selected window; a description of today, not a forecast · as of Wed 04 Nov
+[B]the cost of holding gold (the real yield) and the dollar (DXY) explain most days; the rupee is the MCX leg. Changes in bp for yields: 1 bp = 0.01 pp.
+10-Y REAL YIELD
+2.62%
+1d +2 bp · 1w −4 bp · 1m −30 bp · percentile 88 (1 y) · Mon 02 Nov
+ρ60d −0.14 · SUPPORTIVE (falling = supportive, rising = headwind)
+2-Y TREASURY
+4.59%
+1d +3 bp · 1w −9 bp · 1m −24 bp · percentile 86 (1 y) · Mon 02 Nov
+ρ60d −0.18 · SUPPORTIVE (falling = supportive, rising = headwind)
+10-Y BREAKEVEN
+2.30%
+1d +1 bp · 1w −5 bp · 1m −6 bp · percentile 45 (1 y) · Tue 03 Nov
+ρ60d −0.12 · HEADWIND (rising = supportive)
+DOLLAR INDEX (DXY)
+101.52
+1d −0.34% · 1w −0.65% · 1m −0.63% · percentile 90 (1 y) · Wed 04 Nov
+ρ60d −0.42 · SUPPORTIVE (falling = supportive, rising = headwind)
+USD/INR
+94.63
+1d −0.10% · 1w −0.58% · 1m −1.76% · percentile 53 (1 y) · Wed 04 Nov
+ρ60d +0.11 · HEADWIND (rising = supportive)
+GVZ (GOLD VOL)
+24.11%
+1d −171 bp · 1w +121 bp · 1m +93 bp · percentile 31 (1 y) · Wed 04 Nov
+ρ60d −0.23 · NEUTRAL (size, not direction)
+BRENT
+123.10
+1d −3.92% · 1w +6.84% · 1m +6.11% · percentile 92 (1 y) · Tue 27 Oct
+ρ60d −0.30 · SUPPORTIVE (rising = supportive)
+GLD TONNES
+1,037.7 t
+1d −2.9 t · 1w −4.0 t · 1m −18.0 t · Tue 03 Nov
+ρ60d +0.33 · NEUTRAL (contemporaneous; no lead)
+Source: FRED, Federal Reserve Bank of St. Louis — free with attribution
+GOLD OR THE DOLLAR?
+ARITHMETIC · identity
+DELAYED · YAHOO GC=F (STORE…
+?
+as of Wed 04 Nov
+[B]"gold rose $20; $12 was the dollar falling, $8 was buying" — and for MCX, how much was the rupee. What is KGX?
+gold in USD (W)
++0.47%
+pure gold
+−0.36%
+USD effect (DXY basket)
++0.83%
+rupee leg (USD/INR), for MCX
+−0.58%
+total = pure + USD effect (identity holds) · basket FX_EURUSD 57.6 % · FX_JPY 13.6 % · FX_GBPUSD 11.9 % · FX_CAD 9.1 % · FX_SEK 4.2 % · FX_CHF 3.6 %
+window from Wed 28 Oct
+gold in USD (rebased)
+gold in the DXY basket (rebased)
+100
+110
+120
+130
+04 Nov 25
+12 Dec 25
+23 Jan 26
+04 Mar 26
+13 Apr 26
+20 May 26
+30 Jun 26
+07 Aug 26
+16 Sept 26
+04 Nov 26
+GOLD IN SIX CURRENCIES
+ARITHMETIC · identity
+DELAYED · YAHOO GC=F (STORE…
+?
+as of Wed 04 Nov
+[B]up in USD but down in EUR = it was the dollar.
+CCY	PRICE	1D	1W	1M	YTD
+USD	$4,070.8	+3.31%	+0.47%	−2.07%	−6.23%
+INR landed ₹/10 g · MCXG › CONTRACTS ›	₹123,851	+3.21%	−0.10%	−3.79%	−1.15%
+EUR	€3,624.2	+2.94%	−0.44%	−1.87%	−1.93%
+JPY	¥644,884	+3.64%	+0.74%	−1.65%	−5.03%
+GBP	£3,021.8	+2.84%	−0.76%	−3.73%	−6.26%
+CNY	¥27,129.0	+3.56%	+0.42%	−2.66%	−10.67%
+FED PATH
+CONTEXT · Atlanta Fed MPT; FedWatch = link
+DELAYED · ATLANTA FED
+?
+as of Mon 02 Nov
+[B]what the market expects the Fed to do at each meeting; a cut lowers the cost of holding gold.
+EFFR 3.88% (Tue 03 Nov) · target 3.75–4.00 % · next FOMC 2026-12-17 00:30 ISTAFTER MCX CLOSE · gap risk at 09:00
+Wed 16 Dec
+cut 4%
+hike 85%
+414 bp
+Wed 17 Mar
+cut 9%
+hike 83%
+435 bp
+Wed 16 Jun
+cut 15%
+hike 78%
+447 bp
+Wed 15 Sep
+cut 19%
+hike 74%
+451 bp
+Wed 15 Dec
+cut 22%
+hike 70%
+447 bp
+Wed 15 Mar
+cut 26%
+hike 67%
+444 bp
+Wed 21 Jun
+cut 27%
+hike 65%
+442 bp
+Wed 20 Sep
+cut 29%
+hike 64%
+441 bp
+ZQ implied: NOV-26 3.88%
+Source: Federal Reserve Bank of Atlanta Market Probability Tracker — licence to be read by eye (O-10)
+Source: FRED, Federal Reserve Bank of St. Louis — free with attribution
+EXPECTED MOVE
+ARITHMETIC · GVZ ÷ √252 × price × lot
+DELAYED · YAHOO GC=F (STORE…
+?
+as of Wed 04 Nov
+[B]how big a normal day is, in rupees per lot you trade: the unit for stops and sizing.
+GVZ
+24.11 · Wed 04 Nov
+1Σ DAY
+1.52% · $61.8/oz · ₹2,129/10 g
+REALISED 20-D VOL
+23.0%
+ATR14 ₹/10 G
+₹2,820
+1σ day per lot (₹)
+GOLD ×100
+₹2,12,913
+GOLDM ×10
+₹21,291
+GOLDTEN ×1
+₹2,129
+GOLDGUINEA ×0.8
+₹1,703
+GOLDPETAL ×0.1
+₹213
+US CALENDAR THIS WEEK (IST)
+BLS ↗
+BEA ↗
+ARITHMETIC · schedule
+?
+as of Thu 05 Nov
+[B]when the known shocks hit, in IST; after the MCX close means the move shows up as a gap at 09:00.
+DATE (IST)	RELEASE	IMPACT	CONSENSUS	PREVIOUS	ACTUAL	MCX
+Thu 05 Nov 16:00	Challenger Job Cuts y/y · USD	Low	—	-19.9%	—	IN SESSION
+Thu 05 Nov 19:00	Unemployment Claims · USD	Medium	197K	194K	—	IN SESSION
+Thu 05 Nov 19:00	Prelim Unit Labor Costs q/q · USD	Low	0.3%	1.3%	—	IN SESSION
+Thu 05 Nov 19:00	Prelim Nonfarm Productivity q/q · USD	Low	2.8%	1.4%	—	IN SESSION
+Thu 05 Nov 19:20	FOMC Member Hammack Speaks · USD	Low	—	—	—	IN SESSION
+Thu 05 Nov 19:40	FOMC Member Barkin Speaks · USD	Low	—	—	—	IN SESSION
+Thu 05 Nov 21:00	Natural Gas Storage · USD	Low	81B	80B	—	IN SESSION
+Thu 05 Nov 23:30	MCX GOLDM Nov-26 expiry · IN	context	—	—	—	IN SESSION
+Fri 06 Nov	Dhanteras · IN	context	—	—	—	AFTER CLOSE · gap risk
+Fri 06 Nov 15:00	FOMC Member Williams Speaks · USD	Low	—	—	—	IN SESSION
+Fri 06 Nov 19:00	Unemployment Rate · USD	High	4.2%	4.2%	—	IN SESSION
+Fri 06 Nov 19:00	Average Hourly Earnings m/m · USD	High	0.3%	0.1%	—	IN SESSION
+Fri 06 Nov 19:00	Non-Farm Employment Change · USD	High	65K	29K	—	IN SESSION
+Fri 06 Nov 19:40	FOMC Member Musalem Speaks · USD	Low	—	—	—	IN SESSION
+Fri 06 Nov 20:30	Prelim UoM Inflation Expectations · USD	Medium	—	4.7%	—	IN SESSION
+Fri 06 Nov 20:30	Prelim UoM Consumer Sentiment · USD	Medium	48.1	46.3	—	IN SESSION
+Fri 06 Nov 22:45	FOMC Member Bowman Speaks · USD	Low	—	—	—	IN SESSION
+Sat 07 Nov 01:30	Consumer Credit m/m · USD	Low	13.4B	8.3B	—	AFTER CLOSE · gap risk
+Sat 07 Nov 02:00	CFTC COT (positions as of Tue 03 Nov) · US	context	—	—	—	AFTER CLOSE · gap risk
+Sun 08 Nov 14:20	Muhurat trading (Diwali Laxmi Pujan) · IN	context	—	—	—	IN SESSION
+Tue 10 Nov	MCX morning closure: Diwali-Balipratipada · IN	context	—	—	—	AFTER CLOSE · gap risk
+DRIVER HEALTH
+CONTEXT · G-MACRO H1
+DELAYED · FRED / TREASURY /…
+?
+rolling 1-y correlation of daily changes, by year · as of Wed 04 Nov
+[B]whether the usual drivers are still explaining gold this year.
+vs real yield (10-y)
+2016
+2026
+vs DXY
+2016
+2026
+2003–09
+real yield — · DXY —
+2010–21
+real yield −1,440 $/oz per 100 bp · DXY −1.27 % per 1 %
+2022–26
+real yield −500 $/oz per 100 bp · DXY −0.99 % per 1 %
+since 2022 the real-yield rule explains a third of what it used to; the dollar never stopped working (G-MACRO H1)
+CONTEXT
+CONTEXT · G-MACRO H4
+DELAYED · FRED / TREASURY /…
+?
+as of Tue 03 Nov
+[B]ratios and risk gauges that frame the regime; none of them times anything.
+gold/silver, gold/platinum, GPR, HY OAS, gold/M2, the real-yield scatter

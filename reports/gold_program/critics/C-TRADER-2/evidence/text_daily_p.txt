@@ -1,0 +1,210 @@
+GOLD
+GOLD TERMINAL
+spot, COMEX, MCX, positioning (COT), physical, macro, contracts, health check, pre-open fair value · 03:51 IST
+LIVE · YAHOO (CACHED FET…
+PAPER · CONTEXT
+↻
+COMEX DEC-26
+settle — $4,072.2 last Wed 04 Nov · Yahoo, not settlement
+last $4,072.2 ▲+3.28 % Yahoo, not settlement · 03:29 IST
+LIVE · YAHOO (CACHED FET…
+USD/INR
+94.63
+Yahoo INR=X · 00:13 IST
+10-Y REAL
+2.62 %
+TIPS · Mon 02 Nov
+MCX GOLD DEC-26
+₹1,40,186
+Tue 03 Nov settlement · basis +1.58 % at the at the Tue 03 Nov settlement vs that session's duty-paid landed vs that session's duty-paid
+COT FUNDS NET (MANAGED MONEY)
++105,562
++1,356 w/w · as of Tue 27 Oct
+◷ MCX opens in 5h08m
+spot proxy · COMEX front GC1 · COMEX matched month GCZ26 · MCX GOLD DEC-26
+CONTRACT
+MCX
+NSE (n/a)
+BSE (n/a)
+GOLD
+GOLDM
+GOLDTEN
+GOLDGUINEA
+GOLDPETAL
+front (by OI)
+DEC-26 · 2026-12-04 · OI 16,282
+FEB-27 · 2027-02-05 · OI 1,180
+APR-27 · 2027-04-05 · OI 70
+JUN-27 · 2027-06-04 · OI 2
+AUG-27 · 2027-08-05 · OI 0
+OCT-27 · 2027-10-05 · OI 0
+OPTIONS
+↔ COMEX DEC-26 ↔ GC1
+UNIT
+$/oz
+₹/10 g
+₹/g
+$/g
+₹/tola
+WINDOW
+D
+W
+M
+LAYER
+[B]
+[P]
+HEALTH
+DAILY
+WEEKLY
+MONTHLY
+POSITIONING
+PHYSICAL
+MACRO
+CONTRACTS
+LEARN
+24 HOURS · COMEX DEC-26
+1m
+5m
+prev day
+sessions
+ARITHMETIC
+DELAYED · DATA-SERVICE GOLD…
+?
+1m line · GCZ26 · COMEX front GC1 (continuous) · as of 05 Nov, 03:14 IST
+[P]GC=F rolls before first notice (the roll, see CONTRACTS); the dashed line is the bulletin settlement when C7 is allowed, else the previous session's stored Yahoo daily close labelled as such. Bar timestamps are UTC instants placed on the IST clock. Axis = the Globex day (18:00 ET → 17:00 ET); bands from lib/gold/sessions.ts, DST-aware.
+3,900
+3,950
+4,000
+4,050
+$/oz
+Tue 03 Nov close (Yahoo daily, not settlement) 3,940.40
+4,070.10
+06:00
+19:30
+08:00
+21:30
+10:00
+23:30
+12:00
+01:30
+14:00
+03:30
+16:00
+05:30
+18:00
+07:30
+20:00
+09:30
+22:00
+11:30
+00:00
+13:30
+02:00
+15:30
+04:00
+17:30
+IST
+NY
+MCX 09:00–23:55 IST
+hi 4,081.20
+lo 3,928.20
+Mon 02 Nov close (Yahoo daily, not settlement) 3,969.60 ▲70.70 (+1.81 % vs the previous stored close)
+Tue 03 Nov close (Yahoo daily, not settlement) 3,940.40 ▼29.20 (−0.74 % vs the previous stored close)
+Wed 04 Nov last 4,070.10 ▲129.70 (+3.29 % vs the previous stored close)
+bands: Sydney/Tokyo · Shanghai (SGE) · London · New York · hatched = CME maintenance 17:00–18:00 ET
+3 DAYS OVERLAID
+CONTEXT
+DELAYED · DATA-SERVICE GOLD…
+?
+one 24-h IST axis, one colour each · as of 05 Nov, 03:14 IST
+[P]Three CME trade days on the Globex-day axis; no inference is drawn from the overlay (context).
+3,900
+3,950
+4,000
+4,050
+$/oz
+06:00
+19:30
+09:00
+22:30
+12:00
+01:30
+15:00
+04:30
+18:00
+07:30
+21:00
+10:30
+00:00
+13:30
+03:00
+16:30
+IST
+NY
+MCX 09:00–23:55 IST
+■ Mon 02 Nov■ Tue 03 Nov■ Wed 04 Nov
+SHANGHAI (SGE AU99.99)
+CONTEXT
+OFFLINE
+?
+delayed intraday · drawn on the Shanghai band
+[P]SGE delayed quotations (D4), CNY/g converted to $/oz by the server; displayed with attribution (O-1), never re-served.
+No SGE bars stored for today yet — the asia job writes them during SGE hours (06:30–13:00 and 17:30–00:00 IST).
+SGE delayed quotes · Au99.99 / Au(T+D), delayed
+the publisher's own page; nothing is fetched by the terminal from here
+↗ OPEN
+YESTERDAY'S OI × PRICE READ
+CONTEXT · folklore until G-STUDY-2
+DELAYED · CME FTP DAILY_VOL…
+?
+COMEX product OI (T+1) · MCX GOLD OI (07:35) · as of Tue 03 Nov
+[P]Product OI, all months summed; roll weeks are mechanical (greyed); 'who' needs the weekly COT. The weekly version scored 1 of 12 cells (G-STUDY); the daily version is untested (G-STUDY-2). CME OI lands T+1 ≈ 15:30 IST.
+COMEX GC · product OI
+last 1 sessions · Δprice % over ΔOI · greyed = roll / expiry day (mechanical) · ·· = ΔOI not stored
+··
+03
+Tue 03 Nov: no OI for this session · Δprice −0.74% · ΔOI —
+ΔOI not stored for this session
+OI ▼
+OI ▲
+px ▲
+short covering
+long build-up
+px ▼
+long unwinding
+short build-up
+MCX GOLD · OI (lots) · since 2026-10-29
+last 2 sessions · Δprice % over ΔOI · greyed = roll / expiry day (mechanical) · ·· = ΔOI not stored
+··
+29
+▼▲
+03
+Tue 03 Nov: short build-up — price down with new positions: sellers opened · Δprice −2.45% · ΔOI +863
+Δ over 3 sessions (rows missing between)
+OI ▼
+OI ▲
+px ▲
+short covering
+long build-up
+px ▼
+long unwinding
+short build-up
+INTRADAY TAPE
+ARITHMETIC
+DELAYED · DATA-SERVICE GOLD…
+?
+last 12 × 5-minute bars · as of 05 Nov, 03:14 IST
+[P]5-minute buckets of the stored 1-minute bars (open = first, close = last, range = high − low).
+IST · NY	LAST $/OZ	Δ	RANGE	VOLUME (CONTRACTS)
+03:10 16:40	4,070.10	+0.60	1.20	178
+03:05 16:35	4,069.30	−1.70	3.00	126
+03:00 16:30	4,070.90	−0.30	1.30	231
+02:55 16:25	4,071.40	−3.00	4.00	353
+02:50 16:20	4,074.50	−0.70	1.90	250
+02:45 16:15	4,075.20	−0.20	1.70	267
+02:40 16:10	4,075.60	+0.40	1.60	117
+02:35 16:05	4,074.90	+1.60	2.40	134
+02:30 16:00	4,073.20	−1.10	2.00	306
+02:25 15:55	4,074.20	+3.90	5.00	820
+02:20 15:50	4,070.40	−0.40	3.00	417
+02:15 15:45	4,070.70	−0.60	1.40	274

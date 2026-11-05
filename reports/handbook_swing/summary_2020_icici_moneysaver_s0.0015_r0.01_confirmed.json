@@ -1,0 +1,146 @@
+{
+ "window": [
+  "2020-01-01",
+  "2026-10-09"
+ ],
+ "capital": 500000,
+ "risk_per_trade": 0.01,
+ "cost_profile": "icici_moneysaver",
+ "slippage_per_side": 0.0015,
+ "strategy": {
+  "cagr_pct": -25.7,
+  "total_return_pct": -86.6,
+  "max_dd_pct": -87.4,
+  "sharpe": -1.62,
+  "vol_pct": 17.7
+ },
+ "nifty500_price": {
+  "cagr_pct": 12.44,
+  "total_return_pct": 121.1,
+  "max_dd_pct": -38.3,
+  "sharpe": 0.77,
+  "vol_pct": 17.6
+ },
+ "trades": {
+  "trades": 1096,
+  "win_rate_pct": 35.2,
+  "avg_win_R": 1.0,
+  "avg_loss_R": -1.04,
+  "expectancy_R": -0.322,
+  "median_days": 4.0,
+  "best_R": 13.02,
+  "worst_R": -10.08
+ },
+ "costs_paid": 351086.0,
+ "avg_invested_pct": 42.0,
+ "regime_days_pct": {
+  "0": 15.0,
+  "1": 13.8,
+  "2": 15.6,
+  "3": 29.1,
+  "4": 26.6
+ },
+ "by_setup": {
+  "A_breakout_confirmed": {
+   "trades": 128,
+   "win_rate_pct": 29.7,
+   "avg_win_R": 1.59,
+   "avg_loss_R": -0.85,
+   "expectancy_R": -0.13,
+   "median_days": 7.0,
+   "best_R": 4.45,
+   "worst_R": -4.56
+  },
+  "B_vcp": {
+   "trades": 16,
+   "win_rate_pct": 18.8,
+   "avg_win_R": 2.02,
+   "avg_loss_R": -0.34,
+   "expectancy_R": 0.102,
+   "median_days": 2.0,
+   "best_R": 3.77,
+   "worst_R": -0.89
+  },
+  "C_pocket_pivot": {
+   "trades": 146,
+   "win_rate_pct": 25.3,
+   "avg_win_R": 1.63,
+   "avg_loss_R": -1.2,
+   "expectancy_R": -0.484,
+   "median_days": 5.0,
+   "best_R": 7.94,
+   "worst_R": -3.65
+  },
+  "D_gap_up": {
+   "trades": 15,
+   "win_rate_pct": 26.7,
+   "avg_win_R": 3.89,
+   "avg_loss_R": -1.45,
+   "expectancy_R": -0.027,
+   "median_days": 2.0,
+   "best_R": 13.02,
+   "worst_R": -3.31
+  },
+  "E_burst": {
+   "trades": 606,
+   "win_rate_pct": 34.5,
+   "avg_win_R": 0.96,
+   "avg_loss_R": -1.06,
+   "expectancy_R": -0.36,
+   "median_days": 5.0,
+   "best_R": 6.69,
+   "worst_R": -10.08
+  },
+  "F_rsi2": {
+   "trades": 181,
+   "win_rate_pct": 51.9,
+   "avg_win_R": 0.43,
+   "avg_loss_R": -1.02,
+   "expectancy_R": -0.263,
+   "median_days": 2.0,
+   "best_R": 1.98,
+   "worst_R": -10.08
+  },
+  "G_holy_grail": {
+   "trades": 4,
+   "win_rate_pct": 25.0,
+   "avg_win_R": 1.19,
+   "avg_loss_R": -0.86,
+   "expectancy_R": -0.344,
+   "median_days": 2.0,
+   "best_R": 1.19,
+   "worst_R": -1.23
+  }
+ },
+ "by_exit": {
+  "stop": 383,
+  "burst 5-day exit": 351,
+  "rsi2 exit": 141,
+  "stop (gap)": 78,
+  "trail 20-EMA": 57,
+  "failed breakout": 49,
+  "time stop": 36,
+  "target": 1
+ },
+ "by_year": {
+  "2020": -23.6,
+  "2021": -17.9,
+  "2022": -27.1,
+  "2023": -22.3,
+  "2024": -32.4,
+  "2025": -35.5,
+  "2026": -14.0
+ },
+ "nifty500_by_year": {
+  "2020": 16.5,
+  "2021": 30.2,
+  "2022": 1.6,
+  "2023": 25.2,
+  "2024": 15.2,
+  "2025": 6.7,
+  "2026": -8.4
+ },
+ "open_positions": [],
+ "universe_symbols": 1746,
+ "runtime_s": 23
+}

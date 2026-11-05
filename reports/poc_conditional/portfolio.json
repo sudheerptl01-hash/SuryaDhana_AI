@@ -1,0 +1,10 @@
+{
+  "NIFTY50_buy_hold": {
+    "discovery": {
+      "cagr_pct": 21.49
+    },
+    "holdout": {
+      "cagr_pct": -1.65
+    }
+  }
+}

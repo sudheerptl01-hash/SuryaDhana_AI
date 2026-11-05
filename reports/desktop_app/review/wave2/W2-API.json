@@ -1,0 +1,325 @@
+{
+ "fixer": "W2-API",
+ "summary": "Root cause of the 14:40-14:48 ui-api hang found, reproduced and fixed in routers/monitor.py. A regression test churns 60 monitor sockets on a quiet channel under real uvicorn: /health max 1.8 ms on the fix, while the round-1 code times out 3/3. Added a loop-stall watchdog: a WARNING plus a faulthandler all-threads dump when the loop stalls for 5 s, and kill -USR1 for on-demand stacks. In scratch it caught the round-1 hang 5.09 s in and named _serve_monitor -> unsubscribe. All other wave-2 IDs are done: K1, K2, C2-performance-04/-08/-09, completeness-06 and FX-PY leftovers a-e. ui-api 806 passed, core 612 passed/9 skipped, scripts 175 passed/1 failed (a CI-workflow test outside my files, patch request below), execution 7, alpha_lab 20. Lint is clean against the snapshots; event-loop scanner shows 0 findings.",
+ "findings": [
+  {
+   "id": "HANG-20261025-1440",
+   "outcome": "fixed",
+   "what_changed": "ROOT CAUSE: in round 1 each monitor socket got its own redis-py pubsub from _open_quotes_pubsub(), which ran in a worker thread and used redis.from_url(). That client owns its pool (auto_close_connection_pool). When the helper returned, the client was garbage-collected, and Redis.__del__ -> close() -> pool.disconnect() closed the pubsub's socket right after SUBSCRIBE. I verified this directly: right after the return, pubsub.connection._sock is None. So every socket started with a dead subscription. The socket's reader thread then reconnected it inside listen(). When the client left quickly, the handler's finally block ran pubsub.unsubscribe() ON THE EVENT LOOP at the same time. It found _sock None, reconnected the SAME Connection object, sent CLIENT SETINFO and waited in a blocking recv() for the reply, with no socket_timeout. Two threads were reading one socket, the reply went to the reader thread, and on Sunday's quiet channel no other byte ever arrived. The loop, and /health with it, stayed blocked until the 14:48 restart. The cap of 32 bounds concurrent sockets, not churn: one fast close is enough. EVIDENCE: (1) Scratch repro with only the round-1 router plus /health against the real Redis: 50 open/close cycles at concurrency 16, half closed with no close frame, hang every time. (2) faulthandler stacks of the hung repro: the event-loop thread at round-1 monitor.py:243 _serve_monitor -> unsubscribe -> execute_command -> send_packed_command -> connect -> on_connect -> read_response -> recv; the reader thread in listen -> parse_response -> read_response -> recv. (3) The native sample of the hung repro has the same main-thread shape as the live sample (task_step_impl -> EvalFrame x3 -> method_vectorcall_VARARGS -> sock_recv -> recvfrom). (4) Live lsof: a 4th Redis connection [::1]:59119 opened right after the last monitor socket (127.0.0.1:59109) was accepted. That is the reconnect made by the loop's unsubscribe(). data-service :8001 is not involved. FIX (routers/monitor.py; the _QuotesHub rework, part of it written by the accidental twin instance, which I reviewed and kept): an explicit ConnectionPool, so the subscription survives the helper. No redis-py call runs on the event loop; connect and subscribe run in a worker thread. After that the pubsub belongs to ONE reader thread. It reads with get_message(timeout=READ_POLL_S=1 s), never listen(). The socket timeout READ_STALL_S=10 s bounds every read. On stop it closes its own connection and pool; UNSUBSCRIBE is never sent. The reader also ends when its loop closes. One subscription is shared by all sockets and lingers 15 s after the last one leaves. The hub reconnects on its own with backoff (2/5/15/30 s), and reconnect attempts are logged. QUOTES_CHANNEL is now a constant, so tests can use a quiet channel.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/monitor.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_monitor_churn.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_monitor_hub.py"
+   ],
+   "tests": [
+    "tests/test_monitor_churn.py (2): the real router on a real uvicorn server (same loop implementation as production) in a thread, against an in-test RESP server over TCP, so redis-py does real socket I/O. The channel is quiet. 60 sockets: closed straight away, TCP reset, ping then close frame, or subscribe then reset; 16 at a time. /health is polled every 20 ms with a budget of 100 ms per probe (measured max 1.6-1.8 ms). Afterwards no socket, subscriber or Redis connection is left over, and a new socket still receives a published quote. Parametrized subscription-per-burst (linger 0) and production-linger (exactly 1 Redis connection for the whole churn). 7/7 runs green.",
+    "NEGATIVE CONTROL: the same test with the round-1 monitor.py swapped in FAILS 3/3 ('/health failed during the churn: TimeoutError after 2.00s' x3).",
+    "tests/test_monitor_hub.py (9): the fake pubsub records every thread that touches it and fails if unsubscribe() is called. Tests: one subscription and one reader thread for 3 sockets; per-socket filters; a reload inside the linger reuses the subscription; 60-socket churn where only the reader thread touches the pubsub; a dropped connection reconnects on its own and open sockets resume; sockets opened while Redis was down get quotes once it is back; redis_unavailable cleanup; slow-client queue bound.",
+    "Scratch, real Redis (hang/churn.py + hammer.py): the current code passes immediate/abort/graceful churn and 400 mixed sockets, with /health max 5.8 ms."
+   ],
+   "user_visible_change": "None on the terminal pages: same messages, filters and redis_unavailable error. Behind the scenes: one Redis subscription for all windows, kept 15 s after the last window closes. If Redis restarts, open windows get quotes again without a reload.",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "LOOP-STALL-WATCHDOG",
+   "outcome": "fixed",
+   "what_changed": "New routers/_loop_watchdog.py, started and stopped by main.py's lifespan. A heartbeat task stamps the time every 0.5 s. A watcher THREAD checks it; a task alone could not run while the loop is blocked. When the stamp is older than UI_API_LOOP_STALL_S (default 5 s), the thread logs ONE WARNING JSON line {\"event\":\"loop_stall\",\"stalled_s\",\"threshold_s\",\"pid\"} and then runs faulthandler.dump_traceback(all_threads=True) into ui-api's stderr, which is .logs/ui-api.log. A long stall gets a fresh dump every 60 s. The end of a stall logs {\"event\":\"loop_stall_recovered\",\"stalled_s\"}. faulthandler.register(SIGUSR1) makes `kill -USR1 <ui-api pid>` dump all stacks on demand without root; it is a C-level handler, so it works while the loop is stuck. If the stream has no fd, the dump falls back to sys._current_frames(). UI_API_LOOP_WATCHDOG=0 turns it off. The start logs loop_watchdog_started with stack_dump_signal. Startup can never fail because of it. In scratch, round-1 router plus watchdog: the hang was reported 5.09 s in, and the dump names monitor.py line 243 _serve_monitor -> unsubscribe -> on_connect.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/_loop_watchdog.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/main.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_loop_watchdog.py"
+   ],
+   "tests": [
+    "tests/test_loop_watchdog.py (8): a 1 s blocking call on the loop gives exactly [loop_stall, loop_stall_recovered] WARNINGs and a faulthandler dump that names the blocking frame and the coroutine; a long stall is re-dumped every repeat interval; a busy but healthy loop gives no report; the no-fd fallback; env switches (off, threshold parsing); SIGUSR1 dumps on demand; the real main.py lifespan starts and stops the watcher thread (warmers stubbed); one JSON object per log line."
+   ],
+   "user_visible_change": "None. New log lines (loop_watchdog_started at start; loop_stall / loop_stall_recovered plus stacks only when the loop stalls 5 s or more).",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "K1",
+   "outcome": "fixed",
+   "what_changed": "POST /api/client-errors (routers/client_errors.py, mounted in main.py). It takes JSON {message, stack?, tab?, build?, url?, kind?}, or a text/plain sendBeacon body, and answers 204. Body cap 8 KB (413); other content types 415; malformed 422. Fields are cut to per-field limits, control characters are stripped, and credentials in the text are masked (api_key=, apisession=, *token=, *secret=, password=, Bearer). The url keeps only the path plus tab/sym. Each report becomes ONE structured line {\"event\":\"client_error\",...}. Nothing from the request is logged: no headers, cookies, IP or UA. The rate limit is 30 per minute per process. Reports over it still get 204 with X-Client-Error: dropped, and the dropped count is logged with the next report. There is no GET. The Host/Origin guard applies, as for every write.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/client_errors.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/main.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_client_errors.py"
+   ],
+   "tests": [
+    "tests/test_client_errors.py (16) on the real main.app"
+   ],
+   "user_visible_change": "None (a new endpoint for W2-UI-SHELL's reporters). Tailnet devices are read-only by default, so their reports get 403; the reporter must ignore failures (fire-and-forget).",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "K2",
+   "outcome": "fixed",
+   "what_changed": "GET /api/prefs gains a durable top-level migration block {legacy_import_at: ms|null, legacy_origin: str|null, legacy_keys: int, inferred: bool}. It is written once, by the first non-provisional (legacy) import with at least one valid item, into a new additive SQLite meta table. PRAGMA user_version stays 1, so a rollback still reads the file. Later PUTs, DELETEs and imports never clear it. 'inferred' is additive: a store migrated before K2 is backfilled once from per-record provenance using the UI's rule (live, non-provisional records whose origin is http(s) on port 3000). Such a block says inferred=true and takes the earliest such record's server time. Never migrated: {null, null, 0, false}. Records and block are read under one lock. Live (after the 14:48 restart) it returns {null, null, 0, false}: the owner has not migrated yet.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/prefs.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_prefs_migration.py"
+   ],
+   "tests": [
+    "tests/test_prefs_migration.py (18), including backfill, corrupt meta row, user_version unchanged, and the legacy-origin rule matching ui/lib/prefs/migration.ts"
+   ],
+   "user_visible_change": "None by itself. W2-UI-SHELL's migration notice and W2-OPS's prefs status row can read it.",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "K2-PM-provenance-consistency",
+   "outcome": "verified",
+   "what_changed": "No change needed. The PM-applied per-record provisional+origin in GET /api/prefs is untouched and consistent with K2. The K2 backfill uses the same rule as isLegacyBrowserOrigin plus the !provisional filter in ui/lib/prefs/migration.ts (lines 73-95), so UI fallback and server block agree.",
+   "files": [],
+   "tests": [
+    "tests/test_prefs_migration.py::test_legacy_origin_rule_matches_the_ui",
+    "existing tests/test_prefs.py still green"
+   ],
+   "user_visible_change": "None",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "C2-performance-04",
+   "outcome": "fixed",
+   "what_changed": "gold-preopen: each of the 6 Yahoo series is cached for GOLD_PREOPEN_YAHOO_TTL_S (default 30 s; 0 turns it off). Concurrent callers share one in-flight fetch per series on its own client, with the same 10 s deadline. Only usable answers are cached (bars or a price). The computation is unchanged. DEXP features-explorer: new routers/_features_explorer.py builds the SAME response from bounded pieces. A base (health block plus filtered row numbers), an order (only the sort column read, then the same sort_values) and a page (only the needed row groups and rows, in column batches, through a parquet round trip so dtypes match the original full read). Caches are keyed by file signature (path, inode, size, mtime_ns) and LRU-bounded. Builds are serialized; page reads are capped. It falls back to the original code (kept as legacy_page) for files it does not model.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/gold_preopen.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/_features_explorer.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/pipeline.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_gold_preopen.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_features_explorer.py"
+   ],
+   "tests": [
+    "tests/test_features_explorer.py (11): output compared with legacy_page on fixtures. 3/3 mutants caught (stable sort, nan_is_null, date format).",
+    "Real 352 MB file in scratch: 182 sort/filter/page cases, 0 differences from the original code.",
+    "Scratch RSS: original 0.77 s per click with RSS rising to 2.3 GB (peak 2.45 GB); new 0.6 s on the first click, then 40-65 ms, RSS flat at about 600 MB.",
+    "Live after the 14:48 restart (GET only): DEXP clicks 44-59 ms, RSS 289 -> 616 MB plateau (a cached frame, no longer +830 MB per click). gold-preopen 0.69 s cold, then 0.05-0.07 s.",
+    "tests/test_gold_preopen.py (17): TTL, coalescing, failures not cached, TTL 0. Negative control: 2 calls cost 12 Yahoo fetches on the original code and 6 on the new code."
+   ],
+   "user_visible_change": "DEXP pagination and sorting are about 15x faster after the first click. Within 30 s, gold-preopen reuses the same Yahoo answer the previous call got. Prices can be up to 30 s older than before; the as_of fields show it.",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "C2-performance-08",
+   "outcome": "fixed",
+   "what_changed": "ApiGzipMiddleware (routers/_api_gzip.py), installed in main.py inside the guard. It compresses /api/ HTTP JSON (application/json or +json) when the client accepts gzip, the body is at least 4 KB and arrives in one message, and there is no Content-Encoding or ETag. It never touches streams (the first message has more_body: SSE, NDJSON), WebSockets or the static UI, which has its own .gz files. Bodies of 256 KB or more are compressed in a worker thread. It adds Vary: Accept-Encoding.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/_api_gzip.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/main.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_api_gzip.py"
+   ],
+   "tests": [
+    "tests/test_api_gzip.py (32), including test_real_app_sse_stream_is_not_buffered and test_streams_are_never_buffered_or_compressed. Live: GET /api/stocks/list?limit=1500 went from 934,658 B to 113,235 B."
+   ],
+   "user_visible_change": "None visible. Big /api JSON responses are about 8x smaller (this matters over Tailscale).",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "C2-performance-09",
+   "outcome": "fixed",
+   "what_changed": "Before: one Redis pubsub connection plus one reader thread per monitor socket. Now one subscription and one reader thread per process feed every socket. Each socket keeps its own symbol filter and a bounded 256-entry outbox that drops the oldest quotes for a slow client, drained in order by its own sender task. This is the same _QuotesHub that carries the hang fix above.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/monitor.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_monitor_hub.py"
+   ],
+   "tests": [
+    "tests/test_monitor_hub.py (9)",
+    "Negative control: 3 sockets used 3 Redis connections on the original code and 1 on the new code"
+   ],
+   "user_visible_change": "None",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "completeness-06",
+   "outcome": "fixed",
+   "what_changed": "ui-api /docs and /redoc are off unless UI_API_DOCS=1 (read at start). /openapi.json stays. data-service and master-controller are unchanged.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/main.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_http_security.py"
+   ],
+   "tests": [
+    "tests/test_http_security.py (docs off by default, on with UI_API_DOCS=1). Live: /docs 404."
+   ],
+   "user_visible_change": "http://127.0.0.1:8010/docs and /redoc return 404 unless UI_API_DOCS=1 is set.",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "FX-PY-leftover-a-testserver-host",
+   "outcome": "fixed",
+   "what_changed": "shared/http_guard.py no longer allows 'testserver' by default. The TestClient Host 'testserver' and the peer 'testclient' are accepted only in test mode: PYTEST_CURRENT_TEST present, which pytest sets per test, or an explicit test_mode=True. A service started by uvicorn or launchd never has it. Other harnesses must list the name in GUARD_ALLOWED_HOSTS. No conftest needed a change.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/shared/http_guard.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/unit/test_http_guard.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_http_security.py"
+   ],
+   "tests": [
+    "tests/unit/test_http_guard.py (61 of its tests fail on the original guard)",
+    "Negative control: a 'testserver' rebind write is allowed on the original guard and refused on the new one",
+    "Live: Host: testserver -> 400"
+   ],
+   "user_visible_change": "None",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "FX-PY-leftover-b-env-injection",
+   "outcome": "fixed",
+   "what_changed": "icici_admin.validate_env_updates runs before os.environ or .env change. Keys: POST /api/positions/credentials and /session-token pass the ICICI_ENV_KEYS allowlist. Without an allowlist, keys must still look like env names and must not be posture or security keys (EXECUTION_*, GUARD_*, UI_API_*, PYTEST_*, FORWARDED_ALLOW_IPS, MONITOR_WS_MAX, PAPER_TRADES_DB, PREFS_DB). Values: no C0/C1 control or format characters (CR, LF, NUL, DEL, U+0085), no U+2028/2029, at most 1024 characters. The routes answer 400 with a hint and never echo the value.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/icici_admin.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/positions.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_env_injection.py"
+   ],
+   "tests": [
+    "tests/test_env_injection.py (51)",
+    "Negative control: the original code writes an injected EXECUTION_LIVE_ALLOWED line; the new code refuses it"
+   ],
+   "user_visible_change": "Broker tab: a credential or session token pasted with a line break or control character now gets a 400 ('paste the value again as one line ...') instead of being saved.",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "FX-PY-leftover-c-monitor-slot-leak",
+   "outcome": "fixed",
+   "what_changed": "In _serve_monitor everything after accept runs inside one try/finally, including the redis_unavailable send. A client that left while Redis was being reached no longer leaks its manager entry or hub subscriber. The _ws_active slot is released in ws_monitor's finally.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/monitor.py"
+   ],
+   "tests": [
+    "tests/test_monitor_hub.py::test_redis_unavailable_send_failure_does_not_leak, ::test_redis_down_keeps_the_socket_usable_and_releases_everything",
+    "Negative control: 1 leaked entry on the original code, 0 on the new code"
+   ],
+   "user_visible_change": "None",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "FX-PY-leftover-d-guard-docstring-xff",
+   "outcome": "fixed",
+   "what_changed": "Code and docstring now agree. UI_API_HOST is gone. A client is REMOTE when its socket peer is not loopback, or when ANY X-Forwarded-For entry is not a loopback address, so a Tailscale Serve client is remote whatever uvicorn's proxy-header setting. Remote clients may read: GET, HEAD, OPTIONS, WebSocket. Unsafe methods get 403 unless GUARD_ALLOW_REMOTE_WRITES=1. A local page that forges X-Forwarded-For only makes itself read-only. RUNBOOK wording for W2-OPS: docs/RUNBOOK_RESTORE.md section 7 as it stands now is accurate and needs no change. Its key sentence: 'Tailnet devices are read-only by default. Serve puts the device's tailnet address in X-Forwarded-For, so the guard counts every request through it as a REMOTE client (whatever uvicorn's proxy-header setting). Remote clients may read: every page, quotes, the live monitor WebSocket. Every write gets 403 \"clients on other machines are read-only\" ... To let tailnet devices write ... GUARD_ALLOW_REMOTE_WRITES=1'. If W2-OPS wants one more line: 'UI error reports (POST /api/client-errors) from a tailnet device are writes too, so they are refused in read-only mode; the page ignores this.'",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/shared/http_guard.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/unit/test_http_guard.py"
+   ],
+   "tests": [
+    "tests/unit/test_http_guard.py (XFF remote cases)",
+    "Negative control: an XFF remote write with proxy headers off is allowed on the original guard and refused on the new one"
+   ],
+   "user_visible_change": "Only for tailnet devices: writes are refused even if uvicorn's proxy-header handling is off. Local browsers and the app are unchanged.",
+   "reason_if_not_fixed": null
+  },
+  {
+   "id": "FX-PY-leftover-e-ruf100",
+   "outcome": "fixed",
+   "what_changed": "Removed the unused noqa directives (RUF100) in the guard tests.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/unit/test_http_guard.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_http_guard_controller.py"
+   ],
+   "tests": [
+    "ruff --line-length 130: 0 findings in both files (2 each before)"
+   ],
+   "user_visible_change": "None",
+   "reason_if_not_fixed": null
+  }
+ ],
+ "files_changed": [
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/shared/http_guard.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/main.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/icici_admin.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/monitor.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/gold_preopen.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/pipeline.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/positions.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/prefs.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/_api_gzip.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/_features_explorer.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/_loop_watchdog.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/client_errors.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_api_gzip.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_client_errors.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_env_injection.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_features_explorer.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_loop_watchdog.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_monitor_churn.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_monitor_hub.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_prefs_migration.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_gold_preopen.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/tests/test_http_security.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/unit/test_http_guard.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_http_guard_controller.py"
+ ],
+ "tests_run": [
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest services/ui-api/tests -q",
+   "result": "806 passed, 2 warnings (27.1 s)"
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest tests -q",
+   "result": "612 passed, 9 skipped, 2 warnings (60.5 s)"
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest scripts/tests -q",
+   "result": "175 passed, 1 failed: scripts/tests/test_ci_workflow.py::test_workflow_parses_and_lists_all_five_suites_plus_tsc expects jobs {python, ui}, but .github/workflows/ci.yml (edited 14:31 by another fixer) now also has 'desktop'. Not a W2-API file; patch request below."
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest services/execution-service/tests -q",
+   "result": "7 passed"
+  },
+  {
+   "command": "cd alpha_lab && /Users/sudheer/Desktop/jupyter_env/bin/python -m pytest tests -q",
+   "result": "20 passed"
+  },
+  {
+   "command": "pytest services/ui-api/tests/test_monitor_churn.py (x7 runs on the fix)",
+   "result": "2 passed each run; /health p50 0.4-0.5 ms, max 1.6-1.8 ms during 60-socket churn"
+  },
+  {
+   "command": "NEGATIVE CONTROL: same churn test with the round-1 routers/monitor.py (scratch copy), x3",
+   "result": "1 failed each run: /health TimeoutError after 2.00 s x3 (event loop blocked)"
+  },
+  {
+   "command": "pytest services/ui-api/tests/test_monitor_hub.py test_loop_watchdog.py",
+   "result": "9 + 8 passed"
+  },
+  {
+   "command": "scratch negctl_check.py (original vs new modules)",
+   "result": "guard testserver rebind: orig allowed, new refused; XFF remote write: orig allowed, new refused; .env injection: orig injects, new refused; monitor leak: orig 1, new 0; Redis connections for 3 sockets: orig 3, new 1; gold Yahoo fetches for 2 calls: orig 12, new 6; prefs migration block: orig absent, new present"
+  },
+  {
+   "command": "ruff check --line-length 130 (ruff_diff against the 13:59 snapshot, all 25 touched files)",
+   "result": "0 new findings; monitor.py 11 -> 5, guard tests 2 -> 0, new files 0"
+  },
+  {
+   "command": "mypy --follow-imports=skip shared/http_guard.py services/ui-api/routers/_loop_watchdog.py",
+   "result": "Success: no issues"
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python scripts/check_event_loop.py",
+   "result": "event-loop purity: 0 findings, OK"
+  },
+  {
+   "command": "cd services/ui-api && python -c 'import main'",
+   "result": "imports OK (tree importable)"
+  }
+ ],
+ "patch_requests": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_ci_workflow.py",
+   "old": "    assert set(doc[\"jobs\"]) == {\"python\", \"ui\"}",
+   "new": "    assert set(doc[\"jobs\"]) == {\"python\", \"ui\", \"desktop\"}",
+   "why": "ci.yml gained a macOS 'desktop' job at 14:31 (cargo/clippy/fmt, boot-page checks, shell tests, static export), but this test still pins the old job set. It is the only failure in scripts/tests (175 passed / 1 failed). Apply it only if the desktop job is meant to stay; the owner of ci.yml should confirm."
+  }
+ ],
+ "deploy_notes": [
+  "Restart ui-api once (./start-local.sh restart ui-api; ui-api has no freeze window). That loads the monitor hang fix (routers/monitor.py) and the loop-stall watchdog (main.py + routers/_loop_watchdog.py). Every other W2-API change was already loaded by the 14:48 restart; I checked live with GETs only: migration block present, /docs 404, stock list gzipped to 113 KB, Host testserver -> 400, DEXP 45 ms, gold-preopen cached.",
+  "Live risk until then: the 14:48 process runs an intermediate hub (listen() reader; UNSUBSCRIBE sent from a worker thread). In 3/3 test churns and in the real-Redis churn it did NOT block the event loop. It can still wedge the hub's lock, in which case new monitor sockets would get no quotes while HTTP stays up. So the restart is recommended but not an emergency.",
+  "After the restart, check the log: .logs/ui-api.log should contain {\"event\": \"loop_watchdog_started\", \"threshold_s\": 5.0, \"stack_dump_signal\": \"SIGUSR1\"}. If a stall happens: grep '\"loop_stall\"' .logs/ui-api.log, and every thread's stack follows that line. The event loop is the main thread (stack ending in uvicorn run); the frames above it name the stuck coroutine.",
+  "On-demand stacks without root: kill -USR1 $(lsof -nP -iTCP:8010 -sTCP:LISTEN -t). It writes into .logs/ui-api.log and the process keeps running. CAUTION: only after the restart, once loop_watchdog_started shows stack_dump_signal SIGUSR1. The 14:48 process has no handler, and SIGUSR1 would TERMINATE it. Tell W2-OPS before its watchdog uses USR1.",
+  "data-service and master-controller still run the 13:55 shared/http_guard.py (testserver allowed; older remote rule). Restart them to load the guard changes, outside the freeze windows 07:45-09:20 and 18:30-21:15 IST (fine now, before 18:30). Low urgency: both are loopback-only and not behind Serve.",
+  "No .env change needed. Optional settings: UI_API_LOOP_WATCHDOG=0 (off), UI_API_LOOP_STALL_S (default 5), GOLD_PREOPEN_YAHOO_TTL_S (default 30, 0 = off), UI_API_DOCS=1 (re-enable /docs, /redoc).",
+  "Evidence in scratch W2-API/hang/: round1_hang_traceback.log (faulthandler stacks of the reproduced hang), round1_sample.txt (native sample, same shape as live), wd_server.log (the new watchdog catching the round-1 hang 5.09 s in)."
+ ],
+ "open_issues": [
+  "scripts/tests/test_ci_workflow.py fails against the new ci.yml 'desktop' job (not a W2-API file; patch request above).",
+  "Process note, my own mistake: at 14:50 IST, while stopping my hung negative-control pytest, I ran `pkill -f \"negctl/services/ui-api\" -U 501`. On macOS the extra arguments become extra PATTERNS, so it also signalled every process of this user whose command line contains '-U' or '501', i.e. every scratch path under /private/tmp/claude-501/. Live services kept their PIDs (8010 since 14:48, 8001/8008 since 13:55, 3000 since 11:52, SuryaDhana.app). Other agents' scratch_server.py processes have start times of 14:50:35-14:50:45, so they were probably killed and restarted. Since then I stop processes by PID only.",
+  "An accidental twin W2-API instance (the duplicate the PM stopped at about 15:01) rewrote monitor.py's hub at 15:00. I reviewed its rework and kept it. On top of it I found and fixed the GC/pool part of the root cause, a close-order bug in _close_pubsub, and the reader outliving a closed loop. I added the quiet-channel constant and reconnect logging, and rewrote the tests. I found no other twin edits.",
+  "The churn regression test uses an in-test RESP server, not Redis, so CI needs no Redis. The real-Redis churn was run in scratch (hang/churn.py, hammer.py) and is not in CI.",
+  "Within the 30 s TTL, gold-preopen data can be up to 30 s older than before (as_of shows it). Set GOLD_PREOPEN_YAHOO_TTL_S lower if the owner prefers fresher data over latency."
+ ]
+}

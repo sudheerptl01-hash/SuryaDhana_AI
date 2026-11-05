@@ -1,0 +1,914 @@
+◉ SURYADHANA ▸ MARKETS
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:41:46
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,125.40
+−1.24%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:41 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+MKT
+MARKET MONITOR
+REGIME 0/4 · RISK-OFF
+NSE breadth · regime · sectors · movers · EOD 14 Oct 2026 · 1,403 stocks
+↻ REFRESH
+MARKET REGIME
+handbook stage 2 · health gauge, not a signal
+0
+/ 4
+RISK-OFF
+Exposure guide 0–20% · mostly cash
+at 0 for 9 sessions
+✕
+Nifty 500 above a rising 200-DMA
+22,038 vs 200-DMA 22,889
+✕
+≥ 50% of stocks above their 50- and 200-DMA
+29% above both
+✕
+Market Monitor 10-day ≥ 1.5 and new highs > new lows
+ratio 1.73 · NH−NL 10d avg -35
+✕
+≤ 4 distribution days in 25 and VIX below its 80th percentile
+11 distribution days · VIX 14.6 (71st percentile)
+NIFTY 500
+22,038
+-0.24% today · 200-DMA 22,889
+ADVANCES / DECLINES
+825 / 577
+ratio 1.43
+ABOVE 50-DMA
+33%
+20-DMA 37% (+5.7% today)
+ABOVE 200-DMA
+51%
+the long-term trend
+NEW 52W HIGHS / LOWS
+30 / 14
+10-day avg net -35
+MARKET MONITOR ±4%
+87 / 6
+5d 1.12 · 10d 1.73 (≥ 1.5 bullish)
+DISTRIBUTION DAYS
+11 / 25
+≥ 5 = institutions selling
+INDIA VIX
+14.60
+71st percentile of the past year
+VALUATION · NSE
+P/E, P/B and dividend yield as NSE publishes them for each index · P/E colour: well below / above NIFTY 50's · click an index to chart its history (NSE daily index files, + 2 live days)
+NIFTY 50 P/E since 2012 · now 19.3×, 1st percentile of days since Mar 2021 · median 22.14× · middle half 21.04–22.93× (shaded) · 90% of days 19.98–28.33×
+P/E
+P/B
+Div yield
+2012-02
+weekly · as NSE publishes it · dotted line: NSE moved P/E and yield to consolidated figures (Apr 2021); earlier readings are on a different basis and not compared · describes the past, not a forecast
+2026-10
+INDEX	P/E ↕	P/E VS HISTORY ↕	VS NIFTY P/E ↕	P/B ↕	DIV YIELD ↕	EARNINGS YIELD ↕	TODAY ↕	1M ↕	1Y ↕
+50	19.3×	1st · med 22.1×	—	2.78×	1.52%	5.2%	-0.44%	-3.3%	-10.0%
+NEXT 50	18.1×	1st · med 23.1×	0.94× 14th	3.31×	1.48%	5.5%	+0.10%	-4.3%	+1.2%
+500	21.7×	10th · med 23.9×	1.12× 84th	3.09×	1.31%	4.6%	-0.24%	-3.6%	-4.9%
+MIDCAP 150	28.3×	40th · med 30.2×	1.47× 64th	3.82×	0.97%	3.5%	-0.04%	-4.5%	+1.0%
+SMALLCAP 250	34.4×	90th · med 28.9×	1.78× 100th	3.43×	0.75%	2.9%	-0.01%	-2.8%	+5.4%
+BANK	13.1×	4th · med 16.1×	0.68× 26th	1.67×	1.13%	7.6%	-0.30%	-2.3%	-2.1%
+IT	18.7×	3rd · med 27.4×	0.97× 10th	5.28×	3.86%	5.3%	+1.14%	+4.3%	-14.3%
+FMCG	31.4×	1st · med 42.0×	1.62× 13th	7.52×	2.55%	3.2%	+1.21%	+0.5%	-16.5%
+PHARMA	39.8×	95th · med 33.6×	2.06× 98th	4.85×	0.58%	2.5%	-1.30%	-3.0%	+16.8%
+AUTO	29.2×	44th · med 30.2×	1.51× 58th	3.93×	1.16%	3.4%	-0.93%	-7.9%	-5.6%
+METAL	15.8×	37th · med 18.7×	0.81× 46th	2.55×	1.77%	6.3%	-0.67%	-7.6%	+18.7%
+REALTY	34.8×	4th · med 48.3×	1.80× 13th	3.59×	0.51%	2.9%	-0.86%	-3.0%	-7.4%
+ENERGY	14.4×	57th · med 13.7×	0.75× 97th	2.00×	2.47%	6.9%	+1.47%	-3.8%	+4.1%
+EQUITY VS BONDS · NIFTY EARNINGS YIELD − INDIA 10-YEAR YIELD
+monthly since 2012-02 · higher = equities cheaper relative to bonds · bond yield: OECD monthly average via FRED, published with a lag (latest 2026-07)
+2026-07: earnings yield 4.83% − 10Y 6.78% = -1.95 pts, 88th percentile of months since Apr 2021 · median -2.46 · middle half -2.7 to -2.21
+dotted line: NSE moved index P/E to consolidated earnings (Mar 2021), which raised the earnings yield, so only later months are compared · context, not a timing signal: the gap can stay wide or narrow for years
+ONE YEAR OF BREADTH
+amber = index (left axis) · cyan = % above 50-DMA · violet = % above 200-DMA (right axis) · strip = regime score
+0%
+25%
+50%
+75%
+100%
+20,528
+22,314
+24,099
+REGIME
+Oct 25
+Dec 25
+Feb 26
+Apr 26
+Jun 26
+Aug 26
+Oct 26
+MARKET MAP
+250 most traded stocks · size = turnover · colour = return (±3% full colour) · click a tile
+TODAY
+1D
+1W
+1M
+HDFCBANK
+-0.5%
+BSE
+-1.1%
+ICICIBANK
+-1.6%
+KOTAKBANK
+-0.2%
+SBIN
+-0.2%
+AXISBANK
+-0.3%
+BAJFINANCE
+-2.6%
+PAYTM
+-0.1%
+MCX
+-1.7%
+SHRIRAMFIN
+-3.9%
+POLICYBZR
+-0.7%
+GROWW
+-0.7%
+PINELABS
++1.4%
+IFCI
+-1.6%
+PFC
++0.7%
+JIOFIN
++0.6%
+CHOLAFIN
+-3.6%
+LICI
+-0.0%
+INDUSIND
+-1.3%
+SBILIFE
+-2.2%
+BANDHAN
+-2.0%
+FEDERA
++0.1%
+RECLTD
++1.6%
+HDFCAM
+-1.4%
+LICHSG
+-5.1%
+HDFCLI
+-2.9%
+IDFCFI
+-0.1%
+MUTHOO
+-1.8%
+RBLBAN
+-0.5%
+CANBK
++3.6%
+PNB
++1.7%
+BAJAJF
+-1.9%
+YESBAN
++1.7%
+LTF
+-3.3%
+ABCAPI
+-1.5%
+ICICIG
++1.3%
+BANKBA
+-4.0%
+AUBANK
++0.8%
+MFSL
+-3.1%
+UNIONB
++1.0%
+ANGEL
+-1.3%
+UJJIV
+IIFL
+INDIA
+FINANCIAL SERVICES -0.9%
+WELCORP
+-3.5%
+BEL
++0.6%
+BHEL
++4.9%
+KAYNES
+-0.5%
+POLYCAB
++0.5%
+HAL
++1.3%
+POWERINDI
++0.5%
+SUZLON
++1.5%
+GVT&D
+-0.0%
+APOLLO
++3.6%
+TMCV
+-0.4%
+SYRMA
+-0.1%
+TDPOWER
+-1.8%
+APARIND
+-0.5%
+CGPOWE
++1.1%
+CUMMIN
+-0.9%
+AZAD
+-3.8%
+ASHOKL
+-1.6%
+ABB
++0.3%
+ENRIN
++1.3%
+DATAP
+-0.1%
+WAARE
++2.6%
+MAZDO
++0.2%
+CPPLUS
++1.5%
+LLOYDS
++1.3%
+KEI
+COCHIN
+GRAPH
++1.0%
+HBLEN
++0.9%
+AEQUS
+-0.5%
+BDL
++0.3%
+GRSE
+KIRLO
+FINCAB
+RRKABE
+TEGA
+CAPITAL GOODS +0.2%
+M&M
+-2.5%
+ATHERENERG
+-1.9%
+MARUTI
+-0.6%
+TVSMOTO
+-1.0%
+TMPV
+-0.7%
+BAJAJ-AUT
+-0.7%
+EICHERMOT
+-1.1%
+HEROMOTOC
++0.4%
+OLAELEC
++2.0%
+SONACOMS
++0.5%
+MOTHE
+-0.1%
+BHARA
+-0.2%
+SANSE
+-1.3%
+HYUND
++0.0%
+TIIND
+FORCE
+AUTOMOBILE AND AUTO COMPONENTS -0.8%
+INFY
++2.4%
+TCS
++1.6%
+NETWEB
++0.3%
+HCLTECH
++0.1%
+COFORGE
+-0.1%
+TECHM
++2.0%
+WIPRO
++1.1%
+OFSS
+-2.1%
+PERSIS
+-1.5%
+INFORMATION TECHNOLOGY +1.1%
+DIVISLAB
+-2.8%
+APOLLOHOSP
+-0.6%
+LAURUSLABS
+-1.1%
+SUNPHARM
+-1.4%
+DRREDDY
+-1.9%
+MAXHEAL
+-1.0%
+ZYDUSL
+-0.7%
+WOCKPH
++0.1%
+TORNTP
+-1.4%
+AUROPH
+-1.3%
+FORTIS
+-0.8%
+LUPIN
+-0.0%
+MANKIN
+ACUTAA
+NEULA
+BIOCO
+ALKEM
+HEALTHCARE -1.2%
+RELIANCE
++0.7%
+COALINDIA
++2.1%
+CHENNPE
++5.9%
+ONGC
++1.3%
+HINDPE
++0.6%
+BPCL
++0.8%
+GAIL
+-0.8%
+AEGISL
++7.0%
+IOC
+OIL GAS & CONSUMABLE FUELS +1.6%
+ETERNAL
+-1.4%
+MEESHO
+-5.1%
+LENSKART
+-0.1%
+SWIGGY
+-0.6%
+TRENT
+-0.6%
+NAUKRI
+-0.2%
+DMART
++0.9%
+INDHOT
++0.2%
+NYKAA
+-0.4%
+VMM
+PWL
+CONSUMER SERVICES -1.0%
+CUPID
++0.4%
+ITC
++0.2%
+HINDUNIL
++1.1%
+VBL
++0.1%
+NESTLE
++3.7%
+RADIC
++0.3%
+UNITD
++0.8%
+FAST MOVING CONSUMER … +0.8%
+TATASTEEL
+-0.3%
+ADANIENT
++1.0%
+HINDALCO
+-2.2%
+HINDCOPP
+-0.1%
+VEDL
+-2.5%
+SAIL
+-1.6%
+HINDZIN
+-1.8%
+JSWSTEE
+-0.0%
+NATIONA
++0.7%
+METALS & MINING -0.7%
+VAML
+-1.7%
+RAYMOND
++2.3%
+RATNAVE
+-3.8%
+TFCILTD
++1.3%
+SHADO
++1.6%
+FCL
++5.9%
+DELTAC
+MANIND
+UNCLASSIFIED +0.4%
+ADANIPOW
++4.9%
+NTPC
++0.9%
+POWER
+-0.6%
+ADANI
++5.2%
+ADANI
++2.4%
+TATAP
++2.3%
+JSWEN
+POWER +3.0%
+TITAN
+-1.0%
+KALYANKJ
+-1.2%
+DIXON
++0.6%
+BLUES
+LGEIN
+SKYGO
+CONSUMER DUR… -0.5%
+ADANIPORTS
+-0.8%
+INDIGO
+-1.7%
+JSWINF
+DELHIV
+SERVICES -0.5%
+BHARTIARTL
+-0.7%
+TELECOMMUN… -0.6%
+SOLARIN
++0.4%
+UPL
++3.2%
+HSCL
+PIDIL
+NAVIN
+TATAC
+CHEMICALS +0.8%
+LT
+-0.9%
+CONSTRUCTION -0.6%
+DLF
++0.3%
+REALTY -1.0%
+ULTRACEMC
++0.4%
+GRASIM
+INDUSTRY ROTATION
+relative strength vs the NSE universe (→) and its momentum (↑) · 8-week tails · clockwise rotation is typical
+ALL
+LEADING 5
+WEAKENING 0
+LAGGING 9
+IMPROVING 5
+LEADING
+WEAKENING
+LAGGING
+IMPROVING
+RS-ratio → stronger than the market
+↑ RS-momentum
+Automobile and Auto C…
+Capital Goods
+Chemicals
+Construction
+Construction Materials
+Consumer Durables
+Consumer Services
+Fast Moving Consumer …
+Financial Services
+Healthcare
+Information Technology
+Media Entertainment &…
+Metals & Mining
+Oil Gas & Consumable …
+Power
+Realty
+Services
+Telecommunication
+Textiles
+LEADING
+Capital Goods
+101.3 · 100.5
+Fast Moving Consumer Goods
+100.1 · 100.8
+Media Entertainment & Publication
+103.8 · 102.5
+Oil Gas & Consumable Fuels
+100.6 · 100.4
+Textiles
+100.5 · 100.7
+IMPROVING
+Construction
+95.4 · 100.6
+Consumer Durables
+96.8 · 100.2
+Information Technology
+98.5 · 101.5
+Power
+97.7 · 101.2
+Telecommunication
+99.6 · 101.5
+WEAKENING
+LAGGING
+Automobile and Auto Components
+96.6 · 97.8
+Chemicals
+99.0 · 99.9
+Construction Materials
+94.0 · 99.3
+Consumer Services
+98.9 · 98.7
+Financial Services
+98.3 · 99.5
+Healthcare
+99.1 · 97.5
+Metals & Mining
+95.8 · 98.8
+Realty
+95.3 · 99.0
+Services
+99.3 · 99.3
+WHO HOLDS INDEX FUTURES
+NSE participant-wise open interest · 2026-10-14 · contracts · options = long calls − short calls − (long puts − short puts)
+PARTICIPANT	INDEX FUT. LONG	SHORT	NET ↕	LONG % ↕	NET CHG 1D	NET CHG 5D	INDEX OPTIONS (BULL − BEAR)
+Foreign institutions (FII)	34,282	3.31 L	−2.97 L	9.4%	−7,202	+1,588	−8.78 L
+Domestic institutions (DII)	48,983	18,961	+30,022	72.1%	−4,509	−3,897	+22,433
+Proprietary traders	54,685	33,368	+21,317	62.1%	−3,790	+2,351	−38,685
+Clients (retail + HNI)	2.97 L	51,460	+2.45 L	85.2%	+15,501	−42	+8.94 L
+CASH MARKET NET BUYING · NSE + BSE, provisional · history collected from 12 Oct 2026
+14 Oct FII −₹1,857 crDII +₹2,670 cr
+4 sessions FII −₹8,440 crDII +₹12,898 cr
+month to date (4 collected) FII −₹8,440 crDII +₹12,898 cr
+FII index-futures long ratio, 1 year · now 9.4% · 50% = balanced · tested: does not predict NIFTY over 5–20 sessions (RSCH)
+5
+19
+32
+2025-10-10
+2026-10-14
+INDUSTRY TABLE
+equal-weighted returns of liquid stocks in each NSE industry · click an industry for its stocks
+1D
+1W
+1M
+3M
+INDUSTRY	N	1D ↕	1W ↕	1M ↕	3M ↕	> 50-DMA ↕
+Media Entertainment & Publication	8	+0.9%	+4.2%	+6.4%	+9.3%	62%
+Information Technology	36	+1.1%	+6.1%	+2.5%	-0.9%	50%
+Fast Moving Consumer Goods	45	+1.0%	+0.8%	-0.3%	+0.6%	29%
+Telecommunication	10	+0.3%	-0.3%	-0.8%	-7.3%	20%
+Power	18	+1.9%	+0.3%	-1.4%	-10.3%	28%
+Capital Goods	110	+0.7%	-1.2%	-1.9%	+0.2%	39%
+Textiles	11	+1.7%	-0.6%	-2.0%	-1.7%	36%
+Oil Gas & Consumable Fuels	17	+1.9%	-1.1%	-2.1%	-0.3%	35%
+Chemicals	45	+1.2%	-0.7%	-3.3%	-3.5%	22%
+Services	26	+0.4%	-0.1%	-3.3%	-2.7%	38%
+Consumer Durables	40	+0.5%	-0.1%	-4.3%	-6.1%	15%
+Financial Services	120	-0.4%	+0.6%	-4.5%	-5.9%	24%
+Realty	16	+0.3%	0.0%	-4.5%	-11.1%	12%
+Consumer Services	46	+0.5%	-1.8%	-4.6%	-1.5%	30%
+Diversified	3	+2.5%	+1.2%	-4.7%	-13.8%	33%
+Automobile and Auto Components	48	+0.3%	-0.3%	-5.6%	-1.9%	10%
+Construction	22	+0.3%	-0.1%	-6.0%	-12.8%	18%
+Healthcare	70	-0.4%	-3.2%	-6.4%	-2.9%	17%
+Metals & Mining	24	0.0%	-1.9%	-6.5%	-8.6%	4%
+Construction Materials	16	-0.3%	-1.3%	-7.3%	-15.7%	0%
+Utilities	4	+1.4%	-1.9%	-10.2%	-14.1%	0%
+TOP GAINERS
+STOCK	CLOSE	CHG ↕	₹ CR ↕	VS 52W H
+
+TARIL
+RESULTS
+	349.50	+14.97%	2,413	-30.0%
+
+NIBE
+	1,381.10	+13.72%	182	-25.3%
+
+WSTCSTPAPR
+	940.45	+13.55%	571	-3.8%
+
+VEDPOWER
+	34.13	+12.75%	863	—
+
+V2RETAIL
+	170.64	+12.67%	493	-34.2%
+
+KROSS
+	272.25	+11.67%	282	-3.8%
+
+ELECON
+	486.90	+10.66%	1,117	-21.8%
+
+ZOTA
+	1,420.10	+9.14%	40	-18.4%
+
+IDBI
+	90.39	+8.98%	1,342	-23.6%
+
+RAIN
+	237.08	+7.89%	335	-5.9%
+
+JGCHEM
+	681.70	+7.73%	47	-0.9%
+
+KOPRAN
+	283.95	+7.41%	27	-4.0%
+TOP LOSERS
+STOCK	CLOSE	CHG ↕	₹ CR ↕	VS 52W H
+
+ARSSBL
+RESULTS
+	515.60	-5.17%	60	-35.1%
+
+LICHSGFIN
+	535.00	-5.14%	325	-10.6%
+
+MEESHO
+	228.35	-5.12%	2,003	-10.2%
+
+AHCL
+	29.04	-4.97%	36	-83.2%
+
+PNCINFRA
+	148.62	-4.39%	762	-49.2%
+
+FERMENTA
+	499.10	-4.20%	11	-14.3%
+
+PIRAMALFIN
+	1,951.10	-4.18%	51	-16.1%
+
+HDBFS
+	583.75	-4.15%	65	-26.7%
+
+BANKBARODA
+	229.00	-3.96%	416	-29.6%
+
+KPL
+	3,394.10	-3.94%	8	-14.1%
+
+SHRIRAMFIN
+	950.00	-3.85%	614	-17.7%
+
+AZAD
+	2,871.10	-3.84%	175	-8.2%
+MOST ACTIVE (₹ TURNOVER)
+STOCK	CLOSE	CHG ↕	₹ CR ↕	VS 52W H
+
+TCS
+	2,304.90	+1.57%	2,805	-31.2%
+
+TARIL
+RESULTS
+	349.50	+14.97%	2,413	-30.0%
+
+INFY
+	1,088.00	+2.44%	2,401	-37.0%
+
+MEESHO
+	228.35	-5.12%	2,003	-10.2%
+
+HDFCBANK
+	710.70	-0.46%	1,706	-30.4%
+
+BHEL
+RESULTS
+	464.00	+4.89%	1,700	0.0%
+
+AXISBANK
+	1,264.60	-0.30%	1,456	-10.8%
+
+TATAELXSI
+RESULTS
+	3,623.10	+5.73%	1,454	-39.1%
+
+IDBI
+	90.39	+8.98%	1,342	-23.6%
+
+RELIANCE
+	1,174.60	+0.68%	1,288	-27.1%
+
+HCLTECH
+	1,327.00	+0.08%	1,231	-25.5%
+
+ELECON
+	486.90	+10.66%	1,117	-21.8%
+VOLUME SHOCKERS (≥ 3× AVG)
+STOCK	CLOSE	CHG ↕	VOL × ↕	VS 52W H
+
+PNCINFRA
+	148.62	-4.39%	25.1×	-49.2%
+
+TARIL
+RESULTS
+	349.50	+14.97%	23.5×	-30.0%
+
+NIBE
+	1,381.10	+13.72%	20.3×	-25.3%
+
+V2RETAIL
+	170.64	+12.67%	18.2×	-34.2%
+
+ELECON
+	486.90	+10.66%	17.3×	-21.8%
+
+VEDPOWER
+	34.13	+12.75%	16.1×	—
+
+TATAELXSI
+RESULTS
+	3,623.10	+5.73%	15.8×	-39.1%
+
+WSTCSTPAPR
+	940.45	+13.55%	14.6×	-3.8%
+
+SHRINGARMS
+	317.74	+2.22%	12.5×	-2.2%
+
+IDBI
+	90.39	+8.98%	11.7×	-23.6%
+
+KROSS
+	272.25	+11.67%	10.7×	-3.8%
+
+BHARATCOAL
+	32.75	+5.27%	8.7×	-27.4%
+NEW 52-WEEK HIGHS
+STOCK	CLOSE	CHG ↕	₹ CR ↕	VS 52W H
+
+BHEL
+RESULTS
+	464.00	+4.89%	1,700	0.0%
+
+SHRINGARMS
+	317.74	+2.22%	792	-2.2%
+
+WSTCSTPAPR
+	940.45	+13.55%	571	-3.8%
+
+AEROFLEX
+	568.70	+1.99%	469	-7.3%
+
+CPPLUS
+	4,440.30	+1.46%	317	-3.9%
+
+TFCILTD
+	160.80	+1.33%	232	-0.7%
+
+NEOGEN
+	2,687.90	+4.60%	196	-3.5%
+
+ADVANCE
+	155.67	+8.13%	138	-3.6%
+
+SBC
+	64.11	-0.06%	106	-3.2%
+
+THELEELA
+	591.30	-1.65%	100	-3.9%
+
+UTTAMSUGAR
+	380.05	+1.58%	98	-5.2%
+
+SHANTIGOLD
+	387.90	-0.65%	89	-4.2%
+NEW 52-WEEK LOWS
+STOCK	CLOSE	CHG ↕	₹ CR ↕	VS 52W H
+
+SBILIFE
+	1,650.00	-2.20%	263	-22.6%
+
+FORTIS
+	750.00	-0.85%	164	-32.1%
+
+MFSL
+	1,284.00	-3.12%	103	-32.2%
+
+VMM
+	96.00	-1.03%	98	-36.4%
+
+IOC
+	127.80	+1.32%	88	-32.4%
+
+JWL
+	209.41	-3.15%	40	-41.5%
+
+NATCOPHARM
+	782.65	-0.82%	37	-36.2%
+
+IXIGO
+	138.46	-1.47%	22	-59.2%
+
+CRIZAC
+	156.27	-0.95%	6	-53.1%
+
+GREENPANEL
+	147.83	-1.77%	3	-52.9%
+
+ERIS
+	1,149.60	-0.02%	3	-33.9%
+
+MEDPLUS
+	613.25	-0.61%	3	-40.0%
+Universe: EQ-series stocks ≥ ₹20 with a 20-day median turnover ≥ ₹1 cr, ETFs excluded (movers need ≥ ₹5 cr). Prices adjusted for splits and bonuses, delisted stocks included. Regime score from the SuryaDhana Scanner Handbook; in its backtest, breakouts bought on score-4 days did worst, so read it as market health, not a buy signal. Click any stock for its chart.
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

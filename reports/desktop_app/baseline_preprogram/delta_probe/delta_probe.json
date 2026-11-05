@@ -1,0 +1,482 @@
+{
+ "meta": {
+  "a": "http://127.0.0.1:8097",
+  "b": "http://127.0.0.1:8010",
+  "tab": "brief",
+  "observe_s": 15.0
+ },
+ "engines": {
+  "chromium": {
+   "version": "155.0.8059.85",
+   "a": {
+    "gate": {
+     "seen": false,
+     "shown_at": null,
+     "gone_at": null
+    },
+    "fcp_ms": 380,
+    "html": {
+     "sd_shell": null,
+     "shell_top": null,
+     "inline_style": null,
+     "class": "dark"
+    },
+    "body": {
+     "padding_top": "0px",
+     "inline_style": null
+    },
+    "fonts_loaded": [
+     "Chakra Petch 500 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "Chakra Petch 600 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "Chakra Petch 700 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "JetBrains Mono 400 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "JetBrains Mono 400 normal [U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2]",
+     "JetBrains Mono 600 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "JetBrains Mono 600 normal [U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2]",
+     "JetBrains Mono 700 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "JetBrains Mono 700 normal [U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2]"
+    ],
+    "toast_rules_in_css": {
+     ".z-\\[9999\\]": false,
+     ".right-4": false,
+     ".pointer-events-auto": false,
+     ".translate-x-4": false,
+     ".transition-opacity": false,
+     ".break-words": false
+    },
+    "local_storage_keys": [
+     "suryadhana.prefs.mode",
+     "suryadhana.watchlist"
+    ],
+    "ready_ms": 828,
+    "api_requests": 56,
+    "font_files_rt": [],
+    "font_files": [
+     "fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkeJI91R5_F_gUk0w.woff2",
+     "fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkeQI51R5_F_gUk0w.woff2",
+     "fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkebIl1R5_F_gUk0w.woff2",
+     "fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwgknk-6nFg.woff2",
+     "fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwgknk-4.woff2"
+    ],
+    "non_api_requests": {
+     "GET /": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 6
+     },
+     "GET /_next/static/*.css": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 8
+     },
+     "GET /_next/static/*.js": {
+      "count": 9,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 8
+     },
+     "GET /icon.svg": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 697
+     },
+     "third-party fonts.googleapis.com": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 9
+     },
+     "third-party fonts.gstatic.com": {
+      "count": 5,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 371
+     }
+    }
+   },
+   "b": {
+    "gate": {
+     "seen": true,
+     "shown_at": 4.8999999994412065,
+     "gone_at": 90.59999999962747
+    },
+    "fcp_ms": 100,
+    "html": {
+     "sd_shell": "browser",
+     "shell_top": "0px",
+     "inline_style": "background: rgb(5, 7, 10); color-scheme: dark; --shell-top: 0px;",
+     "class": "dark"
+    },
+    "body": {
+     "padding_top": "0px",
+     "inline_style": "background:#05070a;color:#d6dbe4"
+    },
+    "fonts_loaded": [
+     "Chakra Petch 500 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "Chakra Petch 500 normal [U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2]",
+     "Chakra Petch 600 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "Chakra Petch 600 normal [U+100-2BA, U+2BD-2C5, U+2C7-2CC, U+2CE-2]",
+     "Chakra Petch 700 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "JetBrains Mono 400 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "JetBrains Mono 400 normal [U+20B9]",
+     "JetBrains Mono 600 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]",
+     "JetBrains Mono 600 normal [U+20B9]",
+     "JetBrains Mono 700 normal [U+0-FF, U+131, U+152-153, U+2BB-2BC, U+2]"
+    ],
+    "toast_rules_in_css": {
+     ".z-\\[9999\\]": true,
+     ".right-4": true,
+     ".pointer-events-auto": true,
+     ".translate-x-4": true,
+     ".transition-opacity": true,
+     ".break-words": true
+    },
+    "local_storage_keys": [
+     "suryadhana.prefs.dirty",
+     "suryadhana.prefs.hash",
+     "suryadhana.prefs.legacy",
+     "suryadhana.prefs.meta",
+     "suryadhana.prefs.mode",
+     "suryadhana.watchlist"
+    ],
+    "ready_ms": 519,
+    "api_requests": 56,
+    "font_files_rt": [
+     "/fonts/chakra-petch-v13-500-latin-ext.woff2",
+     "/fonts/chakra-petch-v13-500-latin.woff2",
+     "/fonts/chakra-petch-v13-600-latin-ext.woff2",
+     "/fonts/chakra-petch-v13-600-latin.woff2",
+     "/fonts/chakra-petch-v13-700-latin.woff2",
+     "/fonts/jetbrains-mono-v24-latin.woff2"
+    ],
+    "font_files": [
+     "/fonts/chakra-petch-v13-500-latin-ext.woff2",
+     "/fonts/chakra-petch-v13-500-latin.woff2",
+     "/fonts/chakra-petch-v13-600-latin-ext.woff2",
+     "/fonts/chakra-petch-v13-600-latin.woff2",
+     "/fonts/chakra-petch-v13-700-latin.woff2",
+     "/fonts/jetbrains-mono-v24-latin.woff2"
+    ],
+    "non_api_requests": {
+     "GET /": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 2
+     },
+     "GET /_next/static/*.css": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 7
+     },
+     "GET /_next/static/*.js": {
+      "count": 53,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 7
+     },
+     "GET /api/prefs": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 55
+     },
+     "GET /fonts/chakra-petch-v13-500-latin-ext.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 224
+     },
+     "GET /fonts/chakra-petch-v13-500-latin.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 187
+     },
+     "GET /fonts/chakra-petch-v13-600-latin-ext.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 223
+     },
+     "GET /fonts/chakra-petch-v13-600-latin.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 94
+     },
+     "GET /fonts/chakra-petch-v13-700-latin.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 8
+     },
+     "GET /fonts/jetbrains-mono-v24-latin.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 8
+     },
+     "GET /health": {
+      "count": 2,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 94
+     },
+     "GET /icon.svg": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 55
+     }
+    }
+   }
+  },
+  "webkit": {
+   "version": "26.4",
+   "a": {
+    "gate": {
+     "seen": false,
+     "shown_at": null,
+     "gone_at": null
+    },
+    "fcp_ms": 489,
+    "html": {
+     "sd_shell": null,
+     "shell_top": null,
+     "inline_style": null,
+     "class": "dark"
+    },
+    "body": {
+     "padding_top": "0px",
+     "inline_style": null
+    },
+    "fonts_loaded": [
+     "Chakra Petch 600 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "Chakra Petch 700 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "JetBrains Mono 400 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "JetBrains Mono 400 normal [U+100-2ba, U+2bd-2c5, U+2c7-2cc, U+2ce-2]",
+     "JetBrains Mono 500 normal [U+100-2ba, U+2bd-2c5, U+2c7-2cc, U+2ce-2]",
+     "JetBrains Mono 600 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "JetBrains Mono 600 normal [U+100-2ba, U+2bd-2c5, U+2c7-2cc, U+2ce-2]",
+     "JetBrains Mono 700 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "JetBrains Mono 700 normal [U+100-2ba, U+2bd-2c5, U+2c7-2cc, U+2ce-2]"
+    ],
+    "toast_rules_in_css": {
+     ".z-\\[9999\\]": false,
+     ".right-4": false,
+     ".pointer-events-auto": false,
+     ".translate-x-4": false,
+     ".transition-opacity": false,
+     ".break-words": false
+    },
+    "local_storage_keys": [
+     "suryadhana.prefs.mode",
+     "suryadhana.watchlist"
+    ],
+    "ready_ms": 875,
+    "api_requests": 56,
+    "font_files_rt": [],
+    "font_files": [
+     "fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkeJI91R5_F_gUk0w.woff2",
+     "fonts.gstatic.com/s/chakrapetch/v13/cIflMapbsEk7TDLdtEz1BwkeQI51R5_F_gUk0w.woff2",
+     "fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwgknk-6nFg.woff2",
+     "fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwgknk-4.woff2"
+    ],
+    "non_api_requests": {
+     "GET /": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 58
+     },
+     "GET /_next/static/*.css": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 65
+     },
+     "GET /_next/static/*.js": {
+      "count": 9,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 65
+     },
+     "third-party fonts.googleapis.com": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 66
+     },
+     "third-party fonts.gstatic.com": {
+      "count": 4,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 393
+     }
+    }
+   },
+   "b": {
+    "gate": {
+     "seen": true,
+     "shown_at": 8,
+     "gone_at": 102.00000000000001
+    },
+    "fcp_ms": 105,
+    "html": {
+     "sd_shell": "browser",
+     "shell_top": "0px",
+     "inline_style": "background: rgb(5, 7, 10); color-scheme: dark; --shell-top: 0px;",
+     "class": "dark"
+    },
+    "body": {
+     "padding_top": "0px",
+     "inline_style": "background:#05070a;color:#d6dbe4"
+    },
+    "fonts_loaded": [
+     "Chakra Petch 500 normal [U+100-2ba, U+2bd-2c5, U+2c7-2cc, U+2ce-2]",
+     "Chakra Petch 600 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "Chakra Petch 600 normal [U+100-2ba, U+2bd-2c5, U+2c7-2cc, U+2ce-2]",
+     "Chakra Petch 700 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "JetBrains Mono 400 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "JetBrains Mono 400 normal [U+20b9]",
+     "JetBrains Mono 500 normal [U+20b9]",
+     "JetBrains Mono 600 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]",
+     "JetBrains Mono 600 normal [U+20b9]",
+     "JetBrains Mono 700 normal [U+0-ff, U+131, U+152-153, U+2bb-2bc, U+2]"
+    ],
+    "toast_rules_in_css": {
+     ".z-\\[9999\\]": true,
+     ".right-4": true,
+     ".pointer-events-auto": true,
+     ".translate-x-4": true,
+     ".transition-opacity": true,
+     ".break-words": true
+    },
+    "local_storage_keys": [
+     "suryadhana.prefs.dirty",
+     "suryadhana.prefs.hash",
+     "suryadhana.prefs.legacy",
+     "suryadhana.prefs.meta",
+     "suryadhana.prefs.mode",
+     "suryadhana.watchlist"
+    ],
+    "ready_ms": 549,
+    "api_requests": 56,
+    "font_files_rt": [
+     "/fonts/chakra-petch-v13-500-latin-ext.woff2",
+     "/fonts/chakra-petch-v13-600-latin-ext.woff2",
+     "/fonts/chakra-petch-v13-600-latin.woff2",
+     "/fonts/chakra-petch-v13-700-latin.woff2",
+     "/fonts/jetbrains-mono-v24-latin.woff2"
+    ],
+    "font_files": [
+     "/fonts/chakra-petch-v13-500-latin-ext.woff2",
+     "/fonts/chakra-petch-v13-600-latin-ext.woff2",
+     "/fonts/chakra-petch-v13-600-latin.woff2",
+     "/fonts/chakra-petch-v13-700-latin.woff2",
+     "/fonts/jetbrains-mono-v24-latin.woff2"
+    ],
+    "non_api_requests": {
+     "GET /": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 4
+     },
+     "GET /_next/static/*.css": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 11
+     },
+     "GET /_next/static/*.js": {
+      "count": 53,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 12
+     },
+     "GET /api/prefs": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 65
+     },
+     "GET /fonts/chakra-petch-v13-500-latin-ext.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 266
+     },
+     "GET /fonts/chakra-petch-v13-600-latin-ext.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 265
+     },
+     "GET /fonts/chakra-petch-v13-600-latin.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 109
+     },
+     "GET /fonts/chakra-petch-v13-700-latin.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 13
+     },
+     "GET /fonts/jetbrains-mono-v24-latin.woff2": {
+      "count": 1,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 12
+     },
+     "GET /health": {
+      "count": 2,
+      "statuses": [
+       "200"
+      ],
+      "first_ms": 105
+     }
+    }
+   }
+  }
+ }
+}

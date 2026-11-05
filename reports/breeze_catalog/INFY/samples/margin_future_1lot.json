@@ -1,0 +1,24 @@
+{
+ "Success": {
+  "margin_calulation": [
+   {
+    "strike_price": "0",
+    "quantity": "400",
+    "right": "Others",
+    "product": "Futures",
+    "action": "Buy",
+    "price": "0",
+    "expiry_date": "29-Sep-2026",
+    "stock_code": "INFTEC"
+   }
+  ],
+  "non_span_margin_required": "0",
+  "order_value": "65827.84",
+  "order_margin": "0",
+  "trade_margin": null,
+  "block_trade_margin": "0",
+  "span_margin_required": "65827.84"
+ },
+ "Status": 200,
+ "Error": null
+}

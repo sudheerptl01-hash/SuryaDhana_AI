@@ -1,0 +1,171 @@
+◉ SURYADHANA ▸ SYSTEM
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:42:23
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,125.10
+−1.25%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:42 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+SYS
+SYSTEM
+● MASTER CONTROLLER ONLINE
+scheduler · jobs · latency · logs · 03:42:19 IST
+SYSTEM STATUS
+checked 03:41:59
+↻
+⚙ ICICI
+data-service
+HEALTHY
+DuckDB
+MOUNTED
+Live quotes · ICICI Breeze
+CONNECTED
+● LIVE · ICICI Breeze
+⚡ QUICK REFRESH (3)
+SYSTEM TELEMETRY
+
+Master controller online· 03:42:19 IST
+
+AUTOPILOT: OFF
+
+NEXT JOB
+
+Filing Alerts for your stocks (every 5 min)
+
+4h 17m
+
+BROKER LATENCY
+
+—
+
+ICICI execution svc
+
+CPU
+
+6.3%
+
+MEMORY
+
+59.3%
+
+11.91GB / 25.77GB
+
+JOB	SCHEDULE (IST)	NEXT RUN IN	LAST LATENCY	STATUS
+Filing Alerts for your stocks (every 5 min)	every 5 min · 08:00–22:55 Mon–Sat	4h 17m	—	—
+ICICI Session Refresh (TOTP login)	08:00 IST · Mon–Fri (TOTP login)	4h 17m	—	—
+Pre-Market Data Sync	08:30 IST	4h 47m	—	—
+Gold Pre-Open Snapshot (fair open)	08:45 IST · Mon–Fri	5h 2m	—	—
+Pre-market Note	08:50 IST · Mon–Fri	5h 7m	—	—
+Market internals sample (breadth, every 2 min)	every 2 min · 09:15–15:31 Mon–Fri	5h 17m	—	—
+XGBoost + RL Inference Cycle	09:15–15:30 IST · every 15 min	5h 17m	—	—
+Move Alerts (holdings ±5/10%, NIFTY vs 200-DMA)	every 5 min · 09:20–15:30 Mon–Fri	5h 17m	—	—
+Price Alerts (every minute in market hours)	every minute · 09:15–15:30 Mon–Fri	5h 17m	—	—
+NSE Pre-open Book Capture	09:09:30 IST · Mon–Fri	5h 27m	—	—
+Gold Open Capture (ICICI)	09:10 IST · Mon–Fri	5h 27m	—	—
+EOD Portfolio Rebalancing	15:15 IST	11h 32m	—	—
+Closing Note	15:40 IST · Mon–Fri	11h 57m	—	—
+EOD Data Refresh + ML Dataset Build	18:30 IST · Mon–Fri	14h 47m	—	—
+Index Valuation History	19:15 IST · Mon–Fri	15h 32m	—	—
+Shared Evening Snapshot	—	15h 37m	—	—
+Decision Desk — Paper Cycle	19:30 IST · Mon–Fri (paper)	15h 47m	—	—
+News Scanner Track Record	19:45 IST · Mon–Fri	16h 2m	—	—
+S1 Paper Shadow (alpha_lab)	—	16h 7m	—	—
+NSE Positions Catch-up (OI, deals, MTF)	20:30 IST · Mon–Fri	16h 47m	—	—
+Results Release Capture (NSE)	20:45 IST · Mon–Fri	17h 2m	—	—
+Daily Market Wrap	21:00 IST · Mon–Fri	17h 17m	—	—
+Overnight RL Retraining	23:00 IST	19h 17m	—	—
+Nightly DuckDB Backup	—	22h 32m	—	—
+Weekly Decision Journal (Friday)	—	40h 27m	—	—
+NSE Filings Weekly (insider, shareholding)	Sat 09:00 IST	53h 17m	—	—
+Financials sweep (FA / RV cache, weekly)	Sat 10:00 IST (FA / RV cache)	54h 17m	—	—
+
+LIVE SYSTEM LOGS
+
+2 lines
+03:26:57
+INFO
+[scheduler]
+APScheduler started (IST)
+03:26:57
+INFO
+[alerts]
+SuryaDhana Online
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

@@ -1,0 +1,52 @@
+[
+ {
+  "SYMBOL": "HDFCBANK",
+  "SECURITY": " HDFC BANK LTD.",
+  "WEIGHTAGE(%)": 10.64
+ },
+ {
+  "SYMBOL": "ICICIBANK",
+  "SECURITY": " ICICI BANK LTD.",
+  "WEIGHTAGE(%)": 8.98
+ },
+ {
+  "SYMBOL": "RELIANCE",
+  "SECURITY": " RELIANCE INDUSTRIES LTD.",
+  "WEIGHTAGE(%)": 7.82
+ },
+ {
+  "SYMBOL": "BHARTIARTL",
+  "SECURITY": " BHARTI AIRTEL LTD.",
+  "WEIGHTAGE(%)": 5.13
+ },
+ {
+  "SYMBOL": "LT",
+  "SECURITY": " LARSEN & TOUBRO LTD.",
+  "WEIGHTAGE(%)": 4.28
+ },
+ {
+  "SYMBOL": "SBIN",
+  "SECURITY": " STATE BANK OF INDIA",
+  "WEIGHTAGE(%)": 3.84
+ },
+ {
+  "SYMBOL": "AXISBANK",
+  "SECURITY": " AXIS BANK LTD.",
+  "WEIGHTAGE(%)": 3.32
+ },
+ {
+  "SYMBOL": "INFY",
+  "SECURITY": " INFOSYS LTD.",
+  "WEIGHTAGE(%)": 3.31
+ },
+ {
+  "SYMBOL": "KOTAKBANK",
+  "SECURITY": " KOTAK MAHINDRA BANK LTD.",
+  "WEIGHTAGE(%)": 2.81
+ },
+ {
+  "SYMBOL": "M&M",
+  "SECURITY": " MAHINDRA & MAHINDRA LTD.",
+  "WEIGHTAGE(%)": 2.56
+ }
+]

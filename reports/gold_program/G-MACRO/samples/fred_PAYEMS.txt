@@ -1,0 +1,8 @@
+observation_date,PAYEMS
+2026-08-01,159015
+2026-09-01,159044
+
+...
+observation_date,PAYEMS
+2026-08-01,159015
+2026-09-01,159044

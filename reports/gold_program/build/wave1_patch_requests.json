@@ -1,0 +1,124 @@
+{
+ "B2-CTRL": [],
+ "B6-GATES": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/gold.py",
+   "old": "REUTERS_ASIA_GOLD = \"https://www.reuters.com/markets/commodities/\"",
+   "new": "REUTERS_ASIA_GOLD_LINK = \"https://www.reuters.com/markets/commodities/\"   # link-only: shown as reuters_url, never fetched (T8)",
+   "why": "T8 gate (test_gold_gates.py::TestHostAllowlistT8::test_every_fetched_host_is_allowlisted): www.reuters.com is outside PLAN \u00a7c.6 and the literal is not marked as a link. Either the `_LINK` name suffix or the `# link-only` comment satisfies the gate (both shown); B3 updates the one usage of the constant (premiums reference.reuters_url) if the rename is taken, or keeps the old name and adds only the comment."
+  }
+ ],
+ "B5-LEARN-DOCS": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/data-service/gold/catalog_seed.py",
+   "old": "    for sid, (sym, name, entry, unit) in YAHOO_DAILY.items():\n        rows.append(_row(sid, name, entry, YAHOO, YAHOO_URL.format(symbol=sym), \"D\", unit, \"PUBLISH-CORE\", \"arithmetic\", 4,",
+   "new": "    for sid, (sym, name, entry, unit) in YAHOO_DAILY.items():\n        verdict = \"PUBLISH-CORE\" if entry in (\"A1\", \"A5\", \"A6\") else \"PUBLISH-CONTEXT\"   # A3/A4/G17 are PUBLISH-CONTEXT in SOURCES.md\n        rows.append(_row(sid, name, entry, YAHOO, YAHOO_URL.format(symbol=sym), \"D\", unit, verdict, \"arithmetic\", 4,",
+   "why": "PLAN \u00a7f.2 / SOURCES.md \u00a71: a seed row may be stricter than its source entry, never looser. SOURCES.md gives A3 (SI=F, PL=F, CL=F), A4 (GLD, GOLDBEES.NS) and G17 (ZQ=F) PUBLISH-CONTEXT, so COMEX_SI_FRONT, NYMEX_PL_FRONT, WTI_FRONT, GLD_CLOSE, GOLDBEES_CLOSE and ZQ_FRONT must not be PUBLISH-CORE. PUBLISH-CONTEXT still passes the rendering gate (the ratios, the rupee toggle and the Fed path keep rendering). docs/GOLD_DATA_DICTIONARY.md currently lists these six as 'a defect to fix in the seed' and `scripts/gold_data_dictionary.py --strict` refuses them; after this patch re-run `scripts/gold_data_dictionary.py` (the --check test keeps the committed doc in step with the seed)."
+  }
+ ],
+ "B7-STUDIES": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/FINDINGS.md",
+   "old": "| GS-P4 \u00b7 festival months in rupee gold (Sep / Oct / Nov; 644 months 1973\u2192, split 1999-12-31) | Sep +2.00 % (t 2.75); Oct +0.98 % (t 1.97); Nov +0.61 % (t 1.00) | Sep 1.89 / 2.11 \u00b7 Oct 1.98 / 0.61 \u00b7 Nov \u22120.02 / 1.74 | **CONTEXT-ONLY** (Sep) \u00b7 **FAIL** (Oct, Nov) |\n| GS-P4 \u00b7 Akshaya Tritiya months (Apr / May) in rupee gold | Apr +0.42 % (t 0.79); May +0.80 % (t 1.56) | 0.45 / 0.64 \u00b7 0.59 / 1.63 | **FAIL** |\n| GS-P4 \u00b7 Dec / Jan carry-over in rupee gold; Feb and Aug | Dec +0.79 % (t 1.33); Jan +2.58 % (t 2.64, hit 60 %); Feb +1.46 % (t 2.56); Aug +1.69 % (t 2.71) | Dec 0.94 / 0.99 \u00b7 Jan 1.49 / 3.18 \u00b7 Feb 0.99 / 2.77 \u00b7 Aug 1.29 / 2.51 | **CONTEXT-ONLY** (Jan, Feb, Aug) \u00b7 **FAIL** (Dec) |",
+   "new": "| GS-P4 \u00b7 festival months in rupee gold, drift-adjusted (Sep / Oct / Nov; 644 months 1973\u2192, split 1999-12-31; month mean minus the all-month mean +1.03 %) | Sep excess +0.97 % (t 1.33); Oct \u22120.05 % (t \u22120.10); Nov \u22120.42 % (t \u22120.70) | Sep 1.10 / 0.74 \u00b7 Oct 0.76 / \u22121.33 \u00b7 Nov \u22121.02 / 0.24 | **FAIL** (all three) |\n| GS-P4 \u00b7 Akshaya Tritiya months (Apr / May) in rupee gold, drift-adjusted | Apr excess \u22120.61 % (t \u22121.15); May \u22120.23 % (t \u22120.46) | \u22121.03 / \u22120.64 \u00b7 \u22120.73 / 0.10 | **FAIL** |\n| GS-P4 \u00b7 Dec / Jan carry-over in rupee gold, drift-adjusted | Dec excess \u22120.24 % (t \u22120.41); Jan +1.55 % (t 1.58, the largest of the twelve) | Dec \u22120.04 / \u22120.72 \u00b7 Jan 0.97 / 1.74 | **FAIL** (no month reaches \\|t\\| \u2265 2 even in the full sample) |\n| GS-P4 \u00b7 the pre-registered statistic (each month's mean vs zero), for the record | Jan +2.58 % (t 2.64), Feb +1.46 % (t 2.56), Aug +1.69 % (t 2.71), Sep +2.00 % (t 2.75) reach t \u2265 2 \u2014 but shuffled month labels 'pass' in 44 % of 100 seeds (4.4 such months per run): the statistic measures the +1.03 %/month drift, not the calendar | \u2014 | **VOID** (PLAN N4; the drift-adjusted rows above replace it) |",
+   "why": "B5's rows were pasted from the 07:18 draft; the shuffle control added at 10:50 voids the vs-zero statistic and the drift-adjusted re-run (11:05) gives FAIL for every month \u2014 these are the rows now in reports/gold_program/GS-P4/FINDINGS_ROW.md"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/FINDINGS.md",
+   "old": "| GS-P4 \u00b7 walk-forward best-6-months long/flat in rupees (GC=F \u00d7 USD/INR month-ends, 0.15 %/switch, OOS 2005\u2192) | excess vs scaled buy-and-hold +1.67 %/yr (t 0.89) at 50 % exposure | t 1.15 / \u22120.01 | **FAIL** |",
+   "new": "| GS-P4 \u00b7 walk-forward best-6-months long/flat in rupees (GC=F \u00d7 USD/INR month-ends, 0.15 % per switch = 0.30 % per round trip, OOS 2005\u2192) | excess vs scaled buy-and-hold +1.10 %/yr (t 0.59) at 50 % exposure; shuffled returns reach \\|t\\| \u2265 2 in 7 % of seeds | t 0.97 / \u22120.26 (OOS cut 2015-11-30) | **FAIL** |",
+   "why": "the draft charged 0.15 % per round trip; the plan says 0.15 % per switch (PLAN N2) \u2014 H3 numbers changed, verdict unchanged"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/FINDINGS.md",
+   "old": "- Seasonality in rupees is a stronger-looking table than in dollars because the rupee drifts \u2248 4.6 %/yr against the\n  dollar; the halves rule still passes no month, and the rupee version of the best-6-months rule earns t 0.89. The\n  `m.season` grid shows the cells with the caveat; no month is a position.",
+   "new": "- Seasonality in rupees only *looks* stronger than in dollars because rupee gold drifts +1.03 %/month (USD gold \u2248 +0.6,\n  the rupee \u2248 +0.4 against the dollar): testing each month's mean against zero flags Jan, Feb, Aug and Sep, but shuffled\n  month labels do the same in 44 % of seeds, so that statistic is void (GS-P4 PLAN N4). Measured against the all-month\n  mean no month reaches |t| \u2265 2 even in the full sample, the festival months do not pass, and the rupee best-6-months\n  rule earns t 0.59 after 0.15 % per switch. The `m.season` grid shows the cells with that caption; no month is a\n  position.",
+   "why": "the prose repeats the draft's conclusion; the final GS-P4 verdict is FAIL \u2014 drift, not a calendar"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/PLAN.md",
+   "old": "re-run `G-MACRO/g_study.py` on `G-MACRO/data/`: H2 weekly beta \u22121.0 \u00b1 0.1 in every regime;",
+   "new": "re-run `G-MACRO/g_study.py` on `G-MACRO/data/`: H2 weekly DXY beta between \u22120.8 and \u22121.3 with t \u2264 \u22122 in every regime (\u22121.23 / \u22121.02 / \u22120.97 / \u22121.01, t \u221211.6 / \u221213.2 / \u22126.4 / \u221214.4) and H3 no month passing both halves;",
+   "why": "T4 as written is false for 2003\u20132009 (beta \u22121.23); the test asserts what the G-MACRO script actually reproduces"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/pytest.ini",
+   "old": "",
+   "new": "[pytest]\nmarkers =\n    slow: re-runs a research study on the saved data (tests/test_gold_study_reproduce.py); deselect with -m \"not slow\"\n",
+   "why": "optional, PM's call: no pytest config exists, so the `slow` marker the brief asked for is unregistered (PytestUnknownMarkWarning unless -W ignore, as CI runs); creating a root pytest.ini affects all five suites' rootdir resolution, so I did not add it"
+  }
+ ],
+ "B4B-UI-VIEWS": [
+  {
+   "file": "services/ui-api/routers/telemetry.py",
+   "old": "from fastapi import APIRouter, Request",
+   "new": "from fastapi import APIRouter, HTTPException, Request",
+   "why": "B3: the BRKR TOTP panel's CHECK SESSION / LOG IN IF EXPIRED calls POST /api/telemetry/icici-refresh (PLAN \u00a7g step 4); the new route below raises HTTPException(502) on controller failure so the panel can tell 'proxy missing' (404/405) from 'controller down'."
+  },
+  {
+   "file": "services/ui-api/routers/telemetry.py",
+   "old": "            return resp.json() if resp.status_code == 200 else {\"error\": \"master-controller unreachable\"}\n    except Exception as exc:\n        return {\"error\": str(exc)}\n\n\n# \u2500\u2500 Latency metrics",
+   "new": "            return resp.json() if resp.status_code == 200 else {\"error\": \"master-controller unreachable\"}\n    except Exception as exc:\n        return {\"error\": str(exc)}\n\n\nclass IciciRefreshRequest(BaseModel):\n    force: bool = False\n\n\n@router.post(\"/icici-refresh\")\nasync def icici_refresh(req: IciciRefreshRequest | None = None, force: int = 0) -> dict[str, Any]:\n    \"\"\"BRKR 'CHECK SESSION / LOG IN IF EXPIRED' (PLAN \u00a7g step 4): server-side proxy to the controller's\n    POST /api/scheduler/icici-refresh[?force=1] (the webview is pinned to :8010; the controller has no CORS by design).\n    Never answers 404 on a controller failure: the panel reads 404/405 as 'proxy not in this release'.\"\"\"\n    use_force = bool(force) or bool(req and req.force)\n    try:\n        async with httpx.AsyncClient(timeout=10) as client:\n            resp = await client.post(f\"{MASTER_CTL_URL}/api/scheduler/icici-refresh\", params={\"force\": 1} if use_force else None)\n    except httpx.HTTPError as exc:\n        raise HTTPException(status_code=502, detail=f\"master-controller unreachable: {type(exc).__name__}\") from exc\n    try:\n        body = resp.json()\n    except ValueError:\n        body = {\"detail\": resp.text[:200]}\n    if resp.status_code >= 400:\n        raise HTTPException(status_code=502, detail={\"controller_status\": resp.status_code, **(body if isinstance(body, dict) else {})})\n    return {\"started\": True, \"force\": use_force, **(body if isinstance(body, dict) else {})}\n\n\n# \u2500\u2500 Latency metrics",
+   "why": "B3 (PLAN \u00a7g, table row 'Step 4 \u00b7 test'): the documented scheduler proxy. The controller route POST /api/scheduler/icici-refresh?force=1 already exists (scripts/master_controller.py:3405). Until this lands the panel shows 'The scheduler proxy \u2026 is not in this ui-api release: send /login to the Telegram bot instead.'"
+  },
+  {
+   "file": "services/ui-api/routers/positions.py",
+   "old": "        \"keychain_hint\": f\"security add-generic-password -U -s {KEYCHAIN_SERVICE} -a {TOTP_KEY} -w\",\n    }",
+   "new": "        \"keychain_hint\": f\"security add-generic-password -U -s {KEYCHAIN_SERVICE} -a {TOTP_KEY} -w\",\n        \"force_supported\": True,   # POST /api/telemetry/icici-refresh {force:true} \u2192 controller ?force=1 (PLAN \u00a7g, owner Q5)\n    }",
+   "why": "B3: the panel renders the confirm-gated FORCE A NEW LOGIN (disabled 09:00\u201315:30 IST, warned on a credentials block) only when /api/positions/totp/status advertises force_supported; apply together with the telemetry proxy and only if the owner answers Q5 yes."
+  },
+  {
+   "file": "ui/components/__tests__/gold.check.ts",
+   "old": "near('S6 returnOver 7 d (26 Oct vs 19 Oct)', S.returnOver(d, 7), 0)",
+   "new": "near('S6 returnOver 7 d (26 Oct vs 19 Oct)', S.returnOver(d, 7) ?? null, 0)",
+   "why": "B4A: the only remaining `npx tsc --noEmit` error (TS2345: number|null|undefined into near()'s number|null); blocks the CI tsc gate for everyone."
+  }
+ ],
+ "B3-API": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/_cache_warm.py",
+   "old": "def warm_calls() -> list[tuple[str, Callable[[], Awaitable[Any]]]]:",
+   "new": "async def _gold_overview() -> None:\n    \"\"\"GOLD page frame (PLAN \u00a7d warm list): fills the 30 s memo and the gold store cache; no Breeze beyond mcx's cached quote.\"\"\"\n    from routers import gold\n    await gold.overview()\n\n\ndef warm_calls() -> list[tuple[str, Callable[[], Awaitable[Any]]]]:",
+   "why": "PLAN \u00a7d: warm (\"gold_overview\", gold.overview) so the first GOLD visit after a restart does not wait on the cold reads; gold.overview() exists for exactly this"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/_cache_warm.py",
+   "old": "        (\"gold_yahoo_series\", _gold_series),\n    ]",
+   "new": "        (\"gold_yahoo_series\", _gold_series),\n        (\"gold_overview\", _gold_overview),            # GOLD page frame (routers/gold.py)\n    ]",
+   "why": "registers the warm call; the docstring's 'ok: 7' and tests/test_cache_warm.py's expected call count become 8"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/shared/mcx_specs.py",
+   "old": "    \"GOLDGUINEA\": ContractSpec(\"GOLDGUINEA\", \"Gold Guinea (8 g)\", 8, 8, 1.0, \"8 g\", \"999\",\n                               \"month_end\", ALL_MONTHS, 6.0,\n                               \"Quoted per 8 g; \u20b91 move = \u20b91 per lot.\"),\n}",
+   "new": "    \"GOLDGUINEA\": ContractSpec(\"GOLDGUINEA\", \"Gold Guinea (8 g)\", 8, 8, 1.0, \"8 g\", \"999\",\n                               \"month_end\", ALL_MONTHS, 6.0,\n                               \"Quoted per 8 g; \u20b91 move = \u20b91 per lot.\"),\n    # GOLD program (SOURCES.md F1, G-INDIA \u00a74): 10 g lot quoted per 10 g like GOLD, 999 purity, monthly, month-end expiry,\n    # tick \u20b91 = \u20b91 per lot; Breeze code GOLDTE (ICICI master ShortName); Oct-26 OI 25,655 on 23 Oct 2026.\n    \"GOLDTEN\": ContractSpec(\"GOLDTEN\", \"Gold Ten (10 g)\", 10, 10, 1.0, \"10 g\", \"999\",\n                            \"month_end\", ALL_MONTHS, 6.0,\n                            \"Quoted per 10 g like GOLD, one-hundredth of its lot; 999 purity, month-end expiry.\"),\n}",
+   "why": "PLAN \u00a7d (B3 list) puts GOLDTEN in shared/mcx_specs; routers/mcx.py carries an identical fallback (GOLDTEN_FALLBACK) and defers to the shared row the moment it exists. Any test asserting len(CONTRACTS) == 4 needs 5"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/shared/mcx_specs.py",
+   "old": "SPECIAL_SESSIONS_2026 = [\n    {\"date\": \"2026-11-08\", \"name\": \"Muhurat trading (Diwali Laxmi Pujan)\",\n     \"note\": \"Sunday evening special session; exact timings by MCX circular\"},\n]",
+   "new": "SPECIAL_SESSIONS_2026 = [\n    {\"date\": \"2026-11-08\", \"name\": \"Muhurat trading (Diwali Laxmi Pujan)\",\n     \"note\": \"Sunday special session 14:05\u201314:19 (special), 14:20\u201315:30 trading (MCX/TRD/590/2026 per PLAN \u00a7d; owner to confirm the circular)\"},\n]\n# Customs duty on gold, dated (SOURCES.md F9; PLAN \u00a7d): the ladder prints the rate and its notification on every render.\nDUTY_HISTORY: tuple[tuple[str, float], ...] = ((\"2024-07-24\", 6.0), (\"2026-05-13\", 15.0))\nDUTY_NOTIFICATION = \"Notification 16/2026-Customs (BCD 10 % + AIDC 5 %)\"\nMARGIN_SOURCE = \"zerodha_nrml\"      # the NRML mirror the selector carries (dated); the constants above stay indicative",
+   "why": "PLAN \u00a7d asks shared/mcx_specs for the Muhurat timings, DUTY_HISTORY and margin_source; routers/gold_preopen.py duplicates DUTY_HISTORY/DUTY_NOTIFICATION today and can import these once they exist"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/shared/config.py",
+   "old": "    icici_session_token: str = Field(default=\"\", description=\"ICICI session token (refreshed daily)\")",
+   "new": "    icici_session_token: str = Field(default=\"\", description=\"ICICI session token (refreshed daily)\")\n    # GOLD program (PLAN \u00a7d): the dated customs duty the India price stack uses, and the optional CFTC Socrata token.\n    gold_import_duty_pct: float = Field(default=15.0, description=\"Customs duty on gold, % (BCD 10 + AIDC 5 since 2026-05-13; confirm at CBIC, O-3)\")\n    gold_import_duty_effective: str = Field(default=\"2026-05-13\", description=\"Effective date of gold_import_duty_pct (Notification 16/2026-Customs)\")\n    cftc_app_token: str = Field(default=\"\", description=\"Optional CFTC Socrata app token (O-7); raises the COT API rate limit\")",
+   "why": "PLAN \u00a7d (B3 list): GOLD_IMPORT_DUTY_PCT / GOLD_IMPORT_DUTY_EFFECTIVE / CFTC_APP_TOKEN in shared/config; routers/gold_preopen.duty_rate() already reads the same env names with the same defaults, so the two agree"
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/data-service/gold/api.py",
+   "old": "@router.get(\"/db/gold/health-daily\")",
+   "new": "@router.get(\"/db/gold/cme/prf\")\ndef gold_cme_prf(symbol: str = Query(\"GC\", max_length=12)) -> dict[str, Any]:\n    \"\"\"gold_cme_prf rows for one root symbol (the matched contract's DES card on GOLD \u203a CONTRACTS, ui-api /api/gold/contracts?exchange=COMEX).\"\"\"\n    return reads.cme_prf(_store(), symbol=symbol)\n\n\n@router.get(\"/db/gold/health-daily\")",
+   "why": "ui-api's /api/gold/contracts?exchange=COMEX reads /db/gold/cme/prf?symbol=GC for the c.spec card (init margin, FND/LTD, eligibility, margin history) and shows null until it exists; c.5 lists no prf read. B1 would add reads.cme_prf (SELECT * FROM gold_cme_prf WHERE symbol=? ORDER BY biz_date, mat_date) alongside"
+  }
+ ],
+ "B4A-UI-CORE": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/components/CommandBar.tsx",
+   "old": "      return pageItems.find(i => i.kind === 'page' && i.id === a.id) ?? null",
+   "new": "      const item = pageItems.find(i => i.kind === 'page' && i.id === a.id) ?? null\n      if (item && a.kind === 'page' && 'sub' in a && a.sub) { try { setGoldSubInUrl(a.sub) } catch { /* no-op */ } }\n      return item",
+   "why": "Optional follow-up for the PLAN a.1 sub-view aliases (GPHY\u2192physical, GMAC\u2192macro, LRN\u2192learn, COT\u2192positioning): the AliasTarget would gain an optional `sub` and goAliases.ts the four entries; the brief only asked for XAU and GC, which are done without touching CommandBar. Not required for this slice."
+  }
+ ],
+ "B1-DATA": []
+}

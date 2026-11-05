@@ -1,0 +1,136 @@
+{
+ "health": {
+  "panels": [
+   "h.verdict",
+   "h.gauges",
+   "h.open",
+   "h.moved",
+   "h.headlines",
+   "h.accuracy",
+   "h.events",
+   "h.brief"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2874,
+  "chars": 8563
+ },
+ "daily": {
+  "panels": [
+   "d.24h",
+   "d.3day",
+   "d.sge",
+   "d.quadrant",
+   "d.tape"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2099,
+  "chars": 3933
+ },
+ "weekly": {
+  "panels": [
+   "w.candles",
+   "w.table",
+   "w.grid",
+   "w.whodid"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 1934,
+  "chars": 3708
+ },
+ "monthly": {
+  "panels": [
+   "m.candles",
+   "m.ladder",
+   "m.season",
+   "m.official",
+   "m.physical",
+   "m.balance",
+   "m.liquidity"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2040,
+  "chars": 4736
+ },
+ "positioning": {
+  "panels": [
+   "p.hero",
+   "p.whois",
+   "p.history",
+   "p.crowd",
+   "p.asia",
+   "p.decomp",
+   "p.daily.comex",
+   "p.daily.mcx",
+   "p.mcx.category",
+   "p.drawer"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 3410,
+  "chars": 7943
+ },
+ "physical": {
+  "panels": [
+   "ph.ladder",
+   "ph.india",
+   "ph.shanghai",
+   "ph.etf",
+   "ph.official",
+   "ph.otc",
+   "ph.comex.stocks",
+   "ph.links"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2704,
+  "chars": 8238
+ },
+ "macro": {
+  "panels": [
+   "mc.drivers",
+   "mc.kgx",
+   "mc.ccy",
+   "mc.fed",
+   "mc.move",
+   "mc.calendar",
+   "mc.health",
+   "mc.context"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2184,
+  "chars": 7320
+ },
+ "contracts": {
+  "panels": [
+   "c.selector",
+   "c.comex",
+   "c.spec",
+   "c.mcx",
+   "c.roll",
+   "c.links"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2645,
+  "chars": 8501
+ },
+ "learn": {
+  "panels": [
+   "learn.routines",
+   "learn.curriculum",
+   "learn.notfree",
+   "learn.bbg",
+   "learn.rename",
+   "learn.health_rules"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 3689,
+  "chars": 54261
+ }
+}

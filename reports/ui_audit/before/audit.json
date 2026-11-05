@@ -1,0 +1,139 @@
+{
+  "desk": {
+    "name": "Decision Desk",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/desk.png",
+    "load_s": 7.1,
+    "console": [
+      "error: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failed_api": [],
+    "error_text": false
+  },
+  "overview": {
+    "name": "Overview",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/overview.png",
+    "load_s": 6.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "stocks": {
+    "name": "Stocks",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/stocks.png",
+    "load_s": 7.4,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "backtest": {
+    "name": "Backtest",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/backtest.png",
+    "load_s": 6.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "positions": {
+    "name": "Portfolio",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/positions.png",
+    "load_s": 6.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "broker": {
+    "name": "Broker Account",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/broker.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "pipeline": {
+    "name": "Pipeline",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/pipeline.png",
+    "load_s": 6.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "scanner": {
+    "name": "LW Scanner",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/scanner.png",
+    "load_s": 6.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "discovery": {
+    "name": "Alpha Discovery",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/discovery.png",
+    "load_s": 8.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "commodity": {
+    "name": "Commodity",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/commodity.png",
+    "load_s": 6.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "glassbox": {
+    "name": "Glass-Box",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/glassbox.png",
+    "load_s": 6.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "mlengine": {
+    "name": "ML Engine",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/mlengine.png",
+    "load_s": 6.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "explorer": {
+    "name": "Data Explorer",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/explorer.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "warehouse": {
+    "name": "Warehouse",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/warehouse.png",
+    "load_s": 6.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "system": {
+    "name": "System",
+    "ok": true,
+    "screenshot": "reports/ui_audit/before/system.png",
+    "load_s": 25.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  }
+}

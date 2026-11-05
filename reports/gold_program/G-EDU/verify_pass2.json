@@ -1,0 +1,583 @@
+{
+ "fetched_at": "2026-10-26T00:17:10+00:00",
+ "disagg_fut": {
+  "status": 200,
+  "rows": [
+   {
+    "report_date_as_yyyy_mm_dd": "2026-10-20T00:00:00.000",
+    "open_interest_all": "402279",
+    "prod_merc_positions_long": "19715",
+    "prod_merc_positions_short": "34498",
+    "swap_positions_long_all": "17737",
+    "swap__positions_short_all": "238536",
+    "swap__positions_spread_all": "22079",
+    "m_money_positions_long_all": "120970",
+    "m_money_positions_short_all": "16764",
+    "m_money_positions_spread": "38634",
+    "other_rept_positions_long": "116172",
+    "other_rept_positions_short": "20513",
+    "other_rept_positions_spread": "15565",
+    "nonrept_positions_long_all": "51407",
+    "nonrept_positions_short_all": "15690",
+    "change_in_open_interest_all": "5934",
+    "change_in_m_money_long_all": "-3777",
+    "change_in_m_money_short_all": "-894",
+    "change_in_prod_merc_long": "1329",
+    "change_in_prod_merc_short": "-2325",
+    "change_in_swap_long_all": "3761",
+    "change_in_swap_short_all": "466",
+    "traders_m_money_long_all": "78",
+    "traders_m_money_short_all": "25",
+    "traders_tot_all": "288",
+    "conc_gross_le_4_tdr_long": "20.4",
+    "conc_gross_le_4_tdr_short": "37.8"
+   },
+   {
+    "report_date_as_yyyy_mm_dd": "2026-10-13T00:00:00.000",
+    "open_interest_all": "396345",
+    "prod_merc_positions_long": "18386",
+    "prod_merc_positions_short": "36823",
+    "swap_positions_long_all": "13976",
+    "swap__positions_short_all": "238070",
+    "swap__positions_spread_all": "22057",
+    "m_money_positions_long_all": "124747",
+    "m_money_positions_short_all": "17658",
+    "m_money_positions_spread": "33557",
+    "other_rept_positions_long": "120553",
+    "other_rept_positions_short": "19763",
+    "other_rept_positions_spread": "12338",
+    "nonrept_positions_long_all": "50731",
+    "nonrept_positions_short_all": "16079",
+    "change_in_open_interest_all": "236",
+    "change_in_m_money_long_all": "-2354",
+    "change_in_m_money_short_all": "1544",
+    "change_in_prod_merc_long": "-474",
+    "change_in_prod_merc_short": "-1538",
+    "change_in_swap_long_all": "-628",
+    "change_in_swap_short_all": "-1560",
+    "traders_m_money_long_all": "75",
+    "traders_m_money_short_all": "21",
+    "traders_tot_all": "289",
+    "conc_gross_le_4_tdr_long": "21.6",
+    "conc_gross_le_4_tdr_short": "38.8"
+   }
+  ]
+ },
+ "disagg_combined": {
+  "status": 200,
+  "rows": [
+   {
+    "report_date_as_yyyy_mm_dd": "2026-10-20T00:00:00.000",
+    "open_interest_all": "532443",
+    "prod_merc_positions_long": "23593",
+    "prod_merc_positions_short": "37174",
+    "swap_positions_long_all": "16679",
+    "swap__positions_short_all": "231662",
+    "swap__positions_spread_all": "55758",
+    "m_money_positions_long_all": "124476",
+    "m_money_positions_short_all": "15791",
+    "m_money_positions_spread": "51069",
+    "other_rept_positions_long": "101665",
+    "other_rept_positions_short": "18560",
+    "other_rept_positions_spread": "102525",
+    "nonrept_positions_long_all": "56677",
+    "nonrept_positions_short_all": "19904",
+    "change_in_open_interest_all": "6166",
+    "change_in_m_money_long_all": "-4065",
+    "change_in_m_money_short_all": "-1673",
+    "change_in_prod_merc_long": "1413",
+    "change_in_prod_merc_short": "-2687",
+    "change_in_swap_long_all": "3973",
+    "change_in_swap_short_all": "473",
+    "traders_m_money_long_all": "86",
+    "traders_m_money_short_all": "23",
+    "traders_tot_all": "308",
+    "conc_gross_le_4_tdr_long": "19.5",
+    "conc_gross_le_4_tdr_short": "30.0"
+   },
+   {
+    "report_date_as_yyyy_mm_dd": "2026-10-13T00:00:00.000",
+    "open_interest_all": "526276",
+    "prod_merc_positions_long": "22180",
+    "prod_merc_positions_short": "39861",
+    "swap_positions_long_all": "12706",
+    "swap__positions_short_all": "231189",
+    "swap__positions_spread_all": "54517",
+    "m_money_positions_long_all": "128542",
+    "m_money_positions_short_all": "17463",
+    "m_money_positions_spread": "45810",
+    "other_rept_positions_long": "106765",
+    "other_rept_positions_short": "18110",
+    "other_rept_positions_spread": "99475",
+    "nonrept_positions_long_all": "56281",
+    "nonrept_positions_short_all": "19850",
+    "change_in_open_interest_all": "-1365",
+    "change_in_m_money_long_all": "-1705",
+    "change_in_m_money_short_all": "2036",
+    "change_in_prod_merc_long": "-606",
+    "change_in_prod_merc_short": "-1909",
+    "change_in_swap_long_all": "-1502",
+    "change_in_swap_short_all": "-1635",
+    "traders_m_money_long_all": "84",
+    "traders_m_money_short_all": "23",
+    "traders_tot_all": "314",
+    "conc_gross_le_4_tdr_long": "20.4",
+    "conc_gross_le_4_tdr_short": "30.6"
+   }
+  ]
+ },
+ "mm_history": {
+  "status": 200,
+  "n": 160,
+  "first": {
+   "date": "2023-10-03",
+   "oi": 431226,
+   "mm_long": 100500,
+   "mm_short": 108061,
+   "pm_long": 16614,
+   "pm_short": 38810,
+   "sd_long": 85747,
+   "sd_short": 175533,
+   "mm_net": -7561,
+   "comm_net": -111982
+  },
+  "last": {
+   "date": "2026-10-20",
+   "oi": 402279,
+   "mm_long": 120970,
+   "mm_short": 16764,
+   "pm_long": 19715,
+   "pm_short": 34498,
+   "sd_long": 17737,
+   "sd_short": 238536,
+   "mm_net": 104206,
+   "comm_net": -235582
+  },
+  "cot_index_26w": 26.3,
+  "min_26w": 89752,
+  "max_26w": 144747,
+  "cot_index_52w": 26.3,
+  "min_52w": 89752,
+  "max_52w": 144747,
+  "cot_index_156w": 37.9,
+  "min_156w": 34176,
+  "max_156w": 219029,
+  "last_8": [
+   {
+    "date": "2026-09-01",
+    "oi": 415196,
+    "mm_long": 149721,
+    "mm_short": 12950,
+    "pm_long": 17444,
+    "pm_short": 48733,
+    "sd_long": 17798,
+    "sd_short": 251227,
+    "mm_net": 136771,
+    "comm_net": -264718
+   },
+   {
+    "date": "2026-09-08",
+    "oi": 411227,
+    "mm_long": 145804,
+    "mm_short": 10832,
+    "pm_long": 16588,
+    "pm_short": 47549,
+    "sd_long": 14542,
+    "sd_short": 253855,
+    "mm_net": 134972,
+    "comm_net": -270274
+   },
+   {
+    "date": "2026-09-15",
+    "oi": 409899,
+    "mm_long": 142394,
+    "mm_short": 9278,
+    "pm_long": 16396,
+    "pm_short": 44457,
+    "sd_long": 14690,
+    "sd_short": 248350,
+    "mm_net": 133116,
+    "comm_net": -261721
+   },
+   {
+    "date": "2026-09-22",
+    "oi": 412800,
+    "mm_long": 135699,
+    "mm_short": 8310,
+    "pm_long": 17719,
+    "pm_short": 44496,
+    "sd_long": 14626,
+    "sd_short": 250752,
+    "mm_net": 127389,
+    "comm_net": -262903
+   },
+   {
+    "date": "2026-09-29",
+    "oi": 406456,
+    "mm_long": 131711,
+    "mm_short": 11393,
+    "pm_long": 18200,
+    "pm_short": 39463,
+    "sd_long": 14835,
+    "sd_short": 244539,
+    "mm_net": 120318,
+    "comm_net": -250967
+   },
+   {
+    "date": "2026-10-06",
+    "oi": 396109,
+    "mm_long": 127101,
+    "mm_short": 16114,
+    "pm_long": 18860,
+    "pm_short": 38361,
+    "sd_long": 14604,
+    "sd_short": 239630,
+    "mm_net": 110987,
+    "comm_net": -244527
+   },
+   {
+    "date": "2026-10-13",
+    "oi": 396345,
+    "mm_long": 124747,
+    "mm_short": 17658,
+    "pm_long": 18386,
+    "pm_short": 36823,
+    "sd_long": 13976,
+    "sd_short": 238070,
+    "mm_net": 107089,
+    "comm_net": -242531
+   },
+   {
+    "date": "2026-10-20",
+    "oi": 402279,
+    "mm_long": 120970,
+    "mm_short": 16764,
+    "pm_long": 19715,
+    "pm_short": 34498,
+    "sd_long": 17737,
+    "sd_short": 238536,
+    "mm_net": 104206,
+    "comm_net": -235582
+   }
+  ]
+ },
+ "legacy_gold_block": {
+  "status": 200,
+  "block": "GOLD - COMMODITY EXCHANGE INC.                                       Code-088691\r\nFUTURES ONLY POSITIONS AS OF 10/20/26                         |\r\n--------------------------------------------------------------| NONREPORTABLE\r\n      NON-COMMERCIAL      |   COMMERCIAL    |      TOTAL      |   POSITIONS\r\n--------------------------|-----------------|-----------------|-----------------\r\n  LONG  | SHORT  |SPREADS |  LONG  | SHORT  |  LONG  | SHORT  |  LONG  | SHORT\r\n--------------------------------------------------------------------------------\r\n(CONTRACTS OF 100 TROY OUNCES)                       OPEN INTEREST:      402,279\r\nCOMMITMENTS\r\n 237,142   37,277   54,199   59,531  295,113  350,872  386,589   51,407   15,690\r\n\r\nCHANGES FROM 10/13/26 (CHANGE IN OPEN INTEREST:      5,934)\r\n  -8,158     -144    8,304    5,112   -1,837    5,258    6,323      676     -389\r\n\r\nPERCENT OF OPEN INTEREST FOR EACH CATEGORY OF TRADERS\r\n    58.9      9.3     13.5     14.8     73.4     87.2     96.1     12.8      3.9\r\n\r\nNUMBER OF TRADERS IN EACH CATEGORY (TOTAL TRADERS:      288)\r\n     158       59       69       53       42      241      143                  \r\n \r\n \r\nMICRO GOLD - COMMODITY EXCHANGE INC.                                 Code-088695\r\nFUTURES ONLY POSITIONS AS OF 10/20/26                         |\r\n--------------------------------------------------------------| NONREPORTABLE\r\n      NON-COMM"
+ },
+ "release_schedule": {
+  "status": 200,
+  "hits": []
+ },
+ "gld_csv": {
+  "status": 200,
+  "bytes": 696843,
+  "n_lines": 22806,
+  "head": [
+   "%PDF-1.5",
+   "%\ufffd\ufffd\ufffd\ufffd",
+   "2 0 obj",
+   "<<",
+   "/Type /XObject",
+   "/Subtype /Image",
+   "/Width 1489",
+   "/Height 680"
+  ],
+  "tail": [
+   "startxref",
+   "691490",
+   "%%EOF"
+  ]
+ },
+ "text_kitco_terms": {
+  "status": 200,
+  "hits": [
+   " except as explicitly otherwise authorized by Kitco. Because we host User-Generated Content as a part of portions of the Websites or the Services and therefore redistribute User-Generated Content You give us, we need to obtain certain rights in those materials. By posting, sending or transmitting to us User-Generated Content, You",
+   "ions.kitco.com&quot;, &quot;Kitco Global Index&quot;, &quot;KGX&quot;, &quot;Kitco Silver Fix&quot;, the &quot;Kitco Logo&quot;, &quot;Kitco News&quot; , &quot;Scrapit&quot;, &quot;Metalynx&quot;, and certain other marks used on Kitco Portfolio of Websites are trademarks and/or service marks of Kitco. All other trademarks, ",
+   "lated companies. Kitco grants you a personal, limited, revocable, non-exclusive, non-transferable license to use the Downloaded Services for your personal, non-commercial use only, provided that you not modify the Downloaded Services, that you maintain all copyright and other proprietary notices, and that Kitco, or any other third p",
+   "e that the Downloaded Services are protected by copyright laws, and that, without limiting the generality of the foregoing, copying, re-selling, disassembling, redistributing or reproducing the Downloaded Services is strictly prohibited. You acknowledge and agree that it is your responsibility to review, assess and evaluate the D"
+  ]
+ },
+ "text_lbma_trade_data": {
+  "status": 200,
+  "hits": [
+   "lchemist Publications LBMA Annual Precious Metals Forecast Survey Centenary of the LBMA Gold Price Wonders of Gold Press Page Alchemist Issue 123 Available Now Published as the industry gathers in Sorrento for the 25th anniversary of the LBMA Conference, this issue explores the forces reshaping the precious metals market. Read ",
+   "lchemist Publications LBMA Annual Precious Metals Forecast Survey Centenary of the LBMA Gold Price Wonders of Gold Press Page Alchemist Issue 123 Available Now Published as the industry gathers in Sorrento for the 25th anniversary of the LBMA Conference, this issue explores the forces reshaping the precious metals market. Disco",
+   "ding a full list of the function codes, visit Nasdaq.com/LBMA-Trade-Data or contact Bloomberg and LSEG directly. layout/blocks/body/_panels --> Trade Reporting Weekly Turnover Total value in US dollar (billions). The data represents the 12 week moving average value of trades for the period ending 16 October 2026. Gold: $964.",
+   "pot, swap/forward, options and lease loan deposits. Coverage options include: Daily reporting: Gold, silver, platinum and palladium traded and open volume on a T+1 basis Weekly reporting: Provides data for the previous week of gold, silver, platinum and palladium traded layout/blocks/body/_calltoaction --> Interested in L",
+   "forward, options and lease loan deposits. Coverage options include: Daily reporting: Gold, silver, platinum and palladium traded and open volume on a T+1 basis Weekly reporting: Provides data for the previous week of gold, silver, platinum and palladium traded layout/blocks/body/_calltoaction --> Interested in LBMA Trade Dat"
+  ]
+ },
+ "text_lbma_vault": {
+  "status": 200,
+  "hits": [
+   "lchemist Publications LBMA Annual Precious Metals Forecast Survey Centenary of the LBMA Gold Price Wonders of Gold Press Page Alchemist Issue 123 Available Now Published as the industry gathers in Sorrento for the 25th anniversary of the LBMA Conference, this issue explores the forces reshaping the precious metals market. Read ",
+   "lchemist Publications LBMA Annual Precious Metals Forecast Survey Centenary of the LBMA Gold Price Wonders of Gold Press Page Alchemist Issue 123 Available Now Published as the industry gathers in Sorrento for the 25th anniversary of the LBMA Conference, this issue explores the forces reshaping the precious metals market. Disco",
+   "ld any silver). layout/blocks/body/_text --> Gold and Silver held in London Vaults As at end September 2026, the amount of gold held in London vaults was 9,821 tonnes (a 1.96% increase on previous month), valued at $1.3 trillion, which equates to approximately 785,690 gold bars. There were also 28,985 tonnes of silver (a 1.9",
+   "vaults was 9,821 tonnes (a 1.96% increase on previous month), valued at $1.3 trillion, which equates to approximately 785,690 gold bars. There were also 28,985 tonnes of silver (a 1.95% increase on previous month), valued at $56.6 billion, which equates to approximately 966,175 silver bars. These figures provide an important",
+   " as gatekeepers to the Loco London Precious Metals Market. They are its custodians. Find out more layout/blocks/body/_footnotes --> Notes The data: Is reported monthly (one month in arrears) Represents the holdings on the last day of the month Starts from July 2016, when the current set of custodians were established Includes"
+  ]
+ },
+ "text_lbma_prices": {
+  "status": 200,
+  "hits": [
+   "ommitment to continuous improvement. Discover more Pricing &amp; Data Pricing &amp; Data View information about LBMA prices and data. Overview About LBMA Daily Auction Prices LBMA Gold Price LBMA Silver Price LBMA Platinum and Palladium Price Clearing Vaulting Data LBMA Precious Metal Prices LBMA Daily Trade Reporting Data Cl",
+   "ommitment to continuous improvement. Discover more Pricing &amp; Data Pricing &amp; Data View information about LBMA prices and data. Overview About LBMA Daily Auction Prices LBMA Gold Price LBMA Silver Price LBMA Platinum and Palladium Price Clearing Vaulting Data LBMA Precious Metal Prices LBMA Daily Trade Reporting Data Cl",
+   "ated data for the LBMA Precious Metals Prices has been moved to our MyLBMA Portal. In order to view this data on our Portal, you will need to have the relevant licence from IBA. To access the Portal, please click on the below link. Non-LBMA Members can set up a profile to use the Portal via this link also. If you do not hol",
+   "rom IBA. To access the Portal, please click on the below link. Non-LBMA Members can set up a profile to use the Portal via this link also. If you do not hold a licence, please contact IBA to obtain one. For more information, please contact [email&#160;protected] Sign in to view the tables of data Not got a licence? Visit IC",
+   " not hold a licence, please contact IBA to obtain one. For more information, please contact [email&#160;protected] Sign in to view the tables of data Not got a licence? Visit ICE to see your options to purchase one. ICE Gold Price The LBMA Gold Price is set twice daily in auctions independently operated and administered by "
+  ]
+ },
+ "text_wgc_etf": {
+  "status": 200,
+  "hits": [
+   "demand in tonnes and flows in USD over different time periods. For more information on how our gold ETF data set is produced, please see our methodology note . Downloads: Download xlsx Gold ETF Flows: September 2026 Download pdf ETF Flows Data Methodology &nbsp; Gold ETF flows by region Gold ETF flows by region Sources: Bloomb",
+   "onnes and flows in USD over different time periods. For more information on how our gold ETF data set is produced, please see our methodology note . Downloads: Download xlsx Gold ETF Flows: September 2026 Download pdf ETF Flows Data Methodology &nbsp; Gold ETF flows by region Gold ETF flows by region Sources: Bloomberg, Compan",
+   "riods. For more information on how our gold ETF data set is produced, please see our methodology note . Downloads: Download xlsx Gold ETF Flows: September 2026 Download pdf ETF Flows Data Methodology &nbsp; Gold ETF flows by region Gold ETF flows by region Sources: Bloomberg, Company Filings, ICE Benchmark Administration, Worl",
+   "imer &nbsp; Regional, country and individual fund breakdown Gold-Backed ETFs flows data Length and frequency Flows and holdings data are updated on the website weekly and monthly. Downloadable data in excel is available on a monthly basis, presented in both tables and charts. Update Schedule Weekly data is updated on the Mon",
+   " Regional, country and individual fund breakdown Gold-Backed ETFs flows data Length and frequency Flows and holdings data are updated on the website weekly and monthly. Downloadable data in excel is available on a monthly basis, presented in both tables and charts. Update Schedule Weekly data is updated on the Monday of the f"
+  ]
+ },
+ "text_wgc_cb": {
+  "status": 200,
+  "hits": [
+   "ights World Gold Council Gold Industry & Corporate Goldhub Professional Investors Invest.gold Individual Investors Gold Spot price &nbsp; &nbsp; - AWAITED Last Updated Show chart Gold spot price Price and Premium Data Goldhub Data Gold Reserves by Country Gold Reserves by Country 6 October, 2026 Central banks Gold is an impor",
+   " fifth of all the gold that has been mined throughout history. To help understand this sector of the gold market, we publish gold reserve data \u2013 compiled using IMF IFS statistics \u2013 which tracks central banks\u2019 (and other official institutions, where appropriate) reported purchases and sales along with gold as a percentage ",
+   " market data, tools and analysis. SIGN IN &nbsp; Central Banks Dashboard v2 Data as of 30 June, 2026 Sources: Central Banks, Federal Reserve Bank of St. Louis, IMF, World Bank, World Gold Council; Disclaimer Note: Current account and gross domestic product data is lagged by a quarter due to data availability (last update ",
+   "ces: Central Banks, Federal Reserve Bank of St. Louis, IMF, World Bank, World Gold Council; Disclaimer Note: Current account and gross domestic product data is lagged by a quarter due to data availability (last update 2026-03-31). This chart was updated in September 2026 and reports data available at that time. Data are t",
+   "ncil; Disclaimer Note: Current account and gross domestic product data is lagged by a quarter due to data availability (last update 2026-03-31). This chart was updated in September 2026 and reports data available at that time. Data are taken from the International Monetary Fund's International Financial Statistics (IFS), Sept"
+  ]
+ },
+ "text_bank_participation": {
+  "status": 200,
+  "hits": [
+   "ticipation Reports Explanatory Notes Release Schedule Historical Special Announcements Bank Participation Reports The Bank Participation Report (BPR) publishes monthly on the first Friday after 3:30 ET. The BPR utilizes data from the first Tuesday of each month. However, if the first Tuesday of the month is a Federal holiday,",
+   "nnouncements Bank Participation Reports The Bank Participation Report (BPR) publishes monthly on the first Friday after 3:30 ET. The BPR utilizes data from the first Tuesday of each month. However, if the first Tuesday of the month is a Federal holiday, the report will utilize the following Tuesday\u2019s data and is published the follo",
+   "ank Participation Report (BPR) publishes monthly on the first Friday after 3:30 ET. The BPR utilizes data from the first Tuesday of each month. However, if the first Tuesday of the month is a Federal holiday, the report will utilize the following Tuesday\u2019s data and is published the following Friday. 2026 Month Futures Link Options "
+  ]
+ },
+ "text_cot_explanatory": {
+  "status": 200,
+  "hits": [
+   "lled reporting firms) file daily reports with the Commission. Those reports show the futures and option positions of traders that hold positions above specific reporting levels set by CFTC regulations. If, at the daily market close, a reporting firm has a trader with a position at or above the Commission\u2019s reporting level in any sing",
+   "ve specific reporting levels set by CFTC regulations. If, at the daily market close, a reporting firm has a trader with a position at or above the Commission\u2019s reporting level in any single futures month or option expiration, it reports that trader\u2019s entire position in all futures and options expiration months in that commodity, rega",
+   "to the Commission usually represents 70 to 90 percent of the total open interest in any given market. From time to time, the Commission will raise or lower the reporting levels in specific markets to strike a balance between collecting sufficient information to oversee the markets and minimizing the reporting burden on the futures in"
+  ]
+ },
+ "text_disagg_explanatory": {
+  "status": 200,
+  "hits": [
+   "ncluded. 1 The Disaggregated COT report increases transparency from the legacy COT reports by separating traders into the following four categories of traders: Producer/Merchant/Processor/User; Swap Dealers; Managed Money; and Other Reportables. The legacy COT report separates reportable traders only into \u201ccommercial\u201d and \u201cnon-commerci",
+   "eport increases transparency from the legacy COT reports by separating traders into the following four categories of traders: Producer/Merchant/Processor/User; Swap Dealers; Managed Money; and Other Reportables. The legacy COT report separates reportable traders only into \u201ccommercial\u201d and \u201cnon-commercial\u201d categories. All of the C",
+   "s transparency from the legacy COT reports by separating traders into the following four categories of traders: Producer/Merchant/Processor/User; Swap Dealers; Managed Money; and Other Reportables. The legacy COT report separates reportable traders only into \u201ccommercial\u201d and \u201cnon-commercial\u201d categories. All of the COT reports provi",
+   " the legacy COT reports by separating traders into the following four categories of traders: Producer/Merchant/Processor/User; Swap Dealers; Managed Money; and Other Reportables. The legacy COT report separates reportable traders only into \u201ccommercial\u201d and \u201cnon-commercial\u201d categories. All of the COT reports provide a breakdown of each ",
+   "r providing market transparency arises from the recommendation to disaggregate the existing \u201ccommercial\u201d category in the Commission\u2019s Staff Report on Commodity Swap Dealers &amp; Index Traders&nbsp;(September 2008) . Specifically, that report recommended: Remove Swap Dealer from Commercial Category and Create New Swap Dealer Clas"
+  ]
+ },
+ "text_sge_delayed": {
+  "status": 200,
+  "hits": [
+   " Benchmark Price \ue63e Shanghai Silver Benchmark Price \ue63e Licensed Market Data Distributors Delayed Quotes Home > Data > Delayed Quotes Variety Latest High Low Open Au99.95 0.0 0.0 0.0 0.0 Au99.99 0.0 0.0 0.0 0.0 Au100g 0.0 0.0 0.0 0.0 Pt99.95 0.0 0.0 0.0 0.0 Ag(T+D) 0.0 0.0 0.0 0.0 Au(T+D) 0.0 0.0 0.0 0.0 mAu(T+D) 0.0 0.0 0.0 0.0",
+   "hai Silver Benchmark Price \ue63e Licensed Market Data Distributors Delayed Quotes Home > Data > Delayed Quotes Variety Latest High Low Open Au99.95 0.0 0.0 0.0 0.0 Au99.99 0.0 0.0 0.0 0.0 Au100g 0.0 0.0 0.0 0.0 Pt99.95 0.0 0.0 0.0 0.0 Ag(T+D) 0.0 0.0 0.0 0.0 Au(T+D) 0.0 0.0 0.0 0.0 mAu(T+D) 0.0 0.0 0.0 0.0 Au(T+N1) 0.0 0.0 0.0 0.",
+   "ayed Quotes Variety Latest High Low Open Au99.95 0.0 0.0 0.0 0.0 Au99.99 0.0 0.0 0.0 0.0 Au100g 0.0 0.0 0.0 0.0 Pt99.95 0.0 0.0 0.0 0.0 Ag(T+D) 0.0 0.0 0.0 0.0 Au(T+D) 0.0 0.0 0.0 0.0 mAu(T+D) 0.0 0.0 0.0 0.0 Au(T+N1) 0.0 0.0 0.0 0.0 Au(T+N2) 0.0 0.0 0.0 0.0 Ag99.99 0.0 0.0 0.0 0.0 iAu99.99 0.0 0.0 0.0 0.0 Au99.5 0.0 0.0 0.0 ",
+   "t High Low Open Au99.95 0.0 0.0 0.0 0.0 Au99.99 0.0 0.0 0.0 0.0 Au100g 0.0 0.0 0.0 0.0 Pt99.95 0.0 0.0 0.0 0.0 Ag(T+D) 0.0 0.0 0.0 0.0 Au(T+D) 0.0 0.0 0.0 0.0 mAu(T+D) 0.0 0.0 0.0 0.0 Au(T+N1) 0.0 0.0 0.0 0.0 Au(T+N2) 0.0 0.0 0.0 0.0 Ag99.99 0.0 0.0 0.0 0.0 iAu99.99 0.0 0.0 0.0 0.0 Au99.5 0.0 0.0 0.0 0.0 iAu100g 0.0 0.0 0.0 0",
+   "0.0 0.0 0.0 Ag(T+D) 0.0 0.0 0.0 0.0 Au(T+D) 0.0 0.0 0.0 0.0 mAu(T+D) 0.0 0.0 0.0 0.0 Au(T+N1) 0.0 0.0 0.0 0.0 Au(T+N2) 0.0 0.0 0.0 0.0 Ag99.99 0.0 0.0 0.0 0.0 iAu99.99 0.0 0.0 0.0 0.0 Au99.5 0.0 0.0 0.0 0.0 iAu100g 0.0 0.0 0.0 0.0 iAu99.5 0.0 0.0 0.0 0.0 PGC30g 0.0 0.0 0.0 0.0 NYAuTN06 0.0 0.0 0.0 0.0 NYAuTN12 0.0 0.0 0.0 0.0"
+  ]
+ },
+ "text_sge_benchmark": {
+  "status": 200,
+  "hits": [
+   " data_BenchmarkPrice Prompt text &#xe644; &#xe641; Prompt text! &#xe640; Prompt text! Confirm Cancel \ue620 SEARCH HOME \u4e2d\u6587\u7248 News & Announcement Trading Rules Data Education Members",
+   "rty (CCP) Anti-Money Laundering, Anti-Terrorist Financing, and Anti-Tax Evasion --> PFMI --> Delayed Quotes | View All Price Chart | View All --> Shanghai Gold Benchmark Price | View All Shanghai Silver Benchmark Price | View All Licensed Market Data Distributors | View All Report | View All Daily --> Daily Monthly Annual Cash ",
+   "rist Financing, and Anti-Tax Evasion --> PFMI --> Delayed Quotes | View All Price Chart | View All --> Shanghai Gold Benchmark Price | View All Shanghai Silver Benchmark Price | View All Licensed Market Data Distributors | View All Report | View All Daily --> Daily Monthly Annual Cash Settlement Getting Started | View All Case ",
+   "ducts Introduce OTC Market --> Data \ue610 Data \ue63e Delayed Quotes \ue63e Price Chart --> \ue63e Report \ue63e Daily --> \ue63e Daily \ue63e Monthly \ue63e Annual \ue63e Cash Settlement \ue63e Shanghai Gold Benchmark Price \ue63e Shanghai Silver Benchmark Price \ue63e Licensed Market Data Distributors Shanghai Gold Benchmark Price Home > Data > Shanghai Gold Benchmark Price Daily Sha",
+   "a \ue610 Data \ue63e Delayed Quotes \ue63e Price Chart --> \ue63e Report \ue63e Daily --> \ue63e Daily \ue63e Monthly \ue63e Annual \ue63e Cash Settlement \ue63e Shanghai Gold Benchmark Price \ue63e Shanghai Silver Benchmark Price \ue63e Licensed Market Data Distributors Shanghai Gold Benchmark Price Home > Data > Shanghai Gold Benchmark Price Daily Shanghai Gold Benchmark Price Chart C"
+  ]
+ },
+ "text_ibja": {
+  "status": 200,
+  "hits": [
+   " Gold rate daily opening and closing rates for India --> --> 999 Purity 14163 (1 Gram) 995 Purity 14106 (1 Gram) 916 Purity 12973 (1 Gram) 750 Purity 10622 (1 Gram) 585 Purity 8285 (1 Gram) --> Purity AM PM Rates will be upl",
+   " Gold rate daily opening and closing rates for India --> --> 999 Purity 14163 (1 Gram) 995 Purity 14106 (1 Gram) 916 Purity 12973 (1 Gram) 750 Purity 10622 (1 Gram) 585 Purity 8285 (1 Gram) --> Purity AM PM Rates will be uploaded soon NA Previou",
+   " Gold rate daily opening and closing rates for India --> --> 999 Purity 14163 (1 Gram) 995 Purity 14106 (1 Gram) 916 Purity 12973 (1 Gram) 750 Purity 10622 (1 Gram) 585 Purity 8285 (1 Gram) --> Purity AM PM Rates will be uploaded soon NA Previous 30 ",
+   " Gold rate daily opening and closing rates for India --> --> 999 Purity 14163 (1 Gram) 995 Purity 14106 (1 Gram) 916 Purity 12973 (1 Gram) 750 Purity 10622 (1 Gram) 585 Purity 8285 (1 Gram) --> Purity AM PM Rates will be uploaded soon NA Previous 30 Days --> Previous Dat",
+   " Gold rate daily opening and closing rates for India --> --> 999 Purity 14163 (1 Gram) 995 Purity 14106 (1 Gram) 916 Purity 12973 (1 Gram) 750 Purity 10622 (1 Gram) 585 Purity 8285 (1 Gram) --> Purity AM PM Rates will be uploaded soon NA Previous 30 Days --> Previous Dates Rate Karat/Purity --> A"
+  ]
+ },
+ "text_lbma_good_delivery": {
+  "status": 200,
+  "hits": []
+ },
+ "text_rbi_wss": {
+  "status": 200,
+  "hits": []
+ },
+ "text_icici_ilearn_mcx": {
+  "status": 200,
+  "hits": [
+   " List of MCX Trading Holidays in 2026- ICICI Direct Skip to main content Invest Stocks Why Choose Us Buy Now, Pay Later (MTF) Stock Investing Ideas Stock SIPs Stock Basket Good Till Trigge",
+   " List of MCX Trading Holidays in 2026- ICICI Direct Skip to main content Invest Stocks Why Choose Us Buy Now, Pay Later (MTF) Stock Investing Ideas Stock SIPs Stock Basket Good Till Triggered (GTT)",
+   "nds Commodity iLearn Bonds Text Size A- A A+ Text to Speech Color Contrast Pause Animations LOGIN Open ICICI 3-in-1 Account Login OPEN ICICI 3-IN-1 ACCOUNT MCX Holidays List 2026 23 Dec 2025 | 2 min read | by ICICI Securities Team Read for me Pause &nbsp; MCX Holiday List 2026 (Full &amp; Partial Trading Holidays) The Multi C",
+   "iLearn Bonds Text Size A- A A+ Text to Speech Color Contrast Pause Animations LOGIN Open ICICI 3-in-1 Account Login OPEN ICICI 3-IN-1 ACCOUNT MCX Holidays List 2026 23 Dec 2025 | 2 min read | by ICICI Securities Team Read for me Pause &nbsp; MCX Holiday List 2026 (Full &amp; Partial Trading Holidays) The Multi Commodity Ex",
+   "en ICICI 3-in-1 Account Login OPEN ICICI 3-IN-1 ACCOUNT MCX Holidays List 2026 23 Dec 2025 | 2 min read | by ICICI Securities Team Read for me Pause &nbsp; MCX Holiday List 2026 (Full &amp; Partial Trading Holidays) The Multi Commodity Exchange (MCX) has released its official trading and clearing holiday calendar for 2026. Th"
+  ]
+ },
+ "yahoo_GC=F": {
+  "status": 429,
+  "host": "query1"
+ },
+ "yahoo_SI=F": {
+  "status": 429,
+  "host": "query1"
+ },
+ "yahoo_INR=X": {
+  "status": 429,
+  "host": "query1"
+ },
+ "yahoo_^GVZ": {
+  "status": 429,
+  "host": "query1"
+ },
+ "yahoo_GCZ26.CMX": {
+  "status": 429,
+  "host": "query1"
+ },
+ "yahoo_GCG27.CMX": {
+  "status": 429,
+  "host": "query1"
+ },
+ "yahoo_GCJ27.CMX": {
+  "status": 429,
+  "host": "query1"
+ },
+ "yahoo_GLD": {
+  "status": 429,
+  "host": "query1"
+ },
+ "yahoo_GOLDBEES.NS": {
+  "status": 429,
+  "host": "query1"
+ },
+ "app_overlay": {
+  "status": 200,
+  "body": {
+   "as_of": "2026-10-26T05:49:42+05:30",
+   "contract": "GOLD",
+   "expiry": "2026-12-04",
+   "overlay": {
+    "comex": {
+     "symbol": "GCZ26.CMX",
+     "price": 4004.2,
+     "as_of": "2026-10-26T05:39:36+05:30"
+    },
+    "usdinr": {
+     "symbol": "INR=X",
+     "price": 94.93,
+     "as_of": "2026-10-26T01:32:06+05:30"
+    },
+    "landed": 122211.0,
+    "landed_note": "COMEX \u00d7 USD/INR \u00d7 10 g/oz \u2014 no import duty or local premium",
+    "source": "Yahoo GC\u00d7INR model",
+    "fair": 144228.0,
+    "gap_vs_settlement": -1851.0,
+    "implied_premium_pct": 18.02,
+    "settlement_session": "2026-10-22"
+   },
+   "mcx_price": null,
+   "premium": null
+  }
+ },
+ "app_specs": {
+  "status": 200,
+  "body": {
+   "as_of": "2026-10-26T05:49:42+05:30",
+   "master": {
+    "available": true,
+    "published": "2026-10-23",
+    "source": "ICICI MCXScripMaster.txt (public, ~07:00 IST)"
+   },
+   "contracts": [
+    {
+     "code": "GOLD",
+     "lot": "1 kg",
+     "quotation": "\u20b9 per 10 g",
+     "tick_value": 100.0,
+     "purity": "995",
+     "front": {
+      "expiry": "2026-12-04",
+      "settlement": 146079.0,
+      "band_low": 141697.0,
+      "band_high": 150461.0,
+      "open_interest_lots": 16650.0
+     },
+     "indicative_margin_rupees": 876474.0,
+     "observed_expiries": [
+      "2026-12-04",
+      "2027-02-05",
+      "2027-04-05"
+     ]
+    },
+    {
+     "code": "GOLDM",
+     "lot": "100 g",
+     "quotation": "\u20b9 per 10 g",
+     "tick_value": 10.0,
+     "purity": "995",
+     "front": {
+      "expiry": "2026-11-05",
+      "settlement": 144584.0,
+      "band_low": 140247.0,
+      "band_high": 148921.0,
+      "open_interest_lots": 48437.0
+     },
+     "indicative_margin_rupees": 86750.0,
+     "observed_expiries": [
+      "2026-11-05",
+      "2026-12-04",
+      "2027-01-05"
+     ]
+    },
+    {
+     "code": "GOLDPETAL",
+     "lot": "1 g",
+     "quotation": "\u20b9 per 1 g",
+     "tick_value": 1.0,
+     "purity": "999",
+     "front": {
+      "expiry": "2026-10-30",
+      "settlement": 14581.0,
+      "band_low": 14144.0,
+      "band_high": 15018.0,
+      "open_interest_lots": 155778.0
+     },
+     "indicative_margin_rupees": 875.0,
+     "observed_expiries": [
+      "2026-10-30",
+      "2026-11-30",
+      "2026-12-31"
+     ]
+    },
+    {
+     "code": "GOLDGUINEA",
+     "lot": "8 g",
+     "quotation": "\u20b9 per 8 g",
+     "tick_value": 1.0,
+     "purity": "999",
+     "front": {
+      "expiry": "2026-10-30",
+      "settlement": 116648.0,
+      "band_low": 113149.0,
+      "band_high": 120147.0,
+      "open_interest_lots": 12009.0
+     },
+     "indicative_margin_rupees": 6999.0,
+     "observed_expiries": [
+      "2026-10-30",
+      "2026-11-30",
+      "2026-12-31"
+     ]
+    }
+   ]
+  }
+ }
+}

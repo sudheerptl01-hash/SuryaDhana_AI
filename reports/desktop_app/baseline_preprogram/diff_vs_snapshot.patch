@@ -1,0 +1,630 @@
+--- baseline/ui/app/global-error.tsx
++++ snapshot/ui/app/global-error.tsx
+@@ -2,7 +2,17 @@
+ 
+ /**
+- * global-error.tsx — Surfaces the real exception message in production.
+- * Remove or harden after diagnosis.
++ * global-error.tsx: the root error boundary (replaces the root layout while it shows).
++ *
++ * ChunkLoadError (a lazily loaded tab/modal chunk that the server no longer has, e.g. right after a UI release
++ * swap): one guarded automatic reload (components/desktop/chunkRecovery.ts: at most one per 60 s per tab, and
++ * only while the server answers; while it does not, it re-checks every 5 s and reloads once it is back).
++ * Everything else, and a chunk error that repeats after the reload: today's behavior, the real exception message
++ * with a Retry button.
+  */
++import { useEffect, useState } from 'react'
++import { isChunkLoadError, recoverFromChunkError } from '@/components/desktop/chunkRecovery'
++
++const BG = '#05070a'
++
+ export default function GlobalError({
+   error,
+@@ -12,8 +22,41 @@
+   reset: () => void
+ }) {
++  const chunk = isChunkLoadError(error)
++  // 'reloading' covers the gap until the guard says no: a stale-chunk reload never flashes the exception card
++  const [mode, setMode] = useState<'reloading' | 'waiting' | 'error'>(chunk ? 'reloading' : 'error')
++
++  useEffect(() => {
++    if (!chunk) return
++    let alive = true
++    let timer: ReturnType<typeof setTimeout> | undefined
++    const attempt = () => {
++      recoverFromChunkError().then(outcome => {
++        if (!alive) return
++        if (outcome === 'guarded') setMode('error')
++        else if (outcome === 'unreachable') { setMode('waiting'); timer = setTimeout(attempt, 5000) }
++      })
++    }
++    attempt()
++    return () => { alive = false; if (timer) clearTimeout(timer) }
++  }, [chunk])
++
++  if (mode !== 'error') {
++    return (
++      <html lang="en" className="dark" style={{ background: BG, colorScheme: 'dark' }}>
++        <body style={{ background: BG, color: '#6f7a8e', margin: 0, minHeight: '100vh', display: 'flex', alignItems: 'center',
++                       justifyContent: 'center', fontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace", fontSize: 11,
++                       letterSpacing: '0.14em', textTransform: 'uppercase' }}>
++          <span role="status" aria-live="polite">
++            {mode === 'reloading' ? 'Loading the new terminal build…' : 'Server unreachable · reloading when it is back…'}
++          </span>
++        </body>
++      </html>
++    )
++  }
++
+   return (
+-    <html lang="en">
++    <html lang="en" className="dark" style={{ background: BG, colorScheme: 'dark' }}>
+       <body style={{
+-        background: '#05070a',
++        background: BG,
+         color: '#d6dbe4',
+         fontFamily: 'JetBrains Mono, monospace',
+--- baseline/ui/app/globals.css
++++ snapshot/ui/app/globals.css
+@@ -202,2 +202,165 @@
+ @media (max-width: 1024px) { .t-tape-ge4 { display: none !important; } }
+ @media (max-width: 720px)  { .t-tape-ge2 { display: none !important; } }
++
++/* ═══════════════════════════════════════════════════════════════════════════
++   Desktop program (D4) — APPEND-ONLY SECTION. Everything above this line is unchanged.
++   1. Self-hosted fonts   2. Shell layout offset   3. Title strip   4. Banner / notices   5. Boot gate
++   ═══════════════════════════════════════════════════════════════════════════ */
++
++/* 1. Self-hosted fonts: ui/public/fonts (SIL OFL 1.1, provenance in ui/public/fonts/README.md). The exact
++   Google Fonts files the terminal used before (Chakra Petch v13 static 500/600/700, JetBrains Mono v24
++   variable), latin + latin-ext subsets, same unicode-range split, font-display: swap. No request leaves the
++   machine. JetBrains Mono has no rupee sign (U+20B9, checked in the font's cmap): the last four faces give the
++   'JetBrains Mono' family a rupee from Chakra Petch (which has one), weight-matched, so every "₹" in the mono
++   UI renders identically in WebKit and Chromium instead of whatever system fallback each engine picks.
++   Later rules win for overlapping ranges, so the rupee faces are declared last. */
++@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-500-latin-ext.woff2') format('woff2');
++  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
++@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-500-latin.woff2') format('woff2');
++  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
++@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-600-latin-ext.woff2') format('woff2');
++  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
++@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-600-latin.woff2') format('woff2');
++  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
++@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 700; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-700-latin-ext.woff2') format('woff2');
++  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
++@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 700; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-700-latin.woff2') format('woff2');
++  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
++  src: url('/fonts/jetbrains-mono-v24-latin-ext.woff2') format('woff2');
++  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
++  src: url('/fonts/jetbrains-mono-v24-latin.woff2') format('woff2');
++  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
++  src: url('/fonts/jetbrains-mono-v24-latin-ext.woff2') format('woff2');
++  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
++  src: url('/fonts/jetbrains-mono-v24-latin.woff2') format('woff2');
++  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap;
++  src: url('/fonts/jetbrains-mono-v24-latin-ext.woff2') format('woff2');
++  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap;
++  src: url('/fonts/jetbrains-mono-v24-latin.woff2') format('woff2');
++  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap;
++  src: url('/fonts/jetbrains-mono-v24-latin-ext.woff2') format('woff2');
++  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap;
++  src: url('/fonts/jetbrains-mono-v24-latin.woff2') format('woff2');
++  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-500-latin-ext.woff2') format('woff2');
++  unicode-range: U+20B9; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-500-latin-ext.woff2') format('woff2');
++  unicode-range: U+20B9; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-600-latin-ext.woff2') format('woff2');
++  unicode-range: U+20B9; }
++@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap;
++  src: url('/fonts/chakra-petch-v13-700-latin-ext.woff2') format('woff2');
++  unicode-range: U+20B9; }
++
++/* 2. Shell layout offset. PlatformShell publishes --shell-top on <html>: 32 px title strip in the desktop app
++   + 24 px connection banner while ui-api is down; 0 in a browser without a banner. The page flows below it and
++   the app's fixed/sticky chrome offsets by var(--shell-top, 0px). */
++:root { --shell-top: 0px; }
++body.terminal { padding-top: var(--shell-top); }
++
++/* 3. Title strip (desktop app only): overlay title bar, 32 px like the native macOS 26 title bar. The traffic lights
++   sit at the left: with the shell's inset x = 14 the zoom button ends at 74 px, so content starts at 84 px. */
++.sd-strip {
++  position: fixed; top: 0; left: 0; right: 0;
++  display: flex; align-items: center; padding: 0 6px 0 84px;
++  background: #020304; border-bottom: 1px solid var(--t-border);
++  font-family: var(--t-mono); font-size: 10px; line-height: 1; letter-spacing: .08em;
++  color: var(--t-muted); white-space: nowrap; overflow: hidden;
++  user-select: none; -webkit-user-select: none; cursor: default;
++  font-variant-numeric: tabular-nums;
++}
++.sd-strip-brand { display: flex; align-items: center; gap: 7px; height: 100%; padding: 0 12px 0 2px; }
++.sd-mark { display: inline-block; width: 7px; height: 7px; background: var(--t-amber); transform: rotate(45deg);
++  box-shadow: 0 0 8px rgba(255, 176, 0, .45); flex: none; }
++.sd-wordmark { font-family: var(--t-display); font-weight: 700; font-size: 11px; letter-spacing: .26em; color: var(--t-amber); }
++.sd-strip-seg { display: flex; align-items: center; gap: 7px; height: 100%; padding: 0 11px; border-left: 1px solid var(--t-border); }
++.sd-strip-page { min-width: 0; overflow: hidden; }
++.sd-strip-code { font-family: var(--t-display); font-weight: 700; font-size: 11.5px; letter-spacing: .14em; color: var(--t-bright); }
++.sd-strip-label { color: var(--t-muted); text-transform: uppercase; letter-spacing: .12em; overflow: hidden; text-overflow: ellipsis; }
++.sd-strip-drag { flex: 1; align-self: stretch; min-width: 24px; }
++.sd-strip-k { color: var(--t-dim); font-size: 9px; letter-spacing: .16em; }
++.sd-strip-dim { color: var(--t-dim); letter-spacing: .08em; }
++.sd-strip-detail { text-transform: uppercase; font-size: 9px; letter-spacing: .12em; }
++.sd-strip-last { padding-right: 6px; }
++.sd-chip { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border: 1px solid var(--t-border-hi);
++  font-size: 9.5px; font-weight: 600; letter-spacing: .14em; color: var(--t-muted); }
++.sd-chip.is-open { color: var(--t-green); border-color: rgba(22, 217, 138, .55); background: rgba(22, 217, 138, .08); }
++.sd-chip.is-pre { color: var(--t-amber); border-color: rgba(255, 176, 0, .55); background: rgba(255, 176, 0, .08); }
++.sd-clock { color: var(--t-bright); font-weight: 600; font-size: 11.5px; letter-spacing: .06em; }
++.sd-svc { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: .14em; color: var(--t-muted); }
++.sd-svc + .sd-svc { margin-left: 4px; }
++.sd-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--t-dim); flex: none; }
++.sd-dot.is-up { background: var(--t-green); box-shadow: 0 0 5px rgba(22, 217, 138, .7); }
++.sd-dot.is-down { background: var(--t-red); box-shadow: 0 0 6px rgba(255, 77, 94, .8); animation: t-pulse 1.2s ease-in-out infinite; }
++.sd-newbuild { margin-left: 4px; height: 18px; padding: 0 8px; border: none; background: var(--t-amber); color: #05070a;
++  font-family: var(--t-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .14em; cursor: pointer;
++  animation: sd-attn 2.4s ease-in-out infinite; }
++.sd-newbuild:hover { background: #ffc233; }
++@keyframes sd-attn { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 176, 0, .0); } 50% { box-shadow: 0 0 0 3px rgba(255, 176, 0, .22); } }
++
++/* 4. Connection banner (both modes) and the browser "new build" pill. */
++.sd-banner {
++  position: fixed; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: 0 8px 0 0;
++  font-family: var(--t-mono); font-size: 10px; letter-spacing: .1em; white-space: nowrap; overflow: hidden;
++  border-bottom: 1px solid; animation: sd-banner-in .18s ease-out both;
++}
++.sd-banner.is-down { background: #170609; color: #ff8a94; border-color: rgba(255, 77, 94, .6); }
++.sd-banner.is-ok { background: #03140d; color: var(--t-green); border-color: rgba(22, 217, 138, .5); }
++.sd-banner-tag { align-self: stretch; display: flex; align-items: center; padding: 0 10px; font-weight: 700;
++  letter-spacing: .16em; color: #05070a; }
++.sd-banner.is-down .sd-banner-tag { background: var(--t-red); }
++.sd-banner.is-ok .sd-banner-tag { background: var(--t-green); }
++.sd-banner-main { font-weight: 700; text-transform: uppercase; letter-spacing: .14em; }
++.sd-banner-dim { color: var(--t-muted); }
++.sd-banner-btn { height: 16px; padding: 0 8px; background: transparent; border: 1px solid currentColor; color: inherit;
++  font: inherit; font-size: 9px; font-weight: 700; letter-spacing: .14em; cursor: pointer; }
++.sd-banner-btn:hover { background: rgba(255, 77, 94, .15); }
++@keyframes sd-banner-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
++.sd-pill {
++  position: fixed; right: 14px; bottom: 32px; display: flex; align-items: center; gap: 10px; padding: 0 4px 0 0;
++  height: 26px; background: var(--t-panel); border: 1px solid rgba(255, 176, 0, .55); box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
++  font-family: var(--t-mono); font-size: 10px; letter-spacing: .1em; color: var(--t-text); animation: t-fade-up .3s ease-out both;
++}
++.sd-pill-tag { align-self: stretch; display: flex; align-items: center; padding: 0 9px; background: var(--t-amber); color: #05070a;
++  font-weight: 700; letter-spacing: .16em; }
++.sd-pill-btn { height: 18px; padding: 0 9px; background: transparent; border: 1px solid var(--t-amber); color: var(--t-amber);
++  font: inherit; font-weight: 700; letter-spacing: .14em; cursor: pointer; }
++.sd-pill-btn:hover { background: rgba(255, 176, 0, .14); }
++.sd-pill-x { width: 18px; height: 18px; background: none; border: none; color: var(--t-dim); font: inherit; font-size: 13px; cursor: pointer; }
++.sd-pill-x:hover { color: var(--t-text); }
++
++/* 5. Boot gate: black (terminal token), the mark fades in only after 250 ms so a fast boot never blinks. */
++.sd-gate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--t-bg); }
++.sd-gate-mark { display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0;
++  animation: sd-gate-in .45s ease-out .25s forwards; }
++.sd-gate-word { display: flex; align-items: center; gap: 10px; font-family: var(--t-display); font-weight: 700; font-size: 12px;
++  letter-spacing: .42em; color: var(--t-amber-dim); }
++.sd-gate-bar { position: relative; width: 132px; height: 1px; overflow: hidden; background: var(--t-border); }
++.sd-gate-bar::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 36%; background: var(--t-amber);
++  animation: sd-gate-scan 1.1s ease-in-out infinite; }
++.sd-gate-slow { margin-top: 6px; font-family: var(--t-mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase;
++  color: var(--t-muted); opacity: 0; animation: sd-gate-in .4s ease-out 8s forwards; }
++@keyframes sd-gate-in { to { opacity: 1; } }
++@keyframes sd-gate-scan { from { transform: translateX(-100%); } to { transform: translateX(380%); } }
++@media (prefers-reduced-motion: reduce) {
++  .sd-gate-mark { animation: none; opacity: 1; }
++  .sd-gate-slow { animation: sd-gate-in 0s linear 8s forwards; }
++  .sd-gate-bar::after, .sd-newbuild, .sd-dot.is-down, .sd-banner { animation: none; }
++}
+--- baseline/ui/app/layout.tsx
++++ snapshot/ui/app/layout.tsx
+@@ -1,4 +1,5 @@
+-import type { Metadata } from 'next'
++import type { Metadata, Viewport } from 'next'
+ import './globals.css'
++import { PlatformShell } from '@/components/desktop/PlatformShell'
+ 
+ export const metadata: Metadata = {
+@@ -7,16 +8,32 @@
+ }
+ 
++/** Terminal background (= --t-bg in globals.css). Inline on <html>/<body> so the very first paint is black. */
++const TERMINAL_BG = '#05070a'
++
++// <meta name="theme-color"> and <meta name="color-scheme" content="dark">: dark scrollbars, form controls and
++// window chrome before any CSS has been parsed (no white flash in WKWebView or a browser).
++export const viewport: Viewport = {
++  themeColor: TERMINAL_BG,
++  colorScheme: 'dark',
++}
++
++/**
++ * Self-hosted fonts (ui/public/fonts, SIL OFL 1.1; @font-face rules at the end of globals.css). Preloaded: the
++ * two faces every page paints first, JetBrains Mono latin (one variable file covers all body weights) and Chakra
++ * Petch 700 latin (wordmark, page codes, panel titles). The rest load on demand through unicode-range.
++ */
++const PRELOAD_FONTS = ['/fonts/jetbrains-mono-v24-latin.woff2', '/fonts/chakra-petch-v13-700-latin.woff2']
++
+ export default function RootLayout({ children }: { children: React.ReactNode }) {
+   return (
+-    <html lang="en" className="dark">
++    <html lang="en" className="dark" style={{ background: TERMINAL_BG, colorScheme: 'dark' }}>
+       <head>
+-        <link rel="preconnect" href="https://fonts.googleapis.com" />
+-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+-        <link
+-          rel="stylesheet"
+-          href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+-        />
++        {PRELOAD_FONTS.map(href => (
++          <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="anonymous" />
++        ))}
+       </head>
+-      <body className="terminal">{children}</body>
++      <body className="terminal" style={{ background: TERMINAL_BG, color: '#d6dbe4' }}>
++        <PlatformShell>{children}</PlatformShell>
++      </body>
+     </html>
+   )
+--- baseline/ui/app/page.tsx
++++ snapshot/ui/app/page.tsx
+@@ -34,6 +34,20 @@
+ // is fetched when it is first opened, with a TabSkeleton while in flight. ssr:false — the
+ // terminal is a client app and these pages poll live endpoints on mount.
+-const lazyTab = (load: () => Promise<React.ComponentType<any>>) =>
+-  dynamic(load, { loading: () => <TabSkeleton />, ssr: false })
++// Perf (desktop program D4, reports/desktop_app/perf_baseline.md): a suspending dynamic() boundary shows the
++// skeleton and React then holds the reveal for its 300 ms fallback throttle, even for a 10 ms chunk. So each
++// tab remembers its resolved module and, once resolved (first visit, or the idle warm-up in HomeContent),
++// renders it directly: no Suspense, no skeleton, no 300 ms floor. Chosen once per mount (no remount, no state loss).
++const TAB_WARMERS: Array<() => Promise<unknown>> = []
++const lazyTab = (load: () => Promise<React.ComponentType<any>>) => {
++  let resolved: React.ComponentType<any> | null = null
++  const warm = () => load().then(c => { resolved = c; return c })
++  TAB_WARMERS.push(warm)
++  const Lazy = dynamic(warm, { loading: () => <TabSkeleton />, ssr: false })
++  const Tab = (props: any) => {
++    const [C] = useState<React.ComponentType<any>>(() => resolved ?? Lazy)
++    return <C {...props} />
++  }
++  return Tab
++}
+ const PipelineStudio = lazyTab(() => import('@/components/PipelineStudio').then(m => m.PipelineStudio))
+ const LivePortfolio = lazyTab(() => import('@/components/LivePortfolio').then(m => m.LivePortfolio))
+@@ -232,4 +246,18 @@
+   useEffect(() => { loadDashboard() }, [loadDashboard, retryCount])
+ 
++  // Perf (D4): warm every lazy tab module in idle time so first visits skip the skeleton (see lazyTab above)
++  useEffect(() => {
++    if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return
++    let cancelled = false
++    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }
++    const idle = (cb: () => void) => (w.requestIdleCallback ? w.requestIdleCallback(cb, { timeout: 2000 }) : setTimeout(cb, 120))
++    const next = (i: number) => {
++      if (cancelled || i >= TAB_WARMERS.length) return
++      idle(() => { if (!cancelled) TAB_WARMERS[i]().catch(() => undefined).finally(() => next(i + 1)) })
++    }
++    const start = setTimeout(() => next(0), 3000)
++    return () => { cancelled = true; clearTimeout(start) }
++  }, [])
++
+   // Auto-retry while the initial load is failing: without this, one failed load
+   // (e.g. during a ui-api restart) left "BACKEND UNREACHABLE" on screen until the
+@@ -436,5 +464,5 @@
+ 
+   return (
+-    <div style={{ minHeight: '100vh', background: 'var(--t-bg)', color: 'var(--t-text)', paddingBottom: 30 }}>
++    <div style={{ minHeight: 'calc(100vh - var(--shell-top, 0px))', background: 'var(--t-bg)', color: 'var(--t-text)', paddingBottom: 30 }}>
+       {/* ── NSE Operations Center Command Header ───────────────────────── */}
+       <MarketCommandHeader
+--- baseline/ui/components/AlphaDiscoveryDesk.tsx
++++ snapshot/ui/components/AlphaDiscoveryDesk.tsx
+@@ -337,5 +337,5 @@
+     <div className="space-y-4">
+       <style>{`
+-        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap');
++        /* Chakra Petch is self-hosted (globals.css @font-face): no Google Fonts request (desktop program D4) */
+         .alpha-range { -webkit-appearance: none; height: 4px; border-radius: 3px; background: linear-gradient(90deg,#ffb000,#2A3F58); outline: none; }
+         .alpha-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #ffb000; cursor: pointer; border: 2px solid ${VOID}; }
+--- baseline/ui/components/CommandBar.tsx
++++ snapshot/ui/components/CommandBar.tsx
+@@ -20,7 +20,6 @@
+ import { equityInstrument, tradingViewUrl, yahooUrl } from '@/components/terminal/ChartActions'
+ import { T } from '@/components/terminal'
+-import { COMP_KEY } from '@/components/Compare'
+-import { OMON_KEY } from '@/components/OptionChain'
+-import { DEAL_KEY } from '@/components/DealsMonitor'
++import { COMP_KEY, DEAL_KEY, OMON_KEY } from '@/lib/pageKeys'
++import { openExternal } from '@/lib/platform'
+ 
+ export interface CommandPage { id: string; code: string; label: string; hint: string }
+@@ -191,6 +190,6 @@
+     try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* storage unavailable */ }
+     const inst = equityInstrument(it.t)
+-    if (it.action === 'tv') window.open(tradingViewUrl(inst.tv), '_blank', 'noopener')
+-    else if (it.action === 'yf') window.open(yahooUrl(inst.yahoo), '_blank', 'noopener')
++    if (it.action === 'tv') openExternal(tradingViewUrl(inst.tv))          // browser: window.open(url, '_blank', 'noopener')
++    else if (it.action === 'yf') openExternal(yahooUrl(inst.yahoo))
+     else if (it.action === 'watch') (isWatched(it.t) ? removeFromWatchlist(it.t) : addToWatchlist(it.t))
+     else if (it.action === 'des') openTicker(it.t, 'profile')
+--- baseline/ui/components/Compare.tsx
++++ snapshot/ui/components/Compare.tsx
+@@ -11,5 +11,6 @@
+ import { Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, type Column, ordinal } from '@/components/terminal'
+ 
+-export const COMP_KEY = 'suryadhana.comp.v1'
++export { COMP_KEY } from '@/lib/pageKeys'
++import { COMP_KEY } from '@/lib/pageKeys'
+ const BENCH = '^NSEI'
+ const COLORS = [T.amber, T.cyan, T.violet, T.green, '#ff8a3d', '#ff5fa2', '#9be15d', '#5fd3ff']
+--- baseline/ui/components/DealsMonitor.tsx
++++ snapshot/ui/components/DealsMonitor.tsx
+@@ -17,5 +17,6 @@
+ type Side = 'all' | 'buy' | 'sell' | 'inst'
+ /** GO `TCS DEAL` hands the symbol over through this key (and a suryadhana:deal event when the page is open). */
+-export const DEAL_KEY = 'suryadhana.deal.symbol'
++export { DEAL_KEY } from '@/lib/pageKeys'
++import { DEAL_KEY } from '@/lib/pageKeys'
+ 
+ export function DealsMonitor() {
+--- baseline/ui/components/ErrorCatcher.tsx
++++ snapshot/ui/components/ErrorCatcher.tsx
+@@ -65,5 +65,5 @@
+       style={{
+         position: 'fixed',
+-        top: 12,
++        top: 'calc(var(--shell-top, 0px) + 12px)',
+         left: '50%',
+         transform: 'translateX(-50%)',
+--- baseline/ui/components/MarketCommandHeader.tsx
++++ snapshot/ui/components/MarketCommandHeader.tsx
+@@ -338,5 +338,5 @@
+   const page = tabs.find(t => t.id === activeTab)?.label ?? more.find(m => m.id === activeTab)?.code ?? activeTab
+   return (
+-    <header style={{ position: 'sticky', top: 0, zIndex: Z.header, background: T.bg, fontFamily: T.mono }}>
++    <header style={{ position: 'sticky', top: 'var(--shell-top, 0px)', zIndex: Z.header, background: T.bg, fontFamily: T.mono }}>
+       <div style={{ height: 44, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${T.border}`, background: '#07090d' }}>
+         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', height: '100%' }}>
+--- baseline/ui/components/OptionChain.tsx
++++ snapshot/ui/components/OptionChain.tsx
+@@ -15,5 +15,6 @@
+ import { Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, fmtNum } from '@/components/terminal'
+ 
+-export const OMON_KEY = 'suryadhana.omon.v1'
++export { OMON_KEY } from '@/lib/pageKeys'
++import { OMON_KEY } from '@/lib/pageKeys'
+ const num = fmtNum
+ const lakh = (v?: number | null) => (v == null ? '—' : Math.abs(v) >= 1e7 ? `${(v / 1e7).toFixed(2)} Cr` : Math.abs(v) >= 1e5 ? `${(v / 1e5).toFixed(1)} L` : num(v))
+--- baseline/ui/components/ResearchLibrary.tsx
++++ snapshot/ui/components/ResearchLibrary.tsx
+@@ -11,4 +11,5 @@
+ import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T } from '@/components/terminal'
+ import { Markdown } from '@/components/terminal/Markdown'
++import { downloadUrl, isDesktop } from '@/lib/platform'
+ 
+ export const VERDICT_COLOR: Record<string, string> = {
+@@ -129,5 +130,6 @@
+                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                     {doc.data_files.map(f => (
+-                      <a key={f.name} href={researchFileUrl(doc.id, f.name)} download={f.name} style={{ textDecoration: 'none' }}>
++                      <a key={f.name} href={researchFileUrl(doc.id, f.name)} download={f.name} style={{ textDecoration: 'none' }}
++                         onClick={e => { if (isDesktop() && !e.defaultPrevented) { e.preventDefault(); void downloadUrl(researchFileUrl(doc.id, f.name), f.name) } }}>
+                         <Chip color={T.cyan} style={{ cursor: 'pointer' }}>↓ {f.name} <span style={{ color: T.dim }}>{f.kb} KB</span></Chip>
+                       </a>
+--- baseline/ui/components/StockDetailModal.tsx
++++ snapshot/ui/components/StockDetailModal.tsx
+@@ -201,5 +201,5 @@
+     <div
+       className="fixed inset-0 flex items-center justify-center backdrop-blur-sm p-0 md:p-4"
+-      style={{ zIndex: Z.modal, background: 'rgba(5,7,10,.7)' }}
++      style={{ zIndex: Z.modal, background: 'rgba(5,7,10,.7)', top: 'var(--shell-top, 0px)' }}
+       onClick={e => e.target === e.currentTarget && onClose()}
+     >
+--- baseline/ui/components/WatchMonitor.tsx
++++ snapshot/ui/components/WatchMonitor.tsx
+@@ -23,4 +23,5 @@
+ import { Chip, DataTable, EventBadge, Input, PageHeader, Panel, SourceChip, Spark, Stat, T, TickerLink, type Column, AvoidFlag, fmtPct, tone } from '@/components/terminal'
+ import { useLiveTicks } from '@/lib/liveTicks'
++import { isDesktop, notificationPermission, requestNotificationPermission } from '@/lib/platform'
+ 
+ type Source = 'HELD' | 'DESK' | 'WATCH' | 'PIN'
+@@ -65,4 +66,5 @@
+   const [alertDown, setAlertDown] = useState('')
+   const [perm, setPerm] = useState<string>(() => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'))
++  useEffect(() => { if (isDesktop()) void notificationPermission().then(setPerm) }, [])   // app: macOS permission via the shell
+ 
+   useEffect(() => {
+@@ -253,5 +255,5 @@
+           subtitle="kept on the server · checked every minute 09:15–15:30 (Mac notification, Telegram when set) and on every refresh here · not broker orders"
+           right={perm !== 'granted' && perm !== 'unsupported'
+-            ? <Chip color={T.amber} onClick={() => Notification.requestPermission().then(setPerm)}>ENABLE DESKTOP NOTIFICATIONS</Chip>
++            ? <Chip color={T.amber} onClick={() => void requestNotificationPermission().then(setPerm)}>ENABLE DESKTOP NOTIFICATIONS</Chip>
+             : <span style={{ fontSize: 10, color: T.dim }}>{perm === 'granted' ? 'desktop notifications on' : ''}</span>}>
+           <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontFamily: T.mono, fontSize: 11 }}>
+--- baseline/ui/components/news/NewsTerminal.tsx
++++ snapshot/ui/components/news/NewsTerminal.tsx
+@@ -262,5 +262,5 @@
+   return (
+     <div role="dialog" aria-label="News Catalyst Terminal"
+-      style={{ position: 'fixed', inset: 0, zIndex: Z.overlay, background: T.bg, color: T.text, fontFamily: T.mono,
++      style={{ position: 'fixed', inset: 0, top: 'var(--shell-top, 0px)', zIndex: Z.overlay, background: T.bg, color: T.text, fontFamily: T.mono,
+                display: 'flex', flexDirection: 'column' }}>
+       <style>{`
+--- baseline/ui/components/terminal/index.tsx
++++ snapshot/ui/components/terminal/index.tsx
+@@ -14,4 +14,5 @@
+ import { openTicker } from '@/lib/openTicker'
+ import { goToPage } from '@/lib/navigate'
++import { saveDownload } from '@/lib/platform'
+ import { T } from '@/components/news/format'
+ 
+@@ -345,9 +346,5 @@
+   const stem = (name || document.title.split(/[·|]/)[0] || 'suryadhana').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+   const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' })
+-  const a = document.createElement('a')
+-  a.href = URL.createObjectURL(blob)
+-  a.download = `${stem}-${new Date().toLocaleDateString('en-CA')}.csv`
+-  a.click()
+-  setTimeout(() => URL.revokeObjectURL(a.href), 1000)
++  void saveDownload(blob, `${stem}-${new Date().toLocaleDateString('en-CA')}.csv`)   // browser: anchor download; app: ~/Downloads
+ }
+ 
+--- baseline/ui/context/AppContext.tsx
++++ snapshot/ui/context/AppContext.tsx
+@@ -270,4 +270,18 @@
+     } catch { /* ignore corrupt/blocked storage */ }
+     watchlistHydratedRef.current = true
++  }, [])
++
++  // Synced from another window / the browser (lib/prefs/sync.ts applied a newer server value): adopt it.
++  useEffect(() => {
++    const onPrefs = (e: Event) => {
++      const keys = (e as CustomEvent<{ keys?: string[] }>).detail?.keys
++      if (!keys || !keys.includes(WATCHLIST_KEY)) return
++      try {
++        const parsed = JSON.parse(window.localStorage.getItem(WATCHLIST_KEY) || '[]')
++        if (Array.isArray(parsed)) setWatchlist(parsed.filter((t): t is string => typeof t === 'string'))
++      } catch { /* ignore corrupt/blocked storage */ }
++    }
++    window.addEventListener('suryadhana:prefs-changed', onPrefs)
++    return () => window.removeEventListener('suryadhana:prefs-changed', onPrefs)
+   }, [])
+ 
+--- baseline/ui/context/ToastContext.tsx
++++ snapshot/ui/context/ToastContext.tsx
+@@ -114,5 +114,6 @@
+   return (
+     <div
+-      className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
++      className="fixed right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
++      style={{ top: 'calc(var(--shell-top, 0px) + 16px)' }}
+       aria-live="polite"
+     >
+--- baseline/ui/lib/alerts.ts
++++ snapshot/ui/lib/alerts.ts
+@@ -10,4 +10,5 @@
+ import { useCallback, useEffect, useState } from 'react'
+ import { getPriceAlerts, putPriceAlert, runPriceAlerts, type AlertHitSrv, type AlertLevelsSrv } from '@/lib/api'
++import { notify as platformNotify } from '@/lib/platform'
+ 
+ const LEGACY_KEY = 'suryadhana.alerts.v1'
+@@ -95,6 +96,4 @@
+ export function notify(hit: AlertHit): void {
+   const text = `${hit.sym} ${hit.side === 'above' ? 'rose above' : 'fell below'} ₹${hit.level.toLocaleString('en-IN')} (now ₹${hit.price.toLocaleString('en-IN')})`
+-  try {
+-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification('SuryaDhana alert', { body: text })
+-  } catch { /* notifications unavailable */ }
++  platformNotify('SuryaDhana alert', text) // browser: Notification when granted (unchanged); app: native macOS notification
+ }
+--- baseline/ui/lib/backtestExport.ts
++++ snapshot/ui/lib/backtestExport.ts
+@@ -7,4 +7,5 @@
+  */
+ import type { BacktestResult } from './backtest'
++import { isDesktop, saveDownload } from '@/lib/platform'
+ 
+ function kpiRows(r: BacktestResult): (string | number)[][] {
+@@ -72,13 +73,7 @@
+ }
+ 
++/** Browser: anchor + object URL (same as before, inside saveDownload). App: written to ~/Downloads by the shell. */
+ function download(blob: Blob, filename: string) {
+-  const url = URL.createObjectURL(blob)
+-  const a = document.createElement('a')
+-  a.href = url
+-  a.download = filename
+-  document.body.appendChild(a)
+-  a.click()
+-  a.remove()
+-  setTimeout(() => URL.revokeObjectURL(url), 1000)
++  void saveDownload(blob, filename)
+ }
+ 
+@@ -108,5 +103,9 @@
+       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wfoRows(r)), 'WFO Windows')
+     }
+-    XLSX.writeFile(wb, `backtest-${stamp()}.xlsx`)
++    const name = `backtest-${stamp()}.xlsx`
++    if (isDesktop()) {     // WKWebView cannot save SheetJS's blob download: hand the bytes to the shell
++      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer
++      download(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name)
++    } else XLSX.writeFile(wb, name)
+   } catch {
+     // SheetJS unavailable → graceful CSV fallback (never crash the cockpit).
+--- baseline/ui/next.config.js
++++ snapshot/ui/next.config.js
+@@ -1,5 +1,11 @@
+ /** @type {import('next').NextConfig} */
++const fs = require('fs')
++const path = require('path')
++
+ const API_BACKEND = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8010'
+ 
++// ── dev (`next dev`, :3000 hot reload) and prod (`NEXT_DIST_DIR=.next-prod next build/start`) ──
++// This object is UNCHANGED from before the desktop program: the resolved config for both modes is
++// byte-for-byte identical (proof: ui/scripts/print-next-config.mjs, reports/desktop_app D1 notes).
+ const nextConfig = {
+   reactStrictMode: true,
+@@ -16,3 +22,37 @@
+ }
+ 
+-module.exports = nextConfig
++// ── static export (NEXT_OUTPUT=export): the release that ui-api serves at http://127.0.0.1:8010 ──
++// Run ONLY through scripts/build_ui.sh. It builds inside a staging copy of ui/ because Next's export
++// mode always writes its intermediate build to <project>/.next (with a custom distDir it even
++// *redirects* the intermediate there and treats distDir as the output dir), which would clobber the
++// dev server's ui/.next. The staging copy carries a marker file; without it this config refuses.
++const EXPORT_STAGING_MARKER = '.suryadhana-export-staging'
++const UI_BUILD_RE = /^[A-Za-z0-9._-]{1,64}$/
++
++function exportConfig() {
++  if (!fs.existsSync(path.join(__dirname, EXPORT_STAGING_MARKER))) {
++    throw new Error(
++      'NEXT_OUTPUT=export must run through scripts/build_ui.sh (it builds in a staging copy so ' +
++        'ui/.next and ui/.next-prod are never touched). Use: scripts/build_ui.sh --out <dir>',
++    )
++  }
++  const uiBuild = process.env.NEXT_PUBLIC_UI_BUILD || 'unversioned'
++  if (!UI_BUILD_RE.test(uiBuild)) {
++    throw new Error(`NEXT_PUBLIC_UI_BUILD must match ${UI_BUILD_RE} (got ${JSON.stringify(uiBuild)})`)
++  }
++  // eslint-disable-next-line no-unused-vars
++  const { rewrites, distDir, ...shared } = nextConfig // no rewrites: ui-api serves /api on the same origin
++  return {
++    ...shared,
++    output: 'export',
++    distDir: '.next', // inside the staging copy; the export lands in <staging>/out
++    images: { unoptimized: true },
++    // The 6 app/api/**/route.ts stream proxies are dev-only (ui-api serves those streams itself).
++    // Dropping the .ts/.js page extensions excludes every route handler without moving files;
++    // page.tsx, layout.tsx, global-error.tsx and the icon.svg metadata file are unaffected.
++    pageExtensions: ['tsx', 'jsx'],
++    env: { NEXT_PUBLIC_UI_BUILD: uiBuild },
++  }
++}
++
++module.exports = process.env.NEXT_OUTPUT === 'export' ? exportConfig() : nextConfig
+--- baseline/ui/tailwind.config.ts
++++ snapshot/ui/tailwind.config.ts
+@@ -5,4 +5,5 @@
+     './app/**/*.{js,ts,jsx,tsx,mdx}',
+     './components/**/*.{js,ts,jsx,tsx,mdx}',
++    './context/**/*.{js,ts,jsx,tsx,mdx}',
+   ],
+   theme: {

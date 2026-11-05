@@ -1,0 +1,15 @@
+{
+ "Success": {
+  "brokerage": 24.78,
+  "exchange_turnover_charges": 0.31,
+  "stamp_duty": 0.0,
+  "stt": 9.91,
+  "sebi_charges": 0.01,
+  "gst": 4.52,
+  "total_turnover_and_sebi_charges": 0.32,
+  "total_other_charges": 14.75,
+  "total_brokerage": 39.53
+ },
+ "Status": 200,
+ "Error": null
+}

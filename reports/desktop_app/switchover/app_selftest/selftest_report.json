@@ -1,0 +1,412 @@
+{
+  "started_at": "2026-10-25T11:44:42+05:30",
+  "finished_at": "2026-10-25T11:46:05+05:30",
+  "app": "/Applications/SuryaDhana.app",
+  "ui_url": null,
+  "checks": [
+    {
+      "name": "bundle",
+      "status": "PASS",
+      "detail": "8.0 MiB, ai.suryadhana.terminal",
+      "evidence": {
+        "path": "/Applications/SuryaDhana.app",
+        "identifier": "ai.suryadhana.terminal",
+        "executable": "SuryaDhana",
+        "version": "1.0.0",
+        "min_macos": "13.0",
+        "bytes": 8368239,
+        "mib": 7.98,
+        "max_mib": 25.0
+      }
+    },
+    {
+      "name": "codesign",
+      "status": "PASS",
+      "detail": "valid on disk, satisfies its Designated Requirement",
+      "evidence": {
+        "verify_rc": 0,
+        "verify_out": "/Applications/SuryaDhana.app: valid on disk\n/Applications/SuryaDhana.app: satisfies its Designated Requirement",
+        "signature": "adhoc",
+        "identifier": "ai.suryadhana.terminal",
+        "team": "not set",
+        "flags": "flags=0x2(adhoc)"
+      }
+    },
+    {
+      "name": "autostart",
+      "status": "PASS",
+      "detail": "report only: not enabled (0 SuryaDhana app agent(s))",
+      "evidence": {
+        "agents": [],
+        "expect": "any"
+      }
+    },
+    {
+      "name": "self_test",
+      "status": "PASS",
+      "detail": "40 checks ok in 10.71s",
+      "evidence": {
+        "launch_env": {},
+        "cleanup_terminated": [],
+        "exit_code": 0,
+        "elapsed_s": 10.71,
+        "checks": 40,
+        "report_file": "reports/desktop_app/switchover/app_selftest/selftest.json",
+        "report": {
+          "checks": [
+            {
+              "detail": "the screen is locked: WebKit paints no frames while the session is locked (re-run unlocked to measure the < 500 ms budget)",
+              "ms": null,
+              "name": "boot_page_painted",
+              "ok": true,
+              "skipped": true
+            },
+            {
+              "detail": "{\"href\":\"tauri://localhost\",\"state\":\"loading\"}",
+              "ms": null,
+              "name": "boot_page_state (info)",
+              "ok": true
+            },
+            {
+              "detail": "boot document parsed and boot.js ran 221 ms after process start (paint-independent proxy)",
+              "ms": 221.5,
+              "name": "boot_page_dom_ready (info)",
+              "ok": true
+            },
+            {
+              "detail": "inline script injection blocked by CSP",
+              "ms": null,
+              "name": "boot_csp",
+              "ok": true
+            },
+            {
+              "detail": "terminal page finished loading 5282 ms after process start; the self-test held the boot page for its own checks until 5198 ms, so boot -> terminal took 84 ms",
+              "ms": 5281.7,
+              "name": "terminal_loaded",
+              "ok": true
+            },
+            {
+              "detail": "21 page tabs rendered ~5299 ms after process start; title String(\"SuryaDhana Terminal\")",
+              "ms": 5299.2,
+              "name": "terminal_interactive",
+              "ok": true
+            },
+            {
+              "detail": "__SURYADHANA_SHELL__={\"api\":1,\"build\":\"0ae66db\",\"platform\":\"macos\",\"version\":\"1.0.0\"} frozen=true overwritable=false",
+              "ms": null,
+              "name": "shell_object_in_terminal",
+              "ok": true
+            },
+            {
+              "detail": "typeof __TAURI_INTERNALS__.invoke = \"function\"",
+              "ms": null,
+              "name": "tauri_internals_invoke_in_terminal",
+              "ok": true
+            },
+            {
+              "detail": "shell_info from http://127.0.0.1:8010 -> {\"autostart\":false,\"build\":\"0ae66db\",\"ui_api_url\":\"http://127.0.0.1:8010\",\"version\":\"1.0.0\",\"windows\":1}",
+              "ms": 2.0,
+              "name": "ipc_round_trip_remote",
+              "ok": true
+            },
+            {
+              "detail": "keys [\"at\", \"data_service\", \"icici\", \"master_controller\", \"nifty\", \"ui_api\", \"ui_build\"]",
+              "ms": 1.0,
+              "name": "shell_status_contract",
+              "ok": true
+            },
+            {
+              "detail": "rejected: Command boot_status not allowed by ACL",
+              "ms": null,
+              "name": "remote_denied_boot",
+              "ok": true
+            },
+            {
+              "detail": "rejected: Command stack_stop not allowed by ACL",
+              "ms": null,
+              "name": "remote_denied_stop",
+              "ok": true
+            },
+            {
+              "detail": "rejected: Command stack_start not allowed by ACL",
+              "ms": null,
+              "name": "remote_denied_start",
+              "ok": true
+            },
+            {
+              "detail": "rejected: Command open_terminal not allowed by ACL",
+              "ms": null,
+              "name": "remote_denied_open",
+              "ok": true
+            },
+            {
+              "detail": "rejected: Command open_logs not allowed by ACL",
+              "ms": null,
+              "name": "remote_denied_logs",
+              "ok": true
+            },
+            {
+              "detail": "rejected: Command plugin:autostart|is_enabled not allowed by ACL",
+              "ms": null,
+              "name": "remote_denied_plugin",
+              "ok": true
+            },
+            {
+              "detail": "rejected: Command plugin:event|listen not allowed by ACL",
+              "ms": null,
+              "name": "remote_denied_event",
+              "ok": true
+            },
+            {
+              "detail": "loopback url: \"loopback URLs are never opened externally\" \u00b7 bad tab: \"unknown tab id\" \u00b7 121-char title: \"title longer than 120 characters\"",
+              "ms": null,
+              "name": "validation_rejects_bad_args",
+              "ok": true
+            },
+            {
+              "detail": "recorded (not opened in self-test): https://example.com/suryadhana-selftest?\u2026",
+              "ms": null,
+              "name": "open_external_routed",
+              "ok": true
+            },
+            {
+              "detail": "/var/folders/m7/g0x_3rs92_jccplpxpzssk3c0000gn/T/suryadhana-selftest-34534/Downloads/evil name_.csv (content ok: true, inside Downloads: true)",
+              "ms": 6.0,
+              "name": "save_download",
+              "ok": true
+            },
+            {
+              "detail": "shell_notification_permission = \"granted\"",
+              "ms": null,
+              "name": "notification_permission",
+              "ok": true
+            },
+            {
+              "detail": "detached <a download> blob saved by on_download to /var/folders/m7/g0x_3rs92_jccplpxpzssk3c0000gn/T/suryadhana-selftest-34534/Downloads/webkit export.csv (finished notification: true)",
+              "ms": 102.1,
+              "name": "webkit_download",
+              "ok": true
+            },
+            {
+              "detail": "in-document <a download> saved to /var/folders/m7/g0x_3rs92_jccplpxpzssk3c0000gn/T/suryadhana-selftest-34534/Downloads/bridge export.csv via the UI bridge -> shell_save_download",
+              "ms": 402.9,
+              "name": "bridge_download (info)",
+              "ok": true
+            },
+            {
+              "detail": "received [\"status\", \"goto\"]",
+              "ms": 16.1,
+              "name": "shell_events_delivered",
+              "ok": true
+            },
+            {
+              "detail": "UI handled goto -> tab=desk",
+              "ms": null,
+              "name": "ui_bridge_goto (info)",
+              "ok": true
+            },
+            {
+              "detail": "saved windows [\"main http://127.0.0.1:8010/?\u2026 tab=desk\", \"term-1 http://127.0.0.1:8010/?\u2026 tab=risk\"] -> restore plan [(\"main\", \"/?tab=desk\"), (\"term-1\", \"/?tab=risk\")]; geometry per label saved: true",
+              "ms": null,
+              "name": "session_persistence",
+              "ok": true
+            },
+            {
+              "detail": "term-1 loaded http://127.0.0.1:8010/?tab=risk in Some(105.0) ms; closed: true",
+              "ms": 104.7,
+              "name": "new_window_open_close",
+              "ok": true
+            },
+            {
+              "detail": "main stayed on the terminal after each attempt: [(\"https://example.org/suryadhana-nav-test?\u2026\", true), (\"file:\u2026\", true), (\"tauri://localhost/index.html\", true), (\"http://127.0.0.1:8001/health\", true), (\"javascript:\u2026\", true)]; opened in browser: [\"https://example.org/suryadhana-nav-test?\u2026\", \"https://example.net/suryadhana-popup-test\"]; blocked by policy: [\"tauri://localhost/index.html\", \"http://127.0.0.1:8001/health\"]",
+              "ms": null,
+              "name": "navigation_guard",
+              "ok": true
+            },
+            {
+              "detail": "http://localhost:8010/?\u2026 -> http://127.0.0.1:8010/?\u2026 (exact configured origin: true); shell_info there: {\"ok\":true}",
+              "ms": 156.1,
+              "name": "alias_origin_canonicalized",
+              "ok": true
+            },
+            {
+              "detail": "1 window(s) open after the guard tests",
+              "ms": null,
+              "name": "no_stray_windows",
+              "ok": true
+            },
+            {
+              "detail": "42 distinct pages in Go submenus, 9 \u23181\u2013\u23189 items",
+              "ms": null,
+              "name": "menu_go_42_pages",
+              "ok": true
+            },
+            {
+              "detail": "predefined Cut/Copy/Paste/Select All present",
+              "ms": null,
+              "name": "menu_edit_clipboard",
+              "ok": true
+            },
+            {
+              "detail": "menu-bar item present, title \"NIFTY 22,600.0 \u25bc0.39%\"",
+              "ms": null,
+              "name": "tray_present",
+              "ok": true
+            },
+            {
+              "detail": "launch at login: disabled (unchanged by the self-test: true)",
+              "ms": null,
+              "name": "autostart_state (read-only)",
+              "ok": true
+            },
+            {
+              "detail": "plugin reports Granted (macOS desktop: always Granted; real authorization is managed in System Settings)",
+              "ms": null,
+              "name": "notification_permission_state",
+              "ok": true
+            },
+            {
+              "detail": "ui-api true \u00b7 data-service true \u00b7 master-controller true \u00b7 icici Expired \u00b7 ui_build Some(\"20261025-110718-0ae66db\") \u00b7 nifty Some(Nifty { last: 22600.0, change_pct: -0.39 }) \u00b7 polls 7",
+              "ms": null,
+              "name": "health_snapshot (info)",
+              "ok": true
+            },
+            {
+              "detail": "IST 11:44:52 \u00b7 outside the freeze windows",
+              "ms": null,
+              "name": "freeze_guard (info)",
+              "ok": true
+            },
+            {
+              "detail": "98.6 MB (shell process only)",
+              "ms": null,
+              "name": "app_process_rss",
+              "ok": true
+            },
+            {
+              "detail": "388.9 MB = shell 98.6 MB + 5 WebKit helper process(es) 290.3 MB (attributed by macOS responsibility; budget 500 MB; measured right after the checks, not idle)",
+              "ms": null,
+              "name": "app_total_rss",
+              "ok": true
+            },
+            {
+              "detail": "state/window-state/Downloads in a temp dir; notifications recorded not shown: [\"Download complete\"]",
+              "ms": null,
+              "name": "isolation",
+              "ok": true
+            }
+          ],
+          "meta": {
+            "boot_dom_ready_ms": 221.5,
+            "boot_hold_ms": 5197.7,
+            "boot_to_terminal_ms": 83.9,
+            "build": "0ae66db",
+            "isolated_state_dir": "/var/folders/m7/g0x_3rs92_jccplpxpzssk3c0000gn/T/suryadhana-selftest-34534",
+            "pid": 34534,
+            "screen_locked": true,
+            "skipped": [
+              "boot_page_painted"
+            ],
+            "started_at": "2026-10-25T06:14:42.921206Z",
+            "total_rss_mb": 388.9,
+            "ui_url": "http://127.0.0.1:8010",
+            "version": "1.0.0"
+          },
+          "passed": true
+        },
+        "stdout_tail": "yadhana_desktop_lib::selftest] [selftest] PASS autostart_state (read-only): launch at login: disabled (unchanged by the self-test: true)\n[2026-10-25][11:44:52][INFO][suryadhana_desktop_lib::selftest] [selftest] PASS notification_permission_state: plugin reports Granted (macOS desktop: always Granted; real authorization is managed in System Settings)\n[2026-10-25][11:44:52][INFO][suryadhana_desktop_lib::selftest] [selftest] PASS health_snapshot (info): ui-api true \u00b7 data-service true \u00b7 master-controller true \u00b7 icici Expired \u00b7 ui_build Some(\"20261025-110718-0ae66db\") \u00b7 nifty Some(Nifty { last: 22600.0, change_pct: -0.39 }) \u00b7 polls 7\n[2026-10-25][11:44:52][INFO][suryadhana_desktop_lib::selftest] [selftest] PASS freeze_guard (info): IST 11:44:52 \u00b7 outside the freeze windows\n[2026-10-25][11:44:52][INFO][suryadhana_desktop_lib::selftest] [selftest] PASS app_process_rss: 98.6 MB (shell process only)\n[2026-10-25][11:44:52][INFO][suryadhana_desktop_lib::selftest] [selftest] PASS app_total_rss: 388.9 MB = shell 98.6 MB + 5 WebKit helper process(es) 290.3 MB (attributed by macOS responsibility; budget 500 MB; measured right after the checks, not idle)\n[2026-10-25][11:44:52][INFO][suryadhana_desktop_lib::selftest] [selftest] PASS isolation: state/window-state/Downloads in a temp dir; notifications recorded not shown: [\"Download complete\"]\n[2026-10-25][11:44:52][INFO][suryadhana_desktop_lib::selftest] [selftest] finished: PASSED -> reports/desktop_app/switchover/app_selftest/selftest.json\n"
+      }
+    },
+    {
+      "name": "single_instance",
+      "status": "PASS",
+      "detail": "second launch (pid 37645) exited on its own; pid 34860 is the only instance",
+      "evidence": {
+        "launch": "open -n -g (LaunchServices)",
+        "launch_env": {
+          "SURYADHANA_NO_AUTOSTART": "1"
+        },
+        "a_pid": 34860,
+        "b_pid": 37645,
+        "b_seen": true,
+        "b_exited": true,
+        "a_alive": true,
+        "instances_running": [
+          {
+            "pid": 34860,
+            "exe": "/Applications/SuryaDhana.app/Contents/MacOS/SuryaDhana"
+          }
+        ],
+        "cleanup": {
+          "terminated": [
+            34860
+          ],
+          "leftover_processes": []
+        },
+        "launch_agents_before": [],
+        "launch_agents_after": []
+      }
+    },
+    {
+      "name": "idle_resources",
+      "status": "PASS",
+      "detail": "peak RSS 398.3 MB \u00b7 footprint 232.1 MB \u00b7 CPU 0.79% over 60.5s \u00b7 app + 5 WebKit helper(s)",
+      "evidence": {
+        "seconds": 60.5,
+        "samples": 59,
+        "processes": [
+          {
+            "pid": 34860,
+            "name": "SuryaDhana",
+            "rss_mb": 100.1,
+            "footprint_mb": 24.5
+          },
+          {
+            "pid": 34861,
+            "name": "com.apple.WebKit.GPU",
+            "rss_mb": 40.3,
+            "footprint_mb": 17.5
+          },
+          {
+            "pid": 34862,
+            "name": "com.apple.WebKit.Networking",
+            "rss_mb": 30.7,
+            "footprint_mb": 7.3
+          },
+          {
+            "pid": 34863,
+            "name": "com.apple.WebKit.WebContent",
+            "rss_mb": 35.3,
+            "footprint_mb": 13.2
+          },
+          {
+            "pid": 35019,
+            "name": "com.apple.WebKit.WebContent",
+            "rss_mb": 168.4,
+            "footprint_mb": 60.8
+          },
+          {
+            "pid": 35020,
+            "name": "com.apple.WebKit.WebContent",
+            "rss_mb": 22.3,
+            "footprint_mb": 7.3
+          }
+        ],
+        "rss_mb_peak": 398.3,
+        "rss_mb_mean": 396.7,
+        "footprint_mb_peak": 232.1,
+        "cpu_pct_mean": 0.79,
+        "note": "CPU% = cumulative CPU-time delta / wall time over the window (processes alive at both ends)",
+        "responsible_pid": 34860,
+        "cleanup": {
+          "terminated": [
+            34860
+          ],
+          "leftover_processes": []
+        }
+      }
+    }
+  ],
+  "ok": true,
+  "skipped": []
+}

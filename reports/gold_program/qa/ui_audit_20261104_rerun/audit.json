@@ -1,0 +1,140 @@
+{
+  "screen": {
+    "name": "Fundamentals screener",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261104_rerun/screen.png",
+    "load_s": 8.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "FUND",
+    "url": "http://127.0.0.1:8010/?tab=screen",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 31,
+      "ready_ms": 125,
+      "ready": true,
+      "idle_ms": 2344,
+      "total_ms": 8348
+    },
+    "nav_timing": {
+      "ttfb_ms": 2,
+      "dcl_ms": 0,
+      "load_ms": 62,
+      "fcp_ms": 117,
+      "resources": 77,
+      "js_files": 55,
+      "js_transfer_kb": 690
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 16,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "FUND \u00b7 SuryaDhana",
+      "page_headers": [
+        "FUND Fundamentals screener"
+      ],
+      "panels": [
+        "Industries",
+        "# matches"
+      ],
+      "headings": [],
+      "tables": 2,
+      "table_headers": [
+        "Industry \u2195 | Cos \u2195 | Mcap \u20b9 cr \u25bc | Median P/E \u2195 | Median P/B \u2195 | Median rev YoY \u2195 | Median profit YoY \u2195 | Median margin \u2195",
+        "| Stock \u2195 | Industry \u2195 | Mcap \u20b9 cr \u25bc | P/E \u2195 | P/E vs own past \u2195 | P/B \u2195 | Revenue YoY \u2195 | Profit YoY \u2195 | Net margin \u2195 | Quarter \u2195"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 127246
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "gold": {
+    "name": "Gold terminal",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261104_rerun/gold.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "GOLD",
+    "url": "http://127.0.0.1:8010/?tab=gold",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 33,
+      "ready_ms": 97,
+      "ready": true,
+      "idle_ms": 1050,
+      "total_ms": 7054
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 37,
+      "fcp_ms": 81,
+      "resources": 78,
+      "js_files": 52,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 23,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "GOLD \u00b7 SuryaDhana",
+      "page_headers": [
+        "GOLD Gold terminal"
+      ],
+      "panels": [
+        "Verdict",
+        "Eight gauges",
+        "Today's open",
+        "What moved since the MCX close",
+        "Your inputs",
+        "Headlines",
+        "Accuracy log",
+        "Event risk \u00b7 next # days",
+        "Automated brief"
+      ],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 2,
+      "body_text_len": 9173
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  }
+}

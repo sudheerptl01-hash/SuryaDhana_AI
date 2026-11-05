@@ -1,0 +1,90 @@
+[
+ {
+  "Sr. No": 1,
+  "Symbol": "ALKALI",
+  "Series": "BE",
+  "Security Name": "ALKALI METALS LIMITED",
+  "From": 10,
+  "To": 5
+ },
+ {
+  "Sr. No": 2,
+  "Symbol": "KABRAEXTRU",
+  "Series": "EQ",
+  "Security Name": "KABRA EXTRUSION TECHNIK LIMITED",
+  "From": 10,
+  "To": 5
+ },
+ {
+  "Sr. No": 3,
+  "Symbol": "KLL",
+  "Series": "ST",
+  "Security Name": "KAUSHALYA LOGISTICS LIMITED",
+  "From": 10,
+  "To": 5
+ },
+ {
+  "Sr. No": 4,
+  "Symbol": "LAKSHYA",
+  "Series": "SM",
+  "Security Name": "LAKSHYA POWERTECH LIMITED",
+  "From": 10,
+  "To": 5
+ },
+ {
+  "Sr. No": 5,
+  "Symbol": "CORDSCABLE",
+  "Series": "BE",
+  "Security Name": "CORDS CABLE INDUSTRIES LIMITED",
+  "From": 20,
+  "To": 5
+ },
+ {
+  "Sr. No": 6,
+  "Symbol": "CRESTO",
+  "Series": "EQ",
+  "Security Name": "CRESTO TECHNO LIMITED",
+  "From": 20,
+  "To": 10
+ },
+ {
+  "Sr. No": 7,
+  "Symbol": "EKI",
+  "Series": "EQ",
+  "Security Name": "EKI ENERGY SERVICES LIMITED",
+  "From": 20,
+  "To": 10
+ },
+ {
+  "Sr. No": 8,
+  "Symbol": "PATILAUTOM",
+  "Series": "ST",
+  "Security Name": "PATIL AUTOMATION LIMITED",
+  "From": 20,
+  "To": 5
+ },
+ {
+  "Sr. No": 9,
+  "Symbol": "PRESSTONIC",
+  "Series": "SM",
+  "Security Name": "PRESSTONIC ENGINEERING LIMITED",
+  "From": 20,
+  "To": 10
+ },
+ {
+  "Sr. No": 10,
+  "Symbol": "RADIOWALLA",
+  "Series": "ST",
+  "Security Name": "RADIOWALLA NETWORK LIMITED",
+  "From": 5,
+  "To": 2
+ },
+ {
+  "Sr. No": 11,
+  "Symbol": "TIRUPATIFL",
+  "Series": "BE",
+  "Security Name": "TIRUPATI FORGE LIMITED",
+  "From": 5,
+  "To": 2
+ }
+]

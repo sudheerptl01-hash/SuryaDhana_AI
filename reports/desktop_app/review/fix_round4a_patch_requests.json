@@ -1,0 +1,36 @@
+{
+ "F4-OPS": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/news_scanner.py",
+   "old": "_PICK_KEYS = (\"stage1_picks\", \"picks\", \"stocks\", \"results\", \"data\", \"items\", \"candidates\")",
+   "new": "_PICK_KEYS = (\"stage1_picks\", \"stage1_candidates\", \"picks\", \"stocks\", \"results\", \"data\", \"items\", \"candidates\")",
+   "why": "This is a separate bug that also limits P6. Since 22 Oct the scanner writes its picks under \"stage1_candidates\" (new_scnner/20261022.json, 20261023.json, 20261025.json), alongside a separate \"rejected\" list; each entry has a ticker, conviction_score and thesis. load_scan_file finds no pick key, so the terminal shows 0 picks for those scans (GET /api/news-scanner/scans: 20261025 shows picks 0, rejected 8) and the fixed track record stops at the 20 Oct scan. Please add a ui-api test for the new key. A ui-api restart may happen at any time."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/.gitignore",
+   "old": "data/telegram_offset.json\ndata/icici_otp_last_ask.json",
+   "new": "data/telegram_offset.json\ndata/.scheduler_history.json\ndata/.scheduler_history.json.tmp-*\ndata/icici_otp_last_ask.json",
+   "why": "P14's new runtime state file (and its short-lived temp file) is not git-ignored; data/.controller_heartbeat.json and data/.evening_snapshot.json aren't either. It is runtime state, not history-worthy, like the other entries in this block."
+  }
+ ],
+ "F4-API": [
+  {
+   "file": "scripts/master_controller.py",
+   "old": "                if result.get(\"status\") == \"refreshed\":\n                    await _alerts.info(\"ICICI session refreshed\", str(result.get(\"detail\")))",
+   "new": "                if result.get(\"status\") == \"refreshed\":\n                    if result.get(\"outcome\") == \"warning\":   # saved to .env only: ui-api did not take the token (P3)\n                        await _alerts.warning(\"ICICI session refreshed via .env only\", str(result.get(\"detail\")))\n                    else:\n                        await _alerts.info(\"ICICI session refreshed\", str(result.get(\"detail\")))",
+   "why": "P3: daily_session_refresh now reports a .env-only hand-off as status 'refreshed' with outcome 'warning' and a WARNING detail. Without this patch the 08:00 job still sends it as an info 'ICICI session refreshed' message, with the warning only in the text. The existing line `if result.get(\"status\") in (\"refreshed\", \"valid\"): await _ensure_live_prices()` stays as it is."
+  },
+  {
+   "file": "scripts/master_controller.py",
+   "old": "                r = await client.post(f\"{DATA_SVC}/provider/configure\", json={})",
+   "new": "                # send the token from .env (the login job saved it there; data-service's own environment may still\n                # hold the previous one); an empty value is left out so data-service uses its environment (P3)\n                creds = {\"api_key\": _env_file_value(\"ICICI_API_KEY\"), \"api_secret\": _env_file_value(\"ICICI_API_SECRET\"),\n                         \"session_token\": _env_file_value(\"ICICI_SESSION_TOKEN\")}\n                r = await client.post(f\"{DATA_SVC}/provider/configure\", json={k: v for k, v in creds.items() if v})",
+   "why": "P3 (send the .env token in the reconnect body instead of {}): data-service's /provider/configure fills missing fields from its own environment, which keeps the old token when the login fell back to .env or ui-api's push failed. The script now also sends the token directly on its fallback; this makes _ensure_live_prices correct on every path. _env_file_value is defined later in the same module (dotenv_values of _ROOT/.env, a small sync read)."
+  },
+  {
+   "file": "scripts/master_controller.py",
+   "old": "                msg = (\"\u2705 ICICI session already valid.\" if status == \"valid\" else f\"\u2705 ICICI logged in: {detail}\")",
+   "new": "                msg = (\"\u2705 ICICI session already valid.\" if status == \"valid\"\n                       else f\"\u26a0\ufe0f ICICI logged in, but: {detail}\" if res.get(\"outcome\") == \"warning\"\n                       else f\"\u2705 ICICI logged in: {detail}\")",
+   "why": "P3: the Telegram /login reply should not show a green tick when the token reached .env only."
+  }
+ ]
+}

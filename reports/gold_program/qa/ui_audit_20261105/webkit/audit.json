@@ -1,0 +1,2960 @@
+{
+  "brief": {
+    "name": "Morning brief",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/brief.png",
+    "load_s": 7.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "BRF",
+    "url": "http://127.0.0.1:8010/?tab=brief",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 39,
+      "ready_ms": 208,
+      "ready": true,
+      "idle_ms": 1746,
+      "total_ms": 7750
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 81,
+      "fcp_ms": 181,
+      "resources": 101,
+      "js_files": 53,
+      "js_transfer_kb": 681
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 40,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "BRF Overnight Brief"
+      ],
+      "panels": [
+        "Market",
+        "Your book",
+        "Market today",
+        "This week",
+        "News scanner",
+        "Headlines",
+        "System"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        ""
+      ],
+      "canvas": 7,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 6130
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "watch": {
+    "name": "Watch monitor",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/watch.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "WTCH",
+    "url": "http://127.0.0.1:8010/?tab=watch",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 21,
+      "ready_ms": 82,
+      "ready": true,
+      "idle_ms": 2069,
+      "total_ms": 8072
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 25,
+      "fcp_ms": 60,
+      "resources": 82,
+      "js_files": 58,
+      "js_transfer_kb": 63
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 21,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "WTCH \u00b7 SuryaDhana",
+      "page_headers": [
+        "WTCH Watch Monitor"
+      ],
+      "panels": [
+        "Monitor"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "Stock \u2195 | Name | Last \u2195 | Day \u25bc | Position \u2195 | P/E \u00b7 profit y/y \u2195 | # | Day range | #W \u2195 | Next event | Alert |"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 1495
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "charts": {
+    "name": "Chart studio",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/charts.png",
+    "load_s": 6.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "CHRT",
+    "url": "http://127.0.0.1:8010/?tab=charts",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 25,
+      "ready_ms": 88,
+      "ready": true,
+      "idle_ms": 630,
+      "total_ms": 6634
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 23,
+      "fcp_ms": 66,
+      "resources": 68,
+      "js_files": 48,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "CHRT \u00b7 SuryaDhana",
+      "page_headers": [
+        "CHRT Chart Studio"
+      ],
+      "panels": [
+        "RELIANCE \u00b7 D"
+      ],
+      "headings": [],
+      "tables": 2,
+      "table_headers": [
+        "",
+        ""
+      ],
+      "canvas": 14,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 1318
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "compare": {
+    "name": "Compare stocks",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/compare.png",
+    "load_s": 7.0,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "COMP",
+    "url": "http://127.0.0.1:8010/?tab=compare",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 33,
+      "ready_ms": 95,
+      "ready": true,
+      "idle_ms": 968,
+      "total_ms": 6973
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 37,
+      "fcp_ms": 72,
+      "resources": 71,
+      "js_files": 48,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 19,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "COMP \u00b7 SuryaDhana",
+      "page_headers": [
+        "COMP Compare"
+      ],
+      "panels": [
+        "Performance",
+        "Risk and return",
+        "Correlation of daily returns",
+        "Fundamentals"
+      ],
+      "headings": [],
+      "tables": 2,
+      "table_headers": [
+        "Stock | Return \u2195 | Volatility (yr) \u2195 | Max drawdown \u2195 | Beta \u2195 | Corr. NIFTY | Best / worst day",
+        "Stock | Mcap \u20b9 cr \u2195 | P/E (TTM) \u2195 | P/E vs own past \u2195 | P/B \u2195 | Revenue YoY \u2195 | Profit YoY \u2195 | Net margin \u2195 | Div yield \u2195 | Latest quarter"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 1675
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "screen": {
+    "name": "Fundamentals screener",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/screen.png",
+    "load_s": 7.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "FUND",
+    "url": "http://127.0.0.1:8010/?tab=screen",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 37,
+      "ready_ms": 98,
+      "ready": true,
+      "idle_ms": 1650,
+      "total_ms": 7653
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 39,
+      "fcp_ms": 68,
+      "resources": 74,
+      "js_files": 53,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "FUND \u00b7 SuryaDhana",
+      "page_headers": [
+        "FUND Fundamentals screener"
+      ],
+      "panels": [
+        "Industries",
+        "# matches"
+      ],
+      "headings": [],
+      "tables": 2,
+      "table_headers": [
+        "Industry \u2195 | Cos \u2195 | Mcap \u20b9 cr \u25bc | Median P/E \u2195 | Median P/B \u2195 | Median rev YoY \u2195 | Median profit YoY \u2195 | Median margin \u2195",
+        "| Stock \u2195 | Industry \u2195 | Mcap \u20b9 cr \u25bc | P/E \u2195 | P/E vs own past \u2195 | P/B \u2195 | Revenue YoY \u2195 | Profit YoY \u2195 | Net margin \u2195 | Quarter \u2195"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 127407
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "alerts": {
+    "name": "Alerts",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/alerts.png",
+    "load_s": 6.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "ALRT",
+    "url": "http://127.0.0.1:8010/?tab=alerts",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 34,
+      "ready_ms": 96,
+      "ready": true,
+      "idle_ms": 642,
+      "total_ms": 6645
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 37,
+      "fcp_ms": 73,
+      "resources": 67,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 16,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "ALRT \u00b7 SuryaDhana",
+      "page_headers": [
+        "ALRT Alerts"
+      ],
+      "panels": [
+        "Price alerts \u00b7 #",
+        "Fired \u00b7 #",
+        "Inbox \u00b7 #"
+      ],
+      "headings": [],
+      "tables": 3,
+      "table_headers": [
+        "Stock \u2195 | Last \u2195 | Above | Below | Move \u00b1 | Nearest level \u25b2 |",
+        "When | Stock | Level | Price",
+        "When | Kind | Message"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 8893
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "eco": {
+    "name": "Economic calendar",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/eco.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "ECO",
+    "url": "http://127.0.0.1:8010/?tab=eco",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 38,
+      "ready_ms": 152,
+      "ready": true,
+      "idle_ms": 656,
+      "total_ms": 6658
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 40,
+      "fcp_ms": 66,
+      "resources": 65,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 15,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "ECO \u00b7 SuryaDhana",
+      "page_headers": [
+        "ECO Economic calendar"
+      ],
+      "panels": [
+        "Calendar \u00b7 #"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "Date \u2195 | IST | When | | Type \u2195 | Release | Why it matters | Source"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 6299
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "seag": {
+    "name": "Seasonality",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/seag.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "SEAG",
+    "url": "http://127.0.0.1:8010/?tab=seag",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 37,
+      "ready_ms": 98,
+      "ready": true,
+      "idle_ms": 646,
+      "total_ms": 6650
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 35,
+      "fcp_ms": 67,
+      "resources": 65,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 16,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SEAG \u00b7 SuryaDhana",
+      "page_headers": [
+        "SEAG Seasonality"
+      ],
+      "panels": [
+        "NIFTY #"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "YEAR | JAN | FEB | MAR | APR | MAY | JUN | JUL | AUG | SEP | OCT | NOV | DEC | YEAR"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 2679
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "memb": {
+    "name": "Index members",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/memb.png",
+    "load_s": 6.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "MEMB",
+    "url": "http://127.0.0.1:8010/?tab=memb",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 37,
+      "ready_ms": 99,
+      "ready": true,
+      "idle_ms": 767,
+      "total_ms": 6772
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 35,
+      "fcp_ms": 65,
+      "resources": 68,
+      "js_files": 48,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "MEMB \u00b7 SuryaDhana",
+      "page_headers": [
+        "MEMB Index members"
+      ],
+      "panels": [
+        "NIFTY # \u00b7 # members"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "Stock \u2195 | Weight \u25bc | Close \u2195 | Today \u2195 | Pts \u2195 | # \u2195 | # \u2195 | YTD \u2195 | YTD pts \u2195 | #Y \u2195 | vs #w high \u2195 | P/E \u2195 | P/E vs own \u2195 | Profit y/y \u2195 | Revenue y/y \u2195 | Qtr"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 6885
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "options": {
+    "name": "Option monitor",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/options.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "OMON",
+    "url": "http://127.0.0.1:8010/?tab=options",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 28,
+      "ready_ms": 87,
+      "ready": true,
+      "idle_ms": 675,
+      "total_ms": 6679
+    },
+    "nav_timing": {
+      "ttfb_ms": 5,
+      "dcl_ms": 0,
+      "load_ms": 26,
+      "fcp_ms": 56,
+      "resources": 68,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "OMON \u00b7 SuryaDhana",
+      "page_headers": [
+        "OMON Option Monitor"
+      ],
+      "panels": [
+        "NIFTY implied volatility and PCR \u00b7 # year",
+        "Volatility smile",
+        "Open interest by strike",
+        "Chain"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "CALL OI | CALL OI CHG | CALL VOLUME | CALL IV | CALL PRICE | STRIKE | PUT PRICE | PUT IV | PUT VOLUME | PUT OI CHG | PUT OI"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 6498
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "ostrategy": {
+    "name": "Options strategies",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/ostrategy.png",
+    "load_s": 7.0,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "OSTR",
+    "url": "http://127.0.0.1:8010/?tab=ostrategy",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 37,
+      "ready_ms": 99,
+      "ready": true,
+      "idle_ms": 1040,
+      "total_ms": 7043
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 35,
+      "fcp_ms": 66,
+      "resources": 70,
+      "js_files": 50,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [
+      "POST /api/options/strategy/analyze"
+    ],
+    "fingerprint": {
+      "title": "OSTR \u00b7 SuryaDhana",
+      "page_headers": [
+        "OSTR Options strategies"
+      ],
+      "panels": [
+        "Legs (#/#)",
+        "Margin & costs \u2014 ESTIMATE",
+        "Payoff"
+      ],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 2702
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "derivatives": {
+    "name": "Derivatives desk",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/derivatives.png",
+    "load_s": 6.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "DERV",
+    "url": "http://127.0.0.1:8010/?tab=derivatives",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 39,
+      "ready_ms": 100,
+      "ready": true,
+      "idle_ms": 801,
+      "total_ms": 6805
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 35,
+      "fcp_ms": 64,
+      "resources": 74,
+      "js_files": 48,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 23,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "DERV Derivatives desk"
+      ],
+      "panels": [
+        "Futures term structure \u2014 NIFTY",
+        "Rollover tracker \u2014 NIFTY",
+        "PCR & max pain \u2014 NIFTY",
+        "INDIA VIX"
+      ],
+      "headings": [],
+      "tables": 2,
+      "table_headers": [
+        "Series | Expiry | DTE | Close | Basis | Ann % | OI (shares \u00b7 L) | OI chg \u00b7 L | Contracts",
+        "Expiry | Final rollover | Carry into next (ann)"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 4502
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "insiders": {
+    "name": "Insider monitor",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/insiders.png",
+    "load_s": 6.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "INSD",
+    "url": "http://127.0.0.1:8010/?tab=insiders",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 38,
+      "ready_ms": 100,
+      "ready": true,
+      "idle_ms": 835,
+      "total_ms": 6839
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 35,
+      "fcp_ms": 65,
+      "resources": 68,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "INSD \u00b7 SuryaDhana",
+      "page_headers": [
+        "INSD Insider Monitor"
+      ],
+      "panels": [
+        "# stocks with insider buying"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "Stock \u2195 | Latest filing \u25bc | Bought \u2195 | Trades \u2195 | Buyers \u2195 | Who | Since filing \u2195 | Next event"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 9166
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "deals": {
+    "name": "Block & bulk deals",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/deals.png",
+    "load_s": 7.0,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "DEAL",
+    "url": "http://127.0.0.1:8010/?tab=deals",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 38,
+      "ready_ms": 99,
+      "ready": true,
+      "idle_ms": 1000,
+      "total_ms": 7005
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 33,
+      "fcp_ms": 65,
+      "resources": 70,
+      "js_files": 48,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 19,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "DEAL \u00b7 SuryaDhana",
+      "page_headers": [
+        "DEAL Block & Bulk Deals"
+      ],
+      "panels": [
+        "Most active clients",
+        "Biggest net flows",
+        "# deals",
+        "Institutional short selling \u00b7 # stocks"
+      ],
+      "headings": [],
+      "tables": 2,
+      "table_headers": [
+        "Date \u25bc | Type \u2195 | Stock \u2195 | Client \u2195 | Side \u2195 | Qty \u2195 | Avg \u20b9 \u2195 | Value \u2195 | % of day vol \u2195 | Since deal \u2195 | Next event",
+        "Stock \u2195 | % of volume \u25bc | Shares shorted \u2195 | Days \u2195 | Last \u2195 | Price over window \u2195"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 36731
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "preopen": {
+    "name": "Pre-open auction",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/preopen.png",
+    "load_s": 6.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "PRE",
+    "url": "http://127.0.0.1:8010/?tab=preopen",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 46,
+      "ready_ms": 75,
+      "ready": true,
+      "idle_ms": 926,
+      "total_ms": 6929
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 35,
+      "fcp_ms": 66,
+      "resources": 69,
+      "js_files": 48,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "PRE \u00b7 SuryaDhana",
+      "page_headers": [
+        "PRE Pre-Open Auction"
+      ],
+      "panels": [
+        "Gap up",
+        "Gap down",
+        "Buyers left over",
+        "Sellers left over",
+        "Full book \u00b7 # stocks"
+      ],
+      "headings": [],
+      "tables": 5,
+      "table_headers": [
+        "",
+        "",
+        "",
+        "",
+        "Stock \u2195 | IEP \u20b9 \u2195 | Gap \u25bc | Prev close \u2195 | Matched qty \u2195 | Value \u2195 | Buy left \u2195 | Sell left \u2195 | Imbalance \u2195 | vs #w high \u2195 | Next event"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 18280
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "ipo": {
+    "name": "IPO monitor",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/ipo.png",
+    "load_s": 7.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "IPO",
+    "url": "http://127.0.0.1:8010/?tab=ipo",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 43,
+      "ready_ms": 103,
+      "ready": true,
+      "idle_ms": 1333,
+      "total_ms": 7336
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 36,
+      "fcp_ms": 66,
+      "resources": 73,
+      "js_files": 53,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "IPO \u00b7 SuryaDhana",
+      "page_headers": [
+        "IPO IPO Monitor"
+      ],
+      "panels": [
+        "Open & forthcoming",
+        "Does institutional demand show up in the listing?",
+        "Recent listings \u00b7 #"
+      ],
+      "headings": [],
+      "tables": 3,
+      "table_headers": [
+        "Status | Company | Board | Bidding | Price band | Size \u2195 | Lot | Subscription (live)",
+        "QIB subscribed | IPOs | Avg listing gain | Median | Listed above issue | Avg # sess. (from day# close)",
+        "Listed \u25bc | Stock \u2195 | Issue \u20b9 \u2195 | QIB \u2195 | Retail \u2195 | Total \u2195 | Listing open \u2195 | Day# close \u2195 | # sess. \u2195 | # sess. \u2195 | Now vs issue \u2195"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 18241
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "movers": {
+    "name": "Live movers",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/movers.png",
+    "load_s": 6.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "MOV",
+    "url": "http://127.0.0.1:8010/?tab=movers",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 45,
+      "ready_ms": 106,
+      "ready": true,
+      "idle_ms": 878,
+      "total_ms": 6882
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 38,
+      "fcp_ms": 69,
+      "resources": 72,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 21,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "MOV \u00b7 SuryaDhana",
+      "page_headers": [
+        "MOV Live Movers"
+      ],
+      "panels": [
+        "Intraday",
+        "Intraday",
+        "Who moved the index",
+        "Market internals",
+        "Sector board",
+        "Market map",
+        "Gainers \u00b7 F&O",
+        "Losers \u00b7 F&O",
+        "Most active \u00b7 by value",
+        "Volume surge",
+        "New #-week highs \u00b7 #",
+        "New #-week lows \u00b7 #",
+        "F&O open-interest spurts"
+      ],
+      "headings": [],
+      "tables": 10,
+      "table_headers": [
+        "",
+        "",
+        "",
+        "STOCK | LAST | CHG | VALUE",
+        "STOCK | LAST | CHG | VALUE",
+        "STOCK | LAST | CHG | VALUE",
+        "STOCK | \u00d7 WEEK | CHG | VALUE",
+        "STOCK | LAST | CHG | OLD HIGH",
+        "STOCK | LAST | CHG | OLD LOW",
+        "STOCK | OI CHG | CONTRACTS | PRICE"
+      ],
+      "canvas": 24,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 11494
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "wrap": {
+    "name": "Daily market wrap",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/wrap.png",
+    "load_s": 6.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "WRAP",
+    "url": "http://127.0.0.1:8010/?tab=wrap",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 44,
+      "ready_ms": 74,
+      "ready": true,
+      "idle_ms": 626,
+      "total_ms": 6630
+    },
+    "nav_timing": {
+      "ttfb_ms": 5,
+      "dcl_ms": 0,
+      "load_ms": 35,
+      "fcp_ms": 64,
+      "resources": 66,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "WRAP \u00b7 SuryaDhana",
+      "page_headers": [
+        "WRAP Daily Market Wrap"
+      ],
+      "panels": [
+        "Archive \u00b7 #",
+        "Wed, # Nov #"
+      ],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 5015
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "filings": {
+    "name": "Company filings",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/filings.png",
+    "load_s": 6.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "CF",
+    "url": "http://127.0.0.1:8010/?tab=filings",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 44,
+      "ready_ms": 103,
+      "ready": true,
+      "idle_ms": 846,
+      "total_ms": 6851
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 36,
+      "fcp_ms": 66,
+      "resources": 69,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 19,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "CF \u00b7 SuryaDhana",
+      "page_headers": [
+        "CF Company Filings"
+      ],
+      "panels": [
+        "# filings"
+      ],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 2560
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "margin": {
+    "name": "Margin monitor",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/margin.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "MRGN",
+    "url": "http://127.0.0.1:8010/?tab=margin",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 44,
+      "ready_ms": 74,
+      "ready": true,
+      "idle_ms": 656,
+      "total_ms": 6658
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 35,
+      "fcp_ms": 64,
+      "resources": 66,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "MRGN \u00b7 SuryaDhana",
+      "page_headers": [
+        "MRGN Margin Monitor"
+      ],
+      "panels": [
+        "Market MTF book \u00b7 # year",
+        "Fastest leveraged build-up",
+        "Most crowded",
+        "Largest funded positions"
+      ],
+      "headings": [],
+      "tables": 3,
+      "table_headers": [
+        "Stock \u2195 | Funded \u2195 | #-session chg \u25bc | Days to unwind \u2195",
+        "Stock \u2195 | Funded \u2195 | #-session chg \u2195 | Days to unwind \u25bc",
+        "Stock \u2195 | Funded \u25bc | #-session chg \u2195 | Days to unwind \u2195"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 3806
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "holders": {
+    "name": "Ownership shifts",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/holders.png",
+    "load_s": 6.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "HDS",
+    "url": "http://127.0.0.1:8010/?tab=holders",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 23,
+      "ready_ms": 44,
+      "ready": true,
+      "idle_ms": 837,
+      "total_ms": 6842
+    },
+    "nav_timing": {
+      "ttfb_ms": 2,
+      "dcl_ms": 0,
+      "load_ms": 17,
+      "fcp_ms": 39,
+      "resources": 68,
+      "js_files": 48,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "HDS \u00b7 SuryaDhana",
+      "page_headers": [
+        "HDS Ownership Shifts"
+      ],
+      "panels": [
+        "MF BUYING \u00b7 quarter ended Sep #"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "Stock \u2195 | Mutual funds \u2195 | Foreign investors \u2195 | Promoters \u2195 | Retail \u2195 | Shareholders \u2195 | Quarter"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 7688
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "world": {
+    "name": "World markets",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/world.png",
+    "load_s": 8.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "WEI",
+    "url": "http://127.0.0.1:8010/?tab=world",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 52,
+      "ready_ms": 96,
+      "ready": true,
+      "idle_ms": 2798,
+      "total_ms": 8803
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 37,
+      "fcp_ms": 83,
+      "resources": 84,
+      "js_files": 60,
+      "js_transfer_kb": 6
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 19,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "WEI \u00b7 SuryaDhana",
+      "page_headers": [
+        "WEI World Markets"
+      ],
+      "panels": [
+        "India",
+        "Americas",
+        "Asia-Pacific",
+        "Europe",
+        "Currencies",
+        "Commodities",
+        "Rates & crypto"
+      ],
+      "headings": [],
+      "tables": 7,
+      "table_headers": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 2949
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "desk": {
+    "name": "Decision Desk",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/desk.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "DESK",
+    "url": "http://127.0.0.1:8010/?tab=desk",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 47,
+      "ready_ms": 77,
+      "ready": true,
+      "idle_ms": 2128,
+      "total_ms": 8131
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 36,
+      "fcp_ms": 67,
+      "resources": 84,
+      "js_files": 58,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 23,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "DESK \u00b7 SuryaDhana",
+      "page_headers": [
+        "DESK Decision Desk"
+      ],
+      "panels": [
+        "This month\u2019s brief",
+        "Momentum watchlist",
+        "Book vs NIFTY",
+        "Rules",
+        "Watchlist risk \u00b7 what the Desk would hold",
+        "Holdings",
+        "Activity"
+      ],
+      "headings": [],
+      "tables": 3,
+      "table_headers": [
+        "Action \u2195 | Stock \u2195 | Rank \u2195 | Industry \u2195 | Shares \u2195 | Price | Value \u2195 | Charges \u2195 | Why",
+        "# \u2195 | Stock \u2195 | Industry \u2195 | Last \u2195 | # \u2195 | # \u2195 | Next event | P/E \u2195 | Profit y/y \u2195",
+        "Stock \u2195 | Vol \u25bc | Beta \u2195 | #y \u2195 | Max DD \u2195"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 5535
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "markets": {
+    "name": "Market Monitor",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/markets.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "MKT",
+    "url": "http://127.0.0.1:8010/?tab=markets",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 49,
+      "ready_ms": 76,
+      "ready": true,
+      "idle_ms": 1131,
+      "total_ms": 7135
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 36,
+      "fcp_ms": 65,
+      "resources": 74,
+      "js_files": 49,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 22,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "MKT \u00b7 SuryaDhana",
+      "page_headers": [
+        "MKT Market Monitor"
+      ],
+      "panels": [
+        "Market regime",
+        "Valuation \u00b7 NSE",
+        "Equity vs bonds \u00b7 NIFTY earnings yield \u2212 India #-year yield",
+        "One year of breadth",
+        "Market map",
+        "Industry rotation",
+        "Who holds index futures",
+        "Industry table",
+        "Top gainers",
+        "Top losers",
+        "Most active (\u20b9 turnover)",
+        "Volume shockers (\u2265 #\u00d7 avg)",
+        "New #-week highs",
+        "New #-week lows"
+      ],
+      "headings": [],
+      "tables": 9,
+      "table_headers": [
+        "Index | P/E \u2195 | P/E vs history \u2195 | vs NIFTY P/E \u2195 | P/B \u2195 | Div yield \u2195 | Earnings yield \u2195 | Today \u2195 | # \u2195 | #Y \u2195",
+        "Participant | Index fut. long | Short | Net \u2195 | Long % \u2195 | Net chg #d | Net chg #d | Index options (bull \u2212 bear)",
+        "Industry | N | #D \u2195 | #W \u2195 | # \u2195 | # \u2195 | > #-DMA \u2195",
+        "Stock | Close | Chg \u2195 | \u20b9 cr \u2195 | vs #w H",
+        "Stock | Close | Chg \u2195 | \u20b9 cr \u2195 | vs #w H",
+        "Stock | Close | Chg \u2195 | \u20b9 cr \u2195 | vs #w H",
+        "Stock | Close | Chg \u2195 | Vol \u00d7 \u2195 | vs #w H",
+        "Stock | Close | Chg \u2195 | \u20b9 cr \u2195 | vs #w H",
+        "Stock | Close | Chg \u2195 | \u20b9 cr \u2195 | vs #w H"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 13963
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "events": {
+    "name": "Corporate calendar",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/events.png",
+    "load_s": 7.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "EVTS",
+    "url": "http://127.0.0.1:8010/?tab=events",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 51,
+      "ready_ms": 80,
+      "ready": true,
+      "idle_ms": 1835,
+      "total_ms": 7838
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 39,
+      "fcp_ms": 71,
+      "resources": 84,
+      "js_files": 55,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 25,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "EVTS \u00b7 SuryaDhana",
+      "page_headers": [
+        "EVTS Corporate Calendar"
+      ],
+      "panels": [
+        "Your stocks",
+        "Results since the last close \u00b7 react at #:#",
+        "Q# FY# season so far",
+        "Results scoreboard",
+        "Options into results \u00b7 # F&O names",
+        "Next five weeks",
+        "All events"
+      ],
+      "headings": [],
+      "tables": 4,
+      "table_headers": [
+        "Stock \u2195 | Filed \u2195 | Revenue YoY \u2195 | Profit YoY \u2195 | Today \u2195 | vs NIFTY \u2195 | Typical | Size vs normal \u25bc",
+        "Stock \u2195 | Released \u2195 | Reaction \u25bc | vs NIFTY \u2195 | Typical | Size vs normal \u2195 | \u20b9 cr/day \u2195",
+        "Stock \u2195 | Results \u2195 | Options to | ATM IV \u2195 | Priced to expiry \u2195 | Results-day move priced \u2195 | Usual reaction \u2195 | Priced \u00f7 usual \u25bc | Normal days from",
+        "Date \u2195 | Stock \u2195 | Company | Event \u2195 | Detail | Typical move \u2195 | Last quarter \u2195 | \u20b9 cr/day \u2195 | Close |"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 62201
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "overview": {
+    "name": "Overview",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/overview.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "OVRV",
+    "url": "http://127.0.0.1:8010/?tab=overview",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 49,
+      "ready_ms": 86,
+      "ready": true,
+      "idle_ms": 683,
+      "total_ms": 6685
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 36,
+      "fcp_ms": 75,
+      "resources": 69,
+      "js_files": 48,
+      "js_transfer_kb": 3
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "OVRV \u00b7 SuryaDhana",
+      "page_headers": [
+        "OVRV Overview"
+      ],
+      "panels": [
+        "Data freshness",
+        "Decision Desk",
+        "Roadmap",
+        "System status",
+        "Fundamentals enrichment"
+      ],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 2,
+      "body_text_len": 2398
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "stocks": {
+    "name": "Stocks",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/stocks.png",
+    "load_s": 7.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "EQS",
+    "url": "http://127.0.0.1:8010/?tab=stocks",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 34,
+      "ready_ms": 77,
+      "ready": true,
+      "idle_ms": 1323,
+      "total_ms": 7326
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 21,
+      "fcp_ms": 68,
+      "resources": 74,
+      "js_files": 53,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "EQS \u00b7 SuryaDhana",
+      "page_headers": [
+        "EQS Stocks"
+      ],
+      "panels": [
+        "Minervini trend template",
+        "All stocks"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "\u2605 | Ticker \u2191 | Company \u00b7 Sector | Nifty | Midcap | Cap Type | Event | CMP \u20b9 \u2195 | P/E \u2195 | Mkt Cap Cr \u2195 | Div Yld% \u2195 | NP Qtr Cr \u2195 | Sales Qtr Cr \u2195 | ROCE% \u2195 | Data% \u2195"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 164594
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "backtest": {
+    "name": "Backtest",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/backtest.png",
+    "load_s": 6.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "BTST",
+    "url": "http://127.0.0.1:8010/?tab=backtest",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 38,
+      "ready_ms": 83,
+      "ready": true,
+      "idle_ms": 614,
+      "total_ms": 6618
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 24,
+      "fcp_ms": 71,
+      "resources": 64,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 15,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "BTST Backtest Lab"
+      ],
+      "panels": [],
+      "headings": [
+        "Scope",
+        "Window",
+        "Capital & Risk",
+        "Filters",
+        "Walk-Forward (WFO)",
+        "Factor Diagnostic StudioDECILE IC",
+        "Institutional simulation cockpit"
+      ],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 2551
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "positions": {
+    "name": "Portfolio",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/positions.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "PORT",
+    "url": "http://127.0.0.1:8010/?tab=positions",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 39,
+      "ready_ms": 116,
+      "ready": true,
+      "idle_ms": 721,
+      "total_ms": 6725
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 25,
+      "fcp_ms": 53,
+      "resources": 68,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "PORT \u00b7 SuryaDhana",
+      "page_headers": [
+        "PORT Portfolio \u00b7 Legacy Engine"
+      ],
+      "panels": [
+        "Open positions (#)"
+      ],
+      "headings": [
+        "Execution Control Panel",
+        "Order Log"
+      ],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 2020
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "broker": {
+    "name": "Broker Account",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/broker.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "BRKR",
+    "url": "http://127.0.0.1:8010/?tab=broker",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 40,
+      "ready_ms": 69,
+      "ready": true,
+      "idle_ms": 683,
+      "total_ms": 6688
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 28,
+      "fcp_ms": 58,
+      "resources": 70,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 19,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "BRKR \u00b7 SuryaDhana",
+      "page_headers": [
+        "BRKR Broker Account"
+      ],
+      "panels": [
+        "Connect ICICI Breeze",
+        "Auto-login (TOTP)",
+        "Backend sync status",
+        "Rules that will govern live trading"
+      ],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 4010
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "pipeline": {
+    "name": "Pipeline",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/pipeline.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "PIPE",
+    "url": "http://127.0.0.1:8010/?tab=pipeline",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 41,
+      "ready_ms": 108,
+      "ready": true,
+      "idle_ms": 664,
+      "total_ms": 6668
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 29,
+      "fcp_ms": 72,
+      "resources": 70,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 20,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "PIPE Quantitative Pipeline"
+      ],
+      "panels": [],
+      "headings": [
+        "Pipeline Readiness",
+        "OHLCV Coverage",
+        "Label Distribution",
+        "Feature Engineering Coverage",
+        "Stale Data \u2014 Oldest # Tickers"
+      ],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 1,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 2317
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "scanner": {
+    "name": "LW Scanner",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/scanner.png",
+    "load_s": 6.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "LWSC",
+    "url": "http://127.0.0.1:8010/?tab=scanner",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 38,
+      "ready_ms": 69,
+      "ready": true,
+      "idle_ms": 617,
+      "total_ms": 6619
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 0,
+      "load_ms": 29,
+      "fcp_ms": 62,
+      "resources": 65,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 16,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "LWSC \u00b7 SuryaDhana",
+      "page_headers": [
+        "LWSC Larry Williams Scanner"
+      ],
+      "panels": [],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "# | Ticker | Composite | Calendar Edge | Vol Divergence | Failed BOs | Blast-Off | Active"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 4151
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "discovery": {
+    "name": "Alpha Discovery",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/discovery.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "ALFA",
+    "url": "http://127.0.0.1:8010/?tab=discovery",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 54,
+      "ready_ms": 114,
+      "ready": true,
+      "idle_ms": 2100,
+      "total_ms": 8104
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 43,
+      "fcp_ms": 84,
+      "resources": 79,
+      "js_files": 58,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [
+      "POST /api/alpha/scan"
+    ],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "ALFA Alpha Discovery Desk"
+      ],
+      "panels": [
+        "System status"
+      ],
+      "headings": [
+        "\u2699 Data Pipeline",
+        "\u25c8 Strategy Knobs",
+        "\u25c8 Matched Setups"
+      ],
+      "tables": 1,
+      "table_headers": [
+        "| TICKER | SIGNAL DATE | LTP / CLOSE | CHG% | NET #D"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 2,
+      "body_text_len": 3136
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "commodity": {
+    "name": "Commodity",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/commodity.png",
+    "load_s": 7.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "CMDT",
+    "url": "http://127.0.0.1:8010/?tab=commodity",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 57,
+      "ready_ms": 753,
+      "ready": true,
+      "idle_ms": 1560,
+      "total_ms": 7565
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 44,
+      "fcp_ms": 73,
+      "resources": 74,
+      "js_files": 53,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "CMDT \u00b7 SuryaDhana",
+      "page_headers": [
+        "CMDT Commodities"
+      ],
+      "panels": [],
+      "headings": [
+        "WTI Crude \u00b7 #",
+        "FRED \u00b7 Commodity / Macro",
+        "EIA \u00b7 Energy Fundamentals"
+      ],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 1933
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "mcxgold": {
+    "name": "MCX gold desk",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/mcxgold.png",
+    "load_s": 7.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "MCXG",
+    "url": "http://127.0.0.1:8010/?tab=mcxgold",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 59,
+      "ready_ms": 89,
+      "ready": true,
+      "idle_ms": 1339,
+      "total_ms": 7343
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 48,
+      "fcp_ms": 80,
+      "resources": 78,
+      "js_files": 54,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 20,
+    "non_get_api": [
+      "POST /api/mcx/ticket"
+    ],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "MCXG MCX gold desk"
+      ],
+      "panels": [
+        "Session",
+        "MCX holidays ahead",
+        "Quote",
+        "Contracts \u2014 MCX gold family",
+        "Paper gold ticket"
+      ],
+      "headings": [],
+      "tables": 3,
+      "table_headers": [
+        "Date | MCX holiday | Closure",
+        "Expiry | Source | settle \u20b9/# g | band \u20b9 | OI lots \u2195 | \u0394OI lots | carry to next month % p.a. | COMEX month | Tender",
+        "Leg | Brokerage | Exch # | CTT # (sell) | Stamp (buy) | SEBI | GST # | Total"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 6277
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "gold": {
+    "name": "Gold terminal",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/gold.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "GOLD",
+    "url": "http://127.0.0.1:8010/?tab=gold",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 55,
+      "ready_ms": 132,
+      "ready": true,
+      "idle_ms": 1053,
+      "total_ms": 7057
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 45,
+      "fcp_ms": 94,
+      "resources": 79,
+      "js_files": 52,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 24,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "GOLD Gold terminal"
+      ],
+      "panels": [
+        "Verdict",
+        "Eight gauges",
+        "Today's open",
+        "What moved since the MCX close",
+        "Your inputs",
+        "Headlines",
+        "Accuracy log",
+        "Event risk \u00b7 next # days",
+        "Automated brief"
+      ],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 3,
+      "body_text_len": 11275
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "glassbox": {
+    "name": "Glass-Box",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/glassbox.png",
+    "load_s": 6.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "GBOX",
+    "url": "http://127.0.0.1:8010/?tab=glassbox",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 61,
+      "ready_ms": 129,
+      "ready": true,
+      "idle_ms": 878,
+      "total_ms": 6882
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 48,
+      "fcp_ms": 93,
+      "resources": 65,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 15,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "GBOX Glass-Box Studio"
+      ],
+      "panels": [],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 1212
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "mlengine": {
+    "name": "ML Engine",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/mlengine.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "MLEN",
+    "url": "http://127.0.0.1:8010/?tab=mlengine",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 57,
+      "ready_ms": 136,
+      "ready": true,
+      "idle_ms": 671,
+      "total_ms": 6676
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 44,
+      "fcp_ms": 98,
+      "resources": 64,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 15,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SuryaDhana Terminal",
+      "page_headers": [
+        "MLEN ML Engine"
+      ],
+      "panels": [],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 1594
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "explorer": {
+    "name": "Data Explorer",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/explorer.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "DEXP",
+    "url": "http://127.0.0.1:8010/?tab=explorer",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 55,
+      "ready_ms": 84,
+      "ready": true,
+      "idle_ms": 669,
+      "total_ms": 6675
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 45,
+      "fcp_ms": 74,
+      "resources": 66,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 16,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "DEXP \u00b7 SuryaDhana",
+      "page_headers": [
+        "DEXP Data Explorer"
+      ],
+      "panels": [],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "TICKER \u21c5 | DATE \u2193 | RET_#D \u21c5 | RET_#D \u21c5 | RET_#D \u21c5 | LOG_RET \u21c5 | RETURN_LAG_#D \u21c5 | RETURN_LAG_#D \u21c5 | RETURN_LAG_#D \u21c5 | RETURN_LAG_#D \u21c5 | RETURN_LAG_#D \u21c5 | SMA_# \u21c5 | SMA_# \u21c5 | SMA_# \u21c5 | EMA_# \u21c5 | EMA_# \u21c5 | PRICE_VS_SMA# \u21c5 | PRICE_VS_SMA# \u21c5 |"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 26061
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "warehouse": {
+    "name": "Warehouse",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/warehouse.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "WHSE",
+    "url": "http://127.0.0.1:8010/?tab=warehouse",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 62,
+      "ready_ms": 152,
+      "ready": true,
+      "idle_ms": 716,
+      "total_ms": 6720
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 45,
+      "fcp_ms": 81,
+      "resources": 73,
+      "js_files": 46,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 20,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "WHSE \u00b7 SuryaDhana",
+      "page_headers": [
+        "WHSE Data Warehouse & ML Health"
+      ],
+      "panels": [
+        "NSE research datasets"
+      ],
+      "headings": [
+        "Warehouse Coverage",
+        "ML Dataset \u00b7 Class Balance",
+        "Per-Ticker Data Quality"
+      ],
+      "tables": 2,
+      "table_headers": [
+        "Ticker\u2195 | Last \u20b9\u2195 | Rows\u25bc | Window | Yrs\u2195 | Density\u2195 | Lag\u2195 | Quality",
+        "Dataset | Rows \u2195 | From | To | Freshness | Refreshed"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 9831
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "research": {
+    "name": "Research library",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/research.png",
+    "load_s": 6.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "RSCH",
+    "url": "http://127.0.0.1:8010/?tab=research",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 57,
+      "ready_ms": 86,
+      "ready": true,
+      "idle_ms": 944,
+      "total_ms": 6948
+    },
+    "nav_timing": {
+      "ttfb_ms": 7,
+      "dcl_ms": 0,
+      "load_ms": 46,
+      "fcp_ms": 77,
+      "resources": 67,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 17,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "RSCH \u00b7 SuryaDhana",
+      "page_headers": [
+        "RSCH Research Library"
+      ],
+      "panels": [
+        "Studies",
+        "What's new"
+      ],
+      "headings": [],
+      "tables": 7,
+      "table_headers": [
+        "Hypothesis | Verdict | #-session excess vs market (#\u2013# / #\u2013#)",
+        "Bloomberg | Here | Status",
+        "| Now | Percentile | Median",
+        "Command | What it does",
+        "You type | It does",
+        "QIB subscription | IPOs | Average listing gain | Average next # sessions",
+        "Time | Job | What it does"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 174024
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "risk": {
+    "name": "Risk dashboard",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/risk.png",
+    "load_s": 6.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "RSK",
+    "url": "http://127.0.0.1:8010/?tab=risk",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 58,
+      "ready_ms": 88,
+      "ready": true,
+      "idle_ms": 653,
+      "total_ms": 6656
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 47,
+      "fcp_ms": 78,
+      "resources": 66,
+      "js_files": 47,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 16,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "RSK \u00b7 SuryaDhana",
+      "page_headers": [
+        "RSK Risk dashboard"
+      ],
+      "panels": [
+        "Value at Risk \u00b7 historical simulation",
+        "Drawdown ladder",
+        "Holdings risk",
+        "Sector concentration",
+        "Stress replays \u00b7 honest history"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        "Scenario | NIFTY \u2195 | This book \u2195 | P&L \u2195 | Covered \u2195 | Worst holding | Excluded \u2195"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 3585
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  },
+  "system": {
+    "name": "System",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261105/webkit/system.png",
+    "load_s": 27.4,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "webkit",
+    "browser_version": "26.4",
+    "code": "SYS",
+    "url": "http://127.0.0.1:8010/?tab=system",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 59,
+      "ready_ms": 397,
+      "ready": true,
+      "idle_ms": null,
+      "total_ms": 27404
+    },
+    "nav_timing": {
+      "ttfb_ms": 6,
+      "dcl_ms": 0,
+      "load_ms": 47,
+      "fcp_ms": 79,
+      "resources": 89,
+      "js_files": 60,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:8010/api/telemetry/logs/stream",
+        "status": 200,
+        "failure": "cancelled",
+        "resource_type": "eventsource",
+        "kind": "stream_abort_on_navigation",
+        "reason": "cancelled (allowlisted: stream torn down by navigation)",
+        "seam": false
+      }
+    ],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SYS \u00b7 SuryaDhana",
+      "page_headers": [
+        "SYS System"
+      ],
+      "panels": [
+        "System status"
+      ],
+      "headings": [
+        "System Telemetry"
+      ],
+      "tables": 1,
+      "table_headers": [
+        "Job | Schedule (IST) | Next Run In | Last Latency | Status"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 2,
+      "body_text_len": 5907
+    },
+    "pending_at_leave": [],
+    "repetition_hits": []
+  }
+}

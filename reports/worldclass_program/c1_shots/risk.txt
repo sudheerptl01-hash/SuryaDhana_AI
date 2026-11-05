@@ -1,0 +1,184 @@
+◉ SURYADHANA ▸ RSK
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:40:58
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,127.30
+−1.20%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:40 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+RSK ▾
+⌕ GO
+/
+RSK
+RISK DASHBOARD
+PAPER
+VAR —
+BETA —
+SECTOR —
+DD OK
+hist-sim VaR · beta vs NIFTY50 · stress replays · ladder vs the −20% HARD stop · broker book as of 2026-10-14 15:13
+▶ WHAT-IF
+DESK WATCHLIST
+↻ REFRESH
+VAR95 · 1D
+—
+needs holdings
+VAR99 · 1D
+—
+—
+PORTFOLIO BETA
+—
+vs NIFTY50 · 250d
+MAX INDUSTRY
+—
+cap 40%
+DRAWDOWN
+0.0%
+20.0% to the −20% stop
+BOOK NAV
+₹5,01,389
+equity at risk ₹0
+The book is ALL CASH today (₹5,01,389 in the liquid fund) — nothing at market risk. Run a what-if basket (input above, or “Desk watchlist”) to measure what the Desk would hold.
+VALUE AT RISK · HISTORICAL SIMULATION
+last 0 sessions at current weights
+◌
+NO RETURN SAMPLE
+VaR needs per-ticker history from data-service.
+VAR95 · 1 DAY
+— (—% EQ · —% OF BOOK)
+VAR99 · 1 DAY
+— (—% EQ · —% OF BOOK)
+ES95 / ES99 · 1 DAY
+— / — (MEAN OF THE TAIL DAYS)
+VAR95 · 5 DAY
+— (√5 × 1D — APPROXIMATION)
+VAR99 · 5 DAY
+— (√5 × 1D — APPROXIMATION)
+SAMPLE
+0 SESSIONS · — → — · 0% OF VALUE COVERED
+· historical simulation on the last 0 sessions of portfolio returns at current weights
+· VaR at level a = the ceil((1−a)·n)-th worst day (no interpolation); ES = mean of those days
+· 5-day numbers are 1-day × √5 — an i.i.d. APPROXIMATION, not a resimulation
+· a symbol's missing session counts as a 0.0 return (price carried); thin histories are excluded, not guessed
+DRAWDOWN LADDER
+Desk paper ledger (EOD NAV marks)
+0% (peak)
+−10%
+−15%
+−20% HARD STOP
+−25%
+FROM PEAK
+0.00% (PEAK ₹5,01,389)
+EMERGENCY STOP
+NAV ₹4,01,111 (−20% FROM PEAK · HARD)
+DISTANCE TO STOP
+a further −20.0%
+TODAY
++0.02% (LAST TWO EOD MARKS — INTRADAY HALT DISTANCE NEEDS LIVE MARKS)
+ROOM BEFORE −2% HALT
+2.02%
+· Max drawdown −20% from peak → sell everything at the next open; manual re-enable (HARD)
+· Daily loss limit −2% → halt trading for the day (HARD)
+· Max 15% of portfolio per stock · max 40% of positions per NSE industry
+Rules are read from CLAUDE.md Trading Rules — displayed, never modified here.
+HOLDINGS RISK
+beta vs NIFTY50 · risk share = marginal contribution to portfolio σ (sums to 100%)
+◇
+NO EQUITY POSITIONS
+Desk paper book and broker holdings are both empty.
+SECTOR CONCENTRATION
+max 40% of POSITIONS per NSE industry (Desk rule — CLAUDE.md Trading Rules)
+◇
+NO SECTOR EXPOSURE
+STRESS REPLAYS · HONEST HISTORY
+each holding’s ACTUAL window return — no Monte-Carlo, no extrapolation
+SCENARIO	NIFTY ↕	THIS BOOK ↕	P&L ↕	COVERED ↕	WORST HOLDING	EXCLUDED ↕
+
+COVID crash
+2020-02-20 → 2020-03-23
+	−37.0%	—	₹0	0%	—	0
+
+Election result shock day
+2024-06-03 → 2024-06-04
+	−5.9%	—	₹0	0%	—	0
+
+2022 rate shock (H1)
+2022-01-01 → 2022-06-30
+	−9.1%	—	₹0	0%	—	0
+As of 2026-10-15 03:39:02 · book = Desk paper ledger + broker last-known holdings (file as of 2026-10-14 15:13:04) · payload cached 120 s · PAPER only.
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

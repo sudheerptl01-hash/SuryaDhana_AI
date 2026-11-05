@@ -1,0 +1,79 @@
+{
+ "source": {
+  "transcript": "agent-a4d641463b164d7ab.jsonl",
+  "tool_use_id": "toolu_018xe8VnoyKCczBHhdv9FHe7",
+  "timestamp": "2026-10-24T06:00:55.416Z"
+ },
+ "pairs": [
+  {
+   "file": "ui/lib/alerts.ts",
+   "old": "import { getPriceAlerts, putPriceAlert, runPriceAlerts, type AlertHitSrv, type AlertLevelsSrv } from '@/lib/api'\n",
+   "new": "import { getPriceAlerts, putPriceAlert, runPriceAlerts, type AlertHitSrv, type AlertLevelsSrv } from '@/lib/api'\nimport { notify as platformNotify } from '@/lib/platform'\n"
+  },
+  {
+   "file": "ui/lib/alerts.ts",
+   "old": "  try {\n    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') new Notification('SuryaDhana alert', { body: text })\n  } catch { /* notifications unavailable */ }\n}",
+   "new": "  platformNotify('SuryaDhana alert', text) // browser: Notification when granted (unchanged); app: native macOS notification\n}"
+  },
+  {
+   "file": "ui/components/WatchMonitor.tsx",
+   "old": "import { useLiveTicks } from '@/lib/liveTicks'\n",
+   "new": "import { useLiveTicks } from '@/lib/liveTicks'\nimport { isDesktop, notificationPermission, requestNotificationPermission } from '@/lib/platform'\n"
+  },
+  {
+   "file": "ui/components/WatchMonitor.tsx",
+   "old": "  const [perm, setPerm] = useState<string>(() => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'))\n",
+   "new": "  const [perm, setPerm] = useState<string>(() => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'))\n  useEffect(() => { if (isDesktop()) void notificationPermission().then(setPerm) }, [])   // app: macOS permission via the shell\n"
+  },
+  {
+   "file": "ui/components/WatchMonitor.tsx",
+   "old": "onClick={() => Notification.requestPermission().then(setPerm)}>ENABLE DESKTOP NOTIFICATIONS</Chip>",
+   "new": "onClick={() => void requestNotificationPermission().then(setPerm)}>ENABLE DESKTOP NOTIFICATIONS</Chip>"
+  },
+  {
+   "file": "ui/lib/backtestExport.ts",
+   "old": "import type { BacktestResult } from './backtest'\n",
+   "new": "import type { BacktestResult } from './backtest'\nimport { isDesktop, saveDownload } from '@/lib/platform'\n"
+  },
+  {
+   "file": "ui/lib/backtestExport.ts",
+   "old": "function download(blob: Blob, filename: string) {\n  const url = URL.createObjectURL(blob)\n  const a = document.createElement('a')\n  a.href = url\n  a.download = filename\n  document.body.appendChild(a)\n  a.click()\n  a.remove()\n  setTimeout(() => URL.revokeObjectURL(url), 1000)\n}",
+   "new": "/** Browser: anchor + object URL (same as before, inside saveDownload). App: written to ~/Downloads by the shell. */\nfunction download(blob: Blob, filename: string) {\n  void saveDownload(blob, filename)\n}"
+  },
+  {
+   "file": "ui/lib/backtestExport.ts",
+   "old": "    XLSX.writeFile(wb, `backtest-${stamp()}.xlsx`)",
+   "new": "    const name = `backtest-${stamp()}.xlsx`\n    if (isDesktop()) {     // WKWebView cannot save SheetJS's blob download: hand the bytes to the shell\n      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer\n      download(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name)\n    } else XLSX.writeFile(wb, name)"
+  },
+  {
+   "file": "ui/components/ResearchLibrary.tsx",
+   "old": "import { Markdown } from '@/components/terminal/Markdown'\n",
+   "new": "import { Markdown } from '@/components/terminal/Markdown'\nimport { downloadUrl, isDesktop } from '@/lib/platform'\n"
+  },
+  {
+   "file": "ui/components/ResearchLibrary.tsx",
+   "old": "<a key={f.name} href={researchFileUrl(doc.id, f.name)} download={f.name} style={{ textDecoration: 'none' }}>",
+   "new": "<a key={f.name} href={researchFileUrl(doc.id, f.name)} download={f.name} style={{ textDecoration: 'none' }}\n                         onClick={e => { if (isDesktop() && !e.defaultPrevented) { e.preventDefault(); void downloadUrl(researchFileUrl(doc.id, f.name), f.name) } }}>"
+  },
+  {
+   "file": "ui/components/CommandBar.tsx",
+   "old": "import { DEAL_KEY } from '@/components/DealsMonitor'\n",
+   "new": "import { DEAL_KEY } from '@/components/DealsMonitor'\nimport { openExternal } from '@/lib/platform'\n"
+  },
+  {
+   "file": "ui/components/CommandBar.tsx",
+   "old": "    if (it.action === 'tv') window.open(tradingViewUrl(inst.tv), '_blank', 'noopener')\n    else if (it.action === 'yf') window.open(yahooUrl(inst.yahoo), '_blank', 'noopener')",
+   "new": "    if (it.action === 'tv') openExternal(tradingViewUrl(inst.tv))          // browser: window.open(url, '_blank', 'noopener')\n    else if (it.action === 'yf') openExternal(yahooUrl(inst.yahoo))"
+  },
+  {
+   "file": "ui/components/terminal/index.tsx",
+   "old": "import { goToPage } from '@/lib/navigate'\nimport { T } from '@/components/news/format'\n",
+   "new": "import { goToPage } from '@/lib/navigate'\nimport { saveDownload } from '@/lib/platform'\nimport { T } from '@/components/news/format'\n"
+  },
+  {
+   "file": "ui/components/terminal/index.tsx",
+   "old": "  const blob = new Blob(['\\ufeff' + lines.join('\\n')], { type: 'text/csv;charset=utf-8' })\n  const a = document.createElement('a')\n  a.href = URL.createObjectURL(blob)\n  a.download = `${stem}-${new Date().toLocaleDateString('en-CA')}.csv`\n  a.click()\n  setTimeout(() => URL.revokeObjectURL(a.href), 1000)\n}",
+   "new": "  const blob = new Blob(['\\ufeff' + lines.join('\\n')], { type: 'text/csv;charset=utf-8' })\n  void saveDownload(blob, `${stem}-${new Date().toLocaleDateString('en-CA')}.csv`)   // browser: anchor download; app: ~/Downloads\n}"
+  }
+ ]
+}

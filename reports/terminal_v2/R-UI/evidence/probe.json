@@ -1,0 +1,585 @@
+{
+  "ttfn": [
+    {
+      "tab": "brief",
+      "first_number": "04",
+      "ttfn_ms": 47,
+      "chars": 5292,
+      "lines": 227,
+      "dashes": 1,
+      "degraded_words": 1,
+      "words": 929,
+      "scrollH": 1764
+    },
+    {
+      "tab": "watch",
+      "first_number": "60",
+      "ttfn_ms": 43,
+      "chars": 652,
+      "lines": 21,
+      "dashes": 3,
+      "degraded_words": 1,
+      "words": 133,
+      "scrollH": 1076
+    },
+    {
+      "tab": "charts",
+      "first_number": "20",
+      "ttfn_ms": 45,
+      "chars": 517,
+      "lines": 39,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 110,
+      "scrollH": 1076
+    },
+    {
+      "tab": "compare",
+      "first_number": "100",
+      "ttfn_ms": 49,
+      "chars": 838,
+      "lines": 34,
+      "dashes": 2,
+      "degraded_words": 0,
+      "words": 158,
+      "scrollH": 1076
+    },
+    {
+      "tab": "screen",
+      "first_number": "1807",
+      "ttfn_ms": 894,
+      "chars": 130295,
+      "lines": 3936,
+      "dashes": 2144,
+      "degraded_words": 0,
+      "words": 23242,
+      "scrollH": 1343
+    },
+    {
+      "tab": "alerts",
+      "first_number": "36",
+      "ttfn_ms": 103,
+      "chars": 8050,
+      "lines": 62,
+      "dashes": 2,
+      "degraded_words": 1,
+      "words": 1340,
+      "scrollH": 1076
+    },
+    {
+      "tab": "eco",
+      "first_number": "10",
+      "ttfn_ms": 107,
+      "chars": 5459,
+      "lines": 61,
+      "dashes": 4,
+      "degraded_words": 0,
+      "words": 1019,
+      "scrollH": 1349
+    },
+    {
+      "tab": "seag",
+      "first_number": "50",
+      "ttfn_ms": 35,
+      "chars": 1835,
+      "lines": 68,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 383,
+      "scrollH": 1076
+    },
+    {
+      "tab": "memb",
+      "first_number": "50",
+      "ttfn_ms": 43,
+      "chars": 6149,
+      "lines": 176,
+      "dashes": 1,
+      "degraded_words": 0,
+      "words": 989,
+      "scrollH": 1850
+    },
+    {
+      "tab": "options",
+      "first_number": "05",
+      "ttfn_ms": 119,
+      "chars": 5769,
+      "lines": 190,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 1163,
+      "scrollH": 1712
+    },
+    {
+      "tab": "ostrategy",
+      "first_number": "2026",
+      "ttfn_ms": 107,
+      "chars": 4367,
+      "lines": 432,
+      "dashes": 6,
+      "degraded_words": 0,
+      "words": 672,
+      "scrollH": 1076
+    },
+    {
+      "tab": "derivatives",
+      "first_number": "0.8",
+      "ttfn_ms": 123,
+      "chars": 3660,
+      "lines": 187,
+      "dashes": 10,
+      "degraded_words": 0,
+      "words": 685,
+      "scrollH": 2869
+    },
+    {
+      "tab": "insiders",
+      "first_number": "10",
+      "ttfn_ms": 46,
+      "chars": 8323,
+      "lines": 100,
+      "dashes": 86,
+      "degraded_words": 0,
+      "words": 1426,
+      "scrollH": 1076
+    },
+    {
+      "tab": "deals",
+      "first_number": "10",
+      "ttfn_ms": 45,
+      "chars": 36210,
+      "lines": 1094,
+      "dashes": 269,
+      "degraded_words": 0,
+      "words": 5856,
+      "scrollH": 1966
+    },
+    {
+      "tab": "preopen",
+      "first_number": "50",
+      "ttfn_ms": 50,
+      "chars": 17912,
+      "lines": 755,
+      "dashes": 218,
+      "degraded_words": 0,
+      "words": 2960,
+      "scrollH": 1476
+    },
+    {
+      "tab": "ipo",
+      "first_number": "2026",
+      "ttfn_ms": 894,
+      "chars": 17414,
+      "lines": 264,
+      "dashes": 120,
+      "degraded_words": 0,
+      "words": 3245,
+      "scrollH": 1393
+    },
+    {
+      "tab": "movers",
+      "first_number": "30",
+      "ttfn_ms": 54,
+      "chars": 10416,
+      "lines": 737,
+      "dashes": 61,
+      "degraded_words": 0,
+      "words": 1647,
+      "scrollH": 3672
+    },
+    {
+      "tab": "wrap",
+      "first_number": "21",
+      "ttfn_ms": 30,
+      "chars": 4185,
+      "lines": 57,
+      "dashes": 0,
+      "degraded_words": 1,
+      "words": 693,
+      "scrollH": 1240
+    },
+    {
+      "tab": "filings",
+      "first_number": "1000",
+      "ttfn_ms": 168,
+      "chars": 167272,
+      "lines": 5377,
+      "dashes": 6,
+      "degraded_words": 0,
+      "words": 24709,
+      "scrollH": 1078
+    },
+    {
+      "tab": "margin",
+      "first_number": "20",
+      "ttfn_ms": 42,
+      "chars": 2963,
+      "lines": 108,
+      "dashes": 1,
+      "degraded_words": 0,
+      "words": 558,
+      "scrollH": 1353
+    },
+    {
+      "tab": "holders",
+      "first_number": "341",
+      "ttfn_ms": 155,
+      "chars": 6913,
+      "lines": 76,
+      "dashes": 2,
+      "degraded_words": 0,
+      "words": 1677,
+      "scrollH": 1076
+    },
+    {
+      "tab": "world",
+      "first_number": "60",
+      "ttfn_ms": 34,
+      "chars": 2099,
+      "lines": 98,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 328,
+      "scrollH": 1076
+    },
+    {
+      "tab": "desk",
+      "first_number": "20",
+      "ttfn_ms": 29,
+      "chars": 4767,
+      "lines": 241,
+      "dashes": 19,
+      "degraded_words": 0,
+      "words": 826,
+      "scrollH": 1892
+    },
+    {
+      "tab": "markets",
+      "first_number": "04",
+      "ttfn_ms": 496,
+      "chars": 13277,
+      "lines": 813,
+      "dashes": 1,
+      "degraded_words": 0,
+      "words": 2201,
+      "scrollH": 4686
+    },
+    {
+      "tab": "events",
+      "first_number": "60",
+      "ttfn_ms": 193,
+      "chars": 57336,
+      "lines": 2465,
+      "dashes": 326,
+      "degraded_words": 0,
+      "words": 9566,
+      "scrollH": 3754
+    },
+    {
+      "tab": "overview",
+      "first_number": "2010",
+      "ttfn_ms": 55,
+      "chars": 1522,
+      "lines": 78,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 245,
+      "scrollH": 1076
+    },
+    {
+      "tab": "stocks",
+      "first_number": "150",
+      "ttfn_ms": 48,
+      "chars": 174332,
+      "lines": 10612,
+      "dashes": 4681,
+      "degraded_words": 4,
+      "words": 28649,
+      "scrollH": 1180
+    },
+    {
+      "tab": "backtest",
+      "first_number": "48",
+      "ttfn_ms": 59,
+      "chars": 1703,
+      "lines": 85,
+      "dashes": 3,
+      "degraded_words": 0,
+      "words": 266,
+      "scrollH": 1229
+    },
+    {
+      "tab": "positions",
+      "first_number": "22",
+      "ttfn_ms": 88,
+      "chars": 1036,
+      "lines": 43,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 168,
+      "scrollH": 1078
+    },
+    {
+      "tab": "broker",
+      "first_number": "15",
+      "ttfn_ms": 33,
+      "chars": 971,
+      "lines": 43,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 168,
+      "scrollH": 1076
+    },
+    {
+      "tab": "pipeline",
+      "first_number": null,
+      "ttfn_ms": null,
+      "chars": 0,
+      "lines": 0,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 1,
+      "scrollH": 1549
+    },
+    {
+      "tab": "scanner",
+      "first_number": "2020",
+      "ttfn_ms": 39,
+      "chars": 3355,
+      "lines": 166,
+      "dashes": 42,
+      "degraded_words": 1,
+      "words": 512,
+      "scrollH": 2184
+    },
+    {
+      "tab": "discovery",
+      "first_number": "0.0",
+      "ttfn_ms": 104,
+      "chars": 2316,
+      "lines": 117,
+      "dashes": 39,
+      "degraded_words": 0,
+      "words": 369,
+      "scrollH": 1263
+    },
+    {
+      "tab": "commodity",
+      "first_number": "11",
+      "ttfn_ms": 1676,
+      "chars": 6667,
+      "lines": 224,
+      "dashes": 9,
+      "degraded_words": 0,
+      "words": 1134,
+      "scrollH": 2697
+    },
+    {
+      "tab": "mcxgold",
+      "first_number": "09",
+      "ttfn_ms": 172,
+      "chars": 3820,
+      "lines": 119,
+      "dashes": 12,
+      "degraded_words": 2,
+      "words": 636,
+      "scrollH": 1490
+    },
+    {
+      "tab": "gold",
+      "first_number": "04",
+      "ttfn_ms": 57,
+      "chars": 5791,
+      "lines": 240,
+      "dashes": 1,
+      "degraded_words": 1,
+      "words": 1018,
+      "scrollH": 1962
+    },
+    {
+      "tab": "glassbox",
+      "first_number": "10",
+      "ttfn_ms": 48,
+      "chars": 364,
+      "lines": 20,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 56,
+      "scrollH": 1076
+    },
+    {
+      "tab": "mlengine",
+      "first_number": "20",
+      "ttfn_ms": 50,
+      "chars": 753,
+      "lines": 33,
+      "dashes": 5,
+      "degraded_words": 1,
+      "words": 132,
+      "scrollH": 1076
+    },
+    {
+      "tab": "explorer",
+      "first_number": "0.6",
+      "ttfn_ms": 142,
+      "chars": 25226,
+      "lines": 81,
+      "dashes": 750,
+      "degraded_words": 0,
+      "words": 3825,
+      "scrollH": 2091
+    },
+    {
+      "tab": "warehouse",
+      "first_number": "22",
+      "ttfn_ms": 222,
+      "chars": 8882,
+      "lines": 338,
+      "dashes": 23,
+      "degraded_words": 0,
+      "words": 1305,
+      "scrollH": 2080
+    },
+    {
+      "tab": "research",
+      "first_number": "104",
+      "ttfn_ms": 432,
+      "chars": 165067,
+      "lines": 1327,
+      "dashes": 139,
+      "degraded_words": 45,
+      "words": 26518,
+      "scrollH": 36863
+    },
+    {
+      "tab": "risk",
+      "first_number": "20",
+      "ttfn_ms": 34,
+      "chars": 2750,
+      "lines": 94,
+      "dashes": 33,
+      "degraded_words": 2,
+      "words": 516,
+      "scrollH": 1272
+    },
+    {
+      "tab": "system",
+      "first_number": "22",
+      "ttfn_ms": 599,
+      "chars": 16328,
+      "lines": 381,
+      "dashes": 47,
+      "degraded_words": 8,
+      "words": 1842,
+      "scrollH": 2458
+    }
+  ],
+  "mobile": [
+    {
+      "tab": "brief",
+      "scrollWidth": 465,
+      "chars": 5773,
+      "lines": 240,
+      "dashes": 1,
+      "degraded_words": 1,
+      "words": 1013,
+      "scrollH": 4442
+    },
+    {
+      "tab": "watch",
+      "scrollWidth": 390,
+      "chars": 652,
+      "lines": 21,
+      "dashes": 3,
+      "degraded_words": 1,
+      "words": 133,
+      "scrollH": 913
+    },
+    {
+      "tab": "markets",
+      "scrollWidth": 685,
+      "chars": 10502,
+      "lines": 425,
+      "dashes": 1,
+      "degraded_words": 0,
+      "words": 1792,
+      "scrollH": 7380
+    },
+    {
+      "tab": "options",
+      "scrollWidth": 508,
+      "chars": 5671,
+      "lines": 176,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 1149,
+      "scrollH": 2383
+    },
+    {
+      "tab": "ostrategy",
+      "scrollWidth": 434,
+      "chars": 4353,
+      "lines": 430,
+      "dashes": 6,
+      "degraded_words": 0,
+      "words": 670,
+      "scrollH": 1840
+    },
+    {
+      "tab": "gold",
+      "scrollWidth": 465,
+      "chars": 5275,
+      "lines": 227,
+      "dashes": 1,
+      "degraded_words": 1,
+      "words": 924,
+      "scrollH": 4140
+    },
+    {
+      "tab": "desk",
+      "scrollWidth": 642,
+      "chars": 4802,
+      "lines": 242,
+      "dashes": 19,
+      "degraded_words": 0,
+      "words": 833,
+      "scrollH": 3396
+    },
+    {
+      "tab": "alerts",
+      "scrollWidth": 390,
+      "chars": 8050,
+      "lines": 62,
+      "dashes": 2,
+      "degraded_words": 1,
+      "words": 1340,
+      "scrollH": 1677
+    },
+    {
+      "tab": "charts",
+      "scrollWidth": 390,
+      "chars": 517,
+      "lines": 39,
+      "dashes": 0,
+      "degraded_words": 0,
+      "words": 110,
+      "scrollH": 1248
+    },
+    {
+      "tab": "derivatives",
+      "scrollWidth": 1027,
+      "chars": 3554,
+      "lines": 168,
+      "dashes": 10,
+      "degraded_words": 0,
+      "words": 658,
+      "scrollH": 3619
+    }
+  ],
+  "flows": [
+    {
+      "flow": "GO TCS \u2192 stock window first price",
+      "ms": 805
+    }
+  ]
+}

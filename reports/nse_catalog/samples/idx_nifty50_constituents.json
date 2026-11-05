@@ -1,0 +1,107 @@
+[
+ {
+  "Company Name": "Adani Enterprises Ltd.",
+  "Industry": "Metals & Mining",
+  "Symbol": "ADANIENT",
+  "Series": "EQ",
+  "ISIN Code": "INE423A01024"
+ },
+ {
+  "Company Name": "Adani Ports and Special Economic Zone Ltd.",
+  "Industry": "Services",
+  "Symbol": "ADANIPORTS",
+  "Series": "EQ",
+  "ISIN Code": "INE742F01042"
+ },
+ {
+  "Company Name": "Apollo Hospitals Enterprise Ltd.",
+  "Industry": "Healthcare",
+  "Symbol": "APOLLOHOSP",
+  "Series": "EQ",
+  "ISIN Code": "INE437A01024"
+ },
+ {
+  "Company Name": "Asian Paints Ltd.",
+  "Industry": "Consumer Durables",
+  "Symbol": "ASIANPAINT",
+  "Series": "EQ",
+  "ISIN Code": "INE021A01026"
+ },
+ {
+  "Company Name": "Axis Bank Ltd.",
+  "Industry": "Financial Services",
+  "Symbol": "AXISBANK",
+  "Series": "EQ",
+  "ISIN Code": "INE238A01034"
+ },
+ {
+  "Company Name": "Bajaj Auto Ltd.",
+  "Industry": "Automobile and Auto Components",
+  "Symbol": "BAJAJ-AUTO",
+  "Series": "EQ",
+  "ISIN Code": "INE917I01010"
+ },
+ {
+  "Company Name": "Bajaj Finance Ltd.",
+  "Industry": "Financial Services",
+  "Symbol": "BAJFINANCE",
+  "Series": "EQ",
+  "ISIN Code": "INE296A01032"
+ },
+ {
+  "Company Name": "Bajaj Finserv Ltd.",
+  "Industry": "Financial Services",
+  "Symbol": "BAJAJFINSV",
+  "Series": "EQ",
+  "ISIN Code": "INE918I01026"
+ },
+ {
+  "Company Name": "Bharat Electronics Ltd.",
+  "Industry": "Capital Goods",
+  "Symbol": "BEL",
+  "Series": "EQ",
+  "ISIN Code": "INE263A01024"
+ },
+ {
+  "Company Name": "Bharti Airtel Ltd.",
+  "Industry": "Telecommunication",
+  "Symbol": "BHARTIARTL",
+  "Series": "EQ",
+  "ISIN Code": "INE397D01024"
+ },
+ {
+  "Company Name": "Cipla Ltd.",
+  "Industry": "Healthcare",
+  "Symbol": "CIPLA",
+  "Series": "EQ",
+  "ISIN Code": "INE059A01026"
+ },
+ {
+  "Company Name": "Coal India Ltd.",
+  "Industry": "Oil Gas & Consumable Fuels",
+  "Symbol": "COALINDIA",
+  "Series": "EQ",
+  "ISIN Code": "INE522F01014"
+ },
+ {
+  "Company Name": "Dr. Reddy's Laboratories Ltd.",
+  "Industry": "Healthcare",
+  "Symbol": "DRREDDY",
+  "Series": "EQ",
+  "ISIN Code": "INE089A01031"
+ },
+ {
+  "Company Name": "Eicher Motors Ltd.",
+  "Industry": "Automobile and Auto Components",
+  "Symbol": "EICHERMOT",
+  "Series": "EQ",
+  "ISIN Code": "INE066A01021"
+ },
+ {
+  "Company Name": "Eternal Ltd.",
+  "Industry": "Consumer Services",
+  "Symbol": "ETERNAL",
+  "Series": "EQ",
+  "ISIN Code": "INE758T01015"
+ }
+]

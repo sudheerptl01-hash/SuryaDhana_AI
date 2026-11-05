@@ -1,0 +1,152 @@
+[
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "20MICRONS",
+  "Underlying Close Price (A)": "217.54",
+  "Underlying Previous Day Close Price (B)": "213.86",
+  "Underlying Log Returns (C) = LN(A/B)": "0.0171",
+  "Previous Day Underlying Volatility (D)": "0.0283",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0283",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.5407"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "21STCENMGM",
+  "Underlying Close Price (A)": "39.87",
+  "Underlying Previous Day Close Price (B)": "39.78",
+  "Underlying Log Returns (C) = LN(A/B)": "0.0023",
+  "Previous Day Underlying Volatility (D)": "0.0194",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0193",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.3687"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "360ONE",
+  "Underlying Close Price (A)": "1073.00",
+  "Underlying Previous Day Close Price (B)": "1080.79",
+  "Underlying Log Returns (C) = LN(A/B)": "-0.0072",
+  "Previous Day Underlying Volatility (D)": "0.0200",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0200",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.3821"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "3BBLACKBIO",
+  "Underlying Close Price (A)": "1457.56",
+  "Underlying Previous Day Close Price (B)": "1406.31",
+  "Underlying Log Returns (C) = LN(A/B)": "0.0358",
+  "Previous Day Underlying Volatility (D)": "0.0323",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0323",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.6171"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "3IINFOLTD",
+  "Underlying Close Price (A)": "24.35",
+  "Underlying Previous Day Close Price (B)": "24.96",
+  "Underlying Log Returns (C) = LN(A/B)": "-0.0247",
+  "Previous Day Underlying Volatility (D)": "0.0252",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0252",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.4814"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "3MINDIA",
+  "Underlying Close Price (A)": "33925.57",
+  "Underlying Previous Day Close Price (B)": "34589.41",
+  "Underlying Log Returns (C) = LN(A/B)": "-0.0194",
+  "Previous Day Underlying Volatility (D)": "0.0176",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0176",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.3362"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "3PLAND",
+  "Underlying Close Price (A)": "30.99",
+  "Underlying Previous Day Close Price (B)": "30.52",
+  "Underlying Log Returns (C) = LN(A/B)": "0.0153",
+  "Previous Day Underlying Volatility (D)": "0.0246",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0246",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.4700"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "500012",
+  "Underlying Close Price (A)": "42.48",
+  "Underlying Previous Day Close Price (B)": "42.50",
+  "Underlying Log Returns (C) = LN(A/B)": "-0.0005",
+  "Previous Day Underlying Volatility (D)": "0.0297",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0296",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.5655"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "500014",
+  "Underlying Close Price (A)": "3.83",
+  "Underlying Previous Day Close Price (B)": "3.85",
+  "Underlying Log Returns (C) = LN(A/B)": "-0.0052",
+  "Previous Day Underlying Volatility (D)": "0.0274",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0273",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.5216"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "500016",
+  "Underlying Close Price (A)": "7.18",
+  "Underlying Previous Day Close Price (B)": "7.22",
+  "Underlying Log Returns (C) = LN(A/B)": "-0.0056",
+  "Previous Day Underlying Volatility (D)": "0.0310",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0309",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.5903"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "500028",
+  "Underlying Close Price (A)": "21.31",
+  "Underlying Previous Day Close Price (B)": "23.38",
+  "Underlying Log Returns (C) = LN(A/B)": "-0.0927",
+  "Previous Day Underlying Volatility (D)": "0.0297",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0304",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.5808"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "500051",
+  "Underlying Close Price (A)": "8.78",
+  "Underlying Previous Day Close Price (B)": "8.37",
+  "Underlying Log Returns (C) = LN(A/B)": "0.0478",
+  "Previous Day Underlying Volatility (D)": "0.0255",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0256",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.4891"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "500058",
+  "Underlying Close Price (A)": "12.05",
+  "Underlying Previous Day Close Price (B)": "12.04",
+  "Underlying Log Returns (C) = LN(A/B)": "0.0008",
+  "Previous Day Underlying Volatility (D)": "0.0297",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0296",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.5655"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "500069",
+  "Underlying Close Price (A)": "243.95",
+  "Underlying Previous Day Close Price (B)": "243.95",
+  "Underlying Log Returns (C) = LN(A/B)": "0.0000",
+  "Previous Day Underlying Volatility (D)": "0.0225",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0224",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.4280"
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "500142",
+  "Underlying Close Price (A)": "9.80",
+  "Underlying Previous Day Close Price (B)": "10.31",
+  "Underlying Log Returns (C) = LN(A/B)": "-0.0507",
+  "Previous Day Underlying Volatility (D)": "0.0397",
+  "Current Day Underlying Daily Volatility (E) = Sqrt(0.995*D*D + 0.005*C*C)": "0.0397",
+  "Underlying Annualised Volatility (F) = E*Sqrt(365)": "0.7585"
+ }
+]

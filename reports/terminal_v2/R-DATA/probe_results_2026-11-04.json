@@ -1,0 +1,134 @@
+[
+ {
+  "name": "TRAP quote-equity (blocked for scripts)",
+  "url": "https://www.nseindia.com/api/quote-equity?symbol=RELIANCE",
+  "status": 403,
+  "bytes": 395,
+  "last_modified_ist": null,
+  "content_type": "text/html",
+  "server": "AkamaiGHost",
+  "sample": "<HTML><HEAD> <TITLE>Access Denied</TITLE> </HEAD><BODY> <H1>Access Denied</H1>   You don't have permission to access \"http&#58;&#47;&#47;www&#46;nseindia&#46;co",
+  "note": ""
+ },
+ {
+  "name": "TRAP quote-derivative (404/moved)",
+  "url": "https://www.nseindia.com/api/quote-derivative?symbol=NIFTY",
+  "status": 404,
+  "bytes": 385,
+  "last_modified_ist": null,
+  "content_type": "text/html; charset=utf-8",
+  "server": "Apache",
+  "sample": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta charset=\"UTF-8\">   <title>Resource not found</title> </head> <body style=\"background-color: #e8e8e8;\">   <div st",
+  "note": ""
+ },
+ {
+  "name": "TRAP old option-chain-indices (404/empty)",
+  "url": "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY",
+  "status": 404,
+  "bytes": 385,
+  "last_modified_ist": null,
+  "content_type": "text/html; charset=utf-8",
+  "server": "Apache",
+  "sample": "<!DOCTYPE html> <html lang=\"en\"> <head>   <meta charset=\"UTF-8\">   <title>Resource not found</title> </head> <body style=\"background-color: #e8e8e8;\">   <div st",
+  "note": ""
+ },
+ {
+  "name": "TRAP market-wide corporates-pit (empty)",
+  "url": "https://www.nseindia.com/api/corporates-pit?index=equities&from_date=01-11-2026&to_date=04-11-2026",
+  "status": 200,
+  "bytes": 28,
+  "last_modified_ist": null,
+  "content_type": "application/json; charset=utf-8",
+  "server": "Apache",
+  "sample": "{\"acqNameList\":[],\"data\":[]}",
+  "note": "rows=0"
+ },
+ {
+  "name": "TRAP bulk-deals history 70-row cap (no csv=true)",
+  "url": "https://www.nseindia.com/api/historical/bulk-deals?from=01-10-2026&to=31-10-2026",
+  "status": 503,
+  "bytes": 18517,
+  "last_modified_ist": "2025-09-11T20:42:20+05:30",
+  "content_type": "text/html",
+  "server": "Apache",
+  "sample": " <!DOCTYPE html>  <html lang=\"en\"> <head><meta content=\"noindex, nofollow\" name=\"robots\"/> <meta charset=\"utf-8\"/> <title>Nse India</title> <style>         body",
+  "note": ""
+ },
+ {
+  "name": "CHECK option-chain-v3 NIFTY (the replacement)",
+  "url": "https://www.nseindia.com/api/option-chain-v3?type=Indices&symbol=NIFTY&expiry=23-Nov-2026",
+  "status": 200,
+  "bytes": 265099,
+  "last_modified_ist": null,
+  "content_type": "application/json; charset=utf-8",
+  "server": "Apache",
+  "sample": "{\"records\":{\"data\":[{\"expiryDates\":\"23-Nov-2026\",\"CE\":{\"PChange\":0,\"buyPrice1\":3406.85,\"buyQuantity1\":975,\"change\":0,\"changeinOpenInterest\":0,\"expiryDate\":\"23-1",
+  "note": "keys=['records', 'filtered'] ts=04-Nov-2026 15:40:00 n=123"
+ },
+ {
+  "name": "ARCHIVE equity bhavcopy 04-Nov",
+  "url": "https://nsearchives.nseindia.com/products/content/sec_bhavdata_full_04112026.csv",
+  "status": 200,
+  "bytes": 0,
+  "last_modified_ist": "2026-11-04T22:05:35+05:30",
+  "content_type": "text/csv",
+  "server": null,
+  "sample": "",
+  "note": ""
+ },
+ {
+  "name": "ARCHIVE F&O UDiFF bhavcopy 04-Nov",
+  "url": "https://nsearchives.nseindia.com/content/fo/BhavCopy_NSE_FO_0_0_0_20261104_F_0000.csv.zip",
+  "status": 200,
+  "bytes": 0,
+  "last_modified_ist": "2026-11-04T20:10:32+05:30",
+  "content_type": "application/zip",
+  "server": null,
+  "sample": "",
+  "note": ""
+ },
+ {
+  "name": "ARCHIVE participant OI 04-Nov",
+  "url": "https://nsearchives.nseindia.com/content/nsccl/fao_participant_oi_04112026.csv",
+  "status": 200,
+  "bytes": 0,
+  "last_modified_ist": "2026-11-04T20:10:32+05:30",
+  "content_type": "text/csv",
+  "server": null,
+  "sample": "",
+  "note": ""
+ },
+ {
+  "name": "ARCHIVE combined OI/MWPL 04-Nov",
+  "url": "https://nsearchives.nseindia.com/archives/nsccl/mwpl/combineoi_04112026.zip",
+  "status": 200,
+  "bytes": 0,
+  "last_modified_ist": "2026-11-04T19:23:04+05:30",
+  "content_type": "application/zip",
+  "server": null,
+  "sample": "",
+  "note": ""
+ },
+ {
+  "name": "ARCHIVE MTF 03-Nov file (T+1)",
+  "url": "https://nsearchives.nseindia.com/content/equities/mrg_trading_031126.zip",
+  "status": 200,
+  "bytes": 0,
+  "last_modified_ist": "2026-11-04T22:12:02+05:30",
+  "content_type": "application/zip",
+  "server": null,
+  "sample": "",
+  "note": ""
+ },
+ {
+  "name": "ARCHIVE F&O volatility 04-Nov",
+  "url": "https://nsearchives.nseindia.com/archives/nsccl/volt/FOVOLT_04112026.csv",
+  "status": 200,
+  "bytes": 0,
+  "last_modified_ist": "2026-11-04T17:01:10+05:30",
+  "content_type": "text/csv",
+  "server": null,
+  "sample": "",
+  "note": ""
+ }
+]

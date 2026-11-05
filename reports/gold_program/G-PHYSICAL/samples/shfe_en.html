@@ -1,0 +1,5581 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>
+			Shanghai Futures Exchange
+		</title>
+		<!-- START Public CSS -->
+		<link rel="stylesheet" type="text/css" href="/eng/images/global.css" />
+<link rel="stylesheet" type="text/css" href="/eng/images/common.css" />
+<link rel="stylesheet" type="text/css" href="/eng/images/element-ui/theme-chalk/index.css" />
+<link rel="stylesheet" type="text/css" href="/eng/images/serviceMarket.css" />
+<!-- 手机导航插件 -->
+<link rel="stylesheet" type="text/css" href="/eng/images/hc-demo.css" />
+<link rel="stylesheet" type="text/css" href="/eng/images/isMobile.css" />
+		<!-- END Public CSS -->
+		<!-- START Plugin CSS -->
+		<link rel="stylesheet" href="/eng/images/swiper-bundle.min.css" />
+		<link rel="stylesheet" href="/eng/images/swiper-3.4.2.min.css" />
+		<link rel="stylesheet" href="/eng/images/element-ui/theme-chalk/index.css" />
+		<link rel="stylesheet" href="/eng/images/elementui.css" />
+		<link rel="stylesheet" href="/eng/images/home_index.css" />
+		<style type="text/css">
+			[v-cloak] {display: none;}
+		</style>
+
+<!-- 首页置灰 -->
+
+
+<!-- 首页置红 -->
+<script>
+	var homeView_isRed = false;
+</script>
+
+
+
+		<!-- END Plugin CSS -->
+		<!-- START head CSS -->
+		<meta name="renderer" content="webkit" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<!-- <link rel="shortcut icon" href="favicon.ico"> -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<meta name="format-detection" content="telephone=yes" />
+<!-- JS 优先加载 -->
+<script src="/eng/images/jquery.min.js" /></script>
+<script src="/eng/images/hc-offcanvas-nav.js" /></script>
+<script src="/eng/images/vue.min.js" /></script>
+<script src="/eng/images/moment.min.js" /></script>
+<script src="/eng/images/index_rem.js"></script>
+
+	</head>
+
+	<body>
+		<div class="control">
+			<!-- START header -->
+			<!-- 头部导航-->
+<div class="sqs_top isPc">
+  <div class="sqs_top_line">
+    <a href="/eng/" target="_self" class="sqs_top_logo">
+      <img src="/eng/images/logo.png" />
+    </a>
+
+ <div class="sqs_top_fr_box">
+	 
+    <div class="top-right flex-row align-center" id="search_idNew">
+      <div class="input-box">
+        <div class="contentNew content_select">
+          <div class="search-block">
+            <el-autocomplete class="inline-input" id="searchText" placeholder="Please enter keyword" value-key="word" 
+              v-model="inputStr" 
+              :fetch-suggestions="getFullKey" 
+              :trigger-on-focus="false" 
+              @select="handleSelect" 
+              @keyup.enter.native="searchTextNew"
+              >
+              <i slot="suffix">
+                <a class="search-icon cur" id="searchHeaderBtn" @click="searchHeaderBtnNew"></a>
+              </i>
+            </el-autocomplete>
+          </div>
+        </div>
+      </div>
+      
+      <a id="height_btn" @click="height_btnNew"><img src="/eng/images/sqs_search.png"/ alt="search" /></a>
+
+      <div class="language flex-row align-center">
+		 <a class="home_top_investor" id="home_top_investor" style="display: none;"  href="/eng/services/investor/" >
+		 I Am An Investor
+		 </a>
+        <a href='/'>中文版</a>
+        <!-- <span class="bor"></span> -->
+        <!-- <span id="StranLink">繁</span> -->
+        <!-- <span id="StranLink1">简</span> -->
+        <!-- <a href="https://www.shfe.com.cn/eng/" style="margin-left: 0.0625rem;">旧版</a> -->
+      </div>
+    </div>
+	
+ </div>
+
+
+  </div>
+  <div class="sqs_top_nav">
+    <!-- 头部导航菜单 -->
+    <div class="sqs_nav">
+      <ul id="js_pub_headerDh">
+
+<!-- Circular & News -->
+<li class="sqs_tabJs">
+  <a href="/eng/CircularNews/" target="_self">
+   Circular & News </a>
+  <div class="sqs_nav_tab">
+    <div class="sqs_opacity_blackBg"></div>
+    <div class="sqs_nav_tab_con">
+      <!-- Latest News -->
+      <div class="newsBox">
+        <div class="newsBoxL">
+          <div class="newsTit">
+            <span class="newsTitSpan"> Circular</span>
+            <a class="newsTitMore" href="/eng/CircularNews/Circular/" target="_self">View More</a>
+          </div>
+          <div class="newsList">
+            <ul>
+             
+<li>
+<a href="/eng/CircularNews/Circular/202610/t20261023_833812.html" target="_self">
+  Notice on the Expansion of Products Eligible for Spread Orders
+</a>
+<p>2026-10-23</p>
+</li>
+
+<li>
+<a href="/eng/CircularNews/Circular/202610/t20261023_833813.html" target="_self">
+  Notice of Shanghai Internationl Energy Exchange on the Expansion of Products Eligible for Spread Orders
+</a>
+<p>2026-10-23</p>
+</li>
+
+            </ul>
+          </div>
+        </div>
+        <div class="newsBoxC">
+          <div class="newsTit">
+            <span class="newsTitSpan"> News</span>
+              <a class="newsTitMore" href="/eng/CircularNews/News/" target="_self">View More</a>
+          </div>
+          <div class="newsList">
+
+            <div v-if="newsList.length>0">
+			 
+	<div class="newsImg">
+	  <img src="" />
+	</div>
+
+              
+            </div>
+            <div class="newsImg" v-else>
+              <img src="/eng/images/news.png" />
+            </div>
+
+            <ul>
+              
+<li>
+<a href="/eng/CircularNews/News/202509/t20250922_829092.html" target="_self">
+  CGTN: China Vitality: Shanghai powers China's global trade ascent
+</a>
+<p>2025-09-19</p>
+</li>
+
+            </ul>
+          </div>
+        </div>
+		<div class="newsBoxF">
+		  <div class="newsTit">
+		    <span class="newsTitSpan"> SHFE in Spotlight </span>
+		      <a class="newsTitMore" href="/eng/CircularNews/SHFEinSpotlight/" target="_self">View More</a>
+		  </div>
+		  <div class="newsList">
+		
+		    <div v-if="spotlightList.length>0">
+		    
+	<div class="newsImg">
+	  <img src="" />
+	</div>
+
+		    </div>
+		    <div class="newsImg" v-else>
+		      <img src="/eng/images/FocusonSHFE.png" />
+		    </div>
+		
+		    <ul>
+		       
+<li>
+<a href="/eng/CircularNews/SHFEinSpotlight/202609/t20260930_833634.html" target="_self">
+  SHFE Opens Another 8 Products to QFI, Making Almost All Products QFI-Accessible
+</a>
+<p>2026-09-30</p>
+</li>
+
+		    </ul>
+		  </div>
+		</div>
+    		
+      </div>
+    </div>
+  </div>
+</li>
+<!-- Market -->
+<li class="sqs_tabJs">
+  <a href="/eng/Market/" target="_self"> Market </a>
+  <div class="sqs_nav_tab">
+    <div class="sqs_opacity_blackBg"></div>
+    <div class="sqs_nav_tab_con">
+      <!-- 图片集 -->
+      <div class="sqs_Market_imgs">
+        <div class="sqs_Market_topImgs">
+		 
+			<div class="sqs_Market_crudeOil" style="background-image: url(/eng/Market/202412/W020260908360928020188.gif);">
+			  <!-- 图片背景透明层 -->
+			  <div class="sqs_Market_img sqs_opacity"></div>
+			  <a class="sqs_Market_topImgs_href" href="/eng/Market/Options/hc_o/" target="_self">
+			    <div class="sqs_Market_NewProduct">
+			      <p class="sqs_newProduct"></p>
+			      <p class="sqs_crudeOil">Hot Rolled Coils</p>
+			    </div>
+			    <div class="sqs_Market_NewProduct_more">
+			      <img src="/eng/images/market_gotolink.png" />
+			    </div>
+			  </a>
+			</div>   
+		
+			<div class="sqs_Market_crudeOil" style="background-image: url(/eng/Market/202412/W020260908361576210528.gif);">
+			  <!-- 图片背景透明层 -->
+			  <div class="sqs_Market_img sqs_opacity"></div>
+			  <a class="sqs_Market_topImgs_href" href="/eng/Market/Options/ss_o/" target="_self">
+			    <div class="sqs_Market_NewProduct">
+			      <p class="sqs_newProduct"></p>
+			      <p class="sqs_crudeOil">Stainless Steel</p>
+			    </div>
+			    <div class="sqs_Market_NewProduct_more">
+			      <img src="/eng/images/market_gotolink.png" />
+			    </div>
+			  </a>
+			</div>   
+		
+        </div>
+		<div class="sqs_Market_Platform">
+		<a href="http://otc.shfe.com.cn/" target="_blank" class="sqs_Platform_tit">
+			<div class="sqs_Platform_txt">  OTC platform</div> 
+			<div class="sqs_Platform_more"><img src="/eng/images/market_gotolink.png" /></div>
+			</a>
+			</div>
+      </div>
+
+      <!-- Futures  Options -->
+      <div class="sqs_Market_List">
+        <!-- Futures -->
+        <div class="sqs_Market_Futures">
+          <a class="sqs_Futures_mainTit" href="/eng/Market/Futures/" target="_self">
+		  Futures</a>
+          <div class="sqs_Futures_listBox">
+            <div class="sqs_Futures_list">
+              <ul>
+				   
+				 <li class="sqs_Futures_subTitLi">   <h2 class="sqs_Futures_subTit">Metal</h2></li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/cu_f/" target="_self"> Copper </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/bc_f/" target="_self"> Copper(BC) </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/al_f/" target="_self"> Aluminum </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/zn_f/" target="_self"> Zinc </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/pb_f/" target="_self"> Lead </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/ni_f/" target="_self"> Nickel </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/sn_f/" target="_self"> Tin </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/ao_f/" target="_self"> Aluminium Oxide </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/ad_f/" target="_self"> Cast Aluminum Alloy </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/au_f/" target="_self"> Gold </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/ag_f/" target="_self"> Silver </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/rb_f/" target="_self"> Steel Rebar </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/wr_f/" target="_self"> Steel Wire Rod </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/hc_f/" target="_self"> Hot Rolled Coils </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Metal/ss_f/" target="_self"> Stainless Steel </a>
+                </li>
+                
+				   
+				 <li class="sqs_Futures_subTitLi">   <h2 class="sqs_Futures_subTit">Energy</h2></li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Energy/sc_f/" target="_self"> Crude Oil </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Energy/lu_f/" target="_self"> LSFO </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Energy/fu_f/" target="_self"> Fuel Oil </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Energy/bu_f/" target="_self"> Bitumen </a>
+                </li>
+                
+				   
+				 <li class="sqs_Futures_subTitLi">   <h2 class="sqs_Futures_subTit">Chemical</h2></li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Chemical/br_f/" target="_self"> Synthetic Rubber </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Chemical/ru_f/" target="_self"> Natural Rubber </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Chemical/nr_f/" target="_self"> TSR 20 </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Chemical/sp_f/" target="_self"> Woodpulp </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/Chemical/op_f/" target="_self"> Offset Paper </a>
+                </li>
+                
+				   
+				 <li class="sqs_Futures_subTitLi">   <h2 class="sqs_Futures_subTit">Index</h2></li>
+                
+                <li>
+                  <a href="/eng/Market/Futures/index_f/ec_f/" target="_self"> SCFIS(Europe) </a>
+                </li>
+                
+				 
+              </ul>
+            </div>
+           
+          </div>
+        </div>
+
+        <!-- Options -->
+        <div class="sqs_nav_tab_Options">
+          <a class="sqs_Futures_mainTit" href="/eng/Market/Options/" target="_self">Options</a>
+          <div class="sqs_Options_list">
+            <ul>
+              
+              <li>
+                <a href="/eng/Market/Options/sc_o/" target="_self"> Crude Oil </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/cu_o/" target="_self"> Copper </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/bc_o/" target="_self"> Copper(BC) </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/al_o/" target="_self"> Aluminum </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/zn_o/" target="_self"> Zinc </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/pb_o/" target="_self"> Lead </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/ni_o/" target="_self"> Nickel </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/sn_o/" target="_self"> Tin </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/ao_o/" target="_self"> Aluminium Oxide </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/ad_o/" target="_self"> Cast Aluminum Alloy </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/au_o/" target="_self"> Gold </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/ag_o/" target="_self"> Silver </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/rb_o/" target="_self"> Steel Rebar </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/hc_o/" target="_self"> Hot Rolled Coils </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/ss_o/" target="_self"> Stainless Steel </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/lu_o/" target="_self"> LSFO </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/fu_o/" target="_self"> Fuel Oil </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/bu_o/" target="_self"> Bitumen </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/br_o/" target="_self"> Synthetic Rubber </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/ru_o/" target="_self"> Natural Rubber </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/nr_o/" target="_self"> TSR 20 </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/sp_o/" target="_self"> Woodpulp </a>
+              </li>
+              
+              <li>
+                <a href="/eng/Market/Options/op_o/" target="_self"> Offset Paper </a>
+              </li>
+               
+			  
+            </ul>
+          </div>
+         <div class="sqs_nav_tab_ISIN">
+         				  <a class="sqs_Futures_mainTit isinMar" href="/eng/Market/ISIN/" target="_self">
+         				  ISIN
+         				  </a>
+         </div>
+        </div>
+		<div class="sqs_platform">
+			<a href="http://otc.shfe.com.cn/" target="_blank">
+					 OTC platform
+			</a>
+		</div>
+      </div>
+    </div>
+  </div>
+</li>
+<!-- Serves -->
+<li class="sqs_tabJs">
+  <a href="/eng/services/" target="_self">
+   Services </a>
+  <div class="sqs_nav_tab">
+    <div class="sqs_opacity_blackBg"></div>
+    <div class="sqs_nav_tab_con">
+      <!-- Services imgs -->
+      <div class="sqs_Services_imgs">
+        <!-- Market Data Vender -->
+        <div class="sqs_Services_MarketDataVender">
+          <!-- 图片背景透明层 -->
+          <div class="sqs_MarketDataVender_img sqs_opacity"></div>
+          <div class="sqs_MarketDataVender_main">
+          
+            <div class="sqs_MarketDataVender_tit">
+              <a class="sqs_MarketDataVender_txt" href="/eng/services/vendorMarketData/Vendorlist/" target="_self">
+                Our Market Data Vendors
+              </a>
+              <div class="sqs_MarketDataVender_more">
+                <img src="/eng/images/market_gotolink.png" />
+              </div>
+            </div>
+            <p class="sqs_MarketDataVender_con">
+              
+We collaborate with industry leading vendors, service providers and media portals to
+ distribute real-time and delayed data at a global scale. Companies interested in 
+ becoming our market data vendor, please feel free to apply.							
+            </p>
+            
+            <a class="sqs_MarketDataVender_link" href="/eng/services/vendorMarketData/BecomeaMarketDataVendor/" target="_self">
+              Become a Vendor
+            </a>
+          </div>
+        </div>
+        <!-- Our Members --><!-- <a href="/services/members/memberlist/"> -->
+        
+          <!-- <a class="sqs_Services_CurrentVendor" href="/eng/services/Members/MemberQuery/" target="_self"> -->
+          <a class="sqs_Services_CurrentVendor" href="/eng/services/Members/MemberQuery/" target="_self">
+            <!-- 图片背景透明层 -->
+            <div class="sqs_CurrentVendor_img sqs_opacity"></div>
+            <div class="sqs_CurrentVendor_tit">
+              <div class="sqs_CurrentVendor_txt">
+                Our Members
+              </div>
+              <div class="sqs_MarketDataVender_more">
+                <img src="/eng/images/market_gotolink.png" />
+              </div>
+            </div>
+          </a>
+        
+      
+        
+          
+          <a class="sqs_Services_DataServices" href="/eng/services/Rules/SHFERules/" target="_self">
+            <!-- 图片背景透明层 -->
+            <div class="sqs_DataServices_img sqs_opacity"></div>
+            <div class="sqs_DataServices_tit">
+              <div class="sqs_DataServices_txt">
+                Rules and Regulations
+              </div>
+              <div class="sqs_DataServices_more">
+                <img src="/eng/images/market_gotolink.png" />
+              </div>
+            </div>
+          </a>
+        
+      </div>
+
+      <div class="sqs_Services_items">
+      
+        <div class="itemsA">
+          
+            <h2 class="itemsA_Act">Rules</h2>
+          
+          
+            <h2>Supervision</h2>
+          
+            <h2>Trading</h2>
+          
+            <h2>Settlement</h2>
+          
+            <h2>Delivery</h2>
+          
+            <h2>Technology</h2>
+          
+        </div>
+        
+        <div class="itemsB">
+
+          
+            <div class="itemsB-H" style="display:block;">
+            
+              <a href="/eng/services/Rules/Guidance/" target="_self">Guidance</a>
+            
+              <a href="/eng/services/Rules/SHFERules/" target="_self">SHFE Rules</a>
+            
+              <a href="/eng/services/Rules/INERules/" target="_self">INE Rules</a>
+            
+            </div>
+          
+
+          
+            <div class="itemsB-H">
+              
+                <a href="/eng/services/Supervision/LargePositionReport/" target="_self">Large Position Report</a>
+              
+                <a href="/eng/services/Supervision/AdministrationofAccountsInvolvingActualControlRelationship/" target="_self">Administration of Accounts Involving Actual Control Relationship</a>
+              
+                <a href="/eng/services/Supervision/Cases/" target="_self">Cases</a>
+              
+            </div>
+          
+            <div class="itemsB-H">
+              
+                <a href="/eng/services/trading/TradingBusiness/" target="_self">Trading Business</a>
+              
+                <a href="/eng/services/trading/FloorTraderManagement/" target="_self">Floor Trader Management</a>
+              
+                <a href="/eng/services/trading/AccountOpening/" target="_self">Account Opening</a>
+              
+                <a href="/eng/services/trading/participant_eligibility/" target="_self">Participant Eligibility</a>
+              
+                <a href="/eng/services/trading/SeatManagement/" target="_self">Seat Management</a>
+              
+                <a href="/eng/services/trading/ProgramTradingFiling/" target="_self">Program Trading Filing</a>
+              
+                <a href="/eng/services/trading/HedgingOperation/" target="_self">Hedging Operation</a>
+              
+                <a href="/eng/services/trading/TAS/" target="_self">Order Guideline</a>
+              
+                <a href="/eng/services/trading/MarketMaker/" target="_self">Market Maker</a>
+              
+                <a href="/eng/services/trading/Download_Trading/" target="_self">Download</a>
+              
+            </div>
+          
+            <div class="itemsB-H">
+              
+                <a href="/eng/services/Settlement/SettlementService/" target="_self">Settlement Service</a>
+              
+                <a href="/eng/services/Settlement/SettlementBank/" target="_self">Settlement Bank</a>
+              
+                <a href="/eng/services/Settlement/downloadDownload_Settlement/" target="_self">Download</a>
+              
+            </div>
+          
+            <div class="itemsB-H">
+              
+                <a href="/eng/services/Delivery/WarehouseWarrant/" target="_self">Warehouse Warrant</a>
+              
+                <a href="/eng/services/Delivery/Warehousewarrantaccountmanagement/" target="_self">Warehouse warrant account management</a>
+              
+                <a href="/eng/services/Delivery/BondedDelivery/" target="_self">Bonded Delivery</a>
+              
+                <a href="/eng/services/Delivery/BrandRegistration/" target="_self">Brand Registration</a>
+              
+                <a href="/eng/services/Delivery/CertifiedDeliveryWarehouse/" target="_self">Certified Delivery Warehouse</a>
+              
+                <a href="/eng/services/Delivery/CommoditiesforDelivery/" target="_self">Commodities for Delivery</a>
+              
+                <a href="/eng/services/Delivery/DeliveryWarehouseAssayer/" target="_self">Delivery Warehouse & Assayer</a>
+              
+                <a href="https://www.shfe.com.cn/services/delivery/standardwarrantms/" target="_self">Standard Warrant Management System</a>
+              
+                <a href="/eng/services/Delivery/downloadDownload_Delivery/" target="_self">Download</a>
+              
+            </div>
+          
+            <div class="itemsB-H">
+              
+                <a href="/eng/services/Technology/TechnologyService/" target="_self">Technology Service</a>
+              
+                <a href="/eng/services/Technology/TechnicalSpecificationResource/" target="_self">Technical Specification & Resource</a>
+              
+            </div>
+          
+            <div class="itemsB-H">
+              
+                <a href="/eng/services/vendorMarketData/BecomeaMarketDataVendor/" target="_self">Become a Market Data Vendor</a>
+              
+                <a href="/eng/services/vendorMarketData/Vendorlist/" target="_self">Vendor list</a>
+              
+                <a href="/eng/services/vendorMarketData/SHFEMarketDataProductsandPricing/" target="_self">SHFE Market Data Products and Pricing</a>
+              
+            </div>
+          
+          
+        </div>
+        <div class="itemsC"></div>
+          
+        <div class="itemsD">
+			
+			 
+				   <h2>Market Data</h2>				
+			  
+			   
+           
+			 
+				   <h2>Members and Overseas Special Participants</h2>				
+			  
+			   
+           
+			 
+			   
+				<h2><a href="/eng/services/investor/">I Am An Investor</a></h2>	
+			  
+           
+			 
+				   <h2>PFMI</h2>				
+			  
+			   
+           
+        </div>
+        
+        <div class="itemsE">
+          
+            <div class="itemsE-H">
+				 
+              
+                <a href="/eng/services/vendorMarketData/BecomeaMarketDataVendor/" target="_self">Become a Market Data Vendor</a>
+              
+                <a href="/eng/services/vendorMarketData/Vendorlist/" target="_self">Vendor list</a>
+              
+                <a href="/eng/services/vendorMarketData/SHFEMarketDataProductsandPricing/" target="_self">SHFE Market Data Products and Pricing</a>
+              
+			
+				  
+            </div>
+          
+            <div class="itemsE-H">
+				 
+              
+                <a href="/eng/services/Members/MemberQuery/" target="_self">Member & Overseas Special Participant List</a>
+              
+                <a href="/eng/services/Members/shfe_OverseasIntermediaryList/" target="_self">Overseas Intermediary List</a>
+              
+                <a href="/eng/services/Members/Membership/" target="_self">Become A Member/An OSP</a>
+              
+                <a href="/eng/services/Members/Honor/" target="_self">Honor</a>
+              
+			
+				  
+            </div>
+          
+            <div class="itemsE-H">
+				 
+				  
+				 
+            </div>
+          
+            <div class="itemsE-H">
+				 
+              
+                <a href="/eng/services/PFMI/PFMI/" target="_self">PFMI</a>
+              
+			
+				  
+            </div>
+          
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</li>
+<!-- Data -->
+<li class="sqs_tabJs">
+  <a href="/eng/reports/" target="_self"> Data </a>
+  <div class="sqs_nav_tab">
+    <div class="sqs_opacity_blackBg"></div>
+    <div class="sqs_nav_tab_con">
+      <!-- 日历 calendar -->
+      <div class="sqs_rili_box">
+
+        <!-- 日历 -->
+        <div id="pub_head_cascader">
+          <el-calendar v-model="calendarDate" id="header_calendar_cont">
+            <template slot="dateCell" slot-scope="{data}">
+              <p class="calendar_p">{{data.day.split('-').slice(2).join()}}
+                <div v-for="(i, index) in dayTime" :key="index">
+                  <div class="point_cont" v-if="data.day==i.day">
+                    <div v-if="i.flag_Trade" class="point_purple"></div>
+                    <div v-if="i.flag_settlement" class="point_yellow"></div>
+                    <div v-if="i.flag_delivery" class="point_blue"></div>
+                    <div v-if="i.flag_history" class="point_red"></div>
+                  </div>
+                </div>
+              </p>
+            </template>
+          </el-calendar>
+
+          <el-date-picker v-model="value4" type="month" placeholder="选择月" @change="timeChange" align="center" ref="datapicker"
+              ></el-date-picker>
+        </div>
+        
+        <!-- 内容 -->
+        <div class="pub_head_text_content">
+          <div class="pub_head_text_content_item" v-cloak>
+            <div class="pub_head_text_detail_content">
+              <!-- {{ currentDate }} -->
+              {{ currentDate.substring(0,4) + '-' + currentDate.substring(4,6) + '-' + currentDate.substring(6,8) }}
+            </div>
+          </div>
+
+          <template v-if="!item">
+            <div class="pub_head_text_detail_content">No data available.</div>
+          </template>
+
+          <template v-else>
+            <div class="pub_head_text_content_item" v-if="currentDate == item.tradeDate">
+              
+              <template v-if=" year > 2021 ">
+                <div class="pub_head_text_detail_title"
+                    v-if="item.tradeExit || item.tradeAdjust || item.tradeLastDate ||
+                    item.tradeOnBoard || item.tradeQLastDate || item.tradeLimit ||
+                    item.tradeSellingPositions || item.tradeOpeningRestriction || item.tradePositionLimit
+                    ">
+                  <div class="point_purple text_detail_mr5"></div>Trading notice:
+                </div>
+                <div class="pub_head_text_detail_content">
+                  <div v-if="item.tradeExit" v-html="item.tradeExit"></div><!-- 个人客户退出 -->
+                  <div v-if="item.tradeLastDate" v-html="item.tradeLastDate"></div><!-- 合约最后交易日 -->
+                  <div v-if="item.tradeOnBoard" v-html="item.tradeOnBoard"></div><!-- 新合约上市 -->
+                  <div v-if="item.tradeQLastDate" v-html="item.tradeQLastDate"></div><!-- 期权最后交易日 -->
+                  <div v-if="item.tradeAdjust" v-html="item.tradeAdjust"></div><!-- 非整数倍持仓调整 -->
+                  <div v-if="item.tradeLimit" v-html="item.tradeLimit"></div><!-- 涨跌停板信息 -->
+                  <div v-if="item.tradePositionLimit" v-html="item.tradePositionLimit"></div><!-- 合约限仓 -->
+                  <div v-if="item.tradeOpeningRestriction" v-html="item.tradeOpeningRestriction"></div><!-- 交易限额 -->
+                  <div v-if="item.tradeSellingPositions" v-html="item.tradeSellingPositions"></div><!-- 持仓与仓单匹配 -->
+                </div>
+                <div class="pub_head_text_detail_title"
+                    v-if="item.settleDepositAj || item.settleADepositAj || item.settleTradeFeeAj ||
+                    item.settlePledgeFee || item.settleExitDiscount ||item.settleDeliveryFee || item.settleOther"
+                    >
+                  <div class="point_yellow text_detail_mr5"></div>Settlement notice:
+                </div>
+
+                <div class="pub_head_text_detail_content">
+                  <div v-if="item.settleDepositAj" v-html="item.settleDepositAj"></div><!-- 合约保证金率调整 -->
+                  <div v-if="item.settleTradeFeeAj" v-html="item.settleTradeFeeAj"></div><!-- 合约交易手续费调整 -->
+                  <div v-if="item.settlePledgeFee" v-html="item.settlePledgeFee"></div><!-- 收取会员质押手续费 -->
+                  <div v-if="item.settleExitDiscount" v-html="item.settleExitDiscount"></div><!-- 合约退出单向大边保证金优惠 -->
+                  <div v-if="item.settleADepositAj" v-html="item.settleADepositAj"></div><!-- 品种保证金率调整 -->
+                  <div v-if="item.settleDeliveryFee" v-html="item.settleDeliveryFee"></div><!-- 收取交割手续费 -->
+                  <div v-if="item.settleOther" v-html="item.settleOther"></div><!-- 其它 -->
+                </div>
+
+                <div class="pub_head_text_detail_title" v-if="item.delivery">
+                  <div class="point_blue text_detail_mr5"></div>Delivery notice:
+                </div>
+                <div class="pub_head_text_detail_content">
+                  <div v-if="item.delivery" v-html="item.delivery"></div>
+                </div>
+              </template>
+
+              <template v-else>
+                <div class="pub_head_text_detail_content text_detail_history">
+                  <div v-if="item.historyContent" v-html="item.historyContent"></div>
+                </div>
+              </template>
+
+            </div>
+          </template>
+        </div>
+
+
+
+      </div>
+
+      <!-- DataList -->
+      <div class="sqs_Data_items">
+        <div class="sqs_Data_top">
+          <!-- Calender & Holidays  -->
+          
+          <div class="sqs_Data_topA">
+            <a class="sqs_Data_mainTitle">Calendar & Holidays</a>
+            <ul class="sqs_Data_lists">
+            
+              <li>
+                <a href="/eng/reports/CalendarHolidays/TradingCalendar/" target="_self">
+                  Trading Calendar
+                </a>
+              </li>
+            
+              <li>
+                <a href="/eng/reports/CalendarHolidays/TradingHours/" target="_self">
+                  Trading Hours
+                </a>
+              </li>
+            
+              <li>
+                <a href="/eng/reports/CalendarHolidays/Holiday/" target="_self">
+                  Holiday
+                </a>
+              </li>
+              
+            </ul>
+          </div>
+          
+          <!-- Business Data -->
+          
+          <div class="sqs_Data_topB">
+            <a class="sqs_Data_mainTitle">Business Data</a>
+            <ul class="sqs_Data_lists">
+            
+              <li>
+                <a href="/eng/reports/BusinessData/ContractParameters/" target="_self">
+                  Contract Parameters
+                </a>
+              </li>
+            
+              <li>
+                <a href="/eng/reports/BusinessData/TradingParameters/" target="_self">
+                  Trading Parameters
+                </a>
+              </li>
+            
+              <li>
+                <a href="/eng/reports/BusinessData/SpreadOrderParameters/" target="_self">
+                  Spread Order Parameters
+                </a>
+              </li>
+            
+              <li>
+                <a href="/eng/reports/BusinessData/SettlementParameters/" target="_self">
+                  Settlement Parameters
+                </a>
+              </li>
+            
+              <li>
+                <a href="/eng/reports/BusinessData/AdjustmenttoMonthlySettlementParameters/" target="_self">
+                  Adjustment to Monthly Settlement Parameters
+                </a>
+              </li>
+            
+              <li>
+                <a href="/eng/reports/BusinessData/delivery/" target="_self">
+                  Delivery Parameters
+                </a>
+              </li>
+            
+              <li>
+                <a href="/eng/reports/BusinessData/Fees/" target="_self">
+                  Fees
+                </a>
+              </li>
+             
+            </ul>
+          </div>
+          
+
+          <!-- Market Data -->
+          
+          <div class="sqs_Data_topC">
+            <a class="sqs_Data_mainTitle">Market Data</a>
+            <ul class="sqs_Data_lists">
+            
+              <li>
+                <a href="/eng/reports/delayedMarketData/DelayedQuotes/" target="_self">
+                  Delayed Quotes
+                </a>
+              </li>
+               
+            </ul>
+          </div>
+          
+        </div>
+
+        <div class="sqs_Data_bottom">
+          <!-- Statistical Data -->
+          <a class="sqs_Data_mainTitle">Statistical Data</a>
+          <div class="sqs_Data_Statistical">
+            <div class="sqs_Data_StatisticalA">
+              <ul class="sqs_Data_lists">
+                <li>
+                  <a href="/eng/reports/StatisticalData/DailyData/?query_params=kx" target="_self">
+                    Daily Express
+                  </a>
+                </li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/DailyData/?query_params=pm" target="_self">
+                    Daily Ranking
+                  </a>
+                </li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/DailyData/?query_params=timeprice" target="_self">
+                    IPA
+                  </a>
+                </li>
+                  <li>
+                  <a href="/eng/reports/StatisticalData/DailyData/?query_params=markerprice" target="_self">
+                    Marker Price
+                  </a>
+                </li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/DailyData/?query_params=dailystock" target="_self">
+                    Daily Warrant
+                  </a>
+                </li>
+                
+                
+              </ul>
+            </div>
+            
+            <div class="sqs_Data_StatisticalB">
+              <ul class="sqs_Data_lists">
+
+                <li>
+                  <a href="/eng/reports/StatisticalData/DailyData/?query_params=dailyDlvPlacePremium" target="_self">
+                    Premiums and Discounts at Delivery Locations of Factory Warehouses
+                  </a>
+                </li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/DailyData/?query_params=js_f" target="_self">
+                    Daily Settlement PRA.
+                  </a>
+                </li>
+				<li>
+				  <a href="/eng/reports/StatisticalData/DailyData/?query_params=tradedes" target="_self">
+				    Trading Overview
+				  </a>
+				</li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/DailyData/?query_options=2&query_params=tradedes_o" target="_self">
+                    Option Trading Overview
+                  </a>
+                </li>
+               
+                <li>
+                  <a href="/eng/reports/StatisticalData/WeeklyData/?query_params=week" target="_self">
+                    Weekly Market Data
+                  </a>
+                </li>
+
+                
+  
+                
+
+
+              </ul>
+            </div>
+            <div class="sqs_Data_StatisticalC">
+              <ul class="sqs_Data_lists">
+
+                 
+                
+                <li>
+                  <a href="/eng/reports/StatisticalData/WeeklyData/?query_params=weeklystock" target="_self">
+                    Weekly Inventory
+                  </a>
+                </li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/MonthlyData/?query_params=monthstatq_f" target="_self">
+                    Monthly Statistics
+                  </a>
+                </li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/MonthlyData/?query_params=monthprice" target="_self">
+                    Monthly Ref. Prices
+                  </a>
+                </li>
+				<li>
+				  <a href="/eng/reports/StatisticalData/MonthlyData/?query_params=month" target="_self">
+				    Monthly Market Data
+				  </a>
+				</li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/MonthlyData/?query_params=mosprice_f" target="_self">
+                    SHFE Mean of Settlement Price
+                  </a>
+                </li>
+
+
+
+              </ul>
+            </div>
+            <div class="sqs_Data_StatisticalD">
+              <ul class="sqs_Data_lists">
+                
+                <li>
+                  <a href="/eng/reports/StatisticalData/MonthlyData/?query_params=exchangedelivery_f" target="_self">
+                    Delivery Inquiry
+                  </a>
+                </li>
+                
+                <li>
+                  <a href="/eng/reports/StatisticalData/Annualdata/?query_params=yearstat_f" target="_self">
+                    Annual Statistics
+                  </a>
+                </li>
+                <li>
+                  <a href="/eng/reports/StatisticalData/Annualdata/?query_params=yearstat_f" target="_self">
+                    Historical Data
+                  </a>
+                </li>
+
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+<!-- Market Insights -->
+<li class="sqs_tabJs">
+  <a href="/eng/insights/" target="_self"> Market Insights </a>
+  <div class="sqs_nav_tab">
+    <div class="sqs_opacity_blackBg"></div>
+    <div class="sqs_nav_tab_con">
+      <!-- Events & Webinars -->
+      <div class="sqs_Insights">
+        <!-- 图片背景透明层 -->
+        <div class="sqs_Insights_img sqs_opacity"></div>
+        
+       <div class="sqs_Insights_main">
+          <div class="sqs_Insights_tit">
+            <div class="sqs_Insights_txt">
+              <p class="sqs_Insights_Short">Events & Webinars</p>
+			  
+			 <a class="sqs_Insights_main" href="https://live.btntec.com/v3/lives/watch/636682185" target="_self">
+              <p class="sqs_Insights_Long">
+                TSR20 Futures Cross-border Delivery Business Rules and Models Explained
+              </p>
+			  </a>
+			   
+            </div>
+            <div class="sqs_Insights_more">
+              <img src="/eng/images/market_gotolink.png" />
+            </div>
+          </div>
+        </div>
+       
+      </div>
+      <!-- Frontier Education -->
+      <div class="sqs_Insights_items">
+        <div class="sqs_Insights_itemsTop">
+          <!-- Frontier -->
+          <div class="sqs_Insights_list">
+            
+            <a class="sqs_Services_mainTitle" target="_self">
+              Frontier
+            </a>
+              
+            <ul class="sqs_Services_lists">
+            
+            
+              <li>
+                <a href="/eng/insights/Frontier/Index/" target="_self"> Index Quotes </a>
+              </li>
+              
+              
+            </ul>
+          </div>
+          <!-- Education -->
+          <div class="sqs_Insights_list">
+            
+            <a class="sqs_Services_mainTitle" target="_self">
+              Education
+            </a>
+              
+            <ul class="sqs_Services_lists">
+            
+            
+              <li>
+                <a href="https://edu.shfe.com.cn/" target="_self"> SHFE Investor Education </a>
+              </li>
+              
+              <li>
+                <a href="/eng/insights/Education/EventsWebinars/" target="_self"> Events & Webinars </a>
+              </li>
+              
+              
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</li>
+<!-- About -->
+<li class="sqs_tabJs">
+    <a href="/eng/AboutSHFE/" target="_self"> About SHFE </a>
+  <div class="sqs_nav_tab">
+    <div class="sqs_opacity_blackBg"></div>
+    <div class="sqs_nav_tab_con">
+      <!-- About INE -->
+      <div class="sqs_AboutSHFE">
+        <!-- 图片背景透明层 -->
+        <div class="sqs_AboutSHFE_img sqs_opacity"></div>
+        
+        <a class="sqs_AboutSHFE_main" href="/eng/AboutSHFE/Introduction/Overview/" target="_self">
+          <div class="sqs_AboutSHFE_tit">
+            <div class="sqs_AboutSHFE_txt">About SHFE</div>
+            <div class="sqs_AboutSHFE_more">
+              <img src="/eng/images/market_gotolink.png" />
+            </div>
+          </div>
+          <p class="sqs_AboutSHFE_con">
+            Established in 1999, the Shanghai Futures Exchange (“SHFE” or the “Exchange”) is a futures exchange regulated by the China Securities Regulatory Commission (“CSRC”). SHFE operates venues and facilities for the trading of futures and other derivatives; organizes and supervises trading activities; maintains a fair, orderly, and transparent market; and exercises market self-regulation in accordance with the Futures and Derivatives Law of the People’s Republic of China, the Regulations on Administration of Futures Trading, and the Measures for the Administration of Futures Exchanges, etc.
+          </p>
+        </a>
+        
+      </div>
+
+      <div class="sqs_AboutSHFE_items">
+        <div class="sqs_AboutSHFE_top">
+
+          <div class="sqs_AboutSHFE_list sqs_absa_item">
+            <!-- <a class="sqs_Services_mainTitle" href="/eng/AboutSHFE/Introduction/"> -->
+            <span class="sqs_Services_mainTitle sqs_ins_span">
+              Introduction
+            </span>
+            
+              <a class="sqs_absa_item_a" href="/eng/AboutSHFE/Introduction/Overview/">
+                Overview
+              </a>
+            
+              <a class="sqs_absa_item_a" href="/eng/AboutSHFE/Introduction/Organization/">
+                Organization
+              </a>
+            
+              <a class="sqs_absa_item_a" href="/eng/AboutSHFE/Introduction/Strategy/">
+                Strategy
+              </a>
+            
+          </div>
+          <!-- 
+          Introduction
+          Institution -->
+          <div class="sqs_AboutSHFE_list sqs_absa_item">
+            <!-- <a class="sqs_Services_mainTitle" href="/eng/AboutSHFE/Institution/"> -->
+            <span class="sqs_Services_mainTitle sqs_ins_span">
+              Institution
+            </span>
+            <!-- 
+              <a class="sqs_absa_item_a" href="/eng/AboutSHFE/Institution/sw/">
+                SHFE POST-DOCTORAL PROGRAM
+              </a>
+            
+              <a class="sqs_absa_item_a" href="/eng/AboutSHFE/Institution/Subsidiaries/">
+                Subsidiaries
+              </a>
+             -->
+            
+            <a class="sqs_absa_item_a" href="/eng/AboutSHFE/Institution/sw/Overview/">
+                SHFE POST-DOCTORAL PROGRAM
+            </a>
+            <a class="sqs_absa_item_a" href="/eng/AboutSHFE/Institution/Subsidiaries/sw/">
+                Subsidiaries
+            </a>
+          </div>
+
+          
+            <div class="sqs_AboutSHFE_list">
+              <a class="sqs_Services_mainTitle" href="/eng/AboutSHFE/Recruitment/" target="_self">
+                Recruitment
+              </a>
+            </div>
+          
+            <div class="sqs_AboutSHFE_list">
+              <a class="sqs_Services_mainTitle" href="/eng/AboutSHFE/PersonalInformationProtecttionPolicy/" target="_self">
+                Personal Information Protection Policy
+              </a>
+            </div>
+          
+            <div class="sqs_AboutSHFE_list">
+              <a class="sqs_Services_mainTitle" href="/eng/AboutSHFE/CorporateSocialResponsibility/" target="_self">
+                Corporate Social Responsibility
+              </a>
+            </div>
+          
+            <div class="sqs_AboutSHFE_list">
+              <a class="sqs_Services_mainTitle" href="/eng/AboutSHFE/ContactUs/" target="_self">
+                Contact Us
+              </a>
+            </div>
+          
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</li>
+
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- <script src="/eng/images/jquery.min.js"></script> -->
+<!-- <script src="/eng/images/hc-offcanvas-nav.js"></script> -->
+
+<div class="isMobile">
+  <body class="theme-default">
+    <div id="container">
+      <header>
+        <div class="wrapper cf">
+          <nav id="main-nav">
+            <ul class="first-nav">
+
+<!--home -->
+<li class="">
+  <span><a href="/eng/">Home</a></span>
+</li>
+<!--Circular&News-->  
+<li class="">
+    <a href="/eng/CircularNews/">
+        Circular & News
+    </a>
+    
+    <ul>
+      <li><a href="/eng/CircularNews/Circular/">Circular</a></li>
+    </ul>
+  
+    <ul>
+      <li><a href="/eng/CircularNews/News/">News</a></li>
+    </ul>
+  
+    <ul>
+      <li><a href="/eng/CircularNews/SHFEinSpotlight/">SHFE in Spotlight</a></li>
+    </ul>
+  
+</li>
+<!--Market-->  
+<li class="">
+    <a href="/eng/Market/">
+        Market
+    </a>
+  <ul>
+    <li class="">
+      <a href="/eng/Market/Futures/">Futures</a>
+      <ul>
+        <li>
+          <div class="m_varieties">
+            <div class="m_content">
+              
+                <div class="m_item_title "><a href="/eng/Market/Futures/Metal/">Metal</a></div>
+                <div class="m_item">
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/cu_f/">Copper</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/bc_f/">Copper(BC)</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/al_f/">Aluminum</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/zn_f/">Zinc</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/pb_f/">Lead</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/ni_f/">Nickel</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/sn_f/">Tin</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/ao_f/">Aluminium Oxide</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/ad_f/">Cast Aluminum Alloy</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/au_f/">Gold</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/ag_f/">Silver</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/rb_f/">Steel Rebar</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/wr_f/">Steel Wire Rod</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/hc_f/">Hot Rolled Coils</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Metal/ss_f/">Stainless Steel</a></div>
+                  
+                </div>
+              
+                <div class="m_item_title "><a href="/eng/Market/Futures/Energy/">Energy</a></div>
+                <div class="m_item">
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Energy/sc_f/">Crude Oil</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Energy/lu_f/">LSFO</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Energy/fu_f/">Fuel Oil</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Energy/bu_f/">Bitumen</a></div>
+                  
+                </div>
+              
+                <div class="m_item_title "><a href="/eng/Market/Futures/Chemical/">Chemical</a></div>
+                <div class="m_item">
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Chemical/br_f/">Synthetic Rubber</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Chemical/ru_f/">Natural Rubber</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Chemical/nr_f/">TSR 20</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Chemical/sp_f/">Woodpulp</a></div>
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/Chemical/op_f/">Offset Paper</a></div>
+                  
+                </div>
+              
+                <div class="m_item_title "><a href="/eng/Market/Futures/index_f/">Index</a></div>
+                <div class="m_item">
+                  
+                    <div class="m_item_it"><a href="/eng/Market/Futures/index_f/ec_f/">SCFIS(Europe)</a></div>
+                  
+                </div>
+              
+            
+            
+            </div>
+          </div>
+        </li>
+      </ul>
+    </li>
+    <li class="">
+      <a href="/eng/Market/Options/">Options</a>
+      <ul>
+        <li>
+          <div class="m_varieties">
+
+            <div class="m_content">                  
+                <div class="m_item_title "><a href="/eng/Market/Options/">Options</a></div>
+                
+                <div class="m_item">
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/sc_o/">Crude Oil</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/cu_o/">Copper</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/bc_o/">Copper(BC)</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/al_o/">Aluminum</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/zn_o/">Zinc</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/pb_o/">Lead</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/ni_o/">Nickel</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/sn_o/">Tin</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/ao_o/">Aluminium Oxide</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/ad_o/">Cast Aluminum Alloy</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/au_o/">Gold</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/ag_o/">Silver</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/rb_o/">Steel Rebar</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/hc_o/">Hot Rolled Coils</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/ss_o/">Stainless Steel</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/lu_o/">LSFO</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/fu_o/">Fuel Oil</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/bu_o/">Bitumen</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/br_o/">Synthetic Rubber</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/ru_o/">Natural Rubber</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/nr_o/">TSR 20</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/sp_o/">Woodpulp</a></div>
+                   
+                    <div class="m_item_it"><a href="/eng/Market/Options/op_o/">Offset Paper</a></div>
+                   
+                </div>
+              
+            </div>
+          </div>
+        </li>
+      </ul>
+    </li>
+    <li class="">
+      <a href="/eng/Market/ISIN/">ISIN</a>
+    </li>
+
+  </ul>
+</li>
+<!--services-->  
+<li class="">
+    <a href="/eng/services/">
+        Services
+    </a>
+  <ul>
+    
+      <li class="">
+        
+			 
+				  Rules
+				  <ul>
+					
+					  <li><a href="/eng/services/Rules/Guidance/">Guidance</a></li>
+					
+					  <li><a href="/eng/services/Rules/SHFERules/">SHFE Rules</a></li>
+					
+					  <li><a href="/eng/services/Rules/INERules/">INE Rules</a></li>
+					
+				  </ul>
+		  
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+			 
+				  Supervision
+				  <ul>
+					
+					  <li><a href="/eng/services/Supervision/LargePositionReport/">Large Position Report</a></li>
+					
+					  <li><a href="/eng/services/Supervision/AdministrationofAccountsInvolvingActualControlRelationship/">Administration of Accounts Involving Actual Control Relationship</a></li>
+					
+					  <li><a href="/eng/services/Supervision/Cases/">Cases</a></li>
+					
+				  </ul>
+		  
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+			 
+				  Trading
+				  <ul>
+					
+					  <li><a href="/eng/services/trading/TradingBusiness/">Trading Business</a></li>
+					
+					  <li><a href="/eng/services/trading/FloorTraderManagement/">Floor Trader Management</a></li>
+					
+					  <li><a href="/eng/services/trading/AccountOpening/">Account Opening</a></li>
+					
+					  <li><a href="/eng/services/trading/participant_eligibility/">Participant Eligibility</a></li>
+					
+					  <li><a href="/eng/services/trading/SeatManagement/">Seat Management</a></li>
+					
+					  <li><a href="/eng/services/trading/ProgramTradingFiling/">Program Trading Filing</a></li>
+					
+					  <li><a href="/eng/services/trading/HedgingOperation/">Hedging Operation</a></li>
+					
+					  <li><a href="/eng/services/trading/TAS/">Order Guideline</a></li>
+					
+					  <li><a href="/eng/services/trading/MarketMaker/">Market Maker</a></li>
+					
+					  <li><a href="/eng/services/trading/Download_Trading/">Download</a></li>
+					
+				  </ul>
+		  
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+			 
+				  Settlement
+				  <ul>
+					
+					  <li><a href="/eng/services/Settlement/SettlementService/">Settlement Service</a></li>
+					
+					  <li><a href="/eng/services/Settlement/SettlementBank/">Settlement Bank</a></li>
+					
+					  <li><a href="/eng/services/Settlement/downloadDownload_Settlement/">Download</a></li>
+					
+				  </ul>
+		  
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+			 
+				  Delivery
+				  <ul>
+					
+					  <li><a href="/eng/services/Delivery/WarehouseWarrant/">Warehouse Warrant</a></li>
+					
+					  <li><a href="/eng/services/Delivery/Warehousewarrantaccountmanagement/">Warehouse warrant account management</a></li>
+					
+					  <li><a href="/eng/services/Delivery/BondedDelivery/">Bonded Delivery</a></li>
+					
+					  <li><a href="/eng/services/Delivery/BrandRegistration/">Brand Registration</a></li>
+					
+					  <li><a href="/eng/services/Delivery/CertifiedDeliveryWarehouse/">Certified Delivery Warehouse</a></li>
+					
+					  <li><a href="/eng/services/Delivery/CommoditiesforDelivery/">Commodities for Delivery</a></li>
+					
+					  <li><a href="/eng/services/Delivery/DeliveryWarehouseAssayer/">Delivery Warehouse & Assayer</a></li>
+					
+					  <li><a href="https://www.shfe.com.cn/services/delivery/standardwarrantms/">Standard Warrant Management System</a></li>
+					
+					  <li><a href="/eng/services/Delivery/downloadDownload_Delivery/">Download</a></li>
+					
+				  </ul>
+		  
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+			 
+				  Technology
+				  <ul>
+					
+					  <li><a href="/eng/services/Technology/TechnologyService/">Technology Service</a></li>
+					
+					  <li><a href="/eng/services/Technology/TechnicalSpecificationResource/">Technical Specification & Resource</a></li>
+					
+				  </ul>
+		  
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+			 
+				  Market Data
+				  <ul>
+					
+					  <li><a href="/eng/services/vendorMarketData/BecomeaMarketDataVendor/">Become a Market Data Vendor</a></li>
+					
+					  <li><a href="/eng/services/vendorMarketData/Vendorlist/">Vendor list</a></li>
+					
+					  <li><a href="/eng/services/vendorMarketData/SHFEMarketDataProductsandPricing/">SHFE Market Data Products and Pricing</a></li>
+					
+				  </ul>
+		  
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+			 
+				  Members and Overseas Special Participants
+				  <ul>
+					
+					  <li><a href="/eng/services/Members/MemberQuery/">Member & Overseas Special Participant List</a></li>
+					
+					  <li><a href="/eng/services/Members/shfe_OverseasIntermediaryList/">Overseas Intermediary List</a></li>
+					
+					  <li><a href="/eng/services/Members/Membership/">Become A Member/An OSP</a></li>
+					
+					  <li><a href="/eng/services/Members/Honor/">Honor</a></li>
+					
+				  </ul>
+		  
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+			 
+		  
+		    <a href="/eng/services/investor/">I Am An Investor</a>
+		  
+        
+        
+		
+
+      </li>
+    
+      <li class="">
+        
+        
+          <a href="/eng/services/PFMI/PFMI/">PFMI</a>
+        
+		
+
+      </li>
+    
+    
+
+  </ul>
+</li>
+<!--Data-->  
+<li class="">
+    <a href="/eng/reports/">
+        Data
+    </a>
+  <ul>
+    
+      <li class="">
+        Calendar & Holidays
+        <ul>
+          
+          <li><a href="/eng/reports/CalendarHolidays/TradingCalendar/">Trading Calendar</a></li>
+        
+          <li><a href="/eng/reports/CalendarHolidays/TradingHours/">Trading Hours</a></li>
+        
+          <li><a href="/eng/reports/CalendarHolidays/Holiday/">Holiday</a></li>
+        
+        </ul>
+      </li>
+    
+      <li class="">
+        Business Data
+        <ul>
+          
+          <li><a href="/eng/reports/BusinessData/ContractParameters/">Contract Parameters</a></li>
+        
+          <li><a href="/eng/reports/BusinessData/TradingParameters/">Trading Parameters</a></li>
+        
+          <li><a href="/eng/reports/BusinessData/SpreadOrderParameters/">Spread Order Parameters</a></li>
+        
+          <li><a href="/eng/reports/BusinessData/SettlementParameters/">Settlement Parameters</a></li>
+        
+          <li><a href="/eng/reports/BusinessData/AdjustmenttoMonthlySettlementParameters/">Adjustment to Monthly Settlement Parameters</a></li>
+        
+          <li><a href="/eng/reports/BusinessData/delivery/">Delivery Parameters</a></li>
+        
+          <li><a href="/eng/reports/BusinessData/Fees/">Fees</a></li>
+        
+        </ul>
+      </li>
+    
+      <li class="">
+        Market Data
+        <ul>
+          
+          <li><a href="/eng/reports/delayedMarketData/DelayedQuotes/">Delayed Quotes</a></li>
+        
+        </ul>
+      </li>
+    
+      <li class="">
+        Statistical Data
+        <ul>
+          
+          <li><a href="/eng/reports/StatisticalData/DailyData/">Daily Data</a></li>
+        
+          <li><a href="/eng/reports/StatisticalData/WeeklyData/">Weekly Data</a></li>
+        
+          <li><a href="/eng/reports/StatisticalData/MonthlyData/">Monthly Data</a></li>
+        
+          <li><a href="/eng/reports/StatisticalData/Annualdata/">Annual Data</a></li>
+        
+        </ul>
+      </li>
+    
+  </ul>
+</li>
+<!--MarketInsights-->          
+<li class="">
+    <a href="/eng/insights/">
+        Market Insights
+    </a>
+    <ul>
+        
+            <li class="">
+                Frontier
+                <ul>
+                    
+                        <li>
+                            <a href="/eng/insights/Frontier/Index/">
+                                Index Quotes
+                            </a>
+                        </li>
+                    
+                </ul>
+            </li>
+        
+            <li class="">
+                Education
+                <ul>
+                    
+                        <li>
+                            <a href="https://edu.shfe.com.cn/">
+                                SHFE Investor Education
+                            </a>
+                        </li>
+                    
+                        <li>
+                            <a href="/eng/insights/Education/EventsWebinars/">
+                                Events & Webinars
+                            </a>
+                        </li>
+                    
+                </ul>
+            </li>
+        
+    </ul>
+</li>
+<!-- About -->
+<li class="">
+  <!-- 聚合页 -->
+  <a href="/eng/AboutSHFE/">
+    About SHFE
+  </a>
+  <ul>
+    <li>
+      Introduction
+      <ul>
+        
+          <li class="">
+            <a href="/eng/AboutSHFE/Introduction/Overview/">
+                Overview
+            </a>
+          </li>
+        
+          <li class="">
+            <a href="/eng/AboutSHFE/Introduction/Organization/">
+                Organization
+            </a>
+          </li>
+        
+          <li class="">
+            <a href="/eng/AboutSHFE/Introduction/Strategy/">
+                Strategy
+            </a>
+          </li>
+        
+      </ul>
+    </li>
+    <li>
+      Institution
+      <ul>
+          
+              <li class="">
+                  SHFE POST-DOCTORAL PROGRAM
+                  <ul>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/Overview/">
+                                  Overview
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/FormDownload/">
+                                  Form Download
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/Organization/">
+                                  Organization
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/ExpertTeam/">
+                                  Expert Team
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/ManagementRules/">
+                                  Management Rules
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/PostdoctoralRese/">
+                                  Postdoctoral Research
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/PostdoctoralFellows/">
+                                  Postdoctoral Fellows
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/OverseasPostdoctoralSystem/">
+                                  Overseas Postdoctoral System
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/sw/Recruitment/">
+                                  Recruitment
+                              </a>
+                          </li>
+                      
+                  </ul>
+              </li>
+          
+              <li class="">
+                  Subsidiaries
+                  <ul>
+                      
+                          <li>
+                              <a href="/eng/AboutSHFE/Institution/Subsidiaries/sw/">
+                                  Shanghai SHFE Business Services Co.,Ltd
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://www.ine.cn/eng/">
+                                  Shanghai International Energy Exchange
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://www.shfe.com.cn/sfit/">
+                                  Shanghai Futures Information Technology Co., Ltd.
+                              </a>
+                          </li>
+                      
+                          <li>
+                              <a href="https://www.shfe.com.cn/ifd/">
+                                  Shanghai Futures and Derivatives Research Institute
+                              </a>
+                          </li>
+                      
+                  </ul>
+              </li>
+          
+      </ul>
+    </li>   
+
+    
+      <li>
+        <a href="/eng/AboutSHFE/Recruitment/">
+          Recruitment
+        </a>
+      </li>
+    
+      <li>
+        <a href="/eng/AboutSHFE/PersonalInformationProtecttionPolicy/">
+          Personal Information Protection Policy
+        </a>
+      </li>
+    
+      <li>
+        <a href="/eng/AboutSHFE/CorporateSocialResponsibility/">
+          Corporate Social Responsibility
+        </a>
+      </li>
+    
+      <li>
+        <a href="/eng/AboutSHFE/ContactUs/">
+          Contact Us
+        </a>
+      </li>
+    
+    
+  </ul>
+</li>
+
+            </ul>
+          </nav>
+
+          <div class="sqs_top_line" id="top_nav_mobile">
+            <a href="/eng/" target="_self" class="sqs_top_logo">
+              <img src="/eng/images/logo.png" />
+            </a>
+            <div class="sqs_top_fr_box">
+              <!-- 头部搜索和登录 -->
+              <div class="sqs_searchAndLogin">
+                <a class="originalVersion" href="/">
+                  中文版
+                </a>
+                <a href="/eng/pubilc/server/" class="sqs_search">
+                  <img src="/eng/images/mobile_search.png" />
+                </a>
+                <a class="toggle_menu" href="#">
+                  <img src="/eng/images/mobile_menu.png" alt="" />
+                </a>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </header>
+      <script>
+        (function ($) {
+          "use strict";
+          var Nav = new hcOffcanvasNav("#main-nav", {
+            position: "right",
+            customToggle: ".toggle_menu",
+            levelTitles: true,
+            labelClose: "close",
+            labelBack: "return",
+          });
+          Nav.on( 'open.level', ( e, settings ) => {
+            sessionStorage.setItem('NavLevel', e.data.currentLevel);
+            sessionStorage.setItem('NavIndex', e.data.currentIndex);
+          });
+          Nav.on( 'close.level', ( e, settings ) => {
+            sessionStorage.setItem('NavLevel', e.data.currentLevel);
+            sessionStorage.setItem('NavIndex', e.data.currentIndex);
+          });
+          Nav.on( 'toggle', ( e, settings ) => {
+            if( e.data.action == 'open' ) {
+            Nav.open(  sessionStorage.getItem('NavLevel'), sessionStorage.getItem('NavIndex') )
+            }
+          });
+        })(jQuery);
+      </script>
+    </div>
+  </body>
+</div>
+
+
+  
+<!-- Monitor Start -->
+<script type="text/javascript">
+    var serverUrl = "http://" + window.location.host + "/";
+	if(location.pathname=='/eng/'|| location.pathname=='/shfe_en/'){$('#home_top_investor').show()}
+</script>
+<script language="JavaScript" charset="utf-8" src="/eng/images/count.js"></script>
+<script type="text/javascript">
+    params.siteId='25';
+    params.siteName='shfe_en';
+</script>
+<script language="JavaScript" charset="utf-8" src="/eng/images/submit.js"></script>
+
+<link rel="stylesheet" type="text/css" href="/eng/images/search_header.css" />
+<script type="text/javascript" charset="utf-8" src="/eng/images/vue.min.js"></script>
+<script type="text/javascript" charset="utf-8" src="/eng/images/element-ui/index.js"></script>
+
+  
+<script>
+  var newsList = " ";
+  var spotlightList= " ";
+  newsList=newsList.trim();
+  spotlightList=spotlightList.trim();
+  // ELEMENT.locale(ELEMENT.lang.en);
+  (function () {
+  new Vue({
+    el: "#search_idNew",
+    data() {
+      return {
+        baseUrl: '/api/search/',
+        showHistory: false,
+        currentPage: 1,
+        pageSize: 10,
+        searchHistoryList: [],
+        selectValue: " or ",
+        timeradioVal: 1,
+        timeRange: [],
+        keyWordRadio: "1",
+        showMoreSearch: false,
+        pageTotal: 0,
+        inputStr: "",
+        searchParams: {
+          chlid: 1003,
+          cutsize: 150,
+          dynexpr: [],
+          dynidx: 1,
+          extopt: [],
+          orderby: "",
+          page: 1,
+          searchword: "",
+          size: 20,
+        },
+        hotTagsList: [],
+        loading: false,
+        listData: [], // 列表数据
+        timeStr: "",
+        sourceObj: {
+          products: "产品",
+          reports: "数据",
+          services: "服务",
+          regulation: "规则",
+          publicnotice: "公告",
+          about: "关于",
+        },
+        classifyObj: {
+          allNum: 0,
+          productsNum: 0,
+          reportsNum: 0,
+          servicesNum: 0,
+          regulationNum: 0,
+          publicnoticeNum: 0,
+          aboutNum: 0,
+          othersNum: 0,
+        },
+        allData: [], // 全量数据--用于分类
+        hootKeyParams: {
+          chlid: 1005,
+          cutsize: 150,
+          dynexpr: [],
+          dynidx: 1,
+          extopt: [],
+          orderby: "-searchcnt",
+          page: 1,
+          searchword: "",
+          size: 20,
+        },
+        fullKeyParams: {
+          chlid: 1006,
+          cutsize: 150,
+          dynexpr: [],
+          dynidx: 1,
+          extopt: [],
+          orderby: "-cnt",
+          page: 1,
+          searchword: "word=铜%",
+          size: 10,
+        },
+        fullSourceDic: [],
+        fullSourceParams: {
+          chlid: 1010,
+          cutsize: 1000,
+          dynexpr: [],
+          dynidx: 1,
+          extopt: [],
+          orderby: "",
+          page: 1,
+          searchword: "",
+          size: 1000,
+        },
+        selectedType: "all",
+        typeSearchStr: "",
+        loading: false,
+      };
+    },
+    mounted() {
+      let arr = JSON.parse(localStorage.getItem("searchHistoryList"));
+      if (arr && arr.length > 0) {
+        this.searchHistoryList = arr;
+      } else {
+        this.searchHistoryList = [];
+      }
+    },
+    methods: {
+      height_btnNew(){
+      let recordSearchWord = $('#searchText').val()
+      if( recordSearchWord != "" ) {
+        let recordParamsWord_str = recordSearchWord.trim();
+        if( recordParamsWord_str != "" && recordParamsWord_str.length > 100 ) {
+          this.$message({
+            message: 'The maximum length of the search term is 100, please adjust it and re-enter it again.' ,
+            type: "warning"
+          });
+          return false
+        }
+      }
+      let searchheadertext=  ''
+      searchheadertext= $('#searchText').val().trim() ? encodeURI( $('#searchText').val().trim()) : '' ;
+      let str = '/eng/pubilc/server/'
+      let str1 = str + '?searchText='+ searchheadertext + '&high=1';
+      $('#height_btn').attr('href',  str1)
+    },
+    searchHeaderBtnNew(){
+      let recordSearchWord = $('#searchText').val()
+      if( recordSearchWord != "" ) {
+        let recordParamsWord_str = recordSearchWord.trim();
+        if( recordParamsWord_str != "" && recordParamsWord_str.length > 100 ) {
+          this.$message({
+            message: 'The maximum length of the search term is 100, please adjust it and re-enter it again.' ,
+            type: "warning"
+          });
+          return false
+        }
+      }
+      let searchheadertext=  ''
+      searchheadertext= $('#searchText').val().trim() ? encodeURI( $('#searchText').val().trim()) : '' ;
+      let str = '/eng/pubilc/server/'
+      let str1 = str + '?searchText='+ searchheadertext+ '&high=0';
+      $('#searchHeaderBtn').attr('href',  str1)
+    },
+      searchTextNew(e){
+        let searchheadertext=  ''
+        if (e.which=== 13) {
+        e.preventDefault()
+          searchheadertext= $('#searchText').val().trim() ? encodeURI( $('#searchText').val().trim()) : '' ;
+          let str = '/eng/pubilc/server/'
+          let str1 = str + '?searchText='+ searchheadertext+ '&high=0';
+          window.open(str1)
+        }
+      },
+      // 获取热词
+      getHootKeys() {
+        let _this = this;
+        let obj = JSON.stringify(_this.hootKeyParams);
+        $.ajax({
+          url: _this.baseUrl,
+          //调用servlet方法
+          // data:"action=jQueryAjax",
+          data: obj,
+          type: "POST",
+          contentType: "application/json",
+          success: function (res) {
+            if (res.data?.content?.length > 0) {
+              _this.hotTagsList = [];
+              res.data.content.map((item) => {
+                _this.hotTagsList.push(item.hotkey);
+              });
+            }
+          },
+          //返回数据的格式
+          dataType: "json",
+        });
+      },
+      // 获取联想词
+      getFullKey(queryString, cb) {
+        let _this = this;
+        let strInfo = queryString ? queryString.trim() : queryString;
+        _this.fullKeyParams.searchword = "word=" + "%" + strInfo + "%" + " and siteid=shfe_en" ;
+        let obj = JSON.stringify(_this.fullKeyParams);
+        $.ajax({
+          url: _this.baseUrl,
+          //调用servlet方法
+          // data:"action=jQueryAjax",
+          data: obj,
+          type: "POST",
+          contentType: "application/json",
+          success: function (res) {
+            let arr = [];
+            if (res.data && res.data.content.length > 0) {
+              arr = res.data.content;
+            }
+            cb(arr);
+          },
+          //返回数据的格式
+          dataType: "json",
+        });
+      },
+      handleSelect(item) {
+        this.inputStr = item.word;
+        this.search();
+      },
+      handleSearch() {
+        this.searchParams.page = 1;
+        this.search();
+      },
+      chooseOrderType(val) {
+        this.searchParams.orderby = val;
+        this.search(true);
+      },
+      chooseType(val) {
+        this.selectedType = val;
+        if (val === "all") {
+          this.typeSearchStr = "";
+        } else if (val === "others") {
+          this.typeSearchStr =
+            "chnldesc!= Market and chnldesc!= reports and chnldesc!= services and chnldesc!= MarketInsights and chnldesc!= CircularNews and chnldesc!= AboutSHFE";
+        } else {
+          this.typeSearchStr = "chnldesc=" + val;
+        }
+        this.searchParams.page = 1;
+        this.search(true);
+      },
+      search(val) {
+        let _this = this;
+        _this.loading = true
+        // if (_this.searchParams.page === 1) {
+        //   _this.classifyObj = {
+        //     products: [],
+        //     reports: [],
+        //     services: [],
+        //     regulation: [],
+        //     publicnotice: [],
+        //     about: [],
+        //     others: [],
+        //   };
+        //   _this.allData = [];
+        // }
+        _this.listData = [];
+        // _this.pageTotal = 0;
+        _this.showHistory = false;
+        _this.showMoreSearch = false;
+        _this.searchParams.searchword = "";
+        if (_this.inputStr != "") {
+          _this.searchHistoryList.unshift(_this.inputStr);
+          _this.searchHistoryList = Array.from(
+            new Set(_this.searchHistoryList)
+          );
+          let str = JSON.stringify(_this.searchHistoryList);
+          localStorage.setItem("searchHistoryList", str);
+        }
+        if (_this.inputStr != "") {
+          let arr = _this.inputStr.split(" ").filter((e) => {
+            return e !== "";
+          });
+          let wordArr = [];
+          arr.map((item) => {
+            let symbolsRegex = /[（）()-_=+/?<>,.<=>=%$#*@]/;
+            if (symbolsRegex.test(item)) {
+              wordArr.push("'" + item + "'");
+            } else {
+              wordArr.push("%" + item + "%");
+            }
+          });
+          if (_this.keyWordRadio == "1") {
+            _this.searchParams.searchword = wordArr.join(_this.selectValue);
+          } else {
+            let tArr = [];
+            wordArr.map((item) => {
+              tArr.push(_this.keyWordRadio + item);
+            });
+            _this.searchParams.searchword = tArr.join(_this.selectValue);
+          }
+        }
+        if (_this.timeStr !== "") {
+          if (_this.searchParams.searchword !== "") {
+            _this.searchParams.searchword =
+              _this.searchParams.searchword + " and " + _this.timeStr;
+          } else {
+            _this.searchParams.searchword = _this.timeStr;
+          }
+        }
+        let tempsearchword = this.searchParams.searchword
+        if (_this.searchParams.searchword.length > 0) {
+          if (_this.typeSearchStr != "") {
+            _this.searchParams.searchword =
+              _this.searchParams.searchword + " and " + _this.typeSearchStr;
+          }
+        } else {
+          if (_this.typeSearchStr != "") {
+            _this.searchParams.searchword = _this.typeSearchStr;
+          }
+        }
+        let obj = JSON.stringify(_this.searchParams);
+        // let forAllObj = JSON.parse(JSON.stringify(_this.searchParams));
+        $.ajax({
+          url: _this.baseUrl,
+          //调用servlet方法
+          // data:"action=jQueryAjax",
+          data: obj,
+          type: "POST",
+          contentType: "application/json",
+          success: function (res) {
+            if (res.data?.content?.length > 0) {
+              _this.listData = res.data.content;
+              _this.pageTotal = res.data.totalElements;
+              _this.addUbas()
+              // if (_this.searchParams.page === 1) {
+              //   forAllObj.size = res.data.totalElements;
+              //   forAllObj = JSON.stringify(forAllObj);
+              //   $.ajax({
+              //     url: _this.baseUrl,
+              //     //调用servlet方法
+              //     // data:"action=jQueryAjax",
+              //     data: forAllObj,
+              //     type: "POST",
+              //     contentType: "application/json",
+              //     success: function (value) {
+              //       if (value.data?.content?.length > 0) {
+              //         _this.allData = value.data.content;
+              //         _this.getClassify();
+              //       } else {
+              //         _this.allData = [];
+              //       }
+              //     },
+              //     //返回数据的格式
+              //     dataType: "json",
+              //   });
+              // }
+            } else {
+              _this.listData = [];
+              _this.pageTotal = 0;
+            }
+            _this.loading = false
+            if (!val) {
+              _this.getAllTypesCounts(tempsearchword);
+            }
+          },
+          //返回数据的格式
+          dataType: "json",
+        });
+      },
+      // 选择时间
+      timeRadioChange(val) {
+        this.timeRange = [];
+        if (val === 1) {
+          this.timeStr = "";
+        } else if (val === 2) {
+          let s = moment(new Date(new Date() - 6 * 24 * 3600 * 1000)).format(
+            "YYYY.MM.DD"
+          );
+          let e = moment(new Date()).format("YYYY.MM.DD");
+          this.timeStr = "docreltime>=" + s + " and docreltime<=" + e;
+        } else if (val === 3) {
+          let s = moment(new Date(new Date() - 30 * 24 * 3600 * 1000)).format(
+            "YYYY.MM.DD"
+          );
+          let e = moment(new Date()).format("YYYY.MM.DD");
+          this.timeStr = "docreltime>=" + s + " and docreltime<=" + e;
+        } else if (val === 4) {
+          let s = moment(new Date(new Date() - 365 * 24 * 3600 * 1000)).format(
+            "YYYY.MM.DD"
+          );
+          let e = moment(new Date()).format("YYYY.MM.DD");
+          this.timeStr = "docreltime>=" + s + " and docreltime<=" + e;
+        } else if (val === 5) {
+          this.timeStr = "";
+        }
+      },
+      selectTimeRange() {
+        let s = moment(this.timeRange[0]).format("YYYY.MM.DD");
+        let e = moment(this.timeRange[1]).format("YYYY.MM.DD");
+        this.timeStr = "docreltime>=" + s + " and docreltime<=" + e;
+      },
+      handleClose(tag) {
+        this.searchHistoryList.splice(this.searchHistoryList.indexOf(tag), 1);
+        let str = JSON.stringify(this.searchHistoryList);
+        localStorage.setItem("searchHistoryList", str);
+      },
+      handleTagClick(val) {
+        // let reg = /[\t\r\f\n\s]*/g;
+        // this.inputStr = val.target.innerText.replace(reg, "");
+        this.inputStr = val.target.innerText.replace(/(^\s*)|(\s*$)/g, "");
+      },
+      // 分页
+      handleCurrentChange(val) {
+        this.searchParams.page = val;
+        this.search(true);
+      },
+      handleSizeChange(val) {
+        this.searchParams.page = 1;
+        this.searchParams.size = val;
+        this.search(true);
+      },
+      openUrl(val) {
+        window.open(val);
+      },
+      reset() {
+        this.inputStr = "";
+        this.selectValue = " or ";
+        this.timeRange = [];
+        this.timeradioVal = 1;
+        this.keyWordRadio = "1";
+        this.timeStr = "";
+        this.search();
+      },
+      // 分类
+      getClassify() {
+        this.allData.map((item) => {
+          let key = item.chnldesc;
+          if (!!this.classifyObj[key]) {
+            this.classifyObj[key].push(item.id);
+          } else {
+            this.classifyObj.others.push(item.id);
+          }
+        });
+      },
+      getAllTypesCounts(val) {
+        let _this = this
+        let arr = [
+          {
+            num: 'allNum',
+            str: ''
+          }, {
+            num: 'productsNum',
+            str: 'chnldesc=products'
+          }, {
+            num: 'reportsNum',
+            str: 'chnldesc=reports'
+          }, {
+            num: 'servicesNum',
+            str: 'chnldesc=services'
+          }, {
+            num: 'regulationNum',
+            str: 'chnldesc=regulation'
+          }, {
+            num: 'publicnoticeNum',
+            str: 'chnldesc=publicnotice'
+          }, {
+            num: 'aboutNum',
+            str: 'chnldesc=about'
+          }, {
+            num: 'othersNum',
+            str: 'chnldesc!=products and chnldesc!=reports and chnldesc!=services and chnldesc!=regulation and chnldesc!=publicnotice and chnldesc!=about'
+          }
+        ]
+        arr.map(item => {
+          let searchword = ''
+          if (val.length > 0) {
+            if (item.str != "") {
+              searchword =
+                val + " and " + item.str;
+            } else {
+              searchword = val
+            }
+          } else {
+            if (item.str != "") {
+              searchword = item.str;
+            }
+          }
+          let obj = {
+            chlid: 1003,
+            page: 1,
+            searchword: searchword,
+            size: 10,
+          }
+          $.ajax({
+            url: _this.baseUrl,
+            //调用servlet方法
+            // data:"action=jQueryAjax",
+            data: JSON.stringify(obj),
+            type: "POST",
+            contentType: "application/json",
+            success: function (res) {
+                _this.classifyObj[item.num] =  res.data ?  res.data.totalElements : 0
+            },
+            //返回数据的格式
+            dataType: "json",
+          });
+        })
+      },
+      // 获取来源的字典
+      getFullSourceDic() {
+        let _this = this;
+        let obj = JSON.stringify(_this.fullSourceParams);
+        $.ajax({
+          url: _this.baseUrl,
+          //调用servlet方法
+          // data:"action=jQueryAjax",
+          data: obj,
+          type: "POST",
+          contentType: "application/json",
+          success: function (res) {
+            if (res.data?.content?.length > 0) {
+
+              _this.fullSourceDic = res.data.content
+            }
+            _this.search();
+          },
+          //返回数据的格式
+          dataType: "json",
+        });
+      },
+      // 获取来源的完整路径
+      getFullSource(val) {
+        if (val.length > 0) {
+          let arr = val.split(',')
+          let str = ''
+          arr.map(item => {
+            let a = this.fullSourceDic.find(obj => obj.datapath === item)
+            str += a ? (a.chnldesc + '-') : ''
+          })
+          if (str.endsWith('-')) {
+            str = str.slice(0, -1)
+          }
+          return str
+        } else {
+          return '其他'
+        }
+      },
+      // ubas关键词统计
+      addUbas() {
+        createParams();
+        params.referrer = window.location.origin + '/pubilc/server/?searchText=' + this.inputStr
+        var strParam = "";
+        for(var key in params){
+            strParam += key+"="+params[key]+"&";
+        }
+        //console.log('=======', params, strParam)
+        strParam = strParam.substring(0,strParam.length-1);
+        var trsImg =  document.createElement("img");
+        trsImg.src = encodeURI(encodeURI(addUrl+"?"+strParam));
+        trsImg.style.display = "none";
+        document.body.appendChild(trsImg);
+    }
+      
+    },
+  });
+})();
+
+</script>
+			<!-- END header -->
+			<!-- START body -->
+
+			<div>
+				<div class="pc_box" >
+					<!-- 右边悬浮 -->
+					<!-- START right_menu -->
+					<!-- 右边悬浮 -->
+<div class="sqs_right">
+  <a href="/eng/Market/" target="_blank">
+    <img src="/eng/images/sqs_right_1.png" />
+    <span class="lineHeightO">Products Specs</span>
+  </a>
+  <a href="/eng/reports/CalendarHolidays/TradingCalendar/" target="_blank">
+    <img src="/eng/images/sqs_right_2.png" />
+    <span class="lineHeightO">Trading Calender</span>
+  </a>
+  <a href="/eng/reports/BusinessData/Fees/" target="_blank">
+    <img src="/eng/images/sqs_right_3.png" />
+    <span class="lineHeightT">Fees</span>
+  </a>
+  <a href="/eng/services/Rules/SHFERules/" target="_blank">
+    <img src="/eng/images/sqs_right_4.png" />
+    <span class="lineHeightT">Rules</span>
+  </a>
+  <a href="https://edu.shfe.com.cn/" target="_blank">
+    <img src="/eng/images/sqs_right_5.png" />
+    <span class="lineHeightT">Education</span>
+  </a>
+  <a href="javascript:;" onclick="pageScroll()">
+    <img src="/eng/images/sqs_right_6.png" />
+    <span class="lineHeightT">Back to Top</span>
+  </a>
+</div>
+					<!-- END right_menu -->
+					<!--轮播开始-->
+					<!-- 头部轮播 -->
+					
+					<div class="swiper">
+						<div class="swiper-wrapper">
+							
+								<div class="swiper-slide">
+									
+									
+									
+									<div class="sqs_sledr_box">
+										<div class=TRS_Editor><h2 class="sledr_box_h2">Shanghai Futures Exchange</h2>
+<div class="sqs_content_box">
+<div class="sqs_content_lf">
+<div class="sqs_content_bottom">
+<p>202</p>
+<span>Members of SHFE</span></div>
+<div>
+<p class="home_ban_num1">&nbsp;</p>
+<span>Futures products</span></div>
+</div>
+<div class="sqs_sledr_line">&nbsp;</div>
+<div class="sqs_content_lf sqs_content_rg">
+<div class="sqs_content_bottom">
+<p><a class="yearvolume">&nbsp;</a><span style="line-height:0.18rem">Million Lot</span></p>
+<span>Annual Total Volume</span></div>
+<div>
+<p>224</p>
+<span>Delivery Warehouses</span></div>
+</div>
+</div>
+<div class="sqs_slider_ft"><a href="/eng/AboutSHFE/">Explore More About SHFE <img class="imggo" alt="" src="/eng/images/go-to-link@2x.png" /> </a></div>
+<script>
+$(function(){
+ var pro_homelist1 = getProductList('shfe', '1');
+ var pro_homelist2 = getProductList('shfe', '2');
+ var pro_home_old=$(".home_ban_num1").eq(0).html();
+ 
+ var prodouct_list_home1= pro_homelist1.list.flat();
+ var prodouct_list_home2 =pro_homelist2.list.flat();
+if(prodouct_list_home1&&prodouct_list_home2 && prodouct_list_home1.length && prodouct_list_home2.length&&prodouct_list_home1.length>0 && prodouct_list_home2.length>0){
+var pro_home_legnth=prodouct_list_home1.length + prodouct_list_home2.length;
+if(!isNaN(pro_home_old)&& Number(pro_home_old)>pro_home_legnth){
+ $(".home_ban_num1").html(pro_home_old);
+}else{
+ $(".home_ban_num1").html(pro_home_legnth);
+}
+}
+})
+ var current_tradingday = null;
+
+ $.ajax({
+  type : "get",
+  dataType : "json",
+  url : "/data/config/currentTradingday.dat",
+  cache : false,
+  success : function(data) {
+   current_tradingday = data.currentTradingday;
+   getKxData(data.currentTradingday);
+  }
+ });
+
+ function getKxData(date){
+  $.ajax({
+   type: "GET",
+   url: '/data/tradedata/future/dailydata/kx' + date + '.dat',
+   dataType: "json",
+   success: function(txt){
+    if(txt!=null){
+     var val = txt.o_curproduct[txt.o_curproduct.length-1].YEARVOLUME;
+     var newVal = !val||val==null||val=="" ? val/100 : val/100;
+     var yearvolume = !newVal||newVal==null||newVal=="" ? "" : (newVal + "").substring(0, (newVal + "").indexOf(".")+3);
+     $(".yearvolume").html(yearvolume);
+    }
+   },
+   error: function(){
+    var newDate = moment(date,"YYYYMMDD").add('days', -1).format("YYYYMMDD");
+    var num = Math.abs(moment(current_tradingday,"YYYYMMDD").diff(moment(newDate,"YYYYMMDD"), 'days'));
+    if(num>15){
+     return "";
+    }
+    getKxData(newDate);
+   }
+  });
+ }
+</script></div>
+									</div>
+									
+									
+									<img class="bg_img" src="/eng/Home/banner/202412/W020250411612446369640.jpg" />
+									
+
+								</div>
+							
+								<div class="swiper-slide">
+									
+									
+									
+									
+									<a href="/eng/Home/othercontents/2026Options/" TARGET='_blank'>
+										<img class="bg_img" src="/eng/Home/banner/202608/W020260831521974566183.jpg" /></a>
+									
+
+								</div>
+							
+								<div class="swiper-slide">
+									
+									
+									
+									
+									<a href="/eng/Home/othercontents/2026Futures/" TARGET='_blank'>
+										<img class="bg_img" src="/eng/Home/banner/202604/W020260417586748131564.jpg" /></a>
+									
+
+								</div>
+							
+								<div class="swiper-slide">
+									
+									
+									
+									
+									<img class="bg_img" src="/eng/Home/banner/202510/W020251028561779529519.jpg" />
+									
+
+								</div>
+							
+								<div class="swiper-slide">
+									
+									
+									
+									
+									<a href="https://www.shfe.com.cn/eng/CircularNews/Circular/202503/t20250304_827530.html" TARGET='_blank'>
+										<img class="bg_img" src="/eng/Home/banner/202412/W020250514501626246965.jpg" /></a>
+									
+
+								</div>
+							
+								<div class="swiper-slide">
+									
+											
+												<div style="left:0;top:0;right:0;bottom:0;z-index: 999;" class="index_video_bg">
+													
+													
+													<img class="bg_img" src="/eng/Home/banner/202412/W020250411612447076353.jpg" />
+													
+												</div>
+												<video class="videoShow video-pos" id="videoShow" controls controlslist='nodownload noplaybackrate nofullscreen noremoteplayback '  disablePictureInPicture='true' poster="/eng/Home/banner/202412/W020250411612447076353.jpg"
+												 >
+													<source src="/eng/Home/banner/202412/P020250411612447373845.mp4" type="video/mp4">
+													您的浏览器版本过低，暂不支持视频播放，请更新浏览器。
+												</video>
+												<img class="video-img" src="/eng/images/video-b.png" />
+											
+										
+										
+									
+									
+									
+									
+									<img class="bg_img" src="/eng/Home/banner/202412/W020250411612447076353.jpg" />
+									
+
+								</div>
+							
+						</div>
+						<!-- 如果需要分页器 -->
+						<div class="swiper-pagination" style="display: none;"></div>
+
+						<!-- 如果需要导航按钮 -->
+						<!-- <div class="swiper-button-prev"></div>
+              <div class="swiper-button-next"></div> -->
+
+						<!-- 如果需要滚动条 -->
+						<!-- <div class="swiper-scrollbar"></div> -->
+					</div>
+					<!-- Marked区 -->
+					<div id="js_info_des">
+						<div class="sqs_dataCon_containr">
+							<div class="sqs_Marked_heater">
+								<h2>
+									Market
+									<span>Market Data Charts are delayed at least 30 minutes.</span>
+								</h2>
+								<div class="sqs_Marked_span">
+									<span>* Last/RMB</span>
+									<span>Volume/Lot</span>
+									<span>OI/Lot</span>
+								</div>
+							</div>
+							<home-market-list-component ref="homemarkerlist"> </home-market-list-component>
+						</div>
+
+						<div class="analysis_box">
+							<div class="analysis_box_big">
+								<div class="analysis_box_top_lf">
+									<div class="analysis_lf_tit">
+										<div class="analysis_tit_cir " :class="{ analysis_tit_cir_activr: isNewActive1 }" @click="handleClickActive('1')">
+											Circular
+										</div>
+										<!-- <div class="analysis_lf_titline"></div> -->
+										<div class="analysis_tit_cir" :class="{ analysis_tit_cir_activr: isNewActive2 }" @click="handleClickActive('2')">
+											News
+										</div>
+									</div>
+
+									<div class="analysis_tit_cirtext_show " :class="{ analysis_tit_cirtext_show2: isNewActive1 }">
+									 
+	<div class="analysis_tit_cirtext">
+		<a href="/eng/CircularNews/Circular/202610/t20261023_833812.html">
+			Notice on the Expansion of Products Eligible for Spread Orders</a>
+	</div>
+	<div class="analysis_tit_data">
+		2026-10-23
+	</div>
+	<div class="analysis_tit_cirtextline"></div>
+
+	<div class="analysis_tit_cirtext">
+		<a href="/eng/CircularNews/Circular/202610/t20261023_833813.html">
+			Notice of Shanghai Internationl Energy Exchange on the Expansion of Products Eligible for Spread Orders</a>
+	</div>
+	<div class="analysis_tit_data">
+		2026-10-23
+	</div>
+	<div class="analysis_tit_cirtextline"></div>
+
+										<div class="analysis_box_view">
+											<a href="/eng/CircularNews/Circular/">
+												
+												View More <i class="el-icon el-icon-arrow-right"></i>
+											</a>
+										</div>
+									</div>
+
+									<div class="analysis_tit_cirtext_show" :class="{ analysis_tit_cirtext_show2: isNewActive2 }">
+										
+	<div class="analysis_tit_cirtext">
+		<a href="/eng/CircularNews/News/202509/t20250922_829092.html">
+			CGTN: China Vitality: Shanghai powers China's global trade ascent</a>
+	</div>
+	<div class="analysis_tit_data">
+		2025-09-19
+	</div>
+	<div class="analysis_tit_cirtextline"></div>
+
+	<div class="analysis_tit_cirtext">
+		<a href="/eng/CircularNews/News/202507/t20250728_828429.html">
+			SHFE and INE Added to Malaysia’s List of Specified Exchanges</a>
+	</div>
+	<div class="analysis_tit_data">
+		2025-07-28
+	</div>
+	<div class="analysis_tit_cirtextline"></div>
+
+										<div class="analysis_box_view">
+											<a href="/eng/CircularNews/News/">
+												<!-- View More <i class="vm_thin_arrow">></i> -->
+												View More <i class="el-icon el-icon-arrow-right"></i>
+											</a>
+										</div>
+									</div>
+
+								</div>
+								<div>
+									<div class="tab">
+										<ul class="tab_ul clearfix">
+											<li class="tab_li" :class="{ active: isActive1 }" @click="handleClick('1')" @mouseover="handleClick('1')" >Volume & OI</li>
+											<li class="tab_li" :class="{ active: isActive2 }" @click="handleClick('2')" @mouseover="handleClick('2')" >Price Chart</li>
+											<li class="tab_li" :class="{ active: isActive3 }" @click="handleClick('3')" @mouseover="handleClick('3')" >Delayed Quotes</li>
+										</ul>
+										<div class="con">
+											<div class="div_show" :class="{ on: isActive1 }">
+												<home-volume-chart-component ref="homevolumechart"> </home-volume-chart-component>
+											</div>
+											<div class="div_show" :class="{ on: isActive2 }">
+												<home-price-chart-component ref="homevolumechart" :closepice="isActive2"> </home-price-chart-component>
+											</div>
+											<div class="div_show div_show3" :class="{ on: isActive3}">
+												<el-form ref="form" :inline="true">
+													<el-form-item class="m_option_item_line">
+														<el-select :clearable="false" v-model="searchBtn" :popper-append-to-body="false" @change="handleSearchTab">
+															<el-option label="Futures" value="1"></el-option>
+															<el-option label="Options" value="2"></el-option>
+														</el-select>
+													</el-form-item>
+
+													<el-form-item class="m_option_item_line_tow">
+														<el-select :clearable="false" v-model="type_select" :popper-append-to-body="false" @change="chooseType1">
+															<template v-for="(e,i) in pro_list_info" :key="i">
+																<el-option :label="e.product_name_en" :value="e.productid"></el-option>
+															</template>
+														</el-select>
+													</el-form-item>
+												</el-form>
+
+												<!-- 报表主体 -->
+												<div>
+
+													<a class="look_btn" v-show="searchTab == 'delaymarket_f' || searchTab == 'delaymarket' " 
+:href="`/eng/reports/delayedMarketData/DelayedQuotes/?query_options=` +searchBtn  + '&query_product_code=' + type_select  + '&query_params='  + searchTab"
+														>View More <i class="el-icon el-icon-arrow-right"></i>
+													</a>
+
+													<!-- 延时行情-期货 -->
+													<home-delaymarket-f-component ref="delaymarket_f" v-show="searchTab=='delaymarket_f'" 
+														:current_date="currentDate"
+														:side_type_select="type_select"
+														></home-delaymarket-f-component>
+
+													<!-- 延时行情-期权 -->
+													<delaymarket-component ref="delaymarket" v-show="searchTab=='delaymarket'" 
+														:current_date="currentDate"
+														:side_type_select="type_select"
+														></delaymarket-component>
+
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+
+
+							<div class="analysis_box_foot">
+								<div class="box_foot_rili">
+									<div class="box_foot_rili_tit">SHFE Trading Calendar</div>
+									<div class="sqs_data_rlBox">
+										<!-- 日历 -->
+
+										<div class="calendar_content">
+
+											<div class="calendar_detail calendar_item">
+												<div class="text_content">
+													<div class="text_content_item">
+														
+														<div class="text_detail_content">
+															<template>
+															{{ currentDate.substring(0,4) + '-' + currentDate.substring(4,6) + '-' + currentDate.substring(6,8) }}	
+															</template>
+														</div>
+													</div>
+													<template v-if="!item">
+														<div class="text_detail_content">No data available.</div>
+													</template>
+													<template v-else>
+														<div class="text_content_item" v-if="currentDate == item.tradeDate">
+
+															<template v-if=" year > 2021 ">
+																<div class="text_detail_title" v-if="item.tradeExit || item.tradeAdjust || item.tradeLastDate ||
+															  item.tradeOnBoard || item.tradeQLastDate || item.tradeLimit ||
+															  item.tradeSellingPositions || item.tradeOpeningRestriction || item.tradePositionLimit
+															   ">
+																	<div class="point_purple text_detail_mr5"></div>Trading notice:
+																</div>
+																<div class="text_detail_content">
+																	<div v-if="item.tradeExit" v-html="item.tradeExit"></div><!-- 个人客户退出 -->
+																	<div v-if="item.tradeLastDate" v-html="item.tradeLastDate"></div><!-- 合约最后交易日 -->
+																	<div v-if="item.tradeOnBoard" v-html="item.tradeOnBoard"></div><!-- 新合约上市 -->
+																	<div v-if="item.tradeQLastDate" v-html="item.tradeQLastDate"></div><!-- 期权最后交易日 -->
+																	<div v-if="item.tradeAdjust" v-html="item.tradeAdjust"></div><!-- 非整数倍持仓调整 -->
+																	<div v-if="item.tradeLimit" v-html="item.tradeLimit"></div><!-- 涨跌停板信息 -->
+																	<div v-if="item.tradePositionLimit" v-html="item.tradePositionLimit"></div><!-- 合约限仓 -->
+																	<div v-if="item.tradeOpeningRestriction" v-html="item.tradeOpeningRestriction"></div><!-- 交易限额 -->
+																	<div v-if="item.tradeSellingPositions" v-html="item.tradeSellingPositions"></div><!-- 持仓与仓单匹配 -->
+																</div>
+																<div class="text_detail_title" v-if="item.settleDepositAj || item.settleADepositAj || item.settleTradeFeeAj ||
+                                                                  item.settlePledgeFee || item.settleExitDiscount ||item.settleDeliveryFee || item.settleOther">
+																	<div class="point_yellow text_detail_mr5"></div>Settlement notice:
+																</div>
+
+																<div class="text_detail_content">
+																	<div v-if="item.settleDepositAj" v-html="item.settleDepositAj"></div><!-- 合约保证金率调整 -->
+																	<div v-if="item.settleTradeFeeAj" v-html="item.settleTradeFeeAj"></div><!-- 合约交易手续费调整 -->
+																	<div v-if="item.settlePledgeFee" v-html="item.settlePledgeFee"></div><!-- 收取会员质押手续费 -->
+																	<div v-if="item.settleExitDiscount" v-html="item.settleExitDiscount"></div><!-- 合约退出单向大边保证金优惠 -->
+																	<div v-if="item.settleADepositAj" v-html="item.settleADepositAj"></div><!-- 品种保证金率调整 -->
+																	<div v-if="item.settleDeliveryFee" v-html="item.settleDeliveryFee"></div><!-- 收取交割手续费 -->
+																	<div v-if="item.settleOther" v-html="item.settleOther"></div><!-- 其它 -->
+																</div>
+
+																<div class="text_detail_title" v-if="item.delivery">
+																	<div class="point_blue text_detail_mr5"></div>Delivery notice:
+																</div>
+																<div class="text_detail_content">
+																	<div v-if="item.delivery" v-html="item.delivery"></div>
+																</div>
+															</template>
+
+															<template v-else>
+																<div class="text_detail_content text_detail_history">
+																	<div v-if="item.historyContent" v-html="item.historyContent"></div>
+																</div>
+															</template>
+														</div>
+													</template>
+												</div>
+												<!-- <a class="text_btn_look" id="lookMoreId">了解详情</a> -->
+											</div>
+											<!-- 日历 -->
+											<div class="table_cascader">
+												<el-calendar v-model="calendarDate" id="home_calendar_cont">
+													<template slot="dateCell" slot-scope="{data}">
+														<p class="calendar_p">{{data.day.split('-').slice(2).join()}}
+															<div v-for="(i, index) in dayTime" :key="index">
+																<div class="point_cont" v-if="data.day==i.day">
+																	<div v-if="i.flag_Trade" class="point_purple"></div>
+																	<div v-if="i.flag_settlement" class="point_yellow"></div>
+																	<div v-if="i.flag_delivery" class="point_blue"></div>
+																	<div v-if="i.flag_history" class="point_red"></div>
+																</div>
+															</div>
+														</p>
+													</template>
+												</el-calendar>
+												<el-date-picker class="home_calendar_i" size="mini" v-model="value4" type="month" placeholder="选择月" @change="timeChange"
+												 align="center" ref="datapicker"></el-date-picker>
+											</div>
+
+										</div>
+
+									</div>
+								</div>
+
+								<div class="box_foot_movie">
+										
+								 <img src="/eng/Home/home_pic/202412/W020250411612450014910.png" />
+									
+									
+										<div><a href="https://live.btntec.com/v3/lives/watch/636682185" target="_blank">TSR20 Futures Cross-border Delivery Business Rules and Models Explained</a></div>
+									
+								</div>
+
+								<div class="box_foot_kuair">
+									<a href="/eng/Market/" class="box_foot_kuair1">
+										<div class="kuair1_box">
+											<div class="kuair1_img_box">
+												<div class="imgbox">
+													<img class="img1" src="/eng/images/shiliang.png" alt="" />
+													<img id="imgbox1_show" src="/eng/images/go-to-link@2x.png" alt="" />
+												</div>
+											</div>
+											<div class="kuair1_text">Access the Market</div>
+										</div>
+									</a>
+									<a href="/eng/services/Rules/SHFERules/" class="box_foot_kuair1">
+										<div class="kuair1_box kuair1_box_show">
+											<div class="kuair1_img_box">
+												<div class="imgbox">
+													<img class="img1" id="img1-i" src="/eng/images/shiliangtxt@2x.png" alt="" />
+													<img id="imgbox2_show" src="/eng/images/go-to-link@2x.png" alt="" />
+												</div>
+											</div>
+											<div class="kuair1_text">Rules and Regulations</div>
+										</div>
+									</a>
+								</div>
+							</div>
+
+						</div>
+					</div>
+				</div>
+				
+
+
+				<!-- mobile -->
+					<div class="mobile_box">
+						<div  class="m_invesotr_box">
+							<a class="m_home_top_investor" id="m_home_top_investor" href="/eng/services/investor/" >
+							I Am An Investor<i class="el-icon el-icon-arrow-right"></i>
+							</a>
+						</div>
+						<!-- 轮播图 -->
+						<div class="swiper_mobile" >
+							<div class="swiper-wrapper">
+								
+									<div class="swiper-slide">
+										
+										
+										
+										<div class="sqs_sledr_box">
+											<div class=TRS_Editor><h2 class="sledr_box_h2">Shanghai Futures Exchange</h2>
+<div class="sqs_content_box">
+<div class="sqs_content_lf">
+<div class="sqs_content_bottom">
+<p>202</p>
+<span>Members of SHFE</span></div>
+<div>
+<p class="home_ban_num1">&nbsp;</p>
+<span>Futures products</span></div>
+</div>
+<div class="sqs_sledr_line">&nbsp;</div>
+<div class="sqs_content_lf sqs_content_rg">
+<div class="sqs_content_bottom">
+<p><a class="yearvolume">&nbsp;</a><span style="line-height:0.18rem">Million Lot</span></p>
+<span>Annual Total Volume</span></div>
+<div>
+<p>224</p>
+<span>Delivery Warehouses</span></div>
+</div>
+</div>
+<div class="sqs_slider_ft"><a href="/eng/AboutSHFE/">Explore More About SHFE <img class="imggo" alt="" src="/eng/images/go-to-link@2x.png" /> </a></div>
+<script>
+$(function(){
+ var pro_homelist1 = getProductList('shfe', '1');
+ var pro_homelist2 = getProductList('shfe', '2');
+ var pro_home_old=$(".home_ban_num1").eq(0).html();
+ 
+ var prodouct_list_home1= pro_homelist1.list.flat();
+ var prodouct_list_home2 =pro_homelist2.list.flat();
+if(prodouct_list_home1&&prodouct_list_home2 && prodouct_list_home1.length && prodouct_list_home2.length&&prodouct_list_home1.length>0 && prodouct_list_home2.length>0){
+var pro_home_legnth=prodouct_list_home1.length + prodouct_list_home2.length;
+if(!isNaN(pro_home_old)&& Number(pro_home_old)>pro_home_legnth){
+ $(".home_ban_num1").html(pro_home_old);
+}else{
+ $(".home_ban_num1").html(pro_home_legnth);
+}
+}
+})
+ var current_tradingday = null;
+
+ $.ajax({
+  type : "get",
+  dataType : "json",
+  url : "/data/config/currentTradingday.dat",
+  cache : false,
+  success : function(data) {
+   current_tradingday = data.currentTradingday;
+   getKxData(data.currentTradingday);
+  }
+ });
+
+ function getKxData(date){
+  $.ajax({
+   type: "GET",
+   url: '/data/tradedata/future/dailydata/kx' + date + '.dat',
+   dataType: "json",
+   success: function(txt){
+    if(txt!=null){
+     var val = txt.o_curproduct[txt.o_curproduct.length-1].YEARVOLUME;
+     var newVal = !val||val==null||val=="" ? val/100 : val/100;
+     var yearvolume = !newVal||newVal==null||newVal=="" ? "" : (newVal + "").substring(0, (newVal + "").indexOf(".")+3);
+     $(".yearvolume").html(yearvolume);
+    }
+   },
+   error: function(){
+    var newDate = moment(date,"YYYYMMDD").add('days', -1).format("YYYYMMDD");
+    var num = Math.abs(moment(current_tradingday,"YYYYMMDD").diff(moment(newDate,"YYYYMMDD"), 'days'));
+    if(num>15){
+     return "";
+    }
+    getKxData(newDate);
+   }
+  });
+ }
+</script></div>
+										</div>
+										
+
+										
+										<img class="bg_img" src="/eng/Home/banner/202412/W020250411612446369640.jpg" />
+										
+									</div>
+								
+									<div class="swiper-slide">
+										
+										
+										
+
+										
+										<a href="/eng/Home/othercontents/2026Options/" TARGET='_blank'>
+											<img class="bg_img" src="/eng/Home/banner/202608/W020260831521974566183.jpg" /></a>
+										
+									</div>
+								
+									<div class="swiper-slide">
+										
+										
+										
+
+										
+										<a href="/eng/Home/othercontents/2026Futures/" TARGET='_blank'>
+											<img class="bg_img" src="/eng/Home/banner/202604/W020260417586748131564.jpg" /></a>
+										
+									</div>
+								
+									<div class="swiper-slide">
+										
+										
+										
+
+										
+										<img class="bg_img" src="/eng/Home/banner/202510/W020251028561779529519.jpg" />
+										
+									</div>
+								
+									<div class="swiper-slide">
+										
+										
+										
+
+										
+										<a href="https://www.shfe.com.cn/eng/CircularNews/Circular/202503/t20250304_827530.html" TARGET='_blank'>
+											<img class="bg_img" src="/eng/Home/banner/202412/W020250514501626246965.jpg" /></a>
+										
+									</div>
+								
+									<div class="swiper-slide">
+										
+												
+													<div style="left:0;top:0;right:0;bottom:0;z-index: 999;" class="index_video_bg">
+														
+														
+														<img class="bg_img" src="/eng/Home/banner/202412/W020250411612447076353.jpg" style="width: 100%;height: 1.82rem;" />
+														
+														
+													</div>
+													<video class="videoShow video-pos" id="videoShow" poster="/eng/Home/banner/202412/W020250411612447076353.jpg"
+													 controls="controls"controlslist='nodownload noplaybackrate nofullscreen noremoteplayback '  disablePictureInPicture='true'>
+														<source src="/eng/Home/banner/202412/P020250411612447373845.mp4" type="video/mp4">
+														您的浏览器版本过低，暂不支持视频播放，请更新浏览器。
+													</video>
+													<img class="video-img" src="/eng/images/video-b.png" />
+												
+											
+											
+										
+										
+										
+
+										
+										<img class="bg_img" src="/eng/Home/banner/202412/W020250411612447076353.jpg" />
+										
+									</div>
+								
+
+							</div>
+							<!-- 如果需要分页器 -->
+							<div class="swiper-pagination-mobile" style="display: none;"></div>
+
+							<!-- 如果需要导航按钮 -->
+							<!-- <div class="swiper-button-prev"></div>
+            <div class="swiper-button-next"></div> -->
+							<!-- 如果需要滚动条 -->
+							<!-- <div class="swiper-scrollbar"></div> -->
+						</div>
+						
+						<div  id="m_js_info_des">
+
+							<!-- Circulars or News -->
+							<div class="analysis_box_top_lf">
+								<div class="analysis_lf_tit">
+									<div class="analysis_tit_cir" :class="{ analysis_tit_cir_activr: isNewActive1 }" @click="handleClickActive('1')">
+										Circular
+									</div>
+									<!-- <div class="analysis_lf_titline"></div> -->
+									<div class="analysis_tit_cir" :class="{ analysis_tit_cir_activr: isNewActive2 }" @click="handleClickActive('2')">
+										News
+									</div>
+								</div>
+								<div class="analysis_tit_cirtext_show " :class="{analysis_tit_cirtext_show2: isNewActive1 }">
+									
+	<a class="analysis_tit_item" href="/eng/CircularNews/Circular/202610/t20261023_833812.html">
+		<div class="analysis_tit_cirtext">
+			Notice on the Expansion of Products Eligible for Spread Orders
+		</div>
+		<div class="analysis_tit_data">
+			2026-10-23
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+	<a class="analysis_tit_item" href="/eng/CircularNews/Circular/202610/t20261023_833813.html">
+		<div class="analysis_tit_cirtext">
+			Notice of Shanghai Internationl Energy Exchange on the Expansion of Products Eligible for Spread Orders
+		</div>
+		<div class="analysis_tit_data">
+			2026-10-23
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+	<a class="analysis_tit_item" href="/eng/CircularNews/Circular/202610/t20261020_833767.html">
+		<div class="analysis_tit_cirtext">
+			Notice on Adjusting the Automatic Conversion Standards for Hedging Position Quota of Natural Rubber Futures Contracts
+		</div>
+		<div class="analysis_tit_data">
+			2026-10-20
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+	<a class="analysis_tit_item" href="/eng/CircularNews/Circular/202610/t20261020_833766.html">
+		<div class="analysis_tit_cirtext">
+			Notice of Shanghai International Energy Exchange on Adjusting the Automatic Conversion Standards for Hedging Position Quota of TSR 20 Futures Contracts
+		</div>
+		<div class="analysis_tit_data">
+			2026-10-20
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+	<a class="analysis_tit_item" href="/eng/CircularNews/Circular/202610/t20261016_833721.html">
+		<div class="analysis_tit_cirtext">
+			Notice on Self-Regulation Information in September 2026
+		</div>
+		<div class="analysis_tit_data">
+			2026-10-16
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+									<div class="analysis_box_view">
+										<a href="/eng/CircularNews/Circular/">
+											View More <i class="vm_thin_arrow">></i>
+											<!-- <img class="right_arrow" src="/eng/images/right_jjbg.png" alt="" /> -->
+										</a>
+									</div>
+								</div>
+								<div class="analysis_tit_cirtext_show" :class="{analysis_tit_cirtext_show2: isNewActive2 }">
+									
+	<a class="analysis_tit_item" href="/eng/CircularNews/News/202509/t20250922_829092.html">
+		<div class="analysis_tit_cirtext">
+			CGTN: China Vitality: Shanghai powers China's global trade ascent
+		</div>
+		<div class="analysis_tit_data">
+			2025-09-19
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+	<a class="analysis_tit_item" href="/eng/CircularNews/News/202507/t20250728_828429.html">
+		<div class="analysis_tit_cirtext">
+			SHFE and INE Added to Malaysia’s List of Specified Exchanges
+		</div>
+		<div class="analysis_tit_data">
+			2025-07-28
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+	<a class="analysis_tit_item" href="/eng/CircularNews/News/202506/t20250623_828134.html">
+		<div class="analysis_tit_cirtext">
+			China’s Futures Market Opening Offers Global Investor More Chances
+		</div>
+		<div class="analysis_tit_data">
+			2025-06-23
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+	<a class="analysis_tit_item" href="/eng/CircularNews/News/202506/t20250625_828166.html">
+		<div class="analysis_tit_cirtext">
+			CHINA DAILY: China Futures Market Gains Global Spotlight
+		</div>
+		<div class="analysis_tit_data">
+			2025-06-23
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+	<a class="analysis_tit_item" href="/eng/CircularNews/News/202506/t20250613_828065.html">
+		<div class="analysis_tit_cirtext">
+			Ecns: China launches first future, option of renewable commodity
+		</div>
+		<div class="analysis_tit_data">
+			2025-06-13
+		</div>
+		<div class="analysis_tit_cirtextline"></div>
+	</a>
+
+									<div class="analysis_box_view">
+										<a href="/eng/CircularNews/News/">
+											View More <i class="vm_thin_arrow">></i>
+											<!-- <img class="right_arrow" src="/eng/images/right_jjbg.png" alt="" /> -->
+										</a>
+									</div>
+								</div>
+							</div>
+							<!-- Market -->
+							<div class="Market_box">
+								<div class="Market_box_top">
+									<div class="Market_box_top_title"><span>Market</span>
+									<a class="m_home_more" href="/eng/Market/">View More +</a>
+									</div>
+									<div class="Market_box_top_con">
+										<span class="marketTitle_item">*Last/RMB Yuan</span>
+										<span class="marketTitle_item"> Volume/Lot</span>
+										<span class="marketTitle_item">OI/Lot</span>
+									</div>
+									<div class="Market_box_top_con_div">
+										Market Data Charts are delayed at least 30 minutes.
+									</div>
+								</div>
+								<div class="Market_box_bottom">
+									<home-market-list-component ref="homemarkerlist"> </home-market-list-component>
+								</div>
+							</div>
+
+							<div class="tabBox_cal_bg">
+								<!-- Volume&0l Price Chart  Delayed -->
+								<!-- Volume&0l Price Chart  Delayed -->
+								<div class="tab_box_lists">
+									<div class="tabs_list">
+										<div class="tabs_list_item volume_ol" :class="{ isActive: isActive1 }" @click="handleClick(1)">
+											Volume&Ol
+										</div>
+										<div class="tabs_list_item price_chart" :class="{ isActive: isActive2 }" @click="handleClick(2)">
+											Price Chart
+										</div>
+										<div class="tabs_list_item delayed_info" :class="{ isActive: isActive3 }" @click="handleClick(3)">
+											Delayed
+										</div>
+									</div>
+									<div class="tabs_content_list">
+										<div class="tabs_content_item" v-if="isActive1">
+											<home-volume-chart-component ref="homevolumechart"> </home-volume-chart-component>
+
+										</div>
+										<div class="tabs_content_item" v-if="isActive2">
+											<home-price-chart-component ref="homevolumechart" :closepice="isActive2"> </home-price-chart-component>
+										</div>
+										<div class="tabs_content_item delay_line_box" v-if="isActive3">
+											<div class="content_select_line ">
+												<el-form ref="form" :inline="true">
+													<el-form-item class="m_option_item_line">
+														<el-select :clearable="false" v-model="searchBtn" :popper-append-to-body="false" @change="handleSearchTab">
+															<el-option label="Futures" value="1"></el-option>
+															<el-option label="Options" value="2"></el-option>
+														</el-select>
+													</el-form-item>
+
+													<el-form-item class="m_option_item_line_tow">
+														<el-select :clearable="false" v-model="type_select" :popper-append-to-body="false" @change="chooseType1">
+															<template v-for="(e,i) in pro_list_info" :key="i">
+																<el-option :label="e.product_name_en" :value="e.productid"></el-option>
+															</template>
+														</el-select>
+													</el-form-item>
+												</el-form>
+											</div>
+											<div class="content_select_table">
+												<a class="look_btn" v-if="searchTab == 'delaymarket_f' || searchTab == 'delaymarket' " :href="`/eng/reports/delayedMarketData/DelayedQuotes/?query_options=` +searchBtn  + '&query_product_code=' + type_select  + '&query_params='  + searchTab">
+													View More <i class="el-icon el-icon-arrow-right"></i>
+												</a>
+												<!-- 延时行情-期货 -->
+												<home-delaymarket-f-component ref="delaymarket_f" v-if="searchTab=='delaymarket_f'" :current_date="currentDate"
+												:side_type_select="type_select"></home-delaymarket-f-component>
+
+												<!-- 延时行情-期权 -->
+												<delaymarket-component ref="delaymarket" v-if="searchTab=='delaymarket'" :current_date="currentDate"
+												:side_type_select="type_select"></delaymarket-component>
+											</div>
+										</div>
+									</div>
+								</div>
+								<!-- SHFE Trading Calendar -->
+								<!-- SHFE Trading Calendar -->
+								<div class="calendar_box">
+									<div class="calendar_box_top">
+										<div class="calendar_box_top_title"><span>SHFE Trading Calendar</span>
+										<a class="m_home_more" href="/eng/reports/CalendarHolidays/TradingCalendar/">View More +</a>
+										</div>
+										
+									</div>
+									<div class="calendar_box_middle">
+										<div class="middle_text">
+											<div class="calendar_text_date"><template>{{ currentDate }}</template></div>
+
+											<div class="calendar_text_content">
+												<template v-if="!item">
+													<div class="text_detail_content">No data available.</div>
+												</template>
+												<template v-else>
+													<div class="text_content_item" v-if="currentDate == item.tradeDate">
+
+														<template v-if=" year > 2021 ">
+															<div class="text_detail_title" v-if="item.tradeExit || item.tradeAdjust || item.tradeLastDate ||
+															item.tradeOnBoard || item.tradeQLastDate || item.tradeLimit ||
+															item.tradeSellingPositions || item.tradeOpeningRestriction || item.tradePositionLimit
+															">
+																<div class="point_purple text_detail_mr5"></div>Trading notice:
+															</div>
+															<div class="text_detail_content">
+																<div v-if="item.tradeExit" v-html="item.tradeExit"></div><!-- 个人客户退出 -->
+																<div v-if="item.tradeLastDate" v-html="item.tradeLastDate"></div><!-- 合约最后交易日 -->
+																<div v-if="item.tradeOnBoard" v-html="item.tradeOnBoard"></div><!-- 新合约上市 -->
+																<div v-if="item.tradeQLastDate" v-html="item.tradeQLastDate"></div><!-- 期权最后交易日 -->
+																<div v-if="item.tradeAdjust" v-html="item.tradeAdjust"></div><!-- 非整数倍持仓调整 -->
+																<div v-if="item.tradeLimit" v-html="item.tradeLimit"></div><!-- 涨跌停板信息 -->
+																<div v-if="item.tradePositionLimit" v-html="item.tradePositionLimit"></div><!-- 合约限仓 -->
+																<div v-if="item.tradeOpeningRestriction" v-html="item.tradeOpeningRestriction"></div><!-- 交易限额 -->
+																<div v-if="item.tradeSellingPositions" v-html="item.tradeSellingPositions"></div><!-- 持仓与仓单匹配 -->
+															</div>
+															<div class="text_detail_title" v-if="item.settleDepositAj || item.settleADepositAj || item.settleTradeFeeAj ||
+															item.settlePledgeFee || item.settleExitDiscount ||item.settleDeliveryFee || item.settleOther">
+																<div class="point_yellow text_detail_mr5"></div>Settlement notice:
+															</div>
+
+															<div class="text_detail_content">
+																<div v-if="item.settleDepositAj" v-html="item.settleDepositAj"></div><!-- 合约保证金率调整 -->
+																<div v-if="item.settleTradeFeeAj" v-html="item.settleTradeFeeAj"></div><!-- 合约交易手续费调整 -->
+																<div v-if="item.settlePledgeFee" v-html="item.settlePledgeFee"></div><!-- 收取会员质押手续费 -->
+																<div v-if="item.settleExitDiscount" v-html="item.settleExitDiscount"></div><!-- 合约退出单向大边保证金优惠 -->
+																<div v-if="item.settleADepositAj" v-html="item.settleADepositAj"></div><!-- 品种保证金率调整 -->
+																<div v-if="item.settleDeliveryFee" v-html="item.settleDeliveryFee"></div><!-- 收取交割手续费 -->
+																<div v-if="item.settleOther" v-html="item.settleOther"></div><!-- 其它 -->
+															</div>
+
+															<div class="text_detail_title" v-if="item.delivery">
+																<div class="point_blue text_detail_mr5"></div>Delivery notice:
+															</div>
+															<div class="text_detail_content">
+																<div v-if="item.delivery" v-html="item.delivery"></div>
+															</div>
+														</template>
+
+														<template v-else>
+															<div class="text_detail_content text_detail_history">
+																<div v-if="item.historyContent" v-html="item.historyContent"></div>
+															</div>
+														</template>
+
+													</div>
+												</template>
+
+											</div>
+										</div>
+									</div>
+
+
+
+									<div class="calendar_box_bottom">
+										<div class="bottom_link_item">
+											<div class="box_foot_kuair1">
+												<div class="kuair1_box">
+													<div class="kuair1_img_box">
+														<a class="imgbox" href="/eng/Market/">
+															<img class="img1" src="/eng/images/shiliang.png" alt="" />
+															<img id="imgbox1_show" src="/eng/images/go-to-link@2x.png" alt="" />
+														</a>
+													</div>
+													<div class="kuair1_text"><a  href="/eng/Market/">Access the Market</a></div>
+												</div>
+											</div>
+										</div>
+										<div class="bottom_link_item">
+											<div class="box_foot_kuair1">
+												<div class="kuair1_box kuair1_box_show">
+													<div class="kuair1_img_box">
+														<a class="imgbox" href="/eng/services/Rules/SHFERules/">
+															<img class="img1" id="img1-i" src="/eng/images/shiliangtxt@2x.png" alt="" />
+															<img id="imgbox2_show" src="/eng/images/go-to-link@2x.png" alt="" />
+														</a>
+													</div>
+													<div class="kuair1_text"><a href="/eng/services/Rules/SHFERules/">Rules and Regulations</a></div>
+												</div>
+											</div>
+										</div>
+
+									</div>
+								</div>
+							</div>
+
+						</div>
+
+					</div>
+				</div>
+
+			
+
+			<!-- END body -->
+			<!-- START footer -->
+			<!-- pc底部 -->
+<div class="sqs_footerBox">
+  <div class="sqs_footer">
+    <div class="sqs_footer_up">
+      <div class="sqs_footer_logo">
+        <a href="/eng/" target="_blank">
+          <img src="/eng/images/footer-logo.png" />
+        </a>
+      </div>
+      <div class="sqs_footer_link">
+        <a href="/eng/AboutSHFE/ContactUs/" target="_blank"> Contact Us </a>
+        <a href="/eng/Links/" target="_blank"> Links </a>
+        <a href="/eng/PrivatePolicy/" target="_blank">
+          Private Policy
+        </a>
+        <a href="/eng/WebsiteMap/" target="_blank"> Website Map </a>
+      </div>
+    </div>
+  </div>
+  <div class="sqs_footer_middle">
+    <div class="sqs_footer_Company">
+      <p class="sqs_footer_CompanyName">SHFE Company:</p>
+      <div class="sqs_footer_some">
+        <a href="https://www.ine.com.cn/eng/" target="_blank"> INE </a>
+        <span>|</span>
+        <a href="/sfit/" target="_blank"> SFIT </a>
+        <span>|</span>
+        <a href="/ifd/" target="_blank"> SHIFD </a>
+        <span>|</span>
+        <a href="/eng/AboutSHFE/Institution/Subsidiaries/sw/" target="_blank">
+          SHFES
+        </a>
+      </div>
+    </div>
+    <div class="sqs_footer_middle_icon">
+      <div class="tc_QRBox">
+        <div class="tc_QR">
+          <img src="/eng/images/SHFE_Wechat.png" />
+        </div>
+        <div class="tc_QRafter"></div>
+      </div>
+      <a href="javascript:;" id="wx">
+        <img src="/eng/images/sqs_wx.png" alt="微信" title="微信" />
+      </a>
+      <a href="https://www.shfe.com.cn/weibo/sina/" target="_blank">
+        <img src="/eng/images/sqs_wb.png" alt="微博" title="微博" />
+      </a>
+    </div>
+  </div>
+  <div class="sqs_footer_down">
+<div class="sqs_footer_down_m">
+      <div class="sqs_footer_down_fl">
+        Address: 500 Pudian Road, Shanghai
+        <span>Zip: 200122</span>
+        <span>Tel: 68400000</span>
+        <span>Fax:+86 21 68401198</span>
+        <p class="beian">
+        <a>We recommend using the latest versions of Google Chrome and Microsoft Edge.</a>         
+        </p>
+      </div>
+      <div class="sqs_footer_down_fr">
+        <span>© Copyright SHFE</span>
+        <p class="beian">
+        <a target="_blank" href="http://beian.miit.gov.cn" class="gray">沪ICP备11031067号-1</a>
+        <a target="_blank" class="gray" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011502008304"><img src="/eng/images/ine_pub_record.png" />沪公网安备 31011502008304号</a>   
+         <a href="https://bszs.conac.cn/sitename?method=show&id=230151C803D27D32E06310291AAC87D8" target="_blank" style=" margin-left: 0.1rem;">
+             <img id="imgConac" vspace="0" hspace="0" border="0" src="/eng/images/footer-icon-blue.png" style='width:0.22rem;height:auto;position:relative;top:0.02rem;' />
+         </a>
+        </p>
+      
+</div>
+</div>
+
+  </div>
+</div>
+
+<!-- mobile底部 -->
+<div class="mobile_footer">
+  <div class="mobile_footer_top">
+    <div class="mobile_logo">
+      <div class="mobile_logo_left">
+        <a href='/eng/' target='_blank'><img src="/eng/images/footer-logo.png" /></a>
+      </div>
+      <div class="mobile_logo_right">
+        <div class="sqs_footer_middle_icon">
+          <div class="tc_QRBox" style="display: none">
+            <div class="tc_QR">
+              <img src="/eng/images/SHFE_Wechat.png" />
+            </div>
+            <div class="tc_QRafter"></div>
+          </div>
+          <a href="javascript:;" id="wx_mobile">
+            <img src="/eng/images/sqs_wx.png" alt="微信" title="微信" />
+          </a>
+          <a href="https://www.shfe.com.cn/weibo/sina/" target="_blank">
+            <img src="/eng/images/sqs_wb.png" alt="微博" title="微博" />
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="mobile_desc">
+      <div class="mobile_left">
+        <a class="mobile_left_item" href="/eng/AboutSHFE/ContactUs/">Contact Us</a>
+        <a class="mobile_left_item" href="/eng/Links/">Links</a>
+        <a class="mobile_left_item" href="/eng/PrivatePolicy/">Private Policy</a>
+        <a class="mobile_left_item" href="/eng/WebsiteMap/">Website Map</a>
+      </div>
+      <div class="mobile_right">
+        <a class="mobile_right_item" href="javascript:;">
+          Address: 500 Pudian Road, Shanghai
+        </a>
+        <a class="mobile_right_item" href="javascript:;">Zip: <span>200122</span></a>
+        <a class="mobile_right_item" href="javascript:;">Tel: <span>68400000</span></a>
+        <a class="mobile_right_item" href="tel:+862168401198">Fax: <span>+86 21 68401198</span></a>
+      </div>
+    </div>
+  </div>
+  <div class="mobile_footer_bottom">
+    <div class="mobile_footer_bottom_link">
+      <span class="linkName">SHFE Company:</span>
+      <span class="link_dtail"> 
+       <a href="https://www.ine.com.cn/eng/" target="_blank"> INE </a>
+      </span>
+      <span class="link_line_item">|</span>
+      <span class="link_dtail">
+      <a href="/sfit/" target="_blank"> SFIT </a>
+      </span>
+      <span class="link_line_item">|</span>
+      <span class="link_dtail">
+       <a href="/ifd/" target="_blank"> SHIFD </a>
+      </span>
+      <span class="link_line_item">|</span>
+      <span class="link_dtail">
+      <a  href="/eng/AboutSHFE/Institution/Subsidiaries/sw/" target="_blank">
+          SHFES
+        </a>
+      </span>
+    </div>
+    <div class="mobile_footer_bottom_address">
+      <span class="copy_left" style="top:-0.12rem">©Copyright SHFE</span>
+      <a href="https://bszs.conac.cn/sitename?method=show&id=230151C803D27D32E06310291AAC87D8" target="_blank" style=" margin-left: 0.18rem;display:inline-block;">
+             <img id="imgConac" vspace="0" hspace="0" border="0" src="/eng/images/footer-icon-blue.png" style=" width: 0.19rem;height: auto;" />
+         </a>
+    </div>
+
+    <div class="mobile_footer_bottom_address">
+      <a target="_blank" href="http://beian.miit.gov.cn" class="copy_left">沪ICP备11031067号-1</a>
+      <a target="_blank"class="copy_right" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=31011502008304">沪公网安备 31011502008304号</a>  
+    </div>
+  </div>
+</div>
+			<!-- END footer -->
+		</div>
+		<!-- START Public JS -->
+		<script src="/eng/images/jquery.min.js"></script>
+<script src="/eng/images/global.js" /></script>
+<script src="/eng/images/element-ui/index.js"></script>
+<script src="/eng/images/enum.js" /></script>
+<script src="/eng/images/api.js" /></script>
+<script src="/eng/images/common_utils.js" /></script>
+<script src="/eng/images/pub_header.js"></script>
+
+<!--  <script type="text/javascript" src="/eng/images/hc-offcanvas-nav.js"></script>  -->
+
+<!-- 导航 -->
+<script src="/eng/images/sqs_nav.js" /></script>
+		<!-- END Public JS -->
+
+
+		<script src="/eng/images/vue.min.js"></script>
+		<script src="/eng/images/element-ui/index.js"></script>
+
+		<script src="/eng/images/echarts.min.js"></script>
+		<script src="/eng/images/swiper-bundle.min.js"></script>
+		<script src="/eng/images/element-ui/umd/locale/en.js"></script>
+		<script type="text/javascript" charset="utf-8" src="/eng/images/require.js"></script>
+		<script type="text/javascript" charset="utf-8" src="/eng/images/highStockCharts.js"></script>
+		<script type="text/javascript" charset="utf-8" src="/eng/images/highStock.js"></script>
+		<script>
+			var home_banner= 6;
+			if(home_banner == 1){
+				var mySwiper = new Swiper('.swiper-container', {
+						   loop: false
+				})
+			
+				//轮播图_mobile
+				var mySwiper_mobile = new Swiper(".swiper_mobile", {
+				  loop: false, // 循环模式选项
+				});
+			}else{
+				$(".swiper-pagination").show();
+				$(".swiper-pagination-mobile").show();
+				var mySwiper = new Swiper(".swiper", {
+					autoplay: true,
+					loop: true, // 循环模式选项
+				
+					// 如果需要分页器
+					pagination: {
+						el: ".swiper-pagination",
+						clickable: true,
+					},
+				
+					// 如果需要前进后退按钮
+					navigation: {
+						nextEl: ".swiper-button-next",
+						prevEl: ".swiper-button-prev",
+					},
+				
+					// 如果需要滚动条
+					scrollbar: {
+						el: ".swiper-scrollbar",
+					},
+				});
+				mySwiper.el.onmouseover = function() {
+					//鼠标放上暂停轮播
+					mySwiper.autoplay.stop();
+				};
+				mySwiper.el.onmouseleave = function() {
+					mySwiper.autoplay.start();
+				};
+				
+				//轮播图_mobile
+				
+				var mySwiper_mobile = new Swiper(".swiper_mobile", {
+					autoplay: true,
+					loop: true, // 循环模式选项
+				
+					// 如果需要分页器
+					pagination: {
+						el: ".swiper-pagination-mobile",
+						clickable: true,
+					},
+				
+					// 如果需要前进后退按钮
+					navigation: {
+						nextEl: ".swiper-button-next",
+						prevEl: ".swiper-button-prev",
+					},
+				
+					// 如果需要滚动条
+					scrollbar: {
+						el: ".swiper-scrollbar",
+					},
+				});
+				mySwiper_mobile.el.onmouseover = function() {
+					//鼠标放上暂停轮播
+					mySwiper_mobile.autoplay.stop();
+				};
+				mySwiper_mobile.el.onmouseleave = function() {
+					mySwiper_mobile.autoplay.start();
+				};
+				
+			}
+			$(document).scroll(function() {
+				if ($(document).scrollTop() != 0) {
+					$('.sqs_top .sqs_top_line').addClass('top_line_bg');
+				} else {
+					$('.sqs_top .sqs_top_line').removeClass('top_line_bg');
+				}
+			});
+			ELEMENT.locale(ELEMENT.lang.en);
+			//轮播图_pc
+
+		
+
+
+
+			$('.video-img').click(function() {
+				mySwiper.autoplay.stop();
+				// var $that=$(this);
+				$(this).prev(".videoShow")[0].play();
+				$(this).prev(".videoShow").addClass('video-pos');
+				// $(this).hide();
+				$('.video-img').hide();
+				$(this).prev(".videoShow").prev('.index_video_bg').hide();
+				//视频播放中
+				$(this).prev(".videoShow")[0].addEventListener('playing', function() {
+					//轮播停止自动播放
+					mySwiper.autoplay.stop();
+					//视频播放中鼠标移出轮播区域，也停止自动轮播图片
+					mySwiper.el.onmouseleave = function() {
+						mySwiper.autoplay.stop();
+					}
+				})
+				//视频播放结束
+				$(this).prev(".videoShow")[0].addEventListener('ended', function() {
+					$(this).prev('.index_video_bg').show();
+					//显示视频播放图片
+					$('.video-img').show();
+					//轮播启动自动播放
+					mySwiper.autoplay.start();
+				})
+			})
+
+			$('.swiper_mobile .videoShow').hide();
+			$('.swiper_mobile .video-img').next('img').hide();
+
+			$('.swiper_mobile .video-img').click(function() {
+				mySwiper_mobile.autoplay.stop();
+				// var $that=$(this);
+				$(this).prev(".videoShow").show();
+				$(this).prev(".videoShow")[0].play();
+				$(this).prev(".videoShow").addClass('video-pos');
+				// $(this).hide();
+				$('.swiper_mobile .video-img').hide();
+				$(this).prev(".videoShow").prev('.index_video_bg').hide();
+				//视频播放中
+				$(this).prev(".videoShow")[0].addEventListener('playing', function() {
+					//轮播停止自动播放
+					mySwiper_mobile.autoplay.stop();
+					//视频播放中鼠标移出轮播区域，也停止自动轮播图片
+					mySwiper_mobile.el.onmouseleave = function() {
+						mySwiper_mobile.autoplay.stop();
+					}
+                                    
+				})
+				//视频播放结束
+				$(this).prev(".videoShow")[0].addEventListener('ended', function() {
+					$('.swiper_mobile #videoShow').hide();
+					$(this).prev('.index_video_bg').show();
+					//显示视频播放图片
+					$('.swiper_mobile .video-img').show();
+					//轮播启动自动播放
+					mySwiper_mobile.autoplay.start();
+				})
+			})
+
+			//点击分页器
+			$('.swiper-pagination-bullet').click(function() {
+				//暂停视频
+				//$('#videoShow')[0].pause();
+				//显示视频播放图片
+				//$('.video-img').show();
+				//轮播启动自动播放
+				mySwiper.autoplay.start();
+			});
+			$(".swiper-pagination-bullet-active").hover(function() {
+				mySwiper.params.pagination.clickable = false;
+			});
+			
+                         $(".swiper-pagination-bullet-active").click(function() {
+				if ($(".swiper-slide-active").find('.videoShow').length != 0) {
+					$(".swiper-slide-active").find('.videoShow')[0].pause();
+					//$('.video-img').show();
+
+					mySwiper.autoplay.start();
+				}
+			});
+			$('.swiper-pagination-bullet').click(function() {
+				var $that = $(this);
+				var activeindex = $('swiper-pagination-bullet-active').index();
+				if (!$that.hasClass("swiper-pagination-bullet-active")) {
+					mySwiper.params.pagination.clickable = true;
+					mySwiper.pagination.destroy()
+					mySwiper.pagination.init();
+					mySwiper.pagination.bullets.eq(activeindex).addClass('swiper-pagination-bullet-active');
+				}
+				//$(".videoShow").each(function(i, v) {
+				//	$('.videoShow')[i].pause();
+				//})
+				//暂停视频
+				//显示视频播放图片
+				//$('.video-img').show();
+				//轮播启动自动播放
+				mySwiper.autoplay.start();
+				mySwiper.el.onmouseleave = function() {
+					mySwiper.autoplay.start();
+				}
+			});
+                       
+
+			
+		</script>
+
+		<!-- Market 列表 -->
+		<script type="text/x-template" id="home-market-list-component">
+	<div>
+	<div class="pc_box"  v-if="!isShowMobilePage">
+	 <div class="sqs_dataCon_tit">
+		
+		 <div class="sqs_tit_div">
+		 <div><span class="header_sbox_span1">Metal</span> <span class="header_sbox_span2">{{ all_metail && all_metail.length ? all_metail.length : '' }} Products</span></div>
+		 <div class="v_text">
+			 <a href="/eng/Market/">View More <i class="el-icon el-icon-arrow-right"></i></a>
+			 <div class="header_sbox_show header_box_sh">
+				 <ul class="sbox_show_ulbox1">
+					 <li  v-for="(item,index) in all_metail" :key="index">
+						 <a  :href="all_metail ? ( all_metail[index] ?  all_metail[index].link : '' ) : ''">{{ getFutureNameByid(all_metail[index].productid)}}</a>
+					</li>
+				 </ul>
+			 </div>
+		 </div>
+		 </div>
+		 
+		  <div class="sqs_tit_div">
+		  <div><span class="header_sbox_span1">Energy</span> <span class="header_sbox_span2">{{ all_energy && all_energy.length ? all_energy.length : '' }}  Products</span></div>
+		  <div class="v_text">
+			  <a href="/eng/Market/">View More <i class="el-icon el-icon-arrow-right"></i></a>
+			  <div class="header_sbox_show header_box_sh">
+				  <ul class="sbox_show_ulbox1">
+					  <li  v-for="(item,index) in all_energy" :key="index">
+						  <a  :href="all_energy ? ( all_energy[index] ?  all_energy[index].link : '' ) : ''">{{ getFutureNameByid(all_energy[index].productid)}}</a>
+					 </li>
+				  </ul>
+			  </div>
+		  </div>
+		  </div>
+		 
+		  <div class="sqs_tit_div">
+		  <div><span class="header_sbox_span1">Chemical and others</span> <span class="header_sbox_span2">{{ all_chemical && all_chemical.length ? all_chemical.length : '' }} Products</span></div>
+		  <div class="v_text">
+			  <a href="/eng/Market/">View More <i class="el-icon el-icon-arrow-right"></i></a>
+			  <div class="header_sbox_show header_box_sh">
+				  <ul class="sbox_show_ulbox1">
+					  <li  v-for="(item,index) in all_chemical" :key="index">
+						  <a  :href="all_chemical ? ( all_chemical[index] ?  all_chemical[index].link : '' ) : ''">{{ getFutureNameByid(all_chemical[index].productid)}}</a>
+					 </li>
+				  </ul>
+			  </div>
+		  </div>
+		  </div>
+	 </div>
+	<div class="sqs_tit_div Marked_content_block ">
+		<ul>
+			<li v-for="(item,i) in metalsList" class="sqs_market_href" :key="i">
+				<a :href="item.link">
+					<div class="content_block1"><span class="span1">  {{ item.contractname ? item.contractname : '--' }}</span> 
+						<div class="price">
+						<span class="span2"> last: {{item.lastprice ?  handleDataPrecision(item.lastprice,item.decimal_number) : '--' }}</span>
+						 <span class="span3 "  v-if="item.upperdown"   :class="item.upperdown > 0 ? 'sqs_market_num_red' : (item.upperdown == 0 ?'':'sqs_market_num_green')">
+							  {{  item.upperdown >0 ? ( '+' + handleDataPrecision(item.upperdown,item.decimal_number)):(item.upperdown===''?'--':handleDataPrecision(item.upperdown,item.decimal_number))   }}
+							</span>
+							<span class="span3 " v-else  >--</span>
+						 
+						 </div>
+					</div>
+					<div class="content_block1_pbox">
+						<p class="p1">{{ item.product_name_en }} Futures</p> 
+						<p class="p2">Volume: {{ item.volume ? item.volume : '--'  }} &nbsp;&nbsp;  Open interest: {{item.openinterest&&item.openinterest!='--'? Number(item.openinterest).toFixed(0):'--'}}</p>
+					</div>
+					<div class="optbox" v-if="item.has_option && item.has_option==='yes'">Opt</div>
+				</a>
+			</li>
+		</ul>
+		<ul>
+			<li v-for="(item,i) in energyList" class="sqs_market_href" :key="i">
+				<a :href="item.link">
+					<div class="content_block1"><span class="span1">  {{ item.contractname ? item.contractname : '--' }}</span> 
+						<div class="price">
+						<span class="span2"> last: {{item.lastprice ?  handleDataPrecision(item.lastprice,item.decimal_number) : '--' }}</span>
+						 <span class="span3 "  v-if="item.upperdown"   :class="item.upperdown > 0 ? 'sqs_market_num_red' : (item.upperdown == 0 ?'':'sqs_market_num_green')">
+							  {{  item.upperdown >0 ? ( '+' + handleDataPrecision(item.upperdown,item.decimal_number)):(item.upperdown===''?'--':handleDataPrecision(item.upperdown,item.decimal_number))   }}
+							</span>
+							<span class="span3 " v-else >--</span>
+						 
+						 </div>
+					</div>
+					<div class="content_block1_pbox">
+						<p class="p1">{{ item.product_name_en }} Futures</p> 
+						<p class="p2">Volume: {{ item.volume ? item.volume : '--'  }} &nbsp;&nbsp;  Open interest: {{item.openinterest&&item.openinterest!='--'? Number(item.openinterest).toFixed(0):'--'}}</p>
+					</div>
+					<div class="optbox" v-if="item.has_option && item.has_option==='yes'">Opt</div>
+				</a>
+			</li>
+		</ul>
+		<ul>
+			<li v-for="(item,i) in chemicalList" class="sqs_market_href" :key="i">
+				<a :href="item.link">
+					<div class="content_block1"><span class="span1">  {{ item.contractname ? item.contractname : '--' }}</span> 
+						<div class="price">
+						<span class="span2"> last: {{item.lastprice ?  handleDataPrecision(item.lastprice,item.decimal_number) : '--' }}</span>
+						 <span class="span3 "  v-if="item.upperdown"   :class="item.upperdown > 0 ? 'sqs_market_num_red' : (item.upperdown == 0 ?'':'sqs_market_num_green')">
+							  {{  item.upperdown >0 ? ( '+' + handleDataPrecision(item.upperdown,item.decimal_number)):(item.upperdown===''?'--':handleDataPrecision(item.upperdown,item.decimal_number))   }}
+							</span>
+							<span class="span3 " v-else >--</span>
+						 
+						 </div>
+					</div>
+					<div class="content_block1_pbox">
+						<p class="p1">{{ item.product_name_en }} Futures</p> 
+						<p class="p2">Volume: {{ item.volume ? item.volume : '--'  }} &nbsp;&nbsp;  Open interest: {{item.openinterest&&item.openinterest!='--'? Number(item.openinterest).toFixed(0):'--'}}</p>
+					</div>
+					<div class="optbox" v-if="item.has_option && item.has_option==='yes'">Opt</div>
+				</a>
+			</li>
+		</ul>
+	</div>
+	</div>
+		
+		<!-- mobile -->
+		<div class="mobile_box"  v-if="isShowMobilePage">
+			<div class="m_sql_tit_dev">Metal</div>
+			<ul class="m_home_market_list">
+				<li v-for="(item,i) in metalsList" class="sqs_market_href" :key="i"  v-if="i<2" >	
+					<a :href="item.link">
+						  <div class="pro_name_no">{{item.contractname ? item.contractname : '--' }}</div>
+						   <div class="pro_belong" v-if="item.has_option && item.has_option==='yes'">opt</div>
+							<div class="pro_last">
+							 last：{{item.lastprice ?  handleDataPrecision(item.lastprice,item.decimal_number) : '--' }}
+							<span class="span3 "  v-if="item.upperdown"   :class="item.upperdown > 0 ? 'sqs_market_num_red' : (item.upperdown == 0 ?'':'sqs_market_num_green')">
+														  {{  item.upperdown >0 ? ( '+' + handleDataPrecision(item.upperdown,item.decimal_number)):(item.upperdown===''?'--':handleDataPrecision(item.upperdown,item.decimal_number))   }}
+							</span>
+							<span class="span3 " v-else  >--</span>
+							 
+						   </div>
+						   <div class="pro_enName">{{ item.product_name_en }} Futures</div>
+						   <div class="pro_volume">Volume：{{ item.volume ? item.volume : '--'  }}</div>
+						   <div class="pro_open_interest">Open interest： {{item.openinterest&&item.openinterest!='--'? Number(item.openinterest).toFixed(0):'--'}}</div>
+					</a>
+					
+				</li>
+			</ul>
+			<div class="m_sql_tit_dev">Energy</div>
+			<ul  class="m_home_market_list">
+				<li v-for="(item,i) in energyList" class="sqs_market_href" :key="i" v-if="i<2">
+					<a :href="item.link">
+						  <div class="pro_name_no">{{item.contractname ? item.contractname : '--' }}</div>
+						   <div class="pro_belong" v-if="item.has_option && item.has_option==='yes'">opt</div>
+							<div class="pro_last">
+							 last：{{item.lastprice ?  handleDataPrecision(item.lastprice,item.decimal_number) : '--' }}
+							<span class="span3 "  v-if="item.upperdown"   :class="item.upperdown > 0 ? 'sqs_market_num_red' : (item.upperdown == 0 ?'':'sqs_market_num_green')">
+														  {{  item.upperdown >0 ? ( '+' + handleDataPrecision(item.upperdown,item.decimal_number)):(item.upperdown===''?'--':handleDataPrecision(item.upperdown,item.decimal_number))   }}
+							</span>
+							<span class="span3 " v-else  >--</span>
+							 
+						   </div>
+						   <div class="pro_enName">{{ item.product_name_en }} Futures</div>
+						   <div class="pro_volume">Volume：{{ item.volume ? item.volume : '--'  }}</div>
+						   <div class="pro_open_interest">Open interest： {{item.openinterest&&item.openinterest!='--'? Number(item.openinterest).toFixed(0):'--'}}</div>
+					</a>
+				</li>
+			</ul>
+			<div class="m_sql_tit_dev">Chemical and others</div>
+			<ul  class="m_home_market_list">
+				<li v-for="(item,i) in chemicalList" class="sqs_market_href" :key="i" v-if="i<2">
+					<a :href="item.link">
+						  <div class="pro_name_no">{{item.contractname ? item.contractname : '--' }}</div>
+						   <div class="pro_belong" v-if="item.has_option && item.has_option==='yes'">opt</div>
+							<div class="pro_last">
+							 last：{{item.lastprice ?  handleDataPrecision(item.lastprice,item.decimal_number) : '--' }}
+							<span class="span3 "  v-if="item.upperdown"   :class="item.upperdown > 0 ? 'sqs_market_num_red' : (item.upperdown == 0 ?'':'sqs_market_num_green')">
+														  {{  item.upperdown >0 ? ( '+' + handleDataPrecision(item.upperdown,item.decimal_number)):(item.upperdown===''?'--':handleDataPrecision(item.upperdown,item.decimal_number))   }}
+							</span>
+							<span class="span3 " v-else  >--</span>
+							 
+						   </div>
+						   <div class="pro_enName">{{ item.product_name_en }} Futures</div>
+						   <div class="pro_volume">Volume：{{ item.volume ? item.volume : '--'  }}</div>
+						   <div class="pro_open_interest">Open interest： {{item.openinterest&&item.openinterest!='--'? Number(item.openinterest).toFixed(0):'--'}}</div>
+					</a>
+					
+				</li>
+			</ul>
+		</div>
+	</div>
+		
+	</script>
+	
+	 <script type="text/javascript"> 
+		  let  all_metail= [
+			  {
+				 productid: `cu_f`,
+				link: `/eng/Market/Futures/Metal/cu_f/`,
+			  },
+			  {
+				 productid: `bc_f`,
+				link: `/eng/Market/Futures/Metal/bc_f/`,
+			  },
+			  {
+				 productid: `al_f`,
+				link: `/eng/Market/Futures/Metal/al_f/`,
+			  },
+			  {
+				 productid: `zn_f`,
+				link: `/eng/Market/Futures/Metal/zn_f/`,
+			  },
+			  {
+				 productid: `pb_f`,
+				link: `/eng/Market/Futures/Metal/pb_f/`,
+			  },
+			  {
+				 productid: `ni_f`,
+				link: `/eng/Market/Futures/Metal/ni_f/`,
+			  },
+			  {
+				 productid: `sn_f`,
+				link: `/eng/Market/Futures/Metal/sn_f/`,
+			  },
+			  {
+				 productid: `ao_f`,
+				link: `/eng/Market/Futures/Metal/ao_f/`,
+			  },
+			  {
+				 productid: `ad_f`,
+				link: `/eng/Market/Futures/Metal/ad_f/`,
+			  },
+			  {
+				 productid: `au_f`,
+				link: `/eng/Market/Futures/Metal/au_f/`,
+			  },
+			  {
+				 productid: `ag_f`,
+				link: `/eng/Market/Futures/Metal/ag_f/`,
+			  },
+			  {
+				 productid: `rb_f`,
+				link: `/eng/Market/Futures/Metal/rb_f/`,
+			  },
+			  {
+				 productid: `wr_f`,
+				link: `/eng/Market/Futures/Metal/wr_f/`,
+			  },
+			  {
+				 productid: `hc_f`,
+				link: `/eng/Market/Futures/Metal/hc_f/`,
+			  },
+			  {
+				 productid: `ss_f`,
+				link: `/eng/Market/Futures/Metal/ss_f/`,
+			  }
+			  
+			]
+			let  all_energy= [
+			  {
+				productid: `sc_f`,
+				link: `/eng/Market/Futures/Energy/sc_f/`,
+			  },
+			  {
+				productid: `lu_f`,
+				link: `/eng/Market/Futures/Energy/lu_f/`,
+			  },
+			  {
+				productid: `fu_f`,
+				link: `/eng/Market/Futures/Energy/fu_f/`,
+			  },
+			  {
+				productid: `bu_f`,
+				link: `/eng/Market/Futures/Energy/bu_f/`,
+			  }
+			  
+			]
+			let  all_chemical= [
+			{
+						  productid: `br_f`,
+						link: `/eng/Market/Futures/Chemical/br_f/`,
+			},
+			{
+						  productid: `ru_f`,
+						link: `/eng/Market/Futures/Chemical/ru_f/`,
+			},
+			{
+						  productid: `nr_f`,
+						link: `/eng/Market/Futures/Chemical/nr_f/`,
+			},
+			{
+						  productid: `sp_f`,
+						link: `/eng/Market/Futures/Chemical/sp_f/`,
+			},
+			{
+						  productid: `op_f`,
+						link: `/eng/Market/Futures/Chemical/op_f/`,
+			},
+			
+			  {
+				 productid: `ec_f`,
+				link: `/eng/Market/Futures/index_f/ec_f/`,
+			  }
+			  
+			]
+		  
+		</script>
+		<script src="/eng/images/home_market_list.js"></script>
+
+		<!-- volume echart图 -->
+		<script type="text/x-template" id="home-volume-chart-component">
+ <div>
+ <div class="sqs_contract_screen">
+  <el-form ref="form"  >
+   <el-select  :clearable="false"  v-model="type_select" @change="chooseType">
+    <el-option  v-for="(e,i) in pro_list_info" :key="i" :label="e.product_name_en" :value="e.productid" ></el-option>
+	</el-select>
+  </el-form>
+ 
+</div>
+ <div class="Volume_eachrs" style="width: 100%; height: 100%" >
+       <div id="main1" :style="chartStyle"></div>
+ </div>
+ 
+ <div class="echarts_text">
+   <div>
+     * Volume and OI(Open Interest) Last Updated at the end
+     of {{reportdate}}.
+   </div>
+   <div class="echarts_text_d2">
+     The unit of volume and OI is lot, counted as one-side.
+   </div>
+ </div>
+ 
+</div>
+	
+</script>
+		<script src="/eng/images/home_volume_chart.js"></script>
+
+		<!-- price echart图 -->
+		<script type="text/x-template" id="home-price-chart-component">
+ <div>
+ <div class="sqs_contract_screen">
+  <el-form ref="form"  >
+   <el-select  :clearable="false"  v-model="type_select"  @change="chooseType" >
+    <el-option  v-for="(e,i) in pro_list_info" :key="i" :label="e.product_name_en" :value="e.productid" ></el-option>
+     <el-option label='IMCI' value='IMCI'></el-option>
+	</el-select>
+  </el-form>
+ 
+</div>
+ <div class="Volume_eachrs" style="width: 100%; height: 100%" >
+       <div id="main2" v-if="type_select!='IMCI'" :style="chartStyle"></div>
+	   <div id="main3" v-if="type_select==='IMCI'" :style="chartStyle"></div>
+ </div>
+ 
+ <div class="echarts_text">
+   <div>
+    * Volume and Close Price Last Updated at the end of {{reportdate}}
+   </div>
+   <div class="echarts_text_d2">
+     The unit of volume and OI is lot, counted as one-side.
+   </div>
+ </div>
+ 
+</div>
+	
+</script>
+
+		<!-- 延时行情-期货 -->
+		<style>
+	.m_delay_btn img {
+    height: 0.18rem;
+  }
+  .market_line {
+    text-align: left;
+    font-size: 0.18rem;
+  }
+  .title_date {
+    position: absolute;
+    top: 0.125rem;
+    right: 0;
+  }
+</style>
+
+<script type="text/x-template" id="home-delaymarket-f-component">
+
+	<div>
+    <div class="main_info" v-if="!isShowMobilePage"  v-loading="loading">
+        <div class="content_table" style="width:100%">
+          <div v-for="(item, key, index) in resultList" :key="index + '_a'">
+		  
+            <el-table class="futures_thead" stripe border :data="item" style="width: 100%" max-height="470">
+              <el-table-column
+                prop="contractname"
+                label="Contract"
+                align="center"
+                min-width="7%"
+              >
+              </el-table-column>
+              <el-table-column
+                prop="lastprice"
+                label="Last"
+                align="right"
+                min-width="8%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.lastprice, scope.row.precision)
+                  }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="upperdown"
+                label="Chg"
+                align="right"
+                min-width="8%"
+              >
+                <template scope="scope">
+                  <span v-if="scope.row.upperdown>0" style="color: red"
+                    >{{ handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+                  >
+                  <span v-else style="color: #37b328"
+                    >{{ handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+                  >
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="openinterest"
+                label="Open Interest"
+                align="right"
+                min-width="10%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.openinterest, 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="volume"
+                label="Volume"
+                align="right"
+                min-width="8%"
+              >
+                 <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.volume, 0) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                v-if="isShowTas"
+                prop="tasvolume"
+                label="Tas Volume"
+                align="right"
+                min-width="8%"
+              >
+              </el-table-column>
+              <el-table-column
+                prop="turnover"
+                label="Turnover"
+                align="right"
+                min-width="10%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.turnover, scope.row.turnover_decimal_number) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="bidprice/askprice"
+                label="Bid-Ask"
+                align="right"
+                min-width="10%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.bidprice, scope.row.precision)  +'/'+ handleDataPrecision(scope.row.askprice, scope.row.precision) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="presettlementprice"
+                label="Pre-clear"
+                align="right"
+                min-width="8%"
+              >
+              <template slot-scope="scope">
+                {{ handleDataPrecision(scope.row.presettlementprice, scope.row.precision) }}
+              </template>
+              </el-table-column>
+              <el-table-column
+                prop="openprice"
+                label="Open"
+                align="right"
+                min-width="8%"
+              >
+              <template slot-scope="scope">
+                {{ handleDataPrecision(scope.row.openprice, scope.row.precision) }}
+              </template>
+              </el-table-column>
+              <el-table-column
+                prop="lowerprice"
+                label="Low"
+                align="right"
+                min-width="8%"
+              >
+              <template slot-scope="scope">
+                {{ handleDataPrecision(scope.row.lowerprice, scope.row.precision) }}
+              </template>
+              </el-table-column>
+              <el-table-column
+                prop="highprice"
+                label="High"
+                align="right"
+                min-width="8%"
+              >
+              <template slot-scope="scope">
+                {{ handleDataPrecision(scope.row.highprice, scope.row.precision) }}
+              </template>
+              </el-table-column>
+              
+               <el-table-column label="Chart" min-width="8%" align="center">
+                <template slot-scope="scope">
+                   <a 
+                    style="color: #014380;text-decoration: underline;cursor: pointer;"
+                    @click="get_upperdown_report(scope.row)"
+                  >
+                     <img src="/eng/images/hqticon-base2x.png" width="30" />
+                  </a>
+
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+		 
+      </div>
+     <div  v-if="noData || noData1 " >
+     <el-table class="futures_thead" stripe border :data="[]" style="width: 100%" max-height="470">
+       <el-table-column
+         prop="contractname"
+         label="Contract"
+         align="center"
+         min-width="7%"
+       >
+       </el-table-column>
+       <el-table-column
+         prop="lastprice"
+         label="Last"
+         align="right"
+         min-width="8%"
+       >
+         <template slot-scope="scope">
+           {{ handleDataPrecision(scope.row.lastprice, scope.row.precision)
+           }}
+         </template>
+       </el-table-column>
+       <el-table-column
+         prop="upperdown"
+         label="Chg"
+         align="right"
+         min-width="8%"
+       >
+         <template scope="scope">
+          
+         </template>
+       </el-table-column>
+       <el-table-column
+         prop="openinterest"
+         label="Open Interest"
+         align="right"
+         min-width="10%"
+       >
+         <template slot-scope="scope">
+           {{ handleDataPrecision(scope.row.openinterest, 0) }}
+         </template>
+       </el-table-column>
+       <el-table-column
+         prop="volume"
+         label="Volume"
+         align="right"
+         min-width="8%"
+       >
+          <template slot-scope="scope">
+           {{ handleDataPrecision(scope.row.volume, 0) }}
+         </template>
+       </el-table-column>
+       <el-table-column
+         v-if="isShowTas"
+         prop="tasvolume"
+         label="Tas Volume"
+         align="right"
+         min-width="8%"
+       >
+       </el-table-column>
+       <el-table-column
+         prop="turnover"
+         label="Turnover"
+         align="right"
+         min-width="10%"
+       >
+         <template slot-scope="scope">
+           {{ handleDataPrecision(scope.row.turnover, scope.row.turnover_decimal_number) }}
+         </template>
+       </el-table-column>
+       <el-table-column
+         prop="bidprice/askprice"
+         label="Bid-Ask"
+         align="right"
+         min-width="10%"
+       >
+         <template slot-scope="scope">
+           {{ handleDataPrecision(scope.row.bidprice, scope.row.precision)  +'/'+ handleDataPrecision(scope.row.askprice, scope.row.precision) }}
+         </template>
+       </el-table-column>
+       <el-table-column
+         prop="presettlementprice"
+         label="Pre-clear"
+         align="right"
+         min-width="8%"
+       >
+       <template slot-scope="scope">
+         {{ handleDataPrecision(scope.row.presettlementprice, scope.row.precision) }}
+       </template>
+       </el-table-column>
+       <el-table-column
+         prop="openprice"
+         label="Open"
+         align="right"
+         min-width="8%"
+       >
+       <template slot-scope="scope">
+         {{ handleDataPrecision(scope.row.openprice, scope.row.precision) }}
+       </template>
+       </el-table-column>
+       <el-table-column
+         prop="lowerprice"
+         label="Low"
+         align="right"
+         min-width="8%"
+       >
+       <template slot-scope="scope">
+         {{ handleDataPrecision(scope.row.lowerprice, scope.row.precision) }}
+       </template>
+       </el-table-column>
+       <el-table-column
+         prop="highprice"
+         label="High"
+         align="right"
+         min-width="8%"
+       >
+       <template slot-scope="scope">
+         {{ handleDataPrecision(scope.row.highprice, scope.row.precision) }}
+       </template>
+       </el-table-column>
+       
+        <el-table-column label="Chart" min-width="8%" align="center">
+         <template slot-scope="scope">
+         
+     
+         </template>
+       </el-table-column>
+     </el-table>
+     </div>
+     
+
+      <el-dialog
+        v-if="dialogVisible"
+        :visible.sync="dialogVisible"
+        width="66%"
+        append-to-body
+        @close="closeDialogFn"
+      >
+        <div>
+          <div style="width: 100%; height: 4.5rem; top: 40px" id="market_ticker"></div>
+        </div>
+      </el-dialog>
+  
+    </div>
+    <div id="export-table" v-if="isShowMobilePage">
+      
+      <div v-if="!noData">
+       
+        
+        <div class="m_table_content">
+          <div  v-if="!noData1">
+            <div v-for="(item, key, index) in resultList" :key="index + '_a'">
+              
+              <el-table stripe border :data="item" style="width: 100%"  class="table-fixed futures_thead" max-height="400" >
+                <el-table-column
+                  prop="contractname"
+                  label="Contract"
+                  align="center"
+                  :width="converSize(100)" fixed="left"
+                >
+                </el-table-column>
+                <el-table-column
+                  prop="lastprice"
+                  label="Last"
+                  align="right"
+                  :width="converSize(80)"
+                >
+                  <template slot-scope="scope">
+                    {{ handleDataPrecision(scope.row.lastprice, scope.row.precision)
+                    }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="upperdown"
+                  label="Chg"
+                  align="right"
+                  :width="converSize(80)"
+                >
+                  <template scope="scope">
+                    <span v-if="scope.row.upperdown>0" style="color: red"
+                      >{{ handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+                    >
+                    <span v-else style="color: #37b328"
+                      >{{ handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+                    >
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="openinterest"
+                  label="Open Interest"
+                  align="right"
+                  :width="converSize(100)"
+                >
+                  <template slot-scope="scope">
+                    {{ handleDataPrecision(scope.row.openinterest, 0) }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="volume"
+                  label="Volume"
+                  align="right"
+                  :width="converSize(80)"
+                >
+                  <template slot-scope="scope">
+                    {{ handleDataPrecision(scope.row.volume, 0) }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  v-if="isShowTas"
+                  prop="tasvolume"
+                  label="Tas Volume"
+                  align="right"
+                  :width="converSize(80)"
+                >
+                </el-table-column>
+                <el-table-column
+                  prop="turnover"
+                  label="Turnover"
+                  align="right"
+                  :width="converSize(120)"
+                >
+                  <template slot-scope="scope">
+                    {{ handleDataPrecision(scope.row.turnover, scope.row.turnover_decimal_number) }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="bidprice/askprice"
+                  label="Bid-Ask"
+                  align="right"
+                  :width="converSize(120)"
+                >
+                  <template slot-scope="scope">
+                    {{ handleDataPrecision(scope.row.bidprice, scope.row.precision)  +'/'+ handleDataPrecision(scope.row.askprice, scope.row.precision) }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="presettlementprice"
+                  label="Pre-clear"
+                  align="right"
+                  :width="converSize(80)"
+                >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.presettlementprice, scope.row.precision) }}
+                </template>
+                </el-table-column>
+                <el-table-column
+                  prop="openprice"
+                  label="Open"
+                  align="right"
+                  :width="converSize(80)"
+                >
+                  <template slot-scope="scope">
+                    {{ handleDataPrecision(scope.row.openprice, scope.row.precision) }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="lowerprice"
+                  label="Low"
+                  align="right"
+                  :width="converSize(80)"
+                >
+                  <template slot-scope="scope">
+                    {{ handleDataPrecision(scope.row.lowerprice, scope.row.precision) }}
+                  </template>
+                </el-table-column>
+                <el-table-column
+                  prop="highprice"
+                  label="High"
+                  align="right"
+                  :width="converSize(80)"
+                >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.highprice, scope.row.precision) }}
+                </template>
+                </el-table-column>
+
+              
+
+                <el-table-column label="Chart" :width="converSize(90)" align="center" class-name="m_delay_btn_line">
+                  <template slot-scope="scope">
+                    
+                     <a
+                      class="m_delay_btn"
+                      style="display: inline-block;"
+                      @click="get_upperdown_report(scope.row)"
+                      target="_blank"
+                    >
+                    <img src="/eng/images/hqticon-base2x.png" width="30" />
+                    </a>
+                  
+                 
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-if="noData || noData1 " >
+		<el-table stripe border :data="[]" style="width: 100%"  class="table-fixed futures_thead" max-height="600" >
+		  <el-table-column
+		    prop="contractname"
+		    label="Contract"
+		    align="center"
+		    :width="converSize(100)" fixed="left"
+		  >
+		  </el-table-column>
+		  <el-table-column
+		    prop="lastprice"
+		    label="Last"
+		    align="right"
+		    :width="converSize(80)"
+		  >
+		    <template slot-scope="scope">
+		      {{ handleDataPrecision(scope.row.lastprice, scope.row.precision)
+		      }}
+		    </template>
+		  </el-table-column>
+		  <el-table-column
+		    prop="upperdown"
+		    label="Chg"
+		    align="right"
+		    :width="converSize(80)"
+		  >
+		    <template scope="scope">
+		      <span v-if="scope.row.upperdown>0" style="color: red"
+		        >{{ handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+		      >
+		      <span v-else style="color: #37b328"
+		        >{{ handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+		      >
+		    </template>
+		  </el-table-column>
+		  <el-table-column
+		    prop="openinterest"
+		    label="Open Interest"
+		    align="right"
+		    :width="converSize(100)"
+		  >
+		    <template slot-scope="scope">
+		      {{ handleDataPrecision(scope.row.openinterest, 0) }}
+		    </template>
+		  </el-table-column>
+		  <el-table-column
+		    prop="volume"
+		    label="Volume"
+		    align="right"
+		    :width="converSize(80)"
+		  >
+		    <template slot-scope="scope">
+		      {{ handleDataPrecision(scope.row.volume, 0) }}
+		    </template>
+		  </el-table-column>
+		 <el-table-column
+		   v-if="isShowTas"
+		   prop="tasvolume"
+		   label="Tas Volume"
+		   align="right"
+		   :width="converSize(80)"
+		 >
+		  </el-table-column>
+		  <el-table-column
+		    prop="turnover"
+		    label="Turnover"
+		    align="right"
+		    :width="converSize(80)"
+		  >
+		    <template slot-scope="scope">
+		      {{ handleDataPrecision(scope.row.turnover, scope.row.turnover_decimal_number) }}
+		    </template>
+		  </el-table-column>
+		  <el-table-column
+		    prop="bidprice/askprice"
+		    label="Bid-Ask"
+		    align="right"
+		    :width="converSize(120)"
+		  >
+		    <template slot-scope="scope">
+		      {{ handleDataPrecision(scope.row.bidprice, scope.row.precision)  +'/'+ handleDataPrecision(scope.row.askprice, scope.row.precision) }}
+		    </template>
+		  </el-table-column>
+		  <el-table-column
+		    prop="presettlementprice"
+		    label="Pre-clear"
+		    align="right"
+		    :width="converSize(80)"
+		  >
+		  <template slot-scope="scope">
+		    {{ handleDataPrecision(scope.row.presettlementprice, scope.row.precision) }}
+		  </template>
+		  </el-table-column>
+		  <el-table-column
+		    prop="openprice"
+		    label="Open"
+		    align="right"
+		    :width="converSize(80)"
+		  >
+		    <template slot-scope="scope">
+		      {{ handleDataPrecision(scope.row.openprice, scope.row.precision) }}
+		    </template>
+		  </el-table-column>
+		  <el-table-column
+		    prop="lowerprice"
+		    label="Low"
+		    align="right"
+		    :width="converSize(80)"
+		  >
+		    <template slot-scope="scope">
+		      {{ handleDataPrecision(scope.row.lowerprice, scope.row.precision) }}
+		    </template>
+		  </el-table-column>
+		  <el-table-column
+		    prop="highprice"
+		    label="High"
+		    align="right"
+		    :width="converSize(80)"
+		  >
+		  <template slot-scope="scope">
+		    {{ handleDataPrecision(scope.row.highprice, scope.row.precision) }}
+		  </template>
+		  </el-table-column>
+		
+		
+		
+		  <el-table-column label="Chart" :width="converSize(90)" align="center" class-name="m_delay_btn_line">
+		    <template slot-scope="scope">
+		      
+		    </template>
+		  </el-table-column>
+		</el-table>
+		              
+	  </div>
+      <el-dialog
+        v-if="dialogVisible"
+        :visible.sync="dialogVisible"
+        :width=" isShowMobilePage ? '100%' : '60%' "
+        append-to-body
+        @close="closeDialogFn"
+      >
+        <div>
+          <div style="width: 100%; height: 3.2rem; top: 40px" id="market_ticker"></div>
+        </div>
+      </el-dialog>
+    </div>
+  </div>
+</script>
+<script type='text/javascript'>
+	var market_info_f = ""
+</script>
+		<script src="/eng/images/homeData_delaymarket_f.js"></script>
+
+		<!-- 延时行情-期权 -->
+		<style>
+  .market_line {
+    text-align: left;
+    font-size: 0.18rem;
+  }
+  .title_date {
+    position: absolute;
+    top: 0.125rem;
+    right: 0;
+  }
+</style>
+
+<script type="text/x-template" id="delaymarket-component">
+
+  <div>
+  
+    <div v-if="!isShowMobilePage" class="main_info" v-loading="loading">
+      <div class="main_info">
+        <div class="content_table">
+          <template>
+          <div v-for="(item, key, index) in resultList" :key="index + '_a'">
+            <el-table  class="futures_thead" stripe border :data="item" style="width: 100%;" max-height="470">
+              <el-table-column
+                prop="contractname"
+                label="Contract"
+                align="center"
+                min-width="14%"
+              >
+                <template slot-scope="scope">
+                  {{ scope.row.PRODUCTID === enumObj.field_key_all_total ?
+                  scope.row.PRODUCTID : scope.row.contractname }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="lastprice"
+                label="Last"
+                align="right"
+                min-width="9%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.lastprice, scope.row.precision)
+                  }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="upperdown"
+                label="Chg"
+                align="right"
+                min-width="9%"
+              >
+                <template scope="scope">
+                  <span v-if="scope.row.upperdown>0" style="color: red"
+                    >{{  handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+                  >
+                  <span v-else style="color: #37b328"
+                    >{{  handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+                  >
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="volume"
+                label="Volume"
+                align="right"
+                min-width="9%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.volume, 0)
+                  }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="openinterest"
+                label="	Open Interest"
+                align="right"
+                min-width="13%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.openinterest, 0)
+                  }}
+                </template>
+              </el-table-column>
+  
+              <el-table-column
+                prop="bidprice"
+                label="Bid"
+                align="right"
+                min-width="8%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.bidprice, scope.row.precision) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="askprice"
+                label="Ask"
+                align="right"
+                min-width="8%"
+              >
+                <template slot-scope="scope">
+                  {{ handleDataPrecision(scope.row.askprice, scope.row.precision) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="bidvolume"
+                label="Bid Interest"
+                align="right"
+                min-width="14%"
+              >
+              </el-table-column>
+              <el-table-column
+                prop="askvolume"
+                label="Ask Interest"
+                align="right"
+                min-width="14%"
+              >
+  
+              </el-table-column>
+              <el-table-column
+                prop="settlementprice"
+                label="Clear"
+                align="right"
+                min-width="9%"
+              >
+              </el-table-column>
+              <el-table-column
+                prop="openprice"
+                label="Open"
+                align="right"
+                min-width="9%"
+              >
+              </el-table-column>
+              <el-table-column
+                prop="closeprice"
+                label="Close"
+                align="right"
+                min-width="9%"
+              >
+              </el-table-column>
+              <el-table-column
+                prop="highprice"
+                label="High"
+                align="right"
+                min-width="9%"
+              >
+              </el-table-column>
+              <el-table-column
+                prop="lowerprice"
+                label="Low"
+                align="right"
+                min-width="9%"
+              >
+              </el-table-column>
+              <el-table-column
+                prop="presettlementprice"
+                label="Pre-clear"
+                align="right"
+                min-width="13%"
+              >
+              </el-table-column>
+            </el-table>
+          </div>
+		  <div v-if="resultList.length == 0">
+		    <el-table  class="futures_thead" stripe border :data="[]" style="width: 100%">
+		      <el-table-column
+		        prop="contractname"
+		        label="Contract"
+		        align="center"
+		        min-width="15%"
+		      >
+		        <template slot-scope="scope">
+		          {{ scope.row.PRODUCTID === enumObj.field_key_all_total ?
+		          scope.row.PRODUCTID : scope.row.contractname }}
+		        </template>
+		      </el-table-column>
+		      <el-table-column
+		        prop="lastprice"
+		        label="Last"
+		        align="right"
+		        min-width="9%"
+		      >
+		        <template slot-scope="scope">
+		          {{ handleDataPrecision(scope.row.lastprice, scope.row.precision)
+		          }}
+		        </template>
+		      </el-table-column>
+		      <el-table-column
+		        prop="upperdown"
+		        label="Chg"
+		        align="right"
+		        min-width="9%"
+		      >
+		        <template scope="scope">
+		          <span v-if="scope.row.upperdown>0" style="color: red"
+		            >{{  handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+		          >
+		          <span v-else style="color: #37b328"
+		            >{{  handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+		          >
+		        </template>
+		      </el-table-column>
+		      <el-table-column
+		        prop="volume"
+		        label="Volume"
+		        align="right"
+		        min-width="9%"
+		      >
+		        <template slot-scope="scope">
+		          {{ handleDataPrecision(scope.row.volume, 0)
+		          }}
+		        </template>
+		      </el-table-column>
+		      <el-table-column
+		        prop="openinterest"
+		        label="	Open Interest"
+		        align="right"
+		        min-width="13%"
+		      >
+		        <template slot-scope="scope">
+		          {{ handleDataPrecision(scope.row.openinterest, 0)
+		          }}
+		        </template>
+		      </el-table-column>
+		      
+		      <el-table-column
+		        prop="bidprice"
+		        label="Bid"
+		        align="right"
+		        min-width="8%"
+		      >
+		        <template slot-scope="scope">
+		          {{ handleDataPrecision(scope.row.bidprice, scope.row.precision) }}
+		        </template>
+		      </el-table-column>
+		      <el-table-column
+		        prop="askprice"
+		        label="Ask"
+		        align="right"
+		        min-width="8%"
+		      >
+		        <template slot-scope="scope">
+		          {{ handleDataPrecision(scope.row.askprice, scope.row.precision) }}
+		        </template>
+		      </el-table-column>
+		      <el-table-column
+		        prop="bidvolume"
+		        label="Bid Interest"
+		        align="right"
+		        min-width="14%"
+		      >
+		      </el-table-column>
+		      <el-table-column
+		        prop="askvolume"
+		        label="Ask Interest"
+		        align="right"
+		        min-width="14%"
+		      >
+		      
+		      </el-table-column>
+		      <el-table-column
+		        prop="settlementprice"
+		        label="Clear"
+		        align="right"
+		        min-width="9%"
+		      >
+		      </el-table-column>
+		      <el-table-column
+		        prop="openprice"
+		        label="Open"
+		        align="right"
+		        min-width="9%"
+		      >
+		      </el-table-column>
+		      <el-table-column
+		        prop="closeprice"
+		        label="Close"
+		        align="right"
+		        min-width="9%"
+		      >
+		      </el-table-column>
+		      <el-table-column
+		        prop="highprice"
+		        label="High"
+		        align="right"
+		        min-width="9%"
+		      >
+		      </el-table-column>
+		      <el-table-column
+		        prop="lowerprice"
+		        label="Low"
+		        align="right"
+		        min-width="9%"
+		      >
+		      </el-table-column>
+		      <el-table-column
+		        prop="presettlementprice"
+		        label="Pre-clear"
+		        align="right"
+		        min-width="13%"
+		      >
+		      </el-table-column>
+		    </el-table>
+		  </div>
+        </template>
+        </div>
+      </div>
+    </div>
+    <div v-if="isShowMobilePage">
+      <div id="export-table">
+      <div >
+          <div class="m_table_content">
+            <template>
+              <div v-for="(item, key, index) in resultList" :key="index + '_a'">
+                <el-table  stripe border :data="item" style="width: 100% " class="table-fixed futures_thead"  max-height="400">
+                  <el-table-column
+                    prop="contractname"
+                    label="Contract"
+                    align="center"
+                    :width="converSize(115)" fixed
+                  >
+                    <template slot-scope="scope">
+                      {{ scope.row.PRODUCTID === enumObj.field_key_all_total ?
+                      scope.row.PRODUCTID : scope.row.contractname }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column
+                    prop="lastprice"
+                    label="Last"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                    <template slot-scope="scope">
+                      {{ handleDataPrecision(scope.row.lastprice, scope.row.precision)
+                      }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column
+                    prop="upperdown"
+                    label="Chg"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                    <template scope="scope">
+                      <span v-if="scope.row.upperdown>0" style="color: red"
+                        >{{  handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+                      >
+                      <span v-else style="color: #37b328"
+                        >{{  handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+                      >
+                    </template>
+                  </el-table-column>
+                  <el-table-column
+                    prop="volume"
+                    label="Volume"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                    <template slot-scope="scope">
+                      {{ handleDataPrecision(scope.row.volume, 0)
+                      }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column
+                    prop="openinterest"
+                    label="Open Interest"
+                    align="right"
+                    :width="converSize(90)"
+                    
+                  >
+                    <template slot-scope="scope">
+                      {{ handleDataPrecision(scope.row.openinterest, 0)
+                      }}
+                    </template>
+                  </el-table-column>
+  
+                  <el-table-column
+                    prop="bidprice"
+                    label="Bid"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                    <template slot-scope="scope">
+                      {{ handleDataPrecision(scope.row.bidprice, scope.row.precision) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column
+                    prop="askprice"
+                    label="Ask"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                    <template slot-scope="scope">
+                      {{ handleDataPrecision(scope.row.askprice, scope.row.precision) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column
+                    prop="bidvolume"
+                    label="Bid Interest"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                  </el-table-column>
+                  <el-table-column
+                    prop="askvolume"
+                    label="Ask Interest"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+  
+                  </el-table-column>
+                  <el-table-column
+                    prop="settlementprice"
+                    label="Clear"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                  </el-table-column>
+                  <el-table-column
+                    prop="openprice"
+                    label="Open"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                  </el-table-column>
+                  <el-table-column
+                    prop="closeprice"
+                    label="Close"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                  </el-table-column>
+                  <el-table-column
+                    prop="highprice"
+                    label="High"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                  </el-table-column>
+                  <el-table-column
+                    prop="lowerprice"
+                    label="Low"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                  </el-table-column>
+                  <el-table-column
+                    prop="presettlementprice"
+                    label="Pre-clear"
+                    align="right"
+                    :width="converSize(90)"
+                  >
+                  </el-table-column>
+                </el-table>
+              </div>
+				<div v-if="resultList.length == 0">
+				  <el-table  stripe border :data="[]" style="width: 100% " class="table-fixed futures_thead"  max-height="400">
+				    <el-table-column
+				      prop="contractname"
+				      label="Contract"
+				      align="center"
+				      :width="converSize(100)" fixed
+				    >
+				      <template slot-scope="scope">
+				        {{ scope.row.PRODUCTID === enumObj.field_key_all_total ?
+				        scope.row.PRODUCTID : scope.row.contractname }}
+				      </template>
+				    </el-table-column>
+				    <el-table-column
+				      prop="lastprice"
+				      label="Last"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				      <template slot-scope="scope">
+				        {{ handleDataPrecision(scope.row.lastprice, scope.row.precision)
+				        }}
+				      </template>
+				    </el-table-column>
+				    <el-table-column
+				      prop="upperdown"
+				      label="Chg"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				      <template scope="scope">
+				        <span v-if="scope.row.upperdown>0" style="color: red"
+				          >{{  handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+				        >
+				        <span v-else style="color: #37b328"
+				          >{{  handleDataPrecision(scope.row.upperdown, scope.row.precision) }}</span
+				        >
+				      </template>
+				    </el-table-column>
+				    <el-table-column
+				      prop="volume"
+				      label="Volume"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				      <template slot-scope="scope">
+				        {{ handleDataPrecision(scope.row.volume, 0)
+				        }}
+				      </template>
+				    </el-table-column>
+				    <el-table-column
+				      prop="openinterest"
+				      label="Open Interest"
+				      align="right"
+				      :width="converSize(90)"
+				      
+				    >
+				      <template slot-scope="scope">
+				        {{ handleDataPrecision(scope.row.openinterest, 0)
+				        }}
+				      </template>
+				    </el-table-column>
+				
+				    
+				    <el-table-column
+				    prop="openinterestchg"
+				    label="Open Interest Chg"
+				    align="right"
+				    :width="converSize(120)"
+				    >
+				      <template slot-scope="scope">
+				        {{ handleDataPrecision(scope.row.openinterestchg,
+				        0) }}
+				      </template>
+				    </el-table-column>
+				
+				    <el-table-column
+				      prop="bidprice"
+				      label="Bid"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				      <template slot-scope="scope">
+				        {{ handleDataPrecision(scope.row.bidprice, scope.row.precision) }}
+				      </template>
+				    </el-table-column>
+				    <el-table-column
+				      prop="askprice"
+				      label="Ask"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				      <template slot-scope="scope">
+				        {{ handleDataPrecision(scope.row.askprice, scope.row.precision) }}
+				      </template>
+				    </el-table-column>
+				    <el-table-column
+				      prop="bidvolume"
+				      label="Bid Interest"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				    </el-table-column>
+				    <el-table-column
+				      prop="askvolume"
+				      label="Ask Interest"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				
+				    </el-table-column>
+				    <el-table-column
+				      prop="settlementprice"
+				      label="Clear"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				    </el-table-column>
+				    <el-table-column
+				      prop="openprice"
+				      label="Open"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				    </el-table-column>
+				    <el-table-column
+				      prop="closeprice"
+				      label="Close"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				    </el-table-column>
+				    <el-table-column
+				      prop="highprice"
+				      label="High"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				    </el-table-column>
+				    <el-table-column
+				      prop="lowerprice"
+				      label="Low"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				    </el-table-column>
+				    <el-table-column
+				      prop="presettlementprice"
+				      label="Pre-clear"
+				      align="right"
+				      :width="converSize(90)"
+				    >
+				    </el-table-column>
+				  </el-table>
+				</div>
+				           
+			</template>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </script>
+  <script>
+  var market_info_o = ""
+  </script>
+		<script src="/eng/images/homeData_delaymarket_o.js"></script>
+		<script src="/eng/images/home_price_chart.js"></script>
+		<script src="/eng/images/home_index.js"></script>
+
+		<!-- Monitor Start -->
+		<script type='text/javascript'>
+			params.docId='';
+			params.doctitle='';
+			params.channelId='6470';
+			params.channelName='Home';
+			params.siteId='25';
+			params.siteName='shfe_en';
+		</script>
+		<!-- Monitor End -->
+
+	</body>
+</html>

@@ -1,0 +1,197 @@
+{
+ "daily_pre2010": {
+  "bars": 1000,
+  "first": "2005-09-27"
+ },
+ "daily_big_gaps": [
+  [
+   "2011-05-02",
+   365.38,
+   -87.4
+  ],
+  [
+   "2011-10-26",
+   2838.65,
+   688.0
+  ],
+  [
+   "2011-10-28",
+   357.37,
+   -87.4
+  ],
+  [
+   "2011-12-27",
+   2759.4,
+   692.9
+  ],
+  [
+   "2011-12-28",
+   347.48,
+   -87.4
+  ],
+  [
+   "2012-11-13",
+   2338.3,
+   693.0
+  ],
+  [
+   "2012-11-15",
+   286.81,
+   -87.7
+  ],
+  [
+   "2013-04-02",
+   2969.05,
+   708.0
+  ],
+  [
+   "2013-04-03",
+   369.63,
+   -87.6
+  ],
+  [
+   "2013-11-03",
+   3279.4,
+   701.8
+  ],
+  [
+   "2013-11-05",
+   406.88,
+   -87.6
+  ],
+  [
+   "2014-10-23",
+   3805.05,
+   702.9
+  ],
+  [
+   "2014-10-27",
+   475.38,
+   -87.5
+  ],
+  [
+   "2015-10-01",
+   1173.05,
+   102.8
+  ],
+  [
+   "2015-10-06",
+   578.45,
+   -51.1
+  ],
+  [
+   "2015-11-11",
+   1107.6,
+   100.5
+  ],
+  [
+   "2015-11-13",
+   547.78,
+   -50.5
+  ],
+  [
+   "2016-01-19",
+   1139.65,
+   101.4
+  ],
+  [
+   "2016-01-20",
+   560.63,
+   -50.8
+  ],
+  [
+   "2016-12-20",
+   1012.15,
+   101.5
+  ],
+  [
+   "2016-12-21",
+   500.78,
+   -50.5
+  ],
+  [
+   "2017-07-10",
+   957.05,
+   104.6
+  ],
+  [
+   "2017-07-11",
+   487.68,
+   -49.0
+  ]
+ ],
+ "minute_bars": {
+  "bars": 369,
+  "expected": 375,
+  "sum_minute_volume": 10164746,
+  "daily_volume": 10164746,
+  "coverage_pct": 100.0,
+  "last_close_1m": 1000.2,
+  "daily_close": 1000.2
+ },
+ "second_bars": {
+  "bars": 1000,
+  "span_s": 1610
+ },
+ "today_minute_bars": {
+  "bars": 131,
+  "last": "2026-09-28 11:25:00"
+ },
+ "future_0925": {
+  "close": 1002.5,
+  "spot_close": 1000.2,
+  "basis_rs": 2.3,
+  "oi_open": 53600800,
+  "oi_close": 46592000,
+  "oi_changes_per_day": 369
+ },
+ "future_daily_fields_oi": true,
+ "chain_near": {
+  "expiry": "2026-09-29",
+  "spot": 991.2,
+  "strikes": 54,
+  "traded_strikes": 25,
+  "pcr_oi": 0.44,
+  "max_call_oi_strike": 1100.0,
+  "max_put_oi_strike": 980.0,
+  "atm": 1000.0,
+  "call_mid": 4.05,
+  "put_mid": 11.4,
+  "atm_iv_call_pct": 33.7,
+  "atm_iv_put_pct": 27.5,
+  "atm_spread_bps_call": 247.0
+ },
+ "chain_next": {
+  "expiry": "2026-10-27",
+  "spot": 991.2,
+  "strikes": 52,
+  "traded_strikes": 24,
+  "pcr_oi": 0.75,
+  "max_call_oi_strike": 1100.0,
+  "max_put_oi_strike": 1000.0,
+  "atm": 1000.0,
+  "call_mid": 37.0,
+  "put_mid": 38.85,
+  "atm_iv_call_pct": 34.6,
+  "atm_iv_put_pct": 33.1,
+  "atm_spread_bps_call": 54.0
+ },
+ "hist_expired_future_202009": {
+  "bars": 376,
+  "oi_nonzero": 376
+ },
+ "hist_expired_option_202309_call1500": {
+  "bars": 375,
+  "oi_nonzero": 375
+ },
+ "hist_expired_future_202509": {
+  "bars": 375,
+  "oi_nonzero": 375
+ },
+ "icici_charges": {
+  "buy_total": 41.01,
+  "sell_total": 39.53,
+  "brokerage_rate_pct": 0.25
+ },
+ "our_model_round_trip": "CostBreakdown(trade_value=19824.0, brokerage=57.4896, stt=19.824, stamp=1.4868000000000001, exchange=0.6383328, sebi=0.019824, ipft=0.019824, dp=20.0, gst=14.070164544, legs=['delivery-buy', 'delivery-sell'])"
+}

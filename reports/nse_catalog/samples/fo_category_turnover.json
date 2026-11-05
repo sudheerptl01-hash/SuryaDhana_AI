@@ -1,0 +1,86 @@
+[
+ {
+  "Client Category Wise Turnover": "Trade Date",
+  "Unnamed: 1": "Client Categories",
+  "Unnamed: 2": "Buy Value in Rs.Crores",
+  "Unnamed: 3": "Sell Value in Rs.Crores"
+ },
+ {
+  "Client Category Wise Turnover": "2026-09-25 00:00:00",
+  "Unnamed: 1": "Mutual Funds",
+  "Unnamed: 2": 66284.18,
+  "Unnamed: 3": 68473
+ },
+ {
+  "Client Category Wise Turnover": "2026-09-25 00:00:00",
+  "Unnamed: 1": "AIF",
+  "Unnamed: 2": 1265.67,
+  "Unnamed: 3": 1108.31
+ },
+ {
+  "Client Category Wise Turnover": "2026-09-25 00:00:00",
+  "Unnamed: 1": "PMS",
+  "Unnamed: 2": 907.07,
+  "Unnamed: 3": 874.66
+ },
+ {
+  "Client Category Wise Turnover": "2026-09-25 00:00:00",
+  "Unnamed: 1": "FPI",
+  "Unnamed: 2": 166766.1,
+  "Unnamed: 3": 166582.44
+ },
+ {
+  "Client Category Wise Turnover": "2026-09-25 00:00:00",
+  "Unnamed: 1": "Retail",
+  "Unnamed: 2": 57130.86,
+  "Unnamed: 3": 56985.15
+ },
+ {
+  "Client Category Wise Turnover": "2026-09-25 00:00:00",
+  "Unnamed: 1": "Insurance Companies",
+  "Unnamed: 2": 10.1,
+  "Unnamed: 3": 10.15
+ },
+ {
+  "Client Category Wise Turnover": "2026-09-25 00:00:00",
+  "Unnamed: 1": "Others",
+  "Unnamed: 2": 106098.34,
+  "Unnamed: 3": 104428.6
+ },
+ {
+  "Client Category Wise Turnover": NaN,
+  "Unnamed: 1": NaN,
+  "Unnamed: 2": NaN,
+  "Unnamed: 3": NaN
+ },
+ {
+  "Client Category Wise Turnover": "Note :",
+  "Unnamed: 1": NaN,
+  "Unnamed: 2": NaN,
+  "Unnamed: 3": NaN
+ },
+ {
+  "Client Category Wise Turnover": "1.Data is categorised first on custodial participant code basis and if custodial participant code is not assigned, then as per client category codes as uploaded by trading members in UCC system. ",
+  "Unnamed: 1": NaN,
+  "Unnamed: 2": NaN,
+  "Unnamed: 3": NaN
+ },
+ {
+  "Client Category Wise Turnover": "2. \u2018Retail\u2019 includes HUF, Individual/Proprietorship Firms, NRI and Partnership Firm / Limited Liability Partnership.",
+  "Unnamed: 1": NaN,
+  "Unnamed: 2": NaN,
+  "Unnamed: 3": NaN
+ },
+ {
+  "Client Category Wise Turnover": "3. \u2018Others\u2019 includes Public & Private Companies/Bodies Corporates, Trust / Society, Domestic Financial Institutions (Other than Banks & Insurance), Statutory Bodies, New Pension System (NPS), Non-Govt. Organisation, Depository Receipts, Non-Banking Financial Company (NBFC), Domestic Venture Capital Fund and PRO trades.",
+  "Unnamed: 1": NaN,
+  "Unnamed: 2": NaN,
+  "Unnamed: 3": NaN
+ },
+ {
+  "Client Category Wise Turnover": "   4. 'Options' turnover (Buy Value and Sell Value) is based on Premium value ",
+  "Unnamed: 1": NaN,
+  "Unnamed: 2": NaN,
+  "Unnamed: 3": NaN
+ }
+]

@@ -1,0 +1,307 @@
+◉ SURYADHANA ▸ BRIEF
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:40:03
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,127.30
+−1.20%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:39 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+BRF
+OVERNIGHT BRIEF
+Thursday, 15 October at 03:39 am IST · NSE opens 09:15 IST
+MORNING PAGES
+WEI
+ECO
+PRE
+MOV
+CF
+OMON
+DEAL
+INSD
+IPO
+↻ REFRESH ALL
+NEW SINCE YOUR LAST VISIT
+⚑ RISK FLAGS
+MEMB
+SEAG
+ECO
+MKT VALUATION
+TCS HP
+OMON PRICER
+SHORTS
+LOG
+✕ GOT IT
+NEEDS YOU · 3
+⚠ Start after a restart
+⚠ ICICI unattended login (TOTP)
+⚠ Desk industry cap
+HOW TO FIX ›
+MARKET
+NSE EOD 2026-10-14 · Nifty 500
+MKT ›
+0/4
+RISK-OFF
+exposure guide 0–20% · 9 sessions at this score
+Nifty 500
+22,038 -0.24%
+Above 50-DMA / 200-DMA
+33% / 51%
+Advances / declines
+825 / 577
+New highs / lows
+30 / 14
+Distribution days (25)
+11
+India VIX
+14.60 · 71st pct
+Valuation (NSE) MKT ›
+NIFTY P/E 19.3× (1st percentile since 2021) · P/B 2.8 · yield 1.5% · mid 28× · small 34× (small-cap premium 1.78× NIFTY, 100th pct)
+Global cues WEI ›
+GIFT -0.34%S&P -1.1%NKY 0.0%Brent +0.4%₹/$ -0.2%Fed in 13d
+Data this week ECO ›
+CLOSED Dussehra in 5d · CORE Sep in 5d
+FII / DII cash
+14 Oct FII −₹1,857 crDII +₹2,670 cr
+Pre-open F&O PRE ›
+last session · 66/109PREMIERENE +1.4%GODREJCP -1.6%
+NIFTY options OMON ›
+±1.53% by 19 Oct · PCR 0.86 · walls 23,000/22,000
+Industries, 1 month · best: Media Entertainment & Publication +6.4% · Information Technology +2.5% · Fast Moving Consumer Goods -0.3%
+worst: Utilities -10.2% · Construction Materials -7.3% · Metals & Mining -6.5%
+YOUR BOOK
+Decision Desk (paper) · ICICI account
+DESK ›
+BRKR ›
+DESK VALUE
+₹5,01,389
+start ₹5,00,000
+DESK RETURN
++0.28%
+NIFTY -2.24% same period
+POSITIONS
+0
+drawdown 0.0%
+CRASH FILTER ON · IN THE LIQUID FUND
+NIFTY 22,623 vs 200-DMA 24,222 (-6.6%) · needs +7.1% to turn risk-on · 154 sessions below
+Next monthly signal: close of Fri, 30 Oct (last weekday of the month; a holiday moves it a day earlier) · orders at the next open
+Plan 2026-10
+EXECUTED · signal 2026-09-30 · 0 orders
+ICICI holdings (0)
+₹0 invested · +₹0
+GOLD OPEN (MCX)
+GOLD DEC-26 · fair value before 09:00
+CMDT ›
+WAITING FOR THE OPEN
+Trade the open only if MCX opens within ₹300 of ₹147,612.
+Fair open
+₹1,47,612
+Baseline (MCX settlement 13 Oct (price-band midpoint))
+₹1,49,543
+Expected gap
+−₹1,931 (-1.29%)
+Chase limit
+₹300
+Baseline is the Tue 13 Oct settlement: ICICI publishes the file with the Wed 14 Oct settlement at about 07:30 IST on the next trading day. Until then the expected gap also includes Wed's move; the fair open itself stays valid (it scales the older settlement by every COMEX and rupee move since).
+THIS WEEK
+next 7 days · 173 corporate events
+EVTS ›
+YOUR STOCKS · 0 TRACKED
+Nothing announced for your stocks this week.
+RESULTS SINCE THE LAST CLOSE · REACT AT 09:15 · filed since 10-14 15:30
+MRPL filed 10-14 20:41 · profit +203% y/y
+awaiting the open · rev +37% · typically ±5.3%
+BAJAJCON filed 10-14 18:01 · profit +66% y/y
+awaiting the open · rev +26% · typically ±6.5%
+EMMVEE filed 10-14 19:02 · profit +61% y/y
+awaiting the open · rev +39% · typically ±6.4%
+BIRLAMONEY filed 10-14 19:14 · profit -57% y/y
+awaiting the open · rev -37% · typically ±17.5%
+CEATLTD filed 10-14 18:22 · profit -40% y/y
+awaiting the open · rev +26% · typically ±4.7%
+HDBFS filed 10-14 16:06 · profit +34% y/y
+awaiting the open · rev +10% · typically ±2.1%
+JUST REPORTED · BIGGEST REACTIONS
+HCLTECH
++8.4% · 2.4× normal
+ARSSBL
+-5.2% · 1.7× normal
+DMART
+-4.3% · 1.6× normal
+RBLBANK
+⚠ BAD RESULTS
+-7.1% · 1.5× normal
+TARIL
++15.0% · 1.4× normal
+LARGEST NAMES REPORTING
+TECHM ₹334 cr/day · typically ±2.0% · last Q profit +32%
+RESULTS 15 OCT · TODAY
+POLYCAB⚑ ₹289 cr/day · typically ±2.5% · last Q profit +33%
+RESULTS 15 OCT · TODAY
+JIOFIN ₹275 cr/day · typically ±1.5% · last Q profit +156%
+RESULTS 15 OCT · TODAY
+WIPRO ₹230 cr/day · typically ±4.3% · last Q profit +1%
+RESULTS 15 OCT · TODAY
+PERSISTENT ₹198 cr/day · typically ±5.7% · last Q profit +14%
+RESULTS 15 OCT · TODAY
+NESTLEIND ₹183 cr/day · typically ±2.2% · last Q profit +48%
+RESULTS 15 OCT · TODAY
+HDFCAMC ₹171 cr/day · typically ±3.5% · last Q profit +12%
+RESULTS 15 OCT · TODAY
+HDFCLIFE ₹169 cr/day · typically ±1.3% · last Q profit +12%
+RESULTS 15 OCT · TODAY
+LTF ₹140 cr/day · typically ±2.1% · last Q profit +31%
+RESULTS 15 OCT · TODAY
+SBC ₹108 cr/day · last Q profit +177%
+RESULTS 15 OCT · TODAY
+NEWS SCANNER
+scan 2026-10-14 · 14 picks
+NEWS ›
+Track record (270 picks): No edge yet: picks behave like similar stocks (t -0.27) and lose 2.5% after costs over 5 sessions
+ADANIPOWER
+Pre-regulatory LoA - 25-yr PSA pending UERC tariff adoption
+conv 6
+TATAPOWER
+Narrative Inflection - 2.8 GW Data-Centre Power Pipeline
+conv 6
+BHARATCOAL
+Pricing Power Inflection - Coking Coal Price Revision
+conv 6
+KPIL
+Order Inflow Acceleration - T&D (stock fell on news)
+conv 6
+ASTRAMICRO
+L1 Tender Status - AMCA AESA antenna (unawarded) + doubled order book
+conv 6
+MVELECTRO
+Strategic Institutional Entry - Kotak MF crosses 5% via open market
+conv 5
+HEADLINES
+last 24 h · Indian markets, RBI, FII flows, results, IPOs, global
+IPO
+Tonbo Imaging IPO GMP, Grey Market Premium Today · IPO Watch
+1h
+GLOBAL
+Wall Street stocks fall as inflation hits 3.7% · The Business Journal
+1h
+GLOBAL
+US Crude Oil Inventories See Massive Drop Off · Crude Oil Prices Today | OilPrice.com
+1h
+GLOBAL
+Dollar gains, Wall Street stocks fall after hot inflation data · marketscreener.com
+1h
+RBI
+Indian Bond Yields Touch Three-Year High On Oil, RBI Tightening · BW Businessworld
+1h
+IPO
+Vaibhav Vyapaar IPO Date, Price Band, GMP, Subscription & Allotment · IndiaIPO
+2h
+RBI
+BSE SENSEX Falls to 72,638.70 After RBI Raises Repo Rate to 5.5% Amid US-Iran Tensions · BBN Times
+3h
+RBI
+RBI MPC hikes repo rate by 25 bps to 5.5%, near-term cuts 'off the table' · Business Standard
+3h
+IPO
+LoanFront IPO opens to raise INR 42.10 crore, shares to list on NSE Emerge · Prop News Time
+3h
+SYSTEM
+data · broker · scheduler
+SYS ›
+NSE data through
+2026-10-14
+ICICI session
+connected
+Scheduler
+online
+NEXT JOBS
+Filing Alerts for your stocks (every 5 min)
+Thu, 08:00 am
+ICICI Session Refresh (TOTP login)
+Thu, 08:00 am
+Pre-Market Data Sync
+Thu, 08:30 am
+Gold Pre-Open Snapshot (fair open)
+Thu, 08:45 am
+Pre-market Note
+Thu, 08:50 am
+Market internals sample (breadth, every 2 min)
+Thu, 09:00 am
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

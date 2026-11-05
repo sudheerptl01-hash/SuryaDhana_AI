@@ -1,0 +1,258 @@
+◉ SURYADHANA ▸ DERIV
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:40:47
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,127.30
+−1.20%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:40 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+DERV
+DERIVATIVES DESK
+NIFTY BASIS +3.20% ANN · T−13
+NSE F&O · term structure, basis, rollover, PCR, max pain, VIX · EOD 2026-10-14
+↻ REFRESH
+NIFTY
+BANKNIFTY
+FINNIFTY
+MIDCPNIFTY
+NIFTYNXT50
+GO
+NIFTY SPOT (EOD)
+22,622.70
+futures OI 2.15 cr
+NEAR BASIS (ANN)
++3.20%
+contango — longs pay carry
+DAYS TO EXPIRY
+13
+2026-10-27
+CHAIN PCR (NEAR)
+0.86
+max pain 22,600
+ROLLOVER SO FAR
+14.2%
+past 3 finals avg 74.5%
+INDIA VIX
+14.60
+71st pctile (1y)
+FUTURES TERM STRUCTURE — NIFTY
+spot 22,622.70 · EOD 2026-10-14 · NSE F&O bhavcopy (UDiFF), OI in shares · upward carry curve
+SERIES	EXPIRY	DTE	CLOSE	BASIS	ANN %	OI (SHARES)	OI CHG	CONTRACTS
+NEAR	2026-10-27	13	22,648.50	+0.114%	+3.20%	1.85 cr	3,900	53,505
+NEXT	2026-11-23	40	22,756.00	+0.589%	+5.38%	25.7 L	1.2 L	5,237
+FAR	2026-12-29	76	22,903.10	+1.239%	+5.95%	4.9 L	26,650	1,837
+NEAR-MONTH ANNUALIZED BASIS % — 2021-09-23 → 2026-10-14 · amber = annualized basis (left) · above 0 = contango (longs pay carry)
+-38
+16
+70
+Sept 21
+Feb 22
+Jul 22
+Dec 22
+May 23
+Oct 23
+Mar 24
+Aug 24
+Jan 25
+Jun 25
+Nov 25
+Apr 26
+Sept 26
+ROLLOVER TRACKER — NIFTY
+near → next OI migration · panel through 2026-10-14 · rollover % = OI beyond the dying series ÷ total futures OI (shares); UDiFF era only (Jul-2024 →)
+ROLLED SO FAR (T−13)
+14.2%
+prior cycles at T−13: 14.8%
+VS 3-EXPIRY AVG (FINAL)
+74.5%
+behind pace by 0.6 pts
+COST OF CARRY (NEXT, ANN)
++5.38%
+what rolling a long costs today
+OI NEAR / NEXT / FAR
+1.85 cr
+next 25.7 L · far 4.9 L
+NEAR EXPIRY
+10-27
+13 calendar days
+ROLLOVER % BY DAYS TO EXPIRY — amber = this cycle · dashed = average of prior cycles
+0%
+25%
+50%
+75%
+100%
+T−32
+T−16
+T−5
+T−0
+EXPIRY	FINAL ROLLOVER	CARRY INTO NEXT (ANN)
+2026-09-29	74.3%	+8.58%
+2026-08-25	77.4%	+5.88%
+2026-07-28	71.8%	+6.17%
+2026-06-30	80.3%	+7.83%
+2026-05-26	70.0%	+2.84%
+2026-04-28	71.4%	+3.98%
+2026-03-30	77.8%	+5.34%
+2026-02-24	68.2%	+7.42%
+PCR & MAX PAIN — NIFTY
+aggregate PCR = put÷call OI across ALL strikes and expiries (2019→) · chain PCR / max pain are near-expiry
+MAX PAIN (10-19)
+22,600
+spot 22,623 · -0.1% away
+CHAIN PCR (NEAR EXPIRY)
+0.86
+EOD 2026-10-14 · 5d to expiry
+ATM IV
+12.5%
+±1.5% priced to expiry
+OI WALLS (R / S)
+23,000 / 22,000
+largest call / put OI strikes
+NEAR-EXPIRY MAX PAIN VS SPOT — amber = spot · violet = max pain · cyan = chain PCR (right)
+22,083
+24,206
+26,329
+0.0
+0.9
+1.7
+Oct 24
+Dec 24
+Feb 25
+Apr 25
+Jun 25
+Aug 25
+Oct 25
+Dec 25
+Feb 26
+Apr 26
+Jun 26
+Aug 26
+Oct 26
+AGGREGATE PUT/CALL OI RATIO (all expiries) — 2021-09-30 → 2026-10-14
+0.6
+1.1
+1.6
+Sept 21
+Feb 22
+Jul 22
+Dec 22
+May 23
+Oct 23
+Mar 24
+Aug 24
+Jan 25
+Jun 25
+Nov 25
+Apr 26
+Sept 26
+INDIA VIX
+vs NIFTY 20-day realized volatility (annualized, √252) · as of 2026-10-14T00:00:00
+INDIA VIX
+14.60
++0.48 today
+1Y PERCENTILE
+71st
+5y: 55th
+NIFTY REALIZED (20D)
+14.75
+annualized %
+VIX − REALIZED
+-0.15
+VIX below realized — complacent pricing
+green = INDIA VIX · violet = NIFTY 20d realized
+5
+17
+29
+Oct 24
+Dec 24
+Feb 25
+Apr 25
+Jun 25
+Aug 25
+Oct 25
+Dec 25
+Feb 26
+Apr 26
+Jun 26
+Aug 26
+Oct 26
+Sources: NSE F&O bhavcopy (nse_fo_daily, 2019-10 →; per-contract UDiFF files Jul-2024 →), NSE index closes. OI in shares. Basis history is near-month only (the stored grain); aggregate PCR spans all strikes and expiries, so it runs smoother than the OMON chain's near-expiry PCR. Rollover history starts Jul-2024 (UDiFF archive). BANKNIFTY has no stored spot series, so its basis history is empty while term structure and rollover still work. Max-pain history exists for NIFTY and BANKNIFTY (daily chain archive); for stocks only the current session's chain is archived — no fabricated series.
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

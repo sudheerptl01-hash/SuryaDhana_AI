@@ -1,0 +1,1971 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <title>data_DailyReport</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><link rel="stylesheet" type="text/css" href="/static/css/bootstrap_datepicker.css">
+<link rel="stylesheet" type="text/css" href="/static/css/bootstrap-theme.min.css">
+<link rel="stylesheet" type="text/css" href="/static/css/global.css">
+<link rel="stylesheet" type="text/css" href="/static/css/ie.css">
+<link rel="stylesheet" type="text/css" href="/static/css/jquery-ui.css">
+<link rel="stylesheet" type="text/css" href="/static/css/style.css">
+<link rel="stylesheet" type="text/css" href="/static/css/newHead.css">
+
+
+<script type="text/javascript" src="/static/js/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="/static/js/bootstrap-datetimepicker.min.js"></script>
+<script type="text/javascript" src="/static/js/tools.js"></script>
+<script type="text/javascript" src="/static/js/main.js"></script>
+<!-- <script type="text/javascript" src="/static/js/ie-emulation-modes-warning.js"></script> -->
+<!-- <script type="text/javascript" src="/static/js/bootstrap.min.js"></script> -->
+<!-- <script type="text/javascript" src="/static/js/date-util.js"></script> -->
+<script type="text/javascript" src="/static/js/jquery-ui.js"></script>
+<script type="text/javascript" src="/static/js/style.js"></script> 
+<script type="text/javascript" src="/static/js/echarts.min.js"></script>
+<script type="text/javascript" src="/static/js/highstock.js"></script>
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?62fa33f77aa3ca59592c24364d3c42eb";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+        <script>
+            $(document).ready(function () {
+                $('.nav li:nth-child(4)')
+                    .addClass('active')
+                    .siblings()
+                    .removeClass('active');
+                $('.sideBar_list li:nth-child(2)')
+                    .addClass('current')
+                    .siblings()
+                    .removeClass('current');
+                $('.subNav li:nth-child(1)')
+                    .addClass('current')
+                    .siblings()
+                    .removeClass('current');
+            });
+
+            // function load() {
+            //     var time = $('#time').val();
+            //     $('#loadcontent').load(
+            //         '/data_DailyReport_load_new?p=1&time=' + time
+            //     );
+            // }
+        </script>
+    </head>
+
+    <body>
+<!-- 黑白 -->
+<!--
+<style>
+     html {
+         filter: grayscale(100%);
+         -webkit-filter: grayscale(100%);
+         -moz-filter: grayscale(100%);
+         -ms-filter: grayscale(100%);
+         -o-filter: grayscale(100%);
+         filter: progid:DXImageTransform.Microsoft.BasicImage(grayscale=1);
+         -webkit-filter: grayscale(1);
+         filter: gray
+     }
+
+     img,* {
+         filter: gray; /* just for IE6-9 */
+}
+.pc_header .nav .navBtns {
+border:none;
+}
+.pc_header .nav .navBtns li:hover, .pc_header .nav .navBtns .hover,.pc_header .nav,.thead1,.searchBtn,.searchBtn:hover,.ipcBtn:hover,.sgc .title,h3.add_title{
+background: #828282;
+}
+.pc_header .nav .navBtns .active,.rules .content {
+background: #a4a4a4;
+}
+.pc_header .nav li  {
+border-right-color: #828282;
+}
+.colorRed ,.colorBlue{
+    color: #3d3d3d;
+}
+
+.colorGreen ,.pc_header .subNav .item .title a{
+    color: #a4a4a4;
+}
+
+</style>
+<script type="text/javascript">
+     var grayscale=function(){var e={colorProps:["color","backgroundColor","borderBottomColor","borderTopColor","borderLeftColor","borderRightColor","backgroundImage"],externalImageHandler:{init:function(e,t){if(e.nodeName.toLowerCase()==="img"){}else{r(e).backgroundImageSRC=t;e.style.backgroundImage=""}},reset:function(e){if(e.nodeName.toLowerCase()==="img"){}else{e.style.backgroundImage="url("+(r(e).backgroundImageSRC||"")+")"}}}},t=function(){try{window.console.log.apply(console,arguments)}catch(e){}},n=function(e){return(new RegExp("https?://(?!"+window.location.hostname+")")).test(e)},r=function(){var e=[0],t="data"+ +(new Date);return function(n){var r=n[t],i=e.length;if(!r){r=n[t]=i;e[r]={}}return e[r]}}(),i=function(e,t,n){var s=document.createElement("canvas"),u=s.getContext("2d"),a=e.naturalHeight||e.offsetHeight||e.height,f=e.naturalWidth||e.offsetWidth||e.width,l;s.height=a;s.width=f;u.drawImage(e,0,0);try{l=u.getImageData(0,0,f,a)}catch(c){}if(t){i.preparing=true;var h=0;(function(){if(!i.preparing){return}if(h===a){u.putImageData(l,0,0,0,0,f,a);n?r(n).BGdataURL=s.toDataURL():r(e).dataURL=s.toDataURL()}for(var t=0;t<f;t++){var c=(h*f+t)*4;l.data[c]=l.data[c+1]=l.data[c+2]=o(l.data[c],l.data[c+1],l.data[c+2])}h++;setTimeout(arguments.callee,0)})();return}else{i.preparing=false}for(var h=0;h<a;h++){for(var p=0;p<f;p++){var d=(h*f+p)*4;l.data[d]=l.data[d+1]=l.data[d+2]=o(l.data[d],l.data[d+1],l.data[d+2])}}u.putImageData(l,0,0,0,0,f,a);return s},s=function(e,t){var n=document.defaultView&&document.defaultView.getComputedStyle?document.defaultView.getComputedStyle(e,null)[t]:e.currentStyle[t];if(n&&/^#[A-F0-9]/i.test(n)){var r=n.match(/[A-F0-9]{2}/ig);n="("+parseInt(r[0],16)+","+parseInt(r[1],16)+","+parseInt(r[2],16)+")"}return n},o=function(e,t,n){return parseInt(.2125*e+.7154*t+.0721*n,10)},u=function(e){var t=Array.prototype.slice.call(e.getElementsByTagName("*"));t.unshift(e);return t};var a=function(t){if(t&&t[0]&&t.length&&t[0].nodeName){var f=Array.prototype.slice.call(t),l=-1,c=f.length;while(++l<c){a.call(this,f[l])}return}t=t||document.documentElement;if(!document.createElement("canvas").getContext){t.style.filter="progid:DXImageTransform.Microsoft.BasicImage(grayscale=1)";t.style.zoom=1;return}var h=u(t),p=-1,d=h.length;while(++p<d){var v=h[p];if(v.nodeName.toLowerCase()==="img"){var m=v.getAttribute("src");if(!m){continue}if(n(m)){e.externalImageHandler.init(v,m)}else{r(v).realSRC=m;try{v.src=r(v).dataURL||i(v).toDataURL()}catch(g){e.externalImageHandler.init(v,m)}}}else{for(var y=0,b=e.colorProps.length;y<b;y++){var w=e.colorProps[y],E=s(v,w);if(!E){continue}if(v.style[w]){r(v)[w]=E}if(E.substring(0,4)==="("){var S=o.apply(null,E.match(/\d+/g));v.style[w]=E="("+S+","+S+","+S+")";continue}if(E.indexOf("url(")>-1){var x=/\(['"]?(.+?)['"]?\)/,T=E.match(x)[1];if(n(T)){e.externalImageHandler.init(v,T);r(v).externalBG=true;continue}try{var N=r(v).BGdataURL||function(){var e=document.createElement("img");e.src=T;return i(e).toDataURL()}();v.style[w]=E.replace(x,function(e,t){return"("+N+")"})}catch(g){e.externalImageHandler.init(v,T)}}}}}};a.reset=function(t){if(t&&t[0]&&t.length&&t[0].nodeName){var i=Array.prototype.slice.call(t),s=-1,o=i.length;while(++s<o){a.reset.call(this,i[s])}return}t=t||document.documentElement;if(!document.createElement("canvas").getContext){t.style.filter="progid:DXImageTransform.Microsoft.BasicImage(grayscale=0)";return}var f=u(t),l=-1,c=f.length;while(++l<c){var h=f[l];if(h.nodeName.toLowerCase()==="img"){var p=h.getAttribute("src");if(n(p)){e.externalImageHandler.reset(h,p)}h.src=r(h).realSRC||p}else{for(var d=0,v=e.colorProps.length;d<v;d++){if(r(h).externalBG){e.externalImageHandler.reset(h)}var m=e.colorProps[d];h.style[m]=r(h)[m]||""}}}};a.prepare=function(e){if(e&&e[0]&&e.length&&e[0].nodeName){var t=Array.prototype.slice.call(e),o=-1,f=t.length;while(++o<f){a.prepare.call(null,t[o])}return}e=e||document.documentElement;if(!document.createElement("canvas").getContext){return}var l=u(e),c=-1,h=l.length;while(++c<h){var p=l[c];if(r(p).skip){return}if(p.nodeName.toLowerCase()==="img"){if(p.getAttribute("src")&&!n(p.src)){i(p,true)}}else{var d=s(p,"backgroundImage");if(d.indexOf("url(")>-1){var v=/\(['"]?(.+?)['"]?\)/,m=d.match(v)[1];if(!n(m)){var g=document.createElement("img");g.src=m;i(g,true,p)}}}}};return a}()
+
+     $(function() {
+         var navStr = navigator.userAgent.toLowerCase();
+         if(navStr.indexOf("msie 10.0")!==-1||navStr.indexOf("rv:11.0")!==-1){ // 判断是IE10或者IE11
+             window.onload=function(){
+                 grayscale(document.body);
+             }
+         }
+     })
+
+ </script>
+-->
+<script type="text/javascript">
+	$(function() {
+$('[href]').each(function() {
+$(this).attr('href', $(this).attr('href').replaceAll('://',':////').replaceAll('//','/'))
+})
+$('[onclick]').each(function() {
+$(this).attr('onclick', $(this).attr('onclick').replaceAll('://',':////').replaceAll('//','/'))
+})
+		 $("#focus1").autocomplete({ 
+			 source:function(request,response){
+				 var focus1=encodeURI(encodeURI(request.term));
+				 $.ajax({
+					url:'/protal/article/articleSearch',
+					dataType:"json",
+					data:{"inputStr":focus1},
+					success:function(data){
+						response($.map(data.data,function(item){
+							return{					
+							lable:item.title,
+							value:item.title,
+							article_location:item.article_location
+							}
+						}));
+						
+						var focus1 = $("#focus1").val();
+						$("#ui-id-1").find("li").each(function(){
+							var content = $(this).find("a").text();
+							content = content.replace(focus1, "<span style=\"color:blue;\">"+focus1+"</span>");
+							$(this).find("a").html(content);
+						});
+					}
+				 });
+				 
+			 },
+			 minLength:1,
+			 
+			 select: function( event, ui ) {
+				 if(ui.item.article_location.substring(0,4)=="http"){
+				 	window.location=ui.item.article_location;
+				 }else{
+				 	window.location=''+ui.item.article_location;
+				 }
+			}
+		 });	
+	 });
+	function searchHead(){
+		var focus1=$("#focus1").val();
+		if(focus1==""||focus1=="Please enter the keywords"){
+			$(".success").css("display","none");
+			$(".error").css("display","block");
+			$("#tcc").css("display","block");
+			openPopup(".alertPanel",true,".blackMask","Please enter the keywords");
+			/* openTimerPopup(2000,".alertPanel",true,".blackMask") */
+			return;
+		}else{		
+			window.open(window.location.origin+ "/search?p=1&focus="+encodeURI(encodeURI(focus1)));	
+		}
+	}
+	function searchHead3(){
+		var focus3=$("#focus3").val();
+		if(focus3==""||focus3=="Please enter the keywords"){
+			$(".success").css("display","none");
+			$(".error").css("display","block");
+			$("#tcc").css("display","block");
+			openPopup(".alertPanel",true,".blackMask","Please enter the keywords");
+			return;
+		}else{		
+			window.open(window.location.origin+ "/search?p=1&focus="+encodeURI(encodeURI(focus1)));	
+		}
+	}
+</script>
+
+<!-- 字体中小 -->
+<script>
+	$(document).ready(function (){	
+		$(".itemS").click(function(){
+			/* $(".newsContent").find(".title_left").find("h3").css("font-size","16px");
+			$(".newsContent").find(".title_left").find("p").css("font-size","12px"); */
+			$(".newsContent").find(".articlecontent").css("font-size","12px");
+			$(".newsContent").find(".articlecontent").find("p").css("font-size","12px");
+			$(".newsContent").find(".articlecontent").find("span").css("font-size","12px");
+		});
+		$(".itemM").click(function(){
+			/* $(".newsContent").find(".title_left").find("h3").css("font-size","18px");
+			$(".newsContent").find(".title_left").find("p").css("font-size","14px"); */
+			$(".newsContent").find(".articlecontent").css("font-size","14px");
+			$(".newsContent").find(".articlecontent").find("p").css("font-size","14px");
+			$(".newsContent").find(".articlecontent").find("span").css("font-size","14px");
+		}); 
+		$(".itemL").click(function(){
+			/* $(".newsContent").find(".title_left").find("h3").css("font-size","20px");
+			$(".newsContent").find(".title_left").find("p").css("font-size","16px"); */
+			$(".newsContent").find(".articlecontent").css("font-size","16px");
+			$(".newsContent").find(".articlecontent").find("p").css("font-size","16px");
+			$(".newsContent").find(".articlecontent").find("span").css("font-size","16px");
+		});
+	});
+</script>
+<!-- 下载pdf -->
+<script type="text/javascript">
+function downloadPDF(path){ 
+	window.open(path);
+}
+
+//enter键搜索
+function keySearch(){
+	if(event.keyCode==13){//回车键的键值为13
+		searchHead();
+	}
+}
+</script>
+<style>
+#ui-id-1 {left: 649.5px;width: 330px;z-index:10000000;position:fixed;height:180px; overflow-y:scroll;}
+</style>
+<div id="tcc" style="display: none;">
+<!--弹出层开始-->
+	<div class="panel_blackMask blackMask"></div>
+	<div class="tcc fs18 panel alertPanel ">
+        <div class="title clearfix"><p class="pull-left">Prompt text</p><a href="#" class=" pull-right "><i class="iconfont  fs24 closeBtn" onclick='closePopup(".alertPanel",".blackMask")' ><span class="colorFFF">&#xe644;</span></i></a>
+        <div class="clear"></div>
+        </div>
+        <div class="content color000">
+            <p class="tc error"><i class="iconfont fs26 colorRed pr5">&#xe641;</i><b class="alertMsg">Prompt text!</b></p>
+            <p class="tc success" style="display:block;"><i class="iconfont fs26 colorGreen pr5">&#xe640;</i><b class="alertMsg">Prompt text!</b></p>
+            <div class="btnList">
+            <a href="javascript:;" class="btn1 pull-left" onclick='closePopup(".alertPanel",".blackMask")' >
+Confirm</a>
+            <a href="javascript:;" class="btn2 pull-right" onclick='closePopup(".alertPanel",".blackMask")' >
+Cancel</a>
+            </div>
+        </div>
+    </div>
+<!--弹出层结束--></div>
+<!--header begin-->
+<div class="header">
+
+	<div class="pc_header">
+        <div class="topBar container" >
+            <a href="/"><img src="/static/images/logo.png"  class="logo" /></a>
+            <div class="rightCont pull-right" onkeydown="keySearch();">
+            	<div class="searchBar pull-left clearfix ">
+                	<i class="icon" ></i>
+                	<input id="focus1" name="focus" type="text" class="searchBarInput pull-left" placeholder="Please enter the keywords" value="" onkeydown="if(event.keyCode==13){searchHead();}"/>
+                    <div onclick="searchHead()" class="searchBtn pull-left">SEARCH</div>
+                </div>
+                
+                <a href="/"><div class="button pull-left ml15">HOME</div></a>
+                <a href="http://www.sge.com.cn"><div class="button pull-left ml15">中文版</div></a>
+                
+            </div>
+        </div>  
+        
+       <div class="nav ">
+       		<ul class="container navBtns">
+            	<li style="width:22%" class=""><a href="/eng_news_News">News & Announcement</a></li>
+                <li><a href="/eng_trading_ProductsIntroduce">Trading</a></li>
+                <li><a href="/eng_rules_Rulebook">Rules</a></li>
+                <li><a href="/data_DelayedQuotes">Data</a></li>
+                <li><a href="/eng_education">Education</a></li>
+                <li><a href="/membership_ListofMembers_internationalboard">Membership</a></li>
+                <li><a href="/eng_about_Overview">About</a></li>
+            </ul>
+            
+         <div class="subNavBox">
+            	
+         <!-- subNav1 begin -->
+            	<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>News</b><span class="ml10 mr10">|</span><a href="/eng_news_News">View All</a></div>
+											<a href="/eng_news_News/10002310" class="infoItem fs16 clearfix"><span class=" pull-left">SBMA Visits Shanghai Gold Exchange </span><i class="fs26 pull-left ml5 colorRed"></i><span class="pull-left ml20 color999">2025-07-17</span></a>
+                                </div>
+                                
+                                <div class="item mt10">
+                                    <div class="title"><b>Announcement</b><span class="ml10 mr10">|</span><a href="/eng_news_Announcement">View All</a></div>
+											<a href="/eng_news_Announcement/10002725" class="infoItem fs16 clearfix"><span class=" pull-left">Monthly Report of Data Highlights(September, 2026) </span><i class="fs26 pull-left ml5 colorRed"></i><span class="pull-left ml20 color999">2026-10-12</span></a>
+                                </div>    
+                        </div>
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner1.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav1 end -->
+               
+              <!-- subNav2 begin -->
+<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Trading Hours</b><span class="ml10 mr10">|</span><a href="/eng_trading_ProductsIntroduce">View All</a></div>
+                                </div>
+                                
+                                <!-- <div class="item mt10">
+                                  <div class="title"><b>Trading Hours</b><span class="ml10 mr10">|</span><a href="/trading_TradingHours">View All</a></div>
+                                </div> -->
+                                
+                                <div class="item mt10">
+                                    <div class="title"><b>OTC Market</b><span class="ml10 mr10">|</span><a href="/eng_trading_OTCMarket">View All</a></div>
+                                </div>    
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:180px;">
+                                <div class="item">
+                                  <div class="title"><b>Matching Market</b><span class="ml10 mr10">|</span><a href="/eng_trading_matchingMarket_PhysicalTrading">View All</a></div>
+                                  <a href="/eng_trading_matchingMarket_PhysicalTrading" class="infoItem fs16 clearfix">Physical Trading</a>
+                                  <a href="/eng_trading_matchingMarket_MarginTrading" class="infoItem fs16 clearfix">Margin Trading</a>
+                                </div>
+                                
+                              <!--  <div class="item mt10">
+                                    <div class="title"><b>Leasing Market</b><span class="ml10 mr10">|</span><a href="/eng_trading_LeasingMarket">View All</a></div>
+                                </div>     -->
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner2.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav2 end -->
+               
+              <!-- subNav3 begin -->
+            	<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Rule Book</b><span class="ml10 mr10">|</span><a href="/eng_rules_Rulebook">View All</a></div>
+                                </div>                                
+                                <div class="item mt10">
+                                    <div class="title"><b>Clearing</b><span class="ml10 mr10">|</span><a href="/eng_rules_Clearing">View All</a></div>
+                                </div>    
+                                
+                                <div class="item mt10">
+                                  <div class="title"><b>Trading</b><span class="ml10 mr10">|</span><a href="/eng_rules_Trading">View All</a></div>
+                                </div>                                
+                                <div class="item mt10">
+                                    <div class="title"><b>Delivery</b><span class="ml10 mr10">|</span><a href="/eng_rules_Delivery">View All</a></div>
+                                </div>    
+
+                                <div class="item mt10">
+                                  <div class="title"><b>Risk Management</b><span class="ml10 mr10">|</span><a href="/eng_rules_RiskManagement">View All</a></div>
+                                </div>                                
+                                <div class="item mt10">
+                                    <div class="title"><b>International Members and Clients</b><span class="ml10 mr10">|</span><a href="/eng_rules_InternationalMembersAndClients">View All</a></div>
+                                </div>    
+                                
+                                
+                                
+                                
+                        </div>
+                        
+      <div class="pull-left" style="margin-left:60px;">
+                                <div class="item">
+                                  <div class="title"><b>Other</b><span class="ml10 mr10">|</span><a href="/eng_rules_Other">View All</a></div>
+                              <!--    <span class="infoItem fs16 clearfix">Responsible Gold</span>
+                                  <span class="infoItem fs16 clearfix">Central Counter Party (CCP)</span>
+                                  <span class="infoItem fs16 clearfix">Anti-Money Laundering, Anti-Terrorist Financing, <br />
+									and Anti-Tax Evasion</span> -->
+<!-- <a href="/eng_rules_pfmi" class="infoItem fs16 clearfix">PFMI</a> -->
+                                </div>
+ 
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb60">
+                   	   		 <img src="/static/images/subNavBanner3.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+              <!-- subNav3 end -->
+               
+              <!-- subNav4 begin -->
+            	<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Delayed Quotes</b><span class="ml10 mr10">|</span><a href="/data_DelayedQuotes">View All</a></div>
+                                </div> 
+<!--                               
+                                <div class="item mt10">
+                                    <div class="title"><b>Price Chart</b><span class="ml10 mr10">|</span><a href="/data_PriceChart">View All</a></div>
+                                </div> 
+-->
+                                <div class="item mt10">
+                                    <div class="title"><b>Shanghai Gold Benchmark Price</b><span class="ml10 mr10">|</span><a href="/data_BenchmarkPrice">View All</a></div>
+                                </div> 
+<div class="item mt10">
+			<div class="title"><b>Shanghai Silver Benchmark Price</b><span class="ml10 mr10">|</span><a href="/data_SilverBenchmarkPrice">View All</a></div>
+		</div>
+                                 <div class="item mt10">
+                                    <div class="title"><b>Licensed Market Data Distributors</b><span class="ml10 mr10">|</span><a href="/data_Licensed">View All</a></div>
+                                </div>    
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:180px;">
+                                <div class="item">
+                                  <div class="title"><b>Report</b><span class="ml10 mr10">|</span><a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23">View All</a></div>
+                                 <!--  <a href="/data_DailyReport_new" class="infoItem fs16 clearfix">Daily</a> -->
+                                  <a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23" class="infoItem fs16 clearfix">Daily</a>
+                                  <a href="/data_MonthlyReport" class="infoItem fs16 clearfix">Monthly</a>
+                                  <a href="/data_AnnualReport" class="infoItem fs16 clearfix">Annual</a>
+<a href="/data_CashSettlement" class="infoItem fs16 clearfix">Cash Settlement</a>
+                                </div>
+ 
+                        </div>
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner4.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+              <!-- subNav4 end -->
+               
+              <!-- subNav5 begin -->
+            	<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Getting Started</b><span class="ml10 mr10">|</span><a href="/education_GettingStarted">View All</a></div>
+                                </div>                                
+                                <div class="item mt10">
+                                    <div class="title"><b>Case Study</b><span class="ml10 mr10">|</span><a href="/education_CaseStudy">View All</a></div>
+                                </div> 
+                                
+                                <div class="item mt10">
+                                    <div class="title"><b>FAQs</b><span class="ml10 mr10">|</span><a href="/education_FAQs">View All</a></div>
+                                </div>    
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:180px;">
+                                <div class="item">
+                                  <div class="title"><b>Risk Management</b><span class="ml10 mr10">|</span><a href="/education_RiskManagement">View All</a></div>
+                                </div>
+ 
+                                <div class="item mt10">
+                                  <div class="title"><b>Glossary</b><span class="ml10 mr10">|</span><a href="/education_Glossary">View All</a></div>
+                                </div>
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner5.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav5 end -->
+               
+              <!-- subNav6 begin -->
+               <div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>List of members (International Board)</b><span class="ml10 mr10">|</span><a href="/membership_ListofMembers_internationalboard">View All</a></div>
+                                </div> 
+                                <div class="item mt10">
+                                  <div class="title"><b>List of members (main board)</b><span class="ml10 mr10">|</span><a href="/membership_ListOfMembers_MainBoard">View All</a></div>
+                                </div>
+                                <div class="item mt10">
+                                  <div class="title"><b>Members and Clients</b><span class="ml10 mr10">|</span><a href="/membership_WhatYouNeedtoknow">View All</a></div>
+                                  <a href="/membership_WhatYouNeedtoknow" class="infoItem fs16 clearfix">What you need to know</a>
+                                  <a href="/membership_NewsOfInternationalMembersAndClients" class="infoItem fs16 clearfix">News of International Members & Clients</a>
+                                </div>                                
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:120px;">
+                                <div class="item">
+                                  <div class="title"><b>How to join us</b><span class="ml10 mr10">|</span><a href="/membership_HowToJoinUs">View All</a></div>
+                                  <a href="/membership_HowToJoinUs_WhatYouNeedToKnow" class="infoItem fs16 clearfix">What you need to know</a>
+                                  <a href="/membership_HowToJoinUs_WhatYouNeedToDo" class="infoItem fs16 clearfix">What you need to do</a>
+                                </div>
+                                <div class="item mt10">
+                                  <div class="title"><b>Downloads</b><span class="ml10 mr10">|</span><a href="/membership_downloads?topicCode=membership_downloads_Trading">View All</a></div>
+                                  <a href="/membership_downloads?topicCode=membership_downloads_Trading" class="infoItem fs16 clearfix">Trading</a>
+                                  <a href="/membership_downloads?topicCode=membership_downloads_Delivery" class="infoItem fs16 clearfix">Delivery</a>
+                                  <a href="/membership_downloads?topicCode=membership_downloads_Membership" class="infoItem fs16 clearfix">Membership</a>
+                                  <a href="/membership_downloads?topicCode=membership_downloads_Others" class="infoItem fs16 clearfix">Others</a>
+                                </div>
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb60">
+                   	   		 <img src="/static/images/subNavBanner6.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav6 end -->
+               
+              <!-- subNav7 begin -->
+<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Overview</b><span class="ml10 mr10">|</span><a href="/eng_about_Overview">View All</a></div>
+                                </div> 
+                                
+                                <div class="item mt10">
+                                  <div class="title"><b>Articles of Association</b><span class="ml10 mr10">|</span><a href="/eng_about_ArticlesOfAssociation">View All</a></div>
+                                </div>                                
+
+                                <div class="item mt10">
+                                  <div class="title"><b>Compliance</b><span class="ml10 mr10">|</span><a href="/eng_about_Compliance">View All</a></div>
+                                </div>                                
+
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:180px;">
+                                <div class="item">
+                                  <div class="title"><b>Career</b><span class="ml10 mr10">|</span><a href="/eng_about_Career">View All</a></div>
+                                </div> 
+                                
+                                <div class="item mt10">
+                                  <div class="title"><b>Contact us</b><span class="ml10 mr10">|</span><a href="/eng_about_contactUs">View All</a></div>
+                                </div>                                
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner7.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav7 end -->
+            
+         </div>
+            
+      </div> 
+    </div>
+    
+  <!--wapMobileHeader begin 20161028-->
+  <div class="wapMobileHeader hidden" >
+        <div class="top"> <a href="/"><img src="/static/images/logo.png"  class="logo"/></a>
+    	<i class="pull-right navBtn"></i>
+        </div>
+        
+        <div class="searchBar">
+        	<input id="focus3" name="focus3" type="text"  placeholder="Please enter keywords" class="border_ea" value=""/>
+            <i class="searchBtn" onclick="searchHead3()"></i>
+        </div>
+  
+  </div>
+  
+ <!--wapMobileHeader end 20161028-->
+
+</div>
+
+<!--header end-->
+
+<!-- wapSubNav begin 20161028-->
+<div class="wapSubNav" style="display:none;">
+	<!-- level1 begin -->
+	<div class="subNav level1 clearfix" >
+    	<div class="title">
+        	<span class="pull-left"><a href="/" target="_blank">Home</a></span>
+            <i class=" pull-right closeBtn"></i>
+        </div>
+        <div class="btnList">
+        	<ul>
+                <li><a href="http://www.sge.com.cn" target="_blank">中文版</a></li>
+                <li class="hasSub" ><a href="/eng_news_News" target="_blank" class="block">News & Announcement</a></li>
+                <li><a href="/eng_trading_ProductsIntroduce" target="_blank" class="block">Trading</a></li>
+                <li><a href="/eng_rules_Rulebook" target="_blank" class="block">Rules</a></li>
+                <li><a href="/data_DelayedQuotes" target="_blank" class="block">Data</a></li>
+                <li><a href="/eng_education" target="_blank" class="block">Education</a></li>
+                <li><a href="/membership_ListofMembers_internationalboard" target="_blank" class="block">Membership</a></li>
+                <li><a href="/eng_about_Overview" target="_blank" class="block">About</a></li>
+            </ul>
+        </div>
+    </div>
+    <!-- level1 end -->   
+    
+    
+	<!-- level2 begin -->
+	<!-- <div class="subNav level2  clearfix" style="display:none;">
+    	<div class="title">
+        	<span class="pull-left">Trading</span>
+            <i class=" pull-right closeBtn"></i>
+        </div>
+        <div class="btnList">
+        	<ul>
+                <li ><div class="subNavBackBtn pull-left clearfix"><i class="pull-left mt2"></i><span class="pull-left ml20">Back</span></div></li>
+                <li class="active" >Products Introduce</li>
+                <li>OTC Market</li>
+                <li>Products Introduce</li>
+                <li>OTC Market</li>
+
+            </ul>
+        </div>
+    </div> -->
+    <!-- level2 end -->   
+
+</div>
+<!-- wapSubNav end 20161028-->
+<!-- yinc  20171017 -->
+<script>
+function searchkey(){ 
+	if(event.keyCode==13){//回车键的键值为13
+		search();
+	}
+}
+ function search(){
+		var keywords=$("#keywords").val();
+		if(keywords==""||keywords=="Please enter the keywords"){
+			$(".success").css("display","none");
+			$(".error").css("display","block");
+			$("#tcc").css("display","block");
+			openPopup(".alertPanel",true,".blackMask","Please enter the keywords");
+			/* openTimerPopup(2000,".alertPanel",true,".blackMask") */
+			return;
+		}else{		
+			load();	
+		}
+	}
+</script>
+        <!--banner begin-->
+        <div class="banner pt230">
+            <div class="container"><h2 class="pl20">data</h2></div>
+        </div>
+        <!--banner end-->
+
+        <!--main begin-->
+        <div class="news_warp pt30 pb30">
+            <div class="container clearfix">
+<!--左侧边栏开始-->
+        <div class="left_sideBar ">
+          <div class="left_sideBar_head"><i class="pr10 fs20"></i>Data</div>
+          <ul class="sideBar_list">
+              <li class=""><a href="/data_DelayedQuotes" class="item clearfix"><i class="pull-left mr10"></i><span class="pull-left">Delayed Quotes</span></a></li>
+<!--
+              <li class=""><a href="/data_PriceChart" class="item clearfix"><i class="pull-left mr10"></i><span class="pull-left">Price Chart</span></a></li>
+-->
+              <li class="">
+              <a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23" class="item clearfix"><i class="pull-left mr10"></i><span class="pull-left">Report</span></a>
+              <div class="subNav">
+                  <ul>
+                  	<!-- <li class=""><a href="/data_DailyReport_new" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Daily</span> </a></li> -->
+                    <li class=""><a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Daily</span> </a></li>
+                    <li class=""><a href="/data_MonthlyReport" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Monthly</span> </a></li>
+                    <li class=""><a href="/data_AnnualReport" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Annual</span> </a></li>
+<li class=""><a href="/data_CashSettlement" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Cash Settlement</span> </a></li>
+                  </ul>
+              </div>
+              
+          	</li>
+          	<li class=""><a href="/data_BenchmarkPrice" class="item clearfix" style="padding-right:10px;"><i class="pull-left mr10"></i><span class="pull-left">Shanghai Gold Benchmark Price</span></a></li>
+<li class=""><a href="/data_SilverBenchmarkPrice" class="item clearfix" style="padding-right:10px;"><i class="pull-left mr10"></i><span class="pull-left">Shanghai Silver Benchmark Price</span></a></li>
+          	<li class=""><a href="/data_Licensed" class="item clearfix" style="padding-right:10px;"><i class="pull-left mr10"></i><span class="pull-left">Licensed Market Data Distributors</span></a></li>
+          </ul>
+        </div>
+    <!--左侧边栏结束-->                <!--内容开始-->
+                <div class="main">
+                    <div class="main_head clearfix">
+                        <h2 class="pull-left fs18 lh50">
+                            Daily Report
+                        </h2>
+                        <div class="bread_nav pull-right">
+                            <a href="/">Home</a> >
+                            <a href="/data_DelayedQuotes">Data</a> >
+                            <a
+                                href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23"
+                                >Daily Report</a
+                            >
+                        </div>
+                    </div>
+
+                    <div id="loadcontent">
+<style>
+    .searchBar {
+        display: flex;
+        justify-content: center;
+        text-align: center;
+        height: 66px;
+        line-height: 66px;
+    }
+    .searchDaily,
+    .download {
+        margin: 20px 0 20px 10px;
+        padding: 0 20px;
+        display: inline-block;
+        height: 26px;
+        line-height: 26px;
+        border: 1px solid rgb(230, 230, 230);
+        background-color: #ffffff;
+        color: #333333;
+        border-radius: 2px;
+    }
+    .searchDaily:hover,
+    .download:hover {
+        background-color: #ececec;
+    }
+    .searchDate {
+        margin: 20px 10px 20px 0;
+        padding: 0 20px;
+        display: inline-block;
+        text-align: center;
+        height: 26px;
+        width: 163px;
+        border: 1px solid rgb(230, 230, 230);
+        border-radius: 2px;
+    }
+    #contracts {
+        width: 100%;
+        height: 26px;
+        line-height: 26px;
+        border: 1px solid rgb(230, 230, 230);
+        border-radius: 2px;
+        padding: 0 10px;
+    }
+    .searchContract {
+        flex: 1;
+        margin: 20px 0;
+        padding: 0 0;
+        display: inline-block;
+        height: 28px;
+        text-align: center;
+        position: relative;
+        line-height: 20px;
+        /* border: 1px solid rgb(230, 230, 230);
+        border-radius: 2px; */
+    }
+
+    .table_header {
+        text-align: center;
+        line-height: 30px;
+        margin-top: -10px;
+        margin-bottom: 10px;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .daily_new_table {
+        display: inline-block;
+        width: 100%;
+        border-spacing: 0px;
+        border-collapse: collapse;
+        /* border: 1px solid black; */
+    }
+    .daily_new_table th {
+        line-height: 20px;
+    }
+    .daily_new_table th,
+    .daily_new_table td {
+        height: 25px;
+        text-align: center;
+        border: 1px solid rgb(230, 230, 230);
+        font-size: 12px;
+    }
+    .daily_new_table thead {
+        color: rgb(0, 0, 0);
+        line-height: 15px;
+        background-color: #f5f5f5;
+    }
+    .daily_new_table tbody {
+        display: inline;
+        /* width: calc(100% +8px); */
+        height: 440px;
+        overflow-x: scroll !important;
+        overflow-y: scroll !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .daily_new_table thead tr,
+    .daily_new_table tbody tr {
+        box-sizing: border-box;
+        table-layout: fixed;
+        display: table;
+        width: 100%;
+    }
+    .daily_new_table tbody tr:hover {
+        background-color: #f3f3f3;
+    }
+    .daily_new_table tbody tr td {
+        line-height: 15px;
+        border-top: none;
+        word-break: break-all;
+        font-size: 12px;
+    }
+    .errpop1 {
+        width: 400px;
+        height: 200px;
+        position: absolute;
+        top: calc(50vh - 100px);
+        left: calc(50vw - 200px);
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        align-content: center;
+        background-color: white;
+        font-size: 16px;
+        box-shadow: 0px 0px 10px 5px #eee;
+        
+    }
+    .errpop1 span {
+        text-align: center;
+        margin: 50px 20px 30px 20px;
+    }
+    .errpop1 button {
+        width: 60px;
+        height: 30px;
+        font-size: 14px;
+        background-color: #fff;
+        border: 1px solid #eaeaea;
+        cursor: pointer;
+    }
+    .errpop1 button:hover {
+        background-color: #ececec;
+    }
+    .errpop2 {
+        width: 400px;
+        height: 200px;
+        position: absolute;
+        top: calc(50vh - 100px);
+        left: calc(50vw - 200px);
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        align-content: center;
+        background-color: white;
+        font-size: 16px;
+        box-shadow: 0px 0px 10px 5px #eee;
+    }
+    .errpop2 span {
+        text-align: center;
+        margin: 50px 20px;
+    }
+    .errpop2 button {
+        width: 60px;
+        height: 30px;
+        font-size: 14px;
+        background-color: #fff;
+        border: 1px solid #eaeaea;
+        cursor: pointer;
+    }
+    .errpop2 button:hover {
+        background-color: #ececec;
+    }
+    .errpop3 {
+        width: 400px;
+        height: 200px;
+        position: absolute;
+        top: calc(50vh - 100px);
+        left: calc(50vw - 200px);
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        align-content: center;
+        background-color: white;
+        font-size: 16px;
+        box-shadow: 0px 0px 10px 5px #eee;
+    }
+    .errpop3 span {
+        text-align: center;
+        margin: 50px 20px;
+    }
+    .errpop3 button {
+        width: 60px;
+        height: 30px;
+        font-size: 14px;
+        background-color: #fff;
+        border: 1px solid #eaeaea;
+        cursor: pointer;
+    }
+    .errpop3 button:hover {
+        background-color: #ececec;
+    }
+</style>
+
+<!--新闻中心部分开始-->
+<div class="jzk_main" style="background-color: #ffffff">
+    <div class="jzk_newsCenter_Main">
+        <!--新闻中心标题开始-->
+        <!--新闻中心标题结束-->
+        <!--新闻中心内容开始-->
+        <div class="jzk_newsCenter_Cont">
+            <div class="jzk_newsCenter_ContRight">
+                <div style="height: 24px">
+                    <p style="float: right">
+                        Please note that this page is available for the data
+                        started from Jan 1,2024.Please click
+                        <a
+                            href="/data_DailyReport"
+                            style="display: inline; color: #1890ff"
+                            >Historical Date</a
+                        >
+                        to get earlier information
+                    </p>
+                </div>
+                <div class="searchBar">
+                    <!-- Query Date(Start)<input
+                        id="startdate"
+                        class="fl searchDate"
+                        type="date"
+                        placeholder="查询日期（开始）"
+                        onclick="inputStartDateClick()"
+                        onchange="inputStartDateCheck()"
+                    /> -->
+                    Query Date(Start)<input
+                      value=""
+                      id="startdate"
+                      type="text"
+                      readonly="readonly"
+                      class="zk_datepicker datepicker fl searchDate"
+                      placeholder="Y/M/D"
+                      onclick="inputStartDateClick()"
+                      onchange=""
+                    />
+                    Query Date(End)<input
+                      value=""
+                      id="enddate"
+                      type="text"
+                      readonly="readonly"
+                      class="zk_datepicker datepicker fl searchDate"
+                      placeholder="Y/M/D"
+                      onclick="inputEndDateClick()"
+                      onchange=""
+                    />
+                    <!-- Query Date(End)<input
+                        id="enddate"
+                        class="fl searchDate"
+                        type="date"
+                        placeholder="查询日期（结束）"
+                        onclick="inputEndDateClick()"
+                        onchange="inputEndDateCheck()"
+                    /> -->
+                    <div class="fl searchContract">
+                        <input
+                            type="text"
+                            name=""
+                            id="contracts"
+                            onclick="multiclick()"
+                            readonly="true"
+                            placeholder="Contract Name"
+                            style="width: 100%; height: 26px"
+                        />
+                        <div
+                            id="selectdiv"
+                            style="
+                                display: none;
+                                border: 1px solid rgb(230, 230, 230);
+                                width: 100%;
+                                padding-left: 10px;
+                                z-index: 2;
+                                position: absolute;
+                                top: 26px;
+                                width: 100%;
+                                overflow-y: scroll;
+                                height: 100px;
+                                background-color: white;
+                                text-align: start;
+                            "
+                            onmouseover="mousein()"
+                            onmouseout="mouseout()"
+                        ></div>
+                    </div>
+                    <a
+                        class="fr mt10 download"
+                        href="javascript:;"
+                        onclick="downloadExcel()"
+                    >
+                        <span class="fl">Download</span>
+                    </a>
+                    <a
+                        href="javascript:;"
+                        class="fr mt10 searchDaily"
+                        onclick="dailySearch()"
+                        >Query</a
+                    >
+                </div>
+
+                <div class="table_header">Shanghai Gold Price Daily Report</div>
+                
+                <div>
+                    <table class="daily_new_table">
+                        <thead>
+                            <tr>
+                                <!-- <th>Serial<br />Number</th> -->
+                                <th style="width: 70px;">Date</th>
+                                <th style="width: 70px;">Contract</th>
+                                <th>Open</th>
+                                <th>Highest</th>
+                                <th>Lowest</th>
+                                <th>Close</th>
+                                <th>Up/Down<br />(yuan)</th>
+                                <th>Up/Down<br />(%)</th>
+                                <th>Weighted<br />Average<br />Price</th>
+                                <th>Volume<br />(Kg)</th>
+                                <th style="width: 130px;">Amount<br />(yuan)</th>
+                                <th>Open<br />Interest<br />(Lot)</th>
+                                <th>Direction</th>
+                                <th>Delivery<br />Volume<br />(Lot)</th>
+                            </tr>
+                        </thead>
+                       
+                        <tbody>
+                            
+                            <tr>
+                                <!-- <td>1</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Au99.95</td>
+                                <td>856.00</td>
+                                <td>856.00</td>
+                                <td>851.00</td>
+                                <td>854.00</td>
+                                <td>-20.71</td>
+                                <td>-2.37%</td>
+                                <td>854.00</td>
+                                <td>10</td>
+                                <td style="width: 130px;">8540020</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>2</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Au99.99</td>
+                                <td>874.50</td>
+                                <td>883.98</td>
+                                <td>856.01</td>
+                                <td>864.00</td>
+                                <td>-16.3</td>
+                                <td>-1.85%</td>
+                                <td>863.44</td>
+                                <td>13963.7</td>
+                                <td style="width: 130px;">12056840919.8</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>3</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Au100g</td>
+                                <td>877.00</td>
+                                <td>877.11</td>
+                                <td>862.00</td>
+                                <td>865.54</td>
+                                <td>-16.7</td>
+                                <td>-1.89%</td>
+                                <td>866.52</td>
+                                <td>46.2</td>
+                                <td style="width: 130px;">40033466</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>4</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">iAu100g</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                                <td>-</td>
+                                <td>0</td>
+                                <td style="width: 130px;">0</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>5</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">iAu99.5</td>
+                                <td>863.50</td>
+                                <td>863.50</td>
+                                <td>863.50</td>
+                                <td>863.50</td>
+                                <td>-16.1</td>
+                                <td>-1.83%</td>
+                                <td>863.50</td>
+                                <td>25</td>
+                                <td style="width: 130px;">21587500</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>6</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">iAu99.99</td>
+                                <td>864.62</td>
+                                <td>864.62</td>
+                                <td>856.57</td>
+                                <td>862.33</td>
+                                <td>-17.01</td>
+                                <td>-1.93%</td>
+                                <td>861.39</td>
+                                <td>801.78</td>
+                                <td style="width: 130px;">690648928.6</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>7</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Au(T+D)</td>
+                                <td>872.80</td>
+                                <td>880.04</td>
+                                <td>856.24</td>
+                                <td>863.38</td>
+                                <td>-18.24</td>
+                                <td>-2.07%</td>
+                                <td>865.01</td>
+                                <td>56720</td>
+                                <td style="width: 130px;">49063470980</td>
+                                <td>260054</td>
+                                <td>Long to Short</td>
+                                <td>24570</td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>8</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Au(T+N1)</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                                <td>-</td>
+                                <td>0</td>
+                                <td style="width: 130px;">0</td>
+                                <td>306</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>9</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Au(T+N2)</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                                <td>-</td>
+                                <td>0</td>
+                                <td style="width: 130px;">0</td>
+                                <td>1544</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>10</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">mAu(T+D)</td>
+                                <td>874.00</td>
+                                <td>880.00</td>
+                                <td>856.35</td>
+                                <td>864.34</td>
+                                <td>-17.64</td>
+                                <td>-2.00%</td>
+                                <td>865.19</td>
+                                <td>13999</td>
+                                <td style="width: 130px;">12111865626</td>
+                                <td>629554</td>
+                                <td>Long to Short</td>
+                                <td>77728</td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>11</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Pt99.95</td>
+                                <td>385.30</td>
+                                <td>388.70</td>
+                                <td>385.30</td>
+                                <td>387.43</td>
+                                <td>-6.43</td>
+                                <td>-1.63%</td>
+                                <td>387.43</td>
+                                <td>44</td>
+                                <td style="width: 130px;">17047000</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>12</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Ag(T+D)</td>
+                                <td>13488.00</td>
+                                <td>13543.00</td>
+                                <td>12904.00</td>
+                                <td>13021.00</td>
+                                <td>-653</td>
+                                <td>-4.78%</td>
+                                <td>13090.00</td>
+                                <td>498530</td>
+                                <td style="width: 130px;">6525938760</td>
+                                <td>2715768</td>
+                                <td>Long to Short</td>
+                                <td>70380</td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>13</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Ag99.99</td>
+                                <td>13135.00</td>
+                                <td>13135.00</td>
+                                <td>13135.00</td>
+                                <td>13135.00</td>
+                                <td>-505</td>
+                                <td>-3.70%</td>
+                                <td>13135.00</td>
+                                <td>330</td>
+                                <td style="width: 130px;">4334550</td>
+                                <td>22</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>14</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">Au99.5</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                                <td>-</td>
+                                <td>0</td>
+                                <td style="width: 130px;">0</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>15</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">NYAuTN06</td>
+                                <td>859.90</td>
+                                <td>867.20</td>
+                                <td>859.60</td>
+                                <td>865.30</td>
+                                <td>-16.2</td>
+                                <td>-1.84%</td>
+                                <td>865.05</td>
+                                <td>4.8</td>
+                                <td style="width: 130px;">4152260</td>
+                                <td>1328</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>16</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">NYAuTN12</td>
+                                <td>862.70</td>
+                                <td>866.70</td>
+                                <td>859.05</td>
+                                <td>864.20</td>
+                                <td>-16.95</td>
+                                <td>-1.92%</td>
+                                <td>863.65</td>
+                                <td>7.4</td>
+                                <td style="width: 130px;">6391170</td>
+                                <td>6696</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>17</td>  -->
+                                <td style="width: 70px;">2026-10-23</td>
+                                <td style="width: 70px;">PGC30g</td>
+                                <td>863.61</td>
+                                <td>867.30</td>
+                                <td>863.61</td>
+                                <td>867.14</td>
+                                <td>-14.88</td>
+                                <td>-1.69%</td>
+                                <td>865.85</td>
+                                <td>7.8</td>
+                                <td style="width: 130px;">6753664.8</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>18</td>  -->
+                                <td style="width: 70px;">2026-10-22</td>
+                                <td style="width: 70px;">Au99.95</td>
+                                <td>884.80</td>
+                                <td>890.49</td>
+                                <td>872.00</td>
+                                <td>874.71</td>
+                                <td>-9.79</td>
+                                <td>-1.11%</td>
+                                <td>878.57</td>
+                                <td>24</td>
+                                <td style="width: 130px;">21085860</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>19</td>  -->
+                                <td style="width: 70px;">2026-10-22</td>
+                                <td style="width: 70px;">Au99.99</td>
+                                <td>890.00</td>
+                                <td>891.00</td>
+                                <td>874.02</td>
+                                <td>880.30</td>
+                                <td>-7.2</td>
+                                <td>-0.81%</td>
+                                <td>881.61</td>
+                                <td>7967.02</td>
+                                <td style="width: 130px;">7023878170.6</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            
+                            <tr>
+                                <!-- <td>20</td>  -->
+                                <td style="width: 70px;">2026-10-22</td>
+                                <td style="width: 70px;">Au100g</td>
+                                <td>888.00</td>
+                                <td>888.00</td>
+                                <td>876.79</td>
+                                <td>882.24</td>
+                                <td>-5.42</td>
+                                <td>-0.61%</td>
+                                <td>883.29</td>
+                                <td>26.8</td>
+                                <td style="width: 130px;">23672296</td>
+                                <td>-</td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                        </tbody>
+                    </table>
+                </div>
+                    
+<!-- 分页begin --> 
+<!-- 刷新页面分页 -->
+          <div class="main_page clearfix " style="padding-left:0px; padding-right:0px; border:none">
+             <div class="page_left clearfix">
+<div class='goBtn border_l  pull-left'>Previous</div>                     <ul class="page_list pull-left">
+<li class='current' onclick=gotoPage('/data/data_daily_international_new?start_date=2026-10-20&end_date=2026-10-23&inst_ids=&p=','1')>1</li><li class='' onclick=gotoPage('/data/data_daily_international_new?start_date=2026-10-20&end_date=2026-10-23&inst_ids=&p=','2')>2</li><li class='' onclick=gotoPage('/data/data_daily_international_new?start_date=2026-10-20&end_date=2026-10-23&inst_ids=&p=','3')>3</li><li class='' onclick=gotoPage('/data/data_daily_international_new?start_date=2026-10-20&end_date=2026-10-23&inst_ids=&p=','4')>4</li>                     </ul>
+                     
+<div class='goBtn pull-left' onclick=gotoPage('/data/data_daily_international_new?start_date=2026-10-20&end_date=2026-10-23&inst_ids=&p=','2')>Next</div>                 
+                 <div class="clear"></div>
+             </div>
+            
+             <div class="page_right clearfix">
+  <span class='pull-left mr10 lh30'>Goto</span><input id='tzpage1' value='1' type='text' class='gotoPageNum border_ea pull-left' /><div class='goBtn pull-left' onclick=skippage('/data/data_daily_international_new?start_date=2026-10-20&end_date=2026-10-23&inst_ids=&p=','1') >Go</div>                 <div class="clear"></div>
+             </div>
+             <div class="clear"></div>
+         </div>
+         
+         <!-- 分页end --> 
+         <script>
+         var searchFrom = "";
+         var totalPage = 4;
+         function gotoPage(uri,page){
+         	 if(searchFrom==''){
+         		 window.location=uri+page;
+         	 }else{
+         		var param = $("#"+searchFrom).serialize();
+         		window.location=uri+page+"&"+encodeURI(encodeURI(param));
+         	 }
+         }
+     	function skippage(uri,flag){
+     		var tzpage=$("#tzpage"+flag).val();
+     		if(searchFrom==''){
+     			window.location=uri+tzpage;
+     		}else{
+     			var param = $("#"+searchFrom).serialize();
+                if(tzpage > totalPage ){
+                    tzpage = totalPage ;
+                }
+     			var pp=uri+tzpage+"&"+encodeURI(encodeURI(param));
+     			window.location=uri+tzpage+"&"+encodeURI(encodeURI(param));
+     		}
+     	}
+</script>                 <!-- 分页end -->
+                <div>
+                    <p style="background-color: #ffffff;">
+                        Remark: The data comes out of the tradings on a trading day started from 20:00-02:30 on T-1 working day and continued from 09:00-15:30 on T working day.The data of first trading day after holiday only includes the data from 09:00-15:30 on T working day.The trading volume and trading amount are calculated in a two-way measurement.
+                    </p>
+                </div>
+            </div>
+            <div class="clear"></div>
+        </div>
+        <!--新闻中心内容结束-->
+    </div>
+    <!--新闻中心部分结束-->
+    <div class="errpop1">
+        <span>Query period is limited to 1 month.<br>Please re-enter.</span>
+        <button onclick="close1()">Close</button>
+    </div>
+</div>
+
+<div class="errpop2">
+    <span>Query data does not exist, please re-enter.</span>
+    <button onclick="close2()">Close</button>
+</div>
+
+    <div class="errpop3">
+        <span>Start date should be earlier than end date, please re-enter.</span>
+        <button onclick="close3()">Close</button>
+    </div>
+</div>
+
+
+
+<script type="text/javascript">
+    function forceTwoDecimal(x){
+        if (x === '-') {
+            return '-';
+        }
+        var a = parseFloat(x);
+        if(isNaN(a)) {
+            return '';
+        }
+        var b = Math.round(x*100)/100;
+        var c = b.toString();
+        var d = c.indexOf('.');
+        if(d<0) {
+            d = c.length;
+            c += '.';
+        }
+        while (c.length <= d + 2) {
+            c += '0';
+        }
+        return c;
+    }
+    function format(number){
+        var res = number.toString().replace(/\d+/, function(num){
+            return num.replace(/\d{1,3}(?=(\d{3})+$)/g,function(newnum){
+                return newnum+",";
+            });
+        })
+        return res;
+    }
+    // 初始化数据，/号分割value和选项名称
+    var initlist = [];
+    // var initlist = [
+    //     'Ag(T%2BD)/白银延期',
+    //     'Ag99.99/Ag99.99',
+    //     'Au(T%2BD)/黄金延期',
+    //     'Au(T%2BN1)/黄金单月延期',
+    //     'Au(T%2BN2)/黄金双月延期',
+    //     'Au100g/100克金条',
+    //     'Au99.5/Au995',
+    //     'Au99.95/Au9995',
+    //     'Au99.99/Au9999',
+    //     'NYAuTN06/沪纽金TN06',
+    //     'NYAuTN12/沪纽金TN12',
+    //     'PGC30g/熊猫金币30g',
+    //     'Pt99.95/Pt9995',
+    //     'iAu100g/iAu100g',
+    //     'iAu99.5/iAu995',
+    //     'iAu99.99/iAu9999',
+    //     'mAu(T%2BD)/Mini黄金延期',
+    // ];
+    // 设置map键值对
+    const contractMap = new Map();
+    // 获取dom元素
+    var selecteddiv = document.getElementById('selectdiv');
+    // 鼠标是否在输入框中，用于控制下拉框是否显示
+    var indiv = false;
+    // 传参所需的列表
+    var selectedlist = [];
+    // 显示所需的列表
+    var selectednamelist = [];
+    // 页面加载进行初始化操作
+    window.onload = function () {
+        $.ajax({
+            url: '/portal/marketAutomation/instQuery',
+            data: { inst_str: '' },
+            type: 'GET',
+            contentType: 'application/x-www-form-urlencoded',
+            scriptCharset: 'UTF-8',
+            success: function (data) {
+                //console.log(data);
+                const res = data.data;
+                //fundSelectRender(res);
+                for (var i = 0; i < res.length; i++) {
+                    initlist.push(res[i].name.replace(/\+/g,'%2B') + '/' + res[i].name)
+                }
+                // 更新本地存储数据避免出错
+                localStorage.setItem('startdate', document.getElementById('startdate').value);
+                localStorage.setItem('enddate', document.getElementById('enddate').value);
+                // 初始化多选下拉框
+                for (var i = 0; i < initlist.length; i++) {
+                    var tmpdiv = document.createElement('div');
+                    var tmpinput = document.createElement('input');
+                    tmpinput.setAttribute('name', 'mycheckbox');
+                    tmpinput.setAttribute('type', 'checkbox');
+                    tmpinput.setAttribute('onclick', 'mycheck(this)');
+                    tmpinput.setAttribute('style','vertical-align: middle')
+                    tmpinput.setAttribute(
+                        'value',
+                        initlist[i].substr(0, initlist[i].indexOf('/'))
+                    );
+                
+                    var tmptext = document.createTextNode(
+                        initlist[i].substr(
+                            initlist[i].indexOf('/') + 1,
+                            initlist[i].length
+                        )
+                    );
+                    tmpdiv.appendChild(tmpinput);
+                    tmpdiv.appendChild(tmptext);
+                    selecteddiv.appendChild(tmpdiv);
+                    contractMap.set(
+                        initlist[i].substr(0, initlist[i].indexOf('/')),
+                        initlist[i].substr(
+                            initlist[i].indexOf('/') + 1,
+                            initlist[i].length
+                        )
+                    );
+                }
+                // 点击时判断鼠标位置，控制下拉框显示与隐藏
+                document.onclick = function (event) {
+                    if (event.target.id == 'contracts' || indiv) {
+                        return;
+                    }
+                    selecteddiv.style.display = 'none';
+                };
+                // 正则表达式校验网页链接中的属性值进行获取
+                const contractRe1 = /(?<=inst_ids=).*?(?=&)/g;
+                const contractRe2 = /(?<=inst_ids=).*/g;
+                const contractTMP1 = searchParam.match(contractRe1);
+                const contractTMP2 = searchParam.match(contractRe2);
+                const contractVAR = contractTMP1 || contractTMP2;
+                // 若非空则在selectedlist和selectnamelist中填入该数据并将其显示在框中，达到记忆搜索参数值的效果
+                if (contractVAR) {
+                    const contractValue = contractVAR[0].replace(/\+/g, '%2B');
+                    const contractNotNull = contractValue
+                        .split(',')
+                        .filter(function (s) {
+                            return s && s.trim();
+                        });
+                    for (var i = 0; i < contractNotNull.length; i++) {
+                        document.querySelector(
+                            'input[value="' + contractNotNull[i] + '"]'
+                        ).checked = true;
+                        selectedlist[i] = contractNotNull[i];
+                        selectednamelist[i] = contractMap.get(contractNotNull[i]);
+                    }
+                    document.getElementById('contracts').value = selectednamelist;
+                }
+            },
+        });
+        // // 更新本地存储数据避免出错
+        // localStorage.setItem('startdate', document.getElementById('startdate').value);
+        // localStorage.setItem('enddate', document.getElementById('enddate').value);
+        // // 初始化多选下拉框
+        // for (var i = 0; i < initlist.length; i++) {
+        //     var tmpdiv = document.createElement('div');
+        //     var tmpinput = document.createElement('input');
+        //     tmpinput.setAttribute('name', 'mycheckbox');
+        //     tmpinput.setAttribute('type', 'checkbox');
+        //     tmpinput.setAttribute('onclick', 'mycheck(this)');
+        //     tmpinput.setAttribute('style','vertical-align: middle')
+        //     tmpinput.setAttribute(
+        //         'value',
+        //         initlist[i].substr(0, initlist[i].indexOf('/'))
+        //     );
+
+        //     var tmptext = document.createTextNode(
+        //         initlist[i].substr(
+        //             initlist[i].indexOf('/') + 1,
+        //             initlist[i].length
+        //         )
+        //     );
+        //     tmpdiv.appendChild(tmpinput);
+        //     tmpdiv.appendChild(tmptext);
+        //     selecteddiv.appendChild(tmpdiv);
+        //     contractMap.set(
+        //         initlist[i].substr(0, initlist[i].indexOf('/')),
+        //         initlist[i].substr(
+        //             initlist[i].indexOf('/') + 1,
+        //             initlist[i].length
+        //         )
+        //     );
+        // }
+        // // 点击时判断鼠标位置，控制下拉框显示与隐藏
+        // document.onclick = function (event) {
+        //     if (event.target.id == 'contracts' || indiv) {
+        //         return;
+        //     }
+        //     selecteddiv.style.display = 'none';
+        // };
+        // // 正则表达式校验网页链接中的属性值进行获取
+        // const contractRe1 = /(?<=inst_ids=).*?(?=&)/g;
+        // const contractRe2 = /(?<=inst_ids=).*/g;
+        // const contractTMP1 = searchParam.match(contractRe1);
+        // const contractTMP2 = searchParam.match(contractRe2);
+        // const contractVAR = contractTMP1 || contractTMP2;
+        // // 若非空则在selectedlist和selectnamelist中填入该数据并将其显示在框中，达到记忆搜索参数值的效果
+        // if (contractVAR) {
+        //     const contractValue = contractVAR[0].replace(/\+/g, '%2B');
+        //     const contractNotNull = contractValue
+        //         .split(',')
+        //         .filter(function (s) {
+        //             return s && s.trim();
+        //         });
+        //     for (var i = 0; i < contractNotNull.length; i++) {
+        //         document.querySelector(
+        //             'input[value="' + contractNotNull[i] + '"]'
+        //         ).checked = true;
+        //         selectedlist[i] = contractNotNull[i];
+        //         selectednamelist[i] = contractMap.get(contractNotNull[i]);
+        //     }
+        //     document.getElementById('contracts').value = selectednamelist;
+        // }
+    };
+    // 点击输入框本体时
+    function multiclick() {
+        selecteddiv.style.display = 'block';
+    }
+    function mousein() {
+        indiv = true;
+    }
+    function mouseout() {
+        indiv = false;
+    }
+    function mycheck(obj) {
+        if (obj.checked) {
+            selectedlist.push(obj.value);
+            selectednamelist.push(obj.nextSibling.nodeValue);
+        } else {
+            for (var i = 0; i < selectedlist.length; i++) {
+                if (selectedlist[i] == obj.value) {
+                    selectedlist.splice(i, 1);
+                    selectednamelist.splice(i, 1);
+                }
+            }
+        }
+        document.getElementById('contracts').value = selectednamelist;
+    }
+
+    const dateRe = /\d{4}-\d{2}-\d{2}/g;
+    // const contractRe1 = /(?<=inst_ids=).*?(?=&)/g;
+    // const contractRe2 = /(?<=inst_ids=).*/g;
+
+    const searchParam = window.location.href.split('?')[1];
+    const dateArray = searchParam.match(dateRe);
+    // const contractTMP1 = searchParam.match(contractRe1);
+    // const contractTMP2 = searchParam.match(contractRe2);
+    // const contractVAR = contractTMP1 || contractTMP2;
+
+    // if (contractVAR) {
+    //     setTimeout(function(){
+    //         const contractValue = contractVAR[0].replace(/\+/g,'%2B');
+    //         console.log(contractValue);
+    //         const contractNotNull = contractValue.split(',').filter(function(s){
+    //             return s && s.trim();
+    //         })
+    //         console.log(contractNotNull);
+    //         for (var i = 0;i < contractNotNull.length;i++){
+    //             selectednamelist[i] = contractMap.get(contractNotNull[i]);
+    //         }
+    //         document.getElementById('contracts').value = selectednamelist;
+    //     },0)
+    // }
+
+    // 未搜索出数据时弹框提示
+    if ($('.daily_new_table').find('tr').length === 1) {
+        // document.querySelector('.errpop2').style.display = 'flex';
+        setTimeout(() => {
+            alert('Query data does not exist, please re-enter.');
+        }, 200);
+    }
+    document.getElementById('startdate').value = dateArray[0];
+    document.getElementById('enddate').value = dateArray[1];
+    // const contractID = (localStorage.getItem("contract") === null) ? "" : localStorage.getItem("contract")
+    function downloadExcel() {
+        if ($('.daily_new_table').find('tr').length === 1) {
+            alert('禁止下载！');
+            return;
+        }
+        window.open(
+            '/portal/marketAutomation/downloadExcelForQuoteDailyNew?start_date=' +
+                dateArray[0] +
+                '&end_date=' +
+                dateArray[1] +
+                '&inst_ids=' +
+                selectedlist.toString().replace(/\+/g, '%2B')
+        );
+    }
+    // 日期选择时进行开始日期是否在结束日期之前的判断
+    function inputStartDateClick() {
+        localStorage.setItem('startdate', document.getElementById('startdate').value);
+    }
+    function inputEndDateClick() {
+        localStorage.setItem('enddate', document.getElementById('enddate').value);
+    }
+    function inputDateCheck() {
+        const start = document.getElementById('startdate').value;
+        const end = document.getElementById('enddate').value;
+        const rev = new Date(end).getTime() - new Date(start).getTime();
+        if (rev < 0) {
+            // document.querySelector('.errpop3').style.display = 'flex';
+            alert('Start date should be earlier than end date, please re-enter.');
+            // setTimeout(() => {
+            //     document.getElementById('startdate').value = localStorage.getItem('startdate')
+            // }, 0);
+            return
+        }
+        // localStorage.setItem('startdate', document.getElementById('startdate').value);
+    }
+    // function inputStartDateCheck() {
+    //     const start = document.getElementById('startdate').value;
+    //     const end = document.getElementById('enddate').value;
+    //     const rev = new Date(end).getTime() - new Date(start).getTime();
+    //     if (rev < 0) {
+    //         document.querySelector('.errpop3').style.display = 'flex';
+    //         setTimeout(() => {
+    //             document.getElementById('startdate').value = localStorage.getItem('startdate')
+    //         }, 0);
+    //         return
+    //     }
+    //     localStorage.setItem('startdate', document.getElementById('startdate').value);
+    // }
+    // function inputEndDateCheck() {
+    //     const start = document.getElementById('startdate').value;
+    //     const end = document.getElementById('enddate').value;
+    //     const rev = new Date(end).getTime() - new Date(start).getTime();
+    //     if (rev < 0) {
+    //         document.querySelector('.errpop3').style.display = 'flex';
+    //         setTimeout(() => {
+    //             document.getElementById('enddate').value = localStorage.getItem('enddate')
+    //         }, 0);
+    //         return
+    //     }
+    //     localStorage.setItem('enddate', document.getElementById('enddate').value);
+    // }
+    // 查询函数
+    function dailySearch() {
+        const location = window.location.href.split('?')[0];
+        const start = document.getElementById('startdate').value;
+        const end = document.getElementById('enddate').value;
+        const span =
+            (new Date(end).getTime() - new Date(start).getTime()) /
+            1000 /
+            60 /
+            60 /
+            24;
+        const rev = new Date(end).getTime() - new Date(start).getTime();
+        if (span > 31) {
+            // document.querySelector('.errpop1').style.display = 'flex';
+            alert('Query period is limited to 1 month.Please re-enter.');
+            return;
+        } else if (rev < 0) {
+            // document.querySelector('.errpop3').style.display = 'flex';
+            alert('Start date should be earlier than end date, please re-enter.');
+            return;
+        }
+        const contract = selectedlist.toString().replace(/\+/g, '%2B');
+        // localStorage.setItem("start", start)
+        // localStorage.setItem("end", end)
+        //console.log(location);
+        //console.log(start, end, contract);
+        const newlocation =
+            location +
+            '?start_date=' +
+            start +
+            '&end_date=' +
+            end +
+            '&inst_ids=' +
+            contract;
+        //console.log(newlocation);
+        window.location.assign(newlocation);
+    }
+    // 三个弹框的关闭函数
+    function close1() {
+        document.querySelector('.errpop1').style.display = 'none';
+    }
+    function close2() {
+        document.querySelector('.errpop2').style.display = 'none';
+    }
+    function close3() {
+        document.querySelector('.errpop3').style.display = 'none';
+    }
+    const tableContent = document.getElementsByTagName('tr');
+    for(let i = 1;i < tableContent.length;i++){
+        tableContent[i].children[2].innerHTML = format(forceTwoDecimal(tableContent[i].children[2].innerHTML));
+        tableContent[i].children[3].innerHTML = format(forceTwoDecimal(tableContent[i].children[3].innerHTML));
+        tableContent[i].children[4].innerHTML = format(forceTwoDecimal(tableContent[i].children[4].innerHTML));
+        tableContent[i].children[5].innerHTML = format(forceTwoDecimal(tableContent[i].children[5].innerHTML));
+        tableContent[i].children[6].innerHTML = format(forceTwoDecimal(tableContent[i].children[6].innerHTML));
+        tableContent[i].children[8].innerHTML = format(forceTwoDecimal(tableContent[i].children[8].innerHTML));
+        tableContent[i].children[9].innerHTML = format(forceTwoDecimal(tableContent[i].children[9].innerHTML));
+        tableContent[i].children[10].innerHTML = format(forceTwoDecimal(tableContent[i].children[10].innerHTML));
+        tableContent[i].children[11].innerHTML = format(tableContent[i].children[11].innerHTML);
+        tableContent[i].children[13].innerHTML = format(tableContent[i].children[13].innerHTML);
+    }
+</script>
+<script>
+    // 将链接中的+号进行转义
+    if (!window.location.href.split('?')[1]) {
+        const locationNow = window.location.href.split('?')[0];
+        const newLocationNow =
+            locationNow +
+            '?start_date=2026-10-23&end_date=2026-10-23';
+        window.location.assign(newLocationNow);
+    }
+    if (window.location.href.search(/\+/g) >= 0){
+        window.location.assign(window.location.href.replace(/\+/g,'%2B'))
+    }
+</script>
+<script type="text/javascript">
+    $(function () {
+      $('#startdate')
+        .datetimepicker({
+          //年月日
+          format: 'yyyy-mm-dd',
+          autoclose: true,
+          todayBtn: true,
+          startView: 'month',
+          minView: 'month',
+          maxView: 'decade',
+          language: 'zh-CN',
+        })
+        .on('changeDate', function (ev) {
+          //日期选择后触发事件
+        });
+    });
+    $(function () {
+      $('#enddate')
+        .datetimepicker({
+          //年月日
+          format: 'yyyy-mm-dd',
+          autoclose: true,
+          todayBtn: true,
+          startView: 'month',
+          minView: 'month',
+          maxView: 'decade',
+          language: 'zh-CN',
+        })
+        .on('changeDate', function (ev) {
+          //日期选择后触发事件
+        });
+    });
+  </script>                    </div>
+                </div>
+                <!--内容结束-->
+            </div>
+        </div>
+        <!--main end-->
+
+<!--footer beging-->
+<div class="footer pt40 pb40">
+	<div class="container clearfix ">
+        <div class="footer_nav pull-left">
+        <div class="item">
+        <h4>News & Announcement</h4>
+        <a href="/eng_news_News">News</a><br>
+        <a href="/eng_news_Announcement">Announcement</a>
+       </div>
+        <div class="item">
+        <h4>Trading</h4>
+        <a href="/eng_trading_ProductsIntroduce">Trading Hours</a><br>
+        <a href="/eng_trading_matchingMarket_PhysicalTrading">Matching Market</a><br>
+        <a href="/eng_trading_OTCMarket">OTC Market</a><br>
+       </div>
+
+        <div class="item"> 
+        <h4>Rules</h4>
+        <a href="/eng_rules_Rulebook">Rule Book</a><br>
+        <a href="/eng_rules_Clearing">Clearing</a><br>
+        <a href="/eng_rules_Trading">Trading</a><br>
+        <a href="/eng_rules_Delivery">Delivery</a><br>
+        <a href="/eng_rules_RiskManagement">Risk Management</a><br>
+        <a href="/eng_rules_Other">Other</a>
+       </div>
+
+        <div class="item">
+        <h4>Data</h4>
+        <a href="/data_DelayedQuotes">Delayed Quotes</a><br>
+        <a href="/data_PriceChart">Price Chart</a><br>
+        <a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23">Report</a><br>
+        <a href="/data_BenchmarkPrice">Shanghai Gold Benchmark Price</a><br>
+       </div>
+        <div class="item">
+        <h4>Education</h4>
+        <a href="/education_GettingStarted">Getting Started</a><br>
+        <a href="/education_CaseStudy">Case Study</a><br>
+        <a href="/education_RiskManagement">Risk Management</a><br>
+        <a href="/education_Glossary">Glossary</a><br>
+        <a href="/education_FAQs">FAQs</a><br>
+       </div>
+        <div class="item">
+        <h4>Membership</h4>
+        <a href="/membership_ListofMembers_internationalboard">List of Members</a><br>
+        <a href="/membership_WhatYouNeedtoknow">Members and Clients</a><br>
+        <a href="/membership_HowToJoinUs">How to join us</a><br>
+        <a href="/membership_downloads?topicCode=membership_downloads_Trading">Downloads</a><br>
+       </div>
+        <div class="item">
+        <h4>About</h4>
+        <a href="/eng_about_Overview">Overview</a><br>
+        <a href="/eng_about_ArticlesOfAssociation">Articles of Association</a><br>
+        <a href="/eng_about_Compliance">Compliance</a><br>
+        <a href="/eng_about_Career">Career</a><br>
+        <a href="/eng_about_contactUs">Contact us</a><br>
+       </div>
+       
+       
+        </div>
+        <div class="footer_address pull-right">
+        <p>Contact Us ( FOR MORE INFORMATION )</p>
+        <p><i class="fs14 pr5"></i>Address: 2/F,No.669</p>
+        <p>Zhongshan South Road,Huangpu</p>
+        <p>District,Shanghai 200010,P.R.China</p>
+        <p><i class="fs14 pr5"></i>Tel: 86-21-33128349</p>
+        <p><i class="fs14 pr5"></i>E-mail:sgeimarketing@sge.com.cn</p>
+        </div>
+    </div>
+</div>
+<div class="copy fs12"><p>Copyright © 2016 Shanghai Gold Exchange All rights reserved<span style="margin-left:15px;">IPV6 Enabled</span></p></div>
+
+<!--footer end-->    </body>
+</html>

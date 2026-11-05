@@ -1,0 +1,200 @@
+{
+  "brief": {
+    "name": "brief",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/brief.png",
+    "load_s": 12.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "watch": {
+    "name": "watch",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/watch.png",
+    "load_s": 7.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "world": {
+    "name": "world",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/world.png",
+    "load_s": 9.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "eco": {
+    "name": "eco",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/eco.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "memb": {
+    "name": "memb",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/memb.png",
+    "load_s": 7.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "seag": {
+    "name": "seag",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/seag.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "preopen": {
+    "name": "preopen",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/preopen.png",
+    "load_s": 7.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "movers": {
+    "name": "movers",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/movers.png",
+    "load_s": 11.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "filings": {
+    "name": "filings",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/filings.png",
+    "load_s": 7.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "options": {
+    "name": "options",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/options.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "deals": {
+    "name": "deals",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/deals.png",
+    "load_s": 7.5,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "margin": {
+    "name": "margin",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/margin.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "screen": {
+    "name": "screen",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/screen.png",
+    "load_s": 8.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "alerts": {
+    "name": "alerts",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/alerts.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "holders": {
+    "name": "holders",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/holders.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "insiders": {
+    "name": "insiders",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/insiders.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "ipo": {
+    "name": "ipo",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/ipo.png",
+    "load_s": 17.7,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "wrap": {
+    "name": "wrap",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/wrap.png",
+    "load_s": 7.2,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "compare": {
+    "name": "compare",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/compare.png",
+    "load_s": 7.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "markets": {
+    "name": "markets",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/markets.png",
+    "load_s": 11.9,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "events": {
+    "name": "events",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/events.png",
+    "load_s": 8.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  },
+  "research": {
+    "name": "research",
+    "ok": true,
+    "screenshot": "reports/ui_audit/after_cmd/research.png",
+    "load_s": 8.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false
+  }
+}

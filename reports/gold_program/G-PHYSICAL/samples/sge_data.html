@@ -1,0 +1,872 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>数据</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><link rel="stylesheet" type="text/css" href="/static/css/bootstrap_datepicker.css">
+<link rel="stylesheet" type="text/css" href="/static/css/bootstrap-theme.min.css">
+<link rel="stylesheet" type="text/css" href="/static/css/global.css">
+<link rel="stylesheet" type="text/css" href="/static/css/ie.css">
+<link rel="stylesheet" type="text/css" href="/static/css/jquery-ui.css">
+<link rel="stylesheet" type="text/css" href="/static/css/style.css">
+<link rel="stylesheet" type="text/css" href="/static/css/newHead.css">
+
+
+<script type="text/javascript" src="/static/js/jquery-1.8.3.min.js"></script>
+<script type="text/javascript" src="/static/js/bootstrap-datetimepicker.min.js"></script>
+<script type="text/javascript" src="/static/js/tools.js"></script>
+<script type="text/javascript" src="/static/js/main.js"></script>
+<!-- <script type="text/javascript" src="/static/js/ie-emulation-modes-warning.js"></script> -->
+<!-- <script type="text/javascript" src="/static/js/bootstrap.min.js"></script> -->
+<!-- <script type="text/javascript" src="/static/js/date-util.js"></script> -->
+<script type="text/javascript" src="/static/js/jquery-ui.js"></script>
+<script type="text/javascript" src="/static/js/style.js"></script> 
+<script type="text/javascript" src="/static/js/echarts.min.js"></script>
+<script type="text/javascript" src="/static/js/highstock.js"></script>
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?62fa33f77aa3ca59592c24364d3c42eb";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+<link rel="stylesheet" type="text/css" href="/static/css/animation.css">
+<link rel="stylesheet" type="text/css" href="/static/css/mobile.css">
+<script>
+	$(document).ready(function (){
+		 $(".nav li:nth-child(4)").addClass('active').siblings().removeClass('active');
+		 $(".sideBar_list li:nth-child(1)").addClass('current').siblings().removeClass('current');
+		 $(".subNav li").siblings().removeClass('current');
+	});
+</script>
+</head>
+
+<body>
+<!-- 黑白 -->
+<!--
+<style>
+     html {
+         filter: grayscale(100%);
+         -webkit-filter: grayscale(100%);
+         -moz-filter: grayscale(100%);
+         -ms-filter: grayscale(100%);
+         -o-filter: grayscale(100%);
+         filter: progid:DXImageTransform.Microsoft.BasicImage(grayscale=1);
+         -webkit-filter: grayscale(1);
+         filter: gray
+     }
+
+     img,* {
+         filter: gray; /* just for IE6-9 */
+}
+.pc_header .nav .navBtns {
+border:none;
+}
+.pc_header .nav .navBtns li:hover, .pc_header .nav .navBtns .hover,.pc_header .nav,.thead1,.searchBtn,.searchBtn:hover,.ipcBtn:hover,.sgc .title,h3.add_title{
+background: #828282;
+}
+.pc_header .nav .navBtns .active,.rules .content {
+background: #a4a4a4;
+}
+.pc_header .nav li  {
+border-right-color: #828282;
+}
+.colorRed ,.colorBlue{
+    color: #3d3d3d;
+}
+
+.colorGreen ,.pc_header .subNav .item .title a{
+    color: #a4a4a4;
+}
+
+</style>
+<script type="text/javascript">
+     var grayscale=function(){var e={colorProps:["color","backgroundColor","borderBottomColor","borderTopColor","borderLeftColor","borderRightColor","backgroundImage"],externalImageHandler:{init:function(e,t){if(e.nodeName.toLowerCase()==="img"){}else{r(e).backgroundImageSRC=t;e.style.backgroundImage=""}},reset:function(e){if(e.nodeName.toLowerCase()==="img"){}else{e.style.backgroundImage="url("+(r(e).backgroundImageSRC||"")+")"}}}},t=function(){try{window.console.log.apply(console,arguments)}catch(e){}},n=function(e){return(new RegExp("https?://(?!"+window.location.hostname+")")).test(e)},r=function(){var e=[0],t="data"+ +(new Date);return function(n){var r=n[t],i=e.length;if(!r){r=n[t]=i;e[r]={}}return e[r]}}(),i=function(e,t,n){var s=document.createElement("canvas"),u=s.getContext("2d"),a=e.naturalHeight||e.offsetHeight||e.height,f=e.naturalWidth||e.offsetWidth||e.width,l;s.height=a;s.width=f;u.drawImage(e,0,0);try{l=u.getImageData(0,0,f,a)}catch(c){}if(t){i.preparing=true;var h=0;(function(){if(!i.preparing){return}if(h===a){u.putImageData(l,0,0,0,0,f,a);n?r(n).BGdataURL=s.toDataURL():r(e).dataURL=s.toDataURL()}for(var t=0;t<f;t++){var c=(h*f+t)*4;l.data[c]=l.data[c+1]=l.data[c+2]=o(l.data[c],l.data[c+1],l.data[c+2])}h++;setTimeout(arguments.callee,0)})();return}else{i.preparing=false}for(var h=0;h<a;h++){for(var p=0;p<f;p++){var d=(h*f+p)*4;l.data[d]=l.data[d+1]=l.data[d+2]=o(l.data[d],l.data[d+1],l.data[d+2])}}u.putImageData(l,0,0,0,0,f,a);return s},s=function(e,t){var n=document.defaultView&&document.defaultView.getComputedStyle?document.defaultView.getComputedStyle(e,null)[t]:e.currentStyle[t];if(n&&/^#[A-F0-9]/i.test(n)){var r=n.match(/[A-F0-9]{2}/ig);n="("+parseInt(r[0],16)+","+parseInt(r[1],16)+","+parseInt(r[2],16)+")"}return n},o=function(e,t,n){return parseInt(.2125*e+.7154*t+.0721*n,10)},u=function(e){var t=Array.prototype.slice.call(e.getElementsByTagName("*"));t.unshift(e);return t};var a=function(t){if(t&&t[0]&&t.length&&t[0].nodeName){var f=Array.prototype.slice.call(t),l=-1,c=f.length;while(++l<c){a.call(this,f[l])}return}t=t||document.documentElement;if(!document.createElement("canvas").getContext){t.style.filter="progid:DXImageTransform.Microsoft.BasicImage(grayscale=1)";t.style.zoom=1;return}var h=u(t),p=-1,d=h.length;while(++p<d){var v=h[p];if(v.nodeName.toLowerCase()==="img"){var m=v.getAttribute("src");if(!m){continue}if(n(m)){e.externalImageHandler.init(v,m)}else{r(v).realSRC=m;try{v.src=r(v).dataURL||i(v).toDataURL()}catch(g){e.externalImageHandler.init(v,m)}}}else{for(var y=0,b=e.colorProps.length;y<b;y++){var w=e.colorProps[y],E=s(v,w);if(!E){continue}if(v.style[w]){r(v)[w]=E}if(E.substring(0,4)==="("){var S=o.apply(null,E.match(/\d+/g));v.style[w]=E="("+S+","+S+","+S+")";continue}if(E.indexOf("url(")>-1){var x=/\(['"]?(.+?)['"]?\)/,T=E.match(x)[1];if(n(T)){e.externalImageHandler.init(v,T);r(v).externalBG=true;continue}try{var N=r(v).BGdataURL||function(){var e=document.createElement("img");e.src=T;return i(e).toDataURL()}();v.style[w]=E.replace(x,function(e,t){return"("+N+")"})}catch(g){e.externalImageHandler.init(v,T)}}}}}};a.reset=function(t){if(t&&t[0]&&t.length&&t[0].nodeName){var i=Array.prototype.slice.call(t),s=-1,o=i.length;while(++s<o){a.reset.call(this,i[s])}return}t=t||document.documentElement;if(!document.createElement("canvas").getContext){t.style.filter="progid:DXImageTransform.Microsoft.BasicImage(grayscale=0)";return}var f=u(t),l=-1,c=f.length;while(++l<c){var h=f[l];if(h.nodeName.toLowerCase()==="img"){var p=h.getAttribute("src");if(n(p)){e.externalImageHandler.reset(h,p)}h.src=r(h).realSRC||p}else{for(var d=0,v=e.colorProps.length;d<v;d++){if(r(h).externalBG){e.externalImageHandler.reset(h)}var m=e.colorProps[d];h.style[m]=r(h)[m]||""}}}};a.prepare=function(e){if(e&&e[0]&&e.length&&e[0].nodeName){var t=Array.prototype.slice.call(e),o=-1,f=t.length;while(++o<f){a.prepare.call(null,t[o])}return}e=e||document.documentElement;if(!document.createElement("canvas").getContext){return}var l=u(e),c=-1,h=l.length;while(++c<h){var p=l[c];if(r(p).skip){return}if(p.nodeName.toLowerCase()==="img"){if(p.getAttribute("src")&&!n(p.src)){i(p,true)}}else{var d=s(p,"backgroundImage");if(d.indexOf("url(")>-1){var v=/\(['"]?(.+?)['"]?\)/,m=d.match(v)[1];if(!n(m)){var g=document.createElement("img");g.src=m;i(g,true,p)}}}}};return a}()
+
+     $(function() {
+         var navStr = navigator.userAgent.toLowerCase();
+         if(navStr.indexOf("msie 10.0")!==-1||navStr.indexOf("rv:11.0")!==-1){ // 判断是IE10或者IE11
+             window.onload=function(){
+                 grayscale(document.body);
+             }
+         }
+     })
+
+ </script>
+-->
+<script type="text/javascript">
+	$(function() {
+$('[href]').each(function() {
+$(this).attr('href', $(this).attr('href').replaceAll('://',':////').replaceAll('//','/'))
+})
+$('[onclick]').each(function() {
+$(this).attr('onclick', $(this).attr('onclick').replaceAll('://',':////').replaceAll('//','/'))
+})
+		 $("#focus1").autocomplete({ 
+			 source:function(request,response){
+				 var focus1=encodeURI(encodeURI(request.term));
+				 $.ajax({
+					url:'/protal/article/articleSearch',
+					dataType:"json",
+					data:{"inputStr":focus1},
+					success:function(data){
+						response($.map(data.data,function(item){
+							return{					
+							lable:item.title,
+							value:item.title,
+							article_location:item.article_location
+							}
+						}));
+						
+						var focus1 = $("#focus1").val();
+						$("#ui-id-1").find("li").each(function(){
+							var content = $(this).find("a").text();
+							content = content.replace(focus1, "<span style=\"color:blue;\">"+focus1+"</span>");
+							$(this).find("a").html(content);
+						});
+					}
+				 });
+				 
+			 },
+			 minLength:1,
+			 
+			 select: function( event, ui ) {
+				 if(ui.item.article_location.substring(0,4)=="http"){
+				 	window.location=ui.item.article_location;
+				 }else{
+				 	window.location=''+ui.item.article_location;
+				 }
+			}
+		 });	
+	 });
+	function searchHead(){
+		var focus1=$("#focus1").val();
+		if(focus1==""||focus1=="Please enter the keywords"){
+			$(".success").css("display","none");
+			$(".error").css("display","block");
+			$("#tcc").css("display","block");
+			openPopup(".alertPanel",true,".blackMask","Please enter the keywords");
+			/* openTimerPopup(2000,".alertPanel",true,".blackMask") */
+			return;
+		}else{		
+			window.open(window.location.origin+ "/search?p=1&focus="+encodeURI(encodeURI(focus1)));	
+		}
+	}
+	function searchHead3(){
+		var focus3=$("#focus3").val();
+		if(focus3==""||focus3=="Please enter the keywords"){
+			$(".success").css("display","none");
+			$(".error").css("display","block");
+			$("#tcc").css("display","block");
+			openPopup(".alertPanel",true,".blackMask","Please enter the keywords");
+			return;
+		}else{		
+			window.open(window.location.origin+ "/search?p=1&focus="+encodeURI(encodeURI(focus1)));	
+		}
+	}
+</script>
+
+<!-- 字体中小 -->
+<script>
+	$(document).ready(function (){	
+		$(".itemS").click(function(){
+			/* $(".newsContent").find(".title_left").find("h3").css("font-size","16px");
+			$(".newsContent").find(".title_left").find("p").css("font-size","12px"); */
+			$(".newsContent").find(".articlecontent").css("font-size","12px");
+			$(".newsContent").find(".articlecontent").find("p").css("font-size","12px");
+			$(".newsContent").find(".articlecontent").find("span").css("font-size","12px");
+		});
+		$(".itemM").click(function(){
+			/* $(".newsContent").find(".title_left").find("h3").css("font-size","18px");
+			$(".newsContent").find(".title_left").find("p").css("font-size","14px"); */
+			$(".newsContent").find(".articlecontent").css("font-size","14px");
+			$(".newsContent").find(".articlecontent").find("p").css("font-size","14px");
+			$(".newsContent").find(".articlecontent").find("span").css("font-size","14px");
+		}); 
+		$(".itemL").click(function(){
+			/* $(".newsContent").find(".title_left").find("h3").css("font-size","20px");
+			$(".newsContent").find(".title_left").find("p").css("font-size","16px"); */
+			$(".newsContent").find(".articlecontent").css("font-size","16px");
+			$(".newsContent").find(".articlecontent").find("p").css("font-size","16px");
+			$(".newsContent").find(".articlecontent").find("span").css("font-size","16px");
+		});
+	});
+</script>
+<!-- 下载pdf -->
+<script type="text/javascript">
+function downloadPDF(path){ 
+	window.open(path);
+}
+
+//enter键搜索
+function keySearch(){
+	if(event.keyCode==13){//回车键的键值为13
+		searchHead();
+	}
+}
+</script>
+<style>
+#ui-id-1 {left: 649.5px;width: 330px;z-index:10000000;position:fixed;height:180px; overflow-y:scroll;}
+</style>
+<div id="tcc" style="display: none;">
+<!--弹出层开始-->
+	<div class="panel_blackMask blackMask"></div>
+	<div class="tcc fs18 panel alertPanel ">
+        <div class="title clearfix"><p class="pull-left">Prompt text</p><a href="#" class=" pull-right "><i class="iconfont  fs24 closeBtn" onclick='closePopup(".alertPanel",".blackMask")' ><span class="colorFFF">&#xe644;</span></i></a>
+        <div class="clear"></div>
+        </div>
+        <div class="content color000">
+            <p class="tc error"><i class="iconfont fs26 colorRed pr5">&#xe641;</i><b class="alertMsg">Prompt text!</b></p>
+            <p class="tc success" style="display:block;"><i class="iconfont fs26 colorGreen pr5">&#xe640;</i><b class="alertMsg">Prompt text!</b></p>
+            <div class="btnList">
+            <a href="javascript:;" class="btn1 pull-left" onclick='closePopup(".alertPanel",".blackMask")' >
+Confirm</a>
+            <a href="javascript:;" class="btn2 pull-right" onclick='closePopup(".alertPanel",".blackMask")' >
+Cancel</a>
+            </div>
+        </div>
+    </div>
+<!--弹出层结束--></div>
+<!--header begin-->
+<div class="header">
+
+	<div class="pc_header">
+        <div class="topBar container" >
+            <a href="/"><img src="/static/images/logo.png"  class="logo" /></a>
+            <div class="rightCont pull-right" onkeydown="keySearch();">
+            	<div class="searchBar pull-left clearfix ">
+                	<i class="icon" ></i>
+                	<input id="focus1" name="focus" type="text" class="searchBarInput pull-left" placeholder="Please enter the keywords" value="" onkeydown="if(event.keyCode==13){searchHead();}"/>
+                    <div onclick="searchHead()" class="searchBtn pull-left">SEARCH</div>
+                </div>
+                
+                <a href="/"><div class="button pull-left ml15">HOME</div></a>
+                <a href="http://www.sge.com.cn"><div class="button pull-left ml15">中文版</div></a>
+                
+            </div>
+        </div>  
+        
+       <div class="nav ">
+       		<ul class="container navBtns">
+            	<li style="width:22%" class=""><a href="/eng_news_News">News & Announcement</a></li>
+                <li><a href="/eng_trading_ProductsIntroduce">Trading</a></li>
+                <li><a href="/eng_rules_Rulebook">Rules</a></li>
+                <li><a href="/data_DelayedQuotes">Data</a></li>
+                <li><a href="/eng_education">Education</a></li>
+                <li><a href="/membership_ListofMembers_internationalboard">Membership</a></li>
+                <li><a href="/eng_about_Overview">About</a></li>
+            </ul>
+            
+         <div class="subNavBox">
+            	
+         <!-- subNav1 begin -->
+            	<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>News</b><span class="ml10 mr10">|</span><a href="/eng_news_News">View All</a></div>
+											<a href="/eng_news_News/10002310" class="infoItem fs16 clearfix"><span class=" pull-left">SBMA Visits Shanghai Gold Exchange </span><i class="fs26 pull-left ml5 colorRed"></i><span class="pull-left ml20 color999">2025-07-17</span></a>
+                                </div>
+                                
+                                <div class="item mt10">
+                                    <div class="title"><b>Announcement</b><span class="ml10 mr10">|</span><a href="/eng_news_Announcement">View All</a></div>
+											<a href="/eng_news_Announcement/10002725" class="infoItem fs16 clearfix"><span class=" pull-left">Monthly Report of Data Highlights(September, 2026) </span><i class="fs26 pull-left ml5 colorRed"></i><span class="pull-left ml20 color999">2026-10-12</span></a>
+                                </div>    
+                        </div>
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner1.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav1 end -->
+               
+              <!-- subNav2 begin -->
+<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Trading Hours</b><span class="ml10 mr10">|</span><a href="/eng_trading_ProductsIntroduce">View All</a></div>
+                                </div>
+                                
+                                <!-- <div class="item mt10">
+                                  <div class="title"><b>Trading Hours</b><span class="ml10 mr10">|</span><a href="/trading_TradingHours">View All</a></div>
+                                </div> -->
+                                
+                                <div class="item mt10">
+                                    <div class="title"><b>OTC Market</b><span class="ml10 mr10">|</span><a href="/eng_trading_OTCMarket">View All</a></div>
+                                </div>    
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:180px;">
+                                <div class="item">
+                                  <div class="title"><b>Matching Market</b><span class="ml10 mr10">|</span><a href="/eng_trading_matchingMarket_PhysicalTrading">View All</a></div>
+                                  <a href="/eng_trading_matchingMarket_PhysicalTrading" class="infoItem fs16 clearfix">Physical Trading</a>
+                                  <a href="/eng_trading_matchingMarket_MarginTrading" class="infoItem fs16 clearfix">Margin Trading</a>
+                                </div>
+                                
+                              <!--  <div class="item mt10">
+                                    <div class="title"><b>Leasing Market</b><span class="ml10 mr10">|</span><a href="/eng_trading_LeasingMarket">View All</a></div>
+                                </div>     -->
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner2.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav2 end -->
+               
+              <!-- subNav3 begin -->
+            	<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Rule Book</b><span class="ml10 mr10">|</span><a href="/eng_rules_Rulebook">View All</a></div>
+                                </div>                                
+                                <div class="item mt10">
+                                    <div class="title"><b>Clearing</b><span class="ml10 mr10">|</span><a href="/eng_rules_Clearing">View All</a></div>
+                                </div>    
+                                
+                                <div class="item mt10">
+                                  <div class="title"><b>Trading</b><span class="ml10 mr10">|</span><a href="/eng_rules_Trading">View All</a></div>
+                                </div>                                
+                                <div class="item mt10">
+                                    <div class="title"><b>Delivery</b><span class="ml10 mr10">|</span><a href="/eng_rules_Delivery">View All</a></div>
+                                </div>    
+
+                                <div class="item mt10">
+                                  <div class="title"><b>Risk Management</b><span class="ml10 mr10">|</span><a href="/eng_rules_RiskManagement">View All</a></div>
+                                </div>                                
+                                <div class="item mt10">
+                                    <div class="title"><b>International Members and Clients</b><span class="ml10 mr10">|</span><a href="/eng_rules_InternationalMembersAndClients">View All</a></div>
+                                </div>    
+                                
+                                
+                                
+                                
+                        </div>
+                        
+      <div class="pull-left" style="margin-left:60px;">
+                                <div class="item">
+                                  <div class="title"><b>Other</b><span class="ml10 mr10">|</span><a href="/eng_rules_Other">View All</a></div>
+                              <!--    <span class="infoItem fs16 clearfix">Responsible Gold</span>
+                                  <span class="infoItem fs16 clearfix">Central Counter Party (CCP)</span>
+                                  <span class="infoItem fs16 clearfix">Anti-Money Laundering, Anti-Terrorist Financing, <br />
+									and Anti-Tax Evasion</span> -->
+<!-- <a href="/eng_rules_pfmi" class="infoItem fs16 clearfix">PFMI</a> -->
+                                </div>
+ 
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb60">
+                   	   		 <img src="/static/images/subNavBanner3.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+              <!-- subNav3 end -->
+               
+              <!-- subNav4 begin -->
+            	<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Delayed Quotes</b><span class="ml10 mr10">|</span><a href="/data_DelayedQuotes">View All</a></div>
+                                </div> 
+<!--                               
+                                <div class="item mt10">
+                                    <div class="title"><b>Price Chart</b><span class="ml10 mr10">|</span><a href="/data_PriceChart">View All</a></div>
+                                </div> 
+-->
+                                <div class="item mt10">
+                                    <div class="title"><b>Shanghai Gold Benchmark Price</b><span class="ml10 mr10">|</span><a href="/data_BenchmarkPrice">View All</a></div>
+                                </div> 
+<div class="item mt10">
+			<div class="title"><b>Shanghai Silver Benchmark Price</b><span class="ml10 mr10">|</span><a href="/data_SilverBenchmarkPrice">View All</a></div>
+		</div>
+                                 <div class="item mt10">
+                                    <div class="title"><b>Licensed Market Data Distributors</b><span class="ml10 mr10">|</span><a href="/data_Licensed">View All</a></div>
+                                </div>    
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:180px;">
+                                <div class="item">
+                                  <div class="title"><b>Report</b><span class="ml10 mr10">|</span><a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23">View All</a></div>
+                                 <!--  <a href="/data_DailyReport_new" class="infoItem fs16 clearfix">Daily</a> -->
+                                  <a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23" class="infoItem fs16 clearfix">Daily</a>
+                                  <a href="/data_MonthlyReport" class="infoItem fs16 clearfix">Monthly</a>
+                                  <a href="/data_AnnualReport" class="infoItem fs16 clearfix">Annual</a>
+<a href="/data_CashSettlement" class="infoItem fs16 clearfix">Cash Settlement</a>
+                                </div>
+ 
+                        </div>
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner4.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+              <!-- subNav4 end -->
+               
+              <!-- subNav5 begin -->
+            	<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Getting Started</b><span class="ml10 mr10">|</span><a href="/education_GettingStarted">View All</a></div>
+                                </div>                                
+                                <div class="item mt10">
+                                    <div class="title"><b>Case Study</b><span class="ml10 mr10">|</span><a href="/education_CaseStudy">View All</a></div>
+                                </div> 
+                                
+                                <div class="item mt10">
+                                    <div class="title"><b>FAQs</b><span class="ml10 mr10">|</span><a href="/education_FAQs">View All</a></div>
+                                </div>    
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:180px;">
+                                <div class="item">
+                                  <div class="title"><b>Risk Management</b><span class="ml10 mr10">|</span><a href="/education_RiskManagement">View All</a></div>
+                                </div>
+ 
+                                <div class="item mt10">
+                                  <div class="title"><b>Glossary</b><span class="ml10 mr10">|</span><a href="/education_Glossary">View All</a></div>
+                                </div>
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner5.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav5 end -->
+               
+              <!-- subNav6 begin -->
+               <div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>List of members (International Board)</b><span class="ml10 mr10">|</span><a href="/membership_ListofMembers_internationalboard">View All</a></div>
+                                </div> 
+                                <div class="item mt10">
+                                  <div class="title"><b>List of members (main board)</b><span class="ml10 mr10">|</span><a href="/membership_ListOfMembers_MainBoard">View All</a></div>
+                                </div>
+                                <div class="item mt10">
+                                  <div class="title"><b>Members and Clients</b><span class="ml10 mr10">|</span><a href="/membership_WhatYouNeedtoknow">View All</a></div>
+                                  <a href="/membership_WhatYouNeedtoknow" class="infoItem fs16 clearfix">What you need to know</a>
+                                  <a href="/membership_NewsOfInternationalMembersAndClients" class="infoItem fs16 clearfix">News of International Members & Clients</a>
+                                </div>                                
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:120px;">
+                                <div class="item">
+                                  <div class="title"><b>How to join us</b><span class="ml10 mr10">|</span><a href="/membership_HowToJoinUs">View All</a></div>
+                                  <a href="/membership_HowToJoinUs_WhatYouNeedToKnow" class="infoItem fs16 clearfix">What you need to know</a>
+                                  <a href="/membership_HowToJoinUs_WhatYouNeedToDo" class="infoItem fs16 clearfix">What you need to do</a>
+                                </div>
+                                <div class="item mt10">
+                                  <div class="title"><b>Downloads</b><span class="ml10 mr10">|</span><a href="/membership_downloads?topicCode=membership_downloads_Trading">View All</a></div>
+                                  <a href="/membership_downloads?topicCode=membership_downloads_Trading" class="infoItem fs16 clearfix">Trading</a>
+                                  <a href="/membership_downloads?topicCode=membership_downloads_Delivery" class="infoItem fs16 clearfix">Delivery</a>
+                                  <a href="/membership_downloads?topicCode=membership_downloads_Membership" class="infoItem fs16 clearfix">Membership</a>
+                                  <a href="/membership_downloads?topicCode=membership_downloads_Others" class="infoItem fs16 clearfix">Others</a>
+                                </div>
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb60">
+                   	   		 <img src="/static/images/subNavBanner6.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav6 end -->
+               
+              <!-- subNav7 begin -->
+<div class="subNav container" style="display:none;">
+                        <div class="pull-left">
+                                <div class="item">
+                                  <div class="title"><b>Overview</b><span class="ml10 mr10">|</span><a href="/eng_about_Overview">View All</a></div>
+                                </div> 
+                                
+                                <div class="item mt10">
+                                  <div class="title"><b>Articles of Association</b><span class="ml10 mr10">|</span><a href="/eng_about_ArticlesOfAssociation">View All</a></div>
+                                </div>                                
+
+                                <div class="item mt10">
+                                  <div class="title"><b>Compliance</b><span class="ml10 mr10">|</span><a href="/eng_about_Compliance">View All</a></div>
+                                </div>                                
+
+                        </div>
+                        
+                        <div class="pull-left" style="margin-left:180px;">
+                                <div class="item">
+                                  <div class="title"><b>Career</b><span class="ml10 mr10">|</span><a href="/eng_about_Career">View All</a></div>
+                                </div> 
+                                
+                                <div class="item mt10">
+                                  <div class="title"><b>Contact us</b><span class="ml10 mr10">|</span><a href="/eng_about_contactUs">View All</a></div>
+                                </div>                                
+                        </div>
+                        
+                        
+                        <div class="subNavBanner pull-right pl40 pt10 pb10">
+                   	   		 <img src="/static/images/subNavBanner7.jpg" width="271" height="125" />
+                        </div>
+                        
+              </div>
+               <!-- subNav7 end -->
+            
+         </div>
+            
+      </div> 
+    </div>
+    
+  <!--wapMobileHeader begin 20161028-->
+  <div class="wapMobileHeader hidden" >
+        <div class="top"> <a href="/"><img src="/static/images/logo.png"  class="logo"/></a>
+    	<i class="pull-right navBtn"></i>
+        </div>
+        
+        <div class="searchBar">
+        	<input id="focus3" name="focus3" type="text"  placeholder="Please enter keywords" class="border_ea" value=""/>
+            <i class="searchBtn" onclick="searchHead3()"></i>
+        </div>
+  
+  </div>
+  
+ <!--wapMobileHeader end 20161028-->
+
+</div>
+
+<!--header end-->
+
+<!-- wapSubNav begin 20161028-->
+<div class="wapSubNav" style="display:none;">
+	<!-- level1 begin -->
+	<div class="subNav level1 clearfix" >
+    	<div class="title">
+        	<span class="pull-left"><a href="/" target="_blank">Home</a></span>
+            <i class=" pull-right closeBtn"></i>
+        </div>
+        <div class="btnList">
+        	<ul>
+                <li><a href="http://www.sge.com.cn" target="_blank">中文版</a></li>
+                <li class="hasSub" ><a href="/eng_news_News" target="_blank" class="block">News & Announcement</a></li>
+                <li><a href="/eng_trading_ProductsIntroduce" target="_blank" class="block">Trading</a></li>
+                <li><a href="/eng_rules_Rulebook" target="_blank" class="block">Rules</a></li>
+                <li><a href="/data_DelayedQuotes" target="_blank" class="block">Data</a></li>
+                <li><a href="/eng_education" target="_blank" class="block">Education</a></li>
+                <li><a href="/membership_ListofMembers_internationalboard" target="_blank" class="block">Membership</a></li>
+                <li><a href="/eng_about_Overview" target="_blank" class="block">About</a></li>
+            </ul>
+        </div>
+    </div>
+    <!-- level1 end -->   
+    
+    
+	<!-- level2 begin -->
+	<!-- <div class="subNav level2  clearfix" style="display:none;">
+    	<div class="title">
+        	<span class="pull-left">Trading</span>
+            <i class=" pull-right closeBtn"></i>
+        </div>
+        <div class="btnList">
+        	<ul>
+                <li ><div class="subNavBackBtn pull-left clearfix"><i class="pull-left mt2"></i><span class="pull-left ml20">Back</span></div></li>
+                <li class="active" >Products Introduce</li>
+                <li>OTC Market</li>
+                <li>Products Introduce</li>
+                <li>OTC Market</li>
+
+            </ul>
+        </div>
+    </div> -->
+    <!-- level2 end -->   
+
+</div>
+<!-- wapSubNav end 20161028-->
+<!-- yinc  20171017 -->
+<script>
+function searchkey(){ 
+	if(event.keyCode==13){//回车键的键值为13
+		search();
+	}
+}
+ function search(){
+		var keywords=$("#keywords").val();
+		if(keywords==""||keywords=="Please enter the keywords"){
+			$(".success").css("display","none");
+			$(".error").css("display","block");
+			$("#tcc").css("display","block");
+			openPopup(".alertPanel",true,".blackMask","Please enter the keywords");
+			/* openTimerPopup(2000,".alertPanel",true,".blackMask") */
+			return;
+		}else{		
+			load();	
+		}
+	}
+</script>
+<!--banner begin-->
+<div class="banner pt230">
+  <div class="container"><h2 class="pl20">data</h2></div>
+</div>
+<!--banner end-->
+
+<!--main begin-->
+<div class="news_warp pt30 pb30">
+	<div class="container clearfix">
+<!--左侧边栏开始-->
+        <div class="left_sideBar ">
+          <div class="left_sideBar_head"><i class="pr10 fs20"></i>Data</div>
+          <ul class="sideBar_list">
+              <li class=""><a href="/data_DelayedQuotes" class="item clearfix"><i class="pull-left mr10"></i><span class="pull-left">Delayed Quotes</span></a></li>
+<!--
+              <li class=""><a href="/data_PriceChart" class="item clearfix"><i class="pull-left mr10"></i><span class="pull-left">Price Chart</span></a></li>
+-->
+              <li class="">
+              <a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23" class="item clearfix"><i class="pull-left mr10"></i><span class="pull-left">Report</span></a>
+              <div class="subNav">
+                  <ul>
+                  	<!-- <li class=""><a href="/data_DailyReport_new" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Daily</span> </a></li> -->
+                    <li class=""><a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Daily</span> </a></li>
+                    <li class=""><a href="/data_MonthlyReport" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Monthly</span> </a></li>
+                    <li class=""><a href="/data_AnnualReport" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Annual</span> </a></li>
+<li class=""><a href="/data_CashSettlement" class="clearfix"><i class="pull-left mr10"></i><span class="pull-left">Cash Settlement</span> </a></li>
+                  </ul>
+              </div>
+              
+          	</li>
+          	<li class=""><a href="/data_BenchmarkPrice" class="item clearfix" style="padding-right:10px;"><i class="pull-left mr10"></i><span class="pull-left">Shanghai Gold Benchmark Price</span></a></li>
+<li class=""><a href="/data_SilverBenchmarkPrice" class="item clearfix" style="padding-right:10px;"><i class="pull-left mr10"></i><span class="pull-left">Shanghai Silver Benchmark Price</span></a></li>
+          	<li class=""><a href="/data_Licensed" class="item clearfix" style="padding-right:10px;"><i class="pull-left mr10"></i><span class="pull-left">Licensed Market Data Distributors</span></a></li>
+          </ul>
+        </div>
+    <!--左侧边栏结束-->    <!--内容开始-->
+      <div class="main">
+          <div class="main_head clearfix">
+            <h2 class="pull-left fs18 lh50">Delayed Quotes</h2>
+            <div class="bread_nav pull-right"><a href="/">Home</a> > <a href="/data_DelayedQuotes" >Data</a> > <a href="/data_DelayedQuotes" >Delayed Quotes</a></div>
+           
+        </div>
+           
+           
+         <div class="trading_content">
+             <div class="trading_table">
+             <table class="table_noborder table text-center table-hover ">
+              <thead>
+                  <tr>
+                      <th>Variety</th>
+                      <th>Latest</th>
+                      <th>High</th>
+                      <th>Low</th>
+                      <th>Open</th>
+                  </tr>
+              </thead>
+                  <tbody>
+                      <tr class="">
+                        <td>Au99.95</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="bgColor_tr ">
+                        <td>Au99.99</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="">
+                        <td>Au100g</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="bgColor_tr ">
+                        <td>Pt99.95</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="">
+                        <td>Ag(T+D)</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="bgColor_tr ">
+                        <td>Au(T+D)</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="">
+                        <td>mAu(T+D)</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="bgColor_tr ">
+                        <td>Au(T+N1)</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="">
+                        <td>Au(T+N2)</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="bgColor_tr ">
+                        <td>Ag99.99</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="">
+                        <td>iAu99.99</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="bgColor_tr ">
+                        <td>Au99.5</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="">
+                        <td>iAu100g</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="bgColor_tr ">
+                        <td>iAu99.5</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="">
+                        <td>PGC30g</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="bgColor_tr ">
+                        <td>NYAuTN06</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                      <tr class="">
+                        <td>NYAuTN12</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                        <td class="">0.0</td>
+                      </tr>
+                    </tbody>
+               </table>
+
+             </div>
+             
+           
+         </div>
+
+          
+           
+           
+        </div>
+    <!--内容结束-->
+    </div>
+</div>
+<!--main end-->
+
+<!--footer beging-->
+<div class="footer pt40 pb40">
+	<div class="container clearfix ">
+        <div class="footer_nav pull-left">
+        <div class="item">
+        <h4>News & Announcement</h4>
+        <a href="/eng_news_News">News</a><br>
+        <a href="/eng_news_Announcement">Announcement</a>
+       </div>
+        <div class="item">
+        <h4>Trading</h4>
+        <a href="/eng_trading_ProductsIntroduce">Trading Hours</a><br>
+        <a href="/eng_trading_matchingMarket_PhysicalTrading">Matching Market</a><br>
+        <a href="/eng_trading_OTCMarket">OTC Market</a><br>
+       </div>
+
+        <div class="item"> 
+        <h4>Rules</h4>
+        <a href="/eng_rules_Rulebook">Rule Book</a><br>
+        <a href="/eng_rules_Clearing">Clearing</a><br>
+        <a href="/eng_rules_Trading">Trading</a><br>
+        <a href="/eng_rules_Delivery">Delivery</a><br>
+        <a href="/eng_rules_RiskManagement">Risk Management</a><br>
+        <a href="/eng_rules_Other">Other</a>
+       </div>
+
+        <div class="item">
+        <h4>Data</h4>
+        <a href="/data_DelayedQuotes">Delayed Quotes</a><br>
+        <a href="/data_PriceChart">Price Chart</a><br>
+        <a href="/data/data_daily_international_new?start_date=2026-10-23&end_date=2026-10-23">Report</a><br>
+        <a href="/data_BenchmarkPrice">Shanghai Gold Benchmark Price</a><br>
+       </div>
+        <div class="item">
+        <h4>Education</h4>
+        <a href="/education_GettingStarted">Getting Started</a><br>
+        <a href="/education_CaseStudy">Case Study</a><br>
+        <a href="/education_RiskManagement">Risk Management</a><br>
+        <a href="/education_Glossary">Glossary</a><br>
+        <a href="/education_FAQs">FAQs</a><br>
+       </div>
+        <div class="item">
+        <h4>Membership</h4>
+        <a href="/membership_ListofMembers_internationalboard">List of Members</a><br>
+        <a href="/membership_WhatYouNeedtoknow">Members and Clients</a><br>
+        <a href="/membership_HowToJoinUs">How to join us</a><br>
+        <a href="/membership_downloads?topicCode=membership_downloads_Trading">Downloads</a><br>
+       </div>
+        <div class="item">
+        <h4>About</h4>
+        <a href="/eng_about_Overview">Overview</a><br>
+        <a href="/eng_about_ArticlesOfAssociation">Articles of Association</a><br>
+        <a href="/eng_about_Compliance">Compliance</a><br>
+        <a href="/eng_about_Career">Career</a><br>
+        <a href="/eng_about_contactUs">Contact us</a><br>
+       </div>
+       
+       
+        </div>
+        <div class="footer_address pull-right">
+        <p>Contact Us ( FOR MORE INFORMATION )</p>
+        <p><i class="fs14 pr5"></i>Address: 2/F,No.669</p>
+        <p>Zhongshan South Road,Huangpu</p>
+        <p>District,Shanghai 200010,P.R.China</p>
+        <p><i class="fs14 pr5"></i>Tel: 86-21-33128349</p>
+        <p><i class="fs14 pr5"></i>E-mail:sgeimarketing@sge.com.cn</p>
+        </div>
+    </div>
+</div>
+<div class="copy fs12"><p>Copyright © 2016 Shanghai Gold Exchange All rights reserved<span style="margin-left:15px;">IPV6 Enabled</span></p></div>
+
+<!--footer end--></body>
+</html>

@@ -1,0 +1,342 @@
+GOLD
+GOLD TERMINAL
+spot, COMEX, MCX, positioning (COT), physical, macro, contracts, health check, pre-open fair value · 03:50 IST
+LIVE · YAHOO (CACHED FET…
+PAPER · CONTEXT
+↻
+COMEX DEC-26
+settle — $4,072.2 last Wed 04 Nov · Yahoo, not settlement
+last $4,072.2 ▲+3.28 % Yahoo, not settlement · 03:29 IST
+LIVE · YAHOO (CACHED FET…
+USD/INR
+94.63
+Yahoo INR=X · 00:13 IST
+10-Y REAL
+2.62 %
+TIPS · Mon 02 Nov
+MCX GOLD DEC-26
+₹1,40,186
+Tue 03 Nov settlement · basis +1.58 % at the at the Tue 03 Nov settlement vs that session's duty-paid landed vs that session's duty-paid
+COT FUNDS NET (MANAGED MONEY)
++105,562
++1,356 w/w · as of Tue 27 Oct
+◷ MCX opens in 5h09m
+spot proxy · COMEX front GC1 · COMEX matched month GCZ26 · MCX GOLD DEC-26
+CONTRACT
+MCX
+NSE (n/a)
+BSE (n/a)
+GOLD
+GOLDM
+GOLDTEN
+GOLDGUINEA
+GOLDPETAL
+front (by OI)
+DEC-26 · 2026-12-04 · OI 16,282
+FEB-27 · 2027-02-05 · OI 1,180
+APR-27 · 2027-04-05 · OI 70
+JUN-27 · 2027-06-04 · OI 2
+AUG-27 · 2027-08-05 · OI 0
+OCT-27 · 2027-10-05 · OI 0
+OPTIONS
+↔ COMEX DEC-26 ↔ GC1
+UNIT
+$/oz
+₹/10 g
+₹/g
+$/g
+₹/tola
+WINDOW
+D
+W
+M
+LAYER
+[B]
+[P]
+HEALTH
+DAILY
+WEEKLY
+MONTHLY
+POSITIONING
+PHYSICAL
+MACRO
+CONTRACTS
+LEARN
+Who is answered weekly by the CFTC's COT with a 3-day lag (Tuesday positions, Friday release); what got opened or closed is answered daily by exchange open interest, which never says who.
+MANAGED MONEY THIS WEEK
+CONTEXT · G-STUDY 26 Oct 2026
+DELAYED · CFTC (DATA-SERVIC…
+?
+as of Tue 27 Oct
+[B]the funds' bet and what they did this week: net = longs minus shorts; a negative Δlong means they closed longs, a negative Δshort means they covered shorts. The fund-driver label is the bigger of the two moves; when price fell and the net still rose, funds bought the dip.
+MANAGED-MONEY NET
++105,562
+10.56 Moz · 328 t · $43.0 bn
+CHANGE ON THE WEEK
++1,356
+new 1,538 longs / new 182 shorts
+FUND-DRIVER LABEL
+funds bought the dip
+week price −1.64% · long unwinding
+OPEN INTEREST
+396,810
+Δ −5,469 · percentile 20 · all-history percentile (1986→, data-service)
+as of Tue 27 Oct · released Sat 31 Oct 01:00 IST · next Sat 07 Nov 02:00 IST
+Source: CFTC Commitments of Traders (publicreporting.cftc.gov) — US public domain
+WHO IS LONG · WHO IS SHORT
+CONTEXT · G-STUDY 26 Oct 2026
+DELAYED · CFTC (DATA-SERVIC…
+?
+as of Tue 27 Oct
+[B]every long has a short; swap dealers are the banks' hedge of the OTC and ETF book, producers hedge mine output and inventory.
+short ◀ · ▶ long · contracts as of the report Tuesday · Δ on the week
+DISAGGREGATED
+Managed money (funds, CTAs)
+net +105,562 · 26.6% of OI
+16,946 ▲
+122,508 ▲
+Δ +182
+Δ +1,538
+new 1,538 longs
+new 182 shorts
+Other reportables
+net +80,889 · 20.4% of OI
+20,327 ▼
+101,216 ▼
+Δ −186
+Δ −14,956
+closed 14,956 longs
+covered 186 shorts
+Non-reportable (small traders)
+net +29,173 · 7.4% of OI
+19,449 ▲
+48,622 ▼
+Δ +3,759
+Δ −2,785
+closed 2,785 longs
+new 3,759 shorts
+Swap dealers (banks' OTC book)
+net −206,050 · −51.9% of OI
+226,280 ▼
+20,230 ▲
+Δ −12,256
+Δ +2,493
+new 2,493 longs
+covered 12,256 shorts
+Producer / merchant
+net −9,574 · −2.4% of OI
+30,061 ▼
+20,487 ▲
+Δ −4,437
+Δ +772
+new 772 longs
+covered 4,437 shorts
+0
+HISTORY
+1y
+3y
+10y
+all
+CONTEXT · G-STUDY 26 Oct 2026
+DELAYED · CFTC (DATA-SERVIC…
+?
+52 reports · since Tue 04 Nov 2025 · three stacked panels, one y-axis each — never dual-axis · as of Tue 27 Oct
+[B]where the funds' bet sits against the price over time; the bands mark the 20th and 80th positions of the last year.
+GC front, $/oz (Tuesday close)
+4,000
+4,500
+5,000
+04 Nov 25
+25 Nov 25
+16 Dec 25
+06 Jan 26
+27 Jan 26
+17 Feb 26
+10 Mar 26
+31 Mar 26
+21 Apr 26
+12 May 26
+02 Jun 26
+23 Jun 26
+14 Jul 26
+04 Aug 26
+25 Aug 26
+15 Sept 26
+06 Oct 26
+27 Oct 26
+net position by group, contracts
+managed money
+other reportables
+non-reportable
+swap dealers
+producer / merchant
+−200k
+0k
+200k
+04 Nov 25
+25 Nov 25
+16 Dec 25
+06 Jan 26
+27 Jan 26
+17 Feb 26
+10 Mar 26
+31 Mar 26
+21 Apr 26
+12 May 26
+02 Jun 26
+23 Jun 26
+14 Jul 26
+04 Aug 26
+25 Aug 26
+15 Sept 26
+06 Oct 26
+27 Oct 26
+managed-money COT index (52 w) with 20 / 80 bands — crowdedness, not a signal
+0
+25
+50
+75
+04 Nov 25
+25 Nov 25
+16 Dec 25
+06 Jan 26
+27 Jan 26
+17 Feb 26
+10 Mar 26
+31 Mar 26
+21 Apr 26
+12 May 26
+02 Jun 26
+23 Jun 26
+14 Jul 26
+04 Aug 26
+25 Aug 26
+15 Sept 26
+06 Oct 26
+27 Oct 26
+CROWDEDNESS
+CONTEXT · G-STUDY
+DELAYED · CFTC (DATA-SERVIC…
+?
+as of Tue 27 Oct
+[B]how far the funds' net sits from its own recent range. A high reading says the crowd is already in; it does not say when it leaves.
+29
+0
+100
+COT INDEX 52 W
+29
+COT INDEX 156 W
+39
+Z52 / Z156
+−0.4 / −0.7
+NET % OI
+26.6%
+NET PERCENTILE
+percentile 50 · all-history percentile (1986→, data-service)
+crowdedness, not a signal — no forecasting power 2006–2026 (G-STUDY)
+RALLY / DECLINE DECOMPOSITION
+CONTEXT · G-STUDY 26 Oct 2026
+DELAYED · CFTC (DATA-SERVIC…
+?
+as of Tue 27 Oct
+[B]who was adding and who was leaving during the rally and the decline, in contracts and tonnes.
+SPAN	PRICE $/OZ	Δ FUND LONG	Δ FUND SHORT	Δ FUND NET	Δ COMMERCIAL NET	Δ OTHER REPT.	Δ SMALL SPECS	ΔOI	ΔGLD T
+since the 2-year low	2,570 → 4,075	−81,153	−21,419	−59,734	+49,958 (sd −7,924 · pm +57,882)	+9,734	+42	−139,171	+167.7
+since the high	5,318 → 4,075	−20,813	−8,216	−12,597	+32,661 (sd +1,646 · pm +31,015)	−6,348	−13,716	−91,653	−48.9
+COMEX OPEN INTEREST BY PRODUCT (DAILY, T+1)
+CONTEXT · folklore until G-STUDY-2
+DELAYED · CME FTP DAILY_VOL…
+?
+since Tue 03 Nov · as of Tue 03 Nov
+[B]"which positions got closed yesterday": OI down = positions closed; the tape names the quadrant each day.
+GC OPEN INTEREST
+400,666
+Δ — · Tue 03 Nov
+GC VOLUME VS 20-D AVG
+—
+volume 200,293 · average from 5 sessions (1 stored)
+VOLUME / OI CHURN
+0.50
+OPTIONS P/C OI
+0.39
+puts 225,160 · calls 580,830
+1OZ
+GC
+MGC
+QO
+0k
+200k
+400k
+600k
+03 Nov 26
+last 1 sessions · Δprice % over ΔOI · greyed = roll / expiry day (mechanical) · ·· = ΔOI not stored
+··
+03
+Tue 03 Nov: no OI for this session · Δprice −0.74% · ΔOI —
+no OI yet: the CME daily file lands T+1 ≈ 15:30 IST
+OI ▼
+OI ▲
+px ▲
+short covering
+long build-up
+px ▼
+long unwinding
+short build-up
+roll: front DEC-26 · next FEB-27 · ratio — · 25 days to FND (Mon 30 Nov) (product OI until bulletin settlements are allowed, C7)
+Source: CME Group daily files (ftp.cmegroup.com) — public FTP, paced; www.cmegroup.com is never fetched
+MCX GOLD OPEN INTEREST BY EXPIRY (07:35)
+ARITHMETIC · ICICI master
+DELAYED · ICICI MCX MASTER…
+?
+since Thu 29 Oct · as of Tue 03 Nov
+[B]where MCX liquidity sits and when it moves: the front month's OI falls into the tender period while the next month's rises.
+Fri 04 Dec
+Fri 05 Feb
+Mon 05 Apr
+Fri 04 Jun
+Thu 05 Aug
+Tue 05 Oct
+0
+5,000
+10,000
+15,000
+29 Oct 26
+03 Nov 26
+roll ratio front ÷ next 13.80 · 26 days to tender · tender from Tue 01 Dec (computed; the MCX circular is the legal source)
+last 2 sessions · Δprice % over ΔOI · greyed = roll / expiry day (mechanical) · ·· = ΔOI not stored
+··
+29
+▼▲
+03
+Tue 03 Nov: short build-up — price down with new positions: sellers opened · Δprice −2.45% · ΔOI +863
+Δ over 3 sessions (rows missing between)
+OI ▼
+OI ▲
+px ▲
+short covering
+long build-up
+px ▼
+long unwinding
+short build-up
+EXPIRY	OI (LOTS)	ΔOI	SETTLE ₹/10 G
+Fri 04 Dec	16,282	+677	₹1,40,186 PROXY
+Fri 05 Feb	1,180	+168	₹1,42,926 PROXY
+Mon 05 Apr	70	+22	₹1,44,327 PROXY
+Fri 04 Jun	2	−4	₹1,46,603 PROXY
+Thu 05 Aug	0	0	₹1,48,694 PROXY
+Tue 05 Oct	0	0	₹1,51,246 PROXY
+WHO HOLDS MCX GOLD (MONTHLY)
+CONTEXT
+?
+dormant until a collector exists (O-8)
+LINK-ONLY: the publisher blocks scripts or its terms forbid automated access, so nothing is fetched by the stack; the tile opens the page in your browser. The MCX category-wise OI workbook (FPI / DFI / prop / hedgers / others, long vs short) sits behind a bot wall; the schema `gold_mcx_category_oi` is fixed, the panel fills when the owner approves a browser-session collector.
+MCX participant-wise open interest · monthly workbook
+mcxindia.com is never fetched by the stack
+↗ OPEN
+open question j.2 #1: daily or month-end rows?
+DETAILS
+CONTEXT · context · G-STUDY 26 Oct 2026
+DELAYED · CFTC (DATA-SERVIC…
+?
+as of Tue 27 Oct
+trader counts, concentration, micro gold, options overlay, the raw CFTC block

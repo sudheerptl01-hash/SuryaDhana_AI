@@ -1,0 +1,141 @@
+◉ SURYADHANA ▸ PORTFOLIO
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:41:20
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,125.40
+−1.24%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:41 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+PORT
+EXECUTION ENGINE
+PAPER
+legacy 5-day XGBoost engine book · autopilot OFF (the monthly strategy runs on DESK)
+refreshed 03:41:16
+RESEARCH · FAIL
+This is the legacy 5-day engine. After real ICICI costs it loses about 45–50% a year (5 positions turned over weekly), which is why its autopilot is OFF. The approved strategy is the monthly Decision Desk (DESK), in paper mode.
+READ THE STUDY ›
+Execution Control Panel
+ACTIVE
+ACTIVE MODEL
+XGBoost
+RL Agent
+XGBoost+RL Ensemble
+Manual
+EXECUTION MODE
+PAPER
+LIVE ⚡
+EMERGENCY CONTROL■ LIQUIDATE & HALT
+
+NET EQUITY
+
+₹10.0K
+
+Start: ₹10.0K
+
+DAILY PNL
+
++₹0.00
+
++0.000%
+
+UNREALIZED PNL
+
++₹0.00
+
+0 positions
+
+KILL SWITCH ROOM
+
+2.00%
+
+to -2.0% limit
+
+DAILY LOSS GUARD
++0.000%
+₹0.00 used
+Limit: -2.0% (₹200.00)
+OPEN POSITIONS (0)
+◇
+NO ACTIVE POSITIONS
+The engine populates positions when signals fire (autopilot is OFF).
+ORDER LOG
+No orders recorded yet
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

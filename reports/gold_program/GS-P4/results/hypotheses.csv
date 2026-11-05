@@ -1,0 +1,4 @@
+hypothesis,months,per_month,verdict_pre,verdict
+H1 festival (Sep/Oct/Nov),"Sep, Oct, Nov","Sep 2.00 % (t vs 0 2.75; excess 0.97 % t 1.33, halves 1.10/0.74) FAIL; Oct 0.98 % (t vs 0 1.97; excess −0.05 % t −0.10, halves 0.76/−1.33) FAIL; Nov 0.61 % (t vs 0 1.00; excess −0.42 % t −0.70, halves −1.02/0.24) FAIL",CONTEXT-ONLY,FAIL
+H1b Akshaya Tritiya (Apr/May),"Apr, May","Apr 0.42 % (t vs 0 0.79; excess −0.61 % t −1.15, halves −1.03/−0.64) FAIL; May 0.80 % (t vs 0 1.56; excess −0.23 % t −0.46, halves −0.73/0.10) FAIL",FAIL,FAIL
+H2 Dec/Jan carry-over,"Dec, Jan","Dec 0.79 % (t vs 0 1.33; excess −0.24 % t −0.41, halves −0.04/−0.72) FAIL; Jan 2.58 % (t vs 0 2.64; excess 1.55 % t 1.58, halves 0.97/1.74) FAIL",CONTEXT-ONLY,FAIL

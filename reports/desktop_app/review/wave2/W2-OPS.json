@@ -1,0 +1,320 @@
+{
+ "fixer": "W2-OPS",
+ "summary": "W2-OPS is finished. All 13 brief IDs are fixed. I also found and fixed one new defect: a QA scratch server kept its connections to the live ui-api open after SIGTERM. On timing: nothing more is needed from me. What remains for the PM is applying 6 small patch requests (one test line, five lines of README text), about 10 to 15 minutes including the gate re-runs.\n\n- **Live incident (not caused by a fix, already reported to main):** from about 14:40 IST the live ui-api (pid 75525) stopped accepting connections. Connects timed out, it sat at 0% CPU, and :8010 had 208 open connections, mostly from the agents' scratch relays. 6 of them were mine: my stopped scratch server had ignored SIGTERM, so I SIGKILLed it. I restarted nothing. ui-api is now healthy as pid 70501 (I did not do that restart). Because of this, scratch_server.py now has a bounded shutdown and closes its upstream connections, with a regression test.\n- **start-local.sh** (installed with temp file + mv; bash -n passes on /bin/bash 3.2.57; live `status` and `help` exit 0 and stay read-only):\n  - The `ui-release` row shows the release in ui/dist/current next to the one ui-api serves (GET /version). It warns `mismatch` when they differ.\n  - The `prefs` row reads ui-api's durable migration record from the store's meta table, using W2-API's real schema, with the API as fallback. After the import it stays `imported` even when every key is later edited in the app; the record's 'inferred' backfill is supported.\n  - The per-record fallback gains an `app-owned` state with no misleading instruction, and the instruction now names only the keys an import can still fill.\n  - The status Python has a 10 s timeout: GNU timeout, or a bash fallback when it is missing.\n  - `rotate_log` now fails closed: it leaves a log alone when lsof is missing, fails, or prints unexpected output.\n  - START_SET nit fixed.\n- **QA tools:**\n  - scratch_server.py sends X-Forwarded-Host as Next does, so same-origin QA POSTs now pass the real guard while cross-site ones are still refused. Its shutdown is bounded and it closes its upstream client.\n  - parity.py and netpolicy.py know the header's NSE holiday lookup, matched by exact query values. They accept both W2-UI-SHELL's shared `?back=0&ahead=7` and round-1's `?back=0&ahead=10`, set it aside only when it appears on one side, and have a `--no-expected-deltas` switch. A browser smoke run confirmed it: set aside on watch/desk/stocks, still compared on brief/eco.\n  - e2e_multiwin.py has the two-window Compare case and `--scenarios`; a crashing scenario now counts as a FAIL.\n  - delta_probe.py aborts every non-GET /api request.\n- **Baseline tools:**\n  - reconstruct.py pins every recorded input. The D3.md BOM may be in either form; the old and the corrected D3.md give the same digest.\n  - It now refuses an unrecorded edit anywhere in a touched file made after that file's last recorded change, and checks the PM backup's mtimes.\n  - Its docstring states the one window it cannot see: an edit made before a file's last recorded change.\n  - The BOM test now accepts the corrected D3.md.\n  - Re-run on FX-QA's real snapshot with --pm-backup: every check passes, and MANIFEST and the diff patch are byte-identical.\n- **CI and contract tests (completeness-05):**\n  - The desktop contract tests now FAIL on a missing or reshaped source, unless DESKTOP_CONTRACT_ALLOW_SKIP=1 is set.\n  - ci.yml has a new macOS `desktop` job: cargo fmt/clippy/test, the boot-page checks, the ui/scripts tests, the shell tests, the strict contract tests and a real static export. The ui job runs on node 25 and finds every plain-node check file itself (it picked up W2-UI-PAGES' new pages.check.ts), and the baseline tools run too.\n  - A new tests/integration/test_desktop_ci.py guards against CI drift.\n- **RUNBOOK:**\n  - \u00a77 now matches the guard: tailnet devices are remote, so read-only by default; GUARD_ALLOW_REMOTE_WRITES=1 is optional, with its consequences; GUARD_ALLOWED_ORIGINS is not needed.\n  - \u00a78 explains the prefs row's states.\n  - \u00a74 explains the ui-release row.\n- **E2E after AUDIT2_DONE** (scratch servers with --prefs-db, GET-only to live): a copy of the live round-1 release fails Compare in both engines while watchlist and gold pass, which reproduces the bug. A scratch build of the current source (W2-UI-PAGES' Compare fix) passes all 6 runs (3 scenarios \u00d7 2 engines).\n\nGates: core 586 passed / 9 skipped. scripts/tests: 175 passed, 1 failed, the job-set assertion in test_ci_workflow.py; PR-W2-OPS-1 fixes it (the patched test was checked: 2 passed). Baseline tools 24. ui-api 793. ruff and mypy are clean on everything I touched. Negative controls on the pre-change files: ops tests 20 of 24 fail, baseline-tool tests 20 of 24 fail, the old contract file skips 21 tests silently in a partial tree, and the SIGTERM test hangs with the old scratch server.",
+ "findings": [
+  {
+   "id": "W2-OPS-prefs-k2",
+   "outcome": "fixed",
+   "what_changed": "start-local.sh prefs_summary_py/prefs_status_row: reads the durable K2 migration record. First from the store's meta table (W2-API's real schema: table meta(k, v), JSON row 'migration'; a key/value shape is also accepted), then from GET /api/prefs `migration` when the table is absent. ui-api is asked only for the store it actually uses, i.e. never when PREFS_DB is set in the caller's environment. Rules: imported = the record has legacy_import_at, shown as 'imported N keys from <origin> on <date> IST', or 'imported from <origin> (recorded from its N records; earliest \u2026)' when the record says inferred. It never flips back after app edits. Without a record (older ui-api) a non-provisional :3000 row still counts as imported, unchanged. A provisional :3000 row never counts. The keys an import can still fill (absent, or default-only) are named in the \u2192 line. Both keys set in the app: 'not imported' with an 'other settings' instruction when the record says no import, or the neutral 'app-owned' with no instruction when there is no record. Values are never printed; the store is opened read-only (mode=ro or immutable), so no -wal/-shm is left.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/start-local.sh",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ops.py"
+   ],
+   "tests": "tests/integration/test_desktop_ops.py, 11 cases: K2 meta JSON in ui-api's (k, v) and a (key, value) table, plus individual keys, after every key was edited in the app; K2 'no import' with open and with closed keys; app-owned with no record; a provisional :3000 row is not an import; K2 from the API fallback; an explicit PREFS_DB never asks ui-api (the fake server sees no /api/prefs). Against W2-API's REAL prefs.py store: migrated then edited stays imported; never migrated; backfilled-inferred. scripts/tests/test_ops_shell.py still 19 passed. Negative control on the pre-change script: all K2 cases fail.",
+   "user_visible_change": "The `./start-local.sh status` prefs row can now read 'imported \u2026 \u00b7 imported N keys from http://localhost:3000 on <date> IST', a new neutral 'app-owned' state, and a \u2192 line naming only the watchlist and/or pins that are still open (or an 'other settings' line)."
+  },
+  {
+   "id": "W2-OPS-rotate-fail-closed",
+   "outcome": "fixed",
+   "what_changed": "log_writers now returns 'ok <writers> <non-append>' or 'error <why>'. A missing lsof, an exit other than 0, exit 1 with any output, any 'lsof:' message, or a line that is not a -F p/f/G field all count as error. Only exit 1 with no output at all means 'no writers'. On error rotate_log leaves the file alone and reports 'not rotating <log> (<size> bytes): cannot tell whether a process still writes it (<why>); left as is'.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/start-local.sh",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ops.py"
+   ],
+   "tests": "test_rotation_is_skipped_when_lsof_is_missing (a PATH holding only the needed tools, minus lsof), test_rotation_is_skipped_when_lsof_fails (fake lsof: a stderr warning with exit 1, exit 2, garbage output with exit 0), and the control test_rotation_still_renames_a_log_nobody_has_open (exit 1, silent). The existing test_rotate_logs_renames_copytruncates_or_skips still passes. The 4 fail-closed cases fail against the pre-change script.",
+   "user_visible_change": "rotate-logs (watchdog hourly, or each start) may print a 'cannot tell whether a process still writes it' line instead of renaming a log, when lsof is missing or fails."
+  },
+  {
+   "id": "W2-OPS-start-set-nit",
+   "outcome": "fixed",
+   "what_changed": "main(): the prerequisite and dependency checks of `start` and of a full `restart` now use ${START_SET:-$CORE_SERVICES}, the same set start_services iterates. So a START_SET that includes frontend gets its npm check and npm install.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/start-local.sh",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ops.py"
+   ],
+   "tests": "test_prerequisite_checks_see_the_start_set, 4 cases: start/restart, each with and without START_SET. stop_services and check_prerequisites are overridden, so nothing starts or stops. The 2 START_SET cases fail against the pre-change script.",
+   "user_visible_change": "None (no caller sets START_SET today)."
+  },
+  {
+   "id": "W2-OPS-prefs-timeout",
+   "outcome": "fixed",
+   "what_changed": "New run_with_timeout helper. It uses GNU timeout -k 2 when present (it signals the whole process group); otherwise a bash 3.2 wait loop that TERMs, then KILLs 2 s later, the command and its direct children. The status Python gets STATUS_PY_TIMEOUT seconds (default 10). The program is passed with -c (no stdin or heredoc into a background job). A timeout shows 'unreadable \u2026 <python> timed out after 10s (blocked on a macOS privacy prompt?)'.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/start-local.sh",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ops.py"
+   ],
+   "tests": "test_a_hanging_status_python_times_out[True/False]: a fake python that execs `sleep 30`, STATUS_PY_TIMEOUT=1, with GNU timeout and with the bash fallback. Both return in under 10 s (measured 1.0 s and 3.3 s). Both fail against the pre-change script.",
+   "user_visible_change": "A hung status Python now shows the prefs row as 'unreadable \u2026 timed out' after 10 s instead of hanging `status`."
+  },
+  {
+   "id": "W2-OPS-scratch-xfh",
+   "outcome": "fixed",
+   "what_changed": "scratch_server.py has a new forward_headers() used by forward(). Like Next's /api rewrite, it drops hop-by-hop headers and Host (httpx sets the backend's) and sends the page's Host as X-Forwarded-Host, replacing any value the client sent. Origin is unchanged. A same-origin QA write therefore passes shared/http_guard.py; a cross-site one is still refused at the backend. --block-mutations is unchanged.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/scratch_server.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_qa_harness.py"
+   ],
+   "tests": "test_desktop_qa_harness.py, in front of a FastAPI backend wrapped in the REAL install_http_guard: test_forward_headers_are_what_nexts_rewrite_sends; test_scratch_proxy_same_origin_write_reaches_the_guarded_backend (200; the backend sees host 127.0.0.1:8010 and x-forwarded-host 127.0.0.1:8093; a spoofed client X-Forwarded-Host is replaced); test_scratch_proxy_does_not_launder_a_cross_site_write (403 'unauthorized', both a foreign Origin and Sec-Fetch-Site cross-site); and the negative control test_without_x_forwarded_host_the_guard_refuses_the_same_write (pre-fix behaviour gives 403). Live browser use: E2E and parity smoke through the relay, GETs only to :8010.",
+   "user_visible_change": "None (QA tool). Non-blocked POSTs through a scratch server no longer get a guard 403."
+  },
+  {
+   "id": "W2-OPS-runbook-tailscale",
+   "outcome": "fixed",
+   "what_changed": "RUNBOOK \u00a77 rewritten against the current shared/http_guard.py, including W2-API's X-Forwarded-For rule. Points: Serve keeps the ts.net Host, so only GUARD_ALLOWED_HOSTS is needed; GUARD_ALLOWED_ORIGINS is redundant because Origin equals the allowed Host. Every tailnet device is REMOTE, since Serve sets X-Forwarded-For whatever uvicorn's proxy-header setting is. Remote devices are read-only by default: pages, quotes and the monitor WebSocket work; prefs writes, compute POSTs, paper orders and Desk actions get 403 'clients on other machines are read-only', and phone edits stay on the phone. GUARD_ALLOW_REMOTE_WRITES=1 is an explicit opt-in, with the consequence spelled out: everything the terminal can do, so only if every tailnet device is yours. Restart ui-api after changes, respecting the freeze windows. \u00a78 documents the prefs row states (imported, not imported, app-owned, unreadable/timeout). \u00a74 documents the ui-release row and its mismatch.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/docs/RUNBOOK_RESTORE.md"
+   ],
+   "tests": "Documentation, checked line by line against shared/http_guard.py (evaluate(), _client_is_local, _forwarded_for_is_local, _same_origin) and prefs.py's K2 docstring. Tailscale is not installed here, so the Serve commands themselves are untested.",
+   "user_visible_change": "RUNBOOK text: tailnet access is documented as read-only by default, with an opt-in to writes."
+  },
+  {
+   "id": "W2-OPS-parity-eco-calendar",
+   "outcome": "fixed",
+   "what_changed": "netpolicy.py: new EXPECTED_DELTAS / expected_delta(). The header's NSE holiday lookup is GET /api/market/eco-calendar with the exact query back=0&ahead=7 (W2-UI-SHELL's shared ECO_SHARED_QUERY, which is also BRIEF's own query) or back=0&ahead=10 (round-1 releases). It is matched on query values, so the ECO and EVTS pages' own calls are still compared. probe.summarize marks an endpoint expected_delta only when EVERY call of it was such a request. parity.compare sets a one-sided expected endpoint aside into diff.expected_deltas plus a note; the summary and markdown list the tabs. New --no-expected-deltas switch; meta records it. A drift-guard test reads holidays.ts and api.ts, so a changed query fails a test instead of turning parity DIFF. Lint: parity.py's pre-existing I001/RUF100 and probe.py's 12 BLE001/S110 are now fixed or carry a reasoned noqa.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/netpolicy.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/probe.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/parity.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_qa_harness.py"
+   ],
+   "tests": "test_expected_delta_matches_method_path_and_exact_query_values; test_netpolicy_knows_the_query_the_ui_actually_sends (drift guard); test_compare_sets_a_one_sided_expected_delta_aside_and_reports_it (also the strict mode, and an endpoint with other calls is still compared); test_summarize_marks_an_endpoint_expected_only_when_every_call_is; test_parity_cli_has_the_expected_delta_switch. Real-browser smoke (chromium; A = FX-QA's pre-program baseline export, B = a scratch build of the current source, both behind scratch_server): the expected delta is set aside on watch/desk/stocks and compared normally on brief/eco.",
+   "user_visible_change": "None (QA tool). Parity reports list 'expected program deltas on one side only (set aside)'."
+  },
+  {
+   "id": "W2-OPS-reconstruct-bom-test",
+   "outcome": "fixed",
+   "what_changed": "test_d3_doc_needs_the_bom_normalisation (which asserted that the defect exists, so it failed after the PM's D3.md correction) is replaced by test_d3_doc_bom_in_either_form_parses_to_the_executed_pairs. Each Blob block must use exactly one form. The normalised doc pairs must equal the 14 executed pairs. The other form, written to a temp copy of the patches, must give the same pinned record digest.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/test_reconstruct.py"
+   ],
+   "tests": "pytest reports/desktop_app/baseline_preprogram/tools: 24 passed (was 9 passed, 1 failed on the corrected D3.md). The pre-QA D3.md from the PM backup (literal BOM) and the corrected one both give digest fe76707b\u2026.",
+   "user_visible_change": "None."
+  },
+  {
+   "id": "W2-OPS-reconstruct-drift-claim",
+   "outcome": "fixed",
+   "what_changed": "Made true where the snapshot can prove it, and the wording corrected for the rest. (1) RECORDS_SHA256 pins every recorded input: the parsed D4/D3 blocks (BOM normalised), d3_callsites pairs, Write hashes and originals; check_records() also checks the originals against provenance.json. A changed patch block is refused; a change to prose is accepted. (2) check_touched_mtimes(): every touched file must be dated at the time of the last record that changed it (\u22121.5 s/+20 s), using the PM integration time, D3's script time, the Write times from program_writes.tsv and D4's last globals.css write from bash_write_scan.tsv. So an unrecorded edit anywhere in a touched file made after that record is refused; this is the adversarial reviewer's exact case. (3) check_pm_backup_mtimes(): with --pm-backup, the backup files must predate the program or match a recorded change. The docstring now says what it cannot prove: an edit made before a file's last recorded change, which the transcript scans cover. The README's wording is a PM patch request (README is outside my files).",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/reconstruct.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/test_reconstruct.py"
+   ],
+   "tests": "test_records_are_pinned_and_a_changed_patch_block_is_refused; test_unrecorded_edit_outside_the_recorded_blocks_of_a_touched_file_is_refused (refused, then passes when re-dated, which shows the documented limit); test_pm_backup_must_match_and_be_dated_before_the_program_or_at_a_record (synthetic backup of 13 files; a backup file touched mid-program is refused); make_snapshot now dates files like the real snapshot. Real snapshot (fx-qa/ui_start + ~/.suryadhana_pm_backups/desktop_integration_20261025-110448): exit 0, all 8 checks true, MANIFEST.sha256 and diff_vs_snapshot.patch byte-identical to the committed ones. ruff and mypy clean.",
+   "user_visible_change": "None."
+  },
+  {
+   "id": "W2-OPS-delta-probe-get-only",
+   "outcome": "fixed",
+   "what_changed": "delta_probe.py: install_get_only_guard(ctx, blocked) routes every /api URL on any host and aborts every method other than GET/HEAD/OPTIONS with 'blockedbyclient'. visit() installs it before the init script and before the first page exists. The report gains blocked_non_get per side, and a markdown row lists the refused requests.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/delta_probe.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/test_delta_probe.py"
+   ],
+   "tests": "New tools/test_delta_probe.py, 11 tests: POST/PUT/PATCH/DELETE (and lower case) aborted and recorded; GET/HEAD/OPTIONS continue; the pattern covers /api on any host and nothing else; the guard is installed before new_page; markdown. All fail against the pre-change delta_probe.py.",
+   "user_visible_change": "None (QA tool)."
+  },
+  {
+   "id": "completeness-05",
+   "outcome": "fixed",
+   "what_changed": "(1) tests/integration/test_desktop_contract.py: need() and the 6 'shape' skips now call missing(), which FAILS by default and skips only with DESKTOP_CONTRACT_ALLOW_SKIP=1 (exactly '1') for a partial checkout. Docstring updated; unused noqa removed. (2) .github/workflows/ci.yml. python job (ubuntu): unchanged suites plus the baseline tools; the two macOS-only shell test files move to the desktop job, and a test makes sure ignored files are run there. ui job (ubuntu): node 25; tsc; every ui/**/__tests__/*.check.ts that runs on plain node is found automatically (errors.check.ts needs tsx and is skipped). New desktop job (macos-latest): requirements-ci; the canonical jupyter_env python path linked to setup-python's interpreter; npm ci; rust 1.94.1 pinned with cache; cargo fmt --check, clippy -D warnings with and without devtools, cargo test --locked; desktop/scripts/boot_check.mjs; node --test ui/scripts/*.test.mjs; test_ops_shell.py and test_desktop_ops.py; the strict contract, harness and E2E tests; DESKTOP_QA_BUILD=1 test_desktop_static.py (a real build_ui.sh --out). (3) New tests/integration/test_desktop_ci.py guards against CI drift.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_contract.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/.github/workflows/ci.yml",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ci.py"
+   ],
+   "tests": "test_desktop_contract.py: 23 passed (the new test_missing_sources_fail_unless_a_partial_checkout_opts_out included). In a partial scratch tree without desktop/: strict gives 9 failed + 12 errors, the opt-out gives 21 skipped, the OLD file gives 21 skipped silently (the defect). test_desktop_ci.py: 4 passed. It ran the workflow's discovery loop and found W2-UI-PAGES' new ui/components/__tests__/pages.check.ts, which the first explicit list had missed. ci.yml parses with PyYAML. The workflow has not been run on a GitHub runner (not possible here).",
+   "user_visible_change": "CI only: a new macOS desktop job and node 25 in the ui job. In a checkout without the desktop sources the contract tests now fail unless DESKTOP_CONTRACT_ALLOW_SKIP=1."
+  },
+  {
+   "id": "W2-OPS-e2e-compare",
+   "outcome": "fixed",
+   "what_changed": "e2e_multiwin.py: a new 'compare' scenario on suryadhana.comp.v1. Seed {syms:[TCS,INFY,HCLTECH]}; page 1 adds WIPRO; page 2 (open since before) later removes INFY. localStorage in both pages, the scratch server and both pages' chips must equal [TCS,HCLTECH,WIPRO], with no rewrite during a 4 s quiet period. Also: build_parser()/main(argv), --scenarios (default all three), a crashing scenario counts as a FAIL with its error and the others still run, the import order fixed (I001), and a refusal on anything without a local scratch prefs store, including the live :8010's 404 on /__qa/health. New tests/integration/test_desktop_e2e_multiwin.py: pure CLI and refusal tests, plus an opt-in real run (DESKTOP_QA_E2E_BASE). No request file from W2-UI-PAGES was found; I followed its Compare edit pattern.",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/e2e_multiwin.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_e2e_multiwin.py"
+   ],
+   "tests": "test_desktop_e2e_multiwin.py: 7 passed, 1 skipped (opt-in). Real runs after AUDIT2_DONE (scratch_server --block-mutations --prefs-db, GETs to live): the live round-1 release copy fails compare in chromium and webkit (WIPRO lost, stored [TCS,HCLTECH]), the negative control, while watchlist and gold pass. A scratch build of the current source (build_ui.sh --out into my scratch) passes all 6 runs in chromium and webkit.",
+   "user_visible_change": "None (QA tool)."
+  },
+  {
+   "id": "W2-OPS-status-ui-release",
+   "outcome": "fixed",
+   "what_changed": "New ui_release_row in start-local.sh. ui_api_served_release() parses GET /version with sed (no Python; tolerant of key order and whitespace). The row reads 'ok <id> (ui/dist/current) \u00b7 served by ui-api' when the ids match. 'mismatch' plus a \u2192 line (run status again; otherwise UI_DIST_DIR is set for ui-api; restart ui-api) when ui-api serves another release or 'no release'. 'ui-api not answering (/health)' when ui-api is down. \"ui-api's GET /version did not answer\" for an unreadable body. 'missing \u2026 ui-api serves X from another directory (UI_DIST_DIR?)' when ui/dist/current is absent but ui-api serves one. status_services sets UI_API_UP from its own probe, so a down ui-api is never asked twice. Help text updated (also says status is read-only).",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/start-local.sh",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ops.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/docs/RUNBOOK_RESTORE.md"
+   ],
+   "tests": "test_desktop_ops.py with a fake loopback ui-api: match (compact and spaced JSON), another release, no release, down (a closed port), garbage, missing locally but served, and help. All fail against the pre-change script. Live: 'ui-release ok 20261025-135500-0ae66db (ui/dist/current) \u00b7 served by ui-api'.",
+   "user_visible_change": "New text in the ui-release row of `./start-local.sh status`, plus a yellow 'mismatch' state with a \u2192 line when ui-api serves a different release."
+  },
+  {
+   "id": "W2-OPS-scratch-sigterm",
+   "outcome": "fixed",
+   "what_changed": "New defect, found while it contributed to the 14:40 live ui-api wedge. scratch_server.py ran uvicorn with no bounded graceful shutdown, so after SIGTERM it waited forever on relayed SSE streams and WebSockets and kept its upstream sockets on the live ui-api open (my :8096 relay held 6 until I SIGKILLed it). Fix: uvicorn.run(..., timeout_graceful_shutdown=3), and the lifespan closes the upstream httpx client it owns. Also replaced a pre-existing mypy error (mod.default_db_path assignment) with vars(mod)[...].",
+   "files": [
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/scratch_server.py",
+    "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_qa_harness.py"
+   ],
+   "tests": "test_scratch_server_exits_promptly_on_sigterm_with_a_relayed_stream_open: a real subprocess relays an endless SSE stream from a loopback backend; SIGTERM must end it within 10 s and the backend must see its stream closed. It passes in about 4 s. Negative control with the pre-change scratch_server.py: the process is still alive after the wait (TimeoutExpired). tests/integration/test_scratch_server_prefs.py still passes.",
+   "user_visible_change": "None (QA tool). Stopped scratch servers no longer keep connections open on the live ui-api."
+  }
+ ],
+ "files_changed": [
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/start-local.sh",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/docs/RUNBOOK_RESTORE.md",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/netpolicy.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/probe.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/parity.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/scratch_server.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/desktop_qa/e2e_multiwin.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_contract.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_qa_harness.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ops.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_ci.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/integration/test_desktop_e2e_multiwin.py (new)",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/.github/workflows/ci.yml",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/reconstruct.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/test_reconstruct.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/delta_probe.py",
+  "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/tools/test_delta_probe.py (new)"
+ ],
+ "tests_run": [
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest tests -q",
+   "result": "586 passed, 9 skipped (the +1 skip is the opt-in real E2E in test_desktop_e2e_multiwin.py)"
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest scripts/tests -q",
+   "result": "175 passed, 1 failed: scripts/tests/test_ci_workflow.py::test_workflow_parses_and_lists_all_five_suites_plus_tsc asserts the job set {python, ui}; the new desktop job needs PR-W2-OPS-1. A temp copy with that patch applied: 2 passed."
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest services/ui-api/tests -q",
+   "result": "793 passed (no ui-api file touched)"
+  },
+  {
+   "command": "/Users/sudheer/Desktop/jupyter_env/bin/python -m pytest reports/desktop_app/baseline_preprogram/tools -q",
+   "result": "24 passed (was 9 passed + 1 failed on the corrected D3.md)"
+  },
+  {
+   "command": "pytest tests/integration/test_desktop_ops.py -q (also DESKTOP_OPS_SCRIPT=<scratch copy>)",
+   "result": "28 passed. Negative control, DESKTOP_OPS_SCRIPT=<pre-change start-local.sh>, first 24 tests: 20 failed, 4 passed (the controls)"
+  },
+  {
+   "command": "pytest scripts/tests/test_ops_shell.py -q (against the installed new start-local.sh)",
+   "result": "19 passed"
+  },
+  {
+   "command": "pytest tests/integration/test_desktop_qa_harness.py tests/integration/test_desktop_ops.py tests/integration/test_scratch_server_prefs.py -q",
+   "result": "114 passed"
+  },
+  {
+   "command": "pytest tests/integration/test_desktop_contract.py -q ; partial scratch tree without desktop/: strict / DESKTOP_CONTRACT_ALLOW_SKIP=1 / old file",
+   "result": "23 passed in the repo. Partial tree: strict 9 failed + 12 errors; opt-out 2 passed, 21 skipped; old file 1 passed, 21 skipped (the silent-skip defect)"
+  },
+  {
+   "command": "pytest tests/integration/test_desktop_ci.py tests/integration/test_desktop_e2e_multiwin.py -q",
+   "result": "4 passed; 7 passed, 1 skipped"
+  },
+  {
+   "command": "negative control: the new tools tests in a scratch tree against the pre-change reconstruct.py and delta_probe.py",
+   "result": "20 failed, 4 passed"
+  },
+  {
+   "command": "negative control: the SIGTERM test against the pre-change scratch_server.py",
+   "result": "Fails: the process does not exit (TimeoutExpired); the new code exits in about 4 s"
+  },
+  {
+   "command": "reconstruct.py --src scratchpad/fx-qa/ui_start --dest <scratch> --report-dir <scratch> --pm-backup ~/.suryadhana_pm_backups/desktop_integration_20261025-110448",
+   "result": "exit 0, 134 files, tree 948a92da\u2026, all 8 checks true (new: records_pinned, touched_files_dated_at_their_last_record, pm_backup_mtimes_predate_program_or_match_records); MANIFEST.sha256 and diff_vs_snapshot.patch byte-identical to the committed ones"
+  },
+  {
+   "command": "/bin/bash -n start-local.sh scripts/stack_watchdog.sh (bash 3.2.57)",
+   "result": "OK"
+  },
+  {
+   "command": "./start-local.sh status ; ./start-local.sh help (live, read-only)",
+   "result": "rc 0. 'ui-release ok 20261025-135500-0ae66db (ui/dist/current) \u00b7 served by ui-api'; 'prefs not imported 1 keys (1 defaults) \u00b7 watchlist: default \u00b7 pins: absent' plus the \u2192 line; status takes 0.65 s"
+  },
+  {
+   "command": "ruff check --line-length 130 on every touched Python file; mypy --ignore-missing-imports scripts/desktop_qa/{netpolicy,parity,scratch_server,e2e_multiwin,probe}.py and the baseline tools",
+   "result": "All checks passed; mypy: no issues (5 + 8 source files)"
+  },
+  {
+   "command": "python -c yaml.safe_load(.github/workflows/ci.yml); test_desktop_ci runs the ui job's discovery loop",
+   "result": "Parses: python 10 steps, ui 5 steps, desktop 16 steps. Discovery finds prefs, platform, alerts, desktop and pages checks; errors.check.ts (tsx) is skipped"
+  },
+  {
+   "command": "node <each of the 5 plain-node check files>; node desktop/scripts/boot_check.mjs; (cd ui && node --test scripts/*.test.mjs)",
+   "result": "Commands behind the CI steps, all rc 0: prefs 145, platform 107, alerts 18, desktop 85, pages 108 + 1 pending (W2-UI-PAGES); boot 43/43; ui/scripts node tests pass"
+  },
+  {
+   "command": "scripts/build_ui.sh --out scratchpad/W2-OPS/src_export",
+   "result": "OK: id 20261025-143443-0ae66db, 86 files, 14 s"
+  },
+  {
+   "command": "e2e_multiwin.py --base <scratch :8095 live-release copy> --engines chromium,webkit --scenarios compare,watchlist,gold",
+   "result": "compare FAIL in both engines (the negative control: WIPRO lost); watchlist PASS x2; gold PASS x2"
+  },
+  {
+   "command": "e2e_multiwin.py --base <scratch :8096 current-source export> --engines chromium,webkit",
+   "result": "6/6 PASS: watchlist, gold and compare in chromium and webkit"
+  },
+  {
+   "command": "parity.py --a <scratch :8097 pre-program baseline> --b <scratch :8096 current export> --browser chromium --tabs brief,watch,desk,stocks,eco",
+   "result": "The expected delta is set aside on watch/desk/stocks and compared on brief/eco. All 5 tabs are still DIFF because of other wave-2 changes, not mine (see open issues)"
+  }
+ ],
+ "patch_requests": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_ci_workflow.py",
+   "old": "    assert set(doc[\"jobs\"]) == {\"python\", \"ui\"}",
+   "new": "    assert set(doc[\"jobs\"]) == {\"python\", \"ui\", \"desktop\"}   # desktop: the macOS gates of the desktop program (completeness-05)",
+   "why": "completeness-05 adds a macOS 'desktop' job to ci.yml (cargo, boot checks, ui/scripts tests, shell tests, the static export). Without this one-line change scripts/tests has 1 failure. Every other needle in the test is still present. A temp copy with this change applied: 2 passed."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/README.md",
+   "old": "Every reversal asserts that the text it removes occurs **exactly once**. An unrecorded change therefore makes the\nscript fail; it cannot drift.",
+   "new": "Every reversal asserts that the text it removes occurs **exactly once**, so an edit inside a recorded block makes\nthe script fail. Outside the blocks the snapshot's mtimes are checked: every file no record touches must predate the\nprogram, and every touched file must be dated at the time of the last record that changed it (\u00b1slack), so an\nunrecorded edit made after that record, anywhere in the file, also fails (`tools/test_reconstruct.py`\n`test_unrecorded_edit_outside_the_recorded_blocks_of_a_touched_file_is_refused`). The recorded inputs themselves\n(the parsed D3.md/D4.md blocks and `records/`) are pinned by sha256 (`RECORDS_SHA256`). What the snapshot cannot show\nis an edit outside the blocks made *before* a file's last recorded change; that window is covered by the transcript\nscans (`records/program_writes.tsv`, `records/bash_write_scan.tsv`) and by the PM backup, whose files must equal the\nintermediate state and be dated before the program or at a recorded change.",
+   "why": "FX-QA adversarial check: the README overclaimed drift detection. reconstruct.py now proves what is stated here (W2-OPS) and its docstring names the remaining window; the README must say the same."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/README.md",
+   "old": "`records/` holds every piece of evidence the reversal reads, with provenance (transcript, tool_use id and UTC\ntimestamp in `records/provenance.json`).",
+   "new": "`records/` holds every piece of evidence the reversal reads, with provenance (transcript, tool_use id and UTC\ntimestamp in `records/provenance.json`), except the D4.md and D3.md blocks, which `tools/reconstruct.py` reads from\n`reports/desktop_app/patches/`; all of these inputs are pinned by one sha256 (`RECORDS_SHA256`), so a later edit of a\npatch block is refused instead of silently changing the reconstruction.",
+   "why": "FX-QA adversarial check: 'records/ holds every piece of evidence' was not true (D3.md/D4.md are read live). The pin now enforces it; the sentence should say so."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/README.md",
+   "old": "suryadhana.prefs.legacy, suryadhana.prefs.meta) | no |\n\nNot present in a browser by construction (desktop only, `isDesktop()` false): TitleStrip, native window title, shell\n",
+   "new": "suryadhana.prefs.legacy, suryadhana.prefs.meta) | no |\n| E16 | **Header holiday lookup** (25 Oct fix rounds, C3-logic-unchanged-06): the page header shows HOLIDAY on NSE holidays, so every page load in browser mode sends `GET /api/market/eco-calendar` with BRIEF's own query `back=0&ahead=7` (`ui/lib/api.ts` `ECO_SHARED_QUERY`, cached and shared per page; round-1 releases sent `back=0&ahead=10`). parity.py sets it aside when it appears on one side only (`netpolicy.EXPECTED_DELTAS`, `--no-expected-deltas` to compare it) | fix rounds | P | yes on holidays only: header HOLIDAY instead of NSE OPEN |\n\nNot present in a browser by construction (desktop only, `isDesktop()` false): TitleStrip, native window title, shell\n",
+   "why": "FX-UI adversarial check: the header's per-page eco-calendar request made almost every parity tab DIFF. parity.py/netpolicy.py now treat it as an expected program delta (W2-OPS); the AC-3 evidence document should list it as an E-item."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/README.md",
+   "old": "(output: `delta_probe/`). It uses a fresh readonly-prefs context per side, one browser at a time, GET only. It",
+   "new": "(output: `delta_probe/`). It uses a fresh readonly-prefs context per side, one browser at a time, GET only (enforced\nsince 25 Oct: every non-GET `/api` request is aborted in the browser and listed under `blocked_non_get`). It",
+   "why": "FX-QA adversarial check: delta_probe's GET-only property was luck, not enforcement. It is enforced now (W2-OPS); the README states it."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/desktop_app/baseline_preprogram/README.md",
+   "old": "checks each against D3.md, with this\none normalisation.",
+   "new": "checks each against D3.md, with this\none normalisation. The PM corrected D3.md on 25 Oct (\u00a72f now shows the escape); the normalisation accepts either form,\nand both parse to the same pinned record digest (`RECORDS_SHA256` in `tools/reconstruct.py`).",
+   "why": "\u00a76.1 still describes the uncorrected doc. The tools now accept both forms, checked by test_d3_doc_bom_in_either_form_parses_to_the_executed_pairs."
+  }
+ ],
+ "deploy_notes": [
+  "start-local.sh is already live: installed three times with temp file + chmod 755 + mv, the last at about 14:50 IST. No service was started, stopped or restarted by me; the watchdog keeps calling `start-local.sh rotate-logs`, which now fails closed. stack_watchdog.sh is unchanged.",
+  "Apply PR-W2-OPS-1 (scripts/tests/test_ci_workflow.py) together with the ci.yml change, or scripts/tests stays at 1 failure. PR-W2-OPS-2..6 are text-only edits to reports/desktop_app/baseline_preprogram/README.md.",
+  "Optional: regenerate the committed reports/desktop_app/baseline_preprogram/reconstruct_report.json so its `checks` list the 3 new checks: `$P reports/desktop_app/baseline_preprogram/tools/reconstruct.py --src scratchpad/fx-qa/ui_start --dest <new scratch dir> --report-dir reports/desktop_app/baseline_preprogram --pm-backup ~/.suryadhana_pm_backups/desktop_integration_20261025-110448`. I checked that MANIFEST.sha256 and diff_vs_snapshot.patch come out byte-identical.",
+  "INCIDENT, reported to main at about 14:45: from about 14:40 the live ui-api (pid 75525) stopped accepting connections (connect timeouts, 0% CPU, 208 open connections on :8010, mostly the agents' scratch_server relays). It has since been restarted (pid 70501, healthy; not by me). Scratch servers started from the OLD scratch_server.py (W2-UI-SHELL :8093, W2-RUST :18761, W2-UI-PAGES :8121-8123) still wait forever after SIGTERM and hold their upstream sockets: stop them with SIGKILL, or restart them on the new code (bounded 3 s shutdown, upstream client closed).",
+  "ci.yml can only run once .github/, desktop/, ui/ and scripts/ are committed: they are untracked today, and the strict contract tests fail in a checkout without the desktop sources by design. The macOS job creates /Users/sudheer/Desktop/jupyter_env/bin/python as a link to setup-python's interpreter with sudo, because start-local.sh and test_ops_shell.py hard-code that path.",
+  "QA recipe for the two-window check: `scripts/desktop_qa/scratch_server.py --ui <export> --port 809x --block-mutations --prefs-db <scratch>/p.sqlite`, then `scripts/desktop_qa/e2e_multiwin.py --base http://127.0.0.1:809x --out <dir>` (all 3 scenarios, both engines). Or `DESKTOP_QA_E2E_BASE=http://127.0.0.1:809x pytest tests/integration/test_desktop_e2e_multiwin.py`. Verified 6/6 PASS on a scratch build of the current source; the live round-1 release fails compare (the bug W2-UI-PAGES fixes)."
+ ],
+ "open_issues": [
+  "A parity smoke run (chromium; pre-program baseline vs a scratch build of the current wave-2 source) is still DIFF on every tab for two reasons outside my files. (1) B no longer calls GET /api/dashboard/enrichment-status, /api/pipeline/data-quality, /api/pipeline/feature-importance and /api/pipeline/model-metrics on every page; probably a wave-2 performance change. Its owner should declare it, or the PM should list it as an expected delta. (2) B sends POST /api/monitor/subscribe on every tab, which scratch_server's --block-mutations answers with 403, so B fails its audit behind a blocking scratch server (the same harness limitation FX-QA saw for OSTR, ALFA and MCXG). A narrow allowlist of idempotent POSTs for --block-mutations would need a PM decision.",
+  "The root cause of the 14:40 ui-api wedge is unknown: it took no new connections while at 0% CPU. Possibly a blocked event loop or an exhausted threadpool under about 200 long-lived relayed streams and sockets. I fixed the relay's lingering connections; a diagnosis of ui-api itself (for example py-spy dump on a wedged instance) belongs to W2-API or the PM.",
+  "ci.yml has not run on a real GitHub runner (not possible here). The macOS-specific steps (the sudo-created canonical python path, the rust 1.94.1 toolchain, a static export build of about 1-2 min) and possible pre-existing Linux-only failures in the ubuntu suites are unverified.",
+  "Pre-existing lint in desktop_qa files I did not touch: streams.py (5 BLE001) and run_selftest.py (BLE001/S112/RUF100). Every file I touched is lint-clean.",
+  "The RUNBOOK \u00a77 Tailscale commands are still untested: Tailscale is not installed on this Mac. The read-only and remote-write behaviour is documented from shared/http_guard.py's code."
+ ]
+}

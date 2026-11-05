@@ -1,0 +1,1209 @@
+GOLD
+GOLD TERMINAL
+spot, COMEX, MCX, positioning (COT), physical, macro, contracts, health check, pre-open fair value · 03:51 IST
+LIVE · YAHOO (CACHED FET…
+PAPER · CONTEXT
+↻
+COMEX DEC-26
+settle — $4,072.2 last Wed 04 Nov · Yahoo, not settlement
+last $4,072.2 ▲+3.28 % Yahoo, not settlement · 03:29 IST
+LIVE · YAHOO (CACHED FET…
+USD/INR
+94.63
+Yahoo INR=X · 00:13 IST
+10-Y REAL
+2.62 %
+TIPS · Mon 02 Nov
+MCX GOLD DEC-26
+₹1,40,186
+Tue 03 Nov settlement · basis +1.58 % at the at the Tue 03 Nov settlement vs that session's duty-paid landed vs that session's duty-paid
+COT FUNDS NET (MANAGED MONEY)
++105,562
++1,356 w/w · as of Tue 27 Oct
+◷ MCX opens in 5h08m
+spot proxy · COMEX front GC1 · COMEX matched month GCZ26 · MCX GOLD DEC-26
+CONTRACT
+MCX
+NSE (n/a)
+BSE (n/a)
+GOLD
+GOLDM
+GOLDTEN
+GOLDGUINEA
+GOLDPETAL
+front (by OI)
+DEC-26 · 2026-12-04 · OI 16,282
+FEB-27 · 2027-02-05 · OI 1,180
+APR-27 · 2027-04-05 · OI 70
+JUN-27 · 2027-06-04 · OI 2
+AUG-27 · 2027-08-05 · OI 0
+OCT-27 · 2027-10-05 · OI 0
+OPTIONS
+↔ COMEX DEC-26 ↔ GC1
+UNIT
+$/oz
+₹/10 g
+₹/g
+$/g
+₹/tola
+WINDOW
+D
+W
+M
+LAYER
+[B]
+[P]
+HEALTH
+DAILY
+WEEKLY
+MONTHLY
+POSITIONING
+PHYSICAL
+MACRO
+CONTRACTS
+LEARN
+READING ROUTINES — DAYS, WEEKS, MONTHS
+?
+CURRICULUM Part 9 (live from the document) · each step names the panel in words and opens the view that holds it (hover for the panel id)
+[B]what to read and in which order, before the MCX open, on Saturday and on the first weekend of the month.
+Daily · 08:30–08:55 IST, 10 minutes
+The header strip (top of every view): COMEX settle and live, USD/INR, the real yield (yesterday's), the MCX settlement (by session), the basis, funds' net (last Tuesday) — then the verdict sentence (the health verdict, HEALTH) and the eight tiles (the eight health gauges). HEALTH ›
+Today's open (today's open: fair value vs yesterday's settlement, HEALTH): fair value vs yesterday's settlement; how much of the gap is COMEX and how much the rupee (what moved since the close — COMEX part vs rupee part); the event-risk chip. Decide OK / WAIT before 09:00 — the ₹300 limit is unproven, so read the strip as arithmetic, not advice. HEALTH ›
+The drivers (the driver strip, MACRO): what changed overnight and why; the headlines (the headlines, HEALTH); any scheduled event today (events this week, HEALTH; the after-close flag). MACRO ›
+Yesterday's OI × price (yesterday's OI × price read, DAILY): COMEX (T+1) and MCX (07:35); roll and expiry days are greyed. DAILY ›
+The expected move (the expected move per lot, MACRO): ATR in rupees, the 1σ day per lot, max lots at 1 % risk, cash headroom; the roll calendar (the roll calendar, CONTRACTS) if a tender cut-off is within 7 days. MACRO ›
+Evening (23:00–23:30): the 24-hour chart (d.24h, DAILY) for the COMEX settlement vs the MCX close; tomorrow's events; the settlement window is the last 30 min.
+Weekly · Saturday morning, 20 minutes
+Monthly · first weekend
+GOLD, ZERO TO PROFESSIONAL
+only [B] copy
+?
+1564 lines · updated 05 Nov
+[B]Parts 0–9 in order: units, venues, futures mechanics, the players, the drivers, reading the data, advanced topics, panel micro-copy, routines. Open a part, then a section.
+▸ BEFORE ANYTHING ELSE
+
+Written 26 Oct 2026, 05:50 IST, for the GOLD program. Terminal-grade reference text: short, exact, no fluff. Every section has three voices:
+
+[B] the beginner line: what it is in plain words, defined the first time it appears.
+[P] the pro line: the exact definition, the formula, the pitfall.
+[APP] where it lives on the GOLD page (the panel id of PLAN §a, e.g. ph.ladder) or which page keeps it (MCXG, WEI, BRF, CMDT). Updated 5 Nov 2026 after the page shipped; "LEARN only" means there is deliberately no panel.
+
+Numbers in worked examples are the live values the app, the CFTC, FRED and the LBMA served at the time of writing (each one is dated). They are illustrations of how to read, not quotes. Where a claim is backed by a study it is cited; where it is desk lore it says context only. Our own rule from reports/fii_positioning/FINDINGS.md applies to every positioning number in this document: who is positioned where is context, not a timing tool, until a G-STUDY proves it.
+
+0. The health check: five numbers before anything else
+▸ PART 1 — UNITS, PURITY, PRODUCTS
+▸ PART 2 — VENUES AND HOW EACH PRICE IS MADE
+▸ PART 3 — FUTURES MECHANICS
+▸ PART 4 — THE PLAYERS, AND WHO IS LONG OR SHORT STRUCTURALLY
+▸ PART 5 — WHAT MOVES GOLD, AND THE REGIMES
+▸ PART 6 — READING THE DATA
+▸ PART 7 — ADVANCED
+▸ PART 8 — "HOW TO READ THIS PANEL": MICRO-COPY, PANEL BY PANEL
+▸ PART 9 — READING ROUTINES (THE "DAYS, WEEKS, MONTHS" THE OWNER ASKED FOR)
+▸ APPENDIX A — FORMULAS AND CONSTANTS (CHEAT-SHEET)
+▸ APPENDIX B — THE GOLD DAY IN IST (US DST UNTIL 1 NOV 2026; UK ON GMT FROM 25 OCT 2026)
+▸ APPENDIX C — EVIDENCE LEDGER
+▸ APPENDIX D — SOURCE VERIFICATION TABLE
+Literature citations in Parts 5–7 are from memory or SSRN-blocked pages and are not live-verified (open question j.2 #15).
+WHAT IS NOT FREE, AND WHERE TO CLICK
+?
+CURRICULUM Appendix E, as link tiles
+[B]the sources this terminal links to instead of reading: paid, licensed or bot-walled.
+LBMA Gold Price (AM/PM auction tables)
+IBA licence; the fix is a time marker here, never a scraped number
+↗ OPEN
+LBMA Trade Data (daily, product level)
+Nasdaq subscription; only the weekly headline is public
+↗ OPEN
+CME Group website (specs, warehouse XLS, bulletin, FedWatch)
+blocks non-browser clients; terms forbid automated download; the FTP daily files are used instead
+↗ OPEN
+MCX website (bhavcopy, circulars, category-wise OI)
+blocks scripts (403); the ICICI security master carries the band and OI each morning
+↗ OPEN
+Kitco charts
+personal, non-commercial viewing only; the DAILY chart is built from our own stored bars
+↗ OPEN
+Bloomberg Professional / LSEG Workspace
+paid, no redistribution; the function map below says where the free equivalent lives here
+↗ OPEN
+Reuters India premium survey
+weekly survey behind the paywall; our IBJA-vs-landed premium is the house line
+↗ OPEN
+CME FedWatch
+browser only; the Fed-path panel uses the Atlanta Fed tracker
+↗ OPEN
+WHAT A BLOOMBERG GOLD TRADER LOOKS AT → WHERE IT IS HERE
+?
+CURRICULUM Appendix F (G-KITCO Appendix C; public guides, unverified on a terminal), with deep links
+FUNCTION	WHAT	HERE
+DES	contract description (size, tick, margin, delivery)	CONTRACTS › spec card and selector CONTRACTS ›
+GP / GIP / GPO	price graphs (daily, intraday, open interest)	DAILY 24-h chart · WEEKLY candles · POSITIONING OI tapes DAILY ›
+HP	history table	WEEKLY Mon–Fri table (CSV export) WEEKLY ›
+CT / CTM	contract table with volume and OI; exchange contract search	CONTRACTS › MCX chain and COMEX term structure CONTRACTS ›
+CCRV / FWCV	forward curves, today vs a week ago	CONTRACTS › COMEX curve with the ghost curve CONTRACTS ›
+CFTC <GO> · tickers …MML/MMS/…N	Commitments of Traders by trader group	POSITIONING › who is long / who is short, history, drawer POSITIONING ›
+ECO	economic releases with consensus	MACRO › US calendar in IST MACRO ›
+GLCO	global commodity prices	WEI commodities row (one line + hover) and the macro tape HEALTH ›
+XAU Curncy · GC1 Comdty · GCZ6 Comdty	spot, continuous front, dated contract	the four instruments named on every price: spot proxy · COMEX front GC1 · matched month · MCX HEALTH ›
+WIRP / FedWatch	implied policy path	MACRO › Fed path (Atlanta Fed tracker, ZQ) MACRO ›
+GOLDLNPM Index	LBMA PM benchmark	PHYSICAL › Shanghai premium reference leg (WGC-served, provisional) PHYSICAL ›
+WHERE EACH PANEL WENT (PART 8 → PANEL IDS)
+?
+8.1.1 verdict
+h.open (verdict)
+8.1.2 key numbers
+h.open
+8.1.3 gap build-up
+h.open waterfall / h.moved
+8.1.4 inputs
+h.open
+8.1.5 context table
+mc.drivers
+8.1.6 headlines
+h.headlines
+8.1.7 manual checks
+ph.links + c.links
+8.1.8 accuracy log
+h.accuracy
+8.1.9 session clock
+MCXG (unchanged)
+8.1.10 quote
+MCXG
+8.1.11 overlay
+MCXG one-line + ph.ladder
+8.1.12 specs
+c.selector
+8.1.13 ticket
+MCXG ticket (+ sizing)
+8.1.14 WEI row
+WEI card
+8.1.15 BRF panel
+BRF line
+8.1.16 CMDT board
+CMDT tile
+8.2.1 health strip
+header strip + h.gauges
+8.2.2 COT
+p.hero, p.whois, p.crowd, p.drawer
+8.2.3 daily OI × price
+d.quadrant, p.daily.comex, p.daily.mcx
+8.2.4 warehouse
+ph.comex.stocks
+8.2.5 ETF
+ph.etf
+8.2.6 OTC window
+ph.otc
+8.2.7 premium monitor
+ph.ladder, ph.india, ph.shanghai
+8.2.8 drivers
+mc.drivers, mc.move, mc.health
+8.2.9 central banks
+ph.official, m.official
+8.2.10 term structure
+c.comex, c.mcx
+8.2.11 chooser + calendar
+c.selector, c.roll, h.events
+8.2.12 events calendar
+h.events, mc.calendar (+ ECO)
+8.2.13 Kitco-style chart
+d.24h, d.3day
+8.2.14 periodicity switch
+the window param + WEEKLY / MONTHLY views
+HOW THE HEALTH VERDICT IS BUILT
+?
+every clause is a threshold on a stored series; the sentence ends “describes, does not predict”
+[B]the sentence on HEALTH is assembled from these rules; read the threshold next to each clause.
+STRONG WEEK, GOLD-SPECIFIC · gold +4.4 % week to date (since the Fri 30 Oct close) · of which the dollar +0.3 % · real yield +2 bp · funds +1.3 % w/w (bought the dip) · India basis +1.6 % vs duty-paid landed · roll DEC-26→FEB-27 costs +0.81 % (+5.2 %/yr), FND in 25 d · GLD −2.9 t on the day · describes, does not predict
+RULE	SERIES	VALUE	THRESHOLD	CLAUSE
+H1/H2	COMEX_GC_FRONT	4.41	weak_pct −2 · strong_pct 2 · flat_pct 0.5	STRONG WEEK, GOLD-SPECIFIC
+H2	FRED_DFII10	0.35	usd_share 0.4 · min_move_pct 0.5 · real_yield_bp 5	gold +4.4 % week to date (since the Fri 30 Oct close) · of which the dollar +0.3 % · real yield +2 bp
+H3	COT_DISAGG_F	105,562	—	funds +1.3 % w/w (bought the dip)
+H4	MCX_BASIS_PCT	1.58	—	India basis +1.6 % vs duty-paid landed
+H5	COMEX_CARRY_ANN_PCT	0.81	—	roll DEC-26→FEB-27 costs +0.81 % (+5.2 %/yr), FND in 25 d
+H6	GLD_TONNES	−2.85	notable_t 5	GLD -2.9 t on the day
+Vocabulary: signal · context · arithmetic · heuristic; no composite score, no “N of 7”; a badge changes only by a PASS row in FINDINGS.md from a pre-registered, point-in-time study.
+GLOSSARY
+GLOSSARY · 160 TERMS
+START HERE · 12 TERMS IN READING ORDER
+troy ouncealso oz · ozt · ounce · $/oz
+31.1034768 g. The unit gold is priced in worldwide ($/oz). Not the kitchen ounce (28.35 g).
+Apothecaries' weight kept by the bullion trade. ₹ per 10 g = $/oz × USD/INR × 10 ÷ 31.1034768. One kg = 32.1507 ozt; one COMEX contract = 100 ozt.
+see also
+fineness
+landed price
+tola
+spotalso spot price · spot proxy · XAU · XAUUSD
+Price for gold delivered now (T+2, loco London), $/oz. The reference every futures and local price is compared with.
+Quoted continuously by bullion banks; benchmarked twice daily by the LBMA Gold Price auction.
+see also
+futures
+LBMA Gold Price
+basis
+futures
+A standardised contract to buy/sell a fixed quantity of gold on a date, traded on an exchange with margin.
+COMEX GC (100 oz), MCX GOLD (1 kg). Price = spot + carry. Leveraged, dated, rolled; no coupon; MCX contracts carry the rupee.
+see also
+spot
+contango
+roll
+margin
+COMEX
+CME Group's New York metals exchange; its GC gold future is the world's reference futures price, trading ~23 h a day.
+Globex Sun 18:00 → Fri 17:00 ET with a 60-min daily break. MCX follows it during overlap and gaps at 09:00 IST after it.
+see also
+GC contract
+Globex hours
+daily settlement
+MCX
+Multi Commodity Exchange, Mumbai: India's gold futures venue; prices in ₹ per 10 g, duty-paid, ex-GST, ex-Ahmedabad; 09:00–23:30/23:55 IST.
+Follows COMEX × USD/INR tick for tick, plus duty and local premium. Site blocks non-browser clients; the app reads ICICI's public security master instead.
+see also
+GOLD / GOLDM / GOLDGUINEA / GOLDPETAL
+price band
+tender period
+landed price
+open interestalso OI
+Contracts outstanding (one long + one short = one). Sum all months; single-month OI is destroyed by the roll and expiry.
+COMEX gold OI 402,279 on 20 Oct 2026 = 40.2 Moz ≈ 1,251 t. MCX OI per contract from the bhavcopy or ICICI's master (yesterday's only).
+see also
+OI quadrants
+roll
+COTalso Commitments of Traders · CFTC · CFTC report
+CFTC Commitments of Traders: weekly positions of trader categories in COMEX gold as of Tuesday, released Friday 15:30 ET (Sat 01:00/02:00 IST).
+Free, public domain, Socrata API. Futures-only and futures+options versions; COMEX only (no London/MCX). Context, not a timing tool, until a G-STUDY passes.
+see also
+legacy COT
+disaggregated COT
+COT index
+net position
+managed moneyalso MM · funds · managed-money · hedge funds · CTAs
+CTAs, CPOs, hedge funds trading for clients: the swing speculative long (+104,206 net on 20 Oct 2026; record ≈ 219k in our 3-year pull).
+Trend-following; its net is the most-watched COT line.
+see also
+COT index
+disaggregated COT
+other reportables
+net positionalso net · funds net · MM net · net long · net short
+Long minus short for a category, spreads excluded. Nets across all categories sum to zero.
+Managed money +104,206 on 20 Oct 2026 means funds held 104,206 more contracts long than short (10.4 Moz ≈ 324 t). The w/w change in net is the number the strip narrates; the level is context only.
+see also
+COT index
+COT
+basis
+The gap between a futures price and the reference it is compared with. On this page: MCX basis = MCX front settle ÷ duty-paid landed − 1 (%); on COMEX: futures − London spot in $/oz.
+Fair basis = the carry to expiry (§3.3); the residual (actual − fair) is the stress or premium gauge. Both legs must share a clock: a settlement divided by a live price is clock error, not basis.
+see also
+MCX basis
+EFP
+cost of carry
+IBJA rate
+rollalso rollover · roll over · roll ratio
+Closing the expiring month and opening the next (sell Dec, buy Feb) before expiry/first notice. Everyone rolls in the same two weeks.
+Front-month OI collapses, next-month OI rises, continuous price series jump by the spread. The app picks 'front by OI, > 5 days to expiry'.
+see also
+first notice day
+calendar spread
+open interest
+real yieldalso TIPS yield · DFII10 · real rate · real rates
+Nominal Treasury yield minus expected inflation; 10-year TIPS yield (FRED DFII10, T+1). The opportunity cost of holding gold.
+2.64% on 22 Oct 2026 with gold ≈ $4,000 vs −1.1% in Aug 2020 at $2,075: the level link broke in 2022; the daily direction still bites.
+see also
+TIPS
+breakeven inflation
+central-bank reserves
+ALL TERMS, A–Z
+4GC
+COMEX 'Gold (Enhanced Delivery)' future (2020): 400 oz, deliverable in 100 oz, 400 oz or kilobars — CME's answer to the 2020 bar-logistics squeeze.
+Illiquid; matters as the mechanism that reconnected London bars to New York delivery.
+see also
+EFP
+Good Delivery bar
+995 vs 999
+Same gold, different purity stamp. Price ratio 999/995 = 1.00402: a 999 quote is 0.40% above a 995 quote.
+MCX GOLD and GOLDM are 995; IBJA publishes both; jewellers quote 999 or 916. Always convert before computing a premium or basis.
+see also
+fineness
+IBJA rate
+basis
+accuracy logalso naive · model vs naive
+Daily record of the 08:45 fair open vs the actual 09:00 open and the naive forecast (open = yesterday's settlement); needs ~20 days.
+'Model vs naive WORSE' means the fair-open arithmetic has missed by more than simply assuming the open equals yesterday's settlement; the chase-limit verdict is re-decided at 20 scored rows.
+see also
+fair open
+chase limit
+active month
+The COMEX contract month with the most open interest; usually the next even month until ~2 weeks before its first notice day.
+The MCX front contract should be compared with the matching COMEX month, not with GC=F, to keep carry out of the premium.
+see also
+GC contract
+roll
+AIDC
+Agriculture Infrastructure and Development Cess: the 5% cess on gold imports on top of the 10% basic customs duty since 13 May 2026 (15% together).
+see also
+customs duty (BCD + AIDC)
+allocated gold
+Specific numbered bars held in your name in a vault, for a storage fee. No bank credit risk.
+ETFs such as GLD hold allocated Good Delivery bars; central banks hold allocated metal at the Bank of England.
+see also
+unallocated gold
+ETF (gold-backed)
+arithmetic
+Badge for an identity, cost or spec: fair value, landed cost, duty-paid price, carry, tick value, the KGX split. Makes no claim about the future.
+see also
+evidence badge
+ATRalso ATR14 · average true range
+Average True Range (14-day): the typical daily price range in quote units — ≈ ₹1,750 per 10 g at 1.2% of ₹1,46,000. The unit of every stop and size.
+see also
+position sizing
+realised volatility
+Au(T+D)
+SGE's margined spot-deferred contract; a daily deferral fee is paid by the side in excess (longs or shorts).
+China's lease-rate signal: fee paid by longs = metal wanted now.
+see also
+SGE
+lease rate
+Au(T+D) directionalso Short to Long · Long to Short · deferred fee
+SGE's daily note of which side pays the deferred fee: 'Short to Long' = shorts pay = metal wanted now; 'Long to Short' = longs pay = ample metal.
+23 Oct 2026: Long to Short, OI 260,054 lots of 1 kg. A tightness read for Shanghai; history starts the day the job starts.
+see also
+Au(T+D)
+SGE premium
+backwardationalso inverted curve
+Later months priced below nearer months. Rare in gold; signals physical tightness (Nov 2008, 2013, Jan–Feb 2025) or, on MCX into Feb, an expected duty cut.
+Read the calendar before the curve: MCX Feb below Dec ahead of 1 Feb is a Budget duty-cut expectation, not a shortage; COMEX front above London spot is the EFP under stress.
+see also
+contango
+EFP
+Union Budget
+Bank Participation Report
+CFTC monthly report of US and non-US banks' futures positions by market, first Friday after 15:30 ET using the first Tuesday's data.
+The named-institution view of the 'bullion bank short'.
+see also
+swap dealer
+COT
+bp vs ppalso bp · basis point · basis points · pp · percentage point · percentage points
+bp = basis point = 0.01 percentage point: a yield moving 2.60 % → 2.64 % moved +4 bp. pp = percentage point: the gap between two percentages (2 % → 3 % is +1 pp, or +50 %).
+Yields and spreads are quoted in bp on this page (real yield −4 bp); a change between two percentages (a share of OI, a premium %) is in pp; a change of a price is in %. 'bp' never means the 'basis' of §3.6.
+see also
+real yield
+basis
+breakeven inflation
+Nominal yield minus TIPS yield (FRED T10YIE, 2.34% on 23 Oct 2026): the market's expected inflation. Moves gold through the real-yield channel.
+see also
+real yield
+calendar spreadalso spread · Dec/Feb
+Long one month, short another (Dec/Feb). Fair = carry; trades the change in carry, duty expectations (MCX) or tightness, with reduced margin.
+₹100 per ₹1 of spread per GOLD lot pair.
+see also
+contango
+roll
+Union Budget
+central-bank reservesalso central banks · official sector · official holdings · reserves
+Official-sector gold (~36,000 t); net buyers every year since 2010, > 1,000 t/yr in 2022–24. The reason the real-yield rule broke.
+PBoC reports ~7th monthly; RBI weekly $ value (WSS), tonnes half-yearly (≈ 880 t by 2025). Lag 1–2 months. Context only.
+see also
+WGC
+real yield
+PBoC
+chase limitalso ₹300 · OK / WAIT · OK/WAIT · chase
+The desk's tolerance (default ₹300) between the MCX open and fair value for 'OK to trade the open'. Unsupported by evidence yet (3 logged days, 0% within).
+Wears the `heuristic` badge with the measured miss (median ≈ ₹2.9k) until ≥ 20 scored mornings exist; re-decide the limit then.
+see also
+fair open
+accuracy log
+heuristic
+COMEX warehouse stocks
+Daily report of gold in COMEX-approved vaults: registered (deliverable, with warrant), eligible (meets spec, no warrant), pledged.
+Inflows = metal wanted in New York (EFP stress, 2020 and Jan–Feb 2025). Deliveries are 1–3% of OI a month: 'coverage' is context only. Bot-blocked; browser only.
+see also
+registered
+eligible
+EFP
+contango
+Later months priced above nearer months: the normal state for gold because dollar rates exceed the gold lease rate.
+Annualised carry = ln(F2/F1) × 365/days. A long pays it at every roll (no coupon, made explicit).
+see also
+backwardation
+cost of carry
+roll
+context
+Badge for a metric that describes what happened — COT 'who did what', premiums, flows, every health gauge: PASS as description, FAIL as forecast. Never coloured bullish/bearish.
+The chip names the study and date ('context · G-STUDY 26 Oct 2026: no forecasting power').
+see also
+evidence badge
+signal
+contract chooser
+GOLD for size and liquidity; GOLDM for ₹5–20 lakh accounts; PETAL/GUINEA for learning or small risk budgets; match the MCX month to the COMEX active month.
+Never a far month for a short trade; be out before the broker's tender cut-off.
+see also
+GOLD / GOLDM / GOLDGUINEA / GOLDPETAL
+position sizing
+tender period
+cost of carryalso carry · annualised carry · carry p.a. · implied carry
+F = S × exp((r − lease + storage) × T): the funding rate of the currency minus what metal lending earns, plus storage.
+On MCX the rupee rate makes contango steeper than COMEX's: interest differential, not bullishness.
+see also
+contango
+lease rate
+implied lease rate
+COT indexalso crowded · crowdedness · washed out · stochastic
+100 × (net − min) ÷ (max − min) over N reports (26/52/156). Managed money 20 Oct 2026: 26 (52w), 38 (3y). Crowdedness, not a signal.
+No forecasting power 2006–2026 (G-STUDY, 26 Oct 2026): crowded weeks (≥ 90) even did slightly better than washed-out ones (≤ 10) at 4 weeks. Shown as a neutral gauge, never coloured.
+see also
+net position
+managed money
+context
+COT release schedule
+Tuesday positions, released Friday 15:30 ET = Sat 01:00 IST (02:00 from 7 Nov 2026); holiday Mondays 16 Nov, 30 Nov, 28 Dec 2026; shutdowns delay for weeks.
+The job retries hourly Saturday morning and catches up Monday/Tuesday; a 10-day-old report shows a STALE banner.
+see also
+COT
+point-in-time
+CPI / NFPalso CPI · NFP · payrolls · non-farm · nonfarm
+US inflation and payrolls, 08:30 ET (18:00 IST on DST, 19:00 in winter): the MCX evening session is open; expect 0.7–2% swings and possible band locks.
+CPI lands around the 12th, NFP on the first Friday; both move gold through the real-yield channel in the first minute. They are the High-impact rows on the event strip.
+see also
+real yield
+price band
+cross-exchange decomposition
+MCX = COMEX × USD/INR × 10/31.1035 × 0.995 × (1 + duty) × (1 + local premium) × (1 + carry). Not an arbitrage: a long MCX lot is long gold, long USD/INR and long the premium.
+see also
+rupee hedge
+MCX basis
+customs duty (BCD + AIDC)
+KGX rupee leg
+customs duty (BCD + AIDC)also duty · import duty · BCD
+Import duty on gold: BCD 10% + AIDC 5% = 15% since 13 May 2026 (Notification 16/2026-Customs; was 6% from 24 Jul 2024). A dated policy input.
+Charged on the CBIC tariff value, not the invoice. Stored as a dated constant (GOLD_IMPORT_DUTY_PCT); the primary CBIC page is unreadable to scripts, so the owner confirms it in a browser (O-3).
+see also
+AIDC
+tariff value
+duty-paid landed
+Union Budget
+daily settlementalso settlement · settle
+The official closing price used for margin: COMEX = VWAP 13:29–13:30 ET (23:00 IST on DST); MCX = VWAP of the last 30 minutes before close.
+The app's fair-open model uses the same 30-minute window to read COMEX and USD/INR 'at the MCX close'.
+see also
+mark-to-market
+fair open
+delivery notices
+Daily COMEX tally of shorts giving notice to deliver; the real physical demand through the exchange.
+Spikes at first notice day; compare with registered stock.
+see also
+first notice day
+registered
+devolvement
+MCX gold options are European and in-the-money options turn into futures positions at option expiry (a few sessions before futures expiry).
+The pitfall: a 1 kg futures position and its margin appear in your account.
+see also
+GOLD / GOLDM / GOLDGUINEA / GOLDPETAL
+margin
+DGCI&S
+Directorate General of Commercial Intelligence & Statistics: India's monthly trade data (gold imports, ~15th); tradestat.commerce.gov.in, browser only.
+see also
+premium / discount (India)
+Dhanteras / Akshaya Tritiyaalso Diwali · festival · seasonality · wedding season
+Indian gold-buying festivals (Dhanteras ≈ 6 Nov 2026; Akshaya Tritiya Apr/May). Move the Indian premium and volumes, not the world price. Folklore, context only.
+see also
+premium / discount (India)
+Muhurat trading
+disaggregated COT
+Splits commercials into producer/merchant and swap dealers, speculators into managed money and other reportables.
+Gold sits in the CFTC 'Other' group file (other_lf.htm) and the 72hh-3qpy dataset.
+see also
+producer / merchant
+swap dealer
+managed money
+other reportables
+due date rate
+MCX final settlement price for gold: a polled spot price (995, ex-Ahmedabad, duty-paid, ex-GST) on expiry day.
+see also
+tender period
+duty-paid landedalso duty-paid · duty paid
+Landed ₹/10 g × (1 + duty): what imported gold costs after the border. Duty 15% since 13 May 2026, printed and dated on the ladder.
+26 Oct 2026 at $4,004.2 and 94.93: landed 999 ₹1,22,211 → 995 ₹1,21,600 → duty-paid ₹1,39,840. The base for the India premium (IBJA) and the MCX basis.
+see also
+landed price
+customs duty (BCD + AIDC)
+MCX basis
+DXYalso dollar index · USDX · dollar
+ICE dollar index (57.6% euro). Dollar down → gold up in $ terms, usually; both can rise in a liquidity crisis.
+FRED's broad dollar index (DTWEXBGS) is the trade-weighted alternative, ~1 week lag.
+see also
+USD/INR
+EFPalso exchange for physical · EFP prints · EFRP
+Exchange for physical: swapping a COMEX futures position for loco London metal; its price is the New York–London spread.
+Blew out to $70+ (Mar 2020, bar logistics) and $40–60 (Jan–Feb 2025, tariffs): futures detach from spot when bars cannot move.
+see also
+basis
+Good Delivery bar
+COMEX warehouse stocks
+EFP price vs volume
+CME publishes how many EFPs printed (round turns per contract month, daily), never the price at which futures were swapped for metal.
+The EFP price (futures − spot differential) is the physical-tightness number and is not free; basis minus theoretical carry is the proxy shown.
+see also
+EFP
+basis
+eligible
+Gold in a COMEX vault that meets contract specs but has no warrant; can be registered within a day.
+see also
+registered
+ETF (gold-backed)also gold ETF · GOLDBEES · IAU
+A listed fund holding allocated bars; units are created/redeemed by authorised participants, so tonnage tracks investor flows daily.
+GLD, IAU (US); GOLDBEES (NSE). Flows are contemporaneous with price, not leading (G-STUDY: 4-week change forecasts nothing). WGC aggregates weekly/monthly.
+see also
+GLD
+WGC
+allocated gold
+event risk flag
+A count of headlines carrying war/strike/sanction/margin/halt words. A keyword tally with a `heuristic` badge: no study, no sizing advice.
+see also
+safe haven
+heuristic
+evidence badgealso badge · badges
+Every gold number wears one of four: signal (none today), context, arithmetic, heuristic. No composite score, no 'N of 7 supportive', anywhere.
+A badge moves from context to signal only by a PASS row in reports/gold_program/FINDINGS.md from a pre-registered, point-in-time study (PLAN §f).
+see also
+signal
+context
+arithmetic
+heuristic
+fair openalso fair value · fair
+App model: MCX settlement × (COMEX now ÷ COMEX at the MCX close) × (USD/INR now ÷ USD/INR at the close); references = last-30-minute averages.
+Tells you where MCX should open, not where it will close. Accuracy log: 3 days, 0% within ₹300, worse than naive so far.
+see also
+chase limit
+accuracy log
+daily settlement
+FBIL reference rate
+Official USD/INR reference fixed by Financial Benchmarks India at ~13:30 IST daily.
+see also
+USD/INR
+fineness
+Parts of gold per 1,000 by mass: 999 = 99.9% gold, 995 = 99.5%, 916 = 22 karat.
+Bullion speaks in fineness, jewellery in karat (fineness = K/24 × 1000). LBMA Good Delivery minimum 995; kilobars 999.9; MCX GOLD/GOLDM 995, PETAL/GUINEA 999.
+see also
+karat
+995 vs 999
+hallmark (BIS, HUID)
+first notice dayalso FND
+First day a COMEX long can be assigned delivery: the last business day before the delivery month (Dec-26: 30 Nov 2026).
+Brokers force retail out before it; the roll happens in the two weeks before. Front-month OI collapses mechanically.
+see also
+last trading day
+roll
+active month
+FND / LTDalso first notice
+First Notice Day and Last Trading Day of a COMEX month: GCZ26 FND 30 Nov 2026, LTD 29 Dec 12:30 CT (23:00 IST; 24:00 after 1 Nov). Leave the front before FND.
+The matched COMEX month rolls GCZ26 → GCG27 around 25 Nov while MCX GOLD Dec trades to 4 Dec: mind the mismatch when reading a premium.
+see also
+first notice day
+last trading day
+roll
+active month
+FOMCalso Fed · Fed decision · Fed meeting · rate decision
+Fed rate decision, 14:00 ET (23:30 IST on DST, 00:30 in winter) + press conference: real yields and the dollar move first, gold within seconds; MCX is at or near its close.
+Eight scheduled meetings a year; 'next FOMC' on MACRO is the next decision, not a speech by a Fed member (speakers are listed separately). In US winter the move arrives as a gap at the 09:00 MCX open.
+see also
+real yield
+DXY
+four instrumentsalso matched month · GCZ26 · instruments
+The four prices the page keeps apart: spot proxy (COMEX front GC=F — not spot), continuous front GC1, the matched month (GCZ26), MCX GOLD Dec-26.
+Mixing them adds carry or a roll jump to a 'premium'. The header strip names each one; a Yahoo 'spot' symbol does not exist (XAUUSD=X is 404).
+see also
+GC contract
+active month
+FND / LTD
+MCX
+fund-driver labelalso driver · driver label · fund driver · new longs · new shorts · long liquidation · funds bought the dip · funds sold into it · bought the dip · sold into it
+Six words for the week's dominant fund move: new longs · short covering · funds sold into it (price up); long liquidation · new shorts · funds bought the dip (price down). The larger leg wins.
+ΔL / ΔS = managed money's w/w change in long / short contracts. Down-week: long liquidation if ΔL < 0 and |ΔL| ≥ |ΔS|; new shorts if ΔS > 0 and ΔS ≥ |ΔL|; else funds bought the dip (price down, net up). Up-week, mirrored: short covering if ΔS < 0 and |ΔS| ≥ |ΔL|; new longs if ΔL > 0 and ΔL ≥ |ΔS|; else funds sold into it (price up, net down). Ties go to the leg moving with the price. 27 Oct 2026: +1,538 longs, +182 shorts, price −1.64 % → funds bought the dip. Narration of the week that ended (G-STUDY §5.2, right ≈ 3 weeks in 4); never a forecast.
+see also
+who closed what
+short covering
+long unwinding
+managed money
+gap riskalso gap · overnight gap
+The move MCX cannot trade: ~8.5 h of COMEX each night, ~58 h each weekend, plus band locks. Size for the gap, not the session.
+The Pre-Open desk exists to price the overnight gap before 09:00.
+see also
+Globex hours
+price band
+fair open
+GC contractalso GC1 · GC=F · GC · COMEX front · front month · continuous front
+COMEX gold future: 100 troy oz, tick $0.10 = $10, ≥ 995, delivery of one 100 oz bar or three kilobars; liquid months Feb/Apr/Jun/Aug/Oct/Dec.
+The app matches the MCX month to the same COMEX month (GOLD Dec-26 ↔ GCZ26). Yahoo symbol GC=F is the continuous front month, GCZ26.CMX the Dec contract.
+see also
+first notice day
+active month
+MGC
+GLDalso SPDR · SPDR Gold Shares · GLD tonnes
+SPDR Gold Shares, the largest gold ETF: 1,045.64 t on 22 Oct 2026 (−11.98 t d/d), daily XLSX archive since 2004 (display-only, attributed).
+Its tonnes move when investors create or redeem units, so the daily change is the cleanest read of Western investor demand — contemporaneous with price, never leading it (G-STUDY).
+see also
+ETF (gold-backed)
+Globex hoursalso Globex · COMEX hours · maintenance break
+CME electronic session: Sun 18:00 → Fri 17:00 ET, 60-min break daily at 17:00 ET. IST: 03:30 → 02:30 (04:30 → 03:30 in US winter).
+MCX misses ~8.5 h of COMEX every night and ~58 h over a weekend: the source of gap risk.
+see also
+gap risk
+COMEX
+GOFO
+Gold Forward Offered Rate: the LBMA's daily swap benchmark (lease ≈ LIBOR − GOFO), discontinued 30 Jan 2015 under benchmark regulation.
+Replaced by nothing official; practitioners infer the lease rate from futures spreads.
+see also
+lease rate
+implied lease rate
+GOLD / GOLDM / GOLDGUINEA / GOLDPETALalso GOLDM · GOLDGUINEA · GOLDPETAL · Mini · Guinea · Petal · MCX gold family
+MCX gold family: 1 kg (₹100 per ₹1), 100 g (₹10), 8 g (₹1), 1 g (₹1), plus GOLDTEN 10 g. GOLD/GOLDM are 995, 5th; TEN/GUINEA/PETAL 999, month-end.
+GOLD runs Feb/Apr/Jun/Aug/Oct/Dec; the others monthly. Liquidity in metal terms: GOLD ≫ GOLDM ≫ others. Choose by risk budget, not by habit.
+see also
+GOLDTEN
+lot
+multiplier
+contract chooser
+gold/silver ratio
+Ounces of silver per ounce of gold; ≈ 60–80 for most of 2005–26, 32 (2011) to 125 (Mar 2020). Rising = risk-off/deflation; falling = reflation.
+Trade as a dollar-neutral spread (MCX GOLD vs SILVER). Context only.
+see also
+DXY
+GOLDTEN
+MCX 10 g gold future (Breeze code GOLDTE): ₹/10 g, 999 purity, month-end expiry, tick ₹1 = ₹1 per lot; OI 25,655 on 23 Oct 2026.
+Missing from the app's specs until phase 2; sits between GOLDM (100 g) and GUINEA (8 g) in granularity. Round trip ≈ 0.05% of notional at flat brokerage.
+see also
+GOLD / GOLDM / GOLDGUINEA / GOLDPETAL
+contract chooser
+Good Delivery bar
+LBMA-standard ~400 oz (350–430 oz) bar, ≥ 995 fine, from a listed refiner; the unit of the London market and ETF vaults.
+Serial number, refiner mark, year, fineness stamp. Only GD bars settle loco London; converting them to kilobars/100 oz bars is the refinery bottleneck seen in 2020.
+see also
+loco London
+kilobar
+EFP
+GST on gold
+3% on the gold value (plus 5% on making charges) when physical gold is sold. MCX futures prices exclude GST.
+see also
+landed price
+GVZalso gold vol · implied vol · implied volatility · gold VIX
+Cboe Gold ETF Volatility Index (implied vol of GLD options): normal 14–20, stress > 30. Free, delayed (Yahoo ^GVZ).
+see also
+realised volatility
+risk reversal
+hallmark (BIS, HUID)
+BIS mark certifying fineness on Indian jewellery, with a 6-character HUID; mandatory since 2023.
+Certifies purity, not price. Grades: 14K585, 18K750, 20K833, 22K916, 23K958, 24K999.
+see also
+fineness
+health verdictalso verdict · describes, does not predict
+One rule-based sentence on GOLD › HEALTH: every clause is a threshold on a stored series (table in LEARN Part 8.4). It ends 'describes, does not predict'.
+No score behind it: 0 of 69 walk-forward rules beat buy-and-hold (G-STUDY), so a count of 'supportive' drivers would read as a forecast it cannot be.
+see also
+evidence badge
+context
+heuristic
+Badge for a house rule with no evidence yet: the ₹300 chase limit (0% within it over 3 scored mornings), the headline risk count. The chip carries the measured error.
+see also
+evidence badge
+chase limit
+event risk flag
+IBA
+ICE Benchmark Administration: runs the LBMA Gold/Silver Price auctions since 2015 and licenses the data.
+Why the app links to the fix instead of showing it: the historical tables moved behind the MyLBMA portal and an IBA licence.
+see also
+LBMA Gold Price
+IBJA ratealso IBJA · IBJA 999 · IBJA PM · IBJA fix
+India Bullion & Jewellers Association daily AM/PM rates for 999/995/916/750/585 (₹/g); the domestic spot reference (SGB redemption uses the 999 rate).
+ibjarates.com, free page (redistribution terms unknown). 26 Oct 2026 morning board: 999 ₹14,163/g, 995 ₹14,106/g.
+see also
+995 vs 999
+basis
+premium / discount (India)
+IIBX
+India International Bullion Exchange (GIFT City): $-denominated bullion spot for qualified jewellers; the intended institutional import channel. Link only.
+see also
+MCX
+implied lease ratealso lease · implied lease
+USD rate (SOFR) minus the annualised COMEX calendar carry. Rising/positive spikes = physical tightness.
+Use the 2nd/3rd month pair in roll weeks; storage ignored.
+see also
+GOFO
+cost of carry
+term structure
+implied premium
+Old overlay metric (deprecated alias): MCX ÷ landed-before-duty − 1, e.g. 18.0% on 26 Oct 2026 = 0.995 purity × 1.15 duty × 1.031 basis. Now split into duty (dated) + MCX basis.
+A position in itself: cut by a Budget duty change in a minute, by a rupee rally over weeks. Read `basis_pct` (vs duty-paid landed) instead; `implied_premium_pct` stays one release as an alias.
+see also
+MCX basis
+customs duty (BCD + AIDC)
+landed price
+fair open
+India price ladderalso ladder · price ladder · price stack · India ladder · rupee ladder
+The PHYSICAL stack: COMEX $/oz → × USD/INR → landed ₹/10 g → + duty 15 % (dated) → duty-paid landed → IBJA 999 → MCX front; each bar carries its own timestamp and source.
+A premium or basis is honest only when both legs share a clock: the IBJA premium at the fix minute, the MCX basis at the settlement session. Never divide a live bar by yesterday's settlement; the panel prints the clock each derived number used.
+see also
+landed price
+duty-paid landed
+premium / discount (India)
+MCX basis
+karat
+Gold content in 24ths: 24K ≈ pure, 22K = 916, 18K = 750, 14K = 585.
+A jewellery convention; convert to fineness before comparing with bullion prices.
+see also
+fineness
+KGXalso gold or the dollar · Kitco Gold Index · USD effect · pure gold
+The Kitco Gold Index idea: split a gold move into the part due to the dollar (DXY weights EUR 57.6 / JPY 13.6 / GBP 11.9 / CAD 9.1 / SEK 4.2 / CHF 3.6) and the 'pure' part.
+usd_move = −Σ wᵢ Δln fᵢ; pure_gold = gold_usd + usd_move. 22 Oct 2026: −2.18% = −2.29% pure + 0.10% USD. Replicated on MACRO as 'Gold or the dollar?'; Kitco's numbers stay a link.
+see also
+KGX rupee leg
+DXY
+cross-exchange decomposition
+KGX rupee leg
+Our extension for MCX: the day's move splits three ways — pure gold, the dollar basket, and USD/INR. Arithmetic (an identity), never a forecast.
+see also
+KGX
+USD/INR
+arithmetic
+kilobar
+1,000 g bar, usually 999.9. The Asian standard (SGE, SHFE, Dubai, India imports); three kilobars = one COMEX delivery.
+Priced off the London price plus a kilobar premium that widens when Asian demand or refinery capacity is tight.
+see also
+Good Delivery bar
+SGE premium
+Kitco
+Retail gold-news site with a 24-hour spot chart. Terms (verified 26 Oct 2026): personal, non-commercial use only; redistribution prohibited. Link, never embed.
+Build the 24-h session-shaded chart from the app's own Yahoo bars instead.
+see also
+COMEX
+lag chip (LIVE / DELAYED / STALE / OFFLINE)also STALE · DELAYED · OFFLINE · LIVE · LAST TRADE · chip · freshness
+LIVE (Breeze) · DELAYED (Yahoo, ≈ 1 min) · STALE (older than the series' allowed age; the last stored value stays, dated) · OFFLINE (no source). PROXY and LAST TRADE name a stand-in.
+A STALE chip names the series and its age; nothing is guessed to fill the gap. Daily data shows its date, never a clock.
+see also
+proxy settlement
+point-in-time
+evidence badge
+landed pricealso landed · landed cost · landed ₹/10 g
+World price converted to ₹ per 10 g before duty: $/oz × USD/INR × 10 ÷ 31.1035 (₹1,22,211 on 26 Oct 2026 at $4,004 and 94.93).
+The ladder's first rupee bar. Add the 995 adjustment, 15% duty (dated) and the MCX basis to reach the MCX price.
+see also
+duty-paid landed
+customs duty (BCD + AIDC)
+MCX basis
+troy ounce
+last trading dayalso LTD
+Third-last business day of the COMEX delivery month; the contract stops trading (Dec-26 ≈ 29 Dec 2026).
+A long that is still open after first notice day can be assigned delivery before the last trading day; the roll is done before FND, not LTD.
+see also
+first notice day
+LBMA
+London Bullion Market Association: sets Good Delivery standards and oversees the London OTC market and its benchmarks.
+Publishes weekly trade turnover (LBMA-i) and monthly London vault holdings; price data tables need an IBA licence.
+see also
+LBMA Gold Price
+LBMA-i trade data
+London vault holdings
+LBMA Gold Pricealso fix · the fix · London PM · LBMA PM · PM fix · AM fix
+The twice-daily benchmark auction (ICE Benchmark Administration) that replaced the 1919–2015 'fix': 10:30 and 15:00 London.
+IST: 16:00 / 20:30 while the UK is on GMT (from 25 Oct 2026), 15:00 / 19:30 on BST. Used by central banks, refiners, SGB redemption. Data redistribution requires an IBA licence: link only.
+see also
+spot
+IBA
+LBMA-i trade data
+Weekly published turnover of the London OTC gold market (12-week average daily value, $bn); daily T+1 data is licensed.
+The only public window on 'over-the-counter deals'. Activity, not positions: London has no COT.
+see also
+LBMA
+COT
+lease rate
+Interest paid, in gold, to borrow gold. High lease rate = metal wanted now. Not published directly since GOFO ended.
+see also
+GOFO
+implied lease rate
+Au(T+D)
+legacy COT
+Three groups: non-commercial (speculators above the reporting level), commercial (hedgers), non-reportable (small). Spreads shown separately.
+20 Oct 2026: NC 237,142 L / 37,277 S / 54,199 spread; Comm 59,531 L / 295,113 S; NR 51,407 L / 15,690 S; OI 402,279.
+see also
+COT
+disaggregated COT
+spreading
+leverage
+Notional ÷ margin: ~10–17× on MCX gold. A 1% move is 10–17% of your margin.
+At the 9.25 % NRML margin of 25 Oct 2026 one GOLD lot (≈ ₹1.46 crore) is held with ≈ ₹13.3 lakh: a 1 % day is −11 % of that deposit. Leverage, not cost, is what ends a gold trade.
+see also
+margin
+position sizing
+loco London
+Gold deliverable in an LBMA-approved London vault; the settlement location of the world OTC market.
+Loco = location. Other locos (Zurich, New York, Shanghai) trade at a location premium/discount reflecting transport and refining.
+see also
+unallocated gold
+LBMA
+London vault holdings
+Monthly tonnes of gold in London vaults (incl. the Bank of England); 9,821 t at end-Sep 2026, ~1 month lag.
+Rising London stock with falling COMEX stock = metal moving back from New York; read with COMEX warehouse stocks.
+see also
+COMEX warehouse stocks
+LBMA
+long unwinding
+Decline driven by longs closing (price down, OI down, COT longs falling): a crowded trade leaving (late Oct 2025 washout).
+The COT strip calls the same thing 'long liquidation': a down-week whose larger leg was a fall in long contracts. Daily OI shows the exit, only the weekly COT says who left.
+see also
+OI quadrants
+who closed what
+fund-driver label
+lotalso lot size · contract size
+The fixed quantity in one futures contract (GOLD 1 kg, GOLDM 100 g, GOLDTEN 10 g, GUINEA 8 g, PETAL 1 g).
+You trade whole lots; the price is quoted per 10 g (or 8 g / 1 g) but you own the whole lot, which is why a ₹1 move is ₹100 on GOLD and ₹10 on GOLDM.
+see also
+multiplier
+notional
+LPMCL
+London Precious Metals Clearing Ltd: the bank-owned clearing house that nets loco London transfers daily.
+Its monthly clearing statistics (ounces transferred per day) are a second public OTC activity gauge.
+see also
+loco London
+marginalso NRML · SPAN · initial margin · margin %
+Deposit the exchange requires per lot (SPAN + exposure, NRML): 9.25% of notional on every MCX gold contract on 25 Oct 2026 (Zerodha mirror, dated), revised daily.
+Indicative on the desk; the broker's number is the real one. Special margins by circular; delivery margins rise in the tender period.
+see also
+leverage
+mark-to-market
+special margin
+mark-to-market
+Daily cash settlement of gains/losses at the settlement price. Losses are debited in cash; margin itself can be collateral.
+Keep cash headroom of ~3 ATR per lot beyond the initial margin.
+see also
+daily settlement
+margin
+MCX basisalso India basis · basis vs duty-paid · basis %
+MCX front settle ÷ duty-paid landed − 1 (995 purity, 15% duty); minus carry to expiry = carry-adjusted basis. Replaces the old 'implied premium 18%'.
+26 Oct 2026: 1,44,228 ÷ 1,39,840 − 1 = +3.1%, of which ≈ 1% is six weeks of rupee carry; the rest is local premium and expectation. Context, never a signal.
+see also
+duty-paid landed
+implied premium
+premium / discount (India)
+context
+MGC
+Micro gold future: 10 oz (1/10 of GC); reported as a separate line in the COT (code 088695).
+Do not add micro and full COT positions without scaling by 0.1.
+see also
+GC contract
+COT
+Mozalso million ounces · million troy ounces · tonnes
+Million troy ounces: COMEX gold OI 402,279 contracts × 100 oz = 40.2 Moz ≈ 1,251 t (1 Moz = 31.1035 t). IMF official-sector holdings are reported in ounces; the page shows Moz and tonnes.
+1 Moz = 1,000,000 × 31.1034768 g = 31.10 t; 1 t = 32,150.7 oz; contracts ÷ 10,000 = Moz. Check the unit before comparing an IMF ounce figure with a tonnes table.
+see also
+troy ounce
+open interest
+central-bank reserves
+Muhurat trading
+Diwali special session on MCX: Sun 8 Nov 2026, special session 14:05–14:19, trading 14:20–15:30 (circular MCX/TRD/590/2026).
+see also
+MCX
+multiplier
+₹ of P&L per ₹1 move in the quote = lot grams ÷ quote grams (GOLD 1000/10 = 100).
+GOLDM 100/10 = 10; GOLDTEN 10/10 = 1; GUINEA 8/8 = 1; PETAL 1/1 = 1. Multiply any ₹ change on the quote by it to get the ₹ change on one lot.
+see also
+tick value
+lot
+NDF
+Non-deliverable forward: the offshore rupee market that trades while onshore India is closed; Yahoo INR=X before 09:00 is its proxy.
+Why the desk's rupee leg before the open is 'offshore'.
+see also
+USD/INR
+fair open
+non-reportablealso NR · small specs · small traders · retail
+Positions below the CFTC reporting level (200 contracts for gold): retail and small pros, inferred as OI minus reportables.
+Not reported by anyone — the CFTC computes it as what is left of open interest after the reportable groups; sentiment-driven and usually net long.
+see also
+reporting level
+COT
+notionalalso contract value · exposure
+Full value of the position = price × multiplier × lots (GOLD at ₹1,46,079 ≈ ₹1.46 crore per lot).
+What the margin is a fraction of, and what a 1% move is 1% of.
+see also
+margin
+leverage
+OI quadrantsalso quadrant · quadrants · long build-up · short build-up · build-up
+Price up + OI up = long build-up; price up + OI down = short covering; price down + OI up = short build-up; price down + OI down = long unwinding.
+A description of who is entering/leaving, not a forecast. Grey out roll weeks and expiry days.
+see also
+short covering
+long unwinding
+open interest
+other reportablesalso OR · other reportable
+Reportable traders in no other category: family offices, prop desks, unregistered funds. A second structural long in 2025–26 (+95,659 net on 20 Oct 2026).
+An opaque CFTC bucket: the page shows its net and change like the other four groups and infers nothing about who sits in it.
+see also
+disaggregated COT
+PBoCalso People's Bank of China · SAFE
+People's Bank of China; its monthly reserve print (~7th) and buying streaks/pauses are headline events for gold in Asian hours.
+see also
+central-bank reserves
+percentilealso pct · pctile · percentile rank · rank
+Where a value sits in its own history, 0–100: the 93rd percentile means 93 % of the stored observations were lower. The window is named next to it; over a short history it is noise.
+A percentile is only as good as its window: '14th percentile of 14 months' says almost nothing. COT percentiles use the reports in the window the label names (all history since 2006 when the full panel is read, else the fetched 3 years). Context, never a signal (G-STUDY).
+see also
+COT index
+z-score
+context
+pledged
+Registered COMEX metal posted as clearing collateral, reported separately; not available for delivery while pledged.
+see also
+registered
+point-in-timealso PIT · report_date · release_at · as of
+Every stored observation keeps report_date (the period it describes), release_at (when it became public) and first_seen_at; a revision is a new row.
+So a study can only see what was knowable on the day: COT dated at its Friday release, IMF months checked by TIME_PERIOD, WGC quarterly revisions kept as vintages.
+see also
+COT release schedule
+accuracy log
+position sizingalso sizing · lots · max lots · how many lots
+lots = floor(account × risk% ÷ (k × ATR × multiplier)). At 1% risk and 1.5 ATR, one GOLDM needs ≈ ₹26 lakh, one GOLD ≈ ₹2.6 crore.
+PETAL/GUINEA exist for small accounts. Margin ≤ 35% of account; cash headroom ≥ 3 ATR per lot.
+see also
+ATR
+leverage
+contract chooser
+premium / discount (India)also India premium · IBJA premium · dealer premium · premium · discount
+Dealer price over/under the official duty-paid price, in $/oz (Reuters survey). Discount = weak demand; premium = import friction or festive pull.
+A different quantity from the app's duty-inclusive implied premium. Define each on the panel.
+see also
+implied premium
+SGE premium
+IBJA rate
+price bandalso band · circuit · limit up · limit down
+MCX daily limit around the previous settlement: ±3%, widened to 6% then 9% after cooling periods when hit.
+On a shock the band can lock MCX while COMEX keeps moving; ICICI's master publishes the band, whose midpoint is yesterday's settlement.
+see also
+daily settlement
+gap risk
+producer / merchantalso producer/merchant · producers · hedgers
+Miners, refiners, jewellers, physical dealers hedging inventory or output. Structurally short; small in gold (−14,783 net on 20 Oct 2026).
+The 'commercial short' people quote is mostly swap dealers, not producers: miners de-hedged in the 2000s and the hedge book stayed small.
+see also
+disaggregated COT
+swap dealer
+proxy settlementalso PROXY · band midpoint
+MCX settlement read as the midpoint of ICICI's ±3% price band because the official bhavcopy is bot-blocked. Labelled PROXY; official rows coexist once O-8 unblocks.
+see also
+price band
+session label
+daily settlement
+RBI WSSalso RBI · WSS · RBI gold
+Reserve Bank of India Weekly Statistical Supplement (Friday): forex reserves incl. gold in $; tonnes in the half-yearly reserve-management report.
+see also
+central-bank reserves
+realised volatilityalso realized volatility · realised vol · 20-day vol
+Standard deviation of daily log returns (20-day), annualised × √252; gold ran 12–20% in 2024–26 with event spikes.
+see also
+GVZ
+ATR
+regime
+A multi-year period with one dominant driver: 2001–11 dollar/real yields/ETFs; 2011–15 rising real yields; 2016–19 range; 2020–21 QE; 2022–25 central banks.
+The next regime's driver is the one the current rule ignores.
+see also
+real yield
+central-bank reserves
+registered
+COMEX warehouse gold with a warehouse receipt issued: deliverable against a short futures position today.
+see also
+eligible
+COMEX warehouse stocks
+registered / eligible / pledged
+The three COMEX warehouse buckets: registered = warranted, deliverable; eligible = bar-standard, no warrant; pledged = warrants lodged as collateral.
+23 Oct 2026 (archive copy): registered 14.81 Moz, pledged 1.75, eligible 8.47 ≈ 724 t. LINK-ONLY tiles until the owner resolves CME's block (O-2).
+see also
+registered
+eligible
+pledged
+COMEX warehouse stocks
+reporting level
+Position size at which a trader must be reported to the CFTC (gold: 200 contracts); changes shift COT history.
+see also
+non-reportable
+risk reversal
+25-delta call IV minus 25-delta put IV. Gold's is usually positive (calls bid) in bull/crisis phases; it flips negative in liquidation phases.
+Vol-surface data is paid; GVZ is the free scalar.
+see also
+GVZ
+round-trip costalso costs · brokerage · CTT · round trip
+All charges to open and close: exchange 0.0021%/side, CTT 0.01% on sell, stamp 0.002% on buy, SEBI ₹10/crore, brokerage, GST 18% — ≈ ₹2,560 on one GOLD lot.
+26 ticks. Costs are small in gold futures; leverage and gaps are the risk.
+see also
+tick value
+leverage
+rupee hedge
+Short USD/INR futures against a long MCX gold lot to strip the currency leg: lots = lot_g/31.1035 × $/oz ÷ 1,000.
+Currency futures close at 17:00 IST: the hedge is off during MCX's evening session.
+see also
+USD/INR
+cross-exchange decomposition
+safe haven
+Gold's tendency to hold or rise in extreme equity sell-offs — after the first liquidation wave, and only for ~15 trading days (Baur & Lucey 2010).
+The first move on a shock is noise; wait for the real-yield read.
+see also
+real yield
+session label
+A settlement is named by the session it belongs to ('Thu 22 Oct settlement'), never by the file date: Monday's ICICI file is Friday's, carrying Thursday's settlement.
+see also
+proxy settlement
+settlement by session
+An MCX settlement is labelled by the session it belongs to ('Thu 22 Oct settlement'), never by the date of the ICICI file that carried it (published the next morning).
+ICICI's security master is published ~01:58 UTC with the previous session's band; before ~07:30 the band can still be the session-before-last. The proxy settlement is the band midpoint and wears a PROXY chip until official bhavcopy rows exist (O-8).
+see also
+daily settlement
+price band
+SGB
+Sovereign Gold Bond: government paper indexed to the IBJA 999 price with a 2.5% coupon; no new tranches since early 2024; thin secondary market.
+see also
+IBJA rate
+SGE
+Shanghai Gold Exchange: China's physical spot market (Au99.99 kilobars, CNY/g) and the Shanghai Gold Benchmark Price (10:15 / 14:15 Beijing).
+The EN daily table (close, VWAP, volume, OI, Au(T+D) direction) and the benchmark JSON are fetchable once a day; view-only, attributed.
+see also
+SGE premium
+Au(T+D)
+Au(T+D) direction
+SGE withdrawals
+SGE premiumalso Shanghai premium · China premium
+SGE Au99.99 converted to $/oz minus the London/COMEX price. Positive = China pulling metal in; spikes when import quotas are tight.
+Formula: CNY/g × 31.1035 ÷ USDCNY − spot. Typical −$5 to +$30; +$50–120 in late 2023. Context only.
+see also
+SGE
+premium / discount (India)
+SGE withdrawals
+Monthly tonnes withdrawn from SGE vaults; the standard proxy for Chinese wholesale demand.
+see also
+SGE
+SHFE
+Shanghai Futures Exchange gold future (1 kg, CNY/g) with a night session 21:00–02:30 Beijing (18:30–00:00 IST): the Asian price during MCX's evening.
+POSITIONING shows its front-contract open interest and change (stored daily); SGE Au(T+D) beside it says which side pays the deferred fee.
+see also
+SGE
+COMEX
+short covering
+Rally driven by shorts closing (price up, OI down, COT shorts falling sharply): no new buyers, fades unless longs follow.
+On the weekly COT it is the fund-driver word for an up-week whose larger leg was a fall in short contracts; on the daily OI tape it is the price-up / OI-down quadrant.
+see also
+OI quadrants
+who closed what
+fund-driver label
+signal
+Badge for a metric a pre-registered study found to forecast gold (|t| ≥ 2 in the full sample and in both halves, after costs). None exists today (G-STUDY, 26 Oct 2026).
+see also
+evidence badge
+context
+special margin
+Extra margin MCX imposes by circular on volatile days; a cash call the next morning on open positions.
+The Pre-Open desk links MCX circulars as a manual check for this reason.
+see also
+margin
+spreading
+COT column for positions long one month and short another; excluded from net. Swells in roll weeks (20 Oct 2026: +8,304 while longs −8,158).
+The commonest COT misread: a drop in outright longs with a rise in spreads is a roll, not a liquidation.
+see also
+roll
+legacy COT
+supply and demand (gold)also supply · demand · above-ground stock · what is gold
+Stock ≈ 216,000 t; annual mine ≈ 3,600 t (1.7% of stock) + recycling ≈ 1,200 t; demand = jewellery ~2,000 t, bars/coins ~1,200 t, central banks ~1,000 t, tech ~300 t, ± ETFs.
+Gold is a stock market: price is set by who wants to hold the existing stock (investors, central banks), not by this year's mine output.
+see also
+central-bank reserves
+ETF (gold-backed)
+WGC
+swap dealeralso SD · swap dealers · bullion banks
+Banks hedging OTC swaps/forwards sold to clients; the bulk of the commercial short in gold (−220,799 net on 20 Oct 2026).
+'Commercials are short' in gold means 'bullion banks are hedging client longs', not 'miners are selling'.
+see also
+disaggregated COT
+Bank Participation Report
+T+1also T+2 · T+3 · lag · one-day lag · publication lag
+Published one business day after the day it describes: FRED yields, CME's daily OI file (≈ 15:30 IST next day), GLD tonnes. The page shows the data's date, never a clock.
+T+1 is why a daily OI quadrant has no label until the next afternoon and why the real yield on the strip is yesterday's. T+2 is spot settlement loco London; the COT is T+3 (Tuesday data, Friday release).
+see also
+point-in-time
+COT release schedule
+spot
+tariff value
+CBIC's notified $/10 g value, updated ~fortnightly, on which gold import duty is computed.
+Between notifications the embedded duty lags the market by up to ±0.5%: not a premium signal.
+see also
+customs duty (BCD + AIDC)
+tender periodalso tender · delivery period
+The final sessions before an MCX expiry in which delivery intentions are matched; brokers without delivery facilities square off clients before it.
+ICICI's cut-off date for GOLD is not in the repo: confirm and print it on the specs table.
+see also
+due date rate
+contract chooser
+term structurealso curve · forward curve · futures curve
+The curve of futures prices by month; read as annualised carry between adjacent months on MCX and COMEX.
+One convention per page: carry is stated against the front month ('vs front') unless a column says 'to next month'. Yahoo per-month prices are last trades, not settlements (LAST TRADE chip).
+see also
+contango
+implied lease rate
+tick valuealso tick
+Smallest price step × multiplier: GOLD ₹1 × 100 = ₹100 per lot; GOLDM ₹10; GUINEA and PETAL ₹1.
+Round-trip costs on one GOLD lot ≈ ₹2,560 ≈ 26 ticks; a 1% day ≈ 1,460 ticks.
+see also
+multiplier
+round-trip cost
+TIPS
+US Treasury Inflation-Protected Securities; their yield is the market real yield. Daily close only (no free intraday feed).
+The 10-year TIPS yield (FRED DFII10, T+1) is the 'real yield' on the strip; it is yesterday's close, which the chip says.
+see also
+real yield
+tola
+11.6638 g = 3/8 troy oz. Traditional Indian and Gulf jewellery unit; a 10-tola bar is 116.638 g.
+Still quoted in Dubai and by older Indian jewellers; MCX and IBJA quote per 10 g, not per tola.
+see also
+troy ounce
+unallocated gold
+A claim on a bank's pool of gold, not specific bars. Most OTC trading. You are an unsecured creditor of the bank.
+Cheap (no storage fee) but carries bank credit risk; allocated gold (numbered bars) does not.
+see also
+allocated gold
+loco London
+Union Budget
+1 Feb, 11:00 IST: the scheduled event where gold import duty can change; MCX gaps against COMEX (23 Jul 2024: −5–6% in minutes).
+No open MCX position through the speech without a decision about duty; the Feb/Apr calendar spread is the cleaner expression.
+see also
+customs duty (BCD + AIDC)
+calendar spread
+USD/INRalso USDINR · rupee · INR=X · INR
+Rupees per dollar. MCX gold ≈ COMEX × USD/INR: a 1% rupee fall is a 1% MCX rise with gold flat (≈ ₹1,539 per ₹1 per 10 g on 26 Oct 2026).
+Hedge with NSE/BSE USD/INR futures ($1,000 lots): ≈ 129 lots per GOLD lot at $4,004.
+see also
+rupee hedge
+NDF
+FBIL reference rate
+vol targeting
+notional = (target vol ÷ realised vol) × account; a second road to the same lot count as ATR sizing.
+see also
+position sizing
+realised volatility
+w/w · d/d · m/malso w/w · d/d · m/m · week on week · week-on-week · day on day · month on month
+Week on week, day on day, month on month: the change versus the previous report, session or month, in % or in units — the page prints which.
+COT changes are w/w (Tuesday to Tuesday); GLD and OI changes d/d; vault and official-sector rows m/m. A w/w % on a net position is the change ÷ the earlier level, so it explodes near zero — read the units first.
+see also
+net position
+who closed what
+WGC
+World Gold Council: publishes Gold Demand Trends (quarterly), central-bank reserves (monthly, IMF-based), ETF flows (weekly/monthly) on Goldhub; xlsx needs a free login.
+see also
+ETF (gold-backed)
+central-bank reserves
+who closed whatalso who did what · closed longs · covered shorts · who closed
+Per category: negative Δlong = longs closed; negative Δshort = shorts covered; positive = new positions. Weekly from COT, daily only via total OI.
+20 Oct 2026: managed money closed 3,777 longs and covered 894 shorts; producers covered 2,325 shorts.
+see also
+short covering
+long unwinding
+COT
+z-scorealso z · z52 · z156 · zscore · standard deviations · sigma
+How many standard deviations a value sits from its average over a window (z52 = the last 52 reports). |z| ≥ 2 is unusual for that window; it says nothing about next week.
+z = (value − mean) ÷ standard deviation over N observations. POSITIONING shows z52 and z156 for managed-money net as a crowdedness read; G-STUDY (26 Oct 2026) found no forecasting power at 1/4/13 weeks.
+see also
+COT index
+percentile
+managed money

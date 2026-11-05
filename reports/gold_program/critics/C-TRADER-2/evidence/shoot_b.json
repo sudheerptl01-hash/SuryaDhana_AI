@@ -1,0 +1,135 @@
+{
+ "health": {
+  "panels": [
+   "h.verdict",
+   "h.gauges",
+   "h.open",
+   "h.moved",
+   "h.headlines",
+   "h.accuracy",
+   "h.events",
+   "h.brief"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 3084,
+  "chars": 10584
+ },
+ "daily": {
+  "panels": [
+   "d.24h",
+   "d.3day",
+   "d.sge",
+   "d.quadrant",
+   "d.tape"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2236,
+  "chars": 4851
+ },
+ "weekly": {
+  "panels": [
+   "w.candles",
+   "w.table",
+   "w.grid",
+   "w.whodid"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 1992,
+  "chars": 4126
+ },
+ "monthly": {
+  "panels": [
+   "m.candles",
+   "m.ladder",
+   "m.season",
+   "m.official",
+   "m.physical",
+   "m.balance",
+   "m.liquidity"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2252,
+  "chars": 5460
+ },
+ "positioning": {
+  "panels": [
+   "p.hero",
+   "p.whois",
+   "p.history",
+   "p.crowd",
+   "p.decomp",
+   "p.daily.comex",
+   "p.daily.mcx",
+   "p.mcx.category",
+   "p.drawer"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 3513,
+  "chars": 8065
+ },
+ "physical": {
+  "panels": [
+   "ph.ladder",
+   "ph.india",
+   "ph.shanghai",
+   "ph.etf",
+   "ph.official",
+   "ph.otc",
+   "ph.comex.stocks",
+   "ph.links"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2907,
+  "chars": 9430
+ },
+ "macro": {
+  "panels": [
+   "mc.drivers",
+   "mc.kgx",
+   "mc.ccy",
+   "mc.fed",
+   "mc.move",
+   "mc.calendar",
+   "mc.health",
+   "mc.context"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2401,
+  "chars": 7592
+ },
+ "contracts": {
+  "panels": [
+   "c.selector",
+   "c.comex",
+   "c.spec",
+   "c.mcx",
+   "c.roll",
+   "c.links"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 2783,
+  "chars": 9489
+ },
+ "learn": {
+  "panels": [
+   "learn.routines",
+   "learn.curriculum",
+   "learn.notfree",
+   "learn.bbg",
+   "learn.rename",
+   "learn.health_rules"
+  ],
+  "console": [],
+  "failed": [],
+  "height": 3842,
+  "chars": 59647
+ }
+}

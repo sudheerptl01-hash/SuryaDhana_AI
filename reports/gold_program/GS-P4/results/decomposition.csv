@@ -1,0 +1,13 @@
+month,n,usd_mean_pct,usd_t,fx_mean_pct,fx_t,inr_mean_pct,dominant_leg
+Jan,53,2.51,2.59,0.07,0.37,2.58,USD gold
+Feb,54,1.26,1.99,0.2,1.1,1.46,USD gold
+Mar,54,-0.15,-0.2,0.25,0.82,0.1,USD/INR
+Apr,54,0.4,0.76,0.02,0.1,0.42,USD gold
+May,54,0.24,0.46,0.56,2.44,0.8,USD/INR
+Jun,54,-0.22,-0.33,0.62,3.06,0.4,USD/INR
+Jul,54,-0.03,-0.06,0.61,1.5,0.58,USD/INR
+Aug,54,1.05,1.69,0.64,3.77,1.69,USD gold
+Sep,54,1.27,1.76,0.73,3.4,2.0,USD gold
+Oct,53,0.86,1.65,0.12,0.52,0.98,USD gold
+Nov,53,0.14,0.21,0.47,3.3,0.61,USD/INR
+Dec,53,0.46,0.74,0.33,1.79,0.79,USD gold

@@ -1,0 +1,63 @@
+{
+ "H1": false,
+ "H2": true,
+ "H3": true,
+ "events": 16247,
+ "cost_pct": 0.9546712,
+ "strong_up_60": {
+  "discovery": {
+   "events": 420,
+   "weeks": 145,
+   "avg_excess": 2.72,
+   "median_excess": -1.5,
+   "beat_pct": 47.4,
+   "t_nw": 1.37,
+   "avg_return": 8.65,
+   "excess_after_costs": 1.76
+  },
+  "holdout": {
+   "events": 570,
+   "weeks": 97,
+   "avg_excess": 3.58,
+   "median_excess": 1.55,
+   "beat_pct": 53.5,
+   "t_nw": 3.98,
+   "avg_return": 7.96,
+   "excess_after_costs": 2.62
+  }
+ },
+ "strong_down_60": {
+  "discovery": {
+   "events": 387,
+   "weeks": 119,
+   "avg_excess": -3.69,
+   "median_excess": -4.72,
+   "beat_pct": 34.1,
+   "t_nw": -2.77,
+   "avg_return": 2.68,
+   "excess_after_costs": -4.64
+  },
+  "holdout": {
+   "events": 526,
+   "weeks": 98,
+   "avg_excess": -1.82,
+   "median_excess": -3.96,
+   "beat_pct": 38.6,
+   "t_nw": -2.5,
+   "avg_return": 1.58,
+   "excess_after_costs": -2.77
+  }
+ },
+ "spread_60": {
+  "discovery": {
+   "weeks": 93,
+   "spread": 7.38,
+   "t_nw": 2.79
+  },
+  "holdout": {
+   "weeks": 86,
+   "spread": 5.41,
+   "t_nw": 2.85
+  }
+ }
+}

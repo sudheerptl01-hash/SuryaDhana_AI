@@ -1,0 +1,1280 @@
+◉ SURYADHANA ▸ EVENTS
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:41:09
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,125.40
+−1.24%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:41 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+EVTS
+CORPORATE CALENDAR
+NSE event calendar · board meetings · corporate actions · 402 upcoming
+✓ LIQUID ≥ ₹5 CR
+↻ REFRESH
+YOUR STOCKS
+ICICI holdings · Desk · watchlist · pins — 0 tracked
+No announced events for your 0 tracked stocks in the next 60 days. Pin stocks or add them to the watchlist to track their results and ex-dates here.
+RESULTS SINCE THE LAST CLOSE · REACT AT 09:15
+results filed since 2026-10-14 15:30 · what the numbers said (revenue / profit vs a year ago; … = still reading the filing; hover for why a figure is missing) and today's move vs the stock's average results-day move · the scoreboard below fills in tonight
+STOCK ↕	FILED ↕	REVENUE YOY ↕	PROFIT YOY ↕	TODAY ↕	VS NIFTY ↕	TYPICAL	SIZE VS NORMAL ▼
+BAJAJCON	10-14 18:01	+25.5%	+65.9%	at the open	—	±6.5%	—
+BIRLAMONEY	10-14 19:14	-37.2%	-57.3%	at the open	—	±17.5%	—
+CEATLTD	10-14 18:22	+26.2%	-39.7%	at the open	—	±4.7%	—
+EMMVEE	10-14 19:02	+39.4%	+60.6%	at the open	—	±6.4%	—
+HDBFS	10-14 16:06	+10.1%	+34.2%	at the open	—	±2.1%	—
+ICICIGI	10-14 19:20	+17.7%	+15.5%	at the open	—	±3.7%	—
+MRPL	10-14 20:41	+37.1%	+203.0%	at the open	—	±5.3%	—
+RIIL	10-14 17:23	-31.4%	-8.5%	at the open	—	±0.8%	—
+SECURCRED	10-14 19:21	not on feed yet	—	at the open	—	±3.2%	—
+SONA	10-14 17:58	—	—	at the open	—	—	—
+TATATECH	10-14 16:09	+28.4%	+3.6%	at the open	—	±1.9%	—
+VIJIFIN⚑	10-14 20:13	+380.3%	to profit	at the open	—	±11.4%	—
+Q2 FY27 SEASON SO FAR
+42 companies reported and read · latest quarter vs a year ago · from their NSE results filings (XBRL) · full list: FUND
+REPORTED
+42
+MEDIAN REVENUE GROWTH
++17.8%
+MEDIAN PROFIT GROWTH
++14.9%
+PROFIT UP / DOWN
+30 / 9
+Other / unclassified
+19
+rev +19.2%
+pft +12.6%
+Financial Services
+11
+rev +14.3%
+pft +12.3%
+Capital Goods
+4
+rev +31.6%
+pft +89.3%
+Information Technology
+4
+rev +13.3%
+pft +12.4%
+Consumer Services
+2
+rev +25.2%
+pft +17.6%
+Automobile and Auto Components
+1
+rev +26.2%
+pft -39.7%
+Oil Gas & Consumable Fuels
+1
+rev +37.1%
+pft +203.0%
+BEST PROFIT GROWTH PNBGILTS to profitSWANDEF⚑ to profitTRF to profitVIJIFIN⚑ to profitPOONAWALLA +405%
+WORST GTPL to lossAGRITECH to lossUMIYA-MRO -72%BIRLAMONEY -57%CRAMC -46%
+Medians by industry (count = companies). Early in a season the sample is small and skewed to whoever reports first (IT, banks).
+RESULTS SCOREBOARD
+reported in the last 10 days · reaction session after each release · size = move ÷ the stock's typical results move
+14 reacted · 9 beat NIFTY · 5 lagged · avg +2.5% vs NIFTY
+STOCK ↕	RELEASED ↕	REACTION ▼	VS NIFTY ↕	TYPICAL	SIZE VS NORMAL ↕	₹ CR/DAY ↕
+TARIL	10-13 16:34 after close	
++15.0%
+	+15.4%	±10.6%	1.4×	36
+SSRETAIL	10-13 21:18 after close	
++10.9%
+	+11.3%	±10.9%	1.0×	992
+HCLTECH	10-12 19:38 after close	
++8.4%
+	+6.8%	±3.6%	2.4×	347
+TATAELXSI	10-13 21:42 after close	
++5.7%
+	+6.2%	±4.4%	1.3×	87
+BHEL	10-14 15:19 market hours	
++4.9%
+	+5.3%	±4.6%	1.1×	346
+TCS	10-08 22:07 after close	
++3.9%
+	+2.6%	±2.4%	1.6×	741
+ANANDRATHI	10-09 18:18 after close	
++2.4%
+	+3.1%	±2.5%	1.0×	79
+CANFINHOME	10-09 20:21 after close	
++2.4%
+	+3.0%	±2.6%	0.9×	23
+POONAWALLA	10-09 19:41 after close	
++0.4%
+	+1.1%	±1.7%	0.2×	51
+ICICIPRULI	10-13 16:04 after close	
+-0.5%
+	-0.0%	±1.8%	0.3×	54
+ICICIAMC	10-12 18:07 after close	
+-1.0%
+	-2.6%	±3.4%	0.3×	93
+DMART	10-10 17:08 after close	
+-4.3%
+	-3.6%	±2.7%	1.6×	177
+ARSSBL	10-13 17:23 after close	
+-5.2%
+	-4.7%	±3.0%	1.7×	13
+RBLBANK	10-12 18:39 after close	
+⚠ BAD RESULTS
+-7.1%
+	-8.7%	±4.8%	1.5×	156
+CEATLTD	10-14 20:36 after close	pending	—	±4.7%	—	14
+MRPL	10-14 20:35 after close	pending	—	±5.3%	—	111
+ELECON	10-14 20:22 after close	pending	—	±4.0%	—	30
+BAJAJCON	10-14 19:41 after close	pending	—	±6.5%	—	25
+EMMVEE	10-14 19:38 after close	pending	—	±6.4%	—	51
+HDBFS	10-14 18:32 after close	pending	—	±2.1%	—	26
+TATATECH	10-14 18:17 after close	pending	—	±1.9%	—	59
+CANBK	10-14 17:40 after close	pending	—	±1.6%	—	154
+HEROMOTORS	10-14 16:37 after close	pending	—	—	—	1276
+OPTIONS INTO RESULTS · 56 F&O NAMES
+next 10 days · NSE F&O bhavcopy 2026-10-14 · this week's median priced ÷ usual 1.00× · amber = ≥ 1.5× that median (an unusually big reaction priced), cyan = ≤ ⅔ of it
+STOCK ↕	RESULTS ↕	OPTIONS TO	ATM IV ↕	PRICED TO EXPIRY ↕	RESULTS-DAY MOVE PRICED ↕	USUAL REACTION ↕	PRICED ÷ USUAL ▼	NORMAL DAYS FROM
+TECHM	Thu, 15 Oct	Tue, 27 Oct · 9d	34.9%	±6.7%	±4.8%	±2.0% (8q)	2.38×	options
+IRFC	Thu, 15 Oct	Tue, 27 Oct · 9d	32.8%	±6.3%	±2.9%	±1.4% (8q)	2.03×	options
+UNIONBANK	Mon, 19 Oct	Tue, 27 Oct · 9d	35.1%	±6.8%	±4.1%	±2.1% (8q)	1.95×	realised vol
+JINDALSTEL	Fri, 23 Oct	Tue, 27 Oct · 9d	33.9%	±6.5%	±3.7%	±1.9% (8q)	1.90×	realised vol
+ULTRACEMCO	Mon, 19 Oct	Tue, 27 Oct · 9d	23.5%	±4.5%	±2.3%	±1.2% (8q)	1.89×	realised vol
+JIOFIN	Thu, 15 Oct	Tue, 27 Oct · 9d	33.3%	±6.4%	±2.8%	±1.5% (8q)	1.83×	options
+LTF	Thu, 15 Oct	Tue, 27 Oct · 9d	39.6%	±7.6%	±3.8%	±2.1% (8q)	1.76×	options
+HDFCLIFE	Thu, 15 Oct	Tue, 27 Oct · 9d	29.5%	±5.7%	±2.2%	±1.3% (6q)	1.72×	realised vol
+NESTLEIND	Thu, 15 Oct	Tue, 27 Oct · 9d	32.4%	±6.2%	±3.6%	±2.2% (8q)	1.67×	realised vol
+GODREJPROP	Fri, 23 Oct	Tue, 27 Oct · 9d	37.2%	±7.2%	±3.5%	±2.1% (8q)	1.64×	realised vol
+UJJIVANSFB	Fri, 16 Oct	Tue, 27 Oct · 9d	50.8%	±9.8%	±6.2%	±4.1% (8q)	1.49×	options
+INDIANB	Thu, 15 Oct	Tue, 27 Oct · 9d	36.5%	±7.0%	±3.8%	±2.6% (8q)	1.47×	options
+HINDZINC⚑	Mon, 19 Oct	Tue, 27 Oct · 9d	33.7%	±6.5%	±3.5%	±2.4% (8q)	1.46×	options
+SHREECEM	Fri, 23 Oct	Tue, 27 Oct · 9d	27.9%	±5.4%	±2.8%	±1.9% (8q)	1.44×	realised vol
+PNB	Fri, 16 Oct	Tue, 27 Oct · 9d	33%	±6.3%	±4.2%	±3.0% (8q)	1.42×	realised vol
+YESBANK	Sat, 17 Oct	Tue, 27 Oct · 9d	34.5%	±6.6%	±3.4%	±2.5% (8q)	1.39×	options
+DRREDDY	Fri, 23 Oct	Tue, 27 Oct · 9d	27.3%	±5.3%	±3.2%	±2.4% (8q)	1.34×	options
+JSWSTEEL	Fri, 23 Oct	Tue, 27 Oct · 9d	26.5%	±5.1%	±2.5%	±1.9% (8q)	1.32×	realised vol
+360ONE	Thu, 15 Oct	Tue, 27 Oct · 9d	37%	±7.1%	±4.5%	±3.7% (8q)	1.20×	realised vol
+HDFCAMC	Thu, 15 Oct	Tue, 27 Oct · 9d	34.7%	±6.7%	±4.0%	±3.5% (8q)	1.13×	options
+HINDPETRO	Thu, 22 Oct	Tue, 27 Oct · 9d	31.2%	±6.0%	±2.4%	±2.2% (8q)	1.12×	options
+FEDERALBNK	Fri, 16 Oct	Tue, 27 Oct · 9d	33.9%	±6.5%	±3.8%	±3.5% (8q)	1.10×	options
+ICICIBANK	Sat, 17 Oct	Tue, 27 Oct · 9d	21.6%	±4.2%	±1.9%	±1.8% (8q)	1.06×	options
+HAVELLS	Thu, 22 Oct	Tue, 27 Oct · 9d	29.3%	±5.6%	±3.3%	±3.1% (8q)	1.06×	options
+IREDA⚑	Mon, 19 Oct	Tue, 27 Oct · 9d	36.6%	±7.0%	±4.3%	±4.3% (8q)	1.01×	realised vol
+BAJFINANCE	Mon, 19 Oct	Tue, 27 Oct · 9d	33.8%	±6.5%	±4.1%	±4.1% (8q)	1.00×	options
+COLPAL	Thu, 22 Oct	Tue, 27 Oct · 9d	29.9%	±5.8%	±2.4%	±2.4% (8q)	1.00×	realised vol
+INFY	Fri, 23 Oct	Tue, 27 Oct · 9d	36%	±6.9%	±3.6%	±3.6% (8q)	0.99×	options
+OBEROIRLTY⚑	Fri, 16 Oct	Tue, 27 Oct · 9d	36.1%	±6.9%	±3.8%	±3.9% (8q)	0.98×	realised vol
+ANGELONE	Thu, 15 Oct	Tue, 27 Oct · 9d	46.8%	±9.0%	±5.9%	±6.0% (8q)	0.97×	options
+HDFCBANK	Sat, 17 Oct	Tue, 27 Oct · 9d	23.2%	±4.5%	±1.4%	±1.5% (8q)	0.93×	options
+WIPRO	Thu, 15 Oct	Tue, 27 Oct · 9d	34.4%	±6.6%	±3.9%	±4.3% (8q)	0.91×	options
+DLF	Fri, 16 Oct	Tue, 27 Oct · 9d	30.9%	±5.9%	±2.6%	±2.9% (8q)	0.90×	options
+SWIGGY⚑	Thu, 22 Oct	Tue, 27 Oct · 9d	41.1%	±7.9%	±3.5%	±4.0% (8q)	0.87×	options
+CROMPTON	Fri, 16 Oct	Tue, 27 Oct · 9d	36.1%	±6.9%	±3.0%	±3.5% (8q)	0.86×	realised vol
+AUBANK	Sat, 24 Oct	Tue, 27 Oct · 9d	31.7%	±6.1%	±3.7%	±4.6% (8q)	0.80×	options
+VMM	Wed, 21 Oct	Tue, 27 Oct · 9d	36.5%	±7.0%	±2.9%	±3.8% (7q)	0.75×	realised vol
+CGPOWER	Fri, 23 Oct	Tue, 27 Oct · 9d	35.6%	±6.8%	±3.3%	±4.4% (8q)	0.75×	options
+IDFCFIRSTB	Sat, 24 Oct	Tue, 27 Oct · 9d	35.2%	±6.8%	±2.8%	±3.8% (8q)	0.75×	options
+BPCL	Fri, 23 Oct	Tue, 27 Oct · 9d	25.8%	±5.0%	±1.3%	±1.9% (8q)	0.69×	options
+TORNTPHARM	Fri, 23 Oct	Tue, 27 Oct · 9d	25.9%	±5.0%	±2.4%	±3.6% (8q)	0.68×	realised vol
+AXISBANK	Sat, 17 Oct	Tue, 27 Oct · 9d	26.1%	±5.0%	±2.8%	±4.2% (8q)	0.66×	options
+ADANIENSOL	Thu, 22 Oct	Tue, 27 Oct · 9d	39.2%	±7.5%	±2.4%	±3.5% (8q)	0.66×	options
+PERSISTENT	Thu, 15 Oct	Tue, 27 Oct · 9d	40.8%	±7.8%	±3.7%	±5.7% (8q)	0.65×	options
+INDUSINDBK	Fri, 23 Oct	Tue, 27 Oct · 9d	31%	±6.0%	±2.9%	±4.6% (8q)	0.63×	realised vol
+ADANIGREEN	Wed, 21 Oct	Tue, 27 Oct · 9d	37.8%	±7.3%	±2.1%	±3.5% (8q)	0.60×	realised vol
+INDHOTEL	Wed, 21 Oct	Tue, 27 Oct · 9d	26.6%	±5.1%	±2.3%	±3.8% (8q)	0.60×	options
+KOTAKBANK	Sat, 24 Oct	Tue, 27 Oct · 9d	24.3%	±4.7%	±2.4%	±4.0% (8q)	0.59×	options
+COFORGE	Fri, 23 Oct	Tue, 27 Oct · 9d	39.9%	±7.7%	±2.8%	±5.2% (8q)	0.54×	realised vol
+ETERNAL	Wed, 21 Oct	Tue, 27 Oct · 9d	37.2%	±7.2%	±1.4%	±2.8% (6q)	0.50×	options
+SRF	Wed, 21 Oct	Tue, 27 Oct · 9d	25.6%	±4.9%	±1.7%	±4.7% (8q)	0.37×	realised vol
+POLYCAB⚑	Thu, 15 Oct	Tue, 27 Oct · 9d	37.9%	±7.3%	±0.0%	±2.5% (8q)	—	options
+LTM	Fri, 16 Oct	Tue, 27 Oct · 9d	38.6%	±7.4%	±5.4%	—	—	options
+KEI	Wed, 21 Oct	Tue, 27 Oct · 9d	36.1%	±6.9%	±0.0%	±3.7% (8q)	—	realised vol
+SAGILITY⚑	Thu, 22 Oct	Tue, 27 Oct · 9d	39.3%	±7.6%	±0.0%	±7.0% (8q)	—	options
+ADANIPOWER	Fri, 23 Oct	Tue, 27 Oct · 9d	35.2%	±6.8%	±0.0%	±1.9% (8q)	—	options
+Results-day move priced = √(priced variance to expiry − normal days × recent daily variance) × 0.8 (σ → average absolute move). An approximation from end-of-day option prices: it describes what the options charge, not which way the stock moves.
+NEXT FIVE WEEKS
+busiest names per day by turnover · ◆ = economic data / RBI / Fed (ECO) · click a day to filter
+ALL
+RESULTS 254
+DIVIDEND 5
+FUND RAISE 3
+OTHER 1
+MON
+TUE
+WED
+THU
+FRI
+12
+Oct
+7
+◆ CPI 16:00
+HCLTECH
+SUNPHARMA
+RBLBANK
+ICICIAMC
++3 more
+13
+Oct
+9
+HEROMOTORS
+SSRETAIL
+OLAELEC
+TATAELXSI
++5 more
+14
+Oct
+21
+◆ WPI 12:00
+TCS
+GROWW
+BHEL
+VEDL
++17 more
+15
+Oct
+33
+TECHM
+POLYCAB
+JIOFIN
+WIPRO
++29 more
+16
+Oct
+21
+HCLTECH
+DLF
+FEDERALBNK
+PNB
++17 more
+19
+Oct
+19
+BAJFINANCE
+ULTRACEMCO
+HINDZINC
+UNIONBANK
++15 more
+20
+Oct
+◆ CLOSED
+◆ CORE 17:00
+21
+Oct
+13
+ETERNAL
+PCJEWELLER
+ADANIGREEN
+INDHOTEL
++9 more
+22
+Oct
+19
+SWIGGY
+CHENNPETRO
+ADANIENSOL
+HINDPETRO
++15 more
+23
+Oct
+26
+INFY
+ADANIPOWER
+COFORGE
+DRREDDY
++22 more
+26
+Oct
+11
+PAYTM
+SONACOMS
+MANKIND
+KFINTECH
++7 more
+27
+Oct
+16
+LT
+MARUTI
+BAJAJ-AUTO
+INDUSTOWER
++12 more
+28
+Oct
+13
+◆ IIP 16:00
+◆ FED 23:30
+ADANIENT
+MEESHO
+ADANIPORTS
+CHOLAFIN
++9 more
+29
+Oct
+16
+LAURUSLABS
+TRENT
+APARINDS
+ASIANPAINT
++12 more
+30
+Oct
+8
+SUNPHARMA
+GVT&D
+ABCAPITAL
+IOC
++4 more
+2
+Nov
+6
+MARICO
+PETRONET
+GNFC
+ARE&M
++2 more
+3
+Nov
+11
+BAJAJFINSV
+BAJAJHLDNG
+ENDURANCE
+SUBEXLTD
++7 more
+4
+Nov
+12
+BSE
+APOLLOHOSP
+CUMMINSIND
+EXIDEIND
++8 more
+5
+Nov
+8
+M&M
+LICI
+MPHASIS
+SAILIFE
++4 more
+6
+Nov
+6
+HINDALCO
+BOSCHLTD
+RAIN
+CHOLAHLDNG
++2 more
+9
+Nov
+10
+Nov
+◆ CLOSED
+11
+Nov
+1
+TATAPOWER
+12
+Nov
+2
+◆ CPI 16:00
+PGHH
+MUKANDLTD
+13
+Nov
+2
+ABB
+GILLETTE
+ALL EVENTS
+303 shown · last 7 days and next 60 · click a stock for its chart
+DATE ↕	STOCK ↕	COMPANY	EVENT ↕	DETAIL	TYPICAL MOVE ↕	LAST QUARTER ↕	₹ CR/DAY ↕	CLOSE	
+Thu, 08 Oct7d ago	
+BUILDPRO
+	Shankara Buildpro Limited	
+SPLIT
+	Face Value Split (Sub-Division) - From Rs 10/- Per Share To Rs 2/- Per Share · record Thu, 08 Oct	—	—	9.3	234.00	
+Thu, 08 Oct7d ago	
+BHAGYANGR
+	Bhagyanagar India Limited	
+M&A
+	Demerger · record Thu, 08 Oct	—	—	6.1	—	
+Fri, 09 Oct6d ago	
+SKYWAYS
+	Skyways Air Services Limited	
+DIVIDEND
+	Interim Dividend - Re 0.25 Per Share · record Fri, 09 Oct	—	—	24	108.08	
+Mon, 12 Oct3d ago	
+HCLTECH
+	HCL Technologies Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	—	+21% · 20×	347	1,327.00	
+Mon, 12 Oct3d ago	
+SUNPHARMA
+	Sun Pharmaceutical Industries Limited	
+FUND RAISE
+	Other business matters	—	+27% · 35×	255	1,746.40	
+Mon, 12 Oct3d ago	
+RBLBANK
+	RBL Bank Limited	
+RESULTS
+	Financial Results	—	+159% · 50×	156	386.00	
+Mon, 12 Oct3d ago	
+ICICIAMC
+	ICICI Prudential Asset Management Company Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	—	— · 41×	93	2,915.20	
+Mon, 12 Oct3d ago	
+JUBLPHARMA
+	Jubilant Pharmova Limited	
+FUND RAISE
+	Fund Raising	—	-45% · 42×	20	938.90	
+Mon, 12 Oct3d ago	
+GSFC
+	Gujarat State Fertilizers & Chemicals Limited	
+RESULTS
+	Board meeting Rescheduled	±3.4%	+14% · 7×	11	147.91	
+Mon, 12 Oct3d ago	
+PACEDIGITK
+	Pace Digitek Limited	
+FUND RAISE
+	Fund Raising	—	+14% · 12×	8.8	166.04	
+Tue, 13 Oct2d ago	
+HEROMOTORS
+	Hero Motors Limited	
+RESULTS
+	Financial Results	—	—	1,276	159.29	
+Tue, 13 Oct2d ago	
+SSRETAIL
+	SS Retail Limited	
+RESULTS
+	Financial Results	—	—	992	767.25	
+Tue, 13 Oct2d ago	
+OLAELEC
+	Ola Electric Mobility Limited	
+RIGHTS
+	Rights 2:25 @ Premium Rs 17/- · record Tue, 13 Oct	—	loss both	211	35.81	
+Tue, 13 Oct2d ago	
+TATAELXSI
+	Tata Elxsi Limited	
+RESULTS
+	Financial Results	—	+10% · 34×	87	3,623.10	
+Tue, 13 Oct2d ago	
+AHCL
+	Anlon Healthcare Limited	
+FUND RAISE
+	Fund Raising/Other business matters	—	+134% · 46×	65	29.04	
+Tue, 13 Oct2d ago	
+ICICIPRULI
+	ICICI Prudential Life Insurance Company Limited	
+RESULTS
+	Financial Results	—	+27% · 37×	54	445.00	
+Tue, 13 Oct2d ago	
+TARIL
+	Transformers And Rectifiers (India) Limited	
+RESULTS
+	Financial Results/Other business matters	—	+118% · 34×	35	349.50	
+Tue, 13 Oct2d ago	
+CCAVENUE
+	AvenuesAI Limited	
+OTHER
+	Consolidation Of Equity Shares From Re 1 Per Share To Rs 10 Per Share · record Tue, 13 Oct	—	+45% · 16×	16	—	
+Tue, 13 Oct2d ago	
+ARSSBL
+	Anand Rathi Share and Stock Brokers Limited	
+RESULTS
+	Financial Results/Other business matters	—	-17% · 23×	13	515.60	
+Wed, 14 Oct1d ago	
+TCS
+	Tata Consultancy Services Limited	
+DIVIDEND
+	Interim Dividend - Rs 12 Per Share · record Wed, 14 Oct	—	+15% · 16×	741	2,304.90	
+Wed, 14 Oct1d ago	
+GROWW
+	Billionbrains Garage Ventures Limited	
+RESULTS
+	Financial Results	—	— · 49×	394	192.52	
+Wed, 14 Oct1d ago	
+BHEL
+	Bharat Heavy Electricals Limited	
+RESULTS
+	Financial Results	—	+119% · 56×	346	464.00	
+Wed, 14 Oct1d ago	
+VEDL
+	Vedanta Limited	
+DIVIDEND
+	Interim Dividend - Rs 5 Per Share · record Wed, 14 Oct	—	+78% · 5×	235	250.00	
+Wed, 14 Oct1d ago	
+CANBK
+	Canara Bank	
+RESULTS
+	Financial Results	—	+7% · 6×	154	124.76	
+Wed, 14 Oct1d ago	
+ICICIGI
+	ICICI Lombard General Insurance Company Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	—	+16% · 34×	135	1,713.00	
+Wed, 14 Oct1d ago	
+MRPL
+	Mangalore Refinery and Petrochemicals Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	—	+203% · 7×	111	185.26	
+Wed, 14 Oct1d ago	
+AEROFLEX
+	Aeroflex Industries Limited	
+OTHER
+	Other business matters	—	+162% · 112×	65	568.70	FILING ↗
+Wed, 14 Oct1d ago	
+SMCGLOBAL
+	SMC Global Securities Limited	
+FUND RAISE
+	Fund Raising	—	+23% · 17×	61	115.18	
+Wed, 14 Oct1d ago	
+LLOYDSME
+	Lloyds Metals And Energy Limited	
+OTHER
+	Fund Raising	—	— · 22×	60	1,843.80	FILING ↗
+Wed, 14 Oct1d ago	
+LLOYDSME
+	Lloyds Metals And Energy Limited	
+FUND RAISE
+	Fund Raising	—	— · 22×	60	1,843.80	
+Wed, 14 Oct1d ago	
+TATATECH
+	Tata Technologies Limited	
+RESULTS
+	Financial Results	—	+4% · 54×	59	745.55	
+Wed, 14 Oct1d ago	
+CGCL
+	Capri Global Capital Limited	
+FUND RAISE
+	Fund Raising	—	+102% · 21×	53	247.91	FILING ↗
+Wed, 14 Oct1d ago	
+EMMVEE
+	Emmvee Photovoltaic Power Limited	
+RESULTS
+	Financial Results	—	+61% · 15×	51	299.40	
+Wed, 14 Oct1d ago	
+ELECON
+	Elecon Engineering Company Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend/Other business matters	—	+10% · 45×	30	486.90	
+Wed, 14 Oct1d ago	
+HDBFS
+	HDB Financial Services Limited	
+RESULTS
+	Financial Results	—	+34% · 16×	26	583.75	
+Wed, 14 Oct1d ago	
+HDBFS
+	HDB Financial Services Limited	
+DIVIDEND
+	Dividend	—	+34% · 16×	26	583.75	
+Wed, 14 Oct1d ago	
+BAJAJCON
+	Bajaj Consumer Care Limited	
+RESULTS
+	Financial Results	—	+66% · 27×	25	520.05	
+Wed, 14 Oct1d ago	
+CEATLTD
+	CEAT Limited	
+RESULTS
+	Financial Results/Other business matters	—	-40% · 31×	14	3,357.90	
+Wed, 14 Oct1d ago	
+THELEELA
+	Leela Palaces Hotels & Resorts Limited	
+RESULTS
+	Financial Results	—	+27% · 62×	13	591.30	
+Wed, 14 Oct1d ago	
+CUBEXTUB
+	Cubex Tubings Limited	
+FUND RAISE
+	Fund Raising/Other business matters	—	—	10	—	
+Thu, 15 OctTODAY	
+TECHM
+	Tech Mahindra Limited	
+RESULTS
+BONUS
+DIVIDEND
+	Financial Results/Dividend/Bonus/Other business matters	±2.0%	+32% · 33×	334	1,575.20	
+Thu, 15 OctTODAY	
+POLYCAB
+	Polycab India Limited	
+RESULTS
+	Financial Results	±2.5%	+33% · 44×	289	8,335.00	
+Thu, 15 OctTODAY	
+JIOFIN
+	Jio Financial Services Limited	
+RESULTS
+	Financial Results	±1.5%	+156% · 70×	275	219.00	
+Thu, 15 OctTODAY	
+WIPRO
+	Wipro Limited	
+RESULTS
+	Financial Results	±4.3%	+1% · 13×	230	170.92	
+Thu, 15 OctTODAY	
+PERSISTENT
+	Persistent Systems Limited	
+RESULTS
+	Financial Results/Other business matters	±5.7%	+14% · 48×	198	5,898.00	
+Thu, 15 OctTODAY	
+NESTLEIND
+	Nestle India Limited	
+RESULTS
+	Financial Results	±2.2%	+48% · 70×	183	1,383.20	
+Thu, 15 OctTODAY	
+HDFCAMC
+	HDFC Asset Management Company Limited	
+RESULTS
+	Financial Results	±3.5%	+12% · 33×	171	2,296.90	
+Thu, 15 OctTODAY	
+HDFCLIFE
+	HDFC Life Insurance Company Limited	
+RESULTS
+FUND RAISE
+	Financial Results/Fund Raising	±1.3%	+12% · 60×	169	544.05	
+Thu, 15 OctTODAY	
+LTF
+	L&T Finance Limited	
+RESULTS
+	Financial Results	±2.1%	+31% · 20×	140	258.80	
+Thu, 15 OctTODAY	
+SBC
+	SBC Exports Limited	
+RESULTS
+	Financial Results	—	+177% · 70×	108	64.11	FILING ↗
+Thu, 15 OctTODAY	
+ANGELONE
+	Angel One Limited	
+DIVIDEND
+	Dividend	—	+102% · 27×	107	306.05	
+Thu, 15 OctTODAY	
+ANGELONE
+	Angel One Limited	
+RESULTS
+	Financial Results	±6.0%	+102% · 27×	107	306.05	
+Thu, 15 OctTODAY	
+IIFL
+	IIFL Finance Limited	
+RESULTS
+	Financial Results	±2.6%	+160% · 12×	88	594.85	
+Thu, 15 OctTODAY	
+INDIANB
+	Indian Bank	
+RESULTS
+FUND RAISE
+	Financial Results/Fund Raising	±2.6%	+49% · 9×	83	849.45	FILING ↗
+Thu, 15 OctTODAY	
+ANANDRATHI
+	Anand Rathi Wealth Limited	
+DIVIDEND
+	Interim Dividend - Rs 4 Per Share · record Thu, 15 Oct	—	-11% · 77×	79	2,117.20	
+Thu, 15 OctTODAY	
+KARURVYSYA
+	Karur Vysya Bank Limited	
+RESULTS
+	Financial Results	±5.1%	+45% · 12×	73	341.25	
+Thu, 15 OctTODAY	
+IRFC
+	Indian Railway Finance Corporation Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±1.4%	+10% · 12×	68	79.75	
+Thu, 15 OctTODAY	
+360ONE
+	360 ONE WAM LIMITED	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±3.7%	+16% · 34×	60	1,063.00	
+Thu, 15 OctTODAY	
+SOUTHBANK
+	The South Indian Bank Limited	
+RESULTS
+	Financial Results	±2.1%	+17% · 9×	60	49.64	
+Thu, 15 OctTODAY	
+CYIENTDLM
+	Cyient DLM Limited	
+RESULTS
+	Financial Results	—	+118% · 100×	40	1,038.55	
+Thu, 15 OctTODAY	
+KABRAEXTRU
+	Kabra Extrusion Technik Limited	
+RESULTS
+	Financial Results/Other business matters	—	— · 5780×	26	—	
+Thu, 15 OctTODAY	
+TATACOMM
+	Tata Communications Limited	
+RESULTS
+	Financial Results	±2.3%	-32% · 50×	24	1,658.90	
+Thu, 15 OctTODAY	
+ARMEE
+	ArMee Infotech Limited	
+RESULTS
+FUND RAISE
+	Financial Results	—	—	22	248.60	FILING ↗
+Thu, 15 OctTODAY	
+SWSOLAR
+	Sterling and Wilson Renewable Energy Limited	
+RESULTS
+	Financial Results	±4.1%	+38%	17	171.74	
+Thu, 15 OctTODAY	
+TIPSMUSIC
+	Tips Music Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	—	-5% · 43×	16	718.25	
+Thu, 15 OctTODAY	
+ALOKINDS
+	Alok Industries Limited	
+RESULTS
+	Financial Results	±4.6%	loss both	16	8.86	
+Thu, 15 OctTODAY	
+FEDFINA
+	Fedbank Financial Services Limited	
+RESULTS
+	Financial Results	—	+53% · 16×	13	159.94	
+Thu, 15 OctTODAY	
+CCL
+	CCL Products (India) Limited	
+RESULTS
+	Financial Results	±4.9%	+61% · 34×	12	1,100.60	
+Thu, 15 OctTODAY	
+UTLSOLAR
+	Fujiyama Power Systems Limited	
+FUND RAISE
+	Fund Raising	—	— · 44×	9.9	418.45	
+Thu, 15 OctTODAY	
+HERITGFOOD
+	Heritage Foods Limited	
+RESULTS
+	Financial Results	—	-38% · 29×	9.6	414.80	
+Thu, 15 OctTODAY	
+UCOBANK
+	UCO Bank	
+RESULTS
+	Financial Results	±1.8%	+8% · 11×	7.7	23.96	FILING ↗
+Thu, 15 OctTODAY	
+ORIENTHOT
+	Oriental Hotels Limited	
+RESULTS
+	Financial Results/Other business matters	—	-20% · 44×	6.3	141.45	
+Thu, 15 OctTODAY	
+GARUDA
+	Garuda Construction and Engineering Limited	
+DIVIDEND
+	Dividend	—	+48% · 11×	5.2	167.35	FILING ↗
+Fri, 16 Octtomorrow	
+HCLTECH
+	HCL Technologies Limited	
+DIVIDEND
+	Interim Dividend - Rs 12 Per Share · record Fri, 16 Oct	—	+21% · 20×	347	1,327.00	
+Fri, 16 Octtomorrow	
+DLF
+	DLF Limited	
+RESULTS
+	Financial Results	±2.9%	+4% · 37×	203	666.90	FILING ↗
+Fri, 16 Octtomorrow	
+FEDERALBNK
+	The Federal Bank Limited	
+RESULTS
+	Financial Results	±3.5%	+37% · 17×	191	330.00	
+Fri, 16 Octtomorrow	
+PNB
+	Punjab National Bank	
+RESULTS
+	Financial Results	±3.0%	+191% · 6×	150	118.50	FILING ↗
+Fri, 16 Octtomorrow	
+LTM
+	LTM Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	—	+17% · 24×	146	4,226.10	
+Fri, 16 Octtomorrow	
+HSCL
+	Himadri Speciality Chemical Limited	
+RESULTS
+	Financial Results	±2.6%	+27% · 42×	93	663.95	
+Fri, 16 Octtomorrow	
+UJJIVANSFB
+	Ujjivan Small Finance Bank Limited	
+FUND RAISE
+	Fund Raising	—	+207% · 14×	88	65.14	FILING ↗
+Fri, 16 Octtomorrow	
+UJJIVANSFB
+	Ujjivan Small Finance Bank Limited	
+RESULTS
+	Financial Results	±4.1%	+207% · 14×	88	65.14	
+Fri, 16 Octtomorrow	
+OBEROIRLTY
+	Oberoi Realty Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±3.9%	+29% · 20×	72	1,706.00	
+Fri, 16 Octtomorrow	
+URBANCO
+	Urban Company Limited	
+FUND RAISE
+	Fund Raising	—	—	66	161.79	FILING ↗
+Fri, 16 Octtomorrow	
+URBANCO
+	Urban Company Limited	
+RESULTS
+	Financial Results	±7.1%	—	66	161.79	
+Fri, 16 Octtomorrow	
+CROMPTON
+	Crompton Greaves Consumer Electricals Limited	
+RESULTS
+	Financial Results	±3.5%	+15%	52	216.00	
+Fri, 16 Octtomorrow	
+TEJASNET
+	Tejas Networks Limited	
+RESULTS
+	Financial Results	±8.2%	loss both	52	464.30	
+Fri, 16 Octtomorrow	
+JINDALSAW
+	Jindal Saw Limited	
+RESULTS
+	Financial Results	±5.5%	-78% · 29×	34	297.10	
+Fri, 16 Octtomorrow	
+BAJAJHFL
+	Bajaj Housing Finance Limited	
+RESULTS
+	Financial Results	±1.0%	+23% · 26×	25	84.55	
+Fri, 16 Octtomorrow	
+JAYNECOIND
+	Jayaswal Neco Industries Limited	
+RESULTS
+	Financial Results/Other business matters	—	+109% · 17×	21	98.97	
+Fri, 16 Octtomorrow	
+SOLARA
+	Solara Active Pharma Sciences Limited	
+RESULTS
+	Financial Results	—	+55%	20	640.65	
+Fri, 16 Octtomorrow	
+SGFIN
+	SG Finserve Limited	
+RESULTS
+	Financial Results	—	— · 29×	16	689.45	
+Fri, 16 Octtomorrow	
+RPEL
+	Raghav Productivity Enhancers Limited	
+RESULTS
+	Financial Results	—	+68% · 137×	14	1,865.50	
+Fri, 16 Octtomorrow	
+INDORAMA
+	Indo Rama Synthetics (India) Limited	
+RESULTS
+	Financial Results	—	—	11	96.34	
+Fri, 16 Octtomorrow	
+CRAMC
+	Canara Robeco Asset Management Company Limited	
+DIVIDEND
+	Interim Dividend - Rs 2 Per Share · record Fri, 16 Oct	—	-46% · 20×	7.7	224.91	
+Sat, 17 Octin 2d	
+HDFCBANK
+	HDFC Bank Limited	
+RESULTS
+	Financial Results	±1.5%	+19% · 14×	1,930	710.70	
+Sat, 17 Octin 2d	
+ICICIBANK
+	ICICI Bank Limited	
+RESULTS
+	Financial Results	±1.8%	+13% · 17×	1,156	1,338.60	
+Sat, 17 Octin 2d	
+AXISBANK
+	Axis Bank Limited	
+RESULTS
+	Financial Results	±4.2%	+22% · 14×	739	1,264.60	
+Sat, 17 Octin 2d	
+YESBANK
+	Yes Bank Limited	
+RESULTS
+	Financial Results	±2.5%	+33% · 18×	143	21.20	
+Sat, 17 Octin 2d	
+IDBI
+	IDBI Bank Limited	
+RESULTS
+	Financial Results	±2.9%	+5% · 10×	73	90.39	FILING ↗
+Sat, 17 Octin 2d	
+KROSS
+	Kross Limited	
+RESULTS
+	Financial Results/Other business matters	—	+24% · 30×	23	272.25	FILING ↗
+Sat, 17 Octin 2d	
+IXIGO
+	Le Travenues Technology Limited	
+RESULTS
+	Financial Results	—	+81% · 71×	14	138.46	FILING ↗
+Sat, 17 Octin 2d	
+CENTRALBK
+	Central Bank of India	
+RESULTS
+	Financial Results	±2.0%	+5% · 6×	13	31.18	
+Mon, 19 Octin 4d	
+BAJFINANCE
+	Bajaj Finance Limited	
+RESULTS
+	Financial Results	±4.1%	+28% · 29×	713	957.00	
+Mon, 19 Octin 4d	
+ULTRACEMCO
+	UltraTech Cement Limited	
+RESULTS
+	Financial Results	±1.2%	+17% · 37×	286	10,795.00	
+Mon, 19 Octin 4d	
+HINDZINC
+	Hindustan Zinc Limited	
+RESULTS
+	Financial Results	±2.4%	+145% · 13×	169	540.00	FILING ↗
+Mon, 19 Octin 4d	
+UNIONBANK
+	Union Bank of India	
+RESULTS
+	Financial Results	±2.1%	+30% · 6×	127	174.00	FILING ↗
+Mon, 19 Octin 4d	
+DELTACORP
+	Delta Corp Limited	
+RESULTS
+	Financial Results	±4.3%	to loss	94	81.21	FILING ↗
+Mon, 19 Octin 4d	
+ELEVATE
+	Elevate Campuses Limited	
+RESULTS
+	Financial Results	—	—	65	318.80	
+Mon, 19 Octin 4d	
+PIRAMALFIN
+	Piramal Finance Limited	
+RESULTS
+	Financial Results	—	—	63	1,951.10	
+Mon, 19 Octin 4d	
+JPPOWER
+	Jaiprakash Power Ventures Limited	
+RESULTS
+	Financial Results	±3.2%	+69% · 17×	59	15.43	
+Mon, 19 Octin 4d	
+IREDA
+	Indian Renewable Energy Development Agency Limited	
+RESULTS
+	Financial Results	±4.3%	+37% · 15×	41	108.47	FILING ↗
+Mon, 19 Octin 4d	
+SMLMAH
+	SML Mahindra Limited	
+RESULTS
+	Financial Results	—	-5% · 57×	34	6,139.00	
+Mon, 19 Octin 4d	
+AONESTEELS
+	A-One Steels India Limited	
+RESULTS
+	Financial Results/Other business matters	—	—	22	397.70	FILING ↗
+Mon, 19 Octin 4d	
+VARMORA
+	Varmora Granito Limited	
+RESULTS
+	Financial Results	—	—	19	133.11	FILING ↗
+Mon, 19 Octin 4d	
+NELCO
+	NELCO Limited	
+RESULTS
+	Financial Results	—	+30% · 499×	19	844.40	FILING ↗
+Mon, 19 Octin 4d	
+LTTS
+	L&T Technology Services Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±3.8%	+13% · 29×	17	3,613.40	
+Mon, 19 Octin 4d	
+TATVA
+	Tatva Chintan Pharma Chem Limited	
+RESULTS
+	Financial Results	—	+140% · 88×	15	1,940.60	FILING ↗
+Mon, 19 Octin 4d	
+SOBHA
+	Sobha Limited	
+RESULTS
+	Financial Results	±1.2%	+273% · 56×	12	1,205.10	FILING ↗
+Mon, 19 Octin 4d	
+BEPL
+	Bhansali Engineering Polymers Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±3.6%	+43% · 16×	12	130.89	FILING ↗
+Mon, 19 Octin 4d	
+WAAREERTL
+	Waaree Renewable Technologies Limited	
+RESULTS
+	Financial Results	—	+38% · 17×	8.3	808.20	FILING ↗
+Mon, 19 Octin 4d	
+JUSTDIAL
+	Just Dial Limited	
+RESULTS
+	Financial Results	±8.1%	+4% · 12×	6.6	682.75	FILING ↗
+Wed, 21 Octin 6d	
+ETERNAL
+	ETERNAL LIMITED	
+RESULTS
+	Financial Results	±2.8%	+268% · 672×	671	316.00	FILING ↗
+Wed, 21 Octin 6d	
+PCJEWELLER
+	PC Jeweller Limited	
+RESULTS
+	Financial Results	±2.4%	+37% · 18×	504	14.47	FILING ↗
+Wed, 21 Octin 6d	
+ADANIGREEN
+	Adani Green Energy Limited	
+RESULTS
+	Financial Results	±3.5%	— · 122×	197	1,318.40	FILING ↗
+Wed, 21 Octin 6d	
+INDHOTEL
+	The Indian Hotels Company Limited	
+RESULTS
+	Financial Results	±3.8%	+19% · 48×	160	725.40	
+Wed, 21 Octin 6d	
+KEI
+	KEI Industries Limited	
+RESULTS
+	Financial Results	±3.7%	+40% · 45×	106	4,648.00	FILING ↗
+Wed, 21 Octin 6d	
+VMM
+	Vishal Mega Mart Limited	
+RESULTS
+	Financial Results	±3.8%	+26% · 50×	104	96.00	
+Wed, 21 Octin 6d	
+M&MFIN
+	Mahindra & Mahindra Financial Services Limited	
+RESULTS
+	Financial Results	±4.0%	+75% · 14×	58	319.45	
+Wed, 21 Octin 6d	
+SRF
+	SRF Limited	
+RESULTS
+	Financial Results	±4.7%	+76% · 34×	42	2,499.70	FILING ↗
+Wed, 21 Octin 6d	
+ABSLAMC
+	Aditya Birla Sun Life AMC Limited	
+RESULTS
+	Financial Results	—	+12% · 28×	17	970.50	FILING ↗
+Wed, 21 Octin 6d	
+AYE
+	Aye Finance Limited	
+RESULTS
+	Financial Results	—	—	13	160.07	FILING ↗
+Wed, 21 Octin 6d	
+IGIL
+	International Gemological Institute Limited	
+RESULTS
+	Financial Results	±5.3%	-87% · 30×	13	315.90	FILING ↗
+Wed, 21 Octin 6d	
+WENDT
+	Wendt (India) Limited	
+RESULTS
+	Financial Results	—	+64% · 93×	6.3	7,897.00	
+Wed, 21 Octin 6d	
+LMW
+	LMW Limited	
+RESULTS
+	Financial Results	—	+384% · 99×	5.5	16,203.00	
+Thu, 22 Octin 7d	
+SWIGGY
+	Swiggy Limited	
+RESULTS
+	Financial Results	±4.0%	loss both	262	230.95	
+Thu, 22 Octin 7d	
+CHENNPETRO
+	Chennai Petroleum Corporation Limited	
+RESULTS
+	Financial Results	±3.4%	to profit · 6×	227	1,546.10	
+Thu, 22 Octin 7d	
+ADANIENSOL
+	Adani Energy Solutions Limited	
+RESULTS
+	Financial Results	±3.5%	+129% · 56×	208	1,364.00	
+Thu, 22 Octin 7d	
+HINDPETRO
+	Hindustan Petroleum Corporation Limited	
+RESULTS
+	Financial Results	±2.2%	to loss · 42×	139	331.05	FILING ↗
+Thu, 22 Octin 7d	
+PAISALO
+	Paisalo Digital Limited	
+RESULTS
+	Financial Results	—	+30% · 25×	105	81.71	FILING ↗
+Thu, 22 Octin 7d	
+COLPAL
+	Colgate Palmolive (India) Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±2.4%	+7% · 37×	71	1,826.40	FILING ↗
+Thu, 22 Octin 7d	
+HAVELLS
+	Havells India Limited	
+RESULTS
+	Financial Results	±3.1%	-17% · 43×	69	1,119.90	
+Thu, 22 Octin 7d	
+BLUESTONE
+	BlueStone Jewellery and Lifestyle Limited	
+RESULTS
+FUND RAISE
+	Financial Results/Fund Raising	—	— · 211×	61	777.75	FILING ↗
+Thu, 22 Octin 7d	
+CYIENT
+	Cyient Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±5.6%	— · 35×	51	1,195.40	
+Thu, 22 Octin 7d	
+SAGILITY
+	SAGILITY LIMITED	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±7.0%	+46% · 22×	49	45.55	
+Thu, 22 Octin 7d	
+ATGL
+	Adani Total Gas Limited	
+RESULTS
+	Financial Results	±2.5%	-14% · 101×	37	581.60	
+Thu, 22 Octin 7d	
+J&KBANK
+	The Jammu & Kashmir Bank Limited	
+RESULTS
+	Financial Results	±2.6%	-13% · 7×	25	138.75	FILING ↗
+Thu, 22 Octin 7d	
+CREDITACC
+	CREDITACCESS GRAMEEN LIMITED	
+RESULTS
+	Financial Results/Other business matters	—	+720% · 17×	20	1,267.50	FILING ↗
+Thu, 22 Octin 7d	
+PITTIENG
+	Pitti Engineering Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	—	+29% · 31×	9	1,038.10	
+Thu, 22 Octin 7d	
+RALLIS
+	Rallis India Limited	
+RESULTS
+	Financial Results	±4.2%	+32% · 18×	9	202.77	
+Thu, 22 Octin 7d	
+CIEINDIA
+	CIE Automotive India Limited	
+RESULTS
+	Financial Results	—	+16% · 16×	7.9	380.45	
+Thu, 22 Octin 7d	
+NUVOCO
+	Nuvoco Vistas Corporation Limited	
+RESULTS
+	Financial Results	—	+20% · 30×	7.1	321.15	
+Thu, 22 Octin 7d	
+FAIRCHEMOR
+	Fairchem Organics Limited	
+RESULTS
+	Financial Results	—	+753% · 69×	6.8	792.55	FILING ↗
+Thu, 22 Octin 7d	
+MAHSCOOTER
+	Maharashtra Scooters Limited	
+RESULTS
+	Financial Results	—	-91% · 51×	5	12,436.00	
+Fri, 23 Octin 8d	
+INFY
+	Infosys Limited	
+RESULTS
+DIVIDEND
+	Financial Results/Dividend	±3.6%	+12% · 15×	991	1,088.00	
+Fri, 23 Octin 8d	
+ADANIPOWER
+	Adani Power Limited	
+RESULTS
+	Financial Results	±1.9%	+47% · 26×	386	195.15	
+Fri, 23 Octin 8d	
+COFORGE
+	Coforge Limited	
+RESULTS
+	Financial Results	±5.2%	+49% · 50×	346	1,928.00	
+Fri, 23 Octin 8d	
+DRREDDY
+	Dr. Reddy's Laboratories Limited	
+RESULTS
+	Financial Results	±2.4%	-69% · 32×	242	1,216.00	
+Fri, 23 Octin 8d	
+TMCV
+	Tata Motors Limited	
+RESULTS
+	Financial Results	±2.5%	— · 37×	225	415.25	
+Fri, 23 Octin 8d	
+INDUSINDBK
+	IndusInd Bank Limited	
+RESULTS
+	Financial Results	±4.6%	+72% · 51×	217	866.00	
+Fri, 23 Octin 8d	
+CGPOWER
+	CG Power and Industrial Solutions Limited	
+RESULTS
+	Financial Results	±4.4%	+16% · 136×	179	863.00	
+Fri, 23 Octin 8d	
+JSWSTEEL
+	JSW Steel Limited	
+RESULTS
+	Financia

@@ -1,0 +1,510 @@
+{
+  "config": {
+    "window": 20,
+    "n_bins": 50,
+    "va_pct": 0.7,
+    "balance_days": 5,
+    "horizon": 5,
+    "atr_len": 14,
+    "cost_pct": 0.15,
+    "min_bars": 250
+  },
+  "data_end": "2026-09-25 00:00:00",
+  "data_start": "2020-09-16 00:00:00",
+  "aggregate": {
+    "DOWN": {
+      "events": 45448,
+      "stocks": 1278,
+      "poc_return_rate": 0.4273,
+      "chance_rate": 0.4458,
+      "excess": -0.0184,
+      "z": -8.47,
+      "avg_poc_touch_days": 0.867,
+      "median_days_to_poc": 2.0,
+      "va_reentry_rate": 0.5753,
+      "median_dist_poc_atr": 1.1,
+      "trade_net_mean_pct": 0.1231,
+      "trade_win_rate": 0.5629,
+      "trade_t": 5.29,
+      "gross_excess_vs_universe_pct": -0.0247,
+      "excess_vs_universe_t": -1.22,
+      "by_year": {
+        "2020": {
+          "n": 1004,
+          "excess": 0.1138,
+          "excess_ret_pct": -0.5023
+        },
+        "2021": {
+          "n": 5814,
+          "excess": -0.0153,
+          "excess_ret_pct": -0.0721
+        },
+        "2022": {
+          "n": 7124,
+          "excess": -0.0453,
+          "excess_ret_pct": 0.2045
+        },
+        "2023": {
+          "n": 6365,
+          "excess": -0.0029,
+          "excess_ret_pct": -0.2083
+        },
+        "2024": {
+          "n": 8100,
+          "excess": -0.0317,
+          "excess_ret_pct": -0.0736
+        },
+        "2025": {
+          "n": 10304,
+          "excess": -0.0091,
+          "excess_ret_pct": 0.0397
+        },
+        "2026": {
+          "n": 6737,
+          "excess": -0.0255,
+          "excess_ret_pct": -0.0213
+        }
+      },
+      "by_distance_atr": {
+        "(0.0, 0.5]": {
+          "n": 2644,
+          "rate": 0.7534,
+          "chance": 0.7843
+        },
+        "(0.5, 1.0]": {
+          "n": 16494,
+          "rate": 0.5585,
+          "chance": 0.5871
+        },
+        "(1.0, 1.5]": {
+          "n": 14586,
+          "rate": 0.392,
+          "chance": 0.4025
+        },
+        "(1.5, 2.0]": {
+          "n": 7318,
+          "rate": 0.2588,
+          "chance": 0.2676
+        },
+        "(2.0, 3.0]": {
+          "n": 3862,
+          "rate": 0.1515,
+          "chance": 0.1642
+        },
+        "(3.0, inf]": {
+          "n": 544,
+          "rate": 0.0386,
+          "chance": 0.0721
+        }
+      }
+    },
+    "UP": {
+      "events": 42482,
+      "stocks": 1278,
+      "poc_return_rate": 0.3301,
+      "chance_rate": 0.3068,
+      "excess": 0.0233,
+      "z": 11.3,
+      "avg_poc_touch_days": 0.672,
+      "median_days_to_poc": 3.0,
+      "va_reentry_rate": 0.5201,
+      "median_dist_poc_atr": 1.331,
+      "trade_net_mean_pct": 0.1155,
+      "trade_win_rate": 0.4507,
+      "trade_t": 3.45,
+      "gross_excess_vs_universe_pct": -0.1068,
+      "excess_vs_universe_t": -3.4,
+      "by_year": {
+        "2020": {
+          "n": 1781,
+          "excess": -0.0478,
+          "excess_ret_pct": 0.104
+        },
+        "2021": {
+          "n": 6566,
+          "excess": 0.0062,
+          "excess_ret_pct": 0.266
+        },
+        "2022": {
+          "n": 6603,
+          "excess": 0.016,
+          "excess_ret_pct": -0.4162
+        },
+        "2023": {
+          "n": 8017,
+          "excess": -0.0064,
+          "excess_ret_pct": -0.1551
+        },
+        "2024": {
+          "n": 7500,
+          "excess": 0.0307,
+          "excess_ret_pct": -0.1261
+        },
+        "2025": {
+          "n": 6695,
+          "excess": 0.0524,
+          "excess_ret_pct": -0.1352
+        },
+        "2026": {
+          "n": 5320,
+          "excess": 0.0749,
+          "excess_ret_pct": -0.1177
+        }
+      },
+      "by_distance_atr": {
+        "(0.0, 0.5]": {
+          "n": 1024,
+          "rate": 0.7217,
+          "chance": 0.7259
+        },
+        "(0.5, 1.0]": {
+          "n": 10757,
+          "rate": 0.537,
+          "chance": 0.5181
+        },
+        "(1.0, 1.5]": {
+          "n": 13660,
+          "rate": 0.3583,
+          "chance": 0.3266
+        },
+        "(1.5, 2.0]": {
+          "n": 8606,
+          "rate": 0.2154,
+          "chance": 0.1899
+        },
+        "(2.0, 3.0]": {
+          "n": 6483,
+          "rate": 0.1081,
+          "chance": 0.0896
+        },
+        "(3.0, inf]": {
+          "n": 1952,
+          "rate": 0.0297,
+          "chance": 0.021
+        }
+      }
+    }
+  },
+  "aggregate_liquid_10cr": {
+    "DOWN": {
+      "events": 21074,
+      "stocks": 1129,
+      "poc_return_rate": 0.4004,
+      "chance_rate": 0.4242,
+      "excess": -0.0238,
+      "z": -7.47,
+      "avg_poc_touch_days": 0.803,
+      "median_days_to_poc": 2.0,
+      "va_reentry_rate": 0.5793,
+      "median_dist_poc_atr": 1.181,
+      "trade_net_mean_pct": 0.0985,
+      "trade_win_rate": 0.5623,
+      "trade_t": 2.92,
+      "gross_excess_vs_universe_pct": -0.0865,
+      "excess_vs_universe_t": -2.96,
+      "by_year": {
+        "2020": {
+          "n": 280,
+          "excess": 0.1106,
+          "excess_ret_pct": -0.5859
+        },
+        "2021": {
+          "n": 2426,
+          "excess": -0.0236,
+          "excess_ret_pct": -0.2783
+        },
+        "2022": {
+          "n": 2725,
+          "excess": -0.0563,
+          "excess_ret_pct": 0.1641
+        },
+        "2023": {
+          "n": 2529,
+          "excess": -0.0031,
+          "excess_ret_pct": -0.3233
+        },
+        "2024": {
+          "n": 4576,
+          "excess": -0.038,
+          "excess_ret_pct": -0.098
+        },
+        "2025": {
+          "n": 5114,
+          "excess": -0.0157,
+          "excess_ret_pct": -0.0013
+        },
+        "2026": {
+          "n": 3424,
+          "excess": -0.0173,
+          "excess_ret_pct": -0.0466
+        }
+      },
+      "by_distance_atr": {
+        "(0.0, 0.5]": {
+          "n": 929,
+          "rate": 0.7169,
+          "chance": 0.7803
+        },
+        "(0.5, 1.0]": {
+          "n": 6741,
+          "rate": 0.5548,
+          "chance": 0.5868
+        },
+        "(1.0, 1.5]": {
+          "n": 7020,
+          "rate": 0.3845,
+          "chance": 0.4051
+        },
+        "(1.5, 2.0]": {
+          "n": 3902,
+          "rate": 0.2573,
+          "chance": 0.2683
+        },
+        "(2.0, 3.0]": {
+          "n": 2177,
+          "rate": 0.1479,
+          "chance": 0.1602
+        },
+        "(3.0, inf]": {
+          "n": 305,
+          "rate": 0.0262,
+          "chance": 0.0645
+        }
+      }
+    },
+    "UP": {
+      "events": 21337,
+      "stocks": 1113,
+      "poc_return_rate": 0.3346,
+      "chance_rate": 0.3169,
+      "excess": 0.0178,
+      "z": 6.02,
+      "avg_poc_touch_days": 0.665,
+      "median_days_to_poc": 3.0,
+      "va_reentry_rate": 0.5306,
+      "median_dist_poc_atr": 1.323,
+      "trade_net_mean_pct": -0.0513,
+      "trade_win_rate": 0.4607,
+      "trade_t": -1.23,
+      "gross_excess_vs_universe_pct": -0.2199,
+      "excess_vs_universe_t": -5.66,
+      "by_year": {
+        "2020": {
+          "n": 541,
+          "excess": -0.0436,
+          "excess_ret_pct": -0.709
+        },
+        "2021": {
+          "n": 2815,
+          "excess": -0.0013,
+          "excess_ret_pct": 0.0008
+        },
+        "2022": {
+          "n": 2709,
+          "excess": 0.0026,
+          "excess_ret_pct": -0.523
+        },
+        "2023": {
+          "n": 3809,
+          "excess": -0.021,
+          "excess_ret_pct": -0.1536
+        },
+        "2024": {
+          "n": 4554,
+          "excess": 0.0235,
+          "excess_ret_pct": -0.3248
+        },
+        "2025": {
+          "n": 3894,
+          "excess": 0.0351,
+          "excess_ret_pct": -0.1288
+        },
+        "2026": {
+          "n": 3015,
+          "excess": 0.0781,
+          "excess_ret_pct": -0.1086
+        }
+      },
+      "by_distance_atr": {
+        "(0.0, 0.5]": {
+          "n": 487,
+          "rate": 0.7228,
+          "chance": 0.7233
+        },
+        "(0.5, 1.0]": {
+          "n": 5377,
+          "rate": 0.5319,
+          "chance": 0.5218
+        },
+        "(1.0, 1.5]": {
+          "n": 7069,
+          "rate": 0.3603,
+          "chance": 0.3367
+        },
+        "(1.5, 2.0]": {
+          "n": 4410,
+          "rate": 0.2252,
+          "chance": 0.2011
+        },
+        "(2.0, 3.0]": {
+          "n": 3206,
+          "rate": 0.1129,
+          "chance": 0.098
+        },
+        "(3.0, inf]": {
+          "n": 788,
+          "rate": 0.033,
+          "chance": 0.0269
+        }
+      }
+    }
+  },
+  "persistence_split": "2024-01-15",
+  "persistence": {
+    "DOWN": {
+      "stocks": 1046,
+      "spearman_first_vs_second_half": 0.0198,
+      "second_half_excess_top_quintile": -0.02,
+      "second_half_excess_bottom_quintile": -0.0226
+    },
+    "UP": {
+      "stocks": 1054,
+      "spearman_first_vs_second_half": -0.0001,
+      "second_half_excess_top_quintile": 0.0589,
+      "second_half_excess_bottom_quintile": 0.0534
+    }
+  },
+  "per_stock_tests": 2489,
+  "per_stock_nominal_p05": 147,
+  "per_stock_fdr_q10": 0,
+  "classification_counts": {
+    "NO_EDGE": 2342,
+    "leans REVERTER": 71,
+    "INSUFFICIENT": 67,
+    "leans BREAKDOWN_HOLDER": 53,
+    "leans BOUNCER": 12,
+    "leans BREAKOUT_HOLDER": 11
+  },
+  "sweep": {
+    "W10_H5": {
+      "DOWN": {
+        "events": 57208,
+        "poc_return_rate": 0.521,
+        "chance_rate": 0.5338,
+        "excess": -0.0127,
+        "z": -6.52,
+        "gross_excess_vs_universe_pct": 0.0457,
+        "excess_vs_universe_t": 2.62
+      },
+      "UP": {
+        "events": 50778,
+        "poc_return_rate": 0.4061,
+        "chance_rate": 0.3807,
+        "excess": 0.0254,
+        "z": 12.81,
+        "gross_excess_vs_universe_pct": -0.1384,
+        "excess_vs_universe_t": -4.91
+      }
+    },
+    "W10_H10": {
+      "DOWN": {
+        "events": 42422,
+        "poc_return_rate": 0.6535,
+        "chance_rate": 0.6627,
+        "excess": -0.0092,
+        "z": -4.21,
+        "gross_excess_vs_universe_pct": -0.2997,
+        "excess_vs_universe_t": -11.42
+      },
+      "UP": {
+        "events": 37774,
+        "poc_return_rate": 0.5405,
+        "chance_rate": 0.5173,
+        "excess": 0.0232,
+        "z": 9.69,
+        "gross_excess_vs_universe_pct": -0.0764,
+        "excess_vs_universe_t": -1.63
+      }
+    },
+    "W20_H5": {
+      "DOWN": {
+        "events": 45448,
+        "poc_return_rate": 0.4273,
+        "chance_rate": 0.4458,
+        "excess": -0.0184,
+        "z": -8.47,
+        "gross_excess_vs_universe_pct": -0.0247,
+        "excess_vs_universe_t": -1.22
+      },
+      "UP": {
+        "events": 42482,
+        "poc_return_rate": 0.3301,
+        "chance_rate": 0.3068,
+        "excess": 0.0233,
+        "z": 11.3,
+        "gross_excess_vs_universe_pct": -0.1068,
+        "excess_vs_universe_t": -3.4
+      }
+    },
+    "W20_H10": {
+      "DOWN": {
+        "events": 37457,
+        "poc_return_rate": 0.5697,
+        "chance_rate": 0.582,
+        "excess": -0.0123,
+        "z": -5.12,
+        "gross_excess_vs_universe_pct": -0.3298,
+        "excess_vs_universe_t": -11.38
+      },
+      "UP": {
+        "events": 34805,
+        "poc_return_rate": 0.4702,
+        "chance_rate": 0.441,
+        "excess": 0.0293,
+        "z": 11.86,
+        "gross_excess_vs_universe_pct": -0.0714,
+        "excess_vs_universe_t": -1.44
+      }
+    },
+    "W40_H5": {
+      "DOWN": {
+        "events": 32367,
+        "poc_return_rate": 0.3285,
+        "chance_rate": 0.3523,
+        "excess": -0.0238,
+        "z": -9.68,
+        "gross_excess_vs_universe_pct": -0.0522,
+        "excess_vs_universe_t": -2.1
+      },
+      "UP": {
+        "events": 33781,
+        "poc_return_rate": 0.2448,
+        "chance_rate": 0.2231,
+        "excess": 0.0217,
+        "z": 10.46,
+        "gross_excess_vs_universe_pct": -0.0625,
+        "excess_vs_universe_t": -1.72
+      }
+    },
+    "W40_H10": {
+      "DOWN": {
+        "events": 27602,
+        "poc_return_rate": 0.4665,
+        "chance_rate": 0.4921,
+        "excess": -0.0256,
+        "z": -9.11,
+        "gross_excess_vs_universe_pct": -0.3733,
+        "excess_vs_universe_t": -10.52
+      },
+      "UP": {
+        "events": 28700,
+        "poc_return_rate": 0.3749,
+        "chance_rate": 0.3474,
+        "excess": 0.0276,
+        "z": 10.69,
+        "gross_excess_vs_universe_pct": 0.0036,
+        "excess_vs_universe_t": 0.06
+      }
+    }
+  }
+}

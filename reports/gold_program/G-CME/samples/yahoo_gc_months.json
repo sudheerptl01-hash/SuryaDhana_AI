@@ -1,0 +1,122 @@
+[
+ {
+  "sym": "GC=F",
+  "status": 200,
+  "lat": 0.28,
+  "price": 4001.3,
+  "prevClose": 4142.6,
+  "regTime": 1792973103,
+  "exch": "CMX",
+  "last_vol": 5442,
+  "n_bars": 5,
+  "keys": []
+ },
+ {
+  "sym": "GCZ26.CMX",
+  "status": 200,
+  "lat": 0.75,
+  "price": 3999.6,
+  "prevClose": 4142.6,
+  "regTime": 1792973105,
+  "exch": "CMX",
+  "last_vol": 5474,
+  "n_bars": 5,
+  "keys": []
+ },
+ {
+  "sym": "GCG27.CMX",
+  "status": 200,
+  "lat": 0.77,
+  "price": 4035.8,
+  "prevClose": 4176.9,
+  "regTime": 1792973046,
+  "exch": "CMX",
+  "last_vol": 315,
+  "n_bars": 5,
+  "keys": []
+ },
+ {
+  "sym": "GCJ27.CMX",
+  "status": 200,
+  "lat": 0.25,
+  "price": 4081.2,
+  "prevClose": 4210.6,
+  "regTime": 1792966766,
+  "exch": "CMX",
+  "last_vol": 248,
+  "n_bars": 5,
+  "keys": []
+ },
+ {
+  "sym": "GCM27.CMX",
+  "status": 200,
+  "lat": 0.24,
+  "price": 4115.0,
+  "prevClose": 4246.7,
+  "regTime": 1792971430,
+  "exch": "CMX",
+  "last_vol": 92,
+  "n_bars": 5,
+  "keys": []
+ },
+ {
+  "sym": "GCQ27.CMX",
+  "status": 200,
+  "lat": 0.27,
+  "price": 4142.6,
+  "prevClose": 4283.8,
+  "regTime": 1792769957,
+  "exch": "CMX",
+  "last_vol": 979,
+  "n_bars": 4,
+  "keys": []
+ },
+ {
+  "sym": "GCZ27.CMX",
+  "status": 200,
+  "lat": 0.28,
+  "price": 4209.0,
+  "prevClose": 4355.3,
+  "regTime": 1792787241,
+  "exch": "CMX",
+  "last_vol": 860,
+  "n_bars": 4,
+  "keys": []
+ },
+ {
+  "sym": "MGC=F",
+  "status": 200,
+  "lat": 0.26,
+  "price": 4000.9,
+  "prevClose": 4122.4,
+  "regTime": 1792973115,
+  "exch": "CMX",
+  "last_vol": 15667,
+  "n_bars": 5,
+  "keys": []
+ },
+ {
+  "sym": "SI=F",
+  "status": 200,
+  "lat": 0.29,
+  "price": 53.83,
+  "prevClose": 57.706,
+  "regTime": 1792973107,
+  "exch": "CMX",
+  "last_vol": 1242,
+  "n_bars": 5,
+  "keys": []
+ },
+ {
+  "sym": "SIZ26.CMX",
+  "status": 200,
+  "lat": 0.26,
+  "price": 53.83,
+  "prevClose": 58.0,
+  "regTime": 1792973107,
+  "exch": "CMX",
+  "last_vol": 1242,
+  "n_bars": 5,
+  "keys": []
+ }
+]

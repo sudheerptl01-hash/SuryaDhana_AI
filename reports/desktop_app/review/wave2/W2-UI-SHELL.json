@@ -1,0 +1,486 @@
+{
+ "fixer": "W2-UI-SHELL",
+ "summary": "W2-UI-SHELL wave 2 is done. All 19 brief IDs, the 6 FX-UI round-1 leftovers and the PM's monitor-socket request are in findings: 16 fixed (2 by verification only) and 3 partially fixed, plus the 6 leftovers and the socket lifecycle fixed (C1-trader-ux-11 and -18: the rest is in other owners' files; C1-trader-ux-13: two socket chips need PR-CHIP1/2). Main changes: per-page error boundaries plus a no-stack global-error card and K1 error reports; no bootstrap gate (the stock list for EQS only); the reconnected event that reloads failed pages; one status chrome in the app; header row 1 that never overflows; UPDATE DATA with a confirmation; honest closed-market / LINK DOWN chips; K3 strip counter-zoom; K4 ?sym= and NEW WINDOW; type-to-GO, Esc and real page history; boot preload of the first page; finite animations; PIPE mounted on demand; an isolated header clock; one shared eco-calendar request. I adopted and reviewed the duplicate's socket lifecycle (AppContext, monitorLifecycle, ws.check). It is correct and minimal, and I extended ws.check to 66 checks with a negative control for the wsManager defect, whose fix is PR-WS1. Patch requests: PR-WS1 (wsManager), PR-OPS1 (netpolicy expected deltas) and PR-CHIP1/2 (socket chips), all validated on scratch trees. Gates: tsc clean; desktop 222, prefs 160, platform 120, alerts 18, ws 66, ui/scripts 26; pytest desktop contract + harness 104. Browser: 13/13 sections in Chromium AND WebKit through w2shell_server, with 0 live socket accepts. ui_audit: Chromium 39/42 PASS, WebKit 38/42 PASS. Every failure except one is an expected POST refused by --block-mutations: ostrategy POST /api/options/strategy/analyze, discovery POST /api/alpha/scan, mcxgold POST /api/mcx/ticket (403, both engines). The exception is one transient WebKit 502 on commodity GET /api/commodity/gold-preopen/log?threshold=300. It is not reproducible: a direct GET gives 200, every ui-api log line for it is 200, and a commodity re-audit in WebKit gives 1/1 PASS. 0 page errors. The wrapper counted 84 local monitor sockets (one per page load), 84 closed, all with code 1000. One live :8010 monitor accept in that window came from the installed SuryaDhana.app (system WebKit Networking pid 42761), not from the audit. Disclosure: one run of mine (14:56-14:58), before I fixed the harness, opened live monitor sockets (see open_issues).",
+ "findings": [
+  {
+   "id": "C1-trader-ux-01",
+   "outcome": "fixed",
+   "what_changed": "New components/shell/TabErrorBoundary.tsx wraps each of the 42 pages, keyed by page id. The fallback is a terminal-styled '<CODE> FAILED TO RENDER' panel with RETRY, a DETAILS disclosure (message and stacks, hidden by default) and COPY. The header, strip, tape, page strip, footer, GO bar and navigation stay mounted. There are variants for the header ('bar' with RETRY), the stock window ('modal' with CLOSE, Esc works too) and the GO bar / news dock ('silent'). The boundary resets on page change, on RETRY and on the 'suryadhana:reconnected' event. A ChunkLoadError gets the guarded reload instead of the panel. app/global-error.tsx is the last-resort card: no raw stack by default (behind a disclosure), with RELOAD. ErrorCatcher's full overlay is now behind `next dev` or localStorage 'suryadhana.debug.errors'='1'. Users see a compact '\u26a0 N UI ERROR(S)' footer chip instead (list, COPY DETAILS, CLEAR).",
+   "files": [
+    "ui/components/shell/TabErrorBoundary.tsx",
+    "ui/app/page.tsx",
+    "ui/app/global-error.tsx",
+    "ui/components/ErrorCatcher.tsx"
+   ],
+   "tests": "desktop.check (boundary source guards; 222/222). Browser section C (malformed eco-calendar -> BRF fallback; header, strip, footer chip, GO and navigation alive; switching to DESK clears it; no raw stack): Chromium + WebKit PASS. Screenshot C-crash-app inspected.",
+   "user_visible_change": "A page that throws now shows a FAILED TO RENDER panel inside the page area instead of a full-window stack trace. The old always-on error overlay is replaced by a footer chip that appears only after an error."
+  },
+  {
+   "id": "completeness-02",
+   "outcome": "fixed",
+   "what_changed": "K1 client side. New lib/clientErrors.ts sends POST /api/client-errors {message, stack?, tab?, build?, url?, kind?} fire-and-forget from the per-page boundaries (render), global-error.tsx (global), window error / unhandledrejection (error / rejection, installed once by PlatformShell) and chunk errors. Limits: dedup per fingerprint, a per-minute and a per-page cap, clipped fields (well under 8 KB), control characters stripped, url = path+query only. QA contexts with prefs mode 'readonly' never POST, so live audits stay GET-only. The server route is W2-API's services/ui-api/routers/client_errors.py (present in the repo).",
+   "files": [
+    "ui/lib/clientErrors.ts",
+    "ui/components/desktop/PlatformShell.tsx",
+    "ui/components/shell/TabErrorBoundary.tsx",
+    "ui/app/global-error.tsx"
+   ],
+   "tests": "desktop.check K1 block (buildReport, fingerprint, ReportGate dedup/caps/clipping, readonly suppression). Browser section C captured the K1 payload through a routed endpoint (never live): {kind:'render', tab:'brief', build, url:'/?tab=brief'}."
+  },
+  {
+   "id": "C1-trader-ux-02",
+   "outcome": "fixed",
+   "what_changed": "On LINK DOWN -> LINK UP, PlatformShell dispatches 'suryadhana:reconnected' {outageMs} and bumps ShellState.reconnects. app/page.tsx then reloads the active page and an open stock window, but only when the page's visible text shows a failed load or a crashed render (lib/reconnect.ts needsReloadAfterOutage: axios, WebKit 'Load failed', Chromium 'Failed to fetch', HTTP 5xx, the boundary text). Healthy pages keep their state. While LINK DOWN the page is dimmed under an in-page notice ('LINK DOWN since HH:MM IST \u00b7 the panels below show the last data received\u2026'). The banner copy now promises only what is true: 'panels show the last data received \u00b7 failed pages reload when the link is back'. The footer reads OFFLINE \u00b7 LINK DOWN.",
+   "files": [
+    "ui/lib/reconnect.ts",
+    "ui/components/desktop/PlatformShell.tsx",
+    "ui/components/desktop/ShellNotices.tsx",
+    "ui/app/page.tsx",
+    "ui/app/globals.css"
+   ],
+   "tests": "desktop.check (needsReloadAfterOutage matrix, banner copy). Browser section R (shell up=false + aborted /api -> dimmed page, honest notice, footer OFFLINE, NIFTY STALE; LINK UP -> failed BRF panels reload, no 'Network Error' left): Chromium + WebKit PASS. Screenshot R-down-webkit inspected.",
+   "user_visible_change": "During an outage the page dims with a LINK DOWN notice, and pages that failed reload by themselves when the link is back. New banner wording."
+  },
+  {
+   "id": "C1-trader-ux-03",
+   "outcome": "fixed",
+   "what_changed": "The 42 pages no longer wait on the three bootstrap calls. Every page renders at once. The small dashboard summary (header, status line, OVRV) loads in the background and retries while it fails. The 0.9 MB /api/stocks/list?limit=1500 loads only for EQS, and /api/dashboard/enrichment-status only for OVRV, each with its own in-place error. The ENRICH completion refresh reloads those only if they were loaded. A real ui-api outage is the connection banner's job, so the misleading 'Backend unreachable' gate diagnosis is gone. What EQS and OVRV show is unchanged.",
+   "files": [
+    "ui/app/page.tsx"
+   ],
+   "tests": "desktop.check source guards (C1-trader-ux-03). Browser section G (dashboard + enrichment answered 503 -> MCXG and DESK still render; no stock-list request on non-EQS pages; EQS loads it and lists rows): Chromium + WebKit PASS.",
+   "user_visible_change": "Pages render even when the dashboard or enrichment endpoints fail. EQS/OVRV show their own errors in place."
+  },
+  {
+   "id": "C1-trader-ux-06",
+   "outcome": "fixed",
+   "what_changed": "New ShellState context (PlatformShell is the single writer) carries desktop / link / downSince / zoom / reconnects. In desktop mode the title strip is the ONE brand / clock / session / service-light source. Header row 1 drops its brand + page name, universe count, DATA/DB lights, session chip and clock, and keeps NIFTY, ICICI, alerts and UPDATE DATA in a 36 px row (was 44). The footer's READY follows the link state (OFFLINE \u00b7 LINK DOWN while down) instead of its first-load flag. Browser mode keeps today's full header.",
+   "files": [
+    "ui/components/shell/ShellState.tsx",
+    "ui/components/MarketCommandHeader.tsx",
+    "ui/components/desktop/PlatformShell.tsx",
+    "ui/app/page.tsx"
+   ],
+   "tests": "desktop.check (C1-trader-ux-06 guards). Browser sections D (app: single brand/clock/session/lights in the strip, none in the header; browser: header keeps them) and R (footer OFFLINE during LINK DOWN): Chromium + WebKit PASS. Screenshot L-app-1100-desk inspected.",
+   "user_visible_change": "In SuryaDhana.app the header no longer duplicates the title strip's brand, clock, session and service lights. Row 1 is 8 px shorter."
+  },
+  {
+   "id": "C1-trader-ux-07",
+   "outcome": "fixed",
+   "what_changed": "No code change in wave 2. The round-1 stale-dot fix (dots follow the shell's pushes or pulls, with no fallback probe) was verified end to end against the heartbeat contract with a simulated shell: 45 s without pushes, pulls keep the dots green, and 0 fallback /health probes.",
+   "files": [],
+   "tests": "Browser section S (45 s, no pushes, 0 /health probes, dots green): Chromium + WebKit PASS."
+  },
+  {
+   "id": "C2-performance-10",
+   "outcome": "fixed",
+   "what_changed": "Same verification as C1-trader-ux-07: no per-cycle fallback /health probe in desktop mode (0 in 45 s). No code change in wave 2.",
+   "files": [],
+   "tests": "Browser section S: Chromium + WebKit PASS."
+  },
+  {
+   "id": "C1-trader-ux-09",
+   "outcome": "fixed",
+   "what_changed": "Esc closes the stock window (role=dialog) and the overlays. Type-to-GO (lib/shortcuts.ts): a printable ticker character with no focused input, and no other dialog open, opens the GO bar seeded with it, caret at the end. Keys another handler consumed (DataTable j/k, Shift+N) and modifier chords are left alone. Page history (lib/deepLink.ts): every page switch and every stock window opened from a page pushes ?tab=&sym=. popstate restores the page and stock window, so Back/Forward (and the app's \u2318[ / \u2318] from W2-RUST's Go menu) move between screens instead of leaving the terminal. Closing a pushed stock window goes Back. A deep-linked one is removed in place. The help card and status line are host-aware: \u2318 shortcuts in the app, Alt in a browser.",
+   "files": [
+    "ui/lib/shortcuts.ts",
+    "ui/lib/deepLink.ts",
+    "ui/app/page.tsx",
+    "ui/components/CommandBar.tsx",
+    "ui/components/StockDetailModal.tsx",
+    "ui/lib/platform/index.ts"
+   ],
+   "tests": "desktop.check (shortcut and history unit matrices). Browser section K (web + app: Esc closes and drops sym, type-to-GO 'tcs', Enter opens TCS, Back closes it, desk->markets->research Back/Back/Forward, still in the terminal) and D (help keys per host): Chromium + WebKit PASS. Screenshot D-help-app-webkit inspected.",
+   "user_visible_change": "Typing a ticker anywhere opens GO. Back/Forward move between pages. Esc closes the stock window. The help card shows \u2318 keys in the app."
+  },
+  {
+   "id": "C1-trader-ux-10",
+   "outcome": "fixed",
+   "what_changed": "Header row 1 never overflows. Every item is nowrap, the brand's page name ellipsizes, the row clips instead of widening the page, and low-priority items drop out by width (globals.css t-hide-xl \u2264 1760 px, t-hide-md \u2264 1240 px). Measured in both modes at 1600x1000, 1680x1050 and 1100x700: row scrollWidth = clientWidth, 0 wrapping items, document scrollWidth = viewport, UPDATE DATA fully visible (right edge 1588/1668/1088).",
+   "files": [
+    "ui/components/MarketCommandHeader.tsx",
+    "ui/app/globals.css"
+   ],
+   "tests": "Browser section L (6 sizes x 2 modes x 3 pages): Chromium + WebKit PASS. Screenshots inspected.",
+   "user_visible_change": "At narrower widths some secondary header items (universe count, weekday date, O/H/L, DB light) are hidden instead of wrapping or overflowing."
+  },
+  {
+   "id": "C1-trader-ux-11",
+   "outcome": "partially-fixed",
+   "what_changed": "Stacked chrome is 8 px shorter in the app (header row 1 is 36 px instead of 44 px, with the duplicates gone). The 1100x700 minimum has no horizontal overflow. The EQS row height (~51 px) is in the screener table component, which I do not own.",
+   "files": [
+    "ui/components/MarketCommandHeader.tsx"
+   ],
+   "tests": "Browser section L: Chromium + WebKit PASS.",
+   "user_visible_change": "8 px more content height in the app.",
+   "reason_if_not_fixed": "EQS row density lives in ui/components (screener table), not in my files: W2-UI-PAGES or a later wave."
+  },
+  {
+   "id": "C1-trader-ux-12",
+   "outcome": "fixed",
+   "what_changed": "The header's universe-wide download (POST /api/dashboard/refresh {nse_1500, 5 years}) is now labelled '\u2913 UPDATE DATA' ('UPDATING DATA\u2026' while running) and asks first. A popover states scope (1,500 stocks, up to 5 years, only missing days), duration, and that page-level \u21bb REFRESH is the way to reload just a page. During 18:30\u201321:15 IST it adds an EOD-pipeline warning. Esc or an outside click cancels. On confirm it sends the same request as before. While a download runs, the button reopens the progress panel. Page-level refresh buttons are unchanged.",
+   "files": [
+    "ui/components/MarketCommandHeader.tsx"
+   ],
+   "tests": "desktop.check (inEodWindow, source guards C1-trader-ux-12). Browser section L checks the button stays visible. The confirm path was not clicked (the POST is blocked by --block-mutations; logic is unchanged).",
+   "user_visible_change": "'\u21bb REFRESH' in the header becomes '\u2913 UPDATE DATA' with a confirmation popover."
+  },
+  {
+   "id": "C1-trader-ux-13",
+   "outcome": "partially-fixed",
+   "what_changed": "lib/feedState.ts holds the closed-market / LINK DOWN wording. The header's NIFTY source chip (niftySourceChip) reads 'CLOSE 23-OCT' / CLOSED on a closed market and '\u25cc STALE' while LINK DOWN, and '\u25cf NSE' / '\u25cf LIVE' only during the session. socketChip ('\u25cf SOCKET OK \u00b7 NO TICKS' on a closed market, '\u25cc LINK DOWN' while down) and the useFeedState hook (shared holiday rule, no extra request) are ready for the two socket chips outside my files: LiveMonitorBar '\u25cf STREAMING' and AlphaDiscoveryDesk '\u25cf WS LIVE'. Patch requests PR-CHIP1/PR-CHIP2 are attached (type-checked on a scratch tree).",
+   "files": [
+    "ui/lib/feedState.ts",
+    "ui/components/shell/useFeed.ts",
+    "ui/components/MarketCommandHeader.tsx"
+   ],
+   "tests": "desktop.check (niftySourceChip and socketChip matrices). Browser section R asserts NIFTY STALE during LINK DOWN: Chromium + WebKit PASS. The CLOSE 23-OCT chip on this closed Sunday is visible in the L/C/K screenshots (inspected, not asserted). PR-CHIP1/2: tsc clean on the scratch tree.",
+   "user_visible_change": "On a closed market the NIFTY chip reads CLOSE <day>, and while LINK DOWN it reads STALE.",
+   "reason_if_not_fixed": "'\u25cf STREAMING' (ui/components/LiveMonitorBar.tsx) and '\u25cf WS LIVE' (ui/components/AlphaDiscoveryDesk.tsx) are not my files: see patch requests PR-CHIP1/PR-CHIP2."
+  },
+  {
+   "id": "C1-trader-ux-14",
+   "outcome": "fixed",
+   "what_changed": "K3, UI side. The title strip counter-zooms (CSS zoom 1/factor) so its 84 px traffic-light inset, 32 px height and text size stay constant in SCREEN px at every page zoom, and the wordmark never slides under the native buttons. --shell-top = 32/zoom CSS px. The zoom comes from window.__SURYADHANA_ZOOM__ (init script, persisted per window by W2-RUST) on load and from the shell event {type:'zoom', factor}, clamped to 0.5\u20132.0 (components/desktop/zoom.ts).",
+   "files": [
+    "ui/components/desktop/zoom.ts",
+    "ui/components/desktop/TitleStrip.tsx",
+    "ui/components/desktop/PlatformShell.tsx",
+    "ui/lib/platform/types.ts",
+    "ui/lib/platform/index.ts"
+   ],
+   "tests": "desktop.check K3 (clampZoom, stripHeightCss, stripScreenPx). platform.check K3 event parsing. Browser section Z (0.8 and 1.25, CSS zoom on <html> simulating WKWebView zoom: inset and height constant on screen): Chromium + WebKit PASS. Screenshot Z-zoom-1.25 inspected.",
+   "user_visible_change": "At \u2318= / \u2318\u2212 the title strip keeps its native size and position next to the traffic lights."
+  },
+  {
+   "id": "C1-trader-ux-16",
+   "outcome": "fixed",
+   "what_changed": "K4, UI side. '?sym=<NSE ticker>' (validated ^[A-Z0-9&_.-]{1,20}$ after upper-casing) opens the stock window, in the browser and the app. 'Open in new window' actions: Shift+Enter in GO on a page or ticker, and a '\u29c9 NEW WINDOW' button in the stock window header. Both use newWindow({tab, sym}), which is shell_new_window {tab, sym} in the app and window.open('/?tab=&sym=') in a browser. \u2318-click on a page tab says 'new window' in its title.",
+   "files": [
+    "ui/lib/deepLink.ts",
+    "ui/lib/platform/index.ts",
+    "ui/lib/platform/links.ts",
+    "ui/lib/platform/types.ts",
+    "ui/components/CommandBar.tsx",
+    "ui/components/StockDetailModal.tsx",
+    "ui/app/page.tsx"
+   ],
+   "tests": "platform.check K4 (sym validation, newWindow args in both hosts). desktop.check deep-link matrix. Browser section K (?tab=desk&sym=TCS opens TCS; NEW WINDOW -> shell_new_window {tab:'desk', sym:'TCS'} in the app and window.open('/?tab=desk&sym=TCS') in a browser; Shift+Enter INFY): Chromium + WebKit PASS. Screenshot K-stock-window inspected.",
+   "user_visible_change": "New '\u29c9 NEW WINDOW' button in the stock window. Shift+Enter in GO opens a new window. Links with ?sym= open the stock."
+  },
+  {
+   "id": "C1-trader-ux-18",
+   "outcome": "partially-fixed",
+   "what_changed": "Polish items in my files: the strip's build chip is labelled 'BUILD' (was 'UI'), the GO button's tooltip shows the host's shortcut ('/ or \u2318K' in the app, 'Ctrl+K' in a browser), and the stock window has square terminal corners.",
+   "files": [
+    "ui/components/desktop/TitleStrip.tsx",
+    "ui/components/MarketCommandHeader.tsx",
+    "ui/app/globals.css"
+   ],
+   "tests": "desktop.check source guards. Visual check in the K / D screenshots.",
+   "user_visible_change": "Build chip reads BUILD. The stock window corners are square.",
+   "reason_if_not_fixed": "The other -18 items (PIPE step numbers, GBOX/MLW stale date defaults, dev paths in RSK/DESK copy, emoji, fmtPct minus, 'cr' casing, LAN notes) are in files other teams own."
+  },
+  {
+   "id": "C2-performance-02",
+   "outcome": "fixed",
+   "what_changed": "components/shell/tabModules.ts is one registry of the page import()s (the same webpack chunks as before, promises cached per id). lazyTab renders a resolved module directly and skips the Suspense skeleton and React's 300 ms reveal throttle. PlatformShell preloads the URL's page module (and the stock window module for ?sym=) during the boot gate, bounded at 900 ms and under the existing ceiling, so a new, restored or reloaded window opens its first page without the throttle.",
+   "files": [
+    "ui/components/shell/tabModules.ts",
+    "ui/components/desktop/PlatformShell.tsx",
+    "ui/app/page.tsx"
+   ],
+   "tests": "desktop.check (preloadTab guards). Browser section P (5 deep-linked pages: 0 TabSkeleton renders in the new build, Chromium + WebKit PASS). The negative control at 14:56 against the live 20261025-135500 release showed the skeleton 4x on each page.",
+   "user_visible_change": "A new or restored window shows its page at once instead of a brief skeleton."
+  },
+  {
+   "id": "C2-performance-03",
+   "outcome": "fixed",
+   "what_changed": "Attention animations are finite. The NEWS dock NEW pulse runs 3 times and then stays a steady amber dot (a newer scan restarts it). The NEW BUILD glow runs 3 times, the down-dot pulse 6 times. prefers-reduced-motion disables them, and the link-down transition too.",
+   "files": [
+    "ui/app/globals.css",
+    "ui/components/news/NewsDock.tsx"
+   ],
+   "tests": "desktop.check (C2-performance-03 CSS guards). Browser section A (app window on DESK with a simulated new build and a NEW scan: every document animation finite, sd-attn 3x and nd-pulse 3x, and none still running after 8 s): Chromium + WebKit PASS.",
+   "user_visible_change": "The NEW / NEW BUILD indicators stop pulsing after a few seconds and stay highlighted."
+  },
+  {
+   "id": "C2-performance-06",
+   "outcome": "fixed",
+   "what_changed": "The hidden PipelineStudio is mounted only once PIPE has been opened in that window (it then keeps its training state across page switches). Before, every window mounted it and polled the dormant RL pipeline on every page.",
+   "files": [
+    "ui/app/page.tsx"
+   ],
+   "tests": "desktop.check (C2-performance-06 guard). Browser section I (BRF idle: 0 /api/pipeline/* requests): Chromium + WebKit PASS."
+  },
+  {
+   "id": "C2-performance-07",
+   "outcome": "fixed",
+   "what_changed": "The 1 s IST clock + session chip is its own memo'd, second-aligned leaf (HeaderClock), so the header no longer re-renders every second.",
+   "files": [
+    "ui/components/MarketCommandHeader.tsx"
+   ],
+   "tests": "desktop.check (HeaderClock guards). Browser section L (clock present in browser mode)."
+  },
+  {
+   "id": "FX-UI-leftover-eco-calendar",
+   "outcome": "fixed",
+   "what_changed": "One shared request per IST day for the ECO-calendar query used by BRIEF, the header holiday rule and the strip (lib/sharedFetch.ts, \u2264 30 min, keyed by query, rejected requests dropped so the next caller retries). The holiday rule now uses BRIEF's own query (0,7) instead of (0,10). Holidays are read for today only, and BRIEF's request is unchanged. The response is a schedule (reference files, RBI/Fed dates, NSE holidays), so the cache hides no intraday change. BRIEF's REFRESH ALL never reloaded it. Parity tooling: W2-OPS already accepts ?back=0&ahead=7 in netpolicy.EXPECTED_DELTAS (14:19). PR-OPS1 adds expected deltas for the requests wave 2 REMOVED.",
+   "files": [
+    "ui/lib/sharedFetch.ts",
+    "ui/lib/api.ts",
+    "ui/components/desktop/holidays.ts"
+   ],
+   "tests": "desktop.check sharedFetch matrix. Browser section I (BRF: exactly one eco-calendar request, ?back=0&ahead=7): Chromium + WebKit PASS."
+  },
+  {
+   "id": "FX-UI-leftover-holidays-retry",
+   "outcome": "fixed",
+   "what_changed": "components/desktop/holidayStore.ts keeps one entry per IST date, and each entry owns its retry timer. A failure right after the IST date changes gets its own retry (the old single module-wide timer from the previous date swallowed it). Fetcher and timers are injected, so it is unit-tested under node.",
+   "files": [
+    "ui/components/desktop/holidayStore.ts",
+    "ui/components/desktop/holidays.ts"
+   ],
+   "tests": "desktop.check holidayStore block (date change mid-retry, cancel of the old date's retry, listener lifetime)."
+  },
+  {
+   "id": "FX-UI-leftover-newsdock-first-visit",
+   "outcome": "fixed",
+   "what_changed": "When the first successful poll finds no scan at all, the seen-marker starts at 0, so the first scan that appears later is new and pulses (the same rule as the alerts' SEEN_NOTHING).",
+   "files": [
+    "ui/components/news/NewsDock.tsx"
+   ],
+   "tests": "desktop.check NewsDock guards."
+  },
+  {
+   "id": "FX-UI-leftover-iframe-guard",
+   "outcome": "fixed",
+   "what_changed": "The platform.check iframe-sandbox guard now uses a JSX-aware scanner that also matches non-self-closing <iframe \u2026> elements, multi-line attributes included.",
+   "files": [
+    "ui/lib/__tests__/platform.check.ts"
+   ],
+   "tests": "platform.check 120/120 (scanner cases for self-closing, open/close and multi-line iframes)."
+  },
+  {
+   "id": "FX-UI-leftover-C3-02-multiwin-test",
+   "outcome": "fixed",
+   "what_changed": "The multi-window hook's core is extracted to lib/prefs/external.ts subscribeExternalPrefChange (coalescing, key filtering, error isolation, listener lifetime). useExternalChange delegates to it, so node runs the real hook logic. scripts/desktop_qa/e2e_multiwin.py remains the browser-level test.",
+   "files": [
+    "ui/lib/prefs/external.ts",
+    "ui/lib/prefs/useExternalChange.ts",
+    "ui/lib/__tests__/prefs.check.ts"
+   ],
+   "tests": "prefs.check X3 block (6 checks plus the delegation guard). prefs.check 160/160."
+  },
+  {
+   "id": "FX-UI-leftover-migration-wording",
+   "outcome": "fixed",
+   "what_changed": "The migration notice uses K2 (GET /api/prefs 'migration'). It says 'have not been imported yet' only when K2 proves no legacy import ever happened (legacy_import_at null) and no per-record legacy origin exists. Without K2 it uses the conditional wording, and with a recorded import (including W2-API's inferred:true backfill) it shows nothing. sync.ts passes the whole prefs GET body to the rule.",
+   "files": [
+    "ui/lib/prefs/migration.ts",
+    "ui/lib/prefs/sync.ts",
+    "ui/components/desktop/ShellNotices.tsx",
+    "ui/components/desktop/PlatformShell.tsx"
+   ],
+   "tests": "prefs.check M/K2/E21 blocks. Browser section M (wording follows the scratch store's K2 = none): Chromium + WebKit PASS.",
+   "user_visible_change": "The SETTINGS notice states 'not imported' only when the server proves it. Otherwise it is worded conditionally."
+  },
+  {
+   "id": "PM-monitor-ws-lifecycle",
+   "outcome": "fixed",
+   "what_changed": "ADOPTED from the accidental duplicate and reviewed. lib/monitorLifecycle.ts attachMonitorSocket, called once by AppProvider (context/AppContext.tsx, a 3-line change): ONE socket per window (page switches, boundaries and the reconnect epoch do not remount AppProvider), a clean 1000 close on unmount and on pagehide, exactly one reopen on a persisted pageshow (bfcache), and the status flag read from the manager's real state. Review verdict: correct and minimal. The only browser-mode behaviour change is the close on pagehide, which also makes the page bfcache-eligible in Chromium (Back from another site may restore it instead of reloading). One harmless leak: one no-op status closure per AppProvider mount stays in wsManager's callback Set. My additions to ws.check.ts: crash-safe socket lookups, a tighter superseded-close assertion, and section 7 for the wsManager defect (see PR-WS1). Section 7 asserts the defect while unpatched (a negative control) and enforces the fix automatically once the patch's guard is in the source.",
+   "files": [
+    "ui/lib/monitorLifecycle.ts",
+    "ui/context/AppContext.tsx",
+    "ui/lib/__tests__/ws.check.ts"
+   ],
+   "tests": "node ws.check.ts: 66/66 (unpatched repo; section 7 confirms the defect). 66/66 with PR-WS1 applied to a scratch tree. The negative control (old lifecycle in scratch) fails 44 of 66. Browser section W through w2shell_server's counted LOCAL socket (web + app): load 1 open, 4 page switches + Back still 1 accepted, leaving the terminal -> 0 open with close 1000, Back -> exactly 1 new, window close -> 0 open. Chromium + WebKit PASS. The WebKit context teardown closes with 1005 (no pagehide in Playwright's teardown).",
+   "user_visible_change": "The live-quote socket closes when the page is left or hidden in the back-forward cache and reopens when it comes back."
+  }
+ ],
+ "files_changed": [
+  "ui/app/page.tsx",
+  "ui/app/globals.css",
+  "ui/app/global-error.tsx",
+  "ui/components/MarketCommandHeader.tsx",
+  "ui/components/CommandBar.tsx",
+  "ui/components/StockDetailModal.tsx",
+  "ui/components/ErrorCatcher.tsx",
+  "ui/components/news/NewsDock.tsx",
+  "ui/components/desktop/PlatformShell.tsx",
+  "ui/components/desktop/TitleStrip.tsx",
+  "ui/components/desktop/ShellNotices.tsx",
+  "ui/components/desktop/holidays.ts",
+  "ui/components/desktop/holidayStore.ts (new)",
+  "ui/components/desktop/zoom.ts (new)",
+  "ui/components/desktop/__tests__/desktop.check.ts",
+  "ui/components/shell/ShellState.tsx (new)",
+  "ui/components/shell/TabErrorBoundary.tsx (new)",
+  "ui/components/shell/tabModules.ts (new)",
+  "ui/components/shell/useFeed.ts (new)",
+  "ui/context/AppContext.tsx (adopted from the accidental duplicate, reviewed)",
+  "ui/lib/api.ts",
+  "ui/lib/clientErrors.ts (new)",
+  "ui/lib/deepLink.ts (new)",
+  "ui/lib/shortcuts.ts (new)",
+  "ui/lib/reconnect.ts (new)",
+  "ui/lib/sharedFetch.ts (new)",
+  "ui/lib/feedState.ts (new)",
+  "ui/lib/monitorLifecycle.ts (new; adopted from the accidental duplicate, reviewed)",
+  "ui/lib/platform/index.ts",
+  "ui/lib/platform/links.ts",
+  "ui/lib/platform/types.ts",
+  "ui/lib/prefs/external.ts",
+  "ui/lib/prefs/keys.ts",
+  "ui/lib/prefs/migration.ts",
+  "ui/lib/prefs/sync.ts",
+  "ui/lib/prefs/useExternalChange.ts",
+  "ui/lib/__tests__/platform.check.ts",
+  "ui/lib/__tests__/prefs.check.ts",
+  "ui/lib/__tests__/ws.check.ts (new; adopted from the duplicate, then extended by me: 60 -> 66 checks)"
+ ],
+ "tests_run": [
+  {
+   "command": "cd ui && npx tsc --noEmit",
+   "result": "clean (exit 0)"
+  },
+  {
+   "command": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON ui/components/desktop/__tests__/desktop.check.ts",
+   "result": "222 passed, 0 failed"
+  },
+  {
+   "command": "node \u2026 ui/lib/__tests__/prefs.check.ts",
+   "result": "all 160 checks pass"
+  },
+  {
+   "command": "node \u2026 ui/lib/__tests__/platform.check.ts",
+   "result": "all 120 checks pass"
+  },
+  {
+   "command": "node \u2026 ui/lib/__tests__/alerts.check.ts",
+   "result": "all 18 checks pass"
+  },
+  {
+   "command": "node \u2026 ui/lib/__tests__/ws.check.ts",
+   "result": "all 66 checks pass (NOTE: PR-WS1 not applied, section 7 asserted the known defect)"
+  },
+  {
+   "command": "node \u2026 <scratch tree with PR-WS1 applied>/ui/lib/__tests__/ws.check.ts (+ tsc --noEmit on that tree)",
+   "result": "all 66 pass; tsc clean"
+  },
+  {
+   "command": "node \u2026 <scratch tree with the pre-fix lifecycle>/ui/lib/__tests__/ws.check.ts (negative control)",
+   "result": "44 failed, 22 passed (pagehide/pageshow x20 cycles, superseded-close status, backoff) as expected"
+  },
+  {
+   "command": "node --import <scratch ts-resolve hook> ui/lib/__tests__/errors.check.ts",
+   "result": "all 14 cases pass (file not mine, unchanged; plain node needs tsx for its extensionless import, pre-existing)"
+  },
+  {
+   "command": "node \u2026 ui/components/__tests__/pages.check.ts (W2-UI-PAGES, run for regressions)",
+   "result": "116 passed, 0 failed, 1 pending (their globals.css dim-token patch request)"
+  },
+  {
+   "command": "cd ui && node --test scripts/*.test.mjs",
+   "result": "26 pass, 0 fail"
+  },
+  {
+   "command": "pytest tests/integration/test_desktop_contract.py tests/integration/test_desktop_qa_harness.py",
+   "result": "104 passed"
+  },
+  {
+   "command": "pytest <scratch copy of test_desktop_qa_harness.py importing the PR-OPS1-patched netpolicy>",
+   "result": "81 passed"
+  },
+  {
+   "command": "ruff check --line-length 130 <scratch PR-OPS1 netpolicy.py>",
+   "result": "All checks passed"
+  },
+  {
+   "command": "shell_checks.py --base http://127.0.0.1:8093 (w2shell_server) --engine chromium (L,D,S,C,G,R,K,Z,P,A,I,M,W)",
+   "result": "13/13 PASS; 0 live monitor-socket accepts on :8010 during the run (ui-api log count 1139 -> 1139)"
+  },
+  {
+   "command": "shell_checks.py --base http://127.0.0.1:8093 (w2shell_server) --engine webkit (same 13 sections)",
+   "result": "13/13 PASS; 0 live monitor-socket accepts on :8010"
+  },
+  {
+   "command": "scripts/ui_audit.py --tabs all --browser both --base http://127.0.0.1:8093 (w2shell_server) --screenshots viewport",
+   "result": "Chromium 39/42 PASS, WebKit 38/42 PASS. Every failure except one is an expected POST refused by --block-mutations: ostrategy POST /api/options/strategy/analyze, discovery POST /api/alpha/scan, mcxgold POST /api/mcx/ticket (403, both engines). The exception is one transient WebKit 502 on commodity GET /api/commodity/gold-preopen/log?threshold=300. It is not reproducible: a direct GET gives 200, every ui-api log line for it is 200, and a commodity re-audit in WebKit gives 1/1 PASS. 0 page errors. The wrapper counted 84 local monitor sockets (one per page load), 84 closed, all with code 1000. One live :8010 monitor accept in that window came from the installed SuryaDhana.app (system WebKit Networking pid 42761), not from the audit."
+  },
+  {
+   "command": "scripts/ui_audit.py --tabs commodity --browser webkit --base http://127.0.0.1:8093 (recheck of the transient 502)",
+   "result": "1/1 PASS, 0 failed requests"
+  }
+ ],
+ "patch_requests": [
+  {
+   "file": "ui/lib/wsManager.ts",
+   "old": "      this.ws = new WebSocket(this.url)\n\n      this.ws.onopen = () => {\n        this.reconnectDelay = 2000\n        this._startHeartbeat()\n        this._sendSubscription()\n        this._emitStatus(true)\n      }\n\n      this.ws.onmessage = (ev) => this._onMessage(ev)\n\n      this.ws.onclose = (ev) => {\n        this._stopHeartbeat()\n        this._emitStatus(false)\n        if (this.shouldConnect && ev.code !== 1000) {\n          this._scheduleReconnect()\n        }\n      }\n\n      this.ws.onerror = () => {",
+   "new": "      const sock = new WebSocket(this.url)\n      this.ws = sock\n\n      sock.onopen = () => {\n        this.reconnectDelay = 2000\n        this._startHeartbeat()\n        this._sendSubscription()\n        this._emitStatus(true)\n      }\n\n      sock.onmessage = (ev) => this._onMessage(ev)\n\n      sock.onclose = (ev) => {\n        // A socket that disconnect() closed and a later connect() replaced reports its close late (the close\n        // handshake is async): it must not stop the live socket's heartbeat, mark it down or start a reconnect.\n        if (this.ws !== sock) return\n        this._stopHeartbeat()\n        this._emitStatus(false)\n        if (this.shouldConnect && ev.code !== 1000) {\n          this._scheduleReconnect()\n        }\n      }\n\n      sock.onerror = () => {",
+   "why": "PR-WS1 (wsManager, from the PM's socket-lifecycle request). A superseded socket's late close event (disconnect() closed it, then a reconnect replaced it, e.g. pagehide -> pageshow or a remount) runs the shared onclose. That stops the LIVE socket's 25 s heartbeat, emits status false, and, when the old socket was closed while CONNECTING (close code 1006), schedules a spurious reconnect that doubles the backoff. The fix ignores close events of any socket that is no longer this.ws. A server drop of the live socket is unchanged. Verified: the patched scratch tree is tsc clean and ws.check 66/66 (section 7 enforces heartbeat kept and no spurious reconnect). The unpatched repo reproduces both defects (section 7 negative control). After it lands, ws.check.ts switches to enforcing automatically (it detects the guard). I do not think wsManager.ts should move to me: the fix is this one guard."
+  },
+  {
+   "file": "scripts/desktop_qa/netpolicy.py",
+   "old": "                  \"NSE holiday lookup shared by the page header and the desktop title strip (C3-logic-unchanged-06)\"),\n)\n",
+   "new": "                  \"NSE holiday lookup shared by the page header and the desktop title strip (C3-logic-unchanged-06)\"),\n    # Wave 2 (W2-UI-SHELL) REMOVED these from the pages that do not show them. An older build still sends them on\n    # every page, so there they are one-sided by design; EQS, OVRV and PIPE call them on both sides and stay compared.\n    ExpectedDelta(\"w2-stock-list-eqs-only\", \"GET\", re.compile(r\"^/api/stocks/list$\"),\n                  (((\"limit\", \"1500\"), (\"search\", \"\"), (\"skip\", \"0\")),),\n                  \"the 0.9 MB 1,500-stock list loads only for EQS since wave 2 (C1-trader-ux-03)\"),\n    ExpectedDelta(\"w2-enrichment-ovrv-only\", \"GET\", re.compile(r\"^/api/dashboard/enrichment-status$\"), ((),),\n                  \"the enrichment status loads only for OVRV since wave 2 (C1-trader-ux-03)\"),\n    ExpectedDelta(\"w2-pipeline-pipe-only\", \"GET\",\n                  re.compile(r\"^/api/pipeline/(?:service-health|model-metrics|feature-importance|data-quality\"\n                             r\"|rl-status|rl-training-metrics)$\"), ((),),\n                  \"the hidden PipelineStudio mounts and polls only once PIPE was opened, since wave 2 (C2-performance-06)\"),\n)\n",
+   "why": "PR-OPS1 (W2-OPS parity tooling). Wave 2 removed three page-independent requests from the pages that do not show their data: the 1,500-stock list (EQS only, C1-trader-ux-03), the enrichment status (OVRV only) and the PipelineStudio polls (PIPE only, C2-performance-06). parity.py against an older build (:3000 or a pre-wave-2 release) would report 'API request set differs' on almost every page. These entries set them aside only when they are one-sided. EQS/OVRV/PIPE call them on both sides and stay compared. Verified on a scratch copy: ruff clean, 9/9 expected_delta() cases (other stock-list queries, job status and POST are not matched), and tests/integration/test_desktop_qa_harness.py 81/81 against the patched module."
+  },
+  {
+   "file": "ui/components/LiveMonitorBar.tsx",
+   "old": "import { T } from '@/components/terminal'\n",
+   "new": "import { T } from '@/components/terminal'\nimport { socketChip } from '@/lib/feedState'\nimport { useFeedState } from '@/components/shell/useFeed'\n",
+   "why": "PR-CHIP1 part 1/3 (C1-trader-ux-13). The socket chip must not claim live on a closed market or while LINK DOWN. It uses lib/feedState.ts socketChip + components/shell/useFeed.ts useFeedState (shared holiday rule, no extra request). During the session it is unchanged ('\u25cf STREAMING' / '\u25cf WS LIVE'). Closed market: '\u25cf SOCKET OK \u00b7 NO TICKS'. Link down: '\u25cc LINK DOWN'. Apply all parts together. tsc clean on a scratch tree with both files patched."
+  },
+  {
+   "file": "ui/components/LiveMonitorBar.tsx",
+   "old": "  const { wsConnected } = useLiveQuotes()\n  if (watchlist.length === 0) return null\n",
+   "new": "  const { wsConnected } = useLiveQuotes()\n  const feed = useFeedState()\n  if (watchlist.length === 0) return null\n  // never 'STREAMING' on a closed market or while the link is down (C1-trader-ux-13, lib/feedState.ts)\n  const chip = socketChip({ connected: wsConnected, ...feed, live: '\u25cf STREAMING', offline: '\u25cc WS RECONNECTING' })\n",
+   "why": "PR-CHIP1 part 2/3 (C1-trader-ux-13). The socket chip must not claim live on a closed market or while LINK DOWN. It uses lib/feedState.ts socketChip + components/shell/useFeed.ts useFeedState (shared holiday rule, no extra request). During the session it is unchanged ('\u25cf STREAMING' / '\u25cf WS LIVE'). Closed market: '\u25cf SOCKET OK \u00b7 NO TICKS'. Link down: '\u25cc LINK DOWN'. Apply all parts together. tsc clean on a scratch tree with both files patched."
+  },
+  {
+   "file": "ui/components/LiveMonitorBar.tsx",
+   "old": "      <span style={{ fontSize: 9, color: wsConnected ? T.green : T.dim, padding: '0 10px', letterSpacing: 1, flex: 'none' }}>\n        {wsConnected ? '\u25cf STREAMING' : '\u25cc WS RECONNECTING'}\n",
+   "new": "      <span title={chip.title} style={{ fontSize: 9, color: chip.tone === 'live' ? T.green : chip.tone === 'closed' ? T.muted : T.dim,\n                                        padding: '0 10px', letterSpacing: 1, flex: 'none' }}>\n        {chip.text}\n",
+   "why": "PR-CHIP1 part 3/3 (C1-trader-ux-13). The socket chip must not claim live on a closed market or while LINK DOWN. It uses lib/feedState.ts socketChip + components/shell/useFeed.ts useFeedState (shared holiday rule, no extra request). During the session it is unchanged ('\u25cf STREAMING' / '\u25cf WS LIVE'). Closed market: '\u25cf SOCKET OK \u00b7 NO TICKS'. Link down: '\u25cc LINK DOWN'. Apply all parts together. tsc clean on a scratch tree with both files patched."
+  },
+  {
+   "file": "ui/components/AlphaDiscoveryDesk.tsx",
+   "old": "import { useWatchlist, useLiveQuotes } from '@/context/AppContext'\n",
+   "new": "import { useWatchlist, useLiveQuotes } from '@/context/AppContext'\nimport { socketChip } from '@/lib/feedState'\nimport { useFeedState } from '@/components/shell/useFeed'\n",
+   "why": "PR-CHIP2 part 1/3 (C1-trader-ux-13). The socket chip must not claim live on a closed market or while LINK DOWN. It uses lib/feedState.ts socketChip + components/shell/useFeed.ts useFeedState (shared holiday rule, no extra request). During the session it is unchanged ('\u25cf STREAMING' / '\u25cf WS LIVE'). Closed market: '\u25cf SOCKET OK \u00b7 NO TICKS'. Link down: '\u25cc LINK DOWN'. Apply all parts together. tsc clean on a scratch tree with both files patched."
+  },
+  {
+   "file": "ui/components/AlphaDiscoveryDesk.tsx",
+   "old": "  const { liveQuotes, wsConnected } = useLiveQuotes()\n",
+   "new": "  const { liveQuotes, wsConnected } = useLiveQuotes()\n  const feed = useFeedState()\n  // never 'WS LIVE' on a closed market or while the link is down (C1-trader-ux-13, lib/feedState.ts)\n  const wsChip = socketChip({ connected: wsConnected, ...feed, live: '\u25cf WS LIVE', offline: '\u25cb WS OFFLINE' })\n",
+   "why": "PR-CHIP2 part 2/3 (C1-trader-ux-13). The socket chip must not claim live on a closed market or while LINK DOWN. It uses lib/feedState.ts socketChip + components/shell/useFeed.ts useFeedState (shared holiday rule, no extra request). During the session it is unchanged ('\u25cf STREAMING' / '\u25cf WS LIVE'). Closed market: '\u25cf SOCKET OK \u00b7 NO TICKS'. Link down: '\u25cc LINK DOWN'. Apply all parts together. tsc clean on a scratch tree with both files patched."
+  },
+  {
+   "file": "ui/components/AlphaDiscoveryDesk.tsx",
+   "old": "right={<Chip color={wsConnected ? T.green : T.red} active={wsConnected}>{wsConnected ? '\u25cf WS LIVE' : '\u25cb WS OFFLINE'}</Chip>} />",
+   "new": "right={<Chip color={wsChip.tone === 'live' ? T.green : wsChip.tone === 'closed' ? T.muted : T.red}\n          active={wsChip.tone === 'live'}>{wsChip.text}</Chip>} />",
+   "why": "PR-CHIP2 part 3/3 (C1-trader-ux-13). The socket chip must not claim live on a closed market or while LINK DOWN. It uses lib/feedState.ts socketChip + components/shell/useFeed.ts useFeedState (shared holiday rule, no extra request). During the session it is unchanged ('\u25cf STREAMING' / '\u25cf WS LIVE'). Closed market: '\u25cf SOCKET OK \u00b7 NO TICKS'. Link down: '\u25cc LINK DOWN'. Apply all parts together. tsc clean on a scratch tree with both files patched."
+  }
+ ],
+ "deploy_notes": [
+  "UI only, no Python or Rust in my diff. Build a release from the current sources with scripts/build_ui.sh. My scratch export 20261025-145341 matches every bundled file I own (only ws.check.ts changed after it, and tests are not bundled).",
+  "Apply PR-WS1 (ui/lib/wsManager.ts) in the same release. ws.check.ts then enforces section 7 automatically.",
+  "Apply PR-CHIP1/PR-CHIP2 with it (or ship them in W2-UI-PAGES's merge). Without them the watchlist bar and ALFA chip keep today's wording.",
+  "Apply PR-OPS1 before running parity.py against :3000 or any pre-wave-2 release. Otherwise expect one-sided /api/stocks/list, /api/dashboard/enrichment-status and /api/pipeline/* diffs on most pages.",
+  "Depends on W2-API's POST /api/client-errors (in the repo) and the K2 'migration' block on GET /api/prefs being live in ui-api. Until ui-api is restarted with them, the UI's K1 POSTs get 404/405 (fire-and-forget, nothing visible) and the migration notice uses its conditional wording.",
+  "K3/K4 need W2-RUST's installed app (zoom event + __SURYADHANA_ZOOM__, shell_new_window {sym}). The UI degrades safely without them: zoom 1, and NEW WINDOW opens the page without the stock.",
+  "User-visible changes are listed per finding (user_visible_change). Trading/business logic is untouched.",
+  "Scratch processes: I stopped the twin's stock relay on :8096 (pid 9417, it exited cleanly in 1 s) and my own stock relay on :8093. The twin's shell_checks pids 10409/10410 had already exited, and the relays on 8121/8123/8124 were gone before I checked. My w2shell_server on :8093 (pid 26895) is stopped too (exited in 2 s). No scratch listener on 8090-8199 and no Playwright process remains. Live services were never started, stopped or restarted by me."
+ ],
+ "open_issues": [
+  "Live sockets before the fix to my harness (my responsibility). Between 14:56 and 14:58 my Chromium run (C,K,P,I) went through the STOCK scratch relay on :8093, which relays /api/monitor/ws/monitor to live :8010. Its P negative control (--live) also loaded 5 pages directly from :8010. Those page loads opened live monitor sockets. The twin's 15:00 WebKit run through :8096 did the same. Since 15:05 every browser run has used w2shell_server, and the harness now mocks the socket in the browser and refuses a base without /__qa/ws: 0 live accepts.",
+  "For W2-API (hang root cause). The live ui-api log since the 14:48 restart (pid 70501) shows 177 'WebSocket /api/monitor/ws/monitor [accepted]' / 'connection open' lines and 0 'connection closed' lines. That is the same pattern as the hang, although lsof shows only a handful of established :8010 connections, so TCP does close. Either the handler never returns after a client disconnect or the close is not logged. The UI side now closes with 1000 on pagehide and unmount (verified end to end).",
+  "wsManager keeps one no-op status closure per AppProvider mount (connect(url, onStatus) has no remove API). This is harmless because the lifecycle's closure is inert after detach. It could be tidied together with PR-WS1 later.",
+  "C1-trader-ux-11 (EQS row height) and the C1-trader-ux-18 items outside my files remain for their owners.",
+  "W2-UI-PAGES's pages.check reports a pending patch request for ui/app/globals.css (dim token T1, PR-W2-UI-PAGES-1/2). globals.css is mine and has a wave-2 section. I have not received that request, so the PM should merge it or route it to me.",
+  "Socket accounting for my final runs: shell checks in both engines gave 0 live :8010 monitor accepts (log count 1139 -> 1139). During the ui_audit, 1 live accept appeared, from client port 63229, held by /System/Library/... com.apple.WebKit.Networking pid 42761, i.e. the installed SuryaDhana.app (pid 42755). That is the owner's app, not an audit page (the audit's 84 sockets all went to w2shell_server and closed with 1000).",
+  "ui/lib/format/index.ts was created by W2-UI-PAGES (C1-trader-ux-08). Its path is inside my 'new files under ui/lib/' zone. I left it alone. Noting it so file ownership stays unambiguous.",
+  "ui_audit: Chromium 39/42 PASS, WebKit 38/42 PASS. Every failure except one is an expected POST refused by --block-mutations: ostrategy POST /api/options/strategy/analyze, discovery POST /api/alpha/scan, mcxgold POST /api/mcx/ticket (403, both engines). The exception is one transient WebKit 502 on commodity GET /api/commodity/gold-preopen/log?threshold=300. It is not reproducible: a direct GET gives 200, every ui-api log line for it is 200, and a commodity re-audit in WebKit gives 1/1 PASS. 0 page errors. The wrapper counted 84 local monitor sockets (one per page load), 84 closed, all with code 1000. One live :8010 monitor accept in that window came from the installed SuryaDhana.app (system WebKit Networking pid 42761), not from the audit."
+ ]
+}

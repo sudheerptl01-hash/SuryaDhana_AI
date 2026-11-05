@@ -1,0 +1,9456 @@
+{
+ "Error": null,
+ "Status": 200,
+ "Success": [
+  {
+   "close": 3279.4,
+   "datetime": "2013-11-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 3295.75,
+   "low": 3273.2,
+   "open": 3280.0,
+   "stock_code": "INFTEC",
+   "volume": 50502
+  },
+  {
+   "close": 406.88,
+   "datetime": "2013-11-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 411.32,
+   "low": 404.13,
+   "open": 406.5,
+   "stock_code": "INFTEC",
+   "volume": 5281120
+  },
+  {
+   "close": 413.36,
+   "datetime": "2013-11-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 414.03,
+   "low": 409.41,
+   "open": 409.41,
+   "stock_code": "INFTEC",
+   "volume": 3693984
+  },
+  {
+   "close": 418.63,
+   "datetime": "2013-11-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 424.99,
+   "low": 414.2,
+   "open": 415.21,
+   "stock_code": "INFTEC",
+   "volume": 7136600
+  },
+  {
+   "close": 420.13,
+   "datetime": "2013-11-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 423.65,
+   "low": 418.75,
+   "open": 418.75,
+   "stock_code": "INFTEC",
+   "volume": 8559320
+  },
+  {
+   "close": 420.5,
+   "datetime": "2013-11-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 424.75,
+   "low": 417.51,
+   "open": 418.75,
+   "stock_code": "INFTEC",
+   "volume": 7781000
+  },
+  {
+   "close": 417.01,
+   "datetime": "2013-11-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 421.88,
+   "low": 416.01,
+   "open": 420.31,
+   "stock_code": "INFTEC",
+   "volume": 6324032
+  },
+  {
+   "close": 416.75,
+   "datetime": "2013-11-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 419.83,
+   "low": 414.51,
+   "open": 414.51,
+   "stock_code": "INFTEC",
+   "volume": 4636376
+  },
+  {
+   "close": 419.25,
+   "datetime": "2013-11-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 421.88,
+   "low": 418.76,
+   "open": 419.04,
+   "stock_code": "INFTEC",
+   "volume": 4342256
+  },
+  {
+   "close": 425.76,
+   "datetime": "2013-11-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 426.88,
+   "low": 423.48,
+   "open": 423.88,
+   "stock_code": "INFTEC",
+   "volume": 6310808
+  },
+  {
+   "close": 429.9,
+   "datetime": "2013-11-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 431.0,
+   "low": 425.01,
+   "open": 425.75,
+   "stock_code": "INFTEC",
+   "volume": 8859176
+  },
+  {
+   "close": 425.19,
+   "datetime": "2013-11-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 430.41,
+   "low": 424.38,
+   "open": 426.13,
+   "stock_code": "INFTEC",
+   "volume": 4283432
+  },
+  {
+   "close": 419.13,
+   "datetime": "2013-11-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 425.0,
+   "low": 414.14,
+   "open": 424.5,
+   "stock_code": "INFTEC",
+   "volume": 8383040
+  },
+  {
+   "close": 419.06,
+   "datetime": "2013-11-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 421.88,
+   "low": 417.0,
+   "open": 418.25,
+   "stock_code": "INFTEC",
+   "volume": 2719904
+  },
+  {
+   "close": 416.38,
+   "datetime": "2013-11-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 422.35,
+   "low": 413.38,
+   "open": 419.0,
+   "stock_code": "INFTEC",
+   "volume": 5691840
+  },
+  {
+   "close": 413.25,
+   "datetime": "2013-11-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 418.63,
+   "low": 411.58,
+   "open": 415.0,
+   "stock_code": "INFTEC",
+   "volume": 7114048
+  },
+  {
+   "close": 412.68,
+   "datetime": "2013-11-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 416.98,
+   "low": 410.73,
+   "open": 415.0,
+   "stock_code": "INFTEC",
+   "volume": 6757096
+  },
+  {
+   "close": 416.25,
+   "datetime": "2013-11-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 417.25,
+   "low": 408.13,
+   "open": 412.68,
+   "stock_code": "INFTEC",
+   "volume": 7452840
+  },
+  {
+   "close": 419.38,
+   "datetime": "2013-11-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 420.75,
+   "low": 413.75,
+   "open": 417.0,
+   "stock_code": "INFTEC",
+   "volume": 5374024
+  },
+  {
+   "close": 417.5,
+   "datetime": "2013-12-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 422.11,
+   "low": 415.64,
+   "open": 419.0,
+   "stock_code": "INFTEC",
+   "volume": 4686040
+  },
+  {
+   "close": 418.53,
+   "datetime": "2013-12-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 419.94,
+   "low": 415.0,
+   "open": 415.0,
+   "stock_code": "INFTEC",
+   "volume": 6978856
+  },
+  {
+   "close": 420.63,
+   "datetime": "2013-12-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 423.25,
+   "low": 417.1,
+   "open": 418.75,
+   "stock_code": "INFTEC",
+   "volume": 8415712
+  },
+  {
+   "close": 419.0,
+   "datetime": "2013-12-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 424.88,
+   "low": 417.75,
+   "open": 422.5,
+   "stock_code": "INFTEC",
+   "volume": 6250136
+  },
+  {
+   "close": 415.88,
+   "datetime": "2013-12-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 418.63,
+   "low": 414.78,
+   "open": 417.38,
+   "stock_code": "INFTEC",
+   "volume": 6498176
+  },
+  {
+   "close": 416.25,
+   "datetime": "2013-12-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 423.01,
+   "low": 415.13,
+   "open": 420.63,
+   "stock_code": "INFTEC",
+   "volume": 8829200
+  },
+  {
+   "close": 421.69,
+   "datetime": "2013-12-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 423.73,
+   "low": 416.44,
+   "open": 416.88,
+   "stock_code": "INFTEC",
+   "volume": 12290176
+  },
+  {
+   "close": 422.08,
+   "datetime": "2013-12-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 422.71,
+   "low": 417.5,
+   "open": 420.63,
+   "stock_code": "INFTEC",
+   "volume": 6234896
+  },
+  {
+   "close": 419.88,
+   "datetime": "2013-12-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 423.21,
+   "low": 418.5,
+   "open": 420.55,
+   "stock_code": "INFTEC",
+   "volume": 5474240
+  },
+  {
+   "close": 421.63,
+   "datetime": "2013-12-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 422.5,
+   "low": 418.13,
+   "open": 418.13,
+   "stock_code": "INFTEC",
+   "volume": 8311992
+  },
+  {
+   "close": 431.38,
+   "datetime": "2013-12-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 433.0,
+   "low": 419.23,
+   "open": 422.5,
+   "stock_code": "INFTEC",
+   "volume": 9858600
+  },
+  {
+   "close": 432.5,
+   "datetime": "2013-12-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 435.61,
+   "low": 430.64,
+   "open": 430.64,
+   "stock_code": "INFTEC",
+   "volume": 10620112
+  },
+  {
+   "close": 432.13,
+   "datetime": "2013-12-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 434.22,
+   "low": 430.94,
+   "open": 431.25,
+   "stock_code": "INFTEC",
+   "volume": 9163400
+  },
+  {
+   "close": 439.5,
+   "datetime": "2013-12-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 443.12,
+   "low": 431.88,
+   "open": 432.81,
+   "stock_code": "INFTEC",
+   "volume": 7267568
+  },
+  {
+   "close": 445.5,
+   "datetime": "2013-12-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 446.63,
+   "low": 438.55,
+   "open": 440.63,
+   "stock_code": "INFTEC",
+   "volume": 8599680
+  },
+  {
+   "close": 433.25,
+   "datetime": "2013-12-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 442.49,
+   "low": 432.57,
+   "open": 437.5,
+   "stock_code": "INFTEC",
+   "volume": 8804120
+  },
+  {
+   "close": 436.0,
+   "datetime": "2013-12-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 437.86,
+   "low": 433.26,
+   "open": 435.75,
+   "stock_code": "INFTEC",
+   "volume": 7076320
+  },
+  {
+   "close": 441.23,
+   "datetime": "2013-12-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 441.8,
+   "low": 435.47,
+   "open": 435.88,
+   "stock_code": "INFTEC",
+   "volume": 6859384
+  },
+  {
+   "close": 445.33,
+   "datetime": "2013-12-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 446.5,
+   "low": 441.24,
+   "open": 441.25,
+   "stock_code": "INFTEC",
+   "volume": 7309536
+  },
+  {
+   "close": 437.75,
+   "datetime": "2013-12-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 446.88,
+   "low": 434.38,
+   "open": 445.96,
+   "stock_code": "INFTEC",
+   "volume": 11686448
+  },
+  {
+   "close": 435.33,
+   "datetime": "2013-12-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 440.21,
+   "low": 435.03,
+   "open": 437.5,
+   "stock_code": "INFTEC",
+   "volume": 3587264
+  },
+  {
+   "close": 433.18,
+   "datetime": "2014-01-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 437.38,
+   "low": 432.76,
+   "open": 436.5,
+   "stock_code": "INFTEC",
+   "volume": 1476768
+  },
+  {
+   "close": 435.53,
+   "datetime": "2014-01-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 438.5,
+   "low": 432.91,
+   "open": 432.91,
+   "stock_code": "INFTEC",
+   "volume": 4385616
+  },
+  {
+   "close": 445.15,
+   "datetime": "2014-01-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 446.88,
+   "low": 431.78,
+   "open": 434.38,
+   "stock_code": "INFTEC",
+   "volume": 10004384
+  },
+  {
+   "close": 438.83,
+   "datetime": "2014-01-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 447.56,
+   "low": 433.58,
+   "open": 446.89,
+   "stock_code": "INFTEC",
+   "volume": 11059680
+  },
+  {
+   "close": 432.5,
+   "datetime": "2014-01-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 440.74,
+   "low": 430.84,
+   "open": 439.88,
+   "stock_code": "INFTEC",
+   "volume": 7653792
+  },
+  {
+   "close": 429.18,
+   "datetime": "2014-01-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 434.38,
+   "low": 427.63,
+   "open": 432.63,
+   "stock_code": "INFTEC",
+   "volume": 8977440
+  },
+  {
+   "close": 431.07,
+   "datetime": "2014-01-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 435.25,
+   "low": 427.23,
+   "open": 430.0,
+   "stock_code": "INFTEC",
+   "volume": 12527856
+  },
+  {
+   "close": 444.5,
+   "datetime": "2014-01-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 446.88,
+   "low": 431.0,
+   "open": 436.25,
+   "stock_code": "INFTEC",
+   "volume": 29857920
+  },
+  {
+   "close": 458.0,
+   "datetime": "2014-01-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 459.38,
+   "low": 447.75,
+   "open": 447.75,
+   "stock_code": "INFTEC",
+   "volume": 17090192
+  },
+  {
+   "close": 461.49,
+   "datetime": "2014-01-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 461.88,
+   "low": 455.06,
+   "open": 455.63,
+   "stock_code": "INFTEC",
+   "volume": 7381256
+  },
+  {
+   "close": 464.75,
+   "datetime": "2014-01-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 465.54,
+   "low": 460.13,
+   "open": 461.91,
+   "stock_code": "INFTEC",
+   "volume": 17070008
+  },
+  {
+   "close": 464.76,
+   "datetime": "2014-01-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 467.18,
+   "low": 461.71,
+   "open": 462.38,
+   "stock_code": "INFTEC",
+   "volume": 16701208
+  },
+  {
+   "close": 467.63,
+   "datetime": "2014-01-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 470.58,
+   "low": 465.02,
+   "open": 466.13,
+   "stock_code": "INFTEC",
+   "volume": 24599992
+  },
+  {
+   "close": 469.44,
+   "datetime": "2014-01-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.99,
+   "low": 463.06,
+   "open": 464.0,
+   "stock_code": "INFTEC",
+   "volume": 9619384
+  },
+  {
+   "close": 470.25,
+   "datetime": "2014-01-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 471.25,
+   "low": 464.79,
+   "open": 468.75,
+   "stock_code": "INFTEC",
+   "volume": 9436960
+  },
+  {
+   "close": 471.25,
+   "datetime": "2014-01-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 472.25,
+   "low": 467.51,
+   "open": 467.65,
+   "stock_code": "INFTEC",
+   "volume": 6689560
+  },
+  {
+   "close": 474.56,
+   "datetime": "2014-01-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.88,
+   "low": 470.11,
+   "open": 473.01,
+   "stock_code": "INFTEC",
+   "volume": 7868184
+  },
+  {
+   "close": 470.59,
+   "datetime": "2014-01-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.62,
+   "low": 469.34,
+   "open": 470.63,
+   "stock_code": "INFTEC",
+   "volume": 6819360
+  },
+  {
+   "close": 467.4,
+   "datetime": "2014-01-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 470.49,
+   "low": 463.9,
+   "open": 465.0,
+   "stock_code": "INFTEC",
+   "volume": 8038704
+  },
+  {
+   "close": 460.63,
+   "datetime": "2014-01-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 463.59,
+   "low": 458.49,
+   "open": 463.38,
+   "stock_code": "INFTEC",
+   "volume": 14002520
+  },
+  {
+   "close": 464.75,
+   "datetime": "2014-01-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 467.96,
+   "low": 456.71,
+   "open": 458.25,
+   "stock_code": "INFTEC",
+   "volume": 8046048
+  },
+  {
+   "close": 462.5,
+   "datetime": "2014-01-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 464.59,
+   "low": 457.5,
+   "open": 462.96,
+   "stock_code": "INFTEC",
+   "volume": 7120472
+  },
+  {
+   "close": 462.13,
+   "datetime": "2014-01-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 467.47,
+   "low": 460.82,
+   "open": 462.5,
+   "stock_code": "INFTEC",
+   "volume": 5359832
+  },
+  {
+   "close": 453.13,
+   "datetime": "2014-02-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 461.5,
+   "low": 453.1,
+   "open": 460.63,
+   "stock_code": "INFTEC",
+   "volume": 4278408
+  },
+  {
+   "close": 446.66,
+   "datetime": "2014-02-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 448.99,
+   "low": 443.32,
+   "open": 447.63,
+   "stock_code": "INFTEC",
+   "volume": 4486200
+  },
+  {
+   "close": 447.75,
+   "datetime": "2014-02-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 448.63,
+   "low": 442.84,
+   "open": 447.5,
+   "stock_code": "INFTEC",
+   "volume": 4325864
+  },
+  {
+   "close": 445.25,
+   "datetime": "2014-02-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 447.88,
+   "low": 442.63,
+   "open": 446.5,
+   "stock_code": "INFTEC",
+   "volume": 5702728
+  },
+  {
+   "close": 446.38,
+   "datetime": "2014-02-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 450.16,
+   "low": 443.61,
+   "open": 448.38,
+   "stock_code": "INFTEC",
+   "volume": 7414632
+  },
+  {
+   "close": 445.63,
+   "datetime": "2014-02-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 448.25,
+   "low": 444.69,
+   "open": 447.49,
+   "stock_code": "INFTEC",
+   "volume": 6034680
+  },
+  {
+   "close": 449.5,
+   "datetime": "2014-02-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 452.75,
+   "low": 446.69,
+   "open": 448.0,
+   "stock_code": "INFTEC",
+   "volume": 5582728
+  },
+  {
+   "close": 449.92,
+   "datetime": "2014-02-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 453.43,
+   "low": 449.15,
+   "open": 450.06,
+   "stock_code": "INFTEC",
+   "volume": 4196008
+  },
+  {
+   "close": 449.38,
+   "datetime": "2014-02-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 452.24,
+   "low": 447.51,
+   "open": 450.6,
+   "stock_code": "INFTEC",
+   "volume": 3571240
+  },
+  {
+   "close": 456.87,
+   "datetime": "2014-02-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 457.49,
+   "low": 450.41,
+   "open": 451.94,
+   "stock_code": "INFTEC",
+   "volume": 5943072
+  },
+  {
+   "close": 457.74,
+   "datetime": "2014-02-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 460.63,
+   "low": 456.11,
+   "open": 460.63,
+   "stock_code": "INFTEC",
+   "volume": 13508168
+  },
+  {
+   "close": 459.52,
+   "datetime": "2014-02-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 461.83,
+   "low": 455.88,
+   "open": 455.88,
+   "stock_code": "INFTEC",
+   "volume": 4976056
+  },
+  {
+   "close": 470.0,
+   "datetime": "2014-02-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 470.25,
+   "low": 461.89,
+   "open": 461.96,
+   "stock_code": "INFTEC",
+   "volume": 7061080
+  },
+  {
+   "close": 464.13,
+   "datetime": "2014-02-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 468.11,
+   "low": 463.25,
+   "open": 468.11,
+   "stock_code": "INFTEC",
+   "volume": 8806416
+  },
+  {
+   "close": 469.37,
+   "datetime": "2014-02-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.43,
+   "low": 465.91,
+   "open": 467.0,
+   "stock_code": "INFTEC",
+   "volume": 5473384
+  },
+  {
+   "close": 468.94,
+   "datetime": "2014-02-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.21,
+   "low": 466.25,
+   "open": 468.25,
+   "stock_code": "INFTEC",
+   "volume": 4352072
+  },
+  {
+   "close": 473.0,
+   "datetime": "2014-02-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.01,
+   "low": 469.38,
+   "open": 469.38,
+   "stock_code": "INFTEC",
+   "volume": 8081768
+  },
+  {
+   "close": 477.13,
+   "datetime": "2014-02-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 477.23,
+   "low": 471.51,
+   "open": 472.5,
+   "stock_code": "INFTEC",
+   "volume": 7338264
+  },
+  {
+   "close": 478.58,
+   "datetime": "2014-02-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 479.64,
+   "low": 470.14,
+   "open": 470.14,
+   "stock_code": "INFTEC",
+   "volume": 9716832
+  },
+  {
+   "close": 474.38,
+   "datetime": "2014-03-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.24,
+   "low": 473.99,
+   "open": 478.13,
+   "stock_code": "INFTEC",
+   "volume": 6734608
+  },
+  {
+   "close": 474.88,
+   "datetime": "2014-03-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 478.06,
+   "low": 470.24,
+   "open": 471.25,
+   "stock_code": "INFTEC",
+   "volume": 6931624
+  },
+  {
+   "close": 478.5,
+   "datetime": "2014-03-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 480.55,
+   "low": 476.24,
+   "open": 478.49,
+   "stock_code": "INFTEC",
+   "volume": 4902784
+  },
+  {
+   "close": 479.63,
+   "datetime": "2014-03-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.24,
+   "low": 477.17,
+   "open": 479.75,
+   "stock_code": "INFTEC",
+   "volume": 6201064
+  },
+  {
+   "close": 467.5,
+   "datetime": "2014-03-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 479.25,
+   "low": 463.54,
+   "open": 478.38,
+   "stock_code": "INFTEC",
+   "volume": 14966560
+  },
+  {
+   "close": 460.0,
+   "datetime": "2014-03-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 466.21,
+   "low": 455.66,
+   "open": 466.21,
+   "stock_code": "INFTEC",
+   "volume": 7382368
+  },
+  {
+   "close": 459.53,
+   "datetime": "2014-03-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 463.61,
+   "low": 453.88,
+   "open": 456.63,
+   "stock_code": "INFTEC",
+   "volume": 4118632
+  },
+  {
+   "close": 459.25,
+   "datetime": "2014-03-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 462.92,
+   "low": 456.5,
+   "open": 459.18,
+   "stock_code": "INFTEC",
+   "volume": 3922800
+  },
+  {
+   "close": 420.0,
+   "datetime": "2014-03-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 429.99,
+   "low": 417.5,
+   "open": 427.5,
+   "stock_code": "INFTEC",
+   "volume": 40203568
+  },
+  {
+   "close": 423.75,
+   "datetime": "2014-03-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 425.49,
+   "low": 416.88,
+   "open": 417.5,
+   "stock_code": "INFTEC",
+   "volume": 11091872
+  },
+  {
+   "close": 418.0,
+   "datetime": "2014-03-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 426.49,
+   "low": 417.5,
+   "open": 425.0,
+   "stock_code": "INFTEC",
+   "volume": 11338104
+  },
+  {
+   "close": 408.91,
+   "datetime": "2014-03-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 419.73,
+   "low": 404.84,
+   "open": 418.75,
+   "stock_code": "INFTEC",
+   "volume": 15703848
+  },
+  {
+   "close": 412.89,
+   "datetime": "2014-03-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 418.69,
+   "low": 408.75,
+   "open": 408.75,
+   "stock_code": "INFTEC",
+   "volume": 8005520
+  },
+  {
+   "close": 414.0,
+   "datetime": "2014-03-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 417.25,
+   "low": 408.81,
+   "open": 416.25,
+   "stock_code": "INFTEC",
+   "volume": 12339056
+  },
+  {
+   "close": 412.01,
+   "datetime": "2014-03-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 414.23,
+   "low": 410.15,
+   "open": 411.75,
+   "stock_code": "INFTEC",
+   "volume": 414360
+  },
+  {
+   "close": 409.38,
+   "datetime": "2014-03-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 414.81,
+   "low": 408.75,
+   "open": 409.03,
+   "stock_code": "INFTEC",
+   "volume": 8111808
+  },
+  {
+   "close": 406.38,
+   "datetime": "2014-03-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 409.96,
+   "low": 405.75,
+   "open": 406.0,
+   "stock_code": "INFTEC",
+   "volume": 7408616
+  },
+  {
+   "close": 405.75,
+   "datetime": "2014-03-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 408.62,
+   "low": 403.83,
+   "open": 407.5,
+   "stock_code": "INFTEC",
+   "volume": 8417528
+  },
+  {
+   "close": 403.79,
+   "datetime": "2014-03-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 407.86,
+   "low": 401.99,
+   "open": 406.0,
+   "stock_code": "INFTEC",
+   "volume": 13145504
+  },
+  {
+   "close": 406.88,
+   "datetime": "2014-03-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 409.88,
+   "low": 403.41,
+   "open": 405.01,
+   "stock_code": "INFTEC",
+   "volume": 7091968
+  },
+  {
+   "close": 411.25,
+   "datetime": "2014-03-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 413.12,
+   "low": 403.76,
+   "open": 410.66,
+   "stock_code": "INFTEC",
+   "volume": 9075864
+  },
+  {
+   "close": 414.25,
+   "datetime": "2014-04-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 415.63,
+   "low": 409.38,
+   "open": 410.38,
+   "stock_code": "INFTEC",
+   "volume": 8573480
+  },
+  {
+   "close": 415.38,
+   "datetime": "2014-04-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 418.75,
+   "low": 413.81,
+   "open": 418.6,
+   "stock_code": "INFTEC",
+   "volume": 5524520
+  },
+  {
+   "close": 417.01,
+   "datetime": "2014-04-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 418.5,
+   "low": 414.88,
+   "open": 417.44,
+   "stock_code": "INFTEC",
+   "volume": 4665176
+  },
+  {
+   "close": 413.29,
+   "datetime": "2014-04-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 419.5,
+   "low": 413.26,
+   "open": 418.88,
+   "stock_code": "INFTEC",
+   "volume": 3908080
+  },
+  {
+   "close": 411.12,
+   "datetime": "2014-04-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 414.31,
+   "low": 407.0,
+   "open": 412.25,
+   "stock_code": "INFTEC",
+   "volume": 7065544
+  },
+  {
+   "close": 406.31,
+   "datetime": "2014-04-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 413.73,
+   "low": 403.81,
+   "open": 410.13,
+   "stock_code": "INFTEC",
+   "volume": 10585224
+  },
+  {
+   "close": 399.88,
+   "datetime": "2014-04-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 407.22,
+   "low": 398.27,
+   "open": 406.81,
+   "stock_code": "INFTEC",
+   "volume": 12098096
+  },
+  {
+   "close": 404.75,
+   "datetime": "2014-04-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 406.95,
+   "low": 395.63,
+   "open": 401.25,
+   "stock_code": "INFTEC",
+   "volume": 18546480
+  },
+  {
+   "close": 408.58,
+   "datetime": "2014-04-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 423.5,
+   "low": 405.94,
+   "open": 416.53,
+   "stock_code": "INFTEC",
+   "volume": 20589960
+  },
+  {
+   "close": 395.38,
+   "datetime": "2014-04-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 405.24,
+   "low": 393.5,
+   "open": 405.24,
+   "stock_code": "INFTEC",
+   "volume": 13023984
+  },
+  {
+   "close": 398.13,
+   "datetime": "2014-04-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 401.26,
+   "low": 394.79,
+   "open": 397.5,
+   "stock_code": "INFTEC",
+   "volume": 8343104
+  },
+  {
+   "close": 397.63,
+   "datetime": "2014-04-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 402.5,
+   "low": 396.25,
+   "open": 401.25,
+   "stock_code": "INFTEC",
+   "volume": 6069744
+  },
+  {
+   "close": 394.38,
+   "datetime": "2014-04-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 400.0,
+   "low": 392.8,
+   "open": 396.51,
+   "stock_code": "INFTEC",
+   "volume": 6494888
+  },
+  {
+   "close": 396.75,
+   "datetime": "2014-04-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 398.98,
+   "low": 395.5,
+   "open": 396.76,
+   "stock_code": "INFTEC",
+   "volume": 11967600
+  },
+  {
+   "close": 396.76,
+   "datetime": "2014-04-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 400.0,
+   "low": 395.42,
+   "open": 398.5,
+   "stock_code": "INFTEC",
+   "volume": 5896224
+  },
+  {
+   "close": 397.31,
+   "datetime": "2014-04-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 399.13,
+   "low": 395.63,
+   "open": 396.13,
+   "stock_code": "INFTEC",
+   "volume": 5938072
+  },
+  {
+   "close": 397.63,
+   "datetime": "2014-04-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 399.38,
+   "low": 396.38,
+   "open": 397.88,
+   "stock_code": "INFTEC",
+   "volume": 4807752
+  },
+  {
+   "close": 397.01,
+   "datetime": "2014-04-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 398.75,
+   "low": 396.38,
+   "open": 397.21,
+   "stock_code": "INFTEC",
+   "volume": 7675088
+  },
+  {
+   "close": 402.75,
+   "datetime": "2014-05-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 405.88,
+   "low": 398.13,
+   "open": 398.13,
+   "stock_code": "INFTEC",
+   "volume": 4733688
+  },
+  {
+   "close": 397.06,
+   "datetime": "2014-05-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 404.13,
+   "low": 396.82,
+   "open": 399.0,
+   "stock_code": "INFTEC",
+   "volume": 4168784
+  },
+  {
+   "close": 395.63,
+   "datetime": "2014-05-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 398.06,
+   "low": 394.38,
+   "open": 397.11,
+   "stock_code": "INFTEC",
+   "volume": 4544384
+  },
+  {
+   "close": 383.13,
+   "datetime": "2014-05-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 396.25,
+   "low": 381.25,
+   "open": 393.88,
+   "stock_code": "INFTEC",
+   "volume": 15440288
+  },
+  {
+   "close": 383.38,
+   "datetime": "2014-05-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 386.05,
+   "low": 380.81,
+   "open": 383.75,
+   "stock_code": "INFTEC",
+   "volume": 9152592
+  },
+  {
+   "close": 388.65,
+   "datetime": "2014-05-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 390.63,
+   "low": 381.61,
+   "open": 383.13,
+   "stock_code": "INFTEC",
+   "volume": 6147848
+  },
+  {
+   "close": 396.94,
+   "datetime": "2014-05-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 398.31,
+   "low": 388.13,
+   "open": 389.78,
+   "stock_code": "INFTEC",
+   "volume": 7021944
+  },
+  {
+   "close": 408.66,
+   "datetime": "2014-05-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 409.38,
+   "low": 397.88,
+   "open": 397.88,
+   "stock_code": "INFTEC",
+   "volume": 7286112
+  },
+  {
+   "close": 406.75,
+   "datetime": "2014-05-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 408.13,
+   "low": 402.14,
+   "open": 406.28,
+   "stock_code": "INFTEC",
+   "volume": 5174712
+  },
+  {
+   "close": 410.4,
+   "datetime": "2014-05-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 411.86,
+   "low": 400.66,
+   "open": 406.76,
+   "stock_code": "INFTEC",
+   "volume": 8377600
+  },
+  {
+   "close": 397.86,
+   "datetime": "2014-05-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 417.5,
+   "low": 382.38,
+   "open": 412.38,
+   "stock_code": "INFTEC",
+   "volume": 14117248
+  },
+  {
+   "close": 376.25,
+   "datetime": "2014-05-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 399.75,
+   "low": 375.01,
+   "open": 399.75,
+   "stock_code": "INFTEC",
+   "volume": 16994288
+  },
+  {
+   "close": 387.5,
+   "datetime": "2014-05-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 392.36,
+   "low": 380.28,
+   "open": 381.13,
+   "stock_code": "INFTEC",
+   "volume": 8668064
+  },
+  {
+   "close": 394.43,
+   "datetime": "2014-05-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 395.54,
+   "low": 387.38,
+   "open": 389.75,
+   "stock_code": "INFTEC",
+   "volume": 6767168
+  },
+  {
+   "close": 389.38,
+   "datetime": "2014-05-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 397.5,
+   "low": 385.14,
+   "open": 395.0,
+   "stock_code": "INFTEC",
+   "volume": 9725584
+  },
+  {
+   "close": 383.75,
+   "datetime": "2014-05-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 396.38,
+   "low": 376.52,
+   "open": 390.63,
+   "stock_code": "INFTEC",
+   "volume": 9043608
+  },
+  {
+   "close": 387.5,
+   "datetime": "2014-05-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 388.87,
+   "low": 381.27,
+   "open": 383.88,
+   "stock_code": "INFTEC",
+   "volume": 5732680
+  },
+  {
+   "close": 391.88,
+   "datetime": "2014-05-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 394.38,
+   "low": 387.44,
+   "open": 387.5,
+   "stock_code": "INFTEC",
+   "volume": 4890472
+  },
+  {
+   "close": 396.93,
+   "datetime": "2014-05-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 398.5,
+   "low": 389.75,
+   "open": 390.44,
+   "stock_code": "INFTEC",
+   "volume": 5297272
+  },
+  {
+   "close": 365.13,
+   "datetime": "2014-05-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 378.13,
+   "low": 364.38,
+   "open": 378.13,
+   "stock_code": "INFTEC",
+   "volume": 41101512
+  },
+  {
+   "close": 367.88,
+   "datetime": "2014-05-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 369.93,
+   "low": 361.93,
+   "open": 367.5,
+   "stock_code": "INFTEC",
+   "volume": 27743032
+  },
+  {
+   "close": 374.71,
+   "datetime": "2014-06-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 374.71,
+   "low": 370.06,
+   "open": 370.06,
+   "stock_code": "INFTEC",
+   "volume": 6181472
+  },
+  {
+   "close": 376.88,
+   "datetime": "2014-06-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 379.62,
+   "low": 371.84,
+   "open": 376.0,
+   "stock_code": "INFTEC",
+   "volume": 6753064
+  },
+  {
+   "close": 374.13,
+   "datetime": "2014-06-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 378.42,
+   "low": 369.19,
+   "open": 376.88,
+   "stock_code": "INFTEC",
+   "volume": 5472008
+  },
+  {
+   "close": 381.25,
+   "datetime": "2014-06-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 383.55,
+   "low": 370.25,
+   "open": 375.0,
+   "stock_code": "INFTEC",
+   "volume": 12031384
+  },
+  {
+   "close": 375.26,
+   "datetime": "2014-06-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 376.25,
+   "low": 368.75,
+   "open": 375.02,
+   "stock_code": "INFTEC",
+   "volume": 16759048
+  },
+  {
+   "close": 372.5,
+   "datetime": "2014-06-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 376.88,
+   "low": 372.01,
+   "open": 375.75,
+   "stock_code": "INFTEC",
+   "volume": 10753584
+  },
+  {
+   "close": 385.13,
+   "datetime": "2014-06-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 386.15,
+   "low": 374.54,
+   "open": 375.0,
+   "stock_code": "INFTEC",
+   "volume": 12875096
+  },
+  {
+   "close": 397.04,
+   "datetime": "2014-06-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 407.16,
+   "low": 386.29,
+   "open": 388.13,
+   "stock_code": "INFTEC",
+   "volume": 30484536
+  },
+  {
+   "close": 395.51,
+   "datetime": "2014-06-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 412.13,
+   "low": 390.09,
+   "open": 410.0,
+   "stock_code": "INFTEC",
+   "volume": 21070696
+  },
+  {
+   "close": 398.38,
+   "datetime": "2014-06-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 400.88,
+   "low": 391.38,
+   "open": 398.56,
+   "stock_code": "INFTEC",
+   "volume": 10034704
+  },
+  {
+   "close": 404.25,
+   "datetime": "2014-06-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 407.46,
+   "low": 397.5,
+   "open": 398.25,
+   "stock_code": "INFTEC",
+   "volume": 9260488
+  },
+  {
+   "close": 406.52,
+   "datetime": "2014-06-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 408.38,
+   "low": 402.32,
+   "open": 406.13,
+   "stock_code": "INFTEC",
+   "volume": 10029416
+  },
+  {
+   "close": 404.5,
+   "datetime": "2014-06-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 409.38,
+   "low": 401.59,
+   "open": 405.63,
+   "stock_code": "INFTEC",
+   "volume": 9607984
+  },
+  {
+   "close": 413.5,
+   "datetime": "2014-06-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 415.38,
+   "low": 405.64,
+   "open": 405.73,
+   "stock_code": "INFTEC",
+   "volume": 11157848
+  },
+  {
+   "close": 413.75,
+   "datetime": "2014-06-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 417.43,
+   "low": 411.61,
+   "open": 415.0,
+   "stock_code": "INFTEC",
+   "volume": 8751016
+  },
+  {
+   "close": 403.93,
+   "datetime": "2014-06-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 413.62,
+   "low": 402.68,
+   "open": 412.5,
+   "stock_code": "INFTEC",
+   "volume": 6278544
+  },
+  {
+   "close": 400.76,
+   "datetime": "2014-06-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 404.36,
+   "low": 399.02,
+   "open": 403.75,
+   "stock_code": "INFTEC",
+   "volume": 10603336
+  },
+  {
+   "close": 402.13,
+   "datetime": "2014-06-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 405.63,
+   "low": 400.75,
+   "open": 405.63,
+   "stock_code": "INFTEC",
+   "volume": 6423064
+  },
+  {
+   "close": 398.75,
+   "datetime": "2014-06-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 404.38,
+   "low": 396.09,
+   "open": 402.5,
+   "stock_code": "INFTEC",
+   "volume": 7349288
+  },
+  {
+   "close": 403.18,
+   "datetime": "2014-06-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 404.45,
+   "low": 396.5,
+   "open": 400.0,
+   "stock_code": "INFTEC",
+   "volume": 6866856
+  },
+  {
+   "close": 406.88,
+   "datetime": "2014-06-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 407.88,
+   "low": 401.43,
+   "open": 402.5,
+   "stock_code": "INFTEC",
+   "volume": 7282336
+  },
+  {
+   "close": 402.75,
+   "datetime": "2014-07-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 406.85,
+   "low": 400.75,
+   "open": 405.63,
+   "stock_code": "INFTEC",
+   "volume": 4643848
+  },
+  {
+   "close": 400.61,
+   "datetime": "2014-07-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 405.45,
+   "low": 399.78,
+   "open": 401.5,
+   "stock_code": "INFTEC",
+   "volume": 6079160
+  },
+  {
+   "close": 401.25,
+   "datetime": "2014-07-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 403.55,
+   "low": 398.81,
+   "open": 401.28,
+   "stock_code": "INFTEC",
+   "volume": 7463216
+  },
+  {
+   "close": 406.88,
+   "datetime": "2014-07-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 407.3,
+   "low": 400.01,
+   "open": 400.01,
+   "stock_code": "INFTEC",
+   "volume": 5707136
+  },
+  {
+   "close": 417.85,
+   "datetime": "2014-07-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 421.0,
+   "low": 407.5,
+   "open": 408.13,
+   "stock_code": "INFTEC",
+   "volume": 11488144
+  },
+  {
+   "close": 414.38,
+   "datetime": "2014-07-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 425.79,
+   "low": 412.88,
+   "open": 418.63,
+   "stock_code": "INFTEC",
+   "volume": 11304328
+  },
+  {
+   "close": 413.13,
+   "datetime": "2014-07-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 423.0,
+   "low": 411.25,
+   "open": 416.25,
+   "stock_code": "INFTEC",
+   "volume": 8232680
+  },
+  {
+   "close": 411.2,
+   "datetime": "2014-07-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 422.71,
+   "low": 406.33,
+   "open": 414.38,
+   "stock_code": "INFTEC",
+   "volume": 11258976
+  },
+  {
+   "close": 415.63,
+   "datetime": "2014-07-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 429.0,
+   "low": 412.54,
+   "open": 425.18,
+   "stock_code": "INFTEC",
+   "volume": 15686728
+  },
+  {
+   "close": 403.13,
+   "datetime": "2014-07-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 414.38,
+   "low": 398.23,
+   "open": 414.38,
+   "stock_code": "INFTEC",
+   "volume": 8193240
+  },
+  {
+   "close": 403.25,
+   "datetime": "2014-07-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 407.24,
+   "low": 402.13,
+   "open": 404.88,
+   "stock_code": "INFTEC",
+   "volume": 4106744
+  },
+  {
+   "close": 404.84,
+   "datetime": "2014-07-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 405.63,
+   "low": 400.41,
+   "open": 405.0,
+   "stock_code": "INFTEC",
+   "volume": 4579520
+  },
+  {
+   "close": 406.25,
+   "datetime": "2014-07-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 418.24,
+   "low": 403.96,
+   "open": 407.51,
+   "stock_code": "INFTEC",
+   "volume": 4868576
+  },
+  {
+   "close": 405.73,
+   "datetime": "2014-07-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 409.34,
+   "low": 405.45,
+   "open": 406.63,
+   "stock_code": "INFTEC",
+   "volume": 4073544
+  },
+  {
+   "close": 400.43,
+   "datetime": "2014-07-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 409.17,
+   "low": 398.51,
+   "open": 406.88,
+   "stock_code": "INFTEC",
+   "volume": 7407344
+  },
+  {
+   "close": 405.38,
+   "datetime": "2014-07-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 405.84,
+   "low": 399.76,
+   "open": 400.63,
+   "stock_code": "INFTEC",
+   "volume": 8686528
+  },
+  {
+   "close": 418.16,
+   "datetime": "2014-07-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 419.38,
+   "low": 406.13,
+   "open": 406.13,
+   "stock_code": "INFTEC",
+   "volume": 11700872
+  },
+  {
+   "close": 421.63,
+   "datetime": "2014-07-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 424.24,
+   "low": 415.18,
+   "open": 418.0,
+   "stock_code": "INFTEC",
+   "volume": 5555704
+  },
+  {
+   "close": 420.24,
+   "datetime": "2014-07-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 424.88,
+   "low": 413.09,
+   "open": 424.88,
+   "stock_code": "INFTEC",
+   "volume": 5257592
+  },
+  {
+   "close": 419.5,
+   "datetime": "2014-07-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 423.38,
+   "low": 415.11,
+   "open": 418.13,
+   "stock_code": "INFTEC",
+   "volume": 4582656
+  },
+  {
+   "close": 420.63,
+   "datetime": "2014-07-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 424.25,
+   "low": 418.2,
+   "open": 424.25,
+   "stock_code": "INFTEC",
+   "volume": 9894072
+  },
+  {
+   "close": 420.63,
+   "datetime": "2014-07-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 424.36,
+   "low": 417.9,
+   "open": 422.5,
+   "stock_code": "INFTEC",
+   "volume": 8434872
+  },
+  {
+   "close": 417.13,
+   "datetime": "2014-08-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 424.0,
+   "low": 416.25,
+   "open": 418.75,
+   "stock_code": "INFTEC",
+   "volume": 7566000
+  },
+  {
+   "close": 432.51,
+   "datetime": "2014-08-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 435.36,
+   "low": 418.66,
+   "open": 419.38,
+   "stock_code": "INFTEC",
+   "volume": 13000528
+  },
+  {
+   "close": 439.4,
+   "datetime": "2014-08-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 440.0,
+   "low": 433.76,
+   "open": 434.5,
+   "stock_code": "INFTEC",
+   "volume": 10982592
+  },
+  {
+   "close": 445.0,
+   "datetime": "2014-08-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 451.04,
+   "low": 440.63,
+   "open": 440.63,
+   "stock_code": "INFTEC",
+   "volume": 17886040
+  },
+  {
+   "close": 437.75,
+   "datetime": "2014-08-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 443.05,
+   "low": 435.29,
+   "open": 437.38,
+   "stock_code": "INFTEC",
+   "volume": 7708680
+  },
+  {
+   "close": 435.0,
+   "datetime": "2014-08-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 440.0,
+   "low": 434.38,
+   "open": 437.5,
+   "stock_code": "INFTEC",
+   "volume": 3786888
+  },
+  {
+   "close": 447.39,
+   "datetime": "2014-08-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 447.96,
+   "low": 438.75,
+   "open": 440.5,
+   "stock_code": "INFTEC",
+   "volume": 5619832
+  },
+  {
+   "close": 447.0,
+   "datetime": "2014-08-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 449.88,
+   "low": 442.63,
+   "open": 449.88,
+   "stock_code": "INFTEC",
+   "volume": 5914744
+  },
+  {
+   "close": 450.61,
+   "datetime": "2014-08-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 453.13,
+   "low": 443.84,
+   "open": 445.01,
+   "stock_code": "INFTEC",
+   "volume": 8874544
+  },
+  {
+   "close": 451.75,
+   "datetime": "2014-08-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 453.46,
+   "low": 448.33,
+   "open": 451.0,
+   "stock_code": "INFTEC",
+   "volume": 6746128
+  },
+  {
+   "close": 444.75,
+   "datetime": "2014-08-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 451.5,
+   "low": 443.75,
+   "open": 451.5,
+   "stock_code": "INFTEC",
+   "volume": 6767304
+  },
+  {
+   "close": 444.24,
+   "datetime": "2014-08-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 448.63,
+   "low": 441.25,
+   "open": 445.13,
+   "stock_code": "INFTEC",
+   "volume": 6423488
+  },
+  {
+   "close": 444.38,
+   "datetime": "2014-08-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 447.81,
+   "low": 443.38,
+   "open": 445.38,
+   "stock_code": "INFTEC",
+   "volume": 3927176
+  },
+  {
+   "close": 443.0,
+   "datetime": "2014-08-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 445.43,
+   "low": 441.25,
+   "open": 444.53,
+   "stock_code": "INFTEC",
+   "volume": 4273056
+  },
+  {
+   "close": 449.86,
+   "datetime": "2014-08-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 451.0,
+   "low": 443.5,
+   "open": 443.62,
+   "stock_code": "INFTEC",
+   "volume": 4804920
+  },
+  {
+   "close": 453.25,
+   "datetime": "2014-08-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 454.46,
+   "low": 445.26,
+   "open": 449.88,
+   "stock_code": "INFTEC",
+   "volume": 4172480
+  },
+  {
+   "close": 451.28,
+   "datetime": "2014-08-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 455.0,
+   "low": 450.0,
+   "open": 452.75,
+   "stock_code": "INFTEC",
+   "volume": 5783616
+  },
+  {
+   "close": 454.13,
+   "datetime": "2014-08-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 456.25,
+   "low": 450.14,
+   "open": 453.75,
+   "stock_code": "INFTEC",
+   "volume": 5539056
+  },
+  {
+   "close": 448.99,
+   "datetime": "2014-08-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 454.21,
+   "low": 447.65,
+   "open": 453.63,
+   "stock_code": "INFTEC",
+   "volume": 7477416
+  },
+  {
+   "close": 449.43,
+   "datetime": "2014-09-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 452.36,
+   "low": 448.13,
+   "open": 451.26,
+   "stock_code": "INFTEC",
+   "volume": 3638160
+  },
+  {
+   "close": 452.85,
+   "datetime": "2014-09-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 453.13,
+   "low": 444.44,
+   "open": 450.0,
+   "stock_code": "INFTEC",
+   "volume": 3540512
+  },
+  {
+   "close": 466.25,
+   "datetime": "2014-09-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 468.3,
+   "low": 451.25,
+   "open": 451.25,
+   "stock_code": "INFTEC",
+   "volume": 11823960
+  },
+  {
+   "close": 463.68,
+   "datetime": "2014-09-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 465.63,
+   "low": 462.23,
+   "open": 465.63,
+   "stock_code": "INFTEC",
+   "volume": 6224936
+  },
+  {
+   "close": 466.25,
+   "datetime": "2014-09-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.38,
+   "low": 463.17,
+   "open": 466.5,
+   "stock_code": "INFTEC",
+   "volume": 6437880
+  },
+  {
+   "close": 472.17,
+   "datetime": "2014-09-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 473.81,
+   "low": 466.59,
+   "open": 466.59,
+   "stock_code": "INFTEC",
+   "volume": 6464744
+  },
+  {
+   "close": 466.88,
+   "datetime": "2014-09-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.43,
+   "low": 465.0,
+   "open": 468.5,
+   "stock_code": "INFTEC",
+   "volume": 4293296
+  },
+  {
+   "close": 458.76,
+   "datetime": "2014-09-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 463.5,
+   "low": 457.74,
+   "open": 463.5,
+   "stock_code": "INFTEC",
+   "volume": 5059000
+  },
+  {
+   "close": 461.25,
+   "datetime": "2014-09-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 462.46,
+   "low": 453.83,
+   "open": 459.25,
+   "stock_code": "INFTEC",
+   "volume": 4951320
+  },
+  {
+   "close": 459.24,
+   "datetime": "2014-09-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 463.5,
+   "low": 456.25,
+   "open": 461.0,
+   "stock_code": "INFTEC",
+   "volume": 3901080
+  },
+  {
+   "close": 456.63,
+   "datetime": "2014-09-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 458.5,
+   "low": 453.41,
+   "open": 458.13,
+   "stock_code": "INFTEC",
+   "volume": 4949864
+  },
+  {
+   "close": 456.75,
+   "datetime": "2014-09-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 461.31,
+   "low": 452.95,
+   "open": 455.75,
+   "stock_code": "INFTEC",
+   "volume": 5022536
+  },
+  {
+   "close": 467.5,
+   "datetime": "2014-09-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 468.51,
+   "low": 458.89,
+   "open": 459.99,
+   "stock_code": "INFTEC",
+   "volume": 7861128
+  },
+  {
+   "close": 462.75,
+   "datetime": "2014-09-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 466.21,
+   "low": 456.81,
+   "open": 459.24,
+   "stock_code": "INFTEC",
+   "volume": 9099376
+  },
+  {
+   "close": 460.68,
+   "datetime": "2014-09-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 471.25,
+   "low": 460.16,
+   "open": 462.38,
+   "stock_code": "INFTEC",
+   "volume": 14409952
+  },
+  {
+   "close": 456.35,
+   "datetime": "2014-09-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 460.34,
+   "low": 454.0,
+   "open": 460.0,
+   "stock_code": "INFTEC",
+   "volume": 8541224
+  },
+  {
+   "close": 450.63,
+   "datetime": "2014-09-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 460.43,
+   "low": 449.44,
+   "open": 455.63,
+   "stock_code": "INFTEC",
+   "volume": 12891784
+  },
+  {
+   "close": 455.0,
+   "datetime": "2014-09-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 459.03,
+   "low": 449.78,
+   "open": 453.75,
+   "stock_code": "INFTEC",
+   "volume": 5513472
+  },
+  {
+   "close": 463.13,
+   "datetime": "2014-09-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 464.85,
+   "low": 455.75,
+   "open": 456.25,
+   "stock_code": "INFTEC",
+   "volume": 24666264
+  },
+  {
+   "close": 460.38,
+   "datetime": "2014-09-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 465.03,
+   "low": 457.56,
+   "open": 460.63,
+   "stock_code": "INFTEC",
+   "volume": 8819544
+  },
+  {
+   "close": 468.75,
+   "datetime": "2014-09-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 470.12,
+   "low": 460.14,
+   "open": 462.63,
+   "stock_code": "INFTEC",
+   "volume": 4989976
+  },
+  {
+   "close": 468.79,
+   "datetime": "2014-09-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.54,
+   "low": 462.64,
+   "open": 468.03,
+   "stock_code": "INFTEC",
+   "volume": 6902472
+  },
+  {
+   "close": 481.13,
+   "datetime": "2014-10-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 482.49,
+   "low": 465.25,
+   "open": 465.25,
+   "stock_code": "INFTEC",
+   "volume": 9428728
+  },
+  {
+   "close": 479.24,
+   "datetime": "2014-10-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 486.62,
+   "low": 471.16,
+   "open": 471.16,
+   "stock_code": "INFTEC",
+   "volume": 19933872
+  },
+  {
+   "close": 456.27,
+   "datetime": "2014-10-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.0,
+   "low": 455.13,
+   "open": 473.13,
+   "stock_code": "INFTEC",
+   "volume": 20256840
+  },
+  {
+   "close": 457.63,
+   "datetime": "2014-10-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 464.25,
+   "low": 453.24,
+   "open": 462.5,
+   "stock_code": "INFTEC",
+   "volume": 12331096
+  },
+  {
+   "close": 485.63,
+   "datetime": "2014-10-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 488.5,
+   "low": 446.59,
+   "open": 457.5,
+   "stock_code": "INFTEC",
+   "volume": 45307744
+  },
+  {
+   "close": 492.88,
+   "datetime": "2014-10-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 498.13,
+   "low": 486.16,
+   "open": 486.16,
+   "stock_code": "INFTEC",
+   "volume": 17613632
+  },
+  {
+   "close": 489.88,
+   "datetime": "2014-10-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 495.63,
+   "low": 487.5,
+   "open": 495.63,
+   "stock_code": "INFTEC",
+   "volume": 6805096
+  },
+  {
+   "close": 484.38,
+   "datetime": "2014-10-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 492.29,
+   "low": 481.79,
+   "open": 487.51,
+   "stock_code": "INFTEC",
+   "volume": 9912816
+  },
+  {
+   "close": 482.5,
+   "datetime": "2014-10-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 490.35,
+   "low": 479.64,
+   "open": 483.11,
+   "stock_code": "INFTEC",
+   "volume": 8093384
+  },
+  {
+   "close": 476.3,
+   "datetime": "2014-10-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 482.82,
+   "low": 475.26,
+   "open": 481.63,
+   "stock_code": "INFTEC",
+   "volume": 7620200
+  },
+  {
+   "close": 471.88,
+   "datetime": "2014-10-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.24,
+   "low": 463.75,
+   "open": 481.24,
+   "stock_code": "INFTEC",
+   "volume": 21328320
+  },
+  {
+   "close": 473.94,
+   "datetime": "2014-10-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 476.49,
+   "low": 472.03,
+   "open": 476.16,
+   "stock_code": "INFTEC",
+   "volume": 5274992
+  },
+  {
+   "close": 3805.05,
+   "datetime": "2014-10-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 3813.45,
+   "low": 3797.15,
+   "open": 3804.85,
+   "stock_code": "INFTEC",
+   "volume": 81303
+  },
+  {
+   "close": 475.38,
+   "datetime": "2014-10-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.25,
+   "low": 472.78,
+   "open": 481.25,
+   "stock_code": "INFTEC",
+   "volume": 4754160
+  },
+  {
+   "close": 473.75,
+   "datetime": "2014-10-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 476.54,
+   "low": 470.63,
+   "open": 470.63,
+   "stock_code": "INFTEC",
+   "volume": 6614864
+  },
+  {
+   "close": 485.91,
+   "datetime": "2014-10-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 486.59,
+   "low": 476.62,
+   "open": 476.62,
+   "stock_code": "INFTEC",
+   "volume": 8216344
+  },
+  {
+   "close": 493.13,
+   "datetime": "2014-10-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 497.66,
+   "low": 487.0,
+   "open": 487.0,
+   "stock_code": "INFTEC",
+   "volume": 15120896
+  },
+  {
+   "close": 506.75,
+   "datetime": "2014-10-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 508.25,
+   "low": 498.38,
+   "open": 498.38,
+   "stock_code": "INFTEC",
+   "volume": 8628456
+  },
+  {
+   "close": 510.75,
+   "datetime": "2014-11-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 513.75,
+   "low": 504.06,
+   "open": 509.61,
+   "stock_code": "INFTEC",
+   "volume": 8492768
+  },
+  {
+   "close": 516.3,
+   "datetime": "2014-11-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 519.25,
+   "low": 507.13,
+   "open": 510.63,
+   "stock_code": "INFTEC",
+   "volume": 10127080
+  },
+  {
+   "close": 520.0,
+   "datetime": "2014-11-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.88,
+   "low": 514.79,
+   "open": 514.79,
+   "stock_code": "INFTEC",
+   "volume": 9913608
+  },
+  {
+   "close": 520.51,
+   "datetime": "2014-11-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.64,
+   "low": 517.5,
+   "open": 521.88,
+   "stock_code": "INFTEC",
+   "volume": 5569288
+  },
+  {
+   "close": 514.86,
+   "datetime": "2014-11-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.63,
+   "low": 512.98,
+   "open": 520.63,
+   "stock_code": "INFTEC",
+   "volume": 6194152
+  },
+  {
+   "close": 513.05,
+   "datetime": "2014-11-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 518.48,
+   "low": 512.14,
+   "open": 515.13,
+   "stock_code": "INFTEC",
+   "volume": 5257984
+  },
+  {
+   "close": 524.86,
+   "datetime": "2014-11-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 525.13,
+   "low": 514.05,
+   "open": 515.25,
+   "stock_code": "INFTEC",
+   "volume": 4920392
+  },
+  {
+   "close": 522.86,
+   "datetime": "2014-11-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 526.43,
+   "low": 521.75,
+   "open": 524.25,
+   "stock_code": "INFTEC",
+   "volume": 5143224
+  },
+  {
+   "close": 526.25,
+   "datetime": "2014-11-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 528.49,
+   "low": 518.51,
+   "open": 523.13,
+   "stock_code": "INFTEC",
+   "volume": 5371744
+  },
+  {
+   "close": 523.38,
+   "datetime": "2014-11-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 528.48,
+   "low": 521.51,
+   "open": 528.13,
+   "stock_code": "INFTEC",
+   "volume": 5168688
+  },
+  {
+   "close": 523.13,
+   "datetime": "2014-11-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 523.74,
+   "low": 517.47,
+   "open": 522.5,
+   "stock_code": "INFTEC",
+   "volume": 5138064
+  },
+  {
+   "close": 527.13,
+   "datetime": "2014-11-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.06,
+   "low": 522.98,
+   "open": 523.75,
+   "stock_code": "INFTEC",
+   "volume": 5298232
+  },
+  {
+   "close": 518.0,
+   "datetime": "2014-11-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.38,
+   "low": 512.7,
+   "open": 521.25,
+   "stock_code": "INFTEC",
+   "volume": 10410992
+  },
+  {
+   "close": 534.5,
+   "datetime": "2014-11-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 535.21,
+   "low": 523.99,
+   "open": 525.0,
+   "stock_code": "INFTEC",
+   "volume": 10996352
+  },
+  {
+   "close": 537.5,
+   "datetime": "2014-11-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 539.99,
+   "low": 530.75,
+   "open": 536.88,
+   "stock_code": "INFTEC",
+   "volume": 14800784
+  },
+  {
+   "close": 538.25,
+   "datetime": "2014-11-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 539.71,
+   "low": 533.95,
+   "open": 537.5,
+   "stock_code": "INFTEC",
+   "volume": 7856160
+  },
+  {
+   "close": 545.88,
+   "datetime": "2014-11-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 547.05,
+   "low": 539.0,
+   "open": 540.24,
+   "stock_code": "INFTEC",
+   "volume": 17328736
+  },
+  {
+   "close": 543.13,
+   "datetime": "2014-11-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 549.75,
+   "low": 543.0,
+   "open": 546.26,
+   "stock_code": "INFTEC",
+   "volume": 14332856
+  },
+  {
+   "close": 543.62,
+   "datetime": "2014-12-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 550.28,
+   "low": 536.58,
+   "open": 548.38,
+   "stock_code": "INFTEC",
+   "volume": 18253816
+  },
+  {
+   "close": 531.98,
+   "datetime": "2014-12-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 541.24,
+   "low": 528.75,
+   "open": 541.24,
+   "stock_code": "INFTEC",
+   "volume": 10619588
+  },
+  {
+   "close": 531.13,
+   "datetime": "2014-12-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 533.24,
+   "low": 521.14,
+   "open": 525.38,
+   "stock_code": "INFTEC",
+   "volume": 12659236
+  },
+  {
+   "close": 525.88,
+   "datetime": "2014-12-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 536.23,
+   "low": 523.75,
+   "open": 527.5,
+   "stock_code": "INFTEC",
+   "volume": 9353196
+  },
+  {
+   "close": 515.85,
+   "datetime": "2014-12-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.15,
+   "low": 514.95,
+   "open": 528.75,
+   "stock_code": "INFTEC",
+   "volume": 7284408
+  },
+  {
+   "close": 492.75,
+   "datetime": "2014-12-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 504.75,
+   "low": 489.44,
+   "open": 502.25,
+   "stock_code": "INFTEC",
+   "volume": 165873876
+  },
+  {
+   "close": 491.53,
+   "datetime": "2014-12-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.5,
+   "low": 488.11,
+   "open": 495.69,
+   "stock_code": "INFTEC",
+   "volume": 9615768
+  },
+  {
+   "close": 490.73,
+   "datetime": "2014-12-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.25,
+   "low": 489.78,
+   "open": 491.5,
+   "stock_code": "INFTEC",
+   "volume": 7767028
+  },
+  {
+   "close": 479.75,
+   "datetime": "2014-12-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 488.49,
+   "low": 478.75,
+   "open": 487.75,
+   "stock_code": "INFTEC",
+   "volume": 8210744
+  },
+  {
+   "close": 485.08,
+   "datetime": "2014-12-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 490.1,
+   "low": 479.53,
+   "open": 484.76,
+   "stock_code": "INFTEC",
+   "volume": 14470828
+  },
+  {
+   "close": 480.75,
+   "datetime": "2014-12-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 489.31,
+   "low": 476.23,
+   "open": 476.24,
+   "stock_code": "INFTEC",
+   "volume": 12915572
+  },
+  {
+   "close": 484.16,
+   "datetime": "2014-12-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 487.9,
+   "low": 481.43,
+   "open": 481.43,
+   "stock_code": "INFTEC",
+   "volume": 17693836
+  },
+  {
+   "close": 484.81,
+   "datetime": "2014-12-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 488.88,
+   "low": 474.08,
+   "open": 484.0,
+   "stock_code": "INFTEC",
+   "volume": 17806500
+  },
+  {
+   "close": 492.25,
+   "datetime": "2014-12-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 495.45,
+   "low": 486.19,
+   "open": 488.5,
+   "stock_code": "INFTEC",
+   "volume": 19864896
+  },
+  {
+   "close": 498.88,
+   "datetime": "2014-12-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.0,
+   "low": 496.5,
+   "open": 499.4,
+   "stock_code": "INFTEC",
+   "volume": 14170472
+  },
+  {
+   "close": 500.0,
+   "datetime": "2014-12-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.53,
+   "low": 493.84,
+   "open": 501.5,
+   "stock_code": "INFTEC",
+   "volume": 10294020
+  },
+  {
+   "close": 493.0,
+   "datetime": "2014-12-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 505.48,
+   "low": 490.9,
+   "open": 500.21,
+   "stock_code": "INFTEC",
+   "volume": 8147404
+  },
+  {
+   "close": 483.0,
+   "datetime": "2014-12-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.75,
+   "low": 478.76,
+   "open": 494.0,
+   "stock_code": "INFTEC",
+   "volume": 27286488
+  },
+  {
+   "close": 487.98,
+   "datetime": "2014-12-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 490.18,
+   "low": 482.74,
+   "open": 486.28,
+   "stock_code": "INFTEC",
+   "volume": 2264960
+  },
+  {
+   "close": 490.24,
+   "datetime": "2014-12-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.2,
+   "low": 488.13,
+   "open": 489.01,
+   "stock_code": "INFTEC",
+   "volume": 2791608
+  },
+  {
+   "close": 491.73,
+   "datetime": "2014-12-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.75,
+   "low": 489.2,
+   "open": 490.56,
+   "stock_code": "INFTEC",
+   "volume": 4636788
+  },
+  {
+   "close": 492.5,
+   "datetime": "2014-12-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.74,
+   "low": 487.5,
+   "open": 488.75,
+   "stock_code": "INFTEC",
+   "volume": 6940324
+  },
+  {
+   "close": 492.75,
+   "datetime": "2015-01-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 495.5,
+   "low": 489.23,
+   "open": 492.24,
+   "stock_code": "INFTEC",
+   "volume": 2001356
+  },
+  {
+   "close": 504.49,
+   "datetime": "2015-01-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 504.76,
+   "low": 493.0,
+   "open": 493.0,
+   "stock_code": "INFTEC",
+   "volume": 6716224
+  },
+  {
+   "close": 499.0,
+   "datetime": "2015-01-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 507.5,
+   "low": 494.38,
+   "open": 502.48,
+   "stock_code": "INFTEC",
+   "volume": 9919872
+  },
+  {
+   "close": 491.25,
+   "datetime": "2015-01-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.25,
+   "low": 483.53,
+   "open": 495.0,
+   "stock_code": "INFTEC",
+   "volume": 9646456
+  },
+  {
+   "close": 491.51,
+   "datetime": "2015-01-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.69,
+   "low": 487.5,
+   "open": 491.25,
+   "stock_code": "INFTEC",
+   "volume": 7183004
+  },
+  {
+   "close": 494.81,
+   "datetime": "2015-01-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.25,
+   "low": 487.5,
+   "open": 496.4,
+   "stock_code": "INFTEC",
+   "volume": 13539880
+  },
+  {
+   "close": 518.8,
+   "datetime": "2015-01-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 527.25,
+   "low": 478.26,
+   "open": 495.03,
+   "stock_code": "INFTEC",
+   "volume": 44739260
+  },
+  {
+   "close": 528.25,
+   "datetime": "2015-01-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.8,
+   "low": 518.94,
+   "open": 523.0,
+   "stock_code": "INFTEC",
+   "volume": 12577236
+  },
+  {
+   "close": 523.2,
+   "datetime": "2015-01-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 526.95,
+   "low": 518.75,
+   "open": 526.95,
+   "stock_code": "INFTEC",
+   "volume": 8786740
+  },
+  {
+   "close": 532.25,
+   "datetime": "2015-01-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 533.25,
+   "low": 523.15,
+   "open": 524.63,
+   "stock_code": "INFTEC",
+   "volume": 9884228
+  },
+  {
+   "close": 532.0,
+   "datetime": "2015-01-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 538.2,
+   "low": 528.06,
+   "open": 533.8,
+   "stock_code": "INFTEC",
+   "volume": 8321364
+  },
+  {
+   "close": 528.75,
+   "datetime": "2015-01-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 537.28,
+   "low": 528.0,
+   "open": 537.0,
+   "stock_code": "INFTEC",
+   "volume": 6684820
+  },
+  {
+   "close": 525.99,
+   "datetime": "2015-01-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 533.09,
+   "low": 523.65,
+   "open": 530.0,
+   "stock_code": "INFTEC",
+   "volume": 4058632
+  },
+  {
+   "close": 529.48,
+   "datetime": "2015-01-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 533.25,
+   "low": 525.36,
+   "open": 526.75,
+   "stock_code": "INFTEC",
+   "volume": 6777056
+  },
+  {
+   "close": 543.0,
+   "datetime": "2015-01-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 543.99,
+   "low": 529.5,
+   "open": 532.88,
+   "stock_code": "INFTEC",
+   "volume": 8467396
+  },
+  {
+   "close": 548.74,
+   "datetime": "2015-01-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 550.75,
+   "low": 540.33,
+   "open": 543.7,
+   "stock_code": "INFTEC",
+   "volume": 9859596
+  },
+  {
+   "close": 552.98,
+   "datetime": "2015-01-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 556.25,
+   "low": 541.28,
+   "open": 550.0,
+   "stock_code": "INFTEC",
+   "volume": 9455068
+  },
+  {
+   "close": 534.39,
+   "datetime": "2015-01-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 555.25,
+   "low": 532.53,
+   "open": 555.25,
+   "stock_code": "INFTEC",
+   "volume": 13591216
+  },
+  {
+   "close": 536.11,
+   "datetime": "2015-01-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 538.7,
+   "low": 532.58,
+   "open": 537.5,
+   "stock_code": "INFTEC",
+   "volume": 12290712
+  },
+  {
+   "close": 536.95,
+   "datetime": "2015-01-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 537.48,
+   "low": 531.9,
+   "open": 536.25,
+   "stock_code": "INFTEC",
+   "volume": 15355376
+  },
+  {
+   "close": 535.46,
+   "datetime": "2015-01-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 540.64,
+   "low": 531.74,
+   "open": 540.38,
+   "stock_code": "INFTEC",
+   "volume": 10675420
+  },
+  {
+   "close": 534.25,
+   "datetime": "2015-02-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 538.0,
+   "low": 531.51,
+   "open": 535.38,
+   "stock_code": "INFTEC",
+   "volume": 8690200
+  },
+  {
+   "close": 531.0,
+   "datetime": "2015-02-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 534.99,
+   "low": 525.5,
+   "open": 534.21,
+   "stock_code": "INFTEC",
+   "volume": 5203776
+  },
+  {
+   "close": 535.95,
+   "datetime": "2015-02-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 537.5,
+   "low": 531.6,
+   "open": 534.98,
+   "stock_code": "INFTEC",
+   "volume": 5153136
+  },
+  {
+   "close": 546.5,
+   "datetime": "2015-02-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 555.0,
+   "low": 537.0,
+   "open": 537.7,
+   "stock_code": "INFTEC",
+   "volume": 11743920
+  },
+  {
+   "close": 557.0,
+   "datetime": "2015-02-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 561.95,
+   "low": 547.13,
+   "open": 551.25,
+   "stock_code": "INFTEC",
+   "volume": 7207352
+  },
+  {
+   "close": 561.25,
+   "datetime": "2015-02-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 563.5,
+   "low": 550.0,
+   "open": 550.0,
+   "stock_code": "INFTEC",
+   "volume": 6461044
+  },
+  {
+   "close": 566.51,
+   "datetime": "2015-02-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 574.5,
+   "low": 560.25,
+   "open": 560.75,
+   "stock_code": "INFTEC",
+   "volume": 8504908
+  },
+  {
+   "close": 571.95,
+   "datetime": "2015-02-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 573.3,
+   "low": 564.06,
+   "open": 570.13,
+   "stock_code": "INFTEC",
+   "volume": 5749248
+  },
+  {
+   "close": 575.0,
+   "datetime": "2015-02-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 580.49,
+   "low": 568.25,
+   "open": 570.75,
+   "stock_code": "INFTEC",
+   "volume": 6221604
+  },
+  {
+   "close": 573.95,
+   "datetime": "2015-02-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 581.68,
+   "low": 571.5,
+   "open": 574.9,
+   "stock_code": "INFTEC",
+   "volume": 5649304
+  },
+  {
+   "close": 570.5,
+   "datetime": "2015-02-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 576.73,
+   "low": 566.31,
+   "open": 570.08,
+   "stock_code": "INFTEC",
+   "volume": 6164568
+  },
+  {
+   "close": 573.01,
+   "datetime": "2015-02-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 576.24,
+   "low": 564.54,
+   "open": 572.64,
+   "stock_code": "INFTEC",
+   "volume": 8593264
+  },
+  {
+   "close": 581.0,
+   "datetime": "2015-02-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 583.5,
+   "low": 573.01,
+   "open": 573.5,
+   "stock_code": "INFTEC",
+   "volume": 9576720
+  },
+  {
+   "close": 570.25,
+   "datetime": "2015-02-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 584.0,
+   "low": 569.23,
+   "open": 582.13,
+   "stock_code": "INFTEC",
+   "volume": 6963200
+  },
+  {
+   "close": 567.0,
+   "datetime": "2015-02-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.3,
+   "low": 562.03,
+   "open": 575.0,
+   "stock_code": "INFTEC",
+   "volume": 5065512
+  },
+  {
+   "close": 567.55,
+   "datetime": "2015-02-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 573.99,
+   "low": 564.4,
+   "open": 569.75,
+   "stock_code": "INFTEC",
+   "volume": 6413500
+  },
+  {
+   "close": 578.75,
+   "datetime": "2015-02-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 583.7,
+   "low": 570.0,
+   "open": 572.23,
+   "stock_code": "INFTEC",
+   "volume": 6013732
+  },
+  {
+   "close": 564.91,
+   "datetime": "2015-02-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.25,
+   "low": 561.35,
+   "open": 576.88,
+   "stock_code": "INFTEC",
+   "volume": 6351852
+  },
+  {
+   "close": 567.18,
+   "datetime": "2015-02-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 570.16,
+   "low": 562.88,
+   "open": 568.73,
+   "stock_code": "INFTEC",
+   "volume": 7766732
+  },
+  {
+   "close": 574.3,
+   "datetime": "2015-02-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 576.98,
+   "low": 564.05,
+   "open": 568.69,
+   "stock_code": "INFTEC",
+   "volume": 3196000
+  },
+  {
+   "close": 571.88,
+   "datetime": "2015-03-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.13,
+   "low": 569.51,
+   "open": 575.75,
+   "stock_code": "INFTEC",
+   "volume": 6979776
+  },
+  {
+   "close": 574.5,
+   "datetime": "2015-03-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 575.74,
+   "low": 569.58,
+   "open": 572.5,
+   "stock_code": "INFTEC",
+   "volume": 4889708
+  },
+  {
+   "close": 568.75,
+   "datetime": "2015-03-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 578.48,
+   "low": 562.98,
+   "open": 575.0,
+   "stock_code": "INFTEC",
+   "volume": 4341948
+  },
+  {
+   "close": 562.25,
+   "datetime": "2015-03-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 574.69,
+   "low": 558.34,
+   "open": 566.76,
+   "stock_code": "INFTEC",
+   "volume": 5649844
+  },
+  {
+   "close": 546.96,
+   "datetime": "2015-03-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 564.75,
+   "low": 544.75,
+   "open": 564.75,
+   "stock_code": "INFTEC",
+   "volume": 7810748
+  },
+  {
+   "close": 550.0,
+   "datetime": "2015-03-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 551.74,
+   "low": 540.05,
+   "open": 549.53,
+   "stock_code": "INFTEC",
+   "volume": 6190344
+  },
+  {
+   "close": 544.98,
+   "datetime": "2015-03-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 560.0,
+   "low": 542.28,
+   "open": 548.53,
+   "stock_code": "INFTEC",
+   "volume": 6710972
+  },
+  {
+   "close": 553.76,
+   "datetime": "2015-03-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 556.61,
+   "low": 544.25,
+   "open": 544.75,
+   "stock_code": "INFTEC",
+   "volume": 5645396
+  },
+  {
+   "close": 555.0,
+   "datetime": "2015-03-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 557.5,
+   "low": 548.1,
+   "open": 556.25,
+   "stock_code": "INFTEC",
+   "volume": 6078452
+  },
+  {
+   "close": 565.25,
+   "datetime": "2015-03-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 570.5,
+   "low": 552.64,
+   "open": 552.64,
+   "stock_code": "INFTEC",
+   "volume": 6788140
+  },
+  {
+   "close": 561.25,
+   "datetime": "2015-03-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 569.88,
+   "low": 554.31,
+   "open": 566.66,
+   "stock_code": "INFTEC",
+   "volume": 5521864
+  },
+  {
+   "close": 558.75,
+   "datetime": "2015-03-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 565.71,
+   "low": 555.64,
+   "open": 563.63,
+   "stock_code": "INFTEC",
+   "volume": 4883372
+  },
+  {
+   "close": 557.68,
+   "datetime": "2015-03-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 562.25,
+   "low": 555.69,
+   "open": 558.65,
+   "stock_code": "INFTEC",
+   "volume": 6884768
+  },
+  {
+   "close": 565.89,
+   "datetime": "2015-03-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 567.23,
+   "low": 558.24,
+   "open": 560.25,
+   "stock_code": "INFTEC",
+   "volume": 6420968
+  },
+  {
+   "close": 559.0,
+   "datetime": "2015-03-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 568.75,
+   "low": 556.38,
+   "open": 563.25,
+   "stock_code": "INFTEC",
+   "volume": 5062728
+  },
+  {
+   "close": 553.8,
+   "datetime": "2015-03-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 563.35,
+   "low": 551.5,
+   "open": 558.73,
+   "stock_code": "INFTEC",
+   "volume": 6692868
+  },
+  {
+   "close": 555.7,
+   "datetime": "2015-03-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 557.29,
+   "low": 550.19,
+   "open": 555.73,
+   "stock_code": "INFTEC",
+   "volume": 6115748
+  },
+  {
+   "close": 540.75,
+   "datetime": "2015-03-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 553.73,
+   "low": 533.0,
+   "open": 552.0,
+   "stock_code": "INFTEC",
+   "volume": 15612352
+  },
+  {
+   "close": 550.5,
+   "datetime": "2015-03-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 556.18,
+   "low": 540.75,
+   "open": 541.0,
+   "stock_code": "INFTEC",
+   "volume": 10044428
+  },
+  {
+   "close": 559.96,
+   "datetime": "2015-03-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 560.0,
+   "low": 548.73,
+   "open": 551.4,
+   "stock_code": "INFTEC",
+   "volume": 4542680
+  },
+  {
+   "close": 553.78,
+   "datetime": "2015-03-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 568.41,
+   "low": 551.09,
+   "open": 561.25,
+   "stock_code": "INFTEC",
+   "volume": 7990996
+  },
+  {
+   "close": 542.75,
+   "datetime": "2015-04-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 549.88,
+   "low": 539.43,
+   "open": 549.73,
+   "stock_code": "INFTEC",
+   "volume": 6702152
+  },
+  {
+   "close": 544.99,
+   "datetime": "2015-04-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 546.18,
+   "low": 540.1,
+   "open": 544.75,
+   "stock_code": "INFTEC",
+   "volume": 7694200
+  },
+  {
+   "close": 540.25,
+   "datetime": "2015-04-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 545.7,
+   "low": 534.5,
+   "open": 543.75,
+   "stock_code": "INFTEC",
+   "volume": 8513296
+  },
+  {
+   "close": 550.75,
+   "datetime": "2015-04-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 551.23,
+   "low": 543.26,
+   "open": 545.63,
+   "stock_code": "INFTEC",
+   "volume": 10171952
+  },
+  {
+   "close": 553.0,
+   "datetime": "2015-04-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 554.73,
+   "low": 546.1,
+   "open": 552.85,
+   "stock_code": "INFTEC",
+   "volume": 10544448
+  },
+  {
+   "close": 557.19,
+   "datetime": "2015-04-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 559.5,
+   "low": 552.55,
+   "open": 552.55,
+   "stock_code": "INFTEC",
+   "volume": 7060568
+  },
+  {
+   "close": 558.0,
+   "datetime": "2015-04-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 561.0,
+   "low": 554.03,
+   "open": 559.5,
+   "stock_code": "INFTEC",
+   "volume": 4857284
+  },
+  {
+   "close": 554.49,
+   "datetime": "2015-04-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 561.25,
+   "low": 548.76,
+   "open": 559.13,
+   "stock_code": "INFTEC",
+   "volume": 6234036
+  },
+  {
+   "close": 549.23,
+   "datetime": "2015-04-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 557.75,
+   "low": 540.13,
+   "open": 555.5,
+   "stock_code": "INFTEC",
+   "volume": 8957584
+  },
+  {
+   "close": 545.0,
+   "datetime": "2015-04-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 548.74,
+   "low": 538.36,
+   "open": 545.01,
+   "stock_code": "INFTEC",
+   "volume": 6409024
+  },
+  {
+   "close": 532.38,
+   "datetime": "2015-04-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 545.0,
+   "low": 528.79,
+   "open": 544.0,
+   "stock_code": "INFTEC",
+   "volume": 12533344
+  },
+  {
+   "close": 538.78,
+   "datetime": "2015-04-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 538.78,
+   "low": 530.03,
+   "open": 537.0,
+   "stock_code": "INFTEC",
+   "volume": 8833856
+  },
+  {
+   "close": 533.63,
+   "datetime": "2015-04-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 538.75,
+   "low": 524.49,
+   "open": 537.76,
+   "stock_code": "INFTEC",
+   "volume": 12330140
+  },
+  {
+   "close": 530.28,
+   "datetime": "2015-04-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 537.5,
+   "low": 528.0,
+   "open": 537.18,
+   "stock_code": "INFTEC",
+   "volume": 11812176
+  },
+  {
+   "close": 498.38,
+   "datetime": "2015-04-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 537.55,
+   "low": 495.0,
+   "open": 533.98,
+   "stock_code": "INFTEC",
+   "volume": 43033548
+  },
+  {
+   "close": 496.21,
+   "datetime": "2015-04-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.5,
+   "low": 487.03,
+   "open": 500.0,
+   "stock_code": "INFTEC",
+   "volume": 19612472
+  },
+  {
+   "close": 489.0,
+   "datetime": "2015-04-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 495.5,
+   "low": 488.0,
+   "open": 495.5,
+   "stock_code": "INFTEC",
+   "volume": 10284604
+  },
+  {
+   "close": 490.95,
+   "datetime": "2015-04-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.0,
+   "low": 484.49,
+   "open": 490.23,
+   "stock_code": "INFTEC",
+   "volume": 8221936
+  },
+  {
+   "close": 485.88,
+   "datetime": "2015-04-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.25,
+   "low": 483.08,
+   "open": 490.0,
+   "stock_code": "INFTEC",
+   "volume": 13064228
+  },
+  {
+   "close": 498.45,
+   "datetime": "2015-05-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.0,
+   "low": 487.48,
+   "open": 489.88,
+   "stock_code": "INFTEC",
+   "volume": 13310032
+  },
+  {
+   "close": 491.28,
+   "datetime": "2015-05-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.93,
+   "low": 488.01,
+   "open": 500.0,
+   "stock_code": "INFTEC",
+   "volume": 9313292
+  },
+  {
+   "close": 481.25,
+   "datetime": "2015-05-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.75,
+   "low": 478.83,
+   "open": 493.75,
+   "stock_code": "INFTEC",
+   "volume": 10475648
+  },
+  {
+   "close": 485.49,
+   "datetime": "2015-05-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.78,
+   "low": 477.5,
+   "open": 480.5,
+   "stock_code": "INFTEC",
+   "volume": 6758544
+  },
+  {
+   "close": 490.5,
+   "datetime": "2015-05-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.89,
+   "low": 486.31,
+   "open": 489.5,
+   "stock_code": "INFTEC",
+   "volume": 5744836
+  },
+  {
+   "close": 498.99,
+   "datetime": "2015-05-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.0,
+   "low": 488.05,
+   "open": 491.25,
+   "stock_code": "INFTEC",
+   "volume": 4750628
+  },
+  {
+   "close": 486.73,
+   "datetime": "2015-05-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 498.65,
+   "low": 485.5,
+   "open": 498.41,
+   "stock_code": "INFTEC",
+   "volume": 8279520
+  },
+  {
+   "close": 489.41,
+   "datetime": "2015-05-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.23,
+   "low": 482.13,
+   "open": 487.94,
+   "stock_code": "INFTEC",
+   "volume": 7050508
+  },
+  {
+   "close": 483.25,
+   "datetime": "2015-05-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 490.2,
+   "low": 477.0,
+   "open": 490.0,
+   "stock_code": "INFTEC",
+   "volume": 6224380
+  },
+  {
+   "close": 489.73,
+   "datetime": "2015-05-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.65,
+   "low": 483.08,
+   "open": 483.75,
+   "stock_code": "INFTEC",
+   "volume": 5183088
+  },
+  {
+   "close": 499.25,
+   "datetime": "2015-05-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.73,
+   "low": 490.4,
+   "open": 492.5,
+   "stock_code": "INFTEC",
+   "volume": 6454640
+  },
+  {
+   "close": 505.55,
+   "datetime": "2015-05-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 508.93,
+   "low": 496.5,
+   "open": 496.83,
+   "stock_code": "INFTEC",
+   "volume": 10253676
+  },
+  {
+   "close": 512.18,
+   "datetime": "2015-05-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 513.0,
+   "low": 508.4,
+   "open": 510.0,
+   "stock_code": "INFTEC",
+   "volume": 5875948
+  },
+  {
+   "close": 512.0,
+   "datetime": "2015-05-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 515.48,
+   "low": 509.31,
+   "open": 512.23,
+   "stock_code": "INFTEC",
+   "volume": 10031968
+  },
+  {
+   "close": 510.45,
+   "datetime": "2015-05-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 512.89,
+   "low": 507.53,
+   "open": 511.0,
+   "stock_code": "INFTEC",
+   "volume": 6837560
+  },
+  {
+   "close": 505.25,
+   "datetime": "2015-05-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 514.14,
+   "low": 501.76,
+   "open": 512.63,
+   "stock_code": "INFTEC",
+   "volume": 4626484
+  },
+  {
+   "close": 501.5,
+   "datetime": "2015-05-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 507.86,
+   "low": 500.54,
+   "open": 505.0,
+   "stock_code": "INFTEC",
+   "volume": 3958344
+  },
+  {
+   "close": 493.25,
+   "datetime": "2015-05-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.25,
+   "low": 488.75,
+   "open": 501.75,
+   "stock_code": "INFTEC",
+   "volume": 8399780
+  },
+  {
+   "close": 500.0,
+   "datetime": "2015-05-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 508.0,
+   "low": 493.8,
+   "open": 493.8,
+   "stock_code": "INFTEC",
+   "volume": 10970760
+  },
+  {
+   "close": 507.45,
+   "datetime": "2015-05-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 514.11,
+   "low": 500.25,
+   "open": 501.21,
+   "stock_code": "INFTEC",
+   "volume": 18660792
+  },
+  {
+   "close": 510.51,
+   "datetime": "2015-06-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 516.0,
+   "low": 505.81,
+   "open": 508.2,
+   "stock_code": "INFTEC",
+   "volume": 5717276
+  },
+  {
+   "close": 503.25,
+   "datetime": "2015-06-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 513.78,
+   "low": 501.25,
+   "open": 512.03,
+   "stock_code": "INFTEC",
+   "volume": 4657780
+  },
+  {
+   "close": 508.0,
+   "datetime": "2015-06-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 509.86,
+   "low": 502.0,
+   "open": 504.55,
+   "stock_code": "INFTEC",
+   "volume": 5482436
+  },
+  {
+   "close": 507.03,
+   "datetime": "2015-06-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 513.75,
+   "low": 503.15,
+   "open": 507.5,
+   "stock_code": "INFTEC",
+   "volume": 7352660
+  },
+  {
+   "close": 502.86,
+   "datetime": "2015-06-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 511.0,
+   "low": 502.04,
+   "open": 507.5,
+   "stock_code": "INFTEC",
+   "volume": 6076704
+  },
+  {
+   "close": 500.25,
+   "datetime": "2015-06-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 506.16,
+   "low": 496.75,
+   "open": 505.0,
+   "stock_code": "INFTEC",
+   "volume": 6110612
+  },
+  {
+   "close": 497.63,
+   "datetime": "2015-06-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 501.91,
+   "low": 495.75,
+   "open": 500.94,
+   "stock_code": "INFTEC",
+   "volume": 7540260
+  },
+  {
+   "close": 507.25,
+   "datetime": "2015-06-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 509.84,
+   "low": 496.25,
+   "open": 497.5,
+   "stock_code": "INFTEC",
+   "volume": 6374068
+  },
+  {
+   "close": 500.0,
+   "datetime": "2015-06-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 511.19,
+   "low": 498.76,
+   "open": 508.99,
+   "stock_code": "INFTEC",
+   "volume": 9127132
+  },
+  {
+   "close": 494.5,
+   "datetime": "2015-06-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 506.26,
+   "low": 488.88,
+   "open": 501.25,
+   "stock_code": "INFTEC",
+   "volume": 9729864
+  },
+  {
+   "close": 497.23,
+   "datetime": "2015-06-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.4,
+   "low": 484.0,
+   "open": 488.48,
+   "stock_code": "INFTEC",
+   "volume": 5445514
+  },
+  {
+   "close": 499.0,
+   "datetime": "2015-06-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 501.5,
+   "low": 492.5,
+   "open": 497.18,
+   "stock_code": "INFTEC",
+   "volume": 5205574
+  },
+  {
+   "close": 498.6,
+   "datetime": "2015-06-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 510.5,
+   "low": 496.1,
+   "open": 505.5,
+   "stock_code": "INFTEC",
+   "volume": 6399360
+  },
+  {
+   "close": 500.03,
+   "datetime": "2015-06-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 503.98,
+   "low": 497.9,
+   "open": 502.8,
+   "stock_code": "INFTEC",
+   "volume": 3472876
+  },
+  {
+   "close": 498.4,
+   "datetime": "2015-06-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 505.2,
+   "low": 496.55,
+   "open": 505.15,
+   "stock_code": "INFTEC",
+   "volume": 6664868
+  },
+  {
+   "close": 511.35,
+   "datetime": "2015-06-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 514.38,
+   "low": 498.5,
+   "open": 502.45,
+   "stock_code": "INFTEC",
+   "volume": 5706304
+  },
+  {
+   "close": 500.73,
+   "datetime": "2015-06-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 513.7,
+   "low": 499.08,
+   "open": 512.5,
+   "stock_code": "INFTEC",
+   "volume": 6949212
+  },
+  {
+   "close": 497.55,
+   "datetime": "2015-06-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 507.5,
+   "low": 495.6,
+   "open": 507.5,
+   "stock_code": "INFTEC",
+   "volume": 7068784
+  },
+  {
+   "close": 496.68,
+   "datetime": "2015-06-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 501.75,
+   "low": 493.83,
+   "open": 499.6,
+   "stock_code": "INFTEC",
+   "volume": 7112666
+  },
+  {
+   "close": 502.95,
+   "datetime": "2015-06-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 505.8,
+   "low": 499.05,
+   "open": 499.5,
+   "stock_code": "INFTEC",
+   "volume": 5317060
+  },
+  {
+   "close": 495.2,
+   "datetime": "2015-06-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.75,
+   "low": 491.25,
+   "open": 493.5,
+   "stock_code": "INFTEC",
+   "volume": 5688788
+  },
+  {
+   "close": 493.75,
+   "datetime": "2015-06-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.73,
+   "low": 490.0,
+   "open": 495.0,
+   "stock_code": "INFTEC",
+   "volume": 6211556
+  },
+  {
+   "close": 499.48,
+   "datetime": "2015-07-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.5,
+   "low": 493.0,
+   "open": 494.5,
+   "stock_code": "INFTEC",
+   "volume": 6872146
+  },
+  {
+   "close": 494.25,
+   "datetime": "2015-07-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.7,
+   "low": 492.53,
+   "open": 499.5,
+   "stock_code": "INFTEC",
+   "volume": 4004982
+  },
+  {
+   "close": 495.2,
+   "datetime": "2015-07-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.5,
+   "low": 491.0,
+   "open": 494.0,
+   "stock_code": "INFTEC",
+   "volume": 2693854
+  },
+  {
+   "close": 490.63,
+   "datetime": "2015-07-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.0,
+   "low": 487.5,
+   "open": 492.5,
+   "stock_code": "INFTEC",
+   "volume": 4298676
+  },
+  {
+   "close": 490.0,
+   "datetime": "2015-07-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 495.0,
+   "low": 489.5,
+   "open": 492.5,
+   "stock_code": "INFTEC",
+   "volume": 3494308
+  },
+  {
+   "close": 478.63,
+   "datetime": "2015-07-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 489.5,
+   "low": 477.4,
+   "open": 489.5,
+   "stock_code": "INFTEC",
+   "volume": 7012370
+  },
+  {
+   "close": 470.1,
+   "datetime": "2015-07-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 483.0,
+   "low": 467.03,
+   "open": 478.75,
+   "stock_code": "INFTEC",
+   "volume": 8583470
+  },
+  {
+   "close": 467.55,
+   "datetime": "2015-07-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 476.05,
+   "low": 466.33,
+   "open": 474.05,
+   "stock_code": "INFTEC",
+   "volume": 7406860
+  },
+  {
+   "close": 475.3,
+   "datetime": "2015-07-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 477.5,
+   "low": 467.03,
+   "open": 470.5,
+   "stock_code": "INFTEC",
+   "volume": 6530508
+  },
+  {
+   "close": 485.0,
+   "datetime": "2015-07-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 486.75,
+   "low": 472.75,
+   "open": 477.5,
+   "stock_code": "INFTEC",
+   "volume": 5363012
+  },
+  {
+   "close": 492.23,
+   "datetime": "2015-07-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 492.98,
+   "low": 484.0,
+   "open": 485.0,
+   "stock_code": "INFTEC",
+   "volume": 4125720
+  },
+  {
+   "close": 495.0,
+   "datetime": "2015-07-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 495.75,
+   "low": 489.75,
+   "open": 493.85,
+   "stock_code": "INFTEC",
+   "volume": 3471978
+  },
+  {
+   "close": 500.0,
+   "datetime": "2015-07-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.25,
+   "low": 494.55,
+   "open": 495.5,
+   "stock_code": "INFTEC",
+   "volume": 3446002
+  },
+  {
+   "close": 499.0,
+   "datetime": "2015-07-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 505.4,
+   "low": 493.7,
+   "open": 500.7,
+   "stock_code": "INFTEC",
+   "volume": 4365056
+  },
+  {
+   "close": 558.18,
+   "datetime": "2015-07-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 574.5,
+   "low": 517.5,
+   "open": 517.5,
+   "stock_code": "INFTEC",
+   "volume": 38304958
+  },
+  {
+   "close": 550.0,
+   "datetime": "2015-07-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 556.0,
+   "low": 538.33,
+   "open": 552.5,
+   "stock_code": "INFTEC",
+   "volume": 12662560
+  },
+  {
+   "close": 547.5,
+   "datetime": "2015-07-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 558.5,
+   "low": 545.0,
+   "open": 551.98,
+   "stock_code": "INFTEC",
+   "volume": 7709426
+  },
+  {
+   "close": 544.0,
+   "datetime": "2015-07-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 553.23,
+   "low": 541.55,
+   "open": 547.78,
+   "stock_code": "INFTEC",
+   "volume": 4467558
+  },
+  {
+   "close": 532.5,
+   "datetime": "2015-07-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 543.98,
+   "low": 530.23,
+   "open": 543.45,
+   "stock_code": "INFTEC",
+   "volume": 6741748
+  },
+  {
+   "close": 533.05,
+   "datetime": "2015-07-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 538.0,
+   "low": 527.13,
+   "open": 534.25,
+   "stock_code": "INFTEC",
+   "volume": 8474098
+  },
+  {
+   "close": 543.0,
+   "datetime": "2015-07-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 546.0,
+   "low": 532.5,
+   "open": 537.0,
+   "stock_code": "INFTEC",
+   "volume": 7069280
+  },
+  {
+   "close": 535.5,
+   "datetime": "2015-07-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 545.0,
+   "low": 529.0,
+   "open": 545.0,
+   "stock_code": "INFTEC",
+   "volume": 11951920
+  },
+  {
+   "close": 539.25,
+   "datetime": "2015-07-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 540.68,
+   "low": 530.0,
+   "open": 539.28,
+   "stock_code": "INFTEC",
+   "volume": 7928828
+  },
+  {
+   "close": 537.5,
+   "datetime": "2015-08-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 546.0,
+   "low": 534.48,
+   "open": 539.0,
+   "stock_code": "INFTEC",
+   "volume": 7958866
+  },
+  {
+   "close": 529.25,
+   "datetime": "2015-08-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 539.48,
+   "low": 525.5,
+   "open": 539.0,
+   "stock_code": "INFTEC",
+   "volume": 9093290
+  },
+  {
+   "close": 543.33,
+   "datetime": "2015-08-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 545.0,
+   "low": 530.98,
+   "open": 531.0,
+   "stock_code": "INFTEC",
+   "volume": 4752108
+  },
+  {
+   "close": 544.0,
+   "datetime": "2015-08-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 552.75,
+   "low": 538.5,
+   "open": 547.0,
+   "stock_code": "INFTEC",
+   "volume": 7235700
+  },
+  {
+   "close": 548.5,
+   "datetime": "2015-08-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 550.5,
+   "low": 539.25,
+   "open": 539.75,
+   "stock_code": "INFTEC",
+   "volume": 4986986
+  },
+  {
+   "close": 545.5,
+   "datetime": "2015-08-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 553.18,
+   "low": 533.5,
+   "open": 549.0,
+   "stock_code": "INFTEC",
+   "volume": 3989646
+  },
+  {
+   "close": 557.5,
+   "datetime": "2015-08-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 558.45,
+   "low": 547.85,
+   "open": 549.4,
+   "stock_code": "INFTEC",
+   "volume": 7573138
+  },
+  {
+   "close": 570.5,
+   "datetime": "2015-08-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 574.5,
+   "low": 555.5,
+   "open": 557.5,
+   "stock_code": "INFTEC",
+   "volume": 10167512
+  },
+  {
+   "close": 582.43,
+   "datetime": "2015-08-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 583.43,
+   "low": 527.78,
+   "open": 573.5,
+   "stock_code": "INFTEC",
+   "volume": 9782440
+  },
+  {
+   "close": 574.13,
+   "datetime": "2015-08-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 584.35,
+   "low": 571.55,
+   "open": 582.5,
+   "stock_code": "INFTEC",
+   "volume": 5107028
+  },
+  {
+   "close": 570.55,
+   "datetime": "2015-08-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 576.73,
+   "low": 561.25,
+   "open": 575.0,
+   "stock_code": "INFTEC",
+   "volume": 3106734
+  },
+  {
+   "close": 581.25,
+   "datetime": "2015-08-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 588.85,
+   "low": 575.0,
+   "open": 575.0,
+   "stock_code": "INFTEC",
+   "volume": 4149394
+  },
+  {
+   "close": 587.48,
+   "datetime": "2015-08-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 593.1,
+   "low": 581.4,
+   "open": 585.0,
+   "stock_code": "INFTEC",
+   "volume": 6863814
+  },
+  {
+   "close": 570.45,
+   "datetime": "2015-08-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 584.25,
+   "low": 564.0,
+   "open": 579.5,
+   "stock_code": "INFTEC",
+   "volume": 8368224
+  },
+  {
+   "close": 571.5,
+   "datetime": "2015-08-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 580.48,
+   "low": 558.75,
+   "open": 570.45,
+   "stock_code": "INFTEC",
+   "volume": 10820094
+  },
+  {
+   "close": 544.4,
+   "datetime": "2015-08-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 561.5,
+   "low": 539.3,
+   "open": 554.98,
+   "stock_code": "INFTEC",
+   "volume": 14118708
+  },
+  {
+   "close": 544.0,
+   "datetime": "2015-08-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 559.5,
+   "low": 522.25,
+   "open": 550.0,
+   "stock_code": "INFTEC",
+   "volume": 13732608
+  },
+  {
+   "close": 533.13,
+   "datetime": "2015-08-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 548.5,
+   "low": 529.5,
+   "open": 544.9,
+   "stock_code": "INFTEC",
+   "volume": 11497000
+  },
+  {
+   "close": 540.9,
+   "datetime": "2015-08-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 550.05,
+   "low": 539.03,
+   "open": 544.0,
+   "stock_code": "INFTEC",
+   "volume": 15341262
+  },
+  {
+   "close": 556.98,
+   "datetime": "2015-08-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 562.45,
+   "low": 550.8,
+   "open": 550.8,
+   "stock_code": "INFTEC",
+   "volume": 7201830
+  },
+  {
+   "close": 548.5,
+   "datetime": "2015-08-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 567.43,
+   "low": 541.25,
+   "open": 567.43,
+   "stock_code": "INFTEC",
+   "volume": 9915102
+  },
+  {
+   "close": 543.35,
+   "datetime": "2015-09-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 557.3,
+   "low": 541.0,
+   "open": 545.0,
+   "stock_code": "INFTEC",
+   "volume": 9070716
+  },
+  {
+   "close": 550.55,
+   "datetime": "2015-09-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 557.5,
+   "low": 545.0,
+   "open": 549.0,
+   "stock_code": "INFTEC",
+   "volume": 11170718
+  },
+  {
+   "close": 550.9,
+   "datetime": "2015-09-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 556.0,
+   "low": 546.25,
+   "open": 555.08,
+   "stock_code": "INFTEC",
+   "volume": 8589790
+  },
+  {
+   "close": 537.45,
+   "datetime": "2015-09-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 555.5,
+   "low": 533.5,
+   "open": 551.5,
+   "stock_code": "INFTEC",
+   "volume": 7317746
+  },
+  {
+   "close": 529.48,
+   "datetime": "2015-09-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 542.5,
+   "low": 527.5,
+   "open": 542.48,
+   "stock_code": "INFTEC",
+   "volume": 5179306
+  },
+  {
+   "close": 531.3,
+   "datetime": "2015-09-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 537.0,
+   "low": 526.15,
+   "open": 531.0,
+   "stock_code": "INFTEC",
+   "volume": 5459176
+  },
+  {
+   "close": 544.05,
+   "datetime": "2015-09-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 549.8,
+   "low": 536.0,
+   "open": 543.55,
+   "stock_code": "INFTEC",
+   "volume": 9147272
+  },
+  {
+   "close": 540.18,
+   "datetime": "2015-09-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 545.75,
+   "low": 530.5,
+   "open": 542.45,
+   "stock_code": "INFTEC",
+   "volume": 8361342
+  },
+  {
+   "close": 545.98,
+   "datetime": "2015-09-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 553.2,
+   "low": 542.75,
+   "open": 545.78,
+   "stock_code": "INFTEC",
+   "volume": 9879534
+  },
+  {
+   "close": 550.18,
+   "datetime": "2015-09-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 552.0,
+   "low": 541.33,
+   "open": 549.5,
+   "stock_code": "INFTEC",
+   "volume": 6555828
+  },
+  {
+   "close": 549.5,
+   "datetime": "2015-09-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 551.6,
+   "low": 544.08,
+   "open": 549.7,
+   "stock_code": "INFTEC",
+   "volume": 5290962
+  },
+  {
+   "close": 550.98,
+   "datetime": "2015-09-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 554.88,
+   "low": 549.15,
+   "open": 554.0,
+   "stock_code": "INFTEC",
+   "volume": 7476952
+  },
+  {
+   "close": 550.65,
+   "datetime": "2015-09-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 558.95,
+   "low": 549.53,
+   "open": 555.9,
+   "stock_code": "INFTEC",
+   "volume": 11575002
+  },
+  {
+   "close": 551.6,
+   "datetime": "2015-09-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 554.43,
+   "low": 546.25,
+   "open": 550.0,
+   "stock_code": "INFTEC",
+   "volume": 4344906
+  },
+  {
+   "close": 552.0,
+   "datetime": "2015-09-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 567.98,
+   "low": 550.55,
+   "open": 557.5,
+   "stock_code": "INFTEC",
+   "volume": 9624890
+  },
+  {
+   "close": 558.9,
+   "datetime": "2015-09-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 563.18,
+   "low": 548.73,
+   "open": 553.73,
+   "stock_code": "INFTEC",
+   "volume": 4757300
+  },
+  {
+   "close": 570.63,
+   "datetime": "2015-09-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 576.35,
+   "low": 555.0,
+   "open": 556.75,
+   "stock_code": "INFTEC",
+   "volume": 13397708
+  },
+  {
+   "close": 553.25,
+   "datetime": "2015-09-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 571.43,
+   "low": 550.5,
+   "open": 569.98,
+   "stock_code": "INFTEC",
+   "volume": 9781920
+  },
+  {
+   "close": 558.5,
+   "datetime": "2015-09-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 566.7,
+   "low": 548.75,
+   "open": 551.0,
+   "stock_code": "INFTEC",
+   "volume": 8698034
+  },
+  {
+   "close": 578.5,
+   "datetime": "2015-09-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 584.48,
+   "low": 562.98,
+   "open": 567.2,
+   "stock_code": "INFTEC",
+   "volume": 9491616
+  },
+  {
+   "close": 1173.05,
+   "datetime": "2015-10-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 1197.75,
+   "low": 1160.0,
+   "open": 1169.9,
+   "stock_code": "INFTEC",
+   "volume": 5432197
+  },
+  {
+   "close": 1181.75,
+   "datetime": "2015-10-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 1189.35,
+   "low": 1162.0,
+   "open": 1173.0,
+   "stock_code": "INFTEC",
+   "volume": 3440880
+  },
+  {
+   "close": 578.45,
+   "datetime": "2015-10-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 580.0,
+   "low": 574.05,
+   "open": 577.63,
+   "stock_code": "INFTEC",
+   "volume": 4323042
+  },
+  {
+   "close": 569.5,
+   "datetime": "2015-10-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 584.38,
+   "low": 564.23,
+   "open": 578.0,
+   "stock_code": "INFTEC",
+   "volume": 9173578
+  },
+  {
+   "close": 566.35,
+   "datetime": "2015-10-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 574.8,
+   "low": 563.03,
+   "open": 568.2,
+   "stock_code": "INFTEC",
+   "volume": 9079368
+  },
+  {
+   "close": 584.25,
+   "datetime": "2015-10-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 586.45,
+   "low": 568.0,
+   "open": 568.0,
+   "stock_code": "INFTEC",
+   "volume": 11752624
+  },
+  {
+   "close": 561.03,
+   "datetime": "2015-10-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 609.9,
+   "low": 554.5,
+   "open": 599.5,
+   "stock_code": "INFTEC",
+   "volume": 30384730
+  },
+  {
+   "close": 549.05,
+   "datetime": "2015-10-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 555.5,
+   "low": 542.6,
+   "open": 553.73,
+   "stock_code": "INFTEC",
+   "volume": 15316250
+  },
+  {
+   "close": 547.63,
+   "datetime": "2015-10-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 557.78,
+   "low": 543.6,
+   "open": 545.73,
+   "stock_code": "INFTEC",
+   "volume": 8855182
+  },
+  {
+   "close": 548.05,
+   "datetime": "2015-10-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 552.18,
+   "low": 544.55,
+   "open": 549.95,
+   "stock_code": "INFTEC",
+   "volume": 8227546
+  },
+  {
+   "close": 546.5,
+   "datetime": "2015-10-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 550.7,
+   "low": 545.0,
+   "open": 549.5,
+   "stock_code": "INFTEC",
+   "volume": 6415044
+  },
+  {
+   "close": 557.0,
+   "datetime": "2015-10-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 558.0,
+   "low": 550.25,
+   "open": 551.0,
+   "stock_code": "INFTEC",
+   "volume": 7343464
+  },
+  {
+   "close": 563.0,
+   "datetime": "2015-10-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 565.0,
+   "low": 555.3,
+   "open": 556.5,
+   "stock_code": "INFTEC",
+   "volume": 8769416
+  },
+  {
+   "close": 568.75,
+   "datetime": "2015-10-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 573.43,
+   "low": 562.5,
+   "open": 562.5,
+   "stock_code": "INFTEC",
+   "volume": 7272298
+  },
+  {
+   "close": 574.5,
+   "datetime": "2015-10-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 576.5,
+   "low": 562.55,
+   "open": 570.9,
+   "stock_code": "INFTEC",
+   "volume": 6031116
+  },
+  {
+   "close": 575.0,
+   "datetime": "2015-10-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 579.25,
+   "low": 571.58,
+   "open": 577.0,
+   "stock_code": "INFTEC",
+   "volume": 3190998
+  },
+  {
+   "close": 573.68,
+   "datetime": "2015-10-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.5,
+   "low": 572.05,
+   "open": 575.0,
+   "stock_code": "INFTEC",
+   "volume": 5263148
+  },
+  {
+   "close": 578.0,
+   "datetime": "2015-10-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 579.0,
+   "low": 569.5,
+   "open": 572.25,
+   "stock_code": "INFTEC",
+   "volume": 5253146
+  },
+  {
+   "close": 571.48,
+   "datetime": "2015-10-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.95,
+   "low": 568.03,
+   "open": 576.55,
+   "stock_code": "INFTEC",
+   "volume": 5886258
+  },
+  {
+   "close": 566.0,
+   "datetime": "2015-10-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 572.5,
+   "low": 565.0,
+   "open": 572.5,
+   "stock_code": "INFTEC",
+   "volume": 4043368
+  },
+  {
+   "close": 566.88,
+   "datetime": "2015-11-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 567.9,
+   "low": 557.05,
+   "open": 565.0,
+   "stock_code": "INFTEC",
+   "volume": 3543282
+  },
+  {
+   "close": 570.08,
+   "datetime": "2015-11-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 575.23,
+   "low": 566.7,
+   "open": 566.7,
+   "stock_code": "INFTEC",
+   "volume": 3613576
+  },
+  {
+   "close": 568.5,
+   "datetime": "2015-11-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 578.8,
+   "low": 566.15,
+   "open": 575.05,
+   "stock_code": "INFTEC",
+   "volume": 3203976
+  },
+  {
+   "close": 560.2,
+   "datetime": "2015-11-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 572.5,
+   "low": 559.7,
+   "open": 571.48,
+   "stock_code": "INFTEC",
+   "volume": 2344784
+  },
+  {
+   "close": 570.1,
+   "datetime": "2015-11-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 571.95,
+   "low": 561.45,
+   "open": 561.5,
+   "stock_code": "INFTEC",
+   "volume": 3025042
+  },
+  {
+   "close": 568.53,
+   "datetime": "2015-11-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 570.0,
+   "low": 557.6,
+   "open": 560.0,
+   "stock_code": "INFTEC",
+   "volume": 6125016
+  },
+  {
+   "close": 552.5,
+   "datetime": "2015-11-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 563.75,
+   "low": 550.05,
+   "open": 563.75,
+   "stock_code": "INFTEC",
+   "volume": 4674588
+  },
+  {
+   "close": 1107.6,
+   "datetime": "2015-11-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 1118.0,
+   "low": 1103.0,
+   "open": 1118.0,
+   "stock_code": "INFTEC",
+   "volume": 353652
+  },
+  {
+   "close": 547.78,
+   "datetime": "2015-11-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 553.0,
+   "low": 545.0,
+   "open": 549.98,
+   "stock_code": "INFTEC",
+   "volume": 3517544
+  },
+  {
+   "close": 543.5,
+   "datetime": "2015-11-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 547.0,
+   "low": 533.6,
+   "open": 541.83,
+   "stock_code": "INFTEC",
+   "volume": 6807342
+  },
+  {
+   "close": 529.48,
+   "datetime": "2015-11-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 541.45,
+   "low": 526.0,
+   "open": 540.0,
+   "stock_code": "INFTEC",
+   "volume": 7181208
+  },
+  {
+   "close": 510.03,
+   "datetime": "2015-11-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.58,
+   "low": 505.63,
+   "open": 520.5,
+   "stock_code": "INFTEC",
+   "volume": 10113140
+  },
+  {
+   "close": 524.0,
+   "datetime": "2015-11-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 526.0,
+   "low": 511.9,
+   "open": 515.13,
+   "stock_code": "INFTEC",
+   "volume": 8533684
+  },
+  {
+   "close": 525.5,
+   "datetime": "2015-11-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 531.6,
+   "low": 521.03,
+   "open": 524.0,
+   "stock_code": "INFTEC",
+   "volume": 6082050
+  },
+  {
+   "close": 525.5,
+   "datetime": "2015-11-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 531.2,
+   "low": 519.0,
+   "open": 525.0,
+   "stock_code": "INFTEC",
+   "volume": 5614394
+  },
+  {
+   "close": 520.35,
+   "datetime": "2015-11-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 525.4,
+   "low": 518.5,
+   "open": 525.0,
+   "stock_code": "INFTEC",
+   "volume": 4324202
+  },
+  {
+   "close": 525.0,
+   "datetime": "2015-11-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.75,
+   "low": 520.03,
+   "open": 520.48,
+   "stock_code": "INFTEC",
+   "volume": 9848026
+  },
+  {
+   "close": 533.5,
+   "datetime": "2015-11-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 535.0,
+   "low": 522.5,
+   "open": 529.0,
+   "stock_code": "INFTEC",
+   "volume": 5141282
+  },
+  {
+   "close": 541.65,
+   "datetime": "2015-11-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 549.15,
+   "low": 528.1,
+   "open": 535.0,
+   "stock_code": "INFTEC",
+   "volume": 18102886
+  },
+  {
+   "close": 537.73,
+   "datetime": "2015-12-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 547.5,
+   "low": 536.48,
+   "open": 544.0,
+   "stock_code": "INFTEC",
+   "volume": 5896904
+  },
+  {
+   "close": 530.55,
+   "datetime": "2015-12-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 539.98,
+   "low": 529.5,
+   "open": 539.98,
+   "stock_code": "INFTEC",
+   "volume": 6394624
+  },
+  {
+   "close": 529.5,
+   "datetime": "2015-12-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 532.4,
+   "low": 524.53,
+   "open": 530.5,
+   "stock_code": "INFTEC",
+   "volume": 5502008
+  },
+  {
+   "close": 524.43,
+   "datetime": "2015-12-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 532.45,
+   "low": 520.05,
+   "open": 524.5,
+   "stock_code": "INFTEC",
+   "volume": 8374054
+  },
+  {
+   "close": 523.0,
+   "datetime": "2015-12-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.5,
+   "low": 520.0,
+   "open": 527.65,
+   "stock_code": "INFTEC",
+   "volume": 4513042
+  },
+  {
+   "close": 520.78,
+   "datetime": "2015-12-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 531.38,
+   "low": 519.65,
+   "open": 522.53,
+   "stock_code": "INFTEC",
+   "volume": 5721802
+  },
+  {
+   "close": 512.0,
+   "datetime": "2015-12-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 523.48,
+   "low": 511.28,
+   "open": 521.5,
+   "stock_code": "INFTEC",
+   "volume": 6814776
+  },
+  {
+   "close": 524.95,
+   "datetime": "2015-12-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 525.8,
+   "low": 515.15,
+   "open": 518.3,
+   "stock_code": "INFTEC",
+   "volume": 5586462
+  },
+  {
+   "close": 527.83,
+   "datetime": "2015-12-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 530.95,
+   "low": 522.95,
+   "open": 527.0,
+   "stock_code": "INFTEC",
+   "volume": 5385424
+  },
+  {
+   "close": 533.75,
+   "datetime": "2015-12-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 536.58,
+   "low": 524.03,
+   "open": 524.75,
+   "stock_code": "INFTEC",
+   "volume": 4814386
+  },
+  {
+   "close": 538.95,
+   "datetime": "2015-12-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 539.55,
+   "low": 529.4,
+   "open": 536.63,
+   "stock_code": "INFTEC",
+   "volume": 5429940
+  },
+  {
+   "close": 547.0,
+   "datetime": "2015-12-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 549.0,
+   "low": 541.7,
+   "open": 541.7,
+   "stock_code": "INFTEC",
+   "volume": 5494402
+  },
+  {
+   "close": 552.75,
+   "datetime": "2015-12-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 554.9,
+   "low": 544.0,
+   "open": 550.0,
+   "stock_code": "INFTEC",
+   "volume": 4953360
+  },
+  {
+   "close": 542.98,
+   "datetime": "2015-12-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 551.7,
+   "low": 539.73,
+   "open": 551.7,
+   "stock_code": "INFTEC",
+   "volume": 7217872
+  },
+  {
+   "close": 553.5,
+   "datetime": "2015-12-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 553.7,
+   "low": 532.98,
+   "open": 538.5,
+   "stock_code": "INFTEC",
+   "volume": 4328414
+  },
+  {
+   "close": 542.9,
+   "datetime": "2015-12-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 548.73,
+   "low": 540.05,
+   "open": 548.73,
+   "stock_code": "INFTEC",
+   "volume": 4108120
+  },
+  {
+   "close": 550.0,
+   "datetime": "2015-12-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 551.25,
+   "low": 543.53,
+   "open": 547.53,
+   "stock_code": "INFTEC",
+   "volume": 2869702
+  },
+  {
+   "close": 547.95,
+   "datetime": "2015-12-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 552.23,
+   "low": 545.05,
+   "open": 551.03,
+   "stock_code": "INFTEC",
+   "volume": 1228952
+  },
+  {
+   "close": 551.5,
+   "datetime": "2015-12-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 555.0,
+   "low": 545.0,
+   "open": 545.0,
+   "stock_code": "INFTEC",
+   "volume": 5525016
+  },
+  {
+   "close": 551.5,
+   "datetime": "2015-12-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 555.0,
+   "low": 548.65,
+   "open": 550.63,
+   "stock_code": "INFTEC",
+   "volume": 3343344
+  },
+  {
+   "close": 544.33,
+   "datetime": "2015-12-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 553.3,
+   "low": 541.5,
+   "open": 550.55,
+   "stock_code": "INFTEC",
+   "volume": 5152794
+  },
+  {
+   "close": 551.55,
+   "datetime": "2015-12-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 554.98,
+   "low": 543.5,
+   "open": 545.08,
+   "stock_code": "INFTEC",
+   "volume": 7938632
+  },
+  {
+   "close": 552.63,
+   "datetime": "2016-01-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 554.48,
+   "low": 546.6,
+   "open": 550.0,
+   "stock_code": "INFTEC",
+   "volume": 1806098
+  },
+  {
+   "close": 539.45,
+   "datetime": "2016-01-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 551.23,
+   "low": 538.03,
+   "open": 549.98,
+   "stock_code": "INFTEC",
+   "volume": 3971296
+  },
+  {
+   "close": 537.03,
+   "datetime": "2016-01-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 542.75,
+   "low": 531.13,
+   "open": 542.75,
+   "stock_code": "INFTEC",
+   "volume": 4948582
+  },
+  {
+   "close": 534.68,
+   "datetime": "2016-01-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 537.33,
+   "low": 529.45,
+   "open": 537.33,
+   "stock_code": "INFTEC",
+   "volume": 5587988
+  },
+  {
+   "close": 525.4,
+   "datetime": "2016-01-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 533.95,
+   "low": 523.95,
+   "open": 530.03,
+   "stock_code": "INFTEC",
+   "volume": 5293318
+  },
+  {
+   "close": 531.65,
+   "datetime": "2016-01-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 533.7,
+   "low": 527.75,
+   "open": 530.75,
+   "stock_code": "INFTEC",
+   "volume": 3155902
+  },
+  {
+   "close": 527.85,
+   "datetime": "2016-01-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 534.98,
+   "low": 526.05,
+   "open": 528.15,
+   "stock_code": "INFTEC",
+   "volume": 5358440
+  },
+  {
+   "close": 524.98,
+   "datetime": "2016-01-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 531.48,
+   "low": 515.43,
+   "open": 531.0,
+   "stock_code": "INFTEC",
+   "volume": 6561826
+  },
+  {
+   "close": 541.7,
+   "datetime": "2016-01-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 545.5,
+   "low": 524.05,
+   "open": 528.5,
+   "stock_code": "INFTEC",
+   "volume": 8747814
+  },
+  {
+   "close": 566.5,
+   "datetime": "2016-01-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.5,
+   "low": 527.18,
+   "open": 533.0,
+   "stock_code": "INFTEC",
+   "volume": 30225424
+  },
+  {
+   "close": 569.95,
+   "datetime": "2016-01-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 582.0,
+   "low": 568.78,
+   "open": 574.0,
+   "stock_code": "INFTEC",
+   "volume": 13033982
+  },
+  {
+   "close": 565.95,
+   "datetime": "2016-01-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 581.05,
+   "low": 564.18,
+   "open": 569.95,
+   "stock_code": "INFTEC",
+   "volume": 10066088
+  },
+  {
+   "close": 1139.65,
+   "datetime": "2016-01-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 1158.95,
+   "low": 1128.55,
+   "open": 1135.0,
+   "stock_code": "INFTEC",
+   "volume": 3750218
+  },
+  {
+   "close": 560.63,
+   "datetime": "2016-01-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 580.0,
+   "low": 558.5,
+   "open": 567.0,
+   "stock_code": "INFTEC",
+   "volume": 7506914
+  },
+  {
+   "close": 568.53,
+   "datetime": "2016-01-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 571.25,
+   "low": 561.0,
+   "open": 567.5,
+   "stock_code": "INFTEC",
+   "volume": 6741704
+  },
+  {
+   "close": 568.13,
+   "datetime": "2016-01-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 576.25,
+   "low": 565.5,
+   "open": 574.05,
+   "stock_code": "INFTEC",
+   "volume": 6434432
+  },
+  {
+   "close": 568.83,
+   "datetime": "2016-01-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 573.43,
+   "low": 562.28,
+   "open": 570.13,
+   "stock_code": "INFTEC",
+   "volume": 4577980
+  },
+  {
+   "close": 569.25,
+   "datetime": "2016-01-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 574.8,
+   "low": 567.5,
+   "open": 573.23,
+   "stock_code": "INFTEC",
+   "volume": 6971112
+  },
+  {
+   "close": 564.8,
+   "datetime": "2016-01-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 571.3,
+   "low": 563.1,
+   "open": 568.0,
+   "stock_code": "INFTEC",
+   "volume": 7787432
+  },
+  {
+   "close": 582.45,
+   "datetime": "2016-01-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 585.0,
+   "low": 565.8,
+   "open": 569.0,
+   "stock_code": "INFTEC",
+   "volume": 10230010
+  },
+  {
+   "close": 586.68,
+   "datetime": "2016-02-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 589.95,
+   "low": 580.8,
+   "open": 585.0,
+   "stock_code": "INFTEC",
+   "volume": 4248376
+  },
+  {
+   "close": 587.78,
+   "datetime": "2016-02-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 595.0,
+   "low": 582.0,
+   "open": 588.43,
+   "stock_code": "INFTEC",
+   "volume": 7632044
+  },
+  {
+   "close": 578.85,
+   "datetime": "2016-02-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 587.95,
+   "low": 576.38,
+   "open": 583.9,
+   "stock_code": "INFTEC",
+   "volume": 5243988
+  },
+  {
+   "close": 589.88,
+   "datetime": "2016-02-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 597.48,
+   "low": 580.03,
+   "open": 580.03,
+   "stock_code": "INFTEC",
+   "volume": 5548516
+  },
+  {
+   "close": 587.35,
+   "datetime": "2016-02-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 593.33,
+   "low": 585.93,
+   "open": 587.75,
+   "stock_code": "INFTEC",
+   "volume": 3983584
+  },
+  {
+   "close": 575.4,
+   "datetime": "2016-02-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 586.1,
+   "low": 571.9,
+   "open": 581.88,
+   "stock_code": "INFTEC",
+   "volume": 4220680
+  },
+  {
+   "close": 553.83,
+   "datetime": "2016-02-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 564.15,
+   "low": 546.75,
+   "open": 564.15,
+   "stock_code": "INFTEC",
+   "volume": 7578230
+  },
+  {
+   "close": 554.28,
+   "datetime": "2016-02-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 563.75,
+   "low": 552.5,
+   "open": 554.0,
+   "stock_code": "INFTEC",
+   "volume": 5864604
+  },
+  {
+   "close": 539.33,
+   "datetime": "2016-02-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 556.5,
+   "low": 535.58,
+   "open": 555.5,
+   "stock_code": "INFTEC",
+   "volume": 5181468
+  },
+  {
+   "close": 542.33,
+   "datetime": "2016-02-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 552.2,
+   "low": 533.5,
+   "open": 547.35,
+   "stock_code": "INFTEC",
+   "volume": 7407378
+  },
+  {
+   "close": 545.88,
+   "datetime": "2016-02-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 550.1,
+   "low": 543.3,
+   "open": 548.13,
+   "stock_code": "INFTEC",
+   "volume": 5091594
+  },
+  {
+   "close": 539.58,
+   "datetime": "2016-02-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 546.38,
+   "low": 536.85,
+   "open": 543.5,
+   "stock_code": "INFTEC",
+   "volume": 5123660
+  },
+  {
+   "close": 548.93,
+   "datetime": "2016-02-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 551.5,
+   "low": 538.5,
+   "open": 540.88,
+   "stock_code": "INFTEC",
+   "volume": 4161256
+  },
+  {
+   "close": 561.7,
+   "datetime": "2016-02-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 563.5,
+   "low": 550.0,
+   "open": 550.0,
+   "stock_code": "INFTEC",
+   "volume": 4188736
+  },
+  {
+   "close": 563.63,
+   "datetime": "2016-02-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 567.1,
+   "low": 556.93,
+   "open": 559.6,
+   "stock_code": "INFTEC",
+   "volume": 3972642
+  },
+  {
+   "close": 563.33,
+   "datetime": "2016-02-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 566.98,
+   "low": 557.03,
+   "open": 565.5,
+   "stock_code": "INFTEC",
+   "volume": 3856560
+  },
+  {
+   "close": 561.95,
+   "datetime": "2016-02-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 566.25,
+   "low": 558.03,
+   "open": 565.13,
+   "stock_code": "INFTEC",
+   "volume": 2501904
+  },
+  {
+   "close": 562.68,
+   "datetime": "2016-02-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 571.88,
+   "low": 559.18,
+   "open": 559.75,
+   "stock_code": "INFTEC",
+   "volume": 4949210
+  },
+  {
+   "close": 555.15,
+   "datetime": "2016-02-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 565.3,
+   "low": 550.55,
+   "open": 562.7,
+   "stock_code": "INFTEC",
+   "volume": 4470856
+  },
+  {
+   "close": 560.58,
+   "datetime": "2016-02-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 566.0,
+   "low": 558.0,
+   "open": 560.08,
+   "stock_code": "INFTEC",
+   "volume": 4235302
+  },
+  {
+   "close": 542.03,
+   "datetime": "2016-02-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 565.2,
+   "low": 534.15,
+   "open": 564.75,
+   "stock_code": "INFTEC",
+   "volume": 8165266
+  },
+  {
+   "close": 562.73,
+   "datetime": "2016-03-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 565.15,
+   "low": 547.4,
+   "open": 547.4,
+   "stock_code": "INFTEC",
+   "volume": 6381608
+  },
+  {
+   "close": 578.0,
+   "datetime": "2016-03-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 581.75,
+   "low": 562.5,
+   "open": 568.53,
+   "stock_code": "INFTEC",
+   "volume": 7210750
+  },
+  {
+   "close": 584.65,
+   "datetime": "2016-03-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 596.43,
+   "low": 577.0,
+   "open": 584.0,
+   "stock_code": "INFTEC",
+   "volume": 5813424
+  },
+  {
+   "close": 585.33,
+   "datetime": "2016-03-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 592.5,
+   "low": 579.55,
+   "open": 587.8,
+   "stock_code": "INFTEC",
+   "volume": 4280732
+  },
+  {
+   "close": 581.73,
+   "datetime": "2016-03-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 595.25,
+   "low": 573.7,
+   "open": 581.5,
+   "stock_code": "INFTEC",
+   "volume": 7614900
+  },
+  {
+   "close": 589.25,
+   "datetime": "2016-03-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 591.88,
+   "low": 571.48,
+   "open": 572.5,
+   "stock_code": "INFTEC",
+   "volume": 6304658
+  },
+  {
+   "close": 571.25,
+   "datetime": "2016-03-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 581.45,
+   "low": 569.68,
+   "open": 581.45,
+   "stock_code": "INFTEC",
+   "volume": 24377848
+  },
+  {
+   "close": 571.5,
+   "datetime": "2016-03-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.98,
+   "low": 569.1,
+   "open": 573.1,
+   "stock_code": "INFTEC",
+   "volume": 4055656
+  },
+  {
+   "close": 570.6,
+   "datetime": "2016-03-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.13,
+   "low": 569.25,
+   "open": 573.0,
+   "stock_code": "INFTEC",
+   "volume": 4174082
+  },
+  {
+   "close": 567.2,
+   "datetime": "2016-03-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.25,
+   "low": 564.48,
+   "open": 572.0,
+   "stock_code": "INFTEC",
+   "volume": 6719844
+  },
+  {
+   "close": 576.23,
+   "datetime": "2016-03-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 577.5,
+   "low": 565.78,
+   "open": 570.95,
+   "stock_code": "INFTEC",
+   "volume": 5587700
+  },
+  {
+   "close": 580.88,
+   "datetime": "2016-03-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 584.88,
+   "low": 577.03,
+   "open": 578.45,
+   "stock_code": "INFTEC",
+   "volume": 6473280
+  },
+  {
+   "close": 596.7,
+   "datetime": "2016-03-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 599.5,
+   "low": 581.0,
+   "open": 581.4,
+   "stock_code": "INFTEC",
+   "volume": 8475738
+  },
+  {
+   "close": 597.45,
+   "datetime": "2016-03-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 599.5,
+   "low": 590.03,
+   "open": 594.0,
+   "stock_code": "INFTEC",
+   "volume": 5137296
+  },
+  {
+   "close": 594.98,
+   "datetime": "2016-03-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 597.0,
+   "low": 586.0,
+   "open": 595.63,
+   "stock_code": "INFTEC",
+   "volume": 7097176
+  },
+  {
+   "close": 603.9,
+   "datetime": "2016-03-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 605.35,
+   "low": 591.05,
+   "open": 595.0,
+   "stock_code": "INFTEC",
+   "volume": 6330752
+  },
+  {
+   "close": 602.45,
+   "datetime": "2016-03-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 618.5,
+   "low": 597.88,
+   "open": 616.2,
+   "stock_code": "INFTEC",
+   "volume": 10785116
+  },
+  {
+   "close": 598.63,
+   "datetime": "2016-03-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 609.45,
+   "low": 595.78,
+   "open": 599.5,
+   "stock_code": "INFTEC",
+   "volume": 6989278
+  },
+  {
+   "close": 602.98,
+   "datetime": "2016-03-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 605.0,
+   "low": 597.78,
+   "open": 598.8,
+   "stock_code": "INFTEC",
+   "volume": 5755186
+  },
+  {
+   "close": 609.15,
+   "datetime": "2016-03-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 614.95,
+   "low": 600.15,
+   "open": 605.13,
+   "stock_code": "INFTEC",
+   "volume": 17988482
+  },
+  {
+   "close": 602.73,
+   "datetime": "2016-04-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 611.1,
+   "low": 597.55,
+   "open": 608.0,
+   "stock_code": "INFTEC",
+   "volume": 5508722
+  },
+  {
+   "close": 621.85,
+   "datetime": "2016-04-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 624.0,
+   "low": 606.78,
+   "open": 606.78,
+   "stock_code": "INFTEC",
+   "volume": 4562382
+  },
+  {
+   "close": 609.9,
+   "datetime": "2016-04-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 621.15,
+   "low": 607.0,
+   "open": 621.0,
+   "stock_code": "INFTEC",
+   "volume": 4785580
+  },
+  {
+   "close": 600.35,
+   "datetime": "2016-04-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 614.0,
+   "low": 598.0,
+   "open": 614.0,
+   "stock_code": "INFTEC",
+   "volume": 4931130
+  },
+  {
+   "close": 590.75,
+   "datetime": "2016-04-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 604.2,
+   "low": 587.5,
+   "open": 604.2,
+   "stock_code": "INFTEC",
+   "volume": 5654416
+  },
+  {
+   "close": 582.88,
+   "datetime": "2016-04-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 588.75,
+   "low": 581.03,
+   "open": 587.93,
+   "stock_code": "INFTEC",
+   "volume": 4192986
+  },
+  {
+   "close": 591.95,
+   "datetime": "2016-04-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 593.38,
+   "low": 575.55,
+   "open": 582.9,
+   "stock_code": "INFTEC",
+   "volume": 5760858
+  },
+  {
+   "close": 591.1,
+   "datetime": "2016-04-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 597.45,
+   "low": 589.3,
+   "open": 590.25,
+   "stock_code": "INFTEC",
+   "volume": 5840372
+  },
+  {
+   "close": 586.35,
+   "datetime": "2016-04-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 597.48,
+   "low": 583.18,
+   "open": 597.48,
+   "stock_code": "INFTEC",
+   "volume": 12501066
+  },
+  {
+   "close": 619.35,
+   "datetime": "2016-04-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 633.95,
+   "low": 616.75,
+   "open": 625.0,
+   "stock_code": "INFTEC",
+   "volume": 25003058
+  },
+  {
+   "close": 621.8,
+   "datetime": "2016-04-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 623.23,
+   "low": 612.9,
+   "open": 622.0,
+   "stock_code": "INFTEC",
+   "volume": 8070372
+  },
+  {
+   "close": 613.15,
+   "datetime": "2016-04-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 625.5,
+   "low": 609.05,
+   "open": 625.5,
+   "stock_code": "INFTEC",
+   "volume": 5440356
+  },
+  {
+   "close": 605.63,
+   "datetime": "2016-04-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 614.25,
+   "low": 603.5,
+   "open": 613.15,
+   "stock_code": "INFTEC",
+   "volume": 5141830
+  },
+  {
+   "close": 607.93,
+   "datetime": "2016-04-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 612.4,
+   "low": 600.55,
+   "open": 606.03,
+   "stock_code": "INFTEC",
+   "volume": 5362686
+  },
+  {
+   "close": 616.08,
+   "datetime": "2016-04-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 619.78,
+   "low": 604.3,
+   "open": 607.73,
+   "stock_code": "INFTEC",
+   "volume": 5844284
+  },
+  {
+   "close": 620.08,
+   "datetime": "2016-04-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 621.18,
+   "low": 614.28,
+   "open": 614.6,
+   "stock_code": "INFTEC",
+   "volume": 4483808
+  },
+  {
+   "close": 604.58,
+   "datetime": "2016-04-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 619.8,
+   "low": 603.5,
+   "open": 615.5,
+   "stock_code": "INFTEC",
+   "volume": 12153304
+  },
+  {
+   "close": 604.05,
+   "datetime": "2016-04-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 611.78,
+   "low": 602.5,
+   "open": 605.73,
+   "stock_code": "INFTEC",
+   "volume": 5030950
+  },
+  {
+   "close": 600.53,
+   "datetime": "2016-05-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 605.58,
+   "low": 598.08,
+   "open": 605.0,
+   "stock_code": "INFTEC",
+   "volume": 3613176
+  },
+  {
+   "close": 588.9,
+   "datetime": "2016-05-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 606.1,
+   "low": 585.9,
+   "open": 601.38,
+   "stock_code": "INFTEC",
+   "volume": 6822314
+  },
+  {
+   "close": 594.43,
+   "datetime": "2016-05-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 596.5,
+   "low": 585.33,
+   "open": 590.5,
+   "stock_code": "INFTEC",
+   "volume": 5812262
+  },
+  {
+   "close": 596.23,
+   "datetime": "2016-05-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 599.5,
+   "low": 590.55,
+   "open": 597.58,
+   "stock_code": "INFTEC",
+   "volume": 6300724
+  },
+  {
+   "close": 590.75,
+   "datetime": "2016-05-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 594.9,
+   "low": 588.53,
+   "open": 594.9,
+   "stock_code": "INFTEC",
+   "volume": 2594340
+  },
+  {
+   "close": 599.53,
+   "datetime": "2016-05-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 600.78,
+   "low": 590.3,
+   "open": 591.0,
+   "stock_code": "INFTEC",
+   "volume": 5123682
+  },
+  {
+   "close": 606.4,
+   "datetime": "2016-05-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 608.33,
+   "low": 598.3,
+   "open": 601.25,
+   "stock_code": "INFTEC",
+   "volume": 3393928
+  },
+  {
+   "close": 600.93,
+   "datetime": "2016-05-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 607.35,
+   "low": 596.25,
+   "open": 599.25,
+   "stock_code": "INFTEC",
+   "volume": 3709100
+  },
+  {
+   "close": 605.0,
+   "datetime": "2016-05-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 606.5,
+   "low": 598.4,
+   "open": 601.95,
+   "stock_code": "INFTEC",
+   "volume": 3405222
+  },
+  {
+   "close": 603.63,
+   "datetime": "2016-05-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 605.0,
+   "low": 596.08,
+   "open": 603.0,
+   "stock_code": "INFTEC",
+   "volume": 5650260
+  },
+  {
+   "close": 607.5,
+   "datetime": "2016-05-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 611.83,
+   "low": 602.5,
+   "open": 605.1,
+   "stock_code": "INFTEC",
+   "volume": 4533700
+  },
+  {
+   "close": 607.13,
+   "datetime": "2016-05-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 612.88,
+   "low": 604.08,
+   "open": 610.0,
+   "stock_code": "INFTEC",
+   "volume": 3795464
+  },
+  {
+   "close": 604.93,
+   "datetime": "2016-05-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 607.0,
+   "low": 598.95,
+   "open": 599.5,
+   "stock_code": "INFTEC",
+   "volume": 4254086
+  },
+  {
+   "close": 602.88,
+   "datetime": "2016-05-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 608.08,
+   "low": 600.5,
+   "open": 605.48,
+   "stock_code": "INFTEC",
+   "volume": 3954262
+  },
+  {
+   "close": 600.8,
+   "datetime": "2016-05-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 609.75,
+   "low": 600.0,
+   "open": 602.5,
+   "stock_code": "INFTEC",
+   "volume": 3992902
+  },
+  {
+   "close": 594.0,
+   "datetime": "2016-05-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 602.58,
+   "low": 592.5,
+   "open": 601.7,
+   "stock_code": "INFTEC",
+   "volume": 4584490
+  },
+  {
+   "close": 593.88,
+   "datetime": "2016-05-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 595.88,
+   "low": 588.8,
+   "open": 595.53,
+   "stock_code": "INFTEC",
+   "volume": 3483742
+  },
+  {
+   "close": 604.33,
+   "datetime": "2016-05-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 606.55,
+   "low": 597.05,
+   "open": 597.05,
+   "stock_code": "INFTEC",
+   "volume": 3852246
+  },
+  {
+   "close": 617.08,
+   "datetime": "2016-05-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 619.9,
+   "low": 605.05,
+   "open": 605.05,
+   "stock_code": "INFTEC",
+   "volume": 6130352
+  },
+  {
+   "close": 623.75,
+   "datetime": "2016-05-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 629.75,
+   "low": 615.8,
+   "open": 615.8,
+   "stock_code": "INFTEC",
+   "volume": 6179568
+  },
+  {
+   "close": 633.8,
+   "datetime": "2016-05-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 636.0,
+   "low": 620.75,
+   "open": 620.75,
+   "stock_code": "INFTEC",
+   "volume": 5285466
+  },
+  {
+   "close": 624.33,
+   "datetime": "2016-05-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 633.38,
+   "low": 619.5,
+   "open": 632.5,
+   "stock_code": "INFTEC",
+   "volume": 13781146
+  },
+  {
+   "close": 629.1,
+   "datetime": "2016-06-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 634.25,
+   "low": 623.0,
+   "open": 623.03,
+   "stock_code": "INFTEC",
+   "volume": 4840348
+  },
+  {
+   "close": 630.78,
+   "datetime": "2016-06-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 637.45,
+   "low": 627.0,
+   "open": 627.5,
+   "stock_code": "INFTEC",
+   "volume": 5051452
+  },
+  {
+   "close": 633.45,
+   "datetime": "2016-06-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 639.65,
+   "low": 630.03,
+   "open": 630.03,
+   "stock_code": "INFTEC",
+   "volume": 3997976
+  },
+  {
+   "close": 633.38,
+   "datetime": "2016-06-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 638.5,
+   "low": 630.55,
+   "open": 632.45,
+   "stock_code": "INFTEC",
+   "volume": 4224288
+  },
+  {
+   "close": 628.7,
+   "datetime": "2016-06-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 636.25,
+   "low": 627.55,
+   "open": 633.5,
+   "stock_code": "INFTEC",
+   "volume": 5689978
+  },
+  {
+   "close": 619.05,
+   "datetime": "2016-06-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 631.98,
+   "low": 617.68,
+   "open": 631.98,
+   "stock_code": "INFTEC",
+   "volume": 8740438
+  },
+  {
+   "close": 592.75,
+   "datetime": "2016-06-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 613.13,
+   "low": 590.03,
+   "open": 613.13,
+   "stock_code": "INFTEC",
+   "volume": 12734098
+  },
+  {
+   "close": 590.3,
+   "datetime": "2016-06-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 595.0,
+   "low": 585.05,
+   "open": 587.7,
+   "stock_code": "INFTEC",
+   "volume": 6381492
+  },
+  {
+   "close": 590.45,
+   "datetime": "2016-06-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 592.45,
+   "low": 583.0,
+   "open": 588.4,
+   "stock_code": "INFTEC",
+   "volume": 5283254
+  },
+  {
+   "close": 587.5,
+   "datetime": "2016-06-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 591.2,
+   "low": 583.63,
+   "open": 591.2,
+   "stock_code": "INFTEC",
+   "volume": 2939374
+  },
+  {
+   "close": 594.98,
+   "datetime": "2016-06-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 596.33,
+   "low": 589.53,
+   "open": 591.85,
+   "stock_code": "INFTEC",
+   "volume": 6709026
+  },
+  {
+   "close": 593.0,
+   "datetime": "2016-06-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 594.75,
+   "low": 585.05,
+   "open": 594.75,
+   "stock_code": "INFTEC",
+   "volume": 5301100
+  },
+  {
+   "close": 589.75,
+   "datetime": "2016-06-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 596.38,
+   "low": 587.55,
+   "open": 594.5,
+   "stock_code": "INFTEC",
+   "volume": 8513550
+  },
+  {
+   "close": 604.38,
+   "datetime": "2016-06-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 605.9,
+   "low": 589.85,
+   "open": 590.5,
+   "stock_code": "INFTEC",
+   "volume": 6227658
+  },
+  {
+   "close": 603.05,
+   "datetime": "2016-06-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 607.4,
+   "low": 597.83,
+   "open": 605.6,
+   "stock_code": "INFTEC",
+   "volume": 4760572
+  },
+  {
+   "close": 599.75,
+   "datetime": "2016-06-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 605.98,
+   "low": 594.08,
+   "open": 602.0,
+   "stock_code": "INFTEC",
+   "volume": 3030532
+  },
+  {
+   "close": 605.8,
+   "datetime": "2016-06-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 607.43,
+   "low": 596.68,
+   "open": 598.65,
+   "stock_code": "INFTEC",
+   "volume": 3827430
+  },
+  {
+   "close": 597.28,
+   "datetime": "2016-06-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 599.5,
+   "low": 580.0,
+   "open": 594.0,
+   "stock_code": "INFTEC",
+   "volume": 7807860
+  },
+  {
+   "close": 583.1,
+   "datetime": "2016-06-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 591.6,
+   "low": 580.0,
+   "open": 586.03,
+   "stock_code": "INFTEC",
+   "volume": 5581110
+  },
+  {
+   "close": 579.58,
+   "datetime": "2016-06-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 586.25,
+   "low": 577.55,
+   "open": 581.4,
+   "stock_code": "INFTEC",
+   "volume": 7652910
+  },
+  {
+   "close": 588.43,
+   "datetime": "2016-06-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 589.95,
+   "low": 580.1,
+   "open": 584.5,
+   "stock_code": "INFTEC",
+   "volume": 5457080
+  },
+  {
+   "close": 585.4,
+   "datetime": "2016-06-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 592.25,
+   "low": 583.98,
+   "open": 590.25,
+   "stock_code": "INFTEC",
+   "volume": 9344166
+  },
+  {
+   "close": 586.2,
+   "datetime": "2016-07-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 590.0,
+   "low": 585.05,
+   "open": 590.0,
+   "stock_code": "INFTEC",
+   "volume": 3987550
+  },
+  {
+   "close": 591.98,
+   "datetime": "2016-07-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 597.3,
+   "low": 588.1,
+   "open": 588.1,
+   "stock_code": "INFTEC",
+   "volume": 5378286
+  },
+  {
+   "close": 587.73,
+   "datetime": "2016-07-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 593.75,
+   "low": 585.53,
+   "open": 592.5,
+   "stock_code": "INFTEC",
+   "volume": 3593072
+  },
+  {
+   "close": 578.63,
+   "datetime": "2016-07-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 585.5,
+   "low": 577.5,
+   "open": 584.35,
+   "stock_code": "INFTEC",
+   "volume": 5951038
+  },
+  {
+   "close": 579.1,
+   "datetime": "2016-07-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 583.5,
+   "low": 576.75,
+   "open": 581.5,
+   "stock_code": "INFTEC",
+   "volume": 5551208
+  },
+  {
+   "close": 587.53,
+   "datetime": "2016-07-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 589.35,
+   "low": 580.0,
+   "open": 583.7,
+   "stock_code": "INFTEC",
+   "volume": 6667270
+  },
+  {
+   "close": 588.28,
+   "datetime": "2016-07-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 590.18,
+   "low": 584.0,
+   "open": 590.0,
+   "stock_code": "INFTEC",
+   "volume": 6195434
+  },
+  {
+   "close": 596.9,
+   "datetime": "2016-07-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 597.9,
+   "low": 587.6,
+   "open": 590.0,
+   "stock_code": "INFTEC",
+   "volume": 5271310
+  },
+  {
+   "close": 588.13,
+   "datetime": "2016-07-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 598.03,
+   "low": 582.0,
+   "open": 597.5,
+   "stock_code": "INFTEC",
+   "volume": 7406566
+  },
+  {
+   "close": 536.28,
+   "datetime": "2016-07-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 594.95,
+   "low": 526.0,
+   "open": 594.75,
+   "stock_code": "INFTEC",
+   "volume": 61465862
+  },
+  {
+   "close": 540.98,
+   "datetime": "2016-07-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 542.45,
+   "low": 527.58,
+   "open": 538.63,
+   "stock_code": "INFTEC",
+   "volume": 14326908
+  },
+  {
+   "close": 543.48,
+   "datetime": "2016-07-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 545.0,
+   "low": 537.05,
+   "open": 544.3,
+   "stock_code": "INFTEC",
+   "volume": 10401290
+  },
+  {
+   "close": 541.55,
+   "datetime": "2016-07-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 544.95,
+   "low": 535.0,
+   "open": 535.0,
+   "stock_code": "INFTEC",
+   "volume": 9819888
+  },
+  {
+   "close": 539.95,
+   "datetime": "2016-07-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 543.6,
+   "low": 537.8,
+   "open": 539.5,
+   "stock_code": "INFTEC",
+   "volume": 8662832
+  },
+  {
+   "close": 536.23,
+   "datetime": "2016-07-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 539.95,
+   "low": 533.35,
+   "open": 535.0,
+   "stock_code": "INFTEC",
+   "volume": 9381936
+  },
+  {
+   "close": 540.43,
+   "datetime": "2016-07-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 541.63,
+   "low": 531.5,
+   "open": 531.5,
+   "stock_code": "INFTEC",
+   "volume": 8466296
+  },
+  {
+   "close": 544.35,
+   "datetime": "2016-07-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 544.95,
+   "low": 535.18,
+   "open": 535.18,
+   "stock_code": "INFTEC",
+   "volume": 7187696
+  },
+  {
+   "close": 542.68,
+   "datetime": "2016-07-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 548.25,
+   "low": 539.28,
+   "open": 542.35,
+   "stock_code": "INFTEC",
+   "volume": 7429892
+  },
+  {
+   "close": 538.75,
+   "datetime": "2016-07-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 543.48,
+   "low": 537.03,
+   "open": 542.7,
+   "stock_code": "INFTEC",
+   "volume": 11254184
+  },
+  {
+   "close": 536.93,
+   "datetime": "2016-07-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 538.38,
+   "low": 533.25,
+   "open": 536.3,
+   "stock_code": "INFTEC",
+   "volume": 8150920
+  },
+  {
+   "close": 542.63,
+   "datetime": "2016-08-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 543.93,
+   "low": 534.18,
+   "open": 535.75,
+   "stock_code": "INFTEC",
+   "volume": 9094956
+  },
+  {
+   "close": 541.9,
+   "datetime": "2016-08-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 542.5,
+   "low": 537.5,
+   "open": 539.95,
+   "stock_code": "INFTEC",
+   "volume": 6820676
+  },
+  {
+   "close": 542.45,
+   "datetime": "2016-08-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 543.25,
+   "low": 535.15,
+   "open": 542.83,
+   "stock_code": "INFTEC",
+   "volume": 7206908
+  },
+  {
+   "close": 535.9,
+   "datetime": "2016-08-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 543.45,
+   "low": 535.03,
+   "open": 543.2,
+   "stock_code": "INFTEC",
+   "volume": 4231270
+  },
+  {
+   "close": 534.0,
+   "datetime": "2016-08-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 536.73,
+   "low": 530.0,
+   "open": 536.0,
+   "stock_code": "INFTEC",
+   "volume": 5607494
+  },
+  {
+   "close": 539.35,
+   "datetime": "2016-08-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 540.5,
+   "low": 531.28,
+   "open": 534.5,
+   "stock_code": "INFTEC",
+   "volume": 4641444
+  },
+  {
+   "close": 541.7,
+   "datetime": "2016-08-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 542.25,
+   "low": 535.75,
+   "open": 538.5,
+   "stock_code": "INFTEC",
+   "volume": 7192500
+  },
+  {
+   "close": 541.18,
+   "datetime": "2016-08-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 543.95,
+   "low": 537.6,
+   "open": 538.0,
+   "stock_code": "INFTEC",
+   "volume": 5575762
+  },
+  {
+   "close": 538.68,
+   "datetime": "2016-08-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 547.5,
+   "low": 537.63,
+   "open": 540.85,
+   "stock_code": "INFTEC",
+   "volume": 5036060
+  },
+  {
+   "close": 531.28,
+   "datetime": "2016-08-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 539.4,
+   "low": 530.0,
+   "open": 537.53,
+   "stock_code": "INFTEC",
+   "volume": 7442288
+  },
+  {
+   "close": 525.9,
+   "datetime": "2016-08-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.03,
+   "low": 514.0,
+   "open": 521.0,
+   "stock_code": "INFTEC",
+   "volume": 16422584
+  },
+  {
+   "close": 516.65,
+   "datetime": "2016-08-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 526.33,
+   "low": 515.25,
+   "open": 524.98,
+   "stock_code": "INFTEC",
+   "volume": 6596422
+  },
+  {
+   "close": 511.7,
+   "datetime": "2016-08-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 519.55,
+   "low": 510.75,
+   "open": 518.25,
+   "stock_code": "INFTEC",
+   "volume": 8430816
+  },
+  {
+   "close": 510.65,
+   "datetime": "2016-08-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 519.5,
+   "low": 509.23,
+   "open": 515.0,
+   "stock_code": "INFTEC",
+   "volume": 5681484
+  },
+  {
+   "close": 507.73,
+   "datetime": "2016-08-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 515.0,
+   "low": 504.55,
+   "open": 509.0,
+   "stock_code": "INFTEC",
+   "volume": 10251110
+  },
+  {
+   "close": 519.83,
+   "datetime": "2016-08-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 521.0,
+   "low": 510.05,
+   "open": 510.05,
+   "stock_code": "INFTEC",
+   "volume": 7404096
+  },
+  {
+   "close": 528.7,
+   "datetime": "2016-08-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 531.03,
+   "low": 523.5,
+   "open": 523.5,
+   "stock_code": "INFTEC",
+   "volume": 6127758
+  },
+  {
+   "close": 518.08,
+   "datetime": "2016-08-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 528.8,
+   "low": 516.05,
+   "open": 527.5,
+   "stock_code": "INFTEC",
+   "volume": 4792984
+  },
+  {
+   "close": 510.13,
+   "datetime": "2016-08-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 523.0,
+   "low": 508.53,
+   "open": 518.0,
+   "stock_code": "INFTEC",
+   "volume": 6877732
+  },
+  {
+   "close": 511.4,
+   "datetime": "2016-08-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 515.0,
+   "low": 505.5,
+   "open": 508.8,
+   "stock_code": "INFTEC",
+   "volume": 5219272
+  },
+  {
+   "close": 520.2,
+   "datetime": "2016-08-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.5,
+   "low": 512.5,
+   "open": 516.23,
+   "stock_code": "INFTEC",
+   "volume": 4373672
+  },
+  {
+   "close": 517.93,
+   "datetime": "2016-08-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.88,
+   "low": 513.9,
+   "open": 518.55,
+   "stock_code": "INFTEC",
+   "volume": 11132508
+  },
+  {
+   "close": 518.78,
+   "datetime": "2016-09-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.23,
+   "low": 516.0,
+   "open": 519.0,
+   "stock_code": "INFTEC",
+   "volume": 2874156
+  },
+  {
+   "close": 515.93,
+   "datetime": "2016-09-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 519.68,
+   "low": 513.1,
+   "open": 519.53,
+   "stock_code": "INFTEC",
+   "volume": 3328482
+  },
+  {
+   "close": 522.5,
+   "datetime": "2016-09-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 524.45,
+   "low": 517.8,
+   "open": 519.13,
+   "stock_code": "INFTEC",
+   "volume": 8200204
+  },
+  {
+   "close": 527.18,
+   "datetime": "2016-09-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.5,
+   "low": 522.0,
+   "open": 524.0,
+   "stock_code": "INFTEC",
+   "volume": 7422760
+  },
+  {
+   "close": 518.83,
+   "datetime": "2016-09-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.5,
+   "low": 512.0,
+   "open": 522.5,
+   "stock_code": "INFTEC",
+   "volume": 9091030
+  },
+  {
+   "close": 517.75,
+   "datetime": "2016-09-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.5,
+   "low": 513.28,
+   "open": 518.5,
+   "stock_code": "INFTEC",
+   "volume": 5052394
+  },
+  {
+   "close": 527.0,
+   "datetime": "2016-09-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.0,
+   "low": 512.63,
+   "open": 512.63,
+   "stock_code": "INFTEC",
+   "volume": 6201658
+  },
+  {
+   "close": 522.8,
+   "datetime": "2016-09-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 528.9,
+   "low": 520.33,
+   "open": 526.98,
+   "stock_code": "INFTEC",
+   "volume": 5147076
+  },
+  {
+   "close": 521.1,
+   "datetime": "2016-09-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 523.4,
+   "low": 517.68,
+   "open": 522.8,
+   "stock_code": "INFTEC",
+   "volume": 4700468
+  },
+  {
+   "close": 530.08,
+   "datetime": "2016-09-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 532.25,
+   "low": 519.05,
+   "open": 524.5,
+   "stock_code": "INFTEC",
+   "volume": 9939068
+  },
+  {
+   "close": 530.6,
+   "datetime": "2016-09-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 534.45,
+   "low": 520.68,
+   "open": 523.0,
+   "stock_code": "INFTEC",
+   "volume": 5808038
+  },
+  {
+   "close": 525.08,
+   "datetime": "2016-09-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 528.58,
+   "low": 522.88,
+   "open": 526.65,
+   "stock_code": "INFTEC",
+   "volume": 4213770
+  },
+  {
+   "close": 527.88,
+   "datetime": "2016-09-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 530.63,
+   "low": 525.53,
+   "open": 527.0,
+   "stock_code": "INFTEC",
+   "volume": 4230688
+  },
+  {
+   "close": 529.4,
+   "datetime": "2016-09-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 530.5,
+   "low": 526.0,
+   "open": 529.5,
+   "stock_code": "INFTEC",
+   "volume": 3622656
+  },
+  {
+   "close": 521.28,
+   "datetime": "2016-09-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.4,
+   "low": 520.0,
+   "open": 528.5,
+   "stock_code": "INFTEC",
+   "volume": 5200356
+  },
+  {
+   "close": 517.95,
+   "datetime": "2016-09-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 521.95,
+   "low": 515.5,
+   "open": 521.38,
+   "stock_code": "INFTEC",
+   "volume": 6370714
+  },
+  {
+   "close": 519.88,
+   "datetime": "2016-09-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 524.95,
+   "low": 516.68,
+   "open": 517.53,
+   "stock_code": "INFTEC",
+   "volume": 6524984
+  },
+  {
+   "close": 519.48,
+   "datetime": "2016-09-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 521.15,
+   "low": 516.63,
+   "open": 520.0,
+   "stock_code": "INFTEC",
+   "volume": 5430362
+  },
+  {
+   "close": 514.6,
+   "datetime": "2016-09-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.48,
+   "low": 512.0,
+   "open": 522.48,
+   "stock_code": "INFTEC",
+   "volume": 8897458
+  },
+  {
+   "close": 518.03,
+   "datetime": "2016-09-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 521.95,
+   "low": 515.55,
+   "open": 515.55,
+   "stock_code": "INFTEC",
+   "volume": 6497398
+  },
+  {
+   "close": 519.05,
+   "datetime": "2016-10-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.0,
+   "low": 513.05,
+   "open": 517.75,
+   "stock_code": "INFTEC",
+   "volume": 3654334
+  },
+  {
+   "close": 524.6,
+   "datetime": "2016-10-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 525.7,
+   "low": 519.15,
+   "open": 520.0,
+   "stock_code": "INFTEC",
+   "volume": 5065718
+  },
+  {
+   "close": 520.75,
+   "datetime": "2016-10-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 524.93,
+   "low": 518.5,
+   "open": 524.6,
+   "stock_code": "INFTEC",
+   "volume": 2306486
+  },
+  {
+   "close": 513.7,
+   "datetime": "2016-10-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.5,
+   "low": 512.98,
+   "open": 522.5,
+   "stock_code": "INFTEC",
+   "volume": 3720114
+  },
+  {
+   "close": 506.28,
+   "datetime": "2016-10-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 516.9,
+   "low": 505.05,
+   "open": 514.98,
+   "stock_code": "INFTEC",
+   "volume": 6282974
+  },
+  {
+   "close": 514.98,
+   "datetime": "2016-10-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 515.88,
+   "low": 505.0,
+   "open": 508.5,
+   "stock_code": "INFTEC",
+   "volume": 5410272
+  },
+  {
+   "close": 526.18,
+   "datetime": "2016-10-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 529.0,
+   "low": 510.7,
+   "open": 510.7,
+   "stock_code": "INFTEC",
+   "volume": 9776826
+  },
+  {
+   "close": 513.58,
+   "datetime": "2016-10-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 541.35,
+   "low": 498.13,
+   "open": 526.45,
+   "stock_code": "INFTEC",
+   "volume": 33454380
+  },
+  {
+   "close": 511.2,
+   "datetime": "2016-10-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.9,
+   "low": 508.68,
+   "open": 517.48,
+   "stock_code": "INFTEC",
+   "volume": 8013810
+  },
+  {
+   "close": 519.53,
+   "datetime": "2016-10-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.25,
+   "low": 513.65,
+   "open": 515.0,
+   "stock_code": "INFTEC",
+   "volume": 6386318
+  },
+  {
+   "close": 520.9,
+   "datetime": "2016-10-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.85,
+   "low": 518.0,
+   "open": 521.0,
+   "stock_code": "INFTEC",
+   "volume": 3507792
+  },
+  {
+   "close": 518.33,
+   "datetime": "2016-10-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 525.35,
+   "low": 516.9,
+   "open": 522.38,
+   "stock_code": "INFTEC",
+   "volume": 3531538
+  },
+  {
+   "close": 519.15,
+   "datetime": "2016-10-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.5,
+   "low": 511.25,
+   "open": 517.5,
+   "stock_code": "INFTEC",
+   "volume": 3858042
+  },
+  {
+   "close": 513.55,
+   "datetime": "2016-10-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 521.35,
+   "low": 512.75,
+   "open": 518.75,
+   "stock_code": "INFTEC",
+   "volume": 2901252
+  },
+  {
+   "close": 508.6,
+   "datetime": "2016-10-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 519.45,
+   "low": 507.6,
+   "open": 518.25,
+   "stock_code": "INFTEC",
+   "volume": 5630266
+  },
+  {
+   "close": 507.1,
+   "datetime": "2016-10-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 509.93,
+   "low": 504.65,
+   "open": 508.5,
+   "stock_code": "INFTEC",
+   "volume": 2773842
+  },
+  {
+   "close": 501.75,
+   "datetime": "2016-10-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 508.95,
+   "low": 500.55,
+   "open": 508.95,
+   "stock_code": "INFTEC",
+   "volume": 7224084
+  },
+  {
+   "close": 498.75,
+   "datetime": "2016-10-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 505.0,
+   "low": 496.58,
+   "open": 502.6,
+   "stock_code": "INFTEC",
+   "volume": 5838828
+  },
+  {
+   "close": 501.05,
+   "datetime": "2016-10-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.98,
+   "low": 499.9,
+   "open": 500.5,
+   "stock_code": "INFTEC",
+   "volume": 637374
+  },
+  {
+   "close": 494.73,
+   "datetime": "2016-11-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 503.4,
+   "low": 493.2,
+   "open": 503.4,
+   "stock_code": "INFTEC",
+   "volume": 6329964
+  },
+  {
+   "close": 490.53,
+   "datetime": "2016-11-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.75,
+   "low": 490.0,
+   "open": 492.4,
+   "stock_code": "INFTEC",
+   "volume": 5375172
+  },
+  {
+   "close": 483.43,
+   "datetime": "2016-11-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.0,
+   "low": 482.55,
+   "open": 490.53,
+   "stock_code": "INFTEC",
+   "volume": 5219116
+  },
+  {
+   "close": 485.5,
+   "datetime": "2016-11-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 489.6,
+   "low": 480.5,
+   "open": 483.5,
+   "stock_code": "INFTEC",
+   "volume": 6002318
+  },
+  {
+   "close": 488.98,
+   "datetime": "2016-11-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.0,
+   "low": 487.5,
+   "open": 492.5,
+   "stock_code": "INFTEC",
+   "volume": 4536838
+  },
+  {
+   "close": 491.3,
+   "datetime": "2016-11-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.88,
+   "low": 485.3,
+   "open": 493.45,
+   "stock_code": "INFTEC",
+   "volume": 5258100
+  },
+  {
+   "close": 479.15,
+   "datetime": "2016-11-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 487.3,
+   "low": 450.5,
+   "open": 465.0,
+   "stock_code": "INFTEC",
+   "volume": 12762242
+  },
+  {
+   "close": 469.7,
+   "datetime": "2016-11-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.25,
+   "low": 467.5,
+   "open": 481.25,
+   "stock_code": "INFTEC",
+   "volume": 7282548
+  },
+  {
+   "close": 460.78,
+   "datetime": "2016-11-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 472.5,
+   "low": 459.35,
+   "open": 470.0,
+   "stock_code": "INFTEC",
+   "volume": 7085472
+  },
+  {
+   "close": 461.78,
+   "datetime": "2016-11-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.98,
+   "low": 454.28,
+   "open": 462.0,
+   "stock_code": "INFTEC",
+   "volume": 9234034
+  },
+  {
+   "close": 470.45,
+   "datetime": "2016-11-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 478.43,
+   "low": 464.28,
+   "open": 465.0,
+   "stock_code": "INFTEC",
+   "volume": 12219574
+  },
+  {
+   "close": 464.9,
+   "datetime": "2016-11-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.5,
+   "low": 463.2,
+   "open": 467.13,
+   "stock_code": "INFTEC",
+   "volume": 5705162
+  },
+  {
+   "close": 460.0,
+   "datetime": "2016-11-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 466.63,
+   "low": 458.75,
+   "open": 465.0,
+   "stock_code": "INFTEC",
+   "volume": 6031156
+  },
+  {
+   "close": 455.55,
+   "datetime": "2016-11-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 463.45,
+   "low": 453.48,
+   "open": 463.45,
+   "stock_code": "INFTEC",
+   "volume": 7937930
+  },
+  {
+   "close": 457.1,
+   "datetime": "2016-11-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 464.33,
+   "low": 455.83,
+   "open": 458.45,
+   "stock_code": "INFTEC",
+   "volume": 5479518
+  },
+  {
+   "close": 460.13,
+   "datetime": "2016-11-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 461.45,
+   "low": 456.23,
+   "open": 461.05,
+   "stock_code": "INFTEC",
+   "volume": 8250504
+  },
+  {
+   "close": 465.15,
+   "datetime": "2016-11-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.95,
+   "low": 461.65,
+   "open": 464.1,
+   "stock_code": "INFTEC",
+   "volume": 16779382
+  },
+  {
+   "close": 488.75,
+   "datetime": "2016-11-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 492.5,
+   "low": 465.23,
+   "open": 465.23,
+   "stock_code": "INFTEC",
+   "volume": 12628748
+  },
+  {
+   "close": 489.88,
+   "datetime": "2016-11-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.73,
+   "low": 485.3,
+   "open": 489.65,
+   "stock_code": "INFTEC",
+   "volume": 7365672
+  },
+  {
+   "close": 486.3,
+   "datetime": "2016-11-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 492.35,
+   "low": 483.55,
+   "open": 489.4,
+   "stock_code": "INFTEC",
+   "volume": 6124416
+  },
+  {
+   "close": 487.78,
+   "datetime": "2016-11-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 488.5,
+   "low": 480.53,
+   "open": 486.5,
+   "stock_code": "INFTEC",
+   "volume": 8499266
+  },
+  {
+   "close": 487.8,
+   "datetime": "2016-12-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.78,
+   "low": 483.5,
+   "open": 488.0,
+   "stock_code": "INFTEC",
+   "volume": 4611266
+  },
+  {
+   "close": 482.25,
+   "datetime": "2016-12-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 484.8,
+   "low": 480.55,
+   "open": 482.4,
+   "stock_code": "INFTEC",
+   "volume": 4452960
+  },
+  {
+   "close": 480.83,
+   "datetime": "2016-12-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 484.3,
+   "low": 479.0,
+   "open": 482.95,
+   "stock_code": "INFTEC",
+   "volume": 3659182
+  },
+  {
+   "close": 483.25,
+   "datetime": "2016-12-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 489.75,
+   "low": 480.83,
+   "open": 480.9,
+   "stock_code": "INFTEC",
+   "volume": 3558946
+  },
+  {
+   "close": 483.2,
+   "datetime": "2016-12-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 486.5,
+   "low": 480.1,
+   "open": 484.0,
+   "stock_code": "INFTEC",
+   "volume": 3384268
+  },
+  {
+   "close": 492.33,
+   "datetime": "2016-12-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.05,
+   "low": 485.03,
+   "open": 485.03,
+   "stock_code": "INFTEC",
+   "volume": 5941118
+  },
+  {
+   "close": 494.68,
+   "datetime": "2016-12-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 504.08,
+   "low": 490.75,
+   "open": 492.5,
+   "stock_code": "INFTEC",
+   "volume": 8647550
+  },
+  {
+   "close": 488.68,
+   "datetime": "2016-12-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.4,
+   "low": 482.6,
+   "open": 491.4,
+   "stock_code": "INFTEC",
+   "volume": 5344206
+  },
+  {
+   "close": 495.1,
+   "datetime": "2016-12-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.43,
+   "low": 485.55,
+   "open": 490.25,
+   "stock_code": "INFTEC",
+   "volume": 4853710
+  },
+  {
+   "close": 499.88,
+   "datetime": "2016-12-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.48,
+   "low": 492.05,
+   "open": 495.5,
+   "stock_code": "INFTEC",
+   "volume": 5380818
+  },
+  {
+   "close": 496.18,
+   "datetime": "2016-12-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 509.48,
+   "low": 494.5,
+   "open": 498.7,
+   "stock_code": "INFTEC",
+   "volume": 7963228
+  },
+  {
+   "close": 502.58,
+   "datetime": "2016-12-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 504.85,
+   "low": 498.88,
+   "open": 501.9,
+   "stock_code": "INFTEC",
+   "volume": 6434372
+  },
+  {
+   "close": 502.33,
+   "datetime": "2016-12-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 503.18,
+   "low": 497.05,
+   "open": 503.05,
+   "stock_code": "INFTEC",
+   "volume": 4124052
+  },
+  {
+   "close": 1012.15,
+   "datetime": "2016-12-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 1019.0,
+   "low": 1001.3,
+   "open": 1002.0,
+   "stock_code": "INFTEC",
+   "volume": 3818249
+  },
+  {
+   "close": 500.78,
+   "datetime": "2016-12-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 511.0,
+   "low": 499.13,
+   "open": 508.0,
+   "stock_code": "INFTEC",
+   "volume": 7343394
+  },
+  {
+   "close": 492.35,
+   "datetime": "2016-12-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 503.5,
+   "low": 484.75,
+   "open": 501.25,
+   "stock_code": "INFTEC",
+   "volume": 7059392
+  },
+  {
+   "close": 494.23,
+   "datetime": "2016-12-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 503.3,
+   "low": 486.8,
+   "open": 492.45,
+   "stock_code": "INFTEC",
+   "volume": 7305814
+  },
+  {
+   "close": 491.38,
+   "datetime": "2016-12-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 497.0,
+   "low": 487.55,
+   "open": 494.0,
+   "stock_code": "INFTEC",
+   "volume": 3212076
+  },
+  {
+   "close": 499.48,
+   "datetime": "2016-12-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.95,
+   "low": 490.0,
+   "open": 491.38,
+   "stock_code": "INFTEC",
+   "volume": 4909668
+  },
+  {
+   "close": 499.25,
+   "datetime": "2016-12-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 504.9,
+   "low": 497.5,
+   "open": 501.48,
+   "stock_code": "INFTEC",
+   "volume": 5476112
+  },
+  {
+   "close": 496.18,
+   "datetime": "2016-12-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 504.0,
+   "low": 494.08,
+   "open": 501.88,
+   "stock_code": "INFTEC",
+   "volume": 6239290
+  },
+  {
+   "close": 505.3,
+   "datetime": "2016-12-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 506.0,
+   "low": 496.38,
+   "open": 499.0,
+   "stock_code": "INFTEC",
+   "volume": 7265886
+  },
+  {
+   "close": 500.55,
+   "datetime": "2017-01-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 506.43,
+   "low": 499.68,
+   "open": 505.55,
+   "stock_code": "INFTEC",
+   "volume": 2334736
+  },
+  {
+   "close": 496.93,
+   "datetime": "2017-01-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.45,
+   "low": 491.0,
+   "open": 502.05,
+   "stock_code": "INFTEC",
+   "volume": 6772972
+  },
+  {
+   "close": 498.88,
+   "datetime": "2017-01-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.1,
+   "low": 496.13,
+   "open": 497.53,
+   "stock_code": "INFTEC",
+   "volume": 7073308
+  },
+  {
+   "close": 498.08,
+   "datetime": "2017-01-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 504.75,
+   "low": 494.38,
+   "open": 500.8,
+   "stock_code": "INFTEC",
+   "volume": 8205342
+  },
+  {
+   "close": 486.13,
+   "datetime": "2017-01-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.43,
+   "low": 484.03,
+   "open": 497.45,
+   "stock_code": "INFTEC",
+   "volume": 14392138
+  },
+  {
+   "close": 485.18,
+   "datetime": "2017-01-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 488.48,
+   "low": 482.5,
+   "open": 486.13,
+   "stock_code": "INFTEC",
+   "volume": 10541940
+  },
+  {
+   "close": 485.28,
+   "datetime": "2017-01-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 490.5,
+   "low": 483.98,
+   "open": 488.5,
+   "stock_code": "INFTEC",
+   "volume": 11936748
+  },
+  {
+   "close": 484.55,
+   "datetime": "2017-01-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 489.23,
+   "low": 481.98,
+   "open": 487.1,
+   "stock_code": "INFTEC",
+   "volume": 12238612
+  },
+  {
+   "close": 500.03,
+   "datetime": "2017-01-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.2,
+   "low": 488.78,
+   "open": 488.78,
+   "stock_code": "INFTEC",
+   "volume": 11828274
+  },
+  {
+   "close": 487.9,
+   "datetime": "2017-01-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.0,
+   "low": 481.35,
+   "open": 515.0,
+   "stock_code": "INFTEC",
+   "volume": 31272808
+  },
+  {
+   "close": 477.83,
+   "datetime": "2017-01-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 482.73,
+   "low": 476.23,
+   "open": 482.5,
+   "stock_code": "INFTEC",
+   "volume": 12346202
+  },
+  {
+   "close": 477.7,
+   "datetime": "2017-01-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 482.0,
+   "low": 476.2,
+   "open": 478.13,
+   "stock_code": "INFTEC",
+   "volume": 5554052
+  },
+  {
+   "close": 475.4,
+   "datetime": "2017-01-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 480.5,
+   "low": 474.9,
+   "open": 479.05,
+   "stock_code": "INFTEC",
+   "volume": 5948840
+  },
+  {
+   "close": 479.05,
+   "datetime": "2017-01-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 479.8,
+   "low": 474.05,
+   "open": 475.5,
+   "stock_code": "INFTEC",
+   "volume": 8866774
+  },
+  {
+   "close": 474.35,
+   "datetime": "2017-01-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 476.58,
+   "low": 473.0,
+   "open": 475.0,
+   "stock_code": "INFTEC",
+   "volume": 9122838
+  },
+  {
+   "close": 476.35,
+   "datetime": "2017-01-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 479.0,
+   "low": 470.0,
+   "open": 472.5,
+   "stock_code": "INFTEC",
+   "volume": 7945294
+  },
+  {
+   "close": 472.78,
+   "datetime": "2017-01-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 475.0,
+   "low": 470.05,
+   "open": 475.0,
+   "stock_code": "INFTEC",
+   "volume": 6820380
+  },
+  {
+   "close": 468.3,
+   "datetime": "2017-01-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 473.28,
+   "low": 467.4,
+   "open": 473.05,
+   "stock_code": "INFTEC",
+   "volume": 9966090
+  },
+  {
+   "close": 471.08,
+   "datetime": "2017-01-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 473.78,
+   "low": 450.58,
+   "open": 466.93,
+   "stock_code": "INFTEC",
+   "volume": 10630954
+  },
+  {
+   "close": 474.68,
+   "datetime": "2017-01-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 475.75,
+   "low": 464.43,
+   "open": 468.75,
+   "stock_code": "INFTEC",
+   "volume": 11366564
+  },
+  {
+   "close": 464.3,
+   "datetime": "2017-01-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 470.75,
+   "low": 452.18,
+   "open": 470.75,
+   "stock_code": "INFTEC",
+   "volume": 24065366
+  },
+  {
+   "close": 458.38,
+   "datetime": "2017-02-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 461.6,
+   "low": 452.58,
+   "open": 460.55,
+   "stock_code": "INFTEC",
+   "volume": 11526158
+  },
+  {
+   "close": 467.95,
+   "datetime": "2017-02-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 472.5,
+   "low": 455.05,
+   "open": 458.5,
+   "stock_code": "INFTEC",
+   "volume": 11821006
+  },
+  {
+   "close": 468.05,
+   "datetime": "2017-02-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 470.45,
+   "low": 460.53,
+   "open": 466.9,
+   "stock_code": "INFTEC",
+   "volume": 8421562
+  },
+  {
+   "close": 467.63,
+   "datetime": "2017-02-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 471.88,
+   "low": 465.28,
+   "open": 468.63,
+   "stock_code": "INFTEC",
+   "volume": 6725996
+  },
+  {
+   "close": 471.13,
+   "datetime": "2017-02-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.9,
+   "low": 464.28,
+   "open": 466.5,
+   "stock_code": "INFTEC",
+   "volume": 9266466
+  },
+  {
+   "close": 468.25,
+   "datetime": "2017-02-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 472.05,
+   "low": 466.23,
+   "open": 468.0,
+   "stock_code": "INFTEC",
+   "volume": 6318306
+  },
+  {
+   "close": 473.0,
+   "datetime": "2017-02-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 475.0,
+   "low": 468.28,
+   "open": 468.5,
+   "stock_code": "INFTEC",
+   "volume": 11889768
+  },
+  {
+   "close": 484.15,
+   "datetime": "2017-02-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 486.0,
+   "low": 471.65,
+   "open": 473.13,
+   "stock_code": "INFTEC",
+   "volume": 12248102
+  },
+  {
+   "close": 492.18,
+   "datetime": "2017-02-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.05,
+   "low": 481.43,
+   "open": 486.43,
+   "stock_code": "INFTEC",
+   "volume": 13718740
+  },
+  {
+   "close": 493.85,
+   "datetime": "2017-02-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.5,
+   "low": 486.18,
+   "open": 490.0,
+   "stock_code": "INFTEC",
+   "volume": 9334642
+  },
+  {
+   "close": 490.9,
+   "datetime": "2017-02-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.4,
+   "low": 484.4,
+   "open": 494.6,
+   "stock_code": "INFTEC",
+   "volume": 7258744
+  },
+  {
+   "close": 506.05,
+   "datetime": "2017-02-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 506.95,
+   "low": 495.03,
+   "open": 495.5,
+   "stock_code": "INFTEC",
+   "volume": 12813774
+  },
+  {
+   "close": 500.05,
+   "datetime": "2017-02-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 506.88,
+   "low": 496.35,
+   "open": 506.88,
+   "stock_code": "INFTEC",
+   "volume": 4850888
+  },
+  {
+   "close": 505.13,
+   "datetime": "2017-02-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 515.5,
+   "low": 496.75,
+   "open": 498.25,
+   "stock_code": "INFTEC",
+   "volume": 4650124
+  },
+  {
+   "close": 506.8,
+   "datetime": "2017-02-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 512.25,
+   "low": 500.03,
+   "open": 511.05,
+   "stock_code": "INFTEC",
+   "volume": 7610438
+  },
+  {
+   "close": 495.08,
+   "datetime": "2017-02-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 507.5,
+   "low": 493.2,
+   "open": 507.5,
+   "stock_code": "INFTEC",
+   "volume": 6601564
+  },
+  {
+   "close": 504.43,
+   "datetime": "2017-02-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 510.0,
+   "low": 496.68,
+   "open": 499.45,
+   "stock_code": "INFTEC",
+   "volume": 9531422
+  },
+  {
+   "close": 506.2,
+   "datetime": "2017-02-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 511.5,
+   "low": 503.48,
+   "open": 503.65,
+   "stock_code": "INFTEC",
+   "volume": 5325328
+  },
+  {
+   "close": 506.2,
+   "datetime": "2017-02-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 511.35,
+   "low": 504.63,
+   "open": 505.93,
+   "stock_code": "INFTEC",
+   "volume": 5935670
+  },
+  {
+   "close": 512.58,
+   "datetime": "2017-03-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 513.5,
+   "low": 505.05,
+   "open": 506.0,
+   "stock_code": "INFTEC",
+   "volume": 4280238
+  },
+  {
+   "close": 511.65,
+   "datetime": "2017-03-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 514.0,
+   "low": 508.25,
+   "open": 512.2,
+   "stock_code": "INFTEC",
+   "volume": 2947812
+  },
+  {
+   "close": 515.6,
+   "datetime": "2017-03-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 517.15,
+   "low": 500.2,
+   "open": 505.13,
+   "stock_code": "INFTEC",
+   "volume": 5399966
+  },
+  {
+   "close": 516.95,
+   "datetime": "2017-03-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 517.98,
+   "low": 509.85,
+   "open": 510.03,
+   "stock_code": "INFTEC",
+   "volume": 5285768
+  },
+  {
+   "close": 509.9,
+   "datetime": "2017-03-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 512.9,
+   "low": 507.35,
+   "open": 511.0,
+   "stock_code": "INFTEC",
+   "volume": 4642578
+  },
+  {
+   "close": 503.9,
+   "datetime": "2017-03-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 508.45,
+   "low": 502.23,
+   "open": 508.45,
+   "stock_code": "INFTEC",
+   "volume": 6176590
+  },
+  {
+   "close": 505.78,
+   "datetime": "2017-03-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 506.5,
+   "low": 499.5,
+   "open": 503.9,
+   "stock_code": "INFTEC",
+   "volume": 3479674
+  },
+  {
+   "close": 510.93,
+   "datetime": "2017-03-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 513.83,
+   "low": 506.7,
+   "open": 507.5,
+   "stock_code": "INFTEC",
+   "volume": 4550002
+  },
+  {
+   "close": 517.4,
+   "datetime": "2017-03-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.95,
+   "low": 511.4,
+   "open": 511.4,
+   "stock_code": "INFTEC",
+   "volume": 7876434
+  },
+  {
+   "close": 505.98,
+   "datetime": "2017-03-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 517.45,
+   "low": 503.75,
+   "open": 517.45,
+   "stock_code": "INFTEC",
+   "volume": 6368894
+  },
+  {
+   "close": 514.43,
+   "datetime": "2017-03-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 515.85,
+   "low": 506.65,
+   "open": 506.65,
+   "stock_code": "INFTEC",
+   "volume": 6702714
+  },
+  {
+   "close": 520.15,
+   "datetime": "2017-03-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 521.45,
+   "low": 509.63,
+   "open": 517.7,
+   "stock_code": "INFTEC",
+   "volume": 9506486
+  },
+  {
+   "close": 510.75,
+   "datetime": "2017-03-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 513.28,
+   "low": 507.55,
+   "open": 513.28,
+   "stock_code": "INFTEC",
+   "volume": 4426422
+  },
+  {
+   "close": 516.43,
+   "datetime": "2017-03-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 517.48,
+   "low": 509.4,
+   "open": 510.45,
+   "stock_code": "INFTEC",
+   "volume": 4869028
+  },
+  {
+   "close": 513.85,
+   "datetime": "2017-03-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 519.98,
+   "low": 510.2,
+   "open": 511.23,
+   "stock_code": "INFTEC",
+   "volume": 3990584
+  },
+  {
+   "close": 520.23,
+   "datetime": "2017-03-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 521.5,
+   "low": 513.3,
+   "open": 514.13,
+   "stock_code": "INFTEC",
+   "volume": 4499308
+  },
+  {
+   "close": 515.7,
+   "datetime": "2017-03-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 522.0,
+   "low": 513.85,
+   "open": 519.0,
+   "stock_code": "INFTEC",
+   "volume": 4882964
+  },
+  {
+   "close": 514.43,
+   "datetime": "2017-03-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.93,
+   "low": 512.25,
+   "open": 513.6,
+   "stock_code": "INFTEC",
+   "volume": 7684562
+  },
+  {
+   "close": 517.58,
+   "datetime": "2017-03-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 519.5,
+   "low": 515.03,
+   "open": 515.75,
+   "stock_code": "INFTEC",
+   "volume": 4796218
+  },
+  {
+   "close": 515.93,
+   "datetime": "2017-03-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 520.75,
+   "low": 512.93,
+   "open": 517.15,
+   "stock_code": "INFTEC",
+   "volume": 6979102
+  },
+  {
+   "close": 512.75,
+   "datetime": "2017-03-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 517.95,
+   "low": 510.13,
+   "open": 517.0,
+   "stock_code": "INFTEC",
+   "volume": 12155496
+  },
+  {
+   "close": 511.13,
+   "datetime": "2017-03-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 514.65,
+   "low": 504.0,
+   "open": 511.63,
+   "stock_code": "INFTEC",
+   "volume": 14152106
+  },
+  {
+   "close": 504.4,
+   "datetime": "2017-04-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 516.23,
+   "low": 503.05,
+   "open": 516.08,
+   "stock_code": "INFTEC",
+   "volume": 4313188
+  },
+  {
+   "close": 497.98,
+   "datetime": "2017-04-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.7,
+   "low": 495.5,
+   "open": 502.5,
+   "stock_code": "INFTEC",
+   "volume": 7392608
+  },
+  {
+   "close": 499.8,
+   "datetime": "2017-04-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.9,
+   "low": 496.0,
+   "open": 499.08,
+   "stock_code": "INFTEC",
+   "volume": 5378414
+  },
+  {
+   "close": 490.78,
+   "datetime": "2017-04-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.45,
+   "low": 489.5,
+   "open": 500.45,
+   "stock_code": "INFTEC",
+   "volume": 6399696
+  },
+  {
+   "close": 476.7,
+   "datetime": "2017-04-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.75,
+   "low": 475.05,
+   "open": 492.45,
+   "stock_code": "INFTEC",
+   "volume": 9517660
+  },
+  {
+   "close": 483.58,
+   "datetime": "2017-04-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 485.85,
+   "low": 478.03,
+   "open": 478.03,
+   "stock_code": "INFTEC",
+   "volume": 8653282
+  },
+  {
+   "close": 484.43,
+   "datetime": "2017-04-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 488.45,
+   "low": 480.18,
+   "open": 485.0,
+   "stock_code": "INFTEC",
+   "volume": 6688034
+  },
+  {
+   "close": 465.7,
+   "datetime": "2017-04-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 495.0,
+   "low": 463.33,
+   "open": 485.0,
+   "stock_code": "INFTEC",
+   "volume": 30953756
+  },
+  {
+   "close": 462.45,
+   "datetime": "2017-04-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 466.05,
+   "low": 461.75,
+   "open": 465.0,
+   "stock_code": "INFTEC",
+   "volume": 7208728
+  },
+  {
+   "close": 461.33,
+   "datetime": "2017-04-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 467.0,
+   "low": 459.55,
+   "open": 462.38,
+   "stock_code": "INFTEC",
+   "volume": 4640988
+  },
+  {
+   "close": 459.6,
+   "datetime": "2017-04-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 465.0,
+   "low": 456.33,
+   "open": 461.5,
+   "stock_code": "INFTEC",
+   "volume": 10064696
+  },
+  {
+   "close": 463.65,
+   "datetime": "2017-04-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 464.85,
+   "low": 459.28,
+   "open": 460.75,
+   "stock_code": "INFTEC",
+   "volume": 4547484
+  },
+  {
+   "close": 461.85,
+   "datetime": "2017-04-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 467.4,
+   "low": 460.55,
+   "open": 467.4,
+   "stock_code": "INFTEC",
+   "volume": 3572072
+  },
+  {
+   "close": 463.28,
+   "datetime": "2017-04-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 464.25,
+   "low": 456.5,
+   "open": 458.75,
+   "stock_code": "INFTEC",
+   "volume": 5554628
+  },
+  {
+   "close": 464.68,
+   "datetime": "2017-04-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 466.5,
+   "low": 460.28,
+   "open": 462.95,
+   "stock_code": "INFTEC",
+   "volume": 4733320
+  },
+  {
+   "close": 457.13,
+   "datetime": "2017-04-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 467.78,
+   "low": 455.1,
+   "open": 464.98,
+   "stock_code": "INFTEC",
+   "volume": 9082088
+  },
+  {
+   "close": 462.63,
+   "datetime": "2017-04-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 464.5,
+   "low": 458.0,
+   "open": 458.0,
+   "stock_code": "INFTEC",
+   "volume": 7795966
+  },
+  {
+   "close": 459.48,
+   "datetime": "2017-04-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 463.7,
+   "low": 457.8,
+   "open": 463.43,
+   "stock_code": "INFTEC",
+   "volume": 5028184
+  },
+  {
+   "close": 461.3,
+   "datetime": "2017-05-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 463.2,
+   "low": 457.55,
+   "open": 462.0,
+   "stock_code": "INFTEC",
+   "volume": 3227842
+  },
+  {
+   "close": 467.15,
+   "datetime": "2017-05-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.55,
+   "low": 458.83,
+   "open": 463.25,
+   "stock_code": "INFTEC",
+   "volume": 4656606
+  },
+  {
+   "close": 468.83,
+   "datetime": "2017-05-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.83,
+   "low": 464.45,
+   "open": 468.5,
+   "stock_code": "INFTEC",
+   "volume": 5277850
+  },
+  {
+   "close": 465.75,
+   "datetime": "2017-05-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 468.68,
+   "low": 460.0,
+   "open": 468.0,
+   "stock_code": "INFTEC",
+   "volume": 4431744
+  },
+  {
+   "close": 472.75,
+   "datetime": "2017-05-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.28,
+   "low": 466.0,
+   "open": 469.0,
+   "stock_code": "INFTEC",
+   "volume": 4699626
+  },
+  {
+   "close": 473.33,
+   "datetime": "2017-05-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 475.98,
+   "low": 471.05,
+   "open": 475.3,
+   "stock_code": "INFTEC",
+   "volume": 5647628
+  },
+  {
+   "close": 471.83,
+   "datetime": "2017-05-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 475.0,
+   "low": 468.58,
+   "open": 473.58,
+   "stock_code": "INFTEC",
+   "volume": 3362640
+  },
+  {
+   "close": 472.05,
+   "datetime": "2017-05-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.93,
+   "low": 468.78,
+   "open": 473.43,
+   "stock_code": "INFTEC",
+   "volume": 3227954
+  },
+  {
+   "close": 482.13,
+   "datetime": "2017-05-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 483.0,
+   "low": 475.73,
+   "open": 476.5,
+   "stock_code": "INFTEC",
+   "volume": 11033294
+  },
+  {
+   "close": 475.78,
+   "datetime": "2017-05-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.75,
+   "low": 474.55,
+   "open": 481.75,
+   "stock_code": "INFTEC",
+   "volume": 7299964
+  },
+  {
+   "close": 477.5,
+   "datetime": "2017-05-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 480.08,
+   "low": 473.48,
+   "open": 476.55,
+   "stock_code": "INFTEC",
+   "volume": 6134184
+  },
+  {
+   "close": 476.4,
+   "datetime": "2017-05-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 479.23,
+   "low": 471.93,
+   "open": 475.8,
+   "stock_code": "INFTEC",
+   "volume": 2916834
+  },
+  {
+   "close": 480.88,
+   "datetime": "2017-05-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 486.95,
+   "low": 471.43,
+   "open": 471.5,
+   "stock_code": "INFTEC",
+   "volume": 8083232
+  },
+  {
+   "close": 478.98,
+   "datetime": "2017-05-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.35,
+   "low": 473.93,
+   "open": 480.75,
+   "stock_code": "INFTEC",
+   "volume": 4260190
+  },
+  {
+   "close": 480.73,
+   "datetime": "2017-05-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 483.45,
+   "low": 478.28,
+   "open": 479.2,
+   "stock_code": "INFTEC",
+   "volume": 5500772
+  },
+  {
+   "close": 478.65,
+   "datetime": "2017-05-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 483.5,
+   "low": 477.05,
+   "open": 482.33,
+   "stock_code": "INFTEC",
+   "volume": 4043574
+  },
+  {
+   "close": 477.4,
+   "datetime": "2017-05-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 482.75,
+   "low": 474.8,
+   "open": 480.0,
+   "stock_code": "INFTEC",
+   "volume": 5638708
+  },
+  {
+   "close": 491.65,
+   "datetime": "2017-05-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.3,
+   "low": 480.5,
+   "open": 480.5,
+   "stock_code": "INFTEC",
+   "volume": 10442388
+  },
+  {
+   "close": 497.85,
+   "datetime": "2017-05-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.0,
+   "low": 490.3,
+   "open": 493.5,
+   "stock_code": "INFTEC",
+   "volume": 4997580
+  },
+  {
+   "close": 492.58,
+   "datetime": "2017-05-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 498.35,
+   "low": 487.85,
+   "open": 495.45,
+   "stock_code": "INFTEC",
+   "volume": 6313534
+  },
+  {
+   "close": 498.1,
+   "datetime": "2017-05-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 500.0,
+   "low": 489.33,
+   "open": 491.0,
+   "stock_code": "INFTEC",
+   "volume": 3718314
+  },
+  {
+   "close": 488.53,
+   "datetime": "2017-05-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.78,
+   "low": 487.43,
+   "open": 496.78,
+   "stock_code": "INFTEC",
+   "volume": 7746976
+  },
+  {
+   "close": 485.7,
+   "datetime": "2017-06-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 489.85,
+   "low": 479.28,
+   "open": 484.65,
+   "stock_code": "INFTEC",
+   "volume": 5528852
+  },
+  {
+   "close": 484.73,
+   "datetime": "2017-06-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 487.73,
+   "low": 482.1,
+   "open": 486.7,
+   "stock_code": "INFTEC",
+   "volume": 3917046
+  },
+  {
+   "close": 479.38,
+   "datetime": "2017-06-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 486.0,
+   "low": 478.53,
+   "open": 485.0,
+   "stock_code": "INFTEC",
+   "volume": 5474094
+  },
+  {
+   "close": 489.68,
+   "datetime": "2017-06-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.75,
+   "low": 482.2,
+   "open": 482.5,
+   "stock_code": "INFTEC",
+   "volume": 7014568
+  },
+  {
+   "close": 480.65,
+   "datetime": "2017-06-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.45,
+   "low": 472.5,
+   "open": 492.5,
+   "stock_code": "INFTEC",
+   "volume": 13690242
+  },
+  {
+   "close": 478.23,
+   "datetime": "2017-06-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.48,
+   "low": 474.08,
+   "open": 481.48,
+   "stock_code": "INFTEC",
+   "volume": 6206308
+  },
+  {
+   "close": 474.3,
+   "datetime": "2017-06-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 475.48,
+   "low": 461.5,
+   "open": 469.28,
+   "stock_code": "INFTEC",
+   "volume": 14816728
+  },
+  {
+   "close": 481.93,
+   "datetime": "2017-06-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 482.6,
+   "low": 470.05,
+   "open": 471.68,
+   "stock_code": "INFTEC",
+   "volume": 8601100
+  },
+  {
+   "close": 478.9,
+   "datetime": "2017-06-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 481.48,
+   "low": 475.8,
+   "open": 476.75,
+   "stock_code": "INFTEC",
+   "volume": 4960046
+  },
+  {
+   "close": 479.3,
+   "datetime": "2017-06-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 480.95,
+   "low": 475.6,
+   "open": 480.0,
+   "stock_code": "INFTEC",
+   "volume": 7442460
+  },
+  {
+   "close": 476.05,
+   "datetime": "2017-06-15 00:00:00",
+   "exchange_code": "NSE",
+   "high": 483.98,
+   "low": 474.8,
+   "open": 479.83,
+   "stock_code": "INFTEC",
+   "volume": 5533046
+  },
+  {
+   "close": 470.13,
+   "datetime": "2017-06-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 476.93,
+   "low": 468.0,
+   "open": 474.55,
+   "stock_code": "INFTEC",
+   "volume": 10967144
+  },
+  {
+   "close": 464.93,
+   "datetime": "2017-06-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 470.13,
+   "low": 464.0,
+   "open": 469.98,
+   "stock_code": "INFTEC",
+   "volume": 6878034
+  },
+  {
+   "close": 471.78,
+   "datetime": "2017-06-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 473.45,
+   "low": 467.03,
+   "open": 467.5,
+   "stock_code": "INFTEC",
+   "volume": 5183022
+  },
+  {
+   "close": 471.68,
+   "datetime": "2017-06-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.5,
+   "low": 468.03,
+   "open": 472.5,
+   "stock_code": "INFTEC",
+   "volume": 3733646
+  },
+  {
+   "close": 470.08,
+   "datetime": "2017-06-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 484.35,
+   "low": 467.55,
+   "open": 473.85,
+   "stock_code": "INFTEC",
+   "volume": 9460916
+  },
+  {
+   "close": 471.63,
+   "datetime": "2017-06-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.58,
+   "low": 469.0,
+   "open": 472.5,
+   "stock_code": "INFTEC",
+   "volume": 6403478
+  },
+  {
+   "close": 463.53,
+   "datetime": "2017-06-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 474.0,
+   "low": 461.88,
+   "open": 472.5,
+   "stock_code": "INFTEC",
+   "volume": 6915074
+  },
+  {
+   "close": 462.35,
+   "datetime": "2017-06-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 466.5,
+   "low": 460.5,
+   "open": 466.4,
+   "stock_code": "INFTEC",
+   "volume": 5909714
+  },
+  {
+   "close": 465.1,
+   "datetime": "2017-06-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 473.98,
+   "low": 463.3,
+   "open": 465.1,
+   "stock_code": "INFTEC",
+   "volume": 15929730
+  },
+  {
+   "close": 467.78,
+   "datetime": "2017-06-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.0,
+   "low": 464.5,
+   "open": 465.4,
+   "stock_code": "INFTEC",
+   "volume": 4221768
+  },
+  {
+   "close": 475.95,
+   "datetime": "2017-07-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 477.5,
+   "low": 467.3,
+   "open": 470.55,
+   "stock_code": "INFTEC",
+   "volume": 5094644
+  },
+  {
+   "close": 481.08,
+   "datetime": "2017-07-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 485.0,
+   "low": 474.7,
+   "open": 476.93,
+   "stock_code": "INFTEC",
+   "volume": 5170270
+  },
+  {
+   "close": 475.45,
+   "datetime": "2017-07-05 00:00:00",
+   "exchange_code": "NSE",
+   "high": 479.5,
+   "low": 472.7,
+   "open": 479.5,
+   "stock_code": "INFTEC",
+   "volume": 4230262
+  },
+  {
+   "close": 473.5,
+   "datetime": "2017-07-06 00:00:00",
+   "exchange_code": "NSE",
+   "high": 478.5,
+   "low": 472.1,
+   "open": 472.5,
+   "stock_code": "INFTEC",
+   "volume": 3839596
+  },
+  {
+   "close": 467.7,
+   "datetime": "2017-07-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 472.73,
+   "low": 466.53,
+   "open": 471.93,
+   "stock_code": "INFTEC",
+   "volume": 5781936
+  },
+  {
+   "close": 957.05,
+   "datetime": "2017-07-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 1028.9,
+   "low": 937.3,
+   "open": 945.0,
+   "stock_code": "INFTEC",
+   "volume": 732804
+  },
+  {
+   "close": 487.68,
+   "datetime": "2017-07-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.75,
+   "low": 478.33,
+   "open": 478.33,
+   "stock_code": "INFTEC",
+   "volume": 11542272
+  },
+  {
+   "close": 486.18,
+   "datetime": "2017-07-12 00:00:00",
+   "exchange_code": "NSE",
+   "high": 490.75,
+   "low": 484.38,
+   "open": 487.48,
+   "stock_code": "INFTEC",
+   "volume": 6300198
+  },
+  {
+   "close": 488.53,
+   "datetime": "2017-07-13 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.73,
+   "low": 482.05,
+   "open": 488.63,
+   "stock_code": "INFTEC",
+   "volume": 5177974
+  },
+  {
+   "close": 486.03,
+   "datetime": "2017-07-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 503.43,
+   "low": 483.03,
+   "open": 499.73,
+   "stock_code": "INFTEC",
+   "volume": 22730192
+  },
+  {
+   "close": 492.03,
+   "datetime": "2017-07-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 496.0,
+   "low": 487.0,
+   "open": 487.5,
+   "stock_code": "INFTEC",
+   "volume": 7705736
+  },
+  {
+   "close": 492.8,
+   "datetime": "2017-07-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.4,
+   "low": 490.55,
+   "open": 493.03,
+   "stock_code": "INFTEC",
+   "volume": 8264198
+  },
+  {
+   "close": 489.93,
+   "datetime": "2017-07-19 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.33,
+   "low": 484.55,
+   "open": 490.73,
+   "stock_code": "INFTEC",
+   "volume": 5902844
+  },
+  {
+   "close": 484.73,
+   "datetime": "2017-07-20 00:00:00",
+   "exchange_code": "NSE",
+   "high": 489.93,
+   "low": 483.48,
+   "open": 489.65,
+   "stock_code": "INFTEC",
+   "volume": 6814664
+  },
+  {
+   "close": 490.05,
+   "datetime": "2017-07-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.28,
+   "low": 485.7,
+   "open": 486.5,
+   "stock_code": "INFTEC",
+   "volume": 5983180
+  },
+  {
+   "close": 495.28,
+   "datetime": "2017-07-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 497.0,
+   "low": 491.3,
+   "open": 491.75,
+   "stock_code": "INFTEC",
+   "volume": 6146356
+  },
+  {
+   "close": 496.93,
+   "datetime": "2017-07-25 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.5,
+   "low": 493.1,
+   "open": 495.0,
+   "stock_code": "INFTEC",
+   "volume": 7151856
+  },
+  {
+   "close": 497.03,
+   "datetime": "2017-07-26 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.5,
+   "low": 495.2,
+   "open": 499.05,
+   "stock_code": "INFTEC",
+   "volume": 6872344
+  },
+  {
+   "close": 485.53,
+   "datetime": "2017-07-27 00:00:00",
+   "exchange_code": "NSE",
+   "high": 502.0,
+   "low": 483.4,
+   "open": 498.0,
+   "stock_code": "INFTEC",
+   "volume": 12672716
+  },
+  {
+   "close": 498.68,
+   "datetime": "2017-07-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 501.5,
+   "low": 481.15,
+   "open": 488.0,
+   "stock_code": "INFTEC",
+   "volume": 11102606
+  },
+  {
+   "close": 505.6,
+   "datetime": "2017-07-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 510.85,
+   "low": 493.38,
+   "open": 495.95,
+   "stock_code": "INFTEC",
+   "volume": 19172564
+  },
+  {
+   "close": 502.78,
+   "datetime": "2017-08-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 508.5,
+   "low": 499.18,
+   "open": 505.5,
+   "stock_code": "INFTEC",
+   "volume": 7741050
+  },
+  {
+   "close": 496.68,
+   "datetime": "2017-08-02 00:00:00",
+   "exchange_code": "NSE",
+   "high": 506.38,
+   "low": 493.6,
+   "open": 503.0,
+   "stock_code": "INFTEC",
+   "volume": 4261542
+  },
+  {
+   "close": 492.0,
+   "datetime": "2017-08-03 00:00:00",
+   "exchange_code": "NSE",
+   "high": 499.38,
+   "low": 490.13,
+   "open": 495.5,
+   "stock_code": "INFTEC",
+   "volume": 4646274
+  },
+  {
+   "close": 491.88,
+   "datetime": "2017-08-04 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.5,
+   "low": 488.03,
+   "open": 494.0,
+   "stock_code": "INFTEC",
+   "volume": 5364712
+  },
+  {
+   "close": 484.13,
+   "datetime": "2017-08-07 00:00:00",
+   "exchange_code": "NSE",
+   "high": 491.88,
+   "low": 482.85,
+   "open": 491.75,
+   "stock_code": "INFTEC",
+   "volume": 6074224
+  },
+  {
+   "close": 481.93,
+   "datetime": "2017-08-08 00:00:00",
+   "exchange_code": "NSE",
+   "high": 485.13,
+   "low": 477.53,
+   "open": 484.25,
+   "stock_code": "INFTEC",
+   "volume": 6007210
+  },
+  {
+   "close": 484.68,
+   "datetime": "2017-08-09 00:00:00",
+   "exchange_code": "NSE",
+   "high": 486.95,
+   "low": 482.28,
+   "open": 483.83,
+   "stock_code": "INFTEC",
+   "volume": 3924042
+  },
+  {
+   "close": 490.63,
+   "datetime": "2017-08-10 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.75,
+   "low": 484.68,
+   "open": 484.95,
+   "stock_code": "INFTEC",
+   "volume": 9141346
+  },
+  {
+   "close": 493.85,
+   "datetime": "2017-08-11 00:00:00",
+   "exchange_code": "NSE",
+   "high": 498.5,
+   "low": 484.8,
+   "open": 488.0,
+   "stock_code": "INFTEC",
+   "volume": 6544960
+  },
+  {
+   "close": 490.73,
+   "datetime": "2017-08-14 00:00:00",
+   "exchange_code": "NSE",
+   "high": 494.6,
+   "low": 488.58,
+   "open": 494.0,
+   "stock_code": "INFTEC",
+   "volume": 3814582
+  },
+  {
+   "close": 487.6,
+   "datetime": "2017-08-16 00:00:00",
+   "exchange_code": "NSE",
+   "high": 493.05,
+   "low": 484.5,
+   "open": 491.0,
+   "stock_code": "INFTEC",
+   "volume": 6184244
+  },
+  {
+   "close": 510.43,
+   "datetime": "2017-08-17 00:00:00",
+   "exchange_code": "NSE",
+   "high": 514.63,
+   "low": 499.03,
+   "open": 502.5,
+   "stock_code": "INFTEC",
+   "volume": 26122948
+  },
+  {
+   "close": 461.63,
+   "datetime": "2017-08-18 00:00:00",
+   "exchange_code": "NSE",
+   "high": 508.95,
+   "low": 442.1,
+   "open": 508.95,
+   "stock_code": "INFTEC",
+   "volume": 164493048
+  },
+  {
+   "close": 436.7,
+   "datetime": "2017-08-21 00:00:00",
+   "exchange_code": "NSE",
+   "high": 462.0,
+   "low": 435.0,
+   "open": 462.0,
+   "stock_code": "INFTEC",
+   "volume": 90994410
+  },
+  {
+   "close": 437.7,
+   "datetime": "2017-08-22 00:00:00",
+   "exchange_code": "NSE",
+   "high": 448.53,
+   "low": 430.0,
+   "open": 447.6,
+   "stock_code": "INFTEC",
+   "volume": 49620994
+  },
+  {
+   "close": 446.4,
+   "datetime": "2017-08-23 00:00:00",
+   "exchange_code": "NSE",
+   "high": 451.85,
+   "low": 436.95,
+   "open": 440.0,
+   "stock_code": "INFTEC",
+   "volume": 61366640
+  },
+  {
+   "close": 456.08,
+   "datetime": "2017-08-24 00:00:00",
+   "exchange_code": "NSE",
+   "high": 459.13,
+   "low": 451.18,
+   "open": 455.0,
+   "stock_code": "INFTEC",
+   "volume": 42523134
+  },
+  {
+   "close": 470.5,
+   "datetime": "2017-08-28 00:00:00",
+   "exchange_code": "NSE",
+   "high": 476.98,
+   "low": 469.0,
+   "open": 471.98,
+   "stock_code": "INFTEC",
+   "volume": 41126566
+  },
+  {
+   "close": 463.73,
+   "datetime": "2017-08-29 00:00:00",
+   "exchange_code": "NSE",
+   "high": 471.0,
+   "low": 462.78,
+   "open": 470.73,
+   "stock_code": "INFTEC",
+   "volume": 13387556
+  },
+  {
+   "close": 463.33,
+   "datetime": "2017-08-30 00:00:00",
+   "exchange_code": "NSE",
+   "high": 469.5,
+   "low": 462.05,
+   "open": 468.6,
+   "stock_code": "INFTEC",
+   "volume": 16198338
+  },
+  {
+   "close": 457.48,
+   "datetime": "2017-08-31 00:00:00",
+   "exchange_code": "NSE",
+   "high": 464.48,
+   "low": 456.45,
+   "open": 464.4,
+   "stock_code": "INFTEC",
+   "volume": 15011656
+  },
+  {
+   "close": 459.98,
+   "datetime": "2017-09-01 00:00:00",
+   "exchange_code": "NSE",
+   "high": 462.95,
+   "low": 455.0,
+   "open": 457.98,
+   "stock_code": "INFTEC",
+   "volume": 8444728
+  }
+ ]
+}

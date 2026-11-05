@@ -1,0 +1,137 @@
+[
+ {
+  "record": 20,
+  "sr": 1,
+  "symbol": "0MOFSL27",
+  "series": "N3",
+  "traded_qty": 41,
+  "deliverable_qty": 40,
+  "deliv_pct": 97.56
+ },
+ {
+  "record": 20,
+  "sr": 2,
+  "symbol": "1003SFIL28",
+  "series": "NX",
+  "traded_qty": 379,
+  "deliverable_qty": 227,
+  "deliv_pct": 59.89
+ },
+ {
+  "record": 20,
+  "sr": 3,
+  "symbol": "1015ECL29",
+  "series": "NR",
+  "traded_qty": 4,
+  "deliverable_qty": 3,
+  "deliv_pct": 75.0
+ },
+ {
+  "record": 20,
+  "sr": 4,
+  "symbol": "1015SCFL29",
+  "series": "YY",
+  "traded_qty": 268,
+  "deliverable_qty": 268,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 5,
+  "symbol": "1015SCL28A",
+  "series": "AL",
+  "traded_qty": 2,
+  "deliverable_qty": 2,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 6,
+  "symbol": "1025VCCL28",
+  "series": "N0",
+  "traded_qty": 1,
+  "deliverable_qty": 1,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 7,
+  "symbol": "1039UCL26",
+  "series": "NE",
+  "traded_qty": 1,
+  "deliverable_qty": 1,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 8,
+  "symbol": "1040UCL27B",
+  "series": "N1",
+  "traded_qty": 1,
+  "deliverable_qty": 1,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 9,
+  "symbol": "1050ISFL28",
+  "series": "N5",
+  "traded_qty": 827,
+  "deliverable_qty": 827,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 10,
+  "symbol": "1050UCL28",
+  "series": "NH",
+  "traded_qty": 82,
+  "deliverable_qty": 82,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 11,
+  "symbol": "1060ECL29",
+  "series": "NS",
+  "traded_qty": 100,
+  "deliverable_qty": 100,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 12,
+  "symbol": "1065NFL27",
+  "series": "NC",
+  "traded_qty": 292,
+  "deliverable_qty": 292,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 13,
+  "symbol": "1075SCFL34",
+  "series": "Z6",
+  "traded_qty": 20,
+  "deliverable_qty": 20,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 14,
+  "symbol": "1075SCL33A",
+  "series": "N2",
+  "traded_qty": 449,
+  "deliverable_qty": 449,
+  "deliv_pct": 100.0
+ },
+ {
+  "record": 20,
+  "sr": 15,
+  "symbol": "1075WCA28",
+  "series": "N0",
+  "traded_qty": 10,
+  "deliverable_qty": 10,
+  "deliv_pct": 100.0
+ }
+]

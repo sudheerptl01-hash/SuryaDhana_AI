@@ -1,0 +1,268 @@
+{
+  "brief": {
+    "ok": true,
+    "load_s": 8.0,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "paper) \u00b7 ICICI account",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "world": {
+    "ok": true,
+    "load_s": 7.0,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "eco": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "SOURCE\nWed, 16 Sept\t23:30\t29 days ago\tUS\tFED\tUS Fed rate decision +",
+      "estimate FY27\tquarterly growth\tMoSPI",
+      "source for those).",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "preopen": {
+    "ok": true,
+    "load_s": 5.2,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "as of 14-Oct-2026 09:09:33",
+      "Source: NSE pre-open market (www.nseindia.com). Each session's fina",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "watch": {
+    "ok": true,
+    "load_s": 5.8,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "charts": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "AS OF 2026-10-14",
+      "SOURCE: DUCKDB EOD \u00b7 YAHOO HISTORY",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "options": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "Source: NSE F&O bhavcopy (UDiFF), cached nightly by the EOD pipelin",
+      "not live.",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "ostrategy": {
+    "ok": true,
+    "load_s": 5.5,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "ESTIMATE",
+      "ESTIMATE \u2014 SPAN-like heuristic (futures margin %",
+      "ESTIMATE \u2014 NSE F&O statutory rates FY25-26, squa",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "derivatives": {
+    "ok": true,
+    "load_s": 5.2,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "as of 2026-10-14T00:00:00",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "mcxgold": {
+    "ok": true,
+    "load_s": 6.2,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "paper ticket",
+      "as of 15 Oct, 03:40",
+      "unavailable \u2014 Breeze gave no MCX GOLD quote (Object reference not set t",
+      "paper sizing only.",
+      "PAPER GOLD TICKET",
+      "PAPER, records nothing, no order AP",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "risk": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER",
+      "as of 2026-10-14 15:13",
+      "paper ledger (EOD NAV marks)",
+      "paper book and broker holdings are",
+      "As of 2026-10-15 03:39:02 \u00b7 book = Desk paper ledger + broker last-known holdings (fi",
+      "as of 2026-10-14 15:13:04) \u00b7 payload cached 120 s \u00b7 PAPER only."
+    ],
+    "error_text": false
+  },
+  "filings": {
+    "ok": true,
+    "load_s": 5.7,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "events": {
+    "ok": true,
+    "load_s": 6.0,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [],
+    "error_text": false
+  },
+  "alerts": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "positions": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER",
+      "paper mode."
+    ],
+    "error_text": false
+  },
+  "wrap": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "paper)",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "backtest": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "research": {
+    "ok": true,
+    "load_s": 5.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "paper shadow first). Pays at 60 ses",
+      "paper shadow STARTED (owner's decis",
+      "paper book: nightly 19:50 job repla",
+      "Paper only.",
+      "stale Yahoo values for 13 Oct; they now come from NSE (22,090, +1",
+      "stale NIFTY on the tape, earnings-call notices counted as results"
+    ],
+    "error_text": false
+  },
+  "movers": {
+    "ok": true,
+    "load_s": 5.8,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "market closed: last session",
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "markets": {
+    "ok": true,
+    "load_s": 5.3,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "commodity": {
+    "ok": true,
+    "load_s": 6.4,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER"
+    ],
+    "error_text": false
+  },
+  "desk": {
+    "ok": true,
+    "load_s": 5.9,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "PAPER",
+      "paper)",
+      "paper fill at NSE\u2019s official openin",
+      "Paper book opened with \u20b9500,000; ru"
+    ],
+    "error_text": false
+  },
+  "system": {
+    "ok": true,
+    "load_s": 24.1,
+    "console": [],
+    "failed_api": [],
+    "honesty_markers": [
+      "Paper Cycle\t19:30 IST \u00b7 Mon\u2013Fri (pa",
+      "Paper Shadow (alpha_lab)\t\u2014\t16h 7m\t\u2014",
+      "PAPER"
+    ],
+    "error_text": false
+  }
+}

@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SuryaDhana Terminal — design tokens (single source; mirrors components/news/format.ts T)
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --t-bg: #05070a;
+  --t-panel: #0a0d13;
+  --t-panel2: #0e121a;
+  --t-panel3: #131926;
+  --t-border: #1a2130;
+  --t-border-hi: #2a3448;
+  --t-text: #d6dbe4;
+  --t-bright: #f2f5fa;
+  --t-muted: #6f7a8e;
+  --t-dim: #475063;
+  --t-amber: #ffb000;
+  --t-amber-dim: #8a6400;
+  --t-green: #16d98a;
+  --t-red: #ff4d5e;
+  --t-cyan: #39c6ff;
+  --t-violet: #b58bff;
+  --t-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  --t-display: 'Chakra Petch', 'JetBrains Mono', sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--t-bg); }
+
+body {
+  margin: 0;
+  background: var(--t-bg);
+  color: var(--t-text);
+  font-family: var(--t-mono);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+}
+
+::selection { background: rgba(255, 176, 0, 0.28); color: var(--t-bright); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--t-border-hi) transparent; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--t-border-hi); border-radius: 0; }
+*::-webkit-scrollbar-thumb:hover { background: var(--t-amber-dim); }
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 1px solid var(--t-amber);
+  outline-offset: 1px;
+}
+
+button, a { transition: color 120ms, background-color 120ms, border-color 120ms, opacity 120ms; }
+
+table { border-collapse: collapse; }
+
+/* Form controls: terminal defaults (class-based styles still win via :where) */
+:where(input, select, textarea) {
+  background: var(--t-panel2);
+  color: var(--t-text);
+  border-color: var(--t-border);
+  font-family: var(--t-mono);
+}
+:where(input[type="checkbox"], input[type="radio"]) { accent-color: var(--t-amber); }
+input::placeholder, textarea::placeholder { color: var(--t-dim); }
+
+/* Motion */
+@keyframes t-fade-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes t-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes t-scan { from { background-position: 0 0; } to { background-position: 0 -200px; } }
+.t-fade-up { animation: t-fade-up .35s ease-out both; }
+.t-ticker-link:hover, .t-ticker-link:focus-visible { text-decoration: underline; text-underline-offset: 3px; outline: none; }
+/* Header items that drop out on laptop screens (they are repeated elsewhere: footer, Overview, macro tape) */
+@media (max-width: 1480px) { .t-hide-lg { display: none !important; } }
+.t-pulse { animation: t-pulse 1.2s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Legacy skin — maps the pre-terminal Tailwind light/dark utility classes onto the
+   terminal palette so every page renders consistently while pages are migrated to
+   components/terminal/*. Scoped to .terminal (set on <body>).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* shape: square corners (dots/avatars keep rounded-full), no drop shadows */
+.terminal .rounded, .terminal .rounded-sm, .terminal .rounded-md, .terminal .rounded-lg,
+.terminal .rounded-xl, .terminal .rounded-2xl, .terminal .rounded-3xl,
+.terminal .rounded-t-lg, .terminal .rounded-b-lg, .terminal .rounded-l-lg, .terminal .rounded-r-lg,
+.terminal .rounded-t-xl, .terminal .rounded-b-xl { border-radius: 2px; }
+.terminal .shadow, .terminal .shadow-sm, .terminal .shadow-md, .terminal .shadow-lg,
+.terminal .shadow-xl, .terminal .shadow-2xl, .terminal .shadow-inner { box-shadow: none; }
+.terminal .font-sans { font-family: var(--t-mono); }
+
+/* neutral surfaces */
+.terminal .bg-white, .terminal .bg-gray-50, .terminal .bg-slate-50, .terminal .bg-zinc-50,
+.terminal .bg-slate-900, .terminal .bg-gray-900, .terminal .bg-zinc-900, .terminal .bg-slate-950,
+.terminal .bg-gray-950 { background-color: var(--t-panel); }
+.terminal .bg-gray-100, .terminal .bg-slate-100, .terminal .bg-zinc-100,
+.terminal .bg-slate-800, .terminal .bg-gray-800, .terminal .bg-zinc-800 { background-color: var(--t-panel2); }
+.terminal .bg-gray-200, .terminal .bg-slate-200, .terminal .bg-gray-300, .terminal .bg-slate-300,
+.terminal .bg-slate-700, .terminal .bg-gray-700 { background-color: var(--t-panel3); }
+.terminal .hover\:bg-gray-50:hover, .terminal .hover\:bg-slate-50:hover, .terminal .hover\:bg-gray-100:hover,
+.terminal .hover\:bg-slate-100:hover, .terminal .hover\:bg-slate-800:hover, .terminal .hover\:bg-gray-800:hover,
+.terminal .hover\:bg-slate-700:hover, .terminal .hover\:bg-gray-200:hover { background-color: var(--t-panel3); }
+.terminal .bg-white\/80, .terminal .bg-white\/90, .terminal .bg-white\/60, .terminal .bg-white\/50 { background-color: rgba(10, 13, 19, .9); }
+
+/* pastel light-mode tints → faint coloured wash on black */
+.terminal .bg-emerald-50, .terminal .bg-green-50, .terminal .bg-teal-50, .terminal .bg-lime-50 { background-color: rgba(22, 217, 138, .06); }
+.terminal .bg-emerald-100, .terminal .bg-green-100, .terminal .bg-teal-100 { background-color: rgba(22, 217, 138, .13); }
+.terminal .bg-red-50, .terminal .bg-rose-50, .terminal .bg-pink-50 { background-color: rgba(255, 77, 94, .06); }
+.terminal .bg-red-100, .terminal .bg-rose-100, .terminal .bg-pink-100 { background-color: rgba(255, 77, 94, .13); }
+.terminal .bg-amber-50, .terminal .bg-yellow-50, .terminal .bg-orange-50 { background-color: rgba(255, 176, 0, .06); }
+.terminal .bg-amber-100, .terminal .bg-yellow-100, .terminal .bg-orange-100 { background-color: rgba(255, 176, 0, .13); }
+.terminal .bg-indigo-50, .terminal .bg-blue-50, .terminal .bg-sky-50, .terminal .bg-cyan-50 { background-color: rgba(57, 198, 255, .06); }
+.terminal .bg-indigo-100, .terminal .bg-blue-100, .terminal .bg-sky-100, .terminal .bg-cyan-100,
+.terminal .bg-indigo-200 { background-color: rgba(57, 198, 255, .13); }
+.terminal .bg-violet-50, .terminal .bg-purple-50, .terminal .bg-fuchsia-50 { background-color: rgba(181, 139, 255, .06); }
+.terminal .bg-violet-100, .terminal .bg-purple-100, .terminal .bg-fuchsia-100 { background-color: rgba(181, 139, 255, .13); }
+
+/* light gradients (card washes) → flat panel; bright gradients (bars) untouched */
+.terminal [class*="from-white"], .terminal [class*="from-gray-50"], .terminal [class*="from-slate-50"],
+.terminal [class*="from-indigo-50"], .terminal [class*="from-blue-50"], .terminal [class*="from-emerald-50"],
+.terminal [class*="from-green-50"], .terminal [class*="from-teal-50"], .terminal [class*="from-amber-50"],
+.terminal [class*="from-orange-50"], .terminal [class*="from-rose-50"], .terminal [class*="from-red-50"],
+.terminal [class*="from-violet-50"], .terminal [class*="from-purple-50"], .terminal [class*="from-cyan-50"],
+.terminal [class*="from-sky-50"] { background-image: none; background-color: var(--t-panel); }
+
+/* text */
+.terminal .text-black, .terminal .text-gray-900, .terminal .text-slate-900, .terminal .text-gray-800,
+.terminal .text-slate-800, .terminal .text-zinc-900 { color: var(--t-bright); }
+.terminal .text-gray-700, .terminal .text-slate-700, .terminal .text-gray-600, .terminal .text-slate-600,
+.terminal .text-slate-200, .terminal .text-gray-200, .terminal .text-slate-300, .terminal .text-gray-300 { color: var(--t-text); }
+.terminal .text-gray-500, .terminal .text-slate-500, .terminal .text-gray-400, .terminal .text-slate-400,
+.terminal .text-zinc-500 { color: var(--t-muted); }
+.terminal .text-emerald-600, .terminal .text-emerald-700, .terminal .text-emerald-800, .terminal .text-emerald-900,
+.terminal .text-green-600, .terminal .text-green-700, .terminal .text-green-800, .terminal .text-teal-700 { color: var(--t-green); }
+.terminal .text-red-600, .terminal .text-red-700, .terminal .text-red-800, .terminal .text-rose-600,
+.terminal .text-rose-700, .terminal .text-rose-800 { color: var(--t-red); }
+.terminal .text-amber-600, .terminal .text-amber-700, .terminal .text-amber-800, .terminal .text-amber-900,
+.terminal .text-yellow-700, .terminal .text-orange-600, .terminal .text-orange-700 { color: var(--t-amber); }
+.terminal .text-indigo-600, .terminal .text-indigo-700, .terminal .text-indigo-800, .terminal .text-indigo-900,
+.terminal .text-blue-600, .terminal .text-blue-700, .terminal .text-blue-800, .terminal .text-sky-700,
+.terminal .text-cyan-700 { color: var(--t-cyan); }
+.terminal .text-violet-600, .terminal .text-violet-700, .terminal .text-violet-800, .terminal .text-purple-600,
+.terminal .text-purple-700, .terminal .text-purple-800 { color: var(--t-violet); }
+
+/* borders */
+.terminal .border-gray-100, .terminal .border-gray-200, .terminal .border-gray-300, .terminal .border-slate-100,
+.terminal .border-slate-200, .terminal .border-slate-300, .terminal .border-slate-600, .terminal .border-slate-700,
+.terminal .border-slate-800, .terminal .border-gray-700, .terminal .border-gray-800, .terminal .border-zinc-200,
+.terminal .divide-gray-100 > * + *, .terminal .divide-gray-200 > * + *, .terminal .divide-slate-800 > * + *,
+.terminal .divide-slate-700 > * + * { border-color: var(--t-border); }
+.terminal .border-emerald-100, .terminal .border-emerald-200, .terminal .border-green-200 { border-color: rgba(22, 217, 138, .3); }
+.terminal .border-red-100, .terminal .border-red-200, .terminal .border-rose-200 { border-color: rgba(255, 77, 94, .3); }
+.terminal .border-amber-100, .terminal .border-amber-200, .terminal .border-yellow-200 { border-color: rgba(255, 176, 0, .3); }
+.terminal .border-indigo-100, .terminal .border-indigo-200, .terminal .border-blue-200, .terminal .border-sky-200 { border-color: rgba(57, 198, 255, .3); }
+.terminal .border-violet-200, .terminal .border-purple-200 { border-color: rgba(181, 139, 255, .3); }
+
+/* recharts: dark tooltips and quiet grid lines */
+.terminal .recharts-default-tooltip {
+  background: var(--t-panel2) !important;
+  border: 1px solid var(--t-border-hi) !important;
+  border-radius: 0 !important;
+  font-family: var(--t-mono);
+  font-size: 11px;
+}
+.terminal .recharts-cartesian-grid line { stroke: var(--t-border); }
+.terminal .recharts-text { fill: var(--t-muted); font-family: var(--t-mono); font-size: 10px; }
+
+@media print {
+  * { background: #fff !important; color: #000 !important; box-shadow: none !important; }
+}
+
+/* translucent navy surfaces/borders (bg-slate-800/30 etc.) → terminal panels.
+   Matched only as a base class (start of attribute or after a space) so hover:/focus:
+   variants keep working. */
+.terminal :is([class^="bg-slate-800/"], [class*=" bg-slate-800/"], [class^="bg-slate-900/"], [class*=" bg-slate-900/"],
+  [class^="bg-slate-950/"], [class*=" bg-slate-950/"], [class^="bg-gray-900/"], [class*=" bg-gray-900/"],
+  [class^="bg-gray-800/"], [class*=" bg-gray-800/"]) { background-color: var(--t-panel); }
+.terminal :is([class^="bg-slate-700/"], [class*=" bg-slate-700/"], [class^="bg-slate-600/"], [class*=" bg-slate-600/"]) { background-color: var(--t-panel2); }
+.terminal :is([class^="border-slate-700/"], [class*=" border-slate-700/"], [class^="border-slate-600/"], [class*=" border-slate-600/"],
+  [class^="border-slate-800/"], [class*=" border-slate-800/"], [class^="border-gray-700/"], [class*=" border-gray-700/"]) { border-color: var(--t-border); }
+.terminal :is([class^="divide-slate-700/"], [class*=" divide-slate-700/"], [class^="divide-slate-800/"], [class*=" divide-slate-800/"]) > * + * { border-color: var(--t-border); }
+.terminal :is([class*=" from-slate-800/"], [class^="from-slate-800/"], [class*=" from-slate-900"], [class^="from-slate-900"]) { background-image: none; background-color: var(--t-panel); }
+
+/* legacy section headings → terminal display face */
+.terminal h3.uppercase, .terminal h4.uppercase { font-family: var(--t-display); letter-spacing: .16em; }
+
+/* lining figures for price/number columns outside the kit (kit tables have it inline) */
+.t-nums { font-variant-numeric: tabular-nums; }
+
+/* skeleton shimmer (kit Skeleton / TabSkeleton) */
+@keyframes t-shimmer-slide { 0% { background-position: 100% 0 } 100% { background-position: 0 0 } }
+.t-shimmer { animation: t-shimmer-slide 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .t-shimmer { animation: none; } }
+
+/* macro tape: drop entries from the right on narrow terminals instead of a scrollbar */
+@media (max-width: 1280px) { .t-tape-ge6 { display: none !important; } }
+@media (max-width: 1024px) { .t-tape-ge4 { display: none !important; } }
+@media (max-width: 720px)  { .t-tape-ge2 { display: none !important; } }

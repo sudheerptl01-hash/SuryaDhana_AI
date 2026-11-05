@@ -1,0 +1,43 @@
+[
+ {
+  "name": "SPDR historical page csv strings",
+  "status": 200,
+  "hits": [
+   "Archive",
+   "historical_archive",
+   "https://api.spdrgoldshares.com/api/v1/historical-archive?product=gld&amp;exchange=NYSE&amp;lang=en",
+   "paragraph--historical_archive"
+  ]
+ },
+ {
+  "name": "Atlanta Fed MPT xlsx",
+  "url": "https://www.atlantafed.org/-/media/Project/Atlanta/FRBA/Documents/research-and-data/data/market-probability-tracker/mpt_histdata.xlsx",
+  "status": 200,
+  "latency_ms": 1843,
+  "sheets": [
+   "LICENSE",
+   "DICTIONARY",
+   "DATA"
+  ]
+ },
+ {
+  "name": "BEA schedule parsed",
+  "status": 200,
+  "latency_ms": 1514,
+  "rows": []
+ },
+ {
+  "name": "FRED releases calendar HTML (plain client)",
+  "status": 200,
+  "latency_ms": 987,
+  "names": [
+   "Consumer Price Index",
+   "Employment Situation",
+   "Gross Domestic Product",
+   "H.10 Foreign Exchange Rates",
+   "H.15 Selected Interest Rates",
+   "Money Stock Measures",
+   "Personal Income and Outlays"
+  ]
+ }
+]

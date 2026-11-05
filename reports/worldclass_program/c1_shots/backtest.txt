@@ -1,0 +1,200 @@
+◉ SURYADHANA ▸ BACKTEST
+1,496 NSE · DATA 2026-10-14
+NIFTY 50
+22,622.70
+▼ 99.25 −0.44%
+O 22,715.75
+H 22,757.95
+L 22,558.95
+● NSE
+DATA
+DB
+ICICI
+CLOSED
+03:41:30
+THU, 15 OCT IST
+🔔 12
+↻ REFRESH
+MARKETS
+GIFT NIFTY
+22,545.00
+−0.34% gap
+NIFTY 50
+22,622.70
+−0.44%
+BANK NIFTY
+55,316.00
+−0.30%
+INDIA VIX
+14.60
++3.39%
+USD/INR
+95.140
+−0.15%
+BRENT
+106.06
++0.35%
+GOLD
+4,125.40
+−1.24%
+S&P 500
+7,718.94
+−1.11%
+NSE + YAHOO · 03:41 IST
+1
+BRIEF
+2
+WATCH
+3
+DESK
+4
+MARKETS
+5
+DERIV
+6
+EVENTS
+7
+OVERVIEW
+8
+STOCKS
+9
+BACKTEST
+0
+PORTFOLIO
+BROKER
+PIPELINE
+LW SCAN
+ALPHA
+COMMODITY
+GLASS-BOX
+ML
+EXPLORER
+WAREHOUSE
+RESEARCH
+SYSTEM
+MORE ▾
+⌕ GO
+/
+BTST
+BACKTEST LAB
+PAPER
+Capital-managed, friction-aware simulation · signal at close, fill at next open
+RESEARCH · REFERENCE
+Costs decide short-hold strategies: a 5-day, 5-name book pays about 48% of capital a year in ICICI charges (108% at ₹10,000), monthly momentum about 3–5%. Judge every backtest here after costs, against the Desk.
+READ THE STUDY ›
+SCOPE
+Full Universe
+Watchlist (0)
+WINDOW
+From
+To
+6M
+1Y
+2Y
+3Y
+5Y
+
+⤺ A 250-day+ trailing warm-up is loaded before your From date, so MA/RSI/ATR/52-week indicators are fully seeded on day one — no cold-start bias.
+
+CAPITAL & RISK
+Starting Capital (₹)₹1.00 Cr
+Friction (bps)0.15% round-trip · min 15 bps
+Max Positions
+Stop-Loss
+%
+Trailing Stop
+%
+DD Circuit Breaker
+%
+Entry Timing
+Next Open
+Same Close
+
+Enters next bar — no same-bar look-ahead
+
+Time-Stop (days)
+Win Threshold %
+FILTERS
+
+VALUATION
+
+P/E Ratio⚠
+Dividend Yield⚠
+Market Cap⚠
+
+QUALITY
+
+ROCE⚠
+
+TREND
+
+Price > 50-MA
+Price > 150-MA
+Price > 200-MA
+50-MA > 200-MA
+150-MA > 200-MA
+
+MOMENTUM
+
+RSI (14)
+ATR %
+
+VOLATILITY
+
+% above 52w-Low
+% within 52w-High
+Dist 200-MA
+Squeeze Ratio BB/KC
+Squeeze ON
+
+VOLUME
+
+Vol > 20d-Avg
+
+MICROSTRUCTURE
+
+Volume Market Impact
+Volume Thrust z
+VIPT Breakout
+Intraday Intention
+Intention on Pullback
+
+RELATIVE STRENGTH
+
+Sector-Rel Mom 14d
+Positive Sector Regime
+Market Corr 30d
+De-coupled Leader
+
+STRUCTURAL ALPHA
+
+Idiosyncratic 5d
+Vol-Adj Sector Alpha 14d
+
+ML SIGNAL
+
+P(up · 5d)
+WALK-FORWARD (WFO)
+▶ RUN BACKTEST
+▦
+Factor Diagnostic Studio
+DECILE IC
+
+Stop guessing thresholds — profile any factor against the forward win base rate
+
+▾
+◌
+Institutional simulation cockpit
+
+Configure capital, friction, stops and filters, then run a compounded, benchmark-relative backtest.
+
+● READY
+DATA 2026-10-14
+1,496 STOCKS
+NEWS
+14-10
+14
+NEW
+/ GO
+ALT+1…0 PAGES · SHIFT+N NEWS · ? HELP · ESC CLOSE
+SURYADHANA TERMINAL · NSE · PAPER

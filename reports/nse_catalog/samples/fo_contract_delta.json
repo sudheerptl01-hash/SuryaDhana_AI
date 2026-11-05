@@ -1,0 +1,122 @@
+[
+ {
+  "Date": "25-09-2026",
+  "Symbol": "NIFTYNXT50",
+  "Expiry day": "27-10-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "SENSEX",
+  "Expiry day": "31-12-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "SENSEX50",
+  "Expiry day": "29-10-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ABB",
+  "Expiry day": "29-09-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ABCAPITAL",
+  "Expiry day": "29-09-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ABCAPITAL",
+  "Expiry day": "27-10-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ABCAPITAL",
+  "Expiry day": "23-11-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ABCAPITAL",
+  "Expiry day": "26-11-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ADANIENT",
+  "Expiry day": "29-09-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ADANIENT",
+  "Expiry day": "29-10-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ADANIENT",
+  "Expiry day": "23-11-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ADANIPORTS",
+  "Expiry day": "27-10-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ALKEM",
+  "Expiry day": "29-10-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "ALKEM",
+  "Expiry day": "23-11-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ },
+ {
+  "Date": "25-09-2026",
+  "Symbol": "AMBER",
+  "Expiry day": "31-12-2026",
+  "Strike Price": 0.0,
+  "Option Type": "FF",
+  "Delta Factor": 1.0
+ }
+]

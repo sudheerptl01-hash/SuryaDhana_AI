@@ -1,0 +1,174 @@
+{
+ "F4B-API": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "                    q = (await client.get(f\"{UI_API}/api/news-scanner/quotes\",\n                                          params={\"symbols\": \",\".join(f\"{x}.NS\" for x in syms[:60])})).json().get(\"quotes\") or {}",
+   "new": "                    q = (await client.get(f\"{UI_API}/api/news-scanner/quotes\",      # fresh: it decides, < 30 s old\n                                          params={\"symbols\": \",\".join(f\"{x}.NS\" for x in syms[:60]), \"fresh\": \"1\"}\n                                          )).json().get(\"quotes\") or {}",
+   "why": "move_alerts (every 5 min) fires the \u00b15/\u00b110% holdings alerts from change_pct, so it decides on prices. Without ?fresh=1 it can get a stale-while-revalidate quote up to 60 s old whenever a display poller (WTCH, PORT) refreshed the symbol a minute earlier. With it, every quote is under 30 s old (ui-api F4B-API item 1). Safe in any deploy order: an older ui-api ignores the extra query parameter. Needs a master-controller restart outside 07:45\u201309:20 and 18:30\u201321:15 IST. Anchor is at line 1103-1104 today; it matches exactly once."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "                    nq = (await client.get(f\"{UI_API}/api/news-scanner/quotes\", params={\"symbols\": \"^NSEI\"})).json().get(\"quotes\") or {}",
+   "new": "                    nq = (await client.get(f\"{UI_API}/api/news-scanner/quotes\",\n                                           params={\"symbols\": \"^NSEI\", \"fresh\": \"1\"})).json().get(\"quotes\") or {}",
+   "why": "The same move_alerts check uses the Yahoo NIFTY fallback for the 200-day-average crossing alert, which is a price decision; ask for a fresh quote. The anchor is at line 1116 today and matches once. The new lines are under 130 characters."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/.gitignore",
+   "old": "# Secrets & credentials\n.env\n.session_cache.json",
+   "new": "# Secrets & credentials\n.env\n.env.tmp\n.env.*.tmp\n.session_cache.json",
+   "why": "persist_env_updates writes the whole .env, secrets included, to a temp file next to it for a few milliseconds. Before this round it was '.env.tmp'; now each writer gets its own '.env.XXXXXXXX.tmp' via mkstemp. A writer killed mid-write (SIGKILL or a power loss) leaves that file behind. Neither name is git-ignored today: `git check-ignore -v .env.ab12cd.tmp .env.tmp` matches nothing. This does not overlap PR-F4-OPS-2, which edits the data/ block."
+  }
+ ],
+ "F4B-OPS": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "def _desktop_app_line() -> str:\n    \"\"\"The desktop app: installed, running (the installed bundle's executable), and supervised by launchd (only the\n    copy launchd started is relaunched after a crash; one reopened from the Dock after Quit is not).\"\"\"",
+   "new": "def _desktop_app_line() -> str:\n    \"\"\"The desktop app: installed, running (the installed bundle's executable), and who relaunches it after a crash:\n    launchd (the Launch at Login job's own process), the crash guard a copy reopened from the Dock after Quit starts\n    (app builds from 25 Oct round 3; `suryadhana-crash-guard <app pid>` in ps, as start-local.sh status checks), or\n    nothing (an older build, or Launch at Login off).\"\"\"",
+   "why": "SECREL-06 round-4 reconciliation. A copy opened by hand runs a crash guard (supervise.rs). RUNBOOK, CLAUDE.md and `status` now say so; Telegram /status does not. Apply together with the next hunk and the two test_bot_status.py hunks. Machine-readable, verified copy: scratchpad/F4B-OPS/patch_requests.json (entries 0-3)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "    elif _launchd_job_pid(\"SuryaDhana\") in pids:\n        sup = \"supervised by launchd\"\n    else:\n        sup = \"opened by hand: not relaunched after a crash\"",
+   "new": "    elif _launchd_job_pid(\"SuryaDhana\") in pids:\n        sup = \"supervised by launchd\"\n    elif any(_run_quiet([\"pgrep\", \"-f\", \"--\", f\"suryadhana-crash-guard {p} \"]).strip() for p in pids):\n        sup = \"opened by hand: its crash guard relaunches it\"\n    else:\n        sup = \"opened by hand: not relaunched after a crash\"",
+   "why": "SECREL-06: the crash-guard branch, using the same pgrep pattern as start-local.sh app_status_row (a guard of another pid does not count). _run_quiet returns '' when pgrep finds nothing. Takes effect at the next master-controller restart, outside the freeze windows."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_bot_status.py",
+   "old": "def _commands(ps: str, job_pid: str | None):\n    def run(cmd: list[str]) -> str:\n        if cmd[0] == \"ps\":\n            return ps\n        if cmd[0] == \"launchctl\":\n            return f\"gui/501/SuryaDhana = {{\\n\\tstate = running\\n\\tpid = {job_pid}\\n}}\\n\" if job_pid else \"\"\n        return \"\"\n    return run\n\n\n@pytest.mark.parametrize(\"job,login,want\", [\n    (\"83455\", True, \"\ud83d\udfe2 desktop app 1.0.0 running (supervised by launchd)\"),\n    (\"99999\", True, \"\ud83d\udfe2 desktop app 1.0.0 running (opened by hand: not relaunched after a crash)\"),\n    (\"83455\", False, \"\ud83d\udfe2 desktop app 1.0.0 running (Launch at Login off: not relaunched after a crash)\"),\n])\ndef test_desktop_app_line(monkeypatch, tmp_path, job, login, want):",
+   "new": "def _commands(ps: str, job_pid: str | None, guard_pid: str = \"\"):\n    def run(cmd: list[str]) -> str:\n        if cmd[0] == \"ps\":\n            return ps\n        if cmd[0] == \"launchctl\":\n            return f\"gui/501/SuryaDhana = {{\\n\\tstate = running\\n\\tpid = {job_pid}\\n}}\\n\" if job_pid else \"\"\n        if cmd[0] == \"pgrep\":           # a crash guard (supervise.rs) watching guard_pid only\n            return \"77001\\n\" if guard_pid and cmd[1:] == [\"-f\", \"--\", f\"suryadhana-crash-guard {guard_pid} \"] else \"\"\n        return \"\"\n    return run\n\n\n@pytest.mark.parametrize(\"job,login,guard,want\", [\n    (\"83455\", True, \"\", \"\ud83d\udfe2 desktop app 1.0.0 running (supervised by launchd)\"),\n    (\"99999\", True, \"83455\", \"\ud83d\udfe2 desktop app 1.0.0 running (opened by hand: its crash guard relaunches it)\"),\n    (\"99999\", True, \"58496\", \"\ud83d\udfe2 desktop app 1.0.0 running (opened by hand: not relaunched after a crash)\"),\n    (\"99999\", True, \"\", \"\ud83d\udfe2 desktop app 1.0.0 running (opened by hand: not relaunched after a crash)\"),\n    (\"83455\", False, \"\", \"\ud83d\udfe2 desktop app 1.0.0 running (Launch at Login off: not relaunched after a crash)\"),\n])\ndef test_desktop_app_line(monkeypatch, tmp_path, job, login, guard, want):",
+   "why": "Test for the SECREL-06 controller hunks; apply only together with them. The test file is mine, but this hunk fails until the controller patch lands. The `\\n` / `\\t` inside the f-strings are literal backslash escapes in the source, as in the current file."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_bot_status.py",
+   "old": "    monkeypatch.setattr(mc, \"_run_quiet\", _commands(ps, job))\n    assert mc._desktop_app_line() == want",
+   "new": "    monkeypatch.setattr(mc, \"_run_quiet\", _commands(ps, job, guard))\n    assert mc._desktop_app_line() == want",
+   "why": "Test for the SECREL-06 hunks (apply together)."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "            scheduler.add_job(db_backup_catchup, trigger=\"date\", run_date=slot, id=\"db_backup_catchup\",\n                              name=\"Nightly DuckDB Backup (catch-up after start)\", replace_existing=True)",
+   "new": "            scheduler.add_job(db_backup_catchup, trigger=\"date\", run_date=slot, id=\"db_backup_catchup\",\n                              name=\"Nightly DuckDB Backup (catch-up after start)\", replace_existing=True,\n                              misfire_grace_time=BACKUP_CATCHUP_MISFIRE_S, coalesce=True)",
+   "why": "F4-OPS review (minor): this one-off date job keeps APScheduler's 1 s default grace, so a loop that is more than 1 s late drops it silently and P7 comes back. Firing late is safe: the job re-checks the date, the backup and the freeze windows. Apply with the next two hunks and the test_backup_catchup.py hunks."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "        scheduler.add_job(db_backup_catchup, trigger=\"date\", run_date=backup_when, id=\"db_backup_catchup\",\n                          name=\"Nightly DuckDB Backup (catch-up after start)\", replace_existing=True)",
+   "new": "        scheduler.add_job(db_backup_catchup, trigger=\"date\", run_date=backup_when, id=\"db_backup_catchup\",\n                          name=\"Nightly DuckDB Backup (catch-up after start)\", replace_existing=True,\n                          misfire_grace_time=BACKUP_CATCHUP_MISFIRE_S, coalesce=True)",
+   "why": "F4-OPS review (minor): the same grace for the add_job in lifespan."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "async def db_backup_catchup() -> None:",
+   "new": "# a one-off date job keeps APScheduler's default misfire grace of 1 s: a late loop would drop the catch-up silently.\n# Late is fine (the job re-checks the date, the backup and the freeze windows when it fires).\nBACKUP_CATCHUP_MISFIRE_S = 6 * 3600\n\n\nasync def db_backup_catchup() -> None:",
+   "why": "F4-OPS review (minor): the constant used by the two add_job hunks."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_backup_catchup.py",
+   "old": "    assert name == \"db_backup_catchup\" and kw[\"run_date\"] == at(2026, 10, 26, 21, 16)\n    assert kw[\"id\"] == \"db_backup_catchup\" and kw[\"replace_existing\"] is True",
+   "new": "    assert name == \"db_backup_catchup\" and kw[\"run_date\"] == at(2026, 10, 26, 21, 16)\n    assert kw[\"id\"] == \"db_backup_catchup\" and kw[\"replace_existing\"] is True\n    assert kw[\"misfire_grace_time\"] >= 3600 and kw[\"coalesce\"] is True, \"a late loop must not drop the catch-up\"",
+   "why": "Test for the misfire hunks; apply only with them. Fails with KeyError on the current controller."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_backup_catchup.py",
+   "old": "            backup, catchup = s.get_job(\"db_backup_catchup\"), s.get_job(\"startup_catchup\")\n            return (backup.next_run_time.astimezone(IST), catchup.next_run_time.astimezone(IST), catchup.kwargs,\n                    catchup.args[3])\n    backup_at, catchup_at, kwargs, mode = asyncio.run(scenario())",
+   "new": "            backup, catchup = s.get_job(\"db_backup_catchup\"), s.get_job(\"startup_catchup\")\n            assert backup.misfire_grace_time >= 3600, \"a late loop must not drop the catch-up\"\n            return (backup.next_run_time.astimezone(IST), catchup.next_run_time.astimezone(IST), catchup.kwargs,\n                    catchup.args[3])\n    backup_at, catchup_at, kwargs, mode = asyncio.run(scenario())",
+   "why": "Test for the misfire hunks (the lifespan registration); apply only with them."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "            runs = int(self._jobs.get(job_id, {}).get(\"runs\") or 0) + 1",
+   "new": "            try:\n                runs = int(self._jobs.get(job_id, {}).get(\"runs\") or 0) + 1\n            except (TypeError, ValueError):           # a hand-edited or half-corrupt row: the count starts over\n                runs = 1",
+   "why": "F4-OPS review (minor): JobHistory.load accepts any dict row. Then record() raises ValueError from _track's finally on every run of a job whose 'runs' is not a number, and the row never repairs itself. Apply with the test_scheduler_history.py hunk."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/tests/test_scheduler_history.py",
+   "old": "def _fake_scheduler(*ids):",
+   "new": "def test_a_bad_row_never_breaks_the_job_that_owns_it(armed):\n    \"\"\"F4-OPS review: {'runs': 'n/a'} loaded fine, then every run of that job raised ValueError out of _track.\"\"\"\n    armed.path.write_text(json.dumps({\"version\": 1, \"jobs\": {\"desk_daily\": {\"runs\": \"n/a\", \"last_status\": \"done\"}}}))\n    assert armed.load() == 1\n\n    async def run():\n        async with mc._track(\"desk_daily\"):\n            pass\n    asyncio.run(run())\n    row = json.loads(armed.path.read_text())[\"jobs\"][\"desk_daily\"]\n    assert row[\"runs\"] == 1 and row[\"last_status\"] == \"done\"\n\n\ndef _fake_scheduler(*ids):",
+   "why": "Test for the JobHistory hunk; apply only with it. Without it: ValueError: invalid literal for int() with base 10: 'n/a'."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/scripts/master_controller.py",
+   "old": "                       f\"restarts it about 3.5\u20135.5 min after it hung (data-service and master-controller: not inside \"\n                       f\"a freeze window). \"",
+   "new": "                       f\"restarts it about 3.5\u20135.5 min after it hung (data-service and master-controller: not inside \"\n                       f\"a freeze window, and about 16 min while busy at high CPU; at most 3 restarts an hour). \"",
+   "why": "F3-OPS review nit 3: the Telegram HUNG line omits the watchdog's busy grace and hourly cap, which RUNBOOK 'After an outage' and CLAUDE.md state. Text only. test_bot_status's 'about 3.5\u20135.5 min after it hung' assertion still holds."
+  }
+ ],
+ "F4B-RUST": [
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/data-service/nse_live.py",
+   "old": "from datetime import datetime, timezone\n",
+   "new": "from datetime import datetime, timedelta, timezone\n",
+   "why": "R10, needed for a steady 'live' during Muhurat (1 of 3 hunks; apply all three together). market_open() knows only Mon\u2013Fri 09:15\u201315:35, so during Muhurat (Sun 8 Nov) allIndices is cached for 300 s. NSE's timestamp then lags 1\u20136 min and the 3-min fresh-print rule (app menu bar and UI header alike) flips between live and closed. Validated in scratch: 33 tests pass with the patch, 2 fail without it, ruff findings unchanged. data-service needs a restart outside the freeze windows before 8 Nov."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/data-service/nse_live.py",
+   "old": "def market_open(now: Optional[datetime] = None) -> bool:\n    now = now or datetime.now()\n    return now.weekday() < 5 and (9, 15) <= (now.hour, now.minute) <= (15, 35)\n",
+   "new": "def market_open(now: Optional[datetime] = None) -> bool:\n    now = now or datetime.now()\n    return now.weekday() < 5 and (9, 15) <= (now.hour, now.minute) <= (15, 35)\n\n\n_IST = timezone(timedelta(hours=5, minutes=30))\n\n\ndef fresh_nse_print(timestamp: Any, now: datetime | None = None, max_age_s: float = 300.0) -> bool:\n    \"\"\"NSE's own timestamp (`08-Nov-2026 18:19` / `\u2026 18:19:05`, IST wall clock) within `max_age_s` of `now` (aware;\n    default: the current time) and at most 2 min ahead of it: NSE is printing whatever the calendar says (Muhurat,\n    a special Saturday session).\"\"\"\n    if not isinstance(timestamp, str):\n        return False\n    for fmt in (\"%d-%b-%Y %H:%M:%S\", \"%d-%b-%Y %H:%M\"):\n        try:\n            t = datetime.strptime(timestamp.strip(), fmt).replace(tzinfo=_IST)\n        except ValueError:\n            continue\n        age = ((now or datetime.now(_IST)) - t).total_seconds()\n        return -120 <= age <= max_age_s\n    return False\n",
+   "why": "R10, hunk 2 of 3: a pure 'NSE is printing' test on NSE's own allIndices timestamp. Data beats the calendar, the same idea as the shell's health::fresh_print and the UI's isFreshPrint; 5 min here to cover NSE's lag. market_open() itself is unchanged."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/data-service/nse_live.py",
+   "old": "    def index_quote(self, name: str = \"NIFTY 50\") -> dict[str, Any]:\n        \"\"\"Live index from NSE allIndices (the header's NIFTY when ICICI is not streaming); 15 s cache in session.\"\"\"\n        return parse_index_quote(self.get(\"allIndices\", ttl_open=15, ttl_closed=300), name)\n",
+   "new": "    def index_quote(self, name: str = \"NIFTY 50\") -> dict[str, Any]:\n        \"\"\"Live index from NSE allIndices (the header's NIFTY when ICICI is not streaming); 15 s cache in session, and\n        also while the cached copy's own NSE timestamp is fresh outside the calendar (Muhurat, special sessions: the\n        header chip and the app's menu bar call a print under 3 min old live); 5 min otherwise.\"\"\"\n        hit = self._cache.get(\"allIndices\")\n        printing = bool(hit) and isinstance(hit[1], dict) and fresh_nse_print(hit[1].get(\"timestamp\"))\n        return parse_index_quote(self.get(\"allIndices\", ttl_open=15, ttl_closed=15 if printing else 300), name)\n",
+   "why": "R10, hunk 3 of 3: while the cached allIndices copy is fresh outside the calendar, re-read every 15 s instead of 300 s, so the NIFTY print stays under 3 min old and the menu bar and UI header stay 'live' through Muhurat. Normal days and closed days behave as before (300 s). No new NSE load outside special sessions."
+  },
+  {
+   "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/tests/unit/test_nse_live.py",
+   "old": "def test_chart_drops_the_closing_session():\n    from nse_live import parse_symbol_chart\n    base = 1791882900_000                    # 09:15 IST-as-UTC\n    last = base + (6 * 3600 + 14 * 60) * 1000   # 15:29\n    post = base + (6 * 3600 + 25 * 60) * 1000   # 15:40 closing session\n    out = parse_symbol_chart({\"grapthData\": [[base, 1.0, \"NM\"], [last, 2.0, \"NM\"], [post, 9.0, \"NM\"]]}, 1)\n    assert [r[\"close\"] for r in out[\"rows\"]] == [1.0, 2.0]\n",
+   "new": "def test_chart_drops_the_closing_session():\n    from nse_live import parse_symbol_chart\n    base = 1791882900_000                    # 09:15 IST-as-UTC\n    last = base + (6 * 3600 + 14 * 60) * 1000   # 15:29\n    post = base + (6 * 3600 + 25 * 60) * 1000   # 15:40 closing session\n    out = parse_symbol_chart({\"grapthData\": [[base, 1.0, \"NM\"], [last, 2.0, \"NM\"], [post, 9.0, \"NM\"]]}, 1)\n    assert [r[\"close\"] for r in out[\"rows\"]] == [1.0, 2.0]\n\n\ndef test_fresh_nse_print_outside_the_calendar():\n    \"\"\"Desktop round 4b (R10): an NSE print under 5 min old means NSE is printing, whatever the calendar says.\"\"\"\n    from datetime import timedelta, timezone\n    ist = timezone(timedelta(hours=5, minutes=30))\n    now = datetime(2026, 11, 8, 18, 20, tzinfo=ist)                  # Sun 8 Nov 2026, Muhurat evening\n    assert nl.fresh_nse_print(\"08-Nov-2026 18:19\", now) and nl.fresh_nse_print(\"08-Nov-2026 18:16:05\", now)\n    assert not nl.fresh_nse_print(\"08-Nov-2026 18:14\", now)            # 6 min: the session is over (or paused)\n    assert not nl.fresh_nse_print(\"06-Nov-2026 15:30\", now) and not nl.fresh_nse_print(\"08-Nov-2026 18:25\", now)\n    assert not nl.fresh_nse_print(None, now) and not nl.fresh_nse_print(\"garbage\", now)\n    assert not nl.market_open(now.replace(tzinfo=None))                 # the calendar alone says closed\n\n\ndef test_index_quote_is_re_read_every_15_s_while_nse_prints(monkeypatch):\n    from datetime import timedelta, timezone\n    live = nl.NseLive({})\n    seen = []\n\n    def fake_get(path, ttl_open=30, ttl_closed=600):\n        seen.append(ttl_closed)\n        return live._cache.get(path, (0, {}))[1]\n\n    monkeypatch.setattr(live, \"get\", fake_get)\n    stamp = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime(\"%d-%b-%Y %H:%M:%S\")\n    live._cache[\"allIndices\"] = (0, {\"timestamp\": stamp, \"data\": [{\"index\": \"NIFTY 50\", \"last\": 24180.5}]})\n    assert live.index_quote()[\"last\"] == 24180.5\n    assert seen[-1] == 15                                               # NSE printing: re-read every 15 s\n    live._cache[\"allIndices\"] = (0, {\"timestamp\": \"23-Oct-2026 15:30\", \"data\": []})\n    live.index_quote()\n    assert seen[-1] == 300                                              # a past session: 5 min as before\n    live._cache.clear()\n    live.index_quote()\n    assert seen[-1] == 300                                              # nothing cached yet: as before\n",
+   "why": "Tests for the three nse_live.py hunks: the fresh-print rule (Muhurat date, boundaries, junk input) and the allIndices cache time during a fresh print versus a past session. Run in scratch against a patched copy: 33 passed; against the unpatched module: 2 failed (negative control). No new ruff findings (7 -> 7)."
+  }
+ ],
+ "F4B-UI-PAGES": [
+  {
+   "file": "ui/lib/backtestExport.ts",
+   "old": "import { isDesktop, saveDownload } from '@/lib/platform'\n",
+   "new": "import { isDesktop, saveDownload } from '@/lib/platform'\nimport { istFileStamp } from '@/lib/format'\n",
+   "why": "FEATURE_PARITY P16 'BTST UTC file names'. Import the new IST stamp helper (lib/format istFileStamp, tested in pages.check P16)."
+  },
+  {
+   "file": "ui/lib/backtestExport.ts",
+   "old": "const stamp = () => new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')",
+   "new": "const stamp = () => istFileStamp()   // IST like every other clock on the terminal (P16: toISOString() named the file in UTC, 5 h 30 m behind)",
+   "why": "FEATURE_PARITY P16: BTST CSV/XLSX names used the UTC time. istFileStamp keeps the same 'YYYY-MM-DD-HH-MM-SS' shape, so only the clock changes."
+  },
+  {
+   "file": "ui/components/StockDetailModal.tsx",
+   "old": "{last.toFixed(2)} \u00b7 {chg >= 0 ? '+' : ''}{chg.toFixed(2)}% <span style={{ color: '#8a94a6' }}>vs prev close {prevClose.toFixed(2)}</span></span>",
+   "new": "{last.toFixed(2)} \u00b7 {Math.abs(chg) < 0.005 ? '' : chg > 0 ? '+' : '\u2212'}{Math.abs(chg).toFixed(2)}% <span style={{ color: '#8a94a6' }}>vs prev close {prevClose.toFixed(2)}</span></span>",
+   "why": "C1-trader-ux-18 remainder in a shell-owned file: the stock window's intraday change printed an ASCII '-' for losses. Self-contained (no import needed); U+2212 for losses, no sign when it rounds to 0.00."
+  },
+  {
+   "file": "ui/components/news/format.ts",
+   "old": "  return `${v >= 0 ? '+' : ''}${v.toFixed(digits)}%`",
+   "new": "  const r = Number(v.toFixed(digits)) || 0\n  return `${r > 0 ? '+' : r < 0 ? '\u2212' : ''}${Math.abs(r).toFixed(digits)}%`",
+   "why": "C1-trader-ux-18: the News Terminal's fmtPct printed ASCII '-' for losses (NewsTerminal quote rows) and '+0.00%' for zero. Same rule as the kit's fmtPct. Any CSV made through the kit's downloadCsv turns U+2212 back into '-'."
+  },
+  {
+   "file": "ui/components/news/TrackRecord.tsx",
+   "old": "const pct = (v: number | null | undefined, d = 2) => v == null || !Number.isFinite(v) ? '\u2014' : `${v > 0 ? '+' : ''}${v.toFixed(d)}%`",
+   "new": "const pct = (v: number | null | undefined, d = 2) => v == null || !Number.isFinite(v) ? '\u2014' : `${Number(v.toFixed(d)) > 0 ? '+' : Number(v.toFixed(d)) < 0 ? '\u2212' : ''}${Math.abs(v).toFixed(d)}%`",
+   "why": "C1-trader-ux-18: the track-record table printed ASCII '-' for losses."
+  },
+  {
+   "file": "ui/components/news/TrackRecord.tsx",
+   "old": "(t ${t?.toFixed(2) ?? '\u2014'})",
+   "new": "(t ${t == null ? '\u2014' : t.toFixed(2).replace('-', '\u2212')})",
+   "why": "C1-trader-ux-18: the 'No edge yet \u2026 (t -0.27)' verdict, shown on BRF and in the news bar, is the last ASCII minus a 42-page DOM scan found outside DEXP's raw data."
+  }
+ ],
+ "F4B-UI-SHELL": [
+  {
+   "file": "ui/components/WatchMonitor.tsx",
+   "old": "import { notifyHits, useAlerts } from '@/lib/alerts'\n",
+   "new": "import { notifyHits, useAlerts } from '@/lib/alerts'\nimport { hitText } from '@/lib/alertText'\n",
+   "why": "P11: needed by the next patch. hitText (lib/alertText.ts, F4B-UI-SHELL) words a \u00b1% MOVE hit correctly."
+  },
+  {
+   "file": "ui/components/WatchMonitor.tsx",
+   "old": "      hits.forEach(h => addToast(`${h.side === 'above' ? '\u25b2' : '\u25bc'} ALERT ${h.sym} ${h.side === 'above' ? 'rose above' : 'fell below'} \u20b9${h.level.toLocaleString('en-IN')} \u2014 now \u20b9${fmtPx(h.price)}`, 'warning', 20000))\n",
+   "new": "      // P11: a \u00b1% MOVE hit says \"TCS moved \u22126.1 % (\u2265 5 %)\" (lib/alertText.ts hitText), never \"fell below \u20b95\"\n      hits.forEach(h => addToast(h.side === 'move'\n        ? `${(h.change_pct ?? 0) >= 0 ? '\u25b2' : '\u25bc'} ALERT ${hitText(h)}`\n        : `${h.side === 'above' ? '\u25b2' : '\u25bc'} ALERT ${h.sym} ${h.side === 'above' ? 'rose above' : 'fell below'} \u20b9${h.level.toLocaleString('en-IN')} \u2014 now \u20b9${fmtPx(h.price)}`, 'warning', 20000))\n",
+   "why": "P11 (FEATURE_PARITY): the WTCH toast for a \u00b1% MOVE alert reads 'fell below \u20b95', using the threshold % as a price. Price-level toasts are unchanged byte for byte. Verified in a scratch tree: tsc clean, alerts and platform checks green."
+  }
+ ]
+}

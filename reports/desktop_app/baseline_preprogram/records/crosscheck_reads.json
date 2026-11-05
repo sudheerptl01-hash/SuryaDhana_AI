@@ -1,0 +1,65 @@
+{
+ "exact": {
+  "lib/alerts.ts": 1,
+  "components/WatchMonitor.tsx": 2,
+  "lib/backtestExport.ts": 9,
+  "components/ResearchLibrary.tsx": 1,
+  "components/CommandBar.tsx": 3,
+  "components/terminal/index.tsx": 56,
+  "app/page.tsx": 1161,
+  "components/MarketCommandHeader.tsx": 5,
+  "components/news/NewsTerminal.tsx": 0,
+  "components/StockDetailModal.tsx": 0,
+  "context/ToastContext.tsx": 0,
+  "components/ErrorCatcher.tsx": 0,
+  "components/Compare.tsx": 0,
+  "components/OptionChain.tsx": 0,
+  "components/DealsMonitor.tsx": 0,
+  "components/AlphaDiscoveryDesk.tsx": 0,
+  "tailwind.config.ts": 0,
+  "context/AppContext.tsx": 4,
+  "app/layout.tsx": 1,
+  "app/global-error.tsx": 0,
+  "next.config.js": 0
+ },
+ "exact_total": 1243,
+ "prefix_total": 5,
+ "mismatches": [
+  {
+   "transcript": "a24906e4-7b64-46ba-b24b-14c536f43922",
+   "at": "2026-10-24T05:28:24.826Z",
+   "file": "app/page.tsx",
+   "line": 22,
+   "seen": "TABS = {\"desk\": \"Decision Desk\", \"overview\": \"Overview\", \"stocks\": \"Stocks\", \"backtest\": \"Backtest\",",
+   "baseline": "import { getArchiveMeta } from '@/lib/api'",
+   "command": "sed -n 60,125p services/ui-api/main.py; echo \"--- count pages in ui_audit ---\"; grep -nE \"TABS|tabs =|ALL_TABS|PAGES\" scripts/ui_audit.py | head -5; /Users/sudheer/Desktop/jupyter_env/bin/python - <<'"
+  },
+  {
+   "transcript": "a24906e4-7b64-46ba-b24b-14c536f43922",
+   "at": "2026-10-24T05:28:24.826Z",
+   "file": "app/page.tsx",
+   "line": 32,
+   "seen": "    ap.add_argument(\"--tabs\", default=\",\".join(TABS), help=\"tab ids, e.g. desk,stocks\")",
+   "baseline": "<past end of file>",
+   "command": "sed -n 60,125p services/ui-api/main.py; echo \"--- count pages in ui_audit ---\"; grep -nE \"TABS|tabs =|ALL_TABS|PAGES\" scripts/ui_audit.py | head -5; /Users/sudheer/Desktop/jupyter_env/bin/python - <<'"
+  },
+  {
+   "transcript": "a24906e4-7b64-46ba-b24b-14c536f43922",
+   "at": "2026-10-24T05:28:24.826Z",
+   "file": "app/page.tsx",
+   "line": 40,
+   "seen": "    tabs = [t.strip() for t in args.tabs.split(\",\") if t.strip()]",
+   "baseline": "const BacktestPanel = lazyTab(() => import('@/components/BacktestPanel').then(m => m.BacktestPanel))",
+   "command": "sed -n 60,125p services/ui-api/main.py; echo \"--- count pages in ui_audit ---\"; grep -nE \"TABS|tabs =|ALL_TABS|PAGES\" scripts/ui_audit.py | head -5; /Users/sudheer/Desktop/jupyter_env/bin/python - <<'"
+  },
+  {
+   "transcript": "a24906e4-7b64-46ba-b24b-14c536f43922",
+   "at": "2026-10-24T05:28:24.826Z",
+   "file": "app/page.tsx",
+   "line": 59,
+   "seen": "            name = TABS.get(tab, tab)",
+   "baseline": "const PreOpen = lazyTab(() => import('@/components/PreOpen').then(m => m.PreOpen))",
+   "command": "sed -n 60,125p services/ui-api/main.py; echo \"--- count pages in ui_audit ---\"; grep -nE \"TABS|tabs =|ALL_TABS|PAGES\" scripts/ui_audit.py | head -5; /Users/sudheer/Desktop/jupyter_env/bin/python - <<'"
+  }
+ ]
+}

@@ -1,0 +1,152 @@
+{
+ "overview": {
+  "status": 200,
+  "bytes": 40134,
+  "ms": 69
+ },
+ "health_W": {
+  "status": 200,
+  "bytes": 9049,
+  "ms": 5
+ },
+ "brief": {
+  "status": 200,
+  "bytes": 41540,
+  "ms": 7
+ },
+ "calendar_30": {
+  "status": 200,
+  "bytes": 18732,
+  "ms": 26
+ },
+ "cot_52": {
+  "status": 200,
+  "bytes": 14552,
+  "ms": 98
+ },
+ "curve_COMEX": {
+  "status": 200,
+  "bytes": 3031,
+  "ms": 29
+ },
+ "curve_MCX_GOLD": {
+  "status": 200,
+  "bytes": 5497,
+  "ms": 39
+ },
+ "contracts_COMEX": {
+  "status": 200,
+  "bytes": 23121,
+  "ms": 32
+ },
+ "contracts_MCX": {
+  "status": 200,
+  "bytes": 22226,
+  "ms": 6
+ },
+ "premiums_365": {
+  "status": 200,
+  "bytes": 20257,
+  "ms": 48
+ },
+ "flows_24": {
+  "status": 200,
+  "bytes": 23557,
+  "ms": 18
+ },
+ "macro_D": {
+  "status": 200,
+  "bytes": 13407,
+  "ms": 994
+ },
+ "macro_W": {
+  "status": 200,
+  "bytes": 13416,
+  "ms": 969
+ },
+ "pos_daily_COMEX": {
+  "status": 200,
+  "bytes": 2488,
+  "ms": 44
+ },
+ "pos_daily_MCX": {
+  "status": 200,
+  "bytes": 4129,
+  "ms": 27
+ },
+ "log_60": {
+  "status": 200,
+  "bytes": 3481,
+  "ms": 3
+ },
+ "fair": {
+  "status": 200,
+  "bytes": 12525,
+  "ms": 73
+ },
+ "catalog": {
+  "status": 200,
+  "bytes": 156419,
+  "ms": 7
+ },
+ "series_ui": {
+  "status": 200,
+  "bytes": 161335,
+  "ms": 52
+ },
+ "ds_meta": {
+  "status": 200,
+  "bytes": 6090,
+  "ms": 16
+ },
+ "ds_cot_3": {
+  "status": 200,
+  "bytes": 9265,
+  "ms": 56
+ },
+ "ds_bars_gcz26": {
+  "status": 200,
+  "bytes": 1037,
+  "ms": 5
+ },
+ "ds_bars_gc_1d": {
+  "status": 200,
+  "bytes": 64380,
+  "ms": 251
+ },
+ "ds_bars_1m_tail": {
+  "status": 200,
+  "bytes": 1095557,
+  "ms": 30
+ },
+ "ds_events_fnd": {
+  "status": 200,
+  "bytes": 5992,
+  "ms": 14
+ },
+ "ds_cme_cal": {
+  "status": 200,
+  "bytes": 13765,
+  "ms": 11
+ },
+ "ds_series_imf": {
+  "status": 200,
+  "bytes": 118687,
+  "ms": 25
+ },
+ "ds_series_fx": {
+  "status": 200,
+  "bytes": 2938920,
+  "ms": 156
+ },
+ "ds_curve_mcx": {
+  "status": 200,
+  "bytes": 14155,
+  "ms": 20
+ },
+ "ds_curve_comex": {
+  "status": 200,
+  "bytes": 2975,
+  "ms": 17
+ }
+}

@@ -1,0 +1,219 @@
+[
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  comex_matched_last_source?: string | null\n  usdinr: number | null",
+  "new": "  comex_matched_last_source?: string | null\n  /** 'last trade (Yahoo per-month daily bar), not a settlement' */\n  comex_matched_last_label?: string | null\n  /** the nearest LIQUID COMEX month is `comex_matched`; the calendar month the desk's fair leg prices, and the note when they differ (C-BEGINNER-26) */\n  comex_matched_calendar?: string | null\n  comex_matched_note?: string | null\n  /** the month the desk's live COMEX leg prices (the calendar month) */\n  comex_live_symbol?: string | null\n  usdinr: number | null",
+  "why": "B3 wave 1c: new /overview.strip keys (API_CONTRACT §2.14)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  basis_live_pct?: number | null\n  cot_mm_net: number | null",
+  "new": "  basis_live_pct?: number | null\n  /** which clock `basis_pct` is at ('now' while the page holds a quote, else 'settlement') and its label; the settlement figure beside it */\n  basis_clock?: 'now' | 'settlement' | string | null\n  basis_label?: string | null\n  basis_settle_pct?: number | null\n  basis_settle_date?: string | null\n  /** live MCX vs the settlement, and which of the two the header shows ('live' during MCX hours with a quote) */\n  mcx_live_vs_settle_pct?: number | null\n  mcx_shown?: 'live' | 'settlement' | string | null\n  cot_mm_net: number | null",
+  "why": "B3 wave 1c: one basis per page with its clock named (C-TRADER-10 / C-BEGINNER-5)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  comex_matched: string | null\n  comex_front: string",
+  "new": "  comex_matched: string | null\n  comex_matched_calendar?: string | null\n  comex_matched_note?: string | null\n  comex_front: string",
+  "why": "B3 wave 1c: /overview.contract carries the liquid-month match and the calendar month"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  open_signal?: string | null\n  overnight_summary?: string | null",
+  "new": "  /** wave 1c: no trade-implying field leaves the server (open_signal is gone); the dropped paths are listed here */\n  stripped_fields?: string[] | null\n  overnight_summary?: string | null",
+  "why": "B3 wave 1c: /brief no longer returns open_signal (C-TRADER-15); only a comment in HealthView mentions it"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  days?: number | null\n  source?: string\n}\n\nexport interface GoldOverview {",
+  "new": "  days?: number | null\n  source?: string\n  /** wave 1c (API_CONTRACT §2.12): the page kind (FOMC_SPEECH / FOMC_MINUTES split off the store's FOMC; `kind_stored` keeps the original),\n   *  ★ only on High impact or an FOMC decision, the sort rank (0 = decision / High … 4 = Low) and whether today's row is already past */\n  kind_stored?: string | null\n  star?: boolean\n  impact_rank?: number\n  past?: boolean\n}\n\nexport interface GoldOverview {",
+  "why": "B3 wave 1c: every /calendar and /overview.calendar row is decorated (C-TRADER-11 / C-DATA-21)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  driver_label?: string | null\n  quadrant_label?: string | null\n  week_price_chg_pct?: number | null\n  price_tue?: number | null",
+  "new": "  driver_label?: string | null\n  /** the rule's text, mirrored from data-service driver_rule.py (the [P] line can print it) */\n  driver_rule?: string | null\n  quadrant_label?: string | null\n  week_price_chg_pct?: number | null\n  price_tue?: number | null",
+  "why": "B3 wave 1c: /cot.driver_rule (C-TRADER-3)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "percentile_all?: number | null\n            n_reports?: number | null; label: string; badge?: Badge }",
+  "new": "percentile_all?: number | null\n            /** wave 1c (C-DATA-14): `percentile_all` is data-service's 1986→ figure (null when absent); the fetched-window figure is labelled '3-y percentile (160 reports)' */\n            percentile_window?: number | null; window_reports?: number | null; window_label?: string | null; percentile_label?: string | null\n            n_reports?: number | null; label: string; badge?: Badge }",
+  "why": "B3 wave 1c: crowd percentiles are labelled by their window"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  open_interest: { total: number | null; chg: number | null; pct_rank?: number | null }",
+  "new": "  open_interest: { total: number | null; chg: number | null; pct_rank?: number | null; pct_rank_label?: string | null }",
+  "why": "B3 wave 1c: the OI percentile names its window"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  volume?: number | null; volume_vs_20d?: number | null; churn?: number | null\n}",
+  "new": "  volume?: number | null; volume_vs_20d?: number | null; volume_avg_sessions?: number | null; churn?: number | null\n  /** wave 1c: why there is no quadrant word ('no OI yet (CME file lands T+1 ≈ 15:30 IST)'); MCX: how many sessions the delta spans */\n  label_note?: string | null\n  sessions_spanned?: number | null; multi_session?: boolean; span_note?: string | null\n}",
+  "why": "B3 wave 1c: tape rows (C-BEGINNER-24 / C-DATA-19 / C-TRADER-18)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "fnd_date?: string | null; tender_start?: string | null; note?: string | null } | null\n  /** \"since 27 Oct 2026\": the day the history began */",
+  "new": "fnd_date?: string | null; ltd_date?: string | null; fnd_source?: string | null; days_unit?: string | null; tender_start?: string | null; note?: string | null } | null\n  /** \"since 27 Oct 2026\": the day the history began */",
+  "why": "B3 wave 1c: roll carries days_unit ('calendar days'), ltd_date, fnd_source (C-TRADER-28 / C-TRADER-13)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  annualised_carry_pct?: number | null\n  flags?: string[]",
+  "new": "  annualised_carry_pct?: number | null\n  flags?: string[]\n  /** COMEX only (wave 1c, C-TRADER-24): that month's first notice / last trade from the CME PRF — a long must leave by FND */\n  first_notice?: string | null\n  days_to_fnd?: number | null\n  last_trade?: string | null\n  days_to_ltd?: number | null",
+  "why": "B3 wave 1c: /curve COMEX points carry FND"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  basis_pct: number | null\n  carry_pct?: number | null\n  basis_carry_adj_pct?: number | null",
+  "new": "  basis_pct: number | null\n  /** wave 1c: the settlement-clock basis (the stored MCX_BASIS_PCT row) with its clock named; the live pair beside it only while a quote exists */\n  basis_clock?: 'settlement' | string | null\n  basis_label?: string | null\n  basis_date?: string | null\n  basis_source?: string | null\n  live_basis_pct?: number | null\n  live_basis_label?: string | null\n  mcx_live?: number | null\n  ts_note?: string | null\n  carry_pct?: number | null\n  basis_carry_adj_pct?: number | null",
+  "why": "B3 wave 1c: /curve.basis names its clock (C-DATA-11)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  carry_pct?: number | null\n  comex_matched?: string | null\n  tender_start?: string | null",
+  "new": "  carry_pct?: number | null\n  /** 'annualised vs the front expiry (as /curve)' — the one carry convention; null on the front row (C-DATA-16) */\n  carry_convention?: string | null\n  comex_matched?: string | null\n  comex_matched_calendar?: string | null\n  comex_matched_note?: string | null\n  tender_start?: string | null\n  days_unit?: string | null",
+  "why": "B3 wave 1c: /contracts expiries"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "export interface LadderStep { step: string; label: string; value: number | null; ts?: string | null; source?: string | null; unit?: string | null }",
+  "new": "export interface LadderStep { step: string; label: string; value: number | null; ts?: string | null; ts_label?: string | null; source?: string | null; unit?: string | null\n  /** wave 1c: the clock of this bar — 'now' | 'fix' | 'settlement' | 'dated constant' — never divide across clocks */\n  clock?: string | null }",
+  "why": "B3 wave 1c: every ladder step names its clock (C-TRADER-4 / C-BEGINNER-5)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "    premium_date?: string | null\n    fineness_adjustment?: number | string | null",
+  "new": "    premium_date?: string | null\n    /** wave 1c: the premium is the STORED fix-minute INDIA_PREMIUM_PCT; `premium_note` says when IBJA has a newer fix than the stored premium */\n    premium_clock?: string | null\n    premium_note?: string | null\n    ibja_date?: string | null\n    fineness_adjustment?: number | string | null",
+  "why": "B3 wave 1c: /premiums.india"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "    basis_pct: number | null\n    carry_adj_pct?: number | null",
+  "new": "    basis_pct: number | null\n    basis_date?: string | null\n    basis_label?: string | null\n    basis_source?: string | null\n    /** the live-clock pair while a quote exists (both legs 'now'); null otherwise */\n    live_basis?: { value: number | null; mcx_live?: number | null; duty_paid_landed?: number | null; as_of?: string | null; label?: string | null; clock?: string | null } | null\n    carry_adj_pct?: number | null",
+  "why": "B3 wave 1c: /premiums.india basis at one clock"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "    ts_sge?: string | null\n    ts_ref?: string | null\n    history?: { report_date: string; premium_usd?",
+  "new": "    ts_sge?: string | null\n    ts_ref?: string | null\n    /** wave 1c (C-TRADER-5): paired on the SAME report date only; `note` = \"awaiting today's PM: …\" when today's London PM is not stored */\n    pair_date?: string | null\n    pairing?: string | null\n    note?: string | null\n    history?: { report_date: string; premium_usd?",
+  "why": "B3 wave 1c: /premiums.shanghai"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  official?: { country: string; month: string; oz_mn?: number | null; tonnes?: number | null; chg_oz_mn?: number | null; chg_12m_oz_mn?: number | null }[]\n  rbi?: { week?: string | null; usd_mn?: number | null; share_pct?: number | null; tonnes_est?: number | null; inr_cr?: number | null; note?: string | null } | null",
+  "new": "  /** wave 1c: IMF IFS stores troy ounces — `oz` raw, `oz_mn` = oz ÷ 1e6, `tonnes` = Moz × 31.1035 (C-TRADER-6) */\n  official?: { country: string; month: string; oz?: number | null; oz_mn?: number | null; tonnes?: number | null; chg_oz_mn?: number | null; chg_t?: number | null\n               chg_12m_oz_mn?: number | null; chg_12m_t?: number | null; unit_note?: string | null }[]\n  /** `tonnes` is the IMF's reported ounces for India (C-TRADER-22); `tonnes_est` is a null alias for one release */\n  rbi?: { week?: string | null; usd_mn?: number | null; share_pct?: number | null; tonnes?: number | null; tonnes_month?: string | null; tonnes_source?: string | null\n          tonnes_est?: number | null; inr_cr?: number | null; note?: string | null } | null",
+  "why": "B3 wave 1c: /flows units"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "          efp?: { today_rt?: number | null; date?: string | null; avg_20d?: number | null; pct_of_volume?: number | null } | null; read?: string | null } | null",
+  "new": "          efp?: { today_rt?: number | null; date?: string | null; avg_20d?: number | null; avg_sessions?: number | null; since?: string | null; avg_note?: string | null\n                  pct_of_volume?: number | null } | null; read?: string | null } | null",
+  "why": "B3 wave 1c: the EFP average is null until 5 prior sessions exist (C-TRADER-21)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  label?: string\n  value: number | null\n  unit: string\n  report_date?: string | null\n  d1?: number | null",
+  "new": "  label?: string\n  /** 'stand-in: FRED_DTWEXBGS (DXY_CLOSE has no stored points)' when the fallback series is used; the label already names the series (C-DATA-4) */\n  label_note?: string | null\n  value: number | null\n  unit: string\n  report_date?: string | null\n  d1?: number | null",
+  "why": "B3 wave 1c: /macro drivers labelled by the series used"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "          weights?: Record<string, number>; badge?: Badge; line?: string | null }",
+  "new": "          weights?: Record<string, number>; badge?: Badge; line?: string | null\n          /** wave 1c (C-BEGINNER-14): why the split is empty, in words — print this instead of the identity assertion */\n          note?: string | null; inr_note?: string | null }",
+  "why": "B3 wave 1c: /macro.kgx"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "          next_fomc_ist?: string | null; after_mcx_close?: boolean; badge?: Badge; fedwatch_link?: string | null }",
+  "new": "          /** `next_fomc_ist` is a LABEL ('2026-12-10 00:30 IST'); `next_fomc` is the DECISION only (never a speaker), `speakers` this week's speeches (C-TRADER-12) */\n          next_fomc_ist?: string | null; after_mcx_close?: boolean\n          next_fomc?: { date_et?: string | null; ist?: string | null; at?: string | null; statement_ist?: string | null; name?: string | null; kind?: string | null\n                        source?: string | null; after_mcx_close?: boolean; days?: number | null } | null\n          speakers?: { date: string; time_ist?: string | null; title?: string | null; impact?: string | null; kind?: string | null }[]\n          badge?: Badge; fedwatch_link?: string | null }",
+  "why": "B3 wave 1c: /macro.fed"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "               forecast?: string | null; previous?: string | null; actual?: string | null; in_session?: boolean | null; days?: number | null }[]",
+  "new": "               forecast?: string | null; previous?: string | null; actual?: string | null; in_session?: boolean | null; days?: number | null\n               /** wave 1c: ★ only on High impact or an FOMC decision; rows already past are not sent */\n               impact_rank?: number; star?: boolean }[]",
+  "why": "B3 wave 1c: /macro.calendar rows"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "                    betas_by_regime?: ({ regime?: string; beta_real_yield_per_100bp?: number | null; beta_dxy?: number | null } & Record<string, unknown>)[]; lesson?: string | null }",
+  "new": "                    betas_by_regime?: ({ regime?: string; beta_real_yield_per_100bp?: number | null; beta_dxy?: number | null } & Record<string, unknown>)[]\n                    /** wave 1c (C-DATA-21): the units of the raw keys, and which dollar series the betas / correlations use */\n                    beta_units?: Record<string, string>; dxy_series?: string | null; lesson?: string | null }",
+  "why": "B3 wave 1c: /macro.driver_health"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  settle_line?: { value: number | null; label: string; source?: string | null; quality?: string | null } | null\n  prev_day?: { ts: string | number; c: number }[]",
+  "new": "  /** wave 1c (C-TRADER-2 / C-TRADER-17): the dashed line is a CME settlement when stored, else the PREVIOUS session's daily close (`is_settlement: false`), never the live last;\n   *  `matched_last` is the symbol's own month on the stored curve (labelled 'last trade (Yahoo), not a settlement'); `daily_closes` feed the legend (partial-day flagged) */\n  settle_line?: { value: number | null; label: string; source?: string | null; quality?: string | null; is_settlement?: boolean } | null\n  matched_last?: { value: number | null; label: string; source?: string | null; quality?: string | null; is_settlement?: boolean } | null\n  prev_close?: { date: string; close: number | null; partial?: boolean; label?: string | null } | null\n  daily_closes?: { date: string; close: number | null; partial?: boolean; label?: string | null }[]\n  prev_day?: { ts: string | number; c: number }[]",
+  "why": "B3 wave 1c: /bars closes for the DAILY legend and the dashed line"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  settlement_session_label?: string | null\n  chg_5d?: number | null",
+  "new": "  settlement_session_label?: string | null\n  /** INDIA BASIS (wave 1c): the clock of `value` ('now' with a live quote, else 'settlement') and the other clock's figure beside it */\n  clock?: string | null\n  basis_label?: string | null\n  live_basis_pct?: number | null\n  settle_basis_pct?: number | null\n  settle_basis_date?: string | null\n  settle_basis_label?: string | null\n  settle_basis_source?: string | null\n  ibja_premium_note?: string | null\n  /** DOLLAR: which read the tile used ('series DXY_CLOSE' | 'daily bars DX-Y.NYB' | 'series FRED_DTWEXBGS (stand-in)') */\n  read_from?: string | null\n  /** POSITIONING: the week's two legs the label was computed from */\n  chg_long?: number | null\n  chg_short?: number | null\n  /** CURVE / ROLL: the front month's last trade and where its FND came from */\n  ltd_date?: string | null\n  fnd_source?: string | null\n  chg_5d?: number | null",
+  "why": "B3 wave 1c: HealthGauge extras (window_label / last_bar_partial are already declared)"
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/components/gold/HealthStrip.tsx",
+  "old": "        {row(`COMEX ${comexMonthLabel(o.contract.comex_matched)}`, s.comex_matched_settle != null ? fmtUsd(s.comex_matched_settle, 1) : `last ${fmtUsd(s.comex_live, 1)}`,\n          s.comex_matched_settle != null ? `settle ${dayLabel(s.comex_matched_settle_date)} · last ${fmtUsd(s.comex_live, 1)}` : 'settle — (CME backfill) · Yahoo, not settlement')}",
+  "new": "        {row(`COMEX ${comexMonthLabel(o.contract.comex_matched)}`, s.comex_matched_settle != null ? fmtUsd(s.comex_matched_settle, 1) : `last ${fmtUsd(s.comex_matched_last ?? s.comex_live, 1)}`,\n          s.comex_matched_settle != null ? `settle ${dayLabel(s.comex_matched_settle_date)} · last ${fmtUsd(s.comex_live, 1)}`\n            : `settle — (CME backfill) · ${s.comex_matched_last != null ? `${dayLabel(s.comex_matched_last_date)} ` : ''}Yahoo, not settlement`)}",
+  "why": "B3 wave 1c (C-TRADER-9): the compact row should print the matched month's OWN stored last trade (strip.comex_matched_last, dated) when it exists, not the continuous-front live price under the DEC-26 title; the main Cell above already does"
+ },
+ {
+  "builder": "B4A-UI-CORE",
+  "file": "reports/gold_program/G-EDU/glossary.json",
+  "old": "\"term\": \"hit rate\"",
+  "new": "\"term\": \"hit rate\"",
+  "why": "NOT a literal patch (old==new as a placeholder — there is no 'hit rate' entry today): the glossary owner (B5-LEARN; ui/lib/gold/glossary.json is regenerated by validate_learn.py --write) should ADD an entry {term: 'hit rate', short: 'The share of periods that ended positive (a month, a week, a day): 65 % = positive 65 times in 100. A description of the past, not a probability for the next period.', see_also: ['seasonality', 'percentile'], aliases: ['hit-rate']} so MONTHLY's <Term t=\"hit rate\" /> (C-BEGINNER-7) resolves; gold.check W12 excepts the name until then."
+ },
+ {
+  "builder": "B4B-UI-VIEWS",
+  "file": "reports/gold_program/API_CONTRACT.md",
+  "old": "`latest.release_ist` names the CURRENT report's release (`Sat 24 Oct 01:00 IST` — Friday 15:30 ET is Saturday in IST);",
+  "new": "`crowd.percentile_all` is data-service's expanding all-history percentile (1986→) or null; `crowd.percentile_window` / `crowd.window_reports` / `crowd.window_label` (`\"3-y percentile (160 reports)\"`) and `crowd.percentile_label` name the window ui-api computed over; `open_interest.pct_rank` carries `open_interest.pct_rank_label` the same way — the client prints the label verbatim and never calls a fetched window \"all-history\" (C-DATA-14).\n`latest.release_ist` names the CURRENT report's release (`Sat 24 Oct 01:00 IST` — Friday 15:30 ET is Saturday in IST);",
+  "why": "routers/gold.py already emits these fields (lines ~2502-2520 and ~2675); the contract test keeps the document in sync and PositioningView reads them (B3 owns the file)"
+ },
+ {
+  "builder": "B4B-UI-VIEWS",
+  "file": "services/ui-api/routers/gold.py",
+  "old": "def build_premiums(",
+  "new": "@router.get(\"/asia\")\nasync def gold_asia(exchange: str | None = Query(None, pattern=\"^(SGE|SHFE)$\"), from_: str | None = Query(None, alias=\"from\")) -> dict[str, Any]:\n    \"\"\"p.asia (PLAN a.6): a paced read-through of data-service `/db/gold/asia` (gold_asia_daily: SHFE au front OI/Δ, SGE Au(T+D)\n    OI and settlement direction, Au99.99 VWAP) under the catalog ids SHFE_DAILY / SGE_DAILY; `freshness` from the newest trade_date.\n    Until this exists the release build hides p.asia (C-BEGINNER-16, C-DATA-17).\"\"\"\n    raise HTTPException(status_code=501, detail=\"B3: proxy data-service /db/gold/asia here (shape: {rows[{trade_date, exchange, contract, open_interest, oi_change, direction, vwap, unit}], freshness})\")\n\n\ndef build_premiums(",
+  "why": "p.asia cannot read gold_asia_daily today (no ui-api route; data-service serves /db/gold/asia). B3 owns gold.py and the exact proxy pattern; this stub marks the slot — replace the body with the real read-through before publishing (B4B wires the panel the round after, with B4A's getGoldAsia)"
+ },
+ {
+  "builder": "B4B-UI-VIEWS",
+  "file": "ui/lib/gold/api.ts",
+  "old": "export const getGoldFlows = (months = 24) =>",
+  "new": "/** p.asia: gold_asia_daily rows under SHFE_DAILY / SGE_DAILY (API_CONTRACT §2.x, once B3 serves /api/gold/asia) */\nexport const getGoldAsia = (exchange?: 'SGE' | 'SHFE', from?: string) =>\n  client.get<{ rows: { trade_date: string; exchange: string; contract: string; open_interest: number | null; oi_change: number | null; direction: string | null; vwap: number | null; unit: string | null }[]; freshness?: unknown }>(`${GOLD_API}/asia`, { params: clean({ exchange, from }) })\nexport const getGoldFlows = (months = 24) =>",
+  "why": "B4A owns api.ts / types.ts; the client helper for the asia read so p.asia can leave the release gate once the route exists"
+ }
+]

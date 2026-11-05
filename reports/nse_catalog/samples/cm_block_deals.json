@@ -1,0 +1,56 @@
+[
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "ADANIENT",
+  "Security Name": "Adani Enterprises Limited",
+  "Client Name": "ADANI INFRA (INDIA) LIMITED",
+  "Buy/Sell": "BUY",
+  "Quantity Traded": 3450000,
+  "Trade Price / Wght. Avg. Price": 2905.0
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "ADANIENT",
+  "Security Name": "Adani Enterprises Limited",
+  "Client Name": "ADANI PROPERTIES PVT LTD",
+  "Buy/Sell": "BUY",
+  "Quantity Traded": 5150000,
+  "Trade Price / Wght. Avg. Price": 2905.0
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "DALBHARAT",
+  "Security Name": "Dalmia Bharat Limited",
+  "Client Name": "DALMIA BHARAT REFRACTORIES LIMITED",
+  "Buy/Sell": "BUY",
+  "Quantity Traded": 1084000,
+  "Trade Price / Wght. Avg. Price": 1700.0
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "ADANIENT",
+  "Security Name": "Adani Enterprises Limited",
+  "Client Name": "INFINITE TRADE AND INVESTMENT LTD",
+  "Buy/Sell": "SELL",
+  "Quantity Traded": 8600000,
+  "Trade Price / Wght. Avg. Price": 2905.0
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "DALBHARAT",
+  "Security Name": "Dalmia Bharat Limited",
+  "Client Name": "RAMA INVESTMENT COMPANY PRIVATE LIMITED",
+  "Buy/Sell": "SELL",
+  "Quantity Traded": 357000,
+  "Trade Price / Wght. Avg. Price": 1700.0
+ },
+ {
+  "Date": "25-SEP-2026",
+  "Symbol": "DALBHARAT",
+  "Security Name": "Dalmia Bharat Limited",
+  "Client Name": "KESHAV POWER LIMITED",
+  "Buy/Sell": "SELL",
+  "Quantity Traded": 727000,
+  "Trade Price / Wght. Avg. Price": 1700.0
+ }
+]

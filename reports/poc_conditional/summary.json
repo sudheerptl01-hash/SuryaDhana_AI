@@ -1,0 +1,217 @@
+{
+  "events": 87930,
+  "holdout_start": "2024-07-01",
+  "magnet_modifiers_replicating": [
+    {
+      "feature": "relvol",
+      "direction": "DOWN",
+      "top": "Q5",
+      "bottom": "Q1",
+      "discovery_rate_top": 0.35460346399270737,
+      "discovery_rate_bottom": 0.44541323836423924,
+      "discovery_excess_spread": -0.06748843872121471,
+      "discovery_excess_spread_t": -3.368553827830264,
+      "discovery_fwd_spread_pct": 0.554981520681031,
+      "discovery_fwd_spread_t": 1.7664193891255509,
+      "holdout_rate_top": 0.3014842300556586,
+      "holdout_rate_bottom": 0.4123168823780401,
+      "holdout_excess_spread": -0.04908265255422804,
+      "holdout_excess_spread_t": -2.515692331313387,
+      "holdout_fwd_spread_pct": -0.2177218778037882,
+      "holdout_fwd_spread_t": -0.8642242074894371,
+      "magnet_modifier_replicates": true,
+      "return_modifier_replicates": false
+    },
+    {
+      "feature": "clv",
+      "direction": "DOWN",
+      "top": "Q5",
+      "bottom": "Q1",
+      "discovery_rate_top": 0.38961038961038963,
+      "discovery_rate_bottom": 0.40589065967318944,
+      "discovery_excess_spread": -0.17022077979804814,
+      "discovery_excess_spread_t": -3.1058320024490014,
+      "discovery_fwd_spread_pct": -0.5137971352764031,
+      "discovery_fwd_spread_t": -0.6187324630898919,
+      "holdout_rate_top": 0.6486486486486487,
+      "holdout_rate_bottom": 0.3804520853231455,
+      "holdout_excess_spread": -0.12609731868365204,
+      "holdout_excess_spread_t": -2.4482642587215766,
+      "holdout_fwd_spread_pct": -0.4724925923141322,
+      "holdout_fwd_spread_t": -0.7017736733075032,
+      "magnet_modifier_replicates": true,
+      "return_modifier_replicates": false
+    },
+    {
+      "feature": "breadth50",
+      "direction": "DOWN",
+      "top": "Q5",
+      "bottom": "Q1",
+      "discovery_rate_top": 0.5210954848260547,
+      "discovery_rate_bottom": 0.419927333705981,
+      "discovery_excess_spread": -0.0737882746271277,
+      "discovery_excess_spread_t": -2.057136787043742,
+      "discovery_fwd_spread_pct": 0.045951692698186386,
+      "discovery_fwd_spread_t": 0.1703988777481063,
+      "holdout_rate_top": 0.3428063943161634,
+      "holdout_rate_bottom": 0.4023732470334412,
+      "holdout_excess_spread": -0.13273942428150282,
+      "holdout_excess_spread_t": -3.0892162061773347,
+      "holdout_fwd_spread_pct": -0.779583122737465,
+      "holdout_fwd_spread_t": -1.8084420018770702,
+      "magnet_modifier_replicates": true,
+      "return_modifier_replicates": false
+    }
+  ],
+  "return_modifiers_replicating": [
+    {
+      "feature": "ma50_slope",
+      "direction": "DOWN",
+      "top": "Q5",
+      "bottom": "Q1",
+      "discovery_rate_top": 0.4239733629300777,
+      "discovery_rate_bottom": 0.44310152473038306,
+      "discovery_excess_spread": -0.02217400764366701,
+      "discovery_excess_spread_t": -1.173647109041808,
+      "discovery_fwd_spread_pct": 0.622990517624073,
+      "discovery_fwd_spread_t": 2.503110785360434,
+      "holdout_rate_top": 0.3788546255506608,
+      "holdout_rate_bottom": 0.43163303672139364,
+      "holdout_excess_spread": -0.025512843679273627,
+      "holdout_excess_spread_t": -1.2489499830644653,
+      "holdout_fwd_spread_pct": 0.737846409668086,
+      "holdout_fwd_spread_t": 2.583518570567189,
+      "magnet_modifier_replicates": false,
+      "return_modifier_replicates": true
+    },
+    {
+      "feature": "relvol",
+      "direction": "UP",
+      "top": "Q5",
+      "bottom": "Q1",
+      "discovery_rate_top": 0.24077970982390076,
+      "discovery_rate_bottom": 0.3363590519415028,
+      "discovery_excess_spread": -0.02333681492057042,
+      "discovery_excess_spread_t": -1.625340954876602,
+      "discovery_fwd_spread_pct": -1.3798633700143053,
+      "discovery_fwd_spread_t": -5.884304794751367,
+      "holdout_rate_top": 0.2874476064416501,
+      "holdout_rate_bottom": 0.40948275862068967,
+      "holdout_excess_spread": -0.022108315550653204,
+      "holdout_excess_spread_t": -0.9884242533982212,
+      "holdout_fwd_spread_pct": -0.7295327963461108,
+      "holdout_fwd_spread_t": -2.37019489385998,
+      "magnet_modifier_replicates": false,
+      "return_modifier_replicates": true
+    },
+    {
+      "feature": "atr_pct",
+      "direction": "DOWN",
+      "top": "Q5",
+      "bottom": "Q1",
+      "discovery_rate_top": 0.4008760545100584,
+      "discovery_rate_bottom": 0.4771744353676117,
+      "discovery_excess_spread": 0.0040094691129762845,
+      "discovery_excess_spread_t": 0.27336309952943194,
+      "discovery_fwd_spread_pct": 0.749978424926295,
+      "discovery_fwd_spread_t": 3.4554874957170565,
+      "holdout_rate_top": 0.3995776135163675,
+      "holdout_rate_bottom": 0.423728813559322,
+      "holdout_excess_spread": -0.08124491936815109,
+      "holdout_excess_spread_t": -4.356348652256969,
+      "holdout_fwd_spread_pct": 0.5760245227620887,
+      "holdout_fwd_spread_t": 2.367724556927992,
+      "magnet_modifier_replicates": false,
+      "return_modifier_replicates": true
+    }
+  ],
+  "surviving_strategies": [],
+  "avoid_signals": [
+    {
+      "strategy": "S1_breakout_continuation",
+      "filter": "near_52w_high"
+    },
+    {
+      "strategy": "S1_breakout_continuation",
+      "filter": "stock_uptrend"
+    },
+    {
+      "strategy": "S1_breakout_continuation|nostop",
+      "filter": "near_52w_high"
+    },
+    {
+      "strategy": "S1_breakout_continuation|nostop",
+      "filter": "stock_uptrend"
+    },
+    {
+      "strategy": "S3_failed_breakdown_reclaim",
+      "filter": "all"
+    },
+    {
+      "strategy": "S3_failed_breakdown_reclaim",
+      "filter": "ma50_slope_top_q"
+    },
+    {
+      "strategy": "S3_failed_breakdown_reclaim",
+      "filter": "market_uptrend"
+    },
+    {
+      "strategy": "S3_failed_breakdown_reclaim",
+      "filter": "va_width_top_q"
+    },
+    {
+      "strategy": "S3_failed_breakdown_reclaim|nostop",
+      "filter": "all"
+    },
+    {
+      "strategy": "S3_failed_breakdown_reclaim|nostop",
+      "filter": "ma50_slope_top_q"
+    },
+    {
+      "strategy": "S3_failed_breakdown_reclaim|nostop",
+      "filter": "market_uptrend"
+    },
+    {
+      "strategy": "S3_failed_breakdown_reclaim|nostop",
+      "filter": "va_width_top_q"
+    },
+    {
+      "strategy": "S4_failed_breakout_long",
+      "filter": "all"
+    },
+    {
+      "strategy": "S4_failed_breakout_long",
+      "filter": "market_uptrend"
+    },
+    {
+      "strategy": "S4_failed_breakout_long",
+      "filter": "stock_uptrend"
+    },
+    {
+      "strategy": "S4_failed_breakout_long|nostop",
+      "filter": "stock_uptrend"
+    },
+    {
+      "strategy": "S5_breakdown_long",
+      "filter": "market_uptrend"
+    },
+    {
+      "strategy": "S5_breakdown_long",
+      "filter": "stock_uptrend"
+    },
+    {
+      "strategy": "S5_breakdown_long|nostop",
+      "filter": "market_uptrend"
+    }
+  ],
+  "portfolio": {
+    "NIFTY50_buy_hold": {
+      "discovery": {
+        "cagr_pct": 21.49
+      },
+      "holdout": {
+        "cagr_pct": -1.65
+      }
+    }
+  }
+}

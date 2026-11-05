@@ -1,0 +1,13 @@
+run,period,cagr_pct,max_dd_pct,sharpe,vol_pct,fees_rs,taxes_rs,trades,months_with_blocked_names,blocked_name_months
+approved rules,full,18.52,-13.75,0.98,12.47,,,,,
+approved rules,discovery,26.22,-13.75,1.36,13.76,,,,,
+approved rules,holdout,3.87,-7.91,-0.17,9.18,,,,,
+approved rules,costs & activity,,,,,238997.0,344715.0,840.0,0.0,0.0
++ avoid bulk buys (20 sessions),full,18.72,-12.4,0.99,12.44,,,,,
++ avoid bulk buys (20 sessions),discovery,26.48,-12.4,1.38,13.75,,,,,
++ avoid bulk buys (20 sessions),holdout,3.95,-7.65,-0.16,9.09,,,,,
++ avoid bulk buys (20 sessions),costs & activity,,,,,245835.0,348178.0,846.0,82.0,446.0
+"+ avoid bulk buys (60 sessions, sensitivity)",full,18.55,-13.24,0.99,12.36,,,,,
+"+ avoid bulk buys (60 sessions, sensitivity)",discovery,25.88,-13.24,1.35,13.69,,,,,
+"+ avoid bulk buys (60 sessions, sensitivity)",holdout,4.52,-6.81,-0.1,8.96,,,,,
+"+ avoid bulk buys (60 sessions, sensitivity)",costs & activity,,,,,240066.0,346198.0,842.0,83.0,1243.0

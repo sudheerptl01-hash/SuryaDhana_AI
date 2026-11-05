@@ -1,0 +1,198 @@
+[
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "  latest: { report_date: string; release_at?: string | null; next_release_ist?: string | null; age_days?: number | null; stale?: boolean; catch_up_note?: string | null }",
+  "new": "  /** `release_ist` / `next_release_ist` are LABELS (\"Sat 31 Oct 01:00 IST\", rendered verbatim); `next_release_at` is the ISO instant (API_CONTRACT \u00a72.5) */\n  latest: { report_date: string; release_at?: string | null; release_ist?: string | null; next_report_date?: string | null; next_release_at?: string | null\n            next_release_ist?: string | null; next_release_source?: 'rule' | 'published' | string | null; age_days?: number | null; stale?: boolean; catch_up_note?: string | null }",
+  "why": "B3 wave 1b: /cot.latest gained release_ist, next_report_date, next_release_at, next_release_source (the next release is now the NEXT one, holiday-aware); PositioningView/WeeklyView already print next_release_ist verbatim, which is now the label form. Server shape per API_CONTRACT \u00a72.5 / \u00a78."
+ },
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "  /** @deprecated one release alias of basis_pct (B3) */\n  implied_premium_pct?: number | null\n  badge?: Badge\n  freshness?: Freshness\n}",
+  "new": "  /** @deprecated one release alias of basis_pct (B3) */\n  implied_premium_pct?: number | null\n  /** the desk's \u20b9300 rule on the cached MCX quote: OK / WAIT once a price exists, AWAITING_OPEN / NEED_PRICE before (what brf_line prints) */\n  desk_verdict_state?: 'OK' | 'WAIT' | 'AWAITING_OPEN' | 'NEED_PRICE' | string | null\n  badge?: Badge\n  freshness?: Freshness\n}",
+  "why": "B3 wave 1b: /health.fair.desk_verdict_state (API_CONTRACT \u00a72.1, \u00a77 #10); optional, additive."
+ },
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "  /** POSITIONING: \"long, not crowded\" etc. (a description, never a colour) */\n  words?: string | null",
+  "new": "  /** POSITIONING: \"long, not crowded\" etc. (a description, never a colour) */\n  words?: string | null\n  /** POSITIONING: the G-STUDY \u00a75.2 fund-driver label with the Tue\u2192Tue GC=F change \u2014 identical to /cot.driver_label (API_CONTRACT \u00a72.1) */\n  driver_label?: string | null\n  week_price_chg_pct?: number | null",
+  "why": "B3 wave 1b: the positioning gauge carries driver_label + week_price_chg_pct so HEALTH and POSITIONING never disagree; additive."
+ },
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "  naive_mean_abs_error?: number | null\n  bias?: number | null\n}",
+  "new": "  naive_mean_abs_error?: number | null\n  bias?: number | null\n  threshold?: number | null\n  badge?: Badge\n}",
+  "why": "/fair.accuracy carries threshold and badge (API_CONTRACT \u00a72.2 since wave 1; \u00a78 inventory); additive."
+ },
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "  accuracy?: FairAccuracy | null\n  holiday?: { closure: 'full' | 'morning' | 'evening'; note: string } | null",
+  "new": "  accuracy?: FairAccuracy | null\n  /** today's accuracy-log row once the 08:45 snapshot ran (API_CONTRACT \u00a72.2) */\n  today_log?: GoldLogRowX | null\n  holiday?: { closure: 'full' | 'morning' | 'evening'; name?: string | null; opens_at?: string | null; note?: string | null } | null",
+  "why": "/fair.today_log is in the contract since wave 1 but absent from GoldFair; holiday{} also carries name/opens_at (\u00a72.2). Additive, optional."
+ },
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "  /** when the live last is appended by the server from the SWR cache */\n  last?: { price: number; as_of: string; source: string; age_s?: number | null } | null\n}",
+  "new": "  /** when the live last is appended by the server from the SWR cache */\n  last?: { price: number; as_of: string; source: string; age_s?: number | null } | null\n  store_errors?: Record<string, string> | null\n}",
+  "why": "/bars returns store_errors like every store-reading route (\u00a78 inventory); additive."
+ },
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "export interface GoldCatalog { rows: CatalogRow[]; as_of?: string; count?: number; verdicts?: Record<string, number>; badges?: Record<string, number> }",
+  "new": "export interface GoldCatalog { rows: CatalogRow[]; as_of?: string; count?: number; verdicts?: Record<string, number>; badges?: Record<string, number>; store_errors?: Record<string, string> | null }",
+  "why": "/catalog returns store_errors (\u00a78 inventory); additive."
+ },
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "  in_session?: boolean | null\n  days?: number | null\n  source?: string\n}",
+  "new": "  in_session?: boolean | null\n  /** time_ist after the MCX close (23:30) */\n  after_close?: boolean | null\n  days?: number | null\n  source?: string\n}",
+  "why": "/calendar events carry after_close (API_CONTRACT \u00a72.12); additive."
+ },
+ {
+  "builder": "B3-API",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/types.ts",
+  "old": "  calendar?: GoldEvent[]\n  move?: {",
+  "new": "  /** this week's US calendar as `{date, time_ist, title, kind, country, impact, forecast, previous, actual, in_session, days}` (API_CONTRACT \u00a72.11) \u2014 NOT /calendar's GoldEvent (`event_date`, `name`); MacroView's MacroCalRow is the local type */\n  calendar?: { date: string; time_ist?: string | null; title?: string | null; kind?: string | null; country?: string | null; impact?: string | null\n               forecast?: string | null; previous?: string | null; actual?: string | null; in_session?: boolean | null; days?: number | null }[]\n  move?: {",
+  "why": "Field-name difference found in the reconciliation: /macro.calendar rows use date/title (documented in \u00a72.11 and already consumed that way by MacroView.tsx line 39) while GoldMacro.calendar was typed as GoldEvent[] (event_date/name). Server shape wins; the type should say what the server sends."
+ },
+ {
+  "builder": "B4A-UI-CORE",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/components/gold/PositioningView.tsx",
+  "old": "  const mcx = useGoldLoad(() => getGoldPositioningDaily('MCX', 60), [props.sel.family], 10 * 60_000)",
+  "new": "  const mcx = useGoldLoad(() => getGoldPositioningDaily('MCX', 60, props.sel.family), [props.sel.family], 10 * 60_000)   // THAT family's rows (API_CONTRACT \u00a72.6)",
+  "why": "B4B: the same family-blindness the review found on B4A \u2014 the view refetches on sel.family but the server defaults to GOLD, so POSITIONING's MCX daily block shows GOLD rows for every family. api.ts now takes the family as an optional third argument (backward compatible)."
+ },
+ {
+  "builder": "B4A-UI-CORE",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/gold.py",
+  "old": "        parts.append(f\"roll {roll['front']}\u2192{roll['next']}\" + (f\" {roll_date}\" if roll_date else \"\"))",
+  "new": "        parts.append(f\"roll {roll['front']}\u2192{roll['next']}\" + (f\" \u00b7 FND {_day_label(roll_date)}\" if roll_date else \"\"))",
+  "why": "B3 (optional wording): WEI now renders `line` verbatim, so the owner sees 'roll DEC-26\u2192FEB-27 2026-11-30' (a raw ISO date) where PLAN \u00a7b's example reads 'roll DEC\u2192FEB 25 Nov'. A 'FND 30 Nov' day label (any existing helper that prints 'Mon 30 Nov' \u2192 '30 Nov') reads better; the client no longer re-words server lines."
+ },
+ {
+  "builder": "B4B-UI-VIEWS",
+  "file": "ui/lib/gold/types.ts",
+  "old": "export interface HealthClause {\n  text: string\n  rule_id: string\n  series_id?: string | null\n  value?: number | null\n  threshold?: number | string | null\n}",
+  "new": "export interface HealthClause {\n  text: string\n  rule_id: string\n  series_id?: string | null\n  value?: number | string | Record<string, number | string | null> | null\n  /** routers/gold.py HEALTH_RULES: numbers, strings or objects ({weak_pct, strong_pct, flat_pct}, {usd_share, min_move_pct, real_yield_bp}); never render as a React child */\n  threshold?: number | string | Record<string, number | string | null> | null\n}",
+  "why": "B4A: the server's H1/H2 thresholds are objects (gold.py:772, :780); the narrow type let LearnView render `{c.threshold}` as a React child \u2192 React #31 blanked the GOLD page on LEARN. LearnView now formats through thresholdText(); widening the type makes the next consumer fail at tsc instead of at runtime."
+ },
+ {
+  "builder": "B4B-UI-VIEWS",
+  "file": "ui/lib/gold/types.ts",
+  "old": "  calendar?: GoldEvent[]\n  move?: { gvz?: number | null; gvz_date?: string | null;",
+  "new": "  /** this week's rows as /macro emits them (\u00a72.11): `date` + `title`, not /calendar's `event_date` + `name` */\n  calendar?: (Omit<GoldEvent, 'name' | 'event_date'> & { date: string; title?: string | null; event_date?: string | null; name?: string | null })[]\n  move?: { gvz?: number | null; gvz_date?: string | null;",
+  "why": "B4A: gold.py:3491 emits macro.calendar rows as {date, time_ist, title, kind, \u2026} (API_CONTRACT \u00a72.11) while GoldMacro types them as GoldEvent ({event_date, name}); MacroView carries a local MacroCalRow until types.ts says the same, after which the local type collapses to GoldMacro['calendar'][number]."
+ },
+ {
+  "builder": "B5-LEARN-DOCS",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/tooltips.json",
+  "old": "    \"since\": \"The date this history starts: every stored series begins the day its job first ran ('since 27 Oct 2026'); nothing is backfilled from a chart.\",",
+  "new": "    \"since\": \"The date this history starts: every stored series begins the day its job first ran (the panel prints that date); nothing is backfilled from a chart.\",",
+  "why": "PR-B5-1 (B4B). G-EDU is the source of truth and is now the superset (your 69 ui_added keys were merged verbatim; 4 of them \u2014 carry_adj_basis_pct, cot_next_release, fbil_rate, gpr_ratio \u2014 are referenced by no view, no router and not in API_CONTRACT.md, so they were retired in build_glossary.py RETIRED_FIELD_KEYS). Simplest and exact: `cp reports/gold_program/G-EDU/tooltips.json ui/lib/gold/tooltips.json && cp reports/gold_program/G-EDU/glossary.json ui/lib/gold/glossary.json` (G-EDU tooltips.json: version 2026-11-04, count 260, no `ui_added` block \u2014 gold_views.check.ts only types that field and never reads it; glossary: the same 151 terms, G-EDU order). If you prefer line edits instead of the copy: apply this `since` line, delete the four key lines (`\"carry_adj_basis_pct\": \u2026` line 158, `\"cot_next_release\": \u2026` line 173, `\"fbil_rate\": \u2026` line 219, `\"gpr_ratio\": \u2026` line 233), change `\"count\": 264` to `\"count\": 260`, drop the four names from `ui_added`. Either way gold_views.check 'every G-EDU tooltip is carried verbatim' goes green (today: 1 FAIL on `since`) and the two files are equal key for key, which the IMPROVEMENT_LOG now states."
+ },
+ {
+  "builder": "B5-LEARN-DOCS",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/learn.ts",
+  "old": "  { where: '\u00a72.6 \"18 % premium\"', when: md => curriculumHasStaleDuty(md) || /18\\s?% premium/.test(md), text: 'With the 15 % duty the \"implied premium\" collapses into a basis vs duty-paid landed of \u2248 +0.4 %; `implied_premium_pct` is a deprecated alias for one release.' },\n  { where: 'Appendix C evidence ledger', when: md => /^# Appendix C \u2014 Evidence ledger/m.test(md) && !/SOURCES\\.md \u00a711/.test(md), text: 'Superseded by SOURCES.md \u00a711 (the G-STUDY, G-MACRO, G-INDIA rows the badges rest on).' },",
+  "new": "  { where: '\u00a72.6 \"18 % premium\"', when: md => curriculumHasStaleDuty(md) || !/0\\.995 \u00d7 1\\.15 \u00d7 1\\.031/.test(md), text: 'The old 18 % \"implied premium\" was 0.995 \u00d7 1.15 \u00d7 1.031 \u2212 1: purity \u00d7 the dated 15 % duty \u00d7 the MCX basis vs duty-paid landed (+3.1 % that morning, \u00a72.6); `implied_premium_pct` is a deprecated alias for one release.' },\n  { where: 'Appendix C evidence ledger', when: md => /^# Appendix C \u2014 Evidence ledger/m.test(md) && !/SOURCES\\.md`? \u00a711/.test(md), text: 'Superseded by SOURCES.md \u00a711 (the G-STUDY, G-MACRO, G-INDIA rows the badges rest on).' },",
+  "why": "PR-B5-2 (B4B). Wave-1 adversarial check, major 3: CURRICULUM \u00a72.6's heading still contains the words '18% premium' (it explains what the old figure was made of), so the current predicate fires and LEARN prints '\u2248 +0.4 %' directly above a document whose \u00a70 table, \u00a72.6 ladder and \u00a78.4 example all say +3.1 % (0.995 \u00d7 1.15 \u00d7 1.031) \u2014 the same number with two values on one view (PLAN \u00a7f.6). The new predicate only fires while the curriculum lacks the dated decomposition, and the text carries the document's own figure. Second line: Appendix C already defers to SOURCES.md \u00a711, written as '`SOURCES.md` \u00a711' with backticks, so /SOURCES\\.md \u00a711/ misses it and the 'Superseded' notice prints against an appendix that is not superseded; the `?-tolerant regex fixes that. Entries 0 (duty, gated on curriculumHasStaleDuty, no longer fires) and 3 (panel names) are fine as they are."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/PLAN.md",
+  "old": "GS-P2 (WGC weekly flows 2003\u2192), GS-P4 (IMF monthly CB buying), and the two that wait for history (GS-P3 SGE premium + Au(T+D) OI; G-INDIA OI matrix after 60 sessions; GS-PREMIUM after 2 years). | S5 |",
+  "new": "GS-P2 (WGC weekly flows 2003\u2192), GS-P4 (seasonality in rupees \u2014 run 26 Oct 2026: VOID / FAIL, drift not a calendar), GS-P5 (IMF monthly CB buying; not yet pre-registered, waits for the monthly ingest), and the two that wait for history (GS-P3 SGE premium + Au(T+D) OI; G-INDIA OI matrix after 60 sessions; GS-PREMIUM after 2 years). Ids: `reports/gold_program/STUDIES.md`. | S5 |",
+  "why": "Study-id collision (wave-1 adversarial check, major): O-13 called the central-bank study GS-P4 while the B7 brief, GS-P4/PLAN.md, the script and the merged FINDINGS rows mean seasonality in rupees. STUDIES.md keeps GS-P4 = seasonality and gives the CB study the fresh id GS-P5."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/SOURCES.md",
+  "old": "- **Evidence:** G-MACRO/G-PHYSICAL: regime context; GS-P4 (monthly CB buying \u2192 next-month return) proposed; honest prior FAIL as timing.",
+  "new": "- **Evidence:** G-MACRO/G-PHYSICAL: regime context; GS-P5 (monthly CB buying \u2192 next-month return) proposed, not yet pre-registered (`reports/gold_program/STUDIES.md`); honest prior FAIL as timing.",
+  "why": "Same id collision (E12 entry, line 506); docs/GOLD_DATA_DICTIONARY.md regenerates from SOURCES.md via scripts/gold_data_dictionary.py (its --check gate would otherwise flag the drift)."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/SOURCES.md",
+  "old": "| M45 | Central-bank net purchases by country | E12 \u0394 ounces | monthly | none (GS-P4) | PUBLISH-CORE \u00b7 `context` |",
+  "new": "| M45 | Central-bank net purchases by country | E12 \u0394 ounces | monthly | none (GS-P5, not yet pre-registered) | PUBLISH-CORE \u00b7 `context` |",
+  "why": "Same id collision (M45 metric row, line 845)."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/SOURCES.md",
+  "old": "GS-P3 SGE premium + Au(T+D) OI (after history); GS-P4 IMF monthly CB buying; GS-PREMIUM India/Shanghai premium (after 2 y); G-INDIA OI matrix (after 60 sessions) | | honest prior: FAIL as timing, PASS as context |",
+  "new": "GS-P3 SGE premium + Au(T+D) OI (after history); GS-P4 seasonality in rupees (run 26 Oct 2026: VOID / FAIL \u2014 drift, not a calendar); GS-P5 IMF monthly CB buying (not yet pre-registered); GS-PREMIUM India/Shanghai premium (after 2 y); G-INDIA OI matrix (after 60 sessions); registry `reports/gold_program/STUDIES.md` | | honest prior: FAIL as timing, PASS as context |",
+  "why": "Same id collision (proposed-studies row, line 884); records GS-P4's actual result."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/services/ui-api/routers/gold.py",
+  "old": "        \"evidence\": \"ETF flows: contemporaneous, no lead (G-STUDY, G-MACRO); central banks: GS-P4 pending\",",
+  "new": "        \"evidence\": \"ETF flows: move with the price, do not lead it (G-STUDY, G-MACRO, GS-P1 26 Oct 2026); central banks: GS-P5 pending (not yet pre-registered)\",",
+  "why": "B3: the physical payload's evidence string names the central-bank study GS-P4, which the aggregate FINDINGS.md now reads as the seasonality study (VOID / FAIL); and GS-P1's published result for ph.etf ('moves with the price, does not lead it') reaches no panel without it. Badge unchanged (`context`); no colour, no rule."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/components/gold/PhysicalView.tsx",
+  "old": "<GPanel id=\"ph.official\" title=\"Official sector\" badge=\"context\" evidence=\"GS-P4 pending\"",
+  "new": "<GPanel id=\"ph.official\" title=\"Official sector\" badge=\"context\" evidence=\"GS-P5 pending (not yet pre-registered)\"",
+  "why": "B4B: same id collision in the ph.official evidence chip \u2014 the terminal would say 'GS-P4 pending' for central banks while FINDINGS.md says GS-P4 = seasonality, FAIL."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/components/gold/PhysicalView.tsx",
+  "old": "<GPanel id=\"ph.etf\" title=\"ETF holdings and flows\" badge=\"context\" evidence=\"G-STUDY / G-MACRO: contemporaneous, no lead\"",
+  "new": "<GPanel id=\"ph.etf\" title=\"ETF holdings and flows\" badge=\"context\" evidence=\"G-STUDY / G-MACRO / GS-P1: moves with the price, does not lead it (26 Oct 2026)\"",
+  "why": "B4B: GS-P1's result (six forecast tests FAIL, same-week Spearman 0.29 PASS as description; FINDINGS 'Use:' line) was never requested of B4 in wave 1 (adversarial check, minor). Badge stays `context`; wording describes, does not predict."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/G-EDU/parts/04_panels_routines_appendix.md",
+  "old": "Evidence: `context` (GS-P4 proposed; honest prior FAIL as\ntiming).",
+  "new": "Evidence: `context` (GS-P5 proposed, not yet pre-registered; honest prior FAIL as\ntiming).",
+  "why": "B5: same id collision in \u00a78.2.9 (central banks \u2192 ph.official); CURRICULUM.md regenerates with validate_learn.py --write."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/G-EDU/tooltips.json",
+  "old": "\"m.season\": \"Mean monthly return and hit rate since 1971; Indian festival months marked. No month passes in both halves; walk-forward best-6-months +0.3%/yr. Context only.\"",
+  "new": "\"m.season\": \"Mean monthly return and hit rate since 1971; Indian festival months marked. No month passes in both halves \u2014 in USD (G-MACRO H3) or in rupees once the +1 %/month drift is removed (GS-P4, 26 Oct 2026); festival months do not pass; walk-forward best-6-months +0.3%/yr USD, +1.1%/yr rupees after costs, both FAIL. Context only.\"",
+  "why": "B5 (G-EDU is the source of truth; the UI copy follows per the PM's resolution): GS-P4's rupee result for m.season reaches no panel otherwise (adversarial check, minor). Numbers from GS-P4/summary.json (H3 excess +1.10 %/yr t 0.59). Keeps 'Context only'; no colour, no rule."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/lib/gold/tooltips.json",
+  "old": "\"m.season\": \"Mean monthly return and hit rate since 1971; Indian festival months marked. No month passes in both halves; walk-forward best-6-months +0.3%/yr. Context only.\"",
+  "new": "\"m.season\": \"Mean monthly return and hit rate since 1971; Indian festival months marked. No month passes in both halves \u2014 in USD (G-MACRO H3) or in rupees once the +1 %/month drift is removed (GS-P4, 26 Oct 2026); festival months do not pass; walk-forward best-6-months +0.3%/yr USD, +1.1%/yr rupees after costs, both FAIL. Context only.\"",
+  "why": "B4B: the UI copy must equal the G-EDU copy key for key (gold_views.check 'every G-EDU tooltip is carried verbatim'); apply together with the G-EDU patch above."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/ui/components/gold/SeasonalityGrid.tsx",
+  "old": "\u2726 = Indian festival month. Dec/Jan strong historically; no month passes in both halves;\n        walk-forward best-6-months +0.3 %/yr (G-STUDY, G-MACRO H3). Context, not a signal.",
+  "new": "\u2726 = Indian festival month. Dec/Jan strong historically; no month passes in both halves \u2014 in USD (G-MACRO H3) or in rupees once the +1 %/month drift is removed (GS-P4, 26 Oct 2026); festival months do not pass;\n        walk-forward best-6-months +0.3 %/yr USD, +1.1 %/yr rupees after costs \u2014 both FAIL. Context, not a signal.",
+  "why": "B4B: the grid's caption carries only the PLAN a.5 USD caption; GS-P4's rupee verdict (the festival lore the grid marks with \u2726) is published in FINDINGS.md and should sit under the grid it describes. Same wording as the tooltip; nothing coloured."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/reports/gold_program/FINDINGS.md",
+  "old": "| GS-P4 \u00b7 festival months in rupee gold, drift-adjusted (Sep / Oct / Nov; 644 months 1973\u2192, split 1999-12-31; month mean minus the all-month mean +1.03 %) | Sep excess +0.97 % (t 1.33); Oct \u22120.05 % (t \u22120.10); Nov \u22120.42 % (t \u22120.70) | Sep 1.10 / 0.74 \u00b7 Oct 0.76 / \u22121.33 \u00b7 Nov \u22121.02 / 0.24 | **FAIL** (all three) |\n| GS-P4 \u00b7 Akshaya Tritiya months (Apr / May) in rupee gold, drift-adjusted | Apr excess \u22120.61 % (t \u22121.15); May \u22120.23 % (t \u22120.46) | \u22121.03 / \u22120.64 \u00b7 \u22120.73 / 0.10 | **FAIL** |\n| GS-P4 \u00b7 Dec / Jan carry-over in rupee gold, drift-adjusted | Dec excess \u22120.24 % (t \u22120.41); Jan +1.55 % (t 1.58, the largest of the twelve) | Dec \u22120.04 / \u22120.72 \u00b7 Jan 0.97 / 1.74 | **FAIL** (no month reaches \\|t\\| \u2265 2 even in the full sample) |\n| GS-P4 \u00b7 the pre-registered statistic (each month's mean vs zero), for the record | Jan +2.58 % (t 2.64), Feb +1.46 % (t 2.56), Aug +1.69 % (t 2.71), Sep +2.00 % (t 2.75) reach t \u2265 2 \u2014 but shuffled month labels 'pass' in 44 % of 100 seeds (4.4 such months per run): the statistic measures the +1.03 %/month drift, not the calendar | \u2014 | **VOID** (PLAN N4; the drift-adjusted rows above replace it) |\n| GS-P4 \u00b7 walk-forward best-6-months long/flat in rupees (GC=F \u00d7 USD/INR month-ends, 0.15 % per switch = 0.30 % per round trip, OOS 2005\u2192) | excess vs scaled buy-and-hold +1.10 %/yr (t 0.59) at 50 % exposure; shuffled returns reach \\|t\\| \u2265 2 in 7 % of seeds | t 0.97 / \u22120.26 (OOS cut 2015-11-30) | **FAIL** |",
+  "new": "| GS-P4 \u00b7 H1 festival (Sep/Oct/Nov) (rupee gold, 1973 \u2192, drift-adjusted) | Sep 2.00 % (t vs 0 2.75; excess 0.97 % t 1.33) FAIL; Oct 0.98 % (t vs 0 1.97; excess \u22120.05 % t \u22120.10) FAIL; Nov 0.61 % (t vs 0 1.00; excess \u22120.42 % t \u22120.70) FAIL | Sep excess t 1.10 \u00b7 Oct excess t 0.76 \u00b7 Nov excess t \u22121.02 / Sep excess t 0.74 \u00b7 Oct excess t \u22121.33 \u00b7 Nov excess t 0.24 | **VOID (pre-registered) / FAIL (drift-adjusted, capped)** |\n| GS-P4 \u00b7 H1b Akshaya Tritiya (Apr/May) (rupee gold, 1973 \u2192, drift-adjusted) | Apr 0.42 % (t vs 0 0.79; excess \u22120.61 % t \u22121.15) FAIL; May 0.80 % (t vs 0 1.56; excess \u22120.23 % t \u22120.46) FAIL | Apr excess t \u22121.03 \u00b7 May excess t \u22120.73 / Apr excess t \u22120.64 \u00b7 May excess t 0.10 | **VOID (pre-registered) / FAIL (drift-adjusted, capped)** |\n| GS-P4 \u00b7 H2 Dec/Jan carry-over (rupee gold, 1973 \u2192, drift-adjusted) | Jan 2.58 % (t vs 0 2.64; excess 1.55 % t 1.58) FAIL; Dec 0.79 % (t vs 0 1.33; excess \u22120.24 % t \u22120.41) FAIL | Jan excess t 0.97 \u00b7 Dec excess t \u22120.04 / Jan excess t 1.74 \u00b7 Dec excess t \u22120.72 | **VOID (pre-registered) / FAIL (drift-adjusted, capped)** |\n| GS-P4 \u00b7 H3 \u00b7 walk-forward best-6-months long/flat in rupees (GC=F \u00d7 USD/INR month-ends, 0.15 % per switch = 0.30 % per round trip) | OOS 2005 \u2192: excess vs scaled B&H 1.10 %/yr (t 0.59), exposure 50 %; shuffled returns reach \\|t\\| \u2265 2 in 7% of seeds | t 0.97 / t \u22120.26 (OOS cut 2015-11-30) | **FAIL** |\n| GS-P4 \u00b7 the pre-registered statistic (each month's mean vs zero), for the record | Jan, Feb, Aug, Sep at t \u2265 2 in the full sample \u2014 but shuffled month labels 'pass' in 44% of 100 seeds (seeds 20261027\u201320261126; 4.42 such months per run): the statistic measures the 1.03 %/month drift, not the calendar | null PASS rate vs 0 44% / drift-adjusted 3% | **VOID (PLAN N4; the drift-adjusted rows above replace it)** |",
+  "why": "B5: the wave-1 adversarial check asked that the GS-P4 study verdict read 'VOID (pre-registered statistic) / FAIL (post-hoc drift-adjusted, capped)' in the aggregate rows too, and that the rows be the generated ones rather than hand-reshaped. These five lines are reports/gold_program/GS-P4/FINDINGS_ROW.md byte for byte (4-column, generated 4 Nov 2026 from summary.json; same numbers as the rows the PM merged; H3 now graded signed; the null-pass figure carries its seed set). The prose at line 62 ('44 % of seeds \u2026 void (GS-P4 PLAN N4)') stays correct."
+ },
+ {
+  "builder": "B7-STUDIES",
+  "file": "/Users/sudheer/MahaKubera_108/SuryaDhana_AI/pytest.ini",
+  "old": "",
+  "new": "[pytest]\nmarkers =\n    slow: re-runs a research study on the saved data (tests/test_gold_study_reproduce.py); deselect with -m \"not slow\"\n",
+  "why": "Optional, re-filed from wave 1 (PM's call): the `slow` marker is unregistered (PytestUnknownMarkWarning without -W ignore, which CI passes); a root pytest.ini affects all five suites' rootdir resolution, so B7 did not create it."
+ }
+]

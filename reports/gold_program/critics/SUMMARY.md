@@ -1,0 +1,371 @@
+# Gold critics round — 4/5 Nov 2026 (wf_bdb6ca30-e64)
+
+# C-TRADER — **HOLD** (4.5/10)
+
+The frame is right (badges on every derived number, no composite, verdict suffix, [P] layer shows every threshold, accuracy log admits the model is WORSE than naive, all 9 sub-views render with zero console errors), but a trader cannot answer the brief's questions from this page because several numbers are wrong under their label: DAILY plots UTC bar timestamps as IST (5h30 shift; sessions.ts:153 parses zone-less strings as local), its legend "closes" flip the sign of Tuesday's move vs the WEEKLY table; the funds' driver word is "new shorts" on a week where managed money added 1,538 longs and 182 shorts (rule precedence bug); PHYSICAL prints two clock-error premiums (IBJA −3.94 % vs HEALTH's synchronised −0.71 %; Shanghai +$109 vs −$1.55); the official-sector table is off by 10^6 and sorts Brazil above the USA; the dollar series are empty so the verdict asserts "GOLD-SPECIFIC" without a dollar leg while MACRO relabels the Fed broad index as DXY; the header's COMEX settle is blank ("NO DATA" beside a live price); the event strip is capped at 14 rows so Friday's NFP never shows; "next FOMC" is a Fed speaker; no GCZ26 FND anywhere and the DES card shows the Nov contract already past first notice. COT figures themselves verify (OI identity 396,810 both sides, deltas per group match the stored CFTC change fields); curve carry, fair-value, expected-move and contract-card arithmetic all check.
+
+## findings
+- [blocker] DAILY · d.24h, d.3day, d.tape · ui/lib/gold/sessions.ts
+  - Intraday bars are plotted 5h30 early: data-service serialises naive UTC ts, the UI parses them as browser-local IST, so the 24-h line ends at '18:05 IST' when the clock reads 23:49 IST, the tape says '18:05 IST · 07:35 NY' for a 13:05 NY bar, and every session band (Shanghai/London/NY/MCX) is misaligned with the price path.
+  - evidence: shots/daily_b.png; /db/gold/bars 1m last ts 2026-11-04T18:19:57 (no zone) at 23:53 IST; CME maintenance gap sits at 22:00–23:00 in stored ts (proves UTC); panel header 'as of 23:39 IST' converts correctly while the axis does not.
+  - fix: ui/lib/gold/sessions.ts:153 barMs(): append 'Z' to zone-less datetime strings (or emit '+00:00' from services/data-service/gold/reads.py bars()).
+- [blocker] DAILY · d.24h legend · ui/components/gold/DailyView.tsx
+  - Legend 'closes' are IST-day bucket ends, not settlements: 'Tue 03 Nov close 3,949.80 ▲+0.32 %' vs the stored daily bar 3,940.4 ▼−0.74 % printed on WEEKLY; 'Mon 02 Nov close 3,937.10' vs 3,969.6.
+  - evidence: shots/daily_b.png footer line; /db/gold/bars?symbol=GC=F&interval=1d rows 2026-11-02/03; DailyView.tsx:162-166 prevClose = last point of the previous day bucket.
+  - fix: Take legend closes from gold_daily_bars (settlement/close) and label the bucket price 'last'.
+- [blocker] HEALTH / POSITIONING / WEEKLY · h.verdict, p.hero, w.whodid · services/data-service/gold/cot_metrics.py
+  - Fund-driver label 'new shorts' on the 27 Oct week where managed money added +1,538 longs and +182 shorts (net +1,356, price −1.64 %); the rule tests ΔS>0 before comparing magnitudes, so any down-week with one new short is 'new shorts'. The verdict sentence contradicts itself ('+1.3 % w/w, new shorts').
+  - evidence: /api/gold/cot groups[mm] chg_long 1538, chg_short 182, driver_label 'new shorts'; services/data-service/gold/cot_metrics.py:65 and services/ui-api/routers/gold.py:409.
+  - fix: Down-week: 'long liquidation' if ΔL<0 and |ΔL|≥max(ΔS,0); else 'new shorts' if ΔS>max(ΔL,0); else 'funds bought the dip'. Mirror for the up-week.
+- [blocker] PHYSICAL · ph.ladder · services/ui-api/routers/gold.py
+  - 'IBJA premium vs duty-paid −3.94 %' compares Tue 3 Nov IBJA PM with a duty-paid landed computed at 23:41 Wed after a +3.5 % day — the clock error the panel's own footnote warns about; HEALTH's india_basis gauge prints the synchronised −0.71 % for the same date, so the same metric has two values on one page.
+  - evidence: shots/physical_b.png; /api/gold/premiums india.premium_pct −3.95, ladder ts ibja 2026-11-03 vs landed 2026-11-04T23:40:25; /api/gold/health gauges[india_basis].ibja_premium_pct −0.71; routers/gold.py:3018-3024.
+  - fix: Compute the ladder premium against landed at the IBJA PM minute (the stored INDIA_PREMIUM_PCT) and print one number; show the live bars with their own timestamps but no cross-clock premium.
+- [blocker] PHYSICAL · ph.shanghai · services/ui-api/routers/gold.py
+  - Shanghai premium '+$109.03 (2.77 %)' pairs SGE Au99.99 of Wed 4 Nov with the LBMA PM of Tue 3 Nov (before the rally); HEALTH's shanghai gauge prints −$1.55 for 3 Nov. Two values for one metric, the larger one an artefact.
+  - evidence: /api/gold/premiums shanghai ts_sge 2026-11-04, ts_ref 2026-11-03, london_pm_usd 3936.65, sge_usd_oz 4045.68; /api/gold/health gauges[shanghai].value −1.55; routers/gold.py:3130-3141.
+  - fix: Pair same-date SGE PM with same-date reference only; when today's LBMA PM is not stored, show the last stored SHANGHAI_PREMIUM_USD and say 'awaiting today's PM'.
+- [blocker] PHYSICAL / MONTHLY · ph.official, m.official · services/ui-api/routers/gold.py
+  - Official-sector table is off by 10^6: IMF_GOLD_OZ_* is stored in ounces, the API labels the raw value 'oz_mn' and multiplies by 31.1035 for 'tonnes' (POL shows '2,16,34,000 Moz · 67,28,92,617 t'; true 21.6 Moz · 673 t). The BRA series is 5.54 bn oz (true ≈ 4.2 Moz), so Brazil sorts above the USA. The table is rendered on two sub-views.
+  - evidence: shots/physical_b.png, shots/monthly_b.png; /db/gold/series IMF_GOLD_OZ_BRA value 5544278722.99 unit 'oz'; IMF_GOLD_OZ_USA 261,499,000 oz; routers/gold.py:3253-3255 (oz_mn=value, tonnes=value×TONNES_PER_MOZ).
+  - fix: oz_mn = value/1e6; tonnes = value/32150.7466; fix the BRA SDMX unit in services/data-service/gold/ingest_physical.py; render the table once (PLAN a.5 m.official = net purchases bars, a.7 ph.official = holders table).
+- [major] HEALTH · h.verdict · services/ui-api/routers/gold.py
+  - 'GOLD-SPECIFIC' is asserted while the dollar gauge is unavailable; _driver_word returns GOLD-SPECIFIC whenever the USD leg is None, so the headline claims a driver it cannot test.
+  - evidence: /api/gold/health gauges[dollar].state 'unavailable', freshness.unavailable ['dollar'], clause H2 value null; routers/gold.py:884-900.
+  - fix: Omit the driver word when either leg is None and say 'driver untested (dollar series offline)'.
+- [major] MACRO / MONTHLY / HEALTH · mc.drivers, mc.kgx, mc.ccy, m.ladder, h.gauges[dollar] · services/data-service/gold/ingest_yahoo.py
+  - DXY_CLOSE, FX_EURUSD/JPY/GBP/CNY, USDINR_CLOSE and GOLDBEES_CLOSE (all PUBLISH-CORE) have no stored points: the dollar tile is OFFLINE, 'Gold or the dollar?' is empty and flags its own identity failing, 'gold in six currencies' has one row, the return ladder's ₹ and DXY-basket columns are dashes; MACRO's driver strip silently falls back to FRED DTWEXBGS (Fed broad index, 121.67) under the label 'DOLLAR INDEX (DXY)'.
+  - evidence: shots/macro_b.png, shots/monthly_b.png; /db/gold/series?ids=DXY_CLOSE,FX_EURUSD,USDINR_CLOSE → points []; catalog rows exist (ingest_job yahoo_daily); routers/gold.py:3422 fallback tuple.
+  - fix: Fix the yahoo_daily symbol list/backoff for DX-Y.NYB, INR=X, EURUSD=X, GOLDBEES.NS; label the fallback 'Fed broad USD index (DTWEXBGS)' or hide the tile.
+- [major] all (header strip) · header · ui/components/gold/HealthStrip.tsx
+  - The five-number header's first number is blank: 'COMEX DEC-26 — settle — · NO DATA' next to a live $4,076.9; there are no GCZ26.CMX daily bars in the store so the matched-month settlement never renders.
+  - evidence: shots/health_b.png header; /db/gold/bars?symbol=GCZ26.CMX&interval=1d count 0; HealthStrip.tsx:40.
+  - fix: Store per-month daily bars from the curve job (it already fetches GCZ26 last trade) and render 'last 4,078.3 · Yahoo, not settlement' instead of NO DATA.
+- [major] all (header strip) / HEALTH · header, h.gauges[india_basis] · services/ui-api/routers/gold.py
+  - The MCX cell shows yesterday's proxy settlement ₹1,40,186 while the live Breeze quote ₹1,43,249 is on the same page in h.open; 'basis vs duty-paid landed +1.5 %' is the model fair value (1,44,806) ÷ landed − 1, not the market: live MCX ÷ 1,42,663 − 1 = +0.41 %.
+  - evidence: /api/gold/health fair.basis_pct 1.5 = 144806/142663−1; h.open 'MCX ₹1,43,249 · ICICI Breeze'; gauge rule text says 'settle ÷ duty-paid landed − 1'.
+  - fix: During MCX hours header = live MCX with the settlement beneath; basis = live MCX vs landed; keep the settlement-time basis as 'vs Tue settle +1.6 %'.
+- [major] HEALTH · h.events · ui/components/gold/HealthView.tsx
+  - Event strip is capped at 14 rows so Friday's NFP/unemployment (High) never appears, while 'FOMC Member Hammack/Barkin Speaks' (Low) carry the ★ — the week's real event risk is hidden.
+  - evidence: shots/health_b.png (strip ends Thu 05 Nov 23:30); /api/gold/calendar has 2026-11-06 19:00 Non-Farm Employment Change impact High; HealthView.tsx:163 .slice(0, 14).
+  - fix: Show the full 7 days, sort by impact then time, ★ only High impact or FOMC decisions.
+- [major] MACRO · mc.fed · services/ui-api/routers/gold.py
+  - 'next FOMC 2026-11-05 19:20 IN SESSION' is 'FOMC Member Hammack Speaks', not a meeting (next decision 9 Dec 2026).
+  - evidence: shots/macro_b.png; /api/gold/macro fed.next_fomc_ist '2026-11-05 19:20'; calendar row kind FOMC 'FOMC Member Hammack Speaks'; routers/gold.py:3677.
+  - fix: next FOMC = next decision-kind row; speakers as a separate kind; show the statement time 00:30 IST (winter).
+- [major] CONTRACTS / POSITIONING / HEALTH · c.roll, c.spec, p.daily.comex, h.gauges[curve_roll] · services/ui-api/routers/gold.py
+  - No GCZ26 first-notice day (30 Nov) anywhere: roll tile days_to_fnd null, p.daily.comex '— sessions to FND', roll calendar only 'Wed 25 Nov COMEX GC last trade' (the Nov month, unlabelled); the DES card shows GC 202611 (FND 30 Oct, '5 d ago') instead of the matched Dec contract, with a margin-history sparkline built from a $25 row.
+  - evidence: shots/contracts_b.png; /api/gold/contracts comex_spec.mmy '202611', first_notice 2026-10-30, margin_history [{margin_usd 25.0}]; /db/gold/meta lists no gold_cme_calendar; routers/gold.py:2913-2918 takes the first GC prf row; LEARN glossary itself states 'GCZ26 FND 30 Nov 2026'.
+  - fix: Verify the Sunday 04:00 CME calendar job ran; write FND/LTD rows into gold_events; pick the prf row whose mmy equals the matched month; drop margin rows < $1,000.
+- [major] HEALTH · h.open, h.accuracy · ui/components/gold/GoldPreOpen.tsx
+  - At 23:53 IST the panel still shows the pre-open copy 'DON'T CHASE — WAIT … wait 15–30 minutes for the rupee's 09:00 open' in red; no 08:45 snapshot or 09:10 capture rows exist for 29 Oct–4 Nov (controller outage from 31 Oct), so 'this morning's call' never appears and the log stays at 6 scored days.
+  - evidence: shots/health_b.png; /api/gold/log rows: last snapshot 2026-10-28, 30 Oct has actual only; fair.desk_verdict_state NEED_PRICE; .logs/master-controller.log 'controller was down since 2026-10-31T11:29'.
+  - fix: After 09:15 render 'this morning's call' or 'no snapshot today (job missed)'; confirm the 08:45/09:10 gold jobs are re-armed.
+- [major] HEALTH · h.brief · ui/components/gold/HealthView.tsx
+  - Panel prints 'automated brief · bias — · confidence —' although the 4 Nov brief has bias 'neutral', confidence 0.45; the brief document also carries open_signal 'aligned_tradeable', a trade-implying word that must never surface on a context panel.
+  - evidence: /api/gold/brief available true, bias 'neutral', confidence 0.45, open_signal 'aligned_tradeable'; HealthView.tsx:187 reads nested fields.
+  - fix: Read the top-level bias/confidence; never render open_signal.
+- [major] HEALTH vs WEEKLY · h.verdict, w.grid · services/ui-api/routers/gold.py
+  - 'FIRM WEEK · gold +0.7 % over the week' is a trailing 5-session window (Wed 28 Oct → Wed 4 Nov) while the WEEKLY grid on the same page shows the calendar week at +4.6 % after a −3.3 % Friday; the headline misdescribes the week a trader lived through.
+  - evidence: daily bars 30 Oct 3,898.9 → 4 Nov 4,078.7; 28 Oct 4,051.6; shots/weekly_b.png row '02 Nov +4.6 %'.
+  - fix: window W = Monday-to-date once the week has started; otherwise label '5 sessions'.
+- [major] DAILY · d.24h · ui/components/gold/DailyView.tsx
+  - The dashed 'last settlement' line is today's last trade (4,078.30), i.e. the live price, not the previous settlement (3,940.4).
+  - evidence: shots/daily_b.png legend 'DEC-26 last trade (Yahoo), not a settlement 2026-11-04 4,078.30'.
+  - fix: Draw the previous session's daily-bar close labelled 'Tue 03 Nov close (Yahoo)'.
+- [major] DAILY / WEEKLY / POSITIONING · d.quadrant, w.table, p.daily.mcx · services/ui-api/routers/gold.py
+  - 'Tue 03 Nov: short build-up · Δprice −2.45 % · ΔOI +863' is a 29 Oct → 3 Nov delta (30 Oct and 2 Nov missing from the master) labelled as one day; WEEKLY's 'MCX GOLD OI Δ +863' on Tuesday is the same 3-session number.
+  - evidence: /api/gold/positioning/daily?exchange=MCX rows only 2026-10-29 and 2026-11-03; settle 143,705 → 140,186 = −2.45 %.
+  - fix: Label multi-session deltas 'over N sessions' or grey them like the mechanical flag.
+- [major] all · ph.ladder, h.open, c.mcx, h.gauges[etf], mc.drivers, ph.etf · ui/components/gold/GoldPage.tsx
+  - Same quantity, different prints: landed ₹1,24,037 / 1,24,055 / 1,24,082 and duty-paid ₹1,42,642 / 1,42,663 / 1,42,695 across PHYSICAL, HEALTH and CONTRACTS (separate fetch timestamps); GLD 1,037.7 t on three sub-views; the official-sector table on two — PLAN §f.6 'the same number appears once per page'.
+  - evidence: text_physical_b.txt, text_health_b.txt, text_contracts_b.txt; /api/gold/curve basis.landed_inr 124055 vs contracts footer 1,24,082 vs ladder 1,24,037.
+  - fix: One fair block per page load (use /api/gold/overview) feeding every sub-view; remove the duplicate tables/tiles.
+- [minor] POSITIONING / WEEKLY / header · p.hero, w.whodid, header · ui/components/gold/kit.tsx
+  - CFTC contract counts and COMEX OI in Indian lakh grouping ('1,05,562', '3,96,810', '4,00,666') while the verdict prints 105,562; not a convention any gold desk uses for contracts, ounces or dollars.
+  - evidence: shots/positioning_b.png, shots/weekly_b.png.
+  - fix: Western grouping for contracts/oz/t/$; Indian grouping for rupees only.
+- [minor] PHYSICAL · ph.otc · ui/components/gold/PhysicalView.tsx
+  - 'LBMA WEEKLY TURNOVER (12-WK MA) $964.2 bn/day' mixes weekly, 12-week average and per-day in one label; 'CME EFP 20-d avg 3,141' equals today because one day is stored.
+  - evidence: /api/gold/flows otc lbma_turnover_usd_bn 964.17, efp today_rt 3141 avg_20d 3141.
+  - fix: Fix the unit; print 'since 3 Nov' until 20 days exist.
+- [minor] PHYSICAL · ph.official · services/ui-api/routers/gold.py
+  - 'RBI tonnes est. 815 t' (WSS value ÷ the 3 Nov London PM) sits beside the IMF's 28.3 Moz = 880.6 t for India on the same panel.
+  - evidence: /api/gold/flows rbi.tonnes_est 815; IMF_GOLD_OZ_IND 28,309,311 oz.
+  - fix: Use the IMF ounces; drop the price-implied estimate.
+- [minor] MONTHLY · m.liquidity · ui/components/gold/MonthlyView.tsx
+  - 'gold / M2 (percentile): 14th pct of 14 months' — a percentile over 14 observations is noise.
+  - evidence: text_monthly_b.txt.
+  - fix: Hide percentiles with fewer than ~60 observations; say 'history since …'.
+- [minor] CONTRACTS · c.comex · ui/components/gold/ContractsView.tsx
+  - Term-structure x-axis 'days to expiry' uses LTD (55 d for Dec) while a long must leave by FND (26 d); header rounds the same carry to 5.3 %/yr, the panel to 5.4 %/yr.
+  - evidence: shots/contracts_b.png; /api/gold/curve annualised_carry_pct 5.354.
+  - fix: Add FND ticks and count the roll to FND; one rounding.
+- [minor] WEEKLY · w.table · ui/components/gold/WeeklyView.tsx
+  - GLD Δ t column blank though 3 Nov −2.85 t is stored; COMEX volume identical Mon/Tue (1,72,512), a stale Yahoo partial-day value.
+  - evidence: shots/weekly_b.png; /api/gold/flows etf chg_1d −2.85; daily bars volume 172512 on both 2026-11-02 and 2026-11-03.
+  - fix: Join GLD on report_date; re-fetch the prior day's final volume in the 03:10 job.
+- [minor] DAILY · d.sge · ui/components/gold/DailyView.tsx
+  - 'NO VERDICT — NOT PUBLISHED' rendered in the release build (PLAN §f.2 says dev-only; hidden in release).
+  - evidence: shots/daily_b.png.
+  - fix: Hide the panel or show the SGE link tile.
+- [minor] HEALTH / MACRO · h.verdict, mc.fed · ui/components/gold/HealthView.tsx
+  - Spacing: 'GLD -2.9 t on the day· DESCRIBES'; '19:20IN SESSION'.
+  - evidence: shots/health_b.png, shots/macro_b.png.
+  - fix: Add the separators.
+- [minor] POSITIONING · p.daily.mcx, p.drawer · services/ui-api/routers/gold.py
+  - '26 sessions to tender' are calendar days; computed tender start (5 sessions before expiry) differs from the MCX spec (tender period opens on the 1st of the expiry month); drawer identity_check is null because the disagg rows lack c_long.
+  - evidence: /api/gold/positioning/daily roll.days_to_tender 26, tender_start 2026-11-30; /api/gold/cot drawer.identity_check null.
+  - fix: Say 'days'; tender_start = 1st of the expiry month per family; run the identity on pm+sd+mm+or+nr.
+
+## what works
+- Rule discipline is real: badges on every derived number, no composite, 'describes, does not predict' suffix, the [P] layer prints rule id · series · value · threshold for each clause, crowdedness worded 'not a signal', the accuracy log says the fair-open model is WORSE than naive (mean miss ₹1,878 vs ₹1,467, 0 % within ₹300).
+- COT figures are correct: OI identity 396,810 holds on both sides of the 27 Oct disaggregated row; per-group Δs (MM +1,538/+182, OR −14,956/−186, SD +2,493/−12,256, PM +772/−4,437, OI −5,469) match the stored CFTC change fields; release/next-release times (Sat 31 Oct 01:00, Sat 7 Nov 02:00 IST) are right across the DST change.
+- POSITIONING p.whois (gross long/short per group with closed/covered/new chips) and p.decomp (since the 2-year low: funds −59,734 net, commercials +49,958, OI −139,171, GLD +167.7 t) are the best 'who did what' tables I have seen outside a bank note.
+- COMEX term structure and carry arithmetic check (Dec→Feb +34.1 = +0.84 % = 5.35 %/yr over 57 d; Feb→Apr 4.6; Apr→Jun 4.3; Jun→Dec 5.1), labelled LAST TRADE not settlement.
+- CONTRACTS selector cards: lot, tick value, round-trip cost, 1 % move, COMEX hedge ratio (32.15 / 3.22 / 0.32 / 0.26 / 0.03 oz), tender and expiry dates all correct; GOLDM Nov-26 'expires in 1 d' is flagged; MCX chain with PROXY chips and the Zerodha margin dated.
+- Fair-value arithmetic (4,077.5 × 94.63 ÷ 3.11035 = ₹1,24,055; × 1.15 = ₹1,42,663) and the 'what moved' split (COMEX ₹+4,831, rupee ₹−168) are right; the settlement is labelled by session ('Tue 03 Nov settlement'), the duty is dated with its notification.
+- Expected-move panel: GVZ 25.82 → 1.63 %/day → $66.3/oz → ₹2,280/10 g → ₹2,28,014 per GOLD lot, scaled correctly per family; sizing arithmetic, no direction.
+- WEEKLY Mon–Fri table and the 26-week heat grid are correct against the daily bars (week of 02 Nov +1.8 / −0.7 / +3.5 = +4.6 %); 60-session candles with 20/50-day lines render well.
+- ETF panel (GLD 1,037.66 t, −2.85 d/d, −19.2 t over 30 points, IAU 461.2 t, WGC regional flow bars) and the MACRO driver strip (real 10-y 2.62 %, 2-y 4.59 %, breakeven 2.30 %, GVZ, Brent) are correct and consistently dated.
+- LEARN: reading routines by time of day, a 151-term glossary, the Bloomberg-function → panel map, the panel-id map and the live health-rule table are exactly what a junior needs; all 9 sub-views load with zero console errors and zero failed requests in both layers.
+
+## questions for owner
+- Is 'week' on HEALTH meant to be the calendar week (Monday to now) or a trailing five sessions? Traders read the former; tonight the two differ by 4 points (+0.7 % vs +4.6 %).
+- May the header show the live Breeze MCX quote during MCX hours (it already appears in h.open) with the proxy settlement beneath it, and may 'basis' be the live-market basis rather than the model's fair value vs landed?
+- gold_cme_calendar is absent from the store's table list — did the Sunday 04:00 CME calendar job ever run? Every FND/LTD row (GCZ26 FND 30 Nov) and the DES-card month selection depend on it.
+- The yahoo_daily job stores GC/GVZ/SI but not DX-Y.NYB, INR=X, EURUSD=X or GOLDBEES.NS — a symbol-list gap or a 429 backoff? Five PUBLISH-CORE series and four panels are empty because of it.
+- The 08:45 snapshot and 09:10 capture have no rows since 28 Oct (controller down from 31 Oct); are they re-armed for Thu 5 Nov so the accuracy log reaches its 20 rows?
+- The BRA IMF series is stored as 5.54 bn oz — was the SDMX unit for Brazil different (value in BRL, or thousands of oz)? Worth checking the other 7 countries' units before trusting the table.
+
+# C-BEGINNER — **PUBLISH-WITH-FIXES** (6/10)
+
+Read as a stock trader new to commodities. The page never tells me to buy or sell, every verdict ends "describes, does not predict", context is grey, every panel has a plain [B] line and honest hovers, and the LEARN curriculum teaches in the right order (five numbers → units → venues → futures mechanics → players → drivers → COT/quadrants/EFP/ladder). Four wrong-words-or-numbers under labels break the lessons the page is built on: POSITIONING prints "FUND-DRIVER LABEL · new shorts" above "new 1,538 longs / new 182 shorts" (driver_label() in routers/gold.py:390-409 can never say "funds bought the dip" when any new shorts exist; echoed in the HEALTH verdict and WEEKLY); the India ladder prints an IBJA premium of −3.93 % built from Tuesday's fix and Wednesday-night duty-paid (the stored fix-minute value is −0.71 %); the official-sector table shows ounces under "Moz" and grams under "Tonnes"; the COMEX spec card is GC Nov-26 (first notice already past, tick $1.00) while the matched month is GCZ26 and the glossary says $0.10. Structurally, dotted glossary terms exist on only 4 of 9 views (the verdict sentence has nine undefined words), the LEARN routines are written in panel ids, the glossary opens on "4GC" and lacks w/w, bp, percentile, z-score, Moz, "new shorts"/"long liquidation", "MM"; the "only [B] copy" toggle strips just 20 % of the text; 50 of 151 glossary entries print their sentence twice; several panels show dashes with no reason (MONTHLY ladder ₹/basket columns, MACRO "Gold or the dollar?", HEALTH DOLLAR "OFFLINE" while MACRO shows DXY). 0 console errors, 0 failed requests, every panel rendered; selector and D/W/M switches behave.
+
+## findings
+- [blocker] POSITIONING (echoed in HEALTH, WEEKLY) · p.hero · h.verdict H3 · w.whodid · services/ui-api/routers/gold.py
+  - The week's fund-driver label says "new shorts" while the same panel prints "new 1,538 longs / new 182 shorts" and "CHANGE ON THE WEEK +1,356" (price −1.64 %); a beginner cannot reconcile the word with the three numbers under it.
+  - evidence: shots/positioning_B_viewport.png; shots/health_B_viewport.png; /api/gold/health verdict.clauses[H3].text = "funds net 105,562 (+1.3 % w/w, new shorts)" in windows D/W/M; services/ui-api/routers/gold.py:390-409 driver_label(): down-week branch `return "new shorts" if d_short > 0 else "funds bought the dip"` fires whenever ΔS>0 even with ΔL ≫ ΔS, so "funds bought the dip" (price down, net up — this exact week) is unreachable.
+  - fix: In the down-week branch test the short side the way the up-week tests the long side: `if d_short > 0 and d_short >= max(d_long, 0.0): return "new shorts"` then `return "funds bought the dip"`. Verdict clause → "funds net +1.3 % w/w (bought the dip)"; [B] line add: "the label is the bigger of the two moves; when price fell and the net still rose, funds bought the dip."
+- [blocker] PHYSICAL · ph.ladder · services/ui-api/routers/gold.py
+  - "IBJA premium vs duty-paid −3.93 %" divides Tue 3 Nov's IBJA PM fix by the duty-paid landed price at Wed 4 Nov 23:51 (after a +3.4 % day) — the clock mix the panel's own footnote calls "clock error"; the stored fix-minute premium for 3 Nov is −0.71 %, and the hover ("inputs sampled at the IBJA fix minute") is false for the printed number.
+  - evidence: shots/panel_ph.ladder.png; /api/gold/premiums india.premium_pct = −3.93, india.history[2026-11-03].premium_pct = −0.71, ladder steps ibja.ts 2026-11-03 vs duty_paid.ts 2026-11-04T23:51; gold.py:3018-3024 `premium = (ibja["value"] / (duty_paid * FINENESS_ADJ) - 1) * 100` with the live duty_paid; tooltips.json india_premium_pct.
+  - fix: Print the stored INDIA_PREMIUM_PCT for premium_date ("−0.71 % · Tue 03 Nov, both at the fix minute") and label the live bars "now"; or compute the ladder's premium from the duty-paid value at the IBJA minute.
+- [blocker] PHYSICAL · ph.official · ui/components/gold/PhysicalView.tsx
+  - Column "MOZ" shows raw ounces (POL 2,16,34,000.00; CHN 7,74,70,000.00; BRA 5,54,42,78,723) and "TONNES" shows grams (67,28,92,617); "PBOC LATEST 7,74,70,000.00 Moz". A novice cannot learn that China holds ≈2,409 t from this.
+  - evidence: shots/physical_B_full.png; /api/gold/flows official[] e.g. CHN {oz_mn: 77470000.0, tonnes: 2409586347.7}; ui/components/gold/PhysicalView.tsx:67-69 renders r.oz_mn and r.tonnes unscaled.
+  - fix: Scale on the server (oz_mn ÷ 1e6 → Moz, tonnes ÷ 1e6 → t) or relabel the columns oz / g; exclude or flag the BRA row (5.5 bn — unit error at source).
+- [blocker] CONTRACTS · c.spec · ui/components/gold/ContractsView.tsx
+  - The "matched COMEX contract" DES card is GC Nov-26 (mmy 202611) with "FIRST NOTICE Fri 30 Oct · 5 d ago" while the header, pickers and strip say the matched month is DEC-26 (GCZ26); its "TICK $1.00 = $100" contradicts the panel's own [P] line and the glossary ("$0.10 = $10"); "SETTLEMENT P" and "100 oz_tr" are raw codes.
+  - evidence: shots/panel_c.spec.png; /api/gold/contracts?exchange=COMEX comex_spec {mmy 202611, min_px_incr 1.0, tick_value_usd 100, first_notice 2026-10-30} vs comex_matched_by_family.GOLD = GCZ26.CMX; ui/components/gold/ContractsView.tsx:243,292-309.
+  - fix: Select the PRF row by comex_matched (202612); apply the PRF display factor (0.1) to MinPxIncr so the tick reads "$0.10 = $10"; map settl_method P → "physical delivery" and uom oz_tr → "troy oz".
+- [major] PHYSICAL · ph.ladder · ui/components/gold/PriceLadder.tsx
+  - "MCX basis +1.50 %" is printed beside bars 1,40,186 (Tue 03 Nov settle) and 1,42,625 (duty-paid now) which give −1.7 % by the panel's own [P] formula "basis = MCX front ÷ duty-paid − 1"; the clock of the printed basis is not stated.
+  - evidence: shots/panel_ph.ladder.png; /api/gold/premiums ladder mcx.value 140186, duty_paid.value 142625, basis_pct 1.5.
+  - fix: Label the clock: "basis +1.50 % at the Tue 03 Nov settlement vs that session's duty-paid"; [B] add "the two right-hand bars are yesterday's prices, the five on the left are now — do not divide across them."
+- [major] HEALTH · strip · h.gauges (DOLLAR) · ui/components/gold/HealthStrip.tsx
+  - The first number a novice meets is "COMEX DEC-26 — settle — NO DATA" and the DOLLAR tile is "— OFFLINE · No source is responding" while MACRO prints DXY 121.67 (Fri 30 Oct) — a blank where PLAN a.1 requires "last stored value + STALE + reason, never blank".
+  - evidence: shots/health_B_viewport.png; shots/macro_B_viewport.png; walk.json health strip text.
+  - fix: Strip: "settle — (COMEX settlements arrive with the CME backfill) · live last shown"; DOLLAR tile: "121.67 · STALE Fri 30 Oct · FRED lags a week".
+- [major] HEALTH · DAILY · WEEKLY · MONTHLY · CONTRACTS · all panels (h.verdict first) · ui/components/gold/HealthView.tsx
+  - Dotted glossary terms exist on only 4 of 9 views (HEALTH 0, DAILY 0, WEEKLY 0, MONTHLY 0, CONTRACTS 0; POSITIONING 4, PHYSICAL 1, MACRO 3, LEARN 2); the verdict sentence alone uses real yield, bp, funds net, w/w, India basis, duty-paid landed, roll, GLD, t with no definition on the view.
+  - evidence: walk.json allTerms per sub-view; PLAN a.1 "a term's first appearance in a view has a dotted underline → glossary side panel".
+  - fix: Wrap first uses in <Term>: HEALTH real yield, basis point, managed money, duty-paid landed, roll, GLD, chase limit, fair open; DAILY open interest, OI quadrants, settlement by session, roll; WEEKLY COT, managed money, IBJA rate, GLD; MONTHLY DXY, landed price, PBoC, SGE withdrawals, hit rate; CONTRACTS lot, tick value, margin, notional, tender period, FND / LTD, contango, calendar spread.
+- [major] LEARN · learn.routines · ui/lib/gold/learn.ts
+  - The first panel on LEARN writes the daily/weekly/monthly routines in panel-id shorthand ("h.open: fair vs settlement, COMEX part vs rupee part (h.moved), the event-risk chip; decide OK/WAIT *before* 09:00") that a novice cannot read.
+  - evidence: shots/learn_B_viewport.png; ui/lib/gold/learn.ts parseRoutines keeps the ids as text.
+  - fix: Map ids to panel titles with the id in title=: "Today's open (HEALTH): fair value vs yesterday's settlement; how much of the gap is COMEX and how much the rupee; the event-risk chip. Decide OK / WAIT before 09:00 — the ₹300 limit is unproven."
+- [major] LEARN · learn.curriculum (only [B] copy) · reports/gold_program/G-EDU/CURRICULUM.md
+  - The "only [B] copy" toggle removes only the 36 paragraphs marked **[P]** (24 k of 120 k chars); 177 unmarked paragraphs (the CFTC block anatomy, formulas, regime tables) stay, and 15 sections (2.5, 4.2, 5.9, 6.4, 6.5, 6.8, 6.9, 6.10, 7.5, 7.7, 8.0–8.4) have no [B] line at all.
+  - evidence: CURRICULUM.md marker count (B 36 / P 36 / APP 35 / unmarked 177); walk.json learn_onlyB.len 87178.
+  - fix: Mark the pro paragraphs [P] (treat tables and code fences as [P] when the filter is on) and add one [B] line to each of the 15 sections.
+- [major] LEARN · glossary (inline and dock) · ui/components/gold/GlossaryPanel.tsx
+  - The glossary opens alphabetically on "4GC", "995 vs 999", "accuracy log", "active month"; there is no "start here" — the dock after a term click lists 4GC second.
+  - evidence: shots/learn_B_viewport.png; shots/positioning_term_click_glossary_dock.png.
+  - fix: Pin a start-here dozen above the alphabet when the search box is empty: troy ounce, spot, futures, COMEX, MCX, open interest, COT, managed money, net position, basis, roll, real yield.
+- [major] LEARN · glossary search · ui/lib/gold/glossary.json
+  - Words the page uses most are not findable: zero hits for "w/w", "percentile", "z-score", "long liquidation", "new shorts"; "bp" → KGX only; "MM" (the strip's own label) → COT / DGCI&S; "Moz" → open interest; "OI" top-5 lacks "open interest"; "driver" → no fund-driver entry.
+  - evidence: walk.json glossary_search (45 novice queries).
+  - fix: Add entries: w/w · d/d · m/m; bp vs pp; percentile; z-score; Moz; fund-driver label (the six words with the rule); India price ladder; T+1; and an aliases field (MM → managed money, OI → open interest, FND → first notice day, GC1).
+- [major] HEALTH ↔ LEARN · strip + glossary "basis" · ui/lib/gold/glossary.json
+  - The strip prints "basis vs duty-paid landed +1.5 %" but the glossary entry a novice reaches is "Futures minus spot (₹/10 g on MCX vs IBJA; $/oz on COMEX vs London). Fair basis = carry; residual basis = stress." — a different quantity, and see_also lacks "MCX basis".
+  - evidence: ui/lib/gold/glossary.json term "basis" (see_also EFP, cost of carry, IBJA rate); shots/health_B_viewport.png.
+  - fix: short → "The gap between a futures price and the reference it is compared with. On this page: MCX basis = MCX front settle ÷ duty-paid landed − 1 (%); on COMEX: futures − London spot in $/oz."; add "MCX basis" to see_also.
+- [major] HEALTH · h.open · ui/components/gold/GoldPreOpen.tsx
+  - [B] copy gives an action rule — "Within the chase limit → trade your plan; beyond it → wait for the rupee's 09:00 open and recompute." — from a heuristic the same view scores "WITHIN ₹300 0 % · MODEL VS NAIVE WORSE"; the caveat lives only in [P].
+  - evidence: shots/panel_h.open.png (DON'T CHASE — WAIT in red; accuracy strip WORSE, 0 % within ₹300).
+  - fix: [B] → "Where MCX 'should' open given COMEX and the rupee since the close. The OK / WAIT strip is a house rule (₹300) that has missed by ₹1,360 on a typical morning and is worse than 'open = yesterday's settlement' so far — arithmetic to read, not advice."
+- [major] MACRO · mc.kgx · ui/components/gold/MacroView.tsx
+  - "pure gold —", "USD effect —" and a developer assertion "total = pure + USD effect (identity off by more than 0.02 pp — check the inputs)" are shown to the reader; the split the [B] line promises ("gold rose $20; $12 was the dollar") is absent.
+  - evidence: shots/macro_B_full.png; walk.json macro mc.kgx text.
+  - fix: When DXY is stale print "USD effect unavailable: DXY last Fri 30 Oct (FRED lags a week); the split needs today's basket" and hide the identity check.
+- [major] MONTHLY · m.ladder · ui/components/gold/MonthlyView.tsx
+  - "LANDED ₹/10 G" and "IN THE DXY BASKET" are "—" on all nine horizons with no reason, while the [B] line promises both columns.
+  - evidence: shots/panel_m.ladder.png.
+  - fix: One line: "₹ and basket columns fill as USD/INR and DXY daily history accrues (since 27 Oct 2026)", or hide the columns until filled.
+- [major] POSITIONING · p.asia · ui/components/gold/PositioningView.tsx
+  - Three raw series ids with "no verdict — not published" (SGE_AUTD_OI, SGE_AUTD_DIRECTION, SHFE_AU_FRONT_OI) render in the release build.
+  - evidence: shots/positioning_B_full.png; PLAN §f.2 (placeholder in dev builds, hidden in release).
+  - fix: Hide in release, or show the catalog name with "awaiting verdict".
+- [minor] LEARN · glossary · ui/components/gold/GlossaryPanel.tsx
+  - 50 of 151 entries have long identical to short, so the panel prints the same sentence twice (visible on "accuracy log", "basis", "lot", "net position", "short covering", "long unwinding", "TIPS", "GLD", "FOMC" …).
+  - evidence: build check over ui/lib/gold/glossary.json; shots/learn_B_viewport.png.
+  - fix: Render long only when it differs from short; write real long lines for the ~20 beginner-critical terms.
+- [minor] HEALTH · strip · h.gauges · h.verdict · ui/lib/gold/format.ts
+  - Managed-money net appears three times on one view in two formats ("+1,05,562" ×2 Indian grouping, "105,562" in the verdict).
+  - evidence: shots/health_B_viewport.png.
+  - fix: One formatter page-wide (Indian grouping); the verdict clause keeps only "+1.3 % w/w, …".
+- [minor] MONTHLY · MACRO · POSITIONING · m.liquidity · mc.drivers · p.hero · ui/lib/gold/format.ts
+  - Ordinals "93th pct", "43th pct", "52th pct", "92th pct", "14th pct of history"; "pct" doubles as percent and percentile.
+  - evidence: walk.json panel texts.
+  - fix: Ordinal helper (1st/2nd/3rd/Nth); write "percentile".
+- [minor] MACRO · mc.drivers · ui/components/gold/MacroView.tsx
+  - Tiles say "1d +0.02 pp", the hover says "bp for yields", the verdict says "−4 bp" — neither unit is defined anywhere.
+  - evidence: shots/panel_mc.drivers.png; tooltips.json d1.
+  - fix: One unit (bp) and a glossary entry "bp / pp".
+- [minor] HEALTH · h.gauges (SHANGHAI PREMIUM) · ui/components/gold/HealthView.tsx
+  - "−$1.55 ▲+47.36 % W": a percentage change of a signed near-zero premium is meaningless to a novice.
+  - evidence: shots/health_B_full.png.
+  - fix: Show the change in $/oz ("Δ +$1.4 W").
+- [minor] all views · glossary dock · ui/components/gold/GlossaryPanel.tsx
+  - Escape does not close the docked glossary; only the ✕ does.
+  - evidence: walk.json term_click.esc_closes = false.
+  - fix: keydown Escape → setOpen(false).
+- [minor] LEARN · corrections note · learn.curriculum front · reports/gold_program/G-EDU/CURRICULUM.md
+  - "Part 8 panel names: Carry the PLAN panel ids…" and the curriculum's "the proposed GOLD header strip", "[APP] … which proposed panel it attaches to" are builder-speak now that the page exists.
+  - evidence: shots/learn_B_viewport.png; shots/learn_B_front_part.png.
+  - fix: Hide the note at the B layer; "proposed" → "the GOLD header strip".
+- [minor] DAILY · d.quadrant · ui/components/gold/OiQuadrantTape.tsx
+  - "Tue 03 Nov: flat · Δprice −0.74 % · ΔOI —" calls a −0.74 % day "flat" because OI is missing.
+  - evidence: shots/panel_d.quadrant.png.
+  - fix: "no OI yet (CME file lands T+1 ≈ 15:30 IST)" instead of "flat".
+- [minor] HEALTH · strip label · INDIA BASIS chip · ui/components/gold/HealthStrip.tsx
+  - "COT MM NET" leaves "MM" undefined on screen (hover only); the INDIA BASIS chip "LIVE · MCX SETTLEMENT (P…" is truncated and says LIVE beside "Tue 03 Nov".
+  - evidence: shots/health_B_viewport.png.
+  - fix: "COT funds net (managed money)"; chip "SETTLEMENT · PROXY · Tue 03 Nov".
+- [minor] page header (pickers) · contract selector · services/ui-api/routers/gold.py
+  - Picking GOLDM / GOLDTEN / GUINEA / PETAL flips the strip to "COMEX NOV-26 · matched month GCX26", a serial month the glossary calls illiquid, and shows "— settle —" for it.
+  - evidence: walk.json family_switch; /api/gold/contracts comex_matched_by_family.
+  - fix: Match to the nearest liquid month (Feb/Apr/Jun/Aug/Oct/Dec) and say "(nearest liquid COMEX month)".
+
+## what works
+- No buy/sell anywhere; the verdict ends "describes, does not predict" in D / W / M; context metrics are grey; the chase limit wears HEURISTIC · measured miss and the accuracy log says WORSE than naive in plain sight — the honesty rules are intact.
+- The five-number health check (CURRICULUM §0) is the first thing LEARN shows and the header strip repeats it in the same order; the four instruments are named under the strip.
+- [B] lines are genuinely plain on most panels ("every long has a short; swap dealers are the banks' hedge of the OTC and ETF book", "there is no COT for London", "contango is the normal state for gold; backwardation is news", "how big a normal day is, in rupees per lot you trade").
+- Hover tooltips are dense and dated: quadrant cells explain themselves, seasonality cells show n, p10/p90 and the t-stat, every lag chip carries its as-of; the ? popover gives publisher · cadence · lag · verdict · evidence · terms per panel.
+- The curriculum's order is right for a novice (units → venues → futures mechanics → players → drivers → reading the data → advanced) and the glossary's see-also chains and project vocabulary (evidence badge, context, signal, point-in-time) resolve; term click opens the dock on the right term.
+- The contract selector works as a novice would use it: family switch re-labels the strip and cards, expiries carry OI, cards print lot, tick, margin (dated), round trip, 1 % move and tender date; the roll calendar counts down in words.
+- 0 console errors, 0 failed requests; all 9 sub-views and all 56 panels rendered; D / W / M re-words the verdict headline.
+
+## questions for owner
+- Should the six-word fund-driver label be shown at the B layer at all, or should [B] show only "new 1,538 longs / new 182 shorts" and leave the label to [P]?
+- Brazil's IMF official-sector row (5.5 bn in the oz field): exclude, or convert at source once the unit is known?
+- May the glossary carry an aliases field (MM, OI, FND, GC1)? That is a build_glossary.py change in G-EDU.
+- Appendix C "Evidence ledger" still renders as a LEARN part; is it meant to stay beside SOURCES.md §11?
+- Is the matched-month rule for the small MCX families (→ serial Nov GCX26) intended, given the curriculum calls serial months illiquid?
+
+# C-DATA — **HOLD** (4/10)
+
+The hand re-derivations all pass (fair value ₹1,24,055 landed / ₹1,42,663 duty-paid / basis +1.50 %; COT MM net 105,562, +1,356 w/w, 10.56 Moz = 328 t; DEC→FEB carry +0.836 % = +5.35 %/yr; GLD −2.85 t d/d, −19.18 t over 30 points, −32.9 t YTD; accuracy-log stats; decomposition vs raw rows), every badge equals the catalog, the verdict ends with the suffix, has no score, and context tiles are neutral. But nine blockers put a wrong number, time, unit or contract under a label: the DAILY 1-minute charts/tape render UTC as IST (5.5 h shift, wrong "close" legend); the health headline says GOLD-SPECIFIC while the stored DXY (−0.73 % w/w) satisfies the DOLLAR-DRIVEN rule, because /db/gold/series serves no points for Yahoo-bar/ETF-backed ids (DXY_CLOSE, USDINR_CLOSE, COMEX_GC_FRONT, GLD_TONNES, GVZ_CLOSE) — the same gap blanks the DOLLAR gauge, WEEKLY GLD Δ, the MONTHLY ladder's ₹/DXY columns, the KGX split ("identity off — check the inputs"), five of six currency rows, USD/INR and ATR14 on MACRO; MACRO's "DOLLAR INDEX (DXY)" tile shows the FRED broad index 121.67 with the opposite weekly sign; IMF official-sector tables label ounces as Moz and compute tonnes ×10⁶ wrong (USA 8,13,35,28,080 t); COT "released Fri 30 Oct 19:30 IST" is the UTC instant; the Shanghai gauge change $47.36/oz prints as "+47.36 %"; the COMEX spec card and roll calendar describe NOV-26 (FND "5 d ago") under the DEC-26 title; "next FOMC 2026-11-05 19:20" is a Fed speech. Majors: Shanghai hero pairs SGE 4 Nov with LBMA 3 Nov (+$109 after a +3.5 % day), the India ladder shows a settlement-clock basis (+1.50 %) beside live numbers that give −1.72 % and a clock-error IBJA premium (−3.94 % vs stored −0.71 %), the brief panel prints dashes while the payload has bias neutral / 0.45, the BRF line never prints OK/WAIT because health.fair looks up the MCX quote under a different cache key, "all-history percentile" is a 160-report window, the "new shorts" driver label describes +1,538 longs/+182 shorts, two CONTRACTS tables print different carry under one heading, and p.asia asks for ids absent from the catalog while SHFE OI is stored.
+
+## findings
+- [blocker] DAILY · d.24h / d.3day / d.tape · services/data-service/gold/ingest_yahoo.py:166 (tz_convert('UTC').tz_localize(None)); ui/lib/gold/sessions.ts:149-153 barMs() parses the naive string as browser-local; services/ui-api/routers/gold.py:1914 /bars passes ts through
+  - Intraday bar timestamps are stored as naive UTC and rendered as IST: every bar, session band, the day grouping and the 'close' legend are 5.5 h off.
+  - evidence: /api/gold/bars?symbol=GC=F&interval=1m bars[-1].ts='2026-11-04T18:09:59' (no offset) while freshness.as_of='2026-11-04T23:39:59+05:30'; tape row '18:05 IST · 07:35 NY'; legend 'Tue 03 Nov close 3,949.80 (+0.32 %)' vs stored daily close 3,940.4 (w.table −0.74 %); 'Wed 04 Nov last +3.26 %' vs +3.51 % (w.table) / +3.40 % (strip). Screenshot shots/daily_P.png.
+  - fix: Emit ts with an explicit offset (Z or +05:30) in /bars, or treat offset-less strings as UTC in barMs; add a node check that a 1m bar's rendered IST equals freshness.as_of.
+- [blocker] HEALTH · h.verdict · services/ui-api/routers/gold.py:1246-1290 (dollar gauge from fetch_series only), :884-900 _driver_word falls through to GOLD-SPECIFIC when usd_effect_pct is None
+  - Headline word 'GOLD-SPECIFIC' is produced with the dollar input missing; the stored DXY week (−0.73 %) meets the DOLLAR-DRIVEN rule (usd effect +0.73 ≥ 0.4 × 0.67, same sign).
+  - evidence: health_W.json verdict.clauses[0].text='FIRM WEEK, GOLD-SPECIFIC', freshness.unavailable=['dollar']; /db/gold/bars?symbol=DX-Y.NYB closes 102.19 (28 Oct) → 101.445 (4 Nov); /db/gold/series?ids=DXY_CLOSE returns 0 points. API_CONTRACT §0: unavailable gauges add no clause. Screenshot shots/health_P.png.
+  - fix: Read DXY from /db/gold/bars (DX-Y.NYB) when the series read is empty (or fix F3 at the source); when usd_effect_pct is None, omit the driver word rather than defaulting to GOLD-SPECIFIC.
+- [blocker] HEALTH / WEEKLY / MONTHLY / MACRO · h.gauges(dollar), w.table(GLD Δ t), m.ladder, mc.kgx, mc.ccy, mc.drivers(usdinr), mc.move(atr14_inr), mc.context(gsr) · services/data-service/gold/reads.py series() reads only gold_series via pit.asof_series; SYMBOL_BY_SERIES is used only by reads.bars(); ui/components/gold/WeeklyView.tsx:143, MonthlyView.tsx:112, MacroView.tsx:53-54 request these ids through getGoldSeries
+  - /api/gold/series serves no points for Yahoo-bar- and ETF-backed catalog ids, so a dozen panels are blank or self-flag an error while the data sits in gold_daily_bars / gold_etf_holdings.
+  - evidence: series_yahoo.json: COMEX_GC_FRONT, DXY_CLOSE, USDINR_CLOSE, GLD_TONNES, GVZ_CLOSE, WB_GOLD_MONTHLY_AVG → n 0, published true, state unavailable; w.table GLD Δ t '—' on Mon/Tue while GLD −1.14 / −2.85 t are stored; m.ladder LANDED ₹ and DXY-basket columns all '—'; mc.kgx prints 'identity off by more than 0.02 pp — check the inputs'; mc.ccy INR/EUR/JPY/GBP/CNY '—'; macro_W.json kgx.usd_effect_pct null, currencies price null. Screenshots shots/weekly_P.png, monthly_P.png, macro_P.png.
+  - fix: In reads.series(), route ids present in SYMBOL_BY_SERIES to gold_daily_bars and GLD_TONNES/IAU to gold_etf_holdings (report_date=trade_date, release_at=first_seen_at), or add the same fallback in ui-api fetch_series; add a contract test that every PUBLISH id with data in the store returns ≥1 point.
+- [blocker] MACRO · mc.drivers · services/ui-api/routers/gold.py:3422 row ('dxy','Dollar index (DXY)','DXY_CLOSE','FRED_DTWEXBGS',…) and :3739 fallback
+  - 'DOLLAR INDEX (DXY) 121.67 · 1w +0.28 % · HEADWIND' is the FRED broad trade-weighted index, not DXY; the real DXY is 101.445 and fell −0.73 % w/w (opposite sign and tag).
+  - evidence: macro_W.json drivers[dxy]: value 121.6656, series_id FRED_DTWEXBGS, report_date 2026-10-30, d1w +0.285, tag headwind; ds_bars_dxy.json DX-Y.NYB 4 Nov 101.445, 28 Oct 102.19. Screenshot shots/macro_P.png.
+  - fix: Label the tile by the series actually used (and prefer the stored DX-Y.NYB bars); never present DTWEXBGS under the DXY name.
+- [blocker] MONTHLY / PHYSICAL · m.official / ph.official · services/ui-api/routers/gold.py:3253-3254 ('oz_mn': value, 'tonnes': value × TONNES_PER_MOZ); services/data-service/gold/ingest_physical.py IMF_GOLD_OZ_BRA scale
+  - IMF official-sector values are troy ounces labelled 'MOZ', and tonnes are computed as value × 31.1035 (10⁶ too large); Brazil's stored row is off-scale.
+  - evidence: flows.json official: USA oz_mn 261,499,000 → tonnes 8,133,528,079.7 (true 261.5 Moz = 8,133 t); CHN 77,470,000 → 2,409,586,347.7; BRA 5,544,278,723 (Brazil holds ≈130 t); screen 'USA 26,14,99,000.00 MOZ · 8,13,35,28,080 T', 'PBOC LATEST 7,74,70,000.00 Moz'. Catalog unit for IMF_GOLD_OZ_* = 'oz'. Screenshots shots/monthly_P.png, physical_P.png.
+  - fix: Divide by 1e6 for oz_mn (or rename to oz) and compute tonnes = oz × 31.1035 / 1e6; investigate the BRA series scale before publishing it.
+- [blocker] POSITIONING · p.hero · ui/components/gold/PositioningView.tsx:113 istLabel(c.latest.release_at, true)
+  - 'released Fri 30 Oct 19:30 IST' prints the naive-UTC release_at as IST; the true release was Sat 31 Oct 01:00 IST.
+  - evidence: gold_cot.release_at = '2026-10-30T19:30:00' (UTC, Fri 15:30 ET); cot.json latest.release_ist = 'Sat 31 Oct 01:00 IST'; overview.freshness.cot.as_of = '2026-10-31T01:00:00+05:30'. Screenshot shots/positioning_P.png.
+  - fix: Print latest.release_ist (already correct in the payload) and stamp release_at with an offset in /cot.
+- [blocker] HEALTH · h.gauges (shanghai) · ui/components/gold/HealthView.tsx:55-61 gaugeChange() default branch uses fmtSignedPctSp for unit '$/oz'; the server sends % for trend and $ for shanghai under the same unit
+  - The Shanghai-premium week change is $47.36/oz but the tile renders '▲+47.36 % W'.
+  - evidence: health_W.json gauge shanghai: value −1.55, unit '$/oz', change 47.36 (= −1.55 − (−48.91) on 27 Oct, from SHANGHAI_PREMIUM_USD); screen 'SHANGHAI PREMIUM −$1.55 ▲+47.36 % W'. Screenshot shots/health_P.png.
+  - fix: Send change_unit per gauge from gold.py and branch on it in gaugeChange (render '$47.36/oz').
+- [blocker] CONTRACTS · c.spec / c.roll · services/ui-api/routers/gold.py:2922-2929 picks the first PRF row with last_trd ≥ today
+  - The COMEX spec card and the roll calendar describe the NOV-26 contract (first notice 'Fri 30 Oct · 5 d ago', last trade 25 Nov) under the DEC-26 matched-month title.
+  - evidence: contracts_comex.json comex_spec: mmy 202611, first_notice 2026-10-30, last_notice 2026-11-27, last_trade 2026-11-25, ref_price 4051.3; comex_matched_by_family.GOLD = GCZ26.CMX; c.roll row 'Wed 25 Nov COMEX GC last trade · in 21 d'; margin_history = 36 rows all dated 2026-11-04 with 25.0 entries. Screenshot shots/contracts_P.png.
+  - fix: Select the PRF row whose mat_date month equals the matched COMEX month (GCZ26 → 202612); show FND/LTD for that month; drop the per-contract rows masquerading as margin history.
+- [blocker] MACRO · mc.fed · services/ui-api/routers/gold.py:3660-3677 selects the first event whose kind contains 'FOMC'
+  - 'next FOMC 2026-11-05 19:20 IN SESSION' is the 'FOMC Member Hammack Speaks' calendar row; the next meeting on the same panel is Wed 16 Dec.
+  - evidence: macro_W.json fed.next_fomc_ist='2026-11-05 19:20', after_mcx_close false; calendar row Thu 05 Nov 19:20 'FOMC Member Hammack Speaks · Low'; fed.meetings[0].meeting='2026-12-16'. Screenshot shots/macro_P.png.
+  - fix: Match kind == 'FOMC' (meeting/statement) only, or take the first Atlanta-Fed meeting date; exclude speeches.
+- [major] PHYSICAL · ph.shanghai · services/ui-api/routers/gold.py:3136-3141 (latest SGE and latest LBMA taken independently)
+  - Hero premium +$109.0 (2.77 %) pairs SGE PM Wed 04 Nov with LBMA PM Tue 03 Nov after a +3.5 % day; the text still says 'a 7-hour gap'. HEALTH shows the same metric as −$1.55 (stored same-day series).
+  - evidence: premiums.json shanghai: sge_pm_cny_g 865.47 ts_sge 2026-11-04, london_pm_usd 3,936.65 ts_ref 2026-11-03, premium_usd 109.03; SHANGHAI_PREMIUM_USD 2026-11-03 = −1.55 (ds_series_health.json). Screenshot shots/physical_P.png.
+  - fix: Pair on report_date (or SGE vs the COMEX 14:15-Beijing leg when LBMA lags) and print the real gap.
+- [major] PHYSICAL / CONTRACTS / HEALTH · ph.ladder, c.mcx footer, h.gauges (india_basis), ph.india · services/ui-api/routers/gold.py:1376-1400 (india_basis gauge from fair.basis_pct, rule text 'settle ÷ duty-paid landed − 1'); premiums ladder in gold.py (~3100-3130); services/data-service/gold/derive.py MCX_BASIS_PCT uses the daily close
+  - The ladder prints a live duty-paid price beside a settlement-clock basis (+1.50 %) that contradicts the shown numbers (−1.72 %), plus a clock-error IBJA premium (−3.94 %) whose stored same-day value is −0.71 %; the HEALTH gauge shows 1.50 under MCX_BASIS_PCT dated 2026-11-03 whose stored row is 1.58.
+  - evidence: ph.ladder: duty-paid ₹1,42,642 → MCX settle ₹1,40,186 'MCX basis +1.50 %' (140,186/142,642−1 = −1.72 %); fair.json model: basis 1.5 from duty_paid_landed 138,111 at the 23:25–23:55 reference; 'IBJA premium vs duty-paid −3.94 %' vs INDIA_PREMIUM_PCT 2026-11-03 = −0.71 (health gauge extras ibja_premium_pct −0.71); MCX_BASIS_PCT 2026-11-03 stored 1.58 vs gauge value 1.5; c.mcx 'basis +1.50 % · duty-paid ₹1,42,695'.
+  - fix: Compute the ladder at one clock (settlement reference for settle/IBJA legs, live for the live pair) and label the reference; make the stored MCX_BASIS_PCT and the desk basis use the same reference or give the gauge its own series id.
+- [major] HEALTH · h.brief · ui/components/gold/HealthView.tsx:184-186 reads doc.bias / doc.confidence (absent at the doc's top level)
+  - Shows 'automated brief · bias — · confidence —' while the brief payload carries bias 'neutral' and confidence 0.45.
+  - evidence: brief.json: available true, bias 'neutral', confidence 0.45, label 'automated brief, confidence 0.45', doc.synthesis.{bias:'neutral', confidence:0.45}; overview.brief identical. Screenshot shots/health_P.png.
+  - fix: Read the top-level bias/confidence (or doc.synthesis.*) and the label field.
+- [major] HEALTH · h.open vs brf_line / WEI echo · services/ui-api/routers/gold.py:704 cache key f'quote:{code}:{expiry or "front"}' with expiry None vs :4243 mcx_quote(contract, expiry=selected) → routers/mcx.py:393 key 'quote:GOLD:2026-12-04'
+  - The desk shows 'DON'T CHASE — WAIT' on MCX ₹1,43,249 while health.fair.mcx_live is null (NEED_PRICE / AWAITING_OPEN) and the BRF line prints no verdict — two desk states from one page.
+  - evidence: health_W.json fair.mcx_live null, desk_verdict_state NEED_PRICE (00:01 re-fetch: AWAITING_OPEN), brf_line 'Gold open: fair ₹144,806 (gap +4,620) · …'; fair.json mcx_price.value 143,250 (ICICI Breeze 23:50) verdict WAIT; overview.quote.available true.
+  - fix: Look up the quote under the resolved expiry key (and the 'front' alias) in fair_block.
+- [major] POSITIONING · p.crowd / p.hero · services/ui-api/routers/gold.py /cot crowd block (weeks=160 window); ui/components/gold/PositioningView.tsx labels
+  - 'ALL-HISTORY PERCENTILE 26' and 'OI 14th pct of history' are computed over the 160 reports fetched, not history; the data-service all-history figures are 50.0 and 19.5.
+  - evidence: cot.json crowd.percentile_all 26.2, n_reports 160; open_interest.pct_rank 13.8; ds_cot.json crowd.percentile_all 50.0, open_interest.pct_rank 19.55 (1986→).
+  - fix: Either compute on the full panel (pass data-service's values through) or relabel '3-y percentile'.
+- [major] HEALTH / POSITIONING / WEEKLY · h.verdict (H3), p.hero, w.whodid · services/data-service/gold/cot_metrics.py:63-65 driver_label(); mirrored in routers/gold.py
+  - Fund-driver label 'new shorts' for a −1.64 % week in which funds added 1,538 longs and 182 shorts; the rule tests only the sign of Δshort on a down week.
+  - evidence: cot.json driver_label 'new shorts', groups[mm].chg_long +1,538, chg_short +182; verdict text 'funds net 105,562 (+1.3 % w/w, new shorts)'.
+  - fix: Owner decision (G-STUDY §5.2 wording): make the label magnitude-aware (dominant leg) or drop the word from the verdict sentence and keep the who-did counts.
+- [major] CONTRACTS · c.selector (OI ladder) vs c.mcx · ui/components/gold/ContractsView.tsx:118 and :240; services/ui-api/routers/gold.py /contracts expiries carry_pct (to next) vs /curve annualised_carry_pct (vs front)
+  - Two tables on one page print different 'CARRY % P.A.' for the same expiry: the ladder attaches next-month carry to the earlier row, the chain shows carry vs the front.
+  - evidence: Ladder: DEC-26 +11.3 %, FEB-27 +6.1 %, APR-27 +9.6 %, JUN-27 +8.4 %, AUG-27 +10.3 % (contracts_mcx.json expiries[].carry_pct); chain: FEB-27 +11.3 %, APR-27 +8.8 %, JUN-27 +9.2 %, AUG-27 +9.1 % (curve_mcx.json annualised_carry_pct). Both arithmetically correct; PLAN §f.6.
+  - fix: Use one convention (vs front) in both tables, or head the ladder column 'carry to next month' and put it on the later row.
+- [major] POSITIONING · p.asia · ui/components/gold/PositioningView.tsx:54; services/data-service/gold/catalog_seed.py (no rows for those ids); reads.asia serves gold_asia_daily
+  - Three 'no verdict — not published' rows for ids that have no catalog row at all, while SHFE OI is stored under a published id; the brief's Shanghai long/short read is empty by mistake.
+  - evidence: PositioningView requests SGE_AUTD_OI, SGE_AUTD_DIRECTION, SHFE_AU_FRONT_OI; catalog.json has none of them (it has SHFE_DAILY PUBLISH-CONTEXT, SGE_DAILY, SGE_DELIVERY_RATIO); /db/gold/asia: SHFE au2612 OI 184,422 (−927) on 2026-10-30. Screenshot shots/positioning_P.png.
+  - fix: Point the panel at /api/gold/… reads of gold_asia_daily (SHFE front OI/Δ, SGE Au(T+D) direction) under catalog ids that exist, or seed the three ids.
+- [minor] HEALTH · h.gauges (real_yield), h.verdict chip, number formats · services/ui-api/routers/gold.py _gauge(... 'change_bp'); ui/components/gold/HealthView.tsx LagChipEl freshness mapping; ui/lib/gold/format.ts en-IN grouping vs gold.py f-strings
+  - REAL YIELD tile has no Δ (change null; −4 bp only in extras) while the verdict quotes it; the verdict lag chip reads STALE though freshness.state is 'delayed' (COT 4.95 d < max_age 9); '+1,05,562' (en-IN) and '105,562' spell the same number on one page.
+  - evidence: health_W.json gauges[real_yield].change null, change_bp −4; freshness.state 'delayed'; screen strip '+1,05,562' vs verdict '105,562'; learn.health_rules '1,05,562' beside '105,562'. Screenshot shots/health_P.png.
+  - fix: Send change in bp for the real-yield tile; map 'delayed' to DELAYED on the verdict chip; pick one grouping for contract counts.
+- [minor] DAILY / POSITIONING / PHYSICAL · d.quadrant, p.daily.comex, ph.otc · ui/components/gold/OiQuadrantTape.tsx / PositioningView.tsx daily blocks; services/ui-api/routers/gold.py /flows efp avg
+  - n = 1 statistics printed as ratios/averages: 'VOLUME VS 20-D AVG 1.00×', 'CME EFP 20-d avg 3,141', and a quadrant word 'flat' with ΔOI unknown.
+  - evidence: posdaily_comex.json quadrant_tape[0]: doi null, label null, volume_vs_20d null — yet the UI prints 'flat' and '1.00×'; flows.json otc.efp avg_20d 3141 = today_rt (one CME day stored).
+  - fix: Render '—' until ≥ 2 sessions (quadrant) / ≥ 5 (averages); expected to self-heal after the CME backfill.
+- [minor] PHYSICAL / MONTHLY / WEEKLY · ph.otc, m.liquidity, w.table, w.whodid, ph.ladder · ui/components/gold/PhysicalView.tsx (otc tile suffix), MonthlyView.tsx (liquidity percentiles), WeeklyView.tsx:174, services/data-service/gold/ingest_yahoo.py (daily volume dedupe)
+  - Unit and consistency polish: '$964.2 bn/day' under a 'weekly turnover (12-wk MA)' series whose catalog unit is 'USD bn'; GPR monthly '43th pct' on MONTHLY vs 85th on MACRO for the same 150.52; COMEX VOL 1,72,512 identical on Mon 02 and Tue 03 Nov (stored rows); 'released Fri 30 Oct' (ET) beside 'next Sat 07 Nov 02:00 IST'; MCX step timestamp '—'; basis 1.262 carried to 02 Nov in premiums.india.history; c.comex '+5.4 %/yr' vs HEALTH '+5.3 %/yr' for 5.354.
+  - evidence: catalog LBMA_OTC_TURNOVER_USD_BN unit 'USD bn', name '… weekly turnover, gold (12-wk MA)'; macro_W.json context.gpr_pct_m 85 vs m.liquidity text; ds_bars_gc.json volume 172512 on both days; premiums.json india.history[-2] basis 1.262 with no stored 2026-11-02 row.
+  - fix: Drop '/day'; use one GPR percentile window; dedupe daily volumes; print release_ist; parse the settlement label; skip carried points.
+- [minor] HEALTH / MACRO · h.events, mc.calendar, mc.health, h.gauges (trend) · ui/components/gold/HealthView.tsx events slice; MacroView.tsx driver_health rows; services/data-service/gold/ingest_yahoo.py partial-day bar
+  - Past events today listed under 'next 7 days'; driver-health betas printed as raw keys without units; the TREND tile and w.table 'CLOSE' show today's partial Globex day stored as a daily bar.
+  - evidence: h.events first row 'Wed 04 Nov 03:00 API Weekly Statistical Bulletin' at 23:53 IST; mc.health 'beta_real_yield_per_100bp −1,440.00 · beta_dxy −1.49'; gold_daily_bars 2026-11-04 close 4078.7 released 17:50 IST while COMEX closes 03:30 IST next day.
+  - fix: Filter events before now; label betas ($/oz per 100 bp, % per 1 % DXY); mark the last daily bar 'partial' until the Globex close.
+
+## what works
+- Fair-value chain re-derived exactly: 4,077.5 × 94.63 × 10/31.1035 = ₹1,24,055 landed; × 1.15 = ₹1,42,663 duty-paid; basis +1.50 %; desk fair open ₹1,44,849 = settle + COMEX part + rupee part; per-lot and chase-limit conversions correct
+- COT block matches the stored gold_cot rows: MM net 122,508 − 16,946 = 105,562; Δ +1,356 from 104,206; who-did 'new 1,538 longs / new 182 shorts'; 10.56 Moz = 328.3 t = $43.0 bn; Tue→Tue −1.64 %; trader counts, concentration, micro gold, decomposition (27 Jan / 12 Nov 24 anchors) all reproduce from raw rows; next release 'Sat 07 Nov 02:00 IST' correct post-DST
+- Curve carry DEC-26→FEB-27 = 4,112.4/4,078.3 − 1 = +0.836 %, × 365/57 = +5.35 %/yr; MCX DEC→FEB +11.32 %/yr; roll ratio 13.80 = 16,282/1,180
+- ETF figures reproduce from gold_etf_holdings: GLD 1,037.66 t, −2.85 t d/d, −3.99 t 5 d, −19.18 t over 30 stored points, −18.04 t 1 m, −32.9 t YTD
+- Trend tile reproduces from GC=F bars (20 d −0.28 %, 200 d −9.55 %, 52-w drawdown −23.31 %); real-yield −4 bp; Shanghai week change +47.36 (as $); 1σ sizing (1.63 %, $66.3, ₹2,280/10 g, ₹2,28,014 per GOLD lot); accuracy-log stats (6 days, mean 1,878, median 1,360, p90 3,518, bias −743, naive 1,467)
+- Every badge on screen equals the catalog verdict's badge; 'signal' appears nowhere (catalog badges: 0 signal); no composite score; the verdict ends 'describes, does not predict'; context tiles are neutral with arrows only; supportive/headwind only on the MACRO strip with the rule printed; every tile carries a date and a source
+- Rendering gate works as designed (LINK-ONLY tiles for O-2/O-8, 'no verdict' for unseeded ids); no console errors and no 4xx/5xx API responses across 18 page loads; X-Cache headers present
+
+## questions for owner
+- INDIA_GOLD_IMPORTS_USD_BN and SWISS_GOLD_EXPORT_IN_KG have PUBLISH-CONTEXT catalog rows but no stored points (m.physical shows '—'): is the ingest scheduled, or should those tiles say 'not stored yet'?
+- WGC weekly flows (to 23 Oct), the WGC balance sheet (70 rows), WGC India ETF tonnes and the LBMA PM are stored and displayed 'PROVISIONAL until O-1'; the build brief says they are empty until O-1 — which state is intended tonight?
+- The fund-driver rule (cot_metrics.py:63-65, G-STUDY §5.2) labels this week 'new shorts' on +1,538 longs / +182 shorts: keep the rule verbatim, make it magnitude-aware, or drop the word from the verdict sentence?
+- The HEALTH 'india basis' gauge shows the desk's settlement-reference basis (1.50 %) under series id MCX_BASIS_PCT whose stored 3 Nov row is 1.58 % (daily-close reference): which reference should define the series?
+- Brazil's IMF_GOLD_OZ_BRA row (5.54 bn 'oz') is off by orders of magnitude; should the official-sector table drop BRA until the ingest scale is confirmed?
