@@ -15,12 +15,23 @@
  * block asks POST /api/options/margin — Breeze's margin calculator when a session is live, else NSE's SPAN risk file,
  * else the 12 %-of-notional heuristic — and prints which answered (BREEZE / NSE SPAN FILE / HEURISTIC) with the
  * heuristic's measured 4.8× error beside it. Prices only; paper terminal; no order route exists.
+ *
+ * Live program round 2 (reports/live_nse, L2-UI): while NSE trades the legs, spot and forward are seeded from NSE's
+ * live option chain (GET /api/market/option-chain-live, option-chain-v3 through data-service, ≈ 1 min behind) with its
+ * own timestamp and a DELAYED · NSE · <age> chip — never LIVE; the seed is taken once (↻ CHAIN re-seeds) and the
+ * underlying's spot now (live quote service: Breeze websocket → NSE) is shown beside it as context. After the close the
+ * F&O bhavcopy chain, labelled CLOSE · <date>. Rules + chips: ./strategySeed.ts. The pricing math is unchanged.
  */
 import axios from 'axios'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getOptionChain, type OptionChain as Chain } from '@/lib/api'
+import { getOptionChain, getOptionChainLive, type OptionChain as Chain } from '@/lib/api'
+import { apiError } from '@/lib/errors'
 import { useRequestSeq } from '@/components/useRequestSeq'
-import { BadgeChip, Btn, CHART_BOX, Chip, ErrorBox, Input, Label, Loading, Notice, PageHeader, Panel, Select, Stat, T, fmtInr, inputSource, sourceOf, useChartSize, type SourceInfo } from '@/components/terminal'
+import { BadgeChip, Btn, CHART_BOX, Chip, ErrorBox, Input, Label, Loading, Notice, PageHeader, Panel, Select, SourceChip, Stat, T, fmtInr, inputSource, sourceOf, useChartSize, type SourceInfo } from '@/components/terminal'
+import { useMarketOpen } from '@/components/shell/useFeed'
+import { isStaleEod, useLiveQuotes } from '@/lib/liveQuotes'
+import { underlyingLiveSymbol } from '@/components/liveModel'
+import { chainSeedSource, seedMode, seedPhrase, spotDriftPct, stampClock, type SeedMode } from '@/components/strategySeed'
 import { postMargin, type MarginAnswer, type MarginLeg } from '@/components/vol/api'
 import { legsFromStrikes } from '@/components/vol/volModel'
 import { readActiveSymbol, useActiveSymbol, type ActiveSymbol } from '@/lib/activeSymbol'
@@ -218,6 +229,17 @@ export function StrategyBuilder() {
   const [anErr, setAnErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // live program round 2: the underlying's spot now (live quote service) and the market state that picks the seed
+  const calendarOpen = useMarketOpen()
+  const ulSym = underlyingLiveSymbol(symbol)
+  const ul = useLiveQuotes(ulSym ? [ulSym] : [], { intervalMs: 3_000 })
+  const ulRow = ulSym ? ul.quotes[ulSym] : undefined
+  const [liveNote, setLiveNote] = useState<string | null>(null)
+  const [loadedMode, setLoadedMode] = useState<SeedMode>('eod')
+  // read at load time (never a dependency): crossing 15:30 does not reload, so a book on screen is never wiped by the clock
+  const modeNow = useRef<() => SeedMode>(() => 'eod')
+  modeNow.current = () => seedMode({ marketState: ul.market?.state ?? null, calendarOpen, nowMs: Date.now() })
+
   // CT-01: latest request wins. A slower chain for the previous underlying / expiry never lands under the new
   // selection (it would seed the legs with the old strikes and analyse them against the new symbol), and an older
   // analysis never replaces the newer book's.
@@ -226,16 +248,43 @@ export function StrategyBuilder() {
   const loadChain = useCallback(() => {
     const mine = chainSeq.begin(), current = () => chainSeq.isCurrent(mine)
     setLoading(true); setChainErr(null)
-    getOptionChain(symbol, expiry ?? undefined)
+    const mode = modeNow.current()
+    const eod = () => getOptionChain(symbol, expiry ?? undefined)
+    // in session NSE's live chain (≈ 1 min behind, never live); it failing falls back to end of day, with the reason
+    const seedReq = mode === 'live'
+      ? getOptionChainLive(symbol, expiry ?? undefined)
+          .then(r => { if (current()) setLiveNote(null); return r })
+          .catch(e => { if (current()) setLiveNote(`live chain unavailable (${apiError(e).slice(0, 80)}): seeded from end of day`); return eod() })
+      : eod().then(r => { if (current()) setLiveNote(null); return r })
+    seedReq
       .then(r => {
         if (!current()) return
         setChain(r.data)
+        setLoadedMode(mode)
         if (r.data.underlyings?.length) setUnderlyings(r.data.underlyings)
       })
       .catch(e => { if (current()) { setChainErr(e?.response?.data?.detail ?? e?.message ?? 'chain unavailable'); setChain(null) } })
       .finally(() => { if (current()) setLoading(false) })
   }, [symbol, expiry, chainSeq])
   useEffect(() => { loadChain() }, [loadChain])
+  // the first load may run before the live quote service has said whether NSE trades (the client calendar decided): when
+  // its first answer disagrees (a holiday, a clock off), reload once with the right seed. Later market-state changes
+  // (15:30) never reload: a book on screen is not wiped by the clock.
+  const marketState = ul.market?.state ?? null
+  const checkedSeed = useRef(false)
+  useEffect(() => {
+    if (!marketState || !chain || checkedSeed.current) return
+    checkedSeed.current = true
+    if (modeNow.current() !== loadedMode) loadChain()
+  }, [marketState, chain])                               // eslint-disable-line react-hooks/exhaustive-deps
+  // the live chain carries no F&O underlyings list: read it once from the stored chain (as OMON does)
+  const needUnderlyings = !!chain?.live && underlyings.length === 0
+  useEffect(() => {
+    if (!needUnderlyings) return
+    let alive = true
+    getOptionChain('NIFTY').then(r => { if (alive) setUnderlyings(r.data.underlyings ?? []) }).catch(() => {})
+    return () => { alive = false }
+  }, [needUnderlyings])
 
   // a pick written while OSTR is open (another window, or OMON in a split view): adopt it once
   useEffect(() => {
@@ -349,6 +398,11 @@ export function StrategyBuilder() {
   const removeLeg = (id: number) => { setTemplate(null); setLegs(ls => ls.filter(l => l.id !== id)) }
 
   const net = analysis?.greeks.net
+  // the seed's chip (DELAYED · NSE · age in session — never LIVE — / CLOSE · <date> after the close) and the spot now
+  const seedSrc: SourceInfo | null = chain ? chainSeedSource(chain, { mode: loadedMode, nowMs: ul.now || Date.now(), marketState: ul.market?.state ?? null,
+    sessionDate: ul.market?.session_date ?? null, liveNote }) : null
+  const spotNow = chain?.live && ulRow && ulRow.price != null && ulRow.state !== 'unavailable' && !isStaleEod(ulRow) ? ulRow.price : null
+  const drift = spotDriftPct(chain?.spot, spotNow)
   const toggleStyle = (on: boolean, color: string) => ({
     fontFamily: T.mono, fontSize: 10, padding: '3px 7px', cursor: 'pointer', letterSpacing: 1,
     border: `1px solid ${on ? color : T.border}`, color: on ? T.bg : T.muted, background: on ? color : 'transparent',
@@ -357,7 +411,7 @@ export function StrategyBuilder() {
   return (
     <div>
       <PageHeader code="OSTR" title="Options strategies"
-        subtitle={chain ? `${chain.symbol} · NSE F&O bhavcopy ${chain.date} · expiry ${chain.expiry} (${chain.days_to_expiry}d) · lot ${chain.lot ?? '?'} · fwd ${n2(forward, 2)} (${chain.forward_source}) · ATM IV ${chain.atm_iv ?? '—'}%` : 'payoffs · Greeks · breakevens'}
+        subtitle={chain ? `${chain.symbol} · ${chain.live ? `NSE option chain in session (≈1 min behind) as of ${stampClock(chain.as_of) || chain.as_of || '—'} IST` : `NSE F&O bhavcopy ${chain.date}`} · expiry ${chain.expiry} (${chain.days_to_expiry}d) · lot ${chain.lot ?? '?'} · fwd ${n2(forward, 2)} (${chain.forward_source}) · ATM IV ${chain.atm_iv ?? '—'}%` : 'payoffs · Greeks · breakevens'}
         status={<Chip color={T.violet}>PRICES ONLY · NO ORDERS</Chip>}
         right={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <Select value={symbol} onChange={s => { setExpiry(null); setSymbol(s); writeActive({ symbol: s }) }}
@@ -367,6 +421,7 @@ export function StrategyBuilder() {
 
       {loading && !chain && <Loading label={`option chain · ${symbol}`} />}
       {chainErr != null && <ErrorBox error={chainErr} onRetry={loadChain} />}
+      {liveNote && chain && !chain.live && <div style={{ fontSize: 11, color: T.amber, marginBottom: 8 }} data-ostr-live-note>⚠ {liveNote}</div>}
 
       {chain && (
         <>
@@ -385,8 +440,8 @@ export function StrategyBuilder() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 12 }}>
             {/* ── left: legs ── */}
-            <Panel title={`Legs (${legs.length}/4)`} subtitle={`lot ${lot} · premiums from the ${chain.date} chain, every field editable${seededFrom ? ` · seeded from the ${seededFrom}` : ''}`}
-              source={sourceOf(chain.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic"
+            <Panel title={`Legs (${legs.length}/4)`} subtitle={`lot ${lot} · ${seedPhrase(chain)}, every field editable${seededFrom ? ` · seeded from the ${seededFrom}` : ''}`}
+              source={seedSrc ?? sourceOf(chain.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic"
               right={<Btn size="sm" onClick={addLeg} disabled={legs.length >= 4}>+ LEG</Btn>}>
               {legs.length === 0 && <Notice>Pick a template above or add a leg — up to four.</Notice>}
               <div style={{ display: 'grid', gap: 8 }}>
@@ -489,8 +544,16 @@ export function StrategyBuilder() {
             </Panel>
 
             {/* ── right: payoff + Greeks ── */}
-            <Panel title="Payoff" accent={T.green} source={sourceOf(chain.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic"
+            <Panel title="Payoff" accent={T.green} source={seedSrc ?? sourceOf(chain.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic"
               subtitle={busy ? 'pricing…' : analysis ? `to scale · ${analysis.single_expiry ? 'at expiry + today' : 'at NEAREST expiry (calendar) + today'}` : undefined}>
+              {chain.live && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginBottom: 8 }} data-ostr-spot>
+                  <span>chain spot <span style={{ color: T.text }}>{n2(chain.spot, 2)}</span> · fwd <span style={{ color: T.amber }}>{n2(forward, 2)}</span> at {stampClock(chain.as_of) || '—'} IST (the book is priced on these)</span>
+                  {spotNow != null && ul.sourceFor(ulSym ?? '') && <span title="the underlying's price now (live quote service: Breeze websocket, else NSE's website); context only — the legs keep their seeded prices until ↻ CHAIN">
+                    · spot now <span style={{ color: T.text }}>{n2(spotNow, 2)}</span>{drift != null && <span style={{ color: T.dim }}> ({drift >= 0 ? '+' : '−'}{Math.abs(drift).toFixed(2)}% since the seed)</span>}{' '}
+                    <SourceChip info={ul.sourceFor(ulSym ?? '')!} style={{ fontSize: 8.5 }} /></span>}
+                </div>
+              )}
               {anErr && <ErrorBox error={anErr} />}
               {!analysis && !anErr && legs.length > 0 && <Loading label="pricing" />}
               {!analysis && legs.length === 0 && <Notice>The payoff draws here once the book has a leg.</Notice>}

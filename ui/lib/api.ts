@@ -667,6 +667,17 @@ export const getShortSelling = (days = 20) =>
 export const getIndexDaily = (symbol = 'NIFTY50', days = 1500) =>
   client.get<{ symbol: string; rows: { date: string; close: number }[] }>('/api/market/index-daily', { params: { symbol, days } })
 
+// Stored NSE closes for history panes (live program round 2, L2-API): nse_bhavcopy EQ/BE, split/bonus-adjusted, only
+// sessions already stored (PIT); NSE index names ('NIFTY 50') from NSE's daily index file; ui-api SWR 10 min. `days` =
+// calendar days back, `tail` = only the last N sessions. A symbol it does not know is absent from `series` (`missing`
+// says why). `meta` (name, high / low over the window, last date) when the route passes it through.
+export interface MarketClosesMeta { source?: string; name?: string | null; first_date?: string; last_date?: string; sessions?: number
+  high?: number | null; low?: number | null }
+export interface MarketCloses { as_of: string | null; source: string; series: Record<string, { date: string; close: number }[]>
+  meta?: Record<string, MarketClosesMeta>; missing?: Record<string, string> }
+export const getMarketCloses = (symbols: string[], days: number, tail?: number) =>
+  client.get<MarketCloses>('/api/market/closes', { params: { symbols: symbols.join(','), days, tail }, timeout: 30000 })
+
 // NSE surveillance / risk flags (ASM, GSM, ESM, IRP, tight bands, trade-to-trade, F&O ban)
 export interface RiskChip { code: string; level: 'high' | 'medium' | 'low'; why: string }
 export interface RiskFlags { symbol: string; band: number | null; series: string | null; chips: RiskChip[] }

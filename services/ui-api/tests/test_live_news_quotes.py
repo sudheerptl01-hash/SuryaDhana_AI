@@ -26,7 +26,8 @@ def ds(monkeypatch: pytest.MonkeyPatch, clock: sup.Clock) -> sup.FakeDataService
     fake.rows = {"RELIANCE": sup.row(1311.0, change_pct=1.0, prev_close=1298.0, name="RELIANCE INDUSTRIES"),
                  "TCS": sup.row(3050.0, state="delayed", source="nse_api", age_s=49.0),
                  "INFY": sup.row(1490.0, state="stale", source="eod", age_s=None, ltt="2026-11-04T15:29:59+05:30")}
-    fake.histories = {"RELIANCE": sup.history("RELIANCE", [1298.0, 1290.0, 1280.0, 1270.0], high=1611.8, low=1152.2)}
+    fake.closes = {"RELIANCE": sup.closes([1270.0, 1280.0, 1290.0, 1298.0], high=1611.8, low=1152.2,
+                                          name="Reliance Industries Limited")}
     return fake
 
 
@@ -55,7 +56,8 @@ def test_ns_symbols_make_zero_yahoo_calls_and_keep_every_body_key(ds: sup.FakeDa
     assert {"source", "state", "age_s", "ltt"} <= set(rel)
     assert (rel["price"], rel["change_pct"], rel["prev_close"], rel["available"]) == (1311.0, 1.0, 1298.0, True)
     assert (rel["source"], rel["state"], rel["age_s"], rel["currency"], rel["exchange"]) == ("breeze_ws", "live", 0.6, "INR", "NSE")
-    assert rel["name"] == "RELIANCE INDUSTRIES" and rel["resolved_symbol"] == "RELIANCE.NS" and rel["stale"] is False
+    assert rel["name"] == "Reliance Industries Limited"                       # NSE's EQUITY_L name (stored), not the row's
+    assert rel["resolved_symbol"] == "RELIANCE.NS" and rel["stale"] is False and rel["eod_source"] == "nse_bhavcopy"
     assert rel["market_date"] == "2026-11-05" and rel["prev_date"] == "2026-11-04" and rel["prev_source"] == "NSE"
     assert rel["market_time"] == int(sup.NOW.timestamp()) - 1
     tcs = out["quotes"]["TCS.NS"]
@@ -75,16 +77,57 @@ def test_negative_control_the_kill_switch_puts_ns_back_on_yahoo(ds: sup.FakeData
 
 
 def test_spark_and_52_week_range_come_from_the_stored_bhavcopy(ds: sup.FakeDataService, yahoo: sup.YahooSpy) -> None:
-    # a 1:1 bonus on 3 Nov (row index 1 = 2026-11-03 carries action_k 0.5): older closes are halved, no fake crash
-    ds.histories["RELIANCE"] = sup.history("RELIANCE", [1298.0, 1290.0, 2560.0, 2540.0], action_k={1: 0.5},
-                                           high=1400.0, low=1200.0)
+    # data-service /db/closes serves the closes already split/bonus-adjusted (tests/unit/test_live_closes.py proves it)
+    ds.closes["RELIANCE"] = sup.closes([1270.0, 1280.0, 1290.0, 1298.0], high=1400.0, low=1200.0)
     rel = run(ns.get_quotes(symbols="RELIANCE.NS"))["quotes"]["RELIANCE.NS"]
     assert rel["spark"] == [1270.0, 1280.0, 1290.0, 1298.0, 1311.0]          # oldest first, today's live point last
-    assert rel["eod_as_of"] == "2026-11-04"
+    assert rel["eod_as_of"] == "2026-11-04" and rel["prev_date"] == "2026-11-04"
     assert rel["high_52w"] == 1400.0 and rel["low_52w"] == 1200.0
-    assert ds.calls_to("/db/security/RELIANCE/history") == 1 and yahoo.calls == []
+    assert ds.closes_calls() == [["RELIANCE"]] and yahoo.calls == []
+    assert ds.calls_to("/db/security/") == 0                                 # the per-symbol history read is gone
+    req = next(r for r in ds.requests if r.url.path == "/db/closes")
+    assert (req.url.params["days"], req.url.params["tail"]) == (str(live.CTX_DAYS), str(live.SPARK_N))
     run(ns.get_quotes(symbols="RELIANCE.NS"))
-    assert ds.calls_to("/db/security/RELIANCE/history") == 1                 # cached (EOD data change once a day)
+    assert len(ds.closes_calls()) == 1                                       # cached (EOD data change once a day)
+
+
+def test_one_stored_close_read_serves_every_symbol_of_a_request(ds: sup.FakeDataService, yahoo: sup.YahooSpy) -> None:
+    ds.rows.update({"WIPRO": sup.row(250.0), "NIFTY 50": sup.row(24000.0, change_pct=0.5)})
+    ds.closes.update({"TCS": sup.closes([3000.0, 3010.0]), "WIPRO": sup.closes([248.0, 249.0]),
+                      "NIFTY 50": sup.closes([23900.0, 23880.0], source="nse_index_file", name="NIFTY 50")})
+    out = run(ns.get_quotes(symbols="RELIANCE.NS,TCS.NS,INFY.NS,WIPRO.NS,^NSEI"))["quotes"]
+    calls = ds.closes_calls()
+    assert len(calls) == 1 and sorted(calls[0]) == ["INFY", "NIFTY 50", "RELIANCE", "TCS", "WIPRO"]
+    assert out["TCS.NS"]["spark"] == [3000.0, 3010.0, 3050.0] and out["INFY.NS"]["spark"] == []   # INFY: not stored
+    assert out["^NSEI"]["spark"] == [23900.0, 23880.0, 24000.0]
+    assert out["^NSEI"]["eod_source"] == "nse_index_file" and yahoo.calls == []
+    run(ns.get_quotes(symbols="INFY.NS"))
+    assert len(ds.closes_calls()) == 1                                       # 'not stored' is cached too (an hour)
+
+
+def test_negative_control_one_symbol_per_read_would_cost_n_reads(ds: sup.FakeDataService, yahoo: sup.YahooSpy,
+                                                                 monkeypatch: pytest.MonkeyPatch) -> None:
+    """The counter above can see more than one read: a batcher limited to one symbol per read makes one per symbol."""
+    monkeypatch.setattr(live, "_closes_batcher", live.ClosesBatcher(max_batch=1))
+    ds.closes.update({"TCS": sup.closes([3000.0]), "INFY": sup.closes([1480.0])})
+    run(ns.get_quotes(symbols="RELIANCE.NS,TCS.NS,INFY.NS"))
+    assert sorted(c[0] for c in ds.closes_calls()) == ["INFY", "RELIANCE", "TCS"]
+
+
+def test_a_data_service_without_db_closes_is_not_asked_again_for_a_minute(ds: sup.FakeDataService, yahoo: sup.YahooSpy,
+                                                                         clock: sup.Clock) -> None:
+    ds.closes_status = 404
+    rel = run(ns.get_quotes(symbols="RELIANCE.NS"))["quotes"]["RELIANCE.NS"]
+    assert rel["price"] == 1311.0 and rel["spark"] == [] and yahoo.calls == []
+    assert rel["name"] == "RELIANCE INDUSTRIES"                              # the live row's own name; never Yahoo's
+    live.hub().reset()
+    run(ns.get_quotes(symbols="RELIANCE.NS"))
+    assert len(ds.closes_calls()) == 1                                       # backed off: the route is not deployed
+    clock.t += live.CTX_ROUTE_MISSING_S + 1
+    ds.closes_status = None
+    live.hub().reset()
+    rel = run(ns.get_quotes(symbols="RELIANCE.NS"))["quotes"]["RELIANCE.NS"]
+    assert len(ds.closes_calls()) == 2 and rel["name"] == "Reliance Industries Limited"
 
 
 def test_the_live_day_range_widens_the_stored_52_week_range(ds: sup.FakeDataService, yahoo: sup.YahooSpy) -> None:
@@ -94,7 +137,7 @@ def test_the_live_day_range_widens_the_stored_52_week_range(ds: sup.FakeDataServ
 
 
 def test_a_failing_context_never_blocks_the_price(ds: sup.FakeDataService, yahoo: sup.YahooSpy) -> None:
-    ds.history_status = 500
+    ds.closes_status = 500
     rel = run(ns.get_quotes(symbols="RELIANCE.NS"))["quotes"]["RELIANCE.NS"]
     assert rel["price"] == 1311.0 and rel["available"] is True and rel["spark"] == [] and rel["eod_as_of"] is None
     assert rel["high_52w"] == rel["day_high"] and yahoo.calls == []
@@ -106,7 +149,7 @@ def test_a_slow_context_is_not_waited_for(ds: sup.FakeDataService, yahoo: sup.Ya
     real = ds.handler
 
     async def slow_history(request: Any) -> Any:
-        if "/history" in request.url.path:
+        if request.url.path == "/db/closes":
             await asyncio.sleep(0.2)
         return await real(request)
     monkeypatch.setattr(ds, "handler", slow_history)
@@ -147,10 +190,50 @@ def test_the_price_alert_check_prices_nse_stocks_from_the_live_hub(ds: sup.FakeD
 
 
 def test_index_and_odd_symbols(ds: sup.FakeDataService, yahoo: sup.YahooSpy) -> None:
-    out = run(ns.get_quotes(symbols="^NSEI,A=B.NS,BHEL.BO"))["quotes"]
-    assert yahoo.calls == ["^NSEI", "BHEL.BO"]                        # not '.NS': the Yahoo path, as before
+    ds.rows.update({"NIFTY 50": sup.row(24010.0, change_pct=0.4), "NIFTY IT": sup.row(35500.0, state="delayed",
+                                                                                         source="nse_api", age_s=40.0)})
+    out = run(ns.get_quotes(symbols="^NSEI,^CNXIT,A=B.NS,BHEL.BO,^BSESN"))["quotes"]
+    assert yahoo.calls == ["BHEL.BO", "^BSESN"]                       # BSE: not NSE, the Yahoo path, as before
+    nifty, it = out["^NSEI"], out["^CNXIT"]                            # NSE indices: the live hub, keyed as asked
+    assert (nifty["symbol"], nifty["price"], nifty["source"], nifty["state"]) == ("^NSEI", 24010.0, "breeze_ws", "live")
+    assert nifty["name"] == "NIFTY 50" and nifty["exchange"] == "NSE" and nifty["resolved_symbol"] == "^NSEI"
+    assert (it["source"], it["state"], it["name"]) == ("nse_api", "delayed", "NIFTY IT")
     assert out["A=B.NS"]["available"] is False and out["A=B.NS"]["reason"] == "not an NSE symbol"
-    assert ds.quote_calls() == []
+    assert ds.quote_calls() == [["NIFTY 50", "NIFTY IT"]]
+
+
+def test_negative_control_the_kill_switch_puts_nse_indices_back_on_yahoo(ds: sup.FakeDataService, yahoo: sup.YahooSpy,
+                                                                        monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LIVE_QUOTES_NSE", "0")
+    run(ns.get_quotes(symbols="^NSEI,^NSEBANK"))
+    assert yahoo.calls == ["^NSEI", "^NSEBANK"] and ds.quote_calls() == []
+
+
+def test_a_deciding_read_of_the_nifty_ticker_is_priced_by_nse(ds: sup.FakeDataService, yahoo: sup.YahooSpy) -> None:
+    """The controller's NIFTY fallback asks '^NSEI' with fresh=1: an NSE price (live / delayed / today's close) or none."""
+    ds.rows["NIFTY 50"] = sup.row(24010.0, state="stale", source="eod", age_s=None, ltt=None, date="2026-11-04")
+    q = run(ns.get_quotes(symbols="^NSEI", fresh=True))["quotes"]["^NSEI"]
+    assert q["available"] is False and q["state"] == "stale" and yahoo.calls == []
+
+
+def test_no_yahoo_host_is_contacted_for_nse_symbols_on_the_wire(ds: sup.FakeDataService,
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """No function spy here: the REAL Yahoo fetcher runs, and every request of every httpx client in the process goes
+    through the fake transport, which records any host that is not data-service (``ds.foreign``)."""
+    ds.rows.update({"NIFTY 50": sup.row(24010.0), "NIFTY BANK": sup.row(52000.0), "INDIA VIX": sup.row(12.5)})
+    out = run(ns.get_quotes(symbols="RELIANCE.NS,TCS.NS,INFY.NS,^NSEI,^NSEBANK,^INDIAVIX"))["quotes"]
+    assert ds.foreign == [], ds.foreign
+    assert all(q.get("source") != "yahoo" for q in out.values())
+    assert out["RELIANCE.NS"]["name"] == "Reliance Industries Limited" and out["RELIANCE.NS"]["spark"][-1] == 1311.0
+    # positive control: a US symbol on the same transport reaches Yahoo's hosts, so an empty list above is not blind
+    run(ns.get_quotes(symbols="^GSPC"))
+    assert ds.foreign and all("finance.yahoo.com" in u for u in ds.foreign)
+    ds.foreign.clear()
+    # negative control: the rollback lever puts an NSE stock back on Yahoo, and the transport sees it
+    monkeypatch.setenv("LIVE_QUOTES_NSE", "0")
+    ns._quotes.invalidate()
+    run(ns.get_quotes(symbols="RELIANCE.NS"))
+    assert any("finance.yahoo.com" in u and "RELIANCE.NS" in u for u in ds.foreign), ds.foreign
 
 
 def test_over_http_the_body_shape_and_cache_headers(ds: sup.FakeDataService, yahoo: sup.YahooSpy, clock: sup.Clock) -> None:

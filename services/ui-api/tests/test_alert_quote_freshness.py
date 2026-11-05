@@ -26,7 +26,7 @@ from routers import news_scanner as ns
 FETCH_S = 1.5
 CADENCE_S = 60.0                     # master_controller.price_alerts_check: CronTrigger(minute='*')
 MINUTES = 12
-SYMS = ("AAPL", "INR=X", "^NSEI")   # non-NSE: since LV-API ".NS" prices come from the live hub (test_live_news_quotes.py)
+SYMS = ("AAPL", "INR=X", "^GSPC")   # non-NSE: ".NS" stocks and the NSE index tickers (^NSEI ...) are priced by the live hub (test_live_news_quotes.py)
 
 
 class Clock:

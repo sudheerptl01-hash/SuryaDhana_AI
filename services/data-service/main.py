@@ -856,6 +856,176 @@ def security_history(symbol: str, days: int = Query(90, ge=5, le=3700), store: D
     return out
 
 
+# ── /db/closes: stored NSE closes for history panes (live-NSE program round 2, L2-API, 5 Nov 2026) ───────────────────
+# NSE publishes daily history once a day (the bhavcopy, ~18:30): it is never live, and this route never makes it look
+# live. COMP, the hover card's spark and 52-week range, WTCH and the news dock read it here in ONE request for up to 300
+# symbols instead of one /db/security/{sym}/history read each. Point in time: only sessions already stored, up to today;
+# nothing is forward-filled and today's forming bar is never invented (the live price is /live/quotes' job).
+# Stocks: nse_bhavcopy, EQ/BE rows (EQ preferred, shared.nse_panel.pick_equity_rows), split/bonus-adjusted inside the
+# window exactly as shared.nse_panel.adjust (the splits table + the overnight-gap rule), so a bonus is never drawn as a
+# crash; the ex-dates are listed per symbol. Indices (NSE names with a space, 'NIFTY 50'): index_ohlc_daily (NSE's own
+# daily index file, Terminal v2) only, never market_index_daily (its NIFTY50 / INDIAVIX rows can be Yahoo's). Company
+# names: NSE's EQUITY_L list (data/reference/nse_equity_list.csv), read-only. A sync route: the threadpool, never the loop.
+CLOSES_MAX_SYMBOLS = 300
+CLOSES_MAX_SYMBOL_DAYS = 120_000          # symbols × calendar days per request: 300 × 400 d, or 32 × 3,700 d
+_CLOSES_STOCK = re.compile(r"[A-Z0-9&\-]{1,20}")
+_CLOSES_INDEX = re.compile(r"[A-Z0-9][A-Z0-9 &:/.()%\-]{2,59}")
+_closes_names_state: dict[str, Any] = {"key": None, "names": {}}
+
+
+def _closes_symbols(raw: str) -> list[str]:
+    """'tcs, infy.ns,Nifty  50' → ['TCS', 'INFY', 'NIFTY 50'] (unique, request order); 422 on a bad or empty list."""
+    out: list[str] = []
+    for part in raw.split(","):
+        s = " ".join(part.strip().upper().split())
+        if s.endswith(".NS"):
+            s = s[:-3].rstrip()
+        if not s:
+            continue
+        if not (_CLOSES_INDEX.fullmatch(s) if " " in s else _CLOSES_STOCK.fullmatch(s)):
+            raise HTTPException(status_code=422, detail=f"bad symbol {part.strip()[:40]!r}: an NSE symbol (RELIANCE, M&M) "
+                                                        "or an NSE index name ('NIFTY 50')")
+        out.append(s)
+    out = list(dict.fromkeys(out))
+    if not out:
+        raise HTTPException(status_code=422, detail="no symbols given")
+    if len(out) > CLOSES_MAX_SYMBOLS:
+        raise HTTPException(status_code=422, detail=f"at most {CLOSES_MAX_SYMBOLS} symbols per request ({len(out)} given)")
+    return out
+
+
+def _closes_names_path() -> Path:
+    return _data_dir(get_settings()) / "reference" / "nse_equity_list.csv"
+
+
+def _closes_names() -> dict[str, str]:
+    """SYMBOL → NAME OF COMPANY from NSE's EQUITY_L copy; re-read only when the file changes; {} when it is missing."""
+    p = _closes_names_path()
+    try:
+        st = p.stat()
+    except OSError:
+        return {}
+    key = (str(p), st.st_mtime_ns, st.st_size)
+    if _closes_names_state["key"] != key:
+        try:
+            df = pd.read_csv(p, dtype=str)
+            df.columns = [str(c).strip().upper() for c in df.columns]
+            names = {str(s).strip().upper(): n.strip() for s, n in zip(df["SYMBOL"], df["NAME OF COMPANY"])
+                     if isinstance(n, str) and n.strip()}
+        except (OSError, KeyError, ValueError):
+            names = {}
+        _closes_names_state.update(key=key, names=names)
+    return _closes_names_state["names"]
+
+
+def _closes_frames(con: Any, symbols: list[str], start: date, end: date) -> dict[str, Any]:
+    """The raw stored rows (caller holds the store's shared lock): bhavcopy EQ/BE rows + splits for the stocks,
+    index_ohlc_daily rows for the indices (None when that Terminal v2 table is not deployed)."""
+    import duckdb
+    stocks = [s for s in symbols if " " not in s]
+    indices = [s for s in symbols if " " in s]
+    out: dict[str, Any] = {"bhav": None, "splits": None, "index": None, "index_table": True}
+    if stocks:
+        out["bhav"] = con.execute("""
+            SELECT symbol, series, date, open, high, low, close, prev_close, avg_price, volume FROM nse_bhavcopy
+            WHERE list_contains(?, symbol) AND series IN ('EQ', 'BE') AND date >= ?::DATE AND date <= ?::DATE""",
+                                  [stocks, start.isoformat(), end.isoformat()]).df()
+        out["splits"] = con.execute("SELECT ticker, date, ratio FROM splits WHERE ratio > 0 AND list_contains(?, ticker)",
+                                    [stocks + [f"{s}.NS" for s in stocks]]).df()
+    if indices:
+        try:
+            out["index"] = con.execute("""
+                SELECT symbol, date, high, low, close FROM index_ohlc_daily
+                WHERE list_contains(?, symbol) AND date >= ?::DATE AND date <= ?::DATE AND close IS NOT NULL""",
+                                       [indices, start.isoformat(), end.isoformat()]).df()
+        except duckdb.CatalogException:
+            out["index_table"] = False
+    return out
+
+
+def _closes_num(v: Any, nd: int = 4) -> float | None:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return round(f, nd) if pd.notna(f) and abs(f) != float("inf") else None
+
+
+def _closes_payload(frames: dict[str, Any], symbols: list[str], *, start: date, end: date, tail: int | None,
+                    names: dict[str, str]) -> dict:
+    """Frames → {as_of, source, series: {SYM: [{date, close}]}, meta: {SYM: {...}}, missing: {SYM: reason}}."""
+    from shared.nse_panel import adjust, pick_equity_rows
+    series: dict[str, list[dict]] = {}
+    meta: dict[str, dict] = {}
+    groups: list[tuple[str, pd.DataFrame, str, list[dict]]] = []
+    bhav = frames.get("bhav")
+    if bhav is not None and not bhav.empty:
+        bhav = bhav.assign(date=pd.to_datetime(bhav["date"]))
+        sp = frames.get("splits")
+        if sp is not None and not sp.empty:
+            sp = sp.assign(ticker=sp["ticker"].astype(str).str.upper().str.replace(r"\.NS$", "", regex=True),
+                           date=pd.to_datetime(sp["date"]).dt.tz_localize(None).dt.normalize())
+            sp = sp.drop_duplicates(["ticker", "date"])
+        bars = adjust(pick_equity_rows(bhav), sp if sp is not None and not sp.empty else None)
+        ca = bars.attrs.pop("corporate_actions", None)
+        acts: dict[str, list[dict]] = {}
+        if ca is not None and len(ca):
+            for s, d, k in zip(ca["symbol"], ca["date"], ca["k"]):
+                acts.setdefault(str(s), []).append({"date": pd.Timestamp(d).strftime("%Y-%m-%d"), "k": _closes_num(k, 6)})
+        for sym, g in bars.groupby("symbol", sort=False):
+            g = g.sort_values("date")
+            groups.append((str(sym), g.rename(columns={"adj_close": "c", "adj_high": "h", "adj_low": "l"}), "nse_bhavcopy",
+                           sorted(acts.get(str(sym), []), key=lambda a: a["date"])))
+    ix = frames.get("index")
+    if ix is not None and not ix.empty:
+        ix = ix.assign(date=pd.to_datetime(ix["date"]))
+        for sym, g in ix.groupby("symbol", sort=False):
+            groups.append((str(sym), g.sort_values("date").rename(columns={"close": "c", "high": "h", "low": "l"}),
+                           "nse_index_file", []))
+    for sym, g, source, actions in groups:
+        pts = [{"date": pd.Timestamp(d).strftime("%Y-%m-%d"), "close": c}
+               for d, c in zip(g["date"], (_closes_num(x) for x in g["c"])) if c is not None and c > 0]
+        if not pts:
+            continue
+        series[sym] = pts[-tail:] if tail else pts
+        meta[sym] = {"source": source, "name": names.get(sym) if source == "nse_bhavcopy" else sym,
+                     "first_date": pts[0]["date"], "last_date": pts[-1]["date"], "sessions": len(pts),
+                     "high": _closes_num(g["h"].max(), 2), "low": _closes_num(g["l"].min(), 2),
+                     "last_series": str(g["series"].iloc[-1]) if "series" in g else None, "actions": actions}
+    missing: dict[str, str] = {}
+    for s in symbols:
+        if s in series:
+            continue
+        if " " not in s:
+            missing[s] = f"not in the NSE bhavcopy (EQ/BE) between {start.isoformat()} and {end.isoformat()}"
+        elif not frames.get("index_table", True):
+            missing[s] = "index_ohlc_daily (NSE's daily index file) is not deployed on this data-service"
+        else:
+            missing[s] = f"no NSE daily index file row between {start.isoformat()} and {end.isoformat()}"
+    last = [m["last_date"] for m in meta.values()]
+    return {"as_of": max(last) if last else None, "source": "nse_bhavcopy", "from": start.isoformat(), "to": end.isoformat(),
+            "tail": tail, "series": {s: series[s] for s in symbols if s in series},
+            "meta": {s: meta[s] for s in symbols if s in meta}, "missing": missing,
+            "generated_at": datetime.now().isoformat(timespec="seconds")}
+
+
+@app.get("/db/closes")
+def db_closes(symbols: str = Query(..., min_length=1, max_length=12000), days: int = Query(365, ge=5, le=3700),
+              tail: int | None = Query(None, ge=1, le=3700), store: DuckDBStore = Depends(get_store)) -> dict:
+    """Stored daily closes (EOD, never live) for up to 300 NSE symbols / index names in one read: split/bonus-adjusted
+    bhavcopy closes oldest first (``tail``: only the last N sessions; ``meta`` high/low cover the whole ``days`` window),
+    the ex-dates, the company name, the first/last stored session; ``missing`` says why a symbol has no series."""
+    syms = _closes_symbols(symbols)
+    if len(syms) * days > CLOSES_MAX_SYMBOL_DAYS:
+        raise HTTPException(status_code=422, detail=f"{len(syms)} symbols × {days} days is over the {CLOSES_MAX_SYMBOL_DAYS:,} "
+                                                    "symbol-day budget of one request: ask fewer symbols or a shorter window")
+    end = date.today()
+    start = end - timedelta(days=days)
+    with store.reader() as con:
+        frames = _closes_frames(con, syms, start, end)
+    return _closes_payload(frames, syms, start=start, end=end, tail=tail, names=_closes_names())
+
+
 class ResultsIngestRequest(BaseModel):
     symbols: list[str] | None = None    # default: top-N liquid at each year-end 2014–2025 (survivorship-aware)
     top_n: int = 300

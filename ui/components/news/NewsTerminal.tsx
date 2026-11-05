@@ -9,16 +9,26 @@ import { Z } from '@/lib/z'
  *  ┌ top bar: scan date · counts · refresh · close ───────────────────────────────┐
  *  │ macro tape (scrolling)                                                        │
  *  ├ picks (live quote, spark, conviction) ┬ instrument header + key stats ────────┤
- *  │  pinned (carried across scans)        │ chart: Terminal (Yahoo) | TradingView  │
+ *  │  pinned (carried across scans)        │ chart: Terminal | TradingView          │
  *  │  filters · search                     │ tabs: catalyst · thesis · headlines ·  │
  *  │  rejected · disclaimer                │       technicals · sources             │
  *  └───────────────────────────────────────┴──────────────────────────────────────┘
  * Keys: ↑/↓ select · / search · Esc close
+ *
+ * Live program round 2 (reports/live_nse, L2-UI): an NSE pick (IN, '.NS') never reads Yahoo. Its price / move / day
+ * range come from the live quote hook, its name / 1M spark / 52-week range from NSE's stored closes (useNseBase), and
+ * its TERMINAL chart from NSE's stored daily bars (bhavcopy, adjusted; 1D from the tick store) — ./nseBase.ts and
+ * ./nseChart.ts. The Yahoo routes (quotes, chart) carry only the non-NSE picks (US, UK); NSE picks reach the quotes
+ * route only while /api/live/quotes answers 404 (the live service not deployed: the pre-live world, labelled).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getNewsChart, getNewsHeadlines, getNewsQuotes, getNewsScan, getNewsScans, getNewsTrackRecord } from '@/lib/api'
-import { overlayQuote, useLiveQuotes } from '@/lib/liveQuotes'
-import { SourceChip } from '@/components/terminal'
+import { getNewsChart, getNewsHeadlines, getNewsQuotes, getNewsScan, getNewsScans, getNewsTrackRecord, getStockHistory } from '@/lib/api'
+import { fetchIntradayBars } from '@/lib/chartData'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { SourceChip, sourceOf, type SourceInfo } from '@/components/terminal'
+import { baseTitles, isNseYahoo, nseCode, nseQuoteRow, yahooCallSymbols } from './nseBase'
+import { useNseBase } from './useNseBase'
+import { NSE_HISTORY_DAYS, NSE_RANGES, nseDailyChart, nseIntradayChart, type HistRowLike, type NseChart } from './nseChart'
 import { PriorPicks, TrackRecordView, trackVerdict, type TrackRecordData, type TrackRow } from './TrackRecord'
 import { useWatchlist } from '@/context/AppContext'
 import { usePins } from '@/lib/pins'
@@ -30,6 +40,32 @@ import {
 
 const RANGES = ['1d', '5d', '1mo', '3mo', '6mo', '1y', '2y', '5y'] as const
 const RANGE_LABEL: Record<string, string> = { '1d': '1D', '5d': '5D', '1mo': '1M', '3mo': '3M', '6mo': '6M', '1y': '1Y', '2y': '2Y', '5y': '5Y' }
+
+// NSE picks' stored daily bars, once per symbol per IST day (the bhavcopy changes once a day, ~18:30)
+const nseHistCache = new Map<string, { day: string; rows: HistRowLike[] }>()
+const istDay = () => new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10)
+async function nseHistory(sym: string): Promise<HistRowLike[]> {
+  const hit = nseHistCache.get(sym)
+  if (hit && hit.day === istDay()) return hit.rows
+  const rows = ((await getStockHistory(sym, NSE_HISTORY_DAYS)).data?.rows ?? []) as HistRowLike[]
+  if (nseHistCache.size > 50) nseHistCache.clear()
+  nseHistCache.set(sym, { day: istDay(), rows })
+  return rows
+}
+/** An NSE pick's TERMINAL chart: stored bhavcopy bars (daily ranges) or the tick store's 5-minute bars (1D). Never Yahoo. */
+async function nseChartFor(sym: string, range: string): Promise<NseChart> {
+  const rows = await nseHistory(sym)
+  if (range === '1d') {
+    const day = istDay()
+    const r = await fetchIntradayBars(sym, '5m', day)
+    const c = nseIntradayChart(sym, r.date || day, r.bars, rows)
+    if (!c) throw new Error(`no intraday bars stored for ${sym} today (${r.note ?? 'the tick store fills while the Breeze feed is armed'}): pick 1M or longer`)
+    return c
+  }
+  const c = nseDailyChart(sym, rows, range)
+  if (!c) throw new Error(`${sym} has no stored NSE daily bars`)
+  return c
+}
 type Tab = 'catalyst' | 'thesis' | 'headlines' | 'technicals' | 'sources'
 type Region = 'ALL' | 'US' | 'IN' | 'UK' | 'PINNED'
 
@@ -189,48 +225,62 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
   const current = rows.find(r => r.pick.symbol!.yahoo === selected)?.pick
     ?? scan?.picks.find(p => p.symbol?.yahoo === selected) ?? null
 
-  // ── live quotes for everything listed (refresh every 60 s while open) ───────
+  // ── quotes for everything listed ────────────────────────────────────────────
   const symbolsKey = useMemo(() => Array.from(new Set([
     ...(scan?.picks ?? []).map(p => p.symbol?.yahoo), ...Object.keys(pins),
   ].filter(Boolean) as string[])).sort().join(','), [scan, pins])
 
+  // live program (reports/live_nse): the NSE picks' price, move and day range from the live NSE quote service (Breeze
+  // websocket → NSE ≈ 1 min → the last close; never Yahoo) every 3 s while the dock is open; round 2: their name, 1M
+  // spark and 52-week range from NSE's stored closes. The 60 s quotes call carries the non-NSE picks (US, UK) only —
+  // NSE picks too only while the live route answers 404 (not deployed: the pre-live route, labelled by its own source)
+  const nsePicks = useMemo(() => (symbolsKey ? symbolsKey.split(',').filter(isNseYahoo).map(y => nseCode(y) as string) : []), [symbolsKey])
+  const liveNse = useLiveQuotes(nsePicks, { intervalMs: 3_000, enabled: open })
+  const nseBase = useNseBase(nsePicks, { enabled: open })
+  const legacy = liveNse.status === 'missing'
+  const callKey = yahooCallSymbols(symbolsKey ? symbolsKey.split(',') : [], liveNse.status).join(',')
+
   useEffect(() => {
-    if (!open || !symbolsKey) return
+    if (!open || !callKey) return
     let alive = true
     const pull = async () => {
-      try { const r = await getNewsQuotes(symbolsKey.split(',')); if (alive) setQuotes(r.data.quotes) } catch { /* keep last */ }
+      try { const r = await getNewsQuotes(callKey.split(',')); if (alive) setQuotes(q => ({ ...q, ...r.data.quotes })) } catch { /* keep last */ }
     }
     pull()
     const id = setInterval(pull, 60_000)
     return () => { alive = false; clearInterval(id) }
-  }, [open, symbolsKey])
+  }, [open, callKey])
 
-  // live program (reports/live_nse): the NSE picks' price, move and day range from the live NSE quote service (Breeze
-  // websocket → NSE ≈ 1 min → the last close; never Yahoo) every 3 s while the dock is open; the 60 s quotes call stays
-  // the base for names, sparks, 52-week ranges and the non-NSE picks (US, UK)
-  const nsePicks = useMemo(() => (symbolsKey ? symbolsKey.split(',').filter(y => /\.NS$/i.test(y)).map(y => y.replace(/\.NS$/i, '')) : []), [symbolsKey])
-  const liveNse = useLiveQuotes(nsePicks, { intervalMs: 3_000, enabled: open })
+  const pickName = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const p of [...(scan?.picks ?? []), ...Object.values(pins).map(pp => pp.pick)]) if (p.symbol && p.company_name) m.set(p.symbol.yahoo, p.company_name)
+    return m
+  }, [scan, pins])
   const quotesLive = useMemo(() => {
-    if (!liveNse.available) return quotes
+    if (legacy) return quotes
     const out: Record<string, Quote> = { ...quotes }
     for (const b of nsePicks) {
-      const k = `${b}.NS`, o = overlayQuote(quotes[k] as unknown as Record<string, unknown> | undefined, liveNse.quotes[b])
-      if (o && o !== (quotes[k] as unknown)) out[k] = { ...(quotes[k] ?? { symbol: k }), ...(o as object) } as Quote
+      const k = `${b}.NS`
+      out[k] = nseQuoteRow(b, nseBase.base[b], liveNse.quotes[b], pickName.get(k) ?? null) as unknown as Quote
     }
     return out
-  }, [quotes, liveNse.available, liveNse.quotes, nsePicks])
+  }, [quotes, legacy, liveNse.quotes, nseBase.base, nsePicks, pickName])
 
   // ── chart + headlines for the selection ────────────────────────────────────
+  // an NSE pick's TERMINAL chart is NSE's stored daily bars (1D: the tick store); Yahoo's chart only for non-NSE picks
+  const selNse = selected && isNseYahoo(selected) ? nseCode(selected) : null
+  const effRange = selNse && !(NSE_RANGES as readonly string[]).includes(range) ? '1mo' : range    // 5D (no NSE source) → 1M
   useEffect(() => {
     if (!open || !selected) return
     let alive = true
     setChartState('loading')
-    getNewsChart(selected, range)
-      .then(r => { if (alive) { setChart(r.data); setChartState('idle') } })
+    const req: Promise<ChartData> = selNse ? nseChartFor(selNse, effRange) : getNewsChart(selected, effRange).then(r => r.data as ChartData)
+    req
+      .then(r => { if (alive) { setChart(r); setChartState('idle') } })
       .catch(err => { if (alive) { setChart(null); setChartState('error')
         setChartError(apiError(err, 'Chart unavailable')) } })
     return () => { alive = false }
-  }, [open, selected, range])
+  }, [open, selected, effRange, selNse])
 
   useEffect(() => {
     if (!open || !selected) return
@@ -272,7 +322,16 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
     : undefined
   const st = chart?.symbol === current?.symbol?.yahoo ? chart?.stats : undefined
   const curBase = current?.symbol?.yahoo && /\.NS$/i.test(current.symbol.yahoo) ? current.symbol.yahoo.replace(/\.NS$/i, '') : null
-  const curLive = curBase && liveNse.available && liveNse.quotes[curBase]?.price != null ? liveNse.sourceFor(curBase) : null
+  // an NSE pick's chip is its live row's own (LIVE · BREEZE / DELAYED · NSE / CLOSE / OFFLINE with the reason); the
+  // pre-live route (live service not deployed) prints its own state below instead
+  const curLive = curBase && !legacy ? liveNse.sourceFor(curBase) : null
+  // the TERMINAL chart's own chip: NSE bhavcopy EOD · <last session> / the tick store's 5-minute bars / Yahoo (non-NSE)
+  const nseChartData = chart && current?.symbol && chart.symbol === current.symbol.yahoo && 'source_kind' in chart ? (chart as NseChart) : null
+  const chartSrc: SourceInfo | null = !nseChartData ? null
+    : nseChartData.source_kind === 'tick_store'
+      ? { state: 'delayed', source: 'TICK STORE', asOf: nseChartData.candles.length ? new Date(nseChartData.candles[nseChartData.candles.length - 1].time * 1000).toISOString().slice(0, 16) + ':00+05:30' : null,
+          ageDays: 0, hint: "5-minute bars built from stored Breeze ticks (tick store); re-read when the range is picked again" }
+      : sourceOf(nseChartData.last_date, { source: 'NSE bhavcopy', hint: 'NSE daily bars as traded, split/bonus-adjusted; end of day, not a live feed (the price above is the live quote)' })
   const counts = {
     ALL: (scan?.picks ?? []).length, US: 0, IN: 0, UK: 0, PINNED: Object.keys(pins).length,
   } as Record<Region, number>
@@ -372,7 +431,8 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
                     </span>
                     <span style={{ fontSize: 9, color: T.dim, border: `1px solid ${T.border}`, padding: '0 4px' }}>{s.exchange}</span>
                     <span style={{ flex: 1 }} />
-                    <Sparkline values={qq?.spark} />
+                    <span title={isNseYahoo(s.yahoo) && !legacy ? baseTitles(qq as never).spark : undefined} data-sd-base={isNseYahoo(s.yahoo) && !legacy ? 'nse_closes' : 'quotes_route'}>
+                      <Sparkline values={qq?.spark} /></span>
                     <div style={{ textAlign: 'right', minWidth: 78 }}>
                       <div style={{ fontSize: 12 }}>{qq?.available === false ? 'N/A' : fmtPrice(qq?.price, qq?.currency)}</div>
                       <div style={{ fontSize: 10, color: signColor(qq?.change_pct) }}>{fmtPct(qq?.change_pct)}</div>
@@ -495,8 +555,9 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
                 <Chip color={T.amber} active={mode === 'terminal'} onClick={() => setMode('terminal')}>TERMINAL</Chip>
                 <Chip color={T.amber} active={mode === 'tv'} onClick={() => setMode('tv')}>TRADINGVIEW</Chip>
                 <span style={{ width: 12 }} />
-                {mode === 'terminal' && RANGES.map(r => (
-                  <Chip key={r} color={T.cyan} active={range === r} onClick={() => setRange(r)}>{RANGE_LABEL[r]}</Chip>
+                {mode === 'terminal' && (curBase ? NSE_RANGES : RANGES).map(r => (
+                  <Chip key={r} color={T.cyan} active={effRange === r} onClick={() => setRange(r)}
+                    title={curBase ? (r === '1d' ? "today's 5-minute bars from the tick store (Breeze ticks)" : 'NSE daily bars (bhavcopy), split/bonus-adjusted') : undefined}>{RANGE_LABEL[r]}</Chip>
                 ))}
                 {mode === 'terminal' && <span style={{ width: 12 }} />}
                 {mode === 'terminal' && ([['sma20', 'SMA20', T.cyan], ['sma50', 'SMA50', T.amber], ['sma200', 'SMA200', T.violet], ['rsi', 'RSI', T.amber]] as const).map(([k, label, c]) => (
@@ -504,6 +565,8 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
                 ))}
                 <span style={{ flex: 1 }} />
                 {mode === 'terminal' && chartState === 'loading' && <span style={{ fontSize: 10, color: T.muted }}>LOADING…</span>}
+                {mode === 'terminal' && chartState !== 'loading' && chartSrc && <SourceChip info={chartSrc} />}
+                {mode === 'terminal' && chartState !== 'loading' && !curBase && chart && chart.symbol === current.symbol.yahoo && <span style={{ fontSize: 10, color: T.dim }}>YAHOO BARS (non-NSE)</span>}
                 {mode === 'tv' && current.symbol.region === 'US' && <span style={{ fontSize: 10, color: T.dim }}>TradingView live feed · full toolbar & indicators</span>}
               </div>
               <div style={{ padding: '0 8px 8px' }}>
@@ -515,7 +578,7 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
                     </span>
                     <span style={{ fontSize: 12, color: T.muted, maxWidth: 520, textAlign: 'center', lineHeight: 1.6 }}>
                       TradingView does not allow {current.symbol.exchange} symbols in embedded charts (exchange licensing).
-                      Open the full TradingView chart, or use the TERMINAL chart (same bars, Yahoo feed).
+                      Open the full TradingView chart, or use the TERMINAL chart ({curBase ? "NSE's own daily bars, stored bhavcopy" : 'Yahoo bars'}).
                     </span>
                     <a href={tradingViewUrl(current.symbol.tv)} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
                       <Chip color={T.amber} active>↗ OPEN {current.symbol.tv} ON TRADINGVIEW</Chip>
@@ -527,7 +590,7 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
                   <div style={{ height: 460, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.muted, fontSize: 12, flexDirection: 'column', gap: 8 }}>
                     <span style={{ color: T.amber }}>NO PRICE HISTORY</span>
                     <span>{chartError}</span>
-                    <span style={{ color: T.dim }}>Newly listed or unsupported on Yahoo — try the TradingView view.</span>
+                    <span style={{ color: T.dim }}>{curBase ? 'No stored NSE bars for this range — try 1M or longer, or the TradingView view.' : 'Newly listed or unsupported on Yahoo — try the TradingView view.'}</span>
                   </div>
                 ) : chart && chart.symbol === current.symbol.yahoo ? (
                   <NewsChart data={chart} overlays={overlays} height={460} />

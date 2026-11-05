@@ -5,8 +5,11 @@
  * Desk's positions, with price, day change, a one-month sparkline, where it sits in its day and 52-week range,
  * volume, and the next corporate event. NSE rows' price, day change and day range are LIVE NSE quotes (lib/liveQuotes:
  * the Breeze websocket, else NSE's website ≈ 1 min, else the last close labelled CLOSE), every 3 s, with a per-row
- * source mark; the 60 s /api/news-scanner/quotes call stays the base layer for names, sparks, 52-week ranges and the
- * non-NSE pins (US names, commodities). Add a stock by typing its ticker. Click a ticker for its chart and profile.
+ * source mark. Live program round 2 (L2-UI): their name, one-month spark and 52-week range come from NSE's own stored
+ * closes (news/useNseBase → /api/market/closes, one request, every 10 min) — no Yahoo request for an NSE row; the 60 s
+ * /api/news-scanner/quotes call carries only the non-NSE pins (US names, commodities), and NSE rows only while the live
+ * route is not deployed (404, the pre-live world, labelled). Add a stock by typing its ticker. Click a ticker for its
+ * chart and profile.
  */
 import { RiskChips } from '@/components/RiskChips'
 import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
@@ -28,7 +31,9 @@ import { Chip, DataTable, EventBadge, Input, PageHeader, Panel, Spark, Stat, T, 
 import { sourceChipText } from '@/components/terminal/source'
 import { useMarketOpen } from '@/components/shell/useFeed'
 import { BellGlyph } from '@/components/shell/Glyphs'   // monochrome SVG bell, not the colour emoji (CT-14)
-import { overlayQuote, useLiveQuotes } from '@/lib/liveQuotes'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { baseTitles, nseQuoteRow, yahooCallSymbols } from '@/components/news/nseBase'
+import { useNseBase } from '@/components/news/useNseBase'
 import { isDesktop, notificationPermission, requestNotificationPermission, shellMarker } from '@/lib/platform'
 
 type Source = 'HELD' | 'DESK' | 'WATCH' | 'PIN'
@@ -120,34 +125,50 @@ export function WatchMonitor() {
   const yahooKey = rows.map(r => r.yahoo).sort().join(',')
   // NSE stocks in the list (pins can be US names or commodities), for the risk panel
   const nseSyms = useMemo(() => [...new Set(rows.filter(r => r.yahoo.endsWith('.NS')).map(r => r.sym))].sort().slice(0, 60), [yahooKey])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // live NSE overlay (reports/live_nse): every NSE row's price, day change and day range from the live quote service
+  // (Breeze websocket → NSE website → last close; never Yahoo); round 2: its name, 1M spark and 52-week range from NSE's
+  // stored closes (useNseBase). The 60 s quotes call below carries the non-NSE pins only — and NSE rows only while the
+  // live route answers 404 (not deployed: the pre-live route, labelled by its own source).
+  const liveSyms = useMemo(() => [...new Set(rows.filter(r => r.yahoo.endsWith('.NS')).map(r => r.sym))].sort(), [yahooKey])  // eslint-disable-line react-hooks/exhaustive-deps
+  const liveQ = useLiveQuotes(liveSyms, { intervalMs: 3_000 })
+  const nseBase = useNseBase(liveSyms)
+  const legacy = liveQ.status === 'missing'
+  const callKey = yahooCallSymbols(yahooKey ? yahooKey.split(',') : [], liveQ.status).join(',')
   const refresh = useCallback(async () => {
-    const syms = yahooKey ? yahooKey.split(',') : []
+    const syms = callKey ? callKey.split(',') : []
     if (!syms.length) return
     const out: Record<string, any> = {}
     for (let i = 0; i < syms.length; i += 60) {                 // endpoint caps a call at 60 symbols
       try { Object.assign(out, (await getNewsQuotes(syms.slice(i, i + 60))).data.quotes) } catch { /* keep last */ }
     }
     setQuotes(q => ({ ...q, ...out })); setAsOf(new Date())
-  }, [yahooKey])
+  }, [callKey])
   useEffect(() => { refresh(); const iv = setInterval(refresh, REFRESH_MS); return () => clearInterval(iv) }, [refresh])
 
-  // live NSE overlay (reports/live_nse): every NSE row's price, day change and day range from the live quote service
-  // (Breeze websocket → NSE website → last close; never Yahoo). The 60 s quotes call stays the base layer for names,
-  // sparks, 52-week ranges and the non-NSE pins, and for every row while the live service does not answer.
-  const liveSyms = useMemo(() => [...new Set(rows.filter(r => r.yahoo.endsWith('.NS')).map(r => r.sym))].sort(), [yahooKey])  // eslint-disable-line react-hooks/exhaustive-deps
-  const liveQ = useLiveQuotes(liveSyms, { intervalMs: 3_000 })
   const rowsLive = useMemo(() => rows.map(r => {
-    const t = r.yahoo.endsWith('.NS') ? liveQ.quotes[r.sym] : undefined
-    const q = overlayQuote(r.q as Record<string, unknown> | undefined, t) as Row['q']
-    return q === r.q ? r : { ...r, q }
-  }), [rows, liveQ.quotes])
+    if (!r.yahoo.endsWith('.NS') || legacy) return r                       // non-NSE pins: their Yahoo row as is
+    const q = nseQuoteRow(r.sym, nseBase.base[r.sym], liveQ.quotes[r.sym], dir.get(r.sym)?.n ?? null) as unknown as Row['q']
+    return { ...r, q }
+  }), [rows, liveQ.quotes, nseBase.base, legacy, dir])
   const nonNse = rows.filter(r => !r.yahoo.endsWith('.NS')).length
-  const monitorSrc: SourceInfo = liveQ.available && liveQ.source
-    ? { ...liveQ.source, hint: `${liveQ.source.hint ?? ''}${nonNse ? ` · ${nonNse} non-NSE pin${nonNse > 1 ? 's' : ''} on Yahoo (60 s)` : ''}` }
-    : { state: Object.keys(quotes).length ? 'delayed' : 'offline', source: 'YAHOO', asOf: asOf?.toISOString() ?? null,
-        hint: liveQ.status === 'missing' ? 'live NSE quote service not deployed: Yahoo quotes on a 60 s refresh'
-          : liveQ.status === 'error' ? 'live NSE quote service not answering: Yahoo quotes on a 60 s refresh' : 'Yahoo quotes on a 60 s refresh' }
+  const nonNseHint = nonNse ? ` · ${nonNse} non-NSE pin${nonNse > 1 ? 's' : ''} on Yahoo (60 s)` : ''
+  const baseHint = nseBase.asOf ? ` · names, 1M sparks and 52-week ranges: NSE closes stored to ${nseBase.asOf}${nseBase.status === 'error' ? ` (last read; ${nseBase.error})` : ''}`
+    : nseBase.status === 'missing' ? ' · NSE closes route not deployed: no sparks / 52-week ranges'
+      : nseBase.status === 'error' ? ` · NSE closes unavailable (${nseBase.error}): no sparks / 52-week ranges` : ''
+  const monitorSrc: SourceInfo = legacy
+    ? { state: Object.keys(quotes).length ? 'delayed' : 'offline', source: 'YAHOO', asOf: asOf?.toISOString() ?? null,
+        hint: 'live NSE quote service not deployed: the pre-live quotes route on a 60 s refresh' }
+    : liveQ.source
+      ? { ...liveQ.source, hint: `${liveQ.source.hint ?? ''}${baseHint}${nonNseHint}` }
+      : liveSyms.length
+        ? { state: 'offline', source: 'LIVE', asOf: null, ageDays: null,
+            hint: `${liveQ.status === 'error' ? 'live NSE quote service not answering' : 'waiting for the live NSE quote service'}${baseHint}${nonNseHint}` }
+        : { state: Object.keys(quotes).length ? 'delayed' : 'offline', source: 'YAHOO', asOf: asOf?.toISOString() ?? null, hint: 'non-NSE pins: Yahoo quotes on a 60 s refresh' }
 
+  // the alert check runs on its own 60 s tick: NSE rows no longer arrive through the 60 s quotes call (round 2)
+  const [checkTick, setCheckTick] = useState(0)
+  useEffect(() => { const iv = setInterval(() => setCheckTick(t => t + 1), REFRESH_MS); return () => clearInterval(iv) }, [])
   useEffect(() => {
     // the server prices and fires the levels (also every minute from the scheduler); show what's new here
     check().then(hits => {
@@ -161,7 +182,7 @@ export function WatchMonitor() {
       // keep the page's own notification.
       if (!shellMarker()?.features?.includes('notification_feed')) notifyHits(hits)   // one per check, with a count (C3-logic-unchanged-07)
     })
-  }, [quotes]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [checkTick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openEditor = (sym: string) => {
     setEditing(sym); setAlertUp(alerts[sym]?.above ? String(alerts[sym].above) : ''); setAlertDown(alerts[sym]?.below ? String(alerts[sym].below) : '')
@@ -219,11 +240,14 @@ export function WatchMonitor() {
         return <span style={{ fontSize: 10.5 }}><span style={{ color: T.muted }}>{f.pe != null ? `${fmtFixed(f.pe, 1)}×` : '—'}</span>
           <span style={{ color: T.dim }}> · </span>{f.pat_yoy_turn ? <span style={{ color: f.pat_yoy_turn === 'to profit' ? T.green : T.red }}>{f.pat_yoy_turn}</span>
             : <span style={{ color: f.pat_yoy == null ? T.dim : f.pat_yoy >= 0 ? T.green : T.red }}>{fmtPct(f.pat_yoy, 0)}</span>}</span> } },
-    { key: 'spark', label: '1M', render: r => r.q?.spark && r.q.spark.length > 1
-      ? <Spark values={r.q.spark} width={90} height={22} color={r.q.spark[r.q.spark.length - 1] >= r.q.spark[0] ? T.green : T.red} /> : null },
+    { key: 'spark', label: '1M', title: 'NSE rows: the last 22 NSE daily closes (stored, split/bonus-adjusted) plus today\'s live point; non-NSE pins: Yahoo',
+      render: r => r.q?.spark && r.q.spark.length > 1
+      ? <span title={r.yahoo.endsWith('.NS') && !legacy ? baseTitles(r.q as never).spark : 'Yahoo daily closes (non-NSE pin)'} data-sd-base={r.yahoo.endsWith('.NS') && !legacy ? 'nse_closes' : 'yahoo'}>
+          <Spark values={r.q.spark} width={90} height={22} color={r.q.spark[r.q.spark.length - 1] >= r.q.spark[0] ? T.green : T.red} /></span> : null },
     { key: 'day', label: 'Day range', render: r => <RangeDot lo={r.q?.day_low} hi={r.q?.day_high} v={r.q?.price} label="Day range" /> },
     { key: '52w', label: '52W', sort: r => r.q?.price != null && r.q.high_52w ? r.q.price / r.q.high_52w : -1,
-      render: r => <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+      title: 'NSE rows: the 52-week high / low on adjusted NSE daily bars (stored), widened by today\'s range; non-NSE pins: Yahoo',
+      render: r => <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }} title={r.yahoo.endsWith('.NS') && !legacy ? baseTitles(r.q as never).range : undefined}>
         <RangeDot lo={r.q?.low_52w} hi={r.q?.high_52w} v={r.q?.price} label="52-week range" />
         <span style={{ fontSize: 10, color: T.muted }}>{r.q?.price != null && r.q.high_52w ? ((r.q.price / r.q.high_52w - 1) * 100 > -0.5 ? <span style={{ color: T.green }}>HIGH</span> : pct((r.q.price / r.q.high_52w - 1) * 100, 0)) : ''}</span>
       </span> },
@@ -245,7 +269,7 @@ export function WatchMonitor() {
   return (
     <div>
       <PageHeader code="WTCH" title="Watch Monitor"
-        subtitle={`watchlist · pins · ICICI holdings · Desk · ${liveQ.available ? 'live NSE quotes every 3 s' : 'quotes every 60 s'}${asOf ? ` · ${asOf.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}` : ''}`}
+        subtitle={`watchlist · pins · ICICI holdings · Desk · ${legacy ? 'quotes every 60 s (live NSE service not deployed)' : 'live NSE quotes every 3 s · NSE closes'}${legacy && asOf ? ` · ${asOf.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}` : ''}`}
         right={<form onSubmit={e => { e.preventDefault(); submit() }} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <Input value={add} onChange={setAdd} placeholder="Add ticker + Enter" width={170} />
           <Chip color={T.amber} onClick={submit}>+ ADD</Chip>
@@ -322,8 +346,10 @@ export function WatchMonitor() {
           empty={<div style={{ padding: 20, fontSize: 12, color: T.muted }}>Nothing to watch yet: add a ticker above, ☆ PIN a stock from any chart, or connect ICICI to see your holdings.</div>} />
       </Panel>
       <div style={{ fontSize: 10, color: T.dim, marginTop: 8 }}>{liveQ.available
-        ? "Prices of NSE stocks: live NSE quotes every 3 s (ICICI Breeze websocket; NSE's website about 1 minute behind when a name is not streaming; the last close, labelled CLOSE, after the session). The dot after each price is its source (hover it). Names, 1M sparks (daily closes) and 52-week ranges refresh every 60 s; non-NSE pins are Yahoo, about 1 minute delayed. Range markers: green near the high, red near the low."
-        : "Prices: Yahoo Finance (about 1 minute delayed) while the live NSE quote service does not answer; day change vs NSE's official previous close (bhavcopy). Range markers: green near the high, red near the low."}</div>
+        ? `Prices of NSE stocks: live NSE quotes every 3 s (ICICI Breeze websocket; NSE's website about 1 minute behind when a name is not streaming; the last close, labelled CLOSE, after the session). The dot after each price is its source (hover it). Names, 1M sparks and 52-week ranges of NSE stocks: NSE's stored daily closes${nseBase.asOf ? ` (to ${nseBase.asOf})` : ''}, end of day, plus today's live point. Non-NSE pins are Yahoo, about 1 minute delayed. Range markers: green near the high, red near the low.`
+        : legacy
+          ? "Prices: the pre-live quotes route (live NSE quote service not deployed on this ui-api), about 1 minute delayed. Range markers: green near the high, red near the low."
+          : "Prices of NSE stocks: waiting for the live NSE quote service (no Yahoo price is shown for an NSE stock). Names, 1M sparks and 52-week ranges: NSE's stored daily closes. Range markers: green near the high, red near the low."}</div>
       {(() => {   // book X-ray: your holdings by value at live prices (ICICI book, or the last known one)
         const held = rowsLive.filter(r => book[r.sym] && r.q?.price != null)
           .map(r => ({ sym: r.sym, value: r.q!.price! * book[r.sym].qty, f: fin[r.sym] }))

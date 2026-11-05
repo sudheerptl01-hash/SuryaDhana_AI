@@ -2,8 +2,9 @@
 
 /**
  * NewsChart — terminal price chart (lightweight-charts, TradingView's open-source
- * library) on Yahoo OHLCV: candles + volume + SMA 20/50/200 overlays, with a
- * time-synced RSI(14) pane. TradingViewEmbed renders TradingView's official
+ * library): candles + volume + SMA 20/50/200 overlays, with a time-synced RSI(14) pane. The bars are NSE's stored
+ * daily bars for an NSE pick (./nseChart.ts: bhavcopy, adjusted; 1D from the tick store) and Yahoo OHLCV for the
+ * non-NSE picks (US, UK). TradingViewEmbed renders TradingView's official
  * widget for the same symbol as an alternate view.
  */
 import { Z } from '@/lib/z'

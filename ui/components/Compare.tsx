@@ -2,24 +2,28 @@
 
 /**
  * COMP — compare stocks: performance rebased to 100 against NIFTY 50, with return, volatility, max drawdown,
- * beta / correlation to NIFTY and a correlation matrix. Daily closes from Yahoo (split-adjusted) via
- * /api/news-scanner/chart. Open from the command bar: `COMP TCS INFY HCLTECH`.
+ * beta / correlation to NIFTY and a correlation matrix. Live program round 2 (reports/live_nse, L2-UI): NSE stocks
+ * read NSE's own stored closes (/api/market/closes: bhavcopy EQ/BE, split/bonus-adjusted), the NIFTY 50 benchmark the
+ * stored daily index closes (/api/market/index-daily); only a non-NSE symbol ('^GSPC', a dotted code) still reads
+ * Yahoo's daily closes. Rules + chip in ./CompareCloses.ts. Open from the command bar: `COMP TCS INFY HCLTECH`.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getNewsChart, getStockActions } from '@/lib/api'
+import { getIndexDaily, getMarketCloses, getNewsChart, getStockActions } from '@/lib/api'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
-import { CHART_BOX, Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, type Column, fmtFixed, fmtPct, ordinal, sourceOf, useChartSize } from '@/components/terminal'
+import { CHART_BOX, Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, type Column, fmtFixed, fmtPct, ordinal, useChartSize } from '@/components/terminal'
 import { compareAdd, compareBase, compareRemove, sameList } from '@/components/compareSet'
 import { useRequestSeq } from '@/components/useRequestSeq'
+import {
+  BENCH, BENCH_CLOSES_SYMBOL, BENCH_STORE_SYMBOL, PERIOD_DAYS, benchFromIndexDaily, closesLabel, compareSource, coversPeriod, istToday,
+  lastNseDate, missingReason, periodStart, pickBench, seriesFromCandles, seriesFromCloses, seriesSource, type BenchSource,
+  type ComparePeriod, type Series,
+} from '@/components/CompareCloses'
 
 export { COMP_KEY } from '@/lib/pageKeys'
 import { COMP_KEY } from '@/lib/pageKeys'
-const BENCH = '^NSEI'
 const COLORS = [T.amber, T.cyan, T.violet, T.green, '#ff8a3d', '#ff5fa2', '#9be15d', '#5fd3ff']
 const PERIODS: [string, string][] = [['1mo', '1M'], ['3mo', '3M'], ['6mo', '6M'], ['1y', '1Y'], ['2y', '2Y']]
-
-type Series = { sym: string; dates: string[]; close: number[] }
 
 function readRaw(): string | null {
   try { return localStorage.getItem(COMP_KEY) } catch { return null }
@@ -33,8 +37,7 @@ function load(): { syms: string[]; period: string } {
   return { syms: ['TCS', 'INFY', 'HCLTECH'], period: '1y' }
 }
 
-const yahoo = (s: string) => (s.startsWith('^') || s.includes('.') ? s : `${s}.NS`)
-const day = (t: number) => new Date(t * 1000).toISOString().slice(0, 10)
+const asPeriod = (p: string): ComparePeriod => (p in PERIOD_DAYS ? (p as ComparePeriod) : '1y')
 
 function stats(c: number[], bench?: number[]) {
   const r = c.slice(1).map((v, i) => v / c[i] - 1)
@@ -103,16 +106,42 @@ export function Compare() {
 
   // CT-01: latest request wins. A slower answer for the previous set or period never replaces the newer one
   const seq = useRequestSeq()                         // in a ref, never useMemo (P1); cancelled on unmount
+  const [routeMissing, setRouteMissing] = useState(false)
+  const [benchSrc, setBenchSrc] = useState<BenchSource | null>(null)
+  const [closesErr, setClosesErr] = useState<string | null>(null)
+  const [missingWhy, setMissingWhy] = useState<Record<string, string>>({})   // the route's own reason per absent symbol
+  // live program round 2 (D11): one batch of stored NSE closes for every NSE stock, the stored NIFTY 50 closes for the
+  // benchmark, Yahoo only for a symbol that is not an NSE code. A stock the closes route lacks has no line (never Yahoo).
   const fetchAll = useCallback(async () => {
     const mine = seq.begin()
-    const want = [BENCH, ...syms]
-    const got = await Promise.all(want.map(async s => {
-      try {
-        const r = (await getNewsChart(yahoo(s), period)).data
-        const candles = (r.candles ?? []) as { time: number; close: number }[]
-        return [s, { sym: s, dates: candles.map(c => day(c.time)), close: candles.map(c => c.close) }] as const
-      } catch { return [s, 'error' as const] as const }
-    }))
+    const p = asPeriod(period)
+    const start = periodStart(istToday(Date.now()), p)
+    const nse = syms.filter(s => seriesSource(s) === 'nse_closes')
+    const other = syms.filter(s => seriesSource(s) === 'yahoo')
+    let missing = false, closesErr: string | null = null
+    // the benchmark asks the closes route on its own: an index name the route refuses never fails the stocks' batch
+    const [closes, benchNse, ...yh] = await Promise.all([
+      nse.length ? getMarketCloses(nse, PERIOD_DAYS[p]).then(r => r.data).catch(e => {
+        // FastAPI's own 404 for an unknown path ('Not Found'): the route is not deployed on this ui-api yet
+        missing = e?.response?.status === 404 && e?.response?.data?.detail === 'Not Found'
+        closesErr = e?.response?.status ? `HTTP ${e.response.status}` : 'ui-api unreachable'
+        return null
+      }) : Promise.resolve(null),
+      getMarketCloses([BENCH_CLOSES_SYMBOL], PERIOD_DAYS[p]).then(r => seriesFromCloses(r.data, [BENCH_CLOSES_SYMBOL], start)[BENCH_CLOSES_SYMBOL]).catch(() => null),
+      ...other.map(s => getNewsChart(s, p).then(r => seriesFromCandles(s, r.data?.candles, start)).catch(() => null)),
+    ])
+    // NSE's daily index file is new (Terminal v2): until it covers the period, the stored index closes stand in
+    const benchStore = coversPeriod(benchNse, start) ? null
+      : await getIndexDaily(BENCH_STORE_SYMBOL, PERIOD_DAYS[p]).then(r => benchFromIndexDaily(r.data, start)).catch(() => null)
+    const bench = pickBench(benchNse, benchStore, start)
+    const nseSeries = seriesFromCloses(closes, nse, start)
+    if (seq.isCurrent(mine)) setBenchSrc(bench.source)
+    const got: (readonly [string, Series | 'error'])[] = [[BENCH, bench.series ?? 'error'], ...syms.map(s => {
+      const src = seriesSource(s)
+      const v = src === 'nse_closes' ? nseSeries[s] : src === 'yahoo' ? yh[other.indexOf(s)] : null
+      return [s, v ?? 'error'] as const
+    })]
+    if (seq.isCurrent(mine)) { setRouteMissing(missing); setClosesErr(closesErr); setMissingWhy(closes?.missing ?? {}) }
     if (seq.isCurrent(mine)) setData(Object.fromEntries(got))
   }, [syms, period, seq])
   useEffect(() => { if (syms.length) fetchAll() }, [fetchAll, syms.length])
@@ -190,21 +219,22 @@ export function Compare() {
     { key: 'q', label: 'Latest quarter', align: 'right', render: r => <span style={{ color: T.muted }}>{fin[r.sym]?.period_end ?? '—'}</span> },
   ]
 
-  // PLAN §0.5: the newest stored close across the compared series is the panels' as-of
-  // D11 (reports/live_nse): these daily closes come from the quotes route's Yahoo chart history, not NSE's bhavcopy —
-  // the chip says so (EOD daily data with its last date); the move to stored NSE closes is an open item for the data side
-  const compareSrc = sourceOf(Object.values(data).filter((v): v is Series => v !== 'error').map(v => v.dates[v.dates.length - 1] ?? '').sort().pop() || null,
-    { source: 'Yahoo daily closes', hint: 'adjusted daily closes from the quotes route (Yahoo chart history), end of day; not a live feed' })
+  // PLAN §0.5 + live program round 2 (D11): the newest stored NSE close is the panels' as-of — EOD · <day> (STALE past
+  // 4 days); the hint names every source on the page (NSE closes, the stored NIFTY 50 closes, Yahoo for non-NSE names)
+  const compareSrc = compareSource(data, { routeMissing, bench: benchSrc })
+  const nseLabel = closesLabel(lastNseDate(data))
   return (
     <div>
       <PageHeader code="COMP" title="Compare"
-        subtitle={aligned ? `${aligned.dates.length} sessions · ${aligned.dates[0]} → ${aligned.dates[aligned.dates.length - 1]} · rebased to 100 · vs NIFTY 50` : 'performance rebased to 100'}
+        subtitle={aligned ? `${nseLabel} · ${aligned.dates.length} sessions · ${aligned.dates[0]} → ${aligned.dates[aligned.dates.length - 1]} · rebased to 100 · vs NIFTY 50` : `${nseLabel} · performance rebased to 100`}
         right={<div style={{ display: 'flex', gap: 4 }}>{PERIODS.map(([k, l]) => <Chip key={k} color={T.amber} active={period === k} onClick={() => setPeriod(k)}>{l}</Chip>)}</div>} />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
         {syms.map(s => (
           <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, border: `1px solid ${color(s)}66`, padding: '3px 8px', fontFamily: T.mono, fontSize: 11.5 }}>
             <span style={{ width: 10, height: 3, background: color(s) }} />
-            <span style={{ color: data[s] === 'error' ? T.red : T.text }}>{s}{data[s] === 'error' ? ' (no data)' : ''}</span>
+            <span style={{ color: data[s] === 'error' ? T.red : T.text }} data-comp-source={seriesSource(s)}
+              title={missingWhy[s] ?? (seriesSource(s) === 'yahoo' ? 'not an NSE code: Yahoo daily closes' : 'NSE bhavcopy closes (split/bonus-adjusted), end of day')}>
+              {s}{data[s] === 'error' ? ` (${missingReason(s, routeMissing, closesErr)})` : seriesSource(s) === 'yahoo' ? ' · YAHOO' : ''}</span>
             <span role="button" onClick={() => editSyms(compareRemove(latestSyms(), s))} style={{ color: T.dim, cursor: 'pointer' }}>✕</span>
           </span>
         ))}

@@ -8,7 +8,8 @@ reports/live_nse/L-INVENTORY/REPORT.md §5 (92 panes), the capacity numbers repo
   ``functools.partial`` references, ``from routers.x import y as z``, ``import routers.x as m`` + ``m.f``, class methods
   over-approximated). The live routes (``/api/live/*``, ``/api/quotes/ticks`` + ``/live``) reach no Yahoo fetcher and
   do reach data-service ``/live/quotes``; every call site that hands an NSE symbol (an argument built with ``".NS"``) to a
-  Yahoo-reaching function goes through ``news_scanner.get_quotes`` only (alerts D9, results-reacting D10), and
+  Yahoo-reaching function goes through ``news_scanner.get_quotes`` only (alerts D9; results-reacting D10 reads the live hub
+  itself since L2-API, and ``/api/market/closes`` reads data-service ``/db/closes``: neither reaches Yahoo), and
   ``get_quotes`` reaches the live service (its ``.NS`` answer is proven behaviourally in B-API); negative control: the same
   graph sees Yahoo behind ``/api/news-scanner/chart`` and ``/api/commodity/overview``. data-service: the ``/live/*``
   handlers and live_quotes.py / live_ticks.py carry no Yahoo name or host and no Breeze REST call; the NSE fallback
@@ -427,12 +428,23 @@ class TestNoYahooForNsePricesS1:
         assert not bad, f"an NSE symbol is handed straight to a Yahoo fetcher: {bad}"
 
     def test_the_known_nse_callers_still_pass_through_get_quotes(self, graph: CallGraph):
-        """The server-side price paths the inventory flagged (D9 alerts, D10 results-reacting) price NSE names through
-        ``get_quotes`` — so B-API's proof that ``get_quotes`` answers ``.NS`` from the live service covers them."""
+        """The server-side price path the inventory flagged as D9 (alerts) prices NSE names through ``get_quotes`` — so
+        B-API's proof that ``get_quotes`` answers ``.NS`` from the live service covers it. D10 (results-reacting) no longer
+        does (L2-API, round 2): it reads the live hub itself, so no rollback lever can send it to Yahoo."""
         callers = {(m, f) for m, f, _, c in nse_symbol_calls(graph) if c == NSE_SAFE_ENTRY}
         assert any(m == "alerts" for m, _ in callers), callers
-        assert any(m == "markets" for m, _ in callers), callers
-        assert not any(m in ("quotes", "live") for m, _ in callers), f"the live routes price through Yahoo's entry: {callers}"
+        assert not any(m in ("quotes", "live", "markets") for m, _ in callers), \
+            f"the live routes / results-reacting price through Yahoo's entry: {callers}"
+
+    def test_results_reacting_and_stored_closes_read_nse_only(self, graph: CallGraph, routes: dict[str, tuple[str, str]]):
+        """L2-API (round 2): results-reacting (EVTS / BRF, D10) prices every filer from the live hub and reaches no Yahoo
+        fetcher; /api/market/closes (COMP history, sparks) reads data-service /db/closes and reaches no Yahoo fetcher."""
+        react, closes = routes.get("/api/market/results-reacting"), routes.get("/api/market/closes")
+        assert react and closes, (react, closes)
+        assert not graph.yahoo_sinks(react), f"results-reacting reaches Yahoo: {graph.yahoo_sinks(react)}"
+        assert graph.reaches_text(react, LIVE_SERVICE_TEXT), "results-reacting does not reach data-service /live/quotes"
+        assert not graph.yahoo_sinks(closes), f"/api/market/closes reaches Yahoo: {graph.yahoo_sinks(closes)}"
+        assert graph.reaches_text(closes, re.compile(r"/db/closes\b")), "/api/market/closes does not read /db/closes"
 
     def test_data_service_live_modules_have_no_yahoo_and_no_breeze_rest_quote(self):
         need(DATA_SVC / "live_quotes.py", "LV-DATA")
@@ -870,6 +882,49 @@ class TestLiveHookAdoptedS3:
         """The browser never fetches Yahoo's API hosts (a link-out to finance.yahoo.com/quote is a link, not data)."""
         bad = [str(p.relative_to(ROOT)) for p, s in sources.items() if YAHOO_API_HOST.search(s)]
         assert not bad, bad
+
+
+# L2-UI (live program round 2, 5 Nov): the NSE rows of COMP, WTCH and the news dock never reach a Yahoo path while the
+# live service answers, and OSTR's live chain seed is DELAYED with its age, never LIVE. Static, comments stripped; each
+# test carries a negative control on the pre-round-2 form.
+class TestRound2NseRowsL2UI:
+    def test_comp_reads_nse_closes_and_sends_only_non_nse_codes_to_yahoo(self):
+        src = ts_code(UI / "components" / "Compare.tsx")
+        model = ts_code(UI / "components" / "CompareCloses.ts")
+        assert "getMarketCloses(nse, PERIOD_DAYS[p])" in src, "COMP does not read /api/market/closes for its NSE stocks"
+        assert re.search(r"other\.map\(s => getNewsChart\(s, p\)", src), "COMP's Yahoo chart call is not limited to non-NSE codes"
+        yahoo_ns = re.compile(r"`\$\{s\}\.NS`")
+        assert not yahoo_ns.search(src), "COMP maps an NSE code to a Yahoo '.NS' symbol"
+        assert "source: 'NSE closes'" in model and not re.search(r"\blive:\s*true|state:\s*'live'", model)
+        assert yahoo_ns.search("const yahoo = (s: string) => (s.startsWith('^') || s.includes('.') ? s : `${s}.NS`)")   # control
+
+    def test_wtch_and_the_news_dock_send_nse_rows_to_yahoo_only_while_the_live_route_is_missing(self):
+        base = ts_code(UI / "components" / "news" / "nseBase.ts")
+        assert re.search(r"return liveStatus === 'missing' \? \[\.\.\.other, \.\.\.nse\.map\(", base), \
+            "the Yahoo-call filter no longer limits NSE rows to the not-deployed (404) case"
+        wm = ts_code(UI / "components" / "WatchMonitor.tsx")
+        nt = ts_code(UI / "components" / "news" / "NewsTerminal.tsx")
+        assert "const callKey = yahooCallSymbols(" in wm and "const syms = callKey ? callKey.split" in wm
+        assert re.findall(r"getNewsQuotes\(([^)]*)\)", wm) == ["syms.slice(i, i + 60"], re.findall(r"getNewsQuotes\(([^)]*)\)", wm)
+        assert "const callKey = yahooCallSymbols(" in nt and re.findall(r"getNewsQuotes\(([^)]*)\)", nt) == ["callKey.split(','"]
+        assert re.search(r"selNse \? nseChartFor\(selNse, effRange\) : getNewsChart\(selected, effRange\)", nt), \
+            "the news dock's chart of an NSE pick is not NSE's stored bars"
+        for f in ("nseBase.ts", "useNseBase.ts", "nseChart.ts"):
+            t = ts_code(UI / "components" / "news" / f)
+            assert not re.search(r"news-scanner|getNewsQuotes|getNewsChart|finance\.yahoo|yfinance", t), f"{f} reaches a Yahoo path"
+        old = "const syms = yahooKey ? yahooKey.split(',') : []\ngetNewsQuotes(syms.slice(i, i + 60))"
+        assert "const syms = callKey ? callKey.split" not in old                                                   # control
+
+    def test_ostr_seed_is_nse_delayed_never_live_and_pricing_reads_the_chain(self):
+        sb = ts_code(UI / "components" / "StrategyBuilder.tsx")
+        seed = ts_code(UI / "components" / "strategySeed.ts")
+        assert re.search(r"mode === 'live'\s*\?\s*getOptionChainLive\(symbol, expiry \?\? undefined\)", sb)
+        assert "nseDelayedSource(chain.as_of" in seed and not re.search(r"state:\s*'live'|\blive:\s*true", seed)
+        assert nse_live_sites(sb) == 0
+        start = sb.index("axios.post<Analysis>('/api/options/strategy/analyze'")
+        analyze = sb[start:sb.index("}, { timeout: 15000 })", start)]
+        assert "spotNow" not in analyze and "ulRow" not in analyze and "days_to_expiry: Math.max(0, chain.days_to_expiry) + 0.5" in analyze
+        assert "spotNow" in "forward: spotNow ?? forward,"                                                          # control
 
 
 class TestNseWebsiteNeverLiveS4:

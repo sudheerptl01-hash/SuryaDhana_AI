@@ -1,7 +1,7 @@
 """Shared fakes for the LV-API tests (test_live_*.py; this file holds no tests).
 
-``FakeDataService`` answers data-service's ``/live/quotes``, ``/live/status`` and ``/db/security/{sym}/history`` on an
-``httpx.MockTransport``; ``install`` routes the process-wide client (``shared.http_client.get_async_client``) AND every
+``FakeDataService`` answers data-service's ``/live/quotes``, ``/live/status``, ``/db/closes`` (the stored-close batch read,
+L2-API) and ``/db/security/{sym}/history`` on an ``httpx.MockTransport``; ``install`` routes the process-wide client (``shared.http_client.get_async_client``) AND every
 ``httpx.AsyncClient`` a router builds itself (news_scanner's Yahoo / prev-close clients) through it, so any request to a
 host that is not data-service -- Yahoo above all -- is recorded in ``fake.foreign`` instead of leaving the machine.
 ``YahooSpy`` replaces news_scanner's one Yahoo chart fetch and records every symbol it was asked for.
@@ -52,6 +52,23 @@ def row(price: float | None, *, state: str = "live", source: str = "breeze_ws", 
     return out
 
 
+def closes(points_oldest_first: list[float], *, last_day: int = 4, high: float | None = None, low: float | None = None,
+           name: str | None = None, source: str = "nse_bhavcopy") -> dict[str, Any]:
+    """One symbol of a data-service /db/closes body: ``series`` (adjusted closes, oldest first, the last on 2026-11-
+    ``last_day``) and ``meta`` (name, the window's high / low)."""
+    pts = []
+    n = len(points_oldest_first)
+    for i, c in enumerate(points_oldest_first):
+        day = last_day - (n - 1 - i)
+        d = f"2026-11-{day:02d}" if day > 0 else f"2026-10-{31 + day:02d}"
+        pts.append({"date": d, "close": c})
+    return {"series": pts, "meta": {"source": source, "name": name, "first_date": pts[0]["date"] if pts else None,
+                                    "last_date": pts[-1]["date"] if pts else None, "sessions": n,
+                                    "high": high if high is not None else (max(points_oldest_first) if pts else None),
+                                    "low": low if low is not None else (min(points_oldest_first) if pts else None),
+                                    "actions": []}}
+
+
 def history(sym: str, closes_newest_first: list[float], *, start_day: int = 4, action_k: dict[int, float] | None = None,
             high: float | None = None, low: float | None = None) -> dict[str, Any]:
     """A data-service HP body (rows newest first). ``action_k`` maps a row index to its ex-date multiplier."""
@@ -74,6 +91,8 @@ class FakeDataService:
                                        "cap": 535, "breeze_session": True,
                                        "nse_fallback": {"ok": True, "last_ok_at": "2026-11-05T10:59:30+05:30"}}
         self.histories: dict[str, dict[str, Any]] = {}
+        self.closes: dict[str, dict[str, Any]] = {}   # SYM -> closes(...) (one symbol of a /db/closes body)
+        self.closes_status: int | None = None
         self.requests: list[httpx.Request] = []
         self.foreign: list[str] = []
         self.quotes_status: int | None = None        # answer /live/quotes with this status instead of 200
@@ -112,6 +131,17 @@ class FakeDataService:
             sym = unquote(m.group(1))
             body = self.histories.get(sym)
             return httpx.Response(200, json=body) if body else httpx.Response(404, json={"detail": f"{sym} not found"})
+        if path == "/db/closes":
+            if self.closes_status:
+                return httpx.Response(self.closes_status, json={"detail": "Not Found" if self.closes_status == 404 else "boom"})
+            syms = [s for s in request.url.params.get("symbols", "").split(",") if s]
+            tail = int(request.url.params.get("tail") or 0) or None
+            have = {s: self.closes[s] for s in syms if s in self.closes and self.closes[s]["series"]}
+            return httpx.Response(200, json={
+                "as_of": max(v["meta"]["last_date"] for v in have.values()) if have else None, "source": "nse_bhavcopy",
+                "tail": tail, "series": {s: (v["series"][-tail:] if tail else v["series"]) for s, v in have.items()},
+                "meta": {s: v["meta"] for s, v in have.items()},
+                "missing": {s: "not in the NSE bhavcopy (EQ/BE) between 2025-11-04 and 2026-11-05" for s in syms if s not in have}})
         if path == "/db/prev-close":
             return httpx.Response(200, json={"before": "x", "prev": {}})
         return httpx.Response(404, json={"detail": f"no fake for {path}"})
@@ -119,6 +149,10 @@ class FakeDataService:
     def quote_calls(self) -> list[list[str]]:
         return [[s for s in r.url.params.get("symbols", "").split(",") if s] for r in self.requests
                 if r.url.host == "data-service" and r.url.path == "/live/quotes"]
+
+    def closes_calls(self) -> list[list[str]]:
+        return [[s for s in r.url.params.get("symbols", "").split(",") if s] for r in self.requests
+                if r.url.host == "data-service" and r.url.path == "/db/closes"]
 
     def calls_to(self, path_prefix: str) -> int:
         return sum(1 for r in self.requests if r.url.host == "data-service" and r.url.path.startswith(path_prefix))
@@ -171,6 +205,7 @@ def install(monkeypatch: Any, fake: FakeDataService | None = None, *, clock: Clo
     monkeypatch.setattr(live, "_hub", live.LiveQuotesHub(clock=clk, wall=lambda: wall))
     monkeypatch.setattr(live, "_status", live.LiveStatusCache(clock=clk))
     monkeypatch.setattr(live, "now_ist", lambda: wall)
+    monkeypatch.setattr(live, "_closes_batcher", live.ClosesBatcher(clock=clk))
     ns._cache.clear()
     return fake
 

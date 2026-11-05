@@ -1,7 +1,10 @@
 """Market Monitor proxy: breadth, regime score, sectors and movers (computed by data-service)."""
 from __future__ import annotations
 
+import functools
+import math
 import os
+import re
 from datetime import date, datetime
 from typing import Any
 
@@ -11,6 +14,7 @@ from shared import http_client
 from cache import SWRCache, cache_headers
 from fastapi import APIRouter, HTTPException, Query, Response
 
+from routers import live as _live   # the live NSE hub: results-reacting prices and /closes symbols (L2-API)
 from routers._upstream import upstream_detail
 
 router = APIRouter()
@@ -1063,6 +1067,77 @@ def reacting_rows(filed: dict[str, str], typical: dict[str, dict], chg: dict[str
     return rows
 
 
+# Prices (live NSE program round 2, L2-API): every filer and the NIFTY 50 are priced by the live NSE hub (routers/live.py:
+# Breeze websocket tick -> NSE website copy -> the stored EOD close, each row with its source / state / age), never
+# Yahoo. A change counts as TODAY's reaction only when the row is live or delayed, or the session's close dated today; a
+# stale EOD row carries the previous session's change and is never shown as today's move. On an NSE holiday (the hub's
+# market says the last session was another day) there is no reaction yet.
+REACT_MOVE_STATES = frozenset({"live", "delayed", "closed"})
+REACT_INDEX = "NIFTY 50"
+_ISO_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}")
+
+
+def _row_day(row: dict[str, Any]) -> str | None:
+    """The session date a hub row's price belongs to: its ltt's IST date (the contract stamps +05:30), else ``date``."""
+    for v in (row.get("ltt"), row.get("date")):
+        if isinstance(v, str) and _ISO_DAY.match(v):
+            return v[:10]
+    return None
+
+
+def todays_move(row: Any, today: str) -> float | None:
+    """A live-hub row's change_pct when it is TODAY's move, else None (stale / unavailable rows, a close of another
+    session, a row without a finite change)."""
+    if not isinstance(row, dict) or row.get("state") not in REACT_MOVE_STATES or row.get("price") is None:
+        return None
+    c = row.get("change_pct")
+    if isinstance(c, bool) or not isinstance(c, (int, float)) or not math.isfinite(c):
+        return None
+    day = _row_day(row)
+    if day != today and (day is not None or row.get("state") == "closed"):
+        return None
+    return float(c)
+
+
+def price_fields(row: Any, *, reason: str | None = None) -> dict[str, Any]:
+    """source / state / age_s / ltt (+ reason) of the price behind a results-reacting row (all None when there is none)."""
+    if not isinstance(row, dict):
+        return {"source": None, "state": None, "age_s": None, "ltt": None, **({"reason": reason} if reason else {})}
+    out = {"source": row.get("source"), "state": row.get("state"), "age_s": row.get("age_s"), "ltt": row.get("ltt")}
+    why = reason or row.get("reason")
+    if why:
+        out["reason"] = str(why)[:200]
+    return out
+
+
+def preopen_fields(stamp: str, now: datetime) -> dict[str, Any]:
+    """The pre-open auction price's labels: NSE's website copy, aged from the book's own timestamp ('05-Nov-2026 09:07:58')."""
+    try:
+        at = datetime.strptime(stamp[:20], "%d-%b-%Y %H:%M:%S")  # noqa: DTZ007 — NSE's IST wall time, compared with the local clock
+    except ValueError:
+        return {"source": "nse_api", "state": "delayed", "age_s": None, "ltt": None,
+                "reason": "NSE pre-open auction price (IEP); the session opens 09:15"}
+    age = max(0.0, (now - at).total_seconds())
+    return {"source": "nse_api", "state": "delayed" if age <= 90 else "stale", "age_s": round(age, 1),
+            "ltt": at.strftime("%Y-%m-%dT%H:%M:%S+05:30"),
+            "reason": f"NSE pre-open auction price (IEP) at {at:%H:%M:%S}; the session opens 09:15"}
+
+
+def _react_now() -> datetime:
+    """The local wall clock (IST on the owner's Mac, the clock data-service computes its windows from); tests pin it."""
+    return datetime.now()  # noqa: DTZ005 — local clock on purpose
+
+
+def price_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Which sources priced the rows and the oldest price age: the panel's SourceChip."""
+    counts: dict[str, int] = {}
+    for r in rows:
+        k = r.get("source") or "none"
+        counts[k] = counts.get(k, 0) + 1
+    ages = [r["age_s"] for r in rows if isinstance(r.get("age_s"), (int, float)) and r.get("change_pct") is not None]
+    return {"sources": counts, "max_age_s": max(ages) if ages else None}
+
+
 @router.get("/results-reacting")
 async def results_reacting(response: Response = None) -> dict:  # type: ignore[assignment]  # injected by FastAPI
     """Cached at most 60 s as before; now single flight with a background refresh after 30 s (C-PERF-01)."""
@@ -1073,12 +1148,13 @@ async def results_reacting(response: Response = None) -> dict:  # type: ignore[a
 
 async def _results_reacting() -> dict:
     """Results filed since the last close (after 15:30 on the previous trading day, or today), with today's live move
-    against the stock's typical results-day move. Filings: NSE announcements (results category); prices: NSE heatmap
-    lists, Yahoo for the rest; typical moves: past reactions in nse_results."""
+    against the stock's typical results-day move. Filings: NSE announcements (results category); prices: the live NSE
+    hub (Breeze tick -> NSE website -> stored close, with source / state / age per row; never Yahoo), the pre-open
+    auction before 09:15; typical moves: past reactions in nse_results."""
     import asyncio
-    from datetime import date, datetime, timedelta
-    from routers.news_scanner import get_quotes
-    today = date.today()  # noqa: DTZ005,DTZ011 — local clock on purpose (data-service computes its windows from it)
+    from datetime import timedelta
+    now = _react_now()
+    today = now.date()
     prev = today - timedelta(days=1)
     while prev.weekday() >= 5:
         prev -= timedelta(days=1)
@@ -1092,9 +1168,8 @@ async def _results_reacting() -> dict:
         if not filed:
             return {"rows": [], "since": f"{prev.isoformat()} 15:30"}
         syms = sorted(filed)
-        tm, lq, nl, fl = await asyncio.gather(
+        tm, fl = await asyncio.gather(
             client.get(f"{DATA_SVC}/db/typical-results-moves", params={"symbols": ",".join(syms)}),
-            client.get(f"{DATA_SVC}/db/live-quotes"), client.get(f"{DATA_SVC}/db/nifty-live"),
             client.get(f"{DATA_SVC}/db/financials-latest", params={"symbols": ",".join(syms)}), return_exceptions=True)
         fin_latest = fl.json().get("latest", {}) if not isinstance(fl, Exception) and fl.status_code == 200 else {}
         # the numbers for this filing: cached quarter filed since the previous close; queue the rest for a background read
@@ -1105,38 +1180,59 @@ async def _results_reacting() -> dict:
                 await client.post(f"{DATA_SVC}/db/financials/prefetch", params={"symbols": ",".join(missing)})
             except httpx.HTTPError:
                 pass
-    nifty = nl.json().get("change_pct") if not isinstance(nl, Exception) and nl.status_code == 200 else None
     typical = tm.json().get("moves", {}) if not isinstance(tm, Exception) and tm.status_code == 200 else {}
-    live = lq.json().get("quotes", {}) if not isinstance(lq, Exception) and lq.status_code == 200 else {}
-    phase = reaction_phase(datetime.now())  # noqa: DTZ005,DTZ011 — local clock on purpose (data-service computes its windows from it)
+    phase = reaction_phase(now)
+    names: dict[str, str] = {}
+    for s in syms:
+        try:
+            names[s] = _live.normalize_symbol(s)
+        except ValueError:
+            continue                                   # an announcement code that is not an NSE symbol: never priced
+    quotes: dict[str, Any] = {}
+    market: dict[str, Any] | None = None
+    if phase == "session":
+        snap = await _live.hub().quotes(list(dict.fromkeys([*names.values(), REACT_INDEX])))
+        quotes, market = snap.payload["quotes"], snap.payload["market"]
+        if market.get("state") == "closed" and market.get("session_date") not in (None, today.isoformat()):
+            phase = "holiday"                          # NSE's holiday master: no session today, no reaction yet
+    base = {"since": f"{prev.isoformat()} 15:30", "market": market}
     chg: dict[str, float] = {}
     if phase != "session":
         # before 09:15 live quotes still show yesterday's move: use today's pre-open auction price, or nothing
+        labels: dict[str, dict[str, Any]] = {}
         if phase == "preopen":
             try:
                 async with httpx.AsyncClient(timeout=httpx.Timeout(20.0)) as client:
                     po = (await client.get(f"{DATA_SVC}/db/preopen", params={"key": "ALL"})).json()
-                if str(po.get("timestamp", ""))[:11] == datetime.now().strftime("%d-%b-%Y"):  # noqa: DTZ005,DTZ011 — local clock on purpose (data-service computes its windows from it)
+                stamp = str(po.get("timestamp", ""))
+                if stamp[:11] == now.strftime("%d-%b-%Y"):
                     chg = {r["symbol"]: r["change_pct"] for r in po.get("rows") or [] if r.get("symbol") in filed and r.get("change_pct") is not None}
+                    labels = {s: preopen_fields(stamp, now) for s in chg}
             except (httpx.HTTPError, ValueError):
                 chg = {}
+        why = {"preopen": "no NSE pre-open auction price for it (yet)", "holiday": "no NSE session today: no reaction yet"}.get(
+            phase, "the session has not opened: no reaction yet")
         rows = reacting_rows(filed, typical, chg, None)
         for r in rows:
             f = fresh.get(r["symbol"]) or {}
             r.update(revenue_yoy=f.get("revenue_yoy"), pat_yoy=f.get("pat_yoy"), pat_turn=f.get("pat_yoy_turn"), quarter=f.get("period_end"),
                      numbers=numbers_status(r["symbol"], fresh, fin_latest))
-        return {"rows": rows, "phase": phase, "nifty_change_pct": None, "since": f"{prev.isoformat()} 15:30",
-                "as_of": datetime.now().isoformat(timespec="seconds")}  # noqa: DTZ005,DTZ011 — local clock on purpose (data-service computes its windows from it)
-    chg = {s: live[s]["change_pct"] for s in syms if (live.get(s) or {}).get("change_pct") is not None}
-    rest = [s for s in syms if s not in chg]
-    for i in range(0, len(rest), 60):
-        q = (await get_quotes(symbols=",".join(f"{s}.NS" for s in rest[i:i + 60])))["quotes"]
-        for s in rest[i:i + 60]:
-            v = q.get(f"{s}.NS") or {}
-            if v.get("available") and v.get("change_pct") is not None and v.get("state") not in ("stale", "unavailable"):
-                chg[s] = v["change_pct"]
+            r.update(labels.get(r["symbol"]) or price_fields(None, reason=why))
+        return {"rows": rows, "phase": "closed" if phase == "holiday" else phase, "nifty_change_pct": None, **base,
+                "nifty": price_fields(None, reason=why), "price_source": price_summary(rows),
+                "as_of": now.isoformat(timespec="seconds")}
+    today_s = today.isoformat()
+    prices: dict[str, dict[str, Any]] = {}
+    for s in syms:
+        row = quotes.get(names[s]) if s in names else None
+        prices[s] = price_fields(row, reason=None if s in names else "not an NSE symbol")
+        c = todays_move(row, today_s)
+        if c is not None:
+            chg[s] = c
+    nifty_row = quotes.get(REACT_INDEX)
+    nifty = todays_move(nifty_row, today_s)
     # filed after today's close: today's move happened before the results, so there is no reaction to show yet
-    after_close = f"{today.isoformat()} 15:30"
+    after_close = f"{today_s} 15:30"
     chg = {s: v for s, v in chg.items() if filed[s] < after_close}
     rows = reacting_rows(filed, typical, chg, nifty)
     for r in rows:
@@ -1144,7 +1240,9 @@ async def _results_reacting() -> dict:
         f = fresh.get(r["symbol"]) or {}
         r.update(revenue_yoy=f.get("revenue_yoy"), pat_yoy=f.get("pat_yoy"), pat_turn=f.get("pat_yoy_turn"), quarter=f.get("period_end"),
                  numbers=numbers_status(r["symbol"], fresh, fin_latest))
-    return {"rows": rows, "phase": phase, "nifty_change_pct": nifty, "since": f"{prev.isoformat()} 15:30", "as_of": datetime.now().isoformat(timespec="seconds")}  # noqa: DTZ005 — local clock on purpose
+        r.update(prices[r["symbol"]])
+    return {"rows": rows, "phase": phase, "nifty_change_pct": nifty, **base, "nifty": price_fields(nifty_row),
+            "price_source": price_summary(rows), "as_of": now.isoformat(timespec="seconds")}
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1618,3 +1716,117 @@ async def desk_attribution_route(response: Response, horizon: str = Query("1m", 
                                                              "to": win[-1] if win else None, "sessions": len(win)},
             **out, "badges": {"book": "arithmetic", "nifty": "arithmetic"}, "paper_only": True,
             "note_rules": "reads the paper ledger only; writes nothing; the Desk's rules are frozen", **reads.meta()}
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+# Live NSE program round 2 (L2-API, 5 Nov 2026) — stored NSE closes for history panes: GET /api/market/closes
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+# COMP's history, WTCH / news-dock sparks and any other daily-history pane read NSE's own stored closes here: data-service
+# /db/closes (nse_bhavcopy EQ/BE, split/bonus-adjusted as shared.nse_panel does it, only sessions already stored; index
+# names from NSE's daily index file). End of day, published once a day: the body says so (source 'nse_bhavcopy', as_of =
+# the newest stored session) and never claims to be live. One SWR cache keyed by the request (10 min, then a background
+# refresh; never older than 1 h), so N windows on the same view cost one DuckDB read per 10 min. Never Yahoo.
+CLOSES_REFRESH_S = 600.0
+CLOSES_MAX_AGE_S = 3600.0
+CLOSES_MAX_SYMBOLS = 300
+CLOSES_MAX_SYMBOL_DAYS = 120_000          # data-service's per-request budget (symbols × calendar days)
+CLOSES_UPSTREAM = "data-service-closes"
+_CLOSES = SWRCache("market.closes", max_items=64, refresh_after=CLOSES_REFRESH_S, max_age=CLOSES_MAX_AGE_S)
+_CLOSES_META_KEYS = ("source", "name", "first_date", "last_date", "sessions", "high", "low", "last_series", "actions")
+_CLOSE_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def closes_symbols(raw: str) -> tuple[list[str], dict[str, str]]:
+    """'TCS,infy.ns,^NSEI' → (['TCS', 'INFY', 'NIFTY 50'], {'infy.ns': 'INFY', '^NSEI': 'NIFTY 50'}): canonical NSE names
+    in request order + the spellings that changed. ValueError on a bad symbol, none, or more than 300."""
+    asked = [x.strip() for x in raw.split(",") if x.strip()]
+    names: list[str] = []
+    aliases: dict[str, str] = {}
+    for a in asked:
+        n = _live.nse_name(a)
+        names.append(n)
+        if n != a:
+            aliases[a] = n
+    out = list(dict.fromkeys(names))
+    if not out:
+        raise ValueError("no symbols given")
+    if len(out) > CLOSES_MAX_SYMBOLS:
+        raise ValueError(f"at most {CLOSES_MAX_SYMBOLS} symbols per request ({len(out)} given)")
+    return out, aliases
+
+
+def _small(v: Any) -> bool:
+    return v is None or isinstance(v, (bool, int, float, str)) and (not isinstance(v, str) or len(v) <= 160)
+
+
+def coerce_closes(body: Any, syms: list[str]) -> dict[str, Any]:
+    """data-service's /db/closes body → the route's body, validated (never trust the upstream): finite positive closes
+    on ISO dates, oldest first, one per date; meta trimmed to known small fields; every asked symbol either in
+    ``series`` or in ``missing`` with a reason."""
+    if not isinstance(body, dict) or not isinstance(body.get("series"), dict):
+        raise _UpstreamError(502, "data-service /db/closes answered without a series map", upstream=CLOSES_UPSTREAM)
+    series_in: dict[str, Any] = body["series"]
+    meta_raw, missing_raw = body.get("meta"), body.get("missing")
+    meta_in: dict[str, Any] = meta_raw if isinstance(meta_raw, dict) else {}
+    missing_in: dict[str, Any] = missing_raw if isinstance(missing_raw, dict) else {}
+    series: dict[str, list[dict[str, Any]]] = {}
+    meta: dict[str, dict[str, Any]] = {}
+    for s in syms:
+        pts: dict[str, float] = {}
+        raw_pts = series_in.get(s)
+        for p in raw_pts if isinstance(raw_pts, list) else []:
+            if isinstance(p, dict) and isinstance(p.get("date"), str) and _CLOSE_DAY.fullmatch(p["date"]):
+                c = _num(p.get("close"))
+                if c is not None and c > 0:
+                    pts[p["date"]] = c
+        if not pts:
+            continue
+        series[s] = [{"date": d, "close": c} for d, c in sorted(pts.items())]
+        m_raw = meta_in.get(s)
+        m: dict[str, Any] = m_raw if isinstance(m_raw, dict) else {}
+        meta[s] = {k: m[k] for k in _CLOSES_META_KEYS if k in m and (_small(m[k]) or k == "actions" and isinstance(m[k], list)
+                                                                      and len(m[k]) <= 50 and all(isinstance(a, dict) for a in m[k]))}
+        meta[s]["last_date"] = series[s][-1]["date"]
+    missing = {s: str(missing_in.get(s) or "not in the data-service answer")[:200] for s in syms if s not in series}
+    last = [v[-1]["date"] for v in series.values()]
+    return {"as_of": max(last) if last else None, "source": "nse_bhavcopy", "series": series, "meta": meta, "missing": missing,
+            "from": body.get("from") if _small(body.get("from")) else None, "to": body.get("to") if _small(body.get("to")) else None,
+            "tail": body.get("tail") if isinstance(body.get("tail"), int) else None,
+            "generated_at": body.get("generated_at") if _small(body.get("generated_at")) else None,
+            "note": "end of day: NSE's stored closes (bhavcopy / daily index file), split/bonus-adjusted; never live"}
+
+
+async def _fetch_closes(syms: tuple[str, ...], days: int, tail: int | None) -> dict[str, Any]:
+    params: dict[str, Any] = {"symbols": ",".join(syms), "days": days}
+    if tail:
+        params["tail"] = tail
+    body = await _get_json(f"{_live.data_svc()}/db/closes", route="read", params=params, upstream=CLOSES_UPSTREAM)
+    return coerce_closes(body, list(syms))
+
+
+@router.get("/closes")
+async def market_closes(response: Response, symbols: str = Query(..., min_length=1, max_length=12000),
+                        days: int = Query(365, ge=5, le=3700), tail: int | None = Query(None, ge=1, le=3700)) -> dict:
+    """NSE's stored daily closes for up to 300 symbols / index names: ``{as_of, source: 'nse_bhavcopy', series: {SYM:
+    [{date, close}]}, meta, missing, aliases}`` (oldest first; ``days`` = calendar days back, ``tail`` = only the last N
+    sessions). End of day, never live, never Yahoo. The cache age is in X-Cache-Age."""
+    try:
+        syms, aliases = closes_symbols(symbols)
+    except ValueError as exc:
+        _fail(422, "invalid", str(exc), "NSE symbols (TCS, M&M) or index names ('NIFTY 50'), comma-separated, at most 300")
+    if len(syms) * days > CLOSES_MAX_SYMBOL_DAYS:
+        _fail(422, "invalid", f"{len(syms)} symbols × {days} days is over the {CLOSES_MAX_SYMBOL_DAYS:,} symbol-day budget",
+              "ask fewer symbols or a shorter window")
+    key = (tuple(sorted(syms)), days, tail)
+    try:
+        served = await _CLOSES.get(key, functools.partial(_fetch_closes, key[0], days, tail))
+    except _UpstreamError as exc:
+        hint = ("data-service has no /db/closes yet: deploy data-service with the live-NSE round 2 build"
+                if exc.status_code == 404 else "data-service is down or busy; retry shortly")
+        _fail(503 if exc.status_code in (404, 503) or exc.status_code >= 500 else 502, "upstream_down",
+              f"stored closes unavailable: HTTP {exc.status_code}: {exc.detail}"[:300], hint)
+    cache_headers(response, served)
+    body = served.value
+    return {**body, "series": {s: body["series"][s] for s in syms if s in body["series"]},
+            "meta": {s: body["meta"][s] for s in syms if s in body["meta"]},
+            "missing": {s: body["missing"][s] for s in syms if s in body["missing"]}, "aliases": aliases}

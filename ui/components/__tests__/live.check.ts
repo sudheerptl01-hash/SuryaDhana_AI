@@ -510,5 +510,157 @@ const CLOSED = { state: 'closed' as const, session_date: '2026-11-05' }
   check('L13 negative control: the old literal is caught', /state: 'live'/.test("return { state: 'live', source: src, asOf: lastTs }"))
 }
 
+// ── round 2 (L2-UI, 5 Nov): COMP on NSE closes, OSTR seeded from the live chain, WTCH / news dock on the NSE base ──
+// L20 COMP (components/CompareCloses.ts)  L21 OSTR (components/strategySeed.ts)  L22 the NSE base layer (news/nseBase.ts)
+// L23 the dock's NSE chart (news/nseChart.ts)  L24 static: no Yahoo request for an NSE row on COMP / WTCH / the dock
+type CmpMod = typeof import('../CompareCloses')
+type SeedMod = typeof import('../strategySeed')
+type BaseMod = typeof import('../news/nseBase')
+type NChartMod = typeof import('../news/nseChart')
+const CMP = (await import(new URL('../CompareCloses.ts', import.meta.url).href)) as CmpMod
+const SEED = (await import(new URL('../strategySeed.ts', import.meta.url).href)) as SeedMod
+const NB = (await import(new URL('../news/nseBase.ts', import.meta.url).href)) as BaseMod
+const NC = (await import(new URL('../news/nseChart.ts', import.meta.url).href)) as NChartMod
+{
+  // L20: which source each compared symbol reads
+  check('L20 NSE codes go to the closes route', ['TCS', 'M&M', 'BAJAJ-AUTO'].every(s => CMP.seriesSource(s) === 'nse_closes'))
+  check('L20 the benchmark reads the stored index closes, a ^ or dotted code Yahoo, junk nowhere',
+    CMP.seriesSource('^NSEI') === 'index_store' && CMP.seriesSource('^GSPC') === 'yahoo' && CMP.seriesSource('RELIANCE.BO') === 'yahoo' && CMP.seriesSource('BAD SYM') === 'invalid')
+  check('L20 negative control: an NSE code is never a Yahoo symbol', !['TCS', 'INFY', 'M&M'].some(s => CMP.seriesSource(s) === 'yahoo'))
+  check('L20 period start in calendar days', CMP.periodStart('2026-11-05', '1y') === '2025-11-04' && CMP.periodStart('2026-11-05', '1mo') === '2026-10-05', CMP.periodStart('2026-11-05', '1y'))
+  const body = { as_of: '2026-11-04', source: 'nse_bhavcopy', series: {
+    TCS: [{ date: '2026-11-04', close: 4000 }, { date: '2026-11-03', close: 3990 }, { date: 'bad', close: 1 }, { date: '2026-11-02', close: -5 }, { date: '2025-01-02', close: 3000 }],
+    'INFY.NS': [{ date: '2026-11-04', close: '1500.5' }, { date: '2026-11-03', close: 1490 }],
+  } }
+  const got = CMP.seriesFromCloses(body, ['TCS', 'INFY', 'HCLTECH'], '2026-10-05')
+  check('L20 closes → ascending, finite, positive, dated, trimmed to the period', JSON.stringify(got.TCS) === JSON.stringify({ sym: 'TCS', dates: ['2026-11-03', '2026-11-04'], close: [3990, 4000] }), got.TCS)
+  check('L20 a .NS key and a string close are read', got.INFY?.close[1] === 1500.5, got.INFY)
+  check('L20 negative control: a symbol the route lacks has no series (never filled from another source)', got.HCLTECH === null)
+  const short = CMP.cleanSeries('NIFTY 50', [{ date: '2026-11-03', close: 24000 }, { date: '2026-11-04', close: 24100 }], '2025-11-04')
+  const store = CMP.cleanSeries('^NSEI', [{ date: '2025-11-04', close: 22000 }, { date: '2026-11-04', close: 24100 }], '2025-11-04')
+  const b1 = CMP.pickBench(short, store, '2025-11-04')
+  check('L20 a 2-session NSE index file does not make a 1-year benchmark: the stored closes stand in', b1.source === 'index_store' && b1.series?.dates[0] === '2025-11-04', b1)
+  const b2 = CMP.pickBench(store, null, '2025-11-04')
+  check('L20 NSE\'s daily index file wins once it covers the period', b2.source === 'nse_index_file' && b2.series?.sym === '^NSEI', b2)
+  check('L20 coversPeriod negative control', !CMP.coversPeriod(short, '2025-11-04') && CMP.coversPeriod(store, '2025-11-04'))
+  const data = { '^NSEI': store!, TCS: got.TCS!, '^GSPC': { sym: '^GSPC', dates: ['2026-11-04'], close: [6000] } }
+  const src = CMP.compareSource(data, { bench: 'nse_index_file', now: new Date(Date.UTC(2026, 10, 5, 6)) })
+  const chip = S.sourceChipText(src, new Date(Date.UTC(2026, 10, 5, 6)))
+  check('L20 the chip is EOD · <last NSE close>, source NSE closes, never live', src.state === 'delayed' && src.source === 'NSE closes' && chip.label === 'EOD · 04 NOV', [src, chip])
+  check('L20 the chip names the Yahoo symbols only for non-NSE codes', /\^GSPC: not NSE codes, Yahoo/.test(src.hint ?? '') && !/TCS[^,]*Yahoo/.test(src.hint ?? ''), src.hint)
+  check('L20 STALE past 4 days', CMP.compareSource({ TCS: got.TCS! }, { now: new Date(Date.UTC(2026, 10, 12, 6)) }).state === 'stale')
+  check('L20 header label', CMP.closesLabel('2026-11-04') === 'NSE closes · 04 Nov 2026' && CMP.closesLabel(null) === 'NSE closes · none stored')
+  check('L20 the stored-index chip says it may hold Yahoo-ingested rows', /may be Yahoo-ingested/.test(CMP.compareSource(data, { bench: 'index_store' }).hint ?? ''))
+}
+{
+  // L21: OSTR's seed
+  const at = (h: number, m: number, d = 5) => Date.UTC(2026, 10, d, h, m) - 330 * 60_000      // IST wall → epoch ms
+  check('L21 the service market state picks the seed', SEED.seedMode({ marketState: 'open', calendarOpen: false, nowMs: at(8, 0) }) === 'live'
+    && SEED.seedMode({ marketState: 'closed', calendarOpen: true, nowMs: at(11, 0) }) === 'eod' && SEED.seedMode({ marketState: 'pre-open', calendarOpen: true, nowMs: at(9, 5) }) === 'eod')
+  check('L21 without it, the calendar from 09:15 (options have no pre-open)', SEED.seedMode({ marketState: null, calendarOpen: true, nowMs: at(10, 20) }) === 'live'
+    && SEED.seedMode({ marketState: null, calendarOpen: true, nowMs: at(9, 5) }) === 'eod' && SEED.seedMode({ marketState: null, calendarOpen: false, nowMs: at(10, 20) }) === 'eod')
+  const liveChain = { live: true, as_of: '05-Nov-2026 10:19:30', date: '2026-11-05' }
+  const s1 = SEED.chainSeedSource(liveChain, { mode: 'live', nowMs: at(10, 20, 5) + 30_000 })
+  check('L21 the live chain reads DELAYED · NSE · <age> from its own stamp', s1.state === 'delayed' && S.sourceChipText(s1).label === 'DELAYED · NSE · 60s', [s1, S.sourceChipText(s1)])
+  const fresh = SEED.chainSeedSource({ ...liveChain, as_of: '05-Nov-2026 10:20:29' }, { mode: 'live', nowMs: at(10, 20, 5) + 30_000 })
+  check('L21 negative control: even a 1 s old NSE chain is never LIVE', fresh.state === 'delayed', fresh)
+  check('L21 a seed 11 min old is STALE', SEED.chainSeedSource(liveChain, { mode: 'live', nowMs: at(10, 31) }).state === 'stale')
+  const fb = SEED.chainSeedSource({ date: '2026-11-04' }, { mode: 'live', nowMs: at(10, 20), liveNote: 'live chain unavailable (HTTP 502)' })
+  check('L21 the EOD fallback in session reads EOD · <date> with the reason', S.sourceChipText(fb, new Date(at(10, 20))).label === 'EOD · 04 NOV' && fb.hint === 'live chain unavailable (HTTP 502)', fb)
+  const cl = SEED.chainSeedSource({ date: '2026-11-05' }, { mode: 'eod', nowMs: at(20, 30), marketState: 'closed', sessionDate: '2026-11-05' })
+  check('L21 after the close the bhavcopy chain reads CLOSE · <date>', cl.state === 'closed' && S.sourceChipText(cl).label === 'CLOSE · 05 NOV', cl)
+  const nf = SEED.chainSeedSource({ date: '2026-11-04' }, { mode: 'eod', nowMs: at(16, 0), marketState: 'closed', sessionDate: '2026-11-05' })
+  check('L21 the session ended without its file: STALE, says which file is missing', nf.state === 'stale' && /2026-11-05 F&O bhavcopy is not stored yet/.test(nf.hint ?? ''), nf)
+  const am = SEED.chainSeedSource({ date: '2026-11-05' }, { mode: 'eod', nowMs: at(8, 30, 6), marketState: 'closed', sessionDate: '2026-11-05' })
+  check('L21 negative control: before the next open the last session\'s file is CLOSE, not stale', am.state === 'closed', am)
+  check('L21 a file older than 4 days is STALE', SEED.chainSeedSource({ date: '2026-10-28' }, { mode: 'eod', nowMs: at(8, 30, 6), marketState: 'closed', sessionDate: '2026-11-05' }).state === 'stale')
+  check('L21 stamp clock + drift', SEED.stampClock('05-Nov-2026 10:19:30') === '10:19:30' && Math.abs((SEED.spotDriftPct(24000, 24120) ?? 0) - 0.5) < 1e-9 && SEED.spotDriftPct(null, 1) === null)
+  const sb = code(read('components/StrategyBuilder.tsx'))
+  check('L21 OSTR asks the live chain only in session, EOD otherwise and as the fallback',
+    /mode === 'live'\s*\?\s*getOptionChainLive\(symbol, expiry \?\? undefined\)/.test(sb) && /return eod\(\)/.test(sb) && /modeNow\.current\(\)/.test(sb))
+  const liveTrue = sb.match(/sourceOf\([^)]*live:\s*true[^)]*\)/g) ?? []
+  check('L21 the legs / payoff chips come from the seed rule; the only live:true chip is the Breeze margin answer', (sb.match(/source=\{seedSrc \?\?/g) ?? []).length === 2
+    && liveTrue.length === 1 && /source: 'BREEZE'/.test(liveTrue[0]), liveTrue)
+  // pricing math untouched: the analyze body and the margin call read the chain's forward, never the live spot
+  const analyze = sb.slice(sb.indexOf("axios.post<Analysis>('/api/options/strategy/analyze'"), sb.indexOf("}, { timeout: 15000 })"))
+  check('L21 the analyze body is the pre-live one (forward from the chain, DTE + 0.5, ATM IV default)', /\bforward,\n/.test(analyze) && analyze.includes('days_to_expiry: Math.max(0, chain.days_to_expiry) + 0.5') && analyze.includes('default_iv: chain.atm_iv ?? 15'), analyze.slice(0, 200))
+  check('L21 the live spot never reaches pricing or margin', !/spotNow|ulRow/.test(analyze) && !/postMargin\([^)]*spotNow/.test(sb) && /const forward = chain\?\.forward \?\? chain\?\.future \?\? chain\?\.spot \?\? null/.test(sb))
+  check('L21 a calendar-chosen seed is corrected once by the service\'s first market state, never re-seeded by the clock later',
+    /if \(!marketState \|\| !chain \|\| checkedSeed\.current\) return\s*checkedSeed\.current = true\s*if \(modeNow\.current\(\) !== loadedMode\) loadChain\(\)/.test(sb)
+    && !/\[loadChain, marketState\]|\[marketState, loadChain\]/.test(sb))
+  check('L21 negative control: the pricing scan catches a live spot in the body', /spotNow|ulRow/.test("axios.post<Analysis>('/api/options/strategy/analyze', { symbol, forward: spotNow ?? forward,"))
+}
+{
+  // L22: the NSE base layer
+  const pts = (n: number, from = 100) => Array.from({ length: n }, (_, i) => ({ date: new Date(Date.UTC(2025, 10, 5) + i * 86_400_000).toISOString().slice(0, 10), close: from + i }))
+  const body = { series: { TCS: pts(250), INFY: pts(30), WIPRO: pts(250) }, meta: { TCS: { name: 'Tata Consultancy Services Limited', high: 420, low: 90, last_date: '2026-07-12' } } }
+  const base = NB.nseBaseFromCloses(body, ['TCS', 'INFY.NS', 'WIPRO', 'HCLTECH'])
+  check('L22 meta high / low → the 52-week range on adjusted daily bars; the name from NSE', base.TCS?.range_basis === 'high_low' && base.TCS?.high_52w === 420 && base.TCS?.name === 'Tata Consultancy Services Limited', base.TCS)
+  check('L22 the spark is the last 22 closes', base.TCS?.spark.length === 22 && base.TCS?.spark[21] === 349, base.TCS?.spark.slice(-2))
+  check('L22 without meta, a full year of closes gives a CLOSING range (labelled)', base.WIPRO?.range_basis === 'closes' && base.WIPRO?.high_52w === 349 && base.WIPRO?.low_52w === 100, base.WIPRO)
+  check('L22 negative control: 30 sessions are not a 52-week range', base.INFY?.range_basis === null && base.INFY?.high_52w === null, base.INFY)
+  check('L22 a symbol without closes has no base (never another source)', base.HCLTECH === null)
+  const b: import('../news/nseBase').NseBase = { symbol: 'TCS', name: 'TCS Ltd', spark: [100, 101, 102], high_52w: 1480, low_52w: 900, range_basis: 'high_low', last_date: '2026-11-04' }
+  const live = row({ symbol: 'TCS', price: 1490, change_pct: 1.2, change: 17.7, day_high: 1495, day_low: 1470 })
+  const r1 = NB.nseQuoteRow('TCS', b, live)
+  check('L22 the live half: price / move / day range from the hook', r1.price === 1490 && r1.change_pct === 1.2 && r1.day_high === 1495 && r1.available === true && r1.live_source === 'breeze_ws', r1)
+  check('L22 today\'s live point extends the spark and the 52-week high', r1.spark?.[r1.spark.length - 1] === 1490 && r1.spark?.length === 4 && r1.high_52w === 1495 && r1.low_52w === 900, r1)
+  const eod = row({ symbol: 'TCS', price: 1478, change_pct: -2.5, change: -38, source: 'eod', state: 'stale', day_high: 1500, ltt: '2026-11-04T15:30:00+05:30' })
+  const r2 = NB.nseQuoteRow('TCS', b, eod)
+  check('L22 negative control: an in-session EOD row never paints yesterday\'s move, spark point or range', r2.change_pct === undefined && r2.spark?.length === 3 && r2.high_52w === 1480 && r2.stale === true, r2)
+  const r3 = NB.nseQuoteRow('TCS', b, undefined, 'fallback name')
+  check('L22 no live row: the stored half only, not available, no price', r3.available === false && r3.price === undefined && r3.name === 'TCS Ltd' && r3.base_source === 'nse_closes', r3)
+  check('L22 the name falls back to the directory without a base', NB.nseQuoteRow('TCS', null, undefined, 'Tata Consultancy').name === 'Tata Consultancy')
+  const syms = ['TCS.NS', 'AAPL', 'GC=F', 'M&M.NS', 'RELIANCE.BO']
+  check('L22 the 60 s Yahoo call carries non-NSE symbols only while the live service answers (ok / error / idle)',
+    ['ok', 'error', 'idle', 'loading'].every(st => !NB.yahooCallSymbols(syms, st).some(y => /\.NS$/.test(y))) && NB.yahooCallSymbols(syms, 'ok').length === 3, NB.yahooCallSymbols(syms, 'ok'))
+  check('L22 only a missing live route (404, not deployed) puts NSE rows on the pre-live route', NB.yahooCallSymbols(syms, 'missing').filter(y => /\.NS$/.test(y)).length === 2)
+  check('L22 titles name the basis and the stored date', /adjusted NSE daily bars \(stored to 2026-11-04\)/.test(NB.baseTitles(r1).range) && /CLOSING range/.test(NB.baseTitles({ ...r1, range_basis: 'closes' }).range))
+}
+{
+  // L23: the dock's NSE chart (a 1:1 bonus with ex-date 3 Nov: older prices × 0.5, older volume × 2)
+  const rows = [
+    { date: '2026-11-04', open: 995, high: 1005, low: 990, close: 1000, volume: 2000 },
+    { date: '2026-11-03', open: 1000, high: 1001, low: 985, close: 990, volume: 2100, action_k: 0.5 },
+    { date: '2026-11-02', open: 1990, high: 2010, low: 1980, close: 2000, volume: 1000 },
+    { date: '2026-11-01', open: 1950, high: 1965, low: 1940, close: 1960, volume: 900 },
+  ]
+  const c = NC.adjustedDailyCandles(rows)
+  check('L23 bhavcopy rows → oldest first, adjusted before the ex-date (a bonus is not a crash)', c.map(x => x.close).join() === '980,1000,990,1000' && c[1].volume === 2000 && c[2].volume === 2100, c)
+  const raw = NC.adjustedDailyCandles(rows.map(r => ({ ...r, action_k: null })))
+  check('L23 negative control: without the factor the old prices stay doubled', raw[1].close === 2000)
+  const w = NC.weeklyCandles(NC.adjustedDailyCandles([
+    { date: '2026-11-06', open: 10, high: 12, low: 9, close: 11, volume: 1 }, { date: '2026-11-05', open: 9, high: 13, low: 8, close: 10, volume: 1 },
+    { date: '2026-11-03', open: 8, high: 9, low: 7, close: 9, volume: 1 }, { date: '2026-10-30', open: 7, high: 8, low: 6, close: 7, volume: 1 },
+  ]))
+  check('L23 weekly bars carry each week\'s last trading day, its high / low / close', w.length === 2 && new Date(w[1].time * 1000).toISOString().slice(0, 10) === '2026-11-06' && w[1].high === 13 && w[1].low === 7 && w[1].close === 11 && w[1].volume === 3, w)
+  check('L23 RSI of a straight rise is 100; SMA', NC.rsiSeries(Array.from({ length: 20 }, (_, i) => i + 1))[19] === 100 && NC.smaSeries([1, 2, 3, 4], 2)[3] === 3.5)
+  const many = Array.from({ length: 300 }, (_, i) => ({ date: new Date(Date.UTC(2026, 10, 4) - i * 86_400_000).toISOString().slice(0, 10), open: 100, high: 101, low: 99, close: 100 + (299 - i) * 0.1, volume: 10 }))
+  const d1 = NC.nseDailyChart('TCS', many, '1mo')
+  check('L23 a daily range: ≤ 22 candles, EOD bhavcopy, no quote of its own', !!d1 && d1.candles.length === 22 && d1.intraday === false && d1.source_kind === 'nse_bhavcopy' && d1.quote.available === false && d1.last_date === '2026-11-04', d1 && { n: d1.candles.length, last: d1.last_date })
+  check('L23 stats always from daily bars (SMA 200 known on a 1M view)', !!d1 && d1.stats.sma200 != null && d1.stats.history_days === 300 && d1.sma200.length === 22)
+  check('L23 5Y is weekly', NC.nseDailyChart('TCS', many, '5y')?.interval === '1wk')
+  check('L23 1D: an empty tick store is no chart (never a Yahoo bar)', NC.nseIntradayChart('TCS', '2026-11-05', [], many) === null)
+  const i1 = NC.nseIntradayChart('TCS', '2026-11-05', [{ t: '09:15', o: 1, h: 2, l: 1, c: 2, v: 5 }, { t: '09:20', o: 2, h: 3, l: 2, c: 3, v: 5 }], many)
+  check('L23 1D from the tick store on an IST wall-clock axis', !!i1 && i1.intraday && i1.source_kind === 'tick_store' && new Date(i1.candles[0].time * 1000).toISOString().slice(11, 16) === '09:15', i1?.candles[0])
+}
+{
+  // L24: no Yahoo request for an NSE row (static, comments stripped), with negative controls on the old forms
+  const cp = code(read('components/Compare.tsx')), wm = code(read('components/WatchMonitor.tsx')), nt = code(read('components/news/NewsTerminal.tsx'))
+  const yahooNs = /`\$\{s\}\.NS`/
+  check('L24 COMP: NSE codes read getMarketCloses; Yahoo only through the non-NSE list', /getMarketCloses\(nse, PERIOD_DAYS\[p\]\)/.test(cp) && /other\.map\(s => getNewsChart\(s, p\)/.test(cp) && !yahooNs.test(cp), null)
+  check('L24 negative control: the old COMP mapping is caught', yahooNs.test("const yahoo = (s: string) => (s.startsWith('^') || s.includes('.') ? s : `${s}.NS`)"))
+  check('L24 WTCH: the 60 s quotes call carries yahooCallSymbols only; NSE rows are built from the base + hook',
+    /const callKey = yahooCallSymbols\(/.test(wm) && /getNewsQuotes\(syms\.slice\(i, i \+ 60\)\)/.test(wm) && /const syms = callKey \? callKey\.split/.test(wm) && /nseQuoteRow\(r\.sym, nseBase\.base\[r\.sym\], liveQ\.quotes\[r\.sym\]/.test(wm))
+  check('L24 negative control: the old WTCH call over every row is caught', !/const syms = callKey/.test('const syms = yahooKey ? yahooKey.split(\',\') : []'))
+  check('L24 news dock: quotes through yahooCallSymbols; the TERMINAL chart of an NSE pick from NSE bars',
+    /getNewsQuotes\(callKey\.split\(','\)\)/.test(nt) && /selNse \? nseChartFor\(selNse, effRange\) : getNewsChart\(selected, effRange\)/.test(nt) && !/getNewsQuotes\(symbolsKey/.test(nt))
+  check('L24 negative control: the old dock calls are caught', /getNewsQuotes\(symbolsKey/.test("getNewsQuotes(symbolsKey.split(','))") && !/selNse \?/.test('getNewsChart(selected, range)'))
+  const pure = ['components/news/nseBase.ts', 'components/news/useNseBase.ts', 'components/news/nseChart.ts', 'components/CompareCloses.ts', 'components/strategySeed.ts'].map(f => [f, code(read(f))] as const)
+  const leaky = pure.filter(([, t]) => /news-scanner|getNewsQuotes|getNewsChart|finance\.yahoo|yfinance/i.test(t)).map(([f]) => f)
+  check('L24 the new NSE modules never reach a Yahoo path', leaky.length === 0, leaky)
+  check('L24 every pane keeps its live chip (sourceFor / the hook\'s source)', /liveQ\.sourceFor\(/.test(wm) && /liveNse\.sourceFor\(/.test(nt) && /ul\.sourceFor\(/.test(code(read('components/StrategyBuilder.tsx'))))
+}
+
 console.log(`live.check: ${passed} passed, ${failed} failed`)
 if (failed) process.exit(1)

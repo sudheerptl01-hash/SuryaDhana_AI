@@ -7,8 +7,10 @@ and enriches each pick with live market data from Yahoo Finance:
 
   GET /scans                 available scan files (newest first) + change marker
   GET /scan?date=latest      one scan, normalised (picks, rejected, macro, run log)
-  GET /quotes?symbols=A,B    batch live quotes + 1-month sparkline ('.NS' symbols from the live NSE hub,
-                             routers/live.py: Breeze tick -> NSE website -> EOD close, never Yahoo; the rest Yahoo)
+  GET /quotes?symbols=A,B    batch live quotes + 1-month sparkline ('.NS' symbols and the NSE index tickers
+                             ^NSEI / ^NSEBANK / ^INDIAVIX / ^CNXIT from the live NSE hub, routers/live.py: Breeze tick
+                             -> NSE website -> EOD close; their name / spark / 52-week range from NSE's stored data;
+                             never Yahoo. Only non-NSE symbols -- US, FX, commodities, '.BO' -- read Yahoo)
   GET /chart/{symbol}        OHLCV + indicators (SMA 20/50/200, RSI 14, ATR%) + stats
   GET /headlines/{symbol}    latest Yahoo Finance headlines for the ticker
 
@@ -621,12 +623,14 @@ async def get_quotes(symbols: str = Query(..., min_length=1, max_length=2000),
     quote is under QUOTE_REFRESH_AFTER_S old (see the cache comment above). Plain defaults, so a direct call
     from Python without ``fresh`` gets the display behaviour.
 
-    '.NS' symbols (NSE stocks) answer from the live NSE hub (routers/live.py: Breeze websocket tick -> NSE website ->
-    the last EOD close; ``source`` / ``state`` / ``age_s`` / ``ltt`` on each row, a deciding read never gets a 'stale'
-    row as available) with ZERO Yahoo calls; every other symbol (US, FX, commodities, '^' indices, '.BO') keeps the
-    Yahoo path above. ``LIVE_QUOTES_NSE=0`` (rollback lever) puts '.NS' back on Yahoo. The body keys are unchanged."""
+    '.NS' symbols (NSE stocks) and the NSE index tickers (``live.NSE_INDEX_TICKERS``: ^NSEI, ^NSEBANK, ^INDIAVIX,
+    ^CNXIT) answer from the live NSE hub (routers/live.py: Breeze websocket tick -> NSE website -> the last EOD close;
+    ``source`` / ``state`` / ``age_s`` / ``ltt`` on each row, a deciding read never gets a 'stale' row as available;
+    the name, 22-session spark and 52-week range from NSE's stored closes, data-service /db/closes) with ZERO Yahoo
+    calls; every other symbol (US, FX, commodities, other '^' indices, '.BO') keeps the Yahoo path above.
+    ``LIVE_QUOTES_NSE=0`` (rollback lever) puts them back on Yahoo. The body keys are unchanged."""
     syms = list(dict.fromkeys(_check_symbol(s) for s in symbols.split(",") if s.strip()))[:60]
-    nse = [s for s in syms if s.endswith(".NS")] if _live.nse_live_enabled() else []
+    nse = [s for s in syms if s.endswith(".NS") or s in _live.NSE_INDEX_TICKERS] if _live.nse_live_enabled() else []
     nse_set = set(nse)
     other = [s for s in syms if s not in nse_set]
     yahoo_served, (live_rows, live_served) = await asyncio.gather(

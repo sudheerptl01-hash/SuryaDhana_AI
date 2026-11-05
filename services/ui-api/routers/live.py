@@ -27,9 +27,10 @@ How a quote is served (all on the event loop; nothing here blocks, nothing here 
   reason. There is no other fallback: never Yahoo, never a guessed price (the honesty rules of the live program).
 
 The news-scanner quote path (``news_quotes``) and ``/api/quotes/ticks`` (routers/quotes.py) are built on the hub, so
-Yahoo is never the source of an NSE stock's price once this module answers. ``news_quotes`` adds the stored EOD
-context the hover card, WTCH and the news dock show beside the price (a 22-session split-adjusted spark, the 52-week
-range, the previous session's date) from data-service's NSE bhavcopy history, cached 30 min (SWR, 6 h bound).
+Yahoo is never the source of an NSE stock's price once this module answers (nor of an NSE index asked by its Yahoo
+ticker, ``NSE_INDEX_TICKERS``). ``news_quotes`` adds the stored EOD context the hover card, WTCH and the news dock show
+beside the price (NSE's company name, a 22-session split-adjusted spark, the 52-week range, the previous session's
+date) from data-service ``/db/closes`` -- ONE batch read per request (``ClosesBatcher``), cached 30 min (SWR, 6 h bound).
 
 Push (optional channel, R-ARCH fix 7): ``QuotesChannel`` is one monitor-socket client of ``QuotesPush``, ONE loop per
 process that polls the hub every ``PUSH_INTERVAL_S`` for the union of every subscribed symbol and offers each client
@@ -55,7 +56,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote as _urlquote
 
 import httpx
 from cache import HIT, MISS, STALE, Served, SWRCache, cache_headers
@@ -289,8 +289,8 @@ class Snapshot:
     served: Served[None]
 
 
-def _retrieve(task: asyncio.Task[Any]) -> None:
-    """Mark a task's exception retrieved (a batch whose every caller gave up)."""
+def _retrieve(task: asyncio.Future[Any]) -> None:
+    """Mark a task's (or future's) exception retrieved (a batch whose every caller gave up)."""
     if not task.cancelled():
         task.exception()
 
@@ -578,14 +578,19 @@ async def status_or_none() -> dict[str, Any] | None:
         return None
 
 
-# ── stored EOD context for the news-scanner quote shape (spark, 52-week range, previous session date) ──────────────
+# ── stored EOD context for the news-scanner quote shape (name, spark, 52-week range, previous session date) ────────
+# Everything here is NSE's own stored data, end of day (never live, never Yahoo): data-service /db/closes (L2-API, live
+# NSE round 2) reads the bhavcopy's EQ/BE closes split/bonus-adjusted the way shared.nse_panel does it, the company name
+# from NSE's EQUITY_L list and, for an index, NSE's daily index file -- for every symbol a request needs in ONE read
+# (the per-symbol /db/security/{sym}/history read it replaces cost one DuckDB read per stock on a cold WTCH / MKT load).
 
-CTX_DAYS = 366                    # 52 weeks of NSE bhavcopy history (data-service /db/security/{sym}/history)
+CTX_DAYS = 366                    # 52 weeks of stored sessions: the window of the 52-week high / low
 CTX_REFRESH_S = 1800.0            # EOD data change once a day (bhavcopy ~18:30): refresh after 30 min ...
 CTX_MAX_AGE_S = 6 * 3600.0        # ... never served older than 6 h
 CTX_MISSING_S = 3600.0            # "not in the bhavcopy" is kept an hour
 CTX_WAIT_S = 1.5                  # a quote never waits longer than this for its context (the fetch goes on)
-CTX_CONCURRENCY = 4
+CTX_BATCH_WINDOW_S = 0.005        # context misses started inside this window share ONE /db/closes read
+CTX_ROUTE_MISSING_S = 60.0        # a data-service without /db/closes (HTTP 404: not deployed) is not asked for this long
 CTX_UPSTREAM = "data-service-eod-context"
 SPARK_N = 22
 
@@ -598,43 +603,104 @@ class EodContext:
     high_52w: float | None = None
     low_52w: float | None = None
     last_date: str | None = None
+    name: str | None = None               # NSE's EQUITY_L company name (an index: its NSE name)
+    source: str | None = None             # 'nse_bhavcopy' (a stock) | 'nse_index_file' (an index): where the closes are from
 
 
-def eod_context_from_history(body: Any) -> EodContext:
-    """data-service HP body (rows newest first, ``action_k`` on ex-dates, ``summary.high/low`` adjusted) -> context.
-    Closes before an ex-date are multiplied by its ``action_k`` so a split is not drawn as a crash."""
-    if not isinstance(body, dict) or not body.get("found"):
-        return EodContext(found=False)
-    rows = [r for r in body.get("rows") or [] if isinstance(r, dict) and isinstance(r.get("date"), str)
-            and _num(r.get("close")) is not None]
-    if not rows:
-        return EodContext(found=False)
-    k = 1.0
-    adj: list[float] = []
-    for r in rows[:SPARK_N]:
-        close = _num(r.get("close"))
-        if close is None:                 # filtered above; keeps the type checker honest
+def eod_context_from_closes(points: Any, meta: Any) -> EodContext:
+    """One symbol of a data-service /db/closes body -> context. ``points``: [{date, close}] (adjusted, oldest first; the
+    last SPARK_N are kept); ``meta``: {name, high, low, ...} (the high / low cover the whole CTX_DAYS window)."""
+    pts: list[tuple[str, float]] = []
+    for p in points if isinstance(points, list) else []:
+        if not isinstance(p, dict) or not isinstance(p.get("date"), str) or not _DATE_RE.fullmatch(p["date"]):
             continue
-        adj.append(round(close * k, 4))
-        ak = _num(r.get("action_k"))
-        if ak is not None and ak > 0:
-            k *= ak
-    summary_raw = body.get("summary")
-    summary: dict[str, Any] = summary_raw if isinstance(summary_raw, dict) else {}
-    return EodContext(found=True, dates=tuple(r["date"] for r in rows[:3]), spark=tuple(reversed(adj)),
-                      high_52w=_num(summary.get("high")), low_52w=_num(summary.get("low")), last_date=rows[0]["date"])
+        c = _num(p.get("close"))
+        if c is not None and c > 0:
+            pts.append((p["date"], c))
+    if not pts:
+        return EodContext(found=False)
+    pts = sorted(dict(pts).items())[-SPARK_N:]
+    m: dict[str, Any] = meta if isinstance(meta, dict) else {}
+    name, src = m.get("name"), m.get("source")
+    hi, lo = _num(m.get("high")), _num(m.get("low"))
+    return EodContext(found=True, dates=tuple(d for d, _ in reversed(pts[-3:])), spark=tuple(round(c, 4) for _, c in pts),
+                      high_52w=hi if hi is not None and hi > 0 else None, low_52w=lo if lo is not None and lo > 0 else None,
+                      last_date=pts[-1][0], name=name.strip()[:120] if isinstance(name, str) and name.strip() else None,
+                      source=src if isinstance(src, str) and _TOKEN_RE.fullmatch(src) else "nse_bhavcopy")
+
+
+def eod_contexts_from_closes(body: Any, symbols: Iterable[str]) -> dict[str, EodContext]:
+    """A whole /db/closes body -> {sym: context}; a symbol the body does not carry is ``found=False`` (not stored)."""
+    if not isinstance(body, dict) or not isinstance(body.get("series"), dict):
+        raise UpstreamError(502, "data-service /db/closes answered without a series map", upstream=CTX_UPSTREAM)
+    series: dict[str, Any] = body["series"]
+    meta_raw = body.get("meta")
+    meta: dict[str, Any] = meta_raw if isinstance(meta_raw, dict) else {}
+    return {s: eod_context_from_closes(series.get(s), meta.get(s)) for s in symbols}
+
+
+class ClosesBatcher:
+    """Per-symbol context fetches (the SWR cache starts one per symbol) -> ONE data-service ``/db/closes`` read for every
+    symbol asked inside ``window_s`` on one event loop (at most ``max_batch`` symbols per read). A failed read fails
+    each of its symbols (nothing is cached; the quote goes out without context); a 404 (the route is not deployed)
+    stops the reads for ``CTX_ROUTE_MISSING_S``."""
+
+    def __init__(self, *, window_s: float = CTX_BATCH_WINDOW_S, max_batch: int = MAX_SYMBOLS,
+                 clock: Callable[[], float] = time.monotonic) -> None:
+        self.window_s, self.max_batch, self._clock = window_s, max_batch, clock
+        self._open: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, dict[str, asyncio.Future[EodContext]]] = \
+            weakref.WeakKeyDictionary()
+        self._missing_until = -math.inf
+        self.reads = 0
+        self.symbols_read = 0
+        self.errors = 0
+
+    async def load(self, sym: str) -> EodContext:
+        if self._clock() < self._missing_until:
+            raise UpstreamError(404, "data-service has no /db/closes (not deployed)", upstream=CTX_UPSTREAM)
+        loop = asyncio.get_running_loop()
+        batch = self._open.get(loop)
+        if batch is None or len(batch) >= self.max_batch:
+            batch = {}
+            self._open[loop] = batch
+            loop.call_later(self.window_s, self._launch, loop, batch)
+        fut = batch.get(sym)
+        if fut is None:
+            fut = batch[sym] = loop.create_future()
+            fut.add_done_callback(_retrieve)
+        return await asyncio.shield(fut)
+
+    def stats(self) -> dict[str, Any]:
+        return {"reads": self.reads, "symbols_read": self.symbols_read, "errors": self.errors}
+
+    def _launch(self, loop: asyncio.AbstractEventLoop, batch: dict[str, asyncio.Future[EodContext]]) -> None:
+        if self._open.get(loop) is batch:
+            del self._open[loop]
+        loop.create_task(self._read(batch), name="live-closes-batch").add_done_callback(_retrieve)
+
+    async def _read(self, batch: dict[str, asyncio.Future[EodContext]]) -> None:
+        syms = list(batch)
+        self.reads += 1
+        self.symbols_read += len(syms)
+        try:
+            body = await get_json(f"{data_svc()}/db/closes", route="read", upstream=CTX_UPSTREAM,
+                                  params={"symbols": ",".join(syms), "days": CTX_DAYS, "tail": SPARK_N})
+            ctxs = eod_contexts_from_closes(body, syms)
+        except Exception as exc:  # noqa: BLE001 -- every waiter gets the error; the quotes go out without context
+            self.errors += 1
+            if isinstance(exc, UpstreamError) and exc.status_code == 404:
+                self._missing_until = self._clock() + CTX_ROUTE_MISSING_S
+            for f in batch.values():
+                if not f.done():
+                    f.set_exception(exc)
+            return
+        for s, f in batch.items():
+            if not f.done():
+                f.set_result(ctxs[s])
 
 
 _ctx_cache = SWRCache("live.eod_context", max_items=2000, refresh_after=CTX_REFRESH_S, max_age=CTX_MAX_AGE_S)
-_ctx_sems: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, asyncio.Semaphore] = weakref.WeakKeyDictionary()
-
-
-def _ctx_sem() -> asyncio.Semaphore:
-    loop = asyncio.get_running_loop()
-    sem = _ctx_sems.get(loop)
-    if sem is None:
-        sem = _ctx_sems[loop] = asyncio.Semaphore(CTX_CONCURRENCY)
-    return sem
+_closes_batcher = ClosesBatcher()
 
 
 def _ctx_policy(value: EodContext) -> tuple[float, float]:
@@ -642,15 +708,7 @@ def _ctx_policy(value: EodContext) -> tuple[float, float]:
 
 
 async def _fetch_ctx(base: str) -> EodContext:
-    async with _ctx_sem():
-        try:
-            body = await get_json(f"{data_svc()}/db/security/{_urlquote(base, safe='')}/history", route="read",
-                                  params={"days": CTX_DAYS}, upstream=CTX_UPSTREAM)
-        except UpstreamError as exc:
-            if exc.status_code in (404, 422):
-                return EodContext(found=False)
-            raise
-    return eod_context_from_history(body)
+    return await _closes_batcher.load(base)
 
 
 async def _bounded(aw: Awaitable[Any], timeout: float) -> Any:
@@ -663,8 +721,8 @@ async def _bounded(aw: Awaitable[Any], timeout: float) -> Any:
 
 
 async def eod_contexts(bases: Iterable[str]) -> dict[str, EodContext | None]:
-    """Context per stock symbol (indices get None); never raises, never waits longer than CTX_WAIT_S."""
-    syms = [b for b in dict.fromkeys(bases) if is_stock_symbol(b)]
+    """Context per NSE symbol or index name (already normalised); never raises, never waits longer than CTX_WAIT_S."""
+    syms = list(dict.fromkeys(bases))
 
     async def one(b: str) -> EodContext | None:
         served = await _bounded(_ctx_cache.get(b, functools.partial(_fetch_ctx, b), policy=_ctx_policy), CTX_WAIT_S)
@@ -704,11 +762,13 @@ def _lo(*vals: float | None) -> float | None:
 
 
 def news_row(base: str, row: dict[str, Any], ctx: EodContext | None, market: dict[str, Any], *,
-             fresh: bool = False) -> dict[str, Any]:
+             fresh: bool = False, key: str | None = None) -> dict[str, Any]:
     """One live row in the body keys ``/api/news-scanner/quotes`` has always had (Yahoo's shape), plus ``source``,
     ``state``, ``age_s``, ``ltt`` (and ``reason``) from the live contract. ``fresh`` (a read that DECIDES: price alerts,
-    the controller's move check): a ``stale`` row is not ``available``."""
-    sym = f"{base}.NS"
+    the controller's move check): a ``stale`` row is not ``available``. ``key``: the symbol as asked when it is not
+    ``<base>.NS`` (an NSE index asked by its Yahoo ticker, '^NSEI' -> base 'NIFTY 50'). The name, spark, 52-week range
+    and previous session come from NSE's stored data (``ctx``: data-service /db/closes), never Yahoo."""
+    sym = key or f"{base}.NS"
     state = row.get("state") or "unavailable"
     price = row.get("price")
     common: dict[str, Any] = {"source": row.get("source"), "state": state, "age_s": row.get("age_s"), "ltt": row.get("ltt")}
@@ -732,7 +792,7 @@ def news_row(base: str, row: dict[str, Any], ctx: EodContext | None, market: dic
     if ctx and ctx.found:
         prev_date = next((d for d in ctx.dates if market_date is None or d < market_date), None)
     return {
-        "symbol": sym, "name": row.get("name") if isinstance(row.get("name"), str) else None,
+        "symbol": sym, "name": _name_of(base, row, ctx),
         "currency": "INR", "exchange": "NSE", "price": price, "prev_close": prev, "prev_date": prev_date,
         "market_date": market_date, "change": change, "change_pct": change_pct,
         "day_high": row.get("day_high"), "day_low": row.get("day_low"), "volume": row.get("volume"),
@@ -740,18 +800,40 @@ def news_row(base: str, row: dict[str, Any], ctx: EodContext | None, market: dic
         "low_52w": _lo(ctx.low_52w if ctx else None, row.get("day_low")),
         "market_time": _epoch(row.get("ltt")), "gmtoffset": 19800, "timezone": "Asia/Kolkata",
         "stale": state == "stale", "available": True, "resolved_symbol": sym, "spark": spark,
-        "prev_source": "NSE", "eod_as_of": ctx.last_date if ctx and ctx.found else None, **common,
+        "prev_source": "NSE", "eod_as_of": ctx.last_date if ctx and ctx.found else None,
+        "eod_source": ctx.source if ctx and ctx.found else None, **common,
     }
 
 
+def _name_of(base: str, row: dict[str, Any], ctx: EodContext | None) -> str | None:
+    """NSE's EQUITY_L company name (stored), else a name the live row carries, else an index's own NSE name."""
+    if ctx is not None and ctx.found and ctx.name:
+        return ctx.name
+    name = row.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()[:120]
+    return base if " " in base else None
+
+
+# NSE indices the app asks for by their Yahoo ticker (WEI, the tape, COMP's benchmark, the controller's NIFTY fallback):
+# they are NSE symbols, so the news-scanner quote path answers them from the live hub like '.NS' stocks.
+NSE_INDEX_TICKERS: dict[str, str] = {"^NSEI": "NIFTY 50", "^NSEBANK": "NIFTY BANK", "^INDIAVIX": "INDIA VIX",
+                                     "^CNXIT": "NIFTY IT"}
+
+
+def nse_name(raw: Any) -> str:
+    """``normalize_symbol`` that also takes the NSE index tickers the app asks Yahoo-style ('^CNXIT' -> 'NIFTY IT')."""
+    return (NSE_INDEX_TICKERS.get(raw.strip().upper()) if isinstance(raw, str) else None) or normalize_symbol(raw)
+
+
 async def news_quotes(symbols: Iterable[str], *, fresh: bool = False) -> tuple[dict[str, dict[str, Any]], Served[None] | None]:
-    """'.NS' symbols (as the news-scanner route got them) -> {sym: news row}. A symbol that is not a valid NSE symbol
-    gets an unavailable row; nothing here falls back to Yahoo."""
+    """'.NS' symbols and NSE index tickers (``NSE_INDEX_TICKERS``; as the news-scanner route got them) -> {sym: news
+    row}. A symbol that is not a valid NSE symbol gets an unavailable row; nothing here falls back to Yahoo."""
     rows: dict[str, dict[str, Any]] = {}
     bases: dict[str, str] = {}
     for s in symbols:
         try:
-            bases[s] = normalize_symbol(s)
+            bases[s] = nse_name(s)
         except ValueError:
             rows[s] = {"symbol": s, "available": False, "source": None, "state": "unavailable", "age_s": None,
                        "ltt": None, "reason": "not an NSE symbol"}
@@ -761,7 +843,8 @@ async def news_quotes(symbols: Iterable[str], *, fresh: bool = False) -> tuple[d
     snap, ctxs = await asyncio.gather(hub().quotes(uniq), eod_contexts(uniq))
     market = snap.payload["market"]
     for s, b in bases.items():
-        rows[s] = news_row(b, snap.payload["quotes"][b], ctxs.get(b), market, fresh=fresh)
+        rows[s] = news_row(b, snap.payload["quotes"][b], ctxs.get(b), market, fresh=fresh,
+                           key=s if s.strip().upper() in NSE_INDEX_TICKERS else None)
     return rows, snap.served
 
 
