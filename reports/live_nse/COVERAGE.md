@@ -74,5 +74,6 @@
   tick store (33a214d; 423 symbols primed after the 17:27 restart), so stock, members and movers rows read CLOSED · 5 Nov, not STALE · 4 Nov.
 - Today's equity bhavcopy was ingested at 17:41 as soon as NSE published it (3,567 rows). NSE's official closes replace the last traded
   prices within 10 min.
-- One STALE chip remains by NSE's own schedule: OSTR's seed chain is the 4 Nov F&O bhavcopy, because NSE had not published the 5 Nov F&O
-  file at 17:40 (404). It lands about 20:10, and the 20:30 pass ingests it.
+- OSTR's seed chain waited on NSE's 5 Nov F&O bhavcopy (404 at 17:40). A watcher polled NSE's archive every 5 min. NSE published at 18:46,
+  and the file was ingested within a minute (224 rows), followed by today's `iv_eod` (FOVOLT, contract delta, combined OI, index closes).
+  OSTR reads CLOSE · 05 NOV, OMON reads EOD · 05 NOV, and NIFTY's IV history ends 5 Nov (iv30 12.80). No STALE or OFFLINE chip remains.
