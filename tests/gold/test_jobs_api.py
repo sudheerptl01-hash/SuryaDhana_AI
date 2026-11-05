@@ -200,6 +200,12 @@ def test_mcx_master_group_uses_a_conditional_get(store, now, tmp_path):
     res2 = jobs.run_group("mcx_master", _ctx(store, now, http2))
     assert res2["status"] == "not_modified" and http2.calls[0][1]["headers"]["If-Modified-Since"] == "Mon, 26 Oct 2026 01:58:26 GMT"
     assert ingest_india.previous_mcx_session(date(2026, 10, 26)) == date(2026, 10, 23)
+    # the new master also refreshed the Breeze SDK's cache (5 Nov: the 20 h cache kept yesterday's file all day)
+    cache = tmp_path / "breeze_cache" / "SecurityMaster.zip"
+    assert res["breeze_cache_refreshed"] is True and cache.read_bytes() == buf.getvalue()
+    # negative controls: a 304 leaves the cache alone; a non-zip 200 never replaces a good cache
+    assert "breeze_cache_refreshed" not in res2 and cache.read_bytes() == buf.getvalue()
+    assert ingest_india._refresh_breeze_cache(b"<html>maintenance</html>") is False and cache.read_bytes() == buf.getvalue()
 
 
 def test_manual_group_accepts_only_catalogued_published_series(store, now):

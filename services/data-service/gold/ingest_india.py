@@ -125,9 +125,36 @@ def ingest_mcx_master(store: Any, text: str, published: date, *, now: datetime |
     return {"inserted": n, "published": str(published), "session_date": str(previous_mcx_session(published)), "gold_front": front}
 
 
+def _breeze_cache_file() -> Any:
+    """The Breeze SDK's cached SecurityMaster.zip (shared/breeze_cache.py; tests redirect it)."""
+    from shared import breeze_cache
+
+    return breeze_cache.CACHE
+
+
+def _refresh_breeze_cache(blob: bytes) -> bool:
+    """Write a freshly published master to the Breeze SDK's cache (atomic; best effort: never fails the job).
+
+    The cache refreshes itself at most every 20 h and only when a Breeze session starts, so the 08:00 login kept the
+    previous day's file and new listings were missing from the token map; the catalog row breeze_security_master
+    (job gold_mcx_master) read a session behind on 5 Nov. This job already downloads the same zip at ≈07:35."""
+    try:
+        if not zipfile.is_zipfile(io.BytesIO(blob)):
+            return False
+        dest = _breeze_cache_file()
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_name(dest.name + ".gold.part")
+        tmp.write_bytes(blob)
+        tmp.replace(dest)
+        return True
+    except Exception:  # noqa: BLE001 — the gold ingest stands on its own; the cache keeps its old copy
+        return False
+
+
 def fetch_mcx_master(store: Any, http: Any, *, now: datetime | None = None) -> dict[str, Any]:
     """Conditional GET (``If-Modified-Since`` = the stored ``Last-Modified``): all weekend and before ICICI's ≈07:00
-    publish the answer is a 304 of a few bytes instead of the 3 MB zip (SOURCES.md F1 trap)."""
+    publish the answer is a 304 of a few bytes instead of the 3 MB zip (SOURCES.md F1 trap). A new master (200) is
+    also written to the Breeze SDK's cache, so the token map has the day's listings."""
     headers = {}
     since = db.get_state(store, "mcx_master.last_modified")
     if since:
@@ -139,6 +166,7 @@ def fetch_mcx_master(store: Any, http: Any, *, now: datetime | None = None) -> d
         return {"status": f"http_{resp.status_code}", "inserted": 0}
     text, published = master_text_from_zip(resp.content)
     out = ingest_mcx_master(store, text, published, now=now)
+    out["breeze_cache_refreshed"] = _refresh_breeze_cache(resp.content)
     lm = resp.headers.get("Last-Modified")
     if lm:
         db.set_state(store, "mcx_master.last_modified", lm, now=now)
