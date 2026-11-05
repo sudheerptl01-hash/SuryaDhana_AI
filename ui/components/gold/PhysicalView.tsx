@@ -26,6 +26,7 @@ import { useMemo } from 'react'
 import { DataTable, Grid, KV, Loading, Stat, T, type Column } from '@/components/terminal'
 import { getGoldFlows, getGoldPremiums } from '@/lib/gold/api'
 import type { GoldSubViewProps } from '@/lib/gold/types'
+import { basisPurityShort, settlementLine, stripSettlement } from '@/lib/gold/format'
 import { tipFor } from '@/lib/gold/learn'
 import tooltipsJson from '@/lib/gold/tooltips.json'
 import { PriceLadder } from './PriceLadder'
@@ -89,7 +90,12 @@ export function PhysicalView(props: GoldSubViewProps) {
   // which divides the IBJA fix by a LIVE duty-paid price (the clock error the panel's own note warns about)
   const premiumStored = storedPremiumOn(india?.history, india?.premium_date ?? ibjaTs)
   const mcxStep = india?.ladder?.find(s => /^mcx/i.test(s.step))
-  const basisClock = mcxStep?.ts ? `at the ${/^\d{4}-/.test(mcxStep.ts) ? `${istLabel(mcxStep.ts)} settlement` : mcxStep.ts} vs that session's duty-paid (the close reference)` : 'at the last settlement vs that session\'s duty-paid'
+  // wave 1d: the MCX settle names its source (last-30-min VWAP of the Breeze bars, else the ICICI band midpoint) and the
+  // basis names the purity of the landed price it divides by
+  const settleBlock = props.fair && (props.fair.contract ?? 'GOLD') === 'GOLD' ? stripSettlement(props.overview?.contract?.mcx === 'GOLD' ? props.overview?.strip : null, props.fair) : null
+  const settleSrc = india?.settlement_source ?? settleBlock?.settlement_source ?? null
+  const basisClock = `${mcxStep?.ts ? `at the ${/^\d{4}-/.test(mcxStep.ts) ? `${istLabel(mcxStep.ts)} settlement` : mcxStep.ts} vs that session's duty-paid (the close reference)` : 'at the last settlement vs that session\'s duty-paid'}` +
+    ` · settle ${settlementLine({ ...(settleBlock ?? {}), settlement: settleBlock?.settlement ?? mcxStep?.value ?? null, settlement_source: settleSrc, settlement_session: /^\d{4}-/.test(mcxStep?.ts ?? '') ? mcxStep?.ts : settleBlock?.settlement_session ?? null })} · ${basisPurityShort(india?.basis_reference)}`
   // Shanghai: the premium prints only for a same-date pair; otherwise the last stored same-day value and what it waits for
   const pairing = sh ? shanghaiPairing(sh.ts_sge, sh.ts_ref, sh.london_pm_usd == null && sh.comex_at_1415_bj != null) : null
   const shStored = [...(sh?.history ?? [])].reverse().find(h => h.premium_usd != null) ?? null
@@ -147,7 +153,11 @@ export function PhysicalView(props: GoldSubViewProps) {
                   ? <Stat label={<span title={tip('sge_premium_usd')}>premium $/oz</span>} value={<span data-shanghai-premium="same-date">{signed(sh.premium_usd, 1)}</span>} color={contextTone} big={false} sub={<span title={tip('sge_premium_pct')}>{pct(sh.premium_pct, 2)} · both legs {istLabel(pairing.sgeDate)}</span>} />
                   : <Stat label={<span title={tip('sge_premium_usd')}>premium $/oz (last same-day pair)</span>} value={<span data-shanghai-premium="stored">{shStored ? signed(shStored.premium_usd, 2) : '—'}</span>} color={contextTone} big={false}
                       sub={<span title={tip('sge_premium_pct')}>{shStored ? `${pct(shStored.premium_pct, 2)} · ${istLabel(shStored.report_date)} (stored)` : 'no stored same-day pair yet'} · awaiting the {sh.london_pm_usd != null ? 'LBMA PM' : 'reference'} of {istLabel(pairing.sgeDate)}</span>} />}
-                <Stat label="SGE Au99.99 PM" value={`${num(sh.sge_pm_cny_g, 2)} CNY/g`} color={contextTone} big={false} sub={`= ${usd(sh.sge_usd_oz, 1)} at USDCNY ${num(sh.usdcny, 4)} (${sh.usdcny_source ?? 'source —'}) · ${istLabel(pairing.sgeDate)}`} />
+                {/* the CNY/g is dated by ITS OWN date (sge_pm_date — the pair date's leg), never by the newest SGE timestamp (the 5 Nov review:
+                    a Tuesday price labelled Thursday); a newer SGE print stands alone, without a '=' to a $/oz of another date */}
+                <Stat label="SGE Au99.99 PM" value={<span data-sge-date={sh.sge_pm_date ?? sh.pair_date ?? pairing.sgeDate ?? ''}>{num(sh.sge_pm_cny_g, 2)} CNY/g</span>} color={contextTone} big={false}
+                  sub={<span>= {usd(sh.sge_usd_oz, 1)} at USDCNY {num(sh.usdcny, 4)} ({sh.usdcny_source ?? 'source —'}) · {istLabel(sh.sge_pm_date ?? sh.pair_date ?? pairing.sgeDate)}
+                    {sh.sge_latest_cny_g != null && sh.sge_latest_date && sh.sge_latest_date !== (sh.sge_pm_date ?? sh.pair_date) && <span data-sge-latest style={{ display: 'block', color: T.dim }}>newer SGE print {num(sh.sge_latest_cny_g, 2)} CNY/g · {istLabel(sh.sge_latest_date)} (its $/oz waits for that date&apos;s London PM)</span>}</span>} />
                 <Stat label="reference leg" value={usd(sh.london_pm_usd ?? sh.comex_at_1415_bj, 1)} color={contextTone} big={false} sub={`${sh.london_pm_usd != null ? 'LBMA PM (WGC-served, PROVISIONAL until O-1)' : 'COMEX at 14:15 Beijing'} · ${istLabel(pairing.refDate)}`} />
               </Grid>
               <div data-two-timestamps data-shanghai-pairing={pairing.sameDate ? 'same-date' : 'cross-date'} style={{ fontSize: 10, color: pairing.sameDate ? T.muted : T.amber, marginTop: 6 }}>
@@ -197,7 +207,7 @@ export function PhysicalView(props: GoldSubViewProps) {
           copyB="who is buying at the official level and in which data month; explains the regime, never the week."
           copyP="IMF ounces (E12) for quantity; RBI's weekly value changes are almost all price (its valuation convention sits below spot, F11).">
           {/* the holders table renders here only (PLAN a.7); MONTHLY's m.official keeps the net-purchase bars (PLAN a.5, §f.6) */}
-          <DataTable columns={offCols} rows={official.rows} rowKey={r => `${r.country}-${r.month}`} dense maxHeight={260} initialSort={{ key: 'oz_mn', dir: 'desc' }}
+          <DataTable columns={offCols} rows={official.rows} rowKey={r => `${r.country}-${r.month}`} dense initialSort={{ key: 'oz_mn', dir: 'desc' }}
             empty={<div style={{ padding: 10, color: T.dim, fontSize: 11 }}>IMF rows pending (monthly ~25th, 1–2 month lag)</div>} />
           <div style={{ padding: '8px 12px' }}>
             {official.excluded.length > 0 && (

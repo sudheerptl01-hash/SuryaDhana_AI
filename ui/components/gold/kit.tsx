@@ -158,12 +158,16 @@ export function GoldPanel({ id, title, subtitle, badge, evidence, freshness, max
   right, accent = T.amber, pad = 12, style, bodyStyle, children }: GoldPanelProps) {
   const copy = layer === 'P' ? (copyP ?? copyB) : (copyB ?? copyP)
   const asOf = asOfText(freshness, reportDate)
+  // a low-contrast accent (border / muted tones) keeps its bar but never greys the TITLE out (the 5 Nov review: context panels'
+  // titles rendered unreadably dim in the tall captures)
+  const lowContrast = ([T.border, T.borderHi, T.muted, T.dim] as string[]).includes(accent)
+  const shownTitle = lowContrast && title ? <span data-gold-title-readable style={{ color: T.text }}>{title}</span> : title
   const gate = panelGate(catalog, series)
   const row = catalogRow ?? (series?.length && catalog ? (series.map(s => catalog[s]).find(Boolean) ?? null) : null)
   // the subtitle and the as-of live in their own wrapping row under the header: the kit's header never wraps, so a
   // narrow panel with four chips would otherwise squeeze the subtitle into a one-word-per-line column
   return (
-    <Panel title={title} accent={accent} pad={0} style={style}
+    <Panel title={shownTitle} accent={accent} pad={0} style={style}
       right={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', minWidth: 0 }}>
         {right}
         {badge && <BadgeChip badge={badge} evidence={evidence} />}

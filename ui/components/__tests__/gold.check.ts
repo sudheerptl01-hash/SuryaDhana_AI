@@ -417,7 +417,7 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
   eq('W2 negative control: a date with no daily bar falls back to the bucket end and SAYS so', S.legendCloses([{ date: '2026-11-03', pts: [{ c: 3949.8 }] }, { date: '2026-11-04', pts: [{ c: 1 }] }], [], null, 3)[0], { date: '2026-11-03', px: 3949.8, kind: 'close', prevClose: null, bucketFallback: true })
   eq('W2 the dashed line is the PREVIOUS session\'s stored close, never today\'s last', [S.prevSessionClose(dly, '2026-11-04'), S.prevSessionClose(dly, '2026-11-03'), S.prevSessionClose([], '2026-11-04')], [{ date: '2026-11-03', c: 3940.4 }, { date: '2026-11-02', c: 3969.6 }, null])
   const dv = src('components/gold/DailyView.tsx')
-  check('W2 DailyView draws the server settle_line only when it is a settlement (never a last trade) and labels the fallback as a Yahoo daily close', /last\.\?trade/.test(dv) && /close \(Yahoo daily, not settlement\)/.test(dv) && /legendCloses\(/.test(dv))
+  check('W2 DailyView draws the server settle_line only when it is a settlement (never a last trade) and labels the fallback as a Yahoo daily close', /last\.\?trade/.test(dv) && /close \(Yahoo daily, not settlement\)/.test(dv) && /kitcoLegend\(/.test(dv) && /legendCloses\(/.test(src('lib/gold/kitco.ts')))
   // C-DATA-7 / C-BEGINNER-21 / C-DATA-18: the Δ text branches on change_unit
   eq('W3 gaugeChange: Shanghai week change is $/oz, never a %', F.gaugeChangeText({ key: 'shanghai', unit: '$/oz', change: 47.36, change_unit: '$/oz', change_window: 'W' }), '+$47.36/oz W')
   eq('W3 gaugeChange: without change_unit a $/oz tile still prints $/oz (the old bug printed +47.36 %)', F.gaugeChangeText({ key: 'shanghai', unit: '$/oz', change: 47.36, change_window: 'W' }), '+$47.36/oz W')
@@ -446,7 +446,7 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
   // C-TRADER-15 / C-DATA-12: the brief header reads the TOP-LEVEL bias / confidence; open_signal never renders
   eq('W5 briefHeader: top-level fields; synthesis fallback; never open_signal', [F.briefHeader({ bias: 'neutral', confidence: 0.45, label: null, doc: { open_signal: 'aligned_tradeable' } }), F.briefHeader({ bias: null, confidence: null, label: null, doc: { synthesis: { bias: 'bearish', confidence: 0.6 } } }), F.briefHeader({ bias: null, confidence: null, label: null, doc: {} })],
     ['automated brief · bias neutral · confidence 45 %', 'automated brief · bias bearish · confidence 60 %', 'automated brief · bias — · confidence —'])
-  check('W5 HealthView never renders open_signal and reads the top-level fields through briefHeader', !/open_signal/.test(src('components/gold/HealthView.tsx').replace(/\/\*[\s\S]*?\*\//g, '').replace(/copyP="[^"]*"/g, '')) && /briefHeader\(b\)/.test(src('components/gold/HealthView.tsx')))
+  check('W5 HealthView never renders open_signal and reads the top-level fields through briefHeader', !/open_signal/.test(src('components/gold/HealthView.tsx').replace(/\/\*[\s\S]*?\*\//g, '').replace(/copyP="[^"]*"/g, '')) && /briefHeader\(b(, [^)]*)?\)/.test(src('components/gold/HealthView.tsx')))
   // C-BEGINNER-4 / C-TRADER-13 / C-DATA-8: the DES card by the matched month, tick in display units, settlement and uom in words
   eq('W6 comexMmy / mmyLabel / specMatches', [F.comexMmy('GCZ26.CMX'), F.comexMmy('GC=F'), F.mmyLabel('202611'), F.specMatches({ mmy: '202611' }, 'GCZ26.CMX'), F.specMatches({ mmy: '202612' }, 'GCZ26.CMX'), F.specMatches({ mmy: null }, 'GCZ26.CMX')], ['202612', null, 'NOV-26', false, true, null])
   eq('W6 specTick: the PRF MinPxIncr 1.0 × DisplayFactor 0.1 = $0.10 = $10; a server tick_usd wins; GC convention without a factor', [F.specTick({ symbol: 'GC', min_px_incr: 1, display_factor: 0.1, multiplier: 100 }), F.specTick({ symbol: 'GC', min_px_incr: 1, tick_usd: 0.1, multiplier: 100 }), F.specTick({ symbol: 'GC', min_px_incr: 1, multiplier: 100 }), F.specTick({ symbol: 'SI', min_px_incr: 0.005, multiplier: 5000 }), F.specTick(null)],
@@ -455,13 +455,20 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
   eq('W6 margin history: the $25 row of another product is dropped, one point per date, ≥ 3 dates', [F.marginHistoryPoints([{ trade_date: '2026-11-04', margin_usd: 25 }, { trade_date: '2026-11-04', margin_usd: 19785 }, { trade_date: '2026-11-03', margin_usd: 19700 }, { trade_date: '2026-11-02', margin_usd: 19600 }]), F.marginHistoryPoints([{ trade_date: '2026-11-04', margin_usd: 19785 }])], [[19600, 19700, 19785], []])
   const cv = src('components/gold/ContractsView.tsx')
   check('W6 ContractsView: the card names the PRF month, flags a mismatch, prints the tick through specTick and the words', /specMatches\(spec, comexMatched\)/.test(cv) && /data-gold-spec-mismatch/.test(cv) && /specTick\(spec\)/.test(cv) && /settlMethodWord\(/.test(cv) && /uomWord\(spec\.uom\)/.test(cv) && /marginHistoryPoints\(spec\.margin_history\)/.test(cv))
-  check('W6 the term structure marks the matched month\'s FND and the ladder heads its carry "to next month" (C-TRADER-24 / C-DATA-16)', /data-gold-fnd-tick/.test(cv) && /carry to next month % p\.a\./.test(cv) && /days to last trade/.test(cv))
+  // wave 1d: the server's carry is 'annualised vs the front expiry (as /curve)' (C-DATA-16), so the ladder heads it 'carry vs front' (the old
+  // 'to next month' head contradicted the served convention), and on GOLD › CONTRACTS the chain prints it once (chainOnPage)
+  check('W6 the term structure marks the matched month\'s FND and the ladder heads its carry "vs front", the served convention (C-TRADER-24 / C-DATA-16 / wave 1d)',
+    /data-gold-fnd-tick/.test(cv) && /carry vs front % p\.a\./.test(cv) && !/carry to next month/.test(cv) && /carry_convention/.test(cv) && /days to last trade/.test(cv))
   // C-BEGINNER-5 / C-DATA-11 / C-TRADER-10: basis clock labels
   eq('W7 basisClockLabel / liveBasisPct', [F.basisClockLabel(1.5, 'Tue 03 Nov settlement'), F.basisClockLabel(null, 'x'), F.basisClockLabel(0.41, null), F.liveBasisPct(143249, 142663), F.liveBasisPct(1, 0), F.liveBasisPct(null, 1)],
     ['basis +1.50 % at the Tue 03 Nov settlement vs that session\'s duty-paid', 'basis —', 'basis +0.41 % at the last settlement vs that session\'s duty-paid', (143249 / 142663 - 1) * 100, null, null])
   const hs = src('components/gold/HealthStrip.tsx').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
-  check('W7 the strip: no "NO DATA" beside a live price; settle — says the backfill is coming; the matched last is labelled Yahoo, not settlement; the settlement basis names its session', !/NO DATA/.test(hs) && /arrives with the CME backfill/.test(hs) && /not settlement/.test(hs) && /at the \{basisSession\} vs that session/.test(hs) && /COT funds net \(managed money\)/.test(hs))
-  check('W7 the strip shows the live MCX above the settlement while the session runs and a live-vs-now basis (C-TRADER-10)', /mcxLive != null && mcxTrading/.test(hs) && /basis live vs duty-paid now/.test(hs) && /liveBasisPct\(mcxLive, hf\?\.duty_paid_landed\)/.test(hs))
+  check('W7 the strip: no "NO DATA" beside a live price; no last trade says the backfill is coming; the last trade is labelled Yahoo, not settlement; the settlement basis names its session through basisSettleLabel (printed once, REREVIEW)',
+    !/NO DATA/.test(hs) && /arrives with the CME backfill/.test(hs) && /not settlement/.test(hs) && /basisSettleLabel\(s\?\.basis_session_label/.test(hs) && !/at the \{basisSession\} vs that session/.test(hs) && /COT funds net \(managed money\)/.test(hs))
+  // wave 1d: the client never recomputes a basis (the purity of the landed price is the server's basis_reference; a client ratio of
+  // a 995 contract over a 999 duty-paid price is the cross-purity error the 5 Nov review found)
+  check('W7 the strip shows the live MCX above the settlement while the session runs and the SERVER\'s live-vs-now basis, never a client ratio (C-TRADER-10 / wave 1d)',
+    /mcxLive != null && mcxTrading/.test(hs) && /basis live vs duty-paid now/.test(hs) && !/liveBasisPct\(/.test(hs) && /s\?\.basis_live_pct/.test(hs))
   // wave-1c re-check major: strip.basis_pct is the LIVE figure whenever the server holds a quote (basis_clock 'now'), so the
   // settlement label must read basis_settle_pct, and the live figure appears only while MCX trades (never a cached LTP after the close)
   check('W7 one basis per clock: settlement from basis_settle_pct, live only while trading, never basis_pct under the settlement label',
@@ -516,7 +523,7 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
   const gpSrc = src('components/gold/GoldPage.tsx')
   check('W13 GoldPage hands the overview\'s health.fair to every sub-view as `fair` (and the overview itself)', /const fair = overview\?\.health\?\.fair \?\? null/.test(gpSrc) && /fair, overview, onNavigate/.test(gpSrc))
   check('W13 no sub-view fetches /api/gold/overview on its own (the page does, once)', B4A_VIEWS.filter(f => !/GoldPage|HealthStrip/.test(f)).every(f => !/getGoldOverview\(/.test(src(f))))
-  check('W13 CONTRACTS prints the landed / duty-paid rupee from the page\'s fair block, not its own fetch', /fair\?\.duty_paid_landed \?\? mc\.basis\.duty_paid_landed_inr/.test(cv) && /the same rupee as HEALTH and PHYSICAL/.test(cv))
+  check('W13 CONTRACTS prints the landed / duty-paid rupee from the page\'s fair block, not its own fetch', /pageFair\?\.duty_paid_landed \?\? mc\.basis\.duty_paid_landed_inr/.test(cv) && /const pageFair = \(fair\?\.contract \?\? sel\.family\) === sel\.family \? fair : null/.test(cv) && /the same rupee as HEALTH and PHYSICAL/.test(cv))
   // C-TRADER-6 / C-DATA-5 / C-TRADER-22: MONTHLY's official sector = net-purchase bars in tonnes (the holders table is PHYSICAL's); no RBI price-implied estimate
   const mv = src('components/gold/MonthlyView.tsx')
   check('W14 m.official renders NetPurchases once; no holders DataTable and no RBI price-implied tonnes on MONTHLY', /<NetPurchases bars=\{purchases\} \/>/.test(mv) && !/officialCols/.test(mv) && !/rbi\.tonnes_est|rbi &&|RBI_GOLD_RESERVES_USD_MN/.test(mv))
@@ -525,6 +532,220 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
   check('W15 WeeklyView prints release_ist and never istLabel(release_at)', /c\.latest\.release_ist \?\?/.test(src('components/gold/WeeklyView.tsx')) && !/istLabel\(c\.latest\.release_at/.test(src('components/gold/WeeklyView.tsx')))
   // C-TRADER-26: the SGE panel never shows "no verdict" in the release build — a link tile instead
   check('W16 d.sge: no NoVerdict; the SGE link tile instead', !/id="d\.sge"[\s\S]{0,1500}<NoVerdict/.test(dv) && /LinkTile name="SGE delayed quotes"/.test(dv))
+}
+
+// ── X. wave 1d (5 Nov 2026 review): the settlement names its source, TREND its values, the basis its purity; the Kitco chart ──
+{
+  type KitcoMod = typeof import('../../lib/gold/kitco')
+  const K = (await import(new URL('../../lib/gold/kitco.ts', import.meta.url).href)) as KitcoMod
+  // X1 settlement line: source + session + proxy; a server with no source is the band midpoint (never a better source invented)
+  eq('X1 settlementLine names session and source (VWAP · band · pre-1d server with a value · nothing at all)', [
+    F.settlementLine({ settlement_source: 'breeze_vwap30', settlement_session: '2026-11-04' }),
+    F.settlementLine({ settlement_source: 'band_midpoint', settlement_session: '2026-11-03' }),
+    F.settlementLine({ settlement: 139452, settlement_session_label: 'Wed 04 Nov settlement' }),
+    F.settlementLine({ settlement: null, settlement_source: null, settlement_session: '2026-11-04' }),
+    F.settlementLine(null),
+  ], ['Wed 04 Nov · last-30-min VWAP (Breeze) — proxy', 'Tue 03 Nov · price-band midpoint (ICICI master) — proxy',
+      'Wed 04 Nov · price-band midpoint (ICICI master; source not stated) — proxy', 'no settlement', 'no settlement'])
+  // R2 (checker): a null source never reads as a confident band on nothing; with a value it is the band AND the muted caution
+  check('X1 R2 negative control: no settlement → no band words, no note', !/band/.test(F.settlementLine({ settlement: null })) && F.settlementNote({ settlement: null, settlement_source: null }) === null)
+  check('X1 R2 pre-1d server (a value, no source) → the muted caution (its session label can be one session late)', F.settlementNote({ settlement: 139452, settlement_session: '2026-11-04' })?.tone === 'muted'
+    && /did not name/.test(F.settlementNote({ settlement: 139452 })?.text ?? '') && !F.settlementCheck({ settlement: 139452, band_midpoint: 139452 }).available)
+  // X2 the band-vs-VWAP check: > 0.6 % flags; ≤ 0.6 % does not (negative control); a band settlement has nothing to test
+  const vw = { settlement: 143237, settlement_source: 'breeze_vwap30', band_midpoint: 139452, band_session: '2026-11-03' }
+  const c1 = F.settlementCheck(vw)
+  check('X2 recomputed check flags the 5 Nov case (band ₹1,39,452 vs VWAP ₹1,43,237 = −2.64 %)', c1.flagged && c1.available && c1.pct != null && Math.abs(c1.pct - (139452 / 143237 - 1) * 100) < 1e-9, c1)
+  check('X2 negative control: 0.5 % apart is not flagged', !F.settlementCheck({ ...vw, band_midpoint: 143237 * 1.005 }).flagged)
+  check('X2 negative control: exactly 0.6 % is not flagged (strictly more than)', !F.settlementCheck({ ...vw, band_midpoint: 143237 * 1.006 - 1e-6 }).flagged)
+  check('X2 the server\'s settlement_check wins (flagged true even with a small pct)', F.settlementCheck({ ...vw, settlement_check: { band_vs_vwap30_pct: 0.1, flagged: true } }).flagged)
+  check('X2 the server\'s unflagged check stays unflagged', !F.settlementCheck({ ...vw, settlement_check: { band_vs_vwap30_pct: 0.2, flagged: false } }).flagged)
+  eq('X2 a band settlement has no VWAP to test (not available, not flagged)', F.settlementCheck({ settlement: 139452, settlement_source: 'band_midpoint', band_midpoint: 139452 }), { pct: null, flagged: false, available: false })
+  // X3 notes: amber when flagged; a muted caution on the band fallback; nothing when they agree
+  check('X3 settlementNote is amber and names the band session when flagged', F.settlementNote(vw)?.tone === 'amber' && /Tue 03 Nov/.test(F.settlementNote(vw)?.text ?? '') && /0\.6 %/.test(F.settlementNote(vw)?.text ?? ''))
+  // R2 (§f.6): the cell prints the settlement; the note prints the band's value and the %, never the settlement's value again
+  check('X3 R2 the flagged note carries the band value, not the settlement value (negative control: ₹1,43,237 absent)', /1,39,452/.test(F.settlementNote(vw)?.text ?? '') && !/1,43,237/.test(F.settlementNote(vw)?.text ?? ''))
+  check('X3 band fallback → a muted caution', F.settlementNote({ settlement: 1, settlement_source: 'band_midpoint' })?.tone === 'muted')
+  check('X3 negative control: VWAP and band within 0.6 % → no note', F.settlementNote({ ...vw, band_midpoint: 143300 }) === null)
+  check('X3 settlementNoteShort repeats the fact, never the numbers (the strip prints them once per view, §f.6)', F.settlementNoteShort(vw)?.tone === 'amber' && !/\d/.test(F.settlementNoteShort(vw)?.text.replace('30', '') ?? '1') && F.settlementNoteShort({ ...vw, band_midpoint: 143300 }) === null)
+  check('X3 c.mcx uses the chain note (its settle column is the band of the chain session; the strip carries the numbers)', /chainSettleNote\(chain, chainSettle\)/.test(src('components/gold/ContractsView.tsx')))
+  check('X3 bandReferenceLine: the band with its real session; null when the band IS the settlement (printed once)',
+    F.bandReferenceLine(vw) === 'ICICI band midpoint ₹1,39,452 · belongs to the Tue 03 Nov session (reference)' && F.bandReferenceLine({ settlement_source: 'band_midpoint', band_midpoint: 1 }) === null)
+  check('X3 R2 bandReferenceLine without its value (the strip\'s flagged note prints it): the session, no rupee figure', /Tue 03 Nov/.test(F.bandReferenceLine(vw, false) ?? '') && !/₹|1,39,452/.test(F.bandReferenceLine(vw, false) ?? '₹'))
+  check('X3 R2 h.open drops the band value exactly when its amber check note shows', /bandReferenceLine\(bl, blNote\?\.tone !== 'amber'\)/.test(src('components/gold/GoldPreOpen.tsx')))
+  eq('X3 quality chip', [F.settlementQualityChip('vwap30_proxy'), F.settlementQualityChip('band_proxy'), F.settlementQualityChip('proxy'), F.settlementQualityChip(null, 'breeze_vwap30')], ['VWAP30 PROXY', 'BAND PROXY', 'BAND PROXY', 'VWAP30 PROXY'])
+  // X4 TREND: values and the words they earn; the server's words win
+  eq('X4 trendWordsFrom: below both / above both / between / missing', [F.trendWordsFrom(-0.47, -9.72), F.trendWordsFrom(1, 2), F.trendWordsFrom(0.5, -3), F.trendWordsFrom(null, 1)], ['below both averages', 'above both', 'between', null])
+  eq('X4 trendValuesLine prints the three values (drawdown_52w_pct or drawdown_pct)', [F.trendValuesLine({ vs_20d_pct: -0.47, vs_200d_pct: -9.72, drawdown_52w_pct: -23.46 }), F.trendValuesLine({ drawdown_pct: -5 })],
+    [`vs 20 d ${MINUS}0.47 % · vs 200 d ${MINUS}9.72 % · drawdown ${MINUS}23.46 % from the 52-week high`, `drawdown ${MINUS}5.00 % from the 52-week high`])
+  check('X4 the server\'s trend_words win over the computed ones', F.trendWords({ vs_20d_pct: 1, vs_200d_pct: 1, trend_words: 'between' }) === 'between' && F.trendWords({ vs_20d_pct: -1, vs_200d_pct: -1 }) === 'below both averages')
+  const hv = src('components/gold/HealthView.tsx')
+  check('X4 the TREND tile renders trendValuesLine + trendWords and never its rule as the headline word', /trendValuesLine\(g\)/.test(hv) && /trendWords\(g\)/.test(hv) && /dir && !trendTile/.test(hv) && /data-gold-trend-values/.test(hv))
+  // X5 purity: the basis names its landed reference; a cross-purity reference is flagged
+  eq('X5 basisReferenceFor / basisReferenceLabel / basisPurityShort (D1: GUINEA is 999)', [F.basisReferenceFor('GOLD'), F.basisReferenceFor('goldm'), F.basisReferenceFor('GOLDTEN'), F.basisReferenceFor('GOLDPETAL'), F.basisReferenceFor('GOLDGUINEA'), F.basisReferenceFor('X'),
+    F.basisReferenceLabel('landed_995'), F.basisReferenceLabel(null), F.basisPurityShort('landed_999'), F.basisPurityShort(undefined)],
+    ['landed_995', 'landed_995', 'landed_999', 'landed_999', 'landed_999', null, 'vs the 995 duty-paid landed', 'purity of the landed reference not stated', 'landed at 999 fine', 'landed purity not stated'])
+  check('X5 D1: GOLDGUINEA against 999 is its own purity; against 995 (or a 916 a server might still send) it is flagged', !F.basisPurityMismatch('landed_999', 'GOLDGUINEA') && F.basisPurityMismatch('landed_995', 'GOLDGUINEA') && F.basisPurityMismatch('landed_916', 'GOLDGUINEA'))
+  eq('X5 D1: FAMILY_PURITY is the PM\'s table (GOLD/GOLDM 995; TEN/PETAL/GUINEA 999)', F.FAMILY_PURITY, { GOLD: 995, GOLDM: 995, GOLDTEN: 999, GOLDPETAL: 999, GOLDGUINEA: 999 })
+  check('X5 D1: no UI copy calls GUINEA 916', !/GUINEA 916/.test(src('components/gold/HealthView.tsx')) && !/GOLDGUINEA: 916/.test(src('lib/gold/format.ts')))
+  check('X5 basisPurityMismatch: GOLD read against 999 is flagged; GOLD against 995 is not; no reference is not', F.basisPurityMismatch('landed_999', 'GOLD') && !F.basisPurityMismatch('landed_995', 'GOLD') && !F.basisPurityMismatch(null, 'GOLD'))
+  check('X5 the India-basis tile wears a LIVE chip on the live clock and a dated SETTLEMENT chip (with its source quality) only on the settlement clock',
+    /basisClock === 'settlement' && settleDay/.test(hv) && /settlementQualityChip\(settleBlock\.settlement_quality/.test(hv) && !/SETTLEMENT · PROXY · \{dayLabel\(g\.report_date\)\}/.test(hv) && /basisTileWords\([^;]*g\.basis_reference\)/.test(hv))
+  // X6 the strip: one settlement block, the label printed once, the COMEX price once
+  const st = F.stripSettlement({ mcx_settle: 139452, mcx_settle_session: '2026-11-04', mcx_settle_session_label: 'Wed 04 Nov settlement', mcx_settle_quality: 'proxy' } as never,
+    { settlement_source: 'breeze_vwap30', band_midpoint: 139452, band_session: '2026-11-03' } as never)
+  // R2 negative control (the checker's repro): a legacy BAND value never borrows the fair block's VWAP source — that mix is the blocker's mislabel
+  eq('X6 R2 stripSettlement: a legacy band value keeps its own (unstated) source; another value\'s VWAP label is not borrowed', [st.settlement, st.settlement_session, st.settlement_source, st.band_session], [139452, '2026-11-04', null, null])
+  check('X6 R2 …and it then reads as the band with the muted caution, never "last-30-min VWAP"', !/VWAP/.test(F.settlementLine(st)) && F.settlementNote(st)?.tone === 'muted' && !F.settlementCheck(st).flagged)
+  const stSame = F.stripSettlement({ mcx_settle: 143237, mcx_settle_session: '2026-11-04' } as never, { settlement: 143237, settlement_source: 'breeze_vwap30', band_midpoint: 139452, band_session: '2026-11-03', settlement_check: { band_vs_vwap30_pct: -2.64, flagged: true } } as never)
+  eq('X6 R2 stripSettlement: the fair block fills source / band / check only when its settlement IS the value', [stSame.settlement_source, stSame.band_session, F.settlementCheck(stSame).flagged], ['breeze_vwap30', '2026-11-03', true])
+  check('X6 R2 stripSettlement: a strip with no value takes the WHOLE block from the fair block (value and label together)', F.stripSettlement({} as never, { settlement: 143237, settlement_source: 'breeze_vwap30', settlement_session: '2026-11-04' } as never).settlement_source === 'breeze_vwap30'
+    && F.stripSettlement({ mcx_settle: 1, mcx_settle_source: 'band_midpoint' } as never, null).settlement_source === 'band_midpoint')
+  check('X6 stripSettlement: the contract\'s own names win over the legacy ones', F.stripSettlement({ settlement: 143237, mcx_settle: 139452, settlement_session: '2026-11-04' } as never).settlement === 143237)
+  const sentence = 'at the Wed 04 Nov settlement vs that session\'s duty-paid landed'
+  check('X6 basisSettleLabel prints the server sentence verbatim ("at the" exactly once)', F.basisSettleLabel(sentence) === sentence && (F.basisSettleLabel(sentence).match(/at the/g) ?? []).length === 1)
+  check('X6 basisSettleLabel wraps a bare session label once; falls back to the ISO session', F.basisSettleLabel('Tue 03 Nov settlement') === 'at the Tue 03 Nov settlement vs that session\'s duty-paid landed' && F.basisSettleLabel(null, '2026-11-03') === sentence.replace('Wed 04', 'Tue 03'))
+  check('X6 sameComexPrint: the same quantity prints once; a real difference prints both (negative control)', F.sameComexPrint(4072.2, 4072.2) && F.sameComexPrint(4072.2, 4072.24) && !F.sameComexPrint(4072.2, 4105) && !F.sameComexPrint(null, 4072.2))
+  const hs2 = src('components/gold/HealthStrip.tsx')
+  check('X6 the strip renders settlementLine + settlementNote, never a leading "settle —", and prints the daily bar only when it differs', /settlementLine\(st\)/.test(hs2) && /settlementNote\(st\)/.test(hs2) && !/>settle — </.test(hs2) && /!comexOnce/.test(hs2) && /data-gold-settle-note/.test(hs2))
+  // X7 the pre-open desk: the baseline names its source; the band names its session; a typed override is the user's
+  const fairStub = { baseline: { value: 143237, source: 's', session: '2026-11-04', close_time: '', settlement_from_band: 139452, session_label: 'Wed 04 Nov settlement' } } as never
+  const bs = F.baselineSettlement(fairStub, { contract: 'GOLD', settlement: 143237, settlement_source: 'breeze_vwap30', band_midpoint: 139452, band_session: '2026-11-03' } as never, 'GOLD')
+  eq('X7 baselineSettlement: /fair.baseline value + session, the same family\'s fair (same settlement value) fills source / band', [bs?.settlement, bs?.settlement_session, bs?.settlement_source, bs?.band_session], [143237, '2026-11-04', 'breeze_vwap30', '2026-11-03'])
+  check('X7 negative control: another family\'s fair block never fills the baseline\'s source', F.baselineSettlement(fairStub, { contract: 'GOLDM', settlement_source: 'breeze_vwap30' } as never, 'GOLD')?.settlement_source == null)
+  // R2 (checker): a broker previous close is labelled as what it is, even when the block also carries the settle block's source
+  const brokerStub = { baseline: { value: 140190, source: 'ICICI Breeze previous close', session: '2026-11-04', session_label: 'Wed 04 Nov settlement', settlement_source: 'breeze_vwap30', settlement_quality: 'vwap30_proxy',
+    band_midpoint: 139452, band_session: '2026-11-03', settlement_check: { band_vs_vwap30_pct: -2.64, flagged: true } } } as never
+  const bk = F.baselineSettlement(brokerStub, { contract: 'GOLD', settlement: 143237, settlement_source: 'breeze_vwap30' } as never, 'GOLD')
+  check('X7 R2 broker previous close → its own label (never "last-30-min VWAP"), its own chip, no band check', bk?.settlement_source === 'breeze_previous_close' && /previous close/.test(F.settlementLine(bk)) && !/VWAP/.test(F.settlementLine(bk))
+    && F.settlementQualityChip(bk?.settlement_quality, bk?.settlement_source) === 'BROKER CLOSE' && !F.settlementCheck(bk).flagged && F.settlementNote(bk)?.tone === 'muted', bk)
+  const nullSrc = F.baselineSettlement({ baseline: { value: 140190, source: 'x', session: '2026-11-04', settlement_source: null } } as never, { contract: 'GOLD', settlement: 143237, settlement_source: 'breeze_vwap30' } as never, 'GOLD')
+  check('X7 R2 a null source on a value that is NOT the fair block\'s settlement is not filled with the VWAP label (negative control)', nullSrc?.settlement_source == null && !/VWAP/.test(F.settlementLine(nullSrc)))
+  check('X7 R2 baselineSourceKind', F.baselineSourceKind('your entry') === 'user_entry' && F.baselineSourceKind('ICICI Breeze previous close') === 'breeze_previous_close' && F.baselineSourceKind('MCX Wed 04 Nov settlement · last-30-min VWAP') === null)
+  const po = src('components/gold/GoldPreOpen.tsx')
+  check('X7 h.open prints settlementLine for the baseline, the amber check note and the band\'s session (no "Today\'s MCX band")', /settlementLine\(bl\)/.test(po) && /settlementNoteShort\(bl\)/.test(po) && /set around the \{bandDay\} settlement/.test(po) && !/Today&apos;s MCX band/.test(po) && /your typed close \(override\)/.test(po))
+  // X8 CONTRACTS / MCXG: margin dates, 1 % move, ticket margin, ladder vs chain
+  eq('X8 marginHistoryDates counts the one stored row (REREVIEW "0 dates"); sub-$1,000 rows are not margins', [F.marginHistoryDates([{ trade_date: '2026-11-05', margin_usd: 19702 }]), F.marginHistoryDates([{ trade_date: 'a', margin_usd: 25 }]), F.marginHistoryDates(null)], [1, 0, 0])
+  eq('X8 onePctMove at the live price, else the server\'s settlement figure', [F.onePctMove({ one_pct_move_inr: 139452, multiplier: 100 }, 144014), F.onePctMove({ one_pct_move_inr: 139452, multiplier: 100 }, null)],
+    [{ value: 144014, at: 'live' }, { value: 139452, at: 'settlement' }])
+  const tk = { notional: 144405, indicative_margin: 8664, margin_pct_indicative: 6 }
+  eq('X8 ticketMargin: the card\'s dated NRML % of this notional, not the 6 % constant (5 Nov: ₹8,664 vs the card\'s 9.25 %)', [F.ticketMargin(tk, { margin_pct: 9.25, margin_source: 'zerodha_nrml', margin_date: '2026-11-05' }).value, F.ticketMargin(tk, { margin_pct: 9.25 }).kind], [Math.round(144405 * 0.0925), 'card_mirror'])
+  check('X8 ticketMargin: a server mirror wins; no mirror at all → the constant, labelled as such', F.ticketMargin({ ...tk, margin_source: 'zerodha_nrml' }, { margin_pct: 9.25 }).kind === 'server_mirror' && F.ticketMargin(tk, null).kind === 'constant' && /indicative constant/.test(F.ticketMargin(tk, null).label))
+  const cvx = src('components/gold/ContractsView.tsx')
+  check('X8 R2 the 1 % move prints its number once: "at the live price", never "at live ₹…" (the same number twice)', /'at the live price'/.test(cvx) && !/at live \$\{fmtInr0\(livePrice\)\}/.test(cvx))
+  check('X8 GOLD › CONTRACTS: the ladder omits settle / band / carry (the chain prints them once) and the chain drops OI / ΔOI (the ladder prints them once)', /chainOnPage livePrice=\{livePrice\}/.test(cvx) && /\.\.\.\(chainOnPage \? \[\] : \[/.test(cvx) && !/key: 'doi'/.test(cvx) && /marginHistoryDates\(spec\.margin_history\)/.test(cvx))
+  check('X8 MCXG\'s ticket margin comes from ticketMargin with the picked expiry\'s card', /ticketMargin\(ticket, pickedExpiry\)/.test(src('components/McxGoldDesk.tsx')) && /livePrice=\{liveLtp\}/.test(src('components/McxGoldDesk.tsx')))
+  check('X8 an empty brief shows no bias word; a brief with a body keeps its header', !/bias/.test(F.briefHeader({ bias: 'bullish', confidence: 0.5 } as never, false)) && /bias bullish/.test(F.briefHeader({ bias: 'bullish', confidence: 0.5 } as never)))
+  check('X8 WEEKLY: COMEX OI Δ is the GC product (the POSITIONING / DAILY definition); a repeated volume is not printed as data', /oiChangeByDate\(comex\.data\?\.rows, 'GC'\)/.test(src('components/gold/WeeklyView.tsx')) && /— \(repeat\)/.test(src('components/gold/WeeklyView.tsx')) && !/dupVolume\(r\) \? ' \?'/.test(src('components/gold/WeeklyView.tsx')))
+  // X9 the Kitco-style chart (pure arithmetic)
+  eq('X9 Kitco\'s nine timeframes, in its order', K.KITCO_TIMEFRAMES.map(t => t.label), ['24 h', '3 days', '30 days', '60 days', '6 months', '1 year', '5 years', '10 years', 'all'])
+  eq('X9 Kitco\'s units', K.KITCO_UNITS.map(u => K.KITCO_UNIT_LABEL[u]), ['USD/oz', '₹/10 g', '₹/g', 'USD/g', 'USD/kg'])
+  near('X9 USD/kg = $/oz × 1000 ÷ 31.1034768', K.kitcoConvert(4000, 'usd_kg', null), 4000 * 1000 / 31.1034768)
+  near('X9 USD/g', K.kitcoConvert(4000, 'usd_g', null), 4000 / 31.1034768)
+  near('X9 ₹/10 g landed = $/oz × USD/INR × 10 ÷ 31.1034768', K.kitcoConvert(4000, 'inr_10g', 94.5), 4000 * 94.5 * 10 / 31.1034768)
+  near('X9 ₹/g duty-paid × 1.15', K.kitcoConvert(4000, 'inr_g', 94.5, 1.15), 4000 * 94.5 / 31.1034768 * 1.15)
+  check('X9 negative control: a rupee unit with no rate (or no dated duty) is not drawn; a dollar unit needs neither', K.kitcoConvert(4000, 'inr_10g', null) === null && K.kitcoConvert(4000, 'inr_10g', 94, null) === null && K.kitcoConvert(4000, 'usd_oz', null, null) === 4000)
+  eq('X9 dutyMultiplier: the dated duty only from its effective day', [K.dutyMultiplier('2026-05-13', { pct: 15, effective: '2026-05-13' }), K.dutyMultiplier('2026-05-12', { pct: 15, effective: '2026-05-13' }), K.dutyMultiplier('2026-06-01', null)], [1.15, null, null])
+  const fxs = [{ ms: 100, v: 80 }, { ms: 200, v: 81 }, { ms: 300, v: 82 }]
+  eq('X9 fxAsOf: the latest rate at or before the instant; none before the first', [K.fxAsOf(fxs, 50), K.fxAsOf(fxs, 100), K.fxAsOf(fxs, 250), K.fxAsOf(fxs, 999), K.fxAsOf([], 1)], [null, 80, 81, 82, null])
+  const dfx = K.dailyFxPoints([{ ts: '2026-11-03', c: 94.7 }, { ts: '2026-11-04', c: 94.6 }, { ts: '2026-11-02', c: null }])
+  check('X9 dailyFxPoints: a daily close is known from the END of its day (no same-day look-ahead into intraday points)', dfx.length === 2 && dfx[0].ms === Date.parse('2026-11-04T00:00:00Z') - 1 && K.fxAsOf(dfx, Date.parse('2026-11-04T10:00:00Z')) === 94.7)
+  eq('X9 mergeFx: the 1-minute span replaces the daily points inside it', K.mergeFx([{ ms: 10, v: 1 }, { ms: 50, v: 2 }, { ms: 90, v: 3 }], [{ ms: 40, v: 9 }, { ms: 60, v: 9.5 }]).map(p => p.v), [1, 9, 9.5, 3])
+  const ser = K.kitcoSeries([{ ms: 50, usd: 4000 }, { ms: 150, usd: 4010 }, { ms: 250, usd: 4020 }], { unit: 'inr_10g', duty: 'ex_duty', fx: [{ ms: 100, v: 90 }], dutyRate: null, startMs: null })
+  check('X9 kitcoSeries: a point before the first stored rupee rate is dropped (counted), never converted at today\'s rate', ser.pts.length === 2 && ser.dropped === 1 && Math.abs(ser.pts[0].v - 4010 * 90 * 10 / 31.1034768) < 1e-6)
+  const ser2 = K.kitcoSeries([{ ms: Date.parse('2026-05-01T00:00:00Z'), usd: 4000 }, { ms: Date.parse('2026-06-01T00:00:00Z'), usd: 4000 }], { unit: 'inr_10g', duty: 'duty_paid', fx: [{ ms: 0, v: 90 }], dutyRate: { pct: 15, effective: '2026-05-13' }, startMs: null })
+  check('X9 kitcoSeries duty-paid: only from the duty\'s effective date (the store keeps no duty history)', ser2.pts.length === 1 && ser2.dropped === 1)
+  const ser3 = K.kitcoSeries([{ ms: 50, usd: 1 }, { ms: 150, usd: 2 }], { unit: 'usd_oz', duty: 'ex_duty', fx: [], dutyRate: null, startMs: 100 })
+  check('X9 kitcoSeries: the window starts at startMs', ser3.pts.length === 1 && ser3.pts[0].v === 2 && ser3.firstMs === 150)
+  const ks = K.kitcoStats([{ ms: 1, v: 10 }, { ms: 2, v: 14 }, { ms: 3, v: 8 }, { ms: 4, v: 12 }], 11)
+  eq('X9 kitcoStats vs the previous close', [ks?.hi, ks?.lo, ks?.hiMs, ks?.loMs, ks?.chg, ks?.baseKind], [14, 8, 2, 3, 1, 'prev_close'])
+  eq('X9 kitcoStats without a previous close: vs the window\'s first point', [K.kitcoStats([{ ms: 1, v: 10 }, { ms: 2, v: 12 }])?.chg, K.kitcoStats([{ ms: 1, v: 10 }, { ms: 2, v: 12 }])?.baseKind, K.kitcoStats([])], [2, 'window_first', null])
+  const big = Array.from({ length: 10_000 }, (_, i) => ({ ms: i, v: Math.sin(i / 50) * 100 + (i === 7777 ? 500 : 0) - (i === 1234 ? 400 : 0) }))
+  const dec = K.decimate(big, 1600)
+  check('X9 decimate keeps the window\'s extremes and the last point within the budget', dec.length <= 1601 && dec.some(p => p.ms === 7777) && dec.some(p => p.ms === 1234) && dec[dec.length - 1].ms === 9999 && dec.every((p, i) => i === 0 || p.ms >= dec[i - 1].ms))
+  check('X9 decimate leaves a short series alone', K.decimate([{ ms: 1, v: 1 }, { ms: 2, v: 2 }]).length === 2)
+  const t0 = Date.parse('2026-11-04T18:30:00Z')
+  const tt24 = K.timeTicks(t0, t0 + 86_400_000), ttAll = K.timeTicks(Date.parse('2000-08-30T00:00:00Z'), Date.parse('2026-11-05T00:00:00Z'))
+  check('X9 timeTicks: clock labels inside a day, years over 26 years, never more than asked', tt24.length > 0 && tt24.every(t => /^\d{2}:00$|^\d{2} [A-Z][a-z]{2}$/.test(t.label)) && ttAll.length > 0 && ttAll.length <= 8 && ttAll.every(t => /^\d{4}$/.test(t.label)))
+  eq('X9 the page unit → the panel unit (₹/tola reads ₹/10 g)', ['usd_oz', 'inr_g', 'tola', 'x'].map(K.kitcoUnitFromPage), ['usd_oz', 'inr_g', 'inr_10g', 'usd_oz'])
+  const dvx = src('components/gold/DailyView.tsx'), kc = src('components/gold/KitcoChart.tsx')
+  check('X9 d.24h is the Kitco panel: every timeframe and unit chip, the duty toggle, the stats, the Kitco link — a LINK (the stack never fetches kitco.com)',
+    /KITCO_TIMEFRAMES\.map/.test(dvx) && /KITCO_UNITS\.map/.test(dvx) && /data-gold-kitco-duty="duty_paid"/.test(dvx) && /data-gold-kitco-stats/.test(dvx) && /href=\{KITCO_URL\}/.test(dvx)
+    && !walk(path.join(UI, 'lib')).concat(walk(path.join(UI, 'components'))).some(f => /(fetch|get|getJson|client\.get)\([^)]*kitco\.com/.test(fs.readFileSync(f, 'utf8'))))
+  check('X9 the chart reads only /api/gold/bars (GC=F, INR=X) — no Yahoo, no other source', /getGoldBars\('INR=X', '1d'/.test(dvx) && /getGoldBars\('INR=X', '1m'\)/.test(dvx) && !/query[12]\.finance\.yahoo|yfinance/.test(dvx + kc))
+  check('X9 the price change is the only colour (§f.3); session bands on 24 h; previous close dashed', /kstats\.chg > 0 \? T\.green/.test(dvx) && /data-gold-band=\{b\.key\}/.test(kc) && /data-gold-prev-close/.test(kc))
+  // ── X10 (round 2, D4): CONTRACTS › MCX CHAIN — one session, the band's own, never the request date ─────────────────
+  const curveR2 = { date: '2026-11-05', chain_session: '2026-11-03', chain_session_label: 'Tue 03 Nov settlement', oi_session: '2026-11-04',
+    points: [{ expiry: '2026-12-04', settle_or_last: 139452, source: 'icici_master_band', trade_date: '2026-11-04', session_date: '2026-11-04' }] }
+  const ch = F.chainSession(curveR2)
+  eq('X10 chainSession: the server\'s chain_session (the band\'s own), the OI\'s session, the band source', [ch.session, ch.day, ch.oiSession, ch.source], ['2026-11-03', 'Tue 03 Nov', '2026-11-04', 'band_midpoint'])
+  check('X10 negative control: a pre-1d /curve (no chain_session) is NOT dated by the request date or the row\'s re-keyed session_date', F.chainSession({ ...curveR2, chain_session: null, chain_session_label: null }).session === null
+    && F.chainSession({ ...curveR2, chain_session: null, chain_session_label: null }).day === '')
+  eq('X10 chainRowSettlement: a band row is dated by the chain session, never its session_date (Wed 04 Nov, the file\'s re-key)', F.chainRowSettlement(curveR2.points[0], ch), { settlement: 139452, settlement_source: 'band_midpoint', settlement_session: '2026-11-03' })
+  const basisR2 = F.curveBasisSettlement({ mcx_front_inr: 143237, mcx_front_session: '2026-11-04', mcx_front_session_label: 'Wed 04 Nov settlement', mcx_front_quality: 'vwap30_proxy', mcx_front_source: 'breeze_vwap30',
+    band_midpoint: 139452, band_session: '2026-11-03', settlement_check: { band_vs_vwap30_pct: -2.64, flagged: true } })
+  eq('X10 curveBasisSettlement maps the basis block\'s mcx_front_* names (the real server sends no settlement_source there)', [basisR2?.settlement, basisR2?.settlement_source, basisR2?.settlement_session], [143237, 'breeze_vwap30', '2026-11-04'])
+  const cn = F.chainSettleNote(ch, basisR2)
+  check('X10 chainSettleNote: band chain (Tue 03 Nov) + VWAP basis (Wed 04 Nov) → the note says both sessions, amber when flagged, no numbers',
+    cn?.tone === 'amber' && /Tue 03 Nov/.test(cn.text) && /Wed 04 Nov/.test(cn.text) && /band/.test(cn.text) && !/1,39,452|1,43,237/.test(cn.text), cn)
+  check('X10 negative control: the note never claims "this panel uses the last-30-min VWAP" for a band chain', !/this panel uses the last-30-min VWAP/.test(cn?.text ?? ''))
+  check('X10 band chain + band basis → the muted band caution; an official / VWAP chain on the basis\'s session → no note', F.chainSettleNote(ch, { settlement: 139452, settlement_source: 'band_midpoint', settlement_session: '2026-11-03' })?.tone === 'muted'
+    && F.chainSettleNote({ source: 'breeze_vwap30', session: '2026-11-04', day: 'Wed 04 Nov', oiSession: null }, basisR2) === null)
+  check('X10 c.mcx never prints `session ${dayLabel(mc.date)}`; it renders chain_session_label and the OI session, and the basis line has no request-date fallback',
+    !/session \$\{dayLabel\(mc\.date\)\}/.test(cvx) && /mc\?\.chain_session_label/.test(cvx) && /OI at the \$\{dayLabel\(chain\.oiSession\)\} close/.test(cvx) && !/mc\.date \? `\$\{dayLabel\(mc\.date\)\} settlement`/.test(cvx)
+    && /chainRowSettlement\(p, chain\)/.test(cvx) && /data-gold-chain-session/.test(cvx))
+  // ── X11 (round 2, D5): Kitco — one date's close is ONE rupee number on every timeframe; each number once per panel ─────
+  const fxD = K.dailyFxRows([{ ts: '2026-11-03', c: 88.0 }, { ts: '2026-11-04', c: 88.5 }, { ts: '2026-11-02', c: null }])
+  eq('X11 fxOnDate: the close of the date itself, a holiday takes the latest earlier date, none before the first', [K.fxOnDate(fxD, '2026-11-04'), K.fxOnDate(fxD, '2026-11-05'), K.fxOnDate(fxD, '2026-11-01')], [88.5, 88.5, null])
+  const wedClose24h = K.dailyCloseIn(4000, '2026-11-04', 'inr_10g', 'duty_paid', fxD, { pct: 15, effective: '2026-05-13' })
+  const allSer = K.kitcoSeries([{ ms: Date.parse('2026-11-03T00:00:00Z'), usd: 3950, date: '2026-11-03' }, { ms: Date.parse('2026-11-04T00:00:00Z'), usd: 4000, date: '2026-11-04' }],
+    { unit: 'inr_10g', duty: 'duty_paid', fx: K.dailyFxPoints([{ ts: '2026-11-03', c: 88.0 }, { ts: '2026-11-04', c: 88.5 }]), dutyRate: { pct: 15, effective: '2026-05-13' }, startMs: null, fxDaily: fxD })
+  near('X11 the Wed 04 Nov close converts at Wed\'s INR=X close (88.5): 24 h\'s dashed line = the same date on \'all\'', wedClose24h, 4000 * 88.5 * 10 / 31.1034768 * 1.15)
+  check('X11 …and \'all\' prints the very same number for that date', allSer.pts.length === 2 && wedClose24h != null && Math.abs(allSer.pts[1].v - wedClose24h) < 1e-9, allSer)
+  const lagged = K.kitcoSeries([{ ms: Date.parse('2026-11-04T00:00:00Z'), usd: 4000 }], { unit: 'inr_10g', duty: 'ex_duty', fx: K.dailyFxPoints([{ ts: '2026-11-03', c: 88.0 }, { ts: '2026-11-04', c: 88.5 }]), dutyRate: null, startMs: null })
+  check('X11 negative control: the round-1 instant rule (no date) gave the PREVIOUS day\'s rate (88.0) — the defect the date rule removes', Math.abs(lagged.pts[0].v - 4000 * 88.0 * 10 / 31.1034768) < 1e-9)
+  const legend = K.kitcoLegend([{ date: '2026-11-03', pts: [{ c: 3950 }] }, { date: '2026-11-04', pts: [{ c: 4000 }] }, { date: '2026-11-05', pts: [{ c: 4050 }] }],
+    [{ date: '2026-11-02', o: 0, h: 0, l: 0, c: 3900, v: 0 }, { date: '2026-11-03', o: 0, h: 0, l: 0, c: 3950, v: 0 }, { date: '2026-11-04', o: 0, h: 0, l: 0, c: 4000, v: 0 }], { price: 4050 }, (u: number) => u, 1, '2026-11-04')
+  check('X11 the 24 h legend prints each number once: no today row (the stats + the chart\'s last), the dashed date keeps only its Δ, the older close prints its value',
+    legend.length === 2 && !legend.some(l => /Thu 05 Nov|last /.test(l)) && /^Wed 04 Nov ▲50\.0/.test(legend[1]) && !/4000\.0|4,000\.0/.test(legend[1]) && /dashed line/.test(legend[1]) && /Tue 03 Nov close .* 3,?950\.0 ▲50\.0/.test(legend[0]), legend)
+  check('X11 DailyView: the dashed close uses the date rule (closeIn); the stats row has no "prev close" number; the subtitle never repeats the live price; the strip\'s reference is named',
+    /prevCloseK = prevClose \? closeIn\(prevClose\.c, prevClose\.date\)/.test(dvx) && !/>prev close <b/.test(dvx) && !/live \$\{fmtInUnit\(live\.price/.test(dvx) && /data-gold-kitco-strip-ref/.test(dvx) && /settleValue=\{serverSettle \? undefined : prevCloseK\}/.test(dvx))
+  check('X11 3 days takes its high / low from the same 1-minute highs and lows as 24 h (a 3-day high is never below the 24 h high)', /if \(!intraday \|\| !kstats0\) return kstats0/.test(dvx) && /else for \(const b of data\?\.bars \?\? \[\]\)/.test(dvx))
+  check('X11 the 1-minute rupee bars load for every rupee window (the last value is one number on every window)', /maybe\(rupee, \(\) => getGoldBars\('INR=X', '1m'\)\)/.test(dvx))
+  check('X11 the charts mark high / low without re-printing the stats row\'s numbers (§f.6)', !/hi \{fmtFixed\(/.test(kc) && !/lo \{fmtFixed\(/.test(kc) && /data-gold-hilo-marks/.test(kc))
+  check('X11 the header strip names its change\'s reference where it prints', /data-gold-strip-chg-ref/.test(hs2))
+  // ── X12 (round 2, D3): PETAL (₹/1 g) / GUINEA (₹/8 g) scaled to ₹/10 g beside ₹/10 g values, labelled ───────────────
+  eq('X12 quoteGrams / quoteUnitShort from the server\'s quote unit or the family', [F.quoteGrams('₹ per 1 g'), F.quoteGrams('₹/8 g'), F.quoteGrams('GOLDGUINEA'), F.quoteGrams('GOLD'), F.quoteGrams('x'), F.quoteUnitShort('₹ per 10 g'), F.quoteUnitShort('GOLDPETAL')],
+    [1, 8, 8, 10, null, '₹/10 g', '₹/1 g'])
+  const g8 = F.toPer10g(112211, '₹ per 8 g'), g1 = F.toPer10g(14033, 'GOLDPETAL'), g10 = F.toPer10g(139452, 'GOLD')
+  check('X12 toPer10g: GUINEA × 1.25 (₹1,12,211 → ₹1,40,264), PETAL × 10, GOLD untouched (negative control), the label says so', Math.round(g8.value ?? 0) === 140264 && g8.scaled && /scaled from ₹\/8 g/.test(g8.label)
+    && g1.value === 140330 && g1.from === '₹/1 g' && !g10.scaled && g10.value === 139452 && g10.label === '₹/10 g')
+  const ref = 143986
+  check('X12 ladderPer10g: explicit unit → scaled; an unscaled PETAL / GUINEA bar labelled ₹/10 g is read in the unit nearer the 10 g reference; an already-scaled one is left alone',
+    F.ladderPer10g({ value: 14033, unit: '₹/1 g' }, null).value === 140330
+    && F.ladderPer10g({ value: 14033, unit: '₹/10 g', label: 'MCX GOLDPETAL NOV-26 settle' }, ref).value === 140330
+    && Math.round(F.ladderPer10g({ value: 112211, unit: '₹/10 g', label: 'MCX GOLDGUINEA NOV-26 settle' }, ref).value ?? 0) === 140264
+    && F.ladderPer10g({ value: 140264, unit: '₹/10 g', label: 'MCX GOLDGUINEA NOV-26 settle' }, ref).scaled === false
+    && F.ladderPer10g({ value: 139452, unit: '₹/10 g', label: 'MCX GOLD DEC-26 settle' }, ref).scaled === false
+    && F.ladderPer10g({ value: 140330, scaled_from: '₹/1 g', unit: '₹/10 g' }, ref).value === 140330)
+  check('X12 the chain / ladder print the family\'s own unit (never "settle ₹/10 g" on PETAL) and a ₹/10 g column for a scaled family; PHYSICAL scales its bars',
+    /label: `settle \$\{famUnit\}`/.test(cvx) && /label: `settle \$\{chainUnit\}/.test(cvx) && /'₹\/10 g eq\.'/.test(cvx) && !/'settle ₹\/10 g'/.test(cvx) && /ladderPer10g\(s, dutyPaidRef\)/.test(src('components/gold/PriceLadder.tsx')))
+  // ── X13 (round 2, D2): the accuracy log flags and re-explains, never rewrites ─────────────────────────────────────
+  const rowStale = { date: '2026-11-05', stale_baseline: true, baseline_check: { band_vs_vwap30_pct: -2.64, flagged: true, compared: 'baseline ₹1,39,452 labelled Wed 04 Nov settlement vs that session\'s last-30-min VWAP ₹1,43,237' } }
+  eq('X13 logCheckWords: flagged (its own sentence) · ok · unknown · flagged by the session rule', [F.logCheckWords(rowStale).state, F.logCheckWords({ baseline_check: { band_vs_vwap30_pct: 0.1, flagged: false } }).state, F.logCheckWords({}).state, F.logCheckWords({ stale_baseline: true }).state],
+    ['flagged', 'ok', 'unknown', 'flagged'])
+  check('X13 the flagged words keep the stored numbers and re-explain them', /labelled Wed 04 Nov/.test(F.logCheckWords(rowStale).text) && /stored numbers stand/.test(F.logCheckWords(rowStale).text))
+  const ar = F.accuracyRead({ mean_abs_error: 1500, naive_mean_abs_error: 1200, stale_baseline_count: 7, stale_baseline_dates: ['2026-10-27'], stale_baseline_unknown: ['2026-10-26'], excluding_stale: { days: 0 } }, [])
+  check('X13 accuracyRead: every-row verdict, the stale rows named, unknown counted, and the read without them', ar.better === false && ar.stale === 7 && ar.unknown === 1 && /no scored day left/.test(ar.cleanLine ?? ''))
+  check('X13 negative control: no stale rows → no "without the stale rows" line', F.accuracyRead({ mean_abs_error: 1, naive_mean_abs_error: 2, stale_baseline_count: 0, excluding_stale: { days: 3, mean_abs_error: 1, naive_mean_abs_error: 2 } }, []).cleanLine === null)
+  check('X13 the log table shows the check column and the strip both reads', /key: 'check', label: 'Check vs VWAP30'/.test(src('components/gold/GoldAccuracyLog.tsx')) && /accuracyRead\(stats, rows\)/.test(src('components/gold/GoldAccuracyLog.tsx')))
+  // ── X14 (round 2): the India-basis tile and the strip print each phrase / day once ─────────────────────────────────
+  eq('X14 basisTileWords: the server label once; the purity added only when the label does not name it', [
+    F.basisTileWords('live MCX (ICICI Breeze) vs duty-paid landed at 995 now', 'landed_995'),
+    F.basisTileWords('at the Wed 04 Nov settlement vs that session\'s duty-paid landed', 'landed_995'),
+    F.basisTileWords(null, 'landed_999')],
+    ['live MCX (ICICI Breeze) vs duty-paid landed at 995 now', 'at the Wed 04 Nov settlement vs that session\'s duty-paid landed · vs the 995 duty-paid landed', 'vs the 999 duty-paid landed'])
+  check('X14 the India-basis tile value is signed (+0.42 %), the same sign the strip prints', /g\.key === 'india_basis'\) return fmtSignedPctSp\(g\.value, 2\)/.test(hv) && /basisTileWords\(/.test(hv))
+  check('X14 the strip\'s live branch dates the settlement basis by its own session first (a stored fallback can be older)', /dayLabel\(s\?\.basis_settle_date \?\? s\?\.basis_session\) \|\| settlementDay\(st\)/.test(hs2))
 }
 
 console.log(`gold.check: ${passed} passed, ${failed} failed`)

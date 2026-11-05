@@ -1,26 +1,31 @@
 'use client'
 
 /**
- * DAILY — the Kitco chart, done our way (PLAN a.3): the matched COMEX month over the Globex day on one 24-h axis
- * (d.24h) with the previous day as a dotted overlay, the last settlement as a dashed line, hi/lo, a two-row time
- * axis (IST over NY), session bands (Sydney/Tokyo · Shanghai · London · New York), the MCX bar under the axis and the
- * hatched CME maintenance hour; three days overlaid (d.3day); the SGE Au99.99 line on the Shanghai band when stored
- * (d.sge); yesterday's OI × price read for COMEX and MCX (d.quadrant); the last twelve 5-minute bars (d.tape).
+ * DAILY — the Kitco chart, done our way (PLAN a.3; wave 1d: Kitco's timeframes and units). d.24h is ONE chart panel with
+ * Kitco's timeframes (24 h · 3 days · 30 days · 60 days · 6 months · 1 year · 5 years · 10 years · all) and units (USD/oz,
+ * ₹/10 g landed ex-duty or duty-paid, ₹/g, USD/g, USD/kg), the window's high / low / change, the previous close dashed and,
+ * on 24 h, the Globex-day axis with the session bands (Sydney/Tokyo · Shanghai · London · New York), the MCX bar and the
+ * hatched CME maintenance hour; a "Kitco ↗" link beside it (Kitco is a link only: its terms forbid scraping). Then three
+ * days overlaid (d.3day), the SGE Au99.99 line when stored (d.sge), yesterday's OI × price read (d.quadrant) and the last
+ * twelve 5-minute bars (d.tape).
  *
- * Data: /api/gold/bars (1-minute bars from gold_bars_intraday; the live last from ui-api's SWR cache — the view never
- * calls Yahoo), /api/gold/positioning/daily. Everything inline SVG in CSS px (useChartSize, axisTicks); the chart's
- * axis and bar arithmetic (dayGroups, resample5m, DST bands) is lib/gold/sessions.ts, unit-tested under node by
- * ui/components/__tests__/gold.check.ts. Arithmetic badge on the chart, context on the rest.
+ * Data: /api/gold/bars only (GC=F 1-minute and daily bars, INR=X 1-minute and daily bars for the rupee — each point at the
+ * rate of its own time; the duty is the page's one dated duty, applied only from its effective date), /api/gold/positioning/daily.
+ * The view never calls Yahoo. Chart arithmetic: lib/gold/kitco.ts and lib/gold/sessions.ts, unit-tested by gold.check.ts.
+ * Arithmetic badge on the chart, context on the rest; colour only on the price change.
  */
-import { useMemo, useState } from 'react'
-import { CHART_BOX, Chip, DataTable, T, fmtFixed, fmtSigned, useChartSize, type Column } from '@/components/terminal'
-import { axisTicks, textWidth } from '@/components/terminal/chart'
-import { getGoldBars, getGoldPositioningDaily } from '@/lib/gold/api'
+import { useEffect, useMemo, useState } from 'react'
+import { Chip, DataTable, T, fmtFixed, fmtSigned, type Column } from '@/components/terminal'
+import { getGoldBars, getGoldPositioningDaily, memoGet } from '@/lib/gold/api'
 import { UNIT_LABEL, comexCode, comexMonthLabel, convertUsdOz, dayLabel, fmtCount, fmtInUnit, fmtSignedPctSp, istClock, pctChange, unitDp } from '@/lib/gold/format'
 import { istDateISO } from '@/lib/format'
-import { axisPos, axisTicksIst, barMs, dailyOhlc, dayGroups, fmtHM, globexOpenIst, istMinutes, istToNy, legendCloses, prevSessionClose, resample5m, sessionBands, shiftDays,
-         ukDstActive, usDstActive, type Band, type DayPt } from '@/lib/gold/sessions'
-import type { Bar, GoldBars, GoldSubViewProps, Unit } from '@/lib/gold/types'
+import { KITCO_ALL_FROM, KITCO_SHORT_DAYS, KITCO_TIMEFRAMES, KITCO_UNITS, KITCO_UNIT_LABEL, KITCO_URL, dailyCloseIn, dailyFxPoints, dailyFxRows, decimate, dutyMultiplier, fxAsOf,
+         isRupee, kitcoConvert, kitcoDp, kitcoLegend, kitcoSeries, kitcoStats, kitcoUnitFromPage, mergeFx, timeframe, type DailyFx, type DutyMode, type FxPt, type KitcoTf, type KitcoUnit,
+         type KPt } from '@/lib/gold/kitco'
+import { barMs, dailyOhlc, dayGroups, fmtHM, istDate, istMinutes, istToNy, legendCloses, prevSessionClose, resample5m, shiftDays,
+         ukDstActive, usDstActive, type DayPt } from '@/lib/gold/sessions'
+import type { Bar, GoldBars, GoldSubViewProps } from '@/lib/gold/types'
+import { IntradayChart, TimeChart, type Conv } from './KitcoChart'
 import { OiQuadrantTape } from './OiQuadrantTape'
 import { LinkTile, Term } from './ViewBits'
 import { GoldPanel, NoVerdict, Pending, useGoldLoad } from './kit'
@@ -28,151 +33,12 @@ import { GoldPanel, NoVerdict, Pending, useGoldLoad } from './kit'
 const BARS_MS = 60_000
 /** the only COMEX symbol with stored 1-minute bars (gold_bars_intraday: GC=F, INR=X, SGE_AU9999) */
 const BARS_SYMBOL = 'GC=F'
-const BAND_FILL: Record<Band['key'], string> = { sydney: '#1a2130', shanghai: '#2a1f3f', london: '#13303a', newyork: '#3a2a12', mcx: '#5a3f00', maintenance: 'transparent' }
-
 type Pt = DayPt
+const DAY_MS = 86_400_000
+/** a load that is off resolves to null without a request (the long daily and the rupee bars load only when a timeframe / unit needs them) */
+const maybe = (on: boolean, f: () => Promise<{ data: GoldBars }>): Promise<{ data: GoldBars | null }> => (on ? f() : Promise.resolve({ data: null }))
 
-function Hatch() {
-  return (
-    <defs>
-      <pattern id="gold-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <line x1="0" y1="0" x2="0" y2="6" stroke={T.borderHi} strokeWidth="1" />
-      </pattern>
-    </defs>
-  )
-}
-
-/** The 24-h chart (d.24h) and the 3-day overlay (d.3day) share this renderer. */
-function IntradayChart({ groups, usDst, ukDst, unit, usdinr, settle, settleLabel, showPrev, showBands, mode, live, sge }: {
-  groups: { date: string; pts: Pt[] }[]; usDst: boolean; ukDst: boolean; unit: Unit; usdinr: number | null
-  settle: number | null; settleLabel: string; showPrev: boolean; showBands: boolean; mode: '24h' | '3day'
-  live: { price: number; as_of: string } | null; sge: Pt[] | null
-}) {
-  const { ref, w, h } = useChartSize(1100, 300, { minRatio: 0.85, maxRatio: 1.2 })
-  const padL = 62, padR = 70, padT = 10, padB = 46
-  const plotW = Math.max(100, w - padL - padR), plotH = Math.max(80, h - padT - padB)
-  const conv = (v: number) => convertUsdOz(v, unit, usdinr) ?? v
-  const days = mode === '24h' ? groups.slice(-2) : groups.slice(-3)
-  const today = days[days.length - 1]
-  const prev = mode === '24h' ? days[0] !== today ? days[0] : null : null
-  const series = mode === '24h' ? [{ d: today, color: T.amber, dotted: false }, ...(showPrev && prev ? [{ d: prev, color: T.muted, dotted: true }] : [])]
-    : days.map((d, i) => ({ d, color: [T.violet, T.cyan, T.amber][i + (3 - days.length)], dotted: false }))
-  const vals: number[] = []
-  for (const s of series) for (const p of s.d.pts) vals.push(conv(p.c))
-  if (settle != null) vals.push(conv(settle))
-  if (live) vals.push(conv(live.price))
-  if (sge) for (const p of sge) vals.push(conv(p.c))
-  const lo0 = vals.length ? Math.min(...vals) : 0, hi0 = vals.length ? Math.max(...vals) : 1
-  const padY = Math.max((hi0 - lo0) * 0.08, hi0 * 0.0005)
-  const lo = lo0 - padY, hi = hi0 + padY
-  const yAxis = axisTicks(lo, hi, plotH, 28)
-  const y = (v: number) => padT + plotH - ((v - lo) / (hi - lo || 1)) * plotH
-  const x = (pos: number) => padL + (pos / 1440) * plotW
-  const path = (pts: Pt[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.pos).toFixed(1)},${y(conv(p.c)).toFixed(1)}`).join(' ')
-  const bands = showBands ? sessionBands({ usDst, ukDst }) : []
-  const open = globexOpenIst(usDst)
-  const xt = axisTicksIst(usDst, plotW > 700 ? 120 : 180)
-  const dp = unitDp(unit)
-  const last = today?.pts[today.pts.length - 1]
-  const hiToday = today ? Math.max(...today.pts.map(p => p.h)) : null
-  const loToday = today ? Math.min(...today.pts.map(p => p.l)) : null
-  return (
-    <div ref={ref} style={CHART_BOX}>
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={mode === '24h' ? '24-hour gold chart' : 'three days overlaid'}>
-        <Hatch />
-        {/* session bands (behind) */}
-        {bands.filter(b => b.key !== 'mcx').map((b, i) => {
-          const p0 = axisPos(b.start, usDst), p1 = b.end >= 1440 ? 1440 - (open % 1440) : axisPos(b.end, usDst)
-          const segs = p1 > p0 ? [[p0, p1]] : [[p0, 1440], [0, p1]]
-          return segs.map(([a, z], k) => (
-            <rect key={`${b.key}-${i}-${k}`} x={x(a)} y={padT} width={Math.max(0, x(z) - x(a))} height={plotH}
-              fill={b.key === 'maintenance' ? 'url(#gold-hatch)' : BAND_FILL[b.key]} opacity={b.key === 'maintenance' ? 0.6 : 0.35}>
-              <title>{b.name} · {fmtHM(b.start)}–{fmtHM(b.end)} IST</title>
-            </rect>
-          ))
-        })}
-        {/* y grid + labels (one unit per axis) */}
-        {yAxis.ticks.map(t => (
-          <g key={t}>
-            <line x1={padL} x2={padL + plotW} y1={y(t)} y2={y(t)} stroke={T.border} strokeDasharray="2 4" />
-            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={9.5} fill={T.muted} fontFamily={T.mono}>{fmtFixed(t, yAxis.dp)}</text>
-          </g>
-        ))}
-        <text x={padL - 6} y={padT - 1} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>{UNIT_LABEL[unit]}</text>
-        {/* settle line */}
-        {settle != null && (
-          <g>
-            <line x1={padL} x2={padL + plotW} y1={y(conv(settle))} y2={y(conv(settle))} stroke={T.cyan} strokeDasharray="6 4" strokeWidth={1} />
-            <text x={padL + plotW - 4} y={y(conv(settle)) - 4} textAnchor="end" fontSize={9} fill={T.cyan} fontFamily={T.mono}>{settleLabel} {fmtFixed(conv(settle), dp)}</text>
-          </g>
-        )}
-        {/* SGE overlay */}
-        {sge && sge.length > 1 && <path d={path(sge)} fill="none" stroke={T.violet} strokeWidth={1} strokeDasharray="2 3" opacity={0.9} />}
-        {/* series */}
-        {series.map(s => s.d.pts.length > 1 && (
-          <path key={s.d.date} d={path(s.d.pts)} fill="none" stroke={s.color} strokeWidth={s.dotted ? 1 : 1.5} strokeDasharray={s.dotted ? '2 3' : undefined} />
-        ))}
-        {/* live last */}
-        {mode === '24h' && last && (
-          <g>
-            <circle cx={x(last.pos)} cy={y(conv(live?.price ?? last.c))} r={3} fill={T.amber} />
-            <text x={Math.min(x(last.pos) + 6, padL + plotW - textWidth('0,000.00', 9.5))} y={y(conv(live?.price ?? last.c)) - 6} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>
-              {fmtFixed(conv(live?.price ?? last.c), dp)}
-            </text>
-          </g>
-        )}
-        {/* x axis: IST over NY */}
-        <line x1={padL} x2={padL + plotW} y1={padT + plotH} y2={padT + plotH} stroke={T.borderHi} />
-        {xt.map(t => (
-          <g key={t.pos}>
-            <line x1={x(t.pos)} x2={x(t.pos)} y1={padT + plotH} y2={padT + plotH + 3} stroke={T.borderHi} />
-            <text x={x(t.pos)} y={padT + plotH + 13} textAnchor="middle" fontSize={9.5} fill={T.text} fontFamily={T.mono}>{fmtHM(t.ist)}</text>
-            <text x={x(t.pos)} y={padT + plotH + 24} textAnchor="middle" fontSize={9} fill={T.dim} fontFamily={T.mono}>{fmtHM(istToNy(t.ist, usDst))}</text>
-          </g>
-        ))}
-        <text x={padL - 6} y={padT + plotH + 13} textAnchor="end" fontSize={9} fill={T.muted} fontFamily={T.mono}>IST</text>
-        <text x={padL - 6} y={padT + plotH + 24} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>NY</text>
-        {/* MCX bar under the axis */}
-        {showBands && bands.filter(b => b.key === 'mcx').map((b, i) => {
-          const p0 = axisPos(b.start, usDst), p1 = axisPos(b.end, usDst)
-          const segs = p1 > p0 ? [[p0, p1]] : [[p0, 1440], [0, p1]]
-          return segs.map(([a, z], k) => (
-            <g key={`mcx-${i}-${k}`}>
-              <rect x={x(a)} y={padT + plotH + 30} width={Math.max(0, x(z) - x(a))} height={6} fill={BAND_FILL.mcx} />
-              {k === 0 && <text x={x(a) + 3} y={padT + plotH + 44} fontSize={9} fill={T.amber} fontFamily={T.mono}>MCX {fmtHM(b.start)}–{fmtHM(b.end)} IST</text>}
-            </g>
-          ))
-        })}
-        {/* hi / lo markers (24h) */}
-        {mode === '24h' && hiToday != null && loToday != null && (
-          <g fontSize={9} fontFamily={T.mono} fill={T.dim}>
-            <text x={padL + plotW + 4} y={y(conv(hiToday)) + 3}>hi {fmtFixed(conv(hiToday), dp)}</text>
-            <text x={padL + plotW + 4} y={y(conv(loToday)) + 3}>lo {fmtFixed(conv(loToday), dp)}</text>
-          </g>
-        )}
-      </svg>
-    </div>
-  )
-}
-
-/**
- * The legend under the 24-h chart (C-TRADER-2 / C-DATA-1): finished sessions at their STORED DAILY CLOSE (gold_daily_bars;
- * a Yahoo daily close, not an exchange settlement), today at the live last, each Δ vs the stored close of the session
- * before. Never the last minute of an IST bucket.
- */
-function legendRows(groups: { date: string; pts: Pt[] }[], daily: ReturnType<typeof dailyOhlc>, live: { price: number } | null, unit: Unit, usdinr: number | null): string[] {
-  const dp = unitDp(unit)
-  const conv = (v: number) => fmtFixed(convertUsdOz(v, unit, usdinr) ?? v, dp)
-  return legendCloses(groups, daily, live, 3).map(r => {
-    if (r.px == null) return `${dayLabel(r.date)} ${r.kind} —`
-    const chg = r.prevClose != null ? r.px - r.prevClose : null
-    const pct = pctChange(r.prevClose, r.px)
-    const what = r.kind === 'last' ? 'last' : r.bucketFallback ? 'last stored minute (no daily bar yet)' : 'close (Yahoo daily, not settlement)'
-    return `${dayLabel(r.date)} ${what} ${conv(r.px)}${chg != null ? ` ${chg >= 0 ? '▲' : '▼'}${fmtFixed(Math.abs(chg), dp)} (${fmtSignedPctSp(pct, 2)} vs the previous stored close)` : ' (previous close not stored)'}`
-  })
-}
-
-export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, catalog }: GoldSubViewProps) {
+export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, catalog, fair, overview }: GoldSubViewProps) {
   const symbol = comexMatched ?? 'GC=F'
   // 1-minute bars are stored for GC=F (and INR=X) only — the 5-minute job fetches the front contract, never the matched
   // month (ingest_yahoo.fetch_intraday); the matched month names the panel and prices `live` (desk cache), the chart is GC=F.
@@ -215,6 +81,89 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
   const settleLabel = serverSettle ? serverSettle.label : prevClose ? `${dayLabel(prevClose.date)} close (Yahoo daily, not settlement)` : ''
   const live = data?.last ? { price: data.last.price, as_of: data.last.as_of } : null
   const tape = useMemo(() => resample5m(data?.bars ?? []).slice(-12).reverse(), [data])
+
+  // ── the Kitco-style panel (wave 1d): timeframe × unit × duty, every point at its own time's rupee rate ──────────
+  const [tf, setTf] = useState<KitcoTf>('24h')
+  const [kUnit, setKUnit] = useState<KitcoUnit>(() => kitcoUnitFromPage(unit))
+  useEffect(() => { setKUnit(kitcoUnitFromPage(unit)) }, [unit])            // the page unit sets the panel's; a chip overrides it here
+  const [duty, setDuty] = useState<DutyMode>('ex_duty')
+  const tfDef = timeframe(tf)
+  const rupee = isRupee(kUnit)
+  const longDaily = tfDef.source === '1d' && (tfDef.days == null || tfDef.days > KITCO_SHORT_DAYS)
+  const dailyFrom = longDaily ? KITCO_ALL_FROM : shiftDays(today, -(KITCO_SHORT_DAYS + 10))
+  const dailyK = useGoldLoad(() => maybe(tfDef.source === '1d', () => longDaily
+    ? memoGet(`kitco:GC=F:1d:${KITCO_ALL_FROM}`, 15 * 60_000, () => getGoldBars(BARS_SYMBOL, '1d', { from: KITCO_ALL_FROM }))
+    : getGoldBars(BARS_SYMBOL, '1d', { from: dailyFrom })), [tfDef.source, longDaily, dailyFrom], 15 * 60_000)
+  const inrDaily = useGoldLoad(() => maybe(rupee, () => longDaily
+    ? memoGet(`kitco:INR=X:1d:${KITCO_ALL_FROM}`, 15 * 60_000, () => getGoldBars('INR=X', '1d', { from: KITCO_ALL_FROM }))
+    : getGoldBars('INR=X', '1d', { from: dailyFrom })), [rupee, longDaily, dailyFrom], 15 * 60_000)
+  // the 1-minute rupee bars load for every rupee window: the 1-minute points on 24 h / 3 days AND today's last stored minute at
+  // the end of a daily window convert at the same minute's rate, so the line's last value is one number on every window
+  const inr1m = useGoldLoad(() => maybe(rupee, () => getGoldBars('INR=X', '1m')), [rupee], BARS_MS)
+  const fx: FxPt[] = useMemo(() => mergeFx(dailyFxPoints(inrDaily.data?.bars ?? []),
+    (inr1m.data?.bars ?? []).filter(b => b.c != null).map(b => ({ ms: barMs(b.ts), v: b.c as number })).sort((a, b) => a.ms - b.ms)), [inrDaily.data, inr1m.data])
+  // D5: a DAILY close converts at the INR=X close of its own date (the same rule on every timeframe)
+  const fxDaily: DailyFx[] = useMemo(() => dailyFxRows(inrDaily.data?.bars ?? []), [inrDaily.data])
+  const dutyRate = useMemo(() => ({ pct: fair?.duty_pct ?? null, effective: fair?.duty_effective ?? null }), [fair?.duty_pct, fair?.duty_effective])
+  const kconv: Conv = useMemo(() => (v: number, ms?: number) => {
+    const t = ms ?? Date.now()
+    const inr = rupee ? (fxAsOf(fx, t) ?? (fx.length ? null : usdinr)) : null
+    const mult = rupee ? (duty === 'duty_paid' ? dutyMultiplier(istDate(t), dutyRate) : 1) : 1
+    return kitcoConvert(v, kUnit, inr, mult)
+  }, [rupee, fx, usdinr, duty, dutyRate, kUnit])
+  const kdp = kitcoDp(kUnit)
+  const kLabel = `${KITCO_UNIT_LABEL[kUnit]}${rupee ? (duty === 'duty_paid' ? ' duty-paid' : ' landed') : ''}`
+  // the plotted window: 3 days from the 1-minute bars, longer windows from the daily closes (+ today's last stored minute)
+  const lastBarMs = data?.bars?.length ? barMs(data.bars[data.bars.length - 1].ts) : null
+  const rawPts = useMemo(() => {
+    if (tfDef.source === '1m') return (data?.bars ?? []).filter(b => b.c != null).map(b => ({ ms: barMs(b.ts), usd: b.c as number }))
+    const d: { ms: number; usd: number; date?: string }[] = (dailyK.data?.bars ?? []).filter(b => b.c != null).map(b => ({ ms: Date.parse(`${String(b.ts).slice(0, 10)}T00:00:00Z`), usd: b.c as number, date: String(b.ts).slice(0, 10) }))
+    const lastDaily = d[d.length - 1]
+    const lastMin = data?.bars?.[data.bars.length - 1]
+    // today's last stored MINUTE is a timed point (no `date`): it converts at the latest rate at or before its minute
+    if (lastMin?.c != null && lastBarMs != null && (!lastDaily || istDate(lastBarMs) > (lastDaily.date ?? ''))) d.push({ ms: lastBarMs, usd: lastMin.c })
+    return d
+  }, [tfDef.source, data, dailyK.data, lastBarMs])
+  const endMs = rawPts.length ? rawPts[rawPts.length - 1].ms : null
+  const startMs = tfDef.days != null && endMs != null ? endMs - tfDef.days * DAY_MS : null
+  const kser = useMemo(() => kitcoSeries(rawPts, { unit: kUnit, duty, fx, dutyRate, startMs, fxDaily }), [rawPts, kUnit, duty, fx, dutyRate, startMs, fxDaily])
+  // one daily close in the plotted unit at its own date's rate (D5): the dashed line, the stats' base and the legend use it
+  const closeIn = useMemo(() => (usd: number, date: string) => dailyCloseIn(usd, date, kUnit, duty, fxDaily, dutyRate), [kUnit, duty, fxDaily, dutyRate])
+  // 24 h: today's Globex-day points; the change is vs the previous session's stored close (both in the plotted unit)
+  const todayPts: KPt[] = useMemo(() => (groups24[groups24.length - 1]?.pts ?? []).map(p => ({ ms: p.ms, v: kconv(p.c, p.ms) })).filter((p): p is KPt => p.v != null), [groups24, kconv])
+  const prevCloseK = prevClose ? closeIn(prevClose.c, prevClose.date) : null  // the close at its own DATE's rate: the same number as on 'all' (D5)
+  const intraday = tf === '24h' || tf === '3d'
+  const winPts = tf === '24h' ? todayPts : kser.pts
+  const kstats0 = useMemo(() => kitcoStats(winPts, intraday ? prevCloseK : null), [winPts, intraday, prevCloseK])
+  // 24 h: the window's high / low are the 1-minute bars' highs and lows — the same numbers the chart's hi / lo markers print
+  // (one number per quantity on the page, §f.6), converted at each bar's own rupee rate
+  // 3 days uses the same 1-minute highs / lows over its window, so a 3-day high is never below the 24 h high (one definition)
+  const kstats = useMemo(() => {
+    if (!intraday || !kstats0) return kstats0
+    let hi = kstats0.hi, lo = kstats0.lo, hiMs = kstats0.hiMs, loMs = kstats0.loMs
+    const bump = (hv: number | null | undefined, lv: number | null | undefined, ms: number) => {
+      const h = hv != null ? kconv(hv, ms) : null, l = lv != null ? kconv(lv, ms) : null
+      if (h != null && h > hi) { hi = h; hiMs = ms }
+      if (l != null && l < lo) { lo = l; loMs = ms }
+    }
+    if (tf === '24h') for (const p of groups24[groups24.length - 1]?.pts ?? []) bump(p.h, p.l, p.ms)
+    else for (const b of data?.bars ?? []) { const ms = barMs(b.ts); if (startMs == null || ms >= startMs) bump(b.h, b.l, ms) }
+    return { ...kstats0, hi, lo, hiMs, loMs }
+  }, [intraday, tf, kstats0, groups24, kconv, data, startMs])
+  const longDates = tfDef.source === '1d' && (tfDef.days == null || tfDef.days > 120)
+  const whenLabel = (ms: number) => tfDef.source === '1d' ? `${dayLabel(istDate(ms))}${longDates ? ` ${istDate(ms).slice(0, 4)}` : ''}` : tf === '3d' ? `${dayLabel(istDate(ms))} ${fmtHM(istMinutes(ms))}` : fmtHM(istMinutes(ms))
+  const drawn = useMemo(() => decimate(kser.pts, 1600), [kser.pts])
+  const firstStored = tfDef.source === '1d' ? (dailyK.data?.bars?.[0]?.ts ?? null) : null
+  const kLoad = tfDef.source === '1d' ? dailyK : bars
+  const kNotes: string[] = []
+  if (tf === 'all' && firstStored) kNotes.push(`stored GC=F daily history begins ${dayLabel(String(firstStored))} ${String(firstStored).slice(0, 4)} (Yahoo) — Kitco's all-time chart starts earlier (link)`)
+  if (rupee && kser.dropped > 0 && tf !== '24h') {
+    const firstFx = fx[0]?.ms
+    kNotes.push(duty === 'duty_paid' && dutyRate.effective
+      ? `duty-paid applies the dated ${fmtFixed(dutyRate.pct, 0)} % only from ${dayLabel(dutyRate.effective)} ${dutyRate.effective.slice(0, 4)}: the store keeps no duty history, so earlier points are not drawn (${kser.dropped} dropped)`
+      : `the rupee line starts ${firstFx ? `${dayLabel(istDate(firstFx))} ${istDate(firstFx).slice(0, 4)}` : 'when INR=X is stored'} (stored INR=X history) — ${kser.dropped} earlier points not drawn`)
+  }
+  if (rupee && duty === 'duty_paid' && !dutyRate.effective) kNotes.push('no dated duty in this page load: duty-paid cannot be drawn')
   const dp = unitDp(unit)
   const conv = (v: number | null | undefined) => (v == null ? null : convertUsdOz(v, unit, usdinr))
   const tapeCols: Column<Bar>[] = [
@@ -224,35 +173,67 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
     { key: 'r', label: 'range', align: 'right', render: b => <span style={{ color: T.muted }}>{b.h != null && b.l != null ? fmtFixed((conv(b.h) ?? 0) - (conv(b.l) ?? 0), dp) : '—'}</span> },
     { key: 'v', label: 'volume (contracts)', align: 'right', render: b => <span style={{ color: T.muted }}>{fmtCount(b.v)}</span> },
   ]
-  const legend = legendRows(groups, daily, live, unit, usdinr)
   const chartBadge = 'arithmetic'
   const dayCount = groups.length
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <GoldPanel id="d.24h" title={`24 hours · COMEX ${comexMonthLabel(symbol)}`} badge={chartBadge} layer={layer} accent={T.amber}
-        catalog={catalog} series={['BARS_1M', 'COMEX_GC_FRONT']}
-        subtitle={<>{res} line · {comexCode(symbol)}{data?.instrument ? ` · ${data.instrument}` : ''}{live ? ` · live ${fmtInUnit(live.price, unit, usdinr)} ${istClock(live.as_of)}` : ''}</>}
-        freshness={data ? (data.freshness ?? { state: live ? 'delayed' : 'stale', source: 'gold_bars_intraday', as_of: live?.as_of ?? null }) : null}
+      <GoldPanel id="d.24h" title={`Gold chart · ${tfDef.label} · COMEX ${tfDef.source === '1m' ? 'GC1' : 'GC1 daily'}`} badge={chartBadge} layer={layer} accent={T.amber}
+        catalog={catalog} series={['BARS_1M', 'COMEX_GC_FRONT', ...(rupee ? ['USDINR_CLOSE'] : [])]}
+        subtitle={<>{tf === '24h' ? `${res} line · Globex day` : tfDef.source === '1m' ? '1-minute bars, last 3 days' : 'stored daily closes'} · {comexCode(BARS_SYMBOL)} (continuous front; the matched month is {comexMonthLabel(symbol)}){live ? ` · last trade as of ${istClock(live.as_of)}` : ''}{rupee ? (tfDef.source === '1d' ? ' · ₹ at the INR=X close of each date' : ' · ₹ at each minute\'s USD/INR; closes at their date\'s INR=X close') : ''}</>}
+        freshness={tfDef.source === '1d' ? (dailyK.data?.freshness ?? null) : data ? (data.freshness ?? { state: live ? 'delayed' : 'stale', source: 'gold_bars_intraday', as_of: live?.as_of ?? null }) : null}
         catalogRow={catalog.COMEX_GC_FRONT ?? null}
-        copyB={<>When in the day the move happened and which centre was trading. The dotted line is yesterday on the same clock; the dashed line is the previous session&apos;s close (a Yahoo daily close, not an exchange settlement — see <Term t="settlement by session" />). The legend&apos;s closes are the stored daily bars; today is &apos;last&apos;.</>}
-        copyP="GC=F rolls before first notice (the roll, see CONTRACTS); the dashed line is the bulletin settlement when C7 is allowed, else the previous session's stored Yahoo daily close labelled as such. Bar timestamps are UTC instants placed on the IST clock. Axis = the Globex day (18:00 ET → 17:00 ET); bands from lib/gold/sessions.ts, DST-aware."
+        copyB={<>Kitco&apos;s chart, from what this terminal stores: pick a window and a unit. On 24 h the dotted line is yesterday on the same clock, the dashed line the previous session&apos;s close (a Yahoo daily close, not an exchange settlement — see <Term t="settlement by session" />) and the bands show which centre was trading. Rupee prices use the dollar rate of each moment; duty-paid adds the dated import duty.</>}
+        copyP="GC=F (continuous front future, rolls before first notice) from gold_bars_intraday (1-minute) and gold_daily_bars (daily, Yahoo, not settlement); ₹ = $/oz × USD/INR × 10 ÷ 31.1034768 — a daily close at the INR=X close of its own date (so a date's close is the same rupee number on every window), a 1-minute point at the latest stored 1-minute INR=X at or before it; duty-paid × (1 + duty) only from the duty's effective date (no duty history is stored); USD/kg = $/oz × 1000 ÷ 31.1034768. High/low/change are of the plotted series; change vs the previous stored close on 24 h and 3 days, vs the window's first close otherwise. Axis on 24 h = the Globex day (18:00 ET → 17:00 ET), bands DST-aware (lib/gold/sessions.ts)."
         right={<>
-          <Chip color={T.amber} active={res === '1m'} onClick={() => setRes('1m')}>1m</Chip>
-          <Chip color={T.amber} active={res === '5m'} onClick={() => setRes('5m')}>5m</Chip>
-          <Chip color={T.muted} active={showPrev} onClick={() => setShowPrev(v => !v)} title="previous day as a dotted overlay">prev day</Chip>
-          <Chip color={T.muted} active={showBands} onClick={() => setShowBands(v => !v)} title="Sydney/Tokyo · Shanghai · London · New York · MCX">sessions</Chip>
+          <a href={KITCO_URL} target="_blank" rel="noreferrer" data-gold-kitco-link title="Kitco's own gold chart — a link only: the terminal never fetches kitco.com (terms; PLAN 0.1 #6)" style={{ textDecoration: 'none' }}><Chip color={T.cyan}>Kitco ↗</Chip></a>
+          {tf === '24h' && <>
+            <Chip color={T.amber} active={res === '1m'} onClick={() => setRes('1m')}>1m</Chip>
+            <Chip color={T.amber} active={res === '5m'} onClick={() => setRes('5m')}>5m</Chip>
+            <Chip color={T.muted} active={showPrev} onClick={() => setShowPrev(v => !v)} title="previous day as a dotted overlay">prev day</Chip>
+            <Chip color={T.muted} active={showBands} onClick={() => setShowBands(v => !v)} title="Sydney/Tokyo · Shanghai · London · New York · MCX">sessions</Chip>
+          </>}
         </>}>
-        <Pending s={bars} label="intraday bars">
-          {dayCount === 0 && <NoVerdict what="no 1-minute bars stored yet — the 5-minute job fills gold_bars_intraday from the day it starts" />}
-          {dayCount > 0 && <>
-            <IntradayChart groups={groups24} usDst={usDst} ukDst={ukDst} unit={unit} usdinr={usdinr} settle={settle} settleLabel={settleLabel}
+        {/* Kitco's timeframes and units */}
+        <div data-gold-kitco-controls style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 6px', alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>WINDOW</span>
+          {KITCO_TIMEFRAMES.map(t => <Chip key={t.key} color={T.amber} active={tf === t.key} onClick={() => setTf(t.key)} title={t.source === '1m' ? 'stored 1-minute bars' : 'stored daily closes'}>
+            <span data-gold-kitco-tf={t.key}>{t.label}</span></Chip>)}
+          <span style={{ flex: 1 }} />
+          <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>UNIT</span>
+          {KITCO_UNITS.map(u => <Chip key={u} color={T.cyan} active={kUnit === u} onClick={() => setKUnit(u)}><span data-gold-kitco-unit={u}>{KITCO_UNIT_LABEL[u]}</span></Chip>)}
+          {rupee && <>
+            <Chip color={T.violet} active={duty === 'ex_duty'} onClick={() => setDuty('ex_duty')} title="landed: COMEX × USD/INR, no import duty"><span data-gold-kitco-duty="ex_duty">ex-duty</span></Chip>
+            <Chip color={T.violet} active={duty === 'duty_paid'} onClick={() => setDuty('duty_paid')} title={`landed × (1 + the dated duty${dutyRate.pct != null ? ` ${fmtFixed(dutyRate.pct, 0)} %` : ''}${dutyRate.effective ? ` since ${dayLabel(dutyRate.effective)}` : ''}; confirm at CBIC, O-3)`}><span data-gold-kitco-duty="duty_paid">duty-paid</span></Chip>
+          </>}
+        </div>
+        {/* the window's numbers: high · low · change · previous close */}
+        <div data-gold-kitco-stats style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 16px', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginBottom: 4 }}>
+          {kstats ? <>
+            <span>{tfDef.label} high <b style={{ color: T.text }}>{fmtFixed(kstats.hi, kdp)}</b> {whenLabel(kstats.hiMs)}</span>
+            <span>low <b style={{ color: T.text }}>{fmtFixed(kstats.lo, kdp)}</b> {whenLabel(kstats.loMs)}</span>
+            <span data-gold-kitco-change>change <b style={{ color: kstats.chg > 0 ? T.green : kstats.chg < 0 ? T.red : T.text }}>{fmtSigned(kstats.chg, kdp)} ({fmtSignedPctSp(kstats.chgPct, 2)})</b>
+              {' '}{kstats.baseKind === 'prev_close' ? `vs the ${prevClose ? dayLabel(prevClose.date) : 'previous'} COMEX close (Yahoo daily, the dashed line)` : `vs the window's first close${kser.firstMs ? ` (${dayLabel(istDate(kser.firstMs))} ${istDate(kser.firstMs).slice(0, 4)})` : ''}`}</span>
+            {kstats.baseKind === 'prev_close' && overview?.strip?.comex_live_chg_pct != null && <span data-gold-kitco-strip-ref style={{ color: T.dim }} title="two references, two instruments: this panel is GC1 (continuous front) vs its previous daily close; the header strip is the matched month vs the 30-min reference before the last MCX close">
+              the header strip&apos;s COMEX Δ is {overview.strip.comex_ref_note ?? 'vs the 30-min reference before the last MCX close'} (matched month)</span>}
+            <span style={{ color: T.dim }}>{kLabel}</span>
+          </> : <span style={{ color: T.dim }}>no stored points in this window yet</span>}
+        </div>
+        <Pending s={kLoad} label={tfDef.source === '1m' ? 'intraday bars' : 'daily bars'}>
+          {tf === '24h' && dayCount === 0 && <NoVerdict what="no 1-minute bars stored yet — the 5-minute job fills gold_bars_intraday from the day it starts" />}
+          {tf === '24h' && dayCount > 0 && <>
+            <IntradayChart groups={groups24} usDst={usDst} ukDst={ukDst} conv={kconv} unitLabel={kLabel} dp={kdp} settle={settle} settleValue={serverSettle ? undefined : prevCloseK} settleLabel={settleLabel}
               showPrev={showPrev} showBands={showBands} mode="24h" live={live} sge={sgePts} />
             <div data-gold-legend style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 14px', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginTop: 4 }}>
-              {legend.map(l => <span key={l}>{l}</span>)}
+              {kitcoLegend(groups, daily, live, closeIn, kdp, serverSettle ? null : prevClose?.date ?? null).map(l => <span key={l}>{l}</span>)}
               {showBands && <span style={{ color: T.dim }}>bands: Sydney/Tokyo · Shanghai (SGE) · London · New York · hatched = CME maintenance 17:00–18:00 ET</span>}
             </div>
           </>}
+          {tf !== '24h' && <TimeChart pts={drawn} dp={kdp} unitLabel={kLabel} prevClose={tf === '3d' ? prevCloseK : null}
+            prevCloseLabel={prevClose ? `${dayLabel(prevClose.date)} close` : 'prev close'} label={`gold, ${tfDef.label}, ${kLabel}`}
+            hi={kstats ? { v: kstats.hi, ms: kstats.hiMs } : null} lo={kstats ? { v: kstats.lo, ms: kstats.loMs } : null} />}
+          {kNotes.length > 0 && <div data-gold-kitco-notes style={{ fontSize: 10, color: T.muted, marginTop: 4, lineHeight: 1.5 }}>{kNotes.map(n => <div key={n}>· {n}</div>)}</div>}
+          <div style={{ fontSize: 9.5, color: T.dim, marginTop: 4 }}>COMEX front future (GC=F), not spot: it runs a few dollars above Kitco&apos;s spot price (carry to the front month). Source: the terminal&apos;s store (Yahoo, via data-service), never kitco.com.</div>
         </Pending>
       </GoldPanel>
 
@@ -264,7 +245,7 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
           copyP="Three CME trade days on the Globex-day axis; no inference is drawn from the overlay (context).">
           <Pending s={bars} label="intraday bars">
             {dayCount < 2 ? <NoVerdict what={`${dayCount} day${dayCount === 1 ? '' : 's'} stored; three are needed`} />
-              : <IntradayChart groups={groups} usDst={usDst} ukDst={ukDst} unit={unit} usdinr={usdinr} settle={null} settleLabel="" showPrev={false}
+              : <IntradayChart groups={groups} usDst={usDst} ukDst={ukDst} conv={v => convertUsdOz(v, unit, usdinr)} unitLabel={UNIT_LABEL[unit]} dp={unitDp(unit)} settle={null} settleLabel="" showPrev={false}
                   showBands={showBands} mode="3day" live={null} sge={null} />}
             <div style={{ fontFamily: T.mono, fontSize: 10, color: T.muted, marginTop: 4 }}>
               {groups.slice(-3).map((g, i, a) => <span key={g.date} style={{ marginRight: 12, color: [T.violet, T.cyan, T.amber][i + (3 - a.length)] }}>■ {dayLabel(g.date)}</span>)}

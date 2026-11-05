@@ -4,10 +4,12 @@ Gold Pre-Open desk — where should MCX Gold open, and is the opening price wort
     fair open = MCX settlement × (COMEX now ÷ COMEX at the MCX close) × (USD/INR now ÷ USD/INR at the close)
 
 Inputs, all free and fetched automatically:
-  * MCX baseline: the previous day's settlement price, read from ICICI's public security master
-    (MCXScripMaster.txt, published ~07:00 IST). Its daily price band is ±3% around that settlement,
-    so the midpoint is the settlement. Overridable with the trader's own close; replaced by the
-    broker's previous close when an ICICI Breeze session is live.
+  * MCX baseline (wave 1d, 5 Nov 2026): the latest completed session's settlement proxy = the volume-weighted average of
+    the last 30 minutes of ICICI Breeze 1-minute bars (MCX's own settlement window; ONE read-only call per contract per
+    session, kept all night, through shared/breeze_budget). Without a Breeze session: the midpoint of the ±3 % price band
+    in ICICI's public security master (MCXScripMaster.txt) — which is the settlement TWO sessions before the file's publish
+    date (the band is the band of the session before it), labelled so, with the COMEX / rupee references taken at that
+    session's close. Overridable with the trader's own close; replaced by the broker's previous close when get_quotes works.
   * COMEX: the matching-month contract (MCX Dec ↔ GCZ26) from Yahoo 5-minute bars.
   * USD/INR: Yahoo INR=X (offshore quotes before 09:00 IST; a proxy for the NDF).
   * References: the average over the last 30 minutes before MCX closed (23:30 IST while New York
@@ -181,6 +183,25 @@ def comex_symbol(mcx_expiry: date) -> str:
     return f"GC{COMEX_MONTH[mcx_expiry.month]}{mcx_expiry.year % 100:02d}.CMX"
 
 
+COMEX_LIQUID_MONTHS = (2, 4, 6, 8, 10, 12)  # GC's active cycle (G, J, M, Q, V, Z); the serial months are thin
+
+
+def comex_liquid_symbol(mcx_expiry: date) -> tuple[str, bool]:
+    """The COMEX month every gold view matches an MCX expiry to: the delivery month itself when it is on GC's liquid cycle,
+    else the NEXT liquid month (critic C-BEGINNER-26; 5 Nov review: MCXG priced GOLDTEN NOV-26 off the thin serial GCX26
+    while the GOLD page and the ladder said DEC-26). Returns (Yahoo symbol, is_nearest_liquid_substitute). One helper for
+    GOLD, CONTRACTS and MCXG (`routers.gold.comex_liquid_symbol` is this function)."""
+    exact = comex_symbol(mcx_expiry)
+    if mcx_expiry.month in COMEX_LIQUID_MONTHS:
+        return exact, False
+    y, m = mcx_expiry.year, mcx_expiry.month + 1
+    if m > 12:
+        y, m = y + 1, 1
+    while m not in COMEX_LIQUID_MONTHS:
+        m += 1
+    return comex_symbol(date(y, m, 1)), True
+
+
 def mcx_close_time(day: date) -> datetime:
     """MCX evening close: 23:30 IST while New York is on daylight time, else 23:55."""
     noon_ny = datetime(day.year, day.month, day.day, 12, tzinfo=NY)
@@ -238,12 +259,65 @@ def reference_price(bars: list[tuple[datetime, float]], close_at: datetime, wind
     return None, "no data at the close"
 
 
+# Purity (wave 1d round 2, PM decision D1): the landed price built from COMEX / LBMA ($/oz × USD/INR × g ÷ 31.1034768) is the
+# rupee price of FINE gold (1000 parts per 1000). Every MCX basis divides the contract's price, scaled to ₹/10 g, by landed ×
+# purity / 1000 — GOLD 995, GOLDM 995, GOLDTEN 999, GOLDPETAL 999, GOLDGUINEA 999. The guinea is 999 like the petal (5 Nov:
+# GOLDGUINEA ₹1,12,211 per 8 g = ₹1,40,264 per 10 g ≈ GOLDPETAL 999 ₹1,40,330, far from the ≈ ₹1,28,500 a 916 coin would
+# trade at; shared/mcx_specs and CURRICULUM say 999 too). IBJA 999 compares with landed × 0.999, IBJA 995 with landed ×
+# 0.995. ONE source for both services: the purity is READ from shared/mcx_specs (data-service's gold/ingest_india does the
+# same, with the same fallback literals; test_gold_wave1d pins the two). The 5 Nov review found GOLD (995) divided by a 999
+# price, 0.40 pp off.
+LANDED_FINENESS = 1000                       # COMEX / LBMA quote FINE gold: the landed price is at 1000
+REFERENCE_FINENESS = LANDED_FINENESS         # kept name: the fineness `landed` / `duty_paid_landed` are at
+_PURITY_FALLBACK: dict[str, int] = {"GOLD": 995, "GOLDM": 995, "GOLDTEN": 999, "GOLDPETAL": 999, "GOLDGUINEA": 999}
+
+
+def _spec_purity(family: str) -> int:
+    """The delivery purity shared/mcx_specs lists for `family` ('995' → 995), else the fallback literal."""
+    spec = specs.CONTRACTS.get(family)
+    try:
+        return int(str(spec.purity).strip()) if spec is not None else _PURITY_FALLBACK.get(family, 999)
+    except ValueError:
+        return _PURITY_FALLBACK.get(family, 999)
+
+
+CONTRACT_FINENESS: dict[str, int] = {fam: _spec_purity(fam) for fam in _PURITY_FALLBACK}
+
+# ICICI Breeze stock codes of the MCX gold families (the master's 6-character ShortName) and back. One table: routers.mcx
+# re-exports it as `BREEZE_CODE`.
+BREEZE_CODE = {"GOLD": "GOLD", "GOLDM": "GOLDMI", "GOLDTEN": "GOLDTE", "GOLDPETAL": "GOLDPE", "GOLDGUINEA": "GOLDGU"}
+FAMILY_OF_BREEZE = {v: k for k, v in BREEZE_CODE.items()}
+
+
+def family_code(code: str) -> str:
+    """The MCX family of a family or Breeze code ('GOLDTE' → 'GOLDTEN'); upper-cased input otherwise."""
+    c = str(code or "GOLD").upper()
+    return FAMILY_OF_BREEZE.get(c, c)
+
+
+def fineness_of(code: str) -> int:
+    """The delivery purity of an MCX gold family (995 for GOLD / GOLDM, 999 for GOLDTEN / GOLDPETAL / GOLDGUINEA); a Breeze
+    code works too. Unknown codes take GOLD's."""
+    return CONTRACT_FINENESS.get(family_code(code), CONTRACT_FINENESS["GOLD"])
+
+
+def purity_factor(code: str) -> float:
+    """landed (fine gold) × this = the landed price at the contract's purity (0.995 / 0.999)."""
+    return fineness_of(code) / LANDED_FINENESS
+
+
+def basis_reference(code: str) -> str:
+    """'landed_995' | 'landed_999': the landed price a contract's basis divides by."""
+    return f"landed_{fineness_of(code)}"
+
+
 def fair_open(settlement: float, comex_ref: float, comex_now: float, inr_ref: float, inr_now: float,
-              duty_pct: float | None = None) -> dict[str, float]:
+              duty_pct: float | None = None, fineness: int = LANDED_FINENESS) -> dict[str, Any]:
     """Multiplicative fair value plus a split of the gap into its COMEX and rupee parts, and the duty leg
-    (SOURCES.md M5–M8): landed at the MCX-close references, duty-paid landed, and the settlement's basis vs duty-paid
-    landed. `implied_premium_pct` (settlement vs EX-duty landed) stays for one release as a deprecated alias: it
-    rolled duty, carry and premium into one "17 %" number."""
+    (SOURCES.md M5–M8): landed at the MCX-close references, duty-paid landed, and the settlement's basis vs the duty-paid
+    landed price OF THE CONTRACT'S PURITY (`fineness`: landed × fineness / 1000; `landed` / `duty_paid_landed` stay per FINE
+    gold, D1). Both legs of the basis sit at the settlement session's close (one clock). `implied_premium_pct` (settlement vs
+    EX-duty landed) stays for one release as a deprecated alias: it rolled duty, carry and premium into one "17 %" number."""
     r_c, r_i = comex_now / comex_ref, inr_now / inr_ref
     fair = settlement * r_c * r_i
     comex_part = settlement * (r_c - 1)
@@ -251,6 +325,7 @@ def fair_open(settlement: float, comex_ref: float, comex_now: float, inr_ref: fl
     d = duty_rate()["pct"] if duty_pct is None else duty_pct
     landed_ref = landed_inr_per_10g(comex_ref, inr_ref)
     duty_paid_ref = landed_ref * (1 + d / 100)
+    duty_paid_pure = duty_paid_ref * fineness / LANDED_FINENESS
     return {
         "fair_open": round(fair, 0),
         "gap": round(fair - settlement, 0),
@@ -259,10 +334,13 @@ def fair_open(settlement: float, comex_ref: float, comex_now: float, inr_ref: fl
         "inr_part": round(inr_part, 0),
         "rs_per_comex_dollar": round(settlement / comex_ref, 2),       # ≈ "356 × ΔCOMEX / 10"
         "rs_per_inr_rupee": round(settlement / inr_ref, 0),            # ≈ "1,521 × ΔINR"
-        "landed": round(landed_ref, 0),                                # ex-duty, at the MCX-close references
+        "landed": round(landed_ref, 0),                                # ex-duty, per fine gold, at the MCX-close references
         "duty_pct": d,
         "duty_paid_landed": round(duty_paid_ref, 0),
-        "basis_pct": round((settlement / duty_paid_ref - 1) * 100, 2),  # MCX settlement vs duty-paid landed (M8)
+        "duty_paid_landed_purity": round(duty_paid_pure, 0),           # the same at the contract's purity
+        "purity": fineness,
+        "basis_reference": f"landed_{fineness}",
+        "basis_pct": round((settlement / duty_paid_pure - 1) * 100, 2),  # MCX settlement vs duty-paid landed of its purity (M8)
         "implied_premium_pct": round((settlement / landed_ref - 1) * 100, 2),   # deprecated: duty + carry + premium
     }
 
@@ -280,6 +358,170 @@ def verdict(fair: float | None, mcx_price: float | None, threshold: float, now_i
     opened = trading_day and now_ist.time() >= (open_at or dtime(9, 0))
     out = _verdict_body(fair, mcx_price, threshold, opened)
     out["badge"] = "heuristic"
+    return out
+
+
+# ── the MCX settlement baseline (GOLD wave 1d, 5 Nov 2026) ───────────────────────────────────────────────────────────
+#
+# ICICI's security master is built from the exchange's contract file of the session BEFORE its publish date: its ±3 % price
+# band is that session's band, centred on the settlement one session earlier still. So the band midpoint of a file published
+# on D is the settlement of previous_session(previous_session(D)) — measured 5 Nov 2026 against the last-30-min VWAP of
+# Breeze 1-minute bars (MCX GOLD DEC-26): the 05 Nov file's ₹1,39,452 = Tue 03 Nov ₹1,39,448; the 04 Nov file's ₹1,40,186 =
+# Mon 02 Nov ₹1,40,190; the 28 Oct file's ₹1,43,073 = Mon 26 Oct ₹1,43,069. The page labelled each of them with the session
+# after (one session stale: every fair-open miss in the log equalled the previous session's gold move, corr 0.98).
+# MCX settles gold futures on the volume-weighted average of the last 30 minutes, so the honest proxy for the LATEST
+# completed session is the last-30-min VWAP of the Breeze 1-minute bars (labelled a proxy); the band stays the fallback,
+# labelled with the session it really belongs to, and the two are compared (`settlement_check`, flagged beyond 0.6 %).
+
+BAND_LAG_SESSIONS = 2            # the band midpoint of a file published on D = the settlement two MCX sessions back
+SETTLE_CHECK_PCT = 0.6           # band vs VWAP30 beyond this = the band is not that session's settlement (also the log's flag)
+VWAP_WINDOW_MIN = 30             # MCX's settlement window: the last 30 minutes of the session
+VWAP_READY_AFTER_S = 120.0       # a session counts as completed for the VWAP two minutes after its close (last bar in)
+VWAP_FETCH_LEAD_MIN = 40         # one historical call: the bars from 40 minutes before the close to 23:59
+
+
+def band_session(published: date) -> date:
+    """The session whose settlement the band midpoint of a master published on `published` really is (see above)."""
+    d = published
+    for _ in range(BAND_LAG_SESSIONS):
+        d = previous_session(d)
+    return d
+
+
+def band_applies_to(published: date) -> date:
+    """The session the master's price band was the band OF (centred on `band_session`): the session before the publish day."""
+    return previous_session(published)
+
+
+def session_close_at(day: date) -> datetime:
+    """The end of `day`'s MCX session: the trading window's close (an evening-closure day ends at 17:00), else the usual
+    23:30 / 23:55 rule."""
+    win = specs.trading_window(day)
+    return win[1] if win else mcx_close_time(day)
+
+
+def latest_completed_session(now: datetime, ready_after_s: float = VWAP_READY_AFTER_S) -> date:
+    """The latest MCX session whose close (plus `ready_after_s` for the last bar) has passed at `now`."""
+    now = now.astimezone(IST)
+    today = now.date()
+    win = specs.trading_window(today)
+    if win and now >= win[1] + timedelta(seconds=ready_after_s):
+        return today
+    return previous_session(today)
+
+
+def _bar_minute(bar: dict[str, Any]) -> datetime | None:
+    """A Breeze bar's start minute as IST (Breeze prints IST wall clock without an offset, `2026-11-04 23:54:00`)."""
+    raw = str(bar.get("datetime") or bar.get("ts") or "").strip()[:19]
+    try:
+        t = datetime.fromisoformat(raw.replace(" ", "T"))
+    except ValueError:
+        return None
+    return t.replace(tzinfo=IST) if t.tzinfo is None else t.astimezone(IST)
+
+
+def _bar_num(v: Any) -> float | None:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f else None
+
+
+def vwap_last_minutes(bars: list[dict[str, Any]], close_at: datetime, minutes: int = VWAP_WINDOW_MIN) -> dict[str, Any] | None:
+    """The volume-weighted average of the 1-minute closes in [close − `minutes`, close) — MCX's settlement window — or the
+    plain average when the window traded no volume; None without a bar in the window. Pure (tested on recorded bars)."""
+    start = close_at - timedelta(minutes=minutes)
+    win: list[tuple[datetime, float, float]] = []
+    for b in bars:
+        t, c = _bar_minute(b), _bar_num(b.get("close"))
+        if t is None or c is None or c <= 0 or not (start <= t < close_at):
+            continue
+        win.append((t, c, max(0.0, _bar_num(b.get("volume")) or 0.0)))
+    if not win:
+        return None
+    win.sort()
+    vol = sum(v for _, _, v in win)
+    if vol > 0:
+        value, method = sum(c * v for _, c, v in win) / vol, "volume-weighted"
+    else:
+        value, method = sum(c for _, c, _ in win) / len(win), "equal-weight (no volume in the window)"
+    return {"value": round(value, 1), "bars": len(win), "volume": vol, "method": method,
+            "window": f"{start:%H:%M}–{close_at:%H:%M} IST", "first_bar": win[0][0].isoformat(timespec="minutes"),
+            "last_bar": win[-1][0].isoformat(timespec="minutes"), "last_close": win[-1][1]}
+
+
+def settlement_check(band_mid: float | None, vwap: float | None, band_sess: date | None = None,
+                     vwap_sess: date | None = None) -> dict[str, Any]:
+    """The band midpoint vs the last-30-min VWAP: {band_vs_vwap30_pct, flagged, threshold_pct, compared}; `flagged` when they
+    differ by more than SETTLE_CHECK_PCT (the band is then not that session's settlement). Unflagged without both legs."""
+    out: dict[str, Any] = {"band_vs_vwap30_pct": None, "flagged": False, "threshold_pct": SETTLE_CHECK_PCT, "compared": None}
+    if not band_mid or not vwap:
+        out["note"] = "no last-30-min VWAP to compare the band with (no ICICI session, or no bars in the window)"
+        return out
+    pct = round((band_mid / vwap - 1) * 100, 2)   # the printed figure decides (0.60 % is inside the limit)
+    out["band_vs_vwap30_pct"] = pct
+    out["flagged"] = abs(pct) > SETTLE_CHECK_PCT
+    left = f"band midpoint ({session_label(band_sess)})" if band_sess else "band midpoint"
+    right = f"last-30-min VWAP ({session_label(vwap_sess)})" if vwap_sess else "last-30-min VWAP"
+    out["compared"] = f"{left} vs {right}"
+    return out
+
+
+def _vwap_value(vwap: dict[str, Any] | None, session: date | None = None) -> float | None:
+    """The value of an OK VWAP result (of `session` when given), else None: a failed status is never a price."""
+    if not isinstance(vwap, dict) or vwap.get("status") != "ok" or not vwap.get("value"):
+        return None
+    if session is not None and vwap.get("session") and str(vwap["session"])[:10] != session.isoformat():
+        return None
+    return float(vwap["value"])
+
+
+def settlement_block(band_mid: float | None, published: date | None, vwap: dict[str, Any] | None,
+                     latest: date, prev_vwap: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The settlement every gold number divides by (wave-1d CONTRACT): the latest completed session's last-30-min VWAP of
+    Breeze 1-minute bars when known; else the PREVIOUS session's VWAP when it is still cached (`prev_vwap`: fresher than a
+    band, which is two sessions old — checker round 1); else the band midpoint labelled with the session it REALLY belongs
+    to. The band is kept beside it with its own session, and band and VWAP compared (sessions named). Pure."""
+    b_sess = band_session(published) if published else None
+    prev = previous_session(latest)
+    v = _vwap_value(vwap)
+    pv = None if v else _vwap_value(prev_vwap, prev)
+    if pv is not None and b_sess is not None and prev < b_sess:
+        pv = None                              # never older than the band
+    used, used_sess = (vwap, latest) if v else ((prev_vwap, prev) if pv else (None, None))
+    out: dict[str, Any] = {
+        "band_midpoint": band_mid,
+        "band_session": b_sess.isoformat() if b_sess else None,
+        "band_session_label": session_label(b_sess) if b_sess else None,
+        "band_applies_to": band_applies_to(published).isoformat() if published else None,
+        "latest_session": latest.isoformat(),
+        "latest_session_label": session_label(latest),
+        "settlement_check": settlement_check(band_mid, v or pv, b_sess, used_sess or latest),
+        "vwap30": ({k: (used or {}).get(k) for k in ("value", "bars", "volume", "method", "window", "last_close", "session")}
+                   if used else None),
+        "vwap30_status": (vwap or {}).get("status") if isinstance(vwap, dict) else "not_fetched",
+    }
+    if v or pv:
+        sess, val = (latest, v) if v else (prev, pv)
+        out["settlement"], out["settlement_source"], out["settlement_quality"] = val, "breeze_vwap30", "vwap30_proxy"
+        out["settlement_method"] = f"last-30-min VWAP of ICICI Breeze 1-minute bars ({(used or {}).get('window')}) — a proxy"
+    elif band_mid and b_sess:
+        sess, out["settlement"], out["settlement_source"], out["settlement_quality"] = b_sess, band_mid, "band_midpoint", "band_proxy"
+        out["settlement_method"] = "ICICI price-band midpoint (±3 % band of the next session) — a proxy"
+    else:
+        sess, out["settlement"], out["settlement_source"], out["settlement_quality"] = None, None, None, None
+        out["settlement_method"] = None
+    out["settlement_session"] = sess.isoformat() if sess else None
+    out["settlement_session_label"] = session_label(sess) if sess else None
+    out["settlement_is_latest"] = bool(sess and sess == latest)
+    how = "last-30-min VWAP, proxy" if out["settlement_source"] == "breeze_vwap30" else "band proxy"
+    out["settlement_note"] = (
+        None if sess is None or sess == latest
+        else (f"{session_label(sess)} ({how}): the {session_label(latest)} needs the Breeze last-30-min VWAP "
+              f"({str(out['vwap30_status']).replace('_', ' ')}); the fair open scales the older settlement by every COMEX and "
+              f"rupee move since its close, so the expected gap also holds {latest:%a}'s move")
+    )
     return out
 
 
@@ -671,6 +913,245 @@ def _breeze_mcx_open(expiry: date, day: date) -> dict[str, Any] | None:
         return None
 
 
+# ── the last-30-min VWAP from Breeze: ONE read-only historical call per contract per session, kept all night ────────────
+SETTLE_BREEZE_CALLER = "ui-api.gold_settlement"       # the budget ledger's caller name (shared/breeze_budget.py)
+SETTLE_OK_TTL_S = 14 * 3600.0                          # a completed session's VWAP never changes: kept the whole night
+SETTLE_MISS_TTL_S = 600.0                              # an early / failed / refused answer is asked again after 10 min
+SETTLE_NO_SESSION_TTL_S = 120.0                        # no ICICI session: no call was made; look again in 2 min
+# Round-2 checker: a session that closed long ago will never grow bars, so an empty answer for it is final until morning
+# (the CONTRACTS page polls every 5 min and queues thin back months and unverified Breeze codes); every key is also capped
+# at SETTLE_MAX_CALLS calls per SETTLE_CALLS_WINDOW_S, whatever the answers were.
+SETTLE_FINAL_AFTER_S = 15 * 60.0                       # 15 min after the close an empty window is final …
+SETTLE_FINAL_MISS_TTL_S = 8 * 3600.0                   # … and kept 8 h (a 23:58 miss is asked again after 07:58)
+SETTLE_MAX_CALLS = 4                                   # Breeze calls per key per window, then the miss is kept 8 h
+SETTLE_CALLS_WINDOW_S = 12 * 3600.0
+# A VWAP read too soon after the close may miss the last bars (Breeze's 1-minute bars can lag): it is cached for 14 h only
+# when its last bar is within SETTLE_LAST_BAR_SLACK_MIN of the close or the read ran SETTLE_COMPLETE_AFTER_S after it;
+# otherwise it is used for that request and read again after SETTLE_PARTIAL_TTL_S (03 Nov had 27 bars in 30 minutes, so a
+# bar count is not the test).
+SETTLE_LAST_BAR_SLACK_MIN = 3
+SETTLE_COMPLETE_AFTER_S = 10 * 60.0
+SETTLE_PARTIAL_TTL_S = 300.0
+SETTLE_WAIT_S = 8.0                                    # a request waits at most this long for the one call, then uses the band
+SETTLE_SNAPSHOT_WAIT_S = 30.0                          # the 08:45 recorded prediction waits longer for it
+_settle_cache = TTLCache("gold_settlement", max_items=256, default_ttl=SETTLE_OK_TTL_S)
+_settle_locks: dict[str, threading.Lock] = {}
+_settle_locks_guard = threading.Lock()
+_settle_inflight: set[str] = set()                     # keys whose ONE Breeze call is running right now
+_settle_calls: dict[str, list[float]] = {}             # key → monotonic times of its Breeze calls (the per-key cap)
+_SETTLE_WAIT: contextvars.ContextVar[float] = contextvars.ContextVar("gold_settle_wait", default=SETTLE_WAIT_S)
+
+
+def _now_ist() -> datetime:
+    """The wall clock in IST (one seam for tests)."""
+    return datetime.now(IST)
+
+
+def _settle_wait() -> float:
+    return _SETTLE_WAIT.get()
+
+
+def settle_breeze_enabled() -> bool:
+    """GOLD_SETTLE_BREEZE=1/0 decides; unset, it is on except under pytest (a test never reaches the live broker)."""
+    flag = os.environ.get("GOLD_SETTLE_BREEZE", "").strip()
+    if flag in ("0", "1"):
+        return flag == "1"
+    try:
+        from shared.http_guard import in_test_mode
+        if in_test_mode():
+            return False
+    except ImportError:
+        pass
+    return True
+
+
+def _breeze_session_bars(stock_code: str, expiry: date, session: date) -> tuple[list[dict[str, Any]] | None, str]:
+    """Blocking. ONE read-only `get_historical_data_v2` call through the Breeze budget ledger: `session`'s 1-minute bars from
+    40 minutes before its close to 23:59 (Breeze reads the times as IST wall clock and ignores the Z). Returns (bars, status),
+    status ok | disabled | no_session | budget | empty | error. Never raises; prints nothing from the environment."""
+    if not settle_breeze_enabled():
+        return None, "disabled"
+    try:
+        from routers.positions import _get_breeze_client
+        breeze, err = _get_breeze_client()
+    except Exception:  # noqa: BLE001 — import/build failure is a session problem
+        return None, "no_session"
+    if err or breeze is None:
+        return None, "no_session"
+    start = session_close_at(session) - timedelta(minutes=VWAP_FETCH_LEAD_MIN)
+    try:
+        from shared.breeze_budget import BudgetExceeded, ledger
+    except ImportError:  # pragma: no cover — the ledger ships with the repo
+        return None, "error"
+    try:
+        with ledger().guard(SETTLE_BREEZE_CALLER, "get_historical_data_v2"):
+            h = breeze.get_historical_data_v2(interval="1minute", from_date=f"{session.isoformat()}T{start:%H:%M}:00.000Z",
+                                              to_date=f"{session.isoformat()}T23:59:00.000Z", stock_code=stock_code,
+                                              exchange_code="MCX", product_type="futures",
+                                              expiry_date=f"{expiry.isoformat()}T06:00:00.000Z", right="others",
+                                              strike_price="0")
+    except BudgetExceeded:
+        return None, "budget"
+    except Exception:  # noqa: BLE001 — the broker is optional here
+        return None, "error"
+    rows = h.get("Success") if isinstance(h, dict) and h.get("Status") == 200 else None
+    if not rows:
+        return None, "empty"
+    return [r for r in rows if str(r.get("datetime", "")).startswith(session.isoformat())], "ok"
+
+
+def _settle_key(stock_code: str, expiry: date, session: date) -> str:
+    return f"vwap30:{stock_code}:{expiry.isoformat()}:{session.isoformat()}"
+
+
+def session_vwap_cached(stock_code: str, expiry: date, session: date) -> dict[str, Any] | None:
+    """Non-blocking: the cached result for (contract, expiry, session) — {status: ok, value, …} or {status: <why not>} — or
+    None when it was never asked (or the miss expired)."""
+    hit = _settle_cache.get(_settle_key(stock_code, expiry, session))
+    return hit if isinstance(hit, dict) else None
+
+
+def session_vwap(stock_code: str, expiry: date, session: date) -> dict[str, Any]:
+    """Blocking (call via asyncio.to_thread): the cached result, else ONE Breeze call for the session (single flight per key:
+    concurrent callers wait for the one call). A success is kept all night; a miss is asked again after its TTL."""
+    key = _settle_key(stock_code, expiry, session)
+    hit = session_vwap_cached(stock_code, expiry, session)
+    if hit is not None:
+        return hit
+    with _settle_locks_guard:
+        lock = _settle_locks.setdefault(key, threading.Lock())
+    with lock:
+        hit = session_vwap_cached(stock_code, expiry, session)
+        if hit is not None:
+            return hit
+        mono = time.monotonic()
+        with _settle_locks_guard:
+            recent = [t for t in _settle_calls.get(key, []) if mono - t < SETTLE_CALLS_WINDOW_S]
+            capped = len(recent) >= SETTLE_MAX_CALLS
+            _settle_calls[key] = recent
+            if not capped:
+                _settle_inflight.add(key)
+        result: dict[str, Any]
+        if capped:      # this key has had its calls: keep the miss until morning, never another call tonight
+            result = {"status": "call_cap", "session": session.isoformat(),
+                      "note": f"{SETTLE_MAX_CALLS} Breeze reads in {SETTLE_CALLS_WINDOW_S / 3600:g} h gave no VWAP"}
+            _settle_cache.set(key, result, ttl=SETTLE_FINAL_MISS_TTL_S)
+            return result
+        bars: list[dict[str, Any]] | None = None
+        status = "error"
+        try:
+            bars, status = _breeze_session_bars(stock_code, expiry, session)
+        finally:
+            with _settle_locks_guard:
+                _settle_inflight.discard(key)
+                if status_made_call(status):
+                    _settle_calls.setdefault(key, []).append(mono)
+        close_at = session_close_at(session)
+        vw = vwap_last_minutes(bars or [], close_at) if bars else None
+        if vw:
+            complete = vwap_window_complete(vw, close_at, _now_ist())
+            result = {"status": "ok", **vw, "session": session.isoformat(), "source": "breeze_vwap30",
+                      "stock_code": stock_code, "expiry": expiry.isoformat(), "window_complete": complete}
+            ttl = SETTLE_OK_TTL_S if complete else SETTLE_PARTIAL_TTL_S
+        else:
+            result = {"status": "no_bars_in_window" if status == "ok" else status, "session": session.isoformat()}
+            ttl = settle_miss_ttl(result["status"], close_at, _now_ist())
+        _settle_cache.set(key, result, ttl=ttl)
+        return result
+
+
+def status_made_call(status: str | None) -> bool:
+    """True when `_breeze_session_bars` reached the broker (its answer counts against the per-key cap)."""
+    return status in ("ok", "empty", "error")
+
+
+def vwap_window_complete(vw: dict[str, Any], close_at: datetime, read_at: datetime) -> bool:
+    """A VWAP is final when its last bar sits within SETTLE_LAST_BAR_SLACK_MIN of the close, or the read ran at least
+    SETTLE_COMPLETE_AFTER_S after the close (Breeze had time to deliver every bar). Pure."""
+    try:
+        last = datetime.fromisoformat(str(vw.get("last_bar") or ""))
+    except ValueError:
+        last = None
+    if last is not None:
+        last = last.replace(tzinfo=IST) if last.tzinfo is None else last
+        if last >= close_at - timedelta(minutes=SETTLE_LAST_BAR_SLACK_MIN + 1):   # the bar that STARTS at close − 4 ends at − 3
+            return True
+    return read_at >= close_at + timedelta(seconds=SETTLE_COMPLETE_AFTER_S)
+
+
+def settle_miss_ttl(status: str, close_at: datetime, read_at: datetime) -> float:
+    """How long a miss is kept. Pure: no call made (no ICICI session / disabled) → 2 min; an empty window read more than
+    SETTLE_FINAL_AFTER_S after the close → until morning (those bars never come); a budget refusal, an error or an early
+    empty read → 10 min."""
+    if status in ("no_session", "disabled"):
+        return SETTLE_NO_SESSION_TTL_S
+    if status in ("empty", "no_bars_in_window") and read_at >= close_at + timedelta(seconds=SETTLE_FINAL_AFTER_S):
+        return SETTLE_FINAL_MISS_TTL_S
+    return SETTLE_MISS_TTL_S
+
+
+_prefetch_pending: set[str] = set()
+
+
+def prefetch_session_vwaps(items: list[tuple[str, date, date]]) -> int:
+    """Non-blocking: read the not-yet-cached (Breeze code, expiry, session) VWAPs ONE AFTER ANOTHER on one daemon thread (the
+    CONTRACTS cards ask for every liquid expiry; nobody waits). Returns how many were queued."""
+    if not settle_breeze_enabled():
+        return 0
+    todo: list[tuple[str, date, date]] = []
+    with _settle_locks_guard:
+        for it in dict.fromkeys(items):
+            key = _settle_key(*it)
+            if key not in _prefetch_pending and session_vwap_cached(*it) is None:
+                _prefetch_pending.add(key)
+                todo.append(it)
+    if not todo:
+        return 0
+
+    def _work() -> None:
+        for it in todo:
+            try:
+                session_vwap(*it)
+            except Exception:  # noqa: BLE001 — one failed read never stops the others
+                pass
+            finally:
+                with _settle_locks_guard:
+                    _prefetch_pending.discard(_settle_key(*it))
+    try:
+        threading.Thread(target=_work, name="gold-settle-prefetch", daemon=True).start()
+    except RuntimeError:  # interpreter shutting down
+        with _settle_locks_guard:
+            for it in todo:
+                _prefetch_pending.discard(_settle_key(*it))
+        return 0
+    return len(todo)
+
+
+async def session_vwap_async(stock_code: str, expiry: date, session: date, wait_s: float = SETTLE_WAIT_S) -> dict[str, Any]:
+    """`session_vwap` off the event loop with a deadline: past it the request uses the band (the one call keeps running and
+    fills the cache for the next request)."""
+    hit = session_vwap_cached(stock_code, expiry, session)
+    if hit is not None:
+        return hit
+    key = _settle_key(stock_code, expiry, session)
+    with _settle_locks_guard:
+        busy = key in _settle_inflight or key in _prefetch_pending
+    if busy:   # the one call is already running: wait on the cache (event-loop sleep), never park a worker thread on its lock
+        deadline = time.monotonic() + wait_s
+        while time.monotonic() < deadline:
+            await asyncio.sleep(0.25)
+            hit = session_vwap_cached(stock_code, expiry, session)
+            if hit is not None:
+                return hit
+        return {"status": "pending", "session": session.isoformat()}
+    try:
+        return await asyncio.wait_for(asyncio.to_thread(session_vwap, stock_code, expiry, session), wait_s)
+    except (asyncio.TimeoutError, TimeoutError):
+        return {"status": "pending", "session": session.isoformat()}
+    except Exception:  # noqa: BLE001 — never fails the caller
+        return {"status": "error", "session": session.isoformat()}
+
+
 TREASURY_REAL_URL = ("https://home.treasury.gov/resource-center/data-chart-center/interest-rates/"
                      "daily-treasury-rates.csv/{year}/all?type=daily_treasury_real_yield_curve&field_tdr_date_value={year}")
 
@@ -824,15 +1305,26 @@ async def _gold_preopen(baseline: float | None, mcx_price: float | None, thresho
     if master:
         contracts = parse_mcx_gold(master[0])
         contract = pick_contract(contracts, now.date())
-    settle_day = previous_session(master[1]) if master else previous_session(now.date())
-    close_at = mcx_close_time(settle_day)
-    last_session = previous_session(now.date() + timedelta(days=1)) if now.hour >= 23 else previous_session(now.date())
-    if settle_day < last_session and not baseline:
-        notes.append(f"Baseline is the {settle_day:%a %d %b} settlement: ICICI publishes the file with the "
-                     f"{last_session:%a %d %b} "
-                     f"settlement at about 07:30 IST on the next trading day. Until then the expected gap also includes "
-                     f"{last_session:%a}'s move; the fair open itself stays valid (it scales the older settlement by every "
-                     f"COMEX and rupee move since).")
+    # the settlement baseline (wave 1d): the latest completed session's last-30-min VWAP (Breeze 1-minute bars, ONE call per
+    # contract per session, kept all night), else the band midpoint labelled with the session it really belongs to — and the
+    # COMEX / rupee references are taken at THAT session's close, so the fair open scales the right settlement
+    last_session = latest_completed_session(now)
+    vwap = prev_vwap = None
+    if contract and not baseline:
+        # ONE path for every caller (routers.mcx.settlement_vwaps): the cache, then data-service's stored VWAP30 (G-DATA's
+        # 23:58 read costs no call here), then ONE Breeze read; the previous session's VWAP stands in when cached
+        from routers import mcx as mcxr   # late import: routers.mcx imports this module
+        vwap, prev_vwap = await mcxr.settlement_vwaps("GOLD", contract["expiry"], last_session, wait_s=_settle_wait())
+    settle = settlement_block(contract["settlement"] if contract else None, master[1] if master else None, vwap, last_session,
+                              prev_vwap)
+    settle_day = date.fromisoformat(settle["settlement_session"]) if settle["settlement_session"] else last_session
+    close_at = session_close_at(settle_day)
+    if settle["settlement_note"] and not baseline:
+        notes.append(f"Baseline is the {settle['settlement_note']}.")
+    if settle["settlement_check"]["flagged"]:
+        notes.append(f"The ICICI band midpoint ₹{settle['band_midpoint']:,.0f} is the {settle['band_session_label']}, "
+                     f"{settle['settlement_check']['band_vs_vwap30_pct']:+.2f} % from the {settle['settlement_session_label']} "
+                     "proxy: it is not that session's settlement.")
     broker = await asyncio.to_thread(_breeze_mcx_quote, contract["expiry"]) if contract else None
     if contract and not broker and today_mcx["trading"] and open_at is not None and now.time() >= open_at:
         broker = await asyncio.to_thread(_breeze_mcx_open, contract["expiry"], now.date())
@@ -842,8 +1334,11 @@ async def _gold_preopen(baseline: float | None, mcx_price: float | None, thresho
         base_value, base_source = baseline, "your entry"
     elif broker and broker.get("previous_close"):
         base_value, base_source = broker["previous_close"], "ICICI Breeze previous close"
-    elif contract:
-        base_value, base_source = contract["settlement"], f"MCX settlement {settle_day:%d %b} (price-band midpoint)"
+    elif settle["settlement"]:
+        base_value = settle["settlement"]
+        base_source = (f"MCX {settle['settlement_session_label']} · last-30-min VWAP (Breeze 1-min bars, proxy)"
+                       if settle["settlement_source"] == "breeze_vwap30"
+                       else f"MCX {settle['settlement_session_label']} (ICICI price-band midpoint, proxy)")
     live_price = mcx_price or (broker or {}).get("ltp")
     price_source = "your entry" if mcx_price else ("ICICI Breeze" if live_price else None)
 
@@ -882,7 +1377,8 @@ async def _gold_preopen(baseline: float | None, mcx_price: float | None, thresho
         notes.append("COMEX or USD/INR prices could not be fetched from Yahoo.")
     fair = None
     if base_value and comex_ref and inr_ref:
-        model.update(fair_open(base_value, comex_ref, model["comex"]["now"], inr_ref, model["inr"]["now"]))
+        model.update(fair_open(base_value, comex_ref, model["comex"]["now"], inr_ref, model["inr"]["now"],
+                               fineness=fineness_of("GOLD")))
         fair = model["fair_open"]
         model["lot_pnl_per_rupee"] = MCX_GOLD_LOT_KG * 100
         model["threshold_in_comex_dollars"] = round(threshold / model["rs_per_comex_dollar"], 1)
@@ -936,12 +1432,25 @@ async def _gold_preopen(baseline: float | None, mcx_price: float | None, thresho
                      "band_low": contract["band_low"] if contract else None,
                      "band_high": contract["band_high"] if contract else None,
                      "band_pct": contract["band_pct"] if contract else None,
+                     # the band is the price band MCX applied on `band_applies_to`, centred on the `band_session` settlement
+                     # (never "today's band": the 05 Nov open ₹1,45,153 sat above the 05 Nov file's top ₹1,43,635)
+                     "band_applies_to": settle["band_applies_to"],
+                     "band_session": settle["band_session"],
                      "open_interest_lots": contract["open_interest"] if contract else None},
         "baseline": {"value": base_value, "source": base_source, "session": settle_day.isoformat(),
-                     "session_label": session_label(settle_day),           # "Thu 22 Oct settlement", never the file date
-                     "stale": settle_day < last_session and not baseline,  # ICICI's file still carries an older session
+                     "session_label": session_label(settle_day),           # "Wed 04 Nov settlement", never the file date
+                     "stale": settle_day < last_session and not baseline,  # an older session than the latest completed one
                      "close_time": close_at.isoformat(),
-                     "settlement_from_band": contract["settlement"] if contract else None,
+                     "settlement_source": None if baseline else settle["settlement_source"],
+                     "settlement_quality": None if baseline else settle["settlement_quality"],
+                     "settlement_method": None if baseline else settle["settlement_method"],
+                     "settlement_check": settle["settlement_check"],
+                     "latest_session": settle["latest_session"],
+                     "band_midpoint": settle["band_midpoint"],
+                     "band_session": settle["band_session"],
+                     "band_session_label": settle["band_session_label"],
+                     "settlement_from_band": contract["settlement"] if contract else None,   # deprecated alias of band_midpoint
+                     "vwap30": settle["vwap30"],
                      "master_published": master[1].isoformat() if master else None},
         "mcx_price": {"value": live_price, "source": price_source, "broker": broker},
         "model": model,
@@ -1056,15 +1565,174 @@ def _dual_write_log_async(row: dict[str, Any]) -> None:
         pass
 
 
-def stale_baseline(row: dict[str, Any]) -> bool:
-    """A row whose baseline session is older than the session before its snapshot day (the 15 Oct case): the file
-    ICICI served that morning still carried an older settlement."""
+_LABEL_DAY_RE = re.compile(r"settlement\s+(\d{1,2})\s+([A-Z][a-z]{2})")
+_CONTRACT_LABEL_RE = re.compile(r"^\s*(GOLD[A-Z]*)\s+([A-Za-z]{3})-(\d{2})\s*$")
+_BAND_SOURCE_RE = re.compile(r"price-band midpoint", re.I)
+
+
+def labelled_session(row: dict[str, Any]) -> date | None:
+    """The session a log row's baseline was LABELLED with: `baseline_session` when recorded (26 Oct →), else the day its
+    `baseline_source` names ('MCX settlement 16 Oct (price-band midpoint)': the 20 Oct row used the 19 Oct master on a
+    Dussehra morning, so the snapshot-day rule would mislabel it), else the rule the desk used before wave 1d (the session
+    before the snapshot day)."""
     try:
-        session = date.fromisoformat(str(row.get("baseline_session") or ""))
-        day = date.fromisoformat(str(row.get("date") or ""))
+        return date.fromisoformat(str(row.get("baseline_session") or "")[:10])
     except ValueError:
-        return bool(row.get("stale_baseline", False))
-    return session < previous_session(day)
+        pass
+    try:
+        day = date.fromisoformat(str(row.get("date") or "")[:10])
+    except ValueError:
+        return None
+    m = _LABEL_DAY_RE.search(str(row.get("baseline_source") or ""))
+    if m:
+        try:
+            got = datetime.strptime(f"{m.group(1)} {m.group(2)} {day.year}", "%d %b %Y").date()
+            return got if got <= day else got.replace(year=day.year - 1)
+        except ValueError:
+            pass
+    return previous_session(day)
+
+
+@functools.lru_cache(maxsize=64)
+def expiry_from_label(label: str) -> tuple[str, date] | None:
+    """(family, expiry) of a log row's contract label ('GOLD DEC-26' → ('GOLD', 2026-12-04)) by the shared/mcx_specs expiry
+    rule of that family and month (PM decision D2: rows written before 05 Nov carry no `expiry`); None when unparseable."""
+    m = _CONTRACT_LABEL_RE.match(str(label or ""))
+    if not m:
+        return None
+    fam = family_code(m.group(1))
+    try:
+        month = datetime.strptime(m.group(2).title(), "%b").month
+    except ValueError:
+        return None
+    year = 2000 + int(m.group(3))
+    if fam not in specs.CONTRACTS:
+        return None
+    exps = specs.active_expiries(fam, date(year, month, 1), 1)
+    if not exps or (exps[0].year, exps[0].month) != (year, month):
+        return None
+    return fam, exps[0]
+
+
+def row_contract(row: dict[str, Any]) -> tuple[str, date] | None:
+    """(family, expiry) of a log row: its recorded `expiry` (05 Nov →) with the label's family, else both from the label."""
+    from_label = expiry_from_label(str(row.get("contract") or "GOLD"))
+    fam = from_label[0] if from_label else "GOLD"
+    try:
+        return fam, date.fromisoformat(str(row.get("expiry") or "")[:10])
+    except ValueError:
+        return from_label
+
+
+def baseline_from_band(row: dict[str, Any]) -> bool:
+    """True when a row's baseline is an ICICI band midpoint (wave-1d `baseline_source_kind`, else the source text)."""
+    kind = row.get("baseline_source_kind")
+    if kind:
+        return kind == "band_midpoint"
+    return bool(_BAND_SOURCE_RE.search(str(row.get("baseline_source") or "")))
+
+
+def band_rule(row: dict[str, Any]) -> dict[str, Any] | None:
+    """For a band baseline, the session its number REALLY belongs to (no Breeze read: the verified band rule). Before wave 1d
+    the desk labelled the band of the master published on D with previous_session(D), but that band midpoint is the
+    settlement of band_session(D) — one session EARLIER than its label (verified four times: 05 Nov, 04 Nov, 28 Oct, 27 Oct
+    and 26 Oct files vs Breeze VWAPs). Wave-1d rows (`baseline_source_kind` 'band_midpoint') are labelled with the real
+    session already. None for a baseline that is not a band."""
+    if not baseline_from_band(row):
+        return None
+    lab = labelled_session(row)
+    if lab is None:
+        return None
+    real = lab if row.get("baseline_source_kind") == "band_midpoint" else previous_session(lab)
+    return {"labelled_session": lab.isoformat(), "real_session": real.isoformat(), "real_session_label": session_label(real),
+            "mislabelled": real != lab,
+            "rule": ("the band midpoint of the master published on D is the settlement of the session two before D; the label "
+                     "named the session before D" if real != lab else "labelled with the band's real session")}
+
+
+def _row_vwap(row: dict[str, Any], vwap: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The VWAP of a row's labelled session: the one given (cached Breeze result), else the value recorded on the row."""
+    if _vwap_value(vwap):
+        return vwap
+    v = _bar_num(row.get("labelled_session_vwap30"))
+    lab = labelled_session(row)
+    return {"status": "ok", "value": v, "session": lab.isoformat() if lab else None} if v else None
+
+
+def baseline_check(row: dict[str, Any], vwap: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    """The settlement check of one log row: its baseline vs the last-30-min VWAP of the session it was LABELLED with — the
+    check recorded on the row, else `vwap` (the cached Breeze result for that session) or the VWAP recorded on the row. None
+    when none exists (unknown, never guessed). A wave-1d snapshot's `settlement_check` is NOT this check (it compares the band
+    with the LATEST session's VWAP, another session than a band baseline's label). A band baseline labelled with the right
+    session is not flagged; one labelled a session late fails this test by the session's move."""
+    rec = row.get("baseline_check")
+    if isinstance(rec, dict) and rec.get("band_vs_vwap30_pct") is not None:
+        return rec
+    if row.get("baseline_source_kind") == "breeze_vwap30":
+        return {"band_vs_vwap30_pct": 0.0, "flagged": False, "threshold_pct": SETTLE_CHECK_PCT,
+                "compared": "baseline IS the last-30-min VWAP"}
+    base = _bar_num(row.get("baseline"))
+    sess = labelled_session(row)
+    v = _vwap_value(_row_vwap(row, vwap))
+    if not base or not v or sess is None:
+        return None
+    chk = settlement_check(base, v, None, sess)
+    chk["compared"] = f"baseline ₹{base:,.0f} labelled {session_label(sess)} vs that session's last-30-min VWAP ₹{v:,.0f}"
+    return chk
+
+
+def stale_reasons(row: dict[str, Any], vwap: dict[str, Any] | None = None) -> list[str]:
+    """Why a row's baseline was not the settlement it was labelled with (empty = not stale, as far as is known):
+    'vwap30_check' — baseline vs that session's last-30-min VWAP beyond 0.6 % (05 Nov: ₹1,39,452 labelled Wed 04 Nov vs Wed's
+    ₹1,43,237 = −2.64 %; it was Tue's ₹1,39,448); 'band_rule' — a band baseline labelled one session late (`band_rule`: every
+    row before wave 1d, no Breeze read needed); 'older_session' — a labelled session older than the one before the morning
+    (the 15 Oct case); 'recorded' — the snapshot's own flag."""
+    out: list[str] = []
+    chk = baseline_check(row, vwap)
+    if chk and chk.get("flagged"):
+        out.append("vwap30_check")
+    br = band_rule(row)
+    if br and br["mislabelled"]:
+        out.append("band_rule")
+    lab = labelled_session(row)
+    try:
+        day = date.fromisoformat(str(row.get("date") or "")[:10])
+    except ValueError:
+        day = None
+    if lab is not None and day is not None and lab < previous_session(day):
+        out.append("older_session")
+    if row.get("stale_baseline") is True:
+        out.append("recorded")
+    return out
+
+
+def stale_baseline(row: dict[str, Any], vwap: dict[str, Any] | None = None) -> bool:
+    """True when `stale_reasons` names any reason (see there)."""
+    return bool(stale_reasons(row, vwap))
+
+
+def re_explained(row: dict[str, Any], vwap: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    """A COUNTERFACTUAL beside a band row's recorded numbers (PM decision D2: flagged and re-explained, never re-scored): the
+    fair open had its baseline been the last-30-min VWAP of the session it was labelled with. The references were taken at
+    that session's close, so the counterfactual fair is the recorded fair × VWAP ÷ baseline. None for a VWAP baseline or
+    without that session's VWAP."""
+    if row.get("baseline_source_kind") == "breeze_vwap30" or not baseline_from_band(row):
+        return None
+    v = _vwap_value(_row_vwap(row, vwap))
+    base, fair, actual = _bar_num(row.get("baseline")), _bar_num(row.get("fair_open")), _bar_num(row.get("actual_open"))
+    lab = labelled_session(row)
+    if not (v and base and fair and lab):
+        return None
+    fair_v = fair * v / base
+    return {
+        "labelled_session": lab.isoformat(), "labelled_session_vwap30": round(v, 1),
+        "session_move_pct": round((v / base - 1) * 100, 2),
+        "fair_open_on_vwap30": round(fair_v, 0),
+        "error_on_vwap30": round(actual - fair_v, 0) if actual else None,
+        "naive_error_on_vwap30": round(actual - v, 0) if actual else None,
+        "note": ("counterfactual: the fair open had the baseline been that session's last-30-min VWAP (references unchanged: "
+                 "they sat at its close); the recorded error stays the scored number"),
+    }
 
 
 def snapshot_inputs(d: dict[str, Any], threshold: float) -> str:
@@ -1084,11 +1752,7 @@ def snapshot_inputs(d: dict[str, Any], threshold: float) -> str:
     return json.dumps(inputs, default=str, separators=(",", ":"))
 
 
-def accuracy_stats(rows: list[dict[str, Any]], threshold: float = 300) -> dict[str, Any]:
-    """Model error (actual − fair) against the naive guess (open = yesterday's settlement)."""
-    done = [r for r in rows if r.get("error") is not None]
-    if not done:
-        return {"days": 0}
+def _error_stats(done: list[dict[str, Any]], threshold: float) -> dict[str, Any]:
     err = sorted(abs(r["error"]) for r in done)
     naive = [abs(r["naive_error"]) for r in done if r.get("naive_error") is not None]
     mid = len(err) // 2
@@ -1100,8 +1764,64 @@ def accuracy_stats(rows: list[dict[str, Any]], threshold: float = 300) -> dict[s
         "within_threshold_pct": round(100 * sum(e <= threshold for e in err) / len(err), 1),
         "naive_mean_abs_error": round(sum(naive) / len(naive), 1) if naive else None,
         "p90_abs_error": err[min(len(err) - 1, int(0.9 * len(err)))],
-        "threshold": threshold,
     }
+
+
+STALE_REASON_WORDS = {
+    "vwap30_check": f"baseline vs the last-30-min VWAP of the session it was labelled with beyond {SETTLE_CHECK_PCT:g} %",
+    "band_rule": "a band midpoint labelled one session late (the band of a master is the settlement two sessions before it)",
+    "older_session": "a labelled session older than the one before the morning",
+    "recorded": "flagged by the snapshot itself",
+}
+
+
+def accuracy_stats(rows: list[dict[str, Any]], threshold: float = 300) -> dict[str, Any]:
+    """Model error (actual − fair) against the naive guess (open = yesterday's settlement). Nothing is re-scored: every row
+    keeps its recorded numbers; the stale-baseline rows are NAMED (`stale_baseline_dates`, `stale_by` per reason) and the
+    same stats are repeated without them (`excluding_stale`), so the panel can say which mornings a stale settlement decided.
+    `stale_baseline_unknown` lists scored rows nothing could decide yet (not a band, no VWAP for their session). `on_vwap30`
+    is the COUNTERFACTUAL over the rows `re_explained` covers: model and naive misses had the baseline been the labelled
+    session's VWAP — beside the recorded stats, never instead of them."""
+    done = [r for r in rows if r.get("error") is not None]
+    rule = "; or ".join(STALE_REASON_WORDS.values())
+    if not done:
+        return {"days": 0, "stale_baseline_count": 0, "stale_baseline_dates": [], "stale_baseline_unknown": [], "stale_by": {},
+                "stale_baseline_rule": rule, "excluding_stale": {"days": 0}, "on_vwap30": {"days": 0}}
+    stale = [r for r in done if r.get("stale_baseline")]
+    clean = [r for r in done if not r.get("stale_baseline")]
+    by: dict[str, list[str]] = {}
+    for r in stale:
+        for why in r.get("stale_reasons") or []:
+            by.setdefault(why, []).append(str(r.get("date")))
+    out = {**_error_stats(done, threshold), "threshold": threshold,
+           "stale_baseline_count": len(stale),
+           "stale_baseline_dates": sorted(str(r.get("date")) for r in stale),
+           "stale_by": {k: sorted(v) for k, v in sorted(by.items())},
+           "stale_baseline_unknown": sorted(str(r.get("date")) for r in done
+                                            if not r.get("stale_baseline") and r.get("baseline_check") is None
+                                            and r.get("band_rule") is None),
+           "stale_baseline_rule": rule}
+    out["excluding_stale"] = ({**_error_stats(clean, threshold), "threshold": threshold} if clean else {"days": 0})
+    cf_rows = [r for r in done if isinstance(r.get("re_explained"), dict) and r["re_explained"].get("error_on_vwap30") is not None
+               and r["re_explained"].get("naive_error_on_vwap30") is not None]
+    cf = [r["re_explained"] for r in cf_rows]
+    if cf:
+        err = sorted(abs(c["error_on_vwap30"]) for c in cf)
+        naive = [abs(c["naive_error_on_vwap30"]) for c in cf]
+        mid = len(err) // 2
+        out["on_vwap30"] = {
+            "days": len(cf),
+            "mean_abs_error": round(sum(err) / len(err), 1),
+            "median_abs_error": round(err[mid] if len(err) % 2 else (err[mid - 1] + err[mid]) / 2, 1),
+            "naive_mean_abs_error": round(sum(naive) / len(naive), 1),
+            "within_threshold_pct": round(100 * sum(e <= threshold for e in err) / len(err), 1),
+            "dates": sorted(str(r.get("date")) for r in cf_rows),
+            "note": ("counterfactual, not the score: the same mornings had each baseline been the last-30-min VWAP of the "
+                     "session it was labelled with (references unchanged); the recorded stats above stay the scored numbers"),
+        }
+    else:
+        out["on_vwap30"] = {"days": 0}
+    return out
 
 
 def snapshot_gate(now: datetime, force: bool) -> None:
@@ -1136,17 +1856,24 @@ async def gold_snapshot(force: bool = Query(False, description="Record even afte
     snapshot_gate(now, force)
     threshold = 300.0
     token = _FRESH_ONLY.set(True)          # the recorded prediction keeps the old freshness rule (no stale series)
+    wait_token = _SETTLE_WAIT.set(SETTLE_SNAPSHOT_WAIT_S)   # … and waits for the one Breeze VWAP call (wave 1d)
     try:
         d = await gold_preopen(baseline=None, mcx_price=None, threshold=threshold, eurusd_trigger=None)
     finally:
+        _SETTLE_WAIT.reset(wait_token)
         _FRESH_ONLY.reset(token)
     m = d.get("model") or {}
     if not m.get("fair_open"):
         raise HTTPException(status_code=503, detail="No fair value right now: " + "; ".join(d.get("notes") or ["inputs missing"]))
     b = d["baseline"]
+    kind = b.get("settlement_source")
     return _update_day(now.date().isoformat(), snapshot_at=now.isoformat(timespec="seconds"),
                        contract=d["contract"]["name"], expiry=d["contract"]["expiry"], comex_symbol=d["contract"]["comex"],
                        baseline=b["value"], baseline_source=b["source"], baseline_session=b["session"],
+                       baseline_source_kind=kind, band_midpoint=b.get("band_midpoint"), band_session=b.get("band_session"),
+                       settlement_check=b.get("settlement_check"),
+                       baseline_check=({"band_vs_vwap30_pct": 0.0, "flagged": False, "threshold_pct": SETTLE_CHECK_PCT,
+                                        "compared": "baseline IS the last-30-min VWAP"} if kind == "breeze_vwap30" else None),
                        stale_baseline=bool(b.get("stale")), fair_open=round(m["fair_open"], 1),
                        threshold=threshold, duty_pct=(d.get("duty") or {}).get("pct"),
                        comex_ref=_r(m.get("comex", {}).get("ref"), 2), comex_now=_r(m.get("comex", {}).get("now"), 2),
@@ -1189,13 +1916,88 @@ def gold_set_actual(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
     return _update_day(day, actual_open=round(price, 1), actual_source="manual")
 
 
-def log_rows(days: int) -> list[dict[str, Any]]:
-    """The newest `days` rows, each with `stale_baseline` (rule or stored flag) and `inputs_json` (None before 26 Oct)."""
+LOG_CHECKS_PER_CALL = 3          # at most this many background VWAP reads per /log call (each session read once, then kept)
+
+
+def _row_vwap_args(row: dict[str, Any]) -> tuple[str, date, date] | None:
+    """(Breeze code, expiry, labelled session) of a log row's settlement check; None without a baseline or a contract. Rows
+    written before 05 Nov carry no `expiry`: it comes from the contract label ('GOLD DEC-26' → 2026-12-04, PM decision D2)."""
+    sess = labelled_session(row)
+    rc = row_contract(row)
+    if not row.get("baseline") or sess is None or rc is None:
+        return None
+    fam, expiry = rc
+    return BREEZE_CODE.get(fam, fam), expiry, sess
+
+
+def _record_on_row(day: str, **fields: Any) -> dict[str, Any] | None:
+    """Add fields to a stored log row WITHOUT recomputing anything (`_update_day` re-derives error / naive_error; a check
+    recorded beside the numbers must never touch them — PM decision D2)."""
+    with _log_lock:
+        rows = _read_log()
+        if day not in rows:
+            return None
+        row = {**rows[day], **{k: v for k, v in fields.items() if v is not None}}
+        rows[day] = row
+        _write_log(rows)
+    _dual_write_log_async(row)
+    return row
+
+
+def _fill_row_check(day: str, stock_code: str, expiry: date, sess: date) -> None:
+    """Background: read that session's VWAP (one call, cached) and RECORD the row's settlement check beside its numbers
+    (the row's error / naive_error are never touched)."""
+    try:
+        res = session_vwap(stock_code, expiry, sess)
+        if res.get("status") != "ok":
+            return
+        row = _read_log().get(day)
+        if row and not isinstance(row.get("baseline_check"), dict):
+            chk = baseline_check(row, res)
+            if chk:
+                _record_on_row(day, baseline_check=chk, labelled_session_vwap30=res.get("value"),
+                               labelled_session_vwap30_expiry=expiry.isoformat())
+    except Exception:  # noqa: BLE001 — a background check never breaks the log
+        _log.warning(json.dumps({"event": "gold_log_check_failed", "day": day}))
+
+
+def log_rows(days: int, fill_checks: bool = False) -> list[dict[str, Any]]:
+    """The newest `days` rows, each with `stale_baseline` and its `stale_reasons`, `baseline_check`, `band_rule`,
+    `re_explained` (a counterfactual beside the recorded numbers) and `inputs_json` (None before 26 Oct). `fill_checks` starts
+    up to LOG_CHECKS_PER_CALL background reads of the Breeze VWAP for rows whose check is unknown (one call per session,
+    recorded on the row; the expiry of an old row comes from its contract label)."""
     rows = sorted(_read_log().values(), key=lambda r: r["date"], reverse=True)[:days]
-    return [{**r, "stale_baseline": stale_baseline(r), "inputs_json": r.get("inputs_json")} for r in rows]
+    out: list[dict[str, Any]] = []
+    todo: list[tuple[str, str, date, date]] = []
+    calls = 0
+    for r in rows:
+        vw = None
+        args = None if isinstance(r.get("baseline_check"), dict) else _row_vwap_args(r)
+        if args:
+            vw = session_vwap_cached(*args)
+            if vw is None and calls < LOG_CHECKS_PER_CALL:
+                todo.append((r["date"], *args))
+                calls += 1
+            elif vw is not None and vw.get("status") == "ok" and fill_checks:
+                todo.append((r["date"], *args))      # read already: just record it on the row (no call)
+        reasons = stale_reasons(r, vw)
+        out.append({**r, "baseline_check": baseline_check(r, vw), "stale_baseline": bool(reasons), "stale_reasons": reasons,
+                    "band_rule": band_rule(r), "re_explained": re_explained(r, vw),
+                    "check_contract": ({"breeze_code": args[0], "expiry": args[1].isoformat(), "session": args[2].isoformat()}
+                                       if args else None),
+                    "inputs_json": r.get("inputs_json")})
+    if fill_checks and todo and settle_breeze_enabled():
+        def _work(items: list[tuple[str, str, date, date]] = todo) -> None:   # ONE thread, one call after another
+            for day, stock, expiry, sess in items:
+                _fill_row_check(day, stock, expiry, sess)
+        try:
+            threading.Thread(target=_work, name="gold-log-check", daemon=True).start()
+        except RuntimeError:
+            pass
+    return out
 
 
 @router.get("/gold-preopen/log")
 def gold_log(days: int = Query(60, ge=1, le=400), threshold: float = Query(300, gt=0)) -> dict[str, Any]:
-    rows = log_rows(days)
+    rows = log_rows(days, fill_checks=True)
     return {"rows": rows, "stats": accuracy_stats(rows, threshold)}

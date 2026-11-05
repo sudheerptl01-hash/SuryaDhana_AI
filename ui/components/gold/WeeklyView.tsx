@@ -177,7 +177,8 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
   }, [daily])
   const settle = useMemo(() => (showMcx ? mcxFrontSettle(mcx.data?.rows, sel.family).filter(p => last60.length && p.date >= last60[0].date) : null), [mcx.data, sel.family, showMcx, last60])
   const changes = useMemo(() => dailyChanges(daily), [daily])
-  const comexOi = useMemo(() => oiChangeByDate(comex.data?.rows), [comex.data])
+  // the GC product only — the same definition POSITIONING and DAILY print (the 5 Nov review: +14,150 all products here vs GC +3,381 there)
+  const comexOi = useMemo(() => oiChangeByDate(comex.data?.rows, 'GC'), [comex.data])
   const mcxOi = useMemo(() => oiChangeByDate(mcx.data?.rows, sel.family), [mcx.data, sel.family])
   const ibja = useMemo(() => new Map((series.data?.series.find(s => s.series_id === 'IBJA_999_PM')?.points ?? []).map(p => [p.report_date, p.value])), [series.data])
   const gld = useMemo(() => {
@@ -219,8 +220,11 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
     { key: 'c', label: 'close $/oz', align: 'right', render: r => <span style={{ color: T.bright }}>{fmtFixed(r.k?.c, 1)}</span> },
     { key: 'chg', label: 'Δ %', align: 'right', sort: r => r.chg, render: r => <span style={{ color: r.chg == null ? T.dim : r.chg > 0 ? T.green : r.chg < 0 ? T.red : T.muted }}>{fmtSignedPctSp(r.chg, 2)}</span> },
     { key: 'range', label: 'range %', align: 'right', render: r => (r.k && r.k.c ? `${fmtFixed(((r.k.h - r.k.l) / r.k.c) * 100, 2)} %` : '—') },
-    { key: 'v', label: 'COMEX vol', align: 'right', render: r => (r.k?.v ? <span style={{ color: dupVolume(r) ? T.dim : T.text }} title={dupVolume(r) ? 'identical to the previous session: a stale partial-day Yahoo value, re-fetched by the 03:10 job' : undefined}>{fmtCount(r.k.v)}{dupVolume(r) ? ' ?' : ''}</span> : '—') },
-    { key: 'comexOi', label: 'COMEX OI Δ', align: 'right', title: tip('oi_change'), render: r => gated('CME_VOI', <span style={{ color: T.muted }}>{fmtSignedCount(r.comexOi)}</span>) },
+    // a volume identical to the previous session's is a carried-forward placeholder, not data: not printed (the 5 Nov review)
+    { key: 'v', label: 'COMEX vol', align: 'right', render: r => (r.k?.v ? (dupVolume(r)
+      ? <span data-gold-vol-placeholder style={{ color: T.dim }} title="identical to the previous session: a carried-forward partial-day Yahoo value, not this session's volume; the 03:10 job re-fetches it">— (repeat)</span>
+      : <span style={{ color: T.text }}>{fmtCount(r.k.v)}</span>) : '—') },
+    { key: 'comexOi', label: 'COMEX GC OI Δ', align: 'right', title: tip('oi_change'), render: r => gated('CME_VOI', <span style={{ color: T.muted }}>{fmtSignedCount(r.comexOi)}</span>) },
     { key: 'mcxOi', label: `MCX ${sel.family} OI Δ lots`, align: 'right', title: tip('mcx_oi_by_expiry'), render: r => gated('MCX_CURVE_ICICI', <span style={{ color: T.muted }}>{fmtSignedCount(r.mcxOi)}</span>) },
     { key: 'ibja', label: 'IBJA 999 PM ₹/10 g', align: 'right', title: tip('ibja_999'), render: r => gated('IBJA_999_PM', <>{fmtInr0(r.ibja)}</>) },
     { key: 'gld', label: 'GLD Δ t', align: 'right', title: tip('etf_chg_1d'), render: r => gated('GLD_TONNES', <span style={{ color: T.muted }}>{fmtSigned(r.gld, 2)}</span>) },
@@ -256,7 +260,7 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
         subtitle={week ? `week of ${dayLabel(week.monday)}${week.total_pct != null ? ` · week ${fmtSignedPctSp(week.total_pct, 2)}` : ''}` : 'no week stored yet'}
         freshness={bars.data ? (bars.data.freshness ?? { state: 'delayed', source: 'gold_daily_bars' }) : null}
         copyB={<>One row per session, one unit per column: dollars for COMEX, lots for MCX open interest, rupees for the <Term t="IBJA rate" />, tonnes for <Term t="GLD" />. The CSV button on hover exports it.</>}
-        copyP="OI Δ columns are exchange product OI (COMEX T+1 from the CME FTP file; MCX from the 07:35 ICICI master), all months summed — an MCX Δ that spans missed sessions is the server's multi-session delta; the COT cell appears on the Friday row of the IST release (Saturday 01:00/02:00 IST). A volume marked '?' repeats the previous session's (stale partial-day value)."
+        copyP="OI Δ columns are exchange OI, all months summed: COMEX the GC product only (T+1 from the CME FTP file — the same figure as POSITIONING and DAILY), MCX the picked family (07:35 ICICI master) — an MCX Δ that spans missed sessions is the server's multi-session delta; the COT cell appears on the Friday row of the IST release (Saturday 01:00/02:00 IST). A volume that repeats the previous session's is a carried-forward placeholder and prints '— (repeat)'. During a live COMEX session the last row is the last FINISHED session (today's bar lands after the Globex close), so a STALE chip on a trading evening means 'as of the last close', not a broken feed."
         right={<>
           <Chip color={T.muted} onClick={() => setWeekBack(b => Math.min(weeks.length - 1, b + 1))} title="previous week">‹</Chip>
           <Chip color={T.muted} onClick={() => setWeekBack(b => Math.max(0, b - 1))} title="next week">›</Chip>

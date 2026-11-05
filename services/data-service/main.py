@@ -3459,7 +3459,9 @@ async def get_intraday(
 # ══════════════════════════════════════════════════════════════════════════════════════════════════
 import gold.api as _gold_api  # noqa: E402
 
-_gold_api.configure(get_store=get_store, submit=_submit)
+# get_breeze (wave 1d): the read-only mcx_close_vwap30 group averages Breeze 1-minute bars through this session; the
+# lambda resolves _breeze_connect (defined below with the Terminal v2 block) at call time.
+_gold_api.configure(get_store=get_store, submit=_submit, get_breeze=lambda: _breeze_connect())
 app.include_router(_gold_api.router)
 
 

@@ -152,6 +152,28 @@ build time; mypy / ruff clean. `docs/GOLD_DATA_DICTIONARY.md` regenerated (214 c
 updated (the label is the larger leg; start-here and aliases). Still B4B's: the dotted terms on HEALTH / DAILY / WEEKLY /
 MONTHLY / CONTRACTS (C-BEGINNER-7) and the panel-title routines (C-BEGINNER-8, in `learn.ts`).
 
+**6 Nov 00:45: GOLD wave 1d deployed — the MCX settlement was one session stale, now fixed at the source.** Tonight's review
+(analyst A6) showed every logged fair-open miss equalled the previous session's gold move (corr 0.98). The PM verified it with
+Breeze 1-minute bars (GOLD DEC-26, last-30-min VWAP): Tue 03 Nov ₹1,39,448, Wed 04 Nov ₹1,43,237 — the page's "Wed 04 Nov
+settlement" ₹1,39,452 was Tuesday's. Root cause (G-DATA, six files matched): the ICICI master published on day D carries the OI of
+the previous session S1 but the price band in force DURING S1, centred on the settlement of the session before S1. Fixes
+(build/wave1d.md, two rounds, all three builders ACCEPT-WITH-NOTES after their checkers' majors were closed): the band is labelled
+with its real session; a new `mcx_close_vwap30` group (`gold/mcx_close.py`, 23:58 Mon–Fri `gold_mcx_close`, read-only Breeze
+1-minute bars through the budget ledger) stores each contract's last-30-min VWAP as the settlement proxy (MCX's own DSP method);
+ui-api computes the same VWAP when the store has none; the fair block carries `settlement_source / _session / _quality`,
+`band_midpoint / band_session` and `settlement_check` (flagged > 0.6 %); the accuracy log re-checks every morning's baseline;
+MCX basis pairs each session's settlement with that session's duty-paid landed price; purity is one rule everywhere (landed is
+per fine gold; basis divides by landed × purity/1000 with GOLD/GOLDM 995 and GOLDTEN/PETAL/GUINEA 999 — Guinea's price level
+proves 999, not 916); PETAL/GUINEA values are scaled to ₹/10 g; the TREND tile prints vs 20-d / vs 200-d / drawdown and the words;
+MCXG matches GOLDTEN NOV to COMEX DEC-26 (not the thin GCX26) and its paper ticket takes the contract card's margin; Brent comes
+from the fresher stored BZ=F twin; LBMA weekly turnover keeps every period; the EFP 20-session average reads the 2021→ history
+(28,053 rows, backfill finished 00:44); and DAILY gained a **Kitco-style chart** from stored data (24 h · 3 d · 30 d · 60 d · 6 m ·
+1 y · 5 y · 10 y · all; USD/oz · ₹/10 g ex/with duty · ₹/g · USD/g · USD/kg; Kitco itself stays a link). Deploy 00:45 (lock-safe
+order, controller restarted, UI release 20261106-004501); gold pages 6/6 in both engines. ICICI sessions expire at midnight, so
+tonight's VWAP could not be computed after the restart (the page says so and labels the band "Tue 03 Nov"); the first fair open on
+the corrected baseline is Friday's 08:45 snapshot, after the 08:00 login. Gates: ui-api 1,369, scripts 447, gold 226, core 1,332
+(+1 order-dependent live-ticks test that passes alone, pre-existing), tsc, every node check, validate_learn, both dictionaries.
+
 **5 Nov 21:00–22:00: the 43-page expert review and two fixes it found.** Every page (43 + the GOLD, DERV › VOL and SYS ›
 DATA sub-views, OMON/OSTR/DERV/CHRT also on NIFTY and BANKNIFTY) was captured at 1600 px and read by seven analysts as a daily
 options trader / PM would, rated by two independent raters, and synthesised (desk note, daily routine, decision frameworks,

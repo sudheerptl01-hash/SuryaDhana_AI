@@ -417,13 +417,38 @@ export function driverTileLabel(d: { key: string; label?: string | null; series_
  * yield prints "+2 bp"), '%' → percent, 't' → tonnes; otherwise the raw delta. `v` is the server's delta in the level's
  * own unit (pp for a yield).
  */
-export function driverDelta(d: { unit: string; change_unit?: string | null }, v: number | null | undefined): string {
+export function driverDelta(d: { unit: string; change_unit?: string | null; key?: string | null; series_id?: string | null }, v: number | null | undefined): string {
   if (!finite(v)) return '—'
+  // a volatility index moves in vol points, not basis points (REREVIEW: 'GVZ 24.11 % · 1w +121 bp'): GVZ's change is printed
+  // as '+1.21 vol pts' whatever unit the server attached (a vol point is not a basis point)
+  if (isVolIndex(d)) return `${signed(v, 2)} vol pts`
   const cu = d.change_unit ?? (d.unit === '%' ? 'bp' : d.unit === 't' ? 't' : '%')
   if (cu === 'bp') return `${signed(v * 100, 0)} bp`
   if (cu === 't') return `${signed(v, 1)} t`
   if (cu === '%') return `${signed(v, 2)}%`
   return signed(v, 2)
+}
+
+/**
+ * The exchange-OI quadrant word under the fund-driver label, SAID to be the OI quadrant (REREVIEW: 'funds bought the dip'
+ * above 'long unwinding' read as two driver words): 'OI quadrant: long unwinding (OI −5,469)'.
+ */
+export function oiQuadrantWords(label: string | null | undefined, oiChg: number | null | undefined): string {
+  if (!label) return 'OI quadrant: —'
+  return `OI quadrant: ${label}${finite(oiChg) ? ` (OI ${signed(oiChg, 0)})` : ''}`
+}
+
+/** Days to an MCX tender, never negative (the 5 Nov review: '−4 days to tender'): once it has started, 'in tender since Sun 01 Nov (4 d)'. */
+export function tenderWords(days: number | null | undefined, startLabel: string | null | undefined): string {
+  if (!finite(days)) return 'days to tender —'
+  if (days < 0) return `in tender since ${startLabel ?? 'the tender start'} (${Math.abs(Math.round(days))} d)`
+  if (days === 0) return `tender starts today${startLabel ? ` (${startLabel})` : ''}`
+  return `${Math.round(days)} day${Math.round(days) === 1 ? '' : 's'} to tender`
+}
+
+/** GVZ (and any vol index): its level is a % but its changes are volatility points. */
+export function isVolIndex(d: { key?: string | null; series_id?: string | null; change_unit?: string | null }): boolean {
+  return d.change_unit === 'vol pts' || /^gvz/i.test(d.key ?? '') || /^GVZ/.test(d.series_id ?? '')
 }
 
 /** Driver-health beta with its unit (C-DATA-21): beta_real_yield_per_100bp → "$/oz per 100 bp"; beta_dxy → "% per 1 % DXY". */

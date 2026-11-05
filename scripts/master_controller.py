@@ -67,6 +67,8 @@ market.duckdb, never a restart; heavy ones defer past a freeze window they would
                                               releases; Saturday Telegram digest line (context, no direction)
   Mon 12:00 · Fri 18:00 · Sat 10:30 gold_weekly  WGC ETF flows, RBI WSS, LBMA turnover, WGC premiums, FRED weekly
   Sun 04:00          gold_cme_calendar        CME expiry calendar (38 MB, iterparse)
+  23:58 Mon–Fri      gold_mcx_close           MCX settlement proxy (Breeze last-30-min VWAP per live contract) + India ladder;
+  00:15 Tue–Sat                              its retry (a window whose final minute was not in at 23:58; stored ones cost 0)
   17:10 Mon–Fri      gold_open_capture_evening  the MCX open on morning-closure days (evening session opens 17:00)
   dormant (O-8)      gold_mcx_bhavcopy, gold_mcx_category, gold_breeze_daily — not registered (GOLD_DORMANT_JOBS)
   The 08:45 gold_preopen_snapshot and 09:10 gold_open_capture skip full and morning-closure MCX holidays (shared/mcx_specs).
@@ -909,6 +911,15 @@ GOLD_JOBS: dict[str, GoldJob] = {
                            "Gold weekly (WGC ETF flows, RBI WSS, LBMA turnover, WGC premiums, FRED weekly)", 2 * 3600),
     "gold_cme_calendar": GoldJob(("cme_calendar",), ({"day_of_week": "sun", "hour": 4, "minute": 0},),
                                  "Gold CME expiry calendar (weekly)", 12 * 3600),
+    # wave 1d (G-DATA): the MCX settlement proxy — last-30-min VWAP of Breeze 1-minute bars (data-service group
+    # mcx_close_vwap30: ≤ 15 read-only calls through the budget ledger, a stored session costs 0) — then the India ladder,
+    # so MCX_BASIS_PCT pairs each session's settlement with its own duty-paid landed price; key: re-run after downtime
+    # round 2: + a 00:15 Tue–Sat retry — data-service never stores a window whose final minute is not in yet (before the
+    # close + 10 min) and queues it; the retry (a stored contract costs 0 calls) fetches it once Breeze's bars are final
+    "gold_mcx_close": GoldJob(("mcx_close_vwap30", "derive_india"), ({"day_of_week": "mon-fri", "hour": 23, "minute": 58},
+                                                                      {"day_of_week": "tue-sat", "hour": 0, "minute": 15}),
+                              "Gold MCX settlement proxy (Breeze last-30-min VWAP, 23:58, retry 00:15) + India ladder", 6 * 3600,
+                              key=True),
 }
 # PLAN §c.3 / owner action O-8: the schema and a panel placeholder exist; no collector runs until the owner decides.
 GOLD_DORMANT_JOBS: dict[str, str] = {

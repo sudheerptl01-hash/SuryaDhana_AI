@@ -11,7 +11,9 @@
  *    (PLAN §b). The selection is the prefs-synced `gold.contract.v1`, shared by both pages.
  *  - c.comex: the COMEX term structure (six months) with the "1 week ago" ghost, calendar spreads and implied carry —
  *    "last trade, not settlement" while bulletin settlements are not allowed.
- *  - c.mcx: the MCX chain (expiry · settle PROXY · band · OI · ΔOI · carry) with the roll warning.
+ *  - c.mcx: the MCX chain (expiry · settle PROXY · band · vs front · carry) with the roll warning. The chain is ONE session
+ *    (D4, round 2): its settles are the ICICI band of `chain_session` (the server's), printed with that session and source,
+ *    never the request date; the basis under it names its own session (the latest VWAP) and the note says they differ.
  *  - c.roll: the roll calendar (MCX expiries, COMEX first intent / FND / LTD, broker tender cut-off) with countdowns.
  *  - c.spec: the DES-style card of the matched COMEX contract (size, settlement, tick, InitMargin and % of notional).
  *  - c.links: the linked-only pages (TradingView, FedWatch, CME contract pages, MCX circulars, QuikStrike, DGCX, JPX).
@@ -23,8 +25,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CHART_BOX, Chip, DataTable, KV, Select, Spark, T, fmtFixed, fmtSigned, useChartSize, type Column } from '@/components/terminal'
 import { axisTicks } from '@/components/terminal/chart'
 import { getGoldCalendar, getGoldContracts, getGoldCurve } from '@/lib/gold/api'
-import { annualisedCarry, basisClockLabel, comexMonthLabel, contractDiff, dayLabel, daysBetween, daysWord, expiryMonthLabel, fmtInr0, fmtSignedPctSp, fmtUsd, marginHistoryPoints, mmyLabel,
-         rollWarning, settlMethodWord, specMatches, specTick, uomWord } from '@/lib/gold/format'
+import { annualisedCarry, basisSettleLabel, basisTileWords, chainRowSettlement, chainSession, chainSettleNote, comexMonthLabel, contractDiff, curveBasisSettlement, dayLabel, daysBetween,
+         daysWord, expiryMonthLabel, fmtInr0, fmtSignedPctSp, fmtUsd, marginHistoryDates, marginHistoryPoints, mmyLabel, onePctMove, quoteGrams, quoteUnitShort, rollWarning,
+         settlementLine, settlementQualityChip, settlMethodWord, specMatches, specTick, stripSettlement, toPer10g, uomWord } from '@/lib/gold/format'
 import { istDateISO } from '@/lib/format'
 import { GOLD_FAMILIES, type ContractExpiryRow, type ContractFamily, type CurvePoint, type GoldContractSel, type GoldEvent, type GoldSubViewProps, type Layer } from '@/lib/gold/types'
 import { Term } from './ViewBits'
@@ -52,8 +55,9 @@ export function frontExpiry(f: ContractFamily | null | undefined): ContractExpir
   return f.expiries.reduce<ContractExpiryRow | null>((best, e) => (best == null || (e.oi ?? -1) > (best.oi ?? -1) ? e : best), null)
 }
 
-function FamilyCard({ f, selected, onPick, today, tip }: { f: ContractFamily; selected: boolean; onPick: () => void; today: string; tip: (k: string) => string | undefined }) {
+function FamilyCard({ f, selected, onPick, today, tip, livePrice }: { f: ContractFamily; selected: boolean; onPick: () => void; today: string; tip: (k: string) => string | undefined; livePrice?: number | null }) {
   const front = frontExpiry(f)
+  const move = onePctMove(f, livePrice)
   const next3 = f.expiries.slice(0, 3)
   const maxOi = Math.max(1, ...f.expiries.map(e => e.oi ?? 0))
   const accent = selected ? T.amber : T.border
@@ -70,7 +74,7 @@ function FamilyCard({ f, selected, onPick, today, tip }: { f: ContractFamily; se
         ['tick value', <span key="t" title={tip('tick_value')}>{f.tick_rupees != null ? `₹${fmtFixed(f.tick_rupees, 0)} = ` : ''}{fmtInr0(f.tick_value)}</span>],
         ['NRML margin', front?.margin_inr != null ? <span key="m" title={tip('indicative_margin')}>{fmtInr0(front.margin_inr)}{front.margin_pct != null ? ` (${fmtFixed(front.margin_pct, 2)} %)` : ''}<span style={{ color: T.dim }}> · {front.margin_source ?? 'mirror'}{front.margin_date ? ` ${dayLabel(front.margin_date)}` : ''}</span></span> : '—'],
         ['round trip', f.round_trip?.total != null ? <span key="r" title={tip('round_trip_total')}>{fmtInr0(f.round_trip.total)}{f.round_trip.pct != null ? ` (${fmtFixed(f.round_trip.pct, 3)} %)` : ''}{f.round_trip.breakeven_ticks != null ? ` · ${fmtFixed(f.round_trip.breakeven_ticks, 1)} ticks` : ''}</span> : '—'],
-        ['1 % move', f.one_pct_move_inr != null ? fmtInr0(f.one_pct_move_inr) : '—'],
+        ['1 % move', move.value != null ? <span key="1p" data-gold-one-pct={move.at} title={tip('one_pct_move_inr')}>{fmtInr0(move.value)}<span style={{ color: T.dim }}> · {move.at === 'live' ? 'at the live price' : `at the settlement (proxy${f.price_basis ? `, ${f.price_basis}` : ''})`}</span></span> : '—'],
         ['delivery', `${f.delivery_unit ?? '—'} · ${f.expiry_rule}`],
         ['tender', <span key="tn" title="tender period: from this date a short can tender delivery; the broker's own cut-off (ICICI, O-9) is earlier and decides when a swing position must be rolled">{front?.tender_start ? `${dayLabel(front.tender_start)} (${daysWord(front.tender_start, today)})` : f.tender_cutoff_note ?? 'broker cut-off: ask ICICI (O-9)'}</span>],
         ['COMEX hedge', f.hedge_ratio_oz != null ? `≈ ${fmtFixed(f.hedge_ratio_oz, 2)} oz per lot` : '—'],
@@ -92,9 +96,13 @@ function FamilyCard({ f, selected, onPick, today, tip }: { f: ContractFamily; se
 }
 
 /** The shared contract selector (c.selector; MCXG's specs card): pickers (optional), family cards, diff strip, expiry ladder. */
-export function ContractSelector({ families, sel, onSel, pickers = false, layer = 'B', tooltips = {}, dense = false }: {
+export function ContractSelector({ families, sel, onSel, pickers = false, layer = 'B', tooltips = {}, dense = false, chainOnPage = false, livePrice = null }: {
   families: ContractFamily[] | null; sel: GoldContractSel; onSel: (p: Partial<GoldContractSel>) => void
   pickers?: boolean; layer?: Layer; tooltips?: Record<string, string>; dense?: boolean
+  /** GOLD › CONTRACTS renders the MCX chain (c.mcx) below: the ladder then omits settle / band / carry, which the chain prints once (PLAN §f.6) */
+  chainOnPage?: boolean
+  /** the live MCX price of the SELECTED family (GOLD's strip / MCXG's quote): its card's '1 % move' is computed on it */
+  livePrice?: number | null
 }) {
   const today = istDateISO()
   const tip = (k: string) => tooltips[k]
@@ -110,14 +118,25 @@ export function ContractSelector({ families, sel, onSel, pickers = false, layer 
   const picked = fam?.expiries.find(e => e.expiry === sel.expiry) ?? front
   const roll = fam && fam.expiries.length > 1 ? rollWarning(fam.expiries[0].oi_change, fam.expiries[1].oi_change) : null
   const exch = EXCHANGES.find(e => e.value === sel.exchange) ?? EXCHANGES[0]
+  // the family's own quote unit (D3): PETAL is ₹/1 g, GUINEA ₹/8 g — never headed '₹/10 g'
+  const famUnit = quoteUnitShort(fam?.quote_unit ?? fam?.code ?? sel.family)
   const ladderCols: Column<ContractExpiryRow>[] = [
     { key: 'expiry', label: 'Expiry', render: e => <span style={{ color: e === picked ? T.amber : T.text, fontWeight: e === picked ? 700 : 400 }}>{expiryMonthLabel(e.expiry)} <span style={{ color: T.dim }}>{e.expiry}</span>{e === front ? <Chip color={T.amber} style={{ marginLeft: 6, fontSize: 8.5, padding: '0 4px' }}>FRONT</Chip> : null}</span> },
     { key: 'source', label: 'Source', render: e => <span style={{ color: e.source === 'observed' ? T.green : T.dim }} title={e.source === 'observed' ? 'expiry observed in the ICICI MCX security master' : 'expiry computed from the family\'s rule (5th / month-end, holiday-shifted) until the master lists it'}>{e.source}</span> },
-    { key: 'settle', label: 'settle ₹/10 g', align: 'right', render: e => <span title="ICICI band midpoint (PROXY)">{fmtInr0(e.settle)}{e.settle != null ? <span style={{ color: T.dim, fontSize: 9 }}> PROXY</span> : null}</span> },
-    { key: 'band', label: 'band ₹', align: 'right', render: e => <span style={{ color: T.muted }}>{e.band_lo != null && e.band_hi != null ? `${fmtFixed(e.band_lo, 0)}–${fmtFixed(e.band_hi, 0)}` : '—'}</span> },
+    ...(chainOnPage ? [] : [
+      { key: 'settle', label: `settle ${famUnit}`, align: 'right' as const, render: (e: ContractExpiryRow) => {
+        const st = { settlement: e.settle ?? null, settlement_source: e.settle_source ?? (e.settle != null ? 'band_midpoint' : null), settlement_session: e.settle_session ?? null, settlement_session_label: e.settle_session_label ?? null }
+        return <span data-gold-ladder-settle={st.settlement_source ?? ''} title={settlementLine(st)}>{fmtInr0(e.settle)}{e.settle != null ? <span style={{ color: T.dim, fontSize: 9 }}> {settlementQualityChip(e.settle_quality, st.settlement_source)}{dayLabel(e.settle_session) ? ` · ${dayLabel(e.settle_session)}` : ''}</span> : null}</span>
+      } },
+      { key: 'band', label: `band ${famUnit}`, align: 'right' as const, render: (e: ContractExpiryRow) => { const bs = e.band_session ?? (e.settle_source === 'band_midpoint' ? e.settle_session : null)
+        return <span style={{ color: T.muted }} title={bs ? `ICICI ±3 % band set around the ${dayLabel(bs)} settlement` : 'ICICI ±3 % band (the session it was set around is not stated)'}>{e.band_lo != null && e.band_hi != null ? `${fmtFixed(e.band_lo, 0)}–${fmtFixed(e.band_hi, 0)}` : '—'}</span> } },
+    ]),
     { key: 'oi', label: 'OI lots', align: 'right', sort: e => e.oi, title: tip('open_interest_lots'), render: e => fmtFixed(e.oi, 0) },
-    { key: 'oi_change', label: 'ΔOI lots', align: 'right', title: tip('oi_change'), render: e => <span style={{ color: T.muted }}>{fmtSigned(e.oi_change, 0)}</span> },
-    { key: 'carry', label: 'carry to next month % p.a.', align: 'right', title: `${tip('carry_ann') ?? ''} — this row's settle to the NEXT expiry's, annualised (the MCX chain below prints carry vs the front)`.trim(), render: e => <span style={{ color: T.muted }}>{e.carry_pct != null ? fmtSignedPctSp(e.carry_pct, 1) : '—'}</span> },
+    { key: 'oi_change', label: 'ΔOI lots', align: 'right', title: `${tip('oi_change') ?? ''} — vs the previous STORED master row, which can be more than one session back (POSITIONING names the span)`.trim(), render: e => <span style={{ color: T.muted }}>{fmtSigned(e.oi_change, 0)}</span> },
+    // ONE carry convention, named by the server ('annualised vs the front expiry (as /curve)', C-DATA-16); on GOLD › CONTRACTS the chain prints it
+    ...(chainOnPage ? [] : [
+      { key: 'carry', label: 'carry vs front % p.a.', align: 'right' as const, title: `${tip('carry_ann') ?? ''} — ${fam?.expiries.find(x => x.carry_convention)?.carry_convention ?? 'annualised vs the front expiry'}`.trim(), render: (e: ContractExpiryRow) => <span style={{ color: T.muted }} title={e.carry_note ?? undefined}>{e.carry_pct != null ? fmtSignedPctSp(e.carry_pct, 1) : e.carry_note ? '— (2 sessions)' : '—'}</span> },
+    ]),
     { key: 'comex', label: 'COMEX month', render: e => <span style={{ color: T.muted }}>{e.comex_matched ? comexMonthLabel(e.comex_matched) : '—'}</span> },
     { key: 'tender', label: 'Tender', render: e => <span style={{ color: T.muted }}>{e.tender_start ? `${dayLabel(e.tender_start)} · ${daysWord(e.tender_start, today)}` : '—'}</span> },
   ]
@@ -140,7 +159,8 @@ export function ContractSelector({ families, sel, onSel, pickers = false, layer 
       {families && families.length === 0 && <NoVerdict what="/api/gold/contracts returned no families (the ICICI master is unavailable)" />}
       {families && families.length > 0 && (
         <div style={{ display: 'grid', gap: 8, gridTemplateColumns: `repeat(auto-fit, minmax(${dense ? 220 : 260}px, 1fr))` }}>
-          {families.map(f => <FamilyCard key={f.code} f={f} selected={f.code === sel.family} onPick={() => onSel({ family: f.code as GoldContractSel['family'], expiry: null })} today={today} tip={tip} />)}
+          {families.map(f => <FamilyCard key={f.code} f={f} selected={f.code === sel.family} onPick={() => onSel({ family: f.code as GoldContractSel['family'], expiry: null })} today={today} tip={tip}
+            livePrice={f.code === sel.family ? livePrice : null} />)}
         </div>
       )}
       {diff.length > 0 && from && fam && (
@@ -157,7 +177,7 @@ export function ContractSelector({ families, sel, onSel, pickers = false, layer 
             <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>{fam.code} EXPIRIES · OI LADDER</span>
             {roll && <Chip color={T.amber} title="front-month OI falling faster than the next month is rising">⟳ {roll.split(':')[0].toUpperCase()}</Chip>}
             <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 10, color: T.dim }}>{layer === 'P' ? 'click a row to pick the expiry; the front is the highest-OI expiry more than 5 sessions from the tender period' : 'click a row to trade that month on MCXG and read it on every GOLD panel'}</span>
+            <span style={{ fontSize: 10, color: T.dim }}>{layer === 'P' ? 'click a row to pick the expiry; the front is the highest-OI expiry more than 5 sessions from the tender period' : 'click a row to trade that month on MCXG and read it on every GOLD panel'}{chainOnPage ? ' · settle, band and carry: the MCX chain below' : ''}</span>
           </div>
           <DataTable columns={ladderCols} rows={fam.expiries} rowKey={e => e.expiry} dense onRowClick={e => onSel({ expiry: e.expiry })} exportName={`gold-${fam.code.toLowerCase()}-expiries`}
             empty="No expiries from the ICICI master yet (computed expiries appear once the rule runs)." />
@@ -220,7 +240,7 @@ function CurveChart({ points, ghost, ghostDate, label, fnd }: { points: CurvePoi
   )
 }
 
-export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onSel, fair }: GoldSubViewProps) {
+export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onSel, fair, overview }: GoldSubViewProps) {
   const today = istDateISO()
   const tip = (k: string) => tooltips[k]
   const mcx = useGoldLoad(() => getGoldContracts(sel.exchange), [sel.exchange], CONTRACTS_MS)
@@ -240,13 +260,33 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
   // the server already answers for `?family=`; rows that name another family (a stale cache, a mixed store) are dropped by EQUALITY
   const mcxRows = useMemo(() => (mc?.points ?? []).filter(p => !p.symbol || (p.symbol ?? '').toUpperCase() === sel.family), [mc, sel.family])
   const mcxRoll = mcxRows.length > 1 ? rollWarning(mcxRows[0].oi_change, mcxRows[1].oi_change) : null
+  // the live MCX price of the selected family (the strip's quote, same page load) — the card's '1 % move' uses it (wave 1d)
+  const livePrice = overview?.strip?.mcx_shown === 'live' && (overview.contract?.mcx ?? sel.family) === sel.family ? overview.strip.mcx_live ?? null : null
+  // D4 (round 2): the chain is ONE session — the band of the server's `chain_session` — never the request date (`mc.date`)
+  const chain = useMemo(() => chainSession(mc), [mc])
+  // the basis's settlement: the curve's own basis block (its `mcx_front_*` names, same family), else this page's fair block
+  // when it is the same family — the latest session's VWAP when the server has it, a DIFFERENT session from the chain's band
+  const pageFair = (fair?.contract ?? sel.family) === sel.family ? fair : null
+  const chainSettle = useMemo(() => curveBasisSettlement(mc?.basis) ?? (pageFair ? stripSettlement(overview?.strip, pageFair) : null), [mc?.basis, pageFair, overview?.strip])
+  const chainNote = chainSettleNote(chain, chainSettle)
+  const famQuote = fam?.quote_unit ?? sel.family
+  const chainUnit = quoteUnitShort(famQuote)
+  const scaledFamily = (quoteGrams(famQuote) ?? 10) !== 10
+  // MCX carry vs COMEX carry (the analyst: 12–13 % p.a. vs 5.2 % unexplained): the gap printed as arithmetic, explained in words
+  const mcxCarry = mcxRows.find(p => p.annualised_carry_pct != null)?.annualised_carry_pct ?? null
   const mcxCols: Column<CurvePoint>[] = [
     { key: 'expiry', label: 'Expiry', render: p => <span style={{ color: T.text }}>{expiryMonthLabel(p.expiry)} <span style={{ color: T.dim }}>{p.expiry}</span>{p.symbol ? <span style={{ color: T.dim }}> · {p.symbol}</span> : null}</span> },
-    { key: 'settle', label: 'settle ₹/10 g', align: 'right', render: p => <span>{fmtInr0(p.settle_or_last)} <span style={{ color: T.dim, fontSize: 9 }}>{(p.quality ?? 'proxy').toUpperCase()}</span></span> },
-    { key: 'band', label: 'band ₹', align: 'right', render: p => <span style={{ color: T.muted }}>{p.band_lo != null && p.band_hi != null ? `${fmtFixed(p.band_lo, 0)}–${fmtFixed(p.band_hi, 0)}` : '—'}</span> },
-    { key: 'oi', label: 'OI lots', align: 'right', sort: p => p.open_interest, render: p => fmtFixed(p.open_interest, 0) },
-    { key: 'doi', label: 'ΔOI lots', align: 'right', render: p => <span style={{ color: T.muted }}>{fmtSigned(p.oi_change, 0)}</span> },
-    { key: 'spread', label: 'vs front ₹', align: 'right', render: p => <span style={{ color: T.muted }}>{fmtSigned(p.spread_vs_front, 0)}</span> },
+    // every settle names its session and source (D4): the column head carries the chain's one session; a row of another session says so
+    { key: 'settle', label: `settle ${chainUnit}${chain.day ? ` · ${chain.day}` : ''}`, align: 'right', title: `${chain.source === 'breeze_vwap30' ? 'last-30-min VWAP (Breeze)' : 'ICICI band midpoint'} of the ${chain.day || '(not stated)'} session — proxy until the official bhavcopy (O-8)`,
+      render: p => { const rs = chainRowSettlement(p, chain); const rDay = dayLabel(rs.settlement_session)
+        return <span data-gold-chain-row-session={rs.settlement_session ?? ''} title={settlementLine(rs)}>{fmtInr0(p.settle_or_last)} <span style={{ color: T.dim, fontSize: 9 }}>{(p.quality ?? '').toLowerCase() === 'official' ? 'OFFICIAL' : settlementQualityChip(null, rs.settlement_source)}{rDay && rDay !== chain.day ? ` · ${rDay}` : ''}</span></span> } },
+    // D3: a PETAL (₹/1 g) / GUINEA (₹/8 g) chain also prints its ₹/10 g equivalent, labelled as scaled
+    ...(scaledFamily ? [{ key: 'per10g', label: '₹/10 g eq.', align: 'right' as const, title: toPer10g(1, famQuote).label,
+      render: (p: CurvePoint) => <span style={{ color: T.muted }} data-gold-per10g>{fmtInr0(toPer10g(p.settle_or_last, famQuote).value)}</span> }] : []),
+    { key: 'band', label: `band ${chainUnit}`, align: 'right', render: p => { const bs = p.band_session ?? (chainRowSettlement(p, chain).settlement_source === 'band_midpoint' ? chain.session : null)
+      return <span style={{ color: T.muted }} title={bs ? `ICICI ±3 % band set around the ${dayLabel(bs)} settlement` : 'ICICI ±3 % band (the session it was set around is not stated)'}>{p.band_lo != null && p.band_hi != null ? `${fmtFixed(p.band_lo, 0)}–${fmtFixed(p.band_hi, 0)}` : '—'}</span> } },
+    // OI and ΔOI print once on this view: in the expiry ladder above (PLAN §f.6)
+    { key: 'spread', label: `vs front ${chainUnit}`, align: 'right', render: p => <span style={{ color: T.muted }}>{fmtSigned(p.spread_vs_front, 0)}</span> },
     { key: 'carry', label: 'carry % p.a.', align: 'right', title: tip('carry_ann'), render: p => <span style={{ color: T.muted }}>{p.annualised_carry_pct != null ? fmtSignedPctSp(p.annualised_carry_pct, 1) : '—'}</span> },
     { key: 'dte', label: 'days', align: 'right', render: p => <span style={{ color: T.dim }}>{p.days_to_expiry ?? '—'}</span> },
   ]
@@ -283,8 +323,8 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
         subtitle={fam ? `${fam.code} · ${fam.lot} · ${fam.purity} · ${fam.expiry_rule}` : 'MCX gold family · expiry · options'}
         freshness={mcx.data ? (mcx.data.freshness ?? { state: 'delayed', source: 'ICICI master + Zerodha margin mirror', as_of: mcx.data.as_of ?? null }) : null}
         copyB={<>Which contract for which purpose: GOLD and GOLDM carry the liquidity (<Term t="open interest" />); TEN, GUINEA and PETAL are small but cost more per rupee traded (PETAL&apos;s round trip is 0.34 % of notional vs 0.018 % on GOLD, G-INDIA §4.2). The <Term t="tick value" /> is what one price step is worth per lot. Click a card, then an expiry.</>}
-        copyP="GOLD/GOLDM are 995 purity settling on the 5th; TEN/GUINEA/PETAL are 999, month-end; options expire before the future they settle into. Margins are the Zerodha NRML mirror with their date; costs from shared/mcx_specs round_trip_costs at ₹20/order.">
-        <ContractSelector families={families} sel={sel} onSel={p => onSel?.(p)} layer={layer} tooltips={tooltips} />
+        copyP="GOLD/GOLDM are 995 fine settling on the 5th; the smaller families settle month-end at the purity their card prints (the basis divides by the landed price of that purity); options expire before the future they settle into. Margins are the Zerodha NRML mirror with their date; costs from shared/mcx_specs round_trip_costs at ₹20/order; '1 % move' at the live price when the page holds one, else at the settlement proxy.">
+        <ContractSelector families={families} sel={sel} onSel={p => onSel?.(p)} layer={layer} tooltips={tooltips} chainOnPage livePrice={livePrice} />
       </GoldPanel>
 
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 620px), 1fr))', alignItems: 'start' }}>
@@ -310,7 +350,8 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
         <GoldPanel id="c.spec" title={`COMEX spec · ${spec ? `${spec.symbol} ${specMonth}` : comexMatched ? comexMonthLabel(comexMatched) : 'matched month'}`} badge="arithmetic" layer={layer} accent={T.cyan}
           subtitle={spec ? (specIsMatched === false ? `PRF row ${specMonth}, not the matched ${comexMonthLabel(comexMatched)}` : specIsMatched ? `the matched month ${comexMonthLabel(comexMatched)}` : undefined) : undefined}
           catalog={catalog} series={['CME_PRF']}
-          freshness={comexSpec.data ? (comexSpec.data.freshness ?? { state: 'delayed', source: 'CME product reference (FTP)', as_of: spec?.margin_date ?? null }) : null}
+          // the card's source is the CME product reference file, not the ICICI master the contracts payload's freshness describes (REREVIEW)
+          freshness={comexSpec.data ? (spec ? { state: 'delayed', source: 'CME PRF (FTP)', as_of: spec.margin_date ?? null } : (comexSpec.data.freshness ?? null)) : null}
           copyB={<>The DES card of the matched month: how big one contract is, how it settles, what a tick is worth, how much margin the exchange asks, and the two dates that end it (<Term t="FND / LTD" />: first notice day, then last trade).</>}
           copyP="GC: 100 troy oz, physical delivery, tick $0.10 = $10 (PRF MinPxIncr × DisplayFactor 0.1); InitMargin from the CME product reference file (speculator vs hedger rate unresolved, j.2 #6); % of notional at the matched month's last price — ≈ 5 % means 20× leverage, a 5 % move wipes the margin. The card is the PRF row whose month equals the matched month; a fallback row says which month it is.">
           <Pending s={comexSpec} label="the spec card">
@@ -336,7 +377,7 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: T.dim, marginTop: 6 }} title={spec.margin_history_note ?? 'outright InitMargin per trade date; rows under $1,000 (other products) dropped'}>
                     margin history · {hist.length} dates <Spark values={hist} width={160} height={20} color={T.muted} />
                   </div>
-                ) : <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>margin history: {hist.length} date{hist.length === 1 ? '' : 's'} stored (a sparkline needs three)</div> })()}
+                ) : (() => { const n = marginHistoryDates(spec.margin_history); return <div data-gold-margin-dates={n} style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>margin history: {n} date{n === 1 ? '' : 's'} stored (a sparkline needs three){spec.margin_history_note ? ` · ${spec.margin_history_note}` : ''}</div> })() })()}
               </>
             )}
           </Pending>
@@ -345,10 +386,11 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
         {/* c.mcx — its own full-width row: eight columns need the width (they were clipped in a 3-column grid at 1600 px) */}
         <GoldPanel id="c.mcx" title={`MCX chain · ${sel.family}`} badge="arithmetic" layer={layer} accent={T.amber} pad={0} style={{ gridColumn: '1 / -1' }}
           catalog={catalog} series={['MCX_CURVE_ICICI', 'MCX_BASIS_PCT']}
-          subtitle={<>{mc?.date ? `session ${dayLabel(mc.date)}` : '—'}{mc?.family ? ` · ${mc.family}` : ''}{mc?.since ? ` · since ${mc.since}` : ''}{mcxRoll ? ' · roll warning' : ''}</>}
-          freshness={mc ? (mc.freshness ?? { state: 'delayed', source: 'ICICI master (proxy settlement)', as_of: mc.date }) : null}
-          copyB={<>Every listed month of the chosen family with its settlement (the band midpoint, a proxy), <Term t="open interest" /> and what it costs to hold the later month instead (carry vs the front). The <Term t="MCX basis" /> under the table names the session it belongs to.</>}
-          copyP="MCX back months carry more than COMEX (rupee rates, duty expectations); the settlement is the ICICI ±3 % band midpoint labelled PROXY until official bhavcopy rows exist (O-8); session, never file date."
+          // D4: the settles' session is the server's chain_session (the band's own), the OI's is oi_session — never the request date
+          subtitle={<span data-gold-chain-session={chain.session ?? ''} title={mc?.price_label ?? undefined}>settles: {mc?.chain_session_label ?? (chain.day ? `${chain.day} settlement` : 'session not stated')} · {chain.source === 'breeze_vwap30' ? 'last-30-min VWAP (Breeze)' : 'ICICI band midpoint'} (proxy){chain.oiSession ? ` · OI at the ${dayLabel(chain.oiSession)} close` : ''}{mc?.family ? ` · ${mc.family} · ${chainUnit}` : ''}{mc?.since ? ` · since ${mc.since}` : ''}{mcxRoll ? ' · roll warning' : ''}</span>}
+          freshness={mc ? (mc.freshness ?? { state: 'delayed', source: 'ICICI master (proxy settlement)', as_of: chain.session }) : null}
+          copyB={<>Every listed month of the chosen family with its settlement (the ICICI band midpoint of ONE session, a proxy, dated by that session) and what it costs to hold the later month instead (carry vs the front). The <Term t="MCX basis" /> under the table names its own session — the latest close&apos;s last-30-min VWAP when it is known, which can be a later session than the chain&apos;s band.</>}
+          copyP="MCX back months carry more than COMEX: rupee interest rates run above dollar rates and a duty / local-demand expectation sits on top — a cost a long pays at each roll, not free money. The chain's settles are the ICICI ±3 % band midpoints of one session (the band of a master file is the settlement two sessions before it), labelled with that session — never the file or request date — until official bhavcopy rows exist (O-8); vs-front and carry are taken inside that one session. The basis uses the latest session's last-30-min VWAP of the Breeze 1-minute bars (VWAP30 PROXY) when known, else the band (BAND PROXY). PETAL (₹/1 g) and GUINEA (₹/8 g) also print a ₹/10 g equivalent."
           right={mcxRoll ? <Chip color={T.amber} title={mcxRoll}>⟳ ROLL</Chip> : undefined}>
           <Pending s={mcxCurve} label="the MCX chain">
             <DataTable columns={mcxCols} rows={mcxRows} rowKey={p => `${p.symbol ?? ''}-${p.expiry}`} dense exportName="gold-mcx-chain" onRowClick={p => onSel?.({ expiry: p.expiry })}
@@ -356,8 +398,21 @@ export function ContractsView({ sel, layer, comexMatched, tooltips, catalog, onS
             {mc?.basis && (
               <div data-gold-mcx-basis style={{ padding: '6px 12px', fontSize: 10.5, color: T.muted, borderTop: `1px solid ${T.border}` }} title={tip('mcx_basis_pct')}>
                 {/* the basis names its clock (C-BEGINNER-5 / C-DATA-11); the landed / duty-paid rupees are the page's ONE fair block (C-TRADER-19) */}
-                {basisClockLabel(mc.basis.basis_pct, mc.basis.mcx_front_session_label ?? (mc.basis.mcx_front_session ? `${dayLabel(mc.basis.mcx_front_session)} settlement` : mc.date ? `${dayLabel(mc.date)} settlement` : null))}
-                {' · '}landed {fmtInr0(fair?.landed ?? mc.basis.landed_inr)} · duty {(fair?.duty_pct ?? mc.basis.duty_pct) != null ? `${fmtFixed(fair?.duty_pct ?? mc.basis.duty_pct, 0)} %` : '—'}{(fair?.duty_effective ?? mc.basis.duty_effective) ? ` since ${dayLabel(fair?.duty_effective ?? mc.basis.duty_effective)}` : ''} (confirm at CBIC) · duty-paid landed now {fmtInr0(fair?.duty_paid_landed ?? mc.basis.duty_paid_landed_inr)} (the same rupee as HEALTH and PHYSICAL) · USD/INR {fmtFixed(mc.basis.usdinr, 2)}{mc.basis.usdinr_source ? ` ${mc.basis.usdinr_source}` : ''}
+                {/* the basis's OWN session (never the request date): the server's label verbatim, its purity once, its settle source once */}
+                {(() => {
+                  const lbl = basisSettleLabel(mc.basis.basis_label ?? (mc.basis.mcx_front_session_label ?? null), mc.basis.basis_date ?? mc.basis.mcx_front_session ?? null)
+                  const words = basisTileWords(lbl, mc.basis.basis_reference)
+                  return <>basis <b style={{ color: T.text }}>{fmtSignedPctSp(mc.basis.basis_pct, 2)}</b> {words}
+                    {chainSettle && !/VWAP|band/iu.test(words) && <span data-gold-chain-settle-source> · settle {settlementLine(chainSettle)}</span>}</>
+                })()}
+                {' · '}landed {fmtInr0(pageFair?.landed ?? mc.basis.landed_inr)} · duty {(pageFair?.duty_pct ?? mc.basis.duty_pct) != null ? `${fmtFixed(pageFair?.duty_pct ?? mc.basis.duty_pct, 0)} %` : '—'}{(pageFair?.duty_effective ?? mc.basis.duty_effective) ? ` since ${dayLabel(pageFair?.duty_effective ?? mc.basis.duty_effective)}` : ''} (confirm at CBIC) · duty-paid landed now {fmtInr0(pageFair?.duty_paid_landed ?? mc.basis.duty_paid_landed_inr)} {chainUnit} (the same rupee as HEALTH and PHYSICAL) · USD/INR {fmtFixed(mc.basis.usdinr, 2)}{mc.basis.usdinr_source ? ` ${mc.basis.usdinr_source}` : ''}
+              </div>
+            )}
+            {chainNote && <div data-gold-settle-note={chainNote.tone} data-gold-chain-note style={{ padding: '4px 12px', fontSize: 10.5, color: chainNote.tone === 'amber' ? T.amber : T.muted }}>⚠ {chainNote.text}</div>}
+            {mcxCarry != null && spreads[0]?.ann != null && (
+              <div data-gold-carry-gap style={{ padding: '4px 12px', fontSize: 10.5, color: T.muted }} title={tip('annualised_carry_pct')}>
+                carry: MCX {fmtSignedPctSp(mcxCarry, 1)} p.a. (band, {chain.day || 'its session'}) vs COMEX {expiryMonthLabel(spreads[0].from.expiry)}→{expiryMonthLabel(spreads[0].to.expiry)} {fmtSignedPctSp(spreads[0].ann, 1)} p.a. · gap {fmtSigned(mcxCarry - spreads[0].ann, 1)} pp —
+                the rupee–dollar interest differential (not stored on this page) explains part of it; the rest is local demand / duty expectation. A long pays it at each roll.
               </div>
             )}
             {(mc?.history?.length ?? 0) > 2 && (

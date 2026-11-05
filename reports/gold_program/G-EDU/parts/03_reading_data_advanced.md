@@ -265,7 +265,7 @@ units, which is what a stop-loss needs).
 
 **[P]** GVZ (Cboe Gold ETF Volatility Index on GLD options; Yahoo `^GVZ`, free, delayed; 429 for this machine at the time
 of writing): normal 14–20, stress > 30. Realised: `σ_daily = stdev(ln returns, 20d)`; annualise × √252. ATR(14) in
-₹/10 g: at 1.2% daily range and ₹1,46,000 that is ≈ ₹1,750 — the unit of every stop in §7.6. Implied minus realised
+₹/10 g: at 1.2% daily range and ₹1,46,000 that is ≈ ₹1,750 (26 Oct 2026; ATR14 was ₹2,820 on 5 Nov — MACRO prints today's) — the unit of every stop in §7.6. Implied minus realised
 (the variance premium) is usually positive; a negative gap after a shock = options are cheap vs what is happening.
 
 **[APP]** GOLD › MACRO `mc.move` (GVZ → a 1σ day in %, $/oz, ₹/10 g and ₹ per lot per family; realised 20-day vol; ATR14
@@ -408,7 +408,7 @@ paper first.
 5. **Expiry and tender.** Be out before the broker's cut-off; ITM options become futures.
 6. **Liquidity by contract.** GOLD and GOLDM front only for size; far months and PETAL in size are illiquid.
 7. **Margins change overnight.** A special-margin circular is a cash call; keep 35% of the account free.
-8. **Costs are small, leverage is not.** ₹2,560 round trip on a ₹1.46 crore lot is 26 ticks; one 1% day is 1,460 ticks.
+8. **Costs are small, leverage is not.** ≈ ₹2,445 round trip on a ₹1.44 crore lot is ≈ 24.5 ticks (5 Nov 2026; CONTRACTS prints today's); one 1% day is ≈ 1,440 ticks.
 9. **Positioning extremes are context, not a rule.** G-STUDY (26 Oct 2026) found no forecasting power in the COT index at any
    horizon; size on ATR and the event calendar (§7.6, §7.5), never on the COT index.
 10. **The first move on a shock is liquidation.** Wait for the real-yield read (§5.5).

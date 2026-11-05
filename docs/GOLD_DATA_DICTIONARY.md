@@ -40,7 +40,7 @@ Every free source behind the GOLD page, verified live on Monday 26 Oct 2026, 03:
 
 ## Catalog series (`gold_series_catalog` seed)
 
-Catalog seed `services/data-service/gold/catalog_seed.py`: present (214 series rows via build_rows()). Verdicts: LINK-ONLY 5 · PUBLISH-CONTEXT 111 · PUBLISH-CORE 98. Every row's `source_entry` points at the SOURCES.md entry below; a row may be stricter than its entry, never looser (an upgrade is listed below as a defect; `--strict` refuses it). Badges: signal 0 · context 164 · arithmetic 50 · heuristic 0.
+Catalog seed `services/data-service/gold/catalog_seed.py`: present (225 series rows via build_rows()). Verdicts: LINK-ONLY 5 · PUBLISH-CONTEXT 112 · PUBLISH-CORE 108. Every row's `source_entry` points at the SOURCES.md entry below; a row may be stricter than its entry, never looser (an upgrade is listed below as a defect; `--strict` refuses it). Badges: signal 0 · context 164 · arithmetic 61 · heuristic 0.
 
 | series_id | name | source_entry | freq | unit | verdict | badge | max_age_days | ingest_job | publish_time_ist |
 |---|---|---|---|---|---|---|---|---|---|
@@ -52,6 +52,7 @@ Catalog seed `services/data-service/gold/catalog_seed.py`: present (214 series r
 | ATR14_INR | ATR(14) of MCX GOLD front, ₹/10 g | §10 | D | INR/10g | PUBLISH-CORE | arithmetic | 4 | derive |  |
 | BARS_1M | COMEX GC 1-minute bars (7-day window) + INR=X + SGE delayed | A1 | I | USD/oz | PUBLISH-CORE | arithmetic | 1 | intraday_bars | every 5 min |
 | BREEZE_DAILY | ICICI Breeze daily bars with OI per MCX expiry | F2 | D | INR/10g | LINK-ONLY | arithmetic | 4 |  |  |
+| BRENT_FRONT | Brent crude front future (NYMEX BZ, last trade) | A3 | D | USD/bbl | PUBLISH-CONTEXT | arithmetic | 4 | yahoo_daily | 03:10 overnight (prior US session) |
 | CME_BULLETIN_SETTLE | CME Daily Bulletin per-month settlements (Section 62) | C7 | D | USD/oz | LINK-ONLY | arithmetic | 4 |  |  |
 | CME_CALENDAR | CME product calendar (first notice, last trade, delivery windows) | C3 | W | dates | PUBLISH-CORE | arithmetic | 10 | cme_calendar | Sun 04:00 weekly |
 | CME_EFRP | CME EFRP transaction breakdown (EFP/EFR prints) | C2 | D | round turns | PUBLISH-CONTEXT | context | 4 | cme_efrp |  |
@@ -196,6 +197,16 @@ Catalog seed `services/data-service/gold/catalog_seed.py`: present (214 series r
 | MCX_BHAVCOPY | MCX official daily bhavcopy (settlement, volume, OI) | F3 | D | INR/10g | LINK-ONLY | arithmetic | 4 |  |  |
 | MCX_CATEGORY_OI | MCX category-wise OI (monthly workbook) | F4 | M | lots | LINK-ONLY | context | 45 |  |  |
 | MCX_CURVE_ICICI | MCX gold family settlement (band midpoint) and OI per expiry, ICICI master | F1 | D | INR/10g | PUBLISH-CORE | arithmetic | 4 | mcx_master | 07:35 (retry 08:35) |
+| MCX_GOLDGUINEA_VWAP30 | MCX GOLDGUINEA settlement proxy: last-30-min VWAP of Breeze 1-minute bars (per contract month) | F2 | D | INR/8g | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLDGUINEA_VWAP30_LOTS | MCX GOLDGUINEA lots traded in the settlement window (per contract month) | F2 | D | lots | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLDM_VWAP30 | MCX GOLDM settlement proxy: last-30-min VWAP of Breeze 1-minute bars (per contract month) | F2 | D | INR/10g | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLDM_VWAP30_LOTS | MCX GOLDM lots traded in the settlement window (per contract month) | F2 | D | lots | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLDPETAL_VWAP30 | MCX GOLDPETAL settlement proxy: last-30-min VWAP of Breeze 1-minute bars (per contract month) | F2 | D | INR/1g | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLDPETAL_VWAP30_LOTS | MCX GOLDPETAL lots traded in the settlement window (per contract month) | F2 | D | lots | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLDTEN_VWAP30 | MCX GOLDTEN settlement proxy: last-30-min VWAP of Breeze 1-minute bars (per contract month) | F2 | D | INR/10g | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLDTEN_VWAP30_LOTS | MCX GOLDTEN lots traded in the settlement window (per contract month) | F2 | D | lots | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLD_VWAP30 | MCX GOLD settlement proxy: last-30-min VWAP of Breeze 1-minute bars (per contract month) | F2 | D | INR/10g | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
+| MCX_GOLD_VWAP30_LOTS | MCX GOLD lots traded in the settlement window (per contract month) | F2 | D | lots | PUBLISH-CORE | arithmetic | 4 | mcx_close_vwap30 | 23:58 after the MCX close |
 | MCX_MARGIN_ZERODHA | MCX NRML margins (Zerodha mirror) | F8 | D | INR | PUBLISH-CONTEXT | arithmetic | 4 | margins | daily, dated on the page |
 | NYMEX_PL_FRONT | NYMEX platinum front future | A3 | D | USD/oz | PUBLISH-CONTEXT | arithmetic | 4 | yahoo_daily | 03:10 overnight (prior US session) |
 | PREOPEN_LOG | Fair-open accuracy log | H2 | D | INR/10g | PUBLISH-CORE | arithmetic | 5 | preopen_log |  |
@@ -1277,8 +1288,8 @@ Notation: `L/S/X` long/short/spread per group; `OI`; `F1,F2` consecutive futures
 | M4 | Accuracy stats (MAE, median, p90, within-limit %, bias, naive MAE) | from `gold_preopen_log` | daily | this is the evidence | PUBLISH-CORE · `arithmetic` |
 | M5 | Landed cost (₹/10 g) | G × INR ÷ 31.1034768 × 10 | live/daily | identity | PUBLISH-CORE · `arithmetic` |
 | M6 | Duty-paid landed | landed × (1 + d), d = 0.15 since 2026-05-13 (dated) | live/daily | identity | PUBLISH-CORE · `arithmetic` |
-| M7 | India dealer premium (%) | IBJA 999 PM ÷ (duty-paid landed × 999/995 adjustment as needed) − 1, inputs sampled at the IBJA fix minute (FBIL rate) | daily | none in-house (GS-PREMIUM after 2 y); Reuters sanity | PUBLISH-CORE · `context` |
-| M8 | MCX basis vs duty-paid landed; carry-adjusted basis | MCX front settle ÷ duty-paid landed − 1; minus carry to expiry (≈6–7 % p.a.) | daily/live | none | PUBLISH-CORE · `context` (replaces "implied premium 18 %") |
+| M7 | India dealer premium (%) | IBJA 999 PM ÷ (duty-paid landed × 0.999) − 1 — landed (COMEX per fine oz × INR) is FINE gold, purity P = × P/1000 (PM decision D1, 5 Nov 2026); inputs sampled at the IBJA fix minute (FBIL rate) | daily | none in-house (GS-PREMIUM after 2 y); Reuters sanity | PUBLISH-CORE · `context` |
+| M8 | MCX basis vs duty-paid landed; carry-adjusted basis | MCX front settlement proxy of the session ÷ (that session's duty-paid landed × purity/1000: GOLD/GOLDM 0.995, TEN/PETAL/GUINEA 0.999, D1) − 1; minus carry to expiry (≈6–7 % p.a.) | daily/live | none | PUBLISH-CORE · `context` (replaces "implied premium 18 %") |
 | M9 | Shanghai premium ($/oz, %) | SGE PM (CNY/g) × 31.1034768 ÷ USDCNY − LBMA PM (or COMEX at 14:15 Beijing) | daily | none in-house (GS-P3) | PUBLISH-CORE · `context` |
 | M10 | Rule of thumb ₹ per $1 COMEX / ₹ per ₹1 INR | settlement ÷ COMEX ref; settlement ÷ INR ref | live | identity | PUBLISH-CONTEXT · `arithmetic` |
 | M11 | Open interest and weekly ΔOI (COT) | `open_interest_all`, `change_in_open_interest_all` | weekly | G-STUDY FAIL forecast / CONTEXT | PUBLISH-CORE · `context` |

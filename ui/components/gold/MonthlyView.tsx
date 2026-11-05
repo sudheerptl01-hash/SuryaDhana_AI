@@ -80,6 +80,12 @@ export const OFFICIAL_MOZ_SANE = 1000
 export interface NetPurchaseBar { country: string; month: string; t_mm: number | null; t_12m: number | null; unitError: boolean }
 
 /** m.official (PLAN a.5): NET PURCHASES per country — Δ m/m and Δ 12 m in tonnes — from /flows official[]. The holders table is PHYSICAL's (a.7 ph.official): it renders once per page. */
+/** The newest data month among the bars (YYYY-MM → its first day, ISO), null when none: the panel's date. */
+export function latestMonth(bars: readonly { month?: string | null }[]): string | null {
+  const ms = bars.map(b => (b.month ?? '').slice(0, 7)).filter(m => /^\d{4}-\d{2}$/.test(m)).sort()
+  return ms.length ? `${ms[ms.length - 1]}-01` : null
+}
+
 export function netPurchaseBars(rows: readonly OfficialRow[]): NetPurchaseBar[] {
   return rows.map(r => {
     const unitError = r.oz_mn != null && Math.abs(r.oz_mn) > OFFICIAL_MOZ_SANE
@@ -118,6 +124,12 @@ function NetPurchases({ bars }: { bars: NetPurchaseBar[] }) {
   )
 }
 
+/** '2026-06-30' → 'Q2 26' (a WGC quarter end as its quarter). */
+export function quarterLabel(period: string): string {
+  const m = /^(\d{4})-(\d{2})/.exec(period)
+  return m ? `Q${Math.ceil(+m[2] / 3)} ${m[1].slice(2)}` : period
+}
+
 function BalanceBars({ rows }: { rows: NonNullable<GoldFlows['balance_sheet']> }) {
   const periods = useMemo(() => [...new Set(rows.map(r => r.period))].sort().slice(-24), [rows])
   const by = useMemo(() => {
@@ -127,9 +139,19 @@ function BalanceBars({ rows }: { rows: NonNullable<GoldFlows['balance_sheet']> }
   }, [rows])
   const max = Math.max(1, ...periods.map(p => { const x = by.get(p) ?? {}; return Math.max(BALANCE_DEMAND.reduce((a, k) => a + (x[k] ?? 0), 0), BALANCE_SUPPLY.reduce((a, k) => a + (x[k] ?? 0), 0)) }))
   const H = 150
+  const step = max > 1500 ? 500 : max > 600 ? 200 : 100
+  const ticks = Array.from({ length: Math.floor(max / step) }, (_, i) => (i + 1) * step)
+  const every = Math.max(1, Math.ceil(periods.length / 8))
   return (
     <div data-gold-balance>
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${periods.length}, minmax(0, 1fr))`, gap: 3, alignItems: 'end', height: H }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 4 }}>
+      {/* the tonnage axis (the 5 Nov review: no y-axis, only the end quarters labelled) */}
+      <div data-gold-balance-axis style={{ position: 'relative', height: H, fontSize: 9, fontFamily: T.mono, color: T.dim }}>
+        {ticks.map(t => <span key={t} style={{ position: 'absolute', right: 2, bottom: `${(t / max) * 100}%`, transform: 'translateY(50%)' }}>{fmtFixed(t, 0)} t</span>)}
+        <span style={{ position: 'absolute', right: 2, bottom: 0 }}>0</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${periods.length}, minmax(0, 1fr))`, gap: 3, alignItems: 'end', height: H,
+                    backgroundImage: `repeating-linear-gradient(to top, ${T.border} 0 1px, transparent 1px ${(step / max) * H}px)` }}>
         {periods.map(p => {
           const x = by.get(p) ?? {}
           const demand = BALANCE_DEMAND.reduce((a, k) => a + (x[k] ?? 0), 0), supply = BALANCE_SUPPLY.reduce((a, k) => a + (x[k] ?? 0), 0)
@@ -142,8 +164,10 @@ function BalanceBars({ rows }: { rows: NonNullable<GoldFlows['balance_sheet']> }
           )
         })}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: T.dim, fontFamily: T.mono, marginTop: 2 }}>
-        <span>{periods[0]}</span><span>{periods[periods.length - 1]}</span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: `44px repeat(${periods.length}, minmax(0, 1fr))`, gap: 3, fontSize: 8.5, color: T.dim, fontFamily: T.mono, marginTop: 2 }}>
+        <span />
+        {periods.map((p, i) => <span key={p} style={{ textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden' }}>{i % every === 0 || i === periods.length - 1 ? quarterLabel(p) : ''}</span>)}
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 9.5, color: T.muted, marginTop: 4 }}>
         {BALANCE_DEMAND.map(k => <span key={k}><span style={{ display: 'inline-block', width: 8, height: 8, background: BALANCE_COLOR[k], marginRight: 3 }} />{k.replace('_', ' ')}</span>)}
@@ -213,7 +237,7 @@ export function MonthlyView({ layer, usdinr, tooltips, catalog }: GoldSubViewPro
     }
     return [
       ['gold / M2', last ? (ratio.length >= PERCENTILE_MIN_N ? `${fmtFixed(last.v, 3)} · ${percentileText(percentileOf(ratio.map(r => r.v), last.v), `${ratio.length} months`)}` : `${fmtFixed(last.v, 3)} · ${ratio.length} months since ${ratio[0].date.slice(0, 7)} — too few for a percentile`) : '—'],
-      ['HY OAS (bp)', pct(liqRow('FRED_HY_OAS'))],
+      ['HY OAS (%; × 100 = bp)', pct(liqRow('FRED_HY_OAS'))],
       ['GPR monthly', pct(liqRow('GPR_MONTHLY'))],
       ['10-y inflation expectation (Cleveland Fed)', pct(liqRow('FRED_EXPINF10YR'))],
       ['5y5y forward inflation', pct(liqRow('FRED_T5YIFR'))],
@@ -273,7 +297,8 @@ export function MonthlyView({ layer, usdinr, tooltips, catalog }: GoldSubViewPro
         {/* m.official */}
         <GoldPanel id="m.official" title="Official sector · net purchases" badge="context" layer={layer} accent={T.muted} pad={0}
           subtitle={<>Δ m/m and Δ 12 m in tonnes per central bank{pboc ? <> · <Term t="PBoC" /> streak {pboc.streak} month{pboc.streak === 1 ? '' : 's'} (to {pboc.month})</> : null} · holdings table on PHYSICAL</>}
-          freshness={flows.data ? (flows.data.freshness?.official ?? { state: 'delayed', source: 'IMF IRFCL' }) : null}
+          // the panel is dated by its NEWEST data month (the 5 Nov review: 'as of Wed 01 Jul' from the oldest country while most rows were 2026-09)
+          freshness={flows.data ? { ...(flows.data.freshness?.official ?? { state: 'delayed' as const, source: 'IMF IRFCL' }), ...(latestMonth(purchases) ? { as_of: latestMonth(purchases) } : {}) } : null}
           catalog={catalog} series={['IMF_GOLD_OZ_CHN', 'IMF_GOLD_OZ_IND']}
           copyB={<>Who among the central banks bought or sold last month and over the year, each bar with the month the data describes (the IMF publishes one to two months late). How much each holds is the table on PHYSICAL — the same table is not printed twice.</>}
           copyP="IMF IRFCL monetary gold by country: Δ m/m and Δ 12 m converted from million troy ounces to tonnes (1 Moz = 31.1035 t); a row whose stored level exceeds 1,000 Moz is a unit error at the source and is flagged, not drawn; the PBoC streak counts consecutive positive months. Holdings (ph.official, PLAN a.7) and the RBI WSS row live on PHYSICAL (PLAN §f.6: once per page).">

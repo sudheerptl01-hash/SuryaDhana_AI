@@ -10,8 +10,9 @@
 import { useEffect, useState } from 'react'
 import { Chip, Select, T, fmtFixed, fmtSigned } from '@/components/terminal'
 import { getGoldOverview } from '@/lib/gold/api'
-import { comexCode, comexMonthLabel, countdown, dayLabel, expiryMonthLabel, fmtCount, fmtInr0, fmtK, fmtSignedCount, fmtSignedPctSp, fmtUsd,
-         istClock, liveBasisPct, sessionLabel, utcClock, UNIT_LABEL } from '@/lib/gold/format'
+import { bandReferenceLine, basisPurityMismatch, basisPurityShort, basisReferenceLabel, basisSettleLabel, comexCode, comexMonthLabel, countdown, dayLabel, expiryMonthLabel, fmtCount, fmtInr0, fmtK, fmtSignedCount,
+         fmtSignedPctSp, fmtUsd, istClock, sameComexPrint, settlementDay, settlementLine, settlementNote, settlementQualityChip, stripSettlement,
+         utcClock, UNIT_LABEL } from '@/lib/gold/format'
 import { GOLD_FAMILIES, GOLD_UNITS, INSTRUMENTS, type ContractFamily, type GoldContractSel, type GoldOverview, type Layer, type Unit,
          type Window } from '@/lib/gold/types'
 import { Cell, LagChipEl } from './kit'
@@ -42,39 +43,66 @@ export function HeaderStrip({ overview, sel, loading, error }: { overview: GoldO
   const mcxLiveSource = s?.mcx_live_source ?? hf?.mcx_live_source ?? 'ICICI Breeze'
   // ONE basis per clock, never mixed (wave-1c re-check): the server's strip.basis_pct is the LIVE figure whenever a quote
   // exists (basis_clock 'now'), so the settlement figure must come from basis_settle_pct (or basis_pct only when the
-  // server says the clock is 'settlement'); the live figure is shown only while MCX trades (a cached LTP after the close
-  // divided by a moving duty-paid landed is the cross-clock ratio the critics rejected)
+  // server says the clock is 'settlement'); the live figure is shown only while MCX trades. The client never recomputes a
+  // basis (wave 1d: the purity of the landed price is the server's `basis_reference`, a client ratio would mix 995 and 999)
   const mcxTrading = s?.mcx_shown === 'live' || !!mcxOpen?.is_open
   const basisSettle = s?.basis_settle_pct ?? (s?.basis_clock === 'settlement' || s?.basis_clock == null ? s?.basis_pct ?? null : null)
-  const basisLive = mcxTrading ? (s?.basis_live_pct ?? (s?.basis_clock === 'now' ? s?.basis_pct ?? null : liveBasisPct(mcxLive, hf?.duty_paid_landed))) : null
-  const settleSession = s?.mcx_settle_session_label ?? sessionLabel(s?.mcx_settle_session)
-  const basisSession = s?.basis_session_label ?? (s?.basis_settle_date ? sessionLabel(s.basis_settle_date) : settleSession)
+  const basisLive = mcxTrading ? (s?.basis_live_pct ?? (s?.basis_clock === 'now' ? s?.basis_pct ?? null : null)) : null
+  // wave 1d: the settlement names its source, session and quality ('Wed 04 Nov · last-30-min VWAP (Breeze) — proxy'); the
+  // band midpoint is kept for reference with the session it really belongs to; an amber note when the two disagree > 0.6 %
+  const st = stripSettlement(s, hf)
+  const stLine = settlementLine(st)
+  const stNote = settlementNote(st)
+  const bandRef = bandReferenceLine(st)
+  const basisSettleText = basisSettleLabel(s?.basis_session_label ?? s?.basis_label ?? null, s?.basis_settle_date ?? s?.basis_session ?? null)
+  const basisRef = s?.basis_reference ?? hf?.basis_reference ?? null
+  const refWords = basisReferenceLabel(basisRef)
+  const refShort = basisPurityShort(basisRef)
+  // the strip's basis is for the overview's own contract: a landed reference of another purity is flagged, never silently mixed
+  const purityOff = basisPurityMismatch(basisRef, c?.mcx ?? sel.family)
   const tip = `Four instruments on this page: ${instrumentLine(overview, sel)}. Spot proxy = Yahoo XAU; GC1 = continuous front future; ` +
     'matched month = the COMEX contract that expires nearest after the MCX expiry; MCX GOLD = the picked family and expiry.'
+  // the COMEX cell: a bulletin settle when stored, else ONE last-trade number (the matched month's daily bar and the live
+  // last are the same quantity when they agree — printed once, REREVIEW N7); never a leading 'settle —'
+  const comexOnce = settle == null && sameComexPrint(matchedLast, live)
+  const comexHead = settle ?? live ?? matchedLast
+  const dim = { color: T.dim, fontSize: 9.5, fontWeight: 400 } as const
   return (
     <div data-gold-strip title={tip}
       style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', alignItems: 'flex-end', padding: '8px 14px', border: `1px solid ${T.border}`,
                background: T.panel, marginBottom: 8 }}>
       <Cell label={`COMEX ${comexCode(c?.comex_matched) !== '—' ? comexMonthLabel(c?.comex_matched) : 'matched'}`}
         value={settle != null
-          ? <>{fmtUsd(settle, 1)}<span style={{ color: T.dim, fontSize: 9.5, fontWeight: 400 }}> settle {dayLabel(s?.comex_matched_settle_date) || '—'}</span></>
-          : <span data-gold-strip-settle="none"><span style={{ color: T.dim, fontSize: 9.5, fontWeight: 400 }}>settle — </span>
-              {matchedLast != null ? <>{fmtUsd(matchedLast, 1)}<span style={{ color: T.dim, fontSize: 9.5, fontWeight: 400 }}> last {dayLabel(s?.comex_matched_last_date) || ''} · {s?.comex_matched_last_source ?? 'Yahoo'}, not settlement</span></>
-                : <span style={{ color: T.dim, fontSize: 9.5, fontWeight: 400 }}>(arrives with the CME backfill)</span>}
+          ? <>{fmtUsd(settle, 1)}<span style={dim}> settle {dayLabel(s?.comex_matched_settle_date) || '—'}</span></>
+          : <span data-gold-strip-settle="none">{comexHead != null
+              ? <>{fmtUsd(comexHead, 1)}<span style={dim}> last trade{live == null && s?.comex_matched_last_date ? ` ${dayLabel(s.comex_matched_last_date)}` : ''} · {s?.comex_matched_last_source ?? s?.comex_live_source ?? 'Yahoo'}, not settlement</span></>
+              : <span style={dim}>no last trade stored (arrives with the CME backfill)</span>}
             </span>}
-        sub={<>{live != null ? `last ${fmtUsd(live, 1)}` : 'last —'} {chg != null && <span style={{ color: chg > 0 ? T.green : chg < 0 ? T.red : T.muted }}>{chg > 0 ? '▲' : chg < 0 ? '▼' : ''}{fmtSignedPctSp(chg, 2)}</span>}
-          {live != null && <span style={{ color: T.dim }}> {s?.comex_live_source ?? 'Yahoo'}, not settlement{s?.comex_live_as_of ? ` · ${istClock(s.comex_live_as_of)}` : ''}</span>}
+        sub={<>{settle != null && <>{live != null ? `last ${fmtUsd(live, 1)}` : 'last —'} </>}
+          {chg != null && <span style={{ color: chg > 0 ? T.green : chg < 0 ? T.red : T.muted }}>{chg > 0 ? '▲' : chg < 0 ? '▼' : ''}{fmtSignedPctSp(chg, 2)}</span>}
+          {/* the change's reference, named where it prints (DAILY's chart change is vs the previous COMEX close: another reference) */}
+          {chg != null && <span style={{ color: T.dim }} data-gold-strip-chg-ref> {s?.comex_ref_note ?? 'vs the 30-min reference before the last MCX close'}</span>}
+          {live != null && <span style={{ color: T.dim }}>{settle != null ? ` ${s?.comex_live_source ?? 'Yahoo'}, not settlement` : ''}{s?.comex_live_as_of ? ` · ${istClock(s.comex_live_as_of)}` : ''}</span>}
+          {settle == null && !comexOnce && live != null && matchedLast != null && <span style={{ color: T.dim }} data-gold-strip-dailybar> · daily bar {fmtUsd(matchedLast, 1)} {dayLabel(s?.comex_matched_last_date)}</span>}
+          {settle == null && <span style={{ color: T.dim }}> · settle: CME bulletin (O-2)</span>}
           {live != null && <LagChipEl freshness={liveFresh} style={{ marginLeft: 4 }} />}</>}
         title={`${INSTRUMENTS.matched} ${comexCode(c?.comex_matched)}: bulletin settlement when stored (CME backfill, O-2); last = the desk's cached Yahoo last of the matched month, a trade, not a settlement${s?.comex_ref_note ? `; Δ ${s.comex_ref_note}` : ''}`} />
       <Cell label="USD/INR" value={fmtFixed(s?.usdinr, 2)} sub={s?.usdinr_as_of ? `Yahoo INR=X · ${istClock(s.usdinr_as_of)}` : 'Yahoo INR=X · offshore before 09:00'} />
       <Cell label="10-y real" value={s?.real_10y != null ? `${fmtFixed(s.real_10y, 2)} %` : '—'} sub={s?.real_10y_date ? `TIPS · ${dayLabel(s.real_10y_date)}` : 'TIPS (FRED DFII10)'} />
       {mcxLive != null && mcxTrading
-        ? <Cell label={`MCX ${c?.mcx ?? sel.family} ${expiryMonthLabel(c?.expiry ?? sel.expiry)}`} value={<>{fmtInr0(mcxLive)}<span style={{ color: T.dim, fontSize: 9.5, fontWeight: 400 }}> live · {mcxLiveSource}</span></>}
-            sub={<>settle {fmtInr0(s?.mcx_settle)} {settleSession}{basisLive != null && <> · basis live vs duty-paid now <b style={{ color: T.text }}>{fmtSignedPctSp(basisLive, 2)}</b></>}{basisSettle != null && <> · vs {basisSession.replace(/ settlement$/u, '')} settle <b style={{ color: T.text }}>{fmtSignedPctSp(basisSettle, 2)}</b></>}</>}
-            title={`Live = ${mcxLiveSource} quote; settlement = ICICI band midpoint (PROXY) labelled by its session; basis live = live MCX ÷ duty-paid landed now − 1 (same clock); the settlement basis is ${basisSession} ÷ that session's duty-paid − 1`} />
-        : <Cell label={`MCX ${c?.mcx ?? sel.family} ${expiryMonthLabel(c?.expiry ?? sel.expiry)}`} value={fmtInr0(s?.mcx_settle)}
-            sub={<>{settleSession}{basisSettle != null && <> · basis <b style={{ color: T.text }}>{fmtSignedPctSp(basisSettle, 2)}</b> at the {basisSession} vs that session&apos;s duty-paid</>}</>}
-            title="Settlement = ICICI band midpoint (PROXY), labelled by the session it belongs to, never the file date; the basis is settle ÷ duty-paid landed − 1 with both legs at the settlement clock" />}
+        ? <Cell label={`MCX ${c?.mcx ?? sel.family} ${expiryMonthLabel(c?.expiry ?? sel.expiry)}`} value={<>{fmtInr0(mcxLive)}<span style={dim}> live · {mcxLiveSource}</span></>}
+            sub={<span data-gold-strip-mcx>settle {fmtInr0(st.settlement)} <span data-gold-strip-settle-source>{stLine}</span>
+              {basisLive != null && <> · basis live vs duty-paid now <b style={{ color: T.text }}>{fmtSignedPctSp(basisLive, 2)}</b></>}
+              {/* the settlement basis is dated by ITS OWN session (a stored-row fallback can be an older one), then the strip's settlement */}
+              {basisSettle != null && <> · at the {dayLabel(s?.basis_settle_date ?? s?.basis_session) || settlementDay(st)} settle <b style={{ color: T.text }}>{fmtSignedPctSp(basisSettle, 2)}</b></>}
+              {(basisLive != null || basisSettle != null) && <span style={{ color: purityOff ? T.amber : T.dim }} data-gold-basis-ref title={refWords}> · {refShort}{purityOff ? ` (not ${c?.mcx ?? sel.family}'s purity)` : ''}</span>}
+              {stNote && <span data-gold-settle-note={stNote.tone} style={{ display: 'block', color: stNote.tone === 'amber' ? T.amber : T.muted, whiteSpace: 'normal', maxWidth: 640 }}>⚠ {stNote.text}</span>}</span>}
+            title={`Live = ${mcxLiveSource} quote; settlement = ${stLine} (${settlementQualityChip(st.settlement_quality, st.settlement_source)})${bandRef ? `; ${bandRef}` : ''}; basis live = live MCX ÷ duty-paid landed now − 1 (same clock); the settlement basis is ${basisSettleText}; ${refWords}`} />
+        : <Cell label={`MCX ${c?.mcx ?? sel.family} ${expiryMonthLabel(c?.expiry ?? sel.expiry)}`} value={fmtInr0(st.settlement)}
+            sub={<span data-gold-strip-mcx><span data-gold-strip-settle-source>{stLine}</span>{basisSettle != null && <> · basis <b style={{ color: T.text }}>{fmtSignedPctSp(basisSettle, 2)}</b> {basisSettleText}</>}
+              {basisSettle != null && <span style={{ color: purityOff ? T.amber : T.dim }} data-gold-basis-ref title={refWords}> · {refShort}{purityOff ? ` (not ${c?.mcx ?? sel.family}'s purity)` : ''}</span>}
+              {stNote && <span data-gold-settle-note={stNote.tone} style={{ display: 'block', color: stNote.tone === 'amber' ? T.amber : T.muted, whiteSpace: 'normal', maxWidth: 640 }}>⚠ {stNote.text}</span>}</span>}
+            title={`Settlement = ${stLine} (${settlementQualityChip(st.settlement_quality, st.settlement_source)}), labelled by the session it belongs to, never the file date${bandRef ? `; ${bandRef}` : ''}; the basis is settle ÷ duty-paid landed − 1 with both legs at the settlement clock; ${refWords}`} />}
       <Cell label="COT funds net (managed money)" value={s?.cot_mm_net != null ? fmtSignedCount(s.cot_mm_net) : '—'}
         sub={s?.cot_mm_net != null ? `${fmtSignedCount(s.cot_mm_chg)} w/w · as of ${dayLabel(s.cot_as_of) || '—'}` : 'CFTC weekly, Tuesday positions'}
         title="Managed-money (funds) net futures, CFTC disaggregated report: describes the week, does not forecast (G-STUDY). Contracts: Western grouping." />
@@ -123,7 +151,7 @@ export function GoldHoverCard() {
             : `settle — (CME backfill) · ${s.comex_matched_last != null ? `${dayLabel(s.comex_matched_last_date)} ` : ''}Yahoo, not settlement`)}
         {row('USD/INR', fmtFixed(s.usdinr, 2))}
         {row('10-y real', s.real_10y != null ? `${fmtFixed(s.real_10y, 2)} %` : '—', dayLabel(s.real_10y_date))}
-        {row(`MCX ${o.contract.mcx} ${expiryMonthLabel(o.contract.expiry)}`, fmtInr0(s.mcx_settle), sessionLabel(s.mcx_settle_session, s.mcx_settle_session_label))}
+        {row(`MCX ${o.contract.mcx} ${expiryMonthLabel(o.contract.expiry)}`, fmtInr0(stripSettlement(s, o.health?.fair).settlement), settlementLine(stripSettlement(s, o.health?.fair)))}
         {row('COT funds net (MM)', s.cot_mm_net != null ? fmtSignedCount(s.cot_mm_net) : '—', `${fmtK(s.cot_mm_chg)} w/w · ${dayLabel(s.cot_as_of)}`)}
         <div style={{ color: T.dim, fontSize: 9.5, marginTop: 4 }}>{instrumentLine(o, { exchange: 'MCX', family: (o.contract.mcx as GoldContractSel['family']) ?? 'GOLD', expiry: o.contract.expiry, options: false })}</div>
       </>}

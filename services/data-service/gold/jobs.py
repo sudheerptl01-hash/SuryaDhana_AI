@@ -32,6 +32,7 @@ from gold import (
     ingest_macro,
     ingest_physical,
     ingest_yahoo,
+    mcx_close,
     schema,
 )
 from gold.db import utcnow
@@ -58,6 +59,7 @@ ALIASES: dict[str, str] = {
     "cme_voi_final": "cme_voi", "etf": "etf_holdings", "fed_path": "atlanta_fed", "bars_1m": "intraday_bars",
     "gpr_daily": "gpr", "gpr_monthly": "gpr", "lbma_wgc": "wgc_price", "margins": "zerodha_margins",
     "fred": "fred_daily", "sge_intraday": "sge_quotes", "yahoo": "yahoo_daily", "curve": "yahoo_curve",
+    "mcx_close": "mcx_close_vwap30", "vwap30": "mcx_close_vwap30",
 }
 DORMANT: dict[str, str] = {
     "mcx_official": "MCX official bhavcopy needs a browser-session collector the owner has not authorised (O-8)",
@@ -77,6 +79,7 @@ class Ctx:
     force: bool = False
     params: dict[str, Any] = field(default_factory=dict)
     progress: Callable[[int, int], None] | None = None
+    breeze: Callable[[], Any] | None = None    # data-service's live Breeze session getter (None in tests / no session)
 
     @property
     def today_ist(self) -> date:
@@ -437,7 +440,11 @@ def g_lbma_turnover(ctx: Ctx) -> dict[str, Any]:
     resp = ctx.http.get(ingest_physical.LBMA_TRADE_URL)
     if resp.status_code != 200:
         return {"status": f"http_{resp.status_code}", "inserted": 0}
-    return ingest_physical.ingest_series(ctx.store, ingest_physical.parse_lbma_turnover(resp.text, now=ctx.now), now=ctx.now)
+    df = ingest_physical.parse_lbma_turnover(resp.text, now=ctx.now)
+    if df.empty:
+        return {"status": "no_headline", "inserted": 0, "note": "the 'period ending … Gold: $… bn' headline was not found"}
+    periods = sorted({str(d) for d in df["report_date"]})
+    return {**ingest_physical.ingest_series(ctx.store, df, now=ctx.now), "page_periods": periods, "latest_period": periods[-1]}
 
 
 def g_lbma_vault(ctx: Ctx) -> dict[str, Any]:
@@ -515,7 +522,19 @@ def g_inr_ref(ctx: Ctx) -> dict[str, Any]:
 
 
 def g_mcx_master(ctx: Ctx) -> dict[str, Any]:
-    return ingest_india.fetch_mcx_master(ctx.store, ctx.http, now=ctx.now)
+    try:                                                           # wave 1d: idempotent, rows before the fix only; never fails the group
+        relabel: dict[str, Any] = ingest_india.relabel_band_sessions(ctx.store)
+    except Exception as exc:  # noqa: BLE001 — a read-only store: the reads re-key from trade_date anyway
+        relabel = {"status": "error", "error": type(exc).__name__}
+    return {**ingest_india.fetch_mcx_master(ctx.store, ctx.http, now=ctx.now), "band_session_relabel": relabel}
+
+
+def g_mcx_close_vwap30(ctx: Ctx) -> dict[str, Any]:
+    """The MCX settlement proxy (last-30-minute VWAP of Breeze 1-minute bars) of the latest completed session, or of
+    ``params.sessions`` / every session since ``backfill_from``; stored contracts are skipped (zero Breeze calls)."""
+    p = ctx.params
+    return mcx_close.run(ctx.store, ctx.breeze, now=ctx.now, sessions=p.get("sessions"), backfill_from=ctx.backfill_from,
+                         families=p.get("families"), force=ctx.force, max_calls=p.get("max_calls"))
 
 
 def g_zerodha(ctx: Ctx) -> dict[str, Any]:
@@ -665,6 +684,8 @@ GROUPS: dict[str, Group] = {g.name: g for g in (
     Group("rbi_wss", g_rbi_wss, "weekly", "gold_series", "source = 'rbi_wss'"),
     Group("inr_ref", g_inr_ref, "daily", "gold_series", "series_id = 'USDINR_FBIL'"),
     Group("mcx_master", g_mcx_master, "always", note="conditional GET; a 304 is a no-op"),
+    Group("mcx_close_vwap30", g_mcx_close_vwap30, "always",
+          note="after the MCX close (≈23:58) and at start-up: last-30-min VWAP of Breeze 1-min bars; stored sessions cost 0 calls"),
     Group("zerodha_margins", g_zerodha, "daily", "gold_margins", "source = 'zerodha_nrml'"),
     Group("amfi", g_amfi, "monthly", "gold_series", "source = 'amfi_xls'", publish_day=10),
     Group("duty", g_duty, "always"),
@@ -714,14 +735,36 @@ def run_group(name: str, ctx: Ctx) -> dict[str, Any]:
     return out
 
 
+_CATALOG_CHECKED: set[int] = set()
+
+
+def ensure_catalog(store: Any) -> int:
+    """Seed the catalog when the stored table lacks a code row (a new id shipped since the last ``catalog`` run — wave 1d,
+    C-DATA-17: the three Asia ids existed in code but not in the live table). Once per store per process (a code change
+    means a restart); never fails a job."""
+    if id(store) in _CATALOG_CHECKED:
+        return 0
+    _CATALOG_CHECKED.add(id(store))
+    try:
+        have = {str(r) for r in db.query_df(store, "SELECT series_id FROM gold_series_catalog")["series_id"]}
+        if {r["series_id"] for r in catalog_seed.build_rows()} - have:
+            return catalog_seed.seed(store)
+    except Exception as exc:  # noqa: BLE001 — a read-only store, a missing table
+        logger.warning("gold.catalog.ensure_failed", error=type(exc).__name__)
+    return 0
+
+
 def run_job(store: Any, http: Any, job: str, groups: list[str], *, backfill_from: date | None = None, force: bool = False,
             params: dict[str, Any] | None = None, now: datetime | None = None,
-            progress: Callable[[int, int], None] | None = None) -> dict[str, Any]:
+            progress: Callable[[int, int], None] | None = None, breeze: Callable[[], Any] | None = None) -> dict[str, Any]:
     """The whole job: every group in order, then a checkpoint; the result carries per-group outcomes (``groups``), the
     freshness of the gold tables (``tables``) and ``rows_total``. Row counts sit in ``inserted`` exactly once per leaf
     (a group with legs reports ``inserted_total``), so a walker that sums every ``inserted`` key is never off."""
-    ctx = Ctx(store=store, http=http, now=now or utcnow(), backfill_from=backfill_from, force=force, params=params or {}, progress=progress)
+    ctx = Ctx(store=store, http=http, now=now or utcnow(), backfill_from=backfill_from, force=force, params=params or {}, progress=progress,
+              breeze=breeze)
     out: dict[str, Any] = {}
+    if "catalog" not in groups:
+        ensure_catalog(store)
     for i, name in enumerate(groups):
         out[name] = run_group(name, ctx)
         if progress:

@@ -1,4 +1,4 @@
-# GOLD program — the ui-api contract as implemented (B3-API, 26 Oct 2026; wave 1b 4 Nov 2026; wave 1c critics' fix round 5 Nov 2026)
+# GOLD program — the ui-api contract as implemented (B3-API, 26 Oct 2026; wave 1b 4 Nov 2026; wave 1c critics' fix round 5 Nov 2026; wave 1d settlement baseline 5 Nov 2026 — §7b)
 
 What `services/ui-api/routers/gold.py` (mounted at **`/api/gold`**) and the TOTP routes on `routers/positions.py`
 (**`/api/positions/totp/*`**) actually return. B4A/B4B/B5 build against this file, not against PLAN §d; every deviation
@@ -480,9 +480,151 @@ Every read tolerates `{rows:[…]}`, `{data:[…]}`, `{columns, data}` or a bare
 15. (wave 1c) `rbi.tonnes_est` is a `null` alias for one release; the tonnage is `rbi.tonnes` (IMF ounces).
 16. (wave 1c) Event kinds `FOMC_SPEECH` / `FOMC_MINUTES` are ui-api's split of the store's `FOMC` (`kind_stored` keeps
     the original); data-service may adopt the split at ingest later without a contract change.
-17. (wave 1c) `/health`, `/overview.health` and `/premiums` all print the settlement-clock basis from the SAME stored
-    `MCX_BASIS_PCT` row (or the desk's figure for that session before the 21:30 derive); the desk's `fair.basis_pct`
-    (`gold_preopen.fair_open`) stays as the fallback source and the `implied_premium_pct` alias is unchanged.
+17. (wave 1c, REVERSED in wave 1d) `/health`, `/overview.health`, `/curve` and `/premiums` print ONE settlement-clock
+    basis — since wave 1d the desk's own figure (`fair.basis_pct`: the settlement ÷ the duty-paid landed price of the
+    contract's purity at THAT session's 30-minute close reference − 1, both legs on one clock); the stored `MCX_BASIS_PCT`
+    (data-service derive: band vs the GC=F daily close at 999, labelled one session late until the G-DATA relabel) only
+    stands in when the desk has no model, labelled `data-service derive (stored)` / `stored, 999`.
+
+## 7b. Wave 1d (5 Nov 2026, 22:20 IST) — the settlement baseline, trend, purity, one basis per clock
+
+**The blocker.** ICICI's security master is the exchange's contract file of the session BEFORE its publish date: the band
+midpoint of a file published on D is the settlement of `previous_session(previous_session(D))` (`gold_preopen.band_session`;
+the band itself is MCX's price band OF `band_applies_to` = the session before D). Measured on Breeze 1-minute bars (last
+30 minutes, volume-weighted): the 05 Nov file's ₹1,39,452 = Tue 03 Nov ₹1,39,448 (the page said "Wed 04 Nov settlement");
+04 Nov file ₹1,40,186 = Mon 02 Nov ₹1,40,190; 28 Oct file ₹1,43,073 = Mon 26 Oct ₹1,43,069. Wed 04 Nov = ₹1,43,236.8.
+
+**The settlement block** (`gold_preopen.settlement_block`; served on `/health.fair`, `/overview.strip`, `/overview.fair.contract_fair`,
+`/fair.baseline`, `/api/mcx/quote.fallbacks.settlement`, `/api/mcx/overlay.overlay`):
+`settlement` (the latest COMPLETED session's last-30-min VWAP of the contract's Breeze 1-minute bars, else the band midpoint),
+`settlement_source` (`breeze_vwap30` | `band_midpoint`), `settlement_session` (ISO date the number belongs to),
+`settlement_session_label` (`Wed 04 Nov settlement`), `settlement_quality` (`vwap30_proxy` | `band_proxy`),
+`settlement_method`, `settlement_note` (why an older session is shown), `settlement_is_latest`, `band_midpoint`,
+`band_session`, `band_session_label`, `band_applies_to`, `latest_session`, `latest_session_label`, `vwap30` ({value, bars,
+volume, method, window, last_close}) and `settlement_check` ({`band_vs_vwap30_pct`, `flagged` — beyond 0.6 % on the printed
+figure —, `threshold_pct`, `compared`, `note`}). A session counts as completed two minutes after its close (23:55 + 2 min in
+US winter). ONE read-only `get_historical_data_v2` call per contract per session (`gold_preopen.session_vwap`: single flight,
+through `shared/breeze_budget.py` as caller `ui-api.gold_settlement`, kept 14 h; a miss is asked again after 2–10 min;
+requests wait at most 8 s, the 08:45 snapshot 30 s; off under pytest unless `GOLD_SETTLE_BREEZE=1`). The COMEX / rupee
+references of the fair open are taken at the SETTLEMENT session's close, so a band fallback still scales the right number.
+
+**Fair open (`/fair`).** `baseline` gains `settlement_source`, `settlement_quality`, `settlement_method`, `settlement_check`,
+`latest_session`, `band_midpoint`, `band_session`, `band_session_label`, `vwap30` (`settlement_from_band` stays as a
+deprecated alias of `band_midpoint`); `contract` gains `band_applies_to` and `band_session` (the band is never "today's").
+
+**Accuracy log (`/log`, `/fair.accuracy`).** Each row carries `baseline_check` (its baseline vs the last-30-min VWAP of the
+session it was LABELLED with; recorded on the row once read, `null` = unknown, never guessed) and `stale_baseline` (see §7c for
+the round-2 reasons). New snapshot rows record `baseline_source_kind`, `band_midpoint`, `band_session`,
+`settlement_check`. `stats` adds `stale_baseline_count`, `stale_baseline_dates`, `stale_baseline_unknown`,
+`stale_baseline_rule` and `excluding_stale` (the same stats without the stale rows). NOTHING is re-scored: `error` /
+`naive_error` keep their recorded values.
+
+**Basis purity, one value per clock.** `fair` (the fair block) adds `purity`, `basis_reference` (`landed_995` |
+`landed_999`), `duty_paid_landed_purity` (now) and `duty_paid_landed_at_settlement`; `landed` / `duty_paid_landed` are the
+price of FINE gold and a contract of purity P divides by them × P / 1000 — GOLD / GOLDM 995, GOLDTEN / GOLDPETAL /
+GOLDGUINEA 999 (PM decision D1, round 2: round 1's "999 reference" and "GOLDGUINEA 916" are superseded, see §7c).
+`/overview` builds its health on the PAGE'S contract, so the strip
+(`basis_pct`, `basis_clock`, `basis_reference`, `basis_contract`, `purity`), the INDIA BASIS gauge (`basis_reference`,
+`purity`, `basis_contract`, `settle_basis_session_label`, `duty_paid_landed_purity_now`, `settlement_source`,
+`settlement_quality`, `settlement_check`) and the H4 clause (text names the purity and the clock) print the same number;
+`/health` keeps GOLD (the WEI / BRF echo). `strip.basis_session_label` is the SESSION only (`Wed 04 Nov settlement`).
+`/premiums?contract=&expiry=` (default GOLD front) gives the ladder the page's contract; the `mcx` ladder step adds
+`settlement_source`, `settlement_quality`, `settlement_check`, `basis_reference`, `reference_value`; `india` adds
+`basis_reference`, `basis_purity_note`.
+
+**TREND.** The gauge adds `vs_20d_pct`, `vs_200d_pct`, `drawdown_pct` (= `drawdown_52w_pct`), `trend_words` (`above
+both` | `between` | `below both averages`, the CONTRACT's words verbatim), `ma20`, `ma200`, `high_52w`, `last_bar_partial_source` (`store` | `clock rule`:
+the store's partial flag wins); `direction_for_gold` is the words, never the rule alone. The verdict carries an `H1` trend
+clause with the values right after the head (`price below both averages (−0.5 % vs 20-d, −9.7 % vs 200-d; −23.5 % from the
+52-w high)`). HEALTH_RULES ids, series and thresholds are unchanged (LEARN §8.4 validates them); two rule TEXTS changed: H4
+(round 1: the purity and the clock) and H1 (round 2: its rule now names the trend sentence, `clause` "week label · trend",
+and the trend clause carries `rule_part`).
+
+**CONTRACTS (`/contracts`).** Each expiry's `settle` is the latest session's VWAP where read (`contract_vwaps`: the liquid
+expiries, OI > 0, three per family, read on ONE background thread), else the band of its real session: `settle_source`,
+`settle_session`, `settle_session_label`, `band_midpoint`, `margin_ref_price`, `carry_note` (carry is never taken across two
+sessions), `in_tender`, `tender_note`; per family `basis_reference`, `price_basis` (the session the 1 % move / notional / round
+trip use) and `purity` (D1: '995' GOLD / GOLDM, '999' the rest); top level `latest_session`, `settle_note`, `carry_fair_note`; `master.session` is the
+band's real session and `master.band_applies_to` its band's session. `comex_spec` adds `margin_history_dates` and its own
+`freshness` (CME PRF).
+
+**Positioning MCX / curve MCX.** A master published on D carries the OI at the close of S1 = the session before D (the
+row's `trade_date` — RIGHT for the OI; data-service matched it to Breeze's closing OI) and the band in force during S1,
+centred on the settlement of the session before S1. So ui-api keeps the OI on its `trade_date` and moves only the settle
+(`band_row_session`: `gold_preopen.band_session` of `release_at`'s IST date, else data-service's re-keyed `session_date`
+when it is before the trade_date, else the session before the trade_date); `mcx_session_rows` pairs them per session and
+the sessions no band covers yet (`vwap_sessions_needed`, usually one or two) take the front's last-30-min VWAP. Rows add
+`settle_source`; the tape adds `price_source`, `price_only`, `note`, and prints a quadrant word only when the price and the
+OI deltas span the SAME sessions and the SAME contract (never across a roll). `roll` adds `in_tender`, `tender_note` (never a
+negative day count). `/curve?exchange=MCX` adds `chain_session`, `chain_session_label` (the chain's settles are ONE session,
+the band's) and `oi_session` (the OI's); `basis` adds `mcx_front_source`, `settlement_check`, `band_midpoint`,
+`band_session`, `purity`, `basis_reference`, `duty_paid_landed_purity_inr`. `/curve?exchange=COMEX` carries the three
+session keys as `null`.
+
+**MCXG (`/api/mcx/*`).** The COMEX leg is the LIQUID month (`gold_preopen.comex_liquid_symbol`, the same function as
+`routers.gold.comex_liquid_symbol`: GOLDTEN NOV-26 → GCZ26, `comex.calendar_symbol` GCX26, `comex.matched_note`). `/quote`
+1-minute fallback fills `high` / `low` (`range_from`) and `previous_close` (+ `previous_close_source`) from the settlement read;
+`best` falls back to the settlement block. `/ticket` takes an optional `expiry` and its margin is the CONTRACT CARD's
+(`mcx.card_margin`: the stored Zerodha NRML ₹ per lot × lots, dated) with `margin_expiry`, `margin_ref_price`, `margin_basis`;
+an explicit `margin_pct` still overrides. `/specs.front` names `settlement_source`, `settlement_quality`, `settlement_session`.
+
+**Minors.** Events: one COT release per (date, time) and every MCX expiry at that day's session close (`time_note`) —
+`merge_events` for `/calendar`, `/overview.calendar` and `/macro.calendar`. `/brief`: an empty document (no summary, plan or
+risks) prints `bias` / `confidence` `null` with `bias_withheld`; trade-implying sentences are removed from prose (path in
+`stripped_fields`). Shanghai tile: `change` vs the median of the previous five same-date pairs (`median_prev_pairs`); history
+rows add `timing_spike_suspect`. MACRO: GVZ `change_unit` `vol pts`; a stale driver gets no `tag` (`tag_note`); `kgx` uses
+HEALTH's window anchor (`window_label`); `fed.meetings[].kind` `rate horizon` with a `label`, `fed.meetings_note`;
+`context.hy_oas_unit` (`%`) and `hy_oas_bp`. `/flows` adds `official_months` (`newest`, `oldest`) and dates
+`freshness.official` by the newest month.
+
+## 7c. Wave 1d round 2 (5–6 Nov 2026) — the checker's REJECT and PM decisions D1–D6
+
+**Purity (D1).** `landed` / `duty_paid_landed` are the rupee price of FINE gold (COMEX and LBMA quote fine troy ounces;
+`gold_preopen.LANDED_FINENESS` 1000). Every MCX basis divides the contract's price, scaled to ₹/10 g, by landed × P / 1000:
+GOLD / GOLDM 995, GOLDTEN / GOLDPETAL / GOLDGUINEA 999 (`basis_reference` `landed_995` | `landed_999`; `landed_916` is gone).
+The purity is READ from shared/mcx_specs by both services (`gold_preopen.CONTRACT_FINENESS`, data-service
+`gold/ingest_india.MCX_PURITY`, same fallback literals; `test_gold_wave1d` pins the two). IBJA 999 compares with landed × 0.999
+(`premiums.india.fineness_adjustment`). The settlement-clock stored fallback (`MCX_BASIS_PCT`) is labelled GOLD at
+`landed_995`. Effect vs round 1: every basis ≈ +0.1 pp (GOLD ÷ 0.995 instead of ÷ 995/999; GOLDTEN / PETAL ÷ 0.999 instead
+of ÷ 1), GOLDGUINEA ≈ −9 pp (no longer the 916 artefact).
+
+**Units (D3).** `/premiums` ladder: every rupee step is ₹/10 g whatever the contract — the fair block of a PETAL (₹/1 g) or
+GUINEA (₹/8 g) contract is scaled × 10 / grams; the `mcx` step adds `value_native`, `unit_native`, `scaled_to_10g` and says
+`(₹ per 1 g × 10)` in its label; `reference_value` is scaled too and `reference_label` names the purity; `india` adds `unit` and
+`unit_note`. The landed steps are labelled "fine gold". The fair block adds `quote_unit` (`₹ per 1 g` …) and the strip
+`mcx_quote_unit`: those blocks stay in the contract's own unit.
+
+**Accuracy log (D2).** A row without `expiry` (every row before 05 Nov) takes it from its contract label (`GOLD DEC-26` →
+2026-12-04, `gold_preopen.expiry_from_label`, shared/mcx_specs rule); `labelled_session` reads the day the old
+`baseline_source` names ('MCX settlement 16 Oct …': the 20 Oct row used the 19 Oct master), so every row with a baseline is
+checkable (`check_contract` {breeze_code, expiry, session}). Rows add `stale_reasons` (`vwap30_check` | `band_rule` |
+`older_session` | `recorded`), `band_rule` ({labelled_session, real_session, real_session_label, mislabelled, rule}: a band
+baseline written before wave 1d belongs to the session BEFORE its label — the verified band rule, no Breeze read) and
+`re_explained` (a COUNTERFACTUAL: the fair open, its miss and the naive miss had the baseline been the labelled session's
+VWAP; `null` without that VWAP). `stale_baseline` = any reason. `stats` adds `stale_by` and `on_vwap30` (the counterfactual's
+MAE vs naive over the rows `re_explained` covers, labelled "not the score"); `excluding_stale` now excludes every band row
+written before wave 1d. A wave-1d row's `settlement_check` is no longer used as its `baseline_check` (it compares another
+session). The background check records `baseline_check`, `labelled_session_vwap30`, `labelled_session_vwap30_expiry` on the
+row WITHOUT re-deriving `error` / `naive_error` (`_record_on_row`). Nothing recorded is rewritten. `/fair.accuracy` adds
+`stale_baseline_count`, `stale_baseline_dates`, `excluding_stale`, `on_vwap30`; `/log.read` explains the band rule and the
+counterfactual.
+
+**Settlement reads.** One path for every caller (`mcx.fill_stored_vwaps` / `session_vwap_any` / `settlement_vwaps`): the
+cache, then data-service's stored `MCX_<FAMILY>_<YYYYMM>_VWAP30` (one `/db/gold/series` read for all keys; a key not stored is
+remembered 5 min), then ONE Breeze read — the desk (`/fair`, the 08:45 snapshot), `/health`, `/overview`, `/contracts` (all
+liquid expiries in one stored read before anything is queued) and `/positioning/daily?exchange=MCX`. Off under pytest unless
+`GOLD_STORED_VWAP=1`. The settlement block takes the PREVIOUS session's VWAP when the latest is not read but the previous is
+known (never older than the band), labelled with its own session (`vwap30.session`). Breeze misses: an empty window read more
+than 15 min after the close is kept 8 h; every (contract, expiry, session) gets at most 4 calls per 12 h (`status`
+`call_cap`); a VWAP whose last bar is more than 3 minutes before the close, read within 10 minutes of it, is used but kept
+5 min (`window_complete` false).
+
+**CONTRACTS chain (D4).** `/curve?exchange=MCX` points add `settle_source` (`band_midpoint`), `settle_quality`,
+`band_session`, `settle_session`, `settle_session_label` — the band's own session per point; `date` stays the request date
+(the UI prints `chain_session_label`).
+
+**MACRO (D6).** For a true twin (Brent, 10-y real, 2-y, GVZ) the fresher stored AND published alternate wins over the primary,
+`label_note` "X: fresher than Y (last …)"; Brent's alternate is `BRENT_FRONT` (BZ=F daily), no longer `WTI_FRONT`.
 
 ## 8. Key inventory (generated)
 
@@ -517,6 +659,7 @@ calendar[].past: bool
 calendar[].source: string
 calendar[].star: bool
 calendar[].time_ist: string
+calendar[].time_note: string
 contract: object
 contract.band: object
 contract.band.band_high: number
@@ -524,6 +667,8 @@ contract.band.band_low: number
 contract.band.expiry: string
 contract.band.open_interest: number
 contract.band.settlement: number
+contract.band_applies_to: string
+contract.band_session: string
 contract.comex_front: string
 contract.comex_matched: string
 contract.comex_matched_calendar: string
@@ -534,6 +679,7 @@ contract.lot: string
 contract.master_published: string
 contract.mcx: string
 contract.name: string
+contract.purity: number
 contract.quote_unit: string
 contract.spot_proxy_note: string
 contract.tick_value: number
@@ -543,23 +689,43 @@ fair.accuracy: object
 fair.accuracy.badge: string
 fair.accuracy.bias: null
 fair.accuracy.days: number
+fair.accuracy.excluding_stale: object
+fair.accuracy.excluding_stale.days: number
 fair.accuracy.mean_abs_error: null
 fair.accuracy.median_abs_error: null
 fair.accuracy.naive_mean_abs_error: null
+fair.accuracy.on_vwap30: object
+fair.accuracy.on_vwap30.days: number
 fair.accuracy.p90: null
+fair.accuracy.stale_baseline_count: number
+fair.accuracy.stale_baseline_dates: array
 fair.accuracy.threshold: number
 fair.accuracy.within_threshold_pct: null
 fair.as_of: string
 fair.badge: string
 fair.baseline: object
+fair.baseline.band_midpoint: number
+fair.baseline.band_session: string
+fair.baseline.band_session_label: string
 fair.baseline.close_time: string
+fair.baseline.latest_session: string
 fair.baseline.master_published: string
 fair.baseline.session: string
 fair.baseline.session_label: string
+fair.baseline.settlement_check: object
+fair.baseline.settlement_check.band_vs_vwap30_pct: null
+fair.baseline.settlement_check.compared: null
+fair.baseline.settlement_check.flagged: bool
+fair.baseline.settlement_check.note: string
+fair.baseline.settlement_check.threshold_pct: number
 fair.baseline.settlement_from_band: number
+fair.baseline.settlement_method: string
+fair.baseline.settlement_quality: string
+fair.baseline.settlement_source: string
 fair.baseline.source: string
 fair.baseline.stale: bool
 fair.baseline.value: number
+fair.baseline.vwap30: null
 fair.context: array
 fair.context[]: object
 fair.context[].at_close: number
@@ -573,9 +739,11 @@ fair.context[].trigger_state: string
 fair.context[].unit: string
 fair.context[].value: number
 fair.contract: object
+fair.contract.band_applies_to: string
 fair.contract.band_high: number
 fair.contract.band_low: number
 fair.contract.band_pct: number
+fair.contract.band_session: string
 fair.contract.comex: string
 fair.contract.expiry: string
 fair.contract.name: string
@@ -607,6 +775,7 @@ fair.mcx_price.source: null
 fair.mcx_price.value: null
 fair.model: object
 fair.model.basis_pct: number
+fair.model.basis_reference: string
 fair.model.comex: object
 fair.model.comex.as_of: string
 fair.model.comex.now: number
@@ -615,6 +784,7 @@ fair.model.comex.ref_how: string
 fair.model.comex.symbol: string
 fair.model.comex_part: number
 fair.model.duty_paid_landed: number
+fair.model.duty_paid_landed_purity: number
 fair.model.duty_pct: number
 fair.model.fair_open: number
 fair.model.gap: number
@@ -629,6 +799,7 @@ fair.model.inr.symbol: string
 fair.model.inr_part: number
 fair.model.landed: number
 fair.model.lot_pnl_per_rupee: number
+fair.model.purity: number
 fair.model.rs_per_comex_dollar: number
 fair.model.rs_per_inr_rupee: number
 fair.model.threshold_in_comex_dollars: number
@@ -678,9 +849,17 @@ health.fair: object
 health.fair.actual_open: null
 health.fair.actual_open_source: null
 health.fair.badge: string
+health.fair.band_applies_to: string
+health.fair.band_midpoint: number
+health.fair.band_session: string
+health.fair.band_session_label: string
+health.fair.basis_clock: string
 health.fair.basis_pct: number
+health.fair.basis_reference: string
 health.fair.comex: object
 health.fair.comex.as_of: string
+health.fair.comex.calendar_symbol: string
+health.fair.comex.matched_note: null
 health.fair.comex.price: number
 health.fair.comex.symbol: string
 health.fair.comex_symbol: string
@@ -689,6 +868,8 @@ health.fair.desk_verdict_state: string
 health.fair.duty_effective: string
 health.fair.duty_note: string
 health.fair.duty_paid_landed: number
+health.fair.duty_paid_landed_at_settlement: number
+health.fair.duty_paid_landed_purity: number
 health.fair.duty_pct: number
 health.fair.expiry: string
 health.fair.expiry_source: string
@@ -701,22 +882,37 @@ health.fair.freshness.state: string
 health.fair.gap_vs_settlement: number
 health.fair.implied_premium_pct: number
 health.fair.landed: number
+health.fair.latest_session: string
+health.fair.latest_session_label: string
 health.fair.mcx_holiday: null
 health.fair.mcx_live: null
 health.fair.mcx_live_as_of: null
 health.fair.mcx_live_source: null
 health.fair.premium_pct: null
 health.fair.premium_rupees: null
+health.fair.purity: number
+health.fair.quote_unit: string
 health.fair.settlement: number
+health.fair.settlement_check: object
+health.fair.settlement_check.band_vs_vwap30_pct: null
+health.fair.settlement_check.compared: null
+health.fair.settlement_check.flagged: bool
+health.fair.settlement_check.note: string
+health.fair.settlement_check.threshold_pct: number
+health.fair.settlement_is_latest: bool
+health.fair.settlement_method: string
+health.fair.settlement_note: string
 health.fair.settlement_quality: string
 health.fair.settlement_session: string
 health.fair.settlement_session_label: string
+health.fair.settlement_source: string
 health.fair.snapshot_error: null
 health.fair.snapshot_fair: null
 health.fair.usdinr: object
 health.fair.usdinr.as_of: string
 health.fair.usdinr.price: number
 health.fair.usdinr.symbol: string
+health.fair.vwap30: null
 health.freshness: object
 health.freshness.age_days: number
 health.freshness.oldest: number
@@ -730,7 +926,9 @@ health.gauges[]: object
 health.gauges[].age_days: null|number
 health.gauges[].annualised_pct: number
 health.gauges[].badge: string
+health.gauges[].basis_contract: string
 health.gauges[].basis_label: string
+health.gauges[].basis_reference: string
 health.gauges[].change: null|number
 health.gauges[].change_bp: number
 health.gauges[].change_pct: number
@@ -744,14 +942,17 @@ health.gauges[].cot_index_52: number
 health.gauges[].days_to_fnd: number
 health.gauges[].direction_for_gold: null|string
 health.gauges[].drawdown_52w_pct: number
+health.gauges[].drawdown_pct: number
 health.gauges[].driver_label: string
 health.gauges[].duty_effective: string
 health.gauges[].duty_paid_landed_now: number
+health.gauges[].duty_paid_landed_purity_now: number
 health.gauges[].duty_pct: number
 health.gauges[].evidence: string
 health.gauges[].fnd_date: string
 health.gauges[].fnd_source: string
 health.gauges[].front: string
+health.gauges[].high_52w: number
 health.gauges[].ibja_premium_date: string
 health.gauges[].ibja_premium_note: string
 health.gauges[].ibja_premium_pct: number
@@ -759,13 +960,17 @@ health.gauges[].key: string
 health.gauges[].label: string
 health.gauges[].last_bar_note: null
 health.gauges[].last_bar_partial: bool
+health.gauges[].last_bar_partial_source: string
 health.gauges[].live_basis_pct: null
 health.gauges[].ltd_date: null
+health.gauges[].ma20: number
+health.gauges[].ma200: number
 health.gauges[].mcx_live: null
 health.gauges[].net_pct_oi: number
 health.gauges[].next: string
 health.gauges[].percentile_1y: null|number
 health.gauges[].percentile_3y: null|number
+health.gauges[].purity: number
 health.gauges[].read_from: string
 health.gauges[].release_at: null|string
 health.gauges[].report_date: null|string
@@ -774,10 +979,20 @@ health.gauges[].series_id: string
 health.gauges[].settle_basis_date: string
 health.gauges[].settle_basis_label: string
 health.gauges[].settle_basis_pct: number
+health.gauges[].settle_basis_session_label: string
 health.gauges[].settle_basis_source: string
+health.gauges[].settlement_check: object
+health.gauges[].settlement_check.band_vs_vwap30_pct: null
+health.gauges[].settlement_check.compared: null
+health.gauges[].settlement_check.flagged: bool
+health.gauges[].settlement_check.note: string
+health.gauges[].settlement_check.threshold_pct: number
+health.gauges[].settlement_quality: string
 health.gauges[].settlement_session_label: string
+health.gauges[].settlement_source: string
 health.gauges[].source: string
 health.gauges[].state: string
+health.gauges[].trend_words: string
 health.gauges[].unit: string
 health.gauges[].value: null|number
 health.gauges[].vs_200d_pct: number
@@ -799,6 +1014,7 @@ health.verdict.clauses: array
 health.verdict.clauses[]: object
 health.verdict.clauses[].note: null
 health.verdict.clauses[].rule_id: string
+health.verdict.clauses[].rule_part: string
 health.verdict.clauses[].series_id: string
 health.verdict.clauses[].text: string
 health.verdict.clauses[].threshold: null|object
@@ -809,6 +1025,7 @@ health.verdict.clauses[].threshold.real_yield_bp: number
 health.verdict.clauses[].threshold.strong_pct: number
 health.verdict.clauses[].threshold.usd_share: number
 health.verdict.clauses[].threshold.weak_pct: number
+health.verdict.clauses[].trend_words: string
 health.verdict.clauses[].value: number
 health.verdict.ends_with: string
 health.verdict.headline: string
@@ -829,6 +1046,7 @@ quote.expiry: string
 quote.expiry_source: string
 quote.fallbacks: object
 quote.fallbacks.band: object
+quote.fallbacks.band.band_applies_to: string
 quote.fallbacks.band.band_high: number
 quote.fallbacks.band.band_low: number
 quote.fallbacks.band.open_interest_lots: number
@@ -838,28 +1056,80 @@ quote.fallbacks.band.session_label: string
 quote.fallbacks.band.settlement: number
 quote.fallbacks.band.source: string
 quote.fallbacks.fair_value: object
+quote.fallbacks.fair_value.band_applies_to: string
+quote.fallbacks.fair_value.band_midpoint: number
+quote.fallbacks.fair_value.band_session: string
+quote.fallbacks.fair_value.band_session_label: string
+quote.fallbacks.fair_value.basis_clock: string
 quote.fallbacks.fair_value.basis_pct: number
+quote.fallbacks.fair_value.basis_reference: string
 quote.fallbacks.fair_value.comex: object
 quote.fallbacks.fair_value.comex.as_of: string
+quote.fallbacks.fair_value.comex.calendar_symbol: string
+quote.fallbacks.fair_value.comex.matched_note: null
 quote.fallbacks.fair_value.comex.price: number
 quote.fallbacks.fair_value.comex.symbol: string
+quote.fallbacks.fair_value.comex_ref: number
 quote.fallbacks.fair_value.duty_effective: string
 quote.fallbacks.fair_value.duty_note: string
 quote.fallbacks.fair_value.duty_paid_landed: number
+quote.fallbacks.fair_value.duty_paid_landed_at_settlement: number
+quote.fallbacks.fair_value.duty_paid_landed_purity: number
 quote.fallbacks.fair_value.duty_pct: number
 quote.fallbacks.fair_value.fair: number
 quote.fallbacks.fair_value.gap_vs_settlement: number
 quote.fallbacks.fair_value.implied_premium_pct: number
 quote.fallbacks.fair_value.landed: number
 quote.fallbacks.fair_value.landed_note: string
+quote.fallbacks.fair_value.landed_purity: number
+quote.fallbacks.fair_value.latest_session: string
+quote.fallbacks.fair_value.latest_session_label: string
+quote.fallbacks.fair_value.purity: number
+quote.fallbacks.fair_value.quote_unit: string
+quote.fallbacks.fair_value.ref_close_at: string
 quote.fallbacks.fair_value.settlement: number
+quote.fallbacks.fair_value.settlement_check: object
+quote.fallbacks.fair_value.settlement_check.band_vs_vwap30_pct: null
+quote.fallbacks.fair_value.settlement_check.compared: null
+quote.fallbacks.fair_value.settlement_check.flagged: bool
+quote.fallbacks.fair_value.settlement_check.note: string
+quote.fallbacks.fair_value.settlement_check.threshold_pct: number
+quote.fallbacks.fair_value.settlement_is_latest: bool
+quote.fallbacks.fair_value.settlement_method: string
+quote.fallbacks.fair_value.settlement_note: string
+quote.fallbacks.fair_value.settlement_quality: string
 quote.fallbacks.fair_value.settlement_session: string
 quote.fallbacks.fair_value.settlement_session_label: string
+quote.fallbacks.fair_value.settlement_source: string
 quote.fallbacks.fair_value.source: string
 quote.fallbacks.fair_value.usdinr: object
 quote.fallbacks.fair_value.usdinr.as_of: string
 quote.fallbacks.fair_value.usdinr.price: number
 quote.fallbacks.fair_value.usdinr.symbol: string
+quote.fallbacks.fair_value.usdinr_ref: number
+quote.fallbacks.fair_value.vwap30: null
+quote.fallbacks.settlement: object
+quote.fallbacks.settlement.band_applies_to: string
+quote.fallbacks.settlement.band_midpoint: number
+quote.fallbacks.settlement.band_session: string
+quote.fallbacks.settlement.band_session_label: string
+quote.fallbacks.settlement.latest_session: string
+quote.fallbacks.settlement.latest_session_label: string
+quote.fallbacks.settlement.settlement: number
+quote.fallbacks.settlement.settlement_check: object
+quote.fallbacks.settlement.settlement_check.band_vs_vwap30_pct: null
+quote.fallbacks.settlement.settlement_check.compared: null
+quote.fallbacks.settlement.settlement_check.flagged: bool
+quote.fallbacks.settlement.settlement_check.note: string
+quote.fallbacks.settlement.settlement_check.threshold_pct: number
+quote.fallbacks.settlement.settlement_is_latest: bool
+quote.fallbacks.settlement.settlement_method: string
+quote.fallbacks.settlement.settlement_note: string
+quote.fallbacks.settlement.settlement_quality: string
+quote.fallbacks.settlement.settlement_session: string
+quote.fallbacks.settlement.settlement_session_label: string
+quote.fallbacks.settlement.settlement_source: string
+quote.fallbacks.settlement.vwap30: null
 quote.live_verify_pending: bool
 quote.lot: string
 quote.ok: bool
@@ -880,10 +1150,16 @@ session.mcx.seconds_to_open: null
 session.mcx.segment: string
 session.mcx.weekend: bool
 strip: object
+strip.band_applies_to: string
+strip.band_midpoint: number
+strip.band_session: string
+strip.band_session_label: string
 strip.basis_clock: string
+strip.basis_contract: string
 strip.basis_label: string
 strip.basis_live_pct: null
 strip.basis_pct: number
+strip.basis_reference: string
 strip.basis_session: string
 strip.basis_session_label: string
 strip.basis_settle_date: string
@@ -911,19 +1187,39 @@ strip.instruments.front: string
 strip.instruments.matched: string
 strip.instruments.mcx: string
 strip.instruments.spot: string
+strip.latest_session: string
+strip.latest_session_label: string
 strip.mcx_live: null
 strip.mcx_live_as_of: null
 strip.mcx_live_source: null
 strip.mcx_live_vs_settle_pct: null
+strip.mcx_quote_unit: string
 strip.mcx_settle: number
 strip.mcx_settle_quality: string
 strip.mcx_settle_session: string
 strip.mcx_settle_session_label: string
+strip.mcx_settle_source: string
 strip.mcx_shown: string
+strip.purity: number
 strip.real_10y: number
 strip.real_10y_date: string
+strip.settlement: number
+strip.settlement_check: object
+strip.settlement_check.band_vs_vwap30_pct: null
+strip.settlement_check.compared: null
+strip.settlement_check.flagged: bool
+strip.settlement_check.note: string
+strip.settlement_check.threshold_pct: number
+strip.settlement_is_latest: bool
+strip.settlement_method: string
+strip.settlement_note: string
+strip.settlement_quality: string
+strip.settlement_session: string
+strip.settlement_session_label: string
+strip.settlement_source: string
 strip.usdinr: number
 strip.usdinr_as_of: string
+strip.vwap30: null
 window: string
 ```
 
@@ -935,9 +1231,17 @@ fair: object
 fair.actual_open: null
 fair.actual_open_source: null
 fair.badge: string
+fair.band_applies_to: string
+fair.band_midpoint: number
+fair.band_session: string
+fair.band_session_label: string
+fair.basis_clock: string
 fair.basis_pct: number
+fair.basis_reference: string
 fair.comex: object
 fair.comex.as_of: string
+fair.comex.calendar_symbol: string
+fair.comex.matched_note: null
 fair.comex.price: number
 fair.comex.symbol: string
 fair.comex_symbol: string
@@ -946,6 +1250,8 @@ fair.desk_verdict_state: string
 fair.duty_effective: string
 fair.duty_note: string
 fair.duty_paid_landed: number
+fair.duty_paid_landed_at_settlement: number
+fair.duty_paid_landed_purity: number
 fair.duty_pct: number
 fair.expiry: string
 fair.expiry_source: string
@@ -958,22 +1264,37 @@ fair.freshness.state: string
 fair.gap_vs_settlement: number
 fair.implied_premium_pct: number
 fair.landed: number
+fair.latest_session: string
+fair.latest_session_label: string
 fair.mcx_holiday: null
 fair.mcx_live: null
 fair.mcx_live_as_of: null
 fair.mcx_live_source: null
 fair.premium_pct: null
 fair.premium_rupees: null
+fair.purity: number
+fair.quote_unit: string
 fair.settlement: number
+fair.settlement_check: object
+fair.settlement_check.band_vs_vwap30_pct: null
+fair.settlement_check.compared: null
+fair.settlement_check.flagged: bool
+fair.settlement_check.note: string
+fair.settlement_check.threshold_pct: number
+fair.settlement_is_latest: bool
+fair.settlement_method: string
+fair.settlement_note: string
 fair.settlement_quality: string
 fair.settlement_session: string
 fair.settlement_session_label: string
+fair.settlement_source: string
 fair.snapshot_error: null
 fair.snapshot_fair: null
 fair.usdinr: object
 fair.usdinr.as_of: string
 fair.usdinr.price: number
 fair.usdinr.symbol: string
+fair.vwap30: null
 freshness: object
 freshness.age_days: number
 freshness.oldest: number
@@ -987,7 +1308,9 @@ gauges[]: object
 gauges[].age_days: null|number
 gauges[].annualised_pct: number
 gauges[].badge: string
+gauges[].basis_contract: string
 gauges[].basis_label: string
+gauges[].basis_reference: string
 gauges[].change: null|number
 gauges[].change_bp: number
 gauges[].change_pct: number
@@ -1001,14 +1324,17 @@ gauges[].cot_index_52: number
 gauges[].days_to_fnd: number
 gauges[].direction_for_gold: null|string
 gauges[].drawdown_52w_pct: number
+gauges[].drawdown_pct: number
 gauges[].driver_label: string
 gauges[].duty_effective: string
 gauges[].duty_paid_landed_now: number
+gauges[].duty_paid_landed_purity_now: number
 gauges[].duty_pct: number
 gauges[].evidence: string
 gauges[].fnd_date: string
 gauges[].fnd_source: string
 gauges[].front: string
+gauges[].high_52w: number
 gauges[].ibja_premium_date: string
 gauges[].ibja_premium_note: string
 gauges[].ibja_premium_pct: number
@@ -1016,13 +1342,17 @@ gauges[].key: string
 gauges[].label: string
 gauges[].last_bar_note: null
 gauges[].last_bar_partial: bool
+gauges[].last_bar_partial_source: string
 gauges[].live_basis_pct: null
 gauges[].ltd_date: null
+gauges[].ma20: number
+gauges[].ma200: number
 gauges[].mcx_live: null
 gauges[].net_pct_oi: number
 gauges[].next: string
 gauges[].percentile_1y: null|number
 gauges[].percentile_3y: null|number
+gauges[].purity: number
 gauges[].read_from: string
 gauges[].release_at: null|string
 gauges[].report_date: null|string
@@ -1031,10 +1361,20 @@ gauges[].series_id: string
 gauges[].settle_basis_date: string
 gauges[].settle_basis_label: string
 gauges[].settle_basis_pct: number
+gauges[].settle_basis_session_label: string
 gauges[].settle_basis_source: string
+gauges[].settlement_check: object
+gauges[].settlement_check.band_vs_vwap30_pct: null
+gauges[].settlement_check.compared: null
+gauges[].settlement_check.flagged: bool
+gauges[].settlement_check.note: string
+gauges[].settlement_check.threshold_pct: number
+gauges[].settlement_quality: string
 gauges[].settlement_session_label: string
+gauges[].settlement_source: string
 gauges[].source: string
 gauges[].state: string
+gauges[].trend_words: string
 gauges[].unit: string
 gauges[].value: null|number
 gauges[].vs_200d_pct: number
@@ -1056,6 +1396,7 @@ verdict.clauses: array
 verdict.clauses[]: object
 verdict.clauses[].note: null
 verdict.clauses[].rule_id: string
+verdict.clauses[].rule_part: string
 verdict.clauses[].series_id: string
 verdict.clauses[].text: string
 verdict.clauses[].threshold: null|object
@@ -1066,6 +1407,7 @@ verdict.clauses[].threshold.real_yield_bp: number
 verdict.clauses[].threshold.strong_pct: number
 verdict.clauses[].threshold.usd_share: number
 verdict.clauses[].threshold.weak_pct: number
+verdict.clauses[].trend_words: string
 verdict.clauses[].value: number
 verdict.ends_with: string
 verdict.headline: string
@@ -1079,23 +1421,43 @@ accuracy: object
 accuracy.badge: string
 accuracy.bias: null
 accuracy.days: number
+accuracy.excluding_stale: object
+accuracy.excluding_stale.days: number
 accuracy.mean_abs_error: null
 accuracy.median_abs_error: null
 accuracy.naive_mean_abs_error: null
+accuracy.on_vwap30: object
+accuracy.on_vwap30.days: number
 accuracy.p90: null
+accuracy.stale_baseline_count: number
+accuracy.stale_baseline_dates: array
 accuracy.threshold: number
 accuracy.within_threshold_pct: null
 as_of: string
 badge: string
 baseline: object
+baseline.band_midpoint: number
+baseline.band_session: string
+baseline.band_session_label: string
 baseline.close_time: string
+baseline.latest_session: string
 baseline.master_published: string
 baseline.session: string
 baseline.session_label: string
+baseline.settlement_check: object
+baseline.settlement_check.band_vs_vwap30_pct: null
+baseline.settlement_check.compared: null
+baseline.settlement_check.flagged: bool
+baseline.settlement_check.note: string
+baseline.settlement_check.threshold_pct: number
 baseline.settlement_from_band: number
+baseline.settlement_method: string
+baseline.settlement_quality: string
+baseline.settlement_source: string
 baseline.source: string
 baseline.stale: bool
 baseline.value: number
+baseline.vwap30: null
 context: array
 context[]: object
 context[].at_close: number
@@ -1109,9 +1471,11 @@ context[].trigger_state: string
 context[].unit: string
 context[].value: number
 contract: object
+contract.band_applies_to: string
 contract.band_high: number
 contract.band_low: number
 contract.band_pct: number
+contract.band_session: string
 contract.comex: string
 contract.expiry: string
 contract.name: string
@@ -1143,6 +1507,7 @@ mcx_price.source: null
 mcx_price.value: null
 model: object
 model.basis_pct: number
+model.basis_reference: string
 model.comex: object
 model.comex.as_of: string
 model.comex.now: number
@@ -1151,6 +1516,7 @@ model.comex.ref_how: string
 model.comex.symbol: string
 model.comex_part: number
 model.duty_paid_landed: number
+model.duty_paid_landed_purity: number
 model.duty_pct: number
 model.fair_open: number
 model.gap: number
@@ -1165,6 +1531,7 @@ model.inr.symbol: string
 model.inr_part: number
 model.landed: number
 model.lot_pnl_per_rupee: number
+model.purity: number
 model.rs_per_comex_dollar: number
 model.rs_per_inr_rupee: number
 model.threshold_in_comex_dollars: number
@@ -1488,10 +1855,12 @@ roll.days_unit: string
 roll.expiry: null
 roll.front: null
 roll.front_oi: null
+roll.in_tender: null
 roll.next: null
 roll.next_oi: null
 roll.note: string
 roll.ratio: null
+roll.tender_note: null
 roll.tender_start: null
 rows: array
 since: null
@@ -1502,6 +1871,8 @@ store_errors: null
 ```
 badge: string
 basis: null
+chain_session: null
+chain_session_label: null
 date: string
 exchange: string
 family: null
@@ -1529,6 +1900,7 @@ ghost_1w[].trade_date: string
 ghost_1w[].volume: null
 ghost_date: string
 history: array
+oi_session: null
 points: array
 points[]: object
 points[].annualised_carry_pct: null|number
@@ -1562,17 +1934,21 @@ store_errors: null
 badge: string
 basis: object
 basis.badge: string
+basis.band_midpoint: number
+basis.band_session: string
 basis.basis_carry_adj_pct: null
 basis.basis_clock: string
 basis.basis_date: string
 basis.basis_label: string
 basis.basis_pct: number
+basis.basis_reference: string
 basis.basis_source: string
 basis.carry_pct: null
 basis.duty_effective: string
 basis.duty_note: string
 basis.duty_notification: string
 basis.duty_paid_landed_inr: number
+basis.duty_paid_landed_purity_inr: number
 basis.duty_pct: number
 basis.landed_inr: number
 basis.live_basis_label: null
@@ -1581,11 +1957,21 @@ basis.mcx_front_inr: number
 basis.mcx_front_quality: string
 basis.mcx_front_session: string
 basis.mcx_front_session_label: string
+basis.mcx_front_source: string
 basis.mcx_live: null
+basis.purity: number
+basis.settlement_check: object
+basis.settlement_check.band_vs_vwap30_pct: null
+basis.settlement_check.compared: null
+basis.settlement_check.flagged: bool
+basis.settlement_check.note: string
+basis.settlement_check.threshold_pct: number
 basis.ts: string
 basis.ts_note: string
 basis.usdinr: number
 basis.usdinr_source: string
+chain_session: null
+chain_session_label: null
 date: string
 exchange: string
 family: string
@@ -1601,6 +1987,7 @@ history[]: object
 history[].basis_pct: number
 history[].premium_pct: number
 history[].trade_date: string
+oi_session: null
 points: array
 price_label: string
 since: null
@@ -1611,6 +1998,7 @@ store_errors: null
 ```
 as_of: string
 badge: string
+carry_fair_note: string
 comex_front: object
 comex_front.expiry: string
 comex_front.price: number
@@ -1629,6 +2017,7 @@ exchange: string
 families: array
 families[]: object
 families[].badge: string
+families[].basis_reference: string
 families[].breeze_code: string
 families[].code: string
 families[].cycle: string
@@ -1637,7 +2026,9 @@ families[].expiries: array
 families[].expiries[]: object
 families[].expiries[].band_hi: number
 families[].expiries[].band_lo: number
+families[].expiries[].band_midpoint: number
 families[].expiries[].carry_convention: string
+families[].expiries[].carry_note: null
 families[].expiries[].carry_pct: null|number
 families[].expiries[].comex_matched: string
 families[].expiries[].comex_matched_calendar: string
@@ -1646,15 +2037,21 @@ families[].expiries[].days_to_expiry: number
 families[].expiries[].days_to_tender: number
 families[].expiries[].days_unit: string
 families[].expiries[].expiry: string
+families[].expiries[].in_tender: bool
 families[].expiries[].margin_date: null|string
 families[].expiries[].margin_inr: number
 families[].expiries[].margin_pct: number
+families[].expiries[].margin_ref_price: null|number
 families[].expiries[].margin_source: string
 families[].expiries[].oi: number
 families[].expiries[].oi_change: null
 families[].expiries[].settle: number
 families[].expiries[].settle_quality: string
+families[].expiries[].settle_session: string
+families[].expiries[].settle_session_label: string
+families[].expiries[].settle_source: string
 families[].expiries[].source: string
+families[].expiries[].tender_note: string
 families[].expiries[].tender_start: string
 families[].expiry_rule: string
 families[].hedge_ratio_oz: number
@@ -1670,6 +2067,7 @@ families[].options.available: bool
 families[].options.expiries: array
 families[].options.note: string
 families[].options.strike_step: null
+families[].price_basis: string
 families[].purity: string
 families[].quote_unit: string
 families[].round_trip: object
@@ -1689,9 +2087,11 @@ freshness.age_s: number
 freshness.as_of: string
 freshness.source: string
 freshness.state: string
+latest_session: string
 margin_note: string
 master: object
 master.available: bool
+master.band_applies_to: string
 master.published: string
 master.session: string
 master.session_label: string
@@ -1700,6 +2100,7 @@ other_exchanges[]: object
 other_exchanges[].available: bool
 other_exchanges[].exchange: string
 other_exchanges[].reason: string
+settle_note: string
 store_errors: null
 ```
 
@@ -1713,6 +2114,8 @@ india.badge.premium: string
 india.basis_date: string
 india.basis_label: string
 india.basis_pct: number
+india.basis_purity_note: string
+india.basis_reference: string
 india.basis_source: string
 india.carry_adj_pct: null
 india.clock_note: string
@@ -1739,19 +2142,35 @@ india.history[].report_date: string
 india.ibja_date: string
 india.ladder: array
 india.ladder[]: object
+india.ladder[].basis_reference: string
 india.ladder[].clock: string
 india.ladder[].label: string
+india.ladder[].reference_label: string
+india.ladder[].reference_value: number
+india.ladder[].scaled_to_10g: bool
+india.ladder[].settlement_check: object
+india.ladder[].settlement_check.band_vs_vwap30_pct: null
+india.ladder[].settlement_check.compared: null
+india.ladder[].settlement_check.flagged: bool
+india.ladder[].settlement_check.note: string
+india.ladder[].settlement_check.threshold_pct: number
+india.ladder[].settlement_quality: string
+india.ladder[].settlement_source: string
 india.ladder[].source: string
 india.ladder[].step: string
 india.ladder[].ts: string
 india.ladder[].ts_label: string
 india.ladder[].unit: string
+india.ladder[].unit_native: string
 india.ladder[].value: number
+india.ladder[].value_native: number
 india.live_basis: null
 india.premium_clock: string
 india.premium_date: string
 india.premium_note: null
 india.premium_pct: number
+india.unit: string
+india.unit_note: null
 reference: object
 reference.attribution: string
 reference.reuters_url: string
@@ -1837,6 +2256,7 @@ freshness.wgc_weekly.as_of: string
 freshness.wgc_weekly.source: string
 freshness.wgc_weekly.state: string
 official: array
+official_months: null
 otc: object
 otc.efp: object
 otc.efp.avg_20d: null
@@ -1914,7 +2334,9 @@ context.gpr_pct_m: null
 context.gsr: null
 context.gsr_pct: null
 context.hy_oas: null
+context.hy_oas_bp: null
 context.hy_oas_date: null
+context.hy_oas_unit: string
 currencies: array
 currencies[]: object
 currencies[].badge: string
@@ -1962,6 +2384,7 @@ drivers[].rule: string
 drivers[].series_id: string
 drivers[].state: string
 drivers[].tag: null|string
+drivers[].tag_note: null
 drivers[].unit: string
 drivers[].value: null|number
 fed: object
@@ -1972,6 +2395,7 @@ fed.effr: null
 fed.effr_date: null
 fed.fedwatch_link: string
 fed.meetings: array
+fed.meetings_note: string
 fed.next_fomc: object
 fed.next_fomc.after_mcx_close: bool
 fed.next_fomc.at: string
@@ -2022,6 +2446,7 @@ kgx.total_pct: number
 kgx.usd_effect_pct: number
 kgx.weights: object
 kgx.weights.{*}: number
+kgx.window_label: string
 move: object
 move.atr14_inr: number
 move.atr14_usd: number
@@ -2068,6 +2493,7 @@ events[].past: bool
 events[].source: string
 events[].star: bool
 events[].time_ist: null|string
+events[].time_note: string
 freshness: object
 freshness.age_s: number
 freshness.as_of: string
@@ -2084,7 +2510,16 @@ rows: array
 source: string
 stats: object
 stats.days: number
+stats.excluding_stale: object
+stats.excluding_stale.days: number
+stats.on_vwap30: object
+stats.on_vwap30.days: number
 stats.p90: null
+stats.stale_baseline_count: number
+stats.stale_baseline_dates: array
+stats.stale_baseline_rule: string
+stats.stale_baseline_unknown: array
+stats.stale_by: object
 ```
 
 #### `/api/gold/catalog` (catalog)
@@ -2162,9 +2597,11 @@ tooltips.badge: string
 tooltips.balance_sheet: string
 tooltips.band_high: string
 tooltips.band_low: string
+tooltips.band_midpoint: string
 tooltips.baseline: string
 tooltips.basis_carry_adj_pct: string
 tooltips.basis_pct: string
+tooltips.basis_reference: string
 tooltips.beta_regime: string
 tooltips.bias: string
 tooltips.breakeven_ticks: string
@@ -2375,8 +2812,10 @@ tooltips.season_mean: string
 tooltips.sebi: string
 tooltips.segment: string
 tooltips.session_label: string
+tooltips.settlement_check: string
 tooltips.settlement_from_band: string
 tooltips.settlement_session: string
+tooltips.settlement_source: string
 tooltips.sge_premium_pct: string
 tooltips.sge_premium_usd: string
 tooltips.sge_td_direction: string
@@ -2397,6 +2836,7 @@ tooltips.tick_value: string
 tooltips.tips10: string
 tooltips.traders_long: string
 tooltips.traders_short: string
+tooltips.trend_words: string
 tooltips.ts_ref: string
 tooltips.ts_sge: string
 tooltips.usd_effect_pct: string

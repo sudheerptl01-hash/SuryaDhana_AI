@@ -637,14 +637,23 @@ _LBMA_TURNOVER = re.compile(r"period ending (\d{1,2} [A-Za-z]+ \d{4})\.?\s*Gold:
 
 
 def parse_lbma_turnover(html_text: str, *, now: datetime | None = None) -> pd.DataFrame:
-    """The headline of the trade-data page: '12 week moving average … period ending 16 October 2026. Gold: $964.17 bn'."""
-    m = _LBMA_TURNOVER.search(_strip_tags(html_text))
-    if not m:
+    """The headline of the trade-data page: '12 week moving average … period ending 16 October 2026. Gold: $964.17 bn'.
+    EVERY period the page shows is kept (wave 1d: the page carried one period on 5 Nov 2026 — 16 Oct, verified with one
+    GET — and the stored history grows by one point per new period; ``upsert_series`` never drops an older one)."""
+    gold: dict[date, float | None] = {}
+    silver: dict[date, float | None] = {}
+    for m in _LBMA_TURNOVER.finditer(_strip_tags(html_text)):
+        try:
+            d = db.strptime(m.group(1), "%d %B %Y").date()
+        except ValueError:
+            continue
+        gold.setdefault(d, _flt(m.group(2)))
+        silver.setdefault(d, _flt(m.group(3)))
+    if not gold:
         return pd.DataFrame()
-    d = db.strptime(m.group(1), "%d %B %Y").date()
-    frames = [pit.series_frame("LBMA_OTC_TURNOVER_USD_BN", [(d, _flt(m.group(2)))], freq="W", source="lbma_page",
+    frames = [pit.series_frame("LBMA_OTC_TURNOVER_USD_BN", sorted(gold.items()), freq="W", source="lbma_page",
                                release_kind="lbma_turnover", now=now),
-              pit.series_frame("LBMA_OTC_TURNOVER_SILVER_USD_BN", [(d, _flt(m.group(3)))], freq="W", source="lbma_page",
+              pit.series_frame("LBMA_OTC_TURNOVER_SILVER_USD_BN", sorted(silver.items()), freq="W", source="lbma_page",
                                release_kind="lbma_turnover", now=now)]
     return pd.concat(frames, ignore_index=True)
 

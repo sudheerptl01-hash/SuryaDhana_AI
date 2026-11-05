@@ -15,7 +15,7 @@
 - `P&L = (exit − entry) × multiplier × lots − costs`.
 - Round-trip cost, squared off, one GOLD lot at ₹1,46,079 (app ticket model, `shared/mcx_specs.round_trip_costs`):
   exchange 0.0021% × 2 sides ≈ ₹614; CTT 0.01% sell side ≈ ₹1,461; stamp 0.002% buy ≈ ₹292; SEBI ₹10/crore × 2 ≈ ₹29;
-  brokerage ₹20 × 2; GST 18% on brokerage + exchange + SEBI ≈ ₹123 → **≈ ₹2,560 ≈ 0.018% of notional ≈ 26 ticks**. The
+  brokerage ₹20 × 2; GST 18% on brokerage + exchange + SEBI ≈ ₹123 → **≈ ₹2,560 ≈ 0.018% of notional ≈ 26 ticks** (26 Oct 2026 prices; ≈ ₹2,445 / 24.5 ticks on 5 Nov — the CONTRACTS card prints today's). The
   breakeven move is ₹26 per 10 g. Costs are not the problem in gold futures; **leverage and gaps are.** (Compare the
   project's equity delivery round trip of ≈ 0.93%.)
 

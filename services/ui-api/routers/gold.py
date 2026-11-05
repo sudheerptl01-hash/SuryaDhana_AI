@@ -769,15 +769,19 @@ def latest(points: list[dict[str, Any]]) -> dict[str, Any] | None:
 
 
 async def fair_block(contract: str = "GOLD", expiry: str | None = None) -> dict[str, Any]:
-    """`/health.fair`: fair_value, premium vs the LIVE MCX price when the quote cache holds one (never a Breeze call
-    here), the duty leg and the settlement with its session label."""
+    """`/health.fair`: fair_value, premium vs the LIVE MCX price when the quote cache holds one (no quote call here), the
+    duty leg, the basis vs the landed price of the contract's purity, and the settlement block of the wave-1d CONTRACT: the
+    latest completed session's last-30-min VWAP (ONE Breeze historical call per contract per session, cached all night,
+    waited for at most `gp.SETTLE_WAIT_S`) else the band midpoint labelled with its real session, plus `settlement_check`."""
     code = contract.upper() if contract and contract.upper() in mcxr.contract_specs() else "GOLD"
     asked = _d(expiry) if expiry else None
-    today = _now_ist().date()
+    now_ist = _now_ist()
+    today = now_ist.date()
     got = await asyncio.to_thread(mcxr._master_gold_family)
     family, published = got if got else (None, None)
     exp, exp_source, row = mcxr._resolve_expiry(code, today, asked, family)
-    fair = await mcxr._fair_value(code, exp, (row or {}).get("settlement"), published)  # ONE Yahoo fetcher (PLAN 0.1 #2)
+    settle = await mcxr.resolve_settlement(code, exp, row, published, now_ist)
+    fair = await mcxr._fair_value(code, exp, settle)  # ONE Yahoo fetcher (PLAN 0.1 #2)
     live: float | None = None
     live_source = None
     live_at = None
@@ -813,11 +817,16 @@ async def fair_block(contract: str = "GOLD", expiry: str | None = None) -> dict[
         "duty_effective": (fair or {}).get("duty_effective"),
         "duty_note": (fair or {}).get("duty_note"),
         "duty_paid_landed": (fair or {}).get("duty_paid_landed"),
+        # the basis divides by the landed price × THIS contract's purity / 1000 (D1): 995 GOLD / GOLDM, 999 TEN / PETAL / GUINEA
+        "purity": gp.fineness_of(code),
+        "basis_reference": gp.basis_reference(code),
+        # every rupee price in this block is in the contract's quotation unit (₹ per 1 g PETAL, per 8 g GUINEA, else 10 g)
+        "quote_unit": f"₹ per {mcxr.contract_specs()[code].quote_per_grams} g",
+        "duty_paid_landed_purity": (fair or {}).get("duty_paid_landed_purity"),
+        "duty_paid_landed_at_settlement": (fair or {}).get("duty_paid_landed_at_settlement"),
         "basis_pct": (fair or {}).get("basis_pct"),
-        "settlement": (row or {}).get("settlement"),
-        "settlement_session": (fair or {}).get("settlement_session"),
-        "settlement_session_label": (fair or {}).get("settlement_session_label"),
-        "settlement_quality": "proxy" if row else None,
+        "basis_clock": "settlement" if (fair or {}).get("basis_pct") is not None else None,
+        **{k: settle.get(k) for k in mcxr.SETTLE_KEYS},
         "gap_vs_settlement": (fair or {}).get("gap_vs_settlement"),
         "implied_premium_pct": (fair or {}).get("implied_premium_pct"),  # deprecated alias of basis_pct (one release)
         # today's captured open (09:10 job or a manual entry) → BRF's "Gold opened … vs fair … (miss …)" line
@@ -855,9 +864,12 @@ async def fair_block(contract: str = "GOLD", expiry: str | None = None) -> dict[
 HEALTH_RULES: list[dict[str, Any]] = [
     {
         "rule_id": "H1",
-        "clause": "week label",
+        "clause": "week label · trend",
         "series_id": "COMEX_GC_FRONT",
-        "rule": "gold's change over the window: ≤ −2 % WEAK · ≥ +2 % STRONG · |Δ| < 0.5 % FLAT · else QUIET/FIRM",
+        "rule": "gold's change over the window: ≤ −2 % WEAK · ≥ +2 % STRONG · |Δ| < 0.5 % FLAT · else QUIET/FIRM; then the "
+        "trend sentence from the TREND gauge's values: the price vs its 20-d and 200-d averages ('below both averages' / "
+        "'between' / 'above both', with both % printed) and the drawdown from the 52-week high — a description, no "
+        "threshold of its own",
         "threshold": {"weak_pct": -2.0, "strong_pct": 2.0, "flat_pct": 0.5},
     },
     {
@@ -880,7 +892,9 @@ HEALTH_RULES: list[dict[str, Any]] = [
         "rule_id": "H4",
         "clause": "India basis",
         "series_id": "MCX_BASIS_PCT",
-        "rule": "MCX front settlement vs duty-paid landed (duty dated); stated, not judged",
+        "rule": "the contract's settlement (last-30-min VWAP, else the band of its real session), in ₹/10 g, vs the duty-paid "
+        "landed price × purity/1000 (GOLD / GOLDM 995, GOLDTEN / PETAL / GUINEA 999; landed is per fine gold) at that "
+        "session's close — or the live price vs now while a quote exists; one value per clock (duty dated); stated, not judged",
         "threshold": None,
     },
     {
@@ -1041,6 +1055,21 @@ def verdict_sentence(gauges: list[dict[str, Any]], window: str, extras: dict[str
                 "note": note,
             }
         )
+    # the trend in the gauge's own numbers right after the head (wave 1d): a 'STRONG WEEK' inside a market below both of its
+    # averages reads as a rebound, not an uptrend — the sentence now says which
+    tt = trend_clause_text(trend) if trend else None
+    if tt:
+        clauses.append(
+            {
+                "text": tt,
+                "rule_id": "H1",
+                "rule_part": "trend sentence (HEALTH_RULES H1: the TREND gauge's values, no threshold of its own)",
+                "series_id": "COMEX_GC_FRONT",
+                "value": trend.get("vs_200d_pct") if trend else None,
+                "threshold": None,
+                "trend_words": trend.get("trend_words") if trend else None,
+            }
+        )
     if trend and gold_pct is not None:
         # the window's own words ("week to date (since the Fri 30 Oct close)" / "5 sessions"), never a vague "over the week"
         span = trend.get("window_label") or {"D": "vs the previous session", "W": "over the week", "M": "over the month"}.get(
@@ -1074,13 +1103,17 @@ def verdict_sentence(gauges: list[dict[str, Any]], window: str, extras: dict[str
         clauses.append({"text": text, "rule_id": "H3", "series_id": COT_SERIES_ID, "value": pos["value"], "threshold": None})
     basis = g.get("india_basis")
     if basis and basis.get("value") is not None:
+        # the gauge's ONE value with its clock and purity named (5 Nov review: +0.72 / 0.02 / +0.0 / −2.1 / +0.7 % in ten minutes)
+        clock = "live" if basis.get("clock") == "now" else (basis.get("settle_basis_session_label") or "settlement")
+        ref = str(basis.get("basis_reference") or "").replace("landed_", "")
         clauses.append(
             {
-                "text": f"India basis {basis['value']:+.1f} % vs duty-paid landed",
+                "text": f"India basis {basis['value']:+.1f} % vs duty-paid landed{f' {ref}' if ref else ''} ({clock})",
                 "rule_id": "H4",
                 "series_id": "MCX_BASIS_PCT",
                 "value": basis["value"],
                 "threshold": None,
+                "clock": basis.get("clock"),
             }
         )
     roll = g.get("curve_roll")
@@ -1167,6 +1200,7 @@ def _closes_from_bars(payload: Any) -> list[dict[str, Any]]:
                     "high": _f(r.get("high", r.get("h"))),
                     "low": _f(r.get("low", r.get("l"))),
                     "volume": _f(r.get("volume", r.get("v"))),
+                    "partial": r.get("partial"),  # the store's flag (a bar fetched before the Globex close), kept
                 }
             )
     out.sort(key=lambda p: p["report_date"])
@@ -1184,9 +1218,72 @@ def _cot_net(row: dict[str, Any], g: str) -> float | None:
     return None if lo is None or sh is None else lo - sh
 
 
-async def build_health(window: str = "W") -> dict[str, Any]:
+def trend_words(vs_20d: float | None, vs_200d: float | None) -> str | None:
+    """'above both' | 'between' | 'below both averages' (the wave-1d CONTRACT's words, verbatim) from the close vs its 20- and
+    200-day averages (the tile printed only its rule, 'price above its averages = uptrend', while the price was below both)."""
+    if vs_20d is None or vs_200d is None:
+        return None
+    if vs_20d > 0 and vs_200d > 0:
+        return "above both"
+    if vs_20d < 0 and vs_200d < 0:
+        return "below both averages"
+    return "between"
+
+
+TREND_DISPLAY = {"between": "between its 20-d and 200-d averages", "above both": "above both averages"}
+
+
+def trend_clause_text(g: dict[str, Any]) -> str | None:
+    """The verdict's trend clause, the gauge's own numbers: 'price below both averages (−0.5 % vs 20-d, −9.7 % vs 200-d;
+    −23.5 % from the 52-w high)'."""
+    words = g.get("trend_words")
+    if not words:
+        return None
+    bits = [f"{g['vs_20d_pct']:+.1f} % vs 20-d", f"{g['vs_200d_pct']:+.1f} % vs 200-d"]
+    dd = g.get("drawdown_pct")
+    tail = f"; {dd:+.1f} % from the 52-w high" if dd is not None else ""
+    lead = "price " + TREND_DISPLAY.get(words, words)
+    return f"{lead} ({', '.join(bits)}{tail})"
+
+
+SHANGHAI_MEDIAN_PAIRS = 5
+
+
+def shanghai_change(g: dict[str, Any], pts: list[dict[str, Any]]) -> dict[str, Any]:
+    """The SHANGHAI tile's change: the latest same-date pair vs the MEDIAN of the previous five pairs (re-review C-DATA-2 /
+    5 Nov review: '▼−$76.89/oz W' was measured from the Fri 30 Oct pair, +$75.34 — the 14:15 Beijing fix against a London
+    fix 7 h later on a −3.3 % day, a timing spike — so one cross-clock pair can never set the change). Pure."""
+    if g.get("value") is None or len(pts) < 3:
+        return g
+    prev = [p["value"] for p in pts[-1 - SHANGHAI_MEDIAN_PAIRS : -1] if p.get("value") is not None]
+    if not prev:
+        return g
+    med = statistics.median(prev)
+    g.update(
+        change=_r(pts[-1]["value"] - med, 4),
+        change_window=f"vs the median of the previous {len(prev)} pairs",
+        window_label=f"vs the median of the previous {len(prev)} same-date pairs (a one-day timing spike never sets the change)",
+        window_from=pts[-1 - len(prev)]["report_date"],
+        median_prev_pairs=_r(med, 2),
+    )
+    return g
+
+
+def _bar_partial(p: dict[str, Any]) -> bool | None:
+    """The store's own partial flag on a daily bar (data-service marks a bar fetched before the Globex close), None when absent."""
+    v = p.get("partial")
+    if v is None:
+        return None
+    if isinstance(v, str):
+        return v.strip().lower() in ("1", "true", "t", "yes")
+    return bool(v)
+
+
+async def build_health(window: str = "W", contract: str = "GOLD", expiry: str | None = None) -> dict[str, Any]:
     """The HEALTH payload (PLAN §d): gauges, the verdict, the fair block, the one-line echo and the freshness
-    summary. Every block is built in its own try so one missing source never blanks the rest."""
+    summary. Every block is built in its own try so one missing source never blanks the rest. `contract` / `expiry` pick
+    the MCX contract whose basis the INDIA BASIS gauge, the H4 clause and the lines print (/overview passes the page's pick,
+    so the strip, the gauge and the verdict print ONE basis per clock; /health keeps GOLD, the WEI / BRF echo)."""
     reads = Reads()
     now = _now_ist()
     cat = await catalog(reads)
@@ -1213,7 +1310,7 @@ async def build_health(window: str = "W") -> dict[str, Any]:
         reads.get("/db/gold/etf", **{"from": (now.date() - timedelta(days=90)).isoformat()}),
         reads.get("/db/gold/curve", exchange="COMEX"),
         reads.get("/db/gold/events", **{"from": now.date().isoformat(), "to": (now.date() + timedelta(days=60)).isoformat()}),
-        fair_block(),
+        fair_block(contract, expiry),
         # the DXY leg from the stored DX-Y.NYB daily bars when the DXY_CLOSE series has no points (C-DATA-2/3/4): same
         # catalog row, the same numbers data-service's bars read serves
         reads.get("/db/gold/bars", symbol=DXY_SYMBOL, interval="1d", **{"from": (now.date() - timedelta(days=400)).isoformat()}),
@@ -1243,8 +1340,18 @@ async def build_health(window: str = "W") -> dict[str, Any]:
             ma20 = statistics.fmean(vals[-20:]) if len(vals) >= 20 else None
             ma200 = statistics.fmean(vals[-200:]) if len(vals) >= 200 else None
             hi52 = max(window_values(closes, 365)) if closes else None
-            # a daily bar dated today while Globex still trades is a partial day (the 17:50 IST pull), not a settlement
-            partial = _dd(last["report_date"]) >= now.date() and bool(comex_session(now)["is_open"])
+            # the store's own partial flag wins (re-review: data-service marked the 4 Nov GC=F bar partial — fetched 20 min
+            # before the Globex close — and ui-api printed it as final); the clock rule only when the row carries none
+            stored_partial = _bar_partial(last)
+            partial = (
+                stored_partial
+                if stored_partial is not None
+                else _dd(last["report_date"]) >= now.date() and bool(comex_session(now)["is_open"])
+            )
+            vs20 = _r((last["value"] / ma20 - 1) * 100) if ma20 else None
+            vs200 = _r((last["value"] / ma200 - 1) * 100) if ma200 else None
+            dd52 = _r((last["value"] / hi52 - 1) * 100) if hi52 else None
+            words_t = trend_words(vs20, vs200)
             gauges.append(
                 _gauge(
                     "trend",
@@ -1258,22 +1365,35 @@ async def build_health(window: str = "W") -> dict[str, Any]:
                     None,
                     max_age_of(cat, GC_FRONT_SERIES),
                     "Yahoo GC=F (stored daily bars)",
-                    "price above its averages = uptrend (a description)",
-                    "close vs 20-day / 200-day average; drawdown from the 52-week high",
+                    # the words the values give, never the rule alone (5 Nov review: 'price above its averages = uptrend'
+                    # printed while the price sat 9.7 % under its 200-day average)
+                    f"{TREND_DISPLAY.get(words_t, words_t)} (a description)" if words_t else None,
+                    "close vs 20-day / 200-day average (above both · between · below both); drawdown from the 52-week high",
                     BADGE_CONTEXT,
                     EVIDENCE_CONTEXT,
                     {
-                        "vs_20d_pct": _r((last["value"] / ma20 - 1) * 100) if ma20 else None,
-                        "vs_200d_pct": _r((last["value"] / ma200 - 1) * 100) if ma200 else None,
-                        "drawdown_52w_pct": _r((last["value"] / hi52 - 1) * 100) if hi52 else None,
+                        "vs_20d_pct": vs20,
+                        "vs_200d_pct": vs200,
+                        "drawdown_pct": dd52,
+                        "drawdown_52w_pct": dd52,  # the older name, same number
+                        "trend_words": words_t,
+                        "ma20": _r(ma20, 2) if ma20 else None,
+                        "ma200": _r(ma200, 2) if ma200 else None,
+                        "high_52w": _r(hi52, 2) if hi52 else None,
                         "percentile_1y": pct_rank(window_values(closes, 365), last["value"]),
                         "percentile_3y": pct_rank(window_values(closes, 1095), last["value"]) if len(closes) >= 500 else None,
                         "window_label": anchor["label"],
                         "window_from": anchor["from_date"],
                         "window_from_value": v_then,
                         "window_sessions": anchor["sessions"],
-                        "last_bar_partial": partial,
-                        "last_bar_note": "today's bar is a partial Globex day (stored 17:50 IST), not a settlement" if partial else None,
+                        "last_bar_partial": bool(partial),
+                        "last_bar_partial_source": "store" if stored_partial is not None else "clock rule",
+                        "last_bar_note": (
+                            f"the {_day_label(last['report_date'])} bar is a partial Globex day (fetched before the close), "
+                            "not a settlement"
+                            if partial
+                            else None
+                        ),
                     },
                     change_unit="%",
                 )
@@ -1590,7 +1710,10 @@ async def build_health(window: str = "W") -> dict[str, Any]:
                     now.date().isoformat() if lb else sb["date"],
                     lb["as_of"] if lb else (sb["date"]),
                     2.0,
-                    "live MCX (Breeze) vs COMEX × INR × duty, now" if lb else "MCX settlement (proxy) vs that session's duty-paid landed",
+                    "live MCX (Breeze) vs COMEX × INR × duty, now"
+                    if lb
+                    else f"MCX {fair.get('settlement_session_label') or 'settlement'} "
+                    f"({str(fair.get('settlement_quality') or 'proxy').replace('_', ' ')}) vs that session's duty-paid landed",
                     None,
                     "live MCX ÷ duty-paid landed now − 1 while a quote exists, else settle ÷ that session's duty-paid − 1; "
                     "IBJA premium at its fix minute beside it when stored",
@@ -1599,13 +1722,21 @@ async def build_health(window: str = "W") -> dict[str, Any]:
                     {
                         "clock": shown["clock"],
                         "basis_label": shown["label"],
+                        "basis_reference": shown.get("basis_reference") or fair.get("basis_reference"),
+                        "purity": fair.get("purity"),
+                        "basis_contract": f"{fair.get('contract') or 'GOLD'} {_mmy(fair.get('expiry')) or ''}".strip(),
                         "live_basis_pct": lb["value"] if lb else None,
                         "mcx_live": lb["mcx_live"] if lb else None,
                         "duty_paid_landed_now": fair.get("duty_paid_landed"),
+                        "duty_paid_landed_purity_now": fair.get("duty_paid_landed_purity"),
                         "settle_basis_pct": sb["value"],
                         "settle_basis_date": sb["date"],
+                        "settle_basis_session_label": gp.session_label(_dd(sb["date"])) if sb.get("date") else None,
                         "settle_basis_label": sb["label"],
                         "settle_basis_source": sb["source"],
+                        "settlement_source": fair.get("settlement_source"),
+                        "settlement_quality": fair.get("settlement_quality"),
+                        "settlement_check": fair.get("settlement_check"),
                         "ibja_premium_pct": prem_pts[-1]["value"] if prem_pts else None,
                         "ibja_premium_date": prem_pts[-1]["report_date"] if prem_pts else None,
                         "ibja_premium_note": "IBJA 999 PM vs duty-paid landed at the fix minute (stored INDIA_PREMIUM_PCT)",
@@ -1638,19 +1769,18 @@ async def build_health(window: str = "W") -> dict[str, Any]:
             )
             if shown.get("value") is not None:
                 gauges[-1].update(published=False, note=unpublished_note(cat, "MCX_BASIS_PCT"))
-        gauges.append(
-            _series_gauge(
-                "shanghai",
-                "SHANGHAI PREMIUM",
-                "SHANGHAI_PREMIUM_USD",
-                "SHANGHAI_PREMIUM_PCT",
-                "$/oz" if series.get("SHANGHAI_PREMIUM_USD") or not series.get("SHANGHAI_PREMIUM_PCT") else "%",
-                None,
-                "SGE PM (CNY/g → $/oz) − LBMA PM of the same date; Δ in $/oz over the window",
-                1.0,
-                "$/oz" if series.get("SHANGHAI_PREMIUM_USD") or not series.get("SHANGHAI_PREMIUM_PCT") else "pp",
-            )
+        sh_gauge = _series_gauge(
+            "shanghai",
+            "SHANGHAI PREMIUM",
+            "SHANGHAI_PREMIUM_USD",
+            "SHANGHAI_PREMIUM_PCT",
+            "$/oz" if series.get("SHANGHAI_PREMIUM_USD") or not series.get("SHANGHAI_PREMIUM_PCT") else "%",
+            None,
+            "SGE PM (CNY/g → $/oz) − LBMA PM of the same date; Δ vs the median of the previous 5 pairs",
+            1.0,
+            "$/oz" if series.get("SHANGHAI_PREMIUM_USD") or not series.get("SHANGHAI_PREMIUM_PCT") else "pp",
         )
+        gauges.append(shanghai_change(sh_gauge, series.get(sh_gauge.get("series_id") or "") or []))
     except Exception as exc:  # noqa: BLE001
         reads.errors["gauge:premiums"] = type(exc).__name__
 
@@ -1843,6 +1973,7 @@ def apply_live_mcx(health: dict[str, Any], live: float | None, source: str | Non
             source="live MCX (Breeze) vs COMEX × INR × duty, now",
             clock="now",
             basis_label=lb["label"],
+            basis_reference=lb.get("basis_reference"),
             live_basis_pct=lb["value"],
             mcx_live=live,
         )
@@ -2049,6 +2180,12 @@ async def build_fair(
         "naive_mean_abs_error": stats.get("naive_mean_abs_error"),
         "bias": stats.get("bias"),
         "threshold": threshold,
+        # wave 1d round 2 (D2): which mornings a stale settlement decided, the stats without them, and the counterfactual on
+        # the labelled sessions' VWAPs (never the score)
+        "stale_baseline_count": stats.get("stale_baseline_count"),
+        "stale_baseline_dates": stats.get("stale_baseline_dates"),
+        "excluding_stale": stats.get("excluding_stale"),
+        "on_vwap30": stats.get("on_vwap30"),
         "badge": BADGE_ARITH,
     }
     body["today_log"] = today_row
@@ -2347,23 +2484,10 @@ def _curve_point_for_symbol(pts: list[dict[str, Any]], symbol: str) -> dict[str,
     return None
 
 
-COMEX_LIQUID_MONTHS = (2, 4, 6, 8, 10, 12)  # GC's active cycle (G, J, M, Q, V, Z); the serial months are thin
-
-
-def comex_liquid_symbol(mcx_expiry: date) -> tuple[str, bool]:
-    """The COMEX month the page matches an MCX expiry to: the delivery month itself when it is on GC's liquid cycle, else the
-    NEXT liquid month (critic C-BEGINNER-26: a GOLDM Nov-26 pick flipped the strip to the serial GCX26 with no price).
-    Returns (Yahoo symbol, is_nearest_liquid_substitute). The desk's own fair leg still prices the calendar month
-    (`gold_preopen.comex_symbol`, not changed here)."""
-    exact = gp.comex_symbol(mcx_expiry)
-    if mcx_expiry.month in COMEX_LIQUID_MONTHS:
-        return exact, False
-    y, m = mcx_expiry.year, mcx_expiry.month + 1
-    if m > 12:
-        y, m = y + 1, 1
-    while m not in COMEX_LIQUID_MONTHS:
-        m += 1
-    return gp.comex_symbol(date(y, m, 1)), True
+# The COMEX month the page matches an MCX expiry to (C-BEGINNER-26; 5 Nov review): ONE helper for GOLD, CONTRACTS and MCXG,
+# defined in gold_preopen so mcx.py (which this module imports) uses the very same function.
+COMEX_LIQUID_MONTHS = gp.COMEX_LIQUID_MONTHS
+comex_liquid_symbol = gp.comex_liquid_symbol
 
 
 def prf_rows(payload: Any, symbol_root: str = "GC") -> list[dict[str, Any]]:
@@ -2483,31 +2607,45 @@ def _fnd_for_month(events: list[dict[str, Any]], rows: list[dict[str, Any]], ym:
     return {"fnd_date": None, "ltd_date": None, "days_to_fnd": None, "source": None}
 
 
+def _purity_txt(fair: dict[str, Any]) -> str:
+    p = fair.get("purity")
+    return f" at {p}" if p else ""
+
+
 def settle_basis(fair: dict[str, Any], basis_pts: list[dict[str, Any]]) -> dict[str, Any]:
-    """ONE settlement-clock MCX basis for the whole page (critics C-TRADER-10 / C-DATA-11 / C-BEGINNER-5): the stored
-    `MCX_BASIS_PCT` row of the settlement session (settle ÷ duty-paid landed at that session's reference) when it exists,
-    else the desk's own figure for that session. {value, date, label, series_id, source, clock}."""
+    """ONE settlement-clock MCX basis for the whole page (critics C-TRADER-10 / C-DATA-11 / C-BEGINNER-5; wave 1d): the
+    desk's own figure — the settlement (last-30-min VWAP, else the band of its REAL session) ÷ the duty-paid landed price of
+    the contract's purity at THAT session's 30-minute close reference − 1: both legs on one clock, purity-correct. The stored
+    `MCX_BASIS_PCT` (data-service derive: GOLD's settlement against that day's duty-paid landed × 995/1000 — PM decision D1)
+    only stands in when the desk has no model, and only for its own date. {value, date, label, series_id, source, clock,
+    basis_reference}."""
     sess = fair.get("settlement_session")
+    ref = fair.get("basis_reference")
+    if fair.get("basis_pct") is not None and sess:
+        src = "last-30-min VWAP (Breeze)" if fair.get("settlement_source") == "breeze_vwap30" else "band midpoint"
+        return {
+            "value": _r(fair["basis_pct"], 2),
+            "date": sess,
+            "label": f"at the {fair.get('settlement_session_label') or sess} ({src}, proxy) vs that session's duty-paid "
+            f"landed{_purity_txt(fair)}",
+            "series_id": "MCX_BASIS_PCT",
+            "source": "desk model at the settlement session's 30-min close reference",
+            "clock": "settlement",
+            "basis_reference": ref,
+        }
     stored = next((p for p in reversed(basis_pts) if sess and p["report_date"] == sess), None) if basis_pts else None
     if stored is not None:
         return {
             "value": _r(stored["value"], 2),
             "date": stored["report_date"],
-            "label": f"at the {gp.session_label(_dd(stored['report_date']))} vs that session's duty-paid landed",
+            "label": f"GOLD at the {gp.session_label(_dd(stored['report_date']))} vs that day's duty-paid landed × 995/1000 (stored)",
             "series_id": "MCX_BASIS_PCT",
             "source": "data-service derive (stored)",
             "clock": "settlement",
+            "basis_reference": gp.basis_reference("GOLD"),
         }
-    if fair.get("basis_pct") is not None and sess:
-        return {
-            "value": _r(fair["basis_pct"], 2),
-            "date": sess,
-            "label": f"at the {fair.get('settlement_session_label') or sess} vs the desk's 30-min reference duty-paid",
-            "series_id": "MCX_BASIS_PCT",
-            "source": "desk model (not yet stored)",
-            "clock": "settlement",
-        }
-    return {"value": None, "date": None, "label": None, "series_id": "MCX_BASIS_PCT", "source": None, "clock": None}
+    return {"value": None, "date": None, "label": None, "series_id": "MCX_BASIS_PCT", "source": None, "clock": None,
+            "basis_reference": ref}
 
 
 def mcx_is_open(now: datetime | None = None) -> bool:
@@ -2523,15 +2661,17 @@ def mcx_is_open(now: datetime | None = None) -> bool:
 def live_basis(fair: dict[str, Any], *, now: datetime | None = None) -> dict[str, Any] | None:
     """The live-clock basis: the cached MCX quote ÷ the duty-paid landed computed now − 1 (both legs 'now'); None without
     a live quote AND outside MCX hours (a cached LTP after the close is not 'now'). Never divided across clocks."""
-    live, dp = fair.get("mcx_live"), fair.get("duty_paid_landed")
+    live = fair.get("mcx_live")
+    dp = fair.get("duty_paid_landed_purity") or fair.get("duty_paid_landed")   # the landed price of the contract's purity
     if not live or not dp or not mcx_is_open(now):
         return None
     return {
         "value": _r((live / dp - 1) * 100, 2),
         "mcx_live": live,
         "duty_paid_landed": dp,
+        "basis_reference": fair.get("basis_reference") if fair.get("duty_paid_landed_purity") else "landed_fine",
         "as_of": (fair.get("comex") or {}).get("as_of"),
-        "label": f"live MCX ({fair.get('mcx_live_source') or 'quote'}) vs duty-paid landed now",
+        "label": f"live MCX ({fair.get('mcx_live_source') or 'quote'}) vs duty-paid landed{_purity_txt(fair)} now",
         "clock": "now",
     }
 
@@ -3031,10 +3171,130 @@ def build_positioning_comex(
     }
 
 
-def build_positioning_mcx(curve_rows: list[dict[str, Any]], today: date, family: str = "GOLD") -> dict[str, Any]:
+def band_row_session(row: dict[str, Any]) -> date | None:
+    """The session an ICICI-master curve row's SETTLE (the band midpoint) belongs to (wave 1d): the file of publish day D
+    carries the OI at the close of S1 = previous_session(D) — the row's `trade_date`, a label that is RIGHT for the OI
+    (data-service checked it against Breeze's closing OI) — and the band in force DURING S1, centred on the settlement of
+    the session before S1. So: `gold_preopen.band_session` of the publish date when `release_at` names it, else the
+    `session_date` data-service re-keyed (when it is before the trade_date), else previous_session(trade_date). Other
+    sources keep their trade_date."""
+    td = _d(row.get("trade_date"))
+    if str(row.get("source") or "") != "icici_master_band":
+        return td
+    if _d(row.get("band_session")):          # data-service (wave 1d) names the raw band's session itself
+        return _d(row.get("band_session"))
+    rel = _dt(row.get("release_at"))
+    if rel is not None:
+        return gp.band_session((rel if rel.tzinfo else rel.replace(tzinfo=timezone.utc)).astimezone(IST).date())
+    sd = _d(row.get("session_date"))
+    if td and sd and sd < td:
+        return sd
+    return gp.previous_session(td) if td else None
+
+
+def mcx_session_rows(rows: list[dict[str, Any]], vwaps: list[dict[str, Any]] | None = None, family: str | None = None
+                     ) -> list[dict[str, Any]]:
+    """One row per (session, symbol, expiry) from ICICI-master curve rows: the OI (and its change) of the row whose
+    trade_date IS the session, the settle of the row whose band belongs to the session (`band_row_session`: the next
+    file's), and — for the sessions no band covers yet — the last-30-min VWAP (`vwaps`: Breeze results with `session` and
+    `expiry`; a VWAP wins over a band for its session). `settle_source` / `quality` say which. Pure."""
+    oi: dict[tuple[str, str, str], dict[str, Any]] = {}
+    st: dict[tuple[str, str, str], dict[str, Any]] = {}
+    raw: dict[tuple[str, str, str], dict[str, Any]] = {}   # raw bands from re-keyed rows: only where no settle exists
+    for r in rows:
+        td, exp = _d(r.get("trade_date")), _d(r.get("expiry"))
+        sym = str(r.get("symbol") or family or "").upper()
+        if td is None or exp is None:
+            continue
+        k_oi = (td.isoformat(), sym, exp.isoformat())
+        old = oi.get(k_oi)
+        if old is None or str(r.get("first_seen_at") or "") >= str(old.get("first_seen_at") or ""):
+            oi[k_oi] = r
+        band = str(r.get("source") or "") == "icici_master_band"
+        if band and ("settle_session" in r or "band_midpoint" in r):
+            # data-service already re-keyed this row (wave 1d reads): `settle` IS the settlement of `settle_session` (its
+            # VWAP30 or the next file's band, else null) and `band_midpoint` the raw band of `band_session` — never shifted
+            # again here
+            ss, sv = _d(r.get("settle_session")), _f(r.get("settle"))
+            if ss is not None and sv is not None:
+                st[(ss.isoformat(), sym, exp.isoformat())] = {
+                    "settle": sv, "settle_source": r.get("settle_source") or "band_midpoint",
+                    "quality": r.get("settle_quality") or "band_proxy", "from_file_of": None}
+            bs, bm = _d(r.get("band_session")), _f(r.get("band_midpoint"))
+            if bs is not None and bm is not None:
+                raw.setdefault((bs.isoformat(), sym, exp.isoformat()), {
+                    "settle": bm, "settle_source": "band_midpoint", "quality": "band_proxy", "from_file_of": td.isoformat()})
+            continue
+        s = band_row_session(r)
+        px = _f(r.get("settle")) if r.get("settle") is not None else _f(r.get("close"))
+        if s is not None and px is not None:
+            st[(s.isoformat(), sym, exp.isoformat())] = {
+                "settle": px, "settle_source": "band_midpoint" if band else str(r.get("source") or "stored"),
+                "quality": "band_proxy" if band else (r.get("quality") or "proxy"), "from_file_of": td.isoformat()}
+    for k, v in raw.items():
+        st.setdefault(k, v)
+    for v in vwaps or []:
+        if v.get("status") == "ok" and v.get("value") and _d(v.get("session")) and _d(v.get("expiry")) and family:
+            st[(_dd(v["session"]).isoformat(), family.upper(), _dd(v["expiry"]).isoformat())] = {
+                "settle": _ff(v["value"]), "settle_source": "breeze_vwap30", "quality": "vwap30_proxy", "from_file_of": None}
+    out: list[dict[str, Any]] = []
+    for key in sorted(set(oi) | set(st)):
+        k_sess, sym, k_exp = key
+        o, p = oi.get(key) or {}, st.get(key) or {}
+        out.append({
+            "trade_date": k_sess, "session_date": k_sess, "symbol": sym, "expiry": k_exp,
+            "open_interest": _f(o.get("open_interest")), "oi_change": _f(o.get("oi_change")),
+            "sessions_spanned": o.get("sessions_spanned"), "volume": _f(o.get("volume")),
+            "settle": p.get("settle"), "settle_source": p.get("settle_source"), "quality": p.get("quality") or "proxy",
+            "source": o.get("source") or ("breeze_vwap30" if p.get("settle_source") == "breeze_vwap30" else "icici_master_band"),
+            "settle_from_file_of": p.get("from_file_of"), "oi_from_file": bool(o),
+        })
+    return out
+
+
+def vwap_sessions_needed(rows: list[dict[str, Any]], family: str, latest: date) -> tuple[list[date], date | None]:
+    """The sessions after the newest band-covered session up to `latest` (usually one or two) and the front expiry of the
+    newest file: the VWAP reads that complete the price tape (one Breeze call each, cached all night)."""
+    fam = [r for r in rows if str(r.get("symbol") or "").upper() == family.upper() and _d(r.get("trade_date"))]
+    if not fam:
+        return [], None
+    newest = max(_dd(r["trade_date"]) for r in fam)
+    front = min((_dd(r["expiry"]) for r in fam if _dd(r["trade_date"]) == newest and _d(r.get("expiry"))
+                 and _dd(r["expiry"]) >= latest), default=None)
+    settled = [_d(r.get("settle_session")) for r in fam if r.get("settle") is not None and _d(r.get("settle_session"))]
+    covered = max([s for s in (band_row_session(r) for r in fam) if s] + [s for s in settled if s], default=None)
+    out: list[date] = []
+    d = latest
+    while covered is not None and d > covered and len(out) < 3:
+        out.append(d)
+        d = gp.previous_session(d)
+    return sorted(out), front
+
+
+def tender_state(tender_start: date, expiry: date, today: date) -> dict[str, Any]:
+    """{days_to_tender, in_tender, tender_note}: never a negative count for a tender already running (5 Nov review:
+    '−4 days to tender · tender from Sun 01 Nov')."""
+    days = (tender_start - today).days
+    running = days <= 0 <= (expiry - today).days
+    note = (
+        f"in tender since {tender_start:%a %d %b} ({-days} d)" if running and days < 0
+        else f"tender opens today ({tender_start:%a %d %b})" if running
+        else f"{days} days to tender (from {tender_start:%a %d %b})" if days > 0
+        else None
+    )
+    return {"days_to_tender": max(days, 0) if running else days, "in_tender": running, "tender_note": note}
+
+
+def build_positioning_mcx(
+    curve_rows: list[dict[str, Any]], today: date, family: str = "GOLD", vwaps: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    """Daily MCX OI × price for one family from the ICICI-master curve rows re-keyed per session (`mcx_session_rows`, wave
+    1d: the OI stays on its session, the band midpoint moves to the session it is the settlement of, the sessions no band
+    covers yet take the last-30-min VWAP) — the 'Wed 04 Nov long unwinding −0.51 %' was Tuesday's band against Monday's on a
+    +3.31 % COMEX Wednesday. Pure."""
     rows = [
         r
-        for r in curve_rows
+        for r in mcx_session_rows(curve_rows, vwaps, family)
         if str(r.get("symbol") or "").upper() == family.upper() and _d(r.get("trade_date")) and _d(r.get("expiry"))
     ]
     rows.sort(key=lambda r: (str(r["trade_date"])[:10], str(r["expiry"])[:10]))
@@ -3045,20 +3305,21 @@ def build_positioning_mcx(curve_rows: list[dict[str, Any]], today: date, family:
     out_rows: list[dict[str, Any]] = []
     tape: list[dict[str, Any]] = []
     prev_oi_by_exp: dict[str, float] = {}
-    prev_front_settle: float | None = None
-    prev_day: date | None = None
+    prev_front: tuple[float, date, str] | None = None   # (settle, session, expiry) of the last session with a front settle
+    prev_oi_day: date | None = None                # the last session that had OI (the delta's own span)
     for d in days:
         day_rows = by_day[d]
         total_doi = 0.0
         have_doi = False
-        # sessions this delta spans (1 = one day): data-service's own count (full closures subtracted) when the row carries
-        # it, else the weekday count between the stored days
+        has_oi = any(r.get("open_interest") is not None for r in day_rows)
+        # sessions the OI delta spans (1 = one day): data-service's own count (full closures subtracted) when the row
+        # carries it, else the sessions between this OI session and the previous one
         stored_span = next((int(_ff(r["sessions_spanned"])) for r in day_rows if _f(r.get("sessions_spanned"))), None)
-        span = stored_span if stored_span else (sessions_between(prev_day, _dd(d)) if prev_day else None)
+        span = stored_span if stored_span else (sessions_between(prev_oi_day, _dd(d)) if prev_oi_day and has_oi else None)
         for r in day_rows:
             exp = str(r["expiry"])[:10]
             oi = _f(r.get("open_interest"))
-            doi = _f(r.get("oi_change"))
+            doi = _f(r.get("oi_change")) if oi is not None else None
             if doi is None and oi is not None and exp in prev_oi_by_exp:
                 doi = oi - prev_oi_by_exp[exp]
             if doi is not None:
@@ -3075,39 +3336,55 @@ def build_positioning_mcx(curve_rows: list[dict[str, Any]], today: date, family:
                     "oi_change": doi,
                     "sessions_spanned": span if doi is not None else None,
                     "volume": _f(r.get("volume")),
-                    "settle_or_close": _f(r.get("settle")) if r.get("settle") is not None else _f(r.get("close")),
+                    "settle_or_close": _f(r.get("settle")),
+                    "settle_source": r.get("settle_source"),
                     "quality": r.get("quality") or "proxy",
                     "source": r.get("source"),
-                    "session_date": str(r.get("session_date") or "")[:10] or None,
+                    "session_date": d,
                 }
             )
         live = [r for r in day_rows if _dd(r["expiry"]) >= _dd(d)]
-        front = live[0] if live else None
-        settle = (
-            _f(front.get("settle")) if front and front.get("settle") is not None else (_f(front.get("close")) if front else None)
-        )
-        dpp = _pct_change(settle, prev_front_settle)
+        front = live[0] if live else None                      # the nearest expiry; its settle may be unknown that session
+        settle = _f(front.get("settle")) if front else None
+        same_contract = bool(front and prev_front and prev_front[2] == str(front["expiry"])[:10])   # never across a roll
+        dpp = _pct_change(settle, prev_front[0]) if settle is not None and prev_front and same_contract else None
+        price_span = sessions_between(prev_front[1], _dd(d)) if dpp is not None and prev_front else None
+        # the quadrant word needs the price and the OI over the SAME span (a band session and an OI session can differ)
+        same_span = dpp is not None and have_doi and (price_span or 1) == (span or 1)
         near_expiry = any(abs((_dd(r["expiry"]) - _dd(d)).days) <= 3 for r in day_rows)
-        multi = bool(span and span > 1 and (dpp is not None or have_doi))
+        tape_span = span if have_doi else price_span
+        multi = bool(tape_span and tape_span > 1 and (dpp is not None or have_doi))
         tape.append(
             {
                 "trade_date": d,
                 "dprice_pct": _r(dpp, 2),
                 "doi": total_doi if have_doi else None,
-                "label": quadrant_label(dpp, total_doi if have_doi else None),
+                "label": quadrant_label(dpp, total_doi) if same_span else None,
                 "mechanical": near_expiry,
                 # a delta that spans more than one session is said so, and greyed like the mechanical flag (C-TRADER-18)
-                "sessions_spanned": span if (dpp is not None or have_doi) else None,
+                "sessions_spanned": tape_span if (dpp is not None or have_doi) else None,
                 "multi_session": multi,
-                "span_note": f"over {span} sessions (master skipped {span - 1})" if multi and span else None,
+                "span_note": f"over {tape_span} sessions (master skipped {tape_span - 1})" if multi and tape_span else None,
+                "price_source": front.get("settle_source") if front else None,
+                "price_only": dpp is not None and not have_doi,
+                "note": (
+                    "Δprice from the last-30-min VWAP (Breeze, proxy); ΔOI arrives with the next ICICI master"
+                    if front and front.get("settle_source") == "breeze_vwap30" and not have_doi
+                    else ("price and OI deltas span different sessions: no quadrant word" if dpp is not None and have_doi
+                          and not same_span else None)
+                ),
             }
         )
-        prev_front_settle = settle
-        prev_day = _dd(d)
-    last_day = by_day[days[-1]] if days else []
+        if settle is not None and front:
+            prev_front = (settle, _dd(d), str(front["expiry"])[:10])
+        if has_oi:
+            prev_oi_day = _dd(d)
+    oi_days = [d for d in days if any(r.get("open_interest") is not None for r in by_day[d])]
+    last_day = by_day[oi_days[-1]] if oi_days else []
     live = sorted((r for r in last_day if _dd(r["expiry"]) >= today), key=lambda r: str(r["expiry"]))
     front, nxt = (live[0] if live else None), (live[1] if len(live) > 1 else None)
     tender_start = mcx_tender_start(_dd(front["expiry"])) if front else None
+    ts = tender_state(tender_start, _dd(front["expiry"]), today) if front and tender_start else {}
     roll = {
         "front": _mmy(front["expiry"]) if front else None,
         "next": _mmy(nxt["expiry"]) if nxt else None,
@@ -3118,7 +3395,9 @@ def build_positioning_mcx(curve_rows: list[dict[str, Any]], today: date, family:
             if front and nxt and _f(front.get("open_interest")) and _f(nxt.get("open_interest"))
             else None
         ),
-        "days_to_tender_or_fnd": (tender_start - today).days if tender_start else None,
+        "days_to_tender_or_fnd": ts.get("days_to_tender"),
+        "in_tender": ts.get("in_tender"),
+        "tender_note": ts.get("tender_note"),
         "days_unit": "calendar days",
         "tender_start": tender_start.isoformat() if tender_start else None,
         "expiry": str(front["expiry"])[:10] if front else None,
@@ -3133,7 +3412,9 @@ def build_positioning_mcx(curve_rows: list[dict[str, Any]], today: date, family:
         "roll": roll,
         "since": days[0] if days else None,
         "badge": BADGE_ARITH,
-        "read": "proxy settlement (ICICI band midpoint) and OI in lots from the daily master; no volume until F3 (O-8)",
+        "read": "proxy settlement (ICICI band midpoint, labelled with the session it belongs to: two before the file) and OI "
+        "in lots from the daily master, plus the latest session's last-30-min VWAP (Breeze) when it is newer; no volume "
+        "until F3 (O-8)",
         "freshness": _freshness_of_rows(out_rows, "trade_date", 4.0, "ICICI MCX master (data-service gold_curve, proxy)"),
     }
 
@@ -3172,7 +3453,18 @@ async def gold_positioning_daily(
         if code not in mcxr.contract_specs():
             fail(422, "invalid", f"Unknown MCX contract '{family}'")
         curve_t = await reads.get("/db/gold/curve/history", exchange="MCX", symbol=code, days=days + 10)
-        payload = build_positioning_mcx(_rows(curve_t), now.date(), code)
+        rows = _rows(curve_t)
+        # the sessions no band covers yet (usually the latest one or two) take the front's last-30-min VWAP: one Breeze
+        # call per session, cached all night, shared with the fair block
+        need, front_exp = vwap_sessions_needed(rows, code, gp.latest_completed_session(now))
+        vw: list[dict[str, Any]] = []
+        if front_exp is not None and need:
+            # the ONE path (round-2 checker): data-service's stored VWAP30 for every needed session in one read, then Breeze
+            await mcxr.fill_stored_vwaps([(code, front_exp, sess) for sess in need])
+            for sess in need:
+                v = await mcxr.session_vwap_any(code, front_exp, sess)
+                vw.append({**v, "session": sess.isoformat(), "expiry": front_exp.isoformat()})
+        payload = build_positioning_mcx(rows, now.date(), code, vw)
     payload["as_of"] = now.isoformat(timespec="seconds")
     payload["store_errors"] = reads.errors or None
     reads.headers(response)
@@ -3195,6 +3487,13 @@ def _basis_block(fair: dict[str, Any], carry_pct: float | None, basis_pts: list[
         "mcx_front_session": fair.get("settlement_session"),
         "mcx_front_session_label": fair.get("settlement_session_label"),
         "mcx_front_quality": fair.get("settlement_quality"),
+        "mcx_front_source": fair.get("settlement_source"),
+        "settlement_check": fair.get("settlement_check"),
+        "band_midpoint": fair.get("band_midpoint"),
+        "band_session": fair.get("band_session"),
+        "purity": fair.get("purity"),
+        "basis_reference": sb.get("basis_reference") or fair.get("basis_reference"),
+        "duty_paid_landed_purity_inr": fair.get("duty_paid_landed_purity"),
         "landed_inr": fair.get("landed"),
         "duty_pct": fair.get("duty_pct"),
         "duty_effective": fair.get("duty_effective"),
@@ -3243,8 +3542,26 @@ async def gold_curve(
     if isinstance(cur_t, dict) and isinstance(cur_t.get("ghost_1w"), list) and cur_t["ghost_1w"]:
         ghost_t = {"rows": cur_t["ghost_1w"]}
     if ex == "MCX":
-        rows = [r for r in rows if str(r.get("symbol") or "").upper() == family.upper()]
+        # every band row carries the session it really belongs to (two before the file; wave 1d) — the chain is ONE session
+        # the chain is ONE session: the raw band (data-service's re-keyed rows carry it as `band_midpoint`), never a mix of
+        # re-keyed settles (VWAP for some expiries, nothing for others)
+        rows = [
+            {**r, "settle": r["band_midpoint"]} if r.get("band_midpoint") is not None else r
+            for r in rows
+            if str(r.get("symbol") or "").upper() == family.upper()
+        ]
     pts = curve_points(rows, day)
+    if ex == "MCX":
+        # D4: every chain settle names the session it belongs to and its source (the band of its REAL session, never the
+        # request date) — per point, so a mixed store can never hide a second session under the chain's one label
+        sess_of = {str(r.get("expiry") or "")[:10]: band_row_session(r) for r in rows}
+        for p in pts:
+            ps = sess_of.get(p["expiry"])
+            p["settle_source"] = "band_midpoint" if p.get("settle_or_last") is not None else None
+            p["settle_quality"] = "band_proxy" if p.get("settle_or_last") is not None else None
+            p["band_session"] = ps.isoformat() if ps else None
+            p["settle_session"] = ps.isoformat() if ps and p.get("settle_or_last") is not None else None
+            p["settle_session_label"] = gp.session_label(ps) if ps and p.get("settle_or_last") is not None else None
     ghost = curve_points(
         [
             r
@@ -3294,10 +3611,19 @@ async def gold_curve(
         if ex == "MCX"
         else [{"trade_date": a["report_date"], "carry_ann_pct": a["value"]} for a in (hist.get("COMEX_CARRY_ANN_PCT") or [])]
     )
+    # the chain's settles are ONE session — the one its band belongs to (wave 1d), the session BEFORE the OI's trade_date
+    chain_session = band_row_session(rows[0]) if ex == "MCX" and rows else None
+    oi_session = _d(rows[0].get("trade_date")) if ex == "MCX" and rows else None
     price_label = (
         "last trade (Yahoo per-month), not settlement — bulletin settlements wait on O-2"
         if ex == "COMEX" and any(str(p.get("source") or "").startswith("yahoo") for p in pts)
-        else "ICICI band-midpoint settlement (proxy) until the official bhavcopy (O-8)"
+        else (
+            f"ICICI band-midpoint settlement of the {gp.session_label(chain_session)} (proxy; the band of a file is the "
+            "settlement two sessions before it) until the official bhavcopy (O-8); the basis below uses the latest "
+            "session's last-30-min VWAP when it is known"
+            if chain_session
+            else "ICICI band-midpoint settlement (proxy) until the official bhavcopy (O-8)"
+        )
         if ex == "MCX"
         else None
     )
@@ -3311,6 +3637,9 @@ async def gold_curve(
         "basis": basis,
         "history": history,
         "price_label": price_label,
+        "chain_session": chain_session.isoformat() if chain_session else None,
+        "chain_session_label": gp.session_label(chain_session) if chain_session else None,
+        "oi_session": oi_session.isoformat() if oi_session else None,
         "since": _since(rows, "trade_date"),
         "badge": BADGE_ARITH,
         "freshness": freshness(pts[0].get("trade_date") if pts else None, 4.0, f"data-service gold_curve ({ex})"),
@@ -3329,6 +3658,44 @@ def _margin_rows(payload: Any) -> dict[tuple[str, str], dict[str, Any]]:
     return out
 
 
+async def contract_vwaps(
+    family: dict[str, list[dict[str, Any]]] | None, today: date, latest: date
+) -> dict[tuple[str, str], dict[str, Any]]:
+    """{(family, expiry) → cached VWAP30 result} for the liquid expiries of every family (OI > 0, at most
+    CONTRACTS_VWAP_PER_FAMILY by OI): data-service's stored values first (ONE read for all of them), the ones still unknown
+    queued on ONE background thread (never waited for here)."""
+    out: dict[tuple[str, str], dict[str, Any]] = {}
+    keys: list[tuple[str, date]] = []
+    for code, rows in (family or {}).items():
+        live = sorted((r for r in rows if r["expiry"] >= today and (r.get("open_interest") or 0) > 0),
+                      key=lambda r: -(r.get("open_interest") or 0))[:CONTRACTS_VWAP_PER_FAMILY]
+        keys.extend((code, r["expiry"]) for r in live)
+    if keys:
+        await mcxr.fill_stored_vwaps([(code, exp, latest) for code, exp in keys])
+    queue: list[tuple[str, date, date]] = []
+    for code, exp in keys:
+        stock = mcxr.BREEZE_CODE.get(code, code)
+        hit = gp.session_vwap_cached(stock, exp, latest)
+        if hit is None:
+            queue.append((stock, exp, latest))
+        else:
+            out[(code, exp.isoformat())] = hit
+    if queue:
+        gp.prefetch_session_vwaps(queue)
+    return out
+
+
+async def mcx_margin_row(code: str, expiry: date | None) -> dict[str, Any] | None:
+    """The stored MCX margin row (Zerodha NRML mirror) of (family, expiry) — the row the CONTRACTS card prints, read through
+    the same store cache; the MCXG paper ticket asks for it (one source). None when absent or the store is down."""
+    if expiry is None:
+        return None
+    payload = await Reads().get("/db/gold/margins", exchange="MCX")
+    if isinstance(payload, Exception):
+        return None
+    return _margin_rows(payload).get((code.upper(), expiry.isoformat()))
+
+
 def _mcx_oi_changes(payload: Any) -> dict[tuple[str, str], float]:
     """{(family, expiry) → oi_change} from the latest stored MCX curve rows (B1 `gold_curve`, exchange=MCX)."""
     out: dict[tuple[str, str], float] = {}
@@ -3339,6 +3706,31 @@ def _mcx_oi_changes(payload: Any) -> dict[tuple[str, str], float]:
     return out
 
 
+CONTRACTS_VWAP_PER_FAMILY = 3  # the liquid expiries per family whose last-30-min VWAP is read (one Breeze call each, all night)
+# MCX's carry over COMEX's: a fair MCX carry ≈ COMEX's own annual carry + the INR − USD rate gap (≈ 2.6 pp, a dated estimate)
+INR_USD_RATE_GAP_PCT = 2.6
+
+
+def contract_settles(
+    code: str, rows: list[dict[str, Any]], published: date | None, vwaps: dict[tuple[str, str], dict[str, Any]] | None,
+    latest: date | None,
+) -> list[dict[str, Any]]:
+    """Each observed expiry's settle for the CONTRACTS card (wave 1d): the latest session's last-30-min VWAP when it is known
+    for that expiry, else the band midpoint labelled with its REAL session (`gold_preopen.band_session`). Every row names
+    its `settle_source` / `settle_session`; carry is only ever taken between rows of ONE session. Pure."""
+    b_sess = gp.band_session(published) if published else None
+    out: list[dict[str, Any]] = []
+    sess: date | None
+    for r in rows:
+        v = (vwaps or {}).get((code, r["expiry"].isoformat())) or {}
+        if v.get("status") == "ok" and v.get("value") and latest:
+            settle, src, sess, q = v["value"], "breeze_vwap30", latest, "vwap30_proxy"
+        else:
+            settle, src, sess, q = r["settlement"], "band_midpoint", b_sess, "band_proxy"
+        out.append({**r, "settle": settle, "settle_source": src, "settle_session": sess, "settle_quality": q})
+    return out
+
+
 def build_contracts(
     family_rows: dict[str, list[dict[str, Any]]] | None,
     published: date | None,
@@ -3346,10 +3738,13 @@ def build_contracts(
     comex_curve: list[dict[str, Any]],
     today: date,
     mcx_oi_changes: dict[tuple[str, str], float] | None = None,
+    vwaps: dict[tuple[str, str], dict[str, Any]] | None = None,
+    latest: date | None = None,
 ) -> dict[str, Any]:
     """The selector cards (c.selector): one per MCX family (GOLDTEN included) with expiries (observed from the master, computed
-    fallback), economics from shared/mcx_specs and the Zerodha NRML mirror when stored. Pure: unit-tested with the fixture
-    master."""
+    fallback), economics from shared/mcx_specs and the Zerodha NRML mirror when stored (`mcx.card_margin`, the SAME rule the
+    MCXG paper ticket uses). Settles per `contract_settles` (VWAP30 of the latest session, else the band of its real
+    session). Pure: unit-tested with the fixture master."""
     families: list[dict[str, Any]] = []
     for code, spec in mcxr.contract_specs().items():
         observed = [r for r in (family_rows or {}).get(code, []) if r["expiry"] >= today]
@@ -3358,56 +3753,75 @@ def build_contracts(
             {
                 "expiry": r["expiry"],
                 "source": "observed",
-                "settle": r["settlement"],
+                "settle": r["settle"],
+                "settle_source": r["settle_source"],
+                "settle_session": r["settle_session"],
+                "settle_quality": r["settle_quality"],
+                "band_mid": r["settlement"],
                 "band_lo": r["band_low"],
                 "band_hi": r["band_high"],
                 "oi": r["open_interest"],
             }
-            for r in observed
-        ] or [{"expiry": e, "source": "computed", "settle": None, "band_lo": None, "band_hi": None, "oi": None} for e in computed]
-        front_settle = next((r["settle"] for r in src_rows if r["settle"]), None)
+            for r in contract_settles(code, observed, published, vwaps, latest)
+        ] or [
+            {"expiry": e, "source": "computed", "settle": None, "settle_source": None, "settle_session": None,
+             "settle_quality": None, "band_mid": None, "band_lo": None, "band_hi": None, "oi": None}
+            for e in computed
+        ]
         front_row = next((r for r in src_rows if r["settle"]), None)
+        front_settle = front_row["settle"] if front_row else None
         expiries: list[dict[str, Any]] = []
         for i, r in enumerate(src_rows[:6]):
             m = margins.get((code, r["expiry"].isoformat()))
-            pct = _f((m or {}).get("margin_pct"))
-            inr = _f((m or {}).get("margin_ccy"))
-            if inr is None and pct is not None and r["settle"]:
-                inr = round(r["settle"] * spec.multiplier * pct / 100, 0)
-            if pct is None and r["settle"]:
-                pct = spec.span_margin_pct_indicative
-                inr = round(r["settle"] * spec.multiplier * pct / 100, 0)
+            cm = mcxr.card_margin(spec, r["settle"], m) if (m or r["settle"]) else None
+            inr = (cm or {}).get("margin_inr")
+            pct = (cm or {}).get("margin_pct")
             # ONE carry convention on the page (C-DATA-16): annualised vs the FRONT, exactly `/curve.annualised_carry_pct`;
-            # the front row itself carries none
+            # the front row itself carries none; never across two sessions (a VWAP front vs a band back month is a day's
+            # move, not carry — wave 1d)
+            same_session = bool(front_row and r["settle_session"] == front_row["settle_session"])
             carry = (
                 annualised_carry_pct(front_row["settle"], r["settle"], (r["expiry"] - front_row["expiry"]).days)
-                if front_row and r is not front_row and r["settle"] and (r["expiry"] - front_row["expiry"]).days > 0
+                if front_row and r is not front_row and r["settle"] and same_session
+                and (r["expiry"] - front_row["expiry"]).days > 0
                 else None
             )
             tender = mcx_tender_start(r["expiry"])
+            tst = tender_state(tender, r["expiry"], today)
             matched, substitute = comex_liquid_symbol(r["expiry"])
             expiries.append(
                 {
                     "expiry": r["expiry"].isoformat(),
                     "source": r["source"],
                     "settle": r["settle"],
-                    "settle_quality": "proxy" if r["settle"] else None,
+                    "settle_quality": r["settle_quality"],
+                    "settle_source": r["settle_source"],
+                    "settle_session": r["settle_session"].isoformat() if r["settle_session"] else None,
+                    "settle_session_label": gp.session_label(r["settle_session"]) if r["settle_session"] else None,
+                    "band_midpoint": r["band_mid"],
                     "band_lo": r["band_lo"],
                     "band_hi": r["band_hi"],
                     "oi": r["oi"],
                     "oi_change": (mcx_oi_changes or {}).get((code, r["expiry"].isoformat())),
                     "margin_inr": inr,
                     "margin_pct": pct,
-                    "margin_source": (m or {}).get("source")
-                    or ("indicative constant (shared/mcx_specs)" if pct is not None else None),
-                    "margin_date": str((m or {}).get("trade_date") or "")[:10] or None,
+                    "margin_source": (cm or {}).get("margin_source"),
+                    "margin_date": (cm or {}).get("margin_date"),
+                    "margin_ref_price": (cm or {}).get("margin_ref_price"),
                     "carry_pct": carry,
-                    "carry_convention": "annualised vs the front expiry (as /curve)",
+                    "carry_convention": "annualised vs the front expiry (as /curve), one session only",
+                    "carry_note": (
+                        None
+                        if carry is not None or r is front_row or not r["settle"] or same_session
+                        else "front and this expiry settle on different sessions: no carry printed"
+                    ),
                     "comex_matched": matched,
                     "comex_matched_calendar": gp.comex_symbol(r["expiry"]),
                     "comex_matched_note": "nearest liquid COMEX month" if substitute else None,
                     "tender_start": tender.isoformat(),
-                    "days_to_tender": (tender - today).days,
+                    "days_to_tender": tst["days_to_tender"],
+                    "in_tender": tst["in_tender"],
+                    "tender_note": tst["tender_note"],
                     "days_unit": "calendar days",
                     "days_to_expiry": (r["expiry"] - today).days,
                 }
@@ -3423,7 +3837,15 @@ def build_contracts(
                 "lot": d["lot"],
                 "lot_grams": spec.lot_grams,
                 "quote_unit": d["quotation"],
-                "purity": spec.purity,
+                "purity": str(gp.fineness_of(code)),   # the basis purity (D1): 995 GOLD / GOLDM, 999 TEN / PETAL / GUINEA
+                "basis_reference": gp.basis_reference(code),
+                # the price the 1 % move, the notional and the round trip are taken at: the front's settle, named
+                "price_basis": (
+                    f"{front_row['settle_session'] and gp.session_label(front_row['settle_session'])} "
+                    f"({str(front_row['settle_quality']).replace('_', ' ')})"
+                    if front_row
+                    else None
+                ),
                 "expiry_rule": d["expiry_rule"],
                 "cycle": d["cycle"],
                 "expiries": expiries,
@@ -3489,10 +3911,22 @@ def build_contracts(
         "master": {
             "available": bool(family_rows),
             "published": published.isoformat() if published else None,
-            "session": gp.previous_session(published).isoformat() if published else None,
-            "session_label": gp.session_label(gp.previous_session(published)) if published else None,
+            # the band midpoints are the settlement of THIS session (two before the file; wave 1d), the band itself MCX's
+            # price band of `band_applies_to`
+            "session": gp.band_session(published).isoformat() if published else None,
+            "session_label": gp.session_label(gp.band_session(published)) if published else None,
+            "band_applies_to": gp.band_applies_to(published).isoformat() if published else None,
         },
-        "margin_note": "NRML margin from the Zerodha mirror when stored (dated), else the indicative constant; MCX revises daily",
+        "latest_session": latest.isoformat() if latest else None,
+        "settle_note": "settle = the latest session's last-30-min VWAP (Breeze 1-minute bars, proxy) where read, else the ICICI "
+        "band midpoint of its real session (proxy); carry only within one session",
+        "carry_fair_note": (
+            "MCX carry runs above COMEX's: a fair MCX carry ≈ COMEX's own annual carry + the INR − USD interest-rate gap "
+            f"(≈ {INR_USD_RATE_GAP_PCT:g} pp, an estimate); the rest is local demand or the cost of MCX margin — arithmetic, "
+            "not a free return"
+        ),
+        "margin_note": "NRML margin from the Zerodha mirror when stored (dated), else the indicative constant; MCX revises daily; "
+        "the MCXG paper ticket uses the same rule (mcx.card_margin)",
         "badge": BADGE_ARITH,
     }
 
@@ -3574,7 +4008,10 @@ def comex_spec_card(
         "elig_block": r.get("elig_block"),
         "elig_efp": r.get("elig_efp"),
         "margin_history": hist,
+        "margin_history_dates": len(hist),
         "margin_history_note": f"{symbol_root} {mat} outright, one row per trade date, rows under ${MARGIN_MIN_USD:,.0f} dropped",
+        # the card's own source and date (re-review: its chip read 'LIVE · ICICI MCX SECURIT…' for a CME-PRF card)
+        "freshness": freshness(str(r.get("biz_date") or "")[:10] or None, 4.0, "CME PRF (FTP)"),
         "badge": BADGE_ARITH,
     }
 
@@ -3606,6 +4043,8 @@ async def gold_contracts(
         reads.get("/db/gold/curve", exchange="MCX"),
     )
     family, published = got if isinstance(got, tuple) else (None, None)
+    latest = gp.latest_completed_session(now)
+    vwaps = await contract_vwaps(family, now.date(), latest)
     payload = build_contracts(
         family,
         published,
@@ -3613,6 +4052,8 @@ async def gold_contracts(
         curve_points(curve_t, now.date()) if not isinstance(curve_t, Exception) else [],
         now.date(),
         _mcx_oi_changes(mcx_curve_t) if not isinstance(mcx_curve_t, Exception) else {},
+        vwaps,
+        latest,
     )
     if exchange.upper() == "COMEX":
         payload["comex_spec"] = await _comex_spec(reads, (payload.get("comex_matched_by_family") or {}).get("GOLD"))
@@ -3629,7 +4070,7 @@ async def gold_contracts(
 # GET /premiums · GET /flows (PHYSICAL)
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
-FINENESS_ADJ = 999 / 995  # IBJA 999 vs the 995-fine COMEX/LBMA reference (M7)
+FINENESS_ADJ = 999 / 1000  # IBJA 999 vs the per-fine-gold COMEX/LBMA landed price: × 0.999 (PM decision D1)
 
 
 @router.get("/asia")
@@ -3657,6 +4098,17 @@ async def gold_asia(exchange: str | None = Query(None, pattern="^(SGE|SHFE)$"), 
     }
 
 
+SH_SPIKE_USD = 25.0  # $/oz away from the neighbours' median: a same-date pair that is most likely a timing artefact
+
+
+def _timing_spike(pts: list[dict[str, Any]], i: int) -> bool:
+    """True when pair i sits more than SH_SPIKE_USD from the median of up to two pairs either side (itself excluded)."""
+    nb = [p["value"] for j, p in enumerate(pts[max(0, i - 2) : i + 3], start=max(0, i - 2)) if j != i and p.get("value") is not None]
+    if len(nb) < 2 or pts[i].get("value") is None:
+        return False
+    return abs(pts[i]["value"] - statistics.median(nb)) > SH_SPIKE_USD
+
+
 def build_premiums(
     fair: dict[str, Any], series: dict[str, list[dict[str, Any]]], cat: dict[str, dict[str, Any]]
 ) -> dict[str, Any]:
@@ -3671,9 +4123,20 @@ def build_premiums(
     ibja = last_of("IBJA_999_PM")
     comex = fair.get("comex") or {}
     usdinr = fair.get("usdinr") or {}
-    duty_paid = fair.get("duty_paid_landed")
+    # every rupee price on the ladder is ₹/10 g (PM decision D3): the fair block of a PETAL (₹/1 g) or GUINEA (₹/8 g) contract
+    # is in that contract's quotation unit, so its landed, duty-paid, settle and reference values are scaled × 10 / grams
+    # before they sit beside the IBJA ₹/10 g fix, and the MCX step says so
+    spec = mcxr.contract_specs().get(str(fair.get("contract") or "GOLD").upper())
+    quote_g = float(spec.quote_per_grams) if spec else 10.0
+    to10 = 10.0 / quote_g if quote_g else 1.0
+
+    def per10(v: Any) -> float | None:
+        return _r(float(v) * to10, 0) if isinstance(v, (int, float)) else None
+
+    scaled_note = f" (₹ per {quote_g:g} g × {to10:g})" if to10 != 1 else ""
+    duty_paid = per10(fair.get("duty_paid_landed"))
     # ONE India premium, at ONE clock: the stored INDIA_PREMIUM_PCT (IBJA 999 PM ÷ duty-paid landed at the fix minute,
-    # × 995/999) — never the PM fix divided by a landed price computed hours later (C-TRADER-4 / C-BEGINNER-2 / C-DATA-11)
+    # × 0.999, D1) — never the PM fix divided by a landed price computed hours later (C-TRADER-4 / C-BEGINNER-2 / C-DATA-11)
     prem_pts = pts("INDIA_PREMIUM_PCT")
     stored_prem = prem_pts[-1] if prem_pts else None
     premium = _r(stored_prem["value"], 2) if stored_prem else None
@@ -3714,8 +4177,8 @@ def build_premiums(
         },
         {
             "step": "landed",
-            "label": "landed ₹/10 g (ex-duty) · now",
-            "value": fair.get("landed"),
+            "label": "landed ₹/10 g fine gold (ex-duty) · now",
+            "value": per10(fair.get("landed")),
             "ts": _iso_any(comex.get("as_of")),
             "clock": "now",
             "source": "M5",
@@ -3732,7 +4195,7 @@ def build_premiums(
         },
         {
             "step": "duty_paid",
-            "label": "duty-paid landed ₹/10 g · now",
+            "label": "duty-paid landed ₹/10 g fine gold · now",
             "value": duty_paid,
             "ts": _iso_any(comex.get("as_of")),
             "clock": "now",
@@ -3750,12 +4213,27 @@ def build_premiums(
         },
         {
             "step": "mcx",
-            "label": f"MCX {fair.get('contract')} {_mmy(fair.get('expiry')) or ''} settle{basis_txt}",
-            "value": fair.get("settlement"),
+            "label": f"MCX {fair.get('contract')} {_mmy(fair.get('expiry')) or ''} settle{scaled_note}{basis_txt}",
+            "value": per10(fair.get("settlement")),
+            "value_native": fair.get("settlement"),
+            "unit_native": f"₹/{quote_g:g} g",
+            "scaled_to_10g": to10 != 1,
             "ts": fair.get("settlement_session"),
             "ts_label": fair.get("settlement_session_label"),
             "clock": "settlement",
-            "source": "ICICI band midpoint (proxy)",
+            "source": (
+                "last-30-min VWAP of Breeze 1-minute bars (proxy)"
+                if fair.get("settlement_source") == "breeze_vwap30"
+                else "ICICI band midpoint (proxy)"
+            ),
+            "settlement_source": fair.get("settlement_source"),
+            "settlement_quality": fair.get("settlement_quality"),
+            "settlement_check": fair.get("settlement_check"),
+            # the basis divides by the duty-paid landed price OF THIS CONTRACT'S PURITY at that session's close (wave 1d)
+            "basis_reference": sb.get("basis_reference"),
+            "reference_value": per10(fair.get("duty_paid_landed_at_settlement")),
+            "reference_label": (f"duty-paid landed × {fair.get('purity')}/1000 at that session's close"
+                                if fair.get("purity") else None),
             "unit": "₹/10 g",
         },
     ]
@@ -3793,6 +4271,8 @@ def build_premiums(
         sh_note = "no same-date London PM stored: no premium (never SGE vs an earlier London fix)"
     # the legs printed beside the premium are the PAIR's legs (same date); a newer SGE print is shown on its own
     # (re-review C-DATA-2 N1: '865.47 CNY/g = $3,935.1' glued a 4 Nov CNY leg to the 3 Nov USD leg)
+    sge_shown: dict[str, Any] | None
+    cny_shown: dict[str, Any] | None
     if sge and lbma_same and cny_same and cny_same["value"]:
         sge_shown, cny_shown = sge, cny_same
     elif stored_sh:
@@ -3814,8 +4294,11 @@ def build_premiums(
             "report_date": p["report_date"],
             "premium_usd": p["value"],
             "premium_pct": next((q["value"] for q in sh_hist_pct if q["report_date"] == p["report_date"]), None),
+            # a pair far from its neighbours' median is most likely the 14:15 Beijing vs 15:00 London timing gap on a big
+            # day (+$75.34 on Fri 30 Oct, a −3.3 % day), not a premium: flagged so the chart can mark it (5 Nov review)
+            "timing_spike_suspect": _timing_spike(sh_hist_usd, i),
         }
-        for p in sh_hist_usd
+        for i, p in enumerate(sh_hist_usd)
     ]
     duty_hist = [{"effective": d, "pct": p} for d, p in gp.DUTY_HISTORY]
     wgc_in, wgc_cn = last_of("WGC_PREMIUM_IN"), last_of("WGC_PREMIUM_CN")
@@ -3827,7 +4310,18 @@ def build_premiums(
             "premium_clock": "IBJA PM fix minute: both legs sampled at the fix (stored INDIA_PREMIUM_PCT)",
             "premium_note": premium_note,
             "ibja_date": ibja["report_date"] if ibja else None,
-            "fineness_adjustment": "IBJA 999 vs 995 reference: × 999/995",
+            "fineness_adjustment": ("stored premium: IBJA 999 PM vs duty-paid landed × 0.999 (landed is per fine gold; IBJA 995 "
+                                    "would compare with × 0.995 — PM decision D1, data-service derive)"),
+            "basis_reference": sb.get("basis_reference"),
+            "basis_purity_note": (
+                f"the MCX basis divides by the duty-paid landed price × {fair.get('purity')}/1000 (COMEX × USD/INR is the "
+                "price of fine gold; GOLD / GOLDM 995, GOLDTEN / PETAL / GUINEA 999 — PM decision D1)"
+                if fair.get("purity")
+                else None
+            ),
+            "unit": "₹/10 g",
+            "unit_note": (f"{fair.get('contract')} is quoted per {quote_g:g} g: its prices are scaled × {to10:g} to ₹/10 g here"
+                          if to10 != 1 else None),
             "basis_pct": sb["value"],
             "basis_date": sb["date"],
             "basis_label": sb["label"],
@@ -3889,9 +4383,19 @@ def build_premiums(
 
 
 @router.get("/premiums")
-async def gold_premiums(days: int = Query(365, ge=7, le=3000), response: Response = None) -> dict[str, Any]:  # type: ignore[assignment]
+async def gold_premiums(
+    days: int = Query(365, ge=7, le=3000),
+    contract: str = Query("GOLD"),
+    expiry: str | None = Query(None),
+    response: Response = None,  # type: ignore[assignment]
+) -> dict[str, Any]:
     """PHYSICAL › the India price stack (ph.ladder), the India premium / MCX basis history, the Shanghai premium and the WGC
-    reference lines."""
+    reference lines. `contract` / `expiry` (default GOLD front) pick the MCX bar of the ladder — the page passes its pick so
+    the ladder prints the same basis as the strip and the gauge (wave 1d)."""
+    if contract.upper() not in mcxr.contract_specs():
+        fail(422, "invalid", f"Unknown MCX contract '{contract}'")
+    if expiry:
+        _date_arg(expiry, "expiry")
     reads = Reads()
     cat = await catalog(reads)
     series_t, fair_t = await _gather(
@@ -3912,8 +4416,8 @@ async def gold_premiums(days: int = Query(365, ge=7, le=3000), response: Respons
             ],
             days=days,
         ),
-        fair_block(),
-        )
+        fair_block(contract.upper(), expiry),
+    )
     fair: dict[str, Any] = fair_t if isinstance(fair_t, dict) else {}
     payload = build_premiums(fair, series_t if isinstance(series_t, dict) else {}, cat)
     payload["as_of"] = _now_ist().isoformat(timespec="seconds")
@@ -4093,6 +4597,11 @@ def build_flows(
         "wgc_weekly": wgc_weekly,
         "wgc_india_holdings_t": hold_in["value"] if hold_in else None,
         "official": official[:24],
+        "official_months": (
+            {"newest": max(str(r.get("month") or "") for r in official), "oldest": min(str(r.get("month") or "") for r in official)}
+            if official
+            else None
+        ),
         "rbi": rbi,
         "otc": otc,
         "physical_monthly": physical,
@@ -4104,7 +4613,11 @@ def build_flows(
         "freshness": {
             "etf": freshness(etf[0]["report_date"] if etf else None, max_age_of(cat, "GLD_TONNES", 5.0), "SPDR / iShares"),
             "wgc_weekly": freshness(wgc_weekly[-1]["week_ending"] if wgc_weekly else None, 10.0, "World Gold Council"),
-            "official": freshness(official[0]["month"] + "-01" if official else None, 60.0, "IMF IFS"),
+            # the panel's date is the NEWEST data month (5 Nov review: 'as of Wed 01 Jul' — the first row's, USA 2026-07 — while
+            # most rows were 2026-09); `official_months` says the spread
+            "official": freshness(
+                max(str(r.get("month") or "") for r in official) + "-01" if official else None, 60.0, "IMF IFS"
+            ),
             "rbi": freshness(rbi["week"], 10.0, "RBI WSS"),
             "otc": freshness(otc["week_ending"], 10.0, "LBMA"),
         },
@@ -4175,8 +4688,9 @@ MACRO_DRIVERS: tuple[tuple[str, str, str, str, int, str], ...] = (
     ("dxy", "Dollar index (DXY)", "DXY_CLOSE", "FRED_DTWEXBGS", -1, "index"),
     ("usdinr", "USD/INR", "USDINR_CLOSE", "USDINR_FBIL", +1, "₹/$"),
     ("gvz", "GVZ (gold vol)", "GVZ_CLOSE", "FRED_GVZCLS", 0, "%"),
-    ("brent", "Brent", "FRED_DCOILBRENTEU", "WTI_FRONT", +1, "$/bbl"),
+    ("brent", "Brent", "FRED_DCOILBRENTEU", "BRENT_FRONT", +1, "$/bbl"),   # BZ=F daily (G-DATA); WTI is not Brent
 )
+TRUE_TWINS = ("brent", "real_10y", "nominal_2y", "gvz")   # the drivers whose alternate series measures the SAME thing
 REGIMES: tuple[tuple[str, int, int], ...] = (("2003–09", 2003, 2009), ("2010–21", 2010, 2021), ("2022–26", 2022, 2026))
 
 
@@ -4209,20 +4723,34 @@ def _beta(y: dict[str, float], x: dict[str, float], keys: list[str]) -> float | 
     return round(sum((a - mx) * (b - my) for a, b in xs) / sxx, 3) if sxx > 0 else None
 
 
-def kgx_split(gold_pts: list[dict[str, Any]], fx: dict[str, list[dict[str, Any]]], days: int) -> dict[str, Any]:
+def kgx_split(
+    gold_pts: list[dict[str, Any]], fx: dict[str, list[dict[str, Any]]], days: int, anchor: date | None = None,
+    window_label: str | None = None,
+) -> dict[str, Any]:
     """ "Gold or the dollar?" (M56): usd_effect = −Σ wᵢ·Δln fᵢ over the DXY basket (foreign-per-USD quotes flipped), pure =
-    total − usd_effect; the rupee leg is the USD/INR change (what an MCX holder also sees). Identity, not a forecast."""
-    g_now, g_then, from_date = change_over(gold_pts, days)
+    total − usd_effect; the rupee leg is the USD/INR change (what an MCX holder also sees). Identity, not a forecast.
+    `anchor` (the close the window starts from — HEALTH's week-to-date / previous-session anchor, so 'W' means the same on
+    both views, 5 Nov review) replaces the calendar-day lookback when given."""
+
+    def span(pts: list[dict[str, Any]]) -> tuple[float | None, float | None, str | None]:
+        if anchor is None:
+            return change_over(pts, days)
+        if not pts:
+            return None, None, None
+        then = _row_on_or_before(pts, anchor)
+        return pts[-1]["value"], (then or {}).get("value"), (then or {}).get("report_date")
+
+    g_now, g_then, from_date = span(gold_pts)
     total = _pct_change(g_now, g_then)
     dln_usd = 0.0  # Δln of the dollar basket, in %: Σ wᵢ · sᵢ · Δln fᵢ (sᵢ = −1 for USD-per-foreign quotes)
     used: dict[str, float] = {}
     for sid, (w, sign) in DXY_WEIGHTS.items():
         pts = fx.get(sid) or []
-        v_now, v_then, _ = change_over(pts, days)
+        v_now, v_then, _ = span(pts)
         if v_now and v_then:
             dln_usd += w * sign * math.log(v_now / v_then) * 100
             used[sid] = w
-    inr_now, inr_then, _ = change_over(fx.get("USDINR_CLOSE") or [], days)
+    inr_now, inr_then, _ = span(fx.get("USDINR_CLOSE") or [])
     inr = _pct_change(inr_now, inr_then)
     usd_effect = -dln_usd if used else None  # a stronger dollar is a NEGATIVE effect on gold's USD price (M56)
     total_r, usd_r = _r(total, 2), _r(usd_effect, 2)
@@ -4232,6 +4760,7 @@ def kgx_split(gold_pts: list[dict[str, Any]], fx: dict[str, list[dict[str, Any]]
     return {
         "period": {1: "D", 7: "W", 30: "M"}.get(days, f"{days}d"),
         "from_date": from_date,
+        "window_label": window_label,
         "total_pct": total_r,
         "usd_effect_pct": usd_r,
         "pure_gold_pct": pure_r,
@@ -4270,6 +4799,12 @@ def build_macro(
     drivers: list[dict[str, Any]] = []
     for key, label, sid, alt, direction, unit in MACRO_DRIVERS:
         used = sid if series.get(sid) else (alt if alt and series.get(alt) else sid)
+        # wave 1d (G-DATA's patch, PM decision D6): for a TRUE twin the fresher stored (and published) series wins — Brent's BZ=F
+        # front future vs FRED's spot (2–4 d late), the Treasury CSV vs FRED for the yields, Yahoo ^GVZ vs FRED GVZCLS — shown
+        # under its own id and date. DXY vs the Fed broad index is not a twin and is excluded on purpose.
+        if (key in TRUE_TWINS and alt and series.get(sid) and series.get(alt) and is_published(cat, alt)
+                and series[alt][-1]["report_date"] > series[sid][-1]["report_date"]):
+            used = alt
         pts = series.get(used) or []
         if pts and not is_published(cat, used):
             pts = []
@@ -4302,16 +4837,23 @@ def build_macro(
             if pct_mode
             else _diff(last_p["value"], change_over(pts, days)[1])
         )
+        state = freshness(last_p.get("release_at") or last_p["report_date"], max_age_of(cat, used, 5.0), used)["state"]
         tag: str | None = None
-        if direction and dwin:
+        # no supportive / headwind word on a stale driver (5 Nov review: Brent 9 days old tagged SUPPORTIVE after a 20 % fall)
+        if direction and dwin and state not in ("stale", "unavailable"):
             tag = "supportive" if dwin * direction > 0 else "headwind"
+        vol_index = used in ("GVZ_CLOSE", "FRED_GVZCLS")  # a vol index moves in vol points, not basis points (re-review)
         drivers.append(
             {
                 "key": key,
                 # the tile is labelled by the series actually used (C-DATA-4 / C-TRADER-8): the Fed broad index is never
                 # presented under the DXY name
                 "label": DXY_SOURCE_LABEL.get(used, label),
-                "label_note": f"stand-in: {used} ({sid} has no stored points)" if used != sid else None,
+                "label_note": (
+                    (f"stand-in: {used} ({sid} has no stored points)" if not series.get(sid)
+                     else f"{used}: fresher than {sid} (last {series[sid][-1]['report_date']})")
+                    if used != sid else None
+                ),
                 "value": last_p["value"],
                 "unit": unit,
                 "report_date": last_p["report_date"],
@@ -4319,11 +4861,12 @@ def build_macro(
                 "d1w": d1w,
                 "d1m": d1m,
                 "d_window": dwin,
-                "change_unit": "%" if pct_mode else ("bp" if unit == "%" else unit),
-                "d1_bp": _r(d1 * 100, 1) if d1 is not None and unit == "%" else None,
+                "change_unit": "%" if pct_mode else ("vol pts" if vol_index else ("bp" if unit == "%" else unit)),
+                "d1_bp": _r(d1 * 100, 1) if d1 is not None and unit == "%" and not vol_index else None,
                 "pct_1y": pct_rank(window_values(pts, 365), last_p["value"]),
                 "corr_60d": _corr(gold_chg, _daily_changes(pts, pct=pct_mode), keys60),
                 "tag": tag,
+                "tag_note": "stale: no supportive / headwind word until it is fresh" if direction and state == "stale" else None,
                 "rule": (
                     "falling = supportive, rising = headwind"
                     if direction < 0
@@ -4334,7 +4877,7 @@ def build_macro(
                 "series_id": used,
                 "badge": BADGE_CONTEXT,
                 "evidence": "contemporaneous (G-MACRO H1/H2); no lead",
-                "state": freshness(last_p.get("release_at") or last_p["report_date"], max_age_of(cat, used, 5.0), used)["state"],
+                "state": state,
             }
         )
     if etf_pts:
@@ -4357,7 +4900,11 @@ def build_macro(
                 "state": "delayed",
             }
         )
-    kgx = kgx_split(gold_pts, series, days)
+    # the KGX window is HEALTH's (week to date since the last Friday close for W, the previous session for D, month to date
+    # for M): 'W' printed +0.47 % here from Wed 28 Oct while HEALTH's week said +4.4 % (5 Nov review)
+    wa = window_anchor(gold_pts, window, now.date()) if gold_pts else {}
+    wa_from = _d(wa.get("from_date"))
+    kgx = kgx_split(gold_pts, series, days, wa_from, wa.get("label"))
     currencies: list[dict[str, Any]] = []
     gold_now = gold_pts[-1]["value"] if gold_pts else None
     ccys: list[tuple[str, str | None, bool]] = [
@@ -4409,6 +4956,10 @@ def build_macro(
             meetings.append(
                 {
                     "meeting": str(r["meeting"])[:10],
+                    # the tracker's dates are SOFR / IMM horizons (third Wednesdays), NOT FOMC decision days (5 Nov review:
+                    # rows dated Wed 16 Dec read like meetings while the next FOMC is 9 Dec); `next_fomc` names the decision
+                    "kind": "rate horizon",
+                    "label": f"rate path to {_dd(r['meeting']):%a %d %b %Y} (SOFR / IMM horizon, not an FOMC date)",
                     "p_cut": _f(r.get("prob_cut")),
                     "p_hike": _f(r.get("prob_hike")),
                     "p_hold": _f(r.get("prob_hold")),
@@ -4437,6 +4988,8 @@ def build_macro(
     ]
     fed: dict[str, Any] = {
         "meetings": meetings[:8],
+        "meetings_note": "the tracker's rows are rate horizons on SOFR / IMM dates (quarterly third Wednesdays), not FOMC "
+        "meeting days — the next FOMC decision is `next_fomc`",
         "as_of": latest_asof,
         "source": "Atlanta Fed Market Probability Tracker (licence: owner reads it, O-10)",
         "zq": [
@@ -4555,6 +5108,8 @@ def build_macro(
         "gpr_pct_m": pct_rank([p["value"] for p in gpr_m], gpr_m[-1]["value"]) if gpr_m else None,
         "gpr_pct_d": pct_rank([p["value"] for p in gpr_d], gpr_d[-1]["value"]) if gpr_d else None,
         "hy_oas": hy["value"] if hy else None,
+        "hy_oas_unit": "%",  # FRED BAMLH0A0HYM2 is in percent (3.40 = 340 bp); 5 Nov review: labelled '(bp)'
+        "hy_oas_bp": _r(hy["value"] * 100, 0) if hy else None,
         "hy_oas_date": hy["report_date"] if hy else None,
         "gold_m2_pct": pct_rank([p["value"] for p in gm2], gm2[-1]["value"]) if gm2 else None,
         "badge": BADGE_CONTEXT,
@@ -4624,7 +5179,10 @@ async def gold_macro(window: str = Query("D", pattern="^[DWMdwm]$"), response: R
     settle = None
     if isinstance(master_t, tuple):
         front = next((r for r in master_t[0].get("GOLD", []) if r["expiry"] >= now.date()), None)
-        settle = front["settlement"] if front else None
+        if front:  # the expected move in ₹ scales the latest settlement (VWAP30 when read, else the band of its real session)
+            blk = await mcxr.resolve_settlement("GOLD", front["expiry"], front, master_t[1], now, wait=False)
+            settle = blk.get("settlement")
+    stored_events = _rows(events_t) if not isinstance(events_t, Exception) else []
     etf_rows = (
         [r for r in _rows(etf_t) if str(r.get("fund") or "GLD").upper() == "GLD"] if not isinstance(etf_t, Exception) else []
     )
@@ -4633,7 +5191,7 @@ async def gold_macro(window: str = Query("D", pattern="^[DWMdwm]$"), response: R
         _closes_from_bars(bars_t) if not isinstance(bars_t, Exception) else [],
         _points(etf_rows, value_key="tonnes"),
         _rows(fed_t) if not isinstance(fed_t, Exception) else [],
-        _rows(events_t) if not isinstance(events_t, Exception) else [],
+        merge_events(stored_events, []),   # one row per event, MCX expiries at the session close (5 Nov review)
         settle,
         cat,
         window.upper(),
@@ -4765,6 +5323,46 @@ def next_fomc(events: list[dict[str, Any]], meeting_dates: list[str], now: datet
     }
 
 
+def event_dedupe_key(e: dict[str, Any]) -> tuple[str, ...]:
+    """One row per real event (re-review minor: the COT release listed twice — 'CFTC COT (positions as of Tue 03 Nov)' stored
+    and 'CFTC COT release (Tue 03 Nov positions)' computed — because the dedupe compared names): a COT release is one per
+    (date, time); everything else per (date, kind, name)."""
+    d = str(e.get("event_date") or e.get("date") or "")[:10]
+    kind = str(e.get("kind") or "").upper()
+    if kind in ("COT_RELEASE", "COT"):
+        return (d, "COT_RELEASE", str(e.get("time_ist") or "")[:5])
+    return (d, kind, str(e.get("name") or "").lower())
+
+
+def mcx_expiry_time(e: dict[str, Any]) -> dict[str, Any]:
+    """An MCX expiry row timed at THAT day's session close (23:55 while New York is on standard time, 23:30 in summer,
+    17:00 on an evening closure) — never a flat 23:30 (5 Nov review: 'GOLDM Nov-26 expiry 23:30' on a 23:55 evening)."""
+    if str(e.get("kind") or "").upper() != "MCX_EXPIRY":
+        return e
+    d = _d(e.get("event_date") or e.get("date"))
+    if d is None:
+        return e
+    close = gp.session_close_at(d)
+    return {**e, "time_ist": f"{close:%H:%M}", "time_note": "the session close that day (expiry is end of trading)"}
+
+
+def merge_events(stored: list[dict[str, Any]], computed: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Stored rows first (they win), then the computed ones not already there, deduped by `event_dedupe_key`; MCX expiries
+    re-timed to the session close."""
+    seen: set[tuple[str, ...]] = set()
+    out: list[dict[str, Any]] = []
+    for e in stored + computed:
+        if not _d(e.get("event_date") or e.get("date")):
+            continue
+        e2 = mcx_expiry_time(e)
+        k = event_dedupe_key(e2)
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(e2)
+    return out
+
+
 def computed_events(today: date, days: int) -> list[dict[str, Any]]:
     """Rows the store may not carry yet: MCX expiries per family, MCX holidays, the next COT release (rule) and the Muhurat
     session."""
@@ -4776,7 +5374,7 @@ def computed_events(today: date, days: int) -> list[dict[str, Any]]:
                 out.append(
                     {
                         "event_date": e.isoformat(),
-                        "time_ist": "23:30",
+                        "time_ist": f"{gp.session_close_at(e):%H:%M}",
                         "kind": "MCX_EXPIRY",
                         "name": f"MCX {code} {_mmy(e)} expiry",
                         "country": "IN",
@@ -4852,16 +5450,9 @@ async def gold_calendar(days: int = Query(30, ge=1, le=365), response: Response 
     stored = _rows(
         await reads.get("/db/gold/events", **{"from": now.date().isoformat()}, to=(now.date() + timedelta(days=days)).isoformat())
     )
-    seen: set[tuple[str, str, str]] = set()
     events: list[dict[str, Any]] = []
-    for e in stored + computed_events(now.date(), days):
-        d = _d(e.get("event_date"))
-        if not d:
-            continue
-        key = (d.isoformat(), str(e.get("kind") or "").upper(), str(e.get("name") or "").lower())
-        if key in seen:
-            continue
-        seen.add(key)
+    for e in merge_events(stored, computed_events(now.date(), days)):
+        d = _dd(e.get("event_date"))
         t = str(e.get("time_ist") or "") or None
         in_session = e.get("in_session") if e.get("in_session") is not None else (bool(t) and "09:00" <= (t or "") <= "23:55")
         events.append(
@@ -4897,15 +5488,19 @@ async def gold_calendar(days: int = Query(30, ge=1, le=365), response: Response 
 async def gold_log(days: int = Query(60, ge=1, le=400), threshold: float = Query(300, gt=0)) -> dict[str, Any]:
     """The pre-open accuracy log (h.accuracy): rows with `stale_baseline` and `inputs_json`, and the stats. The JSON log stays
     the source of truth for one release while every row is dual-written to data-service's gold_preopen_log."""
-    rows = await asyncio.to_thread(gp.log_rows, days)
+    rows = await asyncio.to_thread(gp.log_rows, days, True)
     stats = gp.accuracy_stats(rows, threshold)
     return {
         "rows": rows,
         "stats": {**stats, "p90": stats.get("p90_abs_error")},
         "badge": BADGE_ARITH,
         "source": "data/gold_preopen/log.json (dual-written to gold_preopen_log)",
-        "read": "need ≈ 20 rows before the ₹300 chase limit means anything; a stale-baseline row is the ICICI file lagging "
-        "a session",
+        "read": "need ≈ 20 rows before the ₹300 chase limit means anything. A stale-baseline row used a settlement that was not "
+        "the one it was labelled with: until 5 Nov every row took the ICICI band of the session BEFORE its label (`band_rule`, "
+        "no broker read needed), and the 0.6 % check against that session's last-30-min VWAP measures how much it mattered "
+        "(`stale_reasons`): its miss holds a whole session's gold move. Rows keep their recorded numbers; "
+        "`stats.excluding_stale` repeats the stats without them; `re_explained` / `stats.on_vwap30` are a counterfactual on the "
+        "VWAP of the labelled session — beside the score, never instead of it.",
     }
 
 
@@ -4954,13 +5549,15 @@ async def gold_brief(date_: str | None = Query(None, alias="date"), response: Re
         }
     r = max(rows, key=lambda x: str(x.get("report_date") or ""))
     doc, stripped = brief_doc(r)
+    bb = brief_bias(r, doc)
     return {
         "available": True,
         "report_date": str(r.get("report_date"))[:10],
         "generated_at": _iso_any(r.get("generated_at")),
-        "bias": r.get("bias"),
-        "bias_score": _f(r.get("bias_score")),
-        "confidence": _f(r.get("confidence")),
+        "bias": bb["bias"],
+        "bias_score": _f(r.get("bias_score")) if bb["bias"] is not None else None,
+        "confidence": bb["confidence"],
+        "bias_withheld": bb["bias_withheld"],
         "model_fair_open": _f(r.get("model_fair_open")),
         "overnight_summary": doc.get("overnight_summary"),
         "open_plan": doc.get("open_plan"),
@@ -4968,7 +5565,8 @@ async def gold_brief(date_: str | None = Query(None, alias="date"), response: Re
         "doc": doc,
         "data_quality": doc.get("data_quality"),
         "stripped_fields": stripped,
-        "label": f"automated brief, confidence {r.get('confidence')}",
+        "label": (f"automated brief, confidence {bb['confidence']}" if bb["bias"] is not None
+                  else "automated brief, empty for this date"),
         "badge": BADGE_CONTEXT,
         "store_errors": reads.errors or None,
     }
@@ -4995,8 +5593,29 @@ def scrub_trade_fields(obj: Any, path: str = "doc", found: list[str] | None = No
     return obj, found
 
 
+# Trade-implying PROSE (re-review C-DATA-2 N8: doc.open_plan read 'Open signal is aligned_tradeable (deviation ~-100 vs a 300
+# threshold), so no wait is required'): a sentence carrying one of these words leaves the document, its path listed.
+TRADE_PROSE_RE = re.compile(r"aligned_tradeable|\btradeable\b|\bopen signal\b|\bsignal\b|\bno wait is required\b", re.IGNORECASE)
+_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
+
+
+def scrub_trade_prose(obj: Any, path: str = "doc", found: list[str] | None = None) -> tuple[Any, list[str]]:
+    """`obj` with every sentence that implies a trade dropped from its strings (at every depth); the touched paths."""
+    found = [] if found is None else found
+    if isinstance(obj, dict):
+        return {k: scrub_trade_prose(v, f"{path}.{k}", found)[0] for k, v in obj.items()}, found
+    if isinstance(obj, list):
+        return [scrub_trade_prose(v, f"{path}[{i}]", found)[0] for i, v in enumerate(obj)], found
+    if isinstance(obj, str) and TRADE_PROSE_RE.search(obj):
+        kept = [s for s in _SENTENCE_RE.split(obj) if not TRADE_PROSE_RE.search(s)]
+        found.append(f"{path} (sentence)")
+        return " ".join(kept).strip() or None, found
+    return obj, found
+
+
 def brief_doc(row: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
-    """The brief document of a stored row (JSON text or object), scrubbed; the row's own trade-implying columns count too."""
+    """The brief document of a stored row (JSON text or object), scrubbed of trade-implying keys AND sentences; the row's own
+    trade-implying columns count too."""
     doc = row.get("doc")
     if isinstance(doc, str):
         try:
@@ -5005,8 +5624,21 @@ def brief_doc(row: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
             doc = {"raw": doc}
     doc = doc if isinstance(doc, dict) else {}
     clean, found = scrub_trade_fields(doc)
+    clean, found = scrub_trade_prose(clean, "doc", found)
     found += [f"row.{k}" for k in row if TRADE_FIELD_RE.search(str(k)) and row.get(k) is not None]
     return clean, found
+
+
+BRIEF_EMPTY_NOTE = "the document carries no summary, plan or risk list: no bias or confidence is shown for an empty brief"
+
+
+def brief_bias(row: dict[str, Any], doc: dict[str, Any]) -> dict[str, Any]:
+    """{bias, confidence, bias_withheld}: an EMPTY brief (no summary, plan or risks) prints no directional word (5 Nov review:
+    'bias bullish · confidence 50 % · The document carries no summary, plan or risk list')."""
+    has_body = bool(doc.get("overnight_summary") or doc.get("open_plan") or doc.get("key_risks_today"))
+    if not has_body:
+        return {"bias": None, "confidence": None, "bias_withheld": BRIEF_EMPTY_NOTE}
+    return {"bias": row.get("bias"), "confidence": _f(row.get("confidence")), "bias_withheld": None}
 
 
 def _brief_rows(payload: Any) -> list[dict[str, Any]]:
@@ -5168,7 +5800,7 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
         fail(422, "invalid", f"Unknown MCX contract '{contract}'", hint=f"One of {', '.join(mcxr.contract_specs())}")
     reads = Reads()
     health_t, fair_t, quote_t, brief_t, events_t, series_t, cot_t, curve_t = await _gather(
-        build_health(window),
+        build_health(window, code, expiry),   # the page's contract: ONE basis per clock on strip, gauge and verdict (wave 1d)
         build_fair(None, None, 300.0, None, code if code != "GOLD" else None, expiry),
         asyncio.wait_for(mcxr.mcx_quote(contract=code, expiry=expiry), 12.0),
         reads.get("/db/gold/brief"),
@@ -5214,10 +5846,13 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
     matched_pt = _curve_point_for_symbol(curve_pts, matched_sym)
     matched_is_settle = bool(matched_pt and str(matched_pt.get("source") or "").startswith("cme"))
     matched_px = (matched_pt or {}).get("settle_or_last")
-    # ONE basis on the strip, its clock named: live MCX ÷ duty-paid landed now while a quote exists, else the settlement-
-    # clock figure the gauge, the ladder and the CONTRACTS footer print (C-TRADER-10 / C-BEGINNER-5)
-    dp_now = cf.get("duty_paid_landed")
-    live_basis_pct = _r((mcx_live / dp_now - 1) * 100, 2) if mcx_live and dp_now and mcx_open else None
+    # ONE basis on the strip, its clock named: the INDIA BASIS gauge's own value and clock (live MCX ÷ duty-paid landed of
+    # the contract's purity now while a quote exists, else the settlement-clock figure) — the gauge, the verdict and the strip
+    # are built on the same contract, so they cannot differ (C-TRADER-10 / C-BEGINNER-5; wave 1d: five values in ten minutes)
+    hf_live = live_basis(hf) if hf.get("mcx_live") else None
+    live_basis_pct = (
+        ib.get("value") if ib and ib.get("clock") == "now" else (hf_live["value"] if hf_live else None)
+    )
     settle_basis_pct = ib.get("settle_basis_pct") if ib else None
     if settle_basis_pct is None:
         settle_basis_pct = cf.get("basis_pct")
@@ -5247,23 +5882,33 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
         "mcx_live_as_of": mcx_live_at if mcx_live else None,
         "mcx_live_vs_settle_pct": _pct_change(mcx_live, cf.get("settlement")) if mcx_live else None,
         "mcx_shown": "live" if mcx_live and mcx_open else "settlement",
+        # the wave-1d CONTRACT on the strip: the settlement (VWAP30 of the latest session, else the band of its real session)
+        **{k: cf.get(k) for k in mcxr.SETTLE_KEYS},
         "mcx_settle": cf.get("settlement"),
         "mcx_settle_session": cf.get("settlement_session"),
         "mcx_settle_session_label": cf.get("settlement_session_label"),
         "mcx_settle_quality": cf.get("settlement_quality"),
+        "mcx_settle_source": cf.get("settlement_source"),
+        # the unit every MCX price on the strip is in (₹ per 10 g for GOLD / GOLDM / GOLDTEN, per 1 g PETAL, per 8 g GUINEA)
+        "mcx_quote_unit": cf.get("quote_unit"),
         "basis_pct": live_basis_pct if live_basis_pct is not None else settle_basis_pct,
         "basis_clock": "now" if live_basis_pct is not None else "settlement",
         "basis_label": (
-            f"live MCX ({q.get('source') or 'quote'}) vs duty-paid landed now"
+            f"live MCX ({q.get('source') or 'quote'}) vs duty-paid landed at {cf.get('purity')} now"
             if live_basis_pct is not None
             else (ib.get("settle_basis_label") or "settle ÷ that session's duty-paid landed − 1")
         ),
+        "basis_reference": (ib.get("basis_reference") if ib else None) or cf.get("basis_reference"),
+        "basis_contract": f"{code} {_mmy(exp) or ''}".strip(),
+        "purity": cf.get("purity"),
         "basis_live_pct": live_basis_pct,
         "basis_settle_pct": settle_basis_pct,
         "basis_settle_date": (ib.get("settle_basis_date") if ib else None) or cf.get("settlement_session"),
-        # the names the header component already reads (ui/components/gold/HealthStrip.tsx, wave 1c): aliases of the above
+        # the names the header component already reads (ui/components/gold/HealthStrip.tsx, wave 1c): aliases of the above.
+        # `basis_session_label` is the SESSION only ('Wed 04 Nov settlement'): the strip wraps it in its own 'at the … vs
+        # that session's duty-paid' (re-review minor: the full sentence printed 'at the at the … duty-paid landed vs …')
         "basis_session": (ib.get("settle_basis_date") if ib else None) or cf.get("settlement_session"),
-        "basis_session_label": (ib.get("settle_basis_label") if ib else None) or cf.get("settlement_session_label"),
+        "basis_session_label": (ib.get("settle_basis_session_label") if ib else None) or cf.get("settlement_session_label"),
         "cot_mm_net": mm_net,
         "cot_mm_chg": mm_chg,
         "cot_as_of": str(cot_last.get("report_date"))[:10] if cot_last else None,
@@ -5288,11 +5933,13 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
     if brief_rows:
         b = max(brief_rows, key=lambda x: str(x.get("report_date") or ""))
         doc, stripped = brief_doc(b)
+        bb = brief_bias(b, doc)
         brief = {
             "available": True,
             "report_date": str(b.get("report_date"))[:10],
-            "bias": b.get("bias"),
-            "confidence": _f(b.get("confidence")),
+            "bias": bb["bias"],
+            "confidence": bb["confidence"],
+            "bias_withheld": bb["bias_withheld"],
             "overnight_summary": doc.get("overnight_summary"),
             "open_plan": doc.get("open_plan"),
             "key_risks_today": doc.get("key_risks_today") or [],
@@ -5301,16 +5948,11 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
     # the event strip: the FULL next 7 days (stored rows + the computed MCX / COT rows), nothing already past, ordered by
     # impact (FOMC decision / High first) then time; ★ only on High impact or an FOMC decision (C-TRADER-11 / C-DATA-21)
     stored_events = [e for e in (_rows(events_t) if not isinstance(events_t, Exception) else []) if _d(e.get("event_date"))]
-    seen_ev: set[tuple[str, str, str]] = set()
     calendar: list[dict[str, Any]] = []
-    for e in stored_events + computed_events(now.date(), 7):
+    for e in merge_events(stored_events, computed_events(now.date(), 7)):
         d = _d(e.get("event_date"))
         if d is None or d > now.date() + timedelta(days=7) or event_is_past(e, now):
             continue
-        key_ev = (d.isoformat(), event_kind(e), str(e.get("name") or "").lower())
-        if key_ev in seen_ev:
-            continue
-        seen_ev.add(key_ev)
         calendar.append(
             decorate_event(
                 {**e, "event_date": d.isoformat(), "first_seen_at": _iso_any(e.get("first_seen_at")), "days": (d - now.date()).days},
@@ -5339,6 +5981,10 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
             "quote_unit": spec.as_dict()["quotation"],
             "master_published": published.isoformat() if published else None,
             "band": row,
+            # the band's midpoint is the settlement of `band_session`; the band itself MCX's price band of `band_applies_to`
+            "band_session": gp.band_session(published).isoformat() if published else None,
+            "band_applies_to": gp.band_applies_to(published).isoformat() if published else None,
+            "purity": gp.fineness_of(code),
         },
         "session": {
             "mcx": {

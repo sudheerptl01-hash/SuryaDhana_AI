@@ -56,3 +56,16 @@ Two feeds that had never delivered were fixed on the way: the CME FTP `229` pass
 - The Telegram COT digest line first fires Sat 7 Nov 02:30 IST (post-DST calendar); glance at it.
 
 Evidence: `build/wave1.md`, `build/wave1b.md`, `build/wave1c.md`, `critics/`, `qa/`, `FINDINGS.md`, `OWNER_GUIDE.md`.
+
+## Addendum, 6 Nov 2026 00:45 IST — wave 1d (after the 43-page review)
+
+The fair-open model's MCX settlement (the ICICI price-band midpoint) was one session stale: verified with Breeze 1-minute bars
+(Wed 04 Nov last-30-min VWAP ₹1,43,237 vs the page's "Wed 04 Nov settlement" ₹1,39,452, which was Tuesday's). Fixed at the source:
+the band is labelled with its real session and the settlement is now the last-30-min VWAP of the last completed session
+(`mcx_close_vwap30`, 23:58 Mon–Fri; ui-api computes it when the store has none), with a visible check against the band. Also in
+wave 1d: purity-correct basis (one rule), TREND values, MCXG's COMEX month and ticket margin, a fresher Brent, LBMA weekly turnover
+history, the EFP 20-session average (EFRP 2021→, 28,053 rows), and a Kitco-style multi-timeframe, multi-unit chart on DAILY built
+from stored data (Kitco stays a link: its terms forbid scraping). OTC coverage: LBMA weekly turnover, London vault holdings (10
+years, monthly) and CME EFP prints; London has no COT, so OTC positions are not published anywhere. Build record: `build/wave1d.md`.
+Open: the first fair open on the corrected baseline is Fri 6 Nov 08:45 (needs the 08:00 login); WGC/LBMA display posture (O-1)
+and the CME browser files (O-2) remain owner decisions.

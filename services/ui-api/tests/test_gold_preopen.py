@@ -101,7 +101,8 @@ def test_manual_actual_validates_price(tmp_path, monkeypatch):
 
 
 def test_accuracy_stats_empty_and_bias():
-    assert g.accuracy_stats([]) == {"days": 0}
+    empty = g.accuracy_stats([])
+    assert empty["days"] == 0 and empty["stale_baseline_dates"] == [] and empty["excluding_stale"] == {"days": 0}
     s = g.accuracy_stats([{"error": 100, "naive_error": 400}, {"error": -400, "naive_error": -100}], threshold=300)
     assert s["bias"] == -150.0 and s["mean_abs_error"] == 250.0 and s["within_threshold_pct"] == 50.0
 
@@ -120,8 +121,10 @@ class _FrozenDatetime(datetime):
 
 def _chart(symbol: str) -> dict:
     base = {"GCZ26.CMX": 4150.0, "INR=X": 88.1, "DX-Y.NYB": 99.2, "EURUSD=X": 1.16, "^TNX": 4.1, "SI=F": 48.0}[symbol]
-    close = g.mcx_close_time(date(2026, 10, 23))
-    stamps = [int((close + timedelta(minutes=m)).timestamp()) for m in range(-60, 30, 5)]
+    # bars around BOTH closes: the band of Monday's file is the Thu 22 Oct settlement (wave 1d), so the references sit at
+    # Thursday's close; Friday's keep the series realistic
+    stamps = [int((g.mcx_close_time(date(2026, 10, d)) + timedelta(minutes=m)).timestamp())
+              for d in (22, 23) for m in range(-60, 30, 5)]
     closes = [round(base * (1 + 0.0005 * i), 4) for i in range(len(stamps))]
     return {"chart": {"result": [{"meta": {"regularMarketPrice": closes[-1] * 1.002, "regularMarketTime": stamps[-1]},
                                   "timestamp": stamps, "indicators": {"quote": [{"close": closes}]}}]}}
@@ -168,8 +171,11 @@ def desk(monkeypatch: pytest.MonkeyPatch):
     """The gold desk with every upstream replaced: ICICI master, Breeze and the treasury fetch stubbed, httpx
     pointed at _Upstream, the clock frozen. Yields a function that installs an _Upstream and returns it."""
     g._cache.clear()
+    g._settle_cache.clear()
+    g._settle_calls.clear()
     g._yahoo_inflight.clear()
     g._bg_inflight.clear()
+    monkeypatch.setenv("GOLD_STORED_VWAP", "0")          # never the live data-service's stored VWAP from a test
     monkeypatch.setattr(g, "_load_mcx_master", lambda: (HEADER + ROWS, date(2026, 10, 26)))
     monkeypatch.setattr(g, "_breeze_mcx_quote", lambda expiry: None)
     monkeypatch.setattr(g, "_breeze_mcx_open", lambda expiry, day: None)

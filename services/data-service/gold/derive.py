@@ -15,9 +15,9 @@ from typing import Any
 
 import pandas as pd
 
-from gold import db, pit
+from gold import db, mcx_close, pit
 from gold.db import utcnow
-from gold.ingest_india import duty_on
+from gold.ingest_india import duty_on, landed_factor, purity_factor
 from shared.logging import get_logger
 
 logger = get_logger(__name__)
@@ -67,8 +67,10 @@ def _frame(sid: str, s: pd.Series, *, now: datetime, quality: str = "derived") -
 # ── derive_india (M5–M8, ATR14) ─────────────────────────────────────────────────────────────────────
 
 def derive_india(store: Any, *, now: datetime | None = None, days: int = 400) -> dict[str, Any]:
-    """Landed ₹/10 g, duty-paid landed, the India premium (IBJA 999 PM vs duty-paid × 999/995), the MCX basis vs
-    duty-paid landed (front GOLD settle), the carry-adjusted basis, ATR14 in ₹/10 g (from COMEX H/L/C × INR)."""
+    """Landed ₹/10 g of FINE gold, duty-paid landed, the India premium (IBJA 999 PM vs duty-paid × 0.999), the MCX basis
+    vs duty-paid landed × 0.995 (the GOLD front settlement of each session: VWAP30 proxy, else the re-keyed band midpoint;
+    quality ``derived_vwap30`` / ``derived_band``), the carry-adjusted basis, ATR14 in ₹/10 g (from COMEX H/L/C × INR).
+    Purity (PM decision D1): landed is per fine gold; purity P compares with landed × P / 1000 (``ingest_india``)."""
     now = now or utcnow()
     gc = _bars(store, "GC=F", days, now).set_index("trade_date")
     inr_bars = _bars(store, "INR=X", days, now).set_index("trade_date")["close"] if not _bars(store, "INR=X", 5, now).empty else pd.Series(dtype="float64")
@@ -90,19 +92,26 @@ def derive_india(store: Any, *, now: datetime | None = None, days: int = 400) ->
     ibja = _series(store, "IBJA_999_PM", days, now=now)
     if not ibja.empty:
         k = _align(ibja.rename("ibja"), duty_paid.rename("dp"))
-        prem = (k["ibja"] / (k["dp"] * 999.0 / 995.0) - 1.0) * 100.0
+        prem = (k["ibja"] / (k["dp"] * purity_factor(999)) - 1.0) * 100.0          # D1: IBJA 999 vs fine landed × 0.999
         frames.append(_frame("INDIA_PREMIUM_PCT", prem.round(3), now=now))
-    front = db.query_df(store, """
-        SELECT trade_date, settle, expiry FROM gold_curve WHERE exchange = 'MCX' AND symbol = 'GOLD' AND expiry >= trade_date
-        QUALIFY ROW_NUMBER() OVER (PARTITION BY trade_date ORDER BY expiry) = 1 ORDER BY trade_date""")
+    # wave 1d: the GOLD front settlement of EACH session (Breeze VWAP30 proxy, else the band midpoint re-keyed to the
+    # session it belongs to — the master's band is one session older than its OI), divided by THAT session's duty-paid
+    # landed price at the contract's purity (D1: GOLD is 995 fine → fine landed × 0.995; ingest_india.landed_factor)
+    front = mcx_close.session_settlements(store, "GOLD", asof=now)
     if not front.empty:
-        f = front.set_index(pd.to_datetime(front["trade_date"]))
-        k = _align(f["settle"].rename("mcx"), duty_paid.rename("dp"))
+        f = front.set_index(pd.to_datetime(front["session"]))
+        factor, _ref = landed_factor("GOLD")
+        k = _align(f["settle"].rename("mcx"), (duty_paid * factor).rename("dp"))
         basis = (k["mcx"] / k["dp"] - 1.0) * 100.0
-        frames.append(_frame("MCX_BASIS_PCT", basis.round(3), now=now))
+        src = f["source"].reindex(k.index)
+        for source, quality in (("breeze_vwap30", "derived_vwap30"), ("band_midpoint", "derived_band")):
+            mask = src == source
+            frames.append(_frame("MCX_BASIS_PCT", basis[mask].round(3), now=now, quality=quality))
         dte = pd.Series([(pd.Timestamp(e) - d).days for d, e in zip(f.index, f["expiry"])], index=f.index).reindex(k.index)
         carry = CARRY_RATE_PCT * dte / 365.0
-        frames.append(_frame("MCX_BASIS_CARRY_ADJ_PCT", (basis - carry).round(3), now=now))
+        for source, quality in (("breeze_vwap30", "derived_vwap30"), ("band_midpoint", "derived_band")):
+            mask = src == source
+            frames.append(_frame("MCX_BASIS_CARRY_ADJ_PCT", (basis - carry)[mask].round(3), now=now, quality=quality))
     if len(gc) >= 15:
         h, lo, c = gc["high"] * j["inr"] / GRAMS_PER_OZ * 10.0, gc["low"] * j["inr"] / GRAMS_PER_OZ * 10.0, landed
         prev_c = c.shift(1)

@@ -47,7 +47,7 @@ import master_controller as mc
 IST = mc.IST
 PLAN_C3_JOBS = ["gold_overnight", "gold_intraday_bars", "gold_morning", "gold_mcx_master", "gold_health_snapshot",
                 "gold_brief_ingest", "gold_calendar_refresh", "gold_india_midday", "gold_cme_daily", "gold_asia_close",
-                "gold_india_pm", "gold_fred_daily", "gold_cot_weekly", "gold_weekly", "gold_cme_calendar"]
+                "gold_india_pm", "gold_fred_daily", "gold_cot_weekly", "gold_weekly", "gold_cme_calendar", "gold_mcx_close"]
 # PLAN §f / O-14: no gold alert implies a direction. "does not forecast" and "no forecasting power" are the
 # disclaimers themselves (negated, or the -ing form), so they are not direction words.
 DIRECTION_WORDS = re.compile(r"\b(bullish|bearish|buy|sell|go long|go short|long gold|short gold|target|(?<!not )forecast[s]?)\b",
@@ -230,6 +230,7 @@ def test_every_plan_c3_job_is_registered_with_its_ist_times_and_dormant_ones_are
     assert _fires(trig["gold_brief_ingest"], ref, 2) == ["Sat 24 09:05", "Sun 25 09:05"]
     assert _fires(trig["gold_calendar_refresh"], ref, 2) == ["Fri 23 23:00", "Sat 24 09:00"]
     assert _fires(trig["gold_intraday_bars"], ref, 2) == ["Fri 23 22:05", "Fri 23 22:10"]
+    assert _fires(trig["gold_mcx_close"], ref, 3) == ["Fri 23 23:58", "Sat 24 00:15", "Mon 26 23:58"]
 
 
 def test_no_heavy_gold_job_is_scheduled_inside_a_freeze_window():
@@ -254,7 +255,7 @@ def test_key_jobs_max_age_rows_and_groups_per_day():
     assert {"gold_overnight", "gold_cot_weekly", "gold_mcx_master"} <= mc._KEY_JOBS
     # Terminal v2 0.9 extended the downtime re-run (backfill_from) to the Asia-close, morning, India and health jobs
     assert mc.GOLD_KEY_JOBS == ("gold_overnight", "gold_morning", "gold_mcx_master", "gold_health_snapshot",
-                                "gold_india_midday", "gold_asia_close", "gold_india_pm", "gold_cot_weekly")
+                                "gold_india_midday", "gold_asia_close", "gold_india_pm", "gold_cot_weekly", "gold_mcx_close")
     assert mc.GOLD_MAX_AGE_DAYS == {"gold_cot": 9, "gold_curve": 4, "gold_daily_bars": 4, "gold_etf_holdings": 5,
                                     "gold_cme_daily_voi": 4}
     assert not hasattr(mc, "DATASET_MAX_AGE_DAYS"), "retired (Terminal v2 1.4): expected_by + max_age sessions via /api/data/health"

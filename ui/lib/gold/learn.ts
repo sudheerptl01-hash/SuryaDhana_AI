@@ -271,9 +271,9 @@ export const ROUTINES: readonly Routine[] = [
       { text: 'h.open: fair vs settlement, COMEX part vs rupee part (h.moved), the event-risk chip; decide OK/WAIT before 09:00, remembering the chip says the ₹300 limit is unproven.', sub: 'health', panel: 'h.open', panels: ['h.open', 'h.moved'] },
       { text: 'mc.drivers: what changed overnight and why (h.headlines); any scheduled event today (h.events, after-close flag).', sub: 'macro', panel: 'mc.drivers', panels: ['mc.drivers', 'h.headlines', 'h.events'] },
       { text: 'd.quadrant: yesterday\'s OI × price for COMEX (T+1) and MCX (07:35); roll/expiry caveat.', sub: 'daily', panel: 'd.quadrant', panels: ['d.quadrant'] },
-      { text: 'mc.move: ATR ₹, the 1σ day per lot, max lots at 1% risk, cash headroom; c.roll if a tender cut-off is within 7 days.', sub: 'macro', panel: 'mc.move', panels: ['mc.move', 'c.roll'] },
+      { text: 'mc.move: ATR ₹ and the 1σ day per lot (max lots at 1 % risk: the MCXG ticket); c.roll if a tender cut-off is within 7 days.', sub: 'macro', panel: 'mc.move', panels: ['mc.move', 'c.roll'] },
     ],
-    evening: 'Evening (23:00–23:30): d.24h COMEX settlement vs MCX close; tomorrow\'s events; the settlement window is the last 30 min.',
+    evening: 'Evening (the last 30 min before the MCX close: 23:25–23:55 in US winter, 23:00–23:30 in summer): d.24h COMEX vs the MCX close; tomorrow\'s events; MCX settles on the VWAP of those 30 min.',
   },
   {
     id: 'weekly', title: 'Weekly', when: 'Saturday morning, 20 minutes',

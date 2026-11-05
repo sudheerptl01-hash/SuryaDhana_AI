@@ -18,9 +18,9 @@ import { fmtSigned, fmtSignedInr } from '@/lib/format'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chip, Input, Label, Loading, Notice, Panel, Stat, T, fmtInr, fmtNum, indianGrouping, sourceOf, inputSource } from '@/components/terminal'
 import { getGoldFair } from '@/lib/gold/api'
-import { comexCode, fmtInr0, morningCall, parseIso, preOpenCopyB, sessionLabel } from '@/lib/gold/format'
+import { bandReferenceLine, baselineSettlement, comexCode, dayLabel, fmtInr0, morningCall, parseIso, preOpenCopyB, sessionLabel, settlementLine, settlementNoteShort, settlementQualityChip } from '@/lib/gold/format'
 import { readTriggers, writeTriggers } from '@/lib/gold/prefs'
-import type { CatalogRow, GoldContractSel, GoldFair, Layer } from '@/lib/gold/types'
+import type { CatalogRow, GoldContractSel, GoldFair, HealthFair, Layer } from '@/lib/gold/types'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
 import { GoldAccuracyLog, useGoldLog } from './GoldAccuracyLog'
 import { Term } from './ViewBits'
@@ -87,7 +87,7 @@ export function Waterfall({ base, comex, inr }: { base: number; comex: number; i
   )
 }
 
-export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }: { sel?: GoldContractSel; layer?: Layer; tooltips?: Record<string, string>; catalog?: Record<string, CatalogRow> | null }) {
+export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, fair = null }: { sel?: GoldContractSel; layer?: Layer; tooltips?: Record<string, string>; catalog?: Record<string, CatalogRow> | null; fair?: HealthFair | null }) {
   const [saved, setSaved] = useState<Saved>(blank)
   const [trigger, setTrigger] = useState<string>('1.1161')
   const [data, setData] = useState<GoldFair | null>(null)
@@ -158,6 +158,16 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }:
   const todayRow = call.phase === 'call' ? call.row : null
   const callDone = call.phase === 'call'
   const stats = logState.log?.stats ?? (acc ? { days: acc.days, median_abs_error: acc.median_abs_error, mean_abs_error: acc.mean_abs_error, naive_mean_abs_error: acc.naive_mean_abs_error } : null)
+  // wave 1d: the baseline names its source, session and quality; the band is the master's and names the session it belongs to
+  const overridden = num(saved.baseline) != null
+  const bl = useMemo(() => baselineSettlement(data, fair, sel?.family), [data, fair, sel?.family])
+  const blNote = overridden ? null : settlementNoteShort(bl)
+  // the band's value prints once per view: in the header strip's note when the check flags, else here (PLAN §f.6, round 2)
+  const bandRef = overridden ? null : bandReferenceLine(bl, blNote?.tone !== 'amber')
+  const bandDay = dayLabel(bl?.band_session)
+  const bandApplies = dayLabel((data?.contract as { band_applies_to?: string | null } | undefined)?.band_applies_to ?? null)
+  // the server's own flagged-check note repeats the strip's numbers: not printed here when the check is shown (PLAN §f.6)
+  const notes = (data?.notes ?? []).filter(n => !(blNote && /ICICI band midpoint/i.test(n)))
 
   return (
     <GoldPanel id="h.open" title="Today's open" accent={T.amber} badge="arithmetic" layer={layer} catalog={catalog}
@@ -165,7 +175,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }:
       subtitle={data ? `${data.contract.name} ↔ COMEX ${comexCode(data.contract.comex)} · updated ${istTime(data.as_of)} IST · every 60 s` : 'MCX gold fair open from COMEX and the rupee'}
       freshness={data ? (data.freshness ?? { state: 'delayed', source: 'Yahoo', as_of: data.as_of }) : null}
       copyB={<>{preOpenCopyB(stats, threshold)} The <Term t="fair open" /> is arithmetic; the <Term t="chase limit" /> is the house rule.</>}
-      copyP={`Multiplicative: settlement × COMEX ratio × USD/INR ratio; references are 30-min averages before the MCX close; settlement = ICICI band midpoint (PROXY). ${preOpenCopyB(stats, threshold).replace(/^Where MCX .*?close\. /u, '')} After 09:15 the panel shows the 08:45 snapshot against the captured open, never the live fair value.`}
+      copyP={`Multiplicative: settlement × COMEX ratio × USD/INR ratio; references are 30-min averages before the MCX close; settlement = last-30-min VWAP of the Breeze 1-minute bars (PROXY), else the ICICI band midpoint (PROXY; flagged when the two differ > 0.6 %). ${preOpenCopyB(stats, threshold).replace(/^Where MCX .*?close\. /u, '')} After 09:15 the panel shows the 08:45 snapshot against the captured open, never the live fair value.`}
       right={<>
         {loading && <span className="t-pulse" style={{ fontSize: 10, color: T.amber }}>UPDATING</span>}
         <Chip color={T.amber} onClick={fetchData} title="Recompute now">↻</Chip>
@@ -221,10 +231,14 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }:
         </div>
       )}
 
+      {/* wave 1d: the band-vs-VWAP check, visible — amber when the ICICI band belongs to another session */}
+      {blNote && <div data-gold-settle-note={blNote.tone} style={{ padding: '6px 10px', border: `1px solid ${blNote.tone === 'amber' ? T.amber : T.border}`, background: blNote.tone === 'amber' ? `${T.amber}10` : 'transparent',
+                                                         fontSize: 11, color: blNote.tone === 'amber' ? T.amber : T.muted }} title={tip('settlement_check')}>⚠ {blNote.text}</div>}
+
       {/* 2. the five numbers */}
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
         <Stat label={<span title={tip('baseline')}>Baseline · MCX settlement</span>} value={fmtInr(base)} accent={T.violet}
-          sub={`${sessionLabel(data.baseline.session, data.baseline.session_label)}${data.baseline.source ? ` · ${data.baseline.source}` : ''}`} />
+          sub={<span data-gold-baseline-source data-gold-baseline-quality={overridden ? 'override' : settlementQualityChip(bl?.settlement_quality, bl?.settlement_source)} title={tip('settlement_source')}>{overridden ? 'your typed close (override)' : settlementLine(bl)}</span>} />
         <Stat label={<span title={tip('fair_open')}>{marketOpen ? 'Fair value now (model, not the 08:45 call)' : 'Fair open (model)'}</span>} value={fmtInr(m.fair_open)} accent={T.amber} color={T.amber}
           sub={m.gap_pct != null ? `${fmtSigned(m.gap_pct, 2)}% vs baseline` : '—'} />
         <Stat label={<span title={tip('gap')}>Expected gap</span>} value={fmtSignedInr(m.gap)} color={(m.gap ?? 0) >= 0 ? T.green : T.red} accent={(m.gap ?? 0) >= 0 ? T.green : T.red}
@@ -247,13 +261,14 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }:
             <b style={{ color: T.text }}> ₹{fx(m.rs_per_inr_rupee, 0)}</b> per ₹1 on USD/INR
             {m.comex && <> · COMEX {comexCode(m.comex.symbol)} {fx(m.comex.now, 1)} vs {fx(m.comex.ref, 1)} at the close</>}
             {m.inr && <> · ₹/$ {fx(m.inr.now, 3)} vs {fx(m.inr.ref, 3)}</>}.
-            {data.contract.band_low != null && <> Today&apos;s MCX band {fmtInr(data.contract.band_low)} – {fmtInr(data.contract.band_high)} (±{data.contract.band_pct}%).</>}
+            {data.contract.band_low != null && <> The master&apos;s MCX band {fmtInr(data.contract.band_low)} – {fmtInr(data.contract.band_high)} (±{data.contract.band_pct}%){bandDay ? <>, set around the {bandDay} settlement{bandApplies ? <>, applied on {bandApplies}</> : null}</> : ' (the session it was set around is not stated)'}.</>}
+            {bandRef && <span style={{ color: T.dim }}> {bandRef}.</span>}
           </div>
         </Panel>
 
         <Panel source={inputSource('your pre-open inputs (synced)')} title="Your inputs" subtitle="saved for today · synced" accent={T.violet} pad={10} bodyStyle={{ display: 'grid', gap: 10 }}>
           <Input label="MCX close override (₹ / 10 g)" value={saved.baseline} onChange={b => update({ baseline: b })}
-            placeholder={data.baseline.settlement_from_band ? `auto: ${fmtInr(data.baseline.settlement_from_band)}` : 'e.g. 149400'} />
+            placeholder={base != null && !overridden ? `auto: ${fmtInr(base)}` : data.baseline.settlement_from_band ? `auto: ${fmtInr(data.baseline.settlement_from_band)}` : 'e.g. 149400'} />
           <Input label="MCX price now / pre-open (₹)" value={saved.mcx} onChange={x => update({ mcx: x })}
             placeholder={data.mcx_price.source === 'ICICI Breeze' ? `live: ${fmtInr(mcxNow)}` : 'type the opening price'} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -261,7 +276,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }:
             <Input label="EUR/USD trigger" value={trigger} onChange={updateTrigger} />
           </div>
           <div style={{ fontSize: 10, color: T.muted, lineHeight: 1.5 }}>
-            Leave the close empty to use the {sessionLabel(data.baseline.session, data.baseline.session_label)}. Connect ICICI on BRKR and the MCX price fills itself.
+            Leave the close empty to use the {sessionLabel(bl?.settlement_session, bl?.settlement_session_label)} ({settlementLine(bl).replace(/^[^·]*· /u, '')}). Connect ICICI on BRKR and the MCX price fills itself.
           </div>
         </Panel>
       </div>
@@ -291,11 +306,12 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }:
 
       {/* 5. method + data notes */}
       <div style={{ display: 'grid', gap: 6 }}>
-        {(data.notes ?? []).map(n => <Notice key={n} color={T.amber}>{indianGrouping(n)}</Notice>)}
+        {notes.map(n => <Notice key={n} color={T.amber}>{indianGrouping(n)}</Notice>)}
         <div style={{ fontSize: 10, color: T.dim, lineHeight: 1.6 }}>
           <Label>Method</Label> Fair open = MCX settlement × COMEX ratio × USD/INR ratio, references averaged over the last 30 minutes
-          before MCX closed ({istTime(data.baseline.close_time)} IST). Settlement = midpoint of MCX&apos;s ±3% daily band
-          from ICICI&apos;s public contract file (PROXY). USD/INR before 09:00 is the offshore quote. Research tool, not advice.
+          before MCX closed ({istTime(data.baseline.close_time)} IST). Settlement = the volume-weighted average of the last 30 minutes of
+          the completed session&apos;s Breeze 1-minute bars (MCX&apos;s own settlement method; a PROXY, not the bhavcopy); without bars, the
+          midpoint of the ±3% band in ICICI&apos;s public contract file (PROXY, set around an earlier session). USD/INR before 09:00 is the offshore quote. Research tool, not advice.
           <span style={{ marginLeft: 6 }}><LagChipEl freshness={{ state: 'delayed', source: 'Yahoo' }} /></span>
         </div>
       </div>

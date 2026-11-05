@@ -401,7 +401,7 @@ check('tapeReadout: flat only with two known deltas; the server label wins', tr(
 check('tapeReadout: a delta spanning missing sessions is named', tr({ trade_date: '2026-11-03', dprice_pct: -2.45, doi: 863, label: 'short build-up' }, '2026-10-29').note === 'Δ over 3 sessions (rows missing between)' && tr({ trade_date: '2026-11-03', dprice_pct: -2.45, doi: 863, label: 'short build-up' }, '2026-11-02').note === null)
 check('OiQuadrantTape renders through tapeReadout and takes the missing-OI reason from the caller', /tapeReadout\(/.test(sources['gold/OiQuadrantTape.tsx']) && !/\?\? 'flat'/.test(sources['gold/OiQuadrantTape.tsx']) && /missingOiNote=\{CME_OI_LAG\}/.test(posSrc) && /missingOiNote=\{MCX_OI_LAG\}/.test(posSrc))
 // C-TRADER-28 / C-TRADER-13: calendar days, as the server counts them
-check('roll distances print as days, never sessions', /days to FND/.test(posSrc) && /days to tender/.test(posSrc) && !/sessions to (FND|tender)/.test(posSrc))
+check('roll distances print as days, never sessions', /days to FND/.test(posSrc) && (/days to tender/.test(posSrc) || (/tenderWords\(/.test(posSrc) && /days to tender/.test(M.tenderWords(3, null)))) && !/sessions to (FND|tender)/.test(posSrc) && !/sessions/.test(M.tenderWords(3, null)))
 // C-BEGINNER-16 / C-DATA-17: p.asia — no uncatalogued id, no placeholder row; the release build hides the panel until ui-api serves gold_asia_daily
 check('p.asia requests no uncatalogued series id and prints no "no verdict" placeholder', !/SGE_AUTD|SHFE_AU_FRONT_OI|getGoldSeries/.test(posSrc) && !/not published/.test(posSrc) && /data-asia-pending/.test(posSrc))
 check('p.asia is gated out of the release build (PLAN §f.2) and the gate reads NODE_ENV', /const RELEASE_BUILD = process\.env\.NODE_ENV === 'production'/.test(posSrc) && /\{!RELEASE_BUILD && <GPanel id="p\.asia"/.test(posSrc))
@@ -451,6 +451,21 @@ check('the docked glossary is mounted once by GoldPage (every Term opens it); LE
 check('WGC / SPDR / IBJA / SGE panels carry an attribution line', /Attribution sources=\{\['IBJA'\]\}/.test(sources['gold/PhysicalView.tsx']) && /Attribution sources=\{\['SPDR', 'WGC'\]\}/.test(sources['gold/PhysicalView.tsx']) && /Attribution sources=\{\['SGE', 'WGC'\]\}/.test(sources['gold/PhysicalView.tsx']) && /Attribution sources=\{\['SGE'\]\}/.test(sources['gold/PositioningView.tsx']))
 check('context metrics render in the neutral token (no green/red on a context Stat)', !/color=\{T\.(green|red)\}/.test(sources['gold/PositioningView.tsx'] + sources['gold/PhysicalView.tsx'] + sources['gold/MacroView.tsx']))
 check('no composite score anywhere in the B4B views', !/\bscore\b/i.test(sources['gold/PositioningView.tsx'] + sources['gold/PhysicalView.tsx'] + sources['gold/MacroView.tsx']))
+
+// ── wave 1d (5 Nov 2026 review / REREVIEW): vol points, the OI-quadrant label, tender words, the SGE date, MONTHLY's labels ──
+check('1d GVZ changes print in vol points, never bp (REREVIEW: "1w +121 bp")', M.driverDelta({ unit: '%', change_unit: 'bp', key: 'gvz' }, 1.21) === '+1.21 vol pts' && M.driverDelta({ unit: '%', change_unit: 'bp', series_id: 'GVZ_CLOSE' }, -1.71) === '−1.71 vol pts')
+check('1d negative control: the real yield keeps bp (only a vol index is in vol points)', M.driverDelta({ unit: '%', change_unit: 'bp', key: 'real_10y' }, 0.02) === '+2 bp' && !M.isVolIndex({ key: 'real_10y' }))
+check('1d p.hero: the exchange-OI word is SAID to be the OI quadrant, with the OI change', M.oiQuadrantWords('long unwinding', -5469) === 'OI quadrant: long unwinding (OI −5,469)' && M.oiQuadrantWords(null, 1) === 'OI quadrant: —' && /oiQuadrantWords\(c\.quadrant_label/.test(sources['gold/PositioningView.tsx']))
+check('1d tender days are never negative: "in tender since …"', M.tenderWords(-4, 'Sun 01 Nov') === 'in tender since Sun 01 Nov (4 d)' && M.tenderWords(26, null) === '26 days to tender' && M.tenderWords(1, null) === '1 day to tender' && M.tenderWords(0, 'Tue 01 Dec') === 'tender starts today (Tue 01 Dec)' && M.tenderWords(null, null) === 'days to tender —')
+check('1d negative control: the view prints tenderWords, not a bare "{n} days to tender"', /tenderWords\(data\.roll\.days_to_tender_or_fnd/.test(sources['gold/PositioningView.tsx']) && !/num\(data\.roll\.days_to_tender_or_fnd, 0\)\} days to tender/.test(sources['gold/PositioningView.tsx']))
+check('1d the SGE CNY/g is dated by its own date (sge_pm_date), and a newer print stands alone', /data-sge-date=\{sh\.sge_pm_date/.test(sources['gold/PhysicalView.tsx']) && /data-sge-latest/.test(sources['gold/PhysicalView.tsx']) && !/\$\{istLabel\(pairing\.sgeDate\)\}`\} \/>/.test(sources['gold/PhysicalView.tsx']))
+check('1d the Fed path rows are labelled as tracker horizons, not FOMC dates; the KGX W window says it is not HEALTH\'s', /data-gold-fed-rows/.test(sources['gold/MacroView.tsx']) && /not FOMC decision dates/.test(sources['gold/MacroView.tsx']) && /data-gold-kgx-window/.test(sources['gold/MacroView.tsx']))
+check('1d the US calendar and the official-sector table are not clipped inside their panels', !/maxHeight=\{280\}/.test(sources['gold/MacroView.tsx']) && !/maxHeight=\{260\}/.test(sources['gold/PhysicalView.tsx']))
+check('1d PHYSICAL: the ladder basis names its settle source and the landed purity', /settlementLine\(/.test(sources['gold/PhysicalView.tsx']) && /basisPurityShort\(india\?\.basis_reference\)/.test(sources['gold/PhysicalView.tsx']))
+const mvSrc = read('components/gold/MonthlyView.tsx')
+check('1d MONTHLY: HY OAS is labelled in % (the value is percent); the official panel is dated by its newest month; the WGC chart has a tonnage axis and quarter labels',
+  /HY OAS \(%; × 100 = bp\)/.test(mvSrc) && !/'HY OAS \(bp\)'/.test(mvSrc) && /latestMonth\(purchases\)/.test(mvSrc) && /data-gold-balance-axis/.test(mvSrc) && /quarterLabel\(p\)/.test(mvSrc))
+check('1d low-contrast accents never grey a panel title out', /data-gold-title-readable/.test(read('components/gold/kit.tsx')))
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nall gold view checks passed')
 process.exit(failures ? 1 : 0)

@@ -28,7 +28,7 @@ import asyncio
 import csv
 import io
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -73,8 +73,9 @@ MASTER_ALIASES = {"GOLD": "GOLD", "GOLDM": "GOLDM", "GOLDMI": "GOLDM",
                   "GOLDPETAL": "GOLDPETAL", "GOLDPE": "GOLDPETAL",
                   "GOLDGUINEA": "GOLDGUINEA", "GOLDGU": "GOLDGUINEA"}
 # Breeze stock_code for MCX = ICICI's short name, NOT the MCX symbol. GOLD is verified
-# (gold_preopen); the four minis are from the master — LIVE-VERIFY after the 08:00 login (PLAN §i O-8).
-BREEZE_CODE = {"GOLD": "GOLD", "GOLDM": "GOLDMI", "GOLDTEN": "GOLDTE", "GOLDPETAL": "GOLDPE", "GOLDGUINEA": "GOLDGU"}
+# (gold_preopen); the four minis are from the master — LIVE-VERIFY after the 08:00 login (PLAN §i O-8). ONE table, kept in
+# gold_preopen (its accuracy-log checks need it too).
+BREEZE_CODE = gp.BREEZE_CODE
 
 # GOLDTEN until shared/mcx_specs.CONTRACTS carries it (B3 patch request; the shared row wins once it exists):
 # 10 g lot, quoted ₹ per 10 g, 999 purity, monthly, month-end expiry, tick ₹1 = ₹1 per lot (SOURCES.md F1, G-INDIA §4).
@@ -232,8 +233,12 @@ def _breeze_quote(code: str, expiry: date, today: date, after_open: bool) -> dic
             bars = sorted((b for b in bars or [] if str(b.get("datetime", "")).startswith(today.isoformat())),
                           key=lambda b: b["datetime"])
             if bars and bars[-1].get("close"):
+                # the day's range from the same bars (5 Nov review: HIGH / LOW printed '— / —' while the bars existed)
+                highs = [h for h in (_num(b, "high") for b in bars) if h is not None]
+                lows = [x for x in (_num(b, "low") for b in bars) if x is not None]
                 quote = {"ltp": float(bars[-1]["close"]), "open": float(bars[0]["open"]) if bars[0].get("open") else None,
-                         "high": None, "low": None, "previous_close": None,
+                         "high": max(highs) if highs else None, "low": min(lows) if lows else None,
+                         "previous_close": None, "range_from": "today's 1-minute bars",
                          "time": bars[-1]["datetime"], "source": "ICICI Breeze (1-min bars)"}
                 return {"available": True, "quote": quote, "reason": None, "attempted": True}
         except Exception:  # noqa: BLE001
@@ -245,18 +250,148 @@ def _breeze_quote(code: str, expiry: date, today: date, after_open: bool) -> dic
     return {"available": False, "quote": None, "reason": reason, "attempted": True}
 
 
+# ── the settlement every number divides by (wave 1d: gold_preopen.settlement_block) ──
+
+SETTLE_KEYS = ("settlement", "settlement_source", "settlement_session", "settlement_session_label", "settlement_quality",
+               "settlement_method", "settlement_note", "settlement_is_latest", "band_midpoint", "band_session",
+               "band_session_label", "band_applies_to", "latest_session", "latest_session_label", "settlement_check", "vwap30")
+
+
+def vwap30_series_id(code: str, expiry: date) -> str:
+    """data-service's per-contract series id (gold/mcx_close.series_id): 'MCX_GOLD_202612_VWAP30'."""
+    return f"MCX_{code}_{expiry:%Y%m}_VWAP30"
+
+
+STORED_MISS_TTL_S = 300.0   # a (contract, session) data-service has not stored is asked again after 5 min, not per request
+
+
+def stored_vwap_enabled() -> bool:
+    """GOLD_STORED_VWAP=1/0 decides; unset, it is on except under pytest (a test never reads the live data-service)."""
+    import os
+
+    flag = os.environ.get("GOLD_STORED_VWAP", "").strip()
+    if flag in ("0", "1"):
+        return flag == "1"
+    try:
+        from shared.http_guard import in_test_mode
+        if in_test_mode():
+            return False
+    except ImportError:
+        pass
+    return True
+
+
+def _stored_point(series: dict[str, list[dict[str, Any]]], code: str, expiry: date, session: date) -> dict[str, Any] | None:
+    """One stored VWAP30 point as a `gold_preopen.session_vwap` result, or None. Pure."""
+    sid = vwap30_series_id(code, expiry)
+    pt = next((p for p in reversed(series.get(sid) or []) if str(p.get("report_date"))[:10] == session.isoformat()), None)
+    if pt is None or not pt.get("value"):
+        return None
+    lots = next((p for p in reversed(series.get(f"{sid}_LOTS") or []) if str(p.get("report_date"))[:10] == session.isoformat()),
+                None)
+    close_at = gp.session_close_at(session)
+    return {"status": "ok", "value": round(float(pt["value"]), 1), "bars": None, "volume": (lots or {}).get("value"),
+            "method": "volume-weighted", "window": f"{close_at - timedelta(minutes=gp.VWAP_WINDOW_MIN):%H:%M}–{close_at:%H:%M} IST",
+            "last_close": None, "session": session.isoformat(), "source": "breeze_vwap30", "read_by": "data-service (stored)",
+            "stock_code": BREEZE_CODE.get(code, code), "expiry": expiry.isoformat(), "window_complete": True}
+
+
+async def fill_stored_vwaps(items: list[tuple[str, date, date]]) -> int:
+    """ONE data-service read (`/db/gold/series`) for every (family, expiry, session) not known yet: each stored
+    `MCX_<FAMILY>_<YYYYMM>_VWAP30` point (G-DATA's 23:58 job, point-in-time) is cached under the SAME key as ui-api's own
+    Breeze read, so that session costs no call on any path; a key not stored is remembered for STORED_MISS_TTL_S. Returns
+    how many were found. Never raises."""
+    if not stored_vwap_enabled():
+        return 0
+    todo: list[tuple[str, date, date]] = []
+    for code, expiry, session in dict.fromkeys(items):
+        hit = gp.session_vwap_cached(BREEZE_CODE.get(code, code), expiry, session)
+        if (hit is not None and hit.get("status") == "ok") or _cache.get(f"stored_vwap_miss:{code}:{expiry}:{session}"):
+            continue
+        todo.append((code, expiry, session))
+    if not todo:
+        return 0
+    ids = sorted({vwap30_series_id(c, e) for c, e, _ in todo})
+    oldest = min(s for _, _, s in todo)
+    try:
+        from routers import gold as goldr   # late import: gold imports this module
+        days = max(10, (goldr._now_ist().date() - oldest).days + 3)
+        series = await goldr.fetch_series(goldr.Reads(), ids + [f"{i}_LOTS" for i in ids], days=days)
+    except Exception:  # noqa: BLE001 — the Breeze read is the fallback
+        return 0
+    found = 0
+    for code, expiry, session in todo:
+        res = _stored_point(series, code, expiry, session)
+        if res is None:
+            _cache.set(f"stored_vwap_miss:{code}:{expiry}:{session}", True, ttl=STORED_MISS_TTL_S)
+            continue
+        gp._settle_cache.set(gp._settle_key(BREEZE_CODE.get(code, code), expiry, session), res, ttl=gp.SETTLE_OK_TTL_S)
+        found += 1
+    return found
+
+
+async def _stored_vwap30(code: str, expiry: date, session: date) -> dict[str, Any] | None:
+    """The stored last-30-min VWAP of (contract, expiry, session) from data-service, as a `session_vwap` result; None when it
+    is not stored (or the store is down)."""
+    await fill_stored_vwaps([(code, expiry, session)])
+    hit = gp.session_vwap_cached(BREEZE_CODE.get(code, code), expiry, session)
+    return hit if hit and hit.get("read_by") == "data-service (stored)" else None
+
+
+async def session_vwap_any(code: str, expiry: date, session: date, wait_s: float | None = None) -> dict[str, Any]:
+    """One session's VWAP30 through the ONE path (round-2 checker: the desk, CONTRACTS and the MCX tape read the same way):
+    the cache → data-service's stored value → ONE Breeze read (waited for at most `wait_s`)."""
+    await fill_stored_vwaps([(code, expiry, session)])
+    return await gp.session_vwap_async(BREEZE_CODE.get(code, code), expiry, session,
+                                       gp._settle_wait() if wait_s is None else wait_s)
+
+
+async def settlement_vwaps(code: str, expiry: date, latest: date, *, wait: bool = True,
+                           wait_s: float | None = None) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """(the latest session's VWAP30 result, the PREVIOUS session's when already known) for a settlement block — the cache,
+    then data-service's stored values (both sessions in one read), then ONE Breeze read for the latest session (`wait=False`:
+    queued on the background thread, never waited for). The previous session is never read from Breeze here: it only
+    stands in, labelled with its own session, when it is known and the latest is not (fresher than a two-session-old band)."""
+    stock = BREEZE_CODE.get(code, code)
+    prev = gp.previous_session(latest)
+    await fill_stored_vwaps([(code, expiry, latest), (code, expiry, prev)])
+    vwap: dict[str, Any] | None
+    if wait:
+        vwap = await gp.session_vwap_async(stock, expiry, latest, gp._settle_wait() if wait_s is None else wait_s)
+    else:
+        vwap = gp.session_vwap_cached(stock, expiry, latest)
+        if vwap is None:
+            gp.prefetch_session_vwaps([(stock, expiry, latest)])
+    return vwap, gp.session_vwap_cached(stock, expiry, prev)
+
+
+async def resolve_settlement(code: str, expiry: date, row: dict[str, Any] | None, published: date | None,
+                             now: datetime | None = None, wait: bool = True) -> dict[str, Any]:
+    """The CONTRACT's settlement block for one MCX contract: the latest completed session's last-30-min VWAP of its Breeze
+    1-minute bars (data-service's stored read first, else ONE call per contract per session, cached all night; `wait=False`
+    reads the cache only and queues the call in the background), else the previous session's VWAP when known, else the ICICI
+    band midpoint labelled with the session it really belongs to."""
+    now = now or datetime.now(IST)
+    latest = gp.latest_completed_session(now)
+    vwap, prev_vwap = await settlement_vwaps(code, expiry, latest, wait=wait)
+    return gp.settlement_block((row or {}).get("settlement"), published, vwap, latest, prev_vwap)
+
+
 # ── COMEX × USD/INR fair value (gold_preopen's formula, lean inputs) ─────────────
 
-async def _fair_value(code: str, expiry: date, settlement: float | None,
-                      published: date | None) -> dict[str, Any] | None:
+async def _fair_value(code: str, expiry: date, settle: dict[str, Any] | None) -> dict[str, Any] | None:
     """COMEX + rupee legs from gold_preopen's ONE Yahoo fetcher (`_yahoo_bars_cached`: SWR 30/120 s, single flight —
     PLAN 0.1 #2; this used to be a second uncached fetcher), the landed conversion, the duty leg (SOURCES.md M5–M8) and
-    — when a settlement exists — gold_preopen.fair_open scaled to this contract's quotation unit. Cached 60 s."""
-    key = f"fair:{code}:{expiry.isoformat()}"
+    — when a settlement exists — gold_preopen.fair_open scaled to this contract's quotation unit, with the COMEX / rupee
+    references at THAT settlement session's close and the basis vs the landed price of the contract's purity. The COMEX
+    leg is the LIQUID month (`comex_liquid_symbol`: GOLDTEN NOV-26 → GCZ26, never the thin serial GCX26 — 5 Nov review).
+    Cached 60 s per (contract, expiry, settlement)."""
+    s = settle or {}
+    key = f"fair:{code}:{expiry.isoformat()}:{s.get('settlement_source')}:{s.get('settlement_session')}:{s.get('settlement')}"
     hit = _cache.get(key)
     if hit is not None:
         return hit or None
-    comex_sym = gp.comex_symbol(expiry)
+    comex_sym, comex_sub = gp.comex_liquid_symbol(expiry)
     try:
         comex, inr = await asyncio.gather(asyncio.wait_for(gp._yahoo_bars_cached(comex_sym), 10),
                                           asyncio.wait_for(gp._yahoo_bars_cached("INR=X"), 10))
@@ -269,35 +404,51 @@ async def _fair_value(code: str, expiry: date, settlement: float | None,
     spec = contract_specs()[code]
     quote_g = spec.quote_per_grams
     duty = gp.duty_rate()
+    fine = gp.fineness_of(code)
     landed = gp.landed_inr_per_10g(comex["price"], inr["price"], quote_g)
     duty_paid = landed * (1 + duty["pct"] / 100)
     out: dict[str, Any] = {
         "comex": {"symbol": comex_sym, "price": round(comex["price"], 2),
-                  "as_of": comex["time"].isoformat() if comex.get("time") else None},
+                  "as_of": comex["time"].isoformat() if comex.get("time") else None,
+                  "calendar_symbol": gp.comex_symbol(expiry),
+                  "matched_note": "nearest liquid COMEX month (Feb/Apr/Jun/Aug/Oct/Dec)" if comex_sub else None},
         "usdinr": {"symbol": "INR=X", "price": round(inr["price"], 4),
                    "as_of": inr["time"].isoformat() if inr.get("time") else None},
         "landed": round(landed, 0),
-        "landed_note": f"COMEX × USD/INR × {quote_g} g/oz — ex-duty, no local premium",
+        "landed_note": (f"COMEX × USD/INR × {quote_g} g ÷ 31.1035 g/oz — ex-duty, no local premium, per FINE gold; the basis "
+                        f"divides by it × {fine}/1000 (PM decision D1)"),
         "duty_pct": duty["pct"], "duty_effective": duty["effective"], "duty_note": duty["note"],
         "duty_paid_landed": round(duty_paid, 0),
+        # the landed price of THIS contract's purity: landed × purity / 1000 (D1: 995 GOLD / GOLDM, 999 TEN / PETAL / GUINEA)
+        "purity": fine,
+        "basis_reference": gp.basis_reference(code),
+        "landed_purity": round(landed * fine / gp.LANDED_FINENESS, 0),
+        "duty_paid_landed_purity": round(duty_paid * fine / gp.LANDED_FINENESS, 0),
+        "quote_unit": f"₹ per {quote_g} g",
         "source": "Yahoo GC×INR model (cached fetcher)",
     }
-    if settlement:
-        settle_day = gp.previous_session(published or datetime.now(IST).date())
-        close_at = gp.mcx_close_time(settle_day)
+    for k in SETTLE_KEYS:
+        out[k] = s.get(k)
+    settlement = s.get("settlement")
+    if settlement and s.get("settlement_session"):
+        settle_day = date.fromisoformat(s["settlement_session"])
+        close_at = gp.session_close_at(settle_day)
         comex_ref, _ = gp.reference_price(comex.get("bars") or [], close_at)
         inr_ref, _ = gp.reference_price(inr.get("bars") or [], close_at)
         if comex_ref and inr_ref:
             # fair_open works in ₹/10 g terms; the duty leg scales to this contract's quotation unit below
-            model = gp.fair_open(settlement * 10 / quote_g, comex_ref, comex["price"], inr_ref, inr["price"], duty["pct"])
+            model = gp.fair_open(settlement * 10 / quote_g, comex_ref, comex["price"], inr_ref, inr["price"], duty["pct"],
+                                 fineness=fine)
             scale = quote_g / 10
             out["fair"] = round(model["fair_open"] * scale, 0)
             out["gap_vs_settlement"] = round(model["gap"] * scale, 0)
-            out["basis_pct"] = model["basis_pct"]                   # settlement vs duty-paid landed (M8)
+            out["basis_pct"] = model["basis_pct"]        # settlement vs duty-paid landed of its purity, at its close (M8)
+            out["basis_clock"] = "settlement"
+            out["duty_paid_landed_at_settlement"] = round(model["duty_paid_landed_purity"] * scale, 0)
             out["implied_premium_pct"] = model["implied_premium_pct"]   # deprecated alias (duty + carry + premium)
-            out["settlement_session"] = settle_day.isoformat()
-            out["settlement_session_label"] = gp.session_label(settle_day)
-            out["settlement"] = settlement
+            out["comex_ref"] = round(comex_ref, 2)
+            out["usdinr_ref"] = round(inr_ref, 4)
+            out["ref_close_at"] = close_at.isoformat(timespec="minutes")
     _cache.set(key, out, ttl=60)
     return out
 
@@ -319,9 +470,13 @@ def overlay_line(code: str, expiry: date, fair: dict[str, Any] | None, mcx_price
              "GOLD ›"]
     return {"line": " · ".join(parts), "link": "GOLD",
             "fields": {"comex_symbol": fair["comex"]["symbol"], "comex_price": fair["comex"]["price"],
+                       "comex_matched_note": fair["comex"].get("matched_note"),
                        "usdinr": fair["usdinr"]["price"], "landed": fair["landed"], "duty_pct": fair["duty_pct"],
                        "duty_paid_landed": fair["duty_paid_landed"], "fair": fair.get("fair"),
-                       "settlement_session_label": fair.get("settlement_session_label"), "live_vs_fair": live_vs_fair}}
+                       "settlement": fair.get("settlement"), "settlement_source": fair.get("settlement_source"),
+                       "settlement_quality": fair.get("settlement_quality"),
+                       "settlement_session_label": fair.get("settlement_session_label"),
+                       "settlement_check": fair.get("settlement_check"), "live_vs_fair": live_vs_fair}}
 
 
 # ── endpoints ────────────────────────────────────────────────────────────────────
@@ -353,7 +508,11 @@ def mcx_contract_specs() -> dict[str, Any]:
         d["observed_expiries"] = [r["expiry"].isoformat() for r in observed[:3]] or None
         front = observed[0] if observed else None
         if front:
+            b_sess = gp.band_session(published) if published else None
             d["front"] = {"expiry": front["expiry"].isoformat(), "settlement": front["settlement"],
+                          "settlement_source": "band_midpoint", "settlement_quality": "band_proxy",
+                          "settlement_session": b_sess.isoformat() if b_sess else None,
+                          "settlement_session_label": gp.session_label(b_sess) if b_sess else None,
                           "band_low": front["band_low"], "band_high": front["band_high"],
                           "open_interest_lots": front["open_interest"]}
             d["indicative_margin_rupees"] = round(front["settlement"] * spec.multiplier * spec.span_margin_pct_indicative / 100,
@@ -400,30 +559,42 @@ async def mcx_quote(contract: str = Query("GOLD"),
     exp, exp_source, row = _resolve_expiry(code, now.date(), asked, family)
     after_open = (now.hour, now.minute) >= (9, 0) and now.weekday() < 5
     breeze = await asyncio.to_thread(_breeze_quote, code, exp, now.date(), after_open)
-    fair = await _fair_value(code, exp, (row or {}).get("settlement"), published)
+    settle = await resolve_settlement(code, exp, row, published, now)
+    fair = await _fair_value(code, exp, settle)
 
     spec = contract_specs()[code]
-    settle_day = gp.previous_session(published) if published else None
+    b_sess = gp.band_session(published) if published else None
     band = ({"settlement": row["settlement"], "band_low": row["band_low"], "band_high": row["band_high"],
              "open_interest_lots": row["open_interest"],
-             "session": settle_day.isoformat() if settle_day else None,
-             "session_label": gp.session_label(settle_day) if settle_day else None,
-             "quality": "proxy",
+             # the midpoint is the settlement of `session` (two sessions before the file); the band itself is the price band
+             # MCX applied on `band_applies_to` — never "today's band" (wave 1d)
+             "session": b_sess.isoformat() if b_sess else None,
+             "session_label": gp.session_label(b_sess) if b_sess else None,
+             "band_applies_to": gp.band_applies_to(published).isoformat() if published else None,
+             "quality": "band_proxy",
              "source": f"ICICI price-band midpoint ({published.isoformat() if published else '—'} master)"}
             if row else None)
+    quote = breeze["quote"]
+    vw = settle.get("vwap30") or {}
+    if (isinstance(quote, dict) and quote.get("previous_close") is None and vw.get("last_close")
+            and settle.get("latest_session") == gp.previous_session(now.date()).isoformat()):
+        # the previous session's last 1-minute close from the same Breeze read as the settlement (5 Nov review: '—')
+        quote = {**quote, "previous_close": vw["last_close"],
+                 "previous_close_source": f"last 1-minute close of the {settle.get('latest_session_label')} (Breeze)"}
     best = None
     if breeze["available"] and breeze["quote"].get("ltp"):
         best = {"price": breeze["quote"]["ltp"], "source": breeze["quote"]["source"]}
     elif fair and fair.get("fair"):
         best = {"price": fair["fair"], "source": "fair value (COMEX × USD/INR model)"}
-    elif band:
-        best = {"price": band["settlement"], "source": "previous settlement (price band)"}
+    elif settle.get("settlement"):
+        best = {"price": settle["settlement"],
+                "source": f"{settle.get('settlement_session_label')} ({str(settle.get('settlement_quality')).replace('_', ' ')})"}
     payload: dict[str, Any] = {
         "as_of": now.isoformat(timespec="seconds"),
         "contract": code, "expiry": exp.isoformat(), "expiry_source": exp_source,
         "tick_value": spec.tick_value, "lot": spec.as_dict()["lot"],
-        "available": breeze["available"], "quote": breeze["quote"],
-        "fallbacks": {"band": band, "fair_value": fair},
+        "available": breeze["available"], "quote": quote,
+        "fallbacks": {"band": band, "fair_value": fair, "settlement": {k: settle.get(k) for k in SETTLE_KEYS}},
         "best": best,
     }
     if breeze["available"]:
@@ -454,11 +625,12 @@ async def mcx_overlay(contract: str = Query("GOLD"),
             asked = date.fromisoformat(expiry)
         except ValueError:
             fail(422, "invalid", "expiry must be YYYY-MM-DD")
-    today = datetime.now(IST).date()
+    now = datetime.now(IST)
+    today = now.date()
     got = await asyncio.to_thread(_master_gold_family)
     family, published = got if got else (None, None)
     exp, _, row = _resolve_expiry(code, today, asked, family)
-    fair = await _fair_value(code, exp, (row or {}).get("settlement"), published)
+    fair = await _fair_value(code, exp, await resolve_settlement(code, exp, row, published, now))
     if fair is None:
         return degraded({"as_of": datetime.now(IST).isoformat(timespec="seconds"),
                          "contract": code, "expiry": exp.isoformat(), "overlay": None, "premium": None,
@@ -476,16 +648,44 @@ async def mcx_overlay(contract: str = Query("GOLD"),
             "mcx_price": mcx_price, "premium": premium, **overlay_line(code, exp, fair, mcx_price)}
 
 
-@router.post("/ticket")
-def mcx_paper_ticket(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
-    """PAPER pricing only — notional, tick value, indicative margin and round-trip MCX
-    costs for {contract, lots, price[, brokerage_per_order]}. Records nothing; no order
-    API exists in this module.
+def card_margin(spec: specs.ContractSpec, settle: float | None, m: dict[str, Any] | None) -> dict[str, Any]:
+    """The ONE margin rule of the contract card AND the paper ticket (5 Nov review: ticket ₹8,664 at the 6 % constant vs the
+    card's ₹13,287 NRML): the stored Zerodha NRML row's ₹ per lot and % (dated) when it exists, else the indicative constant
+    of shared/mcx_specs on `settle`. {margin_inr (per lot), margin_pct, margin_source, margin_date, margin_ref_price}."""
+    pct = _num(m or {}, "margin_pct")
+    inr = _num(m or {}, "margin_ccy")
+    ref = _num(m or {}, "ref_price")
+    if inr is None and pct is not None and (ref or settle):
+        inr = round((ref or settle or 0) * spec.multiplier * pct / 100, 0)
+    if pct is not None:
+        return {"margin_inr": inr, "margin_pct": pct, "margin_source": (m or {}).get("source") or "zerodha_nrml",
+                "margin_date": str((m or {}).get("trade_date") or "")[:10] or None, "margin_ref_price": ref}
+    pct = spec.span_margin_pct_indicative
+    return {"margin_inr": round(settle * spec.multiplier * pct / 100, 0) if settle else None, "margin_pct": pct,
+            "margin_source": "indicative constant (shared/mcx_specs)", "margin_date": None, "margin_ref_price": settle}
 
-    GOLD program additions (PLAN §b/§d, SOURCES.md M69; every one optional and pure arithmetic): `margin_pct` +
-    `margin_source` + `margin_date` (the Zerodha NRML mirror the selector carries; default stays the indicative
-    constant), `atr14_rupees` + `account_inr` + `risk_pct` → `max_lots_at_risk_pct` (account × risk % ÷ (1.5 × ATR₁₄
-    × multiplier)), `usdinr` → `hedge_usdinr_lots` (notional in $ ÷ the $1,000 USDINR futures lot)."""
+
+async def _stored_margin_row(code: str, expiry: date) -> dict[str, Any] | None:
+    """The stored MCX margin row the contract card reads (data-service /db/gold/margins through routers.gold's store
+    cache); None when the store has none or is down."""
+    try:
+        from routers import gold as goldr   # late import: gold imports this module
+        return await goldr.mcx_margin_row(code, expiry)
+    except Exception:  # noqa: BLE001 — the ticket falls back to the card's own fallback, the indicative constant
+        return None
+
+
+@router.post("/ticket")
+async def mcx_paper_ticket(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    """PAPER pricing only — notional, tick value, margin and round-trip MCX costs for {contract, lots, price[, expiry,
+    brokerage_per_order]}. Records nothing; no order API exists in this module.
+
+    GOLD program additions (PLAN §b/§d, SOURCES.md M69; every one optional and pure arithmetic): the margin is the CONTRACT
+    CARD's (`card_margin`: the stored Zerodha NRML ₹ per lot × lots, dated, for the contract's expiry — `expiry` in the body,
+    else the front by OI as /quote resolves it; the indicative constant only when nothing is stored); an explicit
+    `margin_pct` (+ `margin_source`, `margin_date`) still overrides; `atr14_rupees` + `account_inr` + `risk_pct` →
+    `max_lots_at_risk_pct` (account × risk % ÷ (1.5 × ATR₁₄ × multiplier)), `usdinr` → `hedge_usdinr_lots` (notional in $ ÷
+    the $1,000 USDINR futures lot)."""
     code = str(payload.get("contract") or "").upper()
     if code not in contract_specs():
         fail(422, "invalid", f"Unknown MCX contract '{payload.get('contract')}'",
@@ -511,12 +711,36 @@ def mcx_paper_ticket(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         fail(422, "invalid", "brokerage_per_order out of range")
     if opt["margin_pct"] is not None and opt["margin_pct"] > 100:
         fail(422, "invalid", "margin_pct is a percentage of notional")
+    asked: date | None = None
+    if payload.get("expiry"):
+        try:
+            asked = date.fromisoformat(str(payload["expiry"])[:10])
+        except ValueError:
+            fail(422, "invalid", "expiry must be YYYY-MM-DD")
     spec = contract_specs()[code]
     costs = spec_costs(code, price, lots, brokerage_per_order=brokerage)
     notional = price * spec.multiplier * lots
-    margin_pct = opt["margin_pct"] if opt["margin_pct"] is not None else spec.span_margin_pct_indicative
-    margin_source = (str(payload.get("margin_source") or "zerodha_nrml") if opt["margin_pct"] is not None
-                     else "indicative constant (shared/mcx_specs)")
+    margin_ref: float | None = None
+    if opt["margin_pct"] is not None:
+        margin_pct = opt["margin_pct"]
+        margin_source = str(payload.get("margin_source") or "zerodha_nrml")
+        margin_date = payload.get("margin_date")
+        margin_total = round(notional * margin_pct / 100, 0)
+        margin_basis = "the margin % you entered × notional"
+        exp = asked
+    else:
+        got = await asyncio.to_thread(_master_gold_family)
+        family = got[0] if got else None
+        exp, _, row = _resolve_expiry(code, datetime.now(IST).date(), asked, family)
+        card = card_margin(spec, (row or {}).get("settlement") or price, await _stored_margin_row(code, exp))
+        margin_pct, margin_source, margin_date = card["margin_pct"], card["margin_source"], card["margin_date"]
+        margin_ref = card["margin_ref_price"]
+        if card["margin_date"] and card["margin_inr"] is not None:
+            margin_total = round(card["margin_inr"] * lots, 0)       # the card's ₹ per lot, exactly (one source)
+            margin_basis = f"the contract card's NRML ₹ per lot × {lots} (at its reference price)"
+        else:
+            margin_total = round(notional * margin_pct / 100, 0)
+            margin_basis = "indicative % × notional (no stored NRML margin)"
     risk_pct = opt["risk_pct"] if opt["risk_pct"] is not None else 1.0
     max_lots = None
     if opt["account_inr"] and opt["atr14_rupees"]:
@@ -529,10 +753,13 @@ def mcx_paper_ticket(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         "notional": round(notional, 2),
         "tick_value_per_lot": spec.tick_value,
         "tick_value_position": round(spec.tick_value * lots, 2),
-        "indicative_margin": round(notional * margin_pct / 100, 0),
+        "indicative_margin": margin_total,
         "margin_pct_indicative": margin_pct,
         "margin_source": margin_source,
-        "margin_date": payload.get("margin_date") if opt["margin_pct"] is not None else None,
+        "margin_date": margin_date,
+        "margin_expiry": exp.isoformat() if exp else None,
+        "margin_ref_price": margin_ref,
+        "margin_basis": margin_basis,
         "round_trip": costs,
         "atr14_rupees": opt["atr14_rupees"],
         "risk_pct": risk_pct,

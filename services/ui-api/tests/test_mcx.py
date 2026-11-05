@@ -25,7 +25,7 @@ ROWS = ('"495213","FUTSTK","GOLD","FUTURE","GOLD",100,1,"04-Dec-2026","XX",0,"",
         '"222","FUTSTK","GOLDPETAL","FUTURE","GOLDPETAL",100,1,"30-Oct-2026","XX",0,"","","","",50,"","","","","",14500,15400,"KGS","RS/1GRMS","KGS","","GOLDPETAL"\n'
         '"333","FUTSTK","GOLDGUINEA","FUTURE","GOLDGUINEA",100,1,"30-Oct-2026","XX",0,"","","","",10,"","","","","",116000,123200,"KGS","RS/8GRMS","KGS","","GOLDGUINEA"\n')
 MASTER = HEADER + ROWS
-PUBLISHED = date(2026, 10, 15)
+PUBLISHED = date(2026, 10, 16)  # Friday's file: its band midpoint is the Wed 14 Oct settlement (two sessions back, wave 1d)
 
 # Yahoo fakes: MCX closed Wed 14 Oct 2026 23:30 IST (US daylight time); refs sit inside
 # the 30-minute settlement window, "now" is the live price.
@@ -45,11 +45,20 @@ def _offline(monkeypatch):
     """No network, no stale caches: the master is the fixture, Yahoo is faked."""
     mcx._cache.clear()
     gp._cache.clear()
+    gp._settle_cache.clear()
+    gp._settle_calls.clear()
+    monkeypatch.setenv("GOLD_STORED_VWAP", "0")                       # never the live data-service's stored VWAP from a test
     monkeypatch.setattr(gp, "_load_mcx_master", lambda: (MASTER, PUBLISHED))
     monkeypatch.setattr(gp, "_yahoo_bars", _fake_yahoo)
+    monkeypatch.setattr(mcx, "_stored_margin_row", _no_margin_row)   # never the live data-service from a test
     yield
     mcx._cache.clear()
     gp._cache.clear()
+    gp._settle_cache.clear()
+
+
+async def _no_margin_row(code, expiry):
+    return None
 
 
 def _client() -> TestClient:

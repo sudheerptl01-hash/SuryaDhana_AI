@@ -102,8 +102,13 @@ def ingest_briefs(store: Any, folder: Path | str | None = None, *, now: datetime
 # ── H2 pre-open accuracy log ────────────────────────────────────────────────────────────────────────
 
 def stale_baseline_rule(row: dict[str, Any]) -> bool:
-    """True when the inputs look stale: the baseline's session is not the previous MCX session of the day, or the
-    overnight rupee reference never moved (``inr_now == inr_ref`` — no fresh INR bar, SOURCES.md H2)."""
+    """True when the inputs look stale: the payload's ``settlement_check`` is flagged (wave 1d: the baseline differs from
+    the Breeze VWAP30 proxy of the previous session by more than 0.6 % — the same test as the fair block), the baseline's
+    session is not the previous MCX session of the day, or the overnight rupee reference never moved (``inr_now ==
+    inr_ref`` — no fresh INR bar, SOURCES.md H2)."""
+    chk = row.get("settlement_check")
+    if isinstance(chk, dict) and chk.get("flagged"):
+        return True
     day = db.to_date(row.get("day") or row.get("date"))
     src = str(row.get("baseline_source") or "")
     m = re.search(r"settlement (\d{1,2} [A-Za-z]{3})", src)
@@ -262,7 +267,11 @@ def compile_events(store: Any, *, now: datetime | None = None, horizon_days: int
             if d and today - timedelta(days=30) <= d <= end:
                 detail = (f"CME product calendar; LTD ends {r.ltd_end_time or '12:30 CT'}" if r.source == "cme_calendar"
                           else "CME product reference file (daily); the Sunday calendar refines the LTD end time")
-                rows.append(_event(d, kind, f"COMEX {label} {name}", detail, time_ist="23:00" if kind == "COMEX_LTD" else None,
+                ev_day, t_ist = d, None
+                if kind == "COMEX_LTD":            # wave 1d: the CT end time in IST, DST-correct (12:30 CT = 00:00 IST next day in winter)
+                    ev_day, t_ist, ct = ltd_end_ist(d, r.ltd_end_time)
+                    detail += f" ({ct} on {d:%a %d %b} = {t_ist} IST {ev_day:%a %d %b})"
+                rows.append(_event(ev_day, kind, f"COMEX {label} {name}", detail, time_ist=t_ist,
                                    country="US", in_session=None, source=r.source, now=now))
     for code in ("GOLD", "GOLDM", "GOLDTEN", "GOLDGUINEA", "GOLDPETAL"):
         months = specs.CONTRACTS[code].months if code in specs.CONTRACTS else tuple(range(1, 13))
@@ -271,8 +280,12 @@ def compile_events(store: Any, *, now: datetime | None = None, horizon_days: int
             if m in months:
                 d = family_expiry(code, y, m)
                 if today <= d <= end:
-                    rows.append(_event(d, "MCX_EXPIRY", f"MCX {code} {d:%b-%y} expiry", "rule: 5th (GOLD/GOLDM) or month end (TEN/GUINEA/PETAL)",
-                                       time_ist="23:30", country="IN", in_session=True, source="rule:mcx_specs", now=now))
+                    # wave 1d: the session's real close (23:30 IST in US summer, 23:55 in US winter, 17:00 on an evening closure)
+                    win = specs.trading_window(d)
+                    rows.append(_event(d, "MCX_EXPIRY", f"MCX {code} {d:%b-%y} expiry", "rule: 5th (GOLD/GOLDM) or month end (TEN/GUINEA/PETAL); "
+                                       "trading in the expiring contract ends at the session close",
+                                       time_ist=f"{win[1]:%H:%M}" if win else None, country="IN", in_session=True,
+                                       source="rule:mcx_specs", now=now))
             m += 1
             if m > 12:
                 y, m = y + 1, 1
@@ -287,6 +300,47 @@ def compile_events(store: Any, *, now: datetime | None = None, horizon_days: int
     return df.drop_duplicates(["event_date", "kind", "name"]) if not df.empty else df
 
 
+CT = ZoneInfo("America/Chicago")
+# (kind, source, days back): the window compile_events emits each recompiled kind for (COMEX dates from today − 30,
+# MCX expiries from today) — stale rows are dropped inside that window only, never in the past beyond it
+RECOMPILED: tuple[tuple[str, str, int], ...] = (("COMEX_LTD", "cme_calendar", 30), ("COMEX_LTD", "cme_prf", 30),
+                                                ("MCX_EXPIRY", "rule:mcx_specs", 0))
+
+
+def ltd_end_ist(d: date, raw: Any) -> tuple[date, str, str]:
+    """(IST date, 'HH:MM' IST, 'HH:MM CT') of a COMEX last-trade end time ('12:30:00 PM' Central; default 12:30 CT)."""
+    t = None
+    for fmt in ("%I:%M:%S %p", "%I:%M %p", "%H:%M:%S", "%H:%M"):
+        try:
+            t = datetime.strptime(str(raw or "").replace("CT", "").strip(), fmt).time()  # noqa: DTZ007 — a wall time in CT
+            break
+        except ValueError:
+            continue
+    if t is None:
+        t = datetime.strptime("12:30", "%H:%M").time()  # noqa: DTZ007 — GC's documented LTD end, 12:30 CT
+    ist = datetime.combine(d, t, tzinfo=CT).astimezone(IST)
+    return ist.date(), f"{ist:%H:%M}", f"{t:%H:%M} CT"
+
+
 def ingest_events(store: Any, *, now: datetime | None = None) -> dict[str, Any]:
+    """Upsert the compiled calendar, then drop compiled rows of the recompiled kinds that the new compile no longer has in
+    its window (a corrected time can move an event's IST date — wave 1d: COMEX LTD 12:30 CT is 00:00 IST the NEXT day in
+    winter — and the old key must not stay behind as a duplicate). Rows from other sources are never touched."""
+    now = now or utcnow()
     df = compile_events(store, now=now)
-    return {"inserted": db.upsert(store, "gold_events", df), "kinds": sorted(df["kind"].unique().tolist()) if not df.empty else []}
+    n = db.upsert(store, "gold_events", df)
+    removed = 0
+    if not df.empty:
+        today = now.replace(tzinfo=ZoneInfo("UTC")).astimezone(IST).date()
+        keep = {(db.to_date(r.event_date), str(r.kind), str(r.name)) for r in df.itertuples(index=False)}
+        for kind, source, back in RECOMPILED:
+            if not any(k == kind for _, k, _ in keep):
+                continue                                   # nothing compiled of this kind (no calendar yet): touch nothing
+            old = db.query_df(store, "SELECT event_date, kind, name FROM gold_events WHERE kind = ? AND source = ? AND event_date >= ?",
+                              [kind, source, today - timedelta(days=back)])
+            for r in old.itertuples(index=False):
+                key = (db.to_date(r.event_date), str(r.kind), str(r.name))
+                if key not in keep:
+                    db.execute(store, "DELETE FROM gold_events WHERE event_date = ? AND kind = ? AND name = ?", list(key))
+                    removed += 1
+    return {"inserted": n, "removed_stale": removed, "kinds": sorted(df["kind"].unique().tolist()) if not df.empty else []}

@@ -277,11 +277,19 @@ def test_india_ladder_prints_the_stored_fix_minute_premium_and_never_a_cross_clo
     assert "fix minute" in p["premium_clock"] and "showing Thu 22 Oct" in p["premium_note"]  # IBJA 23 Oct is newer: said so
     cross_clock = (141_900.0 / (140_645.0 * 999 / 995) - 1) * 100
     assert p["premium_pct"] != pytest.approx(cross_clock, abs=0.05)
-    assert p["basis_pct"] == 1.58 and p["basis_date"] == "2026-10-22" and "Thu 22 Oct settlement" in p["basis_label"]
+    # wave 1d: the desk's own settlement-clock basis (both legs at that session's close, purity-correct) wins over the stored
+    # derive row (GC=F daily close, 999, labelled one session late until the relabel)
+    assert p["basis_pct"] == 1.5 and p["basis_date"] == "2026-10-22" and "Thu 22 Oct settlement" in p["basis_label"]
+    assert p["basis_source"].startswith("desk model")
+    # negative control: no desk figure → the stored row of THAT session stands in, labelled as the stored GOLD derive at
+    # its purity (D1: landed × 995/1000)
+    p0 = gold.build_premiums({**FAIR, "basis_pct": None}, series, cat)["india"]
+    assert p0["basis_pct"] == 1.58 and p0["basis_source"] == "data-service derive (stored)" and "(stored)" in p0["basis_label"]
+    assert "× 995/1000" in p0["basis_label"] and p0["basis_reference"] == "landed_995"
     assert p["live_basis"] is None
     steps = {s["step"]: s for s in p["ladder"]}
     assert steps["comex"]["clock"] == "now" and steps["duty_paid"]["clock"] == "now" and steps["ibja"]["clock"] == "fix"
-    assert steps["mcx"]["clock"] == "settlement" and "(basis +1.58 %" in steps["mcx"]["label"]
+    assert steps["mcx"]["clock"] == "settlement" and "(basis +1.50 %" in steps["mcx"]["label"]
     assert "−0.71 %" in steps["ibja"]["label"] and "Thu 22 Oct fix" in steps["ibja"]["label"]
     assert "never divide across them" in p["clock_note"]
     # negative control: nothing stored → no premium, with the reason (never computed from the live bars)
@@ -290,7 +298,7 @@ def test_india_ladder_prints_the_stored_fix_minute_premium_and_never_a_cross_clo
     # a live MCX quote adds the live-clock pair beside the settlement basis — both labelled, neither replaced
     p3 = gold.build_premiums({**FAIR, "mcx_live": 141_200.0, "mcx_live_source": "ICICI Breeze"}, series, cat)["india"]
     assert p3["live_basis"]["value"] == pytest.approx((141_200.0 / 140_645.0 - 1) * 100, abs=0.01)
-    assert p3["live_basis"]["clock"] == "now" and p3["basis_pct"] == 1.58
+    assert p3["live_basis"]["clock"] == "now" and p3["basis_pct"] == 1.5
 
 
 def test_shanghai_premium_pairs_the_same_report_date_only() -> None:
@@ -353,8 +361,13 @@ def test_overview_header_shows_live_mcx_and_one_basis_when_the_quote_exists(clie
     s, h = body["strip"], body["health"]
     assert s["mcx_live"] == 146_500.0 and s["mcx_shown"] == "live" and s["mcx_settle"] == 146_080.0  # settlement beneath
     assert s["mcx_live_as_of"].endswith("+05:30") and s["mcx_live_vs_settle_pct"] == pytest.approx(0.288, abs=0.001)
-    dp = h["fair"]["duty_paid_landed"]
-    assert s["basis_clock"] == "now" and s["basis_pct"] == pytest.approx((146_500.0 / dp - 1) * 100, abs=0.01)
+    # wave 1d (D1): GOLD delivers 995 — the live basis divides by the duty-paid landed price × 995/1000 (landed is fine gold)
+    dp, dp995 = h["fair"]["duty_paid_landed"], h["fair"]["duty_paid_landed_purity"]
+    assert dp995 == pytest.approx(dp * 995 / 1000, abs=1) and h["fair"]["basis_reference"] == "landed_995"
+    assert s["basis_clock"] == "now" and s["basis_pct"] == pytest.approx((146_500.0 / dp995 - 1) * 100, abs=0.01)
+    assert s["basis_pct"] != pytest.approx((146_500.0 / dp - 1) * 100, abs=0.05)  # negative control: never the fine price
+    assert s["basis_pct"] != pytest.approx((146_500.0 / (dp * 995 / 999) - 1) * 100, abs=0.05)  # … nor the old × 995/999
+    assert s["basis_reference"] == "landed_995" and s["basis_contract"].startswith("GOLD")
     assert s["basis_live_pct"] == s["basis_pct"] and s["basis_settle_pct"] is not None and s["basis_settle_date"] == "2026-10-22"
     ib = next(g for g in h["gauges"] if g["key"] == "india_basis")
     assert ib["value"] == pytest.approx(s["basis_pct"], abs=0.01) and ib["state"] == "live" and ib["clock"] == "now"
@@ -677,15 +690,17 @@ def test_comex_tape_withholds_averages_and_quadrant_words_without_enough_session
 # ── 13. one carry convention; the /curve basis block names its clock ───────────────────────────────────────────────
 
 
-def test_curve_mcx_basis_block_names_the_clock_and_prefers_the_stored_row(client: TestClient) -> None:
+def test_curve_mcx_basis_block_names_the_clock_and_prints_one_settlement_basis(client: TestClient) -> None:
     b = client.get("/api/gold/curve", params={"exchange": "MCX"}).json()["basis"]
     assert b["basis_clock"] == "settlement" and b["basis_date"] == "2026-10-22" and b["live_basis_pct"] is None
-    assert b["basis_pct"] == 0.4 and b["basis_source"] == "data-service derive (stored)"  # the fixture's MCX_BASIS_PCT row
+    # wave 1d: the desk's settlement-clock basis (band of its REAL session vs that session's close references, at 995), not
+    # the stored derive row (0.4 in the fixture: GC=F daily close, 999)
+    assert b["basis_pct"] != 0.4 and b["basis_source"].startswith("desk model") and b["basis_reference"] == "landed_995"
     assert "Thu 22 Oct settlement" in b["basis_label"] and b["ts"].endswith("+05:30")
     h = client.get("/api/gold/health").json()
     ib = next(g for g in h["gauges"] if g["key"] == "india_basis")
     p = client.get("/api/gold/premiums").json()["india"]
-    assert ib["value"] == b["basis_pct"] == p["basis_pct"] == 0.4  # ONE settlement basis on the page
+    assert ib["value"] == b["basis_pct"] == p["basis_pct"]  # ONE settlement basis on the page
 
 
 # ── 14. every datetime carries an offset ───────────────────────────────────────────────────────────────────────────

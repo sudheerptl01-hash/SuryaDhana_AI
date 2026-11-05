@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import csv
 import io
+import math
 import re
 import zipfile
 from datetime import date, datetime, timedelta
@@ -34,6 +35,52 @@ FAMILY_BY_SHORT: dict[str, str] = {"GOLD": "GOLD", "GOLDM": "GOLDM", "GOLDMI": "
                                    "GOLDPETAL": "GOLDPETAL", "GOLDPE": "GOLDPETAL", "GOLDGUINEA": "GOLDGUINEA", "GOLDGU": "GOLDGUINEA"}
 QUOTE_UNIT: dict[str, str] = {"GOLD": "INR/10g", "GOLDM": "INR/10g", "GOLDTEN": "INR/10g", "GOLDGUINEA": "INR/8g", "GOLDPETAL": "INR/1g"}
 MONTH_END_FAMILIES = ("GOLDTEN", "GOLDGUINEA", "GOLDPETAL")
+# Purity (wave 1d round 2, PM decision D1 — binding for data-service AND ui-api): COMEX and LBMA quote per FINE troy
+# ounce, so the program's landed price (COMEX × USD/INR ÷ 31.1034768 × 10) is the rupee price of 10 g of FINE gold
+# (1000). A contract or a dealer price of purity P compares with landed × P / 1000: MCX GOLD / GOLDM 995, GOLDTEN /
+# GOLDPETAL / GOLDGUINEA 999 (the exchange's own spec, shared/mcx_specs — the guinea is NOT priced as 916: its ₹/8 g
+# trades at the 999 level, 5 Nov evidence ₹1,12,211 / 8 g = ₹1,40,264 / 10 g ≈ GOLDPETAL ₹1,40,330); IBJA 999 × 0.999,
+# IBJA 995 × 0.995. Purity and quotation grams are READ from shared/mcx_specs (the single source both services import);
+# the literals below are only the fallback for a family the spec module does not list.
+LANDED_FINENESS = 1000
+_PURITY_FALLBACK: dict[str, int] = {"GOLD": 995, "GOLDM": 995, "GOLDTEN": 999, "GOLDPETAL": 999, "GOLDGUINEA": 999}
+_GRAMS_FALLBACK: dict[str, float] = {"GOLD": 10.0, "GOLDM": 10.0, "GOLDTEN": 10.0, "GOLDGUINEA": 8.0, "GOLDPETAL": 1.0}
+
+
+def _spec_purity(family: str) -> int:
+    spec = specs.CONTRACTS.get(family)
+    try:
+        return int(str(spec.purity).strip()) if spec is not None else _PURITY_FALLBACK.get(family, 999)
+    except ValueError:
+        return _PURITY_FALLBACK.get(family, 999)
+
+
+MCX_PURITY: dict[str, int] = {fam: _spec_purity(fam) for fam in _PURITY_FALLBACK}
+QUOTE_GRAMS: dict[str, float] = {fam: float(specs.CONTRACTS[fam].quote_per_grams) if fam in specs.CONTRACTS else g
+                                 for fam, g in _GRAMS_FALLBACK.items()}
+
+
+def purity_factor(purity: int | str) -> float:
+    """The share of fine gold in ``purity`` (995 → 0.995): what multiplies the FINE landed price (D1)."""
+    return int(str(purity).strip()) / LANDED_FINENESS
+
+
+def landed_factor(family: str) -> tuple[float, str]:
+    """(factor, basis_reference) turning the FINE duty-paid landed ₹/10 g into the price of ``family``'s purity in its
+    own quotation unit: GOLD / GOLDM 0.995 'landed_995'; GOLDTEN 0.999 'landed_999'; GOLDPETAL 0.999 ÷ 10 (₹/1 g);
+    GOLDGUINEA 0.999 × 0.8 (₹/8 g). The basis is then ``contract ÷ (duty_paid × factor) − 1`` — the same number as the
+    contract scaled to ₹/10 g divided by landed × purity / 1000 (D1)."""
+    p = MCX_PURITY.get(family, _spec_purity(family))
+    return purity_factor(p) * QUOTE_GRAMS.get(family, 10.0) / 10.0, f"landed_{p}"
+
+
+def per_10g(value: float | None, family: str) -> float | None:
+    """A ``family`` price in ₹ per 10 g (D3: a PETAL ₹/1 g × 10, a GUINEA ₹/8 g × 1.25) — never compared unscaled."""
+    if value is None:
+        return None
+    return round(float(value) * 10.0 / QUOTE_GRAMS.get(family, 10.0), 2)
+
+
 IBJA_PURITIES = ("999", "995", "916", "750", "585")
 
 # F9: BCD + AIDC, dated steps (owner confirms the primary at CBIC, O-3). env GOLD_IMPORT_DUTY_PCT/_EFFECTIVE may add a step.
@@ -67,6 +114,47 @@ def previous_mcx_session(publish_day: date) -> date:
     return d
 
 
+def band_session(oi_session: date) -> date:
+    """The session whose SETTLEMENT a master's price band is centred on (wave 1d, the 5 Nov blocker).
+
+    A master published on day D carries the open interest at the close of S1 = ``previous_mcx_session(D)`` (the OI
+    label is right) but the band is the daily price range that was IN FORCE DURING S1, i.e. ±3 % around the settlement
+    of the session BEFORE S1. Verified against the last-30-minute VWAP of Breeze 1-minute bars (MCX GOLD DEC-26):
+    the Mon 26 Oct file's midpoint 1,43,309 = Thu 22 Oct 1,43,308 (Fri 23 Oct was 1,42,036); Tue 27 Oct 1,42,024 =
+    Fri 23 Oct; Wed 28 Oct 1,43,073 = Mon 26 Oct 1,43,069; Fri 30 Oct 1,43,705 = Wed 28 Oct 1,43,693; Wed 04 Nov
+    1,40,186 = Mon 02 Nov 1,40,190; Thu 05 Nov 1,39,452 = Tue 03 Nov 1,39,448 — while the files' OI (16,282 / 16,110)
+    equals Breeze's closing OI of Tue 03 / Wed 04 Nov. So ``band_session(S1)`` = the session before S1."""
+    return previous_mcx_session(oi_session)
+
+
+def band_midpoint(lo: Any, hi: Any) -> float | None:
+    """(lo + hi) / 2 rounded to the paisa, or None when either edge is missing / not positive."""
+    try:
+        lo_f, hi_f = float(lo), float(hi)
+    except (TypeError, ValueError):
+        return None
+    if not (lo_f > 0 and hi_f > 0) or math.isnan(lo_f) or math.isnan(hi_f):
+        return None
+    return round((lo_f + hi_f) / 2.0, 2)
+
+
+def relabel_band_sessions(store: Any) -> dict[str, Any]:
+    """One-off, idempotent: rows written before wave 1d carry ``session_date = trade_date``; the band's settlement belongs
+    to ``band_session(trade_date)``. Only ``session_date`` changes (not part of the key), never a value or the OI label.
+    Readers never depend on this having run: they derive the band session from ``trade_date`` (``reads``)."""
+    df = db.query_df(store, """SELECT DISTINCT trade_date FROM gold_curve
+                               WHERE exchange = 'MCX' AND source = 'icici_master_band' AND session_date = trade_date""")
+    n = 0
+    for r in df.itertuples(index=False):
+        td = db.to_date(r.trade_date)
+        if td is None:
+            continue
+        db.execute(store, """UPDATE gold_curve SET session_date = ? WHERE exchange = 'MCX' AND source = 'icici_master_band'
+                             AND trade_date = ? AND session_date = trade_date""", [band_session(td), td])
+        n += 1
+    return {"relabelled_dates": n}
+
+
 def master_text_from_zip(zip_bytes: bytes) -> tuple[str, date]:
     """(MCXScripMaster.txt text, the zip entry's date = ICICI's publish date; never the download time)."""
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
@@ -75,11 +163,14 @@ def master_text_from_zip(zip_bytes: bytes) -> tuple[str, date]:
 
 
 def parse_mcx_master(text: str, published: date, *, now: datetime | None = None) -> pd.DataFrame:
-    """FUTURE rows of the five gold families → gold_curve rows: settle = band midpoint (ICICI's ±3 % band around the
-    previous settlement), OI from the shifted ``MarginPercentage`` column, ``session_date`` = the previous MCX session
-    of the publish date, ``quality`` proxy, ``source`` icici_master_band."""
+    """FUTURE rows of the five gold families → gold_curve rows. ``trade_date`` = S1, the previous MCX session of the
+    publish date (the session of the OI, taken from the shifted ``MarginPercentage`` column); ``band_lo`` / ``band_hi`` =
+    the raw ±3 % band in force during S1; ``settle`` = the band midpoint, which is the settlement of ``session_date`` =
+    ``band_session(S1)`` — ONE SESSION BEFORE the row's trade_date (wave 1d). ``quality`` proxy, ``source``
+    icici_master_band. Readers re-key the midpoint to its own session (``reads.mcx_settlement_rows``)."""
     now = now or utcnow()
     session = previous_mcx_session(published)
+    settle_session = band_session(session)
     pub_ist = datetime(published.year, published.month, published.day, 7, 30, tzinfo=IST)
     release_at = min(pub_ist.astimezone(ZoneInfo("UTC")).replace(tzinfo=None), now)
     rows: list[dict[str, Any]] = []
@@ -97,7 +188,7 @@ def parse_mcx_master(text: str, published: date, *, now: datetime | None = None)
         rows.append({"trade_date": session, "exchange": "MCX", "symbol": fam, "expiry": expiry, "open": None, "high": None, "low": None,
                      "close": None, "settle": round((lo + hi) / 2.0, 2), "band_lo": lo, "band_hi": hi, "volume": None,
                      "open_interest": int(float(r.get("MarginPercentage") or 0) or 0), "oi_change": None, "unit": QUOTE_UNIT[fam],
-                     "source": "icici_master_band", "quality": "proxy", "session_date": session, "release_at": release_at,
+                     "source": "icici_master_band", "quality": "proxy", "session_date": settle_session, "release_at": release_at,
                      "first_seen_at": now})
     return pd.DataFrame(rows)
 
@@ -117,12 +208,15 @@ def ingest_mcx_master(store: Any, text: str, published: date, *, now: datetime |
     n = db.upsert(store, "gold_curve", df)
     if n:
         recompute_curve_oi_change(store)
+    oi_session = previous_mcx_session(published)
     front = None
     if n:
         g = df[df["symbol"] == "GOLD"].sort_values("expiry")
         if not g.empty:
-            front = {"expiry": str(g.iloc[0]["expiry"]), "settle": float(g.iloc[0]["settle"]), "oi": int(g.iloc[0]["open_interest"])}
-    return {"inserted": n, "published": str(published), "session_date": str(previous_mcx_session(published)), "gold_front": front}
+            front = {"expiry": str(g.iloc[0]["expiry"]), "band_midpoint": float(g.iloc[0]["settle"]),
+                     "band_session": str(band_session(oi_session)), "oi": int(g.iloc[0]["open_interest"]), "oi_session": str(oi_session)}
+    return {"inserted": n, "published": str(published), "session_date": str(oi_session), "oi_session": str(oi_session),
+            "band_session": str(band_session(oi_session)), "gold_front": front}
 
 
 def _breeze_cache_file() -> Any:

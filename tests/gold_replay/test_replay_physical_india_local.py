@@ -147,7 +147,8 @@ def test_rbi_wss_and_reference_rate(now):
 
 def test_icici_master_labels_the_session_never_the_file_date(store, now):
     df = ingest_india.parse_mcx_master(read(FIXTURES / "MCXScripMaster_gold_20261026.txt"), date(2026, 10, 26), now=now)
-    assert len(df) == 30 and (df["trade_date"] == date(2026, 10, 23)).all() and (df["session_date"] == date(2026, 10, 23)).all()
+    # trade_date = the session of the OI (Fri 23 Oct); session_date = the session of the band's settlement (Thu 22 Oct, wave 1d)
+    assert len(df) == 30 and (df["trade_date"] == date(2026, 10, 23)).all() and (df["session_date"] == date(2026, 10, 22)).all()
     assert (df["quality"] == "proxy").all() and (df["source"] == "icici_master_band").all() and (df["release_at"] == pd.Timestamp("2026-10-26 02:00")).all()
     gold = df[df["symbol"] == "GOLD"].sort_values("expiry").iloc[0]
     assert (gold["expiry"], gold["settle"], gold["band_lo"], gold["band_hi"], gold["open_interest"]) == (date(2026, 12, 4), 143309.0, 139010.0, 147608.0, 16217)
@@ -157,7 +158,9 @@ def test_icici_master_labels_the_session_never_the_file_date(store, now):
     assert ingest_india.previous_mcx_session(date(2026, 10, 26)) == date(2026, 10, 23)      # Monday file → Friday's session
     assert ingest_india.previous_mcx_session(date(2026, 10, 5)) == date(2026, 10, 1)        # Fri 2 Oct full holiday skipped
     assert ingest_india.previous_mcx_session(date(2026, 10, 20)) == date(2026, 10, 19)
-    assert ingest_india.ingest_mcx_master(store, read(FIXTURES / "MCXScripMaster_gold_20261026.txt"), date(2026, 10, 26), now=now)["gold_front"]["settle"] == 143309.0
+    front = ingest_india.ingest_mcx_master(store, read(FIXTURES / "MCXScripMaster_gold_20261026.txt"), date(2026, 10, 26), now=now)["gold_front"]
+    assert (front["band_midpoint"], front["band_session"], front["oi"], front["oi_session"]) == (143309.0, "2026-10-22", 16217, "2026-10-23")
+    assert "settle" not in front                       # the midpoint is never called this session's settlement again
 
 
 def test_zerodha_margin_mirror(now):

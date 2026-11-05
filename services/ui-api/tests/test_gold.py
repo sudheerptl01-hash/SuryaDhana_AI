@@ -60,7 +60,8 @@ ROWS = (
     '"333","FUTSTK","GOLDGUINEA","FUTURE","GOLDGUINEA",100,1,"30-Oct-2026","XX",0,"","","","",10,"","","","","",113600,120600,"KGS","RS/8GRMS","KGS","","GOLDGUINEA"\n'
 )
 MASTER = HEADER + ROWS
-PUBLISHED = date(2026, 10, 23)  # Friday's file → the Thu 22 Oct settlement (PLAN 0.1 #8)
+PUBLISHED = date(2026, 10, 26)  # Monday's file: its band midpoint is the Thu 22 Oct settlement — two sessions back, the
+# band being the band OF Fri 23 Oct (wave 1d, gold_preopen.band_session; PLAN 0.1 #8)
 CLOSE_AT = datetime(2026, 10, 22, 23, 30, tzinfo=IST)
 COMEX_REF, COMEX_NOW = 4060.4, 4007.9
 INR_REF, INR_NOW = 94.90, 94.93
@@ -389,8 +390,9 @@ def _offline(monkeypatch: pytest.MonkeyPatch) -> None:
     """No network, pinned clock, empty caches."""
     YAHOO_CALLS.clear()
     DB_CALLS.clear()
-    for c in (mcx._cache, gp._cache, gold._ttl):
+    for c in (mcx._cache, gp._cache, gp._settle_cache, gold._ttl):
         c.clear()
+    gp._settle_calls.clear()          # the per-key Breeze call cap (wave 1d round 2) starts empty in every test
     gold.STORE.invalidate()
     monkeypatch.setattr(gold, "_db_fetch", _fake_db)
     monkeypatch.setattr(gold, "_now_ist", lambda: NOW)
@@ -408,7 +410,7 @@ def _offline(monkeypatch: pytest.MonkeyPatch) -> None:
         lambda code, expiry, today, after_open: {"available": False, "quote": None, "reason": "offline test", "attempted": False},
     )
     yield
-    for c in (mcx._cache, gp._cache, gold._ttl):
+    for c in (mcx._cache, gp._cache, gp._settle_cache, gold._ttl):
         c.clear()
     gold.STORE.invalidate()
 

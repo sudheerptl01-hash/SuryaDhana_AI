@@ -804,8 +804,8 @@ Notation: `L/S/X` long/short/spread per group; `OI`; `F1,F2` consecutive futures
 | M4 | Accuracy stats (MAE, median, p90, within-limit %, bias, naive MAE) | from `gold_preopen_log` | daily | this is the evidence | PUBLISH-CORE · `arithmetic` |
 | M5 | Landed cost (₹/10 g) | G × INR ÷ 31.1034768 × 10 | live/daily | identity | PUBLISH-CORE · `arithmetic` |
 | M6 | Duty-paid landed | landed × (1 + d), d = 0.15 since 2026-05-13 (dated) | live/daily | identity | PUBLISH-CORE · `arithmetic` |
-| M7 | India dealer premium (%) | IBJA 999 PM ÷ (duty-paid landed × 999/995 adjustment as needed) − 1, inputs sampled at the IBJA fix minute (FBIL rate) | daily | none in-house (GS-PREMIUM after 2 y); Reuters sanity | PUBLISH-CORE · `context` |
-| M8 | MCX basis vs duty-paid landed; carry-adjusted basis | MCX front settle ÷ duty-paid landed − 1; minus carry to expiry (≈6–7 % p.a.) | daily/live | none | PUBLISH-CORE · `context` (replaces "implied premium 18 %") |
+| M7 | India dealer premium (%) | IBJA 999 PM ÷ (duty-paid landed × 0.999) − 1 — landed (COMEX per fine oz × INR) is FINE gold, purity P = × P/1000 (PM decision D1, 5 Nov 2026); inputs sampled at the IBJA fix minute (FBIL rate) | daily | none in-house (GS-PREMIUM after 2 y); Reuters sanity | PUBLISH-CORE · `context` |
+| M8 | MCX basis vs duty-paid landed; carry-adjusted basis | MCX front settlement proxy of the session ÷ (that session's duty-paid landed × purity/1000: GOLD/GOLDM 0.995, TEN/PETAL/GUINEA 0.999, D1) − 1; minus carry to expiry (≈6–7 % p.a.) | daily/live | none | PUBLISH-CORE · `context` (replaces "implied premium 18 %") |
 | M9 | Shanghai premium ($/oz, %) | SGE PM (CNY/g) × 31.1034768 ÷ USDCNY − LBMA PM (or COMEX at 14:15 Beijing) | daily | none in-house (GS-P3) | PUBLISH-CORE · `context` |
 | M10 | Rule of thumb ₹ per $1 COMEX / ₹ per ₹1 INR | settlement ÷ COMEX ref; settlement ÷ INR ref | live | identity | PUBLISH-CONTEXT · `arithmetic` |
 | M11 | Open interest and weekly ΔOI (COT) | `open_interest_all`, `change_in_open_interest_all` | weekly | G-STUDY FAIL forecast / CONTEXT | PUBLISH-CORE · `context` |

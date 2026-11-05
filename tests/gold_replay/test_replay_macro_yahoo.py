@@ -94,7 +94,7 @@ def test_yahoo_intraday_bodies_and_the_monthly_trap(now):
 def test_yahoo_daily_csv_seeds_cover_every_catalogued_symbol(store, now):
     files = {p.name[6:-4] for p in DATA.glob("yahoo_*.csv")}
     missing = [sym for sym in (v[0] for v in YAHOO_DAILY.values())
-               if sym.replace("=", "_").replace("^", "_").replace(".", "_") not in files and sym not in ("ZQ=F", "CL=F", "DX-Y.NYB")]
+               if sym.replace("=", "_").replace("^", "_").replace(".", "_") not in files and sym not in ("ZQ=F", "CL=F", "DX-Y.NYB", "BZ=F")]
     assert missing == [], missing
     df = ingest_yahoo.parse_daily_csv(read(DATA / "yahoo_GC_F.csv"), "GC=F", now=now)
     # the seed's last row is the Sunday-evening (25 Oct) Globex partial: it belongs to MONDAY's session, never a Sunday row

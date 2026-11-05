@@ -67,6 +67,8 @@ YAHOO_DAILY: dict[str, tuple[str, str, str, str]] = {   # series_id → (symbol,
     "TNX_CLOSE": ("^TNX", "CBOE 10-y Treasury yield × 10", "A6", "% ×10"),
     "ZQ_FRONT": ("ZQ=F", "30-day fed funds future, front", "G17", "100 − rate"),
     "WTI_FRONT": ("CL=F", "NYMEX WTI front future", "A3", "USD/bbl"),
+    # wave 1d (MACRO Brent 9 days stale on FRED): the Brent front future, a daily bar the 03:10 job stores from its next run
+    "BRENT_FRONT": ("BZ=F", "Brent crude front future (NYMEX BZ, last trade)", "A3", "USD/bbl"),
 }
 
 FRED_DAILY = {   # series_id → (fred id, name, entry, unit, badge)
@@ -116,11 +118,14 @@ WGC_SD = ("mine", "recycled", "hedging", "jewellery", "technology", "bar_coin", 
 IBJA_PURITIES = ("999", "995", "916", "750", "585")
 
 DERIVED = {   # series_id → (name, unit, badge, formula note)
-    "GOLD_INR_LANDED": ("Landed cost ₹/10 g (no duty)", "INR/10g", "arithmetic", "M5: G × INR ÷ 31.1034768 × 10"),
+    "GOLD_INR_LANDED": ("Landed cost ₹/10 g (no duty)", "INR/10g", "arithmetic",
+                        "M5: G × INR ÷ 31.1034768 × 10 — the price of FINE gold (COMEX quotes per fine oz); purity P = × P/1000 (D1)"),
     "GOLD_INR_DUTY_PAID": ("Duty-paid landed ₹/10 g", "INR/10g", "arithmetic", "M6: landed × (1 + duty), duty dated"),
-    "INDIA_PREMIUM_PCT": ("India dealer premium vs duty-paid landed (IBJA 999 PM)", "%", "context", "M7 at the IBJA fix minute"),
-    "MCX_BASIS_PCT": ("MCX front settle vs duty-paid landed", "%", "context", "M8"),
-    "MCX_BASIS_CARRY_ADJ_PCT": ("MCX basis minus carry to expiry", "%", "context", "M8"),
+    "INDIA_PREMIUM_PCT": ("India dealer premium vs duty-paid landed (IBJA 999 PM)", "%", "context",
+                          "M7: IBJA 999 PM ÷ (duty-paid landed × 0.999) − 1 (D1: landed is fine gold)"),
+    "MCX_BASIS_PCT": ("MCX front settle vs duty-paid landed", "%", "context",
+                      "M8: MCX GOLD front settlement proxy of the session ÷ (that session's duty-paid landed × 0.995) − 1 (995 fine, D1)"),
+    "MCX_BASIS_CARRY_ADJ_PCT": ("MCX basis minus carry to expiry", "%", "context", "M8: MCX_BASIS_PCT − carry to expiry (995 fine, D1)"),
     "SHANGHAI_PREMIUM_USD": ("Shanghai premium $/oz (SGE PM vs London/COMEX)", "USD/oz", "context", "M9"),
     "SHANGHAI_PREMIUM_PCT": ("Shanghai premium %", "%", "context", "M9"),
     "COMEX_CARRY_ANN_PCT": ("COMEX front→next implied carry, annualised", "% p.a.", "arithmetic", "M31: (F2/F1 − 1) × 365/days"),
@@ -254,7 +259,9 @@ def build_rows() -> list[dict[str, Any]]:
                      "https://en.sge.com.cn/data_MonthlyReport", "M", "%", "PUBLISH-CONTEXT", "context", 45, job="sge_monthly"))
     rows.append(_row("LBMA_OTC_TURNOVER_USD_BN", "LBMA trade reporting weekly turnover, gold (12-wk MA)", "E14", "LBMA",
                      "https://www.lbma.org.uk/prices-and-data/lbma-trade-data", "W", "USD bn", "PUBLISH-CONTEXT", "context", 10,
-                     job="lbma_turnover", publish_time_ist="Friday-dated", lag_note="regex of the headline; gross, not netted"))
+                     job="lbma_turnover", publish_time_ist="Friday-dated",
+                     lag_note=("regex of the headline; gross, not netted. The page shows ONE period and updates irregularly: on Thu 5 Nov "
+                               "2026 22:11 IST it still showed the period ending Fri 16 Oct (verified); every new period is kept")))
     rows.append(_row("LBMA_VAULT_GOLD_T", "London vault holdings, gold", "E15", "LBMA",
                      "https://www.lbma.org.uk/prices-and-data/london-vault-holdings-data", "M", "tonnes", "PUBLISH-CONTEXT", "context", 45,
                      job="lbma_vault", publish_time_ist="~20–25th"))
@@ -337,8 +344,27 @@ def build_rows() -> list[dict[str, Any]]:
                      job="cme_prf", pro="the field named MaintMargin cannot be the maintenance margin (open question j.2 #6)"))
     rows.append(_row("MCX_CURVE_ICICI", "MCX gold family settlement (band midpoint) and OI per expiry, ICICI master", "F1", "ICICI Direct",
                      "https://directlink.icicidirect.com/MotherAppMaster/SecurityMaster.zip", "D", "INR/10g", "PUBLISH-CORE", "arithmetic", 4,
-                     job="mcx_master", publish_time_ist="07:35 (retry 08:35)", lag_note="PROXY settlement (band midpoint); labelled by SESSION",
-                     pro="OI sits in the shifted MarginPercentage column; the Monday file is Friday's (Thursday's settlement)"))
+                     job="mcx_master", publish_time_ist="07:35 (retry 08:35)",
+                     lag_note=("PROXY settlement (band midpoint). The file published on D carries the OI of S1 = the previous "
+                               "session and the band in force DURING S1, centred on the settlement of the session BEFORE S1 "
+                               "(verified 5 Nov 2026 against Breeze VWAP30); reads re-key the midpoint to that session"),
+                     pro="OI sits in the shifted MarginPercentage column; the Monday file carries Friday's OI and Thursday's settlement"))
+    # wave 1d (the 5 Nov blocker): the settlement proxy MCX's own method implies — one template row per family; the stored
+    # ids are per contract month (MCX_GOLD_202612_VWAP30 → this row, reads.catalog_row)
+    for fam, unit in (("GOLD", "INR/10g"), ("GOLDM", "INR/10g"), ("GOLDTEN", "INR/10g"), ("GOLDPETAL", "INR/1g"),
+                      ("GOLDGUINEA", "INR/8g")):
+        rows.append(_row(f"MCX_{fam}_VWAP30", f"MCX {fam} settlement proxy: last-30-min VWAP of Breeze 1-minute bars (per contract month)",
+                         "F2", "ICICI Breeze (computed)", "https://api.icicidirect.com/breezeapi/documents/index.html", "D", unit,
+                         "PUBLISH-CORE", "arithmetic", 4, job="mcx_close_vwap30", publish_time_ist="23:58 after the MCX close",
+                         access="FREE-REGISTRATION",
+                         lag_note="PROXY of MCX's settlement method (VWAP of the last 30 minutes); never called the settlement",
+                         evidence="identity over the session's 1-minute bars; Tue 03 Nov 1,39,448 vs the next band midpoint 1,39,452",
+                         beginner="yesterday's MCX settlement, estimated the way MCX computes it",
+                         pro="Σ close·lots ÷ Σ lots over the bars starting in [close − 30 min, close); 23:25–23:55 IST in US winter"))
+        rows.append(_row(f"MCX_{fam}_VWAP30_LOTS", f"MCX {fam} lots traded in the settlement window (per contract month)", "F2",
+                         "ICICI Breeze (computed)", "https://api.icicidirect.com/breezeapi/documents/index.html", "D", "lots",
+                         "PUBLISH-CORE", "arithmetic", 4, job="mcx_close_vwap30", publish_time_ist="23:58 after the MCX close",
+                         access="FREE-REGISTRATION", lag_note="a thin window (a few lots) makes a noisy proxy"))
     rows.append(_row("MCX_MARGIN_ZERODHA", "MCX NRML margins (Zerodha mirror)", "F8", "Zerodha", "https://zerodha.com/margin-calculator/Commodity/",
                      "D", "INR", "PUBLISH-CONTEXT", "arithmetic", 4, job="margins", publish_time_ist="daily, dated on the page",
                      lag_note="exchange NRML (SPAN + exposure); ICICI's plan-dependent margin may differ"))

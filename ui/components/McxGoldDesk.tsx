@@ -19,10 +19,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chip, DataTable, Input, Loading, Notice, PageHeader, Panel, Select, Stat, T,
          fmtInr, fmtNum, type Column, sourceOf, inputSource, undatedSource } from '@/components/terminal'
 import { fmtSigned, fmtSignedInr } from '@/lib/format'   // +₹ / −₹ with U+2212 (C1-18)
-import { ContractSelector } from '@/components/gold/ContractsView'
+import { ContractSelector, frontExpiry } from '@/components/gold/ContractsView'
 import { goToPage } from '@/lib/navigate'
 import { getGoldContracts } from '@/lib/gold/api'
-import { mcxOverlayLine } from '@/lib/gold/format'
+import { mcxOverlayLine, settlementSourceWords, ticketMargin } from '@/lib/gold/format'
 import { setGoldSubInUrl, useGoldContract } from '@/lib/gold/prefs'
 import { GOLD_FAMILIES, type ContractFamily, type GoldContractSel } from '@/lib/gold/types'
 
@@ -68,7 +68,9 @@ interface OverlayPayload {
   /** PLAN §b: the one line (B3 mcx.py overlay_line) and its fields; `link` names the page the chip opens */
   line?: string; link?: string
   fields?: { comex_symbol: string; comex_price: number; usdinr: number; landed: number; duty_pct: number; duty_paid_landed: number; fair: number | null
-             settlement_session_label?: string | null; live_vs_fair?: { rupees: number; pct: number } | null } | null
+             settlement_session_label?: string | null; live_vs_fair?: { rupees: number; pct: number } | null
+             /** wave 1d: where the settlement the fair is built on came from ('breeze_vwap30' | 'band_midpoint') */
+             settlement_source?: string | null } | null
 }
 interface TicketPayload {
   paper: boolean; recorded: boolean; contract: string; lot: string; lots: number; price: number
@@ -213,12 +215,12 @@ export function McxGoldDesk() {
     const t = setTimeout(() => {
       getJson<TicketPayload>('/api/mcx/ticket', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contract, lots: lotsN, price: ticketPrice,
+        body: JSON.stringify({ contract, expiry: expiry || undefined, lots: lotsN, price: ticketPrice,
                                brokerage_per_order: num(brokerage) ?? 20 }),
       }).then(p => { if (alive) setTicket(p) }).catch(() => { if (alive) setTicket(null) })
     }, 400)
     return () => { alive = false; clearTimeout(t) }
-  }, [contract, lots, ticketPrice, brokerage])
+  }, [contract, expiry, lots, ticketPrice, brokerage])
 
   const codes = useMemo(() => (families?.length ? families.map(f => f.code as GoldContractSel['family']) : [...GOLD_FAMILIES]), [families])
   const fam = useMemo(() => families?.find(f => f.code === contract) ?? null, [families, contract])
@@ -250,6 +252,12 @@ export function McxGoldDesk() {
     { key: 'total', label: 'Total', align: 'right', render: r => <span style={{ color: T.bright, fontWeight: 700 }}>{fmtInr(r.total, 2)}</span> },
   ]
   const liveVsFair = overlay?.fields?.live_vs_fair ?? (overlay?.premium ? { rupees: overlay.premium.rupees, pct: overlay.premium.pct } : null)
+  // the ticket's margin is the SAME NRML mirror the contract card prints (the 5 Nov review: ticket ₹8,664 '6 % constant' vs the
+  // card's ₹13,287 at 9.25 %): the server's mirror when it sends one, else the card's dated % of this ticket's notional, else
+  // the server's indicative constant, labelled as such
+  const pickedExpiry = fam ? (fam.expiries.find(e => e.expiry === sel.expiry) ?? frontExpiry(fam)) : null
+  const margin = ticket ? ticketMargin(ticket, pickedExpiry) : null
+  const liveLtp = quote?.available ? quote.quote?.ltp ?? null : null
 
   return (
     <div>
@@ -313,8 +321,10 @@ export function McxGoldDesk() {
                 <Stat label={`LTP · ${quote.quote.source}`} value={fmtInr(quote.quote.ltp)} color={T.green} accent={T.green}
                   sub={quote.quote.time ?? undefined} />
                 <Stat label="Open" value={fmtInr(quote.quote.open)} accent={T.cyan} />
-                <Stat label="High / Low" value={`${fmtInr(quote.quote.high)} / ${fmtInr(quote.quote.low)}`} accent={T.violet} />
-                <Stat label="Prev close" value={fmtInr(quote.quote.previous_close)} accent={T.border} />
+                <Stat label="High / Low" value={quote.quote.high == null && quote.quote.low == null ? 'not served' : `${fmtInr(quote.quote.high)} / ${fmtInr(quote.quote.low)}`} accent={T.violet}
+                  sub={quote.quote.high == null && quote.quote.low == null ? 'the Breeze 1-minute path returns the last bar only (get_quotes answers HTTP 500 for MCX futures)' : undefined} />
+                <Stat label="Prev close" value={quote.quote.previous_close == null ? 'not served' : fmtInr(quote.quote.previous_close)} accent={T.border}
+                  sub={quote.quote.previous_close == null ? 'see the settlement on GOLD › HEALTH (its source and session are named there)' : undefined} />
               </div>
             )}
             {quote && !quote.available && (
@@ -324,9 +334,9 @@ export function McxGoldDesk() {
                   {quote.live_verify_pending && <Chip color={T.violet}>LIVE-VERIFY PENDING · after the 08:00 login</Chip>}
                 </Notice>
                 <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))' }}>
-                  <Stat label="Prev settlement · price band" value={fmtInr(quote.fallbacks.band?.settlement)}
+                  <Stat label="ICICI band midpoint (reference)" value={fmtInr(quote.fallbacks.band?.settlement)}
                     accent={T.cyan}
-                    sub={quote.fallbacks.band ? `band ${fmtInr(quote.fallbacks.band.band_low)}–${fmtInr(quote.fallbacks.band.band_high)} · OI ${fmtNum(quote.fallbacks.band.open_interest_lots)} lots · PROXY` : 'ICICI master unavailable'} />
+                    sub={quote.fallbacks.band ? `band ${fmtInr(quote.fallbacks.band.band_low)}–${fmtInr(quote.fallbacks.band.band_high)} · OI ${fmtNum(quote.fallbacks.band.open_interest_lots)} lots · BAND PROXY: the band is set around an earlier session's settlement` : 'ICICI master unavailable'} />
                   <Stat label="Fair value · COMEX×INR model" value={fmtInr(fv?.fair ?? fv?.landed)}
                     color={T.amber} accent={T.amber}
                     sub={fv?.fair ? `vs settlement ${fmtSignedInr(fv.gap_vs_settlement)}` : fv?.landed_note} />
@@ -339,7 +349,7 @@ export function McxGoldDesk() {
             <div data-mcx-overlay style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: `1px solid ${T.border}`, paddingTop: 8, flexWrap: 'wrap' }}>
               <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.2, color: T.muted }}>COMEX × RUPEE</span>
               <span style={{ fontFamily: T.mono, fontSize: 11, color: T.text, flex: 1, minWidth: 0 }}
-                    title={overlay?.fields?.settlement_session_label ? `fair value against the ${overlay.fields.settlement_session_label} (PROXY); live vs fair only against a live broker price, never against the model itself` : 'live vs fair appears when a live broker quote exists — never computed against the model itself'}>
+                    title={overlay?.fields?.settlement_session_label ? `fair value against the ${overlay.fields.settlement_session_label} (${settlementSourceWords(overlay.fields.settlement_source)} — proxy); live vs fair only against a live broker price, never against the model itself` : 'live vs fair appears when a live broker quote exists — never computed against the model itself'}>
                 {overlayText(overlay)}
                 {liveVsFair && <span style={{ color: Math.abs(liveVsFair.rupees) <= 300 ? T.green : T.red, marginLeft: 6 }}>({fmtSignedInr(liveVsFair.rupees)} · {fmtSigned(liveVsFair.pct, 2)} %)</span>}
                 {overlay?.as_of && <span style={{ color: T.dim }}> · {istClock(overlay.as_of)} IST</span>}
@@ -352,7 +362,7 @@ export function McxGoldDesk() {
           <Panel source={undatedSource('MCX contract master', 'margins from the Zerodha NRML mirror, dated')} title="Contracts — MCX gold family" accent={T.cyan}
             subtitle="the selector GOLD › CONTRACTS uses · synced (prefs gold.contract.v1) · margins from the Zerodha NRML mirror, dated"
             right={<Chip color={T.amber} onClick={() => openGold('contracts')} title="Term structure, MCX chain, roll calendar, COMEX spec card">GOLD › CONTRACTS</Chip>}>
-            <ContractSelector families={families} sel={sel} onSel={updateSel} dense />
+            <ContractSelector families={families} sel={sel} onSel={updateSel} dense livePrice={liveLtp} />
           </Panel>
 
           {/* 5. paper ticket */}
@@ -373,8 +383,8 @@ export function McxGoldDesk() {
                 <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
                   <Stat label="Notional" value={fmtInr(ticket.notional)} accent={T.cyan}
                     sub={`${ticket.lots} × ${ticket.lot} @ ${fmtInr(ticket.price)}`} />
-                  <Stat label={ticket.margin_source ? `Margin · ${ticket.margin_source}` : 'Indicative margin*'} value={fmtInr(ticket.indicative_margin)} color={T.amber} accent={T.amber}
-                    sub={`${ticket.margin_pct_indicative}% ${ticket.margin_source ? 'NRML mirror' : 'SPAN+exposure'} — exchange revises daily`} />
+                  <Stat label={margin?.label ?? 'Margin'} value={fmtInr(margin?.value)} color={T.amber} accent={T.amber}
+                    sub={<span data-mcx-ticket-margin={margin?.kind ?? ''}>{margin?.sub ?? '—'}</span>} />
                   <Stat label="Tick value" value={fmtInr(ticket.tick_value_position)} accent={T.violet}
                     sub={`${fmtInr(ticket.tick_value_per_lot)} per lot`} />
                   <Stat label="Round-trip cost" value={fmtInr(ticket.round_trip.total, 2)} accent={T.red} color={T.red}

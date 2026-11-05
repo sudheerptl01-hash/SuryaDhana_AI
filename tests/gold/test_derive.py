@@ -47,9 +47,18 @@ def test_derive_india_identities(seeded, now):
     landed = 4040.0 * 95.0 / GRAMS * 10
     assert v["GOLD_INR_LANDED"]["value"] == round(landed) and v["GOLD_INR_DUTY_PAID"]["value"] == round(landed * 1.15)
     dp = round(landed * 1.15)
-    assert v["INDIA_PREMIUM_PCT"]["value"] == pytest.approx((141630.0 / (dp * 999 / 995) - 1) * 100, abs=0.01)
-    assert v["MCX_BASIS_PCT"]["value"] == pytest.approx((146079.0 / dp - 1) * 100, abs=0.01)
-    carry = derive.CARRY_RATE_PCT * (date(2026, 12, 4) - days[-1]).days / 365
+    # PM decision D1 (wave 1d round 2): landed is the price of FINE gold, so IBJA 999 compares with duty-paid × 0.999
+    assert v["INDIA_PREMIUM_PCT"]["value"] == pytest.approx((141630.0 / (dp * 0.999) - 1) * 100, abs=0.01)
+    assert v["INDIA_PREMIUM_PCT"]["value"] != pytest.approx((141630.0 / (dp * 999 / 995) - 1) * 100, abs=0.1)   # negative: the old 999/995
+    # wave 1d: the master row keyed Fri 23 Oct carries the band of Thu 22 Oct's settlement, so the basis is dated 22 Oct
+    # and divides by 22 Oct's duty-paid landed price (GC 4,030) at GOLD's 995 purity, never 23 Oct's (the old pairing)
+    dp_thu = 4030.0 * 95.0 / GRAMS * 10 * 1.15
+    basis = pit.asof_series(store, ["MCX_BASIS_PCT"])
+    assert [db.to_date(d) for d in basis["report_date"]] == [days[-2]] and basis["quality"].iloc[-1] == "derived_band"
+    assert v["MCX_BASIS_PCT"]["value"] == pytest.approx((146079.0 / (dp_thu * 0.995) - 1) * 100, abs=0.01)
+    assert v["MCX_BASIS_PCT"]["value"] != pytest.approx((146079.0 / dp_thu - 1) * 100, abs=0.1)        # negative control: 995 as reference
+    assert v["MCX_BASIS_PCT"]["value"] != pytest.approx((146079.0 / (dp * 0.995) - 1) * 100, abs=0.01)  # negative control: old pairing
+    carry = derive.CARRY_RATE_PCT * (date(2026, 12, 4) - days[-2]).days / 365
     assert v["MCX_BASIS_CARRY_ADJ_PCT"]["value"] == pytest.approx(v["MCX_BASIS_PCT"]["value"] - carry, abs=0.01)
     assert ingest_india.duty_on(date(2026, 5, 12)) == (6.0, date(2024, 7, 24)) and ingest_india.duty_on(date(2026, 5, 13))[0] == 15.0
 

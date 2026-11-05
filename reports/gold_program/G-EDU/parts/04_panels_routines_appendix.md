@@ -53,14 +53,16 @@ The OK / WAIT strip is a house rule (the ₹300 chase limit) that has missed by 
 morning and has been worse than 'open = yesterday's settlement' so far (8.1.8)."
 Is not: a direction call, and not an instruction to trade or to wait. Fair can be ₹2,000 above yesterday and the day can
 still close lower.
-Updates: every 60 s; the baseline (settlement) refreshes when ICICI publishes the master (~07:30) and is labelled by its
-**session** ("Thu 22 Oct settlement"), never by the file date.
-Evidence: `heuristic` — the ₹300 chase limit has **no support yet**: 3 scored days, 0% within ₹300, model worse than naive
-(8.1.8). The chip carries the measured miss until ≥ 20 rows say otherwise.
+Updates: every 60 s; the baseline (settlement) is computed once the MCX session closes and is labelled by its
+**session** ("Thu 22 Oct settlement") and its source, never by the file date.
+Evidence: `heuristic` — the ₹300 chase limit has **no support yet**: 7 scored days to 5 Nov 2026, 0% within ₹300, model
+worse than naive (8.1.8) — and those mornings were priced off the band midpoint, which ran one MCX session stale (each
+miss ≈ the previous session's gold move). The chip carries the measured miss until ≥ 20 VWAP-baseline rows say otherwise.
 
 **[P]** **8.1.2 Key numbers (baseline, fair, expected gap, MCX now vs fair, chase limit) → `h.open`**
-Reads: "Baseline = yesterday's MCX settlement (midpoint of the ±3% band, PROXY). Fair = baseline × COMEX ratio × rupee
-ratio. Gap = fair − baseline, also per lot (×100) and per Mini (×10)."
+Reads: "Baseline = the last completed session's MCX settlement — the VWAP of its last 30 minutes of Breeze 1-minute bars
+(VWAP30 PROXY), else the midpoint of the ±3% band (BAND PROXY, set around an earlier session; an amber note when the two
+differ by > 0.6 %). Fair = baseline × COMEX ratio × rupee ratio. Gap = fair − baseline, also per lot (×100) and per Mini (×10)."
 Is not: a prediction of the *close*; a mismatch of the COMEX month and the MCX month (both Dec today; GCZ26 → GCG27
 around 25 Nov while MCX Dec runs to 4 Dec) would add carry to the gap — the symbol is printed so you can check.
 Updates: 60 s. Evidence: `arithmetic`; the *usefulness* is what the accuracy log measures.
@@ -226,9 +228,12 @@ timing).
 **[P]** **8.2.10 Term structure / carry → `c.comex` · `c.mcx` (GOLD › CONTRACTS)** — Reads: "COMEX six months with last week's ghost
 curve, calendar spreads, implied carry p.a. (Dec-26 → Feb-27 +$41.1 = 1.03% ≈ 3.2%/yr on settlements); MCX chain with
 settle (proxy/official), band, OI, implied carry; implied lease ≈ SOFR − COMEX carry. Backwardation = shortage (COMEX) or
-duty-cut expectation (MCX, into Feb)." Is not: a yield you earn — a long pays the carry at every roll; and Yahoo's
-per-month price is the last trade, not the settlement (labelled LAST TRADE until the bulletin is allowed, O-2). Updates:
-daily. Evidence: `arithmetic`.
+duty-cut expectation (MCX, into Feb)." The MCX chain is ONE session: its settles are the ICICI band midpoints of the session
+the band belongs to (5 Nov 2026: the Tue 03 Nov band, with the OI at the Wed 04 Nov close), printed with that session — never
+the file or request date; vs-front and carry are taken inside it. The basis under it names its own session (the latest
+close's last-30-min VWAP), so the note says when the two differ. PETAL (₹/1 g) and GUINEA (₹/8 g) also print a ₹/10 g
+equivalent. Is not: a yield you earn — a long pays the carry at every roll; and Yahoo's per-month price is the last trade,
+not the settlement (labelled LAST TRADE until the bulletin is allowed, O-2). Updates: daily. Evidence: `arithmetic`.
 
 **[P]** **8.2.11 Contract chooser + calendar strip → `c.selector` · `c.roll` · `h.events`** — Reads: "Which contract for which purpose
 (§3.5 table, now with GOLDTEN: PETAL round trip 0.34% of notional vs GOLD 0.018%); next MCX expiries, COMEX first intent /
@@ -295,10 +300,10 @@ directly above this text, so the two can be compared on the page.
 
 | rule_id | Clause it produces | Series | Rule (as implemented) | `threshold` dict (verbatim) | Window |
 |---|---|---|---|---|---|
-| H1 | "WEAK WEEK" / "STRONG WEEK" / "FLAT WEEK" / "FIRM WEEK" / "SOFT WEEK" (DAY / MONTH when `window=D` / `M`) | `COMEX_GC_FRONT` | gold's change over the window: ≤ −2 % WEAK · ≥ +2 % STRONG · \|Δ\| < 0.5 % FLAT · else FIRM (up) / SOFT (down) | `{"weak_pct": -2.0, "strong_pct": 2.0, "flat_pct": 0.5}` | D: latest close vs the previous session · W: the calendar week to date (Monday's close → latest) once the week has started, else the last 5 sessions — the clause names the span it used · M: 30 calendar days (the nearest earlier session) |
+| H1 | "WEAK WEEK" / "STRONG WEEK" / "FLAT WEEK" / "FIRM WEEK" / "SOFT WEEK" (DAY / MONTH when `window=D` / `M`) | `COMEX_GC_FRONT` | gold's change over the window: ≤ −2 % WEAK · ≥ +2 % STRONG · \|Δ\| < 0.5 % FLAT · else FIRM (up) / SOFT (down); then the trend sentence from the TREND gauge: the price vs its 20-d and 200-d averages ('below both averages' / 'between' / 'above both', both % printed) and the drawdown from the 52-week high — a description, no threshold of its own | `{"weak_pct": -2.0, "strong_pct": 2.0, "flat_pct": 0.5}` | D: latest close vs the previous session · W: the calendar week to date (Monday's close → latest) once the week has started, else the last 5 sessions — the clause names the span it used · M: 30 calendar days (the nearest earlier session) |
 | H2 | "DOLLAR-DRIVEN" / "YIELD-DRIVEN" / "GOLD-SPECIFIC" after the H1 words; then the decomposition "gold −2.8 % over the week · of which the dollar −1.9 % · real yield +12 bp" | `DXY_CLOSE` (the KGX dollar effect) · `FRED_DFII10` | DOLLAR-DRIVEN when the dollar effect (KGX split) is ≥ 40 % of gold's move with the same sign and \|move\| ≥ 0.5 %; YIELD-DRIVEN when the 10-y real yield moved ≥ 5 bp against gold; else GOLD-SPECIFIC; no driver word at all when \|move\| < 0.5 %, and none when the dollar or the real-yield leg is unavailable (the clause then says the driver is untested and names the offline series) | `{"usd_share": 0.4, "min_move_pct": 0.5, "real_yield_bp": 5.0}` | the H1 window |
 | H3 | "funds net 104,206 (−2.7 % w/w, long liquidation)" | `COT_DISAGG_F` (`gold_cot_metrics`, managed money) | managed-money net and its w/w change in % with the fund-driver label — the larger of the two fund legs (G-STUDY §5.2; "funds bought the dip" when price fell and the net still rose); printed whenever the positioning gauge is fresh | no threshold | latest report (Tuesday positions, Friday release) |
-| H4 | "India basis +3.1 % vs duty-paid landed" (the 26 Oct 05:49 figure of §2.6) | `MCX_BASIS_PCT` | MCX front settlement vs duty-paid landed (duty dated); stated, not judged — no "wide" or "discount" word | no threshold | latest |
+| H4 | "India basis +3.1 % vs duty-paid landed" (the 26 Oct 05:49 figure of §2.6) | `MCX_BASIS_PCT` | the contract's settlement (last-30-min VWAP, else the band of its real session), in ₹/10 g, vs the duty-paid landed price × purity/1000 (GOLD / GOLDM 995, GOLDTEN / PETAL / GUINEA 999; landed is fine gold — PM decision D1) at that session's close, or the live price vs now while a quote exists; one value per clock (duty dated); stated, not judged — no "wide" or "discount" word | no threshold | latest |
 | H5 | "roll DEC-26→FEB-27 costs +1.03 % (+3.2 %/yr), FND in 35 d" | `COMEX_CARRY_ANN_PCT` (days to FND from `gold_cme_calendar`) | front → next calendar spread as % and annualised; days to first notice; printed whenever the curve gauge is fresh | no threshold | latest |
 | H6 | "GLD −12.0 t on the day (notable)" | `GLD_TONNES` | GLD tonnes change on the latest day, printed whenever the ETF gauge is fresh; ≥ 5 t is called "notable" | `{"notable_t": 5.0}` | latest day |
 | H0 | "no fresh gauge: every input is stale or unavailable" (only when no other clause exists) · the closing words on every sentence | — | every verdict ends "describes, does not predict"; stale or unavailable gauges contribute no clause | no threshold | — |
@@ -335,9 +340,9 @@ as collapsible checklists whose deep link is the first panel id on the line.
 3. The drivers (`mc.drivers`, MACRO): what changed overnight and why; the headlines (`h.headlines`, HEALTH); any scheduled
    event today (`h.events`, HEALTH; the after-close flag).
 4. Yesterday's OI × price (`d.quadrant`, DAILY): COMEX (T+1) and MCX (07:35); roll and expiry days are greyed.
-5. The expected move (`mc.move`, MACRO): ATR in rupees, the 1σ day per lot, max lots at 1 % risk, cash headroom; the roll
+5. The expected move (`mc.move`, MACRO): ATR in rupees and the 1σ day per lot; max lots at 1 % risk sits on the MCXG paper ticket, cash headroom is yours to keep (≥ 3 ATR per lot); the roll
    calendar (`c.roll`, CONTRACTS) if a tender cut-off is within 7 days.
-Evening (23:00–23:30): the 24-hour chart (`d.24h`, DAILY) for the COMEX settlement vs the MCX close; tomorrow's events; the settlement window is the last 30 min.
+Evening (the last 30 min before the MCX close: 23:25–23:55 in US winter, 23:00–23:30 in US summer): the 24-hour chart (`d.24h`, DAILY) for COMEX vs the MCX close; tomorrow's events; MCX settles on the volume-weighted average of those 30 min.
 
 **Weekly (Saturday morning, 20 minutes)**
 1. Who did what (`p.hero` / `p.whois`, POSITIONING): the nets, the change by group in words, who closed what, the

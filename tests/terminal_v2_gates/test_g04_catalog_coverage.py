@@ -63,6 +63,7 @@ KNOWN_JOB_GAPS: dict[str, str] = {
     "gold_india_midday": "IBJA midday leg of the India ladder",
     "gold_weekly": "WGC / RBI / LBMA weekly series",
     "gold_cme_calendar": "CME contract calendar",
+    "gold_mcx_close": "MCX settlement proxy: gold_series MCX_<FAM>_<YYYYMM>_VWAP30 (GOLD catalog MCX_<FAM>_VWAP30)",
 }
 
 #: catalog ingest_job values that name no scheduled or data-service job (a row that can never find its job's last run)

@@ -23,11 +23,15 @@ router = APIRouter(tags=["gold"])
 _get_store: Callable[[], Any] | None = None
 _submit: Callable[[str, Callable[[Callable[[int, int], None]], dict[str, Any]]], dict[str, Any]] | None = None
 _http: Any = None
+_get_breeze: Callable[[], Any] | None = None
 
 
-def configure(*, get_store: Callable[[], Any], submit: Callable[..., dict[str, Any]], http: Any = None) -> None:
-    global _get_store, _submit, _http
-    _get_store, _submit, _http = get_store, submit, http
+def configure(*, get_store: Callable[[], Any], submit: Callable[..., dict[str, Any]], http: Any = None,
+              get_breeze: Callable[[], Any] | None = None) -> None:
+    """``get_breeze`` returns data-service's live BreezeConnect (or None without a session); only the read-only
+    ``mcx_close_vwap30`` group calls it (wave 1d)."""
+    global _get_store, _submit, _http, _get_breeze
+    _get_store, _submit, _http, _get_breeze = get_store, submit, http, get_breeze
 
 
 def _store() -> Any:
@@ -71,7 +75,8 @@ def ingest_gold(req: GoldIngestRequest | None = None, job: str | None = Query(No
         raise HTTPException(status_code=503, detail="gold package not configured")
 
     def _run(progress: Callable[[int, int], None]) -> dict[str, Any]:
-        res = jobs.run_job(store, http, job_id, groups, backfill_from=start, force=forced, params=params, progress=progress)
+        res = jobs.run_job(store, http, job_id, groups, backfill_from=start, force=forced, params=params, progress=progress,
+                           breeze=_get_breeze)
         reads.invalidate_catalog_cache()
         return res
 
@@ -175,6 +180,17 @@ def gold_cme_efrp(from_: str | None = Query(None, alias="from")) -> dict[str, An
 @router.get("/db/gold/curve")
 def gold_curve(exchange: str = Query("COMEX", pattern="^(COMEX|MCX)$"), date_: str | None = Query(None, alias="date")) -> dict[str, Any]:
     return reads.curve(_store(), exchange=exchange, day=_dates(date_))
+
+
+@router.get("/db/gold/mcx/settlement")
+def gold_mcx_settlement(symbol: str = Query("GOLD", pattern="^(GOLD|GOLDM|GOLDTEN|GOLDPETAL|GOLDGUINEA)$"),
+                        expiry: str | None = Query(None), date_: str | None = Query(None, alias="date"),
+                        asof: str | None = Query(None)) -> dict[str, Any]:
+    """The latest COMPLETED session's settlement proxy for one MCX contract (wave 1d, API_CONTRACT fair block):
+    ``settlement`` = the Breeze last-30-min VWAP when stored, else the ICICI band midpoint, with ``settlement_source``,
+    ``settlement_session`` (+ label), ``settlement_quality``, ``band_midpoint`` / ``band_session`` (the band labelled
+    with the session it really belongs to) and ``settlement_check``. ``expiry`` defaults to the front month."""
+    return reads.mcx_settlement(_store(), symbol=symbol, expiry=_dates(expiry), day=_dates(date_), asof=_asof(asof))
 
 
 @router.get("/db/gold/curve/history")

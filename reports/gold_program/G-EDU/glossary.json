@@ -498,7 +498,7 @@
   {
    "term": "tick value",
    "short": "Smallest price step × multiplier: GOLD ₹1 × 100 = ₹100 per lot; GOLDM ₹10; GUINEA and PETAL ₹1.",
-   "long": "Round-trip costs on one GOLD lot ≈ ₹2,560 ≈ 26 ticks; a 1% day ≈ 1,460 ticks.",
+   "long": "Round-trip costs on one GOLD lot ≈ ₹2,445 ≈ 24.5 ticks (5 Nov 2026 prices; the CONTRACTS card prints today's); a 1% day ≈ 1,440 ticks.",
    "see_also": [
     "multiplier",
     "round-trip cost"
@@ -523,7 +523,7 @@
   {
    "term": "price band",
    "short": "MCX daily limit around the previous settlement: ±3%, widened to 6% then 9% after cooling periods when hit.",
-   "long": "On a shock the band can lock MCX while COMEX keeps moving; ICICI's master publishes the band, whose midpoint is yesterday's settlement.",
+   "long": "On a shock the band can lock MCX while COMEX keeps moving. ICICI's master publishes the band; on 5 Nov 2026 its midpoint was one session older than the file implied, so the page keeps it for reference only.",
    "see_also": [
     "daily settlement",
     "gap risk"
@@ -538,7 +538,7 @@
   {
    "term": "settlement by session",
    "short": "An MCX settlement is labelled by the session it belongs to ('Thu 22 Oct settlement'), never by the date of the ICICI file that carried it (published the next morning).",
-   "long": "ICICI's security master is published ~01:58 UTC with the previous session's band; before ~07:30 the band can still be the session-before-last. The proxy settlement is the band midpoint and wears a PROXY chip until official bhavcopy rows exist (O-8).",
+   "long": "The page's settlement is the last-30-minute VWAP of the session's Breeze 1-minute bars (VWAP30 PROXY), else the ICICI band midpoint (BAND PROXY, one session stale on 5 Nov 2026), until official bhavcopy rows exist (O-8).",
    "see_also": [
     "daily settlement",
     "price band"
@@ -1168,7 +1168,7 @@
   {
    "term": "GOLDTEN",
    "short": "MCX 10 g gold future (Breeze code GOLDTE): ₹/10 g, 999 purity, month-end expiry, tick ₹1 = ₹1 per lot; OI 25,655 on 23 Oct 2026.",
-   "long": "Missing from the app's specs until phase 2; sits between GOLDM (100 g) and GUINEA (8 g) in granularity. Round trip ≈ 0.05% of notional at flat brokerage.",
+   "long": "On MCXG and CONTRACTS since phase 2; sits between GOLDM (100 g) and GUINEA (8 g) in granularity. Round trip ≈ 0.05% of notional at flat brokerage.",
    "see_also": [
     "GOLD / GOLDM / GOLDGUINEA / GOLDPETAL",
     "contract chooser"
@@ -1200,8 +1200,8 @@
   },
   {
    "term": "MCX basis",
-   "short": "MCX front settle ÷ duty-paid landed − 1 (995 purity, 15% duty); minus carry to expiry = carry-adjusted basis. Replaces the old 'implied premium 18%'.",
-   "long": "26 Oct 2026: 1,44,228 ÷ 1,39,840 − 1 = +3.1%, of which ≈ 1% is six weeks of rupee carry; the rest is local premium and expectation. Context, never a signal.",
+   "short": "MCX settle in ₹/10 g ÷ duty-paid landed of the contract's purity − 1 (GOLD/GOLDM 995, TEN/PETAL/GUINEA 999); minus carry = carry-adjusted basis.",
+   "long": "PETAL (₹/1 g) × 10 and GUINEA (₹/8 g) × 1.25 before dividing; 15% duty. Replaces the old 'implied premium 18%'. 26 Oct 2026: 1,44,228 ÷ 1,39,840 − 1 = +3.1%, of which ≈ 1% is six weeks of rupee carry; the rest is local premium and expectation. Context, never a signal.",
    "see_also": [
     "duty-paid landed",
     "implied premium",
@@ -1386,7 +1386,7 @@
   },
   {
    "term": "proxy settlement",
-   "short": "MCX settlement read as the midpoint of ICICI's ±3% price band because the official bhavcopy is bot-blocked. Labelled PROXY; official rows coexist once O-8 unblocks.",
+   "short": "MCX settlement estimated because the official bhavcopy is bot-blocked: the last-30-min VWAP of Breeze 1-minute bars (MCX's own method), else the ICICI band midpoint. Labelled PROXY.",
    "long": "",
    "see_also": [
     "price band",
@@ -1623,7 +1623,7 @@
   },
   {
    "term": "ATR",
-   "short": "Average True Range (14-day): the typical daily price range in quote units — ≈ ₹1,750 per 10 g at 1.2% of ₹1,46,000. The unit of every stop and size.",
+   "short": "Average True Range (14-day): the typical daily price range in quote units — ≈ ₹2,820 per 10 g on 5 Nov 2026 (≈ 2 % of ₹1,44,000). The unit of every stop and size.",
    "long": "",
    "see_also": [
     "position sizing",
@@ -1686,8 +1686,8 @@
   },
   {
    "term": "round-trip cost",
-   "short": "All charges to open and close: exchange 0.0021%/side, CTT 0.01% on sell, stamp 0.002% on buy, SEBI ₹10/crore, brokerage, GST 18% — ≈ ₹2,560 on one GOLD lot.",
-   "long": "26 ticks. Costs are small in gold futures; leverage and gaps are the risk.",
+   "short": "All charges to open and close: exchange 0.0021%/side, CTT 0.01% on sell, stamp 0.002% on buy, SEBI ₹10/crore, brokerage, GST 18% — ≈ ₹2,445 on one GOLD lot (5 Nov 2026).",
+   "long": "≈ 24.5 ticks; the CONTRACTS card prints today's figure. Costs are small in gold futures; leverage and gaps are the risk.",
    "see_also": [
     "tick value",
     "leverage"
@@ -1725,7 +1725,7 @@
   {
    "term": "fair open",
    "short": "App model: MCX settlement × (COMEX now ÷ COMEX at the MCX close) × (USD/INR now ÷ USD/INR at the close); references = last-30-minute averages.",
-   "long": "Tells you where MCX should open, not where it will close. Accuracy log: 3 days, 0% within ₹300, worse than naive so far.",
+   "long": "Tells you where MCX should open, not where it will close. The log's first 7 mornings (to 5 Nov 2026) were priced off a one-session-stale band settlement; the VWAP baseline replaced it.",
    "see_also": [
     "chase limit",
     "accuracy log",
@@ -1738,7 +1738,7 @@
   },
   {
    "term": "chase limit",
-   "short": "The desk's tolerance (default ₹300) between the MCX open and fair value for 'OK to trade the open'. Unsupported by evidence yet (3 logged days, 0% within).",
+   "short": "The desk's tolerance (default ₹300) between the MCX open and fair value for 'OK to trade the open'. Unsupported by evidence yet (7 logged days to 5 Nov 2026, 0% within).",
    "long": "Wears the `heuristic` badge with the measured miss (median ≈ ₹2.9k) until ≥ 20 scored mornings exist; re-decide the limit then.",
    "see_also": [
     "fair open",

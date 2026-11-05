@@ -267,8 +267,9 @@ def test_fnd_and_ltd_events_come_from_the_prf_when_the_sunday_calendar_is_missin
     ev = ingest_local.compile_events(store, now=now)
     fnd = ev[(ev["kind"] == "COMEX_FND") & (ev["name"] == "COMEX GC 2026-12 first notice day")].iloc[0]
     ltd = ev[(ev["kind"] == "COMEX_LTD") & (ev["name"] == "COMEX GC 2026-12 last trading day")].iloc[0]
-    assert fnd["event_date"] == date(2026, 11, 30) and fnd["source"] == "cme_prf" and ltd["event_date"] == date(2026, 12, 29)
-    assert ltd["time_ist"] == "23:00" and "COMEX_FIRST_INTENT" not in set(ev["kind"])            # the PRF carries no intent day
+    # wave 1d: the LTD ends 12:30 CT = 00:00 IST the NEXT day in US winter (was printed '23:00' on the CME date)
+    assert fnd["event_date"] == date(2026, 11, 30) and fnd["source"] == "cme_prf" and ltd["event_date"] == date(2026, 12, 30)
+    assert ltd["time_ist"] == "00:00" and "COMEX_FIRST_INTENT" not in set(ev["kind"])            # the PRF carries no intent day
     nxt = ev[(ev["kind"] == "COMEX_FND") & (ev["name"] == "COMEX GC 2027-02 first notice day")].iloc[0]
     assert nxt["event_date"] == date(2027, 1, 29)
     # the calendar, once stored, wins over the PRF for the months it carries (and adds the intent day)

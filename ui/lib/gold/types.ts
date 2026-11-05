@@ -158,6 +158,13 @@ export interface HealthGauge {
   vs_20d_pct?: number | null
   vs_200d_pct?: number | null
   drawdown_52w_pct?: number | null
+  /** TREND (wave 1d contract): drawdown from the 52-week high, % (alias of drawdown_52w_pct) and the words the values earn */
+  drawdown_pct?: number | null
+  trend_words?: 'below both averages' | 'between' | 'above both' | string | null
+  /** INDIA BASIS (wave 1d): the purity of the landed price the basis divides by, and the duty-paid landed it used now */
+  basis_reference?: BasisReference | null
+  duty_paid_landed_now?: number | null
+  mcx_live?: number | null
   net_pct_oi?: number | null
   cot_index_52?: number | null
   /** POSITIONING: "long, not crowded" etc. (a description, never a colour) */
@@ -206,12 +213,45 @@ export interface HealthGauge {
   last_bar_note?: string | null
 }
 
+/**
+ * Wave 1d (the settlement blocker): WHERE the MCX settlement every gold number divides by came from. The ICICI master's
+ * price-band midpoint is one MCX session stale (its band is set around the session BEFORE the one the file names), so the
+ * server prefers the latest COMPLETED session's last-30-minute volume-weighted average of the Breeze 1-minute bars — MCX's
+ * own settlement method, a proxy because it is not the bhavcopy — and keeps the band midpoint for reference, labelled with
+ * the session it really belongs to. `settlement_check.flagged` when the two differ by more than 0.6 %
+ * (`SETTLEMENT_CHECK_PCT` in ./format; the accuracy log's `stale_baseline` uses the same test).
+ * Carried by `/health.fair`, `/overview.strip`, `/fair.baseline` (same names; the UI reads whichever block it holds).
+ */
+export type SettlementSource = 'breeze_vwap30' | 'band_midpoint' | 'breeze_previous_close' | 'user_entry'
+export type SettlementQuality = 'vwap30_proxy' | 'band_proxy' | 'proxy'
+export interface SettlementCheck { band_vs_vwap30_pct: number | null; flagged: boolean }
+export interface SettlementFields {
+  settlement?: number | null
+  settlement_source?: SettlementSource | string | null
+  /** ISO date of the session the number belongs to (never the file date) */
+  settlement_session?: string | null
+  /** 'Wed 04 Nov settlement' */
+  settlement_session_label?: string | null
+  settlement_quality?: SettlementQuality | string | null
+  /** the ICICI band midpoint, kept for reference, and the session it REALLY belongs to */
+  band_midpoint?: number | null
+  band_session?: string | null
+  settlement_check?: SettlementCheck | null
+}
+
+/**
+ * India basis purity (wave 1d; PM decision D1): MCX GOLD / GOLDM are 995 fine, GOLDTEN, GOLDPETAL and GOLDGUINEA 999; the
+ * basis divides the contract's price, scaled to ₹/10 g, by the landed price of THAT purity. The server names it in
+ * `basis_reference`.
+ */
+export type BasisReference = 'landed_995' | 'landed_999' | string
+
 /** A live leg of the fair model as the server sends it (`mcx._fair_value`): `{symbol, price, as_of}`. */
 export interface FairLeg { symbol?: string | null; price: number | null; as_of?: string | null }
 
 /** `/health.fair` (API_CONTRACT §2.1; the SERVER shape). `comex` / `usdinr` are legs, not numbers: read them with
  *  `legPrice()` from ./format (a bare number is tolerated for the legacy MCXG composer only). */
-export interface HealthFair {
+export interface HealthFair extends Omit<SettlementFields, 'settlement' | 'settlement_session' | 'settlement_session_label' | 'settlement_quality'> {
   contract?: string | null
   expiry?: string | null
   expiry_source?: string | null
@@ -232,7 +272,9 @@ export interface HealthFair {
   settlement: number | null
   settlement_session?: string | null
   settlement_session_label?: string | null
-  settlement_quality?: 'proxy' | string | null
+  settlement_quality?: SettlementQuality | string | null
+  /** the landed price of the contract's purity the basis divides by (wave 1d) */
+  basis_reference?: BasisReference | null
   /** fair − settlement in ₹ (the "gap" of BRF's before-open line), from the server */
   gap_vs_settlement?: number | null
   /** today's captured MCX open (gold_preopen_log) once the 09:10 capture ran: BRF's "Gold opened … (miss …)" line */
@@ -296,7 +338,10 @@ export interface FairAccuracy {
 }
 
 export interface GoldFair extends Omit<GoldPreOpen, 'baseline' | 'verdict'> {
-  baseline: GoldPreOpen['baseline'] & { session_label?: string | null }
+  /** wave 1d: the baseline carries the same settlement block as `/health.fair` (source, session, quality, band, check) */
+  baseline: GoldPreOpen['baseline'] & { session_label?: string | null; stale?: boolean | null; master_published?: string | null } & SettlementFields
+  /** the `/health.fair` block for a non-GOLD family or an explicit expiry (API_CONTRACT §2.2) */
+  contract_fair?: HealthFair | null
   verdict: GoldPreOpen['verdict'] & { badge?: 'heuristic' }
   accuracy?: FairAccuracy | null
   /** today's accuracy-log row once the 08:45 snapshot ran (API_CONTRACT §2.2) */
@@ -332,7 +377,9 @@ export interface OverviewSession {
 }
 
 /** The five numbers of the header strip (a.1) + the gold-api cross-check chip (A12). */
-export interface OverviewStrip {
+export interface OverviewStrip extends SettlementFields {
+  /** wave 1d: the purity of the landed price `basis_*` divides by */
+  basis_reference?: BasisReference | null
   comex_matched?: string | null
   comex_matched_settle: number | null
   comex_matched_settle_date?: string | null
@@ -654,9 +701,17 @@ export interface CurvePoint {
   /** the file / fetch date and the SESSION the settlement belongs to (PLAN 0.1 #8) */
   trade_date?: string | null
   session_date?: string | null
+  /** wave 1d: where `settle_or_last` came from ('breeze_vwap30' | 'band_midpoint') and the session the band really belongs to */
+  settle_source?: SettlementSource | string | null
+  band_session?: string | null
 }
 
-export interface CurveBasis {
+export interface CurveBasis extends SettlementFields {
+  /** the basis block's own names for the settlement (gold.py `_basis_block`): read with `curveBasisSettlement` */
+  mcx_front_source?: SettlementSource | string | null
+  purity?: number | string | null
+  /** wave 1d: the purity of the landed price the basis divides by */
+  basis_reference?: BasisReference | null
   mcx_front_inr: number | null
   mcx_front_session?: string | null
   mcx_front_session_label?: string | null
@@ -696,8 +751,12 @@ export interface GoldCurve {
   basis?: CurveBasis | null
   /** MCX: basis / premium history; COMEX: the annualised carry history */
   history?: { trade_date: string; basis_pct?: number | null; premium_pct?: number | null; carry_ann_pct?: number | null }[]
-  /** "last trade, not settlement" (Yahoo per-month) until bulletin settlements are allowed */
+  /** "last trade, not settlement" (Yahoo per-month) until bulletin settlements are allowed; MCX: whose band the settles are */
   price_label?: string | null
+  /** MCX (wave 1d, D4): the ONE session the chain's settles belong to (the band's own session), its label, and the OI's session */
+  chain_session?: string | null
+  chain_session_label?: string | null
+  oi_session?: string | null
   since?: string | null
   badge?: Badge
   freshness?: Freshness
@@ -711,6 +770,12 @@ export interface ContractExpiryRow {
   source: 'observed' | 'computed' | string
   settle?: number | null
   settle_quality?: string | null
+  /** wave 1d: 'breeze_vwap30' | 'band_midpoint', the settle's session and the session the band belongs to */
+  settle_source?: SettlementSource | string | null
+  settle_session?: string | null
+  settle_session_label?: string | null
+  band_session?: string | null
+  band_midpoint?: number | null
   band_lo?: number | null
   band_hi?: number | null
   oi?: number | null
@@ -722,6 +787,8 @@ export interface ContractExpiryRow {
   carry_pct?: number | null
   /** 'annualised vs the front expiry (as /curve)' — the one carry convention; null on the front row (C-DATA-16) */
   carry_convention?: string | null
+  /** wave 1d: why no carry is printed (front and this expiry settle on different sessions) */
+  carry_note?: string | null
   comex_matched?: string | null
   comex_matched_calendar?: string | null
   comex_matched_note?: string | null
@@ -739,6 +806,9 @@ export interface ContractFamily {
   lot_grams?: number | null
   quote_unit: string
   purity: string
+  /** wave 1d: the landed reference its basis divides by, and the session / quality the 1 % move and costs are taken at */
+  basis_reference?: string | null
+  price_basis?: string | null
   expiry_rule: string
   cycle?: string | null
   expiries: ContractExpiryRow[]
@@ -817,6 +887,10 @@ export interface GoldContracts {
 // ── /api/gold/premiums (PHYSICAL; B4B) ──────────────────────────────────────────────────────────
 
 export interface LadderStep { step: string; label: string; value: number | null; ts?: string | null; ts_label?: string | null; source?: string | null; unit?: string | null
+  /** D3 (round 2): the quote unit a PETAL (₹/1 g) / GUINEA (₹/8 g) value was scaled FROM, when the server scaled it to ₹/10 g */
+  scaled_from?: string | null
+  quote_unit?: string | null
+  settlement_source?: string | null
   /** wave 1c: the clock of this bar — 'now' | 'fix' | 'settlement' | 'dated constant' — never divide across clocks */
   clock?: string | null }
 
@@ -834,6 +908,9 @@ export interface GoldPremiums {
     basis_date?: string | null
     basis_label?: string | null
     basis_source?: string | null
+    /** wave 1d: the purity of the landed price the basis divides by, and where the MCX settle came from */
+    basis_reference?: BasisReference | null
+    settlement_source?: SettlementSource | string | null
     /** the live-clock pair while a quote exists (both legs 'now'); null otherwise */
     live_basis?: { value: number | null; mcx_live?: number | null; duty_paid_landed?: number | null; as_of?: string | null; label?: string | null; clock?: string | null } | null
     carry_adj_pct?: number | null
@@ -856,6 +933,10 @@ export interface GoldPremiums {
     ts_ref?: string | null
     /** wave 1c (C-TRADER-5): paired on the SAME report date only; `note` = "awaiting today's PM: …" when today's London PM is not stored */
     pair_date?: string | null
+    /** the date of `sge_pm_cny_g` (the pair date's own SGE leg) and a newer SGE print that stands alone until its London PM is stored */
+    sge_pm_date?: string | null
+    sge_latest_cny_g?: number | null
+    sge_latest_date?: string | null
     pairing?: string | null
     note?: string | null
     history?: { report_date: string; premium_usd?: number | null; premium_pct?: number | null }[]
@@ -969,10 +1050,18 @@ export interface GoldLogRowX {
   fair_open?: number; threshold?: number; duty_pct?: number; comex_ref?: number; comex_now?: number; inr_ref?: number; inr_now?: number
   actual_open?: number; actual_source?: string; captured_at?: string; error?: number; naive_error?: number; event_risk?: number
   stale_baseline?: boolean; inputs_json?: string | null
+  /** D2 (wave 1d): the row's settlement check — its baseline vs the last-30-min VWAP of the session it was labelled with;
+   *  null = not run yet (no VWAP for that session). Stored numbers are never rewritten, only flagged and re-explained. */
+  baseline_check?: (SettlementCheck & { threshold_pct?: number | null; compared?: string | null }) | null
+  labelled_session_vwap30?: number | null
+  baseline_session_label?: string | null
 }
 export interface GoldLogStatsX {
   days: number; mean_abs_error?: number; median_abs_error?: number; bias?: number; within_threshold_pct?: number
   naive_mean_abs_error?: number | null; p90_abs_error?: number; p90?: number; threshold?: number
+  /** D2: the stale rows NAMED, the rows whose check could not run yet, the rule, and the same stats without the stale rows */
+  stale_baseline_count?: number; stale_baseline_dates?: string[]; stale_baseline_unknown?: string[]; stale_baseline_rule?: string | null
+  excluding_stale?: Omit<GoldLogStatsX, 'excluding_stale'> | null
 }
 export interface GoldLog { rows: GoldLogRowX[]; stats: GoldLogStatsX; badge?: Badge; source?: string | null; read?: string | null }
 

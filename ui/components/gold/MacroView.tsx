@@ -148,7 +148,7 @@ export function MacroView(props: GoldSubViewProps) {
           copyP="DXY weights (EUR 57.6 %, JPY 13.6 %, GBP 11.9 %, CAD 9.1 %, SEK 4.2 %, CHF 3.6 %) are replicable but Europe-heavy; Fed broad weights would add CNY/INR with a weekly lag (open question j.2 #11).">
           {m?.kgx ? <KgxBar period={m.kgx.period} total={m.kgx.total_pct} pure={m.kgx.pure_gold_pct} usdEffect={m.kgx.usd_effect_pct} inrEffect={m.kgx.inr_effect_pct} weights={m.kgx.weights} note={kgxNote} tips={tip} />
             : <div style={{ color: T.dim, fontSize: 11 }}>KGX block pending (derived at 21:30)</div>}
-          {m?.kgx?.from_date && <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>window from {istLabel(m.kgx.from_date)}</div>}
+          {m?.kgx?.from_date && <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }} data-gold-kgx-window>window from {istLabel(m.kgx.from_date)}{m.kgx.period === 'W' ? ' — the trailing sessions, not HEALTH\'s week to date (Monday-to-date)' : ''}</div>}
           {rebasedSeries ? <div style={{ marginTop: 8 }}><LineChart series={rebasedSeries} height={120} dp={0} label="gold vs gold-in-basket, rebased" /></div>
             : <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>rebased 1-y line appears once COMEX_GC_FRONT and DXY_CLOSE have daily history{rebased.error ? ` (${rebased.error})` : ''}</div>}
         </GPanel>
@@ -192,10 +192,11 @@ export function MacroView(props: GoldSubViewProps) {
                 <span title={tip('effr')}>EFFR {pct(m.fed.effr, 2)}{m.fed.effr_date ? ` (${istLabel(m.fed.effr_date)})` : ''}</span> · <span title={tip('fed_target')}>target {m.fed.target ?? '—'}</span> · <span title={tip('next_fomc_ist')}>next FOMC {m.fed.next_fomc_ist ?? '—'}</span>
                 {m.fed.after_mcx_close != null && <> · </>}{m.fed.after_mcx_close != null && <Chip color={m.fed.after_mcx_close ? T.amber : T.cyan} style={{ fontSize: 8.5, marginLeft: 6 }} title={tip('after_mcx_close')}>{m.fed.after_mcx_close ? 'AFTER MCX CLOSE · gap risk at 09:00' : 'IN SESSION'}</Chip>}
               </div>
+              <div style={{ fontSize: 9.5, color: T.dim, marginBottom: 3 }} data-gold-fed-rows title={tip('fed_p_hike')}>rows: the Atlanta Fed tracker&apos;s horizons (IMM third-Wednesday windows), not FOMC decision dates — the next decision is the one named above</div>
               <div style={{ display: 'grid', gap: 4 }}>
                 {m.fed.meetings.map(mt => (
                   <div key={mt.meeting} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 60px 60px 70px', gap: 8, alignItems: 'center', fontSize: 10.5, fontFamily: T.mono }}>
-                    <span style={{ color: T.text }}>{istLabel(mt.meeting)}</span>
+                    <span style={{ color: T.text }} title="a tracker horizon (IMM window), not a meeting date">to {istLabel(mt.meeting)}</span>
                     <Meter value={(mt.p_cut ?? 0) / 100} color={T.violet} height={6} />
                     <span title={tip('fed_p_cut')} style={{ color: T.muted }}>cut {pct(mt.p_cut, 0)}</span>
                     <span title={tip('fed_p_hike')} style={{ color: T.muted }}>hike {pct(mt.p_hike, 0)}</span>
@@ -239,7 +240,7 @@ export function MacroView(props: GoldSubViewProps) {
         copyB="when the known shocks hit, in IST; after the MCX close means the move shows up as a gap at 09:00."
         copyP="ForexFactory this-week JSON (G19) with consensus and previous; in-session = 18:00–23:30 IST; FOMC 23:30 (00:30 after 1 Nov); BLS / BEA schedules linked."
         right={<span style={{ display: 'flex', gap: 4 }}><a href="https://www.bls.gov/schedule/news_release/" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}><Chip color={T.cyan} style={{ cursor: 'pointer' }}>BLS ↗</Chip></a><a href="https://www.bea.gov/news/schedule" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}><Chip color={T.cyan} style={{ cursor: 'pointer' }}>BEA ↗</Chip></a></span>}>
-        <DataTable columns={calCols} rows={calRows} rowKey={(r, i) => `${r.date ?? r.event_date}-${r.title ?? r.name}-${i}`} dense maxHeight={280} empty={<div style={{ padding: 10, color: T.dim, fontSize: 11 }}>no US releases stored for this week (hourly job 09:00–23:00)</div>} />
+        <DataTable columns={calCols} rows={calRows} rowKey={(r, i) => `${r.date ?? r.event_date}-${r.title ?? r.name}-${i}`} dense empty={<div style={{ padding: 10, color: T.dim, fontSize: 11 }}>no US releases stored for this week (hourly job 09:00–23:00)</div>} />
       </GPanel>
 
       <Grid min={340}>

@@ -13,6 +13,7 @@
  * itself is context.
  */
 import { CHART_BOX, T, useChartSize } from '@/components/terminal'
+import { ladderPer10g } from '@/lib/gold/format'
 import type { LadderStep } from '@/lib/gold/types'
 import { dateLabel, inr, istLabel, ladderClock, ladderTsLabel, num, orderLadder, signedPct, usd } from './goldViewModel'
 
@@ -43,7 +44,16 @@ export interface PriceLadderProps {
 }
 
 export function PriceLadder({ steps, duty, premium, premiumPending, basisPct, basisClock, carryAdjPct, tips }: PriceLadderProps) {
-  const ordered = orderLadder(steps)
+  // D3 (round 2): a PETAL (₹/1 g) / GUINEA (₹/8 g) bar is scaled to ₹/10 g before it sits beside the ₹/10 g bars, and says so
+  const dutyPaidRef = steps.find(s => s.step.toLowerCase().startsWith('duty_paid'))?.value ?? null
+  const scaledFrom: Record<string, string> = {}
+  const ordered = orderLadder(steps).map(s => {
+    if (!/^(landed|duty_paid|ibja|mcx)/.test(s.step.toLowerCase()) || s.step.toLowerCase().startsWith('duty_paid')) return s
+    const r = ladderPer10g(s, dutyPaidRef)
+    if (!r.scaled) return s
+    if (r.from) scaledFrom[s.step] = r.from
+    return { ...s, value: r.value }
+  })
   const { ref, w } = useChartSize(720, 150, { minRatio: 1, maxRatio: 1 })
   const rupee = ordered.filter(s => /^(landed|duty_paid|ibja|mcx)/.test(s.step.toLowerCase()) && s.value != null)
   const maxR = Math.max(1, ...rupee.map(s => s.value as number))
@@ -70,7 +80,7 @@ export function PriceLadder({ steps, duty, premium, premiumPending, basisPct, ba
               <title>{tips(tipKey) ?? STEP_TEXT[k.split(/[^a-z_]/)[0]] ?? s.step}</title>
               <rect x={x} y={14 + barMaxH - bh} width={bw} height={bh} fill={fill} opacity={clock === 'now' ? 0.85 : 0.6} />
               <text x={x + bw / 2} y={14 + barMaxH - bh - 4} textAnchor="middle" fontSize={10.5} fontFamily={T.mono} fill={T.bright}>{fmtStep(s)}</text>
-              <text x={x + bw / 2} y={14 + barMaxH + 14} textAnchor="middle" fontSize={9.5} fontFamily={T.mono} fill={T.text}>{STEP_TEXT[k.split(/[^a-z_]/)[0]] ?? s.step}</text>
+              <text x={x + bw / 2} y={14 + barMaxH + 14} textAnchor="middle" fontSize={9.5} fontFamily={T.mono} fill={T.text} data-ladder-scaled-from={scaledFrom[s.step] ?? undefined}>{STEP_TEXT[k.split(/[^a-z_]/)[0]] ?? s.step}{scaledFrom[s.step] ? ` (${scaledFrom[s.step]} → ₹/10 g)` : ''}</text>
               <text x={x + bw / 2} y={14 + barMaxH + 26} textAnchor="middle" fontSize={8.5} fontFamily={T.mono} fill={clock === 'now' ? T.cyan : T.dim}>{ladderTsLabel(s)}</text>
               <text x={x + bw / 2} y={14 + barMaxH + 37} textAnchor="middle" fontSize={8.5} fontFamily={T.mono} fill={T.dim}>{s.source ?? ''}</text>
               {i < ordered.length - 1 && <text x={(i + 1) * colW} y={14 + barMaxH / 2} textAnchor="middle" fontSize={11} fill={T.dim}>→</text>}

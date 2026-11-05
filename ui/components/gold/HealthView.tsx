@@ -13,8 +13,9 @@
 import { useMemo, type ReactNode } from 'react'
 import { Chip, Notice, Spark, Stat, T, fmtFixed } from '@/components/terminal'
 import { getGoldBrief, getGoldCalendar, getGoldHealth } from '@/lib/gold/api'
-import { HEALTH_SUFFIX, arrow, briefHeader, dayLabel, eventStar, fmtInUnit, fmtSignedCount, gaugeChangeText, hasCompositeScore, healthLine, istNowKey,
-         orderEvents, percentileText, publishGate, verdictWindowLabel } from '@/lib/gold/format'
+import { HEALTH_SUFFIX, arrow, basisTileWords, briefHeader, dayLabel, eventStar, fmtInUnit, fmtSignedCount, fmtSignedPctSp, gaugeChangeText, hasCompositeScore,
+         healthLine, istNowKey, orderEvents, percentileText, publishGate, settlementDay, settlementQualityChip, stripSettlement, trendValuesLine, trendWords,
+         verdictWindowLabel } from '@/lib/gold/format'
 import type { GoldEvent, GoldSubViewProps, HealthGauge } from '@/lib/gold/types'
 import { GoldPreOpen } from './GoldPreOpen'
 import { Term } from './ViewBits'
@@ -32,7 +33,7 @@ const TILES: { key: string; label: string; b: ReactNode; p: string; price?: bool
   { key: 'real_yield', label: 'Real yield', b: <>The cost of holding gold: a falling <Term t="real yield" /> supports gold. Δ in <Term t="basis point">bp</Term>.</>, p: '10-y TIPS yield (Treasury real curve, FRED DFII10 fallback), T+1; Δ over the window in bp (1 bp = 0.01 %); contemporaneous beta ≈ −5 %/100 bp since 2022, no lead (G-MACRO H1).' },
   { key: 'dollar', label: 'Dollar', b: <>A rising <Term t="DXY">dollar index</Term> is a headwind for gold in dollars.</>, p: 'ICE dollar index DX-Y.NYB, Δ over the window; weekly beta ≈ −1.0 in every regime (H2); both rise in liquidity crises.' },
   { key: 'positioning', label: 'Positioning', b: <>What the funds (<Term t="managed money" />) hold and did this week; the words below are this week&apos;s read.</>, p: 'CFTC managed-money net futures (Tuesday positions, Friday release); Δ w/w; 3-y percentile once history exists. No forecasting power 2006–2026 (G-STUDY).' },
-  { key: 'india_basis', label: 'India basis', b: <>MCX vs the <Term t="duty-paid landed" /> price, both at the settlement clock: above = local demand exceeds importable supply.</>, p: 'MCX front settle ÷ (COMEX × USD/INR × 10/31.1035 × 1.15) − 1 at the settlement session (stored MCX_BASIS_PCT), duty 15 % dated 13 May 2026; IBJA premium beside it (M8/M7).' },
+  { key: 'india_basis', label: 'India basis', b: <>MCX vs the <Term t="duty-paid landed" /> price of the same purity, both legs at one clock (live while MCX trades, else the settlement): above = local demand exceeds importable supply.</>, p: 'live MCX ÷ duty-paid landed now − 1 while a quote exists, else settle ÷ that session\'s duty-paid − 1; settle = last-30-min VWAP of the Breeze 1-minute bars (else the ICICI band midpoint), both PROXY; landed at the contract\'s purity (GOLD/GOLDM 995, TEN/PETAL/GUINEA 999), a PETAL or GUINEA price scaled to ₹/10 g first; duty 15 % dated 13 May 2026; IBJA premium beside it (M8/M7).' },
   { key: 'shanghai', label: 'Shanghai premium', b: <>Shanghai paying more than London (<Term t="SGE premium" />) means Chinese demand is pulling metal east; the Δ is in $/oz.</>, p: 'SGE PM (CNY/g × 31.1035 ÷ USDCNY) − LBMA PM / COMEX at 14:15 Beijing (M9); read changes and sign flips in $/oz, not the level (7-hour gap).' },
   { key: 'etf', label: 'ETF holdings', b: <>Western investment demand: <Term t="GLD" /> tonnes and the day&apos;s change.</>, p: 'SPDR GLD tonnes (T+1 ≈ 06:00 IST), Δ d/d; contemporaneous with price, no lead (G-STUDY, G-MACRO). Displayed with attribution (O-1).' },
   { key: 'curve', label: 'Curve / roll', b: <>What the <Term t="roll" /> from the front month into the next costs, and when the front month stops being tradeable (<Term t="FND / LTD" />).</>, p: 'Contango DEC→FEB (F2/F1 − 1), annualised × 365/days; days to COMEX first notice (gold_cme_calendar). A cost, not a signal.' },
@@ -46,6 +47,8 @@ function gaugeValue(g: HealthGauge, unit: GoldSubViewProps['unit'], usdinr: numb
   if (g.value == null) return '—'
   const u = (g.unit ?? '').toLowerCase()
   if (u === 'usd/oz' || u === '$/oz') return fmtInUnit(g.value, unit, usdinr)
+  // a basis / premium is a signed spread: '+0.42 %', the same sign the header strip prints (round 2)
+  if ((u === '%' || u === 'pct') && g.key === 'india_basis') return fmtSignedPctSp(g.value, 2)
   if (u === '%' || u === 'pct') return `${fmtFixed(g.value, 2)} %`
   if (u === 'contracts') return fmtSignedCount(g.value)                       // Western grouping for contracts (C-TRADER-20)
   if (u === 't' || u === 'tonnes') return `${fmtFixed(g.value, 1)} t`
@@ -71,7 +74,7 @@ function thresholdLabel(t: number | string | Record<string, number | string | nu
   return Object.entries(t).map(([k, v]) => `${k} ${v ?? '—'}`).join(', ')
 }
 
-export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog, onNavigate }: GoldSubViewProps) {
+export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog, onNavigate, fair, overview }: GoldSubViewProps) {
   const health = useGoldLoad(() => getGoldHealth(window), [window], HEALTH_MS)
   const events = useGoldLoad(() => getGoldCalendar(7), [], 600_000)
   const brief = useGoldLoad(() => getGoldBrief(), [], 900_000)
@@ -85,6 +88,8 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
   const windowLabel = verdictWindowLabel(h)
   const nowKey = istNowKey()
   const eventRows = useMemo(() => orderEvents(events.data?.events ?? [], nowKey), [events.data, nowKey])
+  // the settlement block of this page load (wave 1d): the India-basis tile's settlement chip names its source and session
+  const settleBlock = useMemo(() => stripSettlement(overview?.strip, fair), [overview?.strip, fair])
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
@@ -138,10 +143,20 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
               const dir = g.direction_for_gold
               const val = gaugeValue(g, unit, usdinr)
               const offline = g.state === 'unavailable' || g.state === 'stale'
-              // a settlement-clock gauge (India basis) is DATED by its session, not "LIVE" (C-BEGINNER-25)
-              const sessionChip = t.key === 'india_basis' && g.report_date
-                ? <span style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1, color: T.muted, border: `1px solid ${T.muted}55`, padding: '1px 6px', whiteSpace: 'nowrap' }} title={g.settlement_session_label ?? `${dayLabel(g.report_date)} settlement`}>SETTLEMENT · PROXY · {dayLabel(g.report_date)}</span>
+              // a settlement-clock gauge (India basis) is DATED by its session and names the settlement's source (C-BEGINNER-25,
+              // wave 1d); a LIVE-clock value (a quote exists: clock 'now') wears the live lag chip, never a settlement chip
+              const basisClock = t.key === 'india_basis' ? (g.clock ?? (g.state === 'live' ? 'now' : 'settlement')) : null
+              const settleDay = basisClock === 'settlement' ? (dayLabel(g.settle_basis_date) || settlementDay(settleBlock) || dayLabel(g.report_date)) : ''
+              const sessionChip = basisClock === 'settlement' && settleDay
+                ? <span data-gold-basis-chip="settlement" style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1, color: T.muted, border: `1px solid ${T.muted}55`, padding: '1px 6px', whiteSpace: 'nowrap' }}
+                    title={`${g.settle_basis_label ?? g.settlement_session_label ?? `${settleDay} settlement`} · ${settleBlock.settlement_source === 'breeze_vwap30' ? 'last-30-min VWAP of the Breeze 1-minute bars' : 'ICICI price-band midpoint'}`}>
+                    SETTLEMENT · {settlementQualityChip(settleBlock.settlement_quality, settleBlock.settlement_source)} · {settleDay}</span>
                 : null
+              const trendTile = t.key === 'trend'
+              const tWords = trendTile ? trendWords(g) : null
+              const tValues = trendTile ? trendValuesLine(g) : ''
+              // the clock words ONCE: the server's label, the purity only when the label does not already name it (round 2)
+              const basisWords = t.key === 'india_basis' ? basisTileWords(basisClock === 'now' ? (g.basis_label ?? 'live MCX vs duty-paid landed now') : (g.settle_basis_label ?? g.basis_label ?? 'at the settlement'), g.basis_reference) : null
               return (
                 <div key={t.key} data-gold-gauge={t.key} data-badge={g.badge} data-gauge-state={g.state} style={{ minWidth: 0 }}>
                   <Stat big={false} label={<span title={tooltips[g.key] ?? tooltips[t.key] ?? g.label}>{t.label}</span>}
@@ -157,9 +172,16 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
                         {g.state === 'unavailable' ? 'source offline' : 'stale'}{g.report_date ? ` · last ${dayLabel(g.report_date)}` : ''}{g.note ? ` · ${g.note}` : g.state === 'unavailable' && g.value == null ? ' · no stored point yet (the yahoo_daily job writes the series; FRED DTWEXBGS is a different index and is not shown as DXY)' : ''}
                       </span>}
                       {g.words && <span style={{ color: T.text, fontFamily: T.mono, fontSize: 10 }}>{g.words}</span>}
+                      {/* TREND prints its VALUES and the words they earn, never only the rule (wave 1d; the analyst: 'uptrend' while below both) */}
+                      {trendTile && (tValues || tWords) && <span data-gold-trend-values style={{ color: T.text, fontFamily: T.mono, fontSize: 10, whiteSpace: 'normal' }}>
+                        {tValues}{tWords ? <> · <b>{tWords}</b></> : null}</span>}
+                      {/* INDIA BASIS: which clock and which purity the one value is at (wave 1d) */}
+                      {t.key === 'india_basis' && <span data-gold-basis-clock={basisClock ?? ''} style={{ color: T.muted, fontSize: 10, whiteSpace: 'normal' }}>
+                        {basisWords}</span>}
                       {g.last_bar_partial && <span data-gauge-partial style={{ color: T.dim, fontSize: 10 }}>{g.last_bar_note ?? 'today\u2019s bar is a partial Globex day, not a settlement'}</span>}
                       <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
-                        {dir && <span style={{ color: T.text, fontFamily: T.mono, fontSize: 9.5, letterSpacing: .8 }}>{dir.toUpperCase()}{layer === 'P' && g.percentile_1y != null ? ` · ${percentileText(g.percentile_1y, '1 y')}` : ''}{layer === 'P' && g.percentile_3y != null ? ` · ${percentileText(g.percentile_3y, '3 y')}` : ''}</span>}
+                        {dir && !trendTile && <span style={{ color: T.text, fontFamily: T.mono, fontSize: 9.5, letterSpacing: .8 }}>{dir.toUpperCase()}{layer === 'P' && g.percentile_1y != null ? ` · ${percentileText(g.percentile_1y, '1 y')}` : ''}{layer === 'P' && g.percentile_3y != null ? ` · ${percentileText(g.percentile_3y, '3 y')}` : ''}</span>}
+                        {trendTile && layer === 'P' && <span style={{ color: T.dim, fontFamily: T.mono, fontSize: 9.5 }}>rule: {dir ?? g.rule}{g.percentile_1y != null ? ` · ${percentileText(g.percentile_1y, '1 y')}` : ''}</span>}
                         <BadgeChip badge={g.badge} />
                         {sessionChip ?? <LagChipEl freshness={{ state: g.state, source: g.source, as_of: g.release_at, age_days: g.age_days }} maxAgeDays={catalog[g.series_id ?? '']?.max_age_days} />}
                         {!sessionChip && g.report_date && <span style={{ color: T.dim, fontSize: 9.5 }}>{dayLabel(g.report_date)}</span>}
@@ -174,7 +196,7 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
       </GoldPanel>
 
       {/* h.open · h.moved · h.headlines · h.accuracy: the desk, rendered exactly once on the terminal */}
-      <GoldPreOpen sel={sel} layer={layer} tooltips={tooltips} catalog={catalog} />
+      <GoldPreOpen sel={sel} layer={layer} tooltips={tooltips} catalog={catalog} fair={fair} />
 
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', alignItems: 'start' }}>
         {/* h.events */}
@@ -185,7 +207,7 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
           copyP="Impact from the Forex Factory calendar (High / Medium / Low), roll and holiday rows between Medium and Low; rows already behind the IST clock are dropped. FOMC decision 00:30 IST (winter); US CPI/NFP/PCE 18:00/19:00; COT release Sat 01:00/02:00; MCX expiries; COMEX FND/LTD; in-session = 09:00–23:30/23:55 IST.">
           <Pending s={events} label="the calendar">
             {eventRows.length === 0 && <div style={{ padding: 12, fontSize: 11, color: T.muted }}>No events left in the next 7 days (or the calendar is not ingested yet).</div>}
-            <div data-gold-events style={{ maxHeight: 420, overflowY: 'auto' }}>
+            <div data-gold-events>
               {eventRows.map((e: GoldEvent) => (
                 <div key={`${e.event_date ?? e.date}-${e.time_ist ?? ''}-${e.kind}-${e.name}`} data-event-impact={(e.impact ?? '').toLowerCase() || undefined}
                   style={{ display: 'grid', gridTemplateColumns: '112px 56px 1fr auto', gap: 8, padding: '5px 12px', borderBottom: `1px solid ${T.border}`, fontSize: 11 }}>
@@ -215,11 +237,11 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
               const plan = b.open_plan ?? str('open_plan')
               const risks = (b.key_risks_today ?? (Array.isArray(d.key_risks_today) ? (d.key_risks_today as unknown[]).map(String) : [])) as string[]
               return <div style={{ fontSize: 11.5, lineHeight: 1.6, color: T.text }}>
-                <div data-gold-brief-head style={{ fontFamily: T.mono, fontSize: 10, color: T.muted, marginBottom: 4 }}>{briefHeader(b)}</div>
+                <div data-gold-brief-head style={{ fontFamily: T.mono, fontSize: 10, color: T.muted, marginBottom: 4 }}>{briefHeader(b, !!(summary || plan || risks.length))}</div>
                 {summary && <p style={{ margin: '0 0 6px' }}>{summary}</p>}
                 {plan && <p style={{ margin: '0 0 6px', color: T.muted }}>{plan}</p>}
                 {risks.length > 0 && <div style={{ color: T.muted }}>Key risks: {risks.join(' · ')}</div>}
-                {!summary && !plan && risks.length === 0 && <div style={{ color: T.dim, fontSize: 10.5 }}>The document carries no summary, plan or risk list for this date; the bias and confidence above are its only headline fields.</div>}
+                {!summary && !plan && risks.length === 0 && <div style={{ color: T.dim, fontSize: 10.5 }}>The document carries no summary, plan or risk list for this date; with no body to read, its bias and confidence words are not shown.</div>}
               </div>
             })()}
           </Pending>

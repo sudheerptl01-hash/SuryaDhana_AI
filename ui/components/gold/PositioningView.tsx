@@ -37,8 +37,7 @@ import { Gauge, LineChart, StackedBars, type StackRow } from './FlowCharts'
 import { Attribution, Degraded, Field, GPanel, LinkOnlyExplainer, LinkTile, Term, contextTone, useGoldLoad } from './ViewBits'
 import {
   ALL_HISTORY_MIN_REPORTS, COT_RANGES, CROWD_LABEL, MINUS, type CotRange, concentrationLines, contractsToMoz, contractsToTonnes, contractsToUsdBn, cotRangeLabel,
-  fundDriverLabel, inr, istLabel, num, pct, percentileLabel, serverFreshness, signed, signedPct, whoDidWords,
-} from './goldViewModel'
+  fundDriverLabel, inr, istLabel, num, pct, percentileLabel, serverFreshness, signed, signedPct, whoDidWords, oiQuadrantWords, tenderWords } from './goldViewModel'
 
 const BUNDLED = (tooltipsJson as { tooltips: Record<string, string> }).tooltips
 const GROUP_KEYS = [{ key: 'mm', label: 'managed money' }, { key: 'or', label: 'other reportables' }, { key: 'nr', label: 'non-reportable' }, { key: 'sd', label: 'swap dealers' }, { key: 'pm', label: 'producer / merchant' }]
@@ -139,7 +138,7 @@ export function PositioningView(props: GoldSubViewProps) {
               <Stat label={<span title={tip('cot_mm_chg')}>Change on the week</span>} value={signed(mm.chg_net)} color={contextTone} big={false}
                 sub={<span title={tip('who_did')} data-who-did>{words.length ? words.join(' / ') : 'unchanged'}</span>} />
               <Stat label={<span title={tip('driver_label')}>Fund-driver label</span>} value={<span data-driver-label style={{ fontSize: 14 }}>{driver ?? '—'}</span>} color={contextTone} big={false}
-                sub={<span><span title={tip('week_price_chg')}>week price {signedPct(c.week_price_chg_pct)}</span> · <span title={tip('quadrant_label')}>{c.quadrant_label ?? '—'}</span></span>} />
+                sub={<span><span title={tip('week_price_chg')}>week price {signedPct(c.week_price_chg_pct)}</span> · <span title={tip('quadrant_label')} data-oi-quadrant>{oiQuadrantWords(c.quadrant_label, c.open_interest.chg)}</span></span>} />
               <Stat label={<span title={tip('oi_all')}>Open interest</span>} value={num(c.open_interest.total)} color={contextTone} big={false}
                 sub={<span title={tip('oi_change')} data-oi-pctile>Δ {signed(c.open_interest.chg)}{c.open_interest.pct_rank != null ? ` · ${percentileLabel(c.open_interest.pct_rank, nReports, oiPctLabel)}` : ''}</span>} />
             </Grid>
@@ -354,7 +353,7 @@ function DailyMcx({ data, error, tip, layer, catalog, family }: DailyProps & { f
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 1fr)' }}>
           <div>
             {stack.length > 0 ? <StackedBars rows={stack} keys={expiries.map(e => ({ key: e, label: istLabel(e) }))} height={160} dp={0} label="MCX OI by expiry" /> : <div data-mcx-no-rows style={{ color: T.dim, fontSize: 11 }}>no rows for {fam} yet{data.since ? ` — since ${istLabel(data.since)}` : ' (the 07:35 master job writes one row per expiry per session)'}</div>}
-            {data.roll && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}><span title={tip('roll_ratio')}>roll ratio front ÷ next {num(data.roll.ratio, 2)}</span> · <span title={tip('days_to_tender')} data-days-to-tender>{num(data.roll.days_to_tender_or_fnd, 0)} days to tender</span>{data.roll.tender_start ? <span title={tip('tender_start')}> · tender from {istLabel(data.roll.tender_start)} (computed; the MCX circular is the legal source)</span> : null}</div>}
+            {data.roll && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}><span title={tip('roll_ratio')}>roll ratio front ÷ next {num(data.roll.ratio, 2)}</span> · <span title={tip('days_to_tender')} data-days-to-tender>{tenderWords(data.roll.days_to_tender_or_fnd, data.roll.tender_start ? istLabel(data.roll.tender_start) : null)}</span>{data.roll.tender_start && (data.roll.days_to_tender_or_fnd ?? 0) >= 0 ? <span title={tip('tender_start')}> · tender from {istLabel(data.roll.tender_start)} (computed; the MCX circular is the legal source)</span> : null}</div>}
             {data.quadrant_tape?.length ? <div style={{ marginTop: 8 }}><OiQuadrantTape tape={data.quadrant_tape} tips={tip} missingOiNote={MCX_OI_LAG} /></div> : null}
           </div>
           <DataTable columns={cols} rows={ladder} rowKey={r => `${r.symbol_or_product}-${r.expiry}`} dense empty={<div style={{ padding: 8, color: T.dim, fontSize: 11 }}>ladder empty</div>} />
