@@ -85,8 +85,9 @@ def build_rows() -> list[dict[str, Any]]:
     r.append(_row("nse_fii_dii_cash", "FII / DII cash (NSE serves the latest day only)", "BRF,WRAP,MKT", NSEAPI, "same evening (provisional)", "21:00",
                   "session", 1, "nse_positions_catchup", "table", table="nse_fii_dii_cash", column="date", unrecoverable=True,
                   anchor=f"{DICT}#fii-dii", note="a day not fetched the same evening is lost: gap row"))
-    r.append(_row("nse_insider_trades", "Insider trades (PIT, per stock)", "INSD", NSEAPI, "intimation ≈ T+2", None, "weekly", 7, "nse_filings_weekly",
-                  "table", table="nse_insider_trades", column="intimation_date", anchor=f"{DICT}#insider", verdict="PUBLISH-CONTEXT", badge="context"))
+    r.append(_row("nse_insider_trades", "Insider trades (PIT)", "INSD", NSEAPI, "intimation ≈ T+2", "22:30", "session", 4, "nse_insider_daily",
+                  "table", table="nse_insider_trades", column="intimation_date", anchor=f"{DICT}#insider", verdict="PUBLISH-CONTEXT", badge="context",
+                  note="the single-filing feed, last 7 days every weekday evening (21:50); Saturday's weekly run also covers it"))
     r.append(_row("nse_shareholding", "Shareholding pattern (XBRL)", "HDS", NSEAPI, "quarterly, ≤ 21 days after quarter end", None, "quarterly", 100,
                   "nse_filings_weekly", "table", table="nse_shareholding", column="period_end", anchor=f"{DICT}#shareholding", badge="context"))
     r.append(_row("nse_results", "Results release times", "ERN,EVTS,RSCH", NSEAPI, "filing timestamp (real time)", "21:30", "daily", 1,

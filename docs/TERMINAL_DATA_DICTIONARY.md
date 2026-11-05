@@ -93,7 +93,8 @@ Context metrics render in the neutral token and are never coloured bullish or be
 | `iv_eod` | [`index_ohlc_daily`](#index_ohlc_daily), [`iv_event_log`](#iv_event_log), [`iv_expiry_daily`](#iv_expiry_daily), [`iv_summary_daily`](#iv_summary_daily), [`iv_surface_daily`](#iv_surface_daily), [`nse_contract_delta`](#nse_contract_delta), [`nse_fo_volt`](#nse_fo_volt), [`rate_curve`](#rate_curve), [`vix_daily`](#vix_daily) |
 | `iv_intraday` | [`archive:chain`](#archive:chain), [`iv_intraday`](#iv_intraday) |
 | `news_track_record_daily` | [`news_track_record`](#news_track_record) |
-| `nse_filings_weekly` | [`nse_insider_trades`](#nse_insider_trades), [`nse_shareholding`](#nse_shareholding) |
+| `nse_filings_weekly` | [`nse_shareholding`](#nse_shareholding) |
+| `nse_insider_daily` | [`nse_insider_trades`](#nse_insider_trades) |
 | `nse_positions_catchup` | [`nse_combined_oi`](#nse_combined_oi), [`nse_deals`](#nse_deals), [`nse_fii_dii_cash`](#nse_fii_dii_cash), [`nse_fii_stats`](#nse_fii_stats), [`nse_fo_daily`](#nse_fo_daily), [`nse_mtf`](#nse_mtf), [`nse_mwpl_clients`](#nse_mwpl_clients), [`nse_participant_oi`](#nse_participant_oi), [`nse_participant_vol`](#nse_participant_vol), [`option_chain_eod`](#option_chain_eod) |
 | `preopen_capture` | [`archive:preopen`](#archive:preopen) |
 | `results_capture_daily` | [`nse_results`](#nse_results) |
@@ -173,12 +174,13 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Note:** a day not fetched the same evening is lost: gap row
 
 <a id="nse_insider_trades"></a>
-### `nse_insider_trades` · Insider trades (PIT, per stock)
+### `nse_insider_trades` · Insider trades (PIT)
 
 - **Pages:** INSD · **Publisher:** NSE (www.nseindia.com/api)
-- **Published (IST):** intimation ≈ T+2 · **Expected stored by:** no deadline · **Cadence:** weekly · **Amber after:** 7 days, red beyond that
-- **Ingest job:** `nse_filings_weekly` · **Freshness read from:** `MAX(intimation_date)` of `nse_insider_trades`
+- **Published (IST):** intimation ≈ T+2 · **Expected stored by:** 22:30 IST · **Cadence:** session · **Amber after:** 4 sessions, red beyond that
+- **Ingest job:** `nse_insider_daily` · **Freshness read from:** `MAX(intimation_date)` of `nse_insider_trades`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [NSE_DATA_DICTIONARY.md#insider](../docs/NSE_DATA_DICTIONARY.md#insider)
+- **Note:** the single-filing feed, last 7 days every weekday evening (21:50); Saturday's weekly run also covers it
 
 <a id="nse_shareholding"></a>
 ### `nse_shareholding` · Shareholding pattern (XBRL)

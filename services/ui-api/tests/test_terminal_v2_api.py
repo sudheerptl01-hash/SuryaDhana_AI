@@ -474,8 +474,10 @@ def test_classify_states_with_negative_controls() -> None:
 def test_expected_by_is_trading_day_aware_after_weekends_and_holidays() -> None:
     """check:B3-API: T−1 files and morning slots are due on the NEXT TRADING DAY, not the next calendar day."""
     mtf = dh.FALLBACK_CATALOG[5]                                          # nse_mtf: T−1 file, expected by 23:00
-    insider = dh.FALLBACK_CATALOG[7]                                      # nse_insider_trades: 08:00 morning slot
-    assert mtf.id == "nse_mtf" and insider.id == "nse_insider_trades"
+    insider = dh.FALLBACK_CATALOG[16]                                     # a morning slot: gold_series by 08:00 (the insider row
+    assert mtf.id == "nse_mtf" and insider.id == "gold_series"            # moved to a 22:30 evening slot on 5 Nov: nse_insider_daily)
+    assert dh.FALLBACK_CATALOG[7].id == "nse_insider_trades" and dh._expected_at(dh.FALLBACK_CATALOG[7], date(2026, 11, 6), []) == \
+        datetime(2026, 11, 6, 22, 30, tzinfo=IST)                         # the daily insider run: due the same evening
     mon_20 = datetime(2026, 11, 9, 20, 0, tzinfo=IST)                     # Monday 20:00, stored Thu 5 Nov: Friday's file lands Monday 22:12
     r = dh.classify(mtf, date(2026, 11, 5), mon_20, [])
     assert r["state"] == "fresh" and "not due yet" in r["note"] and r["lag_sessions"] == 1

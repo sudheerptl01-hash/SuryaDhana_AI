@@ -3268,6 +3268,29 @@ async def nse_filings_weekly() -> None:
             await _alerts.critical("NSE filings weekly FAILED", str(exc))
 
 
+async def nse_insider_daily() -> None:
+    """21:50 IST Mon–Fri — insider (PIT) filings of the last 7 days from NSE's single-filing feed (corporates-pit-gg): one
+    list call per window plus the XBRL of filings not stored yet (data-service skips the known ones), so INSD is current
+    every evening instead of once a week (5 Nov 2026: it read STALE · 6 d mid-week). After the close and after the
+    18:30–21:15 window, so its NSE requests never compete with the live quote fallback in session. A missed evening is
+    covered by the next one's 7-day window and by Saturday's nse_filings_weekly (shareholding + the legacy feed)."""
+    JOB = "nse_insider_daily"
+    lock = _get_lock(JOB)
+    if lock.locked():
+        return
+    async with lock, _track(JOB):
+        if not DATA_JOBS_ENABLED:
+            return
+        since = (datetime.now(IST).date() - timedelta(days=7)).isoformat()
+        try:
+            result = await _run_data_job(JOB, "/jobs/ingest-nse-filings", {"datasets": ["insider_gg"], "insider_since": since})
+            _log.info(JOB, f"since={since} filings={result.get('filings')} new={result.get('parsed')} rows={result.get('rows')} "
+                           f"known={result.get('skipped_known')} failures={len(result.get('failures') or [])}")
+        except Exception as exc:
+            _log.error(JOB, f"FAILED: {exc}")
+            await _alerts.warning("NSE insider filings (daily) FAILED", str(exc)[:500])
+
+
 async def weekly_journal() -> None:
     """Friday 20:10 IST — the week's decision journal (A2): Desk/shadow actions, vetoes that fired,
     regime, NAV vs NIFTY, next decisions and job failures, as reports/journal/<YYYY-WW>.md plus a
@@ -4080,6 +4103,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         trigger=CronTrigger(minute=10, timezone=IST),
         id="data_health_check", name="Data-health check (hourly; one Telegram line per transition)",
         max_instances=1, coalesce=True, misfire_grace_time=600,
+    )
+    scheduler.add_job(
+        nse_insider_daily,
+        trigger=CronTrigger(day_of_week="mon-fri", hour=21, minute=50, timezone=IST),
+        id="nse_insider_daily",
+        name="NSE insider filings (daily, last 7 days)",
+        max_instances=1, coalesce=True, misfire_grace_time=3600,
     )
     scheduler.add_job(
         nse_filings_weekly,
