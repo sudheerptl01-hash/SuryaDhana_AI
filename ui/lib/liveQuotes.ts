@@ -52,6 +52,9 @@ export interface LiveQuote {
   reason: string | null
   /** epoch ms this window received the row: age now = age_s + (now − received_at) / 1000 */
   received_at: number
+  /** a LIVE row on a healthy socket whose name simply has not traded for a while (data-service QUIET_LIVE_S): its price is
+   *  current as of the refresh, and age_s is the time since its last trade, not how old our knowledge is */
+  quiet?: boolean
 }
 
 export interface LiveMarket { state: LiveMarketState; session_date: string | null }
@@ -137,6 +140,7 @@ export function parseLiveQuotes(body: unknown, receivedAt: number): LiveBatch {
       state: price == null ? 'unavailable' : state,
       reason: str(q.reason),
       received_at: receivedAt,
+      quiet: price != null && state === 'live' && /^quiet\b/i.test(str(q.reason) ?? ''),
     }
   }
   return { asOf: str(b.as_of), market, quotes }
@@ -184,7 +188,16 @@ export function quoteSource(q: LiveQuote | null | undefined, market: LiveMarket 
     const day = istDay(q.ltt) ?? market?.session_date ?? null
     return { state: 'closed', source, asOf: day, ageDays: null, hint: q.reason ?? `last trade ${q.ltt ?? 'n/a'}` }
   }
-  if (q.state === 'live' && local <= LOCAL_LIVE_MAX_S) return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS, hint: q.reason }
+  if (q.state === 'live' && local <= LOCAL_LIVE_MAX_S) {
+    // a quiet name (healthy socket, no trade lately): LIVE as of this window's last refresh; the trade age goes in the hint.
+    // 5 Nov audit: EQS read 'LIVE · BREEZE · 2m' from one quiet name's 92 s since its last trade.
+    if (q.quiet) {
+      const clock = istClock(q.ltt)
+      return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS: Math.max(0, local),
+               hint: `quiet: no trade for ${ageS != null ? fmtAge(ageS) : 'a while'} on a healthy feed${clock ? ` · last trade ${clock} IST` : ''}` }
+    }
+    return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS, hint: q.reason }
+  }
   if (q.state === 'live' || q.state === 'delayed') {
     return { state: 'delayed', source, asOf: q.ltt, ageDays: 0, ageS,
              hint: q.reason ?? (q.state === 'live' ? 'live row, but this window has not refreshed it' : source === 'NSE' ? "NSE's website, about 1 min behind" : null) }
@@ -240,7 +253,10 @@ export function quoteLine(q: LiveQuote | null | undefined, market: LiveMarket | 
   const at = clock ? `${clock} IST` : 'time n/a'
   const age = s.ageS != null ? `${fmtAge(s.ageS)} ago` : ''
   switch (s.state) {
-    case 'live': return `${s.source} LIVE · ${at}${age ? ` · ${age}` : ''}`
+    case 'live': {
+      if (q.quiet) { const ta = quoteAgeS(q, now); return `${s.source} LIVE · quiet · last trade ${at}${ta != null ? ` (${fmtAge(ta)} ago)` : ''}` }
+      return `${s.source} LIVE · ${at}${age ? ` · ${age}` : ''}`
+    }
     case 'delayed': return `${s.source} DELAYED · ${at}${age ? ` · ${age}` : ''}`
     case 'closed': {
       const d = s.asOf && /^\d{4}-(\d{2})-(\d{2})$/.exec(s.asOf)

@@ -549,6 +549,26 @@ const CLOSED = { state: 'closed' as const, session_date: '2026-11-05' }
   check('L13 negative control: the old literal is caught', /state: 'live'/.test("return { state: 'live', source: src, asOf: lastTs }"))
 }
 
+// L15 (5 Nov, cap 500): a QUIET name (healthy socket, no trade lately) is LIVE as of the refresh, never 'LIVE · 2m'
+{
+  const QR = 'quiet: no new trade or quote for 92 s on a healthy feed'
+  const parsed = LQ.parseLiveQuotes({ quotes: { ABB: { price: 5000, source: 'breeze_ws', age_s: 92, state: 'live', reason: QR, ltt: iso(NOW - 92_000) },
+                                                TCS: { price: 4000, source: 'breeze_ws', age_s: 0.4, state: 'live', reason: null, ltt: iso(NOW) },
+                                                IDEA: { price: 9, source: 'nse_api', age_s: 60, state: 'delayed', reason: 'quiet: but delayed', ltt: iso(NOW - 60_000) } } }, NOW)
+  check('L15 parse: a live row whose reason says quiet is quiet; a live tick and a non-live row are not',
+    parsed.quotes.ABB.quiet === true && parsed.quotes.TCS.quiet === false && parsed.quotes.IDEA.quiet === false, parsed.quotes)
+  const qs = LQ.quoteSource(parsed.quotes.ABB, OPEN, NOW + 1_000)
+  check('L15 a quiet row: LIVE, age = this window\'s refresh (1 s), the 92 s trade age in the hint', qs.state === 'live' && qs.ageS === 1 && /quiet: no trade for \d+m/.test(qs.hint ?? '') && /last trade/.test(qs.hint ?? ''), qs)
+  const agg = LQ.liveSourceInfo([parsed.quotes.ABB, parsed.quotes.TCS], OPEN, 'ok', NOW + 1_000)
+  check('L15 the table chip is LIVE with a seconds age, not the quiet name\'s minutes', agg?.state === 'live' && (agg?.ageS ?? 99) <= 10, agg)
+  check('L15 hover line names the quiet state and the last-trade age', /LIVE · quiet · last trade \d\d:\d\d:\d\d IST \(\d+m ago\)/.test(LQ.quoteLine(parsed.quotes.ABB, OPEN, NOW + 1_000)), LQ.quoteLine(parsed.quotes.ABB, OPEN, NOW + 1_000))
+  // negative controls
+  const loud = LQ.quoteSource(row({ age_s: 92, state: 'live', reason: null }), OPEN, NOW + 1_000)
+  check('L15 negative: a live row that is NOT quiet keeps its own age (the audit still catches a 92 s LIVE)', loud.state === 'live' && loud.ageS === 93, loud)
+  const lapsed = LQ.quoteSource(parsed.quotes.ABB, OPEN, NOW + 15_000)
+  check('L15 negative: a quiet row this window stopped refreshing is DELAYED with the trade age', lapsed.state === 'delayed' && (lapsed.ageS ?? 0) > 100, lapsed)
+}
+
 // L14 (5 Nov, post-deploy audit): NSE's DD-MM-YYYY day on CF's announcements panel → ISO before the chip's age rule
 type NseDateMod = typeof import('../../lib/nseDate')
 const ND = (await import(new URL('../../lib/nseDate.ts', import.meta.url).href)) as NseDateMod
