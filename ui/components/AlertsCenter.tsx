@@ -8,7 +8,7 @@ import { apiError } from '@/lib/errors'
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getNewsQuotes, getNotificationFeed, getPriceAlerts, putPriceAlert, type AlertHitSrv, type AlertLevelsSrv, type NotificationItem } from '@/lib/api'
-import { Btn, Chip, DataTable, Input, PageHeader, Panel, SourceChip, T, TickerLink, fmtPct, fmtPx, type Column, sourceOf, inputSource } from '@/components/terminal'
+import { Btn, Chip, DataTable, Input, PageHeader, Panel, SourceChip, T, TickerLink, fmtPct, fmtPx, type Column, sourceOf, inputSource, undatedSource } from '@/components/terminal'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { unicodeMinus } from '@/lib/format'   // server-built notification text: U+2212 (C1-18)
 
@@ -17,9 +17,18 @@ type Row = { sym: string; lv: AlertLevelsSrv; price: number | null }
 const isNse = (lv: AlertLevelsSrv | undefined): boolean => !lv?.yahoo || /\.NS$/i.test(lv.yahoo)
 const KIND_COLOR: Record<string, string> = { price: T.amber, move: T.cyan, filing: T.violet, wrap: T.green, results: T.green, close: T.cyan, morning: T.amber }
 
+/** The Fired panel's chip. An empty fire log that loaded is not "no source is responding" (5 Nov live audit: ALRT read
+ *  OFFLINE with zero alerts set): it is undated, with what the scheduler does; OFFLINE stays for a load that failed. */
+export function firedSource(lastAt: string | null, loaded: boolean) {
+  if (lastAt) return sourceOf(lastAt, { source: 'alert scheduler', maxAgeDays: null })
+  if (loaded) return undatedSource('alert scheduler', 'no alert has fired yet · alerts are checked every minute in market hours on live NSE quotes')
+  return sourceOf(null, { source: 'alert scheduler', maxAgeDays: null, hint: 'the alerts store did not answer' })
+}
+
 export function AlertsCenter() {
   const [alerts, setAlerts] = useState<Record<string, AlertLevelsSrv>>({})
   const [history, setHistory] = useState<AlertHitSrv[]>([])
+  const [loaded, setLoaded] = useState(false)
   const [prices, setPrices] = useState<Record<string, number | null>>({})
   const [feed, setFeed] = useState<NotificationItem[]>([])
   const [kind, setKind] = useState<string | null>(null)
@@ -30,7 +39,7 @@ export function AlertsCenter() {
   const load = useCallback(async () => {
     try {
       const a = (await getPriceAlerts()).data
-      setAlerts(a.alerts); setHistory(a.history)
+      setAlerts(a.alerts); setHistory(a.history); setLoaded(true)
       // live program: NSE names are priced by the live NSE quote service below (useLiveQuotes); the quotes call is only
       // for non-NSE alerts, and for every alert while the live service does not answer
       const syms = Object.keys(a.alerts).filter(s => !liveOkRef.current || !isNse(a.alerts[s]))
@@ -104,7 +113,7 @@ export function AlertsCenter() {
           </div>
           <DataTable columns={cols} rows={rows} rowKey={r => r.sym} dense empty="No price alerts. Set one above, or with the bell in the Alert column on WTCH." initialSort={{ key: 'near', dir: 'asc' }} />
         </Panel>
-        <Panel source={sourceOf(history[0]?.at ?? null, { source: 'alert scheduler', maxAgeDays: null })} title={`Fired · ${history.length}`} accent={T.green} pad={0} subtitle="price alerts that triggered (newest first)">
+        <Panel source={firedSource(history[0]?.at ?? null, loaded)} title={`Fired · ${history.length}`} accent={T.green} pad={0} subtitle="price alerts that triggered (newest first)">
           {/* the server keeps history newest first */}
           <DataTable<AlertHitSrv> dense maxHeight={360} rowKey={(h, i) => `${h.sym}-${h.at}-${i}`} rows={history}
             empty="Nothing has fired yet."

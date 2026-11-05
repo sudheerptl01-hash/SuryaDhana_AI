@@ -481,6 +481,7 @@ def _last_holdings_path():
 
 
 EMPTY_CONFIRM_MINUTES = 30
+CHECKED_STAMP_EVERY_S = 900      # an unchanged book re-stamps checked_at at most every 15 min (the file is not rewritten per read)
 
 
 def _remember_holdings(rows: list[dict], now: datetime | None = None) -> None:
@@ -506,8 +507,19 @@ def _remember_holdings(rows: list[dict], now: datetime | None = None) -> None:
                 return                                            # first empty read: wait for a second one
             if (now - datetime.fromisoformat(first)).total_seconds() < EMPTY_CONFIRM_MINUTES * 60:
                 return
+        stamp = now.isoformat(timespec="seconds")
         if old != keep or saved.get("empty_since"):
-            p.write_text(json.dumps({"as_of": now.isoformat(timespec="seconds"), "positions": keep}))
+            p.write_text(json.dumps({"as_of": stamp, "checked_at": stamp, "positions": keep}))
+            return
+        # unchanged book: ``as_of`` stays the last CHANGE; ``checked_at`` is the last read that confirmed it. RSK dated the
+        # book by as_of and read "STALE · 14 OCT · 22 d" on 5 Nov although ICICI confirmed the same (empty) book that day.
+        last = saved.get("checked_at")
+        try:
+            due = not last or (now - datetime.fromisoformat(last)).total_seconds() >= CHECKED_STAMP_EVERY_S
+        except ValueError:
+            due = True
+        if due:
+            p.write_text(json.dumps({**saved, "checked_at": stamp}))
     except (OSError, ValueError):
         pass
 

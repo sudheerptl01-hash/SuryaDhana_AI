@@ -156,7 +156,10 @@ export function WatchMonitor() {
   const baseHint = nseBase.asOf ? ` · names, 1M sparks and 52-week ranges: NSE closes stored to ${nseBase.asOf}${nseBase.status === 'error' ? ` (last read; ${nseBase.error})` : ''}`
     : nseBase.status === 'missing' ? ' · NSE closes route not deployed: no sparks / 52-week ranges'
       : nseBase.status === 'error' ? ` · NSE closes unavailable (${nseBase.error}): no sparks / 52-week ranges` : ''
-  const monitorSrc: SourceInfo = legacy
+  // an empty list is the user's (nothing pinned), not a feed that failed: the 5 Nov live audit read OFFLINE · YAHOO here
+  const monitorSrc: SourceInfo = rows.length === 0
+    ? inputSource('your watch list: nothing pinned yet (NSE pins price live from Breeze / NSE; other pins from Yahoo)')
+    : legacy
     ? { state: Object.keys(quotes).length ? 'delayed' : 'offline', source: 'YAHOO', asOf: asOf?.toISOString() ?? null,
         hint: 'live NSE quote service not deployed: the pre-live quotes route on a 60 s refresh' }
     : liveQ.source

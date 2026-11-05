@@ -510,6 +510,23 @@ const CLOSED = { state: 'closed' as const, session_date: '2026-11-05' }
   check('L13 negative control: the old literal is caught', /state: 'live'/.test("return { state: 'live', source: src, asOf: lastTs }"))
 }
 
+// L14 (5 Nov, post-deploy audit): NSE's DD-MM-YYYY day on CF's announcements panel → ISO before the chip's age rule
+type NseDateMod = typeof import('../../lib/nseDate')
+const ND = (await import(new URL('../../lib/nseDate.ts', import.meta.url).href)) as NseDateMod
+{
+  check('L14 NSE DD-MM-YYYY → ISO; ISO passes through; empty → null', ND.isoDayFromNse('05-11-2026') === '2026-11-05' && ND.isoDayFromNse('2026-11-05') === '2026-11-05' && ND.isoDayFromNse(null) === null && ND.isoDayFromNse('') === null)
+  check('L14 negative control: junk is never invented into a date', ND.isoDayFromNse('5 Nov') === '5 Nov')
+  check('L14 newest filing stamp regardless of order; junk / null skipped', ND.newestStamp([{ time: '2026-11-05 00:05:41' }, { time: '2026-11-05 13:52:04' }, { time: null }, { time: 'n/a' }]) === '2026-11-05 13:52:04' && ND.newestStamp([]) === null && ND.newestStamp(null) === null)
+  const cf = fs.readFileSync(path.join(UI, 'components', 'CompanyFilings.tsx'), 'utf8')
+  const al = fs.readFileSync(path.join(UI, 'components', 'AlertsCenter.tsx'), 'utf8')
+  check('L14 ALRT: an empty fire log that loaded is undated, not OFFLINE; a failed load stays OFFLINE',
+    /source=\{firedSource\(history\[0\]\?\.at \?\? null, loaded\)\}/.test(al) && /if \(loaded\) return undatedSource\('alert scheduler'/.test(al) && /setLoaded\(true\)/.test(al))
+  const wt = fs.readFileSync(path.join(UI, 'components', 'WatchMonitor.tsx'), 'utf8')
+  check('L14 WTCH: an empty watch list is INPUT (nothing pinned), never OFFLINE · YAHOO', /const monitorSrc: SourceInfo = rows\.length === 0\s*\? inputSource\(/.test(wt))
+  check('L14 CF dates its chip through isoDayFromNse, never the raw NSE day', /sourceOf\(isoDayFromNse\(data\?\.date\)/.test(cf) && !/sourceOf\(data\?\.date/.test(cf))
+  check('L14 CF in session is the 60 s feed (DELAYED, newest filing time), never "EOD · published once a day"', /data\?\.market_open\s*\? undatedSource\('NSE announcements'/.test(cf))
+}
+
 // ── round 2 (L2-UI, 5 Nov): COMP on NSE closes, OSTR seeded from the live chain, WTCH / news dock on the NSE base ──
 // L20 COMP (components/CompareCloses.ts)  L21 OSTR (components/strategySeed.ts)  L22 the NSE base layer (news/nseBase.ts)
 // L23 the dock's NSE chart (news/nseChart.ts)  L24 static: no Yahoo request for an NSE row on COMP / WTCH / the dock

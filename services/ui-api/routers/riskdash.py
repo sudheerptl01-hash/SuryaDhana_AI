@@ -89,7 +89,8 @@ def _broker_book(notes: list[str]) -> tuple[list[dict[str, Any]], Optional[str]]
     try:
         from routers.positions import _last_holdings_path
         raw = json.loads(_last_holdings_path().read_text())
-        return list(raw.get("positions") or []), raw.get("as_of")
+        # dated by the last read that confirmed the book (checked_at), not by its last change (as_of)
+        return list(raw.get("positions") or []), raw.get("checked_at") or raw.get("as_of")
     except (OSError, ValueError) as exc:
         notes.append(f"broker holdings file unreadable: {exc}")
         return [], None

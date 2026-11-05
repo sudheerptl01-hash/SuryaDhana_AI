@@ -11,8 +11,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getAnnouncements, getOpenPositions, type Filing, heldSymbols } from '@/lib/api'
 import { useWatchlist } from '@/context/AppContext'
 import { usePins } from '@/lib/pins'
-import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, TickerLink, fiscalQuarter, fmtPct, sourceOf } from '@/components/terminal'
+import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, TickerLink, fiscalQuarter, fmtPct, sourceOf, undatedSource } from '@/components/terminal'
 import { useFinancialsLatest } from '@/lib/useFinancials'
+import { isoDayFromNse, newestStamp } from '@/lib/nseDate'
+
 
 const CATS: [string, string, string][] = [
   ['results', 'RESULTS', T.amber], ['orders', 'ORDERS', T.green], ['rating', 'RATINGS', T.cyan], ['m&a', 'M&A', T.violet],
@@ -79,7 +81,9 @@ export function CompanyFilings() {
             {CATS.map(([k, l, c]) => (data.counts[k] ?? 0) > 0 && (
               <Chip key={k} color={c} active={cats.has(k)} onClick={() => toggle(k)}>{l} {data.counts[k]}</Chip>))}
           </div>
-          <Panel source={sourceOf(data?.date ?? null, { source: 'NSE announcements', hint: data?.market_open ? "NSE's announcements feed in session (60 s cache), not a live feed" : null })} badge="context" title={`${items.length} filings`} accent={T.amber} pad={0}
+          <Panel source={data?.market_open
+            ? undatedSource('NSE announcements', `NSE's announcements feed in session, refreshed every 60 s (not a tick feed)${newestStamp(data?.items) ? ` · newest filing ${newestStamp(data?.items)!.slice(11, 16)} IST` : ''}`)
+            : sourceOf(isoDayFromNse(data?.date), { source: 'NSE announcements' })} badge="context" title={`${items.length} filings`} accent={T.amber} pad={0}
             subtitle="click a ticker for its profile · ↗ opens the filing on NSE · categories: NSE's own subject first, then keywords in the summary (an earnings-call notice is not results)">
             <div style={{ maxHeight: 760, overflowY: 'auto' }}>
               {items.map(f => (
