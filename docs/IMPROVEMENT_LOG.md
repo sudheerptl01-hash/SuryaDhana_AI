@@ -1,9 +1,26 @@
 # Improvement log: terminal polish sprint (11–15 Oct 2026)
 
-Last updated Thu 5 Nov 2026 08:15 IST (Terminal v2 wave 1 built in the tree and NOT deployed, entry below; GOLD program
+Last updated Thu 5 Nov 2026 14:10 IST (live NSE program + Terminal v2 wave 1 deployed 13:01, entry below; GOLD program
 deployed on the night of 4 Nov; the Terminal v2 research round is written up in `reports/terminal_v2/`). The 11–15 Oct
 sprint entries further down were run and checked against live data at the time; today the terminal has 43 pages and
 `scripts/tests` collects 414 tests.
+
+**5 Nov 2026, 13:01–14:05: live NSE program and Terminal v2 wave 1 DEPLOYED (the morning entry below is history).**
+`LIVE_TICKS=1`; data-service, ui-api and master-controller run the v2 code; UI release `20261105-140130-f4c884e`. Breeze
+websocket ticks price indices and stocks at 0.1–0.9 s; the 43-page audit with the live-freshness assertion passes in
+Chromium and WebKit (`reports/live_nse/COVERAGE.md`). Fixes after the deploy:
+- `66ffd28`: ui-api's live hub re-stated a cache-hit row "delayed — data-service did not answer" when it crossed 2 s while
+  the request waited for another symbol's batch. Every upstream call had succeeded; this is what made the header NIFTY
+  chip flip at random. The `data_health` catalog paths and the archive scanner are fixed too (they load at the next
+  data-service restart).
+- `f4c884e`: data-service serves API_CONTRACT §6's `/db/iv/*` and `/db/index-drivers/{contribution,fit,state,weights}`.
+  ui-api read these and data-service served only `/db/fo-iv/*`, so OMON / EVTS / MEMB / DESK read OFFLINE with the tables
+  populated. Gate: `tests/integration/test_ui_api_data_service_routes.py`. They load at the 21:37 data-service restart.
+- `e8b8ecc`: honest chips on CF (NSE's DD-MM-YYYY day), ALRT (empty fire log), WTCH (empty list) and RSK (the book is
+  dated by `checked_at`, its last confirmed read).
+- Open: DESK's ledger stops at 30 Oct because the controller was down 31 Oct–4 Nov; the 19:30 `desk_daily` marks the
+  missed sessions. CMDT's EIA panel needs a free `EIA_API_KEY`. The Breeze cap of 300 symbols can churn when more than 300
+  names are asked for within 10 min.
 
 **5 Nov 2026, morning: Terminal v2 wave 1 is in the tree, NOT deployed.** The live stack still runs the pre-v2 code:
 UI release `20261105-041017` (GOLD), and data-service, ui-api and master-controller have not been restarted on the v2 code.

@@ -212,6 +212,45 @@ const CLOSED = { state: 'closed' as const, session_date: '2026-11-05' }
   })
 
   {
+    // L6w warm-up (5 Nov): a new symbol whose row is not LIVE yet is re-polled at 2 s for 15 s, then at its own cadence
+    let liveAfter = Infinity
+    const h = harness(syms => ({ status: 200, body: { as_of: iso(NOW), market: { state: 'open', session_date: '2026-11-05' },
+      quotes: Object.fromEntries(syms.map(s => [s, h.now() >= liveAfter || s === 'TCS'
+        ? { price: 100, prev_close: 99, source: 'breeze_ws', age_s: 0.5, state: 'live', ltt: iso(NOW) }
+        : { price: 99, prev_close: 99, source: 'breeze_ws', age_s: 540, state: 'stale', ltt: iso(NOW) }])) } }))
+    h.store.register(1, ['ABB', 'TCS'], 5_000)
+    await h.advance(0)
+    h.calls.length = 0
+    await h.advance(2_100)
+    check('L6w a new non-live row is re-polled at 2 s, a row already LIVE keeps its 5 s cadence', h.calls.flat().includes('ABB') && !h.calls.flat().includes('TCS'), h.calls)
+    liveAfter = h.now() + 1_000
+    h.calls.length = 0
+    await h.advance(2_100)
+    check('L6w the warm-up poll picks up the row once it is live', h.store.snapshot().quotes.get('ABB')?.state === 'live', h.calls)
+    h.calls.length = 0
+    await h.advance(4_000)
+    check('L6w negative: once LIVE the row is back on its own 5 s cadence (no 2 s polls)', h.calls.filter(c => c.includes('ABB')).length <= 1, h.calls)
+    h.store.dispose()
+  }
+  {
+    // negative controls: the warm-up ends after 15 s, and never runs with the market closed
+    const h = harness(syms => ({ status: 200, body: { as_of: iso(NOW), market: { state: 'open', session_date: '2026-11-05' },
+      quotes: Object.fromEntries(syms.map(s => [s, { price: 99, prev_close: 99, source: 'nse_api', age_s: 60, state: 'delayed', ltt: iso(NOW) }])) } }))
+    h.store.register(1, ['AFSL'], 5_000)
+    await h.advance(16_000)
+    h.calls.length = 0
+    await h.advance(10_000)
+    check('L6w negative: after 15 s a never-live (illiquid, NSE delayed) row is polled at its own 5 s, not 2 s', h.calls.length <= 2, h.calls)
+    h.store.dispose()
+    const c2 = harness(okBody('closed'))
+    c2.store.register(1, ['ABB'], 5_000)
+    await c2.advance(0)
+    c2.calls.length = 0
+    await c2.advance(10_000)
+    check('L6w negative: market closed → no warm-up polling', c2.calls.length === 0, c2.calls)
+    c2.store.dispose()
+  }
+  {
     const h = harness(okBody())
     h.store.register(1, ['RELIANCE', 'TCS'], 3_000)
     h.store.register(2, ['NIFTY 50', 'TCS'], 2_000)

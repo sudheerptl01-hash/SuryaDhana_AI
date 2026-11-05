@@ -68,6 +68,11 @@ export const IDLE_INTERVAL_MS = 30_000
 /** The route answered 404 (not deployed yet): look again this often. */
 export const MISSING_RETRY_MS = 60_000
 export const BACKOFF_MS = [2_000, 4_000, 8_000, 30_000] as const
+/** Warm-up: for this long after a symbol is first asked, a row that is not LIVE yet is polled every WARMUP_INTERVAL_MS.
+ *  data-service subscribes a new name on the Breeze socket in 2-5 s (5 Nov, at the 300 cap: p50 2.0 s, max 5.1 s), so a
+ *  5 s consumer (EQS) showed STALE for its whole first poll cycle; the audit read 34 of 60 rows STALE that way. */
+export const WARMUP_WINDOW_MS = 15_000
+export const WARMUP_INTERVAL_MS = MIN_INTERVAL_MS
 /** A row the server called live stays live on screen only this long after we received it (a stalled poll ≠ live). */
 export const LOCAL_LIVE_MAX_S = 10
 /** a /api/live/quotes request older than this is abandoned and counted as a feed error */
@@ -335,6 +340,8 @@ export function createLiveStore(deps: LiveStoreDeps): LiveStore {
   let pendingNew = new Set<string>()
   /** per symbol: when it is next due (epoch ms) */
   const due = new Map<string, number>()
+  /** per symbol: when it first entered the poll (the warm-up clock) */
+  const firstAsked = new Map<string, number>()
   /** a symbol polled at about the same time as another one rides along (one request, not two) */
   const SLACK_MS = 400
   let lastRequestAt = 0
@@ -360,6 +367,13 @@ export function createLiveStore(deps: LiveStoreDeps): LiveStore {
     for (const s of subs.values()) if (s.symbols.includes(sym)) ms = Math.min(ms, s.intervalMs)
     const base = Math.max(MIN_INTERVAL_MS, Number.isFinite(ms) ? ms : DEFAULT_INTERVAL_MS)
     return idle() ? Math.max(base, IDLE_INTERVAL_MS) : base
+  }
+  /** a symbol's next delay: its cadence, or the warm-up interval while it is new, not LIVE yet and the market is open */
+  const nextFor = (sym: string, t: number): number => {
+    const base = intervalOf(sym)
+    const since = firstAsked.get(sym)
+    const warming = since != null && t - since <= WARMUP_WINDOW_MS && !idle() && market?.state !== 'closed' && quotes.get(sym)?.state !== 'live'
+    return warming ? Math.min(base, WARMUP_INTERVAL_MS) : base
   }
   const nextDelay = (): number => {
     if (status === 'missing') return MISSING_RETRY_MS
@@ -427,8 +441,9 @@ export function createLiveStore(deps: LiveStoreDeps): LiveStore {
         await fetchBatch(want)
         fails = 0
         const t1 = deps.now()
-        for (const s of want) due.set(s, t1 + intervalOf(s))
+        for (const s of want) due.set(s, t1 + nextFor(s, t1))
         for (const s of [...due.keys()]) if (!all.includes(s)) due.delete(s)
+        for (const s of [...firstAsked.keys()]) if (!all.includes(s)) firstAsked.delete(s)
         evict(new Set(all))
       } catch (e) {
         if ((e as { name?: string })?.name === 'AbortError') return      // unmounted / disposed: not a feed failure
@@ -448,6 +463,7 @@ export function createLiveStore(deps: LiveStoreDeps): LiveStore {
     register(id, symbols, intervalMs) {
       const before = new Set(union())
       subs.set(id, { symbols: [...symbols], intervalMs })
+      for (const s of symbols) if (!before.has(s) && !firstAsked.has(s)) firstAsked.set(s, deps.now())
       // new to the poll, and not already held fresh (a cached row older than LOCAL_LIVE_MAX_S is fetched again at once)
       const t = deps.now()
       const added = symbols.filter(s => !before.has(s) && !(quotes.has(s) && t - quotes.get(s)!.received_at <= LOCAL_LIVE_MAX_S * 1000))
