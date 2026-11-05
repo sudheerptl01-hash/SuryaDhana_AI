@@ -10,9 +10,10 @@ Three legs, all async via httpx (zero new Python deps — httpx already ships in
                  via Yahoo's v8 chart JSON. NO API KEY. This is the tradeable leg and
                  is also this project's existing historical price provider (yfinance
                  wraps the same endpoint), so it is the natural free proxy.
-  • EIA        — energy FUNDAMENTALS (crude/gas inventories & production) via EIA v2
-                 REST. Requires EIA_API_KEY (free). Gated: returns available=false with
-                 the exact wiring when the key is unset — never fabricated numbers.
+  • EIA        — energy FUNDAMENTALS (crude/gas inventories & production): EIA v2 REST with
+                 EIA_API_KEY (free); WITHOUT a key EIA's own keyless public file of the same
+                 series (www.eia.gov/dnav/pet/hist_xls, checked by its Sourcekey row). Both down
+                 → available=false with the reason — never fabricated numbers.
   • FRED       — commodity / macro CONTEXT indices. With FRED_API_KEY (free) the REST API;
                  WITHOUT a key the keyless `fredgraph.csv` download (GOLD program PLAN §b:
                  the "key required" message is gone; same series, same points, plain UA
@@ -229,6 +230,42 @@ async def _eia_series(route: str, facet: str, freq: str, length: int = 60) -> li
     return points
 
 
+# ── EIA keyless fallback: EIA's own public spreadsheet of the same series ───────
+# 5 Nov 2026: without EIA_API_KEY the panel read OFFLINE. EIA publishes every petroleum series as a keyless download
+# (www.eia.gov/dnav/pet/hist_xls/<SERIES><w|m>.xls; sheet "Data 1", 3 header rows, a "Sourcekey" row naming the series).
+# Same numbers, same IDs as the v2 API; the key, when set, still takes the REST path above.
+EIA_XLS_URL = "https://www.eia.gov/dnav/pet/hist_xls/{facet}{suffix}.xls"
+
+
+def _parse_eia_xls(blob: bytes, facet: str, freq: str, length: int = 60) -> list[dict[str, Any]]:
+    """BLOCKING (xlrd): run through asyncio.to_thread. Points in the v2 shape: weekly 'YYYY-MM-DD', monthly 'YYYY-MM'.
+    Refuses a file whose Sourcekey is not ``facet`` (a moved or renamed series must not fill another series' panel)."""
+    import xlrd
+
+    book = xlrd.open_workbook(file_contents=blob)
+    sh = book.sheet_by_name("Data 1")
+    key = next((str(sh.cell_value(r, 1)).strip() for r in range(min(sh.nrows, 4)) if str(sh.cell_value(r, 0)).strip() == "Sourcekey"), None)
+    if key != facet:
+        raise ValueError(f"EIA file is series {key!r}, expected {facet!r}")
+    points: list[dict[str, Any]] = []
+    for r in range(sh.nrows):
+        d, v = sh.cell_value(r, 0), sh.cell_value(r, 1)
+        if not isinstance(d, float) or not isinstance(v, (int, float)):
+            continue
+        day = xlrd.xldate_as_datetime(d, book.datemode).date()
+        points.append({"date": day.isoformat() if freq == "weekly" else day.strftime("%Y-%m"), "value": float(v)})
+    return points[-length:]
+
+
+async def _eia_series_xls(facet: str, freq: str, length: int = 60) -> list[dict[str, Any]]:
+    url = EIA_XLS_URL.format(facet=facet, suffix="w" if freq == "weekly" else "m")
+    async with httpx.AsyncClient(timeout=_TIMEOUT, headers=_UA, follow_redirects=True) as client:
+        r = await client.get(url)
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"EIA file {facet}: HTTP {r.status_code}")
+    return await asyncio.to_thread(_parse_eia_xls, r.content, facet, freq, length)
+
+
 # ── Endpoints ───────────────────────────────────────────────────────────────────
 
 @router.get("/health")
@@ -237,7 +274,8 @@ async def commodity_health() -> dict[str, Any]:
     return {
         "status": "ok",
         "price_feed": "yahoo-futures (no key)",
-        "eia_enabled": bool(EIA_API_KEY),
+        "eia_enabled": True,                 # keyless public file without EIA_API_KEY (5 Nov)
+        "eia_mode": "api" if EIA_API_KEY else "public_file",
         "fred_enabled": True,                       # keyless fredgraph.csv when FRED_API_KEY is unset
         "fred_mode": fred_mode(),
         "futures_universe": [f["label"] for f in FUTURES],
@@ -283,22 +321,26 @@ async def commodity_overview() -> dict[str, Any]:
         fred["available"] = False
         fred["reason"] = "FRED unreachable right now (every series failed); the board and EIA legs are unaffected."
 
-    # EIA fundamentals (keyed)
-    eia: dict[str, Any] = {"available": bool(EIA_API_KEY), "series": []}
-    if EIA_API_KEY:
-        results = await asyncio.gather(
-            *[_eia_series(s["route"], s["facet"], s["freq"]) for s in EIA_SERIES],
-            return_exceptions=True,
-        )
-        for s, pts in zip(EIA_SERIES, results):
-            meta = {k: s[k] for k in ("id", "label", "unit")}
-            if isinstance(pts, BaseException):
-                eia["series"].append({**meta, "error": str(pts)[:160], "points": []})
-            else:
-                latest = pts[-1] if pts else None
-                eia["series"].append({**meta, "latest": latest, "points": pts})
-    else:
-        eia["reason"] = "EIA_API_KEY not set — add it to .env to enable (free key)."
+    # EIA fundamentals: the v2 REST API with EIA_API_KEY, else EIA's own keyless public file of the same series
+    eia: dict[str, Any] = {"available": True, "series": [],
+                           "source": "EIA v2 API" if EIA_API_KEY else "EIA public file (www.eia.gov, keyless)"}
+    results = await asyncio.gather(
+        *[(_eia_series(s["route"], s["facet"], s["freq"]) if EIA_API_KEY else _eia_series_xls(s["facet"], s["freq"]))
+          for s in EIA_SERIES],
+        return_exceptions=True,
+    )
+    for s, pts in zip(EIA_SERIES, results):
+        meta = {k: s[k] for k in ("id", "label", "unit")}
+        if isinstance(pts, BaseException):
+            eia["series"].append({**meta, "error": str(pts)[:160], "points": []})
+        else:
+            latest = pts[-1] if pts else None
+            eia["series"].append({**meta, "latest": latest, "points": pts})
+    if all(x.get("error") for x in eia["series"]):
+        eia["available"] = False
+        eia["reason"] = ("EIA unreachable right now (every series failed); the board and FRED legs are unaffected."
+                         if EIA_API_KEY else
+                         "EIA's public file did not answer (no EIA_API_KEY set; the free key uses the v2 API instead).")
 
     out = {
         "as_of": int(time.time()),
@@ -306,7 +348,7 @@ async def commodity_overview() -> dict[str, Any]:
         "fundamentals": {"fred": fred, "eia": eia},
         "sources": {
             "price": "yahoo-futures",
-            "eia": bool(EIA_API_KEY),
+            "eia": eia["available"],
             "fred": fred["available"],
             "fred_mode": fred_mode(),
         },

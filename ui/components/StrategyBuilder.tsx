@@ -115,10 +115,19 @@ function freshSeed(a: ActiveSymbol | null, now = Date.now()): ActiveSymbol | nul
 }
 
 /** The margin answer's chip: BREEZE (live) / NSE SPAN FILE (its file date) / HEURISTIC (no feed: your legs). */
-function marginSource(m: MarginAnswer | null, err: string | null): SourceInfo {
+function marginSource(m: MarginAnswer | null, err: string | null,
+                      market: { state?: string | null; session_date?: string | null } | null = null): SourceInfo {
   if (!m) return err ? sourceOf(null, { source: 'margin route', hint: err }) : inputSource('your legs (margin not asked yet)')
   const chip = String(m.source_chip ?? '').toUpperCase()
-  if (chip === 'BREEZE') return sourceOf(m.as_of, { live: true, source: 'BREEZE' })
+  if (chip === 'BREEZE') {
+    // ICICI's margin API answers on demand: LIVE while NSE trades; after the close (or before the open) the answer is
+    // priced off the session's close, so CLOSE · <session> (5 Nov closed-market audit: it read LIVE · BREEZE at 17:02)
+    if (market?.state && market.state !== 'open') {
+      return { state: 'closed', source: 'BREEZE', asOf: market.session_date ?? null, ageDays: null,
+               hint: `ICICI's margin API answered${m.as_of ? ` at ${String(m.as_of).slice(11, 16)}` : ''}; NSE is closed, so it is priced off the session's close` }
+    }
+    return sourceOf(m.as_of, { live: true, source: 'BREEZE' })
+  }
   if (chip === 'NSE SPAN FILE') {
     // the route's as_of is the file date as YYYY-MM-DD; detail.file_date is NCL's raw YYYYMMDD
     const raw = (m.detail as { file_date?: string } | undefined)?.file_date ?? ''
@@ -502,7 +511,7 @@ export function StrategyBuilder() {
                       MAX LOSS {analysis.max_loss.unbounded ? 'UNLIMITED (upside)' : fmtInr(analysis.max_loss.value, 0)}
                     </Chip>
                   </div>
-                  <Panel title="Margin & costs" accent={T.violet} pad={10} source={marginSource(margin, marginErr)} badge={margin?.badge ?? 'heuristic'}
+                  <Panel title="Margin & costs" accent={T.violet} pad={10} source={marginSource(margin, marginErr, ul.market)} badge={margin?.badge ?? 'heuristic'}
                     subtitle={margin ? `answered by ${margin.source_chip}` : marginErr ? 'heuristic only' : 'asking…'}>
                     <div style={{ fontFamily: T.mono, fontSize: 11, display: 'grid', gap: 3 }} data-ostr-margin={margin?.source_chip ?? 'HEURISTIC'}>
                       {margin && String(margin.source_chip).toUpperCase() !== 'HEURISTIC' ? (

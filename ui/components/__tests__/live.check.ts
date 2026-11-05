@@ -551,6 +551,14 @@ const CLOSED = { state: 'closed' as const, session_date: '2026-11-05' }
   check('L13 negative control: the old literal is caught', /state: 'live'/.test("return { state: 'live', source: src, asOf: lastTs }"))
 }
 
+// L16 (5 Nov, closed-market audit): OSTR's Breeze margin answer is LIVE only while NSE trades
+{
+  const sb = fs.readFileSync(path.join(UI, 'components', 'StrategyBuilder.tsx'), 'utf8')
+  check('L16 OSTR margin: a Breeze answer outside the session is CLOSE · <session>, LIVE only while open',
+    /if \(market\?\.state && market\.state !== 'open'\) \{\s*return \{ state: 'closed', source: 'BREEZE'/.test(sb) && /source=\{marginSource\(margin, marginErr, ul\.market\)\}/.test(sb))
+  check('L16 negative control: the in-session branch still reads LIVE', /return sourceOf\(m\.as_of, \{ live: true, source: 'BREEZE' \}\)/.test(sb))
+}
+
 // L15 (5 Nov, cap 500): a QUIET name (healthy socket, no trade lately) is LIVE as of the refresh, never 'LIVE · 2m'
 {
   const QR = 'quiet: no new trade or quote for 92 s on a healthy feed'

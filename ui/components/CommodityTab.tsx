@@ -9,7 +9,7 @@ import { apiError } from '@/lib/errors'
  *                    via /api/commodity/overview (Yahoo, no key) — the tradeable leg.
  *   • DETAIL chart — /api/commodity/price/{symbol} history for the selected contract.
  *   • FUNDAMENTALS — EIA energy stocks/production + FRED commodity/macro indices
- *                    (FRED through the keyless fredgraph.csv; EIA degrades to a "set the free key" hint).
+ *                    (FRED through the keyless fredgraph.csv; EIA through its v2 API with a key, else EIA's keyless public file).
  *
  * Gold (gold program PLAN §b): the fair-open panel moved to GOLD › HEALTH; the gold tile keeps its place on the board
  * with a GOLD › chip, and its detail chart links to GOLD › WEEKLY. The 43rd page GOLD holds every gold panel.
