@@ -1,0 +1,225 @@
+{
+  "scan_date": "2026-10-23",
+  "generated_at": "2026-10-23 16:10 UTC (scheduled run)",
+  "universe": "NSE/BSE only",
+  "methodology": "Soros-reflexivity Stage-1 soft-catalyst screen over public news/exchange-filing summaries for 22-23 Oct 2026 (pre-market lists, Q2 FY27 releases, market-close reports).",
+  "note": "Yahoo Finance tickers use .NS suffix (NSE symbols); not live-verified against Yahoo API. Market context 23 Oct: Nifty 22,600 (-0.39%), midcaps -2.2%, smallcaps -2.9%, Brent ~$114. Not investment advice.",
+  "count": 10,
+  "stage1_candidates": [
+    {
+      "ticker": "HINDPETRO.NS",
+      "yahoo_ticker": "HINDPETRO.NS",
+      "company_name": "Hindustan Petroleum Corporation Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Debt Refinancing / Refinancing-Overhang Clearance (Rajasthan refinery)",
+      "news": "23 Oct 2026: HPCL refinanced about Rs50,000 cr of debt tied to its Rajasthan (Barmer) refinery project, cutting borrowing cost by ~105 bps and targeting ~Rs1,000 cr annual interest savings (per market-close report). HRRL had achieved ~Rs50,000 cr financial closure on 29 Sep 2026. Context: Q2 FY27 PAT Rs3,625 cr (-6% YoY) with record GRM $32.15/bbl offset by marketing losses; Brent ~$114.",
+      "market_consensus_gap": "Street prices HPCL as a pure marketing-loss victim of $114 Brent with a stretched balance sheet from the HRRL capex overrun. A ~Rs1,000 cr/yr interest cut (roughly 5-7% of normalised PAT) plus a de-risked HRRL funding stack is not in FY27-28 models, which still carry the old HRRL cost of debt.",
+      "reflexivity_thesis": "1) Lower finance cost flows straight into consolidated EPS -> analysts revise FY28 EPS up mid-single digits independent of crude. 2) De-risked HRRL removes the 'equity infusion' bear case -> discount to BPCL narrows. 3) Record GRMs already prove refining earnings power; once retail prices or under-recovery compensation normalise, the market re-rates the integrated model. 4) DIIs that underweighted OMCs on crude rotate back -> reflexive loop. Risk: crude >$115 and frozen pump prices dominate near-term.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.kotakneo.com/news/market-news/sensex-nifty-close-lower-amid-oil-price-surge/",
+        "https://www.psuconnect.in/psu-news/hpcl-rajasthan-refinery-achieves-nearly-50-000-crore-financial-closure",
+        "https://m.dailyhunt.in/news/india/english/upstox-epaper-upstox/stocks+to+watch+oct+23+emudhra+swiggy+infosys+coforge+nuvoco+vistas+bluestone+jewellery+mastek+adani+power-newsid-n731290920"
+      ],
+      "news_date": "2026-10-23"
+    },
+    {
+      "ticker": "CREDITACC.NS",
+      "yahoo_ticker": "CREDITACC.NS",
+      "company_name": "CreditAccess Grameen Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Credit-Cycle Inflection / Guidance Upgrade (MFI)",
+      "news": "Q2 FY27 (reported 22 Oct): record standalone PAT Rs501.6-502 cr (+299% YoY), revenue Rs1,350.7 cr (+31%), AUM +19.5%, ROA 5.8%, ROE 23.2%. FY27 guidance raised to ROA 5.2-5.8% and ROE 21-24%.",
+      "market_consensus_gap": "Consensus still anchors MFIs to the FY25-26 stress cycle (high credit cost, regulatory caps). A raised full-year ROA/ROE guide signals credit costs normalised faster than modelled; FY27-28 EPS estimates built on 3-4% ROA are stale.",
+      "reflexivity_thesis": "1) Guidance raise forces brokers to lift credit-cost-normalised EPS 15-25% for FY27-28. 2) Valuation band shifts from 'distressed MFI' to 'franchise lender' P/B. 3) MFI-sector funds/DIIs re-enter the category leader first. 4) Lower perceived risk -> cheaper bank borrowing -> NIM support -> loop. Risk: result-day move may already capture part of this.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-swiggy-cyient-colgate-palmolive-and-others-october-23-2026",
+        "https://m.dailyhunt.in/news/india/english/upstox-epaper-upstox/stocks+to+watch+oct+23+emudhra+swiggy+infosys+coforge+nuvoco+vistas+bluestone+jewellery+mastek+adani+power-newsid-n731290920"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "COFORGE.NS",
+      "yahoo_ticker": "COFORGE.NS",
+      "company_name": "Coforge Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Order-Intake Surge / Margin Guidance Upgrade",
+      "news": "Q2 FY27 (23 Oct): revenue $652.2 mn (+40.1% YoY, +10.1% QoQ), EBIT margin 16.0%; record order intake $1.04 bn (+50.6% QoQ); 12-month executable order book $2.38 bn (+45% YoY). FY27 EBIT margin guide raised to 16.0% from 15.5%; Q4 exit 17%; FY28 to start from >=17% base; 8+ large deals expected in Q3.",
+      "market_consensus_gap": "Street treats Coforge as a fully-valued mid-tier IT name after the Cigniti integration. The step-up in executable book (+45%) and a FY28 margin floor of 17% imply FY28 EBIT above consensus; the initial stock reaction was muted (~flat).",
+      "reflexivity_thesis": "1) $2.38 bn executable book underwrites ~25%+ FY28 growth -> top-line upgrades. 2) Margin guide raise + zero exceptional items from Q3 -> EPS upgrades of 5-8%. 3) Large-deal pipeline commentary keeps upgrade cycle alive into Q3. 4) IT-rotation FIIs (IT rallied on 23 Oct) favour growth-leaders -> reflexive accumulation.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://uk.investing.com/news/stock-market-news/coforge-q2-fy27-slides-margins-upgraded-as-order-intake-tops-1b-93CH-4928784"
+      ],
+      "news_date": "2026-10-23"
+    },
+    {
+      "ticker": "RELIANCE.NS",
+      "yahoo_ticker": "RELIANCE.NS",
+      "company_name": "Reliance Industries Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Promoter Creeping Acquisition + Value Unlocking (Jio IPO) at 52-week low",
+      "news": "RIL trades near its 52-week low (Rs1,190 on 23 Oct vs low Rs1,152.30) while the promoter group lifted its stake to 50.48% via ~Rs8,500-9,000 cr of open-market purchases (June quarter). Jio Platforms IPO drew >1 crore applications and >6x subscription by Day 3.",
+      "market_consensus_gap": "Market prices RIL on O2C weakness and crude volatility, ignoring that the promoter is buying the parent at depressed levels while Jio lists at a premium valuation. The holding-company discount is anchored on pre-IPO opacity.",
+      "reflexivity_thesis": "1) Jio listing sets a mark-to-market value for RIL's stake -> SOTP upgrades. 2) Continued promoter creeping purchases (within 5%/yr SAST limit) provide a visible bid. 3) Once Jio trades, analysts compress the holdco discount -> passive/FII underweights forced to cover. Risk: holdco discount may persist; IPO itself is front-page (Stage 2), so conviction is moderate.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://www.multibagg.ai/market-pulse/articles/top-gainers-india-today-cmvkv1hd300022ls00u4rhfr1",
+        "https://www.kotakneo.com/news/market-news/sensex-nifty-close-lower-amid-oil-price-surge/",
+        "https://www.etvbharat.com/en/business/reliance-promoters-raise-stake-through-rs-8500-to-9000-crore-worth-of-share-purchases-enn26071702354"
+      ],
+      "news_date": "2026-10-23"
+    },
+    {
+      "ticker": "NLCINDIA.NS",
+      "yahoo_ticker": "NLCINDIA.NS",
+      "company_name": "NLC India Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "State MoU / Hidden CapEx (Odisha thermal + beach-sand minerals)",
+      "news": "NLC India signed MoUs with Odisha's IPICOL for coal gasification/synthesis gas and beach-sand mineral processing (tentative Rs2,000 cr) and a proposed 3,200 MW thermal plant (~Rs35,000 cr).",
+      "market_consensus_gap": "NLC is priced as a lignite-plus-renewables utility. Beach-sand mineral processing (ilmenite, rutile, zircon, monazite - critical-mineral adjacent) and coal gasification are optionality not in any model; the Odisha coal block (Talabira/Patrapara) gives captive fuel.",
+      "reflexivity_thesis": "1) MoU -> DPR -> board capex approval converts optionality to regulated-asset RoE growth. 2) Critical-mineral narrative attracts thematic flows. 3) 3,200 MW pipeline lifts regulated equity base and FY29-31 EPS. Risk: MoUs are non-binding; execution is multi-year.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-swiggy-cyient-colgate-palmolive-and-others-october-23-2026"
+      ],
+      "news_date": "2026-10-23"
+    },
+    {
+      "ticker": "JSL.NS",
+      "yahoo_ticker": "JSL.NS",
+      "company_name": "Jindal Stainless Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Corporate Simplification (merger of 4 subsidiaries) + Deleveraged Balance Sheet",
+      "news": "Q2 FY27: PAT Rs898 cr (+11.1%), revenue Rs12,874 cr (+18.2%), EBITDA Rs1,433 cr; net debt Rs3,121 cr (net D/E 0.15x). Board approved merging four group subsidiaries into the company.",
+      "market_consensus_gap": "Street values JSL as a cyclical stainless producer; the merger simplifies structure, removes minority leakage and intercompany layers, and near-zero leverage enables capex without dilution.",
+      "reflexivity_thesis": "1) Scheme filing -> NCLT steps create a visible simplification timeline. 2) Consolidation improves reported margins/ROCE. 3) Low leverage plus import-protection (stainless anti-dumping) supports re-rating toward global specialty peers. Risk: metals sold off 2.7% on 23 Oct.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://m.dailyhunt.in/news/india/english/upstox-epaper-upstox/stocks+to+watch+oct+23+emudhra+swiggy+infosys+coforge+nuvoco+vistas+bluestone+jewellery+mastek+adani+power-newsid-n731290920"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "BANSALWIRE.NS",
+      "yahoo_ticker": "BANSALWIRE.NS",
+      "company_name": "Bansal Wire Industries Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Operating-Leverage Inflection (record EBITDA/tonne post new capacity)",
+      "news": "Q2 FY27: PAT Rs52.9 cr (+38%), revenue Rs1,308.1 cr (+23.9%), volumes 1.29 lakh t (+12.4%), EBITDA Rs105 cr = Rs8,150/t (record).",
+      "market_consensus_gap": "Consensus models Bansal as a low-margin wire commodity player; record per-tonne EBITDA implies the Dadri specialty capacity mix is ramping faster than expected.",
+      "reflexivity_thesis": "1) Higher specialty mix -> sustained EBITDA/t uplift -> EPS upgrades. 2) Small-cap fund discovery as RoCE improves. Risk: small-cap selloff (-2.9% on 23 Oct) and steel price swings.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://m.dailyhunt.in/news/india/english/upstox-epaper-upstox/stocks+to+watch+oct+23+emudhra+swiggy+infosys+coforge+nuvoco+vistas+bluestone+jewellery+mastek+adani+power-newsid-n731290920"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "STLTECH.NS",
+      "yahoo_ticker": "STLTECH.NS",
+      "company_name": "Sterlite Technologies Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "AI Data-Centre Optical Order Book Conversion",
+      "news": "Q2 FY27 (23 Oct): record revenue Rs2,529 cr (~+145% YoY), EBITDA Rs846 cr (~+500%), PAT Rs517 cr (incl. Rs161 cr one-time US tariff refund); net debt-free; open order book Rs35,274 cr incl. US$1.2 bn and US$1.11 bn hyperscaler agreements. Stock +3.4% to Rs829 on 23 Oct.",
+      "market_consensus_gap": "Stock is already up ~746% YTD so the theme is crowded; the remaining gap is whether the Rs35k cr book (~3.5x trailing revenue) converts at current margins.",
+      "reflexivity_thesis": "1) Order book conversion supports FY28 upgrades. 2) Net-cash status removes the old leverage discount. Risk: crowding and one-off gains inflate optics; low conviction for Stage 1.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://www.tribuneindia.com/news/business/stl-achieves-record-q2-fy27-with-highest-ever-revenue-ebitda-and-open-order-book",
+        "https://www.multibagg.ai/market-pulse/articles/top-gainers-india-today-cmvkv1hd300022ls00u4rhfr1"
+      ],
+      "news_date": "2026-10-23"
+    },
+    {
+      "ticker": "OIL.NS",
+      "yahoo_ticker": "OIL.NS",
+      "company_name": "Oil India Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Global Spillover: Brent at 5-month high (~$114) - upstream beneficiary",
+      "news": "Brent ~$114/bbl (5-month high) on Middle East supply concerns; upstream names flagged as beneficiaries; ONGC was a Nifty gainer and Antelopus Selan +13% on 23 Oct.",
+      "market_consensus_gap": "Consensus FY27-28 realisation assumptions for upstream PSUs lag spot crude; Oil India's NRL refinery expansion adds integrated upside.",
+      "reflexivity_thesis": "1) Sustained crude above model deck -> realisation-driven EPS upgrades. 2) Windfall tax risk is the key unknown. 3) Rotation from OMCs into upstream. Risk: windfall levy or crude reversal.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://m.dailyhunt.in/news/india/english/upstox-epaper-upstox/stocks+to+watch+oct+23+emudhra+swiggy+infosys+coforge+nuvoco+vistas+bluestone+jewellery+mastek+adani+power-newsid-n731290920",
+        "https://www.kotakneo.com/news/market-news/sensex-nifty-close-lower-amid-oil-price-surge/"
+      ],
+      "news_date": "2026-10-23"
+    },
+    {
+      "ticker": "PETRONET.NS",
+      "yahoo_ticker": "PETRONET.NS",
+      "company_name": "Petronet LNG Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "New-Energy Diversification (CBG JV)",
+      "news": "Binding term sheet with Gruner Renewable Energy for a 50:50 JV to build 10 compressed-biogas plants (18 TPD each), est. capex Rs1,200 cr.",
+      "market_consensus_gap": "Market views Petronet purely as an LNG regas utility with terminal-utilisation risk; CBG is a small first step into green gas distribution.",
+      "reflexivity_thesis": "1) Small capex relative to balance sheet; signals strategic pivot. 2) Meaningful only if scaled. Low conviction.",
+      "conviction_score": 2,
+      "source_urls": [
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-swiggy-cyient-colgate-palmolive-and-others-october-23-2026",
+        "https://lngprime.com/asia/indias-petronet-lng-to-form-jv-to-build-cbg-plants/197210/"
+      ],
+      "news_date": "2026-10-23"
+    }
+  ],
+  "rejected": [
+    {
+      "company": "Swiggy (SWIGGY.NS)",
+      "stage": "STAGE 2",
+      "reason": "Q2 results out; stock -12.7% on 23 Oct. Priced."
+    },
+    {
+      "company": "eMudhra (EMUDHRA.NS)",
+      "stage": "REJECT (casualty)",
+      "reason": "Exit from global SSL/TLS business after browser distrust; already hit 20% lower circuit."
+    },
+    {
+      "company": "Cholamandalam Investment (CHOLAFIN.NS)",
+      "stage": "REJECT",
+      "reason": "Board meet 28 Oct to consider QIP - dilution event, not a soft catalyst."
+    },
+    {
+      "company": "Steel Strips Wheels (SSWL.NS)",
+      "stage": "STAGE 2",
+      "reason": "Q2 + Rs1,400 cr Aurangabad plant; already +20% upper circuit."
+    },
+    {
+      "company": "Antelopus Selan Energy",
+      "stage": "STAGE 2",
+      "reason": "Already +13% on crude."
+    },
+    {
+      "company": "HFCL (HFCL.NS)",
+      "stage": "STAGE 2",
+      "reason": "Q2 FY27 reported 19 Oct; guidance raise already reflected (+5%)."
+    },
+    {
+      "company": "JSW Steel, IndusInd Bank, Godrej Properties, Tata Teleservices, Westlife Foodworld",
+      "stage": "STAGE 2",
+      "reason": "Q2 results reported/priced on 23 Oct."
+    },
+    {
+      "company": "Zetwerk, Bonfiglioli Transmissions, Tonbo Imaging, Sahajanand Medical",
+      "stage": "STAGE 2",
+      "reason": "Listing-day events."
+    },
+    {
+      "company": "Lord's Mark Industries (BSE)",
+      "stage": "STAGE 3",
+      "reason": "Silvassa capacity done early, but stock fell 5% and Yahoo ticker not verifiable."
+    },
+    {
+      "company": "Orient Cement",
+      "stage": "STAGE 2",
+      "reason": "Merger into Ambuja already announced."
+    },
+    {
+      "company": "Gold lenders/jewellers (Muthoot, Manappuram, Titan, Kalyan, Senco)",
+      "stage": "STAGE 3",
+      "reason": "Macro commentary on falling gold, no company catalyst."
+    }
+  ]
+}

@@ -6,7 +6,8 @@
  * This dynamic GET route handler shadows the rewrite and pipes the backend event-stream
  * straight through unbuffered. Same-origin, dev + Docker.
  */
-import { NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { streamProxyHeaders } from '@/lib/streamProxy'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ job_
   const { job_id } = await params
   const upstream = await fetch(
     `${API_BACKEND}/api/pipeline/rl-stream/${encodeURIComponent(job_id)}${req.nextUrl.search}`,
-    { headers: { accept: 'text/event-stream' } },
+    { headers: streamProxyHeaders(req.headers, { accept: 'text/event-stream' }) },  // + browser context (SECREL-01)
   )
 
   return new Response(upstream.body, {

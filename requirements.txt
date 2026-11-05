@@ -16,8 +16,10 @@ redis==5.0.8
 yfinance==0.2.43
 pandas==2.2.3
 numpy==1.26.4
-scikit-learn==1.5.2
+pyarrow==17.0.0
+scikit-learn==1.8.0
 xgboost==2.1.1
+lightgbm==4.5.0
 shap==0.46.0
 
 # ── Technical Analysis ─────────────────────────────────────────────────────────
@@ -40,6 +42,12 @@ python-telegram-bot==21.6
 # ── ICICI Breeze API ──────────────────────────────────────────────────────────
 breeze-connect==1.0.69
 
+# ── Scheduler & ops (master_controller, ICICI auto-login, studies) ────────────
+apscheduler==3.10.4
+psutil==6.0.0
+scipy==1.17.1
+playwright==1.60.0
+
 # ── Utilities ─────────────────────────────────────────────────────────────────
 python-dotenv==1.0.1
 tenacity==9.0.0
@@ -57,3 +65,4 @@ httpx==0.27.2
 ruff==0.6.9
 mypy==1.11.2
 black==24.10.0
+openpyxl==3.1.5              # NSE bhavcopy occasionally published as .xlsx

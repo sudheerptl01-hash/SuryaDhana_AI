@@ -23,6 +23,8 @@ Air-gap: MODE is forced to PAPER; this router only scans/reads. Zero execution.
 """
 from __future__ import annotations
 
+import asyncio
+
 import importlib.util
 import os
 import sys
@@ -33,8 +35,10 @@ from typing import Any
 import httpx
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
+
+import bulk_cache
 
 router = APIRouter()
 
@@ -48,7 +52,6 @@ MIN_PRICE_INR = 20.0
 # How many calendar days of history to pull for a scan. ~400 trading days comfortably
 # exceeds the 252-bar eligibility floor while keeping the bulk payload small.
 DEFAULT_SCAN_DAYS = 400
-_BULK_TIMEOUT = httpx.Timeout(120.0)
 
 
 # ── Engine loader (bind-mounted at /app/novel_alpha_engine.py in Docker) ──────────
@@ -100,28 +103,22 @@ def _load_engine():
 # ── Data loader (HTTP → data-service, never DuckDB directly) ──────────────────────
 
 async def _load_bulk_ohlcv(days: int) -> pd.DataFrame:
-    """Pull full-universe OHLCV from data-service /db/ohlcv-bulk and return a tidy frame.
+    """Full-universe OHLCV via the shared 60 s bulk cache (bulk_cache.py — D3 fix).
 
-    data-service already excludes macro `^%` tickers and orders by (ticker, date) —
-    the canonical layout the engine's `shift(1)` vectorisation requires.
+    data-service already excludes macro `^%` tickers; the cached frame is (ticker, date)-
+    sorted — the canonical layout the engine's `shift(1)` vectorisation requires. The
+    fetch + ~0.4M-row JSON parse run in a worker thread; the event loop only awaits.
+    Error contract unchanged: upstream status → same status, unreachable → 502, empty → 503.
     """
     try:
-        async with httpx.AsyncClient(timeout=_BULK_TIMEOUT) as client:
-            r = await client.get(f"{DATA_SVC}/db/ohlcv-bulk", params={"days": days})
+        df = await asyncio.to_thread(bulk_cache.get_bulk_ohlcv, days, False)
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
     except httpx.RequestError as exc:
         raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
-    if r.status_code >= 400:
-        raise HTTPException(status_code=r.status_code, detail=r.text)
-    payload = r.json()
-    rows = payload.get("data", [])
-    df = pd.DataFrame(rows)
     if df.empty:
         raise HTTPException(status_code=503, detail="data-service returned no OHLCV rows")
-    df["date"] = pd.to_datetime(df["date"])
-    for col in ("open", "high", "low", "close", "volume", "adjusted_close"):
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-    return df.sort_values(["ticker", "date"], kind="mergesort").reset_index(drop=True)
+    return df
 
 
 def _apply_eligibility(df: pd.DataFrame) -> tuple[pd.DataFrame, int, int]:
@@ -133,8 +130,11 @@ def _apply_eligibility(df: pd.DataFrame) -> tuple[pd.DataFrame, int, int]:
     total_universe = int(nz["ticker"].nunique())
     grp = nz.groupby("ticker")
     bars = grp.size()
-    last_close = grp.apply(lambda g: g.sort_values("date")["close"].iloc[-1])
-    eligible = bars.index[(bars >= MIN_BARS) & (last_close >= MIN_PRICE_INR)].tolist()
+    # One stable date-sort + groupby.last instead of a python-level per-group apply(sort):
+    # 98 ms → 58 ms on the 392k-row frame, results proven identical (build_w7.md) — keeps
+    # the warm cached /universe path under its 100 ms budget.
+    last_close = nz.sort_values("date", kind="mergesort").groupby("ticker")["close"].last()
+    eligible = bars.index[(bars >= MIN_BARS) & (last_close.reindex(bars.index) >= MIN_PRICE_INR)].tolist()
     out = df[df["ticker"].isin(eligible) & (df["volume"] > 0)].reset_index(drop=True)
     return out, total_universe, len(eligible)
 
@@ -188,7 +188,9 @@ async def list_alpha_strategies() -> dict[str, Any]:
 
 
 @router.get("/universe")
-async def universe_size(days: int = DEFAULT_SCAN_DAYS) -> dict[str, Any]:
+async def universe_size(days: int = Query(DEFAULT_SCAN_DAYS, ge=60, le=1825)) -> dict[str, Any]:
+    # C2 E1: unbounded days let a single GET pull an unclamped panel (RSS ratchet) — same
+    # bounds as ScanRequest; out-of-range now 422s via the validation envelope.
     """Report the live universe counts (total vs eligible) — pure observability."""
     df = await _load_bulk_ohlcv(days)
     _, total, eligible = _apply_eligibility(df)

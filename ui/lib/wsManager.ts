@@ -112,6 +112,19 @@ class MonitorWebSocketManager {
     this._emitStatus(false)
   }
 
+  /**
+   * Reconnect at once, with the backoff reset to 2 s (R-UI-SHELL-10): called when the terminal's LINK DOWN → LINK UP
+   * edge says ui-api is back, so the live quotes do not wait out a 16–32 s backoff timer. A no-op while a socket is
+   * OPEN or CONNECTING, or after disconnect() (nothing to reconnect).
+   */
+  reconnectNow(): void {
+    if (!this.shouldConnect || !this.url) return
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return
+    this._cancelReconnect()
+    this.reconnectDelay = 2000
+    this._open()
+  }
+
   /** True if the socket is currently OPEN. */
   get isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN
@@ -171,18 +184,22 @@ class MonitorWebSocketManager {
     this._cancelReconnect()
 
     try {
-      this.ws = new WebSocket(this.url)
+      const sock = new WebSocket(this.url)
+      this.ws = sock
 
-      this.ws.onopen = () => {
+      sock.onopen = () => {
         this.reconnectDelay = 2000
         this._startHeartbeat()
         this._sendSubscription()
         this._emitStatus(true)
       }
 
-      this.ws.onmessage = (ev) => this._onMessage(ev)
+      sock.onmessage = (ev) => this._onMessage(ev)
 
-      this.ws.onclose = (ev) => {
+      sock.onclose = (ev) => {
+        // A socket that disconnect() closed and a later connect() replaced reports its close late (the close
+        // handshake is async): it must not stop the live socket's heartbeat, mark it down or start a reconnect.
+        if (this.ws !== sock) return
         this._stopHeartbeat()
         this._emitStatus(false)
         if (this.shouldConnect && ev.code !== 1000) {
@@ -190,7 +207,7 @@ class MonitorWebSocketManager {
         }
       }
 
-      this.ws.onerror = () => {
+      sock.onerror = () => {
         // onclose fires after onerror — reconnect handled there
       }
     } catch {

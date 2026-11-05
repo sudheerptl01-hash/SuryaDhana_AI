@@ -1,210 +1,69 @@
 'use client'
 
 /**
- * LiveMonitorBar — Horizontal ticker bar showing:
- *  - NIFTY 50 live index price (polled every 5s from /api/monitor/live/nifty)
- *  - Watchlist stocks with live prices from the WebSocket
- *  - Flash green/red animation on price change
- *  - WS connection indicator
+ * LiveMonitorBar: slim WATCHLIST line under the terminal header. Shows each watched
+ * stock with its live price from the ICICI websocket (flashes green/red on ticks).
+ * NIFTY lives in the header, so it isn't repeated here. Hidden when the watchlist is empty.
  */
-
-import { useCallback, useEffect, useRef, useState } from 'react'
-import clsx from 'clsx'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuotes, useWatchlist } from '@/context/AppContext'
-import { monitorLiveNifty } from '@/lib/api'
+import { T } from '@/components/terminal'
+import { socketChip } from '@/lib/feedState'
+import { useFeedState } from '@/components/shell/useFeed'
 
-interface Props {
-  isDark?: boolean
-}
-
-// ── Price flash hook ──────────────────────────────────────────────────────────
-
-function usePriceFlash(price: number | undefined): 'up' | 'down' | null {
-  const [flash, setFlash]   = useState<'up' | 'down' | null>(null)
-  const prevPriceRef        = useRef<number | undefined>(undefined)
-
+function useFlash(price: number | undefined): 'up' | 'down' | null {
+  const [flash, setFlash] = useState<'up' | 'down' | null>(null)
+  const prev = useRef<number | undefined>(undefined)
   useEffect(() => {
     if (price === undefined) return
-    const prev = prevPriceRef.current
-    if (prev !== undefined && price !== prev) {
-      const dir = price > prev ? 'up' : 'down'
-      setFlash(dir)
+    if (prev.current !== undefined && price !== prev.current) {
+      setFlash(price > prev.current ? 'up' : 'down')
       const id = setTimeout(() => setFlash(null), 800)
-      prevPriceRef.current = price
+      prev.current = price
       return () => clearTimeout(id)
     }
-    prevPriceRef.current = price
+    prev.current = price
   }, [price])
-
   return flash
 }
 
-// ── NIFTY chip ────────────────────────────────────────────────────────────────
-
-function NiftyChip({ isDark }: { isDark: boolean }) {
+function Ticker({ ticker, onRemove }: { ticker: string; onRemove: () => void }) {
   const { liveQuotes } = useLiveQuotes()
-  const [httpNifty, setHttpNifty] = useState<any>(null)
-
-  // Poll HTTP fallback every 5s in case WS isn't publishing NIFTY
-  useEffect(() => {
-    let cancelled = false
-    const poll = async () => {
-      try {
-        const res = await monitorLiveNifty()
-        if (!cancelled) setHttpNifty(res.data)
-      } catch { /* silent */ }
-    }
-    poll()
-    const id = setInterval(poll, 5000)
-    return () => { cancelled = true; clearInterval(id) }
-  }, [])
-
-  // Prefer WS quote, fall back to HTTP
-  const wsQuote = liveQuotes['NIFTY'] || liveQuotes['NSEI']
-  const record  = wsQuote?.raw || httpNifty?.record?.payload || httpNifty?.record || null
-  const ltp     = wsQuote?.ltp ?? record?.ltp ?? record?.last_price ?? record?.close ?? null
-  const flash   = usePriceFlash(ltp ?? undefined)
-
-  const chg    = wsQuote?.change   ?? record?.change   ?? null
-  const chgPct = wsQuote?.change_pct ?? record?.change_pct ?? null
-  const isUp   = chg !== null ? chg >= 0 : null
-
+  const q = liveQuotes[ticker.toUpperCase()]
+  const flash = useFlash(q?.ltp)
+  const c = q?.change_pct
   return (
-    <div className={clsx(
-      'flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-colors duration-100',
-      isDark ? 'bg-slate-800/60 border-slate-700/60' : 'bg-gray-50 border-gray-200',
-      flash === 'up'   && (isDark ? 'bg-emerald-900/40 border-emerald-600/50' : 'bg-emerald-50 border-emerald-300'),
-      flash === 'down' && (isDark ? 'bg-rose-900/30    border-rose-600/50'   : 'bg-rose-50    border-rose-300'),
-    )}>
-      <span className={clsx('text-[10px] tracking-widest', isDark ? 'text-slate-400' : 'text-gray-400')}>NIFTY</span>
-      {ltp !== null ? (
-        <>
-          <span className={clsx(
-            'tabular-nums font-black',
-            flash === 'up'   ? 'text-emerald-400' :
-            flash === 'down' ? 'text-rose-400'    :
-            isDark ? 'text-slate-100' : 'text-gray-900',
-          )}>
-            {Number(ltp).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-          {chgPct !== null && (
-            <span className={clsx(
-              'text-[10px] font-semibold px-1.5 py-0.5 rounded-md',
-              isUp
-                ? (isDark ? 'bg-emerald-900/50 text-emerald-400' : 'bg-emerald-100 text-emerald-700')
-                : (isDark ? 'bg-rose-900/30    text-rose-400'    : 'bg-rose-100    text-rose-600'),
-            )}>
-              {isUp ? '+' : ''}{Number(chgPct).toFixed(2)}%
-            </span>
-          )}
-        </>
-      ) : (
-        <span className={clsx('text-[10px]', isDark ? 'text-slate-500' : 'text-gray-400')}>—</span>
-      )}
-    </div>
-  )
-}
-
-// ── Watchlist ticker chip ─────────────────────────────────────────────────────
-
-function WatchlistChip({ ticker, isDark }: { ticker: string; isDark: boolean }) {
-  const { liveQuotes } = useLiveQuotes()
-  const quote  = liveQuotes[ticker.toUpperCase()]
-  const ltp    = quote?.ltp
-  const chgPct = quote?.change_pct
-  const flash  = usePriceFlash(ltp)
-  const isUp   = chgPct !== undefined ? chgPct >= 0 : null
-
-  return (
-    <div className={clsx(
-      'flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-mono transition-colors duration-100',
-      isDark ? 'bg-slate-800/50 border-slate-700/40' : 'bg-gray-50 border-gray-200',
-      flash === 'up'   && (isDark ? 'bg-emerald-900/30 border-emerald-600/40' : 'bg-emerald-50 border-emerald-200'),
-      flash === 'down' && (isDark ? 'bg-rose-900/20    border-rose-600/40'    : 'bg-rose-50    border-rose-200'),
-    )}>
-      <span className={clsx('font-bold', isDark ? 'text-amber-400' : 'text-indigo-600')}>
-        {ticker}
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 7, padding: '0 12px', borderRight: `1px solid ${T.border}`,
+                   background: flash === 'up' ? 'rgba(22,217,138,.12)' : flash === 'down' ? 'rgba(255,77,94,.12)' : 'transparent',
+                   transition: 'background .3s', height: '100%', alignSelf: 'stretch', lineHeight: '24px' }}>
+      <span style={{ color: T.amber, fontWeight: 600, fontSize: 11 }}>{ticker}</span>
+      <span style={{ color: T.text, fontSize: 11 }}>
+        {q?.ltp != null ? Number(q.ltp).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
       </span>
-      {ltp !== undefined ? (
-        <>
-          <span className={clsx(
-            'tabular-nums font-semibold',
-            flash === 'up'   ? 'text-emerald-400' :
-            flash === 'down' ? 'text-rose-400'    :
-            isDark ? 'text-slate-200' : 'text-gray-800',
-          )}>
-            {Number(ltp).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-          {isUp !== null && chgPct !== undefined && (
-            <span className={clsx(
-              'text-[10px] font-semibold',
-              isUp ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-rose-400' : 'text-rose-600'),
-            )}>
-              {isUp ? '▲' : '▼'} {Math.abs(chgPct).toFixed(2)}%
-            </span>
-          )}
-        </>
-      ) : (
-        <span className={clsx('text-[10px]', isDark ? 'text-slate-600' : 'text-gray-400')}>—</span>
-      )}
-    </div>
+      {c != null && <span style={{ fontSize: 10, color: c >= 0 ? T.green : T.red }}>{c >= 0 ? '▲' : '▼'} {Math.abs(c).toFixed(2)}%</span>}
+      <button onClick={onRemove} title={`Remove ${ticker} from watchlist`}
+        style={{ background: 'none', border: 'none', color: T.dim, cursor: 'pointer', fontSize: 10, padding: 0 }}>×</button>
+    </span>
   )
 }
 
-// ── WS status indicator ───────────────────────────────────────────────────────
-
-function WsIndicator({ connected, isDark }: { connected: boolean; isDark: boolean }) {
-  return (
-    <div
-      className={clsx(
-        'flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[10px] font-semibold font-mono',
-        connected
-          ? (isDark ? 'bg-emerald-900/30 border-emerald-700/40 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700')
-          : (isDark ? 'bg-slate-800/40   border-slate-700/30   text-slate-500'   : 'bg-gray-50   border-gray-200   text-gray-400'),
-      )}
-      title={connected ? 'WebSocket live' : 'WebSocket reconnecting…'}
-    >
-      <span className={clsx('w-1.5 h-1.5 rounded-full', connected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500')} />
-      {connected ? 'LIVE' : 'RECONNECTING'}
-    </div>
-  )
-}
-
-// ── Main bar ──────────────────────────────────────────────────────────────────
-
-export function LiveMonitorBar({ isDark = true }: Props) {
-  const { watchlist } = useWatchlist()
+export function LiveMonitorBar(_: { isDark?: boolean }) {
+  const { watchlist, removeFromWatchlist } = useWatchlist()
   const { wsConnected } = useLiveQuotes()
-
-  // Only render if there's something to show
-  if (watchlist.length === 0 && !wsConnected) return null
-
+  const feed = useFeedState()
+  if (watchlist.length === 0) return null
+  // never 'STREAMING' on a closed market or while the link is down (C1-trader-ux-13, lib/feedState.ts)
+  const chip = socketChip({ connected: wsConnected, ...feed, live: '● STREAMING', offline: '◌ WS RECONNECTING' })
   return (
-    <div className={clsx(
-      'w-full px-4 py-2 border-b flex items-center gap-2 overflow-x-auto',
-      isDark ? 'border-slate-800/60 bg-slate-900/40' : 'border-gray-100 bg-gray-50/80',
-    )}>
-      {/* WS connection indicator */}
-      <WsIndicator connected={wsConnected} isDark={isDark} />
-
-      {/* Divider */}
-      <span className={clsx('text-xs', isDark ? 'text-slate-700' : 'text-gray-300')}>|</span>
-
-      {/* NIFTY index */}
-      <NiftyChip isDark={isDark} />
-
-      {/* Watchlist tickers */}
-      {watchlist.length > 0 && (
-        <>
-          <span className={clsx('text-xs', isDark ? 'text-slate-700' : 'text-gray-300')}>|</span>
-          <span className={clsx('text-[10px] font-bold uppercase tracking-wider shrink-0', isDark ? 'text-slate-500' : 'text-gray-400')}>
-            Watchlist
-          </span>
-          {watchlist.map(ticker => (
-            <WatchlistChip key={ticker} ticker={ticker} isDark={isDark} />
-          ))}
-        </>
-      )}
+    <div style={{ display: 'flex', alignItems: 'center', height: 24, borderBottom: `1px solid ${T.border}`, background: '#06080c',
+                  overflowX: 'auto', whiteSpace: 'nowrap', fontFamily: T.mono }}>
+      <span style={{ background: T.cyan, color: T.bg, fontSize: 9, fontWeight: 700, letterSpacing: 1.2, padding: '0 8px',
+                     height: '100%', display: 'flex', alignItems: 'center', flex: 'none' }}>WATCHLIST</span>
+      <span title={chip.title} style={{ fontSize: 9, color: chip.tone === 'live' ? T.green : chip.tone === 'closed' ? T.muted : T.dim,
+                                        padding: '0 10px', letterSpacing: 1, flex: 'none' }}>
+        {chip.text}
+      </span>
+      {watchlist.map(t => <Ticker key={t} ticker={t} onRemove={() => removeFromWatchlist(t)} />)}
     </div>
   )
 }

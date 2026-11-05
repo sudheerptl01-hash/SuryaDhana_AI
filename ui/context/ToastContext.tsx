@@ -113,7 +113,8 @@ function ToastContainer({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id
   if (!toasts.length) return null
   return (
     <div
-      className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
+      className="fixed right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
+      style={{ top: 'calc(var(--shell-top, 0px) + 16px)' }}
       aria-live="polite"
     >
       {toasts.map(t => (

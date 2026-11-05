@@ -13,7 +13,6 @@ import itertools
 import json
 import os
 import queue
-import shutil
 import threading
 import time
 from bisect import bisect_left, bisect_right
@@ -26,12 +25,13 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 import backtest_engine as be
 import factor_decile_engine as fde
 import db
 from db import get_conn
+from snapshot import ReadSnapshot
 
 # C6 — backtest↔live parity: the scheduled-impact model + realised-slippage persistence.
 # Imported defensively so analytics still loads even if the scheduler / DuckDB writer is
@@ -62,28 +62,34 @@ MODE = "PAPER"
 DATA_SVC = os.getenv("DATA_SERVICE_URL", "http://data-service:8001")
 
 # Analytics reads off an isolated snapshot when data-service holds the live
-# write-lock (DuckDB is single-writer; on Docker Desktop/virtioFS a cross-process
-# reader is rejected). A read replica is the standard pattern for serving
-# analytics off a write-busy OLTP store.
-_SNAPSHOT = "/tmp/bt_snapshot.duckdb"
-_SNAPSHOT_TTL = 600  # seconds
+# write-lock (DuckDB is single-writer; a cross-process reader is rejected). A read
+# replica is the standard pattern for serving analytics off a write-busy store;
+# see snapshot.py for the refresh policy (change-detected, stale-while-revalidate).
+_SNAPSHOT_TTL = 600  # seconds a changed source may be served stale to interactive reads
+_snapshot = ReadSnapshot(lambda: db.DB_PATH, directory=os.getenv("ANALYTICS_SNAPSHOT_DIR", "/tmp"),
+                         ttl=_SNAPSHOT_TTL)
 
 
-def _ensure_snapshot() -> str:
-    src = db.DB_PATH
-    stale = (not os.path.exists(_SNAPSHOT)) or (time.time() - os.path.getmtime(_SNAPSHOT) > _SNAPSHOT_TTL)
-    if stale:
-        tmp = f"{_SNAPSHOT}.{os.getpid()}.tmp"
-        shutil.copy2(src, tmp)
-        os.replace(tmp, _SNAPSHOT)
-    return _SNAPSHOT
+def warm_snapshot() -> None:
+    """Build the read snapshot in the background at startup, so the first analytics
+    request doesn't spend ~40 s copying the DB (past Next's 30 s proxy timeout → 500)."""
+    def _run() -> None:
+        try:
+            con, owns = _acquire_readonly(lambda *a, **k: None)
+            if owns:
+                con.close()
+        except Exception as exc:  # warm-up is best-effort; requests retry on their own
+            print(f"[ui-api] snapshot warm-up failed: {exc}")
+    threading.Thread(target=_run, name="snapshot-warm", daemon=True).start()
 
 
-def _acquire_readonly(progress) -> tuple[duckdb.DuckDBPyConnection, bool]:
+def _acquire_readonly(progress, fresh: bool = False) -> tuple[duckdb.DuckDBPyConnection, bool]:
     """
     Return (connection, owns) for read-only analytics.
     Fast path: the shared read-only handle when ui-api owns the read lock.
-    Fallback: an isolated snapshot copy when the live DB is write-locked.
+    Fallback: the read snapshot when the live DB is write-locked. ``fresh=True``
+    (scheduled Decision Desk cycle) blocks until the snapshot matches the live DB;
+    otherwise the current copy is served and refreshed in the background.
     `owns=True` means the caller must close the connection.
     """
     try:
@@ -96,14 +102,14 @@ def _acquire_readonly(progress) -> tuple[duckdb.DuckDBPyConnection, bool]:
     progress(7, "Preparing isolated data snapshot")
     last = None
     for _ in range(2):
+        path = None
         try:
-            return duckdb.connect(_ensure_snapshot(), read_only=True), True
-        except Exception as exc:  # torn copy → drop + retry once
+            path = _snapshot.get(fresh=fresh)
+            return duckdb.connect(path, read_only=True), True
+        except Exception as exc:  # torn copy → drop + rebuild once
             last = exc
-            try:
-                os.remove(_SNAPSHOT)
-            except OSError:
-                pass
+            if path:
+                _snapshot.invalidate(path)
     raise HTTPException(status_code=503, detail=f"Market database busy; snapshot unavailable: {last}")
 BENCHMARK_LABEL = "Nifty-50 proxy (top-100 mkt-cap, equal-weight)"
 
@@ -314,6 +320,15 @@ class FilterCondition(BaseModel):
     # to "absolute". Optional + defaulted ⇒ existing API clients are unaffected.
     mode: str = "absolute"   # absolute | decile
 
+    @field_validator("field")
+    @classmethod
+    def _known_field(cls, v: str) -> str:
+        # The engine silently SKIPS unknown fields, so a typo ran an unfiltered backtest
+        # that looked like a real result. Reject it at the API boundary instead.
+        if v not in be.FIELD_MAP and v not in be.BOOLEAN_FILTERS:
+            raise ValueError(f"unknown filter field '{v}'")
+        return v
+
 
 FILTER_CATALOG = {
     "pe_ratio": {"category": "Valuation", "label": "P/E Ratio", "unit": "x", "desc": "Price-to-earnings ratio", "fundamental": True},
@@ -321,7 +336,9 @@ FILTER_CATALOG = {
     "mktcap_cr": {"category": "Valuation", "label": "Market Cap", "unit": "Cr", "desc": "Market capitalization", "fundamental": True},
     "roce_pct": {"category": "Quality", "label": "ROCE", "unit": "%", "desc": "Return on capital employed", "fundamental": True},
     "price_gt_ma50": {"category": "Technical", "label": "Price > 50-day MA", "unit": "", "desc": "Above short-term trend", "fundamental": False},
+    "price_gt_ma150": {"category": "Technical", "label": "Price > 150-day MA", "unit": "", "desc": "Above intermediate trend (Minervini T1 with Price > 200-MA)", "fundamental": False},
     "price_gt_ma200": {"category": "Technical", "label": "Price > 200-day MA", "unit": "", "desc": "Above long-term trend", "fundamental": False},
+    "ma150_gt_ma200": {"category": "Technical", "label": "150-day MA > 200-day MA", "unit": "", "desc": "Stage-2 uptrend (Minervini T2)", "fundamental": False},
     "ma50_gt_ma200": {"category": "Technical", "label": "50-day MA > 200-day MA", "unit": "", "desc": "Golden cross", "fundamental": False},
     "rsi_14": {"category": "Technical", "label": "RSI (14)", "unit": "0-100", "desc": "Oversold <30, overbought >70", "fundamental": False},
     "atr_14_pct": {"category": "Technical", "label": "ATR % (14)", "unit": "%", "desc": "Volatility (% of close)", "fundamental": False},
@@ -492,9 +509,17 @@ def _load_prepared(con, from_dt, to_dt, forward_days: int, scope_tickers: Option
             [lookback_dt, lookahead_dt, *[t.upper() for t in scope_tickers]],
         ).fetchall()
     else:
+        # Full-universe backtests trade stocks only: ETFs / liquid funds / placeholders
+        # are excluded via the instruments master (skipped if that table is absent,
+        # e.g. an older snapshot). An explicit ticker scope is always honoured as given.
+        has_inst = con.execute(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'instruments'"
+        ).fetchone()[0] > 0
+        eligible = ("AND ticker IN (SELECT ticker FROM instruments WHERE ml_eligible)"
+                    if has_inst and con.execute("SELECT COUNT(*) FROM instruments").fetchone()[0] else "")
         rows = con.execute(
             f"""SELECT {cols} FROM ohlcv
-               WHERE date BETWEEN ? AND ? ORDER BY ticker, date""",
+               WHERE date BETWEEN ? AND ? {eligible} ORDER BY ticker, date""",
             [lookback_dt, lookahead_dt],
         ).fetchall()
 
@@ -616,13 +641,23 @@ def _build_benchmark(con, from_ts, to_ts) -> tuple[dict[str, float], str]:
     """
     start, end = from_ts.date() - timedelta(days=7), to_ts.date()
 
-    # 1) Real index, if present
-    nifty_syms = ["NIFTY", "NIFTY50", "NSEI"]
-    ph = ",".join(["?"] * len(nifty_syms))
-    nrows = con.execute(
-        f"SELECT date, close FROM ohlcv WHERE ticker IN ({ph}) AND date BETWEEN ? AND ? ORDER BY date",
-        [*nifty_syms, start, end],
-    ).fetchall()
+    # 1) Real index: market_index_daily (written by data-service's refresh job),
+    #    else a NIFTY series ingested into ohlcv by older tooling.
+    nrows = []
+    if con.execute("SELECT COUNT(*) FROM information_schema.tables "
+                   "WHERE table_name = 'market_index_daily'").fetchone()[0]:
+        nrows = con.execute(
+            "SELECT date, close FROM market_index_daily WHERE symbol = 'NIFTY50' "
+            "AND date BETWEEN ? AND ? ORDER BY date",
+            [start, end],
+        ).fetchall()
+    if len(nrows) <= 5:
+        nifty_syms = ["NIFTY", "NIFTY50", "NSEI"]
+        ph = ",".join(["?"] * len(nifty_syms))
+        nrows = con.execute(
+            f"SELECT date, close FROM ohlcv WHERE ticker IN ({ph}) AND date BETWEEN ? AND ? ORDER BY date",
+            [*nifty_syms, start, end],
+        ).fetchall()
     if len(nrows) > 5:
         ndf = pd.DataFrame(nrows, columns=["date", "close"]).sort_values("date")
         ndf["date"] = pd.to_datetime(ndf["date"])
@@ -635,9 +670,13 @@ def _build_benchmark(con, from_ts, to_ts) -> tuple[dict[str, float], str]:
     # in this window (avg dollar volume over [start,end]), not today's largest caps —
     # otherwise a historical window selects recently-listed mega-caps with no in-window
     # history and the proxy collapses to empty (silently killing beta/regime).
+    # Stocks only — a liquid fund (LIQUIDBEES) tops any traded-value ranking.
+    has_inst = con.execute("SELECT COUNT(*) FROM information_schema.tables "
+                           "WHERE table_name = 'instruments'").fetchone()[0] > 0
+    stock_only = "AND ticker IN (SELECT ticker FROM instruments WHERE ml_eligible)" if has_inst else ""
     top = con.execute(
-        """SELECT ticker FROM ohlcv
-           WHERE date BETWEEN ? AND ?
+        f"""SELECT ticker FROM ohlcv
+           WHERE date BETWEEN ? AND ? {stock_only}
            GROUP BY ticker
            HAVING COUNT(*) >= 60
            ORDER BY AVG(close * volume) DESC
@@ -1714,8 +1753,11 @@ def _strip_internal(result: dict) -> dict:
 
 # ── Synchronous endpoints (fallback + scripting) ──────────────────────────────────
 
+# Sync on purpose: a backtest (and a WFO run, which can take minutes) is CPU-bound and
+# may refresh the multi-GB snapshot. As `async def` it ran on the event loop and froze
+# every other UI request; FastAPI runs plain `def` handlers in its threadpool.
 @router.post("/backtest")
-async def run_backtest(req: BacktestRequest):
+def run_backtest(req: BacktestRequest):
     try:
         return _strip_internal(_core_backtest(req))
     except HTTPException:
@@ -1727,7 +1769,7 @@ async def run_backtest(req: BacktestRequest):
 
 
 @router.post("/wfo-backtest")
-async def run_wfo_backtest(req: WFOBacktestRequest):
+def run_wfo_backtest(req: WFOBacktestRequest):
     try:
         return _strip_internal(_core_wfo(req))
     except HTTPException:

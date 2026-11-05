@@ -6,6 +6,8 @@
  * dependency-free and always works as a fallback.
  */
 import type { BacktestResult } from './backtest'
+import { isDesktop, saveDownload } from '@/lib/platform'
+import { istFileStamp } from '@/lib/format'
 
 function kpiRows(r: BacktestResult): (string | number)[][] {
   const c = r.config || ({} as any)
@@ -71,18 +73,12 @@ function toCSV(rows: (string | number)[][]): string {
   }).join(',')).join('\n')
 }
 
+/** Browser: anchor + object URL (same as before, inside saveDownload). App: written to ~/Downloads by the shell. */
 function download(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  void saveDownload(blob, filename)
 }
 
-const stamp = () => new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+const stamp = () => istFileStamp()   // IST like every other clock on the terminal (P16: toISOString() named the file in UTC, 5 h 30 m behind)
 
 /** Multi-section CSV (KPIs + trades + equity + WFO), dependency-free fallback. */
 export function exportBacktestCSV(r: BacktestResult) {
@@ -107,7 +103,11 @@ export async function exportBacktestExcel(r: BacktestResult) {
     if (r.wfo_windows?.length) {
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(wfoRows(r)), 'WFO Windows')
     }
-    XLSX.writeFile(wb, `backtest-${stamp()}.xlsx`)
+    const name = `backtest-${stamp()}.xlsx`
+    if (isDesktop()) {     // WKWebView cannot save SheetJS's blob download: hand the bytes to the shell
+      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer
+      download(new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name)
+    } else XLSX.writeFile(wb, name)
   } catch {
     // SheetJS unavailable → graceful CSV fallback (never crash the cockpit).
     exportBacktestCSV(r)

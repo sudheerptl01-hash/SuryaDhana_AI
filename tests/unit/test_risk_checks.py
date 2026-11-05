@@ -1,9 +1,13 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+# Service folders use hyphens (not importable as packages): put the repo root
+# (for `shared`) and the service folder on sys.path and import the module directly.
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ROOT))
+sys.path.insert(0, str(_ROOT / "services/risk-service"))
 
 import pytest
-from services.risk_service.risk_checks import (
+from risk_checks import (
     check_position_limit,
     check_sector_concentration,
     check_max_positions,

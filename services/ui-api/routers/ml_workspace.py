@@ -13,6 +13,10 @@ preserves the partial model (persisted to disk), and the run terminates as
 Look-ahead discipline: the train/validation split is strictly chronological — the
 validation fold is always the most-recent slice of dates (never shuffled), exactly
 as CLAUDE.md mandates for time-series. Features are trailing; the label is forward.
+Because the label is a forward 5-day window, training rows adjacent to the split
+would otherwise observe validation-era prices, so a López de Prado *purge gap*
+(label_horizon + embargo trading days) is removed ahead of the validation start;
+optional exponential time-decay sample weights let recent regimes dominate.
 
 MODE = PAPER: this module only fits models; it never places an order.
 """
@@ -106,6 +110,16 @@ class TrainRequest(BaseModel):
     subsample: float = 0.8
     colsample_bytree: float = 0.8
     valid_fraction: float = 0.25         # most-recent date slice held out (chronological)
+    # Leakage control (López de Prado purging/embargo for overlapping forward labels):
+    label_horizon: int = 5               # forward label horizon in trading days (ml_labels=5)
+    embargo_days: int = 5                # extra trading-day gap purged ahead of the label window
+    weight_halflife_days: int = 0        # >0 ⇒ exponential time-decay sample weights (0 = uniform)
+    # López de Prado labelling (G7):
+    label_kind: str = "direction"        # "direction" (up/down) | "barrier" (profit-target reached)
+    meta_labeling: bool = False          # train a secondary meta-model: P(primary signal is correct)
+    # Robust generalization estimate (G8): purged K-fold CV (mean ± std AUC/Gini):
+    robust_eval: bool = False
+    robust_folds: int = 5
 
 
 class StopRequest(BaseModel):
@@ -154,11 +168,15 @@ def _load_training_frame(req: TrainRequest) -> tuple[pd.DataFrame, list[str]]:
         if tickers:
             ticker_clause = "AND f.ticker IN (" + ",".join(["?"] * len(tickers)) + ")"
             params.extend(tickers)
+        # Pull both labels + the barrier thresholds so the target can be re-derived
+        # without another query. label_direction filters NULLs; barrier needs return.
         sql = f"""
-            SELECT f.date, f.ticker, {feat_sql}, l.label_direction AS y
+            SELECT f.date, f.ticker, {feat_sql},
+                   l.label_direction AS y_dir, l.label_return_pct AS y_ret,
+                   l.profit_target_pct AS y_tgt, l.label_barrier AS y_bar
             FROM ml_features f
             JOIN ml_labels l ON f.ticker = l.ticker AND f.date = l.date
-            WHERE l.horizon_days = 5 AND l.label_direction IS NOT NULL
+            WHERE l.horizon_days = 5 AND l.label_return_pct IS NOT NULL
               AND f.date BETWEEN ? AND ? {ticker_clause}
             ORDER BY f.date, f.ticker
         """
@@ -172,13 +190,120 @@ def _load_training_frame(req: TrainRequest) -> tuple[pd.DataFrame, list[str]]:
 
     if rows is None or rows.empty:
         raise HTTPException(status_code=422, detail="No labelled feature rows in the selected window/scope")
+    # nifty_regime is stored as text (bull/range/bear); XGBoost needs numbers
+    # ("could not convert string to float: 'range'"). Encode it, and coerce any other
+    # non-numeric feature column so a future text column can't crash training.
+    if "nifty_regime" in rows.columns:
+        rows["nifty_regime"] = rows["nifty_regime"].map({"bull": 1, "range": 0, "bear": -1})
+    for c in feats:
+        if c in rows.columns and not pd.api.types.is_numeric_dtype(rows[c]):
+            rows[c] = pd.to_numeric(rows[c], errors="coerce")
     rows = rows.replace([np.inf, -np.inf], np.nan)
-    # Keep rows with a valid label; impute remaining feature NaNs with column medians
-    # (XGBoost handles NaN natively, but median-fill stabilises the validation metrics).
-    rows = rows[rows["y"].notna()].copy()
-    rows["y"] = rows["y"].astype(int).clip(0, 1)
+    # Derive the supervised target (G7). "barrier" = did price TOUCH the profit target
+    # before the stop within the horizon (triple-barrier, label_barrier == +1). Older
+    # datasets without path labels fall back to the terminal-return approximation.
+    # "direction" = beat the round-trip cost hurdle over the horizon.
+    if req.label_kind == "barrier":
+        rows = rows[rows["y_ret"].notna()].copy()
+        if rows["y_bar"].notna().any():
+            rows = rows[rows["y_bar"].notna()]
+            rows["y"] = (rows["y_bar"] == 1).astype(int)
+        else:
+            rows["y"] = (rows["y_ret"] >= rows["y_tgt"].fillna(2.0)).astype(int)
+    else:
+        rows = rows[rows["y_dir"].notna()].copy()
+        rows["y"] = rows["y_dir"].astype(int).clip(0, 1)
+    rows = rows.drop(columns=["y_dir", "y_ret", "y_tgt", "y_bar"], errors="ignore")
     rows["date"] = pd.to_datetime(rows["date"])
     return rows, feats
+
+
+def _purged_split(udates: np.ndarray, valid_fraction: float, horizon: int, embargo: int):
+    """Chronological split with a *purge gap* between training labels and validation.
+
+    The validation fold is the most-recent `valid_fraction` of distinct trading dates.
+    A training sample at date d carries a label observing returns over (d, d+horizon];
+    if that window reaches into the validation period its label "saw" validation-era
+    prices → leakage. We therefore purge the `horizon + embargo` trading days
+    immediately before the split so no training label overlaps (or sits adjacent to)
+    the validation fold.
+
+    Returns (split_date, purge_date, cut_i, purge_i): training keeps date < purge_date,
+    validation keeps date >= split_date.
+    """
+    n = len(udates)
+    vf = min(max(valid_fraction, 0.05), 0.5)
+    cut_i = max(1, min(int(n * (1 - vf)), n - 1))
+    split_date = udates[cut_i]
+    gap = max(0, int(horizon) + int(embargo))
+    purge_i = max(0, cut_i - gap)
+    purge_date = udates[purge_i]
+    return split_date, purge_date, cut_i, purge_i
+
+
+def _purged_kfold_bounds(n_dates: int, k: int, gap: int) -> list[tuple]:
+    """Index bounds into the sorted unique dates for a Purged K-Fold CV (López de Prado
+    AFML ch. 7). Each fold yields (test_lo, test_hi, purge_lo, purge_hi): the test block
+    is udates[test_lo:test_hi]; training uses every date OUTSIDE udates[purge_lo:purge_hi],
+    where the purge zone extends `gap = horizon + embargo` trading days around the test
+    block on both sides so no training label overlaps the test fold."""
+    k = max(2, int(k))
+    fold = max(1, n_dates // k)
+    out = []
+    for i in range(k):
+        lo = i * fold
+        hi = (i + 1) * fold if i < k - 1 else n_dates
+        if lo >= n_dates:
+            break
+        out.append((lo, hi, max(0, lo - gap), min(n_dates, hi + gap)))
+    return out
+
+
+def _robust_purged_eval(xgb, df, feats: list[str], params: dict, rounds: int,
+                        k: int, gap: int) -> Optional[dict]:
+    """Purged K-Fold generalization estimate: AUC/Gini mean ± std across `k` purged
+    folds, so the OOS metric is a distribution rather than a single point. Reuses the
+    same purge gap as the chronological split. Returns None when history is too short."""
+    from sklearn.metrics import roc_auc_score
+    udates = np.sort(df["date"].unique())
+    n = len(udates)
+    if n < k * 4:
+        return None
+    aucs, n_test = [], []
+    for lo, hi, plo, phi in _purged_kfold_bounds(n, k, gap):
+        test_dates = set(udates[lo:hi])
+        purge_dates = set(udates[plo:phi])
+        te = df[df["date"].isin(test_dates)]
+        tr = df[~df["date"].isin(purge_dates)]
+        if len(te) < 20 or len(tr) < 50:
+            continue
+        y_tr = tr["y"].to_numpy(dtype=int); y_te = te["y"].to_numpy(dtype=int)
+        if len(np.unique(y_tr)) < 2 or len(np.unique(y_te)) < 2:
+            continue
+        booster = xgb.train(params, xgb.DMatrix(tr[feats].to_numpy(float), label=y_tr,
+                            feature_names=feats), num_boost_round=min(int(rounds), 120),
+                            verbose_eval=False)
+        proba = booster.predict(xgb.DMatrix(te[feats].to_numpy(float), feature_names=feats))
+        try:
+            aucs.append(float(roc_auc_score(y_te, proba)))
+            n_test.append(int(len(te)))
+        except Exception:
+            continue
+    if len(aucs) < 2:
+        return None
+    aucs = np.asarray(aucs)
+    ginis = 2.0 * aucs - 1.0
+    return {
+        "n_folds": int(len(aucs)),
+        "mean_auc": round(float(aucs.mean()), 4),
+        "std_auc": round(float(aucs.std(ddof=1)), 4),
+        "min_auc": round(float(aucs.min()), 4),
+        "max_auc": round(float(aucs.max()), 4),
+        "mean_gini": round(float(ginis.mean()), 4),
+        "std_gini": round(float(ginis.std(ddof=1)), 4),
+        "fold_aucs": [round(float(a), 4) for a in aucs],
+        "avg_test_rows": int(np.mean(n_test)),
+    }
 
 
 # ── XGBoost streaming callback ────────────────────────────────────────────────────
@@ -238,6 +363,46 @@ def _final_metrics(xgb, booster, dvalid, y_valid: np.ndarray) -> dict:
     return out
 
 
+def _train_meta_model(xgb, X_train, y_train, p_train, X_valid, y_valid, p_valid,
+                      params: dict, rounds: int, feats: list[str]):
+    """Meta-labeling (López de Prado, AFML ch. 3). The *primary* model decides the side
+    (predicts 1 = up); the *meta* model decides whether to ACT on the primary's positive
+    calls — its target is meta_label = 1{the primary's up-call was correct}. This lifts
+    the precision / bet-sizing of the entries without touching the primary's recall.
+    Returns a metrics block, or None when there is too little signal to fit a meta-model.
+    """
+    from sklearn.metrics import roc_auc_score
+    m_tr = p_train >= 0.5                      # primary says "up" on the training rows
+    m_va = p_valid >= 0.5
+    if int(m_tr.sum()) < 50 or int(m_va.sum()) < 20:
+        return None
+    meta_y_tr = (y_train[m_tr] == 1).astype(int)
+    if len(np.unique(meta_y_tr)) < 2:
+        return None
+    mp = dict(params)
+    pos = float(meta_y_tr.sum()); neg = float(len(meta_y_tr) - pos)
+    mp["scale_pos_weight"] = (neg / pos) if pos > 0 else 1.0
+    meta = xgb.train(mp, xgb.DMatrix(X_train[m_tr], label=meta_y_tr, feature_names=feats),
+                     num_boost_round=min(int(rounds), 150), verbose_eval=False)
+    meta_y_va = (y_valid[m_va] == 1).astype(int)
+    proba = meta.predict(xgb.DMatrix(X_valid[m_va], feature_names=feats))
+    try:
+        auc = float(roc_auc_score(meta_y_va, proba)) if len(np.unique(meta_y_va)) > 1 else None
+    except Exception:
+        auc = None
+    base_prec = float(meta_y_va.mean())                       # precision of taking ALL primary up-calls
+    take = proba >= 0.5
+    meta_prec = float(meta_y_va[take].mean()) if take.any() else 0.0   # precision when the meta says act
+    return {
+        "meta_valid_auc": round(auc, 4) if auc is not None else None,
+        "base_precision": round(base_prec, 4),
+        "meta_precision": round(meta_prec, 4),
+        "precision_lift": round(meta_prec - base_prec, 4),
+        "n_meta_train": int(m_tr.sum()), "n_meta_valid": int(m_va.sum()),
+        "n_meta_acted": int(take.sum()),
+    }
+
+
 # ── Core training routine (runs in a worker thread) ───────────────────────────────
 
 def _run_training(req: TrainRequest, state: _RunState, emit) -> dict:
@@ -249,20 +414,37 @@ def _run_training(req: TrainRequest, state: _RunState, emit) -> dict:
     df, feats = _load_training_frame(req)
 
     # Chronological split — no shuffle, split on a DATE boundary so no single date
-    # straddles both folds (strict temporal purity; validation is the most-recent
-    # `valid_fraction` of distinct trading dates).
+    # straddles both folds. A *purge gap* (horizon + embargo trading days) is removed
+    # ahead of the validation start so no training label's forward window leaks into
+    # the validation period (overlapping-label leakage; CLAUDE.md temporal purity).
     n = len(df)
-    vf = min(max(req.valid_fraction, 0.05), 0.5)
     udates = np.sort(df["date"].unique())
-    cut_i = max(1, min(int(len(udates) * (1 - vf)), len(udates) - 1))
-    split_date = udates[cut_i]
-    train_df = df[df["date"] < split_date]
+    split_date, purge_date, cut_i, purge_i = _purged_split(
+        udates, req.valid_fraction, req.label_horizon, req.embargo_days)
+    train_df = df[df["date"] < purge_date]
     valid_df = df[df["date"] >= split_date]
+    purged = int(((df["date"] >= purge_date) & (df["date"] < split_date)).sum())
+    purge_applied = True
+    if train_df.empty or valid_df.empty:  # purge starved a fold → fall back to plain seam
+        train_df = df[df["date"] < split_date]
+        valid_df = df[df["date"] >= split_date]
+        purged, purge_applied = 0, False
     if train_df.empty or valid_df.empty:  # tiny-window fallback → row split
+        vf = min(max(req.valid_fraction, 0.05), 0.5)
         split = max(1, min(int(n * (1 - vf)), n - 1))
         train_df, valid_df = df.iloc[:split], df.iloc[split:]
+        purged, purge_applied = 0, False
     X_train, y_train = train_df[feats].to_numpy(dtype=float), train_df["y"].to_numpy(dtype=int)
     X_valid, y_valid = valid_df[feats].to_numpy(dtype=float), valid_df["y"].to_numpy(dtype=int)
+
+    # Optional exponential time-decay sample weights (recent regimes weigh more).
+    # Strictly point-in-time: age is measured back from each train row's own date.
+    w_train = None
+    hl = int(req.weight_halflife_days)
+    if hl > 0 and len(train_df):
+        ref = train_df["date"].max()
+        age_days = (ref - train_df["date"]).dt.days.to_numpy(dtype=float)
+        w_train = np.power(0.5, age_days / float(hl))
 
     rounds = int(req.n_estimators)
     if req.mode == "sample":
@@ -277,9 +459,16 @@ def _run_training(req: TrainRequest, state: _RunState, emit) -> dict:
         "up_rate": round(up_rate, 4), "total_rounds": rounds,
         "train_span": [str(train_df["date"].min().date()), str(train_df["date"].max().date())],
         "valid_span": [str(valid_df["date"].min().date()), str(valid_df["date"].max().date())],
+        # Leakage-control telemetry: how many rows the purge removed at the seam.
+        "purge_applied": purge_applied,
+        "purged_rows": purged,
+        "purge_gap_days": int(req.label_horizon) + int(req.embargo_days),
+        "weight_decay_halflife": hl,
+        "label_kind": req.label_kind,
+        "meta_labeling_enabled": bool(getattr(req, "meta_labeling", False)),
     })
 
-    dtrain = xgb.DMatrix(X_train, label=y_train, feature_names=feats)
+    dtrain = xgb.DMatrix(X_train, label=y_train, weight=w_train, feature_names=feats)
     dvalid = xgb.DMatrix(X_valid, label=y_valid, feature_names=feats)
 
     # Class imbalance correction so AUC/Gini aren't dominated by the majority class.
@@ -308,6 +497,26 @@ def _run_training(req: TrainRequest, state: _RunState, emit) -> dict:
     state.status = "TERMINATED_BY_USER" if terminated else "COMPLETED"
 
     metrics = _final_metrics(xgb, booster, dvalid, y_valid)
+
+    # Meta-labeling (G7): secondary model on whether the primary's up-calls are correct.
+    meta = None
+    if getattr(req, "meta_labeling", False) and not terminated:
+        try:
+            meta = _train_meta_model(xgb, X_train, y_train, booster.predict(dtrain),
+                                     X_valid, y_valid, booster.predict(dvalid),
+                                     params, rounds, feats)
+        except Exception:
+            meta = None
+
+    # Purged K-Fold robust eval (G8): a distribution of OOS AUC, not one point estimate.
+    robust = None
+    if getattr(req, "robust_eval", False) and not terminated:
+        try:
+            robust = _robust_purged_eval(xgb, df, feats, params, rounds,
+                                         int(req.robust_folds), int(req.label_horizon) + int(req.embargo_days))
+        except Exception:
+            robust = None
+
     score = booster.get_score(importance_type="gain")
     importance = sorted(
         ({"feature": k, "gain": round(float(v), 2)} for k, v in score.items()),
@@ -333,17 +542,33 @@ def _run_training(req: TrainRequest, state: _RunState, emit) -> dict:
         "up_rate": round(up_rate, 4),
         "model_path": model_path,
         "feature_importance": importance,
+        "purge_applied": purge_applied,
+        "purged_rows": purged,
+        "purge_gap_days": int(req.label_horizon) + int(req.embargo_days),
+        "weight_decay_halflife": hl,
+        "label_kind": req.label_kind,
+        "meta_labeling": meta,
+        "robust_eval": robust,
         **metrics,
         "mode_flag": MODE,
     }
 
 
 def _stream(req: TrainRequest):
-    q: "queue.Queue[dict]" = queue.Queue()
+    # Bounded queue (G11): epoch telemetry is loss-tolerant, so a slow/stalled client
+    # cannot accumulate unbounded epoch frames in memory. Critical frames (start /
+    # result / error / accepted) always block-put and are never dropped.
+    q: "queue.Queue[dict]" = queue.Queue(maxsize=2000)
     state = _register(int(req.n_estimators))
 
     def emit(evt: dict):
-        q.put(evt)
+        if evt.get("event") == "epoch":
+            try:
+                q.put_nowait(evt)               # drop this telemetry frame if the queue is full
+            except queue.Full:
+                pass
+        else:
+            q.put(evt)                          # start/result/error must not be lost
 
     def worker():
         try:
@@ -365,11 +590,18 @@ def _stream(req: TrainRequest):
     def generate():
         # Hand the client its run_id immediately so STOP works before round 1.
         yield json.dumps({"event": "accepted", "run_id": state.run_id, "mode": req.mode}) + "\n"
-        while True:
-            evt = q.get()
-            if evt.get("event") == "__done__":
-                break
-            yield json.dumps(evt, default=str) + "\n"
+        try:
+            while True:
+                evt = q.get()
+                if evt.get("event") == "__done__":
+                    break
+                yield json.dumps(evt, default=str) + "\n"
+        finally:
+            # Client disconnect / stream close before completion → signal the worker to
+            # stop at the next round boundary so an abandoned run frees xgboost memory
+            # promptly instead of training to completion in the background (G11).
+            if state.status == "TRAINING":
+                state.cancel.set()
 
     return generate
 
@@ -395,23 +627,5 @@ async def stop_run(req: StopRequest):
     return {"run_id": req.run_id, "status": "STOP_SIGNALLED", "iteration": st.iteration}
 
 
-@router.get("/runs")
-async def list_runs():
-    with _RUNS_LOCK:
-        return [{"run_id": s.run_id, "status": s.status, "iteration": s.iteration,
-                 "total_rounds": s.total_rounds,
-                 "age_s": round(time.time() - s.created_at, 1)}
-                for s in sorted(_RUNS.values(), key=lambda s: s.created_at, reverse=True)]
-
-
-@router.get("/health")
-async def ml_health():
-    try:
-        import xgboost as xgb  # noqa: F401
-        ok = True
-        ver = xgb.__version__
-    except Exception as e:
-        ok, ver = False, str(e)
-    return {"mode": MODE, "xgboost_available": ok, "xgboost_version": ver,
-            "n_features": len(FEATURE_COLUMNS), "active_runs": sum(
-                1 for s in _RUNS.values() if s.status == "TRAINING")}
+# (dead routes /runs and /health removed — Bloomberg program F1.5; ui-api /health is the
+#  service health endpoint, and run state is returned by /train + /stop responses)

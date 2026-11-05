@@ -20,28 +20,28 @@ export function EquityCockpitChart({ data }: { data: EquityPoint[] }) {
     const el = containerRef.current
 
     const chart = createChart(el, {
-      layout: { background: { type: ColorType.Solid, color: '#0f172a' }, textColor: '#94a3b8', fontFamily: 'JetBrains Mono, monospace' },
-      grid: { vertLines: { color: '#1e293b' }, horzLines: { color: '#1e293b' } },
+      layout: { background: { type: ColorType.Solid, color: '#05070a' }, textColor: '#8a94a6', fontFamily: 'JetBrains Mono, monospace' },
+      grid: { vertLines: { color: '#1a2130' }, horzLines: { color: '#1a2130' } },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: '#334155', scaleMargins: { top: 0.08, bottom: 0.32 } },
-      timeScale: { borderColor: '#334155', timeVisible: false, rightOffset: 4 },
+      rightPriceScale: { borderColor: '#2a3448', scaleMargins: { top: 0.08, bottom: 0.32 } },
+      timeScale: { borderColor: '#2a3448', timeVisible: false, rightOffset: 4 },
       width: el.clientWidth,
       height: 320,
     })
 
     const navSeries = chart.addAreaSeries({
-      lineColor: '#f59e0b', topColor: 'rgba(245,158,11,0.28)', bottomColor: 'rgba(245,158,11,0.02)',
+      lineColor: '#ffb000', topColor: 'rgba(245,158,11,0.28)', bottomColor: 'rgba(245,158,11,0.02)',
       lineWidth: 2, priceFormat: { type: 'price', precision: 0, minMove: 1 },
     })
     const benchSeries = chart.addLineSeries({
-      color: '#64748b', lineWidth: 1, lineStyle: LineStyle.Dashed,
+      color: '#6f7a8e', lineWidth: 1, lineStyle: LineStyle.Dashed,
       priceFormat: { type: 'price', precision: 0, minMove: 1 },
     })
     const ddSeries = chart.addAreaSeries({
       lineColor: '#ef4444', topColor: 'rgba(239,68,68,0.05)', bottomColor: 'rgba(239,68,68,0.45)',
       lineWidth: 1, priceScaleId: 'dd', priceFormat: { type: 'price', precision: 1, minMove: 0.1 },
     })
-    chart.priceScale('dd').applyOptions({ scaleMargins: { top: 0.72, bottom: 0 }, borderColor: '#334155' })
+    chart.priceScale('dd').applyOptions({ scaleMargins: { top: 0.72, bottom: 0 }, borderColor: '#2a3448' })
 
     const toTime = (d: string) => d.slice(0, 10)
     navSeries.setData(data.map(d => ({ time: toTime(d.date) as any, value: d.nav })))

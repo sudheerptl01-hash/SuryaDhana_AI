@@ -14,6 +14,9 @@ from typing import Optional, AsyncGenerator
 import httpx
 import numpy as np
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
+
+from errors import degraded
+from routers import _features_explorer
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 router = APIRouter()
@@ -32,6 +35,7 @@ _DB_PATH_ENV      = os.getenv("DUCKDB_PATH") or os.getenv("DATABASE_URL")
 DATA_DIR          = (Path(_DB_PATH_ENV).resolve().parent if _DB_PATH_ENV
                      else Path(__file__).resolve().parent.parent.parent.parent / "data")
 FEATURES_PARQUET  = DATA_DIR / "computed_features.parquet"
+RL_METRICS_PATH   = DATA_DIR / "rl_training_metrics.json"
 LABELS_PARQUET    = DATA_DIR / "computed_labels.parquet"
 
 _jobs: dict[str, dict] = {}
@@ -48,11 +52,22 @@ try:
         compute_market_breadth,
         build_triple_barrier_labels,
         FEATURE_COLS as _ENGINE_FEATURE_COLS,
+        DEFAULT_TRAIN_FEATURES as _DEFAULT_TRAIN_FEATURES,
     )
     _FEATURE_ENGINE_AVAILABLE = True
 except ImportError:
     _FEATURE_ENGINE_AVAILABLE = False
     _ENGINE_FEATURE_COLS = []
+    _DEFAULT_TRAIN_FEATURES = []
+
+# Columns that come from ml_labels (computed from FUTURE prices) or are metadata.
+# They must never be used as model inputs.
+_LABEL_AND_META_COLS = {
+    "ticker", "date", "created_at", "feature_version", "stock_id",
+    "label_direction", "label_return_pct", "label_barrier", "label_return",
+    "fwd_return", "target", "horizon_days", "profit_target_pct", "stop_loss_pct",
+    "cost_hurdle_pct",
+}
 
 
 def _get_or_create_queue(job_id: str) -> queue.Queue:
@@ -65,7 +80,7 @@ def _emit(job_id: str, msg: str, event: str = "log") -> None:
     q = _train_log_queues.get(job_id)
     if q:
         try:
-            q.put_nowait(f"event: {event}\ndata: {json.dumps({'msg': msg, 'ts': datetime.now().isoformat()})}\n\n")
+            q.put_nowait(f"event: {event}\ndata: {json.dumps({'msg': msg, 'ts': datetime.now().astimezone().isoformat()})}\n\n")
         except queue.Full:
             pass
 
@@ -153,285 +168,65 @@ async def get_service_health():
     return health
 
 
-def _fetch_macro_data(days: int = 600) -> "pd.DataFrame":
-    """Fetch NIFTY50 + INDIAVIX via yfinance (data-service holds the DuckDB write lock)."""
-    import pandas as pd
+# ── Feature generation: ONE pipeline, owned by data-service ─────────────────────
+# The dataset (ml_features + ml_labels) is built by data-service's
+# POST /jobs/build-ml-dataset — the only process allowed to write DuckDB. ui-api
+# just starts that job and relays its progress; it no longer computes features
+# in-process (which blocked this event loop and raced the parquet import).
 
-    try:
-        import yfinance as yf
-        from datetime import date as _date, timedelta
-        end = _date.today()
-        start = end - timedelta(days=days)
-        nifty_raw = yf.download("^NSEI",     start=str(start), end=str(end), progress=False)
-        vix_raw   = yf.download("^INDIAVIX", start=str(start), end=str(end), progress=False)
-
-        def _to_df(raw):
-            d = raw.copy().reset_index()
-            d.columns = [c[0].lower() if isinstance(c, tuple) else c.lower() for c in d.columns]
-            if "close" not in d.columns and "adj close" in d.columns:
-                d["close"] = d["adj close"]
-            return d[["date", "close"]].dropna()
-
-        nifty_df = _to_df(nifty_raw)
-        vix_df   = _to_df(vix_raw)
-        if not nifty_df.empty and not vix_df.empty:
-            return compute_macro_features(nifty_df, vix_df)
-    except Exception:
-        pass
-
-    return pd.DataFrame()
-
-
-async def _run_feature_generation(job_id: str):
-    """
-    Batch-compute full ML feature set for all tickers.
-
-    Strategy:
-    - If feature_engine is importable (local dev + Docker with shared mount):
-        load OHLCV bulk from DuckDB, fetch macro via yfinance, compute features
-        in-process — significantly faster than per-ticker HTTP.
-    - Fallback: call feature-service /calculate/features per ticker over HTTP.
-
-    Writes: DuckDB ml_features + ml_labels tables, Parquet files as backup.
-    """
-    import pandas as pd
-
-    start = datetime.now()
-
-    if _FEATURE_ENGINE_AVAILABLE:
-        await _run_feature_generation_direct(job_id, start)
-    else:
-        await _run_feature_generation_http(job_id, start)
-
-
-async def _run_feature_generation_direct(job_id: str, start: datetime):
-    """Fast path: bulk HTTP load from data-service + in-process feature_engine computation.
-
-    data-service holds the DuckDB write lock, so we fetch OHLCV and fundamentals
-    via HTTP rather than opening a competing DuckDB connection.
-    """
-    import pandas as pd
-
-    _jobs[job_id]["status"] = "loading_data"
-
-    # ── 1. Load ALL OHLCV via data-service HTTP ─────────────────────────────────
-    try:
-        async with httpx.AsyncClient(timeout=300) as client:
-            resp = await client.get(f"{DATA_SVC}/db/ohlcv-bulk", params={"days": 700})
-            resp.raise_for_status()
-            ohlcv_records = resp.json().get("data", [])
-    except Exception as e:
-        _jobs[job_id].update({"status": "error", "errors": [{"general": f"OHLCV bulk load failed: {e}"}]})
-        return
-
-    ohlcv_all = pd.DataFrame(ohlcv_records)
-    if ohlcv_all.empty:
-        _jobs[job_id].update({"status": "error", "errors": [{"general": "No OHLCV data returned from data-service"}]})
-        return
-    ohlcv_all["date"] = pd.to_datetime(ohlcv_all["date"])
-    tickers = sorted(ohlcv_all["ticker"].unique().tolist())
-
-    _jobs[job_id]["total"] = len(tickers)
-    _jobs[job_id]["status"] = "computing_macro"
-
-    # ── 2. Macro features (fetched once, merged to all tickers) ─────────────────
-    macro_df = await asyncio.to_thread(_fetch_macro_data, 700)
-
-    # ── 3. Market breadth ────────────────────────────────────────────────────────
-    try:
-        breadth_df = compute_market_breadth(ohlcv_all)
-        if macro_df is not None and not macro_df.empty and not breadth_df.empty:
-            breadth_df["date"] = pd.to_datetime(breadth_df["date"])
-            macro_df["date"]   = pd.to_datetime(macro_df["date"])
-            macro_df = macro_df.merge(breadth_df, on="date", how="left")
-    except Exception:
-        pass  # breadth is optional
-
-    # ── 4. Load fundamentals via data-service HTTP ──────────────────────────────
-    try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            resp = await client.get(f"{DATA_SVC}/db/fundamentals-bulk")
-            resp.raise_for_status()
-            fund_records = resp.json().get("data", [])
-        fund_all = pd.DataFrame(fund_records)
-        if not fund_all.empty and "as_of_date" in fund_all.columns:
-            fund_all["as_of_date"] = pd.to_datetime(fund_all["as_of_date"])
-    except Exception:
-        fund_all = pd.DataFrame()
-
-    # ── 5. Per-ticker feature computation ────────────────────────────────────────
-    _jobs[job_id]["status"] = "computing_features"
-    all_features: list[pd.DataFrame] = []
-    all_labels:   list[pd.DataFrame] = []
-    errors: list[dict] = []
-
-    for i, ticker in enumerate(tickers):
-        try:
-            ohlcv_t = ohlcv_all[ohlcv_all["ticker"] == ticker].drop(columns=["ticker"]).copy()
-            if len(ohlcv_t) < 60:
-                _jobs[job_id]["progress"] = i + 1
-                continue
-
-            fund_t = fund_all[fund_all["ticker"] == ticker].drop(columns=["ticker"]).copy() \
-                     if not fund_all.empty else pd.DataFrame()
-
-            feat_df = build_ticker_features(ticker, ohlcv_t, fund_t, macro_df)
-            if not feat_df.empty:
-                all_features.append(feat_df)
-
-            # Triple-barrier labels
-            lbl_df = build_triple_barrier_labels(ohlcv_t.copy(), horizon=5,
-                                                  profit_target_pct=2.0, stop_loss_pct=2.0)
-            lbl_df = lbl_df.dropna(subset=["label_barrier"])
-            if not lbl_df.empty:
-                lbl_df["ticker"] = ticker
-                lbl_df["date"]   = pd.to_datetime(lbl_df["date"]).dt.strftime("%Y-%m-%d")
-                lbl_out = lbl_df[["ticker","date","horizon_days","label_direction",
-                                   "label_return_pct","label_barrier",
-                                   "profit_target_pct","stop_loss_pct"]].copy()
-                all_labels.append(lbl_out)
-
-        except Exception as e:
-            errors.append({"ticker": ticker, "error": str(e)})
-
-        _jobs[job_id]["progress"] = i + 1
-
-    _jobs[job_id]["errors"] = errors
-
-    # ── 6. Persist ───────────────────────────────────────────────────────────────
-    _jobs[job_id]["status"] = "saving"
-
-    if all_features:
-        feat_df = pd.concat(all_features, ignore_index=True)
-        feat_df["date"] = feat_df["date"].astype(str).str[:10]
-        feat_df.to_parquet(str(FEATURES_PARQUET), index=False)
-
-    if all_labels:
-        lbl_df = pd.concat(all_labels, ignore_index=True)
-        lbl_df.to_parquet(str(LABELS_PARQUET), index=False)
-
-    # Import Parquet → DuckDB via data-service (avoids write-lock conflicts)
-    _jobs[job_id]["status"] = "importing_to_db"
-    try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            resp = await client.post(f"{DATA_SVC}/admin/import-ml-data")
-            if resp.status_code == 200:
-                _jobs[job_id]["db_import"] = resp.json()
-            else:
-                errors.append({"general": f"DuckDB import: data-service returned {resp.status_code}: {resp.text[:200]}"})
-    except Exception as e:
-        errors.append({"general": f"DuckDB import request failed: {e}"})
-
-    elapsed = (datetime.now() - start).total_seconds()
-    _jobs[job_id].update({
-        "status":        "done",
-        "elapsed_secs":  elapsed,
-        "features_rows": len(feat_df) if all_features else 0,
-        "labels_rows":   len(lbl_df)  if all_labels   else 0,
-        "tickers_done":  len(tickers),
-    })
-
-
-async def _run_feature_generation_http(job_id: str, start: datetime):
-    """Fallback: call feature-service /calculate/features per ticker over HTTP."""
-    import pandas as pd
-
-    try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            resp = await client.get(f"{DATA_SVC}/db/ohlcv-meta")
-            resp.raise_for_status()
-            tickers = [row["ticker"] for row in resp.json().get("data", [])]
-    except Exception as e:
-        _jobs[job_id].update({"status": "error", "errors": [{"general": f"Ticker list load failed: {e}"}]})
-        return
-
-    _jobs[job_id]["total"] = len(tickers)
-    all_features: list[dict] = []
-    all_labels:   list[dict] = []
-
-    async with httpx.AsyncClient(timeout=120) as client:
-        for i, ticker in enumerate(tickers):
-            try:
-                ohlcv_resp = await client.get(f"{DATA_SVC}/ohlcv/{ticker}", params={"limit": 1500})
-                if ohlcv_resp.status_code != 200:
-                    _jobs[job_id]["errors"].append({"ticker": ticker, "error": f"data-service {ohlcv_resp.status_code}"})
-                    _jobs[job_id]["progress"] = i + 1
-                    continue
-
-                ohlcv_rows = ohlcv_resp.json().get("data", [])
-                if len(ohlcv_rows) < 60:
-                    _jobs[job_id]["progress"] = i + 1
-                    continue
-
-                feat_resp = await client.post(
-                    f"{FEATURE_SVC}/calculate/features",
-                    json={"ticker": ticker, "ohlcv": ohlcv_rows},
-                    timeout=60,
-                )
-                if feat_resp.status_code == 200:
-                    for row in feat_resp.json().get("features", []):
-                        row["ticker"] = ticker
-                        all_features.append(row)
-
-                # Simple forward-return labels as fallback
-                ohlcv_df = pd.DataFrame(ohlcv_rows)
-                ohlcv_df["date"] = pd.to_datetime(ohlcv_df["date"]).dt.strftime("%Y-%m-%d")
-                ohlcv_df = ohlcv_df.sort_values("date").reset_index(drop=True)
-                future_close = ohlcv_df["close"].shift(-5)
-                ohlcv_df["label_direction"]  = (future_close > ohlcv_df["close"]).astype(float)
-                ohlcv_df["label_return_pct"] = ((future_close - ohlcv_df["close"]) / ohlcv_df["close"]) * 100
-                for _, row in ohlcv_df[ohlcv_df["label_return_pct"].notna()].iterrows():
-                    all_labels.append({
-                        "ticker": ticker,
-                        "date": str(row["date"])[:10],
-                        "label_direction": int(row["label_direction"]),
-                        "label_return_pct": float(row["label_return_pct"]),
-                    })
-
-            except Exception as e:
-                _jobs[job_id]["errors"].append({"ticker": ticker, "error": str(e)})
-
-            _jobs[job_id]["progress"] = i + 1
-
-    if all_features:
-        pd.DataFrame(all_features).to_parquet(str(FEATURES_PARQUET), index=False)
-    if all_labels:
-        pd.DataFrame(all_labels).to_parquet(str(LABELS_PARQUET), index=False)
-
-    elapsed = (datetime.now() - start).total_seconds()
-    _jobs[job_id].update({"status": "done", "elapsed_secs": elapsed})
+_REMOTE_STATUS = {"running": "computing_features", "done": "done", "error": "error"}
 
 
 @router.post("/generate-features")
-async def trigger_feature_generation(background_tasks: BackgroundTasks):
-    job_id = str(uuid.uuid4())
-
+async def trigger_feature_generation():
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(f"{DATA_SVC}/db/stats")
-            count = r.json().get("total_stocks", 501) if r.status_code == 200 else 501
-    except Exception:
-        count = 501
-
-    # Pre-register job so first poll doesn't 404
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(f"{DATA_SVC}/jobs/build-ml-dataset")
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}")
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=r.json().get("detail", r.text[:300]))
+    remote = r.json()
+    job_id = remote["job_id"]
     _jobs[job_id] = {
-        "status":     "loading_data",
-        "progress":   0,
-        "total":      count,
-        "errors":     [],
+        "status": "loading_data",
+        "progress": 0,
+        "total": 0,
+        "errors": [],
         "start_time": datetime.now(),
-        "engine":     "direct" if _FEATURE_ENGINE_AVAILABLE else "http",
+        "engine": "data-service",
+        "remote_job_id": job_id,
     }
-
-    background_tasks.add_task(_run_feature_generation, job_id)
     return {
         "job_id": job_id,
         "status": "loading_data",
         "progress": 0,
-        "total": count,
-        "engine": "direct" if _FEATURE_ENGINE_AVAILABLE else "http",
+        "total": remote.get("total", 0),
+        "engine": "data-service",
         "feature_count": len(FEATURE_COLS),
+        "already_running": remote.get("already_running", False),
     }
+
+
+async def _sync_remote_job(job_id: str) -> None:
+    job = _jobs[job_id]
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"{DATA_SVC}/jobs/{job['remote_job_id']}")
+        if r.status_code != 200:
+            return
+        remote = r.json()
+    except Exception:
+        return  # transient — keep last known state
+    job["status"] = _REMOTE_STATUS.get(remote.get("status"), remote.get("status", "running"))
+    job["progress"] = remote.get("progress", 0)
+    job["total"] = remote.get("total", 0)
+    if remote.get("error"):
+        job["errors"] = [{"general": remote["error"]}]
+    if remote.get("status") in ("done", "error"):
+        job["result"] = remote.get("result")
+        job["elapsed_secs"] = (datetime.now() - job["start_time"]).total_seconds()
+        job.pop("start_time", None)
 
 
 @router.get("/status/{job_id}", response_model=JobStatus)
@@ -439,6 +234,8 @@ async def get_job_status(job_id: str):
     if job_id not in _jobs:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
+    if _jobs[job_id].get("remote_job_id") and _jobs[job_id]["status"] not in ("done", "error"):
+        await _sync_remote_job(job_id)
     job = _jobs[job_id]
     elapsed = job.get("elapsed_secs", 0.0)
     if "start_time" in job and isinstance(job["start_time"], datetime):
@@ -455,34 +252,31 @@ async def get_job_status(job_id: str):
 
 
 async def _run_model_training(job_id: str, model_type: str = "xgboost", selected_features: list | None = None):
-    """Load features + labels from Parquet and train via ml-service."""
+    """Train via ml-service from the SINGLE SOURCE — DuckDB ml_features + ml_labels.
+
+    Pulls a memory-safe training sample from data-service /db/training-sample (DuckDB
+    performs the join + last-N-per-ticker windowing server-side) instead of loading the
+    full ~426 MB feature parquet + labels + merge into the 2 GB ui-api container — which
+    OOM-killed it exactly like feature generation did before the streaming fix."""
     import pandas as pd
+    import math
 
     try:
-        if not FEATURES_PARQUET.exists():
-            _jobs[job_id]["status"] = "error"
-            _jobs[job_id]["error"] = "No features found. Run Phase 3 (Feature Pipeline) first."
-            return
-
-        if not LABELS_PARQUET.exists():
-            _jobs[job_id]["status"] = "error"
-            _jobs[job_id]["error"] = "No labels found. Run Phase 3 (Feature Pipeline) first."
-            return
-
-        feat_df = pd.read_parquet(str(FEATURES_PARQUET))
-        lbl_df  = pd.read_parquet(str(LABELS_PARQUET))
-
-        # Normalise date column
-        feat_df["date"] = feat_df["date"].astype(str).str[:10]
-        lbl_df["date"]  = lbl_df["date"].astype(str).str[:10]
-
-        # Join on ticker + date
-        merged = feat_df.merge(lbl_df, on=["ticker", "date"], how="inner")
-        merged = merged.dropna(subset=["label_direction", "label_return_pct"])
+        _jobs[job_id]["status"] = "loading_data"
+        async with httpx.AsyncClient(timeout=300) as client:
+            # stride=5 (= label horizon): non-overlapping labels across the FULL
+            # history, date-ordered — not just the most recent 200 days.
+            r = await client.get(f"{DATA_SVC}/db/training-sample", params={"stride": 5})
+            if r.status_code != 200:
+                _jobs[job_id]["status"] = "error"
+                _jobs[job_id]["error"] = f"training-sample HTTP {r.status_code}: {r.text[:300]}"
+                return
+            merged = pd.DataFrame(r.json().get("data", []))
 
         if len(merged) < 500:
             _jobs[job_id]["status"] = "error"
-            _jobs[job_id]["error"] = f"Only {len(merged)} joined rows — need ≥500. Re-run Phase 3."
+            _jobs[job_id]["error"] = (f"Only {len(merged)} joined rows in ml_features/ml_labels — "
+                                      "run Phase 3 (Feature Engineering) first.")
             return
 
         # Encode nifty_regime categorical → integer (bull=1, bear=-1, range=0)
@@ -491,13 +285,13 @@ async def _run_model_training(job_id: str, model_type: str = "xgboost", selected
             merged["nifty_regime"] = merged["nifty_regime"].map(regime_map).fillna(0).astype(int)
 
         # Valid feature columns present in merged df (only numeric)
-        feature_pool = selected_features if selected_features else FEATURE_COLS
+        feature_pool = selected_features if selected_features else (_DEFAULT_TRAIN_FEATURES or FEATURE_COLS)
         valid_cols = [c for c in feature_pool if c in merged.columns
-                      and merged[c].dtype.kind in "fiub"]  # float/int/uint/bool only
+                      and c not in _LABEL_AND_META_COLS
+                      and merged[c].dtype.kind in "fiub"      # float/int/uint/bool only
+                      and merged[c].notna().any()]            # all-NULL columns drop every row
 
-        # Sample: last 200 rows per ticker to keep payload <20MB
-        merged = merged.sort_values("date").groupby("ticker").tail(200).reset_index(drop=True)
-
+        _jobs[job_id]["status"] = "training"
         _jobs[job_id]["progress"] = 20
 
         # Build payload — replace NaN/inf with None for JSON serialization
@@ -592,7 +386,9 @@ async def get_data_quality():
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             db_stats_resp  = await client.get(f"{DATA_SVC}/db/stats")
-            ohlcv_meta_resp = await client.get(f"{DATA_SVC}/db/ohlcv-meta")
+            # fields=core (payload budget S2): this page needs 3 of the 19 per-ticker
+            # fields; today's data-service ignores the param, the patched one trims.
+            ohlcv_meta_resp = await client.get(f"{DATA_SVC}/db/ohlcv-meta", params={"fields": "core"})
             ml_stats_resp   = await client.get(f"{DATA_SVC}/db/ml-stats")
 
         db_stats   = db_stats_resp.json()   if db_stats_resp.status_code   == 200 else {}
@@ -627,13 +423,15 @@ async def get_data_quality():
         avg_rows_per_ticker = round(feat_rows / feat_tickers, 0) if feat_tickers else 0.0
 
         if feat_rows == 0 and FEATURES_PARQUET.exists():
+            # F2.2: the 352 MB parquet read must never run on the event loop; only counts are
+            # needed, so project a single column and do it in a worker thread.
+            def _feat_stats():
+                df = pd.read_parquet(str(FEATURES_PARQUET), columns=["ticker"])
+                per = df.groupby("ticker").size()
+                return len(per), len(df), int((per < 100).sum()), (round(float(per.mean()), 0) if len(per) else 0)
             try:
-                feat_df = pd.read_parquet(str(FEATURES_PARQUET))
-                feat_tickers = feat_df["ticker"].nunique()
-                feat_rows = len(feat_df)
-                per_ticker = feat_df.groupby("ticker").size()
-                sparse_tickers = int((per_ticker < 100).sum())
-                avg_rows_per_ticker = round(float(per_ticker.mean()), 0) if len(per_ticker) else 0
+                (feat_tickers, feat_rows,
+                 sparse_tickers, avg_rows_per_ticker) = await asyncio.to_thread(_feat_stats)
             except Exception:
                 pass
 
@@ -648,15 +446,20 @@ async def get_data_quality():
         has_triple_barrier = total_labels > 0  # ml_labels only populated via triple-barrier labels
 
         if total_labels == 0 and LABELS_PARQUET.exists():
+            def _label_stats():
+                import pyarrow.parquet as pq
+                cols = pq.read_schema(str(LABELS_PARQUET)).names
+                df = pd.read_parquet(str(LABELS_PARQUET), columns=["label_direction", "label_return_pct"])
+                n = len(df)
+                up = int((df["label_direction"] == 1).sum())
+                return (n, up, int((df["label_direction"] == 0).sum()),
+                        round(up / n * 100, 1) if n else 0,
+                        round(float(df["label_return_pct"].mean()), 4),
+                        round(float(df["label_return_pct"].std()), 4),
+                        "label_barrier" in cols)
             try:
-                lbl_df = pd.read_parquet(str(LABELS_PARQUET))
-                total_labels = len(lbl_df)
-                up_labels    = int((lbl_df["label_direction"] == 1).sum())
-                down_labels  = int((lbl_df["label_direction"] == 0).sum())
-                class_balance_pct  = round(up_labels / total_labels * 100, 1) if total_labels else 0
-                avg_ret = round(float(lbl_df["label_return_pct"].mean()), 4)
-                std_ret = round(float(lbl_df["label_return_pct"].std()), 4)
-                has_triple_barrier = "label_barrier" in lbl_df.columns
+                (total_labels, up_labels, down_labels, class_balance_pct,
+                 avg_ret, std_ret, has_triple_barrier) = await asyncio.to_thread(_label_stats)
             except Exception:
                 pass
 
@@ -699,7 +502,7 @@ async def get_data_quality():
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        return degraded({"error": str(e)}, "internal", str(e))
 
 
 # ── Model Investigation Endpoints (proxy ml-service + compute from Parquet) ────
@@ -792,23 +595,63 @@ async def get_pdp(feature: str):
         raise HTTPException(status_code=503, detail=str(e))
 
 
+# The Inspector opens several panels at once and each used to pull its own ~170 MB
+# JSON sample. The sample only changes when the dataset is rebuilt, so keep one copy
+# per dataset version (ml-stats row count + latest date) and fetch it single-flight.
+_SAMPLE_TTL_S = 900.0
+_sample_lock = asyncio.Lock()
+_sample_cache: dict = {"key": None, "at": 0.0, "df": None}
+
+
+async def _feature_sample_df(n: int = 80000):
+    """SINGLE-SOURCE feature sample (ml_features ⋈ ml_labels) from data-service — the
+    same canonical DuckDB store the gauges, training and prediction read. The Inspector
+    no longer reads the parquet directly, so every panel agrees by construction."""
+    import time as _t
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        stats = (await client.get(f"{DATA_SVC}/db/ml-stats")).json().get("features", {})
+    key = (stats.get("rows"), stats.get("latest_date"), n)
+    async with _sample_lock:
+        if (_sample_cache["key"] == key and _sample_cache["df"] is not None
+                and _t.monotonic() - _sample_cache["at"] < _SAMPLE_TTL_S):
+            return _sample_cache["df"].copy()
+        df = await _fetch_feature_sample(n)
+        _sample_cache.update(key=key, at=_t.monotonic(), df=df)
+        return df.copy()
+
+
+async def _fetch_feature_sample(n: int):
+    import pandas as pd
+    async with httpx.AsyncClient(timeout=120) as client:
+        r = await client.get(f"{DATA_SVC}/db/feature-sample", params={"n": n})
+        r.raise_for_status()
+        df = await asyncio.to_thread(lambda: pd.DataFrame(r.json().get("data", [])))
+    # nifty_regime is stored as text (bull/range/bear); numeric panels need a number.
+    if "nifty_regime" in df.columns and not pd.api.types.is_numeric_dtype(df["nifty_regime"]):
+        df["nifty_regime"] = df["nifty_regime"].map({"bull": 1, "range": 0, "bear": -1}).astype("float64")
+    return df
+
+
 @router.get("/feature-stats")
 async def get_feature_stats():
-    """Univariate statistics for every feature from the Parquet cache."""
+    """Univariate statistics for every feature from the canonical ml_features (DuckDB)."""
     import pandas as pd
 
-    if not FEATURES_PARQUET.exists() or not LABELS_PARQUET.exists():
-        raise HTTPException(status_code=404, detail="Run Phase 3 first")
+    merged = await _feature_sample_df()
+    if merged.empty:
+        raise HTTPException(status_code=404,
+                            detail="No features in ml_features — run Phase 3 (Feature Engineering) first")
+    # ~70 columns x 80k rows of pandas stats: run off the event loop.
+    return {"features": await asyncio.to_thread(_compute_feature_stats, merged)}
 
-    feat_df = pd.read_parquet(str(FEATURES_PARQUET))
-    lbl_df  = pd.read_parquet(str(LABELS_PARQUET))
-    feat_df["date"] = feat_df["date"].astype(str).str[:10]
-    lbl_df["date"]  = lbl_df["date"].astype(str).str[:10]
-    merged = feat_df.merge(lbl_df[["ticker", "date", "label_direction"]], on=["ticker", "date"], how="inner")
+
+def _compute_feature_stats(merged) -> list[dict]:
+    import pandas as pd
 
     result = []
     for col in FEATURE_COLS:
-        if col not in merged.columns:
+        if col not in merged.columns or not pd.api.types.is_numeric_dtype(merged[col]):
             continue
         s = merged[col]
         s_clean = s.dropna()
@@ -839,28 +682,27 @@ async def get_feature_stats():
             "nan_pct":  round(float(s.isna().mean() * 100), 2),
             "target_corr": target_corr,
         })
-
-    return {"features": result}
+    return result
 
 
 @router.get("/feature-correlations")
 async def get_feature_correlations():
-    """Pearson correlation matrix for top features (from Parquet)."""
+    """Pearson correlation matrix for top features (canonical ml_features / DuckDB)."""
     import pandas as pd
 
-    if not FEATURES_PARQUET.exists():
-        raise HTTPException(status_code=404, detail="Run Phase 3 first")
-
-    feat_df = pd.read_parquet(str(FEATURES_PARQUET))
-    valid_cols = [c for c in FEATURE_COLS if c in feat_df.columns]
+    feat_df = await _feature_sample_df()
+    if feat_df.empty:
+        raise HTTPException(status_code=404, detail="No features in ml_features — run Phase 3 first")
+    valid_cols = [c for c in FEATURE_COLS if c in feat_df.columns
+                  and pd.api.types.is_numeric_dtype(feat_df[c]) and feat_df[c].notna().any()]
     if len(valid_cols) < 2:
         raise HTTPException(status_code=400, detail="Not enough features")
 
-    # Sample for performance
-    sample = feat_df[valid_cols].dropna(how="all").sample(min(8000, len(feat_df)), random_state=42)
-    corr = sample[valid_cols].corr().round(3)
-    matrix = corr.fillna(0).values.tolist()
-    return {"features": valid_cols, "matrix": matrix}
+    def _corr():
+        sample = feat_df[valid_cols].dropna(how="all").sample(min(8000, len(feat_df)), random_state=42)
+        return sample[valid_cols].corr().round(3).fillna(0).values.tolist()
+
+    return {"features": valid_cols, "matrix": await asyncio.to_thread(_corr)}
 
 
 @router.get("/feature-distribution")
@@ -868,22 +710,13 @@ async def get_feature_distribution(feature: str):
     """Histogram of a feature split by label (UP=1 vs DOWN=0)."""
     import pandas as pd
 
-    if not FEATURES_PARQUET.exists() or not LABELS_PARQUET.exists():
-        raise HTTPException(status_code=404, detail="Run Phase 3 first")
     if feature not in FEATURE_COLS:
         raise HTTPException(status_code=400, detail=f"Unknown feature: {feature}")
 
-    feat_df = pd.read_parquet(str(FEATURES_PARQUET))
-    lbl_df  = pd.read_parquet(str(LABELS_PARQUET))
-    feat_df["date"] = feat_df["date"].astype(str).str[:10]
-    lbl_df["date"]  = lbl_df["date"].astype(str).str[:10]
-
-    if feature not in feat_df.columns:
-        raise HTTPException(status_code=400, detail=f"Feature '{feature}' not in data")
-
-    merged = feat_df[["ticker", "date", feature]].merge(
-        lbl_df[["ticker", "date", "label_direction"]], on=["ticker", "date"], how="inner"
-    ).dropna()
+    merged = await _feature_sample_df()
+    if merged.empty or feature not in merged.columns:
+        raise HTTPException(status_code=404, detail="No feature data — run Phase 3 first")
+    merged = merged[["ticker", "date", feature, "label_direction"]].dropna()
 
     col = merged[feature]
     p1, p99 = float(col.quantile(0.01)), float(col.quantile(0.99))
@@ -915,52 +748,28 @@ async def features_explorer(
     ticker: Optional[str] = None,
     sort_by: str = Query(default="date"),
     sort_dir: str = Query(default="desc"),
+    v: int = Query(default=1, ge=1, le=2),
 ):
-    """Paginated feature grid with data health statistics."""
-    import pandas as pd
+    """Paginated feature grid with data health statistics. `v=2` reads the v2 matrix
+    (computed_features_v2.parquet: v1 + carry/momentum/evidence flags + v3 label columns —
+    the y_* columns are TRAIN TARGETS, shown here for inspection only).
+
+    Desktop review C2-performance-04: the read is routers/_features_explorer.py, which returns the same
+    response as the old whole-file read (kept there as legacy_page and compared in the tests) without
+    loading the 352 MB matrix per click: health and sort order are cached per file signature, and only
+    the rows of the requested page are decoded."""
     loop = asyncio.get_running_loop()
 
+    v2_path = FEATURES_PARQUET.with_name("computed_features_v2.parquet")
+    src = v2_path if v == 2 else FEATURES_PARQUET
+
     def _read():
-        if not FEATURES_PARQUET.exists():
-            return None, "No feature data. Run Phase 3 (Compute Features) first."
-        df = pd.read_parquet(str(FEATURES_PARQUET))
-        df["date"] = df["date"].astype(str).str[:10]
-        if ticker:
-            df = df[df["ticker"] == ticker.upper()]
-        total_rows = len(df)
-        total_tickers = int(df["ticker"].nunique()) if "ticker" in df.columns else 0
-        date_min = str(df["date"].min()) if total_rows > 0 else None
-        date_max = str(df["date"].max()) if total_rows > 0 else None
-        valid_feat_cols = [c for c in FEATURE_COLS if c in df.columns]
-        null_counts = {col: int(df[col].isna().sum()) for col in valid_feat_cols}
-        avg_null_pct = round(
-            sum(null_counts.values()) / max(len(valid_feat_cols) * total_rows, 1) * 100, 2
-        )
-        health = {
-            "total_rows": total_rows,
-            "total_tickers": total_tickers,
-            "date_min": date_min,
-            "date_max": date_max,
-            "avg_null_pct": avg_null_pct,
-            "null_counts": null_counts,
-            "feature_count": len(valid_feat_cols),
-        }
-        sort_col = sort_by if sort_by in df.columns else "date"
-        df = df.sort_values(sort_col, ascending=(sort_dir == "asc"))
-        total_pages = max(1, (total_rows + page_size - 1) // page_size)
-        offset = (page - 1) * page_size
-        page_df = df.iloc[offset : offset + page_size]
-        display_cols = ["ticker", "date"] + [c for c in FEATURE_COLS if c in page_df.columns]
-        records = page_df[display_cols].replace({float("nan"): None}).to_dict(orient="records")
-        return {
-            "health": health,
-            "columns": display_cols,
-            "rows": records,
-            "page": page,
-            "page_size": page_size,
-            "total_rows": total_rows,
-            "total_pages": total_pages,
-        }, None
+        if not src.exists():
+            return None, ("No v2 matrix yet — run scripts/build_features_v2.py." if v == 2
+                          else "No feature data. Run Phase 3 (Compute Features) first.")
+        return _features_explorer.explorer.page(src, page=page, page_size=page_size, ticker=ticker,
+                                                sort_by=sort_by, sort_dir=sort_dir, v=v,
+                                                feature_cols=FEATURE_COLS), None
 
     result, error = await loop.run_in_executor(None, _read)
     if error:
@@ -1082,21 +891,29 @@ async def trigger_training_with_config(background_tasks: BackgroundTasks, config
             # (not the legacy fixed FEATURE_COLS list) — every numeric column except
             # identifiers, labels, and metadata. All-empty columns are dropped since
             # they carry no signal.
-            _NON_FEATURE = {
-                "ticker", "date", "created_at", "feature_version", "stock_id",
-                "label_direction", "label_return_pct", "label_return", "fwd_return", "target",
-            }
+            # Default = the curated scale-free set; label/meta columns are never allowed
+            # (label_barrier is computed from future prices — using it is leakage).
             if selected_features_cfg:
                 feature_pool = selected_features_cfg
             else:
-                feature_pool = [
-                    c for c in merged.columns
-                    if c not in _NON_FEATURE and pd.api.types.is_numeric_dtype(merged[c])
+                feature_pool = _DEFAULT_TRAIN_FEATURES or [
+                    c for c in merged.columns if pd.api.types.is_numeric_dtype(merged[c])
                 ]
-            valid_cols = [c for c in feature_pool if c in merged.columns and merged[c].notna().any()]
+            leaked = [c for c in feature_pool if c in _LABEL_AND_META_COLS]
+            if leaked:
+                _emit(job_id, f"Dropping label/meta columns from features (leakage guard): {leaked}")
+            valid_cols = [c for c in feature_pool if c in merged.columns
+                          and c not in _LABEL_AND_META_COLS and merged[c].notna().any()]
             _emit(job_id, f"Feature pool: {len(valid_cols)} usable columns "
                           f"({'custom selection' if selected_features_cfg else 'all available'})")
-            merged = merged.sort_values("date").groupby("ticker").tail(rows_per_ticker).reset_index(drop=True)
+            # rows_per_ticker rows spread EVENLY over each ticker's full history (spans
+            # regimes; spacing > label horizon keeps labels non-overlapping), date-ordered.
+            merged = merged.sort_values(["ticker", "date"])
+            pos = merged.groupby("ticker").cumcount()
+            size = merged.groupby("ticker")["date"].transform("size")
+            step = (size / rows_per_ticker).clip(lower=1.0)
+            merged = merged[(pos % step.round().astype(int)) == 0]
+            merged = merged.sort_values("date").reset_index(drop=True)
             train_cols = valid_cols + ["ticker", "date", "label_direction", "label_return_pct"]
             payload_df = merged[[c for c in train_cols if c in merged.columns]].copy()
             payload_df["label_direction"]  = payload_df["label_direction"].astype(float)
@@ -1223,7 +1040,8 @@ async def get_shap_values(ticker: str):
                 return resp.json()
     except Exception:
         pass
-    return {"ticker": ticker, "shap_values": [], "error": "Could not fetch SHAP values"}
+    return degraded({"ticker": ticker, "shap_values": [], "error": "Could not fetch SHAP values"},
+                    "state", "Could not fetch SHAP values", hint="Train a model first (ModelLab)")
 
 
 @router.get("/rl-status")
@@ -1245,7 +1063,9 @@ async def trigger_rl_training(background_tasks: BackgroundTasks, payload: dict =
     total_timesteps = int(p.get("total_timesteps", 100_000))
     n_candidates    = int(p.get("n_candidates", 15))
     max_positions   = int(p.get("max_positions", 5))
-    metrics_path    = Path("/app/data/rl_training_metrics.json")
+    # Same data dir as the DB (local: <repo>/data, Docker: /app/data). The hard-coded
+    # /app/data path does not exist locally, so the job crashed on its first write.
+    metrics_path    = RL_METRICS_PATH
     _get_or_create_queue(job_id)  # pre-register for SSE
 
     async def _run_rl_training():
@@ -1253,50 +1073,52 @@ async def trigger_rl_training(background_tasks: BackgroundTasks, payload: dict =
         _jobs[job_id] = {"status": "running", "start_time": datetime.now(), "progress": 0, "errors": []}
         _emit(job_id, f"RL training started — timesteps={total_timesteps:,} candidates={n_candidates}")
 
-        # Signal training started so the frontend sees activity immediately
-        metrics_path.write_text(json.dumps({
-            "status": "training",
-            "last_updated": datetime.now().isoformat(),
-            "total_timesteps": total_timesteps,
-            "metrics": [],
-        }))
-
         try:
-            # ── Build signals from computed features+labels parquet ──────────────
-            if not FEATURES_PARQUET.exists() or not LABELS_PARQUET.exists():
-                raise FileNotFoundError("No feature/label parquet. Run Phase 3 first.")
+            # Inside try: any failure (incl. this write) must mark the job as error —
+            # otherwise it stays "running" forever and the stream just idles out.
+            metrics_path.parent.mkdir(parents=True, exist_ok=True)
+            metrics_path.write_text(json.dumps({
+                "status": "training",
+                "last_updated": datetime.now().astimezone().isoformat(),
+                "total_timesteps": total_timesteps,
+                "metrics": [],
+            }))
 
-            feat_df = pd.read_parquet(str(FEATURES_PARQUET))
-            lbl_df  = pd.read_parquet(str(LABELS_PARQUET))
-            feat_df["date"] = feat_df["date"].astype(str).str[:10]
-            lbl_df["date"]  = lbl_df["date"].astype(str).str[:10]
-            merged = feat_df.merge(lbl_df, on=["ticker", "date"], how="inner").dropna(
-                subset=["label_direction", "label_return_pct"]
-            ).sort_values("date")
+            # ── Build signals from the SINGLE SOURCE (DuckDB ml_features+ml_labels) ──
+            # Memory-safe: data-service does the join + last-N-per-ticker windowing, so
+            # we never load the full parquet (the old full read OOM-risked ui-api). Uses
+            # REAL feature columns (correct names) and a TRAILING return — no look-ahead.
+            async with httpx.AsyncClient(timeout=300) as client:
+                r = await client.get(f"{DATA_SVC}/db/training-sample", params={"per_ticker": 120})
+                r.raise_for_status()
+                merged = pd.DataFrame(r.json().get("data", []))
+            if merged.empty:
+                raise ValueError("No ml_features/ml_labels rows — run Phase 3 (Feature Engineering) first.")
+            merged = merged.sort_values("date")
 
-            _SIGNAL_COLS = [
-                "prob_up", "confidence", "rsi_14", "bb_pct",
-                "volume_ratio", "sma_ratio_20_50", "hist_vol_20",
-            ]
+            def _safe(v, d=0.0):
+                try:
+                    f = float(v)
+                    return d if (math.isnan(f) or math.isinf(f)) else f
+                except Exception:
+                    return d
 
             def _build_signal(row) -> dict:
-                def _safe(v):
-                    try:
-                        return 0.0 if (v is None or math.isnan(float(v)) or math.isinf(float(v))) else float(v)
-                    except Exception:
-                        return 0.0
+                rsi = _safe(row.get("rsi_14"), 50.0)
+                # prob_up proxy from real momentum until per-row model scores are wired in
+                prob_up = min(max(rsi / 100.0, 0.05), 0.95)
                 return {
                     "ticker":               str(row.get("ticker", "")),
                     "date":                 str(row.get("date", "")),
-                    "prob_up":              _safe(row.get("prob_up", 0.5)),
-                    "confidence":           _safe(row.get("confidence", 0.0)),
-                    "expected_return_pct":  _safe(row.get("label_return_pct", 0.0)),
-                    "rsi_14":               _safe(row.get("rsi_14", 50.0)),
-                    "bb_pct":               _safe(row.get("bb_pct", 0.5)),
-                    "volume_ratio":         _safe(row.get("volume_ratio", 1.0)),
-                    "sma_ratio_20_50":      _safe(row.get("sma_ratio_20_50", 1.0)),
-                    "hist_vol_20":          _safe(row.get("hist_vol_20", 20.0)),
-                    "sector_id":            int(row.get("sector_id", 0)) if "sector_id" in row else 0,
+                    "prob_up":              prob_up,
+                    "confidence":           abs(prob_up - 0.5) * 2,
+                    "expected_return_pct":  _safe(row.get("ret_5d"), 0.0),       # TRAILING 5d return — no look-ahead
+                    "rsi_14":               rsi,
+                    "bb_pct":               _safe(row.get("bollinger_pctb"), 0.5),
+                    "volume_ratio":         _safe(row.get("volume_ratio"), 1.0),
+                    "sma_ratio_20_50":      _safe(row.get("sma_ratio_20_50"), 1.0),
+                    "hist_vol_20":          _safe(row.get("realized_vol_20d"), 20.0),
+                    "sector_id":            0,
                 }
 
             # Group by date to form daily signal batches (list[list[dict]])
@@ -1310,7 +1132,9 @@ async def trigger_rl_training(background_tasks: BackgroundTasks, payload: dict =
             if not signals_data:
                 raise ValueError("No valid signal batches built from feature data.")
 
-            _emit(job_id, f"Built {len(signals_data)} daily signal batches from {len(merged):,} rows")
+            _n_rows = len(merged)
+            del merged  # free the DataFrame before the large JSON serialization to rl-service
+            _emit(job_id, f"Built {len(signals_data)} daily signal batches from {_n_rows:,} rows")
             _jobs[job_id]["progress"] = 20
 
             # ── Call rl-service /train synchronously (runs in background thread) ──
@@ -1329,7 +1153,7 @@ async def trigger_rl_training(background_tasks: BackgroundTasks, payload: dict =
                 _emit(job_id, f"RL training complete ✓ | timesteps={result.get('timesteps', total_timesteps):,}", event="done")
                 metrics_path.write_text(json.dumps({
                     "status": "done",
-                    "last_updated": datetime.now().isoformat(),
+                    "last_updated": datetime.now().astimezone().isoformat(),
                     "total_timesteps": result.get("timesteps", total_timesteps),
                     "metrics": [{
                         "episode": total_timesteps,
@@ -1350,7 +1174,7 @@ async def trigger_rl_training(background_tasks: BackgroundTasks, payload: dict =
             metrics_path.write_text(json.dumps({
                 "status": "error",
                 "error": str(e),
-                "last_updated": datetime.now().isoformat(),
+                "last_updated": datetime.now().astimezone().isoformat(),
                 "metrics": [],
             }))
 
@@ -1360,14 +1184,14 @@ async def trigger_rl_training(background_tasks: BackgroundTasks, payload: dict =
 
 @router.get("/rl-training-metrics")
 async def get_rl_training_metrics():
-    metrics_path = "/app/data/rl_training_metrics.json"
+    metrics_path = RL_METRICS_PATH
     try:
         with open(metrics_path, "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return {"status": "not_started", "last_updated": None, "metrics": []}
     except Exception as e:
-        return {"status": "error", "error": str(e), "metrics": []}
+        return degraded({"status": "error", "error": str(e), "metrics": []}, "internal", str(e))
 
 
 # ── Model Registry / Catalog Proxy Endpoints ──────────────────────────────────

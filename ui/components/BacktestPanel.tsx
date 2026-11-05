@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
+import { Chip, PageHeader, T, ResearchNote, fmtNum, fmtSigned } from '@/components/terminal'
 import clsx from 'clsx'
 import {
   Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -26,8 +27,10 @@ const FILTER_CATALOG: Record<string, Array<{ id: string; label: string; unit?: s
   ],
   Trend: [
     { id: 'price_gt_ma50', label: 'Price > 50-MA', toggle: true, op: 'gt', val: 0, desc: 'Above short-term trend' },
+    { id: 'price_gt_ma150', label: 'Price > 150-MA', toggle: true, op: 'gt', val: 0, desc: 'Above intermediate trend (Minervini T1 — combine with Price > 200-MA)' },
     { id: 'price_gt_ma200', label: 'Price > 200-MA', toggle: true, op: 'gt', val: 0, desc: 'Above long-term trend' },
     { id: 'ma50_gt_ma200', label: '50-MA > 200-MA', toggle: true, op: 'gt', val: 0, desc: 'Golden cross' },
+    { id: 'ma150_gt_ma200', label: '150-MA > 200-MA', toggle: true, op: 'gt', val: 0, desc: 'Stage-2 uptrend (Minervini T2)' },
   ],
   Momentum: [
     { id: 'rsi_14', label: 'RSI (14)', unit: '', op: 'gt', val: 50, desc: 'Oversold <30 / overbought >70' },
@@ -56,6 +59,10 @@ const FILTER_CATALOG: Record<string, Array<{ id: string; label: string; unit?: s
     { id: 'corr_nifty_30', label: 'Market Corr 30d', unit: 'ρ', op: 'lt', val: 0.2, desc: 'Rolling 30d corr to market' },
     { id: 'decoupled_leader', label: 'De-coupled Leader', toggle: true, op: 'gt', val: 0, desc: 'Low corr in a market pullback' },
   ],
+  'Structural Alpha': [
+    { id: 'beta_resid_5d', label: 'Idiosyncratic 5d', unit: '%', op: 'gt', val: 0, desc: 'Beta-30d-residual 5d return vs Nifty (idiosyncratic momentum)' },
+    { id: 'vol_adj_sector_alpha_14', label: 'Vol-Adj Sector Alpha 14d', unit: 'x', op: 'gt', val: 0, desc: '(14d ret − sector 14d) / 14d ATR%' },
+  ],
   'ML Signal': [
     { id: 'prob_up', label: 'P(up · 5d)', unit: 'prob', op: 'gt', val: 0.55, desc: 'Leak-safe holdout XGBoost P(up over next 5d); available ~last year only (2025-06 →)' },
   ],
@@ -69,13 +76,13 @@ const PRESETS = [
 interface FilterCond { field: string; op: 'lt' | 'gt' | 'lte' | 'gte'; value: number }
 
 // ── Formatting helpers ──────────────────────────────────────────────────────────
-const fNum = (n: number, d = 2) => (n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d })
+const fNum = (n: number, d = 2) => fmtNum(n ?? 0, d)
 const fCr = (n: number) => {
-  if (Math.abs(n) >= 1e7) return `₹${(n / 1e7).toFixed(2)} Cr`
+  if (Math.abs(n) >= 1e7) return `₹${(n / 1e7).toFixed(2)} cr`
   if (Math.abs(n) >= 1e5) return `₹${(n / 1e5).toFixed(2)} L`
   return `₹${fNum(n, 0)}`
 }
-const fPct = (n: number) => `${n >= 0 ? '+' : ''}${fNum(n)}%`
+const fPct = (n: number) => `${fmtSigned(n ?? 0, 2)}%`   // U+2212 for losses (C1-18)
 
 // ── KPI cell ──────────────────────────────────────────────────────────────────────
 function Kpi({ label, value, tone = 'slate', sub }: { label: string; value: string; tone?: 'amber' | 'emerald' | 'rose' | 'slate' | 'indigo'; sub?: string }) {
@@ -195,28 +202,22 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
   const activeFilterCount = filters.length
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100" style={{ fontFamily: 'IBM Plex Sans, system-ui, sans-serif' }}>
-      {/* Header */}
-      <div className="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-30">
-        <div className="w-full px-4 sm:px-6 py-3 flex items-center gap-3">
-          <div className="text-2xl">📊</div>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              Backtest Lab
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">MODE: PAPER</span>
-            </h1>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Capital-managed, friction-aware institutional simulation</p>
-          </div>
-          {results && (
-            <div className="ml-auto text-right font-mono text-xs hidden md:block">
-              <span className={results.total_return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{fPct(results.total_return_pct)}</span>
-              <span className="text-slate-500"> · {results.total_trades} trades · {results.win_rate}% win · DD {results.max_drawdown}%</span>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="text-slate-100">
+      <PageHeader code="BTST" title="Backtest Lab"
+        status={<Chip color={T.green} active>PAPER</Chip>}
+        subtitle="Capital-managed, friction-aware simulation · signal at close, fill at next open"
+        right={results ? (
+          <span style={{ fontSize: 11 }}>
+            <span style={{ color: results.total_return_pct >= 0 ? T.green : T.red, fontWeight: 700 }}>{fPct(results.total_return_pct)}</span>
+            <span style={{ color: T.muted }}> · {results.total_trades} trades · {results.win_rate}% win · DD {results.max_drawdown}%</span>
+          </span>
+        ) : undefined} />
+      <ResearchNote verdict="REFERENCE" report="reports/costs/CAPITAL_VIABILITY.md">
+        Costs decide short-hold strategies: a 5-day, 5-name book pays about 48% of capital a year in ICICI charges (108% at
+        ₹10,000), monthly momentum about 3–5%. Judge every backtest here after costs, against the Desk.
+      </ResearchNote>
 
-      <div className="w-full px-4 sm:px-6 py-5 grid grid-cols-1 lg:grid-cols-4 gap-5">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-3">
         {/* ── Control rail ──────────────────────────────────────────────────────── */}
         <div className="lg:col-span-1 space-y-4 lg:max-h-[calc(100vh-130px)] lg:overflow-y-auto pr-1">
           {/* Scope */}
@@ -413,7 +414,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
           {/* Bias banner — Pillar 1: fundamental point-in-time alert */}
           {fundamentalActive && (
             <div className="rounded-lg border border-amber-600/50 bg-amber-500/10 px-4 py-2.5 text-[12px] text-amber-200 font-medium">
-              [⚠️ WARNING] Fundamental look-ahead bias active: using current point-in-time snapshot metrics over historical dates.
+              [▲ WARNING] Fundamental look-ahead bias active: using current point-in-time snapshot metrics over historical dates.
               <span className="block mt-0.5 text-[11px] text-amber-300/80 font-normal">P/E, ROCE, Mkt-Cap &amp; Div-Yield apply today&apos;s values to past dates. Technical filters (MA/RSI/ATR/52w) are strictly trailing and bias-free.</span>
             </div>
           )}
@@ -422,7 +423,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
           {propensityActive && (
             <div className="rounded-lg border border-indigo-600/50 bg-indigo-500/10 px-4 py-2.5 text-[12px] text-indigo-200">
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <span className="font-medium">🧠 ML Signal active — P(up·5d) from a leak-safe holdout model (trained ≤ 2025-05, scored ~last year only).</span>
+                <span className="font-medium">ƒ ML Signal active — P(up·5d) from a leak-safe holdout model (trained ≤ 2025-05, scored ~last year only).</span>
                 <label className="flex items-center gap-1.5 text-[11px] font-medium shrink-0">
                   <span className="text-indigo-300/80">Unscored names:</span>
                   <select
@@ -459,7 +460,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
           {/* Empty state */}
           {!results && !loading && !error && (
             <div className="rounded-xl border border-slate-700/40 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-16 text-center min-h-[380px] flex flex-col items-center justify-center">
-              <div className="text-5xl mb-5 opacity-60">📈</div>
+              <div className="text-3xl mb-5 opacity-40 font-mono">◌</div>
               <h2 className="text-lg font-bold text-slate-200 mb-2">Institutional simulation cockpit</h2>
               <p className="text-sm text-slate-400 max-w-md">Configure capital, friction, stops and filters, then run a compounded, benchmark-relative backtest.</p>
             </div>
@@ -499,7 +500,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                 <p className="text-[10px] text-amber-400 uppercase tracking-widest font-bold px-1 pt-1">Trade Quality</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
                   <Kpi label="Win Rate" value={`${fNum(results.win_rate, 1)}%`} tone="amber" />
-                  <Kpi label="Total Trades" value={results.total_trades.toLocaleString()} />
+                  <Kpi label="Total Trades" value={results.total_trades.toLocaleString('en-IN')} />
                   <Kpi label="Avg Win" value={fPct(results.avg_win_return)} tone="emerald" />
                   <Kpi label="Avg Loss" value={`${fNum(results.avg_loss_return)}%`} tone="rose" />
                   <Kpi label="Win/Loss" value={fNum(results.win_loss_ratio)} tone={results.win_loss_ratio >= 1 ? 'emerald' : 'rose'} />
@@ -556,11 +557,11 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                   <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wide mb-3">Monte Carlo — Max Drawdown Distribution</h3>
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={results.monte_carlo.histogram.map((count, idx) => ({ bucket: idx, count }))}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                      <XAxis dataKey="bucket" tick={{ fontSize: 10, fill: '#64748b' }} />
-                      <YAxis tick={{ fontSize: 10, fill: '#64748b' }} />
-                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: 8, color: '#f1f5f9', fontSize: 11 }} />
-                      <Bar dataKey="count" fill="#f59e0b" radius={[3, 3, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1a2130" />
+                      <XAxis dataKey="bucket" tick={{ fontSize: 10, fill: T.muted }} />
+                      <YAxis tick={{ fontSize: 10, fill: T.muted }} />
+                      <Tooltip contentStyle={{ backgroundColor: T.bg, border: '1px solid #2a3448', borderRadius: 8, color: '#f1f5f9', fontSize: 11 }} />
+                      <Bar dataKey="count" fill="#ffb000" radius={[3, 3, 0, 0]} />
                       <ReferenceLine x={Math.floor(results.monte_carlo.histogram.length * 0.05)} stroke="#ef4444" strokeDasharray="4 2" label={{ value: `p95 ${results.monte_carlo.p95.toFixed(0)}%`, fill: '#ef4444', fontSize: 10, position: 'top' }} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -578,7 +579,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
               {results.trades.length > 0 && (
                 <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 overflow-hidden">
                   <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50">
-                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wide">🎯 Trade Blotter <span className="text-slate-500 font-normal">({results.trades.length})</span></h3>
+                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wide">Trade Blotter <span className="text-slate-500 font-normal">({results.trades.length})</span></h3>
                   </div>
                   <BacktestTradeGrid trades={results.trades} onTradeClick={setSelectedTrade} />
                 </div>

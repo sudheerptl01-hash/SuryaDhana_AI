@@ -84,8 +84,10 @@ def _boolcol(name: str) -> "Callable[[pd.DataFrame], pd.Series]":
 # Boolean toggle filters -> vectorised predicate over the day's dataframe
 BOOLEAN_FILTERS: dict[str, Callable[[pd.DataFrame], "pd.Series[bool]"]] = {
     "price_gt_ma50": lambda d: d["close"] > d["ma50"],
+    "price_gt_ma150": lambda d: d["close"] > d["ma150"],
     "price_gt_ma200": lambda d: d["close"] > d["ma200"],
     "ma50_gt_ma200": lambda d: d["ma50"] > d["ma200"],
+    "ma150_gt_ma200": lambda d: d["ma150"] > d["ma200"],
     "volume_gt_avg": lambda d: d["volume"] > d["vol20"],
     # ── Advanced alpha factors (Pillar 1) ──────────────────────────────────
     "vipt_breakout": _boolcol("vipt_breakout"),                # N-day breakout on >3σ volume
@@ -122,6 +124,7 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     g = df.groupby("ticker")
 
     df["ma50"] = g["close"].transform(lambda x: x.rolling(50, min_periods=20).mean())
+    df["ma150"] = g["close"].transform(lambda x: x.rolling(150, min_periods=40).mean())
     df["ma200"] = g["close"].transform(lambda x: x.rolling(200, min_periods=50).mean())
     df["vol20"] = g["volume"].transform(lambda x: x.rolling(20, min_periods=5).mean())
     df["low52w"] = g["low"].transform(lambda x: x.rolling(252, min_periods=50).min())

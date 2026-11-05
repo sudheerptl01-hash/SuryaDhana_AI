@@ -1,18 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiError } from '@/lib/errors'
+import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
+import { useCallback, useEffect, useState } from 'react'
+import { PageHeader, ResearchNote } from '@/components/terminal'
 import clsx from 'clsx'
 import { getLWScreener, getLWScanResults, triggerLWScan, getLWScanJob, getLWOHLCV } from '@/lib/api'
 import { useTheme } from '@/context/ThemeContext'
-import {
-  createChart,
-  ColorType,
-  CrosshairMode,
-  type IChartApi,
-  type ISeriesApi,
-  type CandlestickData,
-  type HistogramData,
-} from 'lightweight-charts'
+import { IndicatorPriceChart } from './IndicatorPriceChart'
+import { ChartActions } from './terminal/ChartActions'
+import { IndicatorMenu } from './IndicatorMenu'
+import { defaultIndicators, type Bar, type IndicatorConfig } from '@/lib/indicators'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -101,122 +99,50 @@ interface CandleChartProps {
   ticker: string
   days: number
   isDark: boolean
+  indicators: IndicatorConfig[]
 }
 
-function CandleChart({ ticker, days, isDark }: CandleChartProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const chartRef     = useRef<IChartApi | null>(null)
-  const candleRef    = useRef<ISeriesApi<'Candlestick'> | null>(null)
-  const volumeRef    = useRef<ISeriesApi<'Histogram'> | null>(null)
+function CandleChart({ ticker, days, isDark, indicators }: CandleChartProps) {
+  const [bars, setBars]       = useState<Bar[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
 
-  // Create / destroy chart on mount / unmount
+  // Fetch OHLCV whenever ticker or window changes; rendering is delegated to the
+  // shared IndicatorPriceChart (overlays + oscillators + legend).
   useEffect(() => {
-    if (!containerRef.current) return
-    const chart = createChart(containerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: isDark ? '#0f172a' : '#f8fafc' },
-        textColor: isDark ? '#94a3b8' : '#475569',
-      },
-      grid: {
-        vertLines: { color: isDark ? '#1e293b' : '#e2e8f0' },
-        horzLines: { color: isDark ? '#1e293b' : '#e2e8f0' },
-      },
-      crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: isDark ? '#334155' : '#cbd5e1' },
-      timeScale: {
-        borderColor: isDark ? '#334155' : '#cbd5e1',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      width: containerRef.current.clientWidth,
-      height: 340,
-    })
-
-    const candleSeries = chart.addCandlestickSeries({
-      upColor:       '#10b981',
-      downColor:     '#f43f5e',
-      borderUpColor: '#10b981',
-      borderDownColor: '#f43f5e',
-      wickUpColor:   '#10b981',
-      wickDownColor: '#f43f5e',
-    })
-
-    const volumeSeries = chart.addHistogramSeries({
-      color:       '#f59e0b',
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'volume',
-    })
-
-    chart.priceScale('volume').applyOptions({
-      scaleMargins: { top: 0.8, bottom: 0 },
-    })
-
-    chartRef.current  = chart
-    candleRef.current = candleSeries
-    volumeRef.current = volumeSeries
-
-    const ro = new ResizeObserver(entries => {
-      if (entries[0] && chartRef.current) {
-        chartRef.current.applyOptions({ width: entries[0].contentRect.width })
-      }
-    })
-    ro.observe(containerRef.current)
-
-    return () => {
-      ro.disconnect()
-      chart.remove()
-      chartRef.current  = null
-      candleRef.current = null
-      volumeRef.current = null
-    }
-  }, [isDark])
-
-  // Fetch + load data whenever ticker or days changes
-  useEffect(() => {
-    if (!candleRef.current || !volumeRef.current) return
+    let alive = true
     setLoading(true)
     setError(null)
-
     getLWOHLCV(ticker, days)
       .then(res => {
-        const candles: CandlestickData[] = []
-        const volumes: HistogramData[]   = []
-
-        for (const c of res.data.candles ?? []) {
-          candles.push({ time: c.time as any, open: c.open, high: c.high, low: c.low, close: c.close })
-          volumes.push({
-            time: c.time as any,
-            value: c.volume,
-            color: c.close >= c.open ? '#10b98155' : '#f43f5e55',
-          })
-        }
-
-        candleRef.current?.setData(candles)
-        volumeRef.current?.setData(volumes)
-        chartRef.current?.timeScale().fitContent()
+        if (!alive) return
+        const rows: Bar[] = (res.data.candles ?? []).map((c: any) => ({
+          time: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume ?? 0,
+        }))
+        setBars(rows)
         setLoading(false)
       })
       .catch(e => {
-        setError(e?.response?.data?.detail || 'Failed to load OHLCV')
+        if (!alive) return
+        setError(apiError(e, 'Failed to load OHLCV'))
         setLoading(false)
       })
+    return () => { alive = false }
   }, [ticker, days])
 
   return (
     <div className="relative w-full">
       {loading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/60 rounded-xl">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/60 rounded-xl">
           <span className="text-xs text-amber-400 animate-pulse font-mono">Loading {ticker}…</span>
         </div>
       )}
       {error && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/60 rounded-xl">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/60 rounded-xl">
           <span className="text-xs text-rose-400 font-mono">{error}</span>
         </div>
       )}
-      <div ref={containerRef} className="w-full rounded-xl overflow-hidden" />
+      <IndicatorPriceChart bars={bars} chartType="candle" isDark={isDark} indicators={indicators} height={340} />
     </div>
   )
 }
@@ -231,6 +157,7 @@ interface ChartPanelProps {
 
 function ChartPanel({ ticker, isDark, onClose }: ChartPanelProps) {
   const [days, setDays] = useState(90)
+  const [indicators, setIndicators] = useState<IndicatorConfig[]>(defaultIndicators)
   const card = clsx('rounded-xl border', isDark ? 'bg-slate-800/60 border-slate-700/40' : 'bg-white border-gray-200')
   const mu   = isDark ? 'text-slate-400' : 'text-gray-500'
   const tx   = isDark ? 'text-slate-100' : 'text-gray-900'
@@ -245,6 +172,7 @@ function ChartPanel({ ticker, isDark, onClose }: ChartPanelProps) {
         </div>
         <button onClick={onClose} className={clsx('text-lg leading-none transition-colors', mu, 'hover:text-white')}>✕</button>
       </div>
+      <ChartActions ticker={ticker} from="LW Scanner" />
 
       {/* Period selector */}
       <div className={clsx('flex rounded-lg border overflow-hidden', isDark ? 'border-slate-700' : 'border-gray-200')}>
@@ -262,8 +190,13 @@ function ChartPanel({ ticker, isDark, onClose }: ChartPanelProps) {
         ))}
       </div>
 
+      {/* Indicator toolbar */}
+      <div className={clsx('rounded-lg border px-2 py-1.5', isDark ? 'bg-slate-900/40 border-slate-700' : 'bg-gray-50 border-gray-200')}>
+        <IndicatorMenu indicators={indicators} onChange={setIndicators} isDark={isDark} />
+      </div>
+
       {/* Chart */}
-      <CandleChart ticker={ticker} days={days} isDark={isDark} />
+      <CandleChart ticker={ticker} days={days} isDark={isDark} indicators={indicators} />
 
       <p className={clsx('text-[9px] text-center', mu)}>Scroll to zoom · Drag to pan · Crosshair for values</p>
     </div>
@@ -330,7 +263,7 @@ export function LWScanner() {
       setJobId(r.data.job_id)
     } catch (e: any) {
       setScanLoading(false)
-      const msg = e?.response?.data?.detail || 'Scan trigger failed'
+      const msg = apiError(e, 'Scan trigger failed')
       setJobStatus({ job_id: '', status: 'error', progress: 0, total: 0, elapsed_secs: 0, error: msg })
     }
   }, [])
@@ -343,7 +276,7 @@ export function LWScanner() {
       const r = await getLWScreener(500)
       setScreener(r.data)
     } catch (e: any) {
-      setScreenerError(e?.response?.data?.detail || 'Screener failed')
+      setScreenerError(apiError(e, 'Screener failed'))
     } finally {
       setScreenerLoading(false)
     }
@@ -364,14 +297,14 @@ export function LWScanner() {
 
   return (
     <div className="space-y-4">
+      <PageHeader code="LWSC" title="Larry Williams Scanner"
+        subtitle="Macro cycle patterns · volatility breakout screener · NSE universe · click a row for the chart" />
+      <ResearchNote verdict="FAIL" report="reports/handbook_swing/REPORT.md">
+        Related study: a rules-only swing system (breakouts and pullbacks, 2020 → today) lost 17.8% a year after ICICI costs while
+        NIFTY 500 made 12.4%. Most trades were held about 3 sessions, too short to beat a ~1% round trip.
+      </ResearchNote>
       {/* Section header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className={clsx('text-lg font-bold', isDark ? 'text-slate-100' : 'text-gray-900')}>Larry Williams Scanner</h2>
-          <p className={clsx('text-xs mt-0.5', isDark ? 'text-slate-400' : 'text-gray-500')}>
-            Macro cycle patterns · Volatility breakout screener · NSE universe · Click any row for interactive chart
-          </p>
-        </div>
+      <div className="flex items-center justify-end flex-wrap gap-3">
         <div className={clsx('flex rounded-lg border overflow-hidden', isDark ? 'border-slate-700' : 'border-gray-200')}>
           {(['cycle', 'screener'] as const).map(t => (
             <button
@@ -491,7 +424,7 @@ export function LWScanner() {
                           <td className={td}><ScoreBar value={row.composite_score} /></td>
                           <td className={td}>
                             <span className={clsx('font-mono', row.cycle_edge >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
-                              {row.cycle_edge >= 0 ? '+' : ''}{row.cycle_edge.toFixed(3)}
+                              {fmtSigned(row.cycle_edge, 3)}
                             </span>
                             {row.cycle_pvalue < 0.05 && <span className="ml-1 text-amber-400 text-xs" title="p < 0.05">*</span>}
                           </td>
@@ -544,7 +477,7 @@ export function LWScanner() {
             </div>
           ) : (
             <div className={clsx(card, 'flex flex-col items-center justify-center py-16 gap-3')}>
-              <span className="text-4xl opacity-30">📡</span>
+              <span className="text-3xl opacity-30 font-mono">◌</span>
               <p className={clsx('text-sm font-medium', isDark ? 'text-slate-400' : 'text-gray-500')}>
                 No cycle scan data — click "Run Cycle Scan" to analyse 200 NSE stocks
               </p>
@@ -591,11 +524,11 @@ export function LWScanner() {
                 <FilterBadge label="The Squeeze"          count={screener.filter_counts['squeeze'] ?? 0}          total={screener.universe_size} />
                 <FilterBadge label="Oops Reversal"        count={screener.filter_counts['oops'] ?? 0}             total={screener.universe_size} />
                 <FilterBadge label="Oversold in Uptrend"  count={screener.filter_counts['oversold_uptrend'] ?? 0} total={screener.universe_size} />
-                <FilterBadge label="Liquidity (ADV >₹10Cr)" count={screener.filter_counts['liquidity'] ?? 0}     total={screener.universe_size} />
+                <FilterBadge label="Liquidity (ADV >₹10 cr)" count={screener.filter_counts['liquidity'] ?? 0}     total={screener.universe_size} />
               </div>
 
               <div className={clsx('flex items-center gap-3 px-4 py-3 rounded-xl border', isDark ? 'bg-amber-500/10 border-amber-500/30' : 'bg-indigo-50 border-indigo-200')}>
-                <span className="text-2xl">🎯</span>
+                <span className="text-xl font-mono text-amber-400">◎</span>
                 <div>
                   <span className={clsx('text-base font-black', isDark ? 'text-amber-300' : 'text-indigo-700')}>{screener.combined_pass} stocks</span>
                   <span className={clsx('text-xs ml-2', isDark ? 'text-slate-400' : 'text-gray-500')}>pass all 4 filters</span>
@@ -656,7 +589,7 @@ export function LWScanner() {
                 </div>
               ) : (
                 <div className={clsx(card, 'flex flex-col items-center justify-center py-12 gap-2')}>
-                  <span className="text-3xl opacity-30">🔍</span>
+                  <span className="text-3xl opacity-30">◇</span>
                   <p className={clsx('text-sm', isDark ? 'text-slate-400' : 'text-gray-500')}>No stocks passing all 4 filters today</p>
                 </div>
               )}
@@ -669,7 +602,7 @@ export function LWScanner() {
               <li><span className="text-amber-400">Squeeze</span> — Bollinger Bands inside Keltner Channels (volatility compression)</li>
               <li><span className="text-sky-400">Oops Reversal</span> — Open below prior low, closes back above (failed gap-down)</li>
               <li><span className="text-emerald-400">Oversold Uptrend</span> — Williams %R &lt; −80 AND price &gt; 200-day SMA</li>
-              <li><span className="text-rose-400">Liquidity</span> — 20-day Average Dollar Volume &gt; ₹10 Cr</li>
+              <li><span className="text-rose-400">Liquidity</span> — 20-day Average Dollar Volume &gt; ₹10 cr</li>
             </ul>
           </div>
         </div>

@@ -13,6 +13,7 @@
  * render live into a dual-axis convergence chart. MODE = PAPER at all times.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { T } from '@/components/terminal'   // T.muted for axis text (RUP-06: one muted grey)
 import clsx from 'clsx'
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -22,6 +23,7 @@ import {
   streamTraining, stopRun,
   type EpochEvent, type StartEvent, type ResultEvent,
 } from '@/lib/mlTraining'
+import { trailingRange } from '@/lib/format'
 
 type Status = 'IDLE' | 'TRAINING' | 'COMPLETED' | 'TERMINATED_BY_USER' | 'ERROR'
 
@@ -51,8 +53,9 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
 
   // Production config
   const [tickers, setTickers] = useState('')
-  const [fromDate, setFromDate] = useState('2023-01-01')
-  const [toDate, setToDate] = useState('2025-12-31')
+  // default: the last 3 years up to today (IST); it used to be a fixed 2023-01-01 → 2025-12-31 (C1-18)
+  const [fromDate, setFromDate] = useState(() => trailingRange(36).from)
+  const [toDate, setToDate] = useState(() => trailingRange(36).to)
   const [nEstimators, setNEstimators] = useState(300)
   const [maxDepth, setMaxDepth] = useState(5)
   const [learningRate, setLearningRate] = useState(0.05)
@@ -125,8 +128,8 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
       <div className={clsx(card, 'p-4')}>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-bold tracking-wide text-slate-100">⚙ ML ENGINE WORKSPACE</span>
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">MODE: PAPER</span>
+            <span className="text-[10px] font-bold tracking-[0.18em] text-slate-400">RUN CONTROLS</span>
+            <span className="px-1.5 py-0.5 text-[9px] font-bold tracking-wider border" style={{ color: '#39c6ff', borderColor: '#39c6ff55', background: '#39c6ff12' }}>PAPER</span>
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <span className={clsx('h-2 w-2 rounded-full', ss.dot)} />
@@ -144,7 +147,7 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
           <button
             onClick={() => launch('production')} disabled={isTraining}
             className="px-3 py-1.5 rounded text-[11px] font-bold bg-emerald-600/20 border border-emerald-500/50 text-emerald-200 hover:bg-emerald-600/30 disabled:opacity-40 disabled:cursor-not-allowed">
-            ⚡ Run Production Engine
+            ▶ Run Production Engine
           </button>
           <button
             onClick={kill} disabled={!isTraining}
@@ -227,9 +230,9 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
       {/* dataset banner */}
       {start && (
         <div className={clsx(card, 'px-4 py-2 text-[10px] text-slate-400 flex flex-wrap gap-x-5 gap-y-1')}>
-          <span>samples <b className="text-slate-200">{start.n_samples.toLocaleString()}</b></span>
-          <span>train <b className="text-slate-200">{start.n_train.toLocaleString()}</b> ({start.train_span[0]} → {start.train_span[1]})</span>
-          <span>valid <b className="text-slate-200">{start.n_valid.toLocaleString()}</b> ({start.valid_span[0]} → {start.valid_span[1]})</span>
+          <span>samples <b className="text-slate-200">{start.n_samples.toLocaleString('en-IN')}</b></span>
+          <span>train <b className="text-slate-200">{start.n_train.toLocaleString('en-IN')}</b> ({start.train_span[0]} → {start.train_span[1]})</span>
+          <span>valid <b className="text-slate-200">{start.n_valid.toLocaleString('en-IN')}</b> ({start.valid_span[0]} → {start.valid_span[1]})</span>
           <span>features <b className="text-slate-200">{start.n_features}</b></span>
           <span>up-rate <b className="text-slate-200">{(start.up_rate * 100).toFixed(1)}%</b></span>
           <span className="text-slate-600">· chronological split, no shuffle (look-ahead safe)</span>
@@ -250,18 +253,18 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
-                <XAxis dataKey="iteration" tick={{ fontSize: 9, fill: '#64748b' }} stroke="#334155"
+                <CartesianGrid strokeDasharray="2 4" stroke="#1a2130" />
+                <XAxis dataKey="iteration" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448"
                   label={{ value: 'boosting round', position: 'insideBottom', dy: 10, fontSize: 9, fill: '#475569' }} />
-                <YAxis yAxisId="loss" tick={{ fontSize: 9, fill: '#64748b' }} stroke="#334155"
+                <YAxis yAxisId="loss" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448"
                   domain={['auto', 'auto']} width={44} />
-                <YAxis yAxisId="rank" orientation="right" tick={{ fontSize: 9, fill: '#64748b' }} stroke="#334155"
+                <YAxis yAxisId="rank" orientation="right" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448"
                   domain={[0, 1]} width={36} />
-                <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1e293b', fontSize: 11, fontFamily: 'monospace' }}
-                  labelStyle={{ color: '#94a3b8' }} />
+                <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1a2130', fontSize: 11, fontFamily: 'monospace' }}
+                  labelStyle={{ color: '#8a94a6' }} />
                 <Legend wrapperStyle={{ fontSize: 9 }} />
                 <ReferenceLine yAxisId="rank" y={0.5} stroke="#475569" strokeDasharray="4 4"
-                  label={{ value: 'AUC 0.5', fontSize: 8, fill: '#475569', position: 'right' }} />
+                  label={{ value: 'AUC 0.5', fontSize: 9, fill: '#475569', position: 'right' }} />
                 <Line yAxisId="loss" type="monotone" dataKey="train_logloss" name="train log-loss"
                   stroke="#38bdf8" dot={false} strokeWidth={1.5} isAnimationActive={false} />
                 <Line yAxisId="loss" type="monotone" dataKey="valid_logloss" name="valid log-loss"
@@ -269,7 +272,7 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
                 <Line yAxisId="rank" type="monotone" dataKey="valid_auc" name="valid AUC"
                   stroke="#34d399" dot={false} strokeWidth={1.5} isAnimationActive={false} />
                 <Line yAxisId="rank" type="monotone" dataKey="gini" name="Gini"
-                  stroke="#fbbf24" dot={false} strokeWidth={1.5} strokeDasharray="3 3" isAnimationActive={false} />
+                  stroke="#ffb000" dot={false} strokeWidth={1.5} strokeDasharray="3 3" isAnimationActive={false} />
               </ComposedChart>
             </ResponsiveContainer>
           )}
@@ -381,7 +384,7 @@ function ConfCell({ label, v, tone }: { label: string; v: number; tone: 'emerald
     <div className={clsx('rounded border px-2 py-1.5',
       tone === 'emerald' ? 'border-emerald-700/40 bg-emerald-950/20' : 'border-rose-700/40 bg-rose-950/20')}>
       <div className="text-[9px] text-slate-500">{label}</div>
-      <div className={clsx('tabular-nums font-bold', tone === 'emerald' ? 'text-emerald-300' : 'text-rose-300')}>{v.toLocaleString()}</div>
+      <div className={clsx('tabular-nums font-bold', tone === 'emerald' ? 'text-emerald-300' : 'text-rose-300')}>{v.toLocaleString('en-IN')}</div>
     </div>
   )
 }

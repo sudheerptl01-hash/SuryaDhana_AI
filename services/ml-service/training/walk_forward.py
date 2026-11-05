@@ -9,6 +9,8 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 from shared.logging import get_logger
 
+from .splits import date_folds
+
 logger = get_logger(__name__)
 
 
@@ -64,6 +66,7 @@ def walk_forward_validation(
     train_months: int = 24,
     test_months: int = 3,
     n_folds: int = 8,
+    purge: int = 5,
 ) -> WalkForwardResult:
     """
     Performs walk-forward validation — the only valid validation method for time-series data.
@@ -100,10 +103,11 @@ def walk_forward_validation(
     df[feature_cols] = df[feature_cols].replace([np.inf, -np.inf], np.nan)
     df = df.dropna(subset=feature_cols)
 
-    if len(df) < (train_months + test_months) * 21:
+    n_dates = df[date_col].nunique()
+    if n_dates < (train_months + test_months) * 21:
         raise ValueError(
-            f"Insufficient data: {len(df)} rows after cleaning. "
-            f"Need at least {(train_months + test_months) * 21} rows for one fold."
+            f"Insufficient history: {n_dates} distinct dates after cleaning. "
+            f"Need at least {(train_months + test_months) * 21} dates for one fold."
         )
 
     class_counts = df[target_col].value_counts()
@@ -115,24 +119,18 @@ def walk_forward_validation(
     # ─────────────────────────────────────────────────────────────────────────
 
     result = WalkForwardResult()
-    total_days = len(df)
 
-    # Calculate fold boundaries in rows (approximate months → rows)
-    train_rows = int(train_months * 21)  # ~21 trading days/month
-    test_rows = int(test_months * 21)
-    step_rows = test_rows
+    # Folds are measured in trading DATES (~21/month), not rows: the frame is a panel
+    # with hundreds of tickers per date. A purge gap equal to the label horizon keeps
+    # training labels from overlapping the test window.
+    folds = date_folds(df[date_col], train_dates=int(train_months * 21),
+                       test_dates=int(test_months * 21), n_folds=n_folds, purge=purge)
+    if not folds:
+        raise ValueError("Not enough history for a single walk-forward fold")
 
-    fold_start = 0
-    for fold_idx in range(n_folds):
-        train_end_idx = fold_start + train_rows
-        test_end_idx = train_end_idx + test_rows
-
-        if test_end_idx > total_days:
-            logger.warning("Not enough data for fold", fold=fold_idx + 1, remaining=total_days - fold_start)
-            break
-
-        train_df = df.iloc[fold_start:train_end_idx]
-        test_df = df.iloc[train_end_idx:test_end_idx]
+    for fold_idx, (tr_idx, te_idx) in enumerate(folds):
+        train_df = df.iloc[tr_idx]
+        test_df = df.iloc[te_idx]
 
         X_train = train_df[feature_cols]
         y_train = train_df[target_col]
@@ -164,8 +162,6 @@ def walk_forward_validation(
             accuracy=round(fold_result.accuracy, 3),
             n_test=fold_result.n_test,
         )
-
-        fold_start += step_rows
 
     logger.info("Walk-forward complete", **result.summary())
     return result

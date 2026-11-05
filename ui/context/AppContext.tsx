@@ -10,7 +10,12 @@ import {
   ReactNode,
 } from 'react'
 import { monitorWS, buildWsUrl, type LiveQuote } from '@/lib/wsManager'
-import { monitorSubscribe, monitorUnsubscribe, MONITOR_WS_PATH } from '@/lib/api'
+import { attachMonitorSocket } from '@/lib/monitorLifecycle'
+import { monitorList, monitorSubscribe, monitorUnsubscribe, MONITOR_WS_PATH } from '@/lib/api'
+import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
+import { noteQuoteMessage } from '@/lib/liveEvidence'
+import { missingMonitorSymbols, MONITOR_RESYNC_MS, MONITOR_RESYNC_HIDDEN_MS } from '@/lib/monitorLifecycle'
+import { useDocumentHidden, usePolling } from '@/components/shell/usePoll'
 
 // ── ML Config ─────────────────────────────────────────────────────────────────
 export interface MLConfig {
@@ -145,6 +150,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Guards the persist effect until the watchlist has hydrated from localStorage,
   // so the empty initial state never clobbers a stored list on first render.
   const watchlistHydratedRef = useRef(false)
+  // The list the hydrate effect handed to setWatchlist: the persist effect waits until the state IS that list, so
+  // the mount render's empty [] is never written over the stored list (other windows would adopt that transient []).
+  const watchlistPendingRef = useRef<string[] | null>(null)
+  // Multi-window (C3-02): the serialized list this window last read from or wrote to localStorage. A state equal to
+  // it is not written again, so a list adopted from another window (or the server) is never echoed back over a
+  // newer write.
+  const watchlistStoredRef = useRef<string | null>(null)
 
   // ── Live quote updater ──────────────────────────────────────────────────────
   const setLiveQuote = useCallback((symbol: string, quote: LiveQuote) => {
@@ -182,6 +194,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Register a global callback that routes all quotes into liveQuotes state
     const unsub = monitorWS.subscribeAll((data: any) => {
+      // the chips' "market is printing" evidence (R-UI-SHELL-03): only a quote with a fresh exchange time that is a new
+      // print counts, never a pong / subscription ack / error, nor a previous session's quote on a holiday (round 4b)
+      noteQuoteMessage(data)
       // The WS server publishes: { symbol, ts, payload: { ltp, ... } }
       const sym = data?.symbol || data?.payload?.symbol
       if (!sym) return
@@ -208,14 +223,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
     })
 
-    monitorWS.connect(wsUrl, setWsConnected)
+    // ONE socket per window, closed cleanly on unmount and on page hide, reopened when a hidden page comes back
+    // from the back-forward cache (lib/monitorLifecycle.ts). The symbol set survives a reconnect (wsManager keeps it).
+    const detach = attachMonitorSocket(window, monitorWS, wsUrl, setWsConnected)
 
     // Always subscribe to NIFTY
     monitorWS.addSymbols(['NIFTY', 'NSEI'])
 
     return () => {
       unsub()
-      monitorWS.disconnect()
+      detach()
     }
   }, [setLiveQuote]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -235,12 +252,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     prevWatchlistRef.current = watchlist
   }, [watchlist])
 
-  // ── Poll data-service status every 30s ─────────────────────────────────────
+  // ── Poll data-service status every 30 s (2 min while the window is hidden; at once when it is shown again) ──
+  // (R-UI-SHELL-06 / C-PERF-06: a window hidden to the menu bar no longer polls the chrome at the visible cadence)
+  const hidden = useDocumentHidden()
+  usePolling(refreshDataStatus, hidden ? 120_000 : 30_000)
+
+  // ── P10: keep the server's monitored set holding this window's watchlist ───────────────────────────────────
+  // data-service's watchlist poller quotes the symbols in Redis `monitored.stocks`, which the diff effect above only
+  // fills when a symbol is ADDED. A Redis restart (or flush) empties it while the socket stays up, so the watchlist
+  // never ticked again. Re-registered on every socket REconnect and every 10 min (30 min while hidden): one GET of
+  // the set, then a subscribe only for the symbols missing from it (idempotent SADD; nothing is ever removed here).
+  const watchlistRef = useRef(watchlist)
+  watchlistRef.current = watchlist
+  const resyncMonitor = useCallback(async () => {
+    const list = watchlistRef.current
+    if (!list.length) return
+    let server: unknown
+    try { server = (await monitorList()).data?.symbols } catch { return /* Redis or ui-api down: the next resync retries */ }
+    for (const t of missingMonitorSymbols(list, server)) monitorSubscribe(t).catch(() => { /* best-effort */ })
+  }, [])
+  const wsSeenRef = useRef<'never' | 'up' | 'down'>('never')
   useEffect(() => {
-    refreshDataStatus()
-    const id = setInterval(refreshDataStatus, 30_000)
-    return () => clearInterval(id)
-  }, [refreshDataStatus])
+    // the first connect is covered by the diff effect (it subscribes the hydrated list); every reconnect resyncs
+    if (wsConnected && wsSeenRef.current === 'down') void resyncMonitor()
+    if (wsConnected) wsSeenRef.current = 'up'
+    else if (wsSeenRef.current === 'up') wsSeenRef.current = 'down'
+  }, [wsConnected, resyncMonitor])
+  usePolling(resyncMonitor, hidden ? MONITOR_RESYNC_HIDDEN_MS : MONITOR_RESYNC_MS)
 
   // ── Watchlist helpers ───────────────────────────────────────────────────────
   const addToWatchlist = useCallback((ticker: string) => {
@@ -264,16 +302,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (raw) {
         const parsed = JSON.parse(raw)
         if (Array.isArray(parsed)) {
-          setWatchlist(parsed.filter((t): t is string => typeof t === 'string'))
+          const list = parsed.filter((t): t is string => typeof t === 'string')
+          watchlistPendingRef.current = list
+          watchlistStoredRef.current = JSON.stringify(list)
+          setWatchlist(list)
         }
       }
     } catch { /* ignore corrupt/blocked storage */ }
     watchlistHydratedRef.current = true
   }, [])
 
+  // Changed outside this window's state: another window of this origin (⌘N, session restore, a second tab) or
+  // lib/prefs/sync.ts applying a newer server value. Adopt it, so this window's next edit starts from it.
+  useExternalPrefChange(WATCHLIST_KEY, () => {
+    let list: string[]
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(WATCHLIST_KEY) || '[]')
+      if (!Array.isArray(parsed)) return
+      list = parsed.filter((t): t is string => typeof t === 'string')
+    } catch { return /* ignore corrupt/blocked storage */ }
+    const s = JSON.stringify(list)
+    watchlistPendingRef.current = null
+    watchlistStoredRef.current = s
+    setWatchlist(prev => (JSON.stringify(prev) === s ? prev : list))
+  })
+
   useEffect(() => {
     if (!watchlistHydratedRef.current) return  // don't overwrite store before hydration
-    try { window.localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchlist)) } catch { /* quota/SSR */ }
+    const pending = watchlistPendingRef.current
+    if (pending) {
+      if (watchlist !== pending) return        // the mount render's [] (hydration's setWatchlist not applied yet)
+      watchlistPendingRef.current = null
+    }
+    const s = JSON.stringify(watchlist)
+    if (s === watchlistStoredRef.current) return  // already stored (hydrated or adopted): never echo it back
+    try { window.localStorage.setItem(WATCHLIST_KEY, s); watchlistStoredRef.current = s } catch { /* quota/SSR */ }
   }, [watchlist])
 
   // ── Config setters ──────────────────────────────────────────────────────────

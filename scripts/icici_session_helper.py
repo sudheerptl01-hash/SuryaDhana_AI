@@ -57,6 +57,11 @@ def main() -> None:
         sys.exit(1)
 
     try:
+        try:      # breeze_connect downloads ICICI's security master at import, with no timeout: use the cache
+            from shared.breeze_cache import install as _breeze_cache_install
+            _breeze_cache_install()
+        except Exception:  # noqa: BLE001
+            pass
         from breeze_connect import BreezeConnect  # type: ignore[import]
     except ImportError:
         print("[ERROR] breeze-connect not installed. Run:")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import pickle
 import uuid
@@ -15,11 +16,14 @@ from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from shared.config import get_settings
+from shared.config import load_env_into_process, get_settings
+
+# Local runs: export .env so os.environ readers (ICICI creds, service URLs) see it.
+load_env_into_process()
 from shared.logging import configure_logging, get_logger
 
 from models import DirectionClassifier, ReturnRegressor
-from training import walk_forward_validation
+from training import purged_time_split, walk_forward_validation
 
 logger = get_logger(__name__)
 
@@ -258,6 +262,44 @@ def _activate_registry_entry(entry: dict):
     _active_model_id = entry["model_id"]
 
 
+# Trained artifacts live apart from the `models` CODE package: in Docker a volume
+# mounted over services/ml-service/models hid the model classes (DirectionClassifier)
+# behind whatever the volume was first seeded with. Default keeps local runs unchanged.
+MODEL_ARTIFACT_DIR = Path(os.environ.get("MODEL_ARTIFACT_DIR", "models"))
+CLF_PATH = str(MODEL_ARTIFACT_DIR / "xgb_classifier_v1.pkl")
+REG_PATH = str(MODEL_ARTIFACT_DIR / "xgb_regressor_v1.pkl")
+ACTIVE_CARD_PATH = str(MODEL_ARTIFACT_DIR / "xgb_classifier_v1.card.pkl")
+
+
+def _save_model_card(entry: dict, path: str = ACTIVE_CARD_PATH) -> None:
+    """Persist everything the investigation endpoints need (metrics, validation set,
+    OOS probabilities) next to the model file, so a restart doesn't blank them."""
+    card = {k: v for k, v in entry.items() if k != "_model"}
+    if isinstance(card.get("_X_val"), pd.DataFrame):
+        card["_X_val"] = card["_X_val"].astype("float32")  # ~halves the card size
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    tmp = f"{path}.tmp"
+    with open(tmp, "wb") as f:
+        pickle.dump(card, f)
+    Path(tmp).replace(path)
+
+
+def _load_model_card(clf, path: str = ACTIVE_CARD_PATH) -> dict | None:
+    """Return a registry entry for ``clf`` if its saved card matches its features."""
+    if not Path(path).exists():
+        return None
+    try:
+        with open(path, "rb") as f:
+            card = pickle.load(f)
+    except Exception as exc:
+        logger.warning("Model card unreadable — metrics unavailable until retrain", error=str(exc))
+        return None
+    if list(card.get("feature_cols", [])) != list(clf._feature_cols):
+        logger.warning("Model card does not match the loaded model's features — ignored")
+        return None
+    return {**card, "_model": clf, "is_active": True}
+
+
 # ── Lifespan ───────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -266,11 +308,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     configure_logging("ml-service", settings.log_level)
 
-    clf_path = "models/xgb_classifier_v1.pkl"
-    reg_path = "models/xgb_regressor_v1.pkl"
+    clf_path = CLF_PATH
+    reg_path = REG_PATH
 
     if Path(clf_path).exists():
         _classifier = DirectionClassifier.load(clf_path)
+        card_entry = _load_model_card(_classifier)
+    else:
+        card_entry = None
+    if card_entry is not None:
+        # Restore the trained model's registry entry: metrics, validation set, split.
+        _model_registry[card_entry["model_id"]] = card_entry
+        _activate_registry_entry(card_entry)
+        logger.info("Model card restored", model_id=card_entry["model_id"],
+                    auc=card_entry.get("metrics", {}).get("auc_roc"))
+    elif _classifier is not None:
         _active_model_id = "xgboost_startup"
         _model_registry["xgboost_startup"] = {
             "model_id": "xgboost_startup",
@@ -377,6 +429,8 @@ class TrainRequest(BaseModel):
     model_type: str = "xgboost"
     model_params: dict | None = None
     make_active: bool = True
+    val_frac: float = 0.2
+    purge_dates: int = 5   # = label horizon; drops train rows whose labels overlap validation
 
 
 class TrainResponse(BaseModel):
@@ -386,13 +440,38 @@ class TrainResponse(BaseModel):
     regressor_trained: bool
     walk_forward_summary: dict | None
     metrics: dict
+    split: dict | None = None
+
+
+NIFTY_REGIME_CODES = {"bull": 1, "range": 0, "bear": -1}
+
+
+def _encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
+    """nifty_regime is stored as text; models need the same integer code at train and
+    inference time (float('bull') would otherwise silently drop every prediction row)."""
+    # Check "not numeric" rather than dtype == object: pandas 3 infers the `str` dtype.
+    if "nifty_regime" in df.columns and not pd.api.types.is_numeric_dtype(df["nifty_regime"]):
+        df = df.copy()
+        df["nifty_regime"] = df["nifty_regime"].map(NIFTY_REGIME_CODES).astype("float64")
+    return df
 
 
 @app.post("/train", response_model=TrainResponse)
-async def train(req: TrainRequest) -> TrainResponse:
+def train(req: TrainRequest) -> TrainResponse:
+    # Sync endpoint: model fitting is CPU-bound and must not block the event loop
+    # (FastAPI runs sync handlers in its threadpool).
     global _regressor
 
-    df = pd.DataFrame(req.features)
+    df = _encode_categoricals(pd.DataFrame(req.features))
+    missing = [c for c in req.feature_cols if c not in df.columns]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Feature columns missing from payload: {missing[:10]}")
+    empty = [c for c in req.feature_cols if df[c].isna().all()]
+    if empty:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Feature columns are entirely NULL (would drop every row): {empty[:10]}",
+        )
     df = df.dropna(subset=req.feature_cols + [req.target_direction, req.target_return])
 
     if len(df) < 500:
@@ -401,13 +480,37 @@ async def train(req: TrainRequest) -> TrainResponse:
             detail=f"Insufficient data: {len(df)} rows. Need ≥500."
         )
 
-    split = int(len(df) * 0.8)
-    X_train = df.iloc[:split][req.feature_cols]
-    X_val   = df.iloc[split:][req.feature_cols]
-    y_dir_train = df.iloc[:split][req.target_direction]
-    y_dir_val   = df.iloc[split:][req.target_direction]
-    y_ret_train = df.iloc[:split][req.target_return]
-    y_ret_val   = df.iloc[split:][req.target_return]
+    # Time-ordered, purged split on DATES (see training/splits.py). The old
+    # row-position 80/20 cut split by ticker order and leaked dates across sides.
+    df = df.sort_values(req.date_col).reset_index(drop=True)
+    try:
+        split = purged_time_split(df[req.date_col], val_frac=req.val_frac, purge=req.purge_dates)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    tr, va = df.iloc[split.train_idx], df.iloc[split.val_idx]
+    # Early stopping must NOT look at the reported validation period — choosing the
+    # tree count on it and then scoring on it biases every metric upward. Carve an
+    # inner, purged slice from the END of the training period for early stopping.
+    tr = tr.reset_index(drop=True)
+    try:
+        inner = purged_time_split(tr[req.date_col], val_frac=0.15, purge=req.purge_dates)
+        fit_df, es_df = tr.iloc[inner.train_idx], tr.iloc[inner.val_idx]
+    except ValueError:
+        fit_df, es_df = tr, None
+    X_train = fit_df[req.feature_cols]
+    y_dir_train = fit_df[req.target_direction]
+    y_ret_train = fit_df[req.target_return]
+    X_es = es_df[req.feature_cols] if es_df is not None else None
+    y_dir_es = es_df[req.target_direction] if es_df is not None else None
+    y_ret_es = es_df[req.target_return] if es_df is not None else None
+    X_val   = va[req.feature_cols]
+    y_dir_val   = va[req.target_direction]
+    y_ret_val   = va[req.target_return]
+    split_info = split.describe()
+    if es_df is not None:
+        split_info["early_stopping_period"] = [inner.val_start, inner.val_end]
+        split_info["fit_period"] = [inner.train_start, inner.train_end]
+    logger.info("Training split", **split_info)
 
     t0 = datetime.now()
 
@@ -421,6 +524,8 @@ async def train(req: TrainRequest) -> TrainResponse:
         logger.warning("Replacing inf values in training features", cols=bad_cols)
         X_train = X_train.replace([np.inf, -np.inf], np.nan).fillna(0)
         X_val   = X_val.replace([np.inf, -np.inf], np.nan).fillna(0)
+        if X_es is not None:
+            X_es = X_es.replace([np.inf, -np.inf], np.nan).fillna(0)
 
     nan_mask = X_train.isna()
     if nan_mask.any().any():
@@ -428,6 +533,8 @@ async def train(req: TrainRequest) -> TrainResponse:
         logger.warning("Filling NaN values in training features", cols=bad_cols)
         X_train = X_train.fillna(0)
         X_val   = X_val.fillna(0)
+        if X_es is not None:
+            X_es = X_es.fillna(0)
 
     if len(y_dir_train.unique()) < 2:
         raise HTTPException(
@@ -441,10 +548,10 @@ async def train(req: TrainRequest) -> TrainResponse:
     try:
         if req.model_type == "xgboost":
             clf = DirectionClassifier(params=req.model_params)
-            clf.fit(X_train, y_dir_train, X_val, y_dir_val)
+            clf.fit(X_train, y_dir_train, X_es, y_dir_es)
         else:
             clf = GenericClassifier(model_type=req.model_type, params=req.model_params)
-            clf.fit(X_train, y_dir_train, X_val, y_dir_val)
+            clf.fit(X_train, y_dir_train, X_es, y_dir_es)
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(status_code=400, detail=f"Training failed: {exc}") from exc
     except Exception as exc:
@@ -455,7 +562,7 @@ async def train(req: TrainRequest) -> TrainResponse:
     if req.make_active:
         try:
             _regressor = ReturnRegressor(params=req.model_params if req.model_type == "xgboost" else None)
-            _regressor.fit(X_train, y_ret_train, X_val, y_ret_val)
+            _regressor.fit(X_train, y_ret_train, X_es, y_ret_es)
         except Exception as exc:
             logger.warning("Regressor training failed — continuing without it", error=str(exc))
 
@@ -478,6 +585,7 @@ async def train(req: TrainRequest) -> TrainResponse:
         "trained_at":        datetime.now().isoformat(),
         "is_active":         req.make_active,
         "training_time_secs": round(elapsed, 1),
+        "split":             split_info,
         # Internal
         "_model":      clf,
         "_X_val":      X_val.copy(),
@@ -496,11 +604,16 @@ async def train(req: TrainRequest) -> TrainResponse:
 
     # Save XGBoost model to disk for persistence
     if req.model_type == "xgboost" and req.save_models:
-        clf.save("models/xgb_classifier_v1.pkl")
+        clf.save(CLF_PATH)
+        if req.make_active:
+            try:
+                _save_model_card(entry)
+            except Exception as exc:  # the model itself is saved; card is best-effort
+                logger.warning("Model card save failed", error=str(exc))
         if _regressor:
-            _regressor.save("models/xgb_regressor_v1.pkl")
+            _regressor.save(REG_PATH)
     elif req.save_models:
-        clf.save(f"models/{model_id}.pkl")
+        clf.save(str(MODEL_ARTIFACT_DIR / f"{model_id}.pkl"))
 
     wf_summary = None
     if req.run_walk_forward and req.model_type == "xgboost":
@@ -521,6 +634,7 @@ async def train(req: TrainRequest) -> TrainResponse:
         regressor_trained=req.make_active,
         walk_forward_summary=wf_summary,
         metrics={k: v for k, v in metrics.items() if not isinstance(v, (list, dict))},
+        split=split_info,
     )
 
 
@@ -599,6 +713,25 @@ async def batch_predict(req: BatchPredictRequest) -> BatchPredictResponse:
     if df.empty:
         raise HTTPException(status_code=404, detail="No feature data found. Run feature generation first.")
 
+    # Staleness guard: predictions on old feature rows look valid but are not. Refuse
+    # when the newest feature date lags "today" by more than the allowed business days.
+    max_age = int(os.getenv("MAX_FEATURE_AGE_BUSINESS_DAYS", "2"))
+    feat_dates = pd.to_datetime(df["date"])
+    newest = feat_dates.max().date()
+    today_ist = datetime.now(IST).date()
+    age = int(np.busday_count(newest, today_ist))
+    if age > max_age:
+        raise HTTPException(
+            status_code=409,
+            detail=(f"Features are stale: newest feature date {newest} is {age} business days "
+                    f"old (limit {max_age}). Run the daily pipeline (data-service "
+                    f"POST /jobs/daily-pipeline) before predicting."),
+        )
+    # Only score tickers whose own latest row is current (a halted stock's last row
+    # can be months old even when the rest of the universe is fresh).
+    df = df[feat_dates >= pd.Timestamp(newest)]
+    df = _encode_categoricals(df)
+
     feature_cols = _classifier._feature_cols
     df_cols = set(df.columns)
     present_cols = [c for c in feature_cols if c in df_cols]
@@ -623,6 +756,7 @@ async def batch_predict(req: BatchPredictRequest) -> BatchPredictResponse:
     if missing_cols:
         logger.warning("batch_predict feature gap", missing=missing_cols, imputed_zero=len(missing_cols))
 
+    failed_rows = 0
     for _, row in df.iterrows():
         try:
             # Provide every model feature (missing ones imputed 0.0) so predict_single's
@@ -638,8 +772,12 @@ async def batch_predict(req: BatchPredictRequest) -> BatchPredictResponse:
                     "is_high_confidence": True,
                     "date": str(row.get("date", "")),
                 })
-        except Exception:
-            continue  # single bad row must not abort the full batch
+        except Exception as exc:
+            failed_rows += 1  # single bad row must not abort the full batch
+            if failed_rows <= 3:
+                logger.warning("batch_predict row failed", ticker=row.get("ticker"), error=str(exc))
+    if failed_rows and failed_rows == len(df):
+        raise HTTPException(status_code=500, detail=f"Every row failed to score ({failed_rows}) — see logs")
 
     elapsed_ms = (_t.perf_counter() - t0) * 1000
     logger.info(

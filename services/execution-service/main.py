@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import os
 import re
 import sys
@@ -32,15 +34,35 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     configure_logging("execution-service", settings.log_level)
     # Auto-connect Breeze from .env (shared loader; normalizes the daily token).
+    # The Breeze handshake (generate_session) is a blocking network call that can
+    # hang — so we construct in stub mode and run it in a background thread. This
+    # keeps /health responsive immediately; orders stay in safe stub/PAPER mode
+    # until the live session is established. Liveness must not depend on the broker.
     _creds = load_icici_credentials()
-    _client = ICICIOrderClient(_creds.api_key, _creds.api_secret, _creds.session_token)
+    _client = ICICIOrderClient(
+        _creds.api_key, _creds.api_secret, _creds.session_token, auto_connect=False,
+    )
     _manager = OrderManager(_client)
+
+    async def _bg_connect() -> None:
+        if not _creds.api_key:
+            return
+        try:
+            await asyncio.to_thread(_client.connect)
+            logger.info("ICICI Breeze session established (background)", stub_mode=_client.is_stub)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("ICICI Breeze background connect failed; staying in stub", error=str(exc))
+
+    connect_task = asyncio.create_task(_bg_connect())
     logger.info(
         "Execution service started",
         stub_mode=_client.is_stub,
         needs_daily_token=_creds.needs_daily_token,
     )
     yield
+    connect_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await connect_task
     logger.info("Execution service stopped")
 
 
@@ -56,9 +78,8 @@ def _extract_session_token(raw: str) -> str:
     value = raw.strip()
     if not value:
         return ""
-    if not value.startswith("http"):
-        return value
-    match = re.search(r"(?:apisession|session_token|apiSession|api_session)=([^&\\s]+)", value)
+    # Search regardless of scheme: a copied address bar often reads "127.0.0.1/?apisession=…".
+    match = re.search(r"(?:apisession|session_token|api_session)=([^&\s#]+)", value, re.IGNORECASE)
     return match.group(1) if match else value
 
 

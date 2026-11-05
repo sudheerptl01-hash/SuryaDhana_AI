@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "boot-local",
+  "description": "Bundled boot page (tauri://localhost/index.html). Grants ONLY the boot commands and window dragging for the overlay title strip. Never applies to remote content (local = true, no remote URLs).",
+  "local": true,
+  "windows": ["main", "term-*"],
+  "permissions": [
+    "allow-boot-status",
+    "allow-stack-start",
+    "allow-stack-stop",
+    "allow-open-logs",
+    "allow-open-terminal",
+    "core:window:allow-start-dragging",
+    "core:window:allow-internal-toggle-maximize"
+  ]
+}

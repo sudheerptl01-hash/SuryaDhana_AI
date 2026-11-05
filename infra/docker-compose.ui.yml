@@ -45,6 +45,10 @@ services:
       - EXECUTION_SERVICE_URL=http://execution-service:8006
       - MASTER_CONTROLLER_URL=http://master-controller:8008
       - UI_API_ENV_FILE=/app/.env
+      # shared/http_guard.py: the ui container reaches ui-api as host.docker.internal / ui-api, and container
+      # peers are never loopback (the Origin check still applies)
+      - GUARD_ALLOWED_HOSTS=ui-api,host.docker.internal
+      - GUARD_ALLOW_REMOTE_WRITES=1
       # Override .env localhost Redis URL with Docker DNS hostname
       - REDIS_URL=redis://redis:6379/0
       # Phase 4 Glass-Box — novel alpha engine bind-mounted (not in the image)
@@ -60,6 +64,17 @@ services:
       # without baking them into the image.
       - ../novel_alpha_engine.py:/app/novel_alpha_engine.py:ro
       - ../validated_alpha.md:/app/validated_alpha.md:ro
+      # Research library (RSCH): study reports + reference docs, read-only
+      - ../reports:/app/reports:ro
+      - ../docs:/app/docs:ro
+      # Feature engine (FEATURE_COLS / DEFAULT_TRAIN_FEATURES): routers/pipeline.py resolves
+      # it at <parents[2]>/feature-service = /feature-service. Without this mount ui-api
+      # silently fell back to a legacy list incl. price-level features (macd, sma_*).
+      - ../services/feature-service/feature_engine.py:/feature-service/feature_engine.py:ro
+      # News Catalyst Terminal: daily scanner JSON (written by an external session)
+      - ../new_scnner:/app/new_scnner:ro
+      # Decision Desk: shared strategy/cost/panel code (routers/desk.py imports shared.*)
+      - ../shared:/app/shared:ro
     depends_on:
       master-controller:
         condition: service_healthy
@@ -80,7 +95,11 @@ services:
       context: ../ui
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_BASE=http://ui-api:8000
+        # Next.js freezes rewrites() into .next/routes-manifest.json at BUILD time,
+        # so this build-arg (not the runtime `environment` override below) is what
+        # actually sets the server-side /api/* proxy target. Point it at the host-
+        # published ui-api port to avoid undici/Docker-DNS resets on Docker Desktop Mac.
+        - NEXT_PUBLIC_API_BASE=http://host.docker.internal:8010
     ports:
       - "3000:3000"
     environment:

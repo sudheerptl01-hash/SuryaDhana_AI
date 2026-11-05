@@ -14,6 +14,9 @@ import pandas as pd
 import numpy as np
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
+import bulk_cache
+from errors import fail
+
 router = APIRouter()
 
 _DEFAULT_DB = str(Path(__file__).resolve().parent.parent.parent.parent / "data" / "market.duckdb")
@@ -27,24 +30,26 @@ SCRIPTS_DIR = Path(os.getenv("SCRIPTS_DIR", _DEFAULT_SCRIPTS))
 _jobs: dict[str, dict] = {}
 
 
+_BULK_COLS = ["ticker", "date", "open", "high", "low", "close", "volume"]
+
+
 def _fetch_ohlcv_bulk(days: int) -> pd.DataFrame:
-    """Fetch recent OHLCV from data-service over HTTP.
+    """Fetch recent OHLCV via the shared 60 s bulk cache (bulk_cache.py — D3 fix).
 
     ui-api must NOT open its own DuckDB connection: on Docker Desktop (Mac,
     virtioFS) a second connection fails with "Conflicting lock is held in PID 0"
-    even read-only. data-service owns the lock and serves /db/ohlcv-bulk.
+    even read-only. data-service owns the lock and serves /db/ohlcv-bulk; the
+    cache holds ONE parsed frame per (days, equity_only) key for 60 s so repeat
+    screens stop re-pulling the ~84 MB payload. httpx errors propagate as before
+    (the screener maps them to its 503). Downstream only mask-selects (which
+    copies) before mutating — the cached frame is never written to.
     """
     fetch_days = max(int(days) + 30, 60)  # headroom for the last-complete-day trim
-    with httpx.Client(timeout=httpx.Timeout(120.0)) as client:
-        r = client.get(f"{DATA_SVC}/db/ohlcv-bulk", params={"days": fetch_days})
-    r.raise_for_status()
-    data = r.json().get("data", [])
-    cols = ["ticker", "date", "open", "high", "low", "close", "volume"]
-    if not data:
-        return pd.DataFrame(columns=cols)
-    df = pd.DataFrame(data)
-    df["date"] = pd.to_datetime(df["date"])
-    return df[cols]
+    # Operating companies only — ETFs / liquid funds are not breakout candidates.
+    df = bulk_cache.get_bulk_ohlcv(fetch_days, equity_only=True)
+    if df.empty:
+        return pd.DataFrame(columns=_BULK_COLS)
+    return df[_BULK_COLS]
 
 
 def _last_complete_date_from_df(df: pd.DataFrame, min_tickers: int = 100) -> pd.Timestamp:
@@ -98,9 +103,16 @@ def _load_ohlcv_multiindex(days: int = 500) -> pd.DataFrame:
 
 # ── Screener endpoint ─────────────────────────────────────────────────────────
 
+# Sync handlers on purpose: they use a blocking HTTP client and seconds of pandas work;
+# as `async def` they froze ui-api's event loop (every other UI request queued behind
+# them). FastAPI runs plain `def` handlers — and BackgroundTasks — in a threadpool.
 @router.get("/screener")
-async def run_screener(days: int = 500):
+def run_screener(days: int = 500):
     """Run LW Volatility Breakout Screener on real NSE OHLCV data."""
+    if days < 1:  # D7: days=-3 used to come back as a FALSE 404 "No OHLCV data in DuckDB"
+        fail(422, "invalid", f"days must be >= 1 (got {days})")
+    if days > 2000:  # C2 E1: unbounded days = unclamped full-panel pull + cache churn
+        fail(422, "invalid", f"days must be <= 2000 (got {days})")
     sys.path.insert(0, str(SCRIPTS_DIR))
     try:
         from larry_williams_screener import VolatilityBreakoutScreener, ScreenerConfig
@@ -109,6 +121,8 @@ async def run_screener(days: int = 500):
 
     try:
         df = _load_ohlcv_multiindex(days)
+    except httpx.HTTPStatusError as e:  # no internal URL on the wire (httpx reprs embed it)
+        raise HTTPException(status_code=503, detail=f"DB load failed: data-service returned {e.response.status_code}")
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"DB load failed: {e}")
 
@@ -172,7 +186,7 @@ async def run_screener(days: int = 500):
 # ── Cycle scan: read cached CSV ───────────────────────────────────────────────
 
 @router.get("/scan-results")
-async def get_scan_results(top_n: int = 50):
+def get_scan_results(top_n: int = 50):
     """Return cached cycle-scanner results from last run."""
     if not SCAN_CSV.exists():
         return {"status": "no_data", "results": [], "last_run": None, "total": 0}
@@ -204,7 +218,7 @@ async def get_scan_results(top_n: int = 50):
 
 # ── Cycle scan: background job ────────────────────────────────────────────────
 
-async def _run_cycle_scan(job_id: str, n_stocks: int):
+def _run_cycle_scan(job_id: str, n_stocks: int):
     sys.path.insert(0, str(SCRIPTS_DIR))
     try:
         from larry_williams_cycle_scanner import LarryWilliamsMasterScanner, ScannerConfig

@@ -1,257 +1,131 @@
 'use client'
 
 /**
- * MarketCommandHeader — NSE Operations Center command strip.
+ * MarketCommandHeader: the terminal shell (News Catalyst Terminal look, app-wide).
  *
- * Visual language: ISRO mission control × Bloomberg terminal.
- * Chakra Petch (display) + JetBrains Mono (data).
- * Live NIFTY price with oscilloscope waveform behind it.
- * Service health capsules.  IST clock.  Pulsing corona logo.
+ *   Row 1  ◉ SURYADHANA ▸ PAGE · NIFTY 50 live (O/H/L) · service lights · IST clock · alerts · ⤓ UPDATE DATA
+ *   Row 2  macro tape: NIFTY, BANK NIFTY, INDIA VIX, USD/INR, BRENT, GOLD, S&P 500 (60 s)
+ *   Row 3  page strip with keyboard shortcuts (Alt+1…9, Alt+0; ⌘1…9 in the app)
+ *
+ * In SuryaDhana.app (C1-trader-ux-06) the title strip above is the one brand / clock / session / service-light
+ * source, so row 1 drops its copies (brand + page name, universe count, DATA / DB lights, session chip, clock) and
+ * keeps NIFTY, ICICI, alerts and UPDATE DATA, in a shorter 36 px row. A browser keeps today's full row.
+ *
+ * Row 1 never overflows (C1-trader-ux-10): every item is nowrap, the brand's page name ellipsizes, the row clips
+ * instead of widening the page, and the least important items drop out by width (globals.css t-hide-*).
+ *
+ * The 1 s clock + session chip is its own memo'd, second-aligned leaf (HeaderClock), so the header no longer
+ * re-renders every second (C2-performance-07).
+ *
+ * Data: NIFTY from the ICICI websocket when it is streaming, else NSE's live index (/api/market/nifty-live, ≈1 min
+ * delayed), else the last stored ICICI quote (marked STALE). On a closed market the chip reads CLOSE <day> and
+ * while the link is down STALE (C1-trader-ux-13, lib/feedState.ts); a live tick or a fresh NSE print beats the
+ * calendar (Muhurat, R-UI-SHELL-03). Polls: stored quote 5 s, NSE 15 s while the market prints and the window is
+ * visible, 60 s otherwise (R-UI-SHELL-06 / C-PERF-06); macro tape from /api/news-scanner/quotes (Yahoo, 60 s; 5 min
+ * while the window is hidden; it keeps running after the NSE close because GIFT NIFTY, FX and commodities still
+ * trade). While the link is down the tape is dimmed and tagged STALE (CT-15).
+ *
+ * P9 (round 4b): in NSE's regular hours a NIFTY quote more than 5 min old reads ◌ STALE <time> (never ● LIVE / ● NSE
+ * on a value that stopped), a stopped ICICI stream gives way to NSE's print, and the tape's NSE and Yahoo halves land
+ * independently. P4: the ICICI light's tooltip says why it is red (network outage vs expired session vs missing key).
  */
+import { Z } from '@/lib/z'
+import { memo, useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { useLiveQuotes, useDataServiceStatus } from '@/context/AppContext'
+import { getNewsQuotes, getGiftNifty, getICICIConnectionStatus, getIndicesLive, type GiftNifty } from '@/lib/api'
+import { AlertsBell } from '@/components/AlertsBell'
+import { T } from '@/components/terminal'
+import { goToPage } from '@/lib/navigate'
+import { newWindow } from '@/lib/platform'
+import { chromePollMs, isFreshPrint, liveQuoteAt, niftySourceChip, nseTimeToEpoch, pickNiftySource } from '@/lib/feedState'
+import { iciciLightTitle } from '@/lib/iciciStatus'
+import { tabKeyHint } from '@/lib/shortcuts'
+import { headerSession, istParts, nseSession } from '@/components/desktop/session'
+import { useNseHolidays } from '@/components/desktop/holidays'
+import { useSecondTick } from '@/components/desktop/TitleStrip'
+import { useShellState } from '@/components/shell/ShellState'
+import { useFeedState } from '@/components/shell/useFeed'
+import { useDocumentHidden, usePolling } from '@/components/shell/usePoll'
+import { noteNsePrint } from '@/lib/liveEvidence'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import clsx from 'clsx'
-import { useLiveQuotes, useDataServiceStatus, useWatchlist } from '@/context/AppContext'
-import { useTheme } from '@/context/ThemeContext'
+// ── IST clock + session state ─────────────────────────────────────────────────
 
-// ── IST Clock ─────────────────────────────────────────────────────────────────
+const IST_DATE = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: '2-digit', month: 'short' })
 
-function ISTClock() {
-  const [time, setTime] = useState('')
-  const [date, setDate] = useState('')
-  useEffect(() => {
-    const tick = () => {
-      const now = new Date()
-      const ist = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
-      setTime(ist.toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }))
-      setDate(ist.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' }))
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  const h = Number(time.slice(0, 2))
-  const isOpen = h >= 9 && h < 16  // NSE 9:15–15:30 IST (approximated)
-
+/**
+ * Session chip + IST clock (browser mode). Its own second-aligned tick, memo'd with no props: the rest of the
+ * header does not re-render for the clock. The session uses the same holiday-aware rule as the desktop title strip
+ * (components/desktop/session.ts) and the shared ECO-calendar fetch, so the two never disagree.
+ */
+const HeaderClock = memo(function HeaderClock() {
+  const now = useSecondTick()
+  const p = istParts(now)
+  const holidays = useNseHolidays(p.date)
+  const s = headerSession(nseSession(now, holidays))
+  const color = s.tone === 'green' ? T.green : s.tone === 'amber' ? T.amber : T.muted
   return (
-    <div className="flex flex-col items-end gap-0.5 select-none">
-      <div className="flex items-center gap-2">
-        <div className={clsx(
-          'w-1.5 h-1.5 rounded-full',
-          isOpen ? 'bg-jade animate-pulse' : 'bg-slate-600'
-        )} />
-        <span className={clsx(
-          'text-[10px] font-semibold tracking-widest uppercase',
-          isOpen ? 'text-jade' : 'text-slate-500'
-        )}>
-          {isOpen ? 'NSE OPEN' : 'MARKET CLOSED'}
-        </span>
-      </div>
-      <span className="text-data font-mono text-sm tabular-nums font-bold tracking-tight">{time}</span>
-      <span className="text-[10px] text-label font-mono uppercase tracking-widest">{date} IST</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', borderLeft: `1px solid ${T.border}`, height: '100%', flex: 'none' }}>
+      <span title={s.label === 'MUHURAT' || s.label === 'SPECIAL' ? `NSE special session: ${s.holiday} (timings per NSE circular)`
+                    : s.holiday ? `NSE closed: ${s.holiday}` : undefined}
+            style={{ fontSize: 9.5, letterSpacing: 1.2, color, border: `1px solid ${color === T.muted ? T.border : color}`,
+                     padding: '2px 6px', whiteSpace: 'nowrap' }}>{s.label}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: T.bright, whiteSpace: 'nowrap' }}>{p.time}</span>
+      <span className="t-hide-xl" style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1, whiteSpace: 'nowrap' }}>
+        {IST_DATE.format(now).toUpperCase()} IST
+      </span>
     </div>
   )
-}
+})
 
-// ── Oscilloscope waveform (CSS-animated SVG) ──────────────────────────────────
+// ── NIFTY live ────────────────────────────────────────────────────────────────
 
-function OscilloscopeWave({ ticking }: { ticking: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 240 48"
-      xmlns="http://www.w3.org/2000/svg"
-      className="absolute inset-0 w-full h-full opacity-25 pointer-events-none"
-      preserveAspectRatio="none"
-    >
-      <defs>
-        <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor="#F5A623" stopOpacity="0" />
-          <stop offset="30%"  stopColor="#F5A623" stopOpacity="0.9" />
-          <stop offset="70%"  stopColor="#F5A623" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#F5A623" stopOpacity="0" />
-        </linearGradient>
-        <filter id="waveGlow">
-          <feGaussianBlur stdDeviation="1.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <path
-        d="M0,24 L20,24 L25,8 L30,40 L35,12 L40,36 L45,20 L50,28 L55,24 L70,24 L75,6 L80,42 L85,10 L90,38 L95,16 L100,32 L105,24 L120,24 L125,8 L130,40 L135,14 L140,34 L145,18 L150,30 L155,24 L170,24 L175,7 L180,41 L185,11 L190,37 L195,17 L200,31 L205,24 L240,24"
-        fill="none"
-        stroke="url(#waveGrad)"
-        strokeWidth="1.5"
-        filter="url(#waveGlow)"
-        className={ticking ? 'wave-sweep' : ''}
-      />
-      <style>{`
-        @keyframes waveSweep {
-          0%   { stroke-dashoffset: 800; opacity: 0.4; }
-          30%  { opacity: 1; }
-          70%  { opacity: 1; }
-          100% { stroke-dashoffset: 0; opacity: 0.4; }
-        }
-        .wave-sweep {
-          stroke-dasharray: 800;
-          animation: waveSweep 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-      `}</style>
-    </svg>
-  )
-}
-
-// ── NIFTY price panel ─────────────────────────────────────────────────────────
-
-function NiftyPanel() {
+function NiftyLive() {
   const { liveQuotes, wsConnected } = useLiveQuotes()
-  const [httpNifty, setHttpNifty] = useState<any>(null)
-  const [ticking, setTicking] = useState(false)
-  const prevLtpRef  = useRef<number | undefined>(undefined)
-  const tickTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const { marketOpen, linkDown } = useFeedState()
+  const { desktop } = useShellState()
+  const [http, setHttp] = useState<any>(null)
+  const [nse, setNse] = useState<any>(null)
+  const hidden = useDocumentHidden()
+  const alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  // live cadence while NSE prints (calendar, a tick, or a fresh NSE stamp) and the window is visible; 60 s otherwise
+  const printing = marketOpen || isFreshPrint(nse?.time, Date.now())
+  usePolling(async () => {
+    try {
+      const res = await fetch('/api/market/nifty-live')
+      if (alive.current && res.ok) { const j = await res.json(); setNse(j); noteNsePrint(j?.time) }
+    } catch { /* next poll */ }
+  }, chromePollMs(15_000, { marketOpen: printing, hidden }))
+  usePolling(async () => {
+    try {
+      const res = await fetch('/api/data/live/index/nifty')
+      if (alive.current && res.ok) setHttp(await res.json())
+    } catch { /* backend restarting: next poll */ }
+  }, chromePollMs(5000, { marketOpen: printing, hidden }))
+  const [flash, setFlash] = useState<'up' | 'down' | null>(null)
+  const prev = useRef<number | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    const poll = async () => {
-      try {
-        const res = await fetch('/api/data/live/index/nifty')
-        if (!cancelled && res.ok) {
-          const d = await res.json()
-          setHttpNifty(d)
-        }
-      } catch { /* silent */ }
-    }
-    poll()
-    const id = setInterval(poll, 5000)
-    return () => { cancelled = true; clearInterval(id) }
-  }, [])
-
-  const wsQuote  = liveQuotes['NIFTY'] || liveQuotes['NSEI']
-  const httpRec  = (() => {
-    const p = httpNifty?.record?.payload
+  const ws = liveQuotes['NIFTY'] || liveQuotes['NSEI']
+  const rec = (() => {
+    const p = http?.record?.payload
     if (!p) return null
     if (typeof p === 'string') { try { return JSON.parse(p) } catch { return null } }
     return p
   })()
-  const ltp      = wsQuote?.ltp ?? httpRec?.ltp ?? null
-  const prevClose = wsQuote?.raw?.previous_close ?? httpRec?.previous_close ?? null
-  const change    = ltp != null && prevClose != null ? ltp - prevClose : wsQuote?.change ?? null
-  const changePct = wsQuote?.change_pct ?? wsQuote?.raw?.ltp_percent_change ?? httpRec?.ltp_percent_change ?? null
-  const isUp      = change != null ? change >= 0 : null
-  const high      = wsQuote?.raw?.high ?? httpRec?.high ?? null
-  const low       = wsQuote?.raw?.low  ?? httpRec?.low  ?? null
-  const open      = wsQuote?.raw?.open ?? httpRec?.open ?? null
+  // source: ICICI stream → NSE live index → last stored ICICI quote (which can be yesterday's); a stream that stopped
+  // (its quote more than 5 min behind NSE's print) gives way to NSE (P9, lib/feedState.ts pickNiftySource)
+  const wsAt = liveQuoteAt(ws)
+  const nseAt = nseTimeToEpoch(nse?.time)
+  const src = pickNiftySource({ wsLtp: ws?.ltp, wsAt, nseLast: nse?.last, nseAt, storedLtp: rec?.ltp })
+  const ltp: number | null = src === 'ICICI' ? ws.ltp : src === 'NSE' ? nse.last : rec?.ltp ?? null
+  const pc: number | null = src === 'ICICI' ? ws?.raw?.previous_close ?? null : src === 'NSE' ? nse.previous_close : rec?.previous_close ?? null
+  const chg = src === 'NSE' ? nse.change : ltp != null && pc != null ? ltp - pc : ws?.change ?? null
+  const pct = src === 'NSE' ? nse.change_pct
+    : ws?.change_pct ?? ws?.raw?.ltp_percent_change ?? rec?.ltp_percent_change ?? (chg != null && pc ? (chg / pc) * 100 : null)
+  const o = src === 'NSE' ? nse.open : ws?.raw?.open ?? rec?.open
+  const h = src === 'NSE' ? nse.high : ws?.raw?.high ?? rec?.high
+  const l = src === 'NSE' ? nse.low : ws?.raw?.low ?? rec?.low
 
-  // Trigger waveform sweep on each new tick
-  useEffect(() => {
-    if (ltp === undefined || ltp === null) return
-    if (prevLtpRef.current !== ltp) {
-      prevLtpRef.current = ltp
-      setTicking(true)
-      if (tickTimerRef.current) clearTimeout(tickTimerRef.current)
-      tickTimerRef.current = setTimeout(() => setTicking(false), 2500)
-    }
-  }, [ltp])
-
-  return (
-    <div className="relative flex items-center gap-6 px-5 py-3 overflow-hidden" style={{ minWidth: 320 }}>
-      {/* Oscilloscope waveform backdrop */}
-      <OscilloscopeWave ticking={ticking || wsConnected} />
-
-      {/* Main price block */}
-      <div className="relative z-10 flex flex-col gap-0.5">
-        <div className="flex items-baseline gap-2">
-          <span className="text-label text-[10px] font-semibold tracking-widest uppercase">NIFTY 50</span>
-          <span className={clsx(
-            'text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded border',
-            wsConnected
-              ? 'text-jade border-jade/40 bg-jade/10'
-              : 'text-slate-500 border-slate-700 bg-slate-800/50'
-          )}>
-            {wsConnected ? '⬤ LIVE' : '◌ POLL'}
-          </span>
-        </div>
-        <div className={clsx(
-          'text-4xl font-black tabular-nums tracking-tight transition-colors duration-300',
-          ticking
-            ? isUp === false ? 'text-crimson' : 'text-jade'
-            : 'text-bright',
-        )}>
-          {ltp != null
-            ? ltp.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-            : '——.——'}
-        </div>
-        <div className="flex items-center gap-3">
-          {changePct != null && (
-            <span className={clsx(
-              'flex items-center gap-1 text-sm font-bold tabular-nums',
-              isUp ? 'text-jade' : 'text-crimson'
-            )}>
-              {isUp ? '▲' : '▼'}
-              {Math.abs(Number(changePct)).toFixed(2)}%
-            </span>
-          )}
-          {change != null && (
-            <span className={clsx('text-xs font-semibold tabular-nums', isUp ? 'text-jade/70' : 'text-crimson/70')}>
-              {change >= 0 ? '+' : ''}{change.toFixed(2)}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* OHLC mini-stats */}
-      {(open || high || low || prevClose) && (
-        <div className="relative z-10 flex flex-col gap-1 border-l border-border-dim pl-5">
-          {[
-            { label: 'O', value: open },
-            { label: 'H', value: high },
-            { label: 'L', value: low },
-            { label: 'PC', value: prevClose },
-          ].map(({ label, value }) => value != null && (
-            <div key={label} className="flex items-baseline gap-1.5">
-              <span className="text-[9px] text-label font-semibold tracking-wider w-4">{label}</span>
-              <span className="text-[11px] text-data font-mono tabular-nums">
-                {Number(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Service health capsules ───────────────────────────────────────────────────
-
-function ServiceCapsule({ name, ok, detail }: { name: string; ok: boolean | null; detail?: string }) {
-  return (
-    <div
-      title={detail || name}
-      className={clsx(
-        'flex items-center gap-1.5 px-2.5 py-1 rounded border text-[9px] font-semibold tracking-wider uppercase cursor-default select-none',
-        ok === true  ? 'border-jade/30 bg-jade/8 text-jade/80' :
-        ok === false ? 'border-crimson/30 bg-crimson/8 text-crimson/60' :
-                       'border-border-dim bg-transparent text-label'
-      )}
-    >
-      <span className={clsx(
-        'w-1 h-1 rounded-full',
-        ok === true  ? 'bg-jade animate-pulse' :
-        ok === false ? 'bg-crimson' :
-                       'bg-slate-600'
-      )} />
-      {name}
-    </div>
-  )
-}
-
-// ── Watchlist ticker strip ────────────────────────────────────────────────────
-
-function usePriceFlash(ltp: number | undefined): 'up' | 'down' | null {
-  const [flash, setFlash] = useState<'up' | 'down' | null>(null)
-  const prev = useRef<number | undefined>(undefined)
   useEffect(() => {
     if (ltp == null) return
     if (prev.current != null && ltp !== prev.current) {
@@ -262,351 +136,410 @@ function usePriceFlash(ltp: number | undefined): 'up' | 'down' | null {
     }
     prev.current = ltp
   }, [ltp])
-  return flash
+
+  const up = (chg ?? 0) >= 0
+  const n = (v: any) => v == null ? '—' : Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  // the shown quote's own time: ● LIVE / ● NSE never sit on a value that stopped updating in market hours (P9)
+  const quoteAt = src === 'ICICI' ? wsAt : src === 'NSE' ? nseAt : null
+  const chip = niftySourceChip({ src, wsConnected, marketOpen, linkDown, asOf: nse?.time ?? null, now: Date.now(), quoteAt })
+  const chipColor = chip.tone === 'live' ? T.green : chip.tone === 'delayed' ? T.cyan : T.muted
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '0 16px', borderLeft: `1px solid ${T.border}`,
+                  borderRight: `1px solid ${T.border}`, height: '100%', flex: '0 1 auto', minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 10, letterSpacing: 1.4, color: T.muted, whiteSpace: 'nowrap' }}>NIFTY 50</span>
+      <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: .3,
+                     color: flash === 'up' ? T.green : flash === 'down' ? T.red : T.bright,
+                     background: flash ? (flash === 'up' ? 'rgba(22,217,138,.12)' : 'rgba(255,77,94,.12)') : 'transparent',
+                     padding: '0 4px', transition: 'background .3s' }}>{n(ltp)}</span>
+      <span style={{ fontSize: 12, fontWeight: 600, color: chg == null ? T.muted : up ? T.green : T.red, whiteSpace: 'nowrap' }}>
+        {chg == null ? '' : `${up ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}  ${pct != null ? `${up ? '+' : '−'}${Math.abs(Number(pct)).toFixed(2)}%` : ''}`}
+      </span>
+      <span className={desktop ? 't-hide-md' : 't-hide-xl'} style={{ fontSize: 10, color: T.dim, display: 'flex', gap: 10, whiteSpace: 'nowrap' }}>
+        <span>O <span style={{ color: T.muted }}>{n(o)}</span></span>
+        <span>H <span style={{ color: T.muted }}>{n(h)}</span></span>
+        <span>L <span style={{ color: T.muted }}>{n(l)}</span></span>
+      </span>
+      <span title={chip.title} data-feed={chip.tone}
+            style={{ fontSize: 9, letterSpacing: 1, padding: '2px 6px', whiteSpace: 'nowrap', flex: 'none',
+                     border: `1px solid ${chipColor === T.muted ? T.border : chipColor}`, color: chipColor }}>
+        {chip.text}</span>
+    </div>
+  )
 }
 
+// ── macro tape ────────────────────────────────────────────────────────────────
 
-// ── Main Header ───────────────────────────────────────────────────────────────
+// Indian indices come from NSE (`nse` = allIndices name); Yahoo's can lag a whole session after the close
+const MACRO: { sym: string; label: string; digits?: number; nse?: string }[] = [
+  { sym: '^NSEI', label: 'NIFTY 50', nse: 'NIFTY 50' },
+  { sym: '^NSEBANK', label: 'BANK NIFTY', nse: 'NIFTY BANK' },
+  { sym: '^INDIAVIX', label: 'INDIA VIX', nse: 'INDIA VIX' },
+  { sym: 'INR=X', label: 'USD/INR', digits: 3 },
+  { sym: 'BZ=F', label: 'BRENT' },
+  { sym: 'GC=F', label: 'GOLD GC1' },      // the continuous COMEX front, named (gold program PLAN §b); the page is GOLD
+  { sym: '^GSPC', label: 'S&P 500' },
+]
 
-interface Props {
-  onRefresh:   () => void
-  refreshing:  boolean
-  totalStocks: number
-  latestDate?: string
-  activeTab:   string
-  tabs: { id: string; label: string; badge?: number }[]
-  onTabChange: (id: string) => void
+function MacroTape() {
+  const [q, setQ] = useState<Record<string, any>>({})
+  const [at, setAt] = useState<string>('')
+  const [gift, setGift] = useState<GiftNifty | null>(null)
+  const linkDown = useShellState().link === 'down'
+  const hidden = useDocumentHidden()
+  const alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  // 60 s while visible (unchanged; GIFT NIFTY, FX and commodities trade after the NSE close), 5 min while hidden.
+  // P9: NSE's indices and Yahoo's quotes land independently (allSettled semantics), each merged over the last values,
+  // so a slow or failing Yahoo never blanks the tape or holds NSE's numbers back, and a failure keeps what was shown.
+  usePolling(async () => {
+    getGiftNifty().then(r => { if (alive.current) setGift(r.data) }).catch(() => {})
+    const stamp = () => setAt(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' }))
+    const yahoo = getNewsQuotes(MACRO.filter(m => !m.nse).map(m => m.sym)).then(r => {
+      const quotes: Record<string, any> = r.data?.quotes ?? {}
+      const got = MACRO.filter(m => !m.nse && quotes[m.sym] != null)
+      if (!alive.current || !got.length) return
+      setQ(prev => { const next = { ...prev }; for (const m of got) next[m.sym] = quotes[m.sym]; return next })
+      stamp()
+    })
+    const nse = getIndicesLive(MACRO.filter(m => m.nse).map(m => m.nse!)).then(r => {
+      const got = MACRO.filter(m => m.nse && r.data?.indices?.[m.nse]?.last != null)
+      if (!alive.current || !got.length) return
+      setQ(prev => {
+        const next = { ...prev }
+        for (const m of got) { const v = r.data.indices[m.nse!]; next[m.sym] = { price: v.last, change_pct: v.change_pct, source: 'NSE' } }
+        return next
+      })
+      stamp()
+    })
+    await Promise.allSettled([yahoo, nse])        // a failed source keeps its last values
+  }, chromePollMs(60_000, { marketOpen: true, hidden }, 300_000))
+  return (
+    <div data-sd-tape={linkDown ? 'stale' : 'live'}
+      title={linkDown ? `ui-api unreachable: these are the last values received${at ? ` (${at} IST)` : ''}` : undefined}
+      style={{ display: 'flex', alignItems: 'center', height: 26, borderBottom: `1px solid ${T.border}`,
+               background: '#06080c', overflowX: 'auto', whiteSpace: 'nowrap', opacity: linkDown ? 0.55 : 1 }}>
+      <span style={{ background: T.amber, color: T.bg, fontSize: 9, fontWeight: 700, letterSpacing: 1.2,
+                     padding: '0 8px', height: '100%', display: 'flex', alignItems: 'center', flex: 'none' }}>MARKETS</span>
+      {gift?.last != null && (
+        <span title={`GIFT NIFTY (NSE IX) at ${gift.time}: implies ${gift.implied_gap_pct ?? '—'}% vs NIFTY's last close`}
+              style={{ display: 'inline-flex', gap: 7, alignItems: 'baseline', padding: '0 14px', borderRight: `1px solid ${T.border}`, fontSize: 11 }}>
+          <span style={{ color: T.amber, fontSize: 10, letterSpacing: .8 }}>GIFT NIFTY</span>
+          <span style={{ color: T.text }}>{gift.last.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          {gift.implied_gap_pct != null && <span style={{ color: gift.implied_gap_pct >= 0 ? T.green : T.red }}>{gift.implied_gap_pct >= 0 ? '+' : '−'}{Math.abs(gift.implied_gap_pct).toFixed(2)}%{' '}
+            {gift.nifty_status === 'Open' ? 'vs spot' : 'gap'}</span>}
+        </span>
+      )}
+      {MACRO.map((m, i) => {
+        const v = q[m.sym]
+        const c = v?.change_pct
+        const col = c == null ? T.muted : c >= 0 ? T.green : T.red
+        // narrow terminals drop tape entries from the right instead of scrolling (720/1024/1280)
+        const slice = i >= 6 ? 't-tape-ge6' : i >= 4 ? 't-tape-ge4' : i >= 2 ? 't-tape-ge2' : undefined
+        return (
+          <span key={m.sym} className={slice}
+                style={{ display: 'inline-flex', gap: 7, alignItems: 'baseline', padding: '0 14px',
+                         borderRight: `1px solid ${T.border}`, fontSize: 11 }}>
+            <span style={{ color: T.muted, fontSize: 10, letterSpacing: .8 }}>{m.label}</span>
+            <span style={{ color: T.text }}>{v?.price != null ? Number(v.price).toLocaleString('en-IN', { maximumFractionDigits: m.digits ?? 2, minimumFractionDigits: m.digits ?? 2 }) : '—'}</span>
+            <span style={{ color: col }}>{c == null ? '' : `${c >= 0 ? '+' : '−'}${Math.abs(c).toFixed(2)}%`}</span>
+          </span>
+        )
+      })}
+      <span style={{ flex: 1 }} />
+      {linkDown
+        ? <span style={{ fontSize: 9, color: T.red, letterSpacing: 1, padding: '0 12px', flex: 'none' }}>◌ STALE{at ? ` · ${at} IST` : ''}</span>
+        : <span className="t-tape-ge2" style={{ fontSize: 9, color: T.dim, padding: '0 12px', flex: 'none' }}>{at && `NSE + YAHOO · ${at} IST`}</span>}
+    </div>
+  )
 }
 
-export function MarketCommandHeader({
-  onRefresh, refreshing, totalStocks, latestDate, activeTab, tabs, onTabChange,
-}: Props) {
-  const { isDark, toggleTheme } = useTheme()
-  const { wsConnected } = useLiveQuotes()
-  const { dataServiceStatus } = useDataServiceStatus()
+// ── page strip ────────────────────────────────────────────────────────────────
 
+type MorePage = { id: string; code: string; label: string; hint: string }
+
+/** "MORE ▾": the pages that live outside the strip (also on GO). The menu is fixed-positioned so the strip's
+ *  horizontal scroll doesn't clip it. */
+function MoreMenu({ pages, active, onChange }: { pages: MorePage[]; active: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [at, setAt] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
+  const btn = useRef<HTMLButtonElement>(null)
+  const current = pages.find(p => p.id === active)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as HTMLElement).closest('[data-more-menu]')) setOpen(false)
+    }
+    window.addEventListener('mousedown', close); window.addEventListener('keydown', close)
+    return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', close) }
+  }, [open])
+  const toggle = () => {
+    const r = btn.current?.getBoundingClientRect()
+    if (r) setAt({ top: r.bottom, right: Math.max(8, window.innerWidth - r.right) })
+    setOpen(o => !o)
+  }
   return (
     <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,300;0,400;0,600;0,700;1,300&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
-        :root {
-          --bg-void:    #030810;
-          --bg-deep:    #050D1A;
-          --bg-panel:   #070E1B;
-          --border-dim: #111E30;
-          --border-med: #1A2D44;
-          --border-hot: #F5A623;
-          --amber-hot:  #F5A623;
-          --amber-dim:  #7A5010;
-          --jade:       #00C896;
-          --crimson:    #FF3B47;
-          --data:       #7DA4BE;
-          --label:      #3D5872;
-          --bright:     #C8DCF0;
-          --white:      #E6EFF8;
-        }
-
-        .font-display  { font-family: 'Chakra Petch', 'Chakra Petch', sans-serif; }
-        .font-data     { font-family: 'JetBrains Mono', 'Courier New', monospace; }
-
-        .text-jade    { color: var(--jade); }
-        .text-crimson { color: var(--crimson); }
-        .text-data    { color: var(--data); }
-        .text-label   { color: var(--label); }
-        .text-bright  { color: var(--bright); }
-        .text-white-sd { color: var(--white); }
-
-        .bg-jade\\/8 { background-color: rgba(0,200,150,0.08); }
-        .bg-crimson\\/8 { background-color: rgba(255,59,71,0.08); }
-        .border-jade\\/30 { border-color: rgba(0,200,150,0.3); }
-        .border-jade\\/40 { border-color: rgba(0,200,150,0.4); }
-        .border-crimson\\/30 { border-color: rgba(255,59,71,0.3); }
-        .bg-jade\\/10 { background-color: rgba(0,200,150,0.1); }
-        .bg-jade\\/20 { background-color: rgba(0,200,150,0.2); }
-        .border-border-dim { border-color: var(--border-dim); }
-        .bg-void { background-color: var(--bg-void); }
-        .bg-deep { background-color: var(--bg-deep); }
-
-        /* Diagonal grid overlay (CSS only) */
-        .cmd-grid-bg {
-          background-image:
-            repeating-linear-gradient(
-              -45deg,
-              transparent,
-              transparent 20px,
-              rgba(17,30,48,0.35) 20px,
-              rgba(17,30,48,0.35) 21px
-            );
-        }
-
-        /* Sun corona pulse */
-        @keyframes corona {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(245,166,35,0.2), 0 0 0 0 rgba(245,166,35,0.1); }
-          50%       { box-shadow: 0 0 12px 3px rgba(245,166,35,0.35), 0 0 30px 8px rgba(245,166,35,0.12); }
-        }
-        .sun-corona { animation: corona 2.8s ease-in-out infinite; }
-
-        /* Amber radial bloom behind logo */
-        .amber-bloom {
-          background: radial-gradient(ellipse 140px 80px at center, rgba(245,166,35,0.08) 0%, transparent 70%);
-        }
-
-        /* Tab sliding indicator */
-        .tab-indicator {
-          position: absolute;
-          bottom: -1px;
-          height: 2px;
-          background: var(--amber-hot);
-          border-radius: 2px 2px 0 0;
-          box-shadow: 0 0 8px rgba(245,166,35,0.6);
-          transition: left 0.25s cubic-bezier(0.4,0,0.2,1), width 0.25s cubic-bezier(0.4,0,0.2,1);
-        }
-
-        /* Scanline overlay */
-        .scanline::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: repeating-linear-gradient(
-            0deg,
-            transparent,
-            transparent 2px,
-            rgba(0,0,0,0.04) 2px,
-            rgba(0,0,0,0.04) 4px
-          );
-          pointer-events: none;
-          z-index: 1;
-        }
-
-        /* Glowing amber separator line */
-        .amber-sep {
-          border-bottom: 1px solid rgba(245,166,35,0.08);
-          box-shadow: 0 1px 0 rgba(245,166,35,0.04);
-        }
-
-        .market-header-bg {
-          background: linear-gradient(
-            to bottom,
-            rgba(3,8,16,1) 0%,
-            rgba(5,13,26,0.97) 60%,
-            rgba(5,13,26,0.92) 100%
-          );
-          backdrop-filter: blur(20px) saturate(1.4);
-          -webkit-backdrop-filter: blur(20px) saturate(1.4);
-        }
-      `}</style>
-
-      <header className="sticky top-0 z-50 scanline amber-sep">
-        <div className="market-header-bg cmd-grid-bg">
-
-          {/* ── Top strip ─────────────────────────────────────────────── */}
-          <div className="w-full px-4 lg:px-6 py-3 flex items-stretch gap-0">
-
-            {/* ── LOGO ────────────────────────────────────────────────── */}
-            <div className="flex items-center gap-4 pr-5 border-r border-border-dim amber-bloom">
-              {/* Sun icon */}
-              <div className="relative flex-shrink-0">
-                <div
-                  className={clsx(
-                    'w-12 h-12 rounded-full flex items-center justify-center text-2xl select-none sun-corona',
-                    'bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 shadow-lg'
-                  )}
-                  style={{ boxShadow: '0 0 20px rgba(245,166,35,0.3)' }}
-                >
-                  ☀
-                </div>
-                {/* Live pulse ring */}
-                {wsConnected && (
-                  <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-void bg-jade flex items-center justify-center">
-                    <span className="w-1.5 h-1.5 rounded-full bg-jade animate-pulse" />
-                  </span>
-                )}
-              </div>
-
-              {/* Brand text */}
-              <div className="flex flex-col gap-0.5">
-                <h1
-                  className="font-display text-2xl font-bold tracking-tight text-white-sd"
-                  style={{ letterSpacing: '0.04em', color: 'var(--white)' }}
-                >
-                  SURYADHANA
-                </h1>
-                <p
-                  className="font-display text-[10px] font-light tracking-widest uppercase"
-                  style={{ color: 'var(--amber-hot)', letterSpacing: '0.18em' }}
-                >
-                  NSE QUANT · XGBOOST + RL
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="font-data text-[9px] text-label tabular-nums">
-                    {totalStocks.toLocaleString()} stocks
-                  </span>
-                  {latestDate && (
-                    <>
-                      <span className="text-[9px] text-label opacity-40">·</span>
-                      <span className="font-data text-[9px] text-label tabular-nums">{latestDate}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* ── NIFTY live price panel ───────────────────────────── */}
-            <div className="flex-1 border-r border-border-dim font-data">
-              <NiftyPanel />
-            </div>
-
-            {/* ── Right controls ────────────────────────────────────── */}
-            <div className="flex items-center gap-4 pl-5">
-              {/* Service health */}
-              <div className="flex flex-col gap-1.5">
-                <ServiceCapsule
-                  name="DATA"
-                  ok={dataServiceStatus.health === 'ok'}
-                  detail={`data-service: ${dataServiceStatus.health}`}
-                />
-                <ServiceCapsule
-                  name="DB"
-                  ok={dataServiceStatus.ready}
-                  detail="DuckDB ready"
-                />
-                <ServiceCapsule
-                  name="ICICI"
-                  ok={dataServiceStatus.connected}
-                  detail={`Provider: ${dataServiceStatus.provider ?? 'unknown'}`}
-                />
-              </div>
-
-              {/* IST clock */}
-              <div className="border-l border-border-dim pl-4">
-                <ISTClock />
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex flex-col gap-2 border-l border-border-dim pl-4">
-                {/* Theme toggle */}
-                <button
-                  onClick={toggleTheme}
-                  title={isDark ? 'Day mode' : 'Night mode'}
-                  className={clsx(
-                    'w-8 h-8 rounded-lg border flex items-center justify-center text-sm transition-all duration-200',
-                    isDark
-                      ? 'border-amber-700/40 bg-amber-500/5 text-amber-400 hover:bg-amber-500/15 hover:border-amber-500/50'
-                      : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-100',
-                  )}
-                >
-                  {isDark ? '☀' : '◑'}
-                </button>
-
-                {/* Refresh */}
-                <button
-                  onClick={onRefresh}
-                  disabled={refreshing}
-                  title="Refresh NSE data"
-                  className={clsx(
-                    'w-8 h-8 rounded-lg border flex items-center justify-center text-sm transition-all duration-200',
-                    refreshing
-                      ? 'border-border-dim text-label cursor-not-allowed'
-                      : 'border-amber-700/40 bg-amber-500/5 text-amber-400 hover:bg-amber-500/15 hover:border-amber-500/50'
-                  )}
-                >
-                  <span className={clsx('text-base', refreshing && 'animate-spin inline-block')}>↻</span>
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Watchlist now lives solely in the LiveMonitorBar (single source) to
-              avoid a duplicate banner stacked directly below this header. */}
-
-          {/* ── Tab navigation ────────────────────────────────────────────── */}
-          <TabNav tabs={tabs} active={activeTab} onChange={onTabChange} />
-
+      <button ref={btn} data-more-menu onClick={toggle} title="More pages (also on GO)"
+        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', flex: 'none',
+                 background: current ? '#0e131c' : '#0b0f16', border: 'none', borderLeft: `1px solid ${T.borderHi}`, cursor: 'pointer',
+                 borderBottom: `2px solid ${current ? T.amber : 'transparent'}` }}>
+        <span style={{ fontFamily: T.display, fontSize: 11, fontWeight: 700, letterSpacing: 1, color: current ? T.amber : T.cyan }}>
+          {current ? current.code : 'MORE'} ▾
+        </span>
+      </button>
+      {open && (
+        <div data-more-menu style={{ position: 'fixed', top: at.top, right: at.right, zIndex: Z.dropdown, minWidth: 340, background: '#0b0f16',
+                                     border: `1px solid ${T.borderHi}`, boxShadow: '0 12px 32px rgba(0,0,0,.6)', padding: '4px 0' }}>
+          <div style={{ fontSize: 9, color: T.dim, letterSpacing: 1, padding: '6px 12px' }}>MORE PAGES · OR TYPE THE CODE IN ⌕ GO</div>
+          {pages.map(p => (
+            <button key={p.id} onClick={() => { onChange(p.id); setOpen(false) }}
+              style={{ display: 'grid', gridTemplateColumns: '52px 1fr', gap: 8, width: '100%', textAlign: 'left', padding: '6px 12px',
+                       background: p.id === active ? '#121a26' : 'transparent', border: 'none', cursor: 'pointer', alignItems: 'baseline' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: T.amber }}>{p.code}</span>
+              <span><span style={{ fontSize: 11.5, color: T.text }}>{p.label}</span>
+                <span style={{ display: 'block', fontSize: 10, color: T.dim }}>{p.hint}</span></span>
+            </button>
+          ))}
         </div>
-      </header>
+      )}
     </>
   )
 }
 
-// ── Tab navigation with sliding amber underline ───────────────────────────────
-
-function TabNav({ tabs, active, onChange }: {
-  tabs: { id: string; label: string; badge?: number }[]
-  active: string
-  onChange: (id: string) => void
+function PageStrip({ tabs, more = [], active, onChange, desktop }: {
+  tabs: { id: string; label: string; badge?: number }[]; more?: MorePage[]; active: string; onChange: (id: string) => void; desktop: boolean
 }) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 })
-
-  const updateIndicator = useCallback(() => {
-    if (!containerRef.current) return
-    const el = containerRef.current.querySelector(`[data-tab="${active}"]`) as HTMLElement | null
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const parentRect = containerRef.current.getBoundingClientRect()
-    setIndicator({ left: rect.left - parentRect.left, width: rect.width })
-  }, [active])
-
+  // ⌘/Ctrl-click or middle-click on a page tab opens it in a new window (C1-trader-ux-16)
+  const open = useCallback((e: ReactMouseEvent, id: string) => {
+    if (e.button === 1 || ((e.metaKey || e.ctrlKey) && e.button === 0)) { e.preventDefault(); void newWindow(id); return true }
+    return false
+  }, [])
   useEffect(() => {
-    updateIndicator()
-    window.addEventListener('resize', updateIndicator)
-    return () => window.removeEventListener('resize', updateIndicator)
-  }, [updateIndicator])
-
-  const ICONS: Record<string, string> = {
-    overview: '▦', stocks: '↗', backtest: '⌬', positions: '◈',
-    pipeline: '⬡', scanner: '◎', explorer: '⊞', system: '⊕',
-  }
-
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return
+      const k = e.code.startsWith('Digit') ? e.code.slice(5) : null
+      if (k == null) return
+      const i = k === '0' ? 9 : Number(k) - 1
+      if (tabs[i]) { e.preventDefault(); onChange(tabs[i].id) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [tabs, onChange])
+  useEffect(() => {
+    document.querySelector(`[data-tab="${active}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [active])
   return (
-    <div
-      ref={containerRef}
-      className="relative flex gap-0 overflow-x-auto border-t"
-      style={{ borderColor: 'var(--border-dim)' }}
-    >
-      {/* Sliding indicator */}
-      <div
-        className="tab-indicator"
-        style={{ left: indicator.left, width: indicator.width }}
-      />
-
-      {tabs.map(({ id, label, badge }) => {
-        const isActive = id === active
+    <nav style={{ display: 'flex', overflowX: 'auto', borderBottom: `1px solid ${T.border}`, background: '#07090d' }}>
+      {tabs.map((t, i) => {
+        const on = t.id === active
+        const key = i < 9 ? String(i + 1) : i === 9 ? '0' : null
         return (
-          <button
-            key={id}
-            data-tab={id}
-            onClick={() => onChange(id)}
-            className={clsx(
-              'relative flex items-center gap-2 px-5 py-2.5 text-xs transition-all duration-200 whitespace-nowrap font-display font-semibold tracking-wider',
-              isActive
-                ? 'text-white-sd'
-                : 'text-label hover:text-data',
-            )}
-            style={{
-              fontFamily: "'Chakra Petch', sans-serif",
-              color: isActive ? 'var(--white)' : undefined,
-            }}
-          >
-            <span className="text-[11px] opacity-60">{ICONS[id] ?? '◻'}</span>
-            {label.toUpperCase()}
-            {badge != null && badge > 0 && (
-              <span
-                className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold"
-                style={{
-                  background: 'rgba(245,166,35,0.15)',
-                  color: 'var(--amber-hot)',
-                  border: '1px solid rgba(245,166,35,0.25)',
-                }}
-              >
-                {badge}
-              </span>
-            )}
+          <button key={t.id} data-tab={t.id} onClick={e => { if (!open(e, t.id)) onChange(t.id) }}
+            onAuxClick={e => { open(e, t.id) }} onMouseDown={e => { if (e.button === 1) e.preventDefault() }}
+            title={[tabKeyHint(i, desktop), '⌘-click: new window'].filter(Boolean).join(' · ')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '8px 5px', whiteSpace: 'nowrap', flex: '1 0 auto',
+                     background: on ? '#0e131c' : 'transparent', border: 'none', cursor: 'pointer',
+                     borderBottom: `2px solid ${on ? T.amber : 'transparent'}`, borderRight: `1px solid ${T.border}` }}>
+            {key && <span style={{ fontSize: 9, color: on ? T.bg : T.dim, background: on ? T.amber : 'transparent',
+                                   border: `1px solid ${on ? T.amber : T.border}`, padding: '0 4px', lineHeight: '14px' }}>{key}</span>}
+            <span style={{ fontFamily: T.display, fontSize: 11, fontWeight: 600, letterSpacing: .55,
+                           textTransform: 'uppercase', color: on ? T.amber : T.muted }}>{t.label}</span>
+            {t.badge ? <span style={{ fontSize: 9, color: T.bg, background: T.cyan, padding: '0 5px' }}>{t.badge}</span> : null}
           </button>
         )
       })}
-    </div>
+      <div style={{ position: 'sticky', right: 0, display: 'flex', flex: 'none', background: '#0b0f16' }}>
+      {more.length > 0 && <MoreMenu pages={more} active={active} onChange={onChange} />}
+      <button onClick={() => window.dispatchEvent(new Event('suryadhana:command'))} title={`Command bar — type a ticker or function code (/ or ${desktop ? '⌘K' : 'Ctrl+K'})`}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', flex: 'none',
+                 background: '#0b0f16', border: 'none', borderLeft: `1px solid ${T.borderHi}`, cursor: 'pointer' }}>
+        <span style={{ fontFamily: T.display, fontSize: 11.5, fontWeight: 700, letterSpacing: 1.2, color: T.amber }}>⌕ GO</span>
+        <span style={{ fontSize: 9, color: T.dim, border: `1px solid ${T.border}`, padding: '0 4px', lineHeight: '14px' }}>/</span>
+      </button>
+      </div>
+    </nav>
+  )
+}
+
+// ── header ────────────────────────────────────────────────────────────────────
+
+interface Props {
+  onRefresh: () => void
+  refreshing: boolean
+  totalStocks: number
+  latestDate?: string
+  activeTab: string
+  tabs: { id: string; label: string; badge?: number }[]
+  more?: MorePage[]
+  onTabChange: (id: string) => void
+}
+
+function Light({ name, ok, detail, onClick }: { name: string; ok: boolean | null; detail?: string; onClick?: () => void }) {
+  const c = ok === true ? T.green : ok === false ? T.red : T.dim
+  return (
+    <span title={detail || name} role={onClick ? 'button' : undefined} onClick={onClick}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 9.5, cursor: onClick ? 'pointer' : 'default',
+                   letterSpacing: 1.1, color: ok === false ? T.red : T.muted }}>
+      <span style={{ width: 6, height: 6, borderRadius: 6, background: c, boxShadow: ok ? `0 0 6px ${c}` : 'none' }} />
+      {name}
+    </span>
+  )
+}
+
+/**
+ * The ICICI light (P4, UI half). Its colour is data-service's own Breeze session, as before. While it is red the
+ * tooltip says WHY, from ui-api's connection-status error_kind (lib/iciciStatus.ts): an ICICI network outage reads
+ * 'ICICI unreachable (network) — not a login problem' instead of asking for a login; 'expired' keeps 'send /login'.
+ * That status is read only while the light is red: once on the edge, then every 2 min (10 min hidden); ui-api serves
+ * it from its probe cache.
+ */
+function IciciLight({ connected, provider, known }: { connected: boolean; provider: string | null; known: boolean }) {
+  const [status, setStatus] = useState<unknown>(null)
+  const linkDown = useShellState().link === 'down'
+  const hidden = useDocumentHidden()
+  const want = known && !connected && !linkDown
+  const wantRef = useRef(want)
+  wantRef.current = want
+  const alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  const read = useCallback(() => {
+    if (!wantRef.current) return
+    getICICIConnectionStatus()
+      .then(r => { if (alive.current) setStatus({ connected: r.data?.connected === true, error_kind: r.data?.error_kind,
+                                                   needs_api_credentials: r.data?.needs_api_credentials === true }) })
+      .catch(() => { if (alive.current) setStatus(null) })
+  }, [])
+  useEffect(() => { if (want) read(); else setStatus(null) }, [want, read])
+  usePolling(read, hidden ? 600_000 : 120_000)
+  return (
+    <Light name="ICICI" ok={connected} detail={iciciLightTitle(connected, provider, status)}
+           onClick={connected ? undefined : () => goToPage('broker')} />
+  )
+}
+
+export function MarketCommandHeader({ onRefresh, refreshing, totalStocks, latestDate, activeTab, tabs, more = [], onTabChange }: Props) {
+  const { dataServiceStatus: ds } = useDataServiceStatus()
+  const { desktop } = useShellState()
+  // pages outside the strip show their function code (WRAP, MOV…): long labels crowd the header row
+  const page = tabs.find(t => t.id === activeTab)?.label ?? more.find(m => m.id === activeTab)?.code ?? activeTab
+  return (
+    <header data-sd-header={desktop ? 'desktop' : 'browser'}
+      style={{ position: 'sticky', top: 'var(--shell-top, 0px)', zIndex: Z.header, background: T.bg, fontFamily: T.mono }}>
+      <div data-sd-row1 style={{ height: desktop ? 36 : 44, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${T.border}`,
+                                 background: '#07090d', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        {!desktop && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', height: '100%', flex: '0 1 auto', minWidth: 0 }}>
+            <span style={{ fontFamily: T.display, fontWeight: 700, letterSpacing: 2, color: T.amber, fontSize: 14, whiteSpace: 'nowrap',
+                           overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+              ◉ SURYADHANA <span style={{ color: T.dim }}>▸</span> <span style={{ color: T.bright }}>{page.toUpperCase()}</span>
+            </span>
+            <span className="t-hide-xl" style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1, whiteSpace: 'nowrap' }}>
+              {totalStocks ? `${totalStocks.toLocaleString('en-IN')} NSE` : ''}{latestDate ? ` · DATA ${latestDate}` : ''}
+            </span>
+          </div>
+        )}
+        <NiftyLive />
+        <span style={{ flex: 1, minWidth: 0 }} />
+        <div style={{ display: 'flex', gap: 12, padding: '0 14px', borderLeft: `1px solid ${T.border}`, height: '100%', alignItems: 'center', flex: 'none' }}>
+          {!desktop && <>
+            <Light name="DATA" ok={ds.health === 'ok' ? true : ds.health === 'error' ? false : null} detail={`data-service: ${ds.health}`} />
+            <span className="t-hide-md"><Light name="DB" ok={ds.ready} detail="DuckDB ready" /></span>
+          </>}
+          <IciciLight connected={ds.connected} provider={ds.provider} known={ds.lastChecked != null} />
+        </div>
+        {!desktop && <HeaderClock />}
+        <div style={{ padding: '0 12px', borderLeft: `1px solid ${T.border}`, height: '100%', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
+          <AlertsBell />
+          <UpdateDataButton refreshing={refreshing} onConfirm={onRefresh} />
+        </div>
+      </div>
+      <MacroTape />
+      <PageStrip tabs={tabs} more={more} active={activeTab} onChange={onTabChange} desktop={desktop} />
+    </header>
+  )
+}
+
+// ── UPDATE DATA (C1-trader-ux-12) ───────────────────────────────────────────────
+
+/** IST minutes in the EOD pipeline window (18:30–21:15), when data-service is busy with the nightly jobs. */
+export function inEodWindow(epochMs: number): boolean {
+  const m = istParts(epochMs).minutes
+  return m >= 18 * 60 + 30 && m < 21 * 60 + 15
+}
+
+/**
+ * The header's universe-wide download (POST /api/dashboard/refresh {universe nse_1500, years 5}). It used to be a
+ * bare '↻ REFRESH' next to page-level '↻ REFRESH' buttons that only reload a page, so it now says what it is and
+ * asks first, stating scope and duration. While a download runs, the button just reopens the progress panel.
+ * Same request as before once confirmed.
+ */
+function UpdateDataButton({ refreshing, onConfirm }: { refreshing: boolean; onConfirm: () => void }) {
+  const [ask, setAsk] = useState(false)
+  // inside the EOD window START DOWNLOAD needs a second, explicit click (CT-04)
+  const [armed, setArmed] = useState(false)
+  useEffect(() => { if (!ask) setArmed(false) }, [ask])
+  const [at, setAt] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
+  const btn = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!ask) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setAsk(false) } }
+    const onDown = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest?.('[data-update-data]')) setAsk(false) }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('mousedown', onDown)
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('mousedown', onDown) }
+  }, [ask])
+  const click = () => {
+    if (refreshing) { onConfirm(); return }        // a download is running: show its progress panel
+    const r = btn.current?.getBoundingClientRect()
+    if (r) setAt({ top: r.bottom + 6, right: Math.max(8, window.innerWidth - r.right) })
+    setAsk(a => !a)
+  }
+  const eod = ask && inEodWindow(Date.now())
+  return (
+    <>
+      <button ref={btn} data-update-data onClick={click} aria-haspopup="dialog" aria-expanded={ask}
+        title={refreshing ? 'A data download is running: show its progress' : 'Download missing daily prices for the 1,500-stock NSE universe (asks first)'}
+        style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: refreshing ? T.muted : T.amber, whiteSpace: 'nowrap',
+                 background: 'transparent', border: `1px solid ${ask ? T.amber : T.border}`, padding: '4px 9px', cursor: refreshing ? 'wait' : 'pointer' }}>
+        <span className={refreshing ? 't-pulse' : undefined}>⤓</span> {refreshing ? 'UPDATING DATA…' : 'UPDATE DATA'}
+      </button>
+      {ask && (
+        <div data-update-data role="dialog" aria-label="Update data"
+          style={{ position: 'fixed', top: at.top, right: at.right, zIndex: Z.dropdown, width: 380, background: '#0b0f16',
+                   border: `1px solid ${T.borderHi}`, borderTop: `2px solid ${T.amber}`, boxShadow: '0 12px 32px rgba(0,0,0,.6)',
+                   padding: '10px 12px', fontFamily: T.mono, whiteSpace: 'normal' }}>
+          <div style={{ fontFamily: T.display, fontSize: 11, fontWeight: 700, letterSpacing: 1.4, color: T.amber }}>
+            UPDATE DATA · 1,500 NSE STOCKS · UP TO 5 YEARS
+          </div>
+          <p style={{ margin: '8px 0 0', fontSize: 11, lineHeight: 1.5, color: T.text }}>
+            Downloads the missing daily prices (OHLCV) for the whole 1,500-stock universe from Yahoo Finance, up to five
+            years back. Only days that are not in the database yet are fetched. It runs in data-service for several
+            minutes; progress shows under the header.
+          </p>
+          <p style={{ margin: '6px 0 0', fontSize: 10.5, lineHeight: 1.5, color: T.muted }}>
+            To reload just this page&apos;s numbers, use the page&apos;s own ↻ REFRESH instead.
+          </p>
+          {eod && (
+            <p style={{ margin: '6px 0 0', fontSize: 10.5, lineHeight: 1.5, color: T.amber }}>
+              The EOD pipeline runs 18:30–21:15 IST: a download now competes with it for data-service.
+            </p>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
+            {/* focus starts on CANCEL: a reflexive Enter / Space never starts a universe-wide download (R-UI-SHELL-12) */}
+            <button autoFocus onClick={() => setAsk(false)}
+              style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted, background: 'transparent',
+                       border: `1px solid ${T.border}`, padding: '4px 10px', cursor: 'pointer' }}>CANCEL</button>
+            <button data-update-start onClick={() => {
+                if (eod && !armed) { setArmed(true); return }
+                setAsk(false); onConfirm()
+              }}
+              title={eod && !armed ? 'The EOD pipeline is running: click again to start anyway' : undefined}
+              style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: T.bg, background: T.amber,
+                       border: `1px solid ${T.amber}`, padding: '4px 10px', cursor: 'pointer' }}>
+              {eod ? (armed ? 'CONFIRM: START DURING EOD' : 'START ANYWAY…') : 'START DOWNLOAD'}</button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

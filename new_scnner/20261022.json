@@ -1,0 +1,308 @@
+{
+  "scan_date": "2026-10-22",
+  "generated_at": "2026-10-22 (scheduled run)",
+  "universe": "NSE/BSE only",
+  "methodology": "Soros-reflexivity Stage-1 soft-catalyst screen over public news/exchange-filing summaries for 21-22 Oct 2026 (plus pending DGTR findings from Sep-Oct 2026).",
+  "note": "Yahoo Finance tickers use .NS suffix (NSE). OMNI.NS symbol unverified. Not investment advice.",
+  "count": 16,
+  "stage1_candidates": [
+    {
+      "ticker": "PCJEWELLER.NS",
+      "yahoo_ticker": "PCJEWELLER.NS",
+      "company_name": "PC Jeweller Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Shadow Credit Upgrade / Debt Retirement (refinancing overhang cleared) + Strategic Investor Entry",
+      "news": "Filed 8 Oct 2026: all 14 consortium banks issued No-Dues/Release letters; mortgaged assets, guarantees and charges fully released. Q2 FY27 (reported 21 Oct): consolidated PAT +58% YoY to Rs331.1 cr, revenue +27.8% to Rs1,054.5 cr. Investor Aditya Kumar Halwasiya bought 5.51 cr shares for Rs101.3 cr.",
+      "market_consensus_gap": "Street still treats PCJ as a stressed ex-NPA turnaround with a governance discount and no rated/bankable balance sheet. Formal debt-free status means no rating agency has yet re-rated it; working-capital lines, gold-metal-loan access and institutional eligibility are not in the price.",
+      "reflexivity_thesis": "1) Debt-free + released collateral -> fresh rating initiation (likely investment grade over 2-3 quarters) -> access to cheap gold metal loans. 2) Interest cost falls to near zero -> PAT margin expansion sell-side has not modelled (few analysts cover). 3) Large HNI block buy signals accumulation; once rating lands, DII/PMS mandates can enter -> rising price validates turnaround narrative -> equity becomes currency for store expansion -> loop.",
+      "conviction_score": 7,
+      "source_urls": [
+        "https://www.outlookbusiness.com/spotlight/news-wire/pc-jeweller-completes-debt-clearance-secures-release-of-mortgaged-assets",
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-indian-hotels-pc-jeweller-seamec-and-others-october-22-2026"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "KEI.NS",
+      "yahoo_ticker": "KEI.NS",
+      "company_name": "KEI Industries Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Buyback Proposal (tender offer) - pre-approval stage",
+      "news": "Q2 FY27: PAT +29% YoY to Rs262.5 cr, revenue +38.5% to Rs3,776 cr, EBITDA margin -81 bps to 10.62% (missed estimates). Board to consider an equity buyback via tender offer. Stock fell 4.76% to Rs4,230.",
+      "market_consensus_gap": "Market punished the margin miss and ignored the buyback signal; consensus anchors to margin compression rather than to management's signal that the stock is undervalued and to 38% topline growth driven by cable capex.",
+      "reflexivity_thesis": "1) Tender-offer buyback (promoter likely non-participating or partially) creates a hard price floor + EPS accretion. 2) Margin dip is cyclical (commodity pass-through lag); revenue growth intact on Sanand capacity ramp. 3) Sell-off resets valuations -> buyback announcement with premium triggers re-entry from DII funds that trimmed on the miss -> reflexive recovery.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://scanx.trade/stock-market-news/markets/stocks-watch-today-october-22-2026-international-gemological/54178570"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "OCCLLTD.NS",
+      "yahoo_ticker": "OCCLLTD.NS",
+      "company_name": "OCCL Ltd (insoluble sulphur)",
+      "exchange": "NSE",
+      "catalyst_category": "DGTR Anti-Absorption Finding - duty enhancement pending notification",
+      "news": "DGTR final findings 18 Sep 2026 (AD (AA)-02/2026) in anti-absorption review on Insoluble Sulphur from China; OCCL Ltd is the sole applicant domestic industry. Anti-absorption findings typically raise the existing duty because Chinese exporters absorbed it.",
+      "market_consensus_gap": "Small-cap, thinly covered; market treats OCCL as a commoditised tyre-chem supplier facing Chinese price pressure. A higher duty materially changes domestic realisations for a near-monopoly Indian producer.",
+      "reflexivity_thesis": "1) MoF notification -> higher landed cost of Chinese insoluble sulphur -> OCCL pricing power with Indian tyre majors. 2) Operating leverage on underutilised capacity -> large % EPS revisions on low base. 3) Microcap with few analysts -> first broker initiation/PMS buying drives disproportionate re-rating.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://worldtradescanner.com/DGTR%20Issues%205%20Anti-dumping%20Final%20Findings%20in%20Just%20Four%20Days.htm"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "SEAMECLTD.NS",
+      "yahoo_ticker": "SEAMECLTD.NS",
+      "company_name": "Seamec Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Long-tenure Charter Contract (ONGC IMR via HAL Offshore)",
+      "news": "Seamec signed a deal with HAL Offshore to charter vessel SEAMEC ANANT for ONGC inspection, maintenance & repair work: ~1,225 days, ~US$55 million.",
+      "market_consensus_gap": "Small-cap with volatile utilisation; market discounts vessel idle time. A 3.4-year contracted charter is long-dated revenue visibility (~US$16m/yr) relative to company size.",
+      "reflexivity_thesis": "1) Locked-in day-rates lift fleet utilisation -> EBITDA visibility. 2) Few analysts -> upgraded estimates by smallcap desks. 3) Offshore capex upcycle (ONGC) narrative attracts thematic funds.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-indian-hotels-pc-jeweller-seamec-and-others-october-22-2026"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "SRF.NS",
+      "yahoo_ticker": "SRF.NS",
+      "company_name": "SRF Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "DGTR Anti-Dumping Final Findings - awaiting Finance Ministry notification (HFC blends ex-China)",
+      "news": "DGTR issued final findings (18 Sep 2026, AD (SSR)-10/2025) in sunset review on Hydrofluorocarbon (HFC) blends from China; SRF Ltd is the applicant domestic industry. Ministry of Finance must notify within 3 months (~by mid-Dec 2026).",
+      "market_consensus_gap": "Consensus models refrigerant-gas pricing as still depressed by Chinese dumping; the continuation of duty for 5 more years is not explicitly in chemicals-segment estimates.",
+      "reflexivity_thesis": "1) Notification extends price protection on HFC blends -> realisation stability in fluorochemicals. 2) Analysts lift FY28 chemicals EBIT -> PE re-rating of the specialty-chem segment. 3) Combined with seasonal refrigerant demand, DII re-allocation into SRF on 'chemicals bottom' narrative.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://worldtradescanner.com/DGTR%20Issues%205%20Anti-dumping%20Final%20Findings%20in%20Just%20Four%20Days.htm"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "NHPC.NS",
+      "yahoo_ticker": "NHPC.NS",
+      "company_name": "NHPC Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Hidden Capacity Commercialisation (Subansiri Lower HEP)",
+      "news": "Unit 5 (250 MW) of 2,000 MW Subansiri Lower HE Project declared in commercial operation; operational capacity now 1,250 MW (62.5%). Units 6-8 (750 MW) await final clearance. Stock closed Rs72.65 (+2.76%).",
+      "market_consensus_gap": "Street has repeatedly been burned by Subansiri delays and models slow ramp-up; each COD adds regulated-equity RoE that steps up EPS.",
+      "reflexivity_thesis": "1) Every 250 MW unit adds regulated return on large equity base. 2) Clearance for units 6-8 would complete 2 GW -> sizeable FY28 EPS jump. 3) Visible execution de-risking draws PSU/energy-transition FII flows.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://scanx.trade/stock-market-news/markets/stocks-watch-today-october-22-2026-international-gemological/54178570"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "GSFC.NS",
+      "yahoo_ticker": "GSFC.NS",
+      "company_name": "Gujarat State Fertilizers & Chemicals Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "DGTR Anti-Dumping Initiation (Caprolactam) - policy front-running",
+      "news": "6 Oct 2026: DGTR initiated anti-dumping probe on Caprolactam imports from China, Russia, Thailand and USA (applicant names not disclosed). GSFC is India's main caprolactam producer (inference - applicant not confirmed).",
+      "market_consensus_gap": "Market values GSFC on fertiliser subsidy flows; the loss-making/low-margin caprolactam-nylon chain is assumed permanently impaired by imports.",
+      "reflexivity_thesis": "1) Provisional/final duty over next 6-12 months lifts caprolactam spreads. 2) Industrial chemicals segment swings to profit -> EPS upgrades for a low-P/B PSU. 3) PSU value funds re-rate on 'hidden chemicals turnaround'.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://aninews.in/news/business/dgtr-launches-five-anti-dumping-probes-on-chinese-imports-steps-up-trade-remedy-action20261006130812/"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "DBOL.NS",
+      "yahoo_ticker": "DBOL.NS",
+      "company_name": "Dhampur Bio Organics Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "New-Business Foray / Technology Licence (mycoprotein)",
+      "news": "Signed technology licensing agreement with Switzerland's Planetary SA for exclusive mycoprotein production in India using BioBlocks fermentation platform; Planetary claims costs could fall below $1/kg. Capacity, investment and timeline not disclosed. Stock Rs135.14 (+2.67%).",
+      "market_consensus_gap": "Priced as a cyclical sugar/ethanol mill at low multiples; no value assigned to alternative-protein optionality using captive sugar feedstock.",
+      "reflexivity_thesis": "1) Capex/timeline disclosure would convert option into a modelled segment. 2) Narrative shift from sugar to biotech re-rates multiple. 3) Small float -> momentum funds amplify. Execution risk high.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://hdfcsky.com/news/stocks-to-watch-today-wednesday-october-21-2026-reliance-industries-railtel-infosys-hindustan-zinc-dhampur-bio-organics"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "OMNI.NS",
+      "yahoo_ticker": "OMNI.NS",
+      "company_name": "Omnitech Engineering Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Aerospace & Defence Order Inflow (undisclosed value)",
+      "news": "Exchange filing 21 Oct 2026 disclosed fresh aerospace & defence orders for precision components (value/customers undisclosed). Stock +13.69% to Rs675 on 22 Oct with 2.26 cr volume. Listed Feb 2026 IPO. (Ticker symbol to be verified - reported as OMNI.)",
+      "market_consensus_gap": "Recent IPO, largely valued as an industrial precision-components maker; aerospace qualification is an entry into a high-margin, sticky vertical.",
+      "reflexivity_thesis": "1) Aerospace qualification -> repeat programme orders. 2) Mix shift lifts margins. Partly priced after +13.7% move; conviction capped.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://www.multibagg.ai/market-pulse/articles/top-gainers-india-today-cmvjfkpsr000y2go8it43xlzg"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "GRASIM.NS",
+      "yahoo_ticker": "GRASIM.NS",
+      "company_name": "Grasim Industries Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Import Substitution CapEx Commercialisation (Epichlorohydrin)",
+      "news": "21 Oct 2026: Grasim began commercial production at its 50,000 TPA Epichlorohydrin (ECH) plant at Vilayat, Gujarat, extending its chlor-alkali derivatives chain. Stock closed Rs2,889.10 (+0.35%).",
+      "market_consensus_gap": "Grasim trades as a holdco (UltraTech/ABCap) plus paints-burn story; chemicals segment additions are not modelled. ECH (epoxy resin feedstock) is largely imported into India.",
+      "reflexivity_thesis": "1) ECH captive use with chlorine integration improves chlor-alkali ECU realisations. 2) Chemicals EBITDA upgrades offset paints losses -> holdco discount narrows. Large-cap, so incremental effect is modest.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://www.angelone.in/news/stocks/grasim-industries-share-price-in-focus-as-ech-plant-begins-commercial-production"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "TRF.NS",
+      "yahoo_ticker": "TRF.NS",
+      "company_name": "TRF Ltd (Tata Steel group)",
+      "exchange": "NSE",
+      "catalyst_category": "Strategic Investor Accumulation (SAST >5% via open market)",
+      "news": "Counter Cyclical Investments raised its stake in TRF Ltd to 5.37% via open-market purchases (SAST disclosure, ~Oct 2026; full article could not be fetched).",
+      "market_consensus_gap": "TRF is an ignored Tata Steel subsidiary microcap; a value-focused investor crossing 5% signals perceived turnaround/strategic value (possible merger into Tata Steel).",
+      "reflexivity_thesis": "1) Disclosure draws attention -> follow-on buying. 2) Any Tata Steel consolidation move would force a swap-ratio rerating. Speculative.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://scanx.trade/stock-market-news/companies/counter-cyclical-investments-raises-trf-ltd-stake-5-37-via-open-market/54131299"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "HINDALCO.NS",
+      "yahoo_ticker": "HINDALCO.NS",
+      "company_name": "Hindalco Industries Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "DGTR Anti-Dumping Sunset Review (aluminium foil) - notification pending",
+      "news": "DGTR final findings 14 Sep 2026 recommending continuation of anti-dumping duty on aluminium foil (<=80 micron) from China, Indonesia, Malaysia, Thailand; applicants include Hindalco, Raviraj Foils, LSKB Aluminium Foils.",
+      "market_consensus_gap": "Immaterial at Hindalco group level; mostly ignored.",
+      "reflexivity_thesis": "Marginal: protects downstream foil margins; not large enough to move consolidated EPS. Included under zero-miss policy.",
+      "conviction_score": 2,
+      "source_urls": [
+        "https://worldtradescanner.com/DGTR%20Issues%205%20Anti-dumping%20Final%20Findings%20in%20Just%20Four%20Days.htm"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "LUPIN.NS",
+      "yahoo_ticker": "LUPIN.NS",
+      "company_name": "Lupin Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "DGTR Anti-Dumping Original Investigation (Ethambutol HCl API) - notification pending",
+      "news": "DGTR final findings 17 Sep 2026 (AD (OI)-22/2025) on Ethambutol Hydrochloride from China and Thailand; Lupin is the applicant.",
+      "market_consensus_gap": "Negligible relative to Lupin's size; signals India API import-substitution policy support.",
+      "reflexivity_thesis": "Small API-level margin gain; low EPS impact. Included for completeness.",
+      "conviction_score": 2,
+      "source_urls": [
+        "https://worldtradescanner.com/DGTR%20Issues%205%20Anti-dumping%20Final%20Findings%20in%20Just%20Four%20Days.htm"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "ZYDUSLIFE.NS",
+      "yahoo_ticker": "ZYDUSLIFE.NS",
+      "company_name": "Zydus Lifesciences Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Biologics Capability Partnership",
+      "news": "Zylidac Bio (Zydus unit) partnered Prolific Machines to scale its platform from early development to GMP biologics production. No financials disclosed.",
+      "market_consensus_gap": "Consensus values Zydus on US generics; biologics/CDMO optionality is unpriced.",
+      "reflexivity_thesis": "Early-stage; adds narrative support to a biologics CDMO thesis. Low near-term EPS impact.",
+      "conviction_score": 2,
+      "source_urls": [
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-indian-hotels-pc-jeweller-seamec-and-others-october-22-2026"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "TATACOMM.NS",
+      "yahoo_ticker": "TATACOMM.NS",
+      "company_name": "Tata Communications Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Contingent Liability Removal (legal win)",
+      "news": "Spanish court ruled in favour of subsidiary TC Spain, annulling a VAT demand of EUR15.51m and penalty of EUR18.10m (~EUR33.6m total).",
+      "market_consensus_gap": "Small vs market cap, but removes a contingent liability.",
+      "reflexivity_thesis": "Minor balance-sheet de-risking; possible provision write-back. Low impact.",
+      "conviction_score": 2,
+      "source_urls": [
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-indian-hotels-pc-jeweller-seamec-and-others-october-22-2026"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "ETERNAL.NS",
+      "yahoo_ticker": "ETERNAL.NS",
+      "company_name": "Eternal Ltd",
+      "exchange": "NSE",
+      "catalyst_category": "Corporate Restructuring (slump sale of Going-out business + share swap with Mygate/Adonmo)",
+      "news": "Board approved Q2/H1 results, transfer of Going-out India business to ZEPL via slump sale, and share-swap deal with Mygate and Adonmo.",
+      "market_consensus_gap": "Restructuring simplifies segments; potential future value-unlock of going-out vertical not priced separately.",
+      "reflexivity_thesis": "Segment clarity -> SOTP re-rating possibilities; but large-cap, heavily covered. Low gap.",
+      "conviction_score": 2,
+      "source_urls": [
+        "https://www.multibagg.ai/market-pulse/articles/top-volume-stocks-india-today-cmvjfnvw800112go8g2g80wui"
+      ],
+      "news_date": "2026-10-22"
+    }
+  ],
+  "rejected": [
+    {
+      "company": "Yes Bank (YESBANK.NS)",
+      "stage": "STAGE 2",
+      "reason": "SC upheld quashing of Rs8,415 cr AT1 write-off; stock already crashed 10-14%. Priced-in casualty."
+    },
+    {
+      "company": "Infosys (INFY.NS)",
+      "stage": "STAGE 2",
+      "reason": "Truist >$500m deal; stock already +3.3%."
+    },
+    {
+      "company": "Bharat Electronics (BEL.NS)",
+      "stage": "STAGE 2",
+      "reason": "Rs1,011 cr routine order flow; heavily covered."
+    },
+    {
+      "company": "RailTel (RAILTEL.NS)",
+      "stage": "STAGE 2/3",
+      "reason": "Rs47.4 cr LoA - small, formal award."
+    },
+    {
+      "company": "Beta Drugs",
+      "stage": "STAGE 2",
+      "reason": "Q2 beat already gapped +18.4%."
+    },
+    {
+      "company": "Indian Hotels, M&M Financial, IGI, Hindustan Zinc, HPCL",
+      "stage": "STAGE 2",
+      "reason": "Q2 results already reported/priced."
+    },
+    {
+      "company": "Persistent Systems",
+      "stage": "STAGE 2",
+      "reason": "QIP (Rs4,265 cr) already launched - dilution event."
+    },
+    {
+      "company": "Reliance (Jio IPO)",
+      "stage": "STAGE 2",
+      "reason": "Front-page event."
+    },
+    {
+      "company": "NH-11 Rajasthan HAM tender",
+      "stage": "REJECT",
+      "reason": "L1 Shalimar Corp Ltd - not identified as listed; listed bidders PNC Infratech (L3), Dilip Buildcon (L8), H.G. Infra (L9) lost."
+    },
+    {
+      "company": "NSE (lock-in expiry)",
+      "stage": "STAGE 2",
+      "reason": "18.9m share lock-in expiry is a known calendar overhang."
+    },
+    {
+      "company": "Tata Teleservices, MTNL, Vans Electro, Balkrishna, Aurobindo",
+      "stage": "STAGE 3",
+      "reason": "Momentum moves with no company catalyst."
+    }
+  ]
+}

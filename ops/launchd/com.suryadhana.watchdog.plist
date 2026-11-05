@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Starts the SuryaDhana stack at login and keeps it running (scripts/stack_watchdog.sh).
+     __ROOT__ is replaced by scripts/install_launch_agents.sh. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.suryadhana.watchdog</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/bash</string><string>__ROOT__/scripts/stack_watchdog.sh</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>StartInterval</key><integer>120</integer>
+  <key>StandardOutPath</key><string>__ROOT__/.logs/watchdog.launchd.log</string>
+  <key>StandardErrorPath</key><string>__ROOT__/.logs/watchdog.launchd.log</string>
+</dict>
+</plist>

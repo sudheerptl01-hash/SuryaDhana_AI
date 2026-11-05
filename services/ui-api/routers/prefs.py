@@ -1,0 +1,687 @@
+"""
+User preferences, server-side (desktop program D3, PLAN §1 "User settings" / AC-12).
+
+The terminal's user settings (watchlist, pins, recents, saved tickets, page preferences) used to
+live only in each browser's localStorage, so the desktop app (a new origin) and every other
+browser started empty. They now live here, keyed exactly like the localStorage keys, and the UI
+client (ui/lib/prefs/sync.ts) hydrates before first render and writes through.
+
+GET    /api/prefs                          -> {prefs: {key: {value, updated_at, deleted, provisional, origin}}, server_time,
+                                               migration: {legacy_import_at, legacy_origin, legacy_keys, inferred}}
+PUT    /api/prefs/{key}   {value, updated_at}   last-write-wins per key; older -> 409 + current
+DELETE /api/prefs/{key}?updated_at=<ms>         tombstone (deleted=true) so deletes propagate
+POST   /api/prefs/import  {items: {key: value}, origin, provisional?: bool}
+                                           fill-only migration (never overwrites a real value;
+                                           tombstones count as present) ->
+                                           {imported, skipped, rejected, prefs, server_time}
+
+Migration and provisional values
+- A LEGACY import (provisional=false, the default) carries values that existed in a browser's
+  localStorage before the sync code first ran there (the old :3000 origin): it fills keys that are
+  absent OR provisional on the server.
+- A PROVISIONAL import (provisional=true) carries values a never-synced device wrote after the
+  sync code was installed, typically a component persisting its default state on first mount (the
+  watchlist's `[]`): it fills absent keys only and is marked provisional, so a later legacy import
+  still wins over it. Without this, opening the desktop app first would plant `[]` on the server
+  and the owner's real watchlist from the old origin would be skipped.
+- Any PUT/DELETE is a deliberate write and clears the provisional mark (LWW as usual).
+
+Migration provenance (wave-2 contract K2): GET returns a durable top-level ``migration`` block,
+``{legacy_import_at: epoch ms | null, legacy_origin: str | null, legacy_keys: int, inferred: bool}``.
+It is written ONCE, by the first legacy import FROM A LEGACY BROWSER ORIGIN (http(s) on port 3000, the
+old browser terminal; the same rule as the backfill and the UI's isLegacyBrowserOrigin) that carries at least
+one valid item (``legacy_keys`` = the keys that import actually filled; 0 when the server already held real
+values for all of them). A non-provisional import from any other origin (an earlier app build's WKWebView store,
+a browser tab on localhost:8010) fills values as before but records no migration (desktop review RAPI-02), and a
+block that an older build wrote for such an origin is reported as NO_MIGRATION and replaced by the first real
+one. Otherwise nothing clears it: PUTs and DELETEs rewrite a record's own ``origin``/``provisional`` (so per-record
+provenance fades as the owner edits), but never this block. It lives in the ``meta`` table. A store that
+already held the migration before this field existed is backfilled once from per-record provenance (the
+UI's own rule: live, non-provisional records written from a port-3000 origin); that block says
+``inferred: true`` and its ``legacy_import_at`` is the earliest such record's server time. Never
+migrated: ``{legacy_import_at: null, legacy_origin: null, legacy_keys: 0, inferred: false}``. A quarantined
+(corrupt) store starts a fresh block. The UI's migration notice and ``start-local.sh status`` read it.
+
+Semantics
+- `updated_at` is the client's change time in epoch ms (Date.now()). A write wins iff its
+  updated_at is newer than the stored one; an identical (updated_at, value, deleted) replay is an
+  idempotent 200 (several windows may flush the same queued write); anything else -> 409 with
+  the current record so the client adopts the server state. Timestamps > now + 24 h are refused
+  (a far-future stamp would win forever).
+- Limits: key ^[A-Za-z0-9._:-]{1,128}$, value <= 256 KB (UTF-8), <= 5 MB across live values,
+  <= 500 live keys. Tombstones do not count and are pruned after 90 days.
+- Values are opaque strings (the localStorage value verbatim). Lone UTF-16 surrogates cannot be
+  stored as SQLite TEXT and are refused with 422.
+- PUT and import require `Content-Type: application/json` (415 otherwise; desktop review
+  C2-security-08): a cross-site page can send `text/plain` or form bodies without a CORS preflight, so
+  together with the Origin guard (shared/http_guard.py) this keeps other sites from filling the quota.
+
+Storage: SQLite (NOT DuckDB: tiny, write-heavy, must never contend with the 4 GB market DB),
+file PREFS_DB (default <repo>/data/ui_prefs.sqlite), WAL, busy_timeout 5 s, created on demand,
+schema versioned with PRAGMA user_version (1). The ``meta`` table (k TEXT PRIMARY KEY, v TEXT) is
+additive and created on open without changing user_version: a ui-api from before K2 ignores it, so a
+rollback keeps working on the same file. A file that is not a database / is corrupt is
+renamed to `<file>.corrupt-<ts>` (never deleted) and a fresh store is created: preferences are
+replicated in every client, and clients re-upload keys the server lacks, so the store self-heals.
+A store written by a NEWER schema is refused with 503 (never downgraded).
+
+Event loop: GET/DELETE are sync handlers (threadpool); PUT/import read the capped body
+asynchronously and run the SQLite work in the threadpool. Logs are structured JSON lines with
+keys, sizes and outcomes only, never values.
+"""
+from __future__ import annotations
+
+import contextlib
+import json
+import logging
+import os
+import re
+import sqlite3
+import threading
+import time
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlsplit
+
+from errors import error_block, fail
+from fastapi import APIRouter, Query, Request
+from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
+
+router = APIRouter()
+log = logging.getLogger("ui-api.prefs")
+
+KEY_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+MAX_VALUE_BYTES = 256 * 1024
+MAX_TOTAL_BYTES = 5 * 1024 * 1024
+MAX_KEYS = 500
+MAX_IMPORT_ITEMS = 500
+TOMBSTONE_TTL_MS = 90 * 24 * 3600 * 1000
+MAX_FUTURE_SKEW_MS = 24 * 3600 * 1000
+MAX_TIMESTAMP = 2**53 - 1
+# Request body caps (JSON escaping can inflate a value up to 6x for control characters).
+MAX_PUT_BODY = 6 * MAX_VALUE_BYTES + 4096
+MAX_IMPORT_BODY = 8 * 1024 * 1024
+SCHEMA_VERSION = 1
+BUSY_TIMEOUT_MS = 5000
+META_MIGRATION = "migration"                 # meta row: the K2 migration block (JSON)
+META_MIGRATION_CHECKED = "migration.backfill_checked"
+LEGACY_BROWSER_PORT = 3000                   # the old browser terminal (ui/lib/prefs/migration.ts)
+NO_MIGRATION: dict[str, Any] = {"legacy_import_at": None, "legacy_origin": None, "legacy_keys": 0, "inferred": False}
+
+_SQLITE_CORRUPT = 11
+_SQLITE_NOTADB = 26
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def _event(event: str, **fields: Any) -> None:
+    """One structured JSON log line (never values: keys, sizes, outcomes)."""
+    with contextlib.suppress(Exception):  # logging must never break a request
+        log.info(json.dumps({"event": event, **fields}, ensure_ascii=False, default=str))
+
+
+def default_db_path() -> Path:
+    env = os.environ.get("PREFS_DB", "").strip()
+    if env:
+        return Path(env).expanduser()
+    for root in (Path(__file__).resolve().parents[3] / "data", Path("/app/data")):
+        if root.is_dir():
+            return root / "ui_prefs.sqlite"
+    return Path("ui_prefs.sqlite")
+
+
+class PrefsUnavailable(RuntimeError):
+    """The store cannot be opened (newer schema, unreadable directory, disk I/O)."""
+
+
+class QuotaExceeded(ValueError):
+    pass
+
+
+class InvalidValue(ValueError):
+    pass
+
+
+def _utf8_len(value: str) -> int:
+    try:
+        return len(value.encode("utf-8"))
+    except UnicodeEncodeError as e:  # lone surrogate: not storable as SQLite TEXT
+        raise InvalidValue("value is not valid unicode (lone surrogate)") from e
+
+
+def _is_corruption(e: BaseException) -> bool:
+    if not isinstance(e, sqlite3.DatabaseError) or isinstance(e, sqlite3.OperationalError):
+        return False
+    code = getattr(e, "sqlite_errorcode", None)
+    if code is not None:
+        return (code & 0xFF) in (_SQLITE_CORRUPT, _SQLITE_NOTADB)
+    msg = str(e).lower()
+    return "not a database" in msg or "malformed" in msg
+
+
+def is_legacy_browser_origin(origin: Any) -> bool:
+    """http(s) origin on port 3000 (same rule as ui/lib/prefs/migration.ts isLegacyBrowserOrigin)."""
+    if not isinstance(origin, str) or not origin:
+        return False
+    try:
+        u = urlsplit(origin)
+        return u.scheme in ("http", "https") and u.port == LEGACY_BROWSER_PORT
+    except ValueError:
+        return False
+
+
+def _migration_block(raw: str | None) -> dict[str, Any]:
+    if not raw:
+        return dict(NO_MIGRATION)
+    try:
+        d = json.loads(raw)
+    except ValueError:
+        return dict(NO_MIGRATION)
+    if not isinstance(d, dict):
+        return dict(NO_MIGRATION)
+    at, origin, keys = d.get("legacy_import_at"), d.get("legacy_origin"), d.get("legacy_keys")
+    if not is_legacy_browser_origin(origin):       # written by the pre-RAPI-02 rule for a non-3000 origin
+        return dict(NO_MIGRATION)
+    return {
+        "legacy_import_at": int(at) if isinstance(at, (int, float)) and not isinstance(at, bool) else None,
+        "legacy_origin": origin if isinstance(origin, str) else None,
+        "legacy_keys": int(keys) if isinstance(keys, int) and not isinstance(keys, bool) and keys >= 0 else 0,
+        "inferred": bool(d.get("inferred", False)),
+    }
+
+
+def _record(row: sqlite3.Row | tuple | None) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    _key, value, updated_at, deleted = row[0], row[1], row[2], row[3]
+    return {"value": None if deleted else value, "updated_at": int(updated_at), "deleted": bool(deleted)}
+
+
+class PrefsStore:
+    """One SQLite file, one serialized connection (writes are tiny; a lock is simpler than a pool).
+
+    BEGIN IMMEDIATE + busy_timeout also make it safe if two processes ever share the file.
+    """
+
+    def __init__(self, path: Path):
+        self.path = Path(path)
+        self._lock = threading.RLock()
+        self._conn: sqlite3.Connection | None = None
+
+    # ── connection lifecycle ───────────────────────────────────────────────────────────────
+    def _open(self) -> sqlite3.Connection:
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise PrefsUnavailable(f"cannot create {self.path.parent.name}/: {e.strerror}") from e
+        deadline = time.monotonic() + BUSY_TIMEOUT_MS / 1000
+        while True:
+            conn = sqlite3.connect(str(self.path), timeout=BUSY_TIMEOUT_MS / 1000, isolation_level=None,
+                                   check_same_thread=False)
+            try:
+                conn.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
+                # Switching a fresh file to WAL takes an exclusive lock and can return SQLITE_BUSY
+                # without consulting the busy handler, so racing first opens retry here.
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA synchronous=NORMAL")
+                self._migrate(conn)
+                self._ensure_meta(conn)
+                return conn
+            except sqlite3.OperationalError as e:
+                conn.close()
+                msg = str(e).lower()
+                if ("locked" in msg or "busy" in msg) and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                    continue
+                raise
+            except BaseException:
+                conn.close()
+                raise
+
+    @staticmethod
+    def _migrate(conn: sqlite3.Connection) -> None:
+        version = int(conn.execute("PRAGMA user_version").fetchone()[0])
+        if version > SCHEMA_VERSION:
+            raise PrefsUnavailable(f"prefs store schema v{version} is newer than this ui-api (v{SCHEMA_VERSION})")
+        if version == SCHEMA_VERSION:
+            return
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            version = int(conn.execute("PRAGMA user_version").fetchone()[0])  # re-check under the lock
+            if version == SCHEMA_VERSION:
+                conn.execute("COMMIT")
+                return
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS prefs (
+                       key        TEXT PRIMARY KEY,
+                       value      TEXT,
+                       updated_at INTEGER NOT NULL,
+                       deleted    INTEGER NOT NULL DEFAULT 0,
+                       bytes      INTEGER NOT NULL DEFAULT 0,
+                       provisional INTEGER NOT NULL DEFAULT 0,
+                       origin     TEXT,
+                       server_at  INTEGER NOT NULL
+                   ) WITHOUT ROWID"""
+            )
+            conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+            conn.execute("COMMIT")
+        except BaseException:
+            conn.execute("ROLLBACK")
+            raise
+
+    @staticmethod
+    def _ensure_meta(conn: sqlite3.Connection) -> None:
+        """The additive meta table, plus a one-time backfill of the K2 migration block for a store that was
+        migrated before the block existed (see the module docstring)."""
+        conn.execute("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL) WITHOUT ROWID")
+        if conn.execute("SELECT 1 FROM meta WHERE k = ?", (META_MIGRATION_CHECKED,)).fetchone():
+            return
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            if conn.execute("SELECT 1 FROM meta WHERE k = ?", (META_MIGRATION_CHECKED,)).fetchone() is None:
+                has_block = conn.execute("SELECT 1 FROM meta WHERE k = ?", (META_MIGRATION,)).fetchone()
+                rows = conn.execute("SELECT origin, server_at FROM prefs WHERE deleted = 0 AND provisional = 0 "
+                                    "AND origin IS NOT NULL").fetchall()
+                legacy = [(str(o), int(at)) for o, at in rows if is_legacy_browser_origin(o)]
+                if legacy and not has_block:
+                    counts: dict[str, int] = {}
+                    for o, _ in legacy:
+                        counts[o] = counts.get(o, 0) + 1
+                    origin = min(counts, key=lambda o: (-counts[o], o))
+                    block = {"legacy_import_at": min(at for _, at in legacy), "legacy_origin": origin,
+                             "legacy_keys": len(legacy), "inferred": True}
+                    conn.execute("INSERT INTO meta (k, v) VALUES (?, ?)", (META_MIGRATION, json.dumps(block)))
+                    _event("prefs.migration_backfilled", origin=origin, keys=len(legacy))
+                conn.execute("INSERT INTO meta (k, v) VALUES (?, ?)", (META_MIGRATION_CHECKED, str(_now_ms())))
+            conn.execute("COMMIT")
+        except BaseException:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK")
+            raise
+
+    def _quarantine(self, err: BaseException) -> None:
+        if self._conn is not None:
+            with contextlib.suppress(Exception):  # a corrupt file may refuse a clean close
+                self._conn.close()
+            self._conn = None
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        moved = []
+        for suffix in ("", "-wal", "-shm"):
+            p = Path(str(self.path) + suffix)
+            if p.exists():
+                dest = Path(f"{self.path}{suffix}.corrupt-{stamp}")
+                try:
+                    p.replace(dest)
+                    moved.append(dest.name)
+                except OSError:
+                    pass
+        log.error(json.dumps({"event": "prefs.quarantine", "file": self.path.name, "moved": moved,
+                              "error": type(err).__name__, "message": str(err)[:200]}))
+
+    def _connection(self) -> sqlite3.Connection:
+        if self._conn is None:
+            try:
+                self._conn = self._open()
+            except PrefsUnavailable:
+                raise
+            except sqlite3.DatabaseError as e:
+                if not _is_corruption(e):
+                    raise PrefsUnavailable(f"prefs store unavailable: {e}") from e
+                self._quarantine(e)
+                try:
+                    self._conn = self._open()
+                except sqlite3.DatabaseError as e2:
+                    raise PrefsUnavailable(f"prefs store unavailable after quarantine: {e2}") from e2
+        return self._conn
+
+    def _run(self, fn):
+        """Run fn(conn) under the lock; on corruption quarantine, recreate and retry once."""
+        with self._lock:
+            for attempt in (0, 1):
+                conn = self._connection()
+                try:
+                    return fn(conn)
+                except sqlite3.DatabaseError as e:
+                    if attempt == 0 and _is_corruption(e):
+                        self._quarantine(e)
+                        continue
+                    if isinstance(e, sqlite3.OperationalError):
+                        raise PrefsUnavailable(f"prefs store busy or unwritable: {e}") from e
+                    raise
+            raise PrefsUnavailable("prefs store unavailable")  # pragma: no cover
+
+    def close(self) -> None:
+        with self._lock:
+            if self._conn is not None:
+                self._conn.close()
+                self._conn = None
+
+    # ── queries ────────────────────────────────────────────────────────────────────────────
+    def all(self) -> dict[str, dict[str, Any]]:
+        """Every record, plus its provenance (`provisional`, `origin`) for the UI's one-time migration notice."""
+        def q(conn: sqlite3.Connection):
+            rows = conn.execute(
+                "SELECT key, value, updated_at, deleted, provisional, origin FROM prefs ORDER BY key").fetchall()
+            return {r[0]: {**(_record(r) or {}), "provisional": bool(r[4]), "origin": r[5]} for r in rows}
+        return self._run(q)
+
+    def migration(self) -> dict[str, Any]:
+        """The durable K2 migration block (NO_MIGRATION until the first legacy import)."""
+        def q(conn: sqlite3.Connection):
+            row = conn.execute("SELECT v FROM meta WHERE k = ?", (META_MIGRATION,)).fetchone()
+            return _migration_block(row[0] if row else None)
+        return self._run(q)
+
+    def snapshot(self) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+        """Every record and the migration block, read under one lock."""
+        with self._lock:
+            return self.all(), self.migration()
+
+    @staticmethod
+    def _get(conn: sqlite3.Connection, key: str):
+        return conn.execute("SELECT key, value, updated_at, deleted FROM prefs WHERE key = ?", (key,)).fetchone()
+
+    @staticmethod
+    def _check_quota(conn: sqlite3.Connection, key: str, nbytes: int) -> None:
+        count, total = conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM prefs WHERE deleted = 0 AND key != ?", (key,)
+        ).fetchone()
+        if count + 1 > MAX_KEYS:
+            raise QuotaExceeded(f"too many preference keys (max {MAX_KEYS})")
+        if total + nbytes > MAX_TOTAL_BYTES:
+            raise QuotaExceeded(f"preferences exceed {MAX_TOTAL_BYTES // (1024 * 1024)} MB in total")
+
+    @staticmethod
+    def _prune(conn: sqlite3.Connection, now: int) -> None:
+        conn.execute("DELETE FROM prefs WHERE deleted = 1 AND server_at < ?", (now - TOMBSTONE_TTL_MS,))
+
+    def write(self, key: str, value: str | None, updated_at: int, origin: str | None = None
+              ) -> tuple[bool, dict[str, Any]]:
+        """LWW upsert (value None = tombstone). Returns (applied_or_idempotent, record)."""
+        deleted = value is None
+        nbytes = 0 if deleted else _utf8_len(value)  # type: ignore[arg-type]
+
+        def tx(conn: sqlite3.Connection):
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                cur = self._get(conn, key)
+                if cur is not None:
+                    c_updated, c_deleted, c_value = int(cur[2]), bool(cur[3]), cur[1]
+                    same = c_deleted == deleted and (deleted or c_value == value)
+                    if updated_at < c_updated or (updated_at == c_updated and not same):
+                        conn.execute("ROLLBACK")
+                        return False, _record(cur)
+                    if updated_at == c_updated and same:
+                        conn.execute("ROLLBACK")
+                        return True, _record(cur)
+                if not deleted:
+                    self._check_quota(conn, key, nbytes)
+                now = _now_ms()
+                conn.execute(
+                    """INSERT INTO prefs (key, value, updated_at, deleted, bytes, provisional, origin, server_at)
+                       VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+                       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at,
+                         deleted = excluded.deleted, bytes = excluded.bytes, provisional = 0,
+                         origin = excluded.origin, server_at = excluded.server_at""",
+                    (key, None if deleted else value, updated_at, int(deleted), nbytes, origin, now),
+                )
+                self._prune(conn, now)
+                conn.execute("COMMIT")
+                return True, {"value": None if deleted else value, "updated_at": updated_at, "deleted": deleted}
+            except BaseException:
+                if conn.in_transaction:
+                    conn.execute("ROLLBACK")
+                raise
+        return self._run(tx)
+
+    def import_items(self, items: dict[str, Any], origin: str | None, provisional: bool = False) -> dict[str, Any]:
+        """Fill-only import. Legacy (provisional=False): fills keys absent or provisional on the server.
+        Provisional: fills absent keys only, marked provisional. Tombstones always count as present."""
+        imported: list[str] = []
+        skipped: list[str] = []
+        rejected: dict[str, str] = {}
+        valid: dict[str, tuple[str, int]] = {}
+        for key in sorted(items):
+            value = items[key]
+            if not isinstance(key, str) or not KEY_RE.match(key):
+                rejected[str(key)[:140]] = "invalid key"
+                continue
+            if not isinstance(value, str):
+                rejected[key] = "value must be a string"
+                continue
+            try:
+                n = _utf8_len(value)
+            except InvalidValue as e:
+                rejected[key] = str(e)
+                continue
+            if n > MAX_VALUE_BYTES:
+                rejected[key] = f"value larger than {MAX_VALUE_BYTES // 1024} KB"
+                continue
+            valid[key] = (value, n)
+
+        def tx(conn: sqlite3.Connection):
+            conn.execute("BEGIN IMMEDIATE")
+            try:
+                now = _now_ms()
+                for key, (value, n) in valid.items():
+                    row = conn.execute("SELECT deleted, provisional, updated_at FROM prefs WHERE key = ?",
+                                       (key,)).fetchone()
+                    replace_provisional = (row is not None and not provisional and bool(row[1]) and not row[0])
+                    if row is not None and not replace_provisional:
+                        skipped.append(key)
+                        continue
+                    try:
+                        self._check_quota(conn, key, n)
+                    except QuotaExceeded as e:
+                        rejected[key] = str(e)
+                        continue
+                    stamp = max(now, int(row[2]) + 1) if row is not None else now
+                    conn.execute(
+                        """INSERT INTO prefs (key, value, updated_at, deleted, bytes, provisional, origin, server_at)
+                           VALUES (?, ?, ?, 0, ?, ?, ?, ?)
+                           ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at,
+                             deleted = 0, bytes = excluded.bytes, provisional = excluded.provisional,
+                             origin = excluded.origin, server_at = excluded.server_at""",
+                        (key, value, stamp, n, int(provisional), origin, now),
+                    )
+                    imported.append(key)
+                if not provisional and valid and is_legacy_browser_origin(origin):
+                    current = conn.execute("SELECT v FROM meta WHERE k = ?", (META_MIGRATION,)).fetchone()
+                    if current is None or _migration_block(current[0])["legacy_import_at"] is None:
+                        block = {"legacy_import_at": now, "legacy_origin": origin, "legacy_keys": len(imported),
+                                 "inferred": False}
+                        conn.execute("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)",
+                                     (META_MIGRATION, json.dumps(block)))
+                        _event("prefs.migration_recorded", origin=origin, keys=len(imported))
+                prefs = {}
+                for key in valid:
+                    rec = _record(self._get(conn, key))
+                    if rec is not None:
+                        prefs[key] = rec
+                conn.execute("COMMIT")
+                return prefs
+            except BaseException:
+                if conn.in_transaction:
+                    conn.execute("ROLLBACK")
+                raise
+        prefs = self._run(tx)
+        return {"imported": imported, "skipped": skipped, "rejected": rejected, "prefs": prefs}
+
+
+_stores: dict[str, PrefsStore] = {}
+_stores_lock = threading.Lock()
+
+
+def get_store() -> PrefsStore:
+    """The store for the current PREFS_DB (resolved per call so tests can repoint it)."""
+    path = default_db_path()
+    k = str(path)
+    with _stores_lock:
+        st = _stores.get(k)
+        if st is None:
+            st = _stores[k] = PrefsStore(path)
+        return st
+
+
+def close_all() -> None:
+    """Close every open store (tests; graceful shutdown)."""
+    with _stores_lock:
+        for st in _stores.values():
+            st.close()
+        _stores.clear()
+
+
+# ── HTTP layer ─────────────────────────────────────────────────────────────────────────────────
+
+def _check_key(key: str) -> None:
+    if not KEY_RE.match(key or ""):
+        fail(422, "invalid", "invalid preference key", hint="keys match ^[A-Za-z0-9._:-]{1,128}$")
+
+
+def _check_ts(updated_at: Any) -> int:
+    if isinstance(updated_at, bool) or not isinstance(updated_at, (int, float)):
+        fail(422, "invalid", "updated_at must be epoch milliseconds")
+    if isinstance(updated_at, float):
+        if not updated_at.is_integer():
+            fail(422, "invalid", "updated_at must be an integer (epoch ms)")
+        updated_at = int(updated_at)
+    if updated_at < 0 or updated_at > MAX_TIMESTAMP:
+        fail(422, "invalid", "updated_at out of range")
+    if updated_at > _now_ms() + MAX_FUTURE_SKEW_MS:
+        fail(422, "invalid", "updated_at is more than 24 h in the future", hint="check the client clock")
+    return int(updated_at)
+
+
+def _origin(o: Any) -> str | None:
+    if not isinstance(o, str):
+        return None
+    return re.sub(r"[^\x20-\x7e]", "", o)[:200] or None
+
+
+def _require_json_content_type(request: Request) -> None:
+    """415 unless the body is declared as JSON (`application/json`, parameters such as charset allowed)."""
+    media_type = (request.headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+    if media_type != "application/json":
+        fail(415, "invalid", "Content-Type must be application/json",
+             hint="send the body as JSON with the header Content-Type: application/json")
+
+
+async def _read_json(request: Request, limit: int) -> Any:
+    """Read the body with a hard cap (Content-Length is checked first, chunked bodies are counted)."""
+    _require_json_content_type(request)
+    cl = request.headers.get("content-length")
+    if cl is not None:
+        try:
+            if int(cl) > limit:
+                fail(413, "invalid", f"request body larger than {limit // 1024} KB")
+        except ValueError:
+            fail(400, "invalid", "bad Content-Length")
+    buf = bytearray()
+    async for chunk in request.stream():
+        buf.extend(chunk)
+        if len(buf) > limit:
+            fail(413, "invalid", f"request body larger than {limit // 1024} KB")
+    try:
+        return json.loads(bytes(buf) or b"null")
+    except (ValueError, UnicodeDecodeError):
+        fail(422, "invalid", "body is not valid JSON")
+
+
+def _unavailable(e: PrefsUnavailable):
+    _event("prefs.unavailable", message=str(e)[:200])
+    fail(503, "state", str(e), hint="the preferences store (PREFS_DB) could not be opened; the terminal keeps local settings")
+
+
+def _conflict(key: str, current: dict[str, Any]) -> JSONResponse:
+    message = "a newer value is stored on the server"
+    return JSONResponse({"detail": message, "error": error_block("state", message), "key": key,
+                         "current": current, "server_time": _now_ms()}, status_code=409)
+
+
+@router.get("")
+def list_prefs() -> dict[str, Any]:
+    """Every preference (tombstones included, so clients can apply deletes) plus the K2 migration block."""
+    try:
+        prefs, migration = get_store().snapshot()
+    except PrefsUnavailable as e:
+        _unavailable(e)
+    return {"prefs": prefs, "server_time": _now_ms(), "migration": migration}
+
+
+def _do_write(key: str, value: str | None, updated_at: int, origin: str | None, op: str):
+    try:
+        ok, rec = get_store().write(key, value, updated_at, origin)
+    except PrefsUnavailable as e:
+        _unavailable(e)
+    except QuotaExceeded as e:
+        _event(f"prefs.{op}", key=key, result="quota")
+        fail(413, "invalid", str(e), hint="remove unused preferences")
+    except InvalidValue as e:
+        fail(422, "invalid", str(e))
+    if not ok:
+        _event(f"prefs.{op}", key=key, result="conflict", updated_at=updated_at, current_at=rec["updated_at"])
+        return _conflict(key, rec)
+    _event(f"prefs.{op}", key=key, result="ok", updated_at=updated_at,
+           bytes=0 if value is None else len(value), origin=origin)
+    return {"key": key, "pref": rec, "server_time": _now_ms()}
+
+
+@router.put("/{key}")
+async def put_pref(key: str, request: Request):
+    """Last-write-wins upsert of one key: body {value: string, updated_at: epoch ms}."""
+    _check_key(key)
+    body = await _read_json(request, MAX_PUT_BODY)
+    if not isinstance(body, dict):
+        fail(422, "invalid", "body must be an object {value, updated_at}")
+    value = body.get("value")
+    if not isinstance(value, str):
+        fail(422, "invalid", "value must be a string")
+    updated_at = _check_ts(body.get("updated_at"))
+    try:
+        nbytes = _utf8_len(value)
+    except InvalidValue as e:
+        fail(422, "invalid", str(e))
+    if nbytes > MAX_VALUE_BYTES:
+        fail(413, "invalid", f"value larger than {MAX_VALUE_BYTES // 1024} KB")
+    origin = _origin(body.get("origin")) or _origin(request.headers.get("origin"))
+    return await run_in_threadpool(_do_write, key, value, updated_at, origin, "put")
+
+
+@router.delete("/{key}")
+def delete_pref(key: str, request: Request, updated_at: int | None = Query(None)):
+    """Tombstone one key (deleted=true) with LWW against the stored updated_at."""
+    _check_key(key)
+    if updated_at is None:
+        fail(422, "invalid", "updated_at query parameter is required (epoch ms)")
+    ts = _check_ts(updated_at)
+    return _do_write(key, None, ts, _origin(request.headers.get("origin")), "delete")
+
+
+@router.post("/import")
+async def import_prefs(request: Request):
+    """One-time migration: {items: {key: value}, origin}. Only keys absent on the server are written."""
+    body = await _read_json(request, MAX_IMPORT_BODY)
+    if not isinstance(body, dict) or not isinstance(body.get("items"), dict):
+        fail(422, "invalid", "body must be {items: {key: value}, origin}")
+    items: dict[str, Any] = body["items"]
+    if len(items) > MAX_IMPORT_ITEMS:
+        fail(413, "invalid", f"at most {MAX_IMPORT_ITEMS} items per import")
+    origin = _origin(body.get("origin"))
+    provisional = body.get("provisional", False)
+    if not isinstance(provisional, bool):
+        fail(422, "invalid", "provisional must be a boolean")
+
+    def run() -> dict[str, Any]:
+        try:
+            return get_store().import_items(items, origin, provisional)
+        except PrefsUnavailable as e:
+            _unavailable(e)
+            raise  # pragma: no cover - _unavailable raises
+
+    out = await run_in_threadpool(run)
+    _event("prefs.import", origin=origin, provisional=provisional, imported=out["imported"],
+           skipped=len(out["skipped"]), rejected=sorted(out["rejected"]))
+    return {**out, "server_time": _now_ms()}

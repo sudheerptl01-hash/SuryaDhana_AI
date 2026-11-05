@@ -1,456 +1,418 @@
 #!/usr/bin/env python
 """
-ICICI Breeze — Daily Session Token Auto-Refresh
-================================================
-Run once each morning before the market opens.
+ICICI Breeze — daily session token refresh (unattended with TOTP).
 
-What it does:
-  1. Checks if a fresh token was already obtained today — exits immediately if so.
-  2. Opens a real Chromium browser (via Playwright) at the ICICI login page.
-  3. Auto-fills your Client ID and Password from .env.
-  4. Pauses for you to enter the OTP sent to your registered mobile.
-  5. Captures the session_token from the redirect URL automatically.
-  6. Writes ICICI_SESSION_TOKEN into .env and stamps today's date.
+Scheduled by the master controller (08:00 IST Mon–Fri, and once at start-up on a
+trading morning). Also runnable by hand:
 
-Usage:
-    /Users/sudheer/Desktop/jupyter_env/bin/python scripts/daily_session_refresh.py
+    python scripts/daily_session_refresh.py             # visible browser; you may type the code
+    python scripts/daily_session_refresh.py --headless  # unattended (needs ICICI_TOTP_SECRET)
+    python scripts/daily_session_refresh.py --check     # only report whether today's token works
+    python scripts/daily_session_refresh.py --force     # log in even if the current token works
 
-Prerequisites in .env:
-    ICICI_API_KEY      — your Breeze API key
-    ICICI_CLIENT_ID    — your ICICI Direct client ID (login username)
-    ICICI_PASSWORD     — your ICICI Direct login password
-    ICICI_SESSION_TOKEN — updated by this script automatically
+Flow: keep the current token if it still works → otherwise log in on ICICI's real page
+(iDirect user ID + password + authenticator code, shared/icici_login.py) → hand the
+token to ui-api, which saves it to .env and reconnects the data/execution services.
+If ICICI's API cannot be reached, the current token is NOT treated as expired: no login is
+started (it would text an OTP for nothing) and the run ends "unreachable" (retry later).
+If ui-api does not take the token for about 2 minutes, the token is written to .env here and
+pushed to data-service directly, and the run reports a WARNING (outcome "warning"): ui-api keeps
+its old token until it restarts or the token is pasted on BRKR.
 
-Run once:   python scripts/daily_session_refresh.py
-Force-run:  python scripts/daily_session_refresh.py --force
+Secrets (never printed): ICICI_CLIENT_ID (iDirect user ID, e.g. AD206594),
+ICICI_PASSWORD, ICICI_TOTP_SECRET — from .env or the macOS Keychain. Recommended for
+the TOTP secret, so .env alone is not a full login:
+    security add-generic-password -U -s suryadhana -a ICICI_TOTP_SECRET -w
+
+Exit codes: 0 ok · 2 needs you (no TOTP secret, captcha, rejected login/code) · 3 retry
+later. The last stdout line is `RESULT {json}` for the scheduler: status (valid | refreshed |
+skipped | expired | unreachable | retry | needs_human | blocked), detail, and on a login
+"outcome": "ok" | "warning" with "via": "ui-api" | ".env".
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib.util
 import json
-import re
+import os
+import subprocess
 import sys
 import time
-from datetime import date
+from datetime import datetime
 from pathlib import Path
-from urllib.parse import parse_qs, quote, urlparse
+
+import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from shared.icici import extract_session_token  # noqa: E402
+from shared.icici_login import (  # noqa: E402
+    LoginNeedsHuman,
+    LoginTransient,
+    browser_login,
+    mask,
+    parse_totp_secret,
+    read_secret,
+)
+
 ENV_FILE = ROOT / ".env"
 CACHE_FILE = ROOT / ".session_cache.json"
+# After ICICI rejects the user ID / password, unattended runs stop retrying the same credentials: a broker locks
+# the account after a few wrong passwords. Cleared when the credentials in .env change or a login succeeds.
+BLOCK_FILE = ROOT / ".icici_login_block.json"
+SHOT_FILE = ROOT / ".logs" / "icici_login_failure.png"
+UI_API = os.getenv("UI_API_URL", "http://localhost:8010").rstrip("/")
+DATA_SERVICE = os.getenv("DATA_SERVICE_URL", "http://localhost:8001").rstrip("/")
+# ui-api's .env writer and Breeze check (one implementation for both): loaded by file path, because putting
+# services/ui-api on sys.path would shadow modules of master-controller, which imports this script.
+ICICI_ADMIN_FILE = ROOT / "services" / "ui-api" / "icici_admin.py"
 
-ICICI_LOGIN_URL = "https://api.icicidirect.com/apiuser/login?api_key={api_key}"  # api_key is URL-encoded at call site
-OTP_WAIT_SECONDS = 120  # how long to wait for the user to enter OTP
+# master-controller kills this script after 480 s, and up to 5 min of that may be the wait for your SMS OTP.
+# Every wait after the login is sized from what is left, so a slow ui-api cannot get the token lost in a kill.
+_STARTED = time.monotonic()
+RUN_BUDGET_S = 450.0
+UI_API_HANDOFF_MAX_S = 120.0       # "about 2 minutes" of hand-off retries (ui-api restarts take ~20-60 s)
+UI_API_HANDOFF_MIN_S = 15.0
+UI_API_RETRY_WAITS_S = (2.0, 4.0, 8.0, 15.0, 30.0)
+FALLBACK_RESERVE_S = 60.0          # kept back for the .env fallback: data-service's reconnect is a Breeze login
 
-
-# ── .env helpers ──────────────────────────────────────────────────────────────
-
-def _read_env() -> dict[str, str]:
-    result: dict[str, str] = {}
-    if not ENV_FILE.exists():
-        return result
-    for line in ENV_FILE.read_text().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            key, _, val = line.partition("=")
-            result[key.strip()] = val.strip()
-    return result
-
-
-def _write_env_value(key: str, value: str) -> None:
-    content = ENV_FILE.read_text()
-    pattern = rf"^{re.escape(key)}=.*$"
-    replacement = f"{key}={value}"
-    new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
-    if new_content == content:
-        # Key not found — append it
-        new_content = content.rstrip() + f"\n{key}={value}\n"
-    ENV_FILE.write_text(new_content)
+EXIT_OK, EXIT_NEEDS_HUMAN, EXIT_RETRY = 0, 2, 3
 
 
-# ── Cache helpers ─────────────────────────────────────────────────────────────
+# ── .env ─────────────────────────────────────────────────────────────────────────
 
-def _already_refreshed_today() -> bool:
-    if not CACHE_FILE.exists():
-        return False
+def read_env_file() -> dict[str, str]:
+    out: dict[str, str] = {}
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, val = line.partition("=")
+                out[key.strip()] = val.strip().strip('"').strip("'")
+    return out
+
+
+def _icici_admin():
+    """services/ui-api/icici_admin.py as a private module (see ICICI_ADMIN_FILE)."""
+    name = "_suryadhana_icici_admin"
+    mod = sys.modules.get(name)
+    if mod is None:
+        spec = importlib.util.spec_from_file_location(name, ICICI_ADMIN_FILE)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"cannot load {ICICI_ADMIN_FILE}")
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[name] = mod
+        try:
+            spec.loader.exec_module(mod)
+        except BaseException:
+            sys.modules.pop(name, None)
+            raise
+    return mod
+
+
+def write_env_value(key: str, value: str) -> None:
+    """Set KEY=value in .env the way ui-api does (desktop review P13): quoted when needed so '#', '$', quotes and
+    spaces read back exactly in python-dotenv and the plain parsers, re-read before an atomic rename, the file's
+    mode kept (a new .env is created 0600). Posture/guard keys (EXECUTION_*, GUARD_*, ...) are refused.
+
+    Raises ValueError naming the key, never the value, when the value cannot be stored exactly or the re-read
+    failed (.env is then left as it was). Used for the token fallback and by master-controller's /password and
+    /userid."""
+    admin = _icici_admin()
+    out = admin.persist_env_updates({key: value}, env_path=ENV_FILE)
+    if not out.get("persisted"):
+        raise ValueError(f"{key} was not saved to .env: {out.get('reason') or 'it would not read back exactly'}")
+
+
+# ── Breeze + ui-api ──────────────────────────────────────────────────────────────
+
+def check_token(api_key: str, api_secret: str, token: str, probe=None) -> tuple[str, str]:
+    """(state, message) for a session token: state is 'valid' or the public error kind 'expired' | 'network' |
+    'credentials' | 'unknown' (desktop review P4). The same Breeze check ui-api runs (network failures retried 3x),
+    so an ICICI outage is no longer mistaken for an expired token."""
+    if not (api_key and api_secret):
+        return "credentials", "ICICI_API_KEY / ICICI_API_SECRET missing"
+    if not token:
+        return "expired", "no session token"
+    admin = _icici_admin()
     try:
-        cache = json.loads(CACHE_FILE.read_text())
-        return cache.get("date") == str(date.today())
-    except Exception:
-        return False
+        res = (probe or admin.probe_breeze_connection)(api_key, api_secret, token)
+    except Exception as exc:  # noqa: BLE001 — the SDK raises bare Exception; classify it like the probe does
+        kind, message = admin.classify_breeze_error(str(exc))
+        return admin.public_error_kind(kind), message
+    if res.get("connected"):
+        return "valid", ""
+    return admin.public_error_kind(res.get("error_kind")), str(res.get("error") or "")
 
 
-def _stamp_today(token: str) -> None:
-    CACHE_FILE.write_text(json.dumps({"date": str(date.today()), "token": token[:6] + "***"}))
+def token_works(api_key: str, api_secret: str, token: str) -> bool:
+    """True when the token works now (False also when ICICI could not be reached: use check_token to tell)."""
+    return check_token(api_key, api_secret, token)[0] == "valid"
 
 
-# ── Token extraction ──────────────────────────────────────────────────────────
-
-def _extract_token_from_url(url: str) -> str | None:
-    # ICICI uses 'apisession' in the redirect URL (not 'session_token')
-    _PARAM_NAMES = ("apisession", "session_token", "SessionToken", "apiSession", "api_session")
-    try:
-        parsed = urlparse(url)
-        params = parse_qs(parsed.query)
-        for key in _PARAM_NAMES:
-            token = params.get(key, [None])[0]
-            if token:
-                return token
-        # Also check hash fragment
-        if parsed.fragment:
-            fparams = parse_qs(parsed.fragment)
-            for key in _PARAM_NAMES:
-                token = fparams.get(key, [None])[0]
-                if token:
-                    return token
-    except Exception:
-        pass
-    return None
+def _time_left() -> float:
+    return RUN_BUDGET_S - (time.monotonic() - _STARTED)
 
 
-def _extract_token_from_page(page_content: str) -> str | None:
-    match = re.search(
-        r"(?:apisession|session_token|apiSession)[\"']?\s*[:=]\s*[\"']?([A-Za-z0-9_\-]+)",
-        page_content,
-    )
-    return match.group(1) if match else None
+def handoff_budget_s() -> float:
+    """Seconds the ui-api hand-off may take: about 2 minutes, less when the login itself took long."""
+    return max(UI_API_HANDOFF_MIN_S, min(UI_API_HANDOFF_MAX_S, _time_left() - FALLBACK_RESERVE_S))
 
 
-# ── Browser automation ────────────────────────────────────────────────────────
+def handoff_to_ui_api(token: str, budget_s: float, post=None, clock=time.monotonic, sleep=time.sleep) -> tuple[dict | None, str]:
+    """POST the token to ui-api's /session-token until it answers 200 or ``budget_s`` runs out (P3).
 
-def _run_browser_flow(api_key: str, client_id: str, password: str) -> str:
-    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
-
-    print("\n  Opening ICICI login in browser...")
-    print("  → The browser will auto-fill your Client ID and Password.")
-    print("  → Enter the OTP on your phone when prompted.")
-    print(f"  → You have {OTP_WAIT_SECONDS} seconds to complete OTP entry.\n")
-
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=False, slow_mo=500)
-        context = browser.new_context()
-        page = context.new_page()
-
-        captured_token: list[str] = []
-
-        # ── Intercept the localhost redirect BEFORE Chrome tries to connect ────
-        # ICICI redirects to http://127.0.0.1/?session_token=XXX after login.
-        # Without interception Playwright navigates there, gets ERR_CONNECTION_REFUSED,
-        # and replaces the URL with chrome-error:// — losing the token.
-        # We route all 127.0.0.1/localhost requests, grab the token, show a
-        # success page, and abort the real network request.
-        def _intercept_redirect(route):
-            url = route.request.url
-            token = _extract_token_from_url(url)
-            if token and not captured_token:
-                captured_token.append(token)
-                print(f"\n  [AUTO] Session token captured from redirect URL!")
-                route.fulfill(
-                    status=200,
-                    content_type="text/html",
-                    body="<html><body style='font-family:sans-serif;padding:40px'>"
-                         "<h2 style='color:green'>✓ Login successful!</h2>"
-                         "<p>Session token captured. You can close this window.</p>"
-                         "</body></html>",
-                )
+    ui-api saves the token to .env, checks it with Breeze (10-40 s) and pushes it to the data/execution services.
+    Connection errors, timeouts and 5xx (ui-api restarting) are retried with backoff; a 4xx is final. Returns
+    (ui-api's JSON body, "") or (None, why it was not taken). ``fresh_login``: ICICI ended the previous session when
+    it issued this token, so ui-api saves it even if its check fails."""
+    post = post or httpx.post
+    deadline = clock() + budget_s
+    attempts, why = 0, "not tried"
+    while True:
+        remaining = deadline - clock()
+        if remaining <= 0:
+            break
+        attempts += 1
+        try:
+            r = post(f"{UI_API}/api/positions/session-token", json={"token": token, "fresh_login": True},
+                     timeout=max(5.0, remaining))
+            if r.status_code == 200:
+                body = r.json()
+                if isinstance(body, dict):
+                    return body, ""
+                why = "HTTP 200 without a JSON object"
             else:
-                route.abort()
-
-        context.route("http://127.0.0.1/**", _intercept_redirect)
-        context.route("http://localhost/**",  _intercept_redirect)
-        context.route("https://127.0.0.1/**", _intercept_redirect)
-        context.route("https://localhost/**",  _intercept_redirect)
-
-        # Fallback: also watch all responses and navigations
-        def _on_response(response):
-            url = response.url
-            token = _extract_token_from_url(url)
-            if token and not captured_token:
-                captured_token.append(token)
-
-        def _on_navigation(frame):
-            if frame == page.main_frame:
-                url = page.url
-                token = _extract_token_from_url(url)
-                if token and not captured_token:
-                    captured_token.append(token)
-
-        page.on("response", _on_response)
-        page.on("framenavigated", _on_navigation)
-
-        login_url = ICICI_LOGIN_URL.format(api_key=quote(api_key, safe=""))
-        page.goto(login_url, wait_until="domcontentloaded", timeout=45_000)
-
-        # ── Step 1: Fill Client ID ─────────────────────────────────────────────
-        if client_id:
-            _fill_field(page, [
-                'input[name="userId"]',
-                'input[id="userId"]',
-                'input[placeholder*="Client"]',
-                'input[placeholder*="User"]',
-                'input[type="text"]:visible',
-            ], client_id, label="Client ID")
-
-        # ── Step 2: Fill Password ──────────────────────────────────────────────
-        if password:
-            _fill_field(page, [
-                'input[name="password"]',
-                'input[id="password"]',
-                'input[type="password"]:visible',
-            ], password, label="Password")
-
-        # ── Step 3: Accept Terms & Conditions (checkbox or agree button) ───────
-        _accept_terms(page)
-        time.sleep(0.5)  # let page re-enable the login button after T&C check
-
-        # ── Step 4: Click login/submit ─────────────────────────────────────────
-        _click_button(page, [
-            'button[type="submit"]',
-            'button:text("Login")',
-            'button:text("Sign In")',
-            'button:text("Submit")',
-            'input[type="submit"]',
-            'a:text("Login")',
-        ])
-
-        print("  [WAITING] Enter the OTP in the browser window...")
-
-        # ── Step 4: Wait for OTP completion / redirect ─────────────────────────
-        deadline = time.time() + OTP_WAIT_SECONDS
-        while time.time() < deadline:
-            if captured_token:
-                break
-            # Also check current page URL
-            token = _extract_token_from_url(page.url)
-            if token:
-                captured_token.append(token)
-                break
-            # Check page content for token
-            try:
-                content = page.content()
-                token = _extract_token_from_page(content)
-                if token:
-                    captured_token.append(token)
-                    break
-            except Exception:
-                pass
-            time.sleep(2)
-
-        # ── Step 5: Fallback — ask user to paste URL ───────────────────────────
-        if not captured_token:
-            print("\n  [MANUAL FALLBACK] Could not auto-capture the session token.")
-            print("  After login completes, copy the full redirect URL from the browser.")
-            current_url = page.url
-            print(f"  Current URL: {current_url}\n")
-            try:
-                pasted = input("  Paste the redirect URL (or just the session_token value): ").strip()
-            except EOFError:
-                print("\n[ERROR] This script must be run from an interactive terminal, not a pipe.")
-                print("  Run: /Users/sudheer/Desktop/jupyter_env/bin/python scripts/daily_session_refresh.py")
-                browser.close()
-                sys.exit(1)
-            if pasted.startswith("http"):
-                token = _extract_token_from_url(pasted)
-                captured_token.append(token or pasted)
-            else:
-                captured_token.append(pasted)
-
-        browser.close()
-
-    if not captured_token or not captured_token[0]:
-        raise RuntimeError("Failed to obtain session token from ICICI login flow.")
-
-    return captured_token[0]
+                why = f"HTTP {r.status_code}"
+                if 400 <= r.status_code < 500 and r.status_code not in (408, 425, 429):
+                    return None, f"{why} (refused)"
+        except (httpx.HTTPError, ValueError) as exc:
+            why = type(exc).__name__
+        wait = UI_API_RETRY_WAITS_S[min(attempts - 1, len(UI_API_RETRY_WAITS_S) - 1)]
+        if clock() + wait >= deadline:
+            break
+        sleep(wait)
+    return None, f"{why} after {attempts} attempt(s) in {int(budget_s)} s"
 
 
-def _accept_terms(page) -> None:
-    """Check the T&C checkbox / click agree button if present on the ICICI login page."""
-    selectors = [
-        # Checkboxes
-        'input[type="checkbox"]:visible',
-        'input[name*="agree"]:visible',
-        'input[name*="terms"]:visible',
-        'input[id*="agree"]:visible',
-        'input[id*="terms"]:visible',
-        # Clickable labels / buttons
-        'label:has-text("agree"):visible',
-        'label:has-text("Terms"):visible',
-        'label:has-text("Agree"):visible',
-        'button:has-text("Agree"):visible',
-        'button:has-text("I Agree"):visible',
-        'a:has-text("Agree"):visible',
-        'span:has-text("I agree"):visible',
-    ]
-    for selector in selectors:
-        try:
-            el = page.wait_for_selector(selector, timeout=2_000, state="visible")
-            if el:
-                # For checkboxes only click if not already checked
-                tag = el.evaluate("el => el.tagName.toLowerCase()")
-                if tag == "input":
-                    checked = el.is_checked()
-                    if not checked:
-                        el.click()
-                        print("  [AUTO] Checked T&C checkbox")
-                else:
-                    el.click()
-                    print("  [AUTO] Clicked T&C agree button")
-                time.sleep(0.5)
-                return
-        except Exception:
-            continue
-    # T&C element not found — not all ICICI pages require it
-    pass
-
-
-def _fill_field(page, selectors: list[str], value: str, label: str) -> None:
-    from playwright.sync_api import TimeoutError as PWTimeout
-    for selector in selectors:
-        try:
-            page.wait_for_selector(selector, timeout=3_000, state="visible")
-            page.fill(selector, value)
-            print(f"  [AUTO] Filled {label}")
-            return
-        except Exception:
-            continue
-    print(f"  [SKIP] Could not auto-fill {label} — fill it manually in the browser.")
-
-
-def _click_button(page, selectors: list[str]) -> None:
-    # Extended selector list covering ICICI Direct's various page layouts
-    extended = selectors + [
-        "#btnSubmit",
-        "#submit",
-        "#loginBtn",
-        "#login-btn",
-        ".btn-primary",
-        ".login-button",
-        ".submit-btn",
-        'button[class*="login"]',
-        'button[class*="submit"]',
-        'button[class*="btn"]',
-        'input[class*="btn"]',
-        'input[class*="login"]',
-        # Last resort: any visible button on the page
-        "button:visible",
-    ]
-    for selector in extended:
-        try:
-            el = page.wait_for_selector(selector, timeout=2_000, state="visible")
-            if el:
-                el.click()
-                print(f"  [AUTO] Clicked login button ({selector})")
-                return
-        except Exception:
-            continue
-
-    # Final fallback: press Enter on the password field (submits most login forms)
+def push_token_to_data_service(api_key: str, api_secret: str, token: str, timeout_s: float, post=None) -> dict:
+    """data-service's POST /provider/configure takes the credentials in its body (a missing field = its own
+    environment, which still holds the old token). Send the new token so live quotes reconnect with it now."""
+    post = post or httpx.post
     try:
-        pw_field = page.query_selector('input[type="password"]:visible')
-        if pw_field:
-            pw_field.press("Enter")
-            print("  [AUTO] Submitted login via Enter key")
-            return
-    except Exception:
+        r = post(f"{DATA_SERVICE}/provider/configure",
+                 json={"api_key": api_key, "api_secret": api_secret, "session_token": token}, timeout=timeout_s)
+        body = r.json() if r.status_code == 200 else {}
+        return {"ok": r.status_code == 200, "connected": bool(isinstance(body, dict) and body.get("connected")),
+                "status_code": r.status_code}
+    except (httpx.HTTPError, ValueError) as exc:
+        return {"ok": False, "connected": False, "error": type(exc).__name__}
+
+
+def apply_token(token: str, api_key: str, api_secret: str) -> dict:
+    """Hand the new token to ui-api (retried for about 2 minutes). If ui-api never takes it: write .env here, push
+    the token to data-service directly, and say so (``via`` ".env"); ui-api keeps its old token until it restarts.
+
+    Returns {"via": "ui-api" | ".env" | "none", "connected": bool, "error": str | None, "error_kind": str | None,
+    "why": why ui-api did not take it, "data_service": the direct push's result}."""
+    body, why = handoff_to_ui_api(token, budget_s=handoff_budget_s())
+    if body is not None:
+        return {"via": "ui-api", "connected": bool(body.get("connected")), "error": body.get("error"),
+                "error_kind": body.get("error_kind")}
+    try:
+        write_env_value("ICICI_SESSION_TOKEN", token)
+    except (ValueError, OSError) as exc:
+        return {"via": "none", "connected": False, "why": why, "error_kind": "unknown",
+                "error": f"ui-api did not take the token ({why}) and .env could not be written: {exc}"}
+    ds = push_token_to_data_service(api_key, api_secret, token, timeout_s=max(5.0, min(60.0, _time_left() - 30.0)))
+    # data-service's reconnect is itself a Breeze login; only when it did not confirm, check (up to ~100 s when ICICI
+    # is unreachable: 3 tries) if there is time, else leave it to the next run, which checks .env before logging in
+    state, message = ("valid", "") if ds["connected"] else (
+        check_token(api_key, api_secret, token) if _time_left() > 110.0 else ("unknown", "no time left to check it"))
+    return {"via": ".env", "connected": state == "valid", "why": why, "data_service": ds,
+            "error": None if state == "valid" else message, "error_kind": None if state == "valid" else state}
+
+
+def notify_mac(title: str, body: str) -> None:
+    """Desktop notification — the only alert channel when Telegram/Discord are not set."""
+    if sys.platform != "darwin":
+        return
+    script = f'display notification {json.dumps(body[:220])} with title {json.dumps(title)}'
+    try:
+        subprocess.run(["/usr/bin/osascript", "-e", script], timeout=10, capture_output=True)
+    except (OSError, subprocess.TimeoutExpired):
         pass
 
-    print("  [MANUAL] Could not auto-click login — please click the Login button in the browser.")
+
+def finish(code: int, status: str, detail: str, **extra) -> None:
+    CACHE_FILE.write_text(json.dumps({"at": datetime.now().isoformat(timespec="seconds"),
+                                      "status": status, "detail": detail, **extra}))
+    print("RESULT " + json.dumps({"status": status, "detail": detail, **extra}))
+    sys.exit(code)
 
 
-# ── Validation ────────────────────────────────────────────────────────────────
+# ── wrong-password guard ─────────────────────────────────────────────────────────
 
-def _validate_token(api_key: str, api_secret: str, session_token: str) -> bool:
+def credential_fingerprint(user_id: str, password: str) -> str:
+    """One-way fingerprint of the credentials, so the block lifts by itself once they are corrected."""
+    return hashlib.sha256(f"suryadhana|{user_id}|{password}".encode()).hexdigest()[:16]
+
+
+def blocked_reason(fingerprint: str) -> str | None:
     try:
-        from breeze_connect import BreezeConnect  # type: ignore[import]
-        breeze = BreezeConnect(api_key=api_key)
-        breeze.generate_session(api_secret=api_secret, session_token=session_token)
-        details = breeze.get_customer_details(api_session=session_token)
-        if details and details.get("Status") == 200:
-            name = details.get("Success", {}).get("idirect_user_name", "unknown")
-            print(f"  [OK] Session validated — logged in as: {name}")
-            return True
-        print(f"  [WARN] Validation response: {details}")
+        b = json.loads(BLOCK_FILE.read_text())
+    except (OSError, ValueError):
+        return None
+    return b.get("reason") if b.get("fingerprint") == fingerprint else None
+
+
+def is_credentials_rejection(message: str) -> bool:
+    m = message.lower()
+    return "rejected the login" in m and any(w in m for w in ("credential", "password", "user id", "userid", "invalid"))
+
+
+# ── main ─────────────────────────────────────────────────────────────────────────
+
+OTP_REQUEST = ROOT / "data" / "icici_otp_request.json"
+OTP_REPLY = ROOT / "data" / "icici_otp.json"
+OTP_LAST_ASK = ROOT / "data" / "icici_otp_last_ask.json"     # kept: a restart must not text you again right away
+OTP_WAIT_S = 300
+
+
+def telegram_send(env: dict[str, str], text: str) -> bool:
+    """Plain-text Telegram message to TELEGRAM_CHAT_ID (no-op when not configured)."""
+    tok, chat = env.get("TELEGRAM_BOT_TOKEN", ""), env.get("TELEGRAM_CHAT_ID", "")
+    if not (tok and chat):
         return False
-    except Exception as exc:
-        print(f"  [WARN] Validation failed: {exc}")
+    try:
+        r = httpx.post(f"https://api.telegram.org/bot{tok}/sendMessage", json={"chat_id": chat, "text": text}, timeout=15)
+        return r.status_code == 200
+    except httpx.HTTPError:
         return False
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+def minutes_since_otp_ask(now: float | None = None) -> float | None:
+    """Minutes since the last SMS OTP request on Telegram; None if there was none."""
+    try:
+        asked = float(json.loads(OTP_LAST_ASK.read_text()).get("at", 0))
+    except (OSError, ValueError):
+        return None
+    return ((now or time.time()) - asked) / 60 if asked else None
+
+
+def telegram_otp_provider(env: dict[str, str], wait_s: float = OTP_WAIT_S, poll_s: float = 1.0,
+                          clock=time.time, sleep=time.sleep):
+    """An otp_provider for browser_login: tell you on Telegram that ICICI sent an SMS OTP, then wait for the code
+    your reply leaves in data/icici_otp.json (the controller's Telegram bot writes it). None = no reply in time."""
+    def provide(panel_text: str) -> str | None:
+        OTP_REPLY.unlink(missing_ok=True)
+        OTP_REQUEST.parent.mkdir(parents=True, exist_ok=True)
+        start = clock()
+        OTP_REQUEST.write_text(json.dumps({"at": start}))
+        OTP_LAST_ASK.write_text(json.dumps({"at": start}))
+        phone = env.get("ICICI_MOBILE", "")
+        where = f"your phone ending {phone[-2:]}" if len(phone) >= 4 else "your registered phone"
+        telegram_send(env, f"🔐 ICICI login: an OTP was sent to {where}.\nReply with the 6 digits within "
+                           f"{int(wait_s // 60)} minutes (or /otp 123456).")
+        try:
+            while clock() - start < wait_s:
+                try:
+                    got = json.loads(OTP_REPLY.read_text())
+                    if float(got.get("at", 0)) >= start and str(got.get("code", "")).isdigit():
+                        return str(got["code"])
+                except (OSError, ValueError):
+                    pass
+                sleep(poll_s)
+            telegram_send(env, "⌛ No OTP received in time: ICICI login stopped. Send /login to try again.")
+            return None
+        finally:
+            OTP_REQUEST.unlink(missing_ok=True)
+            OTP_REPLY.unlink(missing_ok=True)
+    return provide
+
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Refresh ICICI Breeze session token")
-    parser.add_argument("--force", action="store_true", help="Refresh even if already done today")
-    args = parser.parse_args()
+    ap = argparse.ArgumentParser(description="Refresh the daily ICICI Breeze session token")
+    ap.add_argument("--headless", action="store_true", help="no browser window; fail instead of waiting for a person")
+    ap.add_argument("--force", action="store_true", help="log in even if the current token still works")
+    ap.add_argument("--check", action="store_true", help="only test the current token")
+    ap.add_argument("--quiet-minutes", type=float, default=0,
+                    help="don't ask for an SMS OTP if one was asked this many minutes ago (start-up checks)")
+    ap.add_argument("--ignore-block", action="store_true",
+                    help="try even though ICICI rejected these credentials before (a login you asked for)")
+    args = ap.parse_args()
 
-    print("\n" + "=" * 60)
-    print("  ICICI Breeze — Daily Session Token Refresh")
-    print("=" * 60)
+    # .env is the source of truth (ui-api writes it); a long-running parent's env may be stale.
+    env = {**os.environ, **read_env_file()}
+    api_key, api_secret = env.get("ICICI_API_KEY", ""), env.get("ICICI_API_SECRET", "")
+    current = extract_session_token(env.get("ICICI_SESSION_TOKEN", ""))
+    if not (api_key and api_secret):
+        finish(EXIT_NEEDS_HUMAN, "needs_human", "ICICI_API_KEY / ICICI_API_SECRET missing in .env")
 
-    # ── Already fresh? ─────────────────────────────────────────────────────────
-    env = _read_env()
-    if not args.force and _already_refreshed_today():
-        existing = env.get("ICICI_SESSION_TOKEN", "")
-        if existing:
-            print(f"\n  [SKIP] Session token already refreshed today ({date.today()}).")
-            print("  Run with --force to refresh again.\n")
-            print("=" * 60 + "\n")
-            sys.exit(0)
+    if not args.force:
+        print("Checking the current session token…")
+        state, message = check_token(api_key, api_secret, current)
+        if state == "valid":
+            finish(EXIT_OK, "valid", "current token still works", token=mask(current))
+        if state == "network":   # an outage says nothing about the token; a login now would text an OTP for nothing
+            finish(EXIT_RETRY, "unreachable", f"ICICI unreachable, the token could not be checked: {message}",
+                   error_kind="network")
+        if args.check:
+            finish(EXIT_RETRY, "expired", "current token no longer works", error_kind=state)
+        print("  expired — logging in")
+        ago = minutes_since_otp_ask()
+        if args.quiet_minutes and ago is not None and ago < args.quiet_minutes:
+            finish(EXIT_OK, "skipped", f"an OTP was asked {int(ago)} min ago; not asking again now")
 
-    # ── Validate existing token first (skip browser if still alive) ────────────
-    existing_token = env.get("ICICI_SESSION_TOKEN", "")
-    api_key_val = env.get("ICICI_API_KEY", "")
-    api_secret_val = env.get("ICICI_API_SECRET", "")
-    if not args.force and existing_token and api_key_val and api_secret_val:
-        print("\n  Checking if existing session token is still valid...")
-        if _validate_token(api_key_val, api_secret_val, existing_token):
-            _stamp_today(existing_token)
-            print(f"  [SKIP] Existing token is valid — no refresh needed today.")
-            print("=" * 60 + "\n")
-            sys.exit(0)
-        print("  Existing token is expired — starting fresh login flow.")
-
-    # ── Load credentials ───────────────────────────────────────────────────────
-    api_key = env.get("ICICI_API_KEY", "")
-    api_secret = env.get("ICICI_API_SECRET", "")
-    client_id = env.get("ICICI_CLIENT_ID", "")
-    password = env.get("ICICI_PASSWORD", "")
-
-    if not api_key:
-        print("[ERROR] ICICI_API_KEY not set in .env")
-        sys.exit(1)
-    if not api_secret:
-        print("[ERROR] ICICI_API_SECRET not set in .env")
-        sys.exit(1)
-    if not client_id:
-        print("[WARN] ICICI_CLIENT_ID not set — you'll need to fill it manually in the browser.")
-    if not password:
-        print("[WARN] ICICI_PASSWORD not set — you'll need to fill it manually in the browser.")
-
-    print(f"\n  API Key  : {api_key[:6]}{'*' * max(0, len(api_key) - 6)}")
-    print(f"  Client ID: {client_id or '(not set)'}")
-
-    # ── Run browser flow ───────────────────────────────────────────────────────
+    user_id = read_secret("ICICI_CLIENT_ID", env)
+    password = read_secret("ICICI_PASSWORD", env)
+    raw_totp = read_secret("ICICI_TOTP_SECRET", env)
     try:
-        session_token = _run_browser_flow(api_key, client_id, password)
-    except KeyboardInterrupt:
-        print("\n[ABORTED] Refresh cancelled.")
-        sys.exit(1)
+        totp_spec = parse_totp_secret(raw_totp) if raw_totp else None
+    except ValueError as exc:
+        finish(EXIT_NEEDS_HUMAN, "needs_human", f"ICICI_TOTP_SECRET is unusable: {exc}")
+    print(f"User {mask(user_id)} · TOTP {'configured' if totp_spec else 'not configured'} · "
+          f"{'headless' if args.headless else 'visible browser'}")
 
-    print(f"\n  Token captured: {session_token[:6]}{'*' * max(0, len(session_token) - 6)}")
+    fingerprint = credential_fingerprint(user_id, password)
+    reason = blocked_reason(fingerprint)
+    if reason and args.headless and not args.force and not args.ignore_block:
+        finish(EXIT_NEEDS_HUMAN, "blocked",
+               f"not retrying: ICICI rejected these credentials before ({reason}). Correct ICICI_CLIENT_ID / "
+               "ICICI_PASSWORD in .env (the block lifts by itself), or run once with --force")
 
-    # ── Validate ───────────────────────────────────────────────────────────────
-    _validate_token(api_key, api_secret, session_token)
+    SHOT_FILE.parent.mkdir(exist_ok=True)
+    try:
+        via_telegram = args.headless and bool(env.get("TELEGRAM_BOT_TOKEN") and env.get("TELEGRAM_CHAT_ID"))
+        token = browser_login(api_key, user_id, password, totp_spec, headless=args.headless,
+                              attended=not args.headless, screenshot_path=str(SHOT_FILE),
+                              otp_provider=telegram_otp_provider(env) if via_telegram else None)
+    except LoginNeedsHuman as exc:
+        if is_credentials_rejection(str(exc)):
+            BLOCK_FILE.write_text(json.dumps({"fingerprint": fingerprint, "reason": str(exc)[:200],
+                                              "at": datetime.now().isoformat(timespec="seconds")}))
+        if args.headless:
+            notify_mac("SuryaDhana · ICICI login needs you", str(exc))
+        finish(EXIT_NEEDS_HUMAN, "needs_human", str(exc))
+    except LoginTransient as exc:
+        finish(EXIT_RETRY, "retry", str(exc))
 
-    # ── Write to .env ──────────────────────────────────────────────────────────
-    _write_env_value("ICICI_SESSION_TOKEN", session_token)
-    _stamp_today(session_token)
-
-    print(f"\n  [SAVED] ICICI_SESSION_TOKEN updated in {ENV_FILE.name}")
-    print(f"  [CACHED] Stamped {date.today()} — won't re-run until tomorrow.")
-    print("\n  Restart the data-service to pick up the new token:")
-    print("    /Users/sudheer/Desktop/jupyter_env/bin/python -m uvicorn main:app --reload --port 8001")
-    print("\n" + "=" * 60 + "\n")
+    BLOCK_FILE.unlink(missing_ok=True)
+    applied = apply_token(token, api_key, api_secret)
+    if not applied["connected"]:
+        notify_mac("SuryaDhana · ICICI session", f"Got a token but Breeze rejected it: {applied['error']}")
+        finish(EXIT_RETRY, "retry", f"new token not accepted: {applied['error']}", token=mask(token),
+               via=applied["via"], error_kind=applied.get("error_kind"))
+    if applied["via"] != "ui-api":
+        quotes = "on" if applied.get("data_service", {}).get("connected") else "not confirmed"
+        detail = (f"WARNING: logged in, but ui-api did not take the token ({applied.get('why')}). It was saved to .env "
+                  f"only and sent to data-service directly (live quotes: {quotes}); ui-api keeps the old token until "
+                  "it restarts or the token is pasted on BRKR.")
+        notify_mac("SuryaDhana · ICICI token saved to .env only", detail)
+        finish(EXIT_OK, "refreshed", detail, outcome="warning", via=applied["via"], token=mask(token))
+    finish(EXIT_OK, "refreshed", "logged in, token applied via ui-api", outcome="ok", via="ui-api", token=mask(token))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SuryaDhana",
+  "mainBinaryName": "SuryaDhana",
+  "version": "1.0.0",
+  "identifier": "ai.suryadhana.terminal",
+  "build": {
+    "frontendDist": "../boot"
+  },
+  "app": {
+    "windows": [],
+    "withGlobalTauri": false,
+    "macOSPrivateApi": false,
+    "security": {
+      "csp": {
+        "default-src": "'none'",
+        "script-src": "'self'",
+        "style-src": "'self'",
+        "img-src": "'self' data:",
+        "font-src": "'self'",
+        "connect-src": "ipc: http://ipc.localhost",
+        "base-uri": "'none'",
+        "form-action": "'none'",
+        "frame-src": "'none'",
+        "object-src": "'none'"
+      },
+      "freezePrototype": false,
+      "capabilities": ["boot-local"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app"],
+    "category": "public.app-category.finance",
+    "shortDescription": "SuryaDhana Terminal",
+    "longDescription": "Native macOS shell for the SuryaDhana NSE + MCX research and paper-trading terminal. PAPER ONLY.",
+    "copyright": "SuryaDhana AI",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.png"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "13.0",
+      "signingIdentity": "-",
+      "hardenedRuntime": false
+    }
+  }
+}

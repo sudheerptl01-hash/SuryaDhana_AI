@@ -1,0 +1,186 @@
+"""reports/gold_program/API_CONTRACT.md ↔ routers/gold.py, kept equal by this test (B3 wave 1b).
+
+The contract's §8 ("Key inventory") is GENERATED from the fixture payloads of test_gold.py: every route is called with the
+pinned clock and the agents' samples, every key path and its value types are collected, and the rendered block must equal
+the one in the document. When the implementation changes, regenerate with
+
+    GOLD_CONTRACT_WRITE=1 python -m pytest services/ui-api/tests/test_gold_contract.py -q
+
+and commit both. The hand-written sections (§0–§7) describe the semantics; §8 is the exact shape, so a renamed or dropped
+key can never ship undocumented. The TOTP routes (§3) are covered by test_icici_totp_routes.py, not by the inventory.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from test_gold import REPO, _app, _offline  # noqa: F401 — the autouse fakes (no network) and the app
+
+# Never build a client outside this fixture: without `_offline` the fair block would reach Yahoo (PLAN 0.1 #2).
+
+
+@pytest.fixture
+def client() -> Iterator[TestClient]:
+    with TestClient(_app()) as c:
+        yield c
+
+CONTRACT = REPO / "reports" / "gold_program" / "API_CONTRACT.md"
+BEGIN, END = "<!-- generated: key inventory — begin -->", "<!-- generated: key inventory — end -->"
+
+# (name, path, query) — one representative call per route and mode (the fixture decides the values; the keys are the contract)
+ROUTES: list[tuple[str, str, dict[str, Any]]] = [
+    ("overview", "/api/gold/overview", {}),
+    ("health", "/api/gold/health", {"window": "W"}),
+    ("fair", "/api/gold/fair", {}),
+    ("series", "/api/gold/series", {"ids": "FRED_DFII10,DXY_CLOSE,CME_BULLETIN_SETTLE", "freq": "W"}),
+    ("bars", "/api/gold/bars", {"symbol": "GC=F", "interval": "1d"}),
+    ("cot", "/api/gold/cot", {"weeks": 4}),
+    ("positioning_daily_comex", "/api/gold/positioning/daily", {"exchange": "COMEX"}),
+    ("positioning_daily_mcx", "/api/gold/positioning/daily", {"exchange": "MCX", "family": "GOLD"}),
+    ("curve_comex", "/api/gold/curve", {"exchange": "COMEX"}),
+    ("curve_mcx", "/api/gold/curve", {"exchange": "MCX", "family": "GOLD"}),
+    ("contracts", "/api/gold/contracts", {"exchange": "COMEX"}),
+    ("premiums", "/api/gold/premiums", {}),
+    ("flows", "/api/gold/flows", {}),
+    ("macro", "/api/gold/macro", {}),
+    ("calendar", "/api/gold/calendar", {"days": 30}),
+    ("log", "/api/gold/log", {}),
+    ("catalog", "/api/gold/catalog", {}),
+    ("brief", "/api/gold/brief", {}),
+    ("learn_glossary", "/api/gold/learn/glossary", {"q": "basis", "limit": 3}),
+    ("learn_tooltips", "/api/gold/learn/tooltips", {}),
+]
+
+
+def _type_of(v: Any) -> str:
+    if v is None:
+        return "null"
+    if isinstance(v, bool):
+        return "bool"
+    if isinstance(v, (int, float)):
+        return "number"
+    if isinstance(v, str):
+        return "string"
+    if isinstance(v, list):
+        return "array"
+    return "object"
+
+
+def key_paths(value: Any, prefix: str = "", out: dict[str, set[str]] | None = None) -> dict[str, set[str]]:
+    """{path → {types}} over a payload; list elements merge under `path[]`; dict keys that are DATA (dates, series ids,
+    tooltip keys) are folded to `{*}` so the inventory names the shape, not the fixture."""
+    out = {} if out is None else out
+    if isinstance(value, dict):
+        keys = list(value.keys())
+        data_keyed = bool(keys) and all(_looks_like_data_key(k) for k in keys)
+        for k, v in value.items():
+            p = f"{prefix}.{{*}}" if data_keyed else (f"{prefix}.{k}" if prefix else str(k))
+            out.setdefault(p, set()).add(_type_of(v))
+            key_paths(v, p, out)
+    elif isinstance(value, list):
+        for v in value:
+            p = f"{prefix}[]"
+            out.setdefault(p, set()).add(_type_of(v))
+            key_paths(v, p, out)
+    return out
+
+
+_DATA_KEY = re.compile(r"^(\d{4}-\d{2}-\d{2}|[A-Z0-9_]{6,}|[a-z0-9_]+\.[a-z0-9_.]+)$")
+
+
+def _looks_like_data_key(k: Any) -> bool:
+    return isinstance(k, str) and bool(_DATA_KEY.match(k)) and k not in {"GOLD", "GOLDM", "GOLDTEN", "GOLDGUINEA", "GOLDPETAL"}
+
+
+def inventory(client: TestClient) -> dict[str, dict[str, list[str]]]:
+    inv: dict[str, dict[str, list[str]]] = {}
+    for name, path, params in ROUTES:
+        r = client.get(path, params=params)
+        assert r.status_code == 200, f"{path} {params}: {r.status_code} {r.text[:200]}"
+        paths = key_paths(r.json())
+        inv[name] = {p: sorted(t) for p, t in sorted(paths.items())}
+    return inv
+
+
+def render(inv: dict[str, dict[str, list[str]]]) -> str:
+    lines = [BEGIN, "",
+             "Generated by `services/ui-api/tests/test_gold_contract.py` from the fixture payloads (pinned clock Mon 26 Oct",
+             "2026, the agents' samples). `path[]` = list element, `{*}` = data-keyed map (dates / series ids / tooltip keys),",
+             "types =",
+             "every JSON type the fixture produced for that key (`null` means the key may be null). Regenerate with",
+             "`GOLD_CONTRACT_WRITE=1 python -m pytest services/ui-api/tests/test_gold_contract.py -q`; the test fails until the",
+             "document matches the code.", ""]
+    for name, path, params in ROUTES:
+        q = ("?" + "&".join(f"{k}={v}" for k, v in params.items())) if params else ""
+        lines.append(f"#### `{path}{q}` ({name})")
+        lines.append("```")
+        for p, types in inv[name].items():
+            lines.append(f"{p}: {'|'.join(types)}")
+        lines.append("```")
+        lines.append("")
+    lines.append(END)
+    return "\n".join(lines)
+
+
+def _current_block(text: str) -> str | None:
+    i, j = text.find(BEGIN), text.find(END)
+    if i < 0 or j < 0:
+        return None
+    return text[i : j + len(END)]
+
+
+def test_key_inventory_matches_the_document(client: TestClient) -> None:
+    inv = inventory(client)
+    rendered = render(inv)
+    text = CONTRACT.read_text(encoding="utf-8")
+    if os.environ.get("GOLD_CONTRACT_JSON"):  # the inventory as JSON (the types.ts reconciliation reads it); fakes stay on
+        Path(os.environ["GOLD_CONTRACT_JSON"]).write_text(json.dumps(inv, indent=1), encoding="utf-8")
+    if os.environ.get("GOLD_CONTRACT_WRITE") == "1":
+        block = _current_block(text)
+        appended = text.rstrip("\n") + "\n\n## 8. Key inventory (generated)\n\n" + rendered + "\n"
+        new = text.replace(block, rendered) if block else appended
+        CONTRACT.write_text(new, encoding="utf-8")
+        text = new
+    block = _current_block(text)
+    assert block is not None, "API_CONTRACT.md has no generated key inventory: run with GOLD_CONTRACT_WRITE=1"
+    if block != rendered:
+        a, b = block.splitlines(), rendered.splitlines()
+        diff = [f"doc: {x!r} / code: {y!r}" for x, y in zip(a, b) if x != y][:12]
+        if len(a) != len(b):
+            diff.append(f"line count doc {len(a)} vs code {len(b)}")
+        pytest.fail("API_CONTRACT.md §8 differs from the code (GOLD_CONTRACT_WRITE=1 regenerates it):\n" + "\n".join(diff))
+
+
+def test_hand_written_sections_name_every_top_level_key(client: TestClient) -> None:
+    """§2's prose must at least NAME every top-level key a route returns (a key the document never mentions is a drift)."""
+    inv = inventory(client)
+    text = CONTRACT.read_text(encoding="utf-8")
+    prose = text.split(BEGIN)[0]
+    missing: list[str] = []
+    for name, _path, _params in ROUTES:
+        for p in inv[name]:
+            if "." in p or "[" in p:
+                continue
+            if not re.search(rf"(?<![\w]){re.escape(p)}(?![\w])", prose):
+                missing.append(f"{name}.{p}")
+    assert missing == [], f"top-level keys the hand-written contract never names: {missing}"
+
+
+def test_contract_has_no_score_and_ends_descriptive(client: TestClient) -> None:
+    """Negative control for the labelling rules the contract promises (PLAN §f.4): no `score` key anywhere in /health."""
+    inv = inventory(client)
+    assert not any(p.split(".")[-1] == "score" for p in inv["health"])
+    assert "verdict.ends_with" in inv["health"] and "latest.next_release_ist" in inv["cot"]
+

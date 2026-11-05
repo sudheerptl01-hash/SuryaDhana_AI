@@ -1,0 +1,1034 @@
+{
+  "meta": {
+    "schema_version": "1.0.0",
+    "report_date": "2026-10-16",
+    "report_day": "Friday",
+    "generated_at": "2026-10-16T16:55:00+05:30",
+    "mcx_contract": "GOLD DEC26",
+    "mcx_contract_expiry": "2026-12-04",
+    "comex_contract": "GCZ26",
+    "is_mcx_trading_day": true,
+    "overnight_window": {
+      "from": "2026-10-15T23:30:00+05:30",
+      "to": "2026-10-16T09:00:00+05:30"
+    },
+    "analyst": "SuryaDhana Desk - automated brief (late run: scheduled 08:40 IST, executed ~16:47 IST)"
+  },
+  "baseline": {
+    "mcx_prev_close": {
+      "name": "MCX Gold Dec26 settlement 15-Oct",
+      "unit": "INR/10g",
+      "last": 147489,
+      "prev_close": 145848,
+      "change": 1641,
+      "change_pct": 1.13,
+      "as_of": "2026-10-15T23:30:00+05:30",
+      "source": "Kedia Advisory via Investing.com India (settle 147,489, +1.13%); Goodreturns implied 148,431-942 = 147,489",
+      "is_derived": false,
+      "confidence": "high",
+      "note": "Official-style settle quoted by Kedia; prev 145,848 derived as 147,489-1,641 (14-Oct last trade 145,850 per prior brief). OI -2.86% to 17,085 = short covering."
+    },
+    "comex_ref_at_mcx_close": {
+      "name": "XAUUSD spot near MCX close 15-Oct",
+      "unit": "USD/oz",
+      "last": 4148.0,
+      "prev_close": 4078.0,
+      "change": 70.0,
+      "change_pct": 1.72,
+      "as_of": "2026-10-16T00:02:00+05:30",
+      "source": "FXStreet 15-Oct 18:32 GMT ('XAU/USD up ~1.1% to ~$4,148')",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "Spot anchor, same method as prior briefs (prev = 14-Oct anchor 4,078). Snapshot ~30 min after 23:30 IST MCX close. COMEX Dec prior close 4,170.10 (Yahoo)."
+    },
+    "usdinr_ref": {
+      "name": "USD/INR onshore close 15-Oct",
+      "unit": "INR per USD",
+      "last": 95.05,
+      "prev_close": 95.17,
+      "change": -0.12,
+      "change_pct": -0.13,
+      "as_of": "2026-10-15T15:30:00+05:30",
+      "source": "PTI via Shillong Times (rupee +12 paise to 95.05, 5th straight gain)",
+      "is_derived": false,
+      "confidence": "high",
+      "note": "Moneycontrol prints 95.06; an IANS/apacnews series shows 94.99. PTI series kept for continuity."
+    }
+  },
+  "overnight_markets": {
+    "xauusd_spot": {
+      "name": "XAUUSD spot",
+      "unit": "USD/oz",
+      "last": 4170.0,
+      "prev_close": 4148.0,
+      "change": 22.0,
+      "change_pct": 0.53,
+      "as_of": "2026-10-16T09:01:00+05:30",
+      "source": "Goodreturns live blog 09:01 IST (spot ~$4,170, +0.3%)",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "Prev = 15-Oct MCX-close anchor. Asia range 4,147-4,186; FXStreet 4,173.86 at 11:05 IST; gold-api 4,178.50 at 12:27 IST; TE ~4,173 late."
+    },
+    "comex_gold_front": {
+      "name": "COMEX Gold Dec26 (GCZ26)",
+      "unit": "USD/oz",
+      "last": 4199.1,
+      "prev_close": 4170.1,
+      "change": 29.0,
+      "change_pct": 0.7,
+      "as_of": "2026-10-16T12:16:00+05:30",
+      "source": "Yahoo Finance via FinanceFeeds (06:46 UTC)",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "Print is ~3h after the 09:00 IST window close; no 09:00 GC print found. Forbes: GC 4,183.90 at 18:45 IST 15-Oct."
+    },
+    "xagusd_spot": {
+      "name": "XAGUSD spot",
+      "unit": "USD/oz",
+      "last": 57.6,
+      "prev_close": null,
+      "change": null,
+      "change_pct": 1.11,
+      "as_of": "2026-10-16T09:01:00+05:30",
+      "source": "Goodreturns 09:01 IST (+1.11%)",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": null
+    },
+    "mcx_silver": {
+      "name": "MCX Silver Dec26",
+      "unit": "INR/kg",
+      "last": 213100,
+      "prev_close": 210660,
+      "change": 2440,
+      "change_pct": 1.16,
+      "as_of": "2026-10-16T09:41:00+05:30",
+      "source": "Goodreturns 09:41 IST (+2,440); prev implied",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "Prev close derived (213,100-2,440). Later 213,475 at 14:27 IST. BusinessToday 18:12 IST 15-Oct print 209,606."
+    },
+    "usdinr_spot": {
+      "name": "USD/INR onshore open 16-Oct",
+      "unit": "INR per USD",
+      "last": 94.75,
+      "prev_close": 95.05,
+      "change": -0.3,
+      "change_pct": -0.32,
+      "as_of": "2026-10-16T09:00:00+05:30",
+      "source": "PTI interbank open 94.75 (via apacnews/Business Standard)",
+      "is_derived": false,
+      "confidence": "high",
+      "note": "Moneycontrol: open 94.73 vs 95.06. Rupee hit 94.79 early; TradingEconomics late-session quote 95.14 (+0.41%) suggests gains faded intraday - unverified."
+    },
+    "usdinr_ndf": {
+      "name": "USD/INR 1M NDF",
+      "unit": "INR per USD",
+      "last": null,
+      "prev_close": null,
+      "change": null,
+      "change_pct": null,
+      "as_of": null,
+      "source": null,
+      "is_derived": false,
+      "confidence": "unavailable",
+      "note": "Moneycontrol notes NDF trading at an unusual discount to onshore after long-dollar unwinding; no quote found."
+    },
+    "dxy": {
+      "name": "US Dollar Index",
+      "unit": "index",
+      "last": 102.0,
+      "prev_close": 102.58,
+      "change": -0.58,
+      "change_pct": -0.57,
+      "as_of": "2026-10-16T09:30:00+05:30",
+      "source": "PTI early trade (-0.54% to 102); prev = Yahoo ICE prior close",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "Yahoo: 101.82 at 12:17 IST; TE 101.66 late; FXStreet saw 102.11 at 00:02 IST. Near two-week low after Warsh."
+    },
+    "eurusd": {
+      "name": "EUR/USD",
+      "unit": "USD per EUR",
+      "last": 1.1258,
+      "prev_close": 1.1221,
+      "change": 0.0037,
+      "change_pct": 0.33,
+      "as_of": "2026-10-16T16:45:00+05:30",
+      "source": "TradingEconomics (+0.33%); prev derived",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "No 09:00 IST print; KBC: 'north of 1.12' in the morning."
+    },
+    "us10y": {
+      "name": "US 10Y Treasury yield",
+      "unit": "%",
+      "last": 5.107,
+      "prev_close": 5.079,
+      "change": 0.028,
+      "change_pct": 0.55,
+      "as_of": "2026-10-16T16:45:00+05:30",
+      "source": "TradingEconomics; prev = FXStreet 15-Oct close 5.079",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "Fell ~8-10bp on 15-Oct to a 3-week low; marginally firmer on 16-Oct."
+    },
+    "us10y_real_tips": {
+      "name": "US 10Y TIPS real yield",
+      "unit": "%",
+      "last": 2.76,
+      "prev_close": 2.84,
+      "change": -0.08,
+      "change_pct": -2.82,
+      "as_of": "2026-10-15T23:59:00+05:30",
+      "source": "TradingEconomics 10Y TIPS",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "15-Oct close value (-8bp); no live 16-Oct print."
+    },
+    "us30y": {
+      "name": "US 30Y Treasury yield",
+      "unit": "%",
+      "last": 5.45,
+      "prev_close": 5.42,
+      "change": 0.03,
+      "change_pct": 0.55,
+      "as_of": "2026-10-16T16:45:00+05:30",
+      "source": "TradingEconomics; prev FXStreet 15-Oct 5.42",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": null
+    },
+    "brent": {
+      "name": "Brent crude Dec",
+      "unit": "USD/bbl",
+      "last": 105.35,
+      "prev_close": 105.92,
+      "change": -0.57,
+      "change_pct": -0.54,
+      "as_of": "2026-10-16T09:30:00+05:30",
+      "source": "PTI (-0.54%); prev derived",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "Business Standard 14:10 IST 105.34; TE late 106.14. IEA diesel release vs Hormuz risk."
+    },
+    "wti": {
+      "name": "WTI crude",
+      "unit": "USD/bbl",
+      "last": 97.44,
+      "prev_close": 98.07,
+      "change": -0.63,
+      "change_pct": -0.64,
+      "as_of": "2026-10-16T08:30:00+05:30",
+      "source": "Gulf News (Asian trade); prev = HDFC Securities 15-Oct 98.07",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": null
+    },
+    "sp500": {
+      "name": "S&P 500",
+      "unit": "index",
+      "last": 7744.06,
+      "prev_close": 7718.94,
+      "change": 25.12,
+      "change_pct": 0.32,
+      "as_of": "2026-10-16T01:30:00+05:30",
+      "source": "AP via Yahoo Finance (15-Oct close +25.12)",
+      "is_derived": false,
+      "confidence": "high",
+      "note": null
+    },
+    "nasdaq100": {
+      "name": "Nasdaq 100 futures (US100)",
+      "unit": "index",
+      "last": 29841,
+      "prev_close": null,
+      "change": null,
+      "change_pct": -0.32,
+      "as_of": "2026-10-16T16:45:00+05:30",
+      "source": "TradingEconomics",
+      "is_derived": false,
+      "confidence": "low",
+      "note": "Cash NDX close not found; Nasdaq Composite closed 26,713.03 (+0.08%) on 15-Oct."
+    },
+    "france_oat_bund_spread_bps": {
+      "name": "France OAT-Bund 10Y spread",
+      "unit": "bps",
+      "last": 135.2,
+      "prev_close": 135.5,
+      "change": -0.3,
+      "change_pct": -0.22,
+      "as_of": "2026-10-15T23:59:00+05:30",
+      "source": "ideal-investisseur.fr (OAT 4.74% - Bund 3.39%)",
+      "is_derived": false,
+      "confidence": "medium",
+      "note": "15-Oct close; prior brief derived 141 from TE live quotes, so day-on-day vs that is not like-for-like."
+    }
+  },
+  "gap_model": {
+    "formula": "gap = 356 * dCOMEX/10 + 1521 * dINR",
+    "coef_comex_per_10usd": 356,
+    "coef_inr_per_1rupee": 1521,
+    "coef_method": "static",
+    "delta_comex_usd": 22.0,
+    "delta_usdinr": -0.3,
+    "comex_component_inr": 783,
+    "inr_component_inr": -456,
+    "expected_gap_inr": 327,
+    "model_fair_open_inr": 147816,
+    "mcx_preopen_indicative_inr": 148431,
+    "deviation_inr": 615,
+    "chase_threshold_inr": 300,
+    "open_signal": "dislocated_wait_15_30m",
+    "note": "Late run (~16:47 IST), so the 'pre-open' value is the first MCX print 148,431 at 09:01 IST (Goodreturns; opening high 148,452), not an indicative price. dCOMEX = spot 4,170 (09:01 IST) - 4,148 (FXStreet 00:02 IST anchor) = +22.0; dINR = PTI open 94.75 - 95.05 = -0.3. COMEX +Rs 783, rupee Rs -456: fair ~Rs 147816. MCX opened Rs 615 rich vs model -> dislocated. Spot drifted to ~4,178-4,186 later (each $10 = Rs 356), which partly justified the premium; MCX was 148,547 at 14:27 IST (high 148,757)."
+  },
+  "fed_and_rates": {
+    "fed_funds_range": "3.75-4.00%",
+    "next_fomc": "2026-10-27/28 (decision 2026-10-28 ~23:30 IST)",
+    "fedwatch": {
+      "as_of": "2026-10-16T00:02:00+05:30",
+      "next_meeting_hold_pct": 74,
+      "next_meeting_hike_pct": 26,
+      "next_meeting_cut_pct": 0,
+      "december_hike_pct": 92,
+      "prev_next_meeting_hold_pct": 68.4,
+      "prev_december_hike_pct": 89.7,
+      "source": "CME FedWatch via FXStreet (15-Oct 18:32 GMT). Others: Goodreturns 16-Oct 72% hold/92% Dec; Kedia 29% hike; Blockhead 32% hike; FXStreet 16-Oct ~22%; KBC money markets ~85% hold post-Warsh."
+    },
+    "fed_speakers": [
+      {
+        "name": "Kevin Warsh",
+        "role": "Fed Chair",
+        "stance": "neutral",
+        "summary": "IMF Bangkok fireside chat: 'I don't believe in pre-judging meetings'; committed to price stability, gave no October signal; dollar and yields slipped."
+      },
+      {
+        "name": "Mary Daly",
+        "role": "San Francisco Fed President",
+        "stance": "hawkish",
+        "summary": "Another hike likely needed eventually but 'no urgency to act' in October."
+      },
+      {
+        "name": "Michelle Bowman",
+        "role": "Fed Governor",
+        "stance": "neutral",
+        "summary": "Fed has time after the September hike to see how the economy responds before acting again."
+      },
+      {
+        "name": "Fed blackout",
+        "role": "FOMC",
+        "stance": "neutral",
+        "summary": "Blackout period starts Sat 17-Oct ahead of the 27-28 Oct meeting; no more Fed guidance after today."
+      }
+    ],
+    "other_central_banks": [
+      {
+        "bank": "RBI",
+        "action": "FX curbs (20% FERR on eligible deals >$2m, tighter rupee-derivative rules, OMC dollar window) plus dollar sales; clarified scope 15-Oct",
+        "gold_impact": "bearish",
+        "summary": "Rupee up 5 sessions to 95.05 and opened 94.75; stronger rupee trims INR gold. CNBC: analysts still see drift toward 100 on oil/Iran war."
+      },
+      {
+        "bank": "PBoC",
+        "action": "23rd straight month of gold buying; reserves 77.47 Moz (from 76.73 Moz)",
+        "gold_impact": "bullish",
+        "summary": "Steady official demand underpins dips; Bloomberg says China buying Treasuries via non-US custodians, pulling US yields lower."
+      },
+      {
+        "bank": "ECB",
+        "action": "No policy news; Bund yields fell 2-5bp on 15-Oct",
+        "gold_impact": "neutral",
+        "summary": "French fiscal risk keeps OAT-Bund spread ~135bp."
+      },
+      {
+        "bank": "BoJ",
+        "action": "No change; USD/JPY slipped below 158 after Warsh",
+        "gold_impact": "neutral",
+        "summary": "Softer dollar vs yen mildly supportive."
+      }
+    ]
+  },
+  "reference_triggers": [
+    {
+      "id": "T1_COMEX_REF",
+      "metric": "Gold USD/oz vs reference",
+      "reference": 4135,
+      "current": 4170.0,
+      "status": "above",
+      "gold_implication": "Spot $35 above the 4,135 reference and holding $4,150 dips; next test $4,200 (21-day SMA)."
+    },
+    {
+      "id": "T2_USDINR_REF",
+      "metric": "USD/INR vs reference",
+      "reference": 96.85,
+      "current": 94.75,
+      "status": "below",
+      "gold_implication": "Rupee Rs 2.10 stronger than reference (~Rs 3,190 lower MCX equivalent); RBI keeps INR firm."
+    },
+    {
+      "id": "T3_EURUSD_TRIGGER",
+      "metric": "EUR/USD vs trigger",
+      "reference": 1.1161,
+      "current": 1.1258,
+      "status": "above",
+      "gold_implication": "Dollar weaker; EUR/USD ~1% above trigger - gold-supportive."
+    },
+    {
+      "id": "T4_FED_OCT_HOLD",
+      "metric": "FedWatch October hold %",
+      "reference": 78,
+      "current": 74,
+      "status": "below",
+      "gold_implication": "Hold odds recovering (68%->74%) toward the 78 reference; post-Warsh money markets near 85% - hawkish risk fading."
+    },
+    {
+      "id": "T5_FED_DEC_HIKE",
+      "metric": "FedWatch December hike %",
+      "reference": 86,
+      "current": 92,
+      "status": "above",
+      "gold_implication": "December hike fully priced; the drag is in the price, new upside needs softer data."
+    }
+  ],
+  "news": [
+    {
+      "id": "N01",
+      "published_at": "2026-10-16T09:16:00+05:30",
+      "headline": "Warsh stays non-committal at IMF Bangkok; dollar slides to ~2-week low",
+      "summary": "Fed Chair Warsh said he does not pre-judge meetings and repeated his price-stability commitment; no October signal. Dollar sold off, USD/JPY below 158, gold pushed toward $4,180-4,186.",
+      "category": "monetary_policy",
+      "region": "US",
+      "gold_impact": "bullish",
+      "impact_strength": 4,
+      "transmission_channel": "dollar",
+      "source": "FXStreet",
+      "url": "https://www.fxstreet.com/news/breaking-feds-warsh-says-he-would-deliver-price-stability-but-wont-pre-judge-meetings-202610160346"
+    },
+    {
+      "id": "N02",
+      "published_at": "2026-10-16T00:02:00+05:30",
+      "headline": "US yields slide ~10bp despite hot PPI; gold rebounds to ~$4,148-4,176",
+      "summary": "10Y fell to ~5.08% (3-week low), 30Y 5.42%, 10Y TIPS 2.76% (-8bp) on haven flows, short covering and a Bloomberg report that China is buying Treasuries via non-US custodians.",
+      "category": "rates_bonds",
+      "region": "US",
+      "gold_impact": "bullish",
+      "impact_strength": 4,
+      "transmission_channel": "real_yields",
+      "source": "FXStreet",
+      "url": "https://www.fxstreet.com/news/gold-defies-63-us-ppi-as-treasury-yield-slide-fuels-rally-202610151832"
+    },
+    {
+      "id": "N03",
+      "published_at": "2026-10-15T18:00:00+05:30",
+      "headline": "US Sept PPI 6.3% y/y vs 5.3% expected; retail sales +0.8% m/m",
+      "summary": "Monthly PPI +1.3% (largest in 4+ years, energy-led), core 5%; retail sales beat (0.8% vs 0.3%) but control group only 0.1%; claims 199k. Largely priced after CPI.",
+      "category": "macro_data",
+      "region": "US",
+      "gold_impact": "mixed",
+      "impact_strength": 3,
+      "transmission_channel": "real_yields",
+      "source": "FXStreet",
+      "url": "https://www.fxstreet.com/analysis/warsh-gives-little-away-despite-hotter-inflation-prints-202610160600"
+    },
+    {
+      "id": "N04",
+      "published_at": "2026-10-15T19:00:00+05:30",
+      "headline": "October Fed hike odds fall back below 30% from ~53% post-CPI peak",
+      "summary": "CME FedWatch: October hike ~26-32% after Daly ('no urgency') and Bowman (time to wait); December hike still ~92%.",
+      "category": "monetary_policy",
+      "region": "US",
+      "gold_impact": "bullish",
+      "impact_strength": 3,
+      "transmission_channel": "real_yields",
+      "source": "CME Group / FXStreet",
+      "url": "https://x.com/Interest_Rates/status/2110746074340020383"
+    },
+    {
+      "id": "N05",
+      "published_at": "2026-10-16T09:00:00+05:30",
+      "headline": "Rupee opens 30-33 paise stronger at 94.73-94.75 on RBI curbs and dollar unwinding",
+      "summary": "Fifth straight gain; RBI FERR and derivative rules, OMC dollar window and intervention; NDF at a discount to onshore. FII sold Rs 5,285 cr on 15-Oct. CNBC: forecasters still see ~100 on oil/Iran war.",
+      "category": "fx",
+      "region": "India",
+      "gold_impact": "bearish",
+      "impact_strength": 4,
+      "transmission_channel": "usdinr",
+      "source": "Moneycontrol via TradingView",
+      "url": "https://www.tradingview.com/news/moneycontrol:d9a31372b094b:0-rupee-opens-33-paise-higher-at-94-73-as-traders-unwind-dollar-bets-rbi-support-lifts-sentiment/"
+    },
+    {
+      "id": "N06",
+      "published_at": "2026-10-16T03:02:00+05:30",
+      "headline": "Iran says Hormuz stays closed; Houthis hit Aden palace and Saudi airports",
+      "summary": "Iran's army chief says Hormuz closed until demands met (CENTCOM: 19m bbl crossed in a day, denies mine sinking). Houthi missiles killed 4 in Aden; strikes on Abha/Najran/Jazan airports; new US sanctions on Iraqi bank.",
+      "category": "geopolitics",
+      "region": "Middle_East",
+      "gold_impact": "bullish",
+      "impact_strength": 3,
+      "transmission_channel": "safe_haven",
+      "source": "Gulf News",
+      "url": "https://gulfnews.com/world/mena/middle-east-conflict-houthis-strike-yemens-presidential-palace-us-issues-new-iran-sanctions-1.500712575"
+    },
+    {
+      "id": "N07",
+      "published_at": "2026-10-16T14:10:00+05:30",
+      "headline": "Brent ~$105 as IEA diesel release offsets Hormuz risk",
+      "summary": "Brent -0.5% to ~$105.3, WTI ~$97.4; IEA 20m bbl diesel release and talk of US easing shadow-fleet curbs vs Gulf supply risk; oil heads for weekly gain.",
+      "category": "energy",
+      "region": "Global",
+      "gold_impact": "mixed",
+      "impact_strength": 2,
+      "transmission_channel": "real_yields",
+      "source": "Business Standard",
+      "url": "https://www.business-standard.com/amp/markets/news/stock-market-live-october-16-nse-bse-sensex-today-nifty50-gift-nifty-crude-oil-prices-q2-results-ipo-today-126101600083_1.html"
+    },
+    {
+      "id": "N08",
+      "published_at": "2026-10-16T07:43:00+05:30",
+      "headline": "HDFC, ICICI Pru, Tata MF halt fresh gold fund-of-fund inflows before festive season",
+      "summary": "Lump sums, switch-ins and new SIPs paused; reported to follow an RBI note to SEBI. Curbs paper-gold demand in India during Dhanteras/Diwali.",
+      "category": "india_policy",
+      "region": "India",
+      "gold_impact": "bearish",
+      "impact_strength": 2,
+      "transmission_channel": "sentiment",
+      "source": "BusinessToday",
+      "url": "https://www.businesstoday.in/personal-finance/investment/story/major-fund-houses-slam-brakes-on-gold-etf-inflows-ahead-of-festive-season-buying-561941-2026-10-16"
+    },
+    {
+      "id": "N09",
+      "published_at": "2026-10-15T17:00:00+05:30",
+      "headline": "India Sept gold imports crash 81% y/y to $1.8bn",
+      "summary": "15% import duty (since 13-May) and PM's call to defer gold purchases; silver imports -49%. Weak official channel demand.",
+      "category": "physical_demand",
+      "region": "India",
+      "gold_impact": "bearish",
+      "impact_strength": 2,
+      "transmission_channel": "physical_premium",
+      "source": "Kotak Neo",
+      "url": "https://www.kotakneo.com/news/commodities/india-gold-silver-imports-fall-september/"
+    },
+    {
+      "id": "N10",
+      "published_at": "2026-10-16T08:00:00+05:30",
+      "headline": "PBoC extends gold buying to 23 months; Goldman keeps $5,400 end-2027",
+      "summary": "PBoC reserves 77.47 Moz vs 76.73 Moz; Goldman cites central-bank diversification.",
+      "category": "central_bank_buying",
+      "region": "China",
+      "gold_impact": "bullish",
+      "impact_strength": 2,
+      "transmission_channel": "comex_price",
+      "source": "Kedia Advisory via Investing.com India",
+      "url": "https://in.investing.com/news/commodities-news/gold-prices-climb-as-dollar-and-us-treasury-yields-remain-under-pressure-today-5636413"
+    },
+    {
+      "id": "N11",
+      "published_at": "2026-10-16T07:45:00+05:30",
+      "headline": "Global gold ETF holdings at record 4,256t after record $31bn Q3",
+      "summary": "WGC: Sept inflow ~$10bn; flows reportedly slowed last week.",
+      "category": "etf_flows",
+      "region": "Global",
+      "gold_impact": "bullish",
+      "impact_strength": 2,
+      "transmission_channel": "sentiment",
+      "source": "Vantage Markets (citing WGC)",
+      "url": "https://www.vantagemarkets.com/market-news/gold-price-today-etf-holdings-us-cpi-october-16-2026/"
+    },
+    {
+      "id": "N12",
+      "published_at": "2026-10-16T08:00:00+05:30",
+      "headline": "Indian dealer discount narrows to $6 from $14; China premium $10",
+      "summary": "Physical demand sluggish but improving into festivals; China back from Golden Week (Reuters weekly 9-Oct, cited by Kedia; new weekly due today).",
+      "category": "physical_demand",
+      "region": "India",
+      "gold_impact": "neutral",
+      "impact_strength": 2,
+      "transmission_channel": "physical_premium",
+      "source": "Kedia Advisory / Reuters",
+      "url": "https://www.miningweekly.com/article/india-gold-demand-slows-as-prices-rebound-china-emerges-from-holiday-lull-2026-10-09"
+    },
+    {
+      "id": "N13",
+      "published_at": "2026-10-16T15:35:00+05:30",
+      "headline": "Risk rebound: Dow +1.1%, Kospi ~+4%, Nikkei ~+2%, Sensex +414",
+      "summary": "AI/tech recovery after Warsh's AI comments; S&P +0.3% to 7,744. Eases haven bid at the margin.",
+      "category": "equities_risk",
+      "region": "Global",
+      "gold_impact": "bearish",
+      "impact_strength": 1,
+      "transmission_channel": "safe_haven",
+      "source": "AP via Yahoo Finance / Business Standard",
+      "url": "https://finance.yahoo.com/markets/world-indices/articles/major-us-stock-indexes-fared-202216834.html"
+    },
+    {
+      "id": "N14",
+      "published_at": "2026-10-16T11:05:00+05:30",
+      "headline": "Gold technicals: $4,200 / 21-day SMA the gate; $4,170 and $4,100 supports",
+      "summary": "FXStreet: 21-day SMA 4,201, 100-day 4,242, RSI ~46; Enrich Money: hold $4,170 or risk 4,100-4,070; HDFC Sec resistance 4,225-4,235.",
+      "category": "technical_analysis",
+      "region": "Global",
+      "gold_impact": "neutral",
+      "impact_strength": 2,
+      "transmission_channel": "comex_price",
+      "source": "FXStreet",
+      "url": "https://www.fxstreet.com/analysis/4-200-back-in-sight-for-gold-after-warshs-silence-on-interest-rate-outlook-202610160535"
+    },
+    {
+      "id": "N15",
+      "published_at": "2026-10-16T10:15:00+05:30",
+      "headline": "ICICI Direct: MCX Dec gold support 146,000, target 149,000",
+      "summary": "Spot seen toward $4,200 while above $4,070; silver range 205,000-216,000.",
+      "category": "technical_analysis",
+      "region": "India",
+      "gold_impact": "bullish",
+      "impact_strength": 2,
+      "transmission_channel": "comex_price",
+      "source": "ICICI Direct via Investment Guru India",
+      "url": "https://investmentguruindia.com/newsdetail/mcx-gold-december-is-expected-to-find-support-near-rs146-000-and-rise-towards-rs149-000-level---icici-direct563564"
+    },
+    {
+      "id": "N16",
+      "published_at": "2026-10-15T23:59:00+05:30",
+      "headline": "France OAT-Bund spread ~135bp; WGC flags record French term premium",
+      "summary": "Spread far above 1-year average of ~77bp; euro-area fiscal risk supports hedging demand.",
+      "category": "rates_bonds",
+      "region": "Europe",
+      "gold_impact": "bullish",
+      "impact_strength": 1,
+      "transmission_channel": "safe_haven",
+      "source": "ideal-investisseur.fr",
+      "url": "https://www.ideal-investisseur.fr/en/markets/oat-bund-spread.html"
+    }
+  ],
+  "flows_and_physical": {
+    "global_etf": {
+      "period": "2026-09",
+      "flow_usd_bn": 10.0,
+      "holdings_tonnes": 4256,
+      "aum_usd_bn": 574,
+      "summary": "Record holdings 4,256t, Sept +$10bn, record Q3 +$31bn; AUM carried from prior brief. Indian FoF curbs could slow local paper demand.",
+      "source": "World Gold Council"
+    },
+    "gld_holdings_tonnes": {
+      "name": "SPDR GLD holdings",
+      "unit": "tonnes",
+      "last": null,
+      "prev_close": null,
+      "change": null,
+      "change_pct": null,
+      "as_of": null,
+      "source": null,
+      "is_derived": false,
+      "confidence": "unavailable",
+      "note": "Daily GLD tonnage not retrieved."
+    },
+    "central_banks": "PBoC 23rd month of buying (77.47 Moz); RBI focused on rupee defence; Goldman cites ongoing CB diversification.",
+    "china": {
+      "sge_premium_usd_low": 10,
+      "sge_premium_usd_high": 10,
+      "as_of": "2026-10-09",
+      "summary": "~$10/oz premium after Golden Week (Reuters weekly 9-Oct); 16-Oct weekly not yet found."
+    },
+    "india": {
+      "dealer_premium_usd_low": -6,
+      "dealer_premium_usd_high": null,
+      "as_of": "2026-10-09",
+      "summary": "Discount narrowed to $6 from $14 (Reuters 9-Oct). Sept imports -81% to $1.8bn on 15% duty; gold FoF inflow curbs; festive demand into Dussehra (20-Oct) and Diwali."
+    }
+  },
+  "exchange_housekeeping": {
+    "margin_change": "none_found",
+    "circulars": [],
+    "summary": "No MCX circular on gold margins, special margins, contract changes or trading hours found for 14-16 Oct; check mcxindia.com circulars directly."
+  },
+  "technicals": {
+    "comex_levels": [
+      {
+        "price": 4331,
+        "type": "resistance",
+        "basis": "FXStreet 50-day SMA 4,331.59"
+      },
+      {
+        "price": 4242,
+        "type": "resistance",
+        "basis": "FXStreet 100-day SMA 4,242.23"
+      },
+      {
+        "price": 4230,
+        "type": "resistance",
+        "basis": "HDFC Securities 4,225-4,235"
+      },
+      {
+        "price": 4201,
+        "type": "resistance",
+        "basis": "FXStreet 21-day SMA 4,201.34 / $4,200"
+      },
+      {
+        "price": 4170,
+        "type": "pivot",
+        "basis": "Enrich Money support; 09:01 IST spot"
+      },
+      {
+        "price": 4135,
+        "type": "pivot",
+        "basis": "User reference T1"
+      },
+      {
+        "price": 4100,
+        "type": "support",
+        "basis": "Enrich Money 4,100-4,070; HDFC 4,095"
+      },
+      {
+        "price": 4073,
+        "type": "support",
+        "basis": "14-Oct post-CPI low"
+      },
+      {
+        "price": 4050,
+        "type": "support",
+        "basis": "HDFC Securities"
+      },
+      {
+        "price": 4002,
+        "type": "support",
+        "basis": "FXStreet rising trendline"
+      }
+    ],
+    "mcx_levels": [
+      {
+        "price": 150080,
+        "type": "resistance",
+        "basis": "HDFC Securities range top"
+      },
+      {
+        "price": 149000,
+        "type": "resistance",
+        "basis": "ICICI Direct target"
+      },
+      {
+        "price": 148757,
+        "type": "resistance",
+        "basis": "16-Oct intraday high (Goodreturns)"
+      },
+      {
+        "price": 148500,
+        "type": "resistance",
+        "basis": "Kedia R2 / target"
+      },
+      {
+        "price": 147990,
+        "type": "resistance",
+        "basis": "Kedia R1 (now below price; flip support)"
+      },
+      {
+        "price": 147816,
+        "type": "pivot",
+        "basis": "Model fair open"
+      },
+      {
+        "price": 147489,
+        "type": "pivot",
+        "basis": "15-Oct settle"
+      },
+      {
+        "price": 147040,
+        "type": "support",
+        "basis": "Kedia S1"
+      },
+      {
+        "price": 146600,
+        "type": "support",
+        "basis": "Kedia S2"
+      },
+      {
+        "price": 146000,
+        "type": "support",
+        "basis": "ICICI Direct / Enrich Money"
+      },
+      {
+        "price": 145627,
+        "type": "support",
+        "basis": "14-Oct low"
+      }
+    ],
+    "notes": "Spot reclaimed $4,150-4,170 but remains below the 21/100/50-day SMAs; RSI ~45-46. MCX held 148,000+ intraday (Enrich Money: needs to hold 148,000-148,600). Close above 148,757 with spot > $4,200 opens 149,000-150,000."
+  },
+  "calendar": [
+    {
+      "datetime_ist": "2026-10-16T09:00:00+05:30",
+      "event": "Fed Chair Warsh at IMF/World Bank meetings, Bangkok (done)",
+      "region": "US",
+      "importance": "high",
+      "forecast": null,
+      "previous": null
+    },
+    {
+      "datetime_ist": "2026-10-16T13:30:00+05:30",
+      "event": "Reuters Asia gold weekly (India discount / China premium)",
+      "region": "Global",
+      "importance": "medium",
+      "forecast": null,
+      "previous": null
+    },
+    {
+      "datetime_ist": "2026-10-17T00:00:00+05:30",
+      "event": "Fed blackout period begins ahead of FOMC",
+      "region": "US",
+      "importance": "medium",
+      "forecast": null,
+      "previous": null
+    },
+    {
+      "datetime_ist": "2026-10-20T09:00:00+05:30",
+      "event": "Dussehra - festive physical demand in India",
+      "region": "India",
+      "importance": "medium",
+      "forecast": null,
+      "previous": null
+    },
+    {
+      "datetime_ist": "2026-10-28T23:30:00+05:30",
+      "event": "FOMC decision",
+      "region": "US",
+      "importance": "high",
+      "forecast": null,
+      "previous": null
+    },
+    {
+      "datetime_ist": "2026-10-29T18:00:00+05:30",
+      "event": "US Q3 GDP (advance) and September PCE",
+      "region": "US",
+      "importance": "high",
+      "forecast": null,
+      "previous": null
+    },
+    {
+      "datetime_ist": "2026-10-30T18:00:00+05:30",
+      "event": "US Employment Cost Index Q3",
+      "region": "US",
+      "importance": "medium",
+      "forecast": null,
+      "previous": null
+    }
+  ],
+  "synthesis": {
+    "overnight_summary": "Gold extended its post-CPI rebound: hotter-than-expected US PPI (6.3% y/y) was overshadowed by a ~10bp drop in US yields (10Y ~5.08%, TIPS 2.76%) and a weaker dollar, lifting spot from ~$4,148 at the MCX close to ~$4,170 by 09:00 IST and ~$4,180 later. Fed Chair Warsh gave no October signal in Bangkok, October hike odds fell back to ~26-30% (December still ~92%) and the dollar slid to a near two-week low. The rupee opened 30 paise stronger at 94.75 on RBI curbs, offsetting most of the COMEX gain, so the model fair open was only ~Rs 147,816 (+Rs 327). MCX instead opened at 148,431, ~Rs 615 rich (dislocated), and held 148,400-148,750 through the day as spot firmed. The open premium was partly absorbed by spot gains, but the rupee and the $4,200 cap leave MCX near the top of its fair band.",
+    "regime": "rates_dominant",
+    "bullish_drivers": [
+      "US yields down ~10bp; 10Y TIPS 2.76%",
+      "Dollar at ~2-week low after neutral Warsh; EUR/USD 1.126",
+      "October hike odds back below 30%",
+      "Middle East: Iran says Hormuz closed, Houthi strikes on Saudi/Aden",
+      "PBoC 23rd month of buying; record ETF holdings",
+      "Short covering on MCX (OI -2.9% on 15-Oct rise)"
+    ],
+    "bearish_drivers": [
+      "Rupee strength (94.75, 5-session gain) trims INR gold",
+      "Hot PPI/CPI keep December hike ~92% priced",
+      "Spot still below 21/50/100-day SMAs; $4,200 resistance",
+      "Equity risk rebound reduces haven bid",
+      "Weak Indian imports and gold FoF inflow curbs",
+      "Fed blackout removes dovish pushback until 28-Oct"
+    ],
+    "bias": "bullish",
+    "bias_score": 1,
+    "confidence": 0.45,
+    "expected_range_mcx": {
+      "low": 147300,
+      "high": 149200,
+      "basis": "Model fair 147,816 plus live spot ~$4,178 (~+Rs 285) gives ~148,100; +/- ~Rs 900-1,100 for a quiet US data day; support 147,990/147,489, resistance 148,757/149,000."
+    },
+    "open_plan": "Run executed late (~16:47 IST); for the record: first print 148,431 was Rs 615 above model fair 147,816 -> dislocated, wait 15-30 min. Spot then firmed to ~$4,178-4,186, partly justifying the premium. For the evening session: treat 147,990-148,000 as the line; add only on pullbacks toward 148,000 with spot holding $4,170, avoid chasing above 148,750 unless spot clears $4,200. Watch the rupee (each 10 paise = ~Rs 152).",
+    "invalidation": "Bullish lean void if MCX closes below 147,490 (15-Oct settle) with spot under $4,150; turns bearish below 147,000/$4,100. Upgrade if spot settles above $4,200 and MCX above 148,760.",
+    "key_risks_today": [
+      "Rupee reversal (TE late 95.14) changing INR translation",
+      "Middle East/Hormuz headlines and oil swings",
+      "Weekend gap risk (Iran, Houthi, Saudi)",
+      "Profit-taking at $4,200 / 21-day SMA",
+      "Hawkish surprise before the Fed blackout",
+      "Indian FoF curbs and import data souring sentiment"
+    ]
+  },
+  "data_quality": {
+    "missing_fields": [
+      "overnight_markets.usdinr_ndf.last",
+      "overnight_markets.usdinr_ndf.prev_close",
+      "overnight_markets.usdinr_ndf.change",
+      "overnight_markets.usdinr_ndf.change_pct",
+      "overnight_markets.usdinr_ndf.as_of",
+      "overnight_markets.usdinr_ndf.source",
+      "overnight_markets.xagusd_spot.prev_close",
+      "overnight_markets.xagusd_spot.change",
+      "overnight_markets.nasdaq100.prev_close",
+      "overnight_markets.nasdaq100.change",
+      "flows_and_physical.gld_holdings_tonnes (all values)",
+      "flows_and_physical.india.dealer_premium_usd_high"
+    ],
+    "conflicts": [
+      {
+        "field": "baseline.usdinr_ref.last",
+        "values": [
+          "95.05 (PTI)",
+          "95.06 (Moneycontrol)",
+          "94.99 (apacnews/IANS)"
+        ],
+        "resolution": "PTI 95.05 for series continuity."
+      },
+      {
+        "field": "overnight_markets.usdinr_spot.last",
+        "values": [
+          "94.75 (PTI open)",
+          "94.73 (Moneycontrol open)",
+          "95.14 (TradingEconomics late)"
+        ],
+        "resolution": "PTI 09:00 open 94.75 used in the gap model."
+      },
+      {
+        "field": "fed_and_rates.fedwatch.next_meeting_hike_pct",
+        "values": [
+          "26 (FXStreet 15-Oct 18:32 GMT)",
+          "28 (Goodreturns 16-Oct)",
+          "29 (Kedia)",
+          "32 (Blockhead)",
+          "~22 (FXStreet 16-Oct)",
+          "~15 implied (KBC money markets 85% hold)"
+        ],
+        "resolution": "FXStreet 26% (explicit, timestamped CME read)."
+      },
+      {
+        "field": "overnight_markets.dxy.last",
+        "values": [
+          "102.0 (PTI ~09:30 IST)",
+          "101.82 (Yahoo 12:17 IST)",
+          "101.66 (TE late)"
+        ],
+        "resolution": "PTI value nearest the window."
+      },
+      {
+        "field": "baseline.comex_ref_at_mcx_close.last",
+        "values": [
+          "4,148 (FXStreet 18:32 GMT spot)",
+          "4,170.10 (COMEX Dec prior close, Yahoo)",
+          "4,175.90 (USAGOLD early US)"
+        ],
+        "resolution": "Spot 4,148 for method consistency with spot-based dCOMEX."
+      }
+    ],
+    "derived_fields": [
+      "baseline.mcx_prev_close.prev_close",
+      "overnight_markets.mcx_silver.prev_close",
+      "overnight_markets.brent.prev_close",
+      "overnight_markets.eurusd.prev_close",
+      "gap_model.delta_comex_usd",
+      "gap_model.delta_usdinr",
+      "gap_model.comex_component_inr",
+      "gap_model.inr_component_inr",
+      "gap_model.expected_gap_inr",
+      "gap_model.model_fair_open_inr",
+      "gap_model.deviation_inr",
+      "reference_triggers[*].status"
+    ]
+  },
+  "sources": [
+    {
+      "name": "Goodreturns live 16-Oct",
+      "url": "https://www.goodreturns.in/news/gold-rates-silver-rates-today-16-10-2026-live-spot-gold-mcx-gold-silver-price-24k-22k-18k-gold-price-1541909.html"
+    },
+    {
+      "name": "Kedia Advisory via Investing.com India",
+      "url": "https://in.investing.com/news/commodities-news/gold-prices-climb-as-dollar-and-us-treasury-yields-remain-under-pressure-today-5636413"
+    },
+    {
+      "name": "FXStreet gold 16-Oct",
+      "url": "https://www.fxstreet.com/analysis/4-200-back-in-sight-for-gold-after-warshs-silence-on-interest-rate-outlook-202610160535"
+    },
+    {
+      "name": "FXStreet gold vs PPI 15-Oct",
+      "url": "https://www.fxstreet.com/news/gold-defies-63-us-ppi-as-treasury-yield-slide-fuels-rally-202610151832"
+    },
+    {
+      "name": "FXStreet Warsh/KBC",
+      "url": "https://www.fxstreet.com/analysis/the-sharper-us-yield-drop-weighed-on-the-dollar-202610160646"
+    },
+    {
+      "name": "FinanceFeeds gold 16-Oct",
+      "url": "https://financefeeds.com/gold-price-4178-warsh-bangkok-fed-hike-odds-bull-4330-bear-4000/"
+    },
+    {
+      "name": "Moneycontrol rupee open",
+      "url": "https://www.tradingview.com/news/moneycontrol:d9a31372b094b:0-rupee-opens-33-paise-higher-at-94-73-as-traders-unwind-dollar-bets-rbi-support-lifts-sentiment/"
+    },
+    {
+      "name": "Apac News rupee",
+      "url": "https://apacnewsnetwork.com/2026/10/rupee-gains-20-paise-against-us-dollar/"
+    },
+    {
+      "name": "Shillong Times rupee close",
+      "url": "https://theshillongtimes.com/2026/10/16/rupee-logs-fifth-straight-session-of-gain-closes-12-paise-higher-at-95-05-vs-usd/"
+    },
+    {
+      "name": "TradingEconomics INR",
+      "url": "https://tradingeconomics.com/india/currency"
+    },
+    {
+      "name": "TradingEconomics US10Y",
+      "url": "https://tradingeconomics.com/united-states/government-bond-yield"
+    },
+    {
+      "name": "TradingEconomics TIPS",
+      "url": "https://tradingeconomics.com/united-states/10-year-tips-yield"
+    },
+    {
+      "name": "Forbes gold 15-Oct",
+      "url": "https://www.forbes.com/sites/conormurray/2026/10/15/gold-rebounds-from-steep-losses-as-treasury-yields-and-us-dollar-fall/"
+    },
+    {
+      "name": "AP via Yahoo US indexes",
+      "url": "https://finance.yahoo.com/markets/world-indices/articles/major-us-stock-indexes-fared-202216834.html"
+    },
+    {
+      "name": "Business Standard markets live",
+      "url": "https://www.business-standard.com/amp/markets/news/stock-market-live-october-16-nse-bse-sensex-today-nifty50-gift-nifty-crude-oil-prices-q2-results-ipo-today-126101600083_1.html"
+    },
+    {
+      "name": "Gulf News Middle East",
+      "url": "https://gulfnews.com/world/mena/middle-east-conflict-houthis-strike-yemens-presidential-palace-us-issues-new-iran-sanctions-1.500712575"
+    },
+    {
+      "name": "HDFC Securities commodity daily",
+      "url": "https://hdfcsky.com/news/hsl-prime-research-commodity-daily-report-16-october-2026"
+    },
+    {
+      "name": "ICICI Direct MCX gold",
+      "url": "https://investmentguruindia.com/newsdetail/mcx-gold-december-is-expected-to-find-support-near-rs146-000-and-rise-towards-rs149-000-level---icici-direct563564"
+    },
+    {
+      "name": "Upstox gold 16-Oct",
+      "url": "https://upstox.com/news/personal-finance/commodities/gold-silver-prices-today-october-16-precious-metals-extend-recovery-check-22-k-24-k-18-k-rates-before-buying-jewellery-this-festive-weekend/article-201968/"
+    },
+    {
+      "name": "BusinessToday gold FoF curbs",
+      "url": "https://www.businesstoday.in/personal-finance/investment/story/major-fund-houses-slam-brakes-on-gold-etf-inflows-ahead-of-festive-season-buying-561941-2026-10-16"
+    },
+    {
+      "name": "Kotak Neo India imports",
+      "url": "https://www.kotakneo.com/news/commodities/india-gold-silver-imports-fall-september/"
+    },
+    {
+      "name": "Vantage Markets ETF",
+      "url": "https://www.vantagemarkets.com/market-news/gold-price-today-etf-holdings-us-cpi-october-16-2026/"
+    },
+    {
+      "name": "ideal-investisseur OAT-Bund",
+      "url": "https://www.ideal-investisseur.fr/en/markets/oat-bund-spread.html"
+    },
+    {
+      "name": "Blockhead FedWatch",
+      "url": "https://blockhead.co/2026/10/16/bitcoin-holds-near-82-000-as-fed-officials-cool-october-hike-bets"
+    },
+    {
+      "name": "Yahoo Warsh",
+      "url": "https://finance.yahoo.com/economy/policy/articles/feds-warsh-gives-no-hint-040051405.html"
+    }
+  ]
+}

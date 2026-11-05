@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-shell-save-download"
+description = "Enables the shell_save_download command without any pre-configured scope."
+commands.allow = ["shell_save_download"]
+
+[[permission]]
+identifier = "deny-shell-save-download"
+description = "Denies the shell_save_download command without any pre-configured scope."
+commands.deny = ["shell_save_download"]

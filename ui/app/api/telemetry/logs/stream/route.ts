@@ -7,7 +7,8 @@
  * telemetry stream only and pipes the backend's event-stream straight through unbuffered.
  * Same-origin, dev + Docker.
  */
-import { NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { streamProxyHeaders } from '@/lib/streamProxy'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -17,7 +18,7 @@ const API_BACKEND = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8010'
 export async function GET(req: NextRequest) {
   const upstream = await fetch(
     `${API_BACKEND}/api/telemetry/logs/stream${req.nextUrl.search}`,
-    { headers: { accept: 'text/event-stream' } },
+    { headers: streamProxyHeaders(req.headers, { accept: 'text/event-stream' }) },  // + browser context (SECREL-01)
   )
 
   return new Response(upstream.body, {

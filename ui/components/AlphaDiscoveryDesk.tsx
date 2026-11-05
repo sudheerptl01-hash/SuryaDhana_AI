@@ -1,5 +1,10 @@
 'use client'
 
+import { apiError } from '@/lib/errors'
+import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
+import { useRequestSeq } from '@/components/useRequestSeq'
+import { TickerLink, ResearchNote } from '@/components/terminal'
+
 /**
  * AlphaDiscoveryDesk — Phase 4 Glass-Box Alpha Discovery tab.
  *
@@ -15,11 +20,12 @@
  *   • Ticker activation          → <StockDetailModal/> (intraday + OHLCV charts)
  *
  * Air-gap: MODE = PAPER. No execution affordances. Read/scan only.
- * Aesthetic: NSE void terminal — JetBrains Mono + Chakra Petch, #030810/#070E1B voids,
+ * Aesthetic: NSE void terminal — JetBrains Mono + Chakra Petch, #05070a/#0a0d13 voids,
  * amber/jade/violet/crimson accents.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Chip, PageHeader, T, fmtInrPx } from '@/components/terminal'
 import clsx from 'clsx'
 import {
   getAlphaStrategies, runAlphaScan, fetchRefreshBatch,
@@ -27,14 +33,16 @@ import {
   type AlphaParamSpec,
 } from '@/lib/api'
 import { useWatchlist, useLiveQuotes } from '@/context/AppContext'
+import { socketChip } from '@/lib/feedState'
+import { useFeedState } from '@/components/shell/useFeed'
 import { useToast } from '@/context/ToastContext'
 import { SystemStatusWidget } from './SystemStatusWidget'
 import { StockDetailModal } from './StockDetailModal'
 
 interface Props { isDark?: boolean }
 
-const VOID = '#030810'
-const PANEL = '#070E1B'
+const VOID = T.bg
+const PANEL = T.panel
 
 // ── Param knob (slider + number for numerics, toggle for booleans) ───────────────
 
@@ -51,7 +59,7 @@ function ParamKnob({
     return (
       <div className="flex items-center justify-between py-2">
         <div className="flex flex-col">
-          <span className="text-[11px] font-bold tracking-wide" style={{ color: '#C8DCF0' }}>{name}</span>
+          <span className="text-[11px] font-bold tracking-wide" style={{ color: T.text }}>{name}</span>
           {spec.label && <span className="text-[10px]" style={{ color: '#5E7793' }}>{spec.label}</span>}
         </div>
         <button
@@ -62,7 +70,7 @@ function ParamKnob({
         >
           <span
             className="inline-block h-3.5 w-3.5 rounded-full transition-transform"
-            style={{ background: on ? '#34D399' : '#7DA4BE', transform: on ? 'translateX(22px)' : 'translateX(3px)' }}
+            style={{ background: on ? '#34D399' : '#aab3c2', transform: on ? 'translateX(22px)' : 'translateX(3px)' }}
           />
         </button>
       </div>
@@ -77,7 +85,7 @@ function ParamKnob({
     <div className="py-2">
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex flex-col">
-          <span className="text-[11px] font-bold tracking-wide" style={{ color: '#C8DCF0' }}>{name}</span>
+          <span className="text-[11px] font-bold tracking-wide" style={{ color: T.text }}>{name}</span>
           {spec.label && <span className="text-[10px]" style={{ color: '#5E7793' }}>{spec.label}</span>}
         </div>
         <input
@@ -86,7 +94,7 @@ function ParamKnob({
           min={min} max={max} step={step}
           onChange={(e) => onChange(Number(e.target.value))}
           className="w-20 px-2 py-1 rounded-md text-[11px] font-mono text-right outline-none"
-          style={{ background: VOID, border: '1px solid #2A3F58', color: '#FFB200' }}
+          style={{ background: VOID, border: '1px solid #2A3F58', color: T.amber }}
         />
       </div>
       <input
@@ -95,7 +103,7 @@ function ParamKnob({
         onChange={(e) => onChange(Number(e.target.value))}
         className="w-full alpha-range"
       />
-      <div className="flex justify-between text-[9px] mt-0.5" style={{ color: '#3D5872' }}>
+      <div className="flex justify-between text-[9px] mt-0.5" style={{ color: T.muted }}>
         <span>{min}</span><span>{max}</span>
       </div>
     </div>
@@ -127,17 +135,17 @@ function ResultRow({
           onClick={(e) => { e.stopPropagation(); onToggle() }}
           className="text-[11px] w-5 h-5 rounded-md flex items-center justify-center transition-all"
           style={{
-            border: `1px solid ${watched ? '#FFB200' : '#2A3F58'}`,
+            border: `1px solid ${watched ? T.amber : '#2A3F58'}`,
             background: watched ? 'rgba(255,178,0,0.12)' : 'transparent',
-            color: watched ? '#FFB200' : '#5E7793',
+            color: watched ? T.amber : '#5E7793',
           }}
           title={watched ? 'Unsubscribe live monitor' : 'Subscribe live monitor'}
         >
           {watched ? '★' : '☆'}
         </button>
       </td>
-      <td className="px-3 py-2 font-bold text-[12px]" style={{ color: '#C8DCF0' }}>{r.ticker}</td>
-      <td className="px-3 py-2 text-[11px] font-mono" style={{ color: '#7DA4BE' }}>{r.date}</td>
+      <td className="px-3 py-2 font-bold text-[12px]"><TickerLink symbol={r.ticker} /></td>
+      <td className="px-3 py-2 text-[11px] font-mono" style={{ color: '#aab3c2' }}>{r.date}</td>
       <td
         className="px-3 py-2 text-[12px] font-mono text-right tabular-nums"
         style={{
@@ -145,20 +153,20 @@ function ResultRow({
           transition: 'color 120ms ease',
         }}
       >
-        {ltp != null ? `₹${ltp.toFixed(2)}` : r.last_close != null ? `₹${r.last_close.toFixed(2)}` : '—'}
+        {ltp != null ? fmtInrPx(ltp) : r.last_close != null ? fmtInrPx(r.last_close) : '—'}
       </td>
       <td
         className="px-3 py-2 text-[11px] font-mono text-right tabular-nums"
-        style={{ color: changePct == null ? '#3D5872' : changePct >= 0 ? '#34D399' : '#FF6080' }}
+        style={{ color: changePct == null ? T.muted : changePct >= 0 ? '#34D399' : '#FF6080' }}
       >
-        {changePct != null ? `${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%` : '—'}
+        {changePct != null ? `${fmtSigned(changePct, 2)}%` : '—'}
       </td>
       <td
         className="px-3 py-2 text-[11px] font-mono text-right tabular-nums"
-        style={{ color: net5bps == null ? '#3D5872' : net5bps >= 0 ? '#34D399' : '#FF6080' }}
+        style={{ color: net5bps == null ? T.muted : net5bps >= 0 ? '#34D399' : '#FF6080' }}
         title="Realised net 5-day edge (forward diagnostic, friction-adjusted)"
       >
-        {net5bps != null ? `${net5bps >= 0 ? '+' : ''}${net5bps.toFixed(0)} bps` : '—'}
+        {net5bps != null ? `${fmtSigned(net5bps, 0)} bps` : '—'}
       </td>
     </tr>
   )
@@ -169,6 +177,9 @@ function ResultRow({
 export function AlphaDiscoveryDesk({ isDark = true }: Props) {
   const { watchlist, addToWatchlist, removeFromWatchlist, isWatched } = useWatchlist()
   const { liveQuotes, wsConnected } = useLiveQuotes()
+  const feed = useFeedState()
+  // never 'WS LIVE' on a closed market or while the link is down (C1-trader-ux-13, lib/feedState.ts)
+  const wsChip = socketChip({ connected: wsConnected, ...feed, live: '● WS LIVE', offline: '○ WS OFFLINE' })
   const { addToast } = useToast()
 
   const [registry, setRegistry] = useState<AlphaStrategiesResponse | null>(null)
@@ -206,7 +217,7 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
         }
       })
       .catch((err) => {
-        setRegistryErr(err?.response?.data?.detail || err?.message || 'failed to load engine')
+        setRegistryErr(apiError(err, 'failed to load engine'))
         addToast('Alpha engine registry unreachable', 'error')
       })
     return () => { alive = false }
@@ -215,19 +226,30 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
   const strategy = strategyId ? registry?.strategies[strategyId] : undefined
 
   // ── Run a scan across the full universe ──────────────────────────────────────
-  const doScan = useCallback(async (silent = false) => {
-    if (!strategyId) return
+  // P12: a scan reads the CURRENT strategy / knobs / mode from a ref. The mode buttons and the knobs called doScan from
+  // a closure made before their own state update, so each scan ran with the previous value (one step behind). Only the
+  // newest scan's answer (or error) is shown: a slower earlier scan never overwrites it (latest request wins, CT-01).
+  type ScanArgs = { strategyId: string; params: Record<string, number | boolean>; mode: 'latest' | 'recent' | 'all' }
+  const scanArgs = useRef<ScanArgs>({ strategyId, params, mode: scanMode })
+  useEffect(() => { scanArgs.current = { strategyId, params, mode: scanMode } }, [strategyId, params, scanMode])
+  const scanSeq = useRequestSeq()
+  const doScan = useCallback(async (silent = false, over: Partial<ScanArgs> = {}) => {
+    const args = { ...scanArgs.current, ...over }
+    scanArgs.current = args
+    if (!args.strategyId) return
+    const mine = scanSeq.begin()
     setScanning(true)
     try {
       const res = await runAlphaScan({
-        strategy_id: strategyId,
-        params,
-        mode: scanMode,
+        strategy_id: args.strategyId,
+        params: args.params,
+        mode: args.mode,
         recent_days: 15,
         days: 400,
         max_results: 500,
         include_diagnostics: true,
       })
+      if (!scanSeq.isCurrent(mine)) return
       setScan(res.data)
       if (!silent) {
         addToast(
@@ -236,12 +258,13 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
         )
       }
     } catch (err: any) {
-      const detail = err?.response?.data?.detail || err?.message || 'scan failed'
+      if (!scanSeq.isCurrent(mine)) return
+      const detail = apiError(err, 'scan failed')
       addToast(`Scan failed: ${detail}`, 'error')
     } finally {
-      setScanning(false)
+      if (scanSeq.isCurrent(mine)) setScanning(false)
     }
-  }, [strategyId, params, scanMode, addToast])
+  }, [addToast, scanSeq])
 
   // Initial scan once defaults are loaded
   const didInitialScan = useRef(false)
@@ -254,7 +277,9 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
 
   // ── Knob change → debounced re-scan (live tuning) ────────────────────────────
   const onParamChange = useCallback((name: string, v: number | boolean) => {
-    setParams((prev) => ({ ...prev, [name]: v }))
+    const next = { ...scanArgs.current.params, [name]: v }          // P12: the scan below uses THIS value
+    scanArgs.current = { ...scanArgs.current, params: next }
+    setParams(next)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => { doScan(true) }, 450)
   }, [doScan])
@@ -313,7 +338,7 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
       const total = Object.values(refreshed).reduce((s: number, v: any) => s + (Number(v) || 0), 0)
       addToast(`Pipeline: ${total} rows refreshed`, 'success')
     } catch (err: any) {
-      addToast(`Refresh failed: ${err?.response?.data?.detail || err?.message}`, 'error')
+      addToast(`Refresh failed: ${apiError(err)}`, 'error')
     } finally {
       setPipelineBusy(false)
     }
@@ -332,50 +357,25 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
   return (
     <div className="space-y-4">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap');
-        .alpha-range { -webkit-appearance: none; height: 4px; border-radius: 3px; background: linear-gradient(90deg,#FFB200,#2A3F58); outline: none; }
-        .alpha-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #FFB200; cursor: pointer; border: 2px solid ${VOID}; }
-        .alpha-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #FFB200; cursor: pointer; border: 2px solid ${VOID}; }
+        /* Chakra Petch is self-hosted (globals.css @font-face): no Google Fonts request (desktop program D4) */
+        .alpha-range { -webkit-appearance: none; height: 4px; border-radius: 3px; background: linear-gradient(90deg,#ffb000,#2A3F58); outline: none; }
+        .alpha-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #ffb000; cursor: pointer; border: 2px solid ${VOID}; }
+        .alpha-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #ffb000; cursor: pointer; border: 2px solid ${VOID}; }
         .alpha-row:hover { background: rgba(255,178,0,0.04); }
         .chakra { font-family: 'Chakra Petch', sans-serif; }
         @keyframes alphascan { 0%,100% { opacity: .4 } 50% { opacity: 1 } }
       `}</style>
 
       {/* ── Air-gap header banner ───────────────────────────────────────────── */}
-      <div
-        className="rounded-2xl border px-5 py-3 flex items-center justify-between flex-wrap gap-3"
-        style={{ background: PANEL, borderColor: '#2A3F58' }}
-      >
-        <div className="flex items-center gap-3">
-          <span
-            className="chakra text-xs font-bold tracking-[0.2em] px-3 py-1 rounded-md"
-            style={{ background: 'rgba(255,178,0,0.10)', border: '1px solid #FFB200', color: '#FFB200' }}
-          >
-            ◈ ALPHA DISCOVERY DESK
-          </span>
-          <span
-            className="text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-md"
-            style={{ background: 'rgba(52,211,153,0.10)', border: '1px solid #34D399', color: '#34D399' }}
-            title="Air-gapped — no live execution"
-          >
-            MODE: PAPER · EXECUTION DISABLED
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px]" style={{ color: '#5E7793' }}>monitor link</span>
-          <span
-            className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full"
-            style={{
-              background: wsConnected ? 'rgba(52,211,153,0.10)' : 'rgba(255,96,128,0.10)',
-              border: `1px solid ${wsConnected ? '#34D399' : '#FF6080'}`,
-              color: wsConnected ? '#34D399' : '#FF6080',
-            }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: wsConnected ? '#34D399' : '#FF6080' }} />
-            {wsConnected ? 'WS LIVE' : 'WS OFFLINE'}
-          </span>
-        </div>
-      </div>
+      <PageHeader code="ALFA" title="Alpha Discovery Desk"
+        status={<Chip color={T.green} active>PAPER · EXECUTION DISABLED</Chip>}
+        subtitle="Strategy engine scans · tweak knobs · monitor matched setups"
+        right={<Chip color={wsChip.tone === 'live' ? T.green : wsChip.tone === 'closed' ? T.muted : T.red}
+          active={wsChip.tone === 'live'}>{wsChip.text}</Chip>} />
+      <ResearchNote verdict="NO EDGE" report="reports/idea_lab/REPORT.md">
+        Out-of-sample tests of India-specific ideas (circuits, overnight momentum, lottery stocks, dividends, splits) found no edge
+        after costs. Treat matches here as research leads, not trades.
+      </ResearchNote>
 
       <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr] gap-4">
         {/* ── Left rail: status + pipeline + knobs ──────────────────────────── */}
@@ -417,7 +417,7 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
                 ◈ Strategy Knobs
               </h3>
               {scanning && (
-                <span className="text-[9px] font-bold tracking-widest" style={{ color: '#FFB200', animation: 'alphascan 1s infinite' }}>
+                <span className="text-[9px] font-bold tracking-widest" style={{ color: T.amber, animation: 'alphascan 1s infinite' }}>
                   SCANNING…
                 </span>
               )}
@@ -444,7 +444,7 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
                       value={strategyId}
                       onChange={(e) => onStrategyChange(e.target.value)}
                       className="w-full mt-1 px-2 py-1.5 rounded-md text-[11px] font-bold outline-none"
-                      style={{ background: VOID, border: '1px solid #2A3F58', color: '#C8DCF0' }}
+                      style={{ background: VOID, border: '1px solid #2A3F58', color: T.text }}
                     >
                       {Object.entries(registry.strategies).map(([sid, m]) => (
                         <option key={sid} value={sid}>{m.name}</option>
@@ -472,12 +472,12 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
                     {(['latest', 'recent', 'all'] as const).map((m) => (
                       <button
                         key={m}
-                        onClick={() => { setScanMode(m); setTimeout(() => doScan(true), 0) }}
+                        onClick={() => { setScanMode(m); doScan(true, { mode: m }) }}
                         className="flex-1 px-2 py-1 rounded-md text-[10px] font-bold uppercase transition-all"
                         style={{
-                          border: `1px solid ${scanMode === m ? '#FFB200' : '#2A3F58'}`,
+                          border: `1px solid ${scanMode === m ? T.amber : '#2A3F58'}`,
                           background: scanMode === m ? 'rgba(255,178,0,0.12)' : 'transparent',
-                          color: scanMode === m ? '#FFB200' : '#5E7793',
+                          color: scanMode === m ? T.amber : '#5E7793',
                         }}
                       >
                         {m}
@@ -489,13 +489,13 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
                     disabled={scanning}
                     className="w-full mt-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all"
                     style={{
-                      border: '1px solid #FFB200',
+                      border: '1px solid #ffb000',
                       background: 'rgba(255,178,0,0.14)',
-                      color: '#FFB200',
+                      color: T.amber,
                       cursor: scanning ? 'wait' : 'pointer',
                     }}
                   >
-                    {scanning && <span className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#FFB200', borderTopColor: 'transparent' }} />}
+                    {scanning && <span className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: T.amber, borderTopColor: 'transparent' }} />}
                     {scanning ? 'Scanning universe…' : '▶ Run Scan'}
                   </button>
                 </>
@@ -509,9 +509,9 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
           {/* Scan summary strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <SummaryStat label="ELIGIBLE UNIVERSE" value={scan ? `${scan.universe.eligible}` : '—'} sub={scan ? `/ ${scan.universe.total} total` : ''} accent="#4ACFE8" />
-            <SummaryStat label="SIGNALS (WINDOW)" value={scan ? `${scan.n_signals_window}` : '—'} sub={scan ? `${scan.n_signals_total} hist` : ''} accent="#FFB200" />
+            <SummaryStat label="SIGNALS (WINDOW)" value={scan ? `${scan.n_signals_window}` : '—'} sub={scan ? `${scan.n_signals_total} hist` : ''} accent="#ffb000" />
             <SummaryStat label="WIN RATE" value={scan?.edge ? `${(scan.edge.win_rate * 100).toFixed(1)}%` : '—'} sub={scan?.edge ? `n=${scan.edge.n_with_forward}` : 'no fwd window'} accent="#34D399" />
-            <SummaryStat label="MEAN NET 5D" value={scan?.edge ? `${scan.edge.mean_net5_bps >= 0 ? '+' : ''}${scan.edge.mean_net5_bps} bps` : '—'} sub="friction-adj" accent={scan?.edge && scan.edge.mean_net5_bps >= 0 ? '#34D399' : '#FF6080'} />
+            <SummaryStat label="MEAN NET 5D" value={scan?.edge ? `${fmtSigned(scan.edge.mean_net5_bps, 2)} bps` : '—'} sub="friction-adj" accent={scan?.edge && scan.edge.mean_net5_bps >= 0 ? '#34D399' : '#FF6080'} />
           </div>
 
           {/* Results grid */}
@@ -532,9 +532,9 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
                 disabled={!scan?.tickers.length}
                 className="px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"
                 style={{
-                  border: `1px solid ${scan?.tickers.length ? '#FFB200' : '#2A3F58'}`,
+                  border: `1px solid ${scan?.tickers.length ? T.amber : '#2A3F58'}`,
                   background: scan?.tickers.length ? 'rgba(255,178,0,0.10)' : 'transparent',
-                  color: scan?.tickers.length ? '#FFB200' : '#3D5872',
+                  color: scan?.tickers.length ? T.amber : T.muted,
                   cursor: scan?.tickers.length ? 'pointer' : 'not-allowed',
                 }}
               >
@@ -552,9 +552,9 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
               )}
               {scan && scan.results.length === 0 && (
                 <div className="p-10 text-center">
-                  <p className="text-[12px] font-bold" style={{ color: '#7DA4BE' }}>No setups in this window.</p>
+                  <p className="text-[12px] font-bold" style={{ color: '#aab3c2' }}>No setups in this window.</p>
                   <p className="text-[10px] mt-1" style={{ color: '#5E7793' }}>
-                    Loosen <span style={{ color: '#FFB200' }}>gap_threshold</span>, enable Leg A, or widen the scan mode to “all”.
+                    Loosen <span style={{ color: T.amber }}>gap_threshold</span>, enable Leg A, or widen the scan mode to “all”.
                   </p>
                 </div>
               )}
@@ -596,8 +596,8 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
             <div className="rounded-xl border px-4 py-2.5 flex items-center gap-4 flex-wrap" style={{ background: PANEL, borderColor: '#2A3F58' }}>
               <span className="text-[9px] font-bold tracking-widest" style={{ color: '#5E7793' }}>RESOLVED PARAMS (engine-coerced)</span>
               {Object.entries(scan.params).map(([k, v]) => (
-                <span key={k} className="text-[10px] font-mono" style={{ color: '#7DA4BE' }}>
-                  {k}=<span style={{ color: '#FFB200' }}>{String(v)}</span>
+                <span key={k} className="text-[10px] font-mono" style={{ color: '#aab3c2' }}>
+                  {k}=<span style={{ color: T.amber }}>{String(v)}</span>
                 </span>
               ))}
             </div>
@@ -616,7 +616,7 @@ function SummaryStat({ label, value, sub, accent }: { label: string; value: stri
     <div className="rounded-xl border px-3 py-2.5" style={{ background: PANEL, borderColor: '#2A3F58' }}>
       <div className="text-[9px] font-bold tracking-widest chakra" style={{ color: '#5E7793' }}>{label}</div>
       <div className="text-lg font-bold font-mono tabular-nums leading-tight" style={{ color: accent }}>{value}</div>
-      {sub && <div className="text-[9px]" style={{ color: '#3D5872' }}>{sub}</div>}
+      {sub && <div className="text-[9px]" style={{ color: T.muted }}>{sub}</div>}
     </div>
   )
 }

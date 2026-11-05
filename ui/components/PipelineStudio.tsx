@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
+import { PageHeader, T } from '@/components/terminal'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
   ResponsiveContainer,
@@ -24,6 +26,8 @@ import {
   getFeatureCorrelations,
 } from '@/lib/api'
 import { ModelLab, ConfigModal } from './ModelLab'
+import { TrainingTerminal } from './TrainingTerminal'
+import { ML_TRAIN_STREAM_URL, RL_TRAIN_STREAM_URL } from '@/lib/api'
 
 // ── TradingView-style line/area chart (lightweight-charts) ────────────────────
 interface LWLineChartProps {
@@ -34,7 +38,7 @@ interface LWLineChartProps {
   fmt?: (v: number) => string
 }
 
-function LWLineChart({ data, color = '#f59e0b', height = 280, label, fmt }: LWLineChartProps) {
+function LWLineChart({ data, color = '#ffb000', height = 280, label, fmt }: LWLineChartProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef     = useRef<IChartApi | null>(null)
   const seriesRef    = useRef<ISeriesApi<'Area'> | null>(null)
@@ -44,11 +48,11 @@ function LWLineChart({ data, color = '#f59e0b', height = 280, label, fmt }: LWLi
     const chart = createChart(containerRef.current, {
       width:  containerRef.current.clientWidth,
       height,
-      layout: { background: { type: ColorType.Solid, color: 'transparent' }, textColor: '#64748b' },
-      grid:   { vertLines: { color: '#1e293b', style: LineStyle.Dashed }, horzLines: { color: '#1e293b', style: LineStyle.Dashed } },
+      layout: { background: { type: ColorType.Solid, color: 'transparent' }, textColor: T.muted },
+      grid:   { vertLines: { color: '#1a2130', style: LineStyle.Dashed }, horzLines: { color: '#1a2130', style: LineStyle.Dashed } },
       crosshair: { mode: CrosshairMode.Normal },
-      rightPriceScale: { borderColor: '#1e293b', scaleMargins: { top: 0.1, bottom: 0.05 } },
-      timeScale: { borderColor: '#1e293b', timeVisible: false },
+      rightPriceScale: { borderColor: '#1a2130', scaleMargins: { top: 0.1, bottom: 0.05 } },
+      timeScale: { borderColor: '#1a2130', timeVisible: false },
       handleScroll: true,
       handleScale:  true,
     })
@@ -118,15 +122,15 @@ function RLConfigModal({ isDark, onLaunch, onClose }: RLConfigModalProps) {
     <div>
       <div className="flex justify-between mb-1">
         <label className={`text-[11px] font-medium ${mu}`}>{label}</label>
-        <span className={`text-[11px] font-mono font-bold ${tx}`}>{fmt ? fmt(val) : val.toLocaleString()}</span>
+        <span className={`text-[11px] font-mono font-bold ${tx}`}>{fmt ? fmt(val) : val.toLocaleString('en-IN')}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={val}
         onChange={e => setVal(parseFloat(e.target.value))}
         className="w-full h-1.5 appearance-none rounded-full bg-slate-700 accent-amber-500 cursor-pointer"
       />
       <div className="flex justify-between">
-        <span className={`text-[9px] ${mu}`}>{min.toLocaleString()}</span>
-        <span className={`text-[9px] ${mu}`}>{max.toLocaleString()}</span>
+        <span className={`text-[9px] ${mu}`}>{min.toLocaleString('en-IN')}</span>
+        <span className={`text-[9px] ${mu}`}>{max.toLocaleString('en-IN')}</span>
       </div>
     </div>
   )
@@ -272,7 +276,7 @@ function FeatureInspectorTab({
               loading ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-400 text-black'
             }`}
           >
-            {loading ? '⟳ Loading…' : features.length > 0 ? '↻ Refresh Stats' : '⚡ Load Feature Stats'}
+            {loading ? '⟳ Loading…' : features.length > 0 ? '↻ Refresh Stats' : '▶ Load Feature Stats'}
           </button>
           <button
             onClick={onApprove}
@@ -401,7 +405,7 @@ function FeatureInspectorTab({
       {/* Empty state */}
       {!loading && features.length === 0 && (
         <div className={`${card} border rounded-2xl py-20 text-center`}>
-          <p className="text-5xl mb-4">🔬</p>
+          <p className="text-3xl mb-4 font-mono opacity-40">◌</p>
           <p className={`${tx} text-lg font-semibold`}>No feature data loaded</p>
           <p className={`${mu} text-sm mt-2`}>Click "Load Feature Stats" to inspect engineered features before training.</p>
           <p className={`${mu} text-xs mt-1`}>Run Phase 3 (Feature Engineering) first if data is empty.</p>
@@ -430,14 +434,16 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
   const [inspectorLoading, setInspectorLoading] = useState(false)
   const [inspectorSort, setInspectorSort] = useState<{ col: string; asc: boolean }>({ col: 'null_pct', asc: false })
   const [inspectorApproved, setInspectorApproved] = useState(false)
+  const [mlStreamJobId, setMlStreamJobId] = useState<string | null>(null)
+  const [rlStreamJobId, setRlStreamJobId] = useState<string | null>(null)
 
   const bg = isDark ? 'bg-slate-950' : 'bg-white'
   const card = isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-slate-50 border-slate-200'
   const tx = isDark ? 'text-slate-50' : 'text-slate-950'
   const mu = isDark ? 'text-slate-500' : 'text-slate-500'
-  const grid = isDark ? '#334155' : '#e2e8f0'
-  const axis = isDark ? '#64748b' : '#94a3b8'
-  const tooltipBg = isDark ? '#1e293b' : '#ffffff'
+  const grid = isDark ? '#2a3448' : '#e2e8f0'
+  const axis = isDark ? T.muted : '#8a94a6'
+  const tooltipBg = isDark ? '#1a2130' : '#f2f5fa'
   const tooltipBorder = isDark ? '#475569' : '#e2e8f0'
 
   // Initial load
@@ -484,17 +490,20 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
     return () => clearInterval(id)
   }, [modelJob?.job_id, modelJob?.status])
 
-  // Poll RL metrics
+  // Poll RL metrics — fast only while a run is live. This component stays mounted after
+  // the first visit, so a fixed 2s poll kept hammering ui-api from every other tab.
   useEffect(() => {
-    const id = setInterval(async () => {
+    const tick = async () => {
       try {
         const res = await getRLTrainingMetrics()
         setTrainingMetrics(res.data)
         setIsTraining(res.data?.status === 'training')
       } catch {}
-    }, 2000)
+    }
+    tick()
+    const id = setInterval(tick, isTraining ? 2000 : 15000)
     return () => clearInterval(id)
-  }, [])
+  }, [isTraining])
 
   // Poll RL status
   useEffect(() => {
@@ -516,12 +525,16 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
     try {
       const res = await triggerTrainingConfig(payload)
       setModelJob(res.data)
+      if (res.data?.job_id) setMlStreamJobId(res.data.job_id)
     } catch (e) { console.error(e) }
   }
 
   const handleRLTrain = async (payload: Record<string, any>) => {
     setShowRLModal(false)
-    try { await triggerRLTraining(payload) } catch (e) { console.error(e) }
+    try {
+      const res = await triggerRLTraining(payload)
+      if (res.data?.job_id) { setRlStreamJobId(res.data.job_id); setIsTraining(true) }
+    } catch (e) { console.error(e) }
   }
 
   const svcStatus = (name: string) => {
@@ -533,14 +546,14 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
   }
 
   const CATEGORY_COLOR: Record<string, string> = {
-    rsi: '#f59e0b', macd: '#f59e0b', stoch: '#f59e0b', roc: '#f59e0b', williams: '#f59e0b', return_lag: '#f59e0b', is_green: '#f59e0b',
+    rsi: '#ffb000', macd: '#ffb000', stoch: '#ffb000', roc: '#ffb000', williams: '#ffb000', return_lag: '#ffb000', is_green: '#ffb000',
     sma: '#14b8a6', ema: '#14b8a6', price_vs: '#14b8a6', uptrend: '#14b8a6',
     volume: '#8b5cf6', obv: '#8b5cf6', mfi: '#8b5cf6', cmf: '#8b5cf6',
-    bb: '#64748b', atr: '#64748b', hist_vol: '#64748b', high_low: '#64748b', close_pos: '#64748b', gap: '#64748b',
+    bb: '#6f7a8e', atr: '#6f7a8e', hist_vol: '#6f7a8e', high_low: '#6f7a8e', close_pos: '#6f7a8e', gap: '#6f7a8e',
   }
   const featureColor = (f: string) => {
     const k = Object.keys(CATEGORY_COLOR).find(k => f.toLowerCase().startsWith(k))
-    return k ? CATEGORY_COLOR[k] : '#f59e0b'
+    return k ? CATEGORY_COLOR[k] : '#ffb000'
   }
 
   const ttStyle = { backgroundColor: tooltipBg, border: `1px solid ${tooltipBorder}`, borderRadius: '6px', fontSize: 12 }
@@ -670,20 +683,16 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
         />
       )}
 
-      {/* Header */}
-      <div className={`border-b ${isDark ? 'border-slate-800' : 'border-slate-200'} px-8 py-6`}>
-        <h1 className={`${tx} text-2xl font-semibold tracking-tight`}>Quantitative Pipeline</h1>
-        <p className={`${mu} text-sm mt-1`}>Data quality · Feature engineering · Model training · RL optimization</p>
-      </div>
+      <PageHeader code="PIPE" title="Quantitative Pipeline" subtitle="Data quality · feature engineering · model training · RL optimisation" />
 
       {/* Tab Bar */}
       <div className={`px-8 flex gap-0 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'} overflow-x-auto`}>
         {([
-          { key: 'quality',    label: 'Data Quality' },
-          { key: 'inspector',  label: '🔬 Feature Inspector' },
-          { key: 'features',   label: 'Feature Engineering' },
-          { key: 'model',      label: 'Model Studio' },
-          { key: 'rl',         label: 'RL Agent' },
+          { key: 'quality',    label: '① Data Quality' },
+          { key: 'features',   label: '② Feature Engineering' },
+          { key: 'inspector',  label: '③ Feature Inspector' },
+          { key: 'model',      label: '④ Model Studio' },
+          { key: 'rl',         label: '⑤ RL Agent' },
         ] as const).map(({ key, label }) => (
           <button
             key={key}
@@ -785,7 +794,7 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                   </ResponsiveContainer>
                 ) : (
                   <div className={`py-16 text-center ${mu}`}>
-                    <p className="text-3xl mb-3">📊</p>
+                    <p className="text-2xl mb-3 font-mono opacity-40">▦</p>
                     <p className="text-sm font-medium">No model trained yet</p>
                     <p className="text-xs mt-1">Run Phase 3 → Phase 4 to generate feature importance</p>
                   </div>
@@ -795,10 +804,10 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                 {featureImportance.length > 0 && (
                   <div className="flex gap-6 mt-4 pt-4 border-t border-slate-800">
                     {[
-                      { color: '#f59e0b', label: 'Momentum' },
+                      { color: '#ffb000', label: 'Momentum' },
                       { color: '#14b8a6', label: 'Trend' },
                       { color: '#8b5cf6', label: 'Volume' },
-                      { color: '#64748b', label: 'Volatility' },
+                      { color: '#6f7a8e', label: 'Volatility' },
                     ].map(l => (
                       <div key={l.label} className="flex items-center gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
@@ -836,15 +845,28 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
         {activeTab === 'model' && (
           <div className="grid grid-cols-[300px_1fr] gap-8">
             <Sidebar />
-            <ModelLab
-              isDark={isDark}
-              featureImportance={featureImportance}
-              modelMetrics={modelMetrics}
-              onMetricsRefresh={async () => {
-                try { setModelMetrics((await getModelMetrics()).data) } catch {}
-                try { setFeatureImportance((await getFeatureImportance()).data || []) } catch {}
-              }}
-            />
+            <div className="space-y-6">
+              <ModelLab
+                isDark={isDark}
+                featureImportance={featureImportance}
+                modelMetrics={modelMetrics}
+                onMetricsRefresh={async () => {
+                  try { setModelMetrics((await getModelMetrics()).data) } catch {}
+                  try { setFeatureImportance((await getFeatureImportance()).data || []) } catch {}
+                }}
+              />
+              <TrainingTerminal
+                jobId={mlStreamJobId}
+                streamUrl={ML_TRAIN_STREAM_URL}
+                title="ML TRAINING LOG"
+                onDone={(status) => {
+                  if (status === 'done') {
+                    getModelMetrics().then(r => setModelMetrics(r.data)).catch(() => {})
+                    getFeatureImportance().then(r => setFeatureImportance(r.data || [])).catch(() => {})
+                  }
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -938,6 +960,12 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                 )
               })()}
 
+              <TrainingTerminal
+                jobId={rlStreamJobId}
+                streamUrl={RL_TRAIN_STREAM_URL}
+                title="RL TRAINING LOG"
+              />
+
               {trainingMetrics?.metrics?.length > 0 ? (
                 /* Side-by-side TradingView-style charts */
                 <div className="grid grid-cols-2 gap-6">
@@ -945,7 +973,7 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                     <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5`}>Reward Convergence</h3>
                     <LWLineChart
                       height={280}
-                      color="#f59e0b"
+                      color="#ffb000"
                       data={trainingMetrics.metrics.map((m: any) => ({ time: m.episode ?? m.timestep ?? 0, value: m.avg_reward ?? 0 }))}
                       fmt={v => v.toFixed(4)}
                     />
@@ -962,7 +990,7 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                 </div>
               ) : (
                 <div className={`${card} border rounded-xl p-20 text-center ${mu}`}>
-                  <p className="text-5xl mb-4">🤖</p>
+                  <p className="text-5xl mb-4" style={{ color: 'var(--t-dim)' }}>◇</p>
                   <p className="text-sm font-semibold mb-1">PPO Agent — Awaiting Training</p>
                   <p className="text-xs">Click <span className="text-amber-400 font-semibold">⚙ Configure & Train PPO ↗</span> in the sidebar to begin. Reward and portfolio curves appear in real-time.</p>
                 </div>
@@ -972,17 +1000,25 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
         )}
 
         {/* ── DATA QUALITY TAB ─────────────────────────────────────────── */}
-        {activeTab === 'quality' && (
+        {activeTab === 'quality' && !(dataQuality?.ohlcv) && (
+          <div className="py-16 text-center text-slate-400 text-sm font-mono">
+            {(dataQuality as any)?.error
+              ? <span className="text-rose-400">DuckDB unavailable: {(dataQuality as any).error}</span>
+              : <span className="animate-pulse">Loading data quality metrics…</span>
+            }
+          </div>
+        )}
+        {activeTab === 'quality' && dataQuality?.ohlcv && (
           <div className="space-y-6">
             {/* Readiness Checklist */}
             <div className={`${card} border rounded-xl p-6`}>
               <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5`}>Pipeline Readiness</h3>
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: 'OHLCV Data', ok: dataQuality?.readiness.has_ohlcv, desc: `${dataQuality?.ohlcv.total_candles?.toLocaleString() || 0} candles` },
-                  { label: 'Features', ok: dataQuality?.readiness.has_features, desc: `${dataQuality?.features.tickers_processed || 0} tickers processed` },
-                  { label: 'Labels', ok: dataQuality?.readiness.has_labels, desc: `${dataQuality?.labels.total_labels?.toLocaleString() || 0} labels` },
-                  { label: 'Ready to Train', ok: dataQuality?.readiness.ready_to_train, desc: dataQuality?.readiness.ready_to_train ? 'All requirements met' : 'Run Phase 3 first' },
+                  { label: 'OHLCV Data', ok: dataQuality?.readiness?.has_ohlcv, desc: `${dataQuality?.ohlcv?.total_candles?.toLocaleString('en-IN') || 0} candles` },
+                  { label: 'Features', ok: dataQuality?.readiness?.has_features, desc: `${dataQuality?.features?.tickers_processed || 0} tickers processed` },
+                  { label: 'Labels', ok: dataQuality?.readiness?.has_labels, desc: `${dataQuality?.labels?.total_labels?.toLocaleString('en-IN') || 0} labels` },
+                  { label: 'Ready to Train', ok: dataQuality?.readiness?.ready_to_train, desc: dataQuality?.readiness?.ready_to_train ? 'All requirements met' : 'Run Phase 3 first' },
                 ].map(({ label, ok, desc }, i) => (
                   <div key={i} className={`rounded-xl p-4 border ${ok ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-slate-700 bg-slate-800/30'}`}>
                     <div className="flex items-center gap-2 mb-2">
@@ -1003,8 +1039,8 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                 <div className="space-y-3 mb-6">
                   {[
                     { label: 'Total Tickers', value: dataQuality?.ohlcv.total_tickers || '—' },
-                    { label: 'Total Candles', value: dataQuality?.ohlcv.total_candles?.toLocaleString() || '—' },
-                    { label: 'Avg / Ticker', value: dataQuality?.ohlcv.avg_candles_per_ticker?.toLocaleString() || '—' },
+                    { label: 'Total Candles', value: dataQuality?.ohlcv.total_candles?.toLocaleString('en-IN') || '—' },
+                    { label: 'Avg / Ticker', value: dataQuality?.ohlcv.avg_candles_per_ticker?.toLocaleString('en-IN') || '—' },
                     { label: 'Date Range', value: dataQuality ? `${dataQuality.ohlcv.min_date} → ${dataQuality.ohlcv.max_date}` : '—' },
                   ].map(({ label, value }, i) => (
                     <div key={i} className="flex justify-between items-center text-xs">
@@ -1023,7 +1059,7 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                         <XAxis dataKey="bucket" stroke={axis} tick={{ fontSize: 10 }} />
                         <YAxis stroke={axis} tick={{ fontSize: 10 }} />
                         <Tooltip contentStyle={ttStyle} formatter={(v: any) => [v, 'Tickers']} />
-                        <Bar dataKey="count" fill="#f59e0b" opacity={0.8} radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="count" fill="#ffb000" opacity={0.8} radius={[3, 3, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </>
@@ -1038,11 +1074,11 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                   <>
                     <div className="space-y-3 mb-6">
                       {[
-                        { label: 'Total Labels', value: dataQuality.labels.total_labels.toLocaleString() },
-                        { label: 'Up (Bullish)', value: dataQuality.labels.up_labels.toLocaleString(), color: 'text-emerald-400' },
-                        { label: 'Down (Bearish)', value: dataQuality.labels.down_labels.toLocaleString(), color: 'text-rose-400' },
+                        { label: 'Total Labels', value: dataQuality.labels.total_labels.toLocaleString('en-IN') },
+                        { label: 'Up (Bullish)', value: dataQuality.labels.up_labels.toLocaleString('en-IN'), color: 'text-emerald-400' },
+                        { label: 'Down (Bearish)', value: dataQuality.labels.down_labels.toLocaleString('en-IN'), color: 'text-rose-400' },
                         { label: 'Class Balance', value: `${dataQuality.labels.class_balance_pct}% up`, color: Math.abs(dataQuality.labels.class_balance_pct - 50) < 10 ? 'text-emerald-400' : 'text-amber-400' },
-                        { label: 'Avg 5D Return', value: `${dataQuality.labels.avg_return_pct > 0 ? '+' : ''}${dataQuality.labels.avg_return_pct.toFixed(3)}%` },
+                        { label: 'Avg 5D Return', value: `${fmtSigned(dataQuality.labels.avg_return_pct, 3)}%` },
                         { label: 'Std Dev Return', value: `±${dataQuality.labels.std_return_pct.toFixed(3)}%` },
                       ].map(({ label, value, color }, i) => (
                         <div key={i} className="flex justify-between items-center text-xs">
@@ -1076,7 +1112,7 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                   </>
                 ) : (
                   <div className={`py-10 text-center ${mu}`}>
-                    <p className="text-3xl mb-3">🏷</p>
+                    <p className="text-3xl mb-3" style={{ color: 'var(--t-dim)' }}>◇</p>
                     <p className="text-sm font-medium">No labels yet</p>
                     <p className="text-xs mt-1">Run Phase 3 to generate 5-day forward return labels</p>
                   </div>
@@ -1090,7 +1126,7 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
               <div className="grid grid-cols-5 gap-4 mb-6">
                 {[
                   { label: 'Tickers Processed', value: dataQuality?.features.tickers_processed || 0 },
-                  { label: 'Total Feature Rows', value: dataQuality?.features.total_rows?.toLocaleString() || '0' },
+                  { label: 'Total Feature Rows', value: dataQuality?.features.total_rows?.toLocaleString('en-IN') || '0' },
                   { label: 'Coverage', value: `${dataQuality?.features.coverage_pct || 0}%` },
                   { label: 'Sparse Tickers (<100 rows)', value: dataQuality?.features.sparse_tickers || 0 },
                   { label: 'Avg Rows / Ticker', value: dataQuality?.features.avg_rows_per_ticker || '—' },

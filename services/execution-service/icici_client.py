@@ -15,23 +15,42 @@ class ICICIOrderClient:
     In development mode (no credentials), all order calls are stubbed.
     """
 
-    def __init__(self, api_key: str, api_secret: str, session_token: str) -> None:
+    def __init__(self, api_key: str, api_secret: str, session_token: str,
+                 auto_connect: bool = True) -> None:
         self._api_key = api_key
-        self._stub = not (api_key and api_secret and session_token)
+        self._api_secret = api_secret
+        self._session_token = session_token
+        self._has_creds = bool(api_key and api_secret and session_token)
+        # Remain a stub until a live Breeze session is actually established. This
+        # lets callers defer the (blocking) handshake to a background thread.
+        self._stub = True
         self._breeze: Any = None
 
-        if not self._stub:
+        if self._has_creds and auto_connect:
             self._connect(api_secret, session_token)
+
+    def connect(self) -> None:
+        """Establish the Breeze session. Blocking — call off the event loop (e.g.
+        via ``asyncio.to_thread``) so service startup never waits on the broker."""
+        if self._has_creds and self._breeze is None:
+            self._connect(self._api_secret, self._session_token)
 
     def _connect(self, api_secret: str, session_token: str) -> None:
         try:
+            try:      # breeze_connect downloads ICICI's security master at import, with no timeout: use the cache
+                from shared.breeze_cache import install as _breeze_cache_install
+                _breeze_cache_install()
+            except Exception:  # noqa: BLE001
+                pass
             from breeze_connect import BreezeConnect  # type: ignore[import]
             self._breeze = BreezeConnect(api_key=self._api_key)
             self._breeze.generate_session(api_secret=api_secret, session_token=session_token)
+            self._stub = False
             logger.info("ICICI order client connected")
         except Exception as exc:
             logger.error("ICICI connection failed, falling back to stub", error=str(exc))
             self._stub = True
+            self._breeze = None
 
     def place_order(self, order: Order) -> str:
         """Places an order. Returns broker_order_id."""

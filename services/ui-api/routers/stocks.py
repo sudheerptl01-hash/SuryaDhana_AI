@@ -1,9 +1,14 @@
 """Stock list and details: data completeness, fundamentals, history."""
+import asyncio
 import csv
 import os
 import re
 from functools import lru_cache
 from fastapi import APIRouter, HTTPException, Query
+
+from errors import fail
+
+from routers._upstream import upstream_detail
 from datetime import date
 import httpx
 from db import get_conn
@@ -78,7 +83,46 @@ def _load_universe_metadata() -> dict[str, dict]:
                     "cap_category": (row.get("cap_category") or "").strip() or None,
                     **_parse_index_metadata(row.get("index")),
                 }
+    _fill_reference_names(metadata, [_app_data, _proj_data])
     return metadata
+
+
+def _fill_reference_names(metadata: dict[str, dict], data_dirs: list[str]) -> None:
+    """The universe CSV has company names / industries for only ~500 of 1,500 stocks. Fill the gaps from NSE's own
+    reference files: reference/nse_industry.csv (name + industry, Nifty Total Market) and
+    reference/nse_equity_list.csv (EQUITY_L.csv: every listed company's name)."""
+    for d in data_dirs:
+        ind_path = os.path.join(d, "reference", "nse_industry.csv")
+        eq_path = os.path.join(d, "reference", "nse_equity_list.csv")
+        if not os.path.exists(eq_path) and not os.path.exists(ind_path):
+            continue
+        if os.path.exists(ind_path):
+            with open(ind_path, newline="") as fh:
+                for row in csv.DictReader(fh):
+                    sym = (row.get("Symbol") or "").strip().upper()
+                    m = metadata.get(sym)
+                    if m is None:
+                        continue
+                    if not m.get("company_name") or m["company_name"].upper() == sym:   # CSV stores the ticker as "name"
+                        m["company_name"] = (row.get("Company Name") or "").strip() or None
+                    if m.get("sector_name") in (None, "", "Unknown") and (row.get("Industry") or "").strip():
+                        m["sector_name"] = row["Industry"].strip()
+        if os.path.exists(eq_path):
+            with open(eq_path, newline="") as fh:
+                for row in csv.DictReader(fh):
+                    sym = (row.get("SYMBOL") or "").strip().upper()
+                    m = metadata.get(sym)
+                    if m is not None and (not m.get("company_name") or m["company_name"].upper() == sym):
+                        m["company_name"] = (row.get("NAME OF COMPANY") or "").strip() or None
+        return
+
+
+@router.get("/symbols")
+async def list_symbols():
+    """Lightweight symbol directory for the command bar's type-ahead: ticker, name, sector, cap. Local CSV only."""
+    meta = _load_universe_metadata()
+    return {"data": [{"t": t, "n": m.get("company_name") or t, "s": None if m.get("sector_name") in (None, "Unknown") else m["sector_name"], "c": m.get("cap_category")}
+                     for t, m in sorted(meta.items())]}
 
 
 @router.get("/list")
@@ -138,6 +182,7 @@ async def list_stocks(
                 if days_stale is None:
                     days_stale = 999
                 density = ohlcv.get("data_density_pct") or 0.0
+                behind = ohlcv.get("sessions_behind")
                 stock.update({
                     "latest_price":     ohlcv.get("latest_price"),
                     "price_date":       ohlcv.get("price_date"),
@@ -147,7 +192,8 @@ async def list_stocks(
                     "years_of_data":    ohlcv.get("years_of_data", 0),
                     "data_density_pct": density,
                     "days_since_update": days_stale,
-                    "data_quality":     _classify_quality(days_stale, density),
+                    "sessions_behind":  behind,
+                    "data_quality":     _classify_quality(days_stale, density, behind),
                     "has_ohlcv":        True,
                     # financial metrics (may be None for unenriched tickers)
                     "cmp":          ohlcv.get("cmp"),
@@ -183,11 +229,117 @@ async def list_stocks(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/reload-universe")
-async def reload_universe():
-    """Clear the in-memory CSV cache so updated universe CSV is picked up immediately."""
-    _load_universe_metadata.cache_clear()
-    return {"status": "cache cleared", "message": "Universe metadata reloaded from CSV"}
+@router.get("/{ticker}/profile")
+async def get_stock_profile(ticker: str):
+    """Security page (DES): adjusted price stats, delivery, ownership, insiders, deals, F&O, MTF, events."""
+    sym = ticker.upper().removesuffix(".NS")
+    if not re.fullmatch(r"[A-Z0-9&\-]{1,20}", sym):
+        raise HTTPException(status_code=422, detail="Bad symbol")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            r = await client.get(f"{DATA_SVC}/db/security/{sym}")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=r.json().get("detail", r.text[:200]) if r.headers.get(
+            "content-type", "").startswith("application/json") else r.text[:200])
+    return r.json()
+
+
+@router.get("/{ticker}/results")
+async def get_stock_results(ticker: str):
+    """How the stock moved on each of its last 12 quarterly results (ERN). First call per week asks NSE (~2 s)."""
+    sym = ticker.upper().removesuffix(".NS")
+    if not re.fullmatch(r"[A-Z0-9&\-]{1,20}", sym):
+        raise HTTPException(status_code=422, detail="Bad symbol")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(45.0)) as client:
+            r = await client.get(f"{DATA_SVC}/db/security/{sym}/results")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 200))
+    return r.json()
+
+
+@router.get("/{ticker}/pe-history")
+async def get_stock_pe_history(ticker: str):
+    """Point-in-time daily trailing P/E (GE) with its median and quartiles."""
+    sym = ticker.upper().removesuffix(".NS")
+    if not re.fullmatch(r"[A-Z0-9&\-]{1,20}", sym):
+        raise HTTPException(status_code=422, detail="Bad symbol")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            r = await client.get(f"{DATA_SVC}/db/security/{sym}/pe-history")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 200))
+    return r.json()
+
+
+@router.get("/{ticker}/actions")
+async def get_stock_actions(ticker: str, years: int = 5):
+    """Dividends, bonuses, splits, buybacks (DVD) and the TTM dividend yield."""
+    sym = ticker.upper().removesuffix(".NS")
+    if not re.fullmatch(r"[A-Z0-9&\-]{1,20}", sym):
+        raise HTTPException(status_code=422, detail="Bad symbol")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            r = await client.get(f"{DATA_SVC}/db/security/{sym}/actions", params={"years": max(1, min(years, 15))})
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 200))
+    return r.json()
+
+
+@router.get("/{ticker}/history")
+async def get_stock_history(ticker: str, days: int = 90):
+    """HP: daily bars as traded with delivery %, change on adjusted closes, split / bonus ex-dates."""
+    sym = ticker.upper().removesuffix(".NS")
+    if not re.fullmatch(r"[A-Z0-9&\-]{1,20}", sym):
+        raise HTTPException(status_code=422, detail="Bad symbol")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            r = await client.get(f"{DATA_SVC}/db/security/{sym}/history", params={"days": max(5, min(days, 3700))})
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 200))
+    return r.json()
+
+
+@router.get("/{ticker}/filings")
+async def get_stock_filings(ticker: str, days: int = 30):
+    """The company's NSE announcements (CN), last `days` days, categorised."""
+    sym = ticker.upper().removesuffix(".NS")
+    if not re.fullmatch(r"[A-Z0-9&\-]{1,20}", sym):
+        raise HTTPException(status_code=422, detail="Bad symbol")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            r = await client.get(f"{DATA_SVC}/db/security/{sym}/filings", params={"days": max(1, min(days, 365))})
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 200))
+    return r.json()
+
+
+@router.get("/{ticker}/financials")
+async def get_stock_financials(ticker: str):
+    """Quarterly revenue / profit / EPS from NSE results XBRL (FA). First call per company reads ~12 filings (~6 s)."""
+    sym = ticker.upper().removesuffix(".NS")
+    if not re.fullmatch(r"[A-Z0-9&\-]{1,20}", sym):
+        raise HTTPException(status_code=422, detail="Bad symbol")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
+            r = await client.get(f"{DATA_SVC}/db/security/{sym}/financials")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 200))
+    return r.json()
 
 
 @router.get("/{ticker}/detail")
@@ -212,7 +364,8 @@ async def get_stock_detail(ticker: str):
 
     row = next((r for r in rows if str(r.get("ticker", "")).upper() == ticker), None)
     if row is None:
-        raise HTTPException(status_code=404, detail=f"No data for {ticker}")
+        fail(404, "not_found", f"Unknown ticker {ticker}",
+             hint="Try the GO bar search — e.g. `TCS` or `GO TCS`")
 
     total_rows = int(row.get("total_rows") or 0)
     first_date = row.get("first_date")
@@ -285,42 +438,48 @@ async def get_stock_ohlcv(ticker: str, days: int = Query(90, ge=5, le=9999)):
     Returns the last N trading days of OHLCV data for a ticker, sorted ascending.
     Used to render interactive price charts in the frontend.
     """
+    # Production-review fix (contract C1, 14 Oct 2026): this route used to open DuckDB directly
+    # (violating the data-service-owns-the-lock rule its own module header states) with the ticker
+    # f-string-interpolated into SQL, and it returned 404 for every ticker because ui-api's local
+    # connection does not see the live table. It now proxies data-service /ohlcv/{ticker}, which
+    # owns the lock, and keeps the exact response shape the frontend chart expects.
     ticker = ticker.upper()
-    with get_conn() as conn:
-        try:
-            rows = conn.execute(f"""
-                SELECT date, open, high, low, close, volume
-                FROM ohlcv
-                WHERE ticker = '{ticker}'
-                ORDER BY date DESC
-                LIMIT {days}
-            """).fetchall()
-
-            if not rows:
-                raise HTTPException(status_code=404, detail=f"No OHLCV data for {ticker}")
-
-            # Reverse to ascending (oldest first)
-            rows = list(reversed(rows))
-
-            return {
-                "ticker": ticker,
-                "days": len(rows),
-                "rows": [
-                    {
-                        "date": str(r[0]),
-                        "open": float(r[1]) if r[1] else None,
-                        "high": float(r[2]) if r[2] else None,
-                        "low": float(r[3]) if r[3] else None,
-                        "close": float(r[4]) if r[4] else None,
-                        "volume": int(r[5]) if r[5] else 0,
-                    }
-                    for r in rows
-                ],
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
+            resp = await client.get(f"{DATA_SVC}/ohlcv/{ticker}")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service OHLCV unavailable: {exc}")
+    # D7: an unknown ticker is NOT an upstream failure. The old raise_for_status() turned the
+    # upstream 404 into `upstream_down` and leaked the internal URL (+ MDN link) on the wire.
+    if resp.status_code == 404:
+        fail(404, "not_found", f"No OHLCV data for {ticker}",
+             hint="Try the GO bar search — e.g. `TCS` or `GO TCS`")
+    if resp.status_code >= 400:  # real upstream trouble — surface its detail, never its URL
+        raise HTTPException(status_code=502,
+                            detail=f"data-service OHLCV error ({resp.status_code}): {upstream_detail(resp, 200)}")
+    try:
+        data = resp.json().get("data") or []
+    except ValueError:
+        raise HTTPException(status_code=502, detail="data-service OHLCV returned non-JSON")
+    if not data:
+        fail(404, "not_found", f"No OHLCV data for {ticker}",
+             hint="Try the GO bar search — e.g. `TCS` or `GO TCS`")
+    rows = data[-days:]                                   # data arrives oldest-first
+    return {
+        "ticker": ticker,
+        "days": len(rows),
+        "rows": [
+            {
+                "date": str(r.get("date")),
+                "open": r.get("open"),
+                "high": r.get("high"),
+                "low": r.get("low"),
+                "close": r.get("close"),
+                "volume": int(r.get("volume") or 0),
             }
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            for r in rows
+        ],
+    }
 
 
 @router.get("/screener")
@@ -365,7 +524,19 @@ async def screener(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    # Legacy DuckDB path (unreachable, kept for reference)
+    # Legacy DuckDB path (unreachable — the delegate above always returns or raises;
+    # kept for reference). Off the event loop per design review A3: the full-universe
+    # window-function scan takes seconds and would freeze every other request.
+    return await asyncio.to_thread(
+        _screener_legacy_duckdb, t1, t2, t3, t4, t5, t6, t7, t8, skip, limit
+    )
+
+
+def _screener_legacy_duckdb(
+    t1: bool, t2: bool, t3: bool, t4: bool, t5: bool, t6: bool, t7: bool, t8: bool,
+    skip: int, limit: int,
+) -> dict:
+    """Legacy local-DuckDB screener. Sync — only ever call via asyncio.to_thread (A3)."""
     with get_conn() as conn:
         try:
             # Compute all technical indicators via SQL window functions
@@ -514,8 +685,15 @@ async def screener(
             raise HTTPException(status_code=500, detail=str(e))
 
 
-def _classify_quality(days_stale: int, density: float) -> str:
-    """Classify data quality: excellent/good/fair/poor."""
+def _classify_quality(days_stale: int, density: float, sessions_behind: int | None = None) -> str:
+    """Classify data quality: excellent/good/fair/poor.
+
+    When ``sessions_behind`` (trading sessions behind the newest DB session) is known it
+    replaces calendar-day staleness, so Friday's close still reads as current on Sunday.
+    """
+    if sessions_behind is not None:
+        # map sessions onto the calendar-day thresholds below: 0 → 0d, 1 → 2d, 2-3 → ≤4d …
+        days_stale = 0 if sessions_behind == 0 else sessions_behind + 1
     if days_stale > 7 or density < 80:
         return "poor"
     if days_stale > 3 or density < 90:

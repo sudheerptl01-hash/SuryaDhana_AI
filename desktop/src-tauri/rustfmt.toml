@@ -1,0 +1,3 @@
+# rustfmt for the desktop shell. The page tables in src/pages.rs are #[rustfmt::skip] (one page per line;
+# scripts/desktop_qa parses that file).
+max_width = 120

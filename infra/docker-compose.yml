@@ -5,12 +5,7 @@ x-common-env: &common-env
   REDIS_URL: redis://redis:6379/0
   CELERY_BROKER_URL: redis://redis:6379/1
   CELERY_RESULT_BACKEND: redis://redis:6379/2
-  ICICI_API_KEY: ${ICICI_API_KEY:-}
-  ICICI_API_SECRET: ${ICICI_API_SECRET:-}
-  ICICI_SESSION_TOKEN: ${ICICI_SESSION_TOKEN:-}
-  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
-  STOCK_UNIVERSE_PATH: /data/FINAL_100_STOCKS.csv
+  STOCK_UNIVERSE_PATH: /data/NSE_1500.csv
   DATA_SERVICE_URL: http://data-service:8001
   FEATURE_SERVICE_URL: http://feature-service:8002
   ML_SERVICE_URL: http://ml-service:8003
@@ -18,6 +13,10 @@ x-common-env: &common-env
   RISK_SERVICE_URL: http://risk-service:8005
   EXECUTION_SERVICE_URL: http://execution-service:8006
   MONITORING_SERVICE_URL: http://monitoring-service:8007
+  MASTER_CONTROLLER_URL: http://master-controller:8008
+  # shared/http_guard.py: containers call each other by service name and are never loopback peers
+  GUARD_ALLOWED_HOSTS: data-service,ui-api,master-controller,host.docker.internal
+  GUARD_ALLOW_REMOTE_WRITES: "1"
 
 x-healthcheck: &default-healthcheck
   interval: 30s
@@ -65,6 +64,8 @@ services:
         condition: service_healthy
       monitoring-service:
         condition: service_healthy
+      master-controller:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       <<: *default-healthcheck
@@ -78,10 +79,15 @@ services:
       dockerfile: services/data-service/Dockerfile
     ports:
       - "8001:8001"
+    env_file:
+      - ../.env
     environment:
       <<: *common-env
     volumes:
-      - market-data:/data
+      # Share the same host data dir that ui-api mounts at /app/data.
+      # data-service writes to /data/market.duckdb → host: <project>/data/market.duckdb
+      # ui-api reads  from /app/data/market.duckdb → same host file.
+      - ../data:/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       <<: *default-healthcheck
@@ -112,8 +118,11 @@ services:
       - "8003:8003"
     environment:
       <<: *common-env
+      MODEL_ARTIFACT_DIR: /app/model-artifacts
     volumes:
-      - model-artifacts:/app/services/ml-service/models
+      # Own volume, mounted OUTSIDE the `models` code package (see MODEL_ARTIFACT_DIR).
+      - ml-model-artifacts:/app/model-artifacts
+      - ../data:/data  # read-only DuckDB access for /batch-predict
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
       <<: *default-healthcheck
@@ -130,7 +139,7 @@ services:
     environment:
       <<: *common-env
     volumes:
-      - model-artifacts:/app/services/rl-service/models
+      - rl-model-artifacts:/app/services/rl-service/models
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
       <<: *default-healthcheck
@@ -159,6 +168,8 @@ services:
       dockerfile: services/execution-service/Dockerfile
     ports:
       - "8006:8006"
+    env_file:
+      - ../.env
     environment:
       <<: *common-env
     healthcheck:
@@ -181,7 +192,41 @@ services:
       <<: *default-healthcheck
     restart: unless-stopped
 
+  # ── Master Controller (IST Autopilot Scheduler) ─────────────────────────────
+
+  master-controller:
+    build:
+      context: ..
+      dockerfile: services/master-controller/Dockerfile
+    ports:
+      - "8008:8008"
+    env_file:
+      - ../.env
+    environment:
+      <<: *common-env
+      RL_TRAINER_PATH: /app/scripts/rl_trainer.py
+      PYTHON_BIN: python
+    volumes:
+      - ../data:/data
+      - ../scripts:/app/scripts
+    depends_on:
+      data-service:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+      rl-service:
+        condition: service_healthy
+      execution-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
 volumes:
   redis-data:
-  market-data:
-  model-artifacts:
+  ml-model-artifacts:
+  rl-model-artifacts:

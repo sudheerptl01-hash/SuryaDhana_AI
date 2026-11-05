@@ -64,16 +64,20 @@ class TrainAgentRequest(BaseModel):
 
 
 @app.post("/train")
-async def train_agent(req: TrainAgentRequest) -> dict:
+def train_agent(req: TrainAgentRequest) -> dict:
+    # Sync handler (threadpool): PPO training is minutes of CPU — as `async def` it froze
+    # the whole service (health checks failed, /optimize stalled). Train a NEW agent and
+    # swap it in only when finished, so /optimize never sees a half-trained agent.
     global _agent
     settings = get_settings()
 
-    _agent = PPOPortfolioAgent(
+    agent = PPOPortfolioAgent(
         max_positions=settings.max_portfolio_positions,
         total_timesteps=req.total_timesteps,
     )
-    _agent.train(req.signals_data)
-    _agent.save("models/rl_agent_v1")
+    agent.train(req.signals_data)
+    agent.save("models/rl_agent_v1")
+    _agent = agent
 
     return {"status": "trained", "timesteps": req.total_timesteps}
 

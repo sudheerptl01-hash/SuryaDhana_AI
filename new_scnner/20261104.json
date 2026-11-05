@@ -1,0 +1,365 @@
+{
+  "scan_date": "2026-11-04",
+  "generated_at": "2026-11-04 16:30 UTC (scheduled run)",
+  "universe": "NSE/BSE only",
+  "methodology": "Soros-reflexivity Stage-1 soft-catalyst screen over public news and exchange-filing summaries from 26 Oct to 4 Nov 2026 (main focus 2-4 Nov): order/L1 announcements, rating actions, SEBI PIT/SAST disclosures, NCLT steps, Q2 FY27 capex disclosures. No input news was supplied, so the feed was built by web search.",
+  "note": "Market context: Nifty closed 23,960.60 (+0.63%) on 4 Nov after four up sessions; Brent ~$103. Yahoo Finance tickers use NSE symbol + '.NS' or BSE code + '.BO'; Yahoo API was unreachable from the run environment, so tickers were not live-verified (formats match earlier scans). Not investment advice.",
+  "count": 19,
+  "stage1_candidates": [
+    {
+      "ticker": "BHEL.NS",
+      "yahoo_ticker": "BHEL.NS",
+      "company_name": "Bharat Heavy Electricals Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Private-Sector Thermal Order Supercycle (4 x 2x800 MW from Adani Power)",
+      "news": "BHEL reportedly won four orders from Adani Power for boiler-turbine-generator packages plus auxiliaries, each project 2x800 MW; value reported at Rs 5,000-7,000 cr per contract (ex-GST), i.e. potentially Rs 20,000-28,000 cr in total. Stock rose only ~2.5% intraday.",
+      "market_consensus_gap": "The Street prices BHEL as a PSU order-book story with chronic execution and margin disappointment, so it models only state-utility thermal orders. Repeat private-sector BTG orders of this size (from a fast-executing developer with advances) are a different mix: better payment terms, quicker execution and lower working capital. A ~2.5% move on a multi-thousand-crore order says the market has not re-based FY28-29 revenue.",
+      "reflexivity_thesis": "1) Formal disclosure of the exact value moves the order book to a new high and extends revenue visibility past FY29. 2) A private customer with advance-led cash flow improves working capital, so sell-side lifts FY28 EPS and FCF estimates. 3) Thermal capacity addition of 80+ GW by 2032 gets re-framed as a multi-year BHEL monopoly-like cycle, pulling DII capex-theme funds back in. 4) A re-rating cuts the cost of bank guarantees and supports more bids. Risks: input-cost pass-through, Adani project timing, value not confirmed in exchange filing.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/industrial-goodsservices/BHEL-Bags-Four-Major-Orders-from-Adani-Power-for-Thermal-Projects/6aeaa689c6c6dccbb9118f5f",
+        "https://trendlyne.com/posts/5928216/market-trades-higher-bhel-wins-orders-worth-upto-rs-7000-crore"
+      ],
+      "news_date": "2026-11-04"
+    },
+    {
+      "ticker": "RITES.NS",
+      "yahoo_ticker": "RITES.NS",
+      "company_name": "RITES Limited",
+      "exchange": "NSE",
+      "catalyst_category": "L1 Tender Status (pre-LoA) - Sri Lanka Railways DMU train sets",
+      "news": "RITES informed exchanges (2 Nov, after hours) that Sri Lanka Railways identified it as L-1 for supply of broad-gauge Diesel Multiple Unit train sets, ~Rs 400 cr. Execution within 12 months of LC opening; still subject to evaluation, technical scrutiny and documentation before LoA.",
+      "market_consensus_gap": "RITES trades as a consultancy/annuity PSU whose export (rolling-stock) segment is seen as lumpy and fading. A Rs 400 cr export supply order alone is a large share of a year's export revenue, and it is not in estimates until the LoA and LC arrive.",
+      "reflexivity_thesis": "1) LoA + LC convert L1 into booked export revenue for FY28. 2) Export rolling-stock carries better margins than consultancy turnkey work, so a mix-led EPS upgrade follows. 3) A revived 'export of Indian rolling stock' narrative (Sri Lanka, Africa) brings back PSU-railway funds. 4) Re-rating supports bids for further neighbouring-country tenders. Risks: Sri Lankan LC/funding delays, award not finalised.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/transportation/RITES-Emerges-As-L-1-Bidder-For-Rs-400-Crore-Sri-Lanka-Contract/6ae8c4d3c6c6dccbb90fae26"
+      ],
+      "news_date": "2026-11-02"
+    },
+    {
+      "ticker": "544291.BO",
+      "yahoo_ticker": "544291.BO",
+      "company_name": "Rajesh Power Services Limited",
+      "exchange": "BSE",
+      "catalyst_category": "Order Inflow Acceleration - Rs 1,629 cr DGVCL underground cabling + SCADA (System Improvement scheme)",
+      "news": "Rajesh Power Services won a Rs 1,628.74 cr (incl. taxes) turnkey contract from Dakshin Gujarat Vij Company (DGVCL) to convert 11/22 kV HT and LT overhead networks to underground cabling with SCADA-compatible equipment; 24-month execution.",
+      "market_consensus_gap": "As a BSE SME-listed power-distribution EPC with thin analyst coverage, the stock is priced on past revenue. A single Rs 1,600+ cr order is a multiple of trailing revenue and repeats the October DGVCL pattern, so the order book (and FY27-28 revenue run-rate) is a step change that coverage has not modelled.",
+      "reflexivity_thesis": "1) A 24-month execution implies a sharp jump in annualised revenue. 2) Repeat Gujarat discom wins under the System Improvement / RDSS spending signal a pipeline, so any initiating broker will model high growth. 3) SME-to-main-board migration eligibility and visibility pull in PMS/AIF money, the stock re-rates and the higher price lowers funding cost for the working-capital need. Risks: working-capital strain, SME illiquidity, single-client concentration.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/industrial-goodsservices/Rajesh-Power-Services-Wins-Rs-1629-Crore-Order-from-DGVCL/6aeab341c6c6dccbb91198a5"
+      ],
+      "news_date": "2026-11-04"
+    },
+    {
+      "ticker": "BORORENEW.NS",
+      "yahoo_ticker": "BORORENEW.NS",
+      "company_name": "Borosil Renewables Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Shadow Credit Upgrade (two-notch: IND A -> IND AA-, A1+)",
+      "news": "India Ratings upgraded Borosil Renewables' long-term rating from IND A to IND AA- (Stable) and short-term to IND A1+. Rationale: consolidated EBITDA margin ~31% in 1QFY27 (vs 3.9% in FY25), net-cash balance sheet as of FY26, exit from insolvent German subsidiary GMB, and domestic solar-glass demand from PM-Surya Ghar and PM-KUSUM. Rs 1,100 cr capacity expansion due end-FY27.",
+      "market_consensus_gap": "The market still remembers Borosil Renewables as a cyclical solar-glass maker crushed by Chinese dumping and German losses. A two-notch upgrade to AA- formally confirms the turnaround to a net-cash, ~30%-margin, import-protected domestic supplier. US AD/CVD duties on Indian modules are seen as a sector negative, but they do not touch domestic solar-glass demand.",
+      "reflexivity_thesis": "1) AA-/A1+ cuts borrowing cost for the Rs 1,100 cr expansion, so interest drag in FY28 models falls. 2) Analysts move margin assumptions from 'cyclical peak' to 'structural', leading to EPS upgrades. 3) Higher-quality credit is eligible for more mandates and lifts DII ownership. 4) Expansion commissioning at strong margins confirms the upgrade loop. Risks: Chinese glass price war, ALMM/duty policy changes, capex execution.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/renewables/Borosil-Renewables-Credit-Rating-Upgraded-to-IND-AA-by-India-Ratings/6ae498bec6c6dccbb90d15c4"
+      ],
+      "news_date": "2026-10-30"
+    },
+    {
+      "ticker": "SESHAPAPER.NS",
+      "yahoo_ticker": "SESHAPAPER.NS",
+      "company_name": "Seshasayee Paper and Boards Limited",
+      "exchange": "NSE",
+      "catalyst_category": "SEBI PIT/SAST Promoter Open-Market Accumulation",
+      "news": "Promoter-group entity Time Square Investments Pvt Ltd bought 5,70,000 shares on NSE at Rs 215 (~Rs 12.3 cr), raising its holding from 10.221% to 11.125% (70.16 lakh of 6.31 cr shares).",
+      "market_consensus_gap": "Paper stocks are priced at trough multiples on Chinese/Indonesian import pressure and soft realisations. A ~0.9% open-market promoter buy at Rs 215 is an insider signal that management sees the cycle bottoming (import duties/ safeguard talk, pulp costs) before it shows in reported EPS.",
+      "reflexivity_thesis": "1) Insider buying creates a price floor near Rs 215. 2) Any paper-price recovery or trade-remedy action on imported paper shifts EPS upward from trough. 3) A cash-rich, low-P/B balance sheet gets value-fund attention, and the promoter's creeping acquisition reduces free float. Risks: prolonged import pressure, low liquidity.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/Hinglish/other/Seshasayee-Paper-Promoter-Group-Increases-Stake-by-090percent-via-Open-Market/6ae08f51c6c6dccbb9087e74"
+      ],
+      "news_date": "2026-10-27"
+    },
+    {
+      "ticker": "SHAKTIPUMP.NS",
+      "yahoo_ticker": "SHAKTIPUMP.NS",
+      "company_name": "Shakti Pumps (India) Limited",
+      "exchange": "NSE",
+      "catalyst_category": "SEBI PIT Promoter-Group Open-Market Accumulation",
+      "news": "Promoter-group entity Vintex Tools & Machineries bought 4,23,000 Shakti Pumps shares in the open market on 29-30 Oct 2026, raising its holding from 3.99% (49.27 lakh shares) to 4.33% (53.50 lakh shares). Price not disclosed.",
+      "market_consensus_gap": "After a sharp de-rating on fears that PM-KUSUM solar-pump orders have peaked, the market prices Shakti on falling order inflow. Promoter-group buying runs against that bear case and comes alongside the backward-integration solar cell/module plant and state-scheme empanelments flagged in October.",
+      "reflexivity_thesis": "1) Insider buying signals confidence in H2 order flow (PM-KUSUM 2.0 / state schemes). 2) Backward integration expands margins, which drives EPS revisions. 3) Short-covering plus DII re-entry after the de-rating start a reflexive bounce. Risks: subsidy disbursal delays, scheme-transition gap.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/Hinglish/other/Shakti-Pumps-Promoter-Entity-Increases-Stake-by-423-Lakh-Shares-via-Open-Market/6ae464ecc6c6dccbb90c7673"
+      ],
+      "news_date": "2026-10-30"
+    },
+    {
+      "ticker": "SAMMAANCAP.NS",
+      "yahoo_ticker": "SAMMAANCAP.NS",
+      "company_name": "Sammaan Capital Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Strategic Institutional Entry / Promoter Warrant Conversion (Avenir Investment)",
+      "news": "Promoter Avenir Investment RSC Ltd converted 8,68,92,966 warrants into equity on 30 Oct 2026, raising its stake from 28.34% to 33.32%; share count rose to 1,25,14,49,810. It still holds 21,97,97,569 Tranche-II warrants (~17.56% of post-conversion equity).",
+      "market_consensus_gap": "The Street still discounts Sammaan (ex-Indiabulls Housing) for legacy-book and governance overhang. Fresh primary capital converting from a strategic Gulf-backed promoter rebuilds equity, and the remaining Tranche-II warrants signal intent to take control further. The market is reading the warrants as dilution rather than as the endorsement they represent.",
+      "reflexivity_thesis": "1) Equity infusion lowers leverage, which brings rating watch-positive / upgrade potential and cheaper borrowing. 2) Lower cost of funds restarts AUM growth and supports ROE re-rating estimates. 3) Strategic-promoter credibility lets FIIs/DIIs re-underwrite the name, and the higher price makes Tranche-II conversion less dilutive. Risks: legacy asset quality, regulatory overhang, dilution.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/bankingfinance/Sammaan-Capital-Promoter-Avenir-Investment-Raises-Stake-to-3332percent-via-Warrant-Conversion/6aeadbfbc6c6dccbb911d2aa"
+      ],
+      "news_date": "2026-10-30"
+    },
+    {
+      "ticker": "ELLEN.NS",
+      "yahoo_ticker": "ELLEN.NS",
+      "company_name": "Ellenbarrie Industrial Gases Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Hidden CapEx Commercialisation + Capability Order (Rs 481 cr 1,200 TPD ASU)",
+      "news": "Q2 FY27: revenue Rs 114.3 cr (+28.1%), EBITDA Rs 40.7 cr (margin 35.6%, -220 bp), PAT Rs 35.6 cr (-3% on base-effect DTC). Won a Rs 480.7 cr turnkey contract for a 1,200 TPD cryogenic Air Separation Unit at Jharsuguda, Odisha (FY28-29 visibility). New 320 TPD onsite plant commissioned; full revenue from Q3 FY27. Capacity: bulk 915 TPD, onsite 1,018 TPD. Cash Rs 424 cr; capex Rs 250 cr FY27 / Rs 200 cr FY28.",
+      "market_consensus_gap": "Headline PAT fell, so the result will screen as weak. The market misses that (a) the 320 TPD onsite plant only contributes from Q3, and (b) a Rs 481 cr ASU order is roughly a year of revenue, establishing Ellenbarrie as an ASU EPC builder (not only a gas seller) against Linde/Air Liquide/INOX.",
+      "reflexivity_thesis": "1) Q3-Q4 onsite revenue ramp drives a sequential EBITDA jump. 2) The ASU order adds a high-visibility EPC stream, so FY28-29 EPS gets upgraded. 3) The 'Indian industrial-gas import substitute' theme plus a net-cash balance sheet attracts fresh DII interest after the IPO lock-in era. Risks: turnkey execution margins, freight/power inflation.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://whalesbook.com/corporate-news/English/industrial-goodsservices/Ellenbarrie-Industrial-Gases-Q2-Revenue-Climbs-28percent-Bags-480-Crore-Order/6aeb3f8ac6c6dccbb9134ad5"
+      ],
+      "news_date": "2026-11-04"
+    },
+    {
+      "ticker": "DEEDEV.NS",
+      "yahoo_ticker": "DEEDEV.NS",
+      "company_name": "DEE Development Engineers Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Shadow Credit Upgrade (CARE A- -> CARE A / A2+ -> A1)",
+      "news": "CareEdge upgraded DEE Development Engineers' long-term bank facilities to CARE A (Stable) from CARE A-, and short-term to CARE A1 from CARE A2+, on total facilities of Rs 1,474.19 cr, based on audited FY26 and Q1 FY27 performance.",
+      "market_consensus_gap": "DEE Piping is priced as a working-capital-heavy piping fabricator with a leveraged balance sheet. Moving to the A1 short-term bucket lowers working-capital cost on a Rs 1,474 cr facility base, a P&L lever not yet in consensus.",
+      "reflexivity_thesis": "1) Lower spreads on WC/LC limits reduce interest cost, so PAT upgrades follow. 2) Higher sanctioned limits allow bigger power/oil & gas piping orders (Indian thermal/nuclear capex cycle). 3) Order-book growth plus better ROCE trigger re-rating and DII entry. Risks: execution, rating triggers in debt covenants, client concentration.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/bankingfinance/DEE-Development-Engineers-Credit-Rating-Upgraded-to-CARE-AA1-by-CareEdge/6aeaa06ac6c6dccbb9118dc2"
+      ],
+      "news_date": "2026-11-04"
+    },
+    {
+      "ticker": "VISHNU.NS",
+      "yahoo_ticker": "VISHNU.NS",
+      "company_name": "Vishnu Chemicals Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Shadow Credit Upgrade (CARE A- -> [ICRA]A Stable, A2+) - Import-substitution chromium/barium chemicals",
+      "news": "Vishnu Chemicals moved its rating mandate to ICRA, which rated Rs 630 cr facilities at [ICRA]A (Stable)/[ICRA]A2+, up from CARE A- (Stable) on Rs 561 cr earlier. Facilities: term loans Rs 321 cr, fund-based WC Rs 170 cr, non-fund-based Rs 75 cr, unallocated Rs 63 cr.",
+      "market_consensus_gap": "Consensus treats Vishnu as a small-cap commodity chemical name. A one-notch upgrade with larger rated limits (including unallocated lines) signals lenders backing capex in chromium/barium derivatives where India substitutes Chinese imports, a growth runway the market discounts.",
+      "reflexivity_thesis": "1) Cheaper, larger credit lines fund capacity growth without equity dilution. 2) Lower interest plus scale lifts EPS, so coverage gets upgraded. 3) A China+1 specialty-chemical re-rating narrative draws small-cap funds. Risks: rating-agency switch can be read as 'rating shopping', commodity price volatility.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/bankingfinance/Vishnu-Chemicals-Credit-Rating-Upgraded-to-ICRAA-Stable-by-ICRA/6ae863c2c6c6dccbb90ede23"
+      ],
+      "news_date": "2026-11-02"
+    },
+    {
+      "ticker": "LLOYDSME.NS",
+      "yahoo_ticker": "LLOYDSME.NS",
+      "company_name": "Lloyds Metals and Energy Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Hidden CapEx - Captive Power Integration (2x180 MW thermal + 168 MW captive RE)",
+      "news": "Board approved a 2x180 MW (360 MW) thermal power plant at Konsari, Maharashtra (~Rs 3,240 cr capex) and investment of up to 30% in renewable projects to procure 168 MW of captive power. Q2 FY27 PAT Rs 1,045.6 cr (+83-88%), revenue Rs 5,672.5 cr (+55%).",
+      "market_consensus_gap": "The result is a hard catalyst and largely priced in. The captive-power capex is not: the Street models Lloyds as an iron-ore miner moving into steel, but owning 360 MW thermal + 168 MW RE power changes the integrated steel cost curve (power is a major cost in DRI/pellet/steel), so post-FY29 margins are underestimated.",
+      "reflexivity_thesis": "1) Captive power cuts per-tonne cost of the pellet/DRI/steel ramp-up, so FY29+ EBITDA/t estimates rise. 2) Lower Scope-2 emissions via RE route improve ESG eligibility for FIIs. 3) Integrated low-cost producer narrative leads to multiple expansion vs steel peers. Risks: capex overrun, Gadchiroli execution/law-and-order, iron-ore price cycle.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-nse-lupin-metropolis-and-others-november-4-2026",
+        "https://trendlyne.com/posts/5928216/market-trades-higher-bhel-wins-orders-worth-upto-rs-7000-crore"
+      ],
+      "news_date": "2026-11-03"
+    },
+    {
+      "ticker": "JNKINDIA.NS",
+      "yahoo_ticker": "JNKINDIA.NS",
+      "company_name": "JNK India Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Export Order Inflow (Rs 300-600 cr heater package, Nigeria, via parent JNK Global)",
+      "news": "JNK India secured an order of ~Rs 300-600 cr from JNK Global (Korea) for design, engineering, supply and transport of a heater package for a project in Nigeria.",
+      "market_consensus_gap": "JNK India has been de-rated on slow domestic refinery/petchem order flow and margin misses. A parent-routed export order of up to Rs 600 cr is large against its revenue base and shows the parent channelling global work to the Indian low-cost arm; the market discounts it as a related-party order.",
+      "reflexivity_thesis": "1) Order book rebuilds, giving FY28 revenue visibility. 2) More parent-routed export work shows India becoming JNK Group's manufacturing hub, a structural volume driver. 3) Higher utilisation lifts margins, earnings revisions bring the stock back to small-cap fund screens. Risks: related-party pricing, wide value range, Nigeria project risk.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.angelone.in/news/market-updates/stocks-to-watch-today-nse-lupin-metropolis-and-others-november-4-2026",
+        "https://www.business-standard.com/amp/markets/news/stocks-to-watch-nse-bata-india-hindustan-zinc-nykaa-ask-automotive-126110400118_1.html"
+      ],
+      "news_date": "2026-11-03"
+    },
+    {
+      "ticker": "EFCIL.NS",
+      "yahoo_ticker": "EFCIL.NS",
+      "company_name": "EFC (I) Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Demerger / Value Unlocking Progress (NCLT final hearing 27 Nov 2026)",
+      "news": "NCLT Mumbai fixed 27 Nov 2026 for the final hearing on EFC (I)'s scheme to demerge wholly-owned subsidiary EFC Limited (order dated 22 Oct 2026). CAA-3 notices to be sent to Income-tax, SEBI and RBI; newspaper notices at least 10 days before the hearing.",
+      "market_consensus_gap": "The holdco discount on EFC's managed-office / design-build businesses persists because the scheme timeline looked open-ended. A fixed final-hearing date makes sanction (and later the record date) a scheduled event inside ~4 weeks, which the market has not yet priced.",
+      "reflexivity_thesis": "1) NCLT sanction confirms the structure, so analysts value each piece on SOTP. 2) The holdco discount narrows ahead of the record date, and event-driven funds and PMS buy. 3) Separate listing improves price discovery for the faster-growing arm. Risks: adjournment, regulator objections.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/other/EFC-I-Ltd-Announces-NCLT-Hearing-Date-for-Proposed-Demerger-Scheme/6ae09f36c6c6dccbb908a614"
+      ],
+      "news_date": "2026-10-27"
+    },
+    {
+      "ticker": "EBGNG.NS",
+      "yahoo_ticker": "EBGNG.NS",
+      "company_name": "GNG Electronics Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Management Guidance Upgrade (growth 30% -> 40%) - pre-sell-side revision",
+      "news": "GNG Electronics (Electronics Bazaar, refurbished laptops/devices) management raised its growth guidance to 40% from 30%.",
+      "market_consensus_gap": "Recently listed with limited coverage, the stock is valued on the earlier 30% guidance. A 10-point lift to the growth target gives the refurbished-device platform (India, US, Europe, UAE) operating leverage that consensus models do not yet reflect.",
+      "reflexivity_thesis": "1) Brokers reset FY27-28 revenue/EPS to the new guidance. 2) Operating leverage on fixed refurb-capacity drives a margin beat. 3) Its weight in small-cap indices rises with market cap, which brings index/DII flows. Risks: inventory sourcing, device price cycles, guidance credibility.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.business-standard.com/amp/markets/news/stocks-to-watch-nse-bata-india-hindustan-zinc-nykaa-ask-automotive-126110400118_1.html"
+      ],
+      "news_date": "2026-11-03"
+    },
+    {
+      "ticker": "535693.BO",
+      "yahoo_ticker": "535693.BO",
+      "company_name": "Brahmaputra Infrastructure Limited",
+      "exchange": "BSE",
+      "catalyst_category": "Shadow Credit Upgrade (CARE BBB- -> BBB / A3 -> A3+)",
+      "news": "CARE Ratings (letter dated 30 Oct 2026, board noted 2 Nov) upgraded Brahmaputra Infrastructure's long-term facilities to CARE BBB (Stable) from BBB- and short-term to A3+ from A3, on Rs 229.84 cr bank facilities, based on FY26 audited and Q1 FY27 results.",
+      "market_consensus_gap": "A micro-cap northeast road/infra EPC priced near 'distress-adjacent' levels. Moving up from the lowest investment-grade notch materially lowers bank-guarantee and WC costs and widens tender eligibility (NHIDCL/MoRTH northeast projects); it follows L1 wins seen earlier in 2026.",
+      "reflexivity_thesis": "1) Better BG terms let it bid more northeast highway tenders. 2) Order inflow + lower finance cost lift EPS. 3) Micro-cap re-rating draws HNI/PMS buying, and the higher market cap improves bank comfort. Risks: illiquidity, northeast execution and payment delays.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/other/Brahmaputra-Infrastructure-Receives-Credit-Rating-Upgrade-from-CARE-Ratings/6ae84c0ac6c6dccbb90eaa84"
+      ],
+      "news_date": "2026-11-02"
+    },
+    {
+      "ticker": "CHAMBLFERT.NS",
+      "yahoo_ticker": "CHAMBLFERT.NS",
+      "company_name": "Chambal Fertilisers and Chemicals Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Import-Substitution CapEx Commercialisation (Technical Ammonium Nitrate plant)",
+      "news": "Q2 FY27: revenue Rs 6,999 cr (+9%), EBITDA Rs 900 cr (+7%), PAT Rs 632 cr (-2.5%). The Technical Ammonium Nitrate (TAN) plant commissioned in August 2026 added a new, non-subsidy revenue segment.",
+      "market_consensus_gap": "Chambal is priced as a subsidy-regulated urea/DAP trader with flat earnings, and the slight PAT decline confirms that view. The new TAN segment (mining/infra explosives, import-substituting) carries a non-regulated margin and is only ~1 quarter old, so coverage has not built in a full-year ramp.",
+      "reflexivity_thesis": "1) Full-year TAN utilisation from H2 adds unregulated EBITDA. 2) Mix shift away from subsidy dependence lowers working-capital and policy risk, so the multiple re-rates. 3) Mining/infra demand plus import substitution of TAN gets DII chemical-theme funds interested. Risks: gas price/subsidy policy, TAN ramp speed.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://www.business-standard.com/amp/markets/news/stocks-to-watch-nse-bata-india-hindustan-zinc-nykaa-ask-automotive-126110400118_1.html"
+      ],
+      "news_date": "2026-11-03"
+    },
+    {
+      "ticker": "AFFORDABLE.NS",
+      "yahoo_ticker": "AFFORDABLE.NS",
+      "company_name": "Affordable Robotic & Automation Limited",
+      "exchange": "NSE",
+      "catalyst_category": "International Capability Order - RaaS autonomous robots (Rs 51.8 cr)",
+      "news": "Subsidiary ARAPL RaaS Pvt Ltd won an order to supply 103 autonomous robots to an unnamed international client, ~Rs 51.8 cr ($5.47 mn), completion targeted by 30 Apr 2027; no related-party interest.",
+      "market_consensus_gap": "Priced as a domestic auto-plant automation integrator, ARAPL is not credited with an export robotics-as-a-service product. A 103-unit international robot order is proof-of-concept for a scalable, higher-margin product business.",
+      "reflexivity_thesis": "1) Repeat export orders drive RaaS revenue scaling. 2) Product margins exceed project margins, so EPS gets re-rated. 3) 'Indian robotics' thematic interest pulls in HNI/PMS buying. Risks: small size, unnamed client, execution.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/industrial-goodsservices/Affordable-Robotic-and-Automation-Subsidiary-Bags-Rs-518-Crore-International-Robot-Order/6aeacbdec6c6dccbb911ae36"
+      ],
+      "news_date": "2026-11-04"
+    },
+    {
+      "ticker": "MSTCLTD.NS",
+      "yahoo_ticker": "MSTCLTD.NS",
+      "company_name": "MSTC Limited",
+      "exchange": "NSE",
+      "catalyst_category": "L1 Tender Status (pre-LoA) - Coal India tender",
+      "news": "Reuters/TradingView headline: MSTC becomes L1 bidder for a Coal India tender. Details (value, scope, exact date) were paywalled and could not be verified.",
+      "market_consensus_gap": "MSTC is priced as a low-growth e-auction PSU after losing scrap/coal auction share. An L1 win on a Coal India tender may signal regained platform work from its largest historical client, but how much it matters cannot be judged without the value.",
+      "reflexivity_thesis": "1) If the value is material, the LoA restores Coal India-linked service revenue. 2) A high-margin platform business means small revenue gains lift EPS sharply. 3) PSU dividend-yield funds re-engage. Risks: unknown value and date; may be immaterial or stale.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://www.tradingview.com/news/reuters.com,2026:newsml_FWN3ZM153:0-mstc-becomes-l1-bidder-for-coal-india-tender/"
+      ],
+      "news_date": "2026-11 (date unverified)"
+    },
+    {
+      "ticker": "RTNINDIA.NS",
+      "yahoo_ticker": "RTNINDIA.NS",
+      "company_name": "RattanIndia Enterprises Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Government Fleet Order (Revolt Motors - 1,100 e-bikes for Bihar Police)",
+      "news": "Subsidiary Revolt Motors won an order to supply 1,100 electric motorcycles to Bihar Police for patrolling, deliveries targeted in November 2026 ahead of a January 2027 deadline.",
+      "market_consensus_gap": "Revolt is written off by the market as a sub-scale EV two-wheeler brand. A state-police fleet order is small in value, but it could open the government-fleet procurement channel (other state police forces/ municipal fleets).",
+      "reflexivity_thesis": "1) Further state fleet tenders help scale volumes. 2) Fleet volumes improve utilisation and unit economics. 3) Re-rating of the EV arm narrows the holdco discount. Risks: small order value, cash burn, low conviction.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://trendlyne.com/posts/5928216/market-trades-higher-bhel-wins-orders-worth-upto-rs-7000-crore"
+      ],
+      "news_date": "2026-11-04"
+    }
+  ],
+  "rejected": [
+    {
+      "ticker": "NSE.NS",
+      "company_name": "National Stock Exchange of India",
+      "reason": "Stage 2 - Q2 PAT +22.8% to Rs 2,577.6 cr; first results since Sept listing, front-page headline."
+    },
+    {
+      "ticker": "MCX.NS",
+      "company_name": "Multi Commodity Exchange of India",
+      "reason": "Stage 2 - Q2 PAT +130%; fully mainstream."
+    },
+    {
+      "ticker": "SBIN.NS",
+      "company_name": "State Bank of India",
+      "reason": "Stage 2 - Q2 PAT +14% to Rs 23,038 cr; consensus event."
+    },
+    {
+      "ticker": "LUPIN.NS",
+      "company_name": "Lupin Limited",
+      "reason": "Stage 2 - Raltegravir 600 mg FTF launch with 180-day exclusivity widely reported; Q2 PAT -22%."
+    },
+    {
+      "ticker": "GLOBAL HEALTH / METROPOLIS / VIJAYA / AWFIS / ASKAUTOLTD / SANDUMA / CLEANMAX / INDIQUBE",
+      "company_name": "Various",
+      "reason": "Stage 2 - Q2 earnings beats already reported pre-open 4 Nov."
+    },
+    {
+      "ticker": "KOTAKBANK.NS",
+      "company_name": "Kotak Mahindra Bank",
+      "reason": "Stage 2 - CCI approval for Deutsche Bank India retail business acquisition, small ($30 mn) and expected."
+    },
+    {
+      "ticker": "HINDZINC.NS",
+      "company_name": "Hindustan Zinc",
+      "reason": "Stage 3 - value-added alloy launches; immaterial to EPS."
+    },
+    {
+      "ticker": "IEX.NS",
+      "company_name": "Indian Energy Exchange",
+      "reason": "Stage 3 - routine monthly volume update."
+    },
+    {
+      "ticker": "PRESTIGE.NS",
+      "company_name": "Prestige Estates Projects",
+      "reason": "Stage 3 - Rs 519 cr EV land/entity acquisition; routine."
+    },
+    {
+      "ticker": "524731.BO",
+      "company_name": "Jenburkt Pharmaceuticals",
+      "reason": "Stage 3 - PMS (non-promoter) bought 4,608 shares crossing 5%; immaterial."
+    },
+    {
+      "ticker": "WOMANCART",
+      "company_name": "Womancart",
+      "reason": "Stage 3 - promoter selling 1.82% to a fund; small SME."
+    },
+    {
+      "ticker": "HEG.NS",
+      "company_name": "HEG Limited",
+      "reason": "No new development - demerger record date still pending (covered 4 Oct)."
+    },
+    {
+      "ticker": "BEL.NS / ADANIENT.NS / TITAN.NS",
+      "company_name": "Nifty top gainers 4 Nov",
+      "reason": "No company-specific Stage-1 trigger identified; price action only."
+    }
+  ]
+}

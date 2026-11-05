@@ -2,56 +2,458 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  @apply box-border;
+/* ═══════════════════════════════════════════════════════════════════════════
+   SuryaDhana Terminal — design tokens (single source; mirrors components/news/format.ts T)
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --t-bg: #05070a;
+  --t-panel: #0a0d13;
+  --t-panel2: #0e121a;
+  --t-panel3: #131926;
+  --t-border: #1a2130;
+  --t-border-hi: #2a3448;
+  --t-text: #d6dbe4;
+  --t-bright: #f2f5fa;
+  --t-muted: #8691a5;
+  --t-dim: #747e92;
+  --t-amber: #ffb000;
+  --t-amber-dim: #8a6400;
+  --t-green: #16d98a;
+  --t-red: #ff4d5e;
+  --t-cyan: #39c6ff;
+  --t-violet: #b58bff;
+  --t-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  --t-display: 'Chakra Petch', 'JetBrains Mono', sans-serif;
+  color-scheme: dark;
 }
 
-html {
-  scroll-behavior: smooth;
-  background: #f8fafc;
-}
+* { box-sizing: border-box; }
+
+html { background: var(--t-bg); }
 
 body {
-  @apply antialiased bg-gray-50 text-gray-900;
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto',
-    'Helvetica Neue', sans-serif;
+  margin: 0;
+  background: var(--t-bg);
+  color: var(--t-text);
+  font-family: var(--t-mono);
+  font-size: 13px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Focus styles */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible {
-  @apply outline-none ring-2 ring-indigo-500 ring-offset-2 ring-offset-white;
+::selection { background: rgba(255, 176, 0, 0.28); color: var(--t-bright); }
+
+* { scrollbar-width: thin; scrollbar-color: var(--t-border-hi) transparent; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--t-border-hi); border-radius: 0; }
+*::-webkit-scrollbar-thumb:hover { background: var(--t-amber-dim); }
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 1px solid var(--t-amber);
+  outline-offset: 1px;
 }
 
-button, a {
-  @apply transition-colors duration-150;
-}
+button, a { transition: color 120ms, background-color 120ms, border-color 120ms, opacity 120ms; }
 
-/* Light scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+table { border-collapse: collapse; }
 
-::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+/* Form controls: terminal defaults (class-based styles still win via :where) */
+:where(input, select, textarea) {
+  background: var(--t-panel2);
+  color: var(--t-text);
+  border-color: var(--t-border);
+  font-family: var(--t-mono);
 }
+:where(input[type="checkbox"], input[type="radio"]) { accent-color: var(--t-amber); }
+input::placeholder, textarea::placeholder { color: var(--t-dim); }
 
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
-}
+/* Motion */
+@keyframes t-fade-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes t-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes t-scan { from { background-position: 0 0; } to { background-position: 0 -200px; } }
+.t-fade-up { animation: t-fade-up .35s ease-out both; }
+.t-ticker-link:hover, .t-ticker-link:focus-visible { text-decoration: underline; text-underline-offset: 3px; outline: none; }
+/* Header items that drop out on laptop screens (they are repeated elsewhere: footer, Overview, macro tape) */
+@media (max-width: 1480px) { .t-hide-lg { display: none !important; } }
+.t-pulse { animation: t-pulse 1.2s ease-in-out infinite; }
 
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   Legacy skin — maps the pre-terminal Tailwind light/dark utility classes onto the
+   terminal palette so every page renders consistently while pages are migrated to
+   components/terminal/*. Scoped to .terminal (set on <body>).
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-table {
-  border-collapse: collapse;
+/* shape: square corners (dots/avatars keep rounded-full), no drop shadows */
+.terminal .rounded, .terminal .rounded-sm, .terminal .rounded-md, .terminal .rounded-lg,
+.terminal .rounded-xl, .terminal .rounded-2xl, .terminal .rounded-3xl,
+.terminal .rounded-t-lg, .terminal .rounded-b-lg, .terminal .rounded-l-lg, .terminal .rounded-r-lg,
+.terminal .rounded-t-xl, .terminal .rounded-b-xl { border-radius: 2px; }
+.terminal .shadow, .terminal .shadow-sm, .terminal .shadow-md, .terminal .shadow-lg,
+.terminal .shadow-xl, .terminal .shadow-2xl, .terminal .shadow-inner { box-shadow: none; }
+.terminal .font-sans { font-family: var(--t-mono); }
+
+/* neutral surfaces */
+.terminal .bg-white, .terminal .bg-gray-50, .terminal .bg-slate-50, .terminal .bg-zinc-50,
+.terminal .bg-slate-900, .terminal .bg-gray-900, .terminal .bg-zinc-900, .terminal .bg-slate-950,
+.terminal .bg-gray-950 { background-color: var(--t-panel); }
+.terminal .bg-gray-100, .terminal .bg-slate-100, .terminal .bg-zinc-100,
+.terminal .bg-slate-800, .terminal .bg-gray-800, .terminal .bg-zinc-800 { background-color: var(--t-panel2); }
+.terminal .bg-gray-200, .terminal .bg-slate-200, .terminal .bg-gray-300, .terminal .bg-slate-300,
+.terminal .bg-slate-700, .terminal .bg-gray-700 { background-color: var(--t-panel3); }
+.terminal .hover\:bg-gray-50:hover, .terminal .hover\:bg-slate-50:hover, .terminal .hover\:bg-gray-100:hover,
+.terminal .hover\:bg-slate-100:hover, .terminal .hover\:bg-slate-800:hover, .terminal .hover\:bg-gray-800:hover,
+.terminal .hover\:bg-slate-700:hover, .terminal .hover\:bg-gray-200:hover { background-color: var(--t-panel3); }
+.terminal .bg-white\/80, .terminal .bg-white\/90, .terminal .bg-white\/60, .terminal .bg-white\/50 { background-color: rgba(10, 13, 19, .9); }
+
+/* pastel light-mode tints → faint coloured wash on black */
+.terminal .bg-emerald-50, .terminal .bg-green-50, .terminal .bg-teal-50, .terminal .bg-lime-50 { background-color: rgba(22, 217, 138, .06); }
+.terminal .bg-emerald-100, .terminal .bg-green-100, .terminal .bg-teal-100 { background-color: rgba(22, 217, 138, .13); }
+.terminal .bg-red-50, .terminal .bg-rose-50, .terminal .bg-pink-50 { background-color: rgba(255, 77, 94, .06); }
+.terminal .bg-red-100, .terminal .bg-rose-100, .terminal .bg-pink-100 { background-color: rgba(255, 77, 94, .13); }
+.terminal .bg-amber-50, .terminal .bg-yellow-50, .terminal .bg-orange-50 { background-color: rgba(255, 176, 0, .06); }
+.terminal .bg-amber-100, .terminal .bg-yellow-100, .terminal .bg-orange-100 { background-color: rgba(255, 176, 0, .13); }
+.terminal .bg-indigo-50, .terminal .bg-blue-50, .terminal .bg-sky-50, .terminal .bg-cyan-50 { background-color: rgba(57, 198, 255, .06); }
+.terminal .bg-indigo-100, .terminal .bg-blue-100, .terminal .bg-sky-100, .terminal .bg-cyan-100,
+.terminal .bg-indigo-200 { background-color: rgba(57, 198, 255, .13); }
+.terminal .bg-violet-50, .terminal .bg-purple-50, .terminal .bg-fuchsia-50 { background-color: rgba(181, 139, 255, .06); }
+.terminal .bg-violet-100, .terminal .bg-purple-100, .terminal .bg-fuchsia-100 { background-color: rgba(181, 139, 255, .13); }
+
+/* light gradients (card washes) → flat panel; bright gradients (bars) untouched */
+.terminal [class*="from-white"], .terminal [class*="from-gray-50"], .terminal [class*="from-slate-50"],
+.terminal [class*="from-indigo-50"], .terminal [class*="from-blue-50"], .terminal [class*="from-emerald-50"],
+.terminal [class*="from-green-50"], .terminal [class*="from-teal-50"], .terminal [class*="from-amber-50"],
+.terminal [class*="from-orange-50"], .terminal [class*="from-rose-50"], .terminal [class*="from-red-50"],
+.terminal [class*="from-violet-50"], .terminal [class*="from-purple-50"], .terminal [class*="from-cyan-50"],
+.terminal [class*="from-sky-50"] { background-image: none; background-color: var(--t-panel); }
+
+/* text */
+.terminal .text-black, .terminal .text-gray-900, .terminal .text-slate-900, .terminal .text-gray-800,
+.terminal .text-slate-800, .terminal .text-zinc-900 { color: var(--t-bright); }
+.terminal .text-gray-700, .terminal .text-slate-700, .terminal .text-gray-600, .terminal .text-slate-600,
+.terminal .text-slate-200, .terminal .text-gray-200, .terminal .text-slate-300, .terminal .text-gray-300 { color: var(--t-text); }
+.terminal .text-gray-500, .terminal .text-slate-500, .terminal .text-gray-400, .terminal .text-slate-400,
+.terminal .text-zinc-500 { color: var(--t-muted); }
+.terminal .text-emerald-600, .terminal .text-emerald-700, .terminal .text-emerald-800, .terminal .text-emerald-900,
+.terminal .text-green-600, .terminal .text-green-700, .terminal .text-green-800, .terminal .text-teal-700 { color: var(--t-green); }
+.terminal .text-red-600, .terminal .text-red-700, .terminal .text-red-800, .terminal .text-rose-600,
+.terminal .text-rose-700, .terminal .text-rose-800 { color: var(--t-red); }
+.terminal .text-amber-600, .terminal .text-amber-700, .terminal .text-amber-800, .terminal .text-amber-900,
+.terminal .text-yellow-700, .terminal .text-orange-600, .terminal .text-orange-700 { color: var(--t-amber); }
+.terminal .text-indigo-600, .terminal .text-indigo-700, .terminal .text-indigo-800, .terminal .text-indigo-900,
+.terminal .text-blue-600, .terminal .text-blue-700, .terminal .text-blue-800, .terminal .text-sky-700,
+.terminal .text-cyan-700 { color: var(--t-cyan); }
+.terminal .text-violet-600, .terminal .text-violet-700, .terminal .text-violet-800, .terminal .text-purple-600,
+.terminal .text-purple-700, .terminal .text-purple-800 { color: var(--t-violet); }
+
+/* borders */
+.terminal .border-gray-100, .terminal .border-gray-200, .terminal .border-gray-300, .terminal .border-slate-100,
+.terminal .border-slate-200, .terminal .border-slate-300, .terminal .border-slate-600, .terminal .border-slate-700,
+.terminal .border-slate-800, .terminal .border-gray-700, .terminal .border-gray-800, .terminal .border-zinc-200,
+.terminal .divide-gray-100 > * + *, .terminal .divide-gray-200 > * + *, .terminal .divide-slate-800 > * + *,
+.terminal .divide-slate-700 > * + * { border-color: var(--t-border); }
+.terminal .border-emerald-100, .terminal .border-emerald-200, .terminal .border-green-200 { border-color: rgba(22, 217, 138, .3); }
+.terminal .border-red-100, .terminal .border-red-200, .terminal .border-rose-200 { border-color: rgba(255, 77, 94, .3); }
+.terminal .border-amber-100, .terminal .border-amber-200, .terminal .border-yellow-200 { border-color: rgba(255, 176, 0, .3); }
+.terminal .border-indigo-100, .terminal .border-indigo-200, .terminal .border-blue-200, .terminal .border-sky-200 { border-color: rgba(57, 198, 255, .3); }
+.terminal .border-violet-200, .terminal .border-purple-200 { border-color: rgba(181, 139, 255, .3); }
+
+/* recharts: dark tooltips and quiet grid lines */
+.terminal .recharts-default-tooltip {
+  background: var(--t-panel2) !important;
+  border: 1px solid var(--t-border-hi) !important;
+  border-radius: 0 !important;
+  font-family: var(--t-mono);
+  font-size: 11px;
 }
+.terminal .recharts-cartesian-grid line { stroke: var(--t-border); }
+.terminal .recharts-text { fill: var(--t-muted); font-family: var(--t-mono); font-size: 10px; }
 
 @media print {
-  * { @apply bg-white text-black shadow-none; }
+  * { background: #fff !important; color: #000 !important; box-shadow: none !important; }
 }
+
+/* translucent navy surfaces/borders (bg-slate-800/30 etc.) → terminal panels.
+   Matched only as a base class (start of attribute or after a space) so hover:/focus:
+   variants keep working. */
+.terminal :is([class^="bg-slate-800/"], [class*=" bg-slate-800/"], [class^="bg-slate-900/"], [class*=" bg-slate-900/"],
+  [class^="bg-slate-950/"], [class*=" bg-slate-950/"], [class^="bg-gray-900/"], [class*=" bg-gray-900/"],
+  [class^="bg-gray-800/"], [class*=" bg-gray-800/"]) { background-color: var(--t-panel); }
+.terminal :is([class^="bg-slate-700/"], [class*=" bg-slate-700/"], [class^="bg-slate-600/"], [class*=" bg-slate-600/"]) { background-color: var(--t-panel2); }
+.terminal :is([class^="border-slate-700/"], [class*=" border-slate-700/"], [class^="border-slate-600/"], [class*=" border-slate-600/"],
+  [class^="border-slate-800/"], [class*=" border-slate-800/"], [class^="border-gray-700/"], [class*=" border-gray-700/"]) { border-color: var(--t-border); }
+.terminal :is([class^="divide-slate-700/"], [class*=" divide-slate-700/"], [class^="divide-slate-800/"], [class*=" divide-slate-800/"]) > * + * { border-color: var(--t-border); }
+.terminal :is([class*=" from-slate-800/"], [class^="from-slate-800/"], [class*=" from-slate-900"], [class^="from-slate-900"]) { background-image: none; background-color: var(--t-panel); }
+
+/* legacy section headings → terminal display face */
+.terminal h3.uppercase, .terminal h4.uppercase { font-family: var(--t-display); letter-spacing: .16em; }
+
+/* lining figures for price/number columns outside the kit (kit tables have it inline) */
+.t-nums { font-variant-numeric: tabular-nums; }
+
+/* skeleton shimmer (kit Skeleton / TabSkeleton) */
+@keyframes t-shimmer-slide { 0% { background-position: 100% 0 } 100% { background-position: 0 0 } }
+.t-shimmer { animation: t-shimmer-slide 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .t-shimmer { animation: none; } }
+
+/* macro tape: drop entries from the right on narrow terminals instead of a scrollbar */
+@media (max-width: 1280px) { .t-tape-ge6 { display: none !important; } }
+@media (max-width: 1024px) { .t-tape-ge4 { display: none !important; } }
+@media (max-width: 720px)  { .t-tape-ge2 { display: none !important; } }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Desktop program (D4) — APPEND-ONLY SECTION. Everything above this line is unchanged.
+   1. Self-hosted fonts   2. Shell layout offset   3. Title strip   4. Banner / notices   5. Boot gate
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Self-hosted fonts: ui/public/fonts (SIL OFL 1.1, provenance in ui/public/fonts/README.md). The exact
+   Google Fonts files the terminal used before (Chakra Petch v13 static 500/600/700, JetBrains Mono v24
+   variable), latin + latin-ext subsets, same unicode-range split, font-display: swap. No request leaves the
+   machine. JetBrains Mono has no rupee sign (U+20B9, checked in the font's cmap): the last four faces give the
+   'JetBrains Mono' family a rupee from Chakra Petch (which has one), weight-matched, so every "₹" in the mono
+   UI renders identically in WebKit and Chromium instead of whatever system fallback each engine picks.
+   The greek subset (one variable file for 400–700, Google's own unicode-range) keeps σ (volatility, pricer, risk
+   and backtest labels) in JetBrains Mono, as the Google-hosted CSS did (C3-10).
+   Later rules win for overlapping ranges, so the rupee faces are declared last. */
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-600-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-700-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Chakra Petch'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-700-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/jetbrains-mono-v24-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+20B9; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-500-latin-ext.woff2') format('woff2');
+  unicode-range: U+20B9; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-600-latin-ext.woff2') format('woff2');
+  unicode-range: U+20B9; }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('/fonts/chakra-petch-v13-700-latin-ext.woff2') format('woff2');
+  unicode-range: U+20B9; }
+
+/* 2. Shell layout offset. PlatformShell publishes --shell-top on <html>: 32 px title strip in the desktop app
+   + 24 px connection banner while ui-api is down; 0 in a browser without a banner. The page flows below it and
+   the app's fixed/sticky chrome offsets by var(--shell-top, 0px). */
+:root { --shell-top: 0px; }
+body.terminal { padding-top: var(--shell-top); }
+
+/* 3. Title strip (desktop app only): overlay title bar, 32 px like the native macOS 26 title bar. The traffic lights
+   sit at the left: with the shell's inset x = 14 the zoom button ends at 74 px, so content starts at 84 px. */
+.sd-strip {
+  position: fixed; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; padding: 0 6px 0 84px;
+  background: #020304; border-bottom: 1px solid var(--t-border);
+  font-family: var(--t-mono); font-size: 10px; line-height: 1; letter-spacing: .08em;
+  color: var(--t-muted); white-space: nowrap; overflow: hidden;
+  user-select: none; -webkit-user-select: none; cursor: default;
+  font-variant-numeric: tabular-nums;
+}
+.sd-strip-brand { display: flex; align-items: center; gap: 7px; height: 100%; padding: 0 12px 0 2px; }
+.sd-mark { display: inline-block; width: 7px; height: 7px; background: var(--t-amber); transform: rotate(45deg);
+  box-shadow: 0 0 8px rgba(255, 176, 0, .45); flex: none; }
+.sd-wordmark { font-family: var(--t-display); font-weight: 700; font-size: 11px; letter-spacing: .26em; color: var(--t-amber); }
+.sd-strip-seg { display: flex; align-items: center; gap: 7px; height: 100%; padding: 0 11px; border-left: 1px solid var(--t-border); }
+.sd-strip-page { min-width: 0; overflow: hidden; }
+.sd-strip-code { font-family: var(--t-display); font-weight: 700; font-size: 11.5px; letter-spacing: .14em; color: var(--t-bright); }
+.sd-strip-label { color: var(--t-muted); text-transform: uppercase; letter-spacing: .12em; overflow: hidden; text-overflow: ellipsis; }
+.sd-strip-drag { flex: 1; align-self: stretch; min-width: 24px; }
+.sd-strip-k { color: var(--t-dim); font-size: 9px; letter-spacing: .16em; }
+.sd-strip-dim { color: var(--t-dim); letter-spacing: .08em; }
+.sd-strip-detail { text-transform: uppercase; font-size: 9px; letter-spacing: .12em; }
+.sd-strip-last { padding-right: 6px; }
+.sd-chip { display: inline-flex; align-items: center; height: 16px; padding: 0 6px; border: 1px solid var(--t-border-hi);
+  font-size: 9.5px; font-weight: 600; letter-spacing: .14em; color: var(--t-muted); }
+.sd-chip.is-open { color: var(--t-green); border-color: rgba(22, 217, 138, .55); background: rgba(22, 217, 138, .08); }
+.sd-chip.is-pre { color: var(--t-amber); border-color: rgba(255, 176, 0, .55); background: rgba(255, 176, 0, .08); }
+.sd-clock { color: var(--t-bright); font-weight: 600; font-size: 11.5px; letter-spacing: .06em; }
+.sd-svc { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: .14em; color: var(--t-muted); }
+.sd-svc + .sd-svc { margin-left: 4px; }
+.sd-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--t-dim); flex: none; }
+.sd-dot.is-up { background: var(--t-green); box-shadow: 0 0 5px rgba(22, 217, 138, .7); }
+.sd-dot.is-down { background: var(--t-red); box-shadow: 0 0 6px rgba(255, 77, 94, .8); animation: t-pulse 1.2s ease-in-out 6; }
+.sd-newbuild { margin-left: 4px; height: 18px; padding: 0 8px; border: none; background: var(--t-amber); color: #05070a;
+  font-family: var(--t-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .14em; cursor: pointer;
+  animation: sd-attn 2.4s ease-in-out 3; }
+.sd-newbuild:hover { background: #ffc233; }
+@keyframes sd-attn { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 176, 0, .0); } 50% { box-shadow: 0 0 0 3px rgba(255, 176, 0, .22); } }
+
+/* 4. Connection banner (both modes) and the browser "new build" pill. */
+.sd-banner {
+  position: fixed; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: 0 8px 0 0;
+  font-family: var(--t-mono); font-size: 10px; letter-spacing: .1em; white-space: nowrap; overflow: hidden;
+  border-bottom: 1px solid; animation: sd-banner-in .18s ease-out both;
+}
+.sd-banner.is-down { background: #170609; color: #ff8a94; border-color: rgba(255, 77, 94, .6); }
+.sd-banner.is-ok { background: #03140d; color: var(--t-green); border-color: rgba(22, 217, 138, .5); }
+.sd-banner-tag { align-self: stretch; display: flex; align-items: center; padding: 0 10px; font-weight: 700;
+  letter-spacing: .16em; color: #05070a; }
+.sd-banner.is-down .sd-banner-tag { background: var(--t-red); }
+.sd-banner.is-ok .sd-banner-tag { background: var(--t-green); }
+.sd-banner-main { font-weight: 700; text-transform: uppercase; letter-spacing: .14em; }
+.sd-banner-dim { color: var(--t-muted); }
+.sd-banner-btn { height: 16px; padding: 0 8px; background: transparent; border: 1px solid currentColor; color: inherit;
+  font: inherit; font-size: 9px; font-weight: 700; letter-spacing: .14em; cursor: pointer; }
+.sd-banner-btn:hover { background: rgba(255, 77, 94, .15); }
+@keyframes sd-banner-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.sd-pill {
+  position: fixed; right: 14px; bottom: 32px; display: flex; align-items: center; gap: 10px; padding: 0 4px 0 0;
+  height: 26px; background: var(--t-panel); border: 1px solid rgba(255, 176, 0, .55); box-shadow: 0 10px 30px rgba(0, 0, 0, .55);
+  font-family: var(--t-mono); font-size: 10px; letter-spacing: .1em; color: var(--t-text); animation: t-fade-up .3s ease-out both;
+}
+.sd-pill-tag { align-self: stretch; display: flex; align-items: center; padding: 0 9px; background: var(--t-amber); color: #05070a;
+  font-weight: 700; letter-spacing: .16em; }
+.sd-pill-btn { height: 18px; padding: 0 9px; background: transparent; border: 1px solid var(--t-amber); color: var(--t-amber);
+  font: inherit; font-weight: 700; letter-spacing: .14em; cursor: pointer; }
+.sd-pill-btn:hover { background: rgba(255, 176, 0, .14); }
+.sd-pill-x { width: 18px; height: 18px; background: none; border: none; color: var(--t-dim); font: inherit; font-size: 13px; cursor: pointer; }
+.sd-pill-x:hover { color: var(--t-text); }
+/* One-time "settings not imported yet" notice (both modes). CT-15: a one-line bar IN THE FLOW above the header (it
+   used to float over the bottom rows of every page and over the stock window and help card); it scrolls away with the
+   page and never covers data or dialogs. */
+.sd-note {
+  position: relative; display: flex; align-items: center; gap: 10px; padding: 0 4px 0 0;
+  min-height: 24px; width: 100%; background: #0b0f16;
+  border-bottom: 1px solid rgba(255, 176, 0, .45);
+  font-family: var(--t-mono); font-size: 10px; line-height: 1.45; letter-spacing: .04em; color: var(--t-text);
+}
+.sd-note-tag { align-self: stretch; display: flex; align-items: center; padding: 0 9px; background: var(--t-amber); color: #05070a;
+  font-weight: 700; letter-spacing: .16em; flex: none; }
+.sd-note-text { padding: 5px 0; }
+.sd-note-url { color: var(--t-amber); user-select: all; -webkit-user-select: all; }
+
+/* Find on page (R9, SuryaDhana.app only; components/desktop/FindBar.tsx). Above the status line, out of the header's
+   way. Every label is generated content (::before), so a search never matches the bar itself; the current match is
+   painted with the CSS highlight 'sd-find' because focus returns to the input after each window.find(). */
+.sd-find { position: fixed; right: 14px; bottom: 30px; display: flex; align-items: center; gap: 6px; height: 30px;
+  padding: 0 6px 0 0; background: #0b0f16; border: 1px solid var(--t-amber); box-shadow: 0 8px 24px rgba(0, 0, 0, .55);
+  font-family: var(--t-mono); font-size: 11px; color: var(--t-text); }
+.sd-find-tag { align-self: stretch; display: flex; align-items: center; padding: 0 8px; background: var(--t-amber); color: #05070a;
+  font-weight: 700; font-size: 10px; letter-spacing: .16em; }
+.sd-find-tag::before { content: 'FIND'; }
+.sd-find input { width: 220px; height: 22px; padding: 0 6px; background: var(--t-bg); border: 1px solid var(--t-border);
+  color: var(--t-bright); font: inherit; outline: none; }
+.sd-find input:focus { border-color: var(--t-amber); }
+.sd-find-status { min-width: 92px; font-size: 10px; letter-spacing: .08em; color: var(--t-muted); white-space: nowrap; }
+.sd-find-status::before { content: attr(data-status); }
+.sd-find-status[data-tone="none"] { color: var(--t-red); }
+.sd-find-btn { width: 22px; height: 22px; padding: 0; background: transparent; border: 1px solid var(--t-border); color: var(--t-text);
+  font: inherit; cursor: pointer; }
+.sd-find-btn::before { content: attr(data-glyph); }
+.sd-find-btn:hover { border-color: var(--t-amber); color: var(--t-amber); }
+::highlight(sd-find) { background-color: var(--t-amber); color: #05070a; }
+
+/* 5. Boot gate: black (terminal token), the mark fades in only after 250 ms so a fast boot never blinks. */
+.sd-gate { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--t-bg); }
+.sd-gate-mark { display: flex; flex-direction: column; align-items: center; gap: 12px; opacity: 0;
+  animation: sd-gate-in .45s ease-out .25s forwards; }
+.sd-gate-word { display: flex; align-items: center; gap: 10px; font-family: var(--t-display); font-weight: 700; font-size: 12px;
+  letter-spacing: .42em; color: var(--t-amber-dim); }
+.sd-gate-bar { position: relative; width: 132px; height: 1px; overflow: hidden; background: var(--t-border); }
+.sd-gate-bar::after { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 36%; background: var(--t-amber);
+  animation: sd-gate-scan 1.1s ease-in-out infinite; }
+.sd-gate-slow { margin-top: 6px; font-family: var(--t-mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--t-muted); opacity: 0; animation: sd-gate-in .4s ease-out 8s forwards; }
+@keyframes sd-gate-in { to { opacity: 1; } }
+@keyframes sd-gate-scan { from { transform: translateX(-100%); } to { transform: translateX(380%); } }
+@media (prefers-reduced-motion: reduce) {
+  .sd-gate-mark { animation: none; opacity: 1; }
+  .sd-gate-slow { animation: sd-gate-in 0s linear 8s forwards; }
+  .sd-gate-bar::after, .sd-newbuild, .sd-dot.is-down, .sd-banner { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Wave 2 shell (W2-UI-SHELL, 25 Oct 2026)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Header row 1 never overflows (C1-trader-ux-10): the least important items drop out by width.
+   t-hide-xl: universe count + data date, weekday date, browser-mode NIFTY O/H/L (≤ 1760 px: the app's default
+   1600 × 1000 window and a 1680 laptop keep one line); t-hide-md: the DB light and desktop-mode O/H/L (≤ 1240 px). */
+@media (max-width: 1760px) { .t-hide-xl { display: none !important; } }
+@media (max-width: 1240px) { .t-hide-md { display: none !important; } }
+
+/* While LINK DOWN the page dims under an honest notice: what is on screen is the last data received (C1-trader-ux-02).
+   R-UI-SHELL-01: never filter / opacity on an ancestor of page content. `filter` made .sd-page the containing block of
+   every position:fixed overlay inside it (the ALFA / BTST stock window, the PIPE / ModelLab dialogs, the indicator menu
+   backdrop) and `opacity` a stacking context under the header and footer, so those overlays were re-anchored to the
+   page box and buried. A non-interactive shade ABOVE the page content does the dimming instead: fixed overlays
+   (z-index ≥ 50) stay above it and anchored to the viewport; sticky table headers (Z.raised) are shaded with the page. */
+.sd-page { position: relative; }
+.sd-main[data-link="down"] .sd-page::after {
+  content: ''; position: absolute; inset: 0; z-index: 10; pointer-events: none;
+  background: rgba(5, 7, 10, .45); animation: sd-shade-in .3s ease-out both;
+}
+@keyframes sd-shade-in { from { opacity: 0; } to { opacity: 1; } }
+.sd-linkdown {
+  display: flex; align-items: center; gap: 10px; margin: 0 0 10px; padding: 5px 10px;
+  background: #170609; border: 1px solid rgba(255, 77, 94, .55); color: #ff8a94;
+  font-family: var(--t-mono); font-size: 10.5px; letter-spacing: .08em;
+}
+.sd-linkdown b { color: var(--t-red); letter-spacing: .16em; }
+
+/* Attention animations are finite (C2-performance-03): an idle window never repaints forever. */
+@keyframes nd-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.nd-dot-new { animation: nd-pulse 1.2s ease-in-out 3; }
+@media (prefers-reduced-motion: reduce) {
+  .nd-dot-new, .sd-newbuild, .sd-dot.is-down, .t-pulse, .sd-linkdown { animation: none !important; transition: none !important; }
+  .sd-main[data-link="down"] .sd-page::after { animation: none; }
+}
+
+/* The stock window is a terminal window: square corners like every other surface (C1-trader-ux-17/-18). */
+.terminal .md\:rounded-2xl { border-radius: 2px; }
+
+/* Footer status chips */
+.sd-foot-chip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.sd-foot-btn { background: none; border: 1px solid transparent; padding: 0 5px; cursor: pointer; font: inherit; letter-spacing: inherit; }
+.sd-foot-btn:hover { border-color: var(--t-border-hi); }

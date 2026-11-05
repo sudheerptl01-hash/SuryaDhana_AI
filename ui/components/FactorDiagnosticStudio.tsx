@@ -14,6 +14,7 @@
  * MODE = PAPER — this is pure diagnostics, no orders.
  */
 
+import { T, fmtNum, fmtSigned } from '@/components/terminal'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
@@ -56,7 +57,7 @@ interface Props {
   onApplyThreshold: (field: string, op: 'gte' | 'lte', value: number) => void
 }
 
-const fNum = (n: number, d = 2) => (n ?? 0).toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d })
+const fNum = (n: number, d = 2) => fmtNum(n ?? 0, d)
 const fInt = (n: number) => (n ?? 0).toLocaleString('en-IN')
 
 export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
@@ -131,7 +132,7 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={12} textAnchor="middle" fontSize={11} fontWeight={700} fill="#cbd5e1" fontFamily="monospace">{payload.value}</text>
-        <text x={0} y={0} dy={26} textAnchor="middle" fontSize={8.5} fill="#64748b" fontFamily="monospace">[{datum?.range}]</text>
+        <text x={0} y={0} dy={26} textAnchor="middle" fontSize={8.5} fill={T.muted} fontFamily="monospace">[{datum?.range}]</text>
       </g>
     )
   }
@@ -144,7 +145,7 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
     const up = (payload?.lift ?? 0) >= 0
     return (
       <circle cx={cx} cy={cy} r={up ? 5.5 : 3.5} fill={up ? '#34d399' : '#fb7185'}
-        stroke="#0f172a" strokeWidth={1.25} style={{ cursor: 'pointer' }}
+        stroke="#05070a" strokeWidth={1.25} style={{ cursor: 'pointer' }}
         onClick={() => payload?.raw && applyDecile(payload.raw)} />
     )
   }
@@ -158,7 +159,7 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
         <div className="text-amber-300 font-bold mb-1">Decile {d.decile} · {meta.label}</div>
         <div className="text-slate-300">Min → Max: <span className="text-slate-100">{fNum(d.obs_lo)} → {fNum(d.obs_hi)} {meta.unit}</span></div>
         <div className="text-slate-500">Quantile edge: {fNum(d.lo)} → {fNum(d.hi)}</div>
-        <div className="text-slate-300">Event Rate: <span className={d.lift >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{fNum(d.event_rate)}%</span> <span className="text-slate-500">({d.lift >= 0 ? '+' : ''}{fNum(d.lift)} vs avg {fNum(base)}%)</span></div>
+        <div className="text-slate-300">Event Rate: <span className={d.lift >= 0 ? 'text-emerald-300' : 'text-rose-300'}>{fNum(d.event_rate)}%</span> <span className="text-slate-500">({fmtSigned(d.lift ?? 0, 2)} vs avg {fNum(base)}%)</span></div>
         <div className="text-slate-300">Volume: <span className="text-indigo-300">{fInt(d.samples)}</span> records · Wins: {fInt(d.positives)}</div>
         <div className="mt-1 text-[10px] text-amber-400/80">click to apply boundary →</div>
       </div>
@@ -170,7 +171,7 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
       {/* Accordion header */}
       <button onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800/40 transition-colors">
-        <span className="text-lg">📊</span>
+        <span className="text-sm font-mono text-amber-400">▦</span>
         <div className="text-left min-w-0">
           <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
             Factor Diagnostic Studio
@@ -212,7 +213,7 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
           {/* Look-ahead structural guard */}
           {result?.lookahead_bias_present && (
             <div className="rounded-lg border border-amber-600/50 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
-              ⚠️ LOOK-AHEAD BIAS: <span className="font-semibold">{meta.label}</span> is a current fundamental snapshot applied to historical dates — decile ranks are point-in-time-inaccurate. Treat as indicative only.
+              ▲ LOOK-AHEAD BIAS: <span className="font-semibold">{meta.label}</span> is a current fundamental snapshot applied to historical dates — decile ranks are point-in-time-inaccurate. Treat as indicative only.
             </div>
           )}
 
@@ -241,26 +242,26 @@ export function FactorDiagnosticStudio({ config, onApplyThreshold }: Props) {
               </div>
               <ResponsiveContainer width="100%" height={300}>
                 <ComposedChart data={chartData} margin={{ top: 14, right: 14, bottom: 18, left: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                  <XAxis dataKey="name" tick={<CustomTick />} height={40} interval={0} stroke="#334155" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1a2130" vertical={false} />
+                  <XAxis dataKey="name" tick={<CustomTick />} height={40} interval={0} stroke="#2a3448" />
                   {/* Left = event-rate scale (auto-zoomed so spikes vs AVG read clearly). */}
-                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }}
-                    stroke="#334155" domain={['auto', 'auto']} tickFormatter={(v: number) => `${fNum(v, 0)}%`}
-                    label={{ value: 'Event %', angle: -90, position: 'insideLeft', fontSize: 10, fill: '#64748b' }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: T.muted, fontFamily: 'monospace' }}
+                    stroke="#2a3448" domain={['auto', 'auto']} tickFormatter={(v: number) => `${fNum(v, 0)}%`}
+                    label={{ value: 'Event %', angle: -90, position: 'insideLeft', fontSize: 10, fill: T.muted }} />
                   {/* Right = record-volume scale. */}
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#64748b', fontFamily: 'monospace' }}
-                    stroke="#334155" tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: T.muted, fontFamily: 'monospace' }}
+                    stroke="#2a3448" tickFormatter={(v: number) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(148,163,184,0.06)' }} />
                   {/* Volume bars first → sit behind the event-rate line. */}
                   <Bar yAxisId="right" dataKey="samples" fill="#6366f1" fillOpacity={0.42}
                     radius={[3, 3, 0, 0]} maxBarSize={48} cursor="pointer" isAnimationActive={false}
                     onClick={(d: any) => { const raw = d?.raw ?? d?.payload?.raw; if (raw) applyDecile(raw) }} />
                   {/* Average (global base rate) horizontal line — the spike baseline. */}
-                  <ReferenceLine yAxisId="left" y={base} stroke="#f59e0b" strokeDasharray="6 3" strokeWidth={1.6}
-                    label={{ value: `AVG ${fNum(base)}%`, position: 'insideTopRight', fontSize: 9, fill: '#f59e0b', fontFamily: 'monospace' }} />
+                  <ReferenceLine yAxisId="left" y={base} stroke="#ffb000" strokeDasharray="6 3" strokeWidth={1.6}
+                    label={{ value: `AVG ${fNum(base)}%`, position: 'insideTopRight', fontSize: 9, fill: '#ffb000', fontFamily: 'monospace' }} />
                   {/* Event-rate line with spike-aware dots on top. */}
                   <Line yAxisId="left" type="monotone" dataKey="event_rate" stroke="#34d399" strokeWidth={2.5}
-                    dot={<SpikeDot />} activeDot={{ r: 7, stroke: '#0f172a', strokeWidth: 1.5 }} isAnimationActive={false} />
+                    dot={<SpikeDot />} activeDot={{ r: 7, stroke: '#05070a', strokeWidth: 1.5 }} isAnimationActive={false} />
                 </ComposedChart>
               </ResponsiveContainer>
               <p className="text-[10px] text-slate-500 mt-1 px-1 font-mono">

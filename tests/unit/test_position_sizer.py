@@ -1,8 +1,12 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+# Service folders use hyphens (not importable as packages): put the repo root
+# (for `shared`) and the service folder on sys.path and import the module directly.
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ROOT))
+sys.path.insert(0, str(_ROOT / "services/risk-service"))
 
-from services.risk_service.position_sizer import kelly_fraction, fractional_kelly, size_position
+from position_sizer import kelly_fraction, fractional_kelly, size_position
 
 
 def test_kelly_fraction_typical():

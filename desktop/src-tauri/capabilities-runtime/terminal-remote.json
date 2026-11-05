@@ -1,0 +1,27 @@
+{
+  "identifier": "terminal-remote",
+  "description": "The terminal UI served by ui-api (remote origin). Added at runtime by src/lib.rs for EXACTLY the configured ui_url origin (__UI_ORIGIN__, default http://127.0.0.1:8010; no localhost alias: the shell canonicalizes an alias spelling before it loads). Grants exactly the 9 contract-v1 shell commands plus window dragging for the overlay title strip (data-tauri-drag-region needs core:window start-dragging; internal-toggle-maximize = double-click to zoom, the standard macOS title-bar behaviour). No event, webview, fs, shell, opener, notification, autostart or log plugin permissions.",
+  "local": false,
+  "windows": [
+    "main",
+    "term-*"
+  ],
+  "remote": {
+    "urls": [
+      "__UI_ORIGIN__"
+    ]
+  },
+  "permissions": [
+    "allow-shell-info",
+    "allow-shell-status",
+    "allow-shell-notify",
+    "allow-shell-notification-permission",
+    "allow-shell-request-notification-permission",
+    "allow-shell-save-download",
+    "allow-shell-open-external",
+    "allow-shell-new-window",
+    "allow-shell-set-title",
+    "core:window:allow-start-dragging",
+    "core:window:allow-internal-toggle-maximize"
+  ]
+}

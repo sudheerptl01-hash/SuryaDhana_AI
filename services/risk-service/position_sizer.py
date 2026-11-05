@@ -15,7 +15,8 @@ def kelly_fraction(win_rate: float, avg_win_pct: float, avg_loss_pct: float) -> 
     Returns a fraction of capital (0-1).
     In practice, use fractional Kelly (50% Kelly) to reduce variance.
     """
-    if avg_loss_pct <= 0 or win_rate <= 0 or win_rate >= 1:
+    # avg_win_pct <= 0 (no winning trades yet) must size to zero, not divide by zero.
+    if avg_loss_pct <= 0 or avg_win_pct <= 0 or win_rate <= 0 or win_rate >= 1:
         return 0.0
     b = avg_win_pct / avg_loss_pct
     q = 1 - win_rate

@@ -1,0 +1,20 @@
+{
+  "name": "suryadhana-desktop",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SuryaDhana Terminal desktop shell (Tauri v2). See README.md.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "tauri": "tauri",
+    "build": "tauri build --bundles app",
+    "icons": "tauri icon icons-src/app-icon-1024.png --output src-tauri/icons",
+    "test": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "selftest": "../scripts/build_desktop.sh --no-build --test"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4"
+  }
+}

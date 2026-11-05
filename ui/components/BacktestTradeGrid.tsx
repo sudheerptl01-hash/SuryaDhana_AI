@@ -1,5 +1,8 @@
 'use client'
 
+import { TickerLink, fmtNum } from '@/components/terminal'
+import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
+
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import type { Trade } from '@/lib/backtest'
@@ -17,9 +20,7 @@ const REASON_COLOR: Record<string, string> = {
 
 const PAGE = 25
 
-function num(n: number, d = 2) {
-  return n.toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d })
-}
+const num = (n: number, d = 2) => fmtNum(n, d)
 
 interface Props {
   trades: Trade[]
@@ -149,7 +150,7 @@ export function BacktestTradeGrid({ trades, onTradeClick }: Props) {
                       ▸ {it.key}
                       <span className="ml-3 text-slate-400 font-normal">
                         {rows.length} trades · {((wins / rows.length) * 100).toFixed(0)}% win ·
-                        avg <span className={avg >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{avg >= 0 ? '+' : ''}{avg.toFixed(2)}%</span> ·
+                        avg <span className={avg >= 0 ? 'text-emerald-400' : 'text-rose-400'}>{fmtSigned(avg, 2)}%</span> ·
                         PnL <span className={pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}>₹{num(pnl, 0)}</span>
                       </span>
                     </td>
@@ -163,11 +164,11 @@ export function BacktestTradeGrid({ trades, onTradeClick }: Props) {
                   className="border-b border-slate-800/60 hover:bg-amber-500/10 cursor-pointer">
                   <td className="px-2 py-1 text-slate-400">{t.entry_date}</td>
                   <td className="px-2 py-1 text-slate-400">{t.exit_date}</td>
-                  <td className="px-2 py-1"><span className="font-bold text-slate-100">{t.ticker}</span>{t.sector && t.sector !== 'Unknown' && <span className="ml-1.5 text-[9px] text-slate-500 uppercase tracking-wide">{t.sector}</span>}</td>
+                  <td className="px-2 py-1"><TickerLink symbol={t.ticker} />{t.sector && t.sector !== 'Unknown' && <span className="ml-1.5 text-[9px] text-slate-500 uppercase tracking-wide">{t.sector}</span>}</td>
                   <td className="px-2 py-1 text-right tabular-nums text-slate-300">{num(t.capital_allocated, 0)}</td>
-                  <td className={clsx('px-2 py-1 text-right tabular-nums', t.gross_return_pct >= 0 ? 'text-emerald-400/80' : 'text-rose-400/80')}>{t.gross_return_pct >= 0 ? '+' : ''}{num(t.gross_return_pct)}</td>
-                  <td className={clsx('px-2 py-1 text-right tabular-nums font-bold', t.return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400')}>{t.return_pct >= 0 ? '+' : ''}{num(t.return_pct)}</td>
-                  <td className={clsx('px-2 py-1 text-right tabular-nums', t.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400')}>{t.pnl >= 0 ? '+' : ''}{num(t.pnl, 0)}</td>
+                  <td className={clsx('px-2 py-1 text-right tabular-nums', t.gross_return_pct >= 0 ? 'text-emerald-400/80' : 'text-rose-400/80')}>{fmtSigned(t.gross_return_pct, 2)}</td>
+                  <td className={clsx('px-2 py-1 text-right tabular-nums font-bold', t.return_pct >= 0 ? 'text-emerald-400' : 'text-rose-400')}>{fmtSigned(t.return_pct, 2)}</td>
+                  <td className={clsx('px-2 py-1 text-right tabular-nums', t.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400')}>{fmtSigned(t.pnl, 0)}</td>
                   <td className="px-2 py-1 text-right tabular-nums text-slate-400">{t.holding_days}</td>
                   <td className={clsx('px-2 py-1 font-bold', REASON_COLOR[t.exit_reason])}>{REASON_LABEL[t.exit_reason]}</td>
                 </tr>

@@ -108,8 +108,16 @@ class ExecutionEngine:
         db_path: str | None = None,
         initial_equity: float = 10_000.0,
         active_model: str = "XGBoost",
+        price_guard_pct: float | None = None,
     ) -> None:
         self._mode = mode
+        # Max allowed gap between a submitted order price and the live market price
+        # (percent). Paper fills book at the SUBMITTED price, so without this guard a
+        # typo or test call (e.g. RELIANCE @ ₹100 while it trades ~₹1,400) creates a
+        # fictitious position with a meaningless P&L. 0 disables (unit tests only).
+        if price_guard_pct is None:
+            price_guard_pct = float(os.environ.get("PAPER_PRICE_GUARD_PCT", "10"))
+        self._price_guard_pct = price_guard_pct
         self._state = EngineState.ACTIVE
         # _cash: liquid cash available (decreases on buy, increases on sell)
         # total portfolio value = _cash + sum(position cost basis)
@@ -340,6 +348,11 @@ class ExecutionEngine:
         if not (api_key and api_secret and raw_token):
             raise RuntimeError("ICICI credentials not configured in environment.")
         try:
+            try:      # breeze_connect downloads ICICI's security master at import, with no timeout: use the cache
+                from shared.breeze_cache import install as _breeze_cache_install
+                _breeze_cache_install()
+            except Exception:  # noqa: BLE001
+                pass
             from breeze_connect import BreezeConnect  # type: ignore[import]
             breeze = BreezeConnect(api_key=api_key)
             breeze.generate_session(api_secret=api_secret, session_token=raw_token)
@@ -618,15 +631,22 @@ class ExecutionEngine:
             "as_of": datetime.now(timezone.utc).isoformat(),
         }
 
+    def _mark_price(self, symbol: str) -> float:
+        if self._mode == ExecutionMode.LIVE and self._breeze:
+            return self._breeze_get_ltp(symbol)
+        return self._get_yfinance_ltp(symbol)
+
     async def get_positions(self) -> list[dict]:
         """Returns current positions with live LTP and unrealized PnL."""
+        # Price lookups are blocking network calls (Breeze / yfinance): run them in
+        # worker threads, concurrently, so polling this never stalls the event loop.
+        symbols = list(self._positions)
+        prices = await asyncio.gather(*(asyncio.to_thread(self._mark_price, s) for s in symbols))
+        marks = dict(zip(symbols, prices))
         result = []
         async with self._lock:
             for symbol, pos in self._positions.items():
-                if self._mode == ExecutionMode.LIVE and self._breeze:
-                    ltp = self._breeze_get_ltp(symbol)
-                else:
-                    ltp = self._get_yfinance_ltp(symbol)
+                ltp = marks.get(symbol, 0.0)
 
                 if ltp <= 0:
                     ltp = pos.avg_entry_price
@@ -922,6 +942,28 @@ class ExecutionEngine:
 
         return rec
 
+    def _reference_price(self, symbol: str) -> float:
+        """Current market price used to sanity-check order prices (0 = unknown)."""
+        if self._mode == ExecutionMode.LIVE:
+            ltp = self._breeze_get_ltp(symbol)
+            if ltp > 0:
+                return ltp
+        return self._get_yfinance_ltp(symbol)
+
+    async def _price_guard_error(self, symbol: str, price: float) -> str | None:
+        """None when ``price`` is plausible vs the market, else a rejection reason."""
+        if not self._price_guard_pct or self._price_guard_pct <= 0:
+            return None
+        ref = await asyncio.to_thread(self._reference_price, symbol)
+        if ref <= 0:
+            return (f"No market reference price for {symbol} — refusing to fill at a "
+                    f"client-supplied price (₹{price:,.2f}). Retry when market data is available.")
+        gap_pct = abs(price / ref - 1) * 100
+        if gap_pct > self._price_guard_pct:
+            return (f"Order price ₹{price:,.2f} for {symbol} is {gap_pct:,.1f}% away from the "
+                    f"market price ₹{ref:,.2f} (limit {self._price_guard_pct:g}%) — rejected.")
+        return None
+
     async def place_order(
         self,
         symbol: str,
@@ -931,7 +973,11 @@ class ExecutionEngine:
         signal_source: str,
         stop_loss_price: float = 0.0,
     ) -> dict:
-        """Public order placement — acquires lock, checks kill switch."""
+        """Public order placement — validates price vs market, checks kill switch."""
+        guard = await self._price_guard_error(symbol, price)
+        if guard:
+            logger.warning("Order rejected by price guard", extra={"symbol": symbol, "price": price})
+            return {"error": guard, "status": "REJECTED", "symbol": symbol}
         async with self._lock:
             if self._state != EngineState.ACTIVE:
                 return {
@@ -970,6 +1016,11 @@ class ExecutionEngine:
         fully-unfilled schedule (e.g. an order far larger than available liquidity) books
         nothing and reports `filled_qty=0` rather than silently assuming the fill.
         """
+        guard = await self._price_guard_error(symbol, arrival_price)
+        if guard:
+            logger.warning("Scheduled order rejected by price guard",
+                           extra={"symbol": symbol, "price": arrival_price})
+            return {"order": None, "error": guard, "status": "REJECTED"}
         async with self._lock:
             if self._state != EngineState.ACTIVE:
                 return {

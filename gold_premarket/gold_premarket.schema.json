@@ -1,0 +1,360 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "suryadhana.gold_premarket.v1",
+  "title": "SuryaDhana AI - MCX Gold Daily Pre-Open Brief",
+  "description": "One file per MCX trading day (YYYYMMDD.json). Every key is always present; unknown values are null, never omitted. Prices: MCX in INR per 10 g, COMEX/spot in USD per troy oz. Times in IST (ISO 8601 with +05:30).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["meta", "baseline", "overnight_markets", "gap_model", "fed_and_rates", "reference_triggers", "news", "flows_and_physical", "exchange_housekeeping", "technicals", "calendar", "synthesis", "data_quality", "sources"],
+  "$defs": {
+    "num": { "type": ["number", "null"] },
+    "str": { "type": ["string", "null"] },
+    "ts": { "type": ["string", "null"], "description": "ISO 8601 timestamp with offset, e.g. 2026-10-09T08:34:00+05:30" },
+    "confidence": { "type": "string", "enum": ["high", "medium", "low", "unavailable"] },
+    "impact": { "type": "string", "enum": ["bullish", "bearish", "neutral", "mixed"] },
+    "quote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "unit", "last", "prev_close", "change", "change_pct", "as_of", "source", "is_derived", "confidence", "note"],
+      "properties": {
+        "name": { "type": "string" },
+        "unit": { "type": "string" },
+        "last": { "$ref": "#/$defs/num" },
+        "prev_close": { "$ref": "#/$defs/num" },
+        "change": { "$ref": "#/$defs/num" },
+        "change_pct": { "$ref": "#/$defs/num" },
+        "as_of": { "$ref": "#/$defs/ts" },
+        "source": { "$ref": "#/$defs/str" },
+        "is_derived": { "type": "boolean", "description": "true if computed from other reported numbers rather than read directly" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "note": { "$ref": "#/$defs/str" }
+      }
+    },
+    "level": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["price", "type", "basis"],
+      "properties": {
+        "price": { "type": "number" },
+        "type": { "type": "string", "enum": ["support", "resistance", "pivot"] },
+        "basis": { "type": "string" }
+      }
+    }
+  },
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "report_date", "report_day", "generated_at", "mcx_contract", "mcx_contract_expiry", "comex_contract", "is_mcx_trading_day", "overnight_window", "analyst"],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "report_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "report_day": { "type": "string", "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
+        "generated_at": { "type": "string" },
+        "mcx_contract": { "type": "string", "description": "Active MCX Gold (1 kg) futures, e.g. GOLD DEC26" },
+        "mcx_contract_expiry": { "$ref": "#/$defs/str" },
+        "comex_contract": { "type": "string", "description": "e.g. GCZ26" },
+        "is_mcx_trading_day": { "type": "boolean" },
+        "overnight_window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to"],
+          "properties": { "from": { "type": "string" }, "to": { "type": "string" } }
+        },
+        "analyst": { "type": "string" }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mcx_prev_close", "comex_ref_at_mcx_close", "usdinr_ref"],
+      "properties": {
+        "mcx_prev_close": { "$ref": "#/$defs/quote" },
+        "comex_ref_at_mcx_close": { "$ref": "#/$defs/quote" },
+        "usdinr_ref": { "$ref": "#/$defs/quote" }
+      }
+    },
+    "overnight_markets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["xauusd_spot", "comex_gold_front", "xagusd_spot", "mcx_silver", "usdinr_spot", "usdinr_ndf", "dxy", "eurusd", "us10y", "us10y_real_tips", "us30y", "brent", "wti", "sp500", "nasdaq100", "france_oat_bund_spread_bps"],
+      "properties": {
+        "xauusd_spot": { "$ref": "#/$defs/quote" },
+        "comex_gold_front": { "$ref": "#/$defs/quote" },
+        "xagusd_spot": { "$ref": "#/$defs/quote" },
+        "mcx_silver": { "$ref": "#/$defs/quote" },
+        "usdinr_spot": { "$ref": "#/$defs/quote" },
+        "usdinr_ndf": { "$ref": "#/$defs/quote" },
+        "dxy": { "$ref": "#/$defs/quote" },
+        "eurusd": { "$ref": "#/$defs/quote" },
+        "us10y": { "$ref": "#/$defs/quote" },
+        "us10y_real_tips": { "$ref": "#/$defs/quote" },
+        "us30y": { "$ref": "#/$defs/quote" },
+        "brent": { "$ref": "#/$defs/quote" },
+        "wti": { "$ref": "#/$defs/quote" },
+        "sp500": { "$ref": "#/$defs/quote" },
+        "nasdaq100": { "$ref": "#/$defs/quote" },
+        "france_oat_bund_spread_bps": { "$ref": "#/$defs/quote" }
+      }
+    },
+    "gap_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formula", "coef_comex_per_10usd", "coef_inr_per_1rupee", "coef_method", "delta_comex_usd", "delta_usdinr", "comex_component_inr", "inr_component_inr", "expected_gap_inr", "model_fair_open_inr", "mcx_preopen_indicative_inr", "deviation_inr", "chase_threshold_inr", "open_signal", "note"],
+      "properties": {
+        "formula": { "type": "string" },
+        "coef_comex_per_10usd": { "type": "number" },
+        "coef_inr_per_1rupee": { "type": "number" },
+        "coef_method": { "type": "string", "enum": ["static", "elasticity_from_prev_close"] },
+        "delta_comex_usd": { "$ref": "#/$defs/num" },
+        "delta_usdinr": { "$ref": "#/$defs/num" },
+        "comex_component_inr": { "$ref": "#/$defs/num" },
+        "inr_component_inr": { "$ref": "#/$defs/num" },
+        "expected_gap_inr": { "$ref": "#/$defs/num" },
+        "model_fair_open_inr": { "$ref": "#/$defs/num" },
+        "mcx_preopen_indicative_inr": { "$ref": "#/$defs/num" },
+        "deviation_inr": { "$ref": "#/$defs/num", "description": "preopen minus model" },
+        "chase_threshold_inr": { "type": "number" },
+        "open_signal": { "type": "string", "enum": ["aligned_tradeable", "dislocated_wait_15_30m", "preopen_unavailable"] },
+        "note": { "$ref": "#/$defs/str" }
+      }
+    },
+    "fed_and_rates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fed_funds_range", "next_fomc", "fedwatch", "fed_speakers", "other_central_banks"],
+      "properties": {
+        "fed_funds_range": { "$ref": "#/$defs/str" },
+        "next_fomc": { "$ref": "#/$defs/str" },
+        "fedwatch": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["as_of", "next_meeting_hold_pct", "next_meeting_hike_pct", "next_meeting_cut_pct", "december_hike_pct", "prev_next_meeting_hold_pct", "prev_december_hike_pct", "source"],
+          "properties": {
+            "as_of": { "$ref": "#/$defs/ts" },
+            "next_meeting_hold_pct": { "$ref": "#/$defs/num" },
+            "next_meeting_hike_pct": { "$ref": "#/$defs/num" },
+            "next_meeting_cut_pct": { "$ref": "#/$defs/num" },
+            "december_hike_pct": { "$ref": "#/$defs/num" },
+            "prev_next_meeting_hold_pct": { "$ref": "#/$defs/num" },
+            "prev_december_hike_pct": { "$ref": "#/$defs/num" },
+            "source": { "$ref": "#/$defs/str" }
+          }
+        },
+        "fed_speakers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "role", "stance", "summary"],
+            "properties": {
+              "name": { "type": "string" },
+              "role": { "type": "string" },
+              "stance": { "type": "string", "enum": ["hawkish", "dovish", "neutral"] },
+              "summary": { "type": "string" }
+            }
+          }
+        },
+        "other_central_banks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["bank", "action", "gold_impact", "summary"],
+            "properties": {
+              "bank": { "type": "string" },
+              "action": { "type": "string" },
+              "gold_impact": { "$ref": "#/$defs/impact" },
+              "summary": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "reference_triggers": {
+      "type": "array",
+      "description": "The user's watch levels. Carry the same trigger ids every day; update references only when the user changes them.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "metric", "reference", "current", "status", "gold_implication"],
+        "properties": {
+          "id": { "type": "string" },
+          "metric": { "type": "string" },
+          "reference": { "type": "number" },
+          "current": { "$ref": "#/$defs/num" },
+          "status": { "type": "string", "enum": ["above", "below", "at", "unknown"] },
+          "gold_implication": { "type": "string" }
+        }
+      }
+    },
+    "news": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "published_at", "headline", "summary", "category", "region", "gold_impact", "impact_strength", "transmission_channel", "source", "url"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^N\\d{2}$" },
+          "published_at": { "$ref": "#/$defs/ts" },
+          "headline": { "type": "string" },
+          "summary": { "type": "string" },
+          "category": { "type": "string", "enum": ["geopolitics", "energy", "monetary_policy", "rates_bonds", "fx", "macro_data", "etf_flows", "central_bank_buying", "physical_demand", "india_policy", "exchange_circular", "technical_analysis", "equities_risk", "other"] },
+          "region": { "type": "string", "enum": ["US", "India", "China", "Europe", "Middle_East", "Global", "Other"] },
+          "gold_impact": { "$ref": "#/$defs/impact" },
+          "impact_strength": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "transmission_channel": { "type": "string", "enum": ["comex_price", "usdinr", "real_yields", "dollar", "safe_haven", "physical_premium", "margin_liquidity", "sentiment"] },
+          "source": { "type": "string" },
+          "url": { "$ref": "#/$defs/str" }
+        }
+      }
+    },
+    "flows_and_physical": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["global_etf", "gld_holdings_tonnes", "central_banks", "china", "india"],
+      "properties": {
+        "global_etf": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["period", "flow_usd_bn", "holdings_tonnes", "aum_usd_bn", "summary", "source"],
+          "properties": {
+            "period": { "$ref": "#/$defs/str" },
+            "flow_usd_bn": { "$ref": "#/$defs/num" },
+            "holdings_tonnes": { "$ref": "#/$defs/num" },
+            "aum_usd_bn": { "$ref": "#/$defs/num" },
+            "summary": { "$ref": "#/$defs/str" },
+            "source": { "$ref": "#/$defs/str" }
+          }
+        },
+        "gld_holdings_tonnes": { "$ref": "#/$defs/quote" },
+        "central_banks": { "$ref": "#/$defs/str" },
+        "china": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sge_premium_usd_low", "sge_premium_usd_high", "as_of", "summary"],
+          "properties": {
+            "sge_premium_usd_low": { "$ref": "#/$defs/num" },
+            "sge_premium_usd_high": { "$ref": "#/$defs/num" },
+            "as_of": { "$ref": "#/$defs/str" },
+            "summary": { "$ref": "#/$defs/str" }
+          }
+        },
+        "india": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dealer_premium_usd_low", "dealer_premium_usd_high", "as_of", "summary"],
+          "properties": {
+            "dealer_premium_usd_low": { "$ref": "#/$defs/num", "description": "negative = discount" },
+            "dealer_premium_usd_high": { "$ref": "#/$defs/num" },
+            "as_of": { "$ref": "#/$defs/str" },
+            "summary": { "$ref": "#/$defs/str" }
+          }
+        }
+      }
+    },
+    "exchange_housekeeping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["margin_change", "circulars", "summary"],
+      "properties": {
+        "margin_change": { "type": "string", "enum": ["none_found", "increase", "decrease", "special_margin", "unknown"] },
+        "circulars": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["date", "title", "effect", "url"],
+            "properties": {
+              "date": { "type": "string" },
+              "title": { "type": "string" },
+              "effect": { "type": "string" },
+              "url": { "$ref": "#/$defs/str" }
+            }
+          }
+        },
+        "summary": { "type": "string" }
+      }
+    },
+    "technicals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["comex_levels", "mcx_levels", "notes"],
+      "properties": {
+        "comex_levels": { "type": "array", "items": { "$ref": "#/$defs/level" } },
+        "mcx_levels": { "type": "array", "items": { "$ref": "#/$defs/level" } },
+        "notes": { "$ref": "#/$defs/str" }
+      }
+    },
+    "calendar": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["datetime_ist", "event", "region", "importance", "forecast", "previous"],
+        "properties": {
+          "datetime_ist": { "type": "string" },
+          "event": { "type": "string" },
+          "region": { "type": "string" },
+          "importance": { "type": "string", "enum": ["high", "medium", "low"] },
+          "forecast": { "$ref": "#/$defs/str" },
+          "previous": { "$ref": "#/$defs/str" }
+        }
+      }
+    },
+    "synthesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["overnight_summary", "regime", "bullish_drivers", "bearish_drivers", "bias", "bias_score", "confidence", "expected_range_mcx", "open_plan", "invalidation", "key_risks_today"],
+      "properties": {
+        "overnight_summary": { "type": "string" },
+        "regime": { "type": "string", "enum": ["rates_dominant", "safe_haven_dominant", "dollar_dominant", "physical_demand_dominant", "mixed"] },
+        "bullish_drivers": { "type": "array", "items": { "type": "string" } },
+        "bearish_drivers": { "type": "array", "items": { "type": "string" } },
+        "bias": { "type": "string", "enum": ["strong_bullish", "bullish", "neutral", "bearish", "strong_bearish"] },
+        "bias_score": { "type": "integer", "minimum": -5, "maximum": 5 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "expected_range_mcx": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["low", "high", "basis"],
+          "properties": { "low": { "type": "number" }, "high": { "type": "number" }, "basis": { "type": "string" } }
+        },
+        "open_plan": { "type": "string" },
+        "invalidation": { "type": "string" },
+        "key_risks_today": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "data_quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["missing_fields", "conflicts", "derived_fields"],
+      "properties": {
+        "missing_fields": { "type": "array", "items": { "type": "string" } },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field", "values", "resolution"],
+            "properties": {
+              "field": { "type": "string" },
+              "values": { "type": "array", "items": { "type": "string" } },
+              "resolution": { "type": "string" }
+            }
+          }
+        },
+        "derived_fields": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "url"],
+        "properties": { "name": { "type": "string" }, "url": { "type": "string" } }
+      }
+    }
+  }
+}

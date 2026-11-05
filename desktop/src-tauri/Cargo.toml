@@ -1,0 +1,64 @@
+[package]
+name = "suryadhana-desktop"
+version = "1.0.0"
+description = "SuryaDhana Terminal: native macOS shell (Tauri v2) for the local SuryaDhana stack"
+authors = ["SuryaDhana"]
+edition = "2021"
+rust-version = "1.80"
+publish = false
+
+[lib]
+# `_lib` suffix avoids a name clash with the bin target on some platforms (Tauri template convention).
+name = "suryadhana_desktop_lib"
+crate-type = ["rlib"]
+
+[[bin]]
+name = "suryadhana-desktop"
+path = "src/main.rs"
+
+[features]
+# Web Inspector for the terminal windows. OFF in every release build (the terminal origin holds the remote
+# IPC grant); `cargo build --features devtools` for a local debugging build only. config.json `devtools`
+# has no effect without it.
+devtools = ["tauri/devtools"]
+
+[build-dependencies]
+tauri-build = { version = "=2.7.4", features = [] }
+
+[dependencies]
+# Tauri core + official plugins: exact pins (the CLI in desktop/package.json is pinned to the matching 2.12 line).
+# Launch at Login (src/autostart.rs) and single instance (src/instance.rs) are the shell's own: the plugins
+# could not write KeepAlive / AssociatedBundleIdentifiers, nor key the instance lock on $HOME (drills).
+tauri = { version = "=2.12.5", features = ["tray-icon", "image-png"] }
+tauri-plugin-window-state = "=2.5.0"
+tauri-plugin-notification = "=2.7.0"
+tauri-plugin-opener = "=2.7.2"
+tauri-plugin-log = "=2.10.1"
+tauri-plugin-dialog = "=2.8.3"
+# Supporting crates (resolved versions are locked in Cargo.lock).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+url = "2"
+base64 = "0.22"
+time = { version = "0.3", features = ["formatting", "macros"] }
+libc = "0.2"
+reqwest = { version = "0.13", default-features = false, features = ["json"] }
+tokio = { version = "1", features = ["time", "sync", "macros", "rt-multi-thread"] }
+# macOS APIs Tauri does not expose (window tabbing, NSBeep, notification authorization, Login Items status).
+# All of these are already in the dependency graph through tao / wry (same versions, same features), so
+# no new crate enters Cargo.lock.
+objc2 = "=0.6.5"
+block2 = "=0.6.2"
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSString", "NSURL", "NSBundle", "NSThread"] }
+objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSResponder", "NSWindow", "NSGraphics"] }
+objc2-service-management = { version = "=0.3.2", default-features = false, features = ["std", "SMAppService", "objc2", "objc2-foundation"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>SuryaDhana Terminal</title>
+  <link rel="stylesheet" href="boot.css">
+</head>
+<body data-state="checking">
+  <header class="strip" data-tauri-drag-region="deep">
+    <div class="brand">
+      <span class="sun" aria-hidden="true"></span>
+      <span class="name">SURYADHANA TERMINAL</span>
+      <span class="ver" id="ver">v—</span>
+    </div>
+    <div class="clock" aria-label="India Standard Time">
+      <span class="lbl">IST</span> <span id="clock">--:--:--</span> <span id="date" class="dim"></span>
+    </div>
+  </header>
+
+  <main>
+    <div class="title-row">
+      <h1 id="mode">BOOT SEQUENCE</h1>
+      <span class="paper">PAPER ONLY</span>
+    </div>
+
+    <table class="svc" aria-label="Services">
+      <thead>
+        <tr><th scope="col">SERVICE</th><th scope="col">PORT</th><th scope="col">STATE</th><th scope="col" class="num">LATENCY</th><th scope="col">ROLE</th></tr>
+      </thead>
+      <tbody id="svc-body">
+        <tr data-svc="data-service"><td class="n">data-service</td><td class="p">8001</td><td class="s pend">● …</td><td class="num l">—</td><td class="r dim">DuckDB owner · NSE ingest · live ticks</td></tr>
+        <tr data-svc="ui-api"><td class="n">ui-api</td><td class="p">8010</td><td class="s pend">● …</td><td class="num l">—</td><td class="r dim">terminal backend · API · UI</td></tr>
+        <tr data-svc="master-controller"><td class="n">master-controller</td><td class="p">8008</td><td class="s pend">● …</td><td class="num l">—</td><td class="r dim">IST scheduler · Telegram · jobs</td></tr>
+      </tbody>
+    </table>
+
+    <dl class="kv">
+      <dt>TERMINAL UI</dt><dd id="ui" class="copy">checking…</dd>
+      <dt>ICICI SESSION</dt><dd id="icici">—</dd>
+      <dt>NIFTY 50</dt><dd id="nifty">—</dd>
+      <dt>DESK NAV</dt><dd id="desk">—</dd>
+    </dl>
+
+    <div class="progress"><span class="caret" aria-hidden="true">&gt;</span> <span id="progress" class="copy" role="status" aria-live="polite">Checking services…</span><span class="cursor" aria-hidden="true">_</span></div>
+    <div id="message" class="message copy" role="alert" hidden></div>
+    <pre id="remedy" class="remedy copy" aria-label="Commands to run in Terminal" hidden></pre>
+
+    <div id="actions" class="actions" hidden>
+      <button id="btn-start" type="button" class="primary">Start stack</button>
+      <button id="btn-logs" type="button">Open logs</button>
+      <button id="btn-retry" type="button">Retry</button>
+      <button id="btn-stop" type="button" class="danger" hidden>Stop stack…</button>
+    </div>
+    <div id="open-now" class="actions" hidden>
+      <button id="btn-open" type="button" class="primary">Open terminal now</button>
+    </div>
+  </main>
+
+  <footer>
+    <span id="freeze" class="warn" hidden></span>
+    <span id="notif" class="warn" hidden></span>
+    <span class="dim" id="hint">⌘N new window · ⌘K GO bar · ⌘1–⌘9 pages · closing the window keeps SuryaDhana in the menu bar</span>
+    <span class="dim" id="build"></span>
+  </footer>
+  <script src="boot.js"></script>
+</body>
+</html>

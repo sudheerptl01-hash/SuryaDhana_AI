@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Chip, PageHeader, T, TabSkeleton } from '@/components/terminal'
 import clsx from 'clsx'
 import {
   getTelemetryStatus,
@@ -48,10 +49,30 @@ interface ParsedLogLine {
 }
 
 const JOB_SCHEDULE: Record<string, string> = {
+  icici_session_refresh:         '08:00 IST  · Mon–Fri (TOTP login)',
+  icici_session_refresh_startup: 'once at start-up (trading morning)',
   pre_market_sync:      '08:30 IST',
   intraday_inference:   '09:15–15:30 IST  · every 15 min',
   eod_rebalancing:      '15:15 IST',
   overnight_rl_retrain: '23:00 IST',
+  eod_data_pipeline:    '18:30 IST  · Mon–Fri',
+  desk_daily:           '19:30 IST  · Mon–Fri (paper)',
+  nse_positions_catchup: '20:30 IST  · Mon–Fri',
+  nse_filings_weekly:   'Sat 09:00 IST',
+  gold_preopen_snapshot: '08:45 IST  · Mon–Fri',
+  preopen_capture:      '09:09:30 IST  · Mon–Fri',
+  gold_open_capture:    '09:10 IST  · Mon–Fri',
+  price_alerts_check:   'every minute  · 09:15–15:30 Mon–Fri',
+  move_alerts:          'every 5 min  · 09:20–15:30 Mon–Fri',
+  filing_alerts:        'every 5 min  · 08:00–22:55 Mon–Sat',
+  news_track_record_daily: '19:45 IST  · Mon–Fri',
+  results_capture_daily: '20:45 IST  · Mon–Fri',
+  index_valuation_daily: '19:15 IST  · Mon–Fri',
+  daily_wrap:           '21:00 IST  · Mon–Fri',
+  morning_note:         '08:50 IST  · Mon–Fri',
+  internals_sample:     'every 2 min  · 09:15–15:31 Mon–Fri',
+  close_note:           '15:40 IST  · Mon–Fri',
+  financials_sweep:     'Sat 10:00 IST (FA / RV cache)',
 }
 
 const LOG_LEVEL_STYLE: Record<string, string> = {
@@ -228,8 +249,8 @@ export function SystemTelemetry({ isDark = true }: { isDark?: boolean }) {
   }, [])
 
   useEffect(() => {
-    fetchStatus()
-    fetchLogs()
+    // all mount probes fire concurrently — the page must paint within one slow probe, not their sum
+    void Promise.allSettled([fetchStatus(), fetchLogs()])
     const statusId = setInterval(fetchStatus, 10_000)
     const logId    = setInterval(fetchLogs,   5_000)
     return () => { clearInterval(statusId); clearInterval(logId) }
@@ -274,9 +295,22 @@ export function SystemTelemetry({ isDark = true }: { isDark?: boolean }) {
   const cpuColor  = (sys?.cpu_pct  ?? 0) > 80 ? 'bg-rose-500'    : (sys?.cpu_pct  ?? 0) > 50 ? 'bg-amber-500' : 'bg-emerald-500'
   const memColor  = (sys?.mem_pct  ?? 0) > 85 ? 'bg-rose-500'    : (sys?.mem_pct  ?? 0) > 60 ? 'bg-amber-500' : 'bg-cyan-500'
 
+  // first paint before any probe answers: skeleton, not a wall of '—'
+  if (!status && !error) {
+    return (
+      <div className="space-y-5">
+        <PageHeader code="SYS" title="System" subtitle="scheduler · jobs · latency · logs" />
+        <TabSkeleton />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-5">
 
+      <PageHeader code="SYS" title="System"
+        status={<Chip color={online ? T.green : T.red} active>{online ? '● MASTER CONTROLLER ONLINE' : '○ CONTROLLER OFFLINE'}</Chip>}
+        subtitle={status ? `scheduler · jobs · latency · logs · ${status.ist_now?.slice(11, 19)} IST` : 'scheduler · jobs · latency · logs'} />
       {/* ── Data-Service & Provider Status ─────────────────────────────────── */}
       <SystemStatusWidget isDark={isDark} />
 
@@ -290,7 +324,7 @@ export function SystemTelemetry({ isDark = true }: { isDark?: boolean }) {
         isDark ? 'border-slate-700/40 bg-slate-900/80' : 'border-gray-200 bg-gray-50',
       )}>
         <div className="flex items-center gap-3">
-          <span className="text-base">⚙️</span>
+          <span style={{ width: 3, height: 12, background: T.amber }} />
           <div>
             <h2 className={clsx('text-sm font-bold tracking-widest uppercase', isDark ? 'text-slate-100' : 'text-gray-900')}>
               System Telemetry

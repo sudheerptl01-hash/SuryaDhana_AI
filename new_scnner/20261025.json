@@ -1,0 +1,256 @@
+{
+  "scan_date": "2026-10-25",
+  "generated_at": "2026-10-25 06:05 UTC (run 1, covering 23-25 Oct AM); updated 2026-10-25 16:15 UTC (run 2, Sunday 25 Oct scan: +ADANIENT, +TRANSWORLD, +LUPIN)",
+  "universe": "NSE/BSE only",
+  "methodology": "Soros-reflexivity Stage-1 soft-catalyst screen over public news/exchange-filing summaries for 23 Oct post-market to 25 Oct 2026 (Saturday Q2 filings, NSE announcements, order/L1/rating news). Run 2 (25 Oct evening) added Sunday/late-Saturday disclosures; no new L1 or rating actions found for 25 Oct.",
+  "note": "Weekend run: markets closed 24-25 Oct; reopen Mon 26 Oct. Market context week ended 23 Oct: Nifty -2.4%, Midcap150 -5.5%, Smallcap250 -7.1%, Brent >$117, INR ~95/USD, DIIs +Rs 10,941 cr. Yahoo Finance tickers use NSE symbol + '.NS'; Yahoo API unreachable from the run environment, so tickers are not live-verified. Not investment advice.",
+  "count": 12,
+  "stage1_candidates": [
+    {
+      "ticker": "AFCONS.NS",
+      "yahoo_ticker": "AFCONS.NS",
+      "company_name": "Afcons Infrastructure Limited",
+      "exchange": "NSE",
+      "catalyst_category": "L1 Tender Status (pre-LoA) - Lucknow Metro Phase 1B underground",
+      "news": "Afcons emerged lowest bidder (L1) for design and construction of the ~6.52 km underground section (Charbagh-Chowk, 7 underground stations) of Lucknow Metro East-West Corridor Phase 1B; bid ~Rs 1,632 cr out of a Rs 5,801 cr phase. Award still subject to UPMRC contracting process; ~3-year completion.",
+      "market_consensus_gap": "Since listing the Street has treated Afcons as a slow-burn marine/overseas EPC with lumpy inflows and working-capital drag, and the infra basket was sold hard this week (midcaps -5.5%). A Rs 1,600+ cr domestic urban-tunnelling award (Afcons' highest-margin niche, few qualified bidders) is not in order-inflow trackers until the LoA arrives.",
+      "reflexivity_thesis": "1) LoA converts L1 into booked inflow, lifting FY27 order-intake vs guidance. 2) Tunnelling mix supports margin guidance, so sell-side keeps or raises FY28 EPS while peers get cut on the risk-off tape. 3) A metro pipeline (Lucknow 1B, plus other city phases) re-establishes the 'domestic urban TBM leader' narrative, drawing infra-focused DIIs back after the sell-off. 4) Re-rating lowers the effective cost of bank guarantees/QIP and lets it bid more. Risks: LoA delay, aggressive pricing, sector-wide de-rating.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://www.constructionworld.in/transport-infrastructure/metro-rail-and-railways-infrastructure/afcons-infrastructure-emerges-as-l1-bidder-for-lucknow-metro/99064"
+      ],
+      "news_date": "2026-10-21"
+    },
+    {
+      "ticker": "WELCORP.NS",
+      "yahoo_ticker": "WELCORP.NS",
+      "company_name": "Welspun Corp Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Hidden AI/Data-Centre Infrastructure Exposure - US order book (market sold the news)",
+      "news": "US subsidiary Welspun Tubular LLC won ~Rs 5,500 cr order for coated line pipes for a Permian natural-gas pipeline serving a hyperscaler data-centre complex; execution FY29 from US plant. Global order book now record ~$5.25 bn (~Rs 50,000 cr). Stock fell 3.2% to Rs 2,365.50 on 23 Oct.",
+      "market_consensus_gap": "The stock fell on a record order, so the market is pricing Welspun as a cyclical pipe maker with FY29-dated revenue and tariff risk. It is not pricing the structural shift: US gas-to-power pipelines for AI data centres, supplied from a US-domiciled plant that sits behind tariff walls, giving multi-year visibility at US-level margins.",
+      "reflexivity_thesis": "1) A Rs 50k cr book (~2.5x revenue) extends visibility into FY29, so analysts raise outer-year EPS and lower the terminal-risk discount. 2) A 'data-centre power infra' label puts it in thematic baskets alongside power-T&D names, moving it to a higher multiple. 3) The sell-off on news gives DIIs/FIIs an entry, and buying reverses the price, which validates the thesis. 4) Re-rating supports US capacity expansion funding. Risks: US policy/tariffs, execution timing, crude-led risk-off.",
+      "conviction_score": 6,
+      "source_urls": [
+        "https://hdfcsky.com/news/welspun-corp-wins-rs-5500-crore-us-gas-pipeline-order-shares-fall-3-22-percent",
+        "https://www.whalesbook.com/corporate-news/English/industrial-goodsservices/Welspun-Corp-Secures-Massive-Rs-5500-Crore-Order-for-US-Project/6adad7b3c6c6dccbb904ccc1"
+      ],
+      "news_date": "2026-10-23"
+    },
+    {
+      "ticker": "SANGAMIND.NS",
+      "yahoo_ticker": "SANGAMIND.NS",
+      "company_name": "Sangam (India) Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Shadow Credit Upgrade - Ind-Ra IND A-/A2+ to IND A/A1",
+      "news": "India Ratings upgraded Sangam India's Rs 2,770 cr bank facilities to IND A/Stable (from IND A-) and short-term to IND A1 (from A2+). Drivers: EBITDA margin 12.2% in 1QFY27 vs 9.9% in FY26 (cost cuts, backward integration, captive renewables); net adjusted leverage 3.04x vs 3.62x. Risks: 127-day working capital, negative FCF, Rs 1,500 cr debt-funded capex over 3 years; exports 36% of revenue.",
+      "market_consensus_gap": "Small-cap textile (yarn/fabric/denim) priced as a levered commodity spinner. A two-notch move on short-term rating to A1 lowers working-capital borrowing cost on a Rs 2,770 cr limit base and confirms the margin step-up is structural (captive power) rather than cyclical.",
+      "reflexivity_thesis": "1) Lower interest on a large WC book flows directly to PAT. 2) 12%+ margins sustained means FY27-28 EPS upgrades for the few covering brokers. 3) A better rating eases funding for the Rs 1,500 cr capex at lower spread, compounding returns. 4) Small-cap textile funds re-enter on the de-risking, and the rerating supports further rating momentum. Risks: cotton prices, US tariff on Indian textiles, capex leverage.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.whalesbook.com/corporate-news/English/other/Sangam-India-Gets-Credit-Rating-Upgrade-to-IND-A-Following-Margin-Gains/6adc809ac6c6dccbb906384b"
+      ],
+      "news_date": "2026-10-24"
+    },
+    {
+      "ticker": "BLKASHYAP.NS",
+      "yahoo_ticker": "BLKASHYAP.NS",
+      "company_name": "B.L. Kashyap and Sons Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Large LoA relative to size - private real estate EPC",
+      "news": "LoA received and accepted 23 Oct 2026 (16:15) from Signature Global (India) Ltd for civil structure and part MEP works on 4 towers + basements and ancillary buildings; Rs 495.86 cr ex-GST; ~40 months. BSE 532719 / NSE BLKASHYAP. Announced post-market 24 Oct.",
+      "market_consensus_gap": "BLK is treated as a stagnant, low-margin contractor with past balance-sheet stress. Repeat large awards from a fast-growing Gurugram developer (Signature Global) point to a growing private-realty order pipeline. That is not reflected in a stock that has de-rated with the small-cap sell-off.",
+      "reflexivity_thesis": "1) Order sizable versus annual revenue, so revenue visibility for FY27-29 improves. 2) Private-developer clients pay faster than government, so working capital and interest improve. 3) Rising inflow leads small-cap funds to re-rate it as a realty-capex proxy. Risks: thin margins, execution, real-estate cycle slowdown.",
+      "conviction_score": 5,
+      "source_urls": [
+        "https://www.equitybulls.com/news/377635/b-l-kashyap-and-sons-limited-secures-495-86-crore-contract-from-signature-global"
+      ],
+      "news_date": "2026-10-23"
+    },
+    {
+      "ticker": "MCLOUD.NS",
+      "yahoo_ticker": "MCLOUD.NS",
+      "company_name": "Magellanic Cloud Limited",
+      "exchange": "NSE",
+      "catalyst_category": "L1 Tender Status - Bank of Maharashtra AI e-surveillance",
+      "news": "Wholly owned subsidiary Provigil Surveillance emerged L1 in Bank of Maharashtra e-surveillance tender across 1,550+ sites (AI-enabled systems plus 24/7 central monitoring). Release says ~Rs 115 cr; filing subject line cites ~Rs 228 cr. Formal order awaited. Mcap ~Rs 1,405 cr; stock flat (-0.25%).",
+      "market_consensus_gap": "The stock did not react, so the L1 is not priced. A PSU-bank e-surveillance contract is recurring annuity-type revenue (multi-year monitoring), and at Rs 115-228 cr it is 8-16% of market cap.",
+      "reflexivity_thesis": "1) A formal PO converts the L1 into booked annuity revenue. 2) Other PSU banks standardise on similar AI-surveillance specs, so it gets repeat wins (prior Punjab & Sind Bank order). 3) Recurring-revenue mix supports a higher multiple and retail/HNI flow. Risks: value ambiguity (115 vs 228 cr), small-cap governance/volatility, PO delay.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://tradebrains.in/indian-markets/magellanic-cloud-arm-emerges-l1-in-bank-of-maharashtras-115-crore-e-surveillance-tender-across-1550-sites-12716744"
+      ],
+      "news_date": "2026-10-22"
+    },
+    {
+      "ticker": "JKCEMENT.NS",
+      "yahoo_ticker": "JKCEMENT.NS",
+      "company_name": "JK Cement Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Hidden CapEx - Paints business second plant (Telangana)",
+      "news": "Board (24 Oct, alongside Q2 FY27 results) endorsed JK Maxx Paints' 75,000 KLPA water-based paint plant at Raghunadhapalem, Suryapet (Telangana), Rs 130 cr, within the already-approved Rs 600 cr paints budget; commissioning within 12 months of construction start. Bhiwadi plant (73,000 KLPA) at ~60% utilisation, expected full by FY28; total capacity to ~148,000 KLPA.",
+      "market_consensus_gap": "Market values JK Cement purely on cement EV/tonne and treats paints as a cash drain. Planning a second plant while Bhiwadi is only at 60% signals management expects paints volumes to roughly double by FY28, so the segment is closer to break-even than consensus assumes.",
+      "reflexivity_thesis": "1) South capacity lowers freight and opens southern dealers, so paints losses narrow faster. 2) Analysts start assigning SOTP value to paints rather than zero/negative. 3) Combined with cement capacity growth, this supports FY28 EPS upgrades and DII accumulation. Risks: intense paints competition (Birla Opus, Asian, JSW), cement price weakness; Q2 numbers to be digested Monday.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://kalkinemedia.com/in/news/announcements/jk-cement-board-meeting-october-2026-key-decisions-on-q2-fy27-results-new-paint-plant-auditor-appointment"
+      ],
+      "news_date": "2026-10-24"
+    },
+    {
+      "ticker": "ADANIENT.NS",
+      "yahoo_ticker": "ADANIENT.NS",
+      "company_name": "Adani Enterprises Limited (Adani Wind, via Adani New Industries Ltd)",
+      "exchange": "NSE",
+      "catalyst_category": "Hidden Capacity Commercialisation - third-party WTG order book crosses 1 GW (pre-results, Q2 on 28 Oct)",
+      "news": "Adani Wind, the wind business of Adani New Industries Ltd (Adani Enterprises' new-energy arm), won 696.2 MW of turbine orders from five independent power producers: Purvah Green Power (RPSG) 300 MW, Jindal India Power 155 MW, NTPC Renewable Energy 109.2 MW, Aditya Birla Renewables 82.5 MW, Integrum Energy 49.5 MW. Platforms: 5.2 MW (MWL-160), 5 MW (MWL-185), 3.3 MW. Cumulative non-Adani third-party orders now above 1 GW. Mundra WTG capacity scaling from 2.25 GW/yr to 5 GW, long-term 10 GW. Reported 24 Oct 7:50 PM IST (PTI), after market hours on a Saturday.",
+      "market_consensus_gap": "Dalal Street values Adani Enterprises' new-energy vertical mostly as a captive supplier to Adani Green (related-party revenue, discounted). Over 1 GW of external orders from blue-chip IPPs, including NTPC RE, shows the turbines have market acceptance outside the group. That makes ANIL a standalone OEM competing with Suzlon and Inox Wind, which current SOTP models do not credit.",
+      "reflexivity_thesis": "1) Non-captive orders let analysts value the WTG business on OEM peer multiples (Suzlon/Inox) rather than a captive-cost discount. 2) Q2 results on 28 Oct and management commentary on the Mundra 5 GW ramp give sell-side a reason to raise new-energy SOTP value. 3) A higher SOTP supports the ANIL IPO/listing narrative and new-energy capex funding, drawing FII/DII flows back to ADANIENT after the mid/small-cap sell-off. 4) Second-order: share loss risk for SUZLON.NS / INOXWIND.NS on large IPP tenders (NTPC RE). Risks: group governance overhang, execution of the capacity ramp, crude-led risk-off.",
+      "conviction_score": 4,
+      "source_urls": [
+        "https://www.etvbharat.com/en/business/adani-wind-bags-696-mw-orders-from-five-power-producers-third-party-book-crosses-1-gw-enn26102403265",
+        "https://www.dailyexcelsior.com/adani-wind-bags-696-mw-orders-from-five-power-producers-third-party-book-crosses-1-gw/amp/"
+      ],
+      "news_date": "2026-10-24"
+    },
+    {
+      "ticker": "RITCO.NS",
+      "yahoo_ticker": "RITCO.NS",
+      "company_name": "Ritco Logistics Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Contract Wins from refinery projects (HRRL, BCPL) - long-term",
+      "news": "Secured Rs 119.55 cr new business in September 2026, of which Rs 109.01 cr long-term: 3-year BCPL (Dibrugarh) Rs 73.67 cr and HRRL (Barmer) Rs 35.34 cr. Subsidiary TrucksUp did Rs 54 cr FASTag GMV in September.",
+      "market_consensus_gap": "Priced as a commodity small-cap trucker. Multi-year logistics contracts with refinery/petchem projects (HPCL Rajasthan refinery commissioning) give annuity-like volume.",
+      "reflexivity_thesis": "1) Contracted revenue visibility lifts FY27-28 estimates. 2) Refinery ramp-ups raise volumes over the contract life. 3) Small-cap logistics funds re-rate on visibility. Risks: tiny cap, illiquidity, execution.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://whalesbook.com/corporate-news/Hinglish/transportation/Ritco-Logistics-Secures-New-Business-Contracts-Worth-indian-rupee11955-Crore/6adcc439c6c6dccbb906708d"
+      ],
+      "news_date": "2026-10-24"
+    },
+    {
+      "ticker": "INDOTECH.NS",
+      "yahoo_ticker": "INDOTECH.NS",
+      "company_name": "Indo Tech Transformers Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Order win - large-rating power transformers to private steel capex",
+      "news": "Orders worth Rs 47.485 cr + taxes from Shyam SEL & Power for four 220/33 kV power transformers (2x 80/100 MVA, 2x 130/180 MVA) for a steel plant in eastern India; execution within 12 months of drawing approval. Filed 24 Oct 22:16 IST.",
+      "market_consensus_gap": "Transformer names de-rated with the defence/capital-goods sell-off. This shows demand broadening from utilities to private captive (steel) capex at 220 kV class, which carries higher realisation.",
+      "reflexivity_thesis": "1) Private-sector orders add to the utility backlog, so inflows run above trend. 2) A higher-MVA mix lifts realisation and margin. 3) Analysts revise and funds return after the sell-off. Risks: small order, CRGO cost, sector valuation.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://www.equitybulls.com/news/377667/indo-tech-transformers-limited-secures-order-worth-47-485-crore-from-shyam-sel-p"
+      ],
+      "news_date": "2026-10-24"
+    },
+    {
+      "ticker": "KAJARIACER.NS",
+      "yahoo_ticker": "KAJARIACER.NS",
+      "company_name": "Kajaria Ceramics Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Capacity Expansion (GVT) - borderline Stage 2 (results headline)",
+      "news": "Q2 FY27 (24 Oct, post-market Saturday): consolidated revenue Rs 1,468 cr (~+24% YoY), PAT Rs 190.7 cr (~+38% YoY), Rs 12 interim dividend; FY27 EBITDA margin guidance 18-19% kept. Board approved ~11 MSM GVT capacity at Gailpur (Rs 165-180 cr, by Apr 2027) plus Srikalahasti ~10 MSM (Rs 210 cr, by Mar 2027).",
+      "market_consensus_gap": "The earnings beat will be priced at Monday's open (Stage 2). The softer element is the capacity: ~20 MSM of GVT added in FY27 after years of flat capacity implies management sees sustained volume growth, which could carry FY28-29 estimates past the quarter's beat.",
+      "reflexivity_thesis": "1) A beat plus a capacity commitment leads to volume-growth upgrades for FY28. 2) Upgrades draw consumption-focused DII buying on the sell-off. Risk: the headline beat may already be priced on open, so conviction is low.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://www.multibagg.ai/market-pulse/articles/kajaria-q2-profit-expansion-plans-cmvmgk0uy000j2vpi1veif52z",
+        "https://alfafinder.com/market/nse-announcements/"
+      ],
+      "news_date": "2026-10-24"
+    },
+    {
+      "ticker": "TRANSWORLD.NS",
+      "yahoo_ticker": "TRANSWORLD.NS",
+      "company_name": "Transworld Shipping Lines Limited (formerly Shreyas Shipping & Logistics)",
+      "exchange": "NSE",
+      "catalyst_category": "Hidden CapEx - fleet expansion (2 container vessels, related-party)",
+      "news": "Wholly owned subsidiary Transworld Sea-Connect IFSC Pvt Ltd signed an MoA to buy two container vessels, OEL Surya (US$22.03 mn) and OEL Varun (US$20.75 mn), total US$42.78 mn (~Rs 400 cr at ~95/USD), from Orient Express Lines Inc., Panama, a common-ownership group entity (related-party transaction, stated arm's length). Notice received 24 Oct; reported 25 Oct. BSE 520151 / NSE TRANSWORLD.",
+      "market_consensus_gap": "Small-cap coastal/feeder container operator priced as a cyclical, low-ROE shipper. A ~Rs 400 cr purchase is large relative to its size and moves owned tonnage under an IFSC (GIFT City) entity, which has tax and dollar-funding advantages. Consensus has no growth capex in the model.",
+      "reflexivity_thesis": "1) Owned vessels replace chartered capacity or add tonnage, lifting revenue and EBITDA from FY28. 2) The IFSC structure gives lower tax and cheaper USD debt, so ROE improves. 3) If India's coastal and EXIM container volumes hold up, small-cap shipping funds re-rate the stock. Risks: related-party pricing (governance discount), freight-rate down-cycle, leverage, illiquidity. Yahoo symbol after the rename not live-verified.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://www.equitybulls.com/news/377669/transworld-sea-connect-ifsc-private-limited-to-purchase-vessels-oel-surya-and-oe",
+        "https://nsearchives.nseindia.com/corporate/TRANSWORLD_07092026181353_BMOutcomesigned.pdf"
+      ],
+      "news_date": "2026-10-25"
+    },
+    {
+      "ticker": "LUPIN.NS",
+      "yahoo_ticker": "LUPIN.NS",
+      "company_name": "Lupin Limited",
+      "exchange": "NSE",
+      "catalyst_category": "Regulatory overhang clearance - USFDA Goa plant inspection, 1 Form-483 observation",
+      "news": "USFDA concluded a five-day inspection of Lupin's Goa manufacturing facility on 23 Oct 2026 with a single Form 483 observation. Reported 25 Oct. Nature of the observation not disclosed.",
+      "market_consensus_gap": "Goa is one of Lupin's key US oral-solid sites and has had compliance history in the past. A single-observation close-out lowers the risk of an OAI or warning letter and keeps new product approvals from the site on track. With pharma de-rated in the broad sell-off, that risk premium is still in the price.",
+      "reflexivity_thesis": "1) A likely VAI classification clears the path for pending ANDA approvals from Goa. 2) Sell-side raises the probability of US launches in FY28 estimates. 3) Defensive rotation into export pharma (INR ~95/USD tailwind) brings DII buying. Risks: the observation's severity is unknown, large-cap with limited surprise, Q2 results soon. Low conviction / borderline Stage 2.",
+      "conviction_score": 3,
+      "source_urls": [
+        "https://whalesbook.com/news/English/healthcarebiotech/Lupins-Goa-Plant-Clears-USFDA-Audit-With-One-Observation/6add812f4fc30694db4b69a5"
+      ],
+      "news_date": "2026-10-25"
+    }
+  ],
+  "rejected": [
+    {
+      "company": "IDFC First Bank, Kotak Mahindra Bank, AU Small Finance Bank, Castrol India, Netweb, Apollo Micro Systems, Lumax Auto (Q2 on 24 Oct)",
+      "stage": "STAGE 2",
+      "reason": "Saturday Q2 earnings headlines; will be priced at Monday's open."
+    },
+    {
+      "company": "Indian Overseas Bank (IOB.NS)",
+      "stage": "REJECT (casualty)",
+      "reason": "Disclosed RBI findings on understated risk weights; negative, not a soft catalyst."
+    },
+    {
+      "company": "Coromandel International (COROMANDEL.NS)",
+      "stage": "STAGE 3",
+      "reason": "Rs 2.51 cr GST demand, immaterial."
+    },
+    {
+      "company": "Sigma Advanced Systems",
+      "stage": "WATCH / not included",
+      "reason": "Rs 174 cr NATO 155mm subsystem order (21 Oct) but stock fell 5% and NSE/Yahoo symbol not verified."
+    },
+    {
+      "company": "RailTel (RAILTEL.NS)",
+      "stage": "STAGE 3",
+      "reason": "Rs 15.78 cr Munitions India order, immaterial vs Rs 10k cr book."
+    },
+    {
+      "company": "T AND T Infra Ltd",
+      "stage": "REJECT",
+      "reason": "Rs 498 cr NH-353C L1; listing on NSE/BSE not confirmed."
+    },
+    {
+      "company": "Jio Platforms IPO",
+      "stage": "STAGE 2",
+      "reason": "Subscribed 21.6x; listing 28 Oct, fully headline-priced. Reliance already covered 23 Oct."
+    },
+    {
+      "company": "Texmaco Rail (Rs 26.6 cr L1), Airo Lam (promoter buy of ~7k shares)",
+      "stage": "STAGE 3",
+      "reason": "Immaterial size."
+    },
+    {
+      "company": "Infosys, Kotak Mahindra Bank (Q2 already reported)",
+      "stage": "STAGE 2",
+      "reason": "Results headlines already public."
+    },
+    {
+      "company": "Ather Energy, Tata Consumer, ITC Hotels, Dalmia Bharat, Bank of Maharashtra, APL Apollo, Paytm, REC (Q2 on 26 Oct)",
+      "stage": "STAGE 2 / pending",
+      "reason": "Scheduled earnings events, not soft catalysts."
+    },
+    {
+      "company": "Gallantt Ispat (GALLANTT.NS)",
+      "stage": "STAGE 3",
+      "reason": "Promoter stake rise via off-market gift, not an open-market purchase."
+    },
+    {
+      "company": "Suzlon Energy / Inox Wind",
+      "stage": "WATCH (casualty)",
+      "reason": "Adani Wind third-party wins (incl. NTPC RE) signal competitive pressure; no direct filing."
+    }
+  ]
+}

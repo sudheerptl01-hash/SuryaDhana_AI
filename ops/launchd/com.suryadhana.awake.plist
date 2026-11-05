@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Keeps the Mac mini from idle/system-sleeping while you are logged in (display may still sleep).
+     pmset sleep=1 put the machine to sleep within a minute of the last Claude session's caffeinate
+     ending, freezing the scheduler (16 Oct 2026). -s = no system sleep on AC; -i = no idle sleep. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.suryadhana.awake</string>
+  <key>ProgramArguments</key>
+  <array><string>/usr/bin/caffeinate</string><string>-s</string><string>-i</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+</dict>
+</plist>

@@ -1,0 +1,38 @@
+[
+  {
+    "family": "trend/momentum (MA200/golden/dist)",
+    "config": "A naive (equal-wt, no gate)",
+    "oos": -94.6,
+    "sharpe": -1.75,
+    "dd": -95.21,
+    "dsr": 0.0,
+    "n": 25
+  },
+  {
+    "family": "trend/momentum (MA200/golden/dist)",
+    "config": "B full stack (volTgt+\u00bdKelly+HMM gate)",
+    "oos": -6.2,
+    "sharpe": -1.08,
+    "dd": -6.52,
+    "dsr": 0.001,
+    "n": 25
+  },
+  {
+    "family": "mean-reversion (RSI<35/52wLow/pullback)",
+    "config": "A naive (equal-wt, no gate)",
+    "oos": -44.4,
+    "sharpe": -0.98,
+    "dd": -50.88,
+    "dsr": 0.0,
+    "n": 25
+  },
+  {
+    "family": "mean-reversion (RSI<35/52wLow/pullback)",
+    "config": "B full stack (volTgt+\u00bdKelly+HMM gate)",
+    "oos": -6.65,
+    "sharpe": -1.11,
+    "dd": -6.81,
+    "dsr": 0.0,
+    "n": 25
+  }
+]

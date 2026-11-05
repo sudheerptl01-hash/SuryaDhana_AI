@@ -1,14 +1,35 @@
 'use client'
 
+import { apiError } from '@/lib/errors'
+import { goToPage } from '@/lib/navigate'
 import { useEffect, useState, useCallback } from 'react'
-import clsx from 'clsx'
-import { getPositionSummary, getOpenPositions, updateSessionToken } from '@/lib/api'
+import { openTicker } from '@/lib/openTicker'
+import { BasketRisk } from '@/components/BasketRisk'
+import { openExternal } from '@/lib/platform'
+import { ICICI_UNREACHABLE, iciciIssue, pickErrorKind } from '@/components/portfolio/iciciState'
+import { IciciTotpPanel } from '@/components/gold/IciciTotpPanel'
+import type { TotpStatus } from '@/components/gold/totpModel'
+import {
+  Btn, Chip, DataTable, Empty, ErrorBox, Grid, Input, KV, Label, Loading, Meter, Notice, PageHeader, Panel, Stat, T,
+  fmtInr, fmtPct, fmtSignedPct, tone, type Column,
+} from '@/components/terminal'
+import {
+  getICICIConnectionStatus,
+  getPositionSummary,
+  getOpenPositions,
+  saveICICICredentials,
+  updateSessionToken,
+  getTradingConfig, getNewsQuotes } from '@/lib/api'
 
 interface Summary {
   connected: boolean
   error?: string
+  /** P4: 'expired' | 'network' | 'credentials' | 'unknown' on connected:false replies (components/portfolio/iciciState.ts) */
+  error_kind?: string | null
   total_capital_inr: number
   cash_available_inr: number
+  cash_readings_10m?: number[]
+  funds?: Record<string, number>
   invested_value_inr: number
   num_open_positions: number
   total_pnl_inr: number
@@ -25,32 +46,84 @@ interface Position {
   current_value: number
   pnl: number
   pnl_percent: number
+  status?: string        // 'settled' | 'today (settles T+1)' | both
+  icici_code?: string
+}
+
+interface ICICIConnectionStatus {
+  connected: boolean
+  error?: string
+  /** P4: null when connected, else 'expired' | 'network' | 'credentials' | 'unknown' (read it before needs_session_refresh) */
+  error_kind?: string | null
+  account_name?: string
+  has_api_key: boolean
+  has_api_secret: boolean
+  has_session_token: boolean
+  has_client_id: boolean
+  has_password: boolean
+  needs_api_credentials: boolean
+  needs_session_refresh: boolean
+  login_url?: string | null
+  token_hint?: string
+  backend?: Record<string, { ok: boolean; body?: any; error?: string }>
 }
 
 export function PortfolioSummary() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [positions, setPositions] = useState<Position[]>([])
+  // today's % change per holding (Yahoo, ≈1 min delayed): ICICI's holdings call has no previous close
+  const [dayChg, setDayChg] = useState<Record<string, number>>({})
+  const holdKey = positions.map(p => p.symbol).sort().join(',')
+  useEffect(() => {
+    if (!holdKey) return
+    const get = () => getNewsQuotes(holdKey.split(',').map(x => `${x}.NS`)).then(r => {
+      const q = r.data.quotes; const out: Record<string, number> = {}
+      for (const x of holdKey.split(',')) { const v = q[`${x}.NS`]; if (v?.available && v.change_pct != null) out[x] = v.change_pct }
+      setDayChg(out)
+    }).catch(() => {})
+    get(); const iv = setInterval(get, 60_000); return () => clearInterval(iv)
+  }, [holdKey])
+  // value × chg / (1 + chg): rupee move today on what is held now (today's buys count from their buy price instead)
+  const dayPnl = positions.reduce((a, p) => {
+    const c = dayChg[p.symbol]; if (c == null) return a
+    return a + ((p.status ?? '').startsWith('today') ? (p.current_value - p.invested) : p.current_value * (c / 100) / (1 + c / 100))
+  }, 0)
   const [loading, setLoading] = useState(true)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<ICICIConnectionStatus | null>(null)
 
+  const [tradingConfig, setTradingConfig] = useState<Record<string, any> | null>(null)
   const [sessionToken, setSessionToken] = useState('')
   const [connecting, setConnecting] = useState(false)
   const [connectMsg, setConnectMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [apiKey, setApiKey] = useState('')
+  const [apiSecret, setApiSecret] = useState('')
+  const [clientId, setClientId] = useState('')
+  const [password, setPassword] = useState('')
+  const [savingCredentials, setSavingCredentials] = useState(false)
 
+  const loadConnectionStatus = useCallback(async () => {
+    const res = await getICICIConnectionStatus()
+    setConnectionStatus(res.data)
+    return res.data as ICICIConnectionStatus
+  }, [])
+
+  const [loadError, setLoadError] = useState<string | null>(null)
+  // BRKR "Auto-login (TOTP)" (PLAN §g): the panel reports its status so the "send /login" advice hides while a login runs
+  const [totp, setTotp] = useState<TotpStatus | null>(null)
   const refresh = useCallback(async () => {
-    try {
-      const [sumRes, posRes] = await Promise.all([
-        getPositionSummary(),
-        getOpenPositions(),
-      ])
-      setSummary(sumRes.data)
-      setPositions(posRes.data?.positions || [])
-      setLastRefresh(new Date())
-    } catch (err) {
-      console.error('Portfolio fetch error:', err)
-    } finally {
-      setLoading(false)
-    }
+    // Independent requests: one Breeze hiccup must not blank the whole page
+    const [statusRes, sumRes, posRes, cfgRes] = await Promise.allSettled([
+      getICICIConnectionStatus(), getPositionSummary(), getOpenPositions(), getTradingConfig(),
+    ])
+    if (statusRes.status === 'fulfilled') setConnectionStatus(statusRes.value.data)
+    if (sumRes.status === 'fulfilled') setSummary(sumRes.value.data)
+    if (posRes.status === 'fulfilled') setPositions(posRes.value.data?.positions || [])
+    if (cfgRes.status === 'fulfilled') setTradingConfig(cfgRes.value.data)
+    const failed = [sumRes, posRes].find(r => r.status === 'rejected') as PromiseRejectedResult | undefined
+    setLoadError(failed ? (apiError(failed.reason, 'Broker request failed')) : null)
+    setLastRefresh(new Date())
+    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -59,6 +132,32 @@ export function PortfolioSummary() {
     return () => clearInterval(interval)
   }, [refresh])
 
+  const handleSaveCredentials = async () => {
+    if (!apiKey.trim() || !apiSecret.trim()) return
+    setSavingCredentials(true)
+    setConnectMsg(null)
+    try {
+      const res = await saveICICICredentials({
+        api_key: apiKey.trim(),
+        api_secret: apiSecret.trim(),
+        client_id: clientId.trim() || undefined,
+        password: password.trim() || undefined,
+      })
+      setConnectionStatus(res.data?.status || null)
+      setConnectMsg({
+        ok: true,
+        text: res.data?.status?.has_session_token
+          ? 'Credentials saved. Checking existing session token now.'
+          : 'Credentials saved. Press LOG IN TO ICICI below, then paste the redirect URL or token.',
+      })
+      await loadConnectionStatus()
+    } catch (err: any) {
+      setConnectMsg({ ok: false, text: apiError(err, 'Failed to save credentials.') })
+    } finally {
+      setSavingCredentials(false)
+    }
+  }
+
   const handleConnect = async () => {
     if (!sessionToken.trim()) return
     setConnecting(true)
@@ -66,280 +165,195 @@ export function PortfolioSummary() {
     try {
       const res = await updateSessionToken(sessionToken.trim())
       if (res.data?.connected) {
-        setConnectMsg({ ok: true, text: 'Connected! Refreshing portfolio…' })
+        setConnectMsg({ ok: true, text: 'Connected. Syncing backend services and refreshing portfolio…' })
         setSessionToken('')
         await refresh()
       } else {
         setConnectMsg({ ok: false, text: res.data?.error || 'Connection failed. Check your token.' })
+        await loadConnectionStatus()
       }
     } catch (err: any) {
-      setConnectMsg({ ok: false, text: err?.response?.data?.detail || 'Failed to update token.' })
+      setConnectMsg({ ok: false, text: apiError(err, 'Failed to update token.') })
     } finally {
       setConnecting(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {Array(3).fill(0).map((_, i) => (
-          <div key={i} className="h-28 animate-pulse rounded-2xl bg-gray-100" />
-        ))}
-      </div>
-    )
-  }
+  // P4: why it is not connected. A network outage is not an expired session: no '/login' advice for it
+  const issueKind = summary?.connected ? null : pickErrorKind(summary, connectionStatus)
+  const issue = issueKind ? iciciIssue(issueKind, {
+    fallback: connectionStatus?.error || summary?.error,
+    keyMissing: connectionStatus ? !(connectionStatus.has_api_key && connectionStatus.has_api_secret) : true,
+  }) : null
+  const header = (
+    <PageHeader code="BRKR" title="Broker Account"
+      status={summary?.connected ? <Chip color={T.green} active>● LIVE · ICICI BREEZE</Chip>
+        : <Chip color={T.amber} active title={issue?.headline}>{issue?.chip ?? 'NOT CONNECTED'}</Chip>}
+      subtitle="real Demat holdings and funds (read-only; orders are never sent from here)"
+      right={<>
+        <span style={{ fontSize: 10, color: T.dim }}>refreshed {lastRefresh?.toLocaleTimeString('en-IN', { hour12: false }) ?? '—'} · every 15 s</span>
+        <Btn size="sm" onClick={refresh}>↻</Btn>
+      </>} />
+  )
+  const rules = (
+    <Panel title="Rules that will govern live trading" subtitle="Decision Desk · owner-approved monthly rule set">
+      <KV cols={2} items={[
+        ['Positions', 'up to 20 · equal weight'], ['Per stock', '≤ 15% of capital'],
+        ['Per industry', '≤ 40% of positions'], ['Equity share', '66% · rest in liquid fund'],
+        ['Crash filter', 'NIFTY < 200-DMA → liquid fund'], ['Emergency stop', '−20% from peak'],
+      ]} />
+      {tradingConfig && (
+        <div style={{ marginTop: 10, fontSize: 10, color: T.dim }}>
+          Legacy 5-day engine settings (autopilot OFF): {tradingConfig.max_positions} positions · stop 2×ATR (volatility-adaptive, approved audit §3.4) ·
+          time-stop {tradingConfig.holding_period_days} days · daily limit −{(tradingConfig.daily_loss_limit_pct * 100).toFixed(0)}%
+        </div>
+      )}
+    </Panel>
+  )
+
+  if (loading) return <div>{header}<Loading label="Contacting ICICI Breeze" /></div>
 
   if (!summary?.connected) {
+    const backendEntries = Object.entries(connectionStatus?.backend || {})
+    const steps: [string, boolean | undefined][] = [
+      ['API key', connectionStatus?.has_api_key], ['API secret', connectionStatus?.has_api_secret],
+      ['Session', connectionStatus?.has_session_token], ['Client ID', connectionStatus?.has_client_id],
+      ['Password', connectionStatus?.has_password],
+    ]
     return (
-      <div className="space-y-6">
-        {/* Session Token Input */}
-        <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-6">
-          <h3 className="text-base font-bold text-indigo-800 mb-1">Connect ICICI Breeze</h3>
-          <p className="text-sm text-indigo-600 mb-4">Paste your session token to connect your trading account.</p>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              value={sessionToken}
-              onChange={(e) => setSessionToken(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-              placeholder="Paste ICICI session token here…"
-              className="flex-1 rounded-lg border border-indigo-200 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-            <button
-              onClick={handleConnect}
-              disabled={connecting || !sessionToken.trim()}
-              className={clsx(
-                'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all',
-                connecting || !sessionToken.trim()
-                  ? 'bg-indigo-200 text-indigo-400 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
-              )}
-            >
-              {connecting ? 'Connecting…' : 'Connect'}
-            </button>
-          </div>
-          {connectMsg && (
-            <p className={clsx('text-sm mt-3 font-medium', connectMsg.ok ? 'text-emerald-600' : 'text-rose-600')}>
-              {connectMsg.ok ? '✓ ' : '✕ '}{connectMsg.text}
-            </p>
-          )}
-        </div>
-
-        {/* Error / instructions */}
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <div className="flex items-start gap-4">
-            <div className="text-3xl">🔌</div>
-            <div>
-              <h3 className="text-base font-bold text-amber-800 mb-1">
-                {summary?.error || 'Credentials not configured'}
-              </h3>
-              <p className="text-amber-700 text-sm mb-3">Generate a fresh session token to connect.</p>
-              <div className="bg-white rounded-xl p-4 border border-amber-200 font-mono text-xs text-gray-600 space-y-1">
-                <p className="text-gray-400 mb-1"># Run this to get your session token:</p>
-                <p>/Users/sudheer/Desktop/jupyter_env/bin/python scripts/icici_session_helper.py</p>
-              </div>
+      <div>
+        {header}
+        <div style={{ display: 'grid', gap: 10 }}>
+          {loadError && <ErrorBox error={loadError} onRetry={refresh} />}
+          <Panel title="Connect ICICI Breeze" subtitle="checks the current connection first, then asks only for what is missing"
+            right={<Btn size="sm" onClick={loadConnectionStatus}>Recheck</Btn>}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+              {steps.map(([label, ok]) => <Chip key={label} color={ok ? T.green : T.amber} active={!!ok}>{ok ? '✓' : '•'} {label}</Chip>)}
             </div>
-          </div>
-        </div>
-
-        {/* Trading config */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-base font-bold text-gray-900 mb-4">Trading Configuration</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {[
-              { label: 'Starting Capital', value: '₹10,000', sub: 'Phase 6 target' },
-              { label: 'Max Positions', value: '5', sub: 'simultaneously' },
-              { label: 'Stop Loss', value: '2%', sub: 'per position' },
-              { label: 'Holding Period', value: '5 days', sub: 'time-stop' },
-              { label: 'Max per Stock', value: '15%', sub: 'of portfolio' },
-              { label: 'Max per Sector', value: '40%', sub: 'sector limit' },
-            ].map(({ label, value, sub }) => (
-              <div key={label} className="rounded-xl bg-gray-50 border border-gray-200 p-4">
-                <p className="text-xs text-gray-400 font-medium">{label}</p>
-                <p className="text-xl font-bold text-gray-900 mt-1">{value}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+            {issue?.kind === 'network' && (
+              <div style={{ marginBottom: 10, fontSize: 11.5, color: T.amber }} data-icici-kind="network">
+                {ICICI_UNREACHABLE}. No new login is needed: press Recheck when the network is back.</div>
+            )}
+            {connectionStatus?.needs_api_credentials || issue?.showCredentials ? (
+              <div style={{ display: 'grid', gap: 8 }}>
+                <Grid cols={2}>
+                  <Input type="password" value={apiKey} onChange={setApiKey} placeholder="ICICI API key" />
+                  <Input type="password" value={apiSecret} onChange={setApiSecret} placeholder="ICICI API secret" />
+                  <Input value={clientId} onChange={setClientId} placeholder="ICICI client ID (optional)" />
+                  <Input type="password" value={password} onChange={setPassword} placeholder="ICICI password (optional)" />
+                </Grid>
+                <div><Btn variant="primary" onClick={handleSaveCredentials} disabled={savingCredentials || !apiKey.trim() || !apiSecret.trim()}>
+                  {savingCredentials ? 'Saving…' : 'Save API credentials'}</Btn></div>
               </div>
-            ))}
-          </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {/* The login URL carries the API key: it opens in the browser and is never printed (C1-trader-ux-05) */}
+                {/* P4: no login push while ICICI is unreachable (a new login would end a session that may still be valid) */}
+                {connectionStatus?.login_url && issue?.suggestLogin !== false && (
+                  <div style={{ border: `1px solid ${T.border}`, padding: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <Label color={T.amber}>1 · Log in at ICICI</Label>
+                    <Btn variant="primary" size="sm" onClick={() => openExternal(String(connectionStatus.login_url))}
+                         title="Opens ICICI's login page in your browser">LOG IN TO ICICI ↗</Btn>
+                    <span style={{ fontSize: 10.5, color: T.muted }}>after logging in, ICICI redirects to a page whose address holds the session token</span>
+                  </div>
+                )}
+                <Label color={T.amber}>{connectionStatus?.login_url && issue?.suggestLogin !== false ? '2 · ' : ''}Paste the redirect URL or session token</Label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1 }} onKeyDown={e => e.key === 'Enter' && handleConnect()}>
+                    <Input type="password" value={sessionToken} onChange={setSessionToken}
+                           placeholder={connectionStatus?.token_hint || 'Paste ICICI redirect URL or session token…'} />
+                  </div>
+                  <Btn variant="go" onClick={handleConnect} disabled={connecting || !sessionToken.trim()}>{connecting ? 'Connecting…' : 'Connect'}</Btn>
+                </div>
+              </div>
+            )}
+            {connectMsg && <div style={{ marginTop: 10, fontSize: 12, color: connectMsg.ok ? T.green : T.red }}>{connectMsg.ok ? '✓ ' : '✕ '}{connectMsg.text}</div>}
+          </Panel>
+          <Notice>
+            {/* P4: 'expired' / 'unknown' keep the server's text and the /login advice; 'network' and 'credentials' do not */}
+            <b style={{ color: T.amber }}>{issue && issue.kind !== 'expired' && issue.kind !== 'unknown' ? issue.headline
+              : connectionStatus?.error || summary?.error || 'Credentials not configured'}</b>
+            {issue?.detail && <div style={{ marginTop: 4, color: T.text }}>{issue.detail}</div>}
+            <div style={{ marginTop: 4, color: T.muted }}>Meanwhile your last-known holdings are priced live on
+              <span role="button" onClick={() => goToPage('watch')} style={{ color: T.cyan, cursor: 'pointer' }}> WTCH › (P&L, book X-ray)</span>.</div>
+            {(issue?.suggestLogin ?? true) && !totp?.login_running && <div style={{ marginTop: 4, color: T.muted }}>Or send /login to the Telegram bot: it logs in to ICICI and asks you for the SMS OTP{totp?.configured ? ' (with the authenticator registered below, the 08:00 job needs no OTP)' : ''}.</div>}
+            {!!totp?.login_running && <div style={{ marginTop: 4, color: T.cyan }}>An auto-login is running right now — wait for it before sending /login.</div>}
+          </Notice>
+          <IciciTotpPanel connected={false} onSessionLive={refresh} onStatus={setTotp} />
+          {backendEntries.length > 0 && (
+            <Panel title="Backend sync status">
+              <KV items={backendEntries.map(([name, info]) => {
+                // the execution service is not part of the local paper stack (the Desk runs in data-service): not an alarm
+                const optional = name === 'execution_service' && !info.ok
+                return [name.replace('_', ' '), info.ok ? 'in sync' : optional ? 'not running · not needed in PAPER mode' : (info.error || 'unavailable'),
+                        info.ok ? T.green : optional ? T.muted : T.red] as [string, string, string]
+              })} />
+            </Panel>
+          )}
+          {rules}
         </div>
       </div>
     )
   }
 
   const isProfit = summary.total_pnl_inr >= 0
-  const investedPct = summary.total_capital_inr > 0
-    ? (summary.invested_value_inr / summary.total_capital_inr) * 100
-    : 0
-
+  const investedPct = summary.total_capital_inr > 0 ? (summary.invested_value_inr / summary.total_capital_inr) * 100 : 0
+  const posCols: Column<Position>[] = [
+    { key: 'symbol', label: 'Symbol', sort: r => r.symbol,
+      render: r => <span style={{ color: T.amber, fontWeight: 600 }} title={r.icici_code ? `ICICI code ${r.icici_code}` : undefined}>{r.symbol}</span> },
+    { key: 'quantity', label: 'Qty', align: 'right', sort: r => r.quantity },
+    { key: 'buy_price', label: 'Avg cost', align: 'right', render: r => fmtInr(r.buy_price, 2) },
+    { key: 'current_price', label: 'LTP', align: 'right', render: r => fmtInr(r.current_price, 2) },
+    { key: 'day', label: 'Today', align: 'right', sort: r => dayChg[r.symbol] ?? -999,
+      render: r => dayChg[r.symbol] == null ? <span style={{ color: T.dim }}>—</span> : <span style={{ color: tone(dayChg[r.symbol]) }}>{fmtSignedPct(dayChg[r.symbol])}</span> },
+    { key: 'current_value', label: 'Value', align: 'right', sort: r => r.current_value, render: r => fmtInr(r.current_value) },
+    { key: 'pnl', label: 'P&L', align: 'right', sort: r => r.pnl, render: r => <span style={{ color: tone(r.pnl) }}>{fmtInr(r.pnl)}</span> },
+    { key: 'pnl_percent', label: 'Return', align: 'right', sort: r => r.pnl_percent,
+      render: r => <span style={{ color: tone(r.pnl_percent) }}>{fmtSignedPct(r.pnl_percent)}</span> },
+    { key: 'status', label: 'Status', sort: r => r.status ?? '',
+      render: r => <span style={{ color: (r.status ?? '').startsWith('today') ? T.cyan : T.muted }}
+                         title="Shares bought today show in ICICI positions until they settle into your demat (T+1)">
+                     {r.status ?? 'settled'}</span> },
+  ]
   return (
-    <div className="space-y-6">
-      {/* Live indicator + refresh */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs text-emerald-600 font-semibold">LIVE · ICICI Breeze</span>
-        </div>
-        <div className="text-xs text-gray-400">
-          Last refresh: {lastRefresh?.toLocaleTimeString('en-IN') ?? '—'}
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard
-          label="Total Portfolio"
-          value={`₹${fmt(summary.total_capital_inr)}`}
-          sub="net worth"
-          color="indigo"
-        />
-        <SummaryCard
-          label="Invested"
-          value={`₹${fmt(summary.invested_value_inr)}`}
-          sub={`${investedPct.toFixed(1)}% deployed`}
-          color="violet"
-        />
-        <SummaryCard
-          label="Cash Available"
-          value={`₹${fmt(summary.cash_available_inr)}`}
-          sub="ready to invest"
-          color="cyan"
-        />
-        <SummaryCard
-          label={isProfit ? 'Total P&L ▲' : 'Total P&L ▼'}
-          value={`${isProfit ? '+' : ''}₹${fmt(Math.abs(summary.total_pnl_inr))}`}
-          sub={`${isProfit ? '+' : ''}${summary.total_pnl_pct.toFixed(2)}% return`}
-          color={isProfit ? 'emerald' : 'rose'}
-        />
-      </div>
-
-      {/* Capital Allocation */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-sm font-bold text-gray-700 mb-4">Capital Allocation</h3>
-        <div className="space-y-3">
-          <div>
-            <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-              <span>Invested ({investedPct.toFixed(1)}%)</span>
-              <span>₹{fmt(summary.invested_value_inr)}</span>
-            </div>
-            <div className="w-full h-3 rounded-full bg-gray-100 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full"
-                style={{ width: `${investedPct}%` }}
-              />
-            </div>
+    <div>
+      {header}
+      <div style={{ display: 'grid', gap: 10 }}>
+        {loadError && <ErrorBox error={`${loadError} (showing the last good values)`} onRetry={refresh} />}
+        <Grid cols={4}>
+          <Stat label="Total portfolio" value={fmtInr(summary.total_capital_inr, 2)} sub="cash + holdings at cost" accent={T.amber} />
+          <Stat label="Invested" value={fmtInr(summary.invested_value_inr, 2)} sub={`${investedPct.toFixed(1)}% deployed`} accent={T.violet} />
+          <Stat label="Cash available" value={fmtInr(summary.cash_available_inr, 2)} accent={T.cyan}
+            sub={(summary.cash_readings_10m?.length ?? 0) > 1
+              ? <span style={{ color: T.amber }} title="ICICI's funds API returned different free-cash figures between refreshes (part of the balance shown as allocated and blocked on some calls). Check ICICI Direct before acting.">
+                  ⚠ ICICI reported {summary.cash_readings_10m!.map(v => fmtInr(v)).join(' / ')} in the last 10 min</span>
+              : summary.funds?.stale ? <span style={{ color: T.amber }}>last good reading · ICICI's funds call just failed</span> : 'ready to invest'} />
+          <Stat label="Unrealised P&L" value={fmtInr(summary.total_pnl_inr, 2)} color={tone(summary.total_pnl_inr)}
+                sub={<span>{`${fmtPct(summary.total_pnl_pct, 2)} on invested`}{Object.keys(dayChg).length > 0 &&
+                  <span style={{ color: tone(dayPnl) }}> · today {dayPnl >= 0 ? '+' : '−'}{fmtInr(Math.abs(dayPnl))}</span>}</span>}
+                accent={isProfit ? T.green : T.red} />
+        </Grid>
+        <Panel title="Capital allocation">
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.muted, marginBottom: 4 }}>
+              <span>INVESTED {investedPct.toFixed(1)}%</span><span>{fmtInr(summary.invested_value_inr)}</span></div>
+              <Meter value={investedPct / 100} color={T.violet} height={6} /></div>
+            <div><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.muted, marginBottom: 4 }}>
+              <span>CASH {(100 - investedPct).toFixed(1)}%</span><span>{fmtInr(summary.cash_available_inr)}</span></div>
+              <Meter value={(100 - investedPct) / 100} color={T.green} height={6} /></div>
           </div>
-          <div>
-            <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-              <span>Cash Reserve ({(100 - investedPct).toFixed(1)}%)</span>
-              <span>₹{fmt(summary.cash_available_inr)}</span>
-            </div>
-            <div className="w-full h-3 rounded-full bg-gray-100 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-                style={{ width: `${100 - investedPct}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Open Positions */}
-      <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-base font-bold text-gray-900">
-            Open Positions
-            <span className="ml-2 text-gray-400 font-normal text-sm">({positions.length})</span>
-          </h3>
-        </div>
-
-        {positions.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Symbol</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Qty</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Avg Cost</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">LTP</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">P&L</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase">Return</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {positions.map((pos) => (
-                  <tr key={pos.symbol} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-gray-900">{pos.symbol}</td>
-                    <td className="px-4 py-3 text-right text-gray-600 tabular-nums">{pos.quantity}</td>
-                    <td className="px-4 py-3 text-right text-gray-500 tabular-nums">₹{pos.buy_price.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-800 tabular-nums">₹{pos.current_price.toFixed(2)}</td>
-                    <td className={clsx('px-4 py-3 text-right font-bold tabular-nums', pos.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
-                      {pos.pnl >= 0 ? '+' : ''}₹{fmt(pos.pnl)}
-                    </td>
-                    <td className={clsx('px-4 py-3 text-right font-bold tabular-nums', pos.pnl_percent >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
-                      {pos.pnl_percent >= 0 ? '+' : ''}{pos.pnl_percent.toFixed(2)}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="py-12 text-center text-gray-400 text-sm">
-            <div className="text-3xl mb-3 opacity-30">📭</div>
-            No active holdings in your Demat account.
-          </div>
+        </Panel>
+        <Panel title={`Open positions (${positions.length})`} subtitle="Demat holdings from ICICI Breeze" pad={0}>
+          <DataTable columns={posCols} rows={positions} rowKey={r => r.symbol} onRowClick={r => openTicker(r.symbol)}
+            empty={<Empty title="No active holdings in your Demat account" icon="◇" />} />
+        </Panel>
+        {positions.length >= 2 && (
+          <BasketRisk title="Holdings risk" symbols={positions.map((p: any) => String(p.symbol).toUpperCase())}
+            weights={Object.fromEntries(positions.map((p: any) => [String(p.symbol).toUpperCase(), Number(p.current_value ?? p.invested ?? 0)]))} />
         )}
-      </div>
-
-      {/* Risk Rules */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h3 className="text-sm font-bold text-gray-700 mb-4">Active Risk Rules</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { label: 'Max Positions', val: '5' },
-            { label: 'Per Stock', val: '15%' },
-            { label: 'Per Sector', val: '40%' },
-            { label: 'Stop Loss', val: '-2%' },
-            { label: 'Time Stop', val: '5 days' },
-            { label: 'Daily Limit', val: '-2%' },
-          ].map(({ label, val }) => (
-            <div key={label} className="text-center rounded-lg bg-gray-50 border border-gray-200 px-3 py-2.5">
-              <p className="text-xs text-gray-400">{label}</p>
-              <p className="text-base font-bold text-gray-900 mt-0.5">{val}</p>
-            </div>
-          ))}
-        </div>
+        <IciciTotpPanel connected onSessionLive={refresh} onStatus={setTotp} />
+        {rules}
       </div>
     </div>
   )
-}
-
-function SummaryCard({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
-  const colors: Record<string, string> = {
-    indigo:  'border-indigo-200 bg-indigo-50',
-    violet:  'border-violet-200 bg-violet-50',
-    cyan:    'border-cyan-200 bg-cyan-50',
-    emerald: 'border-emerald-200 bg-emerald-50',
-    rose:    'border-rose-200 bg-rose-50',
-  }
-  const textColors: Record<string, string> = {
-    indigo: 'text-indigo-900',
-    violet: 'text-violet-900',
-    cyan: 'text-cyan-900',
-    emerald: 'text-emerald-900',
-    rose: 'text-rose-900',
-  }
-  return (
-    <div className={clsx('rounded-2xl border p-5', colors[color] ?? colors.indigo)}>
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className={clsx('text-2xl font-black mt-2', textColors[color] ?? 'text-gray-900')}>{value}</p>
-      <p className="text-xs text-gray-400 mt-1">{sub}</p>
-    </div>
-  )
-}
-
-function fmt(n: number): string {
-  if (n >= 1_00_000) return `${(n / 1_00_000).toFixed(2)}L`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return n.toFixed(2)
 }

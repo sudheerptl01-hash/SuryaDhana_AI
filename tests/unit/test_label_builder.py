@@ -1,11 +1,15 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+# Service folders use hyphens (not importable as packages): put the repo root
+# (for `shared`) and the service folder on sys.path and import the module directly.
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ROOT))
+sys.path.insert(0, str(_ROOT / "services/feature-service"))
 
 import pandas as pd
 import numpy as np
 import pytest
-from services.feature_service.labels.label_builder import build_labels, validate_no_lookahead
+from labels.label_builder import build_labels, validate_no_lookahead
 
 
 def _make_ohlcv(n: int = 30) -> pd.DataFrame:

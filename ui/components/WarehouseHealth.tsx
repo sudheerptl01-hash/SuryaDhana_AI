@@ -1,5 +1,6 @@
 'use client'
 
+import { apiError } from '@/lib/errors'
 /**
  * WarehouseHealth — "Data Warehouse & ML Health" console.
  *
@@ -9,11 +10,13 @@
  *   • GET /api/data/db/ohlcv-meta  — per-ticker data-quality grid
  *
  * Aesthetic: NSE void terminal. Chakra Petch labels, JetBrains Mono values,
- * #030810/#070E1B voids, amber/jade/violet/crimson accents. Corner brackets,
+ * #05070a/#0a0d13 voids, amber/jade/violet/crimson accents. Corner brackets,
  * scanline header, staggered panel reveal.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Btn, Chip, PageHeader, T, fmtNum, fmtSigned } from '@/components/terminal'
+import { NseDatasets } from './NseDatasets'
 import clsx from 'clsx'
 import { QuantKPICard } from './QuantKPICard'
 import { getWarehouseStats, getWarehouseOhlcvMeta, getWarehouseMlStats } from '@/lib/api'
@@ -51,36 +54,35 @@ interface OhlcvMetaRow {
   years_of_data: number
   data_density_pct: number
   days_since_update: number | null
+  sessions_behind?: number | null
   mktcap_cr?: number | null
 }
 
 // ── Palette tokens ──────────────────────────────────────────────────────────────
-const VOID = '#030810'
-const PANEL = '#070E1B'
-const BORDER = '#111E30'
-const TXT = '#C8DCF0'
-const MUTED = '#3D5872'
-const SUB = '#7DA4BE'
-const JADE = '#00C896'
-const AMBER = '#F5A623'
-const VIOLET = '#B87AFF'
-const CRIMSON = '#FF3B47'
+const VOID = '#05070a'
+const PANEL = '#0a0d13'
+const BORDER = '#1a2130'
+const TXT = '#d6dbe4'
+const MUTED = T.muted
+const SUB = '#aab3c2'
+const JADE = '#16d98a'
+const AMBER = '#ffb000'
+const VIOLET = '#b58bff'
+const CRIMSON = '#ff4d5e'
 const CYAN = '#4ACFE8'
 
 // ── Quality classification for a ticker's coverage row ──────────────────────────
 type Quality = { label: string; color: string }
-function classify(density: number, stale: number | null): Quality {
-  const d = stale ?? 999
-  if (density >= 90 && d <= 2) return { label: 'EXCELLENT', color: JADE }
-  if (density >= 75 && d <= 7) return { label: 'GOOD', color: CYAN }
+// `behind` = trading sessions behind the newest session in the warehouse (0 = current).
+function classify(density: number, behind: number | null): Quality {
+  const d = behind ?? 999
+  if (density >= 90 && d <= 1) return { label: 'EXCELLENT', color: JADE }
+  if (density >= 75 && d <= 5) return { label: 'GOOD', color: CYAN }
   if (density >= 50) return { label: 'FAIR', color: AMBER }
   return { label: 'POOR', color: CRIMSON }
 }
 
-const fmt = (n: number | null | undefined, dp = 0) =>
-  n === null || n === undefined || isNaN(n)
-    ? '—'
-    : n.toLocaleString('en-IN', { maximumFractionDigits: dp, minimumFractionDigits: dp })
+const fmt = fmtNum
 
 // ── Reusable terminal panel shell ───────────────────────────────────────────────
 function Panel({
@@ -128,7 +130,7 @@ function CoverageBar({ label, value, total, color }: { label: string; value: num
           <span className="ml-1.5" style={{ color }}>{pct.toFixed(0)}%</span>
         </span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-sm" style={{ background: '#0E1828' }}>
+      <div className="h-1.5 w-full overflow-hidden rounded-sm" style={{ background: '#131926' }}>
         <div className="h-full rounded-sm transition-all duration-700"
              style={{ width: `${pct}%`, background: color, boxShadow: `0 0 8px ${color}66` }} />
       </div>
@@ -137,7 +139,7 @@ function CoverageBar({ label, value, total, color }: { label: string; value: num
 }
 
 // ── Sortable column header ──────────────────────────────────────────────────────
-type SortKey = 'ticker' | 'total_rows' | 'years_of_data' | 'data_density_pct' | 'days_since_update' | 'latest_price'
+type SortKey = 'ticker' | 'total_rows' | 'years_of_data' | 'data_density_pct' | 'sessions_behind' | 'latest_price'
 function Th({
   label, col, sortKey, sortDir, onSort, align = 'right', width,
 }: {
@@ -185,7 +187,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
       setMl(m.data)
       setSyncedAt(new Date())
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || 'data-service unreachable')
+      setError(apiError(err, 'data-service unreachable'))
     } finally {
       setLoading(false)
     }
@@ -220,7 +222,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
   }, [meta, search, sortKey, sortDir])
 
   const totalRows = useMemo(() => meta.reduce((s, r) => s + (r.total_rows || 0), 0), [meta])
-  const staleTickers = useMemo(() => meta.filter(r => (r.days_since_update ?? 0) > 7).length, [meta])
+  const staleTickers = useMemo(() => meta.filter(r => (r.sessions_behind ?? 0) > 5).length, [meta])
 
   // ── Loading skeleton ──────────────────────────────────────────────────────────
   if (loading) {
@@ -279,50 +281,23 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
   const skew = Math.abs(upPct - 50)
 
   return (
-    <div className="space-y-5 wh-root">
-      <style>{`
+    <>
+    <style>{`
         @keyframes whReveal { from { opacity:0; transform: translateY(8px) } to { opacity:1; transform: translateY(0) } }
         .wh-root > * { animation: whReveal .5s ease-out both }
         .wh-root > *:nth-child(1){ animation-delay:.04s } .wh-root > *:nth-child(2){ animation-delay:.10s }
         .wh-root > *:nth-child(3){ animation-delay:.16s } .wh-root > *:nth-child(4){ animation-delay:.22s }
         @keyframes whScan { 0%{ transform: translateX(-100%) } 100%{ transform: translateX(220%) } }
       `}</style>
+    <div className="space-y-3 wh-root">
 
-      {/* ── Header strip ──────────────────────────────────────────────────────── */}
-      <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-lg px-5 py-3"
-           style={{ background: `linear-gradient(135deg, ${VOID} 0%, ${PANEL} 100%)`, border: `1px solid ${BORDER}` }}>
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 opacity-40"
-             style={{ background: `linear-gradient(90deg, transparent, ${AMBER}14, transparent)`, animation: 'whScan 6s linear infinite' }} />
-        <div className="relative flex items-center gap-3">
-          <span className="text-base" style={{ color: AMBER }}>▦</span>
-          <div>
-            <h2 className="text-sm font-bold tracking-[0.18em]" style={{ fontFamily: "'Chakra Petch', sans-serif", color: TXT }}>
-              DATA WAREHOUSE &amp; ML HEALTH
-            </h2>
-            <p className="text-[10px] tracking-wider" style={{ color: MUTED }}>
-              DuckDB coverage · per-ticker quality · ML dataset class balance
-            </p>
-          </div>
-        </div>
-        <div className="relative flex items-center gap-3">
-          <span className="flex items-center gap-1.5 rounded px-2.5 py-1 text-[10px] font-bold tracking-widest"
-                style={{ fontFamily: "'Chakra Petch', sans-serif", color: healthColor,
-                         background: `${healthColor}14`, border: `1px solid ${healthColor}33` }}>
-            <span className="h-1.5 w-1.5 rounded-full" style={{ background: healthColor, boxShadow: `0 0 6px ${healthColor}` }} />
-            {healthStatus}
-          </span>
-          {syncedAt && (
-            <span className="hidden text-[9px] tabular-nums sm:inline" style={{ color: MUTED }}>
-              synced {syncedAt.toLocaleTimeString('en-IN', { hour12: false })}
-            </span>
-          )}
-          <button onClick={load}
-                  className="rounded px-2.5 py-1 text-[10px] font-semibold tracking-wider transition-all hover:brightness-125"
-                  style={{ color: AMBER, background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)', fontFamily: "'Chakra Petch', sans-serif" }}>
-            ↻ SYNC
-          </button>
-        </div>
-      </div>
+      <PageHeader code="WHSE" title="Data Warehouse & ML Health"
+        status={<Chip color={healthColor} active>{healthStatus}</Chip>}
+        subtitle="DuckDB coverage · per-ticker quality · ML dataset class balance"
+        right={<>
+          {syncedAt && <span style={{ fontSize: 10, color: MUTED }}>synced {syncedAt.toLocaleTimeString('en-IN', { hour12: false })}</span>}
+          <Btn size="sm" onClick={load}>↻ Sync</Btn>
+        </>} />
 
       {/* ── KPI row ───────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -330,8 +305,8 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
                       subtext={`${fmt(stats?.enrichment?.enrichment_pct, 0)}% enriched`} />
         <QuantKPICard label="OHLCV Rows" value={metaLoading ? '…' : totalRows} animate accent="cyan" icon="≣"
                       subtext={metaLoading ? 'scanning…' : `${fmt(meta.length)} series`} />
-        <QuantKPICard label="Latest Bar" value={stats?.latest_date ?? '—'} accent={(stats?.days_stale ?? 9) <= 1 ? 'jade' : 'amber'} icon="▦"
-                      subtext={`${stats?.days_stale ?? '—'}d stale`} />
+        <QuantKPICard label="Latest Session" value={stats?.latest_date ?? '—'} accent={(stats?.freshness?.fresh_pct ?? 0) >= 95 ? 'jade' : 'amber'} icon="▦"
+                      subtext={`${stats?.freshness?.fresh_pct ?? '—'}% of tickers current`} />
         <QuantKPICard label="ML Features" value={ml?.features?.rows ?? 0} animate accent="violet" icon="◇"
                       subtext={`${fmt(ml?.features?.tickers)} tickers`} />
         <QuantKPICard label="ML Labels" value={ml?.labels?.rows ?? 0} animate accent="amber" icon="◆"
@@ -358,16 +333,16 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
                   {fmt(stats?.freshness?.fresh_pct, 1)}% fresh
                 </span>
               </div>
-              <div className="flex h-2 w-full overflow-hidden rounded-sm" style={{ background: '#0E1828' }}>
+              <div className="flex h-2 w-full overflow-hidden rounded-sm" style={{ background: '#131926' }}>
                 <div className="h-full transition-all duration-700" style={{ width: `${(fresh / freshDen) * 100}%`, background: JADE }} />
                 <div className="h-full transition-all duration-700" style={{ width: `${(stale / freshDen) * 100}%`, background: AMBER }} />
                 <div className="h-full transition-all duration-700" style={{ width: `${(aged / freshDen) * 100}%`, background: CRIMSON }} />
               </div>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {[
-                  { k: 'FRESH', v: fresh, c: JADE, s: '≤1d' },
-                  { k: 'STALE', v: stale, c: AMBER, s: '1–7d' },
-                  { k: 'AGED', v: aged, c: CRIMSON, s: '>7d' },
+                  { k: 'CURRENT', v: fresh, c: JADE, s: 'latest session' },
+                  { k: 'BEHIND', v: stale, c: AMBER, s: '1–5 sessions' },
+                  { k: 'AGED', v: aged, c: CRIMSON, s: '>5 sessions' },
                 ].map(({ k, v, c, s }) => (
                   <div key={k} className="rounded p-2 text-center" style={{ background: `${c}0d`, border: `1px solid ${c}26` }}>
                     <p className="text-lg font-black tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace", color: c }}>{fmt(v)}</p>
@@ -406,7 +381,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
                 </span>
                 <span className="font-bold tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace", color: CRIMSON }}>{fmt(ml?.labels?.down_labels)} DOWN ▼</span>
               </div>
-              <div className="relative flex h-6 w-full overflow-hidden rounded-sm" style={{ background: '#0E1828' }}>
+              <div className="relative flex h-6 w-full overflow-hidden rounded-sm" style={{ background: '#131926' }}>
                 <div className="flex h-full items-center justify-start pl-2 transition-all duration-700"
                      style={{ width: `${upPct}%`, background: `linear-gradient(90deg, ${JADE}cc, ${JADE}66)` }}>
                   <span className="text-[10px] font-black tabular-nums" style={{ color: VOID }}>{upPct.toFixed(1)}%</span>
@@ -425,7 +400,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
               <div className="rounded p-3" style={{ background: '#0A1320', border: `1px solid ${BORDER}` }}>
                 <p className="text-[9px] font-semibold tracking-widest" style={{ fontFamily: "'Chakra Petch', sans-serif", color: MUTED }}>AVG LABEL RETURN</p>
                 <p className="text-xl font-black tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace", color: avgRet >= 0 ? JADE : CRIMSON }}>
-                  {avgRet >= 0 ? '+' : ''}{fmt(avgRet, 3)}%
+                  {fmtSigned(avgRet, 3)}%
                 </p>
               </div>
               <div className="rounded p-3" style={{ background: '#0A1320', border: `1px solid ${BORDER}` }}>
@@ -447,7 +422,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
               Per-Ticker Data Quality
             </h3>
             <span className="text-[9px] tracking-wider" style={{ color: MUTED }}>
-              {metaLoading ? 'scanning warehouse…' : `${fmt(filteredSorted.length)} series · ${staleTickers} aged >7d`}
+              {metaLoading ? 'scanning warehouse…' : `${fmt(filteredSorted.length)} series · ${staleTickers} aged >5 sessions`}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -471,7 +446,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
                 <th className="px-3 py-2 text-left text-[9px] font-semibold uppercase tracking-widest" style={{ fontFamily: "'Chakra Petch', sans-serif", color: MUTED, width: '22%' }}>Window</th>
                 <Th label="Yrs" col="years_of_data" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
                 <Th label="Density" col="data_density_pct" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-                <Th label="Stale" col="days_since_update" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+                <Th label="Lag" col="sessions_behind" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
                 <th className="px-3 py-2 text-right text-[9px] font-semibold uppercase tracking-widest" style={{ fontFamily: "'Chakra Petch', sans-serif", color: MUTED }}>Quality</th>
               </tr>
             </thead>
@@ -480,7 +455,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
                 Array(10).fill(0).map((_, i) => (
                   <tr key={i} style={{ borderTop: `1px solid ${BORDER}` }}>
                     <td colSpan={8} className="px-3 py-2.5">
-                      <div className="h-3 w-full animate-pulse rounded" style={{ background: '#0E1828' }} />
+                      <div className="h-3 w-full animate-pulse rounded" style={{ background: '#131926' }} />
                     </td>
                   </tr>
                 ))
@@ -490,8 +465,8 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
                 </td></tr>
               ) : (
                 filteredSorted.slice(0, visible).map((r, i) => {
-                  const q = classify(r.data_density_pct, r.days_since_update)
-                  const dStale = r.days_since_update ?? null
+                  const dStale = r.sessions_behind ?? null
+                  const q = classify(r.data_density_pct, dStale)
                   return (
                     <tr key={r.ticker} className="transition-colors hover:bg-[#0C1726]"
                         style={{ borderTop: `1px solid ${BORDER}`, background: i % 2 ? 'rgba(10,19,32,0.35)' : 'transparent' }}>
@@ -504,15 +479,16 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
                       <td className="px-3 py-2 text-right text-[11px] tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace", color: SUB }}>{r.years_of_data}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="h-1 w-14 overflow-hidden rounded-sm" style={{ background: '#0E1828' }}>
+                          <div className="h-1 w-14 overflow-hidden rounded-sm" style={{ background: '#131926' }}>
                             <div className="h-full rounded-sm" style={{ width: `${Math.min(100, r.data_density_pct)}%`, background: q.color }} />
                           </div>
                           <span className="w-9 text-right text-[10px] tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace", color: q.color }}>{fmt(r.data_density_pct, 0)}%</span>
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right text-[11px] tabular-nums"
-                          style={{ fontFamily: "'JetBrains Mono', monospace", color: dStale === null ? MUTED : dStale > 7 ? CRIMSON : dStale > 1 ? AMBER : JADE }}>
-                        {dStale === null ? '—' : `${dStale}d`}
+                          style={{ fontFamily: "'JetBrains Mono', monospace", color: dStale === null ? MUTED : dStale > 5 ? CRIMSON : dStale > 0 ? AMBER : JADE }}
+                          title={r.latest_date ? `last bar ${r.latest_date}` : undefined}>
+                        {dStale === null ? '—' : dStale === 0 ? 'current' : `${dStale} sess`}
                       </td>
                       <td className="px-3 py-2 text-right">
                         <span className="rounded px-1.5 py-0.5 text-[8px] font-bold tracking-wider"
@@ -538,6 +514,9 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
           </div>
         )}
       </Panel>
+
+      <NseDatasets />
     </div>
+    </>
   )
 }

@@ -11,7 +11,9 @@
  * engine that drives the Backtest Lab. MODE = PAPER.
  */
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { T } from '@/components/terminal'   // T.muted for axis text (RUP-06: one muted grey)
 import clsx from 'clsx'
+import { ChartActions } from './terminal/ChartActions'
 import {
   ComposedChart, ScatterChart, Scatter, BarChart, Bar, Line, XAxis, YAxis, ZAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea, Cell,
@@ -20,14 +22,15 @@ import {
   fetchFactorSeries, fetchRRG, fetchVolumeProfile,
   type FactorSeriesResult, type RRGResult, type VolumeProfileResult,
 } from '@/lib/glassbox'
+import { trailingRange } from '@/lib/format'
 
 type Mode = 'rotation' | 'correlation' | 'volume'
 interface Props { isDark?: boolean }
 
-const PALETTE = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa', '#fb7185', '#22d3ee', '#facc15', '#4ade80', '#c084fc']
+const PALETTE = ['#38bdf8', '#34d399', '#ffb000', '#f472b6', '#a78bfa', '#fb7185', '#22d3ee', '#facc15', '#4ade80', '#c084fc']
 const QUAD = {
   Leading:   { fill: '#10b981', label: 'LEADING' },
-  Weakening: { fill: '#f59e0b', label: 'WEAKENING' },
+  Weakening: { fill: '#ffb000', label: 'WEAKENING' },
   Lagging:   { fill: '#ef4444', label: 'LAGGING' },
   Improving: { fill: '#3b82f6', label: 'IMPROVING' },
 }
@@ -35,8 +38,9 @@ const QUAD = {
 export function GlassBoxStudio({ isDark = true }: Props) {
   const [mode, setMode] = useState<Mode>('rotation')
   const [tickers, setTickers] = useState('RELIANCE TCS INFY HDFCBANK ICICIBANK SBIN ITC LT')
-  const [fromDate, setFromDate] = useState('2025-09-01')
-  const [toDate, setToDate] = useState('2026-05-31')
+  // default: the last 9 months up to today (IST); it used to be a fixed 2025-09-01 → 2026-05-31 (C1-18)
+  const [fromDate, setFromDate] = useState(() => trailingRange(9).from)
+  const [toDate, setToDate] = useState(() => trailingRange(9).to)
 
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -75,8 +79,8 @@ export function GlassBoxStudio({ isDark = true }: Props) {
       {/* control bar */}
       <div className={clsx(card, 'p-4')}>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[13px] font-bold tracking-wide text-slate-100">🔬 GLASS-BOX STUDIO</span>
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30">MODE: PAPER</span>
+          <span className="text-[10px] font-bold tracking-[0.18em] text-slate-400">STUDIO CONTROLS</span>
+          <span className="px-1.5 py-0.5 text-[9px] font-bold tracking-wider border" style={{ color: '#39c6ff', borderColor: '#39c6ff55', background: '#39c6ff12' }}>PAPER</span>
           <div className="ml-auto flex gap-1">
             {(['rotation', 'correlation', 'volume'] as Mode[]).map(m => (
               <button key={m} onClick={() => setMode(m)}
@@ -123,18 +127,25 @@ export function GlassBoxStudio({ isDark = true }: Props) {
   )
 }
 
+// Share volume in the Indian compact style used across the terminal (K / L / cr).
+const fmtVolume = (v: number) =>
+  v >= 1e7 ? `${+(v / 1e7).toFixed(1)}cr` : v >= 1e5 ? `${+(v / 1e5).toFixed(1)}L` : v >= 1e3 ? `${+(v / 1e3).toFixed(0)}K` : `${v}`
+
 /* ── Relative Rotation Graph ──────────────────────────────────────────────────── */
 function RRGPanel({ data, loading }: { data: RRGResult | null; loading: boolean }) {
   const entries = data ? Object.entries(data.tickers) : []
-  // Auto-fit axes around 100 with a symmetric margin.
+  // Auto-fit axes around 100 with a symmetric margin, rounded to 0.5 so ticks land on
+  // readable values (100 ± m, ± m/2) instead of recharts' raw float divisions.
   const all = entries.flatMap(([, pts]) => pts)
   const ext = (key: 'rs_ratio' | 'rs_mom') => {
     const v = all.map(p => p[key]).filter((x): x is number => x != null)
-    const m = Math.max(2, ...v.map(x => Math.abs(x - 100)))
-    return [100 - m * 1.1, 100 + m * 1.1] as [number, number]
+    const m = Math.ceil(Math.max(2, ...v.map(x => Math.abs(x - 100))) * 1.1 * 2) / 2
+    return [100 - m, 100 + m] as [number, number]
   }
   const xd = all.length ? ext('rs_ratio') : [96, 104]
   const yd = all.length ? ext('rs_mom') : [96, 104]
+  const ticks = ([lo, hi]: number[]) => [lo, (lo + 100) / 2, 100, (hi + 100) / 2, hi]
+  const fmtAxis = (v: number) => v.toFixed(1)
 
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
@@ -150,16 +161,16 @@ function RRGPanel({ data, loading }: { data: RRGResult | null; loading: boolean 
               <ReferenceArea x1={100} x2={xd[1]} y1={yd[0]} y2={100} fill={QUAD.Weakening.fill} fillOpacity={0.06} />
               <ReferenceArea x1={xd[0]} x2={100} y1={yd[0]} y2={100} fill={QUAD.Lagging.fill} fillOpacity={0.06} />
               <ReferenceArea x1={xd[0]} x2={100} y1={100} y2={yd[1]} fill={QUAD.Improving.fill} fillOpacity={0.06} />
-              <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="2 4" stroke="#1a2130" />
               <ReferenceLine x={100} stroke="#475569" />
               <ReferenceLine y={100} stroke="#475569" />
-              <XAxis type="number" dataKey="rs_ratio" domain={xd} name="RS-Ratio" tick={{ fontSize: 9, fill: '#64748b' }} stroke="#334155"
+              <XAxis type="number" dataKey="rs_ratio" domain={xd} ticks={ticks(xd)} tickFormatter={fmtAxis} name="RS-Ratio" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448"
                 label={{ value: 'JdK RS-Ratio →', position: 'insideBottom', dy: 12, fontSize: 9, fill: '#475569' }} />
-              <YAxis type="number" dataKey="rs_mom" domain={yd} name="RS-Momentum" tick={{ fontSize: 9, fill: '#64748b' }} stroke="#334155"
+              <YAxis type="number" dataKey="rs_mom" domain={yd} ticks={ticks(yd)} tickFormatter={fmtAxis} width={52} name="RS-Momentum" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448"
                 label={{ value: 'RS-Momentum ↑', angle: -90, position: 'insideLeft', fontSize: 9, fill: '#475569' }} />
               <ZAxis range={[20, 20]} />
               <Tooltip cursor={{ strokeDasharray: '3 3' }}
-                contentStyle={{ background: '#0a0e17', border: '1px solid #1e293b', fontSize: 11, fontFamily: 'monospace' }}
+                contentStyle={{ background: '#0a0e17', border: '1px solid #1a2130', fontSize: 11, fontFamily: 'monospace' }}
                 formatter={(v: any, n: any) => [typeof v === 'number' ? v.toFixed(2) : v, n]} />
               {entries.map(([tkr, pts], i) => {
                 const color = PALETTE[i % PALETTE.length]
@@ -210,19 +221,20 @@ function CorrPanel({ data, loading }: { data: FactorSeriesResult | null; loading
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
       <PanelHead title={`ROLLING CORRELATION & SQUEEZE — ${data?.ticker ?? ''}`}
         sub={data ? `${data.corr_window}d corr vs ${data.benchmark} · ${squeezeDays} squeeze · ${viptDays} VIPT` : 'price · corr · squeeze dots'} />
+      {data?.ticker && <ChartActions ticker={data.ticker} from="Glass-Box" style={{ marginBottom: 8 }} />}
       <div className="h-[300px]">
         {!data || !pts.length ? <Empty loading={loading} hint="Render to plot price, market correlation and squeeze alerts." /> : (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={pts} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
-              <XAxis dataKey="date" tick={{ fontSize: 8, fill: '#64748b' }} stroke="#334155" minTickGap={28} />
-              <YAxis yAxisId="px" tick={{ fontSize: 9, fill: '#64748b' }} stroke="#334155" domain={['auto', 'auto']} width={48} />
-              <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1e293b', fontSize: 11, fontFamily: 'monospace' }} />
+              <CartesianGrid strokeDasharray="2 4" stroke="#1a2130" />
+              <XAxis dataKey="date" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448" minTickGap={28} />
+              <YAxis yAxisId="px" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448" domain={['auto', 'auto']} width={48} />
+              <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1a2130', fontSize: 11, fontFamily: 'monospace' }} />
               <Line yAxisId="px" type="monotone" dataKey="close" name="close" stroke="#e2e8f0" dot={false} strokeWidth={1.4} isAnimationActive={false} />
               {/* squeeze alert dots ride the price line as amber markers */}
               <Line yAxisId="px" type="monotone" dataKey="close" name="squeeze" stroke="transparent" isAnimationActive={false} legendType="none"
                 dot={(p: any) => p.payload?.squeeze_on
-                  ? <circle key={p.key ?? `${p.cx}-${p.cy}`} cx={p.cx} cy={p.cy} r={3} fill="#f59e0b" stroke="#0a0e17" strokeWidth={0.5} />
+                  ? <circle key={p.key ?? `${p.cx}-${p.cy}`} cx={p.cx} cy={p.cy} r={3} fill="#ffb000" stroke="#0a0e17" strokeWidth={0.5} />
                   : <g key={p.key ?? `${p.cx}-${p.cy}`} />} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -233,13 +245,13 @@ function CorrPanel({ data, loading }: { data: FactorSeriesResult | null; loading
         {data && pts.length > 0 && (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={pts} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
-              <XAxis dataKey="date" tick={{ fontSize: 8, fill: '#64748b' }} stroke="#334155" minTickGap={28} />
-              <YAxis domain={[-1, 1]} ticks={[-1, -0.5, 0, 0.5, 1]} tick={{ fontSize: 9, fill: '#64748b' }} stroke="#334155" width={48} />
+              <CartesianGrid strokeDasharray="2 4" stroke="#1a2130" />
+              <XAxis dataKey="date" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448" minTickGap={28} />
+              <YAxis domain={[-1, 1]} ticks={[-1, -0.5, 0, 0.5, 1]} tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448" width={48} />
               <ReferenceLine y={0.2} stroke="#ef4444" strokeDasharray="4 4"
-                label={{ value: 'de-couple <0.2', fontSize: 8, fill: '#ef4444', position: 'insideTopRight' }} />
+                label={{ value: 'de-couple <0.2', fontSize: 9, fill: '#ef4444', position: 'insideTopRight' }} />
               <ReferenceLine y={0} stroke="#475569" />
-              <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1e293b', fontSize: 11, fontFamily: 'monospace' }} />
+              <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1a2130', fontSize: 11, fontFamily: 'monospace' }} />
               <Line type="monotone" dataKey="corr30" name="corr30" stroke="#22d3ee" dot={false} strokeWidth={1.5} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -264,14 +276,14 @@ function VolumePanel({ data, loading }: { data: VolumeProfileResult | null; load
           {!data || !rows.length ? <Empty loading={loading} hint="Volume-by-price." /> : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 8, fill: '#64748b' }} stroke="#334155" />
-                <YAxis type="category" dataKey="band" tick={{ fontSize: 8, fill: '#64748b' }} stroke="#334155" width={42} interval={1} />
-                <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1e293b', fontSize: 11, fontFamily: 'monospace' }}
-                  formatter={(v: any, _n: any, p: any) => [`${Number(v).toLocaleString()} (${p.payload.pct}%)`, p.payload.node + (p.payload.poc ? ' · POC' : '')]} />
+                <CartesianGrid strokeDasharray="2 4" stroke="#1a2130" horizontal={false} />
+                <XAxis type="number" tickFormatter={fmtVolume} tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448" />
+                <YAxis type="category" dataKey="band" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448" width={42} interval={1} />
+                <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1a2130', fontSize: 11, fontFamily: 'monospace' }}
+                  formatter={(v: any, _n: any, p: any) => [`${Number(v).toLocaleString('en-IN')} (${p.payload.pct}%)`, p.payload.node + (p.payload.poc ? ' · POC' : '')]} />
                 <Bar dataKey="volume" name="volume">
                   {rows.map((r, i) => (
-                    <Cell key={i} fill={r.poc ? '#f59e0b' : r.node === 'HVN' ? '#38bdf8' : '#334155'}
+                    <Cell key={i} fill={r.poc ? '#ffb000' : r.node === 'HVN' ? '#38bdf8' : '#2a3448'}
                       fillOpacity={r.poc ? 0.95 : r.node === 'HVN' ? 0.7 : 0.45} />
                   ))}
                 </Bar>
@@ -284,12 +296,12 @@ function VolumePanel({ data, loading }: { data: VolumeProfileResult | null; load
           {data && data.ohlc.length > 0 && (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={data.ohlc} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="2 4" stroke="#1e293b" />
-                <XAxis dataKey="date" tick={{ fontSize: 8, fill: '#64748b' }} stroke="#334155" minTickGap={30} />
-                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#64748b' }} stroke="#334155" width={48} />
-                <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1e293b', fontSize: 11, fontFamily: 'monospace' }} />
-                <ReferenceLine y={data.poc_price} stroke="#f59e0b" strokeDasharray="4 4"
-                  label={{ value: `POC ${data.poc_price}`, fontSize: 8, fill: '#f59e0b', position: 'insideTopLeft' }} />
+                <CartesianGrid strokeDasharray="2 4" stroke="#1a2130" />
+                <XAxis dataKey="date" tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448" minTickGap={30} />
+                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 9, fill: T.muted }} stroke="#2a3448" width={48} />
+                <Tooltip contentStyle={{ background: '#0a0e17', border: '1px solid #1a2130', fontSize: 11, fontFamily: 'monospace' }} />
+                <ReferenceLine y={data.poc_price} stroke="#ffb000" strokeDasharray="4 4"
+                  label={{ value: `POC ${data.poc_price}`, fontSize: 9, fill: '#ffb000', position: 'insideTopLeft' }} />
                 <Line type="monotone" dataKey="close" name="close" stroke="#e2e8f0" dot={false} strokeWidth={1.3} isAnimationActive={false} />
                 <Line type="monotone" dataKey="avwap" name="anchored VWAP" stroke="#a78bfa" dot={false} strokeWidth={1.5} strokeDasharray="4 3" isAnimationActive={false} />
               </ComposedChart>

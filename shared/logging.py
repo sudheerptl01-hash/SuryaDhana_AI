@@ -3,12 +3,13 @@ from __future__ import annotations
 import logging
 import sys
 import uuid
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from typing import Any
 
 import structlog
 
 _correlation_id: ContextVar[str] = ContextVar("correlation_id", default="")
+_configured: dict[str, bool] = {"done": False}
 
 
 def get_correlation_id() -> str:
@@ -20,6 +21,26 @@ def set_correlation_id(cid: str | None = None) -> str:
     cid = cid or str(uuid.uuid4())
     _correlation_id.set(cid)
     return cid
+
+
+def bind_correlation_id(cid: str | None = None) -> Token[str]:
+    """Bind a correlation id for the current task/thread context and return the token that undoes it
+    (``unbind_correlation_id``). The request-id middleware in ``shared.metrics`` uses this pair so an id never
+    leaks from one request into the next on a reused worker."""
+    return _correlation_id.set(cid or str(uuid.uuid4()))
+
+
+def unbind_correlation_id(token: Token[str]) -> None:
+    try:
+        _correlation_id.reset(token)
+    except ValueError:  # token from another context (a thread hop): fall back to clearing
+        _correlation_id.set("")
+
+
+def is_logging_configured() -> bool:
+    """True once ``configure_logging`` ran in this process (the services call it in their lifespan; ui-api did not
+    until the observability middleware, which configures it on install when nobody has)."""
+    return _configured["done"]
 
 
 def _add_correlation_id(
@@ -57,6 +78,7 @@ def configure_logging(service_name: str, log_level: str = "INFO") -> None:
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
         cache_logger_on_first_use=True,
     )
+    _configured["done"] = True
 
 
 def get_logger(name: str) -> structlog.BoundLogger:

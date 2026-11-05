@@ -20,7 +20,7 @@ from dataclasses import dataclass
 # ICICI's login redirect returns the token as `apisession=<token>` (sometimes
 # `session_token=`). Accept the full pasted URL or a bare token interchangeably.
 _SESSION_RE = re.compile(
-    r"(?:apisession|session_token|apiSession|api_session)=([^&\s]+)",
+    r"(?:apisession|session_token|api_session)=([^&\s#]+)",
     re.IGNORECASE,
 )
 
@@ -30,8 +30,7 @@ def extract_session_token(raw: str | None) -> str:
     value = (raw or "").strip()
     if not value:
         return ""
-    if not value.lower().startswith("http"):
-        return value
+    # Search regardless of scheme: a copied address bar often reads "127.0.0.1/?apisession=…".
     match = _SESSION_RE.search(value)
     return match.group(1) if match else value
 

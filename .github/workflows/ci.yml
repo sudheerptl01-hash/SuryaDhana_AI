@@ -1,0 +1,139 @@
+# CI — Bloomberg program F1.4 (amendment A4), plus the desktop program's own gates (desktop review completeness-05).
+# Python deps come from requirements-ci.txt: identical pins to requirements.txt MINUS
+# xgboost/lightgbm/stable-baselines3 (no suite imports them at collection time; they pull
+# torch/compilers). Regenerate after editing requirements.txt:
+#   keep pins, comment the three exclusions, keep the [ci-added] block (unpinned-in-main deps).
+# Browser-login tests self-skip when headless Chrome is unavailable (their _need_chrome fixture).
+#
+# Jobs:
+#   python   (ubuntu)  the five pytest suites (core incl. the desktop contract tests, scripts, ui-api incl. prefs /
+#                      static_ui / http_guard, execution, alpha_lab), the event-loop scan, the baseline tools.
+#   ui       (ubuntu)  tsc + the UI's node checks (prefs, platform, alerts, desktop: plain node 25 type stripping).
+#   desktop  (macOS)   what only runs where the program runs: cargo test / clippy / fmt of the Tauri shell, the
+#                      boot-page checks, the release-builder tests (bash 3.2), the start-local.sh / watchdog shell
+#                      tests and a real static export build (build_ui.sh --out).
+# The desktop contract tests (tests/integration/test_desktop_contract.py) FAIL when a desktop source is missing,
+# so this workflow needs a full checkout (desktop/, ui/, scripts/ committed). A partial checkout may set
+# DESKTOP_CONTRACT_ALLOW_SKIP=1 on the python job; never set it here for the full repository.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - run: pip install -r requirements-ci.txt
+      - name: core suite (tests/, incl. the desktop contract + QA-harness tests)
+        # start-local.sh's shell tests are macOS-only (launchd, PlistBuddy, bash 3.2): they run in the desktop job
+        run: python -m pytest tests -q -W ignore --ignore=tests/integration/test_desktop_ops.py
+      - name: controller + bot + jobs (scripts/tests)
+        run: python -m pytest scripts/tests -q -W ignore --ignore=scripts/tests/test_ops_shell.py
+      - name: ui-api routers (incl. prefs, static_ui, http_guard / http_security)
+        run: python -m pytest services/ui-api/tests -q -W ignore
+      - name: execution-service
+        run: python -m pytest services/execution-service/tests -q -W ignore
+      - name: alpha_lab (strategy lab)
+        run: cd alpha_lab && python -m pytest tests -q -W ignore
+      - name: pre-program baseline tools (reconstruction, delta_probe GET-only guard)
+        run: python -m pytest reports/desktop_app/baseline_preprogram/tools -q -W ignore
+      - name: event-loop purity scan (if landed)
+        run: |
+          if [ -f scripts/check_event_loop.py ]; then python scripts/check_event_loop.py; else echo "scanner not present — skipped"; fi
+
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # the .check.ts files run on plain node (type stripping + module.registerHooks): node >= 23.6; the
+          # dev machine runs 25
+          node-version: 25
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: cd ui && npm ci
+      - run: cd ui && npx tsc --noEmit
+      - name: UI node checks (every ui/**/__tests__/*.check.ts that runs on plain node)
+        # discovered, so a new check file is gated without editing this workflow (prefs, platform, alerts,
+        # desktop, pages, ...); errors.check.ts needs tsx (not a dependency) and says so in its header
+        run: |
+          set -e
+          files=$(find ui -name node_modules -prune -o -path '*/__tests__/*.check.ts' -print | sort)
+          [ -n "$files" ] || { echo "no check files found"; exit 1; }
+          for f in $files; do
+            if head -c 600 "$f" | grep -q 'npx tsx'; then echo "skip $f (runs with tsx)"; continue; fi
+            echo "::group::$f"
+            node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON "$f"
+            echo "::endgroup::"
+          done
+
+  desktop:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      RUST_TOOLCHAIN: "1.94.1"   # the toolchain the shell is built and linted with (clippy -D warnings is version-sensitive)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - run: pip install -r requirements-ci.txt
+      - name: provide the canonical interpreter path
+        # start-local.sh (and its tests) hard-code the one Python every repo script uses (CLAUDE.md):
+        # /Users/sudheer/Desktop/jupyter_env/bin/python. On the runner it is a link to setup-python's interpreter.
+        run: |
+          sudo mkdir -p /Users/sudheer/Desktop/jupyter_env/bin
+          sudo ln -sf "$(command -v python)" /Users/sudheer/Desktop/jupyter_env/bin/python
+          /Users/sudheer/Desktop/jupyter_env/bin/python -c "import fastapi, sqlite3; print('python ok')"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: cd ui && npm ci
+      - name: rust toolchain
+        run: |
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --component clippy,rustfmt
+          rustup default "$RUST_TOOLCHAIN"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            desktop/src-tauri/target
+          key: cargo-${{ runner.os }}-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('desktop/src-tauri/Cargo.lock') }}
+      - name: cargo fmt --check
+        run: cargo fmt --manifest-path desktop/src-tauri/Cargo.toml -- --check
+      - name: cargo clippy (default and devtools features)
+        run: |
+          cargo clippy --manifest-path desktop/src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+          cargo clippy --manifest-path desktop/src-tauri/Cargo.toml --locked --all-targets --features devtools -- -D warnings
+      - name: cargo test
+        run: cargo test --manifest-path desktop/src-tauri/Cargo.toml --locked
+      - name: boot-page checks
+        run: node desktop/scripts/boot_check.mjs
+      - name: release builder tests (ui/scripts, bash 3.2 + fake next)
+        run: node --test ui/scripts/*.test.mjs
+      - name: shell tests (start-local.sh, stack_watchdog.sh, build_ui.sh)
+        run: |
+          python -m pytest scripts/tests/test_ops_shell.py -q -W ignore
+          python -m pytest tests/integration/test_desktop_ops.py -q -W ignore
+      - name: "desktop contract + QA harness tests (strict: a missing source fails)"
+        run: python -m pytest tests/integration/test_desktop_contract.py tests/integration/test_desktop_qa_harness.py tests/integration/test_desktop_e2e_multiwin.py -q -W ignore
+      - name: real static export build (scripts/build_ui.sh --out, AC-1)
+        env:
+          DESKTOP_QA_BUILD: "1"
+        run: python -m pytest tests/integration/test_desktop_static.py -q -W ignore

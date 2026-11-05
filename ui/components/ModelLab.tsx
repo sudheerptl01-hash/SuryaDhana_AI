@@ -1,6 +1,8 @@
 'use client'
 
 import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
+import { T } from '@/components/terminal'   // T.muted for axis text (RUP-06: one muted grey)
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
   LineChart, Line, ReferenceLine, ResponsiveContainer,
@@ -11,8 +13,9 @@ import {
   getFeatureCorrelations, getFeatureDistribution,
   triggerTrainingConfig, getPipelineJobStatus, getModelMetrics, getFeatureImportance,
   getModelCatalog, getModelRegistry, activateModel, deleteModel,
-  getShapBeeswarm, getShapWaterfall,
+  getShapBeeswarm, getShapWaterfall, ML_TRAIN_STREAM_URL,
 } from '@/lib/api'
+import { TrainingTerminal } from './TrainingTerminal'
 
 type ModelLabTab = 'overview' | 'explainability' | 'diagnostics' | 'features' | 'correlations' | 'catalog'
 
@@ -34,22 +37,22 @@ const FEATURE_CATEGORIES: Record<string, string[]> = {
 const ALL_FEATURES = Object.values(FEATURE_CATEGORIES).flat()
 
 const CAT_COLORS: Record<string, string> = {
-  Trend: '#14b8a6', Momentum: '#f59e0b', Volatility: '#64748b', Volume: '#8b5cf6', Calendar: '#ec4899',
+  Trend: '#14b8a6', Momentum: '#ffb000', Volatility: '#6f7a8e', Volume: '#8b5cf6', Calendar: '#ec4899',
 }
 
 // ── Color helpers ─────────────────────────────────────────────────────────────
 const CATEGORY_COLOR: Record<string, string> = {
-  rsi: '#f59e0b', macd: '#f59e0b', stoch: '#f59e0b', roc: '#f59e0b',
-  williams: '#f59e0b', return_lag: '#f59e0b', is_green: '#f59e0b',
+  rsi: '#ffb000', macd: '#ffb000', stoch: '#ffb000', roc: '#ffb000',
+  williams: '#ffb000', return_lag: '#ffb000', is_green: '#ffb000',
   sma: '#14b8a6', ema: '#14b8a6', price_vs: '#14b8a6', uptrend: '#14b8a6',
   volume: '#8b5cf6', obv: '#8b5cf6', mfi: '#8b5cf6', cmf: '#8b5cf6',
-  bb: '#64748b', atr: '#64748b', hist_vol: '#64748b',
-  high_low: '#64748b', close_pos: '#64748b', gap: '#64748b',
+  bb: '#6f7a8e', atr: '#6f7a8e', hist_vol: '#6f7a8e',
+  high_low: '#6f7a8e', close_pos: '#6f7a8e', gap: '#6f7a8e',
   day_of: '#ec4899', month: '#ec4899',
 }
 const featColor = (f: string) => {
   const k = Object.keys(CATEGORY_COLOR).find(k => f.toLowerCase().startsWith(k))
-  return k ? CATEGORY_COLOR[k] : '#f59e0b'
+  return k ? CATEGORY_COLOR[k] : '#ffb000'
 }
 
 function corrColor(v: number): string {
@@ -70,7 +73,7 @@ function shapDotColor(norm: number): string {
 
 // ── Model type metadata (mirrors backend catalog) ─────────────────────────────
 const MODEL_TYPES = [
-  { key: 'xgboost',            label: 'XGBoost',         color: '#f59e0b' },
+  { key: 'xgboost',            label: 'XGBoost',         color: '#ffb000' },
   { key: 'lightgbm',           label: 'LightGBM',        color: '#10b981' },
   { key: 'random_forest',      label: 'Random Forest',   color: '#8b5cf6' },
   { key: 'extra_trees',        label: 'Extra Trees',     color: '#06b6d4' },
@@ -91,8 +94,8 @@ function BeeswarmPlot({ data, isDark }: { data: any; isDark: boolean }) {
   const zeroX = leftPad + chartW / 2
   const toX = (v: number) => leftPad + ((v + xMax) / (2 * xMax)) * chartW
 
-  const mu = isDark ? '#64748b' : '#94a3b8'
-  const gridCol = isDark ? '#1e293b' : '#f1f5f9'
+  const mu = isDark ? T.muted : '#8a94a6'
+  const gridCol = isDark ? '#1a2130' : '#f1f5f9'
 
   return (
     <svg viewBox={`0 0 ${vbW} ${vbH}`} width="100%" style={{ fontFamily: 'monospace', display: 'block' }}>
@@ -107,7 +110,7 @@ function BeeswarmPlot({ data, isDark }: { data: any; isDark: boolean }) {
       ))}
 
       {/* Zero reference line */}
-      <line x1={zeroX} x2={zeroX} y1={topPad - 4} y2={vbH - 28} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4,3" />
+      <line x1={zeroX} x2={zeroX} y1={topPad - 4} y2={vbH - 28} stroke="#ffb000" strokeWidth="1.5" strokeDasharray="4,3" />
 
       {/* Dots */}
       {points.map((p, i) => (
@@ -119,7 +122,7 @@ function BeeswarmPlot({ data, isDark }: { data: any; isDark: boolean }) {
           fill={shapDotColor(p.feature_norm)}
           opacity={0.75}
         >
-          <title>{p.feature}: SHAP={p.shap_value > 0 ? '+' : ''}{p.shap_value.toFixed(4)}, val={p.feature_norm > 0.5 ? 'High' : 'Low'}</title>
+          <title>{p.feature}: SHAP={fmtSigned(p.shap_value, 4)}, val={p.feature_norm > 0.5 ? 'High' : 'Low'}</title>
         </circle>
       ))}
 
@@ -139,7 +142,7 @@ function BeeswarmPlot({ data, isDark }: { data: any; isDark: boolean }) {
         <g key={i}>
           <line x1={toX(v)} x2={toX(v)} y1={vbH - 28} y2={vbH - 22} stroke={mu} strokeWidth="1" />
           <text x={toX(v)} y={vbH - 12} textAnchor="middle" fontSize={9} fill={mu}>
-            {v === 0 ? '0' : `${v > 0 ? '+' : ''}${v.toFixed(3)}`}
+            {v === 0 ? '0' : `${fmtSigned(v, 3)}`}
           </text>
         </g>
       ))}
@@ -435,9 +438,9 @@ export function ConfigModal({ isDark, initialModelType, onLaunch, onClose }: Con
                   onClick={() => toggleCat(cat)}
                   className="px-3 py-1.5 text-[10px] font-bold rounded-lg border transition"
                   style={{
-                    borderColor: isCatActive(cat) ? CAT_COLORS[cat] + '80' : isDark ? '#334155' : '#e2e8f0',
+                    borderColor: isCatActive(cat) ? CAT_COLORS[cat] + '80' : isDark ? '#2a3448' : '#e2e8f0',
                     backgroundColor: isCatActive(cat) ? CAT_COLORS[cat] + '20' : 'transparent',
-                    color: isCatActive(cat) ? CAT_COLORS[cat] : isDark ? '#64748b' : '#94a3b8',
+                    color: isCatActive(cat) ? CAT_COLORS[cat] : isDark ? T.muted : '#8a94a6',
                   }}
                 >
                   {isCatFull(cat) ? '●' : isCatActive(cat) ? '◐' : '○'} {cat} ({feats.filter(f => selFeats.has(f)).length}/{feats.length})
@@ -458,9 +461,9 @@ export function ConfigModal({ isDark, initialModelType, onLaunch, onClose }: Con
                           onClick={() => toggleFeat(f)}
                           className="px-2 py-0.5 text-[9px] font-mono rounded-md border transition"
                           style={{
-                            borderColor: selFeats.has(f) ? CAT_COLORS[cat] + '80' : isDark ? '#334155' : '#e2e8f0',
+                            borderColor: selFeats.has(f) ? CAT_COLORS[cat] + '80' : isDark ? '#2a3448' : '#e2e8f0',
                             backgroundColor: selFeats.has(f) ? CAT_COLORS[cat] + '25' : 'transparent',
-                            color: selFeats.has(f) ? CAT_COLORS[cat] : isDark ? '#64748b' : '#94a3b8',
+                            color: selFeats.has(f) ? CAT_COLORS[cat] : isDark ? T.muted : '#8a94a6',
                           }}
                         >
                           {f}
@@ -542,6 +545,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
   const [importanceMode, setImportanceMode] = useState<'mdi' | 'shap'>('mdi')
   const [localFI, setLocalFI]               = useState(featureImportance)
   const [trainingJob, setTrainingJob]       = useState<any>(null)
+  const [terminalJobId, setTerminalJobId]   = useState<string | null>(null)
   // Catalog
   const [modelCatalog, setModelCatalog]     = useState<Record<string, any>>({})
   const [modelRegistry, setModelRegistry]   = useState<any[]>([])
@@ -552,10 +556,10 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
   const inset = isDark ? 'bg-slate-950' : 'bg-slate-100'
   const tx   = isDark ? 'text-slate-50' : 'text-slate-950'
   const mu   = isDark ? 'text-slate-500' : 'text-slate-500'
-  const grid = isDark ? '#334155' : '#e2e8f0'
-  const axis = isDark ? '#64748b' : '#94a3b8'
+  const grid = isDark ? '#2a3448' : '#e2e8f0'
+  const axis = isDark ? T.muted : '#8a94a6'
   const ttStyle = {
-    backgroundColor: isDark ? '#1e293b' : '#ffffff',
+    backgroundColor: isDark ? '#1a2130' : '#f2f5fa',
     border: `1px solid ${isDark ? '#475569' : '#e2e8f0'}`,
     borderRadius: '6px', fontSize: 11,
   }
@@ -627,6 +631,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
     try {
       const res = await triggerTrainingConfig(payload)
       setTrainingJob(res.data)
+      if (res.data?.job_id) setTerminalJobId(res.data.job_id)
       setShowConfigModal(false)
     } catch (e) { console.error(e) }
   }
@@ -673,7 +678,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
 
   const ModelNotTrained = ({ label = 'model' }: { label?: string }) => (
     <div className={`py-16 text-center ${mu}`}>
-      <p className="text-4xl mb-4">🔬</p>
+      <p className="text-3xl mb-4 font-mono opacity-40">◌</p>
       <p className="text-sm font-semibold">Train the {label} first</p>
       <p className="text-xs mt-2 opacity-70">Click "Configure & Train" above, then come back here</p>
     </div>
@@ -763,7 +768,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                 <div key={i} className={`${inset} rounded-xl p-4`}>
                   <p className={`${mu} text-[10px] font-bold uppercase tracking-widest mb-1`}>{m.label}</p>
                   <p className={`text-xl font-bold font-mono ${m.color}`}>
-                    {typeof m.value === 'number' && m.value > 0 ? (m.label === 'Val Samples' ? m.value.toLocaleString() : m.value.toFixed(3)) : '—'}
+                    {typeof m.value === 'number' && m.value > 0 ? (m.label === 'Val Samples' ? m.value.toLocaleString('en-IN') : m.value.toFixed(3)) : '—'}
                   </p>
                   <p className={`text-[9px] ${mu} mt-0.5 leading-tight`}>{m.desc}</p>
                 </div>
@@ -802,7 +807,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                           {row.cells.map(cell => (
                             <div key={cell.label} className={`${cell.bg} rounded-lg p-4 text-center`}>
                               <p className={`text-xs font-bold ${mu} mb-1`}>{cell.label}</p>
-                              <p className={`text-2xl font-bold font-mono ${cell.fg}`}>{cell.val?.toLocaleString()}</p>
+                              <p className={`text-2xl font-bold font-mono ${cell.fg}`}>{cell.val?.toLocaleString('en-IN')}</p>
                               <p className={`text-[9px] ${mu} mt-0.5`}>{cell.sub}</p>
                             </div>
                           ))}
@@ -812,7 +817,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                   </div>
                   <div className={`mt-4 pt-4 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'} text-center`}>
                     <span className={`text-[10px] ${mu}`}>Total: </span>
-                    <span className={`text-[10px] font-mono font-bold ${tx}`}>{confMatrix.total?.toLocaleString()}</span>
+                    <span className={`text-[10px] font-mono font-bold ${tx}`}>{confMatrix.total?.toLocaleString('en-IN')}</span>
                     <span className={`text-[10px] ${mu} mx-3`}>|</span>
                     <span className={`text-[10px] ${mu}`}>Prec: </span>
                     <span className="text-[10px] font-mono font-bold text-blue-400">{confMatrix.precision?.toFixed(3)}</span>
@@ -837,10 +842,10 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                     <XAxis dataKey="score" stroke={axis} tick={{ fontSize: 10, fontFamily: 'monospace' }} tickFormatter={(v: number) => v.toFixed(2)} />
                     <YAxis stroke={axis} tick={{ fontSize: 10 }} />
                     <Tooltip contentStyle={ttStyle} formatter={(v: any) => [v, 'Samples']} labelFormatter={(l: any) => `P(UP)=${Number(l).toFixed(2)}`} />
-                    <ReferenceLine x={0.5} stroke="#f59e0b" strokeDasharray="4 2" label={{ value: 'thresh', position: 'insideTopRight', fontSize: 9, fill: '#f59e0b' }} />
+                    <ReferenceLine x={0.5} stroke="#ffb000" strokeDasharray="4 2" label={{ value: 'thresh', position: 'insideTopRight', fontSize: 9, fill: '#ffb000' }} />
                     <Bar dataKey="count" radius={[2, 2, 0, 0]}>
                       {scoreDist.histogram.map((d: any, i: number) => (
-                        <Cell key={i} fill={d.score >= 0.5 ? '#f59e0b' : '#64748b'} opacity={0.8} />
+                        <Cell key={i} fill={d.score >= 0.5 ? '#ffb000' : '#6f7a8e'} opacity={0.8} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -877,6 +882,17 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
               </p>
             </div>
           )}
+
+          <TrainingTerminal
+            jobId={terminalJobId}
+            streamUrl={ML_TRAIN_STREAM_URL}
+            title="ML TRAINING LOG"
+            onDone={(status) => {
+              if (status === 'done') {
+                getModelMetrics().then(r => onMetricsRefresh?.()).catch(() => {})
+              }
+            }}
+          />
         </div>
       )}
 
@@ -937,7 +953,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                 </ResponsiveContainer>
               ) : (
                 <div className={`py-16 text-center ${mu}`}>
-                  <p className="text-3xl mb-3">🔍</p>
+                  <p className="text-3xl mb-3" style={{ color: 'var(--t-dim)' }}>◇</p>
                   <p className="text-sm">SHAP not yet computed</p>
                   <p className="text-xs mt-1 opacity-70">Switch to SHAP tab to trigger</p>
                 </div>
@@ -945,7 +961,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
             )}
 
             <div className={`flex gap-6 mt-5 pt-4 border-t ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
-              {[{ color: '#f59e0b', label: 'Momentum' }, { color: '#14b8a6', label: 'Trend' }, { color: '#8b5cf6', label: 'Volume' }, { color: '#64748b', label: 'Volatility' }, { color: '#ec4899', label: 'Calendar' }].map(l => (
+              {[{ color: '#ffb000', label: 'Momentum' }, { color: '#14b8a6', label: 'Trend' }, { color: '#8b5cf6', label: 'Volume' }, { color: '#6f7a8e', label: 'Volatility' }, { color: '#ec4899', label: 'Calendar' }].map(l => (
                 <div key={l.label} className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: l.color }} />
                   <span className={`text-[10px] ${mu}`}>{l.label}</span>
@@ -991,7 +1007,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
 
             {!beeswarmLoading && !beeswarmData && (
               <div className={`py-14 text-center ${mu}`}>
-                <p className="text-3xl mb-3">🐝</p>
+                <p className="text-3xl mb-3" style={{ color: 'var(--t-dim)' }}>◇</p>
                 <p className="text-sm">Click "Compute" to generate per-sample SHAP beeswarm</p>
                 <p className="text-xs mt-1 opacity-70">Requires a trained model with validation data</p>
               </div>
@@ -1064,13 +1080,13 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                   <ResponsiveContainer width="100%" height={Math.max(300, bars.length * 28 + 60)}>
                     <BarChart layout="vertical" data={bars} margin={{ top: 0, right: 80, left: 155, bottom: 24 }}>
                       <CartesianGrid strokeDasharray="4 2" stroke={grid} horizontal={false} />
-                      <XAxis type="number" stroke={axis} tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${v > 0 ? '+' : ''}${(v * 100).toFixed(1)}%`}
+                      <XAxis type="number" stroke={axis} tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${fmtSigned(v * 100, 1)}%`}
                         label={{ value: 'SHAP contribution to P(UP)', position: 'insideBottom', offset: -12, fontSize: 10, fill: axis }} />
                       <YAxis dataKey="feature" type="category" width={150} stroke={axis} tick={{ fontSize: 10, fontFamily: 'monospace' }} />
                       <ReferenceLine x={0} stroke="#475569" strokeWidth={1.5} />
                       <Tooltip contentStyle={ttStyle}
                         formatter={(v: any, _: any, props: any) => [
-                          `${v > 0 ? '+' : ''}${(v * 100).toFixed(2)}%`,
+                          `${fmtSigned(Number(v) * 100, 2)}%`,
                           `SHAP (val=${props.payload?.feature_value?.toFixed(3)})`
                         ]}
                       />
@@ -1085,7 +1101,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
 
             {!waterfallLoading && !waterfallData && (
               <div className={`py-12 text-center ${mu}`}>
-                <p className="text-3xl mb-3">🌊</p>
+                <p className="text-3xl mb-3" style={{ color: 'var(--t-dim)' }}>◇</p>
                 <p className="text-sm">Click "Compute" to explain a single validation prediction</p>
                 <p className="text-xs mt-1 opacity-70">Use ◀▶ to step through different samples</p>
               </div>
@@ -1121,7 +1137,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                     <XAxis dataKey="x" stroke={axis} tick={{ fontSize: 10, fontFamily: 'monospace' }} tickFormatter={(v: number) => v.toFixed(2)} label={{ value: pdpData.feature, position: 'insideBottom', offset: -5, fontSize: 11, fill: axis }} />
                     <YAxis stroke={axis} tick={{ fontSize: 10 }} domain={[0, 1]} tickFormatter={(v: number) => (v * 100).toFixed(0) + '%'} />
                     <Tooltip contentStyle={ttStyle} formatter={(v: any) => [`${(v * 100).toFixed(1)}%`, 'Avg P(UP)']} labelFormatter={(l: any) => `${pdpData.feature}=${Number(l).toFixed(3)}`} />
-                    <ReferenceLine y={0.5} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: '50%', position: 'right', fontSize: 10, fill: '#f59e0b' }} />
+                    <ReferenceLine y={0.5} stroke="#ffb000" strokeDasharray="3 3" label={{ value: '50%', position: 'right', fontSize: 10, fill: '#ffb000' }} />
                     <Line type="monotone" dataKey="y" stroke="#8b5cf6" strokeWidth={2.5} dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -1132,7 +1148,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
               </>
             ) : !pdpLoading && (
               <div className={`py-12 text-center ${mu}`}>
-                <p className="text-3xl mb-3">📈</p>
+                <p className="text-2xl mb-3 font-mono opacity-40">◌</p>
                 <p className="text-sm">Select a feature above to compute its PDP</p>
               </div>
             )}
@@ -1185,7 +1201,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                       <YAxis stroke={axis} tick={{ fontSize: 10 }} label={{ value: 'Fraction Positives', angle: -90, position: 'insideLeft', fontSize: 10, fill: axis }} domain={[0, 1]} />
                       <Tooltip contentStyle={ttStyle} formatter={(v: any, name: string) => [(v as number).toFixed(3), name === 'frac_pos' ? 'Actual' : 'Perfect']} />
                       <Line type="monotone" dataKey="perfect" stroke="#475569" strokeWidth={1} strokeDasharray="4 4" dot={false} isAnimationActive={false} legendType="none" />
-                      <Line type="monotone" dataKey="frac_pos" stroke="#f59e0b" strokeWidth={2.5} dot={{ fill: '#f59e0b', r: 4 }} isAnimationActive={false} connectNulls />
+                      <Line type="monotone" dataKey="frac_pos" stroke="#ffb000" strokeWidth={2.5} dot={{ fill: '#ffb000', r: 4 }} isAnimationActive={false} connectNulls />
                     </LineChart>
                   </ResponsiveContainer>
                   <p className={`${mu} text-[10px] mt-3`}>Dashed = perfect calibration. Deviation = over/under-confidence.</p>
@@ -1258,7 +1274,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                         <td className={`px-3 py-2.5 font-mono text-right ${Math.abs(f.kurtosis) > 5 ? 'text-amber-400' : tx}`}>{f.kurtosis.toFixed(1)}</td>
                         <td className={`px-3 py-2.5 font-mono text-right ${f.nan_pct > 10 ? 'text-rose-400' : mu}`}>{f.nan_pct.toFixed(1)}%</td>
                         <td className={`px-3 py-2.5 font-mono text-right font-bold ${Math.abs(f.target_corr) > 0.05 ? (f.target_corr > 0 ? 'text-emerald-400' : 'text-rose-400') : mu}`}>
-                          {f.target_corr > 0 ? '+' : ''}{f.target_corr.toFixed(4)}
+                          {fmtSigned(f.target_corr, 4)}
                         </td>
                       </tr>
                     ))}
@@ -1267,7 +1283,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
               </div>
             ) : (
               <div className={`py-12 text-center ${mu}`}>
-                <p className="text-3xl mb-3">📊</p>
+                <p className="text-2xl mb-3 font-mono opacity-40">▦</p>
                 <p className="text-sm">Run Phase 3 to compute feature statistics</p>
               </div>
             )}
@@ -1301,7 +1317,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
               </>
             ) : (
               <div className={`py-12 text-center ${mu}`}>
-                <p className="text-3xl mb-3">📉</p>
+                <p className="text-2xl mb-3 font-mono opacity-40">◌</p>
                 <p className="text-sm">Select a feature to see its UP/DOWN distribution</p>
               </div>
             )}
@@ -1364,7 +1380,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
               )
             })() : !corrLoading && (
               <div className={`py-12 text-center ${mu}`}>
-                <p className="text-3xl mb-3">🔥</p>
+                <p className="text-2xl mb-3 font-mono opacity-40">▦</p>
                 <p className="text-sm">Run Phase 3 to compute correlations</p>
               </div>
             )}
@@ -1394,7 +1410,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                         <div className="h-full rounded-full" style={{ width: `${Math.abs(p.corr) * 100}%`, backgroundColor: p.corr > 0 ? '#10b981' : '#f43f5e' }} />
                       </div>
                       <span className={`font-mono text-[11px] font-bold w-14 text-right ${p.corr > 0.8 || p.corr < -0.8 ? 'text-rose-400' : p.corr > 0.6 || p.corr < -0.6 ? 'text-amber-400' : tx}`}>
-                        {p.corr > 0 ? '+' : ''}{p.corr.toFixed(3)}
+                        {fmtSigned(p.corr, 3)}
                       </span>
                     </div>
                   ))}
@@ -1426,7 +1442,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h4 className={`${tx} font-bold text-sm`}>{info.name}</h4>
-                        <span className={`text-[10px] font-mono font-bold uppercase tracking-widest`} style={{ color: mt?.color || '#f59e0b' }}>{info.type}</span>
+                        <span className={`text-[10px] font-mono font-bold uppercase tracking-widest`} style={{ color: mt?.color || '#ffb000' }}>{info.type}</span>
                       </div>
                       {info.trained && (
                         <div className="flex flex-col items-end gap-1">
@@ -1460,7 +1476,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
           {/* Empty catalog fallback */}
           {!catalogLoading && Object.keys(modelCatalog).length === 0 && (
             <div className={`${card} border rounded-xl py-16 text-center ${mu}`}>
-              <p className="text-4xl mb-4">🏗️</p>
+              <p className="text-4xl mb-4" style={{ color: 'var(--t-dim)' }}>◇</p>
               <p className="text-sm font-semibold">Model catalog unavailable</p>
               <p className="text-xs mt-2 opacity-70">ml-service may not be running — check service health</p>
             </div>
@@ -1515,7 +1531,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
                           <td className={`px-4 py-3 font-mono ${tx}`}>{m.metrics?.f1_score?.toFixed(3) || '—'}</td>
                           <td className={`px-4 py-3 font-mono ${mu}`}>{m.n_features}</td>
                           <td className={`px-4 py-3 font-mono ${mu} text-[9px] whitespace-nowrap`}>
-                            {(() => { const d = new Date(m.trained_at); return m.trained_at && !isNaN(d.getTime()) ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (m.trained_at || '—') })()}
+                            {(() => { const d = new Date(m.trained_at); return m.trained_at && !isNaN(d.getTime()) ? d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : (m.trained_at || '—') })()}
                           </td>
                           <td className="px-4 py-3">
                             {m.is_active
@@ -1557,7 +1573,7 @@ export function ModelLab({ isDark, featureImportance, modelMetrics, onMetricsRef
               </div>
             ) : (
               <div className={`py-14 text-center ${mu}`}>
-                <p className="text-3xl mb-3">📭</p>
+                <p className="text-3xl mb-3" style={{ color: 'var(--t-dim)' }}>◇</p>
                 <p className="text-sm">No models trained yet this session</p>
                 <p className="text-xs mt-2 opacity-70">Train a model using "Configure & Train" to compare results</p>
               </div>

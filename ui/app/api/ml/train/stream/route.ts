@@ -9,7 +9,8 @@
  * frame flushes the instant the backend emits it. Same-origin (no CORS), works in dev and
  * Docker. Non-streaming endpoints keep using the rewrite.
  */
-import { NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { streamProxyHeaders } from '@/lib/streamProxy'
 
 export const dynamic = 'force-dynamic'   // never cache / prerender
 export const runtime = 'nodejs'          // node fetch can stream the upstream body
@@ -19,7 +20,8 @@ const API_BACKEND = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8010'
 export async function POST(req: NextRequest) {
   const upstream = await fetch(`${API_BACKEND}/api/ml/train/stream`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    // browser context (Origin, Sec-Fetch-*, X-Forwarded-Host) like Next's rewrite, so ui-api's guard judges it
+    headers: streamProxyHeaders(req.headers, { 'content-type': 'application/json' }),
     body: await req.text(),
     // Node's fetch requires duplex for a request that may stream; harmless here.
     // @ts-expect-error duplex is valid at runtime but missing from the DOM lib types

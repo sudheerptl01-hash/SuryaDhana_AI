@@ -59,7 +59,7 @@ class LiveDataProvider(ABC):
     def get_live_quote(self, ticker: str) -> dict[str, Any]: ...
 
     @abstractmethod
-    def get_intraday_ohlcv(self, ticker: str, interval: str = "5minute") -> OHLCVBatch: ...
+    def get_intraday_ohlcv(self, ticker: str, interval: str = "5minute", day: "date | None" = None) -> OHLCVBatch: ...
 
     @abstractmethod
     def is_connected(self) -> bool: ...
@@ -105,6 +105,11 @@ class ICICIBreezeProvider(LiveDataProvider):
             return
         try:
             import requests
+            try:      # breeze_connect downloads ICICI's security master at import, with no timeout: use the cache
+                from shared.breeze_cache import install as _breeze_cache_install
+                _breeze_cache_install()
+            except Exception:  # noqa: BLE001
+                pass
             from breeze_connect import BreezeConnect  # type: ignore[import]
 
             # Monkey-patch the global requests.get used by breeze_connect
@@ -169,15 +174,15 @@ class ICICIBreezeProvider(LiveDataProvider):
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True,
     )
-    def get_intraday_ohlcv(self, ticker: str, interval: str = "5minute") -> OHLCVBatch:
-        """Fetch today's intraday bars using Breeze v2."""
+    def get_intraday_ohlcv(self, ticker: str, interval: str = "5minute", day: "date | None" = None) -> OHLCVBatch:
+        """Fetch intraday bars for `day` (defaults to today) using Breeze v2."""
         self._require_connection()
         stock_code = self._resolve_isec_code(ticker)
-        today = date.today()
+        target = day or date.today()
         response = self._breeze.get_historical_data_v2(
             interval=interval,
-            from_date=_to_icici_dt(today, eod=False),
-            to_date=_to_icici_dt(today, eod=True),
+            from_date=_to_icici_dt(target, eod=False),
+            to_date=_to_icici_dt(target, eod=True),
             stock_code=stock_code,
             exchange_code="NSE",
             product_type="cash",
@@ -331,7 +336,9 @@ class StubLiveProvider(LiveDataProvider):
         pass
 
     def is_connected(self) -> bool:
-        return True
+        # No broker behind the stub: report disconnected so the UI shows the truth and
+        # the live-quote pollers idle instead of fetching empty quotes every 5 s.
+        return False
 
     def get_live_quote(self, ticker: str) -> dict[str, Any]:
         logger.warning("StubLiveProvider.get_live_quote — returning empty dict", ticker=ticker)

@@ -1,15 +1,45 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from pathlib import Path
+from typing import ClassVar, Literal
 
-from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, SecretStr, field_validator
+
+try:
+    from pydantic_settings import BaseSettings, SettingsConfigDict
+except ImportError:  # pragma: no cover
+    from pydantic import BaseSettings, SettingsConfigDict
+
+# Resolve absolute project root once so services work regardless of CWD
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Search for .env in this file's parent directory (project root) so that
+# services launched from their own subdirectory still pick up the root .env
+_ENV_FILE = _PROJECT_ROOT / ".env"
+
+
+def load_env_into_process() -> bool:
+    """Export the project ``.env`` into ``os.environ`` (without overriding).
+
+    ``Settings`` reads .env into its own fields only, but several modules read
+    ``os.environ`` directly (ICICI credentials in shared/icici.py, service URLs).
+    Docker injects .env via ``env_file``; a locally launched uvicorn does not, so
+    call this once at service start-up. Existing variables (e.g. compose
+    ``environment:`` overrides) always win.
+    """
+    if not _ENV_FILE.exists():
+        return False
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return False
+    return bool(load_dotenv(_ENV_FILE, override=False))
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -39,17 +69,32 @@ class Settings(BaseSettings):
     monitoring_service_url: str = "http://monitoring-service:8007"
 
     # ── Database ───────────────────────────────────────────────────────────────
-    duckdb_path: str = "data/market.duckdb"
+    duckdb_path: str = str(_PROJECT_ROOT / "data" / "market.duckdb")
 
     # ── Redis ─────────────────────────────────────────────────────────────────
+    # redis_url may embed the password (redis://:<pw>@127.0.0.1:6379/0); start-local.sh exports it that way when
+    # REDIS_PASSWORD (.env) or the Keychain item 'suryadhana-redis' is set (Wave 0.7, O-T10). Kept a plain str
+    # because every client parses it as a URL; redis_password itself is a SecretStr.
     redis_url: str = "redis://redis:6379/0"
+    redis_password: SecretStr = Field(default=SecretStr(""), description="requirepass for the local redis-server (optional)")
     celery_broker_url: str = "redis://redis:6379/1"
     celery_result_backend: str = "redis://redis:6379/2"
 
     # ── ICICI Direct Breeze API ────────────────────────────────────────────────
-    icici_api_key: str = Field(default="", description="ICICI Breeze API key")
-    icici_api_secret: str = Field(default="", description="ICICI Breeze API secret")
-    icici_session_token: str = Field(default="", description="ICICI session token (refreshed daily)")
+    # Secrets are SecretStr (Terminal v2 Wave 0.7, O-T10): repr/str/model_dump_json show '**********'; a caller
+    # that needs the value says so with .get_secret_value(). A stray print(settings) can no longer leak them.
+    icici_api_key: SecretStr = Field(default=SecretStr(""), description="ICICI Breeze API key")
+    icici_api_secret: SecretStr = Field(default=SecretStr(""), description="ICICI Breeze API secret")
+    icici_session_token: SecretStr = Field(default=SecretStr(""), description="ICICI session token (refreshed daily)")
+    # GOLD program (PLAN §d): the dated customs duty the India price stack uses, and the optional CFTC Socrata token.
+    gold_import_duty_pct: float = Field(
+        default=15.0, description="Customs duty on gold, % (BCD 10 + AIDC 5 since 2026-05-13; confirm at CBIC, O-3)"
+    )
+    gold_import_duty_effective: str = Field(
+        default="2026-05-13", description="Effective date of gold_import_duty_pct (Notification 16/2026-Customs)"
+    )
+    cftc_app_token: SecretStr = Field(default=SecretStr(""),
+                                      description="Optional CFTC Socrata app token (O-7); raises the COT API rate limit")
 
     # ── Trading parameters ─────────────────────────────────────────────────────
     stock_universe_path: str = "data/NSE_1000_MIDCAP_500.csv"
@@ -68,11 +113,19 @@ class Settings(BaseSettings):
     feature_lookback_days: int = 60
 
     # ── Monitoring / alerting ──────────────────────────────────────────────────
-    telegram_bot_token: str = Field(default="", description="Telegram bot token for alerts")
+    telegram_bot_token: SecretStr = Field(default=SecretStr(""), description="Telegram bot token for alerts")
     telegram_chat_id: str = Field(default="", description="Telegram chat ID for alerts")
 
     # ── Data history ───────────────────────────────────────────────────────────
     historical_years: int = Field(default=5, description="Years of OHLCV history to fetch")
+
+    # ── Backups (Wave 0.1; O-T1 decides the target) ────────────────────────────
+    offsite_backup_dir: str = Field(default="", description="scripts/db_backup.py --offsite target (a mounted volume, "
+                                    "an rclone mount or an external SSD); empty = no off-machine copy")
+
+    # Public, non-secret settings are listed by the SYS page; this is the contract the leak test checks against.
+    SECRET_FIELDS: ClassVar[tuple[str, ...]] = ("icici_api_key", "icici_api_secret", "icici_session_token",
+                                               "telegram_bot_token", "cftc_app_token", "redis_password")
 
     @field_validator("stop_loss_pct", "max_position_pct", "max_sector_pct", "daily_loss_limit_pct", "max_drawdown_pct")
     @classmethod

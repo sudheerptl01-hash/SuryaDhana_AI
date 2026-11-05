@@ -115,8 +115,10 @@ async def fetch_refresh_batch(request: Request) -> Any:
         raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
 
 
-@router.post("/fetch/icici/daily")
+@router.post("/fetch/icici/daily", deprecated=True)
 async def fetch_icici_daily(request: Request) -> Any:
+    """DEPRECATED (F1.6): ticks come from the Breeze WebSocket; yfinance is the daily
+    source of record. Kept one release for manual backfills; remove after 2026-11."""
     body = await request.json()
     try:
         async with httpx.AsyncClient(timeout=_LONG_TIMEOUT) as client:
@@ -189,12 +191,16 @@ async def get_live_nifty_direct() -> Any:
 async def get_intraday(
     ticker: str,
     interval: str = Query(default="5minute"),
+    day: str | None = Query(default=None),
 ) -> Any:
     try:
+        params: dict[str, str] = {"interval": interval}
+        if day:
+            params["day"] = day
         async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
             r = await client.get(
                 f"{DATA_SVC}/live/intraday/{ticker}",
-                params={"interval": interval},
+                params=params,
             )
         _raise_upstream(r)
         return r.json()
@@ -223,6 +229,29 @@ async def db_stats() -> Any:
         raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
 
 
+@router.get("/db/archive-meta")
+async def archive_meta() -> Any:
+    try:
+        async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
+            r = await client.get(f"{DATA_SVC}/db/archive-meta")
+        _raise_upstream(r)
+        return r.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+
+
+@router.get("/db/nse-positions-meta")
+async def nse_datasets_meta() -> Any:
+    """Rows and date range of every NSE research table (bhavcopy, F&O, deals, MTF, filings, events, results)."""
+    try:
+        async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
+            r = await client.get(f"{DATA_SVC}/db/nse-positions-meta")
+        _raise_upstream(r)
+        return r.json()
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+
+
 @router.get("/db/ohlcv-meta")
 async def db_ohlcv_meta() -> Any:
     """
@@ -232,21 +261,6 @@ async def db_ohlcv_meta() -> Any:
     try:
         async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
             r = await client.get(f"{DATA_SVC}/db/ohlcv-meta")
-        _raise_upstream(r)
-        return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
-
-
-@router.get("/db/screener")
-async def db_screener(request: Request) -> Any:
-    """Proxy data-service /db/screener (Minervini T1-T8)."""
-    try:
-        async with httpx.AsyncClient(timeout=_MEDIUM_TIMEOUT) as client:
-            r = await client.get(
-                f"{DATA_SVC}/db/screener",
-                params=dict(request.query_params),
-            )
         _raise_upstream(r)
         return r.json()
     except httpx.RequestError as exc:

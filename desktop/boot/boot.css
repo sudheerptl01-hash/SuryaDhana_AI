@@ -1,0 +1,103 @@
+/* SuryaDhana boot screen: Bloomberg-style, black + amber, system monospace (no network fonts). */
+:root {
+  --bg: #000000;
+  --panel: #07090d;
+  --line: #1a1f29;
+  --text: #d6d9de;
+  --dim: #6b7280;
+  --amber: #ffb000;
+  --orange: #ff7a00;
+  --green: #22c55e;
+  --red: #ef4444;
+  --mono: "SF Mono", ui-monospace, Menlo, Monaco, "JetBrains Mono", monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.5 var(--mono);
+  -webkit-font-smoothing: antialiased;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+  overflow: hidden;
+}
+/* error text, details and commands can be selected and copied (C1-desktop-native-17) */
+.copy, .copy * { -webkit-user-select: text; user-select: text; cursor: text; }
+.strip {
+  height: 32px; /* the traffic lights sit at y = 18 for a 32 px strip (same as the terminal's title strip) */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0 84px; /* traffic-light inset */
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.sun {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--amber);
+  box-shadow: inset 0 0 0 2px var(--panel), inset 0 0 0 6px var(--amber);
+}
+.name { color: var(--amber); font-weight: 700; letter-spacing: 0.18em; }
+.ver, .dim { color: var(--dim); }
+.clock { color: var(--text); letter-spacing: 0.06em; }
+.clock .lbl { color: var(--amber); }
+main { padding: 28px 40px 16px 40px; max-width: 1100px; }
+.title-row { display: flex; align-items: baseline; gap: 16px; margin-bottom: 18px; }
+h1 { margin: 0; font-size: 15px; color: var(--orange); letter-spacing: 0.22em; font-weight: 700; }
+body[data-state="reconnecting"] h1, body[data-state="down"] h1, body[data-state="untrusted"] h1 { color: var(--red); }
+body[data-state="starting"] h1, body[data-state="norelease"] h1, body[data-state="stopped"] h1, body[data-state="tcc"] h1,
+body[data-state="notserved"] h1 { color: var(--amber); }
+.paper { color: var(--bg); background: var(--amber); padding: 0 6px; font-weight: 700; font-size: 11px; letter-spacing: 0.12em; }
+table.svc { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.svc th {
+  text-align: left; font-weight: 600; color: var(--amber); font-size: 11px; letter-spacing: 0.12em;
+  border-bottom: 1px solid var(--line); padding: 6px 12px 6px 0;
+}
+.svc td { padding: 7px 12px 7px 0; border-bottom: 1px solid #0d1117; white-space: nowrap; }
+.svc .num { text-align: right; }
+.svc td.r { white-space: normal; }
+.s.up { color: var(--green); }
+.s.down { color: var(--red); }
+.s.pend { color: var(--dim); }
+.s.starting { color: var(--amber); }
+.s.hung { color: var(--amber); }
+.s.paused { color: var(--dim); }
+dl.kv { display: grid; grid-template-columns: 170px 1fr; gap: 6px 16px; margin: 0 0 22px 0; }
+dl.kv dt { color: var(--amber); font-size: 11px; letter-spacing: 0.12em; padding-top: 2px; }
+dl.kv dd { margin: 0; }
+.ok { color: var(--green); }
+.bad { color: var(--red); }
+.warn { color: var(--orange); }
+.progress { color: var(--text); margin-bottom: 10px; }
+.caret { color: var(--amber); }
+.cursor { color: var(--amber); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cursor { animation: none; } }
+.message { color: var(--orange); margin: 6px 0 12px 0; white-space: pre-wrap; }
+.message.bad { color: var(--red); }
+.remedy {
+  margin: 4px 0 14px 0; padding: 10px 12px; max-width: 900px; white-space: pre-wrap;
+  font: 12px/1.6 var(--mono); color: #7ee787; background: #0d1117; border: 1px solid #2a3140;
+}
+.actions { display: flex; gap: 10px; margin-top: 8px; }
+[hidden] { display: none !important; }
+button {
+  font: 600 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text); background: #0d1117; border: 1px solid #2a3140; padding: 7px 14px; cursor: pointer;
+}
+button:hover { border-color: var(--amber); color: var(--amber); }
+button:focus-visible { outline: 1px solid var(--amber); outline-offset: 2px; }
+button.primary { background: var(--amber); color: #000; border-color: var(--amber); }
+button.primary:hover { background: #ffc233; color: #000; }
+button.danger { border-color: #5b1d1d; color: #fca5a5; }
+button:disabled { opacity: 0.5; cursor: wait; }
+footer {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 30px;
+  display: flex; align-items: center; gap: 18px; padding: 0 16px;
+  border-top: 1px solid var(--line); background: var(--panel); font-size: 11px;
+}
+footer #build { margin-left: auto; }

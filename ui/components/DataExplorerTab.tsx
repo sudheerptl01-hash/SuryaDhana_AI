@@ -1,5 +1,6 @@
 'use client'
 
+import { apiError } from '@/lib/errors'
 import React, { useCallback, useEffect, useState } from 'react'
 import { DataHealthBar } from './DataHealthBar'
 import { SkeletonGrid, FullTabLoader } from './LoadingOverlay'
@@ -32,7 +33,7 @@ interface ExplorerPage {
 }
 
 const NULL_COLOR = 'text-slate-600 italic'
-const TICKER_COLOR = 'text-violet-400 font-semibold'
+const TICKER_COLOR = 'text-amber-400 font-semibold'
 const DATE_COLOR   = 'text-teal-400'
 
 function cellClass(col: string, val: any) {
@@ -88,7 +89,7 @@ function DataPipelineControls() {
         errs > 0 ? 'warning' : 'success',
       )
     } catch (err: any) {
-      addToast(`Refresh failed: ${err?.response?.data?.detail || err?.message}`, 'error')
+      addToast(`Refresh failed: ${apiError(err)}`, 'error')
     } finally {
       setBusyRefresh(false)
     }
@@ -103,7 +104,7 @@ function DataPipelineControls() {
       const rows = Object.values(res.data?.fetched ?? {}).reduce((s: number, v: any) => s + Number(v), 0)
       addToast(`Historical fetch complete: ${rows} rows for ${tickers.length} tickers`, 'success')
     } catch (err: any) {
-      addToast(`Historical fetch failed: ${err?.response?.data?.detail || err?.message}`, 'error')
+      addToast(`Historical fetch failed: ${apiError(err)}`, 'error')
     } finally {
       setBusyHist(false)
     }
@@ -120,7 +121,7 @@ function DataPipelineControls() {
         'success',
       )
     } catch (err: any) {
-      addToast(`Fundamentals failed: ${err?.response?.data?.detail || err?.message}`, 'error')
+      addToast(`Fundamentals failed: ${apiError(err)}`, 'error')
     } finally {
       setBusyFund(false)
     }
@@ -142,7 +143,7 @@ function DataPipelineControls() {
         </div>
         {provider && (
           <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-slate-600 text-slate-400">
-            Provider: {provider.replace('Provider','').replace('DirectYahoo','YHoo v8').replace('ICICIBreeze','ICICI Breeze')}
+            LIVE FEED · {provider.replace('Provider','').replace('DirectYahoo','Yahoo v8').replace('ICICIBreeze','ICICI Breeze')}
           </span>
         )}
       </div>
@@ -169,7 +170,7 @@ function DataPipelineControls() {
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2">
         <ActionButton
-          label="⚡ Incremental Refresh"
+          label="↻ Incremental Refresh"
           desc="Only fetch missing bars (fast)"
           busy={busyRefresh}
           disabled={isBusy}
@@ -177,7 +178,7 @@ function DataPipelineControls() {
           onClick={handleRefreshBatch}
         />
         <ActionButton
-          label="📥 Full Historical"
+          label="⇣ Full Historical"
           desc={`${years}Y backfill (slow)`}
           busy={busyHist}
           disabled={isBusy}
@@ -185,7 +186,7 @@ function DataPipelineControls() {
           onClick={handleHistorical}
         />
         <ActionButton
-          label="📊 Fetch Fundamentals"
+          label="ƒ Fetch Fundamentals"
           desc="PE · MCap · ROCE (0.6s/ticker)"
           busy={busyFund}
           disabled={isBusy}
@@ -210,7 +211,7 @@ function ActionButton({
   color: 'indigo' | 'violet' | 'amber'; onClick: () => void
 }) {
   const colors = {
-    indigo: 'border-indigo-700/50 text-indigo-400 hover:border-indigo-500 hover:text-indigo-300 disabled:text-slate-600 disabled:border-slate-700',
+    indigo: 'border-cyan-700/50 text-cyan-400 hover:border-cyan-500 hover:text-cyan-300 disabled:text-slate-600 disabled:border-slate-700',
     violet: 'border-violet-700/50 text-violet-400 hover:border-violet-500 hover:text-violet-300 disabled:text-slate-600 disabled:border-slate-700',
     amber:  'border-amber-700/50  text-amber-400  hover:border-amber-500  hover:text-amber-300  disabled:text-slate-600 disabled:border-slate-700',
   }
@@ -329,7 +330,7 @@ export function DataExplorerTab() {
           )}
         </div>
         <span className="font-mono text-[10px] text-slate-500">
-          {data ? `${data.total_rows.toLocaleString()} rows · page ${data.page}/${data.total_pages}` : ''}
+          {data ? `${data.total_rows.toLocaleString('en-IN')} rows · page ${data.page}/${data.total_pages}` : ''}
         </span>
         <button
           onClick={() => fetch(page)}
