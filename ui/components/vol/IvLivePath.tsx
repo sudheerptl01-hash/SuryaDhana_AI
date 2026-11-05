@@ -35,6 +35,15 @@ export function IvLivePath({ symbol, enabled }: { symbol: string; enabled: boole
   if (!enabled) return null
   const pts = d?.points ?? []
   const last = pts.length ? pts[pts.length - 1] : null
+  // the store answered and holds no snapshot of this symbol today: the pilot does not cover it (it snapshots NIFTY,
+  // BANKNIFTY and the watch list's F&O names) or has not run yet. A coverage line, no chip: an OFFLINE chip here read
+  // as a dead feed on OMON's default INFY (5 Nov audit) while the live chain sat in the NSE panel below.
+  if (!err && d && d.ok && !last) {
+    return <div data-iv-pilot="not-covered" style={{ fontSize: 11, color: T.muted, margin: '0 0 10px' }}>
+      {symbol} · intraday IV path: no 15-minute snapshot today. The Breeze chain pilot covers NIFTY, BANKNIFTY and the
+      watch list&apos;s F&amp;O names (09:20–15:30, O-T6); {symbol}&apos;s live chain and NSE&apos;s IV are in the chain below.
+    </div>
+  }
   const hm = (ts: string) => ts.slice(11, 16)
   return (
     <Panel title={`${symbol} · IV today (15-min pilot)`} accent={T.cyan} pad={8} style={{ marginBottom: 12 }}

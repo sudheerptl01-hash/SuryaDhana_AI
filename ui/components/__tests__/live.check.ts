@@ -546,6 +546,8 @@ const CLOSED = { state: 'closed' as const, session_date: '2026-11-05' }
   // the stored 15-minute IV pilot is never LIVE
   const iv = fs.readFileSync(path.join(UI, 'components', 'vol', 'IvLivePath.tsx'), 'utf8')
   check('L13 IV live path: stored 15-min snapshots are DELAYED with their age, never LIVE', /state: 'delayed', source: src, asOf: lastTs, ageS/.test(iv) && !/state: 'live'/.test(iv))
+  check('L13 IV live path: a symbol with no snapshot today gets a coverage line, not an OFFLINE chip; a failed store still renders the panel',
+    /if \(!err && d && d\.ok && !last\) \{\s*return <div data-iv-pilot="not-covered"/.test(iv) && /if \(!d \|\| !d\.ok\) return \{ state: 'offline'/.test(iv))
   check('L13 negative control: the old literal is caught', /state: 'live'/.test("return { state: 'live', source: src, asOf: lastTs }"))
 }
 
