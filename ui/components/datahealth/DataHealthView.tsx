@@ -50,7 +50,7 @@ export function DataHealthView() {
     { key: 'exp', label: 'Expected by', render: r => <span style={{ color: T.muted }}>{r.expected_by ?? '—'}{r.published_ist ? ` (pub. ${r.published_ist})` : ''}</span> },
     { key: 'pages', label: 'Pages', render: r => <span style={{ color: T.muted }}>{(r.pages ?? []).join(' ')}</span> },
     { key: 'pub', label: 'Publisher', sort: r => r.publisher, render: r => <span style={{ color: T.muted }}>{r.publisher}</span> },
-    { key: 'job', label: 'Job · last run', render: r => <span style={{ color: T.muted }}>{r.job_id ?? '—'}{r.last_run ? ` · ${r.last_run.ts.slice(5, 16).replace('T', ' ')} ${r.last_run.status}` : ''}</span> },
+    { key: 'job', label: 'Job · last run', render: r => <span style={{ color: T.muted }}>{r.job_id ?? '—'}{r.last_run?.ts ? ` · ${r.last_run.ts.slice(5, 16).replace('T', ' ')} ${r.last_run.status ?? ''}` : r.last_run ? ' · never run' : ''}</span> },
     { key: 'note', label: 'What it means', render: r => <span style={{ color: T.text, whiteSpace: 'normal', display: 'inline-block', minWidth: 260 }}>{rowSentence(r)}</span> },
   ], [])
   const n = staleCount(d)

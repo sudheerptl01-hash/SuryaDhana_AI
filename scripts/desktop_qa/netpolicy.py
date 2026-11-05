@@ -303,7 +303,10 @@ def partition_structure(tab: str | None, field: str, side: str, items: list[str]
 
 APP_ERROR_TEXT = re.compile(
     r"Application error: a client-side exception|Unhandled Runtime Error|Client-side Exception|"
-    r"Uncaught Client Exception|Something went wrong", re.IGNORECASE)
+    r"Uncaught Client Exception|Something went wrong|"
+    # the terminal's own TabErrorBoundary (ui/components/shell/TabErrorBoundary.tsx): a sub-view that throws shows this and
+    # nothing reaches the console as an uncaught error (SYS › DATA, 5 Nov 2026: invisible to the 43-page audit)
+    r"\bfailed to render\b", re.IGNORECASE)
 
 
 def is_stream_path(path: str) -> bool:

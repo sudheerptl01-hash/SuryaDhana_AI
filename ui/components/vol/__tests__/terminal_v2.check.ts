@@ -271,6 +271,10 @@ function check(name: string, cond: unknown, extra?: unknown): void {
   check('H4 the server note wins when sent', H.rowSentence({ ...row('x', 'red', 3), note: 'stored 30 Oct · expected by 21:00 · 4 sessions behind' }).endsWith('4 sessions behind'))
   const view = src('components/datahealth/DataHealthView.tsx') + src('components/datahealth/healthModel.ts')
   check('H5 no composite score in the data view', !/\bscore\b/i.test(view.replace(/composite score|never a composite score|no score/gi, '')))
+  // 5 Nov: a catalogued job that never ran has last_run {ts: null, …}: `r.last_run.ts.slice` threw and the whole SYS › DATA view
+  // showed FAILED TO RENDER (the 43-page audit visits ?tab=system, not the sub-view)
+  check('H7 a never-run job (last_run.ts null) renders "never run", never throws', view.includes('r.last_run?.ts ?') && !/r\.last_run\.ts\.slice/.test(view.replace('r.last_run?.ts ? ` · ${r.last_run.ts.slice', ''))
+    && src('components/datahealth/healthModel.ts').includes('last_run: { ts: string | null'))
   check('H6 the header DATA n STALE chip opens SYS › DATA', src('components/MarketCommandHeader.tsx').includes('<DataStaleChip />') && src('components/datahealth/DataHealthView.tsx').includes("setSubInUrl('data')")
     && src('components/SystemTelemetry.tsx').includes("useSubView(['system', 'data'] as const, 'system')"))
 }
@@ -310,7 +314,8 @@ function check(name: string, cond: unknown, extra?: unknown): void {
   const sb = src('components/StrategyBuilder.tsx')
   check('P6 OSTR opens on the active symbol and seeds the picked strikes once', sb.includes("useState(() => readActiveSymbol()?.symbol ?? 'NIFTY')") && sb.includes('seedFromStrikes(seed.strikes, chain)'))
   check('P6 OSTR margin: the route answers, the chip names BREEZE / NSE SPAN FILE / HEURISTIC, the 4.8× error is printed', sb.includes('postMargin(symbol, body, forward)')
-    && sb.includes('source={marginSource(margin, marginErr)}') && sb.includes('data-ostr-heuristic-error') && sb.includes('error_factor_measured ?? 4.8'))
+    && sb.includes('source={marginSource(margin, marginErr, ul.market)}') &&   // cd8778e: the market state makes the chip CLOSE after hours
+    sb.includes('data-ostr-heuristic-error') && sb.includes('error_factor_measured ?? 4.8'))
   check('P6 negative control: the old panel was titled ESTIMATE with no source', !sb.includes('title="Margin & costs — ESTIMATE"'))
   check('P7 EVTS: the IV-crush ledger; the profile: the IV strip', src('components/EventCalendar.tsx').includes('<CrushLedger />') && src('components/StockProfile.tsx').includes('<IvStrip symbol={p.symbol}'))
   check('P7 DESK: Book vs NIFTY attribution, honest in cash', src('components/DecisionDesk.tsx').includes('<DeskAttribution />') && src('components/drivers/DeskAttribution.tsx').includes('Book = liquid fund since'))

@@ -9,7 +9,8 @@ export type HealthState = 'live' | 'fresh' | 'amber' | 'red' | 'gap'
 export interface HealthRow {
   id: string; label: string; pages: string[]; publisher: string; published_ist: string | null; expected_by: string | null
   as_of: string | null; lag_sessions: number | null; state: HealthState | string; unrecoverable: boolean; job_id: string | null
-  last_run: { ts: string; status: string; ms: number } | null; next_run: string | null; catchup_at: string | null
+  // last_run: a catalogued job that never ran comes back with all three fields null (SYS › DATA crashed on it, 5 Nov)
+  last_run: { ts: string | null; status: string | null; ms: number | null } | null; next_run: string | null; catchup_at: string | null
   note: string; dictionary_anchor: string | null; badge?: string; max_age_sessions?: number | null
 }
 export interface DataHealth {
