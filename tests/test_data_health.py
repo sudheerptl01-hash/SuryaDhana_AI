@@ -114,6 +114,12 @@ def test_state_rule_fresh_amber_red_gap_with_negative_controls():
     assert reads.state_for(wk, date(2026, 10, 30), now)["state"] == "fresh"
     assert reads.state_for(wk, date(2026, 10, 24), now)["state"] == "amber"
     assert reads.state_for(wk, date(2026, 10, 1), now)["state"] == "red"
+    # static (a dated constant, the 6.5 % rate_curve seeded 2019-10-01): in force until replaced, never aged into red
+    st = reads.state_for(_row(cadence="static", expected_by=None, max_age_sessions=400), date(2019, 10, 1), now)
+    assert st["state"] == "fresh" and "in force since 2019-10-01" in st["note"]
+    # negative controls: a static row with nothing stored is still red; a monthly row of the same age is still red
+    assert reads.state_for(_row(cadence="static", expected_by=None, max_age_sessions=400), None, now)["state"] == "red"
+    assert reads.state_for(_row(cadence="monthly", expected_by=None, max_age_sessions=400), date(2019, 10, 1), now)["state"] == "red"
 
 
 # ── ingest_log ─────────────────────────────────────────────────────────────────────────────────────────────────────

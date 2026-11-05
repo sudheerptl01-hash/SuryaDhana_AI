@@ -130,6 +130,12 @@ def state_for(row: dict[str, Any], as_of: date | None, now_ist: datetime, *, hol
         out["note"] = "nothing stored"
         return out
     age = (now_ist.date() - as_of).days
+    if cadence == "static":
+        # a dated constant (the 6.5 % rate_curve, O-T5) holds until a new dated row replaces it: its effective date is not
+        # an age (5 Nov: the DATA page read the 2019-10-01 seed as "2592 days old", red)
+        out["state"] = "fresh"
+        out["note"] = f"dated constant in force since {as_of.isoformat()} (a change is a new dated row)"
+        return out
     budget = int(row["max_age_sessions"])
     out["state"] = "fresh" if age <= budget else ("amber" if age <= 2 * budget else "red")
     out["note"] = f"{age} days old (budget {budget})"
