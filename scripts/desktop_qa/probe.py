@@ -180,6 +180,7 @@ class TabProbe:
         self.active: int | None = None   # epoch of the tab currently shown (None between tabs)
         self.last = 0                    # most recent epoch (console events in the gap belong to it)
         self.reqs: dict[Any, _Req] = {}
+        self.drained_at: dict[int, float] = {}   # epoch → when the drain returned (requests after it were cut by leave)
         self.console: list[tuple[int, str, str, str]] = []   # (epoch, type, text, source url)
         self.page_errors: list[tuple[int, str]] = []
         self.crashes: list[int] = []
@@ -328,6 +329,7 @@ class TabProbe:
                 if full_page:
                     self.page.screenshot(path=str(screenshot_dir / f"{shot_prefix}{tab}-full.png"), full_page=True)
             out["pending_at_leave"] = self.drain(epoch, drain_timeout_s)
+            self.drained_at[epoch] = time.perf_counter()
         except Exception as exc:  # noqa: BLE001 - navigation timeout, crash, closed target … (reported, not raised)
             out["error"] = f"{type(exc).__name__}: {exc}"[:500]
             out["timing"]["total_ms"] = ms()
@@ -360,7 +362,8 @@ class TabProbe:
             if (rec.status is not None and rec.status >= 400) or rec.failure:
                 verdict = classify_request_failure(url=rec.url, base_origin=self.base_origin,
                                                    status=rec.status if rec.status and rec.status >= 400 else None,
-                                                   failure_text=rec.failure, left_tab=rec.left_tab)
+                                                   failure_text=rec.failure, left_tab=rec.left_tab,
+                                                   started_after_drain=epoch in self.drained_at and rec.t_start >= self.drained_at[epoch])
                 item = {"method": rec.method, "url": rec.url, "status": rec.status, "failure": rec.failure,
                         "resource_type": rec.resource_type, "kind": verdict.kind, "reason": verdict.reason}
                 item["seam"] = origin_of(rec.url) == self.base_origin and is_platform_seam(_path(rec.url))

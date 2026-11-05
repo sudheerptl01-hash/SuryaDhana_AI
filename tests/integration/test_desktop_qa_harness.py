@@ -108,6 +108,24 @@ def test_classify_request_failure(url, status, failure, left, expect_fail, kind)
     assert (v.failure, v.kind) == (expect_fail, kind)
 
 
+def test_a_poll_started_after_the_drain_is_cut_by_the_harness_not_a_failure():
+    """5 Nov: MOV's 2 s quote poll began between the drain's last check (nothing pending) and leave()."""
+    url = f"{BASE}/api/live/quotes?symbols=TCS"
+    v = netpolicy.classify_request_failure(url=url, base_origin=BASE, status=None, failure_text="net::ERR_ABORTED",
+                                           left_tab=True, started_after_drain=True)
+    assert (v.failure, v.kind) == (False, "poll_cut_at_leave")
+    # negative controls: pending through the drain is still a failure; an HTTP error or a refused connection after
+    # the drain is still a failure; an abort while the tab is open is still a failure
+    assert netpolicy.classify_request_failure(url=url, base_origin=BASE, status=None, failure_text="net::ERR_ABORTED",
+                                              left_tab=True, started_after_drain=False).kind == "aborted_by_navigation"
+    assert netpolicy.classify_request_failure(url=url, base_origin=BASE, status=500, failure_text=None, left_tab=True,
+                                              started_after_drain=True).failure is True
+    assert netpolicy.classify_request_failure(url=url, base_origin=BASE, status=None, failure_text="net::ERR_CONNECTION_REFUSED",
+                                              left_tab=True, started_after_drain=True).failure is True
+    assert netpolicy.classify_request_failure(url=url, base_origin=BASE, status=None, failure_text="net::ERR_ABORTED",
+                                              left_tab=False, started_after_drain=True).kind == "aborted_in_tab"
+
+
 def test_stream_allowlist_is_exactly_six_paths():
     ok = ["/api/telemetry/logs/stream", "/api/pipeline/ml-stream/x", "/api/pipeline/rl-stream/x", "/api/ml/train/stream",
           "/api/analytics/backtest/stream", "/api/analytics/wfo-backtest/stream"]

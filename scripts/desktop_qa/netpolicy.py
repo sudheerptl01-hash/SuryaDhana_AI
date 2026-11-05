@@ -335,10 +335,14 @@ class FailureVerdict:
 
 
 def classify_request_failure(*, url: str, base_origin: str, status: int | None, failure_text: str | None,
-                             left_tab: bool) -> FailureVerdict:
+                             left_tab: bool, started_after_drain: bool = False) -> FailureVerdict:
     """Classify one request that ended in HTTP >= 400 (``status``) or a network failure (``failure_text``).
 
     ``left_tab`` is True when the failure surfaced after the harness navigated away from the request's tab.
+    ``started_after_drain`` is True when the request began after the drain had found nothing in flight, in the
+    moment before the harness navigated away: a poll the harness's own navigation cut, never one that hung (5 Nov:
+    MOV's 2 s quote poll fired between the drain's last check and leave(), and was reported as 'still pending after
+    the drain window').
     """
     parts = urlsplit(url)
     origin = f"{parts.scheme}://{parts.netloc}"
@@ -356,6 +360,9 @@ def classify_request_failure(*, url: str, base_origin: str, status: int | None, 
                 return FailureVerdict(False, "stream_abort_on_navigation",
                                       f"{text} (allowlisted: stream torn down by navigation)")
             return FailureVerdict(True, "stream_abort_in_tab", f"{text} (stream aborted while the tab was still open)")
+        if left_tab and started_after_drain:
+            return FailureVerdict(False, "poll_cut_at_leave",
+                                  f"{text} (started after the drain found nothing pending; cut by the harness leaving)")
         if left_tab:   # the probe drains first, so this request was still pending after dwell + drain window
             return FailureVerdict(True, "aborted_by_navigation",
                                   f"{text} (still pending after the drain window; aborted when the harness left)")
