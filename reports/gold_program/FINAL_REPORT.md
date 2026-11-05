@@ -11,7 +11,7 @@ log and the gold one-liners on BRF / WEI moved here (repetition rule T9); CMDT l
 |---|---|---|
 | CFTC COT for COMEX gold, who is long / short, what got closed, weekly | POSITIONING p.hero / p.whois / p.history / p.crowd / p.decomp; WEEKLY w.whodid; HEALTH H3 clause; BRF/WEI line; Saturday Telegram digest | `context` — "describes, does not predict" (G-STUDY: 0 of 69 rules beat buy-and-hold) |
 | Daily "which positions got closed" | DAILY d.quadrant (OI × price quadrants, 20-day tape); POSITIONING p.daily.comex (CME VOI by product, T+1) and p.daily.mcx (per contract, selected family, "over N sessions" when a session is missing) | `context` |
-| OTC deals, supply/demand, physical | PHYSICAL ph.ladder (COMEX → USD/INR → landed → duty → duty-paid → IBJA → MCX, one clock per number), ph.india, ph.shanghai (same-date pair), ph.etf (GLD/IAU, WGC with attribution), ph.official (IMF holders, troy ounces → Moz / t), ph.otc (LBMA turnover, vaults, EFP), ph.comex.stocks link (O-2) | `context` / `arithmetic`; WGC/LBMA rows wait for O-1 |
+| OTC deals, supply/demand, physical | PHYSICAL ph.ladder (COMEX → USD/INR → landed → duty → duty-paid → IBJA → MCX, one clock per number), ph.india, ph.shanghai (same-date pair), ph.etf (GLD/IAU, WGC with attribution), ph.official (IMF holders, troy ounces → Moz / t), ph.otc (LBMA turnover, vaults, EFP), ph.comex.stocks link (O-2) | `context` / `arithmetic`; WGC / LBMA displayed with attribution (O-1 default) |
 | Kitco-style chart | DAILY d.24h / d.3day / d.tape from stored 1-minute GC=F bars with session bands (UTC offsets fixed in wave 1c); Kitco stays a link | `arithmetic` |
 | Days / weeks / months | DAILY, WEEKLY (grid, COT, IBJA, GLD), MONTHLY (return ladder in $, ₹, basket; seasonality grid with the GS-P4 verdict; official sector bars) | `context` |
 | Health check for gold | HEALTH h.verdict: rule-based sentence from the gauges (week, driver GOLD-SPECIFIC / DOLLAR-DRIVEN only when both legs exist, funds, India basis, roll, ETF), every threshold visible in the P layer, ends "describes, does not predict"; no score | `context` |
@@ -41,8 +41,10 @@ Two feeds that had never delivered were fixed on the way: the CME FTP `229` pass
 
 ## What is still open (owner)
 
-- **O-1** terms posture for WGC / LBMA rows (display with attribution on the private terminal, or links only): the ETF
-  region flows, LBMA turnover and vault panels stay empty until then.
+- **O-1** confirm the terms posture for WGC / LBMA data: today the page DISPLAYS them with attribution (the PM's default) —
+  verified live 5 Nov 10:10: WGC weekly ETF flows (130 rows), India ETF holdings 124.4 t, WGC supply & demand to Q2 2026
+  (jewellery 310 t, central banks 289 t, mine 966 t), LBMA OTC turnover $964 bn (week of 16 Oct), London vaults 9,821 t
+  (Sep, +189 t). If you prefer links only, the catalog rows switch to LINK-ONLY and the panels say so.
 - **O-2** CME browser block: bulletin settlements and warehouse stocks stay LINK-ONLY; the strip prints the matched month's
   last trade labelled "Yahoo, not settlement".
 - **O-3** confirm the 15 % duty at CBIC (dated constant since 13 May 2026).

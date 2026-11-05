@@ -83,8 +83,9 @@ answered 503 — fixed by stop ui-api → restart data-service → start ui-api,
 CLAUDE.md "Restart order". **Backfill** (steps 1–5, 8–10 of `/db/gold/backfill-plan`, 13 min): catalog 211 rows, COT
 6,417 (1986→), Treasury 48,822, FRED daily 123,465 / weekly 21,542 / monthly 6,538, Atlanta Fed 10,942, ETF 5,524 (2004→),
 SGE 5,110, CME calendar 266 + product reference 125 + today's VOI/EFRP, Yahoo daily 125,779 + 1-minute bars, IBJA 36,
-RBI 12, margins 15, derived 487; WGC / LBMA rows 0 until O-1; the two long CME histories (VOI 2014→, EFRP 2017→, ≈ 2 h each)
-run 5 Nov after 10:00. **Acceptance:** parity old vs new release (both engines) 38 PARITY + 4 DIFF (three are the harness
+RBI 12, margins 15, derived 487. WGC / LBMA showed 0 *inserted* because they were already stored (re-checked 5 Nov 10:10:
+flows 2,760, holdings 5,914, S&D 660, premiums 516, LBMA turnover and vaults all present and served with attribution). The two
+long CME histories (VOI 2014→, EFRP 2017→, ≈ 2 h each) started 5 Nov 10:04. **Acceptance:** parity old vs new release (both engines) 38 PARITY + 4 DIFF (three are the harness
 blocking POSTs on the baseline side, one is the pre-open desk leaving CMDT by design) + GOLD NEW
 (`reports/gold_program/qa/parity_20261104/SUMMARY.md`); 43-page audit Chromium 43/43, WebKit 42/43 with FUND's only miss
 a pending `/api/health` probe that passed on re-run (`qa/ui_audit_20261104*`). The live HEALTH line at 23:35 read "FIRM
