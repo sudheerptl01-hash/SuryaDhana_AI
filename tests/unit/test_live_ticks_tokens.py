@@ -264,13 +264,14 @@ def test_eviction_order_holdings_then_pins_then_most_recent_requests():
     clock = [1_000.0]
     pins = ["NIFTY 50", "NIFTY BANK", "INDIA VIX"] + [f"S{i:03d}" for i in range(900, 950)]   # index + 50 members
     obj, prov, fake = make(clock, holdings=["RELIANCE"], pins=pins)
-    for i in range(400):
+    n = lt.MAX_SYMBOLS + 100                                        # more requests than the cap, whatever it is set to
+    for i in range(n):
         clock[0] += 1
         obj.ensure([f"S{i:03d}"])
     target = obj._target_set()
     assert len(target) == lt.MAX_SYMBOLS
     assert target[0] == "RELIANCE" and target[1:1 + len(pins)] == pins
-    assert "S399" in target and "S000" not in target                # most recent requests win the remaining slots
+    assert f"S{n - 1:03d}" in target and "S000" not in target        # most recent requests win the remaining slots
     connect(obj, prov)
     subs = [c for c in fake.calls if c[0] == "subscribe"]
     assert all(len(c[1]) <= lt.SUB_CHUNK for c in subs) and sum(len(c[1]) for c in subs) == lt.MAX_SYMBOLS
@@ -379,3 +380,48 @@ def test_lost_session_parks_disconnected_and_kill_switch_defaults_off(monkeypatc
     assert fake.handlers[-1].sio.connected is False
     monkeypatch.delenv("LIVE_TICKS", raising=False)
     assert lt.enabled() is False                                    # still default OFF in code; the PM flips .env
+
+
+# ── 5 Nov: a restart after the close keeps today's last prices (tick-store priming) ──────────────────────────────────
+
+def _tick_parquet(day_dir, rows):
+    import pandas as pd
+
+    day_dir.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows, columns=["symbol", "ts", "price", "qty", "ttq", "bid", "ask", "prev_close"]).to_parquet(day_dir / "part-0000.parquet")
+
+
+def _closed_engine(clock, market_open=False):
+    return lt.LiveTicks(lambda: None, clock=lambda: clock[0], enabled_fn=lambda: False, market_hours_fn=lambda: market_open)
+
+
+def test_after_the_close_a_restart_primes_todays_last_tick_per_symbol(tmp_path):
+    from datetime import datetime as _dt
+
+    t_1730 = _dt.fromisoformat("2026-11-05T17:30:00+05:30").timestamp()
+    _tick_parquet(tmp_path / "2026-11-05", [
+        ["RELIANCE", "2026-11-05T15:29:58+05:30", 1310.0, 10, 9_000_000, 1309.9, 1310.1, 1311.0],
+        ["RELIANCE", "2026-11-05T15:29:59+05:30", 1316.0, 5, 9_100_000, 1315.9, 1316.1, 1311.0],
+        ["NIFTY 50", "2026-11-05T16:30:51+05:30", 24536.6, None, None, None, None, 23960.6],
+        ["TCS", "2026-11-05T15:29:50+05:30", 3900.0, 1, 100, None, None, 3890.0],
+    ])
+    obj = _closed_engine([t_1730])
+    obj._ticks["TCS"] = {"price": 3999.0, "ts": t_1730 - 5, "prev_close": 3890.0}       # a tick this process received
+    assert obj.prime_from_store(tmp_path) == 2
+    snap = obj.snapshot(["RELIANCE", "NIFTY 50", "TCS"])
+    rel = snap["RELIANCE"]
+    assert rel["price"] == 1316.0 and rel["prev_close"] == 1311.0 and rel["ttq"] == 9_100_000
+    assert rel["ts"] == _dt.fromisoformat("2026-11-05T15:29:59+05:30").timestamp() and rel["ltt_epoch"] == rel["ts"]
+    assert snap["NIFTY 50"]["price"] == 24536.6
+    assert snap["TCS"]["price"] == 3999.0                                                # negative control: never over a real tick
+
+
+def test_priming_never_runs_in_session_or_without_todays_store(tmp_path):
+    from datetime import datetime as _dt
+
+    t_1100 = _dt.fromisoformat("2026-11-05T11:00:00+05:30").timestamp()
+    _tick_parquet(tmp_path / "2026-11-05", [["RELIANCE", "2026-11-05T10:59:00+05:30", 1316.0, 5, 1, None, None, 1311.0]])
+    live = _closed_engine([t_1100], market_open=True)
+    assert live.prime_from_store(tmp_path) == 0 and live.snapshot() == {}   # a primed tick could pass for quiet-live
+    t_next = _dt.fromisoformat("2026-11-06T08:30:00+05:30").timestamp()
+    assert _closed_engine([t_next]).prime_from_store(tmp_path) == 0          # next morning: yesterday's store is never today's

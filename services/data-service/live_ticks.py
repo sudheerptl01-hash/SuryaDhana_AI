@@ -33,6 +33,7 @@ ensure() after the provider reconnects (08:00 login or /provider/configure) star
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import random
 import re
 import threading
@@ -243,6 +244,7 @@ class LiveTicks:
         self._sec_counts = [0] * 60
 
         self._thread: Optional[threading.Thread] = None
+        self._primed = False                            # today's tick store read once per process (outside the session)
         self._stop = threading.Event()
         self._resync = threading.Event()
         self._ws_up = False
@@ -261,6 +263,9 @@ class LiveTicks:
         Cheap and idempotent — called on every GET /live/ticks and /live/quotes poll."""
         now = self._clock()
         new = False
+        if not self._primed:                            # once per process, off the request path
+            self._primed = True
+            threading.Thread(target=self._prime_once, name="live-ticks-prime", daemon=True).start()
         with self._lock:
             for s in _normalize(symbols)[:MAX_SYMBOLS]:
                 if s not in self._requested and s not in self._subscribed:
@@ -278,6 +283,56 @@ class LiveTicks:
         else:
             self.state = OFF
         return self.status()
+
+    def prime_from_store(self, base_dir: Optional[Path] = None, *, now: Optional[float] = None) -> int:
+        """Outside the session only: today's last persisted tick per symbol (the TICK_PERSIST store,
+        data/ticks/<IST date>/part-*.parquet) into the cache, never over a tick this process received.
+
+        A data-service restart after the close otherwise dropped every stock's last price until the EOD files
+        (5 Nov: STALE · the 4 Nov close from the 16:19 restart until the ~18:30 bhavcopy). In session it does nothing:
+        a primed tick a minute old could pass for 'quiet live' on a socket that has not ticked yet. Returns the count."""
+        if self._market_hours():
+            return 0
+        t = now if now is not None else self._clock()
+        day_dir = (base_dir or tick_store.default_base_dir()) / datetime.fromtimestamp(t, IST).date().isoformat()
+        files = sorted(str(f) for f in day_dir.glob("part-*.parquet"))
+        if not files:
+            return 0
+        import duckdb                                    # an in-memory connection over the parquet files, never market.duckdb
+
+        con = duckdb.connect()
+        try:
+            rows = con.execute("""SELECT symbol, arg_max(price, ts), arg_max(prev_close, ts), arg_max(ttq, ts),
+                                         arg_max(bid, ts), arg_max(ask, ts), max(ts)
+                                  FROM read_parquet(?) WHERE price IS NOT NULL AND symbol IS NOT NULL GROUP BY symbol""",
+                               [files]).fetchall()
+        finally:
+            con.close()
+        n = 0
+        with self._lock:
+            for sym, price, prev, ttq, bid, ask, ts in rows:
+                if sym in self._ticks:
+                    continue
+                try:
+                    epoch = datetime.fromisoformat(str(ts)).timestamp()
+                except ValueError:
+                    continue
+                tick: dict[str, Any] = {"price": float(price), "ts": epoch, "as_of": str(ts), "ttq": _num(ttq), "ltt": None,
+                                        "ltt_epoch": epoch, "bid": _num(bid), "ask": _num(ask), "open": None, "high": None,
+                                        "low": None, "avg_price": None, "ltq": None, "token": None, "primed": True}
+                if prev:
+                    tick["prev_close"] = float(prev)
+                self._ticks[sym] = tick
+                n += 1
+        return n
+
+    def _prime_once(self) -> None:
+        try:
+            n = self.prime_from_store()
+            if n:
+                logger.info("live ticks: primed today's last prices from the tick store", symbols=n)
+        except Exception as exc:  # noqa: BLE001 — a missing / unreadable store only means no priming
+            logger.warning("live ticks: tick-store priming failed", error=str(exc)[:160])
 
     def snapshot(self, symbols: Optional[list[str]] = None) -> dict[str, dict]:
         now = self._clock()
