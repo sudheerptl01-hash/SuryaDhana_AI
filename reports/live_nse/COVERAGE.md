@@ -77,3 +77,21 @@
 - OSTR's seed chain waited on NSE's 5 Nov F&O bhavcopy (404 at 17:40). A watcher polled NSE's archive every 5 min. NSE published at 18:46,
   and the file was ingested within a minute (224 rows), followed by today's `iv_eod` (FOVOLT, contract delta, combined OI, index closes).
   OSTR reads CLOSE · 05 NOV, OMON reads EOD · 05 NOV, and NIFTY's IV history ends 5 Nov (iv30 12.80). No STALE or OFFLINE chip remains.
+
+## Evening (audit `ui_audit_20261105_evening`, 21:41–21:54 IST)
+
+43/43 pages pass in Chromium and WebKit (console errors 0, page errors 0, failed requests 0):
+- No NSE price reads LIVE. The 7 LIVE chips per engine are the controller clock, the service probes, the live-service probe, the MCX
+  session clock and MCX gold on Breeze (MCX trades until 23:30).
+- 232 of 241 dated NSE / stored chips read 5 Nov. The other 9 are dated by design: the MTF report is T+1 (03 Nov; 4 Nov's file comes
+  with the 22:45 pass), DESK's monthly brief carries the 30 Oct month-end signal, MEMB's monthly drivers view the November bucket,
+  shareholding is quarterly (27 Oct), EVTS results run to 04 Nov until the 22:45 pass, one IV event is dated by its event (07 Aug),
+  FRED / EIA are not NSE, and `ml_labels` belongs to the dormant pipeline.
+- OMON, EVTS, MEMB, DESK and INSD: no OFFLINE or STALE chip.
+- Evening jobs: EOD pipeline (through 5 Nov), 19:25 drivers, 19:30 Desk (last mark 5 Nov), the 20:30 pass with `iv_eod` (685 expiry,
+  2,474 surface, 224 summary rows), 21:50 insider filings (13 new).
+- The Mac restarted at about 19:52 (controller down 19:34–19:55). The 19:50 S1 shadow and the 19:45 news track record were missed,
+  and neither had run since 30 Oct (the 31 Oct–4 Nov outage's catch-up left them to "the next run"). Both were re-run at 21:40 on the
+  19:20 snapshot; the shadow's data-health row is fresh again.
+- ICICI: the forced login at 20:28 logged in on the authenticator code alone (no SMS), so the 08:00 job can start the Breeze feed
+  unattended. The market-hours confirmation is the 6 Nov 09:26 acceptance run.

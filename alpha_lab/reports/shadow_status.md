@@ -1,11 +1,11 @@
 # S1 paper shadow (started 2026-10-15; PAPER ONLY, no orders)
-As of 2026-11-04 · regime now: RISK-OFF (NIFTY 23,961 vs 200-DMA 24,006)
+As of 2026-11-05 · regime now: RISK-ON (NIFTY 24,537 vs 200-DMA 24,000)
 
 | Track | NAV (100 = start) | vs NIFTY |
 |---|---|---|
-| S1 | 100.07 | -4.12 |
-| S1H | 98.51 | -5.68 |
-| NIFTY | 104.19 | — |
+| S1 | 100.09 | -6.60 |
+| S1H | 97.15 | -9.54 |
+| NIFTY | 106.69 | — |
 
 Last signal 2026-10-30 → RISK-OFF · book: liquid fund (risk-off)
 Rebalances so far: 1 · S1 costs paid ₹0

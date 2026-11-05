@@ -1,9 +1,24 @@
 # Improvement log: terminal polish sprint (11–15 Oct 2026)
 
-Last updated Thu 5 Nov 2026 14:10 IST (live NSE program + Terminal v2 wave 1 deployed 13:01, entry below; GOLD program
+Last updated Thu 5 Nov 2026 22:00 IST (evening checks and the unattended ICICI login, entry below; live NSE program + Terminal v2 wave 1 deployed 13:01; GOLD program
 deployed on the night of 4 Nov; the Terminal v2 research round is written up in `reports/terminal_v2/`). The 11–15 Oct
 sprint entries further down were run and checked against live data at the time; today the terminal has 43 pages and
 `scripts/tests` collects 414 tests.
+
+**5 Nov 2026, evening (20:28–22:00): unattended ICICI login proven; evening checks.**
+- ICICI auto-login: the Keychain item `ICICI_TOTP_SECRET` held a password-like value (not base32), so the 15:47 check stopped
+  before ICICI. The owner supplied a Google Authenticator export; the key was decoded offline and stored in the Keychain without
+  being printed. A forced login at 20:28 logged in on the authenticator code alone in about 14 s (no SMS); Breeze connected.
+- Closed-market audit `ui_audit_20261105_evening`: 43/43 in Chromium and WebKit; no NSE chip reads LIVE; 232 of 241 dated chips
+  read 5 Nov and the other 9 are dated by design (`reports/live_nse/COVERAGE.md`, evening section).
+- The Mac restarted at about 19:52. The S1 shadow and the news track record had not run since 30 Oct: after the 31 Oct–4 Nov
+  outage the catch-up deferred them to "the next run", and tonight's 19:45 / 19:50 runs fell in the downtime. Both were re-run at
+  21:40 on the 19:20 snapshot. Open: a controller that starts inside the EOD window skips catch-up, so a job whose time has already
+  passed waits a full day.
+- CME: the VOI history is complete (2016-01-12 → 2026-11-03). The EFRP backfill (2017 →), cut by the 15:32 data-service restart,
+  was restarted at 21:42 (2,198 files, finishing before the 02:15 backup).
+- Open (gold, not NSE): `gold_india_ibja` reads amber at 18:30 because the parser reads IBJA's "previous 30 days" tables, which
+  carry today's rate only the next day.
 
 **5 Nov 2026, 13:01–14:05: live NSE program and Terminal v2 wave 1 DEPLOYED (the morning entry below is history).**
 `LIVE_TICKS=1`; data-service, ui-api and master-controller run the v2 code; UI release `20261105-140130-f4c884e`. Breeze
@@ -136,6 +151,21 @@ build time; mypy / ruff clean. `docs/GOLD_DATA_DICTIONARY.md` regenerated (214 c
 `SGE_AUTD_OI`, `SGE_AUTD_DIRECTION`, `SHFE_AU_FRONT_OI` now have verdict rows, C-BEGINNER-16); `OWNER_GUIDE.md` §2 / §4
 updated (the label is the larger leg; start-here and aliases). Still B4B's: the dotted terms on HEALTH / DAILY / WEEKLY /
 MONTHLY / CONTRACTS (C-BEGINNER-7) and the panel-title routines (C-BEGINNER-8, in `learn.ts`).
+
+**5 Nov 21:00–22:00: the 43-page expert review and two fixes it found.** Every page (43 + the GOLD, DERV › VOL and SYS ›
+DATA sub-views, OMON/OSTR/DERV/CHRT also on NIFTY and BANKNIFTY) was captured at 1600 px and read by seven analysts as a daily
+options trader / PM would, rated by two independent raters, and synthesised (desk note, daily routine, decision frameworks,
+issues, glossary) into a private illustrated review for the owner. Re-rating (`reports/terminal_v2/RATING_20261105.md`):
+overall **6.0 → 6.5**; UI 7.0 → 7.5 · architecture 5.5 → 6.5 · data freshness 5.0 → 6.0 · platform 5.5 → 5.5 · options & vol
+5.0 → 6.5 · index intelligence 6.0 → 7.0 · commodities 5.5 → 6.0 · research & AI 6.0 → 6.0. Fixed the same night:
+`/api/market/events` kept the first 500 of 1,737 merged rows, i.e. only the past week, so EVTS read "0 upcoming" and every NEXT
+EVENT column (DEAL, INSD, EQS, BRF) was blank — it now keeps upcoming events first (`keep_nearest_events`, default 2,000; 892
+upcoming tonight; d10cc2c, ui-api restarted 21:35); SYS › DATA crashed on a never-run job's null `last_run.ts` — guarded, typed,
+and the audit's `APP_ERROR_TEXT` now matches the terminal's own "FAILED TO RENDER" box (b2b12a4, UI release 20261105-212905).
+Open from the review (ranked in the private issues list): the MCX settlement proxy one session stale (gold fair-open), four
+volatility labels (YZ vs close-to-close RV, near-expiry skew vs the 30-day percentile, two ATM IVs per expiry, volume in
+contracts vs OI in shares), FII/DII multi-day sums skipping missing sessions, EQS prices from an old snapshot, the S1 shadow red
+after the 19:34–19:55 controller outage, OSTR single-expiry, alerts price-only, phone overflow.
 
 **5 Nov 03:50: critics' fix round (wave 1c) deployed.** The three critics (reports/gold_program/critics/: trader HOLD 4.5,
 beginner PUBLISH-WITH-FIXES 6, data HOLD 4; 75 findings, 19 blockers) drove a five-builder round (`build/wave1c.md`). Fixed
