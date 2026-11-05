@@ -191,7 +191,10 @@ export function Compare() {
   ]
 
   // PLAN §0.5: the newest stored close across the compared series is the panels' as-of
-  const compareSrc = sourceOf(Object.values(data).filter((v): v is Series => v !== 'error').map(v => v.dates[v.dates.length - 1] ?? '').sort().pop() || null, { source: 'NSE closes' })
+  // D11 (reports/live_nse): these daily closes come from the quotes route's Yahoo chart history, not NSE's bhavcopy —
+  // the chip says so (EOD daily data with its last date); the move to stored NSE closes is an open item for the data side
+  const compareSrc = sourceOf(Object.values(data).filter((v): v is Series => v !== 'error').map(v => v.dates[v.dates.length - 1] ?? '').sort().pop() || null,
+    { source: 'Yahoo daily closes', hint: 'adjusted daily closes from the quotes route (Yahoo chart history), end of day; not a live feed' })
   return (
     <div>
       <PageHeader code="COMP" title="Compare"

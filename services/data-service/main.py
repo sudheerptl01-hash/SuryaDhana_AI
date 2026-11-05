@@ -220,7 +220,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 # ── Fetch quote (synchronous I/O → thread pool) ───────────────
                 quote = None
                 symbol = None
-                for cand in ([working] if working else candidates):
+                # LV-DATA: while the websocket carries NIFTY 50 (a tick <= 5 s old) publish that tick in the REST quote's
+                # shape instead of calling get_quotes: zero Breeze REST calls (L-INVENTORY: ~1,580 calls/day, 32 % of quota).
+                _lt = live_ticks_mod.instance()
+                _t = _lt.snapshot(["NIFTY 50"]).get("NIFTY 50") if _lt is not None else None
+                if _t and _t.get("ts_age_s") is not None and _t["ts_age_s"] <= live_ticks_mod.FRESH_S:
+                    quote = {"exchange_code": "NSE", "stock_code": "NIFTY", "ltp": _t["price"], "open": _t.get("open"),
+                             "high": _t.get("high"), "low": _t.get("low"), "previous_close": _t.get("prev_close"),
+                             "ltp_percent_change": _t.get("chg_pct"), "ltt": _t.get("ltt"), "source": "breeze_ws"}
+                    symbol = working or "NIFTY"
+                for cand in ([] if quote is not None else [working] if working else candidates):
                     try:
                         q = await asyncio.to_thread(_live.get_live_quote, cand)
                         if q:
@@ -376,6 +385,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # ── Shutdown ──────────────────────────────────────────────────────────────
     try:
         live_ticks_mod.shutdown_instance()
+    except Exception:
+        pass
+    try:
+        if _live_quotes is not None:
+            _live_quotes.stop()          # LV-DATA: join the NSE fallback poller thread on shutdown
     except Exception:
         pass
     try:
@@ -2545,10 +2559,10 @@ def _holdings_symbols() -> list[str]:
 
 
 @app.get("/live/ticks")
-def live_ticks_view(symbols: str = Query("", max_length=1200)) -> dict:
+def live_ticks_view(symbols: str = Query("", max_length=8000)) -> dict:
     """L1 tick snapshot; asking for symbols AUTO-ENSURES their subscription (amendment A1 — union + TTL,
-    holdings pinned, cap 50). Pure dict read + event flip: safe as a sync route. LIVE_TICKS=0 ⇒ state OFF
-    and an empty tick map (honest fallback; ui-api then serves Yahoo)."""
+    holdings pinned, cap live_ticks.MAX_SYMBOLS = 300). Pure dict read + event flip: safe as a sync route. LIVE_TICKS=0
+    ⇒ state OFF and an empty tick map. New callers use /live/quotes (every source, labelled)."""
     lt = live_ticks_mod.instance()
     if lt is None:
         return {"state": "OFF", "connected": False, "error": "live ticks not initialised",
@@ -2557,6 +2571,138 @@ def live_ticks_view(symbols: str = Query("", max_length=1200)) -> dict:
     st = lt.ensure(syms) if syms else lt.status()
     return {**st, "as_of": datetime.now().isoformat(timespec="seconds"),
             "ticks": lt.snapshot(syms or None)}
+
+
+# ── /live/quotes + /live/status (live-NSE program LV-DATA; live_quotes.py) ────────────────────────────────────────────
+# Breeze websocket tick → NSE website copy (fallback poller) → last EOD close, per symbol, never Yahoo. The request path
+# reads memory and a cached DuckDB row; the NSE poller runs on its own thread through the shared NseLive client.
+
+_live_quotes: Any = None
+_live_quotes_lock = threading.Lock()
+_live_watch_cache: dict = {"at": 0.0, "symbols": []}
+
+
+def _live_nse_client() -> Any:
+    """The process's one NseLive (shared cache + 403/429 breaker with every NSE route)."""
+    global _nse_live
+    import nse_live
+    from bhavcopy import HEADERS
+    if _nse_live is None:
+        _nse_live = nse_live.NseLive(HEADERS)
+    return _nse_live
+
+
+def _live_eod_rows(symbols: list[str]) -> dict[str, dict]:
+    """Last stored close per symbol: nse_bhavcopy (EQ before BE) for stocks; index_ohlc_daily (NSE's daily index file,
+    Terminal v2) then market_index_daily for indices. Within the last 30 days; runs in the threadpool, never the loop."""
+    from nse_positions import index_symbol
+    store = get_store()
+    since = (date.today() - timedelta(days=30)).isoformat()
+    eq = [s for s in symbols if " " not in s]
+    ix = [s for s in symbols if " " in s]
+    out: dict[str, dict] = {}
+    if eq:
+        rows = store.read_rows("""
+            SELECT symbol, date, close, prev_close, open, high, low, volume, turnover_lacs FROM (
+                SELECT *, row_number() OVER (PARTITION BY symbol ORDER BY date DESC, CASE series WHEN 'EQ' THEN 0 ELSE 1 END) AS rn
+                FROM nse_bhavcopy WHERE list_contains(?, symbol) AND series IN ('EQ', 'BE') AND date >= ?::DATE) WHERE rn = 1""",
+                               [eq, since])
+        for s, d, c, p, o, h, lo, v, tl in rows:
+            out[s] = {"date": str(d)[:10], "close": c, "prev_close": p, "open": o, "high": h, "low": lo, "volume": v,
+                      "value_cr": tl / 100 if tl else None, "table": "nse_bhavcopy"}
+    if ix:
+        try:
+            rows = store.read_rows("""
+                SELECT symbol, date, open, high, low, close, prev FROM (
+                    SELECT symbol, date, open, high, low, close, lag(close) OVER (PARTITION BY symbol ORDER BY date) AS prev,
+                           row_number() OVER (PARTITION BY symbol ORDER BY date DESC) AS rn
+                    FROM index_ohlc_daily WHERE list_contains(?, symbol) AND date >= ?::DATE) WHERE rn = 1""", [ix, since])
+        except Exception:  # noqa: BLE001 — Terminal v2 table not deployed yet: market_index_daily below
+            rows = []
+        for s, d, o, h, lo, c, p in rows:
+            out[s] = {"date": str(d)[:10], "close": c, "prev_close": p, "open": o, "high": h, "low": lo, "volume": None,
+                      "value_cr": None, "table": "index_ohlc_daily"}
+        rest = {index_symbol(s): s for s in ix if s not in out}
+        if rest:
+            rows = store.read_rows("""
+                SELECT symbol, date, close, prev FROM (
+                    SELECT symbol, date, close, lag(close) OVER (PARTITION BY symbol ORDER BY date) AS prev,
+                           row_number() OVER (PARTITION BY symbol ORDER BY date DESC) AS rn
+                    FROM market_index_daily WHERE list_contains(?, symbol) AND date >= ?::DATE) WHERE rn = 1""",
+                                   [list(rest), since])
+            for code, d, c, p in rows:
+                out[rest[code]] = {"date": str(d)[:10], "close": c, "prev_close": p, "open": None, "high": None,
+                                   "low": None, "volume": None, "value_cr": None, "table": "market_index_daily"}
+    return out
+
+
+def _live_index_members(index_name: str) -> list[str]:
+    """NIFTY 50 / NIFTY BANK members for the pinned set: the stored niftyindices list (Terminal v2 index_constituents_daily),
+    else NSE's heatmap list already in the shared cache (no network here)."""
+    try:
+        rows = get_store().read_rows("""SELECT symbol FROM index_constituents_daily WHERE index_name = ? AND date = (
+                                        SELECT max(date) FROM index_constituents_daily WHERE index_name = ?)""",
+                                     [index_name, index_name])
+        if rows:
+            return [str(r[0]).upper() for r in rows]
+    except Exception:  # noqa: BLE001 — table not deployed yet
+        pass
+    import nse_live
+    nl = _nse_live
+    kind = "Broad Market Indices" if index_name in ("NIFTY 50", "NIFTY NEXT 50") else "Sectoral Indices"
+    hit = nl._cache.get(nse_live.heatmap_path(kind, index_name)) if nl is not None else None
+    payload = hit[1] if hit else None
+    return sorted(nse_live.parse_heatmap(payload if isinstance(payload, list) else []))
+
+
+def _live_watchlist() -> list[str]:
+    """The starred tickers (Redis set monitored.stocks, as the watchlist poller reads it); 60 s cache, 1 s timeouts."""
+    now = time.time()
+    if now - _live_watch_cache["at"] < 60:
+        return list(_live_watch_cache["symbols"])
+    syms: list[str] = []
+    url = os.environ.get("REDIS_URL")
+    if url:
+        try:
+            import redis as _redis
+            members = _redis.from_url(url, socket_connect_timeout=1, socket_timeout=1).smembers("monitored.stocks")
+            syms = [(m.decode() if isinstance(m, (bytes, bytearray)) else str(m)).upper() for m in (members or set())]
+        except Exception:  # noqa: BLE001 — no watchlist pins rather than a blocked worker
+            syms = []
+    _live_watch_cache.update(at=now, symbols=syms)
+    return syms
+
+
+def _live_quotes_engine() -> Any:
+    global _live_quotes
+    with _live_quotes_lock:
+        if _live_quotes is None:
+            import live_quotes as lq
+            _live_quotes = lq.LiveQuotes(
+                ticks_getter=live_ticks_mod.instance, nse_getter=_live_nse_client, eod_fn=_live_eod_rows,
+                session_fn=lambda: bool(_live is not None and _live.is_connected()),
+                watchlist_fn=_live_watchlist, members_fn=_live_index_members)
+        return _live_quotes
+
+
+# The pinned set (indices + NIFTY 50 / NIFTY BANK members + watchlist while the market is open) for the tick engine;
+# the holdings stay pinned through init(holdings_fn=_holdings_symbols) in the lifespan.
+live_ticks_mod.set_pins_source(lambda: _live_quotes_engine().pinned_symbols())
+
+
+@app.get("/live/quotes")
+def live_quotes_view(symbols: str = Query("", max_length=12000)) -> dict:
+    """Per NSE symbol (≤ 300, indices by NSE name: 'NIFTY 50', 'NIFTY BANK', 'INDIA VIX'): price, change, OHLC, volume,
+    bid/ask, ltt, source breeze_ws | nse_api | eod, age_s, state live | delayed | stale | closed | unavailable (+ reason).
+    Asking ensures the websocket subscription. Memory + a cached DuckDB read only: never NSE, Breeze REST or Yahoo."""
+    return _live_quotes_engine().quotes([x for x in symbols.split(",") if x.strip()])
+
+
+@app.get("/live/status")
+def live_status_view() -> dict:
+    """Tick engine + NSE fallback health: state, subscribed, ticks_per_min, last_tick_age_s, cap, breeze_session,
+    nse_fallback {ok, last_ok_at, …}, unmapped ticks, subscriptions without a first tick."""
+    return _live_quotes_engine().status()
 
 
 @app.get("/provider/status")

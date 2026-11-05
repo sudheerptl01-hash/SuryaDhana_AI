@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import csv
+import io
+import sys
+import threading
 from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -33,6 +38,37 @@ def _parse_icici_dt(raw: str) -> date:
         except ValueError:
             continue
     raise ValueError(f"Unparseable ICICI datetime: {raw!r}")
+
+
+WS_TOKEN_PREFIX = "4.1!"            # NSE cash / index exchange-quote stream (what every tick's `symbol` carries)
+WS_EQ_SERIES = ("EQ", "BE")         # the tradable cash rows; EQ wins when a symbol has both
+NSE_MASTER_FILE = "NSEScripMaster.txt"
+
+
+def parse_nse_master_tokens(rows: Iterable[list[str]]) -> tuple[dict[str, str], dict[str, str]]:
+    """ICICI's NSEScripMaster.txt rows → (equities, indices) for the websocket.
+
+    equities: NSE symbol (the master's last column, ExchangeCode) → Token, from EQ / BE rows only, EQ preferred. Keyed
+    by the NSE symbol, never by ShortName (the isec code): get_names also matches ShortName and returns every series'
+    token ('1333 1462 17320' for HDFCBANK because of its W3 warrant rows), so it is only a fallback.
+    indices: upper-cased index name → the exact Token (Series '0' rows, where the Token IS the name: 'NIFTY 50',
+    'NIFTY BANK', 'INDIA VIX', 'Nifty CPSE'). A tick for HDFCBANK arrives keyed '4.1!1333', NIFTY as '4.1!NIFTY 50'."""
+    eq: dict[str, str] = {}
+    eq_series: dict[str, str] = {}
+    idx: dict[str, str] = {}
+    for raw in rows:
+        if len(raw) < 4:
+            continue
+        cols = [c.strip().strip('"').strip() for c in raw]
+        token, series, exch = cols[0], cols[2].upper(), cols[-1].upper()
+        if not token or token.lower() == "token" or not token.strip("0"):
+            continue                                        # header row; '0' / '00' are placeholder tokens of dead rows
+        if series == "0":
+            idx[token.upper()] = token
+        elif series in WS_EQ_SERIES and exch:
+            if exch not in eq or (eq_series.get(exch) != "EQ" and series == "EQ"):
+                eq[exch], eq_series[exch] = token, series
+    return eq, idx
 
 
 def _date_chunks(start: date, end: date) -> list[tuple[date, date]]:
@@ -316,6 +352,70 @@ class ICICIBreezeProvider(LiveDataProvider):
             logger.warning("isec_code lookup failed, using raw ticker", ticker=raw, error=str(exc))
             self._code_cache[raw] = raw
             return raw
+
+    # ── Websocket token resolution (live ticks) ────────────────────────────────
+
+    def _nse_master_rows(self) -> Iterator[list[str]]:
+        """The NSE security master breeze_connect already holds in memory (module-global `zip`, loaded at import from the
+        shared.breeze_cache copy), else the cached archive itself, read-only. Never imports breeze_connect (its import
+        downloads the master) and never opens a socket."""
+        import zipfile
+        bc = sys.modules.get("breeze_connect.breeze_connect")
+        zf = getattr(bc, "zip", None) if bc is not None else None
+        if zf is not None and NSE_MASTER_FILE in zf.namelist():
+            with zf.open(NSE_MASTER_FILE) as fh:
+                yield from csv.reader(io.TextIOWrapper(fh, encoding="utf-8", errors="replace"))
+            return
+        from shared.breeze_cache import CACHE
+        if CACHE.exists() and zipfile.is_zipfile(CACHE):
+            with zipfile.ZipFile(CACHE) as z, z.open(NSE_MASTER_FILE) as fh:
+                yield from csv.reader(io.TextIOWrapper(fh, encoding="utf-8", errors="replace"))
+
+    def ws_token_maps(self) -> tuple[dict[str, str], dict[str, str]]:
+        """(NSE symbol → Token, upper index name → Token), parsed once per provider from the security master."""
+        lock = self.__dict__.setdefault("_ws_lock", threading.Lock())
+        with lock:
+            maps = self.__dict__.get("_ws_maps")
+            if maps is None or not (maps[0] or maps[1]):
+                try:
+                    maps = parse_nse_master_tokens(self._nse_master_rows())
+                except Exception as exc:  # noqa: BLE001 — a missing master leaves only the get_names fallback
+                    logger.warning("security master unreadable for websocket tokens", error=str(exc)[:160])
+                    maps = ({}, {})
+                self.__dict__["_ws_maps"] = maps
+            return maps
+
+    def _resolve_ws_token(self, ticker: str) -> str:
+        """NSE symbol or index name → the websocket token its ticks are keyed by ('HDFCBANK' → '4.1!1333',
+        'NIFTY 50' → '4.1!NIFTY 50'). The master's EQ/BE row first; then get_names' isec_token_level1, FIRST token only
+        ('4.1!1333 1462 17320' → '4.1!1333'). Raises LookupError when neither knows the name (cached, so a bad name
+        never re-parses the master through pandas)."""
+        raw = ticker.strip().upper().replace(".NS", "").replace(".BO", "")
+        eq, idx = self.ws_token_maps()
+        if raw in eq:
+            return WS_TOKEN_PREFIX + eq[raw]
+        if raw in idx:
+            return WS_TOKEN_PREFIX + idx[raw]
+        misses: dict[str, str] = self.__dict__.setdefault("_ws_misses", {})
+        hits: dict[str, str] = self.__dict__.setdefault("_ws_hits", {})
+        if raw in hits:
+            return hits[raw]
+        if raw in misses:
+            raise LookupError(misses[raw])
+        try:
+            info = self._breeze.get_names(exchange_code="NSE", stock_code=raw) if self._breeze is not None else None
+            level1 = str((info or {}).get("isec_token_level1") or "")
+            exch = str((info or {}).get("exchange_stock_code") or "").strip().upper()
+        except Exception as exc:  # noqa: BLE001 — the SDK raises on unknown names
+            level1, exch = "", ""
+            logger.debug("get_names failed for websocket token", ticker=raw, error=str(exc)[:120])
+        first = level1.split()[0] if level1.split() else ""
+        same_name = not exch or exch.split()[0] == raw      # get_names also matches ShortName: another company's isec code
+        if first.startswith(WS_TOKEN_PREFIX) and len(first) > len(WS_TOKEN_PREFIX) and same_name:
+            hits[raw] = first
+            return first
+        misses[raw] = f"no websocket token for {raw}"
+        raise LookupError(misses[raw])
 
     def _require_connection(self) -> None:
         if not self._connected:

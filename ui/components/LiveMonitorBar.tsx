@@ -2,12 +2,15 @@
 
 /**
  * LiveMonitorBar: slim WATCHLIST line under the terminal header. Shows each watched
- * stock with its live price from the ICICI websocket (flashes green/red on ticks).
- * NIFTY lives in the header, so it isn't repeated here. Hidden when the watchlist is empty.
+ * stock with its live price (flashes green/red on ticks). Live program (reports/live_nse): the price is the live NSE
+ * quote service's (Breeze websocket → NSE ≈ 1 min → the last close; never Yahoo), one batch for the whole line every
+ * 3 s, with a SourceChip for the line; the monitor socket's REST-poller quote is used only while that service has no
+ * row for a name. NIFTY lives in the header, so it isn't repeated here. Hidden when the watchlist is empty.
  */
 import { useEffect, useRef, useState } from 'react'
-import { useLiveQuotes, useWatchlist } from '@/context/AppContext'
-import { T } from '@/components/terminal'
+import { useLiveQuotes as useMonitorQuotes, useWatchlist } from '@/context/AppContext'
+import { SourceChip, T } from '@/components/terminal'
+import { useLiveQuotes, type LiveQuote } from '@/lib/liveQuotes'
 import { socketChip } from '@/lib/feedState'
 import { useFeedState } from '@/components/shell/useFeed'
 
@@ -27,13 +30,14 @@ function useFlash(price: number | undefined): 'up' | 'down' | null {
   return flash
 }
 
-function Ticker({ ticker, onRemove }: { ticker: string; onRemove: () => void }) {
-  const { liveQuotes } = useLiveQuotes()
-  const q = liveQuotes[ticker.toUpperCase()]
+function Ticker({ ticker, onRemove, row, line }: { ticker: string; onRemove: () => void; row?: LiveQuote; line?: string | null }) {
+  const { liveQuotes } = useMonitorQuotes()
+  const svc = row && row.price != null && row.state !== 'unavailable' ? row : null
+  const q = svc ? { ltp: svc.price as number, change_pct: svc.change_pct } : liveQuotes[ticker.toUpperCase()]
   const flash = useFlash(q?.ltp)
   const c = q?.change_pct
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 7, padding: '0 12px', borderRight: `1px solid ${T.border}`,
+    <span title={line ?? undefined} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 7, padding: '0 12px', borderRight: `1px solid ${T.border}`,
                    background: flash === 'up' ? 'rgba(22,217,138,.12)' : flash === 'down' ? 'rgba(255,77,94,.12)' : 'transparent',
                    transition: 'background .3s', height: '100%', alignSelf: 'stretch', lineHeight: '24px' }}>
       <span style={{ color: T.amber, fontWeight: 600, fontSize: 11 }}>{ticker}</span>
@@ -49,8 +53,9 @@ function Ticker({ ticker, onRemove }: { ticker: string; onRemove: () => void }) 
 
 export function LiveMonitorBar(_: { isDark?: boolean }) {
   const { watchlist, removeFromWatchlist } = useWatchlist()
-  const { wsConnected } = useLiveQuotes()
+  const { wsConnected } = useMonitorQuotes()
   const feed = useFeedState()
+  const live = useLiveQuotes(watchlist, { intervalMs: 3_000 })
   if (watchlist.length === 0) return null
   // never 'STREAMING' on a closed market or while the link is down (C1-trader-ux-13, lib/feedState.ts)
   const chip = socketChip({ connected: wsConnected, ...feed, live: '● STREAMING', offline: '◌ WS RECONNECTING' })
@@ -59,11 +64,14 @@ export function LiveMonitorBar(_: { isDark?: boolean }) {
                   overflowX: 'auto', whiteSpace: 'nowrap', fontFamily: T.mono }}>
       <span style={{ background: T.cyan, color: T.bg, fontSize: 9, fontWeight: 700, letterSpacing: 1.2, padding: '0 8px',
                      height: '100%', display: 'flex', alignItems: 'center', flex: 'none' }}>WATCHLIST</span>
-      <span title={chip.title} style={{ fontSize: 9, color: chip.tone === 'live' ? T.green : chip.tone === 'closed' ? T.muted : T.dim,
-                                        padding: '0 10px', letterSpacing: 1, flex: 'none' }}>
-        {chip.text}
-      </span>
-      {watchlist.map(t => <Ticker key={t} ticker={t} onRemove={() => removeFromWatchlist(t)} />)}
+      {live.available && live.source
+        ? <span style={{ padding: '0 10px', flex: 'none', display: 'inline-flex', alignItems: 'center' }}><SourceChip info={live.source} /></span>
+        : <span title={chip.title} style={{ fontSize: 9, color: chip.tone === 'live' ? T.green : chip.tone === 'closed' ? T.muted : T.dim,
+                                            padding: '0 10px', letterSpacing: 1, flex: 'none' }}>
+            {chip.text}
+          </span>}
+      {watchlist.map(t => { const k = t.toUpperCase().replace(/\.NS$/, '')
+        return <Ticker key={t} ticker={t} row={live.quotes[k]} line={live.lineFor(k)} onRemove={() => removeFromWatchlist(t)} /> })}
     </div>
   )
 }

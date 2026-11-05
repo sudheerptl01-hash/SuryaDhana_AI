@@ -6,11 +6,16 @@ import { apiError } from '@/lib/errors'
  * volume surges vs the 1-week average, live 52-week highs and lows, F&O open-interest spurts, and a sector board
  * with each index's advance / decline split. NSE live analysis (≈1 min delayed), refreshed every 30 s while the
  * market is open. MKT has the end-of-day picture.
+ *
+ * Live program (reports/live_nse): NSE's website is never LIVE (49–172 s behind, L-CAPACITY), so its panels read
+ * DELAYED · NSE · <age> (or CLOSE · <day>); each panel carries its OWN chip (the intraday charts, who moved the index
+ * and the internals report theirs through `onSource`), and the NIFTY 50 tile, the who-moved points, the intraday tips
+ * and the sector drill-down members come from the live NSE quote service (Breeze websocket) when it answers.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getIndexMembers, getLiveMovers, getMarketMonitor, type LiveIndex, type LiveMover, type LiveMovers as Data } from '@/lib/api'
 import { MarketMap, type MapRow } from '@/components/MarketMap'
-import { Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, fmtPx, fmtSigned, nseStampIso, sourceOf, type SourceInfo } from '@/components/terminal'
+import { Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, fmtPx, fmtSigned, sourceOf, type SourceInfo } from '@/components/terminal'
 import { goToPage } from '@/lib/navigate'
 import { IndexIntraday } from '@/components/IndexIntraday'
 import { sessionWord } from '@/lib/format'
@@ -18,6 +23,9 @@ import { moversPollDue } from '@/components/pageModels'
 import { nseSession } from '@/components/desktop/session'
 import { MarketInternals } from '@/components/MarketInternals'
 import { IndexContribution } from '@/components/IndexContribution'
+import { SourceChip } from '@/components/terminal'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { liveLevel, nseDelayedSource } from '@/components/liveModel'
 
 const UNIVERSES: [string, string][] = [['NIFTY', 'NIFTY 50'], ['BANKNIFTY', 'BANK NIFTY'], ['NIFTYNEXT50', 'NEXT 50'], ['FOSec', 'F&O'], ['SecGtr20', '> ₹20'], ['allSec', 'ALL']]
 const tone = (v: number | null | undefined) => (v == null || Math.abs(v) < 0.005 ? T.muted : v > 0 ? T.green : T.red)
@@ -104,8 +112,20 @@ export function LiveMovers() {
   const chg = (r: LiveMover) => <span style={{ color: tone(r.change_pct), fontWeight: 600 }}>{fmtPct(r.change_pct)}</span>
   const last = (r: LiveMover) => <span style={{ color: T.text }}>{px(r.ltp)}</span>
   const when = sessionWord(data?.market_open, data?.timestamp)
-  // PLAN §0.5: every panel names its feed and as-of (NSE live analysis; the session date once the market has closed)
-  const feedSource = sourceOf(nseStampIso(data?.timestamp), { live: !!data?.market_open, source: 'NSE' })
+  // PLAN §0.5: every panel names its feed and as-of. NSE's live analysis is ≈ 1 min behind: DELAYED · NSE · <age>,
+  // never LIVE (the old chip said LIVE · NSE while the market was open); CLOSE · <day> once the session is over.
+  const feedSource = data ? nseDelayedSource(data.timestamp, { marketOpen: !!data.market_open, now: Date.now(), hint: 'NSE live analysis, 30 s cache' })
+    : sourceOf(null, { source: 'NSE' })
+  const sectorSource = data ? nseDelayedSource(data.timestamp, { marketOpen: !!data.market_open, now: Date.now(), hint: 'sector rows from NSE allIndices, typically 1–3 min behind' }) : feedSource
+  // each panel's own chip, reported by the panel itself (null until it has data: the shared feed chip meanwhile)
+  const [srcN50, setSrcN50] = useState<SourceInfo | null>(null)
+  const [srcBank, setSrcBank] = useState<SourceInfo | null>(null)
+  const [srcContrib, setSrcContrib] = useState<SourceInfo | null>(null)
+  const [srcInternals, setSrcInternals] = useState<SourceInfo | null>(null)
+  // the NIFTY 50 tile and the drill-down members: live NSE quotes when the service answers
+  const liveIdx = useLiveQuotes(['NIFTY 50'], { intervalMs: 3_000 })
+  const n50 = liveLevel(idx.n50 ?? null, liveIdx.quotes['NIFTY 50'])
+  const liveMembers = useLiveQuotes(members?.members.map(m => m.symbol) ?? [], { intervalMs: 3_000, enabled: !!drill })
   const breadth = (i?: LiveIndex) => i ? <span><span style={{ color: T.green }}>{i.advances}</span> / <span style={{ color: T.red }}>{i.declines}</span></span> : '—'
 
   return (
@@ -113,7 +133,7 @@ export function LiveMovers() {
       <PageHeader code="MOV" title="Live Movers"
         subtitle={`NSE live market analysis, ≈1 min delayed · ${data?.timestamp ?? 'loading'}${data && !data.market_open ? ' · market closed: last session' : ' · every 30 s'}`}
         right={<div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {data?.market_open && <span style={{ fontSize: 10, color: T.green, marginRight: 6, letterSpacing: 0.5 }}>● LIVE</span>}
+          {data?.market_open && <span title="NSE is in session; the lists below are NSE's live analysis, about 1 min behind" style={{ fontSize: 10, color: T.green, marginRight: 6, letterSpacing: 0.5 }}>● NSE OPEN</span>}
           {UNIVERSES.map(([k, l]) => <Chip key={k} color={T.amber} active={universe === k} onClick={() => setUniverse(k)}>{l}</Chip>)}
         </div>} />
       {error && <ErrorBox error={error} />}
@@ -121,7 +141,8 @@ export function LiveMovers() {
       {data && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 12 }}>
-            <Stat label="NIFTY 50" value={px(idx.n50?.last)} sub={<span><span style={{ color: tone(idx.n50?.change_pct) }}>{fmtPct(idx.n50?.change_pct)}</span> · {breadth(idx.n50)}</span>} />
+            <Stat label="NIFTY 50" value={px(n50.last)} sub={<span><span style={{ color: tone(n50.change_pct) }}>{fmtPct(n50.change_pct)}</span> · {breadth(idx.n50)}
+              {' '}<SourceChip info={n50.fromService && liveIdx.source ? liveIdx.source : sectorSource} style={{ marginLeft: 4 }} /></span>} />
             <Stat label="NIFTY 500 breadth" value={breadth(idx.n500)} sub={<span style={{ color: tone(idx.n500?.change_pct) }}>{fmtPct(idx.n500?.change_pct)}</span>} />
             <Stat label="Midcap 100 / Smallcap 100" value={<span><span style={{ color: tone(idx.mid?.change_pct) }}>{fmtPct(idx.mid?.change_pct, 1)}</span> / <span style={{ color: tone(idx.small?.change_pct) }}>{fmtPct(idx.small?.change_pct, 1)}</span></span>} />
             <Stat label="52-week highs / lows" value={<span><span style={{ color: T.green }}>{data.highs.count}</span> / <span style={{ color: T.red }}>{data.lows.count}</span></span>} sub={`new ${when === 'today' ? 'today' : `in the ${when}`}, all NSE`} />
@@ -129,11 +150,11 @@ export function LiveMovers() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 12, marginBottom: 12 }}>
             {/* PLAN 0.6 (R-UI S9): two INTRADAY panels used to share one title; each names the index it opens on */}
-            <Panel title="Intraday · NIFTY 50" subtitle={`${when} vs previous close · pick an index`} accent={T.green} source={feedSource} badge="arithmetic"><IndexIntraday height={190} /></Panel>
-            <Panel title="Intraday · NIFTY BANK" subtitle={`${when} vs previous close · pick an index`} accent={T.green} source={feedSource} badge="arithmetic"><IndexIntraday height={190} initial="NIFTY BANK" /></Panel>
+            <Panel title="Intraday · NIFTY 50" subtitle={`${when} vs previous close · pick an index`} accent={T.green} source={srcN50 ?? feedSource} badge="arithmetic"><IndexIntraday height={190} onSource={setSrcN50} /></Panel>
+            <Panel title="Intraday · NIFTY BANK" subtitle={`${when} vs previous close · pick an index`} accent={T.green} source={srcBank ?? feedSource} badge="arithmetic"><IndexIntraday height={190} initial="NIFTY BANK" onSource={setSrcBank} /></Panel>
           </div>
           <Panel title="Who moved the index" subtitle={`each stock's contribution ${when === 'today' ? 'today' : `in the ${when}`}, in index points`} accent={T.green}
-            style={{ marginBottom: 12 }} source={feedSource} badge="arithmetic"><IndexContribution />
+            style={{ marginBottom: 12 }} source={srcContrib ?? feedSource} badge="arithmetic"><IndexContribution onSource={setSrcContrib} />
             {/* PLAN 1.2: MOV keeps the live today panel; every horizon (5d / 1m / YTD / since the last driver change) is on MEMB */}
             <div style={{ marginTop: 6, fontSize: 10.5, color: T.muted, display: 'flex', justifyContent: 'flex-end' }}>
               <span role="button" tabIndex={0} data-testid="mov-history-on-memb" onClick={() => goToPage('memb')}
@@ -141,9 +162,9 @@ export function LiveMovers() {
                 style={{ color: T.cyan, cursor: 'pointer', letterSpacing: 0.5 }}>history on MEMB ›</span>
             </div></Panel>
           <Panel title="Market internals" subtitle="is the move broad or a few heavyweights? breadth through the day vs the size segments" accent={T.amber}
-            style={{ marginBottom: 12 }} source={feedSource} badge="context"><MarketInternals height={200} /></Panel>
+            style={{ marginBottom: 12 }} source={srcInternals ?? feedSource} badge="context"><MarketInternals height={200} onSource={setSrcInternals} /></Panel>
 
-          <Panel title="Sector board" accent={T.violet} subtitle="index move · bar = share of members up · hover for 30-day and 1-year" source={feedSource}
+          <Panel title="Sector board" accent={T.violet} subtitle="index move · bar = share of members up · hover for 30-day and 1-year" source={sectorSource}
             right={<div style={{ display: 'flex', gap: 4 }}>{(['SECTORAL INDICES', 'THEMATIC INDICES', 'BROAD MARKET INDICES'] as const).map(g =>
               <Chip key={g} color={T.violet} active={group === g} onClick={() => { setGroup(g); setDrill(null) }}>{g.split(' ')[0]}</Chip>)}</div>}
             style={{ marginBottom: 12 }}>
@@ -153,12 +174,13 @@ export function LiveMovers() {
             {drill && (
               <div style={{ marginTop: 10, borderTop: `1px solid ${T.border}`, paddingTop: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10.5, color: T.muted, marginBottom: 6 }}>
-                  <span><b style={{ color: T.amber }}>{drill}</b> · members, live{members?.capped ? ' · NSE lists the first 50' : ''} · best to worst</span>
+                  <span><b style={{ color: T.amber }}>{drill}</b> · members{liveMembers.available && liveMembers.source ? <> <SourceChip info={liveMembers.source} /></> : ', NSE heatmap ≈ 1 min'}{members?.capped ? ' · NSE lists the first 50' : ''} · best to worst</span>
                   <span role="button" style={{ color: T.dim, cursor: 'pointer' }} onClick={() => setDrill(null)}>✕ close</span>
                 </div>
                 {!members ? <div style={{ fontSize: 11, color: T.dim }}>Reading members…</div> : (
                   <div className="t-nums" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 4 }}>
-                    {members.members.map(m => (
+                    {members.members.map(m => ({ ...m, change_pct: liveLevel({ last: m.ltp, change_pct: m.change_pct }, liveMembers.quotes[m.symbol]).change_pct }))
+                      .sort((a, b) => (b.change_pct ?? -999) - (a.change_pct ?? -999)).map(m => (
                       <div key={m.symbol} style={{ display: 'flex', justifyContent: 'space-between', gap: 6, padding: '3px 6px', border: `1px solid ${T.border}`, fontSize: 11 }}>
                         <TickerLink symbol={m.symbol} />
                         <span style={{ color: tone(m.change_pct), fontFamily: T.mono }}>{fmtPct(m.change_pct)}</span>

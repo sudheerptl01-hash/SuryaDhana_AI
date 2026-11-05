@@ -20,7 +20,9 @@ import { apiError } from '@/lib/errors'
 import { OptionPricer, type PricerPick } from '@/components/OptionPricer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getSurveillance, getOptionChain, getOptionChainLive, getOptionHistory, type OptionChain as Chain, type OptionHistoryRow } from '@/lib/api'
-import { BadgeChip, CHART_BOX, Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, fmtNum, nseStampIso, sourceOf, useChartSize } from '@/components/terminal'
+import { BadgeChip, CHART_BOX, Chip, ErrorBox, Loading, PageHeader, Panel, SourceChip, Stat, T, fmtNum, sourceOf, useChartSize } from '@/components/terminal'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { nseDelayedSource, underlyingLiveSymbol } from '@/components/liveModel'
 import { IvHistoryChart, useIvHistory } from '@/components/vol/IvHistoryChart'
 import { ChainStrip, greeksFor } from '@/components/vol/ChainStrip'
 import { IvLivePath } from '@/components/vol/IvLivePath'
@@ -291,15 +293,22 @@ export function OptionChain() {
   const maxOi = useMemo(() => Math.max(1, ...(data?.rows ?? []).flatMap(r => [r.ce.oi ?? 0, r.pe.oi ?? 0])), [data])
   const walls = useMemo(() => new Set([...(data?.resistance ?? []).slice(0, 1), ...(data?.support ?? []).slice(0, 1)]), [data])
   const hasNseDelta = useMemo(() => (data?.rows ?? []).some(r => r.ce.nse_delta != null || r.pe.nse_delta != null), [data])
-  // PLAN §0.5: LIVE · NSE in session, else the bhavcopy's date (daily data shows its date, never a clock)
-  const chainSource = data?.live ? sourceOf(nseStampIso(data.as_of) ?? data.date, { live: true, source: 'NSE' })
+  // PLAN §0.5 + live program (reports/live_nse): NSE's option-chain-v3 is never LIVE — NSE refreshes it about once a
+  // minute and L-INVENTORY measured it 34–92 s behind — so in session it reads DELAYED · NSE · <age> from its own
+  // records.timestamp; otherwise the bhavcopy's date (daily data shows its date, never a clock)
+  const chainSource = data?.live ? nseDelayedSource(data.as_of ?? null, { marketOpen: true, now: Date.now(), hint: 'NSE option chain (v3), 30 s cache, NSE refreshes it about once a minute' })
     : sourceOf(data?.date ?? null, { source: 'NSE F&O bhavcopy', hint: liveNote })
+  // the underlying's spot from the live NSE quote service (Breeze websocket index / stock tick) while the chain is live
+  const ulSym = underlyingLiveSymbol(data?.symbol ?? symbol)
+  const ul = useLiveQuotes(ulSym ? [ulSym] : [], { intervalMs: 3_000, enabled: !!data?.live })
+  const ulRow = ulSym ? ul.quotes[ulSym] : undefined
+  const ulPriced = !!data?.live && !!ulRow && ulRow.price != null && ulRow.state !== 'unavailable'
 
   return (
     <div>
       <PageHeader code="OMON" title="Option Monitor"
         subtitle={data ? (data.live
-          ? `${data.symbol} · LIVE NSE option chain · as of ${data.as_of ?? '—'} · expiry ${data.expiry} (${data.days_to_expiry}d) · lot ${data.lot ?? '—'} · every 30 s`
+          ? `${data.symbol} · NSE option chain in session (≈1 min behind) · as of ${data.as_of ?? '—'} · expiry ${data.expiry} (${data.days_to_expiry}d) · lot ${data.lot ?? '—'} · every 30 s`
           : `${data.symbol} · NSE F&O bhavcopy ${data.date} · expiry ${data.expiry} (${data.days_to_expiry}d) · lot ${data.lot ?? '—'} · end of day`) : 'option chain'}
         right={<form onSubmit={e => { e.preventDefault(); pick(input) }} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <Chip color={T.green} active={live} onClick={() => setLive(true)}>● LIVE</Chip>
@@ -342,7 +351,10 @@ export function OptionChain() {
           )}
         </div>
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', marginBottom: 12 }}>
-          <Stat big={false} label="Spot / forward" value={num(data.spot, 2)} sub={`forward ${num(data.forward, 2)} (${data.forward_source})`} />
+          <Stat big={false} label="Spot / forward" value={num(ulPriced ? ulRow!.price : data.spot, 2)}
+                sub={<span>forward {num(data.forward, 2)} ({data.forward_source})
+                  {ulPriced && ul.source ? <> · <SourceChip info={ul.source} style={{ fontSize: 8.5 }} /></>
+                    : data.live ? <span style={{ color: T.dim }}> · spot as NSE's chain prints it</span> : <span style={{ color: T.dim }}> · EOD {data.date}</span>}</span>} />
           <Stat big={false} label="ATM implied vol" value={data.atm_iv != null ? `${data.atm_iv}%` : '—'} accent={T.violet}
                 sub={data.expected_move_pct != null ? `priced move by expiry ±${data.expected_move_pct}%` : ''} />
           <Stat big={false} label="Expected range" accent={T.cyan}

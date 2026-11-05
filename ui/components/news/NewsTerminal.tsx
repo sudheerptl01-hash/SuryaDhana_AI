@@ -17,6 +17,8 @@ import { Z } from '@/lib/z'
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getNewsChart, getNewsHeadlines, getNewsQuotes, getNewsScan, getNewsScans, getNewsTrackRecord } from '@/lib/api'
+import { overlayQuote, useLiveQuotes } from '@/lib/liveQuotes'
+import { SourceChip } from '@/components/terminal'
 import { PriorPicks, TrackRecordView, trackVerdict, type TrackRecordData, type TrackRow } from './TrackRecord'
 import { useWatchlist } from '@/context/AppContext'
 import { usePins } from '@/lib/pins'
@@ -203,6 +205,21 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
     return () => { alive = false; clearInterval(id) }
   }, [open, symbolsKey])
 
+  // live program (reports/live_nse): the NSE picks' price, move and day range from the live NSE quote service (Breeze
+  // websocket → NSE ≈ 1 min → the last close; never Yahoo) every 3 s while the dock is open; the 60 s quotes call stays
+  // the base for names, sparks, 52-week ranges and the non-NSE picks (US, UK)
+  const nsePicks = useMemo(() => (symbolsKey ? symbolsKey.split(',').filter(y => /\.NS$/i.test(y)).map(y => y.replace(/\.NS$/i, '')) : []), [symbolsKey])
+  const liveNse = useLiveQuotes(nsePicks, { intervalMs: 3_000, enabled: open })
+  const quotesLive = useMemo(() => {
+    if (!liveNse.available) return quotes
+    const out: Record<string, Quote> = { ...quotes }
+    for (const b of nsePicks) {
+      const k = `${b}.NS`, o = overlayQuote(quotes[k] as unknown as Record<string, unknown> | undefined, liveNse.quotes[b])
+      if (o && o !== (quotes[k] as unknown)) out[k] = { ...(quotes[k] ?? { symbol: k }), ...(o as object) } as Quote
+    }
+    return out
+  }, [quotes, liveNse.available, liveNse.quotes, nsePicks])
+
   // ── chart + headlines for the selection ────────────────────────────────────
   useEffect(() => {
     if (!open || !selected) return
@@ -250,10 +267,12 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
   if (!open) return null
   // Live 60 s quote first so the header always matches the list; chart quote (5 min cache) is the fallback.
   const q = current?.symbol
-    ? (quotes[current.symbol.yahoo]?.available ? quotes[current.symbol.yahoo] : undefined)
+    ? (quotesLive[current.symbol.yahoo]?.available ? quotesLive[current.symbol.yahoo] : undefined)
       ?? (chart?.symbol === current.symbol.yahoo ? chart.quote : undefined)
     : undefined
   const st = chart?.symbol === current?.symbol?.yahoo ? chart?.stats : undefined
+  const curBase = current?.symbol?.yahoo && /\.NS$/i.test(current.symbol.yahoo) ? current.symbol.yahoo.replace(/\.NS$/i, '') : null
+  const curLive = curBase && liveNse.available && liveNse.quotes[curBase]?.price != null ? liveNse.sourceFor(curBase) : null
   const counts = {
     ALL: (scan?.picks ?? []).length, US: 0, IN: 0, UK: 0, PINNED: Object.keys(pins).length,
   } as Record<Region, number>
@@ -342,7 +361,7 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
 
           <div className="nt-scroll" style={{ flex: 1, overflowY: 'auto' }}>
             {rows.map(({ pick, pinnedFrom }) => {
-              const s = pick.symbol!, qq = quotes[s.yahoo], sel = s.yahoo === selected
+              const s = pick.symbol!, qq = quotesLive[s.yahoo], sel = s.yahoo === selected
               return (
                 <div key={s.yahoo} className="nt-row" onClick={() => setSelected(s.yahoo)}
                   style={{ padding: '8px 10px', borderBottom: `1px solid ${T.border}`, cursor: 'pointer',
@@ -421,8 +440,9 @@ export function NewsTerminal({ open, onClose }: { open: boolean; onClose: () => 
                 <div style={{ fontSize: 26, fontWeight: 700 }}>{fmtPrice(q?.price, q?.currency)}</div>
                 <div style={{ fontSize: 12, color: signColor(q?.change_pct) }}>
                   {q?.change != null ? fmtChange(q.change, q.currency) : ''} {fmtPct(q?.change_pct)}
+                  {curLive ? <> <SourceChip info={curLive} style={{ marginLeft: 4 }} /></> : <>
                   {q?.stale ? <span style={{ color: T.amber }}> · STALE</span> : null}
-                  {q?.market_time ? <span style={{ color: T.dim }}> · {new Date(q.market_time * 1000).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span> : null}
+                  {q?.market_time ? <span style={{ color: T.dim }}> · {new Date(q.market_time * 1000).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</span> : null}</>}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

@@ -15,6 +15,8 @@ import httpx
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+from routers import live as _live   # the live NSE 'quotes' push channel (LV-API)
+
 router = APIRouter()
 log = logging.getLogger("ui-api.monitor")
 
@@ -498,6 +500,7 @@ async def _serve_monitor(socket: WebSocket):
     sub = _Subscriber()
     hub = _hub()
     sender: asyncio.Task[None] | None = None
+    quotes_ch: Any = None          # the live 'quotes' channel (routers/live.py), made on its first subscribe
     # Everything after accept runs inside this try, so every exit path (including a client that left while
     # Redis was being reached, which made the redis_unavailable send raise) releases the socket's entries.
     try:
@@ -521,6 +524,12 @@ async def _serve_monitor(socket: WebSocket):
             action = payload.get("action")
             if action in ("ping", "heartbeat"):
                 await manager.send_json(socket, {"pong": True})
+            elif action in ("subscribe", "unsubscribe") and payload.get("channel") == "quotes":
+                # live NSE quotes push (routers/live.py, LV-API): one poll loop per process for the union of every
+                # socket's symbols, this socket's own bounded outbox (drop-oldest, counted); the Redis filter is untouched
+                if quotes_ch is None:
+                    quotes_ch = _live.QuotesChannel(lambda msg: manager.send_json(socket, msg))
+                await manager.send_json(socket, await quotes_ch.handle(payload))
             elif action in ("subscribe", "unsubscribe"):
                 syms = _symbols(payload.get("symbols"))
                 if syms is None:
@@ -538,6 +547,8 @@ async def _serve_monitor(socket: WebSocket):
         pass
     finally:
         manager.disconnect(socket)
+        if quotes_ch is not None:
+            await quotes_ch.close()
         if sender is not None:
             sender.cancel()
             with contextlib.suppress(BaseException):

@@ -2,8 +2,10 @@
  * Terminal v2 kit helpers that need no DOM and no React (reports/terminal_v2/PLAN.md §0.1, §0.5):
  *
  *  - `sourceOf(asOf, …)` turns a payload's as-of into the SourceChip state every panel header carries
- *    (LIVE · BREEZE / LIVE · NSE / DELAYED <day> / STALE <day> / OFFLINE / GAP): daily data shows its date,
- *    never a clock; a date older than `maxAgeDays` reads STALE; no as-of at all reads OFFLINE.
+ *    (LIVE · BREEZE / EOD · <day> / DELAYED · NSE · <age> / STALE <day> / CLOSE · <day> / OFFLINE / GAP): daily data
+ *    shows its date as EOD · <day>, never a clock; a date older than `maxAgeDays` reads STALE; no as-of at all reads
+ *    OFFLINE. Live program (reports/live_nse): an intraday quote's age prints as '48s' (`ageS`), a pane mixing live
+ *    and delayed rows adds ' · 40/52 LIVE' (`mix`), and after the session a price reads CLOSE · <session day>.
  *  - `inputSource(what)`: the chip of a panel with no data source behind it (a form, a calculator on your inputs):
  *    INPUT, so every Panel header still says where its numbers come from (PLAN §0.5, G9's static scan).
  *  - `nseStampIso('23-Oct-2026 16:00:00')`: NSE's live-feed timestamps as ISO (IST) for `sourceOf`.
@@ -15,7 +17,7 @@
  * Pure: unit-tested under plain node by ui/components/vol/__tests__/terminal_v2.check.ts.
  */
 
-export type SourceState = 'live' | 'delayed' | 'stale' | 'offline' | 'gap' | 'degraded' | 'input' | 'reference'
+export type SourceState = 'live' | 'delayed' | 'stale' | 'offline' | 'gap' | 'degraded' | 'input' | 'reference' | 'closed'
 
 export interface SourceInfo {
   state: SourceState
@@ -27,6 +29,13 @@ export interface SourceInfo {
   ageDays?: number | null
   /** why a stale / gap / offline block is in that state */
   hint?: string | null
+  /**
+   * Live program (reports/live_nse): the age in SECONDS of an intraday quote at render time. When set, the chip prints it
+   * ('LIVE · BREEZE · 2s', 'DELAYED · NSE · 48s', 'STALE · NSE · 6m') instead of a clock; daily data never sets it.
+   */
+  ageS?: number | null
+  /** a pane mixing live and non-live rows: how many of `total` rows are live (the chip adds ' · 40/52 LIVE') */
+  mix?: { live: number; total: number } | null
 }
 
 const DAY_RE = /^(\d{4})-(\d{2})-(\d{2})/
@@ -117,6 +126,15 @@ export function nseStampIso(stamp: string | null | undefined): string | null {
 
 export interface ChipText { label: string; title: string }
 
+/** A quote's age for a chip: '0s' … '89s', then minutes ('6m') up to 90 min, then hours ('3h'); '' when unknown. */
+export function fmtAgeS(ageS: number | null | undefined): string {
+  if (ageS == null || !Number.isFinite(ageS)) return ''
+  const a = Math.max(0, ageS)
+  if (a < 90) return `${Math.round(a)}s`
+  if (a < 90 * 60) return `${Math.round(a / 60)}m`
+  return `${Math.round(a / 3600)}h`
+}
+
 /** 'HH:MM' IST of an ISO timestamp ('' for a date-only value or an unparsable one): intraday chips show a clock. */
 export function chipClock(iso: string | null | undefined): string {
   if (!iso || /^\d{4}-\d{2}-\d{2}$/.test(iso)) return ''
@@ -146,10 +164,25 @@ export function sourceChipText(s: SourceInfo, now: Date = new Date()): ChipText 
   const stamp = today ? `${src && src.length <= 14 ? `${src} · ` : ''}${clock}` : day
   const when = s.asOf && !/^\d{4}-\d{2}-\d{2}$/.test(s.asOf) ? `as of ${s.asOf}` : day ? `as of ${day}` : 'no as-of'
   const why = s.hint ? ` — ${s.hint}` : ''
+  // live program: an intraday quote's age in seconds replaces the clock ('DELAYED · NSE · 48s'), and a pane mixing
+  // live and non-live rows says how many are live (' · 40/52 LIVE')
+  const dateOnly = !!s.asOf && /^\d{4}-\d{2}-\d{2}$/.test(s.asOf)
+  const age = fmtAgeS(s.ageS)
+  const ageTag = age ? ` · ${age}` : ''
+  const mix = s.mix && s.mix.total > 0 && s.mix.live > 0 && s.mix.live < s.mix.total ? ` · ${s.mix.live}/${s.mix.total} LIVE` : ''
+  const ageWhy = age ? ` · ${age} old` : ''
   switch (s.state) {
-    case 'live': return { label: `LIVE${src ? ` · ${src}` : ''}`, title: `Live feed${src ? ` (${src})` : ''}${clock ? ` · last ${clock} IST` : ''}${why}` }
-    case 'delayed': return { label: `DELAYED${stamp ? ` · ${stamp}` : src ? ` · ${src}` : ''}`, title: `Stored or delayed data${src ? ` from ${src}` : ''} · ${when}${why}` }
-    case 'stale': return { label: `STALE${stamp ? ` · ${stamp}` : ''}`, title: `Older than expected${src ? ` (${src})` : ''} · ${when}${s.ageDays != null ? ` · ${Math.round(s.ageDays)} d old` : ''}${why}` }
+    case 'live': return { label: `LIVE${src ? ` · ${src}` : ''}${ageTag}${mix}`, title: `Live feed${src ? ` (${src})` : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
+    case 'delayed': return age
+      ? { label: `DELAYED${src ? ` · ${src}` : ''}${ageTag}${mix}`, title: `Delayed quote${src ? ` from ${src}` : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
+      // live program (honesty rule): daily data cannot be live and says so — EOD + the date it describes
+      : dateOnly && day
+        ? { label: `EOD · ${day}`, title: `End-of-day data${src ? ` from ${src}` : ''} · as of ${day}: published once a day, not a live feed${why}` }
+        : { label: `DELAYED${stamp ? ` · ${stamp}` : src ? ` · ${src}` : ''}`, title: `Stored or delayed data${src ? ` from ${src}` : ''} · ${when}${why}` }
+    case 'stale': return age
+      ? { label: `STALE${src ? ` · ${src}` : ''}${ageTag}${mix}`, title: `Older than expected${src ? ` (${src})` : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
+      : { label: `STALE${stamp ? ` · ${stamp}` : ''}`, title: `Older than expected${src ? ` (${src})` : ''} · ${when}${s.ageDays != null ? ` · ${Math.round(s.ageDays)} d old` : ''}${why}` }
+    case 'closed': return { label: `CLOSE${day ? ` · ${day}` : ''}`, title: `NSE closed: the last session's close${src ? ` (${src})` : ''}${s.asOf ? ` · ${when}` : ''}${why}` }
     case 'gap': return { label: `GAP${day ? ` · ${day}` : ''}`, title: `No capture for this session${src ? ` (${src})` : ''}${why}` }
     case 'degraded': return { label: 'DEGRADED', title: `Feed connected but erroring${src ? ` (${src})` : ''}; values may be stale${why}` }
     case 'input': return { label: 'INPUT', title: `Computed from ${s.hint ?? 'your inputs'}; no stored or live feed behind this panel` }

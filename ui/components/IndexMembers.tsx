@@ -15,7 +15,9 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getIndexMemb, type IndexMemb, type IndexMembRow } from '@/lib/api'
-import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtIdx, fmtPct, fmtPx, nseStampIso, ordinal, sourceOf, type Column } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, SourceChip, Stat, T, TickerLink, fmtIdx, fmtPct, fmtPx, nseStampIso, ordinal, sourceOf, type Column } from '@/components/terminal'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { liveLevel } from '@/components/liveModel'
 import { ConcentrationChart, DriverRegimeStrip, DriversEmpty, FitChip, HorizonPicker, MonthlyLeaderboard, SectorContribution, isDriverIndex, useDrivers, useTimelines } from '@/components/drivers/DriversView'
 import { HORIZON_LABEL, fmtPts, fmtShare, type Horizon } from '@/components/drivers/api'
 
@@ -38,6 +40,20 @@ export function IndexMembers() {
     getIndexMemb(index).then(r => { if (live) setD(r.data) }).catch(e => { if (live) setErr(apiError(e, 'members unavailable')) })
     return () => { live = false }
   }, [index])
+  // live program (D12): today's move per member and the index level from the live NSE quote service (Breeze websocket,
+  // the same subscription as MOV) instead of the payload's one read at load; returns / P/E / horizon points stay stored
+  const memSyms = useMemo(() => (d ? [index, ...d.members.map(m => m.symbol)] : []), [d, index])
+  const liveM = useLiveQuotes(memSyms, { intervalMs: 5_000 })
+  const todayOf = (r: IndexMembRow): number | null => liveLevel({ last: r.close, change_pct: r.change_pct }, liveM.quotes[r.symbol]).change_pct
+  const lvl = liveLevel(d ? { last: d.last, change_pct: d.change_pct } : null, liveM.quotes[index])
+  const lvlRow = liveM.quotes[index]
+  const lvlChange = lvl.fromService && lvlRow ? lvlRow.change ?? (lvlRow.price != null && lvlRow.prev_close != null ? lvlRow.price - lvlRow.prev_close : null) : d?.change ?? null
+  const breadth = useMemo(() => {
+    if (!d || !liveM.available) return null
+    let up = 0, down = 0
+    for (const r of d.members) { const c = todayOf(r); if (c != null) { if (c > 0) up++; else if (c < 0) down++ } }
+    return { up, down }
+  }, [d, liveM.available, liveM.quotes])  // eslint-disable-line react-hooks/exhaustive-deps
   const maxW = Math.max(1, ...(d?.members ?? []).map(r => r.weight_pct ?? 0))
   const cols: Column<IndexMembRow>[] = [
     { key: 'sym', label: 'Stock', sort: r => r.symbol, render: r => <TickerLink symbol={r.symbol} /> },
@@ -47,7 +63,9 @@ export function IndexMembers() {
           <span style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: `${((r.weight_pct ?? 0) / maxW) * 100}%`, background: T.amber, opacity: 0.8 }} /></span>
         <span style={{ minWidth: 40 }}>{r.weight_pct?.toFixed(2)}%</span></span> },
     { key: 'px', label: 'Close', align: 'right', sort: r => r.close ?? 0, render: r => <span style={{ color: T.bright }}>{fmtPx(r.close)}</span> },
-    { key: 'd', label: 'Today', align: 'right', sort: r => r.change_pct ?? -999, render: r => pct(r.change_pct, 2) },
+    { key: 'd', label: 'Today', align: 'right', sort: r => todayOf(r) ?? -999, render: r => {
+        const info = liveM.quotes[r.symbol] ? liveM.sourceFor(r.symbol) : null
+        return <span title={info ? liveM.lineFor(r.symbol) ?? undefined : `NSE heatmap at load (${d?.time ?? 'no stamp'})`}>{pct(todayOf(r), 2)}</span> } },
     // PLAN 1.2: the PTS column follows the horizon — Σ stored daily points (L × w × r) over the window, never today's
     // weights × a long return (the old YTD pts column); today's live points are on MOV
     { key: 'pts', label: `Pts · ${HORIZON_LABEL[horizon]}`, align: 'right', sort: r => ptsBy.get(r.symbol)?.points ?? -1e9,
@@ -82,9 +100,10 @@ export function IndexMembers() {
       {!d && !err && <Loading label="index members" />}
       {d && s && <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8, marginBottom: 12 }}>
-          <Stat label={index} value={fmtIdx(d.last)} color={tone(d.change_pct)}
-            sub={`${fmtPct(d.change_pct, 2)} · ${d.change != null ? `${fmtSigned(d.change, 1)} pts` : ''}`} />
-          <Stat label="Breadth today" value={`${s.up} / ${s.down}`} color={s.up >= s.down ? T.green : T.red} sub={`up / down of ${s.members}`} />
+          <Stat label={index} value={fmtIdx(lvl.last)} color={tone(lvl.change_pct)}
+            sub={<span>{fmtPct(lvl.change_pct, 2)} · {lvlChange != null ? `${fmtSigned(lvlChange, 1)} pts` : ''}
+              {lvl.fromService && liveM.source ? <> <SourceChip info={liveM.sourceFor(index) ?? liveM.source} style={{ fontSize: 8.5 }} /></> : null}</span>} />
+          <Stat label="Breadth today" value={`${breadth?.up ?? s.up} / ${breadth?.down ?? s.down}`} color={(breadth?.up ?? s.up) >= (breadth?.down ?? s.down) ? T.green : T.red} sub={`up / down of ${s.members}`} />
           <Stat label="Top 5 weight" value={`${s.top5_weight_pct}%`} color={T.amber} sub="of the index in five stocks" />
           <Stat label="Weight-implied P/E" value={s.implied_pe != null ? `${s.implied_pe}×` : '—'} color={T.text}
             sub={`from members' filings (${s.pe_coverage_pct}% of weight) · NSE publishes its own on MKT`} />
@@ -93,7 +112,8 @@ export function IndexMembers() {
         </div>
         <DriverRegimeStrip index={index} d={drv.data} tl60={tl60.data} />
         <Panel title={`${index} · ${d.members.length} members`} accent={T.amber} pad={0}
-          source={sourceOf(nseStampIso(d.time) ?? drv.data?.as_of ?? null, { source: 'NSE', live: false, hint: drv.error })} badge={drv.data?.badges?.members ?? 'arithmetic'}
+          source={liveM.available && liveM.source ? { ...liveM.source, hint: `Today column: ${liveM.source.hint ?? 'live NSE quotes'}; weights, returns, P/E and horizon points are stored (EOD)` }
+            : sourceOf(nseStampIso(d.time) ?? drv.data?.as_of ?? null, { source: 'NSE', live: false, hint: drv.error })} badge={drv.data?.badges?.members ?? 'arithmetic'}
           right={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <HorizonPicker value={horizon} onChange={setHorizon} />
             {isDriverIndex(index) && <FitChip d={drv.data} />}

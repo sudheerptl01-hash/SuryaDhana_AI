@@ -1,0 +1,86 @@
+[
+ {
+  "builder": "LV-DATA",
+  "file": "services/data-service/main.py",
+  "old": "                quote = None\n                symbol = None\n                for cand in ([working] if working else candidates):\n",
+  "new": "                quote = None\n                symbol = None\n                # LV-DATA: while the websocket carries NIFTY 50 (a tick <= 5 s old) publish that tick in the REST quote's\n                # shape instead of calling get_quotes: zero Breeze REST calls (L-INVENTORY: ~1,580 calls/day, 32 % of quota).\n                _lt = live_ticks_mod.instance()\n                _t = _lt.snapshot([\"NIFTY 50\"]).get(\"NIFTY 50\") if _lt is not None else None\n                if _t and _t.get(\"ts_age_s\") is not None and _t[\"ts_age_s\"] <= live_ticks_mod.FRESH_S:\n                    quote = {\"exchange_code\": \"NSE\", \"stock_code\": \"NIFTY\", \"ltp\": _t[\"price\"], \"open\": _t.get(\"open\"),\n                             \"high\": _t.get(\"high\"), \"low\": _t.get(\"low\"), \"previous_close\": _t.get(\"prev_close\"),\n                             \"ltp_percent_change\": _t.get(\"chg_pct\"), \"ltt\": _t.get(\"ltt\"), \"source\": \"breeze_ws\"}\n                    symbol = working or \"NIFTY\"\n                for cand in ([] if quote is not None else [working] if working else candidates):\n",
+  "why": "L-INVENTORY work order (1): retire the header's REST poller once the tick engine is armed. `_nifty_poller` calls Breeze `get_quotes` every 15 s outside the budget ledger (~1,580 calls/day). While a NIFTY 50 tick ≤ 5 s old exists, this publishes that tick in the REST quote's key shape (ltp / previous_close / ltp_percent_change) to Redis and DuckDB, so the monitor WebSocket and /live/index/nifty keep working with zero REST calls. When LIVE_TICKS is off or the tick is stale, the old REST path runs unchanged. The anchor is unique; I applied the patch to a scratch copy and it compiles and passes ruff."
+ },
+ {
+  "builder": "LV-DATA",
+  "file": "services/data-service/main.py",
+  "old": "    try:\n        live_ticks_mod.shutdown_instance()\n    except Exception:\n        pass\n",
+  "new": "    try:\n        live_ticks_mod.shutdown_instance()\n    except Exception:\n        pass\n    try:\n        if _live_quotes is not None:\n            _live_quotes.stop()          # LV-DATA: join the NSE fallback poller thread on shutdown\n    except Exception:\n        pass\n",
+  "why": "The NSE fallback poller in live_quotes.py is a daemon thread with no lifespan hook, because the lifespan is outside my route block. This joins it cleanly on shutdown. It is optional: the daemon thread dies with the process anyway. The anchor is unique (count 1). test_tick_store's anchor check is skipped once tick_store is integrated, which it is."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/tests/test_alert_quote_freshness.py",
+  "old": "SYMS = (\"TCS.NS\", \"INFY.NS\", \"^NSEI\")\n",
+  "new": "SYMS = (\"AAPL\", \"INR=X\", \"^NSEI\")   # non-NSE: since LV-API \".NS\" prices come from the live hub (test_live_news_quotes.py)\n",
+  "why": "This file pins the Yahoo SWR freshness of deciding reads. '.NS' symbols no longer take the Yahoo path: they go to the live hub and, unfaked, would reach the real data-service. Non-NSE symbols keep exactly the same Yahoo semantics. Fixes 5 of the 6 failures in this file."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/tests/test_alert_quote_freshness.py",
+  "old": "    with TestClient(app, base_url=\"http://127.0.0.1:8010\") as c:\n        first = c.get(\"/api/news-scanner/quotes\", params={\"symbols\": \"TCS.NS\"})\n        clock.t += 31.0\n        shown = c.get(\"/api/news-scanner/quotes\", params={\"symbols\": \"TCS.NS\"})\n        clock.t += 31.0\n        decided = c.get(\"/api/news-scanner/quotes\", params={\"symbols\": \"TCS.NS\", \"fresh\": \"1\"})\n    p0 = first.json()[\"quotes\"][\"TCS.NS\"][\"price\"]\n    assert shown.headers[\"x-cache\"] == \"stale\" and shown.json()[\"quotes\"][\"TCS.NS\"][\"price\"] == p0\n    assert decided.headers[\"x-cache\"] == \"miss\" and decided.headers[\"x-cache-age\"] == \"0\"\n    assert clock.t - decided.json()[\"quotes\"][\"TCS.NS\"][\"price\"] < 30.0\n",
+  "new": "    with TestClient(app, base_url=\"http://127.0.0.1:8010\") as c:\n        first = c.get(\"/api/news-scanner/quotes\", params={\"symbols\": \"AAPL\"})\n        clock.t += 31.0\n        shown = c.get(\"/api/news-scanner/quotes\", params={\"symbols\": \"AAPL\"})\n        clock.t += 31.0\n        decided = c.get(\"/api/news-scanner/quotes\", params={\"symbols\": \"AAPL\", \"fresh\": \"1\"})\n    p0 = first.json()[\"quotes\"][\"AAPL\"][\"price\"]\n    assert shown.headers[\"x-cache\"] == \"stale\" and shown.json()[\"quotes\"][\"AAPL\"][\"price\"] == p0\n    assert decided.headers[\"x-cache\"] == \"miss\" and decided.headers[\"x-cache-age\"] == \"0\"\n    assert clock.t - decided.json()[\"quotes\"][\"AAPL\"][\"price\"] < 30.0\n",
+  "why": "Same reason: the HTTP freshness test keeps testing the Yahoo SWR path, now with a non-NSE symbol."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/tests/test_slow_endpoint_caches.py",
+  "old": "    async def run() -> None:\n        await ns.get_quotes(symbols=\"NOPE.NS\")\n        clock.t += 61.0\n        q = (await ns.get_quotes(symbols=\"NOPE.NS\"))[\"quotes\"][\"NOPE.NS\"]\n        assert q == {\"symbol\": \"NOPE.NS\", \"available\": False}\n        for _ in range(5):\n            await asyncio.sleep(0)\n        assert yahoo[\"calls\"][\"NOPE.NS\"] == 1\n        clock.t += 60.0\n        await ns.get_quotes(symbols=\"NOPE.NS\")\n    asyncio.run(run())\n    assert yahoo[\"calls\"][\"NOPE.NS\"] == 2",
+  "new": "    async def run() -> None:\n        await ns.get_quotes(symbols=\"NOPE.L\")\n        clock.t += 61.0\n        q = (await ns.get_quotes(symbols=\"NOPE.L\"))[\"quotes\"][\"NOPE.L\"]\n        assert q == {\"symbol\": \"NOPE.L\", \"available\": False}\n        for _ in range(5):\n            await asyncio.sleep(0)\n        assert yahoo[\"calls\"][\"NOPE.L\"] == 1\n        clock.t += 60.0\n        await ns.get_quotes(symbols=\"NOPE.L\")\n    asyncio.run(run())\n    assert yahoo[\"calls\"][\"NOPE.L\"] == 2",
+  "why": "The 120 s 'not available' Yahoo policy is unchanged for non-NSE symbols. A '.NS' symbol now answers from the live hub (with source, state and reason), so this Yahoo-policy test switches to a non-NSE (LSE) symbol."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/tests/test_quotes.py",
+  "old": "\"\"\"routers/quotes.py: tick-vs-Yahoo merge, ensure-on-GET union with holdings, degraded fallbacks (A1/F3.2).\"\"\"\n",
+  "new": "\"\"\"routers/quotes.py (/api/quotes/ticks) since LV-API (5 Nov 2026): the overlay reads the live NSE hub (routers/live.py ->\ndata-service /live/quotes), never Yahoo. Source order, overlay states, ages, the status-derived feed state and the zero-Yahoo\nproof are pinned in test_live_ticks.py; this file keeps the B4 wire-contract pin under its historical name.\"\"\"\nimport asyncio\n\nimport test_live_support as sup\n\nfrom routers import quotes\n\n\ndef test_wire_key_is_ticks_not_quotes(monkeypatch):\n    \"\"\"Pin the B4 wire contract: ui/lib/liveTicks.ts parses `data.ticks` -- shipping `quotes`\n    left the terminal permanently tickless (bloomberg_verdict defect #1). Never rename.\"\"\"\n    sup.install(monkeypatch)\n    out = asyncio.run(quotes.live_quotes(symbols=\"TCS\"))\n    assert \"ticks\" in out and \"quotes\" not in out\n\n\ndef test_holdings_are_no_longer_unioned_here(monkeypatch):\n    \"\"\"data-service pins the holdings (and the NIFTY 50 / NIFTY BANK members, the watchlist) itself under the live contract,\n    so the overlay asks only for what its caller asked.\"\"\"\n    fake = sup.install(monkeypatch)\n    asyncio.run(quotes.live_quotes(symbols=\"TCS.NS\"))\n    assert fake.quote_calls() == [[\"TCS\"]] and not hasattr(quotes, \"_holdings_symbols\")\n",
+  "why": "WHOLE-FILE REPLACEMENT. The 'old' shown here is only the first line of the file, as an anchor: replace the ENTIRE current file with 'new'. The exact full-file old/new pair is the first entry of /Users/sudheer/.suryadhana_pm_scratch/live/LV-API/PATCH_REQUESTS_LV-API.json, and test_patches.py in the same directory applies all 9 patches. Every test in the file pinned removed behaviour: Yahoo rows for '.NS' misses, the holdings union, an exact 4-key tick row, and monkeypatching quotes._yahoo_quotes / quotes.httpx, which no longer exist. Its fixture raises AttributeError, giving the 5 errors. The full behaviour is now covered by test_live_ticks.py."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/routers/markets.py",
+  "old": "            if v.get(\"available\") and v.get(\"change_pct\") is not None:\n",
+  "new": "            if v.get(\"available\") and v.get(\"change_pct\") is not None and v.get(\"state\") not in (\"stale\", \"unavailable\"):\n",
+  "why": "_results_reacting now gets live-hub rows for '.NS' filers outside the heatmap. A 'stale' row is the last EOD close during the session, served when no live source answered; it carries the previous session's change and must not be shown as today's results reaction."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/routers/monitor.py",
+  "old": "from pydantic import BaseModel\n\nrouter = APIRouter()\n",
+  "new": "from pydantic import BaseModel\n\nfrom routers import live as _live   # the live NSE 'quotes' push channel (LV-API)\n\nrouter = APIRouter()\n",
+  "why": "Wire the optional 'quotes' push channel (routers/live.py QuotesChannel) into the existing monitor WebSocket: the import. The integration test in test_live_push.py runs once this is applied."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/routers/monitor.py",
+  "old": "    sender: asyncio.Task[None] | None = None\n    # Everything after accept runs inside this try,",
+  "new": "    sender: asyncio.Task[None] | None = None\n    quotes_ch: Any = None          # the live 'quotes' channel (routers/live.py), made on its first subscribe\n    # Everything after accept runs inside this try,",
+  "why": "The per-socket QuotesChannel handle, which owns its bounded drop-oldest outbox and pump task."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/routers/monitor.py",
+  "old": "            if action in (\"ping\", \"heartbeat\"):\n                await manager.send_json(socket, {\"pong\": True})\n            elif action in (\"subscribe\", \"unsubscribe\"):\n",
+  "new": "            if action in (\"ping\", \"heartbeat\"):\n                await manager.send_json(socket, {\"pong\": True})\n            elif action in (\"subscribe\", \"unsubscribe\") and payload.get(\"channel\") == \"quotes\":\n                # live NSE quotes push (routers/live.py, LV-API): one poll loop per process for the union of every\n                # socket's symbols, this socket's own bounded outbox (drop-oldest, counted); the Redis filter is untouched\n                if quotes_ch is None:\n                    quotes_ch = _live.QuotesChannel(lambda msg: manager.send_json(socket, msg))\n                await manager.send_json(socket, await quotes_ch.handle(payload))\n            elif action in (\"subscribe\", \"unsubscribe\"):\n",
+  "why": "Route {action: subscribe|unsubscribe, channel: 'quotes', symbols: [...]} to the live push channel. Legacy messages with no channel keep the Redis symbol filter exactly as before."
+ },
+ {
+  "builder": "LV-API",
+  "file": "services/ui-api/routers/monitor.py",
+  "old": "    finally:\n        manager.disconnect(socket)\n        if sender is not None:\n",
+  "new": "    finally:\n        manager.disconnect(socket)\n        if quotes_ch is not None:\n            await quotes_ch.close()\n        if sender is not None:\n",
+  "why": "Leave the push loop and stop the channel's pump when the socket goes; the loop ends with its last client. Verified in scratch: test_live_push (7), test_monitor_hub (9) and test_monitor_churn (2) all pass, and ruff passes on the patched monitor.py."
+ },
+ {
+  "builder": "LV-GATES",
+  "file": "ui/components/terminal/index.tsx",
+  "old": "<span title={title} data-sd-chip={st}",
+  "new": "<span title={title} data-sd-chip={st} data-sd-asof={info?.asOf ?? undefined} data-sd-age-s={info && info.ageS != null && Number.isFinite(info.ageS) ? String(Math.round(info.ageS * 10) / 10) : undefined}",
+  "why": "Gives the ui_audit live check a machine-readable age on every SourceChip. Today it parses the age from the label or hover text, which works for chips that set ageS but not for LIVE chips that do not. Two examples: StrategyBuilder's sourceOf(m.as_of, {live: true, source: 'BREEZE'}) and WatchMonitor's book chip, stamped with the page-load time. While NSE is open the audit currently fails those as 'LIVE with no age'; with data-sd-asof it measures them, and catches the book chip's age growing. Optional: the audit and its tests are green without this patch. LV-UI owns the file, so the PM applies the patch after LV-UI's checker (the substring is unique in the file as of 11:29 IST)."
+ }
+]

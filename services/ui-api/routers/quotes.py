@@ -1,96 +1,90 @@
 """
-Live quotes with honest fallback (Bloomberg program F3.2, amendment A1).
+Live ticks overlay (Bloomberg program F3.2, amendment A1), aligned with the live NSE contract (LV-API, 5 Nov 2026).
 
-`GET /api/quotes/live?symbols=` (alias `/api/quotes/ticks`, the F3.2/UIX name — one handler):
-merges data-service L1 ticks (fresh ≤ 5 s → source "icici-ws") with the EXISTING Yahoo quote path
-(source "yahoo") per symbol. Asking is subscribing (A1): the request's symbols ∪ the saved holdings
-are pushed to data-service's ensure-on-GET endpoint on every poll — idempotent, 2 s cadence bounds
-churn, and restarts of either service self-heal within one poll. No frontend POST exists.
+`GET /api/quotes/ticks?symbols=` (alias `/api/quotes/live`, one handler) is the overlay ui/lib/liveTicks.ts polls
+every 2 s (stock window, DESK book, WTCH rows). It reads the SAME per-symbol hub as `/api/live/quotes`
+(routers/live.py -> data-service `/live/quotes`: Breeze websocket tick -> NSE website -> last EOD close), so an NSE
+symbol is never priced from Yahoo here (inventory defect D4: Yahoo rows inside this map overwrote broker prices).
 
-Quota safety (F3.4): the fallback is `news_scanner.get_quotes` (Yahoo) — this module adds **zero**
-ICICI REST quote calls.
+Rows in `ticks`: only prices a consumer may paint OVER its own base layer -- state `live` (Breeze tick), `delayed`
+(NSE website, about a minute old) or `closed` (after the session). `stale` (an EOD close during the session) and
+`unavailable` rows are left out, so the consumer keeps what it has (the stock window's REST quote, the Desk's mark).
+Each row carries `state`, `age_s`, `ltt` and the contract source in `feed`; `source` stays the wire value
+liveTicks.ts keys its row-truth rule on (`icici-ws` for a Breeze tick, otherwise the contract source).
+
+Asking is subscribing (A1): data-service ensures every requested symbol (union + TTL; it pins holdings, the NIFTY 50 /
+NIFTY BANK members and the watchlist itself). Quota safety (F3.4): no Breeze REST call and no Yahoo call here.
 """
 from __future__ import annotations
 
-import json
-import os
-from datetime import datetime
-from pathlib import Path
+import asyncio
+from typing import Any
 
-import httpx
-from fastapi import APIRouter, Query
+from cache import cache_headers
+from fastapi import APIRouter, Query, Response
 
-from routers.news_scanner import get_quotes as _yahoo_quotes   # existing Yahoo path — reused, not duplicated
+from routers import live
 
 router = APIRouter()
 
-DATA_SVC = os.environ.get("DATA_SERVICE_URL", "http://localhost:8001")
-FRESH_S = 5.0
-MAX_SYMBOLS = 60
-
-
-def _holdings_symbols() -> list[str]:
-    """Saved broker book — always unioned into the ensure set (A1: holdings pinned)."""
-    try:
-        raw = json.loads((Path(__file__).resolve().parents[3] / "data" / "last_holdings.json").read_text())
-        return [p.get("symbol", "") for p in raw.get("positions", []) if p.get("symbol")]
-    except (OSError, ValueError):
-        return []
+MAX_SYMBOLS = live.MAX_SYMBOLS
+TICK_STATES = frozenset({"live", "delayed", "closed"})
+_WIRE_SOURCE = {"breeze_ws": "icici-ws"}          # the B4 wire value for a broker tick (liveTicks.ts parse())
 
 
 def _norm(symbols: str) -> list[str]:
+    """Tolerant (as before): unknown entries are skipped, '.NS' dropped, order kept, at most MAX_SYMBOLS."""
     out: list[str] = []
     for s in symbols.split(","):
-        s = s.strip().upper().replace(".NS", "")
-        if s and s not in out:
-            out.append(s)
+        try:
+            sym = live.normalize_symbol(s)
+        except ValueError:
+            continue
+        if sym not in out:
+            out.append(sym)
     return out[:MAX_SYMBOLS]
+
+
+def tick_row(row: dict[str, Any], as_of: str) -> dict[str, Any] | None:
+    """One live-contract row -> the overlay row, or None when the consumer should keep its own price."""
+    if row.get("price") is None or row.get("state") not in TICK_STATES:
+        return None
+    src = row.get("source")
+    day = row.get("date") if isinstance(row.get("date"), str) and len(row["date"]) == 10 else None
+    when = row.get("ltt") or (f"{day}T15:30:00+05:30" if src == "eod" and day else as_of)   # a close is dated, not "now"
+    out: dict[str, Any] = {"price": row["price"], "chg_pct": row.get("change_pct"), "prev_close": row.get("prev_close"),
+                           "ttq": row.get("volume"), "as_of": when,
+                           "source": _WIRE_SOURCE.get(src, src) if isinstance(src, str) else None, "feed": src,
+                           "state": row["state"], "age_s": row.get("age_s"), "ltt": row.get("ltt")}
+    for k in ("hint", "reason"):
+        if row.get(k):
+            out[k] = row[k]
+    return out
 
 
 @router.get("/live")
 @router.get("/ticks")
-async def live_quotes(symbols: str = Query(..., min_length=1, max_length=1500)) -> dict:
-    """Per symbol: {price, chg_pct, source: "icici-ws"|"yahoo", as_of} (+hint on a clamped move);
-    global {connected, state} describe the tick feed. Feed off/stale/unreachable ⇒ every symbol
-    degrades to Yahoo — the panel keeps prices either way and the chip tells the truth."""
+async def live_quotes(symbols: str = Query(..., min_length=1, max_length=12000),
+                      response: Response = None) -> dict[str, Any]:  # type: ignore[assignment]  # injected by FastAPI
+    """{connected, state, as_of, market, ticks: {SYM: {price, chg_pct, prev_close, ttq, as_of, source, feed, state,
+    age_s, ltt, hint?, reason?}}}; `state` / `connected` describe the Breeze tick engine (data-service /live/status;
+    UNREACHABLE when it cannot be read). Wire key `ticks` (the B4 contract) -- never rename it."""
     syms = _norm(symbols)
-    ask = list(dict.fromkeys(syms + _holdings_symbols()))[: MAX_SYMBOLS]
-    ticks: dict = {}
-    state, connected = "OFF", False
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            r = await client.get(f"{DATA_SVC}/live/ticks", params={"symbols": ",".join(ask)})
-        if r.status_code == 200:
-            payload = r.json()
-            state = payload.get("state", "OFF")
-            connected = bool(payload.get("connected"))
-            ticks = payload.get("ticks") or {}
-    except httpx.HTTPError:
-        state = "UNREACHABLE"
-
-    out: dict[str, dict] = {}
-    misses: list[str] = []
+    if not syms:
+        status = await live.status_or_none()
+        state = status["state"] if status else "UNREACHABLE"
+        return {"connected": state == "LIVE", "state": state, "as_of": live.now_ist().isoformat(timespec="seconds"),
+                "market": None, "ticks": {}}
+    snap, status = await asyncio.gather(live.hub().quotes(syms), live.status_or_none())
+    payload = snap.payload
+    ticks: dict[str, dict[str, Any]] = {}
     for s in syms:
-        t = ticks.get(s) or {}
-        age = t.get("ts_age_s")
-        if t.get("price") is not None and age is not None and age <= FRESH_S:
-            row = {"price": t["price"], "chg_pct": t.get("chg_pct"), "as_of": t.get("as_of"),
-                   "source": "icici-ws"}
-            if t.get("hint"):
-                row["hint"] = t["hint"]
-            out[s] = row
-        else:
-            misses.append(s)
-
-    if misses:
-        y = await _yahoo_quotes(symbols=",".join(f"{s}.NS" for s in misses))
-        quotes = y.get("quotes") or {}
-        for s in misses:
-            q = quotes.get(f"{s}.NS") or {}
-            out[s] = {"price": q.get("price"), "chg_pct": q.get("change_pct"),
-                      "as_of": y.get("as_of"), "source": "yahoo"}
-
-    # Wire key is `ticks` — the B4 contract ui/lib/liveTicks.ts parses (build_b4.md §cross-builder).
+        t = tick_row(payload["quotes"].get(s) or {}, payload["as_of"])
+        if t is not None:
+            ticks[s] = t
+    state = status["state"] if status else "UNREACHABLE"
+    cache_headers(response, snap.served)
+    # Wire key is `ticks` -- the B4 contract ui/lib/liveTicks.ts parses (build_b4.md §cross-builder).
     # Shipping this as `quotes` left the UI permanently tickless (bloomberg_verdict defect #1).
-    return {"connected": connected, "state": state,
-            "as_of": datetime.now().isoformat(timespec="seconds"), "ticks": out}
+    return {"connected": state == "LIVE", "state": state, "as_of": payload["as_of"], "market": payload["market"],
+            "ticks": ticks}

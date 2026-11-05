@@ -6,11 +6,20 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
  * Who moved the index today: each constituent's contribution in index points (rebuilt free-float weights: shares
  * from results filings × previous close × (1 − promoter holding)). The explained total is shown next to the
  * actual move so the approximation's error is visible.
+ *
+ * Live program (reports/live_nse): the weights come from /api/market/index-contribution every 2 min (they are built
+ * on the previous close, so they do not move intraday); the index level and every member's move come from the live
+ * NSE quote service every 3 s (the Breeze websocket carries NIFTY 50 + its 50 members on one connection; NSE's
+ * website, ≈ 1 min, for a member that is not streaming) and the points are recomputed here (liveModel.ts). The
+ * panel's chip (`onSource`) is the live rows' own: LIVE · BREEZE · 1s, or DELAYED · NSE · <age> for the 2-min payload.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getIndexContribution, type IndexContribution as Data } from '@/lib/api'
-import { Chip, T, TickerLink, fmtPct } from '@/components/terminal'
+import { Chip, T, TickerLink, fmtPct, type SourceInfo } from '@/components/terminal'
 import { goToPage } from '@/lib/navigate'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { liveContribution, nseDelayedSource } from '@/components/liveModel'
+import { useMarketOpen } from '@/components/shell/useFeed'
 
 /**
  * NSE's own stamp on the payload ("05-Nov-2026 09:54", IST) → what the header prints: the time today, or the session date
@@ -26,9 +35,9 @@ export function contributionStamp(time: string | null | undefined, now: Date = n
   return stampDay.toLowerCase() === todayIst.replace(/,/g, '').toLowerCase() ? `NSE ${hm}` : `NSE · session ${m[1]} ${m[2]} ${hm}`
 }
 
-export function IndexContribution() {
+export function IndexContribution({ onSource }: { onSource?: (s: SourceInfo | null) => void } = {}) {
   const [index, setIndex] = useState('NIFTY 50')
-  const [d, setD] = useState<Data | null>(null)
+  const [raw, setD] = useState<Data | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
     let live = true
@@ -38,6 +47,18 @@ export function IndexContribution() {
     const iv = setInterval(load, 120_000)
     return () => { live = false; clearInterval(iv) }
   }, [index])
+  // live overlay: the index + its members from the live quote service, points recomputed on the stored weights
+  const liveSyms = useMemo(() => (raw ? [raw.index, ...raw.members.map(m => m.symbol)] : []), [raw])
+  const live = useLiveQuotes(liveSyms, { intervalMs: 3_000 })
+  const lc = useMemo(() => (raw ? liveContribution(raw, live.quotes) : null), [raw, live.quotes])
+  const d = lc
+  const marketOpen = useMarketOpen()
+  const src: SourceInfo | null = raw
+    ? (live.available && live.source && lc && (lc.liveMembers > 0 || lc.indexLive)) ? live.source
+      : nseDelayedSource(raw.time, { marketOpen, now: Date.now(), hint: 'heatmap ≈ 60 s + allIndices ≈ 15 s caches, re-polled every 2 min' })
+    : null
+  const srcKey = src ? `${src.state}|${src.source}|${Math.round((src.ageS ?? 0) / 5)}|${src.mix?.live ?? ''}|${src.asOf}` : ''
+  useEffect(() => { onSource?.(src) }, [srcKey])  // eslint-disable-line react-hooks/exhaustive-deps
   const ms = (d?.members ?? []).filter(m => m.points != null)
   const top = ms.slice(0, 8), bottom = [...ms].reverse().slice(0, 8)
   const max = Math.max(1, ...ms.map(m => Math.abs(m.points!)))
@@ -57,7 +78,10 @@ export function IndexContribution() {
         {['NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY NEXT 50'].map(ix => <Chip key={ix} color={T.cyan} active={index === ix} onClick={() => setIndex(ix)}>{ix.replace('NIFTY ', '')}</Chip>)}
         <span style={{ flex: 1 }} />
         {d && <span style={{ fontSize: 10.5, fontFamily: T.mono, color: T.muted }}>
-          {contributionStamp(d.time) && <span data-contrib-stamp title="NSE's publish time for these moves (index ~15 s, members ~60 s server cache); this panel re-polls every 2 min">{contributionStamp(d.time)} · </span>}
+          {lc && (lc.liveMembers > 0 || lc.indexLive)
+            ? <span data-contrib-stamp="live" title={`index ${lc.indexLive ? 'and ' : 'from NSE; '}${lc.liveMembers} of ${lc.members.length} members from the live NSE quote service (Breeze websocket, NSE's website when a name is not streaming); weights from filings, every 2 min`}>
+                index {live.lineFor(lc.index) ?? 'from NSE'} · {lc.liveMembers}/{lc.members.length} members on live quotes · </span>
+            : contributionStamp(d.time) && <span data-contrib-stamp title="NSE's publish time for these moves (index ~15 s, members ~60 s server cache); this panel re-polls every 2 min">{contributionStamp(d.time)} · </span>}
           actual <span style={{ color: (d.change ?? 0) >= 0 ? T.green : T.red }}>{fmtSigned(d.change, 1)} pts</span>
           {' · '}explained {fmtSigned(d.explained_points, 1)}
           {gap != null && d.change ? <span style={{ color: Math.abs(gap / d.change) > 0.1 ? T.amber : T.dim }}> ({(Math.abs(gap / d.change) * 100).toFixed(0)}% off)</span> : null}

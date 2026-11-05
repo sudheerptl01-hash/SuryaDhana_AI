@@ -8,7 +8,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { black76 } from '@/lib/black76'
 import type { OptionChain } from '@/lib/api'
-import { Btn, Input, Panel, T, sourceOf, nseStampIso } from '@/components/terminal'
+import { Btn, Input, Panel, T, sourceOf } from '@/components/terminal'
+import { nseDelayedSource } from '@/components/liveModel'
 
 export type PricerPick = { strike: number; side: 'call' | 'put' }
 const n = (v: number | null | undefined, d = 2) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d }))
@@ -54,7 +55,10 @@ export function OptionPricer({ data, pick, onClose }: { data: OptionChain; pick:
     <div title={title} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '3px 0', borderBottom: `1px solid ${T.border}` }}>
       <span style={{ color: T.muted }}>{label}</span><span style={{ color: T.text }}>{value}</span></div>)
   return (
-    <Panel source={sourceOf(data.live ? (nseStampIso(data.as_of) ?? data.date) : data.date, { source: data.live ? 'NSE' : 'NSE F&O bhavcopy', live: !!data.live })} badge="arithmetic" title={`Pricer · ${data.symbol} ${K} ${pick.side === 'call' ? 'CE' : 'PE'} · ${data.expiry}`} accent={T.violet} pad={10} style={{ marginBottom: 12 }}
+    <Panel source={data.live
+        // live program: NSE's option chain (v3) is about a minute behind — DELAYED · NSE · <age>, never LIVE
+        ? nseDelayedSource(data.as_of ?? null, { marketOpen: true, now: Date.now(), hint: 'NSE option chain (v3)' })
+        : sourceOf(data.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic" title={`Pricer · ${data.symbol} ${K} ${pick.side === 'call' ? 'CE' : 'PE'} · ${data.expiry}`} accent={T.violet} pad={10} style={{ marginBottom: 12 }}
       subtitle="Black-76 on the chain's forward, r 6.5% (the model behind OMON's IVs) · one long lot · edit IV or days to ask what-if"
       right={<Btn size="sm" onClick={onClose}>✕ CLOSE</Btn>}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 16, fontFamily: T.mono, fontSize: 11.5 }}>

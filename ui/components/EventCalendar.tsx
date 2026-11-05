@@ -221,7 +221,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
         </Panel>
 
         {reacting && reacting.rows.length > 0 && (
-          <Panel source={sourceOf(reacting.since ?? null, { source: 'NSE results', live: reacting.phase === 'session' })} badge="context" title={reacting.phase === 'session' ? 'Reacting today · live' : reacting.phase === 'preopen' ? 'Results · pre-open auction' : 'Results since the last close · react at 09:15'} accent={T.violet} pad={0}
+          <Panel source={sourceOf(reacting.since ?? null, { source: 'NSE results', hint: reacting.phase === 'session' ? "today's moves from NSE's heatmap (about 1 min behind) and the quotes route for the other filers: not a live feed" : null })} badge="context" title={reacting.phase === 'session' ? 'Reacting today · live' : reacting.phase === 'preopen' ? 'Results · pre-open auction' : 'Results since the last close · react at 09:15'} accent={T.violet} pad={0}
             subtitle={`results filed since ${reacting.since} · what the numbers said (revenue / profit vs a year ago; … = still reading the filing; hover for why a figure is missing) and today's move vs the stock's average results-day move · the scoreboard below fills in tonight`}>
             <DataTable<ReactingResult> dense maxHeight={300} rowKey={r => r.symbol} onRowClick={r => onSelectTicker(r.symbol)}
               initialSort={{ key: 'size', dir: 'desc' }} rows={reacting.rows}

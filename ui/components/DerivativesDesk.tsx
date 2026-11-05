@@ -13,7 +13,9 @@
  * the neutral token (≥ 1 used to be green); every panel header carries its source chip and evidence badge.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CHART_BOX, Chip, DataTable, ErrorBox, Input, Loading, Notice, PageHeader, Panel, Stat, T, Tabs, type Column, MINUS, fmtFixed, fmtNum, fmtPct, fmtSigned, ordinal, sourceOf, tone, useChartSize, useSubView } from '@/components/terminal'
+import { CHART_BOX, Chip, DataTable, ErrorBox, Input, Loading, Notice, PageHeader, Panel, SourceChip, Stat, T, Tabs, type Column, MINUS, fmtFixed, fmtNum, fmtPct, fmtSigned, ordinal, sourceOf, tone, useChartSize, useSubView } from '@/components/terminal'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { underlyingLiveSymbol } from '@/components/liveModel'
 import { VolView } from '@/components/vol/VolView'
 import { countUnit, fmtCount } from '@/lib/format'
 import { axisTicks, textWidth } from '@/components/terminal/chart'
@@ -383,6 +385,12 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
 
   const pick = (s: string) => { const v = s.trim().toUpperCase(); if (v) { setSymbol(v); setInput('') } }
   const nearLeg = term?.legs?.[0]
+  // live program (reports/live_nse): the underlying's spot from the live NSE quote service (Breeze websocket tick in
+  // session; CLOSE <day> after) beside the EOD spot the tables use; every other DERV panel is EOD and says so
+  const ulSym = underlyingLiveSymbol(symbol)
+  const ul = useLiveQuotes(ulSym ? [ulSym] : [], { intervalMs: 3_000, enabled: sub === 'desk' })
+  const ulRow = ulSym ? ul.quotes[ulSym] : undefined
+  const ulPriced = !!ulRow && ulRow.price != null && ulRow.state !== 'unavailable'
 
   // PLAN 1.1 (O-T14 default: a sub-view, not a 44th page): DESK | VOL in `?sub=`; the GO alias VOL hands `vol` over
   const tabs = <Tabs items={[{ id: 'desk', label: 'Desk · basis · rollover · PCR · VIX' }, { id: 'vol', label: 'VOL · skew · term · cone · screener' }]}
@@ -433,7 +441,10 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
         {/* header strip (PLAN §0.4 same number once per page): spot, futures OI and the India VIX live here only; the
             near basis / DTE are in the header chip and the term table, PCR and rollover in their panels */}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Stat label={`${symbol} spot (EOD)`} value={num(term.spot, 2)} accent={T.amber} sub={`EOD ${term.as_of} · ${term.source}`} />
+          {ulPriced && ul.source
+            ? <Stat label={`${symbol} spot`} value={num(ulRow!.price, 2)} accent={T.amber}
+                sub={<span><SourceChip info={ul.source} style={{ fontSize: 8.5 }} /> · EOD {num(term.spot, 2)} on {term.as_of} (the tables below)</span>} />
+            : <Stat label={`${symbol} spot (EOD)`} value={num(term.spot, 2)} accent={T.amber} sub={`EOD ${term.as_of} · ${term.source}`} />}
           <Stat label="Futures OI (all expiries)" value={oiFmt(term.fut_oi_total)} accent={T.cyan} sub="shares, summed over the listed futures" />
           <Stat label="INDIA VIX" value={num(vix?.level, 2)} accent={T.muted} color={T.text}
             sub={vix ? `${ordinal(vix.pctile_1y)} pctile (1y) · as of ${String(vix.as_of).slice(0, 10)} · context` : 'VIX unavailable'} />

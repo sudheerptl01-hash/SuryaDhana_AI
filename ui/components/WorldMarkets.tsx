@@ -14,6 +14,7 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
 import { spanNote } from '@/lib/quoteSpan'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { getFomc, getGiftNifty, getIndicesLive, getLiveMovers, getNewsQuotes, getRbiMpc, type FomcMeeting, type GiftNifty } from '@/lib/api'
+import { useLiveQuotes } from '@/lib/liveQuotes'
 import type { Quote } from '@/components/news/types'
 import { Chip, PageHeader, Panel, Spark, T, fmtNum, tone, sourceOf } from '@/components/terminal'
 import { GoldHoverCard } from '@/components/gold/HealthStrip'
@@ -66,6 +67,18 @@ export function WorldMarkets() {
     } catch { /* keep last */ }
   }, [])
   useEffect(() => { load(); const iv = setInterval(load, 60_000); return () => clearInterval(iv) }, [load])
+  // live program (reports/live_nse): the India board's NSE indices (NIFTY 50, BANK, IT, INDIA VIX) from the live NSE
+  // quote service (Breeze websocket index ticks; NSE allIndices through the service otherwise), every 3 s; Yahoo keeps
+  // the sparks and every non-NSE row (SENSEX, the world boards)
+  const liveIn = useLiveQuotes(Object.values(NSE_NAME), { intervalMs: 3_000 })
+  const liveRow = (sym: string): Q | null => {
+    const name = NSE_NAME[sym]
+    const r = name ? liveIn.quotes[name] : undefined
+    if (!r || r.price == null || r.state === 'unavailable') return null
+    const t = r.ltt ? Date.parse(r.ltt) : NaN
+    return { ...(q[sym] ?? {}), price: r.price, change: r.change ?? null, change_pct: r.change_pct, day_high: r.day_high ?? undefined, day_low: r.day_low ?? undefined,
+             ...(Number.isFinite(t) ? { market_time: t / 1000 } : {}), prev_date: null, stale: false, available: true } as Q
+  }
   const [fomc, setFomc] = useState<FomcMeeting[]>([])
   useEffect(() => { getFomc().then(r => setFomc(r.data.upcoming)).catch(() => {}) }, [])
   const [gift, setGift] = useState<GiftNifty | null>(null)
@@ -135,7 +148,9 @@ export function WorldMarkets() {
       )}
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(520px, 1fr))', alignItems: 'start' }}>
         {GROUPS.map(g => (
-          <Panel source={sourceOf(asOf ? asOf.toISOString() : null, { source: 'Yahoo', maxAgeDays: 1 })} key={g.title} title={g.title} accent={g.accent} pad={0}>
+          <Panel source={g.title === 'India' && liveIn.available && liveIn.source
+              ? { ...liveIn.source, hint: `NSE indices: ${liveIn.source.hint ?? 'live NSE quotes'} · SENSEX and the sparks: Yahoo, delayed` }
+              : sourceOf(asOf ? asOf.toISOString() : null, { source: 'Yahoo', maxAgeDays: 1 })} key={g.title} title={g.title} accent={g.accent} pad={0}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11.5 }}>
               <tbody>
                 {g.title === 'India' && gift?.last != null && (
@@ -151,7 +166,8 @@ export function WorldMarkets() {
                   </tr>
                 )}
                 {g.rows.map(([sym, label]) => {
-                  const v = q[sym]
+                  const lv = g.title === 'India' ? liveRow(sym) : null
+                  const v = lv ?? q[sym]
                   const ok = v?.available
                   const range = ok && v.day_high != null && v.day_low != null && v.day_high > v.day_low && v.price != null
                     ? ((v.price - v.day_low) / (v.day_high - v.day_low)) * 100 : null

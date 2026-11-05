@@ -54,7 +54,8 @@ function check(name: string, cond: unknown, extra?: unknown): void {
 {
   const now = new Date('2026-11-05T16:30:00Z')                          // Thu 5 Nov 2026 22:00 IST
   const fresh = S.sourceOf('2026-11-04', { source: 'NSE F&O bhavcopy', now })
-  check('S1 a daily as-of inside max age: DELAYED with its date, never a clock', fresh.state === 'delayed' && S.sourceChipText(fresh, now).label === 'DELAYED · 04 NOV', S.sourceChipText(fresh, now))
+  // live program (reports/live_nse honesty rule): daily data reads EOD + its date (was 'DELAYED · 04 NOV'); still never a clock
+  check('S1 a daily as-of inside max age: EOD with its date, never a clock', fresh.state === 'delayed' && S.sourceChipText(fresh, now).label === 'EOD · 04 NOV', S.sourceChipText(fresh, now))
   const old = S.sourceOf('2026-10-30', { source: 'NSE', now })
   check('S1 older than max age (4 d): STALE', old.state === 'stale' && S.sourceChipText(old, now).label === 'STALE · 30 OCT', S.sourceChipText(old, now))
   check('S1 negative control: the same date with a 10-day cap is not stale', S.sourceOf('2026-10-30', { now, maxAgeDays: 10 }).state === 'delayed')

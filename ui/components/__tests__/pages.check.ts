@@ -262,7 +262,9 @@ const MINUS = '−'
   check('E1 no hover state on the table', !s.includes('setHovered') && !s.includes('onMouseEnter') && s.includes('hover:bg-[#131926]'))
   check('E1 stable callbacks for the rows', s.includes('const handleRowClick = useCallback(') && s.includes('const handleWatchToggle = useCallback('))
   check('E1 rows get only their own live value / flash / watched flag',
-    s.includes('live={liveQuotes[stock.ticker]?.ltp}') && s.includes('flash={flashMap[stock.ticker] ?? null}') && s.includes('watched={watched.has(stock.ticker)}'))
+    // live program (reports/live_nse): the row's own live-service price first (a primitive, so the memo holds), the
+    // monitor socket's value otherwise
+    s.includes('live={livePx(stock.ticker) ?? liveQuotes[stock.ticker]?.ltp}') && s.includes('flash={flashMap[stock.ticker] ?? null}') && s.includes('watched={watched.has(stock.ticker)}'))
   check('E1 index ticks do not flash the table', s.includes('if (!tickers.has(sym)) return'))
   check('E1 CMP printed with exactly 2 decimals', s.includes('fmtFixed(price, 2)'))
   check('E1 incremental mount: a screenful first, the rest in transitions, all rows in the end',

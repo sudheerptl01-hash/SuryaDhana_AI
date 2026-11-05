@@ -7,7 +7,8 @@ and enriches each pick with live market data from Yahoo Finance:
 
   GET /scans                 available scan files (newest first) + change marker
   GET /scan?date=latest      one scan, normalised (picks, rejected, macro, run log)
-  GET /quotes?symbols=A,B    batch live quotes + 1-month sparkline
+  GET /quotes?symbols=A,B    batch live quotes + 1-month sparkline ('.NS' symbols from the live NSE hub,
+                             routers/live.py: Breeze tick -> NSE website -> EOD close, never Yahoo; the rest Yahoo)
   GET /chart/{symbol}        OHLCV + indicators (SMA 20/50/200, RSI 14, ATR%) + stats
   GET /headlines/{symbol}    latest Yahoo Finance headlines for the ticker
 
@@ -32,6 +33,8 @@ import httpx
 
 from cache import SWRCache, TTLCache, cache_headers, merge_served
 from fastapi import APIRouter, HTTPException, Query, Response
+
+from routers import live as _live   # the live NSE hub: '.NS' quotes never come from Yahoo (LV-API, 5 Nov 2026)
 
 router = APIRouter()
 
@@ -595,21 +598,47 @@ async def _fetch_quote(sym: str) -> dict[str, Any]:
             "spark": [round(x["close"], 4) for x in c[-22:]]}
 
 
+def _yahoo_tagged(q: Any) -> Any:
+    """A Yahoo quote as served, plus ``source: 'yahoo'`` and a coarse ``state`` (copy: cached values are shared).
+    'stale' = Yahoo's own > 4 days flag; 'delayed' = last trade within 30 min; else 'closed' (its market_date says
+    which session). The age is ``now - market_time`` (exchange time) for the UI; the cache age is in X-Cache-Age."""
+    if not isinstance(q, dict) or not q.get("available"):
+        return q
+    mt = q.get("market_time")
+    state = "stale" if q.get("stale") else ("delayed" if mt and time.time() - mt <= 1800 else "closed")
+    return {**q, "source": "yahoo", "state": state}
+
+
+async def _no_live() -> tuple[dict[str, Any], None]:
+    return {}, None
+
+
 @router.get("/quotes")
 async def get_quotes(symbols: str = Query(..., min_length=1, max_length=2000),
                      response: Response = None,  # type: ignore[assignment]  # injected by FastAPI
                      fresh: bool = False) -> dict[str, Any]:
     """Batch quotes. ``fresh`` (query ``?fresh=1``): for a caller that DECIDES on the price (alerts) -- every
     quote is under QUOTE_REFRESH_AFTER_S old (see the cache comment above). Plain defaults, so a direct call
-    from Python without ``fresh`` gets the display behaviour."""
+    from Python without ``fresh`` gets the display behaviour.
+
+    '.NS' symbols (NSE stocks) answer from the live NSE hub (routers/live.py: Breeze websocket tick -> NSE website ->
+    the last EOD close; ``source`` / ``state`` / ``age_s`` / ``ltt`` on each row, a deciding read never gets a 'stale'
+    row as available) with ZERO Yahoo calls; every other symbol (US, FX, commodities, '^' indices, '.BO') keeps the
+    Yahoo path above. ``LIVE_QUOTES_NSE=0`` (rollback lever) puts '.NS' back on Yahoo. The body keys are unchanged."""
     syms = list(dict.fromkeys(_check_symbol(s) for s in symbols.split(",") if s.strip()))[:60]
-    served = await asyncio.gather(*(_quotes.get(s, functools.partial(_fetch_quote, s), policy=_quote_policy,
-                                                fresh=bool(fresh))
-                                    for s in syms))
-    pairs: list[tuple[str, Any]] = [(s, sv.value) for s, sv in zip(syms, served)]
+    nse = [s for s in syms if s.endswith(".NS")] if _live.nse_live_enabled() else []
+    nse_set = set(nse)
+    other = [s for s in syms if s not in nse_set]
+    yahoo_served, (live_rows, live_served) = await asyncio.gather(
+        asyncio.gather(*(_quotes.get(s, functools.partial(_fetch_quote, s), policy=_quote_policy, fresh=bool(fresh))
+                         for s in other)),
+        _live.news_quotes(nse, fresh=bool(fresh)) if nse else _no_live())
+    pairs: list[tuple[str, Any]] = [(s, sv.value) for s, sv in zip(other, yahoo_served)]
     pairs = await _official_prev_close(pairs)
-    cache_headers(response, merge_served(list(served)))
-    return {"quotes": {s: q for s, q in pairs}, "as_of": datetime.now(timezone.utc).isoformat()}
+    got: dict[str, Any] = {s: _yahoo_tagged(q) for s, q in pairs}
+    got.update(live_rows)
+    cache_headers(response, merge_served(list(yahoo_served) + ([live_served] if live_served is not None else [])))
+    return {"quotes": {s: got[s] for s in syms}, "as_of": datetime.now(timezone.utc).isoformat()}
 
 
 async def _daily(sym: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:

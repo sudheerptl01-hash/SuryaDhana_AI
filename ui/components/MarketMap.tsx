@@ -3,13 +3,15 @@
 /**
  * Market map (Bloomberg IMAP) — the 250 most traded NSE stocks as a treemap: grouped by industry, tile size =
  * 20-day median turnover, colour = return over 1 day / 1 week / 1 month, or LIVE today during the session (NSE
- * heatmap lists, the rest from Yahoo; ≈1 min delayed, refreshed every 60 s). Click a tile for the stock.
+ * heatmap lists, the names they miss from the live NSE quote service; ≈1 min delayed, refreshed every 60 s). Click a
+ * tile for the stock.
  * Squarified layout (Bruls, Huizing & van Wijk 2000), two levels: industries, then stocks inside each.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { CHART_BOX, Chip, Panel, T, fmtPct, useChartSize, sourceOf, undatedSource } from '@/components/terminal'
 import { openTicker } from '@/lib/openTicker'
 import { getLiveQuotes, getNewsQuotes } from '@/lib/api'
+import { useLiveQuotes } from '@/lib/liveQuotes'
 
 export interface MapRow { symbol: string; industry: string; size: number | null; r1: number | null; r5: number | null; r21: number | null }
 interface Rect { x: number; y: number; w: number; h: number }
@@ -60,49 +62,64 @@ function fill(v: number | null, cap: number): string {
 type Period = 'live' | 'r1' | 'r5' | 'r21'
 const PERIODS: [Period, string, number][] = [['live', '● LIVE', 3], ['r1', '1D', 3], ['r5', '1W', 6], ['r21', '1M', 12]]
 
-/** Today's change for the map's stocks: NSE heatmap lists first (one shared server cache, every 60 s), Yahoo for
- *  the ~65 names NSE's lists miss. Yahoo prices one chart per symbol (≈25 s cold for 60), so that leg runs in the
- *  background every 5 min in session and once after the close, and the map paints from NSE without waiting. */
+/** Today's change for the map's stocks: NSE heatmap lists first (one shared server cache, every 60 s); the ~65 names
+ *  NSE's lists miss come from the live NSE quote service (live program, reports/live_nse: Breeze websocket → NSE ≈ 1 min
+ *  → the last close; never Yahoo), every 15 s. Only while that service does not answer at all (404 before its deploy,
+ *  or down) does the old Yahoo leg run for them (every 5 min in session), and the subtitle says so. */
 function useLiveChanges(symbols: string[], on: boolean) {
-  const [live, setLive] = useState<{ chg: Record<string, number>; nse: number; at: Date } | null>(null)
+  const [nse, setNse] = useState<{ chg: Record<string, number>; at: Date } | null>(null)
+  const [rest, setRest] = useState<string[]>([])
+  const svc = useLiveQuotes(rest, { intervalMs: 15_000, enabled: on })
+  const svcOk = useRef(false)
+  svcOk.current = svc.available
   const yahoo = useRef<{ chg: Record<string, number>; at: number }>({ chg: {}, at: 0 })
+  const [yahooTick, setYahooTick] = useState(0)
   useEffect(() => {
     if (!on) return
     let alive = true
-    const publish = (nseChg: Record<string, number>) => {
-      const chg = { ...yahoo.current.chg, ...nseChg }
-      if (alive) setLive({ chg, nse: Object.keys(nseChg).length, at: new Date() })
-    }
-    let lastNse: Record<string, number> = {}
     const loadNse = async () => {
       const chg: Record<string, number> = {}
       try {
         const q = (await getLiveQuotes()).data.quotes
         for (const s of symbols) if (q[s]?.change_pct != null) chg[s] = q[s].change_pct!
-      } catch { /* Yahoo below covers what it can */ }
-      lastNse = chg
-      publish(chg)
+      } catch { /* the live quote service below covers what it can */ }
+      if (!alive) return chg
+      setNse({ chg, at: new Date() })
+      setRest(prev => { const next = symbols.filter(s => chg[s] == null); return prev.join(',') === next.join(',') ? prev : next })
       return chg
     }
     const loadYahoo = async (nseChg: Record<string, number>) => {
+      if (svcOk.current) return                      // the live NSE service prices them: no Yahoo for NSE names
       const stale = Date.now() - yahoo.current.at > (sessionOpen() ? 5 * 60_000 : 6 * 3_600_000)
       if (!stale) return
       yahoo.current.at = Date.now()
-      const rest = symbols.filter(s => nseChg[s] == null)
-      for (let i = 0; i < rest.length; i += 60) {
+      const missing = symbols.filter(s => nseChg[s] == null)
+      for (let i = 0; i < missing.length; i += 60) {
+        if (svcOk.current) break
         try {
-          const q = (await getNewsQuotes(rest.slice(i, i + 60).map(s => `${s}.NS`))).data.quotes
-          for (const s of rest.slice(i, i + 60)) { const v = q[`${s}.NS`]; if (v?.available && v.change_pct != null) yahoo.current.chg[s] = v.change_pct }
+          const q = (await getNewsQuotes(missing.slice(i, i + 60).map(s => `${s}.NS`))).data.quotes
+          for (const s of missing.slice(i, i + 60)) { const v = q[`${s}.NS`]; if (v?.available && v.change_pct != null) yahoo.current.chg[s] = v.change_pct }
         } catch { /* keep what we have */ }
       }
-      publish(lastNse)
+      if (alive) setYahooTick(t => t + 1)
     }
-    const tick = () => { loadNse().then(loadYahoo) }
+    // give the live service its first answer before deciding the Yahoo fallback is needed
+    const tick = () => { loadNse().then(c => setTimeout(() => { void loadYahoo(c) }, 4_000)) }
     tick()
     const iv = setInterval(tick, 60_000)
     return () => { alive = false; clearInterval(iv) }
   }, [on, symbols])
-  return live
+  return useMemo(() => {
+    if (!nse) return null
+    const svcChg: Record<string, number> = {}
+    for (const s of rest) {
+      const q = svc.quotes[s]
+      if (q && q.price != null && q.change_pct != null && q.state !== 'unavailable' && !(q.source === 'eod' && q.state === 'stale')) svcChg[s] = q.change_pct   // an EOD row's move is yesterday's
+    }
+    const yahooChg = svc.available ? {} : Object.fromEntries(Object.entries(yahoo.current.chg).filter(([k]) => nse.chg[k] == null))
+    return { chg: { ...yahooChg, ...svcChg, ...nse.chg }, nse: Object.keys(nse.chg).length, svc: Object.keys(svcChg).length,
+             yahoo: Object.keys(yahooChg).length, at: nse.at }
+  }, [nse, rest, svc.quotes, svc.available, yahooTick])  // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 function sessionOpen(now = new Date()): boolean {
@@ -142,11 +159,15 @@ export function MarketMap({ rows }: { rows: MapRow[] }) {
   }, [rows, period, live, W, H])  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Panel source={period === 'live' ? sourceOf(live?.at ? live.at.toISOString() : null, { source: 'NSE', live: todayMatters() }) : undatedSource('NSE EOD')} title="Market map" accent={T.green} pad={0}
+    <Panel source={period === 'live'
+        // NSE's heatmap lists run about a minute behind: DELAYED · NSE · <read time>, never LIVE; CLOSE once the session is over
+        ? (live?.at && !sessionOpen() && !todayMatters() ? { state: 'closed', source: 'NSE', asOf: live.at.toISOString(), hint: "the last session's close" }
+          : sourceOf(live?.at ? live.at.toISOString() : null, { source: 'NSE', hint: 'NSE heatmap lists (about 1 min behind NSE) + the live NSE quote service for the names they miss; the clock is our read time' }))
+        : undatedSource('NSE EOD')} title="Market map" accent={T.green} pad={0}
       subtitle={hover
         ? `${hover.symbol} · ${hover.industry}${live?.chg[hover.symbol] != null ? ` · ${todayMatters() ? 'today' : 'last session'} ${fmtPct(live.chg[hover.symbol])}` : ''} · 1D ${fmtPct(hover.r1)} · 1W ${fmtPct(hover.r5)} · 1M ${fmtPct(hover.r21)} · ₹${hover.size} cr/day`
         : period === 'live'
-          ? (live ? `${sessionOpen() ? 'LIVE today' : todayMatters() ? 'Session close today' : 'Last session close'} · ${Object.keys(live.chg).length}/${rows.length} stocks priced (${live.nse} from NSE, the rest Yahoo) · ≈1 min delayed · ${live.at.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} · grey = no live price`
+          ? (live ? `${sessionOpen() ? 'LIVE today' : todayMatters() ? 'Session close today' : 'Last session close'} · ${Object.keys(live.chg).length}/${rows.length} stocks priced (${live.nse} from NSE's heatmap${live.svc ? `, ${live.svc} from live NSE quotes` : ''}${live.yahoo ? `, ${live.yahoo} from Yahoo (live NSE service not answering)` : ''}) · ≈1 min delayed · ${live.at.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })} · grey = no live price`
                   : 'LIVE today · reading prices…')
           : `${rows.length} most traded stocks · size = turnover · colour = return (±${cap}% full colour) · click a tile`}
       right={<div style={{ display: 'flex', gap: 4 }}>

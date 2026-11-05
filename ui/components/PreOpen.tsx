@@ -13,6 +13,7 @@ import { daysUntil, useCorpEvents } from '@/lib/useCorpEvents'
 import { usePins } from '@/lib/pins'
 import { useWatchlist } from '@/context/AppContext'
 import { Chip, DataTable, ErrorBox, EventBadge, Input, Loading, PageHeader, Panel, Stat, T, TickerLink, type Column, fmtPct, fmtPx, fmtSigned, tone, sourceOf, nseStampIso } from '@/components/terminal'
+import { nseDelayedSource } from '@/components/liveModel'
 
 type Key = 'FO' | 'NIFTY' | 'BANKNIFTY' | 'ALL'
 const KEYS: [Key, string][] = [['FO', 'F&O STOCKS'], ['NIFTY', 'NIFTY 50'], ['BANKNIFTY', 'BANK NIFTY'], ['ALL', 'ALL NSE']]
@@ -78,8 +79,11 @@ export function PreOpen() {
   const filtered = useMemo(() => { const n = q.trim().toUpperCase(); return n ? rows.filter(r => r.symbol.includes(n)) : rows }, [rows, q])
   const hist = useMemo(() => BUCKETS.map(([lo, hi, label]) => ({ label, lo, n: rows.filter(r => r.change_pct! >= lo && r.change_pct! < hi).length })), [rows])
   const median = useMemo(() => { const v = rows.map(r => r.change_pct!).sort((a, b) => a - b); return v.length ? v[Math.floor(v.length / 2)] : null }, [rows])
-  // PLAN §0.5: the auction book's NSE timestamp; LIVE while the 09:00–09:08 auction runs
-  const preSrc = sourceOf(nseStampIso(data?.timestamp) ?? data?.fetched_at ?? null, { source: 'NSE pre-open', live: auctionPhase(now).live })
+  // PLAN §0.5 + live program (reports/live_nse): the auction book's NSE timestamp. NSE's website is not a live feed: while
+  // the 09:00–09:08 auction runs the chip reads DELAYED · NSE · <age of the book>, afterwards the book's date
+  const preSrc = auctionPhase(now).live && data?.timestamp
+    ? nseDelayedSource(data.timestamp, { marketOpen: true, now: Date.now(), source: 'NSE pre-open', hint: 'the auction book, re-read every 20 s' })
+    : sourceOf(nseStampIso(data?.timestamp) ?? data?.fetched_at ?? null, { source: 'NSE pre-open' })
   const top = (list: PreOpenRow[], f: (r: PreOpenRow) => number, n = 10) => [...list].sort((a, b) => f(b) - f(a)).slice(0, n)
 
   const sessionDay = data?.timestamp?.slice(0, 11)

@@ -11,6 +11,9 @@ import { apiError } from '@/lib/errors'
 import { useEffect, useRef, useState } from 'react'
 import { createChart, ColorType, CrosshairMode, type IChartApi, type ISeriesApi } from 'lightweight-charts'
 import { getMarketInternals, type InternalsSample, type MarketInternals as Data } from '@/lib/api'
+import type { SourceInfo } from '@/components/terminal'
+import { nseDelayedSource } from '@/components/liveModel'
+import { useMarketOpen } from '@/components/shell/useFeed'
 import { T, fmtPct, tone } from '@/components/terminal'
 
 const LINES: [keyof InternalsSample, string, string][] = [['n50_pct', 'NIFTY 50', T.amber], ['mid_pct', 'MID 150', '#38bdf8'], ['small_pct', 'SMALL 250', '#c084fc']]
@@ -23,7 +26,7 @@ function nseTime(ts: string): number | null {
   return mon < 0 ? null : Date.UTC(+m[3], mon, +m[1], +m[4], +m[5]) / 1000
 }
 
-export function MarketInternals({ height = 200 }: { height?: number }) {
+export function MarketInternals({ height = 200, onSource }: { height?: number; onSource?: (s: SourceInfo | null) => void }) {
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
   const box = useRef<HTMLDivElement>(null)
@@ -38,6 +41,15 @@ export function MarketInternals({ height = 200 }: { height?: number }) {
     load(); const iv = setInterval(load, 120_000)
     return () => { alive = false; clearInterval(iv) }
   }, [])
+  // live program: the panel's own chip = the last NSE allIndices sample's stamp (sampled every 2 min), DELAYED, never LIVE
+  const marketOpen = useMarketOpen()
+  const lastTs = data?.rows?.length ? data.rows[data.rows.length - 1].nse_ts : null
+  useEffect(() => {
+    if (!onSource) return
+    onSource(data ? nseDelayedSource(lastTs, { marketOpen, now: Date.now(), hint: "NSE allIndices sampled every 2 min by the controller" }) : null)
+    const iv = setInterval(() => onSource(data ? nseDelayedSource(lastTs, { marketOpen, now: Date.now(), hint: "NSE allIndices sampled every 2 min by the controller" }) : null), 15_000)
+    return () => clearInterval(iv)
+  }, [data, lastTs, marketOpen])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!box.current) return

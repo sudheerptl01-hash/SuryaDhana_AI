@@ -32,6 +32,9 @@
 import { Z } from '@/lib/z'
 import { memo, useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { useLiveQuotes, useDataServiceStatus } from '@/context/AppContext'
+import { useLiveQuotes as useNseQuotes } from '@/lib/liveQuotes'
+import { liveHeaderChip } from '@/components/liveModel'
+import { sourceChipText } from '@/components/terminal/source'
 import { getNewsQuotes, getGiftNifty, getICICIConnectionStatus, getIndicesLive, type GiftNifty } from '@/lib/api'
 import { AlertsBell } from '@/components/AlertsBell'
 import { T } from '@/components/terminal'
@@ -82,6 +85,14 @@ const HeaderClock = memo(function HeaderClock() {
 
 function NiftyLive() {
   const { liveQuotes, wsConnected } = useLiveQuotes()
+  // live program (reports/live_nse): the live NSE quote service first — the Breeze websocket index tick '4.1!NIFTY 50'
+  // (≈ 10/s server-side, polled here every 2 s), else NSE's website through the service, else CLOSE <day>. The older
+  // sources below (the monitor socket's REST quote, NSE allIndices, the stored quote) apply only while it has no row.
+  const svc = useNseQuotes(['NIFTY 50'], { intervalMs: 2_000 })
+  const sq = svc.quotes['NIFTY 50']
+  const svcRow = sq && sq.price != null && sq.state !== 'unavailable' ? sq : null
+  const svcInfo = svcRow ? svc.sourceFor('NIFTY 50') : null
+  const svcChip = svcRow ? liveHeaderChip(svcInfo, svcRow.ltt) : null
   const { marketOpen, linkDown } = useFeedState()
   const { desktop } = useShellState()
   const [http, setHttp] = useState<any>(null)
@@ -102,7 +113,7 @@ function NiftyLive() {
       const res = await fetch('/api/data/live/index/nifty')
       if (alive.current && res.ok) setHttp(await res.json())
     } catch { /* backend restarting: next poll */ }
-  }, chromePollMs(5000, { marketOpen: printing, hidden }))
+  }, svcRow ? 60_000 : chromePollMs(5000, { marketOpen: printing, hidden }))   // the stored quote is only a last resort
   const [flash, setFlash] = useState<'up' | 'down' | null>(null)
   const prev = useRef<number | null>(null)
 
@@ -118,14 +129,16 @@ function NiftyLive() {
   const wsAt = liveQuoteAt(ws)
   const nseAt = nseTimeToEpoch(nse?.time)
   const src = pickNiftySource({ wsLtp: ws?.ltp, wsAt, nseLast: nse?.last, nseAt, storedLtp: rec?.ltp })
-  const ltp: number | null = src === 'ICICI' ? ws.ltp : src === 'NSE' ? nse.last : rec?.ltp ?? null
-  const pc: number | null = src === 'ICICI' ? ws?.raw?.previous_close ?? null : src === 'NSE' ? nse.previous_close : rec?.previous_close ?? null
-  const chg = src === 'NSE' ? nse.change : ltp != null && pc != null ? ltp - pc : ws?.change ?? null
-  const pct = src === 'NSE' ? nse.change_pct
+  const ltp: number | null = svcRow ? svcRow.price : src === 'ICICI' ? ws.ltp : src === 'NSE' ? nse.last : rec?.ltp ?? null
+  const pc: number | null = svcRow ? svcRow.prev_close : src === 'ICICI' ? ws?.raw?.previous_close ?? null : src === 'NSE' ? nse.previous_close : rec?.previous_close ?? null
+  const chg = svcRow ? svcRow.change ?? (ltp != null && pc != null ? ltp - pc : null)
+    : src === 'NSE' ? nse.change : ltp != null && pc != null ? ltp - pc : ws?.change ?? null
+  const pct = svcRow ? svcRow.change_pct ?? (chg != null && pc ? (chg / pc) * 100 : null)
+    : src === 'NSE' ? nse.change_pct
     : ws?.change_pct ?? ws?.raw?.ltp_percent_change ?? rec?.ltp_percent_change ?? (chg != null && pc ? (chg / pc) * 100 : null)
-  const o = src === 'NSE' ? nse.open : ws?.raw?.open ?? rec?.open
-  const h = src === 'NSE' ? nse.high : ws?.raw?.high ?? rec?.high
-  const l = src === 'NSE' ? nse.low : ws?.raw?.low ?? rec?.low
+  const o = svcRow ? svcRow.open : src === 'NSE' ? nse.open : ws?.raw?.open ?? rec?.open
+  const h = svcRow ? svcRow.day_high : src === 'NSE' ? nse.high : ws?.raw?.high ?? rec?.high
+  const l = svcRow ? svcRow.day_low : src === 'NSE' ? nse.low : ws?.raw?.low ?? rec?.low
 
   useEffect(() => {
     if (ltp == null) return
@@ -142,7 +155,8 @@ function NiftyLive() {
   const n = (v: any) => v == null ? '—' : Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   // the shown quote's own time: ● LIVE / ● NSE never sit on a value that stopped updating in market hours (P9)
   const quoteAt = src === 'ICICI' ? wsAt : src === 'NSE' ? nseAt : null
-  const chip = niftySourceChip({ src, wsConnected, marketOpen, linkDown, asOf: nse?.time ?? null, now: Date.now(), quoteAt })
+  const chip = linkDown ? niftySourceChip({ src, wsConnected, marketOpen, linkDown, asOf: nse?.time ?? null, now: Date.now(), quoteAt })
+    : svcChip ?? niftySourceChip({ src, wsConnected, marketOpen, linkDown, asOf: nse?.time ?? null, now: Date.now(), quoteAt })
   const chipColor = chip.tone === 'live' ? T.green : chip.tone === 'delayed' ? T.cyan : T.muted
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '0 16px', borderLeft: `1px solid ${T.border}`,
@@ -161,6 +175,8 @@ function NiftyLive() {
         <span>L <span style={{ color: T.muted }}>{n(l)}</span></span>
       </span>
       <span title={chip.title} data-feed={chip.tone}
+            data-sd-age-s={svcChip && !linkDown && svcInfo?.ageS != null ? svcInfo.ageS.toFixed(1) : undefined}
+            data-sd-feed-source={svcChip && !linkDown ? svcInfo?.source ?? undefined : undefined}
             style={{ fontSize: 9, letterSpacing: 1, padding: '2px 6px', whiteSpace: 'nowrap', flex: 'none',
                      border: `1px solid ${chipColor === T.muted ? T.border : chipColor}`, color: chipColor }}>
         {chip.text}</span>
@@ -184,6 +200,11 @@ const MACRO: { sym: string; label: string; digits?: number; nse?: string }[] = [
 function MacroTape() {
   const [q, setQ] = useState<Record<string, any>>({})
   const [at, setAt] = useState<string>('')
+  // D13: one stamp per source, not one for the tape. NSE indices from the live NSE quote service when it answers
+  // (Breeze websocket index ticks; INDIA VIX streams too), per-item source + age on hover; allIndices otherwise.
+  const [atNse, setAtNse] = useState<string>('')
+  const [atYahoo, setAtYahoo] = useState<string>('')
+  const tapeLive = useNseQuotes(MACRO.filter(m => m.nse).map(m => m.nse!), { intervalMs: 3_000 })
   const [gift, setGift] = useState<GiftNifty | null>(null)
   const linkDown = useShellState().link === 'down'
   const hidden = useDocumentHidden()
@@ -194,23 +215,24 @@ function MacroTape() {
   // so a slow or failing Yahoo never blanks the tape or holds NSE's numbers back, and a failure keeps what was shown.
   usePolling(async () => {
     getGiftNifty().then(r => { if (alive.current) setGift(r.data) }).catch(() => {})
-    const stamp = () => setAt(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' }))
+    const hm = () => new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit' })
+    const stamp = () => setAt(hm())
     const yahoo = getNewsQuotes(MACRO.filter(m => !m.nse).map(m => m.sym)).then(r => {
       const quotes: Record<string, any> = r.data?.quotes ?? {}
       const got = MACRO.filter(m => !m.nse && quotes[m.sym] != null)
       if (!alive.current || !got.length) return
       setQ(prev => { const next = { ...prev }; for (const m of got) next[m.sym] = quotes[m.sym]; return next })
-      stamp()
+      stamp(); setAtYahoo(hm())
     })
     const nse = getIndicesLive(MACRO.filter(m => m.nse).map(m => m.nse!)).then(r => {
       const got = MACRO.filter(m => m.nse && r.data?.indices?.[m.nse]?.last != null)
       if (!alive.current || !got.length) return
       setQ(prev => {
         const next = { ...prev }
-        for (const m of got) { const v = r.data.indices[m.nse!]; next[m.sym] = { price: v.last, change_pct: v.change_pct, source: 'NSE' } }
+        for (const m of got) { const v = r.data.indices[m.nse!]; next[m.sym] = { price: v.last, change_pct: v.change_pct, source: 'NSE', time: v.time } }
         return next
       })
-      stamp()
+      stamp(); setAtNse(r.data?.timestamp ? String(r.data.timestamp).slice(-5) : hm())
     })
     await Promise.allSettled([yahoo, nse])        // a failed source keeps its last values
   }, chromePollMs(60_000, { marketOpen: true, hidden }, 300_000))
@@ -231,13 +253,18 @@ function MacroTape() {
         </span>
       )}
       {MACRO.map((m, i) => {
-        const v = q[m.sym]
+        const lr = m.nse ? tapeLive.quotes[m.nse] : undefined
+        const svcRow = lr && lr.price != null && lr.state !== 'unavailable' ? lr : null
+        const v = svcRow ? { price: svcRow.price, change_pct: svcRow.change_pct } : q[m.sym]
+        const itemTitle = svcRow ? tapeLive.lineFor(m.nse!) ?? undefined
+          : m.nse ? (q[m.sym] ? `NSE allIndices${q[m.sym].time ? ` · ${q[m.sym].time}` : atNse ? ` · ${atNse} IST` : ''} (about 1–3 min behind)` : undefined)
+          : q[m.sym] ? `Yahoo (non-NSE), about 1 min delayed${atYahoo ? ` · read ${atYahoo} IST` : ''}` : undefined
         const c = v?.change_pct
         const col = c == null ? T.muted : c >= 0 ? T.green : T.red
         // narrow terminals drop tape entries from the right instead of scrolling (720/1024/1280)
         const slice = i >= 6 ? 't-tape-ge6' : i >= 4 ? 't-tape-ge4' : i >= 2 ? 't-tape-ge2' : undefined
         return (
-          <span key={m.sym} className={slice}
+          <span key={m.sym} className={slice} title={itemTitle} data-sd-tape-src={svcRow ? svcRow.source : m.nse ? 'nse_allindices' : 'yahoo'}
                 style={{ display: 'inline-flex', gap: 7, alignItems: 'baseline', padding: '0 14px',
                          borderRight: `1px solid ${T.border}`, fontSize: 11 }}>
             <span style={{ color: T.muted, fontSize: 10, letterSpacing: .8 }}>{m.label}</span>
@@ -249,7 +276,11 @@ function MacroTape() {
       <span style={{ flex: 1 }} />
       {linkDown
         ? <span style={{ fontSize: 9, color: T.red, letterSpacing: 1, padding: '0 12px', flex: 'none' }}>◌ STALE{at ? ` · ${at} IST` : ''}</span>
-        : <span className="t-tape-ge2" style={{ fontSize: 9, color: T.dim, padding: '0 12px', flex: 'none' }}>{at && `NSE + YAHOO · ${at} IST`}</span>}
+        : <span className="t-tape-ge2" style={{ fontSize: 9, color: T.dim, padding: '0 12px', flex: 'none' }}
+            title="NSE indices: the live NSE quote service (Breeze websocket) when it answers, else NSE allIndices; USD/INR, Brent, gold and the S&P: Yahoo, about 1 min delayed">
+            {tapeLive.available && tapeLive.source
+              ? `${sourceChipText(tapeLive.source).label}${atYahoo ? ` · YAHOO ${atYahoo} IST` : ''}`
+              : at && `NSE${atNse ? ` ${atNse}` : ''} · YAHOO${atYahoo ? ` ${atYahoo}` : ''} IST`}</span>}
     </div>
   )
 }

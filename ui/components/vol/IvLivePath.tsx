@@ -16,7 +16,9 @@ export function liveSource(d: IvIntraday | null): SourceInfo {
   const src = String(d.source ?? 'OFFLINE').toUpperCase()
   if (src === 'OFFLINE' || !d.points.length) return { state: 'offline', source: 'Breeze chain pilot', asOf: d.date, hint: 'no snapshot stored for this session' }
   const lastTs = d.points[d.points.length - 1].ts
-  return { state: 'live', source: src, asOf: lastTs }
+  // stored 15-minute snapshots (iv_intraday), not a stream: DELAYED with their age, never LIVE (check:LV-GATES major)
+  const ageS = Number.isFinite(Date.parse(lastTs)) ? Math.max(0, (Date.now() - Date.parse(lastTs)) / 1000) : null
+  return { state: 'delayed', source: src, asOf: lastTs, ageS, hint: 'stored 15-minute chain snapshot (iv_intraday pilot)' }
 }
 
 export function IvLivePath({ symbol, enabled }: { symbol: string; enabled: boolean }) {

@@ -1,5 +1,7 @@
 """services/data-service/live_ticks.py: subscription union+TTL+cap (A1), chg_pct preference+clamp (A5),
-watchdog with flip-back (minor 15), strikes/cool-off, kill switch, teardown — all against a fake Breeze."""
+watchdog with flip-back (minor 15), strikes/cool-off, kill switch, teardown — all against a fake Breeze.
+LV-DATA (5 Nov 2026): subscriptions go on the wire as websocket tokens ('4.1!<token>', what ticks are keyed by), not
+isec codes; the token-mapping / cap / teardown specifics live in test_live_ticks_tokens.py."""
 import sys
 from pathlib import Path
 
@@ -28,10 +30,10 @@ class FakeBreeze:
         self.disconnects += 1
 
     def subscribe_feeds(self, **kw):
-        self.subscribed.append(kw["stock_code"])
+        self.subscribed.extend(kw["stock_token"])
 
     def unsubscribe_feeds(self, **kw):
-        self.unsubscribed.append(kw["stock_code"])
+        self.unsubscribed.extend(kw["stock_token"])
 
 
 class FakeProvider:
@@ -42,10 +44,10 @@ class FakeProvider:
     def is_connected(self):
         return self._connected
 
-    def _resolve_isec_code(self, sym):
+    def _resolve_ws_token(self, sym):
         if sym == "FAILME":
-            raise RuntimeError("no isec mapping")
-        return {"TCS": "TATCON", "CUPID": "CUPID", "INFY": "INFTEC"}.get(sym, sym)
+            raise LookupError("no websocket token for FAILME")
+        return "4.1!" + {"TCS": "11536", "CUPID": "1", "INFY": "1594"}.get(sym, sym)
 
 
 def make(clock, breeze=None, holdings=(), prev=None, enabled=True, hours=True):
@@ -73,30 +75,30 @@ def test_union_ttl_cap_and_pinned_holdings():
     obj.ensure(["INFY"])                                           # refresh INFY only
     target = obj._target_set()
     assert target[0] == "CUPID" and "INFY" in target and "TCS" not in target
-    # cap 50, most-recently-requested first, holdings always pinned
+    # cap MAX_SYMBOLS (300), most-recently-requested first, holdings always pinned
     obj2, _ = make(clock, holdings=["CUPID"])
-    for i in range(60):
+    for i in range(lt.MAX_SYMBOLS + 10):
         clock[0] += 1
-        obj2.ensure([f"S{i:02d}"])
+        obj2.ensure([f"S{i:03d}"])
     tgt = obj2._target_set()
-    assert len(tgt) == lt.MAX_SYMBOLS and tgt[0] == "CUPID" and "S59" in tgt and "S05" not in tgt
+    assert len(tgt) == lt.MAX_SYMBOLS and tgt[0] == "CUPID" and f"S{lt.MAX_SYMBOLS + 9:03d}" in tgt and "S005" not in tgt
 
 
-def test_subscribe_uses_isec_codes_diff_and_per_symbol_failure():
+def test_subscribe_uses_ws_tokens_diff_and_per_symbol_failure():
     clock = [0.0]
     fake = FakeBreeze()
     obj, prov = make(clock, breeze=fake, holdings=[])
     obj.ensure(["TCS", "FAILME"])
     obj._sync_subscriptions(prov)
-    assert fake.subscribed == ["TATCON"]                           # ISEC code on the wire
+    assert fake.subscribed == ["4.1!11536"]                        # the websocket token on the wire (never the isec code)
     assert "FAILME" in obj._sub_errors                             # non-fatal
     obj.ensure(["INFY"])                                           # union grows; TCS stays (within TTL)
     obj._sync_subscriptions(prov)
-    assert "INFTEC" in fake.subscribed
+    assert "4.1!1594" in fake.subscribed
     clock[0] += 601
     obj.ensure(["INFY"])                                           # TCS ages out → unsubscribed
     obj._sync_subscriptions(prov)
-    assert "TATCON" in fake.unsubscribed
+    assert "4.1!11536" in fake.unsubscribed
 
 
 def test_tick_ingestion_prefers_tick_close_then_fallback_and_clamps():
@@ -104,10 +106,10 @@ def test_tick_ingestion_prefers_tick_close_then_fallback_and_clamps():
     obj, prov = make(clock, prev={"TCS": 2000.0})
     obj.ensure(["TCS", "INFY"])
     obj._sync_subscriptions(prov)
-    obj._on_tick({"stock_code": "TATCON", "last": 2100.0, "close": 2100.0, "ttq": 5})
+    obj._on_tick({"symbol": "4.1!11536", "last": 2100.0, "close": 2100.0, "ttq": 5})
     snap = obj.snapshot(["TCS"])["TCS"]
     assert snap["prev_close"] == 2100.0 and snap["chg_pct"] == 0.0  # tick close wins over bhavcopy 2000
-    obj._on_tick({"stock_code": "INFTEC", "ltp": 150.0})            # no close on tick, no bhavcopy row
+    obj._on_tick({"symbol": "4.1!1594", "ltp": 150.0})              # no close on tick, no bhavcopy row
     assert obj.snapshot(["INFY"])["INFY"]["chg_pct"] is None
     obj._prev_close["INFY"] = 100.0                                 # bhavcopy fallback: +50% → clamped (A5)
     s2 = obj.snapshot(["INFY"])["INFY"]

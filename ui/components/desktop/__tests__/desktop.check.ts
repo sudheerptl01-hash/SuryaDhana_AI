@@ -895,7 +895,12 @@ async function shellUxChecks(): Promise<void> {
   check('stock window: no endless pulse on the price or intraday dot', !/rounded-full bg-emerald-400 animate-pulse/.test(modal))
   check('stock window: price line with change, % and the shared CLOSE / DELAYED / LIVE rule (stockPriceMarker)', /function priceLine\(/.test(modal)
     && /const marker = stockPriceMarker\(\{ live: i\.live, marketOpen: i\.marketOpen, asOf: i\.asOf, nseStamp: i\.nseStamp, now: Date\.now\(\) \}\)/.test(modal)
-    && /data-sd-price=\{px\.marker\}/.test(modal) && /asOf: tick\?\.as_of \?\? quoteAt, nseStamp: lastNsePrint\(\)/.test(modal))
+    && /data-sd-price=\{px\.marker\}/.test(modal)
+    // live program (reports/live_nse, D4): the live NSE quote service's row is the only price (its own state → the marker,
+    // liveMarker); the legacy branch keeps the REST quote's time; the old 2 s /api/quotes/ticks overlay (Yahoo when ticks
+    // were off) is gone from the window
+    && /live: false, marketOpen, asOf: quoteAt, nseStamp: lastNsePrint\(\)/.test(modal) && /marker: liveMarker\(lqInfo, lq\.ltt\)/.test(modal)
+    && !/useLiveTicks\(/.test(modal))
   check('stock window: the REST quote\'s own previous close is the last change base (change and % shown with only that quote)',
     /impliedPrev\(liveQ\?\.ltp, liveQ\?\.change_pct\)\s*\n\s*\?\? quotePrev,/.test(modal) && /setQuotePrev\(Number\.isFinite\(pc\) && pc > 0 \? pc : null\)/.test(modal))
   check('stock window header wraps instead of overlapping ☆ PIN', /flex flex-wrap justify-between items-center gap-x-4 gap-y-2 z-10/.test(modal))

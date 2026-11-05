@@ -21,7 +21,7 @@ import { daysUntil, useCorpEvents, useResultsAvoid } from '@/lib/useCorpEvents'
 import {
   Btn, CHART_BOX, Chip, DataTable, Empty, EventBadge, ErrorBox, Grid, KV, Label, Loading, Notice, PageHeader, Panel, SourceChip, Stat, T,
   fmtFixed, fmtIdx, fmtInr, fmtInrPx, fmtSignedPct, sourceOf, tone, useChartSize, type Column, AvoidFlag, referenceSource } from '@/components/terminal'
-import { useLiveTicks } from '@/lib/liveTicks'
+import { useLiveQuotes } from '@/lib/liveQuotes'
 
 interface Order {
   symbol: string; side: 'BUY' | 'SELL'; est_qty: number; est_price: number | null; est_value: number
@@ -163,10 +163,12 @@ export function DecisionDesk(_: { isDark?: boolean }) {
     await reenableDesk(); load()
   }
 
-  // broker websocket overlay for the book: LAST/Value/P&L tick when the feed is up; the desk's
-  // own EOD marks (meta.last_mark) remain the base layer and the system of record.
-  const liveT = useLiveTicks((status?.positions ?? []).map(p => p.symbol))
-  const bookChip = liveT.state === 'live' || liveT.state === 'degraded' ? liveT.state : 'delayed'
+  // live NSE overlay for the book (reports/live_nse): LAST / Value / P&L from the live quote service (Breeze websocket →
+  // NSE ≈ 1 min → the last close; never Yahoo); the desk's own EOD marks (meta.last_mark) remain the base layer and the
+  // system of record, labelled MARK EOD <date> beside the live price.
+  const liveB = useLiveQuotes((status?.positions ?? []).map(p => p.symbol), { intervalMs: 3_000 })
+  const livePx = (sym: string): number | null => { const q = liveB.quotes[sym.toUpperCase()]; return q && q.price != null && q.state !== 'unavailable' ? q.price : null }
+  const markDay = status?.meta.last_mark ? status.meta.last_mark.slice(0, 10) : status?.latest?.date ?? null
 
   const latestPlan = status?.plans?.find(p => p.kind === 'REBALANCE' || p.kind === 'EMERGENCY_EXIT')
   const brief = preview ?? (latestPlan ? { summary: latestPlan.summary, orders: latestPlan.orders } : null)
@@ -230,14 +232,19 @@ export function DecisionDesk(_: { isDark?: boolean }) {
     { key: 'symbol', label: 'Stock', sort: p => p.symbol, render: p => <span style={{ color: T.amber, fontWeight: 600 }}>{p.symbol}</span> },
     { key: 'qty', label: 'Shares', align: 'right', sort: p => p.qty, render: p => Math.round(p.qty) },
     { key: 'avg', label: 'Avg cost', align: 'right', render: p => fmtInrPx(p.avg_cost) },
-    { key: 'last', label: 'Last', align: 'right', width: 96, sort: p => liveT.ticks[p.symbol]?.price ?? p.last ?? 0,
-      render: p => { const px = liveT.ticks[p.symbol]?.price ?? p.last
-        return px != null ? fmtInrPx(px) : <span style={{ color: T.dim }}>—</span> } },
+    { key: 'last', label: 'Last', align: 'right', width: 96, sort: p => livePx(p.symbol) ?? p.last ?? 0,
+      render: p => { const lp = livePx(p.symbol), px = lp ?? p.last
+        const info = lp != null ? liveB.sourceFor(p.symbol) : null
+        return px != null
+          ? <span title={info ? `${liveB.lineFor(p.symbol) ?? ''} · desk mark ${p.last != null ? fmtInrPx(p.last) : '—'} (EOD ${markDay ?? '—'})` : `desk mark at the last close (EOD ${markDay ?? '—'})`}>
+              {fmtInrPx(px)}<span data-sd-row-source={info?.state ?? 'mark'} style={{ display: 'inline-block', width: 6, height: 6, marginLeft: 5, borderRadius: 3, verticalAlign: 'middle',
+                background: info?.state === 'live' ? T.green : info?.state === 'stale' ? T.amber : T.muted }} /></span>
+          : <span style={{ color: T.dim }}>—</span> } },
     { key: 'value', label: 'Value', align: 'right', sort: p => p.value ?? 0,
-      render: p => { const t = liveT.ticks[p.symbol]; return fmtInr(t ? t.price * p.qty : p.value) } },
+      render: p => { const lp = livePx(p.symbol); return fmtInr(lp != null ? lp * p.qty : p.value) } },
     { key: 'pnl', label: 'P&L', align: 'right', sort: p => p.pnl_pct ?? 0,
-      render: p => { const t = liveT.ticks[p.symbol]
-        const v = t && p.avg_cost > 0 ? (t.price / p.avg_cost - 1) * 100 : p.pnl_pct
+      render: p => { const lp = livePx(p.symbol)
+        const v = lp != null && p.avg_cost > 0 ? (lp / p.avg_cost - 1) * 100 : p.pnl_pct
         return <span style={{ color: tone(v) }}>{fmtSignedPct(v, 1)}</span> } },
   ]
 
@@ -330,9 +337,10 @@ export function DecisionDesk(_: { isDark?: boolean }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}>
             <Panel title="Holdings" pad={0}
-              source={{ state: status?.positions.length ? bookChip : 'delayed', source: bookChip === 'delayed' ? 'Desk marks' : 'ICICI',
-                        asOf: status?.meta.last_mark ?? status?.latest?.date ?? null,
-                        hint: bookChip === 'delayed' ? `desk marks at last close${status?.meta.last_mark ? ` (${status.meta.last_mark.slice(0, 10)})` : ''}` : null }}>
+              right={status?.positions.length && liveB.available ? <span style={{ fontSize: 9.5, color: T.dim, fontFamily: T.mono }} title="the Desk's own marks (system of record) are end of day">MARK EOD {markDay ?? '—'}</span> : undefined}
+              source={status?.positions.length && liveB.available && liveB.source ? liveB.source
+                : { state: 'delayed', source: 'Desk marks', asOf: markDay,
+                    hint: `desk marks at last close${markDay ? ` (${markDay})` : ''}${liveB.status === 'missing' ? '; live NSE quote service not deployed' : liveB.status === 'error' ? '; live NSE quote service not answering' : ''}` }}>
               {status?.positions.length
                 ? <DataTable columns={posCols} rows={status.positions} rowKey={p => p.symbol} dense onRowClick={p => openTicker(p.symbol)} />
                 : <Empty title={`All in the liquid fund (${fmtInr(status?.meta.cash)})`} icon="◇" />}

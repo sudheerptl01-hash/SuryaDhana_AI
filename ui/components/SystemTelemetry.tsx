@@ -10,6 +10,7 @@ import {
   setAutopilot,
 } from '@/lib/api'
 import { SystemStatusWidget } from '@/components/SystemStatusWidget'
+import { LiveFeedStatus } from '@/components/LiveFeedStatus'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface ScheduledJob {
@@ -316,6 +317,8 @@ function SystemTelemetryMain({ isDark = true, tabs }: { isDark?: boolean; tabs?:
       {tabs}
       {/* ── Data-Service & Provider Status ─────────────────────────────────── */}
       <SystemStatusWidget isDark={isDark} />
+      {/* ── live program: the live NSE quote service (Breeze websocket → NSE → close) ── */}
+      <LiveFeedStatus />
 
     <div className={clsx(
       'rounded-2xl border shadow-lg overflow-hidden',

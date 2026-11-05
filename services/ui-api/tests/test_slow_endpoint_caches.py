@@ -299,17 +299,17 @@ def test_unavailable_quotes_are_kept_120_s_without_an_early_refresh(yahoo) -> No
     clock = yahoo["clock"]
 
     async def run() -> None:
-        await ns.get_quotes(symbols="NOPE.NS")
+        await ns.get_quotes(symbols="NOPE.L")
         clock.t += 61.0
-        q = (await ns.get_quotes(symbols="NOPE.NS"))["quotes"]["NOPE.NS"]
-        assert q == {"symbol": "NOPE.NS", "available": False}
+        q = (await ns.get_quotes(symbols="NOPE.L"))["quotes"]["NOPE.L"]
+        assert q == {"symbol": "NOPE.L", "available": False}
         for _ in range(5):
             await asyncio.sleep(0)
-        assert yahoo["calls"]["NOPE.NS"] == 1
+        assert yahoo["calls"]["NOPE.L"] == 1
         clock.t += 60.0
-        await ns.get_quotes(symbols="NOPE.NS")
+        await ns.get_quotes(symbols="NOPE.L")
     asyncio.run(run())
-    assert yahoo["calls"]["NOPE.NS"] == 2
+    assert yahoo["calls"]["NOPE.L"] == 2
 
 
 def test_quotes_over_http_carry_the_oldest_age_in_a_header(yahoo) -> None:

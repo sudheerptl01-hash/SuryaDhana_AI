@@ -26,7 +26,7 @@ from routers import news_scanner as ns
 FETCH_S = 1.5
 CADENCE_S = 60.0                     # master_controller.price_alerts_check: CronTrigger(minute='*')
 MINUTES = 12
-SYMS = ("TCS.NS", "INFY.NS", "^NSEI")
+SYMS = ("AAPL", "INR=X", "^NSEI")   # non-NSE: since LV-API ".NS" prices come from the live hub (test_live_news_quotes.py)
 
 
 class Clock:
@@ -153,13 +153,13 @@ def test_fresh_over_http_waits_and_the_display_read_does_not(world: dict[str, An
     app = FastAPI()
     app.include_router(ns.router, prefix="/api/news-scanner")
     with TestClient(app, base_url="http://127.0.0.1:8010") as c:
-        first = c.get("/api/news-scanner/quotes", params={"symbols": "TCS.NS"})
+        first = c.get("/api/news-scanner/quotes", params={"symbols": "AAPL"})
         clock.t += 31.0
-        shown = c.get("/api/news-scanner/quotes", params={"symbols": "TCS.NS"})
+        shown = c.get("/api/news-scanner/quotes", params={"symbols": "AAPL"})
         clock.t += 31.0
-        decided = c.get("/api/news-scanner/quotes", params={"symbols": "TCS.NS", "fresh": "1"})
-    p0 = first.json()["quotes"]["TCS.NS"]["price"]
-    assert shown.headers["x-cache"] == "stale" and shown.json()["quotes"]["TCS.NS"]["price"] == p0
+        decided = c.get("/api/news-scanner/quotes", params={"symbols": "AAPL", "fresh": "1"})
+    p0 = first.json()["quotes"]["AAPL"]["price"]
+    assert shown.headers["x-cache"] == "stale" and shown.json()["quotes"]["AAPL"]["price"] == p0
     assert decided.headers["x-cache"] == "miss" and decided.headers["x-cache-age"] == "0"
-    assert clock.t - decided.json()["quotes"]["TCS.NS"]["price"] < 30.0
+    assert clock.t - decided.json()["quotes"]["AAPL"]["price"] < 30.0
     assert set(decided.json()) == {"quotes", "as_of"}                       # the body shape is unchanged

@@ -75,6 +75,7 @@ from routers import gold          # GOLD terminal page (reports/gold_program/PLA
 from routers import markets
 from routers import news_scanner
 from routers import quotes
+from routers import live as live_quotes   # live NSE program (LV-API): /api/live/quotes, /api/live/status
 from routers import desk
 from routers import research
 from routers import costs
@@ -194,6 +195,7 @@ app.include_router(gold.router, prefix="/api/gold", tags=["gold"])              
 app.include_router(markets.router, prefix="/api/market", tags=["market"])
 app.include_router(news_scanner.router, prefix="/api/news-scanner", tags=["news-scanner"])
 app.include_router(quotes.router, prefix="/api/quotes", tags=["quotes"])
+app.include_router(live_quotes.router, prefix="/api/live", tags=["live"])
 app.include_router(desk.router, prefix="/api/desk", tags=["decision-desk"])
 app.include_router(markets.attribution_router, prefix="/api/desk", tags=["decision-desk"])  # PLAN 1.2: /api/desk/attribution (B3)
 app.include_router(research.router, prefix="/api/research", tags=["research"])

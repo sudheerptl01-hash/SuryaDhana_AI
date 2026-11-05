@@ -1133,7 +1133,7 @@ async def _results_reacting() -> dict:
         q = (await get_quotes(symbols=",".join(f"{s}.NS" for s in rest[i:i + 60])))["quotes"]
         for s in rest[i:i + 60]:
             v = q.get(f"{s}.NS") or {}
-            if v.get("available") and v.get("change_pct") is not None:
+            if v.get("available") and v.get("change_pct") is not None and v.get("state") not in ("stale", "unavailable"):
                 chg[s] = v["change_pct"]
     # filed after today's close: today's move happened before the results, so there is no reaction to show yet
     after_close = f"{today.isoformat()} 15:30"

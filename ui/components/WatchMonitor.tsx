@@ -3,8 +3,10 @@
 /**
  * WATCH monitor — every stock you care about in one live grid: the watchlist, pins, ICICI holdings and the
  * Desk's positions, with price, day change, a one-month sparkline, where it sits in its day and 52-week range,
- * volume, and the next corporate event. Quotes refresh every 60 s (Yahoo, via /api/news-scanner/quotes);
- * add a stock by typing its ticker. Click a ticker for its chart and profile.
+ * volume, and the next corporate event. NSE rows' price, day change and day range are LIVE NSE quotes (lib/liveQuotes:
+ * the Breeze websocket, else NSE's website ≈ 1 min, else the last close labelled CLOSE), every 3 s, with a per-row
+ * source mark; the 60 s /api/news-scanner/quotes call stays the base layer for names, sparks, 52-week ranges and the
+ * non-NSE pins (US names, commodities). Add a stock by typing its ticker. Click a ticker for its chart and profile.
  */
 import { RiskChips } from '@/components/RiskChips'
 import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
@@ -23,9 +25,10 @@ import { useFinancialsLatest } from '@/lib/useFinancials'
 import { COMP_KEY } from '@/components/Compare'
 import { goToPage } from '@/lib/navigate'
 import { Chip, DataTable, EventBadge, Input, PageHeader, Panel, Spark, Stat, T, TickerLink, type Column, AvoidFlag, fmtFixed, fmtPct, fmtPx, inputSource, sourceOf, tone, type SourceInfo } from '@/components/terminal'
+import { sourceChipText } from '@/components/terminal/source'
 import { useMarketOpen } from '@/components/shell/useFeed'
 import { BellGlyph } from '@/components/shell/Glyphs'   // monochrome SVG bell, not the colour emoji (CT-14)
-import { useLiveTicks } from '@/lib/liveTicks'
+import { overlayQuote, useLiveQuotes } from '@/lib/liveQuotes'
 import { isDesktop, notificationPermission, requestNotificationPermission, shellMarker } from '@/lib/platform'
 
 type Source = 'HELD' | 'DESK' | 'WATCH' | 'PIN'
@@ -46,6 +49,15 @@ function RangeDot({ lo, hi, v, label }: { lo?: number; hi?: number; v?: number; 
                      background: p > 80 ? T.green : p < 20 ? T.red : T.amber }} />
     </span>
   )
+}
+
+/** A row's live source as a 6 px dot after its price: green = Breeze live, grey = NSE delayed / close, amber = stale; hover for the chip text. */
+function RowSource({ info }: { info: SourceInfo | null }) {
+  if (!info) return null
+  const t = sourceChipText(info)
+  const c = info.state === 'live' ? T.green : info.state === 'stale' ? T.amber : info.state === 'offline' ? T.red : T.muted
+  return <span title={`${t.label} — ${t.title}`} data-sd-row-source={info.state}
+    style={{ display: 'inline-block', width: 6, height: 6, marginLeft: 5, borderRadius: 3, background: c, verticalAlign: 'middle', opacity: info.state === 'live' ? 1 : 0.8 }} />
 }
 
 export function WatchMonitor() {
@@ -119,18 +131,22 @@ export function WatchMonitor() {
   }, [yahooKey])
   useEffect(() => { refresh(); const iv = setInterval(refresh, REFRESH_MS); return () => clearInterval(iv) }, [refresh])
 
-  // broker websocket overlay: live ticks replace the 60 s Yahoo price/chg where available (F3.3).
-  // Yahoo stays the base layer — sparks, ranges and non-NSE rows keep working when the feed is down.
-  const liveT = useLiveTicks(nseSyms)
+  // live NSE overlay (reports/live_nse): every NSE row's price, day change and day range from the live quote service
+  // (Breeze websocket → NSE website → last close; never Yahoo). The 60 s quotes call stays the base layer for names,
+  // sparks, 52-week ranges and the non-NSE pins, and for every row while the live service does not answer.
+  const liveSyms = useMemo(() => [...new Set(rows.filter(r => r.yahoo.endsWith('.NS')).map(r => r.sym))].sort(), [yahooKey])  // eslint-disable-line react-hooks/exhaustive-deps
+  const liveQ = useLiveQuotes(liveSyms, { intervalMs: 3_000 })
   const rowsLive = useMemo(() => rows.map(r => {
-    const t = liveT.ticks[r.sym]
-    if (!t || !r.q || !r.yahoo.endsWith('.NS')) return r
-    return { ...r, q: { ...r.q, available: true, price: t.price, change_pct: t.chg_pct ?? r.q.change_pct } }
-  }), [rows, liveT.ticks])
-  const chipState = liveT.state === 'live' || liveT.state === 'degraded' ? liveT.state
-    : Object.keys(quotes).length ? 'delayed' : liveT.state === 'offline' ? 'offline' : 'delayed'
-  const monitorSrc: SourceInfo = { state: chipState, source: chipState === 'live' || chipState === 'degraded' ? 'ICICI' : 'YAHOO', asOf: asOf?.toISOString() ?? null,
-    hint: liveT.state === 'live' ? `${Object.keys(liveT.ticks).length} ticking` : chipState === 'delayed' ? 'Yahoo quotes on a 60 s refresh; broker feed not connected' : null }
+    const t = r.yahoo.endsWith('.NS') ? liveQ.quotes[r.sym] : undefined
+    const q = overlayQuote(r.q as Record<string, unknown> | undefined, t) as Row['q']
+    return q === r.q ? r : { ...r, q }
+  }), [rows, liveQ.quotes])
+  const nonNse = rows.filter(r => !r.yahoo.endsWith('.NS')).length
+  const monitorSrc: SourceInfo = liveQ.available && liveQ.source
+    ? { ...liveQ.source, hint: `${liveQ.source.hint ?? ''}${nonNse ? ` · ${nonNse} non-NSE pin${nonNse > 1 ? 's' : ''} on Yahoo (60 s)` : ''}` }
+    : { state: Object.keys(quotes).length ? 'delayed' : 'offline', source: 'YAHOO', asOf: asOf?.toISOString() ?? null,
+        hint: liveQ.status === 'missing' ? 'live NSE quote service not deployed: Yahoo quotes on a 60 s refresh'
+          : liveQ.status === 'error' ? 'live NSE quote service not answering: Yahoo quotes on a 60 s refresh' : 'Yahoo quotes on a 60 s refresh' }
 
   useEffect(() => {
     // the server prices and fires the levels (also every minute from the scheduler); show what's new here
@@ -187,7 +203,8 @@ export function WatchMonitor() {
       </span>) },
     { key: 'name', label: 'Name', render: r => <span style={{ color: T.muted, maxWidth: 230, display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}>{r.q?.name ?? r.name}</span> },
     { key: 'price', label: 'Last', align: 'right', sort: r => r.q?.price ?? -1, render: r => r.q?.price != null
-      ? r.q.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : <span style={{ color: T.dim }}>{r.q ? 'n/a' : '…'}</span> },
+      ? <span>{r.q.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}<RowSource info={r.yahoo.endsWith('.NS') ? liveQ.sourceFor(r.sym) : null} /></span>
+      : <span style={{ color: T.dim }}>{r.q ? 'n/a' : '…'}</span> },
     { key: 'chg', label: 'Day', align: 'right', sort: r => r.q?.change_pct ?? -999, render: r => <span style={{ color: tone(r.q?.change_pct), fontWeight: 600 }}>{pct(r.q?.change_pct)}</span> },
     { key: 'pos', label: 'Position', align: 'right', sort: r => { const b = book[r.sym]; return b && r.q?.price != null ? r.q.price / b.buy - 1 : -999 },
       render: r => { const b = book[r.sym], px = r.q?.price
@@ -228,7 +245,7 @@ export function WatchMonitor() {
   return (
     <div>
       <PageHeader code="WTCH" title="Watch Monitor"
-        subtitle={`watchlist · pins · ICICI holdings · Desk · quotes every 60 s${asOf ? ` · ${asOf.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}` : ''}`}
+        subtitle={`watchlist · pins · ICICI holdings · Desk · ${liveQ.available ? 'live NSE quotes every 3 s' : 'quotes every 60 s'}${asOf ? ` · ${asOf.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })}` : ''}`}
         right={<form onSubmit={e => { e.preventDefault(); submit() }} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <Input value={add} onChange={setAdd} placeholder="Add ticker + Enter" width={170} />
           <Chip color={T.amber} onClick={submit}>+ ADD</Chip>
@@ -241,7 +258,7 @@ export function WatchMonitor() {
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: `repeat(${Object.keys(book).length ? 5 : 4}, minmax(0, 1fr))`, marginBottom: 12 }}>
         {Object.keys(book).length > 0 && (() => {   // your holdings: today's ₹ move and total P&L at live prices
           let day = 0, pnl = 0, value = 0, n = 0
-          for (const r of rows) {
+          for (const r of rowsLive) {
             const b = book[r.sym], px = r.q?.price, c = r.q?.change_pct
             if (!b || px == null) continue
             n++; value += px * b.qty; pnl += (px - b.buy) * b.qty
@@ -264,7 +281,7 @@ export function WatchMonitor() {
         <form onSubmit={e => { e.preventDefault(); saveEditor() }}
           style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: '10px 12px', marginBottom: 12, border: `1px solid ${T.amber}66`, background: '#120e04' }}>
           <span style={{ fontFamily: T.display, fontSize: 12, letterSpacing: 1.4, color: T.amber, alignSelf: 'center' }}><BellGlyph size={11} /> {editing}</span>
-          <span style={{ fontSize: 11, color: T.muted, alignSelf: 'center' }}>now ₹{rows.find(r => r.sym === editing)?.q?.price?.toLocaleString('en-IN') ?? '—'}</span>
+          <span style={{ fontSize: 11, color: T.muted, alignSelf: 'center' }}>now ₹{rowsLive.find(r => r.sym === editing)?.q?.price?.toLocaleString('en-IN') ?? '—'}</span>
           <Input label="Alert above ₹" value={alertUp} onChange={setAlertUp} width={130} />
           <Input label="Alert below ₹" value={alertDown} onChange={setAlertDown} width={130} />
           <Chip color={T.green} onClick={saveEditor}>SAVE</Chip>
@@ -304,9 +321,11 @@ export function WatchMonitor() {
         <DataTable columns={cols} rows={shown} rowKey={r => r.yahoo} dense initialSort={{ key: 'chg', dir: 'desc' }}
           empty={<div style={{ padding: 20, fontSize: 12, color: T.muted }}>Nothing to watch yet: add a ticker above, ☆ PIN a stock from any chart, or connect ICICI to see your holdings.</div>} />
       </Panel>
-      <div style={{ fontSize: 10, color: T.dim, marginTop: 8 }}>Prices: Yahoo Finance (about 1 minute delayed); day change vs NSE's official previous close (bhavcopy). ICICI live quotes, when connected, are on the Broker tab. Range markers: green near the high, red near the low.</div>
+      <div style={{ fontSize: 10, color: T.dim, marginTop: 8 }}>{liveQ.available
+        ? "Prices of NSE stocks: live NSE quotes every 3 s (ICICI Breeze websocket; NSE's website about 1 minute behind when a name is not streaming; the last close, labelled CLOSE, after the session). The dot after each price is its source (hover it). Names, 1M sparks (daily closes) and 52-week ranges refresh every 60 s; non-NSE pins are Yahoo, about 1 minute delayed. Range markers: green near the high, red near the low."
+        : "Prices: Yahoo Finance (about 1 minute delayed) while the live NSE quote service does not answer; day change vs NSE's official previous close (bhavcopy). Range markers: green near the high, red near the low."}</div>
       {(() => {   // book X-ray: your holdings by value at live prices (ICICI book, or the last known one)
-        const held = rows.filter(r => book[r.sym] && r.q?.price != null)
+        const held = rowsLive.filter(r => book[r.sym] && r.q?.price != null)
           .map(r => ({ sym: r.sym, value: r.q!.price! * book[r.sym].qty, f: fin[r.sym] }))
         const total = held.reduce((a, h) => a + h.value, 0)
         if (held.length < 1 || total <= 0) return null

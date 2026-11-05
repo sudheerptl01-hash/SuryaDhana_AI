@@ -5,12 +5,17 @@ import { apiError } from '@/lib/errors'
 /**
  * Intraday index chart (Bloomberg GIP-style): today's path of an NSE index against its previous close,
  * green above / red below the close. Source: NSE's chart feed (≈1 min delayed) via /api/market/index-intraday;
- * refreshes every 60 s while NSE is open.
+ * refreshes every 60 s while NSE is open. Live program (reports/live_nse): the headline level and the chart's last
+ * point come from the live NSE quote service (the Breeze websocket index tick, every 3 s) while the session runs; the
+ * 1-min path stays NSE's chart feed. `onSource` hands the panel its own chip (the live row's, else the feed's stamp).
  */
 import { useEffect, useRef, useState } from 'react'
 import { createChart, ColorType, CrosshairMode, LineStyle, type IChartApi, type IPriceLine, type ISeriesApi } from 'lightweight-charts'
 import { getIndexIntraday, type IndexIntraday as Data } from '@/lib/api'
-import { Chip, T, fmtIdx, fmtPct } from '@/components/terminal'
+import { Chip, T, fmtIdx, fmtPct, type SourceInfo } from '@/components/terminal'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { nseDelayedSource } from '@/components/liveModel'
+import { useMarketOpen } from '@/components/shell/useFeed'
 import { PRICE_DP } from '@/lib/format'
 
 /** decimals on the chart's price axis and price-line tags: NSE prints index levels (and VIX) with 2 (C1-08) */
@@ -23,7 +28,13 @@ function marketOpenIST(): boolean {
   return ist.getDay() >= 1 && ist.getDay() <= 5 && m >= 9 * 60 && m <= 15 * 60 + 35
 }
 
-export function IndexIntraday({ height = 200, initial = 'NIFTY 50' }: { height?: number; initial?: string }) {
+/** IST wall-clock minute of an ISO time as the chart's epoch seconds (NSE's chart encodes IST wall-clock as UTC). */
+export function istMinuteTs(iso: string | null | undefined): number | null {
+  const t = iso ? Date.parse(iso) : NaN
+  return Number.isFinite(t) ? Math.floor((t + 330 * 60_000) / 60_000) * 60 : null
+}
+
+export function IndexIntraday({ height = 200, initial = 'NIFTY 50', onSource }: { height?: number; initial?: string; onSource?: (s: SourceInfo | null) => void }) {
   const [index, setIndex] = useState(initial)
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -84,12 +95,31 @@ export function IndexIntraday({ height = 200, initial = 'NIFTY 50' }: { height?:
     chart.current.timeScale().fitContent()
   }, [data, index])
 
+  // the live tip: the index's live row while the session runs (a closed row is the close the chart already ends on)
+  const live = useLiveQuotes([index], { intervalMs: 3_000 })
+  const lq = live.quotes[index.toUpperCase()]
+  const tip = lq && lq.price != null && (lq.state === 'live' || lq.state === 'delayed') ? lq : null
+  const tipTs = tip ? istMinuteTs(tip.ltt) : null
+  useEffect(() => {
+    const s = series.current
+    const rws = data?.rows ?? []
+    if (!s || !tip || tipTs == null || !rws.length || tipTs < rws[rws.length - 1].ts) return
+    try { s.update({ time: tipTs as any, value: tip.price as number }) } catch { /* an out-of-order point: keep the feed's path */ }
+  }, [tip?.price, tipTs, data])  // eslint-disable-line react-hooks/exhaustive-deps
+  const marketOpen = useMarketOpen()
+  const lastRow = data?.rows?.length ? data.rows[data.rows.length - 1] : null
+  const feedStamp = lastRow ? `${new Date(lastRow.ts * 1000).toISOString().slice(0, 19)}+05:30` : null
+  const src: SourceInfo | null = tip && live.source ? { ...live.source, hint: `last point: live quote${live.source.hint ? ` (${live.source.hint})` : ''}; 1-min path: NSE chart feed` }
+    : data ? nseDelayedSource(feedStamp, { marketOpen, now: Date.now(), hint: 'NSE chart feed, 1-min points' }) : null
+  const srcKey = src ? `${src.state}|${src.source}|${Math.round((src.ageS ?? 0) / 5)}|${src.asOf}` : ''
+  useEffect(() => { onSource?.(src) }, [srcKey])  // eslint-disable-line react-hooks/exhaustive-deps
+
   const rows = data?.rows ?? []
-  const last = rows.length ? rows[rows.length - 1].close : null
-  const prev = data?.previous_close ?? null
+  const last = tip?.price ?? (rows.length ? rows[rows.length - 1].close : null)
+  const prev = data?.previous_close ?? tip?.prev_close ?? null
   const chg = last != null && prev ? (last / prev - 1) * 100 : null
-  const hi = rows.length ? Math.max(...rows.map(r => r.high)) : null
-  const lo = rows.length ? Math.min(...rows.map(r => r.low)) : null
+  const hi = rows.length ? Math.max(...rows.map(r => r.high), tip?.price ?? -Infinity) : null
+  const lo = rows.length ? Math.min(...rows.map(r => r.low), tip?.price ?? Infinity) : null
   const shown = hover?.value ?? last
   const shownChg = shown != null && prev ? (shown / prev - 1) * 100 : null
   const up = (shownChg ?? 0) >= 0
@@ -111,7 +141,9 @@ export function IndexIntraday({ height = 200, initial = 'NIFTY 50' }: { height?:
         {!rows.length && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: T.dim, zIndex: Z.raised }}>
           {error ? `NSE chart unavailable: ${error}` : data ? 'No intraday data yet' : 'Loading…'}</div>}
       </div>
-      <div style={{ fontSize: 10, color: T.dim, marginTop: 2 }}>NSE chart feed · 1-min · ≈1 min delayed · refreshes every minute in session</div>
+      <div style={{ fontSize: 10, color: T.dim, marginTop: 2 }}>{tip
+        ? `level: ${live.lineFor(index) ?? 'live quote'} · path: NSE chart feed, 1-min, ≈1 min delayed`
+        : 'NSE chart feed · 1-min · ≈1 min delayed · refreshes every minute in session'}</div>
     </div>
   )
 }

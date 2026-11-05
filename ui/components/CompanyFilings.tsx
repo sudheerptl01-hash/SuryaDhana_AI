@@ -79,7 +79,7 @@ export function CompanyFilings() {
             {CATS.map(([k, l, c]) => (data.counts[k] ?? 0) > 0 && (
               <Chip key={k} color={c} active={cats.has(k)} onClick={() => toggle(k)}>{l} {data.counts[k]}</Chip>))}
           </div>
-          <Panel source={sourceOf(data?.date ?? null, { source: 'NSE announcements', live: !!data?.market_open })} badge="context" title={`${items.length} filings`} accent={T.amber} pad={0}
+          <Panel source={sourceOf(data?.date ?? null, { source: 'NSE announcements', hint: data?.market_open ? "NSE's announcements feed in session (60 s cache), not a live feed" : null })} badge="context" title={`${items.length} filings`} accent={T.amber} pad={0}
             subtitle="click a ticker for its profile · ↗ opens the filing on NSE · categories: NSE's own subject first, then keywords in the summary (an earnings-call notice is not results)">
             <div style={{ maxHeight: 760, overflowY: 'auto' }}>
               {items.map(f => (

@@ -31,12 +31,21 @@ import { goToPage } from '@/lib/navigate'
 import { briefSessionLine, iciciErrorKind } from '@/components/portfolio/iciciState'
 import { openTicker } from '@/lib/openTicker'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
-import { AvoidFlag, Chip, EventBadge, PageHeader, Panel, Stat, T, TickerLink, fmtIdx, fmtInr, fmtPct, ordinal, tone, sourceOf } from '@/components/terminal'
+import { AvoidFlag, Chip, EventBadge, PageHeader, Panel, SourceChip, Stat, T, TickerLink, fmtIdx, fmtInr, fmtPct, ordinal, tone, sourceOf, type SourceInfo } from '@/components/terminal'
+import { nseSession } from '@/components/desktop/session'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { liveContribution, nseDelayedSource } from '@/components/liveModel'
 import { trackVerdict, type TrackRecordData } from '@/components/news/TrackRecord'
 
 type Load<T> = { data: T | null; error: string | null; loading: boolean }
 
-function useLoad<T>(fn: () => Promise<{ data: T }>, deps: unknown[] = []): Load<T> & { reload: () => void } {
+/**
+ * Live program (reports/live_nse, defect D5): a panel line fed by an NSE live feed re-polls while the page is open
+ * instead of freezing at the visit's first read. `poll.ms` is the cadence (never faster than the route's own server
+ * cache); `sessionOnly` (default) polls only while NSE is open; nothing polls while the window is hidden. A failed
+ * re-poll keeps the last data (and records the error) instead of blanking the line.
+ */
+function useLoad<T>(fn: () => Promise<{ data: T }>, deps: unknown[] = [], poll?: { ms: number; sessionOnly?: boolean }): Load<T> & { reload: () => void } {
   const [s, set] = useState<Load<T>>({ data: null, error: null, loading: true })
   const reload = useCallback(() => {
     set(x => ({ ...x, loading: true }))
@@ -44,7 +53,22 @@ function useLoad<T>(fn: () => Promise<{ data: T }>, deps: unknown[] = []): Load<
       .catch((e: any) => set({ data: null, error: apiError(e, 'unavailable'), loading: false }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
+  const refresh = useCallback(() => {
+    fn().then(r => set({ data: r.data, error: null, loading: false }))
+      .catch((e: any) => set(x => ({ ...x, error: apiError(e, 'unavailable'), loading: false })))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps)
   useEffect(() => { reload() }, [reload])
+  const pollMs = poll?.ms ?? 0, sessionOnly = poll?.sessionOnly !== false
+  useEffect(() => {
+    if (!pollMs) return
+    const iv = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      if (sessionOnly && nseSession(Date.now()).state === 'CLOSED') return
+      refresh()
+    }, pollMs)
+    return () => clearInterval(iv)
+  }, [refresh, pollMs, sessionOnly])
   return { ...s, reload }
 }
 
@@ -112,18 +136,20 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const dash = useLoad<any>(getDashboardSummary)
   const crash = useLoad<CrashFilter>(getCrashFilter)
   const reported = useLoad<{ rows: RecentResult[] }>(() => getRecentResults(5))
-  const internals = useLoad<MarketInternals>(() => getMarketInternals())
-  const contrib = useLoad<IndexContributionData>(() => getIndexContribution('NIFTY 50'))
-  const valuation = useLoad<{ indices: Record<string, IndexValuationRow>; vs_history?: Record<string, { pctl: number; since: string }>; rel_history?: Record<string, { ratio: number; pctl: number; median: number }> }>(() => getIndexValuation())
-  const reacting = useLoad<{ rows: ReactingResult[]; since: string; phase?: string }>(() => getResultsReacting())
+  // live program (D5): the NSE-fed lines re-poll in session at their server caches' pace, not once per visit
+  const internals = useLoad<MarketInternals>(() => getMarketInternals(), [], { ms: 120_000 })
+  const contrib = useLoad<IndexContributionData>(() => getIndexContribution('NIFTY 50'), [], { ms: 120_000 })
+  const valuation = useLoad<{ timestamp?: string; indices: Record<string, IndexValuationRow>; vs_history?: Record<string, { pctl: number; since: string }>; rel_history?: Record<string, { ratio: number; pctl: number; median: number }> }>(() => getIndexValuation(), [], { ms: 60_000 })
+  const reacting = useLoad<{ rows: ReactingResult[]; since: string; phase?: string }>(() => getResultsReacting(), [], { ms: 120_000 })
   // live chain during the session (falls back to the last close), end of day otherwise
   const opt = useLoad<OptionChain>(() => {
     const d = new Date(), m = d.getHours() * 60 + d.getMinutes()
     return d.getDay() >= 1 && d.getDay() <= 5 && m >= 555 && m <= 935 ? getOptionChainLive('NIFTY').catch(() => getOptionChain('NIFTY')) : getOptionChain('NIFTY')
-  })
+  }, [], { ms: 60_000 })
   const heads = useLoad<{ headlines: Headline[] }>(getMarketHeadlines)
   const insiders = useLoad<{ rows: InsiderBuy[] }>(() => getInsiderBuys(7, 1e7))
-  const world = useLoad<{ quotes: Record<string, { available: boolean; change_pct?: number; price?: number; prev_date?: string | null; market_date?: string | null }> }>(() => getNewsQuotes(GLOBAL.map(g => g[0])))
+  // non-NSE cues (S&P, Nikkei, Brent, ₹/$) through the app's one quotes fetcher (its SWR cache), re-read every 2 min
+  const world = useLoad<{ quotes: Record<string, { available: boolean; change_pct?: number; price?: number; prev_date?: string | null; market_date?: string | null }> }>(() => getNewsQuotes(GLOBAL.map(g => g[0])), [], { ms: 120_000, sessionOnly: false })
   const pre = useLoad<PreOpen>(() => getPreOpen('FO'))
   const setup = useLoad<{ checks: SetupCheck[] }>(getSetupStatus)
   const fed = useLoad<{ next: FomcMeeting | null }>(getFomc)
@@ -135,14 +161,26 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
     try { setShowNew(localStorage.getItem('suryadhana.whatsnew') !== WHATS_NEW_VERSION) } catch { /* keep */ }
   })
   const eco = useLoad<{ today: string; events: EcoEvent[] }>(() => getEcoCalendar(0, 7))
-  const gift = useLoad<GiftNifty>(getGiftNifty)
+  const gift = useLoad<GiftNifty>(getGiftNifty, [], { ms: 60_000, sessionOnly: false })
   const filings = useLoad<{ items: FilingCore[] }>(() => getAnnouncementsCore())
-  // today's move on ICICI holdings (Yahoo quotes; the broker's holdings call has no previous close)
+  // today's move on ICICI holdings: live NSE quotes (Breeze websocket → NSE ≈ 1 min → the last close); the broker's
+  // holdings call has no previous close. The old 120 s quotes call runs only while the live service does not answer.
   const holdSyms = heldSymbols(holdings.data).sort().join(',')
-  const [holdDay, setHoldDay] = useState<Record<string, number>>({})
-  const [holdPx, setHoldPx] = useState<Record<string, number>>({})
+  const liveBook = useLiveQuotes(holdSyms ? holdSyms.split(',') : [], { intervalMs: 5_000 })
+  const [holdDayOld, setHoldDay] = useState<Record<string, number>>({})
+  const [holdPxOld, setHoldPx] = useState<Record<string, number>>({})
+  const { holdDay, holdPx } = useMemo(() => {
+    if (!liveBook.available) return { holdDay: holdDayOld, holdPx: holdPxOld }
+    const day: Record<string, number> = {}, px: Record<string, number> = {}
+    for (const [k, q] of Object.entries(liveBook.quotes)) {
+      if (q.price != null) px[k] = q.price
+      if (q.price != null && q.change_pct != null) day[k] = q.change_pct
+    }
+    return { holdDay: day, holdPx: px }
+  }, [liveBook.available, liveBook.quotes, holdDayOld, holdPxOld])
+  const bookChip = liveBook.available && liveBook.source ? <SourceChip info={liveBook.source} style={{ marginLeft: 6 }} /> : null
   useEffect(() => {
-    if (!holdSyms) return
+    if (!holdSyms || liveBook.available) return
     const get = () => getNewsQuotes(holdSyms.split(',').map(x => `${x}.NS`)).then(r => {
       const o: Record<string, number> = {}, px: Record<string, number> = {}
       for (const x of holdSyms.split(',')) {
@@ -153,9 +191,14 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
       setHoldDay(o); setHoldPx(px)
     }).catch(() => {})
     get(); const iv = setInterval(get, 120_000); return () => clearInterval(iv)
-  }, [holdSyms])
+  }, [holdSyms, liveBook.available])
   const [setupOpen, setSetupOpen] = useState(false)
   const cash = useLoad<FiiDiiCash>(() => getFiiDiiCash(30))
+  // who moved NIFTY on live rows (the weights from the 2-min payload; liveModel.ts) and the Market today panel's own chip
+  const contribSyms = useMemo(() => (contrib.data ? [contrib.data.index, ...contrib.data.members.map(x => x.symbol)] : []), [contrib.data])
+  const contribLive = useLiveQuotes(contribSyms, { intervalMs: 5_000 })
+  const liveContrib = useMemo(() => (contrib.data ? liveContribution(contrib.data, contribLive.quotes) : null), [contrib.data, contribLive.quotes])
+  const [todaySrc, setTodaySrc] = useState<SourceInfo | null>(null)
   const { watchlist } = useWatchlist()
   const { pins } = usePins()
   const [now, setNow] = useState(() => new Date())
@@ -345,7 +388,9 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                 )
               })()}
               {opt.data && (
-                <Line k={<span>NIFTY options{opt.data.live && <span style={{ color: T.green, fontSize: 9.5 }}> ● LIVE</span>} <span role="button" onClick={() => onNavigate('options')} style={{ color: T.cyan, cursor: 'pointer', fontSize: 10 }}>OMON ›</span></span>}
+                <Line k={<span>NIFTY options{opt.data.live
+                        ? <SourceChip info={nseDelayedSource(opt.data.as_of ?? null, { marketOpen: true, now: now.getTime(), hint: 'NSE option chain (v3), refreshed by NSE about once a minute' })} style={{ marginLeft: 5, fontSize: 8.5 }} />
+                        : <span style={{ color: T.dim, fontSize: 9.5 }}> · F&O EOD {opt.data.date}</span>} <span role="button" onClick={() => onNavigate('options')} style={{ color: T.cyan, cursor: 'pointer', fontSize: 10 }}>OMON ›</span></span>}
                       v={<span>±{opt.data.expected_move_pct}% by {new Date(`${opt.data.expiry}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
                         <span style={{ color: T.dim }}> · PCR {opt.data.pcr_oi} · walls </span>
                         <span style={{ color: T.red }}>{opt.data.resistance[0]?.toLocaleString('en-IN')}</span>/<span style={{ color: T.green }}>{opt.data.support[0]?.toLocaleString('en-IN')}</span></span>} />
@@ -394,7 +439,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
           <div style={{ marginTop: 6 }}>
             {broker.data?.connected
               ? <Pending s={holdings}>
-                  <Line k={`ICICI holdings (${hold.length})`} v={<>{fmtInr(invested)} invested · <span style={{ color: tone(pnl) }}>{pnl >= 0 ? '+' : '−'}{fmtInr(Math.abs(pnl))}</span>
+                  <Line k={<span>ICICI holdings ({hold.length}){bookChip}</span>} v={<>{fmtInr(invested)} invested · <span style={{ color: tone(pnl) }}>{pnl >= 0 ? '+' : '−'}{fmtInr(Math.abs(pnl))}</span>
                     {(() => {   // rupee move today: value × chg ÷ (1 + chg) on each holding with a quote
                       const day = hold.reduce((a: number, p: any) => { const c = holdDay[String(p.symbol).toUpperCase()]; return c == null ? a : a + Number(p.current_value ?? 0) * (c / 100) / (1 + c / 100) }, 0)
                       return Object.keys(holdDay).length ? <span style={{ color: tone(day), marginLeft: 8 }}>· today {day >= 0 ? '+' : '−'}{fmtInr(Math.abs(day))}</span> : null
@@ -424,7 +469,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                     const tot = (k: 'value' | 'cost' | 'pnl' | 'day') => priced.reduce((a, r) => a + (r[k] ?? 0), 0)
                     const pnlT = tot('pnl'), dayT = tot('day')
                     return <>
-                      <Line k={<span>Last-known book <span style={{ color: T.dim, fontSize: 10 }}>· live prices</span></span>}
+                      <Line k={<span>Last-known book {bookChip ?? <span style={{ color: T.dim, fontSize: 10 }}>· Yahoo prices (live NSE service not answering)</span>}</span>}
                             v={<>{fmtInr(tot('value'))} · <span style={{ color: tone(pnlT) }}>{pnlT >= 0 ? '+' : '−'}{fmtInr(Math.abs(pnlT))} ({pct(pnlT / tot('cost') * 100)})</span>
                               <span style={{ color: tone(dayT), marginLeft: 8 }}>· today {dayT >= 0 ? '+' : '−'}{fmtInr(Math.abs(dayT))}</span></>} />
                       {(() => {   // concentration: the largest holding and the effective number of holdings (1 / Σ w²)
@@ -448,9 +493,9 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
 
         {/* ── market today (the gold open is one line at the foot) ─ */}
         {(
-          <Panel source={sourceOf(mon.data?.as_of ?? null, { source: 'NSE', live: reacting.data?.phase === 'session' })} title="Market today" subtitle="intraday · vs previous close" accent={T.green}
+          <Panel source={todaySrc ?? sourceOf(null, { source: 'NSE' })} title="Market today" subtitle="intraday · vs previous close" accent={T.green}
             right={<Go code="MOV" onGo={() => onNavigate('movers')} />}>
-            <IndexIntraday height={210} />
+            <IndexIntraday height={210} onSource={setTodaySrc} />
             {(() => {   // breadth through the day (market internals, sampled every 2 min)
               const sm = internals.data?.summary
               if (!sm?.n500_adv) return null
@@ -461,14 +506,15 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                 <span role="button" onClick={() => onNavigate('movers')} style={{ color: T.cyan, cursor: 'pointer' }}> · internals ›</span>
               </div>
             })()}
-            {(() => {   // who moved NIFTY today (points, rebuilt free-float weights)
-              const ms = (contrib.data?.members ?? []).filter(m => m.points != null)
+            {(() => {   // who moved NIFTY today (points, rebuilt free-float weights; moves from the live quote service)
+              const ms = (liveContrib?.members ?? []).filter(m => m.points != null)
               if (ms.length < 5) return null
               const fmt = (m: (typeof ms)[number]) => <span key={m.symbol} style={{ whiteSpace: 'nowrap' }}><TickerLink symbol={m.symbol} />{' '}
                 <span style={{ color: m.points! >= 0 ? T.green : T.red }}>{fmtSigned(m.points!, 0)}</span></span>
               const up = ms.slice(0, 3).filter(m => m.points! > 0), dn = [...ms].reverse().slice(0, 2).filter(m => m.points! < 0)
-              return <div style={{ fontSize: 10.5, fontFamily: T.mono, color: T.muted, marginTop: 4 }}>
-                NIFTY points · {up.map((m, i) => <span key={m.symbol}>{i ? ' · ' : ''}{fmt(m)}</span>)}
+              return <div style={{ fontSize: 10.5, fontFamily: T.mono, color: T.muted, marginTop: 4 }}
+                title={liveContrib && liveContrib.liveMembers ? `${liveContrib.liveMembers} of ${liveContrib.members.length} members' moves from the live NSE quote service; weights from filings` : `NSE heatmap + allIndices (${contrib.data?.time ?? 'no stamp'}), re-polled every 2 min`}>
+                NIFTY points{liveContrib && liveContrib.liveMembers && contribLive.source ? <> <SourceChip info={contribLive.source} style={{ fontSize: 8.5 }} /></> : contrib.data?.time ? <span style={{ color: T.dim }}> ({contrib.data.time.slice(-5)} NSE)</span> : null} · {up.map((m, i) => <span key={m.symbol}>{i ? ' · ' : ''}{fmt(m)}</span>)}
                 {dn.length > 0 && <> · drag {dn.map((m, i) => <span key={m.symbol}>{i ? ' · ' : ''}{fmt(m)}</span>)}</>}
               </div>
             })()}

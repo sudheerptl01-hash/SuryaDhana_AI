@@ -18,7 +18,8 @@ import type {
   IChartApi, IPriceLine, ISeriesApi, LogicalRange, Time, UTCTimestamp,
 } from 'lightweight-charts'
 import {
-  Chip, Empty, ErrorBox, Label, Loading, Notice, PageHeader, Panel, T, TickerLink, fmtPct, tone, sourceOf } from '@/components/terminal'
+  Chip, Empty, ErrorBox, Label, Loading, Notice, PageHeader, Panel, SourceChip, T, TickerLink, fmtPct, tone, sourceOf } from '@/components/terminal'
+import { useLiveQuotes } from '@/lib/liveQuotes'
 import { fmtVol } from '@/components/news/format'
 import { apiError } from '@/lib/errors'
 import { Z } from '@/lib/z'
@@ -193,6 +194,25 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
     const iv = setInterval(() => { void load() }, 60_000)
     return () => clearInterval(iv)
   }, [isIntraday, load])
+
+  // ── live last-price line (live program, reports/live_nse) ─────────────────────
+  // The live NSE quote service's price for the symbol (Breeze websocket → NSE ≈ 1 min → the last close), every 2 s, as
+  // a dotted price line on the candles titled by its state (LIVE / NSE / STALE / CLOSE) — on every timeframe, so a
+  // daily chart shows where the stock trades now. The bars themselves stay the tick store / DuckDB EOD.
+  const liveQ = useLiveQuotes([symbol], { intervalMs: 2_000 })
+  const lq = liveQ.quotes[symbol.toUpperCase().replace(/\.NS$/, '')]
+  const lqInfo = lq && lq.price != null && lq.state !== 'unavailable' ? liveQ.sourceFor(symbol) : null
+  const lastLine = useRef<IPriceLine | null>(null)
+  useEffect(() => {
+    const a = api.current
+    const lw = lwRef.current
+    if (!a || !lw) return
+    if (lastLine.current) { try { a.candles.removePriceLine(lastLine.current) } catch { /* series rebuilt */ } lastLine.current = null }
+    if (!lq || lq.price == null || !lqInfo) return
+    const title = lqInfo.state === 'live' ? 'LIVE' : lqInfo.state === 'closed' ? 'CLOSE' : lqInfo.state === 'stale' ? 'STALE' : 'NSE'
+    lastLine.current = a.candles.createPriceLine({ price: lq.price, color: lqInfo.state === 'live' ? T.green : T.muted, lineWidth: 1,
+                                                   lineStyle: lw.LineStyle.Dotted, axisLabelVisible: true, title })
+  }, [lq?.price, lqInfo?.state, ready, data])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── push bars + indicators into the series ─────────────────────────────────────
   useEffect(() => {
@@ -372,8 +392,13 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
             </span>
           )}
           <span style={{ flex: 1 }} />
+          {lqInfo && lq && <span data-sd-chart-last title={`dotted line on the chart: ${liveQ.lineFor(symbol) ?? ''}`}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: T.muted }}>
+            last <span style={{ color: T.text, fontWeight: 700 }}>{px(lq.price)}</span>
+            <span style={{ color: tone(lq.change_pct) }}>{fmtPct(lq.change_pct, 2)}</span>
+            <SourceChip info={lqInfo} /></span>}
           <Label color={isIntraday ? T.cyan : T.muted}>
-            {isIntraday ? 'SOURCE: BROKER TICKS (ICICI WS)' : 'SOURCE: DUCKDB EOD · YAHOO HISTORY'}
+            {isIntraday ? 'BARS: BROKER TICKS (ICICI WS)' : 'BARS: DUCKDB EOD · YAHOO HISTORY'}
           </Label>
         </div>
 

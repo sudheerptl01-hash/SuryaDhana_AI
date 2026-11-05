@@ -2,13 +2,13 @@
 
 import { Z } from '@/lib/z'
 import { apiError } from '@/lib/errors'
-import { useLiveTicks } from '@/lib/liveTicks'
+import { useLiveQuotes as useNseQuotes } from '@/lib/liveQuotes'
 import type { TickerFocus } from '@/lib/openTicker'
 import clsx from 'clsx'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { getStockDetail, getStockOHLCV, getDataIntraday, getDataOHLCV, getDataLiveQuote, getIndexDaily } from '@/lib/api'
 import { useTheme } from '@/context/ThemeContext'
-import { useLiveQuotes } from '@/context/AppContext'
+import { useLiveQuotes as useMonitorQuotes } from '@/context/AppContext'
 import { IndicatorPriceChart } from './IndicatorPriceChart'
 import { IndicatorMenu } from './IndicatorMenu'
 import { defaultIndicators, type IndicatorConfig } from '@/lib/indicators'
@@ -16,7 +16,7 @@ import { ChartActions } from './terminal/ChartActions'
 import { StockProfile } from './StockProfile'
 import { PriceHistory } from './PriceHistory'
 import { SeasonalityView } from './Seasonality'
-import { EventBadge, SourceChip } from './terminal'
+import { EventBadge, SourceChip, type SourceInfo } from './terminal'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { useSurveillance } from '@/lib/useSurveillance'
 import { RiskChips } from './RiskChips'
@@ -37,6 +37,25 @@ import { lastNsePrint } from '@/lib/liveEvidence'
 /** Previous close implied by a quote's price and its % change (null when either is missing). */
 function impliedPrev(price: number | null | undefined, pct: number | null | undefined): number | null {
   return price != null && pct != null && Number.isFinite(price) && Number.isFinite(pct) && pct > -100 ? price / (1 + pct / 100) : null
+}
+
+/**
+ * The marker of a live-service price (live program): LIVE (a Breeze tick seconds old), DELAYED · HH:MM:SS IST (NSE's
+ * website), STALE · HH:MM IST, CLOSE DD-MON (the session is over). Same words as stockPriceMarker, from the row's own
+ * state instead of the calendar.
+ */
+function liveMarker(info: SourceInfo, ltt: string | null): string {
+  const t = ltt ? Date.parse(ltt) : NaN
+  const ist = Number.isFinite(t) ? new Date(t + 330 * 60_000) : null
+  const clock = ist ? ist.toISOString().slice(11, 19) : ''
+  if (info.state === 'live') return 'LIVE'
+  if (info.state === 'closed') {
+    const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+    const d = info.asOf && /^\d{4}-(\d{2})-(\d{2})/.exec(info.asOf)
+    return d ? `CLOSE ${d[2]}-${MON[Number(d[1]) - 1]}` : 'CLOSED'
+  }
+  if (info.state === 'stale') return clock ? `STALE · ${clock.slice(0, 5)} IST` : 'STALE'
+  return clock ? `DELAYED · ${clock} IST` : 'DELAYED'
 }
 
 function priceLine(i: { price: number; prevClose: number | null; live: boolean; marketOpen: boolean; asOf: string | null; nseStamp: string | null }) {
@@ -94,7 +113,7 @@ function useEscapeToClose(active: boolean, onClose: () => void): void {
 export function StockDetailModal({ ticker, onClose, focus, onNewWindow }: StockDetailModalProps) {
   const { isDark }      = useTheme()
   useEscapeToClose(!!ticker, onClose)
-  const { liveQuotes }  = useLiveQuotes()
+  const { liveQuotes }  = useMonitorQuotes()
   const liveQ           = ticker ? liveQuotes[ticker.toUpperCase()] : null
 
   const [detail, setDetail]             = useState<any>(null)
@@ -154,28 +173,35 @@ export function StockDetailModal({ ticker, onClose, focus, onNewWindow }: StockD
       .finally(() => setLoading(false))
   }, [ticker])
 
-  // Merge WS live price into livePrice state
+  // Live program (reports/live_nse, defect D4): the live NSE quote service (Breeze websocket → NSE ≈ 1 min → the last
+  // close; never Yahoo) is the ONLY price once it answers; asking for the symbol ensures its websocket subscription.
+  // The Breeze REST quote is the first paint, and the legacy monitor-socket value (the 15 s REST poller) is used only
+  // while the live service has no priced row for this stock — it can no longer overwrite a live price.
+  const tickBase = ticker ? ticker.toUpperCase().replace(/\.NS$/, '') : ''
+  const nse = useNseQuotes(tickBase ? [tickBase] : [], { intervalMs: 2_000 })
+  const lq = nse.quotes[tickBase]
+  const lqPriced = !!lq && lq.price != null && lq.state !== 'unavailable'
+  const lqInfo = lqPriced ? nse.sourceFor(tickBase) : null
+
+  // Merge WS live price into livePrice state (only without a live-service row)
   useEffect(() => {
-    if (liveQ?.ltp !== undefined) {
+    if (liveQ?.ltp !== undefined && !lqPriced) {
       setLivePrice(liveQ.ltp)
       if (typeof liveQ.raw?.ltt === 'string') setQuoteAt(liveQ.raw.ltt)
     }
-  }, [liveQ?.ltp]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Broker websocket snapshot (2 s poll) beats the legacy WS value when it has this stock
-  const tickBase = ticker ? ticker.toUpperCase().replace(/\.NS$/, '') : ''
-  const liveT = useLiveTicks(tickBase ? [tickBase] : [])
-  const tick = liveT.ticks[tickBase]
-  useEffect(() => { if (tick?.price != null) setLivePrice(tick.price) }, [tick?.price])
-  const priceChip: 'live' | 'delayed' | 'degraded' =
-    liveT.state === 'live' && tick ? 'live' : liveT.state === 'degraded' ? 'degraded' : 'delayed'
+  }, [liveQ?.ltp, lqPriced]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (lqPriced && lq?.price != null) setLivePrice(lq.price) }, [lqPriced, lq?.price])
+  const priceChip: 'live' | 'delayed' | 'degraded' = 'delayed'          // the legacy chip, only while the live service has no row
   const { marketOpen } = useFeedState()
   const px = livePrice !== null
-    ? priceLine({ price: livePrice,
-                  prevClose: tick?.prev_close ?? impliedPrev(tick?.price, tick?.chg_pct)
-                    ?? (typeof liveQ?.raw?.previous_close === 'number' ? liveQ.raw.previous_close : null) ?? impliedPrev(liveQ?.ltp, liveQ?.change_pct)
-                    ?? quotePrev,
-                  live: priceChip === 'live', marketOpen, asOf: tick?.as_of ?? quoteAt, nseStamp: lastNsePrint() })
+    ? lqPriced && lq && lqInfo
+      ? { ...priceLine({ price: livePrice, prevClose: lq.prev_close ?? impliedPrev(lq.price, lq.change_pct) ?? quotePrev,
+                         live: lqInfo.state === 'live', marketOpen: lqInfo.state !== 'closed', asOf: lq.ltt, nseStamp: lastNsePrint() }),
+          marker: liveMarker(lqInfo, lq.ltt) }
+      : priceLine({ price: livePrice,
+                    prevClose: (typeof liveQ?.raw?.previous_close === 'number' ? liveQ.raw.previous_close : null) ?? impliedPrev(liveQ?.ltp, liveQ?.change_pct)
+                      ?? quotePrev,
+                    live: false, marketOpen, asOf: quoteAt, nseStamp: lastNsePrint() })
     : null
 
   // the page behind the window must not scroll while it is open (F-006)
@@ -290,7 +316,8 @@ export function StockDetailModal({ ticker, onClose, focus, onNewWindow }: StockD
               <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
                 <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--t-display)', letterSpacing: 1.5, color: '#ffb000' }}>{ticker}</h2>
                 {livePrice !== null && px && (
-                  <span data-sd-price={px.marker} title={px.marker === 'LIVE' ? 'Broker websocket ticks (ICICI Breeze)'
+                  <span data-sd-price={px.marker} data-sd-age-s={lqInfo?.ageS != null ? lqInfo.ageS.toFixed(1) : undefined} data-sd-feed-source={lqInfo?.source ?? undefined}
+                    title={lqPriced && lq ? `${nse.lineFor(tickBase) ?? ''} · live NSE quote service` : px.marker === 'LIVE' ? 'Broker websocket ticks (ICICI Breeze)'
                       : px.marker.startsWith('DELAYED') ? 'Delayed quote (not a broker tick): not a live price' : "NSE closed: the last session's close"}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'var(--t-mono)', fontSize: 13, fontWeight: 700,
                              padding: '1px 7px', whiteSpace: 'nowrap', border: `1px solid ${px.marker === 'LIVE' ? 'rgba(22,217,138,.55)' : '#2a3448'}`,
@@ -305,7 +332,7 @@ export function StockDetailModal({ ticker, onClose, focus, onNewWindow }: StockD
                     <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 1, color: px.marker === 'LIVE' ? '#16d98a' : '#8a94a6' }}>{px.marker}</span>
                   </span>
                 )}
-                {livePrice !== null && <SourceChip state={priceChip} />}
+                {livePrice !== null && (lqInfo ? <SourceChip info={lqInfo} /> : <SourceChip state={priceChip} />)}
                 <RiskChips flags={risk[ticker.toUpperCase().replace(/\.NS$/, '')]} max={3} />
                 {(events.get(ticker.toUpperCase()) ?? []).slice(0, 2).map(e => (
                   <EventBadge key={`${e.kind}-${e.event_date}`} kind={e.kind} date={e.event_date} days={daysUntil(e.event_date)} detail={e.detail} />

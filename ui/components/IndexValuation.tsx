@@ -8,6 +8,9 @@ import { useEffect, useState } from 'react'
 import { fmtSigned, unicodeMinus } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
 import { getIndexValuation, getIndexValuationHistory, getYieldGap, type IndexValuationHistory, type IndexValuationRow, type YieldGap } from '@/lib/api'
 import { Chip, DataTable, Panel, T, fmtPct, type Column, ordinal, undatedSource } from '@/components/terminal'
+import { nseDelayedSource } from '@/components/liveModel'
+import { nseSession } from '@/components/desktop/session'
+import { useMarketOpen } from '@/components/shell/useFeed'
 
 type Row = IndexValuationRow & { name: string }
 
@@ -19,11 +22,24 @@ export function IndexValuation() {
   const [hist, setHist] = useState<Record<string, { pctl: number; median: number; p25: number; p75: number; low: number; high: number; p05: number; p95: number; since: string; days: number }>>({})
   const [pick, setPick] = useState('NIFTY 50')
   const [rel, setRel] = useState<Record<string, { ratio: number; pctl: number; median: number; p25: number; p75: number }>>({})
+  const [stamp, setStamp] = useState<string | null>(null)
+  // live program (reports/live_nse): today's P/E, P/B, yield and move come from NSE allIndices (15 s server cache), so the
+  // panel re-reads them every 60 s in session (it used to load once) and its chip carries NSE's own stamp and age
+  const marketOpen = useMarketOpen()
   useEffect(() => {
-    getIndexValuation().then(r => {
+    let alive = true
+    const get = (first: boolean) => getIndexValuation().then(r => {
+      if (!alive) return
       setRows(Object.entries(r.data.indices).map(([name, v]) => ({ name, ...v }))); setDays(r.data.history_days)
-      setHist(r.data.vs_history ?? {}); setRel(r.data.rel_history ?? {})
-    }).catch(() => setRows([]))
+      setHist(r.data.vs_history ?? {}); setRel(r.data.rel_history ?? {}); setStamp(r.data.timestamp ?? null)
+    }).catch(() => { if (alive && first) setRows([]) })
+    get(true)
+    const iv = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      if (nseSession(Date.now()).state === 'CLOSED') return
+      void get(false)
+    }, 60_000)
+    return () => { alive = false; clearInterval(iv) }
   }, [])
   if (!rows || rows.length === 0) return null
   const n50 = rows.find(r => r.name === 'NIFTY 50')
@@ -50,7 +66,8 @@ export function IndexValuation() {
     { key: 'y', label: '1Y', align: 'right', sort: r => r.chg_365d ?? -999, render: r => <span style={{ color: (r.chg_365d ?? 0) >= 0 ? T.green : T.red }}>{fmtPct(r.chg_365d, 1)}</span> },
   ]
   return (
-    <Panel source={undatedSource('NSE index file', 'P/E, P/B, dividend yield as NSE publishes them each evening')} badge="context" title="Valuation · NSE" accent={T.amber} pad={0} style={{ marginBottom: 12 }}
+    <Panel source={stamp ? nseDelayedSource(stamp, { marketOpen, now: Date.now(), hint: "today's P/E, P/B, yield and move from NSE allIndices (stamped to the minute, 1–3 min behind); history from NSE's daily index files" })
+        : undatedSource('NSE index file', 'P/E, P/B, dividend yield as NSE publishes them each evening')} badge="context" title="Valuation · NSE" accent={T.amber} pad={0} style={{ marginBottom: 12 }}
       subtitle={`P/E, P/B and dividend yield as NSE publishes them for each index · P/E colour: well below / above NIFTY 50's · click an index to chart its history (NSE daily index files${days ? `, + ${days} live day${days === 1 ? '' : 's'}` : ''})`}>
       <ValuationHistoryChart index={pick} todayPe={rows.find(r => r.name === pick)?.pe ?? null} />
       <DataTable columns={cols} rows={rows} rowKey={r => r.name} dense onRowClick={r => setPick(r.name)}

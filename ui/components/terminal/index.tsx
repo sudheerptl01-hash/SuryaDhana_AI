@@ -10,7 +10,9 @@
 import { Z } from '@/lib/z'
 import { isValidElement, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { getFinancialsLatest, getNewsQuotes, getSurveillance } from '@/lib/api'
+import { getFinancialsLatest, getNewsQuotes, getStockHistory, getSurveillance, getSymbols } from '@/lib/api'
+import { useLiveQuotes } from '@/lib/liveQuotes'
+import { fallbackLine, hoverHistory, rangePos, shortDay, type HoverHistory } from './hoverModel'
 import { openTicker } from '@/lib/openTicker'
 import { goToPage } from '@/lib/navigate'
 import { newWindow, saveDownload } from '@/lib/platform'
@@ -23,7 +25,7 @@ export { T }
 // Exchange-style price formatting (2 dp, en-IN grouping, U+2212 minus) for every page: lib/format (C1-08)
 export { MINUS, fmtFixed, fmtIdx, fmtInrPx, fmtPx, fmtSigned, indianGrouping } from '@/lib/format'
 // Terminal v2 (reports/terminal_v2/PLAN.md §0): source chips, badges, sub-view URL state — pure helpers in ./source
-export { BADGES, DESCRIBES, badgeSpec, describes, inputSource, nseStampIso, referenceSource, undatedSource, percentileOf, rankOf, sourceOf, setSubInUrl, subFromSearch, withSub, type Badge, type SourceInfo, type SourceState } from './source'
+export { BADGES, DESCRIBES, badgeSpec, describes, fmtAgeS, inputSource, nseStampIso, referenceSource, undatedSource, percentileOf, rankOf, sourceOf, setSubInUrl, subFromSearch, withSub, type Badge, type SourceInfo, type SourceState } from './source'
 
 // ── formatting ──────────────────────────────────────────────────────────────────
 
@@ -538,62 +540,113 @@ export function Select<V extends string>({ value, onChange, options, style, labe
 }
 
 /** A ticker that opens the stock detail window (chart, levels, ☆ PIN, + WATCHLIST) from any table. */
-// ── hover quote card (every TickerLink): last, day move, ranges, 1-month spark; quotes cached 60 s ────────────────
-type HoverQ = { name?: string; price?: number | null; change_pct?: number | null; day_low?: number | null; day_high?: number | null
-                high_52w?: number | null; low_52w?: number | null; spark?: number[]; available?: boolean
-                fin?: { pe: number | null; revenue_yoy: number | null; pat_yoy: number | null; pat_yoy_turn?: string | null; period_end: string; mcap: number | null } | null }
-const hoverCache = new Map<string, { at: number; q: HoverQ | null; p?: Promise<HoverQ | null> }>()
-function hoverQuote(sym: string): Promise<HoverQ | null> {
-  const hit = hoverCache.get(sym)
-  if (hit && Date.now() - hit.at < 60_000) return hit.p ?? Promise.resolve(hit.q)
+// ── hover quote card (every TickerLink) ─────────────────────────────────────────────────────────────────────────
+// Live half (price, day move, day range, the time + source line): lib/liveQuotes.ts — the Breeze websocket tick, else
+// NSE's website (DELAYED, its age), else the last close (CLOSE <day>); never Yahoo once the live service answers.
+// Stored half (52-week range, one-month sparkline of DAILY closes, P/E line): NSE bhavcopy + results filings, cached
+// per IST day (hoverModel.ts). Only if the live service does not answer at all (404 before its deploy, or down) does
+// the card fall back to the old quotes route, and then it prints that route's own source and time, never LIVE.
+type HoverFin = { pe: number | null; revenue_yoy: number | null; pat_yoy: number | null; pat_yoy_turn?: string | null; period_end: string; mcap: number | null }
+type HoverStored = { name: string | null; hist: HoverHistory | null; fin: HoverFin | null }
+type HoverFallback = { price?: number | null; change_pct?: number | null; day_low?: number | null; day_high?: number | null; source?: unknown; state?: unknown
+                       age_s?: unknown; market_time?: unknown; gmtoffset?: unknown; available?: boolean }
+const storedCache = new Map<string, { day: string; p: Promise<HoverStored> }>()
+let directory: Promise<Map<string, string>> | null = null
+function symbolName(sym: string): Promise<string | null> {
+  if (!directory) {
+    directory = getSymbols().then(r => new Map(r.data.data.map(e => [e.t, e.n] as [string, string])))
+      .catch(() => { directory = null; return new Map<string, string>() })
+  }
+  return directory.then(m => m.get(sym) ?? null)
+}
+function hoverStored(sym: string): Promise<HoverStored> {
+  const day = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10)
+  const hit = storedCache.get(sym)
+  if (hit && hit.day === day) return hit.p
   const p = Promise.all([
-    getNewsQuotes([`${sym}.NS`]),
-    getFinancialsLatest([sym]).catch(() => null),            // cached filings only: never waits on NSE
-  ]).then(([r, f]) => {
-    const raw = r.data?.quotes?.[`${sym}.NS`]
-    const q: HoverQ | null = raw?.available ? { ...raw, fin: f?.data?.latest?.[sym] ?? null } : null
-    hoverCache.set(sym, { at: Date.now(), q }); return q
-  }).catch(() => { hoverCache.delete(sym); return null })
-  hoverCache.set(sym, { at: Date.now(), q: null, p })
+    getStockHistory(sym, 366).then(r => hoverHistory(r.data)).catch(() => null),   // NSE bhavcopy (EOD)
+    getFinancialsLatest([sym]).then(f => f?.data?.latest?.[sym] ?? null).catch(() => null),   // cached filings only
+    symbolName(sym),
+  ]).then(([hist, fin, name]) => ({ hist, fin: fin as HoverFin | null, name }))
+  storedCache.set(sym, { day, p })
+  if (storedCache.size > 400) storedCache.delete(storedCache.keys().next().value as string)
+  return p
+}
+const fallbackCache = new Map<string, { at: number; p: Promise<HoverFallback | null> }>()
+function hoverFallback(sym: string): Promise<HoverFallback | null> {
+  const hit = fallbackCache.get(sym)
+  if (hit && Date.now() - hit.at < 30_000) return hit.p
+  const p = getNewsQuotes([`${sym}.NS`]).then(r => {
+    const raw = r.data?.quotes?.[`${sym}.NS`] as HoverFallback | undefined
+    return raw?.available ? raw : null
+  }).catch(() => { fallbackCache.delete(sym); return null })
+  fallbackCache.set(sym, { at: Date.now(), p })
   return p
 }
 
 function HoverCard({ symbol, at }: { symbol: string; at: DOMRect }) {
-  const [q, setQ] = useState<HoverQ | null | undefined>(undefined)
-  useEffect(() => { let alive = true; hoverQuote(symbol).then(v => { if (alive) setQ(v) }); return () => { alive = false } }, [symbol])
-  const W = 272
+  const sym = String(symbol ?? '').trim().toUpperCase().replace(/\.NS$/, '')
+  const live = useLiveQuotes([sym], { intervalMs: 2_000 })
+  const lq = live.quotes[sym]
+  const [stored, setStored] = useState<HoverStored | null>(null)
+  const [fb, setFb] = useState<HoverFallback | null | undefined>(undefined)
+  useEffect(() => { let alive = true; hoverStored(sym).then(v => { if (alive) setStored(v) }); return () => { alive = false } }, [sym])
+  // the old route only when the live service has not answered at all (never as a second opinion on a live row)
+  const needFallback = live.status === 'missing' || (live.status === 'error' && !lq)
+  useEffect(() => {
+    if (!needFallback) { setFb(undefined); return }
+    let alive = true; hoverFallback(sym).then(v => { if (alive) setFb(v) }); return () => { alive = false }
+  }, [sym, needFallback])
+  const W = 284
   const left = Math.min(Math.max(8, at.left), window.innerWidth - W - 8)
-  const below = at.bottom + 180 < window.innerHeight
+  const below = at.bottom + 190 < window.innerHeight
   const pos: CSSProperties = below ? { top: at.bottom + 6 } : { bottom: window.innerHeight - at.top + 6 }
-  const pos52 = q?.price != null && q.high_52w && q.low_52w && q.high_52w > q.low_52w ? (q.price - q.low_52w) / (q.high_52w - q.low_52w) : null
+  const q = lq && lq.price != null ? lq : null
+  const price = q?.price ?? (needFallback ? fb?.price ?? null : null)
+  const chg = q ? q.change_pct : needFallback ? fb?.change_pct ?? null : null
+  const dayLo = q ? q.day_low : needFallback ? fb?.day_low ?? null : null
+  const dayHi = q ? q.day_high : needFallback ? fb?.day_high ?? null : null
+  const hist = stored?.hist ?? null
+  const pos52 = rangePos(price, hist?.low_52w, hist?.high_52w)
+  const info = q ? live.sourceFor(sym) : null
+  const lineColor = info?.state === 'live' ? T.green : info?.state === 'offline' ? T.red : info?.state === 'stale' ? T.amber : T.muted
+  const waiting = !q && !needFallback && (live.status === 'idle' || live.status === 'loading' || (live.status === 'ok' && !lq))
+  const line = q ? live.lineFor(sym) : lq ? live.lineFor(sym) : needFallback ? (fb ? `${fallbackLine(fb)} · live NSE service ${live.status === 'missing' ? 'not deployed' : 'not answering'}` : fb === null ? 'no quote' : null) : null
   return createPortal(
-    <div role="tooltip" style={{ position: 'fixed', left, width: W, zIndex: Z.commandbar, background: T.panel ?? '#0b0f16', border: `1px solid ${T.amber}`,
+    <div role="tooltip" data-sd-hover={sym} style={{ position: 'fixed', left, width: W, zIndex: Z.commandbar, background: T.panel ?? '#0b0f16', border: `1px solid ${T.amber}`,
                                  boxShadow: '0 8px 24px rgba(0,0,0,.6)', padding: '8px 10px', fontFamily: T.mono, fontSize: 11, pointerEvents: 'none', ...pos }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ color: T.amber, fontWeight: 700 }}>{symbol}</span>
-        <span style={{ color: T.dim, fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q?.name ?? 'NSE'}</span>
+        <span style={{ color: T.amber, fontWeight: 700 }}>{sym}</span>
+        <span style={{ color: T.dim, fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stored?.name ?? 'NSE'}</span>
       </div>
-      {q === undefined ? <div style={{ color: T.dim, marginTop: 6 }}>loading…</div>
-        : q === null ? <div style={{ color: T.dim, marginTop: 6 }}>no quote · click to open</div>
+      {price == null ? <div style={{ color: T.dim, marginTop: 6 }}>{waiting || fb === undefined && needFallback ? 'loading…' : `${line ?? 'no quote'} · click to open`}</div>
         : <>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>{fmtPx(q.price)}</span>
-            <span style={{ color: tone(q.change_pct), fontWeight: 700 }}>{fmtPct(q.change_pct, 2)}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: T.text }}>{fmtPx(price)}</span>
+            <span style={{ color: tone(chg), fontWeight: 700 }}>{fmtPct(chg, 2)}</span>
             <span style={{ flex: 1 }} />
-            {q.spark && q.spark.length > 1 && <Spark values={q.spark} width={70} height={20} />}
+            {hist && hist.spark.length > 1 && <span title={`last ${hist.spark.length} daily closes (NSE bhavcopy, adjusted) to ${hist.last_date ?? '—'}: not today's intraday path`}
+              style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <Spark values={hist.spark} width={70} height={20} />
+              <span data-sd-spark="daily" style={{ fontSize: 8.5, color: T.dim, letterSpacing: .4 }}>1M DAILY CLOSES</span></span>}
           </div>
-          <div style={{ color: T.muted, marginTop: 4, fontSize: 10.5 }}>day {fmtPx(q.day_low)} – {fmtPx(q.day_high)}</div>
-          <div style={{ color: T.muted, fontSize: 10.5 }}>52w {fmtPx(q.low_52w)} – {fmtPx(q.high_52w)}
-            {pos52 != null && <span style={{ color: pos52 > 0.9 ? T.green : pos52 < 0.1 ? T.red : T.dim }}> · {(pos52 * 100).toFixed(0)}% of range</span>}</div>
-          {q.fin && (q.fin.pe != null || q.fin.revenue_yoy != null) && (() => {
-            const f = q.fin!, qn = fiscalQuarter(f.period_end)
+          <div style={{ color: T.muted, marginTop: 4, fontSize: 10.5 }}>day {fmtPx(dayLo)} – {fmtPx(dayHi)}</div>
+          {hist && <div style={{ color: T.muted, fontSize: 10.5 }} title="52-week range on adjusted NSE closes (bhavcopy, end of day)">52w {fmtPx(hist.low_52w)} – {fmtPx(hist.high_52w)}
+            {price != null && hist.high_52w != null && price > hist.high_52w ? <span style={{ color: T.green }}> · above it today</span>
+              : price != null && hist.low_52w != null && price < hist.low_52w ? <span style={{ color: T.red }}> · below it today</span>
+              : pos52 != null && <span style={{ color: pos52 > 0.9 ? T.green : pos52 < 0.1 ? T.red : T.dim }}> · {(pos52 * 100).toFixed(0)}% of range</span>}
+            <span style={{ color: T.dim }}> · EOD {shortDay(hist.last_date)}</span></div>}
+          {stored?.fin && (stored.fin.pe != null || stored.fin.revenue_yoy != null) && (() => {
+            const f = stored.fin!, qn = fiscalQuarter(f.period_end)
             return <div style={{ color: T.muted, fontSize: 10.5, marginTop: 3, borderTop: `1px solid ${T.border}`, paddingTop: 3 }}>
               {f.pe != null && <>P/E <span style={{ color: T.amber }}>{f.pe.toFixed(1)}×</span> · </>}
               {qn} rev <span style={{ color: tone(f.revenue_yoy) }}>{fmtPct(f.revenue_yoy, 0)}</span> · profit{' '}
               {f.pat_yoy_turn ? <span style={{ color: f.pat_yoy_turn === 'to profit' ? T.green : T.red }}>{f.pat_yoy_turn}</span>
                 : <span style={{ color: tone(f.pat_yoy) }}>{fmtPct(f.pat_yoy, 0)}</span>} y/y</div>
           })()}
-          <div style={{ color: T.dim, fontSize: 9.5, marginTop: 4 }}>Yahoo · ≈1 min delayed · click for chart & profile</div>
+          <div data-sd-hover-line={info?.state ?? (needFallback ? 'fallback' : 'none')} title={info?.hint ?? undefined}
+            style={{ color: q ? lineColor : T.amber, fontSize: 9.5, marginTop: 4 }}>{line ?? '—'}</div>
+          <div style={{ color: T.dim, fontSize: 9.5 }}>click for chart & profile</div>
         </>}
     </div>, document.body)
 }
@@ -707,13 +760,17 @@ export function SourceChip({ state, hint, info, style }: { state?: SourceState; 
     gap: { label: 'GAP', tip: 'No capture for this session' },
     input: { label: 'INPUT', tip: 'Computed from your inputs; no feed behind this panel' },
     reference: { label: 'REFERENCE', tip: 'Fixed reference text; no data feed behind this panel' },
+    closed: { label: 'CLOSE', tip: "NSE closed: the last session's close" },
   }
   const st: SourceState = info?.state ?? state ?? 'offline'
-  const color = st === 'live' ? T.green : st === 'delayed' || st === 'input' || st === 'reference' ? T.muted : st === 'offline' ? T.red : T.amber
+  const color = st === 'live' ? T.green : st === 'delayed' || st === 'input' || st === 'reference' || st === 'closed' ? T.muted : st === 'offline' ? T.red : T.amber
   const text = info ? sourceChipText(info) : { label: LEGACY[st].label, title: LEGACY[st].tip }
   const title = hint ? `${text.title} — ${hint}` : text.title
   return (
     <span title={title} data-sd-chip={st}
+      // live program: machine-readable age / as-of for the freshness audit (scripts/ui_audit.py), only when known
+      data-sd-age-s={info?.ageS != null && Number.isFinite(info.ageS) ? info.ageS.toFixed(1) : undefined}
+      data-sd-asof={info?.asOf ?? undefined} data-sd-feed-source={info?.source ?? undefined}
       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: T.mono, fontSize: 9.5,
                letterSpacing: 1, color, border: `1px solid ${color}55`, padding: '1px 6px',
                whiteSpace: 'nowrap', ...style }}>

@@ -99,6 +99,92 @@ def parse_heatmap(rows: list[dict]) -> dict[str, dict[str, Any]]:
     return out
 
 
+# ── live-quote fallback parsers (LV-DATA, 5 Nov 2026): the full row with NSE's own stamp, for /live/quotes ─────────────
+
+def nse_time(stamp: Any) -> tuple[Optional[float], bool]:
+    """NSE's IST wall-clock stamp ('05-Nov-2026 10:14:01' or the minute-only '05-Nov-2026 10:13') → (epoch, minute_only)."""
+    if not isinstance(stamp, str):
+        return None, False
+    s = stamp.strip()
+    for fmt, minute in (("%d-%b-%Y %H:%M:%S", False), ("%d-%b-%Y %H:%M", True)):
+        try:
+            t = datetime.strptime(s, fmt).replace(tzinfo=_IST)
+        except ValueError:
+            continue
+        return t.timestamp(), minute
+    return None, False
+
+
+def parse_heatmap_rows(rows: list[dict]) -> dict[str, dict[str, Any]]:
+    """heatmap-symbols rows → {symbol: full quote with NSE's per-row lastUpdatedTime}. NSE sends no open and no previous
+    close here: prev_close = lastPrice − change. quantityTraded is the traded value in rupees. L-CAPACITY matched the
+    row stamp against Breeze cumulative volume (49 s both ways), so the stamp is an honest age."""
+    out: dict[str, dict[str, Any]] = {}
+    for r in rows or []:
+        sym = r.get("symbol")
+        if not sym or r.get("series") not in (None, "EQ", "BE"):
+            continue
+        last, chg = _f(r.get("lastPrice")), _f(r.get("change"))
+        epoch, minute = nse_time(r.get("lastUpdatedTime"))
+        out[str(sym).upper()] = {
+            "price": last, "change": chg, "change_pct": _f(r.get("pChange")),
+            "prev_close": round(last - chg, 2) if last is not None and chg is not None else None,
+            "open": None, "day_high": _f(r.get("high")), "day_low": _f(r.get("low")), "vwap": _f(r.get("VWAP")),
+            "volume": _f(r.get("totalTradedVolume")), "value_cr": (_f(r.get("quantityTraded")) or 0) / 1e7 or None,
+            "bid": None, "ask": None, "stamp": r.get("lastUpdatedTime"), "stamp_epoch": epoch, "stamp_minute": minute,
+            "kind": "heatmap"}
+    return out
+
+
+def parse_all_indices_rows(payload: dict) -> dict[str, dict[str, Any]]:
+    """allIndices → {INDEX NAME (upper): quote} for every index NSE lists (139 on 5 Nov 2026, not only the MOV groups).
+    The payload's single `timestamp` is minute resolution (seconds, when present, are padding) and runs 1-2 min behind
+    its own values (L-CAPACITY), so every row is flagged stamp_minute."""
+    epoch, _ = nse_time((payload or {}).get("timestamp"))
+    minute = True
+    out: dict[str, dict[str, Any]] = {}
+    for r in (payload or {}).get("data") or []:
+        name = r.get("index")
+        if not name:
+            continue
+        out[re.sub(r"\s+", " ", str(name)).strip().upper()] = {
+            "price": _f(r.get("last")), "change": _f(r.get("variation")), "change_pct": _f(r.get("percentChange")),
+            "prev_close": _f(r.get("previousClose")), "open": _f(r.get("open")), "day_high": _f(r.get("high")),
+            "day_low": _f(r.get("low")), "volume": None, "value_cr": None, "bid": None, "ask": None,
+            "stamp": (payload or {}).get("timestamp"), "stamp_epoch": epoch, "stamp_minute": minute, "kind": "all_indices"}
+    return out
+
+
+def parse_equity_quote(payload: dict) -> dict[str, Any]:
+    """NextApi GetQuoteApi?functionName=getSymbolData → one quote (5-level book, OHLC, previous close). Its
+    lastUpdateTime understates the age (it claimed 8-9 s while the values were 49-65 s behind Breeze, L-CAPACITY), so
+    callers floor the age; `stamp` is NSE's claim, kept for display only."""
+    resp = ((payload or {}).get("equityResponse") or [{}])
+    e = resp[0] if resp and isinstance(resp[0], dict) else {}
+    meta, book, trade = e.get("metaData") or {}, e.get("orderBook") or {}, e.get("tradeInfo") or {}
+    last = _f(book.get("lastPrice")) or _f(trade.get("lastPrice"))
+    epoch, minute = nse_time(e.get("lastUpdateTime"))
+    return {"symbol": str(meta.get("symbol") or "").upper() or None, "series": meta.get("series"),
+            "price": last, "change": _f(meta.get("change")), "change_pct": _f(meta.get("pChange")),
+            "prev_close": _f(meta.get("previousClose")), "open": _f(meta.get("open")), "day_high": _f(meta.get("dayHigh")),
+            "day_low": _f(meta.get("dayLow")), "volume": _f(trade.get("totalTradedVolume")),
+            "value_cr": (_f(trade.get("totalTradedValue")) or 0) / 1e7 or None,
+            "bid": _f(book.get("buyPrice1")), "ask": _f(book.get("sellPrice1")),
+            "stamp": e.get("lastUpdateTime"), "stamp_epoch": epoch, "stamp_minute": minute, "kind": "equity_quote"}
+
+
+def equity_quote_path(symbol: str, series: str = "EQ") -> str:
+    """The working NSE equity quote (L-CAPACITY: /api/quote-equity is 403 at Akamai; this path answered 200)."""
+    from urllib.parse import quote
+    return (f"NextApi/apiClient/GetQuoteApi?functionName=getSymbolData&marketType=N&series={quote(series)}"
+            f"&symbol={quote(symbol.upper())}")
+
+
+def heatmap_path(kind: str, index: str) -> str:
+    """The heatmap-symbols path exactly as heatmap_quotes() builds it, so every caller shares one cache entry."""
+    return f"heatmap-symbols?type={kind.replace(' ', '%20')}&indices={index.replace(' ', '%20').replace('&', '%26')}"
+
+
 # Filing categories, first match wins (subject + attachment text, lower-case). "routine" is hidden by default.
 FILING_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("routine", ("depositories and participants", "trading window", "newspaper publication", "structural digital database",
@@ -344,15 +430,28 @@ class NseLive:
             "indices": parse_indices(raw.get("indices") or {}),
         }
 
-    def heatmap_quotes(self) -> dict[str, Any]:
-        """Live quotes for every member of NSE's sectoral indices plus NIFTY 50 / NEXT 50 / MIDCAP 50 (≈300 stocks)
-        from the heatmap endpoints: one request per index, cached like the rest (30 s in session)."""
-        self._session()
+    def cached_at(self, path: str) -> Optional[float]:
+        """When `path` was last fetched from NSE (epoch), or None: lets a poller tell a cache hit from a network call."""
+        hit = self._cache.get(path)
+        return hit[0] if hit else None
+
+    def heatmap_lists(self) -> list[tuple[str, str]]:
+        """(kind, index) for NSE's sectoral heatmap lists (heatmap-index, 1 h cache) plus NIFTY 50 / NEXT 50 / MIDCAP 50."""
         try:
             sectors = [x["index"] for x in self.get("heatmap-index?type=Sectoral%20Indices", ttl_open=3600) or [] if x.get("index")]
         except Exception:
             sectors = []
-        lists = [("Sectoral Indices", ix) for ix in sectors] + [("Broad Market Indices", ix) for ix in HEATMAP_BROAD]
+        return [("Broad Market Indices", ix) for ix in HEATMAP_BROAD] + [("Sectoral Indices", ix) for ix in sectors]
+
+    def equity_quote(self, symbol: str, series: str = "EQ") -> dict[str, Any]:
+        """One stock's NSE quote through the NextApi path (60 s cache in session). On demand only: callers pace it."""
+        return parse_equity_quote(self.get(equity_quote_path(symbol, series), ttl_open=60, ttl_closed=600))
+
+    def heatmap_quotes(self) -> dict[str, Any]:
+        """Live quotes for every member of NSE's sectoral indices plus NIFTY 50 / NEXT 50 / MIDCAP 50 (≈300 stocks)
+        from the heatmap endpoints: one request per index, cached like the rest (30 s in session)."""
+        self._session()
+        lists = self.heatmap_lists()
         quotes: dict[str, dict[str, Any]] = {}
         failed: list[str] = []
 
@@ -360,7 +459,7 @@ class NseLive:
             kind, ix = item
             try:
                 # 60 s: 26 lists per refresh is the heaviest NSE call the terminal makes
-                quotes.update(parse_heatmap(self.get(f"heatmap-symbols?type={kind.replace(' ', '%20')}&indices={ix.replace(' ', '%20').replace('&', '%26')}", ttl_open=60)))
+                quotes.update(parse_heatmap(self.get(heatmap_path(kind, ix), ttl_open=60)))
             except Exception:
                 failed.append(ix)
         with ThreadPoolExecutor(max_workers=4) as pool:
@@ -396,7 +495,7 @@ class NseLive:
         also while the cached copy's own NSE timestamp is fresh outside the calendar (Muhurat, special sessions: the
         header chip and the app's menu bar call a print under 3 min old live); 5 min otherwise."""
         hit = self._cache.get("allIndices")
-        printing = bool(hit) and isinstance(hit[1], dict) and fresh_nse_print(hit[1].get("timestamp"))
+        printing = hit is not None and isinstance(hit[1], dict) and fresh_nse_print(hit[1].get("timestamp"))
         return parse_index_quote(self.get("allIndices", ttl_open=15, ttl_closed=15 if printing else 300), name)
 
     def symbol_chart(self, symbol: str, minutes: int = 5) -> dict[str, Any]:

@@ -6,12 +6,15 @@ import { apiError } from '@/lib/errors'
  * even with the terminal closed) with the distance to each level, an add / edit form, the alerts that fired,
  * and the full notification inbox (morning / closing notes, moves, filings, results numbers, wraps).
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getNewsQuotes, getNotificationFeed, getPriceAlerts, putPriceAlert, type AlertHitSrv, type AlertLevelsSrv, type NotificationItem } from '@/lib/api'
-import { Btn, Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, fmtPct, fmtPx, type Column, sourceOf, inputSource } from '@/components/terminal'
+import { Btn, Chip, DataTable, Input, PageHeader, Panel, SourceChip, T, TickerLink, fmtPct, fmtPx, type Column, sourceOf, inputSource } from '@/components/terminal'
+import { useLiveQuotes } from '@/lib/liveQuotes'
 import { unicodeMinus } from '@/lib/format'   // server-built notification text: U+2212 (C1-18)
 
 type Row = { sym: string; lv: AlertLevelsSrv; price: number | null }
+/** An alert on an NSE stock (no Yahoo code, or a '.NS' one): priced by the live NSE quote service. */
+const isNse = (lv: AlertLevelsSrv | undefined): boolean => !lv?.yahoo || /\.NS$/i.test(lv.yahoo)
 const KIND_COLOR: Record<string, string> = { price: T.amber, move: T.cyan, filing: T.violet, wrap: T.green, results: T.green, close: T.cyan, morning: T.amber }
 
 export function AlertsCenter() {
@@ -22,15 +25,18 @@ export function AlertsCenter() {
   const [kind, setKind] = useState<string | null>(null)
   const [form, setForm] = useState({ sym: '', above: '', below: '', move: '' })
   const [msg, setMsg] = useState<string | null>(null)
+  const liveOkRef = useRef(false)
 
   const load = useCallback(async () => {
     try {
       const a = (await getPriceAlerts()).data
       setAlerts(a.alerts); setHistory(a.history)
-      const syms = Object.keys(a.alerts)
+      // live program: NSE names are priced by the live NSE quote service below (useLiveQuotes); the quotes call is only
+      // for non-NSE alerts, and for every alert while the live service does not answer
+      const syms = Object.keys(a.alerts).filter(s => !liveOkRef.current || !isNse(a.alerts[s]))
       if (syms.length) {
         const q = (await getNewsQuotes(syms.map(s => a.alerts[s].yahoo ?? `${s}.NS`))).data.quotes
-        setPrices(Object.fromEntries(syms.map(s => [s, q[a.alerts[s].yahoo ?? `${s}.NS`]?.price ?? null])))
+        setPrices(p => ({ ...p, ...Object.fromEntries(syms.map(s => [s, q[a.alerts[s].yahoo ?? `${s}.NS`]?.price ?? null])) }))
       }
     } catch { /* keep what is shown */ }
     getNotificationFeed(200).then(r => setFeed(r.data.items)).catch(() => {})
@@ -53,11 +59,17 @@ export function AlertsCenter() {
     save(sym, num(form.above), num(form.below), num(form.move)); setForm({ sym: '', above: '', below: '', move: '' })
   }
 
-  const rows: Row[] = Object.entries(alerts).map(([sym, lv]) => ({ sym, lv, price: prices[sym] ?? null }))
+  const nseAlerts = useMemo(() => Object.keys(alerts).filter(s => isNse(alerts[s])), [alerts])
+  const liveA = useLiveQuotes(nseAlerts, { intervalMs: 3_000 })
+  liveOkRef.current = liveA.available
+  const livePx = (sym: string): number | null => { const q = liveA.quotes[sym]; return q && q.price != null && q.state !== 'unavailable' ? q.price : null }
+  const rows: Row[] = Object.entries(alerts).map(([sym, lv]) => ({ sym, lv, price: (isNse(lv) ? livePx(sym) : null) ?? prices[sym] ?? null }))
   const dist = (r: Row, lv?: number) => (lv != null && r.price ? (lv / r.price - 1) * 100 : null)
   const cols: Column<Row>[] = [
     { key: 'sym', label: 'Stock', sort: r => r.sym, render: r => <TickerLink symbol={r.sym} /> },
-    { key: 'price', label: 'Last', align: 'right', sort: r => r.price ?? -1, render: r => fmtPx(r.price) },
+    { key: 'price', label: 'Last', align: 'right', sort: r => r.price ?? -1, render: r => {
+        const info = isNse(r.lv) && livePx(r.sym) != null ? liveA.sourceFor(r.sym) : null
+        return <span title={info ? liveA.lineFor(r.sym) ?? undefined : isNse(r.lv) ? 'quotes route (the live NSE quote service is not answering)' : 'Yahoo (non-NSE symbol), about 1 min delayed'}>{fmtPx(r.price)}</span> } },
     { key: 'above', label: 'Above', align: 'right', render: r => r.lv.above == null ? <span style={{ color: T.dim }}>—</span>
         : <span><span style={{ color: T.green }}>{r.lv.above.toLocaleString('en-IN')}</span> <span style={{ color: T.dim, fontSize: 10 }}>{fmtPct(dist(r, r.lv.above), 1)}</span></span> },
     { key: 'below', label: 'Below', align: 'right', render: r => r.lv.below == null ? <span style={{ color: T.dim }}>—</span>
@@ -80,6 +92,7 @@ export function AlertsCenter() {
         subtitle="price alerts checked every minute in market hours by the scheduler (terminal can be closed) · notifications inbox" />
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 12, alignItems: 'start' }}>
         <Panel source={inputSource('your alert levels (the server checks them every minute in session)')} title={`Price alerts · ${rows.length}`} accent={T.amber} pad={0}
+          right={liveA.available && liveA.source ? <span style={{ display: 'inline-flex', gap: 5, alignItems: 'center', fontSize: 9.5, color: T.dim }}>PRICES <SourceChip info={liveA.source} /></span> : undefined}
           subtitle="green = fires when the price rises through it · red = when it falls through it · cyan = a ± % day move · one-shot: a fired level is cleared">
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: 10, borderBottom: `1px solid ${T.border}`, flexWrap: 'wrap' }}>
             <Input label="Stock" value={form.sym} onChange={v => setForm({ ...form, sym: v })} placeholder="TCS" width={100} />

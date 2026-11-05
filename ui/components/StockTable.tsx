@@ -16,14 +16,17 @@
  */
 import clsx from 'clsx'
 import { memo, startTransition, useCallback, useState, useMemo, useEffect, useRef } from 'react'
-import { useLiveQuotes } from '@/context/AppContext'
+import { useLiveQuotes as useMonitorQuotes } from '@/context/AppContext'
+import { useLiveQuotes } from '@/lib/liveQuotes'
 import { daysUntil, useCorpEvents, useResultsAvoid } from '@/lib/useCorpEvents'
 import type { CorpEvent, RecentResult } from '@/lib/api'
-import { AvoidFlag, EventBadge, T, fmtFixed } from '@/components/terminal'
+import { AvoidFlag, EventBadge, SourceChip, T, fmtFixed } from '@/components/terminal'
 import { istDateISO } from '@/lib/format'
 import { createFlashClock } from '@/components/flashClock'
 import { hiddenColumnsCue, hiddenHeaders } from '@/components/deskLayout'
 
+/** live program: how many of the first rows (current sort / filter) carry a live NSE price */
+const LIVE_ROWS = 60
 /** incremental mount: rows rendered with the page, then rows appended per transition (see the header) */
 const FIRST_ROWS = 60
 const CHUNK = 240
@@ -154,7 +157,7 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
   const [filters, setFilters]       = useState<ColFilters>(EMPTY_FILTERS)
 
   // ── Live quote overlay ──────────────────────────────────────────────────────
-  const { liveQuotes } = useLiveQuotes()
+  const { liveQuotes } = useMonitorQuotes()
   // Map of ticker → 'up' | 'down' | null for flash animation
   const [flashMap, setFlashMap]     = useState<Record<string, Flash>>(NO_FLASH)
   const prevPrices                  = useRef<Record<string, number>>({})
@@ -255,6 +258,12 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
     return () => clearTimeout(id)
   }, [limit, displayed])
   const shown = limit >= displayed.length ? displayed : displayed.slice(0, limit)
+  // live program (reports/live_nse): the CMP of the first LIVE_ROWS rows in the current sort / filter (a screenful and
+  // more) from the live NSE quote service (Breeze websocket → NSE ≈ 1 min → the last close; never Yahoo) every 5 s;
+  // the rest keep the stored close (EOD), and the column header's chip says which
+  const liveSyms = useMemo(() => shown.slice(0, LIVE_ROWS).map(s => s.ticker), [shown])
+  const liveEq = useLiveQuotes(liveSyms, { intervalMs: 5_000 })
+  const livePx = (t: string): number | undefined => { const q = liveEq.quotes[t.toUpperCase()]; return q && q.price != null && q.state !== 'unavailable' ? q.price : undefined }
 
   // CT-08: name the columns that are out of view in the table's scroll box ('⇢ scroll for ROCE%, DATA%'), as DESK
   // does, so a narrow window never hides a column silently. Re-measured on scroll and resize.
@@ -428,6 +437,8 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
                 <th onClick={() => toggleSort('cmp')}
                   className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
                   CMP ₹ <SortIcon col="cmp" />
+                  {liveEq.available && liveEq.source && <span title={`first ${LIVE_ROWS} rows in this order: live NSE quotes; the rest: the stored close (EOD)`}>
+                    {' '}<SourceChip info={liveEq.source} style={{ fontSize: 8.5, padding: '0 4px' }} /></span>}
                 </th>
                 <th onClick={() => toggleSort('pe_ratio')}
                   className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
@@ -464,7 +475,7 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
             <tbody className={clsx('divide-y', 'divide-[#1a2130]')}>
               {shown.map((stock, idx) => (
                 <StockRow key={stock.ticker} stock={stock} even={idx % 2 === 0} isDark={isDark}
-                  live={liveQuotes[stock.ticker]?.ltp} flash={flashMap[stock.ticker] ?? null}
+                  live={livePx(stock.ticker) ?? liveQuotes[stock.ticker]?.ltp} flash={flashMap[stock.ticker] ?? null}
                   watched={watched.has(stock.ticker)} showWatch={showWatch}
                   event={events.get(stock.ticker)?.[0]} avoid={avoid.get(stock.ticker)} today={today}
                   onRowClick={handleRowClick} onWatchToggle={handleWatchToggle} />

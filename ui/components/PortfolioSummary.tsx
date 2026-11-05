@@ -2,7 +2,8 @@
 
 import { apiError } from '@/lib/errors'
 import { goToPage } from '@/lib/navigate'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useLiveQuotes } from '@/lib/liveQuotes'
 import { openTicker } from '@/lib/openTicker'
 import { BasketRisk } from '@/components/BasketRisk'
 import { openExternal } from '@/lib/platform'
@@ -70,18 +71,27 @@ interface ICICIConnectionStatus {
 export function PortfolioSummary() {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [positions, setPositions] = useState<Position[]>([])
-  // today's % change per holding (Yahoo, ≈1 min delayed): ICICI's holdings call has no previous close
-  const [dayChg, setDayChg] = useState<Record<string, number>>({})
+  // today's % change per holding: ICICI's holdings call has no previous close. Live program (reports/live_nse): the live
+  // NSE quote service (Breeze websocket → NSE ≈ 1 min → the last close; never Yahoo); the old 60 s quotes call runs only
+  // while the live service does not answer
+  const [dayChgOld, setDayChg] = useState<Record<string, number>>({})
   const holdKey = positions.map(p => p.symbol).sort().join(',')
+  const liveH = useLiveQuotes(holdKey ? holdKey.split(',') : [], { intervalMs: 5_000 })
+  const dayChg = useMemo(() => {
+    if (!liveH.available) return dayChgOld
+    const out: Record<string, number> = {}
+    for (const [k, q] of Object.entries(liveH.quotes)) if (q.price != null && q.change_pct != null && q.state !== 'unavailable') out[k] = q.change_pct
+    return out
+  }, [liveH.available, liveH.quotes, dayChgOld])
   useEffect(() => {
-    if (!holdKey) return
+    if (!holdKey || liveH.available) return
     const get = () => getNewsQuotes(holdKey.split(',').map(x => `${x}.NS`)).then(r => {
       const q = r.data.quotes; const out: Record<string, number> = {}
       for (const x of holdKey.split(',')) { const v = q[`${x}.NS`]; if (v?.available && v.change_pct != null) out[x] = v.change_pct }
       setDayChg(out)
     }).catch(() => {})
     get(); const iv = setInterval(get, 60_000); return () => clearInterval(iv)
-  }, [holdKey])
+  }, [holdKey, liveH.available])
   // value × chg / (1 + chg): rupee move today on what is held now (today's buys count from their buy price instead)
   const dayPnl = positions.reduce((a, p) => {
     const c = dayChg[p.symbol]; if (c == null) return a
@@ -304,7 +314,8 @@ export function PortfolioSummary() {
     { key: 'buy_price', label: 'Avg cost', align: 'right', render: r => fmtInr(r.buy_price, 2) },
     { key: 'current_price', label: 'LTP', align: 'right', render: r => fmtInr(r.current_price, 2) },
     { key: 'day', label: 'Today', align: 'right', sort: r => dayChg[r.symbol] ?? -999,
-      render: r => dayChg[r.symbol] == null ? <span style={{ color: T.dim }}>—</span> : <span style={{ color: tone(dayChg[r.symbol]) }}>{fmtSignedPct(dayChg[r.symbol])}</span> },
+      render: r => dayChg[r.symbol] == null ? <span style={{ color: T.dim }}>—</span>
+        : <span style={{ color: tone(dayChg[r.symbol]) }} title={liveH.lineFor(r.symbol) ?? 'quotes route (the live NSE quote service is not answering)'}>{fmtSignedPct(dayChg[r.symbol])}</span> },
     { key: 'current_value', label: 'Value', align: 'right', sort: r => r.current_value, render: r => fmtInr(r.current_value) },
     { key: 'pnl', label: 'P&L', align: 'right', sort: r => r.pnl, render: r => <span style={{ color: tone(r.pnl) }}>{fmtInr(r.pnl)}</span> },
     { key: 'pnl_percent', label: 'Return', align: 'right', sort: r => r.pnl_percent,
@@ -329,7 +340,7 @@ export function PortfolioSummary() {
               : summary.funds?.stale ? <span style={{ color: T.amber }}>last good reading · ICICI's funds call just failed</span> : 'ready to invest'} />
           <Stat label="Unrealised P&L" value={fmtInr(summary.total_pnl_inr, 2)} color={tone(summary.total_pnl_inr)}
                 sub={<span>{`${fmtPct(summary.total_pnl_pct, 2)} on invested`}{Object.keys(dayChg).length > 0 &&
-                  <span style={{ color: tone(dayPnl) }}> · today {dayPnl >= 0 ? '+' : '−'}{fmtInr(Math.abs(dayPnl))}</span>}</span>}
+                  <span style={{ color: tone(dayPnl) }} title={liveH.available && liveH.source ? `day move from live NSE quotes: ${liveH.source.hint ?? ''}` : 'day move from the quotes route (the live NSE quote service is not answering)'}> · today {dayPnl >= 0 ? '+' : '−'}{fmtInr(Math.abs(dayPnl))}</span>}</span>}
                 accent={isProfit ? T.green : T.red} />
         </Grid>
         <Panel source={sourceOf(summary?.as_of ?? null, { source: 'ICICI funds', maxAgeDays: 1 })} title="Capital allocation">
