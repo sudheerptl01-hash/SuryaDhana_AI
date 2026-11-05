@@ -62,6 +62,8 @@ NSEAPI = "NSE (www.nseindia.com/api)"
 DERIVED = "SuryaDhana (derived)"
 
 
+# PATHS ARE RELATIVE TO data/nse_archive (main._archive_root): data/X is "../X", the repo root is "../../" (5 Nov fix:
+# six rows pointed one level off and the DATA page showed existing files as "nothing stored")
 def build_rows() -> list[dict[str, Any]]:
     r: list[dict[str, Any]] = []
     # ── R-DATA §3 rows 1–30: the NSE / Yahoo / derived datasets ────────────────────────────────────────────────────
@@ -100,12 +102,12 @@ def build_rows() -> list[dict[str, Any]]:
     r.append(_row("market_monitor", "Market monitor (breadth, regime, market map)", "MKT,BRF,WRAP", DERIVED, "derived", "19:00", "derived", 1, "eod_data_pipeline",
                   "endpoint", note="as_of from /db/market-monitor (ui-api composes)", badge="context"))
     r.append(_row("index_valuation_history", "Index valuation history (P/E, P/B, DY)", "MKT,BRF", NSE, "ind_close_all (read 19:15; re-written 23:20)", "20:00", "daily", 1,
-                  "index_valuation_daily", "file", column="csv:date", table="nse_archive/derived/index_valuation_history.csv", anchor=f"{DICT}#ind-close-all",
+                  "index_valuation_daily", "file", column="csv:date", table="derived/index_valuation_history.csv", anchor=f"{DICT}#ind-close-all",
                   badge="context"))
     r.append(_row("option_chain_eod", "EOD option chain + IV (from the F&O file)", "OMON,OSTR", DERIVED, "from nse_fo_daily", "21:00", "derived", 1, "nse_positions_catchup",
                   "endpoint", note="computed on request from the cached F&O file; as_of = the file's date"))
     r.append(_row("option_history_json", "Legacy near-expiry ATM IV history (NIFTY, BANKNIFTY)", "DERV", DERIVED, "lazy on request", "21:00", "derived", 1, None,
-                  "file", column="json:date", table="nse_archive/derived/option_history.json", verdict="PUBLISH-CONTEXT", badge="context",
+                  "file", column="json:date", table="derived/option_history.json", verdict="PUBLISH-CONTEXT", badge="context",
                   note="superseded by iv_summary_daily; kept one release as an alias (PLAN 1.1)"))
     r.append(_row("option_chain_live", "Live option chain (NSE option-chain-v3, 30 s TTL)", "OMON", NSEAPI, "live", None, "live", 1, None, "endpoint",
                   verdict="PUBLISH-CONTEXT", badge="context", note="never stored; the 15-min Breeze pilot stores iv_intraday instead"))
@@ -119,18 +121,18 @@ def build_rows() -> list[dict[str, Any]]:
                   None, "archive", table="surveillance", column="date", anchor=f"{DICT}#surveillance", badge="context"))
     r.append(_row("breeze_session", "ICICI Breeze session (quotes, MCX, holdings)", "BRKR,PORT,MCXG,GOLD", "ICICI Direct", "08:00 login", "08:30", "session", 1,
                   "icici_session_refresh", "endpoint", note="ui-api telemetry: logged in by 08:30 without a human (Wave 0 0.3)"))
-    r.append(_row("tick_store", "Breeze live ticks (tick store)", "CHRT", "ICICI Direct", "live", None, "live", 1, None, "archive", table="ticks", column="date",
+    r.append(_row("tick_store", "Breeze live ticks (tick store)", "CHRT", "ICICI Direct", "live", None, "live", 1, None, "archive", table="../ticks", column="date",
                   verdict="LINK-ONLY", badge="context", note="never armed (LIVE_TICKS=0) by decision O-T29"))
     r.append(_row("breeze_security_master", "ICICI security master", "MCXG,GOLD", "ICICI Direct", "daily", "08:00", "daily", 1, "gold_mcx_master", "file",
-                  column="mtime", table="cache/breeze/SecurityMaster.zip"))
-    r.append(_row("news_scanner", "News scanner JSON (owner-run)", "NEWS", "owner", "manual", None, "manual", 5, None, "archive", table="../new_scnner", column="date",
+                  column="mtime", table="../cache/breeze/SecurityMaster.zip"))
+    r.append(_row("news_scanner", "News scanner JSON (owner-run)", "NEWS", "owner", "manual", None, "manual", 5, None, "archive", table="../../new_scnner", column="date",
                   verdict="PUBLISH-CONTEXT", badge="context", note="news picks performed like random same-size stocks (news_scan_track_record)"))
     r.append(_row("news_track_record", "News scanner track record", "NEWS", DERIVED, "derived", "20:00", "derived", 1, "news_track_record_daily", "endpoint",
                   verdict="PUBLISH-CONTEXT", badge="context"))
     r.append(_row("desk_mark", "Decision Desk mark / plans (paper)", "DESK", DERIVED, "derived", "20:00", "derived", 1, "desk_daily", "endpoint",
                   note="ui-api composes from data/desk*.sqlite; PAPER ONLY"))
     r.append(_row("alpha_shadow", "S1 paper shadow NAV", "ALFA,RSCH", DERIVED, "derived", "20:15", "derived", 1, "alpha_shadow_daily", "file", column="mtime",
-                  table="../alpha_lab/paper/state.json"))
+                  table="../../alpha_lab/paper/state.json"))
     r.append(_row("ml_features", "ML features (dormant pipeline)", "MLEN,GBOX", DERIVED, "derived", "19:30", "derived", 1, "eod_data_pipeline", "table",
                   table="ml_features", column="date", verdict="PUBLISH-CONTEXT", badge="context", note="labels lag 5 sessions by design"))
     r.append(_row("db_backup", "Verified DuckDB backup", "SYS", DERIVED, "02:15", "03:00", "daily", 1, "db_backup_daily", "archive", table="../backups/duckdb",

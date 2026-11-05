@@ -228,7 +228,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 
 - **Pages:** MKT, BRF · **Publisher:** NSE (nsearchives.nseindia.com)
 - **Published (IST):** ind_close_all (read 19:15; re-written 23:20) · **Expected stored by:** 20:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
-- **Ingest job:** `index_valuation_daily` · **Freshness read from:** `nse_archive/derived/index_valuation_history.csv` (csv:date)
+- **Ingest job:** `index_valuation_daily` · **Freshness read from:** `derived/index_valuation_history.csv` (csv:date)
 - **Verdict · badge:** PUBLISH-CORE · `context` · **Dictionary:** [NSE_DATA_DICTIONARY.md#ind-close-all](../docs/NSE_DATA_DICTIONARY.md#ind-close-all)
 
 <a id="option_chain_eod"></a>
@@ -245,7 +245,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 
 - **Pages:** DERV · **Publisher:** SuryaDhana (derived)
 - **Published (IST):** lazy on request · **Expected stored by:** 21:00 IST · **Cadence:** derived · **Amber after:** 1 days, red beyond that
-- **Ingest job:** none (read on request) · **Freshness read from:** `nse_archive/derived/option_history.json` (json:date)
+- **Ingest job:** none (read on request) · **Freshness read from:** `derived/option_history.json` (json:date)
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#option_history_json](../docs/TERMINAL_DATA_DICTIONARY.md#option_history_json)
 - **Note:** superseded by iv_summary_daily; kept one release as an alias (PLAN 1.1)
 
@@ -305,7 +305,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 
 - **Pages:** CHRT · **Publisher:** ICICI Direct
 - **Published (IST):** live · **Expected stored by:** no deadline · **Cadence:** live · **Amber after:** 1 days, red beyond that
-- **Ingest job:** none (read on request) · **Freshness read from:** dated files under `data/nse_archive/ticks/`
+- **Ingest job:** none (read on request) · **Freshness read from:** dated files under `data/nse_archive/../ticks/`
 - **Verdict · badge:** LINK-ONLY · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#tick_store](../docs/TERMINAL_DATA_DICTIONARY.md#tick_store)
 - **Note:** never armed (LIVE_TICKS=0) by decision O-T29
 
@@ -314,7 +314,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 
 - **Pages:** MCXG, GOLD · **Publisher:** ICICI Direct
 - **Published (IST):** daily · **Expected stored by:** 08:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
-- **Ingest job:** `gold_mcx_master` · **Freshness read from:** `cache/breeze/SecurityMaster.zip` (mtime)
+- **Ingest job:** `gold_mcx_master` · **Freshness read from:** `../cache/breeze/SecurityMaster.zip` (mtime)
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#breeze_security_master](../docs/TERMINAL_DATA_DICTIONARY.md#breeze_security_master)
 
 <a id="news_scanner"></a>
@@ -322,7 +322,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 
 - **Pages:** NEWS · **Publisher:** owner
 - **Published (IST):** manual · **Expected stored by:** no deadline · **Cadence:** manual · **Amber after:** 5 days, red beyond that
-- **Ingest job:** none (read on request) · **Freshness read from:** dated files under `data/nse_archive/../new_scnner/`
+- **Ingest job:** none (read on request) · **Freshness read from:** dated files under `data/nse_archive/../../new_scnner/`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#news_scanner](../docs/TERMINAL_DATA_DICTIONARY.md#news_scanner)
 - **Note:** news picks performed like random same-size stocks (news_scan_track_record)
 
@@ -348,7 +348,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 
 - **Pages:** ALFA, RSCH · **Publisher:** SuryaDhana (derived)
 - **Published (IST):** derived · **Expected stored by:** 20:15 IST · **Cadence:** derived · **Amber after:** 1 days, red beyond that
-- **Ingest job:** `alpha_shadow_daily` · **Freshness read from:** `../alpha_lab/paper/state.json` (mtime)
+- **Ingest job:** `alpha_shadow_daily` · **Freshness read from:** `../../alpha_lab/paper/state.json` (mtime)
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#alpha_shadow](../docs/TERMINAL_DATA_DICTIONARY.md#alpha_shadow)
 
 <a id="ml_features"></a>

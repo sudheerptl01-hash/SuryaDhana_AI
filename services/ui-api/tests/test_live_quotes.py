@@ -108,6 +108,31 @@ def test_age_includes_the_time_in_the_cache(ds: sup.FakeDataService, clock: sup.
     assert q["age_s"] == 2.1 and q["state"] == "live" and "reason" not in q
 
 
+def test_a_cache_hit_that_crosses_the_refresh_window_while_waiting_is_not_a_failure(ds: sup.FakeDataService,
+                                                                                     clock: sup.Clock) -> None:
+    """5 Nov race: RELIANCE cached 1.99 s (a hit, no refresh due) + INFY needing a fetch that takes 50 ms → RELIANCE was
+    assembled at 2.04 s and re-stated 'delayed: data-service did not answer' although every upstream call succeeded."""
+    h = live.hub()
+    orig = h._fetch
+
+    async def slow_fetch(chunk: tuple[str, ...]) -> None:
+        clock.t += 0.05                       # the other symbol's batch takes 50 ms
+        await orig(chunk)
+
+    async def go() -> tuple[dict[str, Any], dict[str, Any]]:
+        await h.quotes(["RELIANCE"])
+        clock.t += 1.99
+        h._fetch = slow_fetch                 # type: ignore[method-assign]
+        hit = (await h.quotes(["RELIANCE", "INFY"])).payload["quotes"]["RELIANCE"]
+        ds.down = True                        # negative control: a symbol whose refresh really fails IS flagged
+        clock.t += 2.5
+        failed = (await h.quotes(["RELIANCE"])).payload["quotes"]["RELIANCE"]
+        return hit, failed
+    hit, failed = run(go())
+    assert hit["state"] == "live" and "reason" not in hit and hit["age_s"] > 2.0          # age honest, state not degraded
+    assert failed["state"] == "delayed" and "did not answer" in failed["reason"]
+
+
 def test_data_service_down_serves_the_last_row_restated_then_unavailable(ds: sup.FakeDataService,
                                                                         clock: sup.Clock) -> None:
     h = live.hub()

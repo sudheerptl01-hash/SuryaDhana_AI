@@ -310,3 +310,42 @@ def test_bhavcopy_revision_edge_cases(store, tmp_path):
     body4 = BHAV_1830.replace("04-Nov-2026", "09-Nov-2026")
     out = nse_positions.revise_bhavcopy(store, _client(lambda r: httpx.Response(200, text=body4)), d4, cache, now=datetime(2026, 11, 9, 17, 0))
     assert out["release_at_source"] == "fetch_time"
+
+
+def test_archive_days_reads_iso_and_yyyymmdd_names_and_one_subfolder_level(tmp_path):
+    """5 Nov fix: the DATA page showed existing backups / news scans / surveillance files as 'nothing stored'."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "data-service"))
+    from data_health import gaps
+
+    (tmp_path / "backups").mkdir(); (tmp_path / "backups" / "market-20261025.duckdb").write_text("")
+    (tmp_path / "backups" / "market-20261030.meta.json").write_text("")
+    (tmp_path / "scans").mkdir(); (tmp_path / "scans" / "20260925.csv").write_text("")
+    (tmp_path / "surv" / "ban").mkdir(parents=True); (tmp_path / "surv" / "ban" / "2026-11-05.csv").write_text("")
+    (tmp_path / "pre").mkdir(); (tmp_path / "pre" / "2026-10-09_ALL.json").write_text("")
+    (tmp_path / "junk").mkdir(); (tmp_path / "junk" / "notes-99999999.txt").write_text(""); (tmp_path / "junk" / "README").write_text("")
+    from datetime import date as _d
+    assert gaps.archive_days(tmp_path, "backups") == {_d(2026, 10, 25), _d(2026, 10, 30)}
+    assert gaps.archive_days(tmp_path, "scans") == {_d(2026, 9, 25)}
+    assert gaps.archive_days(tmp_path, "surv") == {_d(2026, 11, 5)}                 # one sub-folder level
+    assert gaps.archive_days(tmp_path, "pre") == {_d(2026, 10, 9)}                  # the ISO prefix still works
+    assert gaps.archive_days(tmp_path, "junk") == set()                             # negative control: no valid date
+    assert gaps.archive_days(tmp_path, "missing") == set()
+
+
+def test_catalog_file_paths_are_relative_to_the_archive_root():
+    """Paths resolve against data/nse_archive: never a doubled 'nse_archive/' prefix; data/X is '../X'; the repo root
+    is '../../' (5 Nov fix: six rows pointed one level off)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "services" / "data-service"))
+    from data_health import catalog
+
+    rows = {r["id"]: r for r in catalog.build_rows() if r["freshness_kind"] in ("file", "archive")}
+    assert all(not r["table_name"].startswith("nse_archive/") for r in rows.values())
+    assert rows["alpha_shadow"]["table_name"] == "../../alpha_lab/paper/state.json"
+    assert rows["news_scanner"]["table_name"] == "../../new_scnner"
+    assert rows["breeze_security_master"]["table_name"] == "../cache/breeze/SecurityMaster.zip"
+    assert rows["tick_store"]["table_name"] == "../ticks"
+    repo = Path(__file__).resolve().parents[1]
+    for rid in ("alpha_shadow", "news_scanner"):                                     # repo-tracked targets exist on any checkout
+        assert (repo / "data" / "nse_archive" / rows[rid]["table_name"]).resolve().parent.exists(), rid

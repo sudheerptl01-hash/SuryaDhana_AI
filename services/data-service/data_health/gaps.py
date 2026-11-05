@@ -5,6 +5,8 @@ and never overwritten by a later success: ``clear_if_recovered`` removes it only
 """
 from __future__ import annotations
 
+import re
+
 from collections.abc import Iterable
 from datetime import date, datetime
 from pathlib import Path
@@ -37,17 +39,38 @@ def write_gaps(store: Any, dataset: str, days: Iterable[date], reason: str, *, u
     return db.upsert(store, "data_gaps", pd.DataFrame(new), COLUMNS["data_gaps"], CASTS["data_gaps"]) if new else 0
 
 
+_DAY_TOKENS = re.compile(r"(?<!\d)(\d{4})-?(\d{2})-?(\d{2})(?!\d)")
+
+
+def _day_from_name(name: str) -> date | None:
+    """The session date in an archive file name: an ISO prefix ('2026-10-09_ALL.json') or a YYYYMMDD token anywhere
+    ('market-20261025.duckdb', '20260925.csv'); impossible dates are ignored (5 Nov fix)."""
+    for m in _DAY_TOKENS.finditer(name):
+        try:
+            d = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            continue
+        if 2000 <= d.year <= 2100:
+            return d
+    return None
+
+
 def archive_days(root: Path, folder: str) -> set[date]:
+    """Dates present in an archive folder: file names directly inside it and one level of sub-folders (surveillance keeps
+    ban/ bands/ reg1/)."""
     d = root / folder
     if not d.exists():
         return set()
     out: set[date] = set()
     for p in d.iterdir():
-        name = p.name
-        try:
-            out.add(date.fromisoformat(name[:10]))
-        except ValueError:
-            continue
+        day = _day_from_name(p.name)
+        if day is not None:
+            out.add(day)
+        elif p.is_dir():
+            for q in p.iterdir():
+                dq = _day_from_name(q.name)
+                if dq is not None:
+                    out.add(dq)
     return out
 
 

@@ -322,10 +322,12 @@ class LiveQuotesHub:
         self.counts["symbols_asked"] += len(symbols)
         waits: dict[int, asyncio.Task[None]] = {}
         need: list[str] = []
+        hits: set[str] = set()
         for s in symbols:
             c = self._rows.get(s)
             if c is not None and now - c.at < REFRESH_S:
                 self.counts["cache_hits"] += 1
+                hits.add(s)
                 continue
             cur = self._inflight.get(s)
             if cur is not None and cur[0] is loop and not cur[1].done():
@@ -343,7 +345,7 @@ class LiveQuotesHub:
         if waits:
             # shield: a caller that gives up (client gone) never cancels the batch the others wait for
             await asyncio.gather(*(asyncio.shield(t) for t in waits.values()), return_exceptions=True)
-        return self._assemble(symbols, fetched=bool(waits))
+        return self._assemble(symbols, fetched=bool(waits), hits=hits)
 
     def stats(self) -> dict[str, Any]:
         return {"name": "live.quotes_hub", "kind": "live", "rows_cached": len(self._rows),
@@ -422,7 +424,11 @@ class LiveQuotesHub:
             return dict(self._market)
         return clock_market(self._wall())
 
-    def _assemble(self, symbols: list[str], *, fetched: bool) -> Snapshot:
+    def _assemble(self, symbols: list[str], *, fetched: bool, hits: set[str] | frozenset[str] = frozenset()) -> Snapshot:
+        """``hits``: symbols served from the cache when this request began. They were inside REFRESH_S then, so no refresh
+        was due: their age grows by the time spent waiting for the others' batch, but they are never declared FAILED —
+        a row that crossed 2 s while this request waited ~10 ms for another symbol's fetch was re-stated 'delayed:
+        data-service did not answer' although every upstream call succeeded (5 Nov, caught by the live audit)."""
         now = self._clock()
         out: dict[str, dict[str, Any]] = {}
         oldest = 0.0
@@ -434,7 +440,7 @@ class LiveQuotesHub:
                 self.counts["unavailable_rows_served"] += 1
                 continue
             extra = max(0.0, now - c.at)
-            failed = extra >= REFRESH_S
+            failed = extra >= REFRESH_S and s not in hits
             if failed and extra > STALE_SERVE_S:
                 out[s] = unavailable_row(self._why_unavailable())
                 self.counts["unavailable_rows_served"] += 1
