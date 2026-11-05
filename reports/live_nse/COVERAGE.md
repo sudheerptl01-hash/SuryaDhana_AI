@@ -65,10 +65,14 @@
 | CMDT | OFFLINE (EIA) | keyless fallback to EIA's own public file of the same series (cd8778e; checked by its Sourcekey row) | EIA crude stocks through 30 Oct, production through Aug 2026; a free `EIA_API_KEY` switches to the v2 API |
 | MCXG, WEI tape | DELAYED / non-NSE | MCX gold, USD/INR, Brent, COMEX gold and the US / Asian indices are not NSE data | labelled with their source |
 
-## After the close (17:12–17:24 IST, release 20261105-171053, audit `ui_audit_20261105_closed2`)
+## After the close (audit `ui_audit_20261105_closed3`, 17:28–17:40 IST)
 
-43/43 pages pass in Chromium and WebKit with the market closed: no NSE price reads LIVE. The only LIVE chips are the controller clock,
-the service probes and MCX (open until 23:30). The OSTR margin chip read LIVE · BREEZE after the close in the 17:00 run and was fixed in cd8778e
-(CLOSE · <session>). Stock and index-member rows read STALE · the 4 Nov close until today's close is stored: data-service was restarted at 16:19
-(its in-memory last prices went with it). The 18:30 EOD pipeline stores today's bhavcopy (the F&O file lands about 20:10), and the quote service
-re-reads closes every 10 min.
+43/43 pages pass in Chromium and WebKit with the market closed:
+- No NSE price reads LIVE. The only LIVE chips are the controller clock, the service probes and MCX (open until 23:30).
+- The OSTR margin chip read LIVE · BREEZE after the close in the 17:00 run. Fixed in cd8778e: it now reads CLOSE · <session>.
+- A data-service restart after the close keeps today's last prices. On its first quote request the tick engine primes itself from today's
+  tick store (33a214d; 423 symbols primed after the 17:27 restart), so stock, members and movers rows read CLOSED · 5 Nov, not STALE · 4 Nov.
+- Today's equity bhavcopy was ingested at 17:41 as soon as NSE published it (3,567 rows). NSE's official closes replace the last traded
+  prices within 10 min.
+- One STALE chip remains by NSE's own schedule: OSTR's seed chain is the 4 Nov F&O bhavcopy, because NSE had not published the 5 Nov F&O
+  file at 17:40 (404). It lands about 20:10, and the 20:30 pass ingests it.
