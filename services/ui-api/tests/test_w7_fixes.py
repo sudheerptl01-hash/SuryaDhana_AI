@@ -223,3 +223,23 @@ def test_fundamentals_screen_core_is_columnar_with_all_fields(monkeypatch):
     assert set(core["columns"]) == set(row)                      # core drops NO fields here — keys only
     got = dict(zip(core["columns"], core["data"][0]))
     assert got["revenue"] == 2447203000.0 and got["filed_at"] == "2026-07-31T16:04:16" and got["pe"] == 10.35
+
+
+def test_events_cut_keeps_upcoming_events_not_the_past_week():
+    """5 Nov 2026: 1,737 rows from 29 Oct; the old `rows[:500]` kept 29 Oct – 3 Nov and EVTS read '0 upcoming'."""
+    from datetime import date as _date
+
+    from routers import markets as m
+
+    rows = [{"symbol": f"S{i}", "event_date": f"2026-10-{29 + i // 100:02d}" if i < 300 else f"2026-11-{5 + (i - 300) // 100:02d}",
+             "kind": "results"} for i in range(1200)]
+    kept = m.keep_nearest_events(rows, 500, _date(2026, 11, 5))
+    days = [r["event_date"] for r in kept]
+    assert len(kept) == 500 and days == sorted(days)
+    assert sum(d >= "2026-11-05" for d in days) == 500                       # 900 upcoming rows: the nearest 500 win
+    assert days[0] == "2026-11-05" and days[-1] == "2026-11-09"
+    few = rows[:300] + rows[300:400]                                          # 100 upcoming, 300 past
+    kept2 = m.keep_nearest_events(few, 250, _date(2026, 11, 5))
+    assert sum(r["event_date"] >= "2026-11-05" for r in kept2) == 100         # every upcoming row kept …
+    assert min(r["event_date"] for r in kept2) == "2026-10-30"                # … then the MOST RECENT past rows
+    assert m.keep_nearest_events(rows[:10], 500, _date(2026, 11, 5)) == rows[:10]   # under the limit: untouched

@@ -6,6 +6,7 @@ import math
 import os
 import re
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from typing import Any
 
 import httpx
@@ -142,15 +143,40 @@ def merge_events(rows: list[dict]) -> list[dict]:
     return sorted(out.values(), key=lambda r: (r.get("event_date") or "", -(r.get("turnover_cr") or 0), r.get("symbol") or ""))
 
 
+_IST_EVENTS = ZoneInfo("Asia/Kolkata")
+
+
+def keep_nearest_events(rows: list[dict], limit: int, today: date) -> list[dict]:
+    """The `limit` rows a calendar needs when it must cut: every event from today on first (nearest first, the farthest
+    future dropped), then the most recent past ones with what is left, returned date-ascending. The old cut kept the
+    first `limit` rows of a list that starts a week back, so in results season (1,737 rows on 5 Nov 2026) it kept only
+    the past week: EVTS read "0 upcoming" and every NEXT EVENT column (DEAL, INSD, EQS, BRF) was blank."""
+    if len(rows) <= limit:
+        return rows
+
+    def day(r: dict) -> str:
+        return str(r.get("event_date") or "")[:10]
+
+    iso = today.isoformat()
+    ordered = sorted(rows, key=day)
+    future = [r for r in ordered if day(r) >= iso]
+    past = [r for r in ordered if day(r) < iso]
+    kept = future[:limit]
+    room = limit - len(kept)
+    if room > 0:
+        kept = past[-room:] + kept
+    return sorted(kept, key=day)
+
+
 @router.get("/events")
 async def market_events(start: str | None = None, end: str | None = None,
-                        limit: int = Query(500, ge=1, le=5000),
+                        limit: int = Query(2000, ge=1, le=5000),
                         fields: str | None = CORE_FIELDS) -> dict:
     """NSE corporate calendar (results, dividends, splits, bonuses, buybacks…) from data-service.
 
-    Payload budget (S2): rows capped at `limit` after merging — the calendar comes
-    date-ascending, so a cut drops only the farthest-future events (today's full
-    window is ~470 rows, under the default).
+    Payload budget (S2): rows capped at `limit` after merging. In results season the window holds 1,700+ rows (5 Nov
+    2026), so the default is 2,000 (≈ 480 KB as `fields=core`) and a cut keeps upcoming events first
+    (`keep_nearest_events`): never the past week instead of the next five.
     """
     params = {k: v for k, v in {"start": start, "end": end}.items() if v}
     try:
@@ -164,7 +190,7 @@ async def market_events(start: str | None = None, end: str | None = None,
     rows = merge_events(body.get("rows", []))
     truncated = len(rows) > limit
     if truncated:
-        rows = rows[:limit]
+        rows = keep_nearest_events(rows, limit, datetime.now(_IST_EVENTS).date())
     if fields == "core":  # columnar + drop unread fields; default below stays byte-identical
         meta = {k: v for k, v in body.items() if k != "rows"}
         return {**meta, **columnar(events_core_rows(rows)), "count": len(rows),
