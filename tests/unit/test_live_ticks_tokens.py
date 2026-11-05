@@ -252,7 +252,11 @@ def test_index_names_aliases_legacy_spellings_and_silent_streams():
 # ── cap, pins, eviction ───────────────────────────────────────────────────────────────────────────────────────────────
 
 def test_cap_is_l_capacity_safe_and_covers_index_plus_members():
-    assert 51 < lt.MAX_SYMBOLS <= 300                               # NIFTY + 50 members fit; ≤ the contract's 300
+    assert 51 < lt.MAX_SYMBOLS <= 500                               # NIFTY + 50 members fit; ≤ L-CAPACITY's 500
+    assert lt.cap_from_env(None) == lt.cap_from_env('') == 300      # default: the live contract's 300
+    assert lt.cap_from_env('450') == 450 and lt.cap_from_env(' 500 ') == 500
+    # negative controls: never above the measured 500, never below index + members, junk → the default
+    assert lt.cap_from_env('1040') == 500 and lt.cap_from_env('10') == 52 and lt.cap_from_env('lots') == 300
     assert lt.REQUESTED_CAP >= lt.MAX_SYMBOLS
 
 

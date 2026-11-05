@@ -52,7 +52,22 @@ logger = get_logger("live-ticks")
 IST = pytz.timezone("Asia/Kolkata")
 SYMBOL_RE = re.compile(r"^[A-Z0-9&-]{1,20}$")
 INDEX_RE = re.compile(r"^[A-Z0-9][A-Z0-9 &:/.()%-]{2,59}$")
-MAX_SYMBOLS = 300                  # L-CAPACITY: 540 tokens clean on one socket; the live contract caps at ≤ 300
+CAP_DEFAULT, CAP_FLOOR, CAP_CEILING = 300, 52, 500
+
+
+def cap_from_env(raw: str | None) -> int:
+    """LIVE_TICKS_MAX_SYMBOLS → the subscription cap. Default 300 (the live contract). L-CAPACITY measured 540 tokens (500
+    stocks + 40 indices) clean on one socket at 11-13 % of a core and recommends ≤ 500 stocks, hence the ceiling; the floor
+    keeps NIFTY + its 50 members + one more. Raising it trades fewer evictions (a page re-opened after a busy stretch shows
+    STALE rows for 2-5 s while its names re-subscribe) for CPU on the GIL-holding socket.io receive thread."""
+    try:
+        v = int(str(raw).strip()) if raw not in (None, "") else CAP_DEFAULT
+    except ValueError:
+        return CAP_DEFAULT
+    return max(CAP_FLOOR, min(CAP_CEILING, v))
+
+
+MAX_SYMBOLS = cap_from_env(os.getenv("LIVE_TICKS_MAX_SYMBOLS"))
 SYMBOL_TTL_S = 600.0               # A1: unsubscribe symbols nobody asked about for 10 min
 REQUESTED_CAP = 2 * MAX_SYMBOLS    # hard bound on the request ledger itself (S1)
 FRESH_S = 5.0                      # consumers treat ticks older than this as stale
