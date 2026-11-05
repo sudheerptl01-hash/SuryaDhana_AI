@@ -1005,22 +1005,22 @@ def totp_status(reveal: bool = False) -> dict[str, Any]:
         "keychain_hint": f"security add-generic-password -U -s {KEYCHAIN_SERVICE} -a {TOTP_KEY} -w",
         "force_supported": True,   # POST /api/telemetry/icici-refresh {force:true} → controller ?force=1 (PLAN §g, owner Q5)
     }
-    if reveal and env_value:
-        try:
-            code, left = _code_now(_spec_from(env_value))
-            out["code"], out["seconds_left"] = code, left
-        except ValueError:
-            out["code"], out["seconds_left"], out["secret_problem"] = None, None, TOTP_BAD_SECRET
-    elif reveal and source == "keychain":
+    # validate the stored key on EVERY status read (never echoed, no code computed unless `reveal`): 'configured' only
+    # says something is stored. 5 Nov: a 10-character non-base32 value read "TOTP CONFIGURED" for five hours and the
+    # forced login stopped at "TOTP secret is not valid base32"; the 08:00 run would have done the same.
+    value = env_value or None
+    if not value and source == "keychain":
         from shared.icici_login import read_secret
         value = read_secret(TOTP_KEY)
+    spec = None
+    if value:
         try:
-            if value:
-                out["code"], out["seconds_left"] = _code_now(_spec_from(value))
-            else:
-                out["code"], out["seconds_left"] = None, None
+            spec = _spec_from(value)
         except ValueError:
-            out["code"], out["seconds_left"], out["secret_problem"] = None, None, TOTP_BAD_SECRET
+            out["secret_problem"] = TOTP_BAD_SECRET
+    out["usable"] = None if not value else spec is not None
+    if reveal:
+        out["code"], out["seconds_left"] = _code_now(spec) if spec is not None else (None, None)
     return out
 
 

@@ -3392,7 +3392,13 @@ def force_refusal(now: datetime) -> str | None:
 
 def otp_hint(detail: str) -> str:
     """The Telegram hint for a login that needs you: the SMS-code path only when the detail names an SMS OTP (a word
-    boundary: 'TOTP' — the authenticator secret being unusable — is not an OTP you can reply with; G-LOGIN §9.3)."""
+    boundary: 'TOTP' — the authenticator secret being unusable — is not an OTP you can reply with; G-LOGIN §9.3).
+    An unusable authenticator key is not a password problem (5 Nov: the stored value was not a base32 setup key and
+    the hint said "/password"): /login stops at the same check until the key is replaced or removed."""
+    if "TOTP_SECRET is unusable" in detail:
+        return ("The stored authenticator key is not a TOTP setup key (A–Z, 2–7, usually 16–32 characters). Replace it: "
+                "security add-generic-password -U -s suryadhana -a ICICI_TOTP_SECRET -w (it prompts), or remove it: "
+                "security delete-generic-password -s suryadhana -a ICICI_TOTP_SECRET, then /login takes the SMS code.")
     return ("Send /login when you can reply with the SMS code." if re.search(r"\bOTP\b", detail)
             else "On Telegram: /password (or /userid) to fix it, then /login.")
 

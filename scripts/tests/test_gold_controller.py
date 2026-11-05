@@ -845,9 +845,16 @@ def test_rc2_is_recorded_as_an_error_with_the_right_hint(refresh, ctl):
     assert mc._latency.stats()["icici_session_refresh"]["last_status"] == "error"
     [(level, title, body)] = ctl["alerts"].sent
     assert (level, title) == ("critical", "ICICI login needs you")
-    assert "/password (or /userid)" in body and "SMS code" not in body, "'TOTP' is not an SMS OTP you can reply with"
+    # an unusable authenticator key is not a password problem, and the SMS code only comes after the key is replaced or
+    # removed (an empty .env value falls through to the Keychain copy, so the fix is the Keychain item itself)
+    assert "TOTP setup key" in body and "/password" not in body and "add-generic-password -U" in body
+    assert "delete-generic-password" in body and body.index("delete-generic-password") < body.index("SMS code")
     assert mc.otp_hint("ICICI sent an SMS OTP; nobody replied") == "Send /login when you can reply with the SMS code."
-    assert mc.otp_hint("ICICI_TOTP_SECRET is unusable") == "On Telegram: /password (or /userid) to fix it, then /login."
+    assert mc.otp_hint("ICICI_TOTP_SECRET is unusable") .startswith("The stored authenticator key is not a TOTP setup key")
+    assert "/password" not in mc.otp_hint("ICICI_TOTP_SECRET is unusable: TOTP secret is not valid base32")
+    # negative controls: a rejected password still points at /password; an SMS OTP still points at /login
+    assert mc.otp_hint("ICICI rejected the login: wrong password") == "On Telegram: /password (or /userid) to fix it, then /login."
+    assert mc.otp_hint("no OTP received in time") == "Send /login when you can reply with the SMS code."
 
 
 def test_a_retry_that_still_fails_is_an_error(refresh, ctl):

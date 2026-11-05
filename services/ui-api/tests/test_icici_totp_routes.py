@@ -219,6 +219,26 @@ def test_status_never_returns_the_secret_and_reveal_computes_the_code(
     assert c.get("/api/positions/totp/status").json()["login_running"] is True
 
 
+def test_status_flags_a_stored_value_that_is_not_a_totp_key_without_reveal(
+    env: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """5 Nov: a 10-character password-like value in the Keychain read "TOTP CONFIGURED" for hours; the forced login
+    then stopped at "not valid base32". The plain status read (no reveal) now says it, and never echoes the value."""
+    c = _client()
+    assert c.get("/api/positions/totp/status").json()["usable"] is None          # nothing stored: neither usable nor not
+    env["keychain"] = True
+    bad = "pa$sw0rd!1"
+    monkeypatch.setattr("shared.icici_login.read_secret", lambda name: bad)
+    r = c.get("/api/positions/totp/status")
+    s = r.json()
+    assert s["configured"] is True and s["usable"] is False and "base32" in s["secret_problem"] and "code" not in s
+    assert bad not in r.text and "sw0rd" not in r.text
+    # negative control: a real key is usable, carries no problem, and still computes no code without reveal
+    monkeypatch.setattr("shared.icici_login.read_secret", lambda name: RFC_SECRET_B32)
+    ok = c.get("/api/positions/totp/status").json()
+    assert ok["usable"] is True and "secret_problem" not in ok and "code" not in ok
+
+
 def test_status_reads_the_last_login_and_the_block_files(env: dict[str, Any], tmp_path: Path) -> None:
     (tmp_path / ".session_cache.json").write_text(
         '{"at": "2026-10-23T08:08:00+05:30", "status": "refreshed", "detail": "via ui-api"}'

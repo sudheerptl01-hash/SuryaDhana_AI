@@ -28,6 +28,8 @@ export interface TotpStatus {
   block?: { credentials?: boolean | string | null; totp?: boolean | string | null } | null
   /** the server's own Keychain one-liner (never the value) */
   keychain_hint?: string | null
+  /** false when the stored value does not parse as a TOTP key (checked on every status read; never echoed) */
+  usable?: boolean | null
   /** only with ?reveal=1 (computed server-side; never the secret) */
   code?: string | null
   seconds_left?: number | null
@@ -55,7 +57,8 @@ export function statusChips(s: TotpStatus | null | undefined): StatusChip[] {
   if (!s) return [{ text: 'TOTP STATUS UNAVAILABLE', tone: 'muted' }]
   const out: StatusChip[] = []
   if (s.block?.totp) out.push({ text: 'TOTP MISMATCH — re-register', tone: 'red' })
-  if (s.configured) out.push({ text: `TOTP CONFIGURED · ${s.source === 'keychain' ? 'Keychain' : s.source === 'env' ? '.env' : 'set'}`, tone: 'green' })
+  if (s.configured && s.usable === false) out.push({ text: 'TOTP KEY NOT USABLE — store the base32 setup key', tone: 'red' })
+  else if (s.configured) out.push({ text: `TOTP CONFIGURED · ${s.source === 'keychain' ? 'Keychain' : s.source === 'env' ? '.env' : 'set'}`, tone: 'green' })
   else out.push({ text: 'TOTP NOT SET', tone: 'amber' })
   if (s.login_running) {
     const since = typeof s.login_running === 'string' ? ` · since ${timeIst(s.login_running)}` : ''
