@@ -165,3 +165,58 @@ def catalog() -> dict[str, Any]:
 def meta(store: Any) -> dict[str, Any]:
     return {"tables": positions_meta(store), "indices": sorted({str(v) for v in db.query_df(store, "SELECT DISTINCT index_name FROM index_contribution_fit")["index_name"]}),
             "as_of": db.iso_utc(db.utcnow())}
+
+
+# ── API_CONTRACT §6: the raw-table reads ui-api's routers/markets.py composes ──────────────────────────────────────────
+# 5 Nov 2026: ui-api read /db/index-drivers/{contribution,fit,state,weights} (the contract) while this package served only
+# the derived /db/index-drivers payloads, so MEMB / DESK attribution / the drivers panes read OFFLINE "no index_drivers
+# tables yet (404)" with the tables populated. ``days`` counts stored sessions (the dates in the table), not calendar days.
+def _sessions(store: Any, table: str, index: str, days: int) -> list[Any]:
+    df = db.query_df(store, f"SELECT DISTINCT date FROM {table} WHERE index_name = ? ORDER BY date DESC LIMIT ?", [index, days])
+    return list(df["date"]) if not df.empty else []
+
+
+def _industry_join(index: str) -> tuple[str, list[Any]]:
+    """The latest stored industry per member (``index_constituents_daily``), as a LEFT JOIN and its parameter."""
+    return ("LEFT JOIN (SELECT symbol, arg_max(industry, date) AS industry FROM index_constituents_daily WHERE index_name = ? GROUP BY symbol) k "
+            "USING (symbol)", [index])
+
+
+def contract_contribution(store: Any, index: str, *, days: int = 400) -> dict[str, Any]:
+    ix = index.upper()
+    dates = _sessions(store, "index_contribution_daily", ix, days)
+    if not dates:
+        return {"index": ix, "rows": []}
+    join, jp = _industry_join(ix)
+    df = db.query_df(store, f"SELECT c.*, k.industry FROM index_contribution_daily c {join} WHERE c.index_name = ? AND c.date >= ? "
+                            "ORDER BY c.date, c.symbol", [*jp, ix, min(dates)])
+    return {"index": ix, "rows": db.records(df, ("date",))}
+
+
+def contract_fit(store: Any, index: str, *, days: int = 400) -> dict[str, Any]:
+    ix = index.upper()
+    df = db.query_df(store, "SELECT * FROM index_contribution_fit WHERE index_name = ? ORDER BY date DESC LIMIT ?", [ix, days]).sort_values("date")
+    return {"index": ix, "rows": db.records(df, ("date",))}
+
+
+def contract_state(store: Any, index: str, *, days: int = 5) -> dict[str, Any]:
+    """``index_driver_state``, both windows, for the last ``days`` sessions (one row per date × window; ``computed_at`` kept)."""
+    ix = index.upper()
+    dates = _sessions(store, "index_driver_state", ix, days)
+    if not dates:
+        return {"index": ix, "rows": []}
+    df = db.query_df(store, "SELECT * FROM index_driver_state WHERE index_name = ? AND date >= ? ORDER BY date, window_sessions", [ix, min(dates)])
+    return {"index": ix, "rows": db.records(df, ("date", "change_date"))}
+
+
+def contract_weights(store: Any, index: str, *, day: date | None = None) -> dict[str, Any]:
+    """``index_weights_daily`` on ``day`` (the latest stored date on or before it; default the latest), every method, + industry."""
+    ix = index.upper()
+    sql = "SELECT MAX(date) FROM index_weights_daily WHERE index_name = ?" + (" AND date <= ?" if day else "")
+    d = db.to_date(db.scalar(store, sql, [ix, day] if day else [ix]))
+    if d is None:
+        return {"index": ix, "requested": day.isoformat() if day else None, "as_of": None, "rows": []}
+    join, jp = _industry_join(ix)
+    df = db.query_df(store, f"SELECT w.*, k.industry FROM index_weights_daily w {join} WHERE w.index_name = ? AND w.date = ? "
+                            "ORDER BY w.method, w.weight_pct DESC", [*jp, ix, d])
+    return {"index": ix, "requested": day.isoformat() if day else None, "as_of": d.isoformat(), "rows": db.records(df, ("date", "promoter_public_at"))}

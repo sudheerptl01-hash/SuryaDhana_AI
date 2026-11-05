@@ -95,6 +95,31 @@ def index_drivers_monthly(index: str = Query("NIFTY 50", max_length=32), months:
     return reads.monthly(_store(), index.upper(), months=months)
 
 
+# API_CONTRACT §6 (what ui-api's routers/markets.py reads); the derived /db/index-drivers payloads above stay
+@router.get("/db/index-drivers/contribution")
+def index_drivers_contribution(index: str = Query("NIFTY 50", max_length=32), days: int = Query(400, ge=1, le=3000)) -> dict[str, Any]:
+    return reads.contract_contribution(_store(), index, days=days)
+
+
+@router.get("/db/index-drivers/fit")
+def index_drivers_fit(index: str = Query("NIFTY 50", max_length=32), days: int = Query(400, ge=1, le=3000)) -> dict[str, Any]:
+    return reads.contract_fit(_store(), index, days=days)
+
+
+@router.get("/db/index-drivers/state")
+def index_drivers_state(index: str = Query("NIFTY 50", max_length=32), days: int = Query(5, ge=1, le=3000)) -> dict[str, Any]:
+    return reads.contract_state(_store(), index, days=days)
+
+
+@router.get("/db/index-drivers/weights")
+def index_drivers_weights(index: str = Query("NIFTY 50", max_length=32), date_: str | None = Query(None, alias="date")) -> dict[str, Any]:
+    try:
+        day = date.fromisoformat(date_[:10]) if date_ else None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"bad date {date_!r}") from exc
+    return reads.contract_weights(_store(), index, day=day)
+
+
 @router.get("/db/index-drivers/catalog")
 def index_drivers_catalog() -> dict[str, Any]:
     return reads.catalog()

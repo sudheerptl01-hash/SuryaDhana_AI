@@ -222,6 +222,42 @@ def fo_iv_intraday(symbol: str, date_: str | None = Query(None, alias="date")) -
     return reads.intraday(_store(), symbol, day=_d(date_))
 
 
+# API_CONTRACT §6 (what ui-api's routers/derivatives.py reads); the /db/fo-iv/* payloads above stay for their own callers
+@router.get("/db/iv/summary")
+def iv_contract_summary(symbol: str = Query(..., max_length=32), days: int = Query(750, ge=1, le=5000)) -> dict[str, Any]:
+    return reads.contract_summary(_store(), symbol, days=days)
+
+
+@router.get("/db/iv/expiry")
+def iv_contract_expiry(symbol: str = Query(..., max_length=32), date_: str | None = Query(None, alias="date")) -> dict[str, Any]:
+    return reads.contract_expiry(_store(), symbol, day=_d(date_))
+
+
+@router.get("/db/iv/surface")
+def iv_contract_surface(symbol: str = Query(..., max_length=32), date_: str | None = Query(None, alias="date")) -> dict[str, Any]:
+    return reads.contract_surface(_store(), symbol, day=_d(date_))
+
+
+@router.get("/db/iv/events")
+def iv_contract_events(symbol: str = Query(..., max_length=32), n: int = Query(8, ge=1, le=100)) -> dict[str, Any]:
+    return reads.contract_events(_store(), symbol, n=n)
+
+
+@router.get("/db/iv/intraday")
+def iv_contract_intraday(symbol: str = Query(..., max_length=32), date_: str | None = Query(None, alias="date")) -> dict[str, Any]:
+    return reads.contract_intraday(_store(), symbol, day=_d(date_))
+
+
+@router.get("/db/iv/vix")
+def iv_contract_vix(days: int = Query(3000, ge=1, le=10000)) -> dict[str, Any]:
+    return reads.contract_vix(_store(), days=days)
+
+
+@router.get("/db/iv/screen")
+def iv_contract_screen() -> dict[str, Any]:
+    return reads.contract_screen(_store())
+
+
 @router.get("/db/fo-iv/catalog")
 def fo_iv_catalog() -> dict[str, Any]:
     return reads.catalog()

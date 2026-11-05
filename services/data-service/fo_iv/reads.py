@@ -167,3 +167,80 @@ def meta(store: Any) -> dict[str, Any]:
     syms = db.scalar(store, "SELECT COUNT(DISTINCT symbol) FROM iv_summary_daily") if db.table_exists(store, "iv_summary_daily") else 0
     return {"tables": pm, "freshness_columns": FRESHNESS_COLUMN, "symbols": int(syms or 0), "model_version": MODEL_VERSION,
             "as_of": db.iso_utc(db.utcnow())}
+
+
+# ── API_CONTRACT §6: the raw-table reads ui-api's routers/derivatives.py composes ──────────────────────────────────────
+# 5 Nov 2026: ui-api read /db/iv/* (the contract) while this package served only /db/fo-iv/*, so every IV pane (OMON, DERV,
+# EVTS, VOL) read OFFLINE "no IV tables yet (404)" with 2,718 surface rows stored. These are thin SELECTs; the derived
+# /db/fo-iv/* payloads above stay for their own callers.
+def _latest_on_or_before(store: Any, table: str, symbol: str, day: date | None) -> date | None:
+    if day is None:
+        return db.to_date(db.scalar(store, f"SELECT MAX(date) FROM {table} WHERE symbol = ?", [symbol]))
+    return db.to_date(db.scalar(store, f"SELECT MAX(date) FROM {table} WHERE symbol = ? AND date <= ?", [symbol, day]))
+
+
+def contract_summary(store: Any, symbol: str, *, days: int = 750) -> dict[str, Any]:
+    """``iv_summary_daily`` for ``symbol``, the last ``days`` sessions, ascending; ``model_version`` / ``r_source`` on the payload."""
+    sym = symbol.upper()
+    df = db.query_df(store, "SELECT * FROM iv_summary_daily WHERE symbol = ? ORDER BY date DESC LIMIT ?", [sym, days]).sort_values("date")
+    as_of = str(df["date"].iloc[-1])[:10] if not df.empty else None
+    r, r_src = rate_for(store, date.fromisoformat(as_of)) if as_of else (None, None)
+    return {"symbol": sym, "as_of": as_of, "model_version": MODEL_VERSION, "r": r, "r_source": r_src, "rows": db.records(df, DATE_COLS)}
+
+
+def contract_expiry(store: Any, symbol: str, *, day: date | None = None) -> dict[str, Any]:
+    """``iv_expiry_daily`` on ``day`` (the latest stored session on or before it; default the latest)."""
+    sym = symbol.upper()
+    d = _latest_on_or_before(store, "iv_expiry_daily", sym, day)
+    df = db.query_df(store, "SELECT * FROM iv_expiry_daily WHERE symbol = ? AND date = ? ORDER BY expiry", [sym, d]) if d else None
+    return {"symbol": sym, "requested": day.isoformat() if day else None, "as_of": d.isoformat() if d else None, "rows": db.records(df, DATE_COLS)}
+
+
+def contract_surface(store: Any, symbol: str, *, day: date | None = None) -> dict[str, Any]:
+    """``iv_surface_daily`` on ``day`` (same date rule as ``contract_expiry``)."""
+    sym = symbol.upper()
+    d = _latest_on_or_before(store, "iv_surface_daily", sym, day)
+    df = db.query_df(store, "SELECT * FROM iv_surface_daily WHERE symbol = ? AND date = ? ORDER BY expiry, strike, opt_type", [sym, d]) if d else None
+    return {"symbol": sym, "requested": day.isoformat() if day else None, "as_of": d.isoformat() if d else None, "rows": db.records(df, DATE_COLS)}
+
+
+def contract_events(store: Any, symbol: str, *, n: int = 8) -> dict[str, Any]:
+    """``iv_event_log`` for ``symbol``, newest first."""
+    sym = symbol.upper()
+    df = db.query_df(store, "SELECT * FROM iv_event_log WHERE symbol = ? ORDER BY released_at DESC LIMIT ?", [sym, n])
+    return {"symbol": sym, "rows": db.records(df, DATE_COLS)}
+
+
+def contract_intraday(store: Any, symbol: str, *, day: date | None = None) -> dict[str, Any]:
+    """``iv_intraday`` rows for ``day`` (default the latest stored day; a named day is that day only, never an older one)."""
+    sym = symbol.upper()
+    d = day or db.to_date(db.scalar(store, "SELECT MAX(ts)::DATE FROM iv_intraday WHERE symbol = ?", [sym]))
+    df = db.query_df(store, "SELECT * FROM iv_intraday WHERE symbol = ? AND ts::DATE = ? ORDER BY ts, expiry, strike, opt_type", [sym, d]) if d else None
+    return {"symbol": sym, "as_of": d.isoformat() if d else None, "rows": db.records(df, DATE_COLS)}
+
+
+def contract_vix(store: Any, *, days: int = 3000) -> dict[str, Any]:
+    return vix(store, days=days)
+
+
+def _ban(mwpl_pct: Any) -> bool | None:
+    """NSE's rule: a stock enters the F&O ban above 95 % of MWPL and leaves below 80 %; between, the state needs yesterday's."""
+    if mwpl_pct is None or (isinstance(mwpl_pct, float) and pd.isna(mwpl_pct)):
+        return None
+    return True if mwpl_pct > 95 else False if mwpl_pct < 80 else None
+
+
+def contract_screen(store: Any) -> dict[str, Any]:
+    """The latest ``iv_summary_daily`` row per symbol + ``next_results``, ``mwpl_pct``, ``ban``; payload ``date``."""
+    d = db.to_date(db.scalar(store, "SELECT MAX(date) FROM iv_summary_daily"))
+    if d is None:
+        return {"date": None, "rows": []}
+    nxt = ("(SELECT MIN(e.event_date) FROM nse_events e WHERE e.symbol = s.symbol AND e.kind = 'RESULTS' AND e.event_date >= s.date)"
+           if db.table_exists(store, "nse_events") else "NULL")
+    mw = ("(SELECT c.fut_equiv_oi / NULLIF(c.mwpl, 0) * 100 FROM nse_combined_oi c WHERE c.symbol = s.symbol AND c.date = s.date)"
+          if db.table_exists(store, "nse_combined_oi") else "NULL")
+    df = db.query_df(store, f"SELECT s.*, {nxt} AS next_results, {mw} AS mwpl_pct FROM iv_summary_daily s WHERE s.date = ? ORDER BY s.symbol", [d])
+    rows = db.records(df, (*DATE_COLS, "next_results"))
+    for r in rows:
+        r["ban"] = _ban(r.get("mwpl_pct"))
+    return {"date": d.isoformat(), "rows": rows}
