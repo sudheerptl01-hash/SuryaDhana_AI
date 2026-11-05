@@ -18,8 +18,7 @@ import type {
   IChartApi, IPriceLine, ISeriesApi, LogicalRange, Time, UTCTimestamp,
 } from 'lightweight-charts'
 import {
-  Chip, Empty, ErrorBox, Label, Loading, Notice, PageHeader, Panel, T, TickerLink, fmtPct, tone,
-} from '@/components/terminal'
+  Chip, Empty, ErrorBox, Label, Loading, Notice, PageHeader, Panel, T, TickerLink, fmtPct, tone, sourceOf } from '@/components/terminal'
 import { fmtVol } from '@/components/news/format'
 import { apiError } from '@/lib/errors'
 import { Z } from '@/lib/z'
@@ -324,7 +323,7 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
         }
       />
 
-      <Panel
+      <Panel source={sourceOf(data?.kind === 'eod' ? data.asOf : data?.kind === 'ticks' ? data.date : null, { source: data?.kind === 'ticks' ? (data.source ?? 'tick store') : 'DuckDB EOD' })}
         title={<span><TickerLink symbol={symbol} /> <span style={{ color: T.dim, fontWeight: 400 }}>· {tf}</span></span>}
         subtitle={provenance}
         right={

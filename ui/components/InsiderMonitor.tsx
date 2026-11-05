@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react'
 import { getInsiderBuys, type InsiderBuy } from '@/lib/api'
 import { daysUntil, useCorpEvents } from '@/lib/useCorpEvents'
 import { orderCategories } from '@/components/pageModels'   // stable 'Who' order (P16)
-import { Chip, DataTable, ErrorBox, EventBadge, Loading, PageHeader, Panel, ResearchNote, T, TickerLink, type Column } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, EventBadge, Loading, PageHeader, Panel, ResearchNote, T, TickerLink, type Column, sourceOf } from '@/components/terminal'
 
 const cr = (v: number | null) => (v == null ? '—' : v >= 1e7 ? `₹${(v / 1e7).toFixed(v >= 1e9 ? 0 : 1)} cr` : `₹${(v / 1e5).toFixed(1)} L`)
 
@@ -57,7 +57,7 @@ export function InsiderMonitor() {
       {error && <ErrorBox error={error} />}
       {!data && !error && <Loading label="Reading insider filings" />}
       {data && (
-        <Panel title={`${data.count} stocks with insider buying`} pad={0} accent={T.green}
+        <Panel source={sourceOf(data?.data_through?.slice(0, 10) ?? null, { source: 'NSE PIT disclosures' })} badge="context" title={`${data.count} stocks with insider buying`} pad={0} accent={T.green}
           subtitle={`last ${days} days · market purchases only (no ESOPs, gifts, pledges or off-market transfers) · click a stock for its profile`}>
           <DataTable columns={cols} rows={data.rows} rowKey={r => r.symbol} dense maxHeight={700} initialSort={{ key: 'last', dir: 'desc' }}
             empty="No qualifying insider purchases in this window" />

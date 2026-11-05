@@ -1,6 +1,6 @@
 # Terminal data dictionary (`dataset_catalog`)
 
-Every dataset the SuryaDhana terminal shows, as data-service's `dataset_catalog` declares it (Terminal v2 PLAN §0.12 / 1.4: the gold `gold_series_catalog` pattern terminal-wide). One row per dataset: who publishes it, when (IST, measured where R-DATA measured it), the IST time by which the terminal expects it stored (`expected_by`, trading-day aware), the lag budget before a row turns red, the job that ingests it, how freshness is read, the dictionary entry that describes the source, the verdict and the badge. `GET /api/data/health` (ui-api) and the SYS › DATA view evaluate exactly these rows (state live | fresh | amber | red | gap); `scripts/tests` assert every ingest job and every page's data source has a row. Verified by: R-DATA §3 (4 Nov 2026) + B1-DATA probes (5 Nov 2026).
+Every dataset the SuryaDhana terminal shows, as data-service's `dataset_catalog` declares it (Terminal v2 PLAN §0.12 / 1.4: the gold `gold_series_catalog` pattern terminal-wide). One row per dataset: who publishes it, when (IST, measured where R-DATA measured it), the IST time by which the terminal expects it stored (`expected_by`, trading-day aware), the lag budget before a row turns red, the job that ingests it, how freshness is read, the dictionary entry that describes the source, the verdict and the badge. `GET /api/data/health` (ui-api) and the SYS › DATA view evaluate exactly these rows (state live | fresh | amber | red | gap | unknown); `scripts/tests` assert every ingest job and every page's data source has a row. Verified by: R-DATA §3 (4 Nov 2026) + B1-DATA probes (5 Nov 2026).
 
 **Generated** by `scripts/terminal_data_dictionary.py` from `services/data-service/data_health/catalog.py` — do not edit by hand; change the catalog and re-run. `--check` fails when this file is stale. Source entries (URLs, formats, traps) live in `docs/NSE_DATA_DICTIONARY.md` and `docs/GOLD_DATA_DICTIONARY.md`; this file is the per-dataset view the terminal itself uses.
 
@@ -75,7 +75,7 @@ Context metrics render in the neutral token and are never coloured bullish or be
 | `desk_daily` | [`desk_mark`](#desk_mark) |
 | `eod_data_pipeline` | [`market_index_daily`](#market_index_daily), [`market_monitor`](#market_monitor), [`ml_features`](#ml_features), [`nse_bhavcopy`](#nse_bhavcopy), [`nse_events`](#nse_events), [`ohlcv`](#ohlcv) |
 | `gold_asia_close` | [`gold_asia_daily`](#gold_asia_daily) |
-| `gold_brief` | [`gold_brief_docs`](#gold_brief_docs) |
+| `gold_brief_ingest` | [`gold_brief_docs`](#gold_brief_docs) |
 | `gold_calendar_refresh` | [`gold_events`](#gold_events) |
 | `gold_cme_daily` | [`gold_cme_daily_voi`](#gold_cme_daily_voi) |
 | `gold_cot_weekly` | [`gold_cot`](#gold_cot) |
@@ -127,7 +127,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** ~18:30; re-published 22:05 (measured) · **Expected stored by:** 19:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `eod_data_pipeline` · **Freshness read from:** `MAX(date)` of `nse_bhavcopy`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [NSE_DATA_DICTIONARY.md#bhavcopy](../docs/NSE_DATA_DICTIONARY.md#bhavcopy)
-- **Note:** 22:45 pass re-fetches with If-Modified-Since; a changed body is a revision row in ingest_log
+- **Note:** revisions: the 22:45 pass re-fetches with If-Modified-Since; the table holds the LATEST publication (release_at = the publisher's Last-Modified of that copy, first_seen_at = our first sighting of the day); both copies stay on disk (data/nse_bhavcopy/YYYY/sec_bhavdata_full_YYYYMMDD.csv.gz = the first, ….rN.csv.gz = revision N) and each fetch is an ingest_log row (sha256, Last-Modified, revision)
 
 <a id="nse_fo_daily"></a>
 ### `nse_fo_daily` · F&O bhavcopy per-underlying aggregate
@@ -212,7 +212,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** 15:30 close · **Expected stored by:** 19:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `eod_data_pipeline` · **Freshness read from:** `MAX(date)` of `market_index_daily` where `symbol = 'NIFTY50'`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#market_index_daily](../docs/TERMINAL_DATA_DICTIONARY.md#market_index_daily)
-- **Note:** the crash filter's series; O-T9 decides whether the NSE daily file replaces it (DO NOT CHANGE without review)
+- **Note:** the crash filter's series; O-T9 decides whether the NSE daily file replaces it (DO NOT CHANGE without review); every other index in this table is NSE-only (source nse_daily_file) from the first run: the PK (symbol, date) holds one source per day, so the Yahoo rows are not kept beside them
 
 <a id="market_monitor"></a>
 ### `market_monitor` · Market monitor (breadth, regime, market map)
@@ -227,7 +227,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `index_valuation_history` · Index valuation history (P/E, P/B, DY)
 
 - **Pages:** MKT, BRF · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** ind_close_all ≈ 17:50 · **Expected stored by:** 20:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** ind_close_all (read 19:15; re-written 23:20) · **Expected stored by:** 20:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `index_valuation_daily` · **Freshness read from:** `nse_archive/derived/index_valuation_history.csv` (csv:date)
 - **Verdict · badge:** PUBLISH-CORE · `context` · **Dictionary:** [NSE_DATA_DICTIONARY.md#ind-close-all](../docs/NSE_DATA_DICTIONARY.md#ind-close-all)
 
@@ -464,7 +464,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 
 - **Pages:** GOLD · **Publisher:** SuryaDhana (derived)
 - **Published (IST):** 09:05 · **Expected stored by:** 09:30 IST · **Cadence:** session · **Amber after:** 1 sessions, red beyond that
-- **Ingest job:** `gold_brief` · **Freshness read from:** `MAX(report_date)` of `gold_brief_docs`
+- **Ingest job:** `gold_brief_ingest` · **Freshness read from:** `MAX(report_date)` of `gold_brief_docs`
 - **Verdict · badge:** PUBLISH-CORE · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#gold_brief_docs](../docs/TERMINAL_DATA_DICTIONARY.md#gold_brief_docs)
 
 <a id="gold_preopen_log"></a>
@@ -487,7 +487,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `nse_fo_volt` · NSE F&O daily volatility (FOVOLT, EWMA λ=0.995)
 
 - **Pages:** DERV, OMON · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** 11:28–17:05 (measured 11:31 on 4 Nov) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** ≈ 17:00 (measured 16:58 on 3 Nov, 17:01 on 4 Nov) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `iv_eod` · **Freshness read from:** `MAX(date)` of `nse_fo_volt`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [NSE_DATA_DICTIONARY.md#fovolt](../docs/NSE_DATA_DICTIONARY.md#fovolt)
 - **Note:** the exchange's margin vol; a third RV line
@@ -496,7 +496,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `nse_contract_delta` · NSE contract delta factors
 
 - **Pages:** OMON, DERV · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** ≈ 13:00–19:20 (measured 13:48 on 4 Nov) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** ≈ 18:30–19:20 (measured 18:28 on 3 Nov, 19:18 on 4 Nov) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `iv_eod` · **Freshness read from:** `MAX(date)` of `nse_contract_delta`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [NSE_DATA_DICTIONARY.md#contract-delta](../docs/NSE_DATA_DICTIONARY.md#contract-delta)
 - **Note:** NSE's own delta beside ours; |Δ_ours − Δ_nse| > 0.05 is logged
@@ -505,7 +505,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `nse_combined_oi` · NSE combined OI / delta-equivalent OI vs MWPL
 
 - **Pages:** OMON, DERV · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** 19:23 (measured; deleq 13:48) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** 19:23 (measured; deleq 19:18) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `nse_positions_catchup` · **Freshness read from:** `MAX(date)` of `nse_combined_oi`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [NSE_DATA_DICTIONARY.md#combined-oi](../docs/NSE_DATA_DICTIONARY.md#combined-oi)
 
@@ -513,7 +513,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `nse_participant_vol` · Participant-wise trading volume (contracts)
 
 - **Pages:** MKT · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** 14:40 (measured) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** 20:10 (measured) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `nse_positions_catchup` · **Freshness read from:** `MAX(date)` of `nse_participant_vol`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [NSE_DATA_DICTIONARY.md#participant-vol](../docs/NSE_DATA_DICTIONARY.md#participant-vol)
 
@@ -521,7 +521,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `nse_fii_stats` · FII derivative statistics
 
 - **Pages:** MKT · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** 14:40 (measured) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** 20:10 (measured) · **Expected stored by:** 21:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `nse_positions_catchup` · **Freshness read from:** `MAX(date)` of `nse_fii_stats`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [NSE_DATA_DICTIONARY.md#fii-stats](../docs/NSE_DATA_DICTIONARY.md#fii-stats)
 
@@ -529,7 +529,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `nse_mwpl_clients` · Clients ≥ 3 % of MWPL (T−1)
 
 - **Pages:** OMON, DERV · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** 12:50 for T−1 (measured) · **Expected stored by:** 21:00 IST on the trading day 1 after the session it describes · **Cadence:** daily · **Amber after:** 2 sessions, red beyond that
+- **Published (IST):** 18:20 for T−1 (measured) · **Expected stored by:** 21:00 IST on the trading day 1 after the session it describes · **Cadence:** daily · **Amber after:** 2 sessions, red beyond that
 - **Ingest job:** `nse_positions_catchup` · **Freshness read from:** `MAX(date)` of `nse_mwpl_clients`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [NSE_DATA_DICTIONARY.md#mwpl-cli](../docs/NSE_DATA_DICTIONARY.md#mwpl-cli)
 
@@ -537,7 +537,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `index_ohlc_daily` · Every NSE index OHLC (ind_close_all)
 
 - **Pages:** DERV, MKT, MEMB · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** 17:50 (measured) · **Expected stored by:** 20:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** read 19:15; re-written 23:20 (measured) · **Expected stored by:** 21:30 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `iv_eod` · **Freshness read from:** `MAX(date)` of `index_ohlc_daily`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [NSE_DATA_DICTIONARY.md#ind-close-all](../docs/NSE_DATA_DICTIONARY.md#ind-close-all)
 - **Note:** Parkinson / Yang-Zhang inputs; the index level L for the drivers
@@ -546,7 +546,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `vix_daily` · India VIX OHLC
 
 - **Pages:** DERV, OMON · **Publisher:** NSE (nsearchives.nseindia.com)
-- **Published (IST):** 17:50 (daily file); vixhistory API for the backfill · **Expected stored by:** 20:00 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** daily file (re-written 23:20); vixhistory API for the backfill · **Expected stored by:** 21:30 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `iv_eod` · **Freshness read from:** `MAX(date)` of `vix_daily`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [NSE_DATA_DICTIONARY.md#vix](../docs/NSE_DATA_DICTIONARY.md#vix)
 - **Note:** one source for the VIX everywhere (PLAN 1.1 rules)
@@ -558,7 +558,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** from the F&O file (20:10) · **Expected stored by:** 21:30 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `iv_eod` · **Freshness read from:** `MAX(date)` of `iv_surface_daily`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#iv_surface_daily](../docs/TERMINAL_DATA_DICTIONARY.md#iv_surface_daily)
-- **Note:** scope: indices + watchlist (O-T4 default); model_version + r on every row
+- **Note:** scope: indices + watchlist (O-T4 default); model_version + r on every row; derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="iv_expiry_daily"></a>
 ### `iv_expiry_daily` · IV per expiry (ATM, 25Δ / 10Δ, skew, PCR, expected move)
@@ -567,6 +567,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** from the F&O file (20:10) · **Expected stored by:** 21:30 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `iv_eod` · **Freshness read from:** `MAX(date)` of `iv_expiry_daily`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#iv_expiry_daily](../docs/TERMINAL_DATA_DICTIONARY.md#iv_expiry_daily)
+- **Note:** derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="iv_summary_daily"></a>
 ### `iv_summary_daily` · IV summary per underlying (iv30/60/90 cm, rank AND percentile, RV cc / Parkinson / YZ, FOVOLT)
@@ -575,7 +576,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** from the F&O file (20:10) · **Expected stored by:** 21:30 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `iv_eod` · **Freshness read from:** `MAX(date)` of `iv_summary_daily`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#iv_summary_daily](../docs/TERMINAL_DATA_DICTIONARY.md#iv_summary_daily)
-- **Note:** IV − RV is context, never coloured; rank and percentile both labelled by definition
+- **Note:** IV − RV is context, never coloured; rank and percentile both labelled by definition; derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="iv_event_log"></a>
 ### `iv_event_log` · Results IV-crush ledger
@@ -584,7 +585,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** from nse_results + iv_expiry_daily · **Expected stored by:** 21:30 IST · **Cadence:** daily · **Amber after:** 3 sessions, red beyond that
 - **Ingest job:** `iv_eod` · **Freshness read from:** `MAX(first_seen_at)` of `iv_event_log`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#iv_event_log](../docs/TERMINAL_DATA_DICTIONARY.md#iv_event_log)
-- **Note:** describes past events, does not forecast the next
+- **Note:** describes past events, does not forecast the next; derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="iv_intraday"></a>
 ### `iv_intraday` · Intraday IV path (15-min Breeze pilot)
@@ -625,10 +626,10 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `index_weights_daily` · Index weights: official top-10 (NSE file) + rebuilt + calibrated
 
 - **Pages:** MEMB · **Publisher:** NSE (nsearchives.nseindia.com) + SuryaDhana (derived)
-- **Published (IST):** top-10 file after close (present by 22:18) · **Expected stored by:** 20:45 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
+- **Published (IST):** top-10 file 16:30 (measured 4 Nov) · **Expected stored by:** 20:45 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `index_drivers_daily` · **Freshness read from:** `MAX(date)` of `index_weights_daily`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [NSE_DATA_DICTIONARY.md#top10](../docs/NSE_DATA_DICTIONARY.md#top10)
-- **Note:** calibration equals the official top-10 to 0.01 pp on the day the file exists
+- **Note:** calibration equals the official top-10 to 0.01 pp on the day the file exists; derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="index_contribution_daily"></a>
 ### `index_contribution_daily` · Index points per member per day (additive attribution)
@@ -637,7 +638,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** 19:25 job · **Expected stored by:** 20:45 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `index_drivers_daily` · **Freshness read from:** `MAX(date)` of `index_contribution_daily`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#index_contribution_daily](../docs/TERMINAL_DATA_DICTIONARY.md#index_contribution_daily)
-- **Note:** an identity with its residual shown
+- **Note:** an identity with its residual shown; derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="index_contribution_fit"></a>
 ### `index_contribution_fit` · Attribution fit (actual vs explained points, residual)
@@ -646,6 +647,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** 19:25 job · **Expected stored by:** 20:45 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `index_drivers_daily` · **Freshness read from:** `MAX(date)` of `index_contribution_fit`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#index_contribution_fit](../docs/TERMINAL_DATA_DICTIONARY.md#index_contribution_fit)
+- **Note:** derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="index_driver_state"></a>
 ### `index_driver_state` · Driver regime (leader with hysteresis, concentration, breadth)
@@ -654,7 +656,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Published (IST):** 19:25 job · **Expected stored by:** 20:45 IST · **Cadence:** daily · **Amber after:** 1 sessions, red beyond that
 - **Ingest job:** `index_drivers_daily` · **Freshness read from:** `MAX(date)` of `index_driver_state`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#index_driver_state](../docs/TERMINAL_DATA_DICTIONARY.md#index_driver_state)
-- **Note:** describes, does not predict; no colour on the leader
+- **Note:** describes, does not predict; no colour on the leader; derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="ingest_log"></a>
 ### `ingest_log` · Ingest log (url, Last-Modified, sha256, revisions)

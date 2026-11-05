@@ -8,8 +8,8 @@ from datetime import date
 from typing import Any
 
 import pandas as pd
-
 from data_health import db
+
 from fo_iv import catalog_seed
 from fo_iv.black76 import MODEL_VERSION
 from fo_iv.iv_eod import rate_for
@@ -86,7 +86,7 @@ def cone(store: Any, symbol: str, *, years: tuple[int, ...] = (1, 3, 5)) -> dict
             s = pd.to_numeric(df[col], errors="coerce").dropna()
             tenors[tenor] = None if len(s) < 20 else {"min": round(float(s.min()), 2), "p25": round(float(s.quantile(0.25)), 2),
                                                       "p50": round(float(s.quantile(0.5)), 2), "p75": round(float(s.quantile(0.75)), 2),
-                                                      "max": round(float(s.max()), 2), "n": int(len(s))}
+                                                      "max": round(float(s.max()), 2), "n": len(s)}
         out[f"{y}y"] = tenors
     today = db.query_df(store, "SELECT dte, atm_iv FROM iv_expiry_daily WHERE symbol = ? AND date = ? AND atm_iv IS NOT NULL ORDER BY dte", [sym, end])
     return {"symbol": sym, "as_of": as_of, "cone": out, "today": db.records(today, ()), "badges": BADGES, "verdict": "IV cone: describes, does not predict"}
@@ -140,7 +140,7 @@ def intraday(store: Any, symbol: str, *, day: date | None = None) -> dict[str, A
         ce, pe = ivs[ivs["opt_type"] == "CE"], ivs[ivs["opt_type"] == "PE"]
         exp_d = db.to_date(expiry)
         path.append({"ts": db.iso_utc(ts), "expiry": exp_d.isoformat() if exp_d is not None else None, "forward": round(fwd, 2),
-                     "atm_iv": round(atm, 2) if atm == atm else None, "n_strikes": int(len(pooled)),
+                     "atm_iv": round(atm, 2) if not pd.isna(atm) else None, "n_strikes": len(pooled),
                      "call_oi": float(ce["oi"].fillna(0).sum()), "put_oi": float(pe["oi"].fillna(0).sum()), "source": str(g["source"].iloc[0])})
     return {"symbol": sym, "as_of": d.isoformat(), "rows": path, "source": "breeze" if path else "OFFLINE", "badges": BADGES,
             "verdict": "Intraday IV path: describes, does not predict"}

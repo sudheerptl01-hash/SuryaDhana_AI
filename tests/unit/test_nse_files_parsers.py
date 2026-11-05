@@ -104,3 +104,32 @@ def test_dataset_table_and_urls():
         assert callable(spec["parse"]) and spec["url"].startswith("https://nsearchives.nseindia.com"), ds
     assert npz.FOVOLT_URL.format(d=D).endswith("FOVOLT_04112026.csv") and npz.FII_STATS_URL.format(d=D).endswith("fii_stats_04-Nov-2026.xls")
     assert npz.TOP10_INDEX if hasattr(npz, "TOP10_INDEX") else True
+
+
+def test_t_minus_one_files_step_back_weekdays_not_calendar_days(tmp_path):
+    """mwpl_cli is named for the session it describes and lands the next day: Monday's run must ask for FRIDAY's file
+    (the calendar-day step asked for Sunday's — a 404 — so every Friday file was never ingested)."""
+    import httpx
+    from storage.duckdb_store import DuckDBStore
+
+    from shared.http_client import PacedClient
+
+    assert npz.prev_weekdays(date(2026, 11, 9), 1) == date(2026, 11, 6)          # Mon → Fri
+    assert npz.prev_weekdays(date(2026, 11, 5), 1) == date(2026, 11, 4)          # Thu → Wed
+    assert npz.prev_weekdays(date(2026, 11, 9), 0) == date(2026, 11, 9)          # T+0 datasets unchanged
+    assert npz.prev_weekdays(date(2026, 11, 10), 2) == date(2026, 11, 6)         # two weekdays back across a weekend
+    urls: list[str] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        urls.append(str(req.url))
+        return httpx.Response(404)
+
+    store = DuckDBStore(str(tmp_path / "f.duckdb"))
+    try:
+        npz.ingest_files(store, PacedClient(transport=httpx.MockTransport(handler), sleep=lambda s: None), ["nse_mwpl_clients", "nse_fii_stats"],
+                         date(2026, 11, 9), date(2026, 11, 9), tmp_path)
+    finally:
+        store.close()
+    assert any(u.endswith("mwpl_cli_06112026.xls") for u in urls), urls
+    assert not any("mwpl_cli_08112026" in u for u in urls)                       # negative control: never the Sunday name
+    assert any(u.endswith("fii_stats_09-Nov-2026.xls") for u in urls)            # a T+0 file keeps the session's own date

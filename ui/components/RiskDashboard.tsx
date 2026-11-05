@@ -17,7 +17,7 @@ import client, { getDeskStatus } from '@/lib/api'
 import { openTicker } from '@/lib/openTicker'
 import {
   Btn, Chip, DataTable, Empty, ErrorBox, Grid, KV, Label, Loading, Meter, Notice, PageHeader, Panel, Stat, T,
-  fmtInr, fmtSignedPct, tone, type Column, CHART_BOX, useChartSize } from '@/components/terminal'
+  fmtInr, fmtSignedPct, tone, type Column, CHART_BOX, useChartSize, sourceOf, SourceChip } from '@/components/terminal'
 import { staggerRows, textWidth } from '@/components/terminal/chart'
 
 type Sev = 'ok' | 'warn' | 'crit' | 'na'
@@ -228,6 +228,11 @@ export function RiskDashboard(_: { isDark?: boolean }) {
     ['Sample', <Label key="f">{v.sessions_used} sessions · {v.from ?? '—'} → {v.to ?? '—'} · {v.coverage_value_pct}% of value covered</Label>],
   ] : []
 
+  // PLAN §0.5 / 1.4: every panel names its source and as-of; the broker book reads STALE past 24 h (was prose only)
+  const riskSrc = sourceOf(data?.as_of ?? null, { source: 'risk engine (Desk ledger + broker book)', maxAgeDays: 1 })
+  const brokerSrc = sourceOf(data?.book.broker_as_of ?? null, { source: 'ICICI book file', maxAgeDays: 1,
+    hint: data?.book.broker_stale_hours != null ? `${Math.round(data.book.broker_stale_hours)} h old` : null })
+
   return (
     <div>
       <PageHeader code="RSK" title="Risk dashboard"
@@ -243,7 +248,8 @@ export function RiskDashboard(_: { isDark?: boolean }) {
           </>}
         </>}
         subtitle={<>hist-sim VaR · beta vs NIFTY50 · stress replays · ladder vs the −20% HARD stop
-          {data?.book.broker_as_of ? <> · broker book as of {data.book.broker_as_of.slice(0, 16).replace('T', ' ')}{(data.book.broker_stale_hours ?? 0) > 24 ? ' (stale)' : ''}</> : null}</>}
+          {/* PLAN 1.4: the broker book's staleness is a chip (STALE when > 24 h), never only a word in the subtitle */}
+          {data?.book.broker_as_of ? <> · broker book <SourceChip info={brokerSrc} /></> : null}</>}
         right={<>
           <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="what-if: SYM1,SYM2,…" spellCheck={false}
             style={{ background: 'transparent', border: `1px solid ${T.border}`, color: T.text, fontFamily: T.mono,
@@ -284,7 +290,7 @@ export function RiskDashboard(_: { isDark?: boolean }) {
           {data.notes.map((n, i) => <Notice key={i} color={T.amber}>{n}</Notice>)}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: 10 }}>
-            <Panel title="Value at Risk · historical simulation" subtitle={`last ${v?.sessions_used ?? 0} sessions at current weights`}
+            <Panel title="Value at Risk · historical simulation" subtitle={`last ${v?.sessions_used ?? 0} sessions at current weights`} source={riskSrc} badge="arithmetic"
               right={v?.excluded.length ? <Label color={T.amber}>{v.excluded.length} excluded</Label> : undefined}>
               <div style={{ display: 'grid', gap: 10 }}>
                 <ReturnHistogram bins={v?.histogram ?? []} var95={v?.var95_1d_pct ?? null} var99={v?.var99_1d_pct ?? null} />
@@ -297,7 +303,7 @@ export function RiskDashboard(_: { isDark?: boolean }) {
               </div>
             </Panel>
             <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
-              <Panel title="Drawdown ladder" subtitle={ladder?.source}>
+              <Panel title="Drawdown ladder" subtitle={ladder?.source} source={riskSrc} badge="arithmetic">
                 <div style={{ display: 'grid', gap: 10 }}>
                   {ladder && <DrawdownLadder ladder={ladder} />}
                   <KV items={[
@@ -319,6 +325,7 @@ export function RiskDashboard(_: { isDark?: boolean }) {
           </div>
 
           <Panel title="Holdings risk" subtitle={`beta vs ${data.beta.index} · risk share = marginal contribution to portfolio σ (sums to 100%)`} pad={0}
+            source={data.book.broker_as_of ? brokerSrc : riskSrc} badge="arithmetic"
             right={data.beta.portfolio_sigma_1d_pct != null ? <Label>portfolio σ {data.beta.portfolio_sigma_1d_pct}%/day</Label> : undefined}>
             {data.holdings.length
               ? <DataTable columns={holdCols} rows={data.holdings} rowKey={h => h.symbol} dense maxHeight={420}
@@ -327,12 +334,12 @@ export function RiskDashboard(_: { isDark?: boolean }) {
           </Panel>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.2fr)', gap: 10 }}>
-            <Panel title="Sector concentration" subtitle={data.sectors.rule} pad={0}>
+            <Panel title="Sector concentration" subtitle={data.sectors.rule} pad={0} source={riskSrc} badge="arithmetic">
               {data.sectors.rows.length
                 ? <DataTable columns={sectorCols} rows={data.sectors.rows} rowKey={r => r.sector} dense />
                 : <Empty title="No sector exposure" icon="◇" />}
             </Panel>
-            <Panel title="Stress replays · honest history" subtitle="each holding’s ACTUAL window return — no Monte-Carlo, no extrapolation" pad={0}>
+            <Panel title="Stress replays · honest history" subtitle="each holding’s ACTUAL window return — no Monte-Carlo, no extrapolation" pad={0} source={riskSrc} badge="context">
               <DataTable columns={stressCols} rows={data.stress} rowKey={s => s.id} dense />
             </Panel>
           </div>

@@ -12,7 +12,7 @@ import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
 import { getFundamentalsScreen, type ScreenRow } from '@/lib/api'
 import { COMP_KEY } from '@/components/Compare'
 import { goToPage } from '@/lib/navigate'
-import { Chip, DataTable, ErrorBox, Input, Loading, PageHeader, Panel, Select, T, TickerLink, fiscalQuarter, fmtFixed, fmtPct, median, type Column, ordinal } from '@/components/terminal'   // fmtFixed: U+2212 (C1-18)
+import { Chip, DataTable, ErrorBox, Input, Loading, PageHeader, Panel, Select, T, TickerLink, fiscalQuarter, fmtFixed, fmtPct, median, type Column, ordinal, undatedSource } from '@/components/terminal'   // fmtFixed: U+2212 (C1-18)
 
 type Preset = { id: string; label: string; hint: string; f: Partial<Filters> }
 type Filters = { mcapMin: number; peMax: number | null; revMin: number | null; patMin: number | null; marginMin: number | null; industry: string; latestOnly?: boolean; pctlMax?: number | null }
@@ -173,13 +173,13 @@ export function FundamentalsScreen() {
             { key: 'mg', label: 'Median margin', align: 'right', sort: r => r.margin ?? -999, render: r => r.margin == null ? '—' : <span style={{ color: T.muted }}>{fmtFixed(r.margin, 1)}%</span> },
           ]
           return (
-            <Panel title="Industries" accent={T.cyan} pad={0} style={{ marginBottom: 10 }}
+            <Panel source={undatedSource('NSE results filings', 'latest quarter per company')} badge="arithmetic" title="Industries" accent={T.cyan} pad={0} style={{ marginBottom: 10 }}
               subtitle={`${ind.length} industries with ≥ 3 companies read · medians of the latest quarter · click one to filter the list below`}>
               <DataTable columns={icols} rows={ind} rowKey={r => r.industry} dense maxHeight={260} initialSort={{ key: 'mcap', dir: 'desc' }} exportName="fund-industries" />
             </Panel>
           )
         })()}
-        <Panel title={`${shown.length} matches`} accent={T.green} pad={0}
+        <Panel source={undatedSource('NSE results filings', 'latest quarter per company')} title={`${shown.length} matches`} accent={T.green} pad={0}
           right={<div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {picked.length > 0 && <span role="button" onClick={() => setPicked([])} style={{ fontSize: 10, color: T.dim, cursor: 'pointer' }}>clear</span>}
             <Chip color={T.green} active={picked.length >= 2} onClick={picked.length >= 2 ? compare : undefined}

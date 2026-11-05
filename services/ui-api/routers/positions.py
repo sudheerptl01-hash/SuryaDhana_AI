@@ -161,9 +161,15 @@ def _build_breeze_client(api_key: str, api_secret: str, session_token: str):
             return _orig_get(url, **kw)
         requests.get = _get_with_timeout  # type: ignore[assignment]
 
+        from shared.breeze_budget import BudgetExceeded, ledger as _ledger
         try:
             breeze = BreezeConnect(api_key=api_key)
-            breeze.generate_session(api_secret=api_secret, session_token=session_token)
+            # generate_session is itself an ICICI API call (customer details): it goes through the budget ledger like
+            # every other Breeze call (PLAN §0.11); past the cap it is refused BEFORE the SDK runs.
+            with _ledger().guard(BREEZE_BUDGET_CALLER, "generate_session"):
+                breeze.generate_session(api_secret=api_secret, session_token=session_token)
+        except BudgetExceeded as exc:
+            return None, f"Breeze budget exhausted ({exc}); the broker book is retried after the cap resets", "budget"
         finally:
             requests.get = _orig_get
 
@@ -542,16 +548,13 @@ def get_trade_history(limit: int = 50):
         return degraded({"connected": False, "error": err, "error_kind": kind, "trades": [], "total_trades": 0},
                         "state", err)
 
+    from shared.breeze_budget import BudgetExceeded
     try:
         from datetime import date, timedelta
         today = date.today().isoformat()  # noqa: DTZ005,DTZ011 — local clock on purpose (the broker book's own stamp)
         week_ago = (date.today() - timedelta(days=7)).isoformat()  # noqa: DTZ005,DTZ011 — local clock on purpose (the broker book's own stamp)
 
-        resp = breeze.get_order_list(
-            exchange_code="NSE",
-            from_date=week_ago,
-            to_date=today,
-        )
+        resp = _breeze_call(breeze.get_order_list, exchange_code="NSE", from_date=week_ago, to_date=today)   # the ledger (§0.11)
 
         trades = []
         if resp.get("Status") == 200:
@@ -569,6 +572,10 @@ def get_trade_history(limit: int = 50):
 
         return {"connected": True, "trades": trades, "total_trades": len(trades)}
 
+    except BudgetExceeded as exc:                          # refused BEFORE the SDK ran: say so, not "ICICI unavailable"
+        msg = f"Breeze budget exhausted: {exc}"
+        return degraded({"connected": True, "error": msg, "error_kind": "budget", "trades": [], "total_trades": 0},
+                        "state", msg, hint="the cap resets at IST midnight (SYS › Breeze budget)")
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"ICICI Breeze unavailable: {exc}") from exc
 

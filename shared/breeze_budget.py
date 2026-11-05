@@ -23,7 +23,7 @@ Rules:
 
 Environment: ``BREEZE_BUDGET_DB`` (SQLite path; under pytest a temp file so a test can never write ``data/``),
 ``BREEZE_BUDGET_CAP_DAY`` (default 4000), ``BREEZE_BUDGET_CAP_MINUTE`` (default 60),
-``BREEZE_BUDGET_QUOTAS`` (``caller=n,caller=n``; default ``chain_poller=700`` per O-T6's pilot).
+``BREEZE_BUDGET_QUOTAS`` (``caller=n,caller=n``; defaults ``chain_poller=700,iv_intraday=800``).
 """
 from __future__ import annotations
 
@@ -46,7 +46,8 @@ DOC_LIMIT_PER_MINUTE = 100          # ICICI Breeze documented ceiling (R-IV §2 
 DOC_LIMIT_PER_DAY = 5000
 DEFAULT_CAP_PER_MINUTE = 60         # the owner's budget, below the ceiling (O-T6 pending; PLAN 1.1: "≤ 30/min" for the poller)
 DEFAULT_CAP_PER_DAY = 4000
-DEFAULT_CALLER_QUOTAS: dict[str, int] = {"chain_poller": 700}   # O-T6 pilot: ≈ 700/day for the 15-minute chain poller
+DEFAULT_CALLER_QUOTAS: dict[str, int] = {"chain_poller": 700, "iv_intraday": 800}   # O-T6 pilot: ≈ 700/day for the chain poller;
+#   iv_intraday = the fo_iv 15-minute pilot's caller name (PLAN 1.1 ≤ 800/day; the pilot also enforces it itself)
 MINUTE_WINDOW_S = 60.0
 KEEP_DAYS = 3                       # rows older than this are pruned (the ledger stays a few hundred KB)
 

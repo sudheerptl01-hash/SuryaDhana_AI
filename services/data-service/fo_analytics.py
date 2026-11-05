@@ -350,8 +350,8 @@ def _ctx():
 def fo_symbols() -> dict:
     """F&O underlyings on the latest session (indices first) — the DERV symbol picker."""
     store, _ = _ctx()
-    with store._lock:
-        rows = q_symbols(store._conn)
+    with store.reader() as con:
+        rows = q_symbols(con)
     return {"rows": rows, "count": len(rows)}
 
 
@@ -380,8 +380,8 @@ def fo_basis_history(symbol: str = Query("NIFTY", pattern=SYMBOL_RE),
     spot history → 404 with that exact reason (its term structure still works)."""
     store, _ = _ctx()
     sym = symbol.upper()
-    with store._lock:
-        rows, source = q_basis_history(store._conn, sym, days)
+    with store.reader() as con:
+        rows, source = q_basis_history(con, sym, days)
     if not rows:
         raise HTTPException(status_code=404, detail=f"No basis history for {sym}: no spot series stored "
                             "(market_index_daily holds NIFTY50 only; stocks need EQ bhavcopy rows)")
@@ -414,8 +414,8 @@ def fo_pcr_history(symbol: str = Query("NIFTY", pattern=SYMBOL_RE),
     The OMON chain PCR is near-expiry only — a different number; both are labeled."""
     store, _ = _ctx()
     sym = symbol.upper()
-    with store._lock:
-        rows = q_pcr_history(store._conn, sym, days)
+    with store.reader() as con:
+        rows = q_pcr_history(con, sym, days)
     if not rows:
         raise HTTPException(status_code=404, detail=f"No option OI history for {sym}")
     return {"symbol": sym, "rows": rows, "count": len(rows),
@@ -427,8 +427,8 @@ def fo_vix(days: int = Query(500, ge=60, le=3000)) -> dict:
     """INDIA VIX panel: level, 1y/5y percentile, and VIX vs NIFTY 20-day realized volatility
     (annualized, √252) from market_index_daily."""
     store, _ = _ctx()
-    with store._lock:
-        out = q_vix(store._conn, days)
+    with store.reader() as con:
+        out = q_vix(con, days)
     if not out.get("rows"):
         raise HTTPException(status_code=404, detail="No INDIAVIX history in market_index_daily")
     return out

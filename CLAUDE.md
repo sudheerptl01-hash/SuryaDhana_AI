@@ -71,6 +71,36 @@ api-gateway :8000 · feature :8002 · ml :8003 · rl :8004 · risk :8005 · exec
   score; context metrics never coloured bullish/bearish; the health verdict ends "describes, does not predict"; the same
   number appears once per page; **nothing gold feeds the Decision Desk, the S1 shadow, directional alerts or the paper
   ticket's price**. Duty is a dated constant (15 % since 2026-05-13, `GOLD_IMPORT_DUTY_PCT`; owner confirms at CBIC).
+- **Terminal v2, wave 1 (5 Nov 2026; in the tree, NOT deployed: the live stack runs the pre-v2 code, the new tables are
+  empty, no IV / drivers backfill has run)**: plan `reports/terminal_v2/PLAN.md` (binding §0, ownership §1), `RATING.md`,
+  research `R-*/REPORT.md`, `API_CONTRACT.md`. data-service packages, each a `schema.py` (DDL) + `api.py` router mounted by
+  `main.py`: `fo_iv/` (Black-76 on the put-call-parity forward, `model_version` `b76-pcp-v1`; tables `iv_surface_daily`,
+  `iv_expiry_daily`, `iv_summary_daily`, `iv_event_log`, `iv_intraday`, `vix_daily`, `index_ohlc_daily`, `rate_curve` (a dated
+  6.5 %), `nse_fo_volt`, `nse_contract_delta`, `nse_combined_oi`; `POST /jobs/iv-eod?job=iv_eod|iv_weekly|iv_backfill|vix_backfill`,
+  `POST /jobs/iv-intraday`, `POST /jobs/ingest-nse-files`; reads `/db/fo-iv/*`, `/db/vix-daily`, `/db/index-ohlc/{symbol}`),
+  `index_drivers/` (`index_constituents_daily`, `index_weights_daily`, `index_contribution_daily`, `index_contribution_fit`,
+  `index_driver_state`; `POST /jobs/index-drivers`, `/db/index-drivers*`), `data_health/` (`dataset_catalog`, whose seed
+  `catalog.py` gates rendering — no row, no panel; `ingest_log` with url / Last-Modified / sha256 / revision; `data_gaps`;
+  `terminal_ingest_state`; `POST /jobs/data-health`, `/db/data-health*`); `nse_positions.py` file ingests (`nse_participant_vol`,
+  `nse_fii_stats`, `nse_mwpl_clients`, the FOVOLT / Contract_Delta / combined-OI / `ind_close_all` files, the bhavcopy
+  `If-Modified-Since` revision pass) and PIT columns (`first_seen_at`, `release_at` on `nse_bhavcopy`; `first_seen_at` on
+  `nse_deals` / `nse_results`). ui-api: `routers/derivatives.py` (`/api/derivatives/iv/{symbol}` + `/surface` `/cone`
+  `/events` `/intraday`, `/vol-screen`), `routers/markets.py` (`/api/market/index-drivers` + `/timeline` `/monthly`,
+  `/api/desk/attribution`), `routers/options_strategy.py` (`POST /api/options/margin`: Breeze → NSE SPAN file → the 12 %
+  heuristic with its measured 4.8× error), `routers/data_health.py` (`GET /api/data/health`). shared: `http_client.py`
+  (host allowlist; `PacedClient` ≥ 1.2 s per host, 20 s, NSE 403/429 → 600 s breaker; one `AsyncClient` per process with a
+  breaker and stale-serve), `breeze_budget.py` (the one Breeze ledger, SQLite `data/breeze_budget.sqlite`, default cap
+  60/min · 4,000/day under the documented 100 · 5,000; `BREEZE_BUDGET_*`), `metrics.py` (see Development Workflow);
+  `storage/duckdb_store.py` readers-writer lock (`read()` / `reader()` shared, `write()` / `writer()` exclusive; never use
+  `store._conn`). UI (B4, in progress): `ui/components/vol/`, `ui/components/drivers/`, `ui/lib/activeSymbol.ts`. Docs:
+  `docs/TERMINAL_DATA_DICTIONARY.md` generated from `dataset_catalog` by `scripts/terminal_data_dictionary.py` (never edit
+  by hand; `--check` runs in `scripts/tests`); LEARN `reports/terminal_v2/LEARN/` (`build_assets.py` → `glossary.json`,
+  `tooltips.json`; `validate_learn.py --write` rebuilds and checks: ≤ 200 chars a line, no direction words, every tooltip
+  key a real column or payload field; a copy bundled under `ui/` must match). Hardening: Redis bound to 127.0.0.1 with an
+  optional password (`REDIS_PASSWORD` or the Keychain item `suryadhana-redis`), secrets are `SecretStr` in
+  `shared/config.py`, `scripts/db_backup.py --offsite` (sha256-verified copy to `OFFSITE_BACKUP_DIR`; the 02:15 job does
+  not pass it yet). GOLD's labelling rules apply: no `signal` badge exists in F&O or index attribution; nothing here feeds
+  the Decision Desk, the S1 shadow, a directional alert or a ticket price. NSE's `Last-Modified` header is GMT (add 5:30).
 
 ## Data Sources
 
@@ -113,6 +143,12 @@ Code: `shared/momentum.py` (`StrategyConfig` defaults = these rules), `shared/de
 - **NEVER** hardcode API keys, secrets, or credentials
 - **NEVER** skip walk-forward validation for backtests
 - **NEVER** account for < 0.15% total transaction costs per trade
+- **NEVER** commit `data/` (market.duckdb, backups, archives, ticks, SQLite stores), logs, screenshots, `.env` or any
+  credential, token, account number or holdings: `origin` (github.com/sudheerptl01-hash/SuryaDhana_AI) is a **PUBLIC**
+  repository since 5 Nov 2026. `.gitignore` covers `data/`, `*.log`, `.logs/`, `reports/**/*.png|jpg|webp`, `.env`;
+  never `git add -f` past it, and never paste PORT / BRKR / RSK / DESK output into a committed file. Every push follows a
+  secret scan of the staged diff (keys, tokens, session ids, account numbers; `git ls-files data` empty), run by the
+  PM / owner; workflow builders never run git commit / push / reset / checkout
 - **NEVER** add a Yahoo Finance caller (`query1`/`query2.finance.yahoo.com`, a new `yfinance` poller): gold goes through the
   app's single fetcher (`gold_preopen._yahoo_bars_cached`) or data-service's gold jobs, which own the budget (≤ 6 chart
   calls/min app-wide, app UA, `period1/period2` never `range=max`). The existing NSE-history scripts (`yfinance`, see Data
@@ -149,6 +185,21 @@ once restarted on the 25 Oct round-3 code; never the `UI_API_RELOAD=1` superviso
 **SuryaDhana.app** starts at login (`~/Library/LaunchAgents/SuryaDhana.plist`); launchd relaunches the copy it started after a crash, never after Quit. A copy reopened by hand after ⌘Q runs a crash guard (`suryadhana-crash-guard` in `ps`; app builds from 25 Oct round 3) that has launchd start it again after an unclean end; an older build is not relaunched until the next login. The menu-bar item and the `./start-local.sh status` desktop-app row say which applies (RUNBOOK §5).
 **PAPER ONLY is enforced in code**: ui-api refuses LIVE execution unless `EXECUTION_LIVE_ALLOWED=1` (never set it casually).
 Outage recipe: docs/RUNBOOK_RESTORE.md → "After an outage".
+**Terminal v2 jobs (in the tree since 5 Nov 2026, NOT deployed: the live controller keeps the pre-v2 schedule until its
+next restart):** the 18:30 pipeline is equity-only (`skip_steps: ["nse_positions"]`); the 20:30
+`nse_positions_catchup` is the evening pass (positions → FII/DII → the NSE evening files via `/jobs/ingest-nse-files` →
+the 20:35 `index_drivers_daily` retry when the top-10 file was missing → `iv_eod` LAST, `/jobs/iv-eod?job=iv_eod`);
+19:25 `index_drivers_daily`; 22:45 `nse_evening_pass` (MTF T−1, the 22:05 bhavcopy re-publication as a revision row,
+FII/DII 2nd attempt, results, `iv_eod` retry; a miss of its 21:30 SLO is one Telegram info line); 08:35 `morning_sweep`
+(amber/red rows of `/api/data/health` re-run as ≤ 6 light NSE fetches, then the DATA digest); `iv_intraday` every 15 min
+09:20–15:30 on trading days (skipped without a live Breeze session or when the budget ledger refuses; quiet); Sat 03:00
+`iv_weekly`; hourly `data_health_check` (one Telegram line per state transition, state in `data/.data_health_state.json`).
+`DATASET_MAX_AGE_DAYS` is retired: freshness = the catalog's `expected_by` + `max_age` sessions as classified by
+`/api/data/health` (red → critical). After downtime the start-up catch-up also re-runs results (window = days down + 3),
+index valuation, the IV store and drivers with `backfill_from`, writes the gap rows (`/jobs/data-health`), the Desk mark
+and the S1 shadow, and the gold key jobs incl. Asia-close / morning / India / health. `TERMINAL_JOBS_ENABLED=0` opts out;
+a 404 from data-service (packages not deployed) pauses these jobs an hour. The watchdog's second heartbeat:
+`HEALTHCHECK_WATCHDOG_URL` (optional).
 **Gold jobs (26 Oct 2026):** `GOLD_JOBS` in `scripts/master_controller.py` (03:10 overnight: Treasury / Yahoo daily / CME
 final OI / FRED / US calendar · 1-minute bars every 5 min while COMEX trades · 06:40 ETF, Fed path, monthly series due ·
 07:35 MCX master + margins (retry 08:35) · 08:40 health snapshot · 08:45 pre-open snapshot (exists) · 09:05 brief · hourly US-calendar refresh 09:00–23:00 · 13:45 / 18:10 IBJA +
@@ -164,6 +215,10 @@ re-run with `backfill_from`. Dormant until the owner decides O-8: `gold_mcx_bhav
 pre-open jobs) or 18:30–21:15 (EOD pipeline, desk, shadow, wrap). The gold jobs only fetch and none is scheduled inside
 the windows except the two small `light` ones (07:35 / 08:35 MCX master, 08:40 health snapshot); never start a gold
 backfill (CME FTP ≈ 2 h, the Yahoo history pull) inside them or next to the 02:15 backup, and ui-api deploys avoid 07:55–08:10.
+The Terminal v2 jobs inside the windows are the light class only (08:35 `morning_sweep` ≤ 6 small fetches, 19:25
+`index_drivers_daily` on stored data + 3 GETs, the 20:30 pass with `iv_eod` last); they fetch and compute, never restart.
+Never start an IV or drivers backfill (`iv_backfill`: UDiFF ≈ 30 min + legacy ≈ 1 h from cached files;
+`index_drivers_backfill`; `vix_backfill`) inside a window or beside the 02:15 backup: a Sunday 10:00 start (PLAN 1.8).
 
 ## How to run things
 
@@ -185,6 +240,11 @@ node --test ui/scripts/*.test.mjs           # UI release builder (build_ui.sh / 
 $P scripts/desktop_qa/run_selftest.py --app /Applications/SuryaDhana.app --live   # installed-app E2E (no other instance running)
 $P scripts/desktop_qa/parity.py --a <old> --b <new> --browser both --out <dir>     # per-page A/B parity (reports/desktop_app/qa_harness.md)
 
+# Generated docs and LEARN assets (both run inside scripts/tests too)
+$P scripts/terminal_data_dictionary.py --check          # docs/TERMINAL_DATA_DICTIONARY.md vs dataset_catalog
+$P scripts/gold_data_dictionary.py --check              # docs/GOLD_DATA_DICTIONARY.md vs SOURCES.md
+$P reports/terminal_v2/LEARN/validate_learn.py          # v2 glossary / tooltips (--write rebuilds)
+
 # Terminal page audit (43 pages, console + API errors; default --base http://127.0.0.1:8010; default set 16/16 incl. gold)
 $P scripts/ui_audit.py --tabs all --browser both
 
@@ -199,9 +259,18 @@ $P -m mypy shared/ services/ --ignore-missing-imports
 ## Development Workflow
 
 1. Each service is independently runnable with `uvicorn main:app --reload`
-2. All services expose `/health`, `/ready`, `/metrics` endpoints
-3. Inter-service communication via async HTTP (httpx) through internal Docker DNS
-4. Redis pub/sub for events: `signal.generated`, `order.filled`, `stop_loss.triggered`
+2. The three core services expose `/health`; data-service and ui-api `/ready`; ui-api `/live` and `/version`.
+   `GET /metrics` (Prometheus text: `sd_http_requests_total`, `sd_http_request_seconds`, `sd_http_inflight`,
+   `sd_duckdb_lock_wait_seconds`, `sd_job_seconds`, `sd_cache_events_total`, `sd_breeze_budget_used`,
+   `sd_upstream_requests_total`, `sd_upstream_breaker_open`, `sd_feed_lag_seconds`), the `X-Request-ID` echo (bound as
+   the log correlation id) and the JSON access log (no `/health`, `/api/health`, `/live`, `/`, `/metrics` lines unless
+   they fail) come from `shared/metrics.install_observability`, installed on data-service, ui-api and master-controller
+   inside the Host/Origin guard. In the tree since 5 Nov 2026; each service serves it only after its next restart (until
+   then `/metrics` is 404 on the live stack). The dormant legacy services are not covered.
+3. Inter-service calls: httpx over 127.0.0.1 (ui-api → data-service :8001, the controller → both); the hot proxies share
+   one `AsyncClient` per process (`shared/http_client.get_json`). Docker DNS only in the legacy compose.
+4. Redis (127.0.0.1:6379, optional password) carries live quotes from data-service to ui-api's `/ws/monitor` hub
+   (`live.quotes`); `signal.generated` / `order.filled` / `stop_loss.triggered` belong to the dormant legacy pipeline.
 5. All config reads from `.env` via `shared/config.py`
 
 ## Where the plan lives

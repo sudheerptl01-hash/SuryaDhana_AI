@@ -30,6 +30,7 @@ only.
 | `suryadhana.fund.hideflagged` | `components/FundamentalsScreen.tsx` (literal) | screen | `'1'`/`'0'` | A page preference |
 | `goldPreOpen.v1` | `components/GoldPreOpen.tsx` (`STORE`) | MCXG pre-open desk | `{day, baseline, mcx, threshold, trigger, done}` | The owner types these pre-open inputs and settings by hand, and they should show in every window. The day-reset logic stays inside the component, unchanged |
 | `suryadhana.whatsnew` | `components/Brief.tsx` (literal) | BRIEF banner | version string | The user dismissed the banner explicitly, so they should not see it again in the app |
+| `activeSymbol.v1` | `lib/activeSymbolCore.ts` (`ACTIVE_SYMBOL_KEY`) | OMON "OPEN IN OSTR", OSTR symbol picker | `{symbol, expiry, strikes[≤4], at}` | Terminal v2 PLAN 1.3: the last underlying / expiry / strikes picked seeds a new window and OSTR; the per-window copy (`activeSymbol.window.v1`) stays in sessionStorage |
 
 ## LOCAL (7 app keys + 6 bookkeeping keys)
 

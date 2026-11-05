@@ -10,7 +10,8 @@ import { apiError } from '@/lib/errors'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getIndexMembers, getLiveMovers, getMarketMonitor, type LiveIndex, type LiveMover, type LiveMovers as Data } from '@/lib/api'
 import { MarketMap, type MapRow } from '@/components/MarketMap'
-import { Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, fmtPx, fmtSigned } from '@/components/terminal'
+import { Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, fmtPx, fmtSigned, nseStampIso, sourceOf, type SourceInfo } from '@/components/terminal'
+import { goToPage } from '@/lib/navigate'
 import { IndexIntraday } from '@/components/IndexIntraday'
 import { sessionWord } from '@/lib/format'
 import { moversPollDue } from '@/components/pageModels'
@@ -23,12 +24,12 @@ const tone = (v: number | null | undefined) => (v == null || Math.abs(v) < 0.005
 const cr = (v: number | null | undefined) => (v == null ? '—' : v >= 100 ? `₹${v.toFixed(0)} cr` : `₹${v.toFixed(1)} cr`)
 const px = (v: number | null | undefined) => fmtPx(v)   // exchange decimals: always 2 dp (C1-08)
 
-function Mini<R extends { symbol: string }>({ title, accent, rows, cols, note }: {
-  title: string; accent: string; rows: R[]; note?: ReactNode
+function Mini<R extends { symbol: string }>({ title, accent, rows, cols, note, source }: {
+  title: string; accent: string; rows: R[]; note?: ReactNode; source: SourceInfo
   cols: { label: string; render: (r: R) => ReactNode; align?: 'right' }[]
 }) {
   return (
-    <Panel title={title} accent={accent} pad={0} subtitle={note}>
+    <Panel title={title} accent={accent} pad={0} subtitle={note} source={source}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11.5, fontVariantNumeric: 'tabular-nums' }}>
         <thead>
           <tr>{[{ label: '', align: undefined }, ...cols].map((c, i) => (
@@ -103,6 +104,8 @@ export function LiveMovers() {
   const chg = (r: LiveMover) => <span style={{ color: tone(r.change_pct), fontWeight: 600 }}>{fmtPct(r.change_pct)}</span>
   const last = (r: LiveMover) => <span style={{ color: T.text }}>{px(r.ltp)}</span>
   const when = sessionWord(data?.market_open, data?.timestamp)
+  // PLAN §0.5: every panel names its feed and as-of (NSE live analysis; the session date once the market has closed)
+  const feedSource = sourceOf(nseStampIso(data?.timestamp), { live: !!data?.market_open, source: 'NSE' })
   const breadth = (i?: LiveIndex) => i ? <span><span style={{ color: T.green }}>{i.advances}</span> / <span style={{ color: T.red }}>{i.declines}</span></span> : '—'
 
   return (
@@ -125,15 +128,22 @@ export function LiveMovers() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 12, marginBottom: 12 }}>
-            <Panel title="Intraday" subtitle={`${when} vs previous close · pick an index`} accent={T.green}><IndexIntraday height={190} /></Panel>
-            <Panel title="Intraday" subtitle={`${when} vs previous close · pick an index`} accent={T.green}><IndexIntraday height={190} initial="NIFTY BANK" /></Panel>
+            {/* PLAN 0.6 (R-UI S9): two INTRADAY panels used to share one title; each names the index it opens on */}
+            <Panel title="Intraday · NIFTY 50" subtitle={`${when} vs previous close · pick an index`} accent={T.green} source={feedSource} badge="arithmetic"><IndexIntraday height={190} /></Panel>
+            <Panel title="Intraday · NIFTY BANK" subtitle={`${when} vs previous close · pick an index`} accent={T.green} source={feedSource} badge="arithmetic"><IndexIntraday height={190} initial="NIFTY BANK" /></Panel>
           </div>
           <Panel title="Who moved the index" subtitle={`each stock's contribution ${when === 'today' ? 'today' : `in the ${when}`}, in index points`} accent={T.green}
-            style={{ marginBottom: 12 }}><IndexContribution /></Panel>
+            style={{ marginBottom: 12 }} source={feedSource} badge="arithmetic"><IndexContribution />
+            {/* PLAN 1.2: MOV keeps the live today panel; every horizon (5d / 1m / YTD / since the last driver change) is on MEMB */}
+            <div style={{ marginTop: 6, fontSize: 10.5, color: T.muted, display: 'flex', justifyContent: 'flex-end' }}>
+              <span role="button" tabIndex={0} data-testid="mov-history-on-memb" onClick={() => goToPage('memb')}
+                onKeyDown={e => { if (e.key === 'Enter') goToPage('memb') }}
+                style={{ color: T.cyan, cursor: 'pointer', letterSpacing: 0.5 }}>history on MEMB ›</span>
+            </div></Panel>
           <Panel title="Market internals" subtitle="is the move broad or a few heavyweights? breadth through the day vs the size segments" accent={T.amber}
-            style={{ marginBottom: 12 }}><MarketInternals height={200} /></Panel>
+            style={{ marginBottom: 12 }} source={feedSource} badge="context"><MarketInternals height={200} /></Panel>
 
-          <Panel title="Sector board" accent={T.violet} subtitle="index move · bar = share of members up · hover for 30-day and 1-year"
+          <Panel title="Sector board" accent={T.violet} subtitle="index move · bar = share of members up · hover for 30-day and 1-year" source={feedSource}
             right={<div style={{ display: 'flex', gap: 4 }}>{(['SECTORAL INDICES', 'THEMATIC INDICES', 'BROAD MARKET INDICES'] as const).map(g =>
               <Chip key={g} color={T.violet} active={group === g} onClick={() => { setGroup(g); setDrill(null) }}>{g.split(' ')[0]}</Chip>)}</div>}
             style={{ marginBottom: 12 }}>
@@ -162,20 +172,20 @@ export function LiveMovers() {
           {mapRows && mapRows.length > 0 && <div style={{ marginBottom: 12 }}><MarketMap rows={mapRows} /></div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 12, alignItems: 'start' }}>
-            <Mini title={`Gainers · ${UNIVERSES.find(u => u[0] === universe)?.[1]}`} accent={T.green} rows={data.gainers}
+            <Mini source={feedSource} title={`Gainers · ${UNIVERSES.find(u => u[0] === universe)?.[1]}`} accent={T.green} rows={data.gainers}
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Value', render: r => <span style={{ color: T.muted }}>{cr(r.value_cr)}</span>, align: 'right' }]} />
-            <Mini title={`Losers · ${UNIVERSES.find(u => u[0] === universe)?.[1]}`} accent={T.red} rows={data.losers}
+            <Mini source={feedSource} title={`Losers · ${UNIVERSES.find(u => u[0] === universe)?.[1]}`} accent={T.red} rows={data.losers}
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Value', render: r => <span style={{ color: T.muted }}>{cr(r.value_cr)}</span>, align: 'right' }]} />
-            <Mini title="Most active · by value" accent={T.amber} rows={data.most_active} note="all NSE"
+            <Mini source={feedSource} title="Most active · by value" accent={T.amber} rows={data.most_active} note="all NSE"
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Value', render: r => <span style={{ color: T.text }}>{cr(r.value_cr)}</span>, align: 'right' }]} />
-            <Mini title="Volume surge" accent={T.cyan} rows={data.volume_surge.filter(r => (r.value_cr ?? 0) >= 1).slice(0, 20)} note={`${when === 'today' ? "today's" : `the ${when}'s`} volume ÷ the 1-week average · all NSE · ≥ ₹1 cr traded`}
+            <Mini source={feedSource} title="Volume surge" accent={T.cyan} rows={data.volume_surge.filter(r => (r.value_cr ?? 0) >= 1).slice(0, 20)} note={`${when === 'today' ? "today's" : `the ${when}'s`} volume ÷ the 1-week average · all NSE · ≥ ₹1 cr traded`}
               cols={[{ label: '× week', render: r => <span style={{ color: (r.vs_week ?? 0) >= 10 ? T.amber : T.text, fontWeight: 600 }}>{r.vs_week != null ? `${r.vs_week.toFixed(1)}×` : '—'}</span>, align: 'right' },
                      { label: 'Chg', render: chg, align: 'right' }, { label: 'Value', render: r => <span style={{ color: T.muted }}>{cr(r.value_cr)}</span>, align: 'right' }]} />
-            <Mini title={`New 52-week highs · ${data.highs.count}`} accent={T.green} rows={data.highs.rows} note="newest first, all NSE"
+            <Mini source={feedSource} title={`New 52-week highs · ${data.highs.count}`} accent={T.green} rows={data.highs.rows} note="newest first, all NSE"
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Old high', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 9.5 }}>{r.prev_date?.slice(0, 6)}</span></span>, align: 'right' }]} />
-            <Mini title={`New 52-week lows · ${data.lows.count}`} accent={T.red} rows={data.lows.rows} note="newest first, all NSE"
+            <Mini source={feedSource} title={`New 52-week lows · ${data.lows.count}`} accent={T.red} rows={data.lows.rows} note="newest first, all NSE"
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Old low', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 9.5 }}>{r.prev_date?.slice(0, 6)}</span></span>, align: 'right' }]} />
-            <Mini title="F&O open-interest spurts" accent={T.violet} rows={data.oi_spurts} note="futures + options OI vs yesterday · rising OI with a falling price often means fresh shorts"
+            <Mini source={feedSource} title="F&O open-interest spurts" accent={T.violet} rows={data.oi_spurts} note="futures + options OI vs yesterday · rising OI with a falling price often means fresh shorts"
               cols={[{ label: 'OI chg', render: r => <span style={{ color: tone(r.oi_change_pct), fontWeight: 600 }}>{fmtPct(r.oi_change_pct, 1)}</span>, align: 'right' },
                      { label: 'Contracts', render: r => <span style={{ color: T.muted }}>{fmtSigned(r.oi_change == null ? null : Math.round(r.oi_change), 0)}</span>, align: 'right' },
                      { label: 'Price', render: r => <span style={{ color: T.text }}>{px(r.underlying)}</span>, align: 'right' }]} />

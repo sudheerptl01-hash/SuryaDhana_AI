@@ -49,6 +49,15 @@ def _row(id_: str, label: str, pages: str, publisher: str, publish: str | None, 
 
 
 NSE = "NSE (nsearchives.nseindia.com)"
+# PLAN §0.3 as amended by the PM on 5 Nov 2026: how each kind of table versions its revisions (rendered in the dictionary)
+LATEST_WINS_NOTE = ("derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / "
+                    "model_version); a past vintage is recomputed from the archived source files versioned in ingest_log")
+DERIVED_LATEST_WINS = frozenset({"iv_surface_daily", "iv_expiry_daily", "iv_summary_daily", "iv_event_log", "index_weights_daily",
+                                 "index_contribution_daily", "index_contribution_fit", "index_driver_state"})
+BHAVCOPY_REVISIONS_NOTE = ("revisions: the 22:45 pass re-fetches with If-Modified-Since; the table holds the LATEST publication "
+                           "(release_at = the publisher's Last-Modified of that copy, first_seen_at = our first sighting of the "
+                           "day); both copies stay on disk (data/nse_bhavcopy/YYYY/sec_bhavdata_full_YYYYMMDD.csv.gz = the "
+                           "first, ….rN.csv.gz = revision N) and each fetch is an ingest_log row (sha256, Last-Modified, revision)")
 NSEAPI = "NSE (www.nseindia.com/api)"
 DERIVED = "SuryaDhana (derived)"
 
@@ -61,7 +70,7 @@ def build_rows() -> list[dict[str, Any]]:
                   note="PLAN §0.7: no new Yahoo caller; the existing refresh stays"))
     r.append(_row("nse_bhavcopy", "NSE equity full bhavcopy", "DES,EQS,DEAL,MKT,DESK", NSE, "~18:30; re-published 22:05 (measured)", "19:00",
                   "daily", 1, "eod_data_pipeline", "table", table="nse_bhavcopy", column="date", anchor=f"{DICT}#bhavcopy",
-                  note="22:45 pass re-fetches with If-Modified-Since; a changed body is a revision row in ingest_log"))
+                  note=BHAVCOPY_REVISIONS_NOTE))
     r.append(_row("nse_fo_daily", "F&O bhavcopy per-underlying aggregate", "DERV,OMON,OSTR,MKT", NSE, "20:10 (measured)", "21:00", "daily", 1,
                   "nse_positions_catchup", "table", table="nse_fo_daily", column="date", anchor=f"{DICT}#fo-bhavcopy"))
     r.append(_row("nse_participant_oi", "Participant-wise open interest", "MKT", NSE, "20:10 (measured)", "21:00", "daily", 1,
@@ -85,10 +94,12 @@ def build_rows() -> list[dict[str, Any]]:
                   "eod_data_pipeline", "table", table="nse_events", column="first_seen", anchor=f"{DICT}#events", badge="context"))
     r.append(_row("market_index_daily", "NIFTY 50 + India VIX closes (Desk series)", "DERV,MKT,RSK", "Yahoo + NSE allIndices", "15:30 close", "19:00", "daily", 1,
                   "eod_data_pipeline", "table", table="market_index_daily", column="date", where="symbol = 'NIFTY50'",
-                  note="the crash filter's series; O-T9 decides whether the NSE daily file replaces it (DO NOT CHANGE without review)"))
+                  note="the crash filter's series; O-T9 decides whether the NSE daily file replaces it (DO NOT CHANGE without review); "
+                       "every other index in this table is NSE-only (source nse_daily_file) from the first run: the PK (symbol, date) "
+                       "holds one source per day, so the Yahoo rows are not kept beside them"))
     r.append(_row("market_monitor", "Market monitor (breadth, regime, market map)", "MKT,BRF,WRAP", DERIVED, "derived", "19:00", "derived", 1, "eod_data_pipeline",
                   "endpoint", note="as_of from /db/market-monitor (ui-api composes)", badge="context"))
-    r.append(_row("index_valuation_history", "Index valuation history (P/E, P/B, DY)", "MKT,BRF", NSE, "ind_close_all ≈ 17:50", "20:00", "daily", 1,
+    r.append(_row("index_valuation_history", "Index valuation history (P/E, P/B, DY)", "MKT,BRF", NSE, "ind_close_all (read 19:15; re-written 23:20)", "20:00", "daily", 1,
                   "index_valuation_daily", "file", column="csv:date", table="nse_archive/derived/index_valuation_history.csv", anchor=f"{DICT}#ind-close-all",
                   badge="context"))
     r.append(_row("option_chain_eod", "EOD option chain + IV (from the F&O file)", "OMON,OSTR", DERIVED, "from nse_fo_daily", "21:00", "derived", 1, "nse_positions_catchup",
@@ -149,30 +160,30 @@ def build_rows() -> list[dict[str, Any]]:
                   table="gold_series", column="report_date", where="series_id LIKE 'IBJA%'", anchor="docs/GOLD_DATA_DICTIONARY.md#E1", badge="context"))
     r.append(_row("gold_health_daily", "Gold: health snapshot", "GOLD", DERIVED, "08:40", "09:00", "session", 1, "gold_health_snapshot", "table",
                   table="gold_health_daily", column="day", badge="context", note="describes, does not predict"))
-    r.append(_row("gold_brief_docs", "Gold: morning brief", "GOLD", DERIVED, "09:05", "09:30", "session", 1, "gold_brief", "table", table="gold_brief_docs",
+    r.append(_row("gold_brief_docs", "Gold: morning brief", "GOLD", DERIVED, "09:05", "09:30", "session", 1, "gold_brief_ingest", "table", table="gold_brief_docs",
                   column="report_date", badge="context"))
     r.append(_row("gold_preopen_log", "Gold: pre-open fair value + captured open (accuracy log)", "GOLD", DERIVED, "08:45 / 09:10", "09:15", "session", 1,
                   "gold_preopen_snapshot", "table", table="gold_preopen_log", column="day", unrecoverable=True, badge="heuristic"))
     r.append(_row("gold_events", "Gold: US calendar + compiled gold events", "GOLD", "ForexFactory / CME / compiled", "hourly 09:00–23:00", "23:30", "daily", 1,
                   "gold_calendar_refresh", "table", table="gold_events", column="first_seen_at", badge="context"))
     # ── R-DATA §3 row 45 (the verified-but-missing NSE evening files) → the new ingests (PLAN 1.1 / 1.4) ───────────
-    r.append(_row("nse_fo_volt", "NSE F&O daily volatility (FOVOLT, EWMA λ=0.995)", "DERV,OMON", NSE, "11:28–17:05 (measured 11:31 on 4 Nov)", "21:00", "daily", 1,
+    r.append(_row("nse_fo_volt", "NSE F&O daily volatility (FOVOLT, EWMA λ=0.995)", "DERV,OMON", NSE, "≈ 17:00 (measured 16:58 on 3 Nov, 17:01 on 4 Nov)", "21:00", "daily", 1,
                   "iv_eod", "table", table="nse_fo_volt", column="date", anchor=f"{DICT}#fovolt", note="the exchange's margin vol; a third RV line"))
-    r.append(_row("nse_contract_delta", "NSE contract delta factors", "OMON,DERV", NSE, "≈ 13:00–19:20 (measured 13:48 on 4 Nov)", "21:00", "daily", 1, "iv_eod",
+    r.append(_row("nse_contract_delta", "NSE contract delta factors", "OMON,DERV", NSE, "≈ 18:30–19:20 (measured 18:28 on 3 Nov, 19:18 on 4 Nov)", "21:00", "daily", 1, "iv_eod",
                   "table", table="nse_contract_delta", column="date", anchor=f"{DICT}#contract-delta", verdict="PUBLISH-CONTEXT", badge="context",
                   note="NSE's own delta beside ours; |Δ_ours − Δ_nse| > 0.05 is logged"))
-    r.append(_row("nse_combined_oi", "NSE combined OI / delta-equivalent OI vs MWPL", "OMON,DERV", NSE, "19:23 (measured; deleq 13:48)", "21:00", "daily", 1,
+    r.append(_row("nse_combined_oi", "NSE combined OI / delta-equivalent OI vs MWPL", "OMON,DERV", NSE, "19:23 (measured; deleq 19:18)", "21:00", "daily", 1,
                   "nse_positions_catchup", "table", table="nse_combined_oi", column="date", anchor=f"{DICT}#combined-oi", verdict="PUBLISH-CONTEXT", badge="context"))
-    r.append(_row("nse_participant_vol", "Participant-wise trading volume (contracts)", "MKT", NSE, "14:40 (measured)", "21:00", "daily", 1, "nse_positions_catchup",
+    r.append(_row("nse_participant_vol", "Participant-wise trading volume (contracts)", "MKT", NSE, "20:10 (measured)", "21:00", "daily", 1, "nse_positions_catchup",
                   "table", table="nse_participant_vol", column="date", anchor=f"{DICT}#participant-vol", verdict="PUBLISH-CONTEXT", badge="context"))
-    r.append(_row("nse_fii_stats", "FII derivative statistics", "MKT", NSE, "14:40 (measured)", "21:00", "daily", 1, "nse_positions_catchup", "table",
+    r.append(_row("nse_fii_stats", "FII derivative statistics", "MKT", NSE, "20:10 (measured)", "21:00", "daily", 1, "nse_positions_catchup", "table",
                   table="nse_fii_stats", column="date", anchor=f"{DICT}#fii-stats", verdict="PUBLISH-CONTEXT", badge="context"))
-    r.append(_row("nse_mwpl_clients", "Clients ≥ 3 % of MWPL (T−1)", "OMON,DERV", NSE, "12:50 for T−1 (measured)", "21:00", "daily", 2, "nse_positions_catchup",
+    r.append(_row("nse_mwpl_clients", "Clients ≥ 3 % of MWPL (T−1)", "OMON,DERV", NSE, "18:20 for T−1 (measured)", "21:00", "daily", 2, "nse_positions_catchup",
                   "table", table="nse_mwpl_clients", column="date", offset=1, anchor=f"{DICT}#mwpl-cli", verdict="PUBLISH-CONTEXT", badge="context"))
     # ── PLAN 1.1: the IV store ──────────────────────────────────────────────────────────────────────────────────────
-    r.append(_row("index_ohlc_daily", "Every NSE index OHLC (ind_close_all)", "DERV,MKT,MEMB", NSE, "17:50 (measured)", "20:00", "daily", 1, "iv_eod", "table",
+    r.append(_row("index_ohlc_daily", "Every NSE index OHLC (ind_close_all)", "DERV,MKT,MEMB", NSE, "read 19:15; re-written 23:20 (measured)", "21:30", "daily", 1, "iv_eod", "table",
                   table="index_ohlc_daily", column="date", anchor=f"{DICT}#ind-close-all", note="Parkinson / Yang-Zhang inputs; the index level L for the drivers"))
-    r.append(_row("vix_daily", "India VIX OHLC", "DERV,OMON", NSE, "17:50 (daily file); vixhistory API for the backfill", "20:00", "daily", 1, "iv_eod", "table",
+    r.append(_row("vix_daily", "India VIX OHLC", "DERV,OMON", NSE, "daily file (re-written 23:20); vixhistory API for the backfill", "21:30", "daily", 1, "iv_eod", "table",
                   table="vix_daily", column="date", anchor=f"{DICT}#vix", note="one source for the VIX everywhere (PLAN 1.1 rules)"))
     r.append(_row("iv_surface_daily", "IV surface per strike (Black-76 on the parity forward)", "OMON,DERV", DERIVED, "from the F&O file (20:10)", "21:30", "daily", 1,
                   "iv_eod", "table", table="iv_surface_daily", column="date", note="scope: indices + watchlist (O-T4 default); model_version + r on every row"))
@@ -195,7 +206,7 @@ def build_rows() -> list[dict[str, Any]]:
                   "20:00", "daily", 1, "index_drivers_daily", "table", table="index_constituents_daily", column="date", anchor=f"{DICT}#constituents",
                   note="display-only posture (O-T11); members as of today applied before the first archived list"))
     r.append(_row("index_weights_daily", "Index weights: official top-10 (NSE file) + rebuilt + calibrated", "MEMB", f"{NSE} + {DERIVED}",
-                  "top-10 file after close (present by 22:18)", "20:45", "daily", 1, "index_drivers_daily", "table", table="index_weights_daily", column="date",
+                  "top-10 file 16:30 (measured 4 Nov)", "20:45", "daily", 1, "index_drivers_daily", "table", table="index_weights_daily", column="date",
                   anchor=f"{DICT}#top10", note="calibration equals the official top-10 to 0.01 pp on the day the file exists"))
     r.append(_row("index_contribution_daily", "Index points per member per day (additive attribution)", "MEMB,DESK", DERIVED, "19:25 job", "20:45", "daily", 1,
                   "index_drivers_daily", "table", table="index_contribution_daily", column="date", note="an identity with its residual shown"))
@@ -213,6 +224,8 @@ def build_rows() -> list[dict[str, Any]]:
     for row in r:
         assert row["id"] not in seen, f"duplicate catalog id {row['id']}"
         seen.add(row["id"])
+        if row["id"] in DERIVED_LATEST_WINS:
+            row["note"] = f"{row['note']}; {LATEST_WINS_NOTE}" if row["note"] else LATEST_WINS_NOTE
     return r
 
 

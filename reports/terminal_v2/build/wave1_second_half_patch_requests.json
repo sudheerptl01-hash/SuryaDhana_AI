@@ -1,0 +1,289 @@
+[
+ {
+  "builder": "F-BACKEND",
+  "file": "services/ui-api/routers/options_strategy.py",
+  "old": "        \"badge\": BADGE_ARITH if source != \"HEURISTIC\" else BADGE_HEURISTIC,\n",
+  "new": "        # per-field badges (check:B3-API minor): on the NSE SPAN FILE answer the exposure leg is NSE's published rule\n        # (heuristic), so the total is only as strong as its weaker part; the UI prints total_margin OR heuristic.total, never both\n        \"badges\": {\"span_margin_required\": BADGE_ARITH if source != \"HEURISTIC\" else BADGE_HEURISTIC,\n                   \"non_span_margin_required\": BADGE_ARITH if source == \"BREEZE\" else BADGE_HEURISTIC,\n                   \"total_margin\": BADGE_ARITH if source == \"BREEZE\" else BADGE_HEURISTIC},\n        \"badge\": BADGE_ARITH if source == \"BREEZE\" else BADGE_HEURISTIC,\n",
+  "why": "check:B3-API minor: the SPAN-file answer is badged 'arithmetic' although its non_span leg (and so total_margin) is the 2 % / 3.5 % exposure rule the code itself badges 'heuristic'. Apply TOGETHER with the next request (test), then regenerate API_CONTRACT §8: TERMINAL_CONTRACT_WRITE=1 python -m pytest services/ui-api/tests/test_terminal_v2_contract.py (the margin payloads gain a `badges` key). options_strategy.py is outside F-BACKEND's ownership."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "services/ui-api/tests/test_terminal_v2_api.py",
+  "old": "    assert b[\"badge\"] == \"arithmetic\" and b[\"heuristic\"][\"total\"] > 5 * b[\"span_margin_required\"]\n",
+  "new": "    assert b[\"badge\"] == \"heuristic\" and b[\"heuristic\"][\"total\"] > 5 * b[\"span_margin_required\"]\n    assert b[\"badges\"] == {\"span_margin_required\": \"arithmetic\", \"non_span_margin_required\": \"heuristic\", \"total_margin\": \"heuristic\"}\n",
+  "why": "Companion of the options_strategy.py per-field badge request. This is F-BACKEND's own test file, held back so the suite stays green until the router change lands. Apply both, then regenerate API_CONTRACT §8."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "scripts/tests/test_gold_controller.py",
+  "old": "    del svc.routes[(\"GET\", mc.DATA_HEALTH_API)]\n    assert asyncio.run(mc._check_dataset_freshness(\"pre_market_sync\")) == []\n    assert len(ctl[\"alerts\"].sent) == n_alerts\n",
+  "new": "    del svc.routes[(\"GET\", mc.DATA_HEALTH_API)]\n    monkeypatch.setattr(mc, \"_FRESHNESS_BLIND_WARNED\", {})\n    assert asyncio.run(mc._check_dataset_freshness(\"pre_market_sync\")) == []\n    assert asyncio.run(mc._check_dataset_freshness(\"pre_market_sync\")) == []        # twice: still one line a day\n    assert len(ctl[\"alerts\"].sent) == n_alerts + 1\n    assert ctl[\"alerts\"].sent[-1][:2] == (\"warning\", \"Freshness check has no data-health view\")\n",
+  "why": "check:B2-CTRL minor: with DATASET_MAX_AGE_DAYS retired, a ui-api without the data-health view (the live pre-v2 release) left the controller with NO stale-feed alert and no trace of it. F-BACKEND made that visible as ONE warning line a day (master_controller._FRESHNESS_BLIND_WARNED). This B6-path test pinned the old 'log line only' behaviour and is the only red test in scripts/tests (413 passed, 1 failed) until applied. The monkeypatch reset makes it order-independent."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "shared/breeze_budget.py",
+  "old": "DEFAULT_CALLER_QUOTAS: dict[str, int] = {\"chain_poller\": 700}   # O-T6 pilot: ≈ 700/day for the 15-minute chain poller\n",
+  "new": "DEFAULT_CALLER_QUOTAS: dict[str, int] = {\"chain_poller\": 700, \"iv_intraday\": 800}   # O-T6 pilot: ≈ 700/day for the chain poller;\n#   iv_intraday = the fo_iv 15-minute pilot's caller name (PLAN 1.1 ≤ 800/day; the pilot also enforces it itself)\n",
+  "why": "check:B1-DATA minor: patch #72 was applied into the module DOCSTRING only, so the ledger still carries no iv_intraday quota. F-BACKEND made the pilot enforce its own 800/day from the ledger's caller count (fo_iv/intraday.py), and test_breeze_budget.py already accepts either default; this makes the ledger say it too."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "shared/breeze_budget.py",
+  "old": "``BREEZE_BUDGET_QUOTAS`` (``caller=n,caller=n``; default quotas also carry iv_intraday=800 (the pilot's caller name; PLAN 1.1 ≤ 800/day) — or B2 sets BREEZE_BUDGET_QUOTAS=chain_poller=700,iv_intraday=800).",
+  "new": "``BREEZE_BUDGET_QUOTAS`` (``caller=n,caller=n``; defaults ``chain_poller=700,iv_intraday=800``).",
+  "why": "Removes the instruction text patch #72 pasted into the docstring; goes with the quota request above."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "services/data-service/main.py",
+  "old": "    return PacedClient(timeout_s=float(os.getenv(\"NSE_HTTP_TIMEOUT_S\", \"30\")))",
+  "new": "    return PacedClient(timeout_s=float(os.getenv(\"NSE_HTTP_TIMEOUT_S\", \"20\")))   # PLAN §0.6: 20 s (httpx read timeout, not a total)",
+  "why": "check:B1-DATA minor: PLAN §0.6 and shared/http_client.DEFAULT_TIMEOUT_S say 20 s. The 6.9 MB Contract_Delta fits, because httpx applies the timeout per read, not per download. main.py is not F-BACKEND's path."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "services/data-service/main.py",
+  "old": "    if os.getenv(\"IV_SURFACE_ALL\", \"0\") == \"1\":\n        return set()          # an empty set is never matched below → handled by the package as \"all\" when None; keep explicit\n    from fo_iv.iv_eod import INDEX_SYMBOLS\n",
+  "new": "    from fo_iv.iv_eod import INDEX_SYMBOLS          # IV_SURFACE_ALL=1 is handled by the configure() lambda (None = all 224)\n",
+  "why": "check:B1-DATA minor: dead branch (configure() already maps IV_SURFACE_ALL=1 to None before calling _surface_symbols)."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "services/data-service/storage/duckdb_store.py",
+  "old": "    def _init_schema(self) -> None:\n        with self.reader() as con:",
+  "new": "    def _init_schema(self) -> None:\n        with self.writer() as con:          # DDL is a write: the exclusive side of the RW lock (check:B1-DATA)",
+  "why": "check:B1-DATA minor (B7's lock code): _init_schema runs the gold and terminal v2 DDL under the SHARED lock on a cursor. Harmless at __init__, but it is a write under the read lock."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "scripts/terminal_data_dictionary.py",
+  "old": "STATES = \"live | fresh | amber | red | gap\"",
+  "new": "STATES = \"live | fresh | amber | red | gap | unknown\"",
+  "why": "F-BACKEND contract change: /api/data/health now builds on data-service's /db/data-health and keeps B1's `unknown` for an endpoint row whose job the controller does not schedule (never guessed green); summary gains `unknown`. Regenerate docs/TERMINAL_DATA_DICTIONARY.md afterwards (python scripts/terminal_data_dictionary.py) or apply the next request."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "docs/TERMINAL_DATA_DICTIONARY.md",
+  "old": "(state live | fresh | amber | red | gap)",
+  "new": "(state live | fresh | amber | red | gap | unknown)",
+  "why": "The generated doc's copy of the STATES line; keeps `--check` green after the generator request above."
+ },
+ {
+  "builder": "F-BACKEND",
+  "file": "services/ui-api/icici_admin.py",
+  "old": "            breeze = BreezeConnect(api_key=api_key)\n            breeze.generate_session(api_secret=api_secret, session_token=token)\n            details = breeze.get_customer_details(api_session=token)\n",
+  "new": "            breeze = BreezeConnect(api_key=api_key)\n            from shared.breeze_budget import ledger as _ledger      # PLAN §0.11: the probe's two ICICI calls are metered too\n            with _ledger().guard(\"ui-api.probe\", \"generate_session\"):\n                breeze.generate_session(api_secret=api_secret, session_token=token)\n            with _ledger().guard(\"ui-api.probe\", \"get_customer_details\"):\n                details = breeze.get_customer_details(api_session=token)\n",
+  "why": "Found while closing check:B3-API's generate_session item: the BRKR connection probe (cached 10 min, single-flight) is the last ui-api Breeze login outside the ledger. A refusal shows as a non-network failure (error_kind other) and is retried on the probe's own TTL. Optional; icici_admin.py is outside every builder row."
+ },
+ {
+  "builder": "B4-UI",
+  "file": "reports/desktop_app/prefs_inventory.md",
+  "old": "| `suryadhana.whatsnew` | `components/Brief.tsx` (literal) | BRIEF banner | version string | The user dismissed the banner explicitly, so they should not see it again in the app |",
+  "new": "| `suryadhana.whatsnew` | `components/Brief.tsx` (literal) | BRIEF banner | version string | The user dismissed the banner explicitly, so they should not see it again in the app |\n| `activeSymbol.v1` | `lib/activeSymbolCore.ts` (`ACTIVE_SYMBOL_KEY`) | OMON \"OPEN IN OSTR\", OSTR symbol picker | `{symbol, expiry, strikes[≤4], at}` | Terminal v2 PLAN 1.3: the last underlying / expiry / strikes picked seeds a new window and OSTR; the per-window copy (`activeSymbol.window.v1`) stays in sessionStorage |",
+  "why": "lib/prefs/keys.ts gained the SYNC key activeSymbol.v1 and its header says to keep this inventory in sync; the file is outside B4's ownership."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"11:28–17:05 (measured 11:31 on 4 Nov)\"",
+  "new": "\"≈ 17:00 (measured 16:58 on 3 Nov, 17:01 on 4 Nov)\"",
+  "why": "11:31 is the raw GMT Last-Modified. Range GETs on 5 Nov give FOVOLT_04112026 11:31:10 GMT = 17:01 IST and FOVOLT_03112026 11:28:10 GMT = 16:58 IST. After applying any catalog patch, re-run scripts/terminal_data_dictionary.py, or the --check test fails."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"≈ 13:00–19:20 (measured 13:48 on 4 Nov)\"",
+  "new": "\"≈ 18:30–19:20 (measured 18:28 on 3 Nov, 19:18 on 4 Nov)\"",
+  "why": "The Contract_Delta Last-Modified values 12:58:03 GMT (3 Nov) and 13:48:02 GMT (4 Nov) are 18:28 and 19:18 IST. It is an evening file, not a midday one."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"19:23 (measured; deleq 13:48)\"",
+  "new": "\"19:23 (measured; deleq 19:18)\"",
+  "why": "combineoi_deleq_04112026 Last-Modified 13:48:02 GMT = 19:18 IST (B5 re-check)."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"Participant-wise trading volume (contracts)\", \"MKT\", NSE, \"14:40 (measured)\"",
+  "new": "\"Participant-wise trading volume (contracts)\", \"MKT\", NSE, \"20:10 (measured)\"",
+  "why": "fao_participant_vol_04112026 Last-Modified 14:40:34 GMT = 20:10 IST, the same minute as participant OI."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"FII derivative statistics\", \"MKT\", NSE, \"14:40 (measured)\"",
+  "new": "\"FII derivative statistics\", \"MKT\", NSE, \"20:10 (measured)\"",
+  "why": "B1's raw 14:40 is GMT, which is 20:10 IST."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"12:50 for T−1 (measured)\"",
+  "new": "\"18:20 for T−1 (measured)\"",
+  "why": "B1's raw 12:50 is GMT, which is 18:20 IST."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"Every NSE index OHLC (ind_close_all)\", \"DERV,MKT,MEMB\", NSE, \"17:50 (measured)\", \"20:00\"",
+  "new": "\"Every NSE index OHLC (ind_close_all)\", \"DERV,MKT,MEMB\", NSE, \"read 19:15; re-written 23:20 (measured)\", \"21:30\"",
+  "why": "ind_close_all Last-Modified is 17:50 GMT = 23:20 IST on both 3 and 4 Nov (a late re-write; a first version is read at 19:15). This row's ingest job is iv_eod, which runs LAST in the 20:30 pass (SLO 21:30). With expected_by 20:00 the row would go amber every evening between 20:00 and the pass, and data_health_check would send a Telegram transition line each night."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"17:50 (daily file); vixhistory API for the backfill\", \"20:00\"",
+  "new": "\"daily file (re-written 23:20); vixhistory API for the backfill\", \"21:30\"",
+  "why": "Same as index_ohlc_daily: 17:50 was GMT, and vix_daily is written by iv_eod at the end of the 20:30 pass, so expected_by should match the 21:30 SLO."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"ind_close_all ≈ 17:50\"",
+  "new": "\"ind_close_all (read 19:15; re-written 23:20)\"",
+  "why": "17:50 is the raw GMT minute (23:20 IST); the 19:15 index_valuation_daily job reads the first version."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"top-10 file after close (present by 22:18)\"",
+  "new": "\"top-10 file 16:30 (measured 4 Nov)\"",
+  "why": "top10nifty50_041126.csv Last-Modified 11:00:33 GMT = 16:30 IST (B5 range GET, 5 Nov), so the 19:25 drivers job finds it."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "start-local.sh",
+  "old": "require_service \"$svc\"; stop_one \"$svc\"; clear_paused \"$svc\"; clear_hang_history \"$svc\"; start_one \"$svc\"",
+  "new": "require_service \"$svc\"; stop_one \"$svc\"; clear_paused \"$svc\"; clear_hang_history \"$svc\"; start_redis; start_one \"$svc\"",
+  "why": "BUG (B7, latent until a Redis password is set): `./start-local.sh restart <svc>` never calls start_redis, so it never exports the password-bearing REDIS_URL. The restarted service then reads .env's password-less REDIS_URL and Redis refuses it, so live quotes stop. The watchdog's hang restarts use exactly this path. start_redis is a cheap check when Redis is already listening. The RUNBOOK pre-check `grep -c 'start_redis; start_one' start-local.sh` expects 2 after this patch. tests/arch/test_start_redis.py may want a case for it (B6)."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "services/ui-api/routers/options_strategy.py",
+  "old": "EOD ≈ 17:02, fetched by the 20:30 pass into data/nse_archive/span/ — B1), parsed here",
+  "new": "EOD ≈ 17:02 IST; no scheduled job fetches it yet — a file placed in data/nse_archive/span/ (SPAN_ARCHIVE_DIR) is parsed here",
+  "why": "Docstring claim not true of the tree: grep finds no nsccl/span fetcher in data-service or the controller."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "reports/terminal_v2/PLAN.md",
+  "old": "| daily, by 17:05 (measured 17:01 / 11:28 on two days); fetch in the 20:30 pass |",
+  "new": "| daily, ≈ 17:00 (measured 17:01 on 4 Nov, 16:58 on 3 Nov; the earlier \"11:28\" was the raw GMT Last-Modified); fetch in the 20:30 pass |",
+  "why": "GMT/IST correction (NSE's Last-Modified is GMT). Evidence: /Users/sudheer/.suryadhana_pm_scratch/v2/B5-DOCS/probe_lm_2026-11-05.json"
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "reports/terminal_v2/PLAN.md",
+  "old": "| daily, between ≈ 13:00 and 19:20 (two measurements); fetch in the 20:30 pass |",
+  "new": "| daily, evening: 18:28 (3 Nov) and 19:18 (4 Nov) IST — the earlier \"≈ 13:00\" was the raw GMT minute; fetch in the 20:30 pass |",
+  "why": "GMT/IST correction for Contract_Delta."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "reports/terminal_v2/PLAN.md",
+  "old": "| daily ≈ 17:50; one GET already made by the 19:15 job |",
+  "new": "| daily; read by the 19:15 job; Last-Modified 23:20 IST (re-written late at night; \"17:50\" was the raw GMT minute) |",
+  "why": "GMT/IST correction for ind_close_all, with the late re-write noted."
+ },
+ {
+  "builder": "B5-DOCS",
+  "file": "reports/terminal_v2/PLAN.md",
+  "old": "| daily after close (present by 22:18; exact minute unverified) — read in the 19:25 job with a 20:35 retry; 1 GET |",
+  "new": "| daily, 16:30 IST (measured 4 Nov) — read in the 19:25 job with a 20:35 retry; 1 GET |",
+  "why": "The top-10 weights file minute is now measured: 11:00:33 GMT = 16:30 IST."
+ },
+ {
+  "builder": "B8-STUDIES",
+  "file": "services/ui-api/routers/research.py",
+  "old": "        \"clock (F&O 20:10, bhavcopy re-published 22:05, MTF 22:12) and the data-health page spec behind /api/data/health.\"),\n",
+  "new": "        \"clock (F&O 20:10, bhavcopy re-published 22:05, MTF 22:12) and the data-health page spec behind /api/data/health.\"),\n    \"reports/terminal_v2/STUDIES.md\": (\n        \"Terminal v2\", \"REFERENCE\",\n        \"Study registry (B8, 5 Nov 2026): three studies pre-registered before any result — TV-IVRV (IV − RV spread and IV \"\n        \"percentile vs next-month vol and return), TV-DRIVERS (do NIFTY's drivers persist; does a driver change precede \"\n        \"anything), TV-GEX (a dealer-gamma proxy vs the next-day range). Signed verdict rule: t ≥ 2 in the claimed direction, \"\n        \"full sample and both halves, after costs. Results PROVISIONAL until the stored backfill reproduces them.\"),\n    \"reports/terminal_v2/studies/iv_rv/FINDINGS.md\": (\n        \"Terminal v2\", \"REFERENCE\",\n        \"TV-IVRV, PROVISIONAL (5 Nov 2026; 1,487 NIFTY / 1,459 BANKNIFTY sessions 2020-10 → 2026-10 recomputed from the \"\n        \"cached F&O files): the IV − RV spread and the IV percentile carry information about next month's realised vol beyond \"\n        \"trailing RV (CONTEXT-ONLY by ceiling; NIFTY t 4.7 / 3.0, both halves) but time neither the seller's edge (FAIL: the \"\n        \"spread's effect flips sign between halves) nor the index return ('buy fear' FAIL after the 0.93 % cash round trip). \"\n        \"0 PASS of 12: the IV chips keep arithmetic / context; describes, does not predict.\"),\n    \"reports/terminal_v2/studies/drivers/FINDINGS.md\": (\n        \"Terminal v2\", \"REFERENCE\",\n        \"TV-DRIVERS, PROVISIONAL (583 fit-gated sessions, Nov 2023 → Oct 2026; the cached share counts start in late 2023): \"\n        \"the 20-session NIFTY leader does not keep a bigger share of the next month's move than the largest-weight name (FAIL, \"\n        \"t −3.2 the wrong way) and does not keep driving relative to NIFTY (FAIL, t −0.3; long-only after costs −1.0 % per \"\n        \"tranche); driver changes PENDING (15 events < 20). The regime strip stays context: describes, does not predict.\"),\n    \"reports/terminal_v2/studies/gex/FINDINGS.md\": (\n        \"Terminal v2\", \"REFERENCE\",\n        \"TV-GEX, PROVISIONAL (1,740 sessions 2019-10 → 2026-11; Wave 3.3's precondition): neither gamma-exposure convention \"\n        \"forecasts NIFTY's next-day range beyond recent ranges, IV and the expiry calendar — the vendor net-gamma share is flat \"\n        \"(t −0.3); the 'writers are short' gamma load comes with SMALLER ranges (t −3.2, both halves), against the claim; \"\n        \"selling the next-day straddle on 'long-gamma' days earns nothing after costs. The proxy stays heuristic.\"),\n",
+  "why": "The brief asks for RSCH CATALOG rows for the B8 study registry and the three FINDINGS pages; the FINDINGS pages are 3 levels deep, so _discover lists them only through CATALOG. Every row is REFERENCE with PROVISIONAL in the takeaway: no study result reaches a verdict colour or badge without the PM, who may switch them to NO EDGE / FAIL after review. Validated on a scratch copy (~/.suryadhana_pm_scratch/v2/B8-STUDIES/patch/research.py; JSON at research_patch.json): imports, keys resolve to files, ruff with F,E9,B,ASYNC,DTZ is clean; the 4 ISC004 hits match the file's existing 43 in the same tuple style."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "services/data-service/data_health/catalog.py",
+  "old": "\"09:05\", \"09:30\", \"session\", 1, \"gold_brief\", \"table\", table=\"gold_brief_docs\",",
+  "new": "\"09:05\", \"09:30\", \"session\", 1, \"gold_brief_ingest\", \"table\", table=\"gold_brief_docs\",",
+  "why": "G4: the gold_brief_docs row names ingest job 'gold_brief', but the scheduled job is GOLD_JOBS 'gold_brief_ingest', so a lookup of that job's last run can never match. APPLY TOGETHER WITH the next patch (my G4 ratchet fails on stale known-gap entries), then regenerate the dictionary: `/Users/sudheer/Desktop/jupyter_env/bin/python scripts/terminal_data_dictionary.py` (scripts/tests runs --check)."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "tests/terminal_v2_gates/test_g04_catalog_coverage.py",
+  "old": "    \"gold_brief_ingest\": \"catalog row gold_brief_docs names 'gold_brief', not the scheduled 'gold_brief_ingest'\",\n",
+  "new": "",
+  "why": "Paired with the catalog.py rename: once the row names gold_brief_ingest it is no longer a known job gap (test_known_gaps_are_still_gaps requires the list to shrink with the fix)."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "tests/terminal_v2_gates/test_g04_catalog_coverage.py",
+  "old": "KNOWN_ORPHAN_INGEST_JOBS: dict[str, str] = {\n    \"gold_brief\": \"renamed gold_brief_ingest in GOLD_JOBS; patch request to catalog.py\",\n}",
+  "new": "KNOWN_ORPHAN_INGEST_JOBS: dict[str, str] = {}",
+  "why": "Paired with the catalog.py rename: the orphan 'gold_brief' disappears."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "services/data-service/providers/direct_yahoo_provider.py",
+  "old": "from typing import Optional\n",
+  "new": "from typing import TYPE_CHECKING, Optional\n\nif TYPE_CHECKING:\n    import pandas as pd\n",
+  "why": "PLAN 0.8: F821 undefined name `pd` at line 219 (the `-> \"pd.DataFrame\"` annotation). Verified on a scratch copy: F821 gone, no new finding. Afterwards the F821 code may be dropped from this file's pyproject baseline line (harmless if left)."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "services/ui-api/routers/dashboard.py",
+  "old": "    out_path = data_dir / \"NSE_1500.csv\"\n    with open(out_path, \"w\", newline=\"\") as f:\n        writer = csv.DictWriter(f, fieldnames=[\"ticker\", \"company_name\", \"sector\", \"isin\", \"index\", \"cap_category\"])\n        writer.writeheader()\n        writer.writerows(all_rows)\n",
+  "new": "    out_path = data_dir / \"NSE_1500.csv\"\n\n    def _write_universe() -> None:          # blocking file I/O off the event loop (ASYNC230, Terminal v2 PLAN 0.8)\n        with open(out_path, \"w\", newline=\"\") as f:\n            writer = csv.DictWriter(f, fieldnames=[\"ticker\", \"company_name\", \"sector\", \"isin\", \"index\", \"cap_category\"])\n            writer.writeheader()\n            writer.writerows(all_rows)\n\n    await asyncio.to_thread(_write_universe)\n",
+  "why": "PLAN 0.8: ASYNC230, a blocking open() inside async bootstrap_universe (it also awaits fetches, so it stays async). asyncio is already imported. Verified on a scratch copy (ASYNC clean, compiles)."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "services/ui-api/routers/pipeline.py",
+  "old": "@router.get(\"/rl-training-metrics\")\nasync def get_rl_training_metrics():",
+  "new": "@router.get(\"/rl-training-metrics\")\ndef get_rl_training_metrics():              # sync: FastAPI runs it on the worker pool (ASYNC230 blocking open, PLAN 0.8)",
+  "why": "PLAN 0.8: ASYNC230, a blocking open() + json.load on the event loop. The handler awaits nothing, so plain def moves it to the thread pool. Verified on a scratch copy."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "ui/components/MarketMonitor.tsx",
+  "old": "title=\"Market regime\" subtitle=\"handbook stage 2 · health gauge, not a signal\" accent={SCORE_COLOR[s]}>",
+  "new": "title=\"Market regime\" subtitle=\"handbook stage 2 · health gauge, not a signal\" accent={T.muted}>",
+  "why": "G9.2 / PLAN §0: a context-badged panel whose header colour follows the regime score (red → green) is coloured by direction. Listed in terminal_v2.check.ts KNOWN_PRE_V2; the check stays green whether or not this lands. B4 review: the gauge text and the header REGIME chip still use SCORE_COLOR."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "ui/components/MarketMonitor.tsx",
+  "old": "<Stat label=\"India VIX\" value={num(b.vix, 2)} accent={(b.vix_pct ?? 0) < 80 ? T.green : T.red}",
+  "new": "<Stat label=\"India VIX\" value={num(b.vix, 2)} accent={T.muted}",
+  "why": "G9.2: the VIX level is context (DERV was neutralised in Wave 0.6); MKT still colours it green below the 80th percentile and red above. Listed in KNOWN_PRE_V2."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "ui/components/Brief.tsx",
+  "old": "subtitle={m ? `NSE EOD ${m.as_of} · ${m.index_name}` : 'NSE breadth'} accent={m ? SCORE_COLOR[m.regime.score] : T.amber}",
+  "new": "subtitle={m ? `NSE EOD ${m.as_of} · ${m.index_name}` : 'NSE breadth'} accent={T.amber}",
+  "why": "G9.2: BRF's context-badged Market panel takes its header colour from the regime score. SCORE_COLOR is still used at lines 279–280, so nothing becomes unused."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "ui/components/Brief.tsx",
+  "old": "<Line k=\"India VIX\" v={`${b.vix?.toFixed(2)} · ${ordinal(b.vix_pct)} pct`} c={(b.vix_pct ?? 0) < 80 ? T.text : T.red} />",
+  "new": "<Line k=\"India VIX\" v={`${b.vix?.toFixed(2)} · ${ordinal(b.vix_pct)} pct`} c={T.text} />",
+  "why": "G9.2: the VIX level turns red at or above the 80th percentile on BRF (context coloured by value). Listed in KNOWN_PRE_V2."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "requirements.txt",
+  "old": "ruff==0.6.9\nmypy==1.11.2\n",
+  "new": "ruff==0.16.4\nmypy==2.3.1\n",
+  "why": "Optional, apply together with the next patch. The stale lint pins differ from the env the repo is linted with; pyproject.toml requires ruff ≥ 0.16, and CI's lint venv already pins 0.16.4 / 2.3.1. With both files bumped, the G12 ruff/mypy tests also run (not skip) inside CI's scripts/tests step."
+ },
+ {
+  "builder": "B6-GATES",
+  "file": "requirements-ci.txt",
+  "old": "ruff==0.6.9\nmypy==1.11.2\n",
+  "new": "ruff==0.16.4\nmypy==2.3.1\n",
+  "why": "Optional, together with the previous patch. scripts/tests/test_ci_workflow.py and test_pin_drift.py require identical pins in both files."
+ }
+]

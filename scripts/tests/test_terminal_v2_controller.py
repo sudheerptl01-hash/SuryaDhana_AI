@@ -452,7 +452,7 @@ SWEEP_ROWS = [
 
 def test_plan_sweep_reruns_only_the_light_nse_fetches_once_each():
     plan = mc.plan_sweep(SWEEP_ROWS, "2026-11-04")
-    assert [p["label"] for p in plan] == ["positions", "iv_eod", "drivers", "results", "bhavcopy"]
+    assert [p["label"] for p in plan] == ["positions", "bhavcopy", "results", "drivers", "iv_eod"], "fetches first, computations last"
     by = {p["label"]: p for p in plan}
     assert by["positions"] == {"label": "positions", "path": "/jobs/ingest-nse-positions", "body": {}, "kind": "job"}
     assert by["iv_eod"]["body"] == {"job": "iv_eod", "backfill_from": "2026-10-31", "backfill_to": "2026-11-04"}, (
@@ -466,7 +466,7 @@ def test_plan_sweep_reruns_only_the_light_nse_fetches_once_each():
     assert mc.plan_sweep([], "2026-11-04") == [] and mc.plan_sweep([SWEEP_ROWS[-1]], "2026-11-04") == []
     many = [{"id": f"x{i}", "state": "red", "job_id": "iv_eod", "lag_sessions": 1} for i in range(3)] + [
         {"id": "a", "state": "red", "job_id": "results_capture_daily"},
-        {"id": "b", "state": "red", "job_id": "nse_evening_pass"},
+        {"id": "b", "state": "red", "job_id": "nse_evening_pass"},  # no catalog row names this job: nothing (dead branch gone)
         {"id": "c", "state": "red", "job_id": "nse_positions_catchup"},
         {"id": "d", "state": "red", "job_id": "index_drivers_daily"},
         {"id": "nse_bhavcopy", "state": "red", "job_id": "eod_data_pipeline"},
@@ -485,10 +485,10 @@ def test_the_0835_sweep_runs_the_plan_sends_one_digest_and_is_quiet_when_nothing
     asyncio.run(mc.morning_sweep())
     assert svc.post_paths() == [
         "/jobs/ingest-nse-positions",
-        mc.IV_EOD_PATH,
-        mc.INDEX_DRIVERS_PATH,
-        "/jobs/ingest-results",
         "/jobs/ingest-bhavcopy",
+        "/jobs/ingest-results",
+        mc.INDEX_DRIVERS_PATH,
+        mc.IV_EOD_PATH,
         "/db/fii-dii-cash/refresh",
     ]
     assert svc.posts(mc.IV_EOD_PATH) == [
@@ -501,7 +501,7 @@ def test_the_0835_sweep_runs_the_plan_sends_one_digest_and_is_quiet_when_nothing
     assert (
         "GAP archive:preopen" in body and "RED iv_summary_daily: stored 30 Oct" in body and "AMBER nse_mtf: stored 02 Nov" in body
     )
-    assert "Sweep: positions ok; iv_eod ok; drivers degraded; results ok; bhavcopy ok; FII/DII HTTP 200" in body
+    assert "Sweep: positions ok; bhavcopy ok; results ok; drivers degraded; iv_eod ok; FII/DII HTTP 200" in body
     assert not DIRECTION_WORDS.search(body) and "score" not in body.lower()
     # nothing missing: no job, the digest alone
     svc.calls.clear()
@@ -517,6 +517,169 @@ def test_the_0835_sweep_runs_the_plan_sends_one_digest_and_is_quiet_when_nothing
     asyncio.run(mc.morning_sweep())
     assert svc.post_paths() == [] and ctl["alerts"].sent == []
     assert any("no data-health view: nothing swept, no digest" in ln for ln in log_lines())
+
+
+# ── check:B2-CTRL major: the sweep and the catch-up re-fetch the evening + IV input files for missed sessions ──
+# rows in the shape B3 serves from B1's catalog: the evening files carry job nse_positions_catchup, the IV inputs iv_eod —
+# neither job's own path fetches them (the positions ingest is legacy-only; iv_eod reads the stored files)
+EVENING_ROWS = [
+    {"id": "nse_participant_vol", "state": "amber", "job_id": "nse_positions_catchup", "lag_sessions": 1, "as_of": "2026-11-03"},
+    {"id": "nse_fii_stats", "state": "red", "job_id": "nse_positions_catchup", "lag_sessions": 3, "as_of": "2026-10-30"},
+    {"id": "nse_fo_volt", "state": "red", "job_id": "iv_eod", "lag_sessions": 3, "as_of": "2026-10-30"},
+    {"id": "nse_contract_delta", "state": "amber", "job_id": "iv_eod", "lag_sessions": 1, "as_of": "2026-11-03"},
+    {"id": "index_ohlc_daily", "state": "amber", "job_id": "iv_eod", "lag_sessions": 1, "as_of": "2026-11-03"},
+    {"id": "iv_summary_daily", "state": "red", "job_id": "iv_eod", "lag_sessions": 3, "as_of": "2026-10-30"},
+]
+
+
+def test_plan_sweep_refetches_the_evening_and_iv_input_files_for_the_missed_sessions():
+    plan = mc.plan_sweep(EVENING_ROWS, "2026-11-04")
+    assert [p["label"] for p in plan] == ["evening files", "iv_eod"], "one files step, then the computation that reads them"
+    files = plan[0]
+    assert files["path"] == mc.NSE_FILES_PATH
+    assert files["body"] == {"job": "nse_files", "datasets": ["nse_participant_vol", "nse_fii_stats", "nse_fo_volt", "nse_contract_delta",
+                                                              "index_ohlc_daily"],
+                             "from": "2026-10-31", "to": "2026-11-04", "revalidate": False}, "from = day after the oldest as-of"
+    assert plan[1]["body"] == {"job": "iv_eod", "backfill_from": "2026-10-31", "backfill_to": "2026-11-04"}
+    # negative control (the bug): the evening rows no longer fall to the legacy positions ingest, which never fetches them
+    assert "/jobs/ingest-nse-positions" not in [p["path"] for p in plan]
+    # one session missing → just the last session
+    one = mc.plan_sweep([EVENING_ROWS[0]], "2026-11-04")
+    assert one[0]["body"]["from"] == "2026-11-04" and one[0]["body"]["to"] == "2026-11-04" and one[0]["body"]["datasets"] == ["nse_participant_vol"]
+    # negative controls: fresh (or not-due) rows, gap rows and unrecoverable rows add nothing
+    assert mc.plan_sweep([{**EVENING_ROWS[0], "state": "fresh"}], "2026-11-04") == []
+    assert mc.plan_sweep([{**EVENING_ROWS[1], "state": "gap"}], "2026-11-04") == []
+    assert mc.plan_sweep([{**EVENING_ROWS[1], "unrecoverable": True}], "2026-11-04") == []
+    # a long hole is capped at a week of files inside the morning window (the next sweep resumes from the new as-of; the
+    # start-up catch-up, outside the windows, takes up to a month)
+    long = mc.plan_sweep([{**EVENING_ROWS[1], "lag_sessions": 60, "as_of": "2026-08-01"}], "2026-11-04")
+    assert long[0]["body"]["from"] == "2026-10-28" and mc.SWEEP_FILES_MAX_SPAN_DAYS < mc.NSE_FILES_MAX_SPAN_DAYS
+    # dedupe + cap: the files step counts once however many file rows there are
+    many = EVENING_ROWS + SWEEP_ROWS
+    plan = mc.plan_sweep(many, "2026-11-04")
+    assert len(plan) <= mc.SWEEP_MAX_JOBS and [p["path"] for p in plan].count(mc.NSE_FILES_PATH) == 1
+
+
+def test_the_0835_sweep_posts_the_files_span_before_iv_eod(ctl, svc, monkeypatch):
+    fake_clock(monkeypatch, at(2026, 11, 5, 8, 35))
+    svc.routes[("GET", mc.DATA_HEALTH_API)] = _health(EVENING_ROWS)
+    svc.results[mc.NSE_FILES_PATH] = {"status": "ok", "files": {"nse_fii_stats": [{"status": "downloaded"}] * 3}}
+    svc.results[mc.IV_EOD_PATH] = {"status": "ok", "days": 3}
+    asyncio.run(mc.morning_sweep())
+    assert svc.post_paths() == [mc.NSE_FILES_PATH, mc.IV_EOD_PATH]
+    [(q, body)] = svc.posts(mc.NSE_FILES_PATH)
+    assert q == "" and body["from"] == "2026-10-31" and body["to"] == "2026-11-04" and "nse_fo_volt" in body["datasets"]
+    assert "Sweep: evening files ok; iv_eod ok" in ctl["alerts"].sent[-1][2]
+
+
+def test_nse_files_span_for_the_startup_catchup():
+    assert mc.nse_files_span("2026-11-02T23:00:00+05:30", at(2026, 11, 5, 10, 0)) == ("2026-11-02", "2026-11-04"), "before 20:30: yesterday"
+    assert mc.nse_files_span("2026-11-02", at(2026, 11, 5, 21, 0)) == ("2026-11-02", "2026-11-05"), "after 20:30: today's files are out"
+    assert mc.nse_files_span("2026-11-02", at(2026, 11, 7, 10, 0)) == ("2026-11-02", "2026-11-06"), "Saturday: Friday"
+    assert mc.nse_files_span("2026-11-02", at(2026, 11, 9, 10, 0)) == ("2026-11-02", "2026-11-06"), "Monday morning: Friday"
+    assert mc.nse_files_span("2026-08-01", at(2026, 11, 5, 10, 0)) == ("2026-10-04", "2026-11-04"), "capped at a month"
+    # negative controls: an empty span (down and up again before the evening's files) and an unparsable heartbeat
+    assert mc.nse_files_span("2026-11-05T12:00:00+05:30", at(2026, 11, 5, 15, 0)) is None
+    assert mc.nse_files_span("garbage", at(2026, 11, 5, 15, 0)) is None
+
+
+def test_the_2245_pass_skips_the_session_files_on_a_holiday_but_keeps_positions_fii_dii_and_results(ctl, svc, monkeypatch):
+    fake_clock(monkeypatch, at(2026, 11, 20, 22, 45))                    # Fri 20 Nov 2026: Guru Nanak Jayanti
+    monkeypatch.setattr(mc, "_HOLIDAYS", {"at": 10**12, "days": {"2026-11-20": "Guru Nanak Jayanti"}})
+    svc.routes[("POST", "/db/fii-dii-cash/refresh")] = {"ok": True}
+    svc.results["/jobs/ingest-results"] = {"symbols": 0, "rows": 0}
+    closed_calls: list[str] = []
+
+    async def closed(job: str) -> bool:
+        closed_calls.append(job)
+        return True
+
+    monkeypatch.setattr(mc, "_closed_today", closed)
+    asyncio.run(mc.nse_evening_pass())
+    assert mc.NSE_FILES_PATH not in svc.post_paths() and mc.IV_EOD_PATH not in svc.post_paths()
+    assert svc.post_paths() == ["/jobs/ingest-nse-positions", "/db/fii-dii-cash/refresh", "/jobs/ingest-results"]
+    assert any("revisions: market closed today" in ln for ln in log_lines()) and closed_calls == ["nse_evening_pass"]
+    # negative control: a session day posts the files with from = to = the session (never B1's date.today() default)
+    svc.calls.clear()
+
+    async def open_(job: str) -> bool:
+        return False
+
+    monkeypatch.setattr(mc, "_closed_today", open_)
+    mc._IV_EOD_STATE.update(date="2026-11-20", status="ok")
+    asyncio.run(mc.nse_evening_pass())
+    [(_, body)] = svc.posts(mc.NSE_FILES_PATH)
+    assert body["from"] == body["to"] == "2026-11-20" and body["revalidate"] is True
+
+
+def test_a_missed_sweep_is_not_replayed_into_the_evening_and_its_one_off_leaves_the_windows(tmp_path, monkeypatch):
+    monkeypatch.setattr(mc, "GOLD_TODAY_SLOTS", {})
+    _history_file(tmp_path, {"morning_sweep": "2026-11-03T08:36:00+05:30"})
+    assert "morning_sweep" in mc.terminal_missed_jobs(at(2026, 11, 4, 10, 0), mc.read_job_history(tmp_path))
+    assert "morning_sweep" in mc.terminal_missed_jobs(at(2026, 11, 4, 18, 29), mc.read_job_history(tmp_path))
+    # from 18:30 the 20:30 / 22:45 passes own last night's files: no sweep (nor DATA digest) on a deploy evening
+    assert "morning_sweep" not in mc.terminal_missed_jobs(at(2026, 11, 4, 18, 30), mc.read_job_history(tmp_path))
+    assert "morning_sweep" not in mc.terminal_missed_jobs(at(2026, 11, 4, 21, 31), mc.read_job_history(tmp_path))
+    assert set(mc.TERMINAL_ONEOFF_DEFER) == {"morning_sweep", "nse_positions_catchup"}
+    assert mc.freeze_slot(at(2026, 11, 4, 8, 40)) == at(2026, 11, 4, 9, 21)
+    assert mc.freeze_slot(at(2026, 11, 4, 20, 31)) == at(2026, 11, 4, 21, 16)
+    assert mc.freeze_slot(at(2026, 11, 4, 10, 0)) == at(2026, 11, 4, 10, 0), "outside the windows: unchanged"
+
+
+def test_lifespan_defers_the_sweep_and_positions_one_offs_out_of_the_windows(monkeypatch, tmp_path):
+    class Paused(mc.AsyncIOScheduler):
+        def start(self, paused: bool = False) -> None:
+            super().start(paused=True)
+
+    monkeypatch.setattr(mc, "_alerts", _Alerts())
+    monkeypatch.setattr(mc, "HEARTBEAT_FILE", tmp_path / "hb.json")
+    monkeypatch.setattr(mc, "BACKUP_DIR", tmp_path / "backups")
+    monkeypatch.setattr(mc, "_history", mc.JobHistory(tmp_path / "history.json"))
+    monkeypatch.setattr(mc, "_log", mc.LogRingBuffer())
+    monkeypatch.setattr(mc, "missed_jobs", lambda now, root: ["morning_sweep", "nse_positions_catchup", "results_capture_daily"])
+    monkeypatch.setattr(mc, "scheduler", None)
+    monkeypatch.setattr(mc, "AsyncIOScheduler", Paused)
+
+    async def no_bot() -> None:
+        return None
+
+    monkeypatch.setattr(mc, "telegram_poller", no_bot)
+
+    async def scenario():
+        async with mc.lifespan(mc.app):
+            return {j.id: j for j in mc.scheduler.get_jobs()}
+
+    fake_clock(monkeypatch, at(2030, 3, 4, 20, 40))                    # a crash restart inside the EOD window, no heartbeat gap
+    jobs = asyncio.run(scenario())
+    when = {k: v.trigger.run_date.astimezone(IST) for k, v in jobs.items() if k.endswith("_catchup") and hasattr(v.trigger, "run_date")}
+    assert when["morning_sweep_catchup"].strftime("%H:%M") == "21:16" and when["nse_positions_catchup_catchup"].strftime("%H:%M") == "21:16"
+    # negative control: a job not in TERMINAL_ONEOFF_DEFER keeps its one-off a minute or two after start
+    assert when["results_capture_daily_catchup"].strftime("%H:%M") in ("20:41", "20:42")
+
+
+def test_the_freshness_check_says_once_a_day_that_it_is_blind(ctl, svc, monkeypatch):
+    monkeypatch.setattr(mc, "_FRESHNESS_BLIND_WARNED", {})
+    fake_clock(monkeypatch, at(2026, 11, 5, 8, 31))
+    svc.routes[("GET", mc.DATA_HEALTH_API)] = {"status": "ok", "service": "data-service", "db_read_only": False}   # the pre-v2 relay
+    assert asyncio.run(mc._check_dataset_freshness("pre_market_sync")) == []
+    assert asyncio.run(mc._check_dataset_freshness("eod_data_pipeline")) == []
+    [(level, title, body)] = ctl["alerts"].sent
+    assert (level, title) == ("warning", "Freshness check has no data-health view") and "no stale-feed alert" in body
+    assert not DIRECTION_WORDS.search(body)
+    fake_clock(monkeypatch, at(2026, 11, 6, 8, 31))
+    asyncio.run(mc._check_dataset_freshness("pre_market_sync"))
+    assert len(ctl["alerts"].sent) == 2, "the next day says it again"
+    # negative control: with the view (nothing red) nothing is sent
+    ctl["alerts"].sent.clear()
+    svc.routes[("GET", mc.DATA_HEALTH_API)] = _health([{"id": "nse_fo_daily", "state": "fresh"}])
+    assert asyncio.run(mc._check_dataset_freshness("pre_market_sync")) == [] and ctl["alerts"].sent == []
+
+
+def test_the_digest_counts_unknown_rows_when_the_view_has_them():
+    h = _health([{"id": "a", "state": "fresh"}, {"id": "market_monitor", "state": "unknown", "note": "job x not in the controller's schedule"}])
+    h["summary"]["unknown"] = 1
+    assert mc.health_digest(h).startswith("1 green · 0 amber · 0 red · 0 gap · 1 unknown of 2 datasets")
+    assert " unknown" not in mc.health_digest(_health([{"id": "a", "state": "fresh"}])).splitlines()[0]
 
 
 # ── the hourly data-health check: one line per transition (PLAN 1.4) ────────────────────────────────────────
@@ -745,10 +908,14 @@ def test_startup_catchup_extends_to_results_valuation_drivers_iv_gap_rows_desk_a
         "/jobs/daily-pipeline",
         "/jobs/ingest-nse-positions",
         "/jobs/ingest-results",
+        mc.NSE_FILES_PATH,
         mc.INDEX_DRIVERS_PATH,
         mc.IV_EOD_PATH,
         mc.DATA_HEALTH_JOB_PATH,
     ]
+    # check:B2-CTRL major: the outage's evening + IV input files are fetched BEFORE the IV / drivers backfills read them
+    assert svc.posts(mc.NSE_FILES_PATH) == [("", {"job": "nse_files", "datasets": ["nse_bhavcopy", *mc.NSE_IV_FILES, *mc.NSE_EVENING_FILES],
+                                                  "from": "2026-10-31", "to": "2026-11-04", "revalidate": True})]
     assert svc.posts("/jobs/daily-pipeline") == [("", {"mode": "incremental", "skip_steps": ["nse_positions"]})]
     assert svc.posts("/jobs/ingest-results") == [("", {"recent_events_days": 7, "max_age_days": 0})], "window = days down (4) + 3"
     assert svc.posts(mc.INDEX_DRIVERS_PATH) == [
@@ -779,11 +946,16 @@ def test_startup_catchup_extends_to_results_valuation_drivers_iv_gap_rows_desk_a
         "/jobs/ingest-bhavcopy",
         "/jobs/ingest-nse-positions",
         "/jobs/ingest-nse-events",
+        mc.NSE_FILES_PATH,
         mc.INDEX_DRIVERS_PATH,
         mc.IV_EOD_PATH,
         mc.DATA_HEALTH_JOB_PATH,
     ]
-    assert ran == [] and "gap rows: none (every session captured)" not in ctl["alerts"].sent[0][2] or True
+    # 10:00: tonight's files are not out → the span ends at the last weekday before today
+    assert [b["from"] + "→" + b["to"] for _, b in svc.posts(mc.NSE_FILES_PATH)] == ["2026-11-04→2026-11-04"]
+    assert ran == [], "nothing missed: no desk / shadow / valuation re-run"
+    body = ctl["alerts"].sent[0][2]
+    assert "gap rows: archive:preopen 2026-11-02, 2026-11-03" in body and "NSE files 2026-11-04 → 2026-11-04" in body
     # negative control: "skip" mode (inside the EOD window) runs none of it — tonight's scheduled jobs do the work
     svc.calls.clear()
     asyncio.run(mc._startup_catchup_run("2026-11-04T23:00:00+05:30", "2026-11-05T19:00:00+05:30", missed, "skip", None))
@@ -793,6 +965,7 @@ def test_startup_catchup_extends_to_results_valuation_drivers_iv_gap_rows_desk_a
     svc.calls.clear()
     asyncio.run(mc._startup_catchup_run("2026-10-31T11:29:00+05:30", "2026-11-04T21:29:00+05:30", missed, "full", None))
     assert mc.IV_EOD_PATH not in svc.post_paths() and mc.DATA_HEALTH_JOB_PATH not in svc.post_paths() and "desk_daily" in ran
+    assert mc.NSE_FILES_PATH not in svc.post_paths()
 
 
 def test_gold_key_jobs_now_include_the_asia_morning_india_and_health_ones():

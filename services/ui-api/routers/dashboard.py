@@ -306,10 +306,14 @@ async def bootstrap_universe():
 
     # Primary universe file: NSE_1500.csv
     out_path = data_dir / "NSE_1500.csv"
-    with open(out_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["ticker", "company_name", "sector", "isin", "index", "cap_category"])
-        writer.writeheader()
-        writer.writerows(all_rows)
+
+    def _write_universe() -> None:          # blocking file I/O off the event loop (ASYNC230, Terminal v2 PLAN 0.8)
+        with open(out_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["ticker", "company_name", "sector", "isin", "index", "cap_category"])
+            writer.writeheader()
+            writer.writerows(all_rows)
+
+    await asyncio.to_thread(_write_universe)
 
     return {
         "status":    "bootstrapped",

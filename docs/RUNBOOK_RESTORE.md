@@ -53,6 +53,10 @@ up but `ui/dist/current` is missing (at most every 6 h). A bad release: `./start
 | ICICI_TOTP_SECRET | optional; the authenticator setup key = fully unattended 08:00 login. **Preferred home is the macOS Keychain, not this file:** `security add-generic-password -U -s suryadhana -a ICICI_TOTP_SECRET -w` (prompts for the value; nothing in argv or shell history), then `chmod 600 .env`. The Keychain item is not in git or the project's 02:15 backups by design (only your login keychain's own Time Machine / iCloud Keychain cover): on a fresh Mac re-add it by hand (the key: icicidirect.com Settings → Login Authenticator → "manually enter the provided key"; steps in `reports/gold_program/OWNER_GUIDE.md` §5). A `.env` copy is a complete login: 0600, and the password-manager copy treated the same way |
 | TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID | @BotFather bot + your chat id (bot answers only you) |
 | HEALTHCHECK_PING_URL | **strongly recommended**: the off-machine dead-man ping, the only alert that still works when this Mac is off, frozen or waiting at the FileVault screen. A free healthchecks.io check, see [Off-machine dead-man ping](#off-machine-dead-man-ping-healthchecksio). Read by the watchdog every run (no restart) |
+| HEALTHCHECK_WATCHDOG_URL | optional second heartbeat (Terminal v2 0.2): a second healthchecks.io check pinged on every watchdog run whatever the stack's state, see the end of [Off-machine dead-man ping](#off-machine-dead-man-ping-healthchecksio) |
+| REDIS_PASSWORD | optional (Terminal v2 0.7): prefer the Keychain item `suryadhana-redis`; letters and digits only. Read [Redis password](#redis-password-terminal-v2-07-o-t10) before setting it |
+| OFFSITE_BACKUP_DIR | the off-machine target for `scripts/db_backup.py --offsite` (a mounted external disk or rclone mount); see [Version control and off-machine backup](#version-control-and-off-machine-backup) step 5 |
+| TERMINAL_JOBS_ENABLED / IV_WATCHLIST / IV_SURFACE_ALL / BREEZE_BUDGET_CAP_DAY / BREEZE_BUDGET_CAP_MINUTE / BREEZE_BUDGET_QUOTAS | Terminal v2 (5 Nov 2026), all optional: `TERMINAL_JOBS_ENABLED=0` stops the controller's v2 jobs; `IV_WATCHLIST` = your F&O names for the IV store and the 15-min pilot (comma list; default indices only); `IV_SURFACE_ALL=1` stores the per-strike surface for all ≈ 224 underlyings (≈ 2–3 GB over 7 years, O-T4); the Breeze ledger defaults to 60/min · 4,000/day, clamped under the documented 100 · 5,000 (O-T6) |
 | FRED_API_KEY / EIA_API_KEY | optional: EIA for the CMDT energy leg; FRED only for ALFRED vintages (the gold jobs use the keyless `fredgraph.csv`) |
 | GOLD_IMPORT_DUTY_PCT / GOLD_IMPORT_DUTY_EFFECTIVE / CFTC_APP_TOKEN | gold (26 Oct 2026): duty 15 / 2026-05-13 (defaults; the owner confirms at CBIC, PLAN O-3); the CFTC Socrata token is optional (free; raises the rate limit) |
 
@@ -496,6 +500,55 @@ What it catches: no ping for 15 minutes (Mac off, frozen, asleep, at the FileVau
 the watchdog not loaded, no network), and `fail` on every watchdog run while a core service you did not stop is
 down or hung. Before a planned shutdown, pause the check on healthchecks.io (or expect the alert).
 
+**Second heartbeat (optional, Terminal v2 0.2).** Add a second check (`SuryaDhana watchdog`, same Period 5 min /
+Grace 10 min) and put its ping URL in `.env` as `HEALTHCHECK_WATCHDOG_URL=`. The watchdog pings it first thing on
+every run, whatever the stack's state, so it goes quiet only when the Mac itself is off, asleep, at the FileVault
+screen or launchd no longer runs the watchdog. Read the two together: the first says `fail` while the second keeps
+beating → the stack is down on a live Mac; both silent → the Mac is gone. The last result is kept in
+`.pids/watchdog/deadman_watchdog` (`<epoch> ok|error`, never the URL) and Telegram `/status` shows it beside the
+dead-man line.
+
+## Redis password (Terminal v2 0.7, O-T10)
+
+Redis carries the live quotes from data-service to ui-api's `/ws/monitor` hub (`live.quotes`); without it the terminal
+works and live streaming does not. It used to listen on `*:6379` with no password (R-ARCH §3). `start-local.sh` now
+starts it bound to 127.0.0.1 and, when a password is configured (`REDIS_PASSWORD` in `.env`, else the Keychain item
+`suryadhana-redis`), with `requirepass` passed on stdin (never argv), and exports
+`REDIS_URL=redis://:<pw>@127.0.0.1:6379/0` to the services it starts. A Redis that is already listening is reused as it
+is, so the change applies only after that Redis is shut down once. One-time, outside both freeze windows:
+
+1. **Before you set a password**, check that a single-service start or restart also exports it:
+   ```bash
+   grep -c 'start_redis; start_one' start-local.sh      # must print 2
+   ```
+   With 1, `./start-local.sh restart <svc>` (the path the watchdog uses for hang restarts) starts the service with
+   `.env`'s password-less `REDIS_URL`: Redis refuses it and live quotes stop until a full restart. A fix was requested
+   on 5 Nov 2026; until it is in, leave the password unset (the 127.0.0.1 bind alone already closes the LAN exposure).
+2. Store a URL-safe password (letters and digits: it is embedded unencoded in `REDIS_URL`) without showing it:
+   ```bash
+   openssl rand -hex 24 | tr -d '\n' | pbcopy                          # to the clipboard, never the screen
+   security add-generic-password -U -a "$USER" -s suryadhana-redis -w   # paste at the prompt; then clear the clipboard
+   ```
+   (`REDIS_PASSWORD=<pw>` in `.env` wins over the Keychain; `REDIS_NO_KEYCHAIN=1` skips the Keychain lookup.)
+3. Restart in the documented order, with Redis in between:
+   ```bash
+   ./start-local.sh stop ui-api
+   redis-cli -h 127.0.0.1 shutdown nosave                     # the old, unprotected Redis (stop never stops it)
+   ./start-local.sh stop data-service && ./start-local.sh start data-service   # starts Redis bound + protected first
+   curl -s -o /dev/null -w '%{http_code}\n' localhost:8001/ready               # 200
+   ./start-local.sh start ui-api
+   ./start-local.sh stop master-controller && ./start-local.sh start master-controller
+   ```
+4. Check (prints no password):
+   ```bash
+   lsof -nP -iTCP:6379 -sTCP:LISTEN                            # 127.0.0.1:6379 only, never *:6379
+   redis-cli -h 127.0.0.1 ping                                 # NOAUTH Authentication required.
+   REDISCLI_AUTH="$(security find-generic-password -a "$USER" -s suryadhana-redis -w)" redis-cli -h 127.0.0.1 ping   # PONG
+   ```
+   then open a terminal window: live quotes move again. Every later `redis-cli` command needs the same `REDISCLI_AUTH=`
+   prefix (the [first-trading-day](#first-trading-day-after-a-deploy-checklist) Redis rows included). The legacy Docker
+   compose is not changed (it is not run).
+
 ## Unattended reboots (power cuts, macOS updates, FileVault)
 
 The current state is on the `reboot-recovery` row of `./start-local.sh status`. As checked on 25 Oct: the Mac
@@ -592,15 +645,18 @@ diff against or roll back to. One-time, about 20 minutes:
    git tag -a desktop-20261025 -m "UI release $(curl -s localhost:8010/ready | sed -nE 's/.*"ui_build_id":"([^"]*)".*/\1/p') · $(cat ~/Library/Application\ Support/ai.suryadhana.terminal/installed-build 2> /dev/null)"
    git log -1 --oneline && git tag -n1 desktop-20261025
    ```
-4. **Push to a private remote.** Create an EMPTY private repository first (GitHub: New repository → Private, no
-   README), then:
+4. **Push to the remote.** `origin` is github.com/sudheerptl01-hash/SuryaDhana_AI and it is **PUBLIC** (the owner's
+   choice, 5 Nov 2026; the earlier advice here was a private repository). Everything committed is world-readable
+   for good: run the step-2 checks before **every** push, keep `data/`, logs, screenshots and `.env` out (`.gitignore`
+   covers them; never `git add -f`), and never paste PORT / BRKR / RSK / DESK output into a committed file. Setting
+   up a new remote:
    ```bash
    git remote add origin git@github.com:<you>/SuryaDhana_AI.git    # or: gh repo create SuryaDhana_AI --private --source . --remote origin
    git push -u origin --all && git push origin --tags
    git ls-remote --tags origin | grep desktop-20261025               # the tag is on the remote
    ```
-   Keep it private (it holds the strategy code). `.env` never goes to git: keep a copy of it in your password
-   manager.
+   A private repository would also keep the strategy code private; with a public one, assume anyone can read it.
+   `.env` never goes to git: keep a copy of it in your password manager.
 5. **An off-machine copy of the data**, which git does not hold (`data/` is ignored: the 4.4 GB DuckDB, the
    settings store and the nightly backups). Either Time Machine to an external disk at least twice the size of
    `data/`:
@@ -614,9 +670,52 @@ diff against or roll back to. One-time, about 20 minutes:
    ```bash
    rsync -a data/backups/duckdb/ /Volumes/<disk>/suryadhana/backups/duckdb/
    ```
+   or let the backup script do it (Terminal v2 0.1): `scripts/db_backup.py --offsite [DIR]` copies tonight's
+   `.duckdb(.zst)`, the `ui_prefs` `.sqlite` and both `.meta.json` to `DIR` (default `OFFSITE_BACKUP_DIR` from `.env`),
+   each through a temp name + rename, verifies the DuckDB copy by sha256 and keeps the same rotation (7 daily + 4
+   Sundays) there. A missing or unmounted target fails the run (exit 1) after the local backup is complete. The 02:15
+   `db_backup_daily` job does **not** pass `--offsite` yet, so run it by hand (never inside a freeze window or
+   beside the 02:15 run; one run at a time, a busy lock exits 75):
+   ```bash
+   /Users/sudheer/Desktop/jupyter_env/bin/python scripts/db_backup.py --offsite /Volumes/<disk>/suryadhana/backups/duckdb
+   ```
 6. **Routine:** commit and push after every deploy, and tag it (`git tag -a deploy-YYYYMMDD -m …`). To see what a
    deploy changed in one file: `git diff <tag> -- <file>`; to put one file back: `git checkout <tag> -- <file>`,
    then restart that service outside the freeze windows.
+
+## Data health: the DATA view and `/api/data/health` (Terminal v2 1.4)
+
+In the tree since 5 Nov 2026, live after the Terminal v2 deploy (ui-api + data-service + master-controller restarts):
+until then `/api/data/health` answers from a built-in fallback seed (R-DATA §3) and says so in `catalog_source`.
+
+- **What it is.** One row per dataset in data-service's `dataset_catalog` (`services/data-service/data_health/catalog.py`;
+  rendered as `docs/TERMINAL_DATA_DICTIONARY.md`): publisher, publication time (IST), `expected_by` (IST, trading-day
+  aware), what is stored (`as_of`), `lag_sessions`, state `live | fresh | amber | red | gap`, the ingest job's last and next
+  run, the catch-up slot and the dictionary anchor. The SYS › DATA view (GO `DATA`) and the header chip `DATA n STALE`
+  read it. No composite score; the page says "stored 30 Oct · expected by 21:00 · 3 sessions behind · catch-up 19:30
+  tomorrow".
+- **Read it** (no restart, no fetch from a publisher: it reads stored data, the scheduler and `ingest_log`):
+  ```bash
+  curl -s localhost:8010/api/data/health | /Users/sudheer/Desktop/jupyter_env/bin/python -c "
+  import json, sys
+  d = json.load(sys.stdin); print(d.get('catalog_source'), d.get('summary'))
+  for r in d.get('rows', []):
+      if r.get('state') not in ('fresh', 'live'):
+          print(f\"{r['id']:28} {r['state']:6} as_of={r.get('as_of')} lag={r.get('lag_sessions')} job={r.get('job_id')}\")"
+  ```
+- **What happens by itself.** Hourly at :10 `data_health_check` sends one Telegram line per dataset that changes
+  state (state kept in `data/.data_health_state.json`, so a restart does not repeat lines; red is critical). At 08:35
+  `morning_sweep` re-runs the jobs behind amber / red rows (at most 6 light NSE fetches, never a gold or a backfill job)
+  and sends the DATA digest. After downtime the start-up catch-up writes explicit **gap** rows for captures that only
+  exist during the session (pre-open book, breadth samples, FII/DII, gold open): those cannot be backfilled, and the
+  pages say "no intraday data for …" instead of showing the last day.
+- **What you do.** amber: usually nothing (the 22:45 pass or the 08:35 sweep catches it). red on an NSE file: check
+  the NSE archive by hand (the publisher may be late; NSE's `Last-Modified` header is GMT, add 5:30), then
+  `curl -s -X POST localhost:8001/jobs/ingest-nse-files -H 'Content-Type: application/json' -d '{"datasets":["<id>"],"revalidate":true}'`
+  outside the freeze windows. red on `iv_*` or `index_*`: `POST :8001/jobs/iv-eod?job=iv_eod` or
+  `POST :8001/jobs/index-drivers?job=index_drivers_daily` for the missing date (same shape as `/jobs/ingest-gold`).
+  A **backfill** (`iv_backfill`, `index_drivers_backfill`, `vix_backfill`) is never started inside a freeze window or
+  beside the 02:15 backup; a Sunday 10:00 start (PLAN 1.8).
 
 ## First trading day after a deploy (checklist)
 
@@ -627,13 +726,14 @@ session is its first real run: the request guard against real job traffic, the m
 | When (IST) | Check | Good |
 |---|---|---|
 | 08:05 | Telegram: the ICICI login result, then `/status` | "ICICI logged in" (or "session already valid"); every service and the terminal UI green (the dead-man and reboot lines stay ⚠️ until those one-time steps are done) |
-| 09:20 | with a terminal window open (the app, or a browser on :8010): `redis-cli -h 127.0.0.1 PUBSUB NUMSUB live.quotes` | `live.quotes` then 1 or more (ui-api's monitor hub subscribes while a window is open, and lets go 15 s after the last one closes) |
+| 09:20 | with a terminal window open (the app, or a browser on :8010): `redis-cli -h 127.0.0.1 PUBSUB NUMSUB live.quotes` (with a Redis password, prefix `REDISCLI_AUTH=…`, see [Redis password](#redis-password-terminal-v2-07-o-t10)) | `live.quotes` then 1 or more (ui-api's monitor hub subscribes while a window is open, and lets go 15 s after the last one closes) |
 | 09:20 | `timeout 10 redis-cli -h 127.0.0.1 SUBSCRIBE live.quotes` | tick messages arrive (NIFTY at least) |
 | 09:20, 15:35 | `grep -c http_guard.rejected .logs/ui-api.log .logs/data-service.log .logs/master-controller.log` | the counts do not grow; if they do, read those lines: a job the guard blocked shows its path |
 | 15:35, 21:20 | the scheduler's results (below) | every job that ran today says `done`, none `error` |
 | 21:20 | `ls -l alpha_lab/reports/shadow_status.md`; the DESK page | the shadow status and the Desk show today |
 | 08:50, 16:00, 21:40 | the GOLD page header strip and the SYS rows `gold_*` (26 Oct 2026) | the MCX settlement labelled by its session (Monday shows "Fri … settlement"), no STALE chip older than `GOLD_MAX_AGE_DAYS`, the 15:45 CME job `done` (log the hour the FTP file arrived in week one); Saturday ≈ 03:30: the "COT <date>: funds net …" Telegram digest line |
 | 02:20 next night | `ls -l data/backups/duckdb/*"$(date +%Y%m%d)"*` | a `market-` and a `ui_prefs-` backup dated today |
+| 21:30, 22:00 (Terminal v2, first week) | the scheduler's `nse_positions_catchup`, `iv_eod`, `index_drivers_daily`; the [data-health](#data-health-the-data-view-and-apidatahealth-terminal-v2-14) summary | `iv_eod` done by 21:30 five days running; the drivers job found the top-10 file (published ≈ 16:30); at 22:00 at most 2 amber rows (PLAN G13) |
 
 ```bash
 curl -s localhost:8008/api/scheduler/status | /Users/sudheer/Desktop/jupyter_env/bin/python -c "

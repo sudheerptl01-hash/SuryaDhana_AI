@@ -8,8 +8,8 @@
  * forecast of the next crush. Describes, does not predict.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { Chip, DataTable, Panel, T, TickerLink, fmtNum, sourceOf, type Column } from '@/components/terminal'
-import { getIvEvents, getVolScreen, storeNote, type CrushRow, type IvEvents, type ScreenRow } from './api'
+import { Chip, DataTable, Panel, T, TickerLink, fmtNum, sourceOf, undatedSource, type Column } from '@/components/terminal'
+import { getIvEvents, getVolScreen, storeNote, volError, type CrushRow, type IvEvents, type ScreenRow } from './api'
 
 const pct = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? '—' : `${fmtNum(v, d)}%`)
 const signedPct = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}%`)
@@ -34,7 +34,7 @@ export function CrushLedger({ initial }: { initial?: string | null }) {
     if (!symbol) return
     let alive = true
     setD(null); setErr(null)
-    getIvEvents(symbol, 8).then(r => { if (alive) setD(r.data) }).catch((e: unknown) => { if (alive) setErr(e instanceof Error ? e.message : 'unavailable') })
+    getIvEvents(symbol, 8).then(r => { if (alive) setD(r.data) }).catch((e: unknown) => { if (alive) setErr(volError(e, 'unavailable')) })
     return () => { alive = false }
   }, [symbol])
   const cols = useMemo<Column<CrushRow>[]>(() => [
@@ -54,7 +54,8 @@ export function CrushLedger({ initial }: { initial?: string | null }) {
   const asOf = d?.rows?.[0]?.released_at?.slice(0, 10) ?? null
   return (
     <Panel title="Results IV crush · ledger" accent={T.violet} pad={0} badge={d?.badge ?? 'context'}
-      source={sourceOf(asOf, { source: 'iv_event_log', maxAgeDays: 400, hint: d && !d.ok ? storeNote(d) : null })}
+      source={d?.ok && !d.rows.length ? undatedSource('iv_event_log', `no measured release for ${symbol} yet`)
+        : sourceOf(asOf, { source: 'iv_event_log', maxAgeDays: 400, hint: err ?? (d && !d.ok ? storeNote(d) : null) })}
       subtitle={`last 8 releases per stock · IV before / after · priced vs realised move${picked?.next_results ? ` · ${symbol} reports next on ${picked.next_results}` : ''}`}
       right={<span style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         {(names ?? []).slice(0, 8).map(n => <Chip key={n.symbol} color={T.violet} active={symbol === n.symbol} onClick={() => setSymbol(n.symbol)} title={`results ${n.next_results ?? '—'}`}>{n.symbol}</Chip>)}

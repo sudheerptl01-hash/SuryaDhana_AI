@@ -8,14 +8,14 @@ import { apiError } from '@/lib/errors'
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getResearchDoc, listResearch, researchFileUrl, type ResearchEntry } from '@/lib/api'
-import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T } from '@/components/terminal'
+import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, sourceOf, referenceSource } from '@/components/terminal'
 import { Markdown } from '@/components/terminal/Markdown'
 import { downloadUrl, isDesktop } from '@/lib/platform'
 
 export const VERDICT_COLOR: Record<string, string> = {
   ADOPTED: T.green, PASS: T.green, PROMISING: T.amber, FAIL: T.red, 'NO EDGE': T.red, REFERENCE: T.cyan,
 }
-const VERDICTS = ['ADOPTED', 'PASS', 'PROMISING', 'FAIL', 'NO EDGE', 'REFERENCE']
+const VERDICTS = ['ADOPTED', 'PASS', 'PROMISING', 'FAIL', 'NO EDGE', 'REFERENCE', 'DESCRIPTIVE', 'ARITHMETIC']
 const SEL_KEY = 'suryadhana.rsch.sel.v1'
 
 const ago = (iso: string) => {
@@ -76,7 +76,7 @@ export function ResearchLibrary() {
           ))}
         </div>} />
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)', alignItems: 'start' }}>
-        <Panel title="Studies" pad={0} style={{ position: 'sticky', top: 8 }}
+        <Panel source={referenceSource('reports/*/FINDINGS.md')} title="Studies" pad={0} style={{ position: 'sticky', top: 8 }}
           right={<Input value={q} onChange={setQ} placeholder="Search…" width={150} />}>
           <div style={{ maxHeight: 'calc(100vh - 230px)', overflowY: 'auto' }}>
             {shown.map(r => {
@@ -109,7 +109,7 @@ export function ResearchLibrary() {
           {docErr && <ErrorBox error={docErr} onRetry={() => setNonce(n => n + 1)} />}
           {!doc && !docErr && <Loading label="Opening report" />}
           {doc && (
-            <Panel accent={VERDICT_COLOR[doc.verdict] ?? T.amber}
+            <Panel source={sourceOf(doc.updated ? String(doc.updated).slice(0, 10) : null, { source: 'study report', maxAgeDays: null })} accent={VERDICT_COLOR[doc.verdict] ?? T.amber}
               title={doc.area}
               subtitle={`${doc.id} · ${doc.lines} lines · updated ${ago(doc.updated)}`}
               right={<Chip color={VERDICT_COLOR[doc.verdict] ?? T.muted} active>{doc.verdict}</Chip>}

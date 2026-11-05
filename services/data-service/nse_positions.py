@@ -367,6 +367,7 @@ def ingest_deals(store, start: date, end: date, progress: Optional[Callable] = N
 import json as _json
 import re as _re
 from datetime import datetime as _datetime
+from datetime import timezone as _timezone
 from typing import Any as _Any
 
 FOVOLT_URL = f"{ARCHIVE}/archives/nsccl/volt/FOVOLT_{{d:%d%m%Y}}.csv"
@@ -649,6 +650,18 @@ def ingest_file(store: _Any, http: _Any, dataset: str, day: date, cache_root: Pa
     return out
 
 
+def prev_weekdays(d: date, n: int) -> date:
+    """``d`` stepped back ``n`` weekdays (weekends skipped). A T−1 file (``mwpl_cli``, named for the session it describes and
+    published the next day) requested on Monday is FRIDAY's, never Sunday's — the calendar-day step left every Friday's
+    file unfetched. An NSE holiday in between is a cheap 404 (``missing``), never a wrong file."""
+    out = d
+    for _ in range(max(0, n)):
+        out -= timedelta(days=1)
+        while out.weekday() >= 5:
+            out -= timedelta(days=1)
+    return out
+
+
 def ingest_files(store: _Any, http: _Any, datasets: list[str], start: date, end: date, cache_root: Path, *, revalidate: bool = False,
                  progress: Optional[Callable] = None, now: Optional[_datetime] = None, skip_weekends: bool = True) -> dict:
     """Every dataset for every day in [start, end]; weekends skipped unless asked (special sessions are rare and 404 cheaply)."""
@@ -662,7 +675,7 @@ def ingest_files(store: _Any, http: _Any, datasets: list[str], start: date, end:
             continue
         res = []
         for d in days:
-            file_day = d - timedelta(days=int(TERMINAL_DATASETS[ds].get("t_minus", 0))) if TERMINAL_DATASETS[ds].get("t_minus") else d
+            file_day = prev_weekdays(d, int(TERMINAL_DATASETS[ds].get("t_minus", 0)))
             r = ingest_file(store, http, ds, file_day, cache_root, revalidate=revalidate, now=now)
             res.append(r)
             out["rows_total"] += int(r.get("rows") or 0)
@@ -675,15 +688,32 @@ def ingest_files(store: _Any, http: _Any, datasets: list[str], start: date, end:
     return out
 
 
-def revise_bhavcopy(store: _Any, http: _Any, day: date, cache_root: Path, *, now: Optional[_datetime] = None) -> dict:
-    """The 22:45 pass (Wave 0 0.5): re-fetch the equity bhavcopy with If-Modified-Since; a changed body (NSE's 22:05
-    re-publication) re-upserts the day's rows and writes a revision row in ingest_log; 304 / same sha256 costs nothing."""
+def revise_bhavcopy(store: _Any, http: _Any, day: date, cache_root: Path, *, now: _datetime | None = None) -> dict:
+    """The 22:45 pass (Wave 0 0.5; PLAN §0.3 as amended 5 Nov 2026): re-fetch the equity bhavcopy with If-Modified-Since
+    (from the 18:30 sighting's ``ingest_log`` row, written by ``bhavcopy.stamp_first_sighting``). ``cache_root`` is the
+    18:30 ingest's own cache (``data/nse_bhavcopy``). NSE's 22:05 re-publication (a new sha256) is
+
+    * archived BESIDE the first copy as ``sec_bhavdata_full_YYYYMMDD.rN.csv.gz`` — the first copy is never overwritten;
+    * re-upserted into ``nse_bhavcopy`` (the table holds the latest publication) with ``release_at`` = the publisher's
+      ``Last-Modified`` (RFC 1123 GMT → UTC, stored UTC-naive like every ``*_at``) and ``first_seen_at`` = the FIRST sighting
+      kept (the upsert replaces whole rows, so it is restored, never re-stamped with the revision's fetch time);
+    * a revision row in ``ingest_log`` (revision + 1).
+
+    304 / same sha256 / the same bytes as the cached copy cost nothing (``not_modified``). A day the 18:30 ingest never
+    stored (an outage) is a first sighting here: the body becomes the first copy on disk and both stamps are set. A file
+    carrying another session's rows is refused (``date_mismatch``), as the 18:30 ingest refuses it."""
+    import gzip as _gzip
+    import hashlib as _hashlib
+
+    import bhavcopy as bc
     from data_health import db as tdb
     from data_health import ingest_log
-    import bhavcopy as bc
 
     now = now or tdb.utcnow()
     url = bc.url_for(day)
+    first = bc.cache_path(cache_root, day)
+    prior = tdb.scalar(store, "SELECT MIN(first_seen_at) FROM nse_bhavcopy WHERE date = ?", [day])
+    prior_seen = None if prior is None or pd.isna(prior) else pd.Timestamp(prior).to_pydatetime()
     f = ingest_log.fetch_logged(store, http, "nse_bhavcopy", day, url, cache_root=None, revalidate=True, now=now)
     out: dict[str, _Any] = {"date": day.isoformat(), "status": f.status, "revision": f.revision, "rows": 0}
     blob = f.body
@@ -695,9 +725,41 @@ def revise_bhavcopy(store: _Any, http: _Any, day: date, cache_root: Path, *, now
         return out
     try:
         df = bc.parse_bhavcopy(text)
+    except Exception as exc:  # noqa: BLE001
+        out["status"] = "parse_error"
+        out["error"] = f"{type(exc).__name__}: {str(exc)[:160]}"
+        return out
+    file_days = {d for d in df["date"].dropna().unique()}
+    if file_days and file_days != {day}:
+        out["status"] = "date_mismatch"
+        out["file_dates"] = sorted(str(d) for d in file_days)[:3]
+        return out
+    release = bc.utc_naive(bc.parse_http_date(f.last_modified))
+    out["release_at_source"] = "last_modified" if release is not None else "fetch_time"
+    encoded = text.encode("utf-8")
+    if first.exists():
+        cached = _gzip.decompress(bc.latest_cached_path(cache_root, day).read_bytes())
+        first_seen = prior_seen or _datetime.fromtimestamp(first.stat().st_mtime, tz=_timezone.utc).replace(tzinfo=None, microsecond=0)
+        if cached == encoded or _hashlib.sha256(cached).hexdigest() == f.sha256:
+            # the copy we already hold (a day stored before the 18:30 sighting was logged): not a revision
+            tdb.execute(store, "UPDATE nse_bhavcopy SET first_seen_at = COALESCE(first_seen_at, ?), release_at = COALESCE(release_at, ?) "
+                               "WHERE date = ?", [first_seen, release, day])
+            out["status"] = "not_modified"
+            return out
+        rev_n = max(int(f.revision), len(bc.revision_paths(cache_root, day)) + 1)
+        target = bc.revision_path(cache_root, day, rev_n)
+        out["status"], out["revision"] = "revised", rev_n
+    else:
+        first_seen = prior_seen or now
+        target = first
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(target.name + ".tmp")
+    tmp.write_bytes(_gzip.compress(encoded))
+    tmp.replace(target)
+    out["archived"] = str(target.relative_to(cache_root))
+    try:
         out["rows"] = int(store.upsert_bhavcopy(df))
-        if f.status == "revised":
-            tdb.execute(store, "UPDATE nse_bhavcopy SET first_seen_at = COALESCE(first_seen_at, ?), release_at = ? WHERE date = ?", [now, now, day])
+        tdb.execute(store, "UPDATE nse_bhavcopy SET first_seen_at = ?, release_at = ? WHERE date = ?", [first_seen, release or now, day])
     except Exception as exc:  # noqa: BLE001
         out["status"] = "parse_error"
         out["error"] = f"{type(exc).__name__}: {str(exc)[:160]}"

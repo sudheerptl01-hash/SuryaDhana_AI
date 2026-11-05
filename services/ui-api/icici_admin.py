@@ -414,8 +414,11 @@ def probe_breeze_connection(api_key: str, api_secret: str, session_token: str,
         requests.get = _get_with_timeout  # type: ignore[assignment]  # the SDK calls requests.get directly
         try:
             breeze = BreezeConnect(api_key=api_key)
-            breeze.generate_session(api_secret=api_secret, session_token=token)
-            details = breeze.get_customer_details(api_session=token)
+            from shared.breeze_budget import ledger as _ledger      # PLAN §0.11: the probe's two ICICI calls are metered too
+            with _ledger().guard("ui-api.probe", "generate_session"):
+                breeze.generate_session(api_secret=api_secret, session_token=token)
+            with _ledger().guard("ui-api.probe", "get_customer_details"):
+                details = breeze.get_customer_details(api_session=token)
         except Exception as exc:  # noqa: BLE001 — the SDK raises bare Exception
             last = str(exc)
             kind, _ = classify_breeze_error(last)

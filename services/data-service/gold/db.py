@@ -55,18 +55,15 @@ def upsert(store: Any, table: str, df: pd.DataFrame | None) -> int:
 
 
 def query_df(store: Any, sql: str, params: list[Any] | None = None) -> pd.DataFrame:
-    with store._lock:
-        return store._conn.execute(sql, params or []).df()
+    return store.read(sql, params or [])                    # shared lock, per-call cursor (PLAN 1.5)
 
 
 def execute(store: Any, sql: str, params: list[Any] | None = None) -> None:
-    with store._lock:
-        store._conn.execute(sql, params or [])
+    store.write(sql, params or [])                          # exclusive lock on the primary connection
 
 
 def scalar(store: Any, sql: str, params: list[Any] | None = None) -> Any:
-    with store._lock:
-        row = store._conn.execute(sql, params or []).fetchone()
+    row = store.read_one(sql, params or [])
     return row[0] if row else None
 
 

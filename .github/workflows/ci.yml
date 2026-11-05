@@ -6,8 +6,11 @@
 # Browser-login tests self-skip when headless Chrome is unavailable (their _need_chrome fixture).
 #
 # Jobs:
-#   python   (ubuntu)  the five pytest suites (core incl. the desktop contract tests, scripts, ui-api incl. prefs /
-#                      static_ui / http_guard, execution, alpha_lab), the event-loop scan, the baseline tools.
+#   python   (ubuntu)  Terminal v2 quality gates first (PLAN 0.8 / G12: pin drift, ruff, mypy per package — config in
+#                      pyproject.toml; the lint tools live in their own venv so the suites run on the pinned env), then
+#                      the five pytest suites (core incl. the desktop contract tests, scripts, ui-api incl. prefs /
+#                      static_ui / http_guard, execution, alpha_lab), the event-loop scan, the baseline tools, and
+#                      pip-audit (advisory until the owner triages its first report).
 #   ui       (ubuntu)  tsc + the UI's node checks (prefs, platform, alerts, desktop: plain node 25 type stripping).
 #   desktop  (macOS)   what only runs where the program runs: cargo test / clippy / fmt of the Tauri shell, the
 #                      boot-page checks, the release-builder tests (bash 3.2), the start-local.sh / watchdog shell
@@ -33,6 +36,23 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-ci.txt
       - run: pip install -r requirements-ci.txt
+      - name: pin drift (installed == requirements-ci.txt pins, i.e. pip freeze vs requirements; PLAN 0.8)
+        env:
+          SD_PIN_DRIFT_STRICT: "1"
+        run: python -m pytest scripts/tests/test_pin_drift.py -q -W ignore
+      - name: lint tools (own venv; the versions pyproject.toml targets, never installed into the suites' env)
+        run: |
+          python -m venv "$RUNNER_TEMP/lint"
+          "$RUNNER_TEMP/lint/bin/pip" install --quiet ruff==0.16.4 mypy==2.3.1
+      - name: ruff (pyproject.toml select F/E9/B/ASYNC/DTZ + the per-file baseline; a new file gets every rule)
+        run: '"$RUNNER_TEMP/lint/bin/ruff" check . --output-format github'
+      - name: mypy (per package; data-service and ui-api both have a main module)
+        env:
+          MYPYPATH: ${{ github.workspace }}
+        run: |
+          "$RUNNER_TEMP/lint/bin/mypy" --config-file pyproject.toml shared
+          (cd services/data-service && "$RUNNER_TEMP/lint/bin/mypy" --config-file ../../pyproject.toml fo_iv index_drivers data_health)
+          (cd services/ui-api && "$RUNNER_TEMP/lint/bin/mypy" --config-file ../../pyproject.toml routers/derivatives.py routers/data_health.py routers/options_strategy.py)
       - name: core suite (tests/, incl. the desktop contract + QA-harness tests)
         # start-local.sh's shell tests are macOS-only (launchd, PlistBuddy, bash 3.2): they run in the desktop job
         run: python -m pytest tests -q -W ignore --ignore=tests/integration/test_desktop_ops.py
@@ -49,6 +69,14 @@ jobs:
       - name: event-loop purity scan (if landed)
         run: |
           if [ -f scripts/check_event_loop.py ]; then python scripts/check_event_loop.py; else echo "scanner not present — skipped"; fi
+      - name: pip-audit (advisory; known-vulnerability scan of the CI pins, own venv, no install of the pins)
+        # continue-on-error until the owner triages the first report (the pins are 2024-era: R-ARCH §5 dependency
+        # hygiene); then drop it so a new advisory fails the job
+        continue-on-error: true
+        run: |
+          python -m venv "$RUNNER_TEMP/audit"
+          "$RUNNER_TEMP/audit/bin/pip" install --quiet pip-audit==2.7.3
+          "$RUNNER_TEMP/audit/bin/pip-audit" -r requirements-ci.txt --no-deps --disable-pip --progress-spinner off
 
   ui:
     runs-on: ubuntu-latest

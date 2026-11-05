@@ -38,6 +38,30 @@ export function parseLocation(search: string, tabs: readonly string[], fallback:
   return { tab: t && tabs.includes(t) ? t : fallback, sym: normalizeSym(p.get('sym')) }
 }
 
+/**
+ * The `?tab=` value when it names no page of this release (terminal v2 PLAN 0.6, R-UI S7: an old window or a link
+ * from a newer build used to land silently on BRF). Null when there is no `tab` or it is a known page.
+ */
+export function unknownTab(search: string, tabs: readonly string[]): string | null {
+  let p: URLSearchParams
+  try {
+    p = new URLSearchParams(search)
+  } catch {
+    return null
+  }
+  const t = p.get('tab')
+  if (t == null || t === '' || tabs.includes(t)) return null
+  return t.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24) || '?'
+}
+
+/** "GOLD is not in this release (built 25 Oct) — showing BRF": `build` is the release id YYYYmmdd-HHMMSS-<sha>. */
+export function unknownTabText(tab: string, build: string | null, landing = 'BRF'): string {
+  const m = /^(\d{4})(\d{2})(\d{2})-/.exec(build ?? '')
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  const built = m && +m[2] >= 1 && +m[2] <= 12 ? `built ${m[3]} ${MONTHS[+m[2] - 1]}` : 'a development build'
+  return `${tab.toUpperCase()} is not in this release (${built}) — showing ${landing}`
+}
+
 /** location.search for (tab, sym), keeping every other parameter of `current` in place. */
 export function buildSearch(current: string, tab: string, sym: string | null): string {
   let p: URLSearchParams

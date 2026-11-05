@@ -17,13 +17,13 @@ import { newWindow, saveDownload } from '@/lib/platform'
 import { T } from '@/components/news/format'
 import { asciiMinus, fmtPx } from '@/lib/format'
 import { chartHeight } from './chart'
-import { badgeSpec, sourceChipText, subFromSearch, withSub, type Badge, type SourceInfo, type SourceState } from './source'
+import { SUB_VIEW_EVENT, badgeSpec, sourceChipText, subFromSearch, withSub, type Badge, type SourceInfo, type SourceState } from './source'
 
 export { T }
 // Exchange-style price formatting (2 dp, en-IN grouping, U+2212 minus) for every page: lib/format (C1-08)
 export { MINUS, fmtFixed, fmtIdx, fmtInrPx, fmtPx, fmtSigned, indianGrouping } from '@/lib/format'
 // Terminal v2 (reports/terminal_v2/PLAN.md §0): source chips, badges, sub-view URL state — pure helpers in ./source
-export { BADGES, DESCRIBES, badgeSpec, describes, percentileOf, rankOf, sourceOf, setSubInUrl, subFromSearch, withSub, type Badge, type SourceInfo, type SourceState } from './source'
+export { BADGES, DESCRIBES, badgeSpec, describes, inputSource, nseStampIso, referenceSource, undatedSource, percentileOf, rankOf, sourceOf, setSubInUrl, subFromSearch, withSub, type Badge, type SourceInfo, type SourceState } from './source'
 
 // ── formatting ──────────────────────────────────────────────────────────────────
 
@@ -705,9 +705,11 @@ export function SourceChip({ state, hint, info, style }: { state?: SourceState; 
     offline: { label: 'OFFLINE', tip: 'No quote source is responding' },
     stale: { label: 'STALE', tip: 'Older than expected' },
     gap: { label: 'GAP', tip: 'No capture for this session' },
+    input: { label: 'INPUT', tip: 'Computed from your inputs; no feed behind this panel' },
+    reference: { label: 'REFERENCE', tip: 'Fixed reference text; no data feed behind this panel' },
   }
   const st: SourceState = info?.state ?? state ?? 'offline'
-  const color = st === 'live' ? T.green : st === 'delayed' ? T.muted : st === 'offline' ? T.red : T.amber
+  const color = st === 'live' ? T.green : st === 'delayed' || st === 'input' || st === 'reference' ? T.muted : st === 'offline' ? T.red : T.amber
   const text = info ? sourceChipText(info) : { label: LEGACY[st].label, title: LEGACY[st].tip }
   const title = hint ? `${text.title} — ${hint}` : text.title
   return (
@@ -749,6 +751,16 @@ export function useSubView<K extends string>(valid: readonly K[], initial: K): [
   useEffect(() => () => {
     try { window.history.replaceState(window.history.state, '', withSub(window.location.search, null) || window.location.pathname) } catch { /* ignore */ }
   }, [])
+  // a GO alias (VOL / DATA) typed while this page is already open: adopt the hand-off without a remount
+  const validKey = valid.join('|')
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent<string | null>).detail
+      if (typeof d === 'string' && validKey.split('|').includes(d)) setSub(d as K)
+    }
+    window.addEventListener(SUB_VIEW_EVENT, on)
+    return () => window.removeEventListener(SUB_VIEW_EVENT, on)
+  }, [validKey])
   return [sub, setSub]
 }
 

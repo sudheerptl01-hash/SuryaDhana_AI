@@ -851,7 +851,7 @@ class DuckDBStore:
                 pass
 
     def _init_schema(self) -> None:
-        with self.reader() as con:
+        with self.writer() as con:          # DDL is a write: the exclusive side of the RW lock (check:B1-DATA)
             for statement in DDL.split(";"):
                 stmt = statement.strip()
                 if stmt:

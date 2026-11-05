@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from 'react'
 import { getResultsImpliedMoves, type ImpliedMoveRow } from '@/lib/api'
-import { DataTable, Panel, T, TickerLink, type Column, fmtDay } from '@/components/terminal'
+import { DataTable, Panel, T, TickerLink, type Column, fmtDay, sourceOf } from '@/components/terminal'
 
 const pm = (v: number | null | undefined, d = 1) => (v == null ? '—' : `±${v.toFixed(d)}%`)
 
@@ -38,7 +38,7 @@ export function ResultsImpliedMoves() {
         {r.method === 'term' ? 'options' : r.method === 'realised' ? 'realised vol' : '—'}</span> },
   ]
   return (
-    <Panel title={`Options into results · ${d.rows.length} F&O names`} accent={T.violet} pad={0} style={{ marginBottom: 12 }}
+    <Panel source={sourceOf(d.fo_date ?? null, { source: 'NSE F&O bhavcopy' })} badge="context" title={`Options into results · ${d.rows.length} F&O names`} accent={T.violet} pad={0} style={{ marginBottom: 12 }}
       subtitle={`next ${d.days} days · NSE F&O bhavcopy ${d.fo_date ?? ''} · this week's median priced ÷ usual ${med.toFixed(2)}× · amber = ≥ 1.5× that median (an unusually big reaction priced), cyan = ≤ ⅔ of it`}>
       <DataTable columns={cols} rows={d.rows} rowKey={r => `${r.symbol}-${r.results_date}`} dense initialSort={{ key: 'ratio', dir: 'desc' }} exportName="results_implied_moves" />
       <div style={{ fontSize: 10, color: T.dim, padding: '6px 10px', lineHeight: 1.5 }}>

@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Chip, PageHeader, T, TabSkeleton } from '@/components/terminal'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { Chip, PageHeader, T, TabSkeleton, Tabs, useSubView } from '@/components/terminal'
+import { DataHealthView } from '@/components/datahealth/DataHealthView'
 import clsx from 'clsx'
 import {
   getTelemetryStatus,
@@ -220,7 +221,7 @@ function LogTerminal({ lines, isDark }: { lines: string[]; isDark: boolean }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // Main component
 // ══════════════════════════════════════════════════════════════════════════════
-export function SystemTelemetry({ isDark = true }: { isDark?: boolean }) {
+function SystemTelemetryMain({ isDark = true, tabs }: { isDark?: boolean; tabs?: ReactNode }) {
   const [status, setStatus]           = useState<TelemetryStatus | null>(null)
   const [logLines, setLogLines]       = useState<string[]>([])
   const [autopilotOn, setAutopilotOn] = useState(true)
@@ -300,6 +301,7 @@ export function SystemTelemetry({ isDark = true }: { isDark?: boolean }) {
     return (
       <div className="space-y-5">
         <PageHeader code="SYS" title="System" subtitle="scheduler · jobs · latency · logs" />
+        {tabs}
         <TabSkeleton />
       </div>
     )
@@ -311,6 +313,7 @@ export function SystemTelemetry({ isDark = true }: { isDark?: boolean }) {
       <PageHeader code="SYS" title="System"
         status={<Chip color={online ? T.green : T.red} active>{online ? '● MASTER CONTROLLER ONLINE' : '○ CONTROLLER OFFLINE'}</Chip>}
         subtitle={status ? `scheduler · jobs · latency · logs · ${status.ist_now?.slice(11, 19)} IST` : 'scheduler · jobs · latency · logs'} />
+      {tabs}
       {/* ── Data-Service & Provider Status ─────────────────────────────────── */}
       <SystemStatusWidget isDark={isDark} />
 
@@ -510,4 +513,23 @@ function NextJobCountdown({ nextRunUnix, isDark }: { nextRunUnix: number | null;
       {label}
     </p>
   )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SYS › SYSTEM | DATA (terminal v2 PLAN 1.4; O-T14 default: a sub-view, GO alias DATA, header chip DATA n STALE)
+// ══════════════════════════════════════════════════════════════════════════════
+export function SystemTelemetry({ isDark = true }: { isDark?: boolean }) {
+  const [sub, setSub] = useSubView(['system', 'data'] as const, 'system')
+  const tabs = <Tabs items={[{ id: 'system', label: 'System · services · jobs · logs' }, { id: 'data', label: 'DATA · freshness of every dataset' }]}
+    active={sub} onChange={setSub} />
+  if (sub === 'data') {
+    return (
+      <div className="space-y-5">
+        <PageHeader code="SYS" title="System" subtitle="DATA · every catalogued dataset: stored as-of, expected-by, sessions behind, catch-up" />
+        {tabs}
+        <DataHealthView />
+      </div>
+    )
+  }
+  return <SystemTelemetryMain isDark={isDark} tabs={tabs} />
 }

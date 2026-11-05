@@ -28,7 +28,8 @@ def ds() -> ModuleType:
 
 def test_guard_is_the_outermost_and_only_middleware(ds: ModuleType) -> None:
     from shared.http_guard import HostOriginGuard
-    assert [m.cls for m in ds.app.user_middleware] == [HostOriginGuard]
+    from shared.metrics import ObservabilityMiddleware
+    assert [m.cls for m in ds.app.user_middleware] == [HostOriginGuard, ObservabilityMiddleware]
 
 
 def test_cross_site_post_cannot_start_a_job(ds: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:

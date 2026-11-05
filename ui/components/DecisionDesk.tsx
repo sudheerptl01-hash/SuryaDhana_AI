@@ -13,13 +13,14 @@ import { useSurveillance } from '@/lib/useSurveillance'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { INDUSTRY_MAX_W, deskGridColumns, deskWatchLayout, hiddenColumnsCue, hiddenHeaders } from '@/components/deskLayout'
 import { getDeskStatus, getDeskPreview, reenableDesk, getCrashFilter, type CrashFilter } from '@/lib/api'
+import { DeskAttribution } from '@/components/drivers/DeskAttribution'
 import { openTicker } from '@/lib/openTicker'
 import { BasketRisk } from '@/components/BasketRisk'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { daysUntil, useCorpEvents, useResultsAvoid } from '@/lib/useCorpEvents'
 import {
   Btn, CHART_BOX, Chip, DataTable, Empty, EventBadge, ErrorBox, Grid, KV, Label, Loading, Notice, PageHeader, Panel, SourceChip, Stat, T,
-  fmtFixed, fmtIdx, fmtInr, fmtInrPx, fmtSignedPct, tone, useChartSize, type Column, AvoidFlag } from '@/components/terminal'
+  fmtFixed, fmtIdx, fmtInr, fmtInrPx, fmtSignedPct, sourceOf, tone, useChartSize, type Column, AvoidFlag, referenceSource } from '@/components/terminal'
 import { useLiveTicks } from '@/lib/liveTicks'
 
 interface Order {
@@ -269,7 +270,7 @@ export function DecisionDesk(_: { isDark?: boolean }) {
             <Stat label="Positions" value={status?.positions.length ?? 0} sub="max 20" />
           </Grid>
 
-          <Panel title={preview ? 'Preview · if the month ended today' : 'This month’s brief'}
+          <Panel source={sourceOf(brief?.summary.signal_date ?? null, { source: 'Desk', maxAgeDays: 35 })} title={preview ? 'Preview · if the month ended today' : 'This month’s brief'}
             subtitle={brief ? `signal ${brief.summary.signal_date} · ${brief.summary.rules}${latestPlan && !preview ? ` · ${latestPlan.status}` : ''}` : undefined}
             right={brief ? <Label>{brief.summary.trades} trades · charges {fmtInr(brief.summary.est_costs)}</Label> : undefined}>
             {!brief ? (
@@ -300,7 +301,7 @@ export function DecisionDesk(_: { isDark?: boolean }) {
 
           {/* CT-03: side by side only when the whole watchlist fits next to the side panels; otherwise stacked */}
           <div ref={row.ref} data-desk-layout={layout} style={{ display: 'grid', gridTemplateColumns: deskGridColumns(layout), gap: 10 }}>
-            <Panel title="Momentum watchlist" subtitle="top 20 within the 300 most liquid NSE stocks" pad={0}
+            <Panel source={sourceOf(brief?.summary.signal_date ?? null, { source: 'Desk', maxAgeDays: 35 })} title="Momentum watchlist" subtitle="top 20 within the 300 most liquid NSE stocks" pad={0}
               right={watchCue.cue ? <span data-testid="watch-hidden-cue" style={{ fontSize: 10, color: T.amber, fontFamily: T.mono }}>{watchCue.cue}</span> : undefined}>
               {brief?.summary.watchlist?.length
                 ? <div ref={watchCue.ref}><DataTable columns={watchCols} rows={brief.summary.watchlist} rowKey={w => w.symbol} dense maxHeight={420} onRowClick={w => openTicker(w.symbol)} /></div>
@@ -308,10 +309,12 @@ export function DecisionDesk(_: { isDark?: boolean }) {
             </Panel>
             <div style={{ display: 'grid', gap: 10, alignContent: 'start',
                           gridTemplateColumns: layout === 'stacked' ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)' }}>
-              <Panel title="Book vs NIFTY" subtitle="green = book · dashed = NIFTY">
+              {/* the side column is narrow: the legend sits in the body so the header keeps one line with its chip */}
+              <Panel title="Book vs NIFTY · NAV" source={sourceOf(status?.latest?.date ?? null, { source: 'paper ledger' })}>
+                <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>green = book · dashed = NIFTY · arithmetic</div>
                 <BookChart nav={status?.nav ?? []} />
               </Panel>
-              <Panel title="Rules" subtitle="owner-approved 2026-09-27">
+              <Panel source={referenceSource('owner-approved Desk rules (shared/momentum.py)')} title="Rules" subtitle="owner-approved 2026-09-27">
                 <KV items={RULES} />
               </Panel>
             </div>
@@ -322,15 +325,19 @@ export function DecisionDesk(_: { isDark?: boolean }) {
               capPct={Math.round(Number(status?.meta.config?.sector_cap ?? 0.4) * 100)} />
           ) : null}
 
+          {/* terminal v2 PLAN 1.2: real lots × stored closes beside NIFTY's drivers; honest in cash ("liquid fund since …") */}
+          <DeskAttribution />
+
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10 }}>
             <Panel title="Holdings" pad={0}
-              right={status?.positions.length ? <SourceChip state={bookChip}
-                hint={bookChip === 'delayed' ? `desk marks at last close${status?.meta.last_mark ? ` (${status.meta.last_mark.slice(0, 10)})` : ''}` : undefined} /> : undefined}>
+              source={{ state: status?.positions.length ? bookChip : 'delayed', source: bookChip === 'delayed' ? 'Desk marks' : 'ICICI',
+                        asOf: status?.meta.last_mark ?? status?.latest?.date ?? null,
+                        hint: bookChip === 'delayed' ? `desk marks at last close${status?.meta.last_mark ? ` (${status.meta.last_mark.slice(0, 10)})` : ''}` : null }}>
               {status?.positions.length
                 ? <DataTable columns={posCols} rows={status.positions} rowKey={p => p.symbol} dense onRowClick={p => openTicker(p.symbol)} />
                 : <Empty title={`All in the liquid fund (${fmtInr(status?.meta.cash)})`} icon="◇" />}
             </Panel>
-            <Panel title="Activity" pad={0}>
+            <Panel source={sourceOf(status?.events?.[0]?.ts ?? null, { source: 'Desk ledger', maxAgeDays: null })} title="Activity" pad={0}>
               <div style={{ maxHeight: 260, overflow: 'auto' }}>
                 {(status?.events ?? []).map((e, i) => (
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: '120px 90px 1fr', gap: 8, padding: '6px 12px',

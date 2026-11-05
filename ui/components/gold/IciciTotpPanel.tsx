@@ -24,7 +24,7 @@
  */
 import axios from 'axios'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Btn, Chip, Dot, Input, Label, Meter, Notice, Panel, T } from '@/components/terminal'
+import { Btn, Chip, Dot, Input, Label, Meter, Notice, Panel, T, undatedSource } from '@/components/terminal'
 import { apiError } from '@/lib/errors'
 import { openExternal } from '@/lib/platform'
 import {
@@ -197,7 +197,7 @@ export function IciciTotpPanel({ connected, onSessionLive, onStatus }: {
   const step = (n: string, text: string) => <div style={{ marginBottom: 6 }}><Label color={T.amber}>{n} · {text}</Label></div>
 
   return (
-    <Panel title="Auto-login (TOTP)" accent={T.cyan} subtitle="the 08:00 job logs in with the authenticator's six digits — no SMS OTP on Telegram"
+    <Panel source={undatedSource('Keychain status (the secret is never echoed)')} title="Auto-login (TOTP)" accent={T.cyan} subtitle="the 08:00 job logs in with the authenticator's six digits — no SMS OTP on Telegram"
       right={<Btn size="sm" onClick={() => loadStatus()} title="Re-read the status">↻</Btn>}>
       <div data-totp-panel data-connected={connected ? '1' : '0'} style={{ display: 'grid', gap: 12 }}>
         {/* status strip */}

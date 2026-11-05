@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getAnnouncements, getOpenPositions, type Filing, heldSymbols } from '@/lib/api'
 import { useWatchlist } from '@/context/AppContext'
 import { usePins } from '@/lib/pins'
-import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, TickerLink, fiscalQuarter, fmtPct } from '@/components/terminal'
+import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, TickerLink, fiscalQuarter, fmtPct, sourceOf } from '@/components/terminal'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 
 const CATS: [string, string, string][] = [
@@ -79,7 +79,7 @@ export function CompanyFilings() {
             {CATS.map(([k, l, c]) => (data.counts[k] ?? 0) > 0 && (
               <Chip key={k} color={c} active={cats.has(k)} onClick={() => toggle(k)}>{l} {data.counts[k]}</Chip>))}
           </div>
-          <Panel title={`${items.length} filings`} accent={T.amber} pad={0}
+          <Panel source={sourceOf(data?.date ?? null, { source: 'NSE announcements', live: !!data?.market_open })} badge="context" title={`${items.length} filings`} accent={T.amber} pad={0}
             subtitle="click a ticker for its profile · ↗ opens the filing on NSE · categories: NSE's own subject first, then keywords in the summary (an earnings-call notice is not results)">
             <div style={{ maxHeight: 760, overflowY: 'auto' }}>
               {items.map(f => (

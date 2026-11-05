@@ -32,6 +32,12 @@ any of these fails its gate.
 3. **Point-in-time.** Every stored observation carries the period it describes (`date` / `report_date`), `release_at` where
    a publisher time exists, `first_seen_at` (our fetch time), and `model_version` / `source` where a model or a choice of
    publisher is involved; revisions are new rows, never overwrites. `r` is recorded on every IV row.
+   *Amendment (PM, 5 Nov 2026, after the wave-1 data re-check):* **derived** tables (`iv_surface_daily`,
+   `iv_expiry_daily`, `iv_summary_daily`, `iv_event_log`, the `index_*` drivers tables) keep the latest computation per
+   natural key (`computed_at` / `first_seen_at` / `model_version` updated in place); a vintage is reproducible because every
+   **source** file is archived on disk and versioned in `ingest_log` (`url`, `fetched_at`, publisher `Last-Modified`,
+   `sha256`). Source revisions (the 22:05 bhavcopy re-publication) keep both cached files, stamp `release_at` with the
+   publisher's `Last-Modified`, and the catalog row says so. Studies that need a past vintage recompute it from the files.
 4. **Same number once per page.** The repetition test fails the build otherwise; the tape and the BRF/WEI one-liners are
    the only off-page echoes.
 5. **Every number: value · source · as-of · lag chip.** `SourceChip` (LIVE Breeze / LIVE NSE / DELAYED age / STALE / OFFLINE
@@ -137,10 +143,10 @@ O-T5). Prototype agreement: corr 0.998 vs the product's ATM IV, 0.983 vs India V
 |---|---|---|---|
 | NSE UDiFF F&O bhavcopy (cached) | `data/nse_archive/fo/<year>/BhavCopy_NSE_FO_0_0_0_YYYYMMDD_F_0000.csv.zip` (from `https://nsearchives.nseindia.com/content/fo/...`; 578 files, 655 MB) | daily, Last-Modified **20:10** (4 Nov); already fetched by the 20:30 job | the EOD IV source |
 | NSE legacy F&O bhavcopy (cached) | `data/nse_archive/fo/2019..2024/foDDMONYYYYbhav.csv.zip` (from `https://nsearchives.nseindia.com/content/historical/DERIVATIVES/YYYY/MON/`; 1,182 files, 712 MB; 16 cols, no underlying price) | static; parsed by `nse_positions.parse_fo_bhavcopy` | backfill 2019-10 → 2024-07 (forward from parity, no spot needed) |
-| NSE daily index file | `https://nsearchives.nseindia.com/content/indices/ind_close_all_DDMMYYYY.csv` | daily ≈ 17:50; one GET already made by the 19:15 job | NIFTY/BANKNIFTY/FINNIFTY/MIDCPNIFTY OHLC (Parkinson/Yang-Zhang), **India VIX OHLC** → `vix_daily`, every index close → `market_index_daily` (source `nse_daily_file`) |
+| NSE daily index file | `https://nsearchives.nseindia.com/content/indices/ind_close_all_DDMMYYYY.csv` | daily; read by the 19:15 job; Last-Modified 23:20 IST (re-written late at night; "17:50" was the raw GMT minute) | NIFTY/BANKNIFTY/FINNIFTY/MIDCPNIFTY OHLC (Parkinson/Yang-Zhang), **India VIX OHLC** → `vix_daily`, every index close → `market_index_daily` (source `nse_daily_file`) |
 | NSE India VIX history API | `https://www.nseindia.com/api/historicalOR/vixhistory?from=DD-MM-YYYY&to=DD-MM-YYYY` (cookie-primed, browser UA, ≤ 1 year per call) — R-IV got 200; the `api/historical/vixhistory` path R-WORLD tried returned 503 | one-off backfill only, paced 2 s | `vix_daily` 2014 → 2026 OHLC |
-| NSE F&O daily volatility | `https://nsearchives.nseindia.com/archives/nsccl/volt/FOVOLT_DDMMYYYY.csv` | daily, by 17:05 (measured 17:01 / 11:28 on two days); fetch in the 20:30 pass | the exchange's EWMA vol per underlying (`fovolt_ann`), a third RV line |
-| NSE contract delta factors | `https://nsearchives.nseindia.com/content/nsccl/Contract_Delta_DDMMYYYY.csv` (6.9 MB) | daily, between ≈ 13:00 and 19:20 (two measurements); fetch in the 20:30 pass | NSE's own delta per contract as a cross-check (log |Δ_ours − Δ_nse| > 0.05) and the model-free delta column |
+| NSE F&O daily volatility | `https://nsearchives.nseindia.com/archives/nsccl/volt/FOVOLT_DDMMYYYY.csv` | daily, ≈ 17:00 (measured 17:01 on 4 Nov, 16:58 on 3 Nov; the earlier "11:28" was the raw GMT Last-Modified); fetch in the 20:30 pass | the exchange's EWMA vol per underlying (`fovolt_ann`), a third RV line |
+| NSE contract delta factors | `https://nsearchives.nseindia.com/content/nsccl/Contract_Delta_DDMMYYYY.csv` (6.9 MB) | daily, evening: 18:28 (3 Nov) and 19:18 (4 Nov) IST — the earlier "≈ 13:00" was the raw GMT minute; fetch in the 20:30 pass | NSE's own delta per contract as a cross-check (log |Δ_ours − Δ_nse| > 0.05) and the model-free delta column |
 | NSE combined delta-equivalent OI | `https://nsearchives.nseindia.com/archives/nsccl/mwpl/combineoi_deleq_DDMMYYYY.csv` and `.../mwpl/combineoi_DDMMYYYY.zip` | daily 19:18 / 19:23; 20:30 pass | MWPL crowding context columns (OMON/DERV) |
 | NSE F&O ban list / lot sizes | `https://nsearchives.nseindia.com/archives/fo/sec_ban/fo_secban_DDMMYYYY.csv` (named for the next session, 19:24), `.../content/fo/fo_mktlots.csv` | daily / on change | ban chip (have), expiry calendar |
 | ICICI Breeze option chain | `breeze.get_option_chain_quotes(stock_code, exchange_code="NFO", product_type="options", expiry_date="YYYY-MM-DDT06:00:00.000Z", right="call"\|"put")` → 60 strikes/side, 26 fields: ltp, ltt, best bid/offer price+qty, OHLC, prev close, OI, chnge_oi, volumes, spot — **no IV, no Greeks** | snapshot 0.35–0.44 s; 100/min, 5,000/day shared; own-account use, no redistribution | intraday IV from bid/ask mid (pilot: every 15 min, NIFTY + BANKNIFTY × 2 expiries × 2 sides = 200 calls/day + watchlist ≤ 500 = ≈ 700/day) |
@@ -234,7 +240,7 @@ pts/day over 229 sessions (`R-DRIVERS/evidence/drivers_results.json`).
 
 | Source | Exact access | Cadence · publication (IST) · pacing | Use |
 |---|---|---|---|
-| NIFTY 50 daily top-10 weights | `https://nsearchives.nseindia.com/content/indices/top10nifty50_DDMMYY.csv` (SYMBOL, SECURITY, WEIGHTAGE(%); 10 rows, Σ 53.13 % on 4 Nov) | daily after close (present by 22:18; exact minute unverified) — read in the 19:25 job with a 20:35 retry; 1 GET | calibration of the rebuilt weights; display-only with attribution (O-T11) |
+| NIFTY 50 daily top-10 weights | `https://nsearchives.nseindia.com/content/indices/top10nifty50_DDMMYY.csv` (SYMBOL, SECURITY, WEIGHTAGE(%); 10 rows, Σ 53.13 % on 4 Nov) | daily, 16:30 IST (measured 4 Nov) — read in the 19:25 job with a 20:35 retry; 1 GET | calibration of the rebuilt weights; display-only with attribution (O-T11) |
 | NIFTY 50 / NIFTY BANK constituents | `https://niftyindices.com/IndexConstituent/ind_nifty50list.csv` (50 rows), `.../ind_niftybanklist.csv` (14 rows) — Company Name, Industry, Symbol, Series, ISIN | on reconstitution (semi-annual, last trading day of Mar/Sep; ad hoc); archived daily (2 conditional GETs) to build the PIT history | membership + NSE industry |
 | NSE daily index file | `ind_close_all_DDMMYYYY.csv` (as in 1.1) | 19:15 job | the index level `L` for every index incl. the 1 Feb 2026 special session |
 | Stored inputs | `nse_bhavcopy` (2010→, unadjusted `prev_close`), `splits`, `nse_shareholding` (`promoter_pct`, `broadcast_ts`), `data/nse_archive/financials/<SYM>.json` (`shares`, `filed_at`) | daily / quarterly | PIT weights and returns |

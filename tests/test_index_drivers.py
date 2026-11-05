@@ -158,9 +158,13 @@ def test_calibration_equals_the_official_top10_to_a_hundredth(store, tmp_path):
     assert len(nxt) == 4 and abs(nxt["weight_pct"].sum() - 100) < 0.01
     fit = store.read("SELECT weight_method FROM index_contribution_fit WHERE date = ?", [day]).iloc[0]["weight_method"]
     assert fit == "rebuilt_calibrated"
-    # negative control: without a file the method is plain rebuilt
-    plain = store.read("SELECT method FROM index_contribution_fit WHERE date = ?", [date(2026, 3, 27)]) if False else None
-    assert plain is None
+    # negative control (point-in-time): a session BEFORE the first top-10 file is plain rebuilt — the 30 Mar calibration is
+    # never carried backwards into 27 Mar, even when 27 Mar is computed after it
+    jobs.compute_index(store, "NIFTY 50", [date(2026, 3, 27)], financials_root=tmp_path / "financials", now=NOW)
+    before = store.read("SELECT weight_method FROM index_contribution_fit WHERE date = ?", [date(2026, 3, 27)])
+    assert len(before) == 1 and before.iloc[0]["weight_method"] == "rebuilt"
+    assert store.read("SELECT COUNT(*) AS n FROM index_weights_daily WHERE date = ? AND method = 'rebuilt_calibrated'",
+                      [date(2026, 3, 27)]).iloc[0]["n"] == 0
 
 
 def test_hysteresis_turns_many_raw_changes_into_few():

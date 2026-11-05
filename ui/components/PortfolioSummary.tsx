@@ -11,8 +11,7 @@ import { IciciTotpPanel } from '@/components/gold/IciciTotpPanel'
 import type { TotpStatus } from '@/components/gold/totpModel'
 import {
   Btn, Chip, DataTable, Empty, ErrorBox, Grid, Input, KV, Label, Loading, Meter, Notice, PageHeader, Panel, Stat, T,
-  fmtInr, fmtPct, fmtSignedPct, tone, type Column,
-} from '@/components/terminal'
+  fmtInr, fmtPct, fmtSignedPct, tone, type Column, sourceOf, inputSource, referenceSource } from '@/components/terminal'
 import {
   getICICIConnectionStatus,
   getPositionSummary,
@@ -196,7 +195,7 @@ export function PortfolioSummary() {
       </>} />
   )
   const rules = (
-    <Panel title="Rules that will govern live trading" subtitle="Decision Desk · owner-approved monthly rule set">
+    <Panel source={referenceSource('owner-approved Desk rules')} title="Rules that will govern live trading" subtitle="Decision Desk · owner-approved monthly rule set">
       <KV cols={2} items={[
         ['Positions', 'up to 20 · equal weight'], ['Per stock', '≤ 15% of capital'],
         ['Per industry', '≤ 40% of positions'], ['Equity share', '66% · rest in liquid fund'],
@@ -225,7 +224,7 @@ export function PortfolioSummary() {
         {header}
         <div style={{ display: 'grid', gap: 10 }}>
           {loadError && <ErrorBox error={loadError} onRetry={refresh} />}
-          <Panel title="Connect ICICI Breeze" subtitle="checks the current connection first, then asks only for what is missing"
+          <Panel source={inputSource('your ICICI credentials (never echoed)')} title="Connect ICICI Breeze" subtitle="checks the current connection first, then asks only for what is missing"
             right={<Btn size="sm" onClick={loadConnectionStatus}>Recheck</Btn>}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
               {steps.map(([label, ok]) => <Chip key={label} color={ok ? T.green : T.amber} active={!!ok}>{ok ? '✓' : '•'} {label}</Chip>)}
@@ -281,7 +280,7 @@ export function PortfolioSummary() {
           </Notice>
           <IciciTotpPanel connected={false} onSessionLive={refresh} onStatus={setTotp} />
           {backendEntries.length > 0 && (
-            <Panel title="Backend sync status">
+            <Panel source={sourceOf(lastRefresh ? lastRefresh.toISOString() : null, { source: 'ICICI sync', maxAgeDays: 1 })} title="Backend sync status">
               <KV items={backendEntries.map(([name, info]) => {
                 // the execution service is not part of the local paper stack (the Desk runs in data-service): not an alarm
                 const optional = name === 'execution_service' && !info.ok
@@ -333,7 +332,7 @@ export function PortfolioSummary() {
                   <span style={{ color: tone(dayPnl) }}> · today {dayPnl >= 0 ? '+' : '−'}{fmtInr(Math.abs(dayPnl))}</span>}</span>}
                 accent={isProfit ? T.green : T.red} />
         </Grid>
-        <Panel title="Capital allocation">
+        <Panel source={sourceOf(summary?.as_of ?? null, { source: 'ICICI funds', maxAgeDays: 1 })} title="Capital allocation">
           <div style={{ display: 'grid', gap: 10 }}>
             <div><div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: T.muted, marginBottom: 4 }}>
               <span>INVESTED {investedPct.toFixed(1)}%</span><span>{fmtInr(summary.invested_value_inr)}</span></div>
@@ -343,7 +342,7 @@ export function PortfolioSummary() {
               <Meter value={(100 - investedPct) / 100} color={T.green} height={6} /></div>
           </div>
         </Panel>
-        <Panel title={`Open positions (${positions.length})`} subtitle="Demat holdings from ICICI Breeze" pad={0}>
+        <Panel source={sourceOf(summary?.as_of ?? null, { source: 'ICICI demat', maxAgeDays: 1 })} title={`Open positions (${positions.length})`} subtitle="Demat holdings from ICICI Breeze" pad={0}>
           <DataTable columns={posCols} rows={positions} rowKey={r => r.symbol} onRowClick={r => openTicker(r.symbol)}
             empty={<Empty title="No active holdings in your Demat account" icon="◇" />} />
         </Panel>

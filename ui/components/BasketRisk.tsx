@@ -9,7 +9,7 @@ import { apiError } from '@/lib/errors'
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getBasketRisk, type BasketRisk as Data, type BasketStock } from '@/lib/api'
-import { DataTable, Panel, T, TickerLink, fmtPct, type Column } from '@/components/terminal'
+import { DataTable, Panel, T, TickerLink, fmtPct, type Column, sourceOf } from '@/components/terminal'
 
 const f0 = (v: number | null | undefined, d = 0) => (v == null ? '—' : v.toFixed(d))
 
@@ -57,7 +57,7 @@ export function BasketRisk({ symbols, industries, capPct = 40, title = 'Watchlis
   ]
 
   return (
-    <Panel title={title} accent={T.violet} pad={0}
+    <Panel source={sourceOf(data?.window.end ?? null, { source: 'NSE closes (DuckDB)', hint: error })} badge="arithmetic" title={title} accent={T.violet} pad={0}
       subtitle={data?.window.start ? `${data.basket?.weighting === 'value' ? 'weighted by holding value' : 'equal weight'} · ${data.window.start} → ${data.window.end} · split-adjusted · describes the basket, not a forecast` : 'trailing year'}>
       {error && <div style={{ padding: 10, fontSize: 11, color: T.red }}>{error}</div>}
       {!data && !error && <div style={{ padding: 10, fontSize: 11, color: T.dim }}>Computing…</div>}

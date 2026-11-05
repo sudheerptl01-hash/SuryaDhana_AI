@@ -458,12 +458,15 @@ async def iv_history(symbol: str, response: Response, days: int = Query(750, ge=
     (one source: vix_daily), results / expiry markers. `series` names the line the chart draws first."""
     sym = _check_symbol(symbol)
     reads = Reads()
-    summary = _rows(await reads.get("/db/iv/summary", symbol=sym, days=days))
+    # the rank / percentile always look back RANK_WINDOW sessions, whatever `days` the chart asks for (days=20 must not
+    # yield a 20-observation "rank 252"): read max(days, 252) rows, chart the last `days`
+    summary = _rows(await reads.get("/db/iv/summary", symbol=sym, days=max(days, RANK_WINDOW)))
     vix_rows = _rows(await reads.get("/db/iv/vix", days=days)) if sym in ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY") else []
     events = _rows(await reads.get("/db/iv/events", symbol=sym, n=40))
-    rows = summary_rows(summary, days)
+    rank_rows = summary_rows(summary, max(days, RANK_WINDOW))
+    rows = rank_rows[-days:]
     meta = summary[0] if summary else {}
-    iv_vals = [_f(r.get("iv30_cm")) for r in rows]
+    iv_obs = [v for v in (_f(r.get("iv30_cm")) for r in rank_rows) if v is not None]     # iv_rank / iv_percentile take the last 252
     reads.headers(response)
     return {
         "symbol": sym, "as_of": _as_of(rows), "since": rows[0]["date"] if rows else None, "sessions": len(rows),
@@ -473,11 +476,12 @@ async def iv_history(symbol: str, response: Response, days: int = Query(750, ge=
         "rows": rows,
         "vix": [{"date": _d(v.get("date")), "close": _f(v.get("close"))} for v in vix_rows if _d(v.get("date"))],
         "events": event_markers(rows, events),
-        "rank": {"iv_rank_252": iv_rank([v for v in iv_vals if v is not None]),
-                 "iv_pctile_252": iv_percentile([v for v in iv_vals if v is not None]),
+        # window_sessions = the observations the recomputed rank / percentile actually used (≤ 252; fewer only while the
+        # store holds less history), never the constant beside a shorter window (check:B3-API)
+        "rank": {"iv_rank_252": iv_rank(iv_obs), "iv_pctile_252": iv_percentile(iv_obs),
                  "stored": {"iv_rank_252": rows[-1].get("iv_rank_252") if rows else None,
                             "iv_pctile_252": rows[-1].get("iv_pctile_252") if rows else None},
-                 "window_sessions": RANK_WINDOW, "on": "iv30_cm"},
+                 "window_sessions": min(len(iv_obs), RANK_WINDOW), "window_target": RANK_WINDOW, "on": "iv30_cm"},
         "definitions": DEFINITIONS,
         "badges": {"iv": BADGE_ARITH, "rank": BADGE_ARITH, "pctile": BADGE_ARITH, "rv": BADGE_ARITH,
                    "spread": BADGE_CONTEXT, "skew": BADGE_CONTEXT, "term": BADGE_CONTEXT, "vix": BADGE_ARITH},

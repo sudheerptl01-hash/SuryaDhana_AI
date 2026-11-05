@@ -22,7 +22,7 @@ import { apiError } from '@/lib/errors'
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Chip, PageHeader, T, fmtPct } from '@/components/terminal'
+import { Chip, PageHeader, SourceChip, T, fmtPct, sourceOf, type SourceInfo } from '@/components/terminal'
 import { ChartActions, futuresInstrument } from '@/components/terminal/ChartActions'
 import { goToPage } from '@/lib/navigate'
 import { setGoldSubInUrl } from '@/lib/gold/prefs'
@@ -59,10 +59,12 @@ const fmtTime = (epoch: number | null | undefined) =>
 
 // ── Panel shell (corner brackets) ───────────────────────────────────────────────
 function Panel({
-  title, hint, accent = MUTED, children, className, style,
+  title, hint, accent = MUTED, children, className, style, source,
 }: {
   title?: string; hint?: string; accent?: string
   children: React.ReactNode; className?: string; style?: React.CSSProperties
+  /** PLAN §0.5 / 1.4: the source chip (staleness never only in prose) */
+  source: SourceInfo
 }) {
   return (
     <div
@@ -77,7 +79,10 @@ function Panel({
         <div className="flex items-baseline justify-between px-4 pt-3">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em]"
               style={{ fontFamily: "'Chakra Petch', sans-serif", color: accent }}>{title}</h3>
-          {hint && <span className="text-[9px] tracking-wider" style={{ color: MUTED }}>{hint}</span>}
+          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+            {hint && <span className="text-[9px] tracking-wider" style={{ color: MUTED }}>{hint}</span>}
+            <SourceChip info={source} />
+          </span>
         </div>
       )}
       {children}
@@ -150,7 +155,9 @@ function FundamentalsLeg({ title, accent, leg, envVar }: {
   title: string; accent: string; leg: CommodityFundamentalsLeg; envVar?: string
 }) {
   return (
-    <Panel title={title} accent={accent} hint={leg.available ? 'live' : envVar ? 'key required' : 'unavailable'}>
+    <Panel title={title} accent={accent} hint={leg.available ? undefined : envVar ? 'key required' : 'unavailable'}
+      source={leg.available ? sourceOf(leg.series.map(x => x.latest?.date ?? '').filter(Boolean).sort().pop() ?? null, { source: title.split(' ')[0], maxAgeDays: 45 })
+        : sourceOf(null, { source: title.split(' ')[0], hint: leg.reason ?? (envVar ? `${envVar} not set` : 'did not answer') })}>
       <div className="p-4">
         {!leg.available ? (
           <div className="rounded-md border border-dashed px-3 py-4 text-[11px] leading-relaxed"
@@ -248,12 +255,20 @@ export function CommodityTab(_props: { isDark?: boolean }) {
     )
   }
 
+  const staleN = (data?.futures ?? []).filter(q => q.stale).length
+  const boardSrc: SourceInfo = sourceOf(data?.as_of ? new Date(data.as_of * 1000).toISOString() : null,
+    { source: 'Yahoo (USD futures)', maxAgeDays: 4, degraded: staleN > 0, hint: staleN ? `${staleN} of ${data?.futures.length ?? 0} quotes stale` : null })
+
   return (
     <div>
       {/* Header */}
       <PageHeader code="CMDT" title="Commodities"
         subtitle="global futures (USD) · EIA energy fundamentals · FRED context · gold lives on GOLD"
-        right={<span style={{ fontSize: 10, color: MUTED }}>updated {fmtTime(data?.as_of)}</span>} />
+        right={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 10, color: MUTED }}>updated {fmtTime(data?.as_of)}</span>
+          {/* PLAN 1.4: the board's own chip — STALE when any quote is stale (was a muted colour only) */}
+          <SourceChip info={boardSrc} />
+        </span>} />
 
       {err && (
         <div className="mb-3 rounded-md px-3 py-2 text-[11px]" style={{ background: '#1a0b0d', border: `1px solid ${CRIMSON}`, color: CRIMSON }}>
@@ -295,7 +310,7 @@ export function CommodityTab(_props: { isDark?: boolean }) {
                 </span>
                 <Sparkline data={q.spark} color={accent} w={56} h={18} />
               </div>
-              <div className="mt-0.5 text-[8px]" style={{ color: MUTED }}>{q.unit}</div>
+              <div className="mt-0.5 text-[8px]" style={{ color: MUTED }}>{q.unit}{q.stale && <span style={{ color: AMBER, marginLeft: 6, letterSpacing: 1 }} data-cmdt-stale title={`last quote ${fmtTime(q.as_of)}`}>STALE</span>}</div>
             </button>
           )
         })}
@@ -306,6 +321,7 @@ export function CommodityTab(_props: { isDark?: boolean }) {
         title={selectedQuote ? `${selectedQuote.label} · 6M` : 'Detail'}
         accent={CYAN}
         hint={selectedQuote ? `${selectedQuote.unit} · ${selectedQuote.symbol}` : ''}
+        source={sourceOf(selectedQuote?.as_of ? new Date(selectedQuote.as_of * 1000).toISOString() : null, { source: 'Yahoo (USD futures)', maxAgeDays: 4, hint: selectedQuote?.stale ? 'quote marked stale by the feed' : null })}
         className="mb-4"
       >
         <div className="px-3 pb-3 pt-1">

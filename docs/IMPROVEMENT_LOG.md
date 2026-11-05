@@ -1,8 +1,67 @@
 # Improvement log: terminal polish sprint (11–15 Oct 2026)
 
-Last updated Thu 5 Nov 2026 02:57 IST (GOLD program deployed on the night of 4 Nov; wave 1c, the critics' fix round, in progress; the Terminal v2 research round is
-written up in `reports/terminal_v2/`). The 11–15 Oct sprint entries further down were run and checked
-against live data at the time; today the terminal has 43 pages and `scripts/tests` numbers 355.
+Last updated Thu 5 Nov 2026 08:15 IST (Terminal v2 wave 1 built in the tree and NOT deployed, entry below; GOLD program
+deployed on the night of 4 Nov; the Terminal v2 research round is written up in `reports/terminal_v2/`). The 11–15 Oct
+sprint entries further down were run and checked against live data at the time; today the terminal has 43 pages and
+`scripts/tests` collects 414 tests.
+
+**5 Nov 2026, morning: Terminal v2 wave 1 is in the tree, NOT deployed.** The live stack still runs the pre-v2 code:
+UI release `20261105-041017` (GOLD), and data-service, ui-api and master-controller have not been restarted on the v2 code.
+So no v2 route answers yet, the new tables do not exist in `market.duckdb`, no IV / drivers / VIX backfill has run, the v2
+jobs below are not scheduled on the running controller, and `/metrics` is still 404 live. Plan: `reports/terminal_v2/PLAN.md`
+(the 5 Nov amendment to §0.3: derived tables keep the latest computation per key, vintages are recomputed from the archived
+source files). The repository is now on a PUBLIC GitHub remote; the PM commits and pushes after a secret scan. What the tree
+holds, by builder (the first half's results and adversarial checks: `reports/terminal_v2/build/`):
+- **Architecture (B7; check ACCEPT-WITH-NOTES).** `DuckDBStore` readers-writer lock (`read()` / `reader()` on per-call cursors,
+  shared; `write()` / `writer()` exclusive). The routes' `store._conn` bypasses are retired through the applied patches. The
+  R-ARCH §2.3 harness, now a test, measured 10 concurrent history reads at 15 ms wall against 42 ms through the old exclusive
+  lock. `shared/metrics.py` (`GET /metrics`, `X-Request-ID`, JSON access log, anyio thread limit 64) is installed on all three
+  services. `shared/http_client.py` (allowlisted, paced client; one `AsyncClient` per process with a breaker and stale-serve)
+  serves ui-api's nifty-live / gift-nifty / indices-live proxies. Yahoo is gone from `/db/market-monitor`. The secret
+  settings are `SecretStr`. Redis is bound to 127.0.0.1 with an optional password. `db_backup.py` has `--offsite`. The
+  snapshot policy is one evening snapshot plus an orphan prune.
+- **Data (B1; ACCEPT-WITH-NOTES).** `fo_iv/`: `iv_eod` reproduces R-IV's prototype on the 23 cached Oct-2026 NIFTY files within
+  0.008 vol-pt and takes 1.5 s for all 224 underlyings of a day's file. `index_drivers/`: the replay on a clone gives a NIFTY 50
+  60-session MAE of 5.7 pts and R² 0.998, with calibration equal to the top-10 file to 0.01 pp; NIFTY BANK's MAE of 102 pts shows
+  as `fit.degraded`. `data_health/`: `dataset_catalog`, `ingest_log`, `data_gaps`. `nse_positions.py` gains the evening-file
+  ingests and the bhavcopy `If-Modified-Since` revision pass. Tables and routes are listed in CLAUDE.md.
+- **API (B3; check REJECT, fixes in progress).** `/api/derivatives/iv/*` and `/vol-screen`, `/api/market/index-drivers*`,
+  `/api/desk/attribution`, and `POST /api/options/margin` (Breeze → NSE SPAN file → the 12 % heuristic with its measured 4.8×
+  error). Also `/api/data/health`, the `shared/breeze_budget.py` ledger, `API_CONTRACT.md` with a sync test, and RSCH rows (IV
+  history DESCRIPTIVE, Index drivers DESCRIPTIVE, SPAN margin ARITHMETIC).
+- **Controller (B2; check REJECT, fixes in progress).** 18:30 equity-only; 19:25 drivers; the 20:30 evening pass with `iv_eod`
+  last; 22:45 `nse_evening_pass`; 08:35 `morning_sweep`; the 15-minute `iv_intraday` pilot; Sat 03:00 `iv_weekly`; the hourly
+  `data_health_check`; the start-up catch-up extended with gap rows; the watchdog's optional second heartbeat.
+- **UI (B4), gates (B6), studies (B8): in progress as this is written.** IV and drivers components exist under
+  `ui/components/vol/` and `ui/components/drivers/` and are being wired into OMON, DERV, EVTS, the stock Profile and MEMB.
+  They are in no release.
+- **Docs and LEARN (B5).** `docs/NSE_DATA_DICTIONARY.md` has verified rows for the top-10 weights file, the constituent lists,
+  FOVOLT, Contract_Delta, the combined / delta-equivalent OI, the SPAN file, `historicalOR/vixhistory`, the legacy F&O format,
+  the dead `equity-stockIndices` and the ban list. **Finding: NSE's `Last-Modified` header is GMT.** Two probe notes had
+  quoted the raw minute as IST; seven range GETs on 5 Nov settled the corrected times:
+  - Contract_Delta and the delta-equivalent OI are evening files at 19:18 IST (not midday).
+  - FOVOLT lands ≈ 17:00; participant volumes and FII stats at 20:10.
+  - The NIFTY top-10 weights file lands at 16:30, so the 19:25 drivers job finds it.
+  - `ind_close_all` is re-written at 23:20 IST, after the 22:45 re-check.
+
+  Also from B5: `docs/TERMINAL_DATA_DICTIONARY.md` is generated from `dataset_catalog` (with a `--check` test in
+  `scripts/tests`), and the LEARN layer (`reports/terminal_v2/LEARN/`, 44 terms incl. the 15 PLAN 1.6 asks, 123 tooltips, a
+  validator for length, direction words, real column / payload keys, code facts and a bundled copy). CLAUDE.md now fixes the
+  `/metrics` claim, lists the v2 inventory, extends the freeze-window note and adds the public-repo rule. The RUNBOOK gains the
+  Redis password, `db_backup.py --offsite`, the data-health view and first-week checks.
+- **Open before the deploy:**
+  - Owner decisions O-T1…O-T14. The plan's defaults are taken meanwhile: indices + watchlist surface, a dated 6.5 % rate, no
+    NSE v3 beside Breeze, no Desk input touched.
+  - The Redis password waits for `./start-local.sh restart <svc>` to export it (the watchdog's hang restarts use that path).
+  - The catalog's publication minutes still carry the GMT misreading until the requested patch lands.
+  - `vix_backfill`'s cookie prime answered 403 to the shared client.
+  - The SPAN file's 4 Nov scanning risk (₹8,124 for the condor) is far below Breeze's ₹81,497.07, so the file leg is exchange
+    arithmetic, not the broker's block.
+  - The 02:15 backup does not pass `--offsite`.
+  - Nothing re-checks `ind_close_all` after its 23:20 re-write.
+
+  The deploy follows PLAN 1.8: data-service, ui-api and master-controller restarted outside both freeze windows in the restart
+  order; the backfills on a Sunday at 10:00; one `build-ui` release.
 
 **4 Nov 23:10 → 5 Nov 00:10: GOLD deployed.** Wave 1b (the fix round) ran as 8 builders + 8 adversarial re-checks
 (`reports/gold_program/build/wave1b.md`; 7 ACCEPT-WITH-NOTES, B4A REJECT on three new majors). The PM fixed the four remaining

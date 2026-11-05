@@ -11,12 +11,11 @@
  * Every block loads on its own (latest request wins) and degrades alone while B1's tables are not deployed.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { apiError } from '@/lib/errors'
 import { BadgeChip, Chip, DataTable, Panel, T, TickerLink, fmtNum, ordinal, sourceOf, type Column } from '@/components/terminal'
 import { percentileOf } from '@/components/terminal/source'
-import { LineChart } from './charts'
-import { getIvCone, getIvHistory, getIvSurface, getVolScreen, storeNote, type IvCone, type IvHistory, type IvSurface, type ScreenRow, type ScreenSort, type VolScreen } from './api'
-import { expectedMoveHitRate, ivPaidLedger, termWord } from './volModel'
+import { LineChart, XYChart } from './charts'
+import { getIvCone, getIvHistory, getIvSurface, getVolScreen, storeNote, volError, type IvCone, type IvHistory, type IvSurface, type ScreenRow, type ScreenSort, type VolScreen } from './api'
+import { expectedMoveHitRate, ivPaidLedger, lastYear, termWord } from './volModel'
 
 type Load<X> = { data: X | null; error: string | null }
 function useLoad<X>(fn: () => Promise<{ data: X }>, deps: unknown[]): Load<X> {
@@ -24,7 +23,7 @@ function useLoad<X>(fn: () => Promise<{ data: X }>, deps: unknown[]): Load<X> {
   useEffect(() => {
     let alive = true
     set({ data: null, error: null })
-    fn().then(r => { if (alive) set({ data: r.data, error: null }) }).catch((e: unknown) => { if (alive) set({ data: null, error: apiError(e, 'unavailable') }) })
+    fn().then(r => { if (alive) set({ data: r.data, error: null }) }).catch((e: unknown) => { if (alive) set({ data: null, error: volError(e, 'unavailable') }) })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
@@ -35,19 +34,18 @@ const pct = (v: number | null | undefined, d = 1) => (v == null || !Number.isFin
 const signed = (v: number | null | undefined, d = 2) => (v == null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}`)
 
 function Degraded({ what, note }: { what: string; note: string | null }) {
-  return <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6 }}>{what} not stored yet{note ? ` (${note})` : ''}: written nightly by <code>iv_eod</code> once the IV store is deployed; histories begin the day the job starts and backfill from the cached files on O-T4.</div>
+  return <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.6 }} data-vol-empty>{what} not stored yet{note ? ` (${note})` : ''} · backfill pending: written nightly by <code>iv_eod</code> once the IV store is deployed; history starts the day the job first runs and backfills from the cached bhavcopies (2019-10 →) on O-T4.</div>
 }
 
 function SkewPanel({ hist, surf }: { hist: Load<IvHistory>; surf: Load<IvSurface> }) {
   const rows = hist.data?.ok ? hist.data.rows : []
   const last = rows.length ? rows[rows.length - 1] : null
-  const skewPct = percentileOf(rows.map(r => r.skew_25d_30), last?.skew_25d_30, 60)
+  const skewPct = percentileOf(lastYear(rows).map(r => r.skew_25d_30), last?.skew_25d_30, 60)
   const near = surf.data?.ok ? (surf.data.expiries.find(e => e.near) ?? surf.data.expiries[0]) : null
   const ghost = surf.data?.compare?.expiries?.[0] ?? null
   const smile = (e: typeof near) => (e ? [...e.smile].sort((a, b) => a.log_moneyness - b.log_moneyness) : [])
   const todaySmile = smile(near), ghostSmile = smile(ghost)
-  const xs = [...new Set([...todaySmile, ...ghostSmile].map(p => p.log_moneyness))].sort((a, b) => a - b)
-  const at = (pts: typeof todaySmile) => xs.map(x => pts.find(p => Math.abs(p.log_moneyness - x) < 1e-9)?.iv ?? null)
+  const xy = (pts: typeof todaySmile) => pts.map(p => ({ x: p.log_moneyness, y: p.iv }))
   return (
     <Panel title="Skew · 25Δ put − call" accent={T.violet} pad={8} badge="context"
       source={sourceOf(hist.data?.as_of ?? null, { source: 'iv_summary_daily', hint: hist.data && !hist.data.ok ? storeNote(hist.data) : hist.error })}
@@ -62,8 +60,8 @@ function SkewPanel({ hist, surf }: { hist: Load<IvHistory>; surf: Load<IvSurface
           <div>
             <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>smile today{near ? ` (${near.expiry})` : ''} vs {ghost ? `${surf.data?.compare?.as_of ?? 'a month ago'} (dashed)` : 'a month ago'} · x = log-moneyness</div>
             {todaySmile.length >= 3 ? (
-              <LineChart dates={xs.map(x => x.toFixed(4))} height={170} lUnit="%" ariaLabel="smile today vs one month ago"
-                series={[{ label: 'today', color: T.violet, values: at(todaySmile), w: 1.6 }, { label: 'ghost', color: T.muted, values: at(ghostSmile), w: 1.1, dash: '4 3' }]} />
+              <XYChart height={170} yUnit="%" xLabel="log(K / F)" markX={0} ariaLabel="smile today vs one month ago"
+                series={[{ label: 'today', color: T.violet, points: xy(todaySmile), w: 1.6 }, { label: 'ghost', color: T.muted, points: xy(ghostSmile), w: 1.1, dash: '4 3' }]} />
             ) : <div style={{ fontSize: 11, color: T.muted }}>{surf.error ?? storeNote(surf.data) ?? 'the stored surface has too few traded strikes for a smile'}</div>}
           </div>
         </div>

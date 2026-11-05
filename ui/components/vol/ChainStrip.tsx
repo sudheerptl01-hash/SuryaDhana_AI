@@ -15,7 +15,7 @@ import { percentileOf } from '@/components/terminal/source'
 import { black76 } from '@/lib/black76'
 import type { OptionChain as Chain } from '@/lib/api'
 import type { IvHistory, IvSurface } from './api'
-import { ivVsRv, straddleView, termWord } from './volModel'
+import { ivVsRv, lastYear, straddleView, termWord } from './volModel'
 
 export interface Greeks { delta: number; gamma: number; thetaDay: number; vega: number }
 
@@ -39,6 +39,8 @@ function Cell({ label, value, sub, title, color = T.text }: { label: string; val
 }
 
 const pct1 = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? '—' : `${fmtNum(v, d)}%`)
+/** b − a in vol points; null when either leg is missing */
+const gap = (b: number | null | undefined, a: number | null | undefined) => (b == null || a == null ? null : b - a)
 const signed = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}`)
 
 export function ChainStrip({ chain, history, surface }: { chain: Chain; history: IvHistory | null; surface: IvSurface | null }) {
@@ -53,22 +55,22 @@ export function ChainStrip({ chain, history, surface }: { chain: Chain; history:
   const next = near ? expiries.find(e => e.expiry > near.expiry) ?? null : null
   const far = next ? expiries.find(e => e.expiry > next.expiry) ?? null : null
   const skewNow = near?.skew_25d ?? last?.skew_25d_30 ?? null
-  const skewPct = percentileOf(rows.map(r => r.skew_25d_30), last?.skew_25d_30, 60)
+  const skewPct = percentileOf(lastYear(rows).map(r => r.skew_25d_30), last?.skew_25d_30, 60)
   const termSlope = last?.term_slope_30_90 ?? null
   return (
     <div data-omon-strip style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(118px, 1fr))', border: `1px solid ${T.border}`, background: T.panel, marginBottom: 10, alignItems: 'stretch' }}>
-      <Cell label="Term · near / next / far" title="ATM IV per expiry from the stored surface (iv_expiry_daily), nearest first; the expiry-day series is excluded from near. Arithmetic."
-        value={near ? `${pct1(near.atm_iv)} / ${next ? pct1(next.atm_iv) : '—'} / ${far ? pct1(far.atm_iv) : '—'}` : `${pct1(chain.atm_iv)} / — / —`}
-        sub={near ? `${near.expiry.slice(5)} · ${next?.expiry.slice(5) ?? '—'} · ${far?.expiry.slice(5) ?? '—'}` : `${chain.expiry.slice(5)} (chain) · surface not stored`} />
+      <Cell label="Term · next − near / far − next" title="The spread between the stored ATM IVs of consecutive expiries (iv_expiry_daily), in vol points; each expiry's own ATM IV is on the ladder chips above (printed once per page). The expiry-day series is excluded from near. Arithmetic."
+        value={near ? `${signed(gap(next?.atm_iv, near.atm_iv), 2)} / ${signed(gap(far?.atm_iv, next?.atm_iv), 2)} pts` : '— / —'}
+        sub={near ? `${near.expiry.slice(5)} · ${next?.expiry.slice(5) ?? '—'} · ${far?.expiry.slice(5) ?? '—'}` : 'surface not stored yet · backfill pending (the chain ATM IV is in the tiles above)'} />
       <Cell label="IV 30 / 60 / 90 (cm)" title={history?.definitions?.iv30_cm ?? 'constant-maturity ATM IV by VIX-style variance interpolation'}
         value={last ? `${pct1(last.iv30_cm)} / ${pct1(last.iv60_cm)} / ${pct1(last.iv90_cm)}` : '—'}
         sub={last ? <>slope 30→90 {signed(termSlope, 2)} pts · {termWord(termSlope)}</> : 'iv_summary_daily not stored'} />
       <Cell label="25Δ skew (put − call)" title={history?.definitions?.skew_25d_30 ?? '25-delta put IV minus 25-delta call IV, vol points'}
         value={skewNow == null ? '—' : `${signed(skewNow, 2)} pts`}
         sub={skewPct != null ? <>{ordinal(skewPct)} pctile of the past year · <BadgeChip badge="context" /></> : rows.length ? 'needs 60 stored sessions for a percentile' : 'stored series needed'} />
-      <Cell label={`ATM straddle · ${chain.atm}`} title="Call + put price at the ATM strike as a % of the forward, beside the lognormal 1σ to expiry that the chain's ATM IV implies (ATM IV × √(days/365)). Arithmetic: a comparison, not a view."
+      <Cell label={`ATM straddle · ${chain.atm}`} title="Call + put price at the ATM strike as a % of the forward, and its ratio to the priced move by expiry shown once in the ATM implied-vol tile (the chain's own T convention). Arithmetic: a comparison, not a view."
         value={straddle.price == null ? '—' : `₹${fmtNum(straddle.price, 2)}`}
-        sub={straddle.pct_of_forward == null ? '' : <>{pct1(straddle.pct_of_forward, 2)} of fwd · 1σ to expiry {pct1(straddle.sigma_to_expiry_pct, 2)} · ratio {fmtNum(straddle.straddle_over_sigma, 2)}×</>} />
+        sub={straddle.pct_of_forward == null ? '' : <>{pct1(straddle.pct_of_forward, 2)} of fwd{chain.expected_move_pct ? <> · {fmtNum(straddle.pct_of_forward / chain.expected_move_pct, 2)}× the priced move in the ATM tile</> : null}</>} />
       <Cell label="IV30 − RV20 (YZ)" title={history?.definitions?.iv_minus_rv20 ?? 'IV30 minus the 20-session Yang-Zhang realised vol, vol points'}
         value={vsRv?.spread == null ? '—' : `${signed(vsRv.spread, 2)} pts`}
         sub={vsRv ? <>cc {pct1(vsRv.cc)} · Parkinson {pct1(vsRv.parkinson)} · YZ {pct1(vsRv.yz)} · FOVOLT {pct1(vsRv.fovolt)}</> : 'realised vol needs the stored index OHLC'} />

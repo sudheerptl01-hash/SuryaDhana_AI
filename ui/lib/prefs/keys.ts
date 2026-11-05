@@ -25,6 +25,7 @@ export const SYNC_KEYS = [
   'gold.layer.v1', //                 lib/gold/prefs.ts LAYER_KEY — GOLD page [B]/[P] micro-copy layer
   'gold.triggers.v1', //              lib/gold/prefs.ts TRIGGERS_KEY — pre-open desk EUR/USD trigger (moved out of goldPreOpen.v1)
   'suryadhana.whatsnew', //           components/Brief.tsx — dismissed "what's new" version
+  'activeSymbol.v1', //               lib/activeSymbol.ts ACTIVE_SYMBOL_KEY — last underlying / expiry / strikes picked (terminal v2 1.3; the per-window copy is sessionStorage)
 ] as const
 
 export type SyncKey = (typeof SYNC_KEYS)[number]

@@ -10,6 +10,7 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
 import { useEffect, useState, type ReactNode } from 'react'
 import { getMarketMonitor, getStockProfile, getStockResults, getStockFinancials, type FinQuarter, type Valuation, type FinLatest, getStockFilings, type Filing, getStockActions, type StockActions, getStockPeHistory, type PeHistory, type ResultReaction, type ResultsSummary, type StockProfile as Profile, getBasketRisk, type BasketRisk, getStockNews, getSymbols, type StockHeadline } from '@/lib/api'
 import { DataTable, EventBadge, Loading, T, AvoidFlag, TickerLink, fiscalQuarter, fmtPct, ordinal, tone, fmtInr } from '@/components/terminal'
+import { IvStrip } from '@/components/vol/IvStrip'
 import { daysUntil, useResultsAvoid } from '@/lib/useCorpEvents'
 import { TradeTicket } from './TradeTicket'
 import { goToPage } from '@/lib/navigate'
@@ -160,6 +161,8 @@ export function StockProfile({ ticker, focus }: { ticker: string; focus?: 'fa' |
           ))}
         </div>
       )}
+      {/* terminal v2 PLAN 1.1 (precedent Bloomberg DES implied-vol strip): iv30_cm, rank, percentile, skew, IV − RV, next results */}
+      <IvStrip symbol={p.symbol} nextResults={upcoming.find(e => e.kind === 'RESULTS')?.event_date ?? null} />
 
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start' }}>
         {px && (

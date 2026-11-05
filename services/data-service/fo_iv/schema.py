@@ -2,7 +2,15 @@
 context tables FOVOLT / Contract_Delta / combined OI). ``CREATE TABLE IF NOT EXISTS`` so a restart creates them; the store's
 ``_init_schema`` runs ``ddl_statements()`` through a guarded import. Point-in-time: every row carries the session it
 describes (``date``), our fetch / compute time (``first_seen_at``) and, where a model is involved, ``model_version`` and
-``r``. A ``model_version`` bump re-derives into new rows, never overwrites.
+``r``.
+
+Vintages (PLAN §0.3 as amended by the PM on 5 Nov 2026): the four DERIVED tables ``iv_surface_daily``, ``iv_expiry_daily``,
+``iv_summary_daily`` and ``iv_event_log`` keep the LATEST computation per natural key — a re-run (the 22:45 retry, a
+backfill resume, a ``model_version`` bump) replaces the row in place, ``first_seen_at`` / ``model_version`` / ``r`` updated
+with it. A past vintage is reproducible because every SOURCE file (the F&O bhavcopies, FOVOLT, Contract_Delta, the index
+file) is archived on disk and versioned in ``ingest_log`` (url, fetched_at, publisher Last-Modified, sha256); a study that
+needs one recomputes it from those files. The source tables (``nse_fo_volt``, ``nse_contract_delta``, ``nse_combined_oi``,
+``vix_daily``, ``index_ohlc_daily``) hold what the publisher's latest copy says, revisions logged in ``ingest_log``.
 """
 from __future__ import annotations
 

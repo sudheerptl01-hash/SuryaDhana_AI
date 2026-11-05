@@ -2,7 +2,7 @@
 
 import { Z } from '@/lib/z'
 import { apiError } from '@/lib/errors'
-import { TickerLink, ResearchNote } from '@/components/terminal'
+import { TickerLink, ResearchNote, undatedSource } from '@/components/terminal'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Btn, Chip, Empty, ErrorBox, Loading, PageHeader, Panel, T, MINUS, fmtInrPx, fmtPct } from '@/components/terminal'
@@ -471,7 +471,7 @@ function KPIStrip({ status, isDark }: { status: EngineStatus; isDark: boolean })
 function PositionsTable({ positions, isDark }: { positions: LivePosition[]; isDark: boolean }) {
   if (positions.length === 0) {
     return (
-      <Panel title="Open positions (0)">
+      <Panel source={undatedSource('legacy engine (dormant)')} title="Open positions (0)">
         <Empty title="No active positions" hint="The engine populates positions when signals fire (autopilot is OFF)." />
       </Panel>
     )

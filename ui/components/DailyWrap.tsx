@@ -8,7 +8,7 @@ import { apiError } from '@/lib/errors'
  */
 import { useEffect, useState } from 'react'
 import { getWrap, getWraps } from '@/lib/api'
-import { ErrorBox, Loading, PageHeader, Panel, T } from '@/components/terminal'
+import { ErrorBox, Loading, PageHeader, Panel, T, sourceOf } from '@/components/terminal'
 import { unicodeMinus } from '@/lib/format'   // server-built wrap: negative numbers with U+2212 (C1-18)
 import { Markdown } from '@/components/terminal/Markdown'
 
@@ -37,14 +37,15 @@ export function DailyWrap() {
       {error && <ErrorBox error={error} />}
       {!list && !error && <Loading label="Reading wraps" />}
       {list && list.length === 0 && (
-        <Panel title="No wraps yet" accent={T.amber}>
+        <Panel title="No wraps yet" accent={T.amber} source={sourceOf(null, { source: 'daily_wrap 21:00 IST', hint: 'no wrap stored yet' })}>
           <span style={{ fontSize: 12, color: T.muted }}>The first one is written tonight at 21:00 IST. To write one now:
             <code style={{ color: T.text, marginLeft: 6 }}>PYTHONPATH=. python scripts/daily_wrap.py</code></span>
         </Panel>
       )}
       {list && list.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: '260px minmax(0, 1fr)', gap: 12, alignItems: 'start' }}>
-          <Panel title={`Archive · ${list.length}`} accent={T.amber} pad={0}>
+          {/* PLAN 1.4: a missed 21:00 wrap reads STALE on the chip (it used to show only as an older date in the list) */}
+          <Panel title={`Archive · ${list.length}`} accent={T.amber} pad={0} source={sourceOf(list[0]?.date ?? null, { source: 'daily_wrap 21:00 IST', maxAgeDays: 4 })}>
             <div style={{ maxHeight: 760, overflowY: 'auto' }}>
               {list.map(w => (
                 <button key={w.date} onClick={() => setDay(w.date)}
@@ -57,7 +58,8 @@ export function DailyWrap() {
               ))}
             </div>
           </Panel>
-          <Panel title={day ? label(day) : ''} accent={T.cyan}
+          <Panel title={day ? label(day) : ''} accent={T.cyan} badge="context"
+            source={sourceOf(day, { source: 'daily_wrap 21:00 IST', maxAgeDays: day === list[0]?.date ? 4 : null })}
             right={<div style={{ display: 'flex', gap: 6 }}>
               <button disabled={i >= (list.length - 1)} onClick={() => setDay(list[i + 1].date)} style={navBtn(i >= list.length - 1)}>‹ OLDER</button>
               <button disabled={i <= 0} onClick={() => setDay(list[i - 1].date)} style={navBtn(i <= 0)}>NEWER ›</button>

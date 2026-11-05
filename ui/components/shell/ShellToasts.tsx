@@ -16,6 +16,23 @@ import { useToast } from '@/context/ToastContext'
 import { DOWNLOAD_EVENT, type DownloadEventDetail } from '@/lib/platform'
 import { downloadToast } from '@/lib/downloadText'
 import { ALERT_SAVE_FAILED_EVENT, alertSaveFailedText, type AlertSaveFailure } from '@/lib/alertText'
+import { unknownTab, unknownTabText } from '@/lib/deepLink'
+import { OWN_BUILD } from '@/components/desktop/build'
+
+/**
+ * Terminal v2 PLAN 0.6: a `?tab=` naming no page of this release (an old window, a link from a newer build) says so in
+ * a toast instead of landing silently on BRF. Read once, on mount, from the address the window opened with.
+ */
+export function UnknownTabToast({ tabs }: { tabs: readonly string[] }): null {
+  const { addToast } = useToast()
+  useEffect(() => {
+    let tab: string | null = null
+    try { tab = unknownTab(window.location.search, tabs) } catch { tab = null }
+    if (tab) addToast(unknownTabText(tab, OWN_BUILD), 'warning', 12000)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return null
+}
 
 export function DownloadToasts(): null {
   const { addToast } = useToast()

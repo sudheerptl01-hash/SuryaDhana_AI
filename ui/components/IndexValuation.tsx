@@ -7,7 +7,7 @@
 import { useEffect, useState } from 'react'
 import { fmtSigned, unicodeMinus } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
 import { getIndexValuation, getIndexValuationHistory, getYieldGap, type IndexValuationHistory, type IndexValuationRow, type YieldGap } from '@/lib/api'
-import { Chip, DataTable, Panel, T, fmtPct, type Column, ordinal } from '@/components/terminal'
+import { Chip, DataTable, Panel, T, fmtPct, type Column, ordinal, undatedSource } from '@/components/terminal'
 
 type Row = IndexValuationRow & { name: string }
 
@@ -50,7 +50,7 @@ export function IndexValuation() {
     { key: 'y', label: '1Y', align: 'right', sort: r => r.chg_365d ?? -999, render: r => <span style={{ color: (r.chg_365d ?? 0) >= 0 ? T.green : T.red }}>{fmtPct(r.chg_365d, 1)}</span> },
   ]
   return (
-    <Panel title="Valuation · NSE" accent={T.amber} pad={0} style={{ marginBottom: 12 }}
+    <Panel source={undatedSource('NSE index file', 'P/E, P/B, dividend yield as NSE publishes them each evening')} badge="context" title="Valuation · NSE" accent={T.amber} pad={0} style={{ marginBottom: 12 }}
       subtitle={`P/E, P/B and dividend yield as NSE publishes them for each index · P/E colour: well below / above NIFTY 50's · click an index to chart its history (NSE daily index files${days ? `, + ${days} live day${days === 1 ? '' : 's'}` : ''})`}>
       <ValuationHistoryChart index={pick} todayPe={rows.find(r => r.name === pick)?.pe ?? null} />
       <DataTable columns={cols} rows={rows} rowKey={r => r.name} dense onRowClick={r => setPick(r.name)}
@@ -142,7 +142,7 @@ export function YieldGapPanel() {
   const breakAt = pts.findIndex(p => p.month >= d!.basis_from)
   const last = pts[pts.length - 1], hv = hover != null ? pts[hover] : null
   return (
-    <Panel title="Equity vs bonds · NIFTY earnings yield − India 10-year yield" accent={T.cyan} pad={10} style={{ marginBottom: 12 }}
+    <Panel source={undatedSource('NSE + FRED (monthly)', d?.bond_through ? `bond yield through ${d.bond_through}` : null)} badge="context" title="Equity vs bonds · NIFTY earnings yield − India 10-year yield" accent={T.cyan} pad={10} style={{ marginBottom: 12 }}
       subtitle={`monthly since ${pts[0].month} · higher = equities cheaper relative to bonds · bond yield: OECD monthly average via FRED, published with a lag (latest ${d!.bond_through ?? last.month})`}>
       <div style={{ fontSize: 11.5, fontFamily: T.mono, color: T.muted, marginBottom: 4 }}>
         {last.month}: earnings yield <span style={{ color: T.text }}>{last.ey.toFixed(2)}%</span> − 10Y <span style={{ color: T.text }}>{last.y10.toFixed(2)}%</span> ={' '}

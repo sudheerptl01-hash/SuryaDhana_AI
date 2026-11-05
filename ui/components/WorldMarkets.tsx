@@ -15,7 +15,7 @@ import { spanNote } from '@/lib/quoteSpan'
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { getFomc, getGiftNifty, getIndicesLive, getLiveMovers, getNewsQuotes, getRbiMpc, type FomcMeeting, type GiftNifty } from '@/lib/api'
 import type { Quote } from '@/components/news/types'
-import { Chip, PageHeader, Panel, Spark, T, fmtNum, tone } from '@/components/terminal'
+import { Chip, PageHeader, Panel, Spark, T, fmtNum, tone, sourceOf } from '@/components/terminal'
 import { GoldHoverCard } from '@/components/gold/HealthStrip'
 import { getGoldHealth } from '@/lib/gold/api'
 import { weiLine } from '@/lib/gold/format'
@@ -135,7 +135,7 @@ export function WorldMarkets() {
       )}
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(520px, 1fr))', alignItems: 'start' }}>
         {GROUPS.map(g => (
-          <Panel key={g.title} title={g.title} accent={g.accent} pad={0}>
+          <Panel source={sourceOf(asOf ? asOf.toISOString() : null, { source: 'Yahoo', maxAgeDays: 1 })} key={g.title} title={g.title} accent={g.accent} pad={0}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11.5 }}>
               <tbody>
                 {g.title === 'India' && gift?.last != null && (

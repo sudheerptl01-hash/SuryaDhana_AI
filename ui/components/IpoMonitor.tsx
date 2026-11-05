@@ -8,7 +8,7 @@ import { apiError } from '@/lib/errors'
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getIpo, type IpoBids, type IpoBucket, type IpoIssue, type IpoListing } from '@/lib/api'
-import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, type Column, median } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, type Column, median, sourceOf, undatedSource } from '@/components/terminal'
 
 const tone = (v: number | null | undefined) => (v == null || Math.abs(v) < 0.05 ? T.muted : v > 0 ? T.green : T.red)
 const times = (v: number | null | undefined) => (v == null ? '—' : v >= 100 ? `${v.toFixed(0)}×` : `${v.toFixed(1)}×`)
@@ -99,7 +99,7 @@ export function IpoMonitor() {
       {!data && !error && <Loading label="Reading NSE issues" />}
       {data && (
         <>
-          <Panel title="Open & forthcoming" accent={T.green} pad={0} subtitle="NSE public issues · subscription = times the shares offered to each category (QIB = institutions, NII = HNIs)"
+          <Panel source={undatedSource('NSE IPO data')} title="Open & forthcoming" accent={T.green} pad={0} subtitle="NSE public issues · subscription = times the shares offered to each category (QIB = institutions, NII = HNIs)"
             style={{ marginBottom: 12 }}>
             <DataTable columns={issueCols} rows={data.issues} rowKey={r => r.symbol} dense empty="No open or forthcoming issues on NSE" />
           </Panel>
@@ -110,12 +110,12 @@ export function IpoMonitor() {
             <Stat label="Median now vs issue" value={fmtPct(stats.medSince, 1)} color={tone(stats.medSince)} sub={`${stats.below} trade below the issue price`} />
           </div>
           {kind === 'Mainboard' && data.buckets.length > 0 && (
-            <Panel title="Does institutional demand show up in the listing?" accent={T.violet} pad={0} style={{ marginBottom: 12 }}
+            <Panel source={sourceOf(data?.bhavcopy_through ?? null, { source: 'NSE bhavcopy' })} badge="context" title="Does institutional demand show up in the listing?" accent={T.violet} pad={0} style={{ marginBottom: 12 }}
               subtitle={`by QIB subscription · ${months} months of mainboard IPOs · descriptive and in-sample, small samples: context, not a rule${data.details.running ? ` · fetching bid books ${data.details.done}/${data.details.total}` : ''}`}>
               <DataTable columns={bucketCols} rows={data.buckets} rowKey={r => r.bucket} dense />
             </Panel>
           )}
-          <Panel title={`Recent listings · ${rows.length}`} accent={T.amber} pad={0}
+          <Panel source={sourceOf(data?.bhavcopy_through ?? null, { source: 'NSE bhavcopy' })} title={`Recent listings · ${rows.length}`} accent={T.amber} pad={0}
             subtitle="listing open / day-1 close vs the issue price · +20 / +60 sessions measured from the day-1 close (what a buyer after listing got)">
             <DataTable columns={cols} rows={rows} rowKey={r => r.symbol + r.listing_date} dense maxHeight={720} initialSort={{ key: 'date', dir: 'desc' }} empty="No listings in this window" />
           </Panel>

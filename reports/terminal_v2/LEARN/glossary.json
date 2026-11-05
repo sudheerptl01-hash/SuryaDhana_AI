@@ -1,0 +1,638 @@
+{
+ "version": "2026-11-05",
+ "agent": "B5-DOCS",
+ "count": 44,
+ "required": [
+  "IV rank",
+  "IV percentile",
+  "constant-maturity IV",
+  "put-call-parity forward",
+  "25Δ skew",
+  "Parkinson volatility",
+  "Yang-Zhang volatility",
+  "FOVOLT",
+  "SPAN margin",
+  "exposure margin",
+  "points attribution",
+  "attribution residual",
+  "hysteresis",
+  "delta-equivalent OI",
+  "MWPL"
+ ],
+ "start_here": [
+  "implied volatility",
+  "IV rank",
+  "IV percentile",
+  "constant-maturity IV",
+  "put-call-parity forward",
+  "25Δ skew",
+  "realised volatility",
+  "FOVOLT",
+  "SPAN margin",
+  "points attribution",
+  "attribution residual",
+  "hysteresis",
+  "badge"
+ ],
+ "terms": [
+  {
+   "term": "IV rank",
+   "short": "Where today's IV sits in its 252-session range: (IV − min) ÷ (max − min) × 100. 0 = at the low, 100 = at the high. Not the percentile.",
+   "long": "Fixture: iv30_cm 12.81 in a 8.50–28.87 range → rank 21. One spike stretches the range and pulls every later rank down. Badge `arithmetic`.",
+   "see_also": [
+    "IV percentile",
+    "constant-maturity IV"
+   ],
+   "aliases": [
+    "IVR",
+    "iv_rank_252"
+   ]
+  },
+  {
+   "term": "IV percentile",
+   "short": "The share of the last 252 sessions whose IV was below today's. 60 means IV was lower on 60 % of those days. Not the rank.",
+   "long": "Same fixture, percentile 60 while the rank is 21. OMON's old \"IV rank\" was a percentile of the saw-tooth near-expiry series; both now show, each by its definition.",
+   "see_also": [
+    "IV rank",
+    "constant-maturity IV"
+   ],
+   "aliases": [
+    "IVP",
+    "iv_pctile_252"
+   ]
+  },
+  {
+   "term": "constant-maturity IV",
+   "short": "ATM IV at a fixed horizon (30 / 60 / 90 days), interpolated in variance between the two expiries that bracket it, the way India VIX is built.",
+   "long": "Weekly expiries make near-expiry ATM IV saw-tooth with the calendar, so a history needs a fixed horizon: σ²·T is interpolated linearly in T, then annualised.",
+   "see_also": [
+    "fixed-expiry series",
+    "India VIX",
+    "ATM IV"
+   ],
+   "aliases": [
+    "iv30_cm",
+    "iv60_cm",
+    "iv90_cm",
+    "CM IV"
+   ]
+  },
+  {
+   "term": "put-call-parity forward",
+   "short": "The forward implied by traded options: F = K + (C − P)·e^{rT} at the strike nearest spot where both the call and the put traded.",
+   "long": "No dividend input needed. Fallback, stored as forward_source: parity → matching future (also if they differ > 0.5 %) → spot·e^{rT}. NIFTY 3 Nov 2026: 23,931.23.",
+   "see_also": [
+    "Black-76",
+    "risk-free rate"
+   ],
+   "aliases": [
+    "parity forward",
+    "PCP forward",
+    "forward_source"
+   ]
+  },
+  {
+   "term": "25Δ skew",
+   "short": "25-delta put IV minus 25-delta call IV, each strike found by inverting its own delta. Positive = puts dearer than calls; NIFTY runs 2–3 vol points.",
+   "long": "Interpolated to 30 days as skew_25d_30. It is why India VIX sits ≈ 1 vol point above the ATM iv30_cm. A `context` number in the neutral token: it describes, does not predict.",
+   "see_also": [
+    "constant-maturity IV",
+    "India VIX",
+    "smile"
+   ],
+   "aliases": [
+    "skew_25d",
+    "skew_25d_30",
+    "25-delta skew"
+   ]
+  },
+  {
+   "term": "Parkinson volatility",
+   "short": "Realised vol from the daily high–low range: √(mean ln(H/L)² ÷ 4 ln 2) × √252 over 20 sessions. Needs only high and low.",
+   "long": "Uses more of each day than close-to-close, so it is less noisy over 20 sessions; it ignores overnight gaps, which is why Yang-Zhang is shown beside it.",
+   "see_also": [
+    "Yang-Zhang volatility",
+    "realised volatility"
+   ],
+   "aliases": [
+    "rv20_parkinson",
+    "Parkinson"
+   ]
+  },
+  {
+   "term": "Yang-Zhang volatility",
+   "short": "Realised vol from open, high, low and close: overnight variance + k·open-to-close variance + (1 − k)·Rogers-Satchell, annualised × √252.",
+   "long": "k = 0.34 ÷ (1.34 + (n + 1)/(n − 1)). The one estimator here that handles overnight gaps; indices take OHLC from index_ohlc_daily, stocks from nse_bhavcopy.",
+   "see_also": [
+    "Parkinson volatility",
+    "realised volatility",
+    "FOVOLT"
+   ],
+   "aliases": [
+    "rv20_yz",
+    "YZ",
+    "Yang-Zhang"
+   ]
+  },
+  {
+   "term": "FOVOLT",
+   "short": "NSE Clearing's own volatility per F&O underlying: an EWMA of squared log returns with λ = 0.995, annualised × √365 (not √252).",
+   "long": "σ²ₜ = 0.995·σ²ₜ₋₁ + 0.005·rₜ². FOVOLT_DDMMYYYY.csv, published ≈ 17:00 IST (16:58 and 17:01 measured); the vol margins are set on. A `context` line beside IV.",
+   "see_also": [
+    "realised volatility",
+    "SPAN margin"
+   ],
+   "aliases": [
+    "fovolt_ann",
+    "NSE daily volatility",
+    "EWMA vol"
+   ]
+  },
+  {
+   "term": "SPAN margin",
+   "short": "The clearing corporation's initial margin: the worst loss of the whole position over 16 price × vol scenarios, plus spread charges, with a short-option minimum.",
+   "long": "Spreads earn offsets: a NIFTY condor needed ₹81,497.07 in Breeze. The 12 %-of-notional estimate measured 4.8× too high. OSTR: Breeze → NSE SPAN file → heuristic.",
+   "see_also": [
+    "exposure margin",
+    "SPAN risk-parameter file"
+   ],
+   "aliases": [
+    "span_margin_required",
+    "SPAN",
+    "initial margin"
+   ]
+  },
+  {
+   "term": "exposure margin",
+   "short": "The flat extra margin added on top of SPAN: a percentage of notional per underlying that earns no spread offset.",
+   "long": "Breeze returns it as non_span_margin_required; total margin = SPAN + exposure. Both are `arithmetic`: an exchange rule, not a view.",
+   "see_also": [
+    "SPAN margin"
+   ],
+   "aliases": [
+    "non_span_margin_required",
+    "non-SPAN margin"
+   ]
+  },
+  {
+   "term": "points attribution",
+   "short": "Each member's share of the index move in points: previous index level × its weight × its return. Additive, so any horizon is the sum of its days.",
+   "long": "L from NSE's daily index file, r from adjusted closes, w rebuilt from filings and calibrated to NSE's top-10 file. An identity shown with its residual; it describes, does not predict.",
+   "see_also": [
+    "attribution residual",
+    "calibration (iwf_correction)",
+    "driver leader"
+   ],
+   "aliases": [
+    "index points",
+    "contribution",
+    "MEMB points"
+   ]
+  },
+  {
+   "term": "attribution residual",
+   "short": "The index move minus the sum of member points on a day: what the identity does not explain. The fit chip prints it beside the MAE.",
+   "long": "Comes from stale weights between filings, a missing close and the bank index's capping. A 60-session MAE above 25 points marks the fit `degraded`.",
+   "see_also": [
+    "points attribution",
+    "calibration (iwf_correction)"
+   ],
+   "aliases": [
+    "residual_points",
+    "residual"
+   ]
+  },
+  {
+   "term": "hysteresis",
+   "short": "The driver leader changes only when a challenger has led the incumbent by ≥ 1.3× (20-session) or 1.2× (60-session) for 5 consecutive sessions.",
+   "long": "Without it the top name flipped 63 times in 208 sessions; with it, 5 times. The raw leader is stored beside the held one. No colour on the leader; it describes, does not predict.",
+   "see_also": [
+    "driver leader",
+    "points attribution"
+   ],
+   "aliases": [
+    "driver change rule",
+    "tenure_sessions"
+   ]
+  },
+  {
+   "term": "delta-equivalent OI",
+   "short": "NSE's portfolio-wise futures-equivalent open interest: options OI weighted by delta and added to futures, per stock, across exchanges.",
+   "long": "From combineoi_deleq_DDMMYYYY.csv (≈ 19:18 IST). Shown with the % of MWPL as a `context` column on OMON and DERV, never coloured.",
+   "see_also": [
+    "MWPL",
+    "NSE delta factor"
+   ],
+   "aliases": [
+    "fut_equiv_oi",
+    "futures-equivalent OI",
+    "combineoi_deleq"
+   ]
+  },
+  {
+   "term": "MWPL",
+   "short": "The market-wide position limit for a stock's F&O book. OI above 95 % of it puts the stock in the F&O ban (no new positions) until it falls below 80 %.",
+   "long": "The MWPL zip lands ≈ 19:23 IST; the ban list (≈ 19:24) is named for the next session; clients holding ≥ 3 % of the limit come as a file dated the previous session.",
+   "see_also": [
+    "delta-equivalent OI",
+    "open interest"
+   ],
+   "aliases": [
+    "market-wide position limit",
+    "mwpl_pct",
+    "ban list"
+   ]
+  },
+  {
+   "term": "implied volatility",
+   "short": "The volatility that makes an option's model price equal its market price: a price restated in vol units, quoted annualised in vol points.",
+   "long": "Computed per traded strike with Black-76 on the parity forward; an untraded strike carries NSE's theoretical settle, so it gets no IV (price_source flags it).",
+   "see_also": [
+    "Black-76",
+    "ATM IV",
+    "realised volatility"
+   ],
+   "aliases": [
+    "IV",
+    "implied vol"
+   ]
+  },
+  {
+   "term": "Black-76",
+   "short": "Black's option model on the forward rather than the spot: the convention behind every stored IV and Greek, named by model_version (b76-pcp-v1).",
+   "long": "T = calendar days ÷ 365 at the 15:30 close; r recorded on every row; a change of convention is a new model_version and new rows, never an overwrite.",
+   "see_also": [
+    "put-call-parity forward",
+    "implied volatility",
+    "point-in-time"
+   ],
+   "aliases": [
+    "b76-pcp-v1",
+    "model_version"
+   ]
+  },
+  {
+   "term": "ATM IV",
+   "short": "IV interpolated at the forward, not at the nearest strike. Near = the first expiry with more than 2 days left; monthly = the first expiry 20–60 days out.",
+   "long": "Expiry-day and T ≤ 2 d rows stay in the surface but are left out of \"near\": their IV jumps with the calendar.",
+   "see_also": [
+    "constant-maturity IV",
+    "fixed-expiry series"
+   ],
+   "aliases": [
+    "atm_iv",
+    "near_atm_iv",
+    "monthly_atm_iv"
+   ]
+  },
+  {
+   "term": "fixed-expiry series",
+   "short": "One expiry's ATM IV from listing to expiry: the series that follows a single contract through its life.",
+   "long": "",
+   "see_also": [
+    "constant-maturity IV",
+    "ATM IV"
+   ],
+   "aliases": [
+    "IV by contract"
+   ]
+  },
+  {
+   "term": "smile",
+   "short": "IV plotted against strike for one expiry; stored in log-moneyness ln(K ÷ F) so surfaces compare across days.",
+   "long": "",
+   "see_also": [
+    "25Δ skew"
+   ],
+   "aliases": [
+    "volatility smile",
+    "log_moneyness"
+   ]
+  },
+  {
+   "term": "term structure",
+   "short": "IV by expiry. The slope iv90_cm − iv30_cm is positive when far months are dearer, the usual state, and often inverts around events.",
+   "long": "A `context` number: it describes, does not predict.",
+   "see_also": [
+    "constant-maturity IV"
+   ],
+   "aliases": [
+    "term_slope_30_90",
+    "term slope"
+   ]
+  },
+  {
+   "term": "realised volatility",
+   "short": "The volatility the price delivered: close-to-close σ of 20 daily log returns × √252, shown beside the Parkinson, Yang-Zhang and FOVOLT estimates.",
+   "long": "",
+   "see_also": [
+    "Parkinson volatility",
+    "Yang-Zhang volatility",
+    "FOVOLT",
+    "volatility risk premium"
+   ],
+   "aliases": [
+    "RV",
+    "rv20_cc",
+    "historical volatility",
+    "HV"
+   ]
+  },
+  {
+   "term": "volatility risk premium",
+   "short": "IV minus realised vol: what options price over what the index has been delivering. A `context` spread in the neutral token, never coloured.",
+   "long": "The \"IV paid vs vol delivered\" ledger over the last 12 monthly expiries shows how often the premium exceeded the move; it describes, does not predict.",
+   "see_also": [
+    "implied volatility",
+    "realised volatility"
+   ],
+   "aliases": [
+    "iv_minus_rv20",
+    "IV − RV",
+    "VRP"
+   ]
+  },
+  {
+   "term": "expected move",
+   "short": "The one-standard-deviation move the options price in: ATM IV × √T to expiry, or iv30_cm ÷ √252 for one day. A model's arithmetic, not a forecast.",
+   "long": "The hit-rate panel counts how often the realised move stayed inside it over 60 sessions.",
+   "see_also": [
+    "ATM IV",
+    "straddle"
+   ],
+   "aliases": [
+    "expected_move_pct",
+    "expected_move_1d_pct",
+    "1σ move"
+   ]
+  },
+  {
+   "term": "straddle",
+   "short": "ATM call + ATM put at one expiry: the market's price for movement in either direction. Its decay through the day is the expiry-day curve.",
+   "long": "",
+   "see_also": [
+    "expected move"
+   ],
+   "aliases": [
+    "straddle price"
+   ]
+  },
+  {
+   "term": "IV crush",
+   "short": "The change in near-expiry ATM IV across a results release: IV after ÷ IV before − 1, kept per stock with the implied and the realised move.",
+   "long": "The EVTS ledger lists the last 8 releases per stock (IV before and after, implied vs realised move); it describes, does not predict.",
+   "see_also": [
+    "expected move",
+    "implied volatility"
+   ],
+   "aliases": [
+    "crush_pct",
+    "event IV",
+    "results IV"
+   ]
+  },
+  {
+   "term": "India VIX",
+   "short": "NSE's model-free 30-day volatility index from NIFTY option prices (a variance strip over the OTM wings). Stored as OHLC in vix_daily, one source for every page.",
+   "long": "Nightly from the ind_close_all file; a one-off backfill from NSE's historicalOR/vixhistory (≤ 1 year per call). It includes the skew, so it sits above ATM iv30_cm.",
+   "see_also": [
+    "constant-maturity IV",
+    "25Δ skew"
+   ],
+   "aliases": [
+    "VIX",
+    "vix_daily"
+   ]
+  },
+  {
+   "term": "risk-free rate",
+   "short": "The rate in the model: a dated constant (6.5 %, O-T5) recorded as r on every stored row, so a later change never rewrites history.",
+   "long": "With the forward taken from parity the rate barely matters: 100 bp moves a 30-day ATM NIFTY IV by ≈ 0.01 vol point.",
+   "see_also": [
+    "put-call-parity forward",
+    "point-in-time"
+   ],
+   "aliases": [
+    "r",
+    "rate_curve"
+   ]
+  },
+  {
+   "term": "put/call OI ratio",
+   "short": "Put open interest ÷ call open interest on an expiry. A `context` ratio shown uncoloured: it says which side holds more open contracts, nothing more.",
+   "long": "",
+   "see_also": [
+    "open interest"
+   ],
+   "aliases": [
+    "pcr",
+    "PCR"
+   ]
+  },
+  {
+   "term": "open interest",
+   "short": "Contracts outstanding at the close, per strike and expiry; its daily change is a `context` column. OI-change classes tested as a swing rule showed no edge (H2).",
+   "long": "",
+   "see_also": [
+    "delta-equivalent OI",
+    "put/call OI ratio"
+   ],
+   "aliases": [
+    "OI",
+    "oi_chg"
+   ]
+  },
+  {
+   "term": "NSE delta factor",
+   "short": "NSE Clearing's own delta per option contract (Contract_Delta file, ≈ 18:30–19:20 IST), shown beside our Black-76 delta; a gap above 0.05 is logged.",
+   "long": "",
+   "see_also": [
+    "delta-equivalent OI",
+    "Black-76"
+   ],
+   "aliases": [
+    "delta_factor",
+    "Contract_Delta"
+   ]
+  },
+  {
+   "term": "SPAN risk-parameter file",
+   "short": "NSE Clearing's end-of-day SPAN parameters (risk arrays per contract, spread charges, short-option minimum), ≈ 17:02 IST. Lets OSTR price margin offline.",
+   "long": "No scheduled job downloads it yet: the parser and the fallback read whatever file sits in data/nse_archive/span/.",
+   "see_also": [
+    "SPAN margin",
+    "exposure margin"
+   ],
+   "aliases": [
+    "nsccl.YYYYMMDD.s.zip",
+    "SPAN file"
+   ]
+  },
+  {
+   "term": "driver leader",
+   "short": "The member with the largest |points| over a rolling 20- or 60-session window, held with hysteresis; shown in the neutral token with its tenure and share.",
+   "long": "\"20-session leader BHARTIARTL for N sessions, 12.5 % of member points\" says what moved the index; it describes, does not predict.",
+   "see_also": [
+    "hysteresis",
+    "points attribution",
+    "breadth (EW − CW)"
+   ],
+   "aliases": [
+    "leader",
+    "driver regime",
+    "raw_leader"
+   ]
+  },
+  {
+   "term": "breadth (EW − CW)",
+   "short": "The members' equal-weight return minus the cap-weight (index) return over 20 sessions, in percentage points. Negative = a few heavyweights carried the index.",
+   "long": "A `context` number; \"narrow\" or \"broad\" describes, does not predict.",
+   "see_also": [
+    "concentration",
+    "driver leader"
+   ],
+   "aliases": [
+    "ew_minus_cw_pp",
+    "equal-weight minus cap-weight"
+   ]
+  },
+  {
+   "term": "concentration",
+   "short": "How few names explain the move: the top-5 share of |points|, the Herfindahl of contributions and of weights, and 1 ÷ Σ weight² (effective number of names).",
+   "long": "",
+   "see_also": [
+    "breadth (EW − CW)",
+    "points attribution"
+   ],
+   "aliases": [
+    "top5_share",
+    "hhi_contrib",
+    "weight_hhi",
+    "effective_n"
+   ]
+  },
+  {
+   "term": "calibration (iwf_correction)",
+   "short": "Rebuilt weights are scaled to NSE's daily top-10 file (≈ 16:30 IST): iwf_correction = official ÷ rebuilt for the ten names, the other forty pro rata, Σ = 100.",
+   "long": "NSE publishes no full daily weight file for free and the equity-stockIndices endpoint is dead (404). The calibrated rebuild explained 99.6 % of daily variance.",
+   "see_also": [
+    "points attribution",
+    "attribution residual"
+   ],
+   "aliases": [
+    "iwf_correction",
+    "rebuilt_calibrated",
+    "weight_method"
+   ]
+  },
+  {
+   "term": "point-in-time",
+   "short": "Every stored row carries the period it describes, when the publisher released it and when we first saw it; a source revision is a new row, never an overwrite.",
+   "long": "Derived tables keep the latest computation per key; a past vintage is recomputed from the archived source files, which ingest_log versions by sha256.",
+   "see_also": [
+    "ingest log revision",
+    "gap row",
+    "Black-76"
+   ],
+   "aliases": [
+    "PIT",
+    "first_seen_at",
+    "release_at"
+   ]
+  },
+  {
+   "term": "ingest log revision",
+   "short": "A re-fetch whose body changed (sha256) is logged as revision + 1 with the publisher's Last-Modified; the 22:45 pass re-checks the equity bhavcopy this way.",
+   "long": "NSE re-published the 4 Nov equity bhavcopy at 22:05 IST, after a first evening copy. Note: NSE's Last-Modified header is GMT; add 5:30 for IST.",
+   "see_also": [
+    "point-in-time",
+    "expected-by"
+   ],
+   "aliases": [
+    "revision",
+    "ingest_log",
+    "If-Modified-Since"
+   ]
+  },
+  {
+   "term": "expected-by",
+   "short": "The IST time by which the terminal expects a dataset stored, trading-day aware. Past it the DATA view shows amber, past its lag budget red. No composite score.",
+   "long": "Page wording: \"stored 30 Oct · expected by 21:00 · 3 sessions behind · catch-up 19:30 tomorrow\". States: live, fresh, amber, red, gap.",
+   "see_also": [
+    "gap row",
+    "ingest log revision",
+    "SourceChip"
+   ],
+   "aliases": [
+    "expected_by",
+    "max_age_sessions",
+    "data health"
+   ]
+  },
+  {
+   "term": "gap row",
+   "short": "An explicit row saying a session-bound capture (pre-open book, breadth samples, FII/DII, gold open) was lost while the stack was down; pages say so.",
+   "long": "",
+   "see_also": [
+    "expected-by",
+    "point-in-time"
+   ],
+   "aliases": [
+    "data_gaps",
+    "unrecoverable"
+   ]
+  },
+  {
+   "term": "SourceChip",
+   "short": "The chip on every panel header: LIVE Breeze, LIVE NSE, DELAYED with its age, STALE, OFFLINE or GAP. Daily data shows its date, not a clock.",
+   "long": "",
+   "see_also": [
+    "expected-by",
+    "badge"
+   ],
+   "aliases": [
+    "source chip"
+   ]
+  },
+  {
+   "term": "badge",
+   "short": "Each derived number's label: `arithmetic` (identity or model convention), `context` (a description), `heuristic` (a house rule, its error shown). No `signal` exists.",
+   "long": "`signal` needs a FINDINGS PASS row from a pre-registered study (PIT data, |t| ≥ 2 in the full sample and both halves, after costs). None has passed here.",
+   "see_also": [
+    "SourceChip",
+    "point-in-time"
+   ],
+   "aliases": [
+    "context",
+    "arithmetic",
+    "heuristic"
+   ]
+  },
+  {
+   "term": "days to expiry",
+   "short": "Calendar days from the trade date to the expiry at the 15:30 close; T = dte ÷ 365 in the model. Read from the file, never assumed from a weekday.",
+   "long": "",
+   "see_also": [
+    "Black-76",
+    "ATM IV"
+   ],
+   "aliases": [
+    "dte",
+    "near_dte",
+    "DTE"
+   ]
+  },
+  {
+   "term": "Breeze budget",
+   "short": "One ledger every ICICI Breeze call passes through: per-minute and per-day counters in SQLite, per-caller quotas, a hard stop at the owner's cap.",
+   "long": "The documented 100/min and 5,000/day are the ceiling; the owner's cap (O-T6) is the budget. The 15-minute chain pilot and the margin calls share it.",
+   "see_also": [
+    "SPAN margin"
+   ],
+   "aliases": [
+    "budget ledger",
+    "breeze_budget"
+   ]
+  }
+ ]
+}

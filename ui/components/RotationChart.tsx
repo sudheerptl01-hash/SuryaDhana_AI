@@ -6,7 +6,7 @@
  * Industries tend to rotate clockwise: Improving → Leading → Weakening → Lagging. Descriptive, not a signal.
  */
 import { useMemo, useState } from 'react'
-import { CHART_BOX, Chip, Panel, T, useChartSize } from '@/components/terminal'
+import { CHART_BOX, Chip, Panel, T, useChartSize, undatedSource } from '@/components/terminal'
 
 export interface RotationRow { industry: string; stocks: number; quadrant: string; tail: { date: string; x: number | null; y: number | null }[] }
 
@@ -30,7 +30,7 @@ export function RotationChart({ rows }: { rows: RotationRow[] }) {
   const counts = Object.fromEntries(Object.keys(Q_COLOR).map(q => [q, rows.filter(r => r.quadrant === q).length]))
 
   return (
-    <Panel title="Industry rotation" accent={T.cyan} pad={0}
+    <Panel source={undatedSource('NSE EOD (weekly)')} badge="context" title="Industry rotation" accent={T.cyan} pad={0}
       subtitle="relative strength vs the NSE universe (→) and its momentum (↑) · 8-week tails · clockwise rotation is typical"
       right={<div style={{ display: 'flex', gap: 4 }}>
         <Chip color={T.muted} active={!only} onClick={() => setOnly(null)}>ALL</Chip>

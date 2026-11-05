@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from 'react'
 import { BadgeChip, SourceChip, T, fmtNum, sourceOf } from '@/components/terminal'
-import { getIvHistory, storeNote, type IvHistory } from './api'
+import { getIvHistory, storeNote, volError, type IvHistory } from './api'
 
 const pct = (v: number | null | undefined, d = 1) => (v == null || !Number.isFinite(v) ? '—' : `${fmtNum(v, d)}%`)
 const signed = (v: number | null | undefined, d = 2) => (v == null || !Number.isFinite(v) ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}`)
@@ -19,10 +19,12 @@ export function IvStrip({ symbol, nextResults }: { symbol: string; nextResults?:
   useEffect(() => {
     let alive = true
     setD(null); setErr(null)
-    getIvHistory(symbol, 20).then(r => { if (alive) setD(r.data) }).catch((e: unknown) => { if (alive) setErr(e instanceof Error ? e.message : 'unavailable') })
+    getIvHistory(symbol, 20).then(r => { if (alive) setD(r.data) }).catch((e: unknown) => { if (alive) setErr(volError(e, 'unavailable')) })
     return () => { alive = false }
   }, [symbol])
   const last = d?.ok && d.rows.length ? d.rows[d.rows.length - 1] : null
+  // the store answered and holds nothing for this symbol: not an F&O underlying (or nothing traded) — no strip at all
+  if (d && d.ok && !d.rows.length) return null
   const cell = (label: string, value: React.ReactNode, title?: string) => (
     <div title={title} style={{ textAlign: 'center', border: `1px solid ${T.border}`, padding: '4px 6px', minWidth: 0 }}>
       <div style={{ fontSize: 9, color: T.dim, letterSpacing: 1, whiteSpace: 'nowrap' }}>{label}</div>

@@ -1,6 +1,11 @@
 """The five drivers tables (R-DRIVERS §6.1 DDL adopted). Every row carries ``computed_at`` and the PIT inputs it used
-(``shares_filed_at``, ``promoter_public_at``); revisions are new rows by ``computed_at`` through INSERT OR REPLACE on the
-natural key (the latest computation wins for a key; older vintages are not kept for these derived tables)."""
+(``shares_filed_at``, ``promoter_public_at``).
+
+Vintages (PLAN §0.3 as amended by the PM on 5 Nov 2026, superseding PLAN 1.2's "revisions are new rows by computed_at"):
+these DERIVED tables keep the LATEST computation per natural key — a re-run (the 20:35 top-10 retry, a backfill resume, a
+later calibration) replaces the row in place through INSERT OR REPLACE with its new ``computed_at``. A past vintage is
+reproducible from the archived SOURCE files (top-10 weights, constituent lists, the index file, the bhavcopies, the
+filings), each versioned in ``ingest_log`` (url, fetched_at, publisher Last-Modified, sha256)."""
 from __future__ import annotations
 
 from typing import Any

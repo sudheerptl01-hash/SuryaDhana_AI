@@ -10,7 +10,7 @@ import { apiError } from '@/lib/errors'
 import { useEffect, useMemo, useState } from 'react'
 import { getDeals, getShortSelling, type Deal, type ShortRow } from '@/lib/api'
 import { daysUntil, useCorpEvents } from '@/lib/useCorpEvents'
-import { Chip, DataTable, ErrorBox, EventBadge, Input, Loading, PageHeader, Panel, ResearchNote, Stat, T, TickerLink, type Column, fmtPct, fmtPx } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, EventBadge, Input, Loading, PageHeader, Panel, ResearchNote, Stat, T, TickerLink, type Column, fmtPct, fmtPx, sourceOf } from '@/components/terminal'
 
 const cr = (v: number | null | undefined) => (v == null ? '—' : v >= 1e9 ? `₹${(v / 1e7).toFixed(0)} cr` : v >= 1e7 ? `₹${(v / 1e7).toFixed(1)} cr` : `₹${(v / 1e5).toFixed(1)} L`)
 const pct = (v: number | null) => fmtPct(v, 1)
@@ -119,7 +119,7 @@ export function DealsMonitor() {
                   sub={s.buy_value + s.sell_value > 0 ? `${((s.institution_value / (s.buy_value + s.sell_value)) * 100).toFixed(0)}% of deal value` : undefined} />
           </div>
           {clients.length > 0 && (
-            <Panel title="Most active clients" accent={T.cyan} style={{ marginBottom: 12 }}
+            <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE deals' })} badge="context" title="Most active clients" accent={T.cyan} style={{ marginBottom: 12 }}
               subtitle={`by gross deal value over ${days} day${days > 1 ? 's' : ''} · click to see their deals`}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '4px 18px', fontSize: 11.5 }}>
                 {clients.map(c => (
@@ -134,7 +134,7 @@ export function DealsMonitor() {
             </Panel>
           )}
           {s.top_net.length > 0 && (
-            <Panel title="Biggest net flows" accent={T.amber} subtitle="buy value minus sell value per stock, all clients">
+            <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE deals' })} badge="arithmetic" title="Biggest net flows" accent={T.amber} subtitle="buy value minus sell value per stock, all clients">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 12 }}>
                 {s.top_net.map(t => (
                   <span key={t.symbol} style={{ display: 'inline-flex', gap: 6, alignItems: 'baseline' }}>
@@ -145,7 +145,7 @@ export function DealsMonitor() {
             </Panel>
           )}
           <div style={{ height: 12 }} />
-          <Panel title={`${rows.length.toLocaleString('en-IN')} deals${data.count > data.rows.length ? ` (newest ${data.rows.length.toLocaleString('en-IN')} of ${data.count.toLocaleString('en-IN')})` : ''}`} pad={0} accent={T.violet}
+          <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE deals' })} title={`${rows.length.toLocaleString('en-IN')} deals${data.count > data.rows.length ? ` (newest ${data.rows.length.toLocaleString('en-IN')} of ${data.count.toLocaleString('en-IN')})` : ''}`} pad={0} accent={T.violet}
             subtitle="click a client to see all their deals · % of day vol ≥ 25% in amber"
             right={<div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               {([['all', 'ALL'], ['buy', 'BUYS'], ['sell', 'SELLS'], ['inst', 'MF/INS']] as [Side, string][]).map(([k, l]) =>
@@ -189,7 +189,7 @@ function ShortSelling() {
       render: r => <span style={{ color: (r.move_pct ?? 0) >= 0 ? T.green : T.red }}>{fmtPct(r.move_pct, 1)}</span> },
   ]
   return (
-    <Panel title={`Institutional short selling${d ? ` · ${d.count} stocks` : ''}`} accent={T.red} pad={0}
+    <Panel source={sourceOf(d?.data_through ?? null, { source: 'NSE short sales' })} badge="context" title={`Institutional short selling${d ? ` · ${d.count} stocks` : ''}`} accent={T.red} pad={0}
       subtitle={d ? `NSE short-sale disclosures, ${d.from} → ${d.data_through ?? 'latest'} · ranked by shares shorted as a share of all trading · persistent shorting (many days) in a rising stock can fuel a squeeze` : 'NSE short-sale disclosures'}
       right={<div style={{ display: 'flex', gap: 4 }}>{[5, 20, 60].map(n => <Chip key={n} color={T.red} active={days === n} onClick={() => setDays(n)}>{n} SESSIONS</Chip>)}</div>}>
       {err ? <ErrorBox error={err} /> : !d ? <Loading label="short selling" /> :

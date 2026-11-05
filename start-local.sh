@@ -1078,7 +1078,7 @@ main() {
       ;;
     restart)
       if [ -n "$svc" ]; then
-        require_service "$svc"; stop_one "$svc"; clear_paused "$svc"; clear_hang_history "$svc"; start_one "$svc"
+        require_service "$svc"; stop_one "$svc"; clear_paused "$svc"; clear_hang_history "$svc"; start_redis; start_one "$svc"
       else
         stop_services
         check_prerequisites "${START_SET:-$CORE_SERVICES}"

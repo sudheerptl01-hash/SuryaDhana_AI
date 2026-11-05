@@ -7,7 +7,7 @@
  * Squarified layout (Bruls, Huizing & van Wijk 2000), two levels: industries, then stocks inside each.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CHART_BOX, Chip, Panel, T, fmtPct, useChartSize } from '@/components/terminal'
+import { CHART_BOX, Chip, Panel, T, fmtPct, useChartSize, sourceOf, undatedSource } from '@/components/terminal'
 import { openTicker } from '@/lib/openTicker'
 import { getLiveQuotes, getNewsQuotes } from '@/lib/api'
 
@@ -142,7 +142,7 @@ export function MarketMap({ rows }: { rows: MapRow[] }) {
   }, [rows, period, live, W, H])  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Panel title="Market map" accent={T.green} pad={0}
+    <Panel source={period === 'live' ? sourceOf(live?.at ? live.at.toISOString() : null, { source: 'NSE', live: todayMatters() }) : undatedSource('NSE EOD')} title="Market map" accent={T.green} pad={0}
       subtitle={hover
         ? `${hover.symbol} · ${hover.industry}${live?.chg[hover.symbol] != null ? ` · ${todayMatters() ? 'today' : 'last session'} ${fmtPct(live.chg[hover.symbol])}` : ''} · 1D ${fmtPct(hover.r1)} · 1W ${fmtPct(hover.r5)} · 1M ${fmtPct(hover.r21)} · ₹${hover.size} cr/day`
         : period === 'live'

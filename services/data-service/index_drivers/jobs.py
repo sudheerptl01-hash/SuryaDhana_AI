@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-
 from data_health import db
+
 from index_drivers import compute, ingest, weights
 from index_drivers.schema import CASTS, COLUMNS, positions_meta
 from shared.logging import get_logger
@@ -79,7 +79,7 @@ def compute_index(store: Any, index_name: str, days: list[date], *, financials_r
         # split effective today so ffmc = shares × prev close stays the same capitalisation (the nse_bhavcopy.prev_close trap)
         split_today = {str(r.ticker): float(r.ratio) for r in splits.itertuples(index=False) if db.to_date(r.date) == d and r.ratio > 0}
         prev_close = {s: float(v) / split_today.get(s, 1.0) for s, v in zip(day_rets["symbol"], day_rets["prev_close"], strict=True)
-                      if v is not None and v == v}
+                      if v is not None and not pd.isna(v)}
         rebuilt = weights.rebuild(index_name, d, m, prev_close, shares, sh, now=now)
         if rebuilt.empty:
             skipped.append({"date": d.isoformat(), "reason": "no weights (no filings / prices)"})

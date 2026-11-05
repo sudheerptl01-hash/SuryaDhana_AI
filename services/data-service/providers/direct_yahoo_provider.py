@@ -9,7 +9,10 @@ from __future__ import annotations
 import random
 import time
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 import requests
 

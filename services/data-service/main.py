@@ -23,6 +23,7 @@ from shared.config import load_env_into_process, Settings, get_settings
 # Local runs: export .env so os.environ readers (ICICI creds, service URLs) see it.
 load_env_into_process()
 from shared.http_guard import install_http_guard
+from shared.metrics import install_observability
 from shared.icici import load_icici_credentials
 from shared.logging import configure_logging, get_logger
 from shared.models import OHLCVBatch
@@ -409,8 +410,12 @@ app = FastAPI(
 )
 app.include_router(tick_store_mod.router)   # W6: /ticks/bars, /ticks/vwap, /ticks/store-status
 app.include_router(fo_analytics.router)       # W2: /db/fo/*
+# Observability (Terminal v2 PLAN 1.5, shared/metrics.py): GET /metrics, X-Request-ID in/out as the correlation id,
+# JSON access log (no /health /live / lines), anyio worker-thread limit raised to SD_THREAD_LIMIT (64) so the
+# per-call DuckDB cursors (storage/duckdb_store.py read()/reader()) run side by side. Inside the guard.
+install_observability(app, service="data-service")
 # Host/Origin guard (desktop review C2-security-01: DNS rebinding + cross-site POSTs such as
-# /jobs/build-ml-dataset). The only middleware, so the outermost; add any future middleware above it.
+# /jobs/build-ml-dataset). The OUTERMOST middleware; add any future middleware above it.
 install_http_guard(app, service="data-service")
 
 
@@ -473,6 +478,10 @@ class RefreshUniverseRequest(BaseModel):
     tickers: list[str] | None = None   # None = whole universe (minus INVALID)
     years: int | None = None
     workers: int = 3
+    # daily-pipeline only: step names left out of the run. The controller (B2, Terminal v2 0.5) sends
+    # ["nse_positions"]: the F&O / participant-OI files land 20:10, so the 18:30 pass is equity-only and the
+    # 20:30 pass fetches them. Unknown names are ignored.
+    skip_steps: list[str] = []
 
 
 def _refresh_targets(store: DuckDBStore, settings: Settings, tickers: list[str] | None) -> list[str]:
@@ -582,14 +591,16 @@ def start_daily_pipeline(req: RefreshUniverseRequest | None = None) -> dict:
             snap = market_monitor_snapshot(get_store())          # new bhavcopy → rebuild the cache now
             return {"as_of": snap.get("as_of")}
 
-        return run_eod_steps([
+        steps = [
             ("refresh", lambda: _run_refresh(req, progress), True),
             ("bhavcopy", lambda: _run_bhavcopy(BhavcopyRequest(), progress), False),
             ("nse_positions", lambda: _run_nse_positions(NsePositionsRequest(), progress), False),
             ("market_monitor", _monitor, False),
             ("nse_events", lambda: _run_nse_events(progress), False),
             ("build", lambda: _run_build(progress), False),
-        ], logger)
+        ]
+        skip = set(req.skip_steps)
+        return run_eod_steps([s for s in steps if s[0] not in skip], logger)
 
     if _jobs.is_running("refresh") or _jobs.is_running("build"):
         raise HTTPException(status_code=409, detail="A refresh/build job is already running")
@@ -713,8 +724,8 @@ def _run_nse_filings(req: NseFilingsRequest, progress) -> dict:
     symbols = req.symbols
     if not symbols:
         liquid = set(store.get_liquid_symbols(req.top_n))
-        with store._lock:
-            fo = {r[0] for r in store._conn.execute(
+        with store.reader() as con:
+            fo = {r[0] for r in con.execute(
                 "SELECT DISTINCT symbol FROM nse_fo_daily WHERE kind = 'stock' AND date = (SELECT MAX(date) FROM nse_fo_daily)"
             ).fetchall()}
         symbols = sorted(liquid | fo)
@@ -780,8 +791,8 @@ def get_events(start: date | None = None, end: date | None = None,
     want = sorted({r["symbol"] for r in rows if r["kind"] == "RESULTS" and r["event_date"] >= date.today().isoformat()})
     if _typical_cache["at"] < time.time() - 3600 or not set(want) <= _typical_cache["asked"]:
         try:
-            with store._lock:
-                _typical_cache["map"] = rh.typical_moves(store._conn, want)
+            with store.reader() as con:
+                _typical_cache["map"] = rh.typical_moves(con, want)
             _typical_cache.update(at=time.time(), asked=set(want))
         except Exception as exc:  # noqa: BLE001 — the calendar works without it
             logger.warning("typical results moves failed", error=str(exc))
@@ -798,8 +809,8 @@ def typical_results_moves(symbols: str = Query(..., min_length=1, max_length=400
     """Average absolute results-day move (and quarters measured) per symbol, from nse_results reactions."""
     import results_history as rh
     syms = sorted({s.strip().upper() for s in symbols.split(",") if s.strip()})[:200]
-    with store._lock:
-        m = rh.typical_moves(store._conn, syms)
+    with store.reader() as con:
+        m = rh.typical_moves(con, syms)
     return {"moves": {k: {"typical_move_pct": v["avg_abs_move_pct"], "quarters": v["quarters"]} for k, v in m.items()}}
 
 
@@ -810,8 +821,8 @@ def security_profile(symbol: str, store: DuckDBStore = Depends(get_store)) -> di
     from shared.momentum import industries
     if not re.fullmatch(r"[A-Za-z0-9&\-]{1,20}", symbol):
         raise HTTPException(status_code=422, detail="Bad symbol")
-    with store._lock:
-        out = security.profile(store._conn, symbol, industries())
+    with store.reader() as con:
+        out = security.profile(con, symbol, industries())
     if not out.get("found"):
         raise HTTPException(status_code=404, detail=f"{symbol.upper()} is not in the NSE bhavcopy")
     return out
@@ -824,8 +835,8 @@ def security_history(symbol: str, days: int = Query(90, ge=5, le=3700), store: D
     import security
     if not re.fullmatch(r"[A-Za-z0-9&\-]{1,20}", symbol):
         raise HTTPException(status_code=422, detail="Bad symbol")
-    with store._lock:
-        out = security.price_history(store._conn, symbol, days)
+    with store.reader() as con:
+        out = security.price_history(con, symbol, days)
     if not out.get("found"):
         raise HTTPException(status_code=404, detail=f"{symbol.upper()} is not in the NSE bhavcopy")
     return out
@@ -852,13 +863,13 @@ def _run_results_ingest(req: ResultsIngestRequest, progress) -> dict:
     if req.symbols:
         symbols = [s.upper() for s in req.symbols]
     elif req.recent_events_days is not None:
-        with store._lock:
-            symbols = [r[0] for r in store._conn.execute(
+        with store.reader() as con:
+            symbols = [r[0] for r in con.execute(
                 "SELECT DISTINCT symbol FROM nse_events WHERE kind = 'RESULTS' AND event_date BETWEEN ?::DATE AND ?::DATE",
                 [(date.today() - pd.Timedelta(days=req.recent_events_days)).isoformat(), date.today().isoformat()]).fetchall()]
     elif req.having_since:
-        with store._lock:
-            symbols = [r[0] for r in store._conn.execute(
+        with store.reader() as con:
+            symbols = [r[0] for r in con.execute(
                 "SELECT DISTINCT symbol FROM nse_results WHERE period_end >= ?::DATE ORDER BY symbol", [req.having_since]).fetchall()]
     else:
         symbols = store.get_historical_liquid_symbols(req.top_n)
@@ -876,8 +887,8 @@ def _run_results_ingest(req: ResultsIngestRequest, progress) -> dict:
                 else:
                     fresh_era = req.replace_since and (pd.to_datetime(rel["period_end"]) >= pd.Timestamp(req.replace_since)).any()
                     if fresh_era:              # the new fetch covers the era: a failed / partial one never deletes data
-                        with store._lock:
-                            out["replaced"] += store._conn.execute(
+                        with store.writer() as con:
+                            out["replaced"] += con.execute(
                                 "DELETE FROM nse_results WHERE symbol = ? AND period_end >= ?::DATE RETURNING 1",
                                 [sym, req.replace_since]).fetchall().__len__()
                     out["rows"] += store.upsert_results(rel)
@@ -920,9 +931,9 @@ def security_results(symbol: str, store: DuckDBStore = Depends(get_store)) -> di
         return {"symbol": sym, "reactions": [], "summary": {"quarters": 0}}
     rel = rel[rel["released_at"] >= pd.Timestamp.now() - pd.Timedelta(days=4 * 365)]
     start = (pd.Timestamp(rel["released_at"].min()) - pd.Timedelta(days=15)).date().isoformat() if len(rel) else "2022-01-01"
-    with store._lock:
-        raw = store._conn.execute("SELECT * FROM nse_bhavcopy WHERE symbol = ? AND date >= ?::DATE", [sym, start]).df()
-        splits = store._conn.execute("SELECT ticker, date, ratio FROM splits WHERE ratio > 0 AND ticker IN (?, ?)",
+    with store.reader() as con:
+        raw = con.execute("SELECT * FROM nse_bhavcopy WHERE symbol = ? AND date >= ?::DATE", [sym, start]).df()
+        splits = con.execute("SELECT ticker, date, ratio FROM splits WHERE ratio > 0 AND ticker IN (?, ?)",
                                      [sym, f"{sym}.NS"]).df()
     if raw.empty:
         return {"symbol": sym, "reactions": [], "summary": {"quarters": 0}}
@@ -974,8 +985,8 @@ def security_actions(symbol: str, years: int = Query(5, ge=1, le=15), store: Duc
         raise HTTPException(status_code=502, detail=f"NSE corporate actions unavailable: {exc}") from exc
     price = None
     try:
-        with store._lock:
-            got = store._conn.execute("SELECT close FROM nse_bhavcopy WHERE symbol = ? AND series IN ('EQ','BE') ORDER BY date DESC LIMIT 1", [sym]).fetchone()
+        with store.reader() as con:
+            got = con.execute("SELECT close FROM nse_bhavcopy WHERE symbol = ? AND series IN ('EQ','BE') ORDER BY date DESC LIMIT 1", [sym]).fetchone()
         price = float(got[0]) if got else None
     except Exception:  # noqa: BLE001
         price = None
@@ -1026,8 +1037,8 @@ def security_financials(symbol: str, store: DuckDBStore = Depends(get_store)) ->
     rows = fin.with_growth((cache or {}).get("quarters", []))
     price = None
     try:
-        with store._lock:
-            got = store._conn.execute("SELECT close FROM nse_bhavcopy WHERE symbol = ? AND series IN ('EQ','BE') ORDER BY date DESC LIMIT 1", [sym]).fetchone()
+        with store.reader() as con:
+            got = con.execute("SELECT close FROM nse_bhavcopy WHERE symbol = ? AND series IN ('EQ','BE') ORDER BY date DESC LIMIT 1", [sym]).fetchone()
         price = float(got[0]) if got else None
     except Exception:  # noqa: BLE001 — valuation is optional
         price = None
@@ -1176,8 +1187,8 @@ def financials_latest(symbols: str = Query(..., min_length=1, max_length=40000),
     syms = sorted({x.strip().upper() for x in symbols.split(",") if x.strip()})[:3000]
     prices: dict[str, float] = {}
     try:
-        with store._lock:
-            got = store._conn.execute("""
+        with store.reader() as con:
+            got = con.execute("""
                 SELECT symbol, close FROM (
                     SELECT symbol, close, row_number() OVER (PARTITION BY symbol ORDER BY date DESC) AS rn
                     FROM nse_bhavcopy WHERE list_contains(?, symbol) AND series IN ('EQ', 'BE')
@@ -1204,8 +1215,8 @@ def financials_latest(symbols: str = Query(..., min_length=1, max_length=40000),
 def results_recent(days: int = Query(10, ge=1, le=120), store: DuckDBStore = Depends(get_store)) -> dict:
     """Results released in the last `days` and the market's reaction (EVTS scoreboard)."""
     import results_history as rh
-    with store._lock:
-        rows = rh.recent_reactions(store._conn, days)
+    with store.reader() as con:
+        rows = rh.recent_reactions(con, days)
     return {"days": days, "rows": rows, "count": len(rows)}
 
 
@@ -1243,12 +1254,12 @@ def results_implied_moves(days: int = Query(10, ge=1, le=30), store: DuckDBStore
     df = oc.load(str(fs[-1][1]))
     fo = set(oc.underlyings(df))
     today = date.today()
-    with store._lock:
-        ev = store._conn.execute("""SELECT DISTINCT symbol, CAST(event_date AS VARCHAR) AS d FROM nse_events
+    with store.reader() as con:
+        ev = con.execute("""SELECT DISTINCT symbol, CAST(event_date AS VARCHAR) AS d FROM nse_events
                                     WHERE kind = 'RESULTS' AND event_date >= ?::DATE AND event_date <= ?::DATE""",
                                  [today.isoformat(), (today + timedelta(days=days)).isoformat()]).fetchall()
         ev = [(s_, d_) for s_, d_ in ev if s_ in fo]
-        typical = rh.typical_moves(store._conn, sorted({s_ for s_, _ in ev})) if ev else {}
+        typical = rh.typical_moves(con, sorted({s_ for s_, _ in ev})) if ev else {}
     closes = store.adjusted_closes(sorted({s_ for s_, _ in ev}), (today - timedelta(days=120)).isoformat()) if ev else pd.DataFrame()
     rows = []
     for sym, d in sorted(ev, key=lambda x: x[1]):
@@ -1336,12 +1347,12 @@ def option_chain_live(symbol: str, expiry: str | None = Query(None, pattern=r"^\
 def participant_positioning(days: int = Query(250, ge=20, le=1500), store: DuckDBStore = Depends(get_store)) -> dict:
     """Index-futures and index-options positioning by participant (FII, DII, PRO, CLIENT) from NSE's
     participant-wise OI file: latest snapshot with 1- and 5-session changes, and the FII long ratio history."""
-    with store._lock:
-        last_day = store._conn.execute("SELECT MAX(date) FROM nse_participant_oi").fetchone()[0]
+    with store.reader() as con:
+        last_day = con.execute("SELECT MAX(date) FROM nse_participant_oi").fetchone()[0]
         if last_day is None:
             raise HTTPException(status_code=404, detail="No participant OI stored")
         since = (pd.Timestamp(last_day) - pd.Timedelta(days=int(days * 1.6) + 10)).date().isoformat()
-        df = store._conn.execute("""
+        df = con.execute("""
             SELECT date, client_type, fut_idx_long, fut_idx_short, opt_idx_call_long, opt_idx_call_short,
                    opt_idx_put_long, opt_idx_put_short
             FROM nse_participant_oi WHERE date >= ?::DATE ORDER BY date""", [since]).df()
@@ -1605,8 +1616,8 @@ def prev_close(symbols: str = Query(..., min_length=1, max_length=8000),
     syms = sorted({x.strip().upper() for x in symbols.split(",") if x.strip()})[:500]
     if not syms:
         return {"before": before, "prev": {}}
-    with store._lock:
-        rows = store._conn.execute("""
+    with store.reader() as con:
+        rows = con.execute("""
             SELECT symbol, close, date FROM (
                 SELECT symbol, close, date, row_number() OVER (PARTITION BY symbol ORDER BY date DESC) AS rn
                 FROM nse_bhavcopy WHERE list_contains(?, symbol) AND series IN ('EQ', 'BE')
@@ -1635,8 +1646,8 @@ def index_contribution(index: str = Query("NIFTY 50", pattern="^(NIFTY 50|NIFTY 
         raise HTTPException(status_code=502, detail=f"NSE data unavailable: {exc}") from exc
     members = nse_live.parse_heatmap(rows if isinstance(rows, list) else (rows or {}).get("data", []))
     syms = sorted(members)
-    with store._lock:
-        promo = dict(store._conn.execute("""
+    with store.reader() as con:
+        promo = dict(con.execute("""
             SELECT symbol, promoter_pct FROM (
                 SELECT symbol, promoter_pct, row_number() OVER (PARTITION BY symbol ORDER BY period_end DESC) AS rn
                 FROM nse_shareholding WHERE list_contains(?, symbol)) WHERE rn = 1""", [syms]).fetchall())
@@ -2154,15 +2165,15 @@ def short_selling_view(days: int = Query(20, ge=1, le=120), store: DuckDBStore =
     """Institutional short selling over the last `days` sessions: per stock, quantity shorted, days with a short-sale
     disclosure, shorted quantity as % of all shares traded in the window, and the price move over the window."""
     import deals_monitor as dm
-    with store._lock:
-        dates = [d for (d,) in store._conn.execute(
+    with store.reader() as con:
+        dates = [d for (d,) in con.execute(
             "SELECT DISTINCT date FROM nse_bhavcopy ORDER BY date DESC LIMIT ?", [days]).fetchall()]
         if not dates:
             return {"days": days, "rows": [], "count": 0}
         start = min(dates)
-        shorts = store._conn.execute("SELECT date, symbol, qty FROM nse_deals WHERE kind = 'short' AND date >= ?", [start]).df()
+        shorts = con.execute("SELECT date, symbol, qty FROM nse_deals WHERE kind = 'short' AND date >= ?", [start]).df()
         syms = sorted(set(shorts["symbol"])) if not shorts.empty else []
-        vol = store._conn.execute("""SELECT date, symbol, SUM(volume) AS volume FROM nse_bhavcopy
+        vol = con.execute("""SELECT date, symbol, SUM(volume) AS volume FROM nse_bhavcopy
                                      WHERE date >= ? AND series IN ('EQ', 'BE', 'BZ') AND list_contains(?, symbol)
                                      GROUP BY date, symbol""", [start, syms]).df() if syms else pd.DataFrame()
     rows = dm.short_selling(shorts, vol)
@@ -2242,21 +2253,6 @@ _monitor_cache: dict[str, Any] = {"key": None, "value": None}
 _monitor_lock = threading.Lock()
 
 
-def _nifty500_close(start: str) -> tuple[pd.Series, str] | None:
-    """Nifty 500 daily closes from Yahoo (^CRSLDX); None when unreachable."""
-    import time as _time
-    import httpx
-    try:
-        r = httpx.get("https://query1.finance.yahoo.com/v8/finance/chart/%5ECRSLDX",
-                      params={"period1": int(pd.Timestamp(start).timestamp()), "period2": int(_time.time()), "interval": "1d"},
-                      headers={"User-Agent": "Mozilla/5.0"}, timeout=20).json()["chart"]["result"][0]
-        idx = pd.to_datetime(r["timestamp"], unit="s", utc=True).tz_convert("Asia/Kolkata").normalize().tz_localize(None)
-        s = pd.Series(r["indicators"]["quote"][0]["close"], index=idx, dtype=float).dropna()
-        return s.groupby(level=0).last(), "Nifty 500"
-    except Exception:  # noqa: BLE001 — fall back to NIFTY 50 from the database
-        return None
-
-
 def _nifty500_nse(start: str, session: str) -> tuple[pd.Series, str] | None:
     """Nifty 500 daily closes from NSE itself: the daily index-file history (backfill + the 19:15 top-up) and, for the
     bhavcopy's session when the history doesn't have it yet, NSE's live index feed after the close. Yahoo's ^CRSLDX
@@ -2283,7 +2279,7 @@ def _nifty500_nse(start: str, session: str) -> tuple[pd.Series, str] | None:
         except Exception:  # noqa: BLE001 — the history alone is still right up to its last day
             pass
     if s.index[-1] < pd.Timestamp(session):
-        return None                                  # NSE can't give the latest session: let Yahoo try
+        return None                                  # NSE can't give the latest session: the caller uses NIFTY 50 from the DB
     return s, "Nifty 500"
 
 
@@ -2299,11 +2295,11 @@ def market_monitor_snapshot(store: DuckDBStore = Depends(get_store)) -> dict:
         if _monitor_cache["key"] == key and _monitor_cache["value"] is not None:
             return _monitor_cache["value"]
         start = (pd.Timestamp(key) - pd.Timedelta(days=620)).date().isoformat()
-        with store._lock:
-            panel = load_panel(store._conn, start=start)
+        with store.reader() as con:
+            panel = load_panel(con, start=start)
         vix = store.get_index_daily("INDIAVIX")
         vix = pd.Series(vix["close"].to_numpy(), index=pd.to_datetime(vix["date"]))
-        got = _nifty500_nse(start, key) or _nifty500_close(start)
+        got = _nifty500_nse(start, key)                 # NSE's daily index file; no Yahoo on the request path (PLAN §0.7)
         if got is None:
             n50 = store.get_index_daily("NIFTY50")
             got = (pd.Series(n50["close"].to_numpy(), index=pd.to_datetime(n50["date"])), "NIFTY 50")
@@ -2353,8 +2349,8 @@ def quarantine_summary(limit: int = 50, store: DuckDBStore = Depends(get_store))
 @app.get("/db/freshness")
 def data_freshness(store: DuckDBStore = Depends(get_store)) -> dict:
     """How current each layer is: bars → features → labels (eligible equities only)."""
-    with store._lock:
-        row = store._conn.execute("""
+    with store.reader() as con:
+        row = con.execute("""
             WITH elig AS (SELECT ticker FROM instruments WHERE ml_eligible),
                  last_bar AS (SELECT o.ticker, MAX(o.date) d FROM ohlcv o JOIN elig USING (ticker) GROUP BY 1),
                  mx AS (SELECT MAX(d) m FROM last_bar)
@@ -2417,13 +2413,11 @@ def import_ml_data_from_parquet(store: DuckDBStore = Depends(get_store)) -> dict
         )
 
     try:
-        con = store._conn  # reuse existing write-mode connection
-
         if feat_parquet.exists():
             # Discover Parquet columns
-            parquet_cols = {r[0] for r in con.execute(
+            parquet_cols = {r[0] for r in store.read_rows(
                 f"DESCRIBE SELECT * FROM read_parquet('{feat_parquet}') LIMIT 1"
-            ).fetchall()}
+            )}
 
             # All numeric feature columns from feature_engine (no macro/varchar edge cases)
             numeric_features = [
@@ -2453,7 +2447,7 @@ def import_ml_data_from_parquet(store: DuckDBStore = Depends(get_store)) -> dict
             ]
 
             # Only include columns that exist in BOTH Parquet AND ml_features table
-            table_cols = {r[0] for r in con.execute("DESCRIBE ml_features").fetchall()}
+            table_cols = {r[0] for r in store.read_rows("DESCRIBE ml_features")}
             insert_cols = ["ticker", "date"]
             select_exprs = ["ticker::VARCHAR", "date::DATE"]
             for col in numeric_features:
@@ -2470,7 +2464,7 @@ def import_ml_data_from_parquet(store: DuckDBStore = Depends(get_store)) -> dict
             col_list = ", ".join(insert_cols)
             val_list = ", ".join(select_exprs)
 
-            with store._lock:
+            with store.writer() as con:
                 con.execute("BEGIN TRANSACTION")
                 try:
                     con.execute("DELETE FROM ml_features")
@@ -2479,17 +2473,17 @@ def import_ml_data_from_parquet(store: DuckDBStore = Depends(get_store)) -> dict
                 except Exception:
                     con.execute("ROLLBACK")  # never leave the feature store empty
                     raise
-            result["features"] = con.execute("SELECT COUNT(*) FROM ml_features").fetchone()[0]
+            result["features"] = store.read_one("SELECT COUNT(*) FROM ml_features")[0]
 
         if lbl_parquet.exists():
-            lbl_parquet_cols = {r[0] for r in con.execute(
+            lbl_parquet_cols = {r[0] for r in store.read_rows(
                 f"DESCRIBE SELECT * FROM read_parquet('{lbl_parquet}') LIMIT 1"
-            ).fetchall()}
+            )}
 
             def _lc(col: str, fallback: str) -> str:
                 return col if col in lbl_parquet_cols else fallback
 
-            with store._lock:
+            with store.writer() as con:
                 con.execute("BEGIN TRANSACTION")
                 try:
                     con.execute("DELETE FROM ml_labels")
@@ -2512,7 +2506,7 @@ def import_ml_data_from_parquet(store: DuckDBStore = Depends(get_store)) -> dict
                 except Exception:
                     con.execute("ROLLBACK")
                     raise
-            result["labels"] = con.execute("SELECT COUNT(*) FROM ml_labels").fetchone()[0]
+            result["labels"] = store.read_one("SELECT COUNT(*) FROM ml_labels")[0]
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Import failed: {exc}")
@@ -2531,10 +2525,10 @@ def _prev_close_for(symbols: list[str]) -> dict[str, float]:
     try:
         store = get_store()
         ph = ",".join("?" * len(symbols))
-        rows = store._conn.execute(
+        rows = store.read_rows(
             f"""SELECT symbol, close FROM nse_bhavcopy
                 WHERE date = (SELECT max(date) FROM nse_bhavcopy) AND series = 'EQ' AND symbol IN ({ph})""",
-            symbols).fetchall()
+            symbols)
         return {r[0]: float(r[1]) for r in rows if r[1]}
     except Exception:  # noqa: BLE001 — fallback only; the tick's own close still works
         return {}
@@ -2914,8 +2908,8 @@ def get_ohlcv_bulk(
     """Return all OHLCV rows for the last N days (excludes macro tickers like ^NSEI).
     Used by pipeline.py feature generation to avoid direct DuckDB access from ui-api.
     """
-    with store._lock:
-        df = store._conn.execute(f"""
+    with store.reader() as con:
+        df = con.execute(f"""
             SELECT ticker, date::VARCHAR AS date, open, high, low, close, volume, adjusted_close
             FROM ohlcv
             WHERE date >= (CURRENT_DATE - INTERVAL '{days}' DAY)
@@ -2936,8 +2930,8 @@ def get_latest_features(store: DuckDBStore = Depends(get_store)) -> dict:
     even read-only. data-service owns the lock, so it serves the feature matrix
     over HTTP instead.
     """
-    with store._lock:
-        df = store._conn.execute("""
+    with store.reader() as con:
+        df = con.execute("""
             SELECT f.*
             FROM ml_features f
             INNER JOIN (
@@ -2971,8 +2965,8 @@ def get_training_sample(
         keep = f"(_rn - 1) % {stride} = 0"
     else:
         keep = f"_rn_desc <= {max(10, min(int(per_ticker), 2000))}"
-    with store._lock:
-        df = store._conn.execute(f"""
+    with store.reader() as con:
+        df = con.execute(f"""
             SELECT * FROM (
                 SELECT f.*, l.label_direction, l.label_return_pct, l.label_barrier,
                        ROW_NUMBER() OVER (PARTITION BY f.ticker ORDER BY f.date)      AS _rn,
@@ -2999,8 +2993,8 @@ def get_feature_sample(n: int = 80000, store: DuckDBStore = Depends(get_store)) 
     a random sample of ml_features joined with labels. DuckDB samples server-side so
     only the sample is materialized — same canonical source as everything else."""
     n = max(1000, min(int(n), 300000))
-    with store._lock:
-        df = store._conn.execute(f"""
+    with store.reader() as con:
+        df = con.execute(f"""
             SELECT * FROM (
                 SELECT f.*, l.label_direction, l.label_return_pct
                 FROM ml_features f
@@ -3026,12 +3020,12 @@ def get_fundamentals_bulk(store: DuckDBStore = Depends(get_store)) -> dict:
 @app.get("/db/ml-stats")
 def get_ml_stats(store: DuckDBStore = Depends(get_store)) -> dict:
     """Return ml_features + ml_labels row counts, freshness and class-balance stats."""
-    with store._lock:
-        feat = store._conn.execute(
+    with store.reader() as con:
+        feat = con.execute(
             "SELECT COUNT(*) AS cnt, COUNT(DISTINCT ticker) AS tickers, "
             "MAX(date)::VARCHAR AS latest FROM ml_features"
         ).fetchone()
-        lbl = store._conn.execute(
+        lbl = con.execute(
             "SELECT COUNT(*) AS cnt, COUNT(DISTINCT ticker) AS tickers, "
             "MAX(date)::VARCHAR AS latest, "
             "SUM(CASE WHEN label_direction=1 THEN 1 ELSE 0 END) AS up_cnt, "
@@ -3169,7 +3163,7 @@ import index_drivers.api as _index_drivers_api  # noqa: E402
 
 def _terminal_http():
     from shared.http_client import PacedClient
-    return PacedClient(timeout_s=float(os.getenv("NSE_HTTP_TIMEOUT_S", "30")))
+    return PacedClient(timeout_s=float(os.getenv("NSE_HTTP_TIMEOUT_S", "20")))   # PLAN §0.6: 20 s (httpx read timeout, not a total)
 
 
 def _archive_root() -> Path:
@@ -3201,9 +3195,7 @@ def _fo_watchlist() -> list[str]:
 
 def _surface_symbols():
     """iv_surface_daily scope (O-T4 default: indices + the watchlist); IV_SURFACE_ALL=1 stores all 224 underlyings."""
-    if os.getenv("IV_SURFACE_ALL", "0") == "1":
-        return set()          # an empty set is never matched below → handled by the package as "all" when None; keep explicit
-    from fo_iv.iv_eod import INDEX_SYMBOLS
+    from fo_iv.iv_eod import INDEX_SYMBOLS          # IV_SURFACE_ALL=1 is handled by the configure() lambda (None = all 224)
     return set(INDEX_SYMBOLS) | set(_fo_watchlist())
 
 

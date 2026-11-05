@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-
 from data_health import db, ingest_log
+
 from fo_iv import events, intraday, iv_eod
 from fo_iv import files as fo_files
 from fo_iv.schema import CASTS, COLUMNS, positions_meta
@@ -55,7 +55,7 @@ def delta_crosscheck(store: Any, day: date, *, tol: float = DELTA_TOL) -> dict[s
         return {"compared": 0}
     diff = (df["ours"] - df["nse"]).abs()
     bad = df[diff > tol].assign(diff=diff[diff > tol]).sort_values("diff", ascending=False).head(10)
-    out = {"compared": int(len(df)), "beyond_tol": int((diff > tol).sum()), "mean_abs": round(float(diff.mean()), 4), "tol": tol,
+    out = {"compared": len(df), "beyond_tol": int((diff > tol).sum()), "mean_abs": round(float(diff.mean()), 4), "tol": tol,
            "worst": db.records(bad, ("expiry",))}
     if out["beyond_tol"]:
         logger.info("fo_iv.delta_crosscheck", day=day.isoformat(), **{k: v for k, v in out.items() if k != "worst"})

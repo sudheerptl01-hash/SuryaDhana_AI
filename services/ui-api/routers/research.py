@@ -273,6 +273,31 @@ CATALOG: dict[str, tuple[str, str, str]] = {
         "Data update side: what runs when and what it writes, 55 % market-hours availability over 14 days, the freshness "
         "matrix of every dataset the terminal shows (22 green / 15 amber / 8 red on 4 Nov), the measured NSE publication "
         "clock (F&O 20:10, bhavcopy re-published 22:05, MTF 22:12) and the data-health page spec behind /api/data/health."),
+    "reports/terminal_v2/STUDIES.md": (
+        "Terminal v2", "REFERENCE",
+        "Study registry (B8, 5 Nov 2026): three studies pre-registered before any result — TV-IVRV (IV − RV spread and IV "
+        "percentile vs next-month vol and return), TV-DRIVERS (do NIFTY's drivers persist; does a driver change precede "
+        "anything), TV-GEX (a dealer-gamma proxy vs the next-day range). Signed verdict rule: t ≥ 2 in the claimed direction, "
+        "full sample and both halves, after costs. Results PROVISIONAL until the stored backfill reproduces them."),
+    "reports/terminal_v2/studies/iv_rv/FINDINGS.md": (
+        "Terminal v2", "REFERENCE",
+        "TV-IVRV, PROVISIONAL (5 Nov 2026; 1,487 NIFTY / 1,459 BANKNIFTY sessions 2020-10 → 2026-10 recomputed from the "
+        "cached F&O files): the IV − RV spread and the IV percentile carry information about next month's realised vol beyond "
+        "trailing RV (CONTEXT-ONLY by ceiling; NIFTY t 4.7 / 3.0, both halves) but time neither the seller's edge (FAIL: the "
+        "spread's effect flips sign between halves) nor the index return ('buy fear' FAIL after the 0.93 % cash round trip). "
+        "0 PASS of 12: the IV chips keep arithmetic / context; describes, does not predict."),
+    "reports/terminal_v2/studies/drivers/FINDINGS.md": (
+        "Terminal v2", "REFERENCE",
+        "TV-DRIVERS, PROVISIONAL (583 fit-gated sessions, Nov 2023 → Oct 2026; the cached share counts start in late 2023): "
+        "the 20-session NIFTY leader does not keep a bigger share of the next month's move than the largest-weight name (FAIL, "
+        "t −3.2 the wrong way) and does not keep driving relative to NIFTY (FAIL, t −0.3; long-only after costs −1.0 % per "
+        "tranche); driver changes PENDING (15 events < 20). The regime strip stays context: describes, does not predict."),
+    "reports/terminal_v2/studies/gex/FINDINGS.md": (
+        "Terminal v2", "REFERENCE",
+        "TV-GEX, PROVISIONAL (1,740 sessions 2019-10 → 2026-11; Wave 3.3's precondition): neither gamma-exposure convention "
+        "forecasts NIFTY's next-day range beyond recent ranges, IV and the expiry calendar — the vendor net-gamma share is flat "
+        "(t −0.3); the 'writers are short' gamma load comes with SMALLER ranges (t −3.2, both halves), against the claim; "
+        "selling the next-day straddle on 'long-gamma' days earns nothing after costs. The proxy stays heuristic."),
     "reports/gold_program/G-PHYSICAL/REPORT.md": (
         "Gold", "REFERENCE",
         "Physical supply and demand, OTC and the balance sheet: WGC chart API, GLD daily tonnes since 2004, IMF official "

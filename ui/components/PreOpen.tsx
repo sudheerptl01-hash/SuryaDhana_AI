@@ -12,7 +12,7 @@ import { getPreOpen, type PreOpen as PreOpenData, type PreOpenRow } from '@/lib/
 import { daysUntil, useCorpEvents } from '@/lib/useCorpEvents'
 import { usePins } from '@/lib/pins'
 import { useWatchlist } from '@/context/AppContext'
-import { Chip, DataTable, ErrorBox, EventBadge, Input, Loading, PageHeader, Panel, Stat, T, TickerLink, type Column, fmtPct, fmtPx, fmtSigned, tone } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, EventBadge, Input, Loading, PageHeader, Panel, Stat, T, TickerLink, type Column, fmtPct, fmtPx, fmtSigned, tone, sourceOf, nseStampIso } from '@/components/terminal'
 
 type Key = 'FO' | 'NIFTY' | 'BANKNIFTY' | 'ALL'
 const KEYS: [Key, string][] = [['FO', 'F&O STOCKS'], ['NIFTY', 'NIFTY 50'], ['BANKNIFTY', 'BANK NIFTY'], ['ALL', 'ALL NSE']]
@@ -78,6 +78,8 @@ export function PreOpen() {
   const filtered = useMemo(() => { const n = q.trim().toUpperCase(); return n ? rows.filter(r => r.symbol.includes(n)) : rows }, [rows, q])
   const hist = useMemo(() => BUCKETS.map(([lo, hi, label]) => ({ label, lo, n: rows.filter(r => r.change_pct! >= lo && r.change_pct! < hi).length })), [rows])
   const median = useMemo(() => { const v = rows.map(r => r.change_pct!).sort((a, b) => a - b); return v.length ? v[Math.floor(v.length / 2)] : null }, [rows])
+  // PLAN §0.5: the auction book's NSE timestamp; LIVE while the 09:00–09:08 auction runs
+  const preSrc = sourceOf(nseStampIso(data?.timestamp) ?? data?.fetched_at ?? null, { source: 'NSE pre-open', live: auctionPhase(now).live })
   const top = (list: PreOpenRow[], f: (r: PreOpenRow) => number, n = 10) => [...list].sort((a, b) => f(b) - f(a)).slice(0, n)
 
   const sessionDay = data?.timestamp?.slice(0, 11)
@@ -96,7 +98,7 @@ export function PreOpen() {
     { key: 'event', label: 'Next event', render: r => { const e = events.get(r.symbol)?.[0]; return e ? <EventBadge kind={e.kind} date={e.event_date} days={daysUntil(e.event_date)} typical={e.typical_move_pct} detail={e.detail} /> : <span style={{ color: T.dim }}>—</span> } },
   ]
   const mini = (title: string, list: PreOpenRow[], accent: string, show: (r: PreOpenRow) => ReactNode) => (
-    <Panel title={title} accent={accent} pad={0}>
+    <Panel source={preSrc} title={title} accent={accent} pad={0}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11.5 }}>
         <tbody>
           {list.map(r => (
@@ -122,7 +124,7 @@ export function PreOpen() {
       {error && <ErrorBox error={error} />}
       {!data && !error && <Loading label="Reading the NSE pre-open book" />}
       {data && !rows.length && (
-        <Panel title="No pre-open book" accent={T.red}>
+        <Panel source={preSrc} title="No pre-open book" accent={T.red}>
           <span style={{ fontSize: 12, color: T.muted }}>NSE has no {KEYS.find(k => k[0] === key)?.[1]} pre-open data right now (the index lists are cleared between
             sessions). Try <span role="button" style={{ color: T.cyan, cursor: 'pointer' }} onClick={() => setKey('FO')}>F&O STOCKS</span>.</span>
         </Panel>
@@ -151,7 +153,7 @@ export function PreOpen() {
             </div>
           </div>
           {mine.length > 0 && (
-            <Panel title="Your stocks" accent={T.cyan} subtitle="watchlist and pins in this list" style={{ marginBottom: 12 }}>
+            <Panel source={preSrc} title="Your stocks" accent={T.cyan} subtitle="watchlist and pins in this list" style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px', fontSize: 12 }}>
                 {mine.map(r => (
                   <span key={r.symbol} style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
@@ -166,7 +168,7 @@ export function PreOpen() {
             {mini('Buyers left over', top(liquid.filter(r => r.imbalance != null && (r.buy_qty ?? 0) + (r.sell_qty ?? 0) > 0), r => r.imbalance!).filter(r => r.imbalance! > 0), T.green, r => <Imbalance v={r.imbalance} />)}
             {mini('Sellers left over', top(liquid.filter(r => r.imbalance != null && (r.buy_qty ?? 0) + (r.sell_qty ?? 0) > 0), r => -r.imbalance!).filter(r => r.imbalance! < 0), T.red, r => <Imbalance v={r.imbalance} />)}
           </div>
-          <Panel title={`Full book · ${filtered.length.toLocaleString('en-IN')} stocks`} pad={0} accent={T.amber}
+          <Panel source={preSrc} title={`Full book · ${filtered.length.toLocaleString('en-IN')} stocks`} pad={0} accent={T.amber}
             subtitle="imbalance = (buy − sell) ÷ (buy + sell) of the orders left unmatched at the IEP · leaders above need ≥ ₹10 L matched"
             right={<Input value={q} onChange={setQ} placeholder="find stock" width={160} />}>
             <DataTable columns={cols} rows={filtered} rowKey={r => r.symbol} dense maxHeight={700} initialSort={{ key: 'gap', dir: 'desc' }} empty="No stocks match" />

@@ -119,6 +119,7 @@ if str(_ROOT) not in sys.path:
     sys.path.append(str(_ROOT))
 from shared import mcx_specs
 from shared.http_guard import install_http_guard
+from shared.metrics import install_observability
 
 for _candidate in [_ROOT / ".env", Path("/app/.env")]:
     if _candidate.exists():
@@ -1530,7 +1531,7 @@ IV_INTRADAY_PATH = "/jobs/iv-intraday"       # B1: ?job=iv_intraday → {status:
 INDEX_DRIVERS_PATH = "/jobs/index-drivers"   # B1 index_drivers/api.py: ?job=index_drivers_daily + {date?}; result.top10.status
 NSE_FILES_PATH = "/jobs/ingest-nse-files"    # B1: {datasets, from?, to?, revalidate} — If-Modified-Since → revision rows
 DATA_HEALTH_JOB_PATH = "/jobs/data-health"   # B1 data_health/api.py: {since?, sessions, reason} → the explicit gap rows
-DATA_HEALTH_API = "/api/data/health"         # B3 ui-api: rows[{id, state: live|fresh|amber|red|gap, as_of, job_id, note, …}]
+DATA_HEALTH_API = "/api/data/health"         # B3 ui-api: rows[{id, state: live|fresh|amber|red|gap|unknown, as_of, job_id, note, …}]
 TERMINAL_PAUSE_S = 3600
 IV_EOD_SLO = time(21, 30)                    # PLAN 1.1: iv_eod stored by 21:30; a miss is one Telegram info line at 22:45
 IV_INTRADAY_WINDOW = (time(9, 20), time(15, 30))
@@ -1736,10 +1737,14 @@ async def nse_evening_pass() -> None:
         except Exception as exc:  # noqa: BLE001
             _mark_failed(JOB)
             lines.append(f"positions FAILED {str(exc)[:160]}")
-        if TERMINAL_JOBS_ENABLED:
+        today = datetime.now(IST).date().isoformat()
+        closed = await _closed_today(JOB)        # an NSE holiday has no session files: no 'missing' rows for a non-session date
+        if TERMINAL_JOBS_ENABLED and closed:
+            lines.append("revisions: market closed today (no session files)")
+        elif TERMINAL_JOBS_ENABLED:
             try:
                 res = await _terminal_job(JOB, NSE_FILES_PATH, {"datasets": ["nse_bhavcopy", *NSE_IV_FILES, *NSE_EVENING_FILES],
-                                                                "revalidate": True})
+                                                                "from": today, "to": today, "revalidate": True})
                 lines.append("revisions " + revision_digest(res))
             except TerminalJobUnavailable as exc:
                 lines.append(f"revisions: {exc}")
@@ -1757,8 +1762,7 @@ async def nse_evening_pass() -> None:
             lines.append(f"results symbols={r2.get('symbols')} rows={r2.get('rows')}")
         except Exception as exc:  # noqa: BLE001
             lines.append(f"results FAILED {str(exc)[:160]}")
-        today = datetime.now(IST).date().isoformat()
-        if not await _closed_today(JOB) and TERMINAL_JOBS_ENABLED:
+        if not closed and TERMINAL_JOBS_ENABLED:
             if iv_eod_missed(_IV_EOD_STATE, today):
                 status = await iv_eod_step(JOB, today, retry=True)
                 lines.append(f"iv_eod retry {status}")
@@ -1786,14 +1790,31 @@ def _span_body(job_id: str, row: dict[str, Any], multi: Any, last_session: str) 
     return {"job": job_id, "date": last_session}
 
 
+NSE_FILE_DATASETS: frozenset[str] = frozenset((*NSE_IV_FILES, *NSE_EVENING_FILES))
+NSE_FILES_MAX_SPAN_DAYS = 31                 # a catch-up span never asks NSE for more than a month of each file
+SWEEP_FILES_MAX_SPAN_DAYS = 7                # the 08:35 sweep runs INSIDE the morning window: ≤ a week (≈ 5 sessions × ≤ 7 files,
+                                             # ≈ 40 paced GETs); a longer hole is the start-up catch-up's (outside the windows)
+# the sweep's execution order: fetch the files first, compute from them last (iv_eod / drivers read what the files wrote)
+_SWEEP_ORDER = {"positions": 0, "bhavcopy": 1, "evening files": 2, "events": 3, "results": 4, "drivers": 5, "iv_eod": 6}
+
+
 def plan_sweep(rows: list[dict[str, Any]], last_session: str) -> list[dict[str, Any]]:
     """The 08:35 sweep's work from the health rows (pure): one small data-service call per amber / red row whose ingest is
     a light NSE fetch, deduplicated, at most SWEEP_MAX_JOBS. Never the Yahoo refresh or the ML build (the 08:30 sync and
     tonight's 18:30 own those), never a gold job (its own catch-up), never a gap row (unrecoverable by definition), never a
-    row that is not due yet. `backfill_from` (iv_eod, drivers: B1's resumable backfill from the files the positions ingest
-    cached) when more than one session is missing, else the last session's date."""
+    row that is not due yet (B3 keeps those `fresh`).
+
+    The Wave 1.4 evening files and the IV input files (NSE_FILE_DATASETS: participant volumes, FII derivative stats, MWPL
+    clients, combined OI, FOVOLT, Contract_Delta, the daily index file) are matched on the ROW ID, whatever job the
+    catalog names for them (B1 lists nse_positions_catchup / iv_eod, whose own paths never fetch these files): ONE
+    /jobs/ingest-nse-files step (B1's NseFilesRequest {datasets, from, to, revalidate}) for every such row, spanning
+    from the day after the oldest stored as-of to the last session — so a missed night is re-fetched, not left as a
+    permanent hole. `backfill_from` (iv_eod, drivers: B1's resumable backfill from the stored files) when more than one
+    session is missing, else the last session's date. Steps run files-first, computations last."""
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
+    files: list[str] = []
+    files_from: list[str] = []
 
     def add(label: str, path: str, body: dict[str, Any] | None = None, *, kind: str = "job") -> None:
         if path in seen or len(out) >= SWEEP_MAX_JOBS:
@@ -1807,7 +1828,13 @@ def plan_sweep(rows: list[dict[str, Any]], last_session: str) -> list[dict[str, 
             continue
         lag = r.get("lag_sessions")
         multi = isinstance(lag, int) and lag > 1 and r.get("as_of")
-        if job_id == "nse_positions_catchup":
+        if rid in NSE_FILE_DATASETS:
+            if rid not in files:
+                files.append(rid)
+            start = _iso_plus(r["as_of"], 1) if multi else last_session
+            files_from.append(start or last_session)
+            add("evening files", NSE_FILES_PATH)               # body filled below (one step for every file row)
+        elif job_id == "nse_positions_catchup":
             add("positions", "/jobs/ingest-nse-positions")
         elif job_id == "results_capture_daily":
             add("results", "/jobs/ingest-results", {"recent_events_days": 3, "max_age_days": 0})
@@ -1816,12 +1843,16 @@ def plan_sweep(rows: list[dict[str, Any]], last_session: str) -> list[dict[str, 
         elif job_id == "index_drivers_daily":
             add("drivers", f"{INDEX_DRIVERS_PATH}?job=index_drivers_daily",
                 _span_body("index_drivers_daily", r, multi, last_session))
-        elif job_id == "nse_evening_pass":
-            add("evening files", NSE_FILES_PATH, {"datasets": [*NSE_IV_FILES, *NSE_EVENING_FILES], "revalidate": True})
         elif job_id == "eod_data_pipeline" and rid == "nse_bhavcopy":
             add("bhavcopy", "/jobs/ingest-bhavcopy")
         elif job_id == "eod_data_pipeline" and rid == "nse_events":
             add("events", "/jobs/ingest-nse-events")
+    for step in out:
+        if step["path"] == NSE_FILES_PATH:
+            floor = _iso_plus(last_session, -SWEEP_FILES_MAX_SPAN_DAYS) or last_session
+            step["body"] = {"job": "nse_files", "datasets": files, "from": max(min(files_from), floor), "to": last_session,
+                            "revalidate": False}
+    out.sort(key=lambda st: _SWEEP_ORDER.get(st["label"], 9))
     return out
 
 
@@ -1830,7 +1861,8 @@ def health_digest(health: dict[str, Any]) -> str:
     date · expected by · sessions behind). Description only — no direction, no score."""
     s: dict[str, Any] = health["summary"] if isinstance(health.get("summary"), dict) else {}
     rows = health_rows(health)
-    head = (f"{s.get('green', 0)} green · {s.get('amber', 0)} amber · {s.get('red', 0)} red · {s.get('gaps', 0)} gap"
+    unknown = f" · {s['unknown']} unknown" if s.get("unknown") else ""
+    head = (f"{s.get('green', 0)} green · {s.get('amber', 0)} amber · {s.get('red', 0)} red · {s.get('gaps', 0)} gap{unknown}"
             f" of {s.get('rows', len(rows))} datasets (last session {health.get('last_session', '?')})")
     bad = [r for r in rows if r.get("state") in ("amber", "red", "gap")]
     bad.sort(key=lambda r: (-HEALTH_RANK.get(str(r.get("state")), 0), str(r.get("id"))))
@@ -2044,6 +2076,12 @@ TERMINAL_TODAY_SLOTS: dict[str, tuple[tuple[int, ...], time]] = {     # job id �
     "nse_evening_pass": ((0, 1, 2, 3, 4), time(22, 45)),
 }
 IV_WEEKLY_SLOT = time(3, 0)                                            # Saturday; checked Sat–Sun
+# a missed 08:35 sweep is worth a one-off only until the evening window opens: from 18:30 the 20:30 / 22:45 passes re-fetch
+# last night's files themselves, and a sweep there would race the EOD pipeline's own ingests (check:B2-CTRL; this also
+# keeps the first deploy evening (≥ 21:30) from firing a sweep + DATA digest)
+MORNING_SWEEP_LAST = time(18, 30)
+# terminal one-offs that are fetch passes: moved out of a freeze window like the non-light gold jobs (freeze_slot)
+TERMINAL_ONEOFF_DEFER: tuple[str, ...] = ("morning_sweep", "nse_positions_catchup")
 
 
 def terminal_missed_jobs(now: datetime, history: dict[str, dict[str, Any]] | None) -> list[str]:
@@ -2053,12 +2091,32 @@ def terminal_missed_jobs(now: datetime, history: dict[str, dict[str, Any]] | Non
         return []
     t = _ist_naive(now)
     out = [job for job, (days, slot) in TERMINAL_TODAY_SLOTS.items()
-           if t.weekday() in days and t.time() >= slot and _last_run_before(history, job, datetime.combine(t.date(), slot))]
+           if t.weekday() in days and t.time() >= slot and _last_run_before(history, job, datetime.combine(t.date(), slot))
+           and not (job == "morning_sweep" and t.time() >= MORNING_SWEEP_LAST)]
     if t.weekday() in (5, 6):
         sat = datetime.combine(t.date() - timedelta(days=t.weekday() - 5), IV_WEEKLY_SLOT)
         if t >= sat and _last_run_before(history, "iv_weekly", sat):
             out.append("iv_weekly")
     return out
+
+
+def nse_files_span(since: str, now: datetime) -> tuple[str, str] | None:
+    """[from, to] for the catch-up's /jobs/ingest-nse-files (pure): from the heartbeat's day (the first session the stack
+    may have missed; capped at NSE_FILES_MAX_SPAN_DAYS back) to the last weekday whose evening files are out — today only
+    once the 20:30 pass's slot has passed (the F&O-era files land by 20:10), else the previous weekday. None when the span
+    is empty (down and up again inside one evening before its files)."""
+    try:
+        start = date.fromisoformat(since[:10])
+    except ValueError:
+        return None
+    t = _ist_naive(now)
+    end = t.date() if t.time() >= time(20, 30) else t.date() - timedelta(days=1)
+    while end.weekday() >= 5:
+        end -= timedelta(days=1)
+    start = max(start, end - timedelta(days=NSE_FILES_MAX_SPAN_DAYS))
+    if start > end:
+        return None
+    return start.isoformat(), end.isoformat()
 
 
 # the jobs the start-up data catch-up re-runs itself after downtime (0.9): their "missed today" one-offs are left to it
@@ -2068,10 +2126,13 @@ TERMINAL_CATCHUP_OWNED: tuple[str, ...] = ("nse_positions_catchup", "index_drive
 async def _terminal_downtime_catchup(job: str, since: str, missed: dict[str, int], mode: str) -> list[str]:
     """Wave 0 0.9: after the data steps of the start-up catch-up (full / nse modes) — the positions files (the 18:30
     pipeline is equity-only now), results release times with a window of the days down + 3, the index valuation history,
-    the IV store and the drivers with `backfill_from` (B1 resumes from the files the positions ingest just cached), the
-    explicit gap rows for the sessions nothing captured (pre-open, internals, FII/DII, gold open — B1's data_gaps), then
-    the Desk mark and the S1 shadow when their 19:30 / 19:50 runs were missed (both replay every missed session from
-    stored closes; rules unchanged). One phrase per step for the 'Stack was down' report."""
+    the NSE evening + IV input files and the equity bhavcopy revisions for every session of the outage
+    (/jobs/ingest-nse-files over `nse_files_span`: the positions ingest caches only the legacy F&O / participant-OI /
+    deals / MTF files, so without this the IV backfill would lack FOVOLT / Contract_Delta / the index file and the evening
+    tables would keep a permanent hole), THEN the IV store and the drivers with `backfill_from` (B1 resumes from those
+    stored files), the explicit gap rows for the sessions nothing captured (pre-open, internals, FII/DII, gold open —
+    B1's data_gaps), then the Desk mark and the S1 shadow when their 19:30 / 19:50 runs were missed (both replay every
+    missed session from stored closes; rules unchanged). One phrase per step for the 'Stack was down' report."""
     lines: list[str] = []
     now = datetime.now(IST)
     try:
@@ -2096,7 +2157,12 @@ async def _terminal_downtime_catchup(job: str, since: str, missed: dict[str, int
         await index_valuation_daily(recent=max(10, days_down + 5))
         lines.append("index valuation: re-run")
     if TERMINAL_JOBS_ENABLED:
-        for label, path, body in (("drivers", f"{INDEX_DRIVERS_PATH}?job=index_drivers_daily",
+        span = nse_files_span(since, now)
+        steps: list[tuple[str, str, dict[str, Any]]] = []
+        if span is not None:
+            steps.append(("NSE files", NSE_FILES_PATH, {"job": "nse_files", "datasets": ["nse_bhavcopy", *NSE_IV_FILES, *NSE_EVENING_FILES],
+                                                        "from": span[0], "to": span[1], "revalidate": True}))
+        for label, path, body in (*steps, ("drivers", f"{INDEX_DRIVERS_PATH}?job=index_drivers_daily",
                                    {"job": "index_drivers_daily", "backfill_from": since[:10]}),
                                   ("IV store", f"{IV_EOD_PATH}?job=iv_eod", {"job": "iv_eod", "backfill_from": since[:10]}),
                                   ("gap rows", DATA_HEALTH_JOB_PATH,
@@ -2108,6 +2174,8 @@ async def _terminal_downtime_catchup(job: str, since: str, missed: dict[str, int
                     found = (res.get("gap_scan") or {}).get("gaps") or {}
                     gaps = [f"{k} {', '.join(v)}" for k, v in found.items() if v] if isinstance(found, dict) else []
                     lines.append("gap rows: " + ("; ".join(gaps) if gaps else "none (every session captured)"))
+                elif label == "NSE files":
+                    lines.append(f"NSE files {body['from']} → {body['to']}: {revision_digest(res)}")
                 else:
                     days = res.get("days")
                     lines.append(f"{label}: {res.get('status', 'ok')} from {since[:10]}"
@@ -3148,6 +3216,9 @@ def gold_freshness_line(tables: dict[str, Any], today: date) -> str:
     return "Gold through: " + " · ".join(parts)
 
 
+_FRESHNESS_BLIND_WARNED: dict[str, str] = {}
+
+
 async def _check_dataset_freshness(job: str) -> list[str]:
     """Alert (critical) on every catalogued dataset ui-api's /api/data/health (B3) classes `red`: due by its `expected_by`
     (IST, trading-day aware) and more than `max_age` sessions behind the last close, or nothing stored — the Terminal v2
@@ -3156,6 +3227,14 @@ async def _check_dataset_freshness(job: str) -> list[str]:
     "stale". Called after the 08:30 sync and the 18:30 pipeline, when the F&O rows are not due yet (fresh)."""
     health = await _data_health(job)
     if health is None:
+        # the old DATASET_MAX_AGE_DAYS net is gone: silence must be visible (check:B2-CTRL) — one WARNING line a day
+        # (e.g. ui-api still on the pre-v2 release, whose /api/data/health is data-service's /health relay)
+        day = datetime.now(IST).date().isoformat()
+        if _FRESHNESS_BLIND_WARNED.get("day") != day:
+            _FRESHNESS_BLIND_WARNED["day"] = day
+            await _alerts.warning("Freshness check has no data-health view",
+                                  f"ui-api {DATA_HEALTH_API} did not answer with dataset rows, so no stale-feed alert can fire "
+                                  "today. Restart ui-api on the Terminal v2 release (outside 07:55–08:10); SYS › DATA shows the rows.")
         return []
     red = [r for r in health_rows(health) if r.get("state") == "red"]
     stale = [f"{r['id']}: {r.get('note') or 'nothing stored'}" for r in red]
@@ -4078,6 +4157,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             scheduler.add_job(func, trigger="date", run_date=when, args=args, id=f"{name}_catchup",
                               name=f"{name} (catch-up after start)", misfire_grace_time=3600, coalesce=True)
         else:
+            if name in TERMINAL_ONEOFF_DEFER:
+                when = freeze_slot(when)
             scheduler.add_job(_catchup[name], trigger="date", run_date=when,
                               id=f"{name}_catchup", name=f"{name} (catch-up after start)")
         _log.info("scheduler", f"missed today: {name} → running it once at {when:%H:%M}")
@@ -4121,7 +4202,8 @@ app = FastAPI(
 
 # No CORS (desktop review C2-security-07): the controller's only browser-facing client is ui-api's
 # server-side proxy (/api/telemetry), so '*' CORS only let other websites drive autopilot and the ICICI
-# login. The Host/Origin guard is the only middleware, so the outermost; add future middleware above it.
+# login. Observability (PLAN 1.5): /metrics, X-Request-ID, JSON access log — inside the guard, which stays outermost.
+install_observability(app, service="master-controller", thread_limit=None)
 install_http_guard(app, service="master-controller")
 
 

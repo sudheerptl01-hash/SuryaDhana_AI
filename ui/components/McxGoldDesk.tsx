@@ -17,7 +17,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chip, DataTable, Input, Loading, Notice, PageHeader, Panel, Select, Stat, T,
-         fmtInr, fmtNum, type Column } from '@/components/terminal'
+         fmtInr, fmtNum, type Column, sourceOf, inputSource, undatedSource } from '@/components/terminal'
 import { fmtSigned, fmtSignedInr } from '@/lib/format'   // +₹ / −₹ with U+2212 (C1-18)
 import { ContractSelector } from '@/components/gold/ContractsView'
 import { goToPage } from '@/lib/navigate'
@@ -272,7 +272,7 @@ export function McxGoldDesk() {
         <div style={{ display: 'grid', gap: 12 }}>
           {/* 1. session + calendar */}
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1.3fr) minmax(300px, 1fr)' }}>
-            <Panel title="Session" accent={stateColor}
+            <Panel source={sourceOf(session.as_of, { source: 'MCX session clock', live: session.is_open })} title="Session" accent={stateColor}
               subtitle={`Mon–Fri 09:00 → ${session.closes_at.includes('23:55') ? '23:55' : '23:30'} IST · as of ${istClock(session.as_of)}`}
               bodyStyle={{ display: 'grid', gap: 10 }}>
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
@@ -286,7 +286,7 @@ export function McxGoldDesk() {
               {session.calendar_warning && <Notice color={T.amber}>{session.calendar_warning}</Notice>}
               <div style={{ fontSize: 10, color: T.dim, lineHeight: 1.5 }}>{session.note}</div>
             </Panel>
-            <Panel title="MCX holidays ahead" subtitle="MCX's own calendar — not NSE's" accent={T.amber} pad={0}>
+            <Panel source={undatedSource('MCX holiday calendar')} title="MCX holidays ahead" subtitle="MCX's own calendar — not NSE's" accent={T.amber} pad={0}>
               <DataTable columns={holCols} rows={holidayRows} rowKey={r => r.date} dense
                 empty="No MCX holidays left in the 2026 table" />
               {(session.special_sessions ?? []).map(s => (
@@ -298,7 +298,7 @@ export function McxGoldDesk() {
           </div>
 
           {/* 2. quote (+ 3. the overlay line at its foot) */}
-          <Panel title="Quote" accent={quote?.available ? T.green : T.amber}
+          <Panel source={sourceOf(quote?.as_of ?? null, { source: 'Breeze', live: !!quote?.available, maxAgeDays: 1 })} title="Quote" accent={quote?.available ? T.green : T.amber}
             subtitle={quote ? `${quote.contract} ${quote.expiry} (${quote.expiry_source}) · lot ${quote.lot} · tick ${fmtInr(quote.tick_value)}` : 'resolving the front contract'}
             right={
               <span style={{ display: 'inline-flex', gap: 8 }}>
@@ -349,14 +349,14 @@ export function McxGoldDesk() {
           </Panel>
 
           {/* 4. the shared contract selector (replaces the specs card; same component as GOLD › CONTRACTS) */}
-          <Panel title="Contracts — MCX gold family" accent={T.cyan}
+          <Panel source={undatedSource('MCX contract master', 'margins from the Zerodha NRML mirror, dated')} title="Contracts — MCX gold family" accent={T.cyan}
             subtitle="the selector GOLD › CONTRACTS uses · synced (prefs gold.contract.v1) · margins from the Zerodha NRML mirror, dated"
             right={<Chip color={T.amber} onClick={() => openGold('contracts')} title="Term structure, MCX chain, roll calendar, COMEX spec card">GOLD › CONTRACTS</Chip>}>
             <ContractSelector families={families} sel={sel} onSel={updateSel} dense />
           </Panel>
 
           {/* 5. paper ticket */}
-          <Panel title="Paper gold ticket" accent={T.green}
+          <Panel source={inputSource('the ticket you fill in (PAPER, records nothing)')} title="Paper gold ticket" accent={T.green}
             subtitle="prices the trade — PAPER, records nothing, no order API exists on this desk"
             bodyStyle={{ display: 'grid', gap: 12 }}>
             <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', alignItems: 'end' }}>

@@ -21,8 +21,8 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 import pandas as pd
-
 from data_health import db
+
 from fo_iv import black76 as b76
 from fo_iv.black76 import MODEL_VERSION
 from fo_iv.iv_eod import INDEX_SYMBOLS, rate_for
@@ -35,7 +35,8 @@ IST = ZoneInfo("Asia/Kolkata")
 WINDOW = (time(9, 20), time(15, 30))
 PILOT_INDICES: tuple[str, ...] = ("NIFTY", "BANKNIFTY")
 DEFAULT_MAX_CALLS_PER_SNAPSHOT = 30            # ≤ 30/min (PLAN 1.1)
-DEFAULT_DAILY_CAP = 800                        # ≤ 800/day
+DEFAULT_DAILY_CAP = 800                        # ≤ 800/day: enforced HERE from the ledger's per-caller count (snapshot()),
+                                               # whether or not the ledger carries an `iv_intraday` quota of its own
 CALLER = "iv_intraday"                         # the ledger's per-caller quota name (B3 BREEZE_BUDGET_QUOTAS)
 METHOD = "get_option_chain_quotes"
 SOURCE = "breeze"
@@ -154,8 +155,11 @@ def pilot_targets(store: Any, *, watchlist: Iterable[str] = (), as_of: date | No
 
 
 def snapshot(store: Any, breeze: Any, budget: Any, *, now: datetime | None = None, watchlist: Iterable[str] = (), parquet_root: Path | None = None,
-             max_calls: int = DEFAULT_MAX_CALLS_PER_SNAPSHOT, force_window: bool = False, is_live: Callable[[], bool] | None = None) -> dict[str, Any]:
-    """One tick of the pilot. Returns ``{"status": skipped|ok, "reason"?, "calls", "rows", ...}``; never raises on a bad chain."""
+             max_calls: int = DEFAULT_MAX_CALLS_PER_SNAPSHOT, force_window: bool = False, is_live: Callable[[], bool] | None = None,
+             daily_cap: int = DEFAULT_DAILY_CAP) -> dict[str, Any]:
+    """One tick of the pilot. Returns ``{"status": skipped|ok, "reason"?, "calls", "rows", ...}``; never raises on a bad chain.
+    The pilot's own day cap (PLAN 1.1: ≤ 800 calls/day) is read from the ledger's count for this caller (the dry run's
+    ``caller_used_day``): a tick that would cross it is trimmed to whole (call, put) pairs, or skipped."""
     now = now or db.utcnow()
     now_ist = now.replace(tzinfo=ZoneInfo("UTC")).astimezone(IST)
     day = now_ist.date()
@@ -176,6 +180,14 @@ def snapshot(store: Any, breeze: Any, budget: Any, *, now: datetime | None = Non
     if not getattr(first, "allowed", False):
         return {"status": "skipped", "reason": f"budget ledger refused: {getattr(first, 'reason', 'no')}", "calls": 0,
                 "retry_after_s": getattr(first, "retry_after_s", None)}
+    used_today = int(getattr(first, "caller_used_day", 0) or 0)
+    left_today = max(0, int(daily_cap) - used_today)
+    if left_today < 2:
+        return {"status": "skipped", "reason": f"pilot day cap reached ({used_today}/{daily_cap} {CALLER} calls today, IST; PLAN 1.1 ≤ 800/day)",
+                "calls": 0}
+    if need > left_today:
+        targets = targets[: left_today // 2]
+        need = 2 * len(targets)
     r, _ = rate_for(store, day)
     raw: list[dict[str, Any]] = []
     derived: list[dict[str, Any]] = []

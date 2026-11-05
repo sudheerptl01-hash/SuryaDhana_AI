@@ -120,3 +120,35 @@ def test_a_refusing_ledger_stops_the_tick_before_the_sdk_call(store, tmp_path):
     breeze, ledger = FakeBreeze(), FakeLedger(cap=3)
     out = intraday.snapshot(store, breeze, ledger, now=TS, parquet_root=tmp_path / "chain")
     assert out["status"] == "partial" and out["calls"] == 3 and out["refused"] == 1 and len(breeze.calls) == 3
+
+
+class _CountingDecision(_Decision):
+    def __init__(self, used: int) -> None:
+        super().__init__(True)
+        self.caller_used_day = used
+
+
+class CountedLedger(FakeLedger):
+    """A ledger whose dry run reports how many iv_intraday calls were made today (the real ledger's caller_used_day)."""
+
+    def __init__(self, used: int) -> None:
+        super().__init__()
+        self.used = used
+
+    def decide(self, caller: str, method: str = "") -> _Decision:
+        return _CountingDecision(self.used)
+
+
+def test_the_pilots_own_day_cap_is_enforced_from_the_ledgers_count(store, tmp_path):
+    """check:B1-DATA minor: DEFAULT_DAILY_CAP was a dead constant (the ledger carries no iv_intraday quota yet). The pilot now
+    reads its own count from the dry run and never crosses ≤ 800 calls/day."""
+    breeze = FakeBreeze()
+    out = intraday.snapshot(store, breeze, CountedLedger(799), now=TS, parquet_root=tmp_path / "chain")
+    assert out["status"] == "skipped" and "pilot day cap reached (799/800" in out["reason"] and breeze.calls == []
+    out = intraday.snapshot(store, breeze, CountedLedger(795), now=TS, parquet_root=tmp_path / "chain")   # 5 left: two pairs, not 8 calls
+    assert out["status"] == "ok" and out["calls"] == 4 and len(breeze.calls) == 4
+    # negative control: far below the cap the full tick runs (2 indices × 2 expiries × 2 sides)
+    breeze2 = FakeBreeze()
+    out = intraday.snapshot(store, breeze2, CountedLedger(10), now=TS, parquet_root=tmp_path / "chain")
+    assert out["calls"] == 8 and len(breeze2.calls) == 8
+    assert intraday.DEFAULT_DAILY_CAP == 800

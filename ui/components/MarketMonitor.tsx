@@ -9,7 +9,7 @@ import { apiError } from '@/lib/errors'
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getMarketMonitor, getRecentResults, type MarketMonitor as Data, type MarketMover, type MarketSector, type RecentResult } from '@/lib/api'
-import { CHART_BOX, Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, type Column, fmtIdx, fmtPct, fmtNum, fmtSigned, ordinal, tone, useChartSize } from '@/components/terminal'
+import { CHART_BOX, Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, type Column, fmtIdx, fmtPct, fmtNum, fmtSigned, ordinal, tone, useChartSize, sourceOf } from '@/components/terminal'
 import { labelEvery, niceAxis } from '@/components/terminal/chart'
 import { MarketMap } from './MarketMap'
 import { sessionDayLabel, unicodeMinus } from '@/lib/format'
@@ -113,7 +113,9 @@ function BreadthChart({ d }: { d: Data }) {
   )
 }
 
-function MoverTable({ title, rows, onSelect, sortKey, accent, results, day = 'today' }: {
+function MoverTable({ title, rows, onSelect, sortKey, accent, results, day = 'today', asOf = null }: {
+  /** the EOD session the movers describe (PLAN §0.5 source chip) */
+  asOf?: string | null
   title: string; rows: MarketMover[]; onSelect: (s: string) => void; sortKey: 'chg_pct' | 'turnover_cr' | 'vol_x'; accent: string
   results?: Map<string, RecentResult>
   /** the EOD session the lists are from: 'today' or 'on 23 Oct' (P16 MKT wording) */
@@ -136,7 +138,7 @@ function MoverTable({ title, rows, onSelect, sortKey, accent, results, day = 'to
     { key: 'from_52w_high_pct', label: 'vs 52w H', align: 'right', render: r => <span style={{ color: T.muted }}>{pct(r.from_52w_high_pct, 1)}</span> },
   ]
   return (
-    <Panel title={title} accent={accent} pad={0}>
+    <Panel title={title} accent={accent} pad={0} source={sourceOf(asOf, { source: 'NSE EOD' })}>
       <DataTable columns={cols} rows={rows} rowKey={r => r.symbol} dense onRowClick={r => onSelect(r.symbol)} empty={`None ${day}`} />
     </Panel>
   )
@@ -186,7 +188,7 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
         right={<Chip color={T.amber} onClick={load}>↻ REFRESH</Chip>} />
       <div style={{ display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(300px, 1fr) minmax(0, 2.4fr)' }}>
-          <Panel title="Market regime" subtitle="handbook stage 2 · health gauge, not a signal" accent={SCORE_COLOR[s]}>
+          <Panel source={sourceOf(data.as_of, { source: 'NSE EOD' })} badge="context" title="Market regime" subtitle="handbook stage 2 · health gauge, not a signal" accent={T.muted}>
             <RegimeGauge d={data} />
           </Panel>
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', alignContent: 'start' }}>
@@ -205,14 +207,14 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
               sub={`5d ${num(b.mm_ratio5, 2)} · 10d ${num(b.mm_ratio10, 2)} (≥ 1.5 bullish)`} />
             <Stat label="Distribution days" value={`${num(b.dist_days_25)} / 25`} accent={(b.dist_days_25 ?? 0) <= 4 ? T.green : T.red}
               color={(b.dist_days_25 ?? 0) <= 4 ? T.green : T.red} sub="≥ 5 = institutions selling" />
-            <Stat label="India VIX" value={num(b.vix, 2)} accent={(b.vix_pct ?? 0) < 80 ? T.green : T.red}
+            <Stat label="India VIX" value={num(b.vix, 2)} accent={T.muted}
               sub={`${ordinal(b.vix_pct)} percentile of the past year`} />
           </div>
         </div>
 
         <IndexValuation />
         <YieldGapPanel />
-        <Panel title="One year of breadth" accent={T.cyan}
+        <Panel source={sourceOf(data.as_of, { source: 'NSE EOD' })} badge="context" title="One year of breadth" accent={T.cyan}
           subtitle="amber = index (left axis) · cyan = % above 50-DMA · violet = % above 200-DMA (right axis) · strip = regime score">
           <BreadthChart d={data} />
         </Panel>
@@ -221,7 +223,7 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
         {data.rotation && data.rotation.length > 0 && <RotationChart rows={data.rotation} />}
         <ParticipantPositioning />
 
-        <Panel title="Industry table" subtitle="equal-weighted returns of liquid stocks in each NSE industry · click an industry for its stocks" accent={T.amber} pad={0}
+        <Panel source={sourceOf(data.as_of, { source: 'NSE EOD' })} badge="arithmetic" title="Industry table" subtitle="equal-weighted returns of liquid stocks in each NSE industry · click an industry for its stocks" accent={T.amber} pad={0}
           right={<div style={{ display: 'flex', gap: 4 }}>
             {(['ret_1d_pct', 'ret_5d_pct', 'ret_21d_pct', 'ret_63d_pct'] as const).map((k, i) => (
               <Chip key={k} color={T.amber} active={sectorSort === k} onClick={() => setSectorSort(k)}>{['1D', '1W', '1M', '3M'][i]}</Chip>
@@ -257,12 +259,12 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
         </Panel>
 
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))' }}>
-          <MoverTable title="Top gainers" rows={data.movers.gainers} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.green} results={resultsToday} day={day} />
-          <MoverTable title="Top losers" rows={data.movers.losers} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.red} results={resultsToday} day={day} />
-          <MoverTable title="Most active (₹ turnover)" rows={data.movers.most_active} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.amber} results={resultsToday} day={day} />
-          <MoverTable title="Volume shockers (≥ 3× avg)" rows={data.movers.volume_shockers} onSelect={onSelectTicker} sortKey="vol_x" accent={T.cyan} results={resultsToday} day={day} />
-          <MoverTable title="New 52-week highs" rows={data.movers.new_highs} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.green} results={resultsToday} day={day} />
-          <MoverTable title="New 52-week lows" rows={data.movers.new_lows} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.red} results={resultsToday} day={day} />
+          <MoverTable title="Top gainers" rows={data.movers.gainers} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.green} results={resultsToday} day={day} asOf={data.as_of} />
+          <MoverTable title="Top losers" rows={data.movers.losers} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.red} results={resultsToday} day={day} asOf={data.as_of} />
+          <MoverTable title="Most active (₹ turnover)" rows={data.movers.most_active} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.amber} results={resultsToday} day={day} asOf={data.as_of} />
+          <MoverTable title="Volume shockers (≥ 3× avg)" rows={data.movers.volume_shockers} onSelect={onSelectTicker} sortKey="vol_x" accent={T.cyan} results={resultsToday} day={day} asOf={data.as_of} />
+          <MoverTable title="New 52-week highs" rows={data.movers.new_highs} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.green} results={resultsToday} day={day} asOf={data.as_of} />
+          <MoverTable title="New 52-week lows" rows={data.movers.new_lows} onSelect={onSelectTicker} sortKey="turnover_cr" accent={T.red} results={resultsToday} day={day} asOf={data.as_of} />
         </div>
         <div style={{ fontSize: 10, color: T.dim, lineHeight: 1.6 }}>
           Universe: EQ-series stocks ≥ ₹20 with a 20-day median turnover ≥ ₹1 cr, ETFs excluded (movers need ≥ ₹5 cr). Prices adjusted for splits and

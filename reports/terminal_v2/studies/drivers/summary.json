@@ -1,0 +1,321 @@
+{
+ "study": "TV-DRIVERS",
+ "run_at": "2026-11-05T08:20:28+05:30",
+ "db": "~/.suryadhana_pm_scratch/v2/B8-STUDIES/inputs.duckdb",
+ "provisional": true,
+ "model_version": "b76-pcp-v1",
+ "seed": 20261105,
+ "fno_costs": {
+  "as_of": "2026-11 (B8 reading; verify against a contract note)",
+  "stt_sell_pct": 0.15,
+  "stt_exercise_pct": 0.15,
+  "exchange_pct": 0.03503,
+  "sebi_pct": 0.0001,
+  "stamp_buy_pct": 0.003,
+  "gst_pct": 18.0,
+  "brokerage_pct": 0.1,
+  "half_spread_pct": 0.5,
+  "floor_pct": 0.15
+ },
+ "split": "2023-04-30",
+ "cash_cost_rt_pct": 0.931071,
+ "results": {
+  "sessions": 744,
+  "span": [
+   "2023-11-01",
+   "2026-10-30"
+  ],
+  "gated_decisions": 583,
+  "weight_methods": [
+   "rebuilt"
+  ],
+  "fit_by_year": [
+   {
+    "year": 2023,
+    "sessions": 41,
+    "passing": 0.0,
+    "decision_ok": 0.0,
+    "mae60_median_pct": null
+   },
+   {
+    "year": 2024,
+    "sessions": 249,
+    "passing": 0.678715,
+    "decision_ok": 0.60241,
+    "mae60_median_pct": 0.058857
+   },
+   {
+    "year": 2025,
+    "sessions": 249,
+    "passing": 1.0,
+    "decision_ok": 1.0,
+    "mae60_median_pct": 0.048399
+   },
+   {
+    "year": 2026,
+    "sessions": 205,
+    "passing": 1.0,
+    "decision_ok": 0.897561,
+    "mae60_median_pct": 0.038253
+   }
+  ],
+  "D1": {
+   "mean_full": -0.022231,
+   "t_full": -3.233557,
+   "n_full": 583,
+   "mean_h1": null,
+   "t_h1": null,
+   "n_h1": 0,
+   "mean_h2": -0.022231,
+   "t_h2": -3.233557,
+   "n_h2": 583
+  },
+  "D2": {
+   "mean_full": -0.123486,
+   "t_full": -0.259752,
+   "n_full": 583,
+   "mean_h1": null,
+   "t_h1": null,
+   "n_h1": 0,
+   "mean_h2": -0.123486,
+   "t_h2": -0.259752,
+   "n_h2": 583
+  },
+  "TL_D2": {
+   "mean_full": -0.977154,
+   "t_full": -1.445853,
+   "n_full": 290,
+   "mean_h1": null,
+   "t_h1": null,
+   "n_h1": 0,
+   "mean_h2": -0.977154,
+   "t_h2": -1.445853,
+   "n_h2": 290,
+   "cost_rt_pct": 0.931071,
+   "n_tranches": 290,
+   "ok": false
+  },
+  "TL_D2_futures_floor": {
+   "mean_full": -0.423486,
+   "t_full": -0.8908,
+   "n_full": 583,
+   "mean_h1": null,
+   "t_h1": null,
+   "n_h1": 0,
+   "mean_h2": -0.423486,
+   "t_h2": -0.8908,
+   "n_h2": 583
+  },
+  "controls": {
+   "N1_random_weight_leader": {
+    "D1": {
+     "mean_full": -0.040651,
+     "t_full": -6.434351,
+     "n_full": 583,
+     "mean_h1": null,
+     "t_h1": null,
+     "n_h1": 0,
+     "mean_h2": -0.040651,
+     "t_h2": -6.434351,
+     "n_h2": 583
+    },
+    "D2": {
+     "mean_full": 0.065061,
+     "t_full": 0.296125,
+     "n_full": 583,
+     "mean_h1": null,
+     "t_h1": null,
+     "n_h1": 0,
+     "mean_h2": 0.065061,
+     "t_h2": 0.296125,
+     "n_h2": 583
+    }
+   },
+   "N2_stale_leader_250": {
+    "D2": {
+     "mean_full": -0.166138,
+     "t_full": -0.245734,
+     "n_full": 454,
+     "mean_h1": null,
+     "t_h1": null,
+     "n_h1": 0,
+     "mean_h2": -0.166138,
+     "t_h2": -0.245734,
+     "n_h2": 454
+    }
+   },
+   "N3_shifted_events": {
+    "D3r": {
+     "mean_full": 0.025859,
+     "t_full": 0.036488,
+     "n_full": 15,
+     "mean_h1": null,
+     "t_h1": null,
+     "n_h1": 0,
+     "mean_h2": 0.025859,
+     "t_h2": 0.036488,
+     "n_h2": 15
+    },
+    "D3v": {
+     "mean_full": -0.078504,
+     "t_full": -0.043049,
+     "n_full": 15,
+     "mean_h1": null,
+     "t_h1": null,
+     "n_h1": 0,
+     "mean_h2": -0.078504,
+     "t_h2": -0.043049,
+     "n_h2": 15
+    }
+   }
+  },
+  "cap_weight_leader_D2": {
+   "mean_full": -0.563648,
+   "t_full": -1.393095,
+   "n_full": 583,
+   "mean_h1": null,
+   "t_h1": null,
+   "n_h1": 0,
+   "mean_h2": -0.563648,
+   "t_h2": -1.393095,
+   "n_h2": 583
+  },
+  "events": [
+   "2024-05-29",
+   "2024-08-09",
+   "2024-09-18",
+   "2024-11-07",
+   "2025-03-12",
+   "2025-04-22",
+   "2025-06-03",
+   "2025-07-03",
+   "2025-09-03",
+   "2025-10-08",
+   "2025-12-26",
+   "2026-02-18",
+   "2026-05-21",
+   "2026-07-29",
+   "2026-09-25"
+  ],
+  "D3": {
+   "D3r": {
+    "mean_full": 0.403391,
+    "t_full": 0.410214,
+    "n_full": 15,
+    "mean_h1": null,
+    "t_h1": null,
+    "n_h1": 0,
+    "mean_h2": 0.403391,
+    "t_h2": 0.410214,
+    "n_h2": 15
+   },
+   "D3v": {
+    "mean_full": 1.879254,
+    "t_full": 1.048762,
+    "n_full": 15,
+    "mean_h1": null,
+    "t_h1": null,
+    "n_h1": 0,
+    "mean_h2": 1.879254,
+    "t_h2": 1.048762,
+    "n_h2": 15
+   }
+  },
+  "robust": {
+   "D1_raw_leader": {
+    "mean_full": -0.021647,
+    "t_full": -3.426568,
+    "n_full": 583,
+    "mean_h1": null,
+    "t_h1": null,
+    "n_h1": 0,
+    "mean_h2": -0.021647,
+    "t_h2": -3.426568,
+    "n_h2": 583
+   },
+   "D1_rank_ic": {
+    "mean_full": -0.205521,
+    "t_full": -15.684375,
+    "n_full": 583,
+    "mean_h1": null,
+    "t_h1": null,
+    "n_h1": 0,
+    "mean_h2": -0.205521,
+    "t_h2": -15.684375,
+    "n_h2": 583
+   },
+   "D2_window60": {
+    "mean_full": -0.363806,
+    "t_full": -0.747657,
+    "n_full": 583,
+    "mean_h1": null,
+    "t_h1": null,
+    "n_h1": 0,
+    "mean_h2": -0.363806,
+    "t_h2": -0.747657,
+    "n_h2": 583
+   },
+   "D3_window60": {
+    "D3r": {
+     "mean_full": 0.526305,
+     "t_full": 0.552207,
+     "n_full": 13,
+     "mean_h1": null,
+     "t_h1": null,
+     "n_h1": 0,
+     "mean_h2": 0.526305,
+     "t_h2": 0.552207,
+     "n_h2": 13
+    },
+    "D3v": {
+     "mean_full": 0.510439,
+     "t_full": 0.229965,
+     "n_full": 13,
+     "mean_h1": null,
+     "t_h1": null,
+     "n_h1": 0,
+     "mean_h2": 0.510439,
+     "t_h2": 0.229965,
+     "n_h2": 13
+    }
+   }
+  },
+  "n_events": 15,
+  "latest_leader": {
+   "date": "2026-10-30",
+   "leader": "HDFCBANK"
+  }
+ },
+ "verdicts": {
+  "D1": {
+   "verdict": "FAIL",
+   "pre_control": "FAIL",
+   "notes": [
+    "|t| ≥ 2 against the registered sign in the full sample only",
+    "H1 empty: the pre-registered split (2023-04-30) falls outside the gated sample, so the both-halves condition cannot be met until the point-in-time share-count history reaches back"
+   ],
+   "traded_ok": null
+  },
+  "D2": {
+   "verdict": "FAIL",
+   "pre_control": "FAIL",
+   "notes": [
+    "H1 empty: the pre-registered split (2023-04-30) falls outside the gated sample, so the both-halves condition cannot be met until the point-in-time share-count history reaches back"
+   ],
+   "traded_ok": false
+  },
+  "D3r": {
+   "verdict": "PENDING",
+   "notes": [
+    "15 thinned events < 20"
+   ]
+  },
+  "D3v": {
+   "verdict": "PENDING",
+   "notes": [
+    "15 thinned events < 20"
+   ]
+  }
+ },
+ "results_dir": "~/.suryadhana_pm_scratch/v2/B8-STUDIES/results/drivers"
+}

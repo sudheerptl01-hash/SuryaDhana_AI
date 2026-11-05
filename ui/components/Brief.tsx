@@ -31,7 +31,7 @@ import { goToPage } from '@/lib/navigate'
 import { briefSessionLine, iciciErrorKind } from '@/components/portfolio/iciciState'
 import { openTicker } from '@/lib/openTicker'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
-import { AvoidFlag, Chip, EventBadge, PageHeader, Panel, Stat, T, TickerLink, fmtIdx, fmtInr, fmtPct, ordinal, tone } from '@/components/terminal'
+import { AvoidFlag, Chip, EventBadge, PageHeader, Panel, Stat, T, TickerLink, fmtIdx, fmtInr, fmtPct, ordinal, tone, sourceOf } from '@/components/terminal'
 import { trackVerdict, type TrackRecordData } from '@/components/news/TrackRecord'
 
 type Load<T> = { data: T | null; error: string | null; loading: boolean }
@@ -271,7 +271,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
       })()}
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', alignItems: 'start' }}>
         {/* ── market ─────────────────────────────────────────────── */}
-        <Panel title="Market" subtitle={m ? `NSE EOD ${m.as_of} · ${m.index_name}` : 'NSE breadth'} accent={m ? SCORE_COLOR[m.regime.score] : T.amber}
+        <Panel source={sourceOf(m?.as_of ?? null, { source: 'NSE EOD' })} badge="context" title="Market" subtitle={m ? `NSE EOD ${m.as_of} · ${m.index_name}` : 'NSE breadth'} accent={T.amber}
           right={<Go code="MKT" onGo={() => onNavigate('markets')} />}>
           <Pending s={mon}>
             {m && b && <>
@@ -285,7 +285,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
               <Line k="Advances / declines" v={`${b.adv} / ${b.dec}`} c={tone((b.adv ?? 0) - (b.dec ?? 0))} />
               <Line k="New highs / lows" v={`${b.new_highs} / ${b.new_lows}`} c={tone((b.new_highs ?? 0) - (b.new_lows ?? 0))} />
               <Line k="Distribution days (25)" v={b.dist_days_25} c={(b.dist_days_25 ?? 0) <= 4 ? T.green : T.red} />
-              <Line k="India VIX" v={`${b.vix?.toFixed(2)} · ${ordinal(b.vix_pct)} pct`} c={(b.vix_pct ?? 0) < 80 ? T.text : T.red} />
+              <Line k="India VIX" v={`${b.vix?.toFixed(2)} · ${ordinal(b.vix_pct)} pct`} c={T.text} />
               {(() => { const v = valuation.data?.indices?.['NIFTY 50'], mid = valuation.data?.indices?.['NIFTY MIDCAP 150'], sm = valuation.data?.indices?.['NIFTY SMALLCAP 250']
                   if (!v?.pe) return null
                   return <Line k={<span style={{ whiteSpace: 'nowrap' }}>Valuation (NSE) <span role="button" onClick={() => onNavigate('markets')} style={{ color: T.cyan, cursor: 'pointer', fontSize: 10 }}>MKT ›</span></span>}
@@ -363,7 +363,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
         </Panel>
 
         {/* ── your book ──────────────────────────────────────────── */}
-        <Panel title="Your book" subtitle="Decision Desk (paper) · ICICI account" accent={T.green}
+        <Panel source={sourceOf(desk.data?.latest?.date ?? null, { source: 'Desk ledger + ICICI' })} title="Your book" subtitle="Decision Desk (paper) · ICICI account" accent={T.green}
           right={<div style={{ display: 'flex', gap: 4 }}><Go code="DESK" onGo={() => onNavigate('desk')} /><Go code="BRKR" onGo={() => onNavigate('broker')} /></div>}>
           <Pending s={desk}>
             {d && <>
@@ -448,7 +448,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
 
         {/* ── market today (the gold open is one line at the foot) ─ */}
         {(
-          <Panel title="Market today" subtitle="intraday · vs previous close" accent={T.green}
+          <Panel source={sourceOf(mon.data?.as_of ?? null, { source: 'NSE', live: reacting.data?.phase === 'session' })} title="Market today" subtitle="intraday · vs previous close" accent={T.green}
             right={<Go code="MOV" onGo={() => onNavigate('movers')} />}>
             <IndexIntraday height={210} />
             {(() => {   // breadth through the day (market internals, sampled every 2 min)
@@ -484,7 +484,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
         )}
 
         {/* ── this week ──────────────────────────────────────────── */}
-        <Panel title="This week" subtitle={`next 7 days · ${week.total} corporate events`} accent={T.cyan}
+        <Panel source={{ state: 'delayed', source: 'NSE calendar', asOf: null, hint: 'board meetings and corporate actions, refreshed every 2 min' }} title="This week" subtitle={`next 7 days · ${week.total} corporate events`} accent={T.cyan}
           right={<Go code="EVTS" onGo={() => onNavigate('events')} />}>
           <Pending s={events}>
             <div style={{ fontFamily: T.display, fontSize: 10, letterSpacing: 1.4, color: T.green, margin: '2px 0 4px' }}>YOUR STOCKS · {mine.size} TRACKED</div>
@@ -570,7 +570,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
         </Panel>
 
         {/* ── news ───────────────────────────────────────────────── */}
-        <Panel title="News scanner" subtitle={scan.data ? `scan ${scan.data.scan_date} · ${scan.data.picks?.length ?? 0} picks` : 'latest scan'} accent={T.violet}
+        <Panel source={sourceOf(scan.data?.scan_date ?? null, { source: 'news scanner', maxAgeDays: 3 })} badge="context" title="News scanner" subtitle={scan.data ? `scan ${scan.data.scan_date} · ${scan.data.picks?.length ?? 0} picks` : 'latest scan'} accent={T.violet}
           right={<Chip color={T.violet} onClick={() => window.dispatchEvent(new Event('suryadhana:open-news'))}>NEWS ›</Chip>}>
           {track.data && (() => { const v = trackVerdict(track.data); return (
             <div style={{ fontSize: 11, color: v.color, borderLeft: `2px solid ${v.color}`, paddingLeft: 8, marginBottom: 8 }}>
@@ -589,7 +589,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
         </Panel>
 
         {/* ── headlines ──────────────────────────────────────────── */}
-        <Panel title="Headlines" subtitle="last 24 h · Indian markets, RBI, FII flows, results, IPOs, global" accent={T.cyan}>
+        <Panel source={sourceOf(heads.data?.headlines?.[0]?.published_at ?? null, { source: 'headlines', maxAgeDays: 1 })} title="Headlines" subtitle="last 24 h · Indian markets, RBI, FII flows, results, IPOs, global" accent={T.cyan}>
           <Pending s={heads}>
             {(heads.data?.headlines ?? []).slice(0, 9).map(h => (
               <a key={h.link} href={h.link} target="_blank" rel="noreferrer"
@@ -604,7 +604,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
         </Panel>
 
         {/* ── system ─────────────────────────────────────────────── */}
-        <Panel title="System" subtitle="data · broker · scheduler" accent={T.muted}
+        <Panel source={sourceOf(tele.data?.ist_now ?? null, { source: 'controller', live: !!tele.data?.master_controller_online })} title="System" subtitle="data · broker · scheduler" accent={T.muted}
           right={<Go code="SYS" onGo={() => onNavigate('system')} />}>
           <Line k="NSE data through" v={dash.data?.latest_date ?? '—'} />
           {/* P4: an ICICI network outage is not an expired session (error_kind, components/portfolio/iciciState.ts) */}

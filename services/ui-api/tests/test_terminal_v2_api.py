@@ -95,7 +95,24 @@ def test_iv_history_degrades_without_the_tables(monkeypatch: pytest.MonkeyPatch)
     b = c.get("/api/derivatives/iv/NIFTY").json()
     assert b["ok"] is False and b["rows"] == [] and b["as_of"] is None and "404" in b["store_errors"]["/db/iv/summary"]
     assert b["rank"] == {"iv_rank_252": None, "iv_pctile_252": None, "stored": {"iv_rank_252": None, "iv_pctile_252": None},
-                         "window_sessions": 252, "on": "iv30_cm"}
+                         "window_sessions": 0, "window_target": 252, "on": "iv30_cm"}       # nothing stored → a 0-observation window, said so
+
+
+def test_iv_rank_window_is_252_sessions_whatever_days_the_chart_asks(client: TestClient, rec: fx.Recorder) -> None:
+    """check:B3-API minor: days=20 labelled a 20-observation rank as `window_sessions: 252`. The rank now always looks back
+    252 sessions (the read asks for max(days, 252) rows) while the chart rows stay at `days`."""
+    short = client.get("/api/derivatives/iv/NIFTY", params={"days": 20}).json()
+    full = client.get("/api/derivatives/iv/NIFTY", params={"days": 300}).json()
+    assert short["sessions"] == 20 and len(short["rows"]) == 20 and short["rows"][-1]["date"] == "2026-11-04"
+    assert short["rank"]["window_sessions"] == 252 and short["rank"]["window_target"] == 252
+    assert short["rank"]["iv_rank_252"] == full["rank"]["iv_rank_252"] and short["rank"]["iv_pctile_252"] == full["rank"]["iv_pctile_252"]
+    assert any(p == "/db/iv/summary" and q.get("days") == "252" for _, p, q in rec.requests)
+    # negative control: the old computation (rank over the 20 chart rows only) differs from the 252-session rank
+    twenty = [r["iv30_cm"] for r in short["rows"] if r["iv30_cm"] is not None]
+    assert drv.iv_rank(twenty) != short["rank"]["iv_rank_252"]
+    # a store holding less than 252 sessions says how many it used
+    rows = fx.IV_SUMMARY[-30:]
+    assert drv.summary_rows(rows, 252)[-1]["date"] == "2026-11-04" and len(drv.summary_rows(rows, 252)) == 30
 
 
 def test_iv_history_rejects_a_bad_symbol_and_series(client: TestClient) -> None:
@@ -170,6 +187,46 @@ def test_legacy_option_history_serves_both_rank_and_percentile_defined(client: T
     assert b["rows"] and b["iv_rank_252"] is not None and b["iv_pctile_252"] is not None and b["iv_rank_252"] != b["iv_pctile_252"]
     assert "percentile" in b["definitions"]["iv_pctile_252"].lower() and "rank" in b["definitions"]["iv_rank_252"].lower()
     assert mk.with_iv_rank_and_percentile({"rows": "nope"}) == {"rows": "nope"}      # negative control: untouched
+
+
+def _err_code(r: Any) -> str:
+    """errors.fail() body: {detail: {code, message, hint}} on a bare app ({error: {...}} behind main.py's handler)."""
+    b = r.json()
+    block = b.get("error") if isinstance(b.get("error"), dict) else b.get("detail")
+    return str(block["code"])
+
+
+def test_legacy_option_history_uses_the_shared_client_only(client: TestClient, rec: fx.Recorder, monkeypatch: pytest.MonkeyPatch) -> None:
+    """check:B3-API major: the route used a per-request httpx.AsyncClient (invisible to the fake transport, so its test
+    leaned on the live :8001). With any raw AsyncClient construction blocked it must still answer from the fixture."""
+    def no_raw_client(*_: Any, **__: Any) -> Any:
+        raise AssertionError("a per-request httpx.AsyncClient was built on the request path")
+
+    import types
+
+    stub = types.SimpleNamespace(AsyncClient=no_raw_client, Timeout=lambda *a, **k: None, HTTPError=Exception)
+    monkeypatch.setattr(mk, "httpx", stub)                      # markets.py's own httpx name only; the fake transport is real
+    r = client.get("/api/market/option-history/NIFTY", params={"days": 300})
+    assert r.status_code == 200, r.text
+    assert r.json()["rows"] and ("localhost", "/db/option-history/NIFTY", {"days": "300"}) in rec.requests
+    # negative controls: an unknown symbol maps the upstream 404 to the structured error; a bad symbol never leaves
+    miss = client.get("/api/market/option-history/ZZZZ")
+    assert miss.status_code == 404 and _err_code(miss) == "not_found"
+    n = len(rec.requests)
+    assert client.get("/api/market/option-history/BAD%20SYM").status_code == 422 and len(rec.requests) == n
+
+
+def test_legacy_option_history_upstream_down_is_a_structured_503(monkeypatch: pytest.MonkeyPatch) -> None:
+    fx.install_fake_transport(monkeypatch)
+    from shared import http_client
+
+    def dead(request: Any) -> Any:
+        raise __import__("httpx").ConnectError("down", request=request)
+
+    import httpx as _hx
+    monkeypatch.setattr(http_client, "get_async_client", lambda: _hx.AsyncClient(transport=_hx.MockTransport(dead)))
+    r = TestClient(fx.make_app()).get("/api/market/option-history/NIFTY")
+    assert r.status_code == 503 and _err_code(r) == "upstream_down"
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -319,7 +376,8 @@ def test_margin_budget_exhausted_falls_to_the_span_file(client: TestClient, monk
     assert d["worst_scenario"] == 10 and len(d["scenario_losses"]) == 16          # price up 2/3 of the range, vol down (1-based CME order)
     assert d["exposure"]["pct_of_notional"] == 2.0 and d["exposure"]["badge"] == "heuristic" and b["non_span_margin_required"] == d["exposure"]["value"]
     assert d["exposure"]["value"] == pytest.approx(2 * 65 * 23970.70 * 0.02, rel=1e-6)   # the file's near future as the reference
-    assert b["badge"] == "arithmetic" and b["heuristic"]["total"] > 5 * b["span_margin_required"]
+    assert b["badge"] == "heuristic" and b["heuristic"]["total"] > 5 * b["span_margin_required"]
+    assert b["badges"] == {"span_margin_required": "arithmetic", "non_span_margin_required": "heuristic", "total_margin": "heuristic"}
 
 
 def test_span_parser_on_the_real_format_subset() -> None:
@@ -413,6 +471,28 @@ def test_classify_states_with_negative_controls() -> None:
     assert dh.classify(row, date(2026, 11, 19), datetime(2026, 11, 20, 22, 0, tzinfo=IST), [date(2026, 11, 20)])["state"] == "fresh"
 
 
+def test_expected_by_is_trading_day_aware_after_weekends_and_holidays() -> None:
+    """check:B3-API: T−1 files and morning slots are due on the NEXT TRADING DAY, not the next calendar day."""
+    mtf = dh.FALLBACK_CATALOG[5]                                          # nse_mtf: T−1 file, expected by 23:00
+    insider = dh.FALLBACK_CATALOG[7]                                      # nse_insider_trades: 08:00 morning slot
+    assert mtf.id == "nse_mtf" and insider.id == "nse_insider_trades"
+    mon_20 = datetime(2026, 11, 9, 20, 0, tzinfo=IST)                     # Monday 20:00, stored Thu 5 Nov: Friday's file lands Monday 22:12
+    r = dh.classify(mtf, date(2026, 11, 5), mon_20, [])
+    assert r["state"] == "fresh" and "not due yet" in r["note"] and r["lag_sessions"] == 1
+    assert dh._expected_at(mtf, date(2026, 11, 6), []) == datetime(2026, 11, 9, 23, 0, tzinfo=IST)        # Fri → Mon 23:00, not Sat
+    assert dh._expected_at(insider, date(2026, 11, 6), []) == datetime(2026, 11, 9, 8, 0, tzinfo=IST)     # Fri → Mon 08:00, not Sat
+    # negative control: the same row on Monday 23:30 IS due → amber
+    assert dh.classify(mtf, date(2026, 11, 5), datetime(2026, 11, 9, 23, 30, tzinfo=IST), [])["state"] == "amber"
+    # a holiday: Thu 19 Nov's T−1 file is due on Mon 23 Nov (Fri 20 Nov = Guru Nanak Jayanti), not Fri 20 Nov
+    hol = [date(2026, 11, 20)]
+    assert dh._expected_at(mtf, date(2026, 11, 19), hol) == datetime(2026, 11, 23, 23, 0, tzinfo=IST)
+    assert dh._expected_at(insider, date(2026, 11, 19), hol) == datetime(2026, 11, 23, 8, 0, tzinfo=IST)
+    # negative control: without the holiday in the calendar the deadline is Friday
+    assert dh._expected_at(mtf, date(2026, 11, 19), []) == datetime(2026, 11, 20, 23, 0, tzinfo=IST)
+    # same-day evening slots are unchanged by the fix (the session itself)
+    assert dh._expected_at(dh.FALLBACK_CATALOG[2], date(2026, 11, 6), []) == datetime(2026, 11, 6, 21, 0, tzinfo=IST)
+
+
 def test_data_health_route(client: TestClient) -> None:
     r = client.get("/api/data/health")
     assert r.status_code == 200, r.text
@@ -433,10 +513,56 @@ def test_data_health_route(client: TestClient) -> None:
 
 
 def test_data_health_prefers_the_data_service_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
-    fx.install_fake_transport(monkeypatch, catalog=True)
+    """B1 deployed: /db/data-health (B1's computed rows, its real key names: max_age_sessions, expected_offset_days,
+    freshness_kind, job_id, cadence) is composed — B1's state kept, unknown endpoint rows completed from the controller."""
+    rec = fx.install_fake_transport(monkeypatch, catalog=True)
     b = TestClient(fx.make_app()).get("/api/data/health").json()
-    assert b["catalog_source"] == "data-service dataset_catalog" and [r["id"] for r in b["rows"]] == ["nse_fo_daily"]
-    assert b["rows"][0]["label"] == "F&O bhavcopy (catalog)" and b["rows"][0]["state"] == "fresh"
+    assert b["catalog_source"] == "data-service dataset_catalog (/db/data-health)" and b["status"] == "ok" and b["ok"] is True
+    by_id = {r["id"]: r for r in b["rows"]}
+    assert set(by_id) == {r["id"] for r in fx.B1_HEALTH["rows"]}
+    assert by_id["nse_fo_daily"]["state"] == "fresh" and by_id["nse_fo_daily"]["label"] == "nse_fo_daily (B1 catalog)"
+    assert by_id["nse_fo_daily"]["last_run"]["status"] == "ok" and by_id["nse_fo_daily"]["note"] == "stored 05 Nov · expected by 21:00"
+    assert by_id["nse_mtf"]["state"] == "fresh" and "1 session behind" in by_id["nse_mtf"]["note"]          # B1: not due yet → kept fresh
+    assert by_id["nse_combined_oi"]["state"] == "amber" and by_id["nse_combined_oi"]["catchup_at"] == "2026-11-06T20:30:00+05:30"
+    assert by_id["nse_results"]["state"] == "red" and by_id["nse_results"]["lag_sessions"] == 4 and by_id["nse_results"]["max_age_sessions"] == 1
+    assert by_id["archive:internals"]["state"] == "gap" and by_id["archive:internals"]["unrecoverable"] is True
+    # B1's `unknown` (endpoint / live) rows: judged by the job's last run, never guessed green
+    assert by_id["option_chain_eod"]["state"] == "fresh" and "ran 05 Nov 20:31 (ok)" in by_id["option_chain_eod"]["note"]
+    assert by_id["desk_mark"]["state"] == "amber" and "(error)" in by_id["desk_mark"]["note"]                # last run failed on 30 Oct
+    assert by_id["nse_live"]["state"] == "live" and by_id["nse_live"]["catchup_at"] is None
+    assert by_id["market_monitor"]["state"] == "unknown" and "not in the controller's schedule" in by_id["market_monitor"]["note"]
+    assert b["summary"] == {"green": 4, "amber": 2, "red": 1, "gaps": 1, "unknown": 1, "rows": 9}
+    assert [r["state"] for r in b["rows"]][:2] == ["gap", "red"] and "score" not in b
+    # the legacy inputs are not read when B1 answers (one source per view)
+    assert "/db/nse-positions-meta" not in rec.paths() and "/db/data-health" in rec.paths()
+    # page filter on B1's comma-split pages
+    assert [r["id"] for r in TestClient(fx.make_app()).get("/api/data/health", params={"page": "MRGN"}).json()["rows"]] == ["nse_mtf"]
+
+
+def test_data_health_composition_negative_controls() -> None:
+    now = fx.NOW
+    # the fixture mirrors B1's real row keys (tests/test_data_health.py::UI_API_READS asserts them on reads.health())
+    reads = {"id", "label", "pages", "publisher", "published_ist", "expected_by", "as_of", "lag_sessions", "state", "unrecoverable",
+             "job_id", "dictionary_anchor", "badge", "max_age_sessions", "cadence", "note"}
+    assert all(reads <= set(r) for r in fx.B1_HEALTH["rows"])
+    assert dh.compose_b1_health({"rows": []}, [], [], now) is None                     # no rows → the seed path, not an empty view
+    assert dh.compose_b1_health({"detail": "Not Found"}, [], [], now) is None
+    row = fx.B1_HEALTH["rows"][5]                                                        # option_chain_eod, job nse_positions_catchup
+    stale_job = [{"id": "nse_positions_catchup", "last_status": "ok", "last_run_ts": "2026-11-04T20:31:00+05:30"}]
+    out = dh.compose_b1_health({"rows": [row]}, stale_job, [], now)
+    assert out is not None and out["rows"][0]["state"] == "amber"                         # ok but before the due session → not fresh
+    never = dh.compose_b1_health({"rows": [row]}, [{"id": "nse_positions_catchup", "last_status": None, "last_run_ts": None}], [], now)
+    assert never is not None and never["rows"][0]["state"] == "red"
+    # an evening job is judged against the session it must cover BY NOW: Thursday 16:00, the 20:00 desk run of Wednesday is
+    # current (Thursday's is not due) → fresh; Thursday 21:00 the same run is a session old → amber
+    desk = {**row, "id": "desk_mark", "job_id": "desk_daily", "expected_by": "20:00"}
+    wed_run = [{"id": "desk_daily", "last_status": "done", "last_run_ts": "2026-11-04T19:31:00+05:30"}]
+    at_16 = dh.compose_b1_health({"rows": [desk]}, wed_run, [], datetime(2026, 11, 5, 16, 0, tzinfo=IST))
+    at_21 = dh.compose_b1_health({"rows": [desk]}, wed_run, [], datetime(2026, 11, 5, 21, 0, tzinfo=IST))
+    assert at_16 is not None and at_16["rows"][0]["state"] == "fresh"
+    assert at_21 is not None and at_21["rows"][0]["state"] == "amber"
+    assert dh._due_session("20:00", 0, datetime(2026, 11, 9, 10, 0, tzinfo=IST), []) == date(2026, 11, 6)     # Monday morning → Friday
+    assert dh._due_session("08:00", 1, datetime(2026, 11, 9, 9, 0, tzinfo=IST), []) == date(2026, 11, 6)      # Friday's T+1 slot is Monday 08:00
 
 
 def test_data_health_degrades_when_inputs_are_down(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -468,7 +594,7 @@ def test_request_path_never_leaves_the_loopback(client: TestClient, rec: fx.Reco
     for path, params in (("/api/derivatives/iv/NIFTY", {}), ("/api/derivatives/iv/NIFTY/surface", {"compare": "1m"}), ("/api/derivatives/iv/NIFTY/cone", {}),
                          ("/api/derivatives/iv/INFY/events", {}), ("/api/derivatives/iv/NIFTY/intraday", {}), ("/api/derivatives/vol-screen", {}),
                          ("/api/market/index-drivers", {}), ("/api/market/index-drivers/timeline", {}), ("/api/market/index-drivers/monthly", {}),
-                         ("/api/desk/attribution", {}), ("/api/data/health", {})):
+                         ("/api/desk/attribution", {}), ("/api/data/health", {}), ("/api/market/option-history/NIFTY", {})):
         assert client.get(path, params=params).status_code == 200, path
     assert client.post("/api/options/margin", json={"symbol": "NIFTY", "legs": fx.CONDOR_LEGS}).status_code == 200
     assert rec.requests, "the fake transport saw nothing — the recorder is not wired"

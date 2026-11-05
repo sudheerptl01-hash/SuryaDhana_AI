@@ -122,6 +122,23 @@ def test_ingest_nse_files_logs_misses_through_the_paced_client(client):
     assert log["count"] == 1 and log["rows"][0]["status"] == "missing"
 
 
+def test_ingest_nse_files_defaults_to_the_last_completed_session_not_today(client, monkeypatch):
+    """check:B2-CTRL minor: with no from / to the route asked for date.today() — on a holiday or a weekend that is a
+    'missing' row for a non-session date. The default is now the last completed NSE session (the docstring's promise)."""
+    from data_health import calendar as cal
+
+    sat_10 = datetime(2026, 11, 7, 10, 0, tzinfo=cal.IST)                  # Saturday morning → Friday 6 Nov
+    monkeypatch.setattr(cal, "now_ist", lambda now_utc_naive=None: sat_10)
+    r = client.post("/jobs/ingest-nse-files", json={"datasets": ["nse_fo_volt"]})
+    j = _wait(client.jobs, r.json()["job_id"])
+    assert j["result"]["from"] == j["result"]["to"] == "2026-11-06"
+    assert client.calls == ["https://nsearchives.nseindia.com/archives/nsccl/volt/FOVOLT_06112026.csv"]
+    # negative control: an explicit window is used as given
+    client.calls.clear()
+    r = client.post("/jobs/ingest-nse-files", json={"datasets": ["nse_fo_volt"], "from": "2026-11-04", "to": "2026-11-04"})
+    assert _wait(client.jobs, r.json()["job_id"])["result"]["to"] == "2026-11-04" and client.calls[-1].endswith("FOVOLT_04112026.csv")
+
+
 def test_index_drivers_jobs_and_reads(client):
     assert client.post("/jobs/index-drivers?job=bogus").status_code == 422
     assert client.post("/jobs/index-drivers", json={"indices": ["NIFTY MOON"]}).status_code == 422

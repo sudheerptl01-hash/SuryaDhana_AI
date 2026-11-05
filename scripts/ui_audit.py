@@ -10,6 +10,7 @@ Usage (the original CLI still works unchanged):
     /Users/sudheer/Desktop/jupyter_env/bin/python scripts/ui_audit.py [--out reports/ui_audit/after] \
         [--tabs "desk,stocks" | --tabs all] [--base http://127.0.0.1:8010] [--wait 6] \
         [--browser chromium|webkit|both] [--strict] [--screenshots full|viewport|none]
+    Terminal v2 (G10): `--tabs v2` audits the ten pages wave 1 changed; `--tabs all --browser both` is the 43/43 gate.
 
 Failure classes per tab (the policy lives in scripts/desktop_qa/netpolicy.py):
     navigation (goto failed) · not_ready (content/title never rendered) · app_error (error overlay text)
@@ -49,17 +50,38 @@ TABS = {"desk": "Decision Desk", "overview": "Overview", "stocks": "Stocks", "ba
         "discovery": "Alpha Discovery", "commodity": "Commodity", "gold": "Gold terminal", "glassbox": "Glass-Box",
         "mlengine": "ML Engine", "explorer": "Data Explorer", "warehouse": "Warehouse", "system": "System"}
 
+# Terminal v2 (reports/terminal_v2/PLAN.md G10): `--tabs v2` = the pages wave 1 changed (OMON chain-first + IV history,
+# DERV › VOL, MEMB drivers, EVTS crush ledger, SYS › DATA, DESK attribution, MOV live panel, OSTR margin, BRF, MKT). The
+# sub-views (VOL / DATA) are reached in-page, so they ride on their pages here.
+TAB_SETS: dict[str, list[str]] = {
+    "v2": ["options", "derivatives", "memb", "events", "system", "desk", "movers", "ostrategy", "brief", "markets"],
+}
+
 # Gold program T9 (reports/gold_program/PLAN.md §h): the pre-open desk's "fair open" may be the subject of at most one
 # panel or heading per page (it lives on GOLD; CMDT and BRF keep a line or a chip, never a second panel). Matched
 # against the normalised fingerprint titles (numbers masked), never against body text.
 REPETITION = re.compile(r"fair open", re.IGNORECASE)
 REPETITION_MAX = 1
 
+# Terminal v2 G9/G10 placement ("the same number once per page" across pages): the live today panel renders on MOV (BRF
+# keeps a one-line summary), the drivers' horizon views on MEMB only. Matched against the start of a panel header's
+# normalised text (title first, then subtitle and chips), never body text; a page outside the allowed set fails.
+PLACEMENT: tuple[tuple[str, re.Pattern[str], frozenset[str]], ...] = (
+    ("who moved the index", re.compile(r"^who moved the index", re.IGNORECASE), frozenset({"movers", "brief"})),
+    ("drivers: sector contribution", re.compile(r"^sector contribution", re.IGNORECASE), frozenset({"memb"})),
+    ("drivers: monthly leaderboard", re.compile(r"^monthly leaderboard", re.IGNORECASE), frozenset({"memb"})),
+    ("drivers: concentration & breadth", re.compile(r"^concentration & breadth", re.IGNORECASE), frozenset({"memb"})),
+)
+
 
 def resolve_tabs(spec: str, tab_ids: list[str]) -> list[str]:
-    """``all`` → every TAB_ID in page order; otherwise a comma list (unknown ids are kept: the page ignores them)."""
-    if spec.strip().lower() == "all":
+    """``all`` → every TAB_ID in page order; a TAB_SETS name (``v2``) → that set (only ids page.tsx still lists, when it
+    could be read); otherwise a comma list (unknown ids are kept: the page ignores them)."""
+    key = spec.strip().lower()
+    if key == "all":
         return list(tab_ids)
+    if key in TAB_SETS:
+        return [t for t in TAB_SETS[key] if not tab_ids or t in tab_ids]
     return [t.strip() for t in spec.split(",") if t.strip()]
 
 
@@ -71,12 +93,26 @@ def repetition_hits(fingerprint: dict[str, Any] | None) -> list[str]:
     return [t for t in titles if REPETITION.search(t or "")]
 
 
+def placement_failures(tab: str | None, fingerprint: dict[str, Any] | None) -> list[str]:
+    """v2 placement rule: a panel that belongs on other pages (PLACEMENT) found on ``tab``. Unknown tab → nothing."""
+    if not tab or not fingerprint:
+        return []
+    out: list[str] = []
+    for name, pattern, allowed in PLACEMENT:
+        hits = [p for p in (fingerprint.get("panels") or []) if pattern.search((p or "").strip())]
+        if hits and tab not in allowed:
+            out.append(f"placement: '{name}' panel on {tab} (belongs on {'/'.join(sorted(allowed))} only): {hits[:2]}")
+    return out
+
+
 def tab_failures(visit: dict[str, Any], events: dict[str, Any], *, strict: bool) -> list[str]:
-    """The audit's failure lines for one tab: the shared policy (probe.failure_lines) plus the T9 repetition rule."""
+    """The audit's failure lines for one tab: the shared policy (probe.failure_lines), the T9 repetition rule and the
+    Terminal v2 placement rule."""
     lines = failure_lines(visit, events, strict=strict)
     hits = repetition_hits(visit.get("fingerprint"))
     if len(hits) > REPETITION_MAX:
         lines.append(f"repetition: 'fair open' named by {len(hits)} panels/headings (T9 allows {REPETITION_MAX}): {hits}")
+    lines.extend(placement_failures(visit.get("tab"), visit.get("fingerprint")))
     return lines
 
 
@@ -210,7 +246,8 @@ def render_markdown(report: dict[str, Any]) -> str:
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--out", default=str(ROOT / "reports" / "ui_audit" / "after"))
-    ap.add_argument("--tabs", default=",".join(TABS), help="tab ids, e.g. desk,stocks — or 'all' (page.tsx TAB_IDS)")
+    ap.add_argument("--tabs", default=",".join(TABS),
+                    help="tab ids, e.g. desk,stocks — or 'all' (page.tsx TAB_IDS) or a set name: " + ", ".join(TAB_SETS))
     ap.add_argument("--base", default="http://127.0.0.1:8010",
                     help="terminal origin (default: the live terminal served by ui-api; the old Next server was "
                          "http://localhost:3000, still usable with --base)")

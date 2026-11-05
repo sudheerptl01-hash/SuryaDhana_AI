@@ -42,7 +42,8 @@ def client() -> TestClient:
 
 
 def test_guard_is_the_only_middleware_and_cors_is_gone() -> None:
-    assert [m.cls for m in mc.app.user_middleware] == [HostOriginGuard]
+    from shared.metrics import ObservabilityMiddleware
+    assert [m.cls for m in mc.app.user_middleware] == [HostOriginGuard, ObservabilityMiddleware]
     assert "CORSMiddleware" not in (ROOT / "scripts" / "master_controller.py").read_text()
 
 

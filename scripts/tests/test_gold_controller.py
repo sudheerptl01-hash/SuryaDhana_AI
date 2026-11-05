@@ -982,8 +982,11 @@ def test_freshness_alert_names_gold_and_nse_rows(ctl, svc, monkeypatch):
                                                        {"id": "archive:preopen", "state": "gap", "note": "explicit gap row"}])
     assert asyncio.run(mc._check_dataset_freshness("pre_market_sync")) == []
     del svc.routes[("GET", mc.DATA_HEALTH_API)]
+    monkeypatch.setattr(mc, "_FRESHNESS_BLIND_WARNED", {})
     assert asyncio.run(mc._check_dataset_freshness("pre_market_sync")) == []
-    assert len(ctl["alerts"].sent) == n_alerts
+    assert asyncio.run(mc._check_dataset_freshness("pre_market_sync")) == []        # twice: still one line a day
+    assert len(ctl["alerts"].sent) == n_alerts + 1
+    assert ctl["alerts"].sent[-1][:2] == ("warning", "Freshness check has no data-health view")
     assert any("/api/data/health → HTTP 404" in ln for ln in log_lines())
 
 

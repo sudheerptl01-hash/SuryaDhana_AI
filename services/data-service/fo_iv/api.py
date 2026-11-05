@@ -10,10 +10,10 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+from data_health import db
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from data_health import db
 from fo_iv import jobs, reads
 
 router = APIRouter(tags=["fo-iv"])
@@ -153,7 +153,12 @@ def ingest_nse_files(req: NseFilesRequest | None = None, job: str | None = Query
     unknown = [d for d in datasets if d not in known]
     if unknown:
         raise HTTPException(status_code=422, detail=f"unknown datasets {unknown}; known: {sorted(known)}")
-    end = body.to or date.today()  # noqa: DTZ011
+    if body.to is not None:
+        end = body.to
+    else:                                    # the docstring's default: the last completed NSE session (never a holiday / weekend)
+        from data_health import api as _dh_api
+        from data_health import calendar as _cal
+        end = _cal.last_completed_session(_cal.now_ist(), _dh_api.holidays())
     start = body.from_ or end
     cache_root = _paths["cache_root"]
 
@@ -165,11 +170,12 @@ def ingest_nse_files(req: NseFilesRequest | None = None, job: str | None = Query
             out["files"] = nse_positions.ingest_files(store, http, files, start, end, cache_root, revalidate=body.revalidate, progress=progress)["datasets"]
         if "nse_bhavcopy" in datasets:
             days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
-            out["nse_bhavcopy"] = [nse_positions.revise_bhavcopy(store, http, d, cache_root / "nse_archive" / "bhavcopy") for d in days if d.weekday() < 5]
+            # the 18:30 ingest's own cache (data/nse_bhavcopy): a revision is archived BESIDE the first copy (PLAN §0.3 amendment)
+            out["nse_bhavcopy"] = [nse_positions.revise_bhavcopy(store, http, d, cache_root / "nse_bhavcopy") for d in days if d.weekday() < 5]
         try:
             store.checkpoint()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001 — a checkpoint is housekeeping; the rows are written either way
+            out["checkpoint"] = f"skipped: {type(exc).__name__}"
         out["status"] = "ok"
         return out
 

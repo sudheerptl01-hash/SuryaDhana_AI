@@ -10,7 +10,7 @@ POST /api/options/margin (PLAN 1.3 "Real SPAN margin on OSTR"): the fallback cha
   1. BREEZE          `breeze.margin_calculator(legs, "NFO")` when the ICICI session is live, through the Breeze budget
                      ledger (shared/breeze_budget.py; refused past the cap → next source);
   2. NSE_SPAN_FILE   the NSE/NCL SPAN risk-parameter file (`nsearchives.nseindia.com/archives/nsccl/span/nsccl.YYYYMMDD.s.zip`,
-                     EOD ≈ 17:02, fetched by the 20:30 pass into data/nse_archive/span/ — B1), parsed here: the 16-scenario
+                     EOD ≈ 17:02 IST; no scheduled job fetches it yet — a file placed in data/nse_archive/span/ (SPAN_ARCHIVE_DIR) is parsed here: the 16-scenario
                      risk arrays per contract → scanning risk, the intra-commodity (calendar) spread charge, the short
                      option minimum; exposure (non-SPAN) margin is NSE's published percentage, labelled as such;
   3. HEURISTIC       options_math.margin_estimate (12 % of notional per short leg + premium) — kept as the last resort
@@ -537,7 +537,12 @@ async def margin(body: MarginIn) -> dict:
         "as_of": (detail.get("file_date") and f"{detail['file_date'][:4]}-{detail['file_date'][4:6]}-{detail['file_date'][6:8]}")
         if source == "NSE_SPAN_FILE" else datetime.now(IST).isoformat(timespec="seconds"),
         "detail": detail, "heuristic": heuristic, "attempts": attempts,
-        "badge": BADGE_ARITH if source != "HEURISTIC" else BADGE_HEURISTIC,
+        # per-field badges (check:B3-API minor): on the NSE SPAN FILE answer the exposure leg is NSE's published rule
+        # (heuristic), so the total is only as strong as its weaker part; the UI prints total_margin OR heuristic.total, never both
+        "badges": {"span_margin_required": BADGE_ARITH if source != "HEURISTIC" else BADGE_HEURISTIC,
+                   "non_span_margin_required": BADGE_ARITH if source == "BREEZE" else BADGE_HEURISTIC,
+                   "total_margin": BADGE_ARITH if source == "BREEZE" else BADGE_HEURISTIC},
+        "badge": BADGE_ARITH if source == "BREEZE" else BADGE_HEURISTIC,
         "note": {"BREEZE": "ICICI's margin calculator (exchange SPAN + exposure as ICICI applies them); 0.3 s; one Breeze call through the budget ledger",
                  "NSE_SPAN_FILE": "scanning risk + calendar-spread charge with the short-option-minimum floor from NCL's EOD risk-parameter file; "
                                   "exposure margin by NSE's published rule (labelled heuristic); intraday files are not fetched",

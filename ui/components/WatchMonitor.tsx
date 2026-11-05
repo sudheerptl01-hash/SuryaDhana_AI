@@ -22,7 +22,7 @@ import { BasketRisk } from '@/components/BasketRisk'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { COMP_KEY } from '@/components/Compare'
 import { goToPage } from '@/lib/navigate'
-import { Chip, DataTable, EventBadge, Input, PageHeader, Panel, SourceChip, Spark, Stat, T, TickerLink, type Column, AvoidFlag, fmtFixed, fmtPct, fmtPx, tone } from '@/components/terminal'
+import { Chip, DataTable, EventBadge, Input, PageHeader, Panel, Spark, Stat, T, TickerLink, type Column, AvoidFlag, fmtFixed, fmtPct, fmtPx, inputSource, sourceOf, tone, type SourceInfo } from '@/components/terminal'
 import { useMarketOpen } from '@/components/shell/useFeed'
 import { BellGlyph } from '@/components/shell/Glyphs'   // monochrome SVG bell, not the colour emoji (CT-14)
 import { useLiveTicks } from '@/lib/liveTicks'
@@ -56,6 +56,8 @@ export function WatchMonitor() {
   const [held, setHeld] = useState<string[]>([])
   // quantity and buy price per held stock (live ICICI book, or the last known one while logged out)
   const [book, setBook] = useState<Record<string, { qty: number; buy: number }>>({})
+  // PLAN 1.4: whether the book is ICICI's live one or the last-known file, as a chip (it was only implied in a comment)
+  const [bookSrc, setBookSrc] = useState<SourceInfo | null>(null)
   const [desk, setDesk] = useState<string[]>([])
   const [quotes, setQuotes] = useState<Record<string, Quote & { spark?: number[] }>>({})
   const [asOf, setAsOf] = useState<Date | null>(null)
@@ -75,6 +77,9 @@ export function WatchMonitor() {
     getOpenPositions().then(r => {
       setHeld(heldSymbols(r.data))
       const rows: any[] = r.data?.positions?.length ? r.data.positions : (r.data?.last_known?.positions ?? [])
+      setBookSrc(r.data?.positions?.length ? sourceOf(new Date().toISOString(), { live: true, source: 'ICICI' })
+        : r.data?.last_known ? sourceOf(String(r.data.last_known.as_of ?? '') || null, { source: 'ICICI last-known book', maxAgeDays: 1, hint: 'ICICI not connected: last known holdings' })
+        : null)
       const b: Record<string, { qty: number; buy: number }> = {}
       for (const p of rows) {
         const qty = Number(p.quantity), buy = Number(p.buy_price ?? p.average_price)
@@ -124,6 +129,8 @@ export function WatchMonitor() {
   }), [rows, liveT.ticks])
   const chipState = liveT.state === 'live' || liveT.state === 'degraded' ? liveT.state
     : Object.keys(quotes).length ? 'delayed' : liveT.state === 'offline' ? 'offline' : 'delayed'
+  const monitorSrc: SourceInfo = { state: chipState, source: chipState === 'live' || chipState === 'degraded' ? 'ICICI' : 'YAHOO', asOf: asOf?.toISOString() ?? null,
+    hint: liveT.state === 'live' ? `${Object.keys(liveT.ticks).length} ticking` : chipState === 'delayed' ? 'Yahoo quotes on a 60 s refresh; broker feed not connected' : null }
 
   useEffect(() => {
     // the server prices and fires the levels (also every minute from the scheduler); show what's new here
@@ -266,7 +273,7 @@ export function WatchMonitor() {
         </form>
       )}
       {(Object.keys(alerts).length > 0 || history.length > 0) && (
-        <Panel title="Price alerts" accent={T.amber} pad={10} style={{ marginBottom: 12 }}
+        <Panel title="Price alerts" accent={T.amber} pad={10} style={{ marginBottom: 12 }} source={inputSource('your alert levels (server-checked every minute in session)')}
           subtitle="kept on the server · checked every minute 09:15–15:30 (Mac notification, Telegram when set) and on every refresh here · not broker orders"
           right={perm !== 'granted' && perm !== 'unsupported'
             ? <Chip color={T.amber} onClick={() => void requestNotificationPermission().then(setPerm)}>ENABLE DESKTOP NOTIFICATIONS</Chip>
@@ -289,9 +296,8 @@ export function WatchMonitor() {
           )}
         </Panel>
       )}
-      <Panel title="Monitor" pad={0} accent={T.cyan}
+      <Panel title="Monitor" pad={0} accent={T.cyan} source={monitorSrc}
         right={<div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <SourceChip state={chipState} hint={liveT.state === 'live' ? `${Object.keys(liveT.ticks).length} ticking` : undefined} />
           <Chip color={T.muted} active={!filter} onClick={() => setFilter(null)}>ALL</Chip>
           {counts.filter(([, n]) => n).map(([s, n]) => <Chip key={s} color={SRC_COLOR[s]} active={filter === s} onClick={() => setFilter(filter === s ? null : s)}>{s} {n}</Chip>)}
         </div>}>
@@ -315,7 +321,7 @@ export function WatchMonitor() {
         const bookGrowth = gw > 0 ? growth.reduce((a, h) => a + h.value * h.f!.pat_yoy!, 0) / gw : null
         const colors = [T.amber, T.cyan, T.violet, T.green, '#fb923c', '#f472b6', '#94a3b8']
         return (
-          <Panel title="Your book · X-ray" accent={T.amber} style={{ marginTop: 12 }}
+          <Panel title="Your book · X-ray" accent={T.amber} style={{ marginTop: 12 }} source={bookSrc ?? monitorSrc} badge="arithmetic"
             subtitle={`${held.length} holdings · ₹${Math.round(total).toLocaleString('en-IN')} at live prices · weights by value`}>
             <div style={{ display: 'flex', height: 14, border: `1px solid ${T.border}`, marginBottom: 8 }}>
               {held.map((h, i) => <div key={h.sym} title={`${h.sym} ${(w[i] * 100).toFixed(1)}%`} style={{ width: `${w[i] * 100}%`, background: colors[i % colors.length] }} />)}

@@ -3,7 +3,8 @@
 ``MODEL_VERSION`` names the whole convention: Black-76 on the parity forward, T = calendar days / 365 at the 15:30 close
 (no half day), price = ``ClsPric`` only when traded, OTM wings plus 3 % ITM, ATM interpolated at the forward in strike,
 25Δ / 10Δ by inverting each strike's own delta, constant maturity by variance interpolation. A change to any of these
-is a new ``MODEL_VERSION`` and re-derives into new rows (PLAN §0.3).
+is a new ``MODEL_VERSION``: the derived IV tables are recomputed and keep the latest computation per key with its
+``model_version`` (PLAN §0.3 as amended 5 Nov 2026; older vintages are recomputed from the archived source files).
 """
 from __future__ import annotations
 

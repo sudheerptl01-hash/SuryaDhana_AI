@@ -12,6 +12,20 @@ import { getIndexContribution, type IndexContribution as Data } from '@/lib/api'
 import { Chip, T, TickerLink, fmtPct } from '@/components/terminal'
 import { goToPage } from '@/lib/navigate'
 
+/**
+ * NSE's own stamp on the payload ("05-Nov-2026 09:54", IST) → what the header prints: the time today, or the session date
+ * when the numbers are a previous session's (after the close, weekends, holidays). The panel never shows moves without
+ * saying when NSE published them (asked 5 Nov: "is this live or stale?").
+ */
+export function contributionStamp(time: string | null | undefined, now: Date = new Date()): string | null {
+  const m = /^(\d{2})-([A-Za-z]{3})-(\d{4})\s+(\d{2}):(\d{2})/.exec(time ?? '')
+  if (!m) return null
+  const todayIst = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' }).format(now)
+  const stampDay = `${m[1]} ${m[2]} ${m[3]}`
+  const hm = `${m[4]}:${m[5]} IST`
+  return stampDay.toLowerCase() === todayIst.replace(/,/g, '').toLowerCase() ? `NSE ${hm}` : `NSE · session ${m[1]} ${m[2]} ${hm}`
+}
+
 export function IndexContribution() {
   const [index, setIndex] = useState('NIFTY 50')
   const [d, setD] = useState<Data | null>(null)
@@ -43,6 +57,7 @@ export function IndexContribution() {
         {['NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY NEXT 50'].map(ix => <Chip key={ix} color={T.cyan} active={index === ix} onClick={() => setIndex(ix)}>{ix.replace('NIFTY ', '')}</Chip>)}
         <span style={{ flex: 1 }} />
         {d && <span style={{ fontSize: 10.5, fontFamily: T.mono, color: T.muted }}>
+          {contributionStamp(d.time) && <span data-contrib-stamp title="NSE's publish time for these moves (index ~15 s, members ~60 s server cache); this panel re-polls every 2 min">{contributionStamp(d.time)} · </span>}
           actual <span style={{ color: (d.change ?? 0) >= 0 ? T.green : T.red }}>{fmtSigned(d.change, 1)} pts</span>
           {' · '}explained {fmtSigned(d.explained_points, 1)}
           {gap != null && d.change ? <span style={{ color: Math.abs(gap / d.change) > 0.1 ? T.amber : T.dim }}> ({(Math.abs(gap / d.change) * 100).toFixed(0)}% off)</span> : null}

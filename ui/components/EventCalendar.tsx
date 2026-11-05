@@ -16,7 +16,8 @@ import { ECO_KINDS } from '@/components/EconomicCalendar'
 import { ResultsImpliedMoves } from '@/components/ResultsImpliedMoves'
 import { useWatchlist } from '@/context/AppContext'
 import { usePins } from '@/lib/pins'
-import { Chip, DataTable, ErrorBox, Input, Loading, PageHeader, Panel, T, TickerLink, type Column, AvoidFlag, fiscalQuarter, fmtPct, median } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, Input, Loading, PageHeader, Panel, T, TickerLink, type Column, AvoidFlag, fiscalQuarter, fmtPct, median, sourceOf, undatedSource } from '@/components/terminal'
+import { CrushLedger } from '@/components/vol/CrushLedger'
 
 const KIND_COLOR: Record<string, string> = {
   RESULTS: T.amber, DIVIDEND: T.green, BONUS: T.cyan, SPLIT: T.cyan, RIGHTS: T.violet, BUYBACK: T.green,
@@ -209,7 +210,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
         </div>} />
 
       <div style={{ display: 'grid', gap: 12 }}>
-        <Panel title="Your stocks" accent={T.green}
+        <Panel source={undatedSource('NSE calendar', brokerNote)} title="Your stocks" accent={T.green}
           subtitle={`ICICI holdings · Desk · watchlist · pins — ${owners.size} tracked${brokerNote ? ` · ${brokerNote}` : ''}`} pad={mine.length ? 0 : 12}>
           {mine.length
             ? <DataTable columns={cols} rows={mine} rowKey={r => `${r.symbol}-${r.event_date}-${r.kind}`} dense onRowClick={r => onSelectTicker(r.symbol)} />
@@ -220,7 +221,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
         </Panel>
 
         {reacting && reacting.rows.length > 0 && (
-          <Panel title={reacting.phase === 'session' ? 'Reacting today · live' : reacting.phase === 'preopen' ? 'Results · pre-open auction' : 'Results since the last close · react at 09:15'} accent={T.violet} pad={0}
+          <Panel source={sourceOf(reacting.since ?? null, { source: 'NSE results', live: reacting.phase === 'session' })} badge="context" title={reacting.phase === 'session' ? 'Reacting today · live' : reacting.phase === 'preopen' ? 'Results · pre-open auction' : 'Results since the last close · react at 09:15'} accent={T.violet} pad={0}
             subtitle={`results filed since ${reacting.since} · what the numbers said (revenue / profit vs a year ago; … = still reading the filing; hover for why a figure is missing) and today's move vs the stock's average results-day move · the scoreboard below fills in tonight`}>
             <DataTable<ReactingResult> dense maxHeight={300} rowKey={r => r.symbol} onRowClick={r => onSelectTicker(r.symbol)}
               initialSort={{ key: 'size', dir: 'desc' }} rows={reacting.rows}
@@ -263,7 +264,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
             pat: med(v.map(r => r.pat_yoy).filter((x): x is number => x != null)) })).sort((a, b) => b.n - a.n).slice(0, 8)
           const pc = (v: number | null) => <span style={{ color: v == null ? T.dim : v >= 0 ? T.green : T.red }}>{fmtPct(v, 1)}</span>
           return (
-            <Panel title={`${qn} season so far`} accent={T.green}
+            <Panel source={undatedSource('NSE results filings', 'latest quarter per company')} badge="context" title={`${qn} season so far`} accent={T.green}
               subtitle={`${rep.length} companies reported and read · latest quarter vs a year ago · from their NSE results filings (XBRL) · full list: FUND`}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginBottom: 10 }}>
                 {([['Reported', String(rep.length), T.text], ['Median revenue growth', fmtPct(med(revs), 1), (med(revs) ?? 0) >= 0 ? T.green : T.red],
@@ -303,7 +304,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
         })()}
 
         {recent && recent.length > 0 && (
-          <Panel title="Results scoreboard" accent={T.amber} pad={0}
+          <Panel source={sourceOf(recent.map(r => r.released_at.slice(0, 10)).sort().pop() ?? null, { source: 'NSE results', maxAgeDays: 10 })} badge="context" title="Results scoreboard" accent={T.amber} pad={0}
             subtitle={`reported in the last 10 days · reaction session after each release · size = move ÷ the stock's typical results move`}
             right={(() => {
               const done = recent.filter(r => r.move_pct != null)
@@ -336,7 +337,9 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
         )}
 
         <ResultsImpliedMoves />
-        <Panel title="Next five weeks" accent={T.amber} pad={0}
+        {/* terminal v2 PLAN 1.1: the per-stock results IV-crush ledger (last 8 releases), names sorted by next results */}
+        <CrushLedger />
+        <Panel source={undatedSource('NSE calendar')} title="Next five weeks" accent={T.amber} pad={0}
           subtitle={day ? `showing ${fmtDay(day)} · click again to clear` : 'busiest names per day by turnover · ◆ = economic data / RBI / Fed (ECO) · click a day to filter'}
           right={<div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             <Chip color={T.muted} active={!kind} onClick={() => setKind(null)}>ALL</Chip>
@@ -383,7 +386,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
           </div>
         </Panel>
 
-        <Panel title="All events" accent={T.cyan} pad={0}
+        <Panel source={undatedSource('NSE calendar')} title="All events" accent={T.cyan} pad={0}
           subtitle={`${filtered.length} shown · last 7 days and next 60 · click a stock for its chart`}
           right={<Input value={q} onChange={setQ} placeholder="Stock, company or text…" width={220} />}>
           <DataTable columns={cols} rows={filtered} rowKey={r => `${r.symbol}-${r.event_date}-${r.kind}`} dense maxHeight={620}

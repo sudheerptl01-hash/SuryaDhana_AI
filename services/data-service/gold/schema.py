@@ -174,18 +174,18 @@ def ddl_statements() -> list[str]:
 
 def ensure_schema(store: Any) -> None:
     """Create the gold tables on ``store`` (idempotent). ``DuckDBStore._init_schema`` does the same at start-up."""
-    with store._lock:
+    with store.writer() as con:
         for stmt in ddl_statements():
-            store._conn.execute(stmt)
+            con.execute(stmt)
 
 
 def positions_meta(store: Any) -> dict[str, dict[str, Any]]:
     """{table: {first, last, rows}} for the freshness-bearing gold tables (the WHSE panel / pre_market_sync rows)."""
     out: dict[str, dict[str, Any]] = {}
-    with store._lock:
+    with store.reader() as con:
         for table, col in FRESHNESS_COLUMN.items():
             try:
-                lo, hi, n = store._conn.execute(f"SELECT MIN({col}), MAX({col}), COUNT(*) FROM {table}").fetchone()
+                lo, hi, n = con.execute(f"SELECT MIN({col}), MAX({col}), COUNT(*) FROM {table}").fetchone()
                 out[table] = {"first": str(lo)[:19] if lo else None, "last": str(hi)[:19] if hi else None, "rows": int(n or 0)}
             except Exception as exc:  # noqa: BLE001 — a store opened before the gold DDL ran
                 out[table] = {"first": None, "last": None, "rows": 0, "error": type(exc).__name__}

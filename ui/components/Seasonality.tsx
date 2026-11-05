@@ -8,7 +8,7 @@ import { apiError } from '@/lib/errors'
  */
 import { useEffect, useState } from 'react'
 import { getSeasonality, type Seasonality as SeasonalityData } from '@/lib/api'
-import { Btn, Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, fmtFixed, fmtPct } from '@/components/terminal'   // fmtFixed: U+2212 (C1-18)
+import { Btn, Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, fmtFixed, fmtPct, undatedSource } from '@/components/terminal'   // fmtFixed: U+2212 (C1-18)
 
 const INDICES = ['NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY MIDCAP 100', 'NIFTY SMALLCAP 100', 'NIFTY FMCG', 'NIFTY PHARMA', 'NIFTY METAL']
 
@@ -106,7 +106,7 @@ export function SeasonalityPage() {
   return (
     <div>
       <PageHeader code="SEAG" title="Seasonality" subtitle="average return by calendar month, how often each month was up, and every year behind it" />
-      <Panel title={sym} accent={T.amber}
+      <Panel source={undatedSource('NSE closes', 'monthly returns; the window is printed in the panel')} badge="context" title={sym} accent={T.amber}
         right={<div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           {INDICES.map(i => <Chip key={i} color={T.amber} active={sym === i} onClick={() => setSym(i)}>{i.replace('NIFTY ', '')}</Chip>)}
           <span onKeyDown={e => { if (e.key === 'Enter') go() }}><Input value={txt} onChange={setTxt} placeholder="any ticker…" width={110} /></span>

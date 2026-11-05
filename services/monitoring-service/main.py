@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _telegram
     settings = get_settings()
     configure_logging("monitoring-service", settings.log_level)
-    _telegram = TelegramAlertBot(settings.telegram_bot_token, settings.telegram_chat_id)
+    _telegram = TelegramAlertBot(settings.telegram_bot_token.get_secret_value(), settings.telegram_chat_id)
     logger.info("Monitoring service started", telegram_stub=_telegram._stub)
     yield
     logger.info("Monitoring service stopped")

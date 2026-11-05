@@ -932,13 +932,19 @@ def test_gold_deltas_are_what_the_ui_sends_and_the_server_mounts():
     assert '@router.get("/specs")' in (api / "routers" / "mcx.py").read_text(), "side A (25 Oct UI) still calls /api/mcx/specs"
     gp = (api / "routers" / "gold_preopen.py").read_text()
     assert '@router.get("/gold-preopen")' in gp and '@router.get("/gold-preopen/log")' in gp
-    # side A (ui/dist/previous, the 25 Oct release) sends exactly the A-only shapes declared above
-    prev = ROOT / "ui" / "dist" / "previous"
-    if prev.exists():
-        bundle = "".join(f.read_text(errors="replace") for f in prev.rglob("*.js") if f.stat().st_size < 4_000_000)
-        assert 'i("/api/mcx/specs")' in bundle or '("/api/mcx/specs")' in bundle
-        assert 'get("/api/commodity/gold-preopen",{params:' in bundle and 'get("/api/commodity/gold-preopen/log",{params:{threshold:' in bundle
-        assert "/api/gold/" not in bundle and "/api/positions/totp" not in bundle
+    # side A = the pre-gold 25 Oct release itself (NOT ui/dist/previous: once GOLD shipped, "previous" is a gold release and
+    # the A-only premise no longer holds — that is what hung the suite on 5 Nov: a failing `in` over megabytes made pytest
+    # diff the whole bundle). Skipped when build_ui.sh has pruned that release. Booleans only, so a failure never diffs a bundle.
+    side_a = ROOT / "ui" / "dist" / "releases" / "20261025-223942-0ae66db"
+    if side_a.exists():
+        bundle = "".join(f.read_text(errors="replace") for f in side_a.rglob("*.js") if f.stat().st_size < 4_000_000)
+        has_specs = 'i("/api/mcx/specs")' in bundle or '("/api/mcx/specs")' in bundle
+        has_preopen = ('get("/api/commodity/gold-preopen",{params:' in bundle
+                       and 'get("/api/commodity/gold-preopen/log",{params:{threshold:' in bundle)
+        has_gold = "/api/gold/" in bundle or "/api/positions/totp" in bundle
+        assert has_specs, "side A no longer calls /api/mcx/specs"
+        assert has_preopen, "side A no longer calls the gold-preopen aliases"
+        assert not has_gold, "side A already calls /api/gold: it is not the pre-gold release"
 
 
 def test_expected_new_page_is_gold_only():

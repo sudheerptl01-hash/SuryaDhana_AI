@@ -26,6 +26,10 @@ export function lastWith<K extends keyof SummaryLike>(rows: readonly SummaryLike
  * in vol points; positive = IV ran above the vol that followed. A description of the past (`context`).
  */
 export interface PaidRow { expiry: string; from: string; to: string; iv_paid: number; rv_delivered: number | null; paid_minus_delivered: number | null; sessions: number }
+/** The 252-session window behind every "percentile of the past year" label (the IV history fetch is ≈ 3 years). */
+export const ONE_YEAR_SESSIONS = 252
+export function lastYear<T>(rows: readonly T[]): T[] { return rows.slice(-ONE_YEAR_SESSIONS) }
+
 export function ivPaidLedger(rows: readonly SummaryLike[], n = 12): PaidRow[] {
   const groups = new Map<string, SummaryLike[]>()
   for (const r of rows) {
@@ -34,14 +38,18 @@ export function ivPaidLedger(rows: readonly SummaryLike[], n = 12): PaidRow[] {
     g.push(r); groups.set(r.monthly_expiry, g)
   }
   const out: PaidRow[] = []
+  // the last stored session of the whole series: a monthly whose expiry is after it is still OPEN — its realised vol has not
+  // been delivered yet (today's RV20 mostly covers the previous month), so it gets no RV and stays out of the closed mean
+  const lastDate = rows.reduce((m, r) => (r.date > m ? r.date : m), '')
   for (const [expiry, g] of groups) {
     const first = g[0], last = g[g.length - 1]
-    const rv = fin(last.rv20_yz) ? last.rv20_yz : fin(last.rv20_cc) ? last.rv20_cc : null
+    const open = expiry > lastDate
+    const rv = open ? null : fin(last.rv20_yz) ? last.rv20_yz : fin(last.rv20_cc) ? last.rv20_cc : null
     out.push({ expiry, from: first.date, to: last.date, iv_paid: first.monthly_atm_iv as number, rv_delivered: rv,
                paid_minus_delivered: rv == null ? null : +(first.monthly_atm_iv! - rv).toFixed(2), sessions: g.length })
   }
   out.sort((a, b) => a.expiry.localeCompare(b.expiry))
-  // the open month (its expiry after the last stored session) has not delivered yet: keep it last, flagged by rv null
+  // the open month (its expiry after the last stored session) sorts last with rv_delivered null → rendered 'open'
   return out.slice(-n)
 }
 
@@ -103,7 +111,8 @@ export function legsFromStrikes(strikes: readonly number[]): SeedLeg[] {
   const ks = [...new Set(strikes.filter(k => Number.isFinite(k) && k > 0))].sort((a, b) => a - b)
   if (ks.length === 1) return [{ side: 'buy', kind: 'CE', strike: ks[0] }, { side: 'buy', kind: 'PE', strike: ks[0] }]
   if (ks.length === 2) return [{ side: 'buy', kind: 'PE', strike: ks[0] }, { side: 'buy', kind: 'CE', strike: ks[1] }]
-  if (ks.length === 3) return [{ side: 'buy', kind: 'PE', strike: ks[0] }, { side: 'sell', kind: 'PE', strike: ks[1] }, { side: 'sell', kind: 'CE', strike: ks[1] }].concat([{ side: 'buy', kind: 'CE', strike: ks[2] }])
+  // 3 strikes → iron fly: long wings at the outer strikes, short straddle at the middle one
+  if (ks.length === 3) return [{ side: 'buy', kind: 'PE', strike: ks[0] }, { side: 'sell', kind: 'PE', strike: ks[1] }, { side: 'sell', kind: 'CE', strike: ks[1] }, { side: 'buy', kind: 'CE', strike: ks[2] }]
   if (ks.length >= 4) return [{ side: 'buy', kind: 'PE', strike: ks[0] }, { side: 'sell', kind: 'PE', strike: ks[1] }, { side: 'sell', kind: 'CE', strike: ks[2] }, { side: 'buy', kind: 'CE', strike: ks[3] }]
   return []
 }

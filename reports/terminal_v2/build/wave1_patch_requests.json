@@ -1,0 +1,583 @@
+[
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "from shared.http_guard import install_http_guard\n",
+  "new": "from shared.http_guard import install_http_guard\nfrom shared.metrics import install_observability\n",
+  "why": "PLAN 1.5 observability contract: /metrics + X-Request-ID + JSON access log on data-service (shared/metrics.py, B7)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "# Host/Origin guard (desktop review C2-security-01: DNS rebinding + cross-site POSTs such as\n# /jobs/build-ml-dataset). The only middleware, so the outermost; add any future middleware above it.\ninstall_http_guard(app, service=\"data-service\")",
+  "new": "# Observability (Terminal v2 PLAN 1.5, shared/metrics.py): GET /metrics, X-Request-ID in/out as the correlation id,\n# JSON access log (no /health /live / lines), anyio worker-thread limit raised to SD_THREAD_LIMIT (64) so the\n# per-call DuckDB cursors (storage/duckdb_store.py read()/reader()) run side by side. Inside the guard.\ninstall_observability(app, service=\"data-service\")\n# Host/Origin guard (desktop review C2-security-01: DNS rebinding + cross-site POSTs such as\n# /jobs/build-ml-dataset). The OUTERMOST middleware; add any future middleware above it.\ninstall_http_guard(app, service=\"data-service\")",
+  "why": "G8: /metrics 200 on :8001 with the named series; the anyio thread-limit raise (R-ARCH fix 2) happens here."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        liquid = set(store.get_liquid_symbols(req.top_n))\n        with store._lock:\n            fo = {r[0] for r in store._conn.execute(\n                \"SELECT DISTINCT symbol FROM nse_fo_daily WHERE kind = 'stock' AND date = (SELECT MAX(date) FROM nse_fo_daily)\"",
+  "new": "        liquid = set(store.get_liquid_symbols(req.top_n))\n        with store.reader() as con:\n            fo = {r[0] for r in con.execute(\n                \"SELECT DISTINCT symbol FROM nse_fo_daily WHERE kind = 'stock' AND date = (SELECT MAX(date) FROM nse_fo_daily)\"",
+  "why": "PLAN 1.5: retire the store._conn/store._lock bypass — reads on store.reader()/read_rows()/read_one() (shared lock, per-call cursor), writes on store.writer()/write() (exclusive). Mechanical codemod; verified to compile, import (103 routes) and apply cleanly in file order (scratchpad B7-ARCH/bypass_hunks.json, codemod.py)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        try:\n            with store._lock:\n                _typical_cache[\"map\"] = rh.typical_moves(store._conn, want)\n            _typical_cache.update(at=time.time(), asked=set(want))",
+  "new": "        try:\n            with store.reader() as con:\n                _typical_cache[\"map\"] = rh.typical_moves(con, want)\n            _typical_cache.update(at=time.time(), asked=set(want))",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    syms = sorted({s.strip().upper() for s in symbols.split(\",\") if s.strip()})[:200]\n    with store._lock:\n        m = rh.typical_moves(store._conn, syms)\n    return {\"moves\": {k: {\"typical_move_pct\": v[\"avg_abs_move_pct\"], \"quarters\": v[\"quarters\"]} for k, v in m.items()}}",
+  "new": "    syms = sorted({s.strip().upper() for s in symbols.split(\",\") if s.strip()})[:200]\n    with store.reader() as con:\n        m = rh.typical_moves(con, syms)\n    return {\"moves\": {k: {\"typical_move_pct\": v[\"avg_abs_move_pct\"], \"quarters\": v[\"quarters\"]} for k, v in m.items()}}",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        raise HTTPException(status_code=422, detail=\"Bad symbol\")\n    with store._lock:\n        out = security.profile(store._conn, symbol, industries())\n    if not out.get(\"found\"):",
+  "new": "        raise HTTPException(status_code=422, detail=\"Bad symbol\")\n    with store.reader() as con:\n        out = security.profile(con, symbol, industries())\n    if not out.get(\"found\"):",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        raise HTTPException(status_code=422, detail=\"Bad symbol\")\n    with store._lock:\n        out = security.price_history(store._conn, symbol, days)\n    if not out.get(\"found\"):",
+  "new": "        raise HTTPException(status_code=422, detail=\"Bad symbol\")\n    with store.reader() as con:\n        out = security.price_history(con, symbol, days)\n    if not out.get(\"found\"):",
+  "why": "PLAN 1.5 bypass retirement — this is the /db/security/{symbol}/history route the §2.3 harness measured."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    elif req.recent_events_days is not None:\n        with store._lock:\n            symbols = [r[0] for r in store._conn.execute(\n                \"SELECT DISTINCT symbol FROM nse_events WHERE kind = 'RESULTS' AND event_date BETWEEN ?::DATE AND ?::DATE\",",
+  "new": "    elif req.recent_events_days is not None:\n        with store.reader() as con:\n            symbols = [r[0] for r in con.execute(\n                \"SELECT DISTINCT symbol FROM nse_events WHERE kind = 'RESULTS' AND event_date BETWEEN ?::DATE AND ?::DATE\",",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    elif req.having_since:\n        with store._lock:\n            symbols = [r[0] for r in store._conn.execute(\n                \"SELECT DISTINCT symbol FROM nse_results WHERE period_end >= ?::DATE ORDER BY symbol\", [req.having_since]).fetchall()]",
+  "new": "    elif req.having_since:\n        with store.reader() as con:\n            symbols = [r[0] for r in con.execute(\n                \"SELECT DISTINCT symbol FROM nse_results WHERE period_end >= ?::DATE ORDER BY symbol\", [req.having_since]).fetchall()]",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "                    if fresh_era:              # the new fetch covers the era: a failed / partial one never deletes data\n                        with store._lock:\n                            out[\"replaced\"] += store._conn.execute(\n                                \"DELETE FROM nse_results WHERE symbol = ? AND period_end >= ?::DATE RETURNING 1\",",
+  "new": "                    if fresh_era:              # the new fetch covers the era: a failed / partial one never deletes data\n                        with store.writer() as con:\n                            out[\"replaced\"] += con.execute(\n                                \"DELETE FROM nse_results WHERE symbol = ? AND period_end >= ?::DATE RETURNING 1\",",
+  "why": "PLAN 1.5 bypass retirement — a DELETE, so the exclusive writer()."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    start = (pd.Timestamp(rel[\"released_at\"].min()) - pd.Timedelta(days=15)).date().isoformat() if len(rel) else \"2022-01-01\"\n    with store._lock:\n        raw = store._conn.execute(\"SELECT * FROM nse_bhavcopy WHERE symbol = ? AND date >= ?::DATE\", [sym, start]).df()\n        splits = store._conn.execute(\"SELECT ticker, date, ratio FROM splits WHERE ratio > 0 AND ticker IN (?, ?)\",\n                                     [sym, f\"{sym}.NS\"]).df()",
+  "new": "    start = (pd.Timestamp(rel[\"released_at\"].min()) - pd.Timedelta(days=15)).date().isoformat() if len(rel) else \"2022-01-01\"\n    with store.reader() as con:\n        raw = con.execute(\"SELECT * FROM nse_bhavcopy WHERE symbol = ? AND date >= ?::DATE\", [sym, start]).df()\n        splits = con.execute(\"SELECT ticker, date, ratio FROM splits WHERE ratio > 0 AND ticker IN (?, ?)\",\n                                     [sym, f\"{sym}.NS\"]).df()",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        raise HTTPException(status_code=502, detail=f\"NSE corporate actions unavailable: {exc}\") from exc\n    price = None\n    try:\n        with store._lock:\n            got = store._conn.execute(\"SELECT close FROM nse_bhavcopy WHERE symbol = ? AND series IN ('EQ','BE') ORDER BY date DESC LIMIT 1\", [sym]).fetchone()\n        price = float(got[0]) if got else None\n    except Exception:  # noqa: BLE001\n        price = None",
+  "new": "        raise HTTPException(status_code=502, detail=f\"NSE corporate actions unavailable: {exc}\") from exc\n    price = None\n    try:\n        with store.reader() as con:\n            got = con.execute(\"SELECT close FROM nse_bhavcopy WHERE symbol = ? AND series IN ('EQ','BE') ORDER BY date DESC LIMIT 1\", [sym]).fetchone()\n        price = float(got[0]) if got else None\n    except Exception:  # noqa: BLE001\n        price = None",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified; context widened because the block text repeats below)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    price = None\n    try:\n        with store._lock:\n            got = store._conn.execute(\"SELECT close FROM nse_bhavcopy WHERE symbol = ? AND series IN ('EQ','BE') ORDER BY date DESC LIMIT 1\", [sym]).fetchone()\n        price = float(got[0]) if got else None\n    except Exception:  # noqa: BLE001 — valuation is optional",
+  "new": "    price = None\n    try:\n        with store.reader() as con:\n            got = con.execute(\"SELECT close FROM nse_bhavcopy WHERE symbol = ? AND series IN ('EQ','BE') ORDER BY date DESC LIMIT 1\", [sym]).fetchone()\n        price = float(got[0]) if got else None\n    except Exception:  # noqa: BLE001 — valuation is optional",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    try:\n        with store._lock:\n            got = store._conn.execute(\"\"\"\n                SELECT symbol, close FROM (",
+  "new": "    try:\n        with store.reader() as con:\n            got = con.execute(\"\"\"\n                SELECT symbol, close FROM (",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    import results_history as rh\n    with store._lock:\n        rows = rh.recent_reactions(store._conn, days)\n    return {\"days\": days, \"rows\": rows, \"count\": len(rows)}",
+  "new": "    import results_history as rh\n    with store.reader() as con:\n        rows = rh.recent_reactions(con, days)\n    return {\"days\": days, \"rows\": rows, \"count\": len(rows)}",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    today = date.today()\n    with store._lock:\n        ev = store._conn.execute(\"\"\"SELECT DISTINCT symbol, CAST(event_date AS VARCHAR) AS d FROM nse_events\n                                    WHERE kind = 'RESULTS' AND event_date >= ?::DATE AND event_date <= ?::DATE\"\"\",",
+  "new": "    today = date.today()\n    with store.reader() as con:\n        ev = con.execute(\"\"\"SELECT DISTINCT symbol, CAST(event_date AS VARCHAR) AS d FROM nse_events\n                                    WHERE kind = 'RESULTS' AND event_date >= ?::DATE AND event_date <= ?::DATE\"\"\",",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        ev = [(s_, d_) for s_, d_ in ev if s_ in fo]\n        typical = rh.typical_moves(store._conn, sorted({s_ for s_, _ in ev})) if ev else {}\n    closes = store.adjusted_closes(sorted({s_ for s_, _ in ev}), (today - timedelta(days=120)).isoformat()) if ev else pd.DataFrame()",
+  "new": "        ev = [(s_, d_) for s_, d_ in ev if s_ in fo]\n        typical = rh.typical_moves(con, sorted({s_ for s_, _ in ev})) if ev else {}\n    closes = store.adjusted_closes(sorted({s_ for s_, _ in ev}), (today - timedelta(days=120)).isoformat()) if ev else pd.DataFrame()",
+  "why": "PLAN 1.5 bypass retirement — second statement of the block above (same reader cursor)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    participant-wise OI file: latest snapshot with 1- and 5-session changes, and the FII long ratio history.\"\"\"\n    with store._lock:\n        last_day = store._conn.execute(\"SELECT MAX(date) FROM nse_participant_oi\").fetchone()[0]\n        if last_day is None:",
+  "new": "    participant-wise OI file: latest snapshot with 1- and 5-session changes, and the FII long ratio history.\"\"\"\n    with store.reader() as con:\n        last_day = con.execute(\"SELECT MAX(date) FROM nse_participant_oi\").fetchone()[0]\n        if last_day is None:",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        since = (pd.Timestamp(last_day) - pd.Timedelta(days=int(days * 1.6) + 10)).date().isoformat()\n        df = store._conn.execute(\"\"\"\n            SELECT date, client_type, fut_idx_long, fut_idx_short, opt_idx_call_long, opt_idx_call_short,",
+  "new": "        since = (pd.Timestamp(last_day) - pd.Timedelta(days=int(days * 1.6) + 10)).date().isoformat()\n        df = con.execute(\"\"\"\n            SELECT date, client_type, fut_idx_long, fut_idx_short, opt_idx_call_long, opt_idx_call_short,",
+  "why": "PLAN 1.5 bypass retirement — second statement of the block above."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        return {\"before\": before, \"prev\": {}}\n    with store._lock:\n        rows = store._conn.execute(\"\"\"\n            SELECT symbol, close, date FROM (",
+  "new": "        return {\"before\": before, \"prev\": {}}\n    with store.reader() as con:\n        rows = con.execute(\"\"\"\n            SELECT symbol, close, date FROM (",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    syms = sorted(members)\n    with store._lock:\n        promo = dict(store._conn.execute(\"\"\"\n            SELECT symbol, promoter_pct FROM (",
+  "new": "    syms = sorted(members)\n    with store.reader() as con:\n        promo = dict(con.execute(\"\"\"\n            SELECT symbol, promoter_pct FROM (",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    import deals_monitor as dm\n    with store._lock:\n        dates = [d for (d,) in store._conn.execute(\n            \"SELECT DISTINCT date FROM nse_bhavcopy ORDER BY date DESC LIMIT ?\", [days]).fetchall()]",
+  "new": "    import deals_monitor as dm\n    with store.reader() as con:\n        dates = [d for (d,) in con.execute(\n            \"SELECT DISTINCT date FROM nse_bhavcopy ORDER BY date DESC LIMIT ?\", [days]).fetchall()]",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        start = min(dates)\n        shorts = store._conn.execute(\"SELECT date, symbol, qty FROM nse_deals WHERE kind = 'short' AND date >= ?\", [start]).df()\n        syms = sorted(set(shorts[\"symbol\"])) if not shorts.empty else []\n        vol = store._conn.execute(\"\"\"SELECT date, symbol, SUM(volume) AS volume FROM nse_bhavcopy\n                                     WHERE date >= ? AND series IN ('EQ', 'BE', 'BZ') AND list_contains(?, symbol)",
+  "new": "        start = min(dates)\n        shorts = con.execute(\"SELECT date, symbol, qty FROM nse_deals WHERE kind = 'short' AND date >= ?\", [start]).df()\n        syms = sorted(set(shorts[\"symbol\"])) if not shorts.empty else []\n        vol = con.execute(\"\"\"SELECT date, symbol, SUM(volume) AS volume FROM nse_bhavcopy\n                                     WHERE date >= ? AND series IN ('EQ', 'BE', 'BZ') AND list_contains(?, symbol)",
+  "why": "PLAN 1.5 bypass retirement — remaining statements of the block above."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "\ndef _nifty500_close(start: str) -> tuple[pd.Series, str] | None:\n    \"\"\"Nifty 500 daily closes from Yahoo (^CRSLDX); None when unreachable.\"\"\"\n    import time as _time\n    import httpx\n    try:\n        r = httpx.get(\"https://query1.finance.yahoo.com/v8/finance/chart/%5ECRSLDX\",\n                      params={\"period1\": int(pd.Timestamp(start).timestamp()), \"period2\": int(_time.time()), \"interval\": \"1d\"},\n                      headers={\"User-Agent\": \"Mozilla/5.0\"}, timeout=20).json()[\"chart\"][\"result\"][0]\n        idx = pd.to_datetime(r[\"timestamp\"], unit=\"s\", utc=True).tz_convert(\"Asia/Kolkata\").normalize().tz_localize(None)\n        s = pd.Series(r[\"indicators\"][\"quote\"][0][\"close\"], index=idx, dtype=float).dropna()\n        return s.groupby(level=0).last(), \"Nifty 500\"\n    except Exception:  # noqa: BLE001 — fall back to NIFTY 50 from the database\n        return None\n\n\ndef _nifty500_nse(start: str, session: str) -> tuple[pd.Series, str] | None:",
+  "new": "\ndef _nifty500_nse(start: str, session: str) -> tuple[pd.Series, str] | None:",
+  "why": "PLAN §0.7 / 1.5: Yahoo (^CRSLDX, query1) removed from /db/market-monitor's locked request path; NSE's ind_close_all history (_index_valuation_history today, B1's index_ohlc_daily when it lands) is the Nifty 500 series; NIFTY 50 from the DB is the fallback."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    if s.index[-1] < pd.Timestamp(session):\n        return None                                  # NSE can't give the latest session: let Yahoo try\n    return s, \"Nifty 500\"",
+  "new": "    if s.index[-1] < pd.Timestamp(session):\n        return None                                  # NSE can't give the latest session: the caller uses NIFTY 50 from the DB\n    return s, \"Nifty 500\"",
+  "why": "PLAN §0.7: the Yahoo leg is gone; the comment says what happens instead."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        start = (pd.Timestamp(key) - pd.Timedelta(days=620)).date().isoformat()\n        with store._lock:\n            panel = load_panel(store._conn, start=start)\n        vix = store.get_index_daily(\"INDIAVIX\")\n        vix = pd.Series(vix[\"close\"].to_numpy(), index=pd.to_datetime(vix[\"date\"]))\n        got = _nifty500_nse(start, key) or _nifty500_close(start)\n        if got is None:",
+  "new": "        start = (pd.Timestamp(key) - pd.Timedelta(days=620)).date().isoformat()\n        with store.reader() as con:\n            panel = load_panel(con, start=start)\n        vix = store.get_index_daily(\"INDIAVIX\")\n        vix = pd.Series(vix[\"close\"].to_numpy(), index=pd.to_datetime(vix[\"date\"]))\n        got = _nifty500_nse(start, key)                 # NSE's daily index file; no Yahoo on the request path (PLAN §0.7)\n        if got is None:",
+  "why": "PLAN §0.7 / 1.5: /db/market-monitor loads the panel on a shared-lock cursor and never calls Yahoo under _monitor_lock (one Yahoo stall used to block every monitor caller for 20 s)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    \"\"\"How current each layer is: bars → features → labels (eligible equities only).\"\"\"\n    with store._lock:\n        row = store._conn.execute(\"\"\"\n            WITH elig AS (SELECT ticker FROM instruments WHERE ml_eligible),",
+  "new": "    \"\"\"How current each layer is: bars → features → labels (eligible equities only).\"\"\"\n    with store.reader() as con:\n        row = con.execute(\"\"\"\n            WITH elig AS (SELECT ticker FROM instruments WHERE ml_eligible),",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    try:\n        con = store._conn  # reuse existing write-mode connection\n\n        if feat_parquet.exists():\n            # Discover Parquet columns\n            parquet_cols = {r[0] for r in con.execute(\n                f\"DESCRIBE SELECT * FROM read_parquet('{feat_parquet}') LIMIT 1\"\n            ).fetchall()}\n",
+  "new": "    try:\n        if feat_parquet.exists():\n            # Discover Parquet columns\n            parquet_cols = {r[0] for r in store.read_rows(\n                f\"DESCRIBE SELECT * FROM read_parquet('{feat_parquet}') LIMIT 1\"\n            )}\n",
+  "why": "PLAN 1.5: the ML-import route held the primary connection without a lock for its reads; reads go through read_rows(), the two transactions through writer() (next hunks)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "            # Only include columns that exist in BOTH Parquet AND ml_features table\n            table_cols = {r[0] for r in con.execute(\"DESCRIBE ml_features\").fetchall()}\n            insert_cols = [\"ticker\", \"date\"]",
+  "new": "            # Only include columns that exist in BOTH Parquet AND ml_features table\n            table_cols = {r[0] for r in store.read_rows(\"DESCRIBE ml_features\")}\n            insert_cols = [\"ticker\", \"date\"]",
+  "why": "PLAN 1.5 (ML-import route, see above)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "            val_list = \", \".join(select_exprs)\n\n            with store._lock:\n                con.execute(\"BEGIN TRANSACTION\")\n                try:",
+  "new": "            val_list = \", \".join(select_exprs)\n\n            with store.writer() as con:\n                con.execute(\"BEGIN TRANSACTION\")\n                try:",
+  "why": "PLAN 1.5 (ML-import route): the features transaction on writer()."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "                    raise\n            result[\"features\"] = con.execute(\"SELECT COUNT(*) FROM ml_features\").fetchone()[0]\n\n        if lbl_parquet.exists():\n            lbl_parquet_cols = {r[0] for r in con.execute(\n                f\"DESCRIBE SELECT * FROM read_parquet('{lbl_parquet}') LIMIT 1\"\n            ).fetchall()}\n",
+  "new": "                    raise\n            result[\"features\"] = store.read_one(\"SELECT COUNT(*) FROM ml_features\")[0]\n\n        if lbl_parquet.exists():\n            lbl_parquet_cols = {r[0] for r in store.read_rows(\n                f\"DESCRIBE SELECT * FROM read_parquet('{lbl_parquet}') LIMIT 1\"\n            )}\n",
+  "why": "PLAN 1.5 (ML-import route, see above)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "                return col if col in lbl_parquet_cols else fallback\n\n            with store._lock:\n                con.execute(\"BEGIN TRANSACTION\")\n                try:",
+  "new": "                return col if col in lbl_parquet_cols else fallback\n\n            with store.writer() as con:\n                con.execute(\"BEGIN TRANSACTION\")\n                try:",
+  "why": "PLAN 1.5 (ML-import route): the labels transaction on writer()."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "                    raise\n            result[\"labels\"] = con.execute(\"SELECT COUNT(*) FROM ml_labels\").fetchone()[0]\n",
+  "new": "                    raise\n            result[\"labels\"] = store.read_one(\"SELECT COUNT(*) FROM ml_labels\")[0]\n",
+  "why": "PLAN 1.5 (ML-import route, see above)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        ph = \",\".join(\"?\" * len(symbols))\n        rows = store._conn.execute(\n            f\"\"\"SELECT symbol, close FROM nse_bhavcopy\n                WHERE date = (SELECT max(date) FROM nse_bhavcopy) AND series = 'EQ' AND symbol IN ({ph})\"\"\",\n            symbols).fetchall()\n        return {r[0]: float(r[1]) for r in rows if r[1]}",
+  "new": "        ph = \",\".join(\"?\" * len(symbols))\n        rows = store.read_rows(\n            f\"\"\"SELECT symbol, close FROM nse_bhavcopy\n                WHERE date = (SELECT max(date) FROM nse_bhavcopy) AND series = 'EQ' AND symbol IN ({ph})\"\"\",\n            symbols)\n        return {r[0]: float(r[1]) for r in rows if r[1]}",
+  "why": "PLAN 1.5: _prev_close_for ran on the live-ticks worker thread against the primary connection with NO lock; read_rows() gives it its own cursor under the shared lock."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    \"\"\"\n    with store._lock:\n        df = store._conn.execute(f\"\"\"\n            SELECT ticker, date::VARCHAR AS date, open, high, low, close, volume, adjusted_close",
+  "new": "    \"\"\"\n    with store.reader() as con:\n        df = con.execute(f\"\"\"\n            SELECT ticker, date::VARCHAR AS date, open, high, low, close, volume, adjusted_close",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    \"\"\"\n    with store._lock:\n        df = store._conn.execute(\"\"\"\n            SELECT f.*",
+  "new": "    \"\"\"\n    with store.reader() as con:\n        df = con.execute(\"\"\"\n            SELECT f.*",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        keep = f\"_rn_desc <= {max(10, min(int(per_ticker), 2000))}\"\n    with store._lock:\n        df = store._conn.execute(f\"\"\"\n            SELECT * FROM (",
+  "new": "        keep = f\"_rn_desc <= {max(10, min(int(per_ticker), 2000))}\"\n    with store.reader() as con:\n        df = con.execute(f\"\"\"\n            SELECT * FROM (",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    n = max(1000, min(int(n), 300000))\n    with store._lock:\n        df = store._conn.execute(f\"\"\"\n            SELECT * FROM (",
+  "new": "    n = max(1000, min(int(n), 300000))\n    with store.reader() as con:\n        df = con.execute(f\"\"\"\n            SELECT * FROM (",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "    \"\"\"Return ml_features + ml_labels row counts, freshness and class-balance stats.\"\"\"\n    with store._lock:\n        feat = store._conn.execute(\n            \"SELECT COUNT(*) AS cnt, COUNT(DISTINCT ticker) AS tickers, \"",
+  "new": "    \"\"\"Return ml_features + ml_labels row counts, freshness and class-balance stats.\"\"\"\n    with store.reader() as con:\n        feat = con.execute(\n            \"SELECT COUNT(*) AS cnt, COUNT(DISTINCT ticker) AS tickers, \"",
+  "why": "PLAN 1.5 bypass retirement (mechanical codemod, verified)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/main.py",
+  "old": "        ).fetchone()\n        lbl = store._conn.execute(\n            \"SELECT COUNT(*) AS cnt, COUNT(DISTINCT ticker) AS tickers, \"",
+  "new": "        ).fetchone()\n        lbl = con.execute(\n            \"SELECT COUNT(*) AS cnt, COUNT(DISTINCT ticker) AS tickers, \"",
+  "why": "PLAN 1.5 bypass retirement — second statement of the block above."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/fo_analytics.py",
+  "old": "    store, _ = _ctx()\n    with store._lock:\n        rows = q_symbols(store._conn)\n    return {\"rows\": rows, \"count\": len(rows)}",
+  "new": "    store, _ = _ctx()\n    with store.reader() as con:\n        rows = q_symbols(con)\n    return {\"rows\": rows, \"count\": len(rows)}",
+  "why": "PLAN 1.5 bypass retirement (DERV reads on the shared lock)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/fo_analytics.py",
+  "old": "    sym = symbol.upper()\n    with store._lock:\n        rows, source = q_basis_history(store._conn, sym, days)\n    if not rows:",
+  "new": "    sym = symbol.upper()\n    with store.reader() as con:\n        rows, source = q_basis_history(con, sym, days)\n    if not rows:",
+  "why": "PLAN 1.5 bypass retirement (DERV reads on the shared lock)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/fo_analytics.py",
+  "old": "    sym = symbol.upper()\n    with store._lock:\n        rows = q_pcr_history(store._conn, sym, days)\n    if not rows:",
+  "new": "    sym = symbol.upper()\n    with store.reader() as con:\n        rows = q_pcr_history(con, sym, days)\n    if not rows:",
+  "why": "PLAN 1.5 bypass retirement (DERV reads on the shared lock)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/fo_analytics.py",
+  "old": "    store, _ = _ctx()\n    with store._lock:\n        out = q_vix(store._conn, days)\n    if not out.get(\"rows\"):",
+  "new": "    store, _ = _ctx()\n    with store.reader() as con:\n        out = q_vix(con, days)\n    if not out.get(\"rows\"):",
+  "why": "PLAN 1.5 bypass retirement (DERV reads on the shared lock)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/gold/db.py",
+  "old": "def query_df(store: Any, sql: str, params: list[Any] | None = None) -> pd.DataFrame:\n    with store._lock:\n        return store._conn.execute(sql, params or []).df()\n",
+  "new": "def query_df(store: Any, sql: str, params: list[Any] | None = None) -> pd.DataFrame:\n    return store.read(sql, params or [])                    # shared lock, per-call cursor (PLAN 1.5)\n",
+  "why": "PLAN 1.5: every gold read (the GOLD page's reads.py) goes through the shared lock instead of serialising behind ingests."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/gold/db.py",
+  "old": "def execute(store: Any, sql: str, params: list[Any] | None = None) -> None:\n    with store._lock:\n        store._conn.execute(sql, params or [])\n",
+  "new": "def execute(store: Any, sql: str, params: list[Any] | None = None) -> None:\n    store.write(sql, params or [])                          # exclusive lock on the primary connection\n",
+  "why": "PLAN 1.5 bypass retirement (gold writes stay exclusive)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/gold/db.py",
+  "old": "def scalar(store: Any, sql: str, params: list[Any] | None = None) -> Any:\n    with store._lock:\n        row = store._conn.execute(sql, params or []).fetchone()\n    return row[0] if row else None",
+  "new": "def scalar(store: Any, sql: str, params: list[Any] | None = None) -> Any:\n    row = store.read_one(sql, params or [])\n    return row[0] if row else None",
+  "why": "PLAN 1.5 bypass retirement (gold reads on the shared lock)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/gold/schema.py",
+  "old": "    \"\"\"Create the gold tables on ``store`` (idempotent). ``DuckDBStore._init_schema`` does the same at start-up.\"\"\"\n    with store._lock:\n        for stmt in ddl_statements():\n            store._conn.execute(stmt)\n",
+  "new": "    \"\"\"Create the gold tables on ``store`` (idempotent). ``DuckDBStore._init_schema`` does the same at start-up.\"\"\"\n    with store.writer() as con:\n        for stmt in ddl_statements():\n            con.execute(stmt)\n",
+  "why": "PLAN 1.5 bypass retirement (DDL on writer())."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/data-service/gold/schema.py",
+  "old": "    out: dict[str, dict[str, Any]] = {}\n    with store._lock:\n        for table, col in FRESHNESS_COLUMN.items():\n            try:\n                lo, hi, n = store._conn.execute(f\"SELECT MIN({col}), MAX({col}), COUNT(*) FROM {table}\").fetchone()\n                out[table] = {\"first\": str(lo)[:19] if lo else None, \"last\": str(hi)[:19] if hi else None, \"rows\": int(n or 0)}",
+  "new": "    out: dict[str, dict[str, Any]] = {}\n    with store.reader() as con:\n        for table, col in FRESHNESS_COLUMN.items():\n            try:\n                lo, hi, n = con.execute(f\"SELECT MIN({col}), MAX({col}), COUNT(*) FROM {table}\").fetchone()\n                out[table] = {\"first\": str(lo)[:19] if lo else None, \"last\": str(hi)[:19] if hi else None, \"rows\": int(n or 0)}",
+  "why": "PLAN 1.5 bypass retirement (freshness reads on the shared lock)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "tests/unit/test_http_guard_data_service.py",
+  "old": "    assert [m.cls for m in ds.app.user_middleware] == [HostOriginGuard]",
+  "new": "    from shared.metrics import ObservabilityMiddleware\n    assert [m.cls for m in ds.app.user_middleware] == [HostOriginGuard, ObservabilityMiddleware]",
+  "why": "The guard stays outermost; the observability middleware sits inside it (PLAN 1.5). Apply together with the data-service main.py patch."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "scripts/tests/test_http_guard_controller.py",
+  "old": "    assert [m.cls for m in mc.app.user_middleware] == [HostOriginGuard]",
+  "new": "    from shared.metrics import ObservabilityMiddleware\n    assert [m.cls for m in mc.app.user_middleware] == [HostOriginGuard, ObservabilityMiddleware]",
+  "why": "Same for master-controller. Apply together with the master_controller.py patch."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/tests/test_http_security.py",
+  "old": "    assert classes == [HostOriginGuard, ApiGzipMiddleware]           # user_middleware[0] is the outermost",
+  "new": "    from shared.metrics import ObservabilityMiddleware\n    assert classes == [HostOriginGuard, ObservabilityMiddleware, ApiGzipMiddleware]   # user_middleware[0] is the outermost",
+  "why": "ui-api main.py (B7) now installs the observability middleware between the guard and gzip; this is the only ui-api test failing today (1 of 1184)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "scripts/master_controller.py",
+  "old": "from shared.http_guard import install_http_guard\n",
+  "new": "from shared.http_guard import install_http_guard\nfrom shared.metrics import install_observability\n",
+  "why": "PLAN 1.5: /metrics on all three services."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "scripts/master_controller.py",
+  "old": "# login. The Host/Origin guard is the only middleware, so the outermost; add future middleware above it.\ninstall_http_guard(app, service=\"master-controller\")",
+  "new": "# login. Observability (PLAN 1.5): /metrics, X-Request-ID, JSON access log — inside the guard, which stays outermost.\ninstall_observability(app, service=\"master-controller\", thread_limit=None)\ninstall_http_guard(app, service=\"master-controller\")",
+  "why": "G8: /metrics 200 on :8008; thread_limit=None because the controller has no DuckDB sync endpoints."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/routers/markets.py",
+  "old": "    try:\n        async with httpx.AsyncClient(timeout=httpx.Timeout(20.0)) as client:\n            r = await client.get(f\"{DATA_SVC}/db/gift-nifty\")\n    except httpx.HTTPError as exc:\n        raise HTTPException(status_code=503, detail=f\"data-service unreachable: {exc}\") from exc\n    if r.status_code != 200:\n        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))\n    return r.json()",
+  "new": "    try:\n        return await http_client.get_json(f\"{DATA_SVC}/db/gift-nifty\", route=\"live\", stale_for=120)\n    except http_client.UpstreamError as exc:\n        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc",
+  "why": "PLAN 1.5 / R-ARCH fix 4: one AsyncClient per process (Limits 32/16, keep-alive), the data-service circuit breaker and stale-serve (last good body ≤ 120 s, marked stale:true) for gift-nifty; 312 + 40 upstream-flake 5xx were passed through before."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/routers/markets.py",
+  "old": "    try:\n        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:\n            r = await client.get(f\"{DATA_SVC}/db/nifty-live\")\n    except httpx.HTTPError as exc:\n        raise HTTPException(status_code=503, detail=f\"data-service unreachable: {exc}\") from exc\n    if r.status_code != 200:\n        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))\n    return r.json()",
+  "new": "    try:\n        return await http_client.get_json(f\"{DATA_SVC}/db/nifty-live\", route=\"live\", stale_for=120)\n    except http_client.UpstreamError as exc:\n        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc",
+  "why": "Same for nifty-live (3,343 polls per 60 k lines: keep-alive reuse matters most here)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/routers/markets.py",
+  "old": "    try:\n        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:\n            r = await client.get(f\"{DATA_SVC}/db/indices-live\", params={\"names\": names})\n    except httpx.HTTPError as exc:\n        raise HTTPException(status_code=503, detail=f\"data-service unreachable: {exc}\") from exc\n    if r.status_code != 200:\n        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))\n    return r.json()",
+  "new": "    try:\n        return await http_client.get_json(f\"{DATA_SVC}/db/indices-live\", route=\"live\", params={\"names\": names}, stale_for=120)\n    except http_client.UpstreamError as exc:\n        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc",
+  "why": "Same for indices-live (the macro tape). The other ~42 per-request clients in markets.py can follow this 4-line shape at B3's pace."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/routers/markets.py",
+  "old": "import httpx\n",
+  "new": "import httpx\n\nfrom shared import http_client\n",
+  "why": "Import for the three proxies above (ui-api's main.py puts the repo root on sys.path before the routers import)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/snapshot.py",
+  "old": "* Every build writes a new versioned file and swaps a pointer, so a reader never\n  opens a half-replaced main/WAL pair. Superseded versions are deleted after a\n  grace period (open handles keep working after unlink on POSIX).\n\"\"\"",
+  "new": "* Every build writes a new versioned file and swaps a pointer, so a reader never\n  opens a half-replaced main/WAL pair. Superseded versions are deleted after a\n  grace period (open handles keep working after unlink on POSIX).\n* Snapshot policy (Terminal v2 PLAN 1.5): interactive reads (``fresh=False``) are\n  served from the shared EVENING snapshot (data/snapshots/evening, built 19:20 by\n  master-controller, pointer data/.evening_snapshot.json, ≤ 30 h old) when one\n  exists — no 4.4 GB private copy per ui-api boot. Only a correctness read\n  (``fresh=True``) still builds a private copy of the live file. Orphaned private\n  copies (``bt_snapshot.*.duckdb`` not named by the pointer) are pruned at start.\n  ``ANALYTICS_SNAPSHOT_SOURCE=private`` restores the old per-boot copy.\n\"\"\"",
+  "why": "PLAN 1.5 snapshot policy (R-ARCH fix 13). Verified on a scratch copy: the 7 existing test_snapshot.py tests pass (scratchpad B7-ARCH/snap/)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/snapshot.py",
+  "old": "@dataclass(frozen=True)\nclass SnapshotState:\n    path: str\n    sig: Signature\n    copied_at: float\n",
+  "new": "@dataclass(frozen=True)\nclass SnapshotState:\n    path: str\n    sig: Signature\n    copied_at: float\n    kind: str = \"private\"            # \"private\" (a copy this process made) | \"evening\" (the shared 19:20 snapshot)\n\n\nEVENING_MAX_AGE_H = 30.0\n\n\ndef evening_snapshot(src: str, max_age_h: float = EVENING_MAX_AGE_H) -> Optional[str]:\n    \"\"\"Path of the shared evening snapshot of ``src`` (scripts/build_evening_snapshot.py's pointer file next to the\n    live DB) when it exists, verified (rows > 0) and at most ``max_age_h`` old; else None. No import of scripts/.\"\"\"\n    pointer = os.path.join(os.path.dirname(os.path.abspath(src)), \".evening_snapshot.json\")\n    try:\n        with open(pointer) as fh:\n            meta = json.load(fh)\n        path = str(meta[\"path\"])\n        st = os.stat(path)\n    except (OSError, ValueError, KeyError, TypeError):\n        return None\n    if int(meta.get(\"rows\") or 0) <= 0 or (time.time() - st.st_mtime) / 3600 > max_age_h:\n        return None\n    return path\n",
+  "why": "PLAN 1.5 snapshot policy: the evening snapshot is found through its pointer file (same contract as db_backup.py), never by importing scripts/."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/snapshot.py",
+  "old": "        self._pointer = os.path.join(directory, f\"{name}.json\")\n        self._build_lock = threading.Lock()   # single-flight: one 4 GB copy at a time",
+  "new": "        self._pointer = os.path.join(directory, f\"{name}.json\")\n        self._prefer_evening = os.getenv(\"ANALYTICS_SNAPSHOT_SOURCE\", \"evening\").strip().lower() != \"private\"\n        self._build_lock = threading.Lock()   # single-flight: one 4 GB copy at a time",
+  "why": "PLAN 1.5 snapshot policy: opt-out switch for the old per-boot copy."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/snapshot.py",
+  "old": "    def get(self, fresh: bool = False) -> str:\n        \"\"\"Path of a readable snapshot. Blocks only when none exists yet, or when\n        ``fresh`` is requested and the source changed since the current copy.\"\"\"\n        state = self._current()\n        if state is None:\n            return self._build_blocking(require_current=True).path\n        if state.sig == source_signature(self._source()):\n            return state.path\n        if fresh:\n            return self._build_blocking(require_current=True).path\n        if self._clock() - state.copied_at >= self._ttl:\n            self._refresh_in_background()\n        return state.path\n",
+  "new": "    def get(self, fresh: bool = False) -> str:\n        \"\"\"Path of a readable snapshot. Blocks only when none exists yet, or when\n        ``fresh`` is requested and the source changed since the current copy.\n        ``fresh=False`` prefers the shared evening snapshot (no private copy at all).\"\"\"\n        if not fresh and self._prefer_evening:\n            evening = evening_snapshot(self._source())\n            if evening is not None:\n                if self._state is None or self._state.path != evening:\n                    self._state = SnapshotState(evening, (None, None), self._clock(), kind=\"evening\")\n                return evening\n        state = self._current()\n        if state is None or state.kind == \"evening\":\n            return self._build_blocking(require_current=True).path\n        if state.sig == source_signature(self._source()):\n            return state.path\n        if fresh:\n            return self._build_blocking(require_current=True).path\n        if self._clock() - state.copied_at >= self._ttl:\n            self._refresh_in_background()\n        return state.path\n\n    def prune_orphans(self) -> list[str]:\n        \"\"\"Delete private copies in the snapshot directory that the pointer file does not name (left by earlier\n        ui-api boots; R-ARCH fix 13: 4.4 GB per boot in /tmp). Never touches the evening snapshot. Returns the names.\"\"\"\n        keep = None\n        state = self._load_pointer()\n        if state is not None:\n            keep = state.path\n        removed: list[str] = []\n        candidates = glob.glob(os.path.join(self._dir, f\"{self._name}.*.duckdb\")) + [os.path.join(self._dir, f\"{self._name}.duckdb\")]\n        for p in candidates:\n            if p == keep or not os.path.exists(p):\n                continue\n            self._remove_files(p)\n            removed.append(os.path.basename(p))\n        return removed\n",
+  "why": "PLAN 1.5 snapshot policy: interactive reads on the evening snapshot (builds=0), fresh=True (the Desk cycle) unchanged, orphan prune."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/snapshot.py",
+  "old": "    def _current(self) -> Optional[SnapshotState]:\n        if self._state is not None and os.path.exists(self._state.path):\n            return self._state",
+  "new": "    def _current(self) -> Optional[SnapshotState]:\n        if self._state is not None and self._state.kind == \"evening\":\n            self._state = None                         # a correctness read never trusts the evening copy's signature\n        if self._state is not None and os.path.exists(self._state.path):\n            return self._state",
+  "why": "PLAN 1.5 snapshot policy: fresh=True always verifies against the live file's signature."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/snapshot.py",
+  "old": "    def _build_blocking(self, require_current: bool) -> SnapshotState:\n        with self._build_lock:\n            # another thread may have finished a build while we waited for the lock\n            state = self._current()",
+  "new": "    def _build_blocking(self, require_current: bool) -> SnapshotState:\n        with self._build_lock:\n            # another thread may have finished a build while we waited for the lock\n            state = self._current()\n            if state is not None and state.kind == \"evening\":\n                state = None",
+  "why": "PLAN 1.5 snapshot policy: a private build never short-circuits on the evening state."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/ui-api/routers/analytics.py",
+  "old": "    def _run() -> None:\n        try:\n            con, owns = _acquire_readonly(lambda *a, **k: None)",
+  "new": "    def _run() -> None:\n        try:\n            removed = _snapshot.prune_orphans()          # PLAN 1.5: private copies earlier boots left in /tmp\n            if removed:\n                print(f\"[ui-api] pruned {len(removed)} orphaned analytics snapshot(s)\")\n            con, owns = _acquire_readonly(lambda *a, **k: None)",
+  "why": "Orphan prune at start (the other half of the snapshot policy); needs the snapshot.py hunks above."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": "services/monitoring-service/main.py",
+  "old": "    _telegram = TelegramAlertBot(settings.telegram_bot_token, settings.telegram_chat_id)",
+  "new": "    _telegram = TelegramAlertBot(settings.telegram_bot_token.get_secret_value(), settings.telegram_chat_id)",
+  "why": "Wave 0.7: telegram_bot_token is a SecretStr now (the only caller of a converted field; dormant legacy service)."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": ".env.example",
+  "old": "# ── Redis (Docker stack only; unused by the local 4-process stack) ─────────────\nREDIS_URL=redis://localhost:6379/0\n",
+  "new": "# ── Redis ───────────────────────────────────────────────────────────────────────\n# The local stack binds redis-server to 127.0.0.1 (start-local.sh start_redis). Optional password (Wave 0.7, O-T10):\n# set REDIS_PASSWORD here or in the Keychain (security add-generic-password -a \"$USER\" -s suryadhana-redis -w '<pw>');\n# start-local.sh then starts Redis with requirepass and exports REDIS_URL=redis://:<pw>@127.0.0.1:6379/0 to the services.\nREDIS_PASSWORD=\nREDIS_URL=redis://localhost:6379/0\n",
+  "why": "Documents REDIS_PASSWORD (empty = no auth, today's behaviour; scripts/tests/test_env_example.py requires every live key documented). Mirror in infra/docker-compose.yml only if the owner sets one: command: [\"redis-server\", \"--requirepass\", \"${REDIS_PASSWORD}\"] and the three REDIS/CELERY URLs with :<pw>@."
+ },
+ {
+  "builder": "B7-ARCH",
+  "file": ".env.example",
+  "old": "HEALTHCHECK_PING_URL=\n",
+  "new": "HEALTHCHECK_PING_URL=\n# Off-machine backup target (Wave 0.1, O-T1): a mounted volume / rclone mount / external SSD. When set, the 02:15 job may\n# run `scripts/db_backup.py --offsite` (copies tonight's .duckdb(.zst) + ui_prefs .sqlite + meta, sha256-verified, same rotation).\nOFFSITE_BACKUP_DIR=\n",
+  "why": "Documents OFFSITE_BACKUP_DIR; B2 adds `--offsite` to the 02:15 db_backup job argv once the owner names the target."
+ },
+ {
+  "builder": "B3-API",
+  "file": "ui/components/ResearchLibrary.tsx",
+  "old": "const VERDICTS = ['ADOPTED', 'PASS', 'PROMISING', 'FAIL', 'NO EDGE', 'REFERENCE']",
+  "new": "const VERDICTS = ['ADOPTED', 'PASS', 'PROMISING', 'FAIL', 'NO EDGE', 'REFERENCE', 'DESCRIPTIVE', 'ARITHMETIC']",
+  "why": "PLAN 1.6's RSCH rows carry the verdicts DESCRIPTIVE (IV history, Index drivers) and ARITHMETIC (SPAN margin); without this the filter chips never show them (they already render in the neutral token via the VERDICT_COLOR fallback, which is the right colour for a description). B4 path."
+ },
+ {
+  "builder": "B3-API",
+  "file": "services/ui-api/tests/test_http_security.py",
+  "old": "    assert classes == [HostOriginGuard, ApiGzipMiddleware]           # user_middleware[0] is the outermost",
+  "new": "    from shared.metrics import ObservabilityMiddleware\n    assert classes == [HostOriginGuard, ObservabilityMiddleware, ApiGzipMiddleware]   # user_middleware[0] is the outermost",
+  "why": "B7's install_observability (PLAN 1.5) now sits inside the guard and outside gzip, exactly as main.py documents; the test predates it and fails on the pre-B3 main.py too. B6 path."
+ },
+ {
+  "builder": "B3-API",
+  "file": "tests/integration/test_gold_gates.py",
+  "old": "    \"\"\"The T8 scan set: services/data-service/gold/**/*.py (B1) and routers/gold.py (B3); both must exist.\"\"\"",
+  "new": "    \"\"\"The T8 scan set: services/data-service/gold/**/*.py (B1) and routers/gold.py (B3); both must exist.\n    Terminal v2 (PLAN 1.7 G5): also routers/derivatives.py, routers/data_health.py, routers/options_strategy.py, routers/markets.py.\"\"\"",
+  "why": "G5 asks for the static host scan over the new routers; the docstring change marks the intent — B6 extends the scan-set function body (the four files name only nsearchives.nseindia.com in a docstring and the loopback)."
+ },
+ {
+  "builder": "B1-DATA",
+  "file": "scripts/master_controller.py",
+  "old": "(B2's job table — no literal; the IV / drivers / data-health jobs are not registered yet)",
+  "new": "Register: 20:30 nse_positions_catchup → last step POST :8001/jobs/iv-eod?job=iv_eod (body {}), retry in the 22:45 pass; 22:45 pass → POST /jobs/ingest-nse-files {\"datasets\": [\"nse_bhavcopy\",\"nse_fo_volt\",\"nse_contract_delta\",\"nse_combined_oi\",\"nse_participant_vol\",\"nse_fii_stats\",\"nse_mwpl_clients\"], \"revalidate\": true} then /jobs/iv-eod?job=iv_eod if the 20:30 run returned status not_yet; 19:15 index_valuation_daily → also POST /jobs/ingest-nse-files {\"datasets\": [\"index_ohlc_daily\"]}; 19:25 index_drivers_daily → POST /jobs/index-drivers?job=index_drivers_daily (retry 20:35 when result.top10.status == missing); every 15 min 09:20–15:30 Mon–Fri → POST /jobs/iv-intraday?job=iv_intraday (skips itself without a live session / ledger); Sat 03:00 → POST /jobs/iv-eod?job=iv_weekly; 08:35 sweep + start-up catch-up → POST /jobs/data-health?job=data_health_refresh {\"sessions\": days_down + 3}; add the five ids to missed_jobs(); poll GET /jobs/{job_id} as for the gold jobs",
+  "why": "PLAN 1.1/1.2/1.4 jobs and Wave 0 0.5/0.9 passes are the controller's (B2); the endpoints and job ids are the contract above"
+ },
+ {
+  "builder": "B1-DATA",
+  "file": "shared/breeze_budget.py",
+  "old": "default ``chain_poller=700`` per O-T6's pilot",
+  "new": "default quotas also carry iv_intraday=800 (the pilot's caller name; PLAN 1.1 ≤ 800/day) — or B2 sets BREEZE_BUDGET_QUOTAS=chain_poller=700,iv_intraday=800",
+  "why": "fo_iv/intraday.py acquires every chain call under caller 'iv_intraday' through ledger().decide()/guard(); without a quota only the global caps apply"
+ },
+ {
+  "builder": "B1-DATA",
+  "file": "services/ui-api/routers/derivatives.py",
+  "old": "/api/derivatives/option-history/{sym} served from option_history.json",
+  "new": "GET /api/derivatives/iv/{symbol}?days= → data-service GET /db/fo-iv/summary/{symbol}?days= (60 s SWR); /surface → /db/fo-iv/surface/{symbol}?date=&compare_days=30; /cone → /db/fo-iv/cone/{symbol}; /events → /db/fo-iv/events/{symbol}?n=; /vol-screen → /db/fo-iv/vol-screen?sort=&results_within=; /intraday → /db/fo-iv/intraday/{symbol}?date=; VIX from /db/vix-daily; payloads already carry as_of, since, model_version, r_source, badges, verdict",
+  "why": "PLAN 1.1 API contract (B3); the data-service half is live on these paths"
+ },
+ {
+  "builder": "B1-DATA",
+  "file": "services/ui-api/routers/markets.py",
+  "old": "/api/market/index-drivers (not yet)",
+  "new": "GET /api/market/index-drivers?index=&horizon= → /db/index-drivers?index=&horizon=1d|5d|1m|3m|60s|ytd|since_change; /timeline → /db/index-drivers/timeline?index=&window=20|60&days=; /monthly → /db/index-drivers/monthly?index=&months=; the payload carries fit.degraded, regime_sentence (ends 'describes, does not predict'), members_note and badges {members: arithmetic, driver: context}",
+  "why": "PLAN 1.2 API contract (B3)"
+ },
+ {
+  "builder": "B1-DATA",
+  "file": "services/ui-api/routers/data_health.py",
+  "old": "rows composed from telemetry only",
+  "new": "compose GET /api/data/health from data-service GET /db/data-health (rows with state fresh|amber|red|gap|unknown, lag_sessions, expected_at, gap_dates, last_fetch) and fill the freshness_kind == 'endpoint' / cadence == 'live' rows (desk_mark, alpha_shadow, market_monitor, breeze_session, nse_live, option_chain_live, news_track_record) from ui-api's own stores and /api/telemetry/status; keep summary counts per state, no composite score",
+  "why": "PLAN 1.4: data-service reports what it can see; endpoint rows are ui-api's"
+ },
+ {
+  "builder": "B1-DATA",
+  "file": "services/data-service/bhavcopy.py",
+  "old": "download_day/ingest_range (the 18:30 equity ingest) do not stamp first_seen_at",
+  "new": "after store.upsert_bhavcopy(df) for a freshly downloaded day: store.write(\"UPDATE nse_bhavcopy SET first_seen_at = COALESCE(first_seen_at, ?) WHERE date = ?\", [now, day]) and record the fetch through data_health.ingest_log.record(store, 'nse_bhavcopy', day, url, status='downloaded', sha256=…, last_modified=resp.headers.get('last-modified'))",
+  "why": "the PIT columns exist (nullable) and the 22:45 revision pass sets release_at on a changed body; the first sighting of the 18:30 copy should be stamped by the ingest that writes it (not my path)"
+ },
+ {
+  "builder": "B1-DATA",
+  "file": "docs/NSE_DATA_DICTIONARY.md",
+  "old": "(rows for FOVOLT, Contract_Delta, combineoi_deleq, fao_participant_vol, fii_stats, mwpl_cli, top10nifty50, constituent lists not described as ingested)",
+  "new": "verified rows: measured Last-Modified 4 Nov 2026 — FOVOLT 11:31, Contract_Delta 13:48 (6.9 MB, 140k rows), combineoi_deleq 13:48, ind_close_all 17:50 (167 indices), fao_participant_vol 14:40, fii_stats_DD-Mon-YYYY.xls 14:40, mwpl_cli_DDMMYYYY.xls for T−1 at 12:50, fo_secban 13:54 (named for the next session); tables nse_fo_volt / nse_contract_delta / nse_combined_oi / nse_participant_vol / nse_fii_stats / nse_mwpl_clients / index_ohlc_daily / vix_daily; www.nseindia.com cookie prime answered 403 to the shared PacedClient's UA (see open issues)",
+  "why": "B5's dictionary rows; the numbers come from this build's probes"
+ },
+ {
+  "builder": "B2-CTRL",
+  "file": "services/data-service/main.py",
+  "old": "class RefreshUniverseRequest(BaseModel):\n    mode: str = \"incremental\"          # \"incremental\" | \"full\"\n    tickers: list[str] | None = None   # None = whole universe (minus INVALID)\n    years: int | None = None\n    workers: int = 3\n",
+  "new": "class RefreshUniverseRequest(BaseModel):\n    mode: str = \"incremental\"          # \"incremental\" | \"full\"\n    tickers: list[str] | None = None   # None = whole universe (minus INVALID)\n    years: int | None = None\n    workers: int = 3\n    # daily-pipeline only: step names left out of the run. The controller (B2, Terminal v2 0.5) sends\n    # [\"nse_positions\"]: the F&O / participant-OI files land 20:10, so the 18:30 pass is equity-only and the\n    # 20:30 pass fetches them. Unknown names are ignored.\n    skip_steps: list[str] = []\n",
+  "why": "Wave 0 0.5: 18:30 EOD becomes equity-only. The controller already posts skip_steps; without this field pydantic drops it and the F&O attempt (a logged miss every night) keeps running."
+ },
+ {
+  "builder": "B2-CTRL",
+  "file": "services/data-service/main.py",
+  "old": "        return run_eod_steps([\n            (\"refresh\", lambda: _run_refresh(req, progress), True),\n            (\"bhavcopy\", lambda: _run_bhavcopy(BhavcopyRequest(), progress), False),\n            (\"nse_positions\", lambda: _run_nse_positions(NsePositionsRequest(), progress), False),\n            (\"market_monitor\", _monitor, False),\n            (\"nse_events\", lambda: _run_nse_events(progress), False),\n            (\"build\", lambda: _run_build(progress), False),\n        ], logger)\n",
+  "new": "        steps = [\n            (\"refresh\", lambda: _run_refresh(req, progress), True),\n            (\"bhavcopy\", lambda: _run_bhavcopy(BhavcopyRequest(), progress), False),\n            (\"nse_positions\", lambda: _run_nse_positions(NsePositionsRequest(), progress), False),\n            (\"market_monitor\", _monitor, False),\n            (\"nse_events\", lambda: _run_nse_events(progress), False),\n            (\"build\", lambda: _run_build(progress), False),\n        ]\n        skip = set(req.skip_steps)\n        return run_eod_steps([s for s in steps if s[0] not in skip], logger)\n",
+  "why": "Honours skip_steps (the equity-only 18:30 pass). The step order, isolation and the fatal/non-fatal contract are unchanged."
+ },
+ {
+  "builder": "B2-CTRL",
+  "file": ".env.example",
+  "old": "# Treat it like a password. Steps: docs/RUNBOOK_RESTORE.md 'Off-machine dead-man ping'.\nHEALTHCHECK_PING_URL=\n",
+  "new": "# Treat it like a password. Steps: docs/RUNBOOK_RESTORE.md 'Off-machine dead-man ping'.\nHEALTHCHECK_PING_URL=\n# Optional second heartbeat (Terminal v2 0.2): a SECOND healthchecks.io check (same Period 5 min / Grace 10 min) the\n# watchdog pings on every run whatever the stack's state. It stops only when this Mac is off, asleep, at the FileVault\n# screen or launchd no longer runs the watchdog: first check 'fail' while this one beats = stack down on a live Mac;\n# both silent = the Mac is gone. Read on every watchdog run; shown by Telegram /status. Treat like a password.\nHEALTHCHECK_WATCHDOG_URL=\n",
+  "why": "The new variable the watchdog reads (scripts/stack_watchdog.sh ping_watchdog_alive); .env.example has no owner row in PLAN §1 — scripts/tests/test_env_example.py may expect every env read to be listed."
+ },
+ {
+  "builder": "B2-CTRL",
+  "file": "docs/RUNBOOK_RESTORE.md",
+  "old": "What it catches: no ping for 15 minutes (Mac off, frozen, asleep, at the FileVault or login screen after a reboot,\nthe watchdog not loaded, no network), and `fail` on every watchdog run while a core service you did not stop is\ndown or hung. Before a planned shutdown, pause the check on healthchecks.io (or expect the alert).\n",
+  "new": "What it catches: no ping for 15 minutes (Mac off, frozen, asleep, at the FileVault or login screen after a reboot,\nthe watchdog not loaded, no network), and `fail` on every watchdog run while a core service you did not stop is\ndown or hung. Before a planned shutdown, pause the check on healthchecks.io (or expect the alert).\n\n**Second heartbeat (optional, Terminal v2 0.2).** Add a second check (`SuryaDhana watchdog`, same Period 5 min /\nGrace 10 min) and put its ping URL in `.env` as `HEALTHCHECK_WATCHDOG_URL=`. The watchdog pings it first thing on\nevery run, whatever the stack's state, so it goes quiet only when the Mac itself is off, asleep, at the FileVault\nscreen or launchd no longer runs the watchdog. Read the two together: the first says `fail` while the second keeps\nbeating → the stack is down on a live Mac; both silent → the Mac is gone. The last result is kept in\n`.pids/watchdog/deadman_watchdog` (`<epoch> ok|error`, never the URL) and Telegram `/status` shows it beside the\ndead-man line.\n",
+  "why": "B5 owns the runbook; documents the watchdog's second heartbeat and how to read the pair."
+ },
+ {
+  "builder": "B2-CTRL",
+  "file": "CLAUDE.md",
+  "old": "**Gold jobs (26 Oct 2026):** `GOLD_JOBS` in `scripts/master_controller.py`",
+  "new": "**Terminal v2 jobs (5 Nov 2026, B2):** the 18:30 pipeline is equity-only (`skip_steps: [\"nse_positions\"]`); the 20:30\n`nse_positions_catchup` is the evening pass (positions → FII/DII → the NSE evening files via `/jobs/ingest-nse-files` →\nthe 20:35 `index_drivers_daily` retry when the top-10 file was missing → `iv_eod` LAST, `/jobs/iv-eod?job=iv_eod`);\n19:25 `index_drivers_daily`; 22:45 `nse_evening_pass` (MTF T−1, the 22:05 bhavcopy re-publication as a revision row,\nFII/DII 2nd attempt, results, `iv_eod` retry; a miss of its 21:30 SLO is one Telegram info line); 08:35 `morning_sweep`\n(amber/red rows of `/api/data/health` re-run as ≤ 6 light NSE fetches, then the DATA digest); `iv_intraday` every 15 min\n09:20–15:30 on trading days (skipped without a live Breeze session or when the budget ledger refuses; quiet); Sat 03:00\n`iv_weekly`; hourly `data_health_check` (one Telegram line per state transition, state in `data/.data_health_state.json`).\n`DATASET_MAX_AGE_DAYS` is retired: freshness = the catalog's `expected_by` + `max_age` sessions as classified by\n`/api/data/health` (red → critical). After downtime the start-up catch-up also re-runs results (window = days down + 3),\nindex valuation, the IV store and drivers with `backfill_from`, writes the gap rows (`/jobs/data-health`), the Desk mark\nand the S1 shadow, and the gold key jobs incl. Asia-close / morning / India / health. `TERMINAL_JOBS_ENABLED=0` opts out;\na 404 from data-service (packages not deployed) pauses these jobs an hour. The watchdog's second heartbeat:\n`HEALTHCHECK_WATCHDOG_URL` (optional).\n**Gold jobs (26 Oct 2026):** `GOLD_JOBS` in `scripts/master_controller.py`",
+  "why": "B5 owns CLAUDE.md; the schedule and the catch-up rules changed and the controller's docstring is the only other place they are written."
+ }
+]

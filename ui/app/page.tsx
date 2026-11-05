@@ -24,7 +24,7 @@ import { LiveMonitorBar } from '@/components/LiveMonitorBar'
 import { MarketCommandHeader, inEodWindow } from '@/components/MarketCommandHeader'
 import { ToastProvider } from '@/context/ToastContext'
 import { ErrorCatcher, UiErrorChip } from '@/components/ErrorCatcher'
-import { AlertSaveToasts, DownloadToasts } from '@/components/shell/ShellToasts'
+import { AlertSaveToasts, DownloadToasts, UnknownTabToast } from '@/components/shell/ShellToasts'
 import { useDocumentHidden, useOnFocus, usePolling } from '@/components/shell/usePoll'
 import { refreshVerdict } from '@/lib/refreshStatus'
 import { NewsDock } from '@/components/news/NewsDock'
@@ -109,7 +109,7 @@ function StockDetailModal(props: any) {
 
 import { OPEN_TICKER_EVENT, type TickerFocus } from '@/lib/openTicker'
 import { GOTO_EVENT } from '@/lib/navigate'
-import { Btn, Chip, ErrorBox, Grid, KV, Loading, Meter, PageHeader, Panel, ResearchNote, Stat, T, TabSkeleton, fmtInr, fmtSignedPct, tone } from '@/components/terminal'
+import { Btn, Chip, ErrorBox, Grid, KV, Loading, Meter, PageHeader, Panel, ResearchNote, Stat, T, TabSkeleton, fmtInr, fmtSignedPct, tone, sourceOf, referenceSource } from '@/components/terminal'
 
 type Tab = 'brief' | 'watch' | 'charts' | 'compare' | 'screen' | 'alerts' | 'eco' | 'seag' | 'memb' | 'options' | 'ostrategy' | 'derivatives' | 'insiders' | 'deals' | 'preopen' | 'ipo' | 'movers' | 'wrap' | 'filings' | 'margin' | 'holders' | 'world' | 'desk' | 'markets' | 'events' | 'overview' | 'stocks' | 'backtest' | 'positions' | 'broker' | 'pipeline' | 'scanner' | 'discovery' | 'commodity' | 'mcxgold' | 'gold' | 'glassbox' | 'mlengine' | 'explorer' | 'warehouse' | 'research' | 'risk' | 'system'
 
@@ -125,13 +125,13 @@ const COMMAND_PAGES: CommandPage[] = [
   { id: 'charts',    code: 'CHRT',  label: 'Chart studio',          hint: 'candles, indicators, intraday VWAP' },
   { id: 'world',     code: 'WEI',   label: 'World markets',         hint: 'global indices, FX, commodities, rates' },
   { id: 'eco',       code: 'ECO',   label: 'Economic calendar',     hint: 'CPI, WPI, IIP, GDP releases · RBI and Fed decisions' },
-  { id: 'memb',      code: 'MEMB',  label: 'Index members',         hint: 'NIFTY 50 / BANK / IT: weights, points, returns, P/E' },
+  { id: 'memb',      code: 'MEMB',  label: 'Index members',         hint: 'members & drivers: who moved NIFTY 50 / BANK over 1D–YTD (DRVR · IMAP · CONTRIB), weights, returns, P/E' },
   { id: 'seag',      code: 'SEAG',  label: 'Seasonality',           hint: 'average return by month · NIFTY, sectors, any stock' },
   { id: 'preopen',   code: 'PRE',   label: 'Pre-open auction',      hint: '09:00–09:08: IEP, gaps, order imbalance' },
   { id: 'movers',    code: 'MOV',   label: 'Live movers',           hint: 'intraday gainers, volume surges, 52w highs, sectors' },
   { id: 'filings',   code: 'CF',    label: 'Company filings',       hint: 'today\'s NSE announcements: results, orders, ratings…' },
   { id: 'options',   code: 'OMON',  label: 'Option monitor',        hint: 'live chain in market hours: OI walls, IV, PCR, max pain' },
-  { id: 'derivatives', code: 'DERV', label: 'Derivatives desk',     hint: 'basis, rollover, PCR, VIX' },
+  { id: 'derivatives', code: 'DERV', label: 'Derivatives desk',     hint: 'basis, rollover, PCR, VIX · VOL: IV skew, term, cone, screener' },
   { id: 'ostrategy', code: 'OSTR',  label: 'Options strategies',    hint: 'payoffs, Greeks, breakevens' },
   { id: 'deals',     code: 'DEAL',  label: 'Block & bulk deals',    hint: 'named-client deals, netted, MF/insurer tagged' },
   { id: 'margin',    code: 'MRGN',  label: 'Margin monitor',        hint: 'MTF leverage build-ups and crowding' },
@@ -162,7 +162,7 @@ const COMMAND_PAGES: CommandPage[] = [
   { id: 'warehouse', code: 'WHSE',  label: 'Warehouse health',      hint: 'NSE datasets and freshness' },
   { id: 'research',  code: 'RSCH',  label: 'Research library',      hint: 'every study and its verdict' },
   { id: 'risk',      code: 'RSK',   label: 'Risk dashboard',        hint: 'VaR, beta, stress, drawdown ladder' },
-  { id: 'system',    code: 'SYS',   label: 'System telemetry',      hint: 'services, jobs, latency' },
+  { id: 'system',    code: 'SYS',   label: 'System telemetry',      hint: 'services, jobs, latency · DATA: freshness of every dataset' },
 ]
 
 const PAGE_CODE: Record<string, string> = Object.fromEntries(COMMAND_PAGES.map(p => [p.id, p.code]))
@@ -650,6 +650,7 @@ function HomeContent() {
       case 'stocks':
         return (
           <StocksTab
+            latestDate={dashboard?.latest_date ?? null}
             displayStocks={displayStocks}
             displayCount={displayCount}
             isFiltered={isFiltered}
@@ -993,7 +994,7 @@ function DeskSnapshot() {
   const start = d?.meta?.start_capital
   const plan = d?.plans?.[0]
   return (
-    <Panel title="Decision Desk" subtitle="paper book · monthly momentum"
+    <Panel source={sourceOf(d?.latest?.date ?? null, { source: 'Desk ledger' })} title="Decision Desk" subtitle="paper book · monthly momentum"
       right={<Chip color={T.amber} active>PAPER</Chip>}>
       {!d ? <Loading label="Loading book" /> : (
         <KV items={[
@@ -1057,7 +1058,7 @@ function OverviewTab({ dashboard, dashError, onRetryDashboard, totalStocks, enri
         )}
 
         {(loaded || !dashError) && (
-          <Panel title="Data freshness" subtitle={loaded ? `${dbCount.toLocaleString('en-IN')} stocks · measured in trading sessions behind the latest close`
+          <Panel source={sourceOf(dashboard?.latest_date ?? null, { source: 'DuckDB EOD' })} title="Data freshness" subtitle={loaded ? `${dbCount.toLocaleString('en-IN')} stocks · measured in trading sessions behind the latest close`
                                                          : 'measured in trading sessions behind the latest close'}
             right={loaded
               ? <Chip color={freshPct >= 95 ? T.green : freshPct >= 80 ? T.amber : T.red} active>{freshPct}% CURRENT</Chip>
@@ -1081,7 +1082,7 @@ function OverviewTab({ dashboard, dashError, onRetryDashboard, totalStocks, enri
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
           <DeskSnapshot />
-          <Panel title="Roadmap" subtitle="product plan">
+          <Panel source={referenceSource('docs/PRODUCT_STRATEGY.md')} title="Roadmap" subtitle="product plan">
             <div style={{ display: 'grid', gap: 6 }}>
               {ROADMAP.map(r => (
                 <div key={r.phase} style={{ display: 'grid', gridTemplateColumns: '22px 1fr', gap: 8, padding: '6px 8px',
@@ -1102,7 +1103,7 @@ function OverviewTab({ dashboard, dashError, onRetryDashboard, totalStocks, enri
         </div>
 
         {(loaded || !dashError) && (
-          <Panel title="Fundamentals enrichment" subtitle="PE · market cap · quarterly profit & sales · ROCE (snapshot, not point-in-time)"
+          <Panel source={sourceOf(dashboard?.latest_date ?? null, { source: 'fundamentals snapshot' })} title="Fundamentals enrichment" subtitle="PE · market cap · quarterly profit & sales · ROCE (snapshot, not point-in-time)"
             right={<Btn size="sm" onClick={onEnrich} disabled={enriching || !loaded}
                         title={loaded ? undefined : 'Waiting for the universe summary: the enrichment state is not known yet'}>
                      {enriching ? 'Enriching…' : !loaded ? '… ENRICH' : enriched === 0 ? '▶ Enrich now' : '↻ Re-enrich'}</Btn>}>
@@ -1129,8 +1130,9 @@ function OverviewTab({ dashboard, dashError, onRetryDashboard, totalStocks, enri
 function StocksTab({
   displayStocks, displayCount, isFiltered, filterLoading, technicalFilters,
   allStocksCount, totalStocks, onFilterChange, onRowClick, onLoadMore, isDark = true,
-  watchlist = [], onWatchToggle, listError, onRetryList, listLoading = false,
+  watchlist = [], onWatchToggle, listError, onRetryList, listLoading = false, latestDate = null,
 }: any) {
+  const eodSrc = sourceOf(latestDate, { source: 'DuckDB EOD' })   // PLAN §0.5: the screener's as-of on every panel
   // Scoped refresh — updates ONLY the watchlist tickers (not the full universe)
   const [wlBusy, setWlBusy] = useState(false)
   const [wlMsg, setWlMsg]   = useState('')
@@ -1182,7 +1184,7 @@ function StocksTab({
           : listLoading && !allStocksCount ? 'loading the NSE universe…' : `${allStocksCount.toLocaleString('en-IN')} of ${totalStocks.toLocaleString('en-IN')} NSE stocks`}
         right={activeCount > 0 ? <Btn size="sm" onClick={clearAll}>Clear filters ({activeCount})</Btn> : undefined} />
       <div style={{ display: 'grid', gap: 10 }}>
-        <Panel title="Minervini trend template" subtitle="all active filters must pass · T1+T2 = Stage-2 trend"
+        <Panel source={eodSrc} title="Minervini trend template" subtitle="all active filters must pass · T1+T2 = Stage-2 trend"
           right={<Btn size="sm" variant={allOn ? 'ghost' : 'primary'} onClick={allOn ? clearAll : selectAll}
                    disabled={filterLoading}
                    title={allOn ? 'Turn every filter off' : 'Turn on T1–T8 at once: the full Minervini trend template'}>
@@ -1204,7 +1206,7 @@ function StocksTab({
         </Panel>
 
         {watchlist.length > 0 && (
-          <Panel title={`Watchlist (${watchlist.length})`} subtitle="syncs to Backtest & Pipeline" accent={T.cyan}
+          <Panel source={eodSrc} title={`Watchlist (${watchlist.length})`} subtitle="syncs to Backtest & Pipeline" accent={T.cyan}
             right={<>
               {wlMsg && <span style={{ fontSize: 10, color: T.cyan }}>{wlMsg}</span>}
               <Btn size="sm" onClick={doRefreshWatchlist} disabled={wlBusy}>{wlBusy ? 'Refreshing…' : `↻ Refresh ${watchlist.length}`}</Btn>
@@ -1219,7 +1221,7 @@ function StocksTab({
           </Panel>
         )}
 
-        <Panel title={isFiltered ? 'Screener results' : 'All stocks'} pad={0}
+        <Panel source={eodSrc} title={isFiltered ? 'Screener results' : 'All stocks'} pad={0}
           subtitle={isFiltered ? `${displayCount} matched` : `${allStocksCount} of ${totalStocks} loaded · click a row for the chart`}
           right={filterLoading ? <span style={{ fontSize: 10, color: T.amber }} className="t-pulse">FILTERING…</span>
             : listLoading ? <span style={{ fontSize: 10, color: T.amber }} className="t-pulse">LOADING…</span> : undefined}>
@@ -1246,6 +1248,7 @@ export default function Home() {
           {/* R8: desktop saves ('Saved to … · ⌥⌘L' / why it failed) and failed alert saves (P11) as toasts */}
           <DownloadToasts />
           <AlertSaveToasts />
+          <UnknownTabToast tabs={TAB_IDS} />
           <HomeContent />
         </ToastProvider>
       </AppProvider>

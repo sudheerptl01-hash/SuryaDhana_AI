@@ -16,6 +16,13 @@ Copying the ~4 GB file takes ~40 s, which is longer than the Next.js proxy waits
 * Every build writes a new versioned file and swaps a pointer, so a reader never
   opens a half-replaced main/WAL pair. Superseded versions are deleted after a
   grace period (open handles keep working after unlink on POSIX).
+* Snapshot policy (Terminal v2 PLAN 1.5): interactive reads (``fresh=False``) are
+  served from the shared EVENING snapshot (data/snapshots/evening, built 19:20 by
+  master-controller, pointer data/.evening_snapshot.json, ≤ 30 h old) when one
+  exists — no 4.4 GB private copy per ui-api boot. Only a correctness read
+  (``fresh=True``) still builds a private copy of the live file. Orphaned private
+  copies (``bt_snapshot.*.duckdb`` not named by the pointer) are pruned at start.
+  ``ANALYTICS_SNAPSHOT_SOURCE=private`` restores the old per-boot copy.
 """
 from __future__ import annotations
 
@@ -48,6 +55,26 @@ class SnapshotState:
     path: str
     sig: Signature
     copied_at: float
+    kind: str = "private"            # "private" (a copy this process made) | "evening" (the shared 19:20 snapshot)
+
+
+EVENING_MAX_AGE_H = 30.0
+
+
+def evening_snapshot(src: str, max_age_h: float = EVENING_MAX_AGE_H) -> Optional[str]:
+    """Path of the shared evening snapshot of ``src`` (scripts/build_evening_snapshot.py's pointer file next to the
+    live DB) when it exists, verified (rows > 0) and at most ``max_age_h`` old; else None. No import of scripts/."""
+    pointer = os.path.join(os.path.dirname(os.path.abspath(src)), ".evening_snapshot.json")
+    try:
+        with open(pointer) as fh:
+            meta = json.load(fh)
+        path = str(meta["path"])
+        st = os.stat(path)
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if int(meta.get("rows") or 0) <= 0 or (time.time() - st.st_mtime) / 3600 > max_age_h:
+        return None
+    return path
 
 
 class ReadSnapshot:
@@ -60,6 +87,7 @@ class ReadSnapshot:
         self._grace = grace
         self._clock = clock
         self._pointer = os.path.join(directory, f"{name}.json")
+        self._prefer_evening = os.getenv("ANALYTICS_SNAPSHOT_SOURCE", "evening").strip().lower() != "private"
         self._build_lock = threading.Lock()   # single-flight: one 4 GB copy at a time
         self._state: Optional[SnapshotState] = None
         self._refresher: Optional[threading.Thread] = None
@@ -68,9 +96,16 @@ class ReadSnapshot:
     # ── public ──────────────────────────────────────────────────────────────────
     def get(self, fresh: bool = False) -> str:
         """Path of a readable snapshot. Blocks only when none exists yet, or when
-        ``fresh`` is requested and the source changed since the current copy."""
+        ``fresh`` is requested and the source changed since the current copy.
+        ``fresh=False`` prefers the shared evening snapshot (no private copy at all)."""
+        if not fresh and self._prefer_evening:
+            evening = evening_snapshot(self._source())
+            if evening is not None:
+                if self._state is None or self._state.path != evening:
+                    self._state = SnapshotState(evening, (None, None), self._clock(), kind="evening")
+                return evening
         state = self._current()
-        if state is None:
+        if state is None or state.kind == "evening":
             return self._build_blocking(require_current=True).path
         if state.sig == source_signature(self._source()):
             return state.path
@@ -79,6 +114,22 @@ class ReadSnapshot:
         if self._clock() - state.copied_at >= self._ttl:
             self._refresh_in_background()
         return state.path
+
+    def prune_orphans(self) -> list[str]:
+        """Delete private copies in the snapshot directory that the pointer file does not name (left by earlier
+        ui-api boots; R-ARCH fix 13: 4.4 GB per boot in /tmp). Never touches the evening snapshot. Returns the names."""
+        keep = None
+        state = self._load_pointer()
+        if state is not None:
+            keep = state.path
+        removed: list[str] = []
+        candidates = glob.glob(os.path.join(self._dir, f"{self._name}.*.duckdb")) + [os.path.join(self._dir, f"{self._name}.duckdb")]
+        for p in candidates:
+            if p == keep or not os.path.exists(p):
+                continue
+            self._remove_files(p)
+            removed.append(os.path.basename(p))
+        return removed
 
     def invalidate(self, path: str) -> None:
         """Forget a snapshot that failed to open (e.g. torn copy) so the next get rebuilds."""
@@ -98,6 +149,8 @@ class ReadSnapshot:
 
     # ── internals ───────────────────────────────────────────────────────────────
     def _current(self) -> Optional[SnapshotState]:
+        if self._state is not None and self._state.kind == "evening":
+            self._state = None                         # a correctness read never trusts the evening copy's signature
         if self._state is not None and os.path.exists(self._state.path):
             return self._state
         self._state = self._load_pointer()
@@ -117,6 +170,8 @@ class ReadSnapshot:
         with self._build_lock:
             # another thread may have finished a build while we waited for the lock
             state = self._current()
+            if state is not None and state.kind == "evening":
+                state = None
             if state is not None and (not require_current or state.sig == source_signature(self._source())):
                 return state
             return self._build_locked()

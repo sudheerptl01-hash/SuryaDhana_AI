@@ -252,7 +252,7 @@ class ObservabilityMiddleware:
             if self.access_log and (path not in self.exclude or code == 500):
                 client = scope.get("client") or (None, None)
                 query = scope.get("query_string", b"").decode("latin-1", "replace")[:200]
-                self._log.info("http.access", method=method, path=path, route=label, status=code,
+                self._log.info("http.access", service=self.service, method=method, path=path, route=label, status=code,
                                ms=round(elapsed * 1000, 1), bytes=status["bytes"], client=client[0],
                                query=query or None, ua=(headers.get("user-agent") or "")[:80] or None)
             unbind_correlation_id(token)

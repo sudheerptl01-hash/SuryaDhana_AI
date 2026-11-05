@@ -8,11 +8,26 @@ import { apiError } from '@/lib/errors'
  * put/call ratio, max pain and the move the options price in by expiry. LIVE from NSE during the session (every 30 s,
  * same engine), otherwise the last published end-of-day F&O bhavcopy.
  * Open from GO: `OMON` or `OMON RELIANCE`.
+ *
+ * Terminal v2 (reports/terminal_v2/PLAN.md 0.6 / 1.1 / 1.3), chain-first: the expiry ladder carries each expiry's stored
+ * ATM IV; the chain header strip (term, 25Δ skew + its 1-year percentile, straddle vs 1σ, IV vs RV20 cc / Parkinson /
+ * YZ / FOVOLT); the IV history collapses to a strip above the chain (iv30_cm + India VIX overlay, "IV percentile" and
+ * "IV rank" each defined on hover — the old "IV rank 73" was a percentile); Greeks Δ Γ Θ ν per strike from lib/black76
+ * on the strike's own IV; j / k move a strike cursor, space picks up to four strikes, "OPEN IN OSTR" carries symbol +
+ * expiry + strikes through lib/activeSymbol; the 15-minute IV path in LIVE mode. PCR prints in the neutral token
+ * (≥ 1 used to be green). Badges: chain / smile / Greeks `arithmetic`; OI, walls, % MWPL `context`.
  */
 import { OptionPricer, type PricerPick } from '@/components/OptionPricer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getSurveillance, getOptionChain, getOptionChainLive, getOptionHistory, type OptionChain as Chain, type OptionHistoryRow } from '@/lib/api'
-import { CHART_BOX, Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, fmtNum, useChartSize } from '@/components/terminal'
+import { BadgeChip, CHART_BOX, Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, fmtNum, nseStampIso, sourceOf, useChartSize } from '@/components/terminal'
+import { IvHistoryChart, useIvHistory } from '@/components/vol/IvHistoryChart'
+import { ChainStrip, greeksFor } from '@/components/vol/ChainStrip'
+import { IvLivePath } from '@/components/vol/IvLivePath'
+import { getIvSurface, getVolScreen, type IvSurface, type ScreenRow } from '@/components/vol/api'
+import { legsFromStrikes } from '@/components/vol/volModel'
+import { useActiveSymbol } from '@/lib/activeSymbol'
+import { goToPage } from '@/lib/navigate'
 import { niceAxis, niceTicks, pickRoundLabels, staggerRows, textWidth } from '@/components/terminal/chart'
 import { atmIndex, edgeLabel, omonInitialSymbol, wallMarks } from '@/components/omonModel'
 import { useRequestSeq } from '@/components/useRequestSeq'
@@ -24,6 +39,15 @@ const lakh = (v?: number | null) => (v == null ? '—' : Math.abs(v) >= 1e7 ? `$
 /** OI change with an explicit sign: '+' for builds, U+2212 for unwinds (C1-18) */
 const signedLakh = (v: number) => (v > 0 ? `+${lakh(v)}` : v < 0 ? `−${lakh(-v)}` : lakh(0))
 const readHandoff = (): string | null => { try { return localStorage.getItem(OMON_KEY) } catch { return null } }
+const INDEX_UNDERLYINGS = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'NIFTYNXT50']
+/** Greeks in the chain: Δ to 2 dp, Γ in significant digits (it is per index point), Θ per day and ν per vol point in ₹ per unit */
+const gfmt = (v: number | null | undefined, kind: 'd' | 'g' | 't' | 'v') => {
+  if (v == null || !Number.isFinite(v)) return ''
+  if (kind === 'g') return v === 0 ? '0' : v < 0.001 ? v.toFixed(5) : v.toFixed(4)
+  if (kind === 'd') return `${v < 0 ? '−' : ''}${Math.abs(v).toFixed(2)}`
+  return `${v < 0 ? '−' : ''}${Math.abs(v).toFixed(kind === 't' ? 1 : 2)}`
+}
+const SEED_NAME: Record<number, string> = { 1: 'long straddle', 2: 'long strangle', 3: 'iron fly', 4: 'iron condor' }
 
 function Smile({ data }: { data: Chain }) {
   const { ref, w: W, h: H } = useChartSize(420, 150)   // CSS px: 9 px axis text at any width (C1-17)
@@ -145,53 +169,6 @@ function OiBars({ data }: { data: Chain }) {
   )
 }
 
-function History({ symbol }: { symbol: string }) {
-  const { ref, w: W, h: H } = useChartSize(860, 170, { maxRatio: 1.2 })   // CSS px (C1-17)
-  const [rows, setRows] = useState<OptionHistoryRow[] | null>(null)
-  useEffect(() => {
-    setRows(null)
-    if (!['NIFTY', 'BANKNIFTY'].includes(symbol)) return
-    let alive = true                                   // CT-01: a slow NIFTY answer never lands under BANKNIFTY
-    getOptionHistory(symbol, 260).then(r => { if (alive) setRows(r.data.rows) }).catch(() => { if (alive) setRows([]) })
-    return () => { alive = false }
-  }, [symbol])
-  if (!['NIFTY', 'BANKNIFTY'].includes(symbol) || !rows || rows.length < 20) return null
-  const iv = rows.map(r => r.atm_iv).filter((v): v is number => v != null)
-  const now = iv[iv.length - 1]
-  const rank = Math.round((iv.filter(v => v < now).length / iv.length) * 100)
-  const L = 36, R = 40
-  const x = (i: number) => L + (i / (rows.length - 1)) * (W - L - R)
-  const ivLo = Math.min(...iv) * 0.9, ivHi = Math.max(...iv) * 1.05
-  const pcrs = rows.map(r => r.pcr ?? NaN)
-  const pLo = Math.min(...pcrs.filter(Number.isFinite)) * 0.95, pHi = Math.max(...pcrs.filter(Number.isFinite)) * 1.05
-  const yIv = (v: number) => 8 + (1 - (v - ivLo) / (ivHi - ivLo || 1)) * (H - 30)
-  const ivAxis = niceAxis(ivLo, ivHi, 3)
-  const yP = (v: number) => 8 + (1 - (v - pLo) / (pHi - pLo || 1)) * (H - 30)
-  const path = (vals: (number | null)[], y: (v: number) => number) =>
-    vals.map((v, i) => (v == null || !Number.isFinite(v) ? '' : `${i && vals[i - 1] != null ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`)).join('')
-  return (
-    <Panel title={`${symbol} implied volatility and PCR · 1 year`} accent={T.violet} pad={8}
-      subtitle={`near-expiry ATM IV now ${now}% · IV rank ${rank} (share of the past year below today) · violet = IV (left) · amber = put/call OI (right)`}
-      style={{ marginBottom: 12 }}>
-      <div ref={ref} style={CHART_BOX}>
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }} role="img" aria-label="IV and PCR history">
-        {ivAxis.ticks.map(v => (
-          <g key={v}>
-            <line x1={L} x2={W - R} y1={yIv(v)} y2={yIv(v)} stroke={T.border} strokeDasharray="2 5" />
-            <text x={L - 4} y={yIv(v) + 3} textAnchor="end" fontSize={9} fill={T.violet} fontFamily={T.mono}>{v.toFixed(ivAxis.dp)}%</text>
-          </g>
-        ))}
-        {[pLo, pHi].map(v => <text key={v} x={W - R + 4} y={yP(v) + 3} fontSize={9} fill={T.amber} fontFamily={T.mono}>{v.toFixed(2)}</text>)}
-        <path d={path(rows.map(r => r.pcr), yP)} fill="none" stroke={T.amber} strokeWidth={1.1} opacity={0.75} />
-        <path d={path(rows.map(r => r.atm_iv), yIv)} fill="none" stroke={T.violet} strokeWidth={1.7} />
-        <text x={L} y={H - 6} fontSize={9} fill={T.dim} fontFamily={T.mono}>{rows[0].date}</text>
-        <text x={W - R} y={H - 6} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>{rows[rows.length - 1].date}</text>
-      </svg>
-      </div>
-    </Panel>
-  )
-}
-
 export function OptionChain() {
   // CT-01: 'RELIANCE OMON' from another page writes the hand-off key before this page mounts; start on it, so the
   // first request is RELIANCE's (it used to start on NIFTY and race the RELIANCE request: the later answer won)
@@ -207,6 +184,14 @@ export function OptionChain() {
   const [rolled, setRolled] = useState<string | null>(null)       // the settled expiry we moved past
   const [ban, setBan] = useState<{ list: string[]; date: string | null } | null>(null)
   useEffect(() => { getSurveillance([]).then(r => setBan({ list: r.data.ban, date: r.data.dates.ban ?? null })).catch(() => {}) }, [])
+  // terminal v2: picked strikes (≤ 4, carried to OSTR), the j/k strike cursor, Greeks columns, the history strip
+  const [picks, setPicks] = useState<number[]>([])
+  const [cursor, setCursor] = useState<number | null>(null)
+  const [greeks, setGreeks] = useState(true)
+  const [histOpen, setHistOpen] = useState(false)
+  const [surface, setSurface] = useState<IvSurface | null>(null)
+  const [screenRow, setScreenRow] = useState<ScreenRow | null>(null)
+  const [, writeActive] = useActiveSymbol()
 
   useEffect(() => {
     const read = () => { const s = readHandoff(); if (s) { setSymbol(omonInitialSymbol(s)); setExpiry(null) } }
@@ -241,6 +226,23 @@ export function OptionChain() {
   // a new underlying never shows the previous one's chain while it loads (the page says LOADING <symbol>), nor its
   // pricer leg or settled-series note (the GO hand-off event changes the symbol without going through pick())
   useEffect(() => { setData(null); setLiveNote(null); setPricer(null); setRolled(null) }, [symbol])
+  useEffect(() => { setPicks([]); setCursor(null) }, [symbol, expiry])
+  // the stored surface (term ladder, skew) and the stored IV history: B1's tables; both degrade alone while not deployed
+  useEffect(() => {
+    let alive = true
+    setSurface(null)
+    getIvSurface(symbol, '1m').then(r => { if (alive) setSurface(r.data) }).catch(() => { if (alive) setSurface(null) })
+    return () => { alive = false }
+  }, [symbol])
+  const ivHist = useIvHistory(symbol, 750)
+  // % of the market-wide position limit for a stock (context): the VOL screener's row, read once per symbol
+  useEffect(() => {
+    let alive = true
+    setScreenRow(null)
+    if (INDEX_UNDERLYINGS.includes(symbol)) return
+    getVolScreen('iv_pctile').then(r => { if (alive && r.data.ok) setScreenRow(r.data.rows.find(x => x.symbol === symbol) ?? null) }).catch(() => {})
+    return () => { alive = false }
+  }, [symbol])
   useEffect(() => { load() }, [load])
   useEffect(() => {   // after the close on an expiry day the default series has settled: show the next one instead
     if (!data || expiry || data.days_to_expiry > 0) return
@@ -255,6 +257,28 @@ export function OptionChain() {
     if (!v) return
     try { localStorage.setItem(OMON_KEY, v) } catch { /* private window */ }
     setSymbol(v); setExpiry(null); setInput(''); setPricer(null); setRolled(null)
+    writeActive({ symbol: v })                         // the active-symbol store (PLAN 1.3): OSTR / DERV start here
+  }
+  const togglePick = (k: number) => setPicks(p => (p.includes(k) ? p.filter(x => x !== k) : p.length >= 4 ? [...p.slice(1), k] : [...p, k]).sort((a, b) => a - b))
+  const openInOstr = () => {
+    if (!data) return
+    writeActive({ symbol: data.symbol, expiry: data.expiry, strikes: picks })
+    goToPage('ostrategy')
+  }
+  const onChainKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!data || (e.target as HTMLElement).closest('input, textarea, select')) return
+    const n = data.rows.length
+    const at = cursor ?? Math.max(0, data.rows.findIndex(r => r.strike === data.atm))
+    const move = (i: number) => {
+      const j = Math.max(0, Math.min(n - 1, i))
+      setCursor(j)
+      scrollRef.current?.querySelector<HTMLElement>(`[data-strike-row="${j}"]`)?.scrollIntoView({ block: 'nearest' })
+    }
+    if (e.key === 'j' || e.key === 'ArrowDown') { e.preventDefault(); move(cursor == null ? at : at + 1) }
+    else if (e.key === 'k' || e.key === 'ArrowUp') { e.preventDefault(); move(cursor == null ? at : at - 1) }
+    else if ((e.key === ' ' || e.key === 'x') && cursor != null) { e.preventDefault(); togglePick(data.rows[cursor].strike) }
+    else if (e.key === 'o' && picks.length) { e.preventDefault(); openInOstr() }
+    else if (e.key === 'Escape' && cursor != null) { e.stopPropagation(); setCursor(null) }
   }
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -266,6 +290,10 @@ export function OptionChain() {
   }, [data])
   const maxOi = useMemo(() => Math.max(1, ...(data?.rows ?? []).flatMap(r => [r.ce.oi ?? 0, r.pe.oi ?? 0])), [data])
   const walls = useMemo(() => new Set([...(data?.resistance ?? []).slice(0, 1), ...(data?.support ?? []).slice(0, 1)]), [data])
+  const hasNseDelta = useMemo(() => (data?.rows ?? []).some(r => r.ce.nse_delta != null || r.pe.nse_delta != null), [data])
+  // PLAN §0.5: LIVE · NSE in session, else the bhavcopy's date (daily data shows its date, never a clock)
+  const chainSource = data?.live ? sourceOf(nseStampIso(data.as_of) ?? data.date, { live: true, source: 'NSE' })
+    : sourceOf(data?.date ?? null, { source: 'NSE F&O bhavcopy', hint: liveNote })
 
   return (
     <div>
@@ -294,12 +322,24 @@ export function OptionChain() {
         The {new Date(`${rolled}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} series settled today: showing the next expiry. Its chip is still there for the final prices.</div>}
       {!data && !error && <Loading label={`Loading ${symbol} · reading the F&O bhavcopy`} />}
       {data && <>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
-          {data.expiries.slice(0, 8).map(e => (
-            <Chip key={e} color={T.cyan} active={e === data.expiry} onClick={() => { setExpiry(e); setRolled(null); setPricer(null) }}>
-              {new Date(`${e}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }).toUpperCase()}
-            </Chip>
-          ))}
+        {/* expiry ladder: each chip carries the expiry's stored ATM IV (iv_expiry_daily) when the surface is stored */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10, alignItems: 'center' }} data-omon-ladder>
+          {data.expiries.slice(0, 8).map(e => {
+            const iv = surface?.ok ? surface.expiries.find(x => x.expiry === e)?.atm_iv ?? null : null
+            return (
+              <Chip key={e} color={T.cyan} active={e === data.expiry} onClick={() => { setExpiry(e); setRolled(null); setPricer(null) }}
+                title={iv != null ? `stored ATM IV ${iv.toFixed(2)}% on ${surface?.as_of} (iv_expiry_daily · arithmetic)` : 'ATM IV per expiry appears once the IV store is deployed'}>
+                {new Date(`${e}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }).toUpperCase()}
+                {iv != null && <span style={{ opacity: 0.75 }}>· {iv.toFixed(1)}%</span>}
+              </Chip>
+            )
+          })}
+          {screenRow?.mwpl_pct != null && (
+            <span style={{ marginLeft: 8, display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 10.5, color: T.muted, fontFamily: T.mono }}
+              title="Open interest as a share of the market-wide position limit (NSE combined OI file). At 95 % the stock enters the F&O ban. Context: describes crowding, does not predict.">
+              % MWPL <b style={{ color: T.text }}>{screenRow.mwpl_pct.toFixed(0)}%</b> <BadgeChip badge="context" />
+            </span>
+          )}
         </div>
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', marginBottom: 12 }}>
           <Stat big={false} label="Spot / forward" value={num(data.spot, 2)} sub={`forward ${num(data.forward, 2)} (${data.forward_source})`} />
@@ -308,40 +348,52 @@ export function OptionChain() {
           <Stat big={false} label="Expected range" accent={T.cyan}
                 value={data.expected_move_pct != null && data.forward ? `${num(data.forward * (1 - data.expected_move_pct / 100))} – ${num(data.forward * (1 + data.expected_move_pct / 100))}` : '—'}
                 sub="±1 standard deviation at expiry" />
-          <Stat big={false} label="Put / call OI" value={data.pcr_oi ?? '—'} color={(data.pcr_oi ?? 1) >= 1 ? T.green : T.red}
-                sub={`calls ${lakh(data.call_oi_total)} · puts ${lakh(data.put_oi_total)}`} />
+          {/* PLAN 0.6 (R-OPTIONS §3.4): a put/call ratio is context — no green above 1, no red below */}
+          <Stat big={false} label="Put / call OI" value={data.pcr_oi ?? '—'} color={T.text}
+                sub={`calls ${lakh(data.call_oi_total)} · puts ${lakh(data.put_oi_total)} · context`} />
           <Stat big={false} label="Max pain" value={num(data.max_pain)} accent={T.amber} sub="where option buyers collect least" />
           <Stat big={false} label="OI walls" value={<span><span style={{ color: T.red }}>{num(data.resistance[0])}</span> / <span style={{ color: T.green }}>{num(data.support[0])}</span></span>}
                 sub={`call wall (resistance) / put wall (support)`} />
         </div>
-        <History symbol={data.symbol} />
-        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', marginBottom: 12 }}>
-          <Panel title="Volatility smile" accent={T.violet} pad={8}
-            subtitle="out-of-the-money IV by strike · higher on the left = traders pay more for downside protection">
-            <Smile data={data} />
-          </Panel>
-          <Panel title="Open interest by strike" accent={T.amber} pad={8} subtitle="red = calls (resistance) · green = puts (support) · walls = most open interest over every strike of the expiry">
-            <OiBars data={data} />
-          </Panel>
-        </div>
+        <ChainStrip chain={data} history={ivHist.v2} surface={surface} />
+        <IvHistoryChart symbol={data.symbol} state={ivHist} collapsed={!histOpen} onToggle={() => setHistOpen(o => !o)} />
+        <IvLivePath symbol={data.symbol} enabled={live} />
         {pricer && data.rows.some(r => r.strike === pricer.strike) && <OptionPricer data={data} pick={pricer} onClose={() => setPricer(null)} />}
-        <Panel title="Chain" pad={0} accent={T.amber}
-          subtitle="calls left · puts right · bars = open interest · OI change since the previous session · IV only for out-of-the-money strikes · click a price to open the pricer (OVME)">
-          <div ref={scrollRef} style={{ maxHeight: 640, overflowY: 'auto', position: 'relative' }}>
+        <Panel title="Chain" pad={0} accent={T.amber} style={{ marginBottom: 12 }} source={chainSource} badge="arithmetic"
+          subtitle="calls left · puts right · bars = open interest · OI change since the previous session · IV only for out-of-the-money strikes · click a price to open the pricer (OVME) · click a strike (or j / k + space) to pick it for OSTR"
+          right={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+            {picks.length > 0 && <span style={{ fontFamily: T.mono, fontSize: 10.5, color: T.violet }} data-omon-picks>
+              {picks.map(k => num(k, k % 1 ? 1 : 0)).join(' · ')} → {SEED_NAME[Math.min(picks.length, 4)]}</span>}
+            {picks.length > 0 && <Chip color={T.muted} onClick={() => setPicks([])} title="clear the picked strikes">CLEAR</Chip>}
+            <Chip color={T.violet} active={picks.length > 0} onClick={openInOstr} aria-label="open in OSTR"
+              title={picks.length ? `Open the strategy builder on ${data.symbol} ${data.expiry} with ${legsFromStrikes(picks).length} legs seeded from the picked strikes (key: o)` : `Open the strategy builder on ${data.symbol} ${data.expiry}; pick up to 4 strikes first to seed the legs`}>
+              OPEN IN OSTR ›</Chip>
+            <Chip color={T.cyan} active={greeks} onClick={() => setGreeks(g => !g)} title="Greeks per strike from Black-76 on the forward with the strike's own IV (r 6.5 %, T = calendar days ÷ 365). Arithmetic.">Δ Γ Θ ν</Chip>
+          </span>}>
+          <div ref={scrollRef} tabIndex={0} onKeyDown={onChainKey} style={{ maxHeight: 640, overflowY: 'auto', position: 'relative', outline: 'none' }} data-omon-chain>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
               <thead style={{ position: 'sticky', top: 0, background: '#080b10', zIndex: Z.raised }}>
                 <tr style={{ color: T.muted, fontSize: 9.5, letterSpacing: .8 }}>
-                  {['OI', 'OI CHG', 'VOLUME', 'IV', 'PRICE'].map(h => <th key={`c${h}`} style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>CALL {h}</th>)}
+                  {['OI', 'OI CHG', 'VOLUME', 'IV', ...(greeks ? ['Δ', ...(hasNseDelta ? ['NSE Δ'] : []), 'Θ/D'] : []), 'PRICE'].map(h => <th key={`c${h}`} style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }}>CALL {h}</th>)}
                   <th style={{ padding: '6px 8px', color: T.amber }}>STRIKE</th>
-                  {['PRICE', 'IV', 'VOLUME', 'OI CHG', 'OI'].map(h => <th key={`p${h}`} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>PUT {h}</th>)}
+                  {greeks && <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }} title="gamma: change in delta per 1 point of the underlying (same for the call and the put at one IV)">Γ</th>}
+                  {greeks && <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 600 }} title="vega: ₹ per unit for a 1 vol-point move in IV (same for both sides)">ν</th>}
+                  {['PRICE', ...(greeks ? ['Θ/D', ...(hasNseDelta ? ['NSE Δ'] : []), 'Δ'] : []), 'IV', 'VOLUME', 'OI CHG', 'OI'].map(h => <th key={`p${h}`} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600 }}>PUT {h}</th>)}
                 </tr>
               </thead>
               <tbody>
-                {data.rows.map(r => {
+                {data.rows.map((r, ri) => {
                   const atm = r.strike === data.atm, itmCall = data.forward != null && r.strike < data.forward
                   const chg = (v: number | null) => <span style={{ color: v == null ? T.dim : v > 0 ? T.green : v < 0 ? T.red : T.dim }}>{v == null ? '—' : signedLakh(v)}</span>
+                  // one IV per strike (OMON prices IV on the out-of-the-money side; parity gives the other side the same IV)
+                  const kIv = r.ce.iv ?? r.pe.iv
+                  const gc = greeks ? greeksFor('call', data.forward, r.strike, kIv, data.days_to_expiry) : null
+                  const gp = greeks ? greeksFor('put', data.forward, r.strike, kIv, data.days_to_expiry) : null
+                  const picked = picks.includes(r.strike), cur = cursor === ri
+                  const gcell = (v: string, shade: boolean, align: 'left' | 'right') => <td style={{ padding: '4px 6px', textAlign: align, color: T.cyan, opacity: 0.9, background: shade ? '#0c1018' : undefined }}>{v}</td>
                   return (
-                    <tr key={r.strike} data-atm={atm ? '1' : undefined} style={{ borderBottom: `1px solid ${T.border}`, background: atm ? '#141106' : undefined }}>
+                    <tr key={r.strike} data-atm={atm ? '1' : undefined} data-strike-row={ri} data-picked={picked ? '1' : undefined}
+                      style={{ borderBottom: `1px solid ${T.border}`, background: cur ? '#16202e' : atm ? '#141106' : undefined, boxShadow: cur ? `inset 2px 0 0 ${T.amber}` : undefined }}>
                       <td style={{ padding: '4px 8px', textAlign: 'right', position: 'relative', background: itmCall ? '#0c1018' : undefined }}>
                         <span style={{ position: 'absolute', right: 0, top: 3, bottom: 3, width: `${((r.ce.oi ?? 0) / maxOi) * 100}%`, background: `${T.red}33` }} />
                         <span style={{ position: 'relative', color: walls.has(r.strike) && data.resistance[0] === r.strike ? T.red : T.text, fontWeight: walls.has(r.strike) ? 700 : 400 }}>{lakh(r.ce.oi)}</span>
@@ -349,13 +401,24 @@ export function OptionChain() {
                       <td style={{ padding: '4px 8px', textAlign: 'right', background: itmCall ? '#0c1018' : undefined }}>{chg(r.ce.oi_chg)}</td>
                       <td style={{ padding: '4px 8px', textAlign: 'right', color: T.muted, background: itmCall ? '#0c1018' : undefined }}>{lakh(r.ce.volume)}</td>
                       <td style={{ padding: '4px 8px', textAlign: 'right', color: T.violet, background: itmCall ? '#0c1018' : undefined }}>{r.ce.iv ?? ''}</td>
+                      {greeks && gcell(gfmt(gc?.delta, 'd'), itmCall, 'right')}
+                      {greeks && hasNseDelta && gcell(gfmt(r.ce.nse_delta, 'd'), itmCall, 'right')}
+                      {greeks && gcell(gfmt(gc?.thetaDay, 't'), itmCall, 'right')}
                       <td onClick={() => setPricer({ strike: r.strike, side: 'call' })} title="price this call (OVME)"
                         style={{ padding: '4px 8px', textAlign: 'right', color: T.bright, cursor: 'pointer', textDecoration: pricer?.strike === r.strike && pricer.side === 'call' ? 'underline' : undefined,
                                  background: pricer?.strike === r.strike && pricer.side === 'call' ? `${T.violet}33` : itmCall ? '#0c1018' : undefined }}>{num(r.ce.price, 2)}</td>
-                      <td style={{ padding: '4px 10px', textAlign: 'center', color: atm ? T.bg : T.amber, background: atm ? T.amber : T.panel, fontWeight: 700 }}>{num(r.strike, r.strike % 1 ? 1 : 0)}</td>
+                      <td onClick={() => togglePick(r.strike)} title={picked ? 'picked for OSTR · click to drop' : 'click to pick this strike for OSTR (up to 4)'}
+                        style={{ padding: '4px 10px', textAlign: 'center', color: atm ? T.bg : T.amber, background: atm ? T.amber : T.panel, fontWeight: 700, cursor: 'pointer',
+                                 outline: picked ? `1px solid ${T.violet}` : undefined, outlineOffset: -2 }}>
+                        {picked && <span style={{ color: atm ? T.bg : T.violet, marginRight: 4 }}>✓</span>}{num(r.strike, r.strike % 1 ? 1 : 0)}</td>
+                      {greeks && gcell(gfmt(gc?.gamma, 'g'), false, 'right')}
+                      {greeks && gcell(gfmt(gc?.vega, 'v'), false, 'right')}
                       <td onClick={() => setPricer({ strike: r.strike, side: 'put' })} title="price this put (OVME)"
                         style={{ padding: '4px 8px', color: T.bright, cursor: 'pointer', textDecoration: pricer?.strike === r.strike && pricer.side === 'put' ? 'underline' : undefined,
                                  background: pricer?.strike === r.strike && pricer.side === 'put' ? `${T.violet}33` : !itmCall ? '#0c1018' : undefined }}>{num(r.pe.price, 2)}</td>
+                      {greeks && gcell(gfmt(gp?.thetaDay, 't'), !itmCall, 'left')}
+                      {greeks && hasNseDelta && gcell(gfmt(r.pe.nse_delta, 'd'), !itmCall, 'left')}
+                      {greeks && gcell(gfmt(gp?.delta, 'd'), !itmCall, 'left')}
                       <td style={{ padding: '4px 8px', color: T.violet, background: !itmCall ? '#0c1018' : undefined }}>{r.pe.iv ?? ''}</td>
                       <td style={{ padding: '4px 8px', color: T.muted, background: !itmCall ? '#0c1018' : undefined }}>{lakh(r.pe.volume)}</td>
                       <td style={{ padding: '4px 8px', background: !itmCall ? '#0c1018' : undefined }}>{chg(r.pe.oi_chg)}</td>
@@ -369,7 +432,20 @@ export function OptionChain() {
               </tbody>
             </table>
           </div>
+          {greeks && <div style={{ padding: '5px 12px', fontSize: 10, color: T.dim, borderTop: `1px solid ${T.border}` }}>
+            Δ Γ Θ ν: Black-76 on the forward {num(data.forward, 2)} with each strike's own IV, {data.days_to_expiry} calendar days ÷ 365, r 6.5 % · per unit of the underlying (× lot {data.lot ?? '—'} for a contract)
+            {hasNseDelta ? ' · NSE Δ from the exchange\'s Contract_Delta file' : " · NSE's own delta column appears once the Contract_Delta ingest is served"} · arithmetic
+          </div>}
         </Panel>
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', marginBottom: 12 }}>
+          <Panel title="Volatility smile" accent={T.violet} pad={8} source={chainSource} badge="arithmetic"
+            subtitle="out-of-the-money IV by strike · higher on the left = traders pay more for downside protection">
+            <Smile data={data} />
+          </Panel>
+          <Panel title="Open interest by strike" accent={T.amber} pad={8} source={chainSource} badge="context" subtitle="red = calls (resistance) · green = puts (support) · walls = most open interest over every strike of the expiry">
+            <OiBars data={data} />
+          </Panel>
+        </div>
         <div style={{ fontSize: 10, color: T.dim, marginTop: 8, lineHeight: 1.6 }}>
           Source: NSE F&O bhavcopy (UDiFF), cached nightly by the EOD pipeline. IV = Black–Scholes on the put–call-parity forward,
           r 6.5%, no dividends (an approximation for stocks). Shaded cells are in the money. Max pain and OI walls describe where

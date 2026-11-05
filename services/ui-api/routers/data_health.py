@@ -6,12 +6,21 @@ a state (live | fresh | amber | red | gap), the ingest job's last run and next r
 dictionary anchor. Honest wording, no composite score: the page says "stored 30 Oct · expected by 21:00 ·
 3 sessions behind · catch-up 19:30 tomorrow".
 
-The catalog is data-service's `dataset_catalog` (B1 `data_health/`, served as /db/data-health/catalog); until it is
-deployed, the built-in seed below (R-DATA §3's rows that the existing endpoints can already evaluate) is used and
-the payload says so (`catalog_source`). Nothing is fetched from a publisher on the request path: inputs are
-data-service `/db/nse-positions-meta`, `/db/freshness`, `/db/archive-meta`, `/db/market-holidays`,
-`/db/data-health/ingest-log` (B1, optional) and master-controller `/api/scheduler/status`, each through the
-process-wide client and one stale-while-revalidate cache (60 s refresh, 10 min bound).
+Two sources, said in `catalog_source`:
+
+* **data-service `/db/data-health`** (B1 `data_health/`, the `dataset_catalog` rows with as-of / lag / state computed where
+  the tables live — `MAX(column)` per table, dated archive files, NSE trading-day deadlines, the `data_gaps` rows). This
+  view keeps B1's state and adds what only ui-api / the controller know: the job's last and next run, the catch-up slot,
+  the honest sentence, and the rows B1 marks `unknown` (`freshness_kind = endpoint` / `cadence = live`): a job-backed row
+  is judged by its job's last run against the due session, a never-stored live feed is `live` (its age is the page's
+  SourceChip), anything else stays `unknown` and is counted as such — never guessed green.
+* until B1 is deployed (`/db/data-health` 404), the built-in seed below (R-DATA §3's rows that the existing endpoints can
+  already evaluate) classified here by `classify()`.
+
+Nothing is fetched from a publisher on the request path: inputs are data-service `/db/data-health`,
+`/db/nse-positions-meta`, `/db/freshness`, `/db/archive-meta`, `/db/market-holidays`, `/db/data-health/ingest-log`
+(B1, optional) and master-controller `/api/scheduler/status`, each through the process-wide client and one
+stale-while-revalidate cache (60 s refresh, 10 min bound).
 
 `/api/data/health` was a thin relay of data-service's `/health` (routers/data_proxy.py; defined in ui/lib/api.ts,
 called by no component); this view keeps `status` / `data_service` keys so an old caller still sees liveness.
@@ -43,7 +52,7 @@ MASTER_CTL = os.environ.get("MASTER_CONTROLLER_URL", "http://localhost:8008").rs
 STORE = SWRCache("data_health.inputs", max_items=16, refresh_after=60.0, max_age=600.0)
 _ttl = TTLCache("data_health", max_items=16, default_ttl=15.0)
 MARKET_CLOSE = time(15, 30)
-STATES = ("live", "fresh", "amber", "red", "gap")
+STATES = ("live", "fresh", "amber", "red", "gap", "unknown")
 DESCRIBES = "describes, does not predict"
 CATCHUP_JOBS = ("nse_positions_catchup", "startup_catchup", "gold_downtime_catchup")
 
@@ -201,9 +210,10 @@ def next_trading_day(d: date, holidays: Iterable[date]) -> date:
     return n
 
 
-def _expected_at(row: CatalogRow, session: date, now: datetime) -> datetime | None:
-    """When `session`'s data is expected stored, as an IST datetime (publication day = the session, or the next trading
-    day for T+1 files and morning slots)."""
+def _expected_at(row: CatalogRow, session: date, holidays: Iterable[date] = ()) -> datetime | None:
+    """When `session`'s data is expected stored, as an IST datetime: `expected_by` on the session itself, or on the NEXT
+    TRADING DAY (NSE holiday calendar, weekends skipped) for T+1 files and morning slots — a T−1 file for Friday is due
+    Monday evening, not Saturday (check:B3-API: a Monday 20:00 MTF row was amber against a Saturday deadline)."""
     if not row.expected_by:
         return None
     hhmm = row.expected_by.split()[0]
@@ -212,8 +222,8 @@ def _expected_at(row: CatalogRow, session: date, now: datetime) -> datetime | No
     except ValueError:
         return None
     day = session
-    if row.t_plus or time(h, m) < MARKET_CLOSE:        # a morning slot refers to the next calendar day after the session
-        day = session + timedelta(days=1)
+    if row.t_plus or time(h, m) < MARKET_CLOSE:        # a morning slot / T−1 file belongs to the next trading day
+        day = next_trading_day(session, holidays)
     return datetime.combine(day, time(h, m), tzinfo=IST)
 
 
@@ -236,7 +246,7 @@ def classify(row: CatalogRow, as_of: date | None, now: datetime, holidays: Itera
         return {"state": "red", "lag_sessions": None, "expected_by": row.expected_by, "last_session": last.isoformat(),
                 "due": True, "note": "nothing stored"}
     lag = len(trading_days(as_of, target, hol)) if as_of < target else 0
-    exp_at = _expected_at(row, target, now)
+    exp_at = _expected_at(row, target, hol)
     due = exp_at is None or now >= exp_at
     if lag == 0 or (lag == 1 and not due):
         state = "fresh"
@@ -279,21 +289,116 @@ def _catchup_at(jobs: list[dict[str, Any]]) -> str | None:
     return min(nexts) if nexts else None
 
 
-def _catalog_rows(payload: Any) -> list[CatalogRow]:
-    """B1's catalog rows → CatalogRow (missing fields fall back to sensible defaults)."""
-    rows = payload.get("rows") if isinstance(payload, dict) else payload
-    out: list[CatalogRow] = []
-    for r in rows or []:
+def _sentence(as_of: date | None, expected_by: str | None, lag: int | None, state: str, extra: str | None = None) -> str:
+    """The honest line: "stored 30 Oct · expected by 21:00 · 3 sessions behind" (+ B1's own reason when it adds one)."""
+    if as_of is None:
+        words = "nothing stored"
+    else:
+        words = f"stored {as_of.strftime('%d %b')}"
+        if expected_by:
+            words += f" · expected by {expected_by}"
+        if lag:
+            words += f" · {lag} session{'s' if lag != 1 else ''} behind"
+    if extra and extra not in words:
+        words += f" · {extra}"
+    return words
+
+
+def _parse_ts(v: Any) -> datetime | None:
+    if not v:
+        return None
+    try:
+        t = datetime.fromisoformat(str(v))
+    except ValueError:
+        return None
+    return t if t.tzinfo else t.replace(tzinfo=IST)
+
+
+def _due_session(expected_by: Any, offset: Any, now: datetime, holidays: list[date]) -> date:
+    """The latest session whose `expected_by` deadline (on the session, or `offset` trading days / a morning slot after
+    it) has passed — the session a job-backed row must cover by now. Without a deadline: the last close."""
+    last = last_close_session(now, holidays)
+    if not expected_by:
+        return last
+    probe = CatalogRow(id="_", label="", pages=(), publisher="", publish_time_ist="", expected_by=str(expected_by), max_age=1,
+                       ingest_job=None, source_kind="", source_key="", dictionary_anchor="", t_plus=int(offset or 0))
+    s, hol = last, set(holidays)
+    for _ in range(12):
+        at = _expected_at(probe, s, holidays)
+        if at is None or at <= now:
+            return s
+        s -= timedelta(days=1)
+        while s.weekday() >= 5 or s in hol:
+            s -= timedelta(days=1)
+    return s
+
+
+def _complete_unknown(r: dict[str, Any], jobs: list[dict[str, Any]], holidays: list[date], now: datetime) -> tuple[str, str]:
+    """State + note for a row B1 reports `unknown` (endpoint / live): judged by its job's last run against the session it
+    must cover by now (its `expected_by`, trading-day aware), never guessed green."""
+    job_id = r.get("job_id")
+    j = next((j for j in jobs if job_id and j.get("id") == job_id), None)
+    if j is not None:
+        ran = _parse_ts(j.get("last_run_ts"))
+        due = _due_session(r.get("expected_by"), r.get("expected_offset_days"), now, holidays)
+        if ran is None:
+            return "red", f"job {job_id} has not run"
+        ok = str(j.get("last_status") or "").lower() in ("ok", "success", "done")
+        on_time = ran.astimezone(IST).date() >= due
+        if ok and on_time:
+            return "fresh", f"job {job_id} ran {ran.astimezone(IST).strftime('%d %b %H:%M')} (ok)"
+        return "amber", f"job {job_id} last ran {ran.astimezone(IST).strftime('%d %b %H:%M')} ({j.get('last_status') or 'unknown'})"
+    if str(r.get("cadence")) == "live" or not job_id:
+        return "live", "live feed, not stored: its age is the page's SourceChip"
+    return "unknown", f"job {job_id} not in the controller's schedule"
+
+
+def compose_b1_health(payload: Any, jobs: list[dict[str, Any]], holidays: list[date], now: datetime,
+                      page: str | None = None) -> dict[str, Any] | None:
+    """data-service `/db/data-health` (B1: state computed where the tables live) → this view's rows; None when the payload
+    carries no rows (B1 not deployed → the caller falls back to the seed)."""
+    rows_in = payload.get("rows") if isinstance(payload, dict) else None
+    if not isinstance(rows_in, list) or not rows_in:
+        return None
+    rows: list[dict[str, Any]] = []
+    for r in rows_in:
         if not isinstance(r, dict) or not r.get("id"):
             continue
-        out.append(CatalogRow(
-            id=str(r["id"]), label=str(r.get("label") or r["id"]), pages=tuple(r.get("pages") or ()),
-            publisher=str(r.get("publisher") or ""), publish_time_ist=str(r.get("publish_time_ist") or ""),
-            expected_by=r.get("expected_by"), max_age=int(r.get("max_age") or 2), ingest_job=r.get("ingest_job"),
-            source_kind=str(r.get("source_kind") or "positions_meta"), source_key=str(r.get("source_key") or r["id"]),
-            dictionary_anchor=str(r.get("dictionary_anchor") or ""), unrecoverable=bool(r.get("unrecoverable")),
-            t_plus=int(r.get("t_plus") or 0), badge=str(r.get("badge") or "context"), note=r.get("note")))
-    return out
+        pages = r.get("pages") or []
+        pages = [p for p in (pages.split(",") if isinstance(pages, str) else pages) if p]
+        if page and page.upper() not in pages:
+            continue
+        as_of = _d(r.get("as_of"))
+        state = str(r.get("state") or "unknown")
+        lag = r.get("lag_sessions") if isinstance(r.get("lag_sessions"), int) else None
+        if state == "unknown":
+            state, why = _complete_unknown(r, jobs, holidays, now)
+            note = why if as_of is None else _sentence(as_of, r.get("expected_by"), lag, state, why)
+        elif state == "gap":
+            note = r.get("note") or "no capture for the session (gap row)"
+        else:
+            note = _sentence(as_of, r.get("expected_by"), lag, state, r.get("note"))
+        if state not in STATES:
+            state = "unknown"
+        rows.append({"id": str(r["id"]), "label": str(r.get("label") or r["id"]), "pages": pages, "publisher": r.get("publisher"),
+                     "published_ist": r.get("published_ist"), "expected_by": r.get("expected_by"), "as_of": as_of.isoformat() if as_of else None,
+                     "lag_sessions": lag, "state": state, "unrecoverable": bool(r.get("unrecoverable")),
+                     **_job_info(jobs, r.get("job_id")), "catchup_at": _catchup_at(jobs) if state in ("amber", "red") else None,
+                     "note": note, "dictionary_anchor": r.get("dictionary_anchor") or "", "badge": r.get("badge") or "context",
+                     "max_age_sessions": r.get("max_age_sessions")})
+    return {"rows": _sorted(rows), "summary": _summary(rows),
+            "last_session": str(payload.get("last_session") or last_close_session(now, holidays).isoformat())}
+
+
+def _sorted(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    order = {"gap": 0, "red": 1, "amber": 2, "unknown": 3, "fresh": 4, "live": 5}
+    return sorted(rows, key=lambda r: (order[r["state"]], -(r["lag_sessions"] or 0), r["id"]))
+
+
+def _summary(rows: list[dict[str, Any]]) -> dict[str, int]:
+    return {"green": sum(r["state"] in ("fresh", "live") for r in rows), "amber": sum(r["state"] == "amber" for r in rows),
+            "red": sum(r["state"] == "red" for r in rows), "gaps": sum(r["state"] == "gap" for r in rows),
+            "unknown": sum(r["state"] == "unknown" for r in rows), "rows": len(rows)}
 
 
 def build_health(catalog: list[CatalogRow], meta: dict[str, Any], fresh: dict[str, Any], archive: dict[str, Any],
@@ -310,11 +415,7 @@ def build_health(catalog: list[CatalogRow], meta: dict[str, Any], fresh: dict[st
                      "lag_sessions": cls["lag_sessions"], "state": cls["state"], "unrecoverable": row.unrecoverable,
                      **_job_info(jobs, row.ingest_job), "catchup_at": _catchup_at(jobs) if cls["state"] in ("amber", "red") else None,
                      "note": cls["note"], "dictionary_anchor": row.dictionary_anchor, "badge": row.badge, "max_age_sessions": row.max_age})
-    order = {"gap": 0, "red": 1, "amber": 2, "fresh": 3, "live": 4}
-    rows.sort(key=lambda r: (order[r["state"]], -(r["lag_sessions"] or 0), r["id"]))
-    summary = {"green": sum(r["state"] in ("fresh", "live") for r in rows), "amber": sum(r["state"] == "amber" for r in rows),
-               "red": sum(r["state"] == "red" for r in rows), "gaps": sum(r["state"] == "gap" for r in rows), "rows": len(rows)}
-    return {"rows": rows, "summary": summary, "last_session": last_close_session(now, holidays).isoformat()}
+    return {"rows": _sorted(rows), "summary": _summary(rows), "last_session": last_close_session(now, holidays).isoformat()}
 
 
 def now_ist() -> datetime:
@@ -329,28 +430,35 @@ async def data_health(response: Response, page: str | None = Query(None, max_len
     `DATA n STALE` header chip (PLAN 1.4). No composite score."""
     inputs = _Inputs()
     now = now_ist()
-    meta = await inputs.get("positions_meta", f"{DATA_SVC}/db/nse-positions-meta") or {}
-    fresh = await inputs.get("freshness", f"{DATA_SVC}/db/freshness") or {}
-    archive = await inputs.get("archive_meta", f"{DATA_SVC}/db/archive-meta") or {}
     hol_payload = await inputs.get("holidays", f"{DATA_SVC}/db/market-holidays") or {}
     sched = await inputs.get("scheduler", f"{MASTER_CTL}/api/scheduler/status", route="live") or {}
-    catalog_payload = await inputs.get("catalog", f"{DATA_SVC}/db/data-health/catalog")
-    ingest_log = await inputs.get("ingest_log", f"{DATA_SVC}/db/data-health/ingest-log", {"days": 3})
+    b1_health = await inputs.get("b1_health", f"{DATA_SVC}/db/data-health")
     holidays = [d for d in (_d(h.get("date")) for h in (hol_payload.get("holidays") or []) if isinstance(h, dict)) if d]
     jobs = [j for j in (sched.get("jobs") or []) if isinstance(j, dict)]
-    catalog = _catalog_rows(catalog_payload) if catalog_payload else []
-    catalog_source = "data-service dataset_catalog" if catalog else "ui-api fallback seed (R-DATA §3; B1 dataset_catalog not deployed)"
-    if not catalog:
-        catalog = list(FALLBACK_CATALOG)
-    gaps: set[str] = set()
-    last = last_close_session(now, holidays).isoformat()
-    for r in (ingest_log.get("rows") if isinstance(ingest_log, dict) else ingest_log) or []:
-        if isinstance(r, dict) and str(r.get("status")) == "gap" and str(r.get("date") or "")[:10] == last:
-            gaps.add(str(r.get("dataset")))
-    built = build_health(catalog, meta if isinstance(meta, dict) else {}, fresh if isinstance(fresh, dict) else {},
-                         archive if isinstance(archive, dict) else {}, holidays, jobs, gaps, now, page)
+    built = compose_b1_health(b1_health, jobs, holidays, now, page)
+    if built is not None:
+        catalog_source = "data-service dataset_catalog (/db/data-health)"
+        reachable = True
+    else:
+        b1_err = inputs.errors.get("b1_health", "")
+        if b1_err.startswith("404"):                       # expected until B1's package is deployed: not an input failure
+            inputs.errors.pop("b1_health")
+            catalog_source = "ui-api fallback seed (R-DATA §3; B1 dataset_catalog not deployed)"
+        else:
+            catalog_source = f"ui-api fallback seed (R-DATA §3; data-service /db/data-health unavailable: {b1_err or 'no rows'})"
+        meta = await inputs.get("positions_meta", f"{DATA_SVC}/db/nse-positions-meta") or {}
+        fresh = await inputs.get("freshness", f"{DATA_SVC}/db/freshness") or {}
+        archive = await inputs.get("archive_meta", f"{DATA_SVC}/db/archive-meta") or {}
+        ingest_log = await inputs.get("ingest_log", f"{DATA_SVC}/db/data-health/ingest-log", {"days": 3})
+        gaps: set[str] = set()
+        last = last_close_session(now, holidays).isoformat()
+        for r in (ingest_log.get("rows") if isinstance(ingest_log, dict) else ingest_log) or []:
+            if isinstance(r, dict) and str(r.get("status")) == "gap" and str(r.get("date") or "")[:10] == last:
+                gaps.add(str(r.get("dataset")))
+        built = build_health(list(FALLBACK_CATALOG), meta if isinstance(meta, dict) else {}, fresh if isinstance(fresh, dict) else {},
+                             archive if isinstance(archive, dict) else {}, holidays, jobs, gaps, now, page)
+        reachable = "positions_meta" not in inputs.errors
     cache_headers(response, merge_served(inputs.served))
-    reachable = "positions_meta" not in inputs.errors
     return {
         "as_of": now.isoformat(timespec="seconds"), **built, "catalog_source": catalog_source,
         "inputs_unavailable": dict(inputs.errors), "controller_online": "scheduler" not in inputs.errors,

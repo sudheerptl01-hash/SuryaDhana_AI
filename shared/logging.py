@@ -52,7 +52,9 @@ def _add_correlation_id(
 
 def _add_service_name(service: str):
     def processor(logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
-        event_dict["service"] = service
+        # an event that names its own service keeps it (shared/metrics.py's access log in a process that hosts more than
+        # one app, e.g. the test suite or a mounted sub-app); everything else gets the configured process name
+        event_dict.setdefault("service", service)
         return event_dict
     return processor
 

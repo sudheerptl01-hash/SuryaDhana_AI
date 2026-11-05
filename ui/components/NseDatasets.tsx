@@ -4,7 +4,7 @@ import { apiError } from '@/lib/errors'
 /** NSE research datasets: rows and date range of every NSE table SuryaDhana keeps (Warehouse tab). */
 import { useEffect, useState } from 'react'
 import { getArchiveMeta, getNseDatasetsMeta } from '@/lib/api'
-import { DataTable, Panel, T, type Column } from '@/components/terminal'
+import { DataTable, Panel, T, type Column, undatedSource } from '@/components/terminal'
 
 // newest row should be no older than this many days (weekends + publication lag); older = the feed may have broken
 const MAX_AGE_DAYS: Record<string, number> = {
@@ -57,7 +57,7 @@ export function NseDatasets() {
     { key: 'when', label: 'Refreshed', render: r => <span style={{ color: T.dim }}>{ABOUT[r.table]?.[1] ?? ''}</span> },
   ]
   return (
-    <Panel title="NSE research datasets" subtitle="free official NSE data: DuckDB tables, then file archives (data/nse_archive) · see docs/NSE_DATA_DICTIONARY.md" pad={0} accent={T.cyan}>
+    <Panel source={undatedSource('DuckDB + data/nse_archive', 'per-dataset dates in the table')} title="NSE research datasets" subtitle="free official NSE data: DuckDB tables, then file archives (data/nse_archive) · see docs/NSE_DATA_DICTIONARY.md" pad={0} accent={T.cyan}>
       {err ? <div style={{ padding: 12, fontSize: 11, color: T.red }}>{err}</div>
         : <DataTable columns={cols} rows={rows ?? []} rowKey={r => r.table} dense empty={rows ? 'No datasets' : 'Loading…'} />}
     </Panel>

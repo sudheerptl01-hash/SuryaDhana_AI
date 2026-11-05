@@ -15,7 +15,7 @@ import { apiError } from '@/lib/errors'
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Btn, Chip, PageHeader, T, fmtNum, fmtSigned } from '@/components/terminal'
+import { Btn, Chip, PageHeader, SourceChip, T, fmtNum, fmtSigned, sourceOf, type SourceInfo } from '@/components/terminal'
 import { NseDatasets } from './NseDatasets'
 import clsx from 'clsx'
 import { QuantKPICard } from './QuantKPICard'
@@ -86,10 +86,12 @@ const fmt = fmtNum
 
 // ── Reusable terminal panel shell ───────────────────────────────────────────────
 function Panel({
-  title, hint, accent = MUTED, children, className, style,
+  title, hint, accent = MUTED, children, className, style, source,
 }: {
   title?: string; hint?: string; accent?: string
   children: React.ReactNode; className?: string; style?: React.CSSProperties
+  /** PLAN §0.5 / 1.4: the source chip on every panel header */
+  source: SourceInfo
 }) {
   return (
     <div
@@ -107,9 +109,12 @@ function Panel({
               style={{ fontFamily: "'Chakra Petch', sans-serif", color: accent }}>
             {title}
           </h3>
-          {hint && (
-            <span className="text-[9px] tracking-wider" style={{ color: MUTED }}>{hint}</span>
-          )}
+          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+            {hint && (
+              <span className="text-[9px] tracking-wider" style={{ color: MUTED }}>{hint}</span>
+            )}
+            <SourceChip info={source} />
+          </span>
         </div>
       )}
       {children}
@@ -244,7 +249,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
   // ── Error state ───────────────────────────────────────────────────────────────
   if (error && !stats) {
     return (
-      <Panel accent={CRIMSON} className="py-20">
+      <Panel source={sourceOf(null, { source: 'data-service', hint: error })} accent={CRIMSON} className="py-20">
         <div className="flex flex-col items-center justify-center gap-5 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full text-2xl"
                style={{ background: 'rgba(255,59,71,0.08)', border: '1px solid rgba(255,59,71,0.2)' }}>⚠</div>
@@ -317,7 +322,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
         {/* Coverage panel */}
-        <Panel title="Warehouse Coverage" hint="enrichment · freshness" accent={JADE}>
+        <Panel source={sourceOf(syncedAt ? syncedAt.toISOString() : null, { source: 'data-service' })} title="Warehouse Coverage" hint="enrichment · freshness" accent={JADE}>
           <div className="space-y-4 px-5 pb-5 pt-4">
             <CoverageBar label="Fundamentals" value={stats?.enrichment?.with_fundamentals ?? 0} total={stats?.total_stocks ?? 0} color={JADE} />
             <CoverageBar label="Dividends" value={stats?.enrichment?.with_dividends ?? 0} total={stats?.total_stocks ?? 0} color={CYAN} />
@@ -356,7 +361,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
         </Panel>
 
         {/* ML dataset panel */}
-        <Panel title="ML Dataset · Class Balance" hint={ml?.labels?.latest_date ? `as of ${ml.labels.latest_date}` : 'no labels yet'} accent={VIOLET}>
+        <Panel source={sourceOf(ml?.labels?.latest_date ?? null, { source: 'ml_labels (dormant)', maxAgeDays: null })} title="ML Dataset · Class Balance" hint={ml?.labels?.latest_date ? `as of ${ml.labels.latest_date}` : 'no labels yet'} accent={VIOLET}>
           <div className="space-y-4 px-5 pb-5 pt-4">
             {/* feature/label counts */}
             <div className="grid grid-cols-2 gap-3">
@@ -415,7 +420,7 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
       </div>
 
       {/* ── Per-ticker coverage grid ──────────────────────────────────────────── */}
-      <Panel accent={AMBER}>
+      <Panel source={sourceOf(syncedAt ? syncedAt.toISOString() : null, { source: 'data-service' })} accent={AMBER}>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 pt-4">
           <div className="flex items-baseline gap-3">
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ fontFamily: "'Chakra Petch', sans-serif", color: AMBER }}>

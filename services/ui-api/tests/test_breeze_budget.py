@@ -3,13 +3,15 @@
 Every rule has a negative control: under the cap the call is allowed and counted; at the cap it is refused BEFORE the
 SDK runs (the guard raises, the body never executes); the minute window slides; the day resets at IST midnight; a
 caller's quota binds only that caller; the caps clamp to ICICI's documented ceiling; counters persist across instances
-on the same file; the status report carries no secret-looking keys; positions._breeze_call goes through the ledger.
+on the same file; the status report carries no secret-looking keys; positions._breeze_call goes through the ledger, and so
+do the trades route's get_order_list and the client's generate_session (a day cap of 0 refuses both before the SDK runs).
 """
 from __future__ import annotations
 
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import ClassVar
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -101,7 +103,9 @@ def test_caps_clamp_to_the_documented_ceiling(tmp_path: Path) -> None:
     assert led.cap_minute == bb.DOC_LIMIT_PER_MINUTE == 100 and led.cap_day == bb.DOC_LIMIT_PER_DAY == 5000
     led2 = bb.BreezeBudget(tmp_path / "d.sqlite", cap_minute=0, cap_day=-1)       # nonsense → defaults
     assert led2.cap_minute == bb.DEFAULT_CAP_PER_MINUTE and led2.cap_day == bb.DEFAULT_CAP_PER_DAY
-    assert bb.DEFAULT_CALLER_QUOTAS == {"chain_poller": 700}                      # O-T6 pilot default
+    # O-T6 pilot default; `iv_intraday: 800` (the fo_iv pilot's caller, PLAN 1.1) once the PM applies F-BACKEND's patch request
+    assert {k: v for k, v in bb.DEFAULT_CALLER_QUOTAS.items() if k != "iv_intraday"} == {"chain_poller": 700}
+    assert bb.DEFAULT_CALLER_QUOTAS.get("iv_intraday", 800) == 800
 
 
 def test_counters_persist_across_instances_on_one_file(tmp_path: Path, clock: Clock) -> None:
@@ -125,7 +129,7 @@ def test_guard_records_the_outcome_and_errors_still_count(ledger: bb.BreezeBudge
 
 
 def test_parse_quotas_and_status_carry_no_secrets(ledger: bb.BreezeBudget) -> None:
-    assert bb.parse_quotas("chain_poller=900, tick_engine=1200, bad, x=-1") == {"chain_poller": 900, "tick_engine": 1200}
+    assert bb.parse_quotas("chain_poller=900, tick_engine=1200, bad, x=-1") == {**bb.DEFAULT_CALLER_QUOTAS, "chain_poller": 900, "tick_engine": 1200}
     assert bb.parse_quotas(None) == bb.DEFAULT_CALLER_QUOTAS
     st = ledger.status()
     assert not {k for k in st if "token" in k or "secret" in k or "key" in k}
@@ -155,3 +159,93 @@ def test_positions_breeze_call_goes_through_the_ledger(tmp_path: Path, monkeypat
     st = pos.breeze_budget_status()
     assert st["by_caller"] == {pos.BREEZE_BUDGET_CALLER: 1} and st["by_method"] == {"get_funds": 1} and st["refused_today"] == 1
     bb.reset_ledger()
+
+
+# ── every Breeze call in routers/positions.py goes through the ledger (check:B3-API majors) ─────────────────────
+class _OrderBreeze:
+    """A fake BreezeConnect: records every SDK call; never opens a socket."""
+
+    def __init__(self) -> None:
+        self.calls: list[dict] = []
+
+    def get_order_list(self, **kw: object) -> dict:
+        self.calls.append(dict(kw))
+        return {"Status": 200, "Success": [{"order_id": "X1", "stock_code": "INFY", "action": "buy", "quantity": "2",
+                                            "average_price": "1500.5", "status": "Executed", "order_type": "limit",
+                                            "order_datetime": "04-Nov-2026 10:01:02"}]}
+
+
+@pytest.fixture
+def pos_ledger(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv(bb.ENV_DB, str(tmp_path / "pos_routes.sqlite"))
+    monkeypatch.delenv(bb.ENV_CAP_DAY, raising=False)
+    bb.reset_ledger()
+    import routers.positions as pos
+    yield pos
+    bb.reset_ledger()
+
+
+def test_trade_history_route_records_one_get_order_list_ledger_entry(pos_ledger, monkeypatch: pytest.MonkeyPatch) -> None:
+    pos = pos_ledger
+    fake = _OrderBreeze()
+    monkeypatch.setattr(pos, "_get_breeze_client", lambda: (fake, None))
+    body = pos.get_trade_history(limit=10)
+    assert body["connected"] is True and body["total_trades"] == 1 and body["trades"][0]["symbol"] == "INFY"
+    assert len(fake.calls) == 1 and fake.calls[0]["exchange_code"] == "NSE"
+    st = pos.breeze_budget_status()
+    assert st["by_method"] == {"get_order_list": 1} and st["by_caller"] == {pos.BREEZE_BUDGET_CALLER: 1}
+    assert st["used_day"] == 1 and st["refused_today"] == 0
+
+
+def test_trade_history_day_cap_zero_refuses_before_the_sdk_runs(pos_ledger, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Negative control: a day cap of 0 — the route answers 'budget' and the SDK method is never called."""
+    pos = pos_ledger
+    fake = _OrderBreeze()
+    monkeypatch.setattr(pos, "_get_breeze_client", lambda: (fake, None))
+    led = bb.ledger()
+    led.cap_day = 0                                    # the env clamp turns 0 into the default; the attribute is the cap
+    body = pos.get_trade_history(limit=10)
+    assert fake.calls == [], "the SDK ran past the cap"
+    assert body["ok"] is False and body["error_kind"] == "budget" and body["trades"] == [] and "budget" in body["error"]
+    st = led.status()
+    assert st["used_day"] == 0 and st["refused_today"] == 1
+
+
+class _FakeBreezeConnect:
+    sessions: ClassVar[list[str]] = []
+
+    def __init__(self, api_key: str) -> None:
+        self.api_key = api_key
+
+    def generate_session(self, api_secret: str, session_token: str) -> None:
+        _FakeBreezeConnect.sessions.append(session_token[:2])
+
+
+def _fake_breeze_module(monkeypatch: pytest.MonkeyPatch) -> None:
+    import types
+
+    import shared.breeze_cache as cache_mod
+    monkeypatch.setattr(cache_mod, "install", lambda: None)                 # never the security-master download
+    mod = types.ModuleType("breeze_connect")
+    mod.BreezeConnect = _FakeBreezeConnect  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "breeze_connect", mod)
+    _FakeBreezeConnect.sessions = []
+
+
+def test_generate_session_goes_through_the_ledger(pos_ledger, monkeypatch: pytest.MonkeyPatch) -> None:
+    pos = pos_ledger
+    _fake_breeze_module(monkeypatch)
+    client, err, kind = pos._build_breeze_client("k", "s", "tok")
+    assert err is None and kind is None and isinstance(client, _FakeBreezeConnect) and _FakeBreezeConnect.sessions == ["to"]
+    st = pos.breeze_budget_status()
+    assert st["by_method"] == {"generate_session": 1} and st["by_caller"] == {pos.BREEZE_BUDGET_CALLER: 1}
+
+
+def test_generate_session_refused_at_the_cap_before_the_sdk_runs(pos_ledger, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Negative control: past the cap the login is not attempted and the client reports the budget, not a login error."""
+    pos = pos_ledger
+    _fake_breeze_module(monkeypatch)
+    bb.ledger().cap_day = 0
+    client, err, kind = pos._build_breeze_client("k", "s", "tok")
+    assert client is None and kind == "budget" and "budget" in (err or "").lower()
+    assert _FakeBreezeConnect.sessions == [] and bb.ledger().status()["refused_today"] == 1

@@ -1183,7 +1183,7 @@ async def trigger_rl_training(background_tasks: BackgroundTasks, payload: dict =
 
 
 @router.get("/rl-training-metrics")
-async def get_rl_training_metrics():
+def get_rl_training_metrics():              # sync: FastAPI runs it on the worker pool (ASYNC230 blocking open, PLAN 0.8)
     metrics_path = RL_METRICS_PATH
     try:
         with open(metrics_path, "r") as f:

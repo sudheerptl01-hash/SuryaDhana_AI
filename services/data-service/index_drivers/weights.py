@@ -12,8 +12,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-
 from data_health import db
+
 from index_drivers.schema import CASTS, COLUMNS
 
 BANK_CAPS = (0.33, 0.62)

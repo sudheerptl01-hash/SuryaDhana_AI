@@ -15,7 +15,7 @@ import { useEffect, useState } from 'react'
 import { BadgeChip, Chip, Panel, T, fmtNum, sourceOf } from '@/components/terminal'
 import { percentileOf } from '@/components/terminal/source'
 import { LineChart, type Marker } from './charts'
-import { getIvHistory, getOptionHistoryLegacy, storeNote, type IvHistory, type OptionHistoryLegacy } from './api'
+import { getIvHistory, getOptionHistoryLegacy, storeNote, volError, type IvHistory, type OptionHistoryLegacy } from './api'
 
 export interface IvHistoryState { v2: IvHistory | null; legacy: OptionHistoryLegacy | null; error: string | null; loading: boolean }
 
@@ -34,7 +34,7 @@ export function useIvHistory(symbol: string, days = 750): IvHistoryState {
         .catch(() => { if (alive) set({ v2: r.data, legacy: null, error: why, loading: false }) })
     }).catch((e: unknown) => {
       if (!alive) return
-      const msg = e instanceof Error ? e.message : 'IV history unavailable'
+      const msg = volError(e, 'IV history unavailable')
       if (!['NIFTY', 'BANKNIFTY'].includes(symbol)) { set({ v2: null, legacy: null, error: msg, loading: false }); return }
       getOptionHistoryLegacy(symbol, 260).then(l => { if (alive) set({ v2: null, legacy: l.data, error: msg, loading: false }) })
         .catch(() => { if (alive) set({ v2: null, legacy: null, error: msg, loading: false }) })
@@ -49,7 +49,7 @@ const dayLabel = (d: string | null | undefined) => (d ? new Date(`${d}T00:00:00`
 export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: { symbol: string; state: IvHistoryState; collapsed?: boolean; onToggle?: () => void }) {
   const { v2, legacy, error, loading } = state
   const toggle = onToggle ? <Chip color={T.muted} onClick={onToggle} title={collapsed ? 'show the history chart' : 'collapse the chart to a strip'}>{collapsed ? 'HISTORY ▾' : 'HISTORY ▴'}</Chip> : null
-  if (loading) return <Panel title={`${symbol} implied volatility · history`} accent={T.violet} pad={8} right={toggle} style={{ marginBottom: 12 }}><div style={{ fontSize: 11, color: T.dim }}>Loading the stored IV series…</div></Panel>
+  if (loading) return <Panel source={sourceOf(null, { source: 'iv_summary_daily', hint: 'loading' })} title={`${symbol} implied volatility · history`} accent={T.violet} pad={8} right={toggle} style={{ marginBottom: 12 }}><div style={{ fontSize: 11, color: T.dim }}>Loading the stored IV series…</div></Panel>
 
   if (v2 && v2.ok && v2.rows.length >= 20) {
     const rows = v2.rows
@@ -80,12 +80,11 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
           {toggle}
         </span>}>
         {collapsed ? (
+          // the strip names the window and the overlay; the IV levels themselves are in the chain header strip (one number,
+          // one place: PLAN §0.4), so the collapsed chart repeats none of them
           <div style={{ fontSize: 10.5, color: T.muted, fontFamily: T.mono, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            <span>IV30 <b style={{ color: T.text }}>{fmtNum(last.iv30_cm, 2)}%</b></span>
-            <span>monthly ATM <b style={{ color: T.text }}>{fmtNum(last.monthly_atm_iv, 2)}%</b> ({last.monthly_expiry})</span>
-            <span>near ATM <b style={{ color: T.text }}>{fmtNum(last.near_atm_iv, 2)}%</b> ({fmtNum(last.near_dte, 0)}d)</span>
-            {hasVix && <span>India VIX <b style={{ color: T.text }}>{fmtNum(vix[vix.length - 1], 2)}</b></span>}
-            <span style={{ color: T.dim }}>{since} → {dayLabel(v2.as_of)}</span>
+            <span>IV30 (constant maturity) · monthly ATM line{hasVix ? ' · India VIX overlay' : ''} · results / expiry markers</span>
+            <span style={{ color: T.dim }}>{since} → {dayLabel(v2.as_of)} · {v2.sessions} sessions · last monthly expiry {last.monthly_expiry ?? '—'}</span>
           </div>
         ) : (
           <>
@@ -124,7 +123,7 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
           {toggle}
         </span>}>
         {collapsed ? (
-          <div style={{ fontSize: 10.5, color: T.muted, fontFamily: T.mono }}>near-expiry ATM IV <b style={{ color: T.text }}>{fmtNum(now, 2)}%</b> · {legacy.rows[0].date} → {legacy.rows[legacy.rows.length - 1].date} · legacy series</div>
+          <div style={{ fontSize: 10.5, color: T.muted, fontFamily: T.mono }}>near-expiry ATM IV (legacy series) · {legacy.rows[0].date} → {legacy.rows[legacy.rows.length - 1].date}{error ? <span style={{ color: T.amber }}> · IV store: {error} · backfill pending</span> : null}</div>
         ) : (
           <>
             <div style={{ fontSize: 10, color: T.muted, marginBottom: 6 }}>

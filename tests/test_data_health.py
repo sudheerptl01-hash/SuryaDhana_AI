@@ -183,3 +183,130 @@ def test_gap_rows_are_written_once_and_render_as_gap(store, tmp_path):
     assert h["summary"]["gap"] >= 1 and "note" in h and by["desk_mark"]["state"] == "unknown"
     assert gaps.clear_if_recovered(store, "archive:internals", [date(2026, 11, 4)]) == 1
     assert db.scalar(store, "SELECT COUNT(*) FROM data_gaps") == 4
+
+
+# ── the ui-api contract: /db/data-health rows carry every key ui-api's compose_b1_health reads ─────────────────────
+# (services/ui-api/routers/data_health.py; its fixture B1_HEALTH mirrors these keys — check:B3-API found the ui-api
+# reading max_age / t_plus / source_kind, keys this package never served)
+UI_API_READS = {"id", "label", "pages", "publisher", "published_ist", "expected_by", "as_of", "lag_sessions", "state", "unrecoverable",
+                "job_id", "dictionary_anchor", "badge", "max_age_sessions", "cadence", "note"}
+
+
+def test_health_rows_carry_the_keys_ui_api_composes(store, tmp_path):
+    catalog.seed(store)
+    h = reads.health(store, tmp_path, now=datetime(2026, 11, 5, 16, 30))
+    assert h["rows"] and "last_session" in h
+    for r in h["rows"]:
+        missing = UI_API_READS - set(r)
+        assert not missing, (r["id"], missing)
+        assert isinstance(r["pages"], list) and r["state"] in reads.STATES
+    # negative control: the catalog table itself does NOT carry the composed keys (state / as_of / job_id come from health())
+    raw = reads.catalog(store)["rows"][0]
+    assert "state" not in raw and "job_id" not in raw and "ingest_job" in raw
+
+
+# ── the equity bhavcopy re-publication (Wave 0 0.5; PLAN §0.3 as amended 5 Nov 2026; check:B1-DATA major) ───────────
+BHAV_HEAD = ("SYMBOL, SERIES, DATE1, PREV_CLOSE, OPEN_PRICE, HIGH_PRICE, LOW_PRICE, LAST_PRICE, CLOSE_PRICE, AVG_PRICE, TTL_TRD_QNTY, "
+             "TURNOVER_LACS, NO_OF_TRADES, DELIV_QTY, DELIV_PER\n")
+BHAV_1830 = BHAV_HEAD + "INFY, EQ, 04-Nov-2026, 1500.00, 1501.00, 1510.00, 1490.00, 1505.00, 1505.50, 1502.00, 100000, 1502.00, 5000, 50000, 50.00\n"
+BHAV_2205 = BHAV_HEAD + "INFY, EQ, 04-Nov-2026, 1500.00, 1501.00, 1510.00, 1490.00, 1505.00, 1506.25, 1502.00, 100000, 1502.00, 5000, 60000, 60.00\n"
+LM_1830 = "Wed, 04 Nov 2026 13:05:00 GMT"        # 18:35 IST
+LM_2205 = "Wed, 04 Nov 2026 16:35:00 GMT"        # 22:05 IST (R-DATA §4's measured re-publication)
+DAY = date(2026, 11, 4)
+
+
+def _bhav_rows(store):
+    return db.query_df(store, "SELECT symbol, close, deliv_pct, first_seen_at, release_at FROM nse_bhavcopy WHERE date = ?", [DAY])
+
+
+def test_http_date_parses_rfc1123_gmt_to_aware_utc():
+    import bhavcopy as bc
+
+    dt = bc.parse_http_date(LM_2205)
+    assert dt is not None and dt.utcoffset() == __import__("datetime").timedelta(0) and (dt.hour, dt.minute) == (16, 35)
+    assert bc.utc_naive(dt) == datetime(2026, 11, 4, 16, 35) and bc.utc_naive(dt).tzinfo is None
+    # negative controls: absent / garbage → None (never "now" by accident); a zone-less date is read as GMT, not IST
+    assert bc.parse_http_date(None) is None and bc.parse_http_date("yesterday evening") is None
+    assert bc.utc_naive(bc.parse_http_date("Wed, 04 Nov 2026 16:35:00 -0000")) == datetime(2026, 11, 4, 16, 35)
+
+
+def test_bhavcopy_first_sighting_then_the_2205_revision_is_versioned_not_overwritten(store, tmp_path):
+    import bhavcopy as bc
+    import nse_positions
+
+    cache = tmp_path / "nse_bhavcopy"
+    first_fetch = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, text=BHAV_1830, headers={"Last-Modified": LM_1830})))
+    res = bc.ingest_range(store, DAY, DAY, cache, client=first_fetch)
+    assert res["days_loaded"] == 1
+    # the 18:30 sighting is stamped: first_seen_at (our clock), release_at = the publisher's Last-Modified, an ingest_log row
+    rows = _bhav_rows(store)
+    assert rows["release_at"].iloc[0] == datetime(2026, 11, 4, 13, 5) and not rows["first_seen_at"].isna().any()
+    first_seen = rows["first_seen_at"].iloc[0]
+    log = ingest_log.recent(store, days=3650, dataset="nse_bhavcopy")
+    assert [(r["status"], r["revision"]) for r in log] == [("downloaded", 0)] and log[0]["last_modified"] == LM_1830
+    first_bytes = bc.cache_path(cache, DAY).read_bytes()
+
+    seen_ims: list[str | None] = []
+
+    def republished(req):
+        seen_ims.append(req.headers.get("If-Modified-Since"))
+        return httpx.Response(200, text=BHAV_2205, headers={"Last-Modified": LM_2205})
+
+    out = nse_positions.revise_bhavcopy(store, _client(republished), DAY, cache, now=datetime(2026, 11, 4, 17, 15))
+    assert seen_ims == [LM_1830], "the conditional GET carries the 18:30 copy's Last-Modified"
+    assert out["status"] == "revised" and out["revision"] == 1 and out["release_at_source"] == "last_modified"
+    # both copies on disk: the first untouched, the revision beside it
+    assert bc.cache_path(cache, DAY).read_bytes() == first_bytes
+    assert bc.revision_paths(cache, DAY) == [bc.revision_path(cache, DAY, 1)] and out["archived"] == "2026/sec_bhavdata_full_20261104.r1.csv.gz"
+    # the table holds the latest publication; release_at = the revision's Last-Modified; first_seen_at = the FIRST sighting
+    rows = _bhav_rows(store)
+    assert rows["close"].iloc[0] == 1506.25 and rows["deliv_pct"].iloc[0] == 60.0
+    assert rows["release_at"].iloc[0] == datetime(2026, 11, 4, 16, 35) and rows["first_seen_at"].iloc[0] == first_seen != datetime(2026, 11, 4, 17, 15)
+    log = ingest_log.recent(store, days=3650, dataset="nse_bhavcopy")
+    assert sorted((r["status"], r["revision"]) for r in log) == [("downloaded", 0), ("revised", 1)]
+    # a re-ingest from cache reads the newest copy (never silently back to the 18:30 values)
+    assert bc.latest_cached_path(cache, DAY) == bc.revision_path(cache, DAY, 1)
+    text, status = bc.download_day(DAY, cache, first_fetch)
+    assert status == "cached" and "1506.25" in text
+    # negative control: 304 → nothing written, nothing archived
+    out = nse_positions.revise_bhavcopy(store, _client(lambda r: httpx.Response(304)), DAY, cache, now=datetime(2026, 11, 4, 18, 0))
+    assert out["status"] == "not_modified" and len(bc.revision_paths(cache, DAY)) == 1 and _bhav_rows(store)["close"].iloc[0] == 1506.25
+
+
+def test_bhavcopy_revision_edge_cases(store, tmp_path):
+    import gzip
+
+    import bhavcopy as bc
+    import nse_positions
+
+    cache = tmp_path / "nse_bhavcopy"
+    def same(r: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=BHAV_1830, headers={"Last-Modified": LM_1830})
+
+    # (a) a day stored before this release (cached, in the table, no ingest_log row) answered with the same bytes: not a revision
+    p = bc.cache_path(cache, DAY)
+    p.parent.mkdir(parents=True)
+    p.write_bytes(gzip.compress(BHAV_1830.encode()))
+    store.upsert_bhavcopy(bc.parse_bhavcopy(BHAV_1830))
+    out = nse_positions.revise_bhavcopy(store, _client(same), DAY, cache, now=datetime(2026, 11, 4, 17, 15))
+    assert out["status"] == "not_modified" and bc.revision_paths(cache, DAY) == []
+    rows = _bhav_rows(store)
+    assert rows["release_at"].iloc[0] == datetime(2026, 11, 4, 13, 5) and not rows["first_seen_at"].isna().any()
+    # (b) an outage day (nothing on disk, nothing stored): the 22:45 fetch is the first sighting → the FIRST copy, not r1
+    d2 = date(2026, 11, 5)
+    body2 = BHAV_2205.replace("04-Nov-2026", "05-Nov-2026")
+    out = nse_positions.revise_bhavcopy(store, _client(lambda r: httpx.Response(200, text=body2, headers={"Last-Modified": LM_2205})),
+                                        d2, cache, now=datetime(2026, 11, 5, 17, 15))
+    assert out["status"] == "downloaded" and bc.cache_path(cache, d2).exists() and bc.revision_paths(cache, d2) == []
+    r2 = db.query_df(store, "SELECT first_seen_at, release_at FROM nse_bhavcopy WHERE date = ?", [d2])
+    assert r2["first_seen_at"].iloc[0] == datetime(2026, 11, 5, 17, 15) and r2["release_at"].iloc[0] == datetime(2026, 11, 4, 16, 35)
+    # (c) a body carrying another session's rows is refused (as the 18:30 ingest refuses it): nothing archived, nothing stored
+    d3 = date(2026, 11, 6)
+    out = nse_positions.revise_bhavcopy(store, _client(lambda r: httpx.Response(200, text=BHAV_2205)), d3, cache, now=datetime(2026, 11, 6, 17, 15))
+    assert out["status"] == "date_mismatch" and not bc.cache_path(cache, d3).exists()
+    assert db.scalar(store, "SELECT COUNT(*) FROM nse_bhavcopy WHERE date = ?", [d3]) == 0
+    # (d) no Last-Modified header: release_at falls back to the fetch time and says so
+    d4 = date(2026, 11, 9)
+    body4 = BHAV_1830.replace("04-Nov-2026", "09-Nov-2026")
+    out = nse_positions.revise_bhavcopy(store, _client(lambda r: httpx.Response(200, text=body4)), d4, cache, now=datetime(2026, 11, 9, 17, 0))
+    assert out["release_at_source"] == "fetch_time"

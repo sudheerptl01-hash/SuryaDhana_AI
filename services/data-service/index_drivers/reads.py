@@ -8,8 +8,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-
 from data_health import db
+
 from index_drivers import catalog_seed
 from index_drivers.schema import positions_meta
 
@@ -54,7 +54,7 @@ def fit_stats(store: Any, index_name: str, as_of: date, sessions: int = 60) -> d
     ss = float(((act - act.mean()) ** 2).sum())
     r2 = round(1 - float((err ** 2).sum()) / ss, 4) if ss > 0 else None
     mae = round(float(err.abs().mean()), 2)
-    return {"mae_60s": mae, "r2_60s": r2, "residual_today": round(float(err.iloc[0]), 2), "degraded": bool(mae > MAE_DEGRADED), "sessions": int(len(df))}
+    return {"mae_60s": mae, "r2_60s": r2, "residual_today": round(float(err.iloc[0]), 2), "degraded": bool(mae > MAE_DEGRADED), "sessions": len(df)}
 
 
 def drivers(store: Any, index_name: str, horizon: str = "1m") -> dict[str, Any]:

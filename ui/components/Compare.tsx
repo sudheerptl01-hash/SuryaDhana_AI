@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getNewsChart, getStockActions } from '@/lib/api'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
-import { CHART_BOX, Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, type Column, fmtFixed, fmtPct, ordinal, useChartSize } from '@/components/terminal'
+import { CHART_BOX, Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, type Column, fmtFixed, fmtPct, ordinal, sourceOf, useChartSize } from '@/components/terminal'
 import { compareAdd, compareBase, compareRemove, sameList } from '@/components/compareSet'
 import { useRequestSeq } from '@/components/useRequestSeq'
 
@@ -190,6 +190,8 @@ export function Compare() {
     { key: 'q', label: 'Latest quarter', align: 'right', render: r => <span style={{ color: T.muted }}>{fin[r.sym]?.period_end ?? '—'}</span> },
   ]
 
+  // PLAN §0.5: the newest stored close across the compared series is the panels' as-of
+  const compareSrc = sourceOf(Object.values(data).filter((v): v is Series => v !== 'error').map(v => v.dates[v.dates.length - 1] ?? '').sort().pop() || null, { source: 'NSE closes' })
   return (
     <div>
       <PageHeader code="COMP" title="Compare"
@@ -207,7 +209,7 @@ export function Compare() {
           <Input value={add} onChange={setAdd} placeholder={syms.length >= 8 ? 'max 8' : 'Add ticker + Enter'} width={160} />
         </form>
       </div>
-      <Panel title="Performance" accent={T.amber} pad={0}
+      <Panel source={compareSrc} badge="arithmetic" title="Performance" accent={T.amber} pad={0}
         subtitle={hover != null && aligned && chart ? `${aligned.dates[hover]} · ` + order.filter(s => chart.norm[s]).map(s => `${s === BENCH ? 'NIFTY' : s} ${fmtPct(chart.norm[s][hover] - 100, 1)}`).join(' · ') : 'hover the chart for values'}>
         <div ref={chartRef} style={CHART_BOX}>
         {!chart ? <div style={{ padding: 30, fontSize: 12, color: T.muted }}>Loading prices…</div> : (
@@ -242,10 +244,10 @@ export function Compare() {
         </div>
       </Panel>
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', marginTop: 12, alignItems: 'start' }}>
-        <Panel title="Risk and return" pad={0} accent={T.cyan}>
+        <Panel source={compareSrc} badge="arithmetic" title="Risk and return" pad={0} accent={T.cyan}>
           <DataTable columns={cols} rows={rows} rowKey={r => r.sym} dense />
         </Panel>
-        <Panel title="Correlation of daily returns" pad={10} accent={T.violet}>
+        <Panel source={compareSrc} badge="arithmetic" title="Correlation of daily returns" pad={10} accent={T.violet}>
           {aligned && syms.filter(s => aligned.series[s]).length > 1 ? (
             <table style={{ borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
               <thead><tr><th />{syms.filter(s => aligned.series[s]).map(s => <th key={s} style={{ padding: '3px 6px', color: color(s), fontWeight: 600 }}>{s.slice(0, 8)}</th>)}</tr></thead>
@@ -264,7 +266,7 @@ export function Compare() {
         </Panel>
       </div>
       {syms.length > 0 && (
-        <Panel title="Fundamentals" accent={T.green} pad={0} style={{ marginTop: 12 }}
+        <Panel source={{ state: 'delayed', source: 'NSE filings', asOf: null, hint: 'latest quarter per company; dates differ by company' }} badge="context" title="Fundamentals" accent={T.green} pad={0} style={{ marginTop: 12 }}
           subtitle={`latest quarter vs a year ago · valuation at the last NSE close · from NSE results filings${pending ? ` · reading ${pending} more…` : ''}`}>
           <DataTable columns={fcols} rows={syms.map(sym => ({ sym }))} rowKey={r => r.sym} dense />
         </Panel>

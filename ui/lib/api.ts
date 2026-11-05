@@ -730,7 +730,11 @@ export const getResultsReacting = () =>
   client.get<{ rows: ReactingResult[]; since: string; as_of?: string; nifty_change_pct?: number | null; phase?: 'session' | 'preopen' | 'closed' }>('/api/market/results-reacting', { timeout: 45000 })
 
 // Option monitor (OMON): EOD chain from NSE's F&O bhavcopy
-export interface OptionSide { price: number | null; oi: number | null; oi_chg: number | null; volume: number | null; iv: number | null }
+export interface OptionSide {
+  price: number | null; oi: number | null; oi_chg: number | null; volume: number | null; iv: number | null
+  /** NSE's own contract delta (Contract_Delta file, terminal v2 PLAN 1.3) when the route carries it; never computed here */
+  nse_delta?: number | null
+}
 export interface OptionChain {
   symbol: string; date: string; expiry: string; expiries: string[]; days_to_expiry: number
   spot: number | null; future: number | null; forward: number | null; forward_source: string

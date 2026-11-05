@@ -13,16 +13,26 @@ Source: https://nsearchives.nseindia.com/products/content/sec_bhavdata_full_DDMM
 (published ~16:00–16:30 IST; archive from late 2019). Raw files are cached as gzip
 under <data>/nse_bhavcopy/YYYY/ so a re-ingest never re-downloads. Prices are raw
 (unadjusted), exactly as NSE published them.
+
+Point-in-time (Terminal v2 PLAN §0.3 as amended 5 Nov 2026, Wave 0 0.5): the first sighting of a day stamps
+``first_seen_at`` (our fetch time, UTC-naive like every ``*_at`` column in the store) and ``release_at`` (the publisher's
+``Last-Modified``, RFC 1123 GMT → UTC) on its rows and writes an ``ingest_log`` row (url, sha256, Last-Modified), so the
+22:45 If-Modified-Since pass (``nse_positions.revise_bhavcopy``) can tell NSE's 22:05 re-publication from the 18:30 copy.
+A revision is archived BESIDE the first copy as ``sec_bhavdata_full_YYYYMMDD.rN.csv.gz`` (the first copy is never
+overwritten); the table holds the latest publication and a re-ingest from cache reads the newest revision.
 """
 from __future__ import annotations
 
 import gzip
+import hashlib
 import io
+import re
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 import httpx
 import pandas as pd
@@ -55,7 +65,53 @@ COLUMNS = {
 
 
 def cache_path(root: Path, day: date) -> Path:
+    """The FIRST copy of a day (the 18:30 download); never overwritten by a revision."""
     return root / f"{day:%Y}" / f"sec_bhavdata_full_{day:%Y%m%d}.csv.gz"
+
+
+_REV = re.compile(r"\.r(\d+)\.csv\.gz$")
+
+
+def revision_path(root: Path, day: date, revision: int) -> Path:
+    """Revision ``revision`` (≥ 1) of a day, archived beside the first copy."""
+    return root / f"{day:%Y}" / f"sec_bhavdata_full_{day:%Y%m%d}.r{int(revision)}.csv.gz"
+
+
+def revision_paths(root: Path, day: date) -> list[Path]:
+    """Every archived revision of a day, oldest first."""
+    folder = root / f"{day:%Y}"
+    found = [(int(m.group(1)), p) for p in folder.glob(f"sec_bhavdata_full_{day:%Y%m%d}.r*.csv.gz") if (m := _REV.search(p.name))]
+    return [p for _, p in sorted(found)]
+
+
+def latest_cached_path(root: Path, day: date) -> Path:
+    """The newest copy on disk: the last revision when one exists, else the first copy (which may not exist)."""
+    revs = revision_paths(root, day)
+    return revs[-1] if revs else cache_path(root, day)
+
+
+def parse_http_date(value: str | None) -> datetime | None:
+    """An HTTP date (``Last-Modified``: RFC 1123, always GMT) → an AWARE UTC datetime; None when absent or unparsable."""
+    if not value:
+        return None
+    try:
+        dt = parsedate_to_datetime(str(value).strip())
+    except (TypeError, ValueError, IndexError):
+        return None
+    if dt is None:
+        return None
+    if dt.tzinfo is None:                     # "-0000" / no zone: RFC 7231 says GMT
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def utc_naive(dt: datetime | None) -> datetime | None:
+    """Aware → UTC-naive, the store's convention for every ``*_at`` TIMESTAMP column (never the session's local zone)."""
+    return dt.astimezone(timezone.utc).replace(tzinfo=None) if dt is not None else None
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
 
 
 def parse_bhavcopy(text: str) -> pd.DataFrame:
@@ -124,12 +180,19 @@ def _xlsx_to_csv(content: bytes) -> Optional[str]:
 
 
 def download_day(day: date, cache_root: Path, client: httpx.Client, retries: int = 3,
-                 backoff_s: float = 2.0) -> tuple[Optional[str], str]:
+                 backoff_s: float = 2.0, meta: dict[str, Any] | None = None) -> tuple[Optional[str], str]:  # noqa: UP045 — legacy return
     """(csv text or None, status) — status: cached | downloaded | missing | error:<msg>.
-    'missing' = NSE has no file for the day (holiday / weekend)."""
+    'missing' = NSE has no file for the day (holiday / weekend). A cached day reads the newest copy (the last archived
+    revision, else the first). ``meta`` (optional, filled in place) receives what the point-in-time stamp needs: url,
+    sha256 / bytes of the published body, the publisher's Last-Modified / ETag, or the cached copy's first-sighting time."""
     path = cache_path(cache_root, day)
     if path.exists():
-        return gzip.decompress(path.read_bytes()).decode("utf-8", "replace"), "cached"
+        newest = latest_cached_path(cache_root, day)
+        raw = gzip.decompress(newest.read_bytes())
+        if meta is not None:
+            meta.update(url=url_for(day), status="cached", sha256=hashlib.sha256(raw).hexdigest(), bytes=len(raw), path=str(newest),
+                        first_seen=datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).replace(tzinfo=None, microsecond=0))
+        return raw.decode("utf-8", "replace"), "cached"
     last_err = ""
     for attempt in range(retries):
         try:
@@ -148,6 +211,9 @@ def download_day(day: date, cache_root: Path, client: httpx.Client, retries: int
                 tmp = path.with_suffix(".tmp")
                 tmp.write_bytes(gzip.compress(text.encode("utf-8")))
                 tmp.replace(path)
+                if meta is not None:
+                    meta.update(url=url_for(day), status="downloaded", sha256=hashlib.sha256(r.content).hexdigest(), bytes=len(r.content),
+                                last_modified=r.headers.get("last-modified"), etag=r.headers.get("etag"), path=str(path))
                 return text, "downloaded"
             last_err = f"HTTP {r.status_code} (not a bhavcopy CSV)"
         except httpx.HTTPError as exc:
@@ -176,15 +242,35 @@ class IngestSummary:
         return d
 
 
+def stamp_first_sighting(store: Any, day: date, meta: dict[str, Any], rows: int, *, now: datetime | None = None) -> None:
+    """The 18:30 ingest's point-in-time stamp for a day it just wrote: ``first_seen_at`` (kept when already set),
+    ``release_at`` = the publisher's Last-Modified (kept when already set; a revision sets its own), and the first
+    ``ingest_log`` row (status downloaded / cached, sha256, Last-Modified) unless one exists. Never raises into the ingest."""
+    from data_health import db as tdb
+    from data_health import ingest_log
+
+    now = now or _utcnow()
+    seen = meta.get("first_seen") or now
+    release = utc_naive(parse_http_date(meta.get("last_modified")))
+    tdb.execute(store, "UPDATE nse_bhavcopy SET first_seen_at = COALESCE(first_seen_at, ?), release_at = COALESCE(release_at, ?) "
+                       "WHERE date = ?", [seen, release, day])
+    if ingest_log.latest_success(store, "nse_bhavcopy", day) is None:
+        ingest_log.record(store, "nse_bhavcopy", day, str(meta.get("url") or url_for(day)), status=str(meta.get("status") or "downloaded"),
+                          sha256=meta.get("sha256"), nbytes=meta.get("bytes"), rows=rows, last_modified=meta.get("last_modified"),
+                          etag=meta.get("etag"), now=seen if meta.get("status") == "cached" else now)
+
+
 def ingest_range(store, start: date, end: date, cache_root: Path, progress: Optional[Callable] = None,
                  sleep_s: float = 0.35, client: Optional[httpx.Client] = None,
-                 days_filter: str = "all") -> dict:
+                 days_filter: str = "all", stamp_pit: bool = True) -> dict:
     """Download (or read from cache) and upsert every day in [start, end].
 
     Weekends are included by default: NSE holds real weekend sessions (Budget days,
     special/DR sessions, some Muhurat sessions) and the next session's PREV_CLOSE
     refers to them. Ordinary weekends simply 404 ("missing").
-    days_filter: "all" | "weekdays" | "weekends" (the last one backfills only weekends)."""
+    days_filter: "all" | "weekdays" | "weekends" (the last one backfills only weekends).
+    stamp_pit: stamp first_seen_at / release_at and the first ingest_log row for every day written
+    (``stamp_first_sighting``; a failure there is logged, never fatal to the ingest)."""
     days = [start + timedelta(n) for n in range((end - start).days + 1)]
     if days_filter == "weekdays":
         days = [d for d in days if d.weekday() < 5]
@@ -195,7 +281,8 @@ def ingest_range(store, start: date, end: date, cache_root: Path, progress: Opti
     client = client or httpx.Client(headers=HEADERS, timeout=30, follow_redirects=True)
     try:
         for i, day in enumerate(days, 1):
-            text, status = download_day(day, cache_root, client)
+            meta: dict[str, Any] = {}
+            text, status = download_day(day, cache_root, client, meta=meta)
             if status == "missing":
                 summary.days_missing += 1
             elif text is None:
@@ -211,15 +298,23 @@ def ingest_range(store, start: date, end: date, cache_root: Path, progress: Opti
                         # cache short-circuits the download, so that day's true file is never fetched.
                         # Drop the copy and count the day as missing: a later run retries it.
                         cache_path(cache_root, day).unlink(missing_ok=True)
+                        for rev in revision_paths(cache_root, day):
+                            rev.unlink(missing_ok=True)
                         summary.days_missing += 1
                         summary.date_mismatches.append(
                             {"requested": day.isoformat(), "file_dates": sorted(str(d) for d in file_days)[:3]})
                         logger.warning("Bhavcopy file date mismatch — dropped", requested=day.isoformat(),
                                        file_dates=sorted(str(d) for d in file_days)[:3])
                     else:
-                        summary.rows_written += store.upsert_bhavcopy(df)
+                        written = store.upsert_bhavcopy(df)
+                        summary.rows_written += written
                         summary.days_loaded += 1
                         summary.days_cached += status == "cached"
+                        if stamp_pit:
+                            try:
+                                stamp_first_sighting(store, day, meta, int(written))
+                            except Exception as exc:  # noqa: BLE001 — the PIT stamp never costs a day's data
+                                logger.warning("bhavcopy.pit_stamp_failed", date=day.isoformat(), error=f"{type(exc).__name__}: {exc}")
                 except Exception as exc:          # one bad file must not stop the backfill
                     summary.failures.append({"date": day.isoformat(), "error": f"parse: {exc}"})
             if status == "downloaded":

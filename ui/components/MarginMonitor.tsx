@@ -9,7 +9,7 @@ import { apiError } from '@/lib/errors'
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getMtfMonitor, type MtfStock } from '@/lib/api'
-import { CHART_BOX, Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, type Column, useChartSize } from '@/components/terminal'
+import { CHART_BOX, Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, type Column, useChartSize, sourceOf } from '@/components/terminal'
 
 const cr = (v: number | null | undefined) => (v == null ? '—' : v >= 1000 ? `₹${(v / 1000).toFixed(2)}k cr` : `₹${v.toFixed(v >= 100 ? 0 : 1)} cr`)
 const lakhCr = (lakh: number | null | undefined) => (lakh == null ? '—' : `₹${(lakh / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })} cr`)
@@ -67,7 +67,7 @@ export function MarginMonitor() {
             <Stat label="Fresh funding · last day" value={lakhCr(last.fresh_lakh)} />
             <Stat label="Liquidated · last day" value={lakhCr(last.liquidated_lakh)} color={T.red} />
           </div>
-          <Panel title="Market MTF book · 1 year" accent={T.violet} pad={8} style={{ marginBottom: 12 }}
+          <Panel source={sourceOf(data?.as_of ?? null, { source: 'NSE MTF report (T+1)', maxAgeDays: 5 })} badge="context" title="Market MTF book · 1 year" accent={T.violet} pad={8} style={{ marginBottom: 12 }}
             subtitle="total broker-funded positions, ₹ crore · a rising book late in a rally is leverage that has to be sold in a fall">
             <div ref={chartRef} style={CHART_BOX}>
             <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }} role="img" aria-label="MTF book">
@@ -81,13 +81,13 @@ export function MarginMonitor() {
             </div>
           </Panel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 12, alignItems: 'start' }}>
-            <Panel title="Fastest leveraged build-up" accent={T.amber} pad={0} subtitle={`funded quantity growth over ${lookback} sessions · ≥ ₹5 cr funded`}>
+            <Panel source={sourceOf(data?.as_of ?? null, { source: 'NSE MTF report (T+1)', maxAgeDays: 5 })} badge="context" title="Fastest leveraged build-up" accent={T.amber} pad={0} subtitle={`funded quantity growth over ${lookback} sessions · ≥ ₹5 cr funded`}>
               <DataTable columns={cols} rows={lists.building} rowKey={r => r.symbol} dense initialSort={{ key: 'c', dir: 'desc' }} />
             </Panel>
-            <Panel title="Most crowded" accent={T.red} pad={0} subtitle="days of normal turnover a forced sale would take · ≥ ₹5 cr funded">
+            <Panel source={sourceOf(data?.as_of ?? null, { source: 'NSE MTF report (T+1)', maxAgeDays: 5 })} badge="context" title="Most crowded" accent={T.red} pad={0} subtitle="days of normal turnover a forced sale would take · ≥ ₹5 cr funded">
               <DataTable columns={cols} rows={lists.crowded} rowKey={r => r.symbol} dense initialSort={{ key: 'd', dir: 'desc' }} />
             </Panel>
-            <Panel title="Largest funded positions" accent={T.cyan} pad={0} subtitle="₹ crore held on margin">
+            <Panel source={sourceOf(data?.as_of ?? null, { source: 'NSE MTF report (T+1)', maxAgeDays: 5 })} badge="context" title="Largest funded positions" accent={T.cyan} pad={0} subtitle="₹ crore held on margin">
               <DataTable columns={cols} rows={lists.largest} rowKey={r => r.symbol} dense initialSort={{ key: 'a', dir: 'desc' }} />
             </Panel>
           </div>

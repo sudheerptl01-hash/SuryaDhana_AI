@@ -1,6 +1,6 @@
 # NSE free data dictionary
 
-Every free NSE dataset useful for research, verified live on 2026-09-28 with `scripts/nse_free_data_catalog.py` (68 of 72 sources returned data; samples in `reports/nse_catalog/`), and re-verified for the Terminal v2 program on 4–5 Nov 2026 (paced GET/HEAD probes, browser UA; evidence in `reports/terminal_v2/R-DATA/probe_results_2026-11-04.json`, `R-IV/nse_probes.json`, `R-DRIVERS/evidence/`, `R-OPTIONS/REPORT.md` §4). Entries marked **Verified (Nov 2026)** carry the measured publication minute (HTTP `Last-Modified`, IST). The `<a id>` anchors are the targets of `dictionary_anchor` in data-service's `dataset_catalog` (`services/data-service/data_health/catalog.py`); the per-dataset terminal view is `docs/TERMINAL_DATA_DICTIONARY.md` (generated). Nothing here feeds the Decision Desk, the S1 shadow, a directional alert or a ticket price; every derived number the terminal shows carries a badge (`context` / `arithmetic` / `heuristic`; no `signal` exists in F&O or index attribution).
+Every free NSE dataset useful for research, verified live on 2026-09-28 with `scripts/nse_free_data_catalog.py` (68 of 72 sources returned data; samples in `reports/nse_catalog/`), and re-verified for the Terminal v2 program on 4–5 Nov 2026 (paced GET/HEAD probes, browser UA; evidence in `reports/terminal_v2/R-DATA/probe_results_2026-11-04.json`, `R-IV/nse_probes.json`, `R-DRIVERS/evidence/`, `R-OPTIONS/REPORT.md` §4). Entries marked **Verified (Nov 2026)** carry the measured publication minute: the HTTP `Last-Modified` header, which NSE sends in **GMT**, converted to IST (+5:30). B5 re-read seven of them on 5 Nov 2026 07:50 IST (1-byte range GETs through `shared/http_client.PacedClient`) because two earlier probe notes had quoted the raw GMT minute as IST (FOVOLT "11:28", Contract_Delta "12:58" / "13:48", delta-equivalent OI "13:48", participant volumes and FII stats "14:40", clients ≥ 3 % MWPL "12:50", `ind_close_all` "17:50"); every minute below is the converted one. The `<a id>` anchors are the targets of `dictionary_anchor` in data-service's `dataset_catalog` (`services/data-service/data_health/catalog.py`); the per-dataset terminal view is `docs/TERMINAL_DATA_DICTIONARY.md` (generated). Nothing here feeds the Decision Desk, the S1 shadow, a directional alert or a ticket price; every derived number the terminal shows carries a badge (`context` / `arithmetic` / `heuristic`; no `signal` exists in F&O or index attribution).
 
 ## Your question: who is holding overnight?
 
@@ -79,7 +79,7 @@ Positions and ownership: delivery, leverage, F&O open interest, shareholders
 
 - **Where on the site:** All Reports → Derivatives → Participant wise Trading Volumes
 - **Get it:** `nsearchives.nseindia.com/content/nsccl/fao_participant_vol_DDMMYYYY.csv`
-- **Verified (Nov 2026):** 200; measured **14:40 IST** (B1 probe, 4 Nov). Ingested by the 20:30 pass into `nse_participant_vol` (same layout as the OI file: a title line, then Client Type + 14 columns); badge `context`.
+- **Verified (Nov 2026):** 200; `Last-Modified` `Wed, 04 Nov 2026 14:40:34 GMT` = **20:10 IST**, the same minute as participant OI (B5 re-check). Ingested by the 20:30 pass into `nse_participant_vol` (same layout as the OI file: a title line, then Client Type + 14 columns); badge `context`.
 - **Published:** Daily, evening · **History:** Same as participant OI
 - **Key fields:** Same layout as participant OI, but volumes
 - **How to use it:** Pairs with participant OI: FIIs adding shorts on heavy volume carries more weight than a quiet change.
@@ -102,7 +102,7 @@ Positions and ownership: delivery, leverage, F&O open interest, shareholders
 - **Where on the site:** All Reports → Derivatives → Combined Delta Equivalent OI
 - **Get it:** `nsearchives.nseindia.com/archives/nsccl/mwpl/combineoi_deleq_DDMMYYYY.csv`
 - **Published:** Daily, evening · **History:** Recent files verified
-- **Verified (Nov 2026):** 200 on 4–5 Nov; measured **13:48 IST** on 4 Nov (B1 probe), i.e. the delta-equivalent file is published around midday for margins while the MWPL zip above follows at 19:23. Stored in `nse_combined_oi` (`notional_oi`, `fut_equiv_oi`); catalog row `nse_combined_oi`, badge `context`, verdict PUBLISH-CONTEXT. Precedent: the futures-equivalent OI column Bloomberg's OMON shows for stock options.
+- **Verified (Nov 2026):** 200 on 4–5 Nov; `Last-Modified` `13:48:02 GMT` = **19:18 IST** on 4 Nov (B5 re-check): five minutes before the MWPL zip above (19:23) and in the same second as the Contract_Delta file. Stored in `nse_combined_oi` (`notional_oi`, `fut_equiv_oi`); catalog row `nse_combined_oi`, badge `context`, verdict PUBLISH-CONTEXT. Precedent: the futures-equivalent OI column Bloomberg's OMON shows for stock options.
 - **Key fields:** Symbol, Notional Open Interest, Portfolio-wise Futures Equivalent Open Interest
 - **How to use it:** Better than raw OI for stocks with big option books: tells you the futures-equivalent position the market is carrying.
 
@@ -112,7 +112,7 @@ Positions and ownership: delivery, leverage, F&O open interest, shareholders
 
 - **Where on the site:** All Reports → Derivatives → Clients Position % ≥3% of Stock MWPL
 - **Get it:** `nsearchives.nseindia.com/content/nsccl/mwpl_cli_DDMMYYYY.xls (dated T−1)`
-- **Verified (Nov 2026):** 200; measured **12:50 IST** for the previous session (B1 probe). Ingested by the 20:30 pass into `nse_mwpl_clients` (`client_rank`, `pct_mwpl`; `t_minus` 1); badge `context`.
+- **Verified (Nov 2026):** 200; `Last-Modified` 12:50 GMT = **18:20 IST** (B1 probe on 4 Nov, minute converted by B5) for the file dated the previous session. Ingested by the 20:30 pass into `nse_mwpl_clients` (`client_rank`, `pct_mwpl`; `t_minus` 1); badge `context`.
 - **Published:** Daily, next day · **History:** Recent files verified
 - **Key fields:** Underlying stock, then Client 1…14 = each large client's position as % of MWPL (anonymous)
 - **How to use it:** Concentration signal: e.g. five clients each held 4–8% of ADANIENSOL's limit. Concentrated positioning can unwind violently; track entries and exits of big clients.
@@ -135,7 +135,7 @@ Positions and ownership: delivery, leverage, F&O open interest, shareholders
 
 - **Where on the site:** All Reports → Derivatives → FII derivatives statistics
 - **Get it:** `nsearchives.nseindia.com/content/fo/fii_stats_DD-Mon-YYYY.xls`
-- **Verified (Nov 2026):** 200; measured **14:40 IST** (B1 probe, 4 Nov). Ingested by the 20:30 pass into `nse_fii_stats` (one row per instrument line: INDEX FUTURES, NIFTY FUTURES, INDEX OPTIONS, …); badge `context`.
+- **Verified (Nov 2026):** 200; `Last-Modified` 14:40 GMT = **20:10 IST** (B1 probe on 4 Nov, minute converted by B5). Ingested by the 20:30 pass into `nse_fii_stats` (one row per instrument line: INDEX FUTURES, NIFTY FUTURES, INDEX OPTIONS, …); badge `context`.
 - **Published:** Daily, evening · **History:** Recent files verified; 2010 naming differs
 - **Key fields:** Index/stock futures and options: buy & sell contracts and value, OI contracts and value
 - **How to use it:** A money-weighted view of FII positioning that complements participant OI.
@@ -302,7 +302,7 @@ Option chains, contract data, settlement and margins inputs
 - **Where on the site:** All Reports → Derivatives → NCL Contract Delta
 - **Get it:** `nsearchives.nseindia.com/content/nsccl/Contract_Delta_DDMMYYYY.csv`
 - **Published:** Daily · **History:** Recent files verified
-- **Verified (Nov 2026):** `Contract_Delta_03112026.csv` 200, `Last-Modified` **12:58 IST** (R-IV); `Contract_Delta_04112026.csv` measured 13:48 (B1) — published around midday for margins, between ≈ 13:00 and 19:20 on the days measured; 6.9 MB. Fetched by `iv_eod` inside the 20:30 pass (`fo_iv.jobs.EOD_FILES`) into `nse_contract_delta`.
+- **Verified (Nov 2026):** `Contract_Delta_03112026.csv` 200, `Last-Modified` `12:58:03 GMT` = **18:28 IST** (R-IV's probe); `Contract_Delta_04112026.csv` `13:48:02 GMT` = **19:18 IST** (B5 re-check): an evening file (≈ 18:30–19:20 on the days measured), not a midday one; ≈ 6.9 MB uncompressed, ≈ 140k rows. Fetched by `iv_eod` inside the 20:30 pass (`fo_iv.jobs.EOD_FILES`) into `nse_contract_delta`.
 - **Key fields:** Date, Symbol, Expiry day, Strike Price, Option Type, Delta Factor (futures rows = 1)
 - **How to use it:** Delta-weight options OI yourself without a pricing model. In the terminal it is NSE's own delta beside ours on OMON / DERV (`context`); `iv_eod` logs any strike where |Δ_ours − Δ_NSE| > 0.05 as a model cross-check.
 
@@ -322,7 +322,7 @@ Option chains, contract data, settlement and margins inputs
 - **Where on the site:** All Reports → Derivatives → Daily Volatility
 - **Get it:** `nsearchives.nseindia.com/archives/nsccl/volt/FOVOLT_DDMMYYYY.csv`
 - **Published:** Daily · **History:** Recent files verified
-- **Verified (Nov 2026):** `FOVOLT_04112026.csv` `Last-Modified` **17:01 IST**, `FOVOLT_03112026.csv` 11:28 IST (14,907 B): published between late morning and ≈ 17:05. Fetched by `iv_eod` inside the 20:30 pass into `nse_fo_volt`; `fovolt_ann` is the third realised-vol line on OMON / DERV (`context`).
+- **Verified (Nov 2026):** `FOVOLT_04112026.csv` `Last-Modified` `11:31:10 GMT` = **17:01 IST** (R-DATA; B5 re-check), `FOVOLT_03112026.csv` `11:28:10 GMT` = **16:58 IST** (14,907 B): published at ≈ 17:00. Fetched by `iv_eod` inside the 20:30 pass into `nse_fo_volt`; `fovolt_ann` is the third realised-vol line on OMON / DERV (`context`).
 - **Key fields:** per underlying: close, previous close, log return, **EWMA daily volatility (λ = 0.995)**, annualised (× √365), and the same for the current-month future. NSE's header carries the formulas as column names, so the parser is positional.
 - **How to use it:** Margin-aware sizing for futures hedges; the exchange's own realised-vol estimate to set beside IV (IV − FOVOLT is a volatility risk premium, a description, never a direction).
 
@@ -333,9 +333,9 @@ Option chains, contract data, settlement and margins inputs
 - **Where on the site:** All Reports → Derivatives → SPAN risk parameter files (NSE Clearing)
 - **Get it:** `nsearchives.nseindia.com/archives/nsccl/span/nsccl.YYYYMMDD.s.zip` (end of day; NCL also publishes intraday files whose names were not probed — do not cite them)
 - **Published:** Daily, ≈ 17:00 · **History:** Recent files
-- **Verified (Nov 2026):** `nsccl.20261104.s.zip` answered **206 Partial** to a range GET, `application/zip`, `Last-Modified` **17:02 IST** (R-OPTIONS §4). Breeze's `margin_calculator(legs, "NFO")` returned real SPAN for the same legs: a NIFTY 09-Nov-2026 iron condor ₹81,497.07, a lone short 23700 PE ₹1,72,460.67, against ₹3.9 L from the old 12 %-of-notional heuristic (**4.8× too high**).
+- **Verified (Nov 2026):** `nsccl.20261104.s.zip` answered **206 Partial** to a range GET, `application/zip`, `Last-Modified` `11:32:03 GMT` = **17:02 IST** (R-OPTIONS §4; B5 re-check). Breeze's `margin_calculator(legs, "NFO")` returned real SPAN for the same legs: a NIFTY 09-Nov-2026 iron condor ₹81,497.07, a lone short 23700 PE ₹1,72,460.67, against ₹3.9 L from the old 12 %-of-notional heuristic (**4.8× too high**).
 - **Key fields:** the SPAN risk arrays per contract (16 price/vol scenarios), the calendar-spread charge, the short-option minimum, exposure (non-SPAN) margin rates
-- **How to use it:** Real margin for an options structure when the broker session is down. In the terminal `POST /api/options/margin` tries Breeze (through the budget ledger) → this file parsed offline from `data/nse_archive/span/` (`SPAN_ARCHIVE_DIR`) → the heuristic last, with its measured 4.8× error printed; the ticket shows `span_margin_required`, `non_span_margin_required` and a source chip BREEZE / NSE SPAN FILE / HEURISTIC. Badge `arithmetic`. **Fetch status:** the parser and the fallback chain are in the tree; no scheduled job downloads this file yet (the 20:30 pass does not include it) — place a file by hand or wait for the fetch step.
+- **How to use it:** Real margin for an options structure when the broker session is down. In the terminal `POST /api/options/margin` tries Breeze (through the budget ledger) → this file parsed offline from `data/nse_archive/span/` (`SPAN_ARCHIVE_DIR`) → the heuristic last, with its measured 4.8× error printed; the ticket shows `span_margin_required`, `non_span_margin_required` and a source chip BREEZE / NSE SPAN FILE / HEURISTIC. Badge `arithmetic`. **Fetch status:** the parser and the fallback chain are in the tree; no scheduled job downloads this file yet (the 20:30 pass does not include it) — place a file by hand or wait for the fetch step. **File vs broker (4 Nov 2026, B3's parse of `nsccl.20261104.s.spn`):** the file's scanning risk for the same NIFTY condor came to ₹8,124 (1 lot) and for the lone written 23700 PE ₹1,22,247, against Breeze's ₹81,497.07 and ₹1,72,460.67: the broker adds its own rules and intraday parameters on top of exchange SPAN, so the file leg is the exchange's arithmetic, not what ICICI will block. The chip says which source answered; the gap is measured in the first live week (PLAN G13) before the ticket leans on the file when Breeze is down.
 
 <a id="lot-sizes"></a>
 ### F&O lot sizes
@@ -396,6 +396,7 @@ What to avoid: surveillance flags, bans, circuit bands
 - **Where on the site:** All Reports → Derivatives → Security in ban period
 - **Get it:** `nsearchives.nseindia.com/archives/fo/sec_ban/fo_secban_DDMMYYYY.csv (named for the next trade date)`
 - **Published:** Daily, evening · **History:** Recent files verified
+- **Verified (Nov 2026):** `fo_secban_05112026.csv` (the list for 5 Nov) 200 · 62 B (KAYNES, SAIL), published **19:24 IST** on 4 Nov (R-OPTIONS; B1's raw 13:54 GMT agrees). The terminal reads it as the OMON ban chip and the screener's `ban` column (`context`).
 - **Key fields:** List of symbols
 - **How to use it:** Entering and leaving the ban are volatile events; avoid fresh swing entries around them.
 
@@ -520,7 +521,7 @@ Index levels, valuations, breadth, VIX
 - **Where on the site:** Market Data → Indices
 - **Get it:** `www.nseindia.com/api/allIndices · daily file nsearchives.nseindia.com/content/indices/ind_close_all_DDMMYYYY.csv`
 - **Published:** Live / daily · **History:** Daily file for history
-- **Verified (Nov 2026):** `ind_close_all_03112026.csv` 200 · 7,394 B · `Last-Modified` **17:50 IST**; columns Index Name, Index Date, Open/High/Low/Closing Index Value, Points Change, Change(%), Volume, Turnover, P/E, P/B, Div Yield — one row per index **including India VIX**. One GET in the 19:15 `index_valuation_daily` job and in `iv_eod`; it feeds `index_ohlc_daily` (every index OHLC: the Parkinson / Yang-Zhang inputs and the index level `L` for the drivers), `vix_daily` (OHLC) and `market_index_daily` (`source = nse_daily_file`; readers prefer it over the Yahoo rows). Whether it also replaces the NIFTY series under the crash filter is O-T9 ("DO NOT CHANGE without review").
+- **Verified (Nov 2026):** `ind_close_all_03112026.csv` 200 · `Last-Modified` `17:50:11 GMT` = **23:20 IST** on 3 Nov, and `ind_close_all_04112026.csv` `17:50:09 GMT` = **23:20 IST** on 4 Nov (B5 re-check): the file is **re-written late at night**. A first version exists earlier (the 19:15 `index_valuation_daily` job reads it), its first-publication minute is not measured, and the 22:45 pass's If-Modified-Since re-check runs before the 23:20 re-write, so whether the re-write changes a number is not yet known (a re-check after 23:20 would log a changed sha256 as a revision row); columns Index Name, Index Date, Open/High/Low/Closing Index Value, Points Change, Change(%), Volume, Turnover, P/E, P/B, Div Yield — one row per index **including India VIX**. One GET in the 19:15 `index_valuation_daily` job and in `iv_eod`; it feeds `index_ohlc_daily` (every index OHLC: the Parkinson / Yang-Zhang inputs and the index level `L` for the drivers), `vix_daily` (OHLC) and `market_index_daily` (`source = nse_daily_file`; readers prefer it over the Yahoo rows). Whether it also replaces the NIFTY series under the crash filter is O-T9 ("DO NOT CHANGE without review").
 - **Key fields:** index, last, change, P/E, P/B, dividend yield, advances, declines, 30-day & 365-day change (INDIA VIX included)
 - **How to use it:** Regime inputs: NIFTY P/E, breadth and India VIX for sizing and for the crash filter.
 
@@ -531,7 +532,7 @@ Index levels, valuations, breadth, VIX
 - **Where on the site:** Market Data → India VIX → Historical data
 - **Get it:** `www.nseindia.com/api/historicalOR/vixhistory?from=DD-MM-YYYY&to=DD-MM-YYYY` (cookie-primed session, browser UA; **≤ 1 year per call**, so page it; paced 2 s) · the daily close also sits in the `ind_close_all` file above
 - **Published:** Daily after close · **History:** 2014 → today (verified ranges in 2026)
-- **Verified (Nov 2026):** 200 with the site cookie (R-IV; `R-IV/nse_probes.json`); the older `api/historical/vixhistory` path answered **503** on 4 Nov (R-WORLD) — use `historicalOR`. One-off backfill job `vix_backfill` (`POST :8001/jobs/iv-eod?job=vix_backfill`) writes `vix_daily` with `source = nse_vixhistory`; the nightly rows come from the daily file (`source = nse_daily_file`).
+- **Verified (Nov 2026):** 200 with the site cookie (R-IV; `R-IV/nse_probes.json`); the older `api/historical/vixhistory` path answered **503** on 4 Nov (R-WORLD) — use `historicalOR`. One-off backfill job `vix_backfill` (`POST :8001/jobs/iv-eod?job=vix_backfill`) writes `vix_daily` with `source = nse_vixhistory`; the nightly rows come from the daily file (`source = nse_daily_file`). **Open (5 Nov):** B1's probe saw the cookie-priming GET on `www.nseindia.com/` answer **403** to the shared `PacedClient`, which opens the 600 s NSE breaker before the vixhistory call; the backfill has not run, and until the prime works `vix_daily` fills only from the nightly daily file.
 - **Key fields:** EOD_TIMESTAMP, EOD_OPEN/HIGH/LOW/CLOSE_INDEX_VAL, EOD_PREV_CLOSE, VIX_PTS_CHG, VIX_PERC_CHG
 - **How to use it:** The only *published* IV history for India. In the terminal `vix_daily` is the one source of the VIX everywhere (DERV header strip, the overlay on the IV chart); India VIX is a model-free 30-day variance strip over the OTM wings, so it sits ≈ 1 vol-pt above our ATM `iv30_cm` (the skew term) and both move together (corr 0.978 since Jul 2024). Badge `context`.
 
@@ -553,7 +554,7 @@ Index levels, valuations, breadth, VIX
 - **Where on the site:** All Reports → Indices → NIFTY 50 Top 10 Holdings
 - **Get it:** `nsearchives.nseindia.com/content/indices/top10nifty50_DDMMYY.csv` (note the two-digit year: `top10nifty50_041126.csv`)
 - **Published:** Daily · **History:** Recent
-- **Verified (Nov 2026):** 200 · 370 B · text/csv on 4 Nov (HDFCBANK 10.20, ICICIBANK 9.22, RELIANCE 7.91, BHARTIARTL 5.68, LT 4.17, SBIN 3.65, INFY 3.60, AXISBANK 3.20, KOTAKBANK 3.05, BAJFINANCE 2.45; Σ 53.13 %). Present by 22:18; the exact publication minute is not yet measured, so the 19:25 job reads it and the 20:30 pass retries at 20:35. NSE publishes **no full daily weight file** for free; this is the only official daily weight anchor.
+- **Verified (Nov 2026):** 200 · 370 B · text/csv on 4 Nov (HDFCBANK 10.20, ICICIBANK 9.22, RELIANCE 7.91, BHARTIARTL 5.68, LT 4.17, SBIN 3.65, INFY 3.60, AXISBANK 3.20, KOTAKBANK 3.05, BAJFINANCE 2.45; Σ 53.13 %). `Last-Modified` `11:00:33 GMT` = **16:30 IST** on 4 Nov (B5 re-check), so the 19:25 `index_drivers_daily` job finds it; the 20:35 retry inside the 20:30 pass is the safety net for a late day. NSE publishes **no full daily weight file** for free; this is the only official daily weight anchor.
 - **Key fields:** SYMBOL, SECURITY, WEIGHTAGE(%)
 - **How to use it:** Concentration context for index hedges. In the terminal it calibrates the rebuilt point-in-time weights (`index_weights_daily.method = rebuilt_calibrated`, `iwf_correction = official ÷ rebuilt` on the ten names, the other forty pro rata; the fit explains 99.6 % of daily variance, MAE 9.4 pts/day over 229 sessions). Display-only with attribution (O-T11).
 
@@ -645,7 +646,7 @@ Security master, holidays, lot sizes, the report index itself
 <a id="yahoo"></a>
 ### Non-NSE sources the terminal catalog anchors here
 
-- **Yahoo Finance daily bars (`ohlcv`, 1,496 tickers):** the existing nightly refresh through the app's single cached fetcher stays; **no new Yahoo caller** may be added anywhere (CLAUDE.md anti-pattern; PLAN §0.7), and the Yahoo leg under `/db/market-monitor`'s lock is being replaced by the `ind_close_all` row stored nightly. Yahoo rows in `market_index_daily` are kept as a second source; readers prefer `nse_daily_file`.
+- **Yahoo Finance daily bars (`ohlcv`, 1,496 tickers):** the existing nightly refresh through the app's single cached fetcher stays; **no new Yahoo caller** may be added anywhere (CLAUDE.md anti-pattern; PLAN §0.7), and the Yahoo leg under `/db/market-monitor`'s lock is gone: the route reads NIFTY 500 from NSE's daily index file and falls back to the stored NIFTY 50 closes (code in the tree, not deployed until the next data-service restart). Yahoo rows in `market_index_daily` are kept as a second source; readers prefer `nse_daily_file`.
 - **ICICI Breeze (read-only):** option chain quotes (60 strikes/side, 26 fields, **no IV, no Greeks**), option history (`get_historical_data_v2`, 1-minute / 1-day, expired contracts served back to 2020; daily close = last trade, so never the EOD source), `margin_calculator`. Every call passes through `shared/breeze_budget.py` (100/min · 5,000/day documented ceiling; the owner's cap O-T6 is the budget) and only when a session is live. Own-account use, no redistribution.
 
 ## When each dataset becomes public (avoid look-ahead)
@@ -657,7 +658,7 @@ Security master, holidays, lot sizes, the report index itself
 | FII/DII cash flows | Same evening (provisional) | Next session |
 | Bhavcopy, delivery, bulk/block, short selling, F&O bhavcopy, participant OI, combined OI, ban list | Evening after the close | Next session's open at the earliest |
 | Margin trading (MTF), clients ≥3% MWPL | Next day (T+1) | Two sessions after the positions |
-| **Measured (HTTP `Last-Modified`, IST, 3–4 Nov 2026):** FOVOLT 11:28 / 17:01 · Contract_Delta 12:58 / 13:48 · clients ≥3% MWPL 12:50 (T−1) · participant volumes and FII stats 14:40 · SPAN file 17:02 · `ind_close_all` 17:50 · combined OI (MWPL zip) 19:23 · ban list 19:24 (named for the next session) · **F&O bhavcopy and participant OI 20:10** · **equity bhavcopy re-published 22:05** · **MTF 22:12 for T−1** · top-10 weights present by 22:18 (minute unmeasured) | the terminal's schedule follows this clock: 18:30 equity-only, 20:30 F&O pass (+ `iv_eod` last, 20:35 drivers retry), 22:45 late files and revisions, 08:35 sweep | a dataset stored before its re-publication is a revision row in `ingest_log`, never an overwrite |
+| **Measured (HTTP `Last-Modified`, GMT converted to IST, 3–4 Nov 2026):** top-10 weights 16:30 · FOVOLT 16:58 / 17:01 · SPAN file 17:02 · clients ≥3% MWPL 18:20 (T−1) · Contract_Delta 18:28 / 19:18 · delta-equivalent OI 19:18 · combined OI (MWPL zip) 19:23 · ban list 19:24 (named for the next session) · **F&O bhavcopy, participant OI, participant volumes and FII stats 20:10** · **equity bhavcopy re-published 22:05** · **MTF 22:12 for T−1** · `ind_close_all` re-written 23:20 (a first version is read at 19:15) | the terminal's schedule follows this clock: 18:30 equity-only, 20:30 F&O pass (+ `iv_eod` last, 20:35 drivers retry), 22:45 late files and revisions, 08:35 sweep | a dataset stored before its re-publication is a revision row in `ingest_log`, never an overwrite |
 | Insider trades (PIT) | A few days after the trade | Use the intimation date, never the trade date |
 | Shareholding pattern | Within 21 days of quarter end | Use the broadcast date |
 | Financial results | Within 45 days of quarter end (60 for Q4) | Use the filing timestamp |
@@ -678,6 +679,7 @@ Security master, holidays, lot sizes, the report index itself
 12. In the F&O bhavcopy an untraded strike's `SttlmPric` is NSE's theoretical value: computing IV from it feeds the exchange's model back as "market" IV. Use `ClsPric` only when `TtlTradgVol > 0`. Expiry calendars change (NIFTY: Thursday → Tuesday in Sep 2025 → other days in 2026): read expiries from the file, never assume a weekday.
 13. Breeze's daily option close is the last trade (198.00 vs NSE's 193.20 `ClsPric` on 3 Nov 2026) and its OI / volume are different snapshots and units (10,408,970 units = 160,138 contracts × 65): never mix Breeze bars with NSE files in one series.
 14. NSE's F&O volatility files annualise with √365, the IV store's realised vols with √252: label the convention next to the number.
+15. NSE's `Last-Modified` header is GMT. Add 5:30 before reading it as a publication minute (11:31 GMT is the 17:01 IST FOVOLT, not a late-morning file), and remember a late re-write moves it (`ind_close_all` reads 23:20 although a first version exists by 19:15).
 
 ## Not available for free, or blocked
 
@@ -736,4 +738,4 @@ Full results: `reports/held_overnight/FINDINGS.md`.
 
     /Users/sudheer/Desktop/jupyter_env/bin/python scripts/nse_free_data_catalog.py --symbol RELIANCE
 
-The Terminal v2 rows above were verified by the research agents' paced probes on 4–5 Nov 2026 (evidence files named in the header). Every fetcher in the stack now goes through `shared/http_client.py` (`PacedClient`: host allowlist, ≥ 1.2 s between requests to one host, 20 s timeout, browser UA for NSE, a 600 s breaker after a 403/429 from an NSE host); `tests/test_hosts_allowlist_terminal.py` and `tests/arch/test_hosts_allowlist_shared.py` scan the sources for any other host. The per-dataset view the terminal itself renders (publisher, cadence, `expected_by`, ingest job, badge, verdict) is `docs/TERMINAL_DATA_DICTIONARY.md`, generated from `dataset_catalog` by `scripts/terminal_data_dictionary.py` (`--check` runs in the test suites).
+The Terminal v2 rows above were verified by the research agents' paced probes on 4–5 Nov 2026 (evidence files named in the header) and B5's seven range GETs on 5 Nov 07:50 IST (publication minutes; the header is GMT). Every Terminal v2 fetcher (`fo_iv/`, `index_drivers/`, `data_health/`, the new `nse_positions.py` file ingests) goes through `shared/http_client.py` (`PacedClient`: host allowlist, ≥ 1.2 s between requests to one host, 20 s timeout, browser UA for NSE, a 600 s breaker after a 403/429 from an NSE host); `tests/test_hosts_allowlist_terminal.py` and `tests/arch/test_hosts_allowlist_shared.py` scan the sources for any other host. The per-dataset view the terminal itself renders (publisher, cadence, `expected_by`, ingest job, badge, verdict) is `docs/TERMINAL_DATA_DICTIONARY.md`, generated from `dataset_catalog` by `scripts/terminal_data_dictionary.py` (`--check` runs in the test suites).

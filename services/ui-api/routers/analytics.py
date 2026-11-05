@@ -75,6 +75,9 @@ def warm_snapshot() -> None:
     request doesn't spend ~40 s copying the DB (past Next's 30 s proxy timeout → 500)."""
     def _run() -> None:
         try:
+            removed = _snapshot.prune_orphans()          # PLAN 1.5: private copies earlier boots left in /tmp
+            if removed:
+                print(f"[ui-api] pruned {len(removed)} orphaned analytics snapshot(s)")
             con, owns = _acquire_readonly(lambda *a, **k: None)
             if owns:
                 con.close()

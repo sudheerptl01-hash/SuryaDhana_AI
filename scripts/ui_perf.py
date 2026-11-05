@@ -64,6 +64,16 @@ BUDGETS: dict[str, float] = {
     "boot_to_interactive_ms": 2500.0,
 }
 
+#: Terminal v2 G10 (reports/terminal_v2/PLAN.md §1.7) per-page budgets by page code, p95 of the switch time. A page with
+#: a READY_SELECTORS entry is "ready" only once that element has rendered: OMON's chain rows (`data-strike-row`), so
+#: "OMON chain ready <= 400 ms" measures the chain on screen, not just the page frame.
+PAGE_BUDGETS_MS: dict[str, float] = {
+    "OMON": 400.0,
+}
+READY_SELECTORS: dict[str, str] = {
+    "OMON": "[data-strike-row]",
+}
+
 #: Long-lived requests that never "finish" (SSE, streamed fetches, websockets) never block network idle.
 STREAM_RE = re.compile(r"/stream(?:/|\?|$)|/ws/|/rl-stream/|/ml-stream/")
 #: Resource types that are never part of "network idle".
@@ -126,13 +136,13 @@ INIT_SCRIPT = r"""
 """
 
 SWITCH_JS = r"""
-([tab, code, skel, evt]) => {
+([tab, code, skel, evt, sel]) => {
   const P = window.__sdPerf;
   const t0 = performance.now();
   const S = { tab, t0, t0Epoch: performance.timeOrigin + t0, readyAt: null, frames: 0 };
   P.switch = S;
   const ready = () => document.title.startsWith(code + ' ') && !document.querySelector(skel)
-    && new URLSearchParams(location.search).get('tab') === tab;
+    && new URLSearchParams(location.search).get('tab') === tab && (!sel || !!document.querySelector(sel));
   const tick = () => {
     if (P.switch !== S) return;
     S.frames++;
@@ -480,7 +490,7 @@ def measure_tab(browser_name: str, page: Any, net: NetLog, p: PageDef, run: int,
         wait_network_idle(page, net, time.monotonic(), idle_ms, timeout_s, background)
     perf_t0 = page.evaluate("() => performance.now()")
     mono0 = time.monotonic()
-    t0 = page.evaluate(SWITCH_JS, [p.id, p.code, SKELETON_SELECTOR, GOTO_EVENT])
+    t0 = page.evaluate(SWITCH_JS, [p.id, p.code, SKELETON_SELECTOR, GOTO_EVENT, READY_SELECTORS.get(p.code)])
     t0_epoch = float(t0["t0Epoch"])
 
     def ready() -> bool:
@@ -572,6 +582,35 @@ def pct(values: Iterable[float], q: float) -> float | None:
     return round(v[k], 1)
 
 
+def budget_breaches(res: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every budget a result breaks (pure): first-load JS gz (bundle analysis, else the cold-load median), the overall
+    tab-switch p95, each PAGE_BUDGETS_MS page's switch p95 per engine, and a budgeted page that never settled."""
+    out: list[dict[str, Any]] = []
+    gz = (res.get("bundle") or {}).get("first_load_js_gz_kb")
+    cold = [c for c in res.get("cold", []) if c.get("js_gz_kb") is not None]
+    if gz is None and cold:
+        gz = pct([c["js_gz_kb"] for c in cold], 50)
+    if gz is not None and gz > BUDGETS["first_load_js_gz_kb"]:
+        out.append({"budget": "first_load_js_gz_kb", "limit": BUDGETS["first_load_js_gz_kb"], "value": gz, "where": "first load"})
+    tabs = res.get("tabs", [])
+    for br in sorted({t["browser"] for t in tabs}):
+        ts = [t for t in tabs if t["browser"] == br and t.get("run", 1) > 0]
+        p95 = pct([t["switch_ms"] for t in ts if t.get("switch_ms") is not None], 95)
+        if p95 is not None and p95 > BUDGETS["tab_switch_p95_ms"]:
+            out.append({"budget": "tab_switch_p95_ms", "limit": BUDGETS["tab_switch_p95_ms"], "value": p95, "where": br})
+        for code, limit in PAGE_BUDGETS_MS.items():
+            mine = [t for t in ts if t.get("code") == code]
+            if not mine:
+                continue
+            settled = [t["switch_ms"] for t in mine if t.get("switch_ms") is not None]
+            v = pct(settled, 95)
+            if v is None:
+                out.append({"budget": f"page_{code}_p95_ms", "limit": limit, "value": None, "where": f"{br}: never ready"})
+            elif v > limit:
+                out.append({"budget": f"page_{code}_p95_ms", "limit": limit, "value": v, "where": br})
+    return out
+
+
 def summarize(results: list[dict[str, Any]]) -> str:
     """Markdown tables (cold load, per-browser tab-switch distribution, top-10 slowest tabs) for raw results."""
     out: list[str] = []
@@ -640,6 +679,10 @@ def summarize(results: list[dict[str, Any]]) -> str:
             out.append(f"Off-origin hosts contacted during tab switches: {hosts}\n")
         if res.get("blocked_writes"):
             out.append(f"Blocked non-GET /api requests: {sorted(set(res['blocked_writes']))}\n")
+        breaches = budget_breaches(res)
+        limits = ", ".join([f"{k} {v:g}" for k, v in BUDGETS.items()] + [f"{c} p95 {v:g} ms" for c, v in PAGE_BUDGETS_MS.items()])
+        out.append(f"Budgets ({limits}): " + ("all met" if not breaches else "; ".join(
+            f"**{b['budget']}** {b['value']} > {b['limit']:g} ({b['where']})" for b in breaches)) + "\n")
     return "\n".join(out)
 
 
@@ -765,6 +808,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--allow-writes", action="store_true", help="do NOT abort non-GET /api requests (never on live)")
     ap.add_argument("--headed", action="store_true")
     ap.add_argument("--write-summary", action="store_true")
+    ap.add_argument("--enforce-budgets", action="store_true",
+                    help="exit 1 when a BUDGETS / PAGE_BUDGETS_MS budget is breached (Terminal v2 G10)")
     ap.add_argument("--summarize", nargs="+", type=Path, default=None,
                     help="print the summary of raw JSON (or CSV) result files and exit")
     ap.add_argument("--prefs-mode", choices=_qa_probe().PREFS_MODES, default="readonly",
@@ -798,7 +843,7 @@ def main(argv: list[str] | None = None) -> int:
         "meta": {"label": args.label, "base": args.base, "runs": args.runs, "idle_ms": args.idle_ms,
                  "viewport": [args.width, args.height], "started": time.strftime("%Y-%m-%d %H:%M:%S %z"),
                  "post_load_wait_s": args.post_load_wait, "prefs_mode": args.prefs_mode,
-                 "pages": len(pages), "budgets": BUDGETS},
+                 "pages": len(pages), "budgets": BUDGETS, "page_budgets_ms": PAGE_BUDGETS_MS},
         "cold": [], "tabs": [], "background": {}, "heap_after_sweep": [], "blocked_writes": [], "bundle": None,
     }
     if args.bundle_dir:
@@ -821,6 +866,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.write_summary:
         (args.out_dir / f"perf_{args.label}_summary.md").write_text(summary + "\n", encoding="utf-8")
     print(summary)
+    if args.enforce_budgets and budget_breaches(res):
+        return 1
     return 0
 
 

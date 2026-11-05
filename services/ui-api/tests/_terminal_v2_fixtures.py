@@ -221,6 +221,39 @@ SCHEDULER = {"scheduler_running": True, "jobs": [
     "ist_now": NOW.isoformat()}
 INGEST_LOG = {"rows": [{"dataset": "archive:internals", "date": "2026-11-05", "status": "gap", "note": "stack down"},
                        {"dataset": "nse_fo_daily", "date": "2026-11-05", "status": "ok", "sha256": "abc", "rows": 180000}]}
+
+def _b1_row(id_: str, state: str, as_of: str | None, lag: int | None, *, job: str | None, cadence: str = "daily", kind: str = "table",
+            expected_by: str | None = "21:00", note: str | None = None, pages: str = "DERV", unrecoverable: bool = False) -> dict[str, Any]:
+    """One row in the exact shape of data-service `GET /db/data-health` (services/data-service/data_health/reads.py health())."""
+    return {"id": id_, "label": f"{id_} (B1 catalog)", "pages": [p for p in pages.split(",") if p], "publisher": "NSE (nsearchives.nseindia.com)",
+            "published_ist": "20:10 (measured)", "expected_by": expected_by, "expected_offset_days": 0, "cadence": cadence, "max_age_sessions": 1,
+            "unrecoverable": unrecoverable, "job_id": job, "freshness_kind": kind, "dictionary_anchor": f"docs/TERMINAL_DATA_DICTIONARY.md#{id_}",
+            "verdict": "PUBLISH-CORE", "badge": "arithmetic", "catalog_note": None, "last_fetch": None, "gap_dates": [],
+            "as_of": as_of, "last_session": "2026-11-05", "lag_sessions": lag, "due_session": "2026-11-05", "expected_at": "2026-11-05T21:00:00+05:30",
+            "state": state, "note": note}
+
+
+B1_HEALTH = {"as_of": "2026-11-05T16:30:00Z", "now_ist": NOW.isoformat(), "last_session": "2026-11-05", "badges": {"state": "arithmetic"},
+             "summary": {"fresh": 2, "amber": 1, "red": 1, "gap": 1, "unknown": 4},
+             "note": "no composite score; endpoint rows are completed by ui-api",
+             "rows": [
+                 _b1_row("nse_fo_daily", "fresh", "2026-11-05", 0, job="nse_positions_catchup", pages="DERV,OMON"),
+                 _b1_row("nse_mtf", "fresh", "2026-11-04", 1, job="nse_positions_catchup", expected_by="23:00", pages="MRGN",
+                         note="due by 23:00 IST for the last session"),
+                 _b1_row("nse_combined_oi", "amber", "2026-11-04", 1, job="nse_positions_catchup", note="1 session(s) behind the expected one"),
+                 _b1_row("nse_results", "red", "2026-10-30", 4, job="results_capture_daily", expected_by="21:30", pages="ERN,EVTS",
+                         note="4 session(s) behind the expected one"),
+                 _b1_row("archive:internals", "gap", "2026-10-30", 4, job="internals_sample", kind="archive", cadence="session", expected_by="15:35",
+                         pages="MOV,WRAP", unrecoverable=True, note="no capture for the session (gap row)"),
+                 _b1_row("option_chain_eod", "unknown", None, None, job="nse_positions_catchup", kind="endpoint", cadence="derived", pages="OMON",
+                         note="composed by ui-api (telemetry / live feed)"),
+                 _b1_row("desk_mark", "unknown", None, None, job="results_capture_daily", kind="endpoint", cadence="derived", pages="DESK",
+                         note="composed by ui-api (telemetry / live feed)"),
+                 _b1_row("nse_live", "unknown", None, None, job=None, kind="endpoint", cadence="live", expected_by=None, pages="MOV,WTCH",
+                         note="composed by ui-api (telemetry / live feed)"),
+                 _b1_row("market_monitor", "unknown", None, None, job="eod_data_pipeline", kind="endpoint", cadence="derived", pages="MKT",
+                         note="composed by ui-api (telemetry / live feed)"),
+             ]}
 OPTION_HISTORY_LEGACY = {"symbol": "NIFTY", "rows": [{"date": r["date"], "atm_iv": r["near_atm_iv"], "pcr": 1.0, "max_pain": 24000} for r in IV_SUMMARY[-300:]], "updating": False}
 
 
@@ -292,10 +325,8 @@ def make_handler(rec: Recorder, *, iv_tables: bool = True, drivers_tables: bool 
             return _json(ARCHIVE_META)
         if path == "/db/market-holidays":
             return _json(HOLIDAYS)
-        if path == "/db/data-health/catalog":
-            return _json({"rows": [{"id": "nse_fo_daily", "label": "F&O bhavcopy (catalog)", "pages": ["DERV"], "publisher": "NSE", "publish_time_ist": "20:10",
-                                    "expected_by": "21:00", "max_age": 2, "ingest_job": "nse_positions_catchup", "source_kind": "positions_meta",
-                                    "source_key": "nse_fo_daily", "dictionary_anchor": "x", "badge": "context"}]}) if catalog else _json({"detail": "Not Found"}, 404)
+        if path == "/db/data-health":                     # B1 deployed (catalog=True) → its computed rows; else 404 as on the live stack today
+            return _json(B1_HEALTH) if catalog else _json({"detail": "Not Found"}, 404)
         if path == "/db/data-health/ingest-log":
             return _json(INGEST_LOG)
         if path == "/api/scheduler/status":

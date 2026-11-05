@@ -6,6 +6,7 @@
  * from the UI; `ok: false` + `store_errors` means B1's tables are not deployed yet and the block degrades, never the page.
  */
 import axios from 'axios'
+import { apiError } from '@/lib/errors'
 
 const client = axios.create({ baseURL: '', timeout: 20_000 })
 
@@ -110,4 +111,14 @@ export function storeNote(m: StoreMeta | null | undefined): string | null {
   const errs = Object.entries(m.store_errors ?? {})
   if (!errs.length) return 'store not available'
   return errs.map(([p, r]) => `${p.replace(/^\/db\//, '')}: ${r}`).join(' · ')
+}
+
+/**
+ * A failed request in words: a 404 means the Terminal v2 route is not on this ui-api yet (the pre-v2 release) — said
+ * as such, with "backfill pending", never as a raw "Request failed with status code 404".
+ */
+export function volError(e: unknown, fallback = 'unavailable'): string {
+  const st = (e as { response?: { status?: number } } | null)?.response?.status
+  if (st === 404) return 'route not on this ui-api yet (Terminal v2 not deployed) · backfill pending'
+  return apiError(e, fallback)
 }

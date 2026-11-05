@@ -9,12 +9,21 @@
  * PRICES ONLY — paper terminal: there is no order button here and never will be.
  * Chain: GET /api/market/option-chain/{symbol} (NSE F&O bhavcopy, works at any hour —
  * no broker session involved).
+ *
+ * Terminal v2 (reports/terminal_v2/PLAN.md 1.3): opens on the active symbol (lib/activeSymbol: OMON's "OPEN IN OSTR"
+ * carries symbol + expiry + up to 4 picked strikes, seeded as straddle / strangle / iron fly / iron condor); the margin
+ * block asks POST /api/options/margin — Breeze's margin calculator when a session is live, else NSE's SPAN risk file,
+ * else the 12 %-of-notional heuristic — and prints which answered (BREEZE / NSE SPAN FILE / HEURISTIC) with the
+ * heuristic's measured 4.8× error beside it. Prices only; paper terminal; no order route exists.
  */
 import axios from 'axios'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getOptionChain, type OptionChain as Chain } from '@/lib/api'
 import { useRequestSeq } from '@/components/useRequestSeq'
-import { Btn, CHART_BOX, Chip, ErrorBox, Input, Label, Loading, Notice, PageHeader, Panel, Select, Stat, T, fmtInr, useChartSize } from '@/components/terminal'
+import { BadgeChip, Btn, CHART_BOX, Chip, ErrorBox, Input, Label, Loading, Notice, PageHeader, Panel, Select, Stat, T, fmtInr, inputSource, sourceOf, useChartSize, type SourceInfo } from '@/components/terminal'
+import { postMargin, type MarginAnswer, type MarginLeg } from '@/components/vol/api'
+import { legsFromStrikes } from '@/components/vol/volModel'
+import { readActiveSymbol, useActiveSymbol, type ActiveSymbol } from '@/lib/activeSymbol'
 import { fmtAxisRupees, niceAxis, niceStep, rupeeAxisUnit, staggerRows, textWidth } from '@/components/terminal/chart'
 
 // ── types ───────────────────────────────────────────────────────────────────────
@@ -77,6 +86,35 @@ function seedTemplate(t: Template, chain: Chain): UiLeg[] {
     case 'Covered call (fut+CE)':
       return [mk('buy', 'FUT', null, chain.future ?? chain.forward ?? chain.spot, null), opt('sell', 'CE', 2)]
   }
+}
+
+/** Legs seeded from strikes picked on OMON (PLAN 1.3); a strike missing from this chain is skipped, never invented. */
+function seedFromStrikes(strikes: readonly number[], chain: Chain): UiLeg[] {
+  const have = new Set(chain.rows.map(r => r.strike))
+  return legsFromStrikes(strikes).filter(l => have.has(l.strike)).map(l => {
+    const { premium, iv } = fromChain(chain, l.strike, l.kind)
+    return mk(l.side, l.kind, l.strike, premium, iv)
+  })
+}
+
+/** An OMON pick younger than 30 minutes seeds the legs; an older one only names the symbol / expiry. */
+const SEED_FRESH_MS = 30 * 60_000
+function freshSeed(a: ActiveSymbol | null, now = Date.now()): ActiveSymbol | null {
+  return a && a.strikes.length > 0 && now - Date.parse(a.at) < SEED_FRESH_MS ? a : null
+}
+
+/** The margin answer's chip: BREEZE (live) / NSE SPAN FILE (its file date) / HEURISTIC (no feed: your legs). */
+function marginSource(m: MarginAnswer | null, err: string | null): SourceInfo {
+  if (!m) return err ? sourceOf(null, { source: 'margin route', hint: err }) : inputSource('your legs (margin not asked yet)')
+  const chip = String(m.source_chip ?? '').toUpperCase()
+  if (chip === 'BREEZE') return sourceOf(m.as_of, { live: true, source: 'BREEZE' })
+  if (chip === 'NSE SPAN FILE') {
+    // the route's as_of is the file date as YYYY-MM-DD; detail.file_date is NCL's raw YYYYMMDD
+    const raw = (m.detail as { file_date?: string } | undefined)?.file_date ?? ''
+    const d = m.as_of ?? (/^\d{8}$/.test(raw) ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}` : null)
+    return sourceOf(d, { source: 'NSE SPAN file', maxAgeDays: 4 })
+  }
+  return inputSource('the 12 %-of-notional heuristic on your legs')
 }
 
 // ── payoff chart (repo SVG pattern — no chart lib) ──────────────────────────────
@@ -161,8 +199,15 @@ function PayoffChart({ a, forward, lotNote }: { a: Analysis; forward: number; lo
 // ── main page ───────────────────────────────────────────────────────────────────
 
 export function StrategyBuilder() {
-  const [symbol, setSymbol] = useState('NIFTY')
-  const [expiry, setExpiry] = useState<string | null>(null)
+  // the active symbol (PLAN 1.3): OMON's "OPEN IN OSTR" or the last underlying picked anywhere; NIFTY otherwise
+  const [symbol, setSymbol] = useState(() => readActiveSymbol()?.symbol ?? 'NIFTY')
+  const [expiry, setExpiry] = useState<string | null>(() => freshSeed(readActiveSymbol())?.expiry ?? null)
+  const pendingSeed = useRef<ActiveSymbol | null>(freshSeed(readActiveSymbol()))
+  const [active, writeActive] = useActiveSymbol()
+  const handledAt = useRef<string | null>(readActiveSymbol()?.at ?? null)
+  const [seededFrom, setSeededFrom] = useState<string | null>(null)
+  const [margin, setMargin] = useState<MarginAnswer | null>(null)
+  const [marginErr, setMarginErr] = useState<string | null>(null)
   const [chain, setChain] = useState<Chain | null>(null)
   const [underlyings, setUnderlyings] = useState<string[]>([])
   const [chainErr, setChainErr] = useState<unknown>(null)
@@ -192,9 +237,29 @@ export function StrategyBuilder() {
   }, [symbol, expiry, chainSeq])
   useEffect(() => { loadChain() }, [loadChain])
 
-  // chain (re)loaded → re-seed the active template so strikes/premiums always match it
+  // a pick written while OSTR is open (another window, or OMON in a split view): adopt it once
+  useEffect(() => {
+    if (!active || active.at === handledAt.current) return
+    handledAt.current = active.at
+    const seed = freshSeed(active)
+    if (seed) pendingSeed.current = seed
+    if (active.symbol !== symbol || (seed && seed.expiry && seed.expiry !== expiry)) { setSymbol(active.symbol); setExpiry(seed?.expiry ?? null) }
+  }, [active])                                           // eslint-disable-line react-hooks/exhaustive-deps
+
+  // chain (re)loaded → re-seed the active template so strikes/premiums always match it; an OMON pick wins once
   useEffect(() => {
     if (!chain) return
+    const seed = pendingSeed.current
+    if (seed && seed.symbol === chain.symbol && (!seed.expiry || seed.expiry === chain.expiry)) {
+      pendingSeed.current = null
+      const seeded = seedFromStrikes(seed.strikes, chain)
+      if (seeded.length) {
+        setTemplate(null); setLegs(seeded)
+        setSeededFrom(`OMON pick ${seed.strikes.join(' · ')} (${chain.expiry})`)
+        return
+      }
+    }
+    setSeededFrom(null)
     if (template) setLegs(seedTemplate(template, chain))
     else setLegs([])                                    // custom book: a new chain means new prices — start clean
   }, [chain])                                            // eslint-disable-line react-hooks/exhaustive-deps
@@ -232,6 +297,25 @@ export function StrategyBuilder() {
     }, 350)
     return () => { if (timer.current) clearTimeout(timer.current) }
   }, [legs, chain, forward, symbol, lot, anSeq])
+
+  // ── real margin (PLAN 1.3): Breeze → NSE SPAN file → heuristic; the answer says which (debounced, latest wins) ──
+  const marginSeq = useRequestSeq()
+  const mTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (!chain || legs.length === 0) { marginSeq.cancel(); setMargin(null); setMarginErr(null); return }
+    const bad = legs.find(l => (l.kind !== 'FUT' && l.strike == null) || !(Number(l.premium) >= 0) || !(Number(l.lots) >= 1))
+    if (bad) { marginSeq.cancel(); return }
+    if (mTimer.current) clearTimeout(mTimer.current)
+    mTimer.current = setTimeout(() => {
+      const mine = marginSeq.begin(), current = () => marginSeq.isCurrent(mine)
+      const body: MarginLeg[] = legs.map(l => ({ side: l.side, kind: l.kind, strike: l.kind === 'FUT' ? null : l.strike, expiry: chain.expiry,
+        premium: Number(l.premium) || 0, lots: Math.max(1, Math.round(Number(l.lots) || 1)), lot_size: lot }))
+      postMargin(symbol, body, forward)
+        .then(r => { if (current()) { setMargin(r.data); setMarginErr(null) } })
+        .catch(e => { if (current()) { setMargin(null); setMarginErr(e?.response?.status === 404 ? 'margin route not deployed on this ui-api' : String(e?.response?.data?.detail ?? e?.message ?? 'margin unavailable')) } })
+    }, 600)
+    return () => { if (mTimer.current) clearTimeout(mTimer.current) }
+  }, [legs, chain, forward, symbol, lot, marginSeq])
 
   // ── leg edits ──
   const edit = (id: number, patch: Partial<UiLeg>) => {
@@ -276,8 +360,8 @@ export function StrategyBuilder() {
         subtitle={chain ? `${chain.symbol} · NSE F&O bhavcopy ${chain.date} · expiry ${chain.expiry} (${chain.days_to_expiry}d) · lot ${chain.lot ?? '?'} · fwd ${n2(forward, 2)} (${chain.forward_source}) · ATM IV ${chain.atm_iv ?? '—'}%` : 'payoffs · Greeks · breakevens'}
         status={<Chip color={T.violet}>PRICES ONLY · NO ORDERS</Chip>}
         right={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <Select value={symbol} onChange={s => { setExpiry(null); setSymbol(s) }}
-            options={[...new Set(['NIFTY', 'BANKNIFTY', 'FINNIFTY', ...underlyings])].map(u => ({ value: u, label: u }))} />
+          <Select value={symbol} onChange={s => { setExpiry(null); setSymbol(s); writeActive({ symbol: s }) }}
+            options={[...new Set(['NIFTY', 'BANKNIFTY', 'FINNIFTY', symbol, ...underlyings])].map(u => ({ value: u, label: u }))} />
           <Btn size="sm" onClick={loadChain}>↻ CHAIN</Btn>
         </div>} />
 
@@ -301,7 +385,8 @@ export function StrategyBuilder() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 12 }}>
             {/* ── left: legs ── */}
-            <Panel title={`Legs (${legs.length}/4)`} subtitle={`lot ${lot} · premiums from the ${chain.date} chain, every field editable`}
+            <Panel title={`Legs (${legs.length}/4)`} subtitle={`lot ${lot} · premiums from the ${chain.date} chain, every field editable${seededFrom ? ` · seeded from the ${seededFrom}` : ''}`}
+              source={sourceOf(chain.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic"
               right={<Btn size="sm" onClick={addLeg} disabled={legs.length >= 4}>+ LEG</Btn>}>
               {legs.length === 0 && <Notice>Pick a template above or add a leg — up to four.</Notice>}
               <div style={{ display: 'grid', gap: 8 }}>
@@ -362,19 +447,41 @@ export function StrategyBuilder() {
                       MAX LOSS {analysis.max_loss.unbounded ? 'UNLIMITED (upside)' : fmtInr(analysis.max_loss.value, 0)}
                     </Chip>
                   </div>
-                  <Panel title="Margin & costs — ESTIMATE" accent={T.violet} pad={10}>
-                    <div style={{ fontFamily: T.mono, fontSize: 11, display: 'grid', gap: 3 }}>
-                      <div>Margin est. <span style={{ color: T.amber }}>{fmtInr(analysis.margin.total, 0)}</span>
+                  <Panel title="Margin & costs" accent={T.violet} pad={10} source={marginSource(margin, marginErr)} badge={margin?.badge ?? 'heuristic'}
+                    subtitle={margin ? `answered by ${margin.source_chip}` : marginErr ? 'heuristic only' : 'asking…'}>
+                    <div style={{ fontFamily: T.mono, fontSize: 11, display: 'grid', gap: 3 }} data-ostr-margin={margin?.source_chip ?? 'HEURISTIC'}>
+                      {margin && String(margin.source_chip).toUpperCase() !== 'HEURISTIC' ? (
+                        <div>
+                          <Chip color={String(margin.source_chip).toUpperCase() === 'BREEZE' ? T.green : T.cyan} active style={{ marginRight: 6 }}
+                            title={String(margin.source_chip).toUpperCase() === 'BREEZE' ? "ICICI Breeze margin calculator (exchange SPAN + the broker's house rules), live session" : "NSE's SPAN risk-parameter file (scanning risk + calendar spread charge, short option minimum); exposure margin by NSE's published rule"}>
+                            {margin.source_chip}</Chip>
+                          SPAN <span style={{ color: T.amber }}>{fmtInr(margin.span_margin_required, 0)}</span>
+                          <span style={{ color: T.muted }}> · exposure / non-SPAN {fmtInr(margin.non_span_margin_required, 0)} · total </span>
+                          <span style={{ color: T.amber, fontWeight: 600 }}>{fmtInr(margin.total_margin, 0)}</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <Chip color={T.violet} active style={{ marginRight: 6 }} title="No broker session and no stored SPAN file answered: the house rule (12 % of notional per short leg + premium) is all there is.">HEURISTIC</Chip>
+                          {marginErr && <span style={{ color: T.amber }}>{marginErr} · </span>}
+                          {margin?.attempts?.filter(a => !a.ok).map(a => <span key={a.source} style={{ color: T.dim }}>{a.source}: {a.reason} · </span>)}
+                        </div>
+                      )}
+                      <div>Heuristic est. <span style={{ color: T.violet }}>{fmtInr(margin?.heuristic?.total ?? analysis.margin.total, 0)}</span>
                         {analysis.margin.premium_outflow > 0 && <span style={{ color: T.muted }}> (incl. {fmtInr(analysis.margin.premium_outflow, 0)} premium paid)</span>}
                         {analysis.margin.defined_risk_floor != null &&
                           <span style={{ color: T.muted }}> · defined-risk floor {fmtInr(analysis.margin.defined_risk_floor, 0)}</span>}
+                        {' '}<BadgeChip badge="heuristic" note={margin?.heuristic?.evidence ?? 'Measured 4.8× above Breeze SPAN on the NIFTY 09-Nov-2026 iron condor (₹3.9 L vs ₹81,497.07).'} />
+                      </div>
+                      <div style={{ color: T.violet, fontSize: 10.5 }} data-ostr-heuristic-error>
+                        measured error {(margin?.heuristic?.error_factor_measured ?? 4.8).toFixed(1)}× (12 % of notional vs Breeze SPAN on the NIFTY 09-Nov-2026 iron condor: ₹3.9 L vs ₹81,497) — use the chip above when it says BREEZE or NSE SPAN FILE
                       </div>
                       <div>Costs est. round trip <span style={{ color: T.amber }}>{fmtInr(analysis.costs.round_trip.total, 0)}</span>
                         <span style={{ color: T.muted }}> — brokerage {fmtInr(analysis.costs.round_trip.brokerage, 0)} ·
                           STT {fmtInr(analysis.costs.round_trip.stt, 0)} · txn {fmtInr(analysis.costs.round_trip.txn, 0)} ·
                           GST {fmtInr(analysis.costs.round_trip.gst, 0)}</span></div>
-                      <div style={{ color: T.dim, fontSize: 10, lineHeight: 1.5 }}>{analysis.margin.note}</div>
-                      <div style={{ color: T.dim, fontSize: 10, lineHeight: 1.5 }}>{analysis.costs.note}</div>
+                      {/* the heuristic's own note repeats the 4.8× sentence above: print the route's note only for a real answer */}
+                      {margin?.note && String(margin.source_chip).toUpperCase() !== 'HEURISTIC' && <div style={{ color: T.dim, fontSize: 10, lineHeight: 1.5 }}>{margin.note}</div>}
+                      <div style={{ color: T.dim, fontSize: 10, lineHeight: 1.5 }}>{analysis.costs.note} · prices only, PAPER terminal: no order route exists.</div>
                     </div>
                   </Panel>
                 </div>
@@ -382,7 +489,7 @@ export function StrategyBuilder() {
             </Panel>
 
             {/* ── right: payoff + Greeks ── */}
-            <Panel title="Payoff" accent={T.green}
+            <Panel title="Payoff" accent={T.green} source={sourceOf(chain.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic"
               subtitle={busy ? 'pricing…' : analysis ? `to scale · ${analysis.single_expiry ? 'at expiry + today' : 'at NEAREST expiry (calendar) + today'}` : undefined}>
               {anErr && <ErrorBox error={anErr} />}
               {!analysis && !anErr && legs.length > 0 && <Loading label="pricing" />}

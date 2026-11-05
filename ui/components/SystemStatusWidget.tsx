@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react'
 import { useDataServiceStatus } from '@/context/AppContext'
 import { configureDataProvider, fetchRefreshBatch } from '@/lib/api'
 import { useToast } from '@/context/ToastContext'
-import { Btn, Chip, Dot, Input, Label, Notice, Panel, T } from '@/components/terminal'
+import { Btn, Chip, Dot, Input, Label, Notice, Panel, T, sourceOf } from '@/components/terminal'
 
 function Row({ label, ok, detail, pending }: { label: string; ok: boolean; detail: string; pending?: boolean }) {
   const c = pending ? T.amber : ok ? T.green : T.red
@@ -63,7 +63,7 @@ export function SystemStatusWidget(_: { isDark?: boolean }) {
     : 'Unknown'
 
   return (
-    <Panel title="System status"
+    <Panel source={sourceOf(ds.lastChecked ? new Date(ds.lastChecked).toISOString() : null, { source: 'service probes', live: !!ds.lastChecked })} title="System status"
       subtitle={ds.lastChecked ? `checked ${new Date(ds.lastChecked).toLocaleTimeString('en-IN', { hour12: false })}` : 'polling…'}
       right={<>
         <Btn size="sm" onClick={refreshDataStatus} title="Refresh service status">↻</Btn>

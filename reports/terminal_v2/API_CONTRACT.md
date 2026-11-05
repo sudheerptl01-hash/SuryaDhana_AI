@@ -35,8 +35,12 @@ master-controller mocked through the process-wide client; Breeze faked; the real
   directional alert or a ticket price. `/api/desk/attribution` reads the paper ledger and writes nothing. The margin
   route prices only (`paper_only: true`); no order route exists.
 - **Breeze budget is one module.** Every Breeze SDK call in ui-api runs inside `shared.breeze_budget.ledger().guard(
-  caller, method)` (`positions._breeze_call`, the margin route); a call past the cap raises `BudgetExceeded` BEFORE
-  the SDK runs. Counters: `GET /api/positions/breeze-budget`.
+  caller, method)` (`positions._breeze_call` — holdings, positions, funds and the trade-history route's
+  `get_order_list` —, the client's `generate_session` login, the margin route); a call past the cap raises
+  `BudgetExceeded` BEFORE the SDK runs (`/api/positions/trade-history` then answers 200 `ok: false, error_kind:
+  "budget"`; a refused login is error kind `budget`, retried after a minute). Counters: `GET /api/positions/breeze-budget`.
+  (ICICI's `probe_breeze_connection` in `icici_admin.py`, the BRKR connection probe, is outside these routers and still
+  logs in unmetered — open item.)
 - **Errors:** `errors.fail` → `{detail: str, error: {code, message, hint?}}` (422 for bad symbols / enums).
 - Timestamps are ISO; dates are `YYYY-MM-DD`; numbers are numbers (`null` when unknown).
 
@@ -50,13 +54,13 @@ master-controller mocked through the process-wide client; Breeze faked; the real
 | `GET /api/derivatives/iv/{symbol}/events?n=8` | SWR | `/db/iv/events` |
 | `GET /api/derivatives/iv/{symbol}/intraday?date=` | SWR | `/db/iv/intraday` |
 | `GET /api/derivatives/vol-screen?sort=iv_pctile\|iv_rank\|iv_minus_rv\|term_slope\|skew&results_within=` | SWR | `/db/iv/screen` |
-| `GET /api/market/option-history/{symbol}` (legacy, + rank/percentile) | none | `/db/option-history/{symbol}` |
+| `GET /api/market/option-history/{symbol}` (legacy, + rank/percentile) | none (process-wide client, `errors.fail` mapping) | `/db/option-history/{symbol}` |
 | `GET /api/market/index-drivers?index=NIFTY 50&horizon=1d\|5d\|1m\|3m\|ytd\|since_change&window=20\|60` | SWR | `/db/index-drivers/{contribution,fit,state,weights}` |
 | `GET /api/market/index-drivers/timeline?index=&window=&days=` | SWR | `/db/index-drivers/state` |
 | `GET /api/market/index-drivers/monthly?index=&months=12` | SWR | `/db/index-drivers/{contribution,fit}` |
 | `GET /api/desk/attribution?horizon=` | SWR (desk 60/600 s) | the paper ledger (`routers.desk.get_desk().status()` on a thread) + `/db/index-drivers/*` + `/db/security/{sym}/history` |
 | `POST /api/options/margin` | none | Breeze (live session, ledger) → `data/nse_archive/span/nsccl.YYYYMMDD.s.zip` (disk) → heuristic |
-| `GET /api/data/health?page=` | SWR 60/600 s | `/db/nse-positions-meta`, `/db/freshness`, `/db/archive-meta`, `/db/market-holidays`, `/db/data-health/{catalog,ingest-log}` (B1, optional), master-controller `/api/scheduler/status` |
+| `GET /api/data/health?page=` | SWR 60/600 s | `/db/data-health` (B1) + `/db/market-holidays` + master-controller `/api/scheduler/status`; until B1 is deployed (404): `/db/nse-positions-meta`, `/db/freshness`, `/db/archive-meta`, `/db/data-health/ingest-log` and the built-in seed |
 | `GET /api/positions/breeze-budget` | none | the SQLite ledger |
 
 ## 2. IV history (PLAN 1.1)
@@ -64,8 +68,9 @@ master-controller mocked through the process-wide client; Breeze faked; the real
 `/iv/{symbol}` returns the `iv_summary_daily` rows (ascending, `SUMMARY_FIELDS`), `vix[]` from `vix_daily` (the ONE VIX
 source; indices only), `events[]` markers (`results` from the crush ledger, `expiry` where the monthly expiry rolls —
 Budget / RBI / US-data markers wait for the owner's clarification in PLAN Appendix C and are never guessed),
-`rank{iv_rank_252, iv_pctile_252, stored{…}, window_sessions, on}` recomputed from the served `iv30_cm` beside the
-stored values (`test_iv_rank_and_percentile_are_distinct_and_match_the_r_iv_fixture`: 12.81 on 4 Nov 2026 → rank
+`rank{iv_rank_252, iv_pctile_252, stored{…}, window_sessions, window_target, on}` recomputed from the stored `iv30_cm`
+over the last 252 sessions whatever `days` the chart asks for (the read takes max(days, 252) rows; `window_sessions` =
+the observations actually used, < 252 only while the store holds less history) beside the stored values (`test_iv_rank_and_percentile_are_distinct_and_match_the_r_iv_fixture`: 12.81 on 4 Nov 2026 → rank
 ≈ 21, percentile ≈ 60, R-IV §3), `definitions{}`, `badges{iv, rank, pctile, rv: arithmetic; spread, skew, term:
 context; vix: arithmetic}`, `model_version`, `r_source`, `since`, `sessions`, `precedent`.
 
@@ -124,19 +129,32 @@ pointer to this route.
 
 ## 5. Data health (PLAN 1.4)
 
-`GET /api/data/health` → `{as_of, rows[], summary{green, amber, red, gaps, rows}, last_session, catalog_source,
+`GET /api/data/health` → `{as_of, rows[], summary{green, amber, red, gaps, unknown, rows}, last_session, catalog_source,
 inputs_unavailable{}, controller_online, status, service, data_service{reachable}, note, badge, ok}`. A row:
 `{id, label, pages[], publisher, published_ist, expected_by, as_of, lag_sessions, state, unrecoverable, job_id,
 last_run{ts, status, ms}, next_run, catchup_at, note, dictionary_anchor, badge, max_age_sessions}`.
 
-State rule (`classify`, trading-day aware through `/db/market-holidays`; `last_session` = the last session whose 15:30
-has passed): `fresh` when nothing is missing or the latest session is not yet due (`expected_by`, IST; a morning slot
-or a T−1 file refers to the next day); `amber` when due and ≤ `max_age` sessions behind; `red` beyond `max_age` or
-nothing stored; `gap` when B1's `ingest_log` carries a `status: gap` row for the last session (session-bound
-captures). Rows sort gap → red → amber → fresh, then by lag. The note is the honest sentence ("stored 30 Oct ·
-expected by 21:00 · 4 sessions behind"). `catchup_at` = the next run of a catch-up job while the row is amber / red.
-Catalog: data-service `/db/data-health/catalog` (B1 `dataset_catalog`) when it answers, else the built-in seed of
-R-DATA §3's evaluable rows (`catalog_source` says which). `?page=DERV` filters by terminal page.
+Two sources (`catalog_source` says which):
+
+1. **data-service `/db/data-health`** (B1 `dataset_catalog`, deployed): B1 computes as-of / lag / state where the tables
+   live (`MAX(column)` per table, dated archive files, NSE trading-day deadlines `expected_by` on the session +
+   `expected_offset_days` trading days, the `data_gaps` rows) and ui-api keeps that state, adding the job's
+   `last_run` / `next_run`, `catchup_at` and the honest sentence. Rows B1 reports `unknown` (`freshness_kind =
+   endpoint`, `cadence = live`) are completed here: a row with an ingest job is `fresh` when the job's last run was ok
+   on or after the session it must cover by now (the latest session whose `expected_by` deadline has passed, trading-day
+   aware), `amber` when it failed or is older, `red` when it never ran; a never-stored live feed
+   with no job is `live` (its age is the page's SourceChip); a job the controller does not schedule stays `unknown`
+   (counted in `summary.unknown`, never guessed green).
+2. **the built-in seed** of R-DATA §3's evaluable rows (until B1's package answers; a 404 there is not an input
+   failure), classified by `classify`: trading-day aware through `/db/market-holidays` (`last_session` = the last
+   session whose 15:30 has passed); `fresh` when nothing is missing or the latest session is not yet due
+   (`expected_by`, IST; a morning slot or a T−1 file is due on the NEXT TRADING DAY — Friday's MTF file on Monday
+   23:00, a Thursday-before-holiday file on the next session); `amber` when due and ≤ `max_age` sessions behind; `red`
+   beyond `max_age` or nothing stored; `gap` when `ingest_log` carries a `status: gap` row for the last session.
+
+States: `live | fresh | amber | red | gap | unknown`. Rows sort gap → red → amber → unknown → fresh → live, then by lag.
+The note is the honest sentence ("stored 30 Oct · expected by 21:00 · 4 sessions behind"). `catchup_at` = the next run
+of a catch-up job while the row is amber / red. `?page=DERV` filters by terminal page.
 
 ## 6. What B1 must serve (data-service `/db/*`, built against PLAN 1.1 / 1.2 table names)
 
@@ -156,8 +174,8 @@ is not deployed is tolerated (the block degrades).
 | `/db/index-drivers/fit` | `index`, `days` | `index_contribution_fit` (+ `prev_index_level`) |
 | `/db/index-drivers/state` | `index`, `days` | `index_driver_state` (both windows; revisions by `computed_at`) |
 | `/db/index-drivers/weights` | `index`, `date` | `index_weights_daily` (`method`, `weight_pct`, `industry`) |
-| `/db/data-health/catalog` | — | `dataset_catalog` rows (`id, label, pages, publisher, publish_time_ist, expected_by, max_age, ingest_job, source_kind, source_key, dictionary_anchor, unrecoverable, t_plus, badge, note`) |
-| `/db/data-health/ingest-log` | `days` | `ingest_log` rows (`dataset, date, status ok\|gap, …`) |
+| `/db/data-health` | — | B1 `reads.health()`: `{last_session, summary, rows[{id, label, pages[], publisher, published_ist, expected_by, expected_offset_days, cadence, max_age_sessions, unrecoverable, job_id, freshness_kind, dictionary_anchor, verdict, badge, catalog_note, last_fetch, gap_dates[], as_of, lag_sessions, due_session, expected_at, state fresh\|amber\|red\|gap\|unknown, note}]}` — the keys ui-api reads are asserted on B1's real output by `tests/test_data_health.py::test_health_rows_carry_the_keys_ui_api_composes` |
+| `/db/data-health/ingest-log` | `days` | `ingest_log` rows (`dataset, date, status ok\|gap, …`; read only on the seed path) |
 
 `data/nse_archive/span/nsccl.YYYYMMDD.s.zip` is the 20:30 pass's file (B1/B2); the margin route only reads the newest.
 
@@ -177,6 +195,11 @@ is not deployed is tolerated (the block degrades).
   (`status` / `data_service.reachable` kept for liveness).
 - `GET /api/positions/breeze-budget` (not in the plan) exposes the ledger for SYS / BRKR.
 - `DATASET_MAX_AGE_DAYS` (controller) is not retired here — B2's job; the view uses `expected_by` + `max_age` sessions.
+- F-BACKEND (5 Nov, wave 1 second half): `/db/data-health/catalog` is no longer read — its rows carry B1's key names
+  (`max_age_sessions`, `expected_offset_days`, `freshness_kind`), not the `max_age` / `t_plus` / `source_kind` this file
+  first assumed, so a deployed B1 would have turned every row red; the view composes `/db/data-health` instead and adds
+  the `unknown` state for what neither side can judge. The legacy `/api/market/option-history/{symbol}` now goes through
+  the process-wide client (it built a per-request `httpx.AsyncClient`, so its test silently reached the live :8001).
 
 ## 8. Key inventory (generated)
 
@@ -225,6 +248,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `rank.stored` | object |
 | `rank.stored.{*}` | number |
 | `rank.window_sessions` | number |
+| `rank.window_target` | number |
 | `rows` | array |
 | `rows[]` | object |
 | `rows[].date` | string |
@@ -494,10 +518,8 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `rows[]` | object |
 | `rows[].atm_iv` | number |
 | `rows[].date` | string |
-| `rows[].expiry` | string |
 | `rows[].max_pain` | number |
 | `rows[].pcr` | number |
-| `rows[].spot` | number |
 | `symbol` | string |
 | `updating` | bool |
 
@@ -693,6 +715,10 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `attempts[].reason` | string |
 | `attempts[].source` | string |
 | `badge` | string |
+| `badges` | object |
+| `badges.non_span_margin_required` | string |
+| `badges.span_margin_required` | string |
+| `badges.total_margin` | string |
 | `detail` | object |
 | `detail.legs_echo` | number |
 | `detail.non_span_margin_required` | number |
@@ -732,6 +758,10 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `attempts[].reason` | string |
 | `attempts[].source` | string |
 | `badge` | string |
+| `badges` | object |
+| `badges.non_span_margin_required` | string |
+| `badges.span_margin_required` | string |
+| `badges.total_margin` | string |
 | `detail` | object |
 | `detail.calendar_spread_charge` | number |
 | `detail.exposure` | object |
@@ -787,6 +817,10 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `attempts[].reason` | string |
 | `attempts[].source` | string |
 | `badge` | string |
+| `badges` | object |
+| `badges.non_span_margin_required` | string |
+| `badges.span_margin_required` | string |
+| `badges.total_margin` | string |
 | `detail` | object |
 | `exchange_code` | string |
 | `heuristic` | object |
@@ -822,7 +856,6 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `data_service.reachable` | bool |
 | `data_service.url_role` | string |
 | `inputs_unavailable` | object |
-| `inputs_unavailable.{*}` | string |
 | `last_session` | string |
 | `note` | string |
 | `ok` | bool |
@@ -858,6 +891,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `summary.green` | number |
 | `summary.red` | number |
 | `summary.rows` | number |
+| `summary.unknown` | number |
 
 ### `breeze_budget` — `GET /api/positions/breeze-budget`
 

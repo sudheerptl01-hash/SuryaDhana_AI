@@ -430,12 +430,22 @@ def scan_hosts(files: Iterable[Path], root: Path) -> HostScan:
     return scan
 
 
+#: Terminal v2 (PLAN 1.7 G5, B6-GATES): the three new ui-api routers join the T8 host scan (they must exist). markets.py is
+#: NOT in the set: its pre-existing eco-calendar fetchers name www.federalreserve.gov, outside the gold allowlist; its v2
+#: drivers section is scanned by services/ui-api/tests/test_terminal_v2_api.py::test_routers_name_no_publisher_host.
+TV2_ROUTERS = tuple(GOLD_ROUTER.parent / n for n in ("derivatives.py", "data_health.py", "options_strategy.py"))
+
+
 def gold_fetch_sources() -> list[Path]:
-    """The T8 scan set: services/data-service/gold/**/*.py (B1) and routers/gold.py (B3); both must exist."""
+    """The T8 scan set: services/data-service/gold/**/*.py (B1) and routers/gold.py (B3); both must exist.
+    Terminal v2 (PLAN 1.7 G5): also TV2_ROUTERS (routers/derivatives.py, data_health.py, options_strategy.py) — 1 + 3
+    routers; see TV2_ROUTERS for why markets.py is not here."""
     need(DATA_GOLD_PKG, "B1 data")
     need(GOLD_ROUTER, "B3 api")
+    for r in TV2_ROUTERS:
+        need(r, "Terminal v2 B3 api")
     files = walk_sources(DATA_GOLD_PKG, (".py",), frozenset({"tests", "__pycache__"}))
-    return files + [GOLD_ROUTER]
+    return files + [GOLD_ROUTER, *TV2_ROUTERS]
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════
@@ -580,6 +590,8 @@ class TestHostAllowlistT8:
         files = gold_fetch_sources()
         assert any(p.name != "__init__.py" for p in files if p.is_relative_to(DATA_GOLD_PKG)), \
             "B1: services/data-service/gold/ holds no ingest modules yet"
+        routers = [p for p in files if p.parent == GOLD_ROUTER.parent]
+        assert len(routers) == 4 and GOLD_ROUTER in routers, routers           # gold.py + the three Terminal v2 routers
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════

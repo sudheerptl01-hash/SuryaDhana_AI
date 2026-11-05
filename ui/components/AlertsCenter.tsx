@@ -8,7 +8,7 @@ import { apiError } from '@/lib/errors'
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getNewsQuotes, getNotificationFeed, getPriceAlerts, putPriceAlert, type AlertHitSrv, type AlertLevelsSrv, type NotificationItem } from '@/lib/api'
-import { Btn, Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, fmtPct, fmtPx, type Column } from '@/components/terminal'
+import { Btn, Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, fmtPct, fmtPx, type Column, sourceOf, inputSource } from '@/components/terminal'
 import { unicodeMinus } from '@/lib/format'   // server-built notification text: U+2212 (C1-18)
 
 type Row = { sym: string; lv: AlertLevelsSrv; price: number | null }
@@ -79,7 +79,7 @@ export function AlertsCenter() {
       <PageHeader code="ALRT" title="Alerts"
         subtitle="price alerts checked every minute in market hours by the scheduler (terminal can be closed) · notifications inbox" />
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 12, alignItems: 'start' }}>
-        <Panel title={`Price alerts · ${rows.length}`} accent={T.amber} pad={0}
+        <Panel source={inputSource('your alert levels (the server checks them every minute in session)')} title={`Price alerts · ${rows.length}`} accent={T.amber} pad={0}
           subtitle="green = fires when the price rises through it · red = when it falls through it · cyan = a ± % day move · one-shot: a fired level is cleared">
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: 10, borderBottom: `1px solid ${T.border}`, flexWrap: 'wrap' }}>
             <Input label="Stock" value={form.sym} onChange={v => setForm({ ...form, sym: v })} placeholder="TCS" width={100} />
@@ -91,7 +91,7 @@ export function AlertsCenter() {
           </div>
           <DataTable columns={cols} rows={rows} rowKey={r => r.sym} dense empty="No price alerts. Set one above, or with the bell in the Alert column on WTCH." initialSort={{ key: 'near', dir: 'asc' }} />
         </Panel>
-        <Panel title={`Fired · ${history.length}`} accent={T.green} pad={0} subtitle="price alerts that triggered (newest first)">
+        <Panel source={sourceOf(history[0]?.at ?? null, { source: 'alert scheduler', maxAgeDays: null })} title={`Fired · ${history.length}`} accent={T.green} pad={0} subtitle="price alerts that triggered (newest first)">
           {/* the server keeps history newest first */}
           <DataTable<AlertHitSrv> dense maxHeight={360} rowKey={(h, i) => `${h.sym}-${h.at}-${i}`} rows={history}
             empty="Nothing has fired yet."
@@ -105,7 +105,7 @@ export function AlertsCenter() {
             ]} />
         </Panel>
       </div>
-      <Panel title={`Inbox · ${shownFeed.length}`} accent={T.cyan} pad={0} style={{ marginTop: 12 }}
+      <Panel source={sourceOf(feed[0]?.at ?? null, { source: 'scheduler inbox', maxAgeDays: null })} title={`Inbox · ${shownFeed.length}`} accent={T.cyan} pad={0} style={{ marginTop: 12 }}
         subtitle="everything the scheduler told you (Mac notifications + Telegram when set up)"
         right={<div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           <Chip color={T.muted} active={!kind} onClick={() => setKind(null)}>ALL</Chip>

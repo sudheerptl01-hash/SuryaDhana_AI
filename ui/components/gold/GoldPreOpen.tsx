@@ -16,7 +16,7 @@
 import { apiError } from '@/lib/errors'
 import { fmtSigned, fmtSignedInr } from '@/lib/format'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Chip, Input, Label, Loading, Notice, Panel, Stat, T, fmtInr, fmtNum, indianGrouping } from '@/components/terminal'
+import { Chip, Input, Label, Loading, Notice, Panel, Stat, T, fmtInr, fmtNum, indianGrouping, sourceOf, inputSource } from '@/components/terminal'
 import { getGoldFair } from '@/lib/gold/api'
 import { comexCode, fmtInr0, morningCall, parseIso, preOpenCopyB, sessionLabel } from '@/lib/gold/format'
 import { readTriggers, writeTriggers } from '@/lib/gold/prefs'
@@ -238,7 +238,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }:
 
       {/* 3. what moved (the one bar) + inputs */}
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1.6fr) minmax(260px, 1fr)' }}>
-        <Panel title="What moved since the MCX close" subtitle={`COMEX ${fmtSignedInr(m.comex_part)} · rupee ${fmtSignedInr(m.inr_part)} → fair ${fmtInr(m.fair_open)}`} accent={T.cyan} pad={10}>
+        <Panel source={sourceOf(data?.as_of ?? null, { source: 'COMEX + USD/INR', maxAgeDays: 1 })} badge="arithmetic" title="What moved since the MCX close" subtitle={`COMEX ${fmtSignedInr(m.comex_part)} · rupee ${fmtSignedInr(m.inr_part)} → fair ${fmtInr(m.fair_open)}`} accent={T.cyan} pad={10}>
           {base != null && m.comex_part != null && m.inr_part != null
             ? <Waterfall base={base} comex={m.comex_part} inr={m.inr_part} />
             : <div style={{ fontSize: 11, color: T.muted }}>Waiting for COMEX, the rupee and the settlement.</div>}
@@ -251,7 +251,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null }:
           </div>
         </Panel>
 
-        <Panel title="Your inputs" subtitle="saved for today · synced" accent={T.violet} pad={10} bodyStyle={{ display: 'grid', gap: 10 }}>
+        <Panel source={inputSource('your pre-open inputs (synced)')} title="Your inputs" subtitle="saved for today · synced" accent={T.violet} pad={10} bodyStyle={{ display: 'grid', gap: 10 }}>
           <Input label="MCX close override (₹ / 10 g)" value={saved.baseline} onChange={b => update({ baseline: b })}
             placeholder={data.baseline.settlement_from_band ? `auto: ${fmtInr(data.baseline.settlement_from_band)}` : 'e.g. 149400'} />
           <Input label="MCX price now / pre-open (₹)" value={saved.mcx} onChange={x => update({ mcx: x })}

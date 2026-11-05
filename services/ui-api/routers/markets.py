@@ -6,6 +6,8 @@ from datetime import date, datetime
 from typing import Any
 
 import httpx
+
+from shared import http_client
 from cache import SWRCache, cache_headers
 from fastapi import APIRouter, HTTPException, Query, Response
 
@@ -227,16 +229,22 @@ async def participants(days: int = 250) -> dict:
 
 
 @router.get("/option-history/{symbol}")
-async def option_history(symbol: str, days: int = 260) -> dict:
-    """Daily ATM IV, PCR and max pain history (NIFTY / BANKNIFTY), via data-service."""
+async def option_history(symbol: str, days: int = Query(260, ge=1, le=3000)) -> dict:
+    """Daily ATM IV, PCR and max pain history (NIFTY / BANKNIFTY), via data-service — through the process-wide
+    client (shared.http_client, PLAN 1.5) with the IV routes' UpstreamError → fail() mapping (errors.py)."""
+    import re
+
+    from errors import code_for_status, fail
+    if not re.fullmatch(r"[A-Za-z0-9&\-]{1,20}", symbol):
+        fail(422, "invalid", f"Bad symbol {symbol!r}", "NSE underlyings look like NIFTY, BANKNIFTY")
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(20.0)) as client:
-            r = await client.get(f"{DATA_SVC}/db/option-history/{symbol}", params={"days": days})
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
-    if r.status_code != 200:
-        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))
-    return with_iv_rank_and_percentile(r.json())
+        body = await http_client.get_json(f"{DATA_SVC}/db/option-history/{symbol.upper()}", route="read",
+                                          params={"days": days}, timeout=20.0)
+    except http_client.UpstreamError as exc:
+        if exc.status_code == 503:
+            fail(503, "upstream_down", f"data-service unreachable: {exc.detail}", "is data-service on :8001 up?")
+        fail(exc.status_code, code_for_status(exc.status_code), exc.detail)
+    return with_iv_rank_and_percentile(body if isinstance(body, dict) else {"rows": body})
 
 
 def with_iv_rank_and_percentile(payload: dict) -> dict:
@@ -746,13 +754,9 @@ async def eco_calendar(back: int = Query(14, ge=0, le=120), ahead: int = Query(6
 async def gift_nifty() -> dict:
     """GIFT NIFTY and the implied gap for the next NIFTY open, via data-service."""
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(20.0)) as client:
-            r = await client.get(f"{DATA_SVC}/db/gift-nifty")
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
-    if r.status_code != 200:
-        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))
-    return r.json()
+        return await http_client.get_json(f"{DATA_SVC}/db/gift-nifty", route="live", stale_for=120)
+    except http_client.UpstreamError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.post("/fii-dii-cash/refresh")
@@ -785,13 +789,9 @@ async def holding_changes() -> dict:
 async def nifty_live() -> dict:
     """NIFTY 50 from NSE (≈1 min delayed), via data-service."""
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
-            r = await client.get(f"{DATA_SVC}/db/nifty-live")
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
-    if r.status_code != 200:
-        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))
-    return r.json()
+        return await http_client.get_json(f"{DATA_SVC}/db/nifty-live", route="live", stale_for=120)
+    except http_client.UpstreamError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.get("/index-intraday")
@@ -891,13 +891,9 @@ async def _fundamentals_screen(limit: int, fields: str | None) -> dict:
 async def indices_live(names: str = "NIFTY 50,NIFTY BANK,INDIA VIX") -> dict:
     """NSE indices (one allIndices read) for the macro tape, via data-service."""
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(15.0)) as client:
-            r = await client.get(f"{DATA_SVC}/db/indices-live", params={"names": names})
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
-    if r.status_code != 200:
-        raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))
-    return r.json()
+        return await http_client.get_json(f"{DATA_SVC}/db/indices-live", route="live", params={"names": names}, stale_for=120)
+    except http_client.UpstreamError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.get("/index-contribution")

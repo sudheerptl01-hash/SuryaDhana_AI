@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { Panel, T, fmtNum, type SourceInfo } from '@/components/terminal'
 import { LineChart } from './charts'
-import { getIvIntraday, storeNote, type IvIntraday } from './api'
+import { getIvIntraday, storeNote, volError, type IvIntraday } from './api'
 
 export function liveSource(d: IvIntraday | null): SourceInfo {
   if (!d || !d.ok) return { state: 'offline', source: 'iv_intraday', asOf: d?.date ?? null, hint: storeNote(d) ?? 'pilot not deployed' }
@@ -25,7 +25,7 @@ export function IvLivePath({ symbol, enabled }: { symbol: string; enabled: boole
   useEffect(() => {
     if (!enabled) return
     let alive = true
-    const load = () => getIvIntraday(symbol).then(r => { if (alive) { setD(r.data); setErr(null) } }).catch((e: unknown) => { if (alive) setErr(e instanceof Error ? e.message : 'unavailable') })
+    const load = () => getIvIntraday(symbol).then(r => { if (alive) { setD(r.data); setErr(null) } }).catch((e: unknown) => { if (alive) setErr(volError(e, 'unavailable')) })
     setD(null); load()
     const iv = setInterval(() => { if (!document.hidden) load() }, 5 * 60_000)        // the pilot writes every 15 min; 5 min is plenty
     return () => { alive = false; clearInterval(iv) }

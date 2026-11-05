@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { getFiiDiiCash, getParticipants, type FiiDiiCash, type ParticipantRow } from '@/lib/api'
-import { CHART_BOX, DataTable, Panel, T, type Column, tone, useChartSize } from '@/components/terminal'
+import { CHART_BOX, DataTable, Panel, T, type Column, tone, useChartSize, sourceOf } from '@/components/terminal'
 
 const LABEL: Record<string, string> = { FII: 'Foreign institutions (FII)', DII: 'Domestic institutions (DII)', PRO: 'Proprietary traders', CLIENT: 'Clients (retail + HNI)' }
 const k = (v: number | null | undefined) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v) >= 1e5 ? `${(Math.abs(v) / 1e5).toFixed(2)} L` : Math.abs(v).toLocaleString('en-IN')}`)
@@ -60,7 +60,7 @@ export function ParticipantPositioning() {
   const y = (v: number) => 8 + (1 - (v - lo) / (hi - lo || 1)) * (H - 28)
   const last = h[h.length - 1]
   return (
-    <Panel title="Who holds index futures" accent={T.violet} pad={0}
+    <Panel source={sourceOf(d.date, { source: 'NSE participant OI' })} badge="context" title="Who holds index futures" accent={T.violet} pad={0}
       subtitle={`NSE participant-wise open interest · ${d.date} · contracts · options = long calls − short calls − (long puts − short puts)`}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.7fr) minmax(300px, 1fr)' }}>
         <div>

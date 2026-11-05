@@ -42,7 +42,7 @@ HTTP_CLIENT = ROOT / "shared" / "http_client.py"
 
 VERDICTS: tuple[str, ...] = ("PUBLISH-CORE", "PUBLISH-CONTEXT", "LINK-ONLY", "DO-NOT-PUBLISH")
 BADGES: tuple[str, ...] = ("context", "arithmetic", "heuristic")          # `signal` is refused: none exists (PLAN §0.1)
-STATES = "live | fresh | amber | red | gap"
+STATES = "live | fresh | amber | red | gap | unknown"
 VERDICT_MEANING: dict[str, str] = {
     "PUBLISH-CORE": "ingested (or computed) and shown on a page's primary panels",
     "PUBLISH-CONTEXT": "ingested and shown inside its section or a details drawer, always with the `context` badge",

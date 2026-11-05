@@ -15,8 +15,8 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-
 from data_health import db
+
 from fo_iv.black76 import MODEL_VERSION
 from fo_iv.iv_eod import NEAR_MIN_DTE
 from fo_iv.schema import CASTS, COLUMNS
@@ -114,4 +114,4 @@ def build_ledger(store: Any, *, since: date, until: date | None = None, symbols:
         if row is not None and row["iv_post_1d"] is not None:
             out.append(row)
     n = db.upsert(store, "iv_event_log", pd.DataFrame(out), COLUMNS["iv_event_log"], CASTS["iv_event_log"]) if out else 0
-    return {"inserted": n, "candidates": int(len(rel))}
+    return {"inserted": n, "candidates": len(rel)}

@@ -10,7 +10,7 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getHoldingChanges, type HoldingChange } from '@/lib/api'
-import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, T, TickerLink, type Column } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, T, TickerLink, type Column, sourceOf } from '@/components/terminal'
 
 type View = 'mf_buy' | 'mf_sell' | 'fpi_buy' | 'fpi_sell' | 'promoter' | 'holders'
 const VIEWS: [View, string, (r: HoldingChange) => number | null, 'asc' | 'desc'][] = [
@@ -63,7 +63,7 @@ export function OwnershipShifts() {
       {error && <ErrorBox error={error} />}
       {!data && !error && <Loading label="Reading shareholding filings" />}
       {data && (
-        <Panel title={`${VIEWS.find(v => v[0] === view)![1]} · quarter ended ${qtr(active)}`} accent={T.violet} pad={0}
+        <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE shareholding filings', maxAgeDays: 120 })} badge="context" title={`${VIEWS.find(v => v[0] === view)![1]} · quarter ended ${qtr(active)}`} accent={T.violet} pad={0}
           subtitle="pp = percentage points of the company's shares · the shareholder count includes every demat holder · companies file within 21 days of the quarter end"
           right={<div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>{VIEWS.map(([k, l]) => <Chip key={k} color={T.violet} active={view === k} onClick={() => setView(k)}>{l}</Chip>)}</div>}>
           <DataTable columns={cols} rows={rows} rowKey={r => r.symbol} dense maxHeight={720} empty="No filings for this quarter yet" />

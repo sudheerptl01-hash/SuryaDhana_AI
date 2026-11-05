@@ -338,7 +338,9 @@ const MINUS = '−'
   check('R1 OMON starts on the hand-off symbol', oc.includes('useState(() => omonInitialSymbol(readHandoff()))') && !oc.includes("useState('NIFTY')"))
   check('R1 OMON drops superseded chain responses (EOD, LIVE and the fallback)', (oc.match(/current\(\)/g) ?? []).length >= 4 && oc.includes('seq.begin(selection)'))
   check('R1 OMON clears the old chain on a symbol change', oc.includes('useEffect(() => { setData(null); setLiveNote(null); setPricer(null); setRolled(null) }, [symbol])'))
-  check('R1 OMON IV history ignores a stale symbol', oc.includes('if (alive) setRows(r.data.rows)'))
+  // terminal v2: the IV history moved to components/vol/IvHistoryChart (useIvHistory); the guard moved with it
+  const ivh = src('components/vol/IvHistoryChart.tsx')
+  check('R1 OMON IV history ignores a stale symbol', oc.includes('useIvHistory(symbol') && ivh.includes('let alive = true') && (ivh.match(/if \(!alive\) return|if \(alive\)/g) ?? []).length >= 4)
   const dl = src('components/DealsMonitor.tsx')
   check('R1 DEAL starts on the hand-off window and ignores stale windows', dl.includes('useState(() => (readHandoff() ? 30 : 10))')
     && dl.includes('if (current) setData(r.data)') && dl.includes('return () => { current = false }'))

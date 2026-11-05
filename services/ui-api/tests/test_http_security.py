@@ -64,7 +64,8 @@ def test_guard_is_the_outermost_middleware_and_cors_is_gone(ui_main: ModuleType)
 
     from shared.http_guard import HostOriginGuard
     classes = [m.cls for m in ui_main.app.user_middleware]
-    assert classes == [HostOriginGuard, ApiGzipMiddleware]           # user_middleware[0] is the outermost
+    from shared.metrics import ObservabilityMiddleware
+    assert classes == [HostOriginGuard, ObservabilityMiddleware, ApiGzipMiddleware]   # user_middleware[0] is the outermost
     assert CORSMiddleware not in classes
 
 

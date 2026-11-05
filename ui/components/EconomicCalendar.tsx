@@ -6,7 +6,7 @@
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getEcoCalendar, type EcoEvent } from '@/lib/api'
-import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, T, type Column, fmtDay } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, T, type Column, fmtDay, undatedSource } from '@/components/terminal'
 
 export const ECO_KINDS: Record<string, { color: string; label: string; why: string }> = {
   RBI:  { color: T.amber,  label: 'RBI',  why: 'repo rate and stance: moves banks, NBFCs, rate-sensitive sectors' },
@@ -61,7 +61,7 @@ export function EconomicCalendar() {
             <div style={{ fontSize: 11, fontFamily: T.mono, color: dayDiff(e.date, today) <= 1 ? T.amber : T.muted }}>{fmtDay(e.date)} · {e.time ? `${e.time} IST` : 'all day'} · {ecoWhen(e.date, today)}</div>
           </div>))}
       </div>
-      <Panel title={`Calendar · ${rows.length}`} accent={T.cyan} pad={0}
+      <Panel source={undatedSource('ECO calendar', 'RBI / MOSPI / Fed release schedules, kept daily')} title={`Calendar · ${rows.length}`} accent={T.cyan} pad={0}
         subtitle="last 30 days and the next 4 months · hover a release for why it matters"
         right={<div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           <Chip color={T.muted} active={!kind} onClick={() => setKind(null)}>ALL</Chip>

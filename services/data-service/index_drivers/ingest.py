@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-
 from data_health import db, ingest_log
+
 from index_drivers.schema import CASTS, COLUMNS
 
 ARCHIVE = "https://nsearchives.nseindia.com"
