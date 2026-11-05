@@ -62,5 +62,13 @@
 | DESK, OVRV, BRF (Desk ledger) | STALE · 30 Oct | the missed `desk_daily` cycle run once (sessions 2–4 Nov); 19:30 marks 5 Nov | current to the last close |
 | OMON intraday IV path for a stock | OFFLINE chip | coverage line: the 15-min Breeze pilot covers NIFTY, BANKNIFTY and the watch list's F&O names (0270a0b) | labelled; the stock's live chain is the NSE panel |
 | VIX overlay (index IV views) | 5 sessions of VIX | NSE's vixhistory API answered 403; backfilled from the `ind_close_all` archive files (1,847 days: 1,744 files, 100 holidays, 3 files NSE dated wrongly, e.g. 6 Apr 2023 stamped 4 Jun 2023) | `vix_daily` 2019-10-01 → 2026-11-04 (1,749 sessions); NIFTY IV page overlays 750 |
-| CMDT | OFFLINE (EIA) | `EIA_API_KEY` not set; US EIA data is not NSE | owner adds a free EIA key |
+| CMDT | OFFLINE (EIA) | keyless fallback to EIA's own public file of the same series (cd8778e; checked by its Sourcekey row) | EIA crude stocks through 30 Oct, production through Aug 2026; a free `EIA_API_KEY` switches to the v2 API |
 | MCXG, WEI tape | DELAYED / non-NSE | MCX gold, USD/INR, Brent, COMEX gold and the US / Asian indices are not NSE data | labelled with their source |
+
+## After the close (17:12–17:24 IST, release 20261105-171053, audit `ui_audit_20261105_closed2`)
+
+43/43 pages pass in Chromium and WebKit with the market closed: no NSE price reads LIVE. The only LIVE chips are the controller clock,
+the service probes and MCX (open until 23:30). The OSTR margin chip read LIVE · BREEZE after the close in the 17:00 run and was fixed in cd8778e
+(CLOSE · <session>). Stock and index-member rows read STALE · the 4 Nov close until today's close is stored: data-service was restarted at 16:19
+(its in-memory last prices went with it). The 18:30 EOD pipeline stores today's bhavcopy (the F&O file lands about 20:10), and the quote service
+re-reads closes every 10 min.
