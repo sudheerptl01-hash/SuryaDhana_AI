@@ -127,5 +127,16 @@ const check = (name: string, ok: boolean, detail?: unknown) => {
   check('W3 the dataset table reads the catalog first', src('components/NseDatasets.tsx').includes('const h = health[r.table]'))
 }
 
+// ── RSCH layout (6 Nov audit): a long report scrolls in its own pane and the first visit opens a study ──────────────────
+{
+  const rl = src('components/ResearchLibrary.tsx')
+  check('R1 the report pane scrolls on its own (the 2,100-line journal made the page 41,600 px tall)',
+    rl.includes("data-rsch-doc-scroll style={{ maxHeight: 'calc(100vh - 230px)', overflowY: 'auto'"))
+  check('R1 negative control: the markdown is not rendered straight into an unbounded Panel body',
+    !rl.includes('pad={18}>\n              {doc.takeaway'))
+  check('R2 the first visit opens the newest study with a verdict, not rows[0]',
+    rl.includes('rows.find(r => STUDY_VERDICTS.has(r.verdict)) ?? rows[0]') && !rl.includes(': rows[0]?.id ?? null))'))
+}
+
 console.log(`honesty.check: ${pass} passed, ${fail} failed`)
 if (fail) process.exit(1)

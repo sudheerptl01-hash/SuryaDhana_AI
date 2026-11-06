@@ -71,8 +71,16 @@ api-gateway :8000 · feature :8002 · ml :8003 · rl :8004 · risk :8005 · exec
   score; context metrics never coloured bullish/bearish; the health verdict ends "describes, does not predict"; the same
   number appears once per page; **nothing gold feeds the Decision Desk, the S1 shadow, directional alerts or the paper
   ticket's price**. Duty is a dated constant (15 % since 2026-05-13, `GOLD_IMPORT_DUTY_PCT`; owner confirms at CBIC).
-- **Terminal v2, wave 1 (5 Nov 2026; in the tree, NOT deployed: the live stack runs the pre-v2 code, the new tables are
-  empty, no IV / drivers backfill has run)**: plan `reports/terminal_v2/PLAN.md` (binding §0, ownership §1), `RATING.md`,
+  **MCX settlement (wave 1d, 5 Nov)**: the ICICI master's price band is one session stale, so the settlement of record is
+  the last-30-minute VWAP of Breeze 1-minute bars (MCX's DSP method): `gold/mcx_close.py`, job `gold_mcx_close` 23:58
+  Mon–Fri (the ICICI session dies at midnight IST, so a run after midnight finds no session), `/db/gold/mcx/settlement`;
+  ui-api computes it when the store has none; fields `settlement_source` / `_session` / `_quality`. Purity: basis =
+  price ÷ (landed × purity/1000), GOLD / GOLDM 995, GOLDTEN / PETAL / GUINEA 999. **Special sessions (wave 1e, 6 Nov)**:
+  `shared/mcx_specs.SPECIAL_SESSIONS_2026` (Muhurat Sun 8 Nov 14:20–15:30, pre-open 14:05–14:19) counted by every session
+  helper, so Monday's fair-open baseline uses Sunday's VWAP (flagged when it has to fall back). HEALTH's India basis is
+  contract-aware and labels its clock (`/api/gold/health?contract=&expiry=` == `/overview`'s health); one real yield per
+  page (the fresher twin); the Shanghai premium is recomputed from its printed legs. Build records `reports/gold_program/build/`.
+- **Terminal v2, wave 1 (5 Nov 2026; DEPLOYED 5 Nov 13:01, IV / VIX / drivers history backfilled to 2019)**: plan `reports/terminal_v2/PLAN.md` (binding §0, ownership §1), `RATING.md`,
   research `R-*/REPORT.md`, `API_CONTRACT.md`. data-service packages, each a `schema.py` (DDL) + `api.py` router mounted by
   `main.py`: `fo_iv/` (Black-76 on the put-call-parity forward, `model_version` `b76-pcp-v1`; tables `iv_surface_daily`,
   `iv_expiry_daily`, `iv_summary_daily`, `iv_event_log`, `iv_intraday`, `vix_daily`, `index_ohlc_daily`, `rate_curve` (a dated
@@ -101,6 +109,26 @@ api-gateway :8000 · feature :8002 · ml :8003 · rl :8004 · risk :8005 · exec
   `shared/config.py`, `scripts/db_backup.py --offsite` (sha256-verified copy to `OFFSITE_BACKUP_DIR`; the 02:15 job does
   not pass it yet). GOLD's labelling rules apply: no `signal` badge exists in F&O or index attribution; nothing here feeds
   the Decision Desk, the S1 shadow, a directional alert or a ticket price. NSE's `Last-Modified` header is GMT (add 5:30).
+- **Terminal v2, wave 2 + the 5 Nov review fixes (6 Nov 2026, commit `0b27dcc`, DEPLOYED 6 Nov 15:36)**: build record
+  `reports/terminal_v2/build/wave2_and_fixes.md` (two rounds, each builder adversarially re-checked). **Paper F&O book**
+  (PAPER ONLY, no order path): ui-api `routers/fo_book.py` (`/api/options/book`, `/greeks`, `/marks`, `/close`, `/roll`,
+  `/journal`) + `fo_book_store.py` (SQLite `data/paper_fo.sqlite`, `PAPER_FO_DB`); expired legs settle at the stored
+  expiry-day mark (point-in-time); RSK › F&O is `/api/risk/fo` (net Greeks, delta-gamma VaR, SPAN utilisation, shocks);
+  OSTR v2 in `routers/options_strategy.py` + `ui/components/fobook/`. **Typed alerts**: `alert_engine.py` +
+  `routers/alerts.py` (`/api/alerts/series` lists the kinds; rules, fires, feed; SQLite `data/alerts.sqlite`, the legacy
+  `data/price_alerts.json` is imported and kept current; backed up nightly by `db_backup.py`); the controller evaluates
+  them after each EOD step (`_alerts_after_soon`) and sends Telegram lines; no alert kind carries a direction word.
+  **Tape + expiry day**: `iv_intraday` every 2 min 09:15–15:30 through the Breeze budget (tiers: NIFTY / BANKNIFTY /
+  FINNIFTY near + next, watch names at 15 min); `routers/expiry.py` (`/api/derivatives/iv/{s}/oi-tape`,
+  `/api/derivatives/expiry-day`), UI `ui/components/expiry/` (DERV › XPRY; OMON LIVE tape); `POST :8001/jobs/expiry-replay`.
+  **One time convention**: T = calendar time to 15:30 IST on the expiry day ÷ 365 (`fo_iv/black76.TIME_CONVENTION`
+  `cal365-1530`, no half day) in the store, the chain, OVME, OSTR and the book. IV − RV20 is close-to-close and says so
+  (Parkinson and Yang-Zhang shown beside it); range-outlier sessions leave Parkinson / YZ only; `POST /jobs/iv-eod?job=iv_repair`
+  re-derives RV / IV30 fill / ranks from stored rows. Results filing times live in `nse_results.filed_at` (+ `filed_source`),
+  read by EVTS as `COALESCE(filed_at, released_at)`; **`released_at` is unchanged and is what the S1 shadow reads** (adopting
+  filed_at there is an owner review item). FII/DII sums say "n of m sessions" (`POST :8001/jobs/fii-dii-backfill`);
+  `scripts/daily_wrap.py --backfill-missing --since <d>` (one date per wrap). GO arguments are read by the target page
+  (`TCS OMON 27NOV`, `NIFTY OSTR IC`, `ALRT TCS >3200`, `GO IMPORT` for the one-time settings import).
 
 ## Data Sources
 
@@ -185,8 +213,7 @@ once restarted on the 25 Oct round-3 code; never the `UI_API_RELOAD=1` superviso
 **SuryaDhana.app** starts at login (`~/Library/LaunchAgents/SuryaDhana.plist`); launchd relaunches the copy it started after a crash, never after Quit. A copy reopened by hand after ⌘Q runs a crash guard (`suryadhana-crash-guard` in `ps`; app builds from 25 Oct round 3) that has launchd start it again after an unclean end; an older build is not relaunched until the next login. The menu-bar item and the `./start-local.sh status` desktop-app row say which applies (RUNBOOK §5).
 **PAPER ONLY is enforced in code**: ui-api refuses LIVE execution unless `EXECUTION_LIVE_ALLOWED=1` (never set it casually).
 Outage recipe: docs/RUNBOOK_RESTORE.md → "After an outage".
-**Terminal v2 jobs (in the tree since 5 Nov 2026, NOT deployed: the live controller keeps the pre-v2 schedule until its
-next restart):** the 18:30 pipeline is equity-only (`skip_steps: ["nse_positions"]`); the 20:30
+**Terminal v2 jobs (live since 5 Nov 2026; wave 2 adds the 2-minute OI / IV tape and the alert dispatch, live 6 Nov):** the 18:30 pipeline is equity-only (`skip_steps: ["nse_positions"]`); the 20:30
 `nse_positions_catchup` is the evening pass (positions → FII/DII → the NSE evening files via `/jobs/ingest-nse-files` →
 the 20:35 `index_drivers_daily` retry when the top-10 file was missing → `iv_eod` LAST, `/jobs/iv-eod?job=iv_eod`);
 19:25 `index_drivers_daily`; 22:45 `nse_evening_pass` (MTF T−1, the 22:05 bhavcopy re-publication as a revision row,
@@ -265,8 +292,7 @@ $P -m mypy shared/ services/ --ignore-missing-imports
    `sd_upstream_requests_total`, `sd_upstream_breaker_open`, `sd_feed_lag_seconds`), the `X-Request-ID` echo (bound as
    the log correlation id) and the JSON access log (no `/health`, `/api/health`, `/live`, `/`, `/metrics` lines unless
    they fail) come from `shared/metrics.install_observability`, installed on data-service, ui-api and master-controller
-   inside the Host/Origin guard. In the tree since 5 Nov 2026; each service serves it only after its next restart (until
-   then `/metrics` is 404 on the live stack). The dormant legacy services are not covered.
+   inside the Host/Origin guard. Live on all three services since the 5 Nov deploy. The dormant legacy services are not covered.
 3. Inter-service calls: httpx over 127.0.0.1 (ui-api → data-service :8001, the controller → both); the hot proxies share
    one `AsyncClient` per process (`shared/http_client.get_json`). Docker DNS only in the legacy compose.
 4. Redis (127.0.0.1:6379, optional password) carries live quotes from data-service to ui-api's `/ws/monitor` hub

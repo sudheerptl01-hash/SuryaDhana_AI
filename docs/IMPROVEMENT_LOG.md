@@ -1,9 +1,47 @@
 # Improvement log: the operations journal (newest entry first)
 
-Last updated Fri 6 Nov 2026 10:45 IST (market-hours acceptance, entry below; evening checks and the unattended ICICI login; live NSE program + Terminal v2 wave 1 deployed 13:01; GOLD program
-deployed on the night of 4 Nov; the Terminal v2 research round is written up in `reports/terminal_v2/`). The 11–15 Oct
-sprint entries further down were run and checked against live data at the time; today the terminal has 43 pages and
-`scripts/tests` collects 414 tests.
+Last updated Fri 6 Nov 2026 16:00 IST (Terminal v2 wave 2 + the 5 Nov review fixes + gold wave 1e DEPLOYED 15:36, entry
+below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5 Nov 13:01; GOLD program deployed on the night
+of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
+has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
+
+**6 Nov 2026, 15:36: Terminal v2 wave 2, every non-gold defect of the 5 Nov 43-page review, and gold wave 1e DEPLOYED (`0b27dcc`).**
+- Built 09:00–10:35 by two workflow rounds (nine builders with disjoint files, each re-checked by an adversarial checker; round 2
+  closed every remaining major) plus gold wave 1e (two builders, two checkers). The PM applied 120 cross-builder patch requests
+  (exact-match, backed up). Records: `reports/terminal_v2/build/wave2_and_fixes.md`, `reports/gold_program/build/wave1e.md`.
+- Gates before commit: ui-api 1,566 · scripts 521 · core 1,416 (the order-dependent live-ticks test is fixed: state isolated,
+  green in the full run) · execution 7 · alpha_lab 20 · cargo 154 + clippy + fmt · boot 74 · release builder 26 · tsc · every
+  node check · ruff · both LEARN validators · both data dictionaries · both API contracts regenerated.
+- Deploy 15:36 (after the close, lock-safe order): stop ui-api → restart data-service (`/ready` 200) → start ui-api → restart
+  master-controller; UI release `20261106-153639-0b27dcc`; SuryaDhana.app rebuilt (`pages.rs` changed) and relaunched through
+  its login item. `/metrics` answers on all three services.
+- After-close jobs: `iv_repair` (329,949 rows; RV filled 329,459, YZ 329,441, IV30 flat-filled 135,342 flagged `cm30_flat`,
+  4,702 range-outlier rows out of Parkinson / YZ; INFY YZ RV20 53.7 % → 36.5 %); the 5 Nov combined-OI (MWPL, 218 rows) and
+  SPAN files; the FII/DII backfill (28 Oct, 2 Nov, 3 Nov stay missing: NSE keeps no archive); daily wraps 16 / 21 / 29 Oct
+  written and the 4 Nov legacy wrap rebuilt (28 Oct, 2 / 3 Nov skipped: no FII/DII cash rows); the expiry-day replay
+  (NIFTY 27, BANKNIFTY 6, FINNIFTY 6 expiries since May, 14,660 rows, 80 Breeze calls through the ledger); results filing
+  times for the last fortnight's reporters into the new `nse_results.filed_at` (`released_at`, which the S1 shadow reads, is
+  unchanged).
+- What changed for the reader: one time convention (calendar time to 15:30 IST on expiry ÷ 365) in the store, chain, OVME,
+  OSTR and the book, so one expiry shows one ATM IV; IV − RV20 named close-to-close with Parkinson and YZ beside it; skew with
+  its own percentile; OI in contracts; IV paid vs delivered on monthlies over each option's own life (NIFTY +2.35 pts mean over
+  11 months, 7 of 11 paid above); % MWPL and BAN from NSE's own files; NSE Contract_Delta beside the model delta. The paper
+  F&O book (OSTR → BOOK, net Δ Γ Θ ν, daily marks, expired legs settle at the stored expiry-day mark, roll; PAPER ONLY), RSK
+  › F&O, typed alerts on any stored series (no direction word in any kind), the 2-minute OI / IV tape, DERV › XPRY, CHRT on
+  indices / the near future / IV30 / OI. Honesty sweep: real costs on ALFA and BTST, alpha_lab verdicts in RSCH, FII/DII
+  "n of m sessions", EQS real close, crash-filter wording, LWSC liquidity universe, DEXP without Yahoo. GO arguments reach the
+  target page; `GO IMPORT` brings the old :3000 settings across (owner click). Gold: contract-aware live HEALTH basis with a
+  clock label, one real yield per page, the Shanghai premium recomputed from its printed legs, the Sun 8 Nov Muhurat session
+  in the MCX calendar (Monday's fair open uses Sunday's VWAP), the COMEX curve in the 03:10 overnight job.
+- Results filing times: 1,476 symbols re-read (62,804 rows; the 14 empty are InvITs / REITs); MOTHERSON's 5 Nov results now
+  time to 14:58, inside the session, so ERN / EVTS measure the reaction from that session.
+- Audit `reports/terminal_v2/qa/ui_audit_20261106_wave2`: the first run failed one page, RSCH in Chromium (full-page screenshot
+  timeout). Cause: the page opened the 2,103-line improvement log in full, making the document 41,600 px tall. Fix: the report
+  scrolls in its own pane like the study list, and a first visit opens the newest study with a verdict
+  (`ResearchLibrary.tsx`, honesty.check R1/R2 with negative controls); release `20261106-161045`. Re-run: 43/43 in Chromium
+  and WebKit.
+- Still to run: the outage backfill's inbox notes after 21:15 tonight; the NIFTY / NIFTY BANK drivers history on Sun 8 Nov
+  10:00 (PLAN 1.8). Owner items: the IMPORT click; adopting `filed_at` for the S1 shadow (review); O-T13 (BANK pre-list days).
 
 **6 Nov 2026, 09:26–10:45: market-hours acceptance PASSED; the EQS warm-up rows explained and labelled honestly.**
 - The 08:00 ICICI job logged in unattended on the authenticator code (no SMS). Breeze: 4,723 ticks/min, 0 unmapped, every

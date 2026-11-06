@@ -42,7 +42,9 @@ export function ResearchLibrary() {
       setList(rows); setError(null)
       let saved: string | null = null
       try { saved = localStorage.getItem(SEL_KEY) } catch { /* storage unavailable */ }
-      setSel(s => s ?? (rows.some(r => r.id === saved) ? saved : rows[0]?.id ?? null))
+      // first visit: the newest study with a verdict (never the 2,000-line operations journal or a reference doc)
+      const firstStudy = rows.find(r => STUDY_VERDICTS.has(r.verdict)) ?? rows[0]
+      setSel(s => s ?? (rows.some(r => r.id === saved) ? saved : firstStudy?.id ?? null))
     } catch (e: any) { setError(apiError(e, 'Research library unavailable')) }
   }, [])
   useEffect(() => { load() }, [load])
@@ -115,7 +117,8 @@ export function ResearchLibrary() {
               title={doc.area}
               subtitle={`${doc.id} · ${doc.lines} lines · updated ${ago(doc.updated)}`}
               right={<Chip color={VERDICT_COLOR[doc.verdict] ?? T.muted} active>{doc.verdict}</Chip>}
-              pad={18}>
+              pad={0}>
+              <div key={doc.id} data-rsch-doc-scroll style={{ maxHeight: 'calc(100vh - 230px)', overflowY: 'auto', padding: 18 }}>
               {doc.takeaway && (
                 <div style={{ border: `1px solid ${T.border}`, borderLeft: `3px solid ${VERDICT_COLOR[doc.verdict] ?? T.amber}`,
                               background: '#080b10', padding: '10px 14px', marginBottom: 18 }}>
@@ -139,6 +142,7 @@ export function ResearchLibrary() {
                   </div>
                 </div>
               )}
+              </div>
             </Panel>
           )}
         </div>
