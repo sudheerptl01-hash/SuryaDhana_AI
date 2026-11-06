@@ -533,6 +533,7 @@ C3, C4, D3, E1, E5, E12, F1, F2, F9, F10, G1, G2, G3, G5, G8, G16, G19, H2, H3, 
 ### E19 · Swiss customs gold trade — BAZG open data (`TN8_EXP_en.zip`) and SwissImpex dashboard
 - **URL:** `https://ocean.nivel.bazg.admin.ch/open-data-reports/TN8_EXP_en/TN8_EXP_en.zip` (CKAN package `e6bcc098-2c55-4305-a5ed-35c7bf7cde55`) · dashboard `https://www.swissimpex.admin.ch/` (JS, no API; the old `gate.ezv.admin.ch/swissimpex/` is 404)
 - **Verified (G-INDIA):** HEAD 200, **692,443,287 bytes**, `Last-Modified 20 Oct 2026` (September data); monthly since 1988; filter tariff 7108.1200 × India (granularity and unit to confirm on the first run, PLAN §j). Terms: open use with attribution.
+- **First run (6 Nov 2026):** one member `TN8_EXP_en.csv`, comma-delimited, 25 columns (`year`, `month`, `Tariffnumber8` '7108.1200', `Country_isoAlpha2` / `Country_txt` 'India', `Supplementary_quantity`, `Quantity_kg`, `Value_CHF/EUR/USD`, `status` def/prov). Monthly, unit kg. The first live run stored 0 rows (the parser matched the ISO-code column and the unit count); fixed and re-run: 177 months, Jan 2012 (67.4 t) → Sep 2026 (3.1 t). Range-request the zip head to audit the header without the 692 MB download.
 - **[B]** Switzerland refines most of the bars India imports, so Swiss customs is the fastest hard count of physical flow, in tonnes. 
 - **Verdict:** PUBLISH-CONTEXT — one row a month (stream the zip, filter, delete). · **Catalog:** `SWISS_GOLD_EXPORT_IN_KG` · `gold_series` (M) · job `gold_monthly` (22nd)
 

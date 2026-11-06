@@ -382,7 +382,7 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 ### `gold_cot` · Gold: CFTC COT
 
 - **Pages:** GOLD · **Publisher:** CFTC (Socrata)
-- **Published (IST):** Fri 15:30 ET for Tue · **Expected stored by:** no deadline · **Cadence:** weekly · **Amber after:** 9 days, red beyond that
+- **Published (IST):** Fri 15:30 ET for Tue · **Expected stored by:** no deadline · **Cadence:** weekly · **Amber after:** 11 days, red beyond that
 - **Ingest job:** `gold_cot_weekly` · **Freshness read from:** `MAX(report_date)` of `gold_cot`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [GOLD_DATA_DICTIONARY.md#B10](../docs/GOLD_DATA_DICTIONARY.md#B10)
 

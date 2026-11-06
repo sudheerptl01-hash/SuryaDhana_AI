@@ -1048,7 +1048,7 @@ GOLD_DORMANT_JOBS: dict[str, str] = {
 GOLD_KEY_JOBS: tuple[str, ...] = tuple(j for j, s in GOLD_JOBS.items() if s.key)
 # key jobs that read Breeze (ICICI) and so are re-run after downtime only while a session is live (6 Nov, O-OPS)
 GOLD_SESSION_JOBS: tuple[str, ...] = ("gold_mcx_close",)
-GOLD_MAX_AGE_DAYS = {"gold_cot": 9, "gold_curve": 4, "gold_daily_bars": 4, "gold_etf_holdings": 5, "gold_cme_daily_voi": 4}
+GOLD_MAX_AGE_DAYS = {"gold_cot": 11, "gold_curve": 4, "gold_daily_bars": 4, "gold_etf_holdings": 5, "gold_cme_daily_voi": 4}
 GOLD_STATUS_TABLES = (("gold_cot", "COT"), ("gold_cme_daily_voi", "COMEX OI"), ("gold_curve", "MCX curve"),
                       ("gold_daily_bars", "bars"), ("gold_etf_holdings", "ETF"))
 # PLAN §c.3 asks for some groups on certain weekdays only: job id → (group, weekdays it is asked for). A multi-day catch-up

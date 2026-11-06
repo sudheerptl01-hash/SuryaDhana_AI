@@ -892,6 +892,7 @@ Seed rows stricter than their source entry (allowed; listed so the difference is
 - **Beginner:** Switzerland refines most of the bars India imports, so Swiss customs is the fastest hard count of physical flow, in tonnes.
 - **Verdict:** PUBLISH-CONTEXT — one row a month (stream the zip, filter, delete).
 - **Catalog:** `SWISS_GOLD_EXPORT_IN_KG` · `gold_series` (M) · job `gold_monthly` (22nd)
+- **Notes:** **First run (6 Nov 2026):** one member `TN8_EXP_en.csv`, comma-delimited, 25 columns (`year`, `month`, `Tariffnumber8` '7108.1200', `Country_isoAlpha2` / `Country_txt` 'India', `Supplementary_quantity`, `Quantity_kg`, `Value_CHF/EUR/USD`, `status` def/prov). Monthly, unit kg. The first live run stored 0 rows (the parser matched the ISO-code column and the unit count); fixed and re-run: 177 months, Jan 2012 (67.4 t) → Sep 2026 (3.1 t). Range-request the zip head to audit the header without the 692 MB download.
 
 ### E20 · Hong Kong C&SD merchandise trade (gold with mainland China)
 

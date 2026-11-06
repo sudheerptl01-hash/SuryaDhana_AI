@@ -419,3 +419,48 @@ def test_market_headlines_use_the_same_cache(desk, monkeypatch) -> None:
     a = asyncio.run(markets.market_headlines())
     b = asyncio.run(markets.market_headlines())
     assert up.news == len(markets.MARKET_TOPICS) and a == b
+
+
+# ── dual-write contract (6 Nov 2026): the body ui-api sends must be accepted by data-service's real /jobs/gold-log ──────
+_DS_HANDLER = r"""
+import json, sys
+sys.path[:0] = [sys.argv[1], sys.argv[2]]          # data-service, then the repo root (shared/), as data-service runs
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from gold import api, ingest_local
+seen = []
+ingest_local.upsert_preopen_log = lambda store, payload: (seen.append(payload), {"inserted": 1, "day": str(payload["day"])})[1]
+api.configure(get_store=lambda: object(), submit=lambda *a, **k: {})
+app = FastAPI(); app.include_router(api.router)
+out = []
+for body in json.loads(sys.stdin.read()):
+    r = TestClient(app).post("/jobs/gold-log", json=body)
+    out.append({"status": r.status_code, "day": str(seen[-1]["day"]) if r.status_code == 200 else None})
+print(json.dumps(out))
+"""
+
+
+def test_gold_log_dual_write_body_is_accepted_by_data_service(monkeypatch):
+    import subprocess
+    import sys as _sys
+    from pathlib import Path
+
+    sent: list[Any] = []
+
+    class _Ok:
+        status_code = 200
+
+    monkeypatch.setattr(g.httpx, "post", lambda url, json=None, timeout=None: (sent.append(json), _Ok())[1])
+    row = {"date": "2026-11-06", "contract": "GOLD DEC-26", "fair_open": 142620.0, "baseline": 144091.7,
+           "baseline_source": "MCX settlement Thu 05 Nov (last-30-min VWAP)", "actual_open": 142530.0, "error": -90.0}
+    assert g._dual_write_log(row) is True and len(sent) == 1
+    assert "row" not in sent[0] and sent[0]["date"] == "2026-11-06"          # the row itself, not an envelope
+    ds = Path(__file__).resolve().parents[2] / "data-service"
+    # the real data-service handler (in a subprocess: its top-level `gold` package stays out of this process)
+    res = subprocess.run([_sys.executable, "-c", _DS_HANDLER, str(ds), str(ds.parents[1])], input=json.dumps([sent[0], {"row": row}]),
+                         capture_output=True, text=True, timeout=120, cwd=str(ds))
+    assert res.returncode == 0, res.stderr[-800:]
+    accepted, envelope = json.loads(res.stdout.strip().splitlines()[-1])
+    assert accepted == {"status": 200, "day": "2026-11-06"}
+    assert envelope["status"] == 422                                           # negative control: the pre-6-Nov body is refused
+

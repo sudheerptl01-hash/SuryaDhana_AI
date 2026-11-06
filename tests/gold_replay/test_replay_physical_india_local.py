@@ -121,6 +121,20 @@ def test_lbma_turnover_vault_and_swiss_zip(now):
     assert _val(sw, "SWISS_GOLD_EXPORT_IN_KG", date(2026, 8, 31)) == 12345.5 and _val(sw, "SWISS_GOLD_EXPORT_IN_KG", date(2026, 9, 30)) == 21000.25
 
 
+def test_swiss_zip_with_the_real_bazg_header(now):
+    """6 Nov 2026: the first live run streamed 692 MB and stored 0 rows. The real header (verbatim in the fixture) lists
+    Country_isoAlpha2 before Country_txt and Supplementary_quantity before Quantity_kg; header-order matching read 'IN'
+    (no 'india' in it) and the unit count. Negative controls: Germany, jewellery (7113), horses (0101), unit counts."""
+    sw = ph.parse_swiss_zip(str(FIXTURES / "swiss_tn8_bazg_header.zip"), now=now)
+    assert _val(sw, "SWISS_GOLD_EXPORT_IN_KG", date(2026, 8, 31)) == 30000.5                 # kg, not the unit count 7
+    assert _val(sw, "SWISS_GOLD_EXPORT_IN_KG", date(2026, 9, 30)) == 25000.0                 # def + prov, India only, 7108.12 only
+    assert len(sw[sw["series_id"] == "SWISS_GOLD_EXPORT_IN_KG"]) == 2
+    hdr = [h.lower() for h in "Traffic_direction,year,quarter,Quarter_txt,month,Month_txt,Tariffnumber8,Tariffnumber8_txt,Tariffnumber6,Tariffnumber4,Tariffnumber2,Total_business_cycle,Total_general,Country_isoAlpha2,Country_num,Country_txt,Supplementary_unit_code,Supplementary_unit_txt,Supplementary_quantity,Quantity_kg,Value_CHF,Value_EUR,Value_USD,status,Update".split(",")]
+    ci = ph._swiss_columns(hdr)
+    assert (hdr[ci["partner"]], hdr[ci["quantity"]], hdr[ci["tariff"]], hdr[ci["year"]], hdr[ci["month"]]) == (
+        "country_txt", "quantity_kg", "tariffnumber8", "year", "month")
+
+
 # ── India ────────────────────────────────────────────────────────────────────────────────────────────
 
 def test_ibja_am_pm_tables(now):

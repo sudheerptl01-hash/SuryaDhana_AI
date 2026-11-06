@@ -40,6 +40,14 @@ has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suit
   scrolls in its own pane like the study list, and a first visit opens the newest study with a verdict
   (`ResearchLibrary.tsx`, honesty.check R1/R2 with negative controls); release `20261106-161045`. Re-run: 43/43 in Chromium
   and WebKit.
+- Gold verified end to end, 16:30–17:00 (`reports/gold_program/VERIFY_20261106.md`): every item of the gold goal 22/22 by GET on
+  the live stack, every GOLD sub-view + MCXG + WEI 22/22 in Chromium and WebKit; the critics' open items closed or re-tested
+  (paper-ticket margin == contract card on all 5 contracts; PETAL / GUINEA scaled to ₹/10 g). Three defects found and fixed:
+  the accuracy-log dual-write had been refused with 422 on every call (ui-api sent `{"row": …}`, data-service reads the row
+  itself; new test runs the real handler; DuckDB copy re-synced through 6 Nov); the COT freshness budget read amber every
+  Friday by design (9 → 11 days); the Swiss customs parser matched 0 rows on the real 692 MB file (ISO-code and unit-count
+  columns; fixed, 177 months Jan 2012 → Sep 2026 stored). data-service + ui-api restarted twice in the lock-safe order
+  (16:37, 16:47), controller once. DATA health: 66 green, 1 amber (news track record, cleared by 19:45), 0 red.
 - Still to run: the outage backfill's inbox notes after 21:15 tonight; the NIFTY / NIFTY BANK drivers history on Sun 8 Nov
   10:00 (PLAN 1.8). Owner items: the IMPORT click; adopting `filed_at` for the S1 shadow (review); O-T13 (BANK pre-list days).
 

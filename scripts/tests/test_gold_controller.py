@@ -276,7 +276,7 @@ def test_key_jobs_max_age_rows_and_groups_per_day():
     # Terminal v2 0.9 extended the downtime re-run (backfill_from) to the Asia-close, morning, India and health jobs
     assert mc.GOLD_KEY_JOBS == ("gold_overnight", "gold_morning", "gold_mcx_master", "gold_health_snapshot",
                                 "gold_india_midday", "gold_asia_close", "gold_india_pm", "gold_cot_weekly", "gold_mcx_close")
-    assert mc.GOLD_MAX_AGE_DAYS == {"gold_cot": 9, "gold_curve": 4, "gold_daily_bars": 4, "gold_etf_holdings": 5,
+    assert mc.GOLD_MAX_AGE_DAYS == {"gold_cot": 11, "gold_curve": 4, "gold_daily_bars": 4, "gold_etf_holdings": 5,
                                     "gold_cme_daily_voi": 4}
     assert not hasattr(mc, "DATASET_MAX_AGE_DAYS"), "retired (Terminal v2 1.4): expected_by + max_age sessions via /api/data/health"
     assert "gpr_daily" in mc.gold_groups("gold_morning", at(2026, 10, 26, 6, 40))          # Monday

@@ -716,7 +716,7 @@ def parse_swiss_zip(path: str, *, now: datetime | None = None, partner: str = "I
                 text = io.TextIOWrapper(raw, encoding="utf-8", errors="ignore")
                 reader = csv.reader(text, delimiter=_sniff_delim(text))
                 header = [h.strip().lower() for h in next(reader, [])]
-                logger.info("gold.swiss.header", member=name, columns=len(header))
+                logger.info("gold.swiss.header", member=name, columns=len(header), header=header[:40])   # names only, never rows
                 ci = _swiss_columns(header)
                 if ci is None:
                     continue
@@ -742,14 +742,22 @@ def _sniff_delim(text: io.TextIOWrapper) -> str:
 
 
 def _swiss_columns(header: list[str]) -> dict[str, int] | None:
+    # Keys in PRIORITY order, each tried across the whole header before the next key. The real BAZG TN8 header (seen
+    # 6 Nov 2026: Traffic_direction, year, quarter, Quarter_txt, month, Month_txt, Tariffnumber8, …, Country_isoAlpha2,
+    # Country_num, Country_txt, Supplementary_unit_code, Supplementary_unit_txt, Supplementary_quantity, Quantity_kg,
+    # Value_CHF, …, status, Update) put Country_isoAlpha2 ('IN') before Country_txt ('India') and Supplementary_quantity
+    # before Quantity_kg, so the old header-order match read the ISO code (no 'india' in 'in': 0 rows) and the unit count.
     def find(*keys: str) -> int | None:
-        for i, h in enumerate(header):
-            if any(k in h for k in keys):
-                return i
+        for k in keys:
+            for i, h in enumerate(header):
+                if k in h:
+                    return i
         return None
 
-    tariff, partner, qty = find("tariff", "tarif", "tn"), find("partner", "country", "land"), find("quantity", "menge", "kg", "net")
-    period: int | None = find("period", "date", "month", "monat")
+    tariff = find("tariffnumber8", "tariff", "tarif", "tn")
+    partner = find("country_txt", "partner", "country_name", "country", "land")
+    qty = find("quantity_kg", "quantity (kg)", "kg", "menge", "net", "quantity")
+    period: int | None = find("period", "month", "monat", "date")
     year, month = find("year", "jahr"), find("month", "monat")
     if tariff is None or partner is None or qty is None or (period is None and (year is None or month is None)):
         return None

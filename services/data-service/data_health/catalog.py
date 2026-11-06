@@ -141,7 +141,9 @@ def build_rows() -> list[dict[str, Any]]:
     # ── R-DATA §3 rows 31–44: the gold program (tables live in the same store) ─────────────────────────────────────
     r.append(_row("gold_daily_bars", "Gold: Yahoo daily series / GC curve / 1-min bars", "GOLD,MCXG,WEI", "Yahoo (one cached fetcher)", "continuous", "04:00", "daily", 1,
                   "gold_overnight", "table", table="gold_daily_bars", column="trade_date", offset=1, anchor="docs/GOLD_DATA_DICTIONARY.md#A1", badge="context"))
-    r.append(_row("gold_cot", "Gold: CFTC COT", "GOLD", "CFTC (Socrata)", "Fri 15:30 ET for Tue", None, "weekly", 9, "gold_cot_weekly", "table", table="gold_cot",
+    # COT budget 11 days: Tuesday's report lands Sat ~02:00 IST, so the newest stored one is 10–11 days old every Friday
+    # by design (9 read amber each Friday, 6 Nov 2026); a US-holiday Monday release still reads amber, as it should.
+    r.append(_row("gold_cot", "Gold: CFTC COT", "GOLD", "CFTC (Socrata)", "Fri 15:30 ET for Tue", None, "weekly", 11, "gold_cot_weekly", "table", table="gold_cot",
                   column="report_date", anchor="docs/GOLD_DATA_DICTIONARY.md#B10", badge="context", verdict="PUBLISH-CONTEXT"))
     r.append(_row("gold_cme_daily_voi", "Gold: CME daily OI / volume (FTP)", "GOLD", "CME Group (ftp.cmegroup.com)", "T+1 ≈ 14:30", "17:30", "daily", 2, "gold_cme_daily",
                   "table", table="gold_cme_daily_voi", column="trade_date", offset=1, anchor="docs/GOLD_DATA_DICTIONARY.md#C1", badge="context",

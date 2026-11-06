@@ -1603,9 +1603,14 @@ def dual_write_enabled() -> bool:
 
 
 def _dual_write_log(row: dict[str, Any]) -> bool:
-    """POST one accuracy-log row to data-service; False (and one structured WARNING, values omitted) on any failure."""
+    """POST one accuracy-log row to data-service; False (and one structured WARNING, values omitted) on any failure.
+
+    The body IS the row (data-service's GoldLogRequest reads `day`/`date` and the fields at the top level). Until 6 Nov 2026
+    this posted ``{"row": row}``, which data-service refused with 422 on every call, so gold_preopen_log stopped at the
+    one-off migration (30 Oct) while log.json kept growing; test_gold_log_dual_write_body_is_accepted_by_data_service
+    now runs the real data-service handler on the body this function sends."""
     try:
-        r = httpx.post(f"{DATA_SVC}{GOLD_LOG_JOB_PATH}", json={"row": row}, timeout=_DUAL_WRITE_TIMEOUT)
+        r = httpx.post(f"{DATA_SVC}{GOLD_LOG_JOB_PATH}", json=row, timeout=_DUAL_WRITE_TIMEOUT)
         if r.status_code >= 400:
             _log.warning(json.dumps({"event": "gold_log_dual_write_refused", "status": r.status_code, "day": row.get("date")}))
             return False
