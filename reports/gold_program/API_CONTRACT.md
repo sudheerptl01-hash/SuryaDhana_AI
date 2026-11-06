@@ -62,6 +62,7 @@ with `GOLD_CONTRACT_WRITE=1`). `ui/lib/gold/types.ts` follows this file (the ser
 | `GET /api/gold/bars?symbol=GC=F&interval=1m\|5m\|1d&from=&to=` | store | `/db/gold/bars`, `/db/gold/curve` |
 | `GET /api/gold/cot?weeks=52&report=disagg\|legacy&fut_or_combined=F\|C` | store | `/db/gold/cot` ×3, bars, etf |
 | `GET /api/gold/positioning/daily?exchange=COMEX\|MCX&days=60&family=GOLD` | store | cme/voi, bars, curve, events · curve/history |
+| `GET /api/gold/positioning/mcx-history?family=GOLD&expiry=&window=D\|W\|M` | 300 s + store | `/db/gold/mcx/daily` (one read per family), catalog |
 | `GET /api/gold/curve?exchange=COMEX\|MCX&date=&family=GOLD` | store | `/db/gold/curve` (+ghost), series, fair block |
 | `GET /api/gold/contracts?exchange=MCX\|COMEX` | store + master | ICICI master, `/db/gold/margins`, curve(COMEX), (`cme/prf` optional) |
 | `GET /api/gold/premiums?days=365` | store | series, fair block |
@@ -233,6 +234,30 @@ carrying `sessions_spanned, multi_session, span_note` (`"over 3 sessions (master
 days — a 29 Oct → 3 Nov OI change is never printed as one day's; data-service's own count wins when the row carries it;
 C-TRADER-18), `roll.tender_start` = the 1st of the expiry month (contract spec) with `roll.days_unit: "calendar days"`
 (C-TRADER-28), `badge: "arithmetic"`.
+
+### 2.6b `/positioning/mcx-history` (p.mcx.history, 6 Nov 2026)
+`?family=GOLDTEN&expiry=2026-11-30&window=D|W|M` (defaults: `GOLD`, that family's front LIVE expiry on its newest stored
+session, `D`; an unknown family, a malformed expiry or another window is a 422). One read of data-service
+`/db/gold/mcx/daily?family=&from=` (gold_mcx_daily: ICICI Breeze daily bars per live contract, OI and volume in lots, owner
+decision O-8) per family, the store's SWR underneath a 300 s memo per (family, expiry, window). Shape: `{family, expiry,
+expiry_label ("NOV-26"), expiry_source ("requested" | "front (nearest live expiry)"), window, window_label, periods[{period
+("2026-11-05" | "2026-W45" | "2026-11"), period_label, period_start, period_end (the period's LAST stored session), sessions,
+partial, close, close_chg_pct, oi, oi_chg, volume, volume_missing, positions ("opened" | "closed" | "unchanged"), label,
+mechanical, sessions_spanned, note}], contracts[{expiry, expiry_label, oi, share_pct, close, selected}], contracts_date,
+family_oi, since, unit ("₹ per 10 g", shared/mcx_specs), oi_unit: "lots", published, note, badge: "arithmetic", catalog_ids:
+["BREEZE_DAILY"], evidence, read, rule, source, quality: "broker", freshness, as_of, store_errors}`. `periods` are oldest
+first: D = every stored session; W = ISO week (Mon–Sun, so the Muhurat Sunday joins its own week), M = calendar month, each
+period's last close and last OI against the PREVIOUS period's, volume summed (`volume_missing` sessions had none).
+`positions` comes from ΔOI; `label` is `quadrant_label(close_chg_pct, oi_chg)` — the daily tapes' one rule (`rule` prints it),
+never a second one. `mechanical` = the period ends in the contract's expiry month (tender from the 1st, `mcx_tender_start`);
+`partial` = a W / M period that can still gain a session ("to date"); `sessions_spanned` (D only) > 1 when the store skipped a
+session (C-TRADER-18). `contracts` = every live expiry of the family on `contracts_date` with its OI and share of the
+family's OI (shares sum to 100; an expired contract is never in it). `read` says it: OI up = positions opened, OI down =
+closed; who is long or short is not visible in exchange OI (every contract has a long and a short); the quadrant names
+describe, they do not predict; live expiries only. No BREEZE_DAILY PUBLISH row → `published: false`, no periods, no
+contracts, `note` says why (§0). An expired `expiry` → no periods, `note` names it. data-service away → `ok: false`,
+`error_info.code: "upstream_down"`; no rows stored for the family → `ok: false`, `code: "state"`; a degraded answer is
+never memoised.
 
 ### 2.7 `/curve`
 `{exchange, family, date, points[{expiry, symbol, settle_or_last, source, quality, open_interest, oi_change, volume,
@@ -420,7 +445,7 @@ Every read tolerates `{rows:[…]}`, `{data:[…]}`, `{columns, data}` or a bare
 `/db/gold/bars?symbol&interval&from&to` → `{rows[{trade_date|ts, open, high, low, close, volume}]}` with Yahoo symbols;
 `/db/gold/curve?exchange&date` → `{rows, ghost_1w}` (the embedded `ghost_1w` is used; a `date=` read is the fallback);
 `/db/gold/curve?exchange=MCX` → `{rows}` (the latest MCX curve: `oi_change` per family + expiry for `/contracts`);
-`/db/gold/curve/history?exchange=MCX&symbol&days` → `{rows}` (the MCX daily OI tape); `/db/gold/cme/voi?from&products`,
+`/db/gold/curve/history?exchange=MCX&symbol&days` → `{rows}` (the MCX daily OI tape); `/db/gold/mcx/daily?family&from` → `{rows[{trade_date, family, expiry, open, high, low, close, volume, open_interest, release_at, first_seen_at, unit}]}` (gold_mcx_daily, p.mcx.history); `/db/gold/cme/voi?from&products`,
 `/db/gold/cme/efrp?from`, `/db/gold/margins?exchange&date`, `/db/gold/etf?from`, `/db/gold/fed-path`, `/db/gold/events?from&to`,
 `/db/gold/catalog`, `/db/gold/brief?date` → `{available, report_date, row, doc}`. `/db/gold/cme/prf?symbol=GC` is **optional**
 (the COMEX spec card is `null` without it).
@@ -450,6 +475,7 @@ Every read tolerates `{rows:[…]}`, `{data:[…]}`, `{columns, data}` or a bare
 | ICICI master unreachable | computed expiries (`source: "computed"`), no settlement, `master.available: false` |
 | Breeze session invalid / MCX quote 500 | `quote.available: false` with the reason (10-minute memory); `mcx_live` null |
 | LEARN files missing | `{count: 0, terms: []}` / `{tooltips: {}}` |
+| `/db/gold/mcx/daily` down / empty | `/positioning/mcx-history` → `ok: false` (`upstream_down` / `state`), empty `periods` and `contracts`, freshness `unavailable`; not memoised |
 
 ## 7. Deviations from PLAN §d (deliberate)
 
@@ -2001,6 +2027,65 @@ since: null
 store_errors: null
 ```
 
+#### `/api/gold/positioning/mcx-history?family=GOLD&window=W` (positioning_mcx_history)
+```
+as_of: string
+badge: string
+catalog_ids: array
+catalog_ids[]: string
+contracts: array
+contracts[]: object
+contracts[].close: number
+contracts[].expiry: string
+contracts[].expiry_label: string
+contracts[].oi: number
+contracts[].selected: bool
+contracts[].share_pct: number
+contracts_date: string
+evidence: string
+expiry: string
+expiry_label: string
+expiry_source: string
+family: string
+family_oi: number
+freshness: object
+freshness.age_s: number
+freshness.as_of: string
+freshness.source: string
+freshness.state: string
+note: null
+oi_unit: string
+periods: array
+periods[]: object
+periods[].close: number
+periods[].close_chg_pct: null|number
+periods[].label: null|string
+periods[].mechanical: bool
+periods[].note: null
+periods[].oi: number
+periods[].oi_chg: null|number
+periods[].partial: bool
+periods[].period: string
+periods[].period_end: string
+periods[].period_label: string
+periods[].period_start: string
+periods[].positions: null|string
+periods[].sessions: number
+periods[].sessions_spanned: null
+periods[].volume: number
+periods[].volume_missing: number
+published: bool
+quality: string
+read: string
+rule: string
+since: string
+source: string
+store_errors: null
+unit: string
+window: string
+window_label: string
+```
+
 #### `/api/gold/curve?exchange=COMEX` (curve_comex)
 ```
 badge: string
@@ -2888,6 +2973,7 @@ tooltips.mc.kgx: string
 tooltips.mc.move: string
 tooltips.mcx_basis_pct: string
 tooltips.mcx_category_oi: string
+tooltips.mcx_daily_close: string
 tooltips.mcx_oi_by_expiry: string
 tooltips.mean_abs_error: string
 tooltips.mechanical: string
@@ -2911,6 +2997,7 @@ tooltips.official_oz: string
 tooltips.oi_all: string
 tooltips.oi_by_product: string
 tooltips.oi_change: string
+tooltips.oi_share: string
 tooltips.one_pct_move_inr: string
 tooltips.open_interest_lots: string
 tooltips.options_overlay: string
@@ -2924,6 +3011,7 @@ tooltips.p.drawer: string
 tooltips.p.hero: string
 tooltips.p.history: string
 tooltips.p.mcx.category: string
+tooltips.p.mcx.history: string
 tooltips.p.whois: string
 tooltips.p90_abs_error: string
 tooltips.p_cut: string
@@ -2942,6 +3030,7 @@ tooltips.ph.official: string
 tooltips.ph.otc: string
 tooltips.ph.shanghai: string
 tooltips.pm_net: string
+tooltips.positions_opened_closed: string
 tooltips.premium_pct: string
 tooltips.premium_usd: string
 tooltips.pure_gold_pct: string

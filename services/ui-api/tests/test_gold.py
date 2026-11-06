@@ -216,7 +216,29 @@ def catalog_rows() -> list[dict[str, Any]]:
         row("XAU_CROSSCHECK", badge="arithmetic"),
         row("CME_BULLETIN_SETTLE", verdict="LINK-ONLY"),
         row("GOLD_IMPORT_DUTY_PCT", badge="arithmetic", max_age=400),
+        row("BREEZE_DAILY", verdict="PUBLISH-CONTEXT", badge="arithmetic", max_age=4),   # p.mcx.history (O-8, 6 Nov 2026)
     ]
+
+
+def mcx_daily_rows() -> list[dict[str, Any]]:
+    """gold_mcx_daily (O-8) as data-service serves it: GOLD DEC-26 and FEB-27 Breeze daily bars on every MCX session
+    from Mon 28 Sep to Fri 23 Oct 2026 (OI and volume in lots; one session without a volume, as Breeze returned 12 Oct)."""
+    out: list[dict[str, Any]] = []
+    d, k = date(2026, 9, 28), 0
+    while d <= date(2026, 10, 23):
+        if specs.is_session_day(d):
+            for exp, base, oi0 in (("2026-12-04", 121000.0, 15000), ("2027-02-05", 122300.0, 900)):
+                close = base + 180.0 * (k % 4) - 70.0 * k
+                out.append({
+                    "trade_date": d.isoformat(), "family": "GOLD", "expiry": exp, "open": close - 50, "high": close + 120,
+                    "low": close - 140, "close": close, "volume": None if k == 9 else 4000 + 150 * k,
+                    "open_interest": oi0 + (40 * k if k % 3 else -25 * k), "source": "breeze_daily", "quality": "broker",
+                    "release_at": f"{d.isoformat()}T04:05:00+00:00", "first_seen_at": f"{d.isoformat()}T04:05:00+00:00",
+                    "unit": "INR/10g",
+                })
+            k += 1
+        d += timedelta(days=1)
+    return out
 
 
 def series_rows() -> list[dict[str, Any]]:
@@ -351,6 +373,7 @@ def _db_payloads() -> dict[str, Any]:
             ]
         },
         "/db/gold/cme/prf": {"rows": []},
+        "/db/gold/mcx/daily": {"rows": mcx_daily_rows(), "source": "breeze_daily", "quality": "broker"},
     }
 
 
@@ -380,6 +403,12 @@ async def _fake_db(path: str, params: dict[str, Any]) -> Any:
         return {"rows": [r for r in DB[path]["rows"] if r["series_id"] in ids]}
     if path == "/db/gold/curve/history" or (path == "/db/gold/curve" and params.get("exchange") == "MCX"):
         return {"rows": []}
+    if path == "/db/gold/mcx/daily":   # data-service filters by family / expiry / from (gold/reads.py mcx_daily)
+        rows = [r for r in DB[path]["rows"]
+                if (not params.get("family") or r["family"] == params["family"])
+                and (not params.get("expiry") or r["expiry"] == params["expiry"])
+                and (not params.get("from") or r["trade_date"] >= str(params["from"]))]
+        return {**DB[path], "rows": rows, "count": len(rows)}
     if path not in DB:
         raise gold.StoreUnavailable("fixture: no such read (404)")
     return DB[path]

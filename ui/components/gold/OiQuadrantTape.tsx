@@ -76,6 +76,22 @@ export function OiQuadrantTape({ tape, days = 20, tips, missingOiNote, oiScope }
   )
 }
 
+/**
+ * One quadrant word as the tape draws its cell — the same glyph, the same two neutral shades, the word in the text tone —
+ * for a table row (p.mcx.history). No direction colour: price up / down is the glyph, never green / red.
+ */
+export function QuadrantTag({ label, title }: { label: string | null | undefined; title?: string }) {
+  const c = label ? CELL[label] : null
+  return (
+    <span data-quadrant-tag={label ?? ''} title={title ?? (label ? QUADRANT_READ[label] : undefined)}
+      style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5, border: `1px solid ${T.border}`, padding: '0 5px', whiteSpace: 'nowrap',
+               background: c ? (c.row === 0 ? '#0e121a' : '#0a0d13') : 'transparent' }}>
+      <span style={{ fontSize: 9, fontFamily: T.mono, color: T.muted }}>{c?.glyph ?? '··'}</span>
+      <span style={{ color: label ? T.text : T.dim }}>{label ?? '—'}</span>
+    </span>
+  )
+}
+
 function Cell({ k, on }: { k: string; on: boolean }) {
   return (
     <div title={QUADRANT_READ[k]} style={{ border: `1px solid ${on ? T.muted : T.border}`, background: on ? '#131926' : 'transparent', padding: '6px 4px', textAlign: 'center', color: on ? T.bright : T.muted, lineHeight: 1.3 }}>

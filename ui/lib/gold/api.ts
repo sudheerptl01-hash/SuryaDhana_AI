@@ -12,8 +12,8 @@
 import axios from 'axios'
 import type {
   BarInterval, Family, GoldBars, GoldBrief, GoldCalendar, GoldCatalog, GoldContracts, GoldCot, GoldCurve, GoldFair, GoldFlows,
-  GoldGlossary, GoldHealth, GoldLog, GoldLogRowX, GoldMacro, GoldOverview, GoldPositioningDaily, GoldPremiums, GoldSeries,
-  GoldTooltips, Window,
+  GoldGlossary, GoldHealth, GoldLog, GoldLogRowX, GoldMacro, GoldMcxHistory, GoldOverview, GoldPositioningDaily, GoldPremiums,
+  GoldSeries, GoldTooltips, Window,
 } from './types'
 
 const client = axios.create({ baseURL: '', timeout: 15_000 })
@@ -30,6 +30,7 @@ export const GOLD_ENDPOINTS = {
   bars: `${GOLD_API}/bars`,
   cot: `${GOLD_API}/cot`,
   positioningDaily: `${GOLD_API}/positioning/daily`,
+  mcxHistory: `${GOLD_API}/positioning/mcx-history`,
   curve: `${GOLD_API}/curve`,
   contracts: `${GOLD_API}/contracts`,
   premiums: `${GOLD_API}/premiums`,
@@ -81,6 +82,12 @@ export const getGoldCot = (q: { weeks?: number; report?: 'disagg' | 'legacy'; fu
  *  so a view that shows the picked family MUST pass `sel.family`). Ignored for COMEX (product OI, all months). */
 export const getGoldPositioningDaily = (exchange: 'COMEX' | 'MCX', days = 60, family?: Family | string | null) =>
   client.get<GoldPositioningDaily>(GOLD_ENDPOINTS.positioningDaily, { params: clean({ exchange, days, family: exchange === 'MCX' ? family : undefined }) })
+
+/** p.mcx.history: positions opened / closed in ONE MCX contract by session / ISO week / month (Breeze daily OI × close) and
+ *  the family's OI split. The page's PICK travels with every request (`family` + `expiry`, the server defaults to GOLD's
+ *  front live expiry) together with the page's D / W / M window (API_CONTRACT §2.6b). */
+export const getGoldMcxHistory = (q: { family: Family | string; expiry?: string | null; window: Window }) =>
+  client.get<GoldMcxHistory>(GOLD_ENDPOINTS.mcxHistory, { params: clean({ family: q.family, expiry: q.expiry, window: q.window }) })
 
 /** `?exchange=MCX&family=GOLDTEN`: that family's chain (API_CONTRACT §2.7); the server defaults to GOLD. */
 export const getGoldCurve = (exchange: 'COMEX' | 'MCX', date?: string, family?: Family | string | null) =>

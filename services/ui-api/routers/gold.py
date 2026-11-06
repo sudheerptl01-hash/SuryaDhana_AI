@@ -3715,6 +3715,271 @@ async def gold_positioning_daily(
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+# GET /positioning/mcx-history — which MCX positions were opened / closed, per contract, by day / week / month
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+MCX_HISTORY_SERIES = "BREEZE_DAILY"   # catalog row (PUBLISH-CONTEXT · arithmetic, owner decision O-8, 6 Nov 2026): the gate
+MCX_HISTORY_TTL_S = 300.0             # the bars change once a day (the 09:35 fetch); the store's SWR sits underneath
+MCX_HISTORY_DAYS = 400                # one read per family covers every stored session of every live expiry (history: May 2026)
+MCX_HISTORY_SOURCE = "ICICI Breeze daily bars (data-service gold_mcx_daily; a broker bar, not MCX's bhavcopy)"
+MCX_HISTORY_EVIDENCE = "arithmetic · G-STUDY: positioning FAILS as a forecast, PASSES as a description"
+MCX_HISTORY_READ = (
+    "OI up = positions opened, OI down = positions closed (lots, this contract). Who is long or short is not visible in "
+    "exchange OI: every contract has a long and a short. The quadrant names describe the period's mix of price and OI, "
+    f"they do not predict ({DESCRIBES}). Live expiries only."
+)
+QUADRANT_RULE_TEXT = (
+    "Δclose ≥ 0 and ΔOI ≥ 0 long build-up · Δclose < 0 and ΔOI ≥ 0 short build-up · Δclose ≥ 0 and ΔOI < 0 short covering · "
+    "Δclose < 0 and ΔOI < 0 long unwinding (SOURCES.md M28; `quadrant_label`, the daily quadrant tape's rule)"
+)
+MCX_HISTORY_WINDOWS = {"D": "by session", "W": "by ISO week, each to its last session", "M": "by calendar month"}
+
+
+def positions_word(doi: float | None) -> str | None:
+    """ΔOI → what happened to positions: 'opened' (> 0) / 'closed' (< 0) / 'unchanged' (0); None without a delta."""
+    if doi is None:
+        return None
+    return "opened" if doi > 0 else "closed" if doi < 0 else "unchanged"
+
+
+def _lots(v: Any) -> int | None:
+    f = _f(v)
+    return None if f is None else int(round(f))
+
+
+def _mcx_bucket(d: date, window: str) -> tuple[str, str, date]:
+    """(period id, its human label stem, the bucket's last CALENDAR day) for a session: D = the day, W = its ISO week
+    (Mon–Sun, so the Muhurat Sunday belongs to its own week), M = the calendar month."""
+    if window == "W":
+        y, wk, _ = d.isocalendar()
+        return f"{y}-W{wk:02d}", f"W{wk:02d}", d - timedelta(days=d.weekday()) + timedelta(days=6)
+    if window == "M":
+        return f"{d:%Y-%m}", f"{d:%b %Y}", month_end(d)
+    return d.isoformat(), f"{d:%a %d %b}", d
+
+
+def mcx_sessions_between(a: date, b: date) -> int:
+    """MCX sessions in (a, b]: weekdays without a full closure, plus dated special sessions (shared/mcx_specs.is_session_day).
+    A delta between two stored rows spans more than one session when the store skipped one (C-TRADER-18)."""
+    if b <= a:
+        return 0
+    n, d = 0, a
+    while d < b:
+        d += timedelta(days=1)
+        n += 1 if specs.is_session_day(d) else 0
+    return n
+
+
+def mcx_period_open(end: date, cal_end: date, today: date) -> bool:
+    """True while a week / month can still gain a stored session: an MCX session after its last stored one, from
+    yesterday on (yesterday's bar is fetched at 09:35 today), up to the period's last calendar day."""
+    d = max(end, today - timedelta(days=2))
+    while d < cal_end:
+        d += timedelta(days=1)
+        if specs.is_session_day(d):
+            return True
+    return False
+
+
+def mcx_history_periods(rows: list[dict[str, Any]], window: str, today: date, expiry: date | None = None) -> list[dict[str, Any]]:
+    """One contract's daily bars → periods, oldest first. D = every stored session; W = per ISO week, M = per calendar
+    month, each ending at its LAST stored session: that session's close and OI against the previous period's last close
+    and OI, volume summed over the period. `positions` from ΔOI; `label` from `quadrant_label` (the one quadrant rule of
+    the daily tapes — never a second rule here). `mechanical` = the period ends in the contract's expiry month (the tender
+    period opens on the 1st, `mcx_tender_start`: OI falls as positions roll or settle); `partial` = the week / month is
+    still running; `sessions_spanned` (D) > 1 when the store skipped a session. Pure."""
+    w = (window or "D").upper()
+    by_day: dict[date, dict[str, Any]] = {}
+    for r in rows:
+        d = _d(r.get("trade_date"))
+        if d is not None:
+            by_day[d] = r                         # one bar per session (data-service's primary key; the last one wins)
+    buckets: dict[str, list[tuple[date, dict[str, Any]]]] = {}
+    meta: dict[str, tuple[str, date]] = {}
+    for d in sorted(by_day):
+        pid, stem, cal_end = _mcx_bucket(d, w)
+        buckets.setdefault(pid, []).append((d, by_day[d]))
+        meta[pid] = (stem, cal_end)
+    tender = mcx_tender_start(expiry) if expiry else None
+    out: list[dict[str, Any]] = []
+    prev: tuple[float | None, float | None, date] | None = None   # (close, oi, last session) of the previous period
+    for pid in sorted(buckets, key=lambda k: buckets[k][0][0]):
+        members = buckets[pid]
+        (start, _), (end, last) = members[0], members[-1]
+        stem, cal_end = meta[pid]
+        close, oi = _f(last.get("close")), _f(last.get("open_interest"))
+        vols = [_f(r.get("volume")) for _, r in members]
+        known = [v for v in vols if v is not None]
+        dpp = None
+        if prev is not None and close is not None and prev[0] is not None:
+            dpp = _pct_change(close, prev[0]) if close != prev[0] else 0.0
+        doi = oi - prev[1] if prev is not None and oi is not None and prev[1] is not None else None
+        span = mcx_sessions_between(prev[2], end) if prev is not None and w == "D" else None
+        partial = w != "D" and mcx_period_open(end, cal_end, today)
+        mech = bool(tender and end >= tender)
+        notes = [n for n in (
+            f"Δ over {span} sessions (rows missing between)" if span and span > 1 else None,
+            "expiry month: OI falls as positions roll or go to tender — partly mechanical" if mech else None,
+            ("week to date" if w == "W" else "month to date") if partial else None,
+        ) if n]
+        label = (f"{stem} · {start:%d %b}–{end:%d %b}" if w == "W" else stem)
+        out.append({
+            "period": pid,
+            "period_label": label,
+            "period_start": start.isoformat(),
+            "period_end": end.isoformat(),
+            "sessions": len(members),
+            "partial": partial,
+            "close": close,
+            "close_chg_pct": _r(dpp, 2),
+            "oi": _lots(oi),
+            "oi_chg": _lots(doi),
+            "volume": _lots(sum(known)) if known else None,
+            "volume_missing": len(vols) - len(known),
+            "positions": positions_word(doi),
+            "label": quadrant_label(dpp, doi),
+            "mechanical": mech,
+            "sessions_spanned": span,
+            "note": " · ".join(notes) or None,
+        })
+        prev = (close, oi, end)
+    return out
+
+
+def mcx_contract_split(rows: list[dict[str, Any]], today: date, selected: date | None) -> tuple[str | None, list[dict[str, Any]]]:
+    """(the family's newest stored session, every LIVE expiry on it with its OI in lots and its share of the family's OI):
+    where the open positions sit. Expired contracts are left out (Breeze OI is unreliable for old contracts). Pure."""
+    days = [d for d in (_d(r.get("trade_date")) for r in rows) if d is not None]
+    if not days:
+        return None, []
+    last = max(days)
+    on_last: dict[date, dict[str, Any]] = {}
+    for r in rows:
+        exp = _d(r.get("expiry"))
+        if _d(r.get("trade_date")) == last and exp is not None and exp >= today and _f(r.get("open_interest")) is not None:
+            on_last[exp] = r
+    total = sum(_ff(r.get("open_interest")) for r in on_last.values())
+    out = [
+        {
+            "expiry": exp.isoformat(),
+            "expiry_label": _mmy(exp),
+            "oi": _lots(r.get("open_interest")),
+            "share_pct": _r(100.0 * _ff(r.get("open_interest")) / total, 2) if total > 0 else None,
+            "close": _f(r.get("close")),
+            "selected": exp == selected,
+        }
+        for exp, r in sorted(on_last.items())
+    ]
+    return last.isoformat(), out
+
+
+def build_mcx_history(
+    rows: list[dict[str, Any]], family: str, expiry: date | None, window: str, today: date, cat: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """The p.mcx.history payload for one family (all its stored rows) and the picked expiry (default: the family's front
+    live expiry on its newest session). Gated on the BREEZE_DAILY catalog row (PLAN §f.2: no PUBLISH verdict → no number).
+    Pure."""
+    fam = family.upper()
+    w = (window or "D").upper()
+    fam_rows = [r for r in rows if str(r.get("family") or fam).upper() == fam and _d(r.get("trade_date")) and _d(r.get("expiry"))]
+    last_day = max((_dd(r["trade_date"]) for r in fam_rows), default=None)
+    live_last = sorted({_dd(r["expiry"]) for r in fam_rows if _dd(r["trade_date"]) == last_day and _dd(r["expiry"]) >= today})
+    live_any = sorted({_dd(r["expiry"]) for r in fam_rows if _dd(r["expiry"]) >= today})
+    front = live_last[0] if live_last else (live_any[0] if live_any else None)
+    chosen = expiry or front
+    published = is_published(cat, MCX_HISTORY_SERIES)
+    live = chosen is not None and chosen >= today
+    contract_rows = sorted((r for r in fam_rows if _dd(r["expiry"]) == chosen), key=lambda r: str(r["trade_date"])[:10]) if live else []
+    periods = mcx_history_periods(contract_rows, w, today, chosen) if published else []
+    split_day, contracts = mcx_contract_split(fam_rows, today, chosen) if published else (None, [])
+    if not published:
+        note: str | None = unpublished_note(cat, MCX_HISTORY_SERIES)
+    elif chosen is None:
+        note = f"no live {fam} contract in the stored Breeze daily bars"
+    elif not live:
+        note = f"{fam} {_mmy(chosen)} has expired: live expiries only (Breeze OI is unreliable for old contracts)"
+    elif not contract_rows:
+        note = f"no Breeze daily bars stored for {fam} {_mmy(chosen)} yet (the 09:35 job fetches every live contract)"
+    else:
+        note = None
+    spec = mcxr.contract_specs().get(fam)
+    as_of = str(contract_rows[-1]["trade_date"])[:10] if contract_rows else (last_day.isoformat() if last_day else None)
+    return {
+        "family": fam,
+        "expiry": chosen.isoformat() if chosen else None,
+        "expiry_label": _mmy(chosen) if chosen else None,
+        "expiry_source": "requested" if expiry else "front (nearest live expiry)",
+        "window": w,
+        "window_label": MCX_HISTORY_WINDOWS.get(w),
+        "periods": periods,
+        "contracts": contracts,
+        "contracts_date": split_day,
+        "family_oi": _lots(sum(_ff(c["oi"]) for c in contracts)) if contracts else None,
+        "since": str(contract_rows[0]["trade_date"])[:10] if contract_rows and published else None,
+        "unit": f"₹ per {spec.quote_per_grams} g" if spec else None,
+        "oi_unit": "lots",
+        "published": published,
+        "note": note,
+        "badge": badge_of(cat, MCX_HISTORY_SERIES, BADGE_ARITH),
+        "catalog_ids": [MCX_HISTORY_SERIES],
+        "evidence": MCX_HISTORY_EVIDENCE,
+        "read": MCX_HISTORY_READ,
+        "rule": QUADRANT_RULE_TEXT,
+        "source": MCX_HISTORY_SOURCE,
+        "quality": "broker",
+        "freshness": freshness(as_of if published else None, max_age_of(cat, MCX_HISTORY_SERIES, 4.0), MCX_HISTORY_SOURCE),
+    }
+
+
+@router.get("/positioning/mcx-history")
+async def gold_positioning_mcx_history(
+    family: str = Query("GOLD"),
+    expiry: str | None = Query(None),
+    window: str = Query("D", pattern="^[DWMdwm]$"),
+    response: Response = None,  # type: ignore[assignment]
+) -> dict[str, Any]:
+    """p.mcx.history: which positions in ONE MCX contract (family + expiry; default the family's front live expiry) were
+    opened or closed per session / ISO week / calendar month — ICICI Breeze daily OI × close (data-service
+    `/db/gold/mcx/daily`, gold_mcx_daily) with the daily tape's quadrant word — plus where the family's open positions sit
+    across its live expiries. A description (badge `arithmetic`, catalog row BREEZE_DAILY); exchange OI never says who.
+    300 s memo per (family, expiry, window) on top of the store's SWR; data-service away → `ok: false`, empty, never a 500."""
+    code = family.upper()
+    if code not in mcxr.contract_specs():
+        fail(422, "invalid", f"Unknown MCX contract '{family}'", hint=f"One of {', '.join(mcxr.contract_specs())}")
+    want = _date_arg(expiry, "expiry")
+    w = window.upper()
+    key = f"mcxhist:{code}:{want.isoformat() if want else 'front'}:{w}"
+    hit = _memo_hit(key, response)
+    if hit is not None:
+        return hit
+    reads = Reads()
+    now = _now_ist()
+    path = "/db/gold/mcx/daily"
+    cat_t, daily_t = await _gather(
+        catalog(reads),
+        reads.get(path, family=code, **{"from": (now.date() - timedelta(days=MCX_HISTORY_DAYS)).isoformat()}),
+    )
+    cat = cat_t if isinstance(cat_t, dict) else {}
+    rows = _rows(daily_t) if isinstance(daily_t, (dict, list)) else []
+    payload = build_mcx_history(rows, code, want, w, now.date(), cat)
+    payload["as_of"] = now.isoformat(timespec="seconds")
+    payload["store_errors"] = reads.errors or None
+    reads.headers(response)
+    if daily_t is None or isinstance(daily_t, Exception):
+        return degraded(
+            payload,
+            "upstream_down",
+            f"MCX daily history unavailable: {reads.errors.get(path) or 'data-service did not answer'}",
+            hint="data-service :8001 serves gold_mcx_daily at /db/gold/mcx/daily; the panel fills when it answers",
+        )
+    if not rows:
+        return degraded(payload, "state", f"no Breeze daily bars stored for {code} yet",
+                        hint="the 09:35 breeze_daily gold job (O-8) writes gold_mcx_daily")
+    _memo(key, MCX_HISTORY_TTL_S, payload, merge_served(reads.served) if reads.served else None)
+    return payload
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 # GET /curve · GET /contracts (CONTRACTS)
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 

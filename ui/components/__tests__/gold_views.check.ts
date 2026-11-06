@@ -111,7 +111,7 @@ const missingTips = [...tipKeys].filter(k => !(k in TIPS)).sort()
 check(`every rendered gold field has a tooltip entry (${tipKeys.size} keys)`, missingTips.length === 0, missingTips.join(','))
 const missingPanels = [...panelIds].filter(p => !(p in TIPS) || !tooltipsJson.panels.includes(p)).sort()
 check(`every PLAN panel id rendered by the B4B views has a panel tooltip (${panelIds.size} panels)`, missingPanels.length === 0, missingPanels.join(','))
-const expectedPanels = ['p.hero', 'p.whois', 'p.history', 'p.crowd', 'p.decomp', 'p.daily.comex', 'p.daily.mcx', 'p.mcx.category', 'p.asia', 'p.drawer',
+const expectedPanels = ['p.hero', 'p.whois', 'p.history', 'p.crowd', 'p.decomp', 'p.daily.comex', 'p.daily.mcx', 'p.mcx.history', 'p.mcx.category', 'p.asia', 'p.drawer',
   'ph.ladder', 'ph.india', 'ph.shanghai', 'ph.etf', 'ph.official', 'ph.otc', 'ph.comex.stocks', 'ph.links',
   'mc.drivers', 'mc.kgx', 'mc.ccy', 'mc.fed', 'mc.calendar', 'mc.move', 'mc.health', 'mc.context']
 check('the three views render every PLAN a.6–a.8 panel exactly once', expectedPanels.every(p => panelIds.has(p)) &&
@@ -366,7 +366,7 @@ if (fs.existsSync(seedPy)) {
       declared.push({ file: f, id: m[1], series, about: /about="([A-Z0-9_]+)"/.exec(attrs)?.[1] ?? null, badge: /badge="([a-z]+)"/.exec(attrs)?.[1] ?? null })
     }
   }
-  check(`every B4B panel was parsed (${declared.length})`, declared.length === 26, declared.map(d => d.id).join(','))
+  check(`every B4B panel was parsed (${declared.length})`, declared.length === 27, declared.map(d => d.id).join(','))
   const unknown = declared.flatMap(d => [...d.series, ...(d.about ? [d.about] : [])].filter(id => !seedHas(id)).map(id => `${d.id}:${id}`))
   check('every catalog id the B4B panels declare exists in catalog_seed.py', unknown.length === 0, unknown.join(','))
   const badgeMismatch = declared.filter(d => d.series[0] && d.badge && seedBadge(d.series[0]) && seedBadge(d.series[0]) !== d.badge).map(d => `${d.id}:${d.badge}≠${seedBadge(d.series[0])}`)
@@ -377,6 +377,38 @@ if (fs.existsSync(seedPy)) {
   check('LINK-ONLY panels gate on nothing and name their catalog row through `about` (p.mcx.category, ph.comex.stocks)', declared.filter(d => d.id === 'p.mcx.category' || d.id === 'ph.comex.stocks').every(d => d.series.length === 0 && !!d.about && seedHas(d.about)))
   check('GPanel: the catalog badge wins over the literal; an absent row is "no verdict", not a pass', /const shownBadge = primary\?\.badge \?\? badge/.test(sources['gold/ViewBits.tsx']) && /publishGate\(catalog, s\) !== 'ok'/.test(sources['gold/ViewBits.tsx']))
 } else console.log('skip catalog seed comparison (services/data-service/gold/catalog_seed.py not on disk)')
+
+// 7e' p.mcx.history (6 Nov 2026, owner request; catalog row BREEZE_DAILY, O-8): wired, gated, the page's pick and window, the
+//     tape's quadrant treatment, no direction colour — each with a negative control
+{
+  const fnSrc = (src: string, name: string) => src.split(`function ${name}(`)[1]?.split(/\nfunction |\nexport default /)[0] ?? ''
+  const mh = fnSrc(posSrc, 'McxHistory'), split = fnSrc(posSrc, 'OiSplit')
+  const apiSrc = read('lib/gold/api.ts')
+  const panelAttrs = /<GPanel id="p\.mcx\.history"([\s\S]*?)>\n/.exec(mh)?.[1] ?? ''
+  check('p.mcx.history: one GPanel, rendered by PositioningView after p.daily.mcx', posSrc.split('id="p.mcx.history"').length === 2 && posSrc.indexOf('<McxHistory ') > posSrc.indexOf('<DailyMcx '))
+  check('p.mcx.history: gated on the catalog row BREEZE_DAILY with the catalog (PLAN §f.2), badge arithmetic', /const MCX_HISTORY_ID = 'BREEZE_DAILY'/.test(posSrc) && /series=\{\[MCX_HISTORY_ID\]\}/.test(panelAttrs) && /catalog=\{catalog\}/.test(panelAttrs) && /badge="arithmetic"/.test(panelAttrs))
+  if (fs.existsSync(seedPy)) {
+    const seed = fs.readFileSync(seedPy, 'utf8')
+    const row = /_row\("BREEZE_DAILY"[\s\S]*?"(PUBLISH-CORE|PUBLISH-CONTEXT|LINK-ONLY|DO-NOT-PUBLISH)",\s*"(context|arithmetic|signal|heuristic)"/.exec(seed)
+    check('p.mcx.history: the seed publishes BREEZE_DAILY as PUBLISH-CONTEXT · arithmetic (the literal badge matches it)', row?.[1] === 'PUBLISH-CONTEXT' && row?.[2] === 'arithmetic')
+  }
+  check('p.mcx.history: the load follows the page pick (family + expiry) and the D / W / M window, and re-runs when they change',
+    /getGoldMcxHistory\(\{ family: fam, expiry: props\.sel\.expiry, window: props\.window \}\), \[fam, props\.sel\.expiry, props\.window\]/.test(posSrc)
+    && /expiry=\{props\.sel\.expiry\} window=\{props\.window\}/.test(posSrc))
+  check('p.mcx.history negative control: no fixed window or expiry is requested', !/getGoldMcxHistory\(\{[^}]*window: '[DWM]'/.test(posSrc) && !/getGoldMcxHistory\(\{[^}]*expiry: '\d{4}/.test(posSrc))
+  check('api.ts: /positioning/mcx-history sends family, expiry and window', /mcxHistory: `\$\{GOLD_API\}\/positioning\/mcx-history`/.test(apiSrc) && /params: clean\(\{ family: q\.family, expiry: q\.expiry, window: q\.window \}\)/.test(apiSrc))
+  check('p.mcx.history: an answer for another family / expiry / window is said, never shown', /served !== fam/.test(mh) && /data\.expiry !== expiry/.test(mh) && /data\.window !== window/.test(mh) && /data-mcx-history-mismatch/.test(mh))
+  check('p.mcx.history: the newest period first, the server\'s quadrant word drawn with the tape\'s own cell (QuadrantTag)', /\[\.\.\.\(data\?\.periods \?\? \[\]\)\]\.reverse\(\)/.test(mh) && /<QuadrantTag label=\{r\.label\} \/>/.test(mh)
+    && /export function QuadrantTag/.test(read('components/gold/OiQuadrantTape.tsx')) && !/quadrantLabel\(/.test(mh))
+  check('p.mcx.history: the lag chip is the server\'s freshness, the as-of the newest period\'s end', /fresh=\{data && !mismatch \? serverFreshness\(data\.freshness\) : null\}/.test(mh) && /dateOnly=\{lastEnd \? istLabel\(lastEnd\) : null\}/.test(mh))
+  const colourOf = (src: string) => [...src.matchAll(/T\.(green|red)\b|#[0-9a-f]{3,6}\b|rgba?\(/gi)].map(m => m[0])
+  check('p.mcx.history: no direction colouring (no green / red, no hand-picked colour) in the table or the OI split', colourOf(mh).length === 0 && colourOf(split).length === 0, [...colourOf(mh), ...colourOf(split)].join(','))
+  check('p.mcx.history negative control: the colour scan catches a green token', colourOf('color: T.green').length === 1 && colourOf("background: '#16d98a'").length === 1)
+  check('p.mcx.history: the tape cell keeps its neutral shades only (no green / red in QuadrantTag)', !/T\.(green|red)/.test(fnSrc(read('components/gold/OiQuadrantTape.tsx'), 'QuadrantTag')))
+  check('p.mcx.history: the OI split prints shares, the lots stay on hover (the ladder prints the lots once per page)', /pct\(c\.share_pct, 0\)/.test(split) && /\$\{num\(c\.oi\)\} lots/.test(split) && !/>\{num\(c\.oi\)\}</.test(split))
+  check('p.mcx.history: clicking an expiry in the split picks it for the page (onSel), never the already-picked one', /props\.onSel\?\.\(\{ expiry \}\)/.test(posSrc) && /const pickable = !!onPick && !c\.selected/.test(split))
+  check('p.mcx.history: the copy says who is not visible and describes only', /never says who is long or short/.test(mh) && /describes, it does not forecast/.test(mh) && /data\.read/.test(mh))
+}
 
 // 7f drivers: the server's tag and rule; the client re-tags nothing
 check('MacroView renders the server tag only (driverTag(d.tag)) and the server rule first', /driverTag\(d\.tag\)/.test(view3['gold/MacroView.tsx']) && !/driverTag\([^)]*d1/.test(view3['gold/MacroView.tsx']) && /d\.rule \?\? DRIVER_RULES\[d\.key\]/.test(view3['gold/MacroView.tsx']))

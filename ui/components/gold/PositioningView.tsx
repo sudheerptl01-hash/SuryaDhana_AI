@@ -3,13 +3,14 @@
 /**
  * GOLD › POSITIONING (reports/gold_program/PLAN.md a.6): who is long, who is short — weekly CFTC COT + daily exchange OI.
  *
- * Panels: p.hero · p.whois · p.history · p.crowd · p.decomp · p.daily.comex · p.daily.mcx · p.mcx.category (dormant,
- * O-8) · p.asia · p.drawer. Every number is `context` (G-STUDY 26 Oct 2026: FAIL as a forecast at every horizon; PASS
- * as a description, same-week Spearman +0.65) except the MCX OI ladder (`arithmetic`). No colour on any of it; no COT
- * index presented as a signal; the crowd gauge is worded "crowdedness, not a signal". Nothing here feeds a trade
- * (PLAN 0.1 #7).
+ * Panels: p.hero · p.whois · p.history · p.crowd · p.decomp · p.daily.comex · p.daily.mcx · p.mcx.history · p.mcx.category
+ * (dormant, O-8) · p.asia · p.drawer. Every number is `context` (G-STUDY 26 Oct 2026: FAIL as a forecast at every horizon;
+ * PASS as a description, same-week Spearman +0.65) except the MCX OI ladder and the per-contract opened / closed table
+ * (`arithmetic`). No colour on any of it; no COT index presented as a signal; the crowd gauge is worded "crowdedness, not a
+ * signal". Nothing here feeds a trade (PLAN 0.1 #7).
  *
- * Data: `/api/gold/cot` (B3, API_CONTRACT §2.5), `/api/gold/positioning/daily?exchange=COMEX|MCX&family=` (§2.6).
+ * Data: `/api/gold/cot` (B3, API_CONTRACT §2.5), `/api/gold/positioning/daily?exchange=COMEX|MCX&family=` (§2.6),
+ * `/api/gold/positioning/mcx-history?family=&expiry=&window=` (§2.6b, the page's pick and D / W / M window).
  * Each block loads on its own and keeps its last good value on error.
  *
  * Honesty rules carried here (wave 1b): the lag chip is the block's own `freshness` from the server or NO DATA — never a
@@ -27,12 +28,12 @@
  */
 import { useMemo, useState } from 'react'
 import { Chip, DataTable, Grid, KV, Loading, Stat, T, type Column } from '@/components/terminal'
-import { getGoldCot, getGoldPositioningDaily } from '@/lib/gold/api'
-import type { CotDecompRow, DailyPositioningRow, GoldPositioningDaily, GoldSubViewProps, Layer } from '@/lib/gold/types'
+import { getGoldCot, getGoldMcxHistory, getGoldPositioningDaily } from '@/lib/gold/api'
+import type { CotDecompRow, DailyPositioningRow, GoldMcxHistory, GoldPositioningDaily, GoldSubViewProps, Layer, McxHistoryContract, McxHistoryPeriod, Window } from '@/lib/gold/types'
 import { tipFor } from '@/lib/gold/learn'
 import tooltipsJson from '@/lib/gold/tooltips.json'
 import { CotWhoIsLong } from './CotWhoIsLong'
-import { OiQuadrantTape } from './OiQuadrantTape'
+import { OiQuadrantTape, QuadrantTag } from './OiQuadrantTape'
 import { Gauge, LineChart, StackedBars, type StackRow } from './FlowCharts'
 import { Attribution, Degraded, Field, GPanel, LinkOnlyExplainer, LinkTile, Term, contextTone, useGoldLoad } from './ViewBits'
 import {
@@ -90,6 +91,9 @@ export function PositioningView(props: GoldSubViewProps) {
   // `?exchange=MCX&family=` (API_CONTRACT §2.6): the server filters and labels rows by the family it was asked for; the
   // selection travels with every request and the load re-runs when it changes
   const mcx = useGoldLoad(() => getGoldPositioningDaily('MCX', 60, fam), [fam], 10 * 60_000)
+  // p.mcx.history follows the page's PICK (family + expiry, the auto-resolved front when none is picked) and its D / W / M window
+  const mcxHist = useGoldLoad(() => getGoldMcxHistory({ family: fam, expiry: props.sel.expiry, window: props.window }), [fam, props.sel.expiry, props.window], 10 * 60_000)
+  const onPick = props.onSel ? (expiry: string) => props.onSel?.({ expiry }) : undefined
 
   const c = cot.data
   const mm = c?.groups.find(g => g.key === 'mm')
@@ -232,6 +236,9 @@ export function PositioningView(props: GoldSubViewProps) {
       {/* p.daily.mcx */}
       <DailyMcx data={mcx.data} error={mcx.error} tip={tip} layer={layer} catalog={catalog} family={fam} />
 
+      {/* p.mcx.history */}
+      <McxHistory data={mcxHist.data} error={mcxHist.error} tip={tip} layer={layer} catalog={catalog} family={fam} expiry={props.sel.expiry} window={props.window} onPick={onPick} />
+
       <Grid min={320}>
         {/* p.mcx.category — dormant: the catalog row (LINK-ONLY, O-8) supplies the about popover; no number gate */}
         <GPanel id="p.mcx.category" title="Who holds MCX gold (monthly)" badge="context" series={[]} about="MCX_CATEGORY_OI" catalog={catalog} subtitle="dormant until a collector exists (O-8)" layer={layer}>
@@ -365,6 +372,112 @@ function DailyMcx({ data, error, tip, layer, catalog, family }: DailyProps & { f
         </div>
       )}
     </GPanel>
+  )
+}
+
+/** The catalog row p.mcx.history is gated on (catalog_seed.py: PUBLISH-CONTEXT · arithmetic, owner decision O-8). */
+const MCX_HISTORY_ID = 'BREEZE_DAILY'
+const PERIOD_HEAD: Record<Window, string> = { D: 'Session', W: 'ISO week', M: 'Month' }
+const WINDOW_WORDS: Record<Window, string> = { D: 'by session', W: 'by ISO week, each to its last session', M: 'by calendar month' }
+/** [B] one-liners for the positions column: OI says that positions opened or closed, never which side. */
+const POSITIONS_READ: Record<string, string> = {
+  opened: 'OI rose: new positions, a new long AND a new short',
+  closed: 'OI fell: positions closed, a long and a short left together',
+  unchanged: 'OI unchanged: positions changed hands, none opened or closed on net',
+}
+
+interface McxHistoryProps {
+  data: GoldMcxHistory | null; error: string | null; tip: Tip; layer: Layer; catalog: GoldSubViewProps['catalog']
+  family: string; expiry: string | null; window: Window; onPick?: (expiry: string) => void
+}
+
+/**
+ * p.mcx.history — which positions in the PICKED MCX contract (the page's family + expiry) were opened or closed per session,
+ * ISO week or month (the page's D / W / M window), from ICICI Breeze daily OI × close; each period's quadrant word is the
+ * server's (the daily tape's rule, drawn with the tape's own cell — `QuadrantTag`); the family's OI split across its live
+ * expiries shows where the open positions sit (click = pick that contract for the page). Exchange OI never says who: every
+ * lot has a long and a short. Badge `arithmetic`, a description: no green / red anywhere, the newest period first.
+ */
+function McxHistory({ data, error, tip, layer, catalog, family, expiry, window, onPick }: McxHistoryProps) {
+  const fam = (family || 'GOLD').toUpperCase()
+  const served = data?.family ? String(data.family).toUpperCase() : null
+  // the panel shows the page's PICK or says why not: an answer for another family / expiry / window never shows under this title
+  const mismatch = !!data && ((!!served && served !== fam) || (!!expiry && !!data.expiry && data.expiry !== expiry) || (!!data.window && data.window !== window))
+  const periods = mismatch ? [] : [...(data?.periods ?? [])].reverse()
+  const contracts = mismatch ? [] : (data?.contracts ?? [])
+  const lastEnd = periods[0]?.period_end ?? null
+  const unit = data?.unit ?? '₹'
+  const cols: Column<McxHistoryPeriod>[] = [
+    { key: 'period', label: PERIOD_HEAD[window], render: r => (
+      <span data-period={r.period} title={`${r.sessions} session${r.sessions === 1 ? '' : 's'} · ${istLabel(r.period_start)} → ${istLabel(r.period_end)} · volume ${num(r.volume)} lots${r.volume_missing ? ` (${r.volume_missing} without volume)` : ''}${r.note ? `\n${r.note}` : ''}`}>
+        <span style={{ color: T.text }}>{r.period_label}</span>
+        {r.partial && <span data-period-partial style={{ color: T.dim }}> · to date</span>}
+        {r.sessions_spanned != null && r.sessions_spanned > 1 && <div data-period-span style={{ fontSize: 9, color: T.amber }}>Δ over {r.sessions_spanned} sessions</div>}
+      </span>) },
+    { key: 'close', label: `Close ${unit}`, align: 'right', title: tip('mcx_daily_close'), render: r => inr(r.close) },
+    { key: 'close_chg_pct', label: 'Δ %', align: 'right', render: r => signedPct(r.close_chg_pct) },
+    { key: 'oi', label: 'OI (lots)', align: 'right', render: r => num(r.oi) },
+    { key: 'oi_chg', label: 'ΔOI', align: 'right', title: tip('oi_change'), render: r => signed(r.oi_chg) },
+    { key: 'positions', label: 'Positions', title: tip('positions_opened_closed'), render: r => (
+      <span data-positions={r.positions ?? ''} title={r.positions ? POSITIONS_READ[r.positions] : 'the first stored period: nothing earlier to compare with'} style={{ color: r.positions ? T.text : T.dim }}>{r.positions ?? '—'}</span>) },
+    { key: 'label', label: 'Quadrant', title: tip('quadrant'), render: r => <QuadrantTag label={r.label} /> },
+  ]
+  return (
+    <GPanel id="p.mcx.history" title={`MCX ${fam}${data?.expiry_label && !mismatch ? ` ${data.expiry_label}` : ''} · positions opened / closed — by contract`} badge="arithmetic"
+      evidence="G-STUDY: positioning describes, it does not forecast" series={[MCX_HISTORY_ID]} catalog={catalog} layer={layer}
+      fresh={data && !mismatch ? serverFreshness(data.freshness) : null} dateOnly={lastEnd ? istLabel(lastEnd) : null}
+      subtitle={`${WINDOW_WORDS[window]}${data?.since && !mismatch ? ` · since ${istLabel(data.since)}` : ''} · live expiries only · newest first`}
+      formula="Δ% = close(end) ÷ close(previous end) − 1 · ΔOI = OI(end) − OI(previous end), lots · quadrant = the daily tape's rule (M28)"
+      copyB="which positions in the picked contract were opened or closed: OI up = new positions, OI down = positions closed. Every lot has a long and a short, so this never says who is long or short; the quadrant word names the period's mix of price and OI. The D / W / M picker above switches session, week or month."
+      copyP="ICICI Breeze daily bars (a broker bar, not MCX's bhavcopy), OI in lots per expiry, live contracts only; W = ISO week to its last stored session, M = calendar month, each period's last close and OI against the previous period's, volume summed. Expiry-month periods are greyed: OI falls as positions roll. G-STUDY: positioning describes, it does not forecast.">
+      <Degraded error={error} what="MCX daily history" />
+      {!data && !error && <Loading label="MCX daily OI × close by contract" />}
+      {data && mismatch && (
+        <div data-mcx-history-mismatch style={{ fontSize: 11, color: T.amber }}>
+          the server answered for {served} {data.expiry_label ?? '—'} ({data.window}), not the page's {fam} {expiry ?? 'front'} ({window}) — nothing shown rather than another contract's rows under this title
+        </div>
+      )}
+      {data && !mismatch && (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {data.ok === false && <div data-mcx-history-degraded style={{ fontSize: 11, color: T.dim }}>{data.error_info?.message ?? 'MCX daily history unavailable'}{data.error_info?.hint ? ` — ${data.error_info.hint}` : ''}</div>}
+          {data.note && <div data-mcx-history-note style={{ fontSize: 11, color: T.dim }}>{data.note}</div>}
+          <OiSplit contracts={contracts} date={data.contracts_date} family={fam} tip={tip} onPick={onPick} />
+          <DataTable columns={cols} rows={periods} rowKey={r => r.period} dense maxHeight={320} exportName={`gold-mcx-${fam.toLowerCase()}-${(data.expiry_label ?? 'front').toLowerCase()}-${window}`}
+            rowStyle={r => (r.mechanical ? { opacity: 0.55 } : undefined)}
+            empty={<div data-mcx-history-empty style={{ padding: 8, color: T.dim, fontSize: 11 }}>no stored periods for {fam} {data.expiry_label ?? ''} yet</div>} />
+          <div data-mcx-history-read style={{ fontSize: 10, color: T.muted, lineHeight: 1.5 }} title={data.rule}>{data.read}</div>
+          <div style={{ fontSize: 9.5, color: T.dim }}>Source: {data.source} · greyed = expiry month (mechanical) · <span title={tip('since')}>history since the first stored bar</span></div>
+        </div>
+      )}
+    </GPanel>
+  )
+}
+
+/** Where the family's open positions sit: each live expiry's share of the family's OI on its newest session (lots on hover). */
+function OiSplit({ contracts, date, family, tip, onPick }: { contracts: McxHistoryContract[]; date: string | null; family: string; tip: Tip; onPick?: (expiry: string) => void }) {
+  if (!contracts.length) return null
+  return (
+    <div data-mcx-oi-split>
+      <div style={{ fontSize: 10, color: T.muted, marginBottom: 3 }} title={tip('oi_share')}>
+        where {family}'s open positions sit{date ? ` on ${istLabel(date)}` : ''}: share of the family's OI by live expiry{onPick ? ' · click an expiry to pick it for the page' : ''}
+      </div>
+      <div style={{ display: 'flex', height: 20, border: `1px solid ${T.border}` }}>
+        {contracts.map(c => {
+          const pickable = !!onPick && !c.selected
+          return (
+            <div key={c.expiry} data-split-expiry={c.expiry} data-split-selected={c.selected ? '1' : '0'} role={pickable ? 'button' : undefined} tabIndex={pickable ? 0 : undefined}
+              onClick={pickable ? () => onPick?.(c.expiry) : undefined}
+              onKeyDown={pickable ? e => { if (e.key === 'Enter') onPick?.(c.expiry) } : undefined}
+              title={`${c.expiry_label ?? istLabel(c.expiry)}: ${num(c.oi)} lots · ${pct(c.share_pct, 1)} of ${family}'s open interest${c.selected ? ' · the picked contract' : pickable ? ' · click to pick this contract for the page' : ''}`}
+              style={{ flex: `${Math.max(c.share_pct ?? 0, 0.01)} 1 0`, minWidth: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                       background: c.selected ? T.panel3 : T.panel2, borderRight: `1px solid ${T.border}`, boxShadow: c.selected ? `inset 0 0 0 1px ${T.amber}` : undefined,
+                       cursor: pickable ? 'pointer' : 'default' }}>
+              <span style={{ fontSize: 9, fontFamily: T.mono, color: c.selected ? T.bright : T.muted, whiteSpace: 'nowrap' }}>{c.expiry_label ?? c.expiry} {pct(c.share_pct, 0)}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 

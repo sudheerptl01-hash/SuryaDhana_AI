@@ -54,6 +54,9 @@ has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suit
   republications; India imports Aug/Sep 2025–26 entered (cross-checked); SGE quotes scheduled every 5 min in SGE hours and
   the SGE parser's trading-day dating fixed (Friday-night quotes had been stamped on Monday, padded into the future; 782
   future rows purged). Deployed 17:44 in the lock-safe order. `reports/gold_program/VERIFY_20261106.md` §5.
+- Gold, 18:09: the Breeze history is on the page — GOLD › POSITIONING 'MCX · positions opened / closed — by contract'
+  (daily / weekly / monthly per the page window, the picked contract, OI split by expiry; arithmetic badge, describes only).
+  Catalog BREEZE_DAILY → PUBLISH-CONTEXT; ui-api restarted, UI release `20261106-180837`; GOLD pages 22/22 both engines.
 - Still to run: the outage backfill's inbox notes after 21:15 tonight; the NIFTY / NIFTY BANK drivers history on Sun 8 Nov
   10:00 (PLAN 1.8). Owner items: the IMPORT click; adopting `filed_at` for the S1 shadow (review); O-T13 (BANK pre-list days).
 

@@ -674,6 +674,10 @@ T: dict[str, str] = {
     "week_price_chg": "GC front-month change Tuesday to Tuesday, the week the report describes.",
     "wgc_region_flow": "WGC weekly fund flows by region (NA / Europe / Asia / Other) in tonnes, for the week ended Friday.",
     "zq_implied": "Fed funds futures (ZQ): implied rate = 100 − price; the continuous ZQ=F rolls, so it is labelled by contract, not by date.",
+    # 6 Nov 2026 (POSITIONING p.mcx.history; owner decision O-8, catalog row BREEZE_DAILY): the per-contract opened / closed table
+    "positions_opened_closed": "OI up over the period = positions opened, OI down = closed (lots, this contract). Every lot has a buyer and a seller: exchange OI never says who is long or short.",
+    "oi_share": "This expiry's share of the family's open interest on the latest stored session, live expiries only: where the open positions sit. Lots on hover.",
+    "mcx_daily_close": "Close of the period's last session from ICICI Breeze daily bars (a broker bar, not MCX's official settlement), in the contract's quote unit.",
 }
 
 # Panel ids (PLAN.md §a.2–a.9): one header tooltip per panel; the UI attaches them to the panel's `?`.
@@ -709,6 +713,7 @@ PANELS: dict[str, str] = {
     "p.decomp": "Rally and decline decomposed: who added or cut since the last 2-year low and since the high — funds, commercials, other reportables, small specs, OI, GLD.",
     "p.daily.comex": "Daily COMEX OI by product (GC, MGC, 1OZ, QO, options P/C) with the OI change against price: 'which positions got closed yesterday'. T+1; mechanical on expiry days.",
     "p.daily.mcx": "MCX OI by contract and expiry (lots), the change, the roll ratio and days to tender; history since the job started. Proxy settlement, no volume.",
+    "p.mcx.history": "MCX positions opened / closed in the picked contract by session, ISO week or month (Breeze daily OI × close, the tape's quadrant word) and where the family's OI sits. Describes, does not predict.",
     "p.mcx.category": "Who holds MCX gold by participant category (FPI, DFI, prop, hedgers, others). Dormant: the monthly MCX workbook needs a collector (owner decision O-8); the link is shown.",
     "p.asia": "SHFE front-month OI change; SGE Au(T+D) OI and which side pays the deferred fee ('Short to Long' = physical tightness).",
     "p.drawer": "Details: trader counts and average size, top-4/8 concentration, micro gold, the options overlay line, the raw CFTC block and API query. Weekly; no daily, no OTC; no timing value found.",

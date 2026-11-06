@@ -179,6 +179,7 @@ export const PANEL_TITLES: Readonly<Record<string, string>> = {
   'm.physical': 'monthly physical flows (MONTHLY)', 'm.balance': 'the WGC balance sheet (MONTHLY)', 'm.liquidity': 'liquidity and risk percentiles (MONTHLY)',
   'p.hero': 'managed money this week (POSITIONING)', 'p.whois': 'who is long, who is short (POSITIONING)', 'p.history': 'positioning history (POSITIONING)', 'p.crowd': 'crowdedness (POSITIONING)',
   'p.decomp': 'the rally / decline decomposition (POSITIONING)', 'p.daily.comex': 'COMEX open interest by product (POSITIONING)', 'p.daily.mcx': 'MCX open interest by expiry (POSITIONING)',
+  'p.mcx.history': 'MCX positions opened / closed by contract (POSITIONING)',
   'p.mcx.category': 'who holds MCX gold (POSITIONING)', 'p.asia': 'Shanghai positioning (POSITIONING)', 'p.drawer': 'the COT details drawer (POSITIONING)',
   'ph.ladder': 'the India price stack (PHYSICAL)', 'ph.india': 'India premium history (PHYSICAL)', 'ph.shanghai': 'the Shanghai premium (PHYSICAL)', 'ph.etf': 'ETF holdings and flows (PHYSICAL)',
   'ph.official': 'the official sector (PHYSICAL)', 'ph.otc': 'the OTC window (PHYSICAL)', 'ph.comex.stocks': 'the COMEX warehouse-stocks link (PHYSICAL)', 'ph.links': 'linked sources (PHYSICAL)',

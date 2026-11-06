@@ -49,6 +49,7 @@ ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("cot", "/api/gold/cot", {"weeks": 4}),
     ("positioning_daily_comex", "/api/gold/positioning/daily", {"exchange": "COMEX"}),
     ("positioning_daily_mcx", "/api/gold/positioning/daily", {"exchange": "MCX", "family": "GOLD"}),
+    ("positioning_mcx_history", "/api/gold/positioning/mcx-history", {"family": "GOLD", "window": "W"}),
     ("curve_comex", "/api/gold/curve", {"exchange": "COMEX"}),
     ("curve_mcx", "/api/gold/curve", {"exchange": "MCX", "family": "GOLD"}),
     ("contracts", "/api/gold/contracts", {"exchange": "COMEX"}),

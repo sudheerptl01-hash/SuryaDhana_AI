@@ -712,6 +712,87 @@ export interface GoldPositioningDaily {
   store_errors?: Record<string, string> | null
 }
 
+// ── /api/gold/positioning/mcx-history (p.mcx.history; catalog row BREEZE_DAILY, O-8 6 Nov 2026) ──────────────
+
+/** What ΔOI says happened to positions in the period: OI up = opened, down = closed (exchange OI never says who). */
+export type PositionsWord = 'opened' | 'closed' | 'unchanged'
+
+/** One session (D), ISO week (W) or calendar month (M) of ONE contract: its last close and OI vs the previous period's. */
+export interface McxHistoryPeriod {
+  /** '2026-11-05' (D) · '2026-W45' (W) · '2026-11' (M) */
+  period: string
+  /** 'Thu 05 Nov' · 'W45 · 02 Nov–05 Nov' · 'Nov 2026' */
+  period_label: string
+  period_start: string
+  /** the period's LAST stored session */
+  period_end: string
+  sessions: number
+  /** W / M: the week / month can still gain a session ('to date') */
+  partial: boolean
+  close: number | null
+  close_chg_pct: number | null
+  /** lots */
+  oi: number | null
+  /** lots, vs the previous period's last OI; null for the first stored period */
+  oi_chg: number | null
+  /** lots, summed over the period; `volume_missing` sessions had none */
+  volume: number | null
+  volume_missing: number
+  positions: PositionsWord | null
+  /** the daily tape's quadrant word (the server's `quadrant_label`, M28) */
+  label: QuadrantLabel | null
+  /** the period ends in the contract's expiry month (tender from the 1st): OI falls as positions roll — greyed like the tape */
+  mechanical: boolean
+  /** D: sessions the delta spans (> 1 = the store skipped a session); null for W / M */
+  sessions_spanned: number | null
+  note: string | null
+}
+
+/** A live expiry of the family on its newest stored session: where the open positions sit. */
+export interface McxHistoryContract {
+  expiry: string
+  expiry_label: string | null
+  oi: number | null
+  share_pct: number | null
+  close: number | null
+  selected: boolean
+}
+
+/** `?family=GOLDTEN&expiry=2026-11-30&window=D|W|M` — the server defaults to GOLD and the family's front live expiry. */
+export interface GoldMcxHistory {
+  family: Family | string
+  expiry: string | null
+  expiry_label: string | null
+  expiry_source: string
+  window: Window
+  window_label?: string | null
+  /** oldest first */
+  periods: McxHistoryPeriod[]
+  contracts: McxHistoryContract[]
+  contracts_date: string | null
+  family_oi: number | null
+  since: string | null
+  /** '₹ per 10 g' (the family's quotation unit, shared/mcx_specs) */
+  unit: string | null
+  oi_unit: string
+  /** PLAN §f.2 on the server: false → no periods, no contracts, `note` says why */
+  published: boolean
+  note: string | null
+  badge: Badge
+  catalog_ids: string[]
+  evidence?: string | null
+  read: string
+  rule: string
+  source: string
+  quality: string
+  freshness?: Freshness
+  as_of?: string
+  store_errors?: Record<string, string> | null
+  /** degraded 200 (data-service away / no rows stored): `ok: false` with the reason */
+  ok?: boolean
+  error_info?: { code: string; message: string; hint?: string } | null
+}
+
 // ── /api/gold/curve (CONTRACTS c.comex / c.mcx) ─────────────────────────────────────────────────
 
 export interface CurvePoint {
