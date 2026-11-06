@@ -22,7 +22,8 @@ def test_store_init_creates_the_19_plan_tables_and_survives_a_restart(tmp_path):
     s = make_store(tmp_path)
     have = _tables(s)
     assert set(GOLD_TABLES) <= have
-    assert len(GOLD_TABLES) == PLAN_TABLE_COUNT + 1          # 19 of PLAN §c.1 + gold_mcx_category_oi counted there as #19 → 20 names
+    # 19 of PLAN §c.1 + gold_mcx_category_oi counted there as #19 → 20 names, + gold_mcx_daily (O-8, 6 Nov 2026) → 21
+    assert len(GOLD_TABLES) == PLAN_TABLE_COUNT + 2 and "gold_mcx_daily" in GOLD_TABLES
     assert "gold_ingest_state" in have and "gold_cot_metrics" in {r[0] for r in s._conn.execute(
         "SELECT table_name FROM information_schema.views").fetchall()}
     s.close()

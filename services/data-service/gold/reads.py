@@ -13,6 +13,7 @@ from typing import Any
 import pandas as pd
 
 from gold import cot_metrics, db, ingest_india, mcx_close, pit, schema
+from gold import mcx_daily as mcx_daily_mod
 from gold.catalog_seed import build_rows
 from gold.db import iso_utc, utcnow
 from gold.ingest_india import band_midpoint, band_session, previous_mcx_session
@@ -616,6 +617,37 @@ def curve_history(store: Any, *, exchange: str = "MCX", symbol: str = "GOLD", da
                                        "quality": "vwap30_proxy" if r.source == "breeze_vwap30" else "band_proxy"}
                                       for r in front.itertuples(index=False) if (db.to_date(r.session) or date.min) >= since]
     return out
+
+
+MCX_DAILY_DEFAULT_DAYS = 180
+
+
+def mcx_daily(store: Any, *, family: str | None = None, expiry: date | None = None, start: date | None = None,
+              end: date | None = None, limit: int = 20000) -> dict[str, Any]:
+    """Breeze daily bars of MCX gold futures per expiry (gold_mcx_daily, O-8): OHLC in the family's quotation unit
+    (``unit`` per row: PETAL ₹/1 g, GUINEA ₹/8 g), volume and open interest in lots, ``release_at`` = our fetch time of
+    the stored values and ``first_seen_at`` = the first fetch, both served with ``+00:00``; dates ``YYYY-MM-DD``.
+    ``from`` defaults to 180 days back. A broker bar, not MCX's official bhavcopy (``quality`` = broker)."""
+    start = start or (utcnow().date() - timedelta(days=MCX_DAILY_DEFAULT_DAYS))
+    sql = f"SELECT * FROM {mcx_daily_mod.TABLE} WHERE trade_date >= ?"
+    params: list[Any] = [start]
+    if end:
+        sql += " AND trade_date <= ?"
+        params.append(end)
+    if family:
+        sql += " AND family = ?"
+        params.append(family)
+    if expiry:
+        sql += " AND expiry = ?"
+        params.append(expiry)
+    df = db.query_df(store, sql + " ORDER BY family, expiry, trade_date", params).tail(limit)
+    rows = db.records(df)
+    for r in rows:
+        r["unit"] = ingest_india.QUOTE_UNIT.get(str(r.get("family")))
+    return {"rows": rows, "count": len(rows), "from": start.isoformat(), "to": end.isoformat() if end else None, "family": family,
+            "expiry": expiry.isoformat() if expiry else None, "source": mcx_daily_mod.SOURCE, "quality": mcx_daily_mod.QUALITY,
+            "note": ("ICICI Breeze daily bars per LIVE contract (fetched 09:35 for the previous session); volume and OI in lots; "
+                     "not MCX's official bhavcopy")}
 
 
 def margins(store: Any, *, day: date | None = None, exchange: str | None = None) -> dict[str, Any]:

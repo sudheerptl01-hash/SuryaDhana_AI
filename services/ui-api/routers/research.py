@@ -233,6 +233,11 @@ CATALOG: dict[str, tuple[str, str, str]] = {
         "The phase-2 build plan for the GOLD page: binding principles, builder ownership, the nine sub-views panel by "
         "panel, the WEI/BRF/CMDT/MCXG consolidation, 19 DuckDB tables and the IST job schedule, the /api/gold contract, "
         "LEARN, the labelling rules, ICICI TOTP auto-login, tests, owner actions and risks."),
+    "reports/gold_program/VERIFY_20261106.md": (
+        "Gold", "ENGINEERING",
+        "The gold goal verified against the live stack after the 6 Nov deploy: 22/22 requirement checks, every GOLD page "
+        "22/22 in Chromium and WebKit, the final critics' open items closed or re-tested, three defects fixed (accuracy-log "
+        "dual-write, COT budget, Swiss customs parser) and the owner's O-1 / O-2 / O-8 decisions recorded."),
     "reports/gold_program/API_CONTRACT.md": (
         "Gold", "REFERENCE",
         "The /api/gold/* and /api/positions/totp/* contract as implemented by ui-api (shapes, caches, freshness states, "

@@ -4,22 +4,22 @@ Every dataset the SuryaDhana terminal shows, as data-service's `dataset_catalog`
 
 **Generated** by `scripts/terminal_data_dictionary.py` from `services/data-service/data_health/catalog.py` — do not edit by hand; change the catalog and re-run. `--check` fails when this file is stale. Source entries (URLs, formats, traps) live in `docs/NSE_DATA_DICTIONARY.md` and `docs/GOLD_DATA_DICTIONARY.md`; this file is the per-dataset view the terminal itself uses.
 
-Catalog seed: present (67 rows). Nothing here feeds the Decision Desk, the S1 shadow, a directional alert or a ticket price.
+Catalog seed: present (68 rows). Nothing here feeds the Decision Desk, the S1 shadow, a directional alert or a ticket price.
 
 ## Verdicts and badges
 
 | Verdict | Meaning in the terminal | Datasets |
 |---|---|---|
-| **PUBLISH-CORE** | ingested (or computed) and shown on a page's primary panels | 46 |
+| **PUBLISH-CORE** | ingested (or computed) and shown on a page's primary panels | 47 |
 | **PUBLISH-CONTEXT** | ingested and shown inside its section or a details drawer, always with the `context` badge | 20 |
 | **LINK-ONLY** | a labelled link to the publisher; nothing is fetched or stored by the stack | 1 |
 | **DO-NOT-PUBLISH** | not fetched, not shown (dead, blocked by terms, or shown to be noise) | 0 |
-| **total** | | 67 |
+| **total** | | 68 |
 
 | Badge | Meaning | Datasets |
 |---|---|---|
 | `context` | a description or a measured relationship that PASSED as a description, never as a forecast; rendered in the neutral token | 39 |
-| `arithmetic` | an identity, a model convention or an exchange rule that makes no claim about the future (IV, Greeks, points attribution, SPAN) | 27 |
+| `arithmetic` | an identity, a model convention or an exchange rule that makes no claim about the future (IV, Greeks, points attribution, SPAN) | 28 |
 | `heuristic` | a house rule without evidence, shown with its measured error where one exists (the 12 % margin estimate: 4.8× too high) | 1 |
 | `signal` | only by a FINDINGS PASS row from a pre-registered study (PLAN before results, PIT data, \|t\| ≥ 2 full sample and both halves, after the cost floor) | **0 — none exists in F&O, gold or index attribution** |
 
@@ -43,10 +43,10 @@ Context metrics render in the neutral token and are never coloured bullish or be
 | ERN | [`nse_events`](#nse_events), [`nse_results`](#nse_results) |
 | EVTS | [`iv_event_log`](#iv_event_log), [`iv_expiry_daily`](#iv_expiry_daily), [`iv_summary_daily`](#iv_summary_daily), [`nse_events`](#nse_events), [`nse_results`](#nse_results) |
 | GBOX | [`ml_features`](#ml_features) |
-| GOLD | [`breeze_security_master`](#breeze_security_master), [`breeze_session`](#breeze_session), [`gold_asia_daily`](#gold_asia_daily), [`gold_brief_docs`](#gold_brief_docs), [`gold_cme_daily_voi`](#gold_cme_daily_voi), [`gold_cot`](#gold_cot), [`gold_curve_mcx`](#gold_curve_mcx), [`gold_daily_bars`](#gold_daily_bars), [`gold_etf_holdings`](#gold_etf_holdings), [`gold_events`](#gold_events), [`gold_fed_path`](#gold_fed_path), [`gold_fred_daily`](#gold_fred_daily), [`gold_health_daily`](#gold_health_daily), [`gold_india_ibja`](#gold_india_ibja), [`gold_preopen_log`](#gold_preopen_log), [`gold_treasury`](#gold_treasury) |
+| GOLD | [`breeze_security_master`](#breeze_security_master), [`breeze_session`](#breeze_session), [`gold_asia_daily`](#gold_asia_daily), [`gold_brief_docs`](#gold_brief_docs), [`gold_cme_daily_voi`](#gold_cme_daily_voi), [`gold_cot`](#gold_cot), [`gold_curve_mcx`](#gold_curve_mcx), [`gold_daily_bars`](#gold_daily_bars), [`gold_etf_holdings`](#gold_etf_holdings), [`gold_events`](#gold_events), [`gold_fed_path`](#gold_fed_path), [`gold_fred_daily`](#gold_fred_daily), [`gold_health_daily`](#gold_health_daily), [`gold_india_ibja`](#gold_india_ibja), [`gold_mcx_daily`](#gold_mcx_daily), [`gold_preopen_log`](#gold_preopen_log), [`gold_treasury`](#gold_treasury) |
 | HDS | [`nse_shareholding`](#nse_shareholding) |
 | INSD | [`nse_insider_trades`](#nse_insider_trades) |
-| MCXG | [`breeze_security_master`](#breeze_security_master), [`breeze_session`](#breeze_session), [`gold_curve_mcx`](#gold_curve_mcx), [`gold_daily_bars`](#gold_daily_bars) |
+| MCXG | [`breeze_security_master`](#breeze_security_master), [`breeze_session`](#breeze_session), [`gold_curve_mcx`](#gold_curve_mcx), [`gold_daily_bars`](#gold_daily_bars), [`gold_mcx_daily`](#gold_mcx_daily) |
 | MEMB | [`index_constituents_daily`](#index_constituents_daily), [`index_contribution_daily`](#index_contribution_daily), [`index_contribution_fit`](#index_contribution_fit), [`index_driver_state`](#index_driver_state), [`index_ohlc_daily`](#index_ohlc_daily), [`index_weights_daily`](#index_weights_daily) |
 | MKT | [`index_ohlc_daily`](#index_ohlc_daily), [`index_valuation_history`](#index_valuation_history), [`market_index_daily`](#market_index_daily), [`market_monitor`](#market_monitor), [`nse_bhavcopy`](#nse_bhavcopy), [`nse_fii_dii_cash`](#nse_fii_dii_cash), [`nse_fii_stats`](#nse_fii_stats), [`nse_fo_daily`](#nse_fo_daily), [`nse_participant_oi`](#nse_participant_oi), [`nse_participant_vol`](#nse_participant_vol) |
 | MLEN | [`ml_features`](#ml_features) |
@@ -75,6 +75,7 @@ Context metrics render in the neutral token and are never coloured bullish or be
 | `desk_daily` | [`desk_mark`](#desk_mark) |
 | `eod_data_pipeline` | [`market_index_daily`](#market_index_daily), [`market_monitor`](#market_monitor), [`ml_features`](#ml_features), [`nse_bhavcopy`](#nse_bhavcopy), [`nse_events`](#nse_events), [`ohlcv`](#ohlcv) |
 | `gold_asia_close` | [`gold_asia_daily`](#gold_asia_daily) |
+| `gold_breeze_daily` | [`gold_mcx_daily`](#gold_mcx_daily) |
 | `gold_brief_ingest` | [`gold_brief_docs`](#gold_brief_docs) |
 | `gold_calendar_refresh` | [`gold_events`](#gold_events) |
 | `gold_cme_daily` | [`gold_cme_daily_voi`](#gold_cme_daily_voi) |
@@ -444,6 +445,15 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Ingest job:** `gold_mcx_master` · **Freshness read from:** `MAX(trade_date)` of `gold_curve` where `exchange = 'MCX'`
 - **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [GOLD_DATA_DICTIONARY.md#F1](../docs/GOLD_DATA_DICTIONARY.md#F1)
 
+<a id="gold_mcx_daily"></a>
+### `gold_mcx_daily` · Gold: MCX futures daily OHLC / volume / OI per live expiry (Breeze)
+
+- **Pages:** GOLD, MCXG · **Publisher:** ICICI Breeze (historical v2)
+- **Published (IST):** 09:35 Mon–Fri (the previous session's complete bars) · **Expected stored by:** 10:00 IST on the trading day 1 after the session it describes · **Cadence:** daily · **Amber after:** 2 sessions, red beyond that
+- **Ingest job:** `gold_breeze_daily` · **Freshness read from:** `MAX(trade_date)` of `gold_mcx_daily`
+- **Verdict · badge:** PUBLISH-CORE · `arithmetic` · **Dictionary:** [GOLD_DATA_DICTIONARY.md#F2](../docs/GOLD_DATA_DICTIONARY.md#F2)
+- **Note:** live expiries only (Breeze OI is unreliable for expired contracts); a broker bar, not MCX's bhavcopy; needs the 08:00 ICICI login
+
 <a id="gold_india_ibja"></a>
 ### `gold_india_ibja` · Gold: IBJA AM / PM, RBI reference rate
 
@@ -743,4 +753,4 @@ Registry present (9 rows). A panel renders a metric only if it has a row here wi
 
 ## Index by id
 
-[`alpha_shadow`](#alpha_shadow) · [`archive:chain`](#archive:chain) · [`archive:internals`](#archive:internals) · [`archive:preopen`](#archive:preopen) · [`breeze_security_master`](#breeze_security_master) · [`breeze_session`](#breeze_session) · [`data_gaps`](#data_gaps) · [`db_backup`](#db_backup) · [`desk_mark`](#desk_mark) · [`gold_asia_daily`](#gold_asia_daily) · [`gold_brief_docs`](#gold_brief_docs) · [`gold_cme_daily_voi`](#gold_cme_daily_voi) · [`gold_cot`](#gold_cot) · [`gold_curve_mcx`](#gold_curve_mcx) · [`gold_daily_bars`](#gold_daily_bars) · [`gold_etf_holdings`](#gold_etf_holdings) · [`gold_events`](#gold_events) · [`gold_fed_path`](#gold_fed_path) · [`gold_fred_daily`](#gold_fred_daily) · [`gold_health_daily`](#gold_health_daily) · [`gold_india_ibja`](#gold_india_ibja) · [`gold_preopen_log`](#gold_preopen_log) · [`gold_treasury`](#gold_treasury) · [`index_constituents_daily`](#index_constituents_daily) · [`index_contribution_daily`](#index_contribution_daily) · [`index_contribution_fit`](#index_contribution_fit) · [`index_driver_state`](#index_driver_state) · [`index_ohlc_daily`](#index_ohlc_daily) · [`index_valuation_history`](#index_valuation_history) · [`index_weights_daily`](#index_weights_daily) · [`ingest_log`](#ingest_log) · [`iv_event_log`](#iv_event_log) · [`iv_expiry_daily`](#iv_expiry_daily) · [`iv_expiry_replay`](#iv_expiry_replay) · [`iv_intraday`](#iv_intraday) · [`iv_summary_daily`](#iv_summary_daily) · [`iv_surface_daily`](#iv_surface_daily) · [`market_index_daily`](#market_index_daily) · [`market_monitor`](#market_monitor) · [`ml_features`](#ml_features) · [`news_scanner`](#news_scanner) · [`news_track_record`](#news_track_record) · [`nse_bhavcopy`](#nse_bhavcopy) · [`nse_combined_oi`](#nse_combined_oi) · [`nse_contract_delta`](#nse_contract_delta) · [`nse_deals`](#nse_deals) · [`nse_events`](#nse_events) · [`nse_fii_dii_cash`](#nse_fii_dii_cash) · [`nse_fii_stats`](#nse_fii_stats) · [`nse_fo_daily`](#nse_fo_daily) · [`nse_fo_volt`](#nse_fo_volt) · [`nse_insider_trades`](#nse_insider_trades) · [`nse_live`](#nse_live) · [`nse_mtf`](#nse_mtf) · [`nse_mwpl_clients`](#nse_mwpl_clients) · [`nse_participant_oi`](#nse_participant_oi) · [`nse_participant_vol`](#nse_participant_vol) · [`nse_results`](#nse_results) · [`nse_shareholding`](#nse_shareholding) · [`ohlcv`](#ohlcv) · [`option_chain_eod`](#option_chain_eod) · [`option_chain_live`](#option_chain_live) · [`option_history_json`](#option_history_json) · [`rate_curve`](#rate_curve) · [`surveillance`](#surveillance) · [`tick_store`](#tick_store) · [`vix_daily`](#vix_daily)
+[`alpha_shadow`](#alpha_shadow) · [`archive:chain`](#archive:chain) · [`archive:internals`](#archive:internals) · [`archive:preopen`](#archive:preopen) · [`breeze_security_master`](#breeze_security_master) · [`breeze_session`](#breeze_session) · [`data_gaps`](#data_gaps) · [`db_backup`](#db_backup) · [`desk_mark`](#desk_mark) · [`gold_asia_daily`](#gold_asia_daily) · [`gold_brief_docs`](#gold_brief_docs) · [`gold_cme_daily_voi`](#gold_cme_daily_voi) · [`gold_cot`](#gold_cot) · [`gold_curve_mcx`](#gold_curve_mcx) · [`gold_daily_bars`](#gold_daily_bars) · [`gold_etf_holdings`](#gold_etf_holdings) · [`gold_events`](#gold_events) · [`gold_fed_path`](#gold_fed_path) · [`gold_fred_daily`](#gold_fred_daily) · [`gold_health_daily`](#gold_health_daily) · [`gold_india_ibja`](#gold_india_ibja) · [`gold_mcx_daily`](#gold_mcx_daily) · [`gold_preopen_log`](#gold_preopen_log) · [`gold_treasury`](#gold_treasury) · [`index_constituents_daily`](#index_constituents_daily) · [`index_contribution_daily`](#index_contribution_daily) · [`index_contribution_fit`](#index_contribution_fit) · [`index_driver_state`](#index_driver_state) · [`index_ohlc_daily`](#index_ohlc_daily) · [`index_valuation_history`](#index_valuation_history) · [`index_weights_daily`](#index_weights_daily) · [`ingest_log`](#ingest_log) · [`iv_event_log`](#iv_event_log) · [`iv_expiry_daily`](#iv_expiry_daily) · [`iv_expiry_replay`](#iv_expiry_replay) · [`iv_intraday`](#iv_intraday) · [`iv_summary_daily`](#iv_summary_daily) · [`iv_surface_daily`](#iv_surface_daily) · [`market_index_daily`](#market_index_daily) · [`market_monitor`](#market_monitor) · [`ml_features`](#ml_features) · [`news_scanner`](#news_scanner) · [`news_track_record`](#news_track_record) · [`nse_bhavcopy`](#nse_bhavcopy) · [`nse_combined_oi`](#nse_combined_oi) · [`nse_contract_delta`](#nse_contract_delta) · [`nse_deals`](#nse_deals) · [`nse_events`](#nse_events) · [`nse_fii_dii_cash`](#nse_fii_dii_cash) · [`nse_fii_stats`](#nse_fii_stats) · [`nse_fo_daily`](#nse_fo_daily) · [`nse_fo_volt`](#nse_fo_volt) · [`nse_insider_trades`](#nse_insider_trades) · [`nse_live`](#nse_live) · [`nse_mtf`](#nse_mtf) · [`nse_mwpl_clients`](#nse_mwpl_clients) · [`nse_participant_oi`](#nse_participant_oi) · [`nse_participant_vol`](#nse_participant_vol) · [`nse_results`](#nse_results) · [`nse_shareholding`](#nse_shareholding) · [`ohlcv`](#ohlcv) · [`option_chain_eod`](#option_chain_eod) · [`option_chain_live`](#option_chain_live) · [`option_history_json`](#option_history_json) · [`rate_curve`](#rate_curve) · [`surveillance`](#surveillance) · [`tick_store`](#tick_store) · [`vix_daily`](#vix_daily)

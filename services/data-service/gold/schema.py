@@ -1,4 +1,4 @@
-"""The gold tables (PLAN §c.1, 19 tables), their casts and the ``gold_cot_metrics`` view.
+"""The gold tables (PLAN §c.1, 19 tables; plus ``gold_mcx_daily``, O-8 6 Nov 2026), their casts and the ``gold_cot_metrics`` view.
 
 Conventions (from ``storage/duckdb_store.py``): ``CREATE TABLE IF NOT EXISTS`` so a restart creates them,
 ``INSERT OR REPLACE`` through ``DuckDBStore._upsert(table, df, cols, casts)``. All timestamps UTC;
@@ -126,6 +126,15 @@ CREATE TABLE IF NOT EXISTS gold_mcx_category_oi (as_of DATE NOT NULL, commodity 
   category VARCHAR NOT NULL, long_pos BIGINT, short_pos BIGINT, open_interest BIGINT, granularity VARCHAR NOT NULL,
   first_seen_at TIMESTAMP NOT NULL, source VARCHAR NOT NULL, PRIMARY KEY (as_of, commodity, instrument, category));
 
+-- 20. MCX gold futures daily bars per LIVE expiry from ICICI Breeze (owner decision O-8, 6 Nov 2026; SOURCES.md F2).
+-- Its own table, never gold_curve: gold_curve readers filter exchange = 'MCX' without a source, so rows there would
+-- change existing panels. Volume and open interest in lots; release_at = our fetch time (a broker bar has no publisher
+-- release instant), first_seen_at = the first fetch of that bar (kept on re-fetch).
+CREATE TABLE IF NOT EXISTS gold_mcx_daily (trade_date DATE NOT NULL, family VARCHAR NOT NULL, expiry DATE NOT NULL,
+  open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE, volume BIGINT, open_interest BIGINT,
+  source VARCHAR NOT NULL, quality VARCHAR NOT NULL, release_at TIMESTAMP NOT NULL, first_seen_at TIMESTAMP NOT NULL,
+  PRIMARY KEY (trade_date, family, expiry));
+
 -- ingest bookkeeping (additive to §c.1): conditional-GET validators, backfill cursors, last run per group
 CREATE TABLE IF NOT EXISTS gold_ingest_state (key VARCHAR PRIMARY KEY, value VARCHAR, updated_at TIMESTAMP NOT NULL);
 
@@ -151,9 +160,9 @@ GOLD_TABLES: tuple[str, ...] = (
     "gold_series_catalog", "gold_series", "gold_cot_raw", "gold_cot", "gold_cme_daily_voi", "gold_cme_efrp",
     "gold_cme_calendar", "gold_cme_prf", "gold_curve", "gold_margins", "gold_daily_bars", "gold_bars_intraday",
     "gold_asia_daily", "gold_etf_holdings", "gold_fed_path", "gold_events", "gold_preopen_log", "gold_brief_docs",
-    "gold_health_daily", "gold_mcx_category_oi",
+    "gold_health_daily", "gold_mcx_category_oi", "gold_mcx_daily",
 )
-PLAN_TABLE_COUNT = 19          # §c.1; gold_ingest_state is bookkeeping on top
+PLAN_TABLE_COUNT = 19          # §c.1; gold_ingest_state is bookkeeping on top; gold_mcx_daily (O-8, 6 Nov 2026) is additive
 
 # The freshness column per table (for get_positions_meta / the WHSE panel).
 FRESHNESS_COLUMN: dict[str, str] = {
@@ -162,6 +171,7 @@ FRESHNESS_COLUMN: dict[str, str] = {
     "gold_etf_holdings": "report_date", "gold_asia_daily": "trade_date", "gold_fed_path": "as_of", "gold_events": "event_date",
     "gold_preopen_log": "day", "gold_brief_docs": "report_date", "gold_health_daily": "day",
     "gold_cme_calendar": "as_of", "gold_cme_prf": "biz_date",      # wave 1c (C-TRADER-13): /db/gold/meta must show the calendar
+    "gold_mcx_daily": "trade_date",
 }
 
 
@@ -247,6 +257,8 @@ COLUMNS: dict[str, list[str]] = {
     "gold_health_daily": ["day", "snapshot_at", "verdict", "gauges"],
     "gold_mcx_category_oi": ["as_of", "commodity", "instrument", "category", "long_pos", "short_pos", "open_interest",
                              "granularity", "first_seen_at", "source"],
+    "gold_mcx_daily": ["trade_date", "family", "expiry", "open", "high", "low", "close", "volume", "open_interest", "source", "quality",
+                       "release_at", "first_seen_at"],
     "gold_ingest_state": ["key", "value", "updated_at"],
 }
 
@@ -296,6 +308,8 @@ CASTS: dict[str, dict[str, str]] = {
                         **{c: _DBL for c in ("bias_score", "confidence", "model_fair_open")}},
     "gold_health_daily": {"day": _D, "snapshot_at": _TS, "gauges": "JSON"},
     "gold_mcx_category_oi": {"as_of": _D, "first_seen_at": _TS, "long_pos": _BIG, "short_pos": _BIG, "open_interest": _BIG},
+    "gold_mcx_daily": {"trade_date": _D, "expiry": _D, "release_at": _TS, "first_seen_at": _TS,
+                       **{c: _DBL for c in ("open", "high", "low", "close")}, "volume": _BIG, "open_interest": _BIG},
     "gold_ingest_state": {"updated_at": _TS},
 }
 

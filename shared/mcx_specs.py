@@ -95,13 +95,14 @@ CALENDAR_YEARS = (2026,)             # outside these years only the weekend rule
 # mcx_close.latest_completed_session) and the VWAP30 window (its last 30 minutes, 15:00–15:30 for Muhurat 2026).
 # Muhurat 2026: MCX circular MCX/TRD/590/2026 (19 Oct 2026), "special session 14:05–14:19, trading 14:20–15:30" as
 # republished by TeamLease RegTech (docs/GOLD_DATA_DICTIONARY.md F6; the 06 Nov automated brief cites the same circular and
-# times). mcxindia.com itself is never fetched (PLAN 0.1 #6); the owner confirms against the circular (O-11).
+# times). mcxindia.com itself is never fetched (PLAN 0.1 #6). 6 Nov 2026: circular number, date and both windows confirmed in
+# a second, independent republication (Algotest: 'MCX/TRD/590/2026 dated October 19, 2026', 14:20–15:30).
 # Keep the literal `"date": "YYYY-MM-DD"` keys: ui/components/desktop/__tests__/desktop.check.ts reads them for its drift check.
 SPECIAL_SESSIONS_2026 = [
     {"date": "2026-11-08", "name": "Muhurat trading (Diwali Laxmi Pujan)",
      "opens": "14:20", "closes": "15:30", "pre_open": "14:05–14:19", "circular": "MCX/TRD/590/2026",
      "note": ("Sunday special session 14:05–14:19 (special), 14:20–15:30 trading "
-              "(MCX/TRD/590/2026 per PLAN §d; owner to confirm the circular)")},
+              "(MCX circular MCX/TRD/590/2026 of 19 Oct 2026; windows confirmed 6 Nov in two republications: TeamLease RegTech, Algotest)")},
 ]
 
 

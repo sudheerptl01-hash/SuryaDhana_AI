@@ -161,6 +161,14 @@ def build_rows() -> list[dict[str, Any]]:
                   table="gold_fed_path", column="as_of", anchor="docs/GOLD_DATA_DICTIONARY.md#G17", badge="context"))
     r.append(_row("gold_curve_mcx", "Gold: MCX master / margins / price band", "GOLD,MCXG", "ICICI Breeze (security master)", "07:30", "08:00", "daily", 1,
                   "gold_mcx_master", "table", table="gold_curve", column="trade_date", where="exchange = 'MCX'", offset=1, anchor="docs/GOLD_DATA_DICTIONARY.md#F1"))
+    # O-8 (6 Nov 2026): the owner authorised the Breeze daily history only. The 09:35 run stores the PREVIOUS session's bar
+    # (offset 1, due 10:00); budget 2 sessions so one missed morning login reads amber, two red
+    r.append(_row("gold_mcx_daily", "Gold: MCX futures daily OHLC / volume / OI per live expiry (Breeze)", "GOLD,MCXG",
+                  "ICICI Breeze (historical v2)", "09:35 Mon–Fri (the previous session's complete bars)", "10:00", "daily", 2,
+                  "gold_breeze_daily", "table", table="gold_mcx_daily", column="trade_date", offset=1,
+                  anchor="docs/GOLD_DATA_DICTIONARY.md#F2",
+                  note=("live expiries only (Breeze OI is unreliable for expired contracts); a broker bar, not MCX's "
+                        "bhavcopy; needs the 08:00 ICICI login")))
     r.append(_row("gold_india_ibja", "Gold: IBJA AM / PM, RBI reference rate", "GOLD", "IBJA / RBI", "13:30 / 18:00", "18:30", "daily", 1, "gold_india_pm", "table",
                   table="gold_series", column="report_date", where="series_id LIKE 'IBJA%'", anchor="docs/GOLD_DATA_DICTIONARY.md#E1", badge="context"))
     r.append(_row("gold_health_daily", "Gold: health snapshot", "GOLD", DERIVED, "08:40", "09:00", "session", 1, "gold_health_snapshot", "table",

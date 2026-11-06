@@ -33,6 +33,7 @@ from gold import (
     ingest_physical,
     ingest_yahoo,
     mcx_close,
+    mcx_daily,
     schema,
 )
 from gold.db import utcnow
@@ -61,10 +62,11 @@ ALIASES: dict[str, str] = {
     "fred": "fred_daily", "sge_intraday": "sge_quotes", "yahoo": "yahoo_daily", "curve": "yahoo_curve",
     "mcx_close": "mcx_close_vwap30", "vwap30": "mcx_close_vwap30",
 }
+# O-8 (6 Nov 2026): the owner authorised the Breeze daily history only (group breeze_daily, gold/mcx_daily.py); the two
+# MCX-site collectors stay dormant
 DORMANT: dict[str, str] = {
     "mcx_official": "MCX official bhavcopy needs a browser-session collector the owner has not authorised (O-8)",
     "mcx_category": "MCX category-wise OI workbook needs the same collector (O-8)",
-    "breeze_daily": "Breeze daily MCX history needs the owner's authorisation and a live check after an 08:00 login (O-8)",
 }
 MONTHLY_SET: tuple[str, ...] = ("imf_official", "wgc_sd", "sge_monthly", "lbma_vault", "amfi", "gpr", "worldbank", "fred_monthly",
                                 "swiss")   # E19 (PLAN §c.3 gold_morning); the 692 MB zip streams to a temp file, once a month
@@ -545,6 +547,15 @@ def g_mcx_close_vwap30(ctx: Ctx) -> dict[str, Any]:
                          families=p.get("families"), force=ctx.force, max_calls=p.get("max_calls"))
 
 
+def g_breeze_daily(ctx: Ctx) -> dict[str, Any]:
+    """MCX gold futures daily OHLC + volume + OI per LIVE expiry from Breeze (O-8, 6 Nov 2026) into gold_mcx_daily, through
+    the latest completed session; a contract with no stored bar gets ``backfill_from`` or 180 days, a stored one its last
+    10 sessions. ``params``: families, max_calls (default 15), max_expiries (default 3)."""
+    p = ctx.params
+    return mcx_daily.run(ctx.store, ctx.breeze, now=ctx.now, backfill_from=ctx.backfill_from, families=p.get("families"),
+                         max_calls=p.get("max_calls"), max_expiries=p.get("max_expiries"))
+
+
 def g_zerodha(ctx: Ctx) -> dict[str, Any]:
     resp = ctx.http.get(ingest_india.ZERODHA_URL)
     if resp.status_code != 200:
@@ -694,6 +705,8 @@ GROUPS: dict[str, Group] = {g.name: g for g in (
     Group("mcx_master", g_mcx_master, "always", note="conditional GET; a 304 is a no-op"),
     Group("mcx_close_vwap30", g_mcx_close_vwap30, "always",
           note="after the MCX close (≈23:58) and at start-up: last-30-min VWAP of Breeze 1-min bars; stored sessions cost 0 calls"),
+    Group("breeze_daily", g_breeze_daily, "always",
+          note="09:35 Mon–Fri: Breeze daily OHLC / volume / OI per live MCX gold expiry → gold_mcx_daily; ≤ 15 calls, 1.2 s apart"),
     Group("zerodha_margins", g_zerodha, "daily", "gold_margins", "source = 'zerodha_nrml'"),
     Group("amfi", g_amfi, "monthly", "gold_series", "source = 'amfi_xls'", publish_day=10),
     Group("duty", g_duty, "always"),

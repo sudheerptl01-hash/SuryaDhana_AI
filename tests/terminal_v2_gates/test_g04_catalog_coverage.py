@@ -60,6 +60,7 @@ KNOWN_JOB_GAPS: dict[str, str] = {
     "gold_open_capture": "gold open log (GOLD pre-open desk)",
     "gold_open_capture_evening": "gold open log, evening leg",
     "gold_intraday_bars": "COMEX 1-minute bars (gold_intraday_*)",
+    "gold_sge_quotes": "SGE delayed intraday quote line (gold_bars_intraday; GOLD › DAILY SGE panel shows its own chip)",
     "gold_india_midday": "IBJA midday leg of the India ladder",
     "gold_weekly": "WGC / RBI / LBMA weekly series",
     "gold_cme_calendar": "CME contract calendar",

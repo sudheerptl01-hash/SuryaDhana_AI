@@ -29,7 +29,7 @@ _get_breeze: Callable[[], Any] | None = None
 def configure(*, get_store: Callable[[], Any], submit: Callable[..., dict[str, Any]], http: Any = None,
               get_breeze: Callable[[], Any] | None = None) -> None:
     """``get_breeze`` returns data-service's live BreezeConnect (or None without a session); only the read-only
-    ``mcx_close_vwap30`` group calls it (wave 1d)."""
+    ``mcx_close_vwap30`` (wave 1d) and ``breeze_daily`` (O-8, 6 Nov 2026) groups call it."""
     global _get_store, _submit, _http, _get_breeze
     _get_store, _submit, _http, _get_breeze = get_store, submit, http, get_breeze
 
@@ -191,6 +191,15 @@ def gold_mcx_settlement(symbol: str = Query("GOLD", pattern="^(GOLD|GOLDM|GOLDTE
     ``settlement_session`` (+ label), ``settlement_quality``, ``band_midpoint`` / ``band_session`` (the band labelled
     with the session it really belongs to) and ``settlement_check``. ``expiry`` defaults to the front month."""
     return reads.mcx_settlement(_store(), symbol=symbol, expiry=_dates(expiry), day=_dates(date_), asof=_asof(asof))
+
+
+@router.get("/db/gold/mcx/daily")
+def gold_mcx_daily(family: str | None = Query(None, pattern="^(GOLD|GOLDM|GOLDTEN|GOLDPETAL|GOLDGUINEA)$"),
+                   expiry: str | None = Query(None), from_: str | None = Query(None, alias="from"),
+                   to: str | None = Query(None)) -> dict[str, Any]:
+    """MCX gold futures daily bars per expiry from ICICI Breeze (gold_mcx_daily, O-8): OHLC, volume and OI in lots,
+    ``release_at`` / ``first_seen_at`` with ``+00:00``; ``from`` defaults to 180 days back."""
+    return reads.mcx_daily(_store(), family=family, expiry=_dates(expiry), start=_dates(from_), end=_dates(to))
 
 
 @router.get("/db/gold/curve/history")

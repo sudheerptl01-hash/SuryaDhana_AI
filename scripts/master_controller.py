@@ -73,7 +73,10 @@ market.duckdb, never a restart; heavy ones defer past a freeze window they would
                                               no after-midnight retry (ICICI sessions expire at midnight IST); after
                                               downtime re-run by the start-up catch-up only while a Breeze session is live
   17:10 Mon–Fri      gold_open_capture_evening  the MCX open on morning-closure days (evening session opens 17:00)
-  dormant (O-8)      gold_mcx_bhavcopy, gold_mcx_category, gold_breeze_daily — not registered (GOLD_DORMANT_JOBS)
+  09:35 Mon–Fri      gold_breeze_daily        MCX gold futures daily OHLC / volume / OI per live expiry from Breeze (O-8,
+                                              6 Nov 2026) → gold_mcx_daily: the previous session's complete bars; after
+                                              downtime re-run by the catch-up only while a Breeze session is live
+  dormant (O-8)      gold_mcx_bhavcopy, gold_mcx_category — not registered (GOLD_DORMANT_JOBS)
   The 08:45 gold_preopen_snapshot and 09:10 gold_open_capture skip full and morning-closure MCX holidays (shared/mcx_specs).
 One-off at start-up: icici_session_refresh_startup, <job>_catchup (pre-open book, morning note, wrap, the terminal
 jobs missed today), startup_catchup (data catch-up after downtime, extended in Terminal v2 0.9 to results release times
@@ -976,6 +979,22 @@ def comex_globex_open(now: datetime) -> bool:
     return not (time(17, 0) <= t < time(18, 0))
 
 
+SH = pytz.timezone("Asia/Shanghai")
+
+
+def sge_session_open(now: datetime) -> bool:
+    """SGE trades 09:00–15:30 (day) and 20:00–02:30 (night) Beijing time, Mon–Fri trading days; the night session that
+    starts on a Friday belongs to Monday and runs to Sat 02:30. In IST: 06:30–13:00 and 17:30–00:00. The 5-minute SGE
+    intraday-quote job fetches only then (6 Nov 2026: the sge_quotes group existed but no job ran it, so DAILY read
+    'No SGE bars stored for today yet' during SGE hours). Chinese holidays are not modelled: a closed day's fetch stores
+    nothing new."""
+    sh = now.astimezone(SH)
+    wd, t = sh.weekday(), sh.time()
+    if wd <= 4 and (time(9, 0) <= t <= time(15, 35) or t >= time(20, 0)):
+        return True
+    return 1 <= wd <= 5 and t <= time(2, 35)          # the tail of the previous evening's night session (Tue–Sat)
+
+
 @dataclass(frozen=True)
 class GoldJob:
     """One gold ingest job (PLAN §c.3): its data-service groups, IST trigger(s) and how it behaves around the windows."""
@@ -997,6 +1016,10 @@ GOLD_JOBS: dict[str, GoldJob] = {
                               "Gold overnight (Treasury, Yahoo daily, COMEX curve, CME final VOI, FRED, US calendar)", 6 * 3600, key=True),
     "gold_intraday_bars": GoldJob(("bars_1m",), ({"minute": "*/5"},), "Gold 1-minute bars (every 5 min while COMEX trades)",
                                   120, light=True, quiet=True, gate=comex_globex_open),
+    # one small GET to SGE's delayed quotation line every 5 min during SGE hours (displayed with attribution, never
+    # re-served: O-1); light, quiet, gated like the COMEX bars
+    "gold_sge_quotes": GoldJob(("sge_quotes",), ({"minute": "2-59/5"},), "Gold SGE intraday quotes (every 5 min in SGE hours)",
+                               120, light=True, quiet=True, gate=sge_session_open),
     "gold_morning": GoldJob(("etf", "fed_path", "gpr_daily", "monthly_due"),
                             ({"day_of_week": "mon-sat", "hour": 6, "minute": 40},),
                             "Gold morning (ETF holdings, Fed path, GPR, monthly series due)", 4 * 3600, key=True),
@@ -1036,18 +1059,24 @@ GOLD_JOBS: dict[str, GoldJob] = {
     "gold_mcx_close": GoldJob(("mcx_close_vwap30", "derive_india"), ({"day_of_week": "mon-fri", "hour": 23, "minute": 58},),
                               "Gold MCX settlement proxy (Breeze last-30-min VWAP, 23:58) + India ladder", 6 * 3600,
                               key=True),
+    # O-8 (6 Nov 2026, the owner authorised this one only): Breeze daily OHLC / volume / OI per LIVE MCX gold expiry →
+    # gold_mcx_daily (data-service group breeze_daily: ≤ 15 read-only calls through the budget ledger, 1.2 s apart). 09:35
+    # is after the ≈08:00 ICICI login and outside the 07:45–09:20 freeze window; it stores the previous session's complete
+    # bars (today's partial bar is skipped). Needs a live session, so the downtime catch-up re-runs it only while one is live
+    "gold_breeze_daily": GoldJob(("breeze_daily",), ({"day_of_week": "mon-fri", "hour": 9, "minute": 35},),
+                                 "Gold MCX daily history (Breeze, 09:35: the previous session's complete bars)", 3600, key=True),
 }
-# PLAN §c.3 / owner action O-8: the schema and a panel placeholder exist; no collector runs until the owner decides.
+# PLAN §c.3 / owner action O-8: the schema and a panel placeholder exist; no collector runs until the owner decides
+# (6 Nov 2026: gold_breeze_daily authorised and moved to GOLD_JOBS; the two MCX-site collectors stay here).
 GOLD_DORMANT_JOBS: dict[str, str] = {
     "gold_mcx_bhavcopy": "MCX official bhavcopy needs a browser-session collector the owner has not authorised (O-8)",
     "gold_mcx_category": "MCX category-wise OI workbook needs the same collector (O-8)",
-    "gold_breeze_daily": "Breeze daily MCX history needs the owner's authorisation and a live check after an 08:00 login (O-8)",
 }
 # key=True: re-run after downtime with backfill_from (PLAN §c.3; Terminal v2 0.9 added the Asia-close, morning, India
 # and health-snapshot jobs — B1 writes their back-dated rows with backfilled=true)
 GOLD_KEY_JOBS: tuple[str, ...] = tuple(j for j, s in GOLD_JOBS.items() if s.key)
 # key jobs that read Breeze (ICICI) and so are re-run after downtime only while a session is live (6 Nov, O-OPS)
-GOLD_SESSION_JOBS: tuple[str, ...] = ("gold_mcx_close",)
+GOLD_SESSION_JOBS: tuple[str, ...] = ("gold_mcx_close", "gold_breeze_daily")
 GOLD_MAX_AGE_DAYS = {"gold_cot": 11, "gold_curve": 4, "gold_daily_bars": 4, "gold_etf_holdings": 5, "gold_cme_daily_voi": 4}
 GOLD_STATUS_TABLES = (("gold_cot", "COT"), ("gold_cme_daily_voi", "COMEX OI"), ("gold_curve", "MCX curve"),
                       ("gold_daily_bars", "bars"), ("gold_etf_holdings", "ETF"))

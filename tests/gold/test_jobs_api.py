@@ -153,8 +153,10 @@ def test_aliases_and_dormant_names():
     assert jobs.resolve("cme_voi_final") == "cme_voi" and jobs.resolve("etf") == "etf_holdings"
     assert jobs.resolve("bars_1m") == "intraday_bars" and jobs.resolve("fed_path") == "atlanta_fed"
     assert jobs.resolve("margins") == "zerodha_margins" and jobs.resolve("lbma_wgc") == "wgc_price"
-    for name in ("mcx_official", "mcx_category", "breeze_daily"):
+    for name in ("mcx_official", "mcx_category"):
         assert name in jobs.DORMANT
+    # O-8 (6 Nov 2026): the Breeze daily history is authorised — a real group now, not a dormant name
+    assert "breeze_daily" not in jobs.DORMANT and jobs.GROUPS["breeze_daily"].cadence == "always"
     controller_groups = {"treasury", "yahoo_daily", "cme_voi_final", "fred_daily", "calendar_us", "bars_1m", "etf", "fed_path", "gpr_daily",
                          "monthly_due", "mcx_master", "margins", "health", "brief", "ibja_am", "inr_ref", "cme_voi", "cme_prf", "sge_daily",
                          "sge_benchmark", "shfe", "ibja_pm", "derive_india", "lbma_wgc", "cme_efrp", "derive_global", "cot", "wgc_etf",
@@ -243,11 +245,11 @@ def client(store, now):
 def test_ingest_endpoint_contract(client):
     assert client.post("/jobs/ingest-gold?job=x", json={"groups": []}).status_code == 422
     assert client.post("/jobs/ingest-gold?job=x", json={"groups": ["nope"]}).status_code == 422
-    r = client.post("/jobs/ingest-gold?job=gold_mcx_master", json={"job": "gold_mcx_master", "groups": ["duty", "margins", "breeze_daily"], "force": True})
+    r = client.post("/jobs/ingest-gold?job=gold_mcx_master", json={"job": "gold_mcx_master", "groups": ["duty", "margins", "mcx_category"], "force": True})
     assert r.status_code == 200 and r.json()["job_id"] == "j1" and r.json()["kind"] == "gold:gold_mcx_master"
     _kind, res = client.submitted[0]
     assert res["groups"]["duty"]["status"] == "ok" and res["groups"]["margins"]["status"] == "http_404"
-    assert res["groups"]["breeze_daily"]["status"] == "dormant" and "tables" in res
+    assert res["groups"]["mcx_category"]["status"] == "dormant" and "tables" in res
     r2 = client.post("/jobs/ingest-gold?job=bf&backfill_from=2026-10-01", json={"groups": ["duty"]})
     assert r2.status_code == 200 and client.submitted[1][1]["backfill_from"] == "2026-10-01"
 

@@ -562,7 +562,7 @@ C3, C4, D3, E1, E5, E12, F1, F2, F9, F10, G1, G2, G3, G5, G8, G16, G19, H2, H3, 
 ### F2 · ICICI Breeze API (MCX quotes, 1-minute bars, daily bars with open interest)
 - **URL:** `https://api.icicidirect.com/breezeapi/documents/index.html` · **Access:** FREE-REGISTRATION (the owner's account; credential) · **Verified:** not exercised today by rule. Known: `get_quotes` on MCX futures returned HTTP 500 on 12 Oct 2026; 1-minute bars (`get_historical_data_v2`) worked; daily bars with `open_interest` and the `GOLDTE` code are UNVERIFIED (O-8); project memory says Breeze OI is wrong for old contracts.
 - **[P]** the only live MCX price; REST calls must stay off the request path (one background call/minute at most, G-APP finding 4).
-- **Verdict:** PUBLISH-CORE when live (honest degrade otherwise). · **Catalog:** `gold_curve` source `breeze_daily` (when verified) · existing quote path
+- **Verdict:** PUBLISH-CORE when live (honest degrade otherwise). · **Catalog:** daily bars → `gold_mcx_daily` (source `breeze_daily`, quality `broker`; job `gold_breeze_daily` 09:35 Mon–Fri, live expiries only; authorised O-8 on 6 Nov 2026; never `gold_curve`, whose readers do not filter by source) · existing quote path
 
 ### F3 · MCX daily bhavcopy (`GetDateWiseBhavCopy`) and market-data pages
 - **URL:** `https://www.mcxindia.com/backpage.aspx/GetDateWiseBhavCopy` (POST `{"Date":"YYYYMMDD","InstrumentName":"FUTCOM"}`; endpoint catalogue recovered from the PyPI sources of `mcxlib 0.4` / `mcxpy 0.0.3`) · page `https://www.mcxindia.com/market-data/bhavcopy`
@@ -618,6 +618,7 @@ C3, C4, D3, E1, E5, E12, F1, F2, F9, F10, G1, G2, G3, G5, G8, G16, G19, H2, H3, 
 ### F14 · India monthly gold imports — Ministry of Commerce / DGCI&S via the PIB release
 - **URL:** `https://pib.gov.in/allRel.aspx` (listing 200 · 0.70 s; the September-2026 release page itself was not located — content via PTI/Business Today/ThePrint and a PDF copy at worldtradescanner.com) → URL pattern UNVERIFIED
 - **Verified (G-INDIA):** **September 2026 gold imports US$1.80 bn (−81.27 % YoY); Apr–Sep US$19.27 bn (−27.3 %)**; silver US$665 mn.
+- **Entered 6 Nov 2026** (group `india_imports`, `params.values`; source string names the releases): Aug 2025 5.439 · Sep 2025 9.61 · Aug 2026 2.298 · Sep 2026 1.80 (US$ bn; Department of Commerce quick estimates of 15 Sep / 15 Oct 2026 via PTI, Business Today, ThePrint, Angel One). Cross-checks: 2,298 / 5,439 = −57.75 % and 1.80 / 9.61 = −81.3 % reproduce the published changes; Apr–Aug 17.47 + Sep 1.80 = Apr–Sep 19.27. Each month needs a new entry after the 15th until a machine-readable release URL is verified.
 - **[B]** The demand pulse after a duty change and the current-account driver of duty policy.
 - **Verdict:** PUBLISH-CONTEXT — one monthly bar; ingest by regex on the ~16th or by hand; keep the PRID. · **Catalog:** `INDIA_GOLD_IMPORTS_USD_BN` · `gold_series` (M)
 

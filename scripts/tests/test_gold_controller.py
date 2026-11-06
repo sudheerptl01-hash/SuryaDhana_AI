@@ -47,9 +47,10 @@ import db_backup
 import master_controller as mc
 
 IST = mc.IST
-PLAN_C3_JOBS = ["gold_overnight", "gold_intraday_bars", "gold_morning", "gold_mcx_master", "gold_health_snapshot",
+PLAN_C3_JOBS = ["gold_overnight", "gold_intraday_bars", "gold_sge_quotes", "gold_morning", "gold_mcx_master", "gold_health_snapshot",
                 "gold_brief_ingest", "gold_calendar_refresh", "gold_india_midday", "gold_cme_daily", "gold_asia_close",
-                "gold_india_pm", "gold_fred_daily", "gold_cot_weekly", "gold_weekly", "gold_cme_calendar", "gold_mcx_close"]
+                "gold_india_pm", "gold_fred_daily", "gold_cot_weekly", "gold_weekly", "gold_cme_calendar", "gold_mcx_close",
+                "gold_breeze_daily"]     # O-8 (6 Nov 2026): the owner authorised the Breeze daily history
 # PLAN §f / O-14: no gold alert implies a direction. "does not forecast" and "no forecasting power" are the
 # disclaimers themselves (negated, or the -ing form), so they are not direction words.
 DIRECTION_WORDS = re.compile(r"\b(bullish|bearish|buy|sell|go long|go short|long gold|short gold|target|(?<!not )forecast[s]?)\b",
@@ -207,7 +208,7 @@ def _fires(trigger: Any, start: datetime, n: int) -> list[str]:
 def test_every_plan_c3_job_is_registered_with_its_ist_times_and_dormant_ones_are_not():
     sched = _FakeScheduler()
     assert mc.register_gold_jobs(sched) == PLAN_C3_JOBS == list(mc.GOLD_JOBS)
-    assert set(mc.GOLD_DORMANT_JOBS) == {"gold_mcx_bhavcopy", "gold_mcx_category", "gold_breeze_daily"}
+    assert set(mc.GOLD_DORMANT_JOBS) == {"gold_mcx_bhavcopy", "gold_mcx_category"}       # O-8: the MCX-site collectors only
     assert not set(mc.GOLD_DORMANT_JOBS) & set(mc.GOLD_JOBS)
     by_id = {kw["id"]: (name, kw) for name, kw in sched.added}
     for job_id, spec in mc.GOLD_JOBS.items():
@@ -234,6 +235,21 @@ def test_every_plan_c3_job_is_registered_with_its_ist_times_and_dormant_ones_are
     assert _fires(trig["gold_intraday_bars"], ref, 2) == ["Fri 23 22:05", "Fri 23 22:10"]
     # 6 Nov (O-OPS): the 00:15 retry is gone — ICICI sessions expire at midnight IST, so it never had a session
     assert _fires(trig["gold_mcx_close"], ref, 3) == ["Fri 23 23:58", "Mon 26 23:58", "Tue 27 23:58"]
+    # O-8: after the ≈08:00 ICICI login and outside the 07:45–09:20 freeze window, weekdays only
+    assert _fires(trig["gold_breeze_daily"], ref, 3) == ["Mon 26 09:35", "Tue 27 09:35", "Wed 28 09:35"]
+
+
+def test_breeze_daily_job_is_a_session_bound_key_job_outside_the_freeze_window():
+    """O-8 (6 Nov 2026): the Breeze daily history needs a live ICICI session (so the downtime catch-up re-runs it only
+    while one is live) and runs at 09:35, past the 07:45–09:20 window, without being a `light` job; negative control:
+    the same job at 09:05 would sit inside the window."""
+    spec = mc.GOLD_JOBS["gold_breeze_daily"]
+    assert spec.groups == ("breeze_daily",) and spec.key and not spec.light and spec.misfire_grace_s == 3600
+    assert "gold_breeze_daily" in mc.GOLD_SESSION_JOBS and "gold_breeze_daily" in mc.GOLD_KEY_JOBS
+    assert "gold_breeze_daily" not in mc.GOLD_DORMANT_JOBS
+    ist = lambda y, m, d, hh, mm: IST.localize(datetime(y, m, d, hh, mm))       # noqa: E731
+    assert not mc.in_freeze_window(ist(2026, 11, 6, 9, 35))
+    assert mc.in_freeze_window(ist(2026, 11, 6, 9, 5))                           # the control: an earlier slot is frozen
 
 
 def test_no_gold_breeze_job_fires_after_midnight_when_icici_sessions_have_expired():
@@ -267,15 +283,31 @@ def test_no_heavy_gold_job_is_scheduled_inside_a_freeze_window():
             assert not mc.in_freeze_window(t.astimezone(IST)), f"{kw['id']} fires at {t.astimezone(IST)}"
             prev = t
     # and the few PLAN §c.3 places inside a window are exactly the light ones
-    assert {j for j, s in mc.GOLD_JOBS.items() if s.light} == {"gold_intraday_bars", "gold_mcx_master", "gold_health_snapshot",
-                                                                "gold_brief_ingest", "gold_calendar_refresh"}
+    assert {j for j, s in mc.GOLD_JOBS.items() if s.light} == {"gold_intraday_bars", "gold_sge_quotes", "gold_mcx_master",
+                                                                "gold_health_snapshot", "gold_brief_ingest", "gold_calendar_refresh"}
+
+
+def test_sge_quotes_job_runs_only_in_sge_hours():
+    """6 Nov 2026: sge_quotes had no schedule, so DAILY read 'No SGE bars stored for today yet' during SGE's day session."""
+    spec = mc.GOLD_JOBS["gold_sge_quotes"]
+    assert spec.groups == ("sge_quotes",) and spec.light and spec.quiet
+    ist = lambda y, m, d, hh, mm: IST.localize(datetime(y, m, d, hh, mm))       # noqa: E731
+    opened = [ist(2026, 11, 6, 6, 35), ist(2026, 11, 6, 9, 26), ist(2026, 11, 6, 12, 55),     # Fri day session
+              ist(2026, 11, 6, 17, 35), ist(2026, 11, 6, 23, 50),                          # Fri night (Monday's)
+              ist(2026, 11, 7, 0, 0), ist(2026, 11, 3, 0, 1)]                              # Sat / Tue tails to 02:30 Beijing
+    shut = [ist(2026, 11, 6, 6, 20), ist(2026, 11, 6, 13, 20), ist(2026, 11, 6, 16, 0),        # before / after / between
+            ist(2026, 11, 7, 6, 35), ist(2026, 11, 8, 9, 0), ist(2026, 11, 7, 0, 20),            # Sat, Sun, Sat after the tail
+            ist(2026, 11, 9, 0, 1)]                                                          # Mon 00:01: no Sunday night session
+    assert all(mc.sge_session_open(t) for t in opened), [t for t in opened if not mc.sge_session_open(t)]
+    assert not any(mc.sge_session_open(t) for t in shut), [t for t in shut if mc.sge_session_open(t)]
 
 
 def test_key_jobs_max_age_rows_and_groups_per_day():
     assert {"gold_overnight", "gold_cot_weekly", "gold_mcx_master"} <= mc._KEY_JOBS
     # Terminal v2 0.9 extended the downtime re-run (backfill_from) to the Asia-close, morning, India and health jobs
     assert mc.GOLD_KEY_JOBS == ("gold_overnight", "gold_morning", "gold_mcx_master", "gold_health_snapshot",
-                                "gold_india_midday", "gold_asia_close", "gold_india_pm", "gold_cot_weekly", "gold_mcx_close")
+                                "gold_india_midday", "gold_asia_close", "gold_india_pm", "gold_cot_weekly", "gold_mcx_close",
+                                "gold_breeze_daily")
     assert mc.GOLD_MAX_AGE_DAYS == {"gold_cot": 11, "gold_curve": 4, "gold_daily_bars": 4, "gold_etf_holdings": 5,
                                     "gold_cme_daily_voi": 4}
     assert not hasattr(mc, "DATASET_MAX_AGE_DAYS"), "retired (Terminal v2 1.4): expected_by + max_age sessions via /api/data/health"
@@ -496,7 +528,8 @@ def test_every_controller_group_name_resolves_in_b1s_gold_jobs():
     assert unresolved == [], f"data-service does not know: {unresolved}"
     assert {b1.resolve(n) for n in ("cme_voi_final", "etf", "fed_path", "bars_1m", "gpr_daily", "margins", "lbma_wgc")} <= set(b1.GROUPS)
     assert not any(b1.resolve(n) in b1.DORMANT for n in names), "no scheduled job asks for a dormant (O-8) group"
-    assert {"mcx_official", "mcx_category", "breeze_daily"} <= set(b1.DORMANT), "B1's dormant set is the controller's GOLD_DORMANT_JOBS"
+    assert {"mcx_official", "mcx_category"} <= set(b1.DORMANT), "B1's dormant set is the controller's GOLD_DORMANT_JOBS"
+    assert "breeze_daily" not in b1.DORMANT and b1.resolve("breeze_daily") in b1.GROUPS     # O-8: authorised, a real group
 
 
 # ── MCX holiday gating of the pre-open desk jobs ────────────────────────────────────────────────────────────
