@@ -1,4 +1,4 @@
-# Improvement log: terminal polish sprint (11–15 Oct 2026)
+# Improvement log: the operations journal (newest entry first)
 
 Last updated Fri 6 Nov 2026 10:45 IST (market-hours acceptance, entry below; evening checks and the unattended ICICI login; live NSE program + Terminal v2 wave 1 deployed 13:01; GOLD program
 deployed on the night of 4 Nov; the Terminal v2 research round is written up in `reports/terminal_v2/`). The 11–15 Oct
@@ -79,7 +79,7 @@ holds, by builder (the first half's results and adversarial checks: `reports/ter
   `data_health_check`; the start-up catch-up extended with gap rows; the watchdog's optional second heartbeat.
 - **UI (B4), gates (B6), studies (B8): in progress as this is written.** IV and drivers components exist under
   `ui/components/vol/` and `ui/components/drivers/` and are being wired into OMON, DERV, EVTS, the stock Profile and MEMB.
-  They are in no release.
+  They were in no release when this entry was written; they shipped in the 5 Nov 13:01 release (entry above).
 - **Docs and LEARN (B5).** `docs/NSE_DATA_DICTIONARY.md` has verified rows for the top-10 weights file, the constituent lists,
   FOVOLT, Contract_Delta, the combined / delta-equivalent OI, the SPAN file, `historicalOR/vixhistory`, the legacy F&O format,
   the dead `equity-stockIndices` and the ban list. **Finding: NSE's `Last-Modified` header is GMT.** Two probe notes had

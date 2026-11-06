@@ -117,6 +117,147 @@ def _fill_reference_names(metadata: dict[str, dict], data_dirs: list[str]) -> No
         return
 
 
+# ── EQS valuation (page review 5 Nov 2026: M07, m076, m077, m078) ───────────────────────────────────────────────
+# The grid's CMP used to be the `stock_metrics` enrichment snapshot's price under a "CLOSE" chip (median gap 15.8 %
+# to the real close, TCS ₹2,350 vs ₹2,495.70), and P/E, market cap and the quarterly columns came from the same stale
+# snapshot (they disagreed with FUND and COMP). Now: CMP is the stored NSE close; P/E, market cap and the quarter come
+# from the NSE results filings at that close (data-service /db/financials-universe, the FUND / COMP source); when a
+# company has no filing read yet, the snapshot's P/E and market cap are rebased to the close only when the snapshot
+# price is within REBASE_BAND of it (outside it a split, a bonus or a stale snapshot makes the ratio meaningless, so
+# the valuation is withheld, never guessed). ETFs (NSE's ETF list) carry no company valuation: SILVERADD, the DSP
+# Silver ETF, showed ₹253.44 on a ₹17.90 close. Placeholder rows (DUMMYVEDL1–4) are dropped.
+
+_PLACEHOLDER_RE = re.compile(r"^DUMMY[A-Z]*\d*$")
+REBASE_BAND = (0.5, 2.0)
+SEBI_LARGE_RANK, SEBI_MID_RANK = 100, 250
+_FIN_TTL_S = 300.0
+_FIN_CACHE: dict = {"at": 0.0, "map": None}
+
+
+@lru_cache(maxsize=1)
+def _load_etf_symbols() -> dict[str, str]:
+    """NSE's ETF list (data/reference/nse_etf_list.csv): symbol → underlying asset. Empty when the file is absent."""
+    _here = os.path.dirname(os.path.abspath(__file__))
+    for d in (os.path.join(_here, "..", "data"), os.path.join(_here, "..", "..", "..", "data")):
+        path = os.path.join(d, "reference", "nse_etf_list.csv")
+        if not os.path.exists(path):
+            continue
+        out: dict[str, str] = {}
+        with open(path, newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                sym = (row.get("Symbol") or "").strip().upper()
+                if sym:
+                    out[sym] = (row.get("Underlying Asset") or row.get("SecurityName") or "ETF").strip()
+        return out
+    return {}
+
+
+def is_placeholder(ticker: str) -> bool:
+    """NSE's placeholder rows (DUMMYVEDL1–4: 'Dummy Vedanta Ltd.') are not securities anyone can trade."""
+    return bool(_PLACEHOLDER_RE.match(ticker or ""))
+
+
+def _num(v) -> float | None:
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f and f not in (float("inf"), float("-inf")) else None
+
+
+def eqs_valuation(latest_price: float | None, price_date: str | None, snapshot: dict, fin: dict | None,
+                  etf_underlying: str | None = None) -> dict:
+    """The EQS valuation fields for one row (pure; unit-tested).
+
+    `snapshot` = the stock_metrics enrichment row (cmp, pe_ratio, mktcap_cr, div_yld_pct, np_qtr_cr, qtr_pft_var,
+    sales_qtr_cr, qtr_sal_var, roce_pct), `fin` = the company's latest-filing row from /db/financials-universe
+    (pe, mcap in ₹, pat / revenue in ₹, pat_yoy, revenue_yoy, period_end, filed_at), `etf_underlying` = set for an ETF.
+    Returns the grid's keys plus `*_basis` fields saying where each number came from:
+      cmp: the stored NSE close (cmp_basis 'nse_close'); never the snapshot price (kept as `snapshot_cmp`);
+      valuation_basis: 'filings' | 'snapshot_rebased' | 'withheld' | 'etf' | 'none';
+      quarter_basis: 'filings' | 'snapshot' | 'etf' | 'none'; div_basis: 'snapshot_rebased' | 'withheld' | 'etf' | 'none'.
+    """
+    px = _num(latest_price)
+    snap_px = _num(snapshot.get("cmp"))
+    out: dict = {"cmp": px, "cmp_date": price_date, "cmp_basis": "nse_close" if px is not None else "none",
+                 "snapshot_cmp": snap_px, "roce_pct": _num(snapshot.get("roce_pct"))}
+    blank = {"pe_ratio": None, "mktcap_cr": None, "div_yld_pct": None, "np_qtr_cr": None, "qtr_pft_var": None,
+             "sales_qtr_cr": None, "qtr_sal_var": None, "qtr_period": None}
+    if etf_underlying is not None:
+        return {**out, **blank, "roce_pct": None, "valuation_basis": "etf", "quarter_basis": "etf", "div_basis": "etf",
+                "instrument": "ETF", "etf_underlying": etf_underlying}
+    out["instrument"] = "EQ"
+    ratio = px / snap_px if px is not None and snap_px else None
+    comparable = ratio is not None and REBASE_BAND[0] <= ratio <= REBASE_BAND[1]
+    out["snapshot_ratio"] = round(ratio, 4) if ratio is not None else None
+    # dividend yield: only the snapshot has it (COMP / DVD compute the trailing-12-month yield per stock)
+    dy = _num(snapshot.get("div_yld_pct"))
+    if dy is None:
+        out.update(div_yld_pct=None, div_basis="none")
+    elif comparable and ratio is not None:
+        out.update(div_yld_pct=round(dy / ratio, 2), div_basis="snapshot_rebased")
+    else:
+        out.update(div_yld_pct=None, div_basis="withheld")
+    fin_mcap = _num((fin or {}).get("mcap"))
+    if fin and fin_mcap:
+        pe = _num(fin.get("pe"))
+        out.update(pe_ratio=pe if pe is not None and pe > 0 else None, mktcap_cr=round(fin_mcap / 1e7, 2),
+                   valuation_basis="filings")
+    elif _num(snapshot.get("pe_ratio")) is not None or _num(snapshot.get("mktcap_cr")) is not None:
+        if comparable and ratio is not None:
+            pe0, mc0 = _num(snapshot.get("pe_ratio")), _num(snapshot.get("mktcap_cr"))
+            out.update(pe_ratio=round(pe0 * ratio, 2) if pe0 is not None else None,
+                       mktcap_cr=round(mc0 * ratio, 2) if mc0 is not None else None, valuation_basis="snapshot_rebased")
+        else:
+            out.update(pe_ratio=None, mktcap_cr=None, valuation_basis="withheld")
+    else:
+        out.update(pe_ratio=None, mktcap_cr=None, valuation_basis="none")
+    if fin and (_num(fin.get("pat")) is not None or _num(fin.get("revenue")) is not None):
+        pat, rev = _num(fin.get("pat")), _num(fin.get("revenue"))
+        out.update(np_qtr_cr=round(pat / 1e7, 2) if pat is not None else None, qtr_pft_var=_num(fin.get("pat_yoy")),
+                   sales_qtr_cr=round(rev / 1e7, 2) if rev is not None else None, qtr_sal_var=_num(fin.get("revenue_yoy")),
+                   qtr_period=fin.get("period_end"), qtr_turn=fin.get("pat_yoy_turn"), quarter_basis="filings")
+    elif any(_num(snapshot.get(k)) is not None for k in ("np_qtr_cr", "sales_qtr_cr")):
+        out.update(np_qtr_cr=_num(snapshot.get("np_qtr_cr")), qtr_pft_var=_num(snapshot.get("qtr_pft_var")),
+                   sales_qtr_cr=_num(snapshot.get("sales_qtr_cr")), qtr_sal_var=_num(snapshot.get("qtr_sal_var")),
+                   qtr_period=None, quarter_basis="snapshot")
+    else:
+        out.update(np_qtr_cr=None, qtr_pft_var=None, sales_qtr_cr=None, qtr_sal_var=None, qtr_period=None,
+                   quarter_basis="none")
+    return out
+
+
+def assign_cap_rank(rows: list[dict]) -> None:
+    """SEBI-style size buckets by market-cap rank among the listed companies with a market cap (in place): 1–100
+    large, 101–250 mid, the rest small (`cap_rank`, `cap_sebi`). SEBI / AMFI rank on the six-month average full
+    market cap; this ranks on the latest close, so a name near a boundary can sit one bucket off (a heuristic)."""
+    ranked = sorted((r for r in rows if r.get("instrument") != "ETF" and (r.get("mktcap_cr") or 0) > 0),
+                    key=lambda r: -r["mktcap_cr"])
+    for i, r in enumerate(ranked, 1):
+        r["cap_rank"] = i
+        r["cap_sebi"] = "Large" if i <= SEBI_LARGE_RANK else "Mid" if i <= SEBI_MID_RANK else "Small"
+    for r in rows:
+        r.setdefault("cap_rank", None)
+        r.setdefault("cap_sebi", None)
+
+
+async def _financials_map(client: httpx.AsyncClient) -> dict[str, dict]:
+    """symbol → latest-filing row from data-service (FUND's source), cached 5 min; {} when unavailable."""
+    import time as _t
+    hit = _FIN_CACHE.get("map")
+    if hit is not None and _t.time() - _FIN_CACHE["at"] < _FIN_TTL_S:
+        return hit
+    try:
+        r = await client.get(f"{DATA_SVC}/db/financials-universe")
+        if r.status_code != 200:
+            return hit or {}
+        out = {str(x.get("symbol", "")).upper(): x for x in (r.json().get("rows") or []) if x.get("symbol")}
+    except Exception:  # noqa: BLE001 — the grid still renders with snapshot / withheld valuations
+        return hit or {}
+    _FIN_CACHE.update(at=_t.time(), map=out)
+    return out
+
+
 @router.get("/symbols")
 async def list_symbols():
     """Lightweight symbol directory for the command bar's type-ahead: ticker, name, sector, cap. Local CSV only."""
@@ -144,11 +285,12 @@ async def list_stocks(
     always falls back to the empty in-memory stub.
     """
     try:
-        # ── Step 1: Fetch OHLCV + metrics from data-service ───────────────────
+        # ── Step 1: Fetch OHLCV + metrics, and the filings valuation (M07), from data-service ─────────
         ohlcv_map: dict[str, dict] = {}
+        fin_map: dict[str, dict] = {}
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
-                resp = await client.get(f"{DATA_SVC}/db/ohlcv-meta")
+                resp, fin_map = await asyncio.gather(client.get(f"{DATA_SVC}/db/ohlcv-meta"), _financials_map(client))
             if resp.status_code == 200:
                 rows = resp.json().get("data", [])
                 ohlcv_map = {r["ticker"]: r for r in rows}
@@ -157,24 +299,24 @@ async def list_stocks(
 
         # ── Step 2: Merge universe CSV + OHLCV + metrics ──────────────────────
         universe_meta = _load_universe_metadata()
+        etfs = _load_etf_symbols()
 
         all_stocks: list[dict] = []
         for ticker, meta in universe_meta.items():
-            # Search filter (ticker or company name)
+            if is_placeholder(ticker):
+                continue
+            # Search filter (ticker or company name) and the CSV-level filters: applied after the market-cap rank,
+            # which is over the whole universe (a search must not make a small cap 'Large')
+            keep = True
             if search:
                 term = search.lower()
-                if term not in ticker.lower() and term not in (meta.get("company_name") or "").lower():
-                    continue
+                keep = term in ticker.lower() or term in (meta.get("company_name") or "").lower()
+            if (cap_category and meta.get("cap_category") != cap_category) \
+                    or (nifty_bucket and meta.get("nifty_bucket") != nifty_bucket) \
+                    or (midcap_bucket and meta.get("midcap_bucket") != midcap_bucket):
+                keep = False
 
-            # CSV-level filters
-            if cap_category and meta.get("cap_category") != cap_category:
-                continue
-            if nifty_bucket and meta.get("nifty_bucket") != nifty_bucket:
-                continue
-            if midcap_bucket and meta.get("midcap_bucket") != midcap_bucket:
-                continue
-
-            stock: dict = {"ticker": ticker, **meta}
+            stock: dict = {"ticker": ticker, **meta, "_keep": keep}
 
             ohlcv = ohlcv_map.get(ticker)
             if ohlcv:
@@ -195,16 +337,11 @@ async def list_stocks(
                     "sessions_behind":  behind,
                     "data_quality":     _classify_quality(days_stale, density, behind),
                     "has_ohlcv":        True,
-                    # financial metrics (may be None for unenriched tickers)
-                    "cmp":          ohlcv.get("cmp"),
-                    "pe_ratio":     ohlcv.get("pe_ratio"),
-                    "mktcap_cr":    ohlcv.get("mktcap_cr"),
-                    "div_yld_pct":  ohlcv.get("div_yld_pct"),
-                    "np_qtr_cr":    ohlcv.get("np_qtr_cr"),
-                    "qtr_pft_var":  ohlcv.get("qtr_pft_var"),
-                    "sales_qtr_cr": ohlcv.get("sales_qtr_cr"),
-                    "qtr_sal_var":  ohlcv.get("qtr_sal_var"),
-                    "roce_pct":     ohlcv.get("roce_pct"),
+                    # M07: CMP = the stored NSE close; P/E, market cap and the quarter from the NSE filings at that
+                    # close (FUND / COMP's source), the snapshot only rebased within REBASE_BAND, else withheld
+                    **eqs_valuation(ohlcv.get("latest_price"), ohlcv.get("price_date"), ohlcv, fin_map.get(ticker),
+                                    etfs.get(ticker)),
+                    "metrics_as_of": ohlcv.get("metrics_as_of"),
                 })
             else:
                 stock.update({
@@ -213,10 +350,17 @@ async def list_stocks(
                     "years_of_data": 0, "data_density_pct": 0,
                     "days_since_update": None, "data_quality": "no_data",
                     "has_ohlcv": False,
+                    "instrument": "ETF" if ticker in etfs else "EQ",
+                    **({"etf_underlying": etfs[ticker]} if ticker in etfs else {}),
                 })
+            if ticker in etfs and stock.get("sector_name") in (None, "", "Unknown"):
+                stock["sector_name"] = f"ETF · {etfs[ticker]}"
 
             all_stocks.append(stock)
 
+        # m077: SEBI-style size buckets by market-cap rank (the CSV's 'Large Cap' only meant NIFTY 500 membership)
+        assign_cap_rank(all_stocks)
+        all_stocks = [s for s in all_stocks if s.pop("_keep", True)]
         # Sort: stocks with OHLCV first, then by ticker
         all_stocks.sort(key=lambda s: (not s.get("has_ohlcv", False), s["ticker"]))
 

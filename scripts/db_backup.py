@@ -58,6 +58,7 @@ EXIT_BUSY = 75                       # EX_TEMPFAIL: another backup holds the loc
 FAMILIES: tuple[tuple[str, ...], ...] = (
     ("market-*.duckdb", "market-*.duckdb.zst"),
     ("ui_prefs-*.sqlite",),
+    ("alerts-*.sqlite",),
 )
 
 
@@ -238,6 +239,61 @@ def _backup_prefs_safely(prefs_db: Path | None, dest: Path, stamp: str) -> dict[
         return {"error": f"{type(exc).__name__}: {exc}"[:300]}
 
 
+def default_alerts_db() -> Path:
+    """ui-api's alert store (routers/alerts.py: ALERTS_DB, else data/alerts.sqlite next to price_alerts.json)."""
+    env = os.environ.get("ALERTS_DB", "").strip()
+    return Path(env).expanduser() if env else ROOT / "data" / "alerts.sqlite"
+
+
+def backup_alerts(db: Path, dest: Path, stamp: str) -> dict[str, Any]:
+    """Online-backup the alert store (typed rules + the append-only fire log, W2-ALERTS) into dest/alerts-<stamp>.sqlite
+    (+ .meta.json) the way the settings store is: SQLite's backup API (consistent while ui-api writes in WAL mode),
+    a single-file rollback journal, PRAGMA integrity_check, an atomic rename. {"skipped": "absent"} before ui-api has
+    created the store. Raises on any failure (nothing partial is left behind)."""
+    if not db.is_file():
+        return {"skipped": "absent", "src": str(db)}
+    dest.mkdir(parents=True, exist_ok=True)
+    for t in dest.glob(".alerts-*.sqlite.tmp-*"):
+        pid = t.name.rsplit("-", 1)[-1]
+        if pid.isdigit() and not _pid_alive(int(pid)):
+            t.unlink(missing_ok=True)
+    out = dest / f"alerts-{stamp}.sqlite"
+    tmp = dest / f".alerts-{stamp}.sqlite.tmp-{os.getpid()}"
+    tmp.unlink(missing_ok=True)
+    try:
+        src = _open_source(db)
+        try:
+            dst = sqlite3.connect(str(tmp))
+            try:
+                src.backup(dst)
+                dst.execute("PRAGMA journal_mode=DELETE")
+                check = dst.execute("PRAGMA integrity_check").fetchone()[0]
+                if check != "ok":
+                    raise RuntimeError(f"alerts backup failed integrity_check: {check}")
+                names = {r[0] for r in dst.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+                rules = dst.execute("SELECT COUNT(*) FROM alert_rules").fetchone()[0] if "alert_rules" in names else 0
+                fires = dst.execute("SELECT COUNT(*) FROM alert_fires").fetchone()[0] if "alert_fires" in names else 0
+            finally:
+                dst.close()
+        finally:
+            src.close()
+        os.replace(tmp, out)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+    meta = {"rules": rules, "fires": fires, "sha256": _sha256(out), "bytes": out.stat().st_size, "file": out.name,
+            "src": str(db), "created_at": _now().isoformat(timespec="seconds")}
+    (dest / f"alerts-{stamp}.meta.json").write_text(json.dumps(meta, indent=1))
+    return meta
+
+
+def _backup_alerts_safely(alerts_db: Path | None, dest: Path, stamp: str) -> dict[str, Any]:
+    try:
+        return backup_alerts(alerts_db or default_alerts_db(), dest, stamp)
+    except Exception as exc:  # noqa: BLE001 - reported in the result; main() exits 1
+        return {"error": f"{type(exc).__name__}: {exc}"[:300]}
+
+
 def run_prefs(dest: Path = DEST_DEFAULT, prefs_db: Path | None = None) -> dict[str, Any]:
     """Settings-store backup alone (with rotation): `--prefs-only`, e.g. before a migration."""
     meta = _backup_prefs_safely(prefs_db, dest, _now().strftime("%Y%m%d"))
@@ -247,11 +303,12 @@ def run_prefs(dest: Path = DEST_DEFAULT, prefs_db: Path | None = None) -> dict[s
 
 
 def run(db: Path = snap.DB, dest: Path = DEST_DEFAULT, pointer: Path = snap.POINTER,
-        prefs_db: Path | None = None) -> dict:
+        prefs_db: Path | None = None, alerts_db: Path | None = None) -> dict:
     dest.mkdir(parents=True, exist_ok=True)
     stamp = _now().strftime("%Y%m%d")
     # Settings store first (tiny, seconds): a DuckDB failure below must not cost the night's settings backup.
     prefs = _backup_prefs_safely(prefs_db, dest, stamp)
+    alerts = _backup_alerts_safely(alerts_db, dest, stamp)          # the alert store too (tiny), before the DuckDB copy
     stem = dest / f"market-{stamp}"
     with tempfile.TemporaryDirectory(prefix="dbbackup_") as td:
         src_path = snap.current(max_age_h=30, allow_stale=True, pointer=pointer, db=db)
@@ -271,6 +328,7 @@ def run(db: Path = snap.DB, dest: Path = DEST_DEFAULT, pointer: Path = snap.POIN
     (dest / f"market-{stamp}.meta.json").write_text(json.dumps(meta, indent=1))
     meta["rotated"] = rotate(dest)
     meta["prefs"] = prefs
+    meta["alerts"] = alerts
     return meta
 
 
@@ -288,7 +346,7 @@ def copy_offsite(dest: Path, meta: dict[str, Any], target: Path, *, keep_daily: 
     temp name + rename, so a cut mount never leaves a half file under the real name. The target keeps the same
     rotation (7 daily + 4 Sundays). Raises on any failure; the local backup is already complete by then."""
     files: list[str] = []
-    for name in (meta.get("file"), (meta.get("prefs") or {}).get("file")):
+    for name in (meta.get("file"), (meta.get("prefs") or {}).get("file"), (meta.get("alerts") or {}).get("file")):
         if name and (dest / name).is_file():
             files.append(name)
             stem_meta = name.split(".")[0] + ".meta.json"
@@ -356,6 +414,10 @@ def main(argv: list[str] | None = None) -> int:
     if "error" in prefs:
         print(f"ui_prefs backup FAILED ({prefs['error']}); the DuckDB backup is fine: {meta.get('file')}",
               file=sys.stderr)
+        rc = 1
+    alerts = {} if args.prefs_only else meta.get("alerts", {})
+    if "error" in alerts:
+        print(f"alerts backup FAILED ({alerts['error']}); the DuckDB backup is fine: {meta.get('file')}", file=sys.stderr)
         rc = 1
     offsite = meta.get("offsite") or {}
     if "error" in offsite:

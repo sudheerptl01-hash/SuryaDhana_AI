@@ -9,13 +9,19 @@
  * comparisons are `context` (neutral tone). Nothing here feeds a trade; every sentence describes, does not predict.
  *
  * Every block loads on its own (latest request wins) and degrades alone while B1's tables are not deployed.
+ *
+ * Fix wave 2 (V-VOL, review 5 Nov 2026): "IV paid vs vol delivered" now reads the server's ledger — NSE MONTHLY expiries,
+ * the ATM IV at ≈ 30 DTE, the close-to-close (zero-mean) vol delivered over the option's own life (M02); the screener's
+ * spread is labelled close-to-close with the Yang-Zhang one named beside it and RV20 shown for both (M01), BAN from NSE's
+ * own list and % MWPL from the merged combined-OI row (M43), a near → next term read where 90 days is not bracketed (m070), "new"
+ * where a rank needs more history (m072), a flat-filled IV30 marked ≈ (M43); the smile compares like tenors (m071).
  */
 import { useEffect, useMemo, useState } from 'react'
 import { BadgeChip, Chip, DataTable, Panel, T, TickerLink, fmtNum, ordinal, sourceOf, type Column } from '@/components/terminal'
 import { percentileOf } from '@/components/terminal/source'
 import { LineChart, XYChart } from './charts'
-import { getIvCone, getIvHistory, getIvSurface, getVolScreen, storeNote, volError, type IvCone, type IvHistory, type IvSurface, type ScreenRow, type ScreenSort, type VolScreen } from './api'
-import { expectedMoveHitRate, ivPaidLedger, lastYear, termWord } from './volModel'
+import { getIvCone, getIvHistory, getIvPaidDelivered, getIvSurface, getVolScreen, storeNote, volError, type IvCone, type IvHistory, type IvSurface, type PaidDelivered, type ScreenRow, type ScreenSort, type VolScreen } from './api'
+import { expectedMoveHitRate, lastYear, nearestTenor, paidSummary, skippedRuns, termWord } from './volModel'
 
 type Load<X> = { data: X | null; error: string | null }
 function useLoad<X>(fn: () => Promise<{ data: X }>, deps: unknown[]): Load<X> {
@@ -41,8 +47,10 @@ function SkewPanel({ hist, surf }: { hist: Load<IvHistory>; surf: Load<IvSurface
   const rows = hist.data?.ok ? hist.data.rows : []
   const last = rows.length ? rows[rows.length - 1] : null
   const skewPct = percentileOf(lastYear(rows).map(r => r.skew_25d_30), last?.skew_25d_30, 60)
-  const near = surf.data?.ok ? (surf.data.expiries.find(e => e.near) ?? surf.data.expiries[0]) : null
-  const ghost = surf.data?.compare?.expiries?.[0] ?? null
+  // m071: like tenors — today's expiry nearest 30 days against the ghost session's expiry nearest 30 days (it compared today's
+  // 4-day weekly with a month-old smile of another expiry, so part of the steepness gap was tenor, not regime)
+  const near = surf.data?.ok ? nearestTenor(surf.data.expiries, 30) : null
+  const ghost = surf.data?.compare ? nearestTenor(surf.data.compare.expiries, 30) : null
   const smile = (e: typeof near) => (e ? [...e.smile].sort((a, b) => a.log_moneyness - b.log_moneyness) : [])
   const todaySmile = smile(near), ghostSmile = smile(ghost)
   const xy = (pts: typeof todaySmile) => pts.map(p => ({ x: p.log_moneyness, y: p.iv }))
@@ -58,7 +66,7 @@ function SkewPanel({ hist, surf }: { hist: Load<IvHistory>; surf: Load<IvSurface
               series={[{ label: '25Δ skew', color: T.violet, values: rows.map(r => r.skew_25d_30), w: 1.5 }]} />
           </div>
           <div>
-            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>smile today{near ? ` (${near.expiry})` : ''} vs {ghost ? `${surf.data?.compare?.as_of ?? 'a month ago'} (dashed)` : 'a month ago'} · x = log-moneyness</div>
+            <div style={{ fontSize: 10, color: T.muted, marginBottom: 4 }}>smile ≈ 30 d: today{near ? ` (${near.expiry}, ${near.dte} d)` : ''} vs {ghost ? `${surf.data?.compare?.as_of ?? 'a month ago'} (${ghost.expiry}, ${ghost.dte} d, dashed)` : 'a month ago (no like-tenor smile stored)'} · x = log-moneyness</div>
             {todaySmile.length >= 3 ? (
               <XYChart height={170} yUnit="%" xLabel="log(K / F)" markX={0} ariaLabel="smile today vs one month ago"
                 series={[{ label: 'today', color: T.violet, points: xy(todaySmile), w: 1.6 }, { label: 'ghost', color: T.muted, points: xy(ghostSmile), w: 1.1, dash: '4 3' }]} />
@@ -141,26 +149,29 @@ function ConePanel({ cone }: { cone: Load<IvCone> }) {
   )
 }
 
-function PaidPanel({ hist }: { hist: Load<IvHistory> }) {
+function PaidPanel({ hist, symbol }: { hist: Load<IvHistory>; symbol: string }) {
   const rows = hist.data?.ok ? hist.data.rows : []
-  const ledger = useMemo(() => ivPaidLedger(rows, 12), [rows])
+  const paid = useLoad<PaidDelivered>(() => getIvPaidDelivered(symbol, 12), [symbol])
+  const ledger = paid.data?.ok ? paid.data.rows : []
+  const skipped = paid.data?.ok ? paid.data.skipped ?? [] : []
+  const sum = useMemo(() => paidSummary(ledger), [ledger])
   const hit = useMemo(() => expectedMoveHitRate(rows, 60), [rows])
-  const closed = ledger.filter(l => l.paid_minus_delivered != null)
-  const avg = closed.length ? closed.reduce((s, l) => s + (l.paid_minus_delivered ?? 0), 0) / closed.length : null
+  const note = paid.error ?? storeNote(paid.data)
   return (
-    <Panel title="IV paid vs vol delivered · last 12 monthly expiries" accent={T.violet} pad={8} badge="context"
-      source={sourceOf(hist.data?.as_of ?? null, { source: 'iv_summary_daily', hint: hist.error ?? storeNote(hist.data) })}
-      subtitle={closed.length ? `monthly ATM IV at the start of each series vs the 20-day Yang-Zhang realised vol at its end · mean difference ${signed(avg)} pts over ${closed.length} closed months` : undefined}>
-      {!rows.length ? <Degraded what="The monthly ledger" note={hist.error ?? storeNote(hist.data)} /> : (
+    <Panel title={`IV paid vs vol delivered · ${ledger.length ? `last ${ledger.length}` : 'the'} NSE monthly expiries`} accent={T.violet} pad={8} badge="context"
+      source={sourceOf(paid.data?.as_of ?? hist.data?.as_of ?? null, { source: 'iv_expiry_daily + NSE OHLC', hint: note })}
+      subtitle={sum.closed ? `NSE monthly expiries · ATM IV at ≈ 30 days to expiry vs the realised vol (close-to-close, zero-mean) from that entry to the expiry close · mean ${signed(sum.mean)} pts over ${sum.closed} closed months · ${sum.paid_above} of ${sum.closed} paid above` : undefined}>
+      {!ledger.length ? <Degraded what="The monthly ledger" note={note} /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(220px, 1fr)', gap: 12 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11 }} data-paid-ledger>
             <thead><tr style={{ color: T.muted, fontSize: 9.5 }}>
-              {['MONTHLY EXPIRY', 'FROM → TO', 'IV PAID', 'RV DELIVERED', 'PAID − DELIVERED'].map((h, i) => <th key={h} style={{ textAlign: i < 2 ? 'left' : 'right', padding: '3px 6px' }}>{h}</th>)}
+              {['MONTHLY EXPIRY', 'ENTRY (DTE) → EXPIRY', 'IV PAID', 'RV DELIVERED (CC)', 'PAID − DELIVERED'].map((h, i) => <th key={h} style={{ textAlign: i < 2 ? 'left' : 'right', padding: '3px 6px' }}>{h}</th>)}
             </tr></thead>
             <tbody>{ledger.map(l => (
               <tr key={l.expiry} style={{ borderTop: `1px solid ${T.border}` }}>
-                <td style={{ padding: '3px 6px' }}>{l.expiry}</td><td style={{ padding: '3px 6px', color: T.muted }}>{l.from} → {l.to} ({l.sessions} s)</td>
-                <td style={{ padding: '3px 6px', textAlign: 'right' }}>{pct(l.iv_paid, 2)}</td><td style={{ padding: '3px 6px', textAlign: 'right' }}>{l.rv_delivered == null ? 'open' : pct(l.rv_delivered, 2)}</td>
+                <td style={{ padding: '3px 6px' }}>{l.expiry}</td><td style={{ padding: '3px 6px', color: T.muted }}>{l.entry} ({fmtNum(l.entry_dte, 0)} d) → {l.open ? 'open' : `${fmtNum(l.sessions, 0)} s`}</td>
+                <td style={{ padding: '3px 6px', textAlign: 'right' }}>{pct(l.iv_paid, 2)}</td>
+                <td style={{ padding: '3px 6px', textAlign: 'right' }} title={l.open ? 'still open: nothing delivered yet' : `demeaned σ ${pct(l.rv_demeaned, 2)} · Yang-Zhang ${pct(l.rv_yz, 2)} over the same sessions`}>{l.open ? 'open' : pct(l.rv_delivered, 2)}</td>
                 <td style={{ padding: '3px 6px', textAlign: 'right', color: T.text }}>{l.paid_minus_delivered == null ? '—' : `${signed(l.paid_minus_delivered)} pts`}</td>
               </tr>))}</tbody>
           </table>
@@ -172,7 +183,9 @@ function PaidPanel({ hist }: { hist: Load<IvHistory> }) {
           </div>
         </div>
       )}
-      {rows.length > 0 && <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>a description of past months; describes, does not predict</div>}
+      {skipped.length > 0 && <div style={{ fontSize: 10.5, color: T.amber, marginTop: 6 }} data-paid-skipped>
+        Not in the ledger: {skippedRuns(skipped).join(' · ')}</div>}
+      {ledger.length > 0 && <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>{paid.data?.definition ?? ''} · a description of past months; describes, does not predict</div>}
     </Panel>
   )
 }
@@ -189,19 +202,29 @@ export function VolScreener({ onPick }: { onPick?: (sym: string) => void }) {
   const scr = useLoad<VolScreen>(() => getVolScreen(sort, within), [sort, within])
   const d = scr.data
   const rows = useMemo(() => (d?.ok ? d.rows : []).filter(r => (!q || r.symbol.includes(q.toUpperCase())) && (!banOnly || r.ban)), [d, q, banOnly])
+  const banDay = d?.ban_date ? new Date(`${d.ban_date}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : null
   const cols = useMemo<Column<ScreenRow>[]>(() => [
-    { key: 'symbol', label: 'Underlying', sort: r => r.symbol, render: r => <><TickerLink symbol={r.symbol} />{r.ban && <span style={{ color: T.red, fontSize: 9, marginLeft: 4 }}>BAN</span>}</> },
+    { key: 'symbol', label: 'Underlying', sort: r => r.symbol, render: r => <><TickerLink symbol={r.symbol} />{r.ban && <span style={{ color: T.red, fontSize: 9, marginLeft: 4 }} title={`in NSE's F&O ban${banDay ? ` for ${banDay}` : ''} (${d?.ban_source ?? 'NSE'}): closing trades only`}>BAN</span>}</> },
     { key: 'spot', label: 'Spot', align: 'right', sort: r => r.spot ?? -1, render: r => fmtNum(r.spot, 2) },
-    { key: 'iv30', label: 'IV30', align: 'right', sort: r => r.iv30_cm ?? -1, title: d?.definitions?.iv30_cm, render: r => pct(r.iv30_cm, 1) },
-    { key: 'rank', label: 'IV rank', align: 'right', sort: r => r.iv_rank_252 ?? -1, title: d?.definitions?.iv_rank_252, render: r => fmtNum(r.iv_rank_252, 0) },
-    { key: 'pctile', label: 'IV pctile', align: 'right', sort: r => r.iv_pctile_252 ?? -1, title: d?.definitions?.iv_pctile_252, render: r => fmtNum(r.iv_pctile_252, 0) },
-    { key: 'rv', label: 'RV20 (YZ)', align: 'right', sort: r => r.rv20_yz ?? -1, render: r => pct(r.rv20_yz, 1) },
-    { key: 'spread', label: 'IV − RV', align: 'right', sort: r => r.iv_minus_rv20 ?? -99, title: d?.definitions?.iv_minus_rv20, render: r => (r.iv_minus_rv20 == null ? '—' : `${signed(r.iv_minus_rv20, 1)}`) },
-    { key: 'term', label: 'Term 30→90', align: 'right', sort: r => r.term_slope_30_90 ?? -99, title: d?.definitions?.term_slope_30_90, render: r => (r.term_slope_30_90 == null ? '—' : signed(r.term_slope_30_90, 1)) },
+    { key: 'iv30', label: 'IV30', align: 'right', sort: r => r.iv30_cm ?? -1, title: d?.definitions?.iv30_cm,
+      render: r => (r.iv30_flat ? <span title="flat from the one expiry inside 10–60 days (no 30-day bracket: the next series had too few traded strikes)">≈{pct(r.iv30_cm, 1)}</span> : pct(r.iv30_cm, 1)) },
+    { key: 'rank', label: 'IV rank', align: 'right', sort: r => r.iv_rank_252 ?? -1, title: d?.definitions?.iv_rank_252,
+      render: r => (r.iv_rank_252 == null && r.iv30_cm != null ? <span style={{ color: T.dim }} title="a rank needs at least 20 stored sessions (a new F&O name)">new</span> : fmtNum(r.iv_rank_252, 0)) },
+    { key: 'pctile', label: 'IV pctile', align: 'right', sort: r => r.iv_pctile_252 ?? -1, title: d?.definitions?.iv_pctile_252,
+      render: r => (r.iv_pctile_252 == null && r.iv30_cm != null ? <span style={{ color: T.dim }} title="a percentile needs at least 20 stored sessions">new</span> : fmtNum(r.iv_pctile_252, 0)) },
+    { key: 'rv', label: 'RV20 (cc)', align: 'right', sort: r => r.rv20_cc ?? -1, title: d?.definitions?.rv20_cc, render: r => pct(r.rv20_cc, 1) },
+    { key: 'spread', label: 'IV − RV (cc)', align: 'right', sort: r => r.iv_minus_rv20 ?? -99, title: d?.definitions?.iv_minus_rv20, render: r => (r.iv_minus_rv20 == null ? '—' : `${signed(r.iv_minus_rv20, 1)}`) },
+    { key: 'rvyz', label: 'RV20 (YZ)', align: 'right', sort: r => r.rv20_yz ?? -1, title: d?.definitions?.rv20_yz, render: r => <span style={{ color: T.muted }}>{pct(r.rv20_yz, 1)}</span> },
+    { key: 'spreadyz', label: 'IV − RV (YZ)', align: 'right', sort: r => r.iv_minus_rv20_yz ?? -99, title: d?.definitions?.iv_minus_rv20_yz,
+      render: r => <span style={{ color: T.muted }}>{r.iv_minus_rv20_yz == null ? '—' : signed(r.iv_minus_rv20_yz, 1)}</span> },
+    { key: 'term', label: 'Term 30→90', align: 'right', sort: r => r.term_slope_30_90 ?? -99, title: `${d?.definitions?.term_slope_30_90 ?? ''} "—" for a stock: its third monthly is too thin for an ATM IV, so 90 days is not bracketed (see near→next).`, render: r => (r.term_slope_30_90 == null ? '—' : signed(r.term_slope_30_90, 1)) },
+    { key: 'termnn', label: 'Term near→next', align: 'right', sort: r => r.term_near_next ?? -99, title: d?.definitions?.term_near_next,
+      render: r => (r.term_near_next == null ? '—' : <span title={`${pct(r.near_atm_iv, 1)} at ${fmtNum(r.near_dte, 0)} d → ${pct(r.next_atm_iv, 1)} at ${fmtNum(r.next_dte, 0)} d`}>{signed(r.term_near_next, 1)} <span style={{ color: T.dim, fontSize: 9.5 }}>{fmtNum(r.near_dte, 0)}→{fmtNum(r.next_dte, 0)}d</span></span>) },
     { key: 'skew', label: '25Δ skew', align: 'right', sort: r => r.skew_25d_30 ?? -99, title: d?.definitions?.skew_25d_30, render: r => (r.skew_25d_30 == null ? '—' : signed(r.skew_25d_30, 1)) },
     { key: 'results', label: 'Next results', sort: r => r.next_results ?? 'zz', render: r => <span style={{ color: T.muted }}>{r.next_results ?? '—'}{r.results_in_days != null ? ` · ${r.results_in_days}d` : ''}</span> },
-    { key: 'mwpl', label: '% MWPL', align: 'right', sort: r => r.mwpl_pct ?? -1, title: 'open interest as a share of the market-wide position limit (ban at 95 %)', render: r => (r.mwpl_pct == null ? '—' : pct(r.mwpl_pct, 0)) },
-  ], [d])
+    { key: 'mwpl', label: '% MWPL', align: 'right', sort: r => r.mwpl_pct ?? -1, title: 'futures-equivalent open interest as a share of the market-wide position limit (NSE combined-OI files; the ban starts above 95 % and ends below 80 %) · context',
+      render: r => (r.mwpl_pct == null ? '—' : <span title={r.mwpl_date ? `NSE combined OI of ${r.mwpl_date}` : undefined}>{pct(r.mwpl_pct, 0)}</span>) },
+  ], [d, banDay])
   return (
     <Panel title="VOL screener · every F&O underlying" accent={T.cyan} pad={0} badge="context"
       source={sourceOf(d?.as_of ?? null, { source: 'iv_summary_daily', hint: scr.error ?? storeNote(d) })}
@@ -209,7 +232,7 @@ export function VolScreener({ onPick }: { onPick?: (sym: string) => void }) {
       right={<span style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         {SORTS.map(s => <Chip key={s.id} color={T.cyan} active={sort === s.id} onClick={() => setSort(s.id)}>{s.label}</Chip>)}
         <Chip color={T.amber} active={within === 10} onClick={() => setWithin(w => (w === 10 ? null : 10))} title="only names reporting within 10 days">RESULTS ≤ 10D</Chip>
-        <Chip color={T.red} active={banOnly} onClick={() => setBanOnly(b => !b)} title="only names in the F&O ban">BAN</Chip>
+        <Chip color={T.red} active={banOnly} onClick={() => setBanOnly(b => !b)} title={`only names in NSE's F&O ban${banDay ? ` for ${banDay}` : ''}`}>BAN{banDay ? ` · ${banDay}` : ''}</Chip>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="filter…" aria-label="screener filter"
           style={{ background: T.panel, border: `1px solid ${T.border}`, color: T.text, fontFamily: T.mono, fontSize: 11, padding: '3px 6px', width: 90, outline: 'none', textTransform: 'uppercase' }} />
       </span>}>
@@ -231,12 +254,14 @@ export function VolView({ symbol, onPick }: { symbol: string; onPick?: (sym: str
       <SkewPanel hist={hist} surf={surf} />
       <TermPanel hist={hist} cone={cone} />
       <ConePanel cone={cone} />
-      <PaidPanel hist={hist} />
+      <PaidPanel hist={hist} symbol={symbol} />
       <VolScreener onPick={onPick} />
       <div style={{ fontSize: 10, color: T.dim, lineHeight: 1.6 }}>
         Sources: the IV store (iv_summary_daily, iv_expiry_daily, iv_surface_daily) rebuilt nightly from the stored NSE F&O bhavcopies (Black-76 on the
-        put–call-parity forward; r from the dated rate curve; T = calendar days / 365 at the 15:30 close); realised vol from NSE's daily index file. The India VIX
-        level is on the DESK sub-view only. Every panel describes where volatility is and was; none forecasts, none feeds the Decision Desk or a ticket.
+        put–call-parity forward; r from the dated rate curve; T = calendar time to 15:30 IST on expiry ÷ 365, the same on OMON and OSTR); realised vol from NSE&apos;s
+        daily index file and the equity bhavcopy (close-to-close is the estimator of record for IV − RV; Parkinson and Yang-Zhang drop a session whose high / low
+        is a bad print); BAN from NSE&apos;s securities-in-ban list; % MWPL from NSE&apos;s combined-OI files. The India VIX level is on the DESK sub-view only. Every panel
+        describes where volatility is and was; none forecasts, none feeds the Decision Desk or a ticket.
       </div>
     </div>
   )

@@ -12,6 +12,12 @@
  *   GP · TOP · MOST · BACK    Bloomberg mnemonics (lib/goAliases.ts): chart studio, news, movers, history back;
  *                             NIFTY / BANKNIFTY offer the index option chain. Mnemonics and exact page codes rank
  *                             above every ticker match (GP never opens GPIL, MOST never the ticker MOST)
+ *   GO arguments (page review M37, lib/goAliases.ts parseGoCommand):
+ *     TCS OMON 27NOV          the chain on that expiry        NIFTY OSTR IC     a strategy template
+ *     ALRT TCS >3200          the alert form, pre-filled      TCS VS INFY       COMP
+ *     GOLD COT                a GOLD sub-view                 BANKNIFTY DERV    a page on that underlying
+ *   Every underlying GO opens is written to the active-symbol store (lib/activeSymbol.ts, M34), so OSTR / DERV /
+ *   CHRT / COMP / DEAL open on the symbol you were on. IMPORT opens the settings import (components/shell/SettingsImport).
  *
  * Arrow keys pick, Enter runs, Shift+Enter (or Shift+click) opens the pick in a NEW WINDOW (contract K4), Esc
  * closes. Typing a ticker character anywhere outside a text box opens the bar seeded with it (type-to-GO,
@@ -32,12 +38,15 @@ import { setSubInUrl } from '@/components/terminal/source'
 import { GOLD_SUBS, type GoldSub } from '@/lib/gold/types'
 import { helpKeys, onMac, typeToGoChar } from '@/lib/shortcuts'
 import { useShellState } from '@/components/shell/ShellState'
-import { aliasTargets, canGoBack, mergeRanked, sanitizeSymbolRows, type AliasTarget } from '@/lib/goAliases'
+import { ALRT_PREFILL_EVENT, ALRT_PREFILL_KEY, GO_ARG_HINTS, OSTR_TEMPLATE_EVENT, PAGE_HANDOFF_EVENT, OSTR_TEMPLATE_KEY, aliasTargets, canGoBack, mergeRanked,
+  parseGoCommand, sanitizeSymbolRows, type AliasTarget, type GoCommand } from '@/lib/goAliases'
+import { writeActiveSymbol } from '@/lib/activeSymbolCore'
+import { openSettingsImport } from '@/components/shell/SettingsImport'
 
 export interface CommandPage { id: string; code: string; label: string; hint: string }
 
 type Item =
-  | { kind: 'page'; key: string; code: string; label: string; hint: string; id: string }
+  | { kind: 'page'; key: string; code: string; label: string; hint: string; id: string; alias?: AliasTarget }
   | { kind: 'news'; key: string; code: string; label: string; hint: string }
   | { kind: 'help'; key: string; code: string; label: string; hint: string }
   | { kind: 'back'; key: string; code: string; label: string; hint: string }
@@ -45,6 +54,9 @@ type Item =
   | { kind: 'omon'; key: string; code: string; label: string; hint: string; sym: string }
   | { kind: 'deal'; key: string; code: string; label: string; hint: string; sym: string }
   | { kind: 'stock'; key: string; code: string; label: string; hint: string; t: string; action: Action }
+  | { kind: 'cmd'; key: string; code: string; label: string; hint: string; cmd: Exclude<GoCommand, { kind: 'invalid' }> }
+  | { kind: 'hint'; key: string; code: string; label: string; hint: string }
+  | { kind: 'import'; key: string; code: string; label: string; hint: string }
 
 type Action = 'open' | 'tv' | 'yf' | 'watch' | 'des' | 'fa' | 'ern' | 'hp' | 'seag'
 const ACTIONS: Record<string, Action> = { DES: 'des', GP: 'open', TV: 'tv', YF: 'yf', Y: 'yf', W: 'watch', WL: 'watch', FA: 'fa', ERN: 'ern', HP: 'hp', SEAG: 'seag' }
@@ -76,12 +88,105 @@ function pushHistory(entry: string): string[] {
   return next
 }
 
+/** Today's IST calendar day (YYYY-MM-DD): the year GO gives an expiry typed without one (27NOV). */
+function istToday(): string {
+  try { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }) } catch { return new Date().toISOString().slice(0, 10) }
+}
+
+/** M34: an underlying GO opens becomes the active symbol (OSTR / DERV / CHRT / COMP / DEAL open on it). Never throws. */
+function setActive(symbol: string, expiry: string | null = null): void {
+  // a GO pick names its expiry or none: `TCS OMON` after `TCS OMON 27NOV` opens on the nearest series, never the stale 27 Nov
+  // (V-VOL r2: OMON reads the store's expiry as the GO hand-off; mergeActive keeps an omitted expiry for the same symbol)
+  try { writeActiveSymbol({ symbol, expiry }) } catch { /* storage blocked */ }
+}
+
+function handOff(key: string, value: unknown, event: string): void {
+  try { localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value)) } catch { /* storage blocked */ }
+  try { window.dispatchEvent(new Event(event)) } catch { /* no DOM */ }
+}
+
+const PAGE_OF: Record<string, string> = { options: 'Option chain', ostrategy: 'Options strategies', derivatives: 'Derivatives desk', charts: 'Chart studio',
+  deals: 'Block & bulk deals', compare: 'Compare' }
+
+const MON = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+/** '2026-11-27' → '27NOV' (the way it was typed). */
+const expiryTag = (iso: string) => `${iso.slice(8, 10)}${MON[Number(iso.slice(5, 7)) - 1] ?? ''}`
+
+/** The GO item for a parsed command (lib/goAliases.ts parseGoCommand). */
+function cmdItem(cmd: Exclude<GoCommand, { kind: 'invalid' }>): Item {
+  const d = (iso: string | null) => (iso ? ` · expiry ${iso}` : '')
+  switch (cmd.kind) {
+    case 'symbolPage':
+      return { kind: 'cmd', key: `cmd:${cmd.code}:${cmd.sym}:${cmd.expiry ?? ''}`, code: `${cmd.sym} ${cmd.code}${cmd.expiry ? ` ${expiryTag(cmd.expiry)}` : ''}`,
+               label: `${cmd.view === 'vol' ? 'Volatility (DERV › VOL)' : PAGE_OF[cmd.page] ?? cmd.code} · ${cmd.sym}${d(cmd.expiry)}`, hint: 'sets the active symbol', cmd }
+    case 'ostrTemplate':
+      return { kind: 'cmd', key: `cmd:ostr:${cmd.sym}:${cmd.template}`, code: `${cmd.sym} OSTR`, label: `${cmd.template} · ${cmd.sym}${d(cmd.expiry)}`,
+               hint: 'options strategies · paper', cmd }
+    case 'alert':
+      return { kind: 'cmd', key: `cmd:alrt:${cmd.sym}`, code: `ALRT ${cmd.sym}`, label: `Alert · ${cmd.sym} ${cmd.op === 'above' ? 'above' : 'below'} ${cmd.level.toLocaleString('en-IN')}`,
+               hint: 'opens the form pre-filled · you save it there', cmd }
+    case 'compare':
+      return { kind: 'cmd', key: `cmd:comp:${cmd.syms.join(',')}`, code: 'COMP', label: `Compare ${cmd.syms.join(' vs ')}`, hint: 'vs NIFTY 50 · rebased to 100', cmd }
+    case 'goldSub':
+      return { kind: 'cmd', key: `cmd:gold:${cmd.sub}`, code: `GOLD ${cmd.sub === 'positioning' ? 'COT' : cmd.sub.toUpperCase().slice(0, 8)}`, label: `Gold terminal · ${cmd.sub}`, hint: 'GOLD sub-view', cmd }
+  }
+}
+
 /** True while a dialog other than the stock window is open (help card, News Terminal, the GO bar itself, popovers). */
 function otherDialogOpen(): boolean {
   try {
     return !!document.querySelector('[role="dialog"]:not([data-sd-stock-window])')
   } catch {
     return false
+  }
+}
+
+/** Hand a GO alias's sub-view to the page it opens, on Enter only: a GOLD sub-view, or another page's `?sub=`. */
+function handOffAliasSub(a: AliasTarget | undefined): void {
+  if (!a || a.kind !== 'page') return
+  if ('sub' in a && typeof a.sub === 'string' && (GOLD_SUBS as readonly string[]).includes(a.sub)) {
+    try { setGoldSubInUrl(a.sub as GoldSub) } catch { /* no-op */ }
+    notePageHandoff()
+  }
+  // terminal v2 sub-views (VOL → DERV › VOL, DATA → SYS › DATA): the same `?sub=` hand-off for any other page
+  if ('view' in a && typeof a.view === 'string') {
+    try { setSubInUrl(a.view) } catch { /* no-op */ }
+    notePageHandoff()
+  }
+}
+
+/** Tell page.tsx a sub-view was just handed over, so the page switch keeps `?sub=` (a plain switch drops a stale one). */
+function notePageHandoff(): void {
+  try { window.dispatchEvent(new Event(PAGE_HANDOFF_EVENT)) } catch { /* no DOM */ }
+}
+
+/** Run a parsed GO command: the active symbol and the page's hand-off first, then the page (or a new window, ⇧↵). */
+function runCommand(cmd: Exclude<GoCommand, { kind: 'invalid' }>, inNewWindow: boolean, onPage: (id: string) => void): void {
+  const go = (id: string) => (inNewWindow ? void newWindow(id) : onPage(id))
+  switch (cmd.kind) {
+    case 'symbolPage': {
+      setActive(cmd.sym, cmd.expiry)
+      if (cmd.page === 'options') handOff(OMON_KEY, cmd.sym, 'suryadhana:omon')
+      else if (cmd.page === 'deals') handOff(DEAL_KEY, cmd.sym, 'suryadhana:deal')
+      if (cmd.view) { try { setSubInUrl(cmd.view) } catch { /* no-op */ } notePageHandoff() }
+      return go(cmd.page)
+    }
+    case 'ostrTemplate':
+      setActive(cmd.sym, cmd.expiry)
+      handOff(OSTR_TEMPLATE_KEY, { template: cmd.template, symbol: cmd.sym, expiry: cmd.expiry, at: new Date().toISOString() }, OSTR_TEMPLATE_EVENT)
+      return go('ostrategy')
+    case 'alert':
+      setActive(cmd.sym)
+      handOff(ALRT_PREFILL_KEY, { symbol: cmd.sym, op: cmd.op, level: cmd.level, at: new Date().toISOString() }, ALRT_PREFILL_EVENT)
+      return go('alerts')
+    case 'compare':
+      setActive(cmd.syms[0])
+      handOff(COMP_KEY, { syms: cmd.syms, period: '1y' }, 'suryadhana:comp')
+      return go('compare')
+    case 'goldSub':
+      try { setGoldSubInUrl(cmd.sub as GoldSub) } catch { /* no-op */ }
+      notePageHandoff()
+      return go('gold')
   }
 }
 
@@ -154,6 +259,7 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
   }, [open, symbols])
 
   const bySymbol = useMemo(() => new Map((symbols ?? []).map(s => [s.t, s])), [symbols])
+  const codeToId = useMemo(() => Object.fromEntries(pages.map(p => [p.code, p.id])) as Record<string, string>, [pages])
 
   const items = useMemo<Item[]>(() => {
     const raw = q.trim().toUpperCase()
@@ -168,9 +274,15 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
     const pageItems: Item[] = pages.map(p => ({ kind: 'page', key: `p:${p.id}`, code: p.code, label: p.label, hint: p.hint, id: p.id }))
     const news: Item = { kind: 'news', key: 'news', code: 'NEWS', label: 'News Catalyst Terminal', hint: 'today\'s scanner picks and headlines' }
     const helpItem: Item = { kind: 'help', key: 'help', code: 'HELP', label: 'Codes and keyboard shortcuts', hint: 'or press ?' }
+    const importItem: Item = { kind: 'import', key: 'import', code: 'IMPORT', label: 'Import settings', hint: 'watchlist and pins from the old browser terminal (SETTINGS)' }
     if (!raw) {
       return [...recent.map(t => stockItem(t, 'open')), ...pageItems, news, helpItem]
     }
+    // GO arguments (M37): TCS OMON 27NOV · NIFTY OSTR IC · ALRT TCS >3200 · TCS VS INFY · GOLD COT · BANKNIFTY DERV.
+    // A ticker + DES / FA / TV … keeps its action (ACTIONS), and `COMP A B` its list, below.
+    const parsed = rest.length && !ACTIONS[rest.join(' ')] && !(head === 'COMP' && rest.length > 1) ? parseGoCommand(raw, istToday(), codeToId) : null
+    if (parsed && parsed.kind !== 'invalid') return [cmdItem(parsed)]
+    const argHint: Item[] = parsed?.kind === 'invalid' ? [{ kind: 'hint', key: 'hint', code: '?', label: parsed.reason, hint: 'not run' }] : []
     const omonItem = (sym: string): Item => ({ kind: 'omon', key: `omon:${sym}`, code: `${sym} OMON`, label: `Option chain · ${sym}`, hint: 'end of day · OI, IV, PCR, max pain', sym })
     const dealItem = (sym: string): Item => ({ kind: 'deal', key: `deal:${sym}`, code: `${sym} DEAL`, label: `Block & bulk deals · ${sym}`, hint: 'last 30 days, netted per client', sym })
     // TICKER FUNCTION (Bloomberg order): TCS OMON, TCS DEAL
@@ -194,14 +306,9 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
                  hint: canGoBack(st) ? `previous page or stock window${desktop ? ' (⌘[)' : ''}` : 'nothing to go back to in this window' }
       }
       const item = pageItems.find(i => i.kind === 'page' && i.id === a.id) ?? null
-      if (item && a.kind === 'page' && 'sub' in a && typeof a.sub === 'string' && (GOLD_SUBS as readonly string[]).includes(a.sub)) {
-        try { setGoldSubInUrl(a.sub as GoldSub) } catch { /* no-op */ }
-      }
-      // terminal v2 sub-views (VOL → DERV › VOL, DATA → SYS › DATA): the same `?sub=` hand-off for any other page
-      if (item && a.kind === 'page' && 'view' in a && typeof a.view === 'string') {
-        try { setSubInUrl(a.view) } catch { /* no-op */ }
-      }
-      return item
+      // the alias carries its sub-view; run() hands it over on Enter (it used to be written while typing, so typing
+      // VOL on DERV, or COT on GOLD, switched the page under the bar before anything was run)
+      return item && item.kind === 'page' && ('sub' in a || 'view' in a) ? { ...item, key: `${item.key}:${'sub' in a ? a.sub : ''}:${'view' in a ? a.view : ''}`, alias: a } : item
     }
     const aliases: Item[] = rest.length ? [] : aliasTargets(raw).map(aliasItem).filter((i): i is Item => i !== null)
     let exactPages: Item[] = []
@@ -213,9 +320,10 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
       const score = (i: { code: string; label: string; hint?: string }) =>
         i.code === raw ? 4 : i.code.startsWith(raw) ? 3 : i.label.toUpperCase().startsWith(raw) ? 2
         : (i.code.includes(raw) || i.label.toUpperCase().includes(raw) || (i.hint ?? '').toUpperCase().includes(raw)) ? 1 : 0
-      const pg = [...pageItems, news, helpItem].filter(i => score(i) > 0).sort((a, b) => score(b) - score(a))
-      exactPages = pg.filter(i => i.code === raw)
-      scoredPages = pg.filter(i => i.code !== raw)
+      const pg = [...pageItems, news, helpItem, importItem].filter(i => score(i) > 0 || (i.kind === 'import' && raw === 'SETTINGS'))
+        .sort((a, b) => score(b) - score(a))
+      exactPages = pg.filter(i => i.code === raw || (i.kind === 'import' && raw === 'SETTINGS'))
+      scoredPages = pg.filter(i => !exactPages.includes(i))
     }
     let tickerLead: Item[] = []
     let tickerRest: Item[] = []
@@ -230,11 +338,11 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
       }
       tickerRest = [...pre.map(s => stockItem(s.t)), ...name.map(s => stockItem(s.t, 'open'))]
     }
-    const out = mergeRanked([aliases, exactPages, tickerLead, scoredPages, tickerRest])
+    const out = mergeRanked([argHint, aliases, exactPages, tickerLead, scoredPages, tickerRest])
     // Anything NSE-shaped that is not in the 1,500-stock directory still opens (movers can sit outside it)
-    if (symbols && !out.length && /^[A-Z0-9&-]{2,20}$/.test(head)) out.push(stockItem(head))
+    if (symbols && out.length === argHint.length && /^[A-Z0-9&-]{2,20}$/.test(head)) out.push(stockItem(head))
     return out.slice(0, 14)
-  }, [q, pages, symbols, bySymbol, recent, desktop])
+  }, [q, pages, symbols, bySymbol, recent, desktop, codeToId])
 
   useEffect(() => { setSel(0) }, [q])
   useEffect(() => {
@@ -248,6 +356,13 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
     setOpen(false)
     // BACK <GO>: history back, only while the entry behind is a terminal screen (never out of the terminal)
     if (it.kind === 'back') { if (canGoBack(window.history.state)) window.history.back(); return }
+    if (it.kind === 'hint') return
+    if (it.kind === 'import') return void openSettingsImport()
+    if (it.kind === 'cmd') return runCommand(it.cmd, inNewWindow, onPage)
+    // M34: every underlying GO opens becomes the active symbol (OSTR / DERV / CHRT / COMP / DEAL follow it)
+    if (it.kind === 'omon' || it.kind === 'deal') setActive(it.sym)
+    else if (it.kind === 'stock' && it.action !== 'watch') setActive(it.t)
+    else if (it.kind === 'comp' && it.syms[0]) setActive(it.syms[0])
     if (inNewWindow) {
       // Shift+Enter / Shift+click (contract K4): pages and stocks open in another terminal window; the per-page
       // hand-off keys (OMON / DEAL / COMP) are written first, so the new window opens on that selection
@@ -260,7 +375,7 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
         return void newWindow('compare')
       }
     }
-    if (it.kind === 'page') return onPage(it.id)
+    if (it.kind === 'page') { handOffAliasSub(it.alias); return onPage(it.id) }
     if (it.kind === 'news') return void window.dispatchEvent(new Event('suryadhana:open-news'))
     if (it.kind === 'help') return void setHelp(true)
     if (it.kind === 'omon') {
@@ -291,7 +406,8 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
 
   if (help && !open) return <HelpCard pages={pages} desktop={desktop} onClose={() => setHelp(false)} onPage={id => { setHelp(false); onPage(id) }} />
   if (!open) return null
-  const kindColor = (i: Item) => (i.kind === 'stock' ? T.amber : i.kind === 'news' || i.kind === 'help' || i.kind === 'back' ? T.violet : i.kind === 'comp' || i.kind === 'omon' ? T.green : T.cyan)
+  const kindColor = (i: Item) => (i.kind === 'stock' ? T.amber : i.kind === 'hint' ? T.dim
+    : i.kind === 'news' || i.kind === 'help' || i.kind === 'back' || i.kind === 'import' ? T.violet : i.kind === 'comp' || i.kind === 'omon' || i.kind === 'cmd' ? T.green : T.cyan)
   return (
     <div onMouseDown={() => setOpen(false)} role="dialog" aria-label="Command bar"
       style={{ position: 'fixed', inset: 0, zIndex: Z.commandbar, background: 'rgba(2,3,6,.72)', backdropFilter: 'blur(2px)',
@@ -303,7 +419,7 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
           <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: T.bg, background: T.amber, padding: '3px 7px' }}>GO</span>
           <input ref={inputRef} value={q} spellCheck={false}
             onChange={e => { if (e.target.value !== recalled.current) { histIdx.current = -1; recalled.current = '' } setQ(e.target.value) }}
-            placeholder="Ticker, company or code  ·  TCS  ·  TCS TV  ·  MKT"
+            placeholder="Ticker, company or code  ·  TCS  ·  TCS OMON 27NOV  ·  ALRT TCS >3200"
             onKeyDown={e => {
               // ↑/↓ recall previous commands — only when the input is empty, still holds a recalled
               // command, or matches nothing; otherwise the arrows keep navigating the result list.
@@ -323,15 +439,16 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
               }
               else if (e.key === 'ArrowDown') { e.preventDefault(); setSel(s => Math.min(s + 1, items.length - 1)) }
               else if (e.key === 'ArrowUp') { e.preventDefault(); setSel(s => Math.max(s - 1, 0)) }
-              else if (e.key === 'Enter') { e.preventDefault(); run(items[sel], e.shiftKey) }
+              else if (e.key === 'Enter') { e.preventDefault(); run(items[sel], e.shiftKey) }   // on a '?' hint row Enter does nothing
             }}
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: T.bright,
                      fontFamily: T.mono, fontSize: 16, letterSpacing: .5, textTransform: q ? 'uppercase' : 'none' }} />
           <span style={{ fontFamily: T.mono, fontSize: 10, color: T.dim }}>ESC</span>
         </div>
-        {!q.trim() && hist.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', padding: '8px 14px 0' }}>
-            <span style={{ fontFamily: T.display, fontSize: 9, letterSpacing: 1.6, color: T.dim, textTransform: 'uppercase' }}>Recall</span>
+        {!q.trim() && (
+          <div data-sd-go-recent="" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', padding: '8px 14px 0' }}>
+            <span style={{ fontFamily: T.display, fontSize: 9, letterSpacing: 1.6, color: T.dim, textTransform: 'uppercase' }}>Recent commands</span>
+            {hist.length === 0 && <span style={{ fontFamily: T.mono, fontSize: 10, color: T.dim }}>none yet · the commands you run appear here (↑ recalls them)</span>}
             {hist.slice(0, 8).map(h => (
               <button key={h} onMouseDown={e => { e.preventDefault(); e.stopPropagation(); histIdx.current = -1; recalled.current = h; setQ(h) }}
                 title={`Fill "${h}" (↑ cycles history)`}
@@ -341,18 +458,18 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
           </div>
         )}
         <div ref={listRef} style={{ maxHeight: '52vh', overflowY: 'auto' }}>
-          {!q.trim() && recent.length > 0 && <Section>Recent</Section>}
+          {!q.trim() && recent.length > 0 && <Section>Recent stocks</Section>}
           {items.map((it, i) => (
             <div key={it.key}>
               {!q.trim() && i === recent.length && <Section>Functions</Section>}
-              <div data-i={i} onMouseEnter={() => setSel(i)} onMouseDown={e => run(it, e.shiftKey)}
+              <div data-i={i} data-kind={it.kind} onMouseEnter={() => setSel(i)} onMouseDown={e => { if (it.kind !== 'hint') run(it, e.shiftKey) }}
                 style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: 12, alignItems: 'center',
                          padding: '8px 14px', cursor: 'pointer', borderLeft: `2px solid ${i === sel ? kindColor(it) : 'transparent'}`,
                          background: i === sel ? T.panel3 : 'transparent' }}>
                 <span style={{ fontFamily: T.mono, fontSize: 12, fontWeight: 700, color: kindColor(it),
                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.code}</span>
                 <span style={{ fontSize: 12, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
-                <span style={{ fontSize: 10, color: T.muted, whiteSpace: 'nowrap' }}>{it.hint}</span>
+                <span title={it.hint} style={{ fontSize: 10, color: T.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{it.hint}</span>
               </div>
             </div>
           ))}
@@ -365,9 +482,15 @@ export function CommandBar({ pages, onPage, onTicker, currentTab }: {
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '7px 14px', borderTop: `1px solid ${T.border}`,
                       fontFamily: T.mono, fontSize: 10, color: T.dim }}>
           <span>↑↓ PICK · ↑ RECALL · ↵ GO · ⇧↵ NEW WINDOW</span>
-          <span>‹TICKER› DES · FA · ERN · HP · SEAG · OMON · DEAL · TV · YF · W · VOL · DRVR · DATA</span>
+          <span>‹TICKER› DES · FA · ERN · HP · SEAG · OMON · OSTR · DERV · CHRT · DEAL · TV · YF · W · VOL · DRVR · DATA · IMPORT</span>
           <span style={{ flex: 1 }} />
           <span>{symbols ? `${symbols.length.toLocaleString('en-IN')} symbols` : '…'}</span>
+        </div>
+        <div data-sd-go-args="" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', padding: '0 14px 7px', fontFamily: T.mono, fontSize: 10, color: T.dim }}>
+          {GO_ARG_HINTS.slice(0, 5).map(([ex, what]) => (
+            <button key={ex} type="button" title={what} onMouseDown={e => { e.preventDefault(); e.stopPropagation(); setQ(ex) }}
+              style={{ font: 'inherit', color: T.cyan, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{ex}</button>
+          ))}
         </div>
       </div>
     </div>
@@ -413,6 +536,13 @@ function HelpCard({ pages, desktop, onClose, onPage }: { pages: CommandPage[]; d
             {keys.map(([k, v]) => (
               <div key={k} style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '5px 0', borderBottom: `1px solid ${T.border}` }}>
                 <span style={{ fontFamily: T.mono, fontSize: 11, color: T.amber }}>{k}</span>
+                <span style={{ fontSize: 11.5, color: T.text }}>{v}</span>
+              </div>
+            ))}
+            <div style={{ fontFamily: T.display, fontSize: 10, letterSpacing: 1.6, color: T.muted, margin: '14px 0 6px' }}>GO ARGUMENTS</div>
+            {GO_ARG_HINTS.map(([k, v]) => (
+              <div key={k} style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 10, padding: '4px 0', borderBottom: `1px solid ${T.border}` }}>
+                <span style={{ fontFamily: T.mono, fontSize: 11, color: T.cyan }}>{k}</span>
                 <span style={{ fontSize: 11.5, color: T.text }}>{v}</span>
               </div>
             ))}

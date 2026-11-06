@@ -158,10 +158,14 @@ export function WorldMarkets() {
                       title="GIFT NIFTY (NSE IX, near-month NIFTY future): trades 06:30–15:40 and 16:35–02:45 IST, the overnight cue for the NIFTY open">
                     <td style={{ padding: '6px 10px', color: T.amber, whiteSpace: 'nowrap', fontWeight: 600 }}>GIFT NIFTY</td>
                     <td style={{ padding: '6px 6px', textAlign: 'right', color: T.bright }}>{fmt(gift.last)}</td>
-                    <td style={{ padding: '6px 6px', textAlign: 'right', color: tone(gift.change) }}>{gift.change != null ? fmtSigned(gift.change, 2) : ''}</td>
-                    <td style={{ padding: '6px 6px', textAlign: 'right', color: tone(gift.change_pct), fontWeight: 600 }}>{gift.change_pct != null ? `${fmtSigned(gift.change_pct, 2)}%` : ''}</td>
-                    <td colSpan={2} style={{ padding: '6px 6px', fontSize: 10.5, color: tone(gift.implied_gap_pct) }}>
-                      {gift.implied_gap_pct != null ? `implies ${fmtSigned(gift.implied_gap_pct, 2)}% vs NIFTY close` : ''}</td>
+                    {/* m010: the number a trader reads for the open is the gap vs NIFTY's close; GIFT's own change is vs ITS
+                        previous settlement (another clock), so it is muted and labelled instead of sitting green beside a red gap */}
+                    <td colSpan={2} style={{ padding: '6px 6px', textAlign: 'right', color: T.dim, fontSize: 10 }}
+                      title="GIFT NIFTY's change vs its own previous settlement (a different reference from NIFTY's close)">
+                      {gift.change_pct != null ? `${fmtSigned(gift.change_pct, 2)}% vs its settle` : ''}</td>
+                    <td colSpan={2} style={{ padding: '6px 6px', fontSize: 11, color: tone(gift.implied_gap_pct), fontWeight: 600 }}
+                      title="GIFT NIFTY vs the NSE NIFTY 50 close: the gap it implies for the open (vs spot; the November future's carry is not netted)">
+                      {gift.implied_gap_pct != null ? `${fmtSigned(gift.implied_gap_pct, 2)}% vs NIFTY close` : ''}</td>
                     <td style={{ padding: '6px 10px', textAlign: 'right', color: T.dim, fontSize: 10 }}>{gift.time?.slice(12) ?? ''}</td>
                   </tr>
                 )}

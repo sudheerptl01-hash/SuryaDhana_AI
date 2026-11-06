@@ -16,7 +16,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Btn, Chip, DataTable, Input, Stat, T, type Column } from '@/components/terminal'
 import { fmtSignedInr } from '@/lib/format'
 import { getGoldLog, setGoldLogActual } from '@/lib/gold/api'
-import { accuracyRead, dayLabel, fmtInr0, logCheckWords } from '@/lib/gold/format'
+import { accuracyRead, dayLabel, fmtInr0, logCheckWords, onVwap30Line, staleReasonWords } from '@/lib/gold/format'
 import type { CatalogRow, GoldLog, GoldLogRowX, GoldLogStatsX } from '@/lib/gold/types'
 import { GoldPanel } from './kit'
 
@@ -38,7 +38,15 @@ export function AccuracyStrip({ stats, rows, threshold }: { stats: GoldLogStatsX
   const acc = accuracyRead(stats, rows)
   const better = acc.better
   const stale = acc.stale
+  // the live-only read first (the rows priced off the right session), then the labelled counterfactual (wave 1e minor)
+  const clean = stats.excluding_stale
+  const cf = onVwap30Line(stats, threshold)
   return (
+    <>
+    {(clean?.days || cf) ? <div data-gold-acc-live style={{ fontSize: 10.5, color: T.text, marginBottom: 6, lineHeight: 1.6 }}>
+      {clean?.days ? <div>On the right session&apos;s settlement ({clean.days} day{clean.days === 1 ? '' : 's'}): median miss <b>{inr(clean.median_abs_error)}</b> · naive {inr(clean.naive_mean_abs_error)}{clean.days < 20 ? ' — too few days to size anything' : ''}</div> : null}
+      {cf ? <div data-gold-acc-counterfactual style={{ color: T.muted }}>{cf}</div> : null}
+    </div> : null}
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
       <Stat big={false} label="Days measured" value={stats.days} sub={stats.days < 20 ? 'need ≈20 to size the chase limit' : 'enough for a first read'} />
       <Stat big={false} label="Typical model miss" value={stats.days ? inr(stats.median_abs_error) : '—'}
@@ -54,6 +62,7 @@ export function AccuracyStrip({ stats, rows, threshold }: { stats: GoldLogStatsX
           {acc.unknown > 0 ? <span style={{ display: 'block', color: T.muted }}>{acc.unknown} row{acc.unknown === 1 ? '' : 's'}: check not run yet (no last-30-min VWAP for the labelled session)</span> : null}
           <span style={{ display: 'block', color: T.dim }}>test: {stats.stale_baseline_rule ?? 'the baseline vs the last-30-min VWAP of the session it was labelled with > 0.6 %'}</span></span>} />
     </div>
+    </>
   )
 }
 
@@ -76,7 +85,7 @@ export function GoldAccuracyLog({ threshold, layer = 'B', shared, catalog = null
   }
 
   const cols: Column<GoldLogRowX>[] = [
-    { key: 'date', label: 'Day', render: r => <span>{dayLabel(r.date)}{r.stale_baseline && <Chip color={T.amber} style={{ marginLeft: 6, fontSize: 8.5, padding: '0 4px' }} title={logCheckWords(r).text}>STALE BASE</Chip>}</span> },
+    { key: 'date', label: 'Day', render: r => <span>{dayLabel(r.date)}{r.stale_baseline && <Chip color={T.amber} style={{ marginLeft: 6, fontSize: 8.5, padding: '0 4px' }} title={`${staleReasonWords(r.stale_reasons) || logCheckWords(r).text}`}>STALE BASE</Chip>}</span> },
     { key: 'baseline', label: 'Settlement (as logged)', align: 'right', render: r => <span style={{ color: T.muted }} title={r.baseline_session ? `labelled ${dayLabel(r.baseline_session)} settlement · ${r.baseline_source ?? 'source not logged'}` : r.baseline_source ?? undefined}>{inr(r.baseline)}</span> },
     // D2: the row's settlement check, re-explained in its own words; the stored numbers beside it are never rewritten
     { key: 'check', label: 'Check vs VWAP30', align: 'right', render: r => { const c = logCheckWords(r)
@@ -93,6 +102,10 @@ export function GoldAccuracyLog({ threshold, layer = 'B', shared, catalog = null
     { key: 'error', label: 'Model miss', align: 'right', sort: r => Math.abs(r.error ?? 0),
       render: r => <span style={{ color: r.error == null ? T.dim : Math.abs(r.error) <= threshold ? T.green : T.red, fontWeight: 600 }}>{fmtSignedInr(r.error)}</span> },
     { key: 'naive_error', label: 'Naive miss', align: 'right', render: r => <span style={{ color: T.muted }}>{fmtSignedInr(r.naive_error)}</span> },
+    // the counterfactual beside the stored numbers, dimmed and labelled — never the scored miss (D2)
+    { key: 're', label: 'Miss on VWAP30 (counterfactual)', align: 'right', render: r => r.re_explained?.error_on_vwap30 != null
+      ? <span data-gold-log-re style={{ color: T.dim }} title={r.re_explained.note ?? 'counterfactual: the fair open had the baseline been the labelled session\'s last-30-min VWAP; the recorded miss stays the score'}>{fmtSignedInr(r.re_explained.error_on_vwap30)}</span>
+      : <span style={{ color: T.dim }}>—</span> },
   ]
 
   return (

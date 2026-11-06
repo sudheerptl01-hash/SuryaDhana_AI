@@ -23,7 +23,11 @@ _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT))
 sys.path.insert(0, str(_ROOT / "services/data-service"))
 
-import main as data_service  # noqa: E402
+import os as _os  # noqa: E402
+_ENV_BEFORE = dict(_os.environ)
+import main as data_service  # noqa: E402  (exports the project .env into os.environ at import)
+for _k in set(_os.environ) - set(_ENV_BEFORE):    # the 6 Nov flaky-test fix: no .env leak into later tests
+    del _os.environ[_k]
 from storage import DuckDBStore  # noqa: E402
 
 from shared.nse_panel import load_panel  # noqa: E402

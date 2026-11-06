@@ -170,14 +170,8 @@ def derive_global(store: Any, *, now: datetime | None = None, days: int = 400) -
         s = pd.Series(gvz["close"].to_numpy(dtype="float64"), index=pd.to_datetime(gvz["trade_date"]))
         frames.append(_frame("GVZ_SIGMA_DAY_PCT", (s / math.sqrt(252.0)).round(3), now=now))
     # Shanghai premium: SGE PM (CNY/g) × 31.1035 ÷ USDCNY − LBMA PM (fallback: GC close same date)
-    sge = _series(store, "SGE_SHAU_PM", days, now=now)
-    if not sge.empty and "FX_CNY" in fx:
-        ref = _series(store, "LBMA_PM_USD", days, now=now)
-        base = ref if not ref.empty else g
-        k = _align(sge.rename("sge"), fx["FX_CNY"].rename("cny"), base.rename("ref"))
-        usd_oz = k["sge"] * GRAMS_PER_OZ / k["cny"]
-        frames.append(_frame("SHANGHAI_PREMIUM_USD", (usd_oz - k["ref"]).round(2), now=now, quality="derived"))
-        frames.append(_frame("SHANGHAI_PREMIUM_PCT", ((usd_oz / k["ref"] - 1.0) * 100.0).round(3), now=now, quality="derived"))
+    if "FX_CNY" in fx:
+        frames.extend(_shanghai_frames(store, g, fx["FX_CNY"], days, now))
     # COMEX carry front → next from the stored curve (Yahoo last trade until bulletin settlements are allowed)
     curve = db.query_df(store, """
         SELECT trade_date, expiry, COALESCE(settle, close) AS px FROM gold_curve
@@ -201,6 +195,35 @@ def derive_global(store: Any, *, now: datetime | None = None, days: int = 400) -
         pts = [(db.to_date(r.trade_date), round(float(r.p) / float(r.c), 4)) for r in pc.itertuples(index=False) if r.p and r.c]
         frames.append(pit.series_frame("COMEX_GC_OI_PUTCALL", pts, freq="D", source="derived", quality="derived", now=now))
     return _write(store, frames, now)
+
+
+def _shanghai_frames(store: Any, g: pd.Series, cny: pd.Series, days: int, now: datetime) -> list[pd.DataFrame]:
+    """SHANGHAI_PREMIUM_USD / _PCT from the CURRENT legs: SGE PM (CNY/g) × 31.1035 ÷ USDCNY − LBMA PM of the same date
+    (fallback: the GC close). A revised leg (CNY=X's 4 Nov bar re-fetched at 03:10) gives a new vintage of the pair."""
+    sge = _series(store, "SGE_SHAU_PM", days, now=now)
+    if sge.empty or cny.empty:
+        return []
+    ref = _series(store, "LBMA_PM_USD", days, now=now)
+    base = ref if not ref.empty else g
+    k = _align(sge.rename("sge"), cny.rename("cny"), base.rename("ref"))
+    usd_oz = k["sge"] * GRAMS_PER_OZ / k["cny"]
+    return [_frame("SHANGHAI_PREMIUM_USD", (usd_oz - k["ref"]).round(2), now=now, quality="derived"),
+            _frame("SHANGHAI_PREMIUM_PCT", ((usd_oz / k["ref"] - 1.0) * 100.0).round(3), now=now, quality="derived")]
+
+
+def derive_shanghai(store: Any, *, now: datetime | None = None, days: int = 30) -> dict[str, Any]:
+    """Re-derive the Shanghai premium alone (wave 1e, M-C): run right after the 03:10 ``yahoo_daily`` group, so a CNY=X bar
+    revised overnight re-derives the pair at once instead of at the 21:30 ``derive_global`` — between the two the PHYSICAL
+    tile printed legs (SGE $4,035.8 at USDCNY 6.6701 vs LBMA $4,037.8) that did not reproduce its premium (+$1.50). An
+    unchanged pair writes nothing (``pit.upsert_series`` keeps one vintage per value)."""
+    now = now or utcnow()
+    gc, fx = _bars(store, "GC=F", days, now), _bars(store, "CNY=X", days, now)
+    if fx.empty:
+        return {"status": "no_inputs", "inserted": 0, "reason": "gold_daily_bars has no CNY=X rows"}
+    g = (pd.Series(gc["close"].to_numpy(dtype="float64"), index=pd.to_datetime(gc["trade_date"])) if not gc.empty
+         else pd.Series(dtype="float64"))
+    cny = pd.Series(fx["close"].to_numpy(dtype="float64"), index=pd.to_datetime(fx["trade_date"]))
+    return _write(store, _shanghai_frames(store, g, cny, days, now), now)
 
 
 def _write(store: Any, frames: list[pd.DataFrame], now: datetime) -> dict[str, Any]:

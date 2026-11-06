@@ -858,3 +858,15 @@ export function prefsSyncStatus(): SyncStatus | null {
     return null
   }
 }
+
+/**
+ * Re-read the server now (after the in-app settings import, components/shell/SettingsImport.tsx): imported values land
+ * in localStorage and 'suryadhana:prefs-changed' tells the pages, exactly like a focus refetch. Never rejects.
+ */
+export async function refetchPrefsNow(): Promise<HydrateResult> {
+  try {
+    return engine ? await engine.refetch(true) : 'error'
+  } catch {
+    return 'error'
+  }
+}

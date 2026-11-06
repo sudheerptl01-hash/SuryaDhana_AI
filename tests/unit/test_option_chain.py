@@ -33,7 +33,7 @@ def _bhav(spot=22_500.0, t_days=10, vol=0.12):
     exp = pd.Timestamp("2026-10-19")
     for k in np.arange(21_500, 23_600, 100.0):
         for kind, call in (("CE", True), ("PE", False)):
-            px = oc.bs_price(spot, k, t + 0.5 / 365, vol, call)
+            px = oc.bs_price(spot, k, t, vol, call)            # T = whole days ÷ 365 at the close (black76.TIME_CONVENTION)
             rows.append({"TradDt": pd.Timestamp("2026-10-09"), "FinInstrmTp": "IDO", "TckrSymb": "NIFTY", "XpryDt": exp,
                          "StrkPric": k, "OptnTp": kind, "ClsPric": px, "SttlmPric": px, "UndrlygPric": spot,
                          "OpnIntrst": 5000.0 if (kind == "CE" and k == 23_000) or (kind == "PE" and k == 22_000) else 100.0,
@@ -72,7 +72,7 @@ def test_update_history_is_incremental(tmp_path):
 def test_live_frame_feeds_the_same_chain_engine():
     s, t_days = 22_400.0, 1
     def leg(k, call):
-        px = oc.bs_price(s, k, (t_days + 0.5) / 365, 0.14, call)
+        px = oc.bs_price(s, k, t_days / 365, 0.14, call)
         return {"strikePrice": k, "expiryDate": "13-10-2026", "lastPrice": round(px, 2), "openInterest": 1000 + k % 7,
                 "changeinOpenInterest": 10, "totalTradedVolume": 500, "underlyingValue": s}
     data = [{"strikePrice": k, "expiryDates": "13-Oct-2026", "CE": leg(k, True), "PE": leg(k, False)}

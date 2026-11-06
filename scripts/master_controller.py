@@ -4,7 +4,8 @@ Port: 8008  |  Timezone: Asia/Kolkata (IST = UTC+5:30)
 
 Schedule (IST; job ids as registered in lifespan() and shown on SYS). Daily = every day incl. weekends.
   02:15 daily        db_backup_daily          Verified nightly DuckDB + settings-store backup (7 daily + 4 Sundays,
-                                              data/backups/duckdb); a missed night is re-run once at start-up
+                                              data/backups/duckdb); a missed night is re-run once at start-up; plus the
+                                              sha256-verified off-machine copy when OFFSITE_BACKUP_DIR is set (M32)
   08:00 Mon–Fri      icici_session_refresh    ICICI Breeze login (TOTP, unattended); also once at start-up on a
                                               trading morning
   08:30 daily        pre_market_sync          Incremental bar refresh (Yahoo, quality-gated) + freshness check
@@ -13,7 +14,8 @@ Schedule (IST; job ids as registered in lifespan() and shown on SYS). Daily = ev
   09:09:30 Mon–Fri   preopen_capture          NSE final pre-open book (F&O and all stocks) → data/nse_archive/preopen
   09:10 Mon–Fri      gold_open_capture        Actual MCX gold open from ICICI (if a session is live)
   09:00–15:45 /15m   intraday_inference       XGBoost → RL cycle (market-hours gate; AUTOPILOT only — dormant)
-  09:00–15:59 /1m    price_alerts_check       Price alerts (Mon–Fri)
+  09:00–15:59 /1m    price_alerts_check       Price alerts + the typed alert rules (W2-ALERTS' POST /api/alerts/run?dispatch=1;
+                                              after each EOD step the stored-series rules again, scope=eod) (Mon–Fri)
   09:00–15:58 /2m    internals_sample         Market internals sample: breadth (Mon–Fri)
   09:00–15:55 /5m    move_alerts              Holdings ±5/10 %, NIFTY vs 200-DMA (Mon–Fri)
   08:00–22:55 /5m    filing_alerts            NSE filings for your stocks (Mon–Sat)
@@ -68,7 +70,8 @@ market.duckdb, never a restart; heavy ones defer past a freeze window they would
   Mon 12:00 · Fri 18:00 · Sat 10:30 gold_weekly  WGC ETF flows, RBI WSS, LBMA turnover, WGC premiums, FRED weekly
   Sun 04:00          gold_cme_calendar        CME expiry calendar (38 MB, iterparse)
   23:58 Mon–Fri      gold_mcx_close           MCX settlement proxy (Breeze last-30-min VWAP per live contract) + India ladder;
-  00:15 Tue–Sat                              its retry (a window whose final minute was not in at 23:58; stored ones cost 0)
+                                              no after-midnight retry (ICICI sessions expire at midnight IST); after
+                                              downtime re-run by the start-up catch-up only while a Breeze session is live
   17:10 Mon–Fri      gold_open_capture_evening  the MCX open on morning-closure days (evening session opens 17:00)
   dormant (O-8)      gold_mcx_bhavcopy, gold_mcx_category, gold_breeze_daily — not registered (GOLD_DORMANT_JOBS)
   The 08:45 gold_preopen_snapshot and 09:10 gold_open_capture skip full and morning-closure MCX holidays (shared/mcx_specs).
@@ -76,9 +79,12 @@ One-off at start-up: icici_session_refresh_startup, <job>_catchup (pre-open book
 jobs missed today), startup_catchup (data catch-up after downtime, extended in Terminal v2 0.9 to results release times
 with a window of the days down + 3, index valuation, the IV store and drivers with backfill_from, the explicit gap rows
 for session-bound captures, the Desk mark and the S1 shadow, and the gold key jobs incl. the Asia-close / morning /
-India / health ones), db_backup_catchup (today's 02:15 backup missing; never inside the
-07:45–09:20 / 18:30–21:15 freeze windows). Each job's last run, status and duration persist in
-data/.scheduler_history.json, so SYS keeps them across restarts.
+India / health ones; inside the 18:20–21:15 window, since 6 Nov, the EVENING_REPLAY of every evening job whose slot
+passed: pipeline, index valuation, snapshot, Desk, S1 shadow, news track record, Friday journal), db_backup_catchup
+(today's 02:15 backup missing; never inside the 07:45–09:20 / 18:30–21:15 freeze windows). Each job's last run, status
+(error | skipped | no new data | done — M33: "no new data" when its catalogued datasets did not move) and duration
+persist in data/.scheduler_history.json, so SYS keeps them across restarts.
+One-off PM command (never scheduled): `python scripts/master_controller.py backfill-outage [--execute]` (M31).
 
 Thread-safety model:
   - APScheduler max_instances=1 prevents scheduler-level job overlap
@@ -96,7 +102,7 @@ import sys
 import threading
 import time as _time
 from collections import deque
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -121,7 +127,7 @@ if str(_ROOT) not in sys.path:
     sys.path.append(str(_ROOT))
 from shared import mcx_specs
 from shared.http_guard import install_http_guard
-from shared.metrics import install_observability
+from shared.metrics import install_observability, observe_job
 
 for _candidate in [_ROOT / ".env", Path("/app/.env")]:
     if _candidate.exists():
@@ -447,31 +453,122 @@ def _get_lock(job_id: str) -> asyncio.Lock:
 # Jobs that catch their own failure (log + alert, no raise) call _mark_failed(JOB) so SYS and the persisted
 # history say "error" instead of "done" for that run.
 _soft_failed: set[str] = set()
+# A run that did nothing on purpose (the dormant legacy engine with AUTOPILOT off) says so instead of "done" (5 Nov review
+# m111: "Overnight RL Retraining 0 ms DONE" read as "a model is retrained nightly").
+STATUS_SKIPPED = "skipped"
+# M33 (5 Nov review): a job that ran but whose catalogued datasets did not move ("gold_preopen_snapshot done at 08:45" while
+# gold_preopen_log had been a gap since 30 Oct) reports this, not "done". Judged from data-service's /db/data-health
+# (B1: the stored as-of of every catalogued dataset + its last ingest_log fetch) before and after the run.
+STATUS_NO_NEW_DATA = "no new data"
+_status_marks: dict[str, str] = {}
 
 
 def _mark_failed(job_id: str) -> None:
     _soft_failed.add(job_id)
 
 
+def _mark_status(job_id: str, status: str) -> None:
+    """This run's status instead of "done" (STATUS_SKIPPED); an error (_mark_failed, an exception) still wins."""
+    _status_marks[job_id] = status
+
+
+JOB_DATASET_CHECK = os.getenv("JOB_DATASET_CHECK", "1") == "1"     # 0: every completed run is "done" again
+DATASET_HEALTH_PATH = "/db/data-health"
+DATASET_CHECK_TIMEOUT_S = 4.0          # a busy DuckDB (writer in flight) must not hold a job up: no answer = no evidence
+DATASET_JOBS_TTL_S = 3600.0            # the set of job ids that own a catalogued dataset, re-read hourly
+# armed by lifespan() only: importing this module (the tests, the backfill CLI) never GETs data-service from _track
+_DATASET_CHECK: dict[str, Any] = {"armed": False, "at": 0.0, "ids": None}
+_RUNNING: dict[str, str] = {}          # job id → start (ISO, IST) while a run is in flight (m113: SYS › DATA said 30 Oct)
+_CATCHUP_PLAN: dict[str, str] = {}     # job id → when a pending one-off re-runs it (M30: SYS states only what will run)
+
+
+def dataset_fingerprints(payload: Any, job_id: str) -> dict[str, tuple[Any, ...]] | None:
+    """{dataset id: fingerprint} for the catalogued datasets whose ingest job is `job_id` and that can be judged (a stored
+    as-of, or an ingest_log fetch with a date / revision / sha256 / Last-Modified); the fetch time is left out (a re-fetch
+    of the same file is not new data). None when the payload carries no rows (data-service down or without B1)."""
+    rows = payload.get("rows") if isinstance(payload, dict) else None
+    if not isinstance(rows, list):
+        return None
+    out: dict[str, tuple[Any, ...]] = {}
+    for r in rows:
+        if not isinstance(r, dict) or str(r.get("job_id") or "") != job_id:
+            continue
+        raw_lf = r.get("last_fetch")
+        lf: dict[str, Any] = raw_lf if isinstance(raw_lf, dict) else {}
+        if r.get("as_of") is None and not lf:
+            continue                                   # an endpoint-kind row: nothing stored to compare
+        out[str(r.get("id"))] = (r.get("as_of"), lf.get("date"), lf.get("revision"), lf.get("sha256"), lf.get("last_modified"))
+    return out
+
+
+def dataset_outcome(before: dict[str, tuple[Any, ...]] | None, after: dict[str, tuple[Any, ...]] | None) -> str | None:
+    """STATUS_NO_NEW_DATA when the job's datasets were judged before AND after the run and none of them moved; None (keep
+    the run's own status) without evidence: no judgeable dataset, or data-service did not answer one of the two reads."""
+    if not before or after is None:
+        return None
+    if set(after) != set(before) or any(after[k] != v for k, v in before.items()):
+        return None
+    return STATUS_NO_NEW_DATA
+
+
+async def _dataset_snapshot(job_id: str) -> dict[str, tuple[Any, ...]] | None:
+    """The job's dataset fingerprints now, or None (check off / not armed / the job owns no catalogued dataset / no
+    answer within DATASET_CHECK_TIMEOUT_S). One local GET; skipped without a request for jobs known to own nothing."""
+    st = _DATASET_CHECK
+    if not (JOB_DATASET_CHECK and st["armed"]):
+        return None
+    ids = st["ids"]
+    if ids is not None and job_id not in ids and _time.time() - st["at"] < DATASET_JOBS_TTL_S:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=DATASET_CHECK_TIMEOUT_S) as client:
+            r = await client.get(f"{DATA_SVC}{DATASET_HEALTH_PATH}")
+        payload = r.json() if r.status_code == 200 else None
+    except Exception:  # noqa: BLE001 — no evidence, never a failure of the job
+        return None
+    rows = payload.get("rows") if isinstance(payload, dict) else None
+    if isinstance(rows, list):
+        st["at"], st["ids"] = _time.time(), {str(x.get("job_id")) for x in rows if isinstance(x, dict) and x.get("job_id")}
+    return dataset_fingerprints(payload, job_id)
+
+
 @asynccontextmanager
 async def _track(job_id: str, quiet: bool = False) -> AsyncIterator[None]:
     """Record the run for SYS (latency + persisted history). `quiet` (a job firing every few minutes) keeps the result
-    for SYS but writes no "Finished" line: 288 lines a day would push every other job out of the 500-line log ring."""
-    t0 = _time.perf_counter()
-    status = "done"
+    for SYS but writes no "Finished" line: 288 lines a day would push every other job out of the 500-line log ring.
+
+    Status: "error" (an exception, or _mark_failed) > a mark (_mark_status: "skipped") > "no new data" (M33: the job's
+    catalogued datasets did not move; not judged for quiet jobs) > "done". The dataset reads are not part of the latency."""
     _soft_failed.discard(job_id)
+    _status_marks.pop(job_id, None)
+    before = None if quiet else await _dataset_snapshot(job_id)
+    _RUNNING[job_id] = datetime.now(IST).isoformat(timespec="seconds")
+    t0 = _time.perf_counter()
+    status, completed = "done", False
     try:
         yield
+        completed = True
     except Exception:
         status = "error"
         raise
     finally:
+        ms = (_time.perf_counter() - t0) * 1000
+        _RUNNING.pop(job_id, None)
+        _CATCHUP_PLAN.pop(job_id, None)               # it ran: the pending catch-up is spent (or superseded)
+        mark = _status_marks.pop(job_id, None)
         if job_id in _soft_failed:
             _soft_failed.discard(job_id)
             status = "error"
-        ms = (_time.perf_counter() - t0) * 1000
+        elif status == "done" and mark:
+            status = mark
+        elif status == "done" and completed and before:
+            status = dataset_outcome(before, await _dataset_snapshot(job_id)) or status
         _latency.record(job_id, ms, status)
         _history.record(job_id, status, ms)
+        try:                                          # M38: sd_job_seconds{job, status} on /metrics (0 callers before)
+            observe_job(job_id, ms / 1000.0, status)
+        except Exception:  # noqa: BLE001, S110 — a metric never fails a job
+            pass
         if not quiet:
             _log.info(job_id, f"Finished in {ms:.1f}ms", latency_ms=f"{ms:.1f}", status=status)
 
@@ -486,6 +583,17 @@ def _is_market_hours() -> bool:
 # ══════════════════════════════════════════════════════════════════════════════
 
 DATA_JOB_POLL_SECS = 15
+# the first polls come sooner (m111: a dozen jobs showed ≈ 15,0xx ms on SYS, the poll cadence, not their work): a short
+# job is timed to ±1 s, a long one costs ≤ 6 extra local GETs; then every DATA_JOB_POLL_SECS
+DATA_JOB_POLL_STEPS: tuple[float, ...] = (1, 1, 2, 3, 5, 8)
+
+
+def data_job_poll_delay(i: int) -> float:
+    """Seconds before the i-th status poll of a data-service job (never above DATA_JOB_POLL_SECS)."""
+    step = DATA_JOB_POLL_STEPS[i] if i < len(DATA_JOB_POLL_STEPS) else DATA_JOB_POLL_SECS
+    return min(step, DATA_JOB_POLL_SECS)
+
+
 DATA_JOB_TIMEOUT_SECS = int(os.getenv("DATA_JOB_TIMEOUT_SECS", "5400"))
 # Data upkeep is not trading: it runs even when AUTOPILOT is off, so features are
 # never silently stale when autopilot is switched back on. Opt out with 0.
@@ -529,8 +637,10 @@ async def _run_data_job(job: str, path: str, body: dict | None = None, quiet: bo
             _log.info(job, f"data-service job started: {path}", job_id=job_id)
 
         deadline = _time.monotonic() + DATA_JOB_TIMEOUT_SECS
+        polls = 0
         while _time.monotonic() < deadline:
-            await asyncio.sleep(DATA_JOB_POLL_SECS)
+            await asyncio.sleep(data_job_poll_delay(polls))
+            polls += 1
             st = await client.get(f"{DATA_SVC}/jobs/{job_id}")
             if st.status_code != 200:
                 raise RuntimeError(f"GET /jobs/{job_id} → HTTP {st.status_code}")
@@ -608,6 +718,7 @@ async def eod_data_pipeline() -> None:
             else:
                 await _alerts.info("EOD Data Pipeline OK", msg)
             await _check_dataset_freshness(JOB)
+            _alerts_after_soon(JOB)             # the stored-series alert rules see tonight's bhavcopy (PLAN 2.3)
         except Exception as exc:
             _log.error(JOB, f"FAILED: {exc}")
             await _alerts.critical("EOD Data Pipeline FAILED", str(exc))
@@ -626,6 +737,7 @@ async def intraday_inference_cycle() -> None:
         return
     async with lock, _track(JOB):
         if not _autopilot.on:
+            _mark_status(JOB, STATUS_SKIPPED)       # dormant legacy engine: SYS says "skipped", not "done" (m111)
             _log.info(JOB, "AUTOPILOT OFF — skipped")
             return
         now_str = datetime.now(IST).strftime("%H:%M IST")
@@ -683,6 +795,7 @@ async def eod_rebalancing() -> None:
         return
     async with lock, _track(JOB):
         if not _autopilot.on:
+            _mark_status(JOB, STATUS_SKIPPED)       # dormant legacy engine: SYS says "skipped", not "done" (m111)
             _log.info(JOB, "AUTOPILOT OFF — skipped")
             return
         _log.info(JOB, "EOD rebalancing + square-off starting")
@@ -712,6 +825,7 @@ async def overnight_rl_retrain() -> None:
         return
     async with lock, _track(JOB):
         if not _autopilot.on:
+            _mark_status(JOB, STATUS_SKIPPED)       # dormant legacy engine: SYS says "skipped", not "done" (m111)
             _log.info(JOB, "AUTOPILOT OFF — skipped")
             return
         _log.info(JOB, f"Overnight RL retraining starting via {RL_TRAINER_PATH}")
@@ -752,6 +866,7 @@ async def desk_daily() -> None:
         return
     async with lock, _track(JOB):
         if not DESK_ENABLED:
+            _mark_status(JOB, STATUS_SKIPPED)       # nothing was marked: SYS and the catch-up report must not say "done"
             _log.info(JOB, "DESK_ENABLED=0 — skipped")
             return
         try:
@@ -824,6 +939,7 @@ async def nse_positions_catchup() -> None:
         if _DRIVERS_STATE.get("date") != today or _DRIVERS_STATE.get("top10_missing"):
             await index_drivers_run(JOB, today, retry=True)
         await iv_eod_step(JOB, today)
+        _alerts_after_soon(JOB)                 # the IV / OI / basis / ban / FII rules on tonight's stored rows
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -876,9 +992,9 @@ class GoldJob:
 GOLD_JOBS: dict[str, GoldJob] = {
     # Schedule deviation from PLAN §c.3 ("03:10 daily, Tue–Sat; Mon for Friday's US session"), deliberate: Mon–Sat, i.e.
     # Sunday skipped and Monday included — see gold_job()'s docstring.
-    "gold_overnight": GoldJob(("treasury", "yahoo_daily", "cme_voi_final", "fred_daily", "calendar_us"),
+    "gold_overnight": GoldJob(("treasury", "yahoo_daily", "yahoo_curve", "cme_voi_final", "fred_daily", "calendar_us"),
                               ({"day_of_week": "mon-sat", "hour": 3, "minute": 10},),
-                              "Gold overnight (Treasury, Yahoo daily, CME final VOI, FRED, US calendar)", 6 * 3600, key=True),
+                              "Gold overnight (Treasury, Yahoo daily, COMEX curve, CME final VOI, FRED, US calendar)", 6 * 3600, key=True),
     "gold_intraday_bars": GoldJob(("bars_1m",), ({"minute": "*/5"},), "Gold 1-minute bars (every 5 min while COMEX trades)",
                                   120, light=True, quiet=True, gate=comex_globex_open),
     "gold_morning": GoldJob(("etf", "fed_path", "gpr_daily", "monthly_due"),
@@ -914,11 +1030,11 @@ GOLD_JOBS: dict[str, GoldJob] = {
     # wave 1d (G-DATA): the MCX settlement proxy — last-30-min VWAP of Breeze 1-minute bars (data-service group
     # mcx_close_vwap30: ≤ 15 read-only calls through the budget ledger, a stored session costs 0) — then the India ladder,
     # so MCX_BASIS_PCT pairs each session's settlement with its own duty-paid landed price; key: re-run after downtime
-    # round 2: + a 00:15 Tue–Sat retry — data-service never stores a window whose final minute is not in yet (before the
-    # close + 10 min) and queues it; the retry (a stored contract costs 0 calls) fetches it once Breeze's bars are final
-    "gold_mcx_close": GoldJob(("mcx_close_vwap30", "derive_india"), ({"day_of_week": "mon-fri", "hour": 23, "minute": 58},
-                                                                      {"day_of_week": "tue-sat", "hour": 0, "minute": 15}),
-                              "Gold MCX settlement proxy (Breeze last-30-min VWAP, 23:58, retry 00:15) + India ladder", 6 * 3600,
+    # 6 Nov (O-OPS): the round-2 00:15 Tue–Sat retry is gone — ICICI sessions expire at midnight IST, so a 00:15 run never
+    # had a session to read Breeze's bars with. One 23:58 run; after downtime the start-up catch-up re-runs it (with
+    # backfill_from) only while a Breeze session is live (gold_downtime_catchup)
+    "gold_mcx_close": GoldJob(("mcx_close_vwap30", "derive_india"), ({"day_of_week": "mon-fri", "hour": 23, "minute": 58},),
+                              "Gold MCX settlement proxy (Breeze last-30-min VWAP, 23:58) + India ladder", 6 * 3600,
                               key=True),
 }
 # PLAN §c.3 / owner action O-8: the schema and a panel placeholder exist; no collector runs until the owner decides.
@@ -930,6 +1046,8 @@ GOLD_DORMANT_JOBS: dict[str, str] = {
 # key=True: re-run after downtime with backfill_from (PLAN §c.3; Terminal v2 0.9 added the Asia-close, morning, India
 # and health-snapshot jobs — B1 writes their back-dated rows with backfilled=true)
 GOLD_KEY_JOBS: tuple[str, ...] = tuple(j for j, s in GOLD_JOBS.items() if s.key)
+# key jobs that read Breeze (ICICI) and so are re-run after downtime only while a session is live (6 Nov, O-OPS)
+GOLD_SESSION_JOBS: tuple[str, ...] = ("gold_mcx_close",)
 GOLD_MAX_AGE_DAYS = {"gold_cot": 9, "gold_curve": 4, "gold_daily_bars": 4, "gold_etf_holdings": 5, "gold_cme_daily_voi": 4}
 GOLD_STATUS_TABLES = (("gold_cot", "COT"), ("gold_cme_daily_voi", "COMEX OI"), ("gold_curve", "MCX curve"),
                       ("gold_daily_bars", "bars"), ("gold_etf_holdings", "ETF"))
@@ -1384,6 +1502,10 @@ async def gold_downtime_catchup(job_ids: list[str], backfill_from: str) -> str:
             await gold_cot_weekly()
             parts.append("gold_cot_weekly: ran (its own log line has the result)")
             continue
+        if job_id in GOLD_SESSION_JOBS and not await _breeze_session_live():
+            parts.append(f"{job_id}: not re-run (no live ICICI session now: sessions expire at midnight IST; the missed "
+                         "settlement windows wait for a catch-up while a session is live)")
+            continue
         async with _get_lock(job_id), _track(job_id):
             groups = gold_groups(job_id, datetime.now(IST), backfill=True)
             try:
@@ -1396,6 +1518,9 @@ async def gold_downtime_catchup(job_ids: list[str], backfill_from: str) -> str:
             except Exception as exc:  # noqa: BLE001 — the report must still go out
                 _mark_failed(job_id)
                 parts.append(f"{job_id}: FAILED {str(exc)[:120]}")
+    # this catch-up is over: a job it skipped (gold_mcx_close without a live session) or never reached (disabled, data-
+    # service without the gold package) has no catch-up pending any more; the ones it ran were cleared by _track
+    _spend_catchups(set(job_ids))
     line = f"gold catch-up from {backfill_from}: " + "; ".join(parts)
     _log.info(JOB, line)
     return line
@@ -1441,6 +1566,9 @@ def compose_gold_preopen_alert(row: dict[str, Any], stats: dict[str, Any] | None
         text += f" ({_signed(fair - float(base))} vs {label or 'settlement'} ₹{float(base):,.0f})"
     limit = float(row.get("threshold") or GOLD_CHASE_LIMIT_INR)
     text += f". Don't chase more than ₹{limit:,.0f} above it (house rule, heuristic: unproven)."
+    if row.get("baseline_older_than_expected"):      # wave 1e M-D: e.g. Mon 9 Nov with no VWAP for the Sun 8 Nov Muhurat session
+        note = str(row.get("baseline_note") or "baseline session older than expected")
+        text += f" ⚠ {note[:1].upper()}{note[1:]}."
     st: dict[str, Any] = stats or {}
     days = int(st.get("days") or 0)
     if days and st.get("median_abs_error") is not None:
@@ -1545,13 +1673,22 @@ DATA_HEALTH_JOB_PATH = "/jobs/data-health"   # B1 data_health/api.py: {since?, s
 DATA_HEALTH_API = "/api/data/health"         # B3 ui-api: rows[{id, state: live|fresh|amber|red|gap|unknown, as_of, job_id, note, …}]
 TERMINAL_PAUSE_S = 3600
 IV_EOD_SLO = time(21, 30)                    # PLAN 1.1: iv_eod stored by 21:30; a miss is one Telegram info line at 22:45
-IV_INTRADAY_WINDOW = (time(9, 20), time(15, 30))
+IV_INTRADAY_WINDOW = (time(9, 15), time(15, 30))
 DATA_HEALTH_STATE_FILE = _ROOT / "data" / ".data_health_state.json"
 HEALTH_RANK = {"live": 0, "fresh": 0, "amber": 1, "red": 2, "gap": 3}
 # B1's fo_iv.jobs.EOD_FILES (the files iv_eod itself ingests) and the other verified evening files PLAN 1.4 puts in the
 # 20:30 pass (nse_positions.TERMINAL_DATASETS); both lists are pinned against the data-service source in scripts/tests.
 NSE_IV_FILES: tuple[str, ...] = ("index_ohlc_daily", "nse_fo_volt", "nse_contract_delta", "nse_combined_oi")
 NSE_EVENING_FILES: tuple[str, ...] = ("nse_participant_vol", "nse_fii_stats", "nse_mwpl_clients")
+# m112 (5 Nov review): the sweep's last run took 1,307,285 ms (21.8 min) for "≤ 6 light fetches". The log shows where:
+# it was the 13:02 catch-up one-off after a restart (not the 08:35 slot), and ≈ 20 of the 21.8 minutes were
+# /jobs/ingest-results (the 20:45 job's own work, 855 s that evening) — not a light fetch. So: the results step is left to
+# the 20:45 capture whenever the sweep runs inside a freeze window (SWEEP_HEAVY_IN_WINDOW), and the controller stops
+# WAITING after SWEEP_BUDGET_S (data-service finishes a running job on its own; the digest says so) and starts no further
+# step; every step gets at least SWEEP_STEP_MIN_S of the budget.
+SWEEP_BUDGET_S = float(os.getenv("SWEEP_BUDGET_S", "480"))
+SWEEP_STEP_MIN_S = 30.0
+SWEEP_HEAVY_IN_WINDOW: dict[str, str] = {"results": "left to the 20:45 capture (≈ 14 min: not a light fetch in the window)"}
 SWEEP_MAX_JOBS = 6                           # the 08:35 sweep stays small: inside the morning window by design
 
 _TERMINAL_PAUSED_UNTIL = 0.0
@@ -1701,6 +1838,7 @@ async def index_drivers_daily() -> None:
         status = await index_drivers_run(JOB, datetime.now(IST).date().isoformat())
         if status in ("failed", "unavailable"):
             _mark_failed(JOB)
+        _alerts_after_soon(JOB)                 # the driver / contribution rules (PLAN 2.3)
 
 
 # ── the 22:45 pass (Wave 0 0.5) ───────────────────────────────────────────────────────────────────────────────
@@ -1773,6 +1911,16 @@ async def nse_evening_pass() -> None:
             lines.append(f"results symbols={r2.get('symbols')} rows={r2.get('rows')}")
         except Exception as exc:  # noqa: BLE001
             lines.append(f"results FAILED {str(exc)[:160]}")
+        try:                                     # review M10: rebuild this week's incomplete / missing wraps from what is stored now
+            cmd = [PYTHON_BIN, str(_ROOT / "scripts" / "daily_wrap.py"), "--base", UI_API, "--backfill-missing",
+                   "--since", (datetime.now(IST).date() - timedelta(days=7)).isoformat(), "--until", today]
+            wres = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=900, cwd=str(_ROOT),
+                                           env={**os.environ, "PYTHONPATH": str(_ROOT)})
+            last = (wres.stdout.strip().splitlines() or [""])[-1]       # (its own name: `res` above is a dict)
+            rep = json.loads(last[7:]) if last.startswith("RESULT ") else {}
+            lines.append(f"wraps rebuilt {len(rep.get('written') or [])}, still incomplete {len(rep.get('skipped') or {})}")
+        except Exception as exc:  # noqa: BLE001
+            lines.append(f"wraps FAILED {type(exc).__name__}")
         if not closed and TERMINAL_JOBS_ENABLED:
             if iv_eod_missed(_IV_EOD_STATE, today):
                 status = await iv_eod_step(JOB, today, retry=True)
@@ -1785,6 +1933,7 @@ async def nse_evening_pass() -> None:
             else:
                 lines.append("iv_eod already ok")
         _log.info(JOB, "; ".join(lines))
+        _alerts_after_soon(JOB)                 # FII/DII, results, a retried IV store: the stored-series rules
 
 
 # ── the 08:35 sweep (Wave 0 0.5) and the data-health digest ───────────────────────────────────────────────
@@ -1901,13 +2050,25 @@ async def morning_sweep() -> None:
             return
         outcomes: list[str] = []
         plan = plan_sweep(health_rows(health), str(health.get("last_session") or datetime.now(IST).date().isoformat()))
+        if in_freeze_window(datetime.now(IST)):
+            outcomes += [f"{st['label']} {SWEEP_HEAVY_IN_WINDOW[st['label']]}" for st in plan if st["label"] in SWEEP_HEAVY_IN_WINDOW]
+            plan = [st for st in plan if st["label"] not in SWEEP_HEAVY_IN_WINDOW]
+        t0 = _time.monotonic()
         for step in plan:
+            left = SWEEP_BUDGET_S - (_time.monotonic() - t0)
+            if left <= 0:                         # m112: the sweep sits inside the 07:45–09:20 window; it stops waiting
+                outcomes.append(f"{step['label']} not started (the {SWEEP_BUDGET_S // 60:.0f}-min sweep budget is spent; "
+                                "the 20:30 pass fetches it)")
+                continue
             try:
                 terminal = step["path"].startswith(("/jobs/iv-", "/jobs/index-", NSE_FILES_PATH))
-                res = (await _terminal_job(JOB, step["path"], step["body"]) if terminal
-                       else await _run_data_job(JOB, step["path"], step["body"]))
+                coro = (_terminal_job(JOB, step["path"], step["body"]) if terminal
+                        else _run_data_job(JOB, step["path"], step["body"]))
+                res = await asyncio.wait_for(coro, timeout=max(SWEEP_STEP_MIN_S, left))
                 st = str(res.get("status") or "ok") if isinstance(res, dict) else "ok"
                 outcomes.append(f"{step['label']} {st}")
+            except asyncio.TimeoutError:
+                outcomes.append(f"{step['label']} still running in data-service after the sweep budget (not waited for)")
             except TerminalJobUnavailable as exc:
                 outcomes.append(f"{step['label']} unavailable ({exc})")
             except Exception as exc:  # noqa: BLE001 — the digest still goes out
@@ -1987,6 +2148,8 @@ async def data_health_check() -> None:
         moved = health_transitions(prev, rows)
         states = {**prev, **{str(r["id"]): str(r.get("state")) for r in rows if r.get("state") in HEALTH_RANK}}
         write_health_state(DATA_HEALTH_STATE_FILE, states)
+        if moved and not (time(9, 15) <= datetime.now(IST).time() <= time(15, 30)):
+            _alerts_after_soon(JOB)             # data_stale rules (in session the per-minute round covers them)
         if not moved:
             return
         lines = [f"{t['id']}: {t['from']} → {t['to']}" + (f" ({t['note']})" if t["note"] else "") for t in moved]
@@ -2046,6 +2209,8 @@ async def iv_intraday_tick() -> None:
             _warn_hourly(JOB, "failed", f"FAILED: {type(exc).__name__}: {str(exc)[:200]}")
             return
         if str(res.get("status")) == "skipped":
+            if res.get("quiet"):                          # nothing due at this tick (the tier cadence): not a warning
+                return
             _warn_hourly(JOB, "skipped", f"skipped by data-service: {res.get('reason')}")
             return
         day = now.date().isoformat()
@@ -2196,12 +2361,20 @@ async def _terminal_downtime_catchup(job: str, since: str, missed: dict[str, int
                 break
             except Exception as exc:  # noqa: BLE001
                 lines.append(f"{label}: FAILED {str(exc)[:120]}")
-    if missed.get("desk_daily"):
-        await desk_daily()
-        lines.append("Desk mark: re-run now (its 19:30 run was missed)")
-    if missed.get("alpha_shadow_daily"):
-        await alpha_shadow_daily()
-        lines.append("S1 shadow: re-run now (its 19:50 run was missed)")
+    # the Desk and the shadow: each run's own SYS status, and a failed Desk (desk_daily raises) never stops the shadow or
+    # the 'Stack was down' report (6 Nov checker: a failed run must never read as a replay)
+    for job_id, label, slot, func in (("desk_daily", "Desk mark", "19:30", desk_daily),
+                                      ("alpha_shadow_daily", "S1 shadow", "19:50", alpha_shadow_daily)):
+        if not missed.get(job_id):
+            continue
+        t0 = datetime.now(IST)
+        try:
+            await func()
+            st = _status_since(job_id, t0)
+            lines.append(f"{label}: re-run ({st}; its {slot} run was missed)" if st
+                         else f"{label}: re-run requested, no run recorded")
+        except Exception as exc:  # noqa: BLE001 — the next job and the report must still happen
+            lines.append(f"{label}: re-run FAILED {type(exc).__name__}: {str(exc)[:100]}")
     return lines
 
 
@@ -2289,9 +2462,88 @@ def _notify_mac(title: str, body: str, kind: str = "alert") -> None:
         pass
 
 
+# ── Alerts: the price levels and the typed alert engine (Terminal v2 PLAN 2.3, W2-ALERTS) ──────────────────────
+# ui-api owns the rules, the evaluation and the fire queue (routers/alerts.py + the pure services/ui-api/alert_engine.py);
+# the controller only asks and delivers. The ask is the same per-minute POST /api/alerts/run the price alerts have used
+# since October, with W2-ALERTS' `scope` (all | live | eod: stored series only, no quote reads) and `dispatch=1`: the
+# answer's "dispatch" list holds every fire not announced yet (price + typed, each AT MOST once, ≤ 30 min old) with its
+# title, Telegram title, text and channel (mac | telegram | both). An older ui-api returns no "dispatch": the legacy
+# price hits are announced as before. Outside the session the stored-series rules are evaluated after each EOD step
+# (alerts_after: the 18:30 pipeline, the 19:25 drivers, the 20:30 pass with iv_eod, the 22:45 pass, the hourly data
+# health). No alert implies a direction (PLAN §0.1): a relayed text with a direction word is withheld, never quoted.
+ALERTS_RUN_PATH = "/api/alerts/run"
+ALERTS_RULES_PATH = "/api/alerts/rules"
+ALERTS_FROM_TEXT_PATH = "/api/alerts/rules/from-text"
+ALERT_DIRECTION_WORDS = re.compile(r"\b(bullish|bearish|buy(s|ing)?|sell(s|ing)?|go long|go short|target|forecast\w*|"
+                                   r"overbought|oversold|breakout|breakdown)\b", re.IGNORECASE)
+
+
+def alert_text_or_withheld(item: dict[str, Any]) -> str:
+    """The fire's text for the Mac / Telegram, or a neutral line when it carries a direction word (defence in depth:
+    W2-ALERTS' templates and notes are scanned there already)."""
+    text = str(item.get("text") or "").strip()
+    if text and not ALERT_DIRECTION_WORDS.search(text):
+        return text
+    who = str(item.get("symbol") or item.get("rule_id") or "alert")
+    return f"{who}: an alert rule's condition was met (its text was withheld: it carried a direction word; see ALRT)"
+
+
+def alert_deliveries(item: dict[str, Any]) -> list[tuple[str, str, str]]:
+    """[(channel, title, text)] for one dispatch item: 'mac' → the Mac notification + inbox, 'telegram' → Telegram,
+    'both' (and anything unknown: never silently dropped) → both. Pure."""
+    text = alert_text_or_withheld(item)
+    ch = str(item.get("channel") or "both")
+    out: list[tuple[str, str, str]] = []
+    if ch in ("mac", "both") or ch not in ("mac", "telegram"):
+        out.append(("mac", str(item.get("title") or "SuryaDhana alert"), text))
+    if ch in ("telegram", "both") or ch not in ("mac", "telegram"):
+        out.append(("telegram", str(item.get("telegram_title") or "Alert"), text))
+    return out
+
+
+async def _deliver_alerts(job: str, items: list[dict[str, Any]]) -> int:
+    n = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        kind = "price" if item.get("origin") == "price" else "alert"
+        for channel, title, text in alert_deliveries(item):
+            if channel == "mac":
+                _log.info(job, text)
+                await asyncio.to_thread(_notify_mac, title, text, kind)
+            else:
+                await _alerts.info(title, text)
+        n += 1
+    return n
+
+
+async def alerts_dispatch(job: str, scope: str = "all") -> dict[str, Any]:
+    """One evaluation + delivery round (POST /api/alerts/run?scope=…&dispatch=1). Returns ui-api's answer."""
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(f"{UI_API}{ALERTS_RUN_PATH}", params={"scope": scope, "dispatch": "1"})
+    r.raise_for_status()
+    res = r.json()
+    if isinstance(res.get("dispatch"), list):
+        await _deliver_alerts(job, res["dispatch"])
+    else:
+        for h in res.get("hits", []):              # an older ui-api: the price levels only, announced as before
+            if h["side"] == "move":
+                text = f"{h['sym']} {h['change_pct']:+.1f}% today (alert at ±{h['level']:g}%, now ₹{h['price']:,.2f})"
+            else:
+                text = (f"{h['sym']} {'rose above' if h['side'] == 'above' else 'fell below'} "
+                        f"₹{h['level']:,.2f} (now ₹{h['price']:,.2f})")
+            _log.info(job, text)
+            await asyncio.to_thread(_notify_mac, "SuryaDhana price alert", text, "price")
+            await _alerts.info("Price alert", text)
+    if res.get("rules_error"):
+        _gold_warn_once(f"{job}:rules", f"typed alert rules not evaluated: {str(res['rules_error'])[:200]}")
+    return res
+
+
 async def price_alerts_check() -> None:
-    """Every minute, Mon–Fri 09:15–15:30 IST — price the WTCH alert levels (ui-api) and announce crossings on the
-    Mac and on Telegram (when configured). Alerts are one-shot; ui-api removes a crossed level."""
+    """Every minute, Mon–Fri 09:15–15:30 IST — price the WTCH alert levels and evaluate the typed rules (ui-api), and
+    announce what fired on the Mac and on Telegram (when configured). Price levels are one-shot; ui-api removes a
+    crossed level. The job id stays price_alerts_check (SYS, the gates)."""
     JOB = "price_alerts_check"
     if await _closed_today(JOB):
         return
@@ -2303,20 +2555,43 @@ async def price_alerts_check() -> None:
         return
     async with lock:
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
-                r = await client.post(f"{UI_API}/api/alerts/run")
-            r.raise_for_status()
-            for h in r.json().get("hits", []):
-                if h["side"] == "move":
-                    text = f"{h['sym']} {h['change_pct']:+.1f}% today (alert at ±{h['level']:g}%, now ₹{h['price']:,.2f})"
-                else:
-                    text = (f"{h['sym']} {'rose above' if h['side'] == 'above' else 'fell below'} "
-                            f"₹{h['level']:,.2f} (now ₹{h['price']:,.2f})")
-                _log.info(JOB, text)
-                await asyncio.to_thread(_notify_mac, "SuryaDhana price alert", text, "price")
-                await _alerts.info("Price alert", text)
+            await alerts_dispatch(JOB, "all")
         except Exception as exc:
             _log.warning(JOB, f"check failed: {type(exc).__name__}: {exc}")
+
+
+ALERTS_EOD_LOCK = "alerts_after_eod"
+
+
+async def alerts_after(step: str) -> None:
+    """After an EOD step stored new rows: evaluate the stored-series rules once (scope=eod: no quote reads) and deliver.
+    Never raises into the step; one at a time (a second call while one runs is skipped: the running one sees the rows)."""
+    if not ALERTS_ENGINE_ENABLED:
+        return
+    lock = _get_lock(ALERTS_EOD_LOCK)
+    if lock.locked():
+        return
+    async with lock:
+        try:
+            res = await alerts_dispatch(ALERTS_EOD_LOCK, "eod")
+            n = len(res.get("dispatch") or []) if isinstance(res, dict) else 0
+            if n:
+                _log.info(ALERTS_EOD_LOCK, f"after {step}: {n} alert(s) delivered")
+        except Exception as exc:  # noqa: BLE001 — an alert round never fails the data step
+            _gold_warn_once(ALERTS_EOD_LOCK, f"after {step}: alert round failed: {type(exc).__name__}: {str(exc)[:160]}")
+
+
+ALERTS_ENGINE_ENABLED = os.getenv("ALERTS_ENGINE_ENABLED", "1") == "1"
+
+
+def _alerts_after_soon(step: str) -> None:
+    """Fire-and-forget alerts_after(step) from inside a job (the job's own lock and latency are not held by it)."""
+    try:
+        task = asyncio.get_running_loop().create_task(alerts_after(step))
+    except RuntimeError:
+        return
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
 
 
 FILING_ALERT_CATS = {"results", "orders", "rating", "m&a", "insider", "capital", "board"}
@@ -2581,9 +2856,27 @@ def surveillance_changes(prev: dict[str, list[str]], now: dict[str, list[str]]) 
     return out
 
 
+def fii_age_note(when: Any, today: str, holidays: Optional[Any] = None) -> str:
+    """Review m084: NSE publishes FII / DII cash the evening after, so a morning note quotes the previous session; when
+    the figure is older (the feed lagged: the 30 Oct note quoted 27 Oct), the note says by how many. With NSE's holiday
+    master (``holidays``: ISO dates, data-service /db/market-holidays via _HOLIDAYS) it counts NSE sessions, so the
+    morning after a weekday holiday is not flagged (round-2 review); without it, weekdays, and it says holidays were not
+    counted. Pure."""
+    try:
+        a, b = date.fromisoformat(str(when)[:10]), date.fromisoformat(str(today)[:10])
+    except ValueError:
+        return ""
+    days = [a + timedelta(days=i) for i in range(1, (b - a).days)]
+    if holidays is not None:
+        n = sum(1 for d in days if d.weekday() < 5 and d.isoformat() not in holidays)
+        return f" — {n} NSE session{'s' if n > 1 else ''} older than the previous session" if n >= 1 else ""
+    n = sum(1 for d in days if d.weekday() < 5)
+    return f" — {n} weekday{'s' if n > 1 else ''} older than the previous session (NSE holidays not counted)" if n >= 1 else ""
+
+
 def compose_morning_note(gift: dict, quotes: dict, cash: dict, events: list[dict], mine: set[str], today: str,
                          reported: Optional[list[dict]] = None, eco: Optional[list[dict]] = None,
-                         surveillance: Optional[list[str]] = None) -> str:
+                         surveillance: Optional[list[str]] = None, holidays: Optional[Any] = None) -> str:
     """Pure: one-paragraph pre-market note from the terminal's endpoints (GIFT gap, overnight cues, FII/DII, results
     filed since yesterday's close with what the numbers said, today's events with your stocks first, economic data
     and policy decisions due today)."""
@@ -2599,7 +2892,7 @@ def compose_morning_note(gift: dict, quotes: dict, cash: dict, events: list[dict
         parts.append("overnight " + ", ".join(cues))
     lat, when = (cash.get("summary") or {}).get("latest") or {}, (cash.get("summary") or {}).get("latest_date")
     if lat:
-        parts.append(f"FII {lat.get('FII', 0):+,.0f} cr / DII {lat.get('DII', 0):+,.0f} cr ({when})")
+        parts.append(f"FII {lat.get('FII', 0):+,.0f} cr / DII {lat.get('DII', 0):+,.0f} cr ({when})" + fii_age_note(when, today, holidays))
     if reported:
         def numbers(r: dict) -> str:
             rev = f"rev {pc(r['revenue_yoy'])}" if r.get("revenue_yoy") is not None else ""
@@ -2739,8 +3032,9 @@ async def morning_note() -> None:
             changes = surveillance_changes(prev, now_flags) if now_flags else []
             if now_flags:
                 seen_path.write_text(json.dumps(now_flags))
+            await _nse_holiday()                      # m084: NSE's holiday master, cached 12 h (the FII / DII age counts sessions)
             note = compose_morning_note(gift, quotes, cash, events, mine, datetime.now(IST).date().isoformat(), reported, eco,
-                                        changes)
+                                        changes, holidays=_HOLIDAYS["days"] if _HOLIDAYS["at"] else None)
             _log.info(JOB, note)
             await asyncio.to_thread(_notify_mac, "SuryaDhana · pre-market note", note, "morning")
             await _alerts.info("Pre-market note", note)
@@ -2829,7 +3123,9 @@ def plan_catchup(now: datetime, missed: dict[str, int]) -> tuple[str, datetime]:
                     (Yahoo settled bars + NSE files + ML rebuild, isolated steps);
           "nse"   — NSE files only (bhavcopy, positions, events, monitor): during market hours the Yahoo
                     refresh would store today's half-formed bar, so it waits for the 18:30 pipeline;
-          "skip"  — inside the EOD window the scheduled 18:30–21:00 jobs do the work themselves.
+          "skip"  — inside the EOD window: no data catch-up of its own; the scheduled 18:30–21:00 jobs still ahead do
+                    their work, and the evening jobs whose slot already passed are replayed once each (M30,
+                    evening_replay_plan / EVENING_REPLAY: before 6 Nov nothing re-ran them).
     when: never inside the 07:45–09:20 ICICI-login / pre-open window (moved to 09:21)."""
     when = now + timedelta(seconds=90)
     hm = (when.hour, when.minute)
@@ -2844,18 +3140,165 @@ def plan_catchup(now: datetime, missed: dict[str, int]) -> tuple[str, datetime]:
     return "nse", when
 
 
+# ── M30 (5 Nov review): the evening jobs a start-up inside the EOD window replays itself ─────────────────────────
+# The controller was down 19:34:54–19:55:26 on 5 Nov; the start-up planned "skip" (inside the 18:20–21:15 window "the
+# scheduled jobs do the work") and re-ran nothing, so the 19:45 news track record and the 19:50 S1 shadow (the one
+# promoted strategy's paper forward test) stayed stale until the next evening, while the report said the Desk and the
+# shadow "mark every missed session on their next run (19:30 / 19:50)" — after 19:50 had passed. These are the evening
+# jobs whose missed slot nothing else re-runs that evening. Each is a JOB, not a restart (the freeze window forbids
+# restarts, PLAN §0.10), and each is safe to replay: the pipeline resumes after the last stored day; the snapshot is
+# rebuilt (its readers below need it); the Desk and the shadow replay every missed session from stored closes with the
+# rules unchanged; the index valuation adds missing days only; the track record and the Friday journal are recomputed
+# from stored files. Run once each, in this order (dependencies first), by the start-up catch-up. The S1 shadow runs
+# BEFORE the 19:45 news track record (6 Nov checker; the review asked "the S1 shadow first"): it reads only the pipeline's
+# closes and the snapshot, never the track record, and the track record's subprocess may take up to 30 min.
+EVENING_REPLAY: tuple[tuple[str, tuple[int, ...], time], ...] = (
+    ("eod_data_pipeline", (0, 1, 2, 3, 4), time(18, 30)),
+    ("index_valuation_daily", (0, 1, 2, 3, 4), time(19, 15)),
+    ("shared_snapshot_build", (0, 1, 2, 3, 4), time(19, 20)),
+    ("desk_daily", (0, 1, 2, 3, 4), time(19, 30)),
+    ("alpha_shadow_daily", (0, 1, 2, 3, 4), time(19, 50)),
+    ("news_track_record_daily", (0, 1, 2, 3, 4), time(19, 45)),
+    ("weekly_journal", (4,), time(20, 10)),
+)
+_CATCHUP_SCHEDULED: set[str] = set()   # every job id this start scheduled a catch-up run for (the report's coverage)
+
+
+def _note_catchup(job_id: str, when: datetime) -> None:
+    """Record that a catch-up run of `job_id` is scheduled at `when`: the report's coverage, and SYS's per-job
+    `catchup_at` (/api/scheduler/status) until the job next runs (_track clears it)."""
+    _CATCHUP_SCHEDULED.add(job_id)
+    _CATCHUP_PLAN[job_id] = when.astimezone(IST).isoformat(timespec="seconds")
+
+
+def _spend_catchups(job_ids: set[str]) -> None:
+    """A catch-up that re-ran these jobs itself (under its own id — startup_catchup, gold_downtime_catchup — so _track
+    never cleared them) or skipped them is over: their `catchup_at` must not keep showing a time that has passed (6 Nov
+    checker). A job whose own one-off (<id>_catchup / _startup / _deferred) is still pending keeps its time."""
+    pending = _pending_oneoffs(job_ids)
+    for j in job_ids - pending:
+        _CATCHUP_PLAN.pop(j, None)
+
+
+def catchup_notes(mode: str, missed: dict[str, int], replay: Sequence[str]) -> list[str]:
+    """The jobs the start-up catch-up will re-run that the downtime actually MISSED (SYS's catchup_at, M30): a job the
+    catch-up re-runs anyway (nse_positions_catchup, index_drivers_daily in the full / nse modes) but that missed nothing
+    has no gap to catch up, so no catch-up time is shown for it. Pure."""
+    return [*replay, *sorted(j for j in catchup_coverage(mode, missed, ()) if missed.get(j) and j not in replay)]
+
+
+def evening_replay_plan(now: datetime, missed: dict[str, int]) -> tuple[list[str], list[str]]:
+    """(replay now, left to today's own run) for the EVENING_REPLAY jobs the downtime missed. A job whose slot today is
+    still ahead is left to that run (it would only race it: the 18:30 bars are not settled before 18:30); the others are
+    replayed once, in EVENING_REPLAY order. Pure."""
+    t = _ist_naive(now)
+    replay: list[str] = []
+    later: list[str] = []
+    for job, days, slot in EVENING_REPLAY:
+        if not missed.get(job):
+            continue
+        (later if t.weekday() in days and t.time() < slot else replay).append(job)
+    return replay, later
+
+
+def _evening_replay_funcs() -> dict[str, Callable[[], Any]]:
+    return {"eod_data_pipeline": eod_data_pipeline, "index_valuation_daily": index_valuation_daily,
+            "shared_snapshot_build": shared_snapshot_build, "desk_daily": desk_daily,
+            "news_track_record_daily": news_track_record_daily, "alpha_shadow_daily": alpha_shadow_daily,
+            "weekly_journal": weekly_journal}
+
+
+def _status_since(job_id: str, since: datetime) -> str | None:
+    """The status SYS recorded for `job_id`'s latest run if that run ended at or after `since`, else None (no run of it
+    was recorded since then: the function returned before _track — a held lock, a closed-market guard)."""
+    st = _latency.stats(job_id).get(job_id) or {}
+    ts = st.get("last_ts")
+    try:
+        ended = datetime.fromisoformat(str(ts)) if ts else None
+    except ValueError:
+        ended = None
+    return st.get("last_status") if ended is not None and ended >= since else None
+
+
+async def evening_replay(job_ids: Sequence[str]) -> list[str]:
+    """Run the planned EVENING_REPLAY jobs one after another (a failure is reported, never stops the next one); one
+    phrase each, with the status THIS run recorded for SYS (never an earlier run's)."""
+    funcs, out = _evening_replay_funcs(), []
+    for job in job_ids:
+        t0 = datetime.now(IST)
+        try:
+            await funcs[job]()
+            st = _status_since(job, t0)
+            out.append(f"{job}: re-run ({st})" if st else f"{job}: re-run requested, no run recorded")
+        except Exception as exc:  # noqa: BLE001 — the next job and the report must still happen
+            out.append(f"{job}: re-run FAILED {type(exc).__name__}: {str(exc)[:100]}")
+    return out
+
+
+def catchup_coverage(mode: str, missed: dict[str, int], replay: Sequence[str]) -> set[str]:
+    """The missed job ids the start-up catch-up itself re-runs (by mode), plus the evening replay. Pure."""
+    covered = set(replay)
+    if mode in ("full", "nse"):
+        covered |= {"nse_positions_catchup"} | ({"eod_data_pipeline"} if mode == "full" else set())
+        covered |= {j for j in ("results_capture_daily", "index_valuation_daily", "desk_daily", "alpha_shadow_daily")
+                    if missed.get(j)}
+        if TERMINAL_JOBS_ENABLED:
+            covered.add("index_drivers_daily")
+    covered |= {j for j in GOLD_KEY_JOBS if missed.get(j)}
+    return covered
+
+
+def catchup_gaps(missed: dict[str, int], covered: set[str], later: Sequence[str],
+                 next_runs: dict[str, datetime | None]) -> list[str]:
+    """The honest tail of the 'Stack was down' report (M30: SYS never claims a catch-up that will not run): every missed
+    key or evening job that NO catch-up re-runs, with its next scheduled run, and the ones left to today's own run.
+    Recurring every-few-minutes jobs are not listed (their next tick is the catch-up). Pure."""
+    watched = set(_KEY_JOBS) | {j for j, _, _ in EVENING_REPLAY}
+    out: list[str] = []
+    if later:
+        out.append("left to today's scheduled run: " + ", ".join(
+            f"{j} {next_runs[j]:%H:%M}" if next_runs.get(j) else j for j in later))
+    gaps = sorted(j for j in missed if j in watched and j not in covered and j not in later)
+    if gaps:
+        out.append("NOT re-run (next scheduled run): " + ", ".join(
+            f"{j} {next_runs[j]:%a %d %b %H:%M}" if next_runs.get(j) else f"{j} (none scheduled)" for j in gaps))
+    return out
+
+
 async def startup_catchup(last_beat_iso: str, started_iso: str, missed: dict[str, int], mode: str,
-                          backup_at: str | None = None) -> None:
+                          backup_at: str | None = None, replay: Sequence[str] = (), later: Sequence[str] = ()) -> None:
     """Run the planned data catch-up and send ONE report (warning level: the stack was down). Holds its lock while
     it runs, so the missed-backup catch-up (db_backup_catchup) never copies the DuckDB while this writes to it."""
     async with _get_lock("startup_catchup"):
-        await _startup_catchup_run(last_beat_iso, started_iso, missed, mode, backup_at)
+        await _startup_catchup_run(last_beat_iso, started_iso, missed, mode, backup_at, replay, later)
+
+
+def _pending_oneoffs(job_ids: set[str]) -> set[str]:
+    """The jobs among `job_ids` with a one-off re-run pending in the scheduler (<id>_catchup / _startup / _deferred:
+    the missed-today one-offs, the start-up ICICI check, a gold job moved past a freeze window)."""
+    getter = getattr(scheduler, "get_job", None)
+    if getter is None:
+        return set()
+    return {j for j in job_ids if any(getter(f"{j}{sfx}") is not None for sfx in ("_catchup", "_startup", "_deferred"))}
+
+
+def _next_runs(job_ids: set[str]) -> dict[str, datetime | None]:
+    """{job id: its next scheduled run (IST)} from the live scheduler; None where unknown."""
+    getter = getattr(scheduler, "get_job", None)
+    out: dict[str, datetime | None] = {}
+    for j in job_ids:
+        job = getter(j) if getter is not None else None
+        nrt = getattr(job, "next_run_time", None)
+        out[j] = nrt.astimezone(IST) if nrt else None
+    return out
 
 
 async def _startup_catchup_run(last_beat_iso: str, started_iso: str, missed: dict[str, int], mode: str,
-                               backup_at: str | None) -> None:
+                               backup_at: str | None, replay: Sequence[str] = (), later: Sequence[str] = ()) -> None:
     JOB = "startup_catchup"
+    t0 = datetime.now(IST)                     # the "replayed" line counts only runs of THIS catch-up
     lines: list[str] = []
+    deferred_gold: list[str] = []
     if mode == "full":
         try:
             res = await _run_data_job(JOB, "/jobs/daily-pipeline", dict(EOD_PIPELINE_BODY))
@@ -2883,8 +3326,11 @@ async def _startup_catchup_run(last_beat_iso: str, started_iso: str, missed: dic
             lines.append(f"market monitor rebuild FAILED: {exc}")
         if missed.get("eod_data_pipeline"):
             lines.append("Yahoo bars + ML rebuild: tonight's 18:30 pipeline (market hours now)")
+    elif replay:
+        # M30: inside the EOD window the jobs whose slot already passed are replayed here, once each, in order
+        lines += await evening_replay(replay)
     else:
-        lines.append("inside the EOD window: tonight's scheduled jobs bring the data up to date")
+        lines.append("inside the EOD window: no evening job's slot was missed")
     if mode in ("full", "nse"):
         lines += await _terminal_downtime_catchup(JOB, last_beat_iso, missed, mode)
     gold_ids = [j for j in GOLD_KEY_JOBS if missed.get(j)]
@@ -2900,6 +3346,9 @@ async def _startup_catchup_run(last_beat_iso: str, started_iso: str, missed: dic
                 scheduler.add_job(gold_downtime_catchup, trigger="date", run_date=when, args=[gold_ids, backfill_from],
                                   id="gold_downtime_catchup", name="Gold data catch-up after downtime",
                                   replace_existing=True, misfire_grace_time=3600, coalesce=True)
+            for j in gold_ids:
+                _note_catchup(j, when)
+            deferred_gold = list(gold_ids)
             lines.append(f"gold ({', '.join(gold_ids)}): one run at {when:%H:%M} with backfill from {backfill_from}")
         else:
             lines.append(await gold_downtime_catchup(gold_ids, backfill_from))
@@ -2907,9 +3356,23 @@ async def _startup_catchup_run(last_beat_iso: str, started_iso: str, missed: dic
         lines.append(f"today's 02:15 backup is missing: one run at {backup_at}")
     top = sorted(missed.items(), key=lambda kv: (-(kv[0] in _KEY_JOBS), kv[0]))[:12]
     missed_txt = ", ".join(f"{k}×{v}" for k, v in top) or "none"
+    # M30: say exactly what was re-run, what waits for today's own slot and what is NOT re-run (with its next run) —
+    # never a blanket "the Desk and the S1 shadow mark every missed session on their next run"
+    covered = catchup_coverage(mode, missed, replay) | _CATCHUP_SCHEDULED | _pending_oneoffs(set(missed))
+    if backup_at:
+        covered.add("db_backup_daily")
+    tail = catchup_gaps(missed, covered, later, _next_runs(set(missed) | set(later)))
+    # only a run of THIS catch-up that recorded "done": an error, "skipped" (DESK_ENABLED=0) or "no new data" (nothing
+    # moved, so nothing was replayed) never reads as a replay (6 Nov checker)
+    replayed = [j for j in ("desk_daily", "alpha_shadow_daily") if j in covered and missed.get(j)
+                and _status_since(j, t0) == "done"]
+    _spend_catchups(catchup_coverage(mode, missed, replay) - set(deferred_gold))
+    if replayed:
+        tail.append(" and ".join({"desk_daily": "the Desk", "alpha_shadow_daily": "the S1 shadow"}[j] for j in replayed)
+                    + " replayed every missed session from stored closes (rules unchanged)")
     body = (f"Down from {last_beat_iso[:16].replace('T', ' ')} to {started_iso[:16].replace('T', ' ')} IST.\n"
-            f"Missed runs: {missed_txt}\nCatch-up: " + " · ".join(lines) +
-            "\nThe Desk and the S1 shadow mark every missed session on their next run (19:30 / 19:50).")
+            f"Missed runs: {missed_txt}\nCatch-up: " + " · ".join(lines)
+            + ("\n" + "\n".join(tail) if tail else ""))
     _log.warning(JOB, body)
     await _alerts.warning("Stack was down — catching up", body)
 
@@ -3009,6 +3472,21 @@ async def shared_snapshot_build() -> None:
 DB_BACKUP_BUSY_EXIT = 75     # scripts/db_backup.py EXIT_BUSY: another run holds its lock; nothing was written
 
 
+def offsite_dir() -> str | None:
+    """M32 / owner action O-3: OFFSITE_BACKUP_DIR from the environment, else read from .env at run time (set it without
+    restarting the controller). None = unset: the 02:15 job does not pass --offsite."""
+    raw = (os.environ.get("OFFSITE_BACKUP_DIR") or _env_file_value("OFFSITE_BACKUP_DIR") or "").strip()
+    return raw or None
+
+
+def db_backup_cmd(offsite: str | None) -> list[str]:
+    """The 02:15 command: scripts/db_backup.py, plus `--offsite DIR` ONLY when OFFSITE_BACKUP_DIR is set (db_backup.py
+    copies tonight's files there, verifies the DuckDB copy by sha256 and rotates 7 daily + 4 Sundays; a failed off-site
+    copy exits 1 after the local backup is complete, so SYS shows the run as an error and Telegram says why)."""
+    cmd = [PYTHON_BIN, str(_ROOT / "scripts" / "db_backup.py")]
+    return cmd + ["--offsite", offsite] if offsite else cmd
+
+
 async def db_backup_daily() -> None:
     """02:15 IST daily — verified DuckDB backup with rotation (scripts/db_backup.py).
     Reads the evening snapshot (allow_stale), so backups lag ≤1 trading day of the 20:30/20:45
@@ -3020,7 +3498,7 @@ async def db_backup_daily() -> None:
         _log.warning(JOB, "a backup is already running — skipped")
         return
     async with lock, _track(JOB):
-        cmd = [PYTHON_BIN, str(_ROOT / "scripts" / "db_backup.py")]
+        cmd = db_backup_cmd(offsite_dir())
         try:
             res = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=1200,
                                           cwd=str(_ROOT))
@@ -3028,6 +3506,12 @@ async def db_backup_daily() -> None:
                 _log.info(JOB, (res.stdout.strip().splitlines() or ["backed up"])[-1][:300])
             elif res.returncode == DB_BACKUP_BUSY_EXIT:
                 _log.warning(JOB, "skipped: another db_backup.py run holds the backup lock")
+            elif "off-site copy FAILED" in (res.stderr or "") and "ui_prefs backup FAILED" not in (res.stderr or ""):
+                _mark_failed(JOB)                 # M32: the local copy is complete; only the off-machine one failed
+                _log.error(JOB, "off-site copy failed (local backup complete)", stderr=res.stderr[-400:])
+                await _alerts.warning("Off-site backup copy FAILED",
+                                      f"{_stderr_reason(res.stderr)}\nTonight's local backup is complete; check that "
+                                      "OFFSITE_BACKUP_DIR is mounted (RUNBOOK 'Owner actions after the 5 Nov review').")
             else:
                 _mark_failed(JOB)
                 _log.error(JOB, "backup failed", stderr=res.stderr[-400:])
@@ -3170,7 +3654,9 @@ async def news_track_record_daily() -> None:
 
 async def alpha_shadow_daily() -> None:
     """19:50 IST Mon–Fri — S1/S1H paper forward shadow (alpha_lab/paper/shadow.py --daily). Replay-based:
-    safe to miss days, never places orders, messages Telegram on fill days and Fridays."""
+    safe to miss days, never places orders, messages Telegram on fill days and Fridays. A failed run (non-zero exit,
+    timeout, a spawn error) records `error` on SYS (6 Nov checker: it recorded "done", so the start-up replay report
+    said the shadow "replayed every missed session" beside its own "S1 shadow job failed" warning)."""
     JOB = "alpha_shadow_daily"
     lock = _get_lock(JOB)
     if lock.locked():
@@ -3185,10 +3671,15 @@ async def alpha_shadow_daily() -> None:
             if res.returncode == 0:
                 _log.info(JOB, "shadow refreshed")
             else:
-                _log.error(JOB, "shadow failed", stderr=res.stderr[-400:])
-                await _alerts.warning("S1 shadow job failed", res.stderr[-200:] or "no stderr")
+                _mark_failed(JOB)
+                _log.error(JOB, f"shadow failed (exit {res.returncode})", stderr=(res.stderr or "")[-400:])
+                await _alerts.warning("S1 shadow job failed",
+                                      f"exit {res.returncode}: {_stderr_reason(res.stderr)}\n"
+                                      "The shadow keeps its last good run. Log: .logs/master-controller.log")
         except Exception as exc:
+            _mark_failed(JOB)
             _log.error(JOB, f"FAILED: {exc}")
+            await _alerts.warning("S1 shadow job failed", f"{type(exc).__name__}: {str(exc)[:200]}")
 
 
 # Newest row must be no older than this many days; older means the NSE source moved or the job is failing
@@ -3772,7 +4263,8 @@ async def _bot_status(args: list[str]) -> str:
                 pass
     if not mac.done():
         mac.cancel()
-    nxt = sorted((j for j in scheduler.get_jobs() if j.next_run_time), key=lambda j: j.next_run_time)[:5]
+    jobs = scheduler.get_jobs() if scheduler is not None else []     # (None only before the lifespan starts it)
+    nxt = sorted((j for j in jobs if j.next_run_time), key=lambda j: j.next_run_time)[:5]
     if nxt:
         lines.append("Next jobs: " + " · ".join(f"{j.next_run_time.astimezone(IST):%H:%M} {tgbot.esc(j.id)}" for j in nxt))
     return "\n".join(lines)
@@ -3798,6 +4290,119 @@ async def _bot_put(path: str, body: dict) -> Any:
         return r.json() if r.status_code == 200 else None
     except Exception:
         return None
+
+
+# ── Telegram parity for the typed alert engine (PLAN 2.3): /alerts list · /alert add <rule> ─────────────────────
+# Behind the poller's chat-id check (the bot's only auth: messages from any other chat are ignored). Everything else —
+# the legacy "/alerts" and "/alert TCS above 2400" price levels — stays with telegram_bot.handle unchanged.
+_ALERT_CMD = re.compile(r"^/(alerts?)(?:@\w+)?\s+(list|add|snooze|resume|pause|del|fired)\b\s*(.*)$",
+                        re.IGNORECASE | re.DOTALL)
+ALERTS_FIRES_PATH = "/api/alerts/fires"
+ALERT_ACTION_USAGE = ("Usage: <code>/alert snooze r-ab12cd34ef 60</code> (minutes, default 60) · "
+                      "<code>/alert resume r-ab12cd34ef</code> · "
+                      "<code>/alert pause r-ab12cd34ef</code> · <code>/alert del r-ab12cd34ef</code> · "
+                      "<code>/alert fired</code>. "
+                      "Ids: /alerts list. Price levels: /unalert TCS")
+ALERT_ADD_USAGE = ("Usage: <code>/alert add iv_pctile:NIFTY above 80 repeat telegram</code> · "
+                   "<code>/alert add price:TCS cross_up 4000</code> · <code>/alert add fii_net change_pct 50 window=1</code>\n"
+                   "Ops: above · below · cross_up · cross_down · change_pct · pctile_above · pctile_below · changed. "
+                   "Options: once | repeat · mac | telegram | both · window=N · cooldown=N · note=…")
+ALERTS_LIST_MAX = 30
+
+
+def alert_command(text: str) -> tuple[str, str] | None:
+    """('list', '') for '/alerts list', ('add', '<rule text>') for '/alert add <rule>'; None for any other message (the
+    legacy price-level commands keep their handler). '/alert list' and '/alerts add …' are accepted too. Pure."""
+    m = _ALERT_CMD.match((text or "").strip())
+    if not m:
+        return None
+    return m.group(2).lower(), m.group(3).strip()
+
+
+def fmt_alert_rules(payload: Any) -> str:
+    """The /alerts list reply (HTML): typed rules first, then the price levels; each rule's own summary line (ui-api's,
+    direction-free), its state and its last fire. Pure."""
+    rules = payload.get("rules") if isinstance(payload, dict) else None
+    if not isinstance(rules, list):
+        return "The alert engine did not answer (ui-api without the typed rules?). The price levels: /alerts"
+    if not rules:
+        return "No alert rules yet. " + ALERT_ADD_USAGE
+    rules = sorted(rules, key=lambda r: (r.get("origin") == "price", str(r.get("created_at") or "")))
+    lines = [f"<b>Alert rules</b> ({len(rules)})"]
+    for r in rules[:ALERTS_LIST_MAX]:
+        state = str(r.get("status") or "active")
+        if state == "snoozed" and r.get("snooze_until"):
+            state += f" to {str(r['snooze_until'])[11:16]}"
+        last = f" · last fired {str(r['last_fired_at'])[5:16].replace('T', ' ')}" if r.get("last_fired_at") else ""
+        lines.append(f"• {tgbot.esc(r.get('summary') or r.get('series') or r.get('id'))} — {tgbot.esc(state)}{tgbot.esc(last)}"
+                     f" <code>{tgbot.esc(r.get('id') or '')}</code>")
+    if len(rules) > ALERTS_LIST_MAX:
+        lines.append(f"… and {len(rules) - ALERTS_LIST_MAX} more on the ALRT page")
+    return "\n".join(lines)
+
+
+def fmt_alert_fired(payload: Any) -> str:
+    """The /alert fired reply: the last fires (price + typed) grouped by symbol, newest group first; each its own
+    direction-free text (a relayed text with a direction word is withheld). Pure."""
+    groups = payload.get("groups") if isinstance(payload, dict) else None
+    if not isinstance(groups, list):
+        return "The alert engine did not answer (ui-api without the typed rules?)."
+    if not groups:
+        return "Nothing has fired yet."
+    lines = ["<b>Fired</b> (newest first)"]
+    for g in groups[:10]:
+        lines.append(f"<b>{tgbot.esc(g.get('symbol'))}</b> · {int(g.get('count') or 0)}")
+        for f in (g.get("fires") or [])[:3]:
+            when = str(f.get("at") or "")[5:16].replace("T", " ")
+            lines.append(f"  {tgbot.esc(when)} {tgbot.esc(alert_text_or_withheld(f)[:220])}")
+    return "\n".join(lines)
+
+
+def fmt_alert_action(action: str, rule_id: str, res: Any) -> str:
+    """The /alert snooze | resume | pause | del reply (None = ui-api refused or did not answer). Pure."""
+    if not isinstance(res, dict):
+        return (f"Could not {tgbot.esc(action)} <code>{tgbot.esc(rule_id)}</code>: an unknown id, a price level "
+                f"(those: /unalert), or the engine did not answer. Ids: /alerts list")
+    if res.get("deleted"):
+        return f"Rule <code>{tgbot.esc(rule_id)}</code> deleted (its fires stay on ALRT)."
+    state = str(res.get("status") or "")
+    if state == "snoozed" and res.get("snooze_until"):
+        state += f" to {str(res['snooze_until'])[11:16]}"
+    return f"{tgbot.esc(res.get('summary') or rule_id)} — {tgbot.esc(state)} <code>{tgbot.esc(rule_id)}</code>"
+
+
+def fmt_alert_added(res: Any) -> str:
+    """The /alert add reply from PUT /api/alerts/rules/from-text ({ok, rule | error}; None = no answer). Pure."""
+    if not isinstance(res, dict):
+        return "Could not reach the alert engine (ui-api without the typed rules?). Nothing stored."
+    if not res.get("ok"):
+        return f"Not stored: {tgbot.esc(str(res.get('error') or 'invalid rule'))}\n{ALERT_ADD_USAGE}"
+    rule = res.get("rule") or {}
+    return (f"Rule stored: {tgbot.esc(rule.get('summary') or rule.get('series') or '')} "
+            f"<code>{tgbot.esc(rule.get('id') or '')}</code>. It describes a level, not a call; /alerts list shows every rule.")
+
+
+async def alert_bot_reply(text: str, get: Callable[..., Any], put: Callable[..., Any]) -> str | None:
+    """The reply to /alerts list or /alert add <rule>, else None (the message goes to telegram_bot.handle)."""
+    cmd = alert_command(text)
+    if cmd is None:
+        return None
+    action, rest = cmd
+    if action == "list":
+        return fmt_alert_rules(await get(ALERTS_RULES_PATH))
+    if action == "fired":
+        return fmt_alert_fired(await get(ALERTS_FIRES_PATH, limit=30))
+    if action in ("snooze", "resume", "pause", "del"):
+        parts = rest.split()
+        if not parts or not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", parts[0]):
+            return ALERT_ACTION_USAGE
+        body: dict[str, Any] = {"action": "delete" if action == "del" else action}
+        if action == "snooze":
+            body["minutes"] = float(parts[1]) if len(parts) > 1 and re.fullmatch(r"\d{1,5}(\.\d+)?", parts[1]) else 60.0
+        return fmt_alert_action(action, parts[0], await put(f"{ALERTS_RULES_PATH}/{parts[0]}/action", body))
+    if not rest:
+        return ALERT_ADD_USAGE
+    return fmt_alert_added(await put(ALERTS_FROM_TEXT_PATH, {"text": rest}))
 
 
 async def telegram_poller() -> None:
@@ -3830,7 +4435,9 @@ async def telegram_poller() -> None:
                         await _tg_call(client, "deleteMessage", chat_id=TELEGRAM_CHAT_ID, message_id=m.get("message_id"))
                     _log.info("telegram", f"command {cmd or ('code' if text.strip().isdigit() else 'text')}")
                     try:
-                        reply = await tgbot.handle(text, _bot_get, _bot_put, _BOT_ACTIONS)
+                        reply = await alert_bot_reply(text, _bot_get, _bot_put)
+                        if reply is None:
+                            reply = await tgbot.handle(text, _bot_get, _bot_put, _BOT_ACTIONS)
                     except Exception as exc:   # one bad command must not stop the bot
                         reply = f"⚠️ That failed: {tgbot.esc(type(exc).__name__)}: {tgbot.esc(str(exc)[:200])}"
                     await _tg_send(client, reply)
@@ -3884,6 +4491,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     scheduler = AsyncIOScheduler(timezone=IST)
     # SYS job history from earlier runs (P14); arms saving each job's result from now on
     _log.info("scheduler", f"job history: {_history.load()} job(s) from {SCHEDULER_HISTORY_FILE.name}")
+    _DATASET_CHECK["armed"] = True          # M33: from now on a run whose datasets did not move says "no new data"
+    _CATCHUP_PLAN.clear()                    # a fresh start: only what THIS start schedules is a pending catch-up
+    _CATCHUP_SCHEDULED.clear()
 
     # ── Pre-market sync: 08:30 IST ───────────────────────────────────────────
     scheduler.add_job(
@@ -4105,8 +4715,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     scheduler.add_job(
         iv_intraday_tick,
-        trigger=CronTrigger(day_of_week="mon-fri", hour="9-15", minute="5,20,35,50", timezone=IST),
-        id="iv_intraday", name="IV intraday pilot (Breeze chain through the budget ledger, every 15 min 09:20–15:30)",
+        trigger=CronTrigger(day_of_week="mon-fri", hour="9-15", minute="*/2", timezone=IST),
+        id="iv_intraday", name="Intraday OI / IV tape (Breeze chain through the budget ledger, every 2 min 09:15–15:30; cadence per tier planned to the budget)",
         max_instances=1, coalesce=True, misfire_grace_time=120,
     )
     scheduler.add_job(
@@ -4208,6 +4818,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 when = freeze_slot(when)
             scheduler.add_job(_catchup[name], trigger="date", run_date=when,
                               id=f"{name}_catchup", name=f"{name} (catch-up after start)")
+        _note_catchup(name, when)
         _log.info("scheduler", f"missed today: {name} → running it once at {when:%H:%M}")
 
     # today's 02:15 backup missed (Mac off or asleep, controller down; P7): one run, outside the freeze windows,
@@ -4220,12 +4831,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         _log.warning("scheduler", f"today's {BACKUP_TIME:%H:%M} backup is missing — one run at {backup_when:%H:%M}")
     if catchup is not None:
         last_beat, missed, mode, when = catchup
+        # M30: inside the EOD window ("skip") the evening jobs whose slot passed are replayed by the catch-up itself
+        replay, later = evening_replay_plan(started, missed) if mode == "skip" else ([], [])
+        for name in catchup_notes(mode, missed, replay):
+            _note_catchup(name, when)
         scheduler.add_job(startup_catchup, trigger="date", run_date=when, id="startup_catchup",
                           name="Data catch-up after downtime",
                           args=[last_beat.isoformat(), started.isoformat(), missed, mode],
-                          kwargs={"backup_at": backup_when.strftime("%H:%M") if backup_when else None})
+                          kwargs={"backup_at": backup_when.strftime("%H:%M") if backup_when else None,
+                                  "replay": replay, "later": later})
         _log.warning("scheduler", f"controller was down since {last_beat.isoformat()} — {mode} catch-up at "
-                                  f"{when.strftime('%H:%M')}, missed: {missed}")
+                                  f"{when.strftime('%H:%M')}" + (f" (replays {', '.join(replay)})" if replay else "")
+                                  + f", missed: {missed}")
     write_heartbeat(HEARTBEAT_FILE, started)
     scheduler.add_job(write_heartbeat, trigger="interval", seconds=60, args=[HEARTBEAT_FILE],
                       id="controller_heartbeat", name="Controller heartbeat", max_instances=1, coalesce=True)
@@ -4234,7 +4851,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     _log.info("scheduler", "APScheduler started (IST)", jobs=str(len(scheduler.get_jobs())), timezone="Asia/Kolkata")
     await _alerts.info("SuryaDhana Online", f"Master Controller started at {datetime.now(IST).strftime('%H:%M IST')}")
     bot = asyncio.create_task(telegram_poller())
-    yield
+    try:
+        yield
+    finally:
+        _DATASET_CHECK["armed"] = False      # a stopped controller (or a test's lifespan) never GETs from _track again
     bot.cancel()
     scheduler.shutdown(wait=False)
     _log.info("scheduler", "APScheduler stopped")
@@ -4284,6 +4904,50 @@ def job_last_run(job_id: str, latency_stats: dict[str, dict[str, Any]]) -> dict[
             "samples": 0, "last_run_source": None}
 
 
+_DOW = {"mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat", "sun": "Sun"}
+
+
+def _cron_days(expr: str) -> str:
+    if expr in ("*", "mon-sun"):
+        return "daily"
+    return ",".join("–".join(_DOW.get(x, x) for x in part.split("-")) for part in expr.split(","))
+
+
+def describe_trigger(trigger: Any) -> str | None:
+    """The IST schedule of a trigger in words for SYS's SCHEDULE column (m111: "—" for ≈ 30 jobs whose times were known
+    only to a hand-kept UI table): "Mon–Fri 19:50", "Sat 02:30–06:30 hourly at :30", "every 5 min 09–15h Mon–Fri",
+    "every 60 s", "once 21:16". Anything it cannot read falls back to the trigger's own text. Pure."""
+    if trigger is None:
+        return None
+    kind = type(trigger).__name__
+    try:
+        if kind == "OrTrigger":
+            return " · ".join(describe_trigger(t) or "" for t in trigger.triggers)
+        if kind == "IntervalTrigger":
+            secs = int(trigger.interval.total_seconds())
+            return f"every {secs // 60} min" if secs % 60 == 0 and secs >= 120 else f"every {secs} s"
+        if kind == "DateTrigger":
+            return f"once {trigger.run_date.astimezone(IST):%a %d %b %H:%M}"
+        if kind == "CronTrigger":
+            f = {fld.name: str(fld) for fld in trigger.fields}
+            days, hour, minute, second = _cron_days(f["day_of_week"]), f["hour"], f["minute"], f["second"]
+            sec = "" if second in ("0", "*") else f":{int(second):02d}"
+            if hour.isdigit() and minute.isdigit():
+                when = f"{int(hour):02d}:{int(minute):02d}{sec}"
+            elif minute.isdigit():
+                hrs = "hourly" if hour == "*" else f"{hour.replace('-', '–')}h hourly"
+                when = f"{hrs} at :{int(minute):02d}"
+            elif minute == "*":
+                when = "every minute" + ("" if hour == "*" else f" {hour.replace('-', '–')}h")
+            else:
+                step = minute.split("/")[1] if minute.startswith("*/") else None
+                when = (f"every {step} min" if step else f"at :{minute}") + ("" if hour == "*" else f" {hour.replace('-', '–')}h")
+            return f"{when}" if days == "daily" else f"{days} {when}"
+    except Exception:  # noqa: BLE001 — a schedule string is never worth an error on SYS
+        pass
+    return str(trigger)
+
+
 @app.get("/api/scheduler/status")
 async def get_scheduler_status() -> dict[str, Any]:
     jobs_info: list[dict[str, Any]] = []
@@ -4300,6 +4964,11 @@ async def get_scheduler_status() -> dict[str, Any]:
                 "next_run_ist": nrt_ist,
                 "next_run_unix": nrt_unix,
                 **job_last_run(job.id, latency_stats),
+                # additive (6 Nov, O-OPS): the schedule in words (m111), the run in flight (m113), and the one-off that
+                # will re-run this job after downtime, only when one is actually scheduled (M30)
+                "schedule_ist": describe_trigger(getattr(job, "trigger", None)),
+                "running_since": _RUNNING.get(job.id),
+                "catchup_at": _CATCHUP_PLAN.get(job.id),
             })
 
     broker_ms = await _probe_broker_latency()
@@ -4405,16 +5074,328 @@ async def get_metrics() -> dict[str, Any]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# M31 (5 Nov review): the one-off backfill of what an outage left missing — PM-run, never scheduled
+# ══════════════════════════════════════════════════════════════════════════════
+# The controller's log records it down 31 Oct 11:29 → 4 Nov 21:29 and 28 Oct 12:46 → 30 Oct 08:11 (also 24 Oct 16:36 →
+# 25 Oct 10:59, a weekend, and 5 Nov 19:34 → 19:55): no ALRT notes on 29 Oct or 2–4 Nov, no wraps for 16 / 21 / 28 / 29 Oct
+# and 2 / 3 Nov, no FII/DII rows for 28 Oct and 2 / 3 Nov (the review's evidence). The command
+#
+#   python scripts/master_controller.py backfill-outage [--since 2026-10-28] [--until 2026-11-04] [--execute]
+#
+# prints the plan (default: a dry run that writes nothing) and, with --execute, runs it outside the freeze windows:
+#   wraps    D-DATA's generator: daily_wrap.py --backfill-missing --since <since> --until <until> (stored sessions; a wrap
+#            whose required sections are not stored is skipped, never half-written — D-DATA M10's one-date rule)
+#   fii_dii  D-DATA's job: data-service POST /jobs/fii-dii-backfill {"since"} (+ "csv_text" of an owner-saved NSE CSV with
+#            --fii-dii-csv): NSE serves only the latest day, so a missed session stays missing unless the owner saved it
+#   notes    the ALRT inbox (data/notifications.jsonl): per missed CLOSING note, one line built from the stored NSE index
+#            closes (index_ohlc_daily), marked backfilled and dated; per missed PRE-MARKET note, one "no pre-market note
+#            is recorded" line — GIFT NIFTY and the overnight cues are not stored point-in-time, so it cannot be rebuilt.
+# Honesty rule (6 Nov checker): a line states only what the code checked — the inbox holds no note of that kind for
+# that session. It names a controller outage ONLY when the controller's own log records one over that slot (its
+# "Down from <a> to <b> IST." downtime report lines, CONTROLLER_LOG); otherwise it names no cause (the current log
+# begins with the 25 Oct 10:59 start, so no earlier session gets one, and it records no outage over the 30 Oct 08:50 slot).
+OUTAGE_STEPS = ("wraps", "fii_dii", "notes")
+# the review's evidence window (M31: the 28 Oct close, 29 Oct, 2–4 Nov); D-DATA's wraps backfill skips complete wraps,
+# so the 16 / 21 Oct wraps are a separate `--steps wraps --since 2026-10-12` run (RUNBOOK)
+OUTAGE_SINCE_DEFAULT = "2026-10-28"
+FII_DII_BACKFILL_PATH = "/jobs/fii-dii-backfill"
+NOTE_SLOTS = {"morning": time(8, 50), "close": time(15, 40)}
+CONTROLLER_LOG = _ROOT / ".logs" / "master-controller.log"     # read-only here; rotated copies are .log.1, .log.2, …
+_DOWN_LINE = re.compile(r"Down from (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) to (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) IST\.")
+
+
+def controller_downtimes(lines: Iterable[str]) -> list[tuple[datetime, datetime]]:
+    """[(down from, back at)] (IST) from the controller's own downtime reports in its log — the 'Stack was down' body
+    _startup_catchup_run logs ("Down from 2026-10-31 11:29 to 2026-11-04 21:29 IST."), sorted, duplicates dropped. Pure."""
+    out: set[tuple[datetime, datetime]] = set()
+    for ln in lines:
+        m = _DOWN_LINE.search(ln)
+        if not m:
+            continue
+        try:
+            a, b = (IST.localize(datetime.strptime(x, "%Y-%m-%d %H:%M")) for x in m.groups())  # noqa: DTZ007 — pytz
+        except ValueError:
+            continue
+        if b > a:
+            out.add((a, b))
+    return sorted(out)
+
+
+def downtime_over(downs: Sequence[tuple[datetime, datetime]], when: datetime) -> tuple[datetime, datetime] | None:
+    """The recorded downtime that covers `when` (from ≤ when < back), else None. Pure."""
+    return next(((a, b) for a, b in downs if a <= when < b), None)
+
+
+def _read_controller_downtimes() -> list[tuple[datetime, datetime]]:
+    """The downtimes the controller's log (and its rotated copies) records; [] when there is no log. Read-only."""
+    lines: list[str] = []
+    for path in sorted(CONTROLLER_LOG.parent.glob(CONTROLLER_LOG.name + "*")):
+        try:
+            with path.open(encoding="utf-8", errors="replace") as fh:
+                lines += [ln for ln in fh if "Down from " in ln]
+        except OSError:
+            continue
+    return controller_downtimes(lines)
+
+
+def outage_sessions(rows: Any, since: str, until: str) -> list[str]:
+    """The NSE sessions in [since, until]: the dates with a stored NIFTY 50 close (data-service /db/index-ohlc rows). Pure."""
+    days = {str(r.get("date"))[:10] for r in (rows or []) if isinstance(r, dict) and r.get("close") is not None}
+    return sorted(d for d in days if since <= d <= until)
+
+
+def notes_present(lines: Sequence[str]) -> set[tuple[str, str]]:
+    """{(session, 'morning' | 'close')} already in the inbox (any line of that kind dated that day, backfilled or not)."""
+    out: set[tuple[str, str]] = set()
+    for ln in lines:
+        try:
+            rec = json.loads(ln)
+        except ValueError:
+            continue
+        if not isinstance(rec, dict):
+            continue
+        kind = rec.get("kind")
+        slot = rec.get("for_slot") or kind
+        if slot in NOTE_SLOTS:
+            out.add((str(rec.get("for_session") or rec.get("at") or "")[:10], str(slot)))
+    return out
+
+
+def missing_note_slots(lines: Sequence[str], sessions: Sequence[str]) -> list[tuple[str, str]]:
+    """[(session, slot)] the inbox lacks, oldest first. Pure."""
+    have = notes_present(lines)
+    return [(d, slot) for d in sessions for slot in NOTE_SLOTS if (d, slot) not in have]
+
+
+def _close_change(rows: Any, day: str) -> tuple[float, float | None] | None:
+    pts = sorted((str(r.get("date"))[:10], float(r["close"])) for r in (rows or [])
+                 if isinstance(r, dict) and r.get("close") is not None)
+    for i, (d, c) in enumerate(pts):
+        if d == day:
+            return c, ((c / pts[i - 1][1] - 1) * 100 if i > 0 and pts[i - 1][1] else None)
+    return None
+
+
+def backfilled_note(day: str, slot: str, n50: Any, bank: Any, written_at: datetime,
+                    downs: Sequence[tuple[datetime, datetime]] = ()) -> dict[str, Any]:
+    """One inbox record for a missed note (pure). Close: NIFTY 50 / NIFTY BANK closes and day changes from the stored NSE
+    daily index file — arithmetic, dated, sourced, no adjective. Morning: a "no pre-market note is recorded" line (kind
+    'gap': the pre-open inputs were never stored, so nothing is reconstructed).
+
+    Each line states only what was checked: the inbox holds no note of that kind for that session. A cause is named only
+    when `downs` (the controller's own downtime records, controller_downtimes) covers the slot; never otherwise."""
+    d = date.fromisoformat(day)
+    slot_at = IST.localize(datetime.combine(d, NOTE_SLOTS[slot]))
+    at = slot_at.isoformat(timespec="seconds")
+    w = written_at.astimezone(IST)
+    common = {"at": at, "for_session": day, "for_slot": slot, "backfilled": True,
+              "written_at": w.isoformat(timespec="seconds")}
+    down = downtime_over(downs, slot_at)
+    log_note = (f"The controller's log records it down from {down[0]:%d %b %H:%M} to {down[1]:%d %b %H:%M} IST. "
+                if down else "")
+    if down:
+        common["controller_down"] = {"from": down[0].isoformat(timespec="minutes"), "to": down[1].isoformat(timespec="minutes"),
+                                     "source": "controller log"}
+    if slot == "morning":
+        return {**common, "kind": "gap", "title": f"No pre-market note · {d:%a %d %b}",
+                "body": (f"No pre-market note is recorded for this session (inbox checked {w:%d %b %H:%M}). {log_note}"
+                         "GIFT NIFTY and the overnight cues are not stored point-in-time, so it cannot be rebuilt; the "
+                         "previous session's wrap is the record.")[:400]}
+    parts = []
+    for label, rows in (("NIFTY 50", n50), ("NIFTY BANK", bank)):
+        cc = _close_change(rows, day)
+        if cc is not None:
+            parts.append(f"{label} {cc[0]:,.2f}" + (f" ({cc[1]:+.2f} %)" if cc[1] is not None else ""))
+    body = (" · ".join(parts) or "index closes not stored for this session") + (
+        " · source NSE daily index file (stored) · no closing note is recorded for this session; backfilled from stored "
+        f"data on {w:%d %b %H:%M}" + (f" · {log_note.strip()}" if log_note else ""))
+    return {**common, "kind": "close", "title": f"Closing note · {d:%a %d %b} (backfilled)", "body": body[:400],
+            "source": "index_ohlc_daily"}
+
+
+def merge_notifications(lines: Sequence[str], records: Sequence[dict[str, Any]]) -> list[str]:
+    """The inbox with `records` added in time order (a stable sort on `at`, so same-time lines keep their order); a record
+    whose (for_session, for_slot) is already present is not added twice. Unparsable lines keep their place. Pure."""
+    have = notes_present(lines)
+    keyed: list[tuple[str, int, str]] = []
+    for i, ln in enumerate(lines):
+        try:
+            at = str((json.loads(ln) or {}).get("at") or "")
+        except (ValueError, AttributeError):
+            at = ""
+        keyed.append((at, i, ln))
+    n = len(keyed)
+    for j, rec in enumerate(records):
+        if (rec.get("for_session"), rec.get("for_slot")) in have:
+            continue
+        keyed.append((str(rec["at"]), n + j, json.dumps(rec, ensure_ascii=True)))
+    last = ""
+    out: list[tuple[str, int, str]] = []
+    for at, i, ln in keyed:                       # unparsable lines inherit the previous time: they stay where they were
+        last = at or last
+        out.append((last, i, ln))
+    return [ln for _, _, ln in sorted(out, key=lambda t: (t[0], t[1]))]
+
+
+def plan_outage_backfill(since: str, until: str, steps: Sequence[str], fii_csv: str | None) -> list[dict[str, Any]]:
+    """The commands / requests the backfill would run, in order (pure: printed by the dry run, run by --execute)."""
+    plan: list[dict[str, Any]] = []
+    if "wraps" in steps:
+        # D-DATA's CLI takes --until too (daily_wrap.py: last session, default yesterday): the command's range is passed
+        wrap_cmd = [PYTHON_BIN, str(_ROOT / "scripts" / "daily_wrap.py"), "--backfill-missing", "--since", since,
+                    "--until", until, "--base", UI_API]
+        plan.append({"step": "wraps", "kind": "subprocess", "cmd": wrap_cmd, "dry_run_cmd": [*wrap_cmd, "--dry-run"],
+                     "writes": "reports/daily_wrap/<session>.md for stored sessions whose wrap is missing or incomplete"})
+    if "fii_dii" in steps:
+        body: dict[str, Any] = {"since": since}
+        if fii_csv:
+            body["csv_path"] = fii_csv           # read at --execute into csv_text (the file stays on this Mac)
+        plan.append({"step": "fii_dii", "kind": "data_job", "path": FII_DII_BACKFILL_PATH, "body": body,
+                     "writes": "nse_fii_dii_cash rows for gaps a source exists for; the rest is listed as still missing"})
+    if "notes" in steps:
+        plan.append({"step": "notes", "kind": "inbox", "path": str(_NOTIFY_LOG), "since": since, "until": until,
+                     "writes": "data/notifications.jsonl: one backfilled close line / one 'no pre-market note is recorded' "
+                               "line per missed note slot of a stored session, dated, in time order; a controller outage "
+                               "is named only where the controller's log records one over that slot"})
+    return plan
+
+
+def _get_json_sync(url: str, **params: Any) -> Any:
+    try:
+        r = httpx.get(url, params=params or None, timeout=30)
+        return r.json() if r.status_code == 200 else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _index_rows(symbol: str, since: str) -> list[dict[str, Any]]:
+    days = max(30, (datetime.now(IST).date() - date.fromisoformat(since)).days + 15)
+    res = _get_json_sync(f"{DATA_SVC}/db/index-ohlc/{symbol}", days=days)
+    return (res or {}).get("rows") or []
+
+
+def _read_user_file(path: str) -> str:
+    return Path(path).expanduser().read_text(encoding="utf-8")
+
+
+def _write_inbox_atomically(path: Path, records: Sequence[dict[str, Any]]) -> int:
+    """Merge `records` into the inbox and replace it atomically; a line the controller appended meanwhile is re-merged
+    (read → merge → re-read; replaced only when the file did not change between the last read and the write)."""
+    for _ in range(5):
+        before = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+        merged = merge_notifications(before, records)
+        tmp = path.with_name(f"{path.name}.backfill-{os.getpid()}")
+        tmp.write_text("\n".join(merged) + "\n", encoding="utf-8")
+        now_lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+        if now_lines == before:
+            os.replace(tmp, path)
+            return len(merged) - len(before)
+        tmp.unlink(missing_ok=True)
+    raise RuntimeError("the inbox kept changing while merging: run the notes step again when no job is writing")
+
+
+async def _run_backfill_step(step: dict[str, Any], since: str, until: str) -> str:
+    if step["kind"] == "subprocess":
+        res = await asyncio.to_thread(subprocess.run, step["cmd"], capture_output=True, text=True, timeout=1800,
+                                      cwd=str(_ROOT), env={**os.environ, "PYTHONPATH": str(_ROOT)})
+        last = (res.stdout.strip().splitlines() or [""])[-1]
+        return f"exit {res.returncode}: {last[:600] or _stderr_reason(res.stderr)}"
+    if step["kind"] == "data_job":
+        body = dict(step["body"])
+        csv_path = body.pop("csv_path", None)
+        if csv_path:
+            body["csv_text"] = await asyncio.to_thread(_read_user_file, csv_path)
+        async with httpx.AsyncClient(timeout=120) as client:
+            r = await client.post(f"{DATA_SVC}{step['path']}", json=body)
+        if r.status_code == 404:
+            return f"{step['path']} not served by data-service (D-DATA's route not mounted yet): nothing done"
+        if r.status_code != 200:
+            return f"HTTP {r.status_code}: {r.text[:300]}"
+        started = r.json()
+        if isinstance(started, dict) and started.get("job_id"):     # a data-service job: poll it (never POST it twice)
+            outcome: Any = None
+            async with httpx.AsyncClient(timeout=60) as client:
+                for i in range(240):
+                    await asyncio.sleep(data_job_poll_delay(i))
+                    info = (await client.get(f"{DATA_SVC}/jobs/{started['job_id']}")).json()
+                    if info.get("status") in ("done", "error"):
+                        outcome = info.get("result") if info.get("status") == "done" else {"error": info.get("error")}
+                        break
+            return (json.dumps(outcome)[:600] if outcome is not None
+                    else f"job {started['job_id']} still running (not waited for)")
+        return json.dumps(started)[:600]
+    n50, bank = await asyncio.to_thread(_index_rows, "NIFTY 50", since), await asyncio.to_thread(_index_rows, "NIFTY BANK", since)
+    sessions = outage_sessions(n50, since, until)
+    lines = (await asyncio.to_thread(_NOTIFY_LOG.read_text, encoding="utf-8")).splitlines() if _NOTIFY_LOG.exists() else []
+    now = datetime.now(IST)
+    downs = await asyncio.to_thread(_read_controller_downtimes)       # the controller's own records; never inferred
+    records = [backfilled_note(d, slot, n50, bank, now, downs) for d, slot in missing_note_slots(lines, sessions)]
+    added = await asyncio.to_thread(_write_inbox_atomically, _NOTIFY_LOG, records) if records else 0
+    named = sum(1 for r in records if r.get("controller_down"))
+    return (f"{len(sessions)} session(s), {len(records)} missed note slot(s) ({named} inside a downtime the controller's "
+            f"log records), {added} line(s) added")
+
+
+def backfill_outage_main(argv: Sequence[str]) -> int:
+    import argparse
+
+    ap = argparse.ArgumentParser(prog="master_controller.py backfill-outage",
+                                 description="One-off backfill of the artefacts an outage left missing (M31). Dry run by default.")
+    ap.add_argument("--since", default=OUTAGE_SINCE_DEFAULT)
+    ap.add_argument("--until", default=(datetime.now(IST).date() - timedelta(days=1)).isoformat())
+    ap.add_argument("--steps", default=",".join(OUTAGE_STEPS), help="comma list of: " + ", ".join(OUTAGE_STEPS))
+    ap.add_argument("--fii-dii-csv", default=None, help="an owner-saved NSE FII/DII CSV for sessions the API no longer serves")
+    ap.add_argument("--execute", action="store_true", help="run the plan (default: print it and write nothing)")
+    ap.add_argument("--allow-window", action="store_true", help="run inside a 07:45–09:20 / 18:30–21:15 freeze window anyway")
+    # run from a shell, not by start-local.sh: the Docker-era defaults (http://ui-api:8000, `python`) would be wrong here
+    ap.add_argument("--ui-api", default=os.environ.get("UI_API_URL") or "http://127.0.0.1:8010")
+    ap.add_argument("--data-service", default=os.environ.get("DATA_SERVICE_URL") or "http://127.0.0.1:8001")
+    args = ap.parse_args(list(argv))
+    global UI_API, DATA_SVC, PYTHON_BIN
+    UI_API, DATA_SVC = args.ui_api.rstrip("/"), args.data_service.rstrip("/")
+    if not os.environ.get("PYTHON_BIN"):
+        PYTHON_BIN = sys.executable                # the interpreter running this command (the canonical env)
+    steps = [x.strip() for x in args.steps.split(",") if x.strip()]
+    bad = [x for x in steps if x not in OUTAGE_STEPS]
+    if bad:
+        ap.error(f"unknown step(s) {bad}; known: {list(OUTAGE_STEPS)}")
+    for v in (args.since, args.until):
+        date.fromisoformat(v)                    # a bad date fails here, before anything is planned
+    plan = plan_outage_backfill(args.since, args.until, steps, args.fii_dii_csv)
+    if not args.execute:
+        print(json.dumps({"dry_run": True, "since": args.since, "until": args.until, "plan": plan}, indent=1, default=str))
+        print("Nothing written. Re-run with --execute (outside the freeze windows) to run it; for the wraps first run "
+              "its own dry_run_cmd above to see which sessions it would write.")
+        return 0
+    if in_freeze_window(datetime.now(IST)) and not args.allow_window:
+        print("refused: inside a restart-freeze window (07:45–09:20 / 18:30–21:15 IST); run it after the window", file=sys.stderr)
+        return 3
+    rc = 0
+    for step in plan:
+        try:
+            out = asyncio.run(_run_backfill_step(step, args.since, args.until))
+            print(f"{step['step']}: {out}")
+            rc |= 1 if out.startswith(("exit 1", "exit 2", "HTTP ")) else 0
+        except Exception as exc:  # noqa: BLE001 — the next step still runs
+            print(f"{step['step']}: FAILED {type(exc).__name__}: {str(exc)[:300]}", file=sys.stderr)
+            rc = 1
+    return rc
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Entrypoint
 # ══════════════════════════════════════════════════════════════════════════════
 if __name__ == "__main__":
     # Guard before uvicorn: `--help` used to fall through and silently start a SECOND
     # controller on :8008 (Bloomberg F5.5). Any argument now prints usage and exits.
+    if len(sys.argv) > 1 and sys.argv[1] == "backfill-outage":       # M31: a one-off PM command, never the server
+        sys.exit(backfill_outage_main(sys.argv[2:]))
     if len(sys.argv) > 1:
         print(
             "master_controller — IST scheduler + Telegram bot + telemetry on :8008.\n"
             "Takes no arguments. Start:  python scripts/master_controller.py\n"
-            "(launchd/ops run it the same way; config comes from .env, not flags)"
+            "(launchd/ops run it the same way; config comes from .env, not flags)\n"
+            "One-off: python scripts/master_controller.py backfill-outage --help (M31; dry run by default)"
         )
         sys.exit(0 if sys.argv[1] in ("-h", "--help") else 2)
     import uvicorn

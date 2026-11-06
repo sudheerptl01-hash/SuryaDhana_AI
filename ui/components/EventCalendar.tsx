@@ -11,8 +11,11 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
  */
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getDeskStatus, getMarketEvents, getOpenPositions, getRecentResults, getResultsReacting, type ReactingResult, getFundamentalsScreen, type ScreenRow, type CorpEvent, type RecentResult, getAnnouncementsCore, heldSymbols, getEcoCalendar, type EcoEvent } from '@/lib/api'
-import { ECO_KINDS } from '@/components/EconomicCalendar'
+import { getDeskStatus, getMarketEvents, getOpenPositions, getRecentResults, getResultsReacting, type ReactingResult, getFundamentalsScreen, type ScreenRow, type CorpEvent, type RecentResult, getAnnouncementsCore, heldSymbols, getEcoCalendar, type EcoEvent, getSymbols } from '@/lib/api'
+import { nseSession } from '@/components/desktop/session'
+import { fillIndustry, hhmm, reactingHeading, releaseCheck } from '@/components/marketPagesModel'
+import { ecoKindSpec } from '@/components/EconomicCalendar'
+import { ecoKey } from '@/components/marketPagesModel'
 import { ResultsImpliedMoves } from '@/components/ResultsImpliedMoves'
 import { useWatchlist } from '@/context/AppContext'
 import { usePins } from '@/lib/pins'
@@ -91,21 +94,43 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
     return m
   }, [eco])
   // results filed since the last close, priced live (refreshed every 2 min)
-  const [reacting, setReacting] = useState<{ rows: ReactingResult[]; since: string; phase?: string } | null>(null)
+  const [reacting, setReacting] = useState<{ rows: ReactingResult[]; since: string; phase?: string; as_of?: string; source?: string; data_date?: string | null; session_open?: boolean } | null>(null)
   useEffect(() => {
     const get = () => getResultsReacting().then(r => setReacting(r.data)).catch(() => {})
     get(); const iv = setInterval(get, 120_000); return () => clearInterval(iv)
   }, [])
   // results filed with NSE today (live announcements): ✓ on today's RESULTS rows before the nightly capture
   const [filedToday, setFiledToday] = useState<Map<string, string>>(new Map())
+  const [filedAtToday, setFiledAtToday] = useState<Map<string, string>>(new Map())   // symbol → earliest results filing stamp
   useEffect(() => {
     const get = () => getAnnouncementsCore().then(r => {
-      const m = new Map<string, string>()
-      for (const f of r.data.items) if (f.category === 'results' && !m.has(f.symbol)) m.set(f.symbol, (f.time ?? '').slice(11, 16))
-      setFiledToday(m)
+      const m = new Map<string, string>(), at = new Map<string, string>()
+      for (const f of r.data.items) {
+        if (f.category !== 'results' || !f.time) continue
+        const prev = at.get(f.symbol)
+        if (!prev || f.time < prev) { at.set(f.symbol, f.time); m.set(f.symbol, f.time.slice(11, 16)) }
+      }
+      setFiledToday(m); setFiledAtToday(at)
     }).catch(() => {})
     get(); const iv = setInterval(get, 120_000); return () => clearInterval(iv)
   }, [])
+  // M12 (UI): the earliest results filing per symbol we can see (since the last close + today's announcements), to
+  // check the scoreboard's stored release time against it
+  const filedAt = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const r of reacting?.rows ?? []) if (r.filed_at) m.set(r.symbol, r.filed_at)
+    for (const [sym, t] of filedAtToday) { const prev = m.get(sym); if (!prev || t < prev) m.set(sym, t) }
+    return m
+  }, [reacting, filedAtToday])
+  // m046: industry for the season panel from the symbol directory when the screen has none
+  const [directory, setDirectory] = useState<Map<string, string | null>>(new Map())
+  useEffect(() => { getSymbols().then(r => setDirectory(new Map(r.data.data.map(e => [e.t, e.s] as [string, string | null])))).catch(() => {}) }, [])
+  // m044: one "usual move" per symbol: the calendar's own results-move average fills the reacting panel's gaps
+  const typicalBySymbol = useMemo(() => {
+    const m = new Map<string, { pct: number; q: number | null }>()
+    for (const r of rows ?? []) if (r.typical_move_pct != null && !m.has(r.symbol)) m.set(r.symbol, { pct: r.typical_move_pct, q: r.typical_quarters ?? null })
+    return m
+  }, [rows])
 
   const owners = useMemo(() => {
     const m = new Map<string, Owner[]>()
@@ -220,8 +245,15 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
               </div>}
         </Panel>
 
-        {reacting && reacting.rows.length > 0 && (
-          <Panel source={sourceOf(reacting.since ?? null, { source: 'NSE results', hint: reacting.phase === 'session' ? "today's moves from NSE's heatmap (about 1 min behind) and the quotes route for the other filers: not a live feed" : null })} badge="context" title={reacting.phase === 'session' ? 'Reacting today · live' : reacting.phase === 'preopen' ? 'Results · pre-open auction' : 'Results since the last close · react at 09:15'} accent={T.violet} pad={0}
+        {reacting && reacting.rows.length > 0 && (() => {
+          // m042: after the close the API's phase is still 'session' but its prices are end of day: no "live" in the
+          // title, and the chip carries the session's date, not the window's start ('DELAYED · 04 NOV' at 20:57)
+          const sess = nseSession(Date.now())
+          // the route's own session flags when it sends them (data_date, session_open), else the client's NSE clock
+          const closed = reacting.session_open != null ? !reacting.session_open : sess.state === 'CLOSED'
+          const head = reactingHeading(reacting.phase, reacting.source, closed, (reacting.data_date ?? reacting.as_of ?? today).slice(0, 10), reacting.since ?? today, today)
+          return (
+          <Panel source={sourceOf(head.asOf, { source: head.live ? 'NSE results' : 'NSE results · EOD', hint: head.live ? "today's moves from NSE's heatmap (about 1 min behind) and the quotes route for the other filers: not a live feed" : 'end-of-day closes' })} badge="context" title={head.title} accent={T.violet} pad={0}
             subtitle={`results filed since ${reacting.since} · what the numbers said (revenue / profit vs a year ago; … = still reading the filing; hover for why a figure is missing) and today's move vs the stock's average results-day move · the scoreboard below fills in tonight`}>
             <DataTable<ReactingResult> dense maxHeight={300} rowKey={r => r.symbol} onRowClick={r => onSelectTicker(r.symbol)}
               initialSort={{ key: 'size', dir: 'desc' }} rows={reacting.rows}
@@ -240,16 +272,23 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
                     : <span style={{ color: r.change_pct >= 0 ? T.green : T.red, fontWeight: 700 }}>{fmtPct(r.change_pct, 1)}</span> },
                 { key: 'vsn', label: 'vs NIFTY', align: 'right', sort: r => r.vs_nifty_pct ?? -999,
                   render: r => r.vs_nifty_pct == null ? '—' : <span style={{ color: r.vs_nifty_pct >= 0 ? T.green : T.red }}>{fmtPct(r.vs_nifty_pct, 1)}</span> },
-                { key: 'typical', label: 'Typical', align: 'right', render: r => r.typical_move_pct == null ? <span style={{ color: T.dim }}>—</span> : <span style={{ color: T.muted }}>±{r.typical_move_pct.toFixed(1)}%</span> },
+                { key: 'typical', label: 'Typical', align: 'right', title: 'average absolute results-day move (the calendar\'s own history; ᶜ = filled from the calendar row)',
+                  render: r => { const c = r.typical_move_pct == null ? typicalBySymbol.get(r.symbol) : null
+                    return r.typical_move_pct != null ? <span style={{ color: T.muted }}>±{r.typical_move_pct.toFixed(1)}%</span>
+                      : c ? <span style={{ color: T.muted }} title={`from the calendar: the last ${c.q ?? '—'} results`}>±{c.pct.toFixed(1)}%ᶜ</span> : <span style={{ color: T.dim }}>—</span> } },
                 { key: 'size', label: 'Size vs normal', align: 'right', sort: r => r.vs_typical ?? -1,
                   render: r => r.vs_typical == null ? '—' : <span style={{ color: r.vs_typical >= 2 ? T.amber : T.muted, fontWeight: r.vs_typical >= 2 ? 700 : 400 }}>{r.vs_typical.toFixed(1)}×</span> },
               ]} />
           </Panel>
-        )}
+          )
+        })()}
 
         {season && season.length > 0 && (() => {
           const latest = season.reduce((m, r) => (r.period_end > m ? r.period_end : m), '')
-          const rep = season.filter(r => r.period_end === latest)
+          // m046: the screen leaves most reporters' industry empty; the symbol directory fills what it can, and the
+          // panel prints the coverage so the medians are read on what they rest on
+          const filled = fillIndustry(season.filter(r => r.period_end === latest), directory)
+          const rep = filled.rows
           if (rep.length < 3) return null
           const qn = fiscalQuarter(latest)
           const med = median
@@ -258,7 +297,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
           const grew = rep.filter(r => (r.pat_yoy != null && r.pat_yoy > 0) || r.pat_yoy_turn === 'to profit').length
           const fell = rep.filter(r => (r.pat_yoy != null && r.pat_yoy < 0) || r.pat_yoy_turn === 'to loss').length
           const byInd = new Map<string, ScreenRow[]>()
-          for (const r of rep) { const k = r.industry ?? 'Other / unclassified'; byInd.set(k, [...(byInd.get(k) ?? []), r]) }
+          for (const r of rep) { if (!r.industry) continue; const k = r.industry; byInd.set(k, [...(byInd.get(k) ?? []), r]) }
           const inds = [...byInd.entries()].map(([k, v]) => ({ k, n: v.length,
             rev: med(v.map(r => r.revenue_yoy).filter((x): x is number => x != null)),
             pat: med(v.map(r => r.pat_yoy).filter((x): x is number => x != null)) })).sort((a, b) => b.n - a.n).slice(0, 8)
@@ -298,7 +337,8 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
                   <span style={{ color: T.dim, fontSize: 10, letterSpacing: 1 }}>WORST </span>{scored.slice(-5).reverse().map(line)}
                 </div>
               })()}
-              <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>Medians by industry (count = companies). Early in a season the sample is small and skewed to whoever reports first (IT, banks).</div>
+              <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>Medians by industry (count = companies): industry known for {filled.known} of {filled.total} reporters
+                ({filled.total ? Math.round((filled.known / filled.total) * 100) : 0} %); the rest are in the totals above, not in the industry rows. Early in a season the sample is small and skewed to whoever reports first (IT, banks).</div>
             </Panel>
           )
         })()}
@@ -320,7 +360,11 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
               rows={recent}
               columns={[
                 { key: 'symbol', label: 'Stock', sort: r => r.symbol, render: r => <TickerLink symbol={r.symbol} /> },
-                { key: 'released', label: 'Released', sort: r => r.released_at, render: r => <span style={{ color: T.muted }}>{r.released_at.slice(5)} <span style={{ color: T.dim, fontSize: 10 }}>{r.timing}</span></span> },
+                { key: 'released', label: 'Released', sort: r => r.released_at, title: 'the results release time; ⚠ = an earlier results filing on NSE that day (the reaction belongs to that session)',
+                  render: r => { const c = releaseCheck(r.released_at, filedAt.get(r.symbol))
+                    return <span style={{ color: T.muted }} title={c.differs ? `stored release ${hhmm(r.released_at)}; NSE's results filing was at ${c.time}: an intraday release reacts the same session` : undefined}>
+                      {r.released_at.slice(5, 10)} {c.time}{c.differs && <span style={{ color: T.amber }}> ⚠ filed {c.time}</span>}
+                      <span style={{ color: T.dim, fontSize: 10 }}> {c.differs ? (c.intraday ? 'intraday' : r.timing) : r.timing}</span></span> } },
                 { key: 'move', label: 'Reaction', align: 'right', sort: r => r.move_pct ?? -999,
                   render: r => r.move_pct == null ? <span style={{ color: T.dim }}>pending</span>
                     : <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>{r.avoid && <AvoidFlag r={r} />}
@@ -336,7 +380,7 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
           </Panel>
         )}
 
-        <ResultsImpliedMoves />
+        <ResultsImpliedMoves filedAt={filedAt} />
         {/* terminal v2 PLAN 1.1: the per-stock results IV-crush ledger (last 8 releases), names sorted by next results */}
         <CrushLedger />
         <Panel source={undatedSource('NSE calendar')} title="Next five weeks" accent={T.amber} pad={0}
@@ -369,10 +413,10 @@ export function EventCalendar({ onSelectTicker }: { onSelectTicker: (s: string) 
                     {ev.length > 0 && <span style={{ fontFamily: T.mono, fontSize: 10, color: T.muted }}>{ev.length}</span>}
                   </div>
                   {(ecoByDay.get(d) ?? []).map(m => (   // macro releases and policy decisions (ECO)
-                    <div key={`${m.kind}-${m.date}`} title={`${m.what} · ${m.time ?? ''} IST`}
-                      style={{ fontSize: 9.5, lineHeight: '15px', color: ECO_KINDS[m.kind]?.color ?? T.muted, fontFamily: T.mono, letterSpacing: 0.5,
+                    <div key={ecoKey(m)} title={`${m.what} · ${m.time ?? ''} IST`}
+                      style={{ fontSize: 9.5, lineHeight: '15px', color: ecoKindSpec(m).color, fontFamily: T.mono, letterSpacing: 0.5,
                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      ◆ {ECO_KINDS[m.kind]?.label ?? m.kind} {m.time}</div>))}
+                      ◆ {ecoKindSpec(m).label} {m.time}</div>))}
                   {[...mineHere, ...ev.filter(e => !owners.has(e.symbol))].slice(0, 4).map(e => (
                     <div key={`${e.symbol}-${e.kind}`} style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 10.5, lineHeight: '16px' }}>
                       <span style={{ width: 5, height: 5, background: KIND_COLOR[e.kind] ?? T.muted, flex: 'none' }} />

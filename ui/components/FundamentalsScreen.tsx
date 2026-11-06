@@ -5,6 +5,11 @@ import { apiError } from '@/lib/errors'
  * FUND · fundamentals screener: every company whose NSE results filings have been read (FA cache), filtered on
  * the latest quarter's growth, margin and valuation at the last NSE close. A screen, not a signal: nothing here
  * has been back-tested (see RSCH for what has).
+ *
+ * 5 Nov 2026 review: the footer reads the earnings-growth verdict from the RSCH catalog at render time (M21, it had
+ * quoted a superseded PROMISING); implausible growth is flagged "verify on FA" (m080); rows two or more quarters behind
+ * (merged / delisted names) are hidden by default (m081); both tables carry their badge (m082); the P/E percentile is a
+ * context number and is no longer coloured cheap-green / dear-red (m003).
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getSurveillance } from '@/lib/api'
@@ -13,6 +18,8 @@ import { getFundamentalsScreen, type ScreenRow } from '@/lib/api'
 import { COMP_KEY } from '@/components/Compare'
 import { goToPage } from '@/lib/navigate'
 import { Chip, DataTable, ErrorBox, Input, Loading, PageHeader, Panel, Select, T, TickerLink, fiscalQuarter, fmtFixed, fmtPct, median, type Column, ordinal, undatedSource } from '@/components/terminal'   // fmtFixed: U+2212 (C1-18)
+import { CatalogLine } from '@/components/CatalogNote'
+import { outlierReason, staleRow } from '@/components/fundScreenRules'
 
 type Preset = { id: string; label: string; hint: string; f: Partial<Filters> }
 type Filters = { mcapMin: number; peMax: number | null; revMin: number | null; patMin: number | null; marginMin: number | null; industry: string; latestOnly?: boolean; pctlMax?: number | null }
@@ -76,6 +83,8 @@ export function FundamentalsScreen() {
       setHideFlagged(hide)
     } catch { /* storage blocked */ }
   })
+  const [showStale, setShowStale] = useState(false)             // rows ≥ 2 quarters behind: merged / delisted (m081)
+  const [hideOutliers, setHideOutliers] = useState(false)       // implausible growth rows (m080)
   const [picked, setPicked] = useState<string[]>([])           // up to 8 rows to open in COMP
   const togglePick = (sym: string) => setPicked(p => p.includes(sym) ? p.filter(x => x !== sym) : p.length >= 8 ? p : [...p, sym])
   const compare = () => {
@@ -92,7 +101,11 @@ export function FundamentalsScreen() {
   // the newest quarter anyone has reported: rows still on an older quarter haven't reported it yet (amber)
   const latestQ = useMemo(() => (rows ?? []).reduce<string | null>((m, r) => (!m || r.period_end > m ? r.period_end : m), null), [rows])
   const reported = (rows ?? []).filter(r => r.period_end === latestQ).length
+  const staleCount = useMemo(() => (rows ?? []).filter(r => staleRow(r.period_end, latestQ)).length, [rows, latestQ])
+  const outlierCount = useMemo(() => (rows ?? []).filter(r => outlierReason(r)).length, [rows])
   const shown = useMemo(() => (rows ?? []).filter(r =>
+    (showStale || !staleRow(r.period_end, latestQ)) &&
+    (!hideOutliers || !outlierReason(r)) &&
     (!q || r.symbol.includes(q.toUpperCase())) &&
     (!hideFlagged || !flagged[r.symbol]) &&
     (!f.latestOnly || r.period_end === latestQ) &&
@@ -102,7 +115,7 @@ export function FundamentalsScreen() {
     (f.peMax == null || (r.pe != null && r.pe <= f.peMax)) &&
     (f.revMin == null || (r.revenue_yoy != null && r.revenue_yoy >= f.revMin)) &&
     (f.patMin == null || (r.pat_yoy != null && r.pat_yoy >= f.patMin) || (f.patMin <= 0 && r.pat_yoy_turn === 'to profit')) &&
-    (f.marginMin == null || (r.pat_margin != null && r.pat_margin >= f.marginMin))), [rows, f, q, latestQ, hideFlagged, flagged])
+    (f.marginMin == null || (r.pat_margin != null && r.pat_margin >= f.marginMin))), [rows, f, q, latestQ, hideFlagged, flagged, showStale, hideOutliers])
 
   const apply = (p: Preset) => { setPreset(p.id); setF({ ...BASE, industry: f.industry, ...p.f }) }
   const num = (v: string) => (v.trim() === '' || isNaN(Number(v)) ? null : Number(v))
@@ -122,12 +135,21 @@ export function FundamentalsScreen() {
     { key: 'pctl', label: 'P/E vs own past', align: 'right', sort: r => r.pe_pctl ?? 1e9,
       title: "where today's P/E sits in the company's own daily P/E history (point-in-time, ~2–3 years): 0 = cheapest it has been, 100 = dearest",
       render: r => r.pe_pctl == null ? <span style={{ color: T.dim }}>—</span>
-        : <span title={r.pe_median_hist != null ? `its median P/E: ${r.pe_median_hist.toFixed(1)}×` : ''} style={{ color: r.pe_pctl <= 20 ? T.green : r.pe_pctl >= 80 ? T.red : T.muted }}>{ordinal(r.pe_pctl)} pct</span> },
+        : <span title={`${r.pe_median_hist != null ? `its median P/E: ${r.pe_median_hist.toFixed(1)}×. ` : ''}Context: where the multiple sits in its own past; describes, does not predict`} style={{ color: T.text }}>{ordinal(r.pe_pctl)} pct</span> },
     { key: 'pb', label: 'P/B', align: 'right', sort: r => r.pb ?? 1e9, render: r => r.pb == null ? <span style={{ color: T.dim }}>—</span> : `${fmtFixed(r.pb, 1)}×` },
     { key: 'rev', label: 'Revenue YoY', align: 'right', sort: r => r.revenue_yoy ?? -999, render: r => g(r.revenue_yoy) },
-    { key: 'pat', label: 'Profit YoY', align: 'right', sort: r => r.pat_yoy ?? -999, render: r => g(r.pat_yoy, r.pat_yoy_turn) },
+    { key: 'pat', label: 'Profit YoY', align: 'right', sort: r => r.pat_yoy ?? -999, render: r => {
+        const why = outlierReason(r)
+        return <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>{g(r.pat_yoy, r.pat_yoy_turn)}
+          {why && <span data-fund-outlier title={why} style={{ fontSize: 9, color: T.amber, border: `1px solid ${T.amber}66`, padding: '0 3px' }}>VERIFY</span>}</span>
+      } },
     { key: 'mg', label: 'Net margin', align: 'right', sort: r => r.pat_margin ?? -999, render: r => r.pat_margin == null ? '—' : <span style={{ color: T.muted }}>{fmtFixed(r.pat_margin, 1)}%</span> },
-    { key: 'q', label: 'Quarter', align: 'right', sort: r => r.period_end, render: r => <span style={{ color: r.period_end === latestQ ? T.text : T.amber }} title={r.period_end === latestQ ? `filed ${r.filed_at.slice(0, 10)}` : 'this quarter is older: the latest results are not out yet (or not read yet)'}>{qn(r.period_end)}</span> },
+    { key: 'q', label: 'Quarter', align: 'right', sort: r => r.period_end, render: r => {
+        const stale = staleRow(r.period_end, latestQ)
+        return <span style={{ color: r.period_end === latestQ ? T.text : stale ? T.red : T.amber }}
+          title={r.period_end === latestQ ? `filed ${r.filed_at.slice(0, 10)}` : stale ? 'two or more quarters behind: usually merged, delisted or suspended; its growth is not comparable' : 'this quarter is older: the latest results are not out yet (or not read yet)'}>
+          {qn(r.period_end)}{stale ? ' · STALE' : ''}</span>
+      } },
   ]
 
   return (
@@ -151,6 +173,12 @@ export function FundamentalsScreen() {
           <Chip color={T.red} active={hideFlagged} onClick={() => setHideFlagged(h => !h)}
             title="hide stocks under NSE surveillance (ASM, GSM, ESM, IRP), with a 2–5% price band, in trade-to-trade, or in the F&O ban">
             {hideFlagged ? '⚑ HIDDEN' : '⚑ HIDE SURVEILLANCE'}{Object.keys(flagged).length ? ` · ${(rows ?? []).filter(r => flagged[r.symbol]).length}` : ''}</Chip>
+          <Chip color={T.amber} active={hideOutliers} onClick={() => setHideOutliers(h => !h)}
+            title="rows whose growth is implausibly large (revenue ≥ +100 % or ≤ −50 % y/y, or profit ≥ +300 % on revenue < +50 %): usually a low base, a one-off, a merger or a parsing artefact. Verify on FA before using one.">
+            {hideOutliers ? 'VERIFY ROWS HIDDEN' : 'HIDE VERIFY ROWS'} · {outlierCount}</Chip>
+          {staleCount > 0 && <Chip color={T.muted} active={showStale} onClick={() => setShowStale(v => !v)}
+            title="companies two or more quarters behind the newest reported quarter: almost always merged, delisted or suspended. Hidden by default.">
+            {showStale ? 'STALE ROWS SHOWN' : 'SHOW STALE ROWS'} · {staleCount}</Chip>}
         </div>
         {(() => {   // industries: medians across every company read (not just the filtered rows)
           const med = median
@@ -179,17 +207,17 @@ export function FundamentalsScreen() {
             </Panel>
           )
         })()}
-        <Panel source={undatedSource('NSE results filings', 'latest quarter per company')} title={`${shown.length} matches`} accent={T.green} pad={0}
+        <Panel source={undatedSource('NSE results filings', 'latest quarter per company')} badge="arithmetic" title={`${shown.length} matches`} accent={T.green} pad={0}
           right={<div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             {picked.length > 0 && <span role="button" onClick={() => setPicked([])} style={{ fontSize: 10, color: T.dim, cursor: 'pointer' }}>clear</span>}
             <Chip color={T.green} active={picked.length >= 2} onClick={picked.length >= 2 ? compare : undefined}
               title={picked.length >= 2 ? `open ${picked.join(', ')} in COMP` : 'tick 2–8 rows to compare'}>COMPARE {picked.length || ''}</Chip>
           </div>}
-          subtitle={`of ${rows.length} · ${reported} have reported ${latestQ ? qn(latestQ) : 'the latest quarter'}; amber = still on an older quarter · hover a ticker for the quote`}>
+          subtitle={`of ${rows.length} · ${reported} have reported ${latestQ ? qn(latestQ) : 'the latest quarter'}; amber = still on an older quarter${showStale ? '' : ` · ${staleCount} stale rows hidden`} · growth and P/E are arithmetic on the filings, the P/E percentile is context · hover a ticker for the quote`}>
           <DataTable columns={cols} rows={shown} rowKey={r => r.symbol} dense maxHeight={620} initialSort={{ key: 'mcap', dir: 'desc' }} exportName="fund" />
         </Panel>
         <div style={{ fontSize: 10.5, color: T.dim, marginTop: 8, lineHeight: 1.6 }}>
-          A screen, not a signal. RSCH › earnings-growth drift tested the idea behind GROWTH presets: strong reported growth beat comparable stocks by ≈ +2% over 60 sessions only in the last 15 months (PROMISING, not proven; selection bias).
+          A screen, not a signal. The idea behind the GROWTH presets was tested: <CatalogLine id="reports/earnings_growth_drift/FINDINGS.md" />{' '}
           Coverage grows as companies are opened (FA), report results, or in the Saturday sweep. Growth compares the latest
           quarter with the same quarter a year earlier (consolidated where filed); EPS-based ratios are avoided because NSE
           EPS is not adjusted for bonuses / splits.

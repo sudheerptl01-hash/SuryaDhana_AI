@@ -9,9 +9,14 @@
  *
  * All series are computed server-side off the same trailing, look-ahead-free
  * engine that drives the Backtest Lab. MODE = PAPER.
+ *
+ * 5 Nov 2026 review (m116): the default basket renders on open (no blank page); every lens carries its badge and its
+ * research status (volume profile: NO EDGE from the catalog; RRG and squeeze: no project study, the breakout family
+ * FAILS); the RRG window is stated; the date window is printed unambiguously beside the dd/mm/yyyy boxes.
  */
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { T } from '@/components/terminal'   // T.muted for axis text (RUP-06: one muted grey)
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { BadgeChip, ResearchNote, T } from '@/components/terminal'   // T.muted for axis text (RUP-06: one muted grey)
+import { CatalogNote } from '@/components/CatalogNote'
 import clsx from 'clsx'
 import { ChartActions } from './terminal/ChartActions'
 import {
@@ -23,6 +28,7 @@ import {
   type FactorSeriesResult, type RRGResult, type VolumeProfileResult,
 } from '@/lib/glassbox'
 import { trailingRange } from '@/lib/format'
+import { longDate } from './honestyKit'
 
 type Mode = 'rotation' | 'correlation' | 'volume'
 interface Props { isDark?: boolean }
@@ -72,6 +78,14 @@ export function GlassBoxStudio({ isDark = true }: Props) {
     }
   }, [mode, tickerList, fromDate, toDate])
 
+  // render the default basket on open, and a lens the first time it is chosen (m116: the page opened blank)
+  const rendered = useRef<Record<Mode, boolean>>({ rotation: false, correlation: false, volume: false })
+  useEffect(() => {
+    if (rendered.current[mode]) return
+    rendered.current[mode] = true
+    void run()
+  }, [mode, run])
+
   const card = 'rounded-lg border border-slate-700/60 bg-slate-900/40'
 
   return (
@@ -110,6 +124,9 @@ export function GlassBoxStudio({ isDark = true }: Props) {
               className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-[11px] focus:border-sky-500 outline-none" />
           </label>
         </div>
+        <div className="mt-2 text-[10px] text-slate-500" data-gbox-window>
+          Window {longDate(fromDate)} → {longDate(toDate)} (the boxes read day / month / year)
+        </div>
         <div className="mt-3">
           <button onClick={run} disabled={loading}
             className="px-3 py-1.5 rounded text-[11px] font-bold bg-emerald-600/20 border border-emerald-500/50 text-emerald-200 hover:bg-emerald-600/30 disabled:opacity-40">
@@ -120,6 +137,15 @@ export function GlassBoxStudio({ isDark = true }: Props) {
 
       {err && <div className="rounded-lg border border-rose-600/50 bg-rose-950/30 px-4 py-2 text-[11px] text-rose-300">⚠ {err}</div>}
 
+      {mode === 'volume'
+        ? <CatalogNote id="reports/value_area/REPORT.md" fallback="NO EDGE" showTakeaway={false}>
+            Volume profile, POC and value area were tested: no value-area event beats a random entry, and upside breaks fail back to
+            the POC. Use this view to see where volume traded, never to time an entry.
+          </CatalogNote>
+        : <ResearchNote verdict="FAIL" report="reports/handbook_swing/REPORT.md">
+            Related study: no project study tests relative rotation, and the squeeze / breakout rules behind the CORR &amp; SQUEEZE dots
+            belong to the family that lost 17.8% a year after ICICI costs. These charts describe the window shown; they do not predict.
+          </ResearchNote>}
       {mode === 'rotation' && <RRGPanel data={rrg} loading={loading} />}
       {mode === 'correlation' && <CorrPanel data={series} loading={loading} />}
       {mode === 'volume' && <VolumePanel data={vp} loading={loading} />}
@@ -149,7 +175,8 @@ function RRGPanel({ data, loading }: { data: RRGResult | null; loading: boolean 
 
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
-      <PanelHead title="RELATIVE ROTATION GRAPH" sub={data ? `vs ${data.benchmark}` : 'RS-Ratio × RS-Momentum'} />
+      <PanelHead title="RELATIVE ROTATION GRAPH" badge="context"
+        sub={`${data ? `vs ${data.benchmark} · ` : ''}RS-Ratio: ${data?.window ?? 12}-session normalisation · RS-Momentum: ${data?.momentum ?? 5}-session change · a short-horizon description`} />
       <div className="h-[440px]">
         {!data || !entries.length ? (
           <Empty loading={loading} hint="Render a basket to map sector/stock rotation." />
@@ -219,7 +246,7 @@ function CorrPanel({ data, loading }: { data: FactorSeriesResult | null; loading
   const viptDays = pts.filter(p => p.vipt_breakout).length
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
-      <PanelHead title={`ROLLING CORRELATION & SQUEEZE — ${data?.ticker ?? ''}`}
+      <PanelHead title={`ROLLING CORRELATION & SQUEEZE — ${data?.ticker ?? ''}`} badge="context" note="Correlation is context; the squeeze and VIPT dots are a house heuristic."
         sub={data ? `${data.corr_window}d corr vs ${data.benchmark} · ${squeezeDays} squeeze · ${viptDays} VIPT` : 'price · corr · squeeze dots'} />
       {data?.ticker && <ChartActions ticker={data.ticker} from="Glass-Box" style={{ marginBottom: 8 }} />}
       <div className="h-[300px]">
@@ -269,7 +296,7 @@ function VolumePanel({ data, loading }: { data: VolumeProfileResult | null; load
     .map(b => ({ ...b, band: b.price_mid.toFixed(0) })), [bins])
   return (
     <div className="rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
-      <PanelHead title={`VOLUME PROFILE — ${data?.ticker ?? ''}`}
+      <PanelHead title={`VOLUME PROFILE — ${data?.ticker ?? ''}`} badge="context" note="Where volume traded over the window; NO EDGE as a timing tool (RSCH value area)."
         sub={data ? `${data.n_bars} bars · POC ₹${data.poc_price} · anchored VWAP ₹${data.ohlc.at(-1)?.avwap?.toFixed(2) ?? '—'}` : 'HVN/LVN · POC · anchored VWAP'} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="lg:col-span-1 h-[420px]">
@@ -314,14 +341,15 @@ function VolumePanel({ data, loading }: { data: VolumeProfileResult | null; load
 }
 
 /* ── shared bits ──────────────────────────────────────────────────────────────── */
-function PanelHead({ title, sub }: { title: string; sub: string }) {
+function PanelHead({ title, sub, badge, note }: { title: string; sub: string; badge?: 'context' | 'heuristic' | 'arithmetic'; note?: string }) {
   return (
-    <div className="flex items-baseline justify-between mb-2">
-      <span className="text-[11px] font-bold tracking-wide text-slate-300">{title}</span>
-      <span className="text-[9px] text-slate-600">{sub}</span>
+    <div className="flex items-baseline justify-between gap-3 mb-2">
+      <span className="flex items-center gap-2 text-[11px] font-bold tracking-wide text-slate-300">{title}{badge && <BadgeChip badge={badge} note={note} />}</span>
+      <span className="text-[9px] text-slate-500 text-right">{sub}</span>
     </div>
   )
 }
+
 function Empty({ loading, hint }: { loading: boolean; hint: string }) {
   return <div className="h-full flex items-center justify-center text-[11px] text-slate-600">{loading ? 'Rendering…' : hint}</div>
 }

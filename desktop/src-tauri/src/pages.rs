@@ -1,7 +1,8 @@
 //! The 43 terminal pages (function codes) known to the shell.
 //!
 //! Source of truth: `ui/app/page.tsx` -> `COMMAND_PAGES` (id, code, label; same order here) and the
-//! `tabList` order that drives the UI's ALT+1..9 shortcuts (mirrored by the shell's Cmd+1..9).
+//! `tabList` order that drives the UI's ALT+1..9 shortcuts (mirrored by the shell's Cmd+1..9). Since the page review of
+//! 5 Nov 2026 (M37) that is the trader's day: BRF WTCH CHRT OMON OSTR DERV MOV EVTS ALRT (Cmd+1..9), RSK on ALT+0.
 //! A QA test (scripts/desktop_qa) parses this file and diffs it against page.tsx, so keep it a plain
 //! array of struct literals with string literals, one page per line.
 //!
@@ -62,32 +63,32 @@ pub const PAGE_COUNT: usize = 43;
 pub const PAGES: [Page; PAGE_COUNT] = [
     Page { id: "brief", code: "BRF", label: "Morning brief", group: Group::Markets, shortcut: 1 },
     Page { id: "watch", code: "WTCH", label: "Watch monitor", group: Group::Markets, shortcut: 2 },
-    Page { id: "charts", code: "CHRT", label: "Chart studio", group: Group::Markets, shortcut: 0 },
+    Page { id: "charts", code: "CHRT", label: "Chart studio", group: Group::Markets, shortcut: 3 },
     Page { id: "world", code: "WEI", label: "World markets", group: Group::Markets, shortcut: 0 },
     Page { id: "eco", code: "ECO", label: "Economic calendar", group: Group::Markets, shortcut: 0 },
     Page { id: "memb", code: "MEMB", label: "Index members", group: Group::Markets, shortcut: 0 },
     Page { id: "seag", code: "SEAG", label: "Seasonality", group: Group::Markets, shortcut: 0 },
     Page { id: "preopen", code: "PRE", label: "Pre-open auction", group: Group::Markets, shortcut: 0 },
-    Page { id: "movers", code: "MOV", label: "Live movers", group: Group::Markets, shortcut: 0 },
+    Page { id: "movers", code: "MOV", label: "Live movers", group: Group::Markets, shortcut: 7 },
     Page { id: "filings", code: "CF", label: "Company filings", group: Group::Equities, shortcut: 0 },
-    Page { id: "options", code: "OMON", label: "Option monitor", group: Group::DerivativesGold, shortcut: 0 },
-    Page { id: "derivatives", code: "DERV", label: "Derivatives desk", group: Group::DerivativesGold, shortcut: 5 },
-    Page { id: "ostrategy", code: "OSTR", label: "Options strategies", group: Group::DerivativesGold, shortcut: 0 },
+    Page { id: "options", code: "OMON", label: "Option monitor", group: Group::DerivativesGold, shortcut: 4 },
+    Page { id: "derivatives", code: "DERV", label: "Derivatives desk", group: Group::DerivativesGold, shortcut: 6 },
+    Page { id: "ostrategy", code: "OSTR", label: "Options strategies", group: Group::DerivativesGold, shortcut: 5 },
     Page { id: "deals", code: "DEAL", label: "Block & bulk deals", group: Group::Equities, shortcut: 0 },
     Page { id: "margin", code: "MRGN", label: "Margin monitor", group: Group::Equities, shortcut: 0 },
     Page { id: "screen", code: "FUND", label: "Fundamentals screener", group: Group::Equities, shortcut: 0 },
-    Page { id: "alerts", code: "ALRT", label: "Alerts", group: Group::PortfolioRisk, shortcut: 0 },
+    Page { id: "alerts", code: "ALRT", label: "Alerts", group: Group::PortfolioRisk, shortcut: 9 },
     Page { id: "holders", code: "HDS", label: "Ownership shifts", group: Group::Equities, shortcut: 0 },
     Page { id: "insiders", code: "INSD", label: "Insider monitor", group: Group::Equities, shortcut: 0 },
     Page { id: "ipo", code: "IPO", label: "IPO monitor", group: Group::Equities, shortcut: 0 },
     Page { id: "wrap", code: "WRAP", label: "Daily market wrap", group: Group::Markets, shortcut: 0 },
     Page { id: "compare", code: "COMP", label: "Compare stocks", group: Group::Equities, shortcut: 0 },
-    Page { id: "desk", code: "DESK", label: "Decision Desk", group: Group::PortfolioRisk, shortcut: 3 },
-    Page { id: "markets", code: "MKT", label: "Market Monitor", group: Group::Markets, shortcut: 4 },
-    Page { id: "events", code: "EVTS", label: "Corporate calendar", group: Group::Markets, shortcut: 6 },
-    Page { id: "overview", code: "OVRV", label: "Overview", group: Group::ResearchData, shortcut: 7 },
-    Page { id: "stocks", code: "EQS", label: "Stocks / screener", group: Group::Equities, shortcut: 8 },
-    Page { id: "backtest", code: "BTST", label: "Backtest lab", group: Group::PortfolioRisk, shortcut: 9 },
+    Page { id: "desk", code: "DESK", label: "Decision Desk", group: Group::PortfolioRisk, shortcut: 0 },
+    Page { id: "markets", code: "MKT", label: "Market Monitor", group: Group::Markets, shortcut: 0 },
+    Page { id: "events", code: "EVTS", label: "Corporate calendar", group: Group::Markets, shortcut: 8 },
+    Page { id: "overview", code: "OVRV", label: "Overview", group: Group::ResearchData, shortcut: 0 },
+    Page { id: "stocks", code: "EQS", label: "Stocks / screener", group: Group::Equities, shortcut: 0 },
+    Page { id: "backtest", code: "BTST", label: "Backtest lab", group: Group::PortfolioRisk, shortcut: 0 },
     Page { id: "positions", code: "PORT", label: "Portfolio", group: Group::PortfolioRisk, shortcut: 0 },
     Page { id: "broker", code: "BRKR", label: "Broker (ICICI)", group: Group::PortfolioRisk, shortcut: 0 },
     Page { id: "pipeline", code: "PIPE", label: "Pipeline / watchlist", group: Group::System, shortcut: 0 },
@@ -111,7 +112,7 @@ pub const DEFAULT_TAB: &str = "brief";
 /// Key pages offered in the tray's Go submenu (Cmd+1..9 pages plus risk and system).
 #[rustfmt::skip]
 pub const TRAY_PAGES: [&str; 11] = [
-    "brief", "watch", "desk", "markets", "derivatives", "events", "overview", "stocks", "backtest", "risk", "system",
+    "brief", "watch", "charts", "options", "ostrategy", "derivatives", "movers", "events", "alerts", "risk", "system",
 ];
 
 /// Look a page up by its tab id.
@@ -173,13 +174,13 @@ mod tests {
             [
                 "brief",
                 "watch",
-                "desk",
-                "markets",
+                "charts",
+                "options",
+                "ostrategy",
                 "derivatives",
+                "movers",
                 "events",
-                "overview",
-                "stocks",
-                "backtest"
+                "alerts"
             ]
         );
         let digits: Vec<u8> = shortcut_pages().iter().map(|p| p.shortcut).collect();

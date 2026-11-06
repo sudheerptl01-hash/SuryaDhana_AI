@@ -56,7 +56,7 @@ export function CrushLedger({ initial }: { initial?: string | null }) {
     <Panel title="Results IV crush · ledger" accent={T.violet} pad={0} badge={d?.badge ?? 'context'}
       source={d?.ok && !d.rows.length ? undatedSource('iv_event_log', `no measured release for ${symbol} yet`)
         : sourceOf(asOf, { source: 'iv_event_log', maxAgeDays: 400, hint: err ?? (d && !d.ok ? storeNote(d) : null) })}
-      subtitle={`last 8 releases per stock · IV before / after · priced vs realised move${picked?.next_results ? ` · ${symbol} reports next on ${picked.next_results}` : ''}`}
+      subtitle={`up to 8 releases per stock (${d?.rows?.length ?? 0} stored for ${symbol}) · IV before / after · priced vs realised move${picked?.next_results ? ` · ${symbol} reports next on ${picked.next_results}` : ''}`}
       right={<span style={{ display: 'inline-flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         {(names ?? []).slice(0, 8).map(n => <Chip key={n.symbol} color={T.violet} active={symbol === n.symbol} onClick={() => setSymbol(n.symbol)} title={`results ${n.next_results ?? '—'}`}>{n.symbol}</Chip>)}
         <input value={symbol} onChange={e => setSymbol(e.target.value.toUpperCase())} placeholder="F&O stock" aria-label="crush ledger symbol"

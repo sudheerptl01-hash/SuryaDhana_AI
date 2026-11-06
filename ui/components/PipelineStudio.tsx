@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
-import { PageHeader, T } from '@/components/terminal'
+import { BadgeChip, PageHeader, T } from '@/components/terminal'
+import { CatalogNote } from '@/components/CatalogNote'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell,
   ResponsiveContainer,
@@ -24,6 +25,7 @@ import {
   getDataQuality,
   getFeatureStats,
   getFeatureCorrelations,
+  getWarehouseStats,
 } from '@/lib/api'
 import { ModelLab, ConfigModal } from './ModelLab'
 import { TrainingTerminal } from './TrainingTerminal'
@@ -427,6 +429,8 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
   const [trainingMetrics, setTrainingMetrics] = useState<any>(null)
   const [isTraining, setIsTraining] = useState(false)
   const [dataQuality, setDataQuality] = useState<DataQuality | null>(null)
+  // the panel's real span (first → last bar), not the spread of each ticker's LAST bar (m086)
+  const [dataSpan, setDataSpan] = useState<{ from: string; to: string } | null>(null)
   const [showTrainModal, setShowTrainModal] = useState(false)
   const [showRLModal, setShowRLModal] = useState(false)
   const [featureStats, setFeatureStats] = useState<any>(null)
@@ -453,6 +457,7 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
       try { setModelMetrics((await getModelMetrics()).data) } catch {}
       try { setFeatureImportance((await getFeatureImportance()).data || []) } catch {}
       try { setDataQuality((await getDataQuality()).data) } catch {}
+      try { const r = (await getWarehouseStats()).data?.data_range; if (r?.from && r?.to) setDataSpan({ from: r.from, to: r.to }) } catch {}
     }
     load()
   }, [])
@@ -683,7 +688,15 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
         />
       )}
 
-      <PageHeader code="PIPE" title="Quantitative Pipeline" subtitle="Data quality · feature engineering · model training · RL optimisation" />
+      <PageHeader code="PIPE" title="Quantitative Pipeline" subtitle="The dormant legacy 5-day ML pipeline (autopilot OFF): data quality · features · model · RL. Reference only" />
+      {/* M23: the legacy ML pipeline's labels and book FAIL in RSCH; the verdict is read from the catalog at render time */}
+      <div className="px-8 pt-3">
+        <CatalogNote id="reports/ml_labels/FINDINGS.md" fallback="FAIL" showTakeaway={false}>
+          This pipeline trains on the production v2 labels (5-day close &gt; 0.15 %), which the label study found flawed; even
+          the better 20-session labels trail plain Desk momentum after costs. &ldquo;Ready&rdquo; below means the tables exist, not that
+          a model is worth training. Nothing here informs a trade.
+        </CatalogNote>
+      </div>
 
       {/* Tab Bar */}
       <div className={`px-8 flex gap-0 border-b ${isDark ? 'border-slate-800' : 'border-slate-200'} overflow-x-auto`}>
@@ -1012,13 +1025,13 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
           <div className="space-y-6">
             {/* Readiness Checklist */}
             <div className={`${card} border rounded-xl p-6`}>
-              <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5`}>Pipeline Readiness</h3>
+              <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5 flex items-center gap-3`}>Pipeline Readiness <BadgeChip badge="context" note="Whether the tables exist; no claim that training is worthwhile." /></h3>
               <div className="grid grid-cols-4 gap-4">
                 {[
                   { label: 'OHLCV Data', ok: dataQuality?.readiness?.has_ohlcv, desc: `${dataQuality?.ohlcv?.total_candles?.toLocaleString('en-IN') || 0} candles` },
                   { label: 'Features', ok: dataQuality?.readiness?.has_features, desc: `${dataQuality?.features?.tickers_processed || 0} tickers processed` },
                   { label: 'Labels', ok: dataQuality?.readiness?.has_labels, desc: `${dataQuality?.labels?.total_labels?.toLocaleString('en-IN') || 0} labels` },
-                  { label: 'Ready to Train', ok: dataQuality?.readiness?.ready_to_train, desc: dataQuality?.readiness?.ready_to_train ? 'All requirements met' : 'Run Phase 3 first' },
+                  { label: 'Tables ready', ok: dataQuality?.readiness?.ready_to_train, desc: dataQuality?.readiness?.ready_to_train ? 'inputs exist · the labels FAIL (RSCH)' : 'Run Phase 3 first' },
                 ].map(({ label, ok, desc }, i) => (
                   <div key={i} className={`rounded-xl p-4 border ${ok ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-slate-700 bg-slate-800/30'}`}>
                     <div className="flex items-center gap-2 mb-2">
@@ -1035,13 +1048,14 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
             <div className="grid grid-cols-2 gap-6">
               {/* OHLCV Coverage */}
               <div className={`${card} border rounded-xl p-6`}>
-                <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5`}>OHLCV Coverage</h3>
+                <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5 flex items-center gap-3`}>OHLCV Coverage <BadgeChip badge="context" /></h3>
                 <div className="space-y-3 mb-6">
                   {[
                     { label: 'Total Tickers', value: dataQuality?.ohlcv.total_tickers || '—' },
                     { label: 'Total Candles', value: dataQuality?.ohlcv.total_candles?.toLocaleString('en-IN') || '—' },
                     { label: 'Avg / Ticker', value: dataQuality?.ohlcv.avg_candles_per_ticker?.toLocaleString('en-IN') || '—' },
-                    { label: 'Date Range', value: dataQuality ? `${dataQuality.ohlcv.min_date} → ${dataQuality.ohlcv.max_date}` : '—' },
+                    { label: 'Data span (first → last bar)', value: dataSpan ? `${dataSpan.from} → ${dataSpan.to}` : '—' },
+                    { label: 'Last bar, oldest → newest ticker', value: dataQuality ? `${dataQuality.ohlcv.min_date} → ${dataQuality.ohlcv.max_date}` : '—' },
                   ].map(({ label, value }, i) => (
                     <div key={i} className="flex justify-between items-center text-xs">
                       <span className={mu}>{label}</span>
@@ -1068,15 +1082,15 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
 
               {/* Label Distribution */}
               <div className={`${card} border rounded-xl p-6`}>
-                <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5`}>Label Distribution</h3>
+                <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5 flex items-center gap-3`}>Label Distribution · v2 5-day labels <BadgeChip badge="arithmetic" note="Counts of the stored v2 labels; the label study marks them FAIL." /></h3>
 
                 {dataQuality?.labels.total_labels ? (
                   <>
                     <div className="space-y-3 mb-6">
                       {[
                         { label: 'Total Labels', value: dataQuality.labels.total_labels.toLocaleString('en-IN') },
-                        { label: 'Up (Bullish)', value: dataQuality.labels.up_labels.toLocaleString('en-IN'), color: 'text-emerald-400' },
-                        { label: 'Down (Bearish)', value: dataQuality.labels.down_labels.toLocaleString('en-IN'), color: 'text-rose-400' },
+                        { label: 'Up label (5-day return > 0.15 %)', value: dataQuality.labels.up_labels.toLocaleString('en-IN') },
+                        { label: 'Down label', value: dataQuality.labels.down_labels.toLocaleString('en-IN') },
                         { label: 'Class Balance', value: `${dataQuality.labels.class_balance_pct}% up`, color: Math.abs(dataQuality.labels.class_balance_pct - 50) < 10 ? 'text-emerald-400' : 'text-amber-400' },
                         { label: 'Avg 5D Return', value: `${fmtSigned(dataQuality.labels.avg_return_pct, 3)}%` },
                         { label: 'Std Dev Return', value: `±${dataQuality.labels.std_return_pct.toFixed(3)}%` },
@@ -1122,7 +1136,7 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
 
             {/* Feature Coverage */}
             <div className={`${card} border rounded-xl p-6`}>
-              <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5`}>Feature Engineering Coverage</h3>
+              <h3 className={`${tx} text-xs font-bold uppercase tracking-widest mb-5 flex items-center gap-3`}>Feature Engineering Coverage <BadgeChip badge="context" /></h3>
               <div className="grid grid-cols-5 gap-4 mb-6">
                 {[
                   { label: 'Tickers Processed', value: dataQuality?.features.tickers_processed || 0 },
@@ -1150,11 +1164,11 @@ export function PipelineStudio({ isDark, watchlist = [] }: { isDark: boolean; wa
                       style={{ width: `${dataQuality.features.coverage_pct}%` }}
                     />
                   </div>
-                  <p className={`${mu} text-[10px] font-mono mt-1`}>{dataQuality.features.coverage_pct}% complete — {dataQuality.ohlcv.total_tickers - dataQuality.features.tickers_processed} tickers pending</p>
+                  <p className={`${mu} text-[10px] font-mono mt-1`}>{dataQuality.features.coverage_pct}% built — {dataQuality.ohlcv.total_tickers - dataQuality.features.tickers_processed} tickers have no features: the legacy feature job is dormant (autopilot OFF) and does not run on the full universe</p>
                 </>
               )}
 
-              <p className={`${mu} text-[10px] font-bold uppercase tracking-widest mt-6 mb-3`}>Feature Catalog ({dataQuality?.readiness.feature_col_count || 38} indicators)</p>
+              <p className={`${mu} text-[10px] font-bold uppercase tracking-widest mt-6 mb-3`}>Feature catalog · {dataQuality?.readiness.feature_col_count ?? '—'} columns in ml_features · the 24 core technicals shown (DEXP lists every column)</p>
               <div className="flex flex-wrap gap-1.5">
                 {[
                   { name: 'RSI-14', cat: 'momentum' }, { name: 'RSI-7', cat: 'momentum' }, { name: 'RSI-28', cat: 'momentum' },

@@ -39,7 +39,7 @@ SYMBOL_RE = r"^[A-Za-z0-9&\-]{1,20}$"
 FUTURE_TYPES = ("IDF", "STF")              # index futures, stock futures (UDiFF)
 PANEL_COLS = ["date", "symbol", "expiry", "close", "spot", "oi"]
 _FUT_USECOLS = ["TradDt", "FinInstrmTp", "TckrSymb", "XpryDt", "ClsPric", "SttlmPric",
-                "UndrlygPric", "OpnIntrst", "ChngInOpnIntrst", "TtlTradgVol"]
+                "UndrlygPric", "OpnIntrst", "ChngInOpnIntrst", "TtlTradgVol", "NewBrdLotQty"]
 
 
 # ── pure math (unit-tested in services/ui-api/tests/test_derivatives.py) ────────────────
@@ -113,6 +113,17 @@ def term_legs(fut: pd.DataFrame) -> list[dict[str, Any]]:
     return legs
 
 
+def roll_spread(near_close: Optional[float], next_close: Optional[float], dte_near: int, dte_next: Optional[int]) -> dict[str, Any]:
+    """m065: what rolling a long future costs today is the CALENDAR SPREAD (next close − near close), not the next series'
+    basis vs spot. Points, % of the near close, and annualised over the days between the two expiries (arithmetic)."""
+    if near_close is None or next_close is None or not near_close or dte_next is None or dte_next <= dte_near:
+        return {"roll_spread_pts": None, "roll_spread_pct": None, "roll_spread_ann_pct": None, "roll_days": None}
+    pct = (next_close / near_close - 1.0) * 100.0
+    days = dte_next - dte_near
+    return {"roll_spread_pts": round(next_close - near_close, 2), "roll_spread_pct": round(pct, 3),
+            "roll_spread_ann_pct": round(pct * 365.0 / days, 2), "roll_days": int(days)}
+
+
 def rollover_view(panel: pd.DataFrame, symbol: str, cycles: int = 8) -> dict[str, Any]:
     """Rollover analytics for one underlying from the futures panel (date, expiry, close, spot, oi).
 
@@ -137,14 +148,17 @@ def rollover_view(panel: pd.DataFrame, symbol: str, cycles: int = 8) -> dict[str
             "dte": dte, "roll_pct": rollover_pct(near_oi, next_oi, far_oi),
             "near_oi": near_oi, "next_oi": next_oi, "far_oi": far_oi,
         }
-        if len(g) > 1:                                   # cost of carry into the next series
+        if len(g) > 1:                                   # the next series vs spot, and the calendar spread a roll pays (m065)
             nxt = g.iloc[1]
             dte_next = (pd.Timestamp(nxt["expiry"]).date() - pd.Timestamp(d).date()).days
             spot_f = float(spot) if pd.notna(spot) else None
             close_n = float(nxt["close"]) if pd.notna(nxt["close"]) else None
+            close_0 = float(g["close"].iloc[0]) if pd.notna(g["close"].iloc[0]) else None
             row["carry_next_ann_pct"] = ann_basis_pct(close_n, spot_f, dte_next)
+            row.update(roll_spread(close_0, close_n, dte, dte_next))
         else:
             row["carry_next_ann_pct"] = None
+            row.update(roll_spread(None, None, dte, None))
         rows.append(row)
     rows.sort(key=lambda r: r["date"])
     history = [{"expiry": r["near_expiry"], "date": r["date"], "roll_pct": r["roll_pct"],
@@ -174,12 +188,21 @@ def q_symbols(conn) -> list[dict[str, Any]]:
 
 
 def q_basis_history(conn, symbol: str, days: int) -> tuple[list[dict[str, Any]], str]:
-    """Near-month basis history: nse_fo_daily fut_close vs spot. Spot = market_index_daily
-    NIFTY50 for NIFTY, else the EQ-series nse_bhavcopy close. ('' , reason) when no spot."""
+    """Near-month basis history: nse_fo_daily fut_close vs spot. Spot = market_index_daily NIFTY50 for NIFTY; NSE's daily
+    index file (``index_ohlc_daily``, Terminal v2 1.1) for BANKNIFTY / FINNIFTY / MIDCPNIFTY / NIFTYNXT50; else the
+    EQ-series nse_bhavcopy close. ([], source) when no spot is stored — incl. a store without ``index_ohlc_daily`` (the
+    v2 table is created by the IV package; before it exists the index basis is empty, never a CatalogException 500)."""
+    index_spot = {"BANKNIFTY": "NIFTY BANK", "FINNIFTY": "NIFTY FINANCIAL SERVICES", "MIDCPNIFTY": "NIFTY MIDCAP SELECT",
+                  "NIFTYNXT50": "NIFTY NEXT 50"}
     if symbol == "NIFTY":
         spot_sql, spot_args, source = (
             "SELECT date, close AS spot FROM market_index_daily WHERE symbol = 'NIFTY50'", [],
             "market_index_daily:NIFTY50")
+    elif symbol in index_spot:              # NSE's daily index file (index_ohlc_daily, Terminal v2 1.1)
+        source = f"index_ohlc_daily:{index_spot[symbol]}"
+        if not _has_table(conn, "index_ohlc_daily"):
+            return [], source
+        spot_sql, spot_args = "SELECT date, close AS spot FROM index_ohlc_daily WHERE symbol = ?", [index_spot[symbol]]
     else:
         spot_sql, spot_args, source = (
             "SELECT date, close AS spot FROM nse_bhavcopy WHERE symbol = ? AND series = 'EQ'", [symbol],
@@ -214,16 +237,31 @@ def q_pcr_history(conn, symbol: str, days: int) -> list[dict[str, Any]]:
             for d, c, p, f in reversed(rows)]
 
 
+def _has_table(conn, name: str) -> bool:
+    return bool(conn.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?", [name]).fetchone()[0])
+
+
 def q_vix(conn, days: int) -> dict[str, Any]:
+    """m001 (review 5 Nov 2026): one VIX everywhere — NSE's own close in ``vix_daily`` (the daily index file; the catalog's
+    VIX_CLOSE), the Desk's ``market_index_daily`` INDIAVIX (Yahoo-era) only on days vix_daily lacks. DERV printed 15.62 beside the
+    strip's 15.58. NIFTY's close likewise prefers ``index_ohlc_daily`` 'NIFTY 50' (the series the IV store's RV20 uses)."""
+    vix_sql = ("SELECT date, close AS vix, 'vix_daily' AS vix_source FROM vix_daily" if _has_table(conn, "vix_daily")
+               else "SELECT NULL::DATE AS date, NULL::DOUBLE AS vix, NULL AS vix_source WHERE FALSE")
+    nifty_sql = ("SELECT date, close FROM index_ohlc_daily WHERE symbol = 'NIFTY 50'" if _has_table(conn, "index_ohlc_daily")
+                 else "SELECT NULL::DATE AS date, NULL::DOUBLE AS close WHERE FALSE")
     df = conn.execute(
-        """
-        SELECT v.date, v.close AS vix, n.close AS nifty
-        FROM market_index_daily v LEFT JOIN market_index_daily n
-          ON n.date = v.date AND n.symbol = 'NIFTY50'
-        WHERE v.symbol = 'INDIAVIX' ORDER BY v.date
+        f"""
+        WITH v AS ({vix_sql}), legacy AS (SELECT date, close AS vix FROM market_index_daily WHERE symbol = 'INDIAVIX'),
+             n1 AS ({nifty_sql}), n2 AS (SELECT date, close FROM market_index_daily WHERE symbol = 'NIFTY50'),
+             d AS (SELECT date FROM v UNION SELECT date FROM legacy)
+        SELECT d.date, COALESCE(v.vix, legacy.vix) AS vix, COALESCE(v.vix_source, 'market_index_daily') AS vix_source,
+               COALESCE(n1.close, n2.close) AS nifty
+        FROM d LEFT JOIN v USING (date) LEFT JOIN legacy USING (date) LEFT JOIN n1 USING (date) LEFT JOIN n2 USING (date)
+        WHERE COALESCE(v.vix, legacy.vix) IS NOT NULL ORDER BY d.date
         """).df()
     if df.empty:
         return {"rows": [], "count": 0}
+    df["date"] = pd.to_datetime(df["date"]).dt.date
     df["rv20"] = realized_vol_series(df["nifty"])
     vix = df["vix"].tolist()
     last, prev = float(vix[-1]), (float(vix[-2]) if len(vix) > 1 else None)
@@ -234,7 +272,9 @@ def q_vix(conn, days: int) -> dict[str, Any]:
              "nifty": round(float(n), 2) if pd.notna(n) else None,
              "rv20": round(float(r), 2) if pd.notna(r) else None}
             for d, v, n, r in zip(tail["date"], tail["vix"], tail["nifty"], tail["rv20"])]
-    return {"as_of": df["date"].iloc[-1].isoformat(), "level": round(last, 2),
+    # m064: a daily value carries its DATE (it printed "2026-11-05T00:00:00" and a 00:00 clock chip)
+    return {"as_of": df["date"].iloc[-1].isoformat()[:10], "level": round(last, 2), "source": str(df["vix_source"].iloc[-1]),
+            "rv20_estimator": "close-to-close, 20 sessions, √252 (the IV store's RV20 cc)",
             "chg_1d": round(last - prev, 2) if prev is not None else None,
             "pctile_1y": percentile_of_last(vix, 252), "pctile_5y": percentile_of_last(vix, 1250),
             "rv20": rv, "spread": round(last - rv, 2) if rv is not None else None,
@@ -246,7 +286,7 @@ def q_vix(conn, days: int) -> dict[str, Any]:
 def read_fut_rows(path: str) -> pd.DataFrame:
     """FUT rows (all underlyings, per expiry) of one UDiFF F&O bhavcopy — ~650 rows, ~0.05 s."""
     with zipfile.ZipFile(path) as z:
-        df = pd.read_csv(z.open(z.namelist()[0]), usecols=_FUT_USECOLS, low_memory=False)
+        df = pd.read_csv(z.open(z.namelist()[0]), usecols=lambda c: c in _FUT_USECOLS, low_memory=False)
     df = df[df["FinInstrmTp"].isin(FUTURE_TYPES)].copy()
     df["TradDt"] = pd.to_datetime(df["TradDt"])
     df["XpryDt"] = pd.to_datetime(df["XpryDt"])
@@ -367,9 +407,13 @@ def fo_term_structure(symbol: str = Query("NIFTY", pattern=SYMBOL_RE)) -> dict:
         raise HTTPException(status_code=404, detail=f"{sym} had no futures on {day.isoformat()} (F&O underlyings only)")
     legs = term_legs(mine)
     spot = float(mine["UndrlygPric"].dropna().iloc[0]) if mine["UndrlygPric"].notna().any() else None
-    return {"symbol": sym, "as_of": day.isoformat(), "spot": spot, "legs": legs,
+    lot = None
+    if "NewBrdLotQty" in mine.columns and mine["NewBrdLotQty"].notna().any():
+        lot = int(mine["NewBrdLotQty"].dropna().iloc[0])
+    return {"symbol": sym, "as_of": day.isoformat(), "spot": spot, "legs": legs, "lot": lot,
             "fut_oi_total": float(mine["OpnIntrst"].fillna(0).sum()),
-            "source": "NSE F&O bhavcopy (UDiFF), OI in shares"}
+            "units": {"oi": "shares", "oi_chg": "shares", "volume": "contracts traded today"},
+            "source": "NSE F&O bhavcopy (UDiFF), OI in shares, volume in contracts"}
 
 
 @router.get("/db/fo/basis-history")

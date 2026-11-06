@@ -11,15 +11,19 @@
  *  - `FitChip`: the identity check on the table header, `arithmetic`.
  *  - `SectorContribution`, `MonthlyLeaderboard`, `ConcentrationChart`: the three panels below the table.
  *
+ *  - `DriversTabNotice` + `TabGrey` (review M46): the route's `tab` state. `degraded` / `insufficient` print one
+ *    note above the table and grey the horizon points, sectors, concentration and the monthly board (each captioned);
+ *    `ok` shows everything as before. The regime strip adds the pending challenger (m028).
+ *
  * Badges: members / sectors / concentration / fit `arithmetic`; regime, breadth, monthly leader `context`. No colour
  * on the leader; nothing here enters momentum.py, decision_desk.py, a directional alert or a ticket.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { BadgeChip, Chip, Panel, T, TickerLink, sourceOf } from '@/components/terminal'
 import { BarRow, LineChart, type Marker } from '@/components/vol/charts'
 import { DRIVER_INDICES, HORIZONS, HORIZON_LABEL, driversError, driversNote, fmtPts, fmtShare, getDriverMonthly, getDriverTimeline,
-         getIndexDrivers, type DriverMonthly, type DriverTimeline, type Horizon, type IndexDrivers } from './api'
-import { dayMon, fitChip, regimeLine } from './driversModel'
+         getIndexDrivers, type DriverMonthly, type DriverTab, type DriverTimeline, type Horizon, type IndexDrivers } from './api'
+import { challengerLine, dayMon, fitChip, monthlyAsOf, regimeLine, tabPanelCaption, tabView } from './driversModel'
 
 export interface Loaded<X> { data: X | null; error: string | null; loading: boolean }
 
@@ -84,16 +88,47 @@ export function FitChip({ d }: { d: IndexDrivers | null }) {
   )
 }
 
+/** M46: the tab's state, printed once above the members table when it is not `ok` (neutral border; never a direction). */
+export function DriversTabNotice({ d }: { d: IndexDrivers | null }) {
+  const v = tabView(d?.tab)
+  if (!v.grey) return null
+  return (
+    <div data-drivers-tab={v.state} style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '6px 12px', borderBottom: `1px solid ${T.border}`,
+                                            borderLeft: `3px solid ${T.amber}`, background: '#0b0a06', fontSize: 11, color: T.text, lineHeight: 1.5 }}>
+      <span style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: T.amber, flex: 'none' }}>{v.label}</span>
+      <span style={{ flex: 1 }}>{v.caption}. The greyed figures below are the stored arithmetic, shown so the gap stays visible.</span>
+      <BadgeChip badge="arithmetic" />
+    </div>
+  )
+}
+
+/** M46: a panel group the tab state greys (opacity + grayscale), with a one-line caption; untouched when `ok`. */
+export function TabGrey({ tab, children }: { tab: DriverTab | null | undefined; children: ReactNode }) {
+  const v = tabView(tab)
+  const cap = tabPanelCaption(v)
+  if (!v.grey) return <>{children}</>
+  return (
+    <div data-drivers-greyed={v.state}>
+      <div style={{ fontFamily: T.mono, fontSize: 9.5, color: T.amber, letterSpacing: 0.5, margin: '0 0 4px 2px' }}>{cap}</div>
+      <div style={{ opacity: 0.5, filter: 'grayscale(0.7)' }} title={v.caption ?? undefined}>{children}</div>
+    </div>
+  )
+}
+
 /** DRIVER REGIME: one neutral line, ending "describes, does not predict" (PLAN 1.2; G9). */
 export function DriverRegimeStrip({ index, d, tl60 }: { index: string; d: IndexDrivers | null; tl60: DriverTimeline | null }) {
   const line = regimeLine(d?.driver ?? null, tl60, d?.concentration?.top5_abs_share ?? d?.driver?.top5_share ?? null,
     d?.breadth?.ew_minus_cw_pp ?? d?.driver?.ew_minus_cw_pp ?? null, d?.breadth?.word ?? null)
+  const challenger = challengerLine(d?.driver?.challenger)       // m028: a raw leader the hysteresis has not adopted yet
   return (
     <div data-driver-regime style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '7px 12px', marginBottom: 12, border: `1px solid ${T.border}`,
                                      borderLeft: `3px solid ${T.muted}`, background: '#080b10', fontSize: 11.5, color: T.text }}>
       <span style={{ fontFamily: T.mono, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: T.muted, border: `1px solid ${T.border}`, padding: '1px 5px', flex: 'none' }}>
         DRIVER REGIME · {index}</span>
-      <span style={{ flex: 1 }}>{line ?? `No driver state stored yet for ${index} · backfill pending — describes, does not predict`}</span>
+      <span style={{ flex: 1 }}>
+        {line ?? `No driver state stored yet for ${index} · backfill pending — describes, does not predict`}
+        {challenger && <span data-driver-challenger style={{ display: 'block', color: T.muted, fontSize: 10.5, marginTop: 2 }}>challenger pending: {challenger}</span>}
+      </span>
       <BadgeChip badge={d?.badges?.driver ?? 'context'} />
     </div>
   )
@@ -119,10 +154,11 @@ export function SectorContribution({ d, error }: { d: IndexDrivers | null; error
 export function MonthlyLeaderboard({ index }: { index: string }) {
   const m = useGet<DriverMonthly>(isDriverIndex(index) ? () => getDriverMonthly(index, 12) : null, [index])
   const rows = [...(m.data?.months ?? [])].reverse()
+  const flagged = rows.filter(r => r.note)
   return (
     <Panel title="Monthly leaderboard · 12 months" accent={T.amber} pad={0} badge={m.data?.badge ?? 'context'}
-      source={sourceOf(m.data?.months?.length ? `${m.data.months[m.data.months.length - 1].month}-01`.slice(0, 10) : null,
-        { source: 'index_contribution_daily', maxAgeDays: 40, hint: m.error ?? driversNote(m.data, rows.length) })}
+      // m025: the data date is the last stored session (the route's as_of), not the first of the last month
+      source={sourceOf(monthlyAsOf(m.data), { source: 'index_contribution_daily', maxAgeDays: 40, hint: m.error ?? driversNote(m.data, rows.length) })}
       subtitle="leader by |points| per month · top-3 adds and drags · the index move and what the members explain">
       {!rows.length ? <div style={{ padding: 12, fontSize: 11, color: T.muted }}>{m.loading ? 'Loading…' : m.error ?? 'no months stored yet · backfill pending'}</div> : (
         <div style={{ overflowX: 'auto' }}>
@@ -143,11 +179,15 @@ export function MonthlyLeaderboard({ index }: { index: string }) {
                 <td style={{ padding: '4px 8px', color: T.muted }}>{r.top3_add.filter(x => x.points > 0).map(x => `${x.symbol} ${fmtPts(x.points, 0)}`).join(' · ') || '—'}</td>
                 <td style={{ padding: '4px 8px', color: T.muted }}>{r.top3_drag.filter(x => x.points < 0).map(x => `${x.symbol} ${fmtPts(x.points, 0)}`).join(' · ') || '—'}</td>
                 <td style={{ padding: '4px 8px', textAlign: 'right' }}>{fmtPts(r.index_move_pts)}</td>
-                <td style={{ padding: '4px 8px', textAlign: 'right', color: T.muted }}>{fmtPts(r.explained_pts)}</td>
+                {/* m026: a month with a session the weights missed by > 150 pts is marked †; its note names the sessions */}
+                <td style={{ padding: '4px 8px', textAlign: 'right', color: r.note ? T.dim : T.muted }} title={r.note ?? undefined} data-drivers-month-flag={r.note ? r.month : undefined}>
+                  {fmtPts(r.explained_pts)}{r.note ? ' †' : ''}</td>
               </tr>))}</tbody>
           </table>
         </div>
       )}
+      {flagged.length > 0 && <div style={{ padding: '6px 12px 0', fontSize: 10, color: T.muted, lineHeight: 1.5 }} data-drivers-month-notes>
+        {flagged.map(r => <div key={r.month}>† {r.month}: {r.note}</div>)}</div>}
       {m.data?.note && rows.length > 0 && <div style={{ padding: '6px 12px', fontSize: 10, color: T.dim }}>{m.data.note}</div>}
     </Panel>
   )

@@ -25,17 +25,18 @@ import { usePins } from '@/lib/pins'
 import { daysUntil } from '@/lib/useCorpEvents'
 import { IndexIntraday } from '@/components/IndexIntraday'
 import { useFinancialsLatest } from '@/lib/useFinancials'
-import { ECO_KINDS, ecoWhen } from '@/components/EconomicCalendar'
+import { ecoKindSpec, ecoWhen } from '@/components/EconomicCalendar'
 import { spanNote } from '@/lib/quoteSpan'
 import { goToPage } from '@/lib/navigate'
 import { briefSessionLine, iciciErrorKind } from '@/components/portfolio/iciciState'
 import { openTicker } from '@/lib/openTicker'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
-import { AvoidFlag, Chip, EventBadge, PageHeader, Panel, SourceChip, Stat, T, TickerLink, fmtIdx, fmtInr, fmtPct, ordinal, tone, sourceOf, type SourceInfo } from '@/components/terminal'
+import { AvoidFlag, BadgeChip, Chip, EventBadge, PageHeader, Panel, SourceChip, Stat, T, TickerLink, fmtIdx, fmtInr, fmtPct, ordinal, tone, sourceOf, type SourceInfo } from '@/components/terminal'
 import { nseSession } from '@/components/desktop/session'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { liveContribution, nseDelayedSource } from '@/components/liveModel'
 import { trackVerdict, type TrackRecordData } from '@/components/news/TrackRecord'
+import { cfCoverage, crashLines, dayMonth, ecoFamily, ecoShortLabel, type DeskLike } from '@/components/marketPagesModel'
 
 type Load<T> = { data: T | null; error: string | null; loading: boolean }
 
@@ -72,7 +73,6 @@ function useLoad<T>(fn: () => Promise<{ data: T }>, deps: unknown[] = [], poll?:
   return { ...s, reload }
 }
 
-const SCORE_COLOR = [T.red, T.red, T.amber, T.green, T.green]
 const SCORE_WORD = ['RISK-OFF', 'DEFENSIVE', 'MIXED', 'CONSTRUCTIVE', 'STRONG']
 const pct = (v: number | null | undefined, d = 1) => fmtPct(v, d)
 
@@ -162,7 +162,7 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
   })
   const eco = useLoad<{ today: string; events: EcoEvent[] }>(() => getEcoCalendar(0, 7))
   const gift = useLoad<GiftNifty>(getGiftNifty, [], { ms: 60_000, sessionOnly: false })
-  const filings = useLoad<{ items: FilingCore[] }>(() => getAnnouncementsCore())
+  const filings = useLoad<{ items: FilingCore[]; counts?: Record<string, number>; truncated?: boolean; total?: number; returned?: number }>(() => getAnnouncementsCore())
   // today's move on ICICI holdings: live NSE quotes (Breeze websocket → NSE ≈ 1 min → the last close); the broker's
   // holdings call has no previous close. The old 120 s quotes call runs only while the live service does not answer.
   const holdSyms = heldSymbols(holdings.data).sort().join(',')
@@ -314,20 +314,22 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
       })()}
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', alignItems: 'start' }}>
         {/* ── market ─────────────────────────────────────────────── */}
-        <Panel source={sourceOf(m?.as_of ?? null, { source: 'NSE EOD' })} badge="context" title="Market" subtitle={m ? `NSE EOD ${m.as_of} · ${m.index_name}` : 'NSE breadth'} accent={T.amber}
+        <Panel source={sourceOf(m?.as_of ?? null, { source: 'NSE EOD' })} badge="context" title="Market" subtitle={m ? `${b?.universe != null ? b.universe.toLocaleString('en-IN') : 'MKT\u2019s'} liquid stocks` : 'NSE breadth'} accent={T.amber}
           right={<Go code="MKT" onGo={() => onNavigate('markets')} />}>
           <Pending s={mon}>
             {m && b && <>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px 10px', marginBottom: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: T.mono, fontSize: 30, fontWeight: 700, color: SCORE_COLOR[m.regime.score] }}>{m.regime.score}/4</span>
-                <span style={{ fontFamily: T.display, fontSize: 15, fontWeight: 700, letterSpacing: 1.4, color: SCORE_COLOR[m.regime.score], whiteSpace: 'nowrap' }}>{SCORE_WORD[m.regime.score]}</span>
+                {/* m003: a context gauge in the neutral tone (never a bullish / bearish colour) */}
+                <span style={{ fontFamily: T.mono, fontSize: 30, fontWeight: 700, color: T.bright }}>{m.regime.score}/4</span>
+                <span style={{ fontFamily: T.display, fontSize: 15, fontWeight: 700, letterSpacing: 1.4, color: T.text, whiteSpace: 'nowrap' }}>{SCORE_WORD[m.regime.score]}</span>
                 <span style={{ fontSize: 11, color: T.muted }}>exposure guide {m.regime.exposure} · {m.regime.days_at_score} sessions at this score</span>
               </div>
               <Line k={`${m.index_name}`} v={<>{fmtIdx(b.index)} <span style={{ color: tone(b.index_chg_pct) }}>{pct(b.index_chg_pct, 2)}</span></>} />
-              <Line k="Above 50-DMA / 200-DMA" v={`${b.pct_above50?.toFixed(0)}% / ${b.pct_above200?.toFixed(0)}%`} c={(b.pct_above50 ?? 0) >= 50 ? T.green : T.red} />
-              <Line k="Advances / declines" v={`${b.adv} / ${b.dec}`} c={tone((b.adv ?? 0) - (b.dec ?? 0))} />
-              <Line k="New highs / lows" v={`${b.new_highs} / ${b.new_lows}`} c={tone((b.new_highs ?? 0) - (b.new_lows ?? 0))} />
-              <Line k="Distribution days (25)" v={b.dist_days_25} c={(b.dist_days_25 ?? 0) <= 4 ? T.green : T.red} />
+              <Line k="Above 50-DMA / 200-DMA" v={`${b.pct_above50?.toFixed(0)}% / ${b.pct_above200?.toFixed(0)}%`} />
+              {/* m007: MKT's liquid universe (EQ ≥ ₹20, median turnover ≥ ₹1 cr), not the Nifty 500 (Market today reads that) */}
+              <Line k={<span title="MKT's universe: EQ-series stocks ≥ ₹20 with a 20-day median turnover ≥ ₹1 cr">Advances / declines · {b.universe != null ? b.universe.toLocaleString('en-IN') : '—'} liquid</span>} v={`${b.adv} / ${b.dec}`} />
+              <Line k="New highs / lows" v={`${b.new_highs} / ${b.new_lows}`} />
+              <Line k="Distribution days (25)" v={b.dist_days_25} />
               <Line k="India VIX" v={`${b.vix?.toFixed(2)} · ${ordinal(b.vix_pct)} pct`} c={T.text} />
               {(() => { const v = valuation.data?.indices?.['NIFTY 50'], mid = valuation.data?.indices?.['NIFTY MIDCAP 150'], sm = valuation.data?.indices?.['NIFTY SMALLCAP 250']
                   if (!v?.pe) return null
@@ -359,14 +361,19 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                       })()}</span>} />
               )}
               {(() => {   // India data releases in the next 7 days (RBI and Fed already sit on the Global cues line)
-                const evs = (eco.data?.events ?? []).filter(e => e.country === 'IN' && e.kind !== 'RBI')
+                // M28: India data, the high-impact US releases, F&O expiries and special sessions (RBI / Fed sit on the line above)
+                const evs = (eco.data?.events ?? []).filter(e => {
+                  const f = ecoFamily(e)
+                  return f === 'IN_DATA' || f === 'EXPIRY' || f === 'SESSION'
+                    || (f === 'US_DATA' && String((e as { impact?: string | null }).impact ?? '').toLowerCase() === 'high')
+                })
                 return evs.length > 0 && (
                   <Line k={<span style={{ whiteSpace: 'nowrap' }}>Data this week <span role="button" onClick={() => onNavigate('eco')} style={{ color: T.cyan, cursor: 'pointer', fontSize: 10 }}>ECO ›</span></span>}
                     v={<span>{evs.slice(0, 3).map((e, i) => {
                       const when = ecoWhen(e.date, eco.data!.today).replace('tomorrow', 'tmrw').replace(/^in (\d+) days$/, 'in $1d')
                       return <span key={`${e.kind}${e.date}`} style={{ whiteSpace: 'nowrap' }} title={`${e.what} · ${e.date} ${e.time ?? ''} IST`}>{i > 0 && <span style={{ color: T.dim }}> · </span>}
-                        <span style={{ color: ECO_KINDS[e.kind]?.color ?? T.muted }}>{ECO_KINDS[e.kind]?.label ?? e.kind}</span>
-                        <span style={{ color: T.dim }}> {(e.what.split(' · ')[1] ?? '').replace(/ 20\d\d$/, '')}</span>
+                        <span style={{ color: ecoKindSpec(e).color }}>{ecoKindSpec(e).label}</span>
+                        <span style={{ color: T.dim }}> {ecoShortLabel(e)}</span>
                         <span style={{ color: e.date <= eco.data!.today ? T.amber : T.muted }}> {when}{i === 0 && e.time ? ` ${e.time}` : ''}</span></span> })}</span>} />)
               })()}
               {cash.data?.summary.latest_date && (
@@ -417,22 +424,24 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                 <Stat big={false} label="Desk return" value={pct(ret, 2)} color={tone(ret)} sub={`NIFTY ${pct(niftyRet, 2)} same period`} />
                 <Stat big={false} label="Positions" value={d.positions?.length ?? 0} sub={`drawdown ${pct((d.latest?.drawdown ?? 0) * 100, 1)}`} />
               </div>
-              {crash.data && (
-                <div style={{ border: `1px solid ${crash.data.risk_on ? T.green : T.amber}55`, background: crash.data.risk_on ? '#06140e' : '#120e04',
-                              padding: '7px 10px', margin: '2px 0 6px', fontSize: 11.5, lineHeight: 1.6 }}>
-                  <span style={{ color: crash.data.risk_on ? T.green : T.amber, fontWeight: 700, letterSpacing: 1 }}>
-                    {crash.data.risk_on ? 'CRASH FILTER OFF · INVESTED' : 'CRASH FILTER ON · IN THE LIQUID FUND'}
-                  </span>
-                  <div style={{ color: T.text }}>
-                    NIFTY {fmtIdx(crash.data.nifty)} vs 200-DMA {fmtIdx(crash.data.sma200)}
-                    {' '}(<span style={{ color: crash.data.risk_on ? T.green : T.red }}>{fmtSigned(crash.data.gap_pct, 1)}%</span>)
-                    {!crash.data.risk_on && <> · needs <b style={{ color: T.amber }}>+{crash.data.move_needed_pct.toFixed(1)}%</b> to turn risk-on · {crash.data.sessions_below} sessions below</>}
+              {crash.data && (() => {
+                // M08: two labelled lines. Today's crash-filter reading (what the next monthly signal would do on it) is
+                // not the book: an all-cash book never reads "INVESTED" (the old box rendered today's risk_on as the book)
+                const cl = crashLines(crash.data, d as DeskLike)
+                return (
+                  <div data-brief-crash style={{ border: `1px solid ${T.border}`, background: '#0b0f16', padding: '7px 10px', margin: '2px 0 6px', fontSize: 11.5, lineHeight: 1.6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, letterSpacing: 1, color: T.muted }}>
+                      CRASH FILTER <BadgeChip badge="context" />
+                    </div>
+                    <div data-brief-crash-reading style={{ color: T.text }}>{cl.reading}</div>
+                    <div data-brief-crash-book style={{ color: T.text }}>{cl.book}</div>
+                    <div style={{ color: T.dim, fontSize: 10.5 }}>
+                      The signal is the close of the last weekday of the month (a holiday moves it a day earlier) · orders at the next open
+                      {!crash.data.risk_on && crash.data.sessions_below ? ` · ${crash.data.sessions_below} sessions below the 200-DMA` : ''}
+                    </div>
                   </div>
-                  <div style={{ color: T.muted, fontSize: 10.5 }}>
-                    Next monthly signal: close of {new Date(`${crash.data.next_signal_date}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })} (last weekday of the month; a holiday moves it a day earlier) · orders at the next open
-                  </div>
-                </div>
-              )}
+                )
+              })()}
               {plan && <Line k={`Plan ${plan.cycle ?? ''}`} v={`${plan.status} · signal ${plan.summary?.signal_date ?? plan.signal_date ?? '—'} · ${plan.orders?.length ?? 0} orders`} />}
             </>}
           </Pending>
@@ -569,9 +578,14 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
             {(() => {   // results filed today, live from NSE announcements (the nightly capture adds release times later)
               const today = (filings.data?.items ?? []).filter(f => f.category === 'results')
               const seen = new Set<string>(); const uniq = today.filter(f => !seen.has(f.symbol) && seen.add(f.symbol))
+              // M11 (BRF part): when the day's list is cut, the whole-day results count comes from NSE's category counts
+              const cov = cfCoverage(filings.data?.items ?? [], filings.data?.counts ?? {}, filings.data)
+              const wholeDay = filings.data?.counts?.results
               return uniq.length ? <>
                 <div style={{ fontFamily: T.display, fontSize: 10, letterSpacing: 1.4, color: T.violet, margin: '10px 0 4px' }}>
-                  RESULTS FILED TODAY · {uniq.length} <span role="button" onClick={() => onNavigate('filings')} style={{ color: T.cyan, cursor: 'pointer' }}>CF ›</span></div>
+                  RESULTS FILED TODAY · {uniq.length} {cov.truncated && wholeDay != null
+                    ? <span style={{ color: T.amber, letterSpacing: 0 }} title={`NSE's list holds the newest ${cov.shown} of ${cov.total} filings (earliest shown ${cov.earliest}); the day has ${wholeDay} results filings`}>
+                        names in the newest {cov.shown.toLocaleString('en-IN')} filings · {wholeDay} results filings all day</span> : null} <span role="button" onClick={() => onNavigate('filings')} style={{ color: T.cyan, cursor: 'pointer' }}>CF ›</span></div>
                 <div style={{ fontSize: 11, lineHeight: 1.7, display: 'flex', flexWrap: 'wrap', columnGap: 12 }}>
                   {uniq.slice(0, 14).map(f => <span key={f.symbol} style={{ whiteSpace: 'nowrap' }}>
                     <TickerLink symbol={f.symbol} /> <span style={{ color: T.dim, fontSize: 10 }}>{(f.time ?? '').slice(11, 16)}</span></span>)}
@@ -621,6 +635,9 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
           {track.data && (() => { const v = trackVerdict(track.data); return (
             <div style={{ fontSize: 11, color: v.color, borderLeft: `2px solid ${v.color}`, paddingLeft: 8, marginBottom: 8 }}>
               Track record ({track.data.picks} picks): {v.text}
+              {/* m009: the record's own date; a record older than 3 days says so (the job last ran 30 Oct) */}
+              {(() => { const at = String(track.data.generated_at ?? '').slice(0, 10); const age = at ? Math.round((Date.parse(`${todayIso}T00:00:00`) - Date.parse(`${at}T00:00:00`)) / 86_400_000) : null
+                return at ? <span style={{ color: age != null && age > 3 ? T.amber : T.dim, fontSize: 10 }}> · computed {dayMonth(at)}{age != null && age > 3 ? ` (${age} days ago: the nightly job has not refreshed it)` : ''}</span> : null })()}
             </div>) })()}
           <Pending s={scan}>
             {picks.slice(0, 6).map((p: any) => (

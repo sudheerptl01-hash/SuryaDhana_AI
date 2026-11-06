@@ -188,15 +188,18 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
         right={<Chip color={T.amber} onClick={load}>↻ REFRESH</Chip>} />
       <div style={{ display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(300px, 1fr) minmax(0, 2.4fr)' }}>
-          <Panel source={sourceOf(data.as_of, { source: 'NSE EOD' })} badge="context" title="Market regime" subtitle="handbook stage 2 · health gauge, not a signal" accent={T.muted}>
+          {/* m023: a short subtitle (the long one wrapped into a narrow four-line column beside the chips) */}
+          <Panel source={sourceOf(data.as_of, { source: 'NSE EOD' })} badge="context" title="Market regime" subtitle="not a signal" accent={T.muted}>
+            <div style={{ fontSize: 10, color: T.dim, marginBottom: 6 }}>Scanner Handbook stage 2 · a health gauge</div>
             <RegimeGauge d={data} />
           </Panel>
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', alignContent: 'start' }}>
             {/* C1-08 / CT-05: index level and its 200-DMA at NSE's 2 decimals, the same as BRF (was 0 dp: 21,428 vs 21,427.60) */}
             <Stat label={data.index_name} value={fmtIdx(b.index)} color={tone(b.index_chg_pct)} accent={T.amber}
               sub={`${pct(b.index_chg_pct)} ${day} · 200-DMA ${fmtIdx(b.index_sma200)}`} />
-            <Stat label="Advances / declines" value={`${num(b.adv)} / ${num(b.dec)}`} accent={tone((b.adv ?? 0) - (b.dec ?? 0))}
-              sub={`ratio ${b.dec ? ((b.adv ?? 0) / b.dec).toFixed(2) : '—'}`} />
+            {/* m007 / m019: the universe named (BRF and MOV read the Nifty 500's own members) */}
+            <Stat label={`Advances / declines · ${num(b.universe)} liquid`} value={`${num(b.adv)} / ${num(b.dec)}`} accent={tone((b.adv ?? 0) - (b.dec ?? 0))}
+              sub={`ratio ${b.dec ? ((b.adv ?? 0) / b.dec).toFixed(2) : '—'} · not the Nifty 500`} />
             <Stat label="Above 50-DMA" value={pct(b.pct_above50, 0, false)} accent={T.cyan} color={(b.pct_above50 ?? 0) >= 50 ? T.green : T.red}
               sub={`20-DMA ${pct(b.pct_above20, 0, false)} (${pct(b.pct_above20_chg, 1)} ${day})`} />
             <Stat label="Above 200-DMA" value={pct(b.pct_above200, 0, false)} accent={T.violet} color={(b.pct_above200 ?? 0) >= 50 ? T.green : T.red}

@@ -15,8 +15,11 @@ import { apiError } from '@/lib/errors'
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Btn, Chip, PageHeader, SourceChip, T, fmtNum, fmtSigned, sourceOf, type SourceInfo } from '@/components/terminal'
+import { BadgeChip, Btn, Chip, PageHeader, SourceChip, T, fmtNum, fmtSigned, sourceOf, type SourceInfo } from '@/components/terminal'
 import { NseDatasets } from './NseDatasets'
+import { CatalogNote } from '@/components/CatalogNote'
+import { getDataHealth, staleCount, type DataHealth } from '@/components/datahealth/api'
+import { goToPage } from '@/lib/navigate'
 import clsx from 'clsx'
 import { QuantKPICard } from './QuantKPICard'
 import { getWarehouseStats, getWarehouseOhlcvMeta, getWarehouseMlStats } from '@/lib/api'
@@ -226,6 +229,10 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
     return rows
   }, [meta, search, sortKey, sortDir])
 
+  // freshness of every catalogued dataset (trading-day aware), for the header chip (m114)
+  const [dataHealth, setDataHealth] = useState<DataHealth | null>(null)
+  useEffect(() => { getDataHealth().then(r => setDataHealth(r.data)).catch(() => setDataHealth(null)) }, [syncedAt])
+
   const totalRows = useMemo(() => meta.reduce((s, r) => s + (r.total_rows || 0), 0), [meta])
   const staleTickers = useMemo(() => meta.filter(r => (r.sessions_behind ?? 0) > 5).length, [meta])
 
@@ -269,11 +276,15 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
     )
   }
 
-  const healthStatus = (stats?.health?.status || 'unknown').toUpperCase()
+  // The warehouse status says whether the tables are POPULATED (coverage); whether they are on time is the data-health
+  // catalog's call (the header's DATA n STALE chip, SYS › DATA). Two words for two questions (m114).
+  const rawStatus = (stats?.health?.status || 'unknown').toUpperCase()
+  const healthStatus = rawStatus === 'HEALTHY' ? 'POPULATED' : rawStatus === 'WARNING' ? 'PARTLY POPULATED' : rawStatus
   const healthColor =
-    healthStatus === 'HEALTHY' ? JADE :
-    healthStatus === 'WARNING' ? AMBER :
-    healthStatus === 'EMPTY' ? MUTED : CRIMSON
+    rawStatus === 'HEALTHY' ? JADE :
+    rawStatus === 'WARNING' ? AMBER :
+    rawStatus === 'EMPTY' ? MUTED : CRIMSON
+  const nStale = dataHealth ? staleCount(dataHealth) : null
 
   const fresh = stats?.freshness?.fresh ?? 0
   const stale = stats?.freshness?.stale ?? 0
@@ -297,7 +308,14 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
     <div className="space-y-3 wh-root">
 
       <PageHeader code="WHSE" title="Data Warehouse & ML Health"
-        status={<Chip color={healthColor} active>{healthStatus}</Chip>}
+        status={<span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+          <Chip color={healthColor} active title="Coverage: the stored tables are populated. On time or not is the freshness question: see the chip beside it.">{healthStatus}</Chip>
+          {nStale != null && (
+            <Chip color={nStale > 0 ? AMBER : JADE} onClick={() => goToPage('system')}
+              title="Freshness per catalogued dataset (stored vs expected, trading-day aware): SYS › DATA">
+              {nStale > 0 ? `DATA ${nStale} STALE` : 'DATA ON TIME'} · SYS ›</Chip>
+          )}
+        </span>}
         subtitle="DuckDB coverage · per-ticker quality · ML dataset class balance"
         right={<>
           {syncedAt && <span style={{ fontSize: 10, color: MUTED }}>synced {syncedAt.toLocaleTimeString('en-IN', { hour12: false })}</span>}
@@ -324,7 +342,11 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
         {/* Coverage panel */}
         <Panel source={sourceOf(syncedAt ? syncedAt.toISOString() : null, { source: 'data-service' })} title="Warehouse Coverage" hint="enrichment · freshness" accent={JADE}>
           <div className="space-y-4 px-5 pb-5 pt-4">
-            <CoverageBar label="Fundamentals" value={stats?.enrichment?.with_fundamentals ?? 0} total={stats?.total_stocks ?? 0} color={JADE} />
+            <CoverageBar label="Fundamentals snapshot (one undated record each)" value={stats?.enrichment?.with_fundamentals ?? 0} total={stats?.total_stocks ?? 0} color={JADE} />
+            <p className="-mt-2 text-[9.5px] leading-snug" style={{ color: MUTED }}>
+              A record exists per ticker, but it is a single undated snapshot, so the 15 fundamental columns of ml_features are NULL on every
+              dated row (point-in-time). DEXP shows them empty for that reason.
+            </p>
             <CoverageBar label="Dividends" value={stats?.enrichment?.with_dividends ?? 0} total={stats?.total_stocks ?? 0} color={CYAN} />
             <CoverageBar label="Splits" value={stats?.enrichment?.with_splits ?? 0} total={stats?.total_stocks ?? 0} color={VIOLET} />
 
@@ -363,6 +385,13 @@ export function WarehouseHealth({ isDark = true }: { isDark?: boolean }) {
         {/* ML dataset panel */}
         <Panel source={sourceOf(ml?.labels?.latest_date ?? null, { source: 'ml_labels (dormant)', maxAgeDays: null })} title="ML Dataset · Class Balance" hint={ml?.labels?.latest_date ? `as of ${ml.labels.latest_date}` : 'no labels yet'} accent={VIOLET}>
           <div className="space-y-4 px-5 pb-5 pt-4">
+            <CatalogNote id="reports/ml_labels/FINDINGS.md" fallback="FAIL" showTakeaway={false}>
+              These are the production v2 5-day labels (close 5 sessions ahead &gt; +0.15 %); the label study marks them FAIL. The counts
+              describe the stored table, not a usable target.
+            </CatalogNote>
+            <div className="-mt-2 flex items-center gap-2 text-[9.5px]" style={{ color: MUTED }}>
+              <BadgeChip badge="arithmetic" note="Counts and moments of the stored labels." /> labels end 5 sessions before the features: a forward label needs 5 future sessions
+            </div>
             {/* feature/label counts */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded p-3" style={{ background: 'rgba(160,96,255,0.05)', border: '1px solid rgba(160,96,255,0.18)' }}>

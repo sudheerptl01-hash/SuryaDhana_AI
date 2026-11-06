@@ -12,14 +12,14 @@
  */
 import { useMemo, type ReactNode } from 'react'
 import { Chip, Notice, Spark, Stat, T, fmtFixed } from '@/components/terminal'
-import { getGoldBrief, getGoldCalendar, getGoldHealth } from '@/lib/gold/api'
-import { HEALTH_SUFFIX, arrow, basisTileWords, briefHeader, dayLabel, eventStar, fmtInUnit, fmtSignedCount, fmtSignedPctSp, gaugeChangeText, hasCompositeScore,
-         healthLine, istNowKey, orderEvents, percentileText, publishGate, settlementDay, settlementQualityChip, stripSettlement, trendValuesLine, trendWords,
-         verdictWindowLabel } from '@/lib/gold/format'
+import { getGoldBrief, getGoldCalendar } from '@/lib/gold/api'
+import { HEALTH_SUFFIX, arrow, basisAgreement, basisClockChip, basisTileWords, briefHeader, dayLabel, eventSessionTag, eventStar, fmtInUnit, fmtSignedCount, fmtSignedPctSp,
+         gaugeChangeText, hasCompositeScore, healthLine, istNowKey, orderEvents, pageRealYield, percentileText, publishGate, realYieldSeriesWords, stripSettlement,
+         trendValuesLine, trendWords, verdictWindowLabel } from '@/lib/gold/format'
 import type { GoldEvent, GoldSubViewProps, HealthGauge } from '@/lib/gold/types'
 import { GoldPreOpen } from './GoldPreOpen'
 import { Term } from './ViewBits'
-import { BadgeChip, GoldPanel, LagChipEl, NoVerdict, Pending, useGoldLoad } from './kit'
+import { BadgeChip, GoldPanel, LagChipEl, NoVerdict, Pending, useGoldLoad, usePageHealth } from './kit'
 
 const HEALTH_MS = 60_000
 
@@ -30,10 +30,10 @@ const HEALTH_MS = 60_000
  */
 const TILES: { key: string; label: string; b: ReactNode; p: string; price?: boolean }[] = [
   { key: 'trend', label: 'Trend', price: true, b: 'Where the price sits against its 20-day and 200-day averages and the 52-week high.', p: 'Price vs 20d/200d simple averages; drawdown from the 52-week high; Yahoo GC=F daily closes.' },
-  { key: 'real_yield', label: 'Real yield', b: <>The cost of holding gold: a falling <Term t="real yield" /> supports gold. Δ in <Term t="basis point">bp</Term>.</>, p: '10-y TIPS yield (Treasury real curve, FRED DFII10 fallback), T+1; Δ over the window in bp (1 bp = 0.01 %); contemporaneous beta ≈ −5 %/100 bp since 2022, no lead (G-MACRO H1).' },
+  { key: 'real_yield', label: 'Real yield', b: <>The cost of holding gold: a falling <Term t="real yield" /> supports gold. Δ in <Term t="basis point">bp</Term>.</>, p: '10-y TIPS yield: the fresher of the Treasury real curve (UST_REAL_10Y) and FRED DFII10 — the same quantity, the later date wins, the same value the header strip, the H2 clause and MACRO print; T+1; Δ over the window in bp (1 bp = 0.01 %); contemporaneous beta ≈ −5 %/100 bp since 2022, no lead (G-MACRO H1).' },
   { key: 'dollar', label: 'Dollar', b: <>A rising <Term t="DXY">dollar index</Term> is a headwind for gold in dollars.</>, p: 'ICE dollar index DX-Y.NYB, Δ over the window; weekly beta ≈ −1.0 in every regime (H2); both rise in liquidity crises.' },
   { key: 'positioning', label: 'Positioning', b: <>What the funds (<Term t="managed money" />) hold and did this week; the words below are this week&apos;s read.</>, p: 'CFTC managed-money net futures (Tuesday positions, Friday release); Δ w/w; 3-y percentile once history exists. No forecasting power 2006–2026 (G-STUDY).' },
-  { key: 'india_basis', label: 'India basis', b: <>MCX vs the <Term t="duty-paid landed" /> price of the same purity, both legs at one clock (live while MCX trades, else the settlement): above = local demand exceeds importable supply.</>, p: 'live MCX ÷ duty-paid landed now − 1 while a quote exists, else settle ÷ that session\'s duty-paid − 1; settle = last-30-min VWAP of the Breeze 1-minute bars (else the ICICI band midpoint), both PROXY; landed at the contract\'s purity (GOLD/GOLDM 995, TEN/PETAL/GUINEA 999), a PETAL or GUINEA price scaled to ₹/10 g first; duty 15 % dated 13 May 2026; IBJA premium beside it (M8/M7).' },
+  { key: 'india_basis', label: 'India basis', b: <>The picked MCX contract vs the <Term t="duty-paid landed" /> price of the same purity, both legs at one clock (live while MCX trades, else the settlement) — the same figure as the header strip: above = local demand exceeds importable supply.</>, p: 'the page\'s picked contract (the overview\'s health block, the same load as the header strip); live MCX ÷ duty-paid landed now − 1 while a quote exists, else settle ÷ that session\'s duty-paid − 1; settle = last-30-min VWAP of the Breeze 1-minute bars (else the ICICI band midpoint), both PROXY; landed at the contract\'s purity (GOLD/GOLDM 995, TEN/PETAL/GUINEA 999), a PETAL or GUINEA price scaled to ₹/10 g first; duty 15 % dated 13 May 2026; IBJA premium beside it (M8/M7).' },
   { key: 'shanghai', label: 'Shanghai premium', b: <>Shanghai paying more than London (<Term t="SGE premium" />) means Chinese demand is pulling metal east; the Δ is in $/oz.</>, p: 'SGE PM (CNY/g × 31.1035 ÷ USDCNY) − LBMA PM / COMEX at 14:15 Beijing (M9); read changes and sign flips in $/oz, not the level (7-hour gap).' },
   { key: 'etf', label: 'ETF holdings', b: <>Western investment demand: <Term t="GLD" /> tonnes and the day&apos;s change.</>, p: 'SPDR GLD tonnes (T+1 ≈ 06:00 IST), Δ d/d; contemporaneous with price, no lead (G-STUDY, G-MACRO). Displayed with attribution (O-1).' },
   { key: 'curve', label: 'Curve / roll', b: <>What the <Term t="roll" /> from the front month into the next costs, and when the front month stops being tradeable (<Term t="FND / LTD" />).</>, p: 'Contango DEC→FEB (F2/F1 − 1), annualised × 365/days; days to COMEX first notice (gold_cme_calendar). A cost, not a signal.' },
@@ -74,8 +74,10 @@ function thresholdLabel(t: number | string | Record<string, number | string | nu
   return Object.entries(t).map(([k, v]) => `${k} ${v ?? '—'}`).join(', ')
 }
 
-export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog, onNavigate, fair, overview }: GoldSubViewProps) {
-  const health = useGoldLoad(() => getGoldHealth(window), [window], HEALTH_MS)
+export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog, onNavigate, fair, overview, overviewStatus }: GoldSubViewProps) {
+  // ONE basis per clock per page (wave 1e, M-A): the overview's health block — the picked contract, the live MCX quote applied
+  // during MCX hours, the same load as the header strip; /api/gold/health (with the pick) only when the overview failed
+  const health = usePageHealth({ overview, overviewStatus, window, sel }, HEALTH_MS)
   const events = useGoldLoad(() => getGoldCalendar(7), [], 600_000)
   const brief = useGoldLoad(() => getGoldBrief(), [], 900_000)
   const h = health.data
@@ -90,13 +92,19 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
   const eventRows = useMemo(() => orderEvents(events.data?.events ?? [], nowKey), [events.data, nowKey])
   // the settlement block of this page load (wave 1d): the India-basis tile's settlement chip names its source and session
   const settleBlock = useMemo(() => stripSettlement(overview?.strip, fair), [overview?.strip, fair])
+  // strip == gauge == verdict, checked on the rendered payloads: a disagreement is said, never printed as two bases
+  const agree = useMemo(() => (health.source === 'overview' ? basisAgreement(overview, h) : { ok: true, reason: null }), [health.source, overview, h])
+  const ry = useMemo(() => pageRealYield(overview?.strip, h), [overview?.strip, h])
+  // the contract the verdict's India-basis clause is about (the page's pick, from the gauge the clause was built on)
+  const verdictContract = (h?.gauges ?? []).find(g => g.key === 'india_basis')?.basis_contract ?? null
+  const fallbackContract = health.source === 'health' ? ((h?.gauges ?? []).find(g => g.key === 'india_basis')?.basis_contract ?? 'GOLD (the /health default)') : null
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       {/* h.verdict */}
       <GoldPanel id="h.verdict" title="Verdict" badge="context" evidence="G-STUDY 26 Oct 2026: no forecasting power" layer={layer} accent={T.amber}
         catalog={catalog} series={['COMEX_GC_FRONT']}
-        subtitle={windowLabel ? `window ${window} · ${windowLabel}` : `window ${window}`}
+        subtitle={`window ${window}${windowLabel ? ` · ${windowLabel}` : ''}${verdictContract ? ` · India basis on ${verdictContract}` : ''}`}
         freshness={h ? { state: h.freshness?.state ?? 'delayed', age_days: h.freshness?.age_days, source: 'stored series', as_of: h.as_of,
                          reason: h.freshness?.stale?.length ? `stale: ${h.freshness.stale.join(', ')}` : h.freshness?.unavailable?.length ? `unavailable: ${h.freshness.unavailable.join(', ')}` : null } : null}
         maxAgeDays={null}
@@ -132,6 +140,9 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
         copyP="Each tile: the direction rule, the publisher's lag and the percentile window (1 y / 3 y once history exists; printed only with ≥ 60 observations). Each Δ carries its own unit (bp for yields, $/oz for the Shanghai premium, % for the price). Curve/roll is arithmetic; the rest is context.">
         <Pending s={health} label="the gauges">
           {gauges.length === 0 && <NoVerdict what="the gauges arrive with the first ingest" />}
+          {fallbackContract && <div data-gold-health-fallback style={{ fontSize: 10.5, color: T.amber, marginBottom: 6 }}>
+            The header strip did not load: these gauges and the verdict come from /api/gold/health — INDIA BASIS is {fallbackContract}&apos;s, not necessarily {sel.family}&apos;s.</div>}
+          {!agree.ok && <div data-gold-basis-mismatch style={{ fontSize: 10.5, color: T.amber, marginBottom: 6 }}>⚠ India basis: {agree.reason} — one basis per clock is the rule; reload the strip (↻).</div>}
           <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))' }}>
             {TILES.map(t => {
               const g = findGauge(gauges, t.key)
@@ -143,14 +154,18 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
               const dir = g.direction_for_gold
               const val = gaugeValue(g, unit, usdinr)
               const offline = g.state === 'unavailable' || g.state === 'stale'
-              // a settlement-clock gauge (India basis) is DATED by its session and names the settlement's source (C-BEGINNER-25,
-              // wave 1d); a LIVE-clock value (a quote exists: clock 'now') wears the live lag chip, never a settlement chip
+              // INDIA BASIS names its CLOCK on its chip (wave 1e, M-A): 'LIVE · MCX 09:20 · COMEX 09:10' (each leg's own clock —
+              // the COMEX leg is Yahoo's, minutes behind Breeze) or 'SETTLEMENT · VWAP30 PROXY · Thu 05 Nov' (dated by the session,
+              // naming the settlement's source; C-BEGINNER-25, wave 1d). Never a settlement chip on a live number or the reverse.
               const basisClock = t.key === 'india_basis' ? (g.clock ?? (g.state === 'live' ? 'now' : 'settlement')) : null
-              const settleDay = basisClock === 'settlement' ? (dayLabel(g.settle_basis_date) || settlementDay(settleBlock) || dayLabel(g.report_date)) : ''
-              const sessionChip = basisClock === 'settlement' && settleDay
-                ? <span data-gold-basis-chip="settlement" style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1, color: T.muted, border: `1px solid ${T.muted}55`, padding: '1px 6px', whiteSpace: 'nowrap' }}
-                    title={`${g.settle_basis_label ?? g.settlement_session_label ?? `${settleDay} settlement`} · ${settleBlock.settlement_source === 'breeze_vwap30' ? 'last-30-min VWAP of the Breeze 1-minute bars' : 'ICICI price-band midpoint'}`}>
-                    SETTLEMENT · {settlementQualityChip(settleBlock.settlement_quality, settleBlock.settlement_source)} · {settleDay}</span>
+              const chip = t.key === 'india_basis' ? basisClockChip(g, overview, settleBlock) : null
+              const settleSrc = g.settlement_source ?? settleBlock.settlement_source
+              const sessionChip = chip
+                ? <span data-gold-basis-chip={chip.kind} style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1, color: chip.kind === 'live' ? T.green : T.muted, border: `1px solid ${chip.kind === 'live' ? T.green : T.muted}55`, padding: '1px 6px', whiteSpace: 'nowrap' }}
+                    title={chip.kind === 'live'
+                      ? `live clock: ${g.basis_label ?? 'live MCX vs duty-paid landed now'}${g.basis_contract ? ` · ${g.basis_contract}` : ''}; MCX = the Breeze quote's own minute, COMEX = the cached Yahoo leg's time (the duty-paid landed is computed from it)`
+                      : `${g.settle_basis_label ?? g.settlement_session_label ?? 'the settlement'} · ${settleSrc === 'breeze_vwap30' ? 'last-30-min VWAP of the Breeze 1-minute bars' : settleSrc == null ? 'source not stated' : 'ICICI price-band midpoint'}`}>
+                    {chip.text}</span>
                 : null
               const trendTile = t.key === 'trend'
               const tWords = trendTile ? trendWords(g) : null
@@ -175,9 +190,14 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
                       {/* TREND prints its VALUES and the words they earn, never only the rule (wave 1d; the analyst: 'uptrend' while below both) */}
                       {trendTile && (tValues || tWords) && <span data-gold-trend-values style={{ color: T.text, fontFamily: T.mono, fontSize: 10, whiteSpace: 'normal' }}>
                         {tValues}{tWords ? <> · <b>{tWords}</b></> : null}</span>}
-                      {/* INDIA BASIS: which clock and which purity the one value is at (wave 1d) */}
-                      {t.key === 'india_basis' && <span data-gold-basis-clock={basisClock ?? ''} style={{ color: T.muted, fontSize: 10, whiteSpace: 'normal' }}>
-                        {basisWords}</span>}
+                      {/* INDIA BASIS: which contract, clock and purity the one value is at (wave 1d / 1e) */}
+                      {t.key === 'india_basis' && <span data-gold-basis-clock={basisClock ?? ''} data-gold-basis-contract={g.basis_contract ?? ''} style={{ color: T.muted, fontSize: 10, whiteSpace: 'normal' }}>
+                        {g.basis_contract ? <span style={{ color: T.text }}>{g.basis_contract} · </span> : null}{basisWords}</span>}
+                      {/* REAL YIELD: the series the value came from (the fresher twin, M-B); an older point than the strip's is said */}
+                      {t.key === 'real_yield' && <span data-gold-ry-series={g.series_id ?? ''} style={{ color: T.dim, fontSize: 10, whiteSpace: 'normal' }}>
+                        {realYieldSeriesWords(g.series_id)}{g.label_note ? ` · ${g.label_note}` : ''}
+                        {ry.from === 'strip' && ry.date && g.report_date && ry.date > g.report_date
+                          ? <span data-gold-ry-older style={{ color: T.amber }}> · an older point than the header strip&apos;s ({dayLabel(ry.date)}, {realYieldSeriesWords(ry.seriesId)})</span> : null}</span>}
                       {g.last_bar_partial && <span data-gauge-partial style={{ color: T.dim, fontSize: 10 }}>{g.last_bar_note ?? 'today\u2019s bar is a partial Globex day, not a settlement'}</span>}
                       <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', minWidth: 0 }}>
                         {dir && !trendTile && <span style={{ color: T.text, fontFamily: T.mono, fontSize: 9.5, letterSpacing: .8 }}>{dir.toUpperCase()}{layer === 'P' && g.percentile_1y != null ? ` · ${percentileText(g.percentile_1y, '1 y')}` : ''}{layer === 'P' && g.percentile_3y != null ? ` · ${percentileText(g.percentile_3y, '3 y')}` : ''}</span>}
@@ -214,7 +234,7 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
                   <span style={{ color: T.muted, fontFamily: T.mono }}>{eventWhen(e)}</span>
                   <span style={{ color: (e.impact ?? '').toLowerCase() === 'high' ? T.text : T.dim, fontFamily: T.mono, fontSize: 9.5, letterSpacing: .6 }}>{(e.impact ?? '').toUpperCase()}</span>
                   <span style={{ color: T.text }}>{eventStar(e) ? '★ ' : ''}{e.name}{e.detail ? <span style={{ color: T.dim }}> · {e.detail}</span> : null}</span>
-                  <span style={{ color: e.in_session ? T.amber : T.dim, fontFamily: T.mono, fontSize: 9.5 }}>{e.in_session == null ? '' : e.in_session ? 'IN SESSION' : 'AFTER CLOSE'}</span>
+                  {(() => { const tag = eventSessionTag(e); return <span data-event-session={tag?.text ?? ''} style={{ color: tag?.tone === 'amber' ? T.amber : T.dim, fontFamily: T.mono, fontSize: 9.5 }}>{tag?.text ?? ''}</span> })()}
                 </div>
               ))}
             </div>

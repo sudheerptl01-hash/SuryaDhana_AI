@@ -8,7 +8,8 @@ import { apiError } from '@/lib/errors'
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getIpo, type IpoBids, type IpoBucket, type IpoIssue, type IpoListing } from '@/lib/api'
-import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, type Column, median, sourceOf, undatedSource } from '@/components/terminal'
+import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, type Column, median, sourceOf } from '@/components/terminal'
+import { ipoRows, isEntitlementSymbol } from '@/components/marketPagesModel'
 
 const tone = (v: number | null | undefined) => (v == null || Math.abs(v) < 0.05 ? T.muted : v > 0 ? T.green : T.red)
 const times = (v: number | null | undefined) => (v == null ? '—' : v >= 100 ? `${v.toFixed(0)}×` : `${v.toFixed(1)}×`)
@@ -33,9 +34,11 @@ export function IpoMonitor() {
   const [months, setMonths] = useState(24)
   const [data, setData] = useState<Awaited<ReturnType<typeof getIpo>>['data'] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // m041: when NSE's issue list was last read successfully (an empty list and a failed fetch must not look alike)
+  const [checkedAt, setCheckedAt] = useState<Date | null>(null)
   useEffect(() => {
     let alive = true
-    const load = () => getIpo(months, kind).then(r => { if (alive) { setData(r.data); setError(null) } })
+    const load = () => getIpo(months, kind).then(r => { if (alive) { setData(r.data); setError(null); setCheckedAt(new Date()) } })
       .catch(e => alive && setError(apiError(e, 'unavailable')))
     setData(null); load()
     // while past bid books are being fetched in the background, re-read every 20 s; open issues every 2 min
@@ -43,7 +46,11 @@ export function IpoMonitor() {
     return () => { alive = false; clearInterval(iv) }
   }, [months, kind])
 
-  const rows = data?.recent ?? []
+  // m040: one row per listing; rights entitlements / partly-paid lines (ADANIENPP1 ×3) out; rows NSE has no price
+  // for yet are counted under the table instead of listed as all-"—" lines
+  const clean = useMemo(() => ipoRows(data?.recent ?? []), [data])
+  const rows = clean.rows
+  const issues = useMemo(() => (data?.issues ?? []).filter(i => !isEntitlementSymbol(i.symbol)), [data])
   const priced = useMemo(() => rows.filter(r => r.listing_gain_pct != null), [rows])
   const stats = useMemo(() => ({
     medGain: median(priced.map(r => r.listing_gain_pct!)),
@@ -99,9 +106,10 @@ export function IpoMonitor() {
       {!data && !error && <Loading label="Reading NSE issues" />}
       {data && (
         <>
-          <Panel source={undatedSource('NSE IPO data')} title="Open & forthcoming" accent={T.green} pad={0} subtitle="NSE public issues · subscription = times the shares offered to each category (QIB = institutions, NII = HNIs)"
+          <Panel source={sourceOf(checkedAt ? checkedAt.toISOString() : null, { source: 'NSE IPO data', maxAgeDays: 1, hint: 'the issue list, re-read every 20 s while the page is open' })} title="Open & forthcoming" accent={T.green} pad={0} subtitle="NSE public issues · subscription = times the shares offered to each category (QIB = institutions, NII = HNIs)"
             style={{ marginBottom: 12 }}>
-            <DataTable columns={issueCols} rows={data.issues} rowKey={r => r.symbol} dense empty="No open or forthcoming issues on NSE" />
+            <DataTable columns={issueCols} rows={issues} rowKey={r => r.symbol} dense
+              empty={`No open or forthcoming issues on NSE · checked ${checkedAt ? checkedAt.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '—'} IST`} />
           </Panel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10, marginBottom: 12 }}>
             <Stat label={`${kind} listings · ${months}M`} value={rows.length} sub={`${priced.length} with prices`} />
@@ -118,6 +126,11 @@ export function IpoMonitor() {
           <Panel source={sourceOf(data?.bhavcopy_through ?? null, { source: 'NSE bhavcopy' })} title={`Recent listings · ${rows.length}`} accent={T.amber} pad={0}
             subtitle="listing open / day-1 close vs the issue price · +20 / +60 sessions measured from the day-1 close (what a buyer after listing got)">
             <DataTable columns={cols} rows={rows} rowKey={r => r.symbol + r.listing_date} dense maxHeight={720} initialSort={{ key: 'date', dir: 'desc' }} empty="No listings in this window" />
+            {(clean.unpriced.length > 0 || clean.entitlements.length > 0) && (
+              <div data-ipo-left-out style={{ padding: '6px 10px', fontSize: 10.5, color: T.dim, borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
+                {clean.unpriced.length > 0 && <>No NSE bhavcopy prices yet (left out): {clean.unpriced.join(', ')}. </>}
+                {clean.entitlements.length > 0 && <>Rights entitlements / partly-paid lines, not IPOs (left out): {clean.entitlements.join(', ')}.</>}
+              </div>)}
           </Panel>
         </>
       )}

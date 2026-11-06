@@ -11,8 +11,9 @@
 import { apiError } from '@/lib/errors'
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Chip, Dot, Panel, T } from '@/components/terminal'
-import { NO_VERDICT, badgeSpec, dayLabel, lagChip, parseIso, publishGate, type Gate, type Tone } from '@/lib/gold/format'
-import type { Badge, CatalogRow, Freshness, Layer } from '@/lib/gold/types'
+import { getGoldHealth } from '@/lib/gold/api'
+import { NO_VERDICT, badgeSpec, dayLabel, lagChip, needsHealthFallback, parseIso, pickPageHealth, publishGate, type Gate, type Tone } from '@/lib/gold/format'
+import type { Badge, CatalogRow, Freshness, GoldHealth, GoldSubViewProps, Layer } from '@/lib/gold/types'
 
 export const toneColor = (tone: Tone): string =>
   tone === 'green' ? T.green : tone === 'red' ? T.red : tone === 'amber' ? T.amber : tone === 'cyan' ? T.cyan
@@ -235,6 +236,23 @@ export function useGoldLoad<T>(fn: () => Promise<{ data: T }>, deps: unknown[], 
   }, [pollMs, reload])
   useEffect(() => () => { seq.current++ }, [])
   return { ...st, reload }
+}
+
+/**
+ * THE HEALTH payload of the page (wave 1e, M-A): `overview.health` — the picked contract, the live MCX quote applied during
+ * MCX hours, the same load as the header strip — so the strip, the INDIA BASIS gauge and the H4 clause print one basis per
+ * clock. `/api/gold/health` (with the picked contract / expiry) only once the overview has failed; while it loads, nothing.
+ * HEALTH and LEARN both read it (one verdict per page).
+ */
+export function usePageHealth(p: Pick<GoldSubViewProps, 'overview' | 'overviewStatus' | 'window' | 'sel'>, pollMs?: number): Load<GoldHealth> & { source: 'overview' | 'health' | null } {
+  const need = needsHealthFallback(p.overview, p.overviewStatus)
+  const fb = useGoldLoad<GoldHealth | null>(
+    () => (need ? getGoldHealth(p.window, { contract: p.sel.family, expiry: p.sel.expiry }) : Promise.resolve({ data: null })),
+    [need, p.window, p.sel.family, p.sel.expiry], need ? pollMs : undefined)
+  const pick = pickPageHealth(p.overview, p.overviewStatus, fb.data)
+  if (pick.source === 'overview') return { data: pick.health, error: null, loading: false, reload: fb.reload, source: 'overview' }
+  if (pick.waiting) return { data: null, error: null, loading: true, reload: fb.reload, source: null }
+  return { data: pick.health, error: fb.error, loading: fb.loading, reload: fb.reload, source: pick.source }
 }
 
 /** Loading / error wrapper that never blanks a panel that already has data. */

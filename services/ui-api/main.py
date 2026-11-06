@@ -82,8 +82,10 @@ from routers import costs
 from routers import alerts as price_alerts
 from routers import charts
 from routers import derivatives
+from routers import expiry
 from routers import data_health   # Terminal v2 PLAN 1.4: GET /api/data/health (B3)
 from routers import options_strategy
+from routers import fo_book       # PLAN 2.2: the PAPER F&O book /api/options/book/* (W2-BOOK)
 from routers import mcx
 from routers import riskdash
 import static_ui  # desktop Layer 1: static terminal UI (ui/dist/current) + /version, /ready, /live
@@ -203,7 +205,9 @@ app.include_router(costs.router, prefix="/api/costs", tags=["costs"])
 app.include_router(price_alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(charts.router, prefix="/api/charts", tags=["charts"])
 app.include_router(derivatives.router, prefix="/api/derivatives", tags=["derivatives"])
+app.include_router(expiry.router, prefix="/api/derivatives", tags=["expiry"])
 app.include_router(options_strategy.router, prefix="/api/options", tags=["options-strategy"])
+app.include_router(fo_book.router, prefix="/api/options/book", tags=["paper-fo-book"])  # PLAN 2.2 PAPER F&O book (W2-BOOK); /api/risk/fo lives in riskdash
 app.include_router(mcx.router, prefix="/api/mcx", tags=["mcx-gold"])
 app.include_router(riskdash.router, prefix="/api/risk", tags=["risk"])
 app.include_router(ui_prefs.router, prefix="/api/prefs", tags=["prefs"])  # user settings (desktop program D3)

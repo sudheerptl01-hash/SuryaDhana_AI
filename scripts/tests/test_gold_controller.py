@@ -36,6 +36,8 @@ from typing import Any
 
 import httpx
 import pytest
+from apscheduler.triggers.combining import OrTrigger
+from apscheduler.triggers.cron import CronTrigger
 from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -230,7 +232,25 @@ def test_every_plan_c3_job_is_registered_with_its_ist_times_and_dormant_ones_are
     assert _fires(trig["gold_brief_ingest"], ref, 2) == ["Sat 24 09:05", "Sun 25 09:05"]
     assert _fires(trig["gold_calendar_refresh"], ref, 2) == ["Fri 23 23:00", "Sat 24 09:00"]
     assert _fires(trig["gold_intraday_bars"], ref, 2) == ["Fri 23 22:05", "Fri 23 22:10"]
-    assert _fires(trig["gold_mcx_close"], ref, 3) == ["Fri 23 23:58", "Sat 24 00:15", "Mon 26 23:58"]
+    # 6 Nov (O-OPS): the 00:15 retry is gone — ICICI sessions expire at midnight IST, so it never had a session
+    assert _fires(trig["gold_mcx_close"], ref, 3) == ["Fri 23 23:58", "Mon 26 23:58", "Tue 27 23:58"]
+
+
+def test_no_gold_breeze_job_fires_after_midnight_when_icici_sessions_have_expired():
+    """Every trigger of the session-bound gold jobs fires before midnight; negative control: the removed round-2 00:15
+    retry, rebuilt here, is caught by the same check."""
+    sched = _FakeScheduler()
+    mc.register_gold_jobs(sched)
+    ref = at(2026, 10, 23, 12, 0)
+    by_id = {kw["id"]: kw for _, kw in sched.added}
+
+    def after_midnight(trigger: Any) -> list[str]:
+        return [f for f in _fires(trigger, ref, 10) if f.split()[-1] < "06:00"]
+    for job in mc.GOLD_SESSION_JOBS:
+        assert after_midnight(by_id[job]["trigger"]) == [], job
+    old = OrTrigger([CronTrigger(timezone=IST, day_of_week="mon-fri", hour=23, minute=58),
+                     CronTrigger(timezone=IST, day_of_week="tue-sat", hour=0, minute=15)])
+    assert after_midnight(old), "the control must fire after midnight"
 
 
 def test_no_heavy_gold_job_is_scheduled_inside_a_freeze_window():

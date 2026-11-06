@@ -12,6 +12,16 @@
  *
  * Provenance is always on screen: EOD bars are labelled DuckDB EOD with their
  * as-of date; intraday bars carry the tick source (icici-ws) and session VWAP.
+ *
+ * W2-TAPE (5 Nov review M42 / m073 / M34 / M45):
+ *  - an NSE index charts too (NIFTY, BANKNIFTY, FINNIFTY …: `index_ohlc_daily`, NSE's daily index file; quick chips by
+ *    the search box); the page opens on the ACTIVE SYMBOL (lib/activeSymbol) and writes it back on a pick — never a
+ *    hard-coded RELIANCE;
+ *  - overlays from stored tables (/api/charts/overlay): the near-month FUTURE close on the price pane, and a lower pane
+ *    that switches RSI 14 → IV30 (iv_summary_daily, with the near ATM IV and RV20) → F&O OI (call / put / futures) →
+ *    BASIS (the near future vs spot, annualised); each with its badge and source chip; daily timeframes only;
+ *  - EMA 200 on by default (price sat on it on 5 Nov);
+ *  - intraday bars outside 09:15–15:30 are never drawn (`inSession`), and a session that starts late says so.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
@@ -20,6 +30,11 @@ import type {
 import {
   Chip, Empty, ErrorBox, Label, Loading, Notice, PageHeader, Panel, SourceChip, T, TickerLink, fmtPct, tone, sourceOf } from '@/components/terminal'
 import { useLiveQuotes } from '@/lib/liveQuotes'
+import { useActiveSymbol } from '@/lib/activeSymbol'
+import { ALERTS_EVENT, draftAlert } from '@/lib/alerts'
+import { getAlertRules } from '@/lib/alertsClient'
+import { alertLevelsFor } from '@/lib/alertsEngine'
+import { alignOverlay, inSession, type OverlayPoint } from '@/components/expiry/chartModel'
 import { fmtVol } from '@/components/news/format'
 import { apiError } from '@/lib/errors'
 import { Z } from '@/lib/z'
@@ -49,12 +64,37 @@ interface ChartHandles {
   bbM: ISeriesApi<'Line'>
   bbL: ISeriesApi<'Line'>
   rsiLine: ISeriesApi<'Line'>
+  futLine: ISeriesApi<'Line'>
+  ivLine: ISeriesApi<'Line'>
+  ivNear: ISeriesApi<'Line'>
+  rvLine: ISeriesApi<'Line'>
+  oiCall: ISeriesApi<'Line'>
+  oiPut: ISeriesApi<'Line'>
+  oiFut: ISeriesApi<'Line'>
+  basisLine: ISeriesApi<'Line'>
   vwapLine: IPriceLine | null
 }
 
+/** The lower pane: RSI 14 (computed from the bars) or a stored daily series (M42). */
+type LowerPane = 'rsi' | 'iv' | 'oi' | 'basis'
+type OverlayKind = 'iv' | 'oi' | 'future'
+interface OverlayResponse {
+  symbol: string; kind: OverlayKind; points: OverlayPoint[]; as_of: string | null; badge: string; source: string; unit: string
+  note?: string; ok?: boolean; error_info?: { code: string; message: string }
+}
+const INDEX_CHIPS = ['NIFTY', 'BANKNIFTY', 'FINNIFTY']
+
+/** The CHRT overlay reader (stored tables only, through ui-api /api/charts/overlay). */
+export async function fetchInstrument(symbol: string, kind: OverlayKind, days: number): Promise<OverlayResponse> {
+  const r = await fetch(`/api/charts/overlay?symbol=${encodeURIComponent(symbol)}&kind=${kind}&days=${days}`)
+  const body = (await r.json().catch(() => null)) as OverlayResponse | { detail?: string } | null
+  if (!r.ok || !body || !('points' in body)) throw new Error((body as { detail?: string } | null)?.detail ?? `HTTP ${r.status}`)
+  return body
+}
+
 type DataState =
-  | { kind: 'eod'; bars: ChartBar[]; asOf: string | null }
-  | { kind: 'ticks'; bars: ChartBar[]; date: string; vwap: number | null; source: string | null; note?: string }
+  | { kind: 'eod'; bars: ChartBar[]; asOf: string | null; index?: string | null; closeOnly?: number }
+  | { kind: 'ticks'; bars: ChartBar[]; date: string; vwap: number | null; source: string | null; note?: string; coverage?: string }
 
 interface SymbolRow { t: string; n: string }
 
@@ -69,13 +109,23 @@ const px = (v: number | null | undefined, digits = 2): string =>
 // module-level symbol directory cache: one fetch per session, shared with re-mounts
 let symbolDir: SymbolRow[] | null = null
 
-export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: string }) {
-  const [symbol, setSymbol] = useState(symbolProp.toUpperCase())
-  useEffect(() => { setSymbol(symbolProp.toUpperCase()) }, [symbolProp])
+export function ChartStudio({ symbol: symbolProp }: { symbol?: string }) {
+  // M34 / m073: open on the active symbol (OMON / DES / the GO bar write it), never a hard-coded RELIANCE
+  const [active, setActive] = useActiveSymbol()
+  const [symbol, setSymbol] = useState(() => (symbolProp ?? active?.symbol ?? 'NIFTY').toUpperCase())
+  useEffect(() => { if (symbolProp) setSymbol(symbolProp.toUpperCase()) }, [symbolProp])
+  useEffect(() => {
+    if (!symbolProp && active?.symbol && active.symbol.toUpperCase() !== symbol) setSymbol(active.symbol.toUpperCase())
+  }, [active?.symbol])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const [tf, setTf] = useState<ChartTf>('D')
   const [range, setRange] = useState<'auto' | string>('auto')
-  const [show, setShow] = useState({ ema20: true, ema50: true, ema200: false, bb: false, rsi: true, vol: true })
+  const [show, setShow] = useState({ ema20: true, ema50: true, ema200: true, bb: false, rsi: true, vol: true })
+  const [lower, setLower] = useState<LowerPane>('rsi')
+  const lowerRef = useRef<LowerPane>('rsi')
+  lowerRef.current = lower
+  const [showFut, setShowFut] = useState(false)
+  const [overlays, setOverlays] = useState<Partial<Record<OverlayKind, OverlayResponse | { error: string }>>>({})
   const [data, setData] = useState<DataState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -134,8 +184,22 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
       const bbM = line(T.dim, true)
       const rsiLine = rsiChart.addLineSeries({
         color: T.cyan, lineWidth: 1, priceLineVisible: false,
-        autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }),
+        // the 0–100 frame only while the pane shows RSI; IV30 / OI / BASIS autoscale on their own values
+        autoscaleInfoProvider: () => (lowerRef.current === 'rsi' ? { priceRange: { minValue: 0, maxValue: 100 } } : null),
       })
+      const lowerLine = (color: string, dotted = false, volume = false) => rsiChart.addLineSeries({
+        color, lineWidth: 1, priceLineVisible: false, lastValueVisible: true,
+        ...(dotted ? { lineStyle: lw.LineStyle.Dashed } : {}), ...(volume ? { priceFormat: { type: 'volume' as const } } : {}),
+      })
+      const ivLine = lowerLine(T.cyan)
+      const ivNear = lowerLine(T.cyan, true)
+      const rvLine = lowerLine(T.muted, true)
+      const oiCall = lowerLine(T.cyan, false, true)
+      const oiPut = lowerLine(T.violet, false, true)
+      const oiFut = lowerLine(T.amber, true, true)
+      const basisLine = lowerLine(T.amber)
+      const futLine = main.addLineSeries({ color: T.amber, lineWidth: 1, lineStyle: lw.LineStyle.Dotted, priceLineVisible: false,
+                                           lastValueVisible: true, crosshairMarkerVisible: false, title: 'FUT' })
       for (const lvl of [70, 30]) rsiLine.createPriceLine({ price: lvl, color: T.dim, lineWidth: 1, lineStyle: lw.LineStyle.Dashed, axisLabelVisible: false, title: '' })
 
       // keep the two panes on one time axis (guard against subscribe loops)
@@ -159,7 +223,8 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
         if (w) { main.applyOptions({ width: w }); rsiChart.applyOptions({ width: w }) }
       })
       ro.observe(mainBox.current)
-      api.current = { main, rsiChart, candles, vol, ema20, ema50, ema200, bbU, bbM, bbL, rsiLine, vwapLine: null }
+      api.current = { main, rsiChart, candles, vol, ema20, ema50, ema200, bbU, bbM, bbL, rsiLine, futLine, ivLine, ivNear, rvLine,
+                      oiCall, oiPut, oiFut, basisLine, vwapLine: null }
       setReady(true)
       cleanup = () => { ro.disconnect(); main.remove(); rsiChart.remove(); api.current = null }
     })()
@@ -175,11 +240,13 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
       if (tf === '1m' || tf === '5m' || tf === '15m') {
         const r = await fetchIntradayBars(symbol, tf)
         if (seq.current !== id) return
-        setData({ kind: 'ticks', bars: r.bars, date: r.date, vwap: r.vwap, source: r.source, note: r.note ?? r.error_info?.message })
+        const cov = (r as { coverage_note?: string }).coverage_note
+        setData({ kind: 'ticks', bars: inSession(r.bars), date: r.date, vwap: r.vwap, source: r.source, note: r.note ?? r.error_info?.message, coverage: cov })
       } else {
         const r = await fetchDailyBars(symbol, tf, days)
         if (seq.current !== id) return
-        setData({ kind: 'eod', bars: r.bars, asOf: r.as_of })
+        const x = r as { kind?: string; close_only?: number; index_name?: string }
+        setData({ kind: 'eod', bars: r.bars, asOf: r.as_of, index: x.kind === 'index' ? (x.index_name ?? symbol) : null, closeOnly: x.close_only ?? 0 })
       }
       setHoverIdx(null)
     } catch (e) {
@@ -194,6 +261,22 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
     const iv = setInterval(() => { void load() }, 60_000)
     return () => clearInterval(iv)
   }, [isIntraday, load])
+
+  // ── M42 overlays (daily, stored tables): the near future on the price pane, IV30 / OI / basis in the lower pane ─────
+  const wanted: OverlayKind[] = isIntraday ? [] : [...(showFut || lower === 'basis' ? ['future' as const] : []),
+    ...(lower === 'iv' ? ['iv' as const] : []), ...(lower === 'oi' ? ['oi' as const] : [])]
+  const wantedKey = wanted.join(',')
+  useEffect(() => {
+    if (!wantedKey) return
+    let alive = true
+    for (const k of wantedKey.split(',') as OverlayKind[]) {
+      fetchInstrument(symbol, k, Math.max(days, 400))
+        .then(r => { if (alive) setOverlays(o => ({ ...o, [k]: r })) })
+        .catch((e: unknown) => { if (alive) setOverlays(o => ({ ...o, [k]: { error: apiError(e, 'overlay unavailable') } })) })
+    }
+    return () => { alive = false }
+  }, [symbol, days, wantedKey])
+  useEffect(() => { setOverlays({}) }, [symbol])
 
   // ── live last-price line (live program, reports/live_nse) ─────────────────────
   // The live NSE quote service's price for the symbol (Breeze websocket → NSE ≈ 1 min → the last close), every 2 s, as
@@ -213,6 +296,26 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
     lastLine.current = a.candles.createPriceLine({ price: lq.price, color: lqInfo.state === 'live' ? T.green : T.muted, lineWidth: 1,
                                                    lineStyle: lw.LineStyle.Dotted, axisLabelVisible: true, title })
   }, [lq?.price, lqInfo?.state, ready, data])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // alert lines (PLAN 2.3): every price rule / price alert level on this symbol, dashed amber, titled ALERT
+  const [alertLevels, setAlertLevels] = useState<number[]>([])
+  const alertLines = useRef<IPriceLine[]>([])
+  useEffect(() => {
+    let on = true
+    const read = () => { getAlertRules('all').then(r => { if (on) setAlertLevels(alertLevelsFor(r.data.rules, symbol)) }).catch(() => {}) }
+    read()
+    const iv = setInterval(read, 60_000)
+    window.addEventListener(ALERTS_EVENT, read)
+    return () => { on = false; clearInterval(iv); window.removeEventListener(ALERTS_EVENT, read) }
+  }, [symbol])
+  useEffect(() => {
+    const a = api.current
+    const lw = lwRef.current
+    if (!a || !lw) return
+    for (const l of alertLines.current) { try { a.candles.removePriceLine(l) } catch { /* series rebuilt */ } }
+    alertLines.current = alertLevels.map(price => a.candles.createPriceLine({ price, color: T.amber, lineWidth: 1, lineStyle: lw.LineStyle.Dashed,
+                                                                            axisLabelVisible: true, title: 'ALERT' }))
+  }, [alertLevels, ready, data])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── push bars + indicators into the series ─────────────────────────────────────
   useEffect(() => {
@@ -244,7 +347,23 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
     } else { a.bbU.setData([]); a.bbM.setData([]); a.bbL.setData([]) }
     // CT-14: the RSI pane carries every bar's time (whitespace before RSI has 14 bars), so the logical-range sync
     // maps bar i to bar i; without them its index 0 was bar 14 and the pane sat 14 bars off the price pane
-    a.rsiLine.setData(show.rsi ? rsi(closes, 14).map((v, i) => (v == null ? { time: times[i] } : { time: times[i], value: v })) : [])
+    a.rsiLine.setData(show.rsi && lower === 'rsi' ? rsi(closes, 14).map((v, i) => (v == null ? { time: times[i] } : { time: times[i], value: v })) : [])
+    // M42 overlays: aligned to every bar time (whitespace where the store has no value) so the panes stay bar-for-bar
+    const ov = (k: OverlayKind) => { const o = overlays[k]; return o && 'points' in o ? o.points : null }
+    const barDates = data.kind === 'eod' ? bars.map(b => b.t) : []
+    const series = (k: OverlayKind, key: string) => {
+      const pts = ov(k)
+      if (!pts || data.kind !== 'eod') return []
+      return alignOverlay(pts, barDates, key).map((v, i) => (v == null ? { time: times[i] } : { time: times[i], value: v }))
+    }
+    a.futLine.setData(showFut ? series('future', 'fut') : [])
+    a.ivLine.setData(lower === 'iv' ? series('iv', 'iv30') : [])
+    a.ivNear.setData(lower === 'iv' ? series('iv', 'near') : [])
+    a.rvLine.setData(lower === 'iv' ? series('iv', 'rv20') : [])
+    a.oiCall.setData(lower === 'oi' ? series('oi', 'call_oi') : [])
+    a.oiPut.setData(lower === 'oi' ? series('oi', 'put_oi') : [])
+    a.oiFut.setData(lower === 'oi' ? series('oi', 'fut_oi') : [])
+    a.basisLine.setData(lower === 'basis' ? series('future', 'basis_ann_pct') : [])
 
     if (a.vwapLine) { a.candles.removePriceLine(a.vwapLine); a.vwapLine = null }
     if (data.kind === 'ticks' && data.vwap != null && bars.length)
@@ -252,7 +371,7 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
 
     const key = `${symbol}|${tf}|${days}`   // 60 s intraday refresh keeps the zoom; a new symbol/tf/range refits
     if (fitKey.current !== key && bars.length) { fitKey.current = key; a.main.timeScale().fitContent() }
-  }, [data, show, ready, symbol, tf, days])
+  }, [data, show, ready, symbol, tf, days, overlays, lower, showFut])
 
   // ── symbol search ──────────────────────────────────────────────────────────────
   const [q, setQ] = useState('')
@@ -279,6 +398,7 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
     const sym = s.trim().toUpperCase()
     if (!sym) return
     setSymbol(sym)
+    setActive({ symbol: sym })                     // the shared convention: CHRT writes the active symbol on a pick
     setQ('')
     setOpenSearch(false)
   }
@@ -295,7 +415,21 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
 
   const provenance = data?.kind === 'ticks'
     ? `${(data.source ?? 'tick store').toUpperCase()} · ${data.date}${data.vwap != null ? ` · VWAP ${px(data.vwap)}` : ''}`
+    : data?.kind === 'eod' && data.index ? `NSE INDEX FILE · ${data.index} · AS OF ${data.asOf ?? '—'}`
     : data ? `DUCKDB EOD · AS OF ${data.asOf ?? '—'}` : '…'
+  const isIndexChart = data?.kind === 'eod' && !!data.index
+  const ovOf = (k: OverlayKind): OverlayResponse | null => { const o = overlays[k]; return o && 'points' in o ? o : null }
+  const ovErr = (k: OverlayKind): string | null => { const o = overlays[k]; return o && 'error' in o ? o.error : (o && 'points' in o && o.ok === false ? (o.note ?? 'unavailable') : null) }
+  const lowerKind: OverlayKind | null = lower === 'iv' ? 'iv' : lower === 'oi' ? 'oi' : lower === 'basis' ? 'future' : null
+  const lowerOv = lowerKind ? ovOf(lowerKind) : null
+  const lowerSrc = lowerKind ? sourceOf(lowerOv?.as_of ?? null, { source: lowerOv?.source ?? (lowerKind === 'iv' ? 'iv_summary_daily' : 'nse_fo_daily'), maxAgeDays: 5,
+                                                                   hint: ovErr(lowerKind) ?? undefined }) : null
+  const lowerLegend: Record<LowerPane, string> = {
+    rsi: 'RSI 14 · 70 / 30 BANDS · WILDER',
+    iv: 'IV30 (cyan) · NEAR ATM IV (dashed) · RV20 CLOSE-TO-CLOSE (grey) · % ANNUALISED · ARITHMETIC',
+    oi: 'F&O OPEN INTEREST, ALL STRIKES + EXPIRIES (FALLS AT EVERY EXPIRY AS CONTRACTS SETTLE) · CALLS (cyan) · PUTS (violet) · FUTURES (amber, dashed) · SHARES · CONTEXT',
+    basis: 'NEAR FUTURE vs SPOT · ANNUALISED BASIS % · ARITHMETIC',
+  }
 
   const tfChip = (t: ChartTf, color: string) => (
     <Chip key={t} active={tf === t} color={color} onClick={() => setTf(t)} aria-label={`timeframe ${t}`}>{t}</Chip>
@@ -311,7 +445,11 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
       <PageHeader code="CHRT" title="Chart Studio"
         subtitle="candles · EMA / Bollinger / RSI · D / W / M from EOD · intraday when the tick store is live"
         right={
-          <span style={{ position: 'relative', display: 'inline-block' }}>
+          <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {INDEX_CHIPS.map(ix => <Chip key={ix} active={symbol === ix} color={T.amber} onClick={() => pick(ix)} title={`chart the ${ix} index`}>{ix}</Chip>)}
+            <Chip color={T.muted} title="open ALRT with a rule: this symbol crosses a level (dashed ALERT lines show the levels set)"
+              onClick={() => draftAlert({ series: `price:${symbol.toUpperCase().replace(/\.NS$/, '')}`, op: 'cross_up',
+                                          value: lq?.price != null ? Math.round(lq.price * 1.02 * 20) / 20 : null, repeat: 'repeat', cooldown_min: 30 })}>＋ ALERT</Chip>
             <input
               value={q}
               onChange={e => { setQ(e.target.value); setOpenSearch(true) }}
@@ -321,7 +459,7 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
                 if (e.key === 'Enter') pick(matches[0]?.t ?? q)
                 else if (e.key === 'Escape') { setQ(''); setOpenSearch(false) }
               }}
-              placeholder="symbol… (RELIANCE)"
+              placeholder="symbol… (RELIANCE, NIFTY)"
               aria-label="chart symbol search"
               style={{ width: 210, background: '#07090d', color: T.text, border: `1px solid ${T.border}`,
                        fontFamily: T.mono, fontSize: 12, padding: '6px 8px', borderRadius: 0, outline: 'none' }}
@@ -374,6 +512,21 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
           {indChip('rsi', 'RSI 14', T.cyan)}
           {indChip('vol', 'VOL', T.muted)}
         </div>
+        {/* M42: F&O overlays from the stored tables (daily timeframes) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginBottom: 8 }} data-sd-chart-overlays>
+          <span style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1 }}>F&amp;O</span>
+          <Chip active={showFut} color={T.amber} onClick={() => setShowFut(v => !v)} title="the near-month future's close on the price pane (nse_fo_daily)">FUT</Chip>
+          <span style={{ width: 1, height: 14, background: T.border, margin: '0 4px' }} />
+          <span style={{ fontSize: 9.5, color: T.dim, letterSpacing: 1 }}>LOWER PANE</span>
+          {(['rsi', 'iv', 'oi', 'basis'] as LowerPane[]).map(k => (
+            <Chip key={k} active={lower === k} color={T.cyan} onClick={() => { setLower(k); if (k === 'rsi' && !show.rsi) setShow(s => ({ ...s, rsi: true })); if (k !== 'rsi') setShow(s => ({ ...s, rsi: true })) }}>
+              {k === 'rsi' ? 'RSI 14' : k === 'iv' ? 'IV30' : k === 'oi' ? 'OI' : 'BASIS'}
+            </Chip>
+          ))}
+          {isIntraday && lower !== 'rsi' && <span style={{ fontSize: 10, color: T.amber }}>IV30 / OI / basis are daily series: switch to D, W or M to draw them</span>}
+          {showFut && ovErr('future') && <span style={{ fontSize: 10, color: T.amber }}>FUT: {ovErr('future')}</span>}
+          {data?.kind === 'eod' && (data.closeOnly ?? 0) > 0 && <span style={{ fontSize: 10, color: T.dim }}>{data.closeOnly} early bars are close-only (NSE index history)</span>}
+        </div>
 
         {/* crosshair OHLC readout */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', fontFamily: T.mono,
@@ -398,11 +551,14 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
             <span style={{ color: tone(lq.change_pct) }}>{fmtPct(lq.change_pct, 2)}</span>
             <SourceChip info={lqInfo} /></span>}
           <Label color={isIntraday ? T.cyan : T.muted}>
-            {isIntraday ? 'BARS: BROKER TICKS (ICICI WS)' : 'BARS: DUCKDB EOD · YAHOO HISTORY'}
+            {isIntraday ? 'BARS: BROKER TICKS (ICICI WS)' : isIndexChart ? 'BARS: NSE DAILY INDEX FILE' : 'BARS: DUCKDB EOD · YAHOO HISTORY'}
           </Label>
         </div>
 
         {error && <div style={{ marginBottom: 8 }}><ErrorBox error={error} onRetry={() => { void load() }} /></div>}
+        {data?.kind === 'ticks' && data.coverage && bars.length > 0 && (
+          <div style={{ marginBottom: 8 }}><Notice color={T.amber}>{data.coverage}.</Notice></div>
+        )}
         {degradedNote && !error && (
           <div style={{ marginBottom: 8 }}>
             <Notice color={T.amber}>
@@ -427,9 +583,12 @@ export function ChartStudio({ symbol: symbolProp = 'RELIANCE' }: { symbol?: stri
           )}
         </div>
         <div style={{ display: show.rsi ? 'block' : 'none' }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 2px' }}>
-            <Label color={T.cyan}>RSI 14</Label>
-            <Label color={T.dim}>70 / 30 BANDS · WILDER</Label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '6px 0 2px', flexWrap: 'wrap' }}>
+            <Label color={T.cyan}>{lower === 'rsi' ? 'RSI 14' : lower === 'iv' ? 'IV30' : lower === 'oi' ? 'OI' : 'BASIS'}</Label>
+            <Label color={T.dim}>{lowerLegend[lower]}</Label>
+            {lowerSrc && <SourceChip info={lowerSrc} />}
+            {lowerKind && ovErr(lowerKind) && <span style={{ fontSize: 10, color: T.amber }}>{ovErr(lowerKind)}</span>}
+            {lowerKind && <span style={{ fontSize: 10, color: T.dim }}>describes, does not predict</span>}
           </div>
           <div ref={rsiBox} style={{ width: '100%', height: RSI_H }} />
         </div>

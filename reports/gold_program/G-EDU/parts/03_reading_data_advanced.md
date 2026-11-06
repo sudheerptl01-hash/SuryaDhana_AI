@@ -329,7 +329,8 @@ NSE/BSE currency segment, 09:00–17:00 IST)**; a GOLDM lot ≈ 13 lots. Long GO
 dollars, financed in rupees (you keep the INR–USD rate gap as cost: that is the covered-interest cost, ≈ the MCX
 contango excess). Timing: MCX trades 14.5 h, COMEX 23 h; every MCX open is a gap trade against 8.5 hours of COMEX
 (the Pre-Open desk); the currency segment closes at 17:00 while MCX runs to 23:30 — **the rupee hedge is off for the
-evening session** (offshore NDF moves it; the app shows `INR=X` as the proxy). Duty: §5.8, §7.5.
+evening session** (the offshore NDF moves it, but the app has no NDF feed: Yahoo `INR=X` stops at its last evening print, so the
+08:45 fair open carries no overnight rupee move and the card prints that print's time). Duty: §5.8, §7.5.
 
 **[APP]** `ph.ladder` and `mc.kgx` (with the rupee leg) compute the pieces; the MCXG paper ticket carries
 `hedge_usdinr_lots`, `max_lots_at_risk_pct`, `atr14_rupees` and the dated NRML margin.

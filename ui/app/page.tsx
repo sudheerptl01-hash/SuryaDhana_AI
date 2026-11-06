@@ -17,6 +17,8 @@ import {
   triggerEnrich,
   getEnrichProgress,
   getDeskStatus,
+  getCrashFilter,
+  type CrashFilter,
 } from '@/lib/api'
 import { getArchiveMeta } from '@/lib/api'
 import { goToPage } from '@/lib/navigate'
@@ -29,6 +31,10 @@ import { useDocumentHidden, useOnFocus, usePolling } from '@/components/shell/us
 import { refreshVerdict } from '@/lib/refreshStatus'
 import { NewsDock } from '@/components/news/NewsDock'
 import { CommandBar, type CommandPage } from '@/components/CommandBar'
+import { SettingsImport } from '@/components/shell/SettingsImport'
+import { crashLines } from '@/components/marketPagesModel'
+import { PAGE_HANDOFF_EVENT, stripStaleSub } from '@/lib/goAliases'
+import { SUB_VIEW_EVENT } from '@/components/terminal/source'
 import { Brief } from '@/components/Brief'
 import { TabErrorBoundary } from '@/components/shell/TabErrorBoundary'
 import { useShellState } from '@/components/shell/ShellState'
@@ -237,6 +243,15 @@ function HomeContent() {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
+  // a sub-view hand-off (GO VOL / DATA / GOLD COT, a page's "VOL ›" chip) keeps `?sub=` on the next switch; a plain
+  // switch to another page drops the previous page's stale `?sub=` (lib/goAliases.ts stripStaleSub)
+  const lastHandoffAt = useRef(0)
+  useEffect(() => {
+    const on = () => { lastHandoffAt.current = Date.now() }
+    window.addEventListener(PAGE_HANDOFF_EVENT, on)
+    window.addEventListener(SUB_VIEW_EVENT, on)
+    return () => { window.removeEventListener(PAGE_HANDOFF_EVENT, on); window.removeEventListener(SUB_VIEW_EVENT, on) }
+  }, [])
   const setView = useCallback((t: Tab) => {
     setSelectedTicker(null)                     // leaving a page closes the stock window
     setTickerFocus(null)
@@ -244,7 +259,8 @@ function HomeContent() {
     const cur = window.history.state
     if (isTerminalState(cur) && cur.tab === t && !cur.sym) return
     const st: TerminalHistoryState = { sd: 1, tab: t, sym: null, pushed: true }
-    try { window.history.pushState(st, '', buildSearch(window.location.search, t, null)) } catch { /* in place */ }
+    const search = stripStaleSub(window.location.search, viewRef.current, t, Date.now() - lastHandoffAt.current)
+    try { window.history.pushState(st, '', buildSearch(search, t, null)) } catch { /* in place */ }
   }, [])
   const openStock = useCallback((ticker: string, focus: TickerFocus | null = null) => {
     if (!ticker) return
@@ -606,30 +622,27 @@ function HomeContent() {
   const activeFilterCount = Object.values(technicalFilters).filter(Boolean).length
   const displayCount = isFiltered ? filteredTotal : totalStocks
 
-  // Build tab descriptor list for MarketCommandHeader
+  // The page strip's DEFAULT order (page review 5 Nov M37: the trader's day; the owner re-orders it under MORE ▾ →
+  // ARRANGE, stored in strip.order.v1, components/shell/stripOrder.ts DEFAULT_STRIP must equal these ids). Alt+1 … 0
+  // = the first ten; desktop/src-tauri/src/pages.rs gives ⌘1 … 9 to the first nine. Research / legacy pages live
+  // under RESEARCH ▾ (stripOrder.ts RESEARCH_PAGES), everything else under MORE ▾; all 43 stay on GO.
   const tabList = [
     { id: 'brief',     label: 'Brief' },
     { id: 'watch',     label: 'Watch' },
-    { id: 'desk',      label: 'Desk' },
-    { id: 'markets',   label: 'Markets' },
+    { id: 'charts',    label: 'Charts' },
+    { id: 'options',   label: 'Options' },
+    { id: 'ostrategy', label: 'Strategy' },
     { id: 'derivatives', label: 'Deriv' },
+    { id: 'movers',    label: 'Movers' },
     { id: 'events',    label: 'Events' },
-    { id: 'overview',  label: 'Overview' },
-    { id: 'stocks',    label: 'Stocks',       badge: activeFilterCount || undefined },
-    { id: 'backtest',  label: 'Backtest' },
-    { id: 'positions', label: 'Portfolio' },
-    { id: 'broker',    label: 'Broker' },
-    { id: 'pipeline',  label: 'Pipeline',     badge: watchlist.length || undefined },
-    { id: 'scanner',   label: 'LW Scan' },
-    { id: 'discovery', label: 'Alpha' },
-    { id: 'commodity', label: 'Commodity' },
-    { id: 'glassbox',  label: 'Glass-Box' },
-    { id: 'mlengine',  label: 'ML' },        // 'ML Engine' truncated to 'ML E…' at common widths
-    { id: 'explorer',  label: 'Explorer' },
-    { id: 'warehouse', label: 'Warehouse' },
-    { id: 'research',  label: 'Research' },
-    { id: 'system',    label: 'System' },
+    { id: 'alerts',    label: 'Alerts' },
+    { id: 'risk',      label: 'Risk' },
+    { id: 'gold',      label: 'Gold' },
+    { id: 'mcxgold',   label: 'MCX Gold' },
+    { id: 'markets',   label: 'Markets' },
+    { id: 'desk',      label: 'Desk' },
   ]
+  const stripBadges = { stocks: activeFilterCount || undefined, pipeline: watchlist.length || undefined }
 
   const renderPage = (): React.ReactNode => {
     switch (view) {
@@ -756,7 +769,8 @@ function HomeContent() {
           latestDate={dashboard?.latest_date}
           activeTab={view}
           tabs={tabList}
-          more={COMMAND_PAGES.filter(p => !tabList.some(t => t.id === p.id))}
+          pages={COMMAND_PAGES}
+          badges={stripBadges}
           onTabChange={(id) => setView(id as Tab)}
         />
       </TabErrorBoundary>
@@ -815,8 +829,8 @@ function HomeContent() {
         <span className="sd-foot-chip" data-link={linkDown ? 'down' : 'up'} style={{ color: linkDown ? 'var(--t-red)' : 'var(--t-green)' }}
               title={linkDown ? 'ui-api unreachable: reconnecting' : 'terminal connected'}>
           ● {linkDown ? 'OFFLINE · LINK DOWN' : 'READY'}</span>
-        <span>DATA {dashboard?.latest_date ?? '—'}</span>
-        <span>{(dashboard?.total_stocks ?? totalStocks).toLocaleString('en-IN')} STOCKS</span>
+        <span className="sd-foot-opt">DATA {dashboard?.latest_date ?? '—'}</span>
+        <span className="sd-foot-opt">{(dashboard?.total_stocks ?? totalStocks).toLocaleString('en-IN')} STOCKS</span>
         {dashError && !linkDown && (
           <span className="sd-foot-chip" style={{ color: 'var(--t-amber)' }} title={`${dashError} · retrying every 15 s`}>◌ UNIVERSE STATS UNAVAILABLE</span>
         )}
@@ -832,12 +846,17 @@ function HomeContent() {
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--t-amber)',
                    font: 'inherit', letterSpacing: 'inherit' }}>{goFailed ? '◌ GO UNAVAILABLE · RETRY' : '/ GO'}</button>
         <span className="t-hide-md">{footerHint(desktop, mac)}</span>
-        <span style={{ color: 'var(--t-dim)' }}>{desktop ? 'NSE · PAPER' : 'SURYADHANA TERMINAL · NSE · PAPER'}</span>
+        <span style={{ color: 'var(--t-dim)' }}>{desktop ? 'NSE · PAPER' : <><span className="sd-foot-opt">SURYADHANA TERMINAL · </span>NSE · PAPER</>}</span>
       </footer>
 
       <TabErrorBoundary name="GO" variant="silent" resetKey={chromeKey} retryOn={GO_RETRY_EVENTS} replay={goReplay}
         onFailedChange={setGoFailed}>
         <CommandBar pages={COMMAND_PAGES} onPage={id => setView(id as Tab)} onTicker={t => openStock(t)} currentTab={view} />
+      </TabErrorBoundary>
+
+      {/* M35: the one-time settings-import toast + dialog (replaces the permanent "not imported yet" banner) */}
+      <TabErrorBoundary name="SETTINGS IMPORT" variant="silent" resetKey={chromeKey}>
+        <SettingsImport />
       </TabErrorBoundary>
 
       {selectedTicker && (
@@ -987,12 +1006,18 @@ const ROADMAP: { phase: string; label: string; detail: string; status: 'done' | 
   { phase: 'E', label: 'Small live', detail: 'After ≥ 3 months of paper inside the tracking band', status: 'later' },
 ]
 
+// M08 (OVRV part): the crash filter as the same two labelled lines as BRF (components/marketPagesModel.ts crashLines):
+// today's reading (what a signal on it would do) and where the book is and since when. The old single line read the
+// 30 Oct plan ("ON · liquid fund") while BRF read today's number ("OFF · INVESTED") for one all-cash book.
 function DeskSnapshot() {
   const [d, setD] = useState<any>(null)
+  const [cf, setCf] = useState<CrashFilter | null>(null)
   useEffect(() => { getDeskStatus().then(r => setD(r.data)).catch(() => setD(null)) }, [])
+  useEffect(() => { getCrashFilter().then(r => setCf(r.data)).catch(() => setCf(null)) }, [])
   const nav = d?.latest?.nav ?? d?.meta?.start_capital
   const start = d?.meta?.start_capital
   const plan = d?.plans?.[0]
+  const lines = cf ? crashLines(cf, d) : null
   return (
     <Panel source={sourceOf(d?.latest?.date ?? null, { source: 'Desk ledger' })} title="Decision Desk" subtitle="paper book · monthly momentum"
       right={<Chip color={T.amber} active>PAPER</Chip>}>
@@ -1002,8 +1027,8 @@ function DeskSnapshot() {
           ['Return', fmtSignedPct(start ? (nav / start - 1) * 100 : null), tone(nav - start)],
           ['Positions', `${d.positions?.length ?? 0} / 20`],
           ['Latest brief', plan ? `${plan.plan_id} · ${plan.status}` : 'after month-end (19:30 IST)'],
-          ['Crash filter', plan ? (plan.summary?.risk_on ? 'OFF · invested' : 'ON · liquid fund') : '—',
-           plan ? (plan.summary?.risk_on ? T.green : T.amber) : undefined],
+          ["Crash filter · today's reading", lines ? lines.reading.replace(/^Today's reading: /, '') : '—'],
+          ['Crash filter · book', lines ? lines.book.replace(/^The book: /, '') : '—'],
           ['Last marked', d.meta?.last_mark ?? '—'],
         ]} />
       )}
@@ -1051,7 +1076,9 @@ function OverviewTab({ dashboard, dashError, onRetryDashboard, totalStocks, enri
             <Stat label="In database" value={num(dbCount)} sub={loaded ? `${coveragePct}% coverage` : pending} accent={T.violet} />
             <Stat label="Latest session" value={dashboard?.latest_date ?? '—'} sub={loaded ? `${freshPct}% of stocks current` : pending}
                   accent={!loaded ? T.dim : freshPct >= 95 ? T.green : T.amber} color={T.bright} />
-            <Stat label="History from" value={dashboard?.data_range?.from?.slice(0, 7) ?? '—'} sub={loaded ? `→ ${dashboard?.data_range?.to ?? '—'} (Yahoo)` : pending} />
+            {/* m024: this is the screener's Yahoo price cache, not the research history (NSE bhavcopy 2010→) */}
+            <Stat label="Price cache from" value={dashboard?.data_range?.from?.slice(0, 7) ?? '—'}
+                  sub={loaded ? `→ ${dashboard?.data_range?.to ?? '—'} · Yahoo, for EQS · research: NSE bhavcopy 2010→` : pending} />
             <Stat label="Fundamentals" value={loaded ? `${enrichPct}%` : '—'}
                   sub={loaded ? `${enriched.toLocaleString('en-IN')} of ${enrichTotal.toLocaleString('en-IN')} enriched` : pending} accent={T.violet} />
           </Grid>
@@ -1184,7 +1211,7 @@ function StocksTab({
           : listLoading && !allStocksCount ? 'loading the NSE universe…' : `${allStocksCount.toLocaleString('en-IN')} of ${totalStocks.toLocaleString('en-IN')} NSE stocks`}
         right={activeCount > 0 ? <Btn size="sm" onClick={clearAll}>Clear filters ({activeCount})</Btn> : undefined} />
       <div style={{ display: 'grid', gap: 10 }}>
-        <Panel source={eodSrc} title="Minervini trend template" subtitle="all active filters must pass · T1+T2 = Stage-2 trend"
+        <Panel source={eodSrc} badge="heuristic" title="Minervini trend template" subtitle="all active filters must pass · T1+T2 = Stage-2 trend · a trend description, not a tested signal"
           right={<Btn size="sm" variant={allOn ? 'ghost' : 'primary'} onClick={allOn ? clearAll : selectAll}
                    disabled={filterLoading}
                    title={allOn ? 'Turn every filter off' : 'Turn on T1–T8 at once: the full Minervini trend template'}>
@@ -1221,7 +1248,7 @@ function StocksTab({
           </Panel>
         )}
 
-        <Panel source={eodSrc} title={isFiltered ? 'Screener results' : 'All stocks'} pad={0}
+        <Panel source={eodSrc} badge="context" title={isFiltered ? 'Screener results' : 'All stocks'} pad={0}
           subtitle={isFiltered ? `${displayCount} matched` : `${allStocksCount} of ${totalStocks} loaded · click a row for the chart`}
           right={filterLoading ? <span style={{ fontSize: 10, color: T.amber }} className="t-pulse">FILTERING…</span>
             : listLoading ? <span style={{ fontSize: 10, color: T.amber }} className="t-pulse">LOADING…</span> : undefined}>

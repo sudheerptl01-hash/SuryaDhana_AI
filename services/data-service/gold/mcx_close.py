@@ -64,6 +64,7 @@ PENDING_KEY = "mcx_close.pending"     # gold_ingest_state: contracts to fetch ag
 PENDING_MAX_AGE_DAYS = 21             # Breeze 1-minute history reached back ≈ 14 sessions in the 5 Nov probes
 PENDING_MAX_ATTEMPTS = 3              # a contract that errored three times is dropped from the queue (logged in the result)
 PENDING_MAX_ITEMS = 300
+SPECIAL_LOOKBACK_DAYS = 4             # a run without sessions also stores a special session (Muhurat) this recent
 FAMILY_PRIORITY: dict[str, int] = {"GOLD": 0, "GOLDM": 1, "GOLDTEN": 2, "GOLDPETAL": 3, "GOLDGUINEA": 4}
 SERIES_RE = re.compile(r"^MCX_(GOLD|GOLDM|GOLDTEN|GOLDPETAL|GOLDGUINEA)_(\d{4})(\d{2})_VWAP30(_LOTS)?$")
 
@@ -289,7 +290,10 @@ def run(store: Any, get_breeze: Callable[[], Any] | None, *, now: datetime | Non
     elif backfill_from is not None and last is not None:
         days = sessions_between(backfill_from, last)
     else:
-        days = [last] if last is not None else []
+        # the latest session, plus a dated special session of the last few days (Muhurat, Sun 8 Nov 2026): the 23:58 job
+        # runs Mon–Fri, so the Monday run also stores Sunday's window (stored contracts cost no call; wave 1e M-D)
+        days = ([d for d in sessions_between(last - timedelta(days=SPECIAL_LOOKBACK_DAYS), last)
+                 if d == last or d in specs.SPECIAL_SESSION_WINDOWS] if last is not None else [])
     oldest = (now.date() - timedelta(days=PENDING_MAX_AGE_DAYS))
     pending_in = load_pending(store)
     queued: dict[tuple[date, str, date], dict[str, Any]] = {}

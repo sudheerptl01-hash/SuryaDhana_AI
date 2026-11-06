@@ -8,18 +8,24 @@
 import { useEffect, useState } from 'react'
 import { getFiiDiiCash, getParticipants, type FiiDiiCash, type ParticipantRow } from '@/lib/api'
 import { CHART_BOX, DataTable, Panel, T, type Column, tone, useChartSize, sourceOf } from '@/components/terminal'
+import { cashCoverage } from '@/components/marketPagesModel'
 
 const LABEL: Record<string, string> = { FII: 'Foreign institutions (FII)', DII: 'Domestic institutions (DII)', PRO: 'Proprietary traders', CLIENT: 'Clients (retail + HNI)' }
 const k = (v: number | null | undefined) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v) >= 1e5 ? `${(Math.abs(v) / 1e5).toFixed(2)} L` : Math.abs(v).toLocaleString('en-IN')}`)
 const crore = (v: number | undefined) => (v == null ? '—' : `${v > 0 ? '+' : v < 0 ? '−' : ''}₹${Math.abs(v).toLocaleString('en-IN', { maximumFractionDigits: 0 })} cr`)
 
-/** FII / DII cash-market net buying: latest session, last 5 collected sessions, month to date. */
+/**
+ * FII / DII cash-market net buying: latest session, the last 5 sessions and month to date. M09: each sum says how
+ * many of its sessions are collected ("3 of 5 sessions · missing 02 Nov, 03 Nov", data-service's NSE session
+ * calendar), in amber when one is missing: never a silent skip.
+ */
 export function CashFlows({ cash, compact = false }: { cash: FiiDiiCash; compact?: boolean }) {
   const s = cash.summary
   if (!s.latest_date) return null
-  const cell = (label: string, rec: Record<string, number>, note?: string) => (
+  const cov5 = cashCoverage(s, '5d'), covM = cashCoverage(s, 'mtd')
+  const cell = (label: string, rec: Record<string, number>, note?: string, gap = false) => (
     <span style={{ whiteSpace: 'nowrap' }}>
-      <span style={{ color: T.dim }}>{label}{note ? <span style={{ fontSize: 9 }}> {note}</span> : null} </span>
+      <span style={{ color: T.dim }}>{label}{note ? <span style={{ fontSize: 9, color: gap ? T.amber : T.dim }}> ({note})</span> : null} </span>
       <span style={{ color: T.amber }}>FII</span> <span style={{ color: tone(rec.FII) }}>{crore(rec.FII)}</span>
       <span style={{ color: T.cyan, marginLeft: 6 }}>DII</span> <span style={{ color: tone(rec.DII) }}>{crore(rec.DII)}</span>
     </span>
@@ -28,8 +34,8 @@ export function CashFlows({ cash, compact = false }: { cash: FiiDiiCash; compact
   return (
     <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '4px 16px', fontSize: compact ? 11 : 11.5 }}>
       {cell(day, s.latest)}
-      {!compact && (s.sessions_5d ?? 0) > 1 && cell(`${s.sessions_5d} sessions`, s.sum_5d)}
-      {!compact && (s.sessions_mtd ?? 0) > 1 && cell('month to date', s.mtd, s.sessions < 15 ? `(${s.sessions_mtd} collected)` : undefined)}
+      {!compact && (s.sessions_5d ?? 0) > 1 && cell('5 sessions', s.sum_5d, cov5.text, cov5.gap)}
+      {!compact && (s.sessions_mtd ?? 0) > 0 && cell('month to date', s.mtd, covM.text, covM.gap)}
     </span>
   )
 }
@@ -82,7 +88,7 @@ export function ParticipantPositioning() {
             {ticks.map(v => (
               <g key={v}>
                 <line x1={P} x2={W - P} y1={y(v)} y2={y(v)} stroke={v === 50 ? T.borderHi : T.border} strokeDasharray="3 4" />
-                <text x={P - 4} y={y(v) + 3} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>{v.toFixed(0)}</text>
+                <text x={P - 4} y={y(v) + 3} textAnchor="end" fontSize={9} fill={T.dim} fontFamily={T.mono}>{v.toFixed(0)}%</text>
               </g>
             ))}
             <path d={h.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.long_pct).toFixed(1)}`).join('')} fill="none" stroke={T.amber} strokeWidth={1.6} />

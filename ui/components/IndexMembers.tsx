@@ -12,14 +12,31 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
  * (additive points, so a horizon is a sum; the old "YTD pts" column — today's weights × YTD returns — is gone); the
  * DRIVER REGIME strip (neutral, "describes, does not predict"); the fit chip on the table header; sector contribution,
  * the monthly leaderboard and the concentration & breadth chart below. Today's live "who moved the index" stays on MOV.
+ *
+ * Review M46 / m027 / m029 (D-DATA, 6 Nov): the route's `tab` state greys the horizon points, sectors, concentration
+ * and monthly board when the fit is degraded or the history insufficient (one note above the table, a caption on each
+ * greyed panel); members' `flags` mark distorted filing figures (⚑, heuristic badge, the route's rule); the subtitle
+ * names where today's explained points come from (`explained_source`: the live rebuild in the session, the stored
+ * attribution after the close).
  */
 import { useEffect, useMemo, useState } from 'react'
 import { getIndexMemb, type IndexMemb, type IndexMembRow } from '@/lib/api'
-import { Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, SourceChip, Stat, T, TickerLink, fmtIdx, fmtPct, fmtPx, nseStampIso, ordinal, sourceOf, type Column } from '@/components/terminal'
+import { BadgeChip, Chip, DataTable, ErrorBox, Loading, PageHeader, Panel, SourceChip, Stat, T, TickerLink, fmtIdx, fmtPct, fmtPx, nseStampIso, ordinal, sourceOf, type Column } from '@/components/terminal'
+import type { Badge } from '@/components/terminal/source'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { liveLevel } from '@/components/liveModel'
-import { ConcentrationChart, DriverRegimeStrip, DriversEmpty, FitChip, HorizonPicker, MonthlyLeaderboard, SectorContribution, isDriverIndex, useDrivers, useTimelines } from '@/components/drivers/DriversView'
+import { ConcentrationChart, DriverRegimeStrip, DriversEmpty, DriversTabNotice, FitChip, HorizonPicker, MonthlyLeaderboard, SectorContribution, TabGrey, isDriverIndex, useDrivers, useTimelines } from '@/components/drivers/DriversView'
 import { HORIZON_LABEL, fmtPts, fmtShare, type Horizon } from '@/components/drivers/api'
+import { flagCell, flagWords, tabView } from '@/components/drivers/driversModel'
+
+/** The route's additive fields (D-DATA, 6 Nov) on top of lib/api's IndexMemb: per-member heuristic flags, their badge
+ *  and rule, and where today's explained points come from. Optional: an older ui-api sends none of them. */
+type MembRow = IndexMembRow & { flags?: string[] }
+type MembExtra = { flag_badge?: Badge; flag_rule?: string; explained_source?: string }
+const flagged = (r: MembRow, cell: 'pe' | 'pat' | 'rev', rule: string | undefined, body: React.ReactNode) =>
+  !flagCell(r.flags, cell) ? body
+    : <span data-memb-flag={cell} title={`heuristic flag: ${flagWords(r.flags).join(' · ')}${rule ? ` — ${rule}` : ''}`}
+        style={{ borderBottom: `1px dotted ${T.amber}` }}>{body}<span style={{ color: T.amber, marginLeft: 3 }}>⚑</span></span>
 
 const INDICES = ['NIFTY 50', 'NIFTY NEXT 50', 'NIFTY BANK', 'NIFTY IT'] as const
 const tone = (v: number | null | undefined) => (v == null ? T.dim : v > 0 ? T.green : v < 0 ? T.red : T.muted)
@@ -55,6 +72,11 @@ export function IndexMembers() {
     return { up, down }
   }, [d, liveM.available, liveM.quotes])  // eslint-disable-line react-hooks/exhaustive-deps
   const maxW = Math.max(1, ...(d?.members ?? []).map(r => r.weight_pct ?? 0))
+  const ext = (d ?? {}) as MembExtra
+  const tab = isDriverIndex(index) ? drv.data?.tab ?? null : null
+  const tv = tabView(tab)                                      // M46: degraded / insufficient grey the horizon columns
+  const greyCell = (body: React.ReactNode) => (tv.grey ? <span style={{ opacity: 0.45 }} title={tv.caption ?? undefined}>{body}</span> : body)
+  const nFlagged = (d?.members ?? []).filter(r => ((r as MembRow).flags ?? []).length > 0).length
   const cols: Column<IndexMembRow>[] = [
     { key: 'sym', label: 'Stock', sort: r => r.symbol, render: r => <TickerLink symbol={r.symbol} /> },
     { key: 'w', label: 'Weight', align: 'right', sort: r => r.weight_pct ?? 0, title: 'rebuilt free-float weight: shares × price × (1 − promoter %)',
@@ -71,9 +93,9 @@ export function IndexMembers() {
     { key: 'pts', label: `Pts · ${HORIZON_LABEL[horizon]}`, align: 'right', sort: r => ptsBy.get(r.symbol)?.points ?? -1e9,
       title: drv.data?.horizon?.from ? `index points from this stock, ${drv.data.horizon.from} → ${drv.data.horizon.to} (${drv.data.horizon.sessions} sessions), summed from the stored daily contribution table` : 'index points over the horizon, from the stored daily contribution table (backfill pending)',
       render: r => { const m = ptsBy.get(r.symbol); return m?.points == null ? <span style={{ color: T.dim }}>—</span>
-        : <span style={{ color: tone(m.points), fontWeight: 600 }} title={`weight ${m.weight_pct?.toFixed(2) ?? '—'}% (${drv.data?.weight_method?.label ?? 'rebuilt'}) · return ${fmtPct(m.ret_pct, 2)}`}>{fmtPts(m.points, 1)}</span> } },
+        : greyCell(<span style={{ color: tv.grey ? T.muted : tone(m.points), fontWeight: 600 }} title={`weight ${m.weight_pct?.toFixed(2) ?? '—'}% (${drv.data?.weight_method?.label ?? 'rebuilt'}) · return ${fmtPct(m.ret_pct, 2)}`}>{fmtPts(m.points, 1)}</span>) } },
     { key: 'share', label: 'Share of move', align: 'right', sort: r => ptsBy.get(r.symbol)?.share_abs ?? -1, title: '|points| ÷ Σ |member points| over the horizon (arithmetic)',
-      render: r => <span style={{ color: T.muted }}>{fmtShare(ptsBy.get(r.symbol)?.share_abs, 1)}</span> },
+      render: r => greyCell(<span style={{ color: T.muted }}>{fmtShare(ptsBy.get(r.symbol)?.share_abs, 1)}</span>) },
     { key: '1m', label: '1M', align: 'right', sort: r => r.ret_1m ?? -999, render: r => pct(r.ret_1m) },
     { key: '3m', label: '3M', align: 'right', sort: r => r.ret_3m ?? -999, render: r => pct(r.ret_3m) },
     { key: 'ytd', label: 'YTD', align: 'right', sort: r => r.ret_ytd ?? -999, render: r => pct(r.ret_ytd) },
@@ -81,13 +103,13 @@ export function IndexMembers() {
     { key: 'hi', label: 'vs 52w high', align: 'right', sort: r => r.from_high_pct ?? -999,
       render: r => <span style={{ color: (r.from_high_pct ?? -99) >= -5 ? T.green : (r.from_high_pct ?? 0) <= -25 ? T.red : T.muted }}>{fmtPct(r.from_high_pct, 1)}</span> },
     { key: 'pe', label: 'P/E', align: 'right', sort: r => r.pe ?? 1e9, title: 'price ÷ trailing four quarters of profit (NSE results filings)',
-      render: r => r.pe == null ? <span style={{ color: T.dim }}>—</span> : <span>{r.pe.toFixed(1)}×</span> },
+      render: r => r.pe == null ? <span style={{ color: T.dim }}>—</span> : flagged(r, 'pe', ext.flag_rule, <span>{r.pe.toFixed(1)}×</span>) },
     { key: 'pep', label: 'P/E vs own', align: 'right', sort: r => r.pe_pctl ?? 1e9, title: "today's P/E percentile within the company's own point-in-time P/E history (FA → P/E history)",
       render: r => r.pe_pctl == null ? <span style={{ color: T.dim }}>—</span>
         : <span style={{ color: r.pe_pctl <= 20 ? T.green : r.pe_pctl >= 80 ? T.red : T.muted }}>{ordinal(r.pe_pctl)}</span> },
     { key: 'pat', label: 'Profit y/y', align: 'right', sort: r => r.pat_yoy ?? -999, title: 'last reported quarter vs the same quarter a year earlier',
-      render: r => r.pat_turn ? <span style={{ color: r.pat_turn === 'to profit' ? T.green : T.red }}>{r.pat_turn}</span> : pct(r.pat_yoy, 0) },
-    { key: 'rev', label: 'Revenue y/y', align: 'right', sort: r => r.revenue_yoy ?? -999, render: r => pct(r.revenue_yoy, 0) },
+      render: r => r.pat_turn ? <span style={{ color: r.pat_turn === 'to profit' ? T.green : T.red }}>{r.pat_turn}</span> : flagged(r, 'pat', ext.flag_rule, pct(r.pat_yoy, 0)) },
+    { key: 'rev', label: 'Revenue y/y', align: 'right', sort: r => r.revenue_yoy ?? -999, render: r => flagged(r, 'rev', ext.flag_rule, pct(r.revenue_yoy, 0)) },
     { key: 'q', label: 'Qtr', align: 'right', render: r => <span style={{ color: T.dim, fontSize: 10 }}>{r.quarter?.slice(0, 7) ?? ''}</span> },
   ]
   const s = d?.summary
@@ -116,19 +138,28 @@ export function IndexMembers() {
             : sourceOf(nseStampIso(d.time) ?? drv.data?.as_of ?? null, { source: 'NSE', live: false, hint: drv.error })} badge={drv.data?.badges?.members ?? 'arithmetic'}
           right={<span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <HorizonPicker value={horizon} onChange={setHorizon} />
-            {isDriverIndex(index) && <FitChip d={drv.data} />}
           </span>}
-          subtitle={`weights rebuilt from filings (NSE does not publish live weights): they explain ${fmtSigned(d.explained_points, 1)} of today's ${d.change != null ? `${fmtSigned(d.change, 1)}` : '—'} points · click a column to sort${d.missing.length ? ` · not priced: ${d.missing.join(', ')}` : ''}`}>
+          // m029: the route says where today's explained points come from (live rebuild in the session, the stored attribution after the close)
+          subtitle={`${ext.explained_source ?? 'weights rebuilt from filings (NSE does not publish live weights)'}: they explain ${fmtSigned(d.explained_points, 1)} of today's ${d.change != null ? `${fmtSigned(d.change, 1)}` : '—'} points · click a column to sort${d.missing.length ? ` · not priced: ${d.missing.join(', ')}` : ''}`}>
+          {/* the fit chip on its own row under the header (in the header it squeezed the subtitle into a narrow column) */}
+          {isDriverIndex(index) && <div style={{ padding: '6px 12px', borderBottom: `1px solid ${T.border}` }}><FitChip d={drv.data} /></div>}
+          {isDriverIndex(index) && <DriversTabNotice d={drv.data} />}
           {!hasPts && !drv.loading && <div style={{ padding: '8px 12px', borderBottom: `1px solid ${T.border}` }}><DriversEmpty index={index} error={drv.error} payload={drv.data} /></div>}
           <DataTable columns={cols} rows={d.members} rowKey={r => r.symbol} dense initialSort={{ key: 'w', dir: 'desc' }} exportName={`MEMB_${index.replace(/ /g, '_')}_${horizon}`} />
+          {nFlagged > 0 && <div data-memb-flags style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '6px 12px', borderTop: `1px solid ${T.border}`, fontSize: 10, color: T.muted }}>
+            <BadgeChip badge={ext.flag_badge ?? 'heuristic'} />
+            <span><span style={{ color: T.amber }}>⚑</span> {nFlagged} member{nFlagged === 1 ? '' : 's'} flagged: {ext.flag_rule ?? 'a filing figure outside the usual range: read the filing first'}</span>
+          </div>}
         </Panel>
         {isDriverIndex(index) && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', gap: 12, marginTop: 12 }}>
-            <SectorContribution d={drv.data} error={drv.error} />
-            <ConcentrationChart index={index} tl20={tl20} />
-          </div>
+          <TabGrey tab={tab}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))', gap: 12, marginTop: 12 }}>
+              <SectorContribution d={drv.data} error={drv.error} />
+              <ConcentrationChart index={index} tl20={tl20} />
+            </div>
+          </TabGrey>
         )}
-        {isDriverIndex(index) && <div style={{ marginTop: 12 }}><MonthlyLeaderboard index={index} /></div>}
+        {isDriverIndex(index) && <div style={{ marginTop: 12 }}><TabGrey tab={tab}><MonthlyLeaderboard index={index} /></TabGrey></div>}
         <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>
           Returns on split- and bonus-adjusted NSE closes (dividends excluded). P/E and growth from each company's latest
           NSE results filing (consolidated where filed). Today's move is from NSE's live index feed ({d.time ?? 'last update'}).

@@ -96,7 +96,9 @@ def test_latest_completed_session_waits_for_the_close_and_the_last_bar() -> None
     assert gp.latest_completed_session(at(THU, 23, 56)) == WED                    # 23:55 close + 2 min grace not reached
     assert gp.latest_completed_session(at(THU, 23, 58)) == THU
     assert gp.latest_completed_session(at(date(2026, 11, 7), 12, 0)) == date(2026, 11, 6)   # Saturday → Friday
-    assert gp.latest_completed_session(at(date(2026, 11, 9), 8, 45)) == date(2026, 11, 6)   # Monday pre-open → Friday
+    assert gp.latest_completed_session(at(date(2026, 11, 16), 8, 45)) == date(2026, 11, 13)  # Monday pre-open → Friday
+    # wave 1e (M-D): Mon 9 Nov 2026 follows the Sun 8 Nov Muhurat session (14:20–15:30) — test_gold_wave1e pins it
+    assert gp.latest_completed_session(at(date(2026, 11, 9), 8, 45)) == date(2026, 11, 8)
     assert gp.session_close_at(date(2026, 10, 27)).strftime("%H:%M") == "23:30"   # US daylight time
     assert gp.session_close_at(WED).strftime("%H:%M") == "23:55"
 
@@ -126,7 +128,20 @@ def test_settlement_block_uses_the_vwap_else_the_band_of_its_real_session() -> N
     assert a["settlement_quality"] == "vwap30_proxy" and "proxy" in a["settlement_method"]
     assert a["band_midpoint"] == BAND_05NOV and a["band_session"] == "2026-11-03"
     assert a["band_session_label"] == "Tue 03 Nov settlement" and a["band_applies_to"] == "2026-11-04"
-    assert a["settlement_check"]["flagged"] is True and a["settlement_is_latest"] and a["settlement_note"] is None
+    # wave 1e: Wednesday's VWAP against Tuesday's band is Wednesday's MOVE, not a check of the proxy (never flagged) …
+    assert a["settlement_check"]["flagged"] is False and a["settlement_check"]["same_session"] is False
+    assert a["settlement_check"]["band_vs_vwap30_pct"] is None and "Tue 03 Nov settlement" in a["settlement_check"]["note"]
+    assert a["session_move_pct"] == pytest.approx((a["settlement"] / BAND_05NOV - 1) * 100, abs=0.01)
+    assert a["session_move_label"].startswith("Tue 03 Nov → Wed 04 Nov settlement move")
+    assert a["settlement_is_latest"] and a["settlement_note"] is None
+    # … the check validates the band against ITS OWN session's VWAP (Tuesday's, when known): 1,39,452 vs 1,39,448 passes
+    tue = {"status": "ok", **gp.vwap_last_minutes(_bars(TUE), gp.session_close_at(TUE)), "session": TUE.isoformat()}
+    a2 = gp.settlement_block(BAND_05NOV, THU, vw, WED, tue)
+    assert a2["settlement_check"]["same_session"] is True and a2["settlement_check"]["flagged"] is False
+    assert abs(a2["settlement_check"]["band_vs_vwap30_pct"]) < 0.01 and a2["settlement"] == a["settlement"]
+    # negative control: a band that is NOT its session's settlement is flagged by the same-session test
+    bad = gp.settlement_block(143_000.0, THU, vw, WED, tue)["settlement_check"]
+    assert bad["flagged"] is True and bad["same_session"] is True and "Tue 03 Nov" in bad["compared"]
     # no Breeze session: the band, LABELLED with Tuesday (never 'Wed 04 Nov settlement'), and the note says what is missing
     b = gp.settlement_block(BAND_05NOV, THU, {"status": "no_session"}, WED)
     assert b["settlement"] == BAND_05NOV and b["settlement_source"] == "band_midpoint" and b["settlement_quality"] == "band_proxy"
@@ -333,7 +348,8 @@ def test_the_0845_snapshot_records_its_settlement_source(tmp_path: Path, monkeyp
     gp._settle_cache.set(gp._settle_key("GOLD", DEC26, date(2026, 10, 23)), _ok(152_000.0, date(2026, 10, 23)))
     row = asyncio.run(gp.gold_snapshot(force=False))
     assert row["baseline"] == 152_000.0 and row["baseline_session"] == "2026-10-23" and row["baseline_source_kind"] == "breeze_vwap30"
-    assert row["stale_baseline"] is False and row["band_session"] == "2026-10-22" and row["settlement_check"]["flagged"] is True
+    assert row["stale_baseline"] is False and row["band_session"] == "2026-10-22" and row["settlement_check"]["flagged"] is False
+    assert row["settlement_check"]["same_session"] is False                              # wave 1e: Thu band vs Fri VWAP = a move
     assert row["baseline_check"]["flagged"] is False
     # negative control: no VWAP → the band of its REAL session (Thu 22 Oct), flagged stale by the session rule
     gp._cache.clear()
@@ -364,7 +380,8 @@ def test_the_contract_fields_are_served_everywhere_the_band_used_to_be(client: T
             assert k in blk, k
     assert h["settlement"] == 146_900.0 and h["settlement_source"] == "breeze_vwap30" and h["settlement_quality"] == "vwap30_proxy"
     assert h["settlement_session_label"] == "Fri 23 Oct settlement" and h["band_session_label"] == "Thu 22 Oct settlement"
-    assert h["settlement_check"]["band_vs_vwap30_pct"] == pytest.approx((146_080 / 146_900 - 1) * 100, abs=0.01)
+    assert h["settlement_check"]["band_vs_vwap30_pct"] is None and h["settlement_check"]["same_session"] is False   # wave 1e
+    assert h["session_move_pct"] == pytest.approx((146_900 / 146_080 - 1) * 100, abs=0.01)
     assert s["mcx_settle"] == 146_900.0 and s["mcx_settle_source"] == "breeze_vwap30" and s["basis_session_label"] == "Fri 23 Oct settlement"
     assert "at the" not in s["basis_session_label"]                    # the session only: the strip wraps it once
     # /fair runs the desk on the wall clock (gold_preopen is not pinned here): seed ITS latest session too
@@ -372,8 +389,8 @@ def test_the_contract_fields_are_served_everywhere_the_band_used_to_be(client: T
     gp._settle_cache.set(gp._settle_key("GOLD", DEC26, desk_latest), _ok(146_900.0, desk_latest))
     fair = client.get("/api/gold/fair").json()["baseline"]
     assert fair["value"] == 146_900.0 and fair["settlement_source"] == "breeze_vwap30" and fair["session"] == desk_latest.isoformat()
-    # 1,46,080 vs 1,46,900 = −0.56 %: inside the 0.6 % limit, so NOT flagged (the check is a test, not a label)
-    assert fair["settlement_check"]["band_vs_vwap30_pct"] == -0.56 and fair["settlement_check"]["flagged"] is False
+    # Thu 22 Oct band vs Fri 23 Oct VWAP: a session MOVE (+0.56 %), never a flag (wave 1e: no same-session VWAP, no check)
+    assert fair["settlement_check"]["band_vs_vwap30_pct"] is None and fair["settlement_check"]["flagged"] is False
     assert fair["band_session"] == "2026-10-22"
     # negative control: without the VWAP everything falls back to the band of its real session (Thu 22 Oct), labelled so
     gp._settle_cache.clear()
@@ -795,6 +812,12 @@ def test_a_vwap_data_service_stored_is_used_without_a_breeze_call(client: TestCl
         return await real(path, params)
 
     monkeypatch.setattr(gold, "_db_fetch", with_vwap)
+    # wave 1e (M-A): /health reads the MCX quote in MCX hours; the quote path keeps its own (real) clock — not under test here
+
+    async def no_quote(contract: str = "GOLD", expiry: str | None = None) -> dict[str, Any]:
+        return {"available": False, "quote": None}
+
+    monkeypatch.setattr(mcx, "mcx_quote", no_quote)
     gp._settle_cache.clear()
     h = client.get("/api/gold/health").json()["fair"]
     assert h["settlement"] == 146_950.0 and h["settlement_source"] == "breeze_vwap30" and h["settlement_session"] == "2026-10-23"
@@ -889,7 +912,8 @@ def test_the_previous_sessions_vwap_stands_in_before_a_two_session_old_band() ->
     assert b["settlement"] == pytest.approx(143_236.8, abs=0.1) and b["settlement_source"] == "breeze_vwap30"
     assert b["settlement_session_label"] == "Wed 04 Nov settlement" and b["settlement_is_latest"] is False
     assert "Thu 05 Nov" in b["settlement_note"] and "last-30-min VWAP, proxy" in b["settlement_note"]
-    assert b["settlement_check"]["flagged"] is True and "Wed 04 Nov" in b["settlement_check"]["compared"]
+    assert b["settlement_check"]["flagged"] is False and b["settlement_check"]["same_session"] is False   # Tue band, Wed VWAP
+    assert b["session_move_label"].startswith("Tue 03 Nov → Wed 04 Nov")
     assert b["vwap30"]["session"] == "2026-11-04"
     # negative controls: a latest VWAP wins; a 'previous' result of another session is ignored; never older than the band
     thu = {**wed, "value": 145_000.0, "session": THU.isoformat()}

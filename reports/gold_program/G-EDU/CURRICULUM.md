@@ -24,8 +24,8 @@ them in this order.
 | # | Number | Why first | Where it comes from | 26 Oct 2026 05:50 IST |
 |---|---|---|---|---|
 | 1 | **COMEX gold, $/oz** (front or matched month) | The world price. Everything else is a ratio to it. | CME via Yahoo `GC=F` / `GCZ26.CMX` (app overlay) | $4,004.2 (GCZ26, 05:39 IST) |
-| 2 | **USD/INR** | MCX gold = gold × rupee. A 1% rupee move is a 1% MCX move with gold flat. | Yahoo `INR=X` (offshore before 09:00) | 94.93 |
-| 3 | **10-year US real yield** (TIPS, %) | The opportunity cost of holding a zero-coupon asset. The classic driver. | FRED `DFII10` (T+1) / US Treasury (same day, slow) | 2.64% (22 Oct) · Treasury 2.66% (23 Oct) |
+| 2 | **USD/INR** | MCX gold = gold × rupee. A 1% rupee move is a 1% MCX move with gold flat. | Yahoo `INR=X` (before 09:00 it is the previous evening's last print: the app has no overnight rupee feed, and the 08:45 card dates it) | 94.93 |
+| 3 | **10-year US real yield** (TIPS, %) | The opportunity cost of holding a zero-coupon asset. The classic driver. | US Treasury real curve `UST_REAL_10Y` (same evening) or FRED `DFII10` (T+1): the same quantity, so the page prints the FRESHER one — one value and one date on the strip, HEALTH and MACRO | 2.64% (22 Oct) · Treasury 2.66% (23 Oct) |
 | 4 | **MCX basis vs duty-paid landed, %** | How much of the rupee price is local premium, carry and expectation once the dated 15% duty is taken out. | GOLD › PHYSICAL `ph.ladder` (`basis_pct`; the old `implied_premium_pct` 18.0% = 0.995 × 1.15 × 1.031) | **+3.1%** at the 26 Oct 05:49 fair value (§2.6) |
 | 5 | **Managed-money net position, contracts** (COT, weekly) | Is the speculative crowd long, how long, and is it adding or leaving — as a description of the week, never a forecast (G-STUDY). | CFTC disaggregated, Tuesday data, Friday release (`p.hero`) | +104,206 (20 Oct), 3rd week of long liquidation; 52-week COT index 26 (context) |
 
@@ -80,7 +80,7 @@ least 995.
 - BIS hallmarking in India: 6-digit alphanumeric HUID is mandatory on hallmarked jewellery (since 2023); the hallmark carries
   the fineness grade, not a price.
 
-**[APP]** `purity` column on MCXG specs. Tooltip: "995/999: multiply a 995 price by 1.00402 to compare with 999".
+**[APP]** `purity` column on MCXG specs. Tooltip: "995/999: a 999 quote is 0.40 % above the same gold at 995 (× 1.00402) — but the basis never uses that ratio: COMEX × USD/INR is the price of FINE gold, so a contract of purity P is compared with landed × P/1000 (PM decision D1)".
 
 ## 1.3 Bars and coins: who holds what
 
@@ -1003,7 +1003,8 @@ NSE/BSE currency segment, 09:00–17:00 IST)**; a GOLDM lot ≈ 13 lots. Long GO
 dollars, financed in rupees (you keep the INR–USD rate gap as cost: that is the covered-interest cost, ≈ the MCX
 contango excess). Timing: MCX trades 14.5 h, COMEX 23 h; every MCX open is a gap trade against 8.5 hours of COMEX
 (the Pre-Open desk); the currency segment closes at 17:00 while MCX runs to 23:30 — **the rupee hedge is off for the
-evening session** (offshore NDF moves it; the app shows `INR=X` as the proxy). Duty: §5.8, §7.5.
+evening session** (the offshore NDF moves it, but the app has no NDF feed: Yahoo `INR=X` stops at its last evening print, so the
+08:45 fair open carries no overnight rupee move and the card prints that print's time). Duty: §5.8, §7.5.
 
 **[APP]** `ph.ladder` and `mc.kgx` (with the rupee leg) compute the pieces; the MCXG paper ticket carries
 `hedge_usdinr_lots`, `max_lots_at_risk_pct`, `atr14_rupees` and the dated NRML margin.
@@ -1392,7 +1393,7 @@ directly above this text, so the two can be compared on the page.
 | rule_id | Clause it produces | Series | Rule (as implemented) | `threshold` dict (verbatim) | Window |
 |---|---|---|---|---|---|
 | H1 | "WEAK WEEK" / "STRONG WEEK" / "FLAT WEEK" / "FIRM WEEK" / "SOFT WEEK" (DAY / MONTH when `window=D` / `M`) | `COMEX_GC_FRONT` | gold's change over the window: ≤ −2 % WEAK · ≥ +2 % STRONG · \|Δ\| < 0.5 % FLAT · else FIRM (up) / SOFT (down); then the trend sentence from the TREND gauge: the price vs its 20-d and 200-d averages ('below both averages' / 'between' / 'above both', both % printed) and the drawdown from the 52-week high — a description, no threshold of its own | `{"weak_pct": -2.0, "strong_pct": 2.0, "flat_pct": 0.5}` | D: latest close vs the previous session · W: the calendar week to date (Monday's close → latest) once the week has started, else the last 5 sessions — the clause names the span it used · M: 30 calendar days (the nearest earlier session) |
-| H2 | "DOLLAR-DRIVEN" / "YIELD-DRIVEN" / "GOLD-SPECIFIC" after the H1 words; then the decomposition "gold −2.8 % over the week · of which the dollar −1.9 % · real yield +12 bp" | `DXY_CLOSE` (the KGX dollar effect) · `FRED_DFII10` | DOLLAR-DRIVEN when the dollar effect (KGX split) is ≥ 40 % of gold's move with the same sign and \|move\| ≥ 0.5 %; YIELD-DRIVEN when the 10-y real yield moved ≥ 5 bp against gold; else GOLD-SPECIFIC; no driver word at all when \|move\| < 0.5 %, and none when the dollar or the real-yield leg is unavailable (the clause then says the driver is untested and names the offline series) | `{"usd_share": 0.4, "min_move_pct": 0.5, "real_yield_bp": 5.0}` | the H1 window |
+| H2 | "DOLLAR-DRIVEN" / "YIELD-DRIVEN" / "GOLD-SPECIFIC" after the H1 words; then the decomposition "gold −2.8 % over the week · of which the dollar −1.9 % · real yield +12 bp" | `DXY_CLOSE` (the KGX dollar effect) · the 10-y real yield: the fresher of `UST_REAL_10Y` and `FRED_DFII10` (one value per page, dated in the clause) | DOLLAR-DRIVEN when the dollar effect (KGX split) is ≥ 40 % of gold's move with the same sign and \|move\| ≥ 0.5 %; YIELD-DRIVEN when the 10-y real yield moved ≥ 5 bp against gold; else GOLD-SPECIFIC; no driver word at all when \|move\| < 0.5 %, and none when the dollar or the real-yield leg is unavailable (the clause then says the driver is untested and names the offline series) | `{"usd_share": 0.4, "min_move_pct": 0.5, "real_yield_bp": 5.0}` | the H1 window |
 | H3 | "funds net 104,206 (−2.7 % w/w, long liquidation)" | `COT_DISAGG_F` (`gold_cot_metrics`, managed money) | managed-money net and its w/w change in % with the fund-driver label — the larger of the two fund legs (G-STUDY §5.2; "funds bought the dip" when price fell and the net still rose); printed whenever the positioning gauge is fresh | no threshold | latest report (Tuesday positions, Friday release) |
 | H4 | "India basis +3.1 % vs duty-paid landed" (the 26 Oct 05:49 figure of §2.6) | `MCX_BASIS_PCT` | the contract's settlement (last-30-min VWAP, else the band of its real session), in ₹/10 g, vs the duty-paid landed price × purity/1000 (GOLD / GOLDM 995, GOLDTEN / PETAL / GUINEA 999; landed is fine gold — PM decision D1) at that session's close, or the live price vs now while a quote exists; one value per clock (duty dated); stated, not judged — no "wide" or "discount" word | no threshold | latest |
 | H5 | "roll DEC-26→FEB-27 costs +1.03 % (+3.2 %/yr), FND in 35 d" | `COMEX_CARRY_ANN_PCT` (days to FND from `gold_cme_calendar`) | front → next calendar spread as % and annualised; days to first notice; printed whenever the curve gauge is fresh | no threshold | latest |
@@ -1468,7 +1469,8 @@ Evening (the last 30 min before the MCX close: 23:25–23:55 in US winter, 23:00
 995 → 999      × 1.00402 ;   999 → 995  × 0.99600
 MCX fair (desk)= settlement × (COMEX_now / COMEX_ref) × (USDINR_now / USDINR_ref)   [refs = last-30-min average before MCX close]
 duty-paid      = landed_995 × (1 + BCD + AIDC)      [15% (10% + 5%) since 13 May 2026, Notification 16/2026-Customs — dated input; tariff value fortnightly]
-MCX basis      = MCX_front / duty-paid − 1 ; carry-adjusted basis = basis − carry_to_expiry
+MCX basis      = MCX (₹/10 g) / (duty-paid × P/1000) − 1, P = the contract's purity (995 GOLD/GOLDM, 999 TEN/PETAL/GUINEA; D1) ;
+                 carry-adjusted basis = basis − carry_to_expiry
 old implied premium = MCX / landed_999 − 1 = 0.995 × (1 + duty) × (1 + basis) − 1      [deprecated alias]
 multiplier     = lot_g / quote_g  (GOLD 100, GOLDM 10, GOLDTEN 1, GUINEA 1, PETAL 1)
 tick value     = ₹1 × multiplier ; notional = price × multiplier × lots ; P&L = Δprice × multiplier × lots

@@ -356,7 +356,8 @@ def test_lifespan_schedules_the_backup_after_the_data_catchup(monkeypatch, tmp_p
                     catchup.args[3])
     backup_at, catchup_at, kwargs, mode = asyncio.run(scenario())
     assert mode == "full" and hm(catchup_at) == "21:21"
-    assert backup_at == catchup_at + mc.BACKUP_CATCHUP_DELAY and kwargs == {"backup_at": hm(backup_at)}
+    assert backup_at == catchup_at + mc.BACKUP_CATCHUP_DELAY
+    assert kwargs == {"backup_at": hm(backup_at), "replay": [], "later": []}      # full mode: no evening replay (M30)
     assert (tmp_path / "hb.json").exists() and not list((tmp_path / "backups").glob("*"))
     assert ("info", "SuryaDhana Online") in alerts.sent
 
@@ -380,3 +381,31 @@ def test_lifespan_adds_no_backup_when_todays_exists(monkeypatch, tmp_path):
         async with mc.lifespan(mc.app):
             return mc.scheduler.get_job("db_backup_catchup")
     assert asyncio.run(scenario()) is None
+
+
+def test_lifespan_inside_the_eod_window_replays_the_missed_evening_jobs(monkeypatch, tmp_path):
+    """M30 (5 Nov, controller down 19:34:54–19:55:26): the start-up planned "skip" and re-ran nothing; now the catch-up
+    carries the replay of the 19:45 track record and the 19:50 S1 shadow, and SYS's catchup_at names it for both."""
+    started = at(2030, 3, 6, 19, 55, 26)                      # a Wednesday, inside the 18:30–21:15 window
+    fake_clock(monkeypatch, started)
+    _quiet_lifespan(monkeypatch)
+    monkeypatch.setattr(mc, "_alerts", _Alerts())
+    monkeypatch.setattr(mc, "HEARTBEAT_FILE", tmp_path / "hb.json")
+    monkeypatch.setattr(mc, "BACKUP_DIR", tmp_path / "backups")
+    done_backup(tmp_path / "backups", "20300306")
+    monkeypatch.setattr(mc, "_history", mc.JobHistory(tmp_path / "history.json"))
+    monkeypatch.setattr(mc, "missed_jobs", lambda now, root: [])
+
+    async def no_bot():
+        return None
+    monkeypatch.setattr(mc, "telegram_poller", no_bot)
+    mc.write_heartbeat(tmp_path / "hb.json", at(2030, 3, 6, 19, 34, 54))
+
+    async def scenario():
+        async with mc.lifespan(mc.app):
+            job = mc.scheduler.get_job("startup_catchup")
+            return job.args[3], job.kwargs, dict(mc._CATCHUP_PLAN)
+    mode, kwargs, plan = asyncio.run(scenario())
+    assert mode == "skip" and kwargs["replay"] == ["alpha_shadow_daily", "news_track_record_daily"]   # the shadow first
+    assert set(plan) >= {"news_track_record_daily", "alpha_shadow_daily"} and "desk_daily" not in plan   # 19:30 ran
+    assert mc._DATASET_CHECK["armed"] is False, "the lifespan disarms the dataset read when it ends"

@@ -211,9 +211,10 @@ def mcx_close_time(day: date) -> datetime:
 
 def previous_session(publish_day: date) -> date:
     """Trading day whose settlement a security master published on `publish_day` carries (weekends and MCX full
-    holidays skipped: the Monday file after a Friday holiday carries Thursday's settlement)."""
+    holidays skipped: the Monday file after a Friday holiday carries Thursday's settlement). A dated special session
+    (Muhurat, Sun 8 Nov 2026, 14:20–15:30) IS a session (wave 1e, M-D): previous_session(Mon 9 Nov) = Sun 8 Nov."""
     d = publish_day - timedelta(days=1)
-    while d.weekday() >= 5 or (specs.holiday_on(d) or (None, None))[1] == "full":
+    while specs.trading_window(d) is None:
         d -= timedelta(days=1)
     return d
 
@@ -228,12 +229,18 @@ def mcx_day(day: date) -> dict[str, Any]:
     closures from shared/mcx_specs; weekends count as closed)."""
     hol = specs.holiday_on(day)
     window = specs.trading_window(day)
+    special = specs.special_session_on(day)
     out: dict[str, Any] = {"date": day.isoformat(), "trading": window is not None,
-                           "closure": hol[1] if hol else ("weekend" if day.weekday() >= 5 else None),
-                           "name": hol[0] if hol else None,
+                           "closure": hol[1] if hol else ("weekend" if day.weekday() >= 5 and not special else None),
+                           "name": hol[0] if hol else (special["name"] if special else None),
                            "opens_at": window[0].isoformat(timespec="minutes") if window else None,
-                           "closes_at": window[1].isoformat(timespec="minutes") if window else None}
-    if hol and hol[1] == "full":
+                           "closes_at": window[1].isoformat(timespec="minutes") if window else None,
+                           "special": special}
+    if special and window:
+        # a dated special session (Muhurat): trading only inside its short window, no 09:00 open to call (wave 1e, M-D)
+        out["note"] = (f"MCX special session: {special['name']} {window[0]:%H:%M}–{window[1]:%H:%M} IST "
+                       f"(circular {special.get('circular') or 'pending'})")
+    elif hol and hol[1] == "full":
         out["note"] = f"MCX closed ({hol[0]})"
     elif hol and hol[1] == "morning":
         out["note"] = f"MCX morning session closed ({hol[0]}): opens {window[0]:%H:%M}" if window else f"MCX closed ({hol[0]})"
@@ -468,6 +475,31 @@ def settlement_check(band_mid: float | None, vwap: float | None, band_sess: date
     return out
 
 
+def band_check(band_mid: float | None, b_sess: date | None, latest: date, prev: date, v: float | None,
+               prev_vwap: dict[str, Any] | None, used_sess: date | None) -> dict[str, Any]:
+    """The band VALIDATED against the last-30-min VWAP of the band's OWN session (wave 1e minor, C-DATA-3 / C-TRADER-3: the
+    check compared the band of S−1 with the VWAP of S, so it measured S's move — −0.60 % against a 0.6 % limit on 6 Nov, and
+    any session moving more than 0.6 % would raise the amber note while nothing was wrong). The band's session VWAP is the
+    latest one (`v`) or the cached / stored previous one (`prev_vwap`); without it there is NO check (`same_session` False,
+    `band_vs_vwap30_pct` None, never flagged) and the cross-session gap is served as `session_move_pct` instead. Pure."""
+    same: float | None = None
+    if b_sess is not None:
+        if v and b_sess == latest:
+            same = v
+        elif b_sess == prev:
+            same = _vwap_value(prev_vwap, prev)
+    if same is not None:
+        out = settlement_check(band_mid, same, b_sess, b_sess)
+        out["same_session"] = True
+        return out
+    out = settlement_check(band_mid, None, b_sess, None)
+    out["same_session"] = False
+    if band_mid and b_sess and used_sess and used_sess != b_sess:
+        out["note"] = (f"the band's own session ({session_label(b_sess)}) has no last-30-min VWAP here: the band against the "
+                       f"{session_label(used_sess)} would measure that session's move, not the proxy (see session_move_pct)")
+    return out
+
+
 def _vwap_value(vwap: dict[str, Any] | None, session: date | None = None) -> float | None:
     """The value of an OK VWAP result (of `session` when given), else None: a failed status is never a price."""
     if not isinstance(vwap, dict) or vwap.get("status") != "ok" or not vwap.get("value"):
@@ -497,7 +529,7 @@ def settlement_block(band_mid: float | None, published: date | None, vwap: dict[
         "band_applies_to": band_applies_to(published).isoformat() if published else None,
         "latest_session": latest.isoformat(),
         "latest_session_label": session_label(latest),
-        "settlement_check": settlement_check(band_mid, v or pv, b_sess, used_sess or latest),
+        "settlement_check": band_check(band_mid, b_sess, latest, prev, v, prev_vwap, used_sess),
         "vwap30": ({k: (used or {}).get(k) for k in ("value", "bars", "volume", "method", "window", "last_close", "session")}
                    if used else None),
         "vwap30_status": (vwap or {}).get("status") if isinstance(vwap, dict) else "not_fetched",
@@ -515,6 +547,12 @@ def settlement_block(band_mid: float | None, published: date | None, vwap: dict[
     out["settlement_session"] = sess.isoformat() if sess else None
     out["settlement_session_label"] = session_label(sess) if sess else None
     out["settlement_is_latest"] = bool(sess and sess == latest)
+    # the move from the band's session to the served VWAP's, labelled as a MOVE (wave 1e minor: it was the check's number)
+    sv = v or pv
+    out["session_move_pct"] = (round((sv / band_mid - 1) * 100, 2)
+                               if band_mid and sv and b_sess and used_sess and used_sess != b_sess else None)
+    out["session_move_label"] = (f"{b_sess:%a %d %b} → {used_sess:%a %d %b} settlement move (band midpoint → last-30-min VWAP)"
+                                 if out["session_move_pct"] is not None and b_sess and used_sess else None)
     how = "last-30-min VWAP, proxy" if out["settlement_source"] == "breeze_vwap30" else "band proxy"
     out["settlement_note"] = (
         None if sess is None or sess == latest
@@ -523,6 +561,18 @@ def settlement_block(band_mid: float | None, published: date | None, vwap: dict[
               f"rupee move since its close, so the expected gap also holds {latest:%a}'s move")
     )
     return out
+
+
+def older_than_expected_note(served: date, expected: date, vwap_status: Any = None) -> str:
+    """The 08:45 flag when the baseline belongs to an OLDER session than the latest completed one (wave 1e, M-D: on Mon
+    9 Nov the expected session is the Sun 8 Nov Muhurat window; with no VWAP stored or read for it the baseline would skip
+    its move — the 5 Nov stale-baseline blocker for one morning). Pure."""
+    special = specs.special_session_on(expected)
+    what = f"{session_label(expected)}" + (f" ({special['name']}, {special['opens']}–{special['closes']} IST)" if special else "")
+    why = str(vwap_status or "not fetched").replace("_", " ")
+    return (f"baseline session older than expected: the {session_label(served)} is used, but the latest completed session is "
+            f"the {what} and no last-30-min VWAP is stored or read for it ({why}); the fair open also carries that "
+            "session's move")
 
 
 def _verdict_body(fair: float, mcx_price: float | None, threshold: float, opened: bool) -> dict[str, Any]:
@@ -1319,12 +1369,14 @@ async def _gold_preopen(baseline: float | None, mcx_price: float | None, thresho
                               prev_vwap)
     settle_day = date.fromisoformat(settle["settlement_session"]) if settle["settlement_session"] else last_session
     close_at = session_close_at(settle_day)
+    if settle_day < last_session and not baseline:
+        notes.append(older_than_expected_note(settle_day, last_session, settle.get("vwap30_status")) + ".")
     if settle["settlement_note"] and not baseline:
         notes.append(f"Baseline is the {settle['settlement_note']}.")
     if settle["settlement_check"]["flagged"]:
-        notes.append(f"The ICICI band midpoint ₹{settle['band_midpoint']:,.0f} is the {settle['band_session_label']}, "
-                     f"{settle['settlement_check']['band_vs_vwap30_pct']:+.2f} % from the {settle['settlement_session_label']} "
-                     "proxy: it is not that session's settlement.")
+        notes.append(f"The ICICI band midpoint ₹{settle['band_midpoint']:,.0f} ({settle['band_session_label']}) is "
+                     f"{settle['settlement_check']['band_vs_vwap30_pct']:+.2f} % from that same session's last-30-min VWAP: "
+                     "beyond the 0.6 % test, the band is not that session's settlement.")
     broker = await asyncio.to_thread(_breeze_mcx_quote, contract["expiry"]) if contract else None
     if contract and not broker and today_mcx["trading"] and open_at is not None and now.time() >= open_at:
         broker = await asyncio.to_thread(_breeze_mcx_open, contract["expiry"], now.date())
@@ -1440,6 +1492,13 @@ async def _gold_preopen(baseline: float | None, mcx_price: float | None, thresho
         "baseline": {"value": base_value, "source": base_source, "session": settle_day.isoformat(),
                      "session_label": session_label(settle_day),           # "Wed 04 Nov settlement", never the file date
                      "stale": settle_day < last_session and not baseline,  # an older session than the latest completed one
+                     # wave 1e (M-D): the session the baseline SHOULD be (the latest completed one, Muhurat included) and,
+                     # when the served one is older, why — e.g. Mon 9 Nov 08:45 with no VWAP stored or read for Sun 8 Nov
+                     "expected_session": last_session.isoformat(),
+                     "expected_session_label": session_label(last_session),
+                     "older_than_expected": bool(settle_day < last_session and not baseline),
+                     "older_note": (older_than_expected_note(settle_day, last_session, settle.get("vwap30_status"))
+                                    if settle_day < last_session and not baseline else None),
                      "close_time": close_at.isoformat(),
                      "settlement_source": None if baseline else settle["settlement_source"],
                      "settlement_quality": None if baseline else settle["settlement_quality"],
@@ -1833,6 +1892,8 @@ def snapshot_gate(now: datetime, force: bool) -> None:
     if today["closure"] == "morning" and not force:      # PLAN c.3: the 08:45 call skips morning closures (no 09:00 open to call)
         raise HTTPException(status_code=409,
                             detail=f"{today['note']}: no 09:00 open to predict (force=true for the 17:00 session)")
+    if today.get("special") and not force:               # Muhurat: a short afternoon window, no 09:00 open (wave 1e, M-D)
+        raise HTTPException(status_code=409, detail=f"{today['note']}: no 09:00 open to predict (force=true to record anyway)")
     open_at = datetime.fromisoformat(today["opens_at"])
     if not force and now >= open_at:
         raise HTTPException(status_code=409, detail=(f"MCX is open (since {open_at:%H:%M}): a snapshot now would use "
@@ -1875,6 +1936,9 @@ async def gold_snapshot(force: bool = Query(False, description="Record even afte
                        baseline_check=({"band_vs_vwap30_pct": 0.0, "flagged": False, "threshold_pct": SETTLE_CHECK_PCT,
                                         "compared": "baseline IS the last-30-min VWAP"} if kind == "breeze_vwap30" else None),
                        stale_baseline=bool(b.get("stale")), fair_open=round(m["fair_open"], 1),
+                       baseline_expected_session=b.get("expected_session"),
+                       baseline_older_than_expected=bool(b.get("older_than_expected")),
+                       baseline_note=b.get("older_note"),
                        threshold=threshold, duty_pct=(d.get("duty") or {}).get("pct"),
                        comex_ref=_r(m.get("comex", {}).get("ref"), 2), comex_now=_r(m.get("comex", {}).get("now"), 2),
                        inr_ref=_r(m.get("inr", {}).get("ref"), 4), inr_now=_r(m.get("inr", {}).get("now"), 4),

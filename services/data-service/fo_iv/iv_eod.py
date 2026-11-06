@@ -40,11 +40,12 @@ RATE_TENOR = "3m"
 NEAR_MIN_DTE = 3                  # near series: dte > 2 (expiry-day and T ≤ 2 d rows stay in the surface, out of "near")
 MONTHLY_DTE = (20, 60)
 CM_TENORS = (30, 60, 90)
+CM30_FLAT_DTE = (10, 60)          # M43: one expiry in this window and no 30-day bracket → IV30 = its ATM IV, flagged cm30_flat
 RANK_WINDOW = 252
 RANK_MIN_OBS = 20
 SURFACE_MONEYNESS = 0.15
 SURFACE_EXPIRIES = 3
-PCP_FUTURE_TOL = 0.005
+PCP_FUTURE_TOL = 0.005             # = black76.PCP_FUTURE_TOL (the OMON chain uses that one; a test pins them equal)
 MIN_IV_STRIKES = 4
 FEW_STRIKES = 8
 DELTA_TARGETS = ((0.25, "25d"), (0.10, "10d"))
@@ -111,7 +112,7 @@ def expiry_surface(symbol: str, kind: str, opts: pd.DataFrame, futs: pd.DataFram
         dte = (expiry - day).days
         if dte <= 0:
             continue
-        t = dte / 365.0
+        t = b76.t_years(expiry, day)              # TIME_CONVENTION: whole calendar days from the session's 15:30 close ÷ 365
         ce = o[o["opt_type"] == "CE"].drop_duplicates("strike").set_index("strike")
         pe = o[o["opt_type"] == "PE"].drop_duplicates("strike").set_index("strike")
         ks = sorted(set(ce.index) & set(pe.index))
@@ -121,30 +122,12 @@ def expiry_surface(symbol: str, kind: str, opts: pd.DataFrame, futs: pd.DataFram
         flags: list[str] = []
         c_px = {k: _px(ce.at[k, "close"], ce.at[k, "volume"]) for k in ks}
         p_px = {k: _px(pe.at[k, "close"], pe.at[k, "volume"]) for k in ks}
-        fwd: float | None = None
-        fsrc: str | None = None
-        for k in sorted(ks, key=lambda k: abs(k - s_ref))[:3]:
-            cpx, ppx = c_px[k], p_px[k]
-            if cpx is not None and ppx is not None:
-                fwd, fsrc = b76.forward_from_parity(k, cpx, ppx, t, r), "pcp"
-                break
-        fut = fut_close.get(expiry)
-        if fwd is not None and fut is not None and abs(fwd / fut - 1.0) > PCP_FUTURE_TOL:
-            fwd, fsrc = fut, "future"
-            flags.append("pcp_fallback_future")
-        if fwd is None:
-            if fut is not None:
-                fwd, fsrc = fut, "future"
-            else:
-                fwd, fsrc = s_ref * math.exp(r * t), "spot"
-                flags.append("forward_from_spot")
-        ivs: dict[float, tuple[float, float | None, float | None]] = {}
-        for k in ks:
-            civ = b76.implied_vol(c_px[k], fwd, k, t, True, r) if (c_px[k] is not None and k >= fwd * (1 - b76.ITM_BAND)) else None
-            piv = b76.implied_vol(p_px[k], fwd, k, t, False, r) if (p_px[k] is not None and k <= fwd * (1 + b76.ITM_BAND)) else None
-            vals = [v for v in (civ, piv) if v]
-            if vals:
-                ivs[k] = (float(np.mean(vals)), civ, piv)
+        # the forward and the per-strike IVs come from black76's shared helpers: the OMON chain calls the same two, so
+        # one expiry has one forward and one ATM IV on every page (M04)
+        pairs = {k: (c_px[k], p_px[k]) for k in ks}
+        fwd, fsrc, fwd_flags = b76.choose_forward(pairs, s_ref, t, r, fut_close.get(expiry), tol=PCP_FUTURE_TOL)
+        flags.extend(fwd_flags)
+        ivs = b76.strike_ivs(pairs, fwd, t, r)
         call_oi = float(pd.to_numeric(ce["oi"], errors="coerce").fillna(0).sum())
         put_oi = float(pd.to_numeric(pe["oi"], errors="coerce").fillna(0).sum())
         if len(ivs) < MIN_IV_STRIKES:
@@ -240,6 +223,17 @@ def cm_skew(rows: list[dict[str, Any]], target_days: int = 30) -> float | None:
     return round(float(pick["skew_25d"]), 4)
 
 
+def cm30_flat(rows: list[dict[str, Any]]) -> tuple[float | None, int | None]:
+    """M43: when no pair of expiries brackets 30 days (a stock whose next-month series has too few traded strikes), IV30 is
+    the ATM IV of the one expiry nearest 30 days inside ``CM30_FLAT_DTE`` — a flat term structure, flagged ``cm30_flat``
+    on the row (arithmetic; never silent). (iv, its dte), or (None, None) when no expiry sits in the window."""
+    cands = [x for x in rows if x.get("atm_iv") is not None and CM30_FLAT_DTE[0] <= (x.get("dte") or 0) <= CM30_FLAT_DTE[1]]
+    if not cands:
+        return None, None
+    pick = min(cands, key=lambda x: (abs(x["dte"] - 30), -x["dte"]))
+    return round(float(pick["atm_iv"]), 4), int(pick["dte"])
+
+
 def summarise(symbol: str, expiry_rows: list[dict[str, Any]], day: date, r: float, *, spot: float | None, spot_source: str | None,
               legacy: bool, now: datetime) -> dict[str, Any]:
     near = sorted([x for x in expiry_rows if x.get("atm_iv") is not None and x["dte"] >= NEAR_MIN_DTE], key=lambda x: x["dte"])
@@ -247,7 +241,12 @@ def summarise(symbol: str, expiry_rows: list[dict[str, Any]], day: date, r: floa
     cm = {d: cm_iv(expiry_rows, d) for d in CM_TENORS}
     flags: list[str] = []
     if cm[30] is None:
-        flags.append("no_cm30")
+        flat, _flat_dte = cm30_flat(expiry_rows)
+        if flat is not None:
+            cm[30] = flat
+            flags.append("cm30_flat")
+        else:
+            flags.append("no_cm30")
     if spot_source == "near_future":
         flags.append("spot_from_future")
     if legacy:
@@ -386,33 +385,41 @@ class RvCache:
     """Rolling RV20 (cc / Parkinson / YZ) per symbol for a date range, computed once for a backfill (the per-day path would
     issue 224 queries per session). Same formulas as ``realised``; a test asserts they agree."""
 
+    LOOKBACK_DAYS = 130               # 20 sessions + the 60-session range-outlier reference ≈ 85 sessions before ``start``
+
     def __init__(self) -> None:
         self.rows: dict[str, pd.DataFrame] = {}
+        self._src: tuple[Any, date, date] | None = None
 
     @staticmethod
     def rolling(frame: pd.DataFrame, n: int = 20) -> pd.DataFrame:
         d = realised._clean(frame).reset_index(drop=True)
         if d.empty:
-            return pd.DataFrame(columns=["date", "rv20_cc", "rv20_parkinson", "rv20_yz"])
+            return pd.DataFrame(columns=["date", "rv20_cc", "rv20_parkinson", "rv20_yz", "range_outlier"])
+        bad = realised.range_outliers(d)                 # the same per-session rule as the single-day estimators
         lr = np.log(d["close"] / d["prev_close"]).replace([np.inf, -np.inf], np.nan)
         cc = lr.rolling(n, min_periods=max(5, n // 2)).std(ddof=1) * realised.ANNUALISE * 100
-        hl = (np.log(d["high"] / d["low"]) ** 2).where((d["high"] > 0) & (d["low"] > 0))
+        hl = (np.log(d["high"] / d["low"]) ** 2).where((d["high"] > 0) & (d["low"] > 0) & ~bad)
         park = np.sqrt(hl.rolling(n, min_periods=max(5, n // 2)).mean() / (4 * math.log(2))) * realised.ANNUALISE * 100
         o = np.log(d["open"] / d["prev_close"])
         c = np.log(d["close"] / d["open"])
-        u, dn = np.log(d["high"] / d["open"]), np.log(d["low"] / d["open"])
-        rs = u * (u - c) + dn * (dn - c)
+        rs = realised.rs_terms(d).where(~bad)
         k = 0.34 / (1.34 + (n + 1) / (n - 1))
-        vo = o.rolling(n, min_periods=n).var(ddof=1)
-        vc = c.rolling(n, min_periods=n).var(ddof=1)
-        rsm = rs.rolling(n, min_periods=n).mean()
+        # min_periods as the other two estimators: a close-only day (the index file missing; the valuation-history close fills
+        # it) used to blank YZ for the next 20 sessions (NIFTY YZ on 1,543 of 1,761 rows); vo / vc gate, RS averages what remains
+        vo = o.rolling(n, min_periods=max(5, n // 2)).var(ddof=1)
+        vc = c.rolling(n, min_periods=max(5, n // 2)).var(ddof=1)
+        rsm = rs.rolling(n, min_periods=1).mean()
         yz = np.sqrt((vo + k * vc + (1 - k) * rsm).clip(lower=0)) * realised.ANNUALISE * 100
-        return pd.DataFrame({"date": d["date"].map(db.to_date), "rv20_cc": cc, "rv20_parkinson": park, "rv20_yz": yz})
+        n_bad = bad.astype(float).rolling(n, min_periods=1).sum()
+        return pd.DataFrame({"date": d["date"].map(db.to_date), "rv20_cc": cc, "rv20_parkinson": park, "rv20_yz": yz,
+                             "range_outlier": n_bad > 0})
 
     def load(self, store: Any, symbols: list[str], start: date, end: date) -> None:
+        self._src = (store, start, end)
         idx = [s for s in symbols if s in INDEX_SYMBOLS]
         stocks = [s for s in symbols if s not in INDEX_SYMBOLS]
-        lo = start - pd.Timedelta(days=60).to_pytimedelta()
+        lo = start - pd.Timedelta(days=self.LOOKBACK_DAYS).to_pytimedelta()
         if stocks and db.table_exists(store, "nse_bhavcopy"):
             df = db.query_df(store, """SELECT symbol, date, open, high, low, close, prev_close FROM nse_bhavcopy
                                        WHERE series = 'EQ' AND date >= ? AND date <= ? AND list_contains(?, symbol) ORDER BY symbol, date""",
@@ -430,6 +437,12 @@ class RvCache:
                 self.rows[back.get(str(name), str(name))] = self.rolling(g)
 
     def get(self, symbol: str, day: date) -> dict[str, float | None]:
+        if symbol not in self.rows and self._src is not None:
+            # a name that joined F&O after the range's first file (360ONE, BSE, CDSL …): the 5 Nov backfill seeded the cache
+            # from the 2019 file only, so 117 of 224 underlyings never got a realised vol. Load it on first use.
+            store, start, end = self._src
+            self.rows[symbol] = pd.DataFrame()
+            self.load(store, [symbol], start, end)
         df = self.rows.get(symbol)
         if df is None or df.empty:
             return {"rv20_cc": None, "rv20_parkinson": None, "rv20_yz": None}
@@ -437,7 +450,10 @@ class RvCache:
         if hit.empty:
             return {"rv20_cc": None, "rv20_parkinson": None, "rv20_yz": None}
         r = hit.iloc[-1]
-        return {k: (None if pd.isna(r[k]) else round(float(r[k]), 4)) for k in ("rv20_cc", "rv20_parkinson", "rv20_yz")}
+        out: dict[str, Any] = {k: (None if pd.isna(r[k]) else round(float(r[k]), 4)) for k in ("rv20_cc", "rv20_parkinson", "rv20_yz")}
+        if "range_outlier" in r.index and bool(r["range_outlier"]):
+            out["range_outlier"] = True
+        return out
 
 
 def fovolt_for(store: Any, day: date) -> dict[str, float]:
@@ -460,18 +476,33 @@ def enrich(store: Any, summary: pd.DataFrame, day: date, *, history: IvHistory, 
         rank, pct = rank_and_percentile(history.prior(sym, day), base)
         history.push(sym, day, base)
         out.at[i, "iv_rank_252"], out.at[i, "iv_pctile_252"] = rank, pct
+        extra: list[str] = []
         if rv is not None:
-            vols = rv.get(sym, day)
+            vols = dict(rv.get(sym, day))
         elif per_day_rv:
             frame = rv_frame_index(store, sym, day) if sym in INDEX_SYMBOLS else rv_frame_stock(store, sym, day)
+            if len(frame) and db.to_date(frame["date"].iloc[-1]) != day:
+                # the session's own OHLC is not stored yet (the 4 Nov row was computed at 13:24 the next day, before the
+                # index file landed): a 20-day RV ending YESTERDAY must not be filed under today — leave it empty, flagged
+                vols, frame = {"rv20_cc": None, "rv20_parkinson": None, "rv20_yz": None}, frame.iloc[0:0]
+                extra.append("rv_input_missing")
             vols = {k: (round(v, 4) if v is not None else None) for k, v in realised.all_three(frame).items()} if len(frame) else \
                 {"rv20_cc": None, "rv20_parkinson": None, "rv20_yz": None}
+            if len(frame) and realised.outlier_dates(frame):
+                vols["range_outlier"] = True
         else:
             vols = {"rv20_cc": None, "rv20_parkinson": None, "rv20_yz": None}
+        if vols.pop("range_outlier", False):
+            extra.append("rv_range_outlier")
         for k, v in vols.items():
             out.at[i, k] = v
+        if extra:
+            prev = row["quality_flags"] if isinstance(row["quality_flags"], str) and row["quality_flags"] else ""
+            out.at[i, "quality_flags"] = ",".join([f for f in [*prev.split(","), *extra] if f])
         out.at[i, "fovolt_ann"] = fov.get(sym)
         rv20 = vols.get("rv20_cc")
+        # IV − RV20 is against CLOSE-TO-CLOSE (catalog IV_MINUS_RV20; M01: every label now says "cc"); the Parkinson and
+        # Yang-Zhang spreads are arithmetic on the stored columns, named where they are shown
         out.at[i, "iv_minus_rv20"] = round(base - rv20, 4) if (base is not None and rv20 is not None) else None
     return out
 

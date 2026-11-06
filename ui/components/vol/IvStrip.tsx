@@ -48,7 +48,7 @@ export function IvStrip({ symbol, nextResults }: { symbol: string; nextResults?:
             {cell('IV RANK', fmtNum(last.iv_rank_252 ?? d?.rank.stored.iv_rank_252 ?? d?.rank.iv_rank_252, 0), `${d?.definitions?.iv_rank_252 ?? 'IV rank'} (252 sessions)`)}
             {cell('IV PCTILE', fmtNum(last.iv_pctile_252 ?? d?.rank.stored.iv_pctile_252 ?? d?.rank.iv_pctile_252, 0), `${d?.definitions?.iv_pctile_252 ?? 'IV percentile'} (252 sessions)`)}
             {cell('25Δ SKEW', last.skew_25d_30 == null ? '—' : `${signed(last.skew_25d_30)} pts`, d?.definitions?.skew_25d_30)}
-            {cell('IV − RV20', last.iv_minus_rv20 == null ? '—' : `${signed(last.iv_minus_rv20)} pts`, d?.definitions?.iv_minus_rv20)}
+            {cell('IV − RV20 (CC)', last.iv_minus_rv20 == null ? '—' : `${signed(last.iv_minus_rv20)} pts`, d?.definitions?.iv_minus_rv20 ?? 'IV30 minus the 20-session close-to-close realised vol')}
             {cell('NEXT RESULTS', nextResults ?? '—', 'from the NSE event calendar (board meeting for results)')}
           </div>
         ) : (

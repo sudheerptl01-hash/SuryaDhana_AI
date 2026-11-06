@@ -294,6 +294,12 @@ ui-api keeps the terminal's user settings (watchlist, pins, GO recents, saved ti
 Every origin (the app, a browser on :8010, a phone through §7) loads them before first render and writes
 through; each also keeps a local copy.
 
+**In-app import (from the first ui-api restart after 6 Nov 2026; page review M35).** While the server says nothing was
+imported, the terminal offers it once in a toast; later use GO `IMPORT` or MORE ▾ → ⇪ IMPORT SETTINGS. START opens a
+one-time page on http://localhost:3000, served by ui-api itself for at most 10 minutes (no Next dev server, single use,
+a token in the link). Copy the link into the browser you used for the old terminal and click IMPORT there: it fills only
+settings you have not set in the app. If something already listens on :3000, the dialog says so and the steps below apply.
+
 **One-time migration from the old browser terminal (:3000).** Settings from before the switchover exist only
 in the localStorage of the browser that used http://localhost:3000. They reach the server the first time that
 browser loads the :3000 build that carries the sync code. Do it **before** editing the watchlist or pins in the
@@ -403,10 +409,27 @@ alone and leave ui-api up. `lsof data/market.duckdb` must show data-service with
 - **No idle sleep** → `com.suryadhana.awake` holds `caffeinate -s -i` while you are logged in.
 - **Controller downtime** → on its next start the controller reads `data/.controller_heartbeat.json`,
   counts every scheduled run it missed, catches up the NSE files (or re-runs the whole EOD pipeline when
-  the market is shut) and sends ONE Telegram report. The Desk and the S1 shadow mark missed sessions on
-  their next nightly run by design. The key gold jobs (`gold_overnight`, `gold_mcx_master`, `gold_cot_weekly`) re-run
-  with `backfill_from` = the last heartbeat's date (`gold_downtime_catchup`, 26 Oct 2026), never inside a freeze window;
+  the market is shut) and sends ONE Telegram report. Outside the evening window the catch-up re-runs the Desk and
+  the S1 shadow when their 19:30 / 19:50 runs were missed (both replay every missed session from stored closes, rules
+  unchanged). **Inside the 18:20–21:15 evening window** (6 Nov 2026, review M30: a 19:34–19:55 restart on 5 Nov left the
+  19:45 news track record and the 19:50 S1 shadow stale for a day) the catch-up replays, once each and in this order,
+  every evening job whose slot passed during the downtime: the 18:30 EOD pipeline, the 19:15 index valuation, the
+  19:20 evening snapshot, the 19:30 Desk, the 19:50 S1 shadow, the 19:45 news track record (the shadow goes first: it
+  never reads the track record, whose run may take 30 min) and Friday's 20:10 journal (`EVENING_REPLAY` in
+  `scripts/master_controller.py`); a slot still ahead is left to its own run. These are jobs, not restarts, so the
+  freeze window allows them. The report lists what was re-run with the status **that** run recorded (`error`,
+  `skipped`, `no new data` or `done`; "no run recorded" when the job returned without running), what waits for today's
+  own slot, and every missed job that is **NOT** re-run with its next scheduled run. "The Desk / the S1 shadow replayed
+  every missed session" appears only for a run of that catch-up that recorded `done`: never for a failed shadow (a
+  non-zero exit, a timeout), a Desk with `DESK_ENABLED=0` (`skipped`) or a run that moved no dataset (`no new data`).
+  SYS's `/api/scheduler/status` carries `catchup_at` for a job that the downtime missed, only while a catch-up run of
+  it is actually scheduled; it is cleared when that catch-up ends, whether the job ran, failed or was skipped.
+  The key gold jobs (`gold_overnight`, `gold_mcx_master`, `gold_cot_weekly`, …) re-run with `backfill_from` = the last
+  heartbeat's date (`gold_downtime_catchup`, 26 Oct 2026), never inside a freeze window; `gold_mcx_close` (Breeze bars)
+  only while an ICICI session is live (sessions expire at midnight IST, so the old 00:15 retry was removed on 6 Nov);
   the other gold jobs simply run at their next slot (every series is point-in-time, so a late fetch is a gap, not a lie).
+  To refill what a long outage left missing (ALRT notes, wraps, FII/DII rows), see
+  [Backfill after a long outage](#backfill-after-a-long-outage-m31).
 - **A missed 02:15 backup** (Mac off or asleep at 02:15, controller down, even a 2-minute restart across 02:15)
   → at start-up, when today's `market-YYYYMMDD.meta.json` is missing and 02:15 has passed, the controller runs the
   backup once (`db_backup_catchup` on SYS): about 3 min after the start, and after the data catch-up above when
@@ -417,7 +440,15 @@ alone and leave ui-api up. `lsof data/market.duckdb` must show data-service with
 - **SYS job history** → each job's last run, status and duration are saved in `data/.scheduler_history.json`
   (rewritten atomically after every job; safe to delete, it refills as jobs run). After a restart SYS shows them
   until each job runs again (`/api/scheduler/status` marks such rows `last_run_source: "history"`). Jobs that catch
-  their own failure (the backup, the 19:45 news track record) now record `error` instead of `done`.
+  their own failure (the backup, the 19:45 news track record, and since 6 Nov the 19:50 S1 shadow, which also sends a
+  Telegram WARNING "S1 shadow job failed" for an exception, not only for a non-zero exit) record `error`, not `done`.
+  Since 6 Nov 2026 (review M33 / m111) a run's status is one of: `error`; `skipped` (the dormant legacy engine with
+  AUTOPILOT off, which used to say `done` in 0 ms); `no new data` (the job ran, but none of the datasets the catalog
+  gives it moved: the stored as-of, the ingest_log date / revision / sha256 / Last-Modified are compared before and
+  after the run on data-service `/db/data-health`; not judged for the every-few-minutes jobs, nor without a reading;
+  `JOB_DATASET_CHECK=0` turns it off); or `done`. `/api/scheduler/status` also gives each job `schedule_ist` (its
+  trigger in words), `running_since` (a run in flight) and `catchup_at`. The first polls of a data-service job now
+  come after 1, 1, 2, 3, 5 and 8 s (then every 15 s), so a short job no longer reads ≈ 15,000 ms.
 - **News-scanner track record (19:45)** → a failed run sends a Telegram WARNING "News track record failed" with
   the error line and shows `error` on SYS; the BRF/NEWS track record keeps its last good run. From 15 to 23 Oct
   2026 it failed silently every evening (the script took the evening snapshot's DuckDB connection for the price
@@ -444,6 +475,39 @@ alone and leave ui-api up. `lsof data/market.duckdb` must show data-service with
 - **Telegram `/status`** shows each service (`HUNG` when it listens but `/health` times out), the terminal UI
   release (or `MISSING` with the build-ui fix), the desktop app (running, and whether launchd supervises it), the
   dead-man ping, and an "Unattended reboots" warning while the reboot settings above are not done.
+
+### Backfill after a long outage (M31)
+
+The controller's log records it down 31 Oct 11:29 → 4 Nov 21:29 IST and 28 Oct 12:46 → 30 Oct 08:11 (its "Down from …
+to … IST." downtime reports; also 24 Oct 16:36 → 25 Oct 10:59, a weekend, and 5 Nov 19:34 → 19:55). The review found no
+ALRT notes on 29 Oct or 2–4 Nov (and none for the 28 Oct close), no wraps for 16 / 21 / 28 / 29 Oct and 2 / 3 Nov, no
+FII/DII rows for 28 Oct and 2 / 3 Nov. One PM-run command refills what stored data allows and says what it cannot; it is
+never scheduled. A **dry run is the default** (it prints the plan and writes nothing); `--execute` refuses to run
+inside a freeze window (exit 3). The default range starts 28 Oct, the review's evidence window.
+```bash
+P=/Users/sudheer/Desktop/jupyter_env/bin/python
+$P scripts/master_controller.py backfill-outage --since 2026-10-28 --until 2026-11-04            # the plan, nothing written
+$P scripts/daily_wrap.py --backfill-missing --since 2026-10-12 --until 2026-11-04 --dry-run --base http://127.0.0.1:8010   # which wraps it would write
+$P scripts/master_controller.py backfill-outage --since 2026-10-28 --until 2026-11-04 --execute  # after 21:15 or on a weekend
+$P scripts/master_controller.py backfill-outage --steps wraps --since 2026-10-12 --until 2026-11-04 --execute   # the 16 / 21 Oct wraps
+```
+- **wraps**: D-DATA's generator, `scripts/daily_wrap.py --backfill-missing --since … --until …` (stored NSE sessions
+  only; a wrap whose required sections are not stored is skipped, never half-written; a complete wrap is never touched).
+- **fii_dii**: D-DATA's job, data-service `POST /jobs/fii-dii-backfill {"since": …}`. NSE's API serves only the latest
+  day, so a missed session stays missing unless you saved NSE's CSV that day: pass it with `--fii-dii-csv <file>`
+  (validated: every date an NSE session, one FII and one DII row, buy − sell = net). The result lists what stays missing.
+- **notes**: the ALRT inbox (`data/notifications.jsonl`), merged in time order: for each missed **closing** note one
+  line built from the stored NSE index closes (`index_ohlc_daily`: NIFTY 50 and NIFTY BANK close and day change),
+  titled "(backfilled)", dated and saying "no closing note is recorded for this session; backfilled from stored data on
+  <date>"; for each missed **pre-market** note one "No pre-market note is recorded for this session" line (kind `gap`):
+  GIFT NIFTY and the overnight cues were never stored point-in-time, so that note is not rebuilt. A line states only
+  what the command checked (the inbox has no note of that kind for that session). It names a controller outage, with
+  its dates, only when the controller's own log (`.logs/master-controller.log*`, its "Down from … to … IST." lines)
+  records one over that slot; otherwise it gives no cause (the current log begins with the 25 Oct 10:59 start, so no
+  earlier session gets one; on 6 Nov it named the 28 Oct close, 29 Oct and 2–4 Nov, and nothing else). Re-running adds
+  nothing twice.
+- Run only the steps you want with `--steps wraps,fii_dii,notes`. The wraps step needs ui-api up; the FII/DII step needs
+  D-DATA's route mounted in data-service (a 404 says so and does nothing).
 
 **Manual recovery recipe (no restarts needed, works inside freeze windows)**
 ```bash
@@ -673,15 +737,69 @@ diff against or roll back to. One-time, about 20 minutes:
    or let the backup script do it (Terminal v2 0.1): `scripts/db_backup.py --offsite [DIR]` copies tonight's
    `.duckdb(.zst)`, the `ui_prefs` `.sqlite` and both `.meta.json` to `DIR` (default `OFFSITE_BACKUP_DIR` from `.env`),
    each through a temp name + rename, verifies the DuckDB copy by sha256 and keeps the same rotation (7 daily + 4
-   Sundays) there. A missing or unmounted target fails the run (exit 1) after the local backup is complete. The 02:15
-   `db_backup_daily` job does **not** pass `--offsite` yet, so run it by hand (never inside a freeze window or
-   beside the 02:15 run; one run at a time, a busy lock exits 75):
+   Sundays) there. A missing or unmounted target fails the run (exit 1) after the local backup is complete. Since
+   6 Nov 2026 the 02:15 `db_backup_daily` job passes `--offsite <OFFSITE_BACKUP_DIR>` **only when `OFFSITE_BACKUP_DIR`
+   is set** (in the environment, or in `.env`, read at each run: no restart needed); unset, it runs exactly as before.
+   An off-site failure is reported as "Off-site backup copy FAILED" (Telegram warning, SYS `error`), not as a failed
+   backup: the local copy is complete. A first run by hand (never inside a freeze window or beside the 02:15 run; one
+   run at a time, a busy lock exits 75):
    ```bash
    /Users/sudheer/Desktop/jupyter_env/bin/python scripts/db_backup.py --offsite /Volumes/<disk>/suryadhana/backups/duckdb
    ```
+   Steps for the owner: [Owner actions after the 5 Nov review](#owner-actions-after-the-5-nov-review-m32).
 6. **Routine:** commit and push after every deploy, and tag it (`git tag -a deploy-YYYYMMDD -m …`). To see what a
    deploy changed in one file: `git diff <tag> -- <file>`; to put one file back: `git checkout <tag> -- <file>`,
    then restart that service outside the freeze windows.
+
+## Owner actions after the 5 Nov review (M32)
+
+The 43-page review found the appliance tells nobody when it is dark (31 Oct–4 Nov went unnoticed) and the 4.4 GB
+database has no off-machine copy. Three one-time settings, about an hour in all, none needing a restart of the stack
+and none inside a freeze window (07:45–09:20, 18:30–21:15 IST):
+
+1. **O-1 · the dead-man ping (≈ 15 min, do it first).** Create the healthchecks.io check and put its URL in `.env` as
+   `HEALTHCHECK_PING_URL=` exactly as in [Off-machine dead-man ping](#off-machine-dead-man-ping-healthchecksio) steps
+   1–6 (optionally the second check, `HEALTHCHECK_WATCHDOG_URL=`). Done when `./start-local.sh status` shows
+   `dead-man-ping  ok` within 2 minutes and the Telegram test on healthchecks.io reaches your phone.
+2. **O-2 · power-on recovery (≈ 15 min).** `sudo pmset -a autorestart 1`, then `pmset -g | grep -w autorestart` prints
+   `autorestart 1`; turn off automatic macOS installs and write the FileVault decision down, as in
+   [Unattended reboots](#unattended-reboots-power-cuts-macos-updates-filevault) steps 1, 2 and 4. Done when the
+   `reboot-recovery` row of `./start-local.sh status` no longer warns about `autorestart`.
+3. **O-3 · the off-machine copy (≈ 30 min, plus one restore drill).**
+   - Mount the target (an external SSD, or an rclone / cloud-drive mount) and create the folder, e.g.
+     `mkdir -p /Volumes/<disk>/suryadhana/backups/duckdb`. An encrypted volume is best: the backups hold the settings
+     store (`ui_prefs`).
+   - Add one line to `.env` (no restart: the 02:15 job reads it at each run):
+     ```bash
+     [ -z "$(tail -c 1 .env)" ] || echo >> .env
+     printf 'OFFSITE_BACKUP_DIR=%s\n' '/Volumes/<disk>/suryadhana/backups/duckdb' >> .env
+     ```
+   - Run one copy by hand outside the windows (it makes tonight's local backup too, ≈ 2–20 min). Pass the folder:
+     run by hand, `db_backup.py` does not read `.env` (the 02:15 job passes it for you):
+     `/Users/sudheer/Desktop/jupyter_env/bin/python scripts/db_backup.py --offsite /Volumes/<disk>/suryadhana/backups/duckdb`
+     — the last line is `RESULT {…}` with `"offsite": {"sha256_verified": true, …}`. From the next night the 02:15 job
+     does the same.
+   - **Restore drill** (read-only on the live database; on a scratch copy):
+     ```bash
+     D=/Volumes/<disk>/suryadhana/backups/duckdb
+     LATEST=$(ls -t "$D"/market-*.meta.json | head -1); echo "$LATEST"
+     /Users/sudheer/Desktop/jupyter_env/bin/python - "$LATEST" << 'EOF'
+     import hashlib, json, sys, pathlib
+     meta = json.loads(pathlib.Path(sys.argv[1]).read_text()); f = pathlib.Path(sys.argv[1]).with_name(meta["file"])
+     h = hashlib.sha256()
+     with f.open("rb") as fh:                      # 4.7 GB: hashed in 8 MB chunks, never read whole
+         for block in iter(lambda: fh.read(8 << 20), b""):
+             h.update(block)
+     print(meta["file"], "sha256 ok" if h.hexdigest() == meta["sha256"] else "sha256 MISMATCH", "rows", meta.get("rows"))
+     EOF
+     ```
+     then restore that file into a scratch folder as in [§3 Restore the database](#3-restore-the-database-44-gb-git-ignored)
+     (never over `data/market.duckdb` while the stack runs) and open it read-only to check the row count matches
+     `rows`. Write the date of the drill here: ______________________
+   - Every failure later arrives as a Telegram "Off-site backup copy FAILED" warning (target unmounted, disk full);
+     the local backup is unaffected.
+4. **O-12 · the public repository.** Keep the secret scan of [Version control](#version-control-and-off-machine-backup)
+   step 2 before every push.
 
 ## Data health: the DATA view and `/api/data/health` (Terminal v2 1.4)
 
@@ -706,7 +824,9 @@ until then `/api/data/health` answers from a built-in fallback seed (R-DATA §3)
 - **What happens by itself.** Hourly at :10 `data_health_check` sends one Telegram line per dataset that changes
   state (state kept in `data/.data_health_state.json`, so a restart does not repeat lines; red is critical). At 08:35
   `morning_sweep` re-runs the jobs behind amber / red rows (at most 6 light NSE fetches, never a gold or a backfill job)
-  and sends the DATA digest. After downtime the start-up catch-up writes explicit **gap** rows for captures that only
+  and sends the DATA digest. Inside the morning window it leaves the results ingest (≈ 14 min) to the 20:45 capture,
+  and it stops waiting after `SWEEP_BUDGET_S` (480 s): data-service finishes a running job on its own and the digest
+  says which step it did not wait for (6 Nov 2026, review m112). After downtime the start-up catch-up writes explicit **gap** rows for captures that only
   exist during the session (pre-open book, breadth samples, FII/DII, gold open): those cannot be backfilled, and the
   pages say "no intraday data for …" instead of showing the last day.
 - **What you do.** amber: usually nothing (the 22:45 pass or the 08:35 sweep catches it). red on an NSE file: check
@@ -729,7 +849,7 @@ session is its first real run: the request guard against real job traffic, the m
 | 09:20 | with a terminal window open (the app, or a browser on :8010): `redis-cli -h 127.0.0.1 PUBSUB NUMSUB live.quotes` (with a Redis password, prefix `REDISCLI_AUTH=…`, see [Redis password](#redis-password-terminal-v2-07-o-t10)) | `live.quotes` then 1 or more (ui-api's monitor hub subscribes while a window is open, and lets go 15 s after the last one closes) |
 | 09:20 | `timeout 10 redis-cli -h 127.0.0.1 SUBSCRIBE live.quotes` | tick messages arrive (NIFTY at least) |
 | 09:20, 15:35 | `grep -c http_guard.rejected .logs/ui-api.log .logs/data-service.log .logs/master-controller.log` | the counts do not grow; if they do, read those lines: a job the guard blocked shows its path |
-| 15:35, 21:20 | the scheduler's results (below) | every job that ran today says `done`, none `error` |
+| 15:35, 21:20 | the scheduler's results (below) | every job that ran today says `done` (or `no new data` / `skipped`, see SYS job history above), none `error` |
 | 21:20 | `ls -l alpha_lab/reports/shadow_status.md`; the DESK page | the shadow status and the Desk show today |
 | 08:50, 16:00, 21:40 | the GOLD page header strip and the SYS rows `gold_*` (26 Oct 2026) | the MCX settlement labelled by its session (Monday shows "Fri … settlement"), no STALE chip older than `GOLD_MAX_AGE_DAYS`, the 15:45 CME job `done` (log the hour the FTP file arrived in week one); Saturday ≈ 03:30: the "COT <date>: funds net …" Telegram digest line |
 | 02:20 next night | `ls -l data/backups/duckdb/*"$(date +%Y%m%d)"*` | a `market-` and a `ui_prefs-` backup dated today |

@@ -203,3 +203,147 @@ def test_the_two_file_parsers():
         ingest.parse_top10(b"SYMBOL,WEIGHTAGE(%)\nX,99\n", date(2026, 11, 4))                       # not ten rows
     with pytest.raises(ValueError):
         ingest.parse_constituents(b"a,b\n1,2\n")
+
+
+# ── review M46: NIFTY BANK — dated caps, the fit to the index's own closes, honest degradation; m026 interval guard ─────
+BANK = [f"BK{i:02d}" for i in range(14)]
+B_START, B_END = date(2026, 3, 2), date(2026, 6, 30)
+TRUE_CORR = {"BK00": 1.25, "BK01": 0.8, "BK03": 1.3, "BK05": 0.7}       # what the filings get wrong (IWF, promoter splits…)
+
+
+def _bank_build(store, financials_root: Path, *, drop_level: date | None = None) -> list[date]:
+    rng = np.random.default_rng(11)
+    days = [d for d in pd.date_range(B_START, B_END).date if d.weekday() < 5]
+    shares = {s: 1e9 * (0.62 ** i) for i, s in enumerate(BANK)}          # HDFC-like head, a long tail
+    prices = {s: 100.0 for s in BANK}
+    financials_root.mkdir(parents=True, exist_ok=True)
+    for s in BANK:
+        q = [{"period_end": "2025-12-31", "filed_at": "2026-01-20T17:00:00", "shares": shares[s], "face_value": 1.0, "paid_up": shares[s]}]
+        (financials_root / f"{s}.json").write_text(json.dumps({"symbol": s, "quarters": q}))
+    rows, idx, level = [], [], 50_000.0
+    for i, d in enumerate(days):
+        rets = {s: float(rng.normal(0, 0.012)) for s in BANK}
+        prev = dict(prices)
+        u = {s: shares[s] * prev[s] for s in BANK}
+        tot = sum(u.values())
+        prior = weights.apply_caps({s: v / tot for s, v in u.items()}, *weights.caps_for("NIFTY BANK", d))
+        raw = {s: prior[s] * TRUE_CORR.get(s, 1.0) for s in BANK}
+        t2 = sum(raw.values())
+        w_true = {s: v / t2 for s, v in raw.items()}
+        for s in BANK:
+            new = prev[s] * (1 + rets[s])
+            rows.append({"symbol": s, "series": "EQ", "date": d, "prev_close": prev[s], "open": new, "high": new, "low": new, "last": new, "close": new,
+                         "avg_price": new, "volume": 1000, "turnover_lacs": 1.0, "trades": 10, "deliv_qty": 100, "deliv_pct": 10.0})
+            prices[s] = new
+        if i > 0:
+            level *= 1 + sum(w_true[s] * rets[s] for s in BANK)
+        if d != drop_level:
+            idx.append({"symbol": "NIFTY BANK", "date": d, "open": level, "high": level, "low": level, "close": level, "source": "nse_daily_file",
+                        "first_seen_at": NOW})
+    store.upsert_bhavcopy(pd.DataFrame(rows))
+    db.upsert(store, "index_ohlc_daily", pd.DataFrame(idx), ["symbol", "date", "open", "high", "low", "close", "source", "first_seen_at"],
+              {"date": "DATE", "first_seen_at": "TIMESTAMP", **{c: "DOUBLE" for c in ("open", "high", "low", "close")}})
+    members = pd.DataFrame([{"symbol": s, "industry": "Financial Services", "isin": None, "company": s} for s in BANK])
+    ingest.write_constituents(store, "NIFTY BANK", members, B_START, source="fixture", now=NOW)
+    return days
+
+
+def test_bank_caps_are_dated():
+    assert weights.caps_for("NIFTY BANK", date(2025, 6, 2)) == (0.33, 0.62)
+    assert weights.caps_for("NIFTY BANK", date(2025, 11, 20)) == (0.29, 0.58)
+    assert weights.caps_for("NIFTY BANK", date(2026, 11, 5)) == (0.20, 0.45)
+    assert weights.caps_for("NIFTY 50", date(2026, 11, 5)) is None                              # negative control: NIFTY 50 is not capped
+
+
+def test_fit_corrections_need_history_and_recover_the_truth():
+    rng = np.random.default_rng(5)
+    syms = ["A", "B", "C"]
+    prior = {"A": 0.5, "B": 0.3, "C": 0.2}
+    truth = {"A": 1.2, "B": 0.8, "C": 1.0}
+    rows = []
+    for t in range(60):
+        r = {s: float(rng.normal(0, 0.01)) for s in syms}
+        w = {s: prior[s] * truth[s] for s in syms}
+        tot = sum(w.values())
+        idx = sum(w[s] / tot * r[s] for s in syms)
+        rows += [{"date": t, "symbol": s, "prior_w": prior[s], "ret": r[s], "index_ret": idx} for s in syms]
+    h = pd.DataFrame(rows)
+    c = weights.fit_corrections(h, lam=1e-9)
+    ratio = {s: c[s] / c["C"] for s in syms}                                                    # identified up to the renormalisation
+    assert abs(ratio["A"] - 1.2) < 0.02 and abs(ratio["B"] - 0.8) < 0.02
+    assert weights.fit_corrections(h[h["date"] < 30]) is None                                   # negative control: < 40 sessions
+
+
+def test_bank_fit_is_out_of_sample_and_beats_the_caps_alone(store, tmp_path):
+    days = _bank_build(store, tmp_path / "fin")
+    res = jobs.compute_index(store, "NIFTY BANK", days[1:], financials_root=tmp_path / "fin", now=NOW)
+    assert res["skipped_count"] == 0 and any("fitted to the index's closes" in n for n in res["notes"])
+    fit = store.read("SELECT date, residual_points, weight_method FROM index_contribution_fit WHERE index_name = 'NIFTY BANK' ORDER BY date")
+    fit["date"] = fit["date"].map(db.to_date)
+    early, late = fit.iloc[:40], fit.iloc[-30:]
+    assert set(early["weight_method"]) == {"rebuilt_capped"}                                     # < 40 stored sessions: the prior, labelled
+    assert set(late["weight_method"]) == {"rebuilt_fitted"}
+    assert late["residual_points"].abs().mean() < 0.25 * early["residual_points"].abs().mean()
+    # point in time: the corrections used on a day were fitted on sessions before it (the history query never reaches the day)
+    d = late["date"].iloc[0]
+    h = weights.fit_history(store, "NIFTY BANK", d)
+    assert h["date"].map(db.to_date).max() < d
+    # the capped prior obeys the dated caps
+    w = store.read("SELECT symbol, weight_pct FROM index_weights_daily WHERE index_name = 'NIFTY BANK' AND method = 'rebuilt_capped' AND date = ?", [d])
+    top = w["weight_pct"].sort_values(ascending=False)
+    assert top.iloc[0] <= 20.0 + 1e-6 and top.head(3).sum() <= 45.0 + 1e-6
+
+
+def test_a_missing_previous_level_skips_the_day_and_is_recomputed_later(store, tmp_path):
+    """m026: 2 Feb 2026 was attributed over 30 Jan → 2 Feb (the 1 Feb level was missing) while the members moved over
+    1 Feb → 2 Feb: −492 pts of residual. Now the day is skipped; once the level is stored the resumed backfill redoes it."""
+    days = _bank_build(store, tmp_path / "fin", drop_level=date(2026, 4, 15))
+    res = jobs.compute_index(store, "NIFTY BANK", days[1:], financials_root=tmp_path / "fin", now=NOW)
+    reasons = {s["date"]: s["reason"] for s in res["skipped"]}
+    assert "2026-04-15" in reasons and "no index level" in reasons["2026-04-15"]
+    assert "2026-04-16" in reasons and "previous session 2026-04-15" in reasons["2026-04-16"]
+    assert "2026-04-17" not in reasons                                                           # negative control: the next day is fine
+    # a row written by the old code with the wrong previous level is flagged stale
+    bad = store.read("SELECT * FROM index_contribution_fit WHERE index_name = 'NIFTY BANK' AND date = ?", [date(2026, 4, 17)])
+    bad["date"] = date(2026, 4, 16)
+    db.upsert(store, "index_contribution_fit", bad, list(bad.columns), {"date": "DATE", "computed_at": "TIMESTAMP"})
+    assert date(2026, 4, 16) not in jobs.stale_dates(store, "NIFTY BANK", B_START, B_END)     # no level to compare with yet
+    lvl = store.read_one("SELECT close FROM index_ohlc_daily WHERE symbol = 'NIFTY BANK' AND date = ?", [date(2026, 4, 14)])[0]
+    db.upsert(store, "index_ohlc_daily", pd.DataFrame([{"symbol": "NIFTY BANK", "date": date(2026, 4, 15), "open": lvl, "high": lvl, "low": lvl,
+                                                        "close": lvl * 1.001, "source": "nse_daily_file", "first_seen_at": NOW}]),
+              ["symbol", "date", "open", "high", "low", "close", "source", "first_seen_at"],
+              {"date": "DATE", "first_seen_at": "TIMESTAMP", **{c: "DOUBLE" for c in ("open", "high", "low", "close")}})
+    assert date(2026, 4, 16) in jobs.stale_dates(store, "NIFTY BANK", B_START, B_END)
+    out = jobs.run_backfill(store, start=B_START, end=B_END, indices=("NIFTY BANK",), financials_root=tmp_path / "fin", now=NOW)
+    assert out["indices"]["NIFTY BANK"]["recomputed_stale"] >= 1
+    assert jobs.stale_dates(store, "NIFTY BANK", B_START, B_END) == set()
+
+
+def test_bank_is_not_computed_before_its_first_archived_list(store, tmp_path):
+    """Checker 6 Nov: a NIFTY BANK backfill from 2019-10 would apply today's 14 members (and hindsight caps) to every
+    earlier day. Days before the first archived constituent list are skipped with the reason; the owner can opt in."""
+    days = _bank_build(store, tmp_path / "fin")
+    first = date(2026, 5, 4)
+    store.write("DELETE FROM index_constituents_daily WHERE index_name = 'NIFTY BANK'")
+    members = pd.DataFrame([{"symbol": s, "industry": "Financial Services", "isin": None, "company": s} for s in BANK])
+    ingest.write_constituents(store, "NIFTY BANK", members, first, source="fixture", now=NOW)
+    res = jobs.run_backfill(store, start=B_START, end=B_END, indices=("NIFTY BANK",), financials_root=tmp_path / "fin", now=NOW)["indices"]["NIFTY BANK"]
+    pre = [d for d in days if d < first]
+    reasons = [s for s in res["skipped"] if "before the first archived constituent list" in s["reason"]]
+    assert res["skipped_count"] >= len(pre) and reasons and reasons[0]["date"] == pre[0].isoformat()
+    assert any(f"{len(pre)} session(s) before {first} not computed" in n for n in res["notes"])
+    stored = store.read("SELECT MIN(date) AS lo FROM index_contribution_fit WHERE index_name = 'NIFTY BANK'")
+    assert db.to_date(stored["lo"].iloc[0]) >= first                                            # nothing stored before the list
+    # negative control: the owner's opt-in computes them (labelled "members as of … applied before")
+    res2 = jobs.compute_index(store, "NIFTY BANK", pre[1:], financials_root=tmp_path / "fin", now=NOW, allow_pre_list=True)
+    assert res2["written"]["fit"] == len(pre) - 1 and any("applied before that date" in n for n in res2["notes"])
+
+
+def test_nifty_50_keeps_its_labelled_pre_list_history(store, tmp_path):
+    """Negative control for the rule above: NIFTY 50 (calibrated daily to NSE's top-10 file) is still computed before its
+    first list, with the 'members as of <date> applied before' note."""
+    fx = _build(store, tmp_path / "financials")
+    store.write("UPDATE index_constituents_daily SET date = ? WHERE index_name = 'NIFTY 50'", [fx["sessions"][40]])
+    res = jobs.compute_index(store, "NIFTY 50", fx["sessions"][1:30], financials_root=tmp_path / "financials", now=NOW)
+    assert res["written"]["fit"] > 0 and any("applied before that date" in n for n in res["notes"])
+    assert not any("before the first archived constituent list" in s["reason"] for s in res["skipped"])

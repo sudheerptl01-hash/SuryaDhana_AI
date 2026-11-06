@@ -4,6 +4,11 @@
  * OVME-style pricer for one contract picked in the OMON chain: Black-76 on the chain's forward (the model behind
  * OMON's implied vols), Greeks, breakeven, chance of finishing in the money, cost per lot, and the payoff of one
  * long lot at expiry and today. IV and days are editable to ask "what if".
+ *
+ * Time (review M04, fix wave 2 round 2): the chain's own `t_days` — calendar time to 15:30 IST on the expiry day ÷ 365
+ * (fo_iv.black76.TIME_CONVENTION 'cal365-1530'): whole days at end of day, fractional in session, no half-day. The
+ * same T the chain's IVs and its Θ / ν columns use, so "at the chain's IV" reprices the market price. It used to be
+ * days + ½, which made the pricer's Θ / ν differ from the chain's for the same contract on the same page.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { black76 } from '@/lib/black76'
@@ -12,6 +17,10 @@ import { Btn, Input, Panel, T, sourceOf } from '@/components/terminal'
 import { nseDelayedSource } from '@/components/liveModel'
 
 export type PricerPick = { strike: number; side: 'call' | 'put' }
+/** M04: the chain's T in calendar days (`t_days`, fractional in session); whole days to expiry when an older payload lacks it */
+export const chainTDays = (data: Pick<OptionChain, 'days_to_expiry'> & { t_days?: number | null }): number =>
+  data.t_days != null && Number.isFinite(data.t_days) ? Math.max(0, data.t_days) : Math.max(0, data.days_to_expiry)
+const fmtDays = (d: number) => String(Number.isInteger(d) ? d : Number(d.toFixed(2)))
 const n = (v: number | null | undefined, d = 2) => (v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d }))
 
 export function OptionPricer({ data, pick, onClose }: { data: OptionChain; pick: PricerPick; onClose: () => void }) {
@@ -22,13 +31,14 @@ export function OptionPricer({ data, pick, onClose }: { data: OptionChain; pick:
   const chainIv = leg?.iv ?? other?.iv ?? data.atm_iv ?? null
   const ivSource = leg?.iv != null ? 'this contract' : other?.iv != null ? `the ${pick.side === 'call' ? 'put' : 'call'} at this strike (parity)` : 'at-the-money'
   const [ivTxt, setIvTxt] = useState(chainIv != null ? String(chainIv) : '15')
-  const [daysTxt, setDaysTxt] = useState(String(Math.max(0, data.days_to_expiry) + 0.5))
-  useEffect(() => { setIvTxt(chainIv != null ? String(chainIv) : '15'); setDaysTxt(String(Math.max(0, data.days_to_expiry) + 0.5)) },
+  const chainDays = chainTDays(data)
+  const [daysTxt, setDaysTxt] = useState(fmtDays(chainDays))
+  useEffect(() => { setIvTxt(chainIv != null ? String(chainIv) : '15'); setDaysTxt(fmtDays(chainDays)) },
     [pick.strike, pick.side, data.expiry, data.symbol])   // eslint-disable-line react-hooks/exhaustive-deps
   const F = data.forward ?? data.spot ?? 0, K = pick.strike
   const iv = Math.max(0.1, Number(ivTxt) || 0) / 100, days = Math.max(0, Number(daysTxt) || 0), yrs = days / 365
   const m = black76(pick.side, F, K, yrs, iv)
-  const atChain = chainIv != null ? black76(pick.side, F, K, (Math.max(0, data.days_to_expiry) + 0.5) / 365, chainIv / 100) : null
+  const atChain = chainIv != null ? black76(pick.side, F, K, chainDays / 365, chainIv / 100) : null
   const mkt = leg?.price ?? null
   const premium = mkt ?? m.price
   const lot = data.lot ?? 1
@@ -59,13 +69,13 @@ export function OptionPricer({ data, pick, onClose }: { data: OptionChain; pick:
         // live program: NSE's option chain (v3) is about a minute behind — DELAYED · NSE · <age>, never LIVE
         ? nseDelayedSource(data.as_of ?? null, { marketOpen: true, now: Date.now(), hint: 'NSE option chain (v3)' })
         : sourceOf(data.date, { source: 'NSE F&O bhavcopy' })} badge="arithmetic" title={`Pricer · ${data.symbol} ${K} ${pick.side === 'call' ? 'CE' : 'PE'} · ${data.expiry}`} accent={T.violet} pad={10} style={{ marginBottom: 12 }}
-      subtitle="Black-76 on the chain's forward, r 6.5% (the model behind OMON's IVs) · one long lot · edit IV or days to ask what-if"
+      subtitle={`Black-76 on the chain's forward, r 6.5%, T = ${fmtDays(chainDays)} calendar days to 15:30 IST on expiry ÷ 365 (the model and clock behind OMON's IVs) · one long lot · edit IV or days to ask what-if`}
       right={<Btn size="sm" onClick={onClose}>✕ CLOSE</Btn>}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.4fr)', gap: 16, fontFamily: T.mono, fontSize: 11.5 }}>
         <div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <Input label="IV %" value={ivTxt} onChange={setIvTxt} width={70} />
-            <Input label="Days left (+½ expiry day)" value={daysTxt} onChange={setDaysTxt} width={90} />
+            <Input label="Days left (to 15:30 IST expiry)" value={daysTxt} onChange={setDaysTxt} width={90} />
             <div style={{ alignSelf: 'flex-end', fontSize: 10.5, color: T.dim }}>forward {n(F)} · lot {data.lot ?? '—'} · IV from {ivSource}</div>
           </div>
           {kv('Model price', <span style={{ color: T.amber }}>₹{n(m.price)}</span>)}

@@ -254,7 +254,8 @@ def _breeze_quote(code: str, expiry: date, today: date, after_open: bool) -> dic
 
 SETTLE_KEYS = ("settlement", "settlement_source", "settlement_session", "settlement_session_label", "settlement_quality",
                "settlement_method", "settlement_note", "settlement_is_latest", "band_midpoint", "band_session",
-               "band_session_label", "band_applies_to", "latest_session", "latest_session_label", "settlement_check", "vwap30")
+               "band_session_label", "band_applies_to", "latest_session", "latest_session_label", "settlement_check", "vwap30",
+               "session_move_pct", "session_move_label")
 
 
 def vwap30_series_id(code: str, expiry: date) -> str:
@@ -557,7 +558,9 @@ async def mcx_quote(contract: str = Query("GOLD"),
     got = await asyncio.to_thread(_master_gold_family)
     family, published = got if got else (None, None)
     exp, exp_source, row = _resolve_expiry(code, now.date(), asked, family)
-    after_open = (now.hour, now.minute) >= (9, 0) and now.weekday() < 5
+    # after today's MCX open (09:00; 17:00 on a morning closure; 14:20 on the Sun 8 Nov 2026 Muhurat session — wave 1e M-D)
+    win_today = specs.trading_window(now.date())
+    after_open = bool(win_today and now >= win_today[0])
     breeze = await asyncio.to_thread(_breeze_quote, code, exp, now.date(), after_open)
     settle = await resolve_settlement(code, exp, row, published, now)
     fair = await _fair_value(code, exp, settle)

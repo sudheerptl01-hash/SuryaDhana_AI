@@ -11,12 +11,25 @@
  * was) and VOL (components/vol/VolView: skew, term, cone, IV paid vs delivered, the VOL screener). Honesty fixes: the
  * India VIX tile and panel use the neutral accent (a level is context, never a buy / sell colour); PCR is printed in
  * the neutral token (≥ 1 used to be green); every panel header carries its source chip and evidence badge.
+ *
+ * Fix wave 2 (V-VOL, review 5 Nov 2026): the page reads and writes the shared active symbol (OMON → DERV keeps BANKNIFTY);
+ * one India VIX (NSE's vix_daily close, as the strip — m001) dated, never a midnight clock (m064); the roll a long pays is
+ * the CALENDAR SPREAD next − near, beside the next series' basis vs spot (m065); the past expiries' final rollover in the
+ * neutral token, the pace comparison named (m066); the basis chart from DTE ≥ 3 (m067); "Volume (contracts)" (m068); the
+ * realised vol named close-to-close, the IV store's RV20 cc (m069).
+ *
+ * Round 2: an external active symbol is adopted only when it is an F&O underlying (volModel.fnoVerdict on
+ * /api/derivatives/symbols: a DEAL pick of a cash-only name used to open DERV on an error instead of NIFTY; a stock waits
+ * for the list, the indices never do); the PCR panel's walls read "OI walls · call / put" in the neutral token (m003).
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CHART_BOX, Chip, DataTable, ErrorBox, Input, Loading, Notice, PageHeader, Panel, SourceChip, Stat, T, Tabs, type Column, MINUS, fmtFixed, fmtNum, fmtPct, fmtSigned, ordinal, sourceOf, tone, useChartSize, useSubView } from '@/components/terminal'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { underlyingLiveSymbol } from '@/components/liveModel'
 import { VolView } from '@/components/vol/VolView'
+import { ExpiryDay } from '@/components/expiry/ExpiryDay'
+import { basisForChart, fnoVerdict } from '@/components/vol/volModel'
+import { useActiveSymbol } from '@/lib/activeSymbol'
 import { countUnit, fmtCount } from '@/lib/format'
 import { axisTicks, textWidth } from '@/components/terminal/chart'
 
@@ -26,16 +39,17 @@ const pct = fmtPct
 // ── payload types (shaped by services/data-service/fo_analytics.py) ──────────────────────
 type Leg = { rank: number; label: string; expiry: string; dte: number; close: number | null; settle: number | null
              basis_pct: number | null; basis_ann_pct: number | null; oi: number | null; oi_chg: number | null; volume: number | null }
-type TermStructure = { symbol: string; as_of: string; spot: number | null; legs: Leg[]; fut_oi_total: number; source: string }
+type TermStructure = { symbol: string; as_of: string; spot: number | null; legs: Leg[]; fut_oi_total: number; source: string; lot?: number | null }
 type BasisRow = { date: string; spot: number; fut: number; dte: number; basis_pct: number | null; basis_ann_pct: number | null }
 type RollRow = { date: string; near_expiry: string; dte: number; roll_pct: number | null
-                 near_oi: number; next_oi: number; far_oi: number; carry_next_ann_pct: number | null }
+                 near_oi: number; next_oi: number; far_oi: number; carry_next_ann_pct: number | null
+                 roll_spread_pts?: number | null; roll_spread_pct?: number | null; roll_spread_ann_pct?: number | null; roll_days?: number | null }
 type Rollover = { symbol: string; updating: boolean; built_through: string | null; error: string | null; note: string
                   current: RollRow | null; curve_now: RollRow[]; curve_avg: { dte: number; roll_pct: number }[]
                   history: { expiry: string; date: string; roll_pct: number; carry_next_ann_pct: number | null }[]; avg3: number | null }
 type PcrRow = { date: string; call_oi: number | null; put_oi: number | null; pcr: number | null; fut_oi: number | null }
 type OptHistRow = { date: string; spot: number; atm_iv: number | null; pcr: number | null; max_pain: number | null; expiry: string }
-type Vix = { as_of: string; level: number; chg_1d: number | null; pctile_1y: number | null; pctile_5y: number | null
+type Vix = { as_of: string; level: number; chg_1d: number | null; pctile_1y: number | null; pctile_5y: number | null; source?: string; rv20_estimator?: string
              rv20: number | null; spread: number | null; rows: { date: string; vix: number; nifty: number | null; rv20: number | null }[] }
 type MaxPain = { symbol: string; date: string; expiry: string; days_to_expiry: number; spot: number | null; atm_iv: number | null
                  pcr_oi: number | null; max_pain: number | null; expected_move_pct: number | null; resistance: number[]; support: number[] }
@@ -175,7 +189,7 @@ function TermPanel({ term, basis, basisNote }: { term: TermStructure; basis: Bas
     { key: 'basis_ann_pct', label: 'Ann %', align: 'right', render: r => <span style={{ color: tone(r.basis_ann_pct), fontWeight: 600 }}>{pct(r.basis_ann_pct, 2)}</span> },
     { key: 'oi', label: `OI (shares${oiU.suffix ? ` ·${oiU.suffix}` : ''})`, align: 'right', render: r => <span style={{ color: T.cyan }}>{fmtCount(r.oi, oiU)}</span> },
     { key: 'oi_chg', label: `OI chg${chgU.suffix ? ` ·${chgU.suffix}` : ''}`, align: 'right', render: r => <span style={{ color: tone(r.oi_chg) }}>{fmtCount(r.oi_chg, chgU, true)}</span> },
-    { key: 'volume', label: 'Contracts', align: 'right', render: r => <span style={{ color: T.muted }}>{num(r.volume)}</span> },
+    { key: 'volume', label: 'Volume (contracts)', align: 'right', render: r => <span style={{ color: T.muted }} title="contracts traded on the session (not open contracts)">{num(r.volume)}</span> },
   ]
   const shape = term.legs.length >= 2 && term.legs[0].basis_ann_pct != null && term.legs[term.legs.length - 1].basis_ann_pct != null
     ? (term.legs[term.legs.length - 1].basis_ann_pct! >= term.legs[0].basis_ann_pct! ? 'upward carry curve' : 'inverted carry curve')
@@ -190,10 +204,10 @@ function TermPanel({ term, basis, basisNote }: { term: TermStructure; basis: Bas
           <>
             <div style={{ fontSize: 10, color: T.muted, marginBottom: 6 }}>
               NEAR-MONTH ANNUALIZED BASIS % — {basis[0].date} → {basis[basis.length - 1].date}
-              <span style={{ color: T.dim }}> · amber = annualized basis (left) · above 0 = contango (longs pay carry)</span>
+              <span style={{ color: T.dim }}> · amber = annualized basis (left) · above 0 = contango (longs pay carry) · sessions ≥ 3 days to expiry only (annualising the last 1–2 days divides by noise and set the axis)</span>
             </div>
             <TsChart dates={basis.map(r => r.date)} zero height={210} lUnit="%"
-              series={[{ label: 'basis ann %', color: T.amber, values: basis.map(r => r.basis_ann_pct), w: 1.6 }]} />
+              series={[{ label: 'basis ann %', color: T.amber, values: basisForChart(basis, 3), w: 1.6 }]} />
           </>
         ) : basisNote ? <Notice color={T.violet}>{basisNote}</Notice> : <Loading label="Basis history" />}
       </div>
@@ -201,7 +215,7 @@ function TermPanel({ term, basis, basisNote }: { term: TermStructure; basis: Bas
   )
 }
 
-function RolloverPanel({ roll }: { roll: Rollover }) {
+function RolloverPanel({ roll, term }: { roll: Rollover; term: TermStructure }) {
   const c = roll.current
   const histCols: Column<Rollover['history'][number]>[] = [
     { key: 'expiry', label: 'Expiry', render: r => <span style={{ fontFamily: T.mono }}>{r.expiry}</span> },
@@ -221,11 +235,14 @@ function RolloverPanel({ roll }: { roll: Rollover }) {
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
             <Stat label={`Rolled so far (T−${c.dte})`} value={`${num(c.roll_pct, 1)}%`} accent={T.amber}
               color={T.amber} sub={avgAtDte != null ? `prior cycles at T−${c.dte}: ${num(avgAtDte, 1)}%` : 'no prior-cycle baseline yet'} />
-            <Stat label="vs 3-expiry avg (final)" value={roll.avg3 != null ? `${num(roll.avg3, 1)}%` : '—'} accent={T.cyan}
-              sub={vsAvg != null ? `${vsAvg >= 0 ? 'ahead of' : 'behind'} pace by ${num(Math.abs(vsAvg), 1)} pts` : 'pace unknown'}
-              color={vsAvg == null ? T.text : vsAvg >= 0 ? T.green : T.red} />
-            <Stat label="Cost of carry (next, ann)" value={pct(c.carry_next_ann_pct, 2)} accent={tone(c.carry_next_ann_pct)}
-              color={tone(c.carry_next_ann_pct)} sub="what rolling a long costs today" />
+            <Stat label="Past 3 expiries · final rollover (avg)" value={roll.avg3 != null ? `${num(roll.avg3, 1)}%` : '—'} accent={T.cyan} color={T.text}
+              sub={vsAvg != null && avgAtDte != null ? `pace: this cycle ${num(c.roll_pct, 1)}% vs prior cycles ${num(avgAtDte, 1)}% at T−${c.dte} (${vsAvg >= 0 ? '+' : MINUS}${num(Math.abs(vsAvg), 1)} pts) · context` : 'the final rollover of the last three expiries · pace unknown'} />
+            <Stat label="Calendar roll · near → next" value={c.roll_spread_pts != null ? `${fmtSigned(c.roll_spread_pts, 1)} pts` : '—'} accent={T.muted} color={T.text}
+              sub={c.roll_spread_pts != null
+                ? `${pct(c.roll_spread_pct, 2)} over ${c.roll_days} d ≈ ${pct(c.roll_spread_ann_pct, 2)} ann${term.lot ? ` · ₹${num(Math.abs(c.roll_spread_pts) * term.lot, 0)} per lot` : ''} · what rolling a long pays today (sell near, buy next) · arithmetic`
+                : 'needs both series in the panel'} />
+            <Stat label="Next series vs spot (ann)" value={pct(c.carry_next_ann_pct, 2)} accent={T.muted} color={T.text}
+              sub="the next future's basis over its own days (carry), not the roll cost" />
             {/* CT-11: one unit for the three legs (it read '1.13 cr' over 'next 85.5 L · far 8.5 L') */}
             {(() => { const u = countUnit([c.near_oi, c.next_oi, c.far_oi]); return (
               <Stat label="OI near / next / far" value={fmtCount(c.near_oi, u)} accent={T.violet}
@@ -262,8 +279,8 @@ function PcrPanel({ symbol, pcrRows, optHist, maxPain }: {
               color={T.text} sub={`EOD ${maxPain.date} · ${maxPain.days_to_expiry}d to expiry`} />
             <Stat label="ATM IV" value={maxPain.atm_iv != null ? `${num(maxPain.atm_iv, 1)}%` : '—'} accent={T.amber}
               sub={maxPain.expected_move_pct != null ? `±${num(maxPain.expected_move_pct, 1)}% priced to expiry` : undefined} />
-            <Stat label="OI walls (R / S)" value={`${num(maxPain.resistance?.[0], 0)} / ${num(maxPain.support?.[0], 0)}`} accent={T.red}
-              sub="largest call / put OI strikes" />
+            <Stat label="OI walls · call / put" value={`${num(maxPain.resistance?.[0], 0)} / ${num(maxPain.support?.[0], 0)}`} accent={T.muted} color={T.text}
+              sub="the strikes with the most call / put OI (where writers sit) · context, not a level" />
           </div>
         )}
         {optHist && optHist.length > 0 && (
@@ -295,22 +312,22 @@ function PcrPanel({ symbol, pcrRows, optHist, maxPain }: {
 function VixPanel({ vix }: { vix: Vix }) {
   return (
     <Panel title="INDIA VIX" accent={T.muted}
-      source={sourceOf(vix.as_of, { source: 'NSE' })} badge="arithmetic"
-      subtitle={`vs NIFTY 20-day realized volatility (annualized, √252) · as of ${vix.as_of}`}>
+      source={sourceOf(String(vix.as_of).slice(0, 10), { source: vix.source === 'vix_daily' ? 'NSE daily index file' : 'NSE' })} badge="arithmetic"
+      subtitle={`vs NIFTY 20-day realised volatility (close-to-close, √252: the IV store's RV20 cc on DERV › VOL) · as of ${String(vix.as_of).slice(0, 10)}`}>
       <div style={{ display: 'grid', gap: 12 }}>
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
           <Stat label="VIX change (1 session)" value={fmtSigned(vix.chg_1d, 2)} accent={T.muted}
             color={T.text} sub="the level is in the strip above" />
           <Stat label="5y percentile" value={ordinal(vix.pctile_5y)} accent={T.muted}
             color={T.text} sub="share of the past 5 years' sessions below today (1y in the strip)" />
-          <Stat label="NIFTY realized (20d)" value={vix.rv20 != null ? num(vix.rv20, 2) : '—'} accent={T.violet} sub="annualized %" />
+          <Stat label="NIFTY realised (20d, cc)" value={vix.rv20 != null ? num(vix.rv20, 2) : '—'} accent={T.violet} sub="close-to-close, annualised % (RV20 cc)" />
           <Stat label="VIX − realized" value={fmtSigned(vix.spread, 2)}
             accent={T.muted} color={T.text}
             sub={(vix.spread ?? 0) >= 0 ? 'VIX above the 20d realized · describes, does not predict' : 'VIX below the 20d realized · describes, does not predict'} />
         </div>
         <div>
           <div style={{ fontSize: 10, color: T.muted, marginBottom: 6 }}>
-            <span style={{ color: T.text }}>white = INDIA VIX</span> · <span style={{ color: T.violet }}>violet = NIFTY 20d realized</span>
+            <span style={{ color: T.text }}>white = INDIA VIX</span> · <span style={{ color: T.violet }}>violet = NIFTY 20d realised (close-to-close)</span>
           </div>
           <TsChart dates={vix.rows.map(r => r.date)} height={210} series={[
             { label: 'VIX', color: T.text, values: vix.rows.map(r => r.vix), w: 1.7 },
@@ -325,9 +342,26 @@ function VixPanel({ vix }: { vix: Vix }) {
 // ── the tab ──────────────────────────────────────────────────────────────────────────────
 
 export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: string) => void }) {
-  const [symbol, setSymbol] = useState('NIFTY')
+  // the shared symbol convention (ui/lib/activeSymbol): open on the active underlying, follow another page's / GO's pick,
+  // write our own picks (the 5 Nov capture: OMON on BANKNIFTY, DERV › VOL on NIFTY)
+  const [active, writeActive] = useActiveSymbol()
+  const [symbol, setSymbolState] = useState(() => active?.symbol ?? 'NIFTY')
   const [input, setInput] = useState('')
   const [symbols, setSymbols] = useState<{ symbol: string; kind: string }[]>([])
+  // F&O guard (round 2): the F&O list (undefined while it loads, null if unavailable); a user's own pick is never second-guessed
+  const [fnoState, setFnoState] = useState<'loading' | 'ok' | 'failed'>('loading')
+  const fno = useMemo(() => (fnoState === 'loading' ? undefined : fnoState === 'ok' && symbols.length ? symbols.map(s => s.symbol) : null), [fnoState, symbols])
+  const userPicked = useRef(false)
+  const setSymbol = useCallback((s: string) => { userPicked.current = true; setSymbolState(s); writeActive({ symbol: s }) }, [writeActive])
+  useEffect(() => {
+    const s = active?.symbol
+    if (s && fnoVerdict(s, fno) === 'adopt') setSymbolState(prev => (prev === s ? prev : s))
+  }, [active?.symbol, fno])
+  // the opening symbol came from the store: once the list is known, a cash-only name falls back to NIFTY
+  useEffect(() => {
+    if (fno !== undefined && !userPicked.current) setSymbolState(prev => (fnoVerdict(prev, fno) === 'reject' ? 'NIFTY' : prev))
+  }, [fno])
+  const symbolReady = userPicked.current || fnoVerdict(symbol, fno) === 'adopt'
   const [term, setTerm] = useState<TermStructure | null>(null)
   const [basis, setBasis] = useState<BasisRow[]>([])
   const [basisNote, setBasisNote] = useState<string | null>(null)
@@ -337,11 +371,11 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
   const [maxPain, setMaxPain] = useState<MaxPain | null>(null)
   const [vix, setVix] = useState<Vix | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [sub, setSub] = useSubView(['desk', 'vol'] as const, 'desk')
+  const [sub, setSub] = useSubView(['desk', 'vol', 'xpry'] as const, 'desk')
   const seq = useRef(0)
 
   useEffect(() => {
-    j<{ rows: { symbol: string; kind: string }[] }>('/api/derivatives/symbols').then(r => setSymbols(r.rows)).catch(() => {})
+    j<{ rows: { symbol: string; kind: string }[] }>('/api/derivatives/symbols').then(r => { setSymbols(r.rows); setFnoState('ok') }).catch(() => setFnoState('failed'))
     j<Vix>('/api/derivatives/vix?days=500').then(setVix).catch(() => {})
   }, [])
 
@@ -381,7 +415,8 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
     pollRoll(12)
   }, [])
 
-  useEffect(() => { load(symbol) }, [symbol, load])
+  // a stock from the store waits for the F&O list (no 404 flash for a cash-only name); an index or a user pick loads at once
+  useEffect(() => { if (symbolReady) load(symbol) }, [symbol, load, symbolReady])
 
   const pick = (s: string) => { const v = s.trim().toUpperCase(); if (v) { setSymbol(v); setInput('') } }
   const nearLeg = term?.legs?.[0]
@@ -393,7 +428,7 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
   const ulPriced = !!ulRow && ulRow.price != null && ulRow.state !== 'unavailable'
 
   // PLAN 1.1 (O-T14 default: a sub-view, not a 44th page): DESK | VOL in `?sub=`; the GO alias VOL hands `vol` over
-  const tabs = <Tabs items={[{ id: 'desk', label: 'Desk · basis · rollover · PCR · VIX' }, { id: 'vol', label: 'VOL · skew · term · cone · screener' }]}
+  const tabs = <Tabs items={[{ id: 'desk', label: 'Desk · basis · rollover · PCR · VIX' }, { id: 'vol', label: 'VOL · skew · term · cone · screener' }, { id: 'xpry', label: 'XPRY · expiry day · OI unwind · decay · scorecard' }]}
     active={sub} onChange={setSub} />
   const picker = (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -409,6 +444,19 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
     </div>
   )
 
+  if (sub === 'xpry') {
+    return (
+      <div>
+        <PageHeader code="DERV" title="Derivatives desk" subtitle={`XPRY · ${symbol} · the expiry day from the stored intraday tape + the implied-vs-realised record`} />
+        <div style={{ display: 'grid', gap: 12 }}>
+          {tabs}
+          {picker}
+          {symbolReady ? <ExpiryDay symbol={symbol} /> : <Loading label="Reading the F&O list" />}
+        </div>
+      </div>
+    )
+  }
+
   if (sub === 'vol') {
     return (
       <div>
@@ -416,7 +464,7 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
         <div style={{ display: 'grid', gap: 12 }}>
           {tabs}
           {picker}
-          <VolView symbol={symbol} onPick={s => setSymbol(s)} />
+          {symbolReady ? <VolView symbol={symbol} onPick={s => setSymbol(s)} /> : <Loading label="Reading the F&O list" />}
         </div>
       </div>
     )
@@ -447,19 +495,20 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
             : <Stat label={`${symbol} spot (EOD)`} value={num(term.spot, 2)} accent={T.amber} sub={`EOD ${term.as_of} · ${term.source}`} />}
           <Stat label="Futures OI (all expiries)" value={oiFmt(term.fut_oi_total)} accent={T.cyan} sub="shares, summed over the listed futures" />
           <Stat label="INDIA VIX" value={num(vix?.level, 2)} accent={T.muted} color={T.text}
-            sub={vix ? `${ordinal(vix.pctile_1y)} pctile (1y) · as of ${String(vix.as_of).slice(0, 10)} · context` : 'VIX unavailable'} />
+            sub={vix ? `${ordinal(vix.pctile_1y)} pctile (1y) · close ${String(vix.as_of).slice(0, 10)} (${vix.source === 'vix_daily' ? 'NSE daily file, as the strip' : 'NSE'}) · context` : 'VIX unavailable'} />
         </div>
 
         <TermPanel term={term} basis={basis} basisNote={basisNote} />
-        {roll ? <RolloverPanel roll={roll} /> : <Panel title={`Rollover tracker — ${symbol}`} accent={T.cyan} source={sourceOf(null, { source: 'NSE F&O bhavcopy', hint: 'loading' })}><Loading label="Futures panel" /></Panel>}
+        {roll ? <RolloverPanel roll={roll} term={term} /> : <Panel title={`Rollover tracker — ${symbol}`} accent={T.cyan} source={sourceOf(null, { source: 'NSE F&O bhavcopy', hint: 'loading' })}><Loading label="Futures panel" /></Panel>}
         <PcrPanel symbol={symbol} pcrRows={pcrRows} optHist={optHist} maxPain={maxPain} />
         {vix && <VixPanel vix={vix} />}
 
         <div style={{ fontSize: 10, color: T.dim, lineHeight: 1.6 }}>
           Sources: NSE F&O bhavcopy (nse_fo_daily, 2019-10 →; per-contract UDiFF files Jul-2024 →), NSE index closes. OI in shares.
           Basis history is near-month only (the stored grain); aggregate PCR spans all strikes and expiries, so it runs smoother than
-          the OMON chain's near-expiry PCR. Rollover history starts Jul-2024 (UDiFF archive). BANKNIFTY has no stored spot series, so
-          its basis history is empty while term structure and rollover still work. Max-pain history exists for NIFTY and BANKNIFTY
+          the OMON chain's near-expiry PCR. Rollover history starts Jul-2024 (UDiFF archive). BANKNIFTY, FINNIFTY, MIDCPNIFTY and NIFTYNXT50
+          take their basis spot from NSE's daily index file (index_ohlc_daily); where it is not stored the basis history is empty
+          (never NIFTY's close), while term structure and rollover still work. Max-pain history exists for NIFTY and BANKNIFTY
           (daily chain archive); for stocks only the current session's chain is archived — no fabricated series.
         </div>
       </div>

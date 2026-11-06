@@ -921,7 +921,8 @@ def test_gold_deltas_are_what_the_ui_sends_and_the_server_mounts():
     gold_api = (ui / "lib" / "gold" / "api.ts").read_text()
     assert "export const GOLD_API = '/api/gold'" in gold_api
     assert re.search(r"health: `\$\{GOLD_API\}/health`", gold_api) and re.search(r"contracts: `\$\{GOLD_API\}/contracts`", gold_api)
-    assert re.search(r"getGoldHealth = \(window: Window = 'D'\) =>\s*client\.get<GoldHealth>\(GOLD_ENDPOINTS\.health, \{ params: \{ window \} \}\)", gold_api)
+    # wave 1e M-A: /health takes the page's contract / expiry (the GOLD page's fallback passes the pick; WEI / BRF send none)
+    assert re.search(r"getGoldHealth = \(window: Window = 'D', q: ContractQuery = \{\}\) =>\s*client\.get<GoldHealth>\(GOLD_ENDPOINTS\.health, \{ params: clean\(\{ window, contract: q\.contract, expiry: q\.expiry \}\) \}\)", gold_api)
     assert re.search(r"getGoldContracts = \(exchange = 'MCX'\) =>\s*client\.get<GoldContracts>\(GOLD_ENDPOINTS\.contracts, \{ params: \{ exchange \} \}\)", gold_api)
     for comp in ("Brief.tsx", "WorldMarkets.tsx"):                       # the one line: window W, nothing else gold
         src = (ui / "components" / comp).read_text()

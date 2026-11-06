@@ -1,8 +1,16 @@
 """Point-in-time weights (R-DRIVERS §3): ``ffmc = shares × prev_close × (1 − promoter %)`` with ``shares`` from the newest
 XBRL filing with ``filed_at ≤ d`` (split-scaled from its period end to d) and ``promoter %`` from the newest shareholding
 filing with ``broadcast_ts ≤ d`` (fallback: period_end + 21 days); normalised to 100 %. Calibration on a day with NSE's top-10
-file: ``iwf_correction_i = official_i / rebuilt_i`` for the ten, the rest pro rata to the remaining share. NSE's sector capping
-(single ≤ 33 %, top-3 ≤ 62 %) applied iteratively for NIFTY BANK (approximate until O-T13's official cap factors).
+file: ``iwf_correction_i = official_i / rebuilt_i`` for the ten, the rest pro rata to the remaining share.
+
+NIFTY BANK (review M46): the capping is DATED (``CAP_SCHEDULE``). NSE's sector capping (single ≤ 33 %, top three ≤ 62 %) held
+until SEBI's December 2024 rule for non-benchmark derivative indices (≥ 14 members, top ≤ 20 %, top three ≤ 45 %) was phased
+in. The interim caps and their dates are inferred from the index's own closes (6 Nov 2026: the cap pair that best explains
+each month's NIFTY BANK moves from stored member closes; the old 33/62 missed by ≈ 100 pts a day in 2026, 20/45 by ≈ 55),
+until NSE's official cap factors are stored (owner item O-T13). There is no NSE top-10 file for BANK, so its capped weights
+are then corrected by a ridge fit to the index's own published closes over the 60 sessions BEFORE the day (``fit_history``
+→ ``fit_corrections``; method ``rebuilt_fitted``): point in time, so the stored residual is an out-of-sample error
+(prototype on 100 sessions to 5 Nov 2026: MAE ≈ 13 pts a day against ≈ 55 for the caps alone).
 """
 from __future__ import annotations
 
@@ -16,8 +24,28 @@ from data_health import db
 
 from index_drivers.schema import CASTS, COLUMNS
 
-BANK_CAPS = (0.33, 0.62)
-CAPPED_INDICES = {"NIFTY BANK": BANK_CAPS}
+BANK_CAPS = (0.33, 0.62)                    # NSE's sector capping before the SEBI glide path (the first schedule row)
+CAPPED_INDICES = {"NIFTY BANK": BANK_CAPS}  # kept for readers; the dated CAP_SCHEDULE decides
+CAP_SCHEDULE: dict[str, tuple[tuple[date, tuple[float, float]], ...]] = {
+    "NIFTY BANK": ((date(2000, 1, 1), BANK_CAPS),
+                   (date(2025, 10, 31), (0.29, 0.58)),     # inferred tranche (Nov–Dec 2025 fit best)
+                   (date(2026, 1, 12), (0.25, 0.55)),      # inferred tranche (mid-Jan 2026)
+                   (date(2026, 2, 16), (0.20, 0.45))),     # the SEBI limits (best from mid-Feb 2026 on)
+}
+CAP_SOURCE = "inferred from NIFTY BANK's own closes (6 Nov 2026); NSE's official cap factors pending (O-T13)"
+FIT_INDICES = frozenset({"NIFTY BANK"})     # no NSE top-10 file: calibrated to the index's own closes
+FIT_LOOKBACK, FIT_MIN_SESSIONS = 60, 40
+FIT_LAMBDA = 3e-6                           # ridge toward no correction (prototype: λ 1e-6…1e-5 all ≈ 13–16 pts OOS)
+FIT_CLIP = (0.5, 1.5)
+
+
+def caps_for(index_name: str, day: date) -> tuple[float, float] | None:
+    """The (single, top three) caps in force for ``index_name`` on ``day``, or None for an uncapped index."""
+    cur = None
+    for since, caps in CAP_SCHEDULE.get(index_name, ()):
+        if day >= since:
+            cur = caps
+    return cur
 
 
 def members_for(store: Any, index_name: str, day: date) -> tuple[pd.DataFrame, date | None, str]:
@@ -159,9 +187,11 @@ def rebuild(index_name: str, day: date, members: pd.DataFrame, prev_close: dict[
         return pd.DataFrame(columns=COLUMNS["index_weights_daily"])
     tot = sum(r["ffmc"] for r in rec)
     w = {r["symbol"]: r["ffmc"] / tot for r in rec}
-    if index_name in CAPPED_INDICES:
-        w = apply_caps(w, *CAPPED_INDICES[index_name])
-    rows = [{"index_name": index_name, "date": day, "symbol": r["symbol"], "method": "rebuilt", "weight_pct": round(w[r["symbol"]] * 100, 6),
+    caps = caps_for(index_name, day)
+    if caps:
+        w = apply_caps(w, *caps)
+    method = "rebuilt_capped" if caps else "rebuilt"
+    rows = [{"index_name": index_name, "date": day, "symbol": r["symbol"], "method": method, "weight_pct": round(w[r["symbol"]] * 100, 6),
              "ffmc_cr": round(r["ffmc"] / 1e7, 4), "shares": r["shares"], "shares_filed_at": r["shares_filed_at"], "promoter_pct": r["promoter_pct"],
              "promoter_public_at": r["promoter_public_at"], "iwf_correction": None, "computed_at": now} for r in rec]
     return pd.DataFrame(rows, columns=COLUMNS["index_weights_daily"])
@@ -216,4 +246,60 @@ def carry_calibration(rebuilt: pd.DataFrame, corrections: dict[str, float], *, n
         return pd.DataFrame(columns=COLUMNS["index_weights_daily"])
     r["weight_pct"] = (r["weight_pct"] / tot * 100).round(6)
     r["method"], r["computed_at"] = "rebuilt_calibrated", now
+    return r[COLUMNS["index_weights_daily"]]
+
+
+# ── NIFTY BANK: the fit to the index's own closes (review M46) ───────────────────────────────────────────────────────
+
+def fit_history(store: Any, index_name: str, day: date, lookback: int = FIT_LOOKBACK) -> pd.DataFrame:
+    """The ``lookback`` stored sessions BEFORE ``day``: (date, symbol, prior_w, ret, index_ret) from the capped prior weights
+    (``rebuilt_capped`` rows), the stored member returns and the stored index move. Nothing dated ``day`` or later."""
+    cols = ["date", "symbol", "prior_w", "ret", "index_ret"]
+    if not db.table_exists(store, "index_contribution_fit"):
+        return pd.DataFrame(columns=cols)
+    df = db.query_df(store, """WITH f AS (SELECT date, actual_points / NULLIF(prev_index_level, 0) AS index_ret FROM index_contribution_fit
+                                          WHERE index_name = ? AND date < ? ORDER BY date DESC LIMIT ?)
+                               SELECT f.date, w.symbol, w.weight_pct / 100.0 AS prior_w, c.ret_pct / 100.0 AS ret, f.index_ret
+                               FROM f JOIN index_weights_daily w ON w.index_name = ? AND w.date = f.date AND w.method = 'rebuilt_capped'
+                               LEFT JOIN index_contribution_daily c ON c.index_name = ? AND c.date = f.date AND c.symbol = w.symbol
+                               ORDER BY f.date""", [index_name, day, lookback, index_name, index_name])
+    return df if not df.empty else pd.DataFrame(columns=cols)
+
+
+def fit_corrections(history: pd.DataFrame, *, lam: float = FIT_LAMBDA, min_sessions: int = FIT_MIN_SESSIONS,
+                    clip: tuple[float, float] = FIT_CLIP) -> dict[str, float] | None:
+    """Per-member corrections c (weight = prior × c, renormalised) minimising Σ_t (index_ret_t − Σ_i prior_it c_i r_it)²
+    + λ Σ_i (c_i − 1)², clipped; None with fewer than ``min_sessions`` sessions (the prior alone is then used, and says so)."""
+    if history is None or history.empty:
+        return None
+    h = history.dropna(subset=["index_ret", "prior_w"])
+    if h["date"].nunique() < min_sessions:
+        return None
+    x = (h.assign(v=h["prior_w"] * h["ret"].fillna(0.0)).pivot_table(index="date", columns="symbol", values="v", aggfunc="sum").fillna(0.0))
+    y = h.groupby("date")["index_ret"].first().reindex(x.index).to_numpy(dtype=float)
+    xm = x.to_numpy(dtype=float)
+    n = xm.shape[1]
+    with np.errstate(all="ignore"):
+        a = xm.T @ xm + lam * np.eye(n)
+        b = xm.T @ y + lam * np.ones(n)
+        c = np.linalg.solve(a, b)
+    if not np.all(np.isfinite(c)):
+        return None
+    c = np.clip(c, *clip)
+    return {str(sym): float(v) for sym, v in zip(x.columns, c, strict=True)}
+
+
+def apply_corrections(prior: pd.DataFrame, corrections: dict[str, float], *, now: datetime) -> pd.DataFrame:
+    """``rebuilt_fitted`` rows: the capped prior × the fitted correction, renormalised to 100 %; ``iwf_correction`` stored."""
+    if prior.empty or not corrections:
+        return pd.DataFrame(columns=COLUMNS["index_weights_daily"])
+    r = prior.copy()
+    r["iwf_correction"] = r["symbol"].map(corrections).fillna(1.0)
+    r["weight_pct"] = r["weight_pct"] * r["iwf_correction"]
+    tot = float(r["weight_pct"].sum())
+    if tot <= 0:
+        return pd.DataFrame(columns=COLUMNS["index_weights_daily"])
+    r["weight_pct"] = (r["weight_pct"] / tot * 100).round(6)
+    r["iwf_correction"] = r["iwf_correction"].round(6)
+    r["method"], r["computed_at"] = "rebuilt_fitted", now
     return r[COLUMNS["index_weights_daily"]]

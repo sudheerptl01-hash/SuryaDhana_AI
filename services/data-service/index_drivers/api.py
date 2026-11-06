@@ -49,6 +49,7 @@ class DriversJobRequest(BaseModel):
     indices: list[str] | None = None
     fetch: bool = True
     resume: bool = True
+    allow_pre_list: bool = False      # owner opt-in (O-T13): compute NIFTY BANK before its first archived constituent list
     model_config = {"populate_by_name": True}
 
 
@@ -70,7 +71,8 @@ def index_drivers_job(req: DriversJobRequest | None = None, job: str | None = Qu
     def _run(progress: Callable[[int, int], None]) -> dict[str, Any]:
         if job_id == "index_drivers_backfill" or start is not None:
             return jobs.run_backfill(store, start=start or date(2019, 10, 1), end=body.backfill_to or date.today(), indices=indices,  # noqa: DTZ011
-                                     financials_root=_paths["financials_root"], progress=progress, resume=body.resume)
+                                     financials_root=_paths["financials_root"], progress=progress, resume=body.resume,
+                                     allow_pre_list=body.allow_pre_list)
         return jobs.run_daily(store, _http(), day=body.date_, indices=indices, cache_root=_paths["cache_root"], financials_root=_paths["financials_root"],
                               fetch=body.fetch)
 

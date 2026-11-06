@@ -23,6 +23,9 @@ interface ScheduledJob {
   last_status: string | null
   last_run_ts: string | null
   samples: number
+  schedule_ist?: string | null     // the trigger in words, from the controller (m111)
+  running_since?: string | null    // a run in flight (m113)
+  catchup_at?: string | null       // a scheduled catch-up run of this job (M30)
 }
 
 interface TelemetryStatus {
@@ -110,11 +113,8 @@ function useCountdown(nextRunUnix: number | null): string {
 // ── Sub-components ────────────────────────────────────────────────────────────
 function LatencyPill({ ms, isDark }: { ms: number | null; isDark: boolean }) {
   if (ms === null) return <span className={clsx('text-xs font-mono', isDark ? 'text-slate-500' : 'text-gray-400')}>—</span>
-  const color = ms < 50
-    ? (isDark ? 'text-emerald-400' : 'text-emerald-600')
-    : ms < 200
-      ? (isDark ? 'text-amber-400' : 'text-amber-600')
-      : (isDark ? 'text-rose-400' : 'text-rose-600')
+  // m111: a batch job's duration is neither good nor bad (every job read red at the old 50 / 200 ms thresholds)
+  const color = isDark ? 'text-slate-300' : 'text-gray-700'
   return <span className={clsx('text-xs font-mono font-bold', color)}>{ms.toFixed(0)}ms</span>
 }
 
@@ -140,10 +140,14 @@ function StatusDot({ ok }: { ok: boolean }) {
 
 function JobRow({ job, isDark }: { job: ScheduledJob; isDark: boolean }) {
   const countdown = useCountdown(job.next_run_unix)
-  const schedule = JOB_SCHEDULE[job.id] ?? '—'
+  const schedule = job.schedule_ist ?? JOB_SCHEDULE[job.id] ?? '—'
+  const statusText = job.running_since ? `running since ${job.running_since.slice(11, 16)}`
+    : job.catchup_at && job.last_status !== 'done' ? `${job.last_status ?? '—'} · catch-up ${job.catchup_at.slice(11, 16)}`
+    : job.last_status ?? '—'
   const statusColor =
     job.last_status === 'done'  ? (isDark ? 'text-emerald-400' : 'text-emerald-600') :
     job.last_status === 'error' ? (isDark ? 'text-rose-400'    : 'text-rose-600')    :
+    job.last_status === 'no new data' ? (isDark ? 'text-amber-400' : 'text-amber-600') :
     isDark ? 'text-slate-500' : 'text-gray-400'
 
   return (
@@ -164,7 +168,7 @@ function JobRow({ job, isDark }: { job: ScheduledJob; isDark: boolean }) {
         <LatencyPill ms={job.last_latency_ms} isDark={isDark} />
       </td>
       <td className={clsx('py-2 px-3 font-mono font-semibold uppercase', statusColor)}>
-        {job.last_status ?? '—'}
+        {statusText}
       </td>
     </tr>
   )

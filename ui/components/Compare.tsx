@@ -8,7 +8,9 @@
  * Yahoo's daily closes. Rules + chip in ./CompareCloses.ts. Open from the command bar: `COMP TCS INFY HCLTECH`.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getIndexDaily, getMarketCloses, getNewsChart, getStockActions } from '@/lib/api'
+import { getIndexDaily, getMarketCloses, getNewsChart, getStockActions, getSymbols, type SymbolEntry } from '@/lib/api'
+import { useActiveSymbol } from '@/lib/activeSymbol'
+import { compSuggestions, isIndexUnderlying } from '@/components/marketPagesModel'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
 import { CHART_BOX, Chip, DataTable, Input, PageHeader, Panel, T, TickerLink, type Column, fmtFixed, fmtPct, ordinal, useChartSize } from '@/components/terminal'
@@ -155,11 +157,27 @@ export function Compare() {
     return { dates: common, series: Object.fromEntries(ok.map(s => [s, byDate(s)])) as Record<string, number[]> }
   }, [data, syms])
 
-  const submit = () => {
-    const s = add.trim().toUpperCase().replace(/\.NS$/, '')
-    if (s) editSyms(compareAdd(latestSyms(), s))
-    setAdd('')
+  // shared symbol context (terminal v2 PLAN 1.3, M34): a stock added here becomes the active symbol
+  const [active, writeActive] = useActiveSymbol()
+  const addSym = (sym: string) => {
+    const s = sym.trim().toUpperCase().replace(/\.NS$/, '')
+    if (!s) return
+    editSyms(compareAdd(latestSyms(), s))
+    if (!isIndexUnderlying(s)) writeActive({ symbol: s })
   }
+  const submit = () => { addSym(add); setAdd('') }
+  // m083: a one-name set opened the correlation panel empty. The active stock (GO, OMON, CHRT…) joins a one-name set
+  // once on arrival; same-sector names are offered as one-click chips
+  const activeSym = active?.symbol ?? null
+  const joined = useRef<string | null>(null)
+  useEffect(() => {
+    if (!activeSym || isIndexUnderlying(activeSym) || syms.length !== 1 || syms.includes(activeSym) || joined.current === activeSym) return
+    joined.current = activeSym
+    editSyms(compareAdd(latestSyms(), activeSym))
+  }, [activeSym, syms])   // eslint-disable-line react-hooks/exhaustive-deps
+  const [directory, setDirectory] = useState<SymbolEntry[]>([])
+  useEffect(() => { if (syms.length < 2 && !directory.length) getSymbols().then(r => setDirectory(r.data.data)).catch(() => {}) }, [syms.length, directory.length])
+  const suggestions = useMemo(() => (syms.length < 2 ? compSuggestions(syms, activeSym, directory) : []), [syms, activeSym, directory])
 
   // drawn in CSS px (C1-17): axis and end labels stay 10–10.5 px at any window width
   const { ref: chartRef, w: W, h: H } = useChartSize(1200, 380, { minRatio: 0.75, maxRatio: 1.1 })
@@ -294,7 +312,8 @@ export function Compare() {
                 </tr>
               ))}</tbody>
             </table>
-          ) : <div style={{ fontSize: 11, color: T.dim }}>Add two or more stocks.</div>}
+          ) : <div style={{ fontSize: 11, color: T.dim }}>Add a second stock to see correlations{suggestions.length ? ':' : '.'}
+                {suggestions.map(x => <Chip key={x} color={T.violet} onClick={() => addSym(x)} title={x === activeSym ? 'the active symbol' : 'same NSE sector'} style={{ marginLeft: 6 }}>+ {x}</Chip>)}</div>}
           <div style={{ fontSize: 10, color: T.dim, marginTop: 8 }}>High correlation = the names move together: holding them adds little diversification.</div>
         </Panel>
       </div>

@@ -20,7 +20,8 @@ import { useLiveQuotes as useMonitorQuotes } from '@/context/AppContext'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { daysUntil, useCorpEvents, useResultsAvoid } from '@/lib/useCorpEvents'
 import type { CorpEvent, RecentResult } from '@/lib/api'
-import { AvoidFlag, EventBadge, SourceChip, T, fmtFixed } from '@/components/terminal'
+import { AvoidFlag, BadgeChip, EventBadge, SourceChip, T, fmtFixed } from '@/components/terminal'
+import { eqsLegend, eqsPrice, shownValuation, valuationNote, type ValuationBasis } from '@/components/marketPagesModel'
 import { istDateISO } from '@/lib/format'
 import { createFlashClock } from '@/components/flashClock'
 import { hiddenColumnsCue, hiddenHeaders } from '@/components/deskLayout'
@@ -65,6 +66,20 @@ interface Stock {
   sales_qtr_cr?: number | null
   qtr_sal_var?: number | null
   roce_pct?: number | null
+  // M07 / m076–m078 (ui-api routers/stocks.py eqs_valuation): where each number came from
+  cmp_basis?: 'nse_close' | 'none'
+  cmp_date?: string | null
+  snapshot_cmp?: number | null
+  valuation_basis?: ValuationBasis
+  quarter_basis?: 'filings' | 'snapshot' | 'etf' | 'none'
+  div_basis?: 'snapshot_rebased' | 'withheld' | 'etf' | 'none'
+  qtr_period?: string | null
+  qtr_turn?: string | null
+  instrument?: 'EQ' | 'ETF'
+  etf_underlying?: string | null
+  cap_rank?: number | null
+  cap_sebi?: 'Large' | 'Mid' | 'Small' | null
+  metrics_as_of?: string | null
 }
 
 interface StockTableProps {
@@ -86,7 +101,6 @@ type SortDir = 'asc' | 'desc'
 interface ColFilters {
   ticker: string
   nifty: string
-  midcap: string
   capCategory: string
   sector: string
   priceMin: string
@@ -95,15 +109,15 @@ interface ColFilters {
 }
 
 const EMPTY_FILTERS: ColFilters = {
-  ticker: '', nifty: '', midcap: '', capCategory: '', sector: '',
+  ticker: '', nifty: '', capCategory: '', sector: '',
   priceMin: '', priceMax: '', quality: '',
 }
 
+// m077: SEBI-style buckets by market-cap rank (1–100 large, 101–250 mid); neutral tones (context, not a verdict)
 const CAP_BADGE_COLORS: Record<string, string> = {
-  'Large Cap': 'text-[#39c6ff]',
-  'Mid Cap':   'text-[#ffb000]',
-  'Small Cap': 'text-[#16d98a]',
-  'Micro Cap': 'text-[var(--t-muted)]',
+  Large: 'text-[var(--t-text)]',
+  Mid:   'text-[var(--t-muted)]',
+  Small: 'text-[var(--t-dim)]',
 }
 
 const SEPA_COLORS: Record<string, string> = {
@@ -155,6 +169,10 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
   const [sortDir, setSortDir]       = useState<SortDir>('asc')
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters]       = useState<ColFilters>(EMPTY_FILTERS)
+  // m078: ETFs are funds, not companies: hidden by default, one click shows them
+  const [showEtfs, setShowEtfs]     = useState(false)
+  const etfCount = useMemo(() => stocks.filter(s => s.instrument === 'ETF').length, [stocks])
+  const legend = useMemo(() => eqsLegend(stocks), [stocks])
 
   // ── Live quote overlay ──────────────────────────────────────────────────────
   const { liveQuotes } = useMonitorQuotes()
@@ -214,12 +232,12 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
 
     // Apply column filters
     if (filters.ticker) r = r.filter(s => s.ticker.toLowerCase().includes(filters.ticker.toLowerCase()))
+    if (!showEtfs) r = r.filter(s => s.instrument !== 'ETF')
     if (filters.nifty)  r = r.filter(s => s.nifty_bucket === filters.nifty)
-    if (filters.midcap) r = r.filter(s => s.midcap_bucket === filters.midcap)
-    if (filters.capCategory) r = r.filter(s => s.cap_category === filters.capCategory)
+    if (filters.capCategory) r = r.filter(s => s.cap_sebi === filters.capCategory)
     if (filters.sector) r = r.filter(s => (s.sector_name || '').toLowerCase().includes(filters.sector.toLowerCase()))
-    if (filters.priceMin) r = r.filter(s => (s.cmp ?? s.latest_price ?? 0) >= parseFloat(filters.priceMin))
-    if (filters.priceMax) r = r.filter(s => (s.cmp ?? s.latest_price ?? 0) <= parseFloat(filters.priceMax))
+    if (filters.priceMin) r = r.filter(s => (eqsPrice(s) ?? 0) >= parseFloat(filters.priceMin))
+    if (filters.priceMax) r = r.filter(s => (eqsPrice(s) ?? 0) <= parseFloat(filters.priceMax))
     if (filters.quality) r = r.filter(s => s.data_quality === filters.quality)
 
     // Sort
@@ -227,14 +245,14 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
       let av: number | string = 0, bv: number | string = 0
       switch (sortCol) {
         case 'ticker':     av = a.ticker;                  bv = b.ticker; break
-        case 'price':      av = a.cmp ?? a.latest_price ?? 0; bv = b.cmp ?? b.latest_price ?? 0; break
+        case 'price':      av = eqsPrice(a) ?? 0; bv = eqsPrice(b) ?? 0; break
         case 'ma50':       av = a.ma50 ?? 0;               bv = b.ma50 ?? 0; break
         case 'rs_rating':  av = a.rs_rating ?? 0;          bv = b.rs_rating ?? 0; break
         case 'density':    av = a.data_density_pct ?? 0;   bv = b.data_density_pct ?? 0; break
-        case 'cmp':        av = a.cmp ?? 0;                bv = b.cmp ?? 0; break
-        case 'pe_ratio':   av = a.pe_ratio ?? 0;           bv = b.pe_ratio ?? 0; break
-        case 'mktcap_cr':  av = a.mktcap_cr ?? 0;          bv = b.mktcap_cr ?? 0; break
-        case 'div_yld_pct':av = a.div_yld_pct ?? 0;       bv = b.div_yld_pct ?? 0; break
+        case 'cmp':        av = eqsPrice(a) ?? 0;          bv = eqsPrice(b) ?? 0; break
+        case 'pe_ratio':   av = shownValuation(a, 'pe_ratio') ?? 0;    bv = shownValuation(b, 'pe_ratio') ?? 0; break
+        case 'mktcap_cr':  av = shownValuation(a, 'mktcap_cr') ?? 0;   bv = shownValuation(b, 'mktcap_cr') ?? 0; break
+        case 'div_yld_pct':av = shownValuation(a, 'div_yld_pct') ?? 0; bv = shownValuation(b, 'div_yld_pct') ?? 0; break
         case 'np_qtr_cr':  av = a.np_qtr_cr ?? 0;         bv = b.np_qtr_cr ?? 0; break
         case 'sales_qtr_cr':av = a.sales_qtr_cr ?? 0;     bv = b.sales_qtr_cr ?? 0; break
         case 'roce_pct':   av = a.roce_pct ?? 0;           bv = b.roce_pct ?? 0; break
@@ -244,7 +262,7 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
     })
 
     return r
-  }, [stocks, sortCol, sortDir, filters])
+  }, [stocks, sortCol, sortDir, filters, showEtfs])
 
   // incremental mount (see the header): grow the rendered row count in transitions until every row is in. RUP-09: a
   // new result set (filter, sort, screener, reload) starts again from a screenful, in the same render, instead of
@@ -325,8 +343,16 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
           </button>
         )}
         {cue && <span data-eqs-cue className="ml-auto text-[10.5px]" style={{ color: T.amber }} title="Columns outside the visible part of the table">{cue}</span>}
-        <span className={clsx(cue ? 'ml-3' : 'ml-auto', 'text-xs', isDark ? 'text-slate-400' : 'text-gray-400')}>
-          {displayed.length.toLocaleString('en-IN')} of {stocks.length.toLocaleString('en-IN')} stocks
+        {etfCount > 0 && (
+          <button onClick={() => setShowEtfs(v => !v)} data-eqs-etf-toggle
+            title="ETFs are funds, not companies: no earnings, no market cap (m078)"
+            className={clsx(cue ? 'ml-3' : 'ml-auto', 'text-[10.5px] px-2 py-0.5 border')}
+            style={{ borderColor: T.border, color: showEtfs ? T.amber : T.muted }}>
+            {showEtfs ? `✓ ${etfCount} ETFs shown` : `${etfCount} ETFs hidden · show`}
+          </button>
+        )}
+        <span className={clsx(cue || etfCount > 0 ? 'ml-3' : 'ml-auto', 'text-xs', isDark ? 'text-slate-400' : 'text-gray-400')}>
+          {displayed.length.toLocaleString('en-IN')} of {stocks.length.toLocaleString('en-IN')} {showEtfs ? 'securities' : 'listings'}
         </span>
       </div>
 
@@ -353,25 +379,14 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
               <option value="50">Nifty 50</option>
             </select>
             <select
-              value={filters.midcap}
-              onChange={e => setFilters(f => ({ ...f, midcap: e.target.value }))}
-              className={clsx('px-2 py-1.5 text-xs rounded focus:ring-1', isDark ? 'border border-slate-600 bg-slate-700 text-slate-200 focus:ring-amber-500' : 'border border-gray-300 bg-white focus:ring-indigo-400')}
-            >
-              <option value="">All Midcap</option>
-              <option value="300">Midcap 300</option>
-              <option value="150">Midcap 150</option>
-              <option value="50">Midcap 50</option>
-            </select>
-            <select
               value={filters.capCategory}
               onChange={e => setFilters(f => ({ ...f, capCategory: e.target.value }))}
               className={clsx('px-2 py-1.5 text-xs rounded focus:ring-1', isDark ? 'border border-slate-600 bg-slate-700 text-slate-200 focus:ring-amber-500' : 'border border-gray-300 bg-white focus:ring-indigo-400')}
             >
-              <option value="">All Cap Types</option>
-              <option value="Large Cap">Large Cap ≥₹20K cr</option>
-              <option value="Mid Cap">Mid Cap ≥₹5K cr</option>
-              <option value="Small Cap">Small Cap ≥₹500 cr</option>
-              <option value="Micro Cap">Micro Cap ≥₹100 cr</option>
+              <option value="">All sizes</option>
+              <option value="Large">Large · market-cap rank 1–100</option>
+              <option value="Mid">Mid · rank 101–250</option>
+              <option value="Small">Small · rank 251+</option>
             </select>
             <input
               type="text" placeholder="Sector"
@@ -406,6 +421,14 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
         </div>
       )}
 
+      {/* m079: what each column is and where it came from (evidence badges; M07 provenance counts) */}
+      <div data-eqs-legend className="px-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px]" style={{ color: T.dim }}>
+        <span><span style={{ color: T.muted }}>CMP</span> the stored NSE close (live NSE quote on the first {LIVE_ROWS} rows when the feed answers)</span>
+        <span className="inline-flex items-center gap-1"><BadgeChip badge="arithmetic" /> P/E · Mkt cap · size rank at that close, from the latest NSE results filing ({legend.filings.toLocaleString('en-IN')} rows){legend.rebased ? `; ${legend.rebased} rebased from the enrichment snapshot (ˢ)` : ''}{legend.withheld ? `; ${legend.withheld} withheld (snapshot not comparable)` : ''}</span>
+        <span className="inline-flex items-center gap-1"><BadgeChip badge="context" /> NP / Sales Qtr: that filing vs a year earlier · Div Yld, ROCE: the enrichment snapshot{(() => { const d = stocks.reduce<string | null>((m, x) => (x.metrics_as_of && (!m || x.metrics_as_of > m) ? x.metrics_as_of : m), null); return d ? ` of ${d.slice(0, 10)}` : ' (undated)' })()} (COMP and DVD give the trailing-12-month yield)</span>
+        <span className="inline-flex items-center gap-1"><BadgeChip badge="heuristic" /> Size: SEBI-style rank by today&apos;s market cap (1–100 large, 101–250 mid), not AMFI&apos;s six-month list</span>
+      </div>
+
       {/* Table */}
       {displayed.length === 0 ? (
         <div className="py-16 text-center">
@@ -428,9 +451,9 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
                   Ticker <SortIcon col="ticker" />
                 </th>
                 <th className={clsx('px-2 py-2 text-left text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Company · Sector</th>
-                <th className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Nifty</th>
-                <th className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Midcap</th>
-                <th className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Cap Type</th>
+                <th className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')} title="member of the NIFTY 500 index">Nifty</th>
+                <th className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}
+                  title="SEBI-style size by market-cap rank at the latest close: 1–100 large, 101–250 mid, the rest small (heuristic: SEBI ranks the six-month average)">Size</th>
                 <th className={clsx('px-2 py-2 text-left text-[9.5px] font-medium uppercase tracking-wider whitespace-nowrap', isDark ? 'text-slate-400' : 'text-gray-500')}>Event</th>
 
                 {/* Financial columns — sortable */}
@@ -442,7 +465,7 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
                 </th>
                 <th onClick={() => toggleSort('pe_ratio')}
                   className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
-                  P/E <SortIcon col="pe_ratio" />
+                  <span title="trailing P/E at the stored NSE close (latest NSE results filing)">P/E</span> <SortIcon col="pe_ratio" />
                 </th>
                 <th onClick={() => toggleSort('mktcap_cr')}
                   className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
@@ -450,11 +473,11 @@ export function StockTable({ stocks, onRowClick, loading, isDark = true, watchli
                 </th>
                 <th onClick={() => toggleSort('div_yld_pct')}
                   className={clsx('px-2 py-2 text-center text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
-                  Div Yld% <SortIcon col="div_yld_pct" />
+                  <span title="the enrichment snapshot's dividend yield rebased to the stored close; COMP / DVD give the trailing-12-month yield from NSE corporate actions">Div Yld%ˢ</span> <SortIcon col="div_yld_pct" />
                 </th>
                 <th onClick={() => toggleSort('np_qtr_cr')}
                   className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
-                  NP Qtr Cr <SortIcon col="np_qtr_cr" />
+                  <span title="net profit of the latest quarter filed with NSE, ₹ cr, vs the same quarter a year earlier">NP Qtr Cr</span> <SortIcon col="np_qtr_cr" />
                 </th>
                 <th onClick={() => toggleSort('sales_qtr_cr')}
                   className={clsx('px-2 py-2 text-right text-[9.5px] font-medium uppercase tracking-wider cursor-pointer whitespace-nowrap', isDark ? 'text-slate-400 hover:bg-slate-700/30' : 'text-gray-500 hover:bg-gray-100')}>
@@ -506,11 +529,20 @@ interface StockRowProps {
 }
 
 /** One EQS row. Memoized: it re-renders only when its own props change (C2-performance-01). */
-const StockRow = memo(function StockRow({ stock, even, isDark, live, flash, watched, showWatch, event, avoid, today, onRowClick, onWatchToggle }: StockRowProps) {
+const StockRow = memo(function StockRow({ stock: raw, even, isDark, live, flash, watched, showWatch, event, avoid, today, onRowClick, onWatchToggle }: StockRowProps) {
+  // M07: the row renders only dated, comparable valuations (shownValuation: filings at the close, or the snapshot
+  // rebased within the band); anything else is null and prints "—"
+  const stock: Stock = { ...raw, pe_ratio: shownValuation(raw, 'pe_ratio'), mktcap_cr: shownValuation(raw, 'mktcap_cr'), div_yld_pct: shownValuation(raw, 'div_yld_pct') }
   const sepaKey   = stock.sepa_stage?.split(':')[0]?.trim() ?? ''
   const sepaColor = SEPA_COLORS[sepaKey] ?? 'bg-gray-100 text-gray-500 border-gray-200'
   const qualityDot = stock.has_ohlcv === false ? 'bg-gray-200' : (QUALITY_DOTS[stock.data_quality ?? ''] ?? 'bg-gray-300')
-  const displayPrice = stock.cmp ?? stock.latest_price
+  // M07: the stored NSE close (never the enrichment snapshot's price: an older ui-api sent that as `cmp`)
+  const displayPrice = eqsPrice(stock)
+  const vNote = valuationNote(stock)
+  const snapMark = stock.valuation_basis === 'snapshot_rebased' ? 'ˢ' : ''
+  const quarterOk = stock.quarter_basis === 'filings' || stock.quarter_basis === 'snapshot'
+  const qTitle = stock.quarter_basis === 'filings' ? `quarter ended ${stock.qtr_period ?? '—'} (NSE results filing) vs a year earlier`
+    : stock.quarter_basis === 'snapshot' ? 'the enrichment snapshot (no NSE results filing read yet)' : 'no quarter stored'
   const isEvenRow = even
 
   return (
@@ -546,6 +578,7 @@ const StockRow = memo(function StockRow({ stock, even, isDark, live, flash, watc
           <div className={clsx('w-2 h-2 rounded-full flex-shrink-0', qualityDot)}
                title={`data health: ${stock.has_ohlcv === false ? 'no price data' : (stock.data_quality || 'unknown')}`} />
           <span className="font-semibold" style={{ color: '#ffb000' }}>{stock.ticker}</span>
+          {stock.instrument === 'ETF' && <span title={`ETF · ${stock.etf_underlying ?? ''}`} className="text-[9px] px-1 border" style={{ color: T.muted, borderColor: T.border }}>ETF</span>}
         </div>
       </td>
 
@@ -568,26 +601,14 @@ const StockRow = memo(function StockRow({ stock, even, isDark, live, flash, watc
         </span>
       </td>
 
-      {/* Midcap bucket */}
+      {/* m077: size by market-cap rank (the CSV's 'Large Cap' only meant NIFTY 500 membership, shown in the Nifty column) */}
       <td className="px-2 py-1.5 text-center">
-        <span className={clsx(
-          'inline-block min-w-[36px] px-1.5 text-[10px] font-semibold border',
-          stock.midcap_bucket ? 'border-[#ffb00055] text-[#ffb000]' : 'border-transparent text-[var(--t-dim)]'
-        )}>
-          {stock.midcap_bucket ?? '—'}
-        </span>
-      </td>
-
-      {/* Cap Category */}
-      <td className="px-2 py-1.5 text-center">
-        {stock.cap_category ? (
-          <span className={clsx(
-            'inline-block px-1.5 text-[10px] font-medium whitespace-nowrap border border-current uppercase',
-            CAP_BADGE_COLORS[stock.cap_category] ?? 'bg-gray-100 text-gray-500'
-          )} title={stock.cap_category}>
-            {stock.cap_category.replace(/ Cap$/, '')}{/* CT-08: 'LARGE' (the column says Cap Type); full name on hover */}
+        {stock.cap_sebi ? (
+          <span className={clsx('inline-block px-1.5 text-[10px] font-medium whitespace-nowrap border border-current uppercase', CAP_BADGE_COLORS[stock.cap_sebi])}
+            title={`market-cap rank ${stock.cap_rank} at the latest close (SEBI-style: 1–100 large, 101–250 mid)`}>
+            {stock.cap_sebi}
           </span>
-        ) : <span className="text-gray-300 text-xs">—</span>}
+        ) : <span className="text-xs" style={{ color: T.dim }} title={stock.instrument === 'ETF' ? 'an ETF' : 'no market cap stored'}>—</span>}
       </td>
 
       {/* Next corporate event + research flag (bad results reaction within 60 sessions) */}
@@ -632,30 +653,28 @@ const StockRow = memo(function StockRow({ stock, even, isDark, live, flash, watc
         })()}
       </td>
 
-      {/* P/E */}
-      <td className="px-2 py-1.5 text-right">
+      {/* P/E (M07: at the stored close; neutral tone: a valuation is context, not a buy / sell colour) */}
+      <td className="px-2 py-1.5 text-right" title={vNote}>
         {stock.pe_ratio != null ? (
-          <span className={clsx('font-semibold', stock.pe_ratio < 20 ? 'text-emerald-600' : stock.pe_ratio > 50 ? 'text-rose-500' : isDark ? 'text-slate-300' : 'text-gray-700')}>
-            {fmtFixed(stock.pe_ratio, 1)}
-          </span>
-        ) : <span className={isDark ? 'text-slate-500' : 'text-gray-300'}>—</span>}
+          <span className={clsx('font-semibold', isDark ? 'text-slate-300' : 'text-gray-700')}>{fmtFixed(stock.pe_ratio, 1)}{snapMark}</span>
+        ) : <span className={isDark ? 'text-slate-500' : 'text-gray-300'}>{stock.valuation_basis === 'etf' ? 'ETF' : '—'}</span>}
       </td>
 
       {/* Market Cap */}
-      <td className={clsx('px-2 py-1.5 text-right text-xs', isDark ? 'text-slate-300' : 'text-gray-700')}>
-        {stock.mktcap_cr != null ? fmt(Math.round(stock.mktcap_cr)) : <span className={isDark ? 'text-slate-500' : 'text-gray-300'}>—</span>}
+      <td className={clsx('px-2 py-1.5 text-right text-xs', isDark ? 'text-slate-300' : 'text-gray-700')} title={vNote}>
+        {stock.mktcap_cr != null ? <>{fmt(Math.round(stock.mktcap_cr))}{snapMark}</> : <span className={isDark ? 'text-slate-500' : 'text-gray-300'}>—</span>}
       </td>
 
-      {/* Div Yield */}
-      <td className="px-2 py-1.5 text-center">
+      {/* Div Yield (the snapshot, rebased to the close; withheld when not comparable) */}
+      <td className="px-2 py-1.5 text-center" title={stock.div_basis === 'withheld' ? 'withheld: the snapshot is not comparable with the close' : 'the enrichment snapshot rebased to the stored close'}>
         {stock.div_yld_pct != null && stock.div_yld_pct > 0 ? (
-          <span className="text-xs font-semibold text-teal-600">{fmtFixed(stock.div_yld_pct, 2)}%</span>
+          <span className={clsx('text-xs', isDark ? 'text-slate-300' : 'text-gray-700')}>{fmtFixed(stock.div_yld_pct, 2)}%</span>
         ) : <span className={clsx('text-xs', isDark ? 'text-slate-500' : 'text-gray-300')}>—</span>}
       </td>
 
       {/* NP Quarter Cr */}
-      <td className="px-2 py-1.5 text-right">
-        {stock.np_qtr_cr != null ? (
+      <td className="px-2 py-1.5 text-right" title={qTitle}>
+        {quarterOk && stock.np_qtr_cr != null ? (
           <span className={clsx('text-xs', stock.np_qtr_cr >= 0 ? (isDark ? 'text-slate-300' : 'text-gray-700') : 'text-rose-500')}>
             {fmtFixed(stock.np_qtr_cr, 0)}
             <TrendArrow pct={stock.qtr_pft_var} />
@@ -664,8 +683,8 @@ const StockRow = memo(function StockRow({ stock, even, isDark, live, flash, watc
       </td>
 
       {/* Sales Quarter Cr */}
-      <td className="px-2 py-1.5 text-right">
-        {stock.sales_qtr_cr != null ? (
+      <td className="px-2 py-1.5 text-right" title={qTitle}>
+        {quarterOk && stock.sales_qtr_cr != null ? (
           <span className={clsx('text-xs', isDark ? 'text-slate-300' : 'text-gray-700')}>
             {fmtFixed(stock.sales_qtr_cr, 0)}
             <TrendArrow pct={stock.qtr_sal_var} />
@@ -676,7 +695,7 @@ const StockRow = memo(function StockRow({ stock, even, isDark, live, flash, watc
       {/* ROCE % */}
       <td className="px-2 py-1.5 text-right">
         {stock.roce_pct != null ? (
-          <span className={clsx('text-xs font-semibold', stock.roce_pct >= 15 ? 'text-emerald-600' : stock.roce_pct < 5 ? 'text-rose-500' : isDark ? 'text-slate-300' : 'text-gray-600')}>
+          <span className={clsx('text-xs', isDark ? 'text-slate-300' : 'text-gray-600')} title="the enrichment snapshot's ROCE">
             {fmtFixed(stock.roce_pct, 1)}%
           </span>
         ) : <span className={clsx('text-xs', isDark ? 'text-slate-500' : 'text-gray-300')}>—</span>}

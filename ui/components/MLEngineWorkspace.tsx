@@ -11,9 +11,14 @@
  *
  * Telemetry streams over NDJSON (see lib/mlTraining): epoch / log-loss / AUC / Gini
  * render live into a dual-axis convergence chart. MODE = PAPER at all times.
+ *
+ * 5 Nov 2026 review (m116): the page says which labels a run trains on (the production v2 5-day labels, which the
+ * label study marks FAIL; services/ui-api/routers/ml_workspace.py `horizon_days = 5`), shows what a typical result
+ * looks like before any run, and asks in place before a production run inside a restart freeze window (07:45–09:20,
+ * 18:30–21:15 IST), when the EOD pipeline needs the CPU and the DuckDB lock.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { T } from '@/components/terminal'   // T.muted for axis text (RUP-06: one muted grey)
+import { BadgeChip, T } from '@/components/terminal'   // T.muted for axis text (RUP-06: one muted grey)
 import clsx from 'clsx'
 import {
   ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -24,8 +29,10 @@ import {
   type EpochEvent, type StartEvent, type ResultEvent,
 } from '@/lib/mlTraining'
 import { trailingRange } from '@/lib/format'
+import { inFreezeWindowIST } from './honestyKit'
 
 type Status = 'IDLE' | 'TRAINING' | 'COMPLETED' | 'TERMINATED_BY_USER' | 'ERROR'
+
 
 interface Props { isDark?: boolean }
 
@@ -66,7 +73,11 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
   const rate = live && live.elapsed > 0 ? live.iteration / live.elapsed : 0
   const etaSec = live && rate > 0 ? Math.max(0, (total - live.iteration) / rate) : null
 
-  const launch = useCallback(async (mode: 'sample' | 'production') => {
+  const [freezeAsk, setFreezeAsk] = useState<string | null>(null)
+  const launch = useCallback(async (mode: 'sample' | 'production', override = false) => {
+    const win = mode === 'production' && !override ? inFreezeWindowIST() : null
+    if (win) { setFreezeAsk(win); return }
+    setFreezeAsk(null)
     abortRef.current?.abort()
     const ac = new AbortController()
     abortRef.current = ac
@@ -158,6 +169,20 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
             Sample = 5 liquid names · 6 months · ≤80 rounds. Kill-switch preserves the model trained so far.
           </span>
         </div>
+        {freezeAsk && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]" data-mlen-freeze>
+            <span className="text-amber-300">Inside the {freezeAsk} freeze window: a production run competes with the scheduled jobs for the CPU and the DuckDB lock.</span>
+            <button onClick={() => launch('production', true)} className="px-2 py-0.5 rounded border border-amber-500/60 text-amber-200">Run anyway</button>
+            <button onClick={() => setFreezeAsk(null)} className="px-2 py-0.5 rounded border border-slate-600 text-slate-400">Later</button>
+          </div>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-[10.5px] text-slate-400" data-mlen-labels>
+          <BadgeChip badge="arithmetic" note="Training metrics of a classifier: no forecast of returns is claimed." />
+          <span>Labels: the production <b className="text-slate-200">v2 5-day labels</b> (close 5 sessions ahead &gt; +0.15 %, ±2 % barrier),
+            the ones the label study marks <b className="text-rose-300">FAIL</b>. The better 20-session excess-rank labels are not what this
+            engine trains on. An earlier out-of-sample check put the 5-day AUC near 0.48 (a coin flip is 0.50), and even an AUC of 0.55
+            would not survive a ~1 % round trip at weekly turnover.</span>
+        </div>
 
         {/* Production config */}
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -248,7 +273,7 @@ export function MLEngineWorkspace({ isDark = true }: Props) {
         <div className="h-72">
           {chartData.length === 0 ? (
             <div className="h-full flex items-center justify-center text-[11px] text-slate-600">
-              {isTraining ? 'Awaiting first boosting round…' : 'Launch a run to stream the convergence curve.'}
+              {isTraining ? 'Awaiting first boosting round…' : 'Launch a run to stream the convergence curve. Read VALID AUC: near 0.50 means no ranking skill; train log-loss falling while valid log-loss rises means overfitting.'}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">

@@ -81,3 +81,59 @@ export function fitChip(d: FitLike | null | undefined): string | null {
   return parts.join(' · ')
 }
 
+
+// ── review M46 / m025 / m027 / m028 (D-DATA, 6 Nov): how far the drivers tab can be read ───────────────────────────
+export type TabState = 'ok' | 'degraded' | 'insufficient'
+export interface TabLike { state?: string | null; sessions?: number | null; sentence?: string | null }
+export interface TabView { grey: boolean; state: TabState | null; label: string | null; caption: string | null }
+
+const TAB_LABEL: Record<TabState, string> = { ok: 'FIT OK', degraded: 'FIT DEGRADED', insufficient: 'HISTORY INSUFFICIENT' }
+
+/**
+ * The route's `tab` → what the page does with it. `ok` (or no tab: an older ui-api) shows everything as before;
+ * `degraded` and `insufficient` grey the horizon points, sectors, concentration and the monthly board and caption them.
+ * The degraded caption carries no MAE (the fit chip prints it: the same number once per page); the insufficient one is
+ * the route's sentence (sessions stored and since when, which nothing else on the page prints).
+ */
+export function tabView(tab: TabLike | null | undefined): TabView {
+  const s = tab?.state
+  if (s !== 'degraded' && s !== 'insufficient') return { grey: false, state: s === 'ok' ? 'ok' : null, label: s === 'ok' ? TAB_LABEL.ok : null, caption: null }
+  const caption = s === 'degraded'
+    ? "the rebuilt weights miss the index by more than the 25-pt bar (error on the fit chip): members' points, sectors and the monthly board are approximate; the residual is shown"
+    : (tab?.sentence ?? '').trim().replace(/[.\s]+$/, '') || 'too few sessions of attribution stored: the backfill has not run'
+  return { grey: true, state: s, label: TAB_LABEL[s], caption }
+}
+
+/** Short per-panel caption on a greyed panel (the full sentence is printed once, above the table). */
+export function tabPanelCaption(v: TabView): string | null {
+  return v.grey && v.label ? `${v.label} · read with the note above the table` : null
+}
+
+export interface ChallengerLike { symbol?: string | null; sessions_leading?: number | null; sessions_needed?: number | null; sentence?: string | null }
+
+/** m028: "X leads the raw points; the label changes after N sessions (k so far)" — always ending the describes clause. */
+export function challengerLine(ch: ChallengerLike | null | undefined): string | null {
+  if (!ch?.symbol) return null
+  const base = (ch.sentence ?? '').trim()
+  return describes(base || `${ch.symbol} leads the raw points (${ch.sessions_leading ?? 0} of ${(ch.sessions_leading ?? 0) + (ch.sessions_needed ?? 0)} sessions the label needs)`)
+}
+
+const FLAG_LABEL: Record<string, string> = { pat_yoy_outlier: 'profit y/y beyond ±200 %', revenue_yoy_outlier: 'revenue y/y beyond ±200 %', pe_distorted: 'P/E outside 3–150×' }
+/** m027: the member's heuristic flags in words (unknown codes pass through), [] when none. */
+export function flagWords(flags: readonly string[] | null | undefined): string[] {
+  return (flags ?? []).map(f => FLAG_LABEL[f] ?? f.replace(/_/g, ' '))
+}
+/** Which MEMB cell a flag marks: P/E, profit y/y or revenue y/y. */
+export function flagCell(flags: readonly string[] | null | undefined, cell: 'pe' | 'pat' | 'rev'): boolean {
+  const code = cell === 'pe' ? 'pe_distorted' : cell === 'pat' ? 'pat_yoy_outlier' : 'revenue_yoy_outlier'
+  return (flags ?? []).includes(code)
+}
+
+/** m025: the monthly board's data date — the route's `as_of` (the last stored session, '2026-11-05'); an older ui-api
+ *  sent the month there ('2026-11'), so fall back to the last month's first day only then. */
+export function monthlyAsOf(m: { as_of?: string | null; months?: { month: string }[] } | null | undefined): string | null {
+  if (!m) return null
+  if (m.as_of && /^\d{4}-\d{2}-\d{2}$/.test(m.as_of)) return m.as_of
+  const last = m.months?.length ? m.months[m.months.length - 1].month : null
+  return last ? `${last}-01`.slice(0, 10) : null
+}

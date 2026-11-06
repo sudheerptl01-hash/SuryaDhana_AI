@@ -13,6 +13,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from data_health import db, ingest_log
 
@@ -23,8 +24,26 @@ from shared.logging import get_logger
 
 logger = get_logger(__name__)
 
-JOBS: tuple[str, ...] = ("iv_eod", "iv_weekly", "iv_backfill", "vix_backfill", "iv_intraday")
+JOBS: tuple[str, ...] = ("iv_eod", "iv_weekly", "iv_backfill", "vix_backfill", "iv_intraday", "iv_repair")
 EOD_FILES: tuple[str, ...] = ("index_ohlc_daily", "nse_fo_volt", "nse_contract_delta", "nse_combined_oi")
+# fetched by iv_eod itself after EOD_FILES (the controller's pinned NSE_IV_FILES list stays as it is): the MWPL zip (M43: the
+# deleq file alone carries no MWPL, so % MWPL and BAN were empty for 224 of 224) and NCL's SPAN risk-parameter file (M44;
+# stored under data/nse_archive/span/ for POST /api/options/margin's file tier). Both are published before 19:30 IST.
+EOD_EXTRA_FILES: tuple[str, ...] = ("nse_combined_oi_zip", "nse_span_zip")
+# Round 2 (checker deploy note): the SPAN zip is ≈ 10 MB, heavier than the "light" class allowed inside the 07:45–09:20 IST
+# freeze window (ICICI login + pre-open jobs), where the 08:35 morning sweep can re-run iv_eod. It is deferred there; the
+# margin route then reads the newest stored SPAN file (it names its date). The MWPL zip (≈ 22 KB) stays.
+HEAVY_EXTRA_FILES: frozenset[str] = frozenset({"nse_span_zip"})
+MORNING_FREEZE_IST: tuple[tuple[int, int], tuple[int, int]] = ((7, 45), (9, 20))
+
+
+def extra_files_for(now_utc: datetime) -> tuple[list[str], list[str]]:
+    """(the extra files iv_eod fetches at ``now_utc``, the ones it defers): the heavy ones wait outside the morning freeze."""
+    ist = now_utc + timedelta(hours=5, minutes=30)
+    (h0, m0), (h1, m1) = MORNING_FREEZE_IST
+    in_freeze = (h0, m0) <= (ist.hour, ist.minute) < (h1, m1)
+    fetch = [f for f in EOD_EXTRA_FILES if not (in_freeze and f in HEAVY_EXTRA_FILES)]
+    return fetch, [f for f in EOD_EXTRA_FILES if f not in fetch]
 DELTA_TOL = 0.05
 LEGACY_START = date(2019, 10, 1)
 
@@ -82,6 +101,11 @@ def run_eod(store: Any, http: Any, *, day: date | None, fo_root: Path, cache_roo
         return out
     if fetch_files:
         out["files"] = nse_positions.ingest_files(store, http, list(EOD_FILES), day, day, cache_root, revalidate=revalidate, now=now)["datasets"]
+        extra, deferred = extra_files_for(now)
+        out["files_extra"] = nse_positions.ingest_files(store, http, extra, day, day, cache_root, revalidate=revalidate,
+                                                        now=now)["datasets"]
+        if deferred:
+            out["files_deferred"] = {"datasets": deferred, "reason": "heavy file inside the 07:45–09:20 IST freeze window"}
     out["iv"] = iv_eod.run_day(store, path, day, surface_symbols=surface_symbols, now=now)
     out["events"] = events.build_ledger(store, since=day - timedelta(days=4), until=day, now=now)
     out["delta_check"] = delta_crosscheck(store, day)
@@ -154,6 +178,112 @@ def run_backfill(store: Any, *, start: date, end: date, fo_root: Path, surface_s
             "to": todo[-1][0].isoformat(), "seconds": round(sum(r["seconds"] for r in results), 1),
             "rows": {k: sum(int(r[k]) for r in results) for k in ("expiry_rows", "surface_rows", "summary_rows")}, "events": ev,
             "errors": errors[:20], "tables": positions_meta(store)}
+
+
+REPAIR_COLS = ("rv20_cc", "rv20_parkinson", "rv20_yz", "iv_minus_rv20", "iv30_cm", "expected_move_1d_pct", "quality_flags", "first_seen_at")
+
+
+def _flags_without(flags: Any, drop: set[str]) -> list[str]:
+    if not isinstance(flags, str) or not flags:
+        return []
+    return [f for f in flags.split(",") if f and f not in drop]
+
+
+def run_repair(store: Any, *, start: date | None = None, end: date | None = None, symbols: list[str] | None = None,
+               now: datetime | None = None) -> dict[str, Any]:
+    """``iv_repair`` (M06 / M43 / m052; POST /jobs/iv-eod?job=iv_repair[&backfill_from=YYYY-MM-DD], the PM runs it once after
+    the deploy, outside the freeze windows; ≈ 1–3 min, cached data only, no fetch). Over the stored ``iv_summary_daily`` rows
+    in [start, end] (default: all):
+
+    * RV20 close-to-close / Parkinson / Yang-Zhang recomputed from ``index_ohlc_daily`` (indices; OHLC stored 2019-10 →) and
+      ``nse_bhavcopy`` (stocks) with the range-outlier rule — the 5 Nov backfill had RV for 107 of 224 names (the cache was
+      seeded from the 2019 file) and index YZ / Parkinson on 1 of 1,761 rows (it ran before the index OHLC history);
+    * IV30 filled flat from the one expiry nearest 30 d inside 10–60 d where no pair brackets 30 d (flag ``cm30_flat``);
+    * IV − RV20 (close-to-close) recomputed on the result with enrich's base (IV30, else the ~1-month ATM IV), and the 1-day
+      expected move with summarise's base (IV30, else the NEAR ATM IV) — one rule for repaired history and fresh EOD rows
+      (round 2: the repair used the ~1-month IV here and blanked 10,558 near-only rows that iv_eod fills);
+    * rank / percentile recomputed over the whole history (``recompute_ranks``), so the 4 Nov rows get theirs.
+
+    Rows are updated in place (the derived-table rule, PLAN §0.3 as amended 5 Nov): ``first_seen_at`` = this run."""
+    now = now or db.utcnow()
+    where: list[str] = ["1 = 1"]
+    params: list[Any] = []
+    if start:
+        where.append("date >= ?")
+        params.append(start)
+    if end:
+        where.append("date <= ?")
+        params.append(end)
+    if symbols:
+        where.append("list_contains(?, symbol)")
+        params.append([s.upper() for s in symbols])
+    w = " AND ".join(where)
+    summ = db.query_df(store, f"""SELECT date, symbol, iv30_cm, monthly_atm_iv, near_atm_iv, quality_flags FROM iv_summary_daily
+                                 WHERE {w} ORDER BY symbol, date""", params)
+    if summ.empty:
+        return {"job": "iv_repair", "status": "ok", "rows": 0, "note": "no stored summary rows in range"}
+    summ["date"] = summ["date"].map(db.to_date)
+    lo, hi = min(summ["date"]), max(summ["date"])
+    exp = db.query_df(store, f"""SELECT date, symbol, dte, atm_iv FROM iv_expiry_daily
+                                WHERE {w} AND atm_iv IS NOT NULL AND dte BETWEEN ? AND ?""", [*params, *iv_eod.CM30_FLAT_DTE])
+    flat: dict[tuple[str, date], float] = {}
+    if not exp.empty:
+        exp["date"] = exp["date"].map(db.to_date)
+        exp["gap"] = (exp["dte"] - 30).abs()
+        exp = exp.sort_values(["symbol", "date", "gap", "dte"], ascending=[True, True, True, False]).drop_duplicates(["symbol", "date"])
+        flat = {(str(r.symbol), r.date): round(float(r.atm_iv), 4) for r in exp.itertuples(index=False)}
+    rv = iv_eod.RvCache()
+    syms = sorted(summ["symbol"].astype(str).unique())
+    rv.load(store, syms, lo, hi)
+    frames = []
+    for sym in syms:
+        rv.get(sym, lo)                                   # loads a late F&O entrant on first use
+        f = rv.rows.get(sym)
+        if f is not None and not f.empty:
+            frames.append(f.assign(symbol=sym))
+    rv_all = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=["symbol", "date", "rv20_cc", "rv20_parkinson",
+                                                                                       "rv20_yz", "range_outlier"])
+    rv_all = rv_all.drop_duplicates(["symbol", "date"], keep="last")
+    m = summ.merge(rv_all, on=["symbol", "date"], how="left")
+    out_rows: list[dict[str, Any]] = []
+    counts = {"rv_filled": 0, "yz_filled": 0, "iv30_flat": 0, "range_outlier_rows": 0}
+    drop = {"no_cm30", "cm30_flat", "rv_range_outlier", "rv_input_missing"}
+
+    def _v(x: Any) -> float | None:
+        return None if x is None or pd.isna(x) else round(float(x), 4)
+
+    for r in m.itertuples(index=False):
+        sym, d = str(r.symbol), r.date
+        flags = _flags_without(r.quality_flags, drop)
+        was_flat = "cm30_flat" in str(r.quality_flags or "").split(",")
+        iv30 = None if was_flat else _v(r.iv30_cm)
+        if iv30 is None:
+            iv30 = flat.get((sym, d))
+            flags.append("cm30_flat" if iv30 is not None else "no_cm30")
+            counts["iv30_flat"] += int(iv30 is not None)
+        if isinstance(r.range_outlier, (bool, np.bool_)) and bool(r.range_outlier):
+            flags.append("rv_range_outlier")
+            counts["range_outlier_rows"] += 1
+        cc, park, yz = _v(r.rv20_cc), _v(r.rv20_parkinson), _v(r.rv20_yz)
+        base = iv30 if iv30 is not None else _v(r.monthly_atm_iv)          # enrich's IV − RV base
+        em_base = iv30 if iv30 is not None else _v(r.near_atm_iv)          # summarise's expected-move base
+        counts["rv_filled"] += int(cc is not None)
+        counts["yz_filled"] += int(yz is not None)
+        out_rows.append({"symbol": sym, "date": d, "rv20_cc": cc, "rv20_parkinson": park, "rv20_yz": yz,
+                         "iv_minus_rv20": round(base - cc, 4) if (base is not None and cc is not None) else None, "iv30_cm": iv30,
+                         "expected_move_1d_pct": round(em_base / (252.0 ** 0.5), 4) if em_base is not None else None,
+                         "quality_flags": ",".join(dict.fromkeys(flags)) or None, "first_seen_at": now})
+    up = pd.DataFrame(out_rows)
+    sets = ", ".join(f"{c} = u.{c}" for c in REPAIR_COLS)
+    for i in range(0, len(up), db.BATCH_ROWS):
+        chunk = up.iloc[i:i + db.BATCH_ROWS]
+        store.write(f"""UPDATE iv_summary_daily SET {sets} FROM _b1_repair u
+                        WHERE iv_summary_daily.symbol = u.symbol AND iv_summary_daily.date = u.date::DATE""", frames={"_b1_repair": chunk})
+    ranks = iv_eod.recompute_ranks(store, symbols=[s.upper() for s in symbols] if symbols else None)
+    with contextlib.suppress(Exception):
+        store.checkpoint()
+    return {"job": "iv_repair", "status": "ok", "rows": len(up), "from": lo.isoformat(), "to": hi.isoformat(), **counts,
+            "ranks_recomputed": ranks, "note": "RV (cc / Parkinson / YZ, range outliers out), IV30 flat fill, IV − RV20 (cc), ranks"}
 
 
 def run_weekly(store: Any, *, now: datetime | None = None) -> dict[str, Any]:

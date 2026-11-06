@@ -669,7 +669,7 @@ const NC = (await import(new URL('../news/nseChart.ts', import.meta.url).href)) 
     && liveTrue.length === 1 && /source: 'BREEZE'/.test(liveTrue[0]), liveTrue)
   // pricing math untouched: the analyze body and the margin call read the chain's forward, never the live spot
   const analyze = sb.slice(sb.indexOf("axios.post<Analysis>('/api/options/strategy/analyze'"), sb.indexOf("}, { timeout: 15000 })"))
-  check('L21 the analyze body is the pre-live one (forward from the chain, DTE + 0.5, ATM IV default)', /\bforward,\n/.test(analyze) && analyze.includes('days_to_expiry: Math.max(0, chain.days_to_expiry) + 0.5') && analyze.includes('default_iv: chain.atm_iv ?? 15'), analyze.slice(0, 200))
+  check('L21 the analyze body is the pre-live one (forward from the chain, the chain\'s t_days (M04), ATM IV default)', /\bforward,\n/.test(analyze) && analyze.includes('days_to_expiry: (chain as { t_days?: number | null }).t_days ?? Math.max(0, chain.days_to_expiry)') && analyze.includes('default_iv: chain.atm_iv ?? 15'), analyze.slice(0, 200))
   check('L21 the live spot never reaches pricing or margin', !/spotNow|ulRow/.test(analyze) && !/postMargin\([^)]*spotNow/.test(sb) && /const forward = chain\?\.forward \?\? chain\?\.future \?\? chain\?\.spot \?\? null/.test(sb))
   check('L21 a calendar-chosen seed is corrected once by the service\'s first market state, never re-seeded by the clock later',
     /if \(!marketState \|\| !chain \|\| checkedSeed\.current\) return\s*checkedSeed\.current = true\s*if \(modeNow\.current\(\) !== loadedMode\) loadChain\(\)/.test(sb)

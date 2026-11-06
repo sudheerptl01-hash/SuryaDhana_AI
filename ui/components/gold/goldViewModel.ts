@@ -209,6 +209,13 @@ export function percentileLabel(pctile: number | null | undefined, nReports: num
   return `${p} of the last ${num(nReports)} reports (≈ ${years >= 1 ? `${Math.round(years)} y` : `${Math.round(nReports / 4.33)} mo`})`
 }
 
+/** Calendar days from a to b (ISO dates), or null. */
+export function calendarDays(a: string | null | undefined, b: string | null | undefined): number | null {
+  const ma = /^(\d{4})-(\d{2})-(\d{2})/u.exec(a ?? ''), mb = /^(\d{4})-(\d{2})-(\d{2})/u.exec(b ?? '')
+  if (!ma || !mb) return null
+  return Math.round((Date.UTC(+mb[1], +mb[2] - 1, +mb[3]) - Date.UTC(+ma[1], +ma[2] - 1, +ma[3])) / 86_400_000)
+}
+
 /** Weekday sessions from `a` (exclusive) to `b` (inclusive): 1 for consecutive sessions, 3 when two rows are missing. Junk → null. */
 export function sessionsBetween(a: string | null | undefined, b: string | null | undefined): number | null {
   const ma = /^(\d{4})-(\d{2})-(\d{2})/.exec(a ?? ''), mb = /^(\d{4})-(\d{2})-(\d{2})/.exec(b ?? '')
@@ -405,11 +412,77 @@ export const SERIES_LABEL: Record<string, string> = {
   FRED_T10YIE: '10-y breakeven',
   GVZ_CLOSE: 'GVZ (gold vol)',
   FRED_GVZCLS: 'GVZ (gold vol, FRED)',
-  FRED_DCOILBRENTEU: 'Brent',
+  FRED_DCOILBRENTEU: 'Brent (dated spot, FRED)',
+  BRENT_FRONT: 'Brent front-month future (BZ=F)',
   WTI_FRONT: 'WTI front (not Brent)',
 }
 export function driverTileLabel(d: { key: string; label?: string | null; series_id?: string | null }): string {
   return (d.series_id && SERIES_LABEL[d.series_id]) || d.label || d.key
+}
+
+/**
+ * What the instrument IS when the served series is not the primary's quantity (wave 1e minor: the NYMEX BZ=F front future
+ * printed as 'BRENT 98.68' under 'Source: FRED'): a future is said to be a future, with its own source. Null otherwise.
+ */
+export function driverInstrumentNote(d: { series_id?: string | null }): string | null {
+  if (d.series_id === 'BRENT_FRONT') return 'front-month future (Yahoo BZ=F, last trade; the latest bar can be partial), not dated Brent spot'
+  if (d.series_id === 'WTI_FRONT') return 'WTI front-month future (Yahoo CL=F), not Brent'
+  return null
+}
+
+/**
+ * A driver's served `label_note`, verbatim (wave 1e: MACRO printed 'the primary series has no stored points' while FRED had
+ * points to 3 Nov — the note said 'UST_REAL_10Y: fresher than FRED_DFII10 (last 2026-11-03)'). `tone` amber only for a
+ * stand-in of another quantity (the Fed broad index for DXY); a fresher twin of the same quantity is information.
+ */
+export function driverNote(d: { key: string; label?: string | null; label_note?: string | null; series_id?: string | null }): { text: string; tone: 'amber' | 'dim' } | null {
+  const note = (d.label_note ?? '').trim()
+  if (note) return { text: note, tone: /fresher than/iu.test(note) ? 'dim' : 'amber' }
+  const label = driverTileLabel(d)
+  if (d.series_id && label !== (d.label ?? d.key) && !driverInstrumentNote(d)) return { text: `stand-in for ${d.label ?? d.key}: ${d.series_id}`, tone: 'amber' }
+  return null
+}
+
+/** The attribution lines MACRO's drivers need, from the series actually served (never 'FRED' alone under a Yahoo future). */
+export function driverSources(drivers: readonly { series_id?: string | null }[]): ('FRED' | 'US Treasury' | 'Yahoo' | 'SPDR')[] {
+  const out = new Set<'FRED' | 'US Treasury' | 'Yahoo' | 'SPDR'>()
+  for (const d of drivers) {
+    const id = d.series_id ?? ''
+    if (/^FRED_/u.test(id)) out.add('FRED')
+    else if (/^UST_/u.test(id)) out.add('US Treasury')
+    else if (/^GLD_/u.test(id)) out.add('SPDR')
+    else if (id) out.add('Yahoo')
+  }
+  return (['FRED', 'US Treasury', 'Yahoo', 'SPDR'] as const).filter(s => out.has(s))
+}
+
+/** A Fed-path row's mean: the tracker's `mean_bp` is a RATE LEVEL in bp (416 = 4.16 %), not a move (wave 1e minor: 'hike 89 % · 416 bp' read as a move). */
+export function fedMeanText(meanBp: number | null | undefined): string {
+  if (!finite(meanBp)) return 'mean rate —'
+  return `mean rate ${num(meanBp / 100, 2)} %`
+}
+
+/**
+ * The ZQ (30-day Fed funds future) label: the contract when the server names it ('ZQZ26'), else the observation month with
+ * the honest words — the continuous ZQ=F rolls before expiry, so the month is NOT the contract's (wave 1e minor: 'NOV-26
+ * 4.05 %' was the rolled December-like contract).
+ */
+export function zqLabel(z: { month: string; contract?: string | null; symbol?: string | null; contract_month?: string | null; month_guess?: string | null; rolled_suspect?: boolean | null }): string {
+  const c = z.contract ?? z.symbol ?? null
+  const continuous = !c || /ZQ=F|=F$|continuous/iu.test(c)
+  if (!continuous) return `${c}${z.contract_month ? ` (${z.contract_month})` : ''}`
+  if (z.rolled_suspect) return `ZQ=F front · likely ${z.month_guess ?? z.month} (rolled)`
+  return `ZQ=F front · ${z.month_guess ?? z.month} (the observation month; Yahoo does not report the contract)`
+}
+
+/**
+ * MACRO's KGX window caption vs HEALTH's (wave 1e minor: it said 'not HEALTH's week to date' while the windows were equal).
+ */
+export function kgxWindowCaption(kgx: { period?: string | null; from_date?: string | null; window_label?: string | null } | null | undefined, healthFrom: string | null | undefined): string | null {
+  if (!kgx?.from_date) return null
+  const head = `window from ${istLabel(kgx.from_date)}${kgx.window_label ? ` (${kgx.window_label})` : ''}`
+  if (!healthFrom) return head
+  return kgx.from_date === healthFrom ? `${head} — the same window as HEALTH's` : `${head} — HEALTH's window starts ${istLabel(healthFrom)}`
 }
 
 /**
@@ -438,9 +511,22 @@ export function oiQuadrantWords(label: string | null | undefined, oiChg: number 
   return `OI quadrant: ${label}${finite(oiChg) ? ` (OI ${signed(oiChg, 0)})` : ''}`
 }
 
-/** Days to an MCX tender, never negative (the 5 Nov review: '−4 days to tender'): once it has started, 'in tender since Sun 01 Nov (4 d)'. */
-export function tenderWords(days: number | null | undefined, startLabel: string | null | undefined): string {
+/**
+ * Days to an MCX tender, never negative (the 5 Nov review: '−4 days to tender'): once it has started, 'in tender since Sun 01
+ * Nov (4 d)'. Wave 1e (regression: 'tender starts today (Sun 01 Nov)' on Fri 06 Nov): the server clamps the days to 0 while
+ * the tender runs and says so — `in_tender` / `tender_note` win; 'starts today' only when the tender start IS today.
+ */
+export function tenderWords(days: number | null | undefined, startLabel: string | null | undefined,
+  roll?: { in_tender?: boolean | null; tender_note?: string | null; tender_start?: string | null } | null, today?: string | null): string {
+  if (roll?.in_tender) {
+    if (roll.tender_note) return roll.tender_note
+    const d = calendarDays(roll.tender_start, today)
+    return `in tender since ${startLabel ?? 'the tender start'}${d != null ? ` (${d} d)` : ''}`
+  }
   if (!finite(days)) return 'days to tender —'
+  if (days === 0 && roll?.tender_start && today && roll.tender_start < today) {
+    return `in tender since ${startLabel ?? 'the tender start'} (${calendarDays(roll.tender_start, today)} d)`
+  }
   if (days < 0) return `in tender since ${startLabel ?? 'the tender start'} (${Math.abs(Math.round(days))} d)`
   if (days === 0) return `tender starts today${startLabel ? ` (${startLabel})` : ''}`
   return `${Math.round(days)} day${Math.round(days) === 1 ? '' : 's'} to tender`

@@ -8,7 +8,7 @@
  * never green/red: PLAN §f.3).
  */
 import { MINUS, fmtFixed, fmtSigned, fmtSignedInr, indianGrouping } from '@/lib/format'
-import type { Badge, BasisReference, ComexSpec, FairLeg, Freshness, GoldBrief, GoldEvent, GoldFair, GoldHealth, HealthFair, HealthGauge, SettlementFields, Unit } from './types'
+import type { Badge, BasisReference, ComexSpec, FairLeg, Freshness, GoldBrief, GoldEvent, GoldFair, GoldHealth, GoldOverview, HealthFair, HealthGauge, OverviewStrip, SettlementFields, Unit } from './types'
 
 export { MINUS }
 
@@ -751,7 +751,7 @@ export function morningCall(istMinutes: number, weekday: number, today: string, 
  * The honest [B] line of h.open (C-BEGINNER-13): the chase limit is a house rule; the measured miss and the model-vs-naive
  * verdict come from the accuracy log when it has scored days, else the words say the rule is unproven. Never an action rule.
  */
-export function preOpenCopyB(stats: { days?: number | null; median_abs_error?: number | null; mean_abs_error?: number | null; naive_mean_abs_error?: number | null } | null | undefined, threshold = 300): string {
+export function preOpenCopyB(stats: { days?: number | null; median_abs_error?: number | null; mean_abs_error?: number | null; naive_mean_abs_error?: number | null; stale_baseline_count?: number | null } | null | undefined, threshold = 300): string {
   const head = 'Where MCX ‘should’ open given COMEX and the rupee since the close.'
   const days = stats?.days ?? 0
   if (!days) return `${head} The OK / WAIT strip is a house rule (₹${threshold.toLocaleString('en-IN')}) with no scored mornings yet — arithmetic to read, not advice.`
@@ -759,7 +759,10 @@ export function preOpenCopyB(stats: { days?: number | null; median_abs_error?: n
   const worse = stats?.naive_mean_abs_error != null && stats?.mean_abs_error != null ? stats.mean_abs_error > stats.naive_mean_abs_error : null
   const missed = med != null ? ` that has missed by ${fmtInr0(med)} on a typical morning` : ''
   const vsNaive = worse == null ? '' : worse ? ' and is worse than ‘open = yesterday’s settlement’ so far' : ' and beats ‘open = yesterday’s settlement’ so far'
-  return `${head} The OK / WAIT strip is a house rule (₹${threshold.toLocaleString('en-IN')})${missed}${vsNaive} (${days} day${days === 1 ? '' : 's'} scored) — arithmetic to read, not advice.`
+  // wave 1e minor: a typical miss built on stale baselines says so (7 of 8 mornings were priced off the wrong session)
+  const stale = stats?.stale_baseline_count ?? 0
+  const staleWords = stale > 0 ? `, ${stale} of them priced off a stale settlement — the accuracy log shows the read without them` : ''
+  return `${head} The OK / WAIT strip is a house rule (₹${threshold.toLocaleString('en-IN')})${missed}${vsNaive} (${days} day${days === 1 ? '' : 's'} scored${staleWords}) — arithmetic to read, not advice.`
 }
 
 /**
@@ -874,6 +877,8 @@ export interface SettlementNote { tone: 'amber' | 'muted'; text: string }
 export function settlementNote(b: SettlementFields | null | undefined): SettlementNote | null {
   if (!b || noSettlement(b)) return null
   const c = settlementCheck(b)
+  const older = settlementOlderThanLatest(b)
+  if (older) return { tone: 'amber', text: older }
   if (c.flagged) {
     const day = dayLabel(b.band_session)
     return { tone: 'amber', text: `The ICICI band midpoint${b.band_midpoint != null ? ` ${fmtInr0(b.band_midpoint)}` : ''}${day ? ` (${day} session)` : ''} is ${c.pct != null ? fmtSignedPctSp(c.pct, 2) : 'more than 0.6 %'} away from the last-30-min VWAP settlement above — over ${SETTLEMENT_CHECK_PCT} %: the band belongs to an earlier session. Every fair, gap and basis here uses the VWAP.` }
@@ -899,6 +904,7 @@ export function settlementNote(b: SettlementFields | null | undefined): Settleme
 export function settlementNoteShort(b: SettlementFields | null | undefined): SettlementNote | null {
   const n = settlementNote(b)
   if (!n) return null
+  if (n.tone === 'amber' && settlementOlderThanLatest(b)) return { tone: 'amber', text: `baseline session older than expected: ${dayLabel(b?.settlement_session) || 'an earlier session'}, not ${dayLabel(b?.latest_session) || 'the latest completed session'} (no VWAP stored for it yet; numbers in the header strip)` }
   if (n.tone === 'amber') return { tone: 'amber', text: 'settlement check flagged: the ICICI band belongs to an earlier session (numbers in the header strip); this panel\'s settlement is the last-30-min VWAP' }
   const src = b?.settlement_source ?? null
   if (src === 'breeze_previous_close') return { tone: 'muted', text: 'baseline = ICICI Breeze\'s previous-close field (a broker number, not an MCX settlement)' }
@@ -1107,6 +1113,9 @@ export function stripSettlement(
     band_midpoint: s?.band_midpoint ?? f?.band_midpoint ?? null,
     band_session: s?.band_session ?? f?.band_session ?? null,
     settlement_check: s?.settlement_check ?? f?.settlement_check ?? null,
+    settlement_is_latest: s?.settlement_is_latest ?? f?.settlement_is_latest ?? null,
+    latest_session: s?.latest_session ?? f?.latest_session ?? null,
+    latest_session_label: s?.latest_session_label ?? f?.latest_session_label ?? null,
   }
 }
 
@@ -1185,6 +1194,12 @@ export function baselineSettlement(data: GoldFair | null, fair: HealthFair | nul
     band_midpoint: b.band_midpoint ?? side?.band_midpoint ?? null,
     band_session: b.band_session ?? side?.band_session ?? null,
     settlement_check: kind ? null : (b.settlement_check ?? same?.settlement_check ?? null),
+    // the 08:45 flag (M-D): `older_than_expected` + `expected_session` are the baseline's own words for the same fact
+    settlement_is_latest: kind ? null : (b.older_than_expected ? false : (b.settlement_is_latest ?? same?.settlement_is_latest ?? null)),
+    latest_session: b.latest_session ?? b.expected_session ?? same?.latest_session ?? null,
+    latest_session_label: b.latest_session_label ?? same?.latest_session_label ?? null,
+    older_than_expected: kind ? null : (b.older_than_expected ?? null),
+    older_note: kind ? null : (b.older_note ?? null),
   }
 }
 
@@ -1259,4 +1274,334 @@ export function ticketMargin(
              sub: `${fmtFixed(card.margin_pct, 2)} % of this notional — the contract card's figure; exchange revises daily` }
   }
   return { value: t.indicative_margin, kind: 'constant', label: 'Margin · indicative constant', sub: `${fmtFixed(t.margin_pct_indicative, 2)} % constant (no dated NRML mirror for this contract) — not the exchange's figure` }
+}
+
+// ── wave 1e (6 Nov final critics): ONE basis per clock per page for the PICKED contract; ONE real yield per page ─────────
+
+/**
+ * The settlement is older than the latest completed MCX session (wave 1e, M-D: a Sunday Muhurat session, or a session
+ * whose last-30-min VWAP is not stored yet, leaves the baseline one session behind — the 5 Nov blocker's effect for one
+ * morning). The sentence when the server says so (`settlement_is_latest === false`, or `latest_session` after the
+ * settlement's own session), else null. A broker close or a typed entry is not a settlement and never reads this way.
+ */
+export function settlementOlderThanLatest(b: SettlementFields | null | undefined): string | null {
+  if (!b || b.settlement == null) return null
+  const src = b.settlement_source ?? null
+  if (src === 'breeze_previous_close' || src === 'user_entry') return null
+  const own = b.settlement_session ?? null
+  const latest = b.latest_session ?? null
+  const behind = b.older_than_expected === true || b.settlement_is_latest === false || (!!own && !!latest && latest > own)
+  if (!behind) return null
+  // the server's own sentence when it sends one (it names a special session: 'Sun 08 Nov settlement (Muhurat …, 14:20–15:30 IST)')
+  if (b.older_note) return b.older_note.charAt(0).toUpperCase() + b.older_note.slice(1).replace(/\.?$/u, '.')
+  const ownDay = dayLabel(own) || 'an earlier session'
+  const latestDay = dayLabel(latest) || 'the latest completed session'
+  return `Baseline session older than expected: this settlement is ${ownDay}'s, but the latest completed MCX session is ${latestDay}, which has no last-30-min VWAP stored yet — the fair, the gap and the settlement basis also hold ${latestDay}'s move.`
+}
+
+/** Which payload the HEALTH / LEARN views render, and why (M-A). */
+export interface PageHealthPick { health: GoldHealth | null; source: 'overview' | 'health' | null; waiting: boolean }
+
+/**
+ * The HEALTH payload the page renders (wave 1e, M-A; critics C-DATA-3 / C-TRADER-3): the overview's `health` — built by
+ * ui-api for the PICKED contract and expiry, with the live MCX quote folded in during MCX hours (`apply_live_mcx`), the SAME
+ * load as the header strip — so the strip, the INDIA BASIS gauge and the H4 clause print one basis per clock. `/api/gold/
+ * health` (GOLD at its own clock: the WEI / BRF echo) is read only once the overview has FAILED; while the overview is still
+ * loading nothing is rendered (`waiting`), never GOLD's basis under another contract's strip.
+ */
+export function pickPageHealth(overview: Pick<GoldOverview, 'health'> | null | undefined, status: 'loading' | 'ok' | 'error' | undefined,
+  fallback: GoldHealth | null | undefined): PageHealthPick {
+  if (overview?.health) return { health: overview.health, source: 'overview', waiting: false }
+  if (status === 'loading' || (status === undefined && !overview)) return { health: null, source: null, waiting: true }
+  return { health: fallback ?? null, source: fallback ? 'health' : null, waiting: false }
+}
+
+/** True when HEALTH must read `/api/gold/health` itself (the overview has no health block and is not loading). */
+export function needsHealthFallback(overview: Pick<GoldOverview, 'health'> | null | undefined, status: 'loading' | 'ok' | 'error' | undefined): boolean {
+  const p = pickPageHealth(overview, status, null)
+  return !p.health && !p.waiting
+}
+
+/**
+ * The header strip's two India-basis figures (wave 1c rule, factored out for M-A's check): the LIVE figure only while MCX
+ * trades (`basis_live_pct`, or `basis_pct` when its clock is 'now'), the SETTLEMENT figure from `basis_settle_pct` (or
+ * `basis_pct` when its clock is 'settlement'). The client never recomputes a basis.
+ */
+export function stripBasis(s: Pick<OverviewStrip, 'basis_pct' | 'basis_clock' | 'basis_live_pct' | 'basis_settle_pct' | 'mcx_shown'> | null | undefined,
+  mcxOpen?: boolean | null): { live: number | null; settle: number | null; trading: boolean } {
+  const trading = s?.mcx_shown === 'live' || !!mcxOpen
+  const settle = s?.basis_settle_pct ?? (s?.basis_clock === 'settlement' || s?.basis_clock == null ? s?.basis_pct ?? null : null)
+  const live = trading ? (s?.basis_live_pct ?? (s?.basis_clock === 'now' ? s?.basis_pct ?? null : null)) : null
+  return { live, settle, trading }
+}
+
+/** The INDIA BASIS gauge's one value and its clock ('now' | 'settlement'), from a HEALTH payload. */
+export function gaugeBasis(h: Pick<GoldHealth, 'gauges'> | null | undefined): { value: number | null; clock: 'now' | 'settlement' | null; contract: string | null } {
+  const g = (h?.gauges ?? []).find(x => x.key === 'india_basis') ?? null
+  if (!g) return { value: null, clock: null, contract: null }
+  const clock = g.clock === 'now' || g.clock === 'settlement' ? g.clock : (g.state === 'live' ? 'now' : 'settlement')
+  return { value: g.value ?? null, clock, contract: g.basis_contract ?? null }
+}
+
+/** The H4 clause's value and clock (the verdict's India-basis words). */
+export function verdictBasis(h: Pick<GoldHealth, 'verdict'> | null | undefined): { value: number | null; clock: string | null; text: string | null } {
+  const c = (h?.verdict?.clauses ?? []).find(x => x.rule_id === 'H4') ?? null
+  if (!c) return { value: null, clock: null, text: null }
+  const v = typeof c.value === 'number' ? c.value : null
+  const clock = c.clock ?? (/\(live\)/u.test(c.text) ? 'now' : /settlement/u.test(c.text) ? 'settlement' : null)
+  return { value: v, clock, text: c.text }
+}
+
+/**
+ * strip == gauge == verdict (M-A): the strip's figure AT THE GAUGE'S CLOCK, the gauge and the H4 clause agree to the
+ * printed 0.01 pp, and the gauge is for the strip's contract. `ok` false names the first disagreement in words (HEALTH
+ * shows it as an amber note instead of silently printing two bases).
+ */
+export function basisAgreement(overview: Pick<GoldOverview, 'strip' | 'contract' | 'session'> | null | undefined,
+  h: Pick<GoldHealth, 'gauges' | 'verdict'> | null | undefined): { ok: boolean; reason: string | null; strip: number | null; gauge: number | null; verdict: number | null; clock: string | null } {
+  const gb = gaugeBasis(h)
+  const vb = verdictBasis(h)
+  const sb = stripBasis(overview?.strip, overview?.session?.mcx?.is_open)
+  const stripAtClock = gb.clock === 'now' ? sb.live : sb.settle
+  const r2 = (v: number | null) => (v == null ? null : Math.round(v * 100) / 100)
+  const out = { strip: stripAtClock, gauge: gb.value, verdict: vb.value, clock: gb.clock }
+  if (!overview?.strip || gb.value == null) return { ok: true, reason: null, ...out }
+  const fam = String(overview.contract?.mcx ?? '')
+  if (gb.contract && fam && gb.contract.split(/\s+/u)[0] !== fam) {
+    return { ok: false, reason: `the gauge is ${gb.contract}'s basis, the header strip ${fam}'s`, ...out }
+  }
+  if (gb.clock === 'settlement' && sb.live != null) {
+    return { ok: false, reason: 'the gauge is at the settlement clock while the header strip prints a live basis', ...out }
+  }
+  if (stripAtClock != null && r2(stripAtClock) !== r2(gb.value)) {
+    return { ok: false, reason: `the header strip prints ${fmtSignedPctSp(stripAtClock, 2)} at the ${gb.clock === 'now' ? 'live' : 'settlement'} clock, the gauge ${fmtSignedPctSp(gb.value, 2)}`, ...out }
+  }
+  if (vb.value != null && r2(vb.value) !== r2(gb.value)) {
+    return { ok: false, reason: `the verdict's India-basis clause is ${fmtSignedPctSp(vb.value, 2)}, the gauge ${fmtSignedPctSp(gb.value, 2)}`, ...out }
+  }
+  return { ok: true, reason: null, ...out }
+}
+
+/**
+ * 'HH:MM' of a time the page receives, or '' — never a time AFTER the payload's own `as_of` (+1 min): ui-api stamped the
+ * zone-less Breeze IST bar time as UTC (C-DATA-3 / C-TRADER-3: '14:46' for the 09:16 bar). A zone-less 'YYYY-MM-DD HH:MM'
+ * (Breeze's own field) is read as IST wall time, which it is.
+ */
+export function istHm(t: string | null | undefined, asOf?: string | null): string {
+  const s = (t ?? '').trim()
+  if (!s) return ''
+  const naiveIst = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})/u.exec(s)
+  let d: Date | null
+  if (naiveIst) d = new Date(`${naiveIst[1]}T${naiveIst[2]}:${naiveIst[3]}:00+05:30`)
+  else d = parseIso(s)
+  if (!d || Number.isNaN(d.getTime())) return ''
+  const ref = parseIso(asOf)
+  if (ref && d.getTime() > ref.getTime() + 60_000) return ''
+  return istClock(d.toISOString()).replace(/ IST$/u, '')
+}
+
+/** The live MCX quote's clock (M-E): Breeze's own bar time first (IST wall time), then the served `mcx_live_as_of` unless it is in the future. */
+export function mcxLiveClock(o: Pick<GoldOverview, 'as_of' | 'quote' | 'strip' | 'health'> | null | undefined): string {
+  const q = (o?.quote as { quote?: { time?: string | null } } | null | undefined)?.quote
+  return istHm(q?.time ?? null, o?.as_of) || istHm(o?.strip?.mcx_live_as_of ?? null, o?.as_of)
+    || istHm((o?.health?.fair as { mcx_live_as_of?: string | null } | null | undefined)?.mcx_live_as_of ?? null, o?.as_of)
+}
+
+/**
+ * The INDIA BASIS chip, naming its clock (M-A): 'LIVE · MCX 09:20 · COMEX 09:10' (both legs' own clocks — the COMEX leg is
+ * Yahoo's, minutes behind Breeze) or 'SETTLEMENT · VWAP30 PROXY · Thu 05 Nov'.
+ */
+export function basisClockChip(g: Pick<HealthGauge, 'clock' | 'state' | 'release_at' | 'settle_basis_date' | 'report_date' | 'settlement_source' | 'settlement_quality' | 'clock_label'> | null | undefined,
+  o: Pick<GoldOverview, 'as_of' | 'quote' | 'strip' | 'health'> | null | undefined, settle?: SettlementFields | null): { kind: 'live' | 'settlement'; text: string } | null {
+  if (!g) return null
+  const clock = g.clock ?? (g.state === 'live' ? 'now' : 'settlement')
+  // the server's own chip (G2-API wave 1e) wins when it sends one; the live clock adds the COMEX leg's time (Yahoo, minutes
+  // behind Breeze: the clock gap is printed, never hidden)
+  const server = (g.clock_label ?? '').trim()
+  if (clock === 'now') {
+    const mcx = mcxLiveClock(o)
+    const comexAt = (o?.health?.fair?.comex as FairLeg | null | undefined)?.as_of ?? g.release_at ?? null
+    const comex = istHm(comexAt, o?.as_of)
+    const head = /^LIVE\b/u.test(server) && !istHmFuture(server, o?.as_of) ? server : `LIVE · MCX ${mcx || 'time not stated'}`
+    return { kind: 'live', text: `${head}${comex ? ` · COMEX ${comex}` : ''}` }
+  }
+  if (/^SETTLEMENT\b/u.test(server)) return { kind: 'settlement', text: server }
+  const day = dayLabel(g.settle_basis_date) || settlementDay(settle) || dayLabel(g.report_date)
+  const src = g.settlement_source ?? settle?.settlement_source ?? null
+  const q = g.settlement_quality ?? settle?.settlement_quality ?? null
+  return { kind: 'settlement', text: `SETTLEMENT · ${settlementQualityChip(q, src)}${day ? ` · ${day}` : ''}` }
+}
+
+/**
+ * A 'live' freshness block whose leg is minutes old reads DELAYED (M-E: the COMEX leg is Yahoo's CME print, ~10 min behind
+ * real-time MCX, yet it was chipped LIVE). `age_s` above `maxS` (default 5 min) → state 'delayed' and the age in the source.
+ */
+export function delayedIfOld<F extends Freshness>(f: F | null | undefined, maxS = 300): F | null {
+  if (!f) return null
+  const age = (f as Freshness & { age_s?: number | null }).age_s
+  if (f.state !== 'live' || age == null || !Number.isFinite(age) || age <= maxS) return f
+  return { ...f, state: 'delayed', source: `${f.source ? `${f.source} · ` : ''}≈${Math.round(age / 60)} min delayed` }
+}
+
+// ── M-B: one real yield per page ───────────────────────────────────────────────────────────────────────────────────
+
+/** Words for the series a real-yield value came from. */
+export function realYieldSeriesWords(seriesId: string | null | undefined): string {
+  if (seriesId === 'UST_REAL_10Y') return 'Treasury real curve 10-y (TIPS)'
+  if (seriesId === 'FRED_DFII10') return 'FRED DFII10 (TIPS)'
+  return seriesId ? `${seriesId} (TIPS)` : 'TIPS'
+}
+
+/** The page's one 10-y real yield. */
+export interface PageRealYield { value: number | null; date: string | null; seriesId: string | null; note: string | null; from: 'strip' | 'gauge' | null }
+
+/**
+ * ONE 10-y real yield per page (wave 1e, M-B; C-DATA-3 / C-TRADER-3: HEALTH and the strip printed FRED_DFII10 2.65 % Tue
+ * while MACRO printed the fresher twin UST_REAL_10Y 2.60 % Thu, opposite weekly signs). The server applies MACRO's
+ * fresher-twin rule to the strip, the REAL YIELD gauge and the H2 clause; the client keeps the rule as a guard: of the
+ * strip's point and the gauge's point (the same Treasury quantity, `same_level`), the LATER report date wins; on a tie the
+ * strip's. The strip, its hover card and the gauge's date check all read this.
+ */
+export function pageRealYield(s: Pick<OverviewStrip, 'real_10y' | 'real_10y_date' | 'real_10y_series_id' | 'real_10y_series' | 'real_10y_source' | 'real_10y_note' | 'real_10y_label_note'> | null | undefined,
+  h: Pick<GoldHealth, 'gauges'> | null | undefined): PageRealYield {
+  const g = (h?.gauges ?? []).find(x => x.key === 'real_yield') ?? null
+  const strip: PageRealYield = { value: s?.real_10y ?? null, date: s?.real_10y_date ?? null,
+    seriesId: s?.real_10y_series_id ?? s?.real_10y_series ?? null, note: s?.real_10y_label_note ?? s?.real_10y_note ?? null, from: 'strip' }
+  const gauge: PageRealYield = { value: g?.value ?? null, date: g?.report_date ?? null, seriesId: g?.series_id ?? null, note: g?.label_note ?? null, from: 'gauge' }
+  if (strip.value == null) return gauge.value == null ? { value: null, date: null, seriesId: null, note: null, from: null } : gauge
+  if (gauge.value == null) return strip
+  if ((gauge.date ?? '') > (strip.date ?? '')) return gauge
+  // same date: the strip's number; the series id from whichever names it
+  return { ...strip, seriesId: strip.seriesId ?? (gauge.date === strip.date ? gauge.seriesId : null), note: strip.note ?? (gauge.date === strip.date ? gauge.note : null) }
+}
+
+/** '2.60 % · Thu 05 Nov' — the one printed form of the page's real yield (strip, gauge and MACRO compare on it). */
+export function realYieldPrint(v: number | null | undefined, date: string | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  return `${fmtFixed(v, 2)} %${date ? ` · ${dayLabel(date)}` : ''}`
+}
+
+/**
+ * MACRO's 10-y real tile vs the page's (M-B): null when they print the same value and date; else the words for the older
+ * one, without repeating its number (PLAN §f.6) — 'the header strip is on an older point (Tue 03 Nov, FRED DFII10)'.
+ */
+export function realYieldMismatch(page: PageRealYield, driver: { value?: number | null; report_date?: string | null; series_id?: string | null } | null | undefined): string | null {
+  if (!driver || driver.value == null || page.value == null) return null
+  if (realYieldPrint(page.value, page.date) === realYieldPrint(driver.value, driver.report_date)) return null
+  if ((page.date ?? '') < (driver.report_date ?? '')) return `the header strip and HEALTH are on an older point (${dayLabel(page.date) || 'undated'}, ${realYieldSeriesWords(page.seriesId)}): the server's fresher-twin rule has not reached them`
+  return `this tile is on an older point than the header strip (${dayLabel(page.date) || 'undated'}, ${realYieldSeriesWords(page.seriesId)})`
+}
+
+/**
+ * The MCX-session tag of an event row (wave 1e minor: an untimed row — Dhanteras, an MCX morning closure, a COMEX notice
+ * day — printed 'AFTER CLOSE · gap risk'). Timed rows: IN SESSION · AFTER CLOSE (gap risk at 09:00); untimed:
+ * the closure it is ('MORNING CLOSED' / 'MCX CLOSED') or 'ALL DAY'. `tone` 'amber' only for in-session rows (as before).
+ * The timed branch keeps the old words (IN SESSION / AFTER CLOSE · gap risk).
+ */
+export function eventSessionTag(e: Pick<GoldEvent, 'time_ist' | 'kind' | 'name' | 'in_session' | 'after_close'>): { text: string; tone: 'amber' | 'dim' } | null {
+  const kind = (e.kind ?? '').toUpperCase()
+  const name = e.name ?? ''
+  if (!e.time_ist) {
+    if (kind === 'MCX_HOLIDAY' || /closure|holiday/iu.test(name)) {
+      if (/morning/iu.test(name)) return { text: 'MORNING CLOSED', tone: 'dim' }
+      if (/evening/iu.test(name)) return { text: 'EVENING CLOSED', tone: 'dim' }
+      return { text: 'MCX CLOSED', tone: 'dim' }
+    }
+    return { text: 'ALL DAY', tone: 'dim' }
+  }
+  if (e.in_session == null && e.after_close == null) return null
+  if (e.in_session) return { text: 'IN SESSION', tone: 'amber' }
+  // 00:00–09:00 and after 23:30 / 23:55 are both outside the session: the move shows up as a gap at the next 09:00
+  return { text: 'AFTER CLOSE · gap risk', tone: 'dim' }
+}
+
+// ── M-C: the Shanghai premium must equal its printed legs ──────────────────────────────────────────────────────────
+
+/** The tolerance (USD/oz) within which SGE $/oz − London PM must equal the printed premium (M-C). */
+export const SHANGHAI_RECONCILE_USD = 0.1
+
+/**
+ * Do the printed legs reproduce the printed premium? (wave 1e, M-C: SGE $4,035.8 − LBMA PM $4,037.8 = −$2.0 printed beside
+ * '+$1.50', the stored derive's earlier USDCNY vintage). `ok` null when a leg is not printed; the server's own `reconciles`
+ * wins when it disagrees with nothing; `diff` = legs − premium.
+ */
+export function shanghaiReconcile(sh: { sge_usd_oz?: number | null; london_pm_usd?: number | null; comex_at_1415_bj?: number | null; premium_usd?: number | null; reconciles?: boolean | null } | null | undefined):
+  { ok: boolean | null; diff: number | null; legs: number | null } {
+  const ref = sh?.london_pm_usd ?? sh?.comex_at_1415_bj ?? null
+  if (sh?.sge_usd_oz == null || ref == null || sh.premium_usd == null) return { ok: sh?.reconciles ?? null, diff: null, legs: null }
+  const legs = sh.sge_usd_oz - ref
+  const diff = legs - sh.premium_usd
+  const ok = Math.abs(diff) < SHANGHAI_RECONCILE_USD && sh.reconciles !== false
+  return { ok, diff: Math.round(diff * 100) / 100, legs: Math.round(legs * 100) / 100 }
+}
+
+/**
+ * The rupee leg of the fair open, dated (wave 1e minor: the METHOD said 'USD/INR before 09:00 is the offshore quote', but
+ * every stored INR=X bar from 21:10 IST to 09:00 was the same print — the 08:45 fair carries no rupee information after
+ * 21:10). 'USD/INR last print 21:10 IST Thu 05 Nov' and, when now equals the close reference, that it has not moved.
+ */
+export function inrLegWords(inr: { now?: number | null; ref?: number | null; as_of?: string | null } | null | undefined): { text: string; flat: boolean } | null {
+  if (!inr || inr.now == null) return null
+  const d = parseIso(inr.as_of)
+  const at = d ? `${istClock(d.toISOString())} ${dayLabel(new Date(d.getTime() + 5.5 * 3_600_000).toISOString().slice(0, 10))}` : 'time not stated'
+  const flat = inr.ref != null && Math.abs(inr.now - inr.ref) < 0.0005
+  return { text: `USD/INR last print ${at}${flat ? ' — unchanged since the close reference (Yahoo INR=X has no overnight feed: the rupee part is 0 until it moves)' : ''}`, flat }
+}
+
+/** The MCX ΔOI's span per trade date (wave 1e minor: WEEKLY printed '+1,888' over 3 sessions as one day): from the served tape. */
+export function oiSpanByDate(tape: readonly { trade_date: string; sessions_spanned?: number | null; span_note?: string | null }[] | null | undefined): Map<string, { n: number; note: string | null }> {
+  const out = new Map<string, { n: number; note: string | null }>()
+  for (const r of tape ?? []) if (r.sessions_spanned != null && r.sessions_spanned > 1) out.set(r.trade_date, { n: r.sessions_spanned, note: r.span_note ?? null })
+  return out
+}
+
+/**
+ * The page's default expiry when the user has picked none (wave 1e minor, C-TRADER-3: the 'front (by OI)' default for
+ * GOLDTEN / GUINEA / PETAL was NOV-26, in tender since 1 Nov — every GOLD panel was driven by a contract a trader should
+ * not open). The OI front stays the server's pick unless it is IN TENDER; then the next expiry not in tender, with the
+ * reason. The OI front remains selectable in the picker. Null `expiry` = let the server pick (no family data yet).
+ */
+export function autoExpiry(fam: { expiries?: readonly { expiry: string; oi?: number | null; in_tender?: boolean | null; tender_note?: string | null }[] } | null | undefined):
+  { expiry: string | null; front: string | null; reason: string | null } {
+  const ex = [...(fam?.expiries ?? [])].sort((a, b) => a.expiry.localeCompare(b.expiry))
+  if (!ex.length) return { expiry: null, front: null, reason: null }
+  const front = ex.reduce((best, e) => ((e.oi ?? -1) > (best.oi ?? -1) ? e : best), ex[0])
+  if (!front.in_tender) return { expiry: null, front: front.expiry, reason: null }
+  const next = ex.find(e => e.expiry > front.expiry && !e.in_tender) ?? null
+  if (!next) return { expiry: null, front: front.expiry, reason: null }
+  return { expiry: next.expiry, front: front.expiry,
+    reason: `the OI front ${expiryMonthLabel(front.expiry)} is ${front.tender_note ?? 'in its tender period'}: the page follows ${expiryMonthLabel(next.expiry)}, the next month (${expiryMonthLabel(front.expiry)} stays selectable)` }
+}
+
+/** A stale accuracy-log row's reasons in words (C-TRADER-3 minor: every stale row read one fixed sentence). */
+export const STALE_REASON_WORDS: Readonly<Record<string, string>> = Object.freeze({
+  band_rule: 'a band midpoint labelled one session late (the master\'s band is the settlement two sessions before it)',
+  vwap30_check: 'the logged baseline is more than 0.6 % from the labelled session\'s last-30-min VWAP',
+  older_session: 'the labelled session is older than the one before the morning',
+  recorded: 'flagged by the 08:45 snapshot itself',
+})
+export function staleReasonWords(reasons: readonly string[] | null | undefined): string {
+  const r = (reasons ?? []).map(k => STALE_REASON_WORDS[k] ?? k)
+  return r.length ? r.join('; ') : ''
+}
+
+/**
+ * The accuracy counterfactual, labelled as one (C-TRADER-3 minor: the 'is the desk trustworthy' answer was hidden): the
+ * stale mornings re-priced off each labelled session's last-30-min VWAP — median / mean miss, share within the chase limit
+ * and the naive miss. Never the score; null when the server sends none.
+ */
+export function onVwap30Line(stats: { on_vwap30?: { days?: number | null; median_abs_error?: number | null; mean_abs_error?: number | null; within_threshold_pct?: number | null; naive_mean_abs_error?: number | null } | null } | null | undefined,
+  threshold = 300): string | null {
+  const o = stats?.on_vwap30
+  if (!o || !o.days) return null
+  return `counterfactual, not the score — the ${o.days} stale morning${o.days === 1 ? '' : 's'} re-priced off the labelled session's last-30-min VWAP: median miss ${fmtInr0(o.median_abs_error)} · mean ${fmtInr0(o.mean_abs_error)} · ${o.within_threshold_pct ?? '—'} % within ₹${threshold.toLocaleString('en-IN')} · naive ${fmtInr0(o.naive_mean_abs_error)}`
+}
+
+/** True when a label's 'HH:MM IST' lies after the payload's as_of (the +5:30 bug in a served chip): such a chip is not printed. */
+function istHmFuture(label: string, asOf: string | null | undefined): boolean {
+  const m = /(\d{2}):(\d{2}) IST/u.exec(label)
+  const ref = parseIso(asOf)
+  if (!m || !ref) return false
+  const refMin = ((ref.getUTCHours() * 60 + ref.getUTCMinutes() + 330) % 1440)
+  return +m[1] * 60 + +m[2] > refMin + 1
 }

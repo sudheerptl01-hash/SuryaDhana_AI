@@ -6,6 +6,7 @@ import math
 import os
 import re
 from datetime import date, datetime
+from datetime import timedelta as _timedelta
 from zoneinfo import ZoneInfo
 from typing import Any
 
@@ -100,10 +101,12 @@ def mtf_core(body: dict) -> dict:
 
 
 @router.get("/monitor")
-async def market_monitor() -> dict:
+async def market_monitor(as_of: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$")) -> dict:
+    """Breadth, regime, sectors and movers; `as_of` asks for the snapshot of a past session (review M10: the wrap's
+    backfill). The payload's own `as_of` is the session it describes: a caller checks it, never assumes it."""
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
-            r = await client.get(f"{DATA_SVC}/db/market-monitor")
+        async with httpx.AsyncClient(timeout=httpx.Timeout(90.0 if as_of else 60.0)) as client:
+            r = await client.get(f"{DATA_SVC}/db/market-monitor", params={"as_of": as_of} if as_of else None)
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
     if r.status_code != 200:
@@ -432,28 +435,88 @@ def _wrap_dir():
     return _root() / "reports" / "daily_wrap"
 
 
+WRAP_MARKER = "<!-- wrap-sections "     # scripts/daily_wrap.py: each section's status ('ok' / 'not_stored')
+WRAP_SCHEDULED = "21:00"
+
+
+def split_wrap(text: str) -> tuple[str, dict[str, str] | None]:
+    """(markdown without the machine marker, the marker's section status or None for a legacy wrap)."""
+    import json as _json
+    lines = text.splitlines()
+    for i in range(len(lines) - 1, -1, -1):
+        ln = lines[i].strip()
+        if ln.startswith(WRAP_MARKER) and ln.endswith("-->"):
+            try:
+                status = _json.loads(ln[len(WRAP_MARKER):-3].strip())
+            except ValueError:
+                status = None
+            return "\n".join(lines[:i] + lines[i + 1:]).rstrip() + "\n", status
+    return text, None
+
+
+def wrap_entry(day: str, text: str) -> dict[str, Any]:
+    """One archive row: date, teaser, and whether every section was stored for that day (legacy wraps: whether the
+    header's end-of-day date is the wrap's own day)."""
+    body, status = split_wrap(text)
+    teaser = next((ln[2:].strip() for ln in body.splitlines() if ln.startswith("- ")), "")
+    if status is not None:
+        missing = sorted(k for k, v in status.items() if v == "not_stored")
+    else:
+        m = re.search(r"NSE end of day (\d{4}-\d{2}-\d{2})", body)
+        missing = ["all end-of-day sections (written from " + m.group(1) + ")"] if m and m.group(1) != day else []
+    return {"date": day, "teaser": teaser[:160], "complete": not missing, "not_stored": missing}
+
+
+def wrap_archive_status(dates: list[str], sessions: list[str], today: str, today_is_session: bool) -> dict[str, Any]:
+    """Archive gaps (stored NSE sessions with no wrap, inside the archive's span) and today's pending note (m022)."""
+    have = set(dates)
+    first = min(dates) if dates else None
+    gaps = [d for d in sessions if first and first <= d < today and d not in have]
+    pending = today_is_session and today not in have
+    note = f"today's wrap is written after {WRAP_SCHEDULED} IST once the evening NSE files land" if pending else None
+    return {"missing_sessions": gaps, "today": today, "today_written": today in have, "today_pending": pending,
+            "scheduled": f"{WRAP_SCHEDULED} IST", "note": note}
+
+
 @router.get("/wraps")
-def list_wraps(limit: int = 60) -> dict:
-    """Dates of the saved daily wraps, newest first, with each wrap's first content line as a teaser."""
+async def list_wraps(limit: int = 60) -> dict:
+    """Dates of the saved daily wraps, newest first, with each wrap's first content line as a teaser, whether its
+    sections were all stored for that day, the archive's missing sessions and today's pending note (review M10, m022)."""
+    import asyncio
     d = _wrap_dir()
-    files = sorted(d.glob("????-??-??.md"), reverse=True)[: max(1, min(limit, 400))] if d.is_dir() else []
-    out = []
-    for f in files:
-        teaser = next((ln[2:].strip() for ln in f.read_text(encoding="utf-8", errors="replace").splitlines()
-                       if ln.startswith("- ")), "")
-        out.append({"date": f.stem, "teaser": teaser[:160]})
-    return {"wraps": out}
+
+    def _read() -> list[dict[str, Any]]:
+        files = sorted(d.glob("????-??-??.md"), reverse=True)[: max(1, min(limit, 400))] if d.is_dir() else []
+        return [wrap_entry(f.stem, f.read_text(encoding="utf-8", errors="replace")) for f in files]
+
+    out = await asyncio.to_thread(_read)
+    sessions: list[str] = []
+    holidays: set[str] = set()
+    got = await asyncio.gather(
+        http_client.get_json(f"{DATA_SVC}/db/index-daily", route="read", params={"symbol": "NIFTY50", "days": 120}),
+        http_client.get_json(f"{DATA_SVC}/db/market-holidays", route="read"), return_exceptions=True)
+    if isinstance(got[0], dict):                    # the archive still lists without them; gaps unknown
+        sessions = [str(r.get("date"))[:10] for r in got[0].get("rows") or []]
+    if isinstance(got[1], dict):
+        holidays = {str(h.get("date")) for h in got[1].get("holidays") or []}
+    now = datetime.now(_IST_EVENTS)
+    today = now.date().isoformat()
+    is_session = now.weekday() < 5 and today not in holidays
+    status = wrap_archive_status([w["date"] for w in out], sessions, today, is_session)
+    return {"wraps": out, **status, "sessions_known": bool(sessions)}
 
 
 @router.get("/wraps/{day}")
 def get_wrap(day: str) -> dict:
-    import re
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day):
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD")
     f = _wrap_dir() / f"{day}.md"
     if not f.is_file():
         raise HTTPException(status_code=404, detail=f"No wrap for {day}")
-    return {"date": day, "markdown": f.read_text(encoding="utf-8", errors="replace")}
+    text = f.read_text(encoding="utf-8", errors="replace")
+    body, status = split_wrap(text)
+    entry = wrap_entry(day, text)
+    return {"date": day, "markdown": body, "sections": status, "complete": entry["complete"], "not_stored": entry["not_stored"]}
 
 
 @router.get("/live-quotes")
@@ -485,18 +548,53 @@ async def basket_risk(symbols: str, days: int = 365, weights: str | None = None)
     return r.json()
 
 
+ANNOUNCEMENTS_DEFAULT_LIMIT = 5000      # 1,421 filings on 5 Nov 2026 (results season); NSE's busiest days stay well under it
+_HHMM = re.compile(r"^\d{2}:\d{2}(:\d{2})?$")
+
+
+def page_announcements(items: list[dict], limit: int, before: str | None = None) -> tuple[list[dict], dict[str, Any]]:
+    """Newest-first filings cut to `limit`, optionally only those older than the cursor `before`: a clock ('HH:MM',
+    'HH:MM:SS', or the items' own 'YYYY-MM-DD HH:MM:SS' time), optionally '#k' = k filings stamped that same time were
+    already returned (ties never fall between pages). Returns (page, meta): how many the day has, how many came back,
+    the oldest returned and the cursor for the next page (review M11: the old 1,000 cap silently dropped everything
+    filed before ≈ 14:40 on a results day)."""
+    def clock(t: Any) -> str:
+        t = str(t or "")
+        return t[12:20] if len(t) >= 20 and t[2] == "-" else t[11:19] if len(t) >= 19 and t[4] == "-" else t[:8]
+
+    rows = items
+    if before:
+        at, _, k = before.partition("#")
+        cut = at if _HHMM.match(at) else clock(at)
+        cut = (cut + ":00")[:8] if len(cut) == 5 else cut
+        skip = int(k) if k.isdigit() else 0
+        ties = [it for it in items if clock(it.get("time")) == cut][skip:] if k else []
+        rows = ties + [it for it in items if clock(it.get("time")) < cut]
+    page = rows[:limit]
+    truncated = len(rows) > limit
+    oldest = page[-1].get("time") if page else None
+    cursor = None
+    if truncated and oldest is not None:
+        last = clock(oldest)
+        before_ties = int(before.partition("#")[2] or 0) if before and clock(before.partition("#")[0]) == last else 0
+        cursor = f"{oldest}#{before_ties + sum(1 for it in page if clock(it.get('time')) == last)}"
+    return page, {"total": len(items), "matching": len(rows), "returned": len(page), "truncated": truncated,
+                  "oldest": oldest, "newest": page[0].get("time") if page else None, "next_before": cursor}
+
+
 @router.get("/announcements")
 async def announcements(day: str | None = None,
-                        limit: int = Query(1000, ge=1, le=5000),
+                        limit: int = Query(ANNOUNCEMENTS_DEFAULT_LIMIT, ge=1, le=20000),
+                        before: str | None = Query(None, max_length=28, pattern=r"^[0-9A-Za-z: \-]+(#\d{1,5})?$"),
                         full: bool = False,
                         fields: str | None = CORE_FIELDS) -> dict:
-    """Today's NSE company filings, categorised, via data-service.
+    """The day's NSE company filings, categorised, newest first, via data-service.
 
-    Payload budget (S2): filing text trimmed to 400 chars unless `full=true`; items
-    capped at `limit` — the default (1000) keeps a whole normal day (~500 filings),
-    it only guards pathological days. `counts` stays whole-day truth either way.
-    `fields=core` (W7): items carry only {symbol, time, category} — for the EVTS/BRIEF
-    pollers (every 2 min), which read nothing else; it overrides `full`.
+    The whole day by default (review M11): `limit` 5,000 is far above a results-season day (1,421 on 5 Nov 2026), and
+    `before` pages back by time when a caller wants smaller pages. `total` / `returned` / `oldest` / `next_before` say
+    what came back and `truncated` is true only when filings were left out; `counts` stays the whole-day count either
+    way, so a category chip and the list can be reconciled. Filing text trimmed to 400 chars unless `full=true`;
+    `fields=core` returns {symbol, time, category} items only (the EVTS / BRIEF pollers).
     """
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(40.0)) as client:
@@ -506,20 +604,18 @@ async def announcements(day: str | None = None,
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))
     body = r.json()
-    items = body.get("items", [])
-    truncated = len(items) > limit
-    if truncated:
-        items = items[:limit]
+    items, meta = page_announcements(body.get("items", []), limit, before)
+    flag = {"truncated": True} if meta["truncated"] else {}
     if fields == "core":  # new dicts — never mutate the full items
         core = [{"symbol": it.get("symbol"), "time": it.get("time"), "category": it.get("category")}
                 for it in items]
-        return {**body, "items": core, **({"truncated": True} if truncated else {})}
+        return {**body, "items": core, **meta, **flag}
     if not full:
         for it in items:
             t = it.get("text")
             if isinstance(t, str) and len(t) > 400:
                 it["text"] = t[:400] + "…"
-    return {**body, "items": items, **({"truncated": True} if truncated else {})}
+    return {**body, "items": items, **meta, **flag}
 
 
 @router.get("/option-chain-live/{symbol}")
@@ -746,10 +842,160 @@ def build_eco_calendar(ref: dict, rbi: list[dict], fomc_rows: list[dict], start:
     return sorted((x for x in out if s <= x["date"] <= e), key=lambda x: (x["date"], x["time"] or ""))
 
 
+# ── ECO additions (review M28): US releases, F&O expiries, exchange special sessions ─────────────────────────────
+US_ECO_IMPACT = ("High", "Medium")              # ForexFactory's impact; "Low" (weekly API stocks, speeches) stays on GOLD
+US_ECO_PER_DAY = 5
+FO_MONTHLY_WHAT = "F&O monthly expiry: NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY and stock futures & options"
+FO_WEEKLY_WHAT = "NIFTY weekly options expiry"
+FO_RULE = "rule: NIFTY weekly options on Tuesday, every monthly contract on the month's last Tuesday; an NSE holiday moves it to the previous session"
+# Exchange special sessions, dated constants with their circulars (MCX: shared/mcx_specs.SPECIAL_SESSIONS_2026). NSE's own
+# Muhurat window is set by an NSE circular not stored yet (owner action O-11): the row says so instead of guessing a time.
+NSE_SPECIAL_SESSIONS: tuple[dict[str, Any], ...] = (
+    {"date": "2026-11-08", "name": "Muhurat trading (Diwali Laxmi Pujan)", "time": None, "circular": None,
+     "note": "NSE timing by NSE circular (not stored yet: owner action O-11)"},
+)
+_ECO_EXTRA_CACHE: dict[str, tuple[float, Any]] = {}
+_ECO_EXTRA_TTL_S = 3600.0
+
+
+def _eco_id(kind: str, day: str) -> str:
+    return f"{kind}-{day}"
+
+
+def us_release_rows(events: list[dict[str, Any]], start: date, end: date) -> list[dict[str, Any]]:
+    """The gold calendar's stored US releases (gold_events, ForexFactory weekly feed) as ECO rows: one row per date (the
+    table keys rows by kind and date), High / Medium impact only, each release with its time, forecast, previous and,
+    once stored, the actual print. Fed decisions stay on ECO's own federalreserve.gov rows."""
+    by_day: dict[str, list[dict[str, Any]]] = {}
+    s, e = start.isoformat(), end.isoformat()
+    for ev in events:
+        kind, day = str(ev.get("kind") or ""), str(ev.get("event_date") or "")[:10]
+        if not kind.startswith("US_") or not (s <= day <= e) or str(ev.get("impact")) not in US_ECO_IMPACT:
+            continue
+        by_day.setdefault(day, []).append(ev)
+    out = []
+    for day, evs in sorted(by_day.items()):
+        evs.sort(key=lambda x: (0 if x.get("impact") == "High" else 1, 0 if x.get("kind") == "US_NFP" else 1, str(x.get("time_ist") or "99:99")))
+        items = [{"name": x.get("name"), "time": x.get("time_ist"), "impact": x.get("impact"), "forecast": x.get("forecast"),
+                  "previous": x.get("previous"), "actual": x.get("actual")} for x in evs]
+
+        def part(i: dict[str, Any]) -> str:
+            nums = [f"{k} {i[k]}" for k in ("actual", "forecast", "previous") if i.get(k) not in (None, "")]
+            return f"{i['name']}" + (f" {i['time']}" if i.get("time") else "") + (f" ({', '.join(nums)})" if nums else "")
+        shown = items[:US_ECO_PER_DAY]
+        high = [i for i in items if i.get("impact") == "High"]
+        times = sorted(str(i["time"]) for i in (high or items) if i.get("time"))
+        out.append({"id": _eco_id("US", day), "date": day, "time": times[0] if times else None, "kind": "US",
+                    "what": "US data: " + " · ".join(part(i) for i in shown) + (f" · +{len(items) - len(shown)} more" if len(items) > len(shown) else ""),
+                    "country": "US", "impact": "High" if high else "Medium", "items": items,
+                    "source": "ForexFactory weekly calendar (stored as gold_events; forecast / previous as published, actual once stored)",
+                    "moved": False})
+    return out
+
+
+def _prev_session(d: date, holidays: set[str]) -> date:
+    from datetime import timedelta
+    while d.weekday() >= 5 or d.isoformat() in holidays:
+        d -= timedelta(days=1)
+    return d
+
+
+def fo_expiry_rows(listed: list[str], holidays: set[str], start: date, end: date) -> list[dict[str, Any]]:
+    """NIFTY weekly and the monthly F&O expiries in [start, end], holiday-shifted. Each week's rule date is Tuesday (the
+    month's last Tuesday is the monthly), moved to the previous session on an NSE holiday. A listed NIFTY expiry in
+    that week (the NSE F&O bhavcopy's series) confirms or replaces the date; weeks beyond the listed ones (and past
+    weeks) keep the rule date, labelled as the rule."""
+    from datetime import timedelta
+    listed_d = sorted({date.fromisoformat(x[:10]) for x in listed if x})
+    weekly_hi = listed_d[0] if listed_d else None          # the end of the contiguous weekly listing
+    for a, b in zip(listed_d, listed_d[1:], strict=False):
+        if (b - a).days > 8:
+            break
+        weekly_hi = b
+    rows: dict[str, dict[str, Any]] = {}
+    d = start - timedelta(days=(start.weekday() - 1) % 7)            # the Tuesday on or before start
+    while d <= end + timedelta(days=7):
+        monthly = (d + timedelta(days=7)).month != d.month
+        rule_day = _prev_session(d, holidays)
+        got = [x for x in listed_d if d - timedelta(days=6) <= x <= d]
+        if got:
+            actual, source = got[-1], "NSE F&O bhavcopy (listed NIFTY expiries)"
+        elif weekly_hi is not None and listed_d[0] <= d <= weekly_hi:
+            actual, source = None, ""                                    # inside the listed weeks: NSE lists none this week
+        else:
+            actual, source = rule_day, FO_RULE
+        if actual is not None and start <= actual <= end:
+            moved = actual != d
+            rows[actual.isoformat()] = {
+                "id": _eco_id("EXPIRY", actual.isoformat()), "date": actual.isoformat(), "time": "15:30", "kind": "EXPIRY",
+                "what": (FO_MONTHLY_WHAT if monthly else FO_WEEKLY_WHAT)
+                + (f" (moved from Tue {d:%d %b}: NSE holiday)" if moved and d.isoformat() in holidays else ""),
+                "country": "IN", "monthly": monthly, "moved": False, "shifted": moved, "moved_from": d.isoformat() if moved else None,
+                "source": source}
+        d += timedelta(days=7)
+    return sorted(rows.values(), key=lambda r: r["date"])
+
+
+def special_session_rows(mcx_sessions: list[dict[str, Any]], start: date, end: date) -> list[dict[str, Any]]:
+    """Exchange special sessions (Muhurat) from dated constants: one row per date with each exchange's window and the
+    circular it comes from (MCX's from shared/mcx_specs; NSE's when its circular is stored, else 'timing to confirm')."""
+    by_day: dict[str, dict[str, Any]] = {}
+    for x in NSE_SPECIAL_SESSIONS:
+        by_day.setdefault(x["date"], {"name": x["name"], "parts": [], "sources": []})
+        by_day[x["date"]]["parts"].append(f"NSE {x['time']} ({x['circular']})" if x.get("time") else f"NSE: {x['note']}")
+        by_day[x["date"]]["sources"].append(x.get("circular") or "NSE circular pending (O-11)")
+    for x in mcx_sessions:
+        day = str(x.get("date"))
+        by_day.setdefault(day, {"name": x.get("name"), "parts": [], "sources": []})
+        by_day[day]["parts"].append(f"MCX: {x.get('note')}")
+        by_day[day]["sources"].append("shared/mcx_specs (MCX circular)")
+    s, e = start.isoformat(), end.isoformat()
+    return [{"id": _eco_id("SESSION", day), "date": day, "time": None, "kind": "SESSION",
+             "what": f"{v['name']} · " + " · ".join(v["parts"]), "country": "IN", "source": " + ".join(v["sources"]), "moved": False}
+            for day, v in sorted(by_day.items()) if s <= day <= e]
+
+
+async def _eco_extra_inputs(start: date, end: date) -> tuple[list[dict[str, Any]], list[str], str | None, str | None]:
+    """(gold_events rows, listed NIFTY expiries, errors) — each cached an hour; a missing source drops only its rows."""
+    import time as _t
+    errs: dict[str, str] = {}
+
+    async def cached(key: str, fn: Any) -> Any:
+        hit = _ECO_EXTRA_CACHE.get(key)
+        if hit and hit[0] > _t.time() - _ECO_EXTRA_TTL_S:
+            return hit[1]
+        val = await fn()
+        _ECO_EXTRA_CACHE[key] = (_t.time(), val)
+        return val
+
+    async def gold() -> list[dict[str, Any]]:
+        body = await http_client.get_json(f"{DATA_SVC}/db/gold/events", route="read",
+                                          params={"from": start.isoformat(), "to": end.isoformat()})
+        return list((body or {}).get("rows") or [])
+
+    async def chain() -> list[str]:
+        body = await http_client.get_json(f"{DATA_SVC}/db/option-chain/NIFTY", route="read")
+        return [str(x)[:10] for x in (body or {}).get("expiries") or []]
+
+    events: list[dict[str, Any]] = []
+    listed: list[str] = []
+    try:
+        events = await cached(f"gold:{start}:{end}", gold)
+    except http_client.UpstreamError as exc:
+        errs["us"] = f"gold_events unavailable ({exc.status_code})"
+    try:
+        listed = await cached("chain", chain)
+    except http_client.UpstreamError as exc:
+        errs["expiries"] = f"listed expiries unavailable ({exc.status_code}): the rule fills every week"
+    return events, listed, errs.get("us"), errs.get("expiries")
+
+
 @router.get("/eco-calendar")
 async def eco_calendar(back: int = Query(14, ge=0, le=120), ahead: int = Query(60, ge=1, le=366)) -> dict:
     """Economic calendar for the last `back` and next `ahead` days: India CPI / WPI / IIP / core / GDP (official
-    release calendars, data/reference/india_data_calendar.json), RBI policy decisions and US Fed decisions."""
+    release calendars, data/reference/india_data_calendar.json), RBI policy decisions, US Fed decisions, NSE holidays,
+    and (review M28) the US data releases the gold calendar stores (forecast / previous / actual), the F&O expiries
+    (listed, holiday-shifted) and exchange special sessions (Muhurat). Every row has a unique `id`."""
     import json
     from datetime import date, timedelta
     from routers.research import _root
@@ -775,9 +1021,24 @@ async def eco_calendar(back: int = Query(14, ge=0, le=120), ahead: int = Query(6
     except httpx.HTTPError:
         pass                                       # holidays are optional context
     today = date.today()  # noqa: DTZ005,DTZ011 — local clock on purpose (data-service computes its windows from it)
-    events = build_eco_calendar(ref, rbi, fed, today - timedelta(days=back), today + timedelta(days=ahead), holidays)
+    start, end = today - timedelta(days=back), today + timedelta(days=ahead)
+    events = build_eco_calendar(ref, rbi, fed, start, end, holidays)
+    for e in events:
+        e.setdefault("id", _eco_id(e["kind"], e["date"]))
+    gold_rows, listed, us_err, exp_err = await _eco_extra_inputs(start, end)
+    try:
+        from shared.mcx_specs import SPECIAL_SESSIONS_2026 as _MCX_SPECIAL
+    except ImportError:
+        _MCX_SPECIAL = []
+    hol = {h["date"] for h in holidays}
+    extra = us_release_rows(gold_rows, start, end) + fo_expiry_rows(listed, hol, start, end) + special_session_rows(list(_MCX_SPECIAL), start, end)
+    events = sorted(events + extra, key=lambda x: (x["date"], x.get("time") or ""))
     return {"today": today.isoformat(), "events": events, "sources": ref.get("sources") or {}, "note": ref.get("note"),
-            "valid_until": ref.get("valid_until"), "fed_available": bool(fed)}
+            "valid_until": ref.get("valid_until"), "fed_available": bool(fed),
+            "us_available": us_err is None, "expiries_source": "listed + rule" if listed else "rule",
+            "errors": {k: v for k, v in (("us", us_err), ("expiries", exp_err)) if v} or None,
+            "holidays_known": bool(holidays), "badges": {"calendar": "context", "forecast": "context"},
+            "note_us": "forecast / previous as ForexFactory publishes them (context): dates and consensus, never a call"}
 
 
 @router.get("/gift-nifty")
@@ -926,9 +1187,106 @@ async def indices_live(names: str = "NIFTY 50,NIFTY BANK,INDIA VIX") -> dict:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
+def prefer_stored_contribution(live: dict[str, Any], stored: list[dict[str, Any]], fit_row: dict[str, Any] | None) -> dict[str, Any]:
+    """m029: once the session is closed and the 19:25 drivers job has stored it, the stored (calibrated) attribution is
+    the one number app-wide (MEMB, MOV, BRF and the wrap): each member's points / weight and `explained_points` come from
+    index_contribution_daily and the fit; during the session the live rebuild stays, labelled. `explained_source` says
+    which."""
+    t = str(live.get("time") or "")
+    try:
+        day = datetime.strptime(t[:11], "%d-%b-%Y").date().isoformat()  # noqa: DTZ007 — NSE's IST wall date
+    except ValueError:
+        day = None
+    rows = [r for r in stored if _day(r.get("date")) == day and _num(r.get("points")) is not None]
+    if not day or t[12:17] < "15:30" or not rows:
+        return live_on_stored_weights(live, stored, day) or {**live, "explained_source": live_rebuild_source(live)}
+    by = {str(r.get("symbol")): r for r in rows}
+    members = []
+    for m in live.get("members") or []:
+        st = by.get(str(m.get("symbol")))
+        members.append({**m, "points": round(float(st["points"]), 2), "weight_pct": round(float(st["weight_pct"]), 2)} if st else m)
+    members.sort(key=lambda m: -(m.get("points") or 0))
+    explained = _num((fit_row or {}).get("explained_points"))
+    summary = live.get("summary")
+    if isinstance(summary, dict) and "top5_weight_pct" in summary:          # MEMB's tile: the same weights as the table
+        ws = sorted((float(m["weight_pct"]) for m in members if _num(m.get("weight_pct")) is not None), reverse=True)
+        summary = {**summary, "top5_weight_pct": round(sum(ws[:5]), 1)}
+    return {**live, "members": members, **({"summary": summary} if summary is not None else {}),
+            "explained_points": round(explained if explained is not None else sum(float(r["points"]) for r in rows), 1),
+            "explained_source": f"stored attribution for {day} ({(fit_row or {}).get('weight_method') or rows[0].get('weight_method')}; "
+                                "the same figure as MEMB)"}
+
+
+STORED_WEIGHTS_MAX_AGE_DAYS = 7      # a weekend + a holiday; older stored weights are not used for today's points
+STORED_WEIGHTS_MIN_COVER = 0.9       # share of the live members the stored weights must cover
+STORED_WEIGHT_METHODS = frozenset({"rebuilt_calibrated", "rebuilt_fitted", "rebuilt_capped", "official_top10"})
+
+
+def live_rebuild_source(live: dict[str, Any]) -> str:
+    """The label of the uncalibrated live rebuild; for NIFTY BANK it also says the caps are not applied (M46)."""
+    capped = " and NIFTY BANK's 20 % / 45 % caps not applied" if str(live.get("index") or "").upper() == "NIFTY BANK" else ""
+    return f"live rebuild (free-float weights from filings; not calibrated{capped})"
+
+
+def live_on_stored_weights(live: dict[str, Any], stored: list[dict[str, Any]], day: str | None) -> dict[str, Any] | None:
+    """Checker 6 Nov (M46 / m029, in the session): today's points on the LAST STORED session's weights (capped and fitted
+    for NIFTY BANK, calibrated to NSE's top-10 for NIFTY 50) drifted to that session's close by its stored returns,
+    w_i ∝ w_i,d−1 × (1 + r_i,d−1), times the live prices: points_i = L_{d−1} × w_i × change_i. The uncapped live rebuild
+    (ICICIBANK 27.5 % of NIFTY BANK at 09:07 on 6 Nov, above the 20 % cap) is used only when no recent stored session
+    covers the members. None = keep the live rebuild."""
+    if not day:
+        return None
+    prev_days = sorted({d for d in (_day(r.get("date")) for r in stored) if d and d < day})
+    if not prev_days:
+        return None
+    sd = prev_days[-1]
+    try:
+        if (date.fromisoformat(day) - date.fromisoformat(sd)).days > STORED_WEIGHTS_MAX_AGE_DAYS:
+            return None
+    except ValueError:
+        return None
+    method = next((str(r.get("weight_method")) for r in stored if _day(r.get("date")) == sd and r.get("weight_method")), "")
+    if method not in STORED_WEIGHT_METHODS:      # a plain 'rebuilt' row is the same uncapped, uncalibrated rebuild: no gain
+        return None
+    w: dict[str, float] = {}
+    for r in stored:
+        wp, rp = _num(r.get("weight_pct")), _num(r.get("ret_pct"))
+        if _day(r.get("date")) == sd and wp is not None and rp is not None and wp > 0:
+            w[str(r.get("symbol"))] = wp * (1 + rp / 100)
+    members = live.get("members") or []
+    if not members or not w:
+        return None
+    covered = [m for m in members if str(m.get("symbol")) in w and _num(m.get("change_pct")) is not None]
+    if len(covered) < STORED_WEIGHTS_MIN_COVER * len(members):
+        return None
+    last, chg = _num(live.get("last")), _num(live.get("change"))
+    if last is None or chg is None:
+        return None
+    prev_level = last - chg
+    tot = sum(w[str(m["symbol"])] for m in covered)
+    out = []
+    for m in members:
+        sym = str(m.get("symbol"))
+        c = _num(m.get("change_pct"))
+        if sym in w and c is not None and tot > 0:
+            wt = w[sym] / tot
+            out.append({**m, "weight_pct": round(wt * 100, 2), "points": round(prev_level * wt * c / 100, 2)})
+        else:
+            out.append({**m, "weight_pct": None, "points": None})
+    out.sort(key=lambda m: -(m.get("points") or 0))
+    summary = live.get("summary")
+    if isinstance(summary, dict) and "top5_weight_pct" in summary:
+        ws = sorted((float(m["weight_pct"]) for m in out if m.get("weight_pct") is not None), reverse=True)
+        summary = {**summary, "top5_weight_pct": round(sum(ws[:5]), 1)}
+    return {**live, "members": out, **({"summary": summary} if summary is not None else {}),
+            "explained_points": round(sum(m["points"] or 0 for m in out), 1),
+            "explained_source": f"live prices × the stored weights of {sd} ({method}, drifted to that close)"}
+
+
 @router.get("/index-contribution")
 async def index_contribution(index: str = "NIFTY 50") -> dict:
-    """Who moved the index today, in points (rebuilt free-float weights), via data-service."""
+    """Who moved the index today, in points, via data-service: the live rebuild in the session, the stored calibrated
+    attribution once the close is stored (m029: one 'explained' number app-wide)."""
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(20.0)) as client:
             r = await client.get(f"{DATA_SVC}/db/index-contribution", params={"index": index})
@@ -936,7 +1294,14 @@ async def index_contribution(index: str = "NIFTY 50") -> dict:
         raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))
-    return r.json()
+    live = r.json()
+    name = str(index).strip().upper()
+    if name not in DRIVER_INDICES:
+        return live
+    reads = _DriverReads()
+    stored = await reads.get("contribution", index=name, days=1)
+    fit = await reads.get("fit", index=name, days=1)
+    return prefer_stored_contribution(live, stored, fit[-1] if fit else None)
 
 
 @router.get("/index-valuation")
@@ -968,7 +1333,9 @@ async def index_valuation_history(index: str = Query("NIFTY 50", max_length=40),
 
 @router.get("/index-memb")
 async def index_memb(index: str = Query("NIFTY 50", pattern="^(NIFTY 50|NIFTY BANK|NIFTY NEXT 50|NIFTY IT)$")) -> dict:
-    """MEMB: index members with weight, today's points, returns, distance from high, P/E and growth, via data-service."""
+    """MEMB: index members with weight, today's points, returns, distance from high, P/E and growth, via data-service.
+    Once the close is stored, each member's weight / points and the 'explained' figure are the stored attribution's
+    (m029 / M46: the live rebuild is uncapped for NIFTY BANK — HDFCBANK 30.5 % — while the stored weights are capped)."""
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
             r = await client.get(f"{DATA_SVC}/db/index-memb", params={"index": index})
@@ -976,7 +1343,34 @@ async def index_memb(index: str = Query("NIFTY 50", pattern="^(NIFTY 50|NIFTY BA
         raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))
-    return r.json()
+    live = r.json()
+    reads = _DriverReads()
+    stored = await reads.get("contribution", index=index, days=1)
+    fit = await reads.get("fit", index=index, days=1)
+    return memb_outlier_flags(prefer_stored_contribution(live, stored, fit[-1] if fit else None))
+
+
+GROWTH_OUTLIER_PCT = 200.0          # m027: COALINDIA profit +261 % / revenue +200 % y/y — check the filing (one-off, base effect)
+PE_DISTORTED = (3.0, 150.0)         # ETERNAL 669×, TMPV 1.4×: a filing-based P/E outside this range describes the filing, not value
+
+
+def memb_outlier_flags(body: dict[str, Any]) -> dict[str, Any]:
+    """m027: per-member `flags` (heuristic) on figures a filing distorts: |profit or revenue growth| above 200 % y/y, or a
+    filing-based P/E below 3× or above 150×. The numbers stay; the flag says read the filing first."""
+    out = []
+    for m in body.get("members") or []:
+        flags = []
+        for k in ("pat_yoy", "revenue_yoy"):
+            v = _num(m.get(k))
+            if v is not None and abs(v) > GROWTH_OUTLIER_PCT:
+                flags.append(f"{k}_outlier")
+        pe = _num(m.get("pe"))
+        if pe is not None and pe > 0 and not (PE_DISTORTED[0] <= pe <= PE_DISTORTED[1]):
+            flags.append("pe_distorted")
+        out.append({**m, "flags": flags})
+    return {**body, "members": out, "flag_badge": "heuristic",
+            "flag_rule": f"growth beyond ±{GROWTH_OUTLIER_PCT:.0f} % y/y or a P/E outside {PE_DISTORTED[0]:.0f}–{PE_DISTORTED[1]:.0f}×: "
+                         "read the filing (one-off items, a base effect, a loss year) before the number"}
 
 
 @router.get("/index-daily")
@@ -1005,15 +1399,47 @@ async def surveillance(symbols: str = Query("", max_length=8000), all_flagged: b
     return r.json()
 
 
+def mark_post_event(rows: list[dict[str, Any]], releases: list[dict[str, Any]], fo_date: str | None) -> list[dict[str, Any]]:
+    """m043: a row whose results were filed before the F&O file's close (an intraday reporter, e.g. M&M at 12:57 on
+    5 Nov 2026) is priced from post-event options: `post_event` true, `filed_at`, and a note; its event-move figures
+    describe leftover volatility, not a priced event. Release times are nse_results' (the results filing)."""
+    if not fo_date:
+        return rows
+    close = f"{fo_date} 15:30"
+    filed: dict[str, str] = {}
+    for r in releases:
+        t = str(r.get("released_at") or "")
+        if t and t < close and r.get("symbol"):
+            filed[str(r["symbol"])] = max(filed.get(str(r["symbol"]), ""), t)
+    out = []
+    for row in rows:
+        t = filed.get(str(row.get("symbol")))
+        rd = str(row.get("results_date") or "")
+        if t and rd and t[:10] >= (date.fromisoformat(rd[:10]) - _timedelta(days=3)).isoformat():
+            row = {**row, "post_event": True, "filed_at": t,
+                   "post_event_note": f"results filed {t[11:16]} on {t[:10]}, before the {fo_date} close: these options are post-event"}
+        else:
+            row = {**row, "post_event": False}
+        out.append(row)
+    return out
+
+
 async def _fetch_implied_moves(days: int) -> dict:
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
             r = await client.get(f"{DATA_SVC}/db/results-implied-moves", params={"days": days})
+            releases: list[dict[str, Any]] = []
+            try:                                         # optional: without release times nothing is marked post-event
+                rr = await client.get(f"{DATA_SVC}/db/results-recent", params={"days": 4})
+                releases = rr.json().get("rows", []) if rr.status_code == 200 else []
+            except Exception:  # noqa: BLE001
+                releases = []
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=503, detail=f"data-service unreachable: {exc}") from exc
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=upstream_detail(r, 300))
-    return r.json()
+    body = r.json()
+    return {**body, "rows": mark_post_event(body.get("rows") or [], releases, body.get("fo_date"))}
 
 
 @router.get("/results-implied-moves")
@@ -1164,6 +1590,17 @@ def price_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {"sources": counts, "max_age_s": max(ages) if ages else None}
 
 
+TYPICAL_CHUNK = 150                    # data-service's /db/typical-results-moves reads at most 200 symbols a request
+
+
+def session_labels(now: datetime, today: str) -> dict[str, Any]:
+    """m042: the reaction's own date (today's session, not the window start `since`) and whether it is still trading:
+    after 15:30 the moves are the session's close ('reacted today'), not live."""
+    open_ = (9, 15) <= (now.hour, now.minute) < (15, 30)
+    return {"data_date": today, "session_open": open_,
+            "label": "reacting today · live session" if open_ else "reacted today · session closed (end-of-day moves)"}
+
+
 @router.get("/results-reacting")
 async def results_reacting(response: Response = None) -> dict:  # type: ignore[assignment]  # injected by FastAPI
     """Cached at most 60 s as before; now single flight with a background refresh after 30 s (C-PERF-01)."""
@@ -1194,9 +1631,12 @@ async def _results_reacting() -> dict:
         if not filed:
             return {"rows": [], "since": f"{prev.isoformat()} 15:30"}
         syms = sorted(filed)
-        tm, fl = await asyncio.gather(
-            client.get(f"{DATA_SVC}/db/typical-results-moves", params={"symbols": ",".join(syms)}),
-            client.get(f"{DATA_SVC}/db/financials-latest", params={"symbols": ",".join(syms)}), return_exceptions=True)
+        chunks = [syms[i:i + TYPICAL_CHUNK] for i in range(0, len(syms), TYPICAL_CHUNK)]
+        got = await asyncio.gather(
+            client.get(f"{DATA_SVC}/db/financials-latest", params={"symbols": ",".join(syms)}),
+            *(client.get(f"{DATA_SVC}/db/typical-results-moves", params={"symbols": ",".join(c)}) for c in chunks),
+            return_exceptions=True)
+        fl, tms = got[0], got[1:]
         fin_latest = fl.json().get("latest", {}) if not isinstance(fl, Exception) and fl.status_code == 200 else {}
         # the numbers for this filing: cached quarter filed since the previous close; queue the rest for a background read
         fresh = {s: f for s, f in fin_latest.items() if (f.get("filed_at") or "")[:16].replace("T", " ") >= f"{prev.isoformat()} 15:30"}
@@ -1206,7 +1646,10 @@ async def _results_reacting() -> dict:
                 await client.post(f"{DATA_SVC}/db/financials/prefetch", params={"symbols": ",".join(missing)})
             except httpx.HTTPError:
                 pass
-    typical = tm.json().get("moves", {}) if not isinstance(tm, Exception) and tm.status_code == 200 else {}
+    typical: dict[str, Any] = {}
+    for tm in tms:                                     # every chunk: a failed one leaves only its own names blank
+        if not isinstance(tm, Exception) and tm.status_code == 200:
+            typical.update(tm.json().get("moves", {}))
     phase = reaction_phase(now)
     names: dict[str, str] = {}
     for s in syms:
@@ -1246,7 +1689,8 @@ async def _results_reacting() -> dict:
             r.update(labels.get(r["symbol"]) or price_fields(None, reason=why))
         return {"rows": rows, "phase": "closed" if phase == "holiday" else phase, "nifty_change_pct": None, **base,
                 "nifty": price_fields(None, reason=why), "price_source": price_summary(rows),
-                "as_of": now.isoformat(timespec="seconds")}
+                "as_of": now.isoformat(timespec="seconds"), "data_date": None, "session_open": False,
+                "label": "no reaction yet (the session has not opened)" if phase != "holiday" else "no NSE session today"}
     today_s = today.isoformat()
     prices: dict[str, dict[str, Any]] = {}
     for s in syms:
@@ -1268,7 +1712,7 @@ async def _results_reacting() -> dict:
                  numbers=numbers_status(r["symbol"], fresh, fin_latest))
         r.update(prices[r["symbol"]])
     return {"rows": rows, "phase": phase, "nifty_change_pct": nifty, **base, "nifty": price_fields(nifty_row),
-            "price_source": price_summary(rows), "as_of": now.isoformat(timespec="seconds")}
+            "price_source": price_summary(rows), "as_of": now.isoformat(timespec="seconds"), **session_labels(now, today_s)}
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1431,16 +1875,21 @@ def slice_contributions(contrib: list[dict[str, Any]], fit: list[dict[str, Any]]
             industry[s] = str(r["industry"])
     last_day = window[-1] if window else None
     w_latest: dict[str, float] = {}
-    for r in weights:
+    for r in rows:                                   # the weight each point was computed with (one method per day)
+        if _day(r.get("date")) == last_day and _num(r.get("weight_pct")) is not None:
+            w_latest[str(r.get("symbol"))] = float(r["weight_pct"])
+    rank: dict[str, int] = {}
+    for r in weights:                                # members without a contribution row: the best stored method
+        sym = str(r.get("symbol"))
+        if r.get("industry"):
+            industry.setdefault(sym, str(r["industry"]))
+        if sym in w_latest and sym not in rank:
+            continue
         if _day(r.get("date")) == last_day or last_day is None:
             w = _num(r.get("weight_pct"))
-            if w is not None:
-                w_latest[str(r.get("symbol"))] = w
-                if r.get("industry"):
-                    industry.setdefault(str(r.get("symbol")), str(r["industry"]))
-    for r in rows:                                   # the contribution rows carry the day's weight too
-        if _day(r.get("date")) == last_day and str(r.get("symbol")) not in w_latest and _num(r.get("weight_pct")) is not None:
-            w_latest[str(r.get("symbol"))] = float(r["weight_pct"])
+            pr = METHOD_RANK.get(str(r.get("method")), 9)
+            if w is not None and pr < rank.get(sym, 99):
+                w_latest[sym], rank[sym] = w, pr
     total_abs = sum(abs(v) for v in pts.values())
     members = []
     for s, p in pts.items():
@@ -1525,6 +1974,48 @@ def fit_summary(fit: list[dict[str, Any]], sessions: int = 60) -> dict[str, Any]
                      + ("; degraded (> 25 pts) — weights need recalibration" if mae > FIT_DEGRADED_MAE else ""))}
 
 
+CHALLENGER_CONFIRM = {20: 5, 60: 5}         # compute.WINDOWS: consecutive sessions a challenger must lead
+
+
+def challenger_of(rows: list[dict[str, Any]], leader: Any, window: int) -> dict[str, Any] | None:
+    """m028: the raw leader when it is not the hysteresis leader, with how many consecutive stored sessions it has led
+    and how many more the rule needs ("challenger pending"); None when the leader also leads raw."""
+    seen: dict[str, dict[str, Any]] = {}
+    for r in sorted(rows, key=lambda r: (_day(r.get("date")) or "", str(r.get("computed_at") or ""))):
+        seen[_day(r.get("date")) or ""] = r
+    ordered = [seen[d] for d in sorted(seen)]
+    if not ordered:
+        return None
+    raw = ordered[-1].get("raw_leader")
+    if not raw or raw == leader:
+        return None
+    streak = 0
+    for r in reversed(ordered):
+        if r.get("raw_leader") != raw or r.get("leader") != leader:
+            break
+        streak += 1
+    need = CHALLENGER_CONFIRM.get(window, 5)
+    return {"symbol": raw, "sessions_leading": streak, "sessions_needed": max(0, need - streak),
+            "sentence": f"{raw} leads the raw {window}-session points; the label changes after {need} consecutive sessions "
+                        f"({streak} so far) — {DRIVER_DESCRIBES}"}
+
+
+def tab_state(fit: dict[str, Any], horizon_sessions: int, stored_sessions: int, history_since: str | None) -> dict[str, Any]:
+    """M46: how far the page can be read. 'insufficient' when fewer than 20 fit sessions are stored (a backfill has not
+    run), 'degraded' when the 60-session MAE is above the 25-pt bar, else 'ok'; a sentence says which and why."""
+    n = int(fit.get("sessions") or 0)
+    mae = fit.get("mae_60s")
+    if n < 20:
+        return {"state": "insufficient", "sessions": n,
+                "sentence": f"only {n} session{'s' if n != 1 else ''} of attribution stored (since {history_since or '—'}): "
+                            "the backfill has not run, so horizons longer than that are not shown in full"}
+    if fit.get("degraded"):
+        return {"state": "degraded", "sessions": n,
+                "sentence": f"the weights miss the index by {mae:.0f} pts a day on average over {n} sessions (bar 25): "
+                            "members' points are approximate; the residual is shown"}
+    return {"state": "ok", "sessions": n, "sentence": f"weights explain the index within {mae:.0f} pts a day over {n} sessions"}
+
+
 def driver_state_row(state: list[dict[str, Any]], window: int) -> dict[str, Any] | None:
     rows = [s for s in state if _num(s.get("window_sessions")) == window and _day(s.get("date"))]
     if not rows:
@@ -1538,7 +2029,8 @@ def driver_state_row(state: list[dict[str, Any]], window: int) -> dict[str, Any]
             "change_date": _day(s.get("change_date")), "top5_share": _num(s.get("top5_share")),
             "hhi_contrib": _num(s.get("hhi_contrib")), "ew_minus_cw_pp": _num(s.get("ew_minus_cw_pp")),
             "members_up": s.get("members_up"), "members_down": s.get("members_down"),
-            "sentence": regime_sentence(window, s.get("leader"), tenure, share, _num(s.get("ew_minus_cw_pp")))}
+            "sentence": regime_sentence(window, s.get("leader"), tenure, share, _num(s.get("ew_minus_cw_pp"))),
+            "challenger": challenger_of(rows, s.get("leader"), window)}
 
 
 def regime_sentence(window: int, leader: Any, tenure: float | None, share: float | None, ew_minus_cw_pp: float | None) -> str:
@@ -1555,6 +2047,9 @@ def regime_sentence(window: int, leader: Any, tenure: float | None, share: float
     return ", ".join(bits) + f" — {DRIVER_DESCRIBES}"
 
 
+MONTHLY_BAD_SESSION_PTS = 150.0             # m026: one failed session (2 Feb 2026: −492 pts) breaks a month's "explained"
+
+
 def monthly_leaderboard(contrib: list[dict[str, Any]], fit: list[dict[str, Any]], months: int) -> list[dict[str, Any]]:
     by_month: dict[str, dict[str, float]] = _defaultdict(lambda: _defaultdict(float))
     sessions: dict[str, set[str]] = _defaultdict(set)
@@ -1564,10 +2059,14 @@ def monthly_leaderboard(contrib: list[dict[str, Any]], fit: list[dict[str, Any]]
             by_month[d[:7]][s] += p
             sessions[d[:7]].add(d)
     actual: dict[str, float] = _defaultdict(float)
+    bad: dict[str, list[str]] = _defaultdict(list)
     for f in fit:
         d, a = _day(f.get("date")), _num(f.get("actual_points"))
         if d and a is not None:
             actual[d[:7]] += a
+        res = _num(f.get("residual_points"))
+        if d and res is not None and abs(res) > MONTHLY_BAD_SESSION_PTS:
+            bad[d[:7]].append(d)
     out = []
     prev_leader = None
     for ym in sorted(by_month):
@@ -1580,7 +2079,11 @@ def monthly_leaderboard(contrib: list[dict[str, Any]], fit: list[dict[str, Any]]
                     "leader_share": round(abs(m[leader]) / tot_abs, 3) if tot_abs else None,
                     "leader_changed": prev_leader is not None and leader != prev_leader,
                     "top3_add": [{"symbol": s, "points": round(v, 1)} for s, v in ranked[:3]],
-                    "top3_drag": [{"symbol": s, "points": round(v, 1)} for s, v in ranked[-3:][::-1]]})
+                    "top3_drag": [{"symbol": s, "points": round(v, 1)} for s, v in ranked[-3:][::-1]],
+                    "residual_pts": round(actual[ym] - sum(m.values()), 1) if ym in actual else None,
+                    "bad_sessions": bad.get(ym) or [],
+                    "note": (f"{len(bad[ym])} session(s) the weights missed by > {MONTHLY_BAD_SESSION_PTS:.0f} pts "
+                             f"({', '.join(bad[ym][:3])}): the month's 'explained' is not reliable" if bad.get(ym) else None)})
         prev_leader = leader
     return out[-months:]
 
@@ -1590,9 +2093,17 @@ def _history_since(contrib: list[dict[str, Any]]) -> str | None:
     return days[0] if days else None
 
 
+METHOD_RANK = {"rebuilt_fitted": 0, "rebuilt_calibrated": 1, "rebuilt_capped": 2, "rebuilt": 3, "official_top10": 4}
+
+
 def _weight_method(weights: list[dict[str, Any]], day: str | None) -> dict[str, Any]:
     rows = [w for w in weights if _day(w.get("date")) == day] if day else []
     methods = {str(w.get("method")) for w in rows if w.get("method")}
+    if "rebuilt_fitted" in methods:
+        return {"method": "rebuilt_fitted", "label": f"weights rebuilt from filings, capped, corrected by a 60-session fit to the "
+                                                     f"index's own closes (fitted before {day}, applied on it)"}
+    if "rebuilt_capped" in methods:
+        return {"method": "rebuilt_capped", "label": f"weights rebuilt from filings and capped (dated cap schedule; no fit on {day})"}
     if "rebuilt_calibrated" in methods:
         return {"method": "rebuilt_calibrated", "label": f"weights rebuilt, calibrated to NSE's top-10 on {day}"}
     if "rebuilt" in methods:
@@ -1606,25 +2117,35 @@ def _weight_method(weights: list[dict[str, Any]], day: str | None) -> dict[str, 
 @router.get("/index-drivers")
 async def index_drivers(response: Response, index: str = Query("NIFTY 50"),
                         horizon: str = Query("1m", pattern="^(1d|5d|1m|3m|ytd|since_change)$"),
-                        window: int = Query(20, ge=20, le=60)) -> dict:
+                        window: int = Query(20, ge=20, le=60),
+                        as_of: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$")) -> dict:
     """Who drove the index over `horizon` (PLAN 1.2): members (points, weight, return, share), sectors, concentration,
-    breadth, the fit (MAE / R² over 60 sessions, today's residual), the driver state with hysteresis, badges."""
+    breadth, the fit (MAE / R² over 60 sessions, today's residual), the driver state with hysteresis, badges.
+    `as_of` ends the horizon on a past stored session (the wrap's backfill reads one day's attribution with it);
+    `tab` says whether the stored fit supports reading the page (M46)."""
     name = _check_index(index)
     reads = _DriverReads()
     contrib = await reads.get("contribution", index=name, days=400)
     fit = await reads.get("fit", index=name, days=400)
-    state = await reads.get("state", index=name, days=5)
+    state = await reads.get("state", index=name, days=12)
+    if as_of:
+        contrib = [r for r in contrib if (_day(r.get("date")) or "") <= as_of]
+        fit = [f for f in fit if (_day(f.get("date")) or "") <= as_of]
+        state = [x for x in state if (_day(x.get("date")) or "") <= as_of]
     dates = sorted({d for d in (_day(r.get("date")) for r in contrib) if d})
     driver = driver_state_row(state, window if window in (20, 60) else 20)
     win = horizon_window(dates, horizon, driver["change_date"] if driver else None)
     weights = await reads.get("weights", index=name, date=win[-1]) if win else []
     sliced = slice_contributions(contrib, fit, weights, win)
     reads.headers(response)
+    fs = fit_summary(fit)
+    since = _history_since(contrib)
     return {
         "as_of": win[-1] if win else None, "index": name,
         "horizon": {"name": horizon, "from": win[0] if win else None, "to": win[-1] if win else None, "sessions": len(win)},
-        **sliced, "fit": fit_summary(fit), "weight_method": _weight_method(weights, win[-1] if win else None),
-        "driver": driver, "history_since": _history_since(contrib), "badges": DRIVER_BADGES,
+        **sliced, "fit": fs, "weight_method": _weight_method(weights, win[-1] if win else None),
+        "tab": tab_state(fs, len(win), len(dates), since),
+        "driver": driver, "history_since": since, "badges": DRIVER_BADGES,
         "note": f"points = previous index level × weight × return (additive; the residual is shown); {DRIVER_DESCRIBES}",
         "precedent": "Bloomberg MEMB / IMAP contribution; NSE daily top-10 file (display-only, O-T11)",
         **reads.meta(),
@@ -1664,7 +2185,9 @@ async def index_drivers_monthly(response: Response, index: str = Query("NIFTY 50
     fit = await reads.get("fit", index=name, days=days)
     rows = monthly_leaderboard(contrib, fit, months)
     reads.headers(response)
-    return {"index": name, "months": rows, "n": len(rows), "as_of": rows[-1]["month"] if rows else None, "badge": "context",
+    last = max((d for d in (_day(r.get("date")) for r in contrib) if d), default=None)
+    return {"index": name, "months": rows, "n": len(rows), "as_of": last, "as_of_month": rows[-1]["month"] if rows else None,
+            "badge": "context",
             "note": f"monthly sums of stored daily points; {DRIVER_DESCRIBES}", **reads.meta()}
 
 

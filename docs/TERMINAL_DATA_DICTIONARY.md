@@ -4,21 +4,21 @@ Every dataset the SuryaDhana terminal shows, as data-service's `dataset_catalog`
 
 **Generated** by `scripts/terminal_data_dictionary.py` from `services/data-service/data_health/catalog.py` — do not edit by hand; change the catalog and re-run. `--check` fails when this file is stale. Source entries (URLs, formats, traps) live in `docs/NSE_DATA_DICTIONARY.md` and `docs/GOLD_DATA_DICTIONARY.md`; this file is the per-dataset view the terminal itself uses.
 
-Catalog seed: present (66 rows). Nothing here feeds the Decision Desk, the S1 shadow, a directional alert or a ticket price.
+Catalog seed: present (67 rows). Nothing here feeds the Decision Desk, the S1 shadow, a directional alert or a ticket price.
 
 ## Verdicts and badges
 
 | Verdict | Meaning in the terminal | Datasets |
 |---|---|---|
 | **PUBLISH-CORE** | ingested (or computed) and shown on a page's primary panels | 46 |
-| **PUBLISH-CONTEXT** | ingested and shown inside its section or a details drawer, always with the `context` badge | 19 |
+| **PUBLISH-CONTEXT** | ingested and shown inside its section or a details drawer, always with the `context` badge | 20 |
 | **LINK-ONLY** | a labelled link to the publisher; nothing is fetched or stored by the stack | 1 |
 | **DO-NOT-PUBLISH** | not fetched, not shown (dead, blocked by terms, or shown to be noise) | 0 |
-| **total** | | 66 |
+| **total** | | 67 |
 
 | Badge | Meaning | Datasets |
 |---|---|---|
-| `context` | a description or a measured relationship that PASSED as a description, never as a forecast; rendered in the neutral token | 38 |
+| `context` | a description or a measured relationship that PASSED as a description, never as a forecast; rendered in the neutral token | 39 |
 | `arithmetic` | an identity, a model convention or an exchange rule that makes no claim about the future (IV, Greeks, points attribution, SPAN) | 27 |
 | `heuristic` | a house rule without evidence, shown with its measured error where one exists (the 12 % margin estimate: 4.8× too high) | 1 |
 | `signal` | only by a FINDINGS PASS row from a pre-registered study (PLAN before results, PIT data, \|t\| ≥ 2 full sample and both halves, after the cost floor) | **0 — none exists in F&O, gold or index attribution** |
@@ -36,7 +36,7 @@ Context metrics render in the neutral token and are never coloured bullish or be
 | CF | [`nse_live`](#nse_live) |
 | CHRT | [`ohlcv`](#ohlcv), [`tick_store`](#tick_store) |
 | DEAL | [`nse_bhavcopy`](#nse_bhavcopy), [`nse_deals`](#nse_deals) |
-| DERV | [`index_ohlc_daily`](#index_ohlc_daily), [`iv_expiry_daily`](#iv_expiry_daily), [`iv_summary_daily`](#iv_summary_daily), [`iv_surface_daily`](#iv_surface_daily), [`market_index_daily`](#market_index_daily), [`nse_combined_oi`](#nse_combined_oi), [`nse_contract_delta`](#nse_contract_delta), [`nse_fo_daily`](#nse_fo_daily), [`nse_fo_volt`](#nse_fo_volt), [`nse_mwpl_clients`](#nse_mwpl_clients), [`option_history_json`](#option_history_json), [`vix_daily`](#vix_daily) |
+| DERV | [`archive:chain`](#archive:chain), [`index_ohlc_daily`](#index_ohlc_daily), [`iv_expiry_daily`](#iv_expiry_daily), [`iv_expiry_replay`](#iv_expiry_replay), [`iv_intraday`](#iv_intraday), [`iv_summary_daily`](#iv_summary_daily), [`iv_surface_daily`](#iv_surface_daily), [`market_index_daily`](#market_index_daily), [`nse_combined_oi`](#nse_combined_oi), [`nse_contract_delta`](#nse_contract_delta), [`nse_fo_daily`](#nse_fo_daily), [`nse_fo_volt`](#nse_fo_volt), [`nse_mwpl_clients`](#nse_mwpl_clients), [`option_history_json`](#option_history_json), [`vix_daily`](#vix_daily) |
 | DES | [`iv_event_log`](#iv_event_log), [`iv_summary_daily`](#iv_summary_daily), [`nse_bhavcopy`](#nse_bhavcopy) |
 | DESK | [`desk_mark`](#desk_mark), [`index_contribution_daily`](#index_contribution_daily), [`nse_bhavcopy`](#nse_bhavcopy), [`nse_deals`](#nse_deals), [`ohlcv`](#ohlcv), [`surveillance`](#surveillance) |
 | EQS | [`nse_bhavcopy`](#nse_bhavcopy), [`ohlcv`](#ohlcv), [`surveillance`](#surveillance) |
@@ -590,21 +590,30 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Note:** describes past events, does not forecast the next; derived: the latest computation per key (re-runs replace the row with their computed_at / first_seen_at / model_version); a past vintage is recomputed from the archived source files versioned in ingest_log
 
 <a id="iv_intraday"></a>
-### `iv_intraday` · Intraday IV path (15-min Breeze pilot)
+### `iv_intraday` · Intraday OI / IV tape (Breeze chain: NIFTY, BANKNIFTY, FINNIFTY + watch names)
 
-- **Pages:** OMON · **Publisher:** ICICI Breeze (chain quotes)
-- **Published (IST):** 09:20–15:30 every 15 min · **Expected stored by:** 15:45 IST · **Cadence:** session · **Amber after:** 1 sessions, red beyond that · **unrecoverable** (a missed capture is a gap row, never backfilled)
+- **Pages:** OMON, DERV · **Publisher:** ICICI Breeze (chain quotes)
+- **Published (IST):** 09:15–15:30, near expiry every 2 min when the budget allows (tiers planned to the ledger) · **Expected stored by:** 15:45 IST · **Cadence:** session · **Amber after:** 1 sessions, red beyond that · **unrecoverable** (a missed capture is a gap row, never backfilled)
 - **Ingest job:** `iv_intraday` · **Freshness read from:** `MAX(ts)` of `iv_intraday`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#iv_intraday](../docs/TERMINAL_DATA_DICTIONARY.md#iv_intraday)
-- **Note:** through the Breeze budget ledger only; skipped without a live session
+- **Note:** through the Breeze budget ledger only; skipped without a live session; ICICI codes (BANKNIFTY = CNXBAN)
 
 <a id="archive:chain"></a>
 ### `archive:chain` · Raw chain snapshots (parquet parts)
 
-- **Pages:** OMON · **Publisher:** ICICI Breeze
-- **Published (IST):** 09:20–15:30 every 15 min · **Expected stored by:** 15:45 IST · **Cadence:** session · **Amber after:** 1 sessions, red beyond that · **unrecoverable** (a missed capture is a gap row, never backfilled)
+- **Pages:** OMON, DERV · **Publisher:** ICICI Breeze
+- **Published (IST):** 09:15–15:30, every tape tick · **Expected stored by:** 15:45 IST · **Cadence:** session · **Amber after:** 1 sessions, red beyond that · **unrecoverable** (a missed capture is a gap row, never backfilled)
 - **Ingest job:** `iv_intraday` · **Freshness read from:** dated files under `data/nse_archive/../ticks/chain/`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#archive:chain](../docs/TERMINAL_DATA_DICTIONARY.md#archive:chain)
+
+<a id="iv_expiry_replay"></a>
+### `iv_expiry_replay` · Expiry-day straddle replays (Breeze 1-minute bars of past expiries)
+
+- **Pages:** DERV · **Publisher:** ICICI Breeze (historical v2)
+- **Published (IST):** after the close, on demand (O-T16) · **Expected stored by:** no deadline · **Cadence:** manual · **Amber after:** 400 days, red beyond that
+- **Ingest job:** none (read on request) · **Freshness read from:** `MAX(ts)` of `iv_expiry_replay`
+- **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [TERMINAL_DATA_DICTIONARY.md#iv_expiry_replay](../docs/TERMINAL_DATA_DICTIONARY.md#iv_expiry_replay)
+- **Note:** POST /jobs/expiry-replay (the PM, after the close); 2 metered calls per expiry; XPRY's historical curve
 
 <a id="rate_curve"></a>
 ### `rate_curve` · Risk-free rate (dated constant; O-T5)
@@ -680,8 +689,8 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 
 ### IV series (`fo_iv/catalog_seed.py`, served as `/db/fo-iv/catalog`)
 
-Registry present (28 rows). A panel renders a metric only if it has a row here with a PUBLISH verdict (no row, no panel).
-`context` 12 · `arithmetic` 16 · `heuristic` 0 · `signal` 0.
+Registry present (29 rows). A panel renders a metric only if it has a row here with a PUBLISH verdict (no row, no panel).
+`context` 13 · `arithmetic` 16 · `heuristic` 0 · `signal` 0.
 
 | series | name | table.column | badge | definition | precedent | unit |
 |---|---|---|---|---|---|---|
@@ -694,16 +703,17 @@ Registry present (28 rows). A panel renders a metric only if it has a row here w
 | `EXPIRY_SKEW_25D` | 25Δ skew per expiry | `iv_expiry_daily.skew_25d` | `context` | 25Δ put IV − 25Δ call IV, each by inverting that strike's own delta | ORATS skew | vol pt |
 | `FOVOLT_ANN` | NSE FOVOLT annualised vol | `iv_summary_daily.fovolt_ann` | `context` | NSE's EWMA (λ 0.995) daily vol × √365: the exchange's margin vol | NSE F&O daily volatility file | vol pt |
 | `INTRADAY_ATM_IV` | Intraday ATM IV (15-min pilot) | `iv_intraday.iv` | `context` | Black-76 IV from the bid/ask mid on the Breeze chain, every 15 min | Quantsapp IV live; Bloomberg OMON intraday | vol pt |
-| `IV30_CM` | 30-day constant-maturity ATM IV | `iv_summary_daily.iv30_cm` | `arithmetic` | ATM variance interpolated between the two expiries bracketing 30 calendar days (VIX-style), annualised | Bloomberg HIVG / IVOL; Cboe VIX method | vol pt |
+| `IV30_CM` | 30-day constant-maturity ATM IV | `iv_summary_daily.iv30_cm` | `arithmetic` | ATM variance interpolated between the two expiries bracketing 30 calendar days (VIX-style), annualised; with no bracket, the ATM IV of the one expiry nearest 30 d inside 10–60 d (flat term, flag cm30_flat) | Bloomberg HIVG / IVOL; Cboe VIX method | vol pt |
 | `IV60_CM` | 60-day constant-maturity ATM IV | `iv_summary_daily.iv60_cm` | `arithmetic` | as IV30_CM at 60 days | Bloomberg OVDV term tab | vol pt |
 | `IV90_CM` | 90-day constant-maturity ATM IV | `iv_summary_daily.iv90_cm` | `arithmetic` | as IV30_CM at 90 days | Bloomberg OVDV term tab | vol pt |
-| `IV_MINUS_RV20` | IV − RV20 (volatility risk premium) | `iv_summary_daily.iv_minus_rv20` | `context` | IV30_CM minus RV20_CC | Market Chameleon IV30 vs HV; Bloomberg VCA | vol pt |
+| `IV_MINUS_RV20` | IV30 − RV20 close-to-close (volatility risk premium) | `iv_summary_daily.iv_minus_rv20` | `context` | IV30_CM minus RV20_CC | Market Chameleon IV30 vs HV; Bloomberg VCA | vol pt |
 | `IV_PCTILE_252` | IV percentile (252 sessions) | `iv_summary_daily.iv_pctile_252` | `arithmetic` | share of the past 252 sessions whose IV30_CM was below today's | Bloomberg IVOL %ile; thinkorswim IV percentile | % |
 | `IV_RANK_252` | IV rank (252 sessions) | `iv_summary_daily.iv_rank_252` | `arithmetic` | where today's IV30_CM sits between the 252-session minimum and maximum, 0–100 | Bloomberg IVOL rank; tastytrade IVR | % |
-| `MONTHLY_ATM_IV` | Monthly-expiry ATM IV (20–60 d) | `iv_summary_daily.monthly_atm_iv` | `arithmetic` | ATM IV of the first expiry 20–60 days out | Bloomberg OVDV; India VIX (variance strip) sits ≈ 1 pt above it | vol pt |
+| `MONTHLY_ATM_IV` | ~1-month ATM IV (first expiry 20–60 d) | `iv_summary_daily.monthly_atm_iv` | `arithmetic` | ATM IV of the first expiry 20–60 days out (a weekly when one falls in the window; not NSE's monthly series) | Bloomberg OVDV; India VIX (variance strip) sits ≈ 1 pt above it | vol pt |
 | `MWPL_FUT_EQUIV_OI` | Futures-equivalent OI (delta-equivalent) | `nse_combined_oi.fut_equiv_oi` | `context` | NSE's portfolio-wise futures-equivalent OI | NSE combineoi_deleq file | shares |
 | `NEAR_ATM_IV` | Near-expiry ATM IV (dte > 2) | `iv_summary_daily.near_atm_iv` | `arithmetic` | ATM IV of the first expiry more than 2 days out; a saw-tooth by construction (R-IV §3) | Sensibull / Opstra IV chart | vol pt |
 | `NSE_DELTA_FACTOR` | NSE delta factor | `nse_contract_delta.delta_factor` | `context` | NSE Clearing's delta per contract (margins) | NSE Contract_Delta file | vol pt |
+| `PAID_VS_DELIVERED` | IV paid vs vol delivered (monthly expiries) | `iv_expiry_daily.atm_iv` | `context` | ATM IV of each NSE monthly expiry at ≈ 30 DTE minus the close-to-close realised vol (zero-mean) over that option's own life, entry close → expiry close | ORATS implied vs realised; Bloomberg VCA | vol pt |
 | `RATE_R` | Risk-free rate used | `rate_curve.rate` | `arithmetic` | dated constant 6.5 % (O-T5) recorded as r on every row | — | % |
 | `RV20_CC` | Realised vol 20 d (close-to-close) | `iv_summary_daily.rv20_cc` | `arithmetic` | σ of 20 daily log returns × √252 | Bloomberg HVG | vol pt |
 | `RV20_PARKINSON` | Realised vol 20 d (Parkinson) | `iv_summary_daily.rv20_parkinson` | `arithmetic` | √(mean ln(H/L)² / 4 ln 2) × √252 | Bloomberg HVG (Parkinson) | vol pt |
@@ -733,4 +743,4 @@ Registry present (9 rows). A panel renders a metric only if it has a row here wi
 
 ## Index by id
 
-[`alpha_shadow`](#alpha_shadow) · [`archive:chain`](#archive:chain) · [`archive:internals`](#archive:internals) · [`archive:preopen`](#archive:preopen) · [`breeze_security_master`](#breeze_security_master) · [`breeze_session`](#breeze_session) · [`data_gaps`](#data_gaps) · [`db_backup`](#db_backup) · [`desk_mark`](#desk_mark) · [`gold_asia_daily`](#gold_asia_daily) · [`gold_brief_docs`](#gold_brief_docs) · [`gold_cme_daily_voi`](#gold_cme_daily_voi) · [`gold_cot`](#gold_cot) · [`gold_curve_mcx`](#gold_curve_mcx) · [`gold_daily_bars`](#gold_daily_bars) · [`gold_etf_holdings`](#gold_etf_holdings) · [`gold_events`](#gold_events) · [`gold_fed_path`](#gold_fed_path) · [`gold_fred_daily`](#gold_fred_daily) · [`gold_health_daily`](#gold_health_daily) · [`gold_india_ibja`](#gold_india_ibja) · [`gold_preopen_log`](#gold_preopen_log) · [`gold_treasury`](#gold_treasury) · [`index_constituents_daily`](#index_constituents_daily) · [`index_contribution_daily`](#index_contribution_daily) · [`index_contribution_fit`](#index_contribution_fit) · [`index_driver_state`](#index_driver_state) · [`index_ohlc_daily`](#index_ohlc_daily) · [`index_valuation_history`](#index_valuation_history) · [`index_weights_daily`](#index_weights_daily) · [`ingest_log`](#ingest_log) · [`iv_event_log`](#iv_event_log) · [`iv_expiry_daily`](#iv_expiry_daily) · [`iv_intraday`](#iv_intraday) · [`iv_summary_daily`](#iv_summary_daily) · [`iv_surface_daily`](#iv_surface_daily) · [`market_index_daily`](#market_index_daily) · [`market_monitor`](#market_monitor) · [`ml_features`](#ml_features) · [`news_scanner`](#news_scanner) · [`news_track_record`](#news_track_record) · [`nse_bhavcopy`](#nse_bhavcopy) · [`nse_combined_oi`](#nse_combined_oi) · [`nse_contract_delta`](#nse_contract_delta) · [`nse_deals`](#nse_deals) · [`nse_events`](#nse_events) · [`nse_fii_dii_cash`](#nse_fii_dii_cash) · [`nse_fii_stats`](#nse_fii_stats) · [`nse_fo_daily`](#nse_fo_daily) · [`nse_fo_volt`](#nse_fo_volt) · [`nse_insider_trades`](#nse_insider_trades) · [`nse_live`](#nse_live) · [`nse_mtf`](#nse_mtf) · [`nse_mwpl_clients`](#nse_mwpl_clients) · [`nse_participant_oi`](#nse_participant_oi) · [`nse_participant_vol`](#nse_participant_vol) · [`nse_results`](#nse_results) · [`nse_shareholding`](#nse_shareholding) · [`ohlcv`](#ohlcv) · [`option_chain_eod`](#option_chain_eod) · [`option_chain_live`](#option_chain_live) · [`option_history_json`](#option_history_json) · [`rate_curve`](#rate_curve) · [`surveillance`](#surveillance) · [`tick_store`](#tick_store) · [`vix_daily`](#vix_daily)
+[`alpha_shadow`](#alpha_shadow) · [`archive:chain`](#archive:chain) · [`archive:internals`](#archive:internals) · [`archive:preopen`](#archive:preopen) · [`breeze_security_master`](#breeze_security_master) · [`breeze_session`](#breeze_session) · [`data_gaps`](#data_gaps) · [`db_backup`](#db_backup) · [`desk_mark`](#desk_mark) · [`gold_asia_daily`](#gold_asia_daily) · [`gold_brief_docs`](#gold_brief_docs) · [`gold_cme_daily_voi`](#gold_cme_daily_voi) · [`gold_cot`](#gold_cot) · [`gold_curve_mcx`](#gold_curve_mcx) · [`gold_daily_bars`](#gold_daily_bars) · [`gold_etf_holdings`](#gold_etf_holdings) · [`gold_events`](#gold_events) · [`gold_fed_path`](#gold_fed_path) · [`gold_fred_daily`](#gold_fred_daily) · [`gold_health_daily`](#gold_health_daily) · [`gold_india_ibja`](#gold_india_ibja) · [`gold_preopen_log`](#gold_preopen_log) · [`gold_treasury`](#gold_treasury) · [`index_constituents_daily`](#index_constituents_daily) · [`index_contribution_daily`](#index_contribution_daily) · [`index_contribution_fit`](#index_contribution_fit) · [`index_driver_state`](#index_driver_state) · [`index_ohlc_daily`](#index_ohlc_daily) · [`index_valuation_history`](#index_valuation_history) · [`index_weights_daily`](#index_weights_daily) · [`ingest_log`](#ingest_log) · [`iv_event_log`](#iv_event_log) · [`iv_expiry_daily`](#iv_expiry_daily) · [`iv_expiry_replay`](#iv_expiry_replay) · [`iv_intraday`](#iv_intraday) · [`iv_summary_daily`](#iv_summary_daily) · [`iv_surface_daily`](#iv_surface_daily) · [`market_index_daily`](#market_index_daily) · [`market_monitor`](#market_monitor) · [`ml_features`](#ml_features) · [`news_scanner`](#news_scanner) · [`news_track_record`](#news_track_record) · [`nse_bhavcopy`](#nse_bhavcopy) · [`nse_combined_oi`](#nse_combined_oi) · [`nse_contract_delta`](#nse_contract_delta) · [`nse_deals`](#nse_deals) · [`nse_events`](#nse_events) · [`nse_fii_dii_cash`](#nse_fii_dii_cash) · [`nse_fii_stats`](#nse_fii_stats) · [`nse_fo_daily`](#nse_fo_daily) · [`nse_fo_volt`](#nse_fo_volt) · [`nse_insider_trades`](#nse_insider_trades) · [`nse_live`](#nse_live) · [`nse_mtf`](#nse_mtf) · [`nse_mwpl_clients`](#nse_mwpl_clients) · [`nse_participant_oi`](#nse_participant_oi) · [`nse_participant_vol`](#nse_participant_vol) · [`nse_results`](#nse_results) · [`nse_shareholding`](#nse_shareholding) · [`ohlcv`](#ohlcv) · [`option_chain_eod`](#option_chain_eod) · [`option_chain_live`](#option_chain_live) · [`option_history_json`](#option_history_json) · [`rate_curve`](#rate_curve) · [`surveillance`](#surveillance) · [`tick_store`](#tick_store) · [`vix_daily`](#vix_daily)

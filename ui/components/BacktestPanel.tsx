@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Chip, PageHeader, T, ResearchNote, fmtNum, fmtSigned } from '@/components/terminal'
 import clsx from 'clsx'
 import {
@@ -12,6 +12,8 @@ import { BacktestTradeGrid } from './BacktestTradeGrid'
 import { FactorDiagnosticStudio } from './FactorDiagnosticStudio'
 import { streamBacktest, type BacktestParams, type BacktestResult, type Trade } from '@/lib/backtest'
 import { exportBacktestCSV, exportBacktestExcel } from '@/lib/backtestExport'
+import { getTradeTicket } from '@/lib/api'
+import { DESK_LIKE, LEGACY_DEFAULTS, MIN_FRICTION_BPS, frictionFromRoundTrip, looksLegacy, positionValue, stopPayload, type StopMode } from './btstDefaults'
 
 // ── Filter catalog (fundamental = look-ahead-prone snapshot fields) ──────────────
 const FUNDAMENTAL = new Set(['pe_ratio', 'div_yld_pct', 'mktcap_cr', 'roce_pct'])
@@ -64,7 +66,7 @@ const FILTER_CATALOG: Record<string, Array<{ id: string; label: string; unit?: s
     { id: 'vol_adj_sector_alpha_14', label: 'Vol-Adj Sector Alpha 14d', unit: 'x', op: 'gt', val: 0, desc: '(14d ret − sector 14d) / 14d ATR%' },
   ],
   'ML Signal': [
-    { id: 'prob_up', label: 'P(up · 5d)', unit: 'prob', op: 'gt', val: 0.55, desc: 'Leak-safe holdout XGBoost P(up over next 5d); available ~last year only (2025-06 →)' },
+    { id: 'prob_up', label: 'P(up · 5d)', unit: 'prob', op: 'gt', val: 0.55, desc: 'Leak-safe holdout XGBoost P(up over next 5d); available ~last year only (2025-06 →). RSCH: the 5-day labels behind it FAIL' },
   ],
 }
 
@@ -108,21 +110,46 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
   // Window + strategy
   const [fromDate, setFromDate] = useState(ago(365))
   const [toDate, setToDate] = useState(today)
-  const [forwardDays, setForwardDays] = useState(5)
+  const [forwardDays, setForwardDays] = useState<number>(DESK_LIKE.holdSessions)
   const [winThreshold, setWinThreshold] = useState(0)
   const [filters, setFilters] = useState<FilterCond[]>([])
 
   // Risk + capital (Pillar 1)
   const [startingCapital, setStartingCapital] = useState(10_000_000)
-  const [frictionBps, setFrictionBps] = useState(15)
-  const [slEnabled, setSlEnabled] = useState(true)
+  // friction: the real ICICI round trip at this lab's position size (shared/trading_costs.py via /api/costs/ticket),
+  // until the user types their own number (M20)
+  const [frictionBps, setFrictionBps] = useState<number | null>(null)
+  const [frictionAuto, setFrictionAuto] = useState(true)
+  const [costNote, setCostNote] = useState<{ pct: number; value: number; profile: string } | 'error' | null>(null)
+  const [stopMode, setStopMode] = useState<StopMode>(DESK_LIKE.stopMode)
+  const [atrMult, setAtrMult] = useState(2)
   const [stopLossPct, setStopLossPct] = useState(2)
   const [trailEnabled, setTrailEnabled] = useState(false)
   const [trailingPct, setTrailingPct] = useState(5)
-  const [maxPositions, setMaxPositions] = useState(5)
+  const [maxPositions, setMaxPositions] = useState<number>(DESK_LIKE.maxPositions)
   const [entryTiming, setEntryTiming] = useState<'next_open' | 'close'>('next_open')
-  const [ddHaltEnabled, setDdHaltEnabled] = useState(false)
-  const [ddHaltPct, setDdHaltPct] = useState(20)
+  const [ddHaltEnabled, setDdHaltEnabled] = useState(true)
+  const [ddHaltPct, setDdHaltPct] = useState<number>(DESK_LIKE.ddHaltPct)
+  const [dailyHalt, setDailyHalt] = useState<boolean>(DESK_LIKE.dailyHalt)
+
+  const posValue = positionValue(startingCapital, maxPositions)
+  useEffect(() => {
+    if (!frictionAuto) return
+    let live = true
+    const value = Math.round(posValue)
+    const t = setTimeout(() => {
+      getTradeTicket({ value, price: 1 })
+        .then(r => {
+          if (!live) return
+          const bps = frictionFromRoundTrip(r.data.round_trip_pct)
+          if (bps == null) { setCostNote('error'); return }
+          setFrictionBps(bps)
+          setCostNote({ pct: r.data.round_trip_pct ?? 0, value, profile: r.data.profile })
+        })
+        .catch(() => { if (live) setCostNote('error') })
+    }, 300)
+    return () => { live = false; clearTimeout(t) }
+  }, [posValue, frictionAuto])
 
   // Scope (Pillar 2)
   const [propensityMissing, setPropensityMissing] = useState<'keep' | 'exclude' | 'neutral'>('keep')
@@ -173,10 +200,14 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
     abortRef.current = ac
     setLoading(true); setError(null); setResults(null); setProgress({ pct: 2, label: 'Starting…', eta: null })
 
-    const params: BacktestParams = {
+    if (frictionBps == null) { setError('The real round-trip cost is not known yet: wait a moment, or type a friction in bps.'); return }
+    const stops = stopPayload(stopMode, atrMult, stopLossPct)
+    // the stop and daily-halt fields go out explicitly: the API's own defaults must never switch a stop on silently
+    const params: BacktestParams & { atr_stop_mult: number | null; daily_loss_halt_pct: number | null } = {
       from_date: fromDate, to_date: toDate, forward_days: forwardDays, win_threshold: winThreshold,
       filters, starting_capital: startingCapital, friction_bps: frictionBps,
-      stop_loss_pct: slEnabled ? stopLossPct : null,
+      stop_loss_pct: stops.stop_loss_pct, atr_stop_mult: stops.atr_stop_mult,
+      daily_loss_halt_pct: dailyHalt ? 2 : null,
       trailing_stop_pct: trailEnabled ? trailingPct : null,
       max_positions: maxPositions, max_drawdown_halt_pct: ddHaltEnabled ? ddHaltPct : null,
       scope, tickers: scope === 'watchlist' ? watchlist : [], entry_timing: entryTiming,
@@ -215,6 +246,12 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
       <ResearchNote verdict="REFERENCE" report="reports/costs/CAPITAL_VIABILITY.md">
         Costs decide short-hold strategies: a 5-day, 5-name book pays about 48% of capital a year in ICICI charges (108% at
         ₹10,000), monthly momentum about 3–5%. Judge every backtest here after costs, against the Desk.
+      </ResearchNote>
+      <ResearchNote verdict="FAIL" report="reports/handbook_swing/REPORT.md">
+        The old defaults here ({LEGACY_DEFAULTS.maxPositions} names, a {LEGACY_DEFAULTS.stopPct}% stop, a {LEGACY_DEFAULTS.holdSessions}-day
+        time-stop, {LEGACY_DEFAULTS.frictionBps} bps) were the legacy 5-day system, which FAILS after costs (−17.8% a year after ICICI
+        charges in the rules-only swing backtest). The defaults now follow the Desk: {DESK_LIKE.maxPositions} names, a {DESK_LIKE.holdSessions}-session
+        hold, no per-trade stop, the real round trip. The lab has no monthly ranking, so it approximates the Desk, never replicates it.
       </ResearchNote>
 
       <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-3">
@@ -268,10 +305,17 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
             </label>
             <div className="grid grid-cols-2 gap-2">
               <label className="block text-[11px] text-slate-400">Friction (bps)
-                <input type="number" value={frictionBps} step={1} min={15}
-                  onChange={e => setFrictionBps(Math.max(15, Number(e.target.value)))}
+                <input type="number" value={frictionBps ?? ''} step={1} min={MIN_FRICTION_BPS} placeholder="…"
+                  onChange={e => { setFrictionAuto(false); setFrictionBps(Math.max(MIN_FRICTION_BPS, Number(e.target.value))) }}
                   className="mt-1 w-full px-2 py-1.5 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono focus:border-amber-500 outline-none" />
-                <span className="text-[10px] text-slate-500">{(frictionBps / 100).toFixed(2)}% round-trip · min 15 bps</span>
+                <span className="text-[10px] text-slate-500">
+                  {frictionBps != null ? `${(frictionBps / 100).toFixed(2)}% round trip` : 'reading the cost model…'}
+                  {frictionAuto && costNote && costNote !== 'error'
+                    ? ` · ${costNote.profile.replace('icici_moneysaver', 'ICICI MoneySaver').replace(/^icici_/, 'ICICI ').replace(/_/g, ' ')} at ₹${costNote.value.toLocaleString('en-IN')} a name (shared/trading_costs.py)`
+                    : ''}
+                  {costNote === 'error' && frictionAuto ? ' · cost model unavailable: type the friction' : ''}
+                  {!frictionAuto && <> · your number · <button type="button" className="underline text-amber-300/80" onClick={() => setFrictionAuto(true)}>use the real cost</button></>}
+                </span>
               </label>
               <label className="block text-[11px] text-slate-400">Max Positions
                 <input type="number" value={maxPositions} step={1} min={1} max={50}
@@ -279,14 +323,32 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                   className="mt-1 w-full px-2 py-1.5 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono focus:border-amber-500 outline-none" />
               </label>
             </div>
-            {/* Stop-loss */}
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="sl" checked={slEnabled} onChange={e => setSlEnabled(e.target.checked)} className="accent-amber-500" />
-              <label htmlFor="sl" className="text-[11px] text-slate-300 flex-1">Stop-Loss</label>
-              <input type="number" value={stopLossPct} step={0.5} min={0.1} disabled={!slEnabled}
-                onChange={e => setStopLossPct(Number(e.target.value))}
-                className="w-16 px-2 py-1 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono disabled:opacity-40 outline-none" />
-              <span className="text-[10px] text-slate-500">%</span>
+            {/* Per-trade stop: OFF by default (the Desk's rules forbid it: it sells winners on normal dips) */}
+            <div>
+              <label className="block text-[11px] text-slate-400 mb-1">Per-trade stop</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(['none', 'atr', 'fixed'] as const).map(m => (
+                  <button key={m} type="button" onClick={() => setStopMode(m)}
+                    className={clsx('px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors',
+                      stopMode === m ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:border-slate-600')}>
+                    {m === 'none' ? 'None (Desk)' : m === 'atr' ? 'k·ATR' : 'Fixed %'}
+                  </button>
+                ))}
+              </div>
+              {stopMode !== 'none' && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  {stopMode === 'atr' && <>
+                    <span className="text-[10px] text-slate-500">k</span>
+                    <input type="number" value={atrMult} step={0.5} min={0.5} onChange={e => setAtrMult(Number(e.target.value))}
+                      className="w-14 px-2 py-1 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono outline-none" />
+                    <span className="text-[10px] text-slate-500">× ATR · else</span>
+                  </>}
+                  <input type="number" value={stopLossPct} step={0.5} min={0.1} onChange={e => setStopLossPct(Number(e.target.value))}
+                    className="w-14 px-2 py-1 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono outline-none" />
+                  <span className="text-[10px] text-slate-500">%</span>
+                </div>
+              )}
+              <p className="text-[10px] text-slate-500 mt-1">{stopMode === 'none' ? 'No per-trade stop: exits come from the hold, as on the Desk' : 'A per-trade stop is the legacy setting the Desk rejected'}</p>
             </div>
             {/* Trailing */}
             <div className="flex items-center gap-2">
@@ -300,11 +362,16 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
             {/* Max-drawdown circuit breaker */}
             <div className="flex items-center gap-2">
               <input type="checkbox" id="ddh" checked={ddHaltEnabled} onChange={e => setDdHaltEnabled(e.target.checked)} className="accent-amber-500" />
-              <label htmlFor="ddh" className="text-[11px] text-slate-300 flex-1" title="Halt new entries once portfolio drawdown breaches this level">DD Circuit Breaker</label>
+              <label htmlFor="ddh" className="text-[11px] text-slate-300 flex-1" title="Halt new entries once portfolio drawdown breaches this level (the Desk's HARD −20 % rule sells everything instead)">DD Circuit Breaker</label>
               <input type="number" value={ddHaltPct} step={1} min={1} disabled={!ddHaltEnabled}
                 onChange={e => setDdHaltPct(Number(e.target.value))}
                 className="w-16 px-2 py-1 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono disabled:opacity-40 outline-none" />
               <span className="text-[10px] text-slate-500">%</span>
+            </div>
+            {/* Daily-loss halt: a legacy 5-day rule, off on the Desk */}
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="dlh" checked={dailyHalt} onChange={e => setDailyHalt(e.target.checked)} className="accent-amber-500" />
+              <label htmlFor="dlh" className="text-[11px] text-slate-300 flex-1" title="Halt new entries for the day after a −2 % day (legacy 5-day system rule; the Desk has none)">Daily-loss halt −2% (legacy)</label>
             </div>
             {/* Entry timing — removes same-bar look-ahead */}
             <div>
@@ -321,7 +388,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
               <p className="text-[10px] text-slate-500 mt-1">{entryTiming === 'next_open' ? 'Enters next bar — no same-bar look-ahead' : 'Enters on the signal-bar close'}</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <label className="block text-[11px] text-slate-400">Time-Stop (days)
+              <label className="block text-[11px] text-slate-400">Hold (sessions)
                 <input type="number" value={forwardDays} step={1} min={1} max={30}
                   onChange={e => setForwardDays(Math.min(30, Math.max(1, Number(e.target.value))))}
                   className="mt-1 w-full px-2 py-1.5 rounded bg-slate-700/50 border border-slate-600 text-slate-100 text-xs font-mono focus:border-amber-500 outline-none" />
@@ -349,7 +416,9 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                     <div key={def.id} className="rounded-lg p-1.5 hover:bg-slate-700/20">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" checked={!!active} onChange={() => toggleFilter(def.id)} className="accent-amber-500" />
-                        <span className="text-[11px] text-slate-200 flex-1">{def.label}{FUNDAMENTAL.has(def.id) && <span className="ml-1 text-amber-500/70" title="Fundamental snapshot (look-ahead-prone)">⚠</span>}</span>
+                        <span className="text-[11px] text-slate-200 flex-1" title={def.desc}>{def.label}{FUNDAMENTAL.has(def.id) && <span className="ml-1 text-amber-500/70" title="Fundamental snapshot (look-ahead-prone)">⚠</span>}
+                          {def.id === 'prob_up' && <span className="ml-1.5 px-1 text-[9px] font-mono font-bold border border-rose-500/60 text-rose-300"
+                            title="RSCH · ML labels and NSE features: FAIL. The 5-day labels behind this score are flawed and the ML book trails Desk momentum after costs.">RSCH · FAIL</span>}</span>
                       </label>
                       {active && !def.toggle && (
                         <div className="ml-6 mt-1.5 flex gap-1.5 items-center">
@@ -393,6 +462,10 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
             )}
           </div>
 
+          {looksLegacy({ holdSessions: forwardDays, maxPositions, frictionBps: frictionBps ?? MIN_FRICTION_BPS }) && (
+            <p className="text-[10.5px] text-rose-300/90 leading-snug">This is a short-hold or floor-cost setup: the configuration the research FAILED after
+              costs. Read any result as a cost lesson, not an edge.</p>
+          )}
           <button onClick={run} disabled={loading || watchlistEmpty}
             className={clsx('w-full py-3 rounded-xl font-bold uppercase tracking-widest text-sm transition-all',
               loading || watchlistEmpty ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 hover:shadow-lg hover:shadow-amber-500/40')}>
@@ -405,7 +478,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
           {/* Factor Diagnostic Studio — pre-trade threshold discovery (decile IC) */}
           <FactorDiagnosticStudio
             config={{
-              fromDate, toDate, forwardDays, winThreshold, frictionBps,
+              fromDate, toDate, forwardDays, winThreshold, frictionBps: frictionBps ?? MIN_FRICTION_BPS,
               scope, watchlist,
             }}
             onApplyThreshold={applyThreshold}
@@ -423,7 +496,7 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
           {propensityActive && (
             <div className="rounded-lg border border-indigo-600/50 bg-indigo-500/10 px-4 py-2.5 text-[12px] text-indigo-200">
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <span className="font-medium">ƒ ML Signal active — P(up·5d) from a leak-safe holdout model (trained ≤ 2025-05, scored ~last year only).</span>
+                <span className="font-medium">ƒ ML Signal active — P(up·5d) from a leak-safe holdout model (trained ≤ 2025-05, scored ~last year only). RSCH: its 5-day labels FAIL (reports/ml_labels).</span>
                 <label className="flex items-center gap-1.5 text-[11px] font-medium shrink-0">
                   <span className="text-indigo-300/80">Unscored names:</span>
                   <select
@@ -462,7 +535,15 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
             <div className="rounded-xl border border-slate-700/40 bg-gradient-to-br from-slate-800/30 to-slate-900/20 p-16 text-center min-h-[380px] flex flex-col items-center justify-center">
               <div className="text-3xl mb-5 opacity-40 font-mono">◌</div>
               <h2 className="text-lg font-bold text-slate-200 mb-2">Institutional simulation cockpit</h2>
-              <p className="text-sm text-slate-400 max-w-md">Configure capital, friction, stops and filters, then run a compounded, benchmark-relative backtest.</p>
+              <p className="text-sm text-slate-400 max-w-md">Start with the Desk-like baseline: {DESK_LIKE.maxPositions} names, a {DESK_LIKE.holdSessions}-session hold,
+                no per-trade stop{frictionBps != null ? `, ${(frictionBps / 100).toFixed(2)}% a round trip` : ''}, no filters, last year. Then add one filter
+                (for example Price &gt; 200-MA, the evidence-backed veto) and compare the two runs after costs, against the Desk.</p>
+              <button onClick={run} disabled={loading || watchlistEmpty || frictionBps == null}
+                className="mt-5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border border-amber-500/50 text-amber-300 hover:bg-amber-500/10 disabled:opacity-40">
+                ▶ Run the Desk-like baseline
+              </button>
+              <p className="text-[10.5px] text-slate-500 max-w-md mt-3">A backtest describes what a rule did; it predicts nothing until a pre-registered,
+                out-of-sample study passes (RSCH).</p>
             </div>
           )}
 

@@ -8,7 +8,9 @@ import { apiError } from '@/lib/errors'
  * everyone else's bulk buying followed by lagging returns. Click a client to see all their deals.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { getDeals, getShortSelling, type Deal, type ShortRow } from '@/lib/api'
+import { getDeals, getIndexDaily, getShortSelling, type Deal, type ShortRow } from '@/lib/api'
+import { useActiveSymbol } from '@/lib/activeSymbol'
+import { excessVsIndex, isBrokerNotInsurer, isIndexUnderlying, matchedTransfers, volShare } from '@/components/marketPagesModel'
 import { daysUntil, useCorpEvents } from '@/lib/useCorpEvents'
 import { Chip, DataTable, ErrorBox, EventBadge, Input, Loading, PageHeader, Panel, ResearchNote, Stat, T, TickerLink, type Column, fmtPct, fmtPx, sourceOf } from '@/components/terminal'
 
@@ -32,11 +34,18 @@ export function DealsMonitor() {
   const [data, setData] = useState<Awaited<ReturnType<typeof getDeals>>['data'] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const events = useCorpEvents()
+  // shared symbol context (terminal v2 PLAN 1.3, M34): a stock picked here becomes the active symbol; the active one
+  // (from GO, OMON, CHRT…) is one click away
+  const [active, writeActive] = useActiveSymbol()
+  const pickSymbol = (sym: string) => { setQ(sym); writeActive({ symbol: sym }) }
+  // m035: NIFTY closes for the "since the deal" excess
+  const [nifty, setNifty] = useState<{ date: string; close: number }[] | null>(null)
+  useEffect(() => { getIndexDaily('NIFTY50', 60).then(r => setNifty(r.data.rows)).catch(() => setNifty(null)) }, [])
   useEffect(() => {
     const take = () => {
       try {
         const sym = localStorage.getItem(DEAL_KEY)
-        if (sym) { localStorage.removeItem(DEAL_KEY); setQ(sym); setDays(30); setMinValue(1e6); setSide('all') }
+        if (sym) { localStorage.removeItem(DEAL_KEY); setQ(sym); setDays(30); setMinValue(1e6); setSide('all'); writeActive({ symbol: sym }) }
       } catch { /* storage blocked */ }
     }
     take()
@@ -59,24 +68,34 @@ export function DealsMonitor() {
   }, [data, side, q])
 
   const s = data?.summary
+  // m033: a buy and a sell of one stock on one day for the same quantity between two names is one transfer
+  // (BofA Securities Europe ↔ Bank of America N.A.; a promoter → its group company), not two flows
+  const dealKey = (r: Deal) => `${r.date}|${r.symbol}|${r.client_name}|${r.direction}`
+  const matched = useMemo(() => matchedTransfers(data?.rows ?? []), [data])
+  const matchedValue = useMemo(() => (data?.rows ?? []).filter(r => matched.has(dealKey(r))).reduce((a, r) => a + r.value, 0), [data, matched])
   // most active clients in the window: gross value, net direction, how many stocks (the "who is trading" view)
   const clients = useMemo(() => {
     const m = new Map<string, { name: string; gross: number; net: number; stocks: Set<string>; inst: boolean }>()
     for (const r of data?.rows ?? []) {
+      if (matched.has(dealKey(r))) continue
       const k = r.client_name ?? '—'
       const c = m.get(k) ?? { name: k, gross: 0, net: 0, stocks: new Set<string>(), inst: r.institution }
       c.gross += r.value; c.net += r.direction === 'buy' ? r.value : -r.value; c.stocks.add(r.symbol)
       m.set(k, c)
     }
     return [...m.values()].sort((a, b) => b.gross - a.gross).slice(0, 12)
-  }, [data])
+  }, [data, matched])   // eslint-disable-line react-hooks/exhaustive-deps
   const cols: Column<Deal>[] = [
     { key: 'date', label: 'Date', sort: r => r.date, render: r => <span style={{ color: T.text }}>{r.date.slice(5)}</span> },
     { key: 'kind', label: 'Type', sort: r => r.kind, render: r => <span style={{ color: r.kind === 'block' ? T.violet : T.muted, fontSize: 10, letterSpacing: 0.5 }}>{r.kind.toUpperCase()}</span> },
-    { key: 'symbol', label: 'Stock', sort: r => r.symbol, render: r => <TickerLink symbol={r.symbol} /> },
+    { key: 'symbol', label: 'Stock', sort: r => r.symbol, render: r => <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}><TickerLink symbol={r.symbol} />
+        <span role="button" title={`only ${r.symbol}'s deals (and make it the active symbol)`} onClick={e => { e.stopPropagation(); pickSymbol(r.symbol) }} style={{ color: T.dim, cursor: 'pointer', fontSize: 10 }}>⌕</span></span> },
     { key: 'client', label: 'Client', sort: r => r.client_name ?? '', render: r => (
       <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center', maxWidth: 340 }}>
-        {r.institution && <span title="mutual fund / insurer / pension fund" style={{ color: T.cyan, fontSize: 9, border: `1px solid ${T.cyan}`, padding: '0 3px' }}>MF/INS</span>}
+        {/* m032 (display): an insurance BROKER is not an insurer; the shared regex still tags it (patch request) */}
+        {r.institution && !isBrokerNotInsurer(r.client_name) && <span title="mutual fund / insurer / pension fund" style={{ color: T.cyan, fontSize: 9, border: `1px solid ${T.cyan}`, padding: '0 3px' }}>MF/INS</span>}
+        {r.institution && isBrokerNotInsurer(r.client_name) && <span title="an insurance broker, not an insurer: tagged MF/INS by the name rule, shown untagged here" style={{ color: T.dim, fontSize: 9, border: `1px solid ${T.border}`, padding: '0 3px' }}>BROKER</span>}
+        {matched.has(dealKey(r)) && <span title="a buy and a sell of the same quantity on the same day between two names that look like one group: an internal transfer (heuristic), left out of Most active clients" style={{ color: T.violet, fontSize: 9, border: `1px solid ${T.violet}88`, padding: '0 3px' }}>MATCHED</span>}
         <span role="button" title={`all deals by ${r.client_name}`} onClick={e => { e.stopPropagation(); setQ(r.client_name ?? '') }}
               style={{ color: T.text, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.client_name ?? '—'}</span>
       </span>) },
@@ -85,9 +104,16 @@ export function DealsMonitor() {
     { key: 'px', label: 'Avg ₹', align: 'right', sort: r => r.avg_price, render: r => <span style={{ color: T.muted }}>{fmtPx(r.avg_price)}</span> },
     { key: 'value', label: 'Value', align: 'right', sort: r => r.value, render: r => <span style={{ color: r.direction === 'buy' ? T.green : T.red, fontWeight: 600 }}>{cr(r.value)}</span> },
     { key: 'vol', label: '% of day vol', align: 'right', sort: r => r.pct_of_volume ?? -1,
-      render: r => r.pct_of_volume == null ? <span style={{ color: T.dim }}>—</span> : <span style={{ color: r.pct_of_volume >= 25 ? T.amber : T.muted }}>{r.pct_of_volume.toFixed(1)}%</span> },
-    { key: 'since', label: 'Since deal', align: 'right', sort: r => r.since_pct ?? -999,
-      render: r => r.since_pct == null || r.date === r.last_date ? <span style={{ color: T.dim }}>—</span> : <span style={{ color: r.since_pct >= 0 ? T.green : T.red }}>{pct(r.since_pct)}</span> },
+      title: "deal quantity ÷ the day's bhavcopy volume; the block window is not in that volume, so a block can exceed 100 %",
+      render: r => { const v = volShare(r.pct_of_volume)
+        return r.pct_of_volume == null ? <span style={{ color: T.dim }}>—</span>
+          : <span style={{ color: v.capped ? T.dim : r.pct_of_volume >= 25 ? T.amber : T.muted }} title={v.capped ? `${r.pct_of_volume.toFixed(1)} % of the bhavcopy volume: larger than the day's volume (the block window is not in it), so not a share` : undefined}>{v.text}</span> } },
+    // m035: in excess of NIFTY over the same dates (raw on hover); "—" on the deal's own session (no close after it yet)
+    { key: 'since', label: 'Since deal vs NIFTY', align: 'right', sort: r => excessVsIndex(r.since_pct, r.date, r.last_date, nifty) ?? -999,
+      title: '(1 + the stock\'s move since the deal) ÷ (1 + NIFTY\'s) − 1, adjusted closes',
+      render: r => { const x = excessVsIndex(r.since_pct, r.date, r.last_date, nifty)
+        return x == null ? <span style={{ color: T.dim }} title={r.since_pct != null && r.last_date && r.last_date > r.date ? 'NIFTY closes unavailable' : 'no close after the deal yet'}>—</span>
+          : <span style={{ color: x >= 0 ? T.green : T.red }} title={`raw ${pct(r.since_pct)}`}>{pct(x)}</span> } },
     { key: 'event', label: 'Next event', render: r => { const e = events.get(r.symbol)?.[0]; return e ? <EventBadge kind={e.kind} date={e.event_date} days={daysUntil(e.event_date)} typical={e.typical_move_pct} detail={e.detail} /> : <span style={{ color: T.dim }}>—</span> } },
   ]
 
@@ -146,10 +172,12 @@ export function DealsMonitor() {
           )}
           <div style={{ height: 12 }} />
           <Panel source={sourceOf(data?.data_through ?? null, { source: 'NSE deals' })} title={`${rows.length.toLocaleString('en-IN')} deals${data.count > data.rows.length ? ` (newest ${data.rows.length.toLocaleString('en-IN')} of ${data.count.toLocaleString('en-IN')})` : ''}`} pad={0} accent={T.violet}
-            subtitle="click a client to see all their deals · % of day vol ≥ 25% in amber"
+            subtitle={`click a client to see all their deals · % of day vol ≥ 25% in amber${matched.size ? ` · ${matched.size} MATCHED legs (${cr(matchedValue)}) look like same-group transfers` : ''}`}
             right={<div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               {([['all', 'ALL'], ['buy', 'BUYS'], ['sell', 'SELLS'], ['inst', 'MF/INS']] as [Side, string][]).map(([k, l]) =>
                 <Chip key={k} color={k === 'sell' ? T.red : k === 'inst' ? T.cyan : T.green} active={side === k} onClick={() => setSide(k)}>{l}</Chip>)}
+              {active && !isIndexUnderlying(active.symbol) && active.symbol !== q.trim().toUpperCase() && (
+                <Chip color={T.amber} onClick={() => setQ(active.symbol)} title="the active symbol (GO bar, OMON, CHRT…)">◎ {active.symbol}</Chip>)}
               <Input value={q} onChange={setQ} placeholder="stock or client" width={180} />
               {q && <Chip color={T.muted} onClick={() => setQ('')}>✕</Chip>}
             </div>}>
@@ -188,9 +216,11 @@ function ShortSelling() {
     { key: 'move', label: 'Price over window', align: 'right', sort: r => r.move_pct ?? -999, title: 'adjusted close, from the first session of the window to the latest',
       render: r => <span style={{ color: (r.move_pct ?? 0) >= 0 ? T.green : T.red }}>{fmtPct(r.move_pct, 1)}</span> },
   ]
+  // m034: the panel is dated by its newest short-sale row (today's file lands late; the header's date is the deals')
+  const newest = d?.rows.reduce<string | null>((m, r) => (r.last && (!m || r.last > m) ? r.last : m), null) ?? null
   return (
-    <Panel source={sourceOf(d?.data_through ?? null, { source: 'NSE short sales' })} badge="context" title={`Institutional short selling${d ? ` · ${d.count} stocks` : ''}`} accent={T.red} pad={0}
-      subtitle={d ? `NSE short-sale disclosures, ${d.from} → ${d.data_through ?? 'latest'} · ranked by shares shorted as a share of all trading · persistent shorting (many days) in a rising stock can fuel a squeeze` : 'NSE short-sale disclosures'}
+    <Panel source={sourceOf(newest ?? d?.data_through ?? null, { source: 'NSE short sales' })} badge="context" title={`Institutional short selling${d ? ` · ${d.count} stocks` : ''}`} accent={T.red} pad={0}
+      subtitle={d ? `NSE short-sale disclosures, ${d.from} → ${newest ?? d.data_through ?? 'latest'}${newest && d.data_through && newest < d.data_through.slice(0, 10) ? ` (the ${d.data_through.slice(0, 10)} file is not in yet)` : ''} · ranked by shares shorted as a share of all trading` : 'NSE short-sale disclosures'}
       right={<div style={{ display: 'flex', gap: 4 }}>{[5, 20, 60].map(n => <Chip key={n} color={T.red} active={days === n} onClick={() => setDays(n)}>{n} SESSIONS</Chip>)}</div>}>
       {err ? <ErrorBox error={err} /> : !d ? <Loading label="short selling" /> :
         <DataTable columns={cols} rows={d.rows} rowKey={r => r.symbol} dense maxHeight={480} initialSort={{ key: 'pct', dir: 'desc' }}

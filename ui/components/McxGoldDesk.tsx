@@ -22,7 +22,7 @@ import { fmtSigned, fmtSignedInr } from '@/lib/format'   // +₹ / −₹ with U
 import { ContractSelector, frontExpiry } from '@/components/gold/ContractsView'
 import { goToPage } from '@/lib/navigate'
 import { getGoldContracts } from '@/lib/gold/api'
-import { mcxOverlayLine, settlementSourceWords, ticketMargin } from '@/lib/gold/format'
+import { fmtInr0, mcxOverlayLine, settlementSourceWords, ticketMargin } from '@/lib/gold/format'
 import { setGoldSubInUrl, useGoldContract } from '@/lib/gold/prefs'
 import { GOLD_FAMILIES, type ContractFamily, type GoldContractSel } from '@/lib/gold/types'
 
@@ -122,6 +122,7 @@ const CLOSURE_CHIP: Record<string, { label: string; color: string }> = {
 export function overlayText(p: OverlayPayload | null): string {
   if (!p) return 'COMEX × rupee: loading…'
   if (p.line) return p.line.replace(/\s*·\s*GOLD ›\s*$/, '').replace(/\s*·\s*live vs fair[^·]*$/, '')
+    .replace(/₹(\d{1,3}(?:,\d{3})+)(?![\d,])/gu, (_m, n: string) => fmtInr0(Number(n.replace(/,/g, ''))))
   const f = p.overlay
   if (!f) return 'COMEX × rupee: unavailable'
   const line = mcxOverlayLine({

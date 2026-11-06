@@ -75,6 +75,11 @@ const RELEASE_BUILD = process.env.NODE_ENV === 'production'
 /** GC volume ÷ its 20-d average needs a few sessions stored, or the ratio is 1.00× by construction (C-DATA-19) */
 const VOL_AVG_MIN_SESSIONS = 5
 
+/** Today's IST date (YYYY-MM-DD): the tender words compare the tender start with it. */
+function todayIst(): string {
+  return new Date(Date.now() + 5.5 * 3_600_000).toISOString().slice(0, 10)
+}
+
 export function PositioningView(props: GoldSubViewProps) {
   const { layer, catalog } = props
   const tip = useMemo<Tip>(() => (k: string) => tipFor(props.tooltips, BUNDLED, k), [props.tooltips])
@@ -334,7 +339,7 @@ function DailyMcx({ data, error, tip, layer, catalog, family }: DailyProps & { f
   const cols: Column<DailyPositioningRow>[] = [
     { key: 'expiry', label: 'Expiry', render: r => <span style={{ color: T.text }}>{r.expiry ? istLabel(r.expiry) : '—'}</span> },
     { key: 'open_interest', label: 'OI (lots)', align: 'right', title: tip('mcx_oi_by_expiry'), render: r => num(r.open_interest) },
-    { key: 'oi_change', label: 'ΔOI', align: 'right', title: tip('oi_change'), render: r => signed(r.oi_change) },
+    { key: 'oi_change', label: 'ΔOI (this expiry)', align: 'right', title: tip('oi_change'), render: r => signed(r.oi_change) },
     { key: 'settle', label: 'Settle ₹/10 g', align: 'right', title: tip('settlement_from_band'), render: r => <span>{inr(r.settle_or_close)} {r.quality === 'proxy' && <Chip color={T.amber} style={{ fontSize: 8 }}>PROXY</Chip>}</span> },
   ]
   return (
@@ -353,8 +358,8 @@ function DailyMcx({ data, error, tip, layer, catalog, family }: DailyProps & { f
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1.4fr) minmax(260px, 1fr)' }}>
           <div>
             {stack.length > 0 ? <StackedBars rows={stack} keys={expiries.map(e => ({ key: e, label: istLabel(e) }))} height={160} dp={0} label="MCX OI by expiry" /> : <div data-mcx-no-rows style={{ color: T.dim, fontSize: 11 }}>no rows for {fam} yet{data.since ? ` — since ${istLabel(data.since)}` : ' (the 07:35 master job writes one row per expiry per session)'}</div>}
-            {data.roll && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}><span title={tip('roll_ratio')}>roll ratio front ÷ next {num(data.roll.ratio, 2)}</span> · <span title={tip('days_to_tender')} data-days-to-tender>{tenderWords(data.roll.days_to_tender_or_fnd, data.roll.tender_start ? istLabel(data.roll.tender_start) : null)}</span>{data.roll.tender_start && (data.roll.days_to_tender_or_fnd ?? 0) >= 0 ? <span title={tip('tender_start')}> · tender from {istLabel(data.roll.tender_start)} (computed; the MCX circular is the legal source)</span> : null}</div>}
-            {data.quadrant_tape?.length ? <div style={{ marginTop: 8 }}><OiQuadrantTape tape={data.quadrant_tape} tips={tip} missingOiNote={MCX_OI_LAG} /></div> : null}
+            {data.roll && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}><span title={tip('roll_ratio')}>roll ratio front ÷ next {num(data.roll.ratio, 2)}</span> · <span title={tip('days_to_tender')} data-days-to-tender>{tenderWords(data.roll.days_to_tender_or_fnd, data.roll.tender_start ? istLabel(data.roll.tender_start) : null, data.roll, todayIst())}</span>{data.roll.tender_start && !data.roll.in_tender && (data.roll.days_to_tender_or_fnd ?? 0) > 0 ? <span title={tip('tender_start')}> · tender from {istLabel(data.roll.tender_start)} (computed; the MCX circular is the legal source)</span> : null}</div>}
+            {data.quadrant_tape?.length ? <div style={{ marginTop: 8 }}><OiQuadrantTape tape={data.quadrant_tape} tips={tip} missingOiNote={MCX_OI_LAG} oiScope={`all ${fam} expiries`} /></div> : null}
           </div>
           <DataTable columns={cols} rows={ladder} rowKey={r => `${r.symbol_or_product}-${r.expiry}`} dense empty={<div style={{ padding: 8, color: T.dim, fontSize: 11 }}>ladder empty</div>} />
         </div>

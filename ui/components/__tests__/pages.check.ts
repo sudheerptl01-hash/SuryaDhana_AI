@@ -750,5 +750,35 @@ const MINUS = '−'
   check('DESK confirm focuses Cancel once (it re-focused on every DESK re-render)', dd.includes("useEffect(() => { el?.querySelector<HTMLButtonElement>('[data-role=\"cancel-wrap\"] button')?.focus() }, [el])"))
 }
 
+
+// ── 19. page review 5 Nov 2026 (U-PLATFORM): M36 phone mode, m004 no docked banner, M37 strip in the shell ─────────
+{
+  const css = src('app/globals.css')
+  const phone = /@media \(max-width: 720px\) \{\n {2}\/\* header row 1 \*\/([\s\S]*?)\n\}/.exec(css)?.[1] ?? ''
+  check('M36 a ≤ 720 px phone block exists (the 5 Nov globals.css had no layout breakpoint below 720 px)', phone.length > 500)
+  check('M36 phone: one column (every inline grid collapses)', /\.sd-page \[style\*="grid-template-columns"\] \{ grid-template-columns: minmax\(0, 1fr\) !important; \}/.test(phone))
+  check('M36 phone: 44 px targets on the strip, menus, shell buttons and page buttons', /\.sd-pstrip-tab \{ min-height: 44px; min-width: 44px; \}/.test(phone)
+    && /\.sd-menu-row \{ min-height: 44px; \}/.test(phone) && /\.sd-page button, \.sd-page \[role="button"\][^{]*\{ min-height: 44px; \}/.test(phone))
+  check('M36 phone: wide tables scroll inside their own box, with an edge-shadow cue', /\.sd-page \.t-table, \.sd-page table:not\(\.t-table table\) \{\s*display: block; max-width: 100%; overflow-x: auto;/.test(phone)
+    && /radial-gradient\(farthest-side at 100% 50%/.test(phone))
+  check('M36 phone: the header keeps NIFTY whole (brand, lights, clock and the UPDATE DATA word drop)', /\.sd-h-brand, \.sd-h-lights, \.sd-h-clock, \.sd-h-word, \.sd-h-kbd \{ display: none !important; \}/.test(phone)
+    && /\.sd-h-nifty \{ flex: 1 1 auto !important;/.test(phone))
+  check('M36 phone: the page itself is never clipped to pass the width test (no overflow: clip / hidden on .sd-page or html)',
+    !/\.sd-page \{[^}]*overflow-x: (clip|hidden)/.test(phone) && !/html, body \{ overflow-x: hidden/.test(phone))
+  check('negative control: the phone rules are not in a desktop block', !/@media \(max-width: 1240px\) \{[^}]*grid-template-columns: minmax\(0, 1fr\) !important/.test(css))
+  const hdr = src('components/MarketCommandHeader.tsx')
+  check('M36 the header carries the phone hooks (brand, lights, clock, NIFTY, actions)', ['sd-h-brand', 'sd-h-lights', 'sd-h-clock', 'sd-h-nifty', 'sd-h-actions', 'sd-h-word']
+    .every(c => hdr.includes(`"${c}"`) || hdr.includes(`${c}\``) || hdr.includes(` ${c}\``)))
+  check('M36 the page strip has its own class (sd-strip is the desktop title strip: a shared class put the page strip at the top)',
+    hdr.includes('<nav className="sd-pstrip"') && !hdr.includes('className="sd-strip"'))
+  const pg = src('app/page.tsx')
+  check('M36 the status line drops the data date / stock count on a phone, never READY, GO or PAPER', (pg.match(/className="sd-foot-opt"/g) ?? []).length === 3
+    && /footer \.t-hide-md, footer \.sd-foot-opt \{ display: none !important; \}/.test(phone))
+  // m004 / M35: no permanent banner pushes BRF's first row down; a one-time toast offers the import instead
+  const si = src('components/shell/SettingsImport.tsx')
+  check('m004 the import offer is a fixed toast (never in the page flow) and one-time', /position: 'fixed', right: 14, bottom: 32/.test(si) && /writeLocal\(OFFER_KEY, 'seen'\)/.test(si))
+  check('M37 the strip default lives in page.tsx tabList and the header cuts RESEARCH ▾ / MORE ▾ from COMMAND_PAGES', /pages=\{COMMAND_PAGES\}/.test(pg) && !/more=\{COMMAND_PAGES\.filter/.test(pg))
+}
+
 console.log(`${passed} passed, ${failed} failed${pending ? `, ${pending} pending (patch requests)` : ''}`)
 if (failed) process.exit(1)

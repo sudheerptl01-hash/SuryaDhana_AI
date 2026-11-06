@@ -17,7 +17,7 @@ import { apiError } from '@/lib/errors'
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react'
 import { Chip, Loading, PageHeader, T, Tabs } from '@/components/terminal'
 import { getGoldContracts, getGoldOverview, loadCatalog, loadTooltips } from '@/lib/gold/api'
-import { istClock } from '@/lib/gold/format'
+import { autoExpiry, delayedIfOld, istClock } from '@/lib/gold/format'
 import { buildGoldSearch, parseGoldUrl, stripGoldSearch, useGoldContract, useGoldLayer } from '@/lib/gold/prefs'
 import { GOLD_SUBS, type CatalogRow, type ContractFamily, type GoldContractSel, type GoldOverview, type GoldSub, type GoldSubViewProps, type Unit, type Window } from '@/lib/gold/types'
 import { ContractsView } from './ContractsView'
@@ -98,25 +98,6 @@ export function GoldPage() {
     return () => { alive = false }
   }, [])
 
-  // ── the overview (header strip): 60 s, per contract, latest request wins ──────────────────────────
-  const [overview, setOverview] = useState<GoldOverview | null>(null)
-  const [ovError, setOvError] = useState<string | null>(null)
-  const [ovLoading, setOvLoading] = useState(true)
-  const ovSeq = useRef(0)
-  const loadOverview = useCallback(() => {
-    const mine = ++ovSeq.current
-    setOvLoading(true)
-    getGoldOverview({ contract: sel.family, expiry: sel.expiry, window: win })
-      .then(r => { if (mine === ovSeq.current) { setOverview(r.data); setOvError(null) } })
-      .catch((e: unknown) => { if (mine === ovSeq.current) setOvError(apiError(e, 'overview unavailable')) })
-      .finally(() => { if (mine === ovSeq.current) setOvLoading(false) })
-  }, [sel.family, sel.expiry, win])
-  useEffect(() => {
-    loadOverview()
-    const iv = setInterval(() => { if (!document.hidden) loadOverview() }, OVERVIEW_MS)
-    return () => { ovSeq.current++; clearInterval(iv) }
-  }, [loadOverview])
-
   // ── the contract families for the pickers (5 min) ─────────────────────────────────────────────────
   const [families, setFamilies] = useState<ContractFamily[] | null>(null)
   useEffect(() => {
@@ -127,17 +108,45 @@ export function GoldPage() {
     return () => { alive = false; clearInterval(iv) }
   }, [sel.exchange])
 
+  // the page's expiry when none is picked (wave 1e minor): the OI front, unless it is in its tender period — then the next
+  // month, with the reason on the pickers; the OI front stays selectable. The URL and prefs keep 'front (by OI)'.
+  const auto = useMemo(() => autoExpiry(families?.find(f => f.code === sel.family) ?? null), [families, sel.family])
+  const pageSel = useMemo<GoldContractSel>(() => (sel.expiry || !auto.expiry ? sel : { ...sel, expiry: auto.expiry }), [sel, auto.expiry])
+
+  // ── the overview (header strip): 60 s, per contract, latest request wins ──────────────────────────
+  const [overview, setOverview] = useState<GoldOverview | null>(null)
+  const [ovError, setOvError] = useState<string | null>(null)
+  const [ovLoading, setOvLoading] = useState(true)
+  const ovSeq = useRef(0)
+  const loadOverview = useCallback(() => {
+    const mine = ++ovSeq.current
+    setOvLoading(true)
+    getGoldOverview({ contract: pageSel.family, expiry: pageSel.expiry, window: win })
+      .then(r => { if (mine === ovSeq.current) { setOverview(r.data); setOvError(null) } })
+      .catch((e: unknown) => { if (mine === ovSeq.current) setOvError(apiError(e, 'overview unavailable')) })
+      .finally(() => { if (mine === ovSeq.current) setOvLoading(false) })
+  }, [pageSel.family, pageSel.expiry, win])
+  useEffect(() => {
+    loadOverview()
+    const iv = setInterval(() => { if (!document.hidden) loadOverview() }, OVERVIEW_MS)
+    return () => { ovSeq.current++; clearInterval(iv) }
+  }, [loadOverview])
+
   const comexMatched = overview?.contract.comex_matched ?? null
   const usdinr = overview?.strip.usdinr ?? null
   // ONE fair block per page load (C-TRADER-19 / PLAN §f.6): the overview's health.fair (landed, duty-paid landed, basis,
   // settlement, the live legs) feeds every sub-view, so the same rupee prints on HEALTH, PHYSICAL and CONTRACTS
   const fair = overview?.health?.fair ?? null
   const onNavigate = useCallback((s: GoldSub) => setSub(s), [])
-  const viewProps: GoldSubViewProps = { sel, unit, window: win, layer, comexMatched, usdinr, tooltips, catalog, fair, overview, onNavigate, onSel: updateSel }
+  // the overview's load state (wave 1e, M-A): HEALTH / LEARN render overview.health and read /api/gold/health only once the
+  // overview has failed — a page whose strip shows GOLDTEN never prints GOLD's basis in the gauge while the overview loads
+  const overviewStatus: GoldSubViewProps['overviewStatus'] = overview ? 'ok' : ovError ? 'error' : 'loading'
+  const viewProps: GoldSubViewProps = { sel: pageSel, unit, window: win, layer, comexMatched, usdinr, tooltips, catalog, fair, overview, overviewStatus, onNavigate, onSel: updateSel }
   const View = VIEWS[sub]
 
   // the live COMEX leg comes from the desk's cache: its freshness is `fair`'s when the strip has no block of its own
-  const stripFresh = overview?.freshness?.strip ?? overview?.freshness?.comex_live ?? overview?.freshness?.fair ?? null
+  // a leg minutes behind real-time MCX reads DELAYED with its age, never LIVE (wave 1e minor: the Yahoo leg ~10 min behind Breeze)
+  const stripFresh = delayedIfOld(overview?.freshness?.strip ?? overview?.freshness?.comex_live ?? overview?.freshness?.fair ?? null)
   return (
     <div data-gold-page data-gold-sub={sub}>
       <PageHeader code="GOLD" title="Gold terminal"
@@ -148,9 +157,9 @@ export function GoldPage() {
           <Chip color={T.muted} title="PAPER ONLY: nothing on this page feeds the Decision Desk, the S1 shadow, an alert or a ticket price (PLAN 0.1 #7)">PAPER · CONTEXT</Chip>
           <Chip color={T.amber} onClick={loadOverview} title="Re-read the header strip now">↻</Chip>
         </span>} />
-      <HeaderStrip overview={overview} sel={sel} loading={ovLoading} error={ovError} />
+      <HeaderStrip overview={overview} sel={pageSel} loading={ovLoading} error={ovError} />
       <Pickers sel={sel} onSel={updateSel} families={families} unit={unit} onUnit={setUnit} window={win} onWindow={setWin} layer={layer} onLayer={setLayer}
-        comexMatched={comexMatched} />
+        comexMatched={comexMatched} autoExpiry={auto} />
       <div style={{ marginBottom: 10 }}>
         <Tabs items={GOLD_SUBS.map(s => ({ id: s, label: SUB_LABEL[s] }))} active={sub} onChange={setSub} />
       </div>

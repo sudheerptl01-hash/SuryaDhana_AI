@@ -197,11 +197,16 @@ def build_rows() -> list[dict[str, Any]]:
                   note="IV − RV is context, never coloured; rank and percentile both labelled by definition"))
     r.append(_row("iv_event_log", "Results IV-crush ledger", "EVTS,DES", DERIVED, "from nse_results + iv_expiry_daily", "21:30", "daily", 3, "iv_eod", "table",
                   table="iv_event_log", column="first_seen_at", verdict="PUBLISH-CONTEXT", badge="context", note="describes past events, does not forecast the next"))
-    r.append(_row("iv_intraday", "Intraday IV path (15-min Breeze pilot)", "OMON", "ICICI Breeze (chain quotes)", "09:20–15:30 every 15 min", "15:45", "session", 1,
+    r.append(_row("iv_intraday", "Intraday OI / IV tape (Breeze chain: NIFTY, BANKNIFTY, FINNIFTY + watch names)", "OMON,DERV", "ICICI Breeze (chain quotes)",
+                  "09:15–15:30, near expiry every 2 min when the budget allows (tiers planned to the ledger)", "15:45", "session", 1,
                   "iv_intraday", "table", table="iv_intraday", column="ts", unrecoverable=True, verdict="PUBLISH-CONTEXT", badge="context",
-                  note="through the Breeze budget ledger only; skipped without a live session"))
-    r.append(_row("archive:chain", "Raw chain snapshots (parquet parts)", "OMON", "ICICI Breeze", "09:20–15:30 every 15 min", "15:45", "session", 1, "iv_intraday",
+                  note="through the Breeze budget ledger only; skipped without a live session; ICICI codes (BANKNIFTY = CNXBAN)"))
+    r.append(_row("archive:chain", "Raw chain snapshots (parquet parts)", "OMON,DERV", "ICICI Breeze", "09:15–15:30, every tape tick", "15:45", "session", 1, "iv_intraday",
                   "archive", table="../ticks/chain", column="date", unrecoverable=True, verdict="PUBLISH-CONTEXT", badge="context"))
+    r.append(_row("iv_expiry_replay", "Expiry-day straddle replays (Breeze 1-minute bars of past expiries)", "DERV", "ICICI Breeze (historical v2)",
+                  "after the close, on demand (O-T16)", None, "manual", 400, None, "table", table="iv_expiry_replay", column="ts",
+                  verdict="PUBLISH-CONTEXT", badge="context",
+                  note="POST /jobs/expiry-replay (the PM, after the close); 2 metered calls per expiry; XPRY's historical curve"))
     r.append(_row("rate_curve", "Risk-free rate (dated constant; O-T5)", "OMON,OSTR", DERIVED, "dated constant 6.5 %", None, "static", 400, "iv_eod", "table",
                   table="rate_curve", column="date", note="recorded as r on every IV row; a change never rewrites history"))
     # ── PLAN 1.2: the drivers ──────────────────────────────────────────────────────────────────────────────────────

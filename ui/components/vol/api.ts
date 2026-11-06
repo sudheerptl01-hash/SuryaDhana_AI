@@ -68,10 +68,36 @@ export interface IvIntraday extends StoreMeta { symbol: string; date: string | n
 export interface ScreenRow {
   symbol: string; date: string | null; spot: number | null; iv30_cm: number | null; iv_rank_252: number | null; iv_pctile_252: number | null
   rv20_yz: number | null; iv_minus_rv20: number | null; term_slope_30_90: number | null; skew_25d_30: number | null
-  next_results: string | null; results_in_days?: number | null; ban: boolean; mwpl_pct: number | null
+  next_results: string | null; results_in_days?: number | null; ban: boolean | null; mwpl_pct: number | null
+  // fix wave 2 (V-VOL): the spread of record is close-to-close (M01); the other two named beside it; 30→60 for stocks (m070)
+  rv20_cc?: number | null; rv20_parkinson?: number | null; iv60_cm?: number | null; iv_minus_rv20_yz?: number | null
+  iv_minus_rv20_parkinson?: number | null; term_slope_30_60?: number | null; iv30_flat?: boolean; quality_flags?: string | null; mwpl_date?: string | null
+  near_atm_iv?: number | null; near_dte?: number | null; next_atm_iv?: number | null; next_dte?: number | null; term_near_next?: number | null
 }
 export type ScreenSort = 'iv_pctile' | 'iv_rank' | 'iv_minus_rv' | 'term_slope' | 'skew'
-export interface VolScreen extends StoreMeta { as_of: string | null; sort: ScreenSort; results_within: number | null; rows: ScreenRow[]; n: number; definitions: Record<string, string>; badges: Record<string, Badge> }
+export interface VolScreen extends StoreMeta {
+  as_of: string | null; sort: ScreenSort; results_within: number | null; rows: ScreenRow[]; n: number; definitions: Record<string, string>; badges: Record<string, Badge>
+  spread_estimator?: string; ban_date?: string | null; ban_source?: string
+}
+
+/** M02: IV paid at ≈ 30 DTE vs the vol delivered over each NSE monthly option's own life (server-side, iv_expiry_daily + OHLC). */
+export interface PaidDeliveredRow {
+  expiry: string; entry: string; entry_dte: number | null; iv_paid: number | null; rv_delivered: number | null; rv_demeaned: number | null
+  rv_yz: number | null; sessions: number | null; open: boolean; paid_minus_delivered: number | null
+}
+export interface PaidDelivered extends StoreMeta {
+  symbol: string; as_of: string | null; rows: PaidDeliveredRow[]; closed: number; mean_paid_minus_delivered: number | null; paid_above: number
+  estimator: string; entry_dte: number; definition: string; badge: Badge
+  /** round 2: months inside the span with no usable row, each with its reason (never dropped silently) */
+  skipped?: { month: string; expiry: string | null; reason: string }[]
+}
+/** M03: the near expiry's own 25Δ skew series and today's percentile against it. */
+export interface NearSkew extends StoreMeta {
+  symbol: string; as_of: string | null; rows: { date: string; expiry: string | null; dte: number | null; skew_25d: number | null }[]
+  today: number | null; pctile: number | null; window_sessions: number; series: string; definition: string; badge: Badge
+}
+/** M44: NSE Clearing's Contract_Delta per strike for one expiry. */
+export interface ContractDelta extends StoreMeta { symbol: string; as_of: string | null; expiry: string | null; rows: { strike: number; ce: number | null; pe: number | null }[]; n: number; badge: Badge }
 
 export interface OptionHistoryLegacy {
   symbol: string; rows: { date: string; spot: number | null; atm_iv: number | null; pcr: number | null; max_pain: number | null; expiry: string }[]
@@ -88,6 +114,12 @@ export const getIvEvents = (symbol: string, n = 8) => client.get<IvEvents>(`${IV
 export const getIvIntraday = (symbol: string, date?: string) => client.get<IvIntraday>(`${IV_API}/${encodeURIComponent(symbol)}/intraday`, { params: { date } })
 export const getVolScreen = (sort: ScreenSort = 'iv_pctile', resultsWithin?: number | null) =>
   client.get<VolScreen>('/api/derivatives/vol-screen', { params: { sort, results_within: resultsWithin ?? undefined } })
+export const getIvPaidDelivered = (symbol: string, n = 12) =>
+  client.get<PaidDelivered>(`${IV_API}/${encodeURIComponent(symbol)}/paid-delivered`, { params: { n } })
+export const getIvNearSkew = (symbol: string, days = 750) =>
+  client.get<NearSkew>(`${IV_API}/${encodeURIComponent(symbol)}/near-skew`, { params: { days } })
+export const getIvContractDelta = (symbol: string, expiry?: string | null, date?: string | null) =>
+  client.get<ContractDelta>(`${IV_API}/${encodeURIComponent(symbol)}/contract-delta`, { params: { expiry: expiry ?? undefined, date: date ?? undefined } })
 export const getOptionHistoryLegacy = (symbol: string, days = 260) =>
   client.get<OptionHistoryLegacy>(`/api/market/option-history/${encodeURIComponent(symbol)}`, { params: { days } })
 

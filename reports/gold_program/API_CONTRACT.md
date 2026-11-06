@@ -626,6 +626,76 @@ than 15 min after the close is kept 8 h; every (contract, expiry, session) gets 
 **MACRO (D6).** For a true twin (Brent, 10-y real, 2-y, GVZ) the fresher stored AND published alternate wins over the primary,
 `label_note` "X: fresher than Y (last …)"; Brent's alternate is `BRENT_FRONT` (BZ=F daily), no longer `WTI_FRONT`.
 
+## 7d. Wave 1e (6 Nov 2026) — the final critics (C-DATA-3 / C-TRADER-3, PUBLISH-WITH-FIXES)
+
+**M-A · one India basis per clock per page, for the PICKED contract.** `/health` takes `contract` (default `GOLD`) and `expiry`
+(default the front by OI), like `/overview`; the memo key is (contract, expiry, window). While MCX trades
+(`mcx_is_open`: shared/mcx_specs.session_state, the Muhurat window included) `/health` with a `contract` (or `expiry`) reads
+the contract's quote once (`mcx.mcx_quote`, its 15 s cache, at most 12 s) and folds it in with the SAME function `/overview` uses
+(`gold.fold_live_quote` → `apply_live_mcx`); outside the window no quote is read and the gauge stays at the settlement clock; the default `/health` (no `contract`: the
+polled WEI / BRF echo) reads no quote of its own and folds only one the quote cache already holds. So
+`/health?contract=X&expiry=Y` = `/overview?contract=X&expiry=Y`.`health`, and on either payload strip `basis_pct` = gauge
+`india_basis.value` = the H4 clause's `value`. New top-level key `live_quote` {mcx_live, source, as_of, is_open, applied} on
+`/health` and on `/overview.health`. The `india_basis` gauge adds `clock_label` — render it verbatim: `LIVE · GOLDTEN NOV-26 ·
+09:16 IST` (the quote's own minute) or `SETTLEMENT · VWAP30 PROXY · Thu 05 Nov` (`BAND PROXY` for the band midpoint, `STORED`
+for the derive row) — and `mcx_live_as_of`. The H4 clause adds `clock_label` and `basis_contract`; its text names the contract:
+`India basis +0.9 % vs duty-paid landed 999 (live) on GOLDTEN NOV-26`. G2-UI renders `overview.health` (one load with the
+strip); `/health?contract=` serves any other consumer the same numbers.
+
+**Breeze times are IST.** `mcx_live_as_of` (fair block, strip, gauge, `live_quote.as_of`) parses Breeze's zone-less wall time
+as IST (`gold._iso_ist`: `2026-11-06 09:16:00` → `2026-11-06T09:16:00+05:30`; it was read as UTC, `14:46 +05:30`); a stamp
+more than 2 minutes after the read is dropped (`null`), never served.
+
+**M-B · one real yield per page.** `gold.pick_twin` is MACRO's fresher-twin rule (D6) and the only one: the HEALTH `real_yield`
+tile (`series_id` = the series shown, `primary_series_id`, `label_note` 'UST_REAL_10Y: fresher than FRED_DFII10 (last …)',
+`instrument`), the H2 clause (`series_id` / `real_yield_series_id`, `real_yield_value`, `real_yield_date`,
+`real_yield_change_bp`; the text is dated: `real yield −3 bp (to Thu 5 Nov)`) and the header strip (`real_10y` /
+`real_10y_date` are the tile's own; adds `real_10y_series_id`, `real_10y_source`). The 2-y has no HEALTH or strip twin (MACRO
+only). MACRO drivers add `instrument`, `source_label` and `same_level` (False for Brent's BZ=F future vs dated spot); Brent's
+tile label is `Brent front future (BZ=F)` when the future is shown. MACRO's `label_note` is the served text — render it.
+
+**M-C · the Shanghai premium equals its printed legs.** `gold.shanghai_pairs` recomputes every same-date pair from the legs
+PHYSICAL prints — SGE PM (CNY/g) × 31.1035 ÷ USDCNY (latest vintage on/before the SGE date) − LBMA PM of that date — and
+keeps the stored derive only where a leg is missing (`history[].source` `legs` | `stored`, `history[].stored_usd`).
+`/premiums.shanghai` adds `premium_usd_stored`, `premium_source`, `reconciles` (|`sge_usd_oz` − `london_pm_usd` −
+`premium_usd`| < 0.1), `recompute_note` (when the stored derive used an earlier USDCNY vintage) and `usdcny_as_of` (the
+vintage's stored time). The HEALTH `shanghai` tile is built on the same pairs (adds `premium_source`, `sge_usd_oz`,
+`london_pm_usd`, `usdcny`, `usdcny_date`, `premium_usd_stored`), so the tile and the hero print one number. data-service:
+`derive.derive_shanghai` re-derives the pair right after the 03:10 `yahoo_daily` group when CNY=X was fetched
+(`shanghai_rederive` in the group result), not only at 21:30.
+
+**M-D · the Muhurat session is a session.** `shared/mcx_specs.SPECIAL_SESSIONS_2026` rows carry `opens` / `closes` /
+`pre_open` / `circular` (Sun 8 Nov 2026: 14:20–15:30, pre-open 14:05–14:19, MCX/TRD/590/2026); `trading_window` returns the
+window, `is_session_day` / `special_session_on` are new, `session_state` adds `special` (served as `/overview`
+`session.mcx.special` and on `/api/mcx/session`). Every session rule follows:
+`gold_preopen.previous_session` (Mon 9 Nov → Sun 8 Nov), `band_session` (the Mon 9 file's band is centred on Fri 6, the Tue
+10 file's on Sun 8), `latest_completed_session` (Mon 9 08:45 → Sun 8), `session_close_at` (15:30, so the VWAP30 window is
+15:00–15:30); data-service `ingest_india.previous_mcx_session` / `band_session`, `mcx_close` (and its Mon–Fri 23:58 run also
+stores a special session of the last 4 days), the OI-delta `sessions_spanned`. `gold_preopen.mcx_day` adds `special` and a
+note naming the circular; the 08:45 snapshot refuses a special-session day without `force` (no 09:00 open). The `/fair`
+baseline adds `expected_session`, `expected_session_label`, `older_than_expected`, `older_note` ('baseline session older than
+expected: the Fri 06 Nov settlement is used, but the latest completed session is the Sun 08 Nov settlement (Muhurat …) and no
+last-30-min VWAP is stored or read for it …'); the accuracy-log row adds `baseline_expected_session`,
+`baseline_older_than_expected`, `baseline_note`. The MCX_SPECIAL calendar row carries `time_ist` 14:20 and `time_note`.
+
+**M-E · server-side minors.** `/bars`: a bar keeps the store's `partial` flag (and `volume_repeat`); an open or close outside
+[low, high] is withheld (`o` null, `o_raw`, `ohlc_note`) — the partial Thu 05 Nov GC=F bar's copied Wed open; `daily_closes`
+use the store's `partial` first (`partial_source` `store` | `clock rule`). `/positioning/daily?exchange=MCX` `roll` adds
+`days_in_tender` (print `tender_note` while `in_tender`, never words from the clamped 0); `tender_state` adds `tender_start`.
+The settlement block's `settlement_check` now validates the band against the last-30-min VWAP of the band's OWN session
+(`gold_preopen.band_check`: the latest VWAP when the band is the latest session's, else the cached / stored previous one;
+`same_session` true) — it compared the band of S−1 with the VWAP of S, i.e. measured S's move (−0.60 % against the 0.6 % limit
+on 6 Nov). Without that VWAP there is no check (`band_vs_vwap30_pct` null, never flagged, `note` says why) and the cross-session
+gap is served as a MOVE: `session_move_pct`, `session_move_label` ('Wed 04 Nov → Thu 05 Nov settlement move (band midpoint →
+last-30-min VWAP)'), carried with the settlement keys (`mcx.SETTLE_KEYS`: fair block, strip, MCXG fallbacks).
+`/premiums.india` adds `contract`, `expiry`, `settlement_source`, `settlement_quality`, `settlement_session`,
+`settlement_session_label` (the PHYSICAL basis line's source under GOLDTEN). `/macro.fed.zq[]` adds `contract`,
+`month_guess`, `observed`, `effr`, `rolled_suspect`, `note`: the continuous ZQ=F is labelled by the observation month only when
+it is consistent with EFFR or a decision falls in the month, else `likely DEC-26 (ZQ=F rolled)`; `fed.meetings[]` adds
+`mean_rate_pct` (the tracker's mean is a level, 416 bp = 4.16 %). `/fair.freshness` turns `delayed` past 5 minutes with
+`delay_min` and `chip` ('COMEX ≈11 min delayed (Yahoo)'). Calendar rows add `timing_label` for an untimed row ('all day',
+'MCX morning session closed (evening session from 17:00)') — never an after-close guess.
+
 ## 8. Key inventory (generated)
 
 <!-- generated: key inventory — begin -->
@@ -660,6 +730,7 @@ calendar[].source: string
 calendar[].star: bool
 calendar[].time_ist: string
 calendar[].time_note: string
+calendar[].timing_label: null
 contract: object
 contract.band: object
 contract.band.band_high: number
@@ -708,8 +779,12 @@ fair.baseline.band_midpoint: number
 fair.baseline.band_session: string
 fair.baseline.band_session_label: string
 fair.baseline.close_time: string
+fair.baseline.expected_session: string
+fair.baseline.expected_session_label: string
 fair.baseline.latest_session: string
 fair.baseline.master_published: string
+fair.baseline.older_note: string
+fair.baseline.older_than_expected: bool
 fair.baseline.session: string
 fair.baseline.session_label: string
 fair.baseline.settlement_check: object
@@ -717,6 +792,7 @@ fair.baseline.settlement_check.band_vs_vwap30_pct: null
 fair.baseline.settlement_check.compared: null
 fair.baseline.settlement_check.flagged: bool
 fair.baseline.settlement_check.note: string
+fair.baseline.settlement_check.same_session: bool
 fair.baseline.settlement_check.threshold_pct: number
 fair.baseline.settlement_from_band: number
 fair.baseline.settlement_method: string
@@ -892,12 +968,15 @@ health.fair.premium_pct: null
 health.fair.premium_rupees: null
 health.fair.purity: number
 health.fair.quote_unit: string
+health.fair.session_move_label: null
+health.fair.session_move_pct: null
 health.fair.settlement: number
 health.fair.settlement_check: object
 health.fair.settlement_check.band_vs_vwap30_pct: null
 health.fair.settlement_check.compared: null
 health.fair.settlement_check.flagged: bool
 health.fair.settlement_check.note: string
+health.fair.settlement_check.same_session: bool
 health.fair.settlement_check.threshold_pct: number
 health.fair.settlement_is_latest: bool
 health.fair.settlement_method: string
@@ -938,6 +1017,7 @@ health.gauges[].chg_5d: number
 health.gauges[].chg_long: number
 health.gauges[].chg_short: number
 health.gauges[].clock: string
+health.gauges[].clock_label: string
 health.gauges[].cot_index_52: number
 health.gauges[].days_to_fnd: number
 health.gauges[].direction_for_gold: null|string
@@ -956,8 +1036,10 @@ health.gauges[].high_52w: number
 health.gauges[].ibja_premium_date: string
 health.gauges[].ibja_premium_note: string
 health.gauges[].ibja_premium_pct: number
+health.gauges[].instrument: string
 health.gauges[].key: string
 health.gauges[].label: string
+health.gauges[].label_note: null
 health.gauges[].last_bar_note: null
 health.gauges[].last_bar_partial: bool
 health.gauges[].last_bar_partial_source: string
@@ -966,10 +1048,12 @@ health.gauges[].ltd_date: null
 health.gauges[].ma20: number
 health.gauges[].ma200: number
 health.gauges[].mcx_live: null
+health.gauges[].mcx_live_as_of: null
 health.gauges[].net_pct_oi: number
 health.gauges[].next: string
 health.gauges[].percentile_1y: null|number
 health.gauges[].percentile_3y: null|number
+health.gauges[].primary_series_id: string
 health.gauges[].purity: number
 health.gauges[].read_from: string
 health.gauges[].release_at: null|string
@@ -986,6 +1070,7 @@ health.gauges[].settlement_check.band_vs_vwap30_pct: null
 health.gauges[].settlement_check.compared: null
 health.gauges[].settlement_check.flagged: bool
 health.gauges[].settlement_check.note: string
+health.gauges[].settlement_check.same_session: bool
 health.gauges[].settlement_check.threshold_pct: number
 health.gauges[].settlement_quality: string
 health.gauges[].settlement_session_label: string
@@ -1007,12 +1092,22 @@ health.line: string
 health.lines: object
 health.lines.brf: string
 health.lines.wei: string
+health.live_quote: object
+health.live_quote.applied: bool
+health.live_quote.as_of: null
+health.live_quote.is_open: bool
+health.live_quote.mcx_live: null
+health.live_quote.source: null
 health.store_errors: null
 health.verdict: object
 health.verdict.badge: string
 health.verdict.clauses: array
 health.verdict.clauses[]: object
 health.verdict.clauses[].note: null
+health.verdict.clauses[].real_yield_change_bp: number
+health.verdict.clauses[].real_yield_date: string
+health.verdict.clauses[].real_yield_series_id: string
+health.verdict.clauses[].real_yield_value: number
 health.verdict.clauses[].rule_id: string
 health.verdict.clauses[].rule_part: string
 health.verdict.clauses[].series_id: string
@@ -1087,12 +1182,15 @@ quote.fallbacks.fair_value.latest_session_label: string
 quote.fallbacks.fair_value.purity: number
 quote.fallbacks.fair_value.quote_unit: string
 quote.fallbacks.fair_value.ref_close_at: string
+quote.fallbacks.fair_value.session_move_label: null
+quote.fallbacks.fair_value.session_move_pct: null
 quote.fallbacks.fair_value.settlement: number
 quote.fallbacks.fair_value.settlement_check: object
 quote.fallbacks.fair_value.settlement_check.band_vs_vwap30_pct: null
 quote.fallbacks.fair_value.settlement_check.compared: null
 quote.fallbacks.fair_value.settlement_check.flagged: bool
 quote.fallbacks.fair_value.settlement_check.note: string
+quote.fallbacks.fair_value.settlement_check.same_session: bool
 quote.fallbacks.fair_value.settlement_check.threshold_pct: number
 quote.fallbacks.fair_value.settlement_is_latest: bool
 quote.fallbacks.fair_value.settlement_method: string
@@ -1115,12 +1213,15 @@ quote.fallbacks.settlement.band_session: string
 quote.fallbacks.settlement.band_session_label: string
 quote.fallbacks.settlement.latest_session: string
 quote.fallbacks.settlement.latest_session_label: string
+quote.fallbacks.settlement.session_move_label: null
+quote.fallbacks.settlement.session_move_pct: null
 quote.fallbacks.settlement.settlement: number
 quote.fallbacks.settlement.settlement_check: object
 quote.fallbacks.settlement.settlement_check.band_vs_vwap30_pct: null
 quote.fallbacks.settlement.settlement_check.compared: null
 quote.fallbacks.settlement.settlement_check.flagged: bool
 quote.fallbacks.settlement.settlement_check.note: string
+quote.fallbacks.settlement.settlement_check.same_session: bool
 quote.fallbacks.settlement.settlement_check.threshold_pct: number
 quote.fallbacks.settlement.settlement_is_latest: bool
 quote.fallbacks.settlement.settlement_method: string
@@ -1148,6 +1249,7 @@ session.mcx.opens_at: string
 session.mcx.seconds_to_close: number
 session.mcx.seconds_to_open: null
 session.mcx.segment: string
+session.mcx.special: null
 session.mcx.weekend: bool
 strip: object
 strip.band_applies_to: string
@@ -1203,12 +1305,17 @@ strip.mcx_shown: string
 strip.purity: number
 strip.real_10y: number
 strip.real_10y_date: string
+strip.real_10y_series_id: string
+strip.real_10y_source: string
+strip.session_move_label: null
+strip.session_move_pct: null
 strip.settlement: number
 strip.settlement_check: object
 strip.settlement_check.band_vs_vwap30_pct: null
 strip.settlement_check.compared: null
 strip.settlement_check.flagged: bool
 strip.settlement_check.note: string
+strip.settlement_check.same_session: bool
 strip.settlement_check.threshold_pct: number
 strip.settlement_is_latest: bool
 strip.settlement_method: string
@@ -1274,12 +1381,15 @@ fair.premium_pct: null
 fair.premium_rupees: null
 fair.purity: number
 fair.quote_unit: string
+fair.session_move_label: null
+fair.session_move_pct: null
 fair.settlement: number
 fair.settlement_check: object
 fair.settlement_check.band_vs_vwap30_pct: null
 fair.settlement_check.compared: null
 fair.settlement_check.flagged: bool
 fair.settlement_check.note: string
+fair.settlement_check.same_session: bool
 fair.settlement_check.threshold_pct: number
 fair.settlement_is_latest: bool
 fair.settlement_method: string
@@ -1320,6 +1430,7 @@ gauges[].chg_5d: number
 gauges[].chg_long: number
 gauges[].chg_short: number
 gauges[].clock: string
+gauges[].clock_label: string
 gauges[].cot_index_52: number
 gauges[].days_to_fnd: number
 gauges[].direction_for_gold: null|string
@@ -1338,8 +1449,10 @@ gauges[].high_52w: number
 gauges[].ibja_premium_date: string
 gauges[].ibja_premium_note: string
 gauges[].ibja_premium_pct: number
+gauges[].instrument: string
 gauges[].key: string
 gauges[].label: string
+gauges[].label_note: null
 gauges[].last_bar_note: null
 gauges[].last_bar_partial: bool
 gauges[].last_bar_partial_source: string
@@ -1348,10 +1461,12 @@ gauges[].ltd_date: null
 gauges[].ma20: number
 gauges[].ma200: number
 gauges[].mcx_live: null
+gauges[].mcx_live_as_of: null
 gauges[].net_pct_oi: number
 gauges[].next: string
 gauges[].percentile_1y: null|number
 gauges[].percentile_3y: null|number
+gauges[].primary_series_id: string
 gauges[].purity: number
 gauges[].read_from: string
 gauges[].release_at: null|string
@@ -1368,6 +1483,7 @@ gauges[].settlement_check.band_vs_vwap30_pct: null
 gauges[].settlement_check.compared: null
 gauges[].settlement_check.flagged: bool
 gauges[].settlement_check.note: string
+gauges[].settlement_check.same_session: bool
 gauges[].settlement_check.threshold_pct: number
 gauges[].settlement_quality: string
 gauges[].settlement_session_label: string
@@ -1389,12 +1505,22 @@ line: string
 lines: object
 lines.brf: string
 lines.wei: string
+live_quote: object
+live_quote.applied: bool
+live_quote.as_of: null
+live_quote.is_open: bool
+live_quote.mcx_live: null
+live_quote.source: null
 store_errors: null
 verdict: object
 verdict.badge: string
 verdict.clauses: array
 verdict.clauses[]: object
 verdict.clauses[].note: null
+verdict.clauses[].real_yield_change_bp: number
+verdict.clauses[].real_yield_date: string
+verdict.clauses[].real_yield_series_id: string
+verdict.clauses[].real_yield_value: number
 verdict.clauses[].rule_id: string
 verdict.clauses[].rule_part: string
 verdict.clauses[].series_id: string
@@ -1440,8 +1566,12 @@ baseline.band_midpoint: number
 baseline.band_session: string
 baseline.band_session_label: string
 baseline.close_time: string
+baseline.expected_session: string
+baseline.expected_session_label: string
 baseline.latest_session: string
 baseline.master_published: string
+baseline.older_note: string
+baseline.older_than_expected: bool
 baseline.session: string
 baseline.session_label: string
 baseline.settlement_check: object
@@ -1449,6 +1579,7 @@ baseline.settlement_check.band_vs_vwap30_pct: null
 baseline.settlement_check.compared: null
 baseline.settlement_check.flagged: bool
 baseline.settlement_check.note: string
+baseline.settlement_check.same_session: bool
 baseline.settlement_check.threshold_pct: number
 baseline.settlement_from_band: number
 baseline.settlement_method: string
@@ -1599,6 +1730,7 @@ daily_closes[].close: number
 daily_closes[].date: string
 daily_closes[].label: string
 daily_closes[].partial: bool
+daily_closes[].partial_source: string
 day: string
 freshness: object
 freshness.age_s: number
@@ -1622,6 +1754,7 @@ prev_close.close: number
 prev_close.date: string
 prev_close.label: string
 prev_close.partial: bool
+prev_close.partial_source: string
 prev_day: array
 prev_day[]: object
 prev_day[].c: number
@@ -1850,6 +1983,7 @@ freshness.state: string
 quadrant_tape: array
 read: string
 roll: object
+roll.days_in_tender: null
 roll.days_to_tender_or_fnd: null
 roll.days_unit: string
 roll.expiry: null
@@ -1965,6 +2099,7 @@ basis.settlement_check.band_vs_vwap30_pct: null
 basis.settlement_check.compared: null
 basis.settlement_check.flagged: bool
 basis.settlement_check.note: string
+basis.settlement_check.same_session: bool
 basis.settlement_check.threshold_pct: number
 basis.ts: string
 basis.ts_note: string
@@ -2119,6 +2254,7 @@ india.basis_reference: string
 india.basis_source: string
 india.carry_adj_pct: null
 india.clock_note: string
+india.contract: string
 india.duty: object
 india.duty.effective: string
 india.duty.history: array
@@ -2128,6 +2264,7 @@ india.duty.history[].pct: number
 india.duty.note: string
 india.duty.notification: string
 india.duty.pct: number
+india.expiry: string
 india.fineness_adjustment: string
 india.freshness: object
 india.freshness.age_s: number
@@ -2153,6 +2290,7 @@ india.ladder[].settlement_check.band_vs_vwap30_pct: null
 india.ladder[].settlement_check.compared: null
 india.ladder[].settlement_check.flagged: bool
 india.ladder[].settlement_check.note: string
+india.ladder[].settlement_check.same_session: bool
 india.ladder[].settlement_check.threshold_pct: number
 india.ladder[].settlement_quality: string
 india.ladder[].settlement_source: string
@@ -2169,6 +2307,10 @@ india.premium_clock: string
 india.premium_date: string
 india.premium_note: null
 india.premium_pct: number
+india.settlement_quality: string
+india.settlement_session: string
+india.settlement_session_label: string
+india.settlement_source: string
 india.unit: string
 india.unit_note: null
 reference: object
@@ -2194,7 +2336,11 @@ shanghai.note: null
 shanghai.pair_date: null
 shanghai.pairing: null
 shanghai.premium_pct: null
+shanghai.premium_source: null
 shanghai.premium_usd: null
+shanghai.premium_usd_stored: null
+shanghai.recompute_note: null
+shanghai.reconciles: null
 shanghai.sge_latest_cny_g: null
 shanghai.sge_latest_date: null
 shanghai.sge_pm_cny_g: null
@@ -2203,6 +2349,7 @@ shanghai.sge_usd_oz: null
 shanghai.ts_ref: null
 shanghai.ts_sge: null
 shanghai.usdcny: null
+shanghai.usdcny_as_of: null
 shanghai.usdcny_date: null
 shanghai.usdcny_source: null
 store_errors: null
@@ -2375,13 +2522,16 @@ drivers[].d1m: number
 drivers[].d1w: number
 drivers[].d_window: number
 drivers[].evidence: string
+drivers[].instrument: null|string
 drivers[].key: string
 drivers[].label: string
 drivers[].label_note: null
 drivers[].pct_1y: number
 drivers[].report_date: string
 drivers[].rule: string
+drivers[].same_level: bool
 drivers[].series_id: string
+drivers[].source_label: null|string
 drivers[].state: string
 drivers[].tag: null|string
 drivers[].tag_note: null
@@ -2494,6 +2644,7 @@ events[].source: string
 events[].star: bool
 events[].time_ist: null|string
 events[].time_note: string
+events[].timing_label: null|string
 freshness: object
 freshness.age_s: number
 freshness.as_of: string

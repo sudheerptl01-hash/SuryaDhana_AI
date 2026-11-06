@@ -217,7 +217,7 @@ def failure_lines(telemetry: Optional[dict], logs: Optional[list[str]], monday: 
     # Healthy statuses observed from the controller: "done" (its actual word — PM integration
     # caught the 15 Oct false positive where every successful job was reported as errored),
     # plus ok/success for safety and None for never-ran. Anything else surfaces.
-    bad = [j["id"] for j in jobs if j.get("last_status") not in (None, "ok", "success", "done")]
+    bad = [j["id"] for j in jobs if j.get("last_status") not in (None, "ok", "success", "done", "no new data", "skipped")]
     if bad:
         out.append(f"- Jobs whose LAST run errored: {', '.join(sorted(bad))}")
     errors: dict[str, int] = {}

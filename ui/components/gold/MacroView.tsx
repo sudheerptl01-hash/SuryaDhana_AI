@@ -32,7 +32,8 @@ import tooltipsJson from '@/lib/gold/tooltips.json'
 import { KgxBar } from './KgxBar'
 import { LineChart, SmallMultiple } from './FlowCharts'
 import { Attribution, Degraded, Field, GPanel, Term, contextTone, useGoldLoad } from './ViewBits'
-import { DRIVER_RULES, LOT_MULTIPLIER, betaText, driverDelta, driverTag, driverTileLabel, inr, istLabel, kgxUnavailableNote, latestDate, num, pct, serverFreshness, sigmaPerLot, signed, signedPct, usd } from './goldViewModel'
+import { DRIVER_RULES, LOT_MULTIPLIER, betaText, driverDelta, driverInstrumentNote, driverNote, driverSources, driverTag, driverTileLabel, fedMeanText, inr, istLabel, kgxUnavailableNote, kgxWindowCaption, latestDate, num, pct, serverFreshness, sigmaPerLot, signed, signedPct, usd, zqLabel } from './goldViewModel'
+import { eventSessionTag, pageRealYield, realYieldMismatch } from '@/lib/gold/format'
 
 const BUNDLED = (tooltipsJson as { tooltips: Record<string, string> }).tooltips
 const FAMILIES = ['GOLD', 'GOLDM', 'GOLDTEN', 'GOLDGUINEA', 'GOLDPETAL'] as const
@@ -73,6 +74,10 @@ export function MacroView(props: GoldSubViewProps) {
   // the dollar driver as served (DXY_CLOSE, or the Fed broad index when the DXY series has no points): the KGX note names it
   const dollar = m?.drivers.find(d => d.key === 'dxy') ?? null
   const kgxNote = m?.kgx ? kgxUnavailableNote(m.kgx.usd_effect_pct, dollar) : null
+  // ONE 10-y real yield per page (wave 1e, M-B): the header strip / HEALTH point this tile must equal; a mismatch is said
+  const pageRy = useMemo(() => pageRealYield(props.overview?.strip, props.overview?.health), [props.overview])
+  // HEALTH's window start (the TREND gauge's), so the KGX caption compares like with like (wave 1e minor)
+  const healthFrom = (props.overview?.health?.gauges ?? []).find(g => g.key === 'trend')?.window_from ?? null
 
   // gold USD vs gold-in-basket, rebased to 100 over the window (gold-in-basket = gold × DXY ÷ DXY₀: the dollar's own move removed)
   const rebasedSeries = useMemo(() => {
@@ -96,7 +101,11 @@ export function MacroView(props: GoldSubViewProps) {
     { key: 'forecast', label: 'Consensus', align: 'right', title: tip('cal_consensus'), render: r => r.forecast ?? '—' },
     { key: 'previous', label: 'Previous', align: 'right', render: r => r.previous ?? '—' },
     { key: 'actual', label: 'Actual', align: 'right', render: r => r.actual ?? '—' },
-    { key: 'in_session', label: 'MCX', title: tip('cal_in_session'), render: r => r.in_session == null ? '—' : <Chip color={r.in_session ? T.cyan : T.amber} style={{ fontSize: 8.5 }}>{r.in_session ? 'IN SESSION' : 'AFTER CLOSE · gap risk'}</Chip> },
+    { key: 'in_session', label: 'MCX', title: tip('cal_in_session'), render: r => {
+      // untimed rows are 'ALL DAY' / a closure, never 'AFTER CLOSE · gap risk' (wave 1e minor)
+      const tag = eventSessionTag({ time_ist: r.time_ist ?? null, kind: r.kind ?? '', name: r.title ?? r.name ?? '', in_session: r.in_session ?? null, after_close: r.after_close ?? null })
+      return tag ? <Chip color={tag.text === 'IN SESSION' ? T.cyan : tag.text.startsWith('AFTER CLOSE') ? T.amber : T.muted} style={{ fontSize: 8.5 }}>{tag.text}</Chip> : '—'
+    } },
   ]
 
   return (
@@ -116,16 +125,22 @@ export function MacroView(props: GoldSubViewProps) {
                 const tag = driverTag(d.tag)                                   // the server's tag; null → neutral (no client rule)
                 const rule = d.rule ?? DRIVER_RULES[d.key] ?? 'no sign rule'   // the server's rule text; the local table only when absent
                 const label = driverTileLabel(d)                                // the series the server used, never the key's nominal name
-                const fallback = !!d.series_id && label !== (d.label ?? d.key)   // e.g. the Fed broad index standing in for DXY
+                // the served label_note verbatim (a fresher twin of the same quantity, or a stand-in of another), the instrument when
+                // it is a future, and — on the real yield — whether the header strip prints the same point (wave 1e, M-B)
+                const note = driverNote(d)
+                const instrument = driverInstrumentNote(d)
+                const ryOff = d.key === 'real_10y' ? realYieldMismatch(pageRy, d) : null
                 return (
-                  <Stat key={d.key} label={<span title={tip(DRIVER_TIP[d.key] ?? d.key)} data-driver-label={d.series_id ?? d.key}>{label}</span>}
+                  <Stat key={d.key} label={<span title={tip(DRIVER_TIP[d.key] ?? d.key)} data-driver-label={d.series_id ?? d.key} data-driver-print={d.key === 'real_10y' && d.value != null ? `${num(d.value, 2)} %${d.report_date ? ` · ${istLabel(d.report_date)}` : ''}` : undefined}>{label}</span>}
                     value={d.state === 'unavailable' && d.value == null ? '—' : fmtDriver(d, d.value)} color={contextTone} big={false}
                     sub={<span>
                       {d.state === 'unavailable' && d.value == null && <span style={{ color: T.amber }}>{d.series_id ?? d.key}: no stored points · </span>}
                       <span title={tip('d1')}>1d {fmtDelta(d, d.d1)}</span> · <span title={tip('d1w')}>1w {fmtDelta(d, d.d1w)}</span> · <span title={tip('d1m')}>1m {fmtDelta(d, d.d1m)}</span>
                       {d.pct_1y != null && <span title={tip('pct_1y')}> · percentile {num(d.pct_1y, 0)} (1 y)</span>}
                       {d.report_date && <span> · {istLabel(d.report_date)}</span>}
-                      {fallback && <span style={{ color: T.amber }} data-driver-fallback={d.series_id ?? ''}> · stand-in for {d.label ?? d.key}: {d.series_id} (the primary series has no stored points)</span>}
+                      {instrument && <span style={{ color: T.muted }} data-driver-instrument={d.series_id ?? ''}> · {instrument}</span>}
+                      {note && <span style={{ color: note.tone === 'amber' ? T.amber : T.dim }} data-driver-fallback={d.series_id ?? ''}> · {note.text}</span>}
+                      {ryOff && <span style={{ color: T.amber }} data-driver-ry-mismatch> · {ryOff}</span>}
                       <br />
                       <span title={tip('corr_60d')}>ρ60d {signed(d.corr_60d, 2)}</span> ·{' '}
                       <span title={`${tip('driver_tag') ?? ''} rule: ${rule}`} data-driver-tag={tag} style={{ color: tag === 'neutral' ? T.dim : T.text, textTransform: 'uppercase', letterSpacing: .6 }}>{tag}</span>
@@ -135,7 +150,7 @@ export function MacroView(props: GoldSubViewProps) {
               })}
             </Grid>
             {m.drivers.length === 0 && <div style={{ color: T.dim, fontSize: 11 }}>no drivers stored yet (21:30 FRED job, 03:10 Treasury / Yahoo job)</div>}
-            <Attribution sources={['FRED']} />
+            <Attribution sources={driverSources(m.drivers)} />
           </>
         )}
       </GPanel>
@@ -148,7 +163,7 @@ export function MacroView(props: GoldSubViewProps) {
           copyP="DXY weights (EUR 57.6 %, JPY 13.6 %, GBP 11.9 %, CAD 9.1 %, SEK 4.2 %, CHF 3.6 %) are replicable but Europe-heavy; Fed broad weights would add CNY/INR with a weekly lag (open question j.2 #11).">
           {m?.kgx ? <KgxBar period={m.kgx.period} total={m.kgx.total_pct} pure={m.kgx.pure_gold_pct} usdEffect={m.kgx.usd_effect_pct} inrEffect={m.kgx.inr_effect_pct} weights={m.kgx.weights} note={kgxNote} tips={tip} />
             : <div style={{ color: T.dim, fontSize: 11 }}>KGX block pending (derived at 21:30)</div>}
-          {m?.kgx?.from_date && <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }} data-gold-kgx-window>window from {istLabel(m.kgx.from_date)}{m.kgx.period === 'W' ? ' — the trailing sessions, not HEALTH\'s week to date (Monday-to-date)' : ''}</div>}
+          {m?.kgx?.from_date && <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }} data-gold-kgx-window>{kgxWindowCaption(m.kgx, healthFrom)}</div>}
           {rebasedSeries ? <div style={{ marginTop: 8 }}><LineChart series={rebasedSeries} height={120} dp={0} label="gold vs gold-in-basket, rebased" /></div>
             : <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>rebased 1-y line appears once COMEX_GC_FRONT and DXY_CLOSE have daily history{rebased.error ? ` (${rebased.error})` : ''}</div>}
         </GPanel>
@@ -195,17 +210,17 @@ export function MacroView(props: GoldSubViewProps) {
               <div style={{ fontSize: 9.5, color: T.dim, marginBottom: 3 }} data-gold-fed-rows title={tip('fed_p_hike')}>rows: the Atlanta Fed tracker&apos;s horizons (IMM third-Wednesday windows), not FOMC decision dates — the next decision is the one named above</div>
               <div style={{ display: 'grid', gap: 4 }}>
                 {m.fed.meetings.map(mt => (
-                  <div key={mt.meeting} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 60px 60px 70px', gap: 8, alignItems: 'center', fontSize: 10.5, fontFamily: T.mono }}>
+                  <div key={mt.meeting} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 60px 60px 110px', gap: 8, alignItems: 'center', fontSize: 10.5, fontFamily: T.mono }}>
                     <span style={{ color: T.text }} title="a tracker horizon (IMM window), not a meeting date">to {istLabel(mt.meeting)}</span>
                     <Meter value={(mt.p_cut ?? 0) / 100} color={T.violet} height={6} />
                     <span title={tip('fed_p_cut')} style={{ color: T.muted }}>cut {pct(mt.p_cut, 0)}</span>
                     <span title={tip('fed_p_hike')} style={{ color: T.muted }}>hike {pct(mt.p_hike, 0)}</span>
-                    <span title={tip('fed_mean_bp')} style={{ color: T.muted }}>{num(mt.mean_bp, 0)} bp</span>
+                    <span title={`${tip('fed_mean_bp') ?? ''} The expected average policy rate to the horizon: a level, not a move.`} style={{ color: T.muted }}>{fedMeanText(mt.mean_bp)}</span>
                   </div>
                 ))}
                 {m.fed.meetings.length === 0 && <div style={{ color: T.dim, fontSize: 11 }}>no meeting rows stored yet (06:40 Atlanta Fed job)</div>}
               </div>
-              {m.fed.zq?.length ? <div style={{ fontSize: 10, color: T.muted, marginTop: 6 }} title={tip('zq_implied')}>ZQ implied: {m.fed.zq.map(z => `${z.month} ${pct(z.implied_pct, 2)}`).join(' · ')}</div> : null}
+              {m.fed.zq?.length ? <div style={{ fontSize: 10, color: T.muted, marginTop: 6 }} title={tip('zq_implied')} data-gold-zq>ZQ implied (100 − price): {m.fed.zq.map(z => `${zqLabel(z)} ${pct(z.implied_pct, 2)}${z.note ? ` (${z.note})` : ''}`).join(' · ')}</div> : null}
               <Attribution sources={['Atlanta Fed', 'FRED']} />
             </>
           ) : <div style={{ color: T.dim, fontSize: 11 }}>Fed path pending (06:40 job)</div>}

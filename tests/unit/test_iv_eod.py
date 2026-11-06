@@ -120,10 +120,15 @@ def test_expiry_day_and_short_dte_rows_stay_in_the_surface_but_out_of_near():
 
 def test_iv30_cm_needs_a_bracket():
     day = date(2026, 11, 3)
+    # M43: one expiry inside 10–60 d and no bracket → IV30 is that expiry's ATM IV, flagged cm30_flat (never silent)
     one = _chain("NIFTY", day, {20: 0.14}, 24000.0, spot=24000.0)
     res = iv_eod.compute_day(one, day, R, now=NOW)
     s = res.summary.iloc[0]
-    assert s["iv30_cm"] is None and "no_cm30" in s["quality_flags"]       # negative control
+    assert abs(s["iv30_cm"] - 14.0) < 0.05 and "cm30_flat" in s["quality_flags"] and "no_cm30" not in s["quality_flags"]
+    # negative control: the only expiry is 5 days out (outside 10–60) → no IV30, flagged no_cm30
+    short = _chain("NIFTY", day, {5: 0.14}, 24000.0, spot=24000.0)
+    s0 = iv_eod.compute_day(short, day, R, now=NOW).summary.iloc[0]
+    assert s0["iv30_cm"] is None and "no_cm30" in s0["quality_flags"] and "cm30_flat" not in s0["quality_flags"]
     two = _chain("NIFTY", day, {20: 0.10, 40: 0.20}, 24000.0, spot=24000.0)
     s2 = iv_eod.compute_day(two, day, R, now=NOW).summary.iloc[0]
     # var30 = (0.01·20/365·½ + 0.04·40/365·½) / (30/365) = 0.0300 → 17.32 %

@@ -17,9 +17,9 @@
  * the high and the low WITHOUT repeating the numbers; the dashed previous close prints its value once (the stats row does
  * not); the last value prints once, at the line's end.
  */
-import { CHART_BOX, T, fmtFixed, useChartSize } from '@/components/terminal'
+import { CHART_BOX, T, useChartSize } from '@/components/terminal'
 import { axisTicks, textWidth } from '@/components/terminal/chart'
-import { type KPt, timeTicks } from '@/lib/gold/kitco'
+import { type KPt, fmtKitco, timeTicks } from '@/lib/gold/kitco'
 import { axisPos, axisTicksIst, fmtHM, globexOpenIst, istToNy, sessionBands, type Band, type DayPt } from '@/lib/gold/sessions'
 
 export const BAND_FILL: Record<Band['key'], string> = { sydney: '#1a2130', shanghai: '#2a1f3f', london: '#13303a', newyork: '#3a2a12', mcx: '#5a3f00', maintenance: 'transparent' }
@@ -99,14 +99,14 @@ export function IntradayChart({ groups, usDst, ukDst, conv, unitLabel, dp, settl
         {yAxis.ticks.map(t => (
           <g key={t}>
             <line x1={padL} x2={padL + plotW} y1={y(t)} y2={y(t)} stroke={T.border} strokeDasharray="2 4" />
-            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={9.5} fill={T.muted} fontFamily={T.mono}>{fmtFixed(t, yAxis.dp)}</text>
+            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={9.5} fill={T.muted} fontFamily={T.mono}>{fmtKitco(t, yAxis.dp, unitLabel)}</text>
           </g>
         ))}
         <text x={4} y={padT - 1} textAnchor="start" fontSize={9} fill={T.dim} fontFamily={T.mono}>{unitLabel}</text>
         {settleV != null && (
           <g data-gold-prev-close>
             <line x1={padL} x2={padL + plotW} y1={y(settleV)} y2={y(settleV)} stroke={T.cyan} strokeDasharray="6 4" strokeWidth={1} />
-            <text x={padL + plotW - 4} y={y(settleV) - 4} textAnchor="end" fontSize={9} fill={T.cyan} fontFamily={T.mono}>{settleLabel} {fmtFixed(settleV, dp)}</text>
+            <text x={padL + plotW - 4} y={y(settleV) - 4} textAnchor="end" fontSize={9} fill={T.cyan} fontFamily={T.mono}>{settleLabel} {fmtKitco(settleV, dp, unitLabel)}</text>
           </g>
         )}
         {sge && sge.length > 1 && <path d={path(sge)} fill="none" stroke={T.violet} strokeWidth={1} strokeDasharray="2 3" opacity={0.9} />}
@@ -116,7 +116,7 @@ export function IntradayChart({ groups, usDst, ukDst, conv, unitLabel, dp, settl
         {mode === '24h' && last && lastV != null && (
           <g>
             <circle cx={x(last.pos)} cy={y(lastV)} r={3} fill={T.amber} />
-            <text x={Math.min(x(last.pos) + 6, padL + plotW - textWidth('0,00,000.00', 9.5))} y={y(lastV) - 6} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>{fmtFixed(lastV, dp)}</text>
+            <text x={Math.min(x(last.pos) + 6, padL + plotW - textWidth('0,00,000.00', 9.5))} y={y(lastV) - 6} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>{fmtKitco(lastV, dp, unitLabel)}</text>
           </g>
         )}
         <line x1={padL} x2={padL + plotW} y1={padT + plotH} y2={padT + plotH} stroke={T.borderHi} />
@@ -179,7 +179,7 @@ export function TimeChart({ pts, dp, unitLabel, prevClose, prevCloseLabel, hi, l
         {yAxis.ticks.map(t => (
           <g key={t}>
             <line x1={padL} x2={padL + plotW} y1={y(t)} y2={y(t)} stroke={T.border} strokeDasharray="2 4" />
-            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={9.5} fill={T.muted} fontFamily={T.mono}>{fmtFixed(t, yAxis.dp)}</text>
+            <text x={padL - 6} y={y(t) + 3} textAnchor="end" fontSize={9.5} fill={T.muted} fontFamily={T.mono}>{fmtKitco(t, yAxis.dp, unitLabel)}</text>
           </g>
         ))}
         <text x={4} y={padT - 2} textAnchor="start" fontSize={9} fill={T.dim} fontFamily={T.mono}>{unitLabel}</text>
@@ -188,13 +188,13 @@ export function TimeChart({ pts, dp, unitLabel, prevClose, prevCloseLabel, hi, l
         {prevClose != null && (
           <g data-gold-prev-close>
             <line x1={padL} x2={padL + plotW} y1={y(prevClose)} y2={y(prevClose)} stroke={T.cyan} strokeDasharray="6 4" strokeWidth={1} />
-            <text x={padL + 4} y={y(prevClose) - 4} fontSize={9} fill={T.cyan} fontFamily={T.mono}>{prevCloseLabel} {fmtFixed(prevClose, dp)}</text>
+            <text x={padL + 4} y={y(prevClose) - 4} fontSize={9} fill={T.cyan} fontFamily={T.mono}>{prevCloseLabel} {fmtKitco(prevClose, dp, unitLabel)}</text>
           </g>
         )}
         {hi && <g fontSize={9} fontFamily={T.mono} fill={T.dim} data-gold-hilo-marks><circle cx={x(hi.ms)} cy={y(hi.v)} r={2} fill={T.dim} /><text x={Math.min(x(hi.ms) + 4, padL + plotW - 40)} y={y(hi.v) - 4}>high</text></g>}
         {lo && <g fontSize={9} fontFamily={T.mono} fill={T.dim}><circle cx={x(lo.ms)} cy={y(lo.v)} r={2} fill={T.dim} /><text x={Math.min(x(lo.ms) + 4, padL + plotW - 40)} y={y(lo.v) + 11}>low</text></g>}
         <circle cx={x(last.ms)} cy={y(last.v)} r={3} fill={T.amber} />
-        <text x={padL + plotW + 4} y={y(last.v) + 3} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>{fmtFixed(last.v, dp)}</text>
+        <text x={padL + plotW + 4} y={y(last.v) + 3} fontSize={9.5} fill={T.amber} fontFamily={T.mono}>{fmtKitco(last.v, dp, unitLabel)}</text>
         <line x1={padL} x2={padL + plotW} y1={padT + plotH} y2={padT + plotH} stroke={T.borderHi} />
         {xt.map(t => (
           <g key={t.ms}>

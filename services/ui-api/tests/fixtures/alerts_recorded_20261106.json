@@ -1,0 +1,794 @@
+{
+ "option_chain_nifty": {
+  "payload": {
+   "atm": 24550.0,
+   "date": "2026-11-05",
+   "expiry": "2026-11-09",
+   "found": true,
+   "lot": 65,
+   "rows": [
+    {
+     "ce": {
+      "iv": 14.4,
+      "oi": 5800275.0,
+      "oi_chg": -3533140.0,
+      "price": 180.3,
+      "volume": 3874489.0
+     },
+     "pe": {
+      "iv": 14.5,
+      "oi": 5819840.0,
+      "oi_chg": 5398380.0,
+      "price": 135.7,
+      "volume": 1692616.0
+     },
+     "strike": 24500.0
+    },
+    {
+     "ce": {
+      "iv": 14.6,
+      "oi": 4294095.0,
+      "oi_chg": 2677935.0,
+      "price": 156.15,
+      "volume": 1878923.0
+     },
+     "pe": {
+      "iv": 14.6,
+      "oi": 2999295.0,
+      "oi_chg": 2997800.0,
+      "price": 160.4,
+      "volume": 645062.0
+     },
+     "strike": 24550.0
+    }
+   ],
+   "spot": 24536.6,
+   "symbol": "NIFTY"
+  },
+  "recorded": "2026-11-06, GET /db/option-chain/NIFTY (the live data-service, before review M05: OI in shares, no oi_contracts)"
+ },
+ "payloads": {
+  "NIFTY": {
+   "as_of": null,
+   "badges": {
+    "breadth": "context",
+    "concentration": "arithmetic",
+    "driver": "context",
+    "fit": "arithmetic",
+    "members": "arithmetic",
+    "monthly": "context",
+    "sectors": "arithmetic"
+   },
+   "history_since": null,
+   "horizon": {
+    "name": "1m"
+   },
+   "index": "NIFTY",
+   "members": [],
+   "note": "no stored attribution yet (run index_drivers_daily)"
+  },
+  "NIFTY 50": {
+   "as_of": "2026-11-05",
+   "badges": {
+    "breadth": "context",
+    "concentration": "arithmetic",
+    "driver": "context",
+    "fit": "arithmetic",
+    "members": "arithmetic",
+    "monthly": "context",
+    "sectors": "arithmetic"
+   },
+   "breadth": {
+    "cw_pct": 7.7296,
+    "down": 8,
+    "ew_minus_cw_pp": -1.3902,
+    "ew_pct": 6.3394,
+    "up": 42,
+    "word": "narrow"
+   },
+   "concentration": {
+    "effective_n": 23.7,
+    "hhi_contrib": 0.0558,
+    "top5_abs_share": 0.447,
+    "top5_weight_pct": 37.19,
+    "weight_hhi": 0.0423
+   },
+   "driver": {
+    "20": {
+     "change_date": "2026-10-27",
+     "changed_from": "RELIANCE",
+     "ew_minus_cw_pp": -1.1309,
+     "leader": "HDFCBANK",
+     "leader_share": 0.096844,
+     "tenure": 8,
+     "top5_share": 0.425121,
+     "window": 20
+    },
+    "60": {
+     "change_date": "2026-09-21",
+     "changed_from": null,
+     "ew_minus_cw_pp": -1.8914,
+     "leader": "HDFCBANK",
+     "leader_share": 0.070422,
+     "tenure": 32,
+     "top5_share": 0.34959,
+     "window": 60
+    }
+   },
+   "explained_pts": 1724.9,
+   "fit": {
+    "degraded": false,
+    "mae_60s": 5.76,
+    "r2_60s": 0.9985,
+    "residual_today": -6.31,
+    "sessions": 60
+   },
+   "history_since": "2023-11-01",
+   "horizon": {
+    "from": "2026-10-07",
+    "name": "1m",
+    "sessions": 21,
+    "to": "2026-11-05"
+   },
+   "index": "NIFTY 50",
+   "index_move_pts": 1760.5,
+   "members": [
+    {
+     "industry": "Financial Services",
+     "points": 242.42,
+     "ret_pct": 11.7069,
+     "share_abs": 0.134612,
+     "symbol": "ICICIBANK",
+     "weight_pct": 9.48
+    },
+    {
+     "industry": "Financial Services",
+     "points": 160.37,
+     "ret_pct": 6.8241,
+     "share_abs": 0.089052,
+     "symbol": "HDFCBANK",
+     "weight_pct": 10.27
+    },
+    {
+     "industry": "Telecommunication",
+     "points": 156.0,
+     "ret_pct": 13.6095,
+     "share_abs": 0.086624,
+     "symbol": "BHARTIARTL",
+     "weight_pct": 5.52
+    },
+    {
+     "industry": "Oil Gas & Consumable Fuels",
+     "points": 133.27,
+     "ret_pct": 7.8325,
+     "share_abs": 0.074002,
+     "symbol": "RELIANCE",
+     "weight_pct": 7.74
+    },
+    {
+     "industry": "Information Technology",
+     "points": 112.95,
+     "ret_pct": 15.1452,
+     "share_abs": 0.062719,
+     "symbol": "INFY",
+     "weight_pct": 3.64
+    },
+    {
+     "industry": "Information Technology",
+     "points": 84.08,
+     "ret_pct": 18.8429,
+     "share_abs": 0.046691,
+     "symbol": "TCS",
+     "weight_pct": 2.1008
+    },
+    {
+     "industry": "Construction",
+     "points": 76.92,
+     "ret_pct": 7.4271,
+     "share_abs": 0.042714,
+     "symbol": "LT",
+     "weight_pct": 4.18
+    },
+    {
+     "industry": "Financial Services",
+     "points": 65.56,
+     "ret_pct": 11.0996,
+     "share_abs": 0.036402,
+     "symbol": "BAJFINANCE",
+     "weight_pct": 2.57
+    },
+    {
+     "industry": "Consumer Services",
+     "points": 55.62,
+     "ret_pct": 8.9058,
+     "share_abs": 0.030884,
+     "symbol": "ETERNAL",
+     "weight_pct": 2.6776
+    },
+    {
+     "industry": "Financial Services",
+     "points": 54.05,
+     "ret_pct": 8.1269,
+     "share_abs": 0.030015,
+     "symbol": "KOTAKBANK",
+     "weight_pct": 3.03
+    },
+    {
+     "industry": "Automobile and Auto Components",
+     "points": 50.63,
+     "ret_pct": 9.5447,
+     "share_abs": 0.028115,
+     "symbol": "M&M",
+     "weight_pct": 2.2804
+    },
+    {
+     "industry": "Information Technology",
+     "points": 49.98,
+     "ret_pct": 18.7728,
+     "share_abs": 0.027751,
+     "symbol": "HCLTECH",
+     "weight_pct": 1.2593
+    },
+    {
+     "industry": "Financial Services",
+     "points": 42.3,
+     "ret_pct": 4.97,
+     "share_abs": 0.02349,
+     "symbol": "SBIN",
+     "weight_pct": 3.67
+    },
+    {
+     "industry": "Financial Services",
+     "points": 40.82,
+     "ret_pct": 14.6747,
+     "share_abs": 0.022669,
+     "symbol": "BSE",
+     "weight_pct": 1.2397
+    },
+    {
+     "industry": "Information Technology",
+     "points": 38.03,
+     "ret_pct": 21.1499,
+     "share_abs": 0.021117,
+     "symbol": "TECHM",
+     "weight_pct": 0.8671
+    },
+    {
+     "industry": "Construction Materials",
+     "points": 37.86,
+     "ret_pct": 13.9535,
+     "share_abs": 0.021023,
+     "symbol": "ULTRACEMCO",
+     "weight_pct": 1.22
+    },
+    {
+     "industry": "Fast Moving Consumer Goods",
+     "points": 31.44,
+     "ret_pct": 4.5557,
+     "share_abs": 0.017458,
+     "symbol": "ITC",
+     "weight_pct": 2.9606
+    },
+    {
+     "industry": "Automobile and Auto Components",
+     "points": 27.16,
+     "ret_pct": 8.8344,
+     "share_abs": 0.015081,
+     "symbol": "MARUTI",
+     "weight_pct": 1.3138
+    },
+    {
+     "industry": "Metals & Mining",
+     "points": 26.92,
+     "ret_pct": 7.6215,
+     "share_abs": 0.014949,
+     "symbol": "JSWSTEEL",
+     "weight_pct": 1.5403
+    },
+    {
+     "industry": "Consumer Durables",
+     "points": 24.22,
+     "ret_pct": 6.2549,
+     "share_abs": 0.013449,
+     "symbol": "TITAN",
+     "weight_pct": 1.6777
+    },
+    {
+     "industry": "Financial Services",
+     "points": 20.67,
+     "ret_pct": 2.5641,
+     "share_abs": 0.011479,
+     "symbol": "AXISBANK",
+     "weight_pct": 3.24
+    },
+    {
+     "industry": "Healthcare",
+     "points": 20.17,
+     "ret_pct": 13.0795,
+     "share_abs": 0.011198,
+     "symbol": "DRREDDY",
+     "weight_pct": 0.7104
+    },
+    {
+     "industry": "Construction Materials",
+     "points": 19.63,
+     "ret_pct": 8.71,
+     "share_abs": 0.010898,
+     "symbol": "GRASIM",
+     "weight_pct": 0.9876
+    },
+    {
+     "industry": "Automobile and Auto Components",
+     "points": 19.05,
+     "ret_pct": 9.3887,
+     "share_abs": 0.010579,
+     "symbol": "EICHERMOT",
+     "weight_pct": 0.8763
+    },
+    {
+     "industry": "Automobile and Auto Components",
+     "points": 18.8,
+     "ret_pct": 7.3974,
+     "share_abs": 0.010437,
+     "symbol": "BAJAJ-AUTO",
+     "weight_pct": 1.0837
+    },
+    {
+     "industry": "Services",
+     "points": 16.89,
+     "ret_pct": 7.3161,
+     "share_abs": 0.009377,
+     "symbol": "INDIGO",
+     "weight_pct": 0.9802
+    },
+    {
+     "industry": "Services",
+     "points": 16.47,
+     "ret_pct": 5.6746,
+     "share_abs": 0.009143,
+     "symbol": "ADANIPORTS",
+     "weight_pct": 1.2615
+    },
+    {
+     "industry": "Fast Moving Consumer Goods",
+     "points": 16.08,
+     "ret_pct": 4.58,
+     "share_abs": 0.00893,
+     "symbol": "HINDUNILVR",
+     "weight_pct": 1.4939
+    },
+    {
+     "industry": "Fast Moving Consumer Goods",
+     "points": 13.83,
+     "ret_pct": 10.4201,
+     "share_abs": 0.007682,
+     "symbol": "TATACONSUM",
+     "weight_pct": 0.5902
+    },
+    {
+     "industry": "Financial Services",
+     "points": 10.95,
+     "ret_pct": 4.7135,
+     "share_abs": 0.006078,
+     "symbol": "BAJAJFINSV",
+     "weight_pct": 0.9799
+    },
+    {
+     "industry": "Consumer Services",
+     "points": 10.39,
+     "ret_pct": 5.1273,
+     "share_abs": 0.005769,
+     "symbol": "TRENT",
+     "weight_pct": 0.8673
+    },
+    {
+     "industry": "Healthcare",
+     "points": 9.91,
+     "ret_pct": 5.7679,
+     "share_abs": 0.005502,
+     "symbol": "APOLLOHOSP",
+     "weight_pct": 0.7512
+    },
+    {
+     "industry": "Consumer Durables",
+     "points": 9.16,
+     "ret_pct": 4.1086,
+     "share_abs": 0.005088,
+     "symbol": "ASIANPAINT",
+     "weight_pct": 0.9269
+    },
+    {
+     "industry": "Financial Services",
+     "points": 7.93,
+     "ret_pct": 5.3786,
+     "share_abs": 0.004401,
+     "symbol": "JIOFIN",
+     "weight_pct": 0.6301
+    },
+    {
+     "industry": "Healthcare",
+     "points": 7.59,
+     "ret_pct": 4.7679,
+     "share_abs": 0.004213,
+     "symbol": "CIPLA",
+     "weight_pct": 0.6766
+    },
+    {
+     "industry": "Oil Gas & Consumable Fuels",
+     "points": 6.33,
+     "ret_pct": 2.587,
+     "share_abs": 0.003518,
+     "symbol": "ONGC",
+     "weight_pct": 1.0256
+    },
+    {
+     "industry": "Healthcare",
+     "points": 6.01,
+     "ret_pct": 1.3802,
+     "share_abs": 0.003339,
+     "symbol": "SUNPHARMA",
+     "weight_pct": 1.6991
+    },
+    {
+     "industry": "Metals & Mining",
+     "points": 5.53,
+     "ret_pct": 1.8524,
+     "share_abs": 0.003071,
+     "symbol": "TATASTEEL",
+     "weight_pct": 1.2702
+    },
+    {
+     "industry": "Capital Goods",
+     "points": 5.5,
+     "ret_pct": 1.9876,
+     "share_abs": 0.003057,
+     "symbol": "BEL",
+     "weight_pct": 1.1996
+    },
+    {
+     "industry": "Healthcare",
+     "points": 4.44,
+     "ret_pct": 3.2687,
+     "share_abs": 0.002463,
+     "symbol": "MAXHEALTH",
+     "weight_pct": 0.581
+    },
+    {
+     "industry": "Power",
+     "points": 3.7,
+     "ret_pct": 1.5358,
+     "share_abs": 0.002056,
+     "symbol": "POWERGRID",
+     "weight_pct": 1.0008
+    },
+    {
+     "industry": "Automobile and Auto Components",
+     "points": 3.27,
+     "ret_pct": 2.7642,
+     "share_abs": 0.001817,
+     "symbol": "TMPV",
+     "weight_pct": 0.498
+    },
+    {
+     "industry": "Financial Services",
+     "points": -0.13,
+     "ret_pct": -0.0276,
+     "share_abs": 7.4e-05,
+     "symbol": "HDFCLIFE",
+     "weight_pct": 0.4811
+    },
+    {
+     "industry": "Metals & Mining",
+     "points": -0.94,
+     "ret_pct": -0.2818,
+     "share_abs": 0.000523,
+     "symbol": "HINDALCO",
+     "weight_pct": 1.1455
+    },
+    {
+     "industry": "Financial Services",
+     "points": -1.24,
+     "ret_pct": -0.1088,
+     "share_abs": 0.000687,
+     "symbol": "SHRIRAMFIN",
+     "weight_pct": 1.4382
+    },
+    {
+     "industry": "Financial Services",
+     "points": -1.52,
+     "ret_pct": -0.8571,
+     "share_abs": 0.000843,
+     "symbol": "SBILIFE",
+     "weight_pct": 0.6476
+    },
+    {
+     "industry": "Power",
+     "points": -4.55,
+     "ret_pct": -1.4777,
+     "share_abs": 0.002527,
+     "symbol": "NTPC",
+     "weight_pct": 1.2883
+    },
+    {
+     "industry": "Oil Gas & Consumable Fuels",
+     "points": -8.5,
+     "ret_pct": -4.2147,
+     "share_abs": 0.004717,
+     "symbol": "COALINDIA",
+     "weight_pct": 0.8079
+    },
+    {
+     "industry": "Metals & Mining",
+     "points": -8.63,
+     "ret_pct": -4.0914,
+     "share_abs": 0.004793,
+     "symbol": "ADANIENT",
+     "weight_pct": 0.8675
+    },
+    {
+     "industry": "Fast Moving Consumer Goods",
+     "points": -12.47,
+     "ret_pct": -6.195,
+     "share_abs": 0.006923,
+     "symbol": "NESTLEIND",
+     "weight_pct": 0.7563
+    }
+   ],
+   "members_note": null,
+   "regime_sentence": "20-session leader HDFCBANK for 8 sessions, 9.7 % of member points; top-5 of the move 43 %; EW − CW -1.3902 pp: narrow — describes, does not predict",
+   "sectors": [
+    {
+     "industry": "Financial Services",
+     "points": 642.18,
+     "weight_pct": 37.6767
+    },
+    {
+     "industry": "Information Technology",
+     "points": 285.04,
+     "weight_pct": 7.8672
+    },
+    {
+     "industry": "Telecommunication",
+     "points": 156.0,
+     "weight_pct": 5.52
+    },
+    {
+     "industry": "Oil Gas & Consumable Fuels",
+     "points": 131.11,
+     "weight_pct": 9.5736
+    },
+    {
+     "industry": "Automobile and Auto Components",
+     "points": 118.91,
+     "weight_pct": 6.0521
+    },
+    {
+     "industry": "Construction",
+     "points": 76.92,
+     "weight_pct": 4.18
+    },
+    {
+     "industry": "Consumer Services",
+     "points": 66.01,
+     "weight_pct": 3.5449
+    },
+    {
+     "industry": "Construction Materials",
+     "points": 57.48,
+     "weight_pct": 2.2076
+    },
+    {
+     "industry": "Fast Moving Consumer Goods",
+     "points": 48.89,
+     "weight_pct": 5.801
+    },
+    {
+     "industry": "Healthcare",
+     "points": 48.11,
+     "weight_pct": 4.4183
+    },
+    {
+     "industry": "Consumer Durables",
+     "points": 33.38,
+     "weight_pct": 2.6046
+    },
+    {
+     "industry": "Services",
+     "points": 33.35,
+     "weight_pct": 2.2418
+    },
+    {
+     "industry": "Metals & Mining",
+     "points": 22.88,
+     "weight_pct": 4.8235
+    },
+    {
+     "industry": "Capital Goods",
+     "points": 5.5,
+     "weight_pct": 1.1996
+    },
+    {
+     "industry": "Power",
+     "points": -0.85,
+     "weight_pct": 2.2891
+    }
+   ],
+   "weight_method": "rebuilt_calibrated"
+  },
+  "NIFTY BANK": {
+   "as_of": "2026-11-05",
+   "badges": {
+    "breadth": "context",
+    "concentration": "arithmetic",
+    "driver": "context",
+    "fit": "arithmetic",
+    "members": "arithmetic",
+    "monthly": "context",
+    "sectors": "arithmetic"
+   },
+   "breadth": {
+    "cw_pct": 4.0216,
+    "down": 0,
+    "ew_minus_cw_pp": 0.1794,
+    "ew_pct": 4.201,
+    "up": 14,
+    "word": "even"
+   },
+   "concentration": {
+    "effective_n": 6.0,
+    "hhi_contrib": 0.2111,
+    "top5_abs_share": 0.8441,
+    "top5_weight_pct": 83.7,
+    "weight_hhi": 0.1677
+   },
+   "driver": {},
+   "explained_pts": 2295.57,
+   "fit": {
+    "degraded": true,
+    "mae_60s": 90.8,
+    "r2_60s": 0.9833,
+    "residual_today": -121.79,
+    "sessions": 2
+   },
+   "history_since": "2026-11-04",
+   "horizon": {
+    "from": "2026-11-04",
+    "name": "1m",
+    "sessions": 2,
+    "to": "2026-11-05"
+   },
+   "index": "NIFTY BANK",
+   "index_move_pts": 2233.6,
+   "members": [
+    {
+     "industry": "Financial Services",
+     "points": 708.23,
+     "ret_pct": 5.3001,
+     "share_abs": 0.308518,
+     "symbol": "ICICIBANK",
+     "weight_pct": 23.8915
+    },
+    {
+     "industry": "Financial Services",
+     "points": 694.64,
+     "ret_pct": 4.7553,
+     "share_abs": 0.3026,
+     "symbol": "HDFCBANK",
+     "weight_pct": 26.5416
+    },
+    {
+     "industry": "Financial Services",
+     "points": 243.82,
+     "ret_pct": 3.8371,
+     "share_abs": 0.106212,
+     "symbol": "AXISBANK",
+     "weight_pct": 11.3576
+    },
+    {
+     "industry": "Financial Services",
+     "points": 213.96,
+     "ret_pct": 3.7258,
+     "share_abs": 0.093204,
+     "symbol": "SBIN",
+     "weight_pct": 10.3474
+    },
+    {
+     "industry": "Financial Services",
+     "points": 77.04,
+     "ret_pct": 6.2842,
+     "share_abs": 0.03356,
+     "symbol": "IDFCFIRSTB",
+     "weight_pct": 2.2385
+    },
+    {
+     "industry": "Financial Services",
+     "points": 69.68,
+     "ret_pct": 6.3846,
+     "share_abs": 0.030356,
+     "symbol": "INDUSINDBK",
+     "weight_pct": 1.9712
+    },
+    {
+     "industry": "Financial Services",
+     "points": 68.84,
+     "ret_pct": 6.9318,
+     "share_abs": 0.029988,
+     "symbol": "AUBANK",
+     "weight_pct": 1.8254
+    },
+    {
+     "industry": "Financial Services",
+     "points": 52.43,
+     "ret_pct": 5.5917,
+     "share_abs": 0.02284,
+     "symbol": "YESBANK",
+     "weight_pct": 1.7152
+    },
+    {
+     "industry": "Financial Services",
+     "points": 35.27,
+     "ret_pct": 4.5957,
+     "share_abs": 0.015363,
+     "symbol": "CANBK",
+     "weight_pct": 1.3821
+    },
+    {
+     "industry": "Financial Services",
+     "points": 34.26,
+     "ret_pct": 4.2407,
+     "share_abs": 0.014926,
+     "symbol": "PNB",
+     "weight_pct": 1.4624
+    },
+    {
+     "industry": "Financial Services",
+     "points": 33.55,
+     "ret_pct": 0.5058,
+     "share_abs": 0.014616,
+     "symbol": "KOTAKBANK",
+     "weight_pct": 11.5669
+    },
+    {
+     "industry": "Financial Services",
+     "points": 23.08,
+     "ret_pct": 2.6182,
+     "share_abs": 0.010054,
+     "symbol": "BANKBARODA",
+     "weight_pct": 1.5901
+    },
+    {
+     "industry": "Financial Services",
+     "points": 22.81,
+     "ret_pct": 1.4232,
+     "share_abs": 0.009938,
+     "symbol": "FEDERALBNK",
+     "weight_pct": 2.8793
+    },
+    {
+     "industry": "Financial Services",
+     "points": 17.96,
+     "ret_pct": 2.6201,
+     "share_abs": 0.007825,
+     "symbol": "UNIONBANK",
+     "weight_pct": 1.2308
+    }
+   ],
+   "members_note": null,
+   "regime_sentence": null,
+   "sectors": [
+    {
+     "industry": "Financial Services",
+     "points": 2295.57,
+     "weight_pct": 100.0
+    }
+   ],
+   "weight_method": "rebuilt"
+  }
+ },
+ "recorded": "2026-11-06T09:55:31+05:30, read-only GETs to data-service :8001 (W2-ALERTS round 2), paced 1.5 s",
+ "requests": {
+  "NIFTY": "/db/index-drivers?index=NIFTY&horizon=1m (the short id round 1 sent: the store has no such key)",
+  "NIFTY 50": "/db/index-drivers?index=NIFTY%2050&horizon=1m",
+  "NIFTY BANK": "/db/index-drivers?index=NIFTY%20BANK&horizon=1m"
+ }
+}

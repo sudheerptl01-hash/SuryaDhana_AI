@@ -9,6 +9,7 @@ import { apiError } from '@/lib/errors'
 import { useEffect, useState } from 'react'
 import { getSeasonality, type Seasonality as SeasonalityData } from '@/lib/api'
 import { Btn, Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, fmtFixed, fmtPct, undatedSource } from '@/components/terminal'   // fmtFixed: U+2212 (C1-18)
+import { seagSpan } from '@/components/marketPagesModel'
 
 const INDICES = ['NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY MIDCAP 100', 'NIFTY SMALLCAP 100', 'NIFTY FMCG', 'NIFTY PHARMA', 'NIFTY METAL']
 
@@ -36,10 +37,13 @@ export function SeasonalityView({ symbol }: { symbol: string }) {
   const maxAbs = Math.max(1, ...d.months.map(m => Math.abs(m.avg ?? 0)))
   const W = 1200, H = 150, mid = H / 2, bw = W / 12
   const best = [...d.months].filter(m => m.avg != null).sort((a, b) => b.avg! - a.avg!)
+  // m030: name the first and last month that carry a RETURN (the first stored close only seeds the first return:
+  // "2012-02 →" read like Feb 2012 had one, the table starts at Mar 2012); the current month is "so far"
+  const span = seagSpan(d.grid.map(r => ({ year: r.year, months: r.months })), d.months.map(m => m.month))
   return (
     <div style={{ fontFamily: T.mono }}>
       <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 6 }}>
-        <span style={{ color: T.amber }}>{d.symbol}</span> · {d.years} years of monthly returns ({d.from?.slice(0, 7)} → {d.to?.slice(0, 7)})
+        <span style={{ color: T.amber }}>{d.symbol}</span> · {d.years} years of monthly returns ({span.first ?? d.from?.slice(0, 7)} → {span.last ?? d.to?.slice(0, 7)}<span title={`closes from ${d.from?.slice(0, 10) ?? '—'}: the first close only seeds the first return`} style={{ color: T.dim }}> · first close {d.from?.slice(0, 7)}</span>)
         {d.current && <> · <span style={{ color: T.text }}>{d.current.month} {d.current.year} so far</span>{' '}
           <span style={{ color: d.current.ret >= 0 ? T.green : T.red }}>{fmtPct(d.current.ret, 1)}</span>
           <span style={{ color: T.dim }}> (to {d.current.asof})</span></>}

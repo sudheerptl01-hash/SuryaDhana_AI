@@ -20,6 +20,12 @@ owns the lock) and runs the engine's pure-pandas signal math in-process. This ke
 data-service untouched and avoids the lock entirely.
 
 Air-gap: MODE is forced to PAPER; this router only scans/reads. Zero execution.
+
+Honesty (5 Nov 2026 review, M19 / m090): every net figure is after the real ICICI delivery round trip from
+shared/trading_costs.py at a stated position size (`position_inr`, default ₹1,00,000 ≈ 0.93 %), never a flat
+0.15 %. The realised-edge stats carry n, a 95 % interval (a bootstrap over signal DATES: signals that fire on the same
+day are not independent) and a Wilson interval on the win rate, for the scan window AND for every signal in the loaded
+history (`edge_history`). These are realised outcomes of a tested-NO-EDGE family: arithmetic, not a forecast.
 """
 from __future__ import annotations
 
@@ -151,12 +157,70 @@ class ScanRequest(BaseModel):
     recent_days: int = Field(default=10, ge=1, le=120)
     max_results: int = Field(default=500, ge=1, le=5000)
     include_diagnostics: bool = Field(default=True)
+    # ₹ size of one position for the cost maths (the ₹24 DP charge makes the round-trip % size-dependent)
+    position_inr: float = Field(default=100_000.0, ge=5_000.0, le=50_000_000.0)
 
 
 # `from __future__ import annotations` stringizes the `dict[str, Any]` annotation; when
 # this module is imported dynamically by path the `Any` forward-ref isn't in the eval
 # namespace until rebuilt. Resolve it explicitly so Pydantic finalises the model.
 ScanRequest.model_rebuild()
+
+
+# ── Realised-edge statistics (arithmetic on realised outcomes, never a forecast) ───────────────────────────────────
+
+_BOOT_RESAMPLES = 2000
+_BOOT_SEED = 108
+
+
+def _wilson(k: int, n: int, z: float = 1.96) -> list[float] | None:
+    if n <= 0:
+        return None
+    p = k / n
+    den = 1 + z * z / n
+    mid = (p + z * z / (2 * n)) / den
+    half = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
+    return [round(float(max(0.0, mid - half)), 4), round(float(min(1.0, mid + half)), 4)]
+
+
+def edge_stats(net: pd.Series, cost: float) -> dict[str, Any] | None:
+    """n, mean / median net (bps), win rate, a 95 % interval on the mean from a bootstrap over signal dates (the
+    clusters: one bad day moves every signal fired on it) and a Wilson interval on the win rate. `net` is indexed by
+    (ticker, date); NaNs (no complete forward window) are dropped. None when no signal has a forward window."""
+    net = pd.to_numeric(net, errors="coerce").dropna()
+    n = int(len(net))
+    if n == 0:
+        return None
+    vals = net.to_numpy(dtype=float)
+    wins = int((vals > 0).sum())
+    out: dict[str, Any] = {
+        "n_with_forward": n,
+        "mean_net5_bps": round(float(vals.mean()) * 1e4, 2),
+        "median_net5_bps": round(float(np.median(vals)) * 1e4, 2),
+        "win_rate": round(wins / n, 4),
+        "mean_gross5_bps": round(float(vals.mean() + cost) * 1e4, 2),
+        "cost_bps": round(cost * 1e4, 2),
+        "win_rate_ci95": _wilson(wins, n),
+        "mean_net5_ci95_bps": None,
+        "n_dates": None,
+        "ci_method": f"bootstrap over signal dates, {_BOOT_RESAMPLES:,} resamples (same-day signals are not independent)",
+    }
+    dates = pd.Index(net.index.get_level_values(-1) if isinstance(net.index, pd.MultiIndex) else net.index)
+    g = pd.DataFrame({"d": dates, "v": vals}).groupby("d")["v"].agg(["sum", "count"])
+    out["n_dates"] = int(len(g))
+    # how concentrated the sample is: a few market-wide gap days can carry most of the signals (and the mean)
+    top = g.sort_values("count", ascending=False).head(3)
+    out["top3_dates"] = [{"date": str(pd.Timestamp(d).date()), "n": int(r["count"]),
+                          "mean_net5_bps": round(float(r["sum"] / r["count"]) * 1e4, 1)} for d, r in top.iterrows()]
+    out["top3_dates_signal_share"] = round(float(top["count"].sum()) / n, 4)
+    if len(g) >= 2:
+        rng = np.random.default_rng(_BOOT_SEED)
+        idx = rng.integers(0, len(g), size=(_BOOT_RESAMPLES, len(g)))
+        sums, cnts = g["sum"].to_numpy()[idx].sum(axis=1), g["count"].to_numpy()[idx].sum(axis=1)
+        means = sums / cnts
+        out["mean_net5_ci95_bps"] = [round(float(np.percentile(means, 2.5)) * 1e4, 2),
+                                     round(float(np.percentile(means, 97.5)) * 1e4, 2)]
+    return out
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────────
@@ -238,13 +302,15 @@ async def run_scan(req: ScanRequest) -> dict[str, Any]:
     diag = None
     if req.include_diagnostics and hasattr(strat, "forward_diagnostics"):
         try:
-            diag = strat.forward_diagnostics(df).set_index(["ticker", "date"])
+            diag = strat.forward_diagnostics(df, position_inr=req.position_inr).set_index(["ticker", "date"])
         except Exception:
             diag = None
+    cost = eng.cost_info(req.position_inr)
 
     sig = mask.reset_index()
     sig.columns = ["ticker", "date", "signal"]
     fired = sig[sig["signal"]].copy()
+    fired_all = fired
     latest_date = df["date"].max()
 
     # Select the result window.
@@ -260,10 +326,13 @@ async def run_scan(req: ScanRequest) -> dict[str, Any]:
 
     fired = fired.sort_values("date", ascending=False)
 
-    # Attach the last close + realised edge per matched row.
-    last_close = (
-        df.sort_values("date").groupby("ticker")["close"].last().to_dict()
-    )
+    # Attach the last close, the last session's close-to-close change (shown after the close, when no live tick
+    # exists: m090) and the realised edge per matched row.
+    by_date = df.sort_values("date")
+    last_close = by_date.groupby("ticker")["close"].last().to_dict()
+    prev_close = by_date.groupby("ticker")["close"].nth(-2)
+    prev_close = dict(zip(by_date.loc[prev_close.index, "ticker"], prev_close.to_numpy(), strict=True)) if len(prev_close) else {}
+    last_bar_date = by_date.groupby("ticker")["date"].last().to_dict()
     results: list[dict[str, Any]] = []
     for _, row in fired.head(req.max_results).iterrows():
         tkr, dt = row["ticker"], row["date"]
@@ -273,6 +342,10 @@ async def run_scan(req: ScanRequest) -> dict[str, Any]:
             "last_close": float(last_close.get(tkr, np.nan))
             if not np.isnan(last_close.get(tkr, np.nan)) else None,
         }
+        lc, pc = last_close.get(tkr), prev_close.get(tkr)
+        item["eod_change_pct"] = (round((float(lc) / float(pc) - 1) * 100, 2)
+                                  if lc is not None and pc is not None and np.isfinite(lc) and np.isfinite(pc) and pc > 0 else None)
+        item["eod_change_date"] = str(last_bar_date[tkr].date()) if tkr in last_bar_date else None
         if diag is not None and (tkr, dt) in diag.index:
             d = diag.loc[(tkr, dt)]
             for k in ("entry_adj", "exit_adj", "fwd5", "net5"):
@@ -280,18 +353,16 @@ async def run_scan(req: ScanRequest) -> dict[str, Any]:
                 item[k] = float(v) if v is not None and np.isfinite(v) else None
         results.append(item)
 
-    # Aggregate realised-edge stats over ALL fired rows with a complete forward window.
-    edge = None
+    # Realised-edge stats over the window's fired rows AND over every signal in the loaded history (the n that matters),
+    # each with n and a 95 % interval, after the real round trip.
+    rt = float(cost["round_trip_pct"]) / 100.0
+    edge = edge_history = None
     if diag is not None and len(fired):
         joined = fired.set_index(["ticker", "date"]).join(diag, how="left")
-        net = pd.to_numeric(joined.get("net5"), errors="coerce").dropna()
-        if len(net):
-            edge = {
-                "n_with_forward": int(len(net)),
-                "mean_net5_bps": round(float(net.mean()) * 1e4, 2),
-                "median_net5_bps": round(float(net.median()) * 1e4, 2),
-                "win_rate": round(float((net > 0).mean()), 4),
-            }
+        edge = edge_stats(joined.get("net5"), rt)
+    if diag is not None and len(fired_all):
+        joined_all = fired_all.set_index(["ticker", "date"]).join(diag, how="left")
+        edge_history = edge_stats(joined_all.get("net5"), rt)
 
     tickers = sorted(fired["ticker"].unique().tolist())
     return {
@@ -310,6 +381,13 @@ async def run_scan(req: ScanRequest) -> dict[str, Any]:
         "tickers": tickers,
         "results": results,
         "edge": edge,
+        "edge_history": edge_history,
+        "history_window": {"from": str(df["date"].min().date()), "to": str(latest_date.date()), "days": req.days},
+        "cost": cost,
+        "badge": "arithmetic",
+        "verdict": {"verdict": "NO EDGE", "report": "reports/idea_lab/REPORT.md",
+                    "note": "Realised outcomes after real costs; gap and overnight-momentum ideas carried no edge after "
+                            "costs. Describes, does not predict."},
         "latency": {
             "sql_s": round(sql_latency, 3),
             "signal_s": round(signal_latency, 3),

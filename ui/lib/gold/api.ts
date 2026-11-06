@@ -58,8 +58,10 @@ export interface ContractQuery { contract?: Family | string; expiry?: string | n
 export const getGoldOverview = (q: ContractQuery & { window?: Window } = {}) =>
   client.get<GoldOverview>(GOLD_ENDPOINTS.overview, { params: clean({ contract: q.contract, expiry: q.expiry, window: q.window }), timeout: 30_000 })
 
-export const getGoldHealth = (window: Window = 'D') =>
-  client.get<GoldHealth>(GOLD_ENDPOINTS.health, { params: { window } })
+/** `/api/gold/health` — GOLD at its own clock (the WEI / BRF echo). The GOLD page renders `/overview`'s health (the picked
+ *  contract, live quote applied) and calls this only as a fallback, with the picked contract / expiry (wave 1e, M-A). */
+export const getGoldHealth = (window: Window = 'D', q: ContractQuery = {}) =>
+  client.get<GoldHealth>(GOLD_ENDPOINTS.health, { params: clean({ window, contract: q.contract, expiry: q.expiry }) })
 
 /** Today's pre-open model (the CMDT desk's body + session label, accuracy and holiday). Inputs come from the desk's
  *  saved inputs; `eurusd_trigger` and topics are prefs and are sent only when set. */
@@ -87,8 +89,10 @@ export const getGoldCurve = (exchange: 'COMEX' | 'MCX', date?: string, family?: 
 export const getGoldContracts = (exchange = 'MCX') =>
   client.get<GoldContracts>(GOLD_ENDPOINTS.contracts, { params: { exchange } })
 
-export const getGoldPremiums = (days = 365) =>
-  client.get<GoldPremiums>(GOLD_ENDPOINTS.premiums, { params: { days } })
+/** `?contract=GOLDTEN&expiry=…`: the ladder's MCX bar and basis for the page's PICK (API_CONTRACT §2.9; wave 1e: PHYSICAL printed
+ *  GOLD's ₹1,44,092 with GOLDTEN picked). */
+export const getGoldPremiums = (days = 365, q: ContractQuery = {}) =>
+  client.get<GoldPremiums>(GOLD_ENDPOINTS.premiums, { params: clean({ days, contract: q.contract, expiry: q.expiry }) })
 
 /** p.asia: gold_asia_daily rows under SHFE_DAILY / SGE_DAILY (API_CONTRACT §2.x, once B3 serves /api/gold/asia) */
 export const getGoldAsia = (exchange?: 'SGE' | 'SHFE', from?: string) =>

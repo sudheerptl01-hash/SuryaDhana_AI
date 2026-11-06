@@ -3,7 +3,7 @@
 import { apiError } from '@/lib/errors'
 import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
 import { useCallback, useEffect, useState } from 'react'
-import { PageHeader, ResearchNote } from '@/components/terminal'
+import { BadgeChip, PageHeader, ResearchNote, SourceChip, sourceOf } from '@/components/terminal'
 import clsx from 'clsx'
 import { getLWScreener, getLWScanResults, triggerLWScan, getLWScanJob, getLWOHLCV } from '@/lib/api'
 import { useTheme } from '@/context/ThemeContext'
@@ -28,6 +28,10 @@ interface CycleResult {
   momentum_strength: number
   is_active_momentum: boolean
   momentum_direction: number
+  // 5 Nov 2026 review (M24 / m088): flags withheld past their horizon, FDR-adjusted calendar p-values
+  active_at_scan?: boolean
+  cycle_qvalue?: number | null
+  cycle_significant_fdr?: boolean
 }
 
 interface ScreenerResult {
@@ -55,6 +59,16 @@ interface ScanData {
   results: CycleResult[]
   last_run: string | null
   total: number
+  as_of?: string
+  as_of_source?: string
+  last_close?: string
+  sessions_behind?: number
+  stale?: boolean
+  active_flags_expired?: boolean
+  active_horizon_sessions?: number
+  universe?: string
+  n_stocks?: number
+  multiple_testing?: { method: string; q: number; n_tests: number; expected_false_positives_at_p05: number; raw_p_below_05: number; significant_after_fdr: number }
 }
 
 interface JobStatus {
@@ -254,15 +268,27 @@ export function LWScanner() {
     return () => clearInterval(interval)
   }, [jobId])
 
-  // Trigger cycle scan
-  const handleRunScan = useCallback(async () => {
+  // Trigger cycle scan. Inside a freeze window the server answers 409: the page asks in place (no browser dialog) and
+  // only an explicit "run anyway" sends confirm=true.
+  const [freezeAsk, setFreezeAsk] = useState<string | null>(null)
+  const handleRunScan = useCallback(async (override = false) => {
     setScanLoading(true)
     setJobStatus(null)
+    setFreezeAsk(null)
     try {
-      const r = await triggerLWScan(200)
-      setJobId(r.data.job_id)
+      if (override) {
+        const res = await fetch('/api/lw/run-cycle-scan?n_stocks=200&confirm=true', { method: 'POST' })
+        if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? `HTTP ${res.status}`)
+        setJobId((await res.json()).job_id)
+      } else {
+        const r = await triggerLWScan(200)
+        setJobId(r.data.job_id)
+      }
     } catch (e: any) {
       setScanLoading(false)
+      if (e?.response?.status === 409 && /freeze window/i.test(String(e?.response?.data?.detail ?? ''))) {
+        setFreezeAsk(String(e.response.data.detail)); return
+      }
       const msg = apiError(e, 'Scan trigger failed')
       setJobStatus({ job_id: '', status: 'error', progress: 0, total: 0, elapsed_secs: 0, error: msg })
     }
@@ -328,14 +354,24 @@ export function LWScanner() {
         <div className="space-y-4">
           {/* Controls row */}
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className={clsx('text-xs', isDark ? 'text-slate-400' : 'text-gray-500')}>
+            <div className={clsx('text-xs flex items-center gap-2 flex-wrap', isDark ? 'text-slate-400' : 'text-gray-500')}>
               {scanData?.last_run
-                ? <span>Last scan: <span className={clsx('font-semibold', isDark ? 'text-slate-200' : 'text-gray-800')}>{scanData.last_run}</span></span>
+                ? <>
+                    <SourceChip info={sourceOf(scanData.as_of ?? null, { source: 'LW cycle scan', maxAgeDays: 2 })} />
+                    <span>Scan of the <span className={clsx('font-semibold', isDark ? 'text-slate-200' : 'text-gray-800')}>{scanData.as_of ?? '—'}</span> close
+                      (written {scanData.last_run}){scanData.universe ? ` · ${scanData.universe}` : ''}</span>
+                    {scanData.stale && (
+                      <span data-lw-stale className="px-2 py-0.5 rounded border border-amber-500/50 text-amber-300 font-semibold">
+                        STALE · {scanData.sessions_behind} sessions behind the {scanData.last_close} close
+                        {scanData.active_flags_expired ? ' · ACTIVE flags withheld (past their 5-session horizon)' : ''}
+                      </span>
+                    )}
+                  </>
                 : <span className="italic">No scan results yet — run a scan to populate</span>
               }
             </div>
             <button
-              onClick={handleRunScan}
+              onClick={() => handleRunScan(false)}
               disabled={scanLoading}
               className={clsx(
                 'flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold border transition-all',
@@ -348,10 +384,25 @@ export function LWScanner() {
             >
               {scanLoading
                 ? <><span className="animate-spin">↻</span> Scanning…</>
-                : <><span>▶</span> Run Cycle Scan (200 stocks)</>
+                : <><span>▶</span> Run Cycle Scan (200 most liquid)</>
               }
             </button>
           </div>
+          {freezeAsk && (
+            <div className={clsx(card, 'py-3 flex items-center gap-3 flex-wrap')}>
+              <span className="text-xs text-amber-300">{freezeAsk}</span>
+              <button onClick={() => handleRunScan(true)} className="px-3 py-1 rounded border border-amber-500/50 text-amber-300 text-xs font-semibold">Run anyway</button>
+              <button onClick={() => setFreezeAsk(null)} className="px-3 py-1 rounded border border-slate-600 text-slate-400 text-xs">Later</button>
+            </div>
+          )}
+          {scanData?.multiple_testing && (
+            <div className={clsx('text-[11px] flex items-center gap-2 flex-wrap', isDark ? 'text-slate-400' : 'text-gray-500')}>
+              <BadgeChip badge="heuristic" note="Equal-weight pattern scores: a house rule, never fitted or validated. The related swing study FAILS after costs." />
+              <span>Calendar-edge p-values: {scanData.multiple_testing.raw_p_below_05} of {scanData.multiple_testing.n_tests} below 0.05, where chance alone
+                gives ≈ {scanData.multiple_testing.expected_false_positives_at_p05}; {scanData.multiple_testing.significant_after_fdr} survive the
+                {' '}{scanData.multiple_testing.method} correction (* = q &lt; {scanData.multiple_testing.q}). Scores describe past patterns; they do not predict.</span>
+            </div>
+          )}
 
           {/* Job progress */}
           {jobStatus && (
@@ -426,7 +477,9 @@ export function LWScanner() {
                             <span className={clsx('font-mono', row.cycle_edge >= 0 ? 'text-emerald-400' : 'text-rose-400')}>
                               {fmtSigned(row.cycle_edge, 3)}
                             </span>
-                            {row.cycle_pvalue < 0.05 && <span className="ml-1 text-amber-400 text-xs" title="p < 0.05">*</span>}
+                            {row.cycle_significant_fdr
+                              ? <span className="ml-1 text-amber-400 text-xs" title={`p ${row.cycle_pvalue.toFixed(3)} · q ${row.cycle_qvalue?.toFixed(3)} (Benjamini–Hochberg across the scan)`}>*</span>
+                              : row.cycle_pvalue < 0.05 && <span className="ml-1 text-slate-500 text-[10px]" title={`raw p ${row.cycle_pvalue.toFixed(3)}, but q ${row.cycle_qvalue != null ? row.cycle_qvalue.toFixed(3) : '—'} after the multiple-testing correction: what chance gives across ${scanData.multiple_testing?.n_tests ?? 'all'} tests`}>p&lt;.05 · n.s.</span>}
                           </td>
                           <td className={td}>
                             <span className={clsx(row.divergence_count > 0 ? 'text-sky-400' : isDark ? 'text-slate-500' : 'text-gray-400')}>
@@ -455,6 +508,9 @@ export function LWScanner() {
                               <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold border border-amber-500/30">
                                 {row.momentum_direction >= 0 ? '▲ LONG' : '▼ SHORT'}
                               </span>
+                            ) : row.active_at_scan ? (
+                              <span className={clsx('text-[10px]', isDark ? 'text-slate-500' : 'text-gray-400')}
+                                title={`Active at the ${scanData.as_of} scan; older than its ${scanData.active_horizon_sessions ?? 5}-session horizon, so withheld`}>expired</span>
                             ) : (
                               <span className={clsx('text-xs', isDark ? 'text-slate-600' : 'text-gray-400')}>—</span>
                             )}
@@ -479,7 +535,7 @@ export function LWScanner() {
             <div className={clsx(card, 'flex flex-col items-center justify-center py-16 gap-3')}>
               <span className="text-3xl opacity-30 font-mono">◌</span>
               <p className={clsx('text-sm font-medium', isDark ? 'text-slate-400' : 'text-gray-500')}>
-                No cycle scan data — click "Run Cycle Scan" to analyse 200 NSE stocks
+                No cycle scan data — click "Run Cycle Scan" to analyse the 200 most liquid NSE stocks
               </p>
             </div>
           )}

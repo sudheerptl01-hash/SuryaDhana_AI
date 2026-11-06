@@ -364,6 +364,7 @@ def ingest_deals(store, start: date, end: date, progress: Optional[Callable] = N
 # If-Modified-Since revisions). Parsers are pure (fixtures under tests/unit/fixtures/terminal_v2/). Nothing here feeds
 # the Decision Desk, the S1 shadow, a directional alert or a ticket price.
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+import contextlib
 import json as _json
 import re as _re
 from datetime import datetime as _datetime
@@ -380,6 +381,12 @@ FII_STATS_URL = f"{ARCHIVE}/content/fo/fii_stats_{{d:%d-%b-%Y}}.xls"
 MWPL_CLI_URL = f"{ARCHIVE}/content/nsccl/mwpl_cli_{{d:%d%m%Y}}.xls"
 SECBAN_URL = f"{ARCHIVE}/archives/fo/sec_ban/fo_secban_{{d:%d%m%Y}}.csv"
 VIX_HISTORY_URL = f"{API}/historicalOR/vixhistory?from={{start:%d-%m-%Y}}&to={{end:%d-%m-%Y}}"
+# M44: NCL's end-of-day SPAN risk-parameter file (verified 6 Nov 2026: nsccl.20261105.s.zip 206 to a range GET, 9.75 MB,
+# application/zip, Last-Modified 16:56 IST). Stored as-is under data/nse_archive/span/ — the directory POST /api/options/margin
+# reads (SPAN_ARCHIVE_DIR) — keeping the newest SPAN_KEEP files (≈ 10 MB each).
+SPAN_URL = f"{ARCHIVE}/archives/nsccl/span/nsccl.{{d:%Y%m%d}}.s.zip"
+SPAN_KEEP = 10
+SPAN_MIN_BYTES = 100_000
 
 # Desk inputs (shared/momentum.py reads market_index_daily NIFTY50): never written from the NSE daily file unless the
 # owner answers O-T9 ("DO NOT CHANGE without review"). index_ohlc_daily and vix_daily are separate tables and always written.
@@ -451,18 +458,50 @@ def parse_combined_oi_deleq(blob: bytes, day: date) -> pd.DataFrame:
 
 
 def parse_combined_oi_zip(blob: bytes, day: date) -> pd.DataFrame:
-    """combineoi_DDMMYYYY.zip (MWPL, open interest, next-day limit) → nse_combined_oi columns mwpl / oi / limit_next_day."""
+    """combineoi_DDMMYYYY.zip (MWPL, open interest, futures-equivalent OI, next-day limit) → nse_combined_oi columns mwpl / oi /
+    fut_equiv_oi / limit_next_day. The live layout (verified 6 Nov 2026 on combineoi_05112026.zip, ``Last-Modified`` 18:19 IST):
+    ``Date, ISIN, Scrip Name, NSE Symbol, MWPL, Open Interest, Future Equivalent Open Interest, Limit for Next Day``; a name
+    in the ban reads ``No Fresh Positions`` as its limit (→ NULL here; BAN comes from NSE's ban list)."""
     df = pd.read_csv(io.BytesIO(_unzip_first(blob)), dtype=str)
     df.columns = _clean_header(list(df.columns))
     sym = next((c for c in df.columns if c.lower() in ("symbol", "nse symbol")), None)
     mwpl = next((c for c in df.columns if c.lower() == "mwpl"), None)
     oi = next((c for c in df.columns if c.lower() in ("open interest", "oi")), None)
+    feq = next((c for c in df.columns if "equivalent" in c.lower()), None)
     lim = next((c for c in df.columns if "limit" in c.lower()), None)
     if sym is None or mwpl is None:
         raise ValueError(f"combineoi layout changed: {list(df.columns)}")
     out = pd.DataFrame({"date": day, "symbol": df[sym].str.strip(), "isin": df["ISIN"].str.strip() if "ISIN" in df.columns else None,
-                        "mwpl": _num(df[mwpl]), "oi": _num(df[oi]) if oi else None, "limit_next_day": _num(df[lim]) if lim else None})
+                        "mwpl": _num(df[mwpl]), "oi": _num(df[oi]) if oi else None, "fut_equiv_oi": _num(df[feq]) if feq else None,
+                        "limit_next_day": _num(df[lim]) if lim else None})
     return out.dropna(subset=["symbol"]).reset_index(drop=True)
+
+
+# the two combined-OI files fill DIFFERENT columns of one row (deleq: notional + futures-equivalent OI; the zip: MWPL / OI /
+# limit); the upsert replaced whole rows, so whichever file landed second wiped the other's columns (M43: mwpl NULL on 1,362 of
+# 1,362 rows). A write keeps every column the new file does not carry from the stored row.
+MERGE_TABLES: dict[str, tuple[str, ...]] = {"nse_combined_oi": ("date", "symbol")}
+
+
+def _merge_stored(store: _Any, table: str, frame: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    from data_health import db as tdb
+
+    keys = MERGE_TABLES[table]
+    days = sorted({d for d in (tdb.to_date(v) for v in frame["date"]) if d is not None})
+    have = tdb.query_df(store, f"SELECT * FROM {table} WHERE list_contains(?, date)", [days]) if days else pd.DataFrame()
+    if have is None or have.empty:
+        return frame
+    have = have.assign(date=have["date"].map(tdb.to_date))
+    new = frame.assign(date=frame["date"].map(tdb.to_date))
+    m = new.merge(have, on=list(keys), how="left", suffixes=("", "__old"))
+    for c in cols:
+        if c in keys or c == "first_seen_at" or f"{c}__old" not in m.columns:
+            continue
+        if c not in new.columns:
+            m[c] = m[f"{c}__old"]
+        else:
+            m[c] = m[c].where(m[c].notna(), m[f"{c}__old"])
+    return m[[c for c in m.columns if not c.endswith("__old")]]
 
 
 def index_symbol(name: str) -> str:
@@ -553,6 +592,56 @@ def parse_mwpl_clients(blob: bytes, day: date) -> pd.DataFrame:
     return pd.DataFrame(out, columns=TERMINAL_FILE_COLUMNS["nse_mwpl_clients"][:-1])
 
 
+def parse_span_zip(blob: bytes, day: date) -> list[str]:
+    """Validate an NCL SPAN zip: a real zip, ≥ SPAN_MIN_BYTES, holding a ``.spn`` (or ``.xml``) member → the member names."""
+    if not blob or blob[:2] != b"PK" or len(blob) < SPAN_MIN_BYTES:
+        raise ValueError(f"not a SPAN zip ({len(blob or b'')} bytes)")
+    names = zipfile.ZipFile(io.BytesIO(blob)).namelist()
+    if not any(n.lower().endswith((".spn", ".xml")) for n in names):
+        raise ValueError(f"SPAN zip without a .spn member: {names[:3]}")
+    return names
+
+
+def span_dir(cache_root: Path) -> Path:
+    """``cache_root`` is the data directory (data-service ``_data_dir``): the SPAN files live in ``<data>/nse_archive/span``."""
+    return cache_root / "nse_archive" / "span"
+
+
+def ingest_span_file(store: _Any, http: _Any, day: date, cache_root: Path, *, revalidate: bool = False, now: Optional[_datetime] = None) -> dict:
+    """The day's SPAN zip into ``span_dir`` (atomic write, logged in ingest_log as ``nse_span_zip``); a stored file is not
+    fetched again unless ``revalidate``. Older files beyond ``SPAN_KEEP`` are pruned. Never raises on a bad file."""
+    from data_health import db as tdb
+    from data_health import ingest_log
+
+    now = now or tdb.utcnow()
+    folder = span_dir(cache_root)
+    target = folder / f"nsccl.{day:%Y%m%d}.s.zip"
+    out: dict[str, _Any] = {"dataset": "nse_span_zip", "date": day.isoformat(), "status": "cached", "revision": 0, "rows": 0, "path": str(target)}
+    if target.exists() and not revalidate:
+        return out
+    f = ingest_log.fetch_logged(store, http, "nse_span_zip", day, SPAN_URL.format(d=day), cache_root=None, revalidate=revalidate, now=now)
+    out.update(status=f.status, revision=f.revision)
+    if f.body is None or f.status not in ("downloaded", "revised", "not_modified"):
+        return out
+    try:
+        out["members"] = parse_span_zip(f.body, day)
+    except Exception as exc:  # noqa: BLE001 — a bad file is logged, never stored
+        out["status"] = "parse_error"
+        out["error"] = f"{type(exc).__name__}: {str(exc)[:160]}"
+        return out
+    folder.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(target.name + ".tmp")
+    tmp.write_bytes(f.body)
+    tmp.replace(target)
+    out["bytes"] = len(f.body)
+    kept = sorted(p for p in folder.glob("nsccl.*.s.zip"))
+    for old in kept[:-SPAN_KEEP]:
+        with contextlib.suppress(OSError):
+            old.unlink()
+    out["kept"] = min(len(kept), SPAN_KEEP)
+    return out
+
+
 def parse_secban(blob: bytes) -> list[str]:
     """fo_secban_DDMMYYYY.csv (named for the next session) → the banned symbols."""
     out = []
@@ -581,6 +670,8 @@ def _write_table(store: _Any, table: str, df: pd.DataFrame, now: _datetime) -> i
     casts = casts_fo.get(table) or TERMINAL_FILE_CASTS.get(table, {})
     frame = df.copy()
     frame["first_seen_at"] = now
+    if table in MERGE_TABLES and tdb.table_exists(store, table):
+        frame = _merge_stored(store, table, frame, cols)
     return tdb.upsert(store, table, frame, cols, casts)
 
 
@@ -615,6 +706,7 @@ TERMINAL_DATASETS: dict[str, dict[str, _Any]] = {
     "nse_participant_vol": {"url": PARTICIPANT_VOL_URL, "parse": parse_participant_vol, "table": "nse_participant_vol", "folder": "participant_vol"},
     "nse_fii_stats": {"url": FII_STATS_URL, "parse": parse_fii_stats, "table": "nse_fii_stats", "folder": "fii_stats"},
     "nse_mwpl_clients": {"url": MWPL_CLI_URL, "parse": parse_mwpl_clients, "table": "nse_mwpl_clients", "folder": "mwpl_cli", "t_minus": 1},
+    "nse_span_zip": {"url": SPAN_URL, "parse": parse_span_zip, "table": "__span_file__", "folder": "span"},
 }
 TERMINAL_DATASET_NAMES = tuple(TERMINAL_DATASETS)
 
@@ -627,6 +719,8 @@ def ingest_file(store: _Any, http: _Any, dataset: str, day: date, cache_root: Pa
 
     spec = TERMINAL_DATASETS[dataset]
     now = now or tdb.utcnow()
+    if spec["table"] == "__span_file__":
+        return ingest_span_file(store, http, day, cache_root, revalidate=revalidate, now=now)
     url = spec["url"].format(d=day)
     f = ingest_log.fetch_logged(store, http, dataset, day, url, cache_root=cache_root / "nse_archive", cache_name=None, revalidate=revalidate, now=now)
     out: dict[str, _Any] = {"dataset": dataset, "date": day.isoformat(), "status": f.status, "revision": f.revision, "rows": 0}

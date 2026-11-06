@@ -16,7 +16,15 @@ Routes (all GET, all read-only, mounted at /api/derivatives):
   /iv/{symbol}/cone               min/25/50/75/max of constant-maturity IV by tenor over 1/3/5 years + today
   /iv/{symbol}/events?n=          the results IV-crush ledger
   /iv/{symbol}/intraday?date=     the 15-minute pilot path (ATM IV, straddle, PCR; source chip)
+  /iv/{symbol}/paid-delivered?n=  IV paid at ≈ 30 DTE vs the vol delivered over each MONTHLY option's own life (M02)
+  /iv/{symbol}/near-skew?days=    the near expiry's own 25Δ skew history + its percentile (M03)
+  /iv/{symbol}/contract-delta?expiry=&date=  NSE Clearing's Contract_Delta per strike (M44)
   /vol-screen?sort=&results_within=  the 224-underlying VOL screener
+
+Estimators (M01, review 5 Nov 2026): the stored `iv_minus_rv20` is IV30 minus the CLOSE-TO-CLOSE RV20 — it was labelled
+Yang-Zhang here and on OMON while the store (and its catalog) computed close-to-close. Every label now names close-to-close,
+and the Parkinson / Yang-Zhang spreads travel beside it, each named (`iv_minus_rv20_parkinson`, `iv_minus_rv20_yz`).
+Time (M04): T = calendar time to 15:30 IST on expiry ÷ 365 (`fo_iv.black76.TIME_CONVENTION`), the same on every page.
 
 Honesty rules (PLAN §0): every derived number carries a badge (`arithmetic` for IV / rank / percentile / RV,
 `context` for spreads, skew, term, the ledger); rank and percentile are BOTH served, each with its definition; no
@@ -64,15 +72,31 @@ CONE_YEARS = (1, 3, 5)
 CONE_TENORS = ("iv30_cm", "iv60_cm", "iv90_cm")
 SESSIONS_PER_YEAR = 250
 
+TIME_CONVENTION = "cal365-1530"
+TIME_CONVENTION_NOTE = ("T = calendar time to 15:30 IST on the expiry day ÷ 365 (end of day: whole days from the session's 15:30 close; "
+                        "intraday: from the snapshot clock); no half-day")
 DEFINITIONS = {
     "iv_rank_252": "IV rank: where today's iv30_cm sits between its 252-session minimum (0) and maximum (100).",
     "iv_pctile_252": "IV percentile: the share of the past 252 sessions whose iv30_cm was below today's.",
-    "iv30_cm": "30-day constant-maturity ATM IV: VIX-style variance interpolation between the two bracketing expiries.",
+    "iv30_cm": ("30-day constant-maturity ATM IV: VIX-style variance interpolation between the two bracketing expiries; with no "
+                "bracket, the ATM IV of the one expiry nearest 30 days inside 10–60 days (flat term, flag cm30_flat)."),
+    "monthly_atm_iv": "~1-month ATM IV: the first expiry 20–60 days out (a weekly when one falls in the window; not NSE's monthly series).",
     "skew_25d_30": "25-delta skew: 25Δ put IV minus 25Δ call IV on the 30-day surface (vol points).",
+    "near_skew_25d": "Near-expiry 25-delta skew: 25Δ put IV minus 25Δ call IV of the first expiry more than 2 days out (vol points).",
     "term_slope_30_90": "Term slope: iv90_cm minus iv30_cm (vol points).",
-    "iv_minus_rv20": "IV minus RV20: iv30_cm minus the 20-session Yang-Zhang realised vol (vol points; the volatility risk premium).",
-    "fovolt_ann": "NSE's own EWMA daily volatility (FOVOLT), annualised.",
+    "term_slope_30_60": "Term slope 30→60: iv60_cm minus iv30_cm (vol points; stocks list ≈ 3 monthly expiries, so 90 days is rarely bracketed).",
+    "term_near_next": ("Term near → next: the next expiry's ATM IV minus the near expiry's (both more than 2 days out), vol points — the term read "
+                       "a stock has (its third monthly is usually too thin for an ATM IV, so 60 / 90-day IVs are rarely bracketed)."),
+    "rv20_cc": "RV20 close-to-close: σ of the last 20 daily log returns × √252.",
+    "rv20_parkinson": "RV20 Parkinson: √(mean ln(H/L)² / 4 ln 2) × √252 over 20 sessions (range outliers out).",
+    "rv20_yz": "RV20 Yang-Zhang: overnight + k·open-to-close + (1−k)·Rogers-Satchell variance × 252 over 20 sessions (range outliers out).",
+    "iv_minus_rv20": "IV30 − RV20 (close-to-close): iv30_cm minus the 20-session close-to-close realised vol (vol points; the volatility risk premium).",
+    "iv_minus_rv20_parkinson": "IV30 − RV20 (Parkinson): iv30_cm minus the 20-session Parkinson realised vol (vol points).",
+    "iv_minus_rv20_yz": "IV30 − RV20 (Yang-Zhang): iv30_cm minus the 20-session Yang-Zhang realised vol (vol points).",
+    "fovolt_ann": "NSE's own EWMA daily volatility (FOVOLT, λ 0.995), annualised × √365 by NSE (× √(252/365) for the √252 basis of the RVs).",
+    "time_to_expiry": TIME_CONVENTION_NOTE,
 }
+SPREAD_ESTIMATOR = "cc"
 
 SUMMARY_FIELDS = ("date", "spot", "iv30_cm", "iv60_cm", "iv90_cm", "monthly_atm_iv", "monthly_expiry", "near_atm_iv",
                   "near_expiry", "near_dte", "skew_25d_30", "term_slope_30_90", "iv_rank_252", "iv_pctile_252", "rv20_cc",
@@ -83,7 +107,21 @@ EXPIRY_FIELDS = ("expiry", "dte", "forward", "forward_source", "atm_iv", "iv_25d
 EVENT_FIELDS = ("symbol", "released_at", "expiry", "iv_pre_5d", "iv_pre_1d", "iv_post_1d", "crush_pct",
                 "implied_move_pct", "realised_move_pct")
 SCREEN_FIELDS = ("symbol", "date", "spot", "iv30_cm", "iv_rank_252", "iv_pctile_252", "rv20_yz", "iv_minus_rv20",
-                 "term_slope_30_90", "skew_25d_30", "next_results", "ban", "mwpl_pct")
+                 "term_slope_30_90", "skew_25d_30", "next_results", "ban", "mwpl_pct",
+                 "iv60_cm", "rv20_cc", "rv20_parkinson", "quality_flags", "mwpl_date", "near_atm_iv", "near_dte", "next_atm_iv", "next_dte")
+# Every derived number on a screen row carries a badge (PLAN §0, binding; round 2: the M01 / m070 columns had none). IVs, RVs,
+# rank and percentile are arithmetic on stored rows; spreads, skew, term and crowding are context. `spot`, the DTEs, the
+# dates, `ban` (NSE's own list) and `iv30_flat` (a flag) are inputs or facts, not derived numbers.
+SCREEN_BADGES: dict[str, str] = {
+    "iv30_cm": BADGE_ARITH, "iv60_cm": BADGE_ARITH, "near_atm_iv": BADGE_ARITH, "next_atm_iv": BADGE_ARITH,
+    "iv_rank_252": BADGE_ARITH, "iv_pctile_252": BADGE_ARITH,
+    "rv20_cc": BADGE_ARITH, "rv20_parkinson": BADGE_ARITH, "rv20_yz": BADGE_ARITH,
+    "iv_minus_rv20": BADGE_CONTEXT, "iv_minus_rv20_yz": BADGE_CONTEXT, "iv_minus_rv20_parkinson": BADGE_CONTEXT,
+    "term_slope_30_90": BADGE_CONTEXT, "term_slope_30_60": BADGE_CONTEXT, "term_near_next": BADGE_CONTEXT,
+    "skew_25d_30": BADGE_CONTEXT, "mwpl_pct": BADGE_CONTEXT,
+}
+SCREEN_UNBADGED = frozenset({"symbol", "date", "spot", "next_results", "ban", "quality_flags", "mwpl_date", "near_dte", "next_dte",
+                             "iv30_flat", "results_in_days"})
 
 
 # ── helpers shared with the legacy routes ────────────────────────────────────────────────────────────────────
@@ -249,7 +287,7 @@ def _pick(row: dict[str, Any], fields: Iterable[str]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for k in fields:
         v = row.get(k)
-        if k in ("date", "expiry", "monthly_expiry", "near_expiry", "next_results"):
+        if k in ("date", "expiry", "monthly_expiry", "near_expiry", "next_results", "mwpl_date"):
             out[k] = _d(v)
         elif k in ("quality_flags", "forward_source", "symbol", "released_at", "price_source", "opt_type", "source"):
             out[k] = None if v is None else str(v)
@@ -260,6 +298,27 @@ def _pick(row: dict[str, Any], fields: Iterable[str]) -> dict[str, Any]:
         else:
             out[k] = _f(v) if not isinstance(v, str) or v.replace(".", "", 1).replace("-", "", 1).isdigit() else v
     return out
+
+
+RANK_MIN_OBS = 20
+
+
+def store_rank_and_percentile(base: list[float | None]) -> tuple[float | None, float | None, int]:
+    """m058: the IV store's own rank / percentile (fo_iv.iv_eod.rank_and_percentile) on the store's own base (iv30_cm, else the
+    ~1-month ATM IV): rank over the trailing window incl. today, percentile = share of the PRIOR ≤ 252 observations below today.
+    OMON recomputed on iv30_cm only and printed 60.3 / 89.6 for TITAN where the screener (stored) read 61 / 86. → (rank,
+    percentile, observations used)."""
+    vals = [v for v in base if v is not None]
+    if not vals:
+        return None, None, 0
+    today, prior = vals[-1], vals[:-1][-RANK_WINDOW:]
+    if len(prior) < RANK_MIN_OBS:
+        return None, None, len(prior)
+    window = [*prior, today][-RANK_WINDOW:]
+    lo, hi = min(window), max(window)
+    rank = round((today - lo) / (hi - lo) * 100.0, 2) if hi > lo else None
+    pct = round(sum(1 for v in prior if v < today) / len(prior) * 100.0, 2)
+    return rank, pct, len(prior)
 
 
 def iv_rank(values: list[float], window: int = RANK_WINDOW) -> float | None:
@@ -421,6 +480,10 @@ def intraday_path(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {"points": points, "source": source, "sources": sorted(sources), "snapshots": len(points)}
 
 
+def _spread(iv: float | None, rv: float | None) -> float | None:
+    return round(iv - rv, 4) if iv is not None and rv is not None else None
+
+
 def screen_rows(rows: list[dict[str, Any]], sort: str, results_within: int | None, today: date | None = None) -> list[dict[str, Any]]:
     key = {"iv_pctile": "iv_pctile_252", "iv_rank": "iv_rank_252", "iv_minus_rv": "iv_minus_rv20",
            "term_slope": "term_slope_30_90", "skew": "skew_25d_30"}[sort]
@@ -429,6 +492,14 @@ def screen_rows(rows: list[dict[str, Any]], sort: str, results_within: int | Non
         row = _pick(r, SCREEN_FIELDS)
         if not row.get("symbol"):
             continue
+        # M01: the stored spread is against close-to-close; the other two estimators' spreads ride beside it, named (m070:
+        # the 30→60 slope where 90 days is not bracketed — most stocks list three monthlies)
+        row["iv_minus_rv20_yz"] = _spread(row.get("iv30_cm"), row.get("rv20_yz"))
+        row["iv_minus_rv20_parkinson"] = _spread(row.get("iv30_cm"), row.get("rv20_parkinson"))
+        row["term_slope_30_60"] = _spread(row.get("iv60_cm"), row.get("iv30_cm"))
+        row["term_near_next"] = _spread(row.get("next_atm_iv"), row.get("near_atm_iv"))
+        flags = set(str(row.get("quality_flags") or "").split(","))
+        row["iv30_flat"] = "cm30_flat" in flags
         if results_within is not None:
             nr = row.get("next_results")
             if not nr:
@@ -460,13 +531,17 @@ async def iv_history(symbol: str, response: Response, days: int = Query(750, ge=
     reads = Reads()
     # the rank / percentile always look back RANK_WINDOW sessions, whatever `days` the chart asks for (days=20 must not
     # yield a 20-observation "rank 252"): read max(days, 252) rows, chart the last `days`
-    summary = _rows(await reads.get("/db/iv/summary", symbol=sym, days=max(days, RANK_WINDOW)))
+    # + 1: the store's percentile compares today with the 252 sessions BEFORE it (m058: one formula for OMON and the screener)
+    summary = _rows(await reads.get("/db/iv/summary", symbol=sym, days=max(days, RANK_WINDOW + 1)))
     vix_rows = _rows(await reads.get("/db/iv/vix", days=days)) if sym in ("NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY") else []
     events = _rows(await reads.get("/db/iv/events", symbol=sym, n=40))
-    rank_rows = summary_rows(summary, max(days, RANK_WINDOW))
+    rank_rows = summary_rows(summary, max(days, RANK_WINDOW + 1))
     rows = rank_rows[-days:]
     meta = summary[0] if summary else {}
-    iv_obs = [v for v in (_f(r.get("iv30_cm")) for r in rank_rows) if v is not None]     # iv_rank / iv_percentile take the last 252
+    # m058: the store's formula on the store's base (iv30_cm, else the ~1-month ATM IV), so OMON and the screener agree
+    base = [_f(r.get("iv30_cm")) if _f(r.get("iv30_cm")) is not None else _f(r.get("monthly_atm_iv")) for r in rank_rows]
+    rank_now, pct_now, n_prior = store_rank_and_percentile(base)
+    iv_obs = [v for v in base if v is not None]
     reads.headers(response)
     return {
         "symbol": sym, "as_of": _as_of(rows), "since": rows[0]["date"] if rows else None, "sessions": len(rows),
@@ -478,11 +553,13 @@ async def iv_history(symbol: str, response: Response, days: int = Query(750, ge=
         "events": event_markers(rows, events),
         # window_sessions = the observations the recomputed rank / percentile actually used (≤ 252; fewer only while the
         # store holds less history), never the constant beside a shorter window (check:B3-API)
-        "rank": {"iv_rank_252": iv_rank(iv_obs), "iv_pctile_252": iv_percentile(iv_obs),
+        "rank": {"iv_rank_252": rank_now, "iv_pctile_252": pct_now,
                  "stored": {"iv_rank_252": rows[-1].get("iv_rank_252") if rows else None,
                             "iv_pctile_252": rows[-1].get("iv_pctile_252") if rows else None},
                  "window_sessions": min(len(iv_obs), RANK_WINDOW), "window_target": RANK_WINDOW, "on": "iv30_cm"},
-        "definitions": DEFINITIONS,
+        "rank_base": "iv30_cm, else the ~1-month ATM IV (the store's rule); percentile over the prior ≤ 252 sessions",
+        "rank_prior_observations": n_prior,
+        "definitions": DEFINITIONS, "spread_estimator": SPREAD_ESTIMATOR, "time_convention": TIME_CONVENTION,
         "badges": {"iv": BADGE_ARITH, "rank": BADGE_ARITH, "pctile": BADGE_ARITH, "rv": BADGE_ARITH,
                    "spread": BADGE_CONTEXT, "skew": BADGE_CONTEXT, "term": BADGE_CONTEXT, "vix": BADGE_ARITH},
         "note": f"history since {rows[0]['date'] if rows else '—'} from the stored NSE F&O bhavcopies; {DESCRIBES}",
@@ -568,10 +645,75 @@ async def vol_screen(response: Response, sort: str = Query("iv_pctile", pattern=
     rows = screen_rows(_rows(payload), sort, results_within)
     as_of = (payload or {}).get("date") if isinstance(payload, dict) else None
     reads.headers(response)
+    ban_date = (payload or {}).get("ban_date") if isinstance(payload, dict) else None
+    ban_source = (payload or {}).get("ban_source") if isinstance(payload, dict) else None
     return {"as_of": _d(as_of) or (rows[0].get("date") if rows else None), "sort": sort, "results_within": results_within,
-            "rows": rows, "n": len(rows), "definitions": DEFINITIONS,
-            "badges": {"iv30_cm": BADGE_ARITH, "iv_rank_252": BADGE_ARITH, "iv_pctile_252": BADGE_ARITH, "rv20_yz": BADGE_ARITH,
-                       "iv_minus_rv20": BADGE_CONTEXT, "term_slope_30_90": BADGE_CONTEXT, "skew_25d_30": BADGE_CONTEXT,
-                       "mwpl_pct": BADGE_CONTEXT},
+            "rows": rows, "n": len(rows), "definitions": DEFINITIONS, "spread_estimator": SPREAD_ESTIMATOR,
+            "ban_date": _d(ban_date), "ban_source": ban_source or "MWPL rule (95 % / 80 %)",
+            "badges": dict(SCREEN_BADGES),
             "note": f"a screen, not a signal; {DESCRIBES}", "precedent": "Bloomberg GV / WVOL; Quantsapp IV percentile",
+            **reads.meta()}
+
+
+@router.get("/iv/{symbol}/paid-delivered")
+async def iv_paid_delivered(symbol: str, response: Response, n: int = Query(12, ge=1, le=60)) -> dict:
+    """M02: for each NSE MONTHLY expiry, the ATM IV paid at ≈ 30 DTE against the close-to-close vol (zero-mean) delivered over
+    that option's own life, entry close → expiry close; the mean over the closed months and how many paid above."""
+    sym = _check_symbol(symbol)
+    reads = Reads()
+    body = await reads.get("/db/iv/paid-delivered", symbol=sym, n=n)
+    b = body if isinstance(body, dict) else {}
+    rows = [{"expiry": _d(r.get("expiry")), "entry": _d(r.get("entry")), "entry_dte": _f(r.get("entry_dte")), "iv_paid": _f(r.get("iv_paid")),
+             "rv_delivered": _f(r.get("rv_delivered")), "rv_demeaned": _f(r.get("rv_demeaned")), "rv_yz": _f(r.get("rv_yz")),
+             "sessions": _f(r.get("sessions")), "open": bool(r.get("open")), "paid_minus_delivered": _f(r.get("paid_minus_delivered"))}
+            for r in _rows(body)]
+    # round 2: the months inside the span with no usable row, each with its reason (the March 2026 re-dated monthly vanished)
+    skipped = [{"month": str(x.get("month") or ""), "expiry": _d(x.get("expiry")), "reason": str(x.get("reason") or "")}
+               for x in (b.get("skipped") or []) if isinstance(x, dict)]
+    reads.headers(response)
+    return {"symbol": sym, "as_of": _d(b.get("as_of")), "rows": rows, "skipped": skipped, "closed": int(b.get("closed") or 0),
+            "mean_paid_minus_delivered": _f(b.get("mean_paid_minus_delivered")), "paid_above": int(b.get("paid_above") or 0),
+            "estimator": "close-to-close, zero-mean (√(252 · mean r²)), entry close → expiry close", "entry_dte": 30,
+            "definition": b.get("definition") or "", "badge": BADGE_CONTEXT,
+            "note": f"a description of past monthly expiries; {DESCRIBES}", "precedent": "ORATS implied vs realised; Bloomberg VCA", **reads.meta()}
+
+
+@router.get("/iv/{symbol}/near-skew")
+async def iv_near_skew(symbol: str, response: Response, days: int = Query(750, ge=20, le=3000)) -> dict:
+    """M03: the near expiry's own 25Δ skew history (first expiry with dte > 2 each session) and today's percentile against it
+    (share of the prior ≤ 252 sessions below today) — OMON's skew tile pairs each value with its own series."""
+    sym = _check_symbol(symbol)
+    reads = Reads()
+    rows = [{"date": _d(r.get("date")), "expiry": _d(r.get("expiry")), "dte": _f(r.get("dte")), "skew_25d": _f(r.get("skew_25d"))}
+            for r in _rows(await reads.get("/db/iv/near-skew", symbol=sym, days=days)) if _d(r.get("date"))]
+    rows.sort(key=lambda r: r["date"] or "")
+    vals: list[float] = [v for v in (_f(r.get("skew_25d")) for r in rows) if v is not None]
+    pct: float | None = None
+    if len(vals) > RANK_MIN_OBS:
+        today, prior = vals[-1], vals[:-1][-RANK_WINDOW:]
+        pct = round(sum(1 for v in prior if v < today) / len(prior) * 100.0, 1)
+    reads.headers(response)
+    return {"symbol": sym, "as_of": rows[-1]["date"] if rows else None, "rows": rows, "today": vals[-1] if vals else None,
+            "pctile": pct, "window_sessions": min(max(len(vals) - 1, 0), RANK_WINDOW), "series": "near expiry (dte > 2)",
+            "definition": DEFINITIONS["near_skew_25d"], "badge": BADGE_CONTEXT, "note": f"near-expiry skew history; {DESCRIBES}", **reads.meta()}
+
+
+@router.get("/iv/{symbol}/contract-delta")
+async def iv_contract_delta(symbol: str, response: Response, expiry: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+                            date_: str | None = Query(None, alias="date", pattern=r"^\d{4}-\d{2}-\d{2}$")) -> dict:
+    """M44: NSE Clearing's own delta per strike (Contract_Delta file) for one expiry, beside OMON's model delta. Context; the
+    exchange's number as published (its factor is the discounted Black-76 delta on its own vol)."""
+    sym = _check_symbol(symbol)
+    reads = Reads()
+    body = await reads.get("/db/iv/contract-delta", symbol=sym, expiry=expiry, date=date_)
+    b = body if isinstance(body, dict) else {}
+    by_strike: dict[float, dict[str, Any]] = defaultdict(dict)
+    for r in _rows(body):
+        k, t = _f(r.get("strike")), str(r.get("opt_type") or "").upper()
+        if k is not None and t in ("CE", "PE"):
+            by_strike[k][t.lower()] = _f(r.get("delta_factor"))
+    rows = [{"strike": k, "ce": v.get("ce"), "pe": v.get("pe")} for k, v in sorted(by_strike.items())]
+    reads.headers(response)
+    return {"symbol": sym, "as_of": _d(b.get("as_of")), "expiry": _d(b.get("expiry")), "rows": rows, "n": len(rows),
+            "source": "NSE Clearing Contract_Delta", "badge": BADGE_CONTEXT, "note": f"the exchange's delta factor as published; {DESCRIBES}",
             **reads.meta()}

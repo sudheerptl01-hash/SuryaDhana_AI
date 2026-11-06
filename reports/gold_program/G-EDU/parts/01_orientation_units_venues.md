@@ -24,8 +24,8 @@ them in this order.
 | # | Number | Why first | Where it comes from | 26 Oct 2026 05:50 IST |
 |---|---|---|---|---|
 | 1 | **COMEX gold, $/oz** (front or matched month) | The world price. Everything else is a ratio to it. | CME via Yahoo `GC=F` / `GCZ26.CMX` (app overlay) | $4,004.2 (GCZ26, 05:39 IST) |
-| 2 | **USD/INR** | MCX gold = gold × rupee. A 1% rupee move is a 1% MCX move with gold flat. | Yahoo `INR=X` (offshore before 09:00) | 94.93 |
-| 3 | **10-year US real yield** (TIPS, %) | The opportunity cost of holding a zero-coupon asset. The classic driver. | FRED `DFII10` (T+1) / US Treasury (same day, slow) | 2.64% (22 Oct) · Treasury 2.66% (23 Oct) |
+| 2 | **USD/INR** | MCX gold = gold × rupee. A 1% rupee move is a 1% MCX move with gold flat. | Yahoo `INR=X` (before 09:00 it is the previous evening's last print: the app has no overnight rupee feed, and the 08:45 card dates it) | 94.93 |
+| 3 | **10-year US real yield** (TIPS, %) | The opportunity cost of holding a zero-coupon asset. The classic driver. | US Treasury real curve `UST_REAL_10Y` (same evening) or FRED `DFII10` (T+1): the same quantity, so the page prints the FRESHER one — one value and one date on the strip, HEALTH and MACRO | 2.64% (22 Oct) · Treasury 2.66% (23 Oct) |
 | 4 | **MCX basis vs duty-paid landed, %** | How much of the rupee price is local premium, carry and expectation once the dated 15% duty is taken out. | GOLD › PHYSICAL `ph.ladder` (`basis_pct`; the old `implied_premium_pct` 18.0% = 0.995 × 1.15 × 1.031) | **+3.1%** at the 26 Oct 05:49 fair value (§2.6) |
 | 5 | **Managed-money net position, contracts** (COT, weekly) | Is the speculative crowd long, how long, and is it adding or leaving — as a description of the week, never a forecast (G-STUDY). | CFTC disaggregated, Tuesday data, Friday release (`p.hero`) | +104,206 (20 Oct), 3rd week of long liquidation; 52-week COT index 26 (context) |
 
@@ -80,7 +80,7 @@ least 995.
 - BIS hallmarking in India: 6-digit alphanumeric HUID is mandatory on hallmarked jewellery (since 2023); the hallmark carries
   the fineness grade, not a price.
 
-**[APP]** `purity` column on MCXG specs. Tooltip: "995/999: multiply a 995 price by 1.00402 to compare with 999".
+**[APP]** `purity` column on MCXG specs. Tooltip: "995/999: a 999 quote is 0.40 % above the same gold at 995 (× 1.00402) — but the basis never uses that ratio: COMEX × USD/INR is the price of FINE gold, so a contract of purity P is compared with landed × P/1000 (PM decision D1)".
 
 ## 1.3 Bars and coins: who holds what
 

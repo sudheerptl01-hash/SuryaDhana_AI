@@ -11,6 +11,12 @@ import { apiError } from '@/lib/errors'
  * risk_math.py). Book = Desk paper positions + last-known broker holdings (file
  * as-of surfaced). `symbols=` runs an equal-weight WHAT-IF basket for pre-trade
  * checks; the ladder below it stays the real book.
+ *
+ * W2-BOOK (6 Nov 2026): the WHAT-IF basket is sized at the Desk's equity share of NAV by default (66 %, review M18 —
+ * 100 % of NAV overstated VaR ≈ 1.5× and tripped "crit"), labelled, with a selector (Desk share / 100 % NAV / custom ₹);
+ * the empty VaR panel says why it is empty (m106); the legacy −2 % daily halt is listed apart from the Desk rules
+ * (m107); a stress replay that covers only part of the basket says how much (m108); and the PAPER F&O book's risk sits
+ * beside the cash VaR (./fobook/FoRiskPanel, GET /api/risk/fo — PLAN 2.2).
  */
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import client, { getDeskStatus } from '@/lib/api'
@@ -19,6 +25,7 @@ import {
   Btn, Chip, DataTable, Empty, ErrorBox, Grid, KV, Label, Loading, Meter, Notice, PageHeader, Panel, Stat, T,
   fmtInr, fmtSignedPct, tone, type Column, CHART_BOX, useChartSize, sourceOf, SourceChip } from '@/components/terminal'
 import { staggerRows, textWidth } from '@/components/terminal/chart'
+import { FoRiskPanel } from '@/components/fobook/FoRiskPanel'
 
 type Sev = 'ok' | 'warn' | 'crit' | 'na'
 interface Excl { symbol: string; reason: string }
@@ -39,15 +46,18 @@ interface SectorRow { sector: string; value_inr: number; value_pct: number; posi
 interface Stress {
   id: string; label: string; start: string; end: string; nifty_pct: number | null; portfolio_pct: number | null
   pnl_inr: number; covered_value_pct: number; worst: { symbol: string; window_return_pct: number } | null; excluded: Excl[]
+  names_total?: number; names_covered?: number; partial?: boolean
 }
 interface Ladder {
   nav: number | null; peak: number | null; drawdown_pct: number | null; stop_nav: number | null
   further_fall_to_stop_pct: number | null; today_return_pct: number | null; room_before_halt_pct: number | null
   emergency_stop_pct: number; daily_halt_pct: number; source: string; today_basis: string; stopped: boolean
-  points: { date: string; drawdown_pct: number }[]; rules: string[]
+  points: { date: string; drawdown_pct: number }[]; rules: string[]; legacy_rules?: string[]; daily_halt_basis?: string
 }
+interface Sizing { mode: 'desk' | 'nav' | 'custom'; equity_share: number; nav_inr: number; notional_inr: number; per_name_inr: number | null; label: string }
+type SizeMode = Sizing['mode']
 interface RiskData {
-  as_of: string; mode: 'book' | 'what_if'
+  as_of: string; mode: 'book' | 'what_if'; sizing?: Sizing | null
   book: {
     nav_inr: number; equity_value_inr: number; desk_nav_inr: number; desk_cash_inr: number
     desk_positions: number; broker_positions: number; broker_equity_inr: number
@@ -69,9 +79,10 @@ function SevChip({ name, sev, title }: { name: string; sev: Sev; title?: string 
 }
 
 /** Daily portfolio return histogram with the VaR95/99 loss markers (hand-rolled SVG, kit style). */
-function ReturnHistogram({ bins, var95, var99 }: { bins: HistBin[]; var95: number | null; var99: number | null }) {
+function ReturnHistogram({ bins, var95, var99, emptyHint }: { bins: HistBin[]; var95: number | null; var99: number | null; emptyHint: string }) {
   const { ref, w, h } = useChartSize(640, 150)   // CSS px (C1-17): 9 px labels at any width
-  if (!bins.length) return <Empty title="No return sample" hint="VaR needs per-ticker history from data-service." icon="◌" />
+  // review m106: an empty book is not a data fault — the copy says which one it is
+  if (!bins.length) return <Empty title="No return sample" hint={emptyHint} icon="◌" />
   const L = 8, R = 8, TOP = 8, B = 18
   const lo = bins[0].x0, hi = bins[bins.length - 1].x1, span = hi - lo || 1
   const nMax = Math.max(...bins.map(b => b.n)) || 1
@@ -142,16 +153,21 @@ export function RiskDashboard(_: { isDark?: boolean }) {
   const [error, setError] = useState<string | null>(null)
   const [basket, setBasket] = useState('')          // applied what-if CSV ('' = live book)
   const [draft, setDraft] = useState('')
+  // review M18: the what-if is sized at the Desk's equity share by default; 100 % of NAV and a custom ₹ on request
+  const [size, setSize] = useState<SizeMode>('desk')
+  const [customDraft, setCustomDraft] = useState('')
+  const [custom, setCustom] = useState<number | null>(null)
 
   const load = useCallback(async (symbols: string, refresh = false) => {
     setLoading(true)
     try {
+      const sizing = symbols ? { size: size === 'custom' && !custom ? 'desk' : size, ...(size === 'custom' && custom ? { notional: custom } : {}) } : {}
       const r = await client.get('/api/risk/dashboard', {
-        params: { ...(symbols ? { symbols } : {}), ...(refresh ? { refresh: true } : {}) }, timeout: 120000 })
+        params: { ...(symbols ? { symbols } : {}), ...sizing, ...(refresh ? { refresh: true } : {}) }, timeout: 120000 })
       setData(r.data); setError(null)
     } catch (e: unknown) { setError(apiError(e)) }
     finally { setLoading(false) }
-  }, [])
+  }, [size, custom])
   useEffect(() => { load(basket) }, [load, basket])
 
   const loadWatchlist = async () => {
@@ -205,8 +221,11 @@ export function RiskDashboard(_: { isDark?: boolean }) {
       render: s => <span style={{ color: tone(s.nifty_pct) }}>{fmtSignedPct(s.nifty_pct, 1)}</span> },
     { key: 'port', label: 'This book', align: 'right', sort: s => s.portfolio_pct ?? 0,
       title: 'P&L over the covered value: each holding’s ACTUAL return in the window',
-      render: s => <span style={{ color: tone(s.portfolio_pct), fontWeight: 700 }}>{fmtSignedPct(s.portfolio_pct, 1)}</span> },
-    { key: 'pnl', label: 'P&L', align: 'right', sort: s => s.pnl_inr, render: s => <span style={{ color: tone(s.pnl_inr) }}>{fmtInr(s.pnl_inr)}</span> },
+      // review m108: a replay that covers part of the basket says so next to its headline
+      render: s => <span><span style={{ color: tone(s.portfolio_pct), fontWeight: 700 }}>{fmtSignedPct(s.portfolio_pct, 1)}</span>
+        {s.partial && <div style={{ color: T.amber, fontSize: 9.5 }} data-rsk-partial>on {s.names_covered} of {s.names_total} names ({s.covered_value_pct.toFixed(0)}% of value)</div>}</span> },
+    { key: 'pnl', label: 'P&L', align: 'right', sort: s => s.pnl_inr, title: 'on the covered names only; excluded names are never guessed',
+      render: s => <span style={{ color: tone(s.pnl_inr) }}>{fmtInr(s.pnl_inr)}{s.partial && <span style={{ color: T.dim }}> ᶜ</span>}</span> },
     { key: 'cov', label: 'Covered', align: 'right', sort: s => s.covered_value_pct,
       title: 'share of book value with history in the window; the rest is excluded, never guessed',
       render: s => <span style={{ color: s.covered_value_pct < 70 ? T.amber : T.muted }}>{s.covered_value_pct.toFixed(0)}%</span> },
@@ -254,6 +273,17 @@ export function RiskDashboard(_: { isDark?: boolean }) {
           <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="what-if: SYM1,SYM2,…" spellCheck={false}
             style={{ background: 'transparent', border: `1px solid ${T.border}`, color: T.text, fontFamily: T.mono,
                      fontSize: 11, padding: '5px 8px', width: 220 }} />
+          <select value={size} onChange={e => setSize(e.target.value as SizeMode)} aria-label="what-if sizing"
+            title="how much the equal-weight what-if basket is spread over"
+            style={{ background: '#07090d', color: T.text, border: `1px solid ${T.border}`, fontFamily: T.mono, fontSize: 11, padding: '5px 6px' }}>
+            <option value="desk">size: Desk equity share</option>
+            <option value="nav">size: 100% of NAV</option>
+            <option value="custom">size: custom ₹</option>
+          </select>
+          {size === 'custom' && <input value={customDraft} onChange={e => setCustomDraft(e.target.value)} placeholder="₹ e.g. 300000" spellCheck={false}
+            onBlur={() => setCustom(Number(customDraft.replace(/[,₹\s]/g, '')) > 0 ? Number(customDraft.replace(/[,₹\s]/g, '')) : null)}
+            aria-label="custom what-if amount"
+            style={{ background: 'transparent', border: `1px solid ${T.border}`, color: T.text, fontFamily: T.mono, fontSize: 11, padding: '5px 8px', width: 110 }} />}
           <Btn onClick={() => setBasket(draft.trim())} disabled={!draft.trim() || loading}>▶ What-if</Btn>
           <Btn onClick={loadWatchlist} title="equal-weight the Desk's momentum watchlist">Desk watchlist</Btn>
           {basket && <Btn onClick={() => { setBasket(''); setDraft('') }}>✕ Live book</Btn>}
@@ -283,17 +313,20 @@ export function RiskDashboard(_: { isDark?: boolean }) {
           )}
           {data.mode === 'what_if' && (
             <Notice color={T.cyan}>
-              WHAT-IF basket: equal weight on {fmtInr(data.book.nav_inr)} — a pre-trade check, not the live book.
-              The drawdown ladder below still tracks the real ledger.
+              <span data-rsk-sizing={data.sizing?.mode ?? 'nav'}>WHAT-IF basket: equal weight on {data.sizing ? data.sizing.label : fmtInr(data.book.nav_inr)}
+              {data.sizing?.per_name_inr != null && <> · {fmtInr(data.sizing.per_name_inr)} per name</>} — a pre-trade check, not the live book.
+              VaR “% of book” is against the full NAV {fmtInr(data.book.nav_inr)}. The drawdown ladder below still tracks the real ledger.</span>
             </Notice>
           )}
-          {data.notes.map((n, i) => <Notice key={i} color={T.amber}>{n}</Notice>)}
+          {data.notes.filter(n => !n.startsWith('WHAT-IF basket:')).map((n, i) => <Notice key={i} color={T.amber}>{n}</Notice>)}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)', gap: 10 }}>
             <Panel title="Value at Risk · historical simulation" subtitle={`last ${v?.sessions_used ?? 0} sessions at current weights`} source={riskSrc} badge="arithmetic"
               right={v?.excluded.length ? <Label color={T.amber}>{v.excluded.length} excluded</Label> : undefined}>
               <div style={{ display: 'grid', gap: 10 }}>
-                <ReturnHistogram bins={v?.histogram ?? []} var95={v?.var95_1d_pct ?? null} var99={v?.var99_1d_pct ?? null} />
+                <ReturnHistogram bins={v?.histogram ?? []} var95={v?.var95_1d_pct ?? null} var99={v?.var99_1d_pct ?? null}
+                  emptyHint={data.holdings.length === 0 ? 'The book holds no equity today, so there is nothing to measure: run a what-if basket above.'
+                    : 'VaR needs per-ticker history from data-service (see the excluded names below).'} />
                 <KV items={varRows} />
                 {v?.excluded.length ? (
                   <div style={{ fontSize: 10, color: T.amber }}>
@@ -312,17 +345,23 @@ export function RiskDashboard(_: { isDark?: boolean }) {
                     ['Distance to stop', <span key="3" style={{ color: (ladder?.further_fall_to_stop_pct ?? 99) < 5 ? T.red : T.text }}>
                       {ladder?.further_fall_to_stop_pct != null ? `a further −${ladder.further_fall_to_stop_pct.toFixed(1)}%` : '—'}</span>],
                     ['Today', <span key="4" style={{ color: tone(ladder?.today_return_pct) }}>{fmtSignedPct(ladder?.today_return_pct, 2)} <Label>({ladder?.today_basis})</Label></span>],
-                    ['Room before −2% halt', <span key="5" style={{ color: (ladder?.room_before_halt_pct ?? 9) <= 0.5 ? T.red : T.text }}>
-                      {ladder?.room_before_halt_pct != null ? `${ladder.room_before_halt_pct.toFixed(2)}%` : '—'}</span>],
+                    ['Room before the legacy −2% halt', <span key="5" style={{ color: T.muted }} title={ladder?.daily_halt_basis ?? 'legacy 5-day system (dormant), not a Desk rule'}>
+                      {ladder?.room_before_halt_pct != null ? `${ladder.room_before_halt_pct.toFixed(2)}%` : '—'} <Label>(5-day system, dormant)</Label></span>],
                   ]} />
                   <div style={{ fontSize: 10, color: T.muted, lineHeight: 1.6 }}>
+                    <div style={{ color: T.text }}>Decision Desk rules</div>
                     {(ladder?.rules ?? []).map((r, i) => <div key={i}>· {r}</div>)}
+                    {(ladder?.legacy_rules ?? []).length > 0 && <div style={{ color: T.dim, marginTop: 4 }} data-rsk-legacy-rules>
+                      {(ladder?.legacy_rules ?? []).map((r, i) => <div key={i}>· {r}</div>)}</div>}
                     <div style={{ color: T.dim, marginTop: 4 }}>The owner-approved trading rules, displayed here and never modified from this page.</div>
                   </div>
                 </div>
               </Panel>
             </div>
           </div>
+
+          {/* PLAN 2.2 / review M40: the PAPER F&O book's risk, beside the cash VaR */}
+          <FoRiskPanel />
 
           <Panel title="Holdings risk" subtitle={`beta vs ${data.beta.index} · risk share = marginal contribution to portfolio σ (sums to 100%)`} pad={0}
             source={data.book.broker_as_of ? brokerSrc : riskSrc} badge="arithmetic"

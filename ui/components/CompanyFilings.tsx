@@ -14,6 +14,7 @@ import { usePins } from '@/lib/pins'
 import { Chip, ErrorBox, Input, Loading, PageHeader, Panel, T, TickerLink, fiscalQuarter, fmtPct, sourceOf, undatedSource } from '@/components/terminal'
 import { useFinancialsLatest } from '@/lib/useFinancials'
 import { isoDayFromNse, newestStamp } from '@/lib/nseDate'
+import { cfCoverage } from '@/components/marketPagesModel'
 
 
 const CATS: [string, string, string][] = [
@@ -62,12 +63,20 @@ export function CompanyFilings() {
   const { fin: resFin } = useFinancialsLatest([...new Set((data?.items ?? []).filter(f => f.category === 'results').map(f => f.symbol))], { prefetch: false })
   const mineCount = useMemo(() => (data?.items ?? []).filter(f => mine.has(f.symbol) && f.category !== 'routine').length, [data, mine])
 
+  // M11 (UI): a list cut to the newest N filings says so: on a results day the morning (M&M 12:57, LGEINDIA 10:56)
+  // was missing with no sign. The chips are NSE's whole-day counts; the list may hold fewer.
+  const cov = useMemo(() => (data ? cfCoverage(data.items, data.counts, data as { truncated?: boolean; total?: number; returned?: number }) : null), [data])
+  const listCounts = useMemo(() => {
+    const c: Record<string, number> = {}
+    for (const f of data?.items ?? []) c[f.category] = (c[f.category] ?? 0) + 1
+    return c
+  }, [data])
   const toggle = (c: string) => setCats(prev => { const s = new Set(prev); s.has(c) ? s.delete(c) : s.add(c); return s })
 
   return (
     <div>
       <PageHeader code="CF" title="Company Filings"
-        subtitle={`every NSE equity announcement today, newest first · ${data ? `${data.items.length} filings` : 'loading'}${data?.market_open ? ' · every 60 s' : ''}`}
+        subtitle={`every NSE equity announcement today, newest first · ${data ? `${data.items.length.toLocaleString('en-IN')} filings${cov?.truncated ? ` of ${cov.total.toLocaleString('en-IN')} today` : ''}` : 'loading'}${data?.market_open ? ' · every 60 s' : ''}`}
         right={<div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <Chip color={T.cyan} active={mineOnly} onClick={() => setMineOnly(m => !m)}>YOUR STOCKS {mineCount}</Chip>
           <Input value={q} onChange={setQ} placeholder="stock, company or subject" width={220} />
@@ -76,10 +85,17 @@ export function CompanyFilings() {
       {!data && !error && <Loading label="Reading NSE announcements" />}
       {data && (
         <>
+          {cov?.truncated && (
+            <div data-cf-truncated style={{ border: `1px solid ${T.amber}66`, background: '#120e04', padding: '6px 10px', marginBottom: 8, fontSize: 11, color: T.amber }}>
+              PARTIAL LIST · the newest {cov.shown.toLocaleString('en-IN')} of the day&apos;s {cov.total.toLocaleString('en-IN')} filings{cov.earliest ? `, back to ${cov.earliest} IST` : ''}:
+              earlier filings are not shown. The chips count the whole day; the number after the slash is what this list holds.
+            </div>)}
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 10 }}>
             <Chip color={T.text} active={cats.size === 0} onClick={() => setCats(new Set())}>ALL (NO ROUTINE)</Chip>
             {CATS.map(([k, l, c]) => (data.counts[k] ?? 0) > 0 && (
-              <Chip key={k} color={c} active={cats.has(k)} onClick={() => toggle(k)}>{l} {data.counts[k]}</Chip>))}
+              <Chip key={k} color={c} active={cats.has(k)} onClick={() => toggle(k)}
+                title={cov?.truncated ? `${data.counts[k]} today on NSE · ${listCounts[k] ?? 0} in this list` : undefined}>
+                {l} {data.counts[k]}{cov?.truncated && (listCounts[k] ?? 0) !== data.counts[k] ? ` / ${listCounts[k] ?? 0}` : ''}</Chip>))}
           </div>
           <Panel source={data?.market_open
             ? undatedSource('NSE announcements', `NSE's announcements feed in session, refreshed every 60 s (not a tick feed)${newestStamp(data?.items) ? ` · newest filing ${newestStamp(data?.items)!.slice(11, 16)} IST` : ''}`)

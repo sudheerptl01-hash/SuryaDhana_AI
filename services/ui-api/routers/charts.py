@@ -13,6 +13,18 @@ Two reads, both proxying data-service (:8001 owns DuckDB — never opened here):
   `note: "tick store not live"` via errors.degraded() — the chart falls back
   to daily instead of showing a red error.
 
+- M42 (5 Nov review: "CHRT cannot chart an index, a future, IV or OI"):
+  * an NSE index (NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTYNXT50 and their NSE / Yahoo spellings) charts from
+    data-service `/db/index-ohlc/{name}` (`index_ohlc_daily`: NSE's daily index file; the oldest rows are close-only and
+    are counted in `close_only`), and its intraday bars from the tick store under NSE's index name;
+  * GET /overlay?symbol=&kind=iv|oi|future&days=N — the lower pane / price-pane overlays, all from stored tables:
+    `iv` = `iv_summary_daily` (iv30_cm, the near ATM IV, RV20 cc; `arithmetic`), `oi` = `nse_fo_daily` aggregate call /
+    put / futures OI (`/db/fo/pcr-history`, shares; `context`), `future` = the near-month future's close and basis
+    (`/db/fo/basis-history`; `arithmetic`). A missing series degrades to `ok: false` with the reason, never a 500.
+- intraday bars outside 09:15–15:30 IST are dropped (the tick store keeps post-close prints), the VWAP is then recomputed
+  from the bars shown, and a session that starts late says so (`coverage_note`: 5 Nov's bars began at 13:00, after a
+  midday deploy, so its "session VWAP" was an afternoon VWAP).
+
 Event-loop purity: every route is a sync `def` (FastAPI threadpool), so the
 blocking httpx calls and the pandas resample never touch the event loop.
 """
@@ -23,6 +35,8 @@ import re
 import threading
 import time
 from datetime import date, timedelta
+from typing import Any
+from urllib.parse import quote
 
 import httpx
 import pandas as pd
@@ -46,6 +60,18 @@ _PERIOD = {"W": "W", "M": "M"}
 
 _DAYS_MIN, _DAYS_MAX = 10, 7320  # ~20 years; the panel starts 2010
 
+# NSE index underlyings (the F&O symbol) and every spelling the terminal / Yahoo / NSE use for them
+INDEX_NAMES: dict[str, str] = {"NIFTY": "NIFTY 50", "BANKNIFTY": "NIFTY BANK", "FINNIFTY": "NIFTY FINANCIAL SERVICES",
+                               "MIDCPNIFTY": "NIFTY MIDCAP SELECT", "NIFTYNXT50": "NIFTY NEXT 50"}
+INDEX_ALIASES: dict[str, str] = {
+    **{k: k for k in INDEX_NAMES}, **{v: k for k, v in INDEX_NAMES.items()},
+    "NIFTY50": "NIFTY", "NSEI": "NIFTY", "^NSEI": "NIFTY", "NIFTYBANK": "BANKNIFTY", "^NSEBANK": "BANKNIFTY", "NSEBANK": "BANKNIFTY",
+    "NIFTY FIN SERVICE": "FINNIFTY", "NIFTY MID SELECT": "MIDCPNIFTY", "NIFTY NEXT50": "NIFTYNXT50",
+}
+OVERLAYS = ("iv", "oi", "future")
+SESSION = ("09:15", "15:30")
+LATE_START = "09:20"
+
 
 class UpstreamError(Exception):
     """A data-service call that did not yield usable JSON. status=None → unreachable."""
@@ -60,10 +86,16 @@ def _norm_symbol(symbol: str) -> str:
     sym = (symbol or "").strip().upper()
     if sym.endswith(".NS"):
         sym = sym[:-3]
+    if sym in INDEX_ALIASES:
+        return INDEX_ALIASES[sym]
     if not _SYMBOL_RE.match(sym):
         fail(400, "invalid", f"'{symbol}' is not an NSE symbol",
-             hint="Plain NSE ticker, e.g. RELIANCE or BAJAJ-AUTO (no .NS suffix needed)")
+             hint="Plain NSE ticker, e.g. RELIANCE or BAJAJ-AUTO (no .NS suffix needed), or an index: NIFTY, BANKNIFTY, FINNIFTY")
     return sym
+
+
+def is_index(sym: str) -> bool:
+    return sym in INDEX_NAMES
 
 
 # ── upstream fetches (monkeypatched in tests; the 60 s cache lives inside) ───────
@@ -96,6 +128,47 @@ def _fetch_daily(symbol: str, start: date) -> list[dict]:
             _cache.pop(min(_cache, key=lambda k: _cache[k][0]))
         _cache[key] = (now, rows)
     return rows
+
+
+def _fetch_json(path: str, params: dict) -> dict:
+    """One data-service read (index OHLC, the IV summary, the F&O aggregates), cached 60 s per (path, params)."""
+    key = (path, repr(sorted(params.items())))
+    now = time.monotonic()
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit and now - hit[0] < _CACHE_TTL:
+            return hit[1]  # type: ignore[return-value]
+    try:
+        r = httpx.get(f"{DATA_SVC}{path}", params=params, timeout=_TIMEOUT)
+    except httpx.RequestError as exc:
+        raise UpstreamError(None, f"data-service unreachable: {exc.__class__.__name__}") from exc
+    if r.status_code >= 400:
+        raise UpstreamError(r.status_code, str(upstream_detail(r)))
+    body = r.json()
+    body = body if isinstance(body, dict) else {"rows": body}
+    with _cache_lock:
+        if len(_cache) >= _CACHE_MAX:
+            _cache.pop(min(_cache, key=lambda k: _cache[k][0]))
+        _cache[key] = (now, body)  # type: ignore[assignment]
+    return body
+
+
+def _fetch_index_daily(sym: str, days: int) -> tuple[list[dict], int]:
+    """Daily bars of an NSE index from `index_ohlc_daily` (NSE's daily index file). Rows with no open / high / low (the
+    close-only history) are drawn as a close-only bar and counted."""
+    body = _fetch_json(f"/db/index-ohlc/{quote(INDEX_NAMES[sym])}", {"days": min(10000, max(10, int(days * 0.75) + 10))})
+    start = (date.today() - timedelta(days=days)).isoformat()
+    rows, close_only = [], 0
+    for r in body.get("rows") or []:
+        d, c = str(r.get("date") or "")[:10], r.get("close")
+        if not d or d < start or c is None:
+            continue
+        o, h, lo = r.get("open"), r.get("high"), r.get("low")
+        if o is None or h is None or lo is None:
+            close_only += 1
+            o = h = lo = c
+        rows.append({"date": d, "open": o, "high": h, "low": lo, "close": c, "volume": 0})
+    return rows, close_only
 
 
 def _fetch_ticks(symbol: str, day: str, interval: str) -> dict:
@@ -157,15 +230,21 @@ def get_ohlcv(symbol: str = "RELIANCE", tf: str = "D", days: int = 365) -> dict:
              hint="Intraday goes through /api/charts/intraday")
     days = max(_DAYS_MIN, min(int(days), _DAYS_MAX))
     start = date.today() - timedelta(days=days)
+    close_only = 0
     try:
-        rows = _fetch_daily(sym, start)
+        if is_index(sym):
+            rows, close_only = _fetch_index_daily(sym, days)
+        else:
+            rows = _fetch_daily(sym, start)
     except UpstreamError as exc:
         if exc.status == 404:
             fail(404, "not_found", exc.detail or f"No OHLCV data for {sym}",
-                 hint="NSE ticker as in the EQS screener, e.g. RELIANCE, TCS, M&M")
+                 hint="NSE ticker as in the EQS screener, e.g. RELIANCE, TCS, M&M; or an index: NIFTY, BANKNIFTY")
         fail(502, "upstream_down", exc.detail, hint="./start-local.sh status — is data-service (:8001) up?")
+    if is_index(sym) and not rows:
+        fail(404, "not_found", f"No index bars stored for {sym} ({INDEX_NAMES[sym]})", hint="index_ohlc_daily is filled by the 19:15 index-file job")
     bars = _resample(rows, tf)
-    return {
+    out = {
         "symbol": sym,
         "tf": tf,
         "days": days,
@@ -174,6 +253,66 @@ def get_ohlcv(symbol: str = "RELIANCE", tf: str = "D", days: int = 365) -> dict:
         "as_of": bars[-1]["t"] if bars else None,
         "source": "duckdb-eod",  # data-service DuckDB ohlcv (yahoo history), not live ticks
     }
+    if is_index(sym):
+        out.update(kind="index", index_name=INDEX_NAMES[sym], source="nse-index-file", close_only=close_only)
+    return out
+
+
+def overlay_points(kind: str, body: dict) -> list[dict]:
+    """The overlay's points by date from a data-service payload (pure; unit-tested)."""
+    rows = body.get("rows") or body.get("data") or []
+    out: list[dict] = []
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        d = str(r.get("date") or "")[:10]
+        if not d:
+            continue
+        if kind == "iv":
+            p = {"t": d, "iv30": r.get("iv30_cm"), "near": r.get("near_atm_iv"), "rv20": r.get("rv20_cc")}
+        elif kind == "oi":
+            c, pu = r.get("call_oi"), r.get("put_oi")
+            p = {"t": d, "call_oi": c, "put_oi": pu, "fut_oi": r.get("fut_oi"),
+                 "pcr": round(pu / c, 3) if isinstance(c, (int, float)) and isinstance(pu, (int, float)) and c else None}
+        else:
+            p = {"t": d, "fut": r.get("fut"), "spot": r.get("spot"), "basis_pct": r.get("basis_pct"),
+                 "basis_ann_pct": r.get("basis_ann_pct"), "dte": r.get("dte")}
+        out.append(p)
+    out.sort(key=lambda p: p["t"])
+    return out
+
+
+_OVERLAY_SPEC = {
+    "iv": ("/db/iv/summary", "arithmetic", "iv_summary_daily (Black-76 on the parity forward, b76-pcp-v1)", "% annualised"),
+    "oi": ("/db/fo/pcr-history", "context", "NSE F&O bhavcopy aggregates (nse_fo_daily): every strike and expiry", "shares"),
+    "future": ("/db/fo/basis-history", "arithmetic", "NSE F&O bhavcopy near-month future close (nse_fo_daily) vs spot", "₹ / % basis"),
+}
+
+
+@router.get("/overlay")
+def get_overlay(symbol: str = "NIFTY", kind: str = "iv", days: int = 365) -> dict:
+    """A daily overlay for the chart from stored tables: IV30 (iv), F&O open interest (oi) or the near future (future)."""
+    sym = _norm_symbol(symbol)
+    kind = (kind or "").strip().lower()
+    if kind not in OVERLAYS:
+        fail(400, "invalid", f"kind must be one of {', '.join(OVERLAYS)} (got '{kind}')")
+    days = max(_DAYS_MIN, min(int(days), _DAYS_MAX))
+    path, badge, source, unit = _OVERLAY_SPEC[kind]
+    sessions = max(20, min(2000, int(days * 0.75) + 10))
+    params = {"symbol": sym, "days": sessions}
+    base = {"symbol": sym, "kind": kind, "days": days, "points": [], "as_of": None, "badge": badge, "source": source, "unit": unit,
+            "note": "describes, does not predict"}
+    try:
+        body = _fetch_json(path, params)
+    except UpstreamError as exc:
+        why = exc.detail if exc.status is not None else f"data-service unreachable ({exc.detail})"
+        if exc.status == 404 and kind == "future" and is_index(sym) and sym != "NIFTY":
+            why = (f"no near-future series served for {sym}: data-service's basis read joins a spot series it holds for "
+                   "NIFTY and the stocks only")
+        return degraded({**base, "note": why}, "degraded" if exc.status == 404 else "upstream_down", why)
+    start = (date.today() - timedelta(days=days)).isoformat()
+    pts = [p for p in overlay_points(kind, body) if p["t"] >= start]
+    return {**base, "points": pts, "as_of": pts[-1]["t"] if pts else None}
 
 
 @router.get("/intraday")
@@ -193,9 +332,9 @@ def get_intraday(symbol: str = "RELIANCE", interval: str = "1m",
         except ValueError:
             fail(400, "invalid", f"date must be YYYY-MM-DD (got '{day}')")
 
-    base = {"symbol": sym, "date": day, "interval": interval, "bars": [], "vwap": None, "source": None}
+    base: dict[str, Any] = {"symbol": sym, "date": day, "interval": interval, "bars": [], "vwap": None, "source": None}
     try:
-        body = _fetch_ticks(sym, day, interval)
+        body = _fetch_ticks(INDEX_NAMES.get(sym, sym), day, interval)
     except UpstreamError as exc:
         if exc.status == 404:
             # W6's /ticks/bars is not integrated yet (or holds nothing for this session):
@@ -207,18 +346,47 @@ def get_intraday(symbol: str = "RELIANCE", interval: str = "1m",
             return degraded({**base, "note": "data-service unreachable"}, "upstream_down",
                             exc.detail, hint="./start-local.sh status — is data-service (:8001) up?")
         fail(502, "upstream_down", exc.detail)
-    bars = body.get("bars") or []
+    raw = body.get("bars") or []
+    bars = in_session(raw)
+    vwap = body.get("vwap")
+    if len(bars) != len(raw):
+        vwap = bars_vwap(bars)                               # the upstream VWAP included the dropped bars
     out = {
-        "symbol": body.get("symbol", sym),
+        "symbol": sym,
         "date": body.get("date", day),
         "interval": body.get("interval", interval),
         "bars": bars,
-        "vwap": body.get("vwap"),
+        "vwap": vwap,
         "source": body.get("source"),
     }
+    if len(bars) != len(raw):
+        out["dropped_outside_session"] = len(raw) - len(bars)
+    if bars and str(bars[0].get("t", "")) > LATE_START:
+        out["coverage_note"] = (f"the tick store holds nothing before {bars[0]['t']} IST for this session: the VWAP and the "
+                                f"session range are since {bars[0]['t']}")
     note = body.get("note")
     if note is None and not bars:
         note = "no ticks stored for this session"
     if note is not None:
         out["note"] = note
     return out
+
+
+def in_session(bars: list[dict]) -> list[dict]:
+    """Bars stamped 09:15–15:30 IST only (the tick store keeps post-close prints: 5 Nov's bars ran to 15:55)."""
+    return [b for b in bars if SESSION[0] <= str(b.get("t", ""))[:5] <= SESSION[1]]
+
+
+def bars_vwap(bars: list[dict]) -> float | None:
+    """Volume-weighted typical price of the bars shown; None without volume (an index has none)."""
+    num = den = 0.0
+    for b in bars:
+        try:
+            v = float(b.get("v") or 0)
+            tp = (float(b["h"]) + float(b["l"]) + float(b["c"])) / 3
+        except (KeyError, TypeError, ValueError):
+            continue
+        if v > 0:
+            num += tp * v
+            den += v
+    return round(num / den, 2) if den else None

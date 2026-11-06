@@ -94,6 +94,10 @@ def iv_eod_job(req: IvJobRequest | None = None, job: str | None = Query(None), b
     def _run(progress: Callable[[int, int], None]) -> dict[str, Any]:
         if job_id == "iv_weekly":
             return jobs.run_weekly(store)
+        if job_id == "iv_repair":                   # M06 / M43: RV + IV30 fill + ranks over the stored rows (no fetch)
+            out = jobs.run_repair(store, start=start, end=body.backfill_to, symbols=body.surface_symbols)
+            progress(1, 1)
+            return out
         if job_id == "vix_backfill":
             return jobs.run_vix_backfill(store, _http(), start=start or date(2014, 1, 1), end=body.backfill_to or date.today())  # noqa: DTZ011
         if job_id == "iv_backfill" or start is not None:
@@ -253,9 +257,33 @@ def iv_contract_vix(days: int = Query(3000, ge=1, le=10000)) -> dict[str, Any]:
     return reads.contract_vix(_store(), days=days)
 
 
+def _ban_dir() -> Path | None:
+    root = _paths.get("cache_root")
+    return root / "nse_archive" / "surveillance" / "ban" if root else None
+
+
 @router.get("/db/iv/screen")
 def iv_contract_screen() -> dict[str, Any]:
-    return reads.contract_screen(_store())
+    return reads.contract_screen(_store(), ban_dir=_ban_dir())
+
+
+@router.get("/db/iv/paid-delivered")
+def iv_paid_delivered(symbol: str = Query(..., max_length=32), n: int = Query(12, ge=1, le=60)) -> dict[str, Any]:
+    """M02: IV paid at ≈ 30 DTE vs the vol delivered over each monthly option's own life (close-to-close, zero-mean)."""
+    return reads.paid_vs_delivered(_store(), symbol, n=n)
+
+
+@router.get("/db/iv/near-skew")
+def iv_near_skew(symbol: str = Query(..., max_length=32), days: int = Query(750, ge=1, le=5000)) -> dict[str, Any]:
+    """M03: the near expiry's own 25Δ skew series (its percentile is taken against itself)."""
+    return reads.near_skew(_store(), symbol, days=days)
+
+
+@router.get("/db/iv/contract-delta")
+def iv_contract_delta(symbol: str = Query(..., max_length=32), expiry: str | None = Query(None), date_: str | None = Query(None, alias="date")
+                      ) -> dict[str, Any]:
+    """M44: NSE Clearing's Contract_Delta per strike for one expiry (the latest stored session on or before ``date``)."""
+    return reads.contract_delta(_store(), symbol, expiry=_d(expiry), day=_d(date_))
 
 
 @router.get("/db/fo-iv/catalog")
@@ -286,3 +314,42 @@ def index_ohlc(symbol: str, days: int = Query(3000, ge=1, le=10000)) -> dict[str
 @router.get("/db/fo-iv/jobs")
 def fo_iv_jobs() -> dict[str, Any]:
     return {"jobs": list(jobs.JOBS), "eod_files": list(jobs.EOD_FILES), "as_of": db.iso_utc(db.utcnow())}
+
+
+# ── W2-TAPE (PLAN 2.1 the intraday OI / IV tape, 2.4 XPRY): stored rows only; the replay is a metered after-close job ─────
+@router.get("/db/fo-iv/oi-tape/{symbol}")
+def fo_iv_oi_tape(symbol: str, date_: str | None = Query(None, alias="date"), expiry: str | None = Query(None)) -> dict[str, Any]:
+    from fo_iv import intraday
+    return intraday.oi_tape(_store(), symbol, day=_d(date_), expiry=_d(expiry), parquet_root=_paths.get("parquet_root"))
+
+
+@router.get("/db/fo-iv/expiry-day/{symbol}")
+def fo_iv_expiry_day(symbol: str, date_: str | None = Query(None, alias="date"), n: int = Query(26, ge=1, le=260)) -> dict[str, Any]:
+    from fo_iv import intraday
+    return intraday.expiry_day(_store(), symbol, day=_d(date_), parquet_root=_paths.get("parquet_root"), n_score=n)
+
+
+class ExpiryReplayRequest(BaseModel):
+    symbols: list[str] = Field(default_factory=lambda: ["NIFTY", "BANKNIFTY", "FINNIFTY"])
+    since: date | None = None
+    until: date | None = None
+    max_calls: int = Field(default=120, ge=2, le=1000)
+    force: bool = False
+
+
+@router.post("/jobs/expiry-replay")
+def expiry_replay_job(req: ExpiryReplayRequest | None = None) -> dict[str, Any]:
+    """Backfill iv_expiry_replay (Breeze 1-minute ATM call + put bars of past expiry days, 2 metered calls per expiry; O-T16).
+    Refused inside 07:45–09:20, the session and 18:30–21:15 unless ``force``; resumable."""
+    from fo_iv import intraday
+    body = req or ExpiryReplayRequest()
+    store = _store()
+    breeze = _get_breeze() if _get_breeze else None
+
+    def _run(progress: Callable[[int, int], None]) -> dict[str, Any]:
+        out = intraday.run_expiry_replay(store, breeze, _budget(), symbols=body.symbols, since=body.since, until=body.until,
+                                         max_calls=body.max_calls, force=body.force)
+        progress(1, 1)
+        return out
+
+    return _submit_or_503("fo_iv:expiry_replay", _run)

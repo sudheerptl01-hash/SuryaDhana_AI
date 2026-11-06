@@ -18,12 +18,12 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { Chip, Label, Loading, Notice, T } from '@/components/terminal'
 import { Markdown } from '@/components/terminal/Markdown'
 import { getResearchDoc } from '@/lib/api'
-import { getGoldHealth } from '@/lib/gold/api'
 import { HEALTH_SUFFIX, healthLine } from '@/lib/gold/format'
 import type { GoldSubViewProps } from '@/lib/gold/types'
 import { BBG_MAP, NOT_FREE, PART8_RENAME, PARTS_RENDERED_AS_PANELS, ROUTINES, activeCorrections, describeStep, filterLayerParagraphs, parseCurriculum, parseRoutines, shortPanelTitle, type CurriculumPart, type Routine, type RoutineTarget } from '@/lib/gold/learn'
 import { GlossaryPanel } from './GlossaryPanel'
 import { Degraded, GPanel, LinkTile, Term, useGoldLoad } from './ViewBits'
+import { usePageHealth } from './kit'
 import { thresholdText } from './goldViewModel'
 
 export const CURRICULUM_ID = 'reports/gold_program/G-EDU/CURRICULUM.md'
@@ -48,7 +48,8 @@ function NavChip({ sub, onNavigate, title }: { sub: RoutineTarget; onNavigate: G
 export function LearnView(props: GoldSubViewProps) {
   const { layer, onNavigate, catalog } = props
   const doc = useGoldLoad(() => getResearchDoc(CURRICULUM_ID), [])
-  const health = useGoldLoad(() => getGoldHealth(props.window), [props.window])
+  // the SAME verdict HEALTH prints (wave 1e, M-A): the overview's health block for the picked contract, live quote applied
+  const health = usePageHealth({ overview: props.overview, overviewStatus: props.overviewStatus, window: props.window, sel: props.sel })
   // Appendix E / F (what is not free; the Bloomberg map) are rendered as the two panels below, not twice
   const parts = useMemo<CurriculumPart[]>(() => (doc.data?.markdown ? parseCurriculum(doc.data.markdown).filter(p => !PARTS_RENDERED_AS_PANELS.test(p.title)) : []), [doc.data])
   // the builder-speak notes (Part 8 panel ids) are [P]-only (C-BEGINNER-23)

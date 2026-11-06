@@ -13,10 +13,12 @@ import itertools
 import json
 import os
 import queue
+import sys
 import threading
 import time
 from bisect import bisect_left, bisect_right
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Callable, Optional
 
 import duckdb
@@ -120,6 +122,21 @@ BENCHMARK_LABEL = "Nifty-50 proxy (top-100 mkt-cap, equal-weight)"
 # Enforced server-side so a tampered/legacy client payload can't model a fee-free
 # fantasy. 15 bps = 0.15%.
 MIN_FRICTION_BPS = 15.0
+
+# ── Desk-like defaults (5 Nov 2026 review, M20). The old defaults (5 names, a 2 % / 2·ATR per-trade stop, a 5-day
+# time-stop, 15 bps) reproduced the legacy 5-day system that FAILS after costs (it loses ~45–50 %/yr to charges;
+# reports/handbook_swing FAIL −17.8 % CAGR). The new defaults follow the Decision Desk: 20 names, a ≥ 21-session hold,
+# no per-trade stop, and the real ICICI delivery round trip from shared/trading_costs.py at the default position size
+# (₹1 cr / 20 = ₹5 L a name ≈ 0.91 %). Only DEFAULTS change here; every caller may still pass its own values.
+for _p in (Path(__file__).resolve().parents[3], Path(__file__).resolve().parents[1]):
+    if (_p / "shared").is_dir() and str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+from shared.trading_costs import default_model as _cost_model  # noqa: E402
+
+DEFAULT_STARTING_CAPITAL = 10_000_000.0
+DESK_LIKE_POSITIONS = 20
+DESK_LIKE_HOLD_SESSIONS = 21
+DESK_LIKE_FRICTION_BPS = round(_cost_model().round_trip_pct(DEFAULT_STARTING_CAPITAL / DESK_LIKE_POSITIONS) * 100, 1)
 
 # Ticker → sector map for trade-level sector tagging (the blotter's sector grouping).
 # stock_metrics carries no sector column, so it is resolved from the locked universe
@@ -382,16 +399,16 @@ async def get_filter_catalog():
 class BacktestRequest(BaseModel):
     from_date: str
     to_date: str
-    forward_days: int = 5
+    forward_days: int = DESK_LIKE_HOLD_SESSIONS      # Desk-like ≥ 21-session hold (was 5: the failed legacy time-stop)
     win_threshold: float = 0.0
     filters: list[FilterCondition] = []
     max_stocks_per_day: int = 50
     # Pillar 1 — friction + risk + capital
-    starting_capital: float = 10_000_000.0
-    friction_bps: float = 15.0           # round-trip cost, basis points (0.15%)
+    starting_capital: float = DEFAULT_STARTING_CAPITAL
+    friction_bps: float = DESK_LIKE_FRICTION_BPS     # real ICICI round trip at ₹5 L a name (was 15 bps, 1/6 of it)
     stop_loss_pct: Optional[float] = None
     trailing_stop_pct: Optional[float] = None
-    max_positions: int = 5
+    max_positions: int = DESK_LIKE_POSITIONS          # was 5
     max_drawdown_halt_pct: Optional[float] = None   # circuit breaker: halt new entries past this DD
     # C7b — daily realised-loss VaR governor, ON BY DEFAULT at -2% (mirrors the live
     # 2% kill-switch and the CLAUDE.md locked daily-loss rule). Halts NEW entries for
@@ -403,7 +420,7 @@ class BacktestRequest(BaseModel):
     # Fidelity
     entry_timing: str = "next_open"      # "next_open" (no same-bar look-ahead) | "close"
     # Advanced risk sizing (opt-in; all None/False ⇒ identical to plain equal-weight)
-    # C7a (revised, audit §3.4) — true volatility-adaptive ATR stops are ON BY DEFAULT
+    # C7a (revised, audit §3.4) — true volatility-adaptive ATR stops (opt-in since 6 Nov 2026, M20; were on by default)
     # (k=2.0). The per-trade stop is k·ATR% with NO hard upper cap, so a high-ATR storm
     # name gets a WIDER stop (median ATR 3.24%·2 ≈ 6.5%) and is not knocked out on noise.
     # `stop_floor_pct` (default None) is an OPTIONAL *minimum* stop width, not a cap; set
@@ -411,7 +428,9 @@ class BacktestRequest(BaseModel):
     # (with a fixed stop_loss_pct) to opt back out to a pure fixed-% stop; names without
     # ATR data fall back to stop_loss_pct automatically. NOTE: this affects ONLY the
     # per-trade stop — the -2% daily-loss halt (C7b) and -20% max-DD e-stop stay HARD.
-    atr_stop_mult: Optional[float] = 2.0     # per-trade stop = k × signal-day ATR% (no upper cap)
+    # Desk-like default: no per-trade stop (the Desk's rules forbid it: it sells winners on normal dips). Pass e.g.
+    # 2.0 to opt into the k·ATR stop described above.
+    atr_stop_mult: Optional[float] = None    # per-trade stop = k × signal-day ATR% (no upper cap) when set
     stop_floor_pct: Optional[float] = None   # optional minimum stop width (% below entry); None ⇒ none
     vol_target_pct: Optional[float] = None   # volatility-target position sizing
     # Phase 4 / §3.3 — book-level capital allocation. "equal" (default) = legacy
@@ -1903,7 +1922,7 @@ class FactorProfileRequest(BaseModel):
     to_date: str
     forward_days: int = 5                # forward holding horizon N (trading bars)
     win_threshold: float = 0.0           # net % a forward return must clear to be a "win"
-    friction_bps: float = 15.0           # round-trip cost, basis points (matches backtest)
+    friction_bps: float = DESK_LIKE_FRICTION_BPS   # round-trip cost, basis points (matches the backtest default)
     scope: str = "universe"              # "universe" | "watchlist"
     tickers: list[str] = []
     n_deciles: int = 10

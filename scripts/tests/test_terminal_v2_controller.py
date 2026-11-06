@@ -226,13 +226,13 @@ def test_lifespan_registers_the_terminal_jobs_at_their_ist_times(monkeypatch, tm
     assert _fires(jobs["morning_sweep"].trigger, mon, 2) == ["Mon 08:35", "Tue 08:35"]
     assert _fires(jobs["iv_weekly"].trigger, mon, 2) == ["Sat 03:00", "Sat 03:00"]
     assert _fires(jobs["data_health_check"].trigger, mon, 3) == ["Mon 00:10", "Mon 01:10", "Mon 02:10"]
-    ticks = _fires(jobs["iv_intraday"].trigger, mon, 30)
+    ticks = _fires(jobs["iv_intraday"].trigger, mon, 211)            # PLAN 2.1: every 2 minutes, 09:00–15:58 (the gate keeps 09:15–15:30)
     assert (
-        ticks[:3] == ["Mon 09:05", "Mon 09:20", "Mon 09:35"]
-        and "Mon 15:20" in ticks
-        and ticks[27:29] == ["Mon 15:50", "Tue 09:05"]
+        ticks[:3] == ["Mon 09:00", "Mon 09:02", "Mon 09:04"]
+        and "Mon 09:16" in ticks and "Mon 15:30" in ticks
+        and ticks[209:211] == ["Mon 15:58", "Tue 09:00"]
     )
-    assert _fires(jobs["iv_intraday"].trigger, at(2026, 11, 6, 16, 0), 1) == ["Mon 09:05"], "no weekend ticks"
+    assert _fires(jobs["iv_intraday"].trigger, at(2026, 11, 6, 16, 0), 1) == ["Mon 09:00"], "no weekend ticks"
     assert _fires(jobs["nse_positions_catchup"].trigger, mon, 1) == ["Mon 20:30"], "20:30 unchanged (carries iv_eod last)"
     assert "iv_eod" not in jobs, "iv_eod is a step of the 20:30 pass and the 22:45 retry, not a job of its own"
     assert jobs["nse_evening_pass"].misfire_grace_time == 3 * 3600 and jobs["iv_intraday"].misfire_grace_time == 120
@@ -253,6 +253,7 @@ def test_no_terminal_job_fires_inside_a_freeze_window_except_the_light_stored_da
             assert not any(a <= hm <= b for a, b in mc.FREEZE_WINDOWS), f"{jid} fires at {stamp}"
     assert not mc.iv_intraday_due(at(2026, 11, 2, 9, 5)), "the 09:05 tick (inside the morning window) never requests"
     assert mc.iv_intraday_due(at(2026, 11, 2, 9, 20)) and mc.iv_intraday_due(at(2026, 11, 2, 15, 30))
+    assert mc.iv_intraday_due(at(2026, 11, 2, 9, 16)) and not mc.iv_intraday_due(at(2026, 11, 2, 9, 14)), "M45: the whole session from 09:15"
     assert not mc.iv_intraday_due(at(2026, 11, 2, 15, 35)) and not mc.iv_intraday_due(at(2026, 11, 7, 10, 0))
 
 
@@ -483,10 +484,9 @@ def test_the_0835_sweep_runs_the_plan_sends_one_digest_and_is_quiet_when_nothing
     svc.results[mc.IV_EOD_PATH] = {"status": "ok", "days": 3}
     svc.results[mc.INDEX_DRIVERS_PATH] = {"status": "degraded"}
     asyncio.run(mc.morning_sweep())
-    assert svc.post_paths() == [
+    assert svc.post_paths() == [          # m112 (6 Nov): no /jobs/ingest-results inside the 07:45–09:20 window
         "/jobs/ingest-nse-positions",
         "/jobs/ingest-bhavcopy",
-        "/jobs/ingest-results",
         mc.INDEX_DRIVERS_PATH,
         mc.IV_EOD_PATH,
         "/db/fii-dii-cash/refresh",
@@ -501,7 +501,8 @@ def test_the_0835_sweep_runs_the_plan_sends_one_digest_and_is_quiet_when_nothing
     assert (
         "GAP archive:preopen" in body and "RED iv_summary_daily: stored 30 Oct" in body and "AMBER nse_mtf: stored 02 Nov" in body
     )
-    assert "Sweep: positions ok; bhavcopy ok; results ok; drivers degraded; iv_eod ok; FII/DII HTTP 200" in body
+    assert ("Sweep: results left to the 20:45 capture (≈ 14 min: not a light fetch in the window); positions ok; "
+            "bhavcopy ok; drivers degraded; iv_eod ok; FII/DII HTTP 200") in body
     assert not DIRECTION_WORDS.search(body) and "score" not in body.lower()
     # nothing missing: no job, the digest alone
     svc.calls.clear()
@@ -883,10 +884,12 @@ def test_startup_catchup_extends_to_results_valuation_drivers_iv_gap_rows_desk_a
     ran: list[Any] = []
 
     async def desk() -> None:
-        ran.append("desk_daily")
+        async with mc._track("desk_daily"):          # a real tracked run: the report quotes the status it recorded
+            ran.append("desk_daily")
 
     async def shadow() -> None:
-        ran.append("alpha_shadow_daily")
+        async with mc._track("alpha_shadow_daily"):
+            ran.append("alpha_shadow_daily")
 
     async def valuation(recent: int = 10) -> None:
         ran.append(("index_valuation_daily", recent))
@@ -930,7 +933,9 @@ def test_startup_catchup_extends_to_results_valuation_drivers_iv_gap_rows_desk_a
     assert "results release times (7-day window): symbols=40 rows=31" in body
     assert "gap rows: archive:preopen 2026-11-02, 2026-11-03; archive:internals 2026-11-02" in body
     assert (
-        "IV store: ok from 2026-10-31 (3 day(s))" in body and "Desk mark: re-run now" in body and "S1 shadow: re-run now" in body
+        "IV store: ok from 2026-10-31 (3 day(s))" in body
+        and "Desk mark: re-run (done; its 19:30 run was missed)" in body
+        and "S1 shadow: re-run (done; its 19:50 run was missed)" in body
     )
     # "nse" mode (market hours): the same extension after the NSE-file steps, no positions re-run of its own (the
     # 'nse' step list already carries it); nothing missed → no results / desk / shadow / valuation re-run

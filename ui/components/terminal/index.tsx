@@ -183,7 +183,7 @@ export function Panel({ title, subtitle, right, children, pad = 12, style, bodyS
           <span style={{ width: 3, height: 12, background: accent, flex: 'none' }} />
           {title && <span style={{ fontFamily: T.display, fontSize: 12, fontWeight: 600, letterSpacing: 1.6,
                                    color: accent, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{title}</span>}
-          {subtitle && <span style={{ fontSize: 10, color: T.muted, letterSpacing: .5 }}>{subtitle}</span>}
+          {subtitle && <span style={{ fontSize: 10, color: T.muted, letterSpacing: .5, minWidth: 140, flex: '0 1 auto' }}>{subtitle}</span>}
           <span style={{ flex: 1 }} />
           {right}
           {badge && <BadgeChip badge={badge} />}

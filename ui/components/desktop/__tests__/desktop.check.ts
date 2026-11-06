@@ -43,6 +43,10 @@ type RefreshStatusMod = typeof import('../../../lib/refreshStatus')
 type IciciStatusMod = typeof import('../../../lib/iciciStatus')
 type DownloadTextMod = typeof import('../../../lib/downloadText')
 type FindMod = typeof import('../find')
+type StripMod = typeof import('../../shell/stripOrder')
+type MarketPagesMod = typeof import('../../marketPagesModel')
+type LegacyImportMod = typeof import('../../../lib/prefs/legacyImport')
+type ActiveCoreMod = typeof import('../../../lib/activeSymbolCore')
 
 const load = async <T,>(rel: string): Promise<T> => (await import(new URL(rel, import.meta.url).href)) as T
 
@@ -438,7 +442,8 @@ async function deepLinkChecks(): Promise<void> {
   eq('close when the entry has no sym → replace', D.closeStockAction({ sd: 1, tab: 'desk', sym: null, pushed: true }, null), 'replace')
   // page.tsx wiring (source guards; fail on the pre-wave-2 page)
   const page = await read('../../../app/page.tsx')
-  check('page.tsx pushes a history entry per page switch (was replaceState only)', /history\.pushState\(st, '', buildSearch\(window\.location\.search, t, null\)\)/.test(page))
+  check('page.tsx pushes a history entry per page switch (was replaceState only; a stale ?sub= is dropped first)',
+    /const search = stripStaleSub\(window\.location\.search, viewRef\.current, t, Date\.now\(\) - lastHandoffAt\.current\)\s*\n\s*try \{ window\.history\.pushState\(st, '', buildSearch\(search, t, null\)\) \}/.test(page))
   check('page.tsx handles popstate (Back / Forward, ⌘[ / ⌘])', /addEventListener\('popstate', onPop\)/.test(page))
   check('page.tsx opens ?sym= deep links on load', /useState<string \| null>\(\(\) => initialLocation\(\)\.sym\)/.test(page))
   check('page.tsx initial page from the URL in the initializer (no first render on the brief)', /useState<Tab>\(\(\) => initialLocation\(\)\.tab\)/.test(page))
@@ -740,8 +745,8 @@ async function goAliasChecks(): Promise<void> {
   const P = await load<PagesMod>('../pages.ts')
   check('alias targets are real page ids', Object.values(A.GO_ALIASES).flat().every(t => t.kind !== 'page' || t.id in P.PAGE_META))
   const bar = await read('../../CommandBar.tsx')
-  check('GO ranks mnemonics and exact page codes above every ticker match (CT-09)',
-    /mergeRanked\(\[aliases, exactPages, tickerLead, scoredPages, tickerRest\]\)/.test(bar) && /exactPages = pg\.filter\(i => i\.code === raw\)/.test(bar))
+  check('GO ranks mnemonics and exact page codes above every ticker match (CT-09; an argument hint row may lead, M37)',
+    /mergeRanked\(\[argHint, aliases, exactPages, tickerLead, scoredPages, tickerRest\]\)/.test(bar) && /exactPages = pg\.filter\(i => i\.code === raw \|\|/.test(bar))
   check('BACK <GO> goes back only inside the terminal', /if \(it\.kind === 'back'\) \{ if \(canGoBack\(window\.history\.state\)\) window\.history\.back\(\); return \}/.test(bar))
   check('symbols rows go through sanitizeSymbolRows (R-UI-SHELL-04 / P15 crash)', /setSymbols\(sanitizeSymbolRows<SymbolEntry>\(r\.data\?\.data\)\)/.test(bar)
     && /label: s\?\.n \|\| t,/.test(bar))
@@ -1150,6 +1155,169 @@ async function goSanitizeChecks(): Promise<void> {
   eq('not a list → empty', [A.sanitizeSymbolRows(null).length, A.sanitizeSymbolRows({ data: [] }).length], [0, 0])
 }
 
+
+// ── page review 5 Nov 2026 (U-PLATFORM): M37 GO arguments + strip, M34 active symbol, M08 OVRV lines, M35 import ──
+async function platformReviewChecks(): Promise<void> {
+  const A = await load<GoAliasesMod>('../../../lib/goAliases.ts')
+  const P = await load<PagesMod>('../pages.ts')
+  const ids = Object.fromEntries(Object.entries(P.PAGE_META).map(([id, m]) => [m.code, id])) as Record<string, string>
+  const T0 = '2026-11-06'
+  const g = (q: string) => A.parseGoCommand(q, T0, ids)
+  // expiry tokens
+  eq('expiry: 27NOV → this year (on or after today)', A.parseExpiryToken('27NOV', T0), '2026-11-27')
+  eq('expiry: 05NOV → next year (already past)', A.parseExpiryToken('05NOV', T0), '2027-11-05')
+  eq('expiry: 06NOV is today, not next year', A.parseExpiryToken('6NOV', T0), '2026-11-06')
+  eq('expiry: 27NOV26 / 27NOV2026 / ISO', [A.parseExpiryToken('27NOV26', T0), A.parseExpiryToken('27nov2026', T0), A.parseExpiryToken('2026-12-29', T0)],
+    ['2026-11-27', '2026-11-27', '2026-12-29'])
+  eq('negative control: 31NOV, 27XYZ, NOV, 2026-02-30 are not expiries', ['31NOV', '27XYZ', 'NOV', '2026-02-30', 'IC'].map(t => A.parseExpiryToken(t, T0)),
+    [null, null, null, null, null])
+  // the review's five queries (M37)
+  eq('TCS OMON 27NOV → OMON on TCS, expiry 2026-11-27', g('TCS OMON 27NOV'),
+    { kind: 'symbolPage', sym: 'TCS', page: 'options', code: 'OMON', expiry: '2026-11-27', view: null })
+  eq('OMON TCS 27NOV (page first) is the same page and expiry', [g('OMON TCS 27NOV')?.kind, (g('OMON TCS 27NOV') as { expiry?: string })?.expiry], ['symbolPage', '2026-11-27'])
+  eq('NIFTY OSTR IC → the iron condor on NIFTY', g('NIFTY OSTR IC'), { kind: 'ostrTemplate', sym: 'NIFTY', template: 'Iron condor', code: 'OSTR', expiry: null })
+  eq('NIFTY OSTR STRD 27NOV → straddle with an expiry', g('nifty ostr strd 27nov'), { kind: 'ostrTemplate', sym: 'NIFTY', template: 'Straddle', code: 'OSTR', expiry: '2026-11-27' })
+  eq('ALRT TCS >3200 → the alert form pre-filled (above 3200)', g('ALRT TCS >3200'), { kind: 'alert', sym: 'TCS', op: 'above', level: 3200 })
+  eq('ALRT forms: "> 3,200", BELOW, <=, TCS ALRT <3100', [g('ALRT TCS > 3,200'), g('ALRT TCS BELOW 3100'), g('ALRT TCS <=3100.5'), g('TCS ALRT <3100')].map(c => c && c.kind === 'alert' ? `${c.op}:${c.level}` : c?.kind),
+    ['above:3200', 'below:3100', 'below:3100.5', 'below:3100'])
+  eq('TCS VS INFY (VS HDFCBANK) → COMP', [g('TCS VS INFY'), g('TCS VS INFY VS HDFCBANK')].map(c => c && c.kind === 'compare' ? c.syms.join(',') : c),
+    ['TCS,INFY', 'TCS,INFY,HDFCBANK'])
+  eq('GOLD COT → GOLD positioning; GOLD PHYSICAL; GOLD HEALTH', [g('GOLD COT'), g('gold physical'), g('GOLD HEALTH')].map(c => c && c.kind === 'goldSub' ? c.sub : c),
+    ['positioning', 'physical', 'health'])
+  eq('BANKNIFTY DERV / BANKNIFTY VOL / TCS CHRT / TCS DEAL → a page on that underlying',
+    ['BANKNIFTY DERV', 'BANKNIFTY VOL', 'TCS CHRT', 'TCS DEAL'].map(q => { const c = g(q); return c && c.kind === 'symbolPage' ? `${c.page}:${c.sym}:${c.view}` : c }),
+    ['derivatives:BANKNIFTY:null', 'derivatives:BANKNIFTY:vol', 'charts:TCS:null', 'deals:TCS:null'])
+  // negative controls: single words, the ticker actions and unknown words keep the old ranking; bad arguments are hints
+  eq('negative control: single words / ticker actions are not commands', ['TCS', 'OMON', 'TCS TV', 'TCS FA', 'GOLD', 'MKT DESK'].map(q => g(q)),
+    [null, null, null, null, null, null])
+  eq('bad arguments are a hint, never a silent jump to the stock (the 5 Nov TCS OMON 27NOV → TCS)',
+    ['TCS OMON NOV', 'ALRT TCS', 'ALRT TCS >abc', 'TCS CHRT 27NOV', 'NIFTY OSTR XYZ'].map(q => g(q)?.kind),
+    ['invalid', 'invalid', 'invalid', 'invalid', 'invalid'])
+  check('every symbol page and template target exists', Object.values(A.SYMBOL_PAGES).every(id => id in P.PAGE_META)
+    && Object.values(A.GOLD_SUB_WORDS).every(s => ['health', 'daily', 'weekly', 'monthly', 'positioning', 'physical', 'macro', 'contracts', 'learn'].includes(s)))
+  // GO IVR / SKEW (the review's "IVR → nothing") open DERV › VOL; sub-views are handed over on Enter, never while typing
+  eq('IVR and SKEW open DERV › VOL', ['IVR', 'skew'].map(q => A.aliasTargets(q).map(t => t.kind === 'page' ? `${t.id}:${'view' in t ? t.view : ''}` : t.kind).join()),
+    ['derivatives:vol', 'derivatives:vol'])
+  const barSrc2 = await read('../../CommandBar.tsx')
+  const memo = /const items = useMemo<Item\[\]>\(\(\) => \{([\s\S]*?)\n {2}\}, \[q, /.exec(barSrc2)?.[1] ?? ''
+  check('typing an alias never rewrites the URL (setSubInUrl / setGoldSubInUrl only on Enter, in run())', memo.length > 1000
+    && !/setSubInUrl\(|setGoldSubInUrl\(/.test(memo) && /if \(it\.kind === 'page'\) \{ handOffAliasSub\(it\.alias\); return onPage\(it\.id\) \}/.test(barSrc2))
+  check('negative control: the 5 Nov memo wrote the URL while typing', /setSubInUrl\(/.test("const aliasItem = (a) => { if (item && a.kind === 'page' && 'view' in a) { try { setSubInUrl(a.view) } catch {} } }"))
+  // the stale ?sub= on a plain page switch (review: GO from SYS › DATA left OMON on ?tab=options&sub=data)
+  eq('stripStaleSub: a plain switch drops sub; a hand-off switch, a same-page switch keep it', [
+    A.stripStaleSub('?tab=system&sub=data', 'system', 'options', 60_000), A.stripStaleSub('?tab=system&sub=data&x=1', 'system', 'options', 60_000),
+    A.stripStaleSub('?tab=brief&sub=vol', 'brief', 'derivatives', 200), A.stripStaleSub('?tab=gold&sub=physical', 'gold', 'gold', 60_000),
+    A.stripStaleSub('?tab=brief', 'brief', 'options', 60_000)],
+    ['?tab=system', '?tab=system&x=1', '?tab=brief&sub=vol', '?tab=gold&sub=physical', '?tab=brief'])
+  // the one-shot hand-offs the owners read (ALRT pre-fill, OSTR template): fresh and well-formed only
+  const now = Date.parse('2026-11-06T03:00:00Z')
+  const at = new Date(now - 10_000).toISOString()
+  eq('ALRT pre-fill: a fresh hand-off reads back', A.parseAlertPrefill(JSON.stringify({ symbol: 'TCS', op: 'above', level: 3200, at }), now), { symbol: 'TCS', op: 'above', level: 3200, at })
+  eq('negative control: stale (5 min), malformed, wrong op or level → null', [
+    A.parseAlertPrefill(JSON.stringify({ symbol: 'TCS', op: 'above', level: 3200, at: new Date(now - 300_000).toISOString() }), now),
+    A.parseAlertPrefill('{x', now), A.parseAlertPrefill(JSON.stringify({ symbol: 'TCS', op: 'near', level: 3200, at }), now),
+    A.parseAlertPrefill(JSON.stringify({ symbol: 'TCS', op: 'above', level: -1, at }), now)], [null, null, null, null])
+  eq('OSTR template: a fresh hand-off reads back; an unknown template or a stale one does not',
+    [A.parseOstrTemplate(JSON.stringify({ template: 'Iron condor', symbol: 'NIFTY', expiry: '2026-11-27', at }), now)?.template,
+     A.parseOstrTemplate(JSON.stringify({ template: 'Butterfly', symbol: 'NIFTY', expiry: null, at }), now),
+     A.parseOstrTemplate(JSON.stringify({ template: 'Straddle', symbol: 'NIFTY', expiry: null, at: new Date(now - 600_000).toISOString() }), now)],
+    ['Iron condor', null, null])
+  // the builder's TEMPLATES list (StrategyBuilder.tsx, or components/fobook/ostrModel.ts since the W2 paper book)
+  const sb = (await read('../../StrategyBuilder.tsx')) + (await read('../../fobook/ostrModel.ts').catch(() => ''))
+  const tplBlock = /const TEMPLATES = \[([\s\S]*?)\] as const/.exec(sb)?.[1] ?? ''
+  check('every OSTR template name is one of the builder\'s templates', tplBlock.length > 0 && Object.values(A.OSTR_TEMPLATES).every(t => tplBlock.includes(`'${t}'`)),
+    Object.values(A.OSTR_TEMPLATES).join('|'))
+
+  // M34: GO writes the active-symbol store (pure write over two fake storages)
+  const C = await load<ActiveCoreMod>('../../../lib/activeSymbolCore.ts')
+  const mk = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) } } }
+  const w = mk(), sh = mk()
+  C.writeActiveSymbol({ symbol: 'BANKNIFTY' }, w, sh, new Date('2026-11-06T03:00:00Z'))
+  eq('M34 GO BANKNIFTY → the active symbol is BANKNIFTY in both layers', [C.readActiveSymbol(w, sh)?.symbol, C.readActiveSymbol(mk(), sh)?.symbol], ['BANKNIFTY', 'BANKNIFTY'])
+  C.writeActiveSymbol({ symbol: 'TCS', expiry: '2026-11-27' }, w, sh, new Date('2026-11-06T03:01:00Z'))
+  eq('M34 TCS OMON 27NOV → symbol + expiry', [C.readActiveSymbol(w, sh)?.symbol, C.readActiveSymbol(w, sh)?.expiry], ['TCS', '2026-11-27'])
+  const bar = await read('../../CommandBar.tsx')
+  check('M34 CommandBar writes the store for chains, deals, stocks, compares and commands (was OMON_KEY only)',
+    /if \(it\.kind === 'omon' \|\| it\.kind === 'deal'\) setActive\(it\.sym\)/.test(bar) && /else if \(it\.kind === 'stock' && it\.action !== 'watch'\) setActive\(it\.t\)/.test(bar)
+    && /case 'symbolPage': \{\s*setActive\(cmd\.sym, cmd\.expiry\)/.test(bar) && /writeActiveSymbol\(/.test(bar))
+  check('negative control: the 5 Nov bar wrote only OMON_KEY (no active-symbol write)', !/writeActiveSymbol\(|setActive\(/.test("if (it.kind === 'omon') { try { localStorage.setItem(OMON_KEY, it.sym) } catch {} }"))
+  check('GO shows a recent row even before the first command, and the argument hints', /data-sd-go-recent=""/.test(bar) && /none yet · the commands you run appear here/.test(bar)
+    && /GO_ARG_HINTS\.slice\(0, 5\)\.map/.test(bar))
+  check('an argument hint row never runs (Enter / click on it does nothing)', /if \(it\.kind === 'hint'\) return/.test(bar) && /if \(it\.kind !== 'hint'\) run\(it, e\.shiftKey\)/.test(bar))
+
+  // M37 strip
+  const S = await load<StripMod>('../../shell/stripOrder.ts')
+  const known = Object.keys(P.PAGE_META)
+  const codes = (l: readonly string[]) => l.map(id => P.PAGE_META[id]?.code)
+  eq('M37 default strip = the trader\'s day', codes(S.DEFAULT_STRIP), ['BRF', 'WTCH', 'CHRT', 'OMON', 'OSTR', 'DERV', 'MOV', 'EVTS', 'ALRT', 'RSK', 'GOLD', 'MCXG', 'MKT', 'DESK'])
+  eq('M37 RESEARCH ▾ holds the research / legacy pages', codes(S.RESEARCH_PAGES), ['OVRV', 'EQS', 'BTST', 'PIPE', 'LWSC', 'ALFA', 'GBOX', 'MLEN', 'DEXP', 'WHSE', 'RSCH', 'PORT'])
+  const split = S.splitMenus(S.DEFAULT_STRIP, known)
+  eq('strip + RESEARCH + MORE cover the 43 pages exactly once', [S.DEFAULT_STRIP.length + split.research.length + split.more.length,
+    new Set([...S.DEFAULT_STRIP, ...split.research, ...split.more]).size], [43, 43])
+  const page = await read('../../../app/page.tsx')
+  const tl = [...(/const tabList = \[([\s\S]*?)\n {2}\]/.exec(page)?.[1] ?? '').matchAll(/id: '([a-z]+)'/g)].map(m => m[1])
+  eq('page.tsx tabList (the QA harness / pages.rs source) = DEFAULT_STRIP', tl, [...S.DEFAULT_STRIP])
+  eq('stored order: unknown, duplicate, malformed entries dropped', S.parseStripOrder('["gold","nope","gold","brief",7,"BRIEF"]', known), ['gold', 'brief'])
+  eq('negative control: junk / empty / non-list → the default', [S.resolveStrip('{x', known), S.resolveStrip('[]', known), S.resolveStrip(null, known)].map(l => l.length),
+    [14, 14, 14])
+  eq('a re-ordered strip moves research pages out of RESEARCH ▾', S.splitMenus(['research', 'brief'], known).research.includes('research'), false)
+  eq('move / add / remove', [S.moveInStrip(['a', 'b', 'c'], 'c', -1), S.moveInStrip(['a', 'b'], 'a', -1), S.addToStrip(['brief'], 'gold'), S.addToStrip(['brief'], 'brief'),
+    S.removeFromStrip(['brief', 'gold'], 'brief'), S.removeFromStrip(['brief'], 'brief')], [['a', 'c', 'b'], ['a', 'b'], ['brief', 'gold'], ['brief'], ['gold'], ['brief']])
+  eq('Alt digits follow the strip: Digit1 → slot 0, Digit0 → slot 9', [S.slotForDigitCode('Digit1'), S.slotForDigitCode('Digit0'), S.slotForDigitCode('KeyA'), S.slotDigit(9), S.slotDigit(10)],
+    [0, 9, -1, '0', null])
+  eq('⌘N is offered only while the native digit opens the same page', [S.slotKeyHint(S.DEFAULT_STRIP, 0, true), S.slotKeyHint(['watch', 'brief'], 0, true),
+    S.slotKeyHint(S.DEFAULT_STRIP, 0, false), S.slotKeyHint(S.DEFAULT_STRIP, 9, true)], ['⌘1 · Alt+1', 'Alt+1', 'Alt+1', 'Alt+0'])
+  const header = await read('../../MarketCommandHeader.tsx')
+  check('the header strip reads the owner\'s order and Alt digits follow it', /const \[strip, writeStrip\] = useStripOrder\(known\)/.test(header)
+    && /const i = slotForDigitCode\(e\.code\)/.test(header) && /if \(strip\[i\]\) \{ e\.preventDefault\(\); onChange\(strip\[i\]\) \}/.test(header))
+  check('RESEARCH ▾ and MORE ▾ menus, ARRANGE under MORE', /title="RESEARCH"/.test(header) && /title="MORE"/.test(header) && /⚙ ARRANGE THE STRIP/.test(header))
+  const keys = await read('../../../lib/prefs/keys.ts')
+  check('strip.order.v1 is a SYNC prefs key (app, browsers and windows share it)', /'strip\.order\.v1', \/\//.test(keys.split('] as const')[0]))
+  // m006: the tape names the NSE state as NSE's
+  check('m006 the tape stamp says the NSE state is NSE\'s and the S&P / FX are Yahoo\'s', /`NSE \$\{sourceChipText\(tapeLive\.source\)\.label\}/.test(header)
+    && /FX · BRENT · GOLD · S&P: YAHOO/.test(header))
+  check('negative control: the 5 Nov stamp put CLOSE · 05 NOV next to the S&P with no owner', !/`NSE \$\{/.test("`${sourceChipText(tapeLive.source).label}${atYahoo ? ` · YAHOO ${atYahoo} IST` : ''}`"))
+
+  // M08 OVRV lines: the same two labelled lines as BRF (one rule, components/marketPagesModel.ts crashLines)
+  const MP = await load<MarketPagesMod>('../../marketPagesModel.ts')
+  const cf = { nifty: 24536.6, sma200: 24002.44, risk_on: true, gap_pct: 2.23, move_needed_pct: 0, next_signal_date: '2026-11-30', date: '2026-11-05' }
+  const desk = { positions: [], latest: { date: '2026-11-05', holdings: 0, positions: 0, nav: 503131 },
+    nav: [{ date: '2026-10-30', positions: 0, holdings: 0 }, { date: '2026-11-05', positions: 0, holdings: 0 }],
+    plans: [{ signal_date: '2026-10-30', summary: { signal_date: '2026-10-30', risk_on: false } }] }
+  const L2 = MP.crashLines(cf, desk)
+  check('M08 the 5 Nov state: today\'s reading invests, the book is in the liquid fund', /above its 200-DMA/.test(L2.reading) && /would invest/.test(L2.reading)
+    && /^The book: in the liquid fund/.test(L2.book), JSON.stringify(L2))
+  check('M08 OVRV renders both labelled lines from crashLines (same rule as BRF)', /import \{ crashLines \} from '@\/components\/marketPagesModel'/.test(page)
+    && page.includes(`["Crash filter · today's reading", lines ? lines.reading`) && page.includes(`['Crash filter · book', lines ? lines.book`))
+  check('negative control: the old single OVRV line read the plan alone ("ON · liquid fund")', !page.includes("plan.summary?.risk_on ? 'OFF · invested' : 'ON · liquid fund'")
+    && "['Crash filter', plan ? (plan.summary?.risk_on ? 'OFF · invested' : 'ON · liquid fund') : '—'".includes('ON · liquid fund'))
+  check('m024 OVRV names the price cache, not the research history', page.includes('label="Price cache from"') && page.includes('research: NSE bhavcopy 2010→') && !page.includes("(Yahoo)` : pending"))
+
+  // M35 settings import (offer + status wording; the page itself is tested in services/ui-api/tests)
+  const L = await load<LegacyImportMod>('../../../lib/prefs/legacyImport.ts')
+  const none = { live: 3, described: 3, legacyOrigins: [], legacyImport: { at: null, origin: null, keys: 0 } }
+  const done = { ...none, legacyImport: { at: 1_762_000_000_000, origin: 'http://localhost:3000', keys: 4 } }
+  const app = 'http://127.0.0.1:8010'
+  eq('M35 offer: a toast once, then quiet; none once imported, on :3000, sync off or unread',
+    [L.importOffer({ pageOrigin: app, mode: 'sync', offerMarker: null, server: none }), L.importOffer({ pageOrigin: app, mode: 'sync', offerMarker: 'seen', server: none }),
+     L.importOffer({ pageOrigin: app, mode: 'sync', offerMarker: null, server: done }), L.importOffer({ pageOrigin: 'http://localhost:3000', mode: 'sync', offerMarker: null, server: none }),
+     L.importOffer({ pageOrigin: app, mode: 'off', offerMarker: null, server: none }), L.importOffer({ pageOrigin: app, mode: 'sync', offerMarker: null, server: null }),
+     L.importOffer({ pageOrigin: app, mode: 'readonly', offerMarker: null, server: none })],
+    ['toast', 'quiet', 'none', 'none', 'none', 'none', 'quiet'])
+  check('negative control: the old banner ignored nothing but its own dismissal (it showed on every page)', L.importOffer({ pageOrigin: app, mode: 'sync', offerMarker: 'seen', server: none }) !== 'toast')
+  const st = L.parseImportStatus({ state: 'waiting', url: 'http://localhost:3000/import?t=abcdefghijklmnopqrstuvwx', expires_at: 1_000_000 + 9 * 60_000, port: 3000 })
+  eq('status: a waiting page with its link', [st.state, st.url, L.importStatusText(st, 1_000_000).includes('closes in 9 min')], ['waiting', 'http://localhost:3000/import?t=abcdefghijklmnopqrstuvwx', true])
+  eq('negative control: a waiting status with a foreign link is refused', L.parseImportStatus({ state: 'waiting', url: 'http://evil.example/import?t=abcdefghijklmnopqrstu' }).state, 'failed')
+  eq('done: names the keys (never values) and what the app kept', L.importStatusText(L.parseImportStatus({ state: 'done', imported: ['suryadhana.watchlist', 'newsTerminal.pins.v1'], skipped: ['suryadhana.omon.v1'] }), 0),
+    'Imported watchlist, pins. Kept 1 setting you already set in the app (suryadhana.omon.v1).')
+  check('the page reads every SYNC key the sync code imports', L.importKeys().includes('suryadhana.watchlist') && L.importKeys().includes('newsTerminal.pins.v1') && L.importKeys().includes('strip.order.v1'))
+  const si = await read('../../shell/SettingsImport.tsx')
+  check('the toast retires the old docked banner (marker + storage event) and marks itself seen once', /writeLocal\(MIGRATE_NOTICE_KEY, 'dismissed'\)/.test(si)
+    && /new StorageEvent\('storage', \{ key: MIGRATE_NOTICE_KEY \}\)/.test(si) && /writeLocal\(OFFER_KEY, 'seen'\)/.test(si))
+  check('the app never opens the loopback link itself (desktop policy): COPY LINK in the app', /\{!desktop && <button[\s\S]{0,120}window\.open\(st!\.url!/.test(si) && /COPY LINK/.test(si))
+  check('page.tsx mounts the import inside HomeContent (the toast block of ToastProvider stays as alerts.check expects)', /<SettingsImport \/>/.test(page))
+}
+
 for (const [name, fn] of [['session', sessionChecks], ['status', statusChecks], ['pages', pagesChecks], ['health', healthChecks],
   ['build', buildChecks], ['chunkRecovery', chunkChecks], ['location', locationChecks],
   ['clientErrors', clientErrorChecks], ['deepLink', deepLinkChecks], ['shortcuts', shortcutChecks], ['reconnect', reconnectChecks],
@@ -1157,7 +1325,8 @@ for (const [name, fn] of [['session', sessionChecks], ['status', statusChecks], 
   ['holidayStore', holidayStoreChecks], ['feedState', feedChecks], ['specialSession', specialSessionChecks], ['liveFeed', liveFeedChecks],
   ['goAliases', goAliasChecks], ['macKeys', macKeyChecks], ['outage', outageChecks], ['boundary', boundaryChecks], ['shellUx', shellUxChecks],
   ['liveEvidence', liveEvidenceChecks], ['priceMarker', priceMarkerChecks], ['staleQuote', staleQuoteChecks], ['refreshVerdict', refreshVerdictChecks],
-  ['icici', iciciChecks], ['find', findChecks], ['downloadToast', downloadToastChecks], ['goSanitize', goSanitizeChecks]] as const) {
+  ['icici', iciciChecks], ['find', findChecks], ['downloadToast', downloadToastChecks], ['goSanitize', goSanitizeChecks],
+  ['platformReview', platformReviewChecks]] as const) {
   try {
     await fn()
   } catch (e) {

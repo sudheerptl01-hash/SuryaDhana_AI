@@ -83,6 +83,12 @@ export interface GoldSubViewProps {
   fair: HealthFair | null
   /** the whole overview the strip was built from (same load as `fair`): strip, contract, session, freshness */
   overview: GoldOverview | null
+  /**
+   * the overview's load state (wave 1e, M-A): HEALTH and LEARN render `overview.health` — built for the PICKED contract with
+   * the live MCX quote applied during MCX hours, the same load as the header strip — and fall back to `/api/gold/health`
+   * only once the overview has failed ('error'), never while it is still loading (no GOLD-contract flash).
+   */
+  overviewStatus?: 'loading' | 'ok' | 'error'
   onNavigate: (sub: GoldSub) => void
   /** change the page-global contract selection (prefs `gold.contract.v1`); the CONTRACTS selector uses it */
   onSel?: (patch: Partial<GoldContractSel>) => void
@@ -121,6 +127,9 @@ export interface CatalogRow {
 export interface HealthClause {
   text: string
   rule_id: string
+  /** H4: the clock of `value` ('now' = live MCX vs duty-paid now; 'settlement'); H2: the date of the real-yield point (wave 1e) */
+  clock?: string | null
+  report_date?: string | null
   series_id?: string | null
   value?: number | string | Record<string, number | string | null> | null
   /** routers/gold.py HEALTH_RULES: numbers, strings or objects ({weak_pct, strong_pct, flat_pct}, {usd_share, min_move_pct, real_yield_bp}); never render as a React child */
@@ -177,6 +186,16 @@ export interface HealthGauge {
   duty_pct?: number | null
   duty_effective?: string | null
   settlement_session_label?: string | null
+  /** INDIA BASIS (wave 1d/1e): the contract the basis is for ('GOLDTEN NOV-26'), its purity, and its settlement's source / quality */
+  basis_contract?: string | null
+  /** INDIA BASIS (wave 1e, G2-API): the server's chip naming the clock ('LIVE · GOLDTEN NOV-26 · 09:16 IST' / 'SETTLEMENT · VWAP30 PROXY · Thu 05 Nov') */
+  clock_label?: string | null
+  purity?: number | null
+  duty_paid_landed_purity_now?: number | null
+  settlement_source?: SettlementSource | string | null
+  settlement_quality?: SettlementQuality | string | null
+  /** REAL YIELD (wave 1e, M-B): the series the value came from when the fresher twin won ('UST_REAL_10Y: fresher than FRED_DFII10 (last …)') */
+  label_note?: string | null
   /** INDIA BASIS (wave 1c): the clock of `value` ('now' with a live quote, else 'settlement') and the other clock's figure beside it */
   clock?: string | null
   basis_label?: string | null
@@ -237,6 +256,15 @@ export interface SettlementFields {
   band_midpoint?: number | null
   band_session?: string | null
   settlement_check?: SettlementCheck | null
+  /** wave 1d/1e: false when the settlement is NOT the latest completed MCX session's (its VWAP is not in yet, or a special
+   *  session such as Muhurat was skipped); `latest_session` names the session that should have been used */
+  settlement_is_latest?: boolean | null
+  latest_session?: string | null
+  latest_session_label?: string | null
+  /** `/fair.baseline` (wave 1e, M-D): the 08:45 flag and its sentence (names a special session such as Muhurat) */
+  older_than_expected?: boolean | null
+  older_note?: string | null
+  expected_session?: string | null
 }
 
 /**
@@ -403,6 +431,12 @@ export interface OverviewStrip extends SettlementFields {
   usdinr_as_of?: string | null
   real_10y: number | null
   real_10y_date?: string | null
+  /** wave 1e (M-B): the series the strip's real yield came from (the fresher twin: UST_REAL_10Y over FRED_DFII10) and its note */
+  real_10y_series_id?: string | null
+  real_10y_series?: string | null
+  real_10y_source?: string | null
+  real_10y_note?: string | null
+  real_10y_label_note?: string | null
   mcx_settle: number | null
   mcx_settle_session: string | null
   mcx_settle_session_label?: string | null
@@ -512,7 +546,7 @@ export interface GoldSeries { as_of: string; asof_applied?: string | null; freq:
 export type BarInterval = '1m' | '5m' | '1d'
 
 /** `ts`: an ISO instant WITH offset (B1 wave 1c), a zone-less ISO datetime (= UTC, the store's older form), 'YYYY-MM-DD', or epoch s/ms — `sessions.barMs` reads all four */
-export interface Bar { ts: string | number; o: number | null; h: number | null; l: number | null; c: number | null; v?: number | null }
+export interface Bar { ts: string | number; o: number | null; h: number | null; l: number | null; c: number | null; v?: number | null; partial?: boolean | null }
 
 export interface SessionBand { name: string; start_ist: string; end_ist: string; hatched?: boolean; bar?: boolean; closed?: boolean }
 
@@ -665,7 +699,9 @@ export interface GoldPositioningDaily {
   quadrant_tape: QuadrantTapeRow[]
   put_call_oi_ratio?: number | null
   roll?: { front?: string | null; next?: string | null; front_oi?: number | null; next_oi?: number | null; ratio?: number | null; days_to_tender_or_fnd?: number | null
-           fnd_date?: string | null; ltd_date?: string | null; fnd_source?: string | null; days_unit?: string | null; tender_start?: string | null; note?: string | null } | null
+           fnd_date?: string | null; ltd_date?: string | null; fnd_source?: string | null; days_unit?: string | null; tender_start?: string | null; note?: string | null
+           /** wave 1d: the server clamps days to 0 once the tender has begun and says so (`in_tender`, 'in tender since Sun 01 Nov (5 d)') */
+           in_tender?: boolean | null; tender_note?: string | null } | null
   /** "since 27 Oct 2026": the day the history began */
   since?: string | null
   badge?: Badge
@@ -796,6 +832,9 @@ export interface ContractExpiryRow {
   days_unit?: string | null
   days_to_tender?: number | null
   days_to_expiry?: number | null
+  /** wave 1d: the tender of this expiry has begun (MCX tender period), and the server's words for it */
+  in_tender?: boolean | null
+  tender_note?: string | null
 }
 
 export interface ContractFamily {
@@ -891,6 +930,15 @@ export interface LadderStep { step: string; label: string; value: number | null;
   scaled_from?: string | null
   quote_unit?: string | null
   settlement_source?: string | null
+  /** wave 1d: the MCX bar's settlement quality / check, its native value and unit (PETAL ₹/1 g …), whether it was scaled to ₹/10 g */
+  settlement_quality?: string | null
+  settlement_check?: SettlementCheck | null
+  value_native?: number | null
+  unit_native?: string | null
+  scaled_to_10g?: boolean | null
+  basis_reference?: BasisReference | null
+  reference_value?: number | null
+  reference_label?: string | null
   /** wave 1c: the clock of this bar — 'now' | 'fix' | 'settlement' | 'dated constant' — never divide across clocks */
   clock?: string | null }
 
@@ -911,6 +959,8 @@ export interface GoldPremiums {
     /** wave 1d: the purity of the landed price the basis divides by, and where the MCX settle came from */
     basis_reference?: BasisReference | null
     settlement_source?: SettlementSource | string | null
+    basis_purity_note?: string | null
+    unit_note?: string | null
     /** the live-clock pair while a quote exists (both legs 'now'); null otherwise */
     live_basis?: { value: number | null; mcx_live?: number | null; duty_paid_landed?: number | null; as_of?: string | null; label?: string | null; clock?: string | null } | null
     carry_adj_pct?: number | null
@@ -939,7 +989,16 @@ export interface GoldPremiums {
     sge_latest_date?: string | null
     pairing?: string | null
     note?: string | null
-    history?: { report_date: string; premium_usd?: number | null; premium_pct?: number | null }[]
+    /** wave 1e (M-C): the USDCNY leg's own date and stored time (its vintage); the premium recomputed from the printed legs, whether
+     *  |sge_usd_oz − london_pm_usd − premium_usd| < 0.1, the stored derive when it differs and why */
+    usdcny_date?: string | null
+    usdcny_as_of?: string | null
+    premium_usd_stored?: number | null
+    premium_source?: 'legs' | 'stored' | string | null
+    reconciles?: boolean | null
+    recompute_note?: string | null
+    legs_note?: string | null
+    history?: { report_date: string; premium_usd?: number | null; premium_pct?: number | null; source?: string | null; stored_usd?: number | null; timing_spike_suspect?: boolean | null }[]
     badge?: Badge
     clock_note?: string | null
     freshness?: Freshness
@@ -1004,19 +1063,26 @@ export interface MacroDriver {
   badge?: Badge
   evidence?: string | null
   state?: FreshState
+  /** wave 1d/1e: the twin relation (`same_level` false = a different instrument, e.g. BZ=F vs dated Brent) and quality ('partial') */
+  same_level?: boolean | null
+  relation?: string | null
+  quality?: string | null
+  source?: string | null
 }
 
 export interface GoldMacro {
   as_of?: string
   window?: Window
   drivers: MacroDriver[]
-  kgx?: { period: string; from_date?: string | null; total_pct: number | null; pure_gold_pct: number | null; usd_effect_pct: number | null; inr_effect_pct?: number | null
+  kgx?: { period: string; from_date?: string | null; window_label?: string | null; total_pct: number | null; pure_gold_pct: number | null; usd_effect_pct: number | null; inr_effect_pct?: number | null
           weights?: Record<string, number>; badge?: Badge; line?: string | null
           /** wave 1c (C-BEGINNER-14): why the split is empty, in words — print this instead of the identity assertion */
           note?: string | null; inr_note?: string | null }
   currencies?: { ccy: string; price: number | null; unit?: string | null; d1?: number | null; d1w?: number | null; d1m?: number | null; ytd?: number | null; badge?: Badge }[]
-  fed?: { meetings: { meeting: string; p_cut?: number | null; p_hike?: number | null; p_hold?: number | null; mean_bp?: number | null; p10_bp?: number | null; p90_bp?: number | null }[]
-          as_of?: string | null; source?: string | null; zq?: { month: string; implied_pct: number | null }[]; effr?: number | null; effr_date?: string | null; target?: string | null
+  fed?: { meetings: { meeting: string; label?: string | null; kind?: string | null; p_cut?: number | null; p_hike?: number | null; p_hold?: number | null; mean_bp?: number | null; p10_bp?: number | null; p90_bp?: number | null }[]
+          as_of?: string | null; source?: string | null; zq?: { month: string; implied_pct: number | null; contract?: string | null; symbol?: string | null; contract_month?: string | null; note?: string | null
+                 /** wave 1e (G2-API): the observation date, the month guess, whether the continuous ZQ=F has likely rolled, and EFFR */
+                 month_guess?: string | null; observed?: string | null; rolled_suspect?: boolean | null; effr?: number | null }[]; effr?: number | null; effr_date?: string | null; target?: string | null
           /** `next_fomc_ist` is a LABEL ('2026-12-10 00:30 IST'); `next_fomc` is the DECISION only (never a speaker), `speakers` this week's speeches (C-TRADER-12) */
           next_fomc_ist?: string | null; after_mcx_close?: boolean
           next_fomc?: { date_et?: string | null; ist?: string | null; at?: string | null; statement_ist?: string | null; name?: string | null; kind?: string | null
@@ -1055,6 +1121,11 @@ export interface GoldLogRowX {
   baseline_check?: (SettlementCheck & { threshold_pct?: number | null; compared?: string | null }) | null
   labelled_session_vwap30?: number | null
   baseline_session_label?: string | null
+  /** wave 1d (G-API): why the row is stale ('band_rule' | 'vwap30_check' | 'older_session' | 'recorded') and the counterfactual
+   *  fair / misses had the baseline been the labelled session's last-30-min VWAP (never the scored number) */
+  stale_reasons?: string[] | null
+  re_explained?: { labelled_session?: string | null; labelled_session_vwap30?: number | null; session_move_pct?: number | null; fair_open_on_vwap30?: number | null
+                   error_on_vwap30?: number | null; naive_error_on_vwap30?: number | null; note?: string | null } | null
 }
 export interface GoldLogStatsX {
   days: number; mean_abs_error?: number; median_abs_error?: number; bias?: number; within_threshold_pct?: number
@@ -1062,6 +1133,10 @@ export interface GoldLogStatsX {
   /** D2: the stale rows NAMED, the rows whose check could not run yet, the rule, and the same stats without the stale rows */
   stale_baseline_count?: number; stale_baseline_dates?: string[]; stale_baseline_unknown?: string[]; stale_baseline_rule?: string | null
   excluding_stale?: Omit<GoldLogStatsX, 'excluding_stale'> | null
+  /** the counterfactual on the corrected baselines (the same mornings priced off each labelled session's VWAP30): not the score */
+  on_vwap30?: { days?: number | null; mean_abs_error?: number | null; median_abs_error?: number | null; naive_mean_abs_error?: number | null
+                within_threshold_pct?: number | null; dates?: string[] | null; note?: string | null } | null
+  stale_by?: Record<string, string[]> | null
 }
 export interface GoldLog { rows: GoldLogRowX[]; stats: GoldLogStatsX; badge?: Badge; source?: string | null; read?: string | null }
 

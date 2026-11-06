@@ -5,7 +5,13 @@
  *
  *   Row 1  ◉ SURYADHANA ▸ PAGE · NIFTY 50 live (O/H/L) · service lights · IST clock · alerts · ⤓ UPDATE DATA
  *   Row 2  macro tape: NIFTY, BANK NIFTY, INDIA VIX, USD/INR, BRENT, GOLD, S&P 500 (60 s)
- *   Row 3  page strip with keyboard shortcuts (Alt+1…9, Alt+0; ⌘1…9 in the app)
+ *   Row 3  page strip, re-cut for the trader's day (page review M37, components/shell/stripOrder.ts): BRF WTCH CHRT
+ *          OMON OSTR DERV MOV EVTS ALRT RSK GOLD MCXG MKT DESK, Alt+1…0 on the first ten in the owner's order
+ *          (strip.order.v1, ⚙ ARRANGE THE STRIP under MORE ▾); research / legacy pages under RESEARCH ▾, the rest
+ *          under MORE ▾; ⌘1…9 in the app follow the native Go menu
+ *
+ * Phone (≤ 720 px, globals.css `sd-h-*` / `sd-pstrip*`): row 1 keeps NIFTY whole (brand text, lights, clock and the
+ * UPDATE DATA word drop), the tape scrolls, every strip target is 44 px.
  *
  * In SuryaDhana.app (C1-trader-ux-06) the title strip above is the one brand / clock / session / service-light
  * source, so row 1 drops its copies (brand + page name, universe count, DATA / DB lights, session chip, clock) and
@@ -30,7 +36,7 @@
  * independently. P4: the ICICI light's tooltip says why it is red (network outage vs expired session vs missing key).
  */
 import { Z } from '@/lib/z'
-import { memo, useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { useLiveQuotes, useDataServiceStatus } from '@/context/AppContext'
 import { useLiveQuotes as useNseQuotes } from '@/lib/liveQuotes'
 import { liveHeaderChip } from '@/components/liveModel'
@@ -43,7 +49,6 @@ import { DataStaleChip } from '@/components/datahealth/DataHealthView'
 import { newWindow } from '@/lib/platform'
 import { chromePollMs, isFreshPrint, liveQuoteAt, niftySourceChip, nseTimeToEpoch, pickNiftySource } from '@/lib/feedState'
 import { iciciLightTitle } from '@/lib/iciciStatus'
-import { tabKeyHint } from '@/lib/shortcuts'
 import { headerSession, istParts, nseSession } from '@/components/desktop/session'
 import { useNseHolidays } from '@/components/desktop/holidays'
 import { useSecondTick } from '@/components/desktop/TitleStrip'
@@ -51,6 +56,9 @@ import { useShellState } from '@/components/shell/ShellState'
 import { useFeedState } from '@/components/shell/useFeed'
 import { useDocumentHidden, usePolling } from '@/components/shell/usePoll'
 import { noteNsePrint } from '@/lib/liveEvidence'
+import { MAX_STRIP, addToStrip, isDefaultStrip, moveInStrip, removeFromStrip, slotDigit, slotForDigitCode, slotKeyHint, splitMenus } from '@/components/shell/stripOrder'
+import { useStripOrder } from '@/components/shell/useStripOrder'
+import { openSettingsImport, useImportOffer } from '@/components/shell/SettingsImport'
 
 // ── IST clock + session state ─────────────────────────────────────────────────
 
@@ -68,7 +76,7 @@ const HeaderClock = memo(function HeaderClock() {
   const s = headerSession(nseSession(now, holidays))
   const color = s.tone === 'green' ? T.green : s.tone === 'amber' ? T.amber : T.muted
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', borderLeft: `1px solid ${T.border}`, height: '100%', flex: 'none' }}>
+    <div className="sd-h-clock" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', borderLeft: `1px solid ${T.border}`, height: '100%', flex: 'none' }}>
       <span title={s.label === 'MUHURAT' || s.label === 'SPECIAL' ? `NSE special session: ${s.holiday} (timings per NSE circular)`
                     : s.holiday ? `NSE closed: ${s.holiday}` : undefined}
             style={{ fontSize: 9.5, letterSpacing: 1.2, color, border: `1px solid ${color === T.muted ? T.border : color}`,
@@ -159,9 +167,9 @@ function NiftyLive() {
     : svcChip ?? niftySourceChip({ src, wsConnected, marketOpen, linkDown, asOf: nse?.time ?? null, now: Date.now(), quoteAt })
   const chipColor = chip.tone === 'live' ? T.green : chip.tone === 'delayed' ? T.cyan : T.muted
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '0 16px', borderLeft: `1px solid ${T.border}`,
+    <div className="sd-h-nifty" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '0 16px', borderLeft: `1px solid ${T.border}`,
                   borderRight: `1px solid ${T.border}`, height: '100%', flex: '0 1 auto', minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-      <span style={{ fontSize: 10, letterSpacing: 1.4, color: T.muted, whiteSpace: 'nowrap' }}>NIFTY 50</span>
+      <span className="sd-h-nifty-k" style={{ fontSize: 10, letterSpacing: 1.4, color: T.muted, whiteSpace: 'nowrap' }}>NIFTY 50</span>
       <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: .3,
                      color: flash === 'up' ? T.green : flash === 'down' ? T.red : T.bright,
                      background: flash ? (flash === 'up' ? 'rgba(22,217,138,.12)' : 'rgba(255,77,94,.12)') : 'transparent',
@@ -169,7 +177,7 @@ function NiftyLive() {
       <span style={{ fontSize: 12, fontWeight: 600, color: chg == null ? T.muted : up ? T.green : T.red, whiteSpace: 'nowrap' }}>
         {chg == null ? '' : `${up ? '▲' : '▼'} ${Math.abs(chg).toFixed(2)}  ${pct != null ? `${up ? '+' : '−'}${Math.abs(Number(pct)).toFixed(2)}%` : ''}`}
       </span>
-      <span className={desktop ? 't-hide-md' : 't-hide-xl'} style={{ fontSize: 10, color: T.dim, display: 'flex', gap: 10, whiteSpace: 'nowrap' }}>
+      <span className={`${desktop ? 't-hide-md' : 't-hide-xl'} sd-h-ohl`} style={{ fontSize: 10, color: T.dim, display: 'flex', gap: 10, whiteSpace: 'nowrap' }}>
         <span>O <span style={{ color: T.muted }}>{n(o)}</span></span>
         <span>H <span style={{ color: T.muted }}>{n(h)}</span></span>
         <span>L <span style={{ color: T.muted }}>{n(l)}</span></span>
@@ -244,12 +252,14 @@ function MacroTape() {
       <span style={{ background: T.amber, color: T.bg, fontSize: 9, fontWeight: 700, letterSpacing: 1.2,
                      padding: '0 8px', height: '100%', display: 'flex', alignItems: 'center', flex: 'none' }}>MARKETS</span>
       {gift?.last != null && (
-        <span title={`GIFT NIFTY (NSE IX) at ${gift.time}: implies ${gift.implied_gap_pct ?? '—'}% vs NIFTY's last close`}
+        <span title={`GIFT NIFTY (NSE IX${gift.expiry ? `, ${gift.expiry} contract` : ''}) at ${gift.time}: ${gift.implied_gap_pct ?? '—'}% vs NIFTY's last SPOT close. `
+                     + 'Not the opening gap: GIFT tracks the near-month future, which trades above spot by the carry (about 0.2 % a month), '
+                     + 'so the gap to fair value is lower by about that much (m002).'}
               style={{ display: 'inline-flex', gap: 7, alignItems: 'baseline', padding: '0 14px', borderRight: `1px solid ${T.border}`, fontSize: 11 }}>
           <span style={{ color: T.amber, fontSize: 10, letterSpacing: .8 }}>GIFT NIFTY</span>
           <span style={{ color: T.text }}>{gift.last.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           {gift.implied_gap_pct != null && <span style={{ color: gift.implied_gap_pct >= 0 ? T.green : T.red }}>{gift.implied_gap_pct >= 0 ? '+' : '−'}{Math.abs(gift.implied_gap_pct).toFixed(2)}%{' '}
-            {gift.nifty_status === 'Open' ? 'vs spot' : 'gap'}</span>}
+            vs spot</span>}
         </span>
       )}
       {MACRO.map((m, i) => {
@@ -277,10 +287,11 @@ function MacroTape() {
       {linkDown
         ? <span style={{ fontSize: 9, color: T.red, letterSpacing: 1, padding: '0 12px', flex: 'none' }}>◌ STALE{at ? ` · ${at} IST` : ''}</span>
         : <span className="t-tape-ge2" style={{ fontSize: 9, color: T.dim, padding: '0 12px', flex: 'none' }}
-            title="NSE indices: the live NSE quote service (Breeze websocket) when it answers, else NSE allIndices; USD/INR, Brent, gold and the S&P: Yahoo, about 1 min delayed">
+            title="NSE indices: the live NSE quote service (Breeze websocket) when it answers, else NSE allIndices. USD/INR, Brent, gold and the S&P 500: Yahoo, about 1 min delayed, on their own sessions (the S&P trades 20:00–02:30 IST in winter): the NSE state never describes them">
+            {/* m006: the NSE session word (CLOSE · 05 NOV) applies to the NSE indices only, never to the S&P / FX / commodities */}
             {tapeLive.available && tapeLive.source
-              ? `${sourceChipText(tapeLive.source).label}${atYahoo ? ` · YAHOO ${atYahoo} IST` : ''}`
-              : at && `NSE${atNse ? ` ${atNse}` : ''} · YAHOO${atYahoo ? ` ${atYahoo}` : ''} IST`}</span>}
+              ? `NSE ${sourceChipText(tapeLive.source).label}${atYahoo ? ` │ FX · BRENT · GOLD · S&P: YAHOO ${atYahoo} IST` : ''}`
+              : at && `NSE${atNse ? ` ${atNse}` : ''} │ FX · BRENT · GOLD · S&P: YAHOO${atYahoo ? ` ${atYahoo}` : ''} IST`}</span>}
     </div>
   )
 }
@@ -289,21 +300,25 @@ function MacroTape() {
 
 type MorePage = { id: string; code: string; label: string; hint: string }
 
-/** "MORE ▾": the pages that live outside the strip (also on GO). The menu is fixed-positioned so the strip's
- *  horizontal scroll doesn't clip it. */
-function MoreMenu({ pages, active, onChange }: { pages: MorePage[]; active: string; onChange: (id: string) => void }) {
+/** A ▾ menu of pages outside the strip (RESEARCH ▾, MORE ▾; also on GO). Fixed-positioned so the strip's horizontal
+ *  scroll doesn't clip it. `extra` rows (ARRANGE STRIP, IMPORT SETTINGS) sit under a rule at the bottom. */
+function PageMenu({ title, pages, active, onChange, badges = {}, extra = [], heading }: {
+  title: string; pages: MorePage[]; active: string; onChange: (id: string) => void; badges?: Record<string, number | undefined>
+  extra?: { key: string; label: string; hint: string; run: () => void }[]; heading: string
+}) {
   const [open, setOpen] = useState(false)
   const [at, setAt] = useState<{ top: number; right: number }>({ top: 0, right: 0 })
   const btn = useRef<HTMLButtonElement>(null)
   const current = pages.find(p => p.id === active)
+  const tag = `menu-${title.toLowerCase()}`
   useEffect(() => {
     if (!open) return
     const close = (e: MouseEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as HTMLElement).closest('[data-more-menu]')) setOpen(false)
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !(e.target as HTMLElement).closest(`[data-more-menu="${tag}"]`)) setOpen(false)
     }
     window.addEventListener('mousedown', close); window.addEventListener('keydown', close)
     return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', close) }
-  }, [open])
+  }, [open, tag])
   const toggle = () => {
     const r = btn.current?.getBoundingClientRect()
     if (r) setAt({ top: r.bottom, right: Math.max(8, window.innerWidth - r.right) })
@@ -311,25 +326,38 @@ function MoreMenu({ pages, active, onChange }: { pages: MorePage[]; active: stri
   }
   return (
     <>
-      <button ref={btn} data-more-menu onClick={toggle} title="More pages (also on GO)"
+      <button ref={btn} data-more-menu={tag} onClick={toggle} title={`${heading} (also on GO)`} className="sd-pstrip-tab" aria-expanded={open}
         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', flex: 'none',
                  background: current ? '#0e131c' : '#0b0f16', border: 'none', borderLeft: `1px solid ${T.borderHi}`, cursor: 'pointer',
                  borderBottom: `2px solid ${current ? T.amber : 'transparent'}` }}>
         <span style={{ fontFamily: T.display, fontSize: 11, fontWeight: 700, letterSpacing: 1, color: current ? T.amber : T.cyan }}>
-          {current ? current.code : 'MORE'} ▾
+          {current ? current.code : title} ▾
         </span>
       </button>
       {open && (
-        <div data-more-menu style={{ position: 'fixed', top: at.top, right: at.right, zIndex: Z.dropdown, minWidth: 340, background: '#0b0f16',
-                                     border: `1px solid ${T.borderHi}`, boxShadow: '0 12px 32px rgba(0,0,0,.6)', padding: '4px 0' }}>
-          <div style={{ fontSize: 9, color: T.dim, letterSpacing: 1, padding: '6px 12px' }}>MORE PAGES · OR TYPE THE CODE IN ⌕ GO</div>
+        <div data-more-menu={tag} role="menu" aria-label={heading}
+          style={{ position: 'fixed', top: at.top, right: at.right, zIndex: Z.dropdown, width: 'min(420px, calc(100vw - 16px))',
+                   maxHeight: 'calc(100vh - 140px)', overflowY: 'auto', background: '#0b0f16',
+                   border: `1px solid ${T.borderHi}`, boxShadow: '0 12px 32px rgba(0,0,0,.6)', padding: '4px 0' }}>
+          <div style={{ fontSize: 9, color: T.dim, letterSpacing: 1, padding: '6px 12px' }}>{heading.toUpperCase()} · OR TYPE THE CODE IN ⌕ GO</div>
           {pages.map(p => (
-            <button key={p.id} onClick={() => { onChange(p.id); setOpen(false) }}
-              style={{ display: 'grid', gridTemplateColumns: '52px 1fr', gap: 8, width: '100%', textAlign: 'left', padding: '6px 12px',
+            <button key={p.id} role="menuitem" className="sd-menu-row" onClick={() => { onChange(p.id); setOpen(false) }}
+              style={{ display: 'grid', gridTemplateColumns: '52px 1fr auto', gap: 8, width: '100%', textAlign: 'left', padding: '6px 12px',
                        background: p.id === active ? '#121a26' : 'transparent', border: 'none', cursor: 'pointer', alignItems: 'baseline' }}>
               <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: T.amber }}>{p.code}</span>
-              <span><span style={{ fontSize: 11.5, color: T.text }}>{p.label}</span>
-                <span style={{ display: 'block', fontSize: 10, color: T.dim }}>{p.hint}</span></span>
+              <span style={{ minWidth: 0 }}><span style={{ fontSize: 11.5, color: T.text }}>{p.label}</span>
+                <span style={{ display: 'block', fontSize: 10, color: T.dim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      title={p.hint}>{p.hint}</span></span>
+              {badges[p.id] ? <span style={{ fontSize: 9, color: T.bg, background: T.cyan, padding: '0 5px' }}>{badges[p.id]}</span> : <span />}
+            </button>
+          ))}
+          {extra.length > 0 && <div style={{ borderTop: `1px solid ${T.border}`, margin: '4px 0' }} />}
+          {extra.map(x => (
+            <button key={x.key} role="menuitem" className="sd-menu-row" onClick={() => { setOpen(false); x.run() }}
+              style={{ display: 'grid', gridTemplateColumns: '1fr', width: '100%', textAlign: 'left', padding: '6px 12px',
+                       background: 'transparent', border: 'none', cursor: 'pointer' }}>
+              <span style={{ fontFamily: T.mono, fontSize: 11, fontWeight: 700, color: T.cyan, letterSpacing: 1 }}>{x.label}</span>
+              <span style={{ fontSize: 10, color: T.dim }}>{x.hint}</span>
             </button>
           ))}
         </div>
@@ -338,57 +366,148 @@ function MoreMenu({ pages, active, onChange }: { pages: MorePage[]; active: stri
   )
 }
 
-function PageStrip({ tabs, more = [], active, onChange, desktop }: {
-  tabs: { id: string; label: string; badge?: number }[]; more?: MorePage[]; active: string; onChange: (id: string) => void; desktop: boolean
+/** ARRANGE STRIP: move, add and remove strip pages; stored in the SYNC prefs key strip.order.v1 (every window follows). */
+function ArrangeStrip({ strip, pages, onWrite, onClose, desktop }: {
+  strip: string[]; pages: MorePage[]; onWrite: (next: readonly string[] | null) => void; onClose: () => void; desktop: boolean
 }) {
+  const byId = new Map(pages.map(p => [p.id, p]))
+  const off = pages.filter(p => !strip.includes(p.id))
+  const [pick, setPick] = useState('')
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); onClose() } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  const b = (c: string) => ({ fontFamily: T.mono, fontSize: 10.5, color: c, background: 'transparent', border: `1px solid ${T.border}`,
+                              padding: '2px 8px', cursor: 'pointer', minWidth: 30 } as const)
+  return (
+    <div onMouseDown={onClose} role="dialog" aria-label="Arrange the page strip" data-sd-arrange-strip=""
+      style={{ position: 'fixed', inset: 0, zIndex: Z.commandbar, background: 'rgba(2,3,6,.6)', display: 'flex', justifyContent: 'center',
+               alignItems: 'flex-start', paddingTop: '8vh' }}>
+      <div onMouseDown={e => e.stopPropagation()} className="t-fade-up"
+        style={{ width: 'min(520px, 94vw)', maxHeight: '84vh', overflowY: 'auto', background: T.panel, border: `1px solid ${T.borderHi}`,
+                 borderTop: `2px solid ${T.cyan}`, boxShadow: '0 24px 80px rgba(0,0,0,.6)', fontFamily: T.mono }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: `1px solid ${T.border}` }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: T.bg, background: T.cyan, padding: '3px 7px' }}>STRIP</span>
+          <span style={{ fontFamily: T.display, fontSize: 13, fontWeight: 700, letterSpacing: 1.4, color: T.bright }}>ARRANGE THE PAGE STRIP</span>
+          <span style={{ flex: 1 }} />
+          <button type="button" onClick={onClose} style={b(T.muted)}>ESC</button>
+        </div>
+        <div style={{ padding: '6px 14px 2px', fontSize: 10.5, color: T.muted, lineHeight: 1.5 }}>
+          Alt+1 … 0 open the first ten{desktop ? '; ⌘1 … 9 follow the Go menu (the default order)' : ''}. Saved to your settings: every window and the app follow.
+        </div>
+        <div style={{ padding: '6px 14px' }}>
+          {strip.map((id, i) => {
+            const p = byId.get(id)
+            const d = slotDigit(i)
+            return (
+              <div key={id} data-sd-strip-row={id} style={{ display: 'grid', gridTemplateColumns: '22px 52px 1fr auto', gap: 8, alignItems: 'center',
+                                                          padding: '4px 0', borderBottom: `1px solid ${T.border}` }}>
+                <span style={{ fontSize: 9.5, color: T.dim, textAlign: 'center', border: d ? `1px solid ${T.border}` : 'none' }}>{d ?? ''}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: T.amber }}>{p?.code ?? id}</span>
+                <span style={{ fontSize: 11, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p?.label ?? ''}</span>
+                <span style={{ display: 'flex', gap: 4 }}>
+                  <button type="button" className="sd-tap" aria-label={`Move ${p?.code ?? id} left`} disabled={i === 0}
+                    onClick={() => onWrite(moveInStrip(strip, id, -1))} style={b(i === 0 ? T.dim : T.cyan)}>↑</button>
+                  <button type="button" className="sd-tap" aria-label={`Move ${p?.code ?? id} right`} disabled={i === strip.length - 1}
+                    onClick={() => onWrite(moveInStrip(strip, id, 1))} style={b(i === strip.length - 1 ? T.dim : T.cyan)}>↓</button>
+                  <button type="button" className="sd-tap" aria-label={`Remove ${p?.code ?? id} from the strip`} disabled={strip.length <= 1}
+                    onClick={() => onWrite(removeFromStrip(strip, id))} style={b(T.muted)}>✕</button>
+                </span>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 14px 12px' }}>
+          <select value={pick} onChange={e => setPick(e.target.value)} aria-label="Page to add"
+            style={{ fontFamily: T.mono, fontSize: 11, background: '#080b10', color: T.text, border: `1px solid ${T.border}`, padding: '4px 6px', maxWidth: 260 }}>
+            <option value="">add a page…</option>
+            {off.map(p => <option key={p.id} value={p.id}>{p.code} · {p.label}</option>)}
+          </select>
+          <button type="button" className="sd-tap" disabled={!pick || strip.length >= MAX_STRIP}
+            onClick={() => { if (pick) { onWrite(addToStrip(strip, pick)); setPick('') } }} style={b(pick ? T.green : T.dim)}>+ ADD</button>
+          <span style={{ flex: 1 }} />
+          <button type="button" className="sd-tap" disabled={isDefaultStrip(strip)} onClick={() => onWrite(null)} style={b(isDefaultStrip(strip) ? T.dim : T.amber)}>RESET</button>
+          <button type="button" className="sd-tap" onClick={onClose} style={{ ...b(T.bg), background: T.cyan, borderColor: T.cyan, fontWeight: 700 }}>DONE</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PageStrip({ tabs, pages, active, onChange, desktop, badges }: {
+  tabs: { id: string; label: string; badge?: number }[]; pages: MorePage[]; active: string; onChange: (id: string) => void; desktop: boolean
+  badges: Record<string, number | undefined>
+}) {
+  const known = useMemo(() => pages.map(p => p.id), [pages])
+  const [strip, writeStrip] = useStripOrder(known)
+  const [arranging, setArranging] = useState(false)
+  const { offer } = useImportOffer()
+  const label = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const p of pages) m.set(p.id, p.code)
+    for (const t of tabs) m.set(t.id, t.label)
+    return m
+  }, [pages, tabs])
+  const menus = useMemo(() => splitMenus(strip, known), [strip, known])
+  const byId = useMemo(() => new Map(pages.map(p => [p.id, p])), [pages])
+  const research = menus.research.map(id => byId.get(id)).filter((p): p is MorePage => !!p)
+  const more = menus.more.map(id => byId.get(id)).filter((p): p is MorePage => !!p)
   // ⌘/Ctrl-click or middle-click on a page tab opens it in a new window (C1-trader-ux-16)
   const open = useCallback((e: ReactMouseEvent, id: string) => {
     if (e.button === 1 || ((e.metaKey || e.ctrlKey) && e.button === 0)) { e.preventDefault(); void newWindow(id); return true }
     return false
   }, [])
+  // Alt+1 … 9, Alt+0: the strip's first ten slots, in the owner's order (M37)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!e.altKey || e.ctrlKey || e.metaKey) return
-      const k = e.code.startsWith('Digit') ? e.code.slice(5) : null
-      if (k == null) return
-      const i = k === '0' ? 9 : Number(k) - 1
-      if (tabs[i]) { e.preventDefault(); onChange(tabs[i].id) }
+      const i = slotForDigitCode(e.code)
+      if (i < 0) return
+      if (strip[i]) { e.preventDefault(); onChange(strip[i]) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [tabs, onChange])
+  }, [strip, onChange])
   useEffect(() => {
     document.querySelector(`[data-tab="${active}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [active])
+  const extra = [
+    { key: 'arrange', label: '⚙ ARRANGE THE STRIP', hint: 'move, add or remove pages · Alt+1 … 0 follow', run: () => setArranging(true) },
+    ...(offer !== 'none' ? [{ key: 'import', label: '⇪ IMPORT SETTINGS', hint: 'watchlist and pins from the old browser terminal', run: () => openSettingsImport() }] : []),
+  ]
   return (
-    <nav style={{ display: 'flex', overflowX: 'auto', borderBottom: `1px solid ${T.border}`, background: '#07090d' }}>
-      {tabs.map((t, i) => {
-        const on = t.id === active
-        const key = i < 9 ? String(i + 1) : i === 9 ? '0' : null
+    <nav className="sd-pstrip" aria-label="Pages" style={{ display: 'flex', overflowX: 'auto', borderBottom: `1px solid ${T.border}`, background: '#07090d' }}>
+      {strip.map((id, i) => {
+        const on = id === active
+        const key = slotDigit(i)
+        const badge = badges[id]
         return (
-          <button key={t.id} data-tab={t.id} onClick={e => { if (!open(e, t.id)) onChange(t.id) }}
-            onAuxClick={e => { open(e, t.id) }} onMouseDown={e => { if (e.button === 1) e.preventDefault() }}
-            title={[tabKeyHint(i, desktop), '⌘-click: new window'].filter(Boolean).join(' · ')}
+          <button key={id} data-tab={id} className="sd-pstrip-tab" onClick={e => { if (!open(e, id)) onChange(id) }}
+            onAuxClick={e => { open(e, id) }} onMouseDown={e => { if (e.button === 1) e.preventDefault() }}
+            title={[byId.get(id)?.code, slotKeyHint(strip, i, desktop), '⌘-click: new window'].filter(Boolean).join(' · ')}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '8px 5px', whiteSpace: 'nowrap', flex: '1 0 auto',
                      background: on ? '#0e131c' : 'transparent', border: 'none', cursor: 'pointer',
                      borderBottom: `2px solid ${on ? T.amber : 'transparent'}`, borderRight: `1px solid ${T.border}` }}>
             {key && <span style={{ fontSize: 9, color: on ? T.bg : T.dim, background: on ? T.amber : 'transparent',
                                    border: `1px solid ${on ? T.amber : T.border}`, padding: '0 4px', lineHeight: '14px' }}>{key}</span>}
             <span style={{ fontFamily: T.display, fontSize: 11, fontWeight: 600, letterSpacing: .55,
-                           textTransform: 'uppercase', color: on ? T.amber : T.muted }}>{t.label}</span>
-            {t.badge ? <span style={{ fontSize: 9, color: T.bg, background: T.cyan, padding: '0 5px' }}>{t.badge}</span> : null}
+                           textTransform: 'uppercase', color: on ? T.amber : T.muted }}>{label.get(id) ?? id}</span>
+            {badge ? <span style={{ fontSize: 9, color: T.bg, background: T.cyan, padding: '0 5px' }}>{badge}</span> : null}
           </button>
         )
       })}
-      <div style={{ position: 'sticky', right: 0, display: 'flex', flex: 'none', background: '#0b0f16' }}>
-      {more.length > 0 && <MoreMenu pages={more} active={active} onChange={onChange} />}
-      <button onClick={() => window.dispatchEvent(new Event('suryadhana:command'))} title={`Command bar — type a ticker or function code (/ or ${desktop ? '⌘K' : 'Ctrl+K'})`}
+      <div className="sd-pstrip-end" style={{ position: 'sticky', right: 0, display: 'flex', flex: 'none', background: '#0b0f16' }}>
+      {research.length > 0 && <PageMenu title="RESEARCH" heading="Research and legacy pages" pages={research} active={active} onChange={onChange} badges={badges} />}
+      {(more.length > 0 || extra.length > 0) && <PageMenu title="MORE" heading="More pages" pages={more} active={active} onChange={onChange} badges={badges} extra={extra} />}
+      <button className="sd-pstrip-tab" onClick={() => window.dispatchEvent(new Event('suryadhana:command'))} title={`Command bar — type a ticker or function code (/ or ${desktop ? '⌘K' : 'Ctrl+K'})`}
         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', flex: 'none',
                  background: '#0b0f16', border: 'none', borderLeft: `1px solid ${T.borderHi}`, cursor: 'pointer' }}>
         <span style={{ fontFamily: T.display, fontSize: 11.5, fontWeight: 700, letterSpacing: 1.2, color: T.amber }}>⌕ GO</span>
-        <span style={{ fontSize: 9, color: T.dim, border: `1px solid ${T.border}`, padding: '0 4px', lineHeight: '14px' }}>/</span>
+        <span className="sd-h-kbd" style={{ fontSize: 9, color: T.dim, border: `1px solid ${T.border}`, padding: '0 4px', lineHeight: '14px' }}>/</span>
       </button>
       </div>
+      {arranging && <ArrangeStrip strip={strip} pages={pages} onWrite={writeStrip} onClose={() => setArranging(false)} desktop={desktop} />}
     </nav>
   )
 }
@@ -401,8 +520,12 @@ interface Props {
   totalStocks: number
   latestDate?: string
   activeTab: string
+  /** labels of the default strip pages (page.tsx tabList); a page the owner adds shows its code */
   tabs: { id: string; label: string; badge?: number }[]
-  more?: MorePage[]
+  /** every page (COMMAND_PAGES): the strip, RESEARCH ▾ and MORE ▾ are cut from these */
+  pages: MorePage[]
+  /** counts shown beside a page wherever it sits (EQS active filters, PIPE watchlist) */
+  badges?: Record<string, number | undefined>
   onTabChange: (id: string) => void
 }
 
@@ -449,18 +572,18 @@ function IciciLight({ connected, provider, known }: { connected: boolean; provid
   )
 }
 
-export function MarketCommandHeader({ onRefresh, refreshing, totalStocks, latestDate, activeTab, tabs, more = [], onTabChange }: Props) {
+export function MarketCommandHeader({ onRefresh, refreshing, totalStocks, latestDate, activeTab, tabs, pages, badges = {}, onTabChange }: Props) {
   const { dataServiceStatus: ds } = useDataServiceStatus()
   const { desktop } = useShellState()
   // pages outside the strip show their function code (WRAP, MOV…): long labels crowd the header row
-  const page = tabs.find(t => t.id === activeTab)?.label ?? more.find(m => m.id === activeTab)?.code ?? activeTab
+  const page = tabs.find(t => t.id === activeTab)?.label ?? pages.find(m => m.id === activeTab)?.code ?? activeTab
   return (
     <header data-sd-header={desktop ? 'desktop' : 'browser'}
       style={{ position: 'sticky', top: 'var(--shell-top, 0px)', zIndex: Z.header, background: T.bg, fontFamily: T.mono }}>
-      <div data-sd-row1 style={{ height: desktop ? 36 : 44, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${T.border}`,
+      <div className="sd-row1" data-sd-row1 style={{ height: desktop ? 36 : 44, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${T.border}`,
                                  background: '#07090d', overflow: 'hidden', whiteSpace: 'nowrap' }}>
         {!desktop && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', height: '100%', flex: '0 1 auto', minWidth: 0 }}>
+          <div className="sd-h-brand" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px', height: '100%', flex: '0 1 auto', minWidth: 0 }}>
             <span style={{ fontFamily: T.display, fontWeight: 700, letterSpacing: 2, color: T.amber, fontSize: 14, whiteSpace: 'nowrap',
                            overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
               ◉ SURYADHANA <span style={{ color: T.dim }}>▸</span> <span style={{ color: T.bright }}>{page.toUpperCase()}</span>
@@ -472,7 +595,7 @@ export function MarketCommandHeader({ onRefresh, refreshing, totalStocks, latest
         )}
         <NiftyLive />
         <span style={{ flex: 1, minWidth: 0 }} />
-        <div style={{ display: 'flex', gap: 12, padding: '0 14px', borderLeft: `1px solid ${T.border}`, height: '100%', alignItems: 'center', flex: 'none' }}>
+        <div className="sd-h-lights" style={{ display: 'flex', gap: 12, padding: '0 14px', borderLeft: `1px solid ${T.border}`, height: '100%', alignItems: 'center', flex: 'none' }}>
           {!desktop && <>
             <Light name="DATA" ok={ds.health === 'ok' ? true : ds.health === 'error' ? false : null} detail={`data-service: ${ds.health}`} />
             <span className="t-hide-md"><Light name="DB" ok={ds.ready} detail="DuckDB ready" /></span>
@@ -482,13 +605,13 @@ export function MarketCommandHeader({ onRefresh, refreshing, totalStocks, latest
           <DataStaleChip />
         </div>
         {!desktop && <HeaderClock />}
-        <div style={{ padding: '0 12px', borderLeft: `1px solid ${T.border}`, height: '100%', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
+        <div className="sd-h-actions" style={{ padding: '0 12px', borderLeft: `1px solid ${T.border}`, height: '100%', display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
           <AlertsBell />
           <UpdateDataButton refreshing={refreshing} onConfirm={onRefresh} />
         </div>
       </div>
       <MacroTape />
-      <PageStrip tabs={tabs} more={more} active={activeTab} onChange={onTabChange} desktop={desktop} />
+      <PageStrip tabs={tabs} pages={pages} active={activeTab} onChange={onTabChange} desktop={desktop} badges={badges} />
     </header>
   )
 }
@@ -535,7 +658,7 @@ function UpdateDataButton({ refreshing, onConfirm }: { refreshing: boolean; onCo
         title={refreshing ? 'A data download is running: show its progress' : 'Download missing daily prices for the 1,500-stock NSE universe (asks first)'}
         style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: refreshing ? T.muted : T.amber, whiteSpace: 'nowrap',
                  background: 'transparent', border: `1px solid ${ask ? T.amber : T.border}`, padding: '4px 9px', cursor: refreshing ? 'wait' : 'pointer' }}>
-        <span className={refreshing ? 't-pulse' : undefined}>⤓</span> {refreshing ? 'UPDATING DATA…' : 'UPDATE DATA'}
+        <span className={refreshing ? 't-pulse' : undefined}>⤓</span> <span className="sd-h-word">{refreshing ? 'UPDATING DATA…' : 'UPDATE DATA'}</span>
       </button>
       {ask && (
         <div data-update-data role="dialog" aria-label="Update data"

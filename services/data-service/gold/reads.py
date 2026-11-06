@@ -299,17 +299,31 @@ def _full_closures(exchange: str) -> set[date]:
         return set()
 
 
-def sessions_between(prev: date | None, cur: date, *, closures: set[date] | None = None) -> int | None:
-    """Trading sessions in (prev, cur]: weekdays minus full closures. None without a previous row. A stored OI delta
-    whose previous row is more than one session back spans the gap (wave 1c, C-TRADER-18: '29 Oct → 3 Nov labelled as one
-    day'); the UI prints 'over N sessions' when this is > 1."""
+def _special_sessions(exchange: str) -> set[date]:
+    """Dated special sessions (MCX Muhurat, Sun 8 Nov 2026: shared/mcx_specs) — sessions on a weekend (wave 1e, M-D)."""
+    if exchange != "MCX":
+        return set()
+    try:
+        from shared import mcx_specs as specs
+
+        return set(specs.SPECIAL_SESSION_WINDOWS)
+    except Exception:  # noqa: BLE001 — the specs module is optional for a read
+        return set()
+
+
+def sessions_between(prev: date | None, cur: date, *, closures: set[date] | None = None,
+                     specials: set[date] | None = None) -> int | None:
+    """Trading sessions in (prev, cur]: weekdays minus full closures, plus dated special sessions (``specials``: MCX
+    Muhurat). None without a previous row. A stored OI delta whose previous row is more than one session back spans the
+    gap (wave 1c, C-TRADER-18: '29 Oct → 3 Nov labelled as one day'); the UI prints 'over N sessions' when this is > 1."""
     if prev is None or cur <= prev:
         return None
     closures = closures or set()
+    specials = specials or set()
     n, d = 0, prev
     while d < cur:
         d += timedelta(days=1)
-        if d.weekday() < 5 and d not in closures:
+        if (d.weekday() < 5 and d not in closures) or d in specials:
             n += 1
     return n
 
@@ -320,7 +334,7 @@ def _with_sessions_spanned(store: Any, rows: pd.DataFrame, exchange: str) -> lis
     recs = db.records(rows)
     if not recs:
         return recs
-    closures = _full_closures(exchange)
+    closures, specials = _full_closures(exchange), _special_sessions(exchange)
     keys = {(r["symbol"], str(r["expiry"]), r["source"]) for r in recs}
     days = [d for d in (db.to_date(r["trade_date"]) for r in recs) if d is not None]
     if not days:
@@ -339,7 +353,7 @@ def _with_sessions_spanned(store: Any, rows: pd.DataFrame, exchange: str) -> lis
         cur = db.to_date(r["trade_date"])
         p = lookup.get((r["symbol"], str(r["expiry"]), r["source"], cur)) if cur else None
         r["oi_change_from"] = p.isoformat() if p else None
-        r["sessions_spanned"] = sessions_between(p, cur, closures=closures) if (cur and r.get("oi_change") is not None) else None
+        r["sessions_spanned"] = sessions_between(p, cur, closures=closures, specials=specials) if (cur and r.get("oi_change") is not None) else None
     return recs
 
 

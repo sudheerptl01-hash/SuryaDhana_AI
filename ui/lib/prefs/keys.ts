@@ -26,6 +26,7 @@ export const SYNC_KEYS = [
   'gold.triggers.v1', //              lib/gold/prefs.ts TRIGGERS_KEY — pre-open desk EUR/USD trigger (moved out of goldPreOpen.v1)
   'suryadhana.whatsnew', //           components/Brief.tsx — dismissed "what's new" version
   'activeSymbol.v1', //               lib/activeSymbol.ts ACTIVE_SYMBOL_KEY — last underlying / expiry / strikes picked (terminal v2 1.3; the per-window copy is sessionStorage)
+  'strip.order.v1', //                components/shell/stripOrder.ts STRIP_ORDER_KEY — the owner's page-strip order (page review M37)
 ] as const
 
 export type SyncKey = (typeof SYNC_KEYS)[number]
@@ -46,6 +47,9 @@ export const LOCAL_KEYS = [
   'suryadhana.prefs.mode', //         'off' | 'readonly' (QA audits against live) | absent = sync
   'suryadhana.migrate.notice.v1', //  prefs/migration.ts — 'dismissed' | 'imported': the not-imported notice is done here
   'suryadhana.debug.errors', //       components/ErrorCatcher.tsx DEBUG_ERRORS_KEY — '1' = developer error overlay on this device
+  'suryadhana.ostr.template.v1', //   lib/goAliases.ts OSTR_TEMPLATE_KEY — one-shot GO hand-off (`NIFTY OSTR IC`), read + removed by OSTR
+  'suryadhana.alrt.prefill.v1', //    lib/goAliases.ts ALRT_PREFILL_KEY — one-shot GO hand-off (`ALRT TCS >3200`), read + removed by ALRT
+  'suryadhana.migrate.offer.v1', //   components/shell/SettingsImport.tsx — 'seen': the one-time settings-import toast was shown here
 ] as const
 
 export const PREFS_META_KEY = 'suryadhana.prefs.meta'

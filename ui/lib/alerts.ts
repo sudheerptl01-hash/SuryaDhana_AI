@@ -17,6 +17,11 @@ import { getPriceAlerts, putPriceAlert, runPriceAlerts, type AlertHitSrv, type A
 import { apiError } from '@/lib/errors'
 import { notify as platformNotify } from '@/lib/platform'
 import { ALERT_SAVE_FAILED_EVENT, alertNotification, initialSeen, type AlertSaveFailure } from '@/lib/alertText'
+import { ALERT_DRAFT_EVENT, ALERT_DRAFT_KEY, type AlertRule, type AlertRuleDraft } from '@/lib/alertsEngine'
+import { postAlertRule } from '@/lib/alertsClient'
+import { goToPage } from '@/lib/navigate'
+
+export type { AlertRule, AlertRuleDraft } from '@/lib/alertsEngine'
 
 const LEGACY_KEY = 'suryadhana.alerts.v1'
 const SEEN_KEY = 'suryadhana.alerts.seen.v2'
@@ -24,6 +29,17 @@ export const ALERTS_EVENT = 'suryadhana:alerts'
 
 export type AlertLevels = AlertLevelsSrv
 export type AlertHit = AlertHitSrv
+
+// One Mac banner per hit (round-2 review): ui-api's POST /api/alerts/run answers `page_notify` — false while the
+// scheduler is dispatching (it delivers every hit, this page's included, to the Mac and Telegram), true when it is not
+// (this page announces the hits, and the scheduler's queue never repeats them). An older ui-api sends nothing: notify.
+let pageNotify = true
+/** What the last check's run said (exported for the check script). */
+export function pageShouldNotify(): boolean { return pageNotify }
+export function notePageNotify(res: unknown): void {
+  const v = (res as { page_notify?: unknown } | null | undefined)?.page_notify
+  pageNotify = v !== false
+}
 
 // In-page copy of the marker: when storage is blocked the page still remembers what it showed (it used to replay
 // the whole history on every check).
@@ -127,7 +143,7 @@ export function useAlerts() {
 
   /** Ask the server to check now, then return hits this browser has not shown yet (fired here or by the scheduler). */
   const check = useCallback(async (): Promise<AlertHit[]> => {
-    if (Object.keys(alerts).length) { try { await runPriceAlerts() } catch { /* scheduler will catch it */ } }
+    if (Object.keys(alerts).length) { try { notePageNotify((await runPriceAlerts()).data) } catch { /* scheduler will catch it */ } }
     let d: { alerts: Record<string, AlertLevels>; history: AlertHit[] }
     try { d = (await getPriceAlerts()).data } catch { return [] }
     remember(d)
@@ -148,11 +164,40 @@ export function notify(hit: AlertHit): void {
   notifyHits([hit])
 }
 
+// ── create-alert entry points for other pages (Terminal v2 PLAN 2.3: "created where the trader looks") ──────────
+// OMON (a chain strike), CHRT (a chart level), OSTR (a breakeven) call one of these two; the rule model and every
+// series kind are documented in services/ui-api/routers/alerts.py (GET /api/alerts/series lists them):
+//   draftAlert({ series: 'oi_strike:NIFTY:24500:CE', op: 'change_pct', value: 25 })   → opens ALRT with the builder filled
+//   await createAlert({ series: 'price:NIFTY', op: 'cross_up', value: 25000 })         → stores it at once (throws a readable error)
+// Never a direction word in a note (the server refuses one); never an order (PAPER ONLY).
+
+/** Open ALRT with the rule builder filled from `draft` (the owner reviews and saves). Never throws. */
+export function draftAlert(draft: AlertRuleDraft): void {
+  try { sessionStorage.setItem(ALERT_DRAFT_KEY, JSON.stringify(draft)) } catch { /* storage blocked: the event still carries it */ }
+  try {
+    window.dispatchEvent(new CustomEvent<AlertRuleDraft>(ALERT_DRAFT_EVENT, { detail: draft }))
+    goToPage('alerts')
+  } catch { /* no window */ }
+}
+
+/** Store a typed rule now. Resolves the stored rule; rejects with the server's reason (lib/errors apiError). */
+export async function createAlert(draft: AlertRuleDraft): Promise<AlertRule> {
+  try {
+    const r = (await postAlertRule(draft)).data
+    window.dispatchEvent(new Event(ALERTS_EVENT))
+    return r
+  } catch (e) {
+    throw new Error(apiError(e, 'ui-api did not store the alert'))
+  }
+}
+
 /**
  * One notification for one check's fresh hits (a count + the first few when there are several), the same in the
- * browser (Notification when granted) and the app (native macOS notification): see lib/alertText.ts.
+ * browser (Notification when granted) and the app (native macOS notification): see lib/alertText.ts. Silent while the
+ * scheduler dispatches (the last run's `page_notify` was false): its banner is the one.
  */
 export function notifyHits(hits: AlertHit[]): void {
+  if (!pageNotify) return                                   // the scheduler delivers these (one banner, not two)
   const n = alertNotification(hits)
   if (n) platformNotify(n.title, n.body)
 }

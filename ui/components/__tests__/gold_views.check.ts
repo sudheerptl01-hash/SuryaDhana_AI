@@ -459,13 +459,46 @@ check('1d p.hero: the exchange-OI word is SAID to be the OI quadrant, with the O
 check('1d tender days are never negative: "in tender since …"', M.tenderWords(-4, 'Sun 01 Nov') === 'in tender since Sun 01 Nov (4 d)' && M.tenderWords(26, null) === '26 days to tender' && M.tenderWords(1, null) === '1 day to tender' && M.tenderWords(0, 'Tue 01 Dec') === 'tender starts today (Tue 01 Dec)' && M.tenderWords(null, null) === 'days to tender —')
 check('1d negative control: the view prints tenderWords, not a bare "{n} days to tender"', /tenderWords\(data\.roll\.days_to_tender_or_fnd/.test(sources['gold/PositioningView.tsx']) && !/num\(data\.roll\.days_to_tender_or_fnd, 0\)\} days to tender/.test(sources['gold/PositioningView.tsx']))
 check('1d the SGE CNY/g is dated by its own date (sge_pm_date), and a newer print stands alone', /data-sge-date=\{sh\.sge_pm_date/.test(sources['gold/PhysicalView.tsx']) && /data-sge-latest/.test(sources['gold/PhysicalView.tsx']) && !/\$\{istLabel\(pairing\.sgeDate\)\}`\} \/>/.test(sources['gold/PhysicalView.tsx']))
-check('1d the Fed path rows are labelled as tracker horizons, not FOMC dates; the KGX W window says it is not HEALTH\'s', /data-gold-fed-rows/.test(sources['gold/MacroView.tsx']) && /not FOMC decision dates/.test(sources['gold/MacroView.tsx']) && /data-gold-kgx-window/.test(sources['gold/MacroView.tsx']))
+check('1d the Fed path rows are labelled as tracker horizons, not FOMC dates; the KGX window caption compares with HEALTH\'s', /data-gold-fed-rows/.test(sources['gold/MacroView.tsx']) && /not FOMC decision dates/.test(sources['gold/MacroView.tsx']) && /data-gold-kgx-window/.test(sources['gold/MacroView.tsx']))
 check('1d the US calendar and the official-sector table are not clipped inside their panels', !/maxHeight=\{280\}/.test(sources['gold/MacroView.tsx']) && !/maxHeight=\{260\}/.test(sources['gold/PhysicalView.tsx']))
-check('1d PHYSICAL: the ladder basis names its settle source and the landed purity', /settlementLine\(/.test(sources['gold/PhysicalView.tsx']) && /basisPurityShort\(india\?\.basis_reference\)/.test(sources['gold/PhysicalView.tsx']))
+check('1d PHYSICAL: the ladder basis names its settle source and the landed purity (1e: the MCX step\'s own first)', /settlementLine\(/.test(sources['gold/PhysicalView.tsx']) && /basisPurityShort\(mcxStep\?\.basis_reference \?\? india\?\.basis_reference\)/.test(sources['gold/PhysicalView.tsx']))
 const mvSrc = read('components/gold/MonthlyView.tsx')
 check('1d MONTHLY: HY OAS is labelled in % (the value is percent); the official panel is dated by its newest month; the WGC chart has a tonnage axis and quarter labels',
   /HY OAS \(%; × 100 = bp\)/.test(mvSrc) && !/'HY OAS \(bp\)'/.test(mvSrc) && /latestMonth\(purchases\)/.test(mvSrc) && /data-gold-balance-axis/.test(mvSrc) && /quarterLabel\(p\)/.test(mvSrc))
 check('1d low-contrast accents never grey a panel title out', /data-gold-title-readable/.test(read('components/gold/kit.tsx')))
+
+// ── 1e (the 6 Nov final critics C-DATA-3 / C-TRADER-3): the B4B-view minors, each with a negative control ─────────────
+const roll6Nov = { in_tender: true, tender_note: 'in tender since Sun 01 Nov (5 d)', tender_start: '2026-11-01' }
+check('1e tender: a running tender prints the server\'s tender_note (Fri 06 Nov), never \'tender starts today (Sun 01 Nov)\'',
+  M.tenderWords(0, 'Sun 01 Nov', roll6Nov, '2026-11-06') === 'in tender since Sun 01 Nov (5 d)'
+  && M.tenderWords(0, 'Sun 01 Nov', { in_tender: true, tender_start: '2026-11-01' }, '2026-11-06') === 'in tender since Sun 01 Nov (5 d)'
+  && M.tenderWords(0, 'Sun 01 Nov', { tender_start: '2026-11-01' }, '2026-11-06') === 'in tender since Sun 01 Nov (5 d)')
+check('1e tender negative control: starts today only when the start IS today; future days unchanged',
+  M.tenderWords(0, 'Fri 06 Nov', { tender_start: '2026-11-06' }, '2026-11-06') === 'tender starts today (Fri 06 Nov)' && M.tenderWords(24, null, { in_tender: false }, '2026-11-06') === '24 days to tender'
+  && /tenderWords\(data\.roll\.days_to_tender_or_fnd, .*, data\.roll, todayIst\(\)\)/.test(sources['gold/PositioningView.tsx']))
+const realTwin = { key: 'real_10y', label: '10-y real yield', label_note: 'UST_REAL_10Y: fresher than FRED_DFII10 (last 2026-11-03)', series_id: 'UST_REAL_10Y' }
+const brent = { key: 'brent', label: 'Brent', label_note: 'BRENT_FRONT: fresher than FRED_DCOILBRENTEU (last 2026-11-03)', series_id: 'BRENT_FRONT' }
+const standIn = { key: 'dxy', label: 'Dollar index (DXY)', label_note: null, series_id: 'FRED_DTWEXBGS' }
+check('1e MACRO: label_note verbatim (a fresher twin is information, dim); a stand-in of another index is amber',
+  M.driverNote(realTwin)?.text === realTwin.label_note && M.driverNote(realTwin)?.tone === 'dim' && M.driverNote(standIn)?.tone === 'amber' && /stand-in for Dollar index \(DXY\): FRED_DTWEXBGS/.test(M.driverNote(standIn)?.text ?? '')
+  && M.driverNote({ key: 'usdinr', label: 'USD/INR', series_id: 'USDINR_CLOSE' }) === null)
+check('1e MACRO: Brent BZ=F is labelled a front-month future with its own source (never "Source: FRED" alone)',
+  M.driverTileLabel(brent) === 'Brent front-month future (BZ=F)' && /front-month future \(Yahoo BZ=F/.test(M.driverInstrumentNote(brent) ?? '') && M.driverInstrumentNote({ series_id: 'FRED_DCOILBRENTEU' }) === null
+  && JSON.stringify(M.driverSources([realTwin, brent, { series_id: 'FRED_T10YIE' }, { series_id: 'GLD_TONNES' }])) === JSON.stringify(['FRED', 'US Treasury', 'Yahoo', 'SPDR'])
+  && /driverSources\(m\.drivers\)/.test(sources['gold/MacroView.tsx']) && !/<Attribution sources=\{\['FRED'\]\} \/>/.test(sources['gold/MacroView.tsx']))
+check('1e MACRO: the Fed row\'s mean is a rate level (4.16 %), not \'416 bp\'', M.fedMeanText(416.49) === 'mean rate 4.16 %' && M.fedMeanText(null) === 'mean rate —' && /fedMeanText\(mt\.mean_bp\)/.test(sources['gold/MacroView.tsx']) && !/num\(mt\.mean_bp, 0\)\} bp/.test(sources['gold/MacroView.tsx']))
+check('1e MACRO: ZQ is labelled by contract when served, else honestly as the continuous front on its date (never \'NOV-26\' as a contract)',
+  M.zqLabel({ month: 'NOV-26', contract: 'ZQZ26', contract_month: 'DEC-26' }) === 'ZQZ26 (DEC-26)'
+  && M.zqLabel({ month: 'likely DEC-26 (ZQ=F rolled)', month_guess: 'DEC-26', rolled_suspect: true, contract: 'ZQ=F continuous front (Yahoo does not report the contract month)' }) === 'ZQ=F front · likely DEC-26 (rolled)'
+  && /^ZQ=F front · NOV-26 \(the observation month/.test(M.zqLabel({ month: 'NOV-26', symbol: 'ZQ=F' })) && !/^NOV-26/.test(M.zqLabel({ month: 'NOV-26' })))
+check('1e MACRO: the KGX caption compares its window with HEALTH\'s (same window says so; another names HEALTH\'s start)',
+  /the same window as HEALTH's/.test(M.kgxWindowCaption({ period: 'W', from_date: '2026-10-30' }, '2026-10-30') ?? '') && /HEALTH's window starts/.test(M.kgxWindowCaption({ period: 'D', from_date: '2026-11-04' }, '2026-10-30') ?? '')
+  && M.kgxWindowCaption(null, '2026-10-30') === null && !/not HEALTH\\'s week to date/.test(sources['gold/MacroView.tsx']))
+check('1e POSITIONING / DAILY: the tape\'s ΔOI names its scope (all expiries); the table\'s is \'this expiry\'',
+  /oiScope=\{`all \$\{fam\} expiries`\}/.test(sources['gold/PositioningView.tsx']) && /'ΔOI \(this expiry\)'/.test(sources['gold/PositioningView.tsx']) && /data-tape-oi-scope/.test(read('components/gold/OiQuadrantTape.tsx')))
+check('1e PHYSICAL: the pick reaches /premiums; the MCX settle source is the STEP\'s own; no 999 ÷ 995 ratio in the basis copy',
+  /getGoldPremiums\(365, \{ contract: props\.sel\.family, expiry: props\.sel\.expiry \}\)/.test(sources['gold/PhysicalView.tsx']) && /const settleSrc = mcxStep\?\.settlement_source \?\?/.test(sources['gold/PhysicalView.tsx'])
+  && !/999 ÷ 995 = 1\.00402/.test(sources['gold/PhysicalView.tsx']) && /P\/1000/.test(sources['gold/PhysicalView.tsx']))
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nall gold view checks passed')
 process.exit(failures ? 1 : 0)

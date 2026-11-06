@@ -10,9 +10,9 @@
 import { useEffect, useState } from 'react'
 import { Chip, Select, T, fmtFixed, fmtSigned } from '@/components/terminal'
 import { getGoldOverview } from '@/lib/gold/api'
-import { bandReferenceLine, basisPurityMismatch, basisPurityShort, basisReferenceLabel, basisSettleLabel, comexCode, comexMonthLabel, countdown, dayLabel, expiryMonthLabel, fmtCount, fmtInr0, fmtK, fmtSignedCount,
-         fmtSignedPctSp, fmtUsd, istClock, sameComexPrint, settlementDay, settlementLine, settlementNote, settlementQualityChip, stripSettlement,
-         utcClock, UNIT_LABEL } from '@/lib/gold/format'
+import { bandReferenceLine, basisPurityMismatch, basisPurityShort, basisReferenceLabel, basisSettleLabel, comexCode, comexMonthLabel, countdown, dayLabel, delayedIfOld, expiryMonthLabel, fmtCount, fmtInr0, fmtK, fmtSignedCount,
+         fmtSignedPctSp, fmtUsd, istClock, mcxLiveClock, pageRealYield, realYieldPrint, realYieldSeriesWords, sameComexPrint, settlementDay, settlementLine, settlementNote, settlementQualityChip,
+         stripBasis, stripSettlement, utcClock, UNIT_LABEL } from '@/lib/gold/format'
 import { GOLD_FAMILIES, GOLD_UNITS, INSTRUMENTS, type ContractFamily, type GoldContractSel, type GoldOverview, type Layer, type Unit,
          type Window } from '@/lib/gold/types'
 import { Cell, LagChipEl } from './kit'
@@ -32,8 +32,9 @@ export function HeaderStrip({ overview, sel, loading, error }: { overview: GoldO
   const chg = s?.comex_live_chg_pct
   const mcxOpen = overview?.session?.mcx
   const hf = overview?.health?.fair ?? null
-  // the live COMEX leg is the desk's cached Yahoo last: its freshness block is `fair`'s when the strip carries none
-  const liveFresh = fx.comex_live ?? fx.strip ?? fx.fair ?? null
+  // the live COMEX leg is the desk's cached Yahoo last: its freshness block is `fair`'s when the strip carries none; a leg
+  // minutes behind real-time MCX reads DELAYED with its age, never LIVE (wave 1e minor: ~10 min behind Breeze)
+  const liveFresh = delayedIfOld(fx.comex_live ?? fx.strip ?? fx.fair ?? null)
   // a bulletin settlement for the matched month exists only once the CME backfill lands (O-2): until then the cell says
   // so and prints the stored daily close / last trade labelled as what it is — never "NO DATA" beside a live price
   const settle = s?.comex_matched_settle
@@ -45,9 +46,11 @@ export function HeaderStrip({ overview, sel, loading, error }: { overview: GoldO
   // exists (basis_clock 'now'), so the settlement figure must come from basis_settle_pct (or basis_pct only when the
   // server says the clock is 'settlement'); the live figure is shown only while MCX trades. The client never recomputes a
   // basis (wave 1d: the purity of the landed price is the server's `basis_reference`, a client ratio would mix 995 and 999)
-  const mcxTrading = s?.mcx_shown === 'live' || !!mcxOpen?.is_open
-  const basisSettle = s?.basis_settle_pct ?? (s?.basis_clock === 'settlement' || s?.basis_clock == null ? s?.basis_pct ?? null : null)
-  const basisLive = mcxTrading ? (s?.basis_live_pct ?? (s?.basis_clock === 'now' ? s?.basis_pct ?? null : null)) : null
+  const { live: basisLive, settle: basisSettle, trading: mcxTrading } = stripBasis(s, mcxOpen?.is_open)
+  // the live quote's own minute (Breeze's IST bar time; a served time in the future is never printed — wave 1e minor)
+  const mcxLiveAt = mcxLiveClock(overview)
+  // ONE 10-y real yield per page (wave 1e, M-B): the fresher of the strip's point and the HEALTH gauge's, named by its series
+  const ry = pageRealYield(s, overview?.health)
   // wave 1d: the settlement names its source, session and quality ('Wed 04 Nov · last-30-min VWAP (Breeze) — proxy'); the
   // band midpoint is kept for reference with the session it really belongs to; an amber note when the two disagree > 0.6 %
   const st = stripSettlement(s, hf)
@@ -87,10 +90,12 @@ export function HeaderStrip({ overview, sel, loading, error }: { overview: GoldO
           {settle == null && <span style={{ color: T.dim }}> · settle: CME bulletin (O-2)</span>}
           {live != null && <LagChipEl freshness={liveFresh} style={{ marginLeft: 4 }} />}</>}
         title={`${INSTRUMENTS.matched} ${comexCode(c?.comex_matched)}: bulletin settlement when stored (CME backfill, O-2); last = the desk's cached Yahoo last of the matched month, a trade, not a settlement${s?.comex_ref_note ? `; Δ ${s.comex_ref_note}` : ''}`} />
-      <Cell label="USD/INR" value={fmtFixed(s?.usdinr, 2)} sub={s?.usdinr_as_of ? `Yahoo INR=X · ${istClock(s.usdinr_as_of)}` : 'Yahoo INR=X · offshore before 09:00'} />
-      <Cell label="10-y real" value={s?.real_10y != null ? `${fmtFixed(s.real_10y, 2)} %` : '—'} sub={s?.real_10y_date ? `TIPS · ${dayLabel(s.real_10y_date)}` : 'TIPS (FRED DFII10)'} />
+      <Cell label="USD/INR" value={fmtFixed(s?.usdinr, 2)} sub={s?.usdinr_as_of ? `Yahoo INR=X · ${istClock(s.usdinr_as_of)}` : 'Yahoo INR=X · last print (no overnight feed)'} />
+      <Cell label="10-y real" value={<span data-gold-strip-ry={realYieldPrint(ry.value, ry.date)}>{ry.value != null ? `${fmtFixed(ry.value, 2)} %` : '—'}</span>}
+        sub={`${realYieldSeriesWords(ry.seriesId)}${ry.date ? ` · ${dayLabel(ry.date)}` : ''}`}
+        title={`10-y real yield, one value per page: the fresher of the Treasury real curve (UST_REAL_10Y) and FRED DFII10 (the same quantity; the later date wins) — HEALTH's REAL YIELD tile, the H2 clause and MACRO print the same point${ry.note ? `; ${ry.note}` : ''}`} />
       {mcxLive != null && mcxTrading
-        ? <Cell label={`MCX ${c?.mcx ?? sel.family} ${expiryMonthLabel(c?.expiry ?? sel.expiry)}`} value={<>{fmtInr0(mcxLive)}<span style={dim}> live · {mcxLiveSource}</span></>}
+        ? <Cell label={`MCX ${c?.mcx ?? sel.family} ${expiryMonthLabel(c?.expiry ?? sel.expiry)}`} value={<>{fmtInr0(mcxLive)}<span style={dim} data-gold-strip-mcx-clock={mcxLiveAt}> live{mcxLiveAt ? ` · ${mcxLiveAt}` : ''} · {mcxLiveSource}</span></>}
             sub={<span data-gold-strip-mcx>settle {fmtInr0(st.settlement)} <span data-gold-strip-settle-source>{stLine}</span>
               {basisLive != null && <> · basis live vs duty-paid now <b style={{ color: T.text }}>{fmtSignedPctSp(basisLive, 2)}</b></>}
               {/* the settlement basis is dated by ITS OWN session (a stored-row fallback can be an older one), then the strip's settlement */}
@@ -150,7 +155,7 @@ export function GoldHoverCard() {
           s.comex_matched_settle != null ? `settle ${dayLabel(s.comex_matched_settle_date)} · last ${fmtUsd(s.comex_live, 1)}`
             : `settle — (CME backfill) · ${s.comex_matched_last != null ? `${dayLabel(s.comex_matched_last_date)} ` : ''}Yahoo, not settlement`)}
         {row('USD/INR', fmtFixed(s.usdinr, 2))}
-        {row('10-y real', s.real_10y != null ? `${fmtFixed(s.real_10y, 2)} %` : '—', dayLabel(s.real_10y_date))}
+        {(() => { const r = pageRealYield(s, o.health); return row('10-y real', r.value != null ? `${fmtFixed(r.value, 2)} %` : '—', dayLabel(r.date)) })()}
         {row(`MCX ${o.contract.mcx} ${expiryMonthLabel(o.contract.expiry)}`, fmtInr0(stripSettlement(s, o.health?.fair).settlement), settlementLine(stripSettlement(s, o.health?.fair)))}
         {row('COT funds net (MM)', s.cot_mm_net != null ? fmtSignedCount(s.cot_mm_net) : '—', `${fmtK(s.cot_mm_chg)} w/w · ${dayLabel(s.cot_as_of)}`)}
         <div style={{ color: T.dim, fontSize: 9.5, marginTop: 4 }}>{instrumentLine(o, { exchange: 'MCX', family: (o.contract.mcx as GoldContractSel['family']) ?? 'GOLD', expiry: o.contract.expiry, options: false })}</div>
@@ -166,14 +171,18 @@ const EXCHANGES: { value: 'MCX' | 'NSE' | 'BSE'; label: string; disabled?: boole
 ]
 
 /** The page-global pickers (a.1): exchange × family × expiry · unit · window · [B]/[P]. */
-export function Pickers({ sel, onSel, families, unit, onUnit, window, onWindow, layer, onLayer, comexMatched }: {
+export function Pickers({ sel, onSel, families, unit, onUnit, window, onWindow, layer, onLayer, comexMatched, autoExpiry }: {
   sel: GoldContractSel; onSel: (p: Partial<GoldContractSel>) => void; families: ContractFamily[] | null
   unit: Unit; onUnit: (u: Unit) => void; window: Window; onWindow: (w: Window) => void; layer: Layer; onLayer: (l: Layer) => void
   comexMatched: string | null
+  /** the page's default when no expiry is picked (wave 1e): the next month when the OI front is in tender, with the reason */
+  autoExpiry?: { expiry: string | null; front: string | null; reason: string | null } | null
 }) {
   const fam = families?.find(f => f.code === sel.family) ?? null
   const expiries = fam?.expiries ?? []
-  const expiryOptions = [{ value: '', label: 'front (by OI)' }, ...expiries.map(e => ({ value: e.expiry, label: `${expiryMonthLabel(e.expiry)} · ${e.expiry}${e.oi != null ? ` · OI ${e.oi.toLocaleString('en-IN')}` : ''}${e.source === 'computed' ? ' · computed' : ''}` }))]
+  // 'auto' = the OI front, or the next month when the front is in its tender period (wave 1e); an in-tender month says so
+  const autoLabel = autoExpiry?.expiry ? `auto: ${expiryMonthLabel(autoExpiry.expiry)} (front ${expiryMonthLabel(autoExpiry.front)} in tender)` : 'front (by OI)'
+  const expiryOptions = [{ value: '', label: autoLabel }, ...expiries.map(e => ({ value: e.expiry, label: `${expiryMonthLabel(e.expiry)} · ${e.expiry}${e.oi != null ? ` · OI ${e.oi.toLocaleString('en-IN')}` : ''}${e.source === 'computed' ? ' · computed' : ''}${e.in_tender ? ' · IN TENDER' : ''}` }))]
   const exch = EXCHANGES.find(e => e.value === sel.exchange) ?? EXCHANGES[0]
   return (
     <div data-gold-pickers style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 10px', alignItems: 'center', padding: '6px 10px', border: `1px solid ${T.border}`,
@@ -186,6 +195,7 @@ export function Pickers({ sel, onSel, families, unit, onUnit, window, onWindow, 
       <Select value={sel.family} onChange={v => onSel({ family: v, expiry: null })}
         options={GOLD_FAMILIES.map(f => ({ value: f, label: f }))} />
       <Select value={sel.expiry ?? ''} onChange={v => onSel({ expiry: v || null })} options={expiryOptions} />
+      {!sel.expiry && autoExpiry?.reason && <span data-gold-auto-expiry={autoExpiry.expiry ?? ''} style={{ color: T.amber, fontSize: 10 }} title={autoExpiry.reason}>⚠ {autoExpiry.reason}</span>}
       <Chip color={sel.options ? T.violet : T.muted} active={sel.options} onClick={() => onSel({ options: !sel.options })}
         title="Show the options chain (CE/PE) on the selector card; an exercised option becomes the future">OPTIONS</Chip>
       <span style={{ color: T.dim, fontFamily: T.mono, fontSize: 10 }} title="the COMEX contract that expires nearest after the MCX expiry (gold_cme_calendar FND/LTD)">

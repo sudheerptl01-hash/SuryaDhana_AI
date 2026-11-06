@@ -26,7 +26,7 @@ import { useMemo } from 'react'
 import { DataTable, Grid, KV, Loading, Stat, T, type Column } from '@/components/terminal'
 import { getGoldFlows, getGoldPremiums } from '@/lib/gold/api'
 import type { GoldSubViewProps } from '@/lib/gold/types'
-import { basisPurityShort, settlementLine, stripSettlement } from '@/lib/gold/format'
+import { basisPurityShort, dayLabel, settlementLine, shanghaiReconcile, stripSettlement } from '@/lib/gold/format'
 import { tipFor } from '@/lib/gold/learn'
 import tooltipsJson from '@/lib/gold/tooltips.json'
 import { PriceLadder } from './PriceLadder'
@@ -52,7 +52,8 @@ const LINKS = [
 export function PhysicalView(props: GoldSubViewProps) {
   const { layer, catalog } = props
   const tip = useMemo(() => (k: string) => tipFor(props.tooltips, BUNDLED, k), [props.tooltips])
-  const prem = useGoldLoad(() => getGoldPremiums(365), [], 5 * 60_000)
+  // the page's PICK reaches /premiums (wave 1e minor: the ladder printed GOLD's settle with GOLDTEN picked)
+  const prem = useGoldLoad(() => getGoldPremiums(365, { contract: props.sel.family, expiry: props.sel.expiry }), [props.sel.family, props.sel.expiry], 5 * 60_000)
   const flows = useGoldLoad(() => getGoldFlows(24), [], 10 * 60_000)
   const p = prem.data
   const f = flows.data
@@ -92,22 +93,34 @@ export function PhysicalView(props: GoldSubViewProps) {
   const mcxStep = india?.ladder?.find(s => /^mcx/i.test(s.step))
   // wave 1d: the MCX settle names its source (last-30-min VWAP of the Breeze bars, else the ICICI band midpoint) and the
   // basis names the purity of the landed price it divides by
-  const settleBlock = props.fair && (props.fair.contract ?? 'GOLD') === 'GOLD' ? stripSettlement(props.overview?.contract?.mcx === 'GOLD' ? props.overview?.strip : null, props.fair) : null
-  const settleSrc = india?.settlement_source ?? settleBlock?.settlement_source ?? null
-  const basisClock = `${mcxStep?.ts ? `at the ${/^\d{4}-/.test(mcxStep.ts) ? `${istLabel(mcxStep.ts)} settlement` : mcxStep.ts} vs that session's duty-paid (the close reference)` : 'at the last settlement vs that session\'s duty-paid'}` +
-    ` · settle ${settlementLine({ ...(settleBlock ?? {}), settlement: settleBlock?.settlement ?? mcxStep?.value ?? null, settlement_source: settleSrc, settlement_session: /^\d{4}-/.test(mcxStep?.ts ?? '') ? mcxStep?.ts : settleBlock?.settlement_session ?? null })} · ${basisPurityShort(india?.basis_reference)}`
+  // wave 1e minor: the source and session come from the MCX STEP itself (`settlement_source` / `ts`), for whichever contract the
+  // page picked — never 'source not stated' when the step names it; the page's settlement block only when it is the same contract
+  const stepContract = /MCX\s+(\S+)/u.exec(mcxStep?.label ?? '')?.[1] ?? props.sel.family
+  const settleBlock = props.fair && (props.fair.contract ?? 'GOLD') === stepContract ? stripSettlement(props.overview?.contract?.mcx === stepContract ? props.overview?.strip : null, props.fair) : null
+  const settleSrc = mcxStep?.settlement_source ?? india?.settlement_source ?? settleBlock?.settlement_source ?? null
+  const stepSession = /^\d{4}-/.test(mcxStep?.ts ?? '') ? mcxStep?.ts ?? null : null
+  const basisClock = `${stepSession ? `at the ${dayLabel(stepSession)} settlement vs that session's duty-paid (the close reference)` : mcxStep?.ts ? `at the ${mcxStep.ts} vs that session's duty-paid (the close reference)` : 'at the last settlement vs that session\'s duty-paid'}` +
+    ` · settle ${settlementLine({ ...(settleBlock ?? {}), settlement: mcxStep?.value ?? settleBlock?.settlement ?? null, settlement_source: settleSrc,
+      settlement_quality: mcxStep?.settlement_quality ?? settleBlock?.settlement_quality ?? null, settlement_session: stepSession ?? settleBlock?.settlement_session ?? null,
+      settlement_session_label: mcxStep?.ts_label ?? (stepSession ? null : settleBlock?.settlement_session_label ?? null) })} · ${basisPurityShort(mcxStep?.basis_reference ?? india?.basis_reference)}`
+  // M-C: the printed legs must reproduce the printed premium (server `reconciles`, re-checked here to the cent)
+  const shRec = shanghaiReconcile(sh)
   // Shanghai: the premium prints only for a same-date pair; otherwise the last stored same-day value and what it waits for
   const pairing = sh ? shanghaiPairing(sh.ts_sge, sh.ts_ref, sh.london_pm_usd == null && sh.comex_at_1415_bj != null) : null
-  const shStored = [...(sh?.history ?? [])].reverse().find(h => h.premium_usd != null) ?? null
+  // the last same-date pair: the server's own (premium_usd of pair_date — recomputed from the printed legs, wave 1e M-C), else
+  // the history's last stored point; the legs printed beside it are that pair's, so the premium equals them to the cent
+  const shStored = sh?.pair_date && sh.premium_usd != null
+    ? { report_date: sh.pair_date, premium_usd: sh.premium_usd, premium_pct: sh.premium_pct ?? null }
+    : ([...(sh?.history ?? [])].reverse().find(h => h.premium_usd != null) ?? null)
 
   return (
     <div data-gold-b4b="physical" style={{ display: 'grid', gap: 10 }}>
       {/* ph.ladder */}
       <GPanel id="ph.ladder" title="The India price stack" badge="arithmetic" evidence="identity: landed → duty-paid → IBJA → MCX" fresh={indiaFresh} dateOnly={ibjaTs ? istLabel(ibjaTs, true) : null}
         series={['GOLD_INR_LANDED', 'GOLD_INR_DUTY_PAID', 'IBJA_999_PM', 'USDINR_FBIL']} catalog={catalog} layer={layer}
-        formula="landed ₹/10 g = COMEX $/oz × USD/INR × 10 ÷ 31.1034768; duty-paid = landed × (1 + 0.15); premium = IBJA 999 PM ÷ (duty-paid × 999/995) − 1; basis = MCX front ÷ duty-paid − 1"
+        formula="landed ₹/10 g = COMEX $/oz × USD/INR × 10 ÷ 31.1034768 (fine gold); duty-paid = landed × (1 + 0.15); premium = IBJA 999 PM ÷ (duty-paid × 999/1000) − 1; basis = MCX ÷ (duty-paid × P/1000) − 1, P = the contract's purity (GOLD / GOLDM 995, TEN / PETAL / GUINEA 999)"
         copyB={<>what a rupee gold price is made of and where demand shows up: above the <Term t="duty-paid landed" /> price = local demand exceeds importable supply; below = discount. The <Term t="basis" /> is the MCX futures over that landed price.</>}
-        copyP={<>synchronise the timestamps or the premium is clock error (G-INDIA §5.3: NY close vs the IBJA afternoon board gave +0.9 %; Reuters saw ≈ +$3). Inputs are sampled at the IBJA PM minute with the <Term t="FBIL reference rate" />. 999 ÷ 995 = 1.00402.</>}>
+        copyP={<>synchronise the timestamps or the premium is clock error (G-INDIA §5.3: NY close vs the IBJA afternoon board gave +0.9 %; Reuters saw ≈ +$3). Inputs are sampled at the IBJA PM minute with the <Term t="FBIL reference rate" />. Landed is per FINE gold: a price of purity P compares with landed × P/1000 (PM decision D1) — never a 999 ÷ 995 ratio.</>}>
         <Degraded error={prem.error} what="premiums" />
         {!p && !prem.error && <Loading label="Building the rupee price from COMEX, the rupee, the duty, IBJA and MCX" />}
         {india && (
@@ -152,14 +165,18 @@ export function PhysicalView(props: GoldSubViewProps) {
                 {pairing.sameDate
                   ? <Stat label={<span title={tip('sge_premium_usd')}>premium $/oz</span>} value={<span data-shanghai-premium="same-date">{signed(sh.premium_usd, 1)}</span>} color={contextTone} big={false} sub={<span title={tip('sge_premium_pct')}>{pct(sh.premium_pct, 2)} · both legs {istLabel(pairing.sgeDate)}</span>} />
                   : <Stat label={<span title={tip('sge_premium_usd')}>premium $/oz (last same-day pair)</span>} value={<span data-shanghai-premium="stored">{shStored ? signed(shStored.premium_usd, 2) : '—'}</span>} color={contextTone} big={false}
-                      sub={<span title={tip('sge_premium_pct')}>{shStored ? `${pct(shStored.premium_pct, 2)} · ${istLabel(shStored.report_date)} (stored)` : 'no stored same-day pair yet'} · awaiting the {sh.london_pm_usd != null ? 'LBMA PM' : 'reference'} of {istLabel(pairing.sgeDate)}</span>} />}
+                      sub={<span title={tip('sge_premium_pct')}>{shStored ? `${pct(shStored.premium_pct, 2)} · ${istLabel(shStored.report_date)} (${sh.premium_source === 'legs' ? 'from the printed legs' : 'stored'})` : 'no stored same-day pair yet'} · awaiting the {sh.london_pm_usd != null ? 'LBMA PM' : 'reference'} of {istLabel(pairing.sgeDate)}</span>} />}
                 {/* the CNY/g is dated by ITS OWN date (sge_pm_date — the pair date's leg), never by the newest SGE timestamp (the 5 Nov review:
                     a Tuesday price labelled Thursday); a newer SGE print stands alone, without a '=' to a $/oz of another date */}
                 <Stat label="SGE Au99.99 PM" value={<span data-sge-date={sh.sge_pm_date ?? sh.pair_date ?? pairing.sgeDate ?? ''}>{num(sh.sge_pm_cny_g, 2)} CNY/g</span>} color={contextTone} big={false}
-                  sub={<span>= {usd(sh.sge_usd_oz, 1)} at USDCNY {num(sh.usdcny, 4)} ({sh.usdcny_source ?? 'source —'}) · {istLabel(sh.sge_pm_date ?? sh.pair_date ?? pairing.sgeDate)}
+                  sub={<span>= {usd(sh.sge_usd_oz, 1)} at USDCNY {num(sh.usdcny, 4)} ({sh.usdcny_source ?? 'source —'}{sh.usdcny_date ? ` · ${istLabel(sh.usdcny_date)}` : ''}{sh.usdcny_as_of ? ` · stored ${istLabel(sh.usdcny_as_of, true)}` : ''}) · {istLabel(sh.sge_pm_date ?? sh.pair_date ?? pairing.sgeDate)}
                     {sh.sge_latest_cny_g != null && sh.sge_latest_date && sh.sge_latest_date !== (sh.sge_pm_date ?? sh.pair_date) && <span data-sge-latest style={{ display: 'block', color: T.dim }}>newer SGE print {num(sh.sge_latest_cny_g, 2)} CNY/g · {istLabel(sh.sge_latest_date)} (its $/oz waits for that date&apos;s London PM)</span>}</span>} />
                 <Stat label="reference leg" value={usd(sh.london_pm_usd ?? sh.comex_at_1415_bj, 1)} color={contextTone} big={false} sub={`${sh.london_pm_usd != null ? 'LBMA PM (WGC-served, PROVISIONAL until O-1)' : 'COMEX at 14:15 Beijing'} · ${istLabel(pairing.refDate)}`} />
               </Grid>
+              {/* M-C: the premium printed must equal SGE $/oz − the reference leg printed beside it (to $0.10) */}
+              {shRec.ok === false && <div data-shanghai-reconcile="mismatch" style={{ fontSize: 10.5, color: T.amber, marginTop: 6 }}>
+                ⚠ the printed legs do not reproduce this premium: SGE $/oz − reference = {signed(shRec.legs, 2)} $/oz — the premium was derived with another USDCNY vintage; read the sign from the legs until it is re-derived</div>}
+              {sh.recompute_note && <div data-shanghai-recompute style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>{sh.recompute_note}</div>}
               <div data-two-timestamps data-shanghai-pairing={pairing.sameDate ? 'same-date' : 'cross-date'} style={{ fontSize: 10, color: pairing.sameDate ? T.muted : T.amber, marginTop: 6 }}>
                 <span title={tip('ts_sge')}>SGE {istLabel(sh.ts_sge, true)}</span> · <span title={tip('ts_ref')}>reference {istLabel(sh.ts_ref, true)}</span> — {pairing.gap}
                 {!pairing.sameDate && <span>; the two legs are on different dates, so no premium is divided across them (a cross-date pair after a big day is an artefact, not Shanghai)</span>}

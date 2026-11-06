@@ -24,7 +24,11 @@ export interface DriverState {
   window: number; leader: string | null; tenure: number | null; leader_share: number | null; leader_points?: number | null
   changed_from: string | null; change_date: string | null; top5_share?: number | null; hhi_contrib?: number | null
   ew_minus_cw_pp?: number | null; members_up?: number | null; members_down?: number | null; as_of?: string | null; sentence: string
+  /** m028: the raw leader while the hysteresis label has not changed yet (null when the leader also leads raw). */
+  challenger?: { symbol: string; sessions_leading: number; sessions_needed: number; sentence: string } | null
 }
+/** M46: how far the page can be read (fit sessions stored, 60-session MAE vs the 25-pt bar). */
+export interface DriverTab { state: 'ok' | 'degraded' | 'insufficient'; sessions: number; sentence: string }
 export interface IndexDrivers extends DriverStoreMeta {
   as_of: string | null; index: string
   horizon: { name: Horizon; from: string | null; to: string | null; sessions: number }
@@ -37,6 +41,7 @@ export interface IndexDrivers extends DriverStoreMeta {
   driver: DriverState | null
   history_since: string | null
   badges: Record<string, Badge>
+  tab?: DriverTab | null
 }
 export interface DriverTimeline extends DriverStoreMeta {
   index: string; window: number; as_of: string | null; badge: Badge
@@ -47,8 +52,11 @@ export interface MonthRow {
   month: string; sessions: number; leader: string | null; leader_pts: number | null; leader_share: number | null; leader_changed: boolean
   index_move_pts: number | null; explained_pts: number | null
   top3_add: { symbol: string; points: number }[]; top3_drag: { symbol: string; points: number }[]
+  /** m026: index move − Σ members, sessions the weights missed by > 150 pts, and a note when any did. */
+  residual_pts?: number | null; bad_sessions?: string[]; note?: string | null
 }
-export interface DriverMonthly extends DriverStoreMeta { index: string; months: MonthRow[]; n: number; as_of: string | null; badge: Badge }
+/** `as_of` is the last stored session ('2026-11-05'; m025), `as_of_month` the last month. */
+export interface DriverMonthly extends DriverStoreMeta { index: string; months: MonthRow[]; n: number; as_of: string | null; as_of_month?: string | null; badge: Badge }
 
 export interface DeskAttribution extends DriverStoreMeta {
   as_of: string | null; horizon: { name: Horizon; from: string | null; to: string | null; sessions: number }

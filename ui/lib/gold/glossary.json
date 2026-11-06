@@ -737,8 +737,8 @@
   },
   {
    "term": "NDF",
-   "short": "Non-deliverable forward: the offshore rupee market that trades while onshore India is closed; Yahoo INR=X before 09:00 is its proxy.",
-   "long": "Why the desk's rupee leg before the open is 'offshore'.",
+   "short": "Non-deliverable forward: the offshore rupee market that trades while onshore India is closed. The app has no NDF feed: Yahoo INR=X before 09:00 is the previous evening's last print.",
+   "long": "Why the desk's rupee leg before the open can be stale: the 08:45 card prints the time of the last INR=X print.",
    "see_also": [
     "USD/INR",
     "fair open"
@@ -1520,7 +1520,7 @@
   },
   {
    "term": "real yield",
-   "short": "Nominal Treasury yield minus expected inflation; 10-year TIPS yield (FRED DFII10, T+1). The opportunity cost of holding gold.",
+   "short": "Nominal yield minus expected inflation: the 10-y TIPS yield (the fresher of Treasury UST_REAL_10Y and FRED DFII10). The opportunity cost of holding gold.",
    "long": "2.64% on 22 Oct 2026 with gold ≈ $4,000 vs −1.1% in Aug 2020 at $2,075: the level link broke in 2022; the daily direction still bites.",
    "see_also": [
     "TIPS",
@@ -1537,7 +1537,7 @@
   {
    "term": "TIPS",
    "short": "US Treasury Inflation-Protected Securities; their yield is the market real yield. Daily close only (no free intraday feed).",
-   "long": "The 10-year TIPS yield (FRED DFII10, T+1) is the 'real yield' on the strip; it is yesterday's close, which the chip says.",
+   "long": "The 10-year TIPS yield on the strip is the fresher of the Treasury real curve (UST_REAL_10Y) and FRED DFII10 (T+1); it is a daily close, dated on the strip, the same point HEALTH and MACRO print.",
    "see_also": [
     "real yield"
    ],

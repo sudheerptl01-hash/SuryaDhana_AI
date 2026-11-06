@@ -8,7 +8,16 @@ Book = the Decision Desk paper positions (routers/desk status — the same ledge
 DESK tab shows) merged with the broker's last-known holdings (data/last_holdings.json,
 written by routers/positions; its `as_of` is surfaced — this endpoint never calls
 Breeze, so a stale file is shown as stale, not refreshed). `?symbols=A,B` instead
-prices an equal-weight WHAT-IF basket at the book's NAV, for pre-trade checks.
+prices an equal-weight WHAT-IF basket for pre-trade checks, sized by `?size=`:
+  desk (default)  the Desk's equity share of NAV (`config.equity_share`, 66 % = Option B,
+                  DESK_EQUITY_SHARE) — what the Desk would actually put in stocks (review M18:
+                  100 % of NAV overstated VaR ≈ 1.5× and tripped "crit");
+  nav             100 % of NAV (the pre-6-Nov behaviour, for comparison);
+  custom          `&notional=` ₹.
+VaR "% of book" is always against the full NAV, so the severity chip reads the Desk-sized risk.
+
+GET /api/risk/fo          the PAPER F&O book's risk (Greeks exposure, delta-gamma VaR, vega, IV
+                          shocks, gaps, SPAN margin utilisation) — routers/fo_book.risk_payload.
 
 Data: per-ticker history over data-service HTTP only (never DuckDB directly):
   GET :8001/ohlcv/{t}?start=…              adjusted closes → VaR/beta panel
@@ -29,7 +38,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import httpx
 import pandas as pd
@@ -62,6 +71,20 @@ _SCENARIOS: list[dict[str, Any]] = [
 _STRESS_FROM = date(2019, 12, 1)       # bhavcopy fetch must reach the COVID base close
 
 _cache = TTLCache("riskdash", max_items=8, default_ttl=120.0)
+DEFAULT_EQUITY_SHARE = 0.66            # shared/momentum.StrategyConfig.equity_share (read from the ledger's config when present)
+
+# The rules this page DISPLAYS (CLAUDE.md "Trading Rules"; never modified here). The −2 % daily halt belongs to the
+# dormant legacy 5-day system, not to the Decision Desk (review m107): it is listed apart and labelled.
+DESK_RULES = [
+    "Max drawdown −20% from peak → sell everything at the next open; manual re-enable (HARD)",
+    "Crash filter: NIFTY below its 200-day average → everything in the liquid fund",
+    "Up to 20 positions · max 15% of portfolio per stock · max 40% of positions per NSE industry",
+]
+LEGACY_RULES = [
+    "Legacy 5-day system (dormant, autopilot OFF): daily loss −2% → halt trading for the day (HARD) — not a Decision Desk rule",
+]
+VAR_THRESHOLD_NOTE = ("VaR95 1d as % of book: ok < 1.0% · warn 1.0–2.0% · crit ≥ 2.0% "
+                      "(at 2 %, one day in twenty loses at least 2 % of the book)")
 
 
 # ── Book assembly ──────────────────────────────────────────────────────────────────
@@ -210,23 +233,43 @@ def _fetch_nifty_returns() -> tuple[pd.Series, Optional[str]]:
 
 @router.get("/dashboard")
 def risk_dashboard(
-    symbols: str = Query("", max_length=800, description="comma-separated WHAT-IF basket (equal weight at book NAV); empty = the live book"),
+    symbols: str = Query("", max_length=800, description="comma-separated WHAT-IF basket (equal weight); empty = the live book"),
     lookback: int = Query(750, ge=100, le=1500, description="hist-sim lookback in sessions"),
     refresh: bool = Query(False, description="bypass the 120 s cache"),
+    size: Literal["desk", "nav", "custom"] = Query("desk", description="what-if sizing: the Desk's equity share of NAV (default), 100 % of NAV, or `notional`"),
+    notional: Optional[float] = Query(None, gt=0, le=1e11, description="what-if ₹ when size=custom"),
 ) -> dict[str, Any]:
     """Full RSK payload. Sync handler: runs in FastAPI's threadpool; per-ticker history
     is fanned out on a bounded executor so the event loop is never blocked."""
-    key = f"{symbols.strip().upper()}|{lookback}"
+    if size == "custom" and not notional:
+        fail(422, "invalid", "size=custom needs notional=<₹>", hint="or use size=desk (the Desk's equity share) / size=nav")
+    key = f"{symbols.strip().upper()}|{lookback}|{size}|{notional or ''}"
     if not refresh:
         hit = _cache.get(key)
         if hit is not None:
             return hit
-    out = _build_dashboard(symbols, lookback)
+    out = _build_dashboard(symbols, lookback, size, notional)
     _cache.set(key, out)
     return out
 
 
-def _build_dashboard(symbols: str, lookback: int) -> dict[str, Any]:
+def what_if_sizing(desk_nav: float, cfg: dict[str, Any], size: str, notional: Optional[float], n_names: int) -> dict[str, Any]:
+    """The ₹ the what-if basket is spread over (review M18): the Desk's equity share of NAV by default — before share
+    rounding and the volatility-target exposure, both of which can only make the real basket smaller."""
+    nav = desk_nav if desk_nav > 0 else 500_000.0
+    share = float(cfg.get("equity_share") or DEFAULT_EQUITY_SHARE)
+    if size == "custom" and notional:
+        amount, label = float(notional), f"custom ₹{float(notional):,.0f}"
+    elif size == "nav":
+        amount, label = nav, f"100% of NAV ₹{nav:,.0f} (the Desk never invests all of it)"
+    else:
+        amount, label = nav * share, (f"the Desk's equity share {share:.0%} of NAV ₹{nav:,.0f} = ₹{nav * share:,.0f} "
+                                      "(before share rounding and the volatility-target exposure)")
+    return {"mode": size, "equity_share": share, "nav_inr": round(nav, 0), "notional_inr": round(amount, 0),
+            "per_name_inr": round(amount / n_names, 0) if n_names else None, "label": label}
+
+
+def _build_dashboard(symbols: str, lookback: int, size: str = "desk", notional: Optional[float] = None) -> dict[str, Any]:
     notes: list[str] = []
     sector_of = _industries()
     desk = _desk_book(notes)
@@ -239,14 +282,15 @@ def _build_dashboard(symbols: str, lookback: int) -> dict[str, Any]:
     stopped = bool(meta.get("stopped"))
     sector_cap_pct = float(cfg.get("sector_cap", 0.40)) * 100.0
 
-    what_if = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    what_if = list(dict.fromkeys(s.strip().upper() for s in symbols.split(",") if s.strip()))[:_MAX_SYMBOLS]
+    sizing: Optional[dict[str, Any]] = None
     if what_if:
-        notional = desk_nav if desk_nav > 0 else 500_000.0
-        per = notional / len(what_if)
+        sizing = what_if_sizing(desk_nav, cfg, size, notional, len(what_if))
+        per = sizing["notional_inr"] / len(what_if)
         holdings = [{"symbol": s, "qty": None, "value": per, "invested": per,
                      "sector": sector_of.get(s, "Unknown"), "sources": ["what-if"], "needs_pricing": False}
-                    for s in dict.fromkeys(what_if)][:_MAX_SYMBOLS]
-        notes.append(f"WHAT-IF basket: {len(holdings)} names, equal weight on ₹{notional:,.0f} "
+                    for s in what_if]
+        notes.append(f"WHAT-IF basket: {len(holdings)} names, equal weight on {sizing['label']} "
                      "(the live book is untouched; the drawdown ladder below is still the real book)")
         mode = "what_if"
     else:
@@ -381,6 +425,10 @@ def _build_dashboard(symbols: str, lookback: int) -> dict[str, Any]:
             "portfolio_pct": None if res["portfolio_pct"] is None else round(res["portfolio_pct"], 1),
             "pnl_inr": round(res["pnl_inr"], 0),
             "covered_value_pct": round(res["covered_value_pct"], 0),
+            # review m108: the headline is the COVERED names' return; say how many names that is
+            "names_total": len(values),
+            "names_covered": len(values) - len(res["excluded"]),
+            "partial": len(res["excluded"]) > 0,
             "worst": res["worst"],
             "excluded": res["excluded"],
         })
@@ -399,11 +447,9 @@ def _build_dashboard(symbols: str, lookback: int) -> dict[str, Any]:
         "source": ladder_src, "today_basis": today_basis, "stopped": stopped,
         "points": [{"date": str(r["date"])[:10], "drawdown_pct": round(float(r.get("drawdown") or 0.0) * 100, 2)}
                    for r in nav_rows[-250:]],
-        "rules": [
-            "Max drawdown −20% from peak → sell everything at the next open; manual re-enable (HARD)",
-            "Daily loss limit −2% → halt trading for the day (HARD)",
-            "Max 15% of portfolio per stock · max 40% of positions per NSE industry",
-        ],
+        "rules": DESK_RULES,
+        "legacy_rules": LEGACY_RULES,
+        "daily_halt_basis": "legacy 5-day system (dormant) — shown for reference, not a Desk rule",
     })
 
     severity = {
@@ -411,7 +457,7 @@ def _build_dashboard(symbols: str, lookback: int) -> dict[str, Any]:
         "beta": rm.severity_beta(portfolio_beta),
         "sector": rm.severity_sector(max_count_pct, sector_cap_pct),
         "dd": rm.severity_dd(ladder.get("drawdown_pct"), stopped),
-        "thresholds": rm.THRESHOLDS_DOC,
+        "thresholds": {**rm.THRESHOLDS_DOC, "var": VAR_THRESHOLD_NOTE},
     }
 
     broker_stale_h = None
@@ -427,6 +473,7 @@ def _build_dashboard(symbols: str, lookback: int) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "as_of": datetime.now().isoformat(timespec="seconds"),
         "mode": mode,
+        "sizing": sizing,
         "book": {
             "nav_inr": round(book_nav, 0),
             "equity_value_inr": round(equity_value, 0),
@@ -462,3 +509,12 @@ def _build_dashboard(symbols: str, lookback: int) -> dict[str, Any]:
         return degraded(payload, "degraded", "VaR could not be computed (per-ticker history unavailable)",
                         hint="data-service :8001 must be up; see var.excluded for per-symbol reasons")
     return payload
+
+
+@router.get("/fo")
+async def risk_fo(mode: Literal["auto", "eod", "live"] = Query("auto", description="marks: live chain in session (auto), or EOD"),
+                  margin: bool = Query(True, description="ask POST /api/options/margin per underlying (cached 10 min)")) -> dict[str, Any]:
+    """RSK › F&O — the PAPER F&O book's risk beside the cash VaR: Greeks exposure, delta-gamma VaR (+ full revaluation),
+    vega, IV-shock and gap scenarios, SPAN margin utilisation (PLAN 2.2). Reads ui-api's paper book; PAPER ONLY."""
+    from routers import fo_book
+    return await fo_book.risk_payload(mode, margin)

@@ -18,7 +18,7 @@ import { fmtSigned, fmtSignedInr } from '@/lib/format'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chip, Input, Label, Loading, Notice, Panel, Stat, T, fmtInr, fmtNum, indianGrouping, sourceOf, inputSource } from '@/components/terminal'
 import { getGoldFair } from '@/lib/gold/api'
-import { bandReferenceLine, baselineSettlement, comexCode, dayLabel, fmtInr0, morningCall, parseIso, preOpenCopyB, sessionLabel, settlementLine, settlementNoteShort, settlementQualityChip } from '@/lib/gold/format'
+import { bandReferenceLine, baselineSettlement, comexCode, dayLabel, fmtInr0, inrLegWords, morningCall, parseIso, preOpenCopyB, sessionLabel, settlementLine, settlementNoteShort, settlementQualityChip } from '@/lib/gold/format'
 import { readTriggers, writeTriggers } from '@/lib/gold/prefs'
 import type { CatalogRow, GoldContractSel, GoldFair, HealthFair, Layer } from '@/lib/gold/types'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
@@ -132,6 +132,8 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
   }, [fetchData])
 
   const m = data?.model ?? {}
+  // the rupee leg, dated: the last INR=X print and whether it moved since the close reference (wave 1e minor)
+  const inrWords = inrLegWords(m.inr ?? null)
   const v = data?.verdict
   const vs = VERDICT_STYLE[v?.state ?? 'NO_MODEL']
   const base = data?.baseline.value ?? null
@@ -261,6 +263,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
             <b style={{ color: T.text }}> ₹{fx(m.rs_per_inr_rupee, 0)}</b> per ₹1 on USD/INR
             {m.comex && <> · COMEX {comexCode(m.comex.symbol)} {fx(m.comex.now, 1)} vs {fx(m.comex.ref, 1)} at the close</>}
             {m.inr && <> · ₹/$ {fx(m.inr.now, 3)} vs {fx(m.inr.ref, 3)}</>}.
+            {inrWords && <span data-gold-inr-leg style={{ display: 'block', color: inrWords.flat ? T.amber : T.dim }}>{inrWords.text}</span>}
             {data.contract.band_low != null && <> The master&apos;s MCX band {fmtInr(data.contract.band_low)} – {fmtInr(data.contract.band_high)} (±{data.contract.band_pct}%){bandDay ? <>, set around the {bandDay} settlement{bandApplies ? <>, applied on {bandApplies}</> : null}</> : ' (the session it was set around is not stated)'}.</>}
             {bandRef && <span style={{ color: T.dim }}> {bandRef}.</span>}
           </div>
@@ -311,7 +314,7 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
           <Label>Method</Label> Fair open = MCX settlement × COMEX ratio × USD/INR ratio, references averaged over the last 30 minutes
           before MCX closed ({istTime(data.baseline.close_time)} IST). Settlement = the volume-weighted average of the last 30 minutes of
           the completed session&apos;s Breeze 1-minute bars (MCX&apos;s own settlement method; a PROXY, not the bhavcopy); without bars, the
-          midpoint of the ±3% band in ICICI&apos;s public contract file (PROXY, set around an earlier session). USD/INR before 09:00 is the offshore quote. Research tool, not advice.
+          midpoint of the ±3% band in ICICI&apos;s public contract file (PROXY, set around an earlier session). USD/INR before 09:00 is the last stored Yahoo INR=X print (there is no overnight rupee feed: its time is printed under &lsquo;What moved&rsquo;). Research tool, not advice.
           <span style={{ marginLeft: 6 }}><LagChipEl freshness={{ state: 'delayed', source: 'Yahoo' }} /></span>
         </div>
       </div>

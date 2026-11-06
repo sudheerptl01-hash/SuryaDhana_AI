@@ -312,7 +312,12 @@ def test_shanghai_premium_pairs_the_same_report_date_only() -> None:
         "SHANGHAI_PREMIUM_PCT": [_pt("2026-10-23", -0.04)],
     }
     sh = gold.build_premiums(FAIR, series, cat)["shanghai"]
-    assert sh["premium_usd"] == -1.55 and sh["premium_pct"] == -0.04 and sh["pair_date"] == "2026-10-23"
+    # wave 1e (M-C): the premium is the PRINTED legs' difference (905 CNY/g at 7.12 vs 3,960), the stored −1.55 (an earlier
+    # input vintage in this fixture) kept beside it and named
+    legs = 905.0 * g / 7.12 - 3960.0
+    assert sh["premium_usd"] == pytest.approx(legs, abs=0.01) and sh["premium_usd_stored"] == -1.55 and sh["pair_date"] == "2026-10-23"
+    assert sh["premium_pct"] == pytest.approx(legs / 3960.0 * 100, abs=0.01) and sh["reconciles"] is True
+    assert "earlier USDCNY vintage" in sh["recompute_note"]
     assert sh["ts_sge"] == "2026-10-26" and sh["ts_ref"] == "2026-10-23" and sh["note"].startswith("awaiting today's PM")
     assert sh["sge_usd_oz"] == pytest.approx(905.0 * g / 7.12, abs=0.01)  # the stored pair's own legs, not today's SGE
     assert sh["premium_usd"] != pytest.approx(930.0 * g / 7.11 - 3960.0, abs=1.0)  # the cross-date artefact (≈ +$100)

@@ -38,6 +38,8 @@ const H = (await import(new URL('../../datahealth/healthModel.ts', import.meta.u
 const DL = (await import(new URL('../../../lib/deepLink.ts', import.meta.url).href)) as DeepMod
 const GA = (await import(new URL('../../../lib/goAliases.ts', import.meta.url).href)) as AliasMod
 const K = (await import(new URL('../../../lib/prefs/keys.ts', import.meta.url).href)) as KeysMod
+type B76Mod = typeof import('../../../lib/black76')
+const B = (await import(new URL('../../../lib/black76.ts', import.meta.url).href)) as B76Mod
 
 const UI = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..', '..')
 const src = (rel: string) => fs.readFileSync(path.join(UI, rel), 'utf8')
@@ -171,15 +173,71 @@ function check(name: string, cond: unknown, extra?: unknown): void {
     { date: '2026-09-30', spot: 103, monthly_expiry: '2026-10-27', monthly_atm_iv: 12, rv20_yz: 12.5, expected_move_1d_pct: 1 },
     { date: '2026-10-26', spot: 103.5, monthly_expiry: '2026-10-27', monthly_atm_iv: 15, rv20_yz: null, rv20_cc: 9, expected_move_1d_pct: 1 },
   ]
-  const led = V.ivPaidLedger(rows, 12)
-  check('V1 paid vs delivered: first-session IV of a CLOSED series vs its last session realised (YZ, else cc)',
-    led.length === 2 && led[0].iv_paid === 14 && led[0].rv_delivered === 12 && led[0].paid_minus_delivered === 2, led)
-  // the Oct series expires 27 Oct, after the last stored session (26 Oct): still open, nothing delivered yet
-  check('V1 the open month has no delivered RV and no paid − delivered (renders "open", out of the closed mean)',
-    led[1].iv_paid === 12 && led[1].rv_delivered === null && led[1].paid_minus_delivered === null, led)
-  const closed = V.ivPaidLedger([...rows, { date: '2026-10-27', spot: 104, monthly_expiry: '2026-11-24', monthly_atm_iv: 13, rv20_yz: 10, expected_move_1d_pct: 1 }], 12)
-  check('V1 negative control: once a session on/after the expiry is stored, the month closes and gets its RV',
-    closed.find(r => r.expiry === '2026-10-27')?.rv_delivered === 9 && closed.find(r => r.expiry === '2026-11-24')?.rv_delivered === null, closed)
+  // M02 (fix wave 2): the ledger is the server's (NSE monthlies, IV at ≈ 30 DTE, vol delivered over the option's own life);
+  // the client only summarises closed months — the old client ledger (first expiry 20–60 d, trailing RV20 before expiry,
+  // cc under a YZ header) is gone
+  const ledger = [
+    { expiry: '2026-09-29', open: false, paid_minus_delivered: -1.24 }, { expiry: '2026-10-27', open: false, paid_minus_delivered: 3.74 },
+    { expiry: '2026-11-23', open: true, paid_minus_delivered: null },
+  ]
+  const ps = V.paidSummary(ledger)
+  check('V1 paid vs delivered: the mean and the "paid above" count use closed months only', ps.closed === 2 && ps.open === 1 && ps.paid_above === 1 && Math.abs((ps.mean ?? 0) - 1.25) < 1e-9, ps)
+  check('V1 negative control: an open month never enters the mean (it would read 1.25 → null-poisoned)', V.paidSummary([{ expiry: 'x', open: true, paid_minus_delivered: 9 }]).mean === null)
+  check('V1 the client ledger is gone (no first-session-IV vs trailing-RV20 arithmetic)', !('ivPaidLedger' in V) && src('components/vol/VolView.tsx').includes('getIvPaidDelivered(symbol, 12)'))
+  // M01: the spread of record is close-to-close and the others are named; FOVOLT on both annualisations
+  const vr = V.ivVsRv([{ date: '2026-11-05', iv30_cm: 12.8, rv20_cc: 17.2, rv20_parkinson: 13.51, rv20_yz: 15.09, fovolt_ann: 16.5, iv_minus_rv20: -4.4 }])!
+  check('V1f IV − RV is close-to-close; Parkinson and YZ spreads beside it', vr.spread === -4.4 && vr.spreadYz === -2.29 && vr.spreadParkinson === -0.71 && Math.abs((vr.fovolt252 ?? 0) - 16.5 * Math.sqrt(252 / 365)) < 1e-9, vr)
+  const noStored = V.ivVsRv([{ date: '2026-11-05', iv30_cm: 12.8, rv20_cc: 17.2, rv20_yz: 15.09 }])!
+  check('V1f negative control: without a stored spread it falls back to cc, never to Yang-Zhang (the 5 Nov mislabel)', noStored.spread === -4.4 && noStored.spread !== noStored.spreadYz)
+  check('V1f the OMON tile says close-to-close, not YZ', src('components/vol/ChainStrip.tsx').includes('label="IV30 − RV20 (close-to-close)"') && !src('components/vol/ChainStrip.tsx').includes('label="IV30 − RV20 (YZ)"'))
+  // M03: two skews, each with its own series' percentile
+  const cs0 = src('components/vol/ChainStrip.tsx')
+  check('V1g the skew tile pairs the near skew with the near series and the 30-day skew with the 30-day series', cs0.includes('nearSkew.pctile') && cs0.includes('percentileOf(lastYear(rows).map(r => r.skew_25d_30), skew30, 60)')
+    && !cs0.includes('const skewNow = near?.skew_25d ?? last?.skew_25d_30'))
+  // m047: Greeks on the OTM side's IV; m053: the straddle against realised windows, not the √(2/π) identity
+  check('V1h OTM-side IV for the Greeks', V.otmIv(23850, 24545, 15.0, 17.4) === 17.4 && V.otmIv(24600, 24545, 15.5, 15.6) === 15.5 && V.otmIv(100, null, 12, 13) === 12)
+  const oldPick = (ce: number | null, pe: number | null) => ce ?? pe
+  check('V1h negative control: the old ce ?? pe pick took the ITM call (15.0)', oldPick(15.0, 17.4) === 15.0 && V.otmIv(23850, 24545, 15.0, 17.4) !== oldPick(15.0, 17.4))
+  const spots = Array.from({ length: 40 }, (_, i) => ({ date: `d${i}`, spot: 100 * (1 + (i % 2 ? 0.02 : 0)) }))
+  const sh = V.straddleHitRate(spots, 1.0, 1)
+  check('V1i straddle breakeven vs past windows of the same length', sh.windows === 39 && sh.beyond === 39 && sh.share === 100 && V.straddleHitRate(spots, 5, 1).beyond === 0, sh)
+  check('V1i negative control: no breakeven or no sessions → no share', V.straddleHitRate(spots, null, 2).share === null && V.straddleHitRate(spots, 1, 0).share === null)
+  check('V1i the 0.80× identity is gone', !cs0.includes('× the priced move in the ATM tile'))
+  check('V1j weekdays to expiry (Thu → Mon = 2 sessions)', V.weekdaysBetween('2026-11-05', '2026-11-09') === 2 && V.weekdaysBetween('2026-11-09', '2026-11-05') === 0)
+  // m071 / m067
+  const ex = [{ expiry: 'a', dte: 4, smile: [1, 2, 3] }, { expiry: 'b', dte: 18, smile: [1, 2, 3] }, { expiry: 'c', dte: 32, smile: [1, 2] }, { expiry: 'd', dte: 54, smile: [1, 2, 3] }]
+  check('V1k like tenors: the expiry nearest 30 d with a smile', V.nearestTenor(ex, 30)?.expiry === 'b' && V.nearestTenor([{ expiry: 'x', dte: 2, smile: [1, 2, 3] }], 30) === null)
+  check('V1l the basis chart keeps DTE ≥ 3', JSON.stringify(V.basisForChart([{ dte: 1, basis_ann_pct: 55 }, { dte: 3, basis_ann_pct: 4.2 }, { dte: 10, basis_ann_pct: null }], 3)) === '[null,4.2,null]')
+  // round 2: the F&O guard on the shared active symbol (a DEAL pick of a cash-only name must not move DERV / OMON)
+  const list = ['TCS', 'INFY', 'KAYNES']
+  check('V2a fnoVerdict: an index is adopted before the list loads; a stock waits; on the list → adopt; off it → reject',
+    V.fnoVerdict('NIFTY', undefined) === 'adopt' && V.fnoVerdict('TCS', undefined) === 'wait' && V.fnoVerdict('tcs', list) === 'adopt' && V.fnoVerdict('IRFC', list) === 'reject')
+  check('V2a list unavailable → adopt (no guard beats a page that never follows); empty candidate → reject',
+    V.fnoVerdict('IRFC', null) === 'adopt' && V.fnoVerdict('', list) === 'reject' && V.fnoVerdict(null, list) === 'reject')
+  check('V2a negative control: a cash-only name is never adopted once the list is known', V.fnoVerdict('IRFC', list) !== 'adopt' && V.fnoVerdict('IRFC', ['NIFTY']) === 'reject')
+  // the GO expiry hand-off: TCS OMON 27NOV writes {symbol, expiry} to the store (the bar's own write, pure core)
+  const mkS = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) } } }
+  const hw = mkS(), hs = mkS()
+  A.writeActiveSymbol({ symbol: 'TCS', expiry: '2026-11-27' }, hw, hs, new Date('2026-11-06T04:00:00Z'))
+  const handed = A.readActiveSymbol(hw, hs)
+  check('V2b the GO expiry is read for the same symbol while it has not passed', V.handoffExpiry(handed, 'TCS', '2026-11-06') === '2026-11-27' && V.handoffExpiry(handed, 'TCS', '2026-11-27') === '2026-11-27')
+  check('V2b negative controls: another symbol, a passed expiry, no expiry → the nearest series (null)',
+    V.handoffExpiry(handed, 'INFY', '2026-11-06') === null && V.handoffExpiry(handed, 'TCS', '2026-11-28') === null
+    && V.handoffExpiry({ symbol: 'TCS', expiry: null }, 'TCS', '2026-11-06') === null && V.handoffExpiry(null, 'TCS', '2026-11-06') === null)
+  const chain = { symbol: 'TCS', expiry: '2026-11-24', expiries: ['2026-11-24', '2026-12-29'] }
+  check('V2c an unlisted GO expiry is named (the chain answered with its nearest)', V.expiryNote('2026-11-27', chain) === '2026-11-27 is not a listed TCS expiry: showing 2026-11-24; the next listed after it is 2026-12-29.')
+  check('V2c negative control: a listed expiry, or none asked, prints no note', V.expiryNote('2026-12-29', { ...chain, expiry: '2026-12-29' }) === null && V.expiryNote(null, chain) === null)
+  const sk = [{ month: '2026-01', expiry: null, reason: 'gap' }, { month: '2025-11', expiry: null, reason: 'gap' }, { month: '2025-12', expiry: null, reason: 'gap' },
+              { month: '2026-04', expiry: '2026-04-28', reason: 'no entry row' }, { month: '2026-06', expiry: null, reason: 'gap' }]
+  check('V2f the paid-vs-delivered ledger names its skipped months, consecutive gaps folded into one run',
+    JSON.stringify(V.skippedRuns(sk)) === JSON.stringify(['2025-11 → 2026-01: gap', '2026-04 (2026-04-28): no entry row', '2026-06: gap']), V.skippedRuns(sk))
+  check('V2f negative control: a month with its own expiry is never folded into a run; nothing skipped → nothing printed',
+    V.skippedRuns([{ month: '2026-03', expiry: null, reason: 'gap' }, { month: '2026-04', expiry: '2026-04-28', reason: 'gap' }]).length === 2 && V.skippedRuns([]).length === 0)
+  check('V2d istDay is the IST calendar day', V.istDay(new Date('2026-11-05T18:29:00Z')) === '2026-11-05' && V.istDay(new Date('2026-11-05T18:31:00Z')) === '2026-11-06')
+  // M04 on OVME: the pricer's T is the chain's t_days; the old days + ½ gives another theta / vega for the same contract
+  const at = B.black76('call', 24_000, 24_550, B.tYears(4), 0.15), half = B.black76('call', 24_000, 24_550, (4 + 0.5) / 365, 0.15)
+  check('V2e one clock: OVME at t_days 4 equals the chain\'s Greeks at T = 4 / 365', Math.abs(at.thetaDay - B.black76('call', 24_000, 24_550, 4 / 365, 0.15).thetaDay) < 1e-12)
+  check('V2e negative control: the half-day T moves theta and vega (the M04 symptom)', Math.abs(at.thetaDay - half.thetaDay) > 0.1 && Math.abs(at.vega - half.vega) > 0.05, { at, half })
   // "percentile of the past year" = the last 252 sessions, never the ≈3-year fetch (B4-UI check major)
   const series = Array.from({ length: 500 }, (_, i) => ({ v: i < 248 ? 100 + i : i - 248 }))   // old high values, recent low ones
   const yr = V.lastYear(series).map(x => x.v), today = 300   // recent 252 values are 0..251, the old 248 are 100..347
@@ -307,10 +365,35 @@ function check(name: string, cond: unknown, extra?: unknown): void {
   const horizonUsers = ['app/page.tsx', ...fs.readdirSync(path.join(UI, 'components')).filter(f => f.endsWith('.tsx')).map(f => `components/${f}`)].filter(f => src(f).includes('useDrivers('))
   check('P3 the horizon table on MEMB only', JSON.stringify(horizonUsers) === '["components/IndexMembers.tsx"]', horizonUsers)
   check('P3 MOV keeps the live panel with a "history on MEMB" footer', mv.includes('history on MEMB ›') && mv.includes("goToPage('memb')"))
-  check('P4 DERV › VOL is a sub-view (O-T14), not a 44th page', dv.includes("useSubView(['desk', 'vol'] as const, 'desk')") && dv.includes('<VolView symbol={symbol}') && !src('app/page.tsx').includes("id: 'vol'"))
+  // W2-TAPE mounted XPRY (PLAN 2.4) as DERV's third sub-view: DESK | VOL | XPRY, still one page
+  check('P4 DERV › VOL (and › XPRY) are sub-views (O-T14), not a 44th page', dv.includes("useSubView(['desk', 'vol', 'xpry'] as const, 'desk')") && dv.includes('<VolView symbol={symbol}')
+    && dv.includes('<ExpiryDay symbol={symbol}') && !src('app/page.tsx').includes("id: 'vol'") && !src('app/page.tsx').includes("id: 'xpry'"))
+  check('P4 negative control: the two-view list (before XPRY) no longer matches', !dv.includes("useSubView(['desk', 'vol'] as const, 'desk')"))
   check('P5 OMON: OPEN IN OSTR carries symbol + expiry + strikes through the active-symbol store', oc.includes('writeActive({ symbol: data.symbol, expiry: data.expiry, strikes: picks })') && oc.includes("goToPage('ostrategy')"))
   check('P5 OMON: j / k strike cursor and space picks', oc.includes("e.key === 'j'") && oc.includes("e.key === 'k'") && oc.includes("e.key === ' '"))
-  check('P5 OMON: Greeks columns from lib/black76 (greeksFor)', oc.includes("greeksFor('call', data.forward, r.strike, kIv, data.days_to_expiry)") && src('components/vol/ChainStrip.tsx').includes("from '@/lib/black76'"))
+  check('P5 OMON: Greeks columns from lib/black76 (greeksFor) on the chain\'s own T (t_days, M04) and the OTM side\'s IV', oc.includes("greeksFor('call', data.forward, r.strike, kIv, tDays)")
+    && oc.includes('const kIv = otmIv(r.strike, data.forward, r.ce.iv, r.pe.iv)') && src('components/vol/ChainStrip.tsx').includes("from '@/lib/black76'"))
+  check('P5 negative control: the integer-day Greeks call is gone', !oc.includes("greeksFor('call', data.forward, r.strike, kIv, data.days_to_expiry)"))
+  check('P5b OMON chain units: OI / OI CHG in contracts like VOLUME, the header says so (M05)', oc.includes("inContracts(ce, 'oi', data.lot)") && oc.includes("const oiUnit = data?.lot ? 'contracts' : 'shares'"))
+  check('P5c OMON walls in side colours, no "support / resistance" (m003)', !oc.includes('call wall (resistance) / put wall (support)') && !oc.includes('red = calls (resistance)'))
+  check('P5d OMON IV history open by default (m050)', oc.includes('const [histOpen, setHistOpen] = useState(true)'))
+  check('P5e DERV follows the active symbol (the shared convention)', dv.includes('useActiveSymbol()') && dv.includes("useState(() => active?.symbol ?? 'NIFTY')"))
+  check('P5f DERV roll cost is the calendar spread (m065)', dv.includes('label="Calendar roll · near → next"') && !dv.includes('sub="what rolling a long costs today"'))
+  // round 2 (checker notes): the rest of m003, the F&O guard on adoption, the GO expiry hand-off, OVME on the chain's T
+  check('P5g m003: OMON OI CHG in the neutral token with its sign; DERV walls "call / put" in the neutral token',
+    oc.includes("const chg = (v: number | null) => <span style={{ color: v == null || v === 0 ? T.dim : T.text }}>{v == null ? '—' : signedLakh(v)}</span>")
+    && dv.includes('label="OI walls · call / put"') && !oc.includes('where writers sit = support / resistance'))
+  check('P5g negative control: green / red OI change and "OI walls (R / S)" are gone',
+    !oc.includes('v > 0 ? T.green : v < 0 ? T.red') && !dv.includes('label="OI walls (R / S)"'))
+  check('P5h DERV and OMON adopt an external active symbol only when it is F&O (fnoVerdict)', dv.includes("if (s && fnoVerdict(s, fno) === 'adopt') setSymbolState(")
+    && dv.includes("setSymbolState(prev => (fnoVerdict(prev, fno) === 'reject' ? 'NIFTY' : prev))") && oc.includes('const verdict = fnoVerdict(s, fnoList)'))
+  check('P5h negative control: the unconditional adoption is gone', !dv.includes('useEffect(() => { if (active?.symbol) setSymbolState(prev => (prev === active.symbol ? prev : active.symbol)) }, [active?.symbol])'))
+  check('P5i OMON reads the GO expiry hand-off (TCS OMON 27NOV) on mount and on the hand-off event, and says when it is not listed',
+    oc.includes("useState<string | null>(() => (typeof window === 'undefined' ? null : handoffExpiry(readActiveSymbol(), omonInitialSymbol(readHandoff()), istDay())))")
+    && oc.includes('const sym = omonInitialSymbol(s), e = handoffExpiry(readActiveSymbol(), sym, istDay())') && oc.includes('expiryNote(askedExpiry, data)'))
+  const op = src('components/OptionPricer.tsx')
+  check('P5j OVME prices on the chain\'s t_days (M04), the label has no half day', op.includes('black76(pick.side, F, K, chainDays / 365, chainIv / 100)')
+    && op.includes('const chainDays = chainTDays(data)') && !op.includes('days_to_expiry) + 0.5') && !op.includes('+½'))
   const sb = src('components/StrategyBuilder.tsx')
   check('P6 OSTR opens on the active symbol and seeds the picked strikes once', sb.includes("useState(() => readActiveSymbol()?.symbol ?? 'NIFTY')") && sb.includes('seedFromStrikes(seed.strikes, chain)'))
   check('P6 OSTR margin: the route answers, the chip names BREEZE / NSE SPAN FILE / HEURISTIC, the 4.8× error is printed', sb.includes('postMargin(symbol, body, forward)')

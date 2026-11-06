@@ -2,7 +2,14 @@
  * Black-76 option maths on the forward, with the same assumptions OMON's implied vols use (the put–call-parity
  * forward, r = 6.5 %, no separate dividend term: the forward already carries it). Greeks are per unit of the
  * underlying: delta ≈ ∂price/∂spot, gamma per point, theta per calendar day, vega per 1 volatility point.
+ *
+ * Time (M04, review 5 Nov 2026): T is the app's one convention — calendar time to 15:30 IST on the expiry day ÷ 365
+ * (`T_DAYS_IN_YEAR`), i.e. the option chain's `t_days` ÷ 365: whole days at end of day, fractional intraday, no half-day.
+ * The IV store, the OMON chain and its Greeks, and OSTR all pass that T, so one expiry has one ATM IV everywhere.
  */
+export const T_DAYS_IN_YEAR = 365
+/** years from the chain's `t_days` (calendar days to 15:30 IST on expiry) */
+export const tYears = (tDays: number | null | undefined) => Math.max(0, tDays ?? 0) / T_DAYS_IN_YEAR
 
 /** standard normal CDF (erf via Abramowitz–Stegun 7.1.26 refined; |error| < 1.5e-7) */
 export function normCdf(x: number): number {

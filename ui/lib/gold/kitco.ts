@@ -22,6 +22,28 @@ import { GRAMS_PER_OZ, dayLabel, fmtSignedPctSp, pctChange } from './format'
 import { fmtFixed } from '@/lib/format'
 import { legendCloses, type Ohlc } from './sessions'
 
+/**
+ * A number in a Kitco unit (wave 1e minor, C-TRADER-20 convention): Western grouping for every USD unit (usd_oz / usd_g /
+ * usd_kg: '1,32,339' → '132,339'), Indian for the rupee units; U+2212 minus. `unit` may be a KitcoUnit or a label
+ * ('USD/kg', '₹/10 g').
+ */
+export function fmtKitco(v: number | null | undefined, dp: number, unit: KitcoUnit | string | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  const usd = /^(usd|USD|\$)/u.test(String(unit ?? ''))
+  if (!usd) return fmtFixed(v, dp)
+  const s = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp })
+  const zero = Number(Math.abs(v).toFixed(dp)) === 0
+  return `${v < 0 && !zero ? '\u2212' : ''}${s}`
+}
+
+/** fmtKitco with a sign ('+1,234' / '−1,234'; '0' unsigned). */
+export function fmtKitcoSigned(v: number | null | undefined, dp: number, unit: KitcoUnit | string | null | undefined): string {
+  if (v == null || !Number.isFinite(v)) return '—'
+  const body = fmtKitco(Math.abs(v), dp, unit)
+  const zero = Number(Math.abs(v).toFixed(dp)) === 0
+  return zero ? body : `${v > 0 ? '+' : '\u2212'}${body}`
+}
+
 export type KitcoTf = '24h' | '3d' | '30d' | '60d' | '6m' | '1y' | '5y' | '10y' | 'all'
 export type KitcoUnit = 'usd_oz' | 'inr_10g' | 'inr_g' | 'usd_g' | 'usd_kg'
 export type DutyMode = 'ex_duty' | 'duty_paid'
@@ -290,7 +312,7 @@ export function timeTicks(startMs: number, endMs: number, maxTicks = 8): { ms: n
  * so its row keeps only its own Δ. Never the last minute of an IST bucket.
  */
 export function kitcoLegend(groups: readonly { date: string; pts: readonly { c: number }[] }[], daily: readonly Ohlc[], live: { price: number } | null,
-  closeIn: (usd: number, date: string) => number | null, dp: number, dashedDate: string | null): string[] {
+  closeIn: (usd: number, date: string) => number | null, dp: number, dashedDate: string | null, unit?: KitcoUnit | string | null): string[] {
   const out: string[] = []
   for (const r of legendCloses(groups, daily, live, 3)) {
     if (r.kind === 'last') continue
@@ -301,10 +323,10 @@ export function kitcoLegend(groups: readonly { date: string; pts: readonly { c: 
     const chg = pxC != null && prevC != null ? pxC - prevC : null
     const pct = pctChange(prevC, pxC)
     const what = r.bucketFallback ? 'last stored minute (no daily bar yet)' : 'close (Yahoo daily, not settlement)'
-    const delta = chg != null ? `${chg >= 0 ? '▲' : '▼'}${fmtFixed(Math.abs(chg), dp)} (${fmtSignedPctSp(pct, 2)} vs ${prevDate ? `the ${dayLabel(prevDate)}` : 'the previous stored'} close)` : '(previous close not stored)'
+    const delta = chg != null ? `${chg >= 0 ? '▲' : '▼'}${fmtKitco(Math.abs(chg), dp, unit)} (${fmtSignedPctSp(pct, 2)} vs ${prevDate ? `the ${dayLabel(prevDate)}` : 'the previous stored'} close)` : '(previous close not stored)'
     out.push(r.date === dashedDate && !r.bucketFallback
       ? `${dayLabel(r.date)} ${delta} — its close is the dashed line`
-      : `${dayLabel(r.date)} ${what} ${pxC == null ? '—' : fmtFixed(pxC, dp)} ${delta}`)
+      : `${dayLabel(r.date)} ${what} ${pxC == null ? '—' : fmtKitco(pxC, dp, unit)} ${delta}`)
   }
   return out
 }

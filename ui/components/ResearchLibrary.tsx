@@ -14,8 +14,10 @@ import { downloadUrl, isDesktop } from '@/lib/platform'
 
 export const VERDICT_COLOR: Record<string, string> = {
   ADOPTED: T.green, PASS: T.green, PROMISING: T.amber, FAIL: T.red, 'NO EDGE': T.red, REFERENCE: T.cyan,
+  DESCRIPTIVE: T.muted, ARITHMETIC: T.cyan, ENGINEERING: T.dim, SUMMARY: T.amber,
 }
-const VERDICTS = ['ADOPTED', 'PASS', 'PROMISING', 'FAIL', 'NO EDGE', 'REFERENCE', 'DESCRIPTIVE', 'ARITHMETIC']
+const VERDICTS = ['ADOPTED', 'PASS', 'PROMISING', 'FAIL', 'NO EDGE', 'DESCRIPTIVE', 'ARITHMETIC', 'REFERENCE', 'ENGINEERING']
+const STUDY_VERDICTS = new Set(['ADOPTED', 'PASS', 'PROMISING', 'FAIL', 'NO EDGE', 'DESCRIPTIVE', 'ARITHMETIC'])
 const SEL_KEY = 'suryadhana.rsch.sel.v1'
 
 const ago = (iso: string) => {
@@ -66,7 +68,7 @@ export function ResearchLibrary() {
   return (
     <div>
       <PageHeader code="RSCH" title="Research Library"
-        subtitle={`${list.length} studies · pre-registered tests, real ICICI costs, out-of-sample holdouts`}
+        subtitle={`${list.filter(r => STUDY_VERDICTS.has(r.verdict)).length} studies with a verdict · ${list.filter(r => r.verdict === 'REFERENCE').length} references · ${list.filter(r => r.verdict === 'ENGINEERING').length} engineering records · pre-registered tests, real ICICI costs, out-of-sample holdouts`}
         right={<div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           <Chip color={T.muted} active={!verdict} onClick={() => setVerdict(null)}>ALL {list.length}</Chip>
           {VERDICTS.filter(v => counts[v]).map(v => (

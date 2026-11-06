@@ -8,7 +8,8 @@ import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-tra
  * where it was the strongest flow candidate (PROMISING, not proven). NSE PIT disclosures, dated by broadcast.
  */
 import { useEffect, useState } from 'react'
-import { getInsiderBuys, type InsiderBuy } from '@/lib/api'
+import { getIndexDaily, getInsiderBuys, type InsiderBuy } from '@/lib/api'
+import { excessVsIndex } from '@/components/marketPagesModel'
 import { daysUntil, useCorpEvents } from '@/lib/useCorpEvents'
 import { orderCategories } from '@/components/pageModels'   // stable 'Who' order (P16)
 import { Chip, DataTable, ErrorBox, EventBadge, Loading, PageHeader, Panel, ResearchNote, T, TickerLink, type Column, sourceOf } from '@/components/terminal'
@@ -21,6 +22,9 @@ export function InsiderMonitor() {
   const [data, setData] = useState<Awaited<ReturnType<typeof getInsiderBuys>>['data'] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const events = useCorpEvents()
+  // m036: NIFTY closes for the move since the filing in excess of the index (a rising market is not a hit rate)
+  const [nifty, setNifty] = useState<{ date: string; close: number }[] | null>(null)
+  useEffect(() => { getIndexDaily('NIFTY50', 200).then(r => setNifty(r.data.rows)).catch(() => setNifty(null)) }, [])
   useEffect(() => {
     setData(null); setError(null)
     getInsiderBuys(days, minValue).then(r => setData(r.data)).catch(e => setError(apiError(e, 'unavailable')))
@@ -34,8 +38,11 @@ export function InsiderMonitor() {
     { key: 'trades', label: 'Trades', align: 'right', sort: r => r.trades, render: r => <span style={{ color: T.muted }}>{r.trades}</span> },
     { key: 'buyers', label: 'Buyers', align: 'right', sort: r => r.buyers, render: r => <span style={{ color: r.buyers > 1 ? T.amber : T.muted }}>{r.buyers}</span> },
     { key: 'who', label: 'Who', render: r => <span title={r.top_buyer ?? ''} style={{ color: T.muted, maxWidth: 300, display: 'inline-block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}>{orderCategories(r.categories)}{r.top_buyer ? ` · ${r.top_buyer}` : ''}</span> },
-    { key: 'since', label: 'Since filing', align: 'right', sort: r => r.since_filing_pct ?? -999,
-      render: r => r.since_filing_pct == null ? '—' : <span style={{ color: r.since_filing_pct >= 0 ? T.green : T.red }}>{fmtSigned(r.since_filing_pct, 1)}%</span> },
+    { key: 'since', label: 'Since filing vs NIFTY', align: 'right', sort: r => excessVsIndex(r.since_filing_pct, r.last_date, r.last_px_date, nifty) ?? -999,
+      title: "(1 + the stock's move since the latest filing) ÷ (1 + NIFTY's over the same dates) − 1; the raw move on hover",
+      render: r => { const x = excessVsIndex(r.since_filing_pct, r.last_date, r.last_px_date, nifty)
+        return x == null ? <span style={{ color: T.dim }} title={r.since_filing_pct != null ? `raw ${fmtSigned(r.since_filing_pct, 1)}% (NIFTY closes unavailable or no close after the filing)` : undefined}>—</span>
+          : <span style={{ color: x >= 0 ? T.green : T.red }} title={`raw ${fmtSigned(r.since_filing_pct!, 1)}%`}>{fmtSigned(x, 1)}%</span> } },
     { key: 'event', label: 'Next event', render: r => { const e = events.get(r.symbol)?.[0]; return e ? <EventBadge kind={e.kind} date={e.event_date} days={daysUntil(e.event_date)} typical={e.typical_move_pct} detail={e.detail} /> : <span style={{ color: T.dim }}>—</span> } },
   ]
   return (

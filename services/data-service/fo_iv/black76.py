@@ -9,12 +9,92 @@ is a new ``MODEL_VERSION``: the derived IV tables are recomputed and keep the la
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
+from datetime import date, datetime, time, timedelta, timezone
 
 MODEL_VERSION = "b76-pcp-v1"
 IV_LO, IV_HI = 1e-3, 5.0            # bisection bounds (annualised)
 IV_MIN, IV_MAX = 0.01, 4.0          # outside: no IV (a stale or crossed price)
 INTRINSIC_PAD = 0.05                # price must exceed intrinsic by this (₹) to carry time value
 ITM_BAND = 0.03                     # calls for K ≥ 0.97 F, puts for K ≤ 1.03 F
+PCP_FUTURE_TOL = 0.005              # the parity forward is replaced by the matching future beyond 0.5 %
+
+# M04 (review 5 Nov 2026): ONE time-to-expiry convention app-wide — the IV store's, unchanged, so no MODEL_VERSION bump and
+# no recompute. T = calendar time from the valuation instant to 15:30 IST on the expiry day ÷ 365 days. At end of day the
+# valuation instant is the session's own 15:30 IST close, so T = (expiry − session date) calendar days ÷ 365 exactly (the
+# store, the EOD chain, the chain Greeks and OSTR); an intraday snapshot (the live chain, the 15-minute pilot) values at its
+# own clock, so T is fractional and reaches 0 at 15:30 on expiry day. No half-day for the expiry session (the old chain's
+# +0.5/365 and OSTR's +0.5 day are retired: they made one expiry print two ATM IVs).
+TIME_CONVENTION = "cal365-1530"
+TIME_CONVENTION_NOTE = ("T = calendar time to 15:30 IST on the expiry day ÷ 365 (end of day: whole days from the session's 15:30 close; "
+                        "intraday: from the snapshot clock); no half-day")
+IST = timezone(timedelta(hours=5, minutes=30))
+CLOSE_IST = time(15, 30)
+YEAR_SECONDS = 365.0 * 86400.0
+
+
+def t_years(expiry: date, valuation: date | datetime) -> float:
+    """Years to expiry under ``TIME_CONVENTION``: a ``date`` values at that session's 15:30 close (whole calendar days); a
+    ``datetime`` (naive = IST) values at that instant. Never negative."""
+    if isinstance(valuation, datetime):
+        v = valuation.astimezone(IST).replace(tzinfo=None) if valuation.tzinfo else valuation
+        secs = (datetime.combine(expiry, CLOSE_IST) - v).total_seconds()
+        return max(0.0, secs / YEAR_SECONDS)
+    return max(0, (expiry - valuation).days) / 365.0
+
+
+def choose_forward(pairs: Mapping[float, tuple[float | None, float | None]], s_ref: float, t: float, r: float, fut: float | None,
+                   *, tol: float = PCP_FUTURE_TOL) -> tuple[float, str, list[str]]:
+    """The store's forward rule, shared by ``iv_eod`` and the OMON chain so one expiry has one forward: put-call parity at the
+    first of the three strikes nearest ``s_ref`` where both sides traded; the matching-month future instead when the two
+    differ by more than ``tol``; the future when no parity pair exists; else spot·e^{rT}. ``pairs``: strike → (call, put)
+    traded prices (None = untraded). Returns (forward, source 'pcp' | 'future' | 'spot', flags)."""
+    flags: list[str] = []
+    fwd: float | None = None
+    src = "spot"
+    for k in sorted(pairs, key=lambda k: abs(k - s_ref))[:3]:
+        cpx, ppx = pairs[k]
+        if cpx is not None and ppx is not None:
+            fwd, src = forward_from_parity(k, cpx, ppx, t, r), "pcp"
+            break
+    if fwd is not None and fut is not None and abs(fwd / fut - 1.0) > tol:
+        fwd, src = fut, "future"
+        flags.append("pcp_fallback_future")
+    if fwd is None:
+        if fut is not None:
+            fwd, src = fut, "future"
+        else:
+            fwd, src = s_ref * math.exp(r * t), "spot"
+            flags.append("forward_from_spot")
+    return float(fwd), src, flags
+
+
+def strike_ivs(pairs: Mapping[float, tuple[float | None, float | None]], fwd: float, t: float, r: float
+               ) -> dict[float, tuple[float, float | None, float | None]]:
+    """Per strike (mean, call IV, put IV): calls for K ≥ (1 − ITM_BAND)·F, puts for K ≤ (1 + ITM_BAND)·F, traded prices only."""
+    out: dict[float, tuple[float, float | None, float | None]] = {}
+    for k, (cpx, ppx) in pairs.items():
+        civ = implied_vol(cpx, fwd, k, t, True, r) if (cpx is not None and k >= fwd * (1 - ITM_BAND)) else None
+        piv = implied_vol(ppx, fwd, k, t, False, r) if (ppx is not None and k <= fwd * (1 + ITM_BAND)) else None
+        vals = [v for v in (civ, piv) if v]
+        if vals:
+            out[k] = (sum(vals) / len(vals), civ, piv)
+    return out
+
+
+def atm_iv_at_forward(strikes: Sequence[float], ivs: Sequence[float], fwd: float) -> float | None:
+    """ATM IV interpolated linearly in strike at the forward (clamped at the ends, the store's ``np.interp``)."""
+    pts = sorted(zip(strikes, ivs, strict=True))
+    if not pts:
+        return None
+    if fwd <= pts[0][0]:
+        return float(pts[0][1])
+    if fwd >= pts[-1][0]:
+        return float(pts[-1][1])
+    for (k0, v0), (k1, v1) in zip(pts, pts[1:], strict=False):
+        if k0 <= fwd <= k1:
+            return float(v0 + (v1 - v0) * ((fwd - k0) / (k1 - k0) if k1 > k0 else 0.0))
+    return None
 
 
 def ncdf(x: float) -> float:

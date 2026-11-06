@@ -107,9 +107,10 @@ def _flt(v: Any) -> float | None:
 def previous_mcx_session(publish_day: date) -> date:
     """The session whose settlement a master published on ``publish_day`` carries: weekends and MCX full holidays
     skipped (the Monday file after a Friday holiday carries Thursday's settlement) — the ui-api rule, duplicated so
-    data-service never imports ui-api."""
+    data-service never imports ui-api. A dated special session (Muhurat, Sun 8 Nov 2026) IS a session: the Mon 9 Nov
+    master carries the Sunday close (wave 1e, M-D: shared/mcx_specs.trading_window counts it)."""
     d = publish_day - timedelta(days=1)
-    while d.weekday() >= 5 or (specs.holiday_on(d) or (None, None))[1] == "full":
+    while specs.trading_window(d) is None:
         d -= timedelta(days=1)
     return d
 

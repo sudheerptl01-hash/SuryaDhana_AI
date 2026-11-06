@@ -276,17 +276,34 @@ def _as_of_from_inputs(row: CatalogRow, meta: dict[str, Any], fresh: dict[str, A
 
 
 def _job_info(jobs: list[dict[str, Any]], job_id: str | None) -> dict[str, Any]:
+    """The row's job from the controller: last run, next run, and a run in flight (m113: SYS › DATA said "last run 30 Oct"
+    while tonight's capture was running; the controller's `running_since`, 6 Nov O-OPS)."""
     j = next((j for j in jobs if j.get("id") == job_id), None) if job_id else None
     if not j:
-        return {"job_id": job_id, "last_run": None, "next_run": None}
-    return {"job_id": job_id,
-            "last_run": {"ts": j.get("last_run_ts"), "status": j.get("last_status"), "ms": j.get("last_latency_ms")},
-            "next_run": j.get("next_run_ist")}
+        return {"job_id": job_id, "last_run": None, "next_run": None, "running_since": None}
+    running = j.get("running_since")
+    last = ({"ts": running, "status": "running", "ms": None} if running
+            else {"ts": j.get("last_run_ts"), "status": j.get("last_status"), "ms": j.get("last_latency_ms")})
+    return {"job_id": job_id, "last_run": last, "next_run": j.get("next_run_ist"), "running_since": running}
 
 
-def _catchup_at(jobs: list[dict[str, Any]]) -> str | None:
-    nexts = [str(j["next_run_ist"]) for j in jobs if j.get("id") in CATCHUP_JOBS and j.get("next_run_ist")]
-    return min(nexts) if nexts else None
+# jobs whose next scheduled run itself catches every missed session up (they resume after the last stored day or replay
+# from stored closes): their next run IS the catch-up. Any other job shows a catch-up only when the controller has one
+# scheduled for it (`catchup_at` on /api/scheduler/status, M30: never a claim for a run that will not happen).
+SELF_CATCHUP_JOBS = frozenset({"nse_positions_catchup", "eod_data_pipeline", "desk_daily", "alpha_shadow_daily",
+                               "index_valuation_daily"})
+
+
+def _catchup_at(jobs: list[dict[str, Any]], job_id: str | None = None) -> str | None:
+    """When the row's dataset will actually be caught up: the controller's pending catch-up of its job, else the job's
+    own next run for a self-catching job, else None (5 Nov review M30: every amber / red row used to show the 20:30
+    pass's next run, even the S1 shadow's, which that pass never runs)."""
+    j = next((x for x in jobs if job_id and x.get("id") == job_id), None)
+    if j is None:
+        return None
+    if j.get("catchup_at"):
+        return str(j["catchup_at"])
+    return str(j["next_run_ist"]) if job_id in SELF_CATCHUP_JOBS and j.get("next_run_ist") else None
 
 
 def _sentence(as_of: date | None, expected_by: str | None, lag: int | None, state: str, extra: str | None = None) -> str:
@@ -383,7 +400,7 @@ def compose_b1_health(payload: Any, jobs: list[dict[str, Any]], holidays: list[d
         rows.append({"id": str(r["id"]), "label": str(r.get("label") or r["id"]), "pages": pages, "publisher": r.get("publisher"),
                      "published_ist": r.get("published_ist"), "expected_by": r.get("expected_by"), "as_of": as_of.isoformat() if as_of else None,
                      "lag_sessions": lag, "state": state, "unrecoverable": bool(r.get("unrecoverable")),
-                     **_job_info(jobs, r.get("job_id")), "catchup_at": _catchup_at(jobs) if state in ("amber", "red") else None,
+                     **_job_info(jobs, r.get("job_id")), "catchup_at": _catchup_at(jobs, r.get("job_id")) if state in ("amber", "red") else None,
                      "note": note, "dictionary_anchor": r.get("dictionary_anchor") or "", "badge": r.get("badge") or "context",
                      "max_age_sessions": r.get("max_age_sessions")})
     return {"rows": _sorted(rows), "summary": _summary(rows),
@@ -413,7 +430,7 @@ def build_health(catalog: list[CatalogRow], meta: dict[str, Any], fresh: dict[st
         rows.append({"id": row.id, "label": row.label, "pages": list(row.pages), "publisher": row.publisher,
                      "published_ist": row.publish_time_ist, "expected_by": row.expected_by, "as_of": as_of.isoformat() if as_of else None,
                      "lag_sessions": cls["lag_sessions"], "state": cls["state"], "unrecoverable": row.unrecoverable,
-                     **_job_info(jobs, row.ingest_job), "catchup_at": _catchup_at(jobs) if cls["state"] in ("amber", "red") else None,
+                     **_job_info(jobs, row.ingest_job), "catchup_at": _catchup_at(jobs, row.ingest_job) if cls["state"] in ("amber", "red") else None,
                      "note": cls["note"], "dictionary_anchor": row.dictionary_anchor, "badge": row.badge, "max_age_sessions": row.max_age})
     return {"rows": _sorted(rows), "summary": _summary(rows), "last_session": last_close_session(now, holidays).isoformat()}
 

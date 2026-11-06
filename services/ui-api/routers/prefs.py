@@ -65,6 +65,19 @@ renamed to `<file>.corrupt-<ts>` (never deleted) and a fresh store is created: p
 replicated in every client, and clients re-upload keys the server lacks, so the store self-heals.
 A store written by a NEWER schema is refused with 503 (never downgraded).
 
+In-app import from the old browser terminal (page review 5 Nov 2026, M35). The owner's watchlist and pins live
+only in the localStorage of the browser that used http://localhost:3000, which nothing but a page ON that origin can
+read. One click in the terminal (POST /api/prefs/legacy-import) starts a one-shot page on 127.0.0.1:3000 (and [::1]
+when free), served by this process: no Next dev server, no second door to the API. Opened in that browser, the page
+reads the same SYNC keys the sync code's legacy import reads (the UI sends them), shows what it found, and only on
+the owner's click posts them to itself; this module then runs the fill-only legacy import above (it never replaces
+a value the owner set in the app; a provisional default is filled) with the page's own origin, so the K2 migration
+block is recorded exactly as the :3000 sync code would have. The page is single-use (closed after an import), lives
+at most LEGACY_IMPORT_TTL_S, answers only /import with a random token, checks Host (DNS rebinding) and, for the POST,
+Origin + Content-Type + the token, and refuses to start when anything already listens on the port (the Next UI then
+imports by itself). GET /api/prefs/legacy-import reports its state and the imported / skipped key NAMES (never a
+value); POST /api/prefs/legacy-import/stop closes it.
+
 Event loop: GET/DELETE are sync handlers (threadpool); PUT/import read the capped body
 asynchronously and run the SQLite work in the threadpool. Logs are structured JSON lines with
 keys, sizes and outcomes only, never values.
@@ -72,16 +85,21 @@ keys, sizes and outcomes only, never values.
 from __future__ import annotations
 
 import contextlib
+import hmac
+import html
 import json
 import logging
 import os
 import re
+import secrets
+import socket
 import sqlite3
 import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from errors import error_block, fail
 from fastapi import APIRouter, Query, Request
@@ -527,7 +545,11 @@ def get_store() -> PrefsStore:
 
 
 def close_all() -> None:
-    """Close every open store (tests; graceful shutdown)."""
+    """Close every open store (tests; graceful shutdown); a running one-shot import page is stopped and forgotten."""
+    global _legacy
+    legacy_import_stop("closed")
+    with _legacy_lock:
+        _legacy = None
     with _stores_lock:
         for st in _stores.values():
             st.close()
@@ -685,3 +707,339 @@ async def import_prefs(request: Request):
     _event("prefs.import", origin=origin, provisional=provisional, imported=out["imported"],
            skipped=len(out["skipped"]), rejected=sorted(out["rejected"]))
     return {**out, "server_time": _now_ms()}
+
+
+# ── In-app import from the old browser terminal (page review 5 Nov 2026, M35; see the module docstring) ─────────
+
+LEGACY_IMPORT_TTL_S = 600
+LEGACY_IMPORT_MAX_KEYS = 100
+_LEGACY_STATES = ("idle", "waiting", "done", "expired", "stopped", "closed", "port_busy", "failed")
+
+
+def legacy_import_port() -> int:
+    """The old browser terminal's port (PREFS_LEGACY_IMPORT_PORT overrides, for tests only)."""
+    try:
+        p = int(os.environ.get("PREFS_LEGACY_IMPORT_PORT", LEGACY_BROWSER_PORT))
+    except ValueError:
+        return LEGACY_BROWSER_PORT
+    return p if 1 <= p <= 65535 else LEGACY_BROWSER_PORT
+
+
+def _port_answers(host: str, port: int, family: int = socket.AF_INET) -> bool:
+    """True when something already accepts connections on host:port (never bind over another listener)."""
+    try:
+        with socket.socket(family, socket.SOCK_STREAM) as s:
+            s.settimeout(0.3)
+            return s.connect_ex((host, port)) == 0
+    except OSError:
+        return False
+
+
+class _Server4(ThreadingHTTPServer):
+    allow_reuse_address = False            # never share the port with a listener that is already there
+    daemon_threads = True
+
+
+class _Server6(_Server4):
+    address_family = socket.AF_INET6
+
+
+class _LegacyImportSession:
+    """One single-use import page: token, allowed keys, listeners, outcome (key names only)."""
+
+    def __init__(self, port: int, keys: list[str]):
+        self.port = port
+        self.keys = keys
+        self.token = secrets.token_urlsafe(24)
+        self.started_at = _now_ms()
+        self.expires_at = self.started_at + LEGACY_IMPORT_TTL_S * 1000
+        self.state = "waiting"
+        self.result: dict[str, Any] | None = None
+        self.finished_at: int | None = None
+        self.servers: list[ThreadingHTTPServer] = []
+        self.timer: threading.Timer | None = None
+        self.nonce = secrets.token_urlsafe(16)
+
+    @property
+    def url(self) -> str:
+        return f"http://localhost:{self.port}/import?t={self.token}"
+
+    def hosts(self) -> set[str]:
+        return {f"localhost:{self.port}", f"127.0.0.1:{self.port}", f"[::1]:{self.port}"}
+
+    def origins(self) -> set[str]:
+        return {f"http://{h}" for h in self.hosts()}
+
+    def public(self) -> dict[str, Any]:
+        live = self.state == "waiting"
+        r = self.result or {}
+        return {"state": self.state, "port": self.port, "url": self.url if live else None,
+                "urls": [self.url, f"http://127.0.0.1:{self.port}/import?t={self.token}"] if live else [],
+                "expires_at": self.expires_at, "started_at": self.started_at, "finished_at": self.finished_at,
+                "imported": list(r.get("imported", [])), "skipped": list(r.get("skipped", [])),
+                "rejected": sorted(r.get("rejected", {})), "found": r.get("found")}
+
+
+_legacy: _LegacyImportSession | None = None
+_legacy_lock = threading.Lock()
+
+
+def _legacy_close(sess: _LegacyImportSession, state: str) -> None:
+    """Stop the listeners (from any thread except their own serve loop) and record the final state."""
+    if sess.state == "waiting":
+        sess.state = state
+        sess.finished_at = _now_ms()
+    if sess.timer is not None:
+        sess.timer.cancel()
+    for srv in sess.servers:
+        with contextlib.suppress(Exception):
+            srv.shutdown()
+        with contextlib.suppress(Exception):
+            srv.server_close()
+    sess.servers = []
+
+
+def legacy_import_stop(state: str = "stopped") -> dict[str, Any]:
+    """Close a running import page (POST /api/prefs/legacy-import/stop, close_all)."""
+    with _legacy_lock:
+        sess = _legacy
+    if sess is None:
+        return {"state": "idle"}
+    _legacy_close(sess, state)
+    return sess.public()
+
+
+def _page_html(sess: _LegacyImportSession) -> str:
+    keys = json.dumps(sess.keys)
+    tok = json.dumps(sess.token)
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SuryaDhana · import settings</title><style>
+body{{background:#05070a;color:#d7dde8;font:14px/1.5 ui-monospace,Menlo,monospace;margin:0;padding:24px;max-width:720px}}
+h1{{font-size:15px;letter-spacing:2px;color:#ffb000;margin:0 0 12px}} .k{{color:#7f8a9c}} .ok{{color:#16d98a}} .warn{{color:#ffb000}}
+button{{font:inherit;font-weight:700;letter-spacing:1px;background:#ffb000;color:#05070a;border:0;padding:10px 16px;min-height:44px;cursor:pointer}}
+button[disabled]{{opacity:.5;cursor:default}} li{{margin:2px 0}} code{{color:#ffb000}}
+</style></head><body><h1>SURYADHANA · IMPORT SETTINGS FROM THE BROWSER TERMINAL</h1>
+<p class="k">This one-time page runs on <code>{html.escape(f"http://localhost:{sess.port}")}</code>, the old terminal's address, so it can
+read the watchlist, pins and page settings this browser kept for it. Nothing leaves this computer; the terminal's own
+copy is filled only where you have not set the same setting in the app.</p>
+<div id="found">Reading this browser's settings…</div>
+<p><button id="go" disabled>IMPORT</button></p><div id="out"></div>
+<script nonce="{sess.nonce}">
+(function () {{
+  var KEYS = {keys}, T = {tok}, items = {{}}, n = 0;
+  function count(v) {{ try {{ var x = JSON.parse(v); return Array.isArray(x) ? x.length : null }} catch (e) {{ return null }} }}
+  var lines = [];
+  for (var i = 0; i < KEYS.length; i++) {{
+    var v = null;
+    try {{ v = window.localStorage.getItem(KEYS[i]) }} catch (e) {{ v = null }}
+    if (v === null) continue;
+    items[KEYS[i]] = v; n++;
+    var c = count(v);
+    var name = KEYS[i] === 'suryadhana.watchlist' ? 'watchlist' : KEYS[i] === 'newsTerminal.pins.v1' ? 'pins' : KEYS[i];
+    lines.push('<li>' + name.replace(/[<>&]/g, '') + (c !== null ? ' · ' + c + (c === 1 ? ' entry' : ' entries') : '') + '</li>');
+  }}
+  var found = document.getElementById('found'), go = document.getElementById('go'), out = document.getElementById('out');
+  if (!n) {{
+    found.innerHTML = '<p class="warn">This browser holds no terminal settings for this address. If you used the old terminal in another browser, copy this page\\'s address into that browser.</p>';
+    return;
+  }}
+  found.innerHTML = '<p>Found ' + n + ' setting' + (n === 1 ? '' : 's') + ':</p><ul>' + lines.join('') + '</ul>';
+  go.disabled = false;
+  go.textContent = 'IMPORT ' + n + ' SETTING' + (n === 1 ? '' : 'S');
+  go.onclick = function () {{
+    go.disabled = true; out.textContent = 'Importing…';
+    fetch('/import?t=' + encodeURIComponent(T), {{ method: 'POST', headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ items: items }}) }})
+      .then(function (r) {{ return r.json().then(function (j) {{ return [r.ok, j] }}) }})
+      .then(function (a) {{
+        var ok = a[0], j = a[1] || {{}};
+        if (!ok) {{ out.innerHTML = '<p class="warn">' + String(j.detail || 'the import was refused').replace(/[<>&]/g, '') + '</p>'; return }}
+        var imp = (j.imported || []).length, sk = (j.skipped || []).length;
+        out.innerHTML = '<p class="ok">Imported ' + imp + ' setting' + (imp === 1 ? '' : 's') + '.' + (sk ? ' Kept ' + sk + ' you already set in the app.' : '')
+          + '</p><p class="k">You can close this tab; the terminal picks the settings up on its next focus.</p>';
+      }})
+      .catch(function () {{ out.innerHTML = '<p class="warn">The terminal did not answer. Start the import again from the terminal.</p>' }});
+  }};
+}})();
+</script></body></html>"""
+
+
+class _LegacyHandler(BaseHTTPRequestHandler):
+    server_version = "SuryaDhanaImport"
+    sys_version = ""
+    session: _LegacyImportSession | None = None          # bound per session (a subclass per session)
+
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002 - BaseHTTPRequestHandler's signature
+        return                                            # no access log with the token in it
+
+    def _send(self, code: int, body: bytes, ctype: str, extra: dict[str, str] | None = None) -> None:
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Frame-Options", "DENY")
+        for k, v in (extra or {}).items():
+            self.send_header(k, v)
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def _json(self, code: int, obj: dict[str, Any]) -> None:
+        self._send(code, json.dumps(obj).encode(), "application/json")
+
+    def _check(self) -> tuple[_LegacyImportSession, dict[str, list[str]]] | None:
+        sess = self.session
+        u = urlsplit(self.path)
+        if sess is None or u.path != "/import":
+            self._json(404, {"detail": "not found"})
+            return None
+        if (self.headers.get("Host") or "").lower() not in sess.hosts():
+            self._json(403, {"detail": "wrong host"})
+            return None
+        q = parse_qs(u.query)
+        tok = (q.get("t") or [""])[0]
+        if sess.state != "waiting" or _now_ms() > sess.expires_at:
+            self._json(410, {"detail": "this import page has closed: start it again from the terminal"})
+            return None
+        if not hmac.compare_digest(tok.encode(), sess.token.encode()):
+            self._json(403, {"detail": "this link is not valid: start the import again from the terminal"})
+            return None
+        return sess, q
+
+    def do_GET(self) -> None:  # noqa: N802 - http.server API
+        got = self._check()
+        if got is None:
+            return
+        sess, _q = got
+        csp = (f"default-src 'none'; script-src 'nonce-{sess.nonce}'; style-src 'unsafe-inline'; connect-src 'self'; "
+               "form-action 'none'; frame-ancestors 'none'; base-uri 'none'")
+        self._send(200, _page_html(sess).encode(), "text/html; charset=utf-8", {"Content-Security-Policy": csp})
+
+    def do_POST(self) -> None:  # noqa: N802 - http.server API
+        got = self._check()
+        if got is None:
+            return
+        sess, _q = got
+        origin = (self.headers.get("Origin") or "").lower()
+        if origin not in sess.origins():
+            self._json(403, {"detail": "the import must come from the import page itself"})
+            return
+        if (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower() != "application/json":
+            self._json(415, {"detail": "Content-Type must be application/json"})
+            return
+        try:
+            n = int(self.headers.get("Content-Length") or "0")
+        except ValueError:
+            n = -1
+        if n < 0 or n > MAX_IMPORT_BODY:
+            self._json(413, {"detail": "request body too large"})
+            return
+        try:
+            body = json.loads(self.rfile.read(n) or b"null")
+        except (ValueError, UnicodeDecodeError):
+            self._json(422, {"detail": "body is not valid JSON"})
+            return
+        items = body.get("items") if isinstance(body, dict) else None
+        if not isinstance(items, dict):
+            self._json(422, {"detail": "body must be {items: {key: value}}"})
+            return
+        allowed = set(sess.keys)
+        items = {k: v for k, v in items.items() if k in allowed}
+        try:
+            out = get_store().import_items(items, origin, provisional=False)
+        except PrefsUnavailable as e:
+            self._json(503, {"detail": str(e)[:200]})
+            return
+        found = len(items)
+        sess.result = {"imported": out["imported"], "skipped": out["skipped"], "rejected": out["rejected"], "found": found}
+        sess.state = "done"
+        sess.finished_at = _now_ms()
+        _event("prefs.legacy_import_page", origin=origin, found=found, imported=out["imported"],
+               skipped=len(out["skipped"]), rejected=sorted(out["rejected"]))
+        self._json(200, {"imported": out["imported"], "skipped": out["skipped"], "rejected": sorted(out["rejected"])})
+        threading.Thread(target=_legacy_close, args=(sess, "done"), daemon=True).start()   # single use
+
+    def do_HEAD(self) -> None:  # noqa: N802 - http.server API
+        self._json(405, {"detail": "method not allowed"})
+
+    def do_PUT(self) -> None:  # noqa: N802 - http.server API
+        self._json(405, {"detail": "method not allowed"})
+
+    do_DELETE = do_PUT
+    do_OPTIONS = do_PUT
+    do_PATCH = do_PUT
+
+
+def legacy_import_start(keys: list[str]) -> tuple[int, dict[str, Any]]:
+    """Start (or return the running) one-shot import page. (status, body); 409 when the port is taken."""
+    global _legacy
+    with _legacy_lock:
+        cur = _legacy
+        if cur is not None and cur.state == "waiting" and _now_ms() < cur.expires_at and cur.servers:
+            return 200, cur.public()
+        if cur is not None:
+            _legacy_close(cur, "expired")
+        port = legacy_import_port()
+        if _port_answers("127.0.0.1", port) or _port_answers("::1", port, socket.AF_INET6):
+            _event("prefs.legacy_import_page", result="port_busy", port=port)
+            return 409, {"state": "port_busy", "port": port,
+                         "detail": f"something already listens on port {port} (the Next dev UI?): open "
+                                   f"http://localhost:{port} in your usual browser; its own sync code imports the settings"}
+        sess = _LegacyImportSession(port, keys)
+        handler = type("_BoundLegacyHandler", (_LegacyHandler,), {"session": sess})
+        try:
+            sess.servers.append(_Server4(("127.0.0.1", port), handler))
+        except OSError as e:
+            _event("prefs.legacy_import_page", result="bind_failed", port=port, error=type(e).__name__)
+            return 409, {"state": "port_busy", "port": port, "detail": f"port {port} is not free ({type(e).__name__})"}
+        with contextlib.suppress(OSError):                  # [::1] too: some browsers resolve localhost to ::1 first
+            sess.servers.append(_Server6(("::1", port), handler))
+        for srv in sess.servers:
+            threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.25}, daemon=True,
+                             name=f"prefs-legacy-import-{port}").start()
+        sess.timer = threading.Timer(LEGACY_IMPORT_TTL_S, _legacy_close, args=(sess, "expired"))
+        sess.timer.daemon = True
+        sess.timer.start()
+        _legacy = sess
+        _event("prefs.legacy_import_page", result="started", port=port, keys=len(keys), ipv6=len(sess.servers) > 1)
+        return 200, sess.public()
+
+
+def legacy_import_status() -> dict[str, Any]:
+    with _legacy_lock:
+        sess = _legacy
+    if sess is None:
+        return {"state": "idle"}
+    if sess.state == "waiting" and _now_ms() > sess.expires_at:
+        _legacy_close(sess, "expired")
+    return sess.public()
+
+
+@router.post("/legacy-import")
+async def legacy_import_begin(request: Request):
+    """Start the one-shot import page on the old terminal's port: body {keys: [SYNC keys]} -> {state, url, …}."""
+    body = await _read_json(request, 64 * 1024)
+    keys = body.get("keys") if isinstance(body, dict) else None
+    if not isinstance(keys, list) or not keys:
+        fail(422, "invalid", "body must be {keys: [preference keys]}")
+    clean = sorted({k for k in keys if isinstance(k, str) and KEY_RE.match(k)})
+    if not clean or len(clean) > LEGACY_IMPORT_MAX_KEYS:
+        fail(422, "invalid", f"between 1 and {LEGACY_IMPORT_MAX_KEYS} valid keys")
+    status, out = await run_in_threadpool(legacy_import_start, clean)
+    if status != 200:
+        return JSONResponse({**out, "error": error_block("state", out.get("detail", "port busy"))}, status_code=status)
+    return out
+
+
+@router.get("/legacy-import")
+def legacy_import_get() -> dict[str, Any]:
+    """The import page's state and the imported / skipped key names (never a value)."""
+    return legacy_import_status()
+
+
+@router.post("/legacy-import/stop")
+def legacy_import_end() -> dict[str, Any]:
+    """Close the import page now."""
+    return legacy_import_stop("stopped")

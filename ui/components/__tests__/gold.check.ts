@@ -467,13 +467,17 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
     !/NO DATA/.test(hs) && /arrives with the CME backfill/.test(hs) && /not settlement/.test(hs) && /basisSettleLabel\(s\?\.basis_session_label/.test(hs) && !/at the \{basisSession\} vs that session/.test(hs) && /COT funds net \(managed money\)/.test(hs))
   // wave 1d: the client never recomputes a basis (the purity of the landed price is the server's basis_reference; a client ratio of
   // a 995 contract over a 999 duty-paid price is the cross-purity error the 5 Nov review found)
-  check('W7 the strip shows the live MCX above the settlement while the session runs and the SERVER\'s live-vs-now basis, never a client ratio (C-TRADER-10 / wave 1d)',
-    /mcxLive != null && mcxTrading/.test(hs) && /basis live vs duty-paid now/.test(hs) && !/liveBasisPct\(/.test(hs) && /s\?\.basis_live_pct/.test(hs))
+  check('W7 the strip shows the live MCX above the settlement while the session runs and the SERVER\'s live-vs-now basis, never a client ratio (C-TRADER-10 / wave 1d; wave 1e: through stripBasis)',
+    /mcxLive != null && mcxTrading/.test(hs) && /basis live vs duty-paid now/.test(hs) && !/liveBasisPct\(/.test(hs) && /stripBasis\(s, mcxOpen\?\.is_open\)/.test(hs))
   // wave-1c re-check major: strip.basis_pct is the LIVE figure whenever the server holds a quote (basis_clock 'now'), so the
   // settlement label must read basis_settle_pct, and the live figure appears only while MCX trades (never a cached LTP after the close)
   check('W7 one basis per clock: settlement from basis_settle_pct, live only while trading, never basis_pct under the settlement label',
-    /const basisSettle = s\?\.basis_settle_pct \?\? \(s\?\.basis_clock === 'settlement'/.test(hs) && /const basisLive = mcxTrading \? \(s\?\.basis_live_pct/.test(hs)
-    && !/fmtSignedPctSp\(s\.basis_pct, 2\)/.test(hs) && /fmtSignedPctSp\(basisSettle, 2\)/.test(hs) && /const mcxTrading = s\?\.mcx_shown === 'live' \|\| !!mcxOpen\?\.is_open/.test(hs))
+    !/fmtSignedPctSp\(s\.basis_pct, 2\)/.test(hs) && /fmtSignedPctSp\(basisSettle, 2\)/.test(hs) && /fmtSignedPctSp\(basisLive, 2\)/.test(hs))
+  eq('W7 stripBasis: live = basis_live_pct while trading; settle = basis_settle_pct; basis_pct at clock now never under the settlement label; no live figure after the close', [
+    F.stripBasis({ basis_pct: 0.89, basis_clock: 'now', basis_live_pct: 0.89, basis_settle_pct: 0.69, mcx_shown: 'live' }, true),
+    F.stripBasis({ basis_pct: 0.89, basis_clock: 'now', basis_live_pct: null, basis_settle_pct: null, mcx_shown: 'settlement' }, false),
+    F.stripBasis({ basis_pct: 0.69, basis_clock: 'settlement', basis_live_pct: null, basis_settle_pct: null, mcx_shown: 'settlement' }, false)],
+    [{ live: 0.89, settle: 0.69, trading: true }, { live: null, settle: null, trading: false }, { live: null, settle: 0.69, trading: false }])
   // C-TRADER-20 / C-BEGINNER-18 / C-BEGINNER-19 / C-TRADER-23: Western grouping for counts, ordinals, percentiles
   eq('W8 fmtCount / fmtSignedCount: Western grouping, U+2212', [F.fmtCount(105562), F.fmtSignedCount(1356), F.fmtSignedCount(-2883), F.fmtSignedCount(0), F.fmtCount(null)], ['105,562', '+1,356', `${MINUS}2,883`, '0', '—'])
   check('W8 rupees keep the Indian grouping (only rupees)', F.fmtInr0(146079) === '₹1,46,079' && !/1,05,562/.test(F.fmtCount(105562)))
@@ -521,7 +525,7 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
   }
   // C-TRADER-19 / PLAN §f.6: ONE fair block per page load feeds every sub-view
   const gpSrc = src('components/gold/GoldPage.tsx')
-  check('W13 GoldPage hands the overview\'s health.fair to every sub-view as `fair` (and the overview itself)', /const fair = overview\?\.health\?\.fair \?\? null/.test(gpSrc) && /fair, overview, onNavigate/.test(gpSrc))
+  check('W13 GoldPage hands the overview\'s health.fair to every sub-view as `fair` (and the overview itself, with its load state)', /const fair = overview\?\.health\?\.fair \?\? null/.test(gpSrc) && /fair, overview, overviewStatus, onNavigate/.test(gpSrc))
   check('W13 no sub-view fetches /api/gold/overview on its own (the page does, once)', B4A_VIEWS.filter(f => !/GoldPage|HealthStrip/.test(f)).every(f => !/getGoldOverview\(/.test(src(f))))
   check('W13 CONTRACTS prints the landed / duty-paid rupee from the page\'s fair block, not its own fetch', /pageFair\?\.duty_paid_landed \?\? mc\.basis\.duty_paid_landed_inr/.test(cv) && /const pageFair = \(fair\?\.contract \?\? sel\.family\) === sel\.family \? fair : null/.test(cv) && /the same rupee as HEALTH and PHYSICAL/.test(cv))
   // C-TRADER-6 / C-DATA-5 / C-TRADER-22: MONTHLY's official sector = net-purchase bars in tonnes (the holders table is PHYSICAL's); no RBI price-implied estimate
@@ -588,8 +592,8 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
   eq('X5 D1: FAMILY_PURITY is the PM\'s table (GOLD/GOLDM 995; TEN/PETAL/GUINEA 999)', F.FAMILY_PURITY, { GOLD: 995, GOLDM: 995, GOLDTEN: 999, GOLDPETAL: 999, GOLDGUINEA: 999 })
   check('X5 D1: no UI copy calls GUINEA 916', !/GUINEA 916/.test(src('components/gold/HealthView.tsx')) && !/GOLDGUINEA: 916/.test(src('lib/gold/format.ts')))
   check('X5 basisPurityMismatch: GOLD read against 999 is flagged; GOLD against 995 is not; no reference is not', F.basisPurityMismatch('landed_999', 'GOLD') && !F.basisPurityMismatch('landed_995', 'GOLD') && !F.basisPurityMismatch(null, 'GOLD'))
-  check('X5 the India-basis tile wears a LIVE chip on the live clock and a dated SETTLEMENT chip (with its source quality) only on the settlement clock',
-    /basisClock === 'settlement' && settleDay/.test(hv) && /settlementQualityChip\(settleBlock\.settlement_quality/.test(hv) && !/SETTLEMENT · PROXY · \{dayLabel\(g\.report_date\)\}/.test(hv) && /basisTileWords\([^;]*g\.basis_reference\)/.test(hv))
+  check('X5 the India-basis tile wears a LIVE chip on the live clock and a dated SETTLEMENT chip (with its source quality) only on the settlement clock (wave 1e: basisClockChip names the clock)',
+    /basisClockChip\(g, overview, settleBlock\)/.test(hv) && /data-gold-basis-chip=\{chip\.kind\}/.test(hv) && !/SETTLEMENT · PROXY · \{dayLabel\(g\.report_date\)\}/.test(hv) && /basisTileWords\([^;]*g\.basis_reference\)/.test(hv))
   // X6 the strip: one settlement block, the label printed once, the COMEX price once
   const st = F.stripSettlement({ mcx_settle: 139452, mcx_settle_session: '2026-11-04', mcx_settle_session_label: 'Wed 04 Nov settlement', mcx_settle_quality: 'proxy' } as never,
     { settlement_source: 'breeze_vwap30', band_midpoint: 139452, band_session: '2026-11-03' } as never)
@@ -746,6 +750,158 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
     ['live MCX (ICICI Breeze) vs duty-paid landed at 995 now', 'at the Wed 04 Nov settlement vs that session\'s duty-paid landed · vs the 995 duty-paid landed', 'vs the 999 duty-paid landed'])
   check('X14 the India-basis tile value is signed (+0.42 %), the same sign the strip prints', /g\.key === 'india_basis'\) return fmtSignedPctSp\(g\.value, 2\)/.test(hv) && /basisTileWords\(/.test(hv))
   check('X14 the strip\'s live branch dates the settlement basis by its own session first (a stored fallback can be older)', /dayLabel\(s\?\.basis_settle_date \?\? s\?\.basis_session\) \|\| settlementDay\(st\)/.test(hs2))
+}
+
+// ── Y. wave 1e (the 6 Nov final critics C-DATA-3 / C-TRADER-3): one basis per clock for the PICKED contract (M-A), one real
+//       yield per page (M-B), the Shanghai legs reproduce the premium (M-C), a baseline older than expected is flagged (M-D),
+//       and the UI minors (M-E). Fixtures are the real 6 Nov 09:17–09:21 payloads, trimmed. Every rule has a negative control.
+{
+  type Ov = import('../../lib/gold/types').GoldOverview
+  type GH = import('../../lib/gold/types').GoldHealth
+  const AS_OF = '2026-11-06T09:21:42+05:30'
+  // /api/gold/overview?contract=GOLDTEN at 09:21 (MCX open, the live Breeze quote folded in by apply_live_mcx)
+  const liveGauge = { key: 'india_basis', label: 'INDIA BASIS', value: 0.89, unit: '%', state: 'live', badge: 'context', clock: 'now', basis_contract: 'GOLDTEN NOV-26',
+    basis_label: 'live MCX (ICICI Breeze (1-min bars)) vs duty-paid landed at 999 now', basis_reference: 'landed_999', release_at: '2026-11-06T09:10:20+05:30',
+    report_date: '2026-11-06', settle_basis_pct: 0.69, settle_basis_date: '2026-11-05', settlement_source: 'breeze_vwap30', settlement_quality: 'vwap30_proxy' }
+  const ryFred = { key: 'real_yield', label: 'REAL YIELD 10-y', value: 2.65, unit: '%', state: 'delayed', badge: 'context', series_id: 'FRED_DFII10', report_date: '2026-11-03', change_bp: 5 }
+  const ovHealth = { as_of: AS_OF, window: 'W', line: '', freshness: { state: 'delayed' }, fair: { comex: { symbol: 'GCZ26.CMX', price: 4052, as_of: '2026-11-06T09:10:20+05:30' }, mcx_live: 142542, mcx_live_as_of: '2026-11-06T14:50:00+05:30' },
+    gauges: [liveGauge, ryFred],
+    verdict: { line: '', clauses: [{ rule_id: 'H4', text: 'India basis +0.9 % vs duty-paid landed 999 (live)', series_id: 'MCX_BASIS_PCT', value: 0.89, clock: 'now' }] } } as unknown as GH
+  const ov = { as_of: AS_OF, contract: { mcx: 'GOLDTEN', expiry: '2026-11-30' }, session: { mcx: { is_open: true }, comex: { is_open: true } },
+    strip: { basis_pct: 0.89, basis_clock: 'now', basis_live_pct: 0.89, basis_settle_pct: 0.69, mcx_shown: 'live', mcx_live: 142542, mcx_live_as_of: '2026-11-06T14:50:00+05:30',
+             real_10y: 2.65, real_10y_date: '2026-11-03' },
+    quote: { available: true, quote: { ltp: 142542, time: '2026-11-06 09:20:00' } }, health: ovHealth, freshness: {} } as unknown as Ov
+  // /api/gold/health at 09:17 (GOLD, the settlement clock): the payload HEALTH rendered before wave 1e
+  const goldHealth = { as_of: '2026-11-06T09:17:00+05:30', window: 'W', line: '', freshness: { state: 'delayed' }, fair: {},
+    gauges: [{ key: 'india_basis', value: 0.85, unit: '%', state: 'delayed', badge: 'context', clock: 'settlement', basis_contract: 'GOLD DEC-26', settle_basis_date: '2026-11-05' }],
+    verdict: { line: '', clauses: [{ rule_id: 'H4', text: 'India basis +0.8 % vs duty-paid landed 995 (Thu 05 Nov settlement)', value: 0.85 }] } } as unknown as GH
+
+  // M-A: which payload HEALTH renders
+  const pk = F.pickPageHealth(ov, 'ok', goldHealth)
+  check('Y1 HEALTH renders the overview\'s health (picked contract, live quote applied), never /health when the overview has one', pk.source === 'overview' && pk.health === ovHealth)
+  check('Y1 while the overview loads nothing is rendered (no GOLD flash under a GOLDTEN strip); /health only once the overview failed',
+    F.pickPageHealth(null, 'loading', goldHealth).waiting && F.pickPageHealth(null, 'loading', goldHealth).health === null
+    && F.pickPageHealth(null, 'error', goldHealth).source === 'health' && F.pickPageHealth({ health: null }, 'ok', goldHealth).source === 'health')
+  eq('Y1 needsHealthFallback: never with an overview health, never while loading', [F.needsHealthFallback(ov, 'ok'), F.needsHealthFallback(null, 'loading'), F.needsHealthFallback(null, 'error'), F.needsHealthFallback({ health: null }, 'ok')],
+    [false, false, true, true])
+  // M-A: strip == gauge == verdict, for a non-GOLD pick during MCX hours
+  const ag = F.basisAgreement(ov, ovHealth)
+  check('Y2 strip == gauge == verdict (GOLDTEN, live clock): +0.89 % three times, one clock', ag.ok && ag.clock === 'now' && ag.strip === 0.89 && ag.gauge === 0.89 && ag.verdict === 0.89
+    && F.fmtSignedPctSp(ag.strip, 2) === F.fmtSignedPctSp(ag.gauge, 2) && F.fmtSignedPctSp(ag.gauge, 2) === '+0.89 %')
+  const agOld = F.basisAgreement(ov, goldHealth)
+  check('Y2 negative control: the pre-1e page (GOLDTEN strip, /health GOLD gauge at the settlement) is flagged, not printed as two bases', !agOld.ok && /GOLD DEC-26/.test(agOld.reason ?? ''))
+  const sameContractSettle = { ...goldHealth, gauges: [{ ...goldHealth.gauges[0], basis_contract: 'GOLDTEN NOV-26' }] } as unknown as GH
+  check('Y2 negative control: the right contract at the settlement clock while the strip prints a live basis is flagged', !F.basisAgreement(ov, sameContractSettle).ok)
+  const h4Off = { ...ovHealth, verdict: { line: '', clauses: [{ rule_id: 'H4', text: 'India basis +0.7 % (live)', value: 0.69, clock: 'now' }] } } as unknown as GH
+  check('Y2 negative control: an H4 clause on another value is flagged', !F.basisAgreement(ov, h4Off).ok && /verdict/.test(F.basisAgreement(ov, h4Off).reason ?? ''))
+  const ovClosed = { ...ov, session: { mcx: { is_open: false }, comex: { is_open: true } }, strip: { basis_pct: 0.69, basis_clock: 'settlement', basis_settle_pct: 0.69, mcx_shown: 'settlement' } } as unknown as Ov
+  const hClosed = { ...ovHealth, gauges: [{ ...liveGauge, value: 0.69, clock: 'settlement', state: 'delayed' }], verdict: { line: '', clauses: [{ rule_id: 'H4', text: 'India basis +0.7 % (Thu 05 Nov settlement)', value: 0.69, clock: 'settlement' }] } } as unknown as GH
+  check('Y2 MCX closed: strip == gauge == verdict at the settlement clock', F.basisAgreement(ovClosed, hClosed).ok && F.basisAgreement(ovClosed, hClosed).clock === 'settlement')
+  // M-A: the chip names its clock; a future time is never printed
+  eq('Y3 basisClockChip: LIVE · MCX (Breeze bar minute) · COMEX (the Yahoo leg\'s time)', F.basisClockChip(liveGauge as never, ov), { kind: 'live', text: 'LIVE · MCX 09:20 · COMEX 09:10' })
+  const ovNoQuote = { ...ov, quote: null } as unknown as Ov
+  eq('Y3 negative control: only the +5:30-shifted mcx_live_as_of (14:50 at 09:21) → the time is not printed', F.basisClockChip(liveGauge as never, ovNoQuote)?.text, 'LIVE · MCX time not stated · COMEX 09:10')
+  eq('Y3 the settlement chip names source quality and session', F.basisClockChip({ clock: 'settlement', settle_basis_date: '2026-11-05', settlement_source: 'breeze_vwap30', settlement_quality: 'vwap30_proxy' } as never, ov)?.text,
+    'SETTLEMENT · VWAP30 PROXY · Thu 05 Nov')
+  eq('Y3 the server\'s clock_label wins (contract named), plus the COMEX leg\'s time; a served label in the future is not printed', [
+    F.basisClockChip({ ...liveGauge, clock_label: 'LIVE · GOLDTEN NOV-26 · 09:20 IST' } as never, ov)?.text,
+    F.basisClockChip({ ...liveGauge, clock_label: 'LIVE · GOLDTEN NOV-26 · 14:50 IST' } as never, ov)?.text,
+    F.basisClockChip({ clock: 'settlement', clock_label: 'SETTLEMENT · BAND PROXY · Wed 04 Nov' } as never, ov)?.text],
+    ['LIVE · GOLDTEN NOV-26 · 09:20 IST · COMEX 09:10', 'LIVE · MCX 09:20 · COMEX 09:10', 'SETTLEMENT · BAND PROXY · Wed 04 Nov'])
+  eq('Y3 istHm: Breeze\'s zone-less IST time read as IST; a time after as_of is dropped', [F.istHm('2026-11-06 09:16:00', AS_OF), F.istHm('2026-11-06T14:46:00+05:30', AS_OF), F.istHm('2026-11-06T09:10:20+05:30', AS_OF), F.istHm(null, AS_OF)],
+    ['09:16', '', '09:10', ''])
+  eq('Y3 mcxLiveClock: the strip prints \'live · 09:20\' (Breeze bar), never 14:50', [F.mcxLiveClock(ov), F.mcxLiveClock(ovNoQuote)], ['09:20', ''])
+  const hvY = src('components/gold/HealthView.tsx')
+  const kitY = src('components/gold/kit.tsx')
+  check('Y4 HealthView and LearnView read usePageHealth (no own /health fetch); the hook passes the pick to the fallback',
+    /usePageHealth\(\{ overview, overviewStatus, window, sel \}/.test(hvY) && !/getGoldHealth\(/.test(hvY) && /usePageHealth\(/.test(src('components/gold/LearnView.tsx')) && !/getGoldHealth\(/.test(src('components/gold/LearnView.tsx'))
+    && /getGoldHealth\(p\.window, \{ contract: p\.sel\.family, expiry: p\.sel\.expiry \}\)/.test(kitY) && /pickPageHealth\(p\.overview, p\.overviewStatus, fb\.data\)/.test(kitY))
+  check('Y4 HEALTH says a disagreement and a fallback in words (never two bases silently)', /data-gold-basis-mismatch/.test(hvY) && /basisAgreement\(overview, h\)/.test(hvY) && /data-gold-health-fallback/.test(hvY))
+  check('Y4 getGoldHealth / getGoldPremiums carry contract + expiry; Brief / WEI keep the GOLD echo (window only)',
+    /getGoldHealth = \(window: Window = 'D', q: ContractQuery = \{\}\)/.test(src('lib/gold/api.ts')) && /getGoldPremiums = \(days = 365, q: ContractQuery = \{\}\)/.test(src('lib/gold/api.ts')) && /getGoldHealth\('W'\)/.test(src('components/Brief.tsx')))
+  check('Y4 the strip prints the live quote\'s minute and reads stripBasis (the same function the check uses)', /mcxLiveClock\(overview\)/.test(src('components/gold/HealthStrip.tsx')) && /data-gold-strip-mcx-clock/.test(src('components/gold/HealthStrip.tsx')))
+
+  // M-B: one 10-y real yield per page
+  const stripFixed = { real_10y: 2.6, real_10y_date: '2026-11-05', real_10y_series_id: 'UST_REAL_10Y' }
+  const hFixed = { gauges: [{ key: 'real_yield', value: 2.6, report_date: '2026-11-05', series_id: 'UST_REAL_10Y', label_note: 'UST_REAL_10Y: fresher than FRED_DFII10 (last 2026-11-03)' }] } as unknown as GH
+  const macroDriver = { value: 2.6, report_date: '2026-11-05', series_id: 'UST_REAL_10Y' }
+  const pr = F.pageRealYield(stripFixed, hFixed)
+  check('Y5 the fixed server: strip == gauge == MACRO print \'2.60 % · Thu 05 Nov\', no mismatch note',
+    F.realYieldPrint(pr.value, pr.date) === '2.60 % · Thu 05 Nov' && F.realYieldPrint(hFixed.gauges[0].value, hFixed.gauges[0].report_date) === F.realYieldPrint(macroDriver.value, macroDriver.report_date)
+    && F.realYieldMismatch(pr, macroDriver) === null && pr.seriesId === 'UST_REAL_10Y')
+  const prOld = F.pageRealYield({ real_10y: 2.65, real_10y_date: '2026-11-03' }, { gauges: [ryFred] } as unknown as GH)
+  check('Y5 negative control: the 6 Nov page (strip / HEALTH FRED Tue, MACRO Treasury Thu) is said on MACRO, without repeating the number',
+    /older point \(Tue 03 Nov, FRED DFII10/.test(F.realYieldMismatch(prOld, macroDriver) ?? '') && !/2\.65/.test(F.realYieldMismatch(prOld, macroDriver) ?? ''))
+  const prGaugeFresher = F.pageRealYield({ real_10y: 2.65, real_10y_date: '2026-11-03' }, hFixed)
+  check('Y5 the fresher of strip and gauge wins (same quantity, the later date); a tie keeps the strip', prGaugeFresher.from === 'gauge' && prGaugeFresher.value === 2.6
+    && F.pageRealYield({ real_10y: 2.61, real_10y_date: '2026-11-05' }, hFixed).from === 'strip')
+  check('Y5 the strip, its hover card and MACRO read pageRealYield; MACRO renders label_note verbatim (never \'no stored points\')',
+    /pageRealYield\(s, overview\?\.health\)/.test(src('components/gold/HealthStrip.tsx')) && /pageRealYield\(s, o\.health\)/.test(src('components/gold/HealthStrip.tsx'))
+    && /realYieldMismatch\(pageRy, d\)/.test(src('components/gold/MacroView.tsx')) && !/the primary series has no stored points/.test(src('components/gold/MacroView.tsx')))
+
+  // M-C: the printed legs reproduce the printed premium
+  const shBad = { sge_usd_oz: 4035.79, london_pm_usd: 4037.8, premium_usd: 1.5 }
+  const shGood = { sge_usd_oz: 4035.79, london_pm_usd: 4037.8, premium_usd: -2.01, reconciles: true }
+  check('Y6 shanghaiReconcile: 4,035.79 − 4,037.80 = −2.01 → a premium of −2.01 reconciles; the 6 Nov +1.50 does not', F.shanghaiReconcile(shGood).ok === true && F.shanghaiReconcile(shBad).ok === false
+    && F.shanghaiReconcile(shBad).legs === -2.01 && Math.abs((F.shanghaiReconcile(shBad).diff ?? 0) + 3.51) < 1e-9)
+  check('Y6 negative control: a server reconciles=false wins even when the client legs agree; missing leg → null', F.shanghaiReconcile({ ...shGood, reconciles: false }).ok === false && F.shanghaiReconcile({ premium_usd: 1 }).ok === null)
+  check('Y6 PHYSICAL shows the mismatch note and the server\'s recompute note', /shanghaiReconcile\(sh\)/.test(src('components/gold/PhysicalView.tsx')) && /data-shanghai-reconcile="mismatch"/.test(src('components/gold/PhysicalView.tsx')) && /sh\.recompute_note/.test(src('components/gold/PhysicalView.tsx')))
+
+  // M-D: the baseline session older than the latest completed session (Muhurat Sun 8 Nov missing on Mon 9 Nov)
+  const muhurat = { settlement: 143900, settlement_source: 'breeze_vwap30', settlement_session: '2026-11-06', settlement_quality: 'vwap30_proxy', settlement_is_latest: false, latest_session: '2026-11-08' }
+  check('Y7 a baseline older than the latest completed session (Fri 06 Nov vs the Sun 08 Nov Muhurat) is an amber note naming both sessions',
+    /older than expected/.test(F.settlementOlderThanLatest(muhurat) ?? '') && /Fri 06 Nov/.test(F.settlementOlderThanLatest(muhurat) ?? '') && /Sun 08 Nov/.test(F.settlementOlderThanLatest(muhurat) ?? '')
+    && F.settlementNote(muhurat)?.tone === 'amber' && /older than expected/.test(F.settlementNoteShort(muhurat)?.text ?? ''))
+  check('Y7 negative controls: the latest session\'s VWAP, a broker close and no settlement raise nothing',
+    F.settlementOlderThanLatest({ ...muhurat, settlement_is_latest: true, latest_session: '2026-11-06' }) === null
+    && F.settlementOlderThanLatest({ ...muhurat, settlement_source: 'breeze_previous_close' }) === null && F.settlementOlderThanLatest({ settlement: null }) === null)
+  // the server's Mon 9 Nov 08:45 shape (gold_preopen wave 1e): /fair.baseline.older_than_expected + expected_session + older_note
+  const fair9Nov = { baseline: { value: 143900, source: 'Fri 06 Nov settlement (last-30-min VWAP)', session: '2026-11-06', settlement_source: 'breeze_vwap30', settlement_quality: 'vwap30_proxy',
+    older_than_expected: true, expected_session: '2026-11-08', older_note: 'baseline session older than expected: the Fri 06 Nov settlement is used, but the latest completed session is the Sun 08 Nov settlement (Muhurat trading, 14:20–15:30 IST) and no last-30-min VWAP is stored or read for it (not fetched); the fair open also carries that session\'s move' } }
+  const bl9 = F.baselineSettlement(fair9Nov as never, null, 'GOLD')
+  check('Y7 Mon 9 Nov 08:45: /fair.baseline.older_than_expected becomes the amber note in the server\'s words (Muhurat named)',
+    bl9?.settlement_is_latest === false && bl9?.latest_session === '2026-11-08' && F.settlementNote(bl9)?.tone === 'amber' && /^Baseline session older than expected: .*Muhurat trading, 14:20–15:30 IST/.test(F.settlementNote(bl9)?.text ?? ''))
+  check('Y7 negative control: the same baseline with older_than_expected false and no later session raises nothing',
+    F.settlementNote(F.baselineSettlement({ baseline: { ...fair9Nov.baseline, older_than_expected: false, expected_session: '2026-11-06', older_note: null } } as never, null, 'GOLD')) === null)
+  check('Y7 the strip and the baseline carry the latest-session fields through', F.stripSettlement(muhurat).latest_session === '2026-11-08' && F.stripSettlement(muhurat).settlement_is_latest === false)
+
+  // M-E: event tags, delayed COMEX leg, Kitco grouping, the rupee leg, OI span, WEEKLY impossible open
+  eq('Y8 eventSessionTag: untimed rows are ALL DAY / a closure, never AFTER CLOSE; timed rows keep their words', [
+    F.eventSessionTag({ time_ist: null, kind: 'FESTIVAL', name: 'Dhanteras', in_session: false, after_close: false })?.text,
+    F.eventSessionTag({ time_ist: null, kind: 'MCX_HOLIDAY', name: 'MCX morning closure: Diwali-Balipratipada', in_session: false })?.text,
+    F.eventSessionTag({ time_ist: '14:20', kind: 'MCX_SPECIAL', name: 'Muhurat trading', in_session: true })?.text,
+    F.eventSessionTag({ time_ist: '00:30', kind: 'FOMC', name: 'FOMC', in_session: false, after_close: true })?.text],
+    ['ALL DAY', 'MORNING CLOSED', 'IN SESSION', 'AFTER CLOSE · gap risk'])
+  type Fr = import('../../lib/gold/types').Freshness
+  const fr632 = F.delayedIfOld({ state: 'live', source: 'Yahoo (cached fetcher)', age_s: 632 } as Fr)
+  check('Y8 a \'live\' COMEX leg 632 s old reads DELAYED ≈11 min; a 60 s one stays LIVE', fr632?.state === 'delayed' && /≈11 min delayed/.test(fr632?.source ?? '')
+    && F.delayedIfOld({ state: 'live', source: 'Yahoo', age_s: 60 } as Fr)?.state === 'live')
+  const KK = (await import(new URL('../../lib/gold/kitco.ts', import.meta.url).href)) as typeof import('../../lib/gold/kitco')
+  eq('Y8 Kitco: USD units in Western grouping, rupees Indian', [KK.fmtKitco(132339, 0, 'usd_kg'), KK.fmtKitco(132339, 0, 'inr_10g'), KK.fmtKitco(132339, 0, 'USD/kg'), KK.fmtKitcoSigned(-1234.5, 1, 'usd_oz'), KK.fmtKitcoSigned(0, 0, 'usd_kg')],
+    ['132,339', '1,32,339', '132,339', `${MINUS}1,234.5`, '0'])
+  const inrFlat = F.inrLegWords({ now: 94.465, ref: 94.46499, as_of: '2026-11-05T15:40:00' })
+  check('Y8 the rupee leg is dated (21:10 IST Thu 05 Nov) and said to be unchanged since the close; a moved leg is not', inrFlat?.flat === true && /21:10 IST Thu 05 Nov/.test(inrFlat?.text ?? '')
+    && F.inrLegWords({ now: 94.4, ref: 94.465, as_of: '2026-11-06T03:50:00Z' })?.flat === false)
+  const span = F.oiSpanByDate([{ trade_date: '2026-11-03', sessions_spanned: 3, span_note: 'over 3 sessions (master skipped 2)' }, { trade_date: '2026-11-04', sessions_spanned: 1 }])
+  check('Y8 WEEKLY: a 3-session ΔOI is labelled, a 1-session one is not', span.get('2026-11-03')?.n === 3 && !span.has('2026-11-04') && /over \{r\.mcxSpan\.n\} sessions/.test(src('components/gold/WeeklyView.tsx')))
+  const ten = { expiries: [{ expiry: '2026-12-31', oi: 12249, in_tender: false }, { expiry: '2026-11-30', oi: 29503, in_tender: true, tender_note: 'in tender since Sun 01 Nov (5 d)' }, { expiry: '2027-01-29', oi: 6604, in_tender: false }] }
+  const ax = F.autoExpiry(ten)
+  check('Y8 the default GOLDTEN pick: NOV-26 (OI front) is in tender → the page follows DEC-26 and says why; NOV-26 stays selectable',
+    ax.expiry === '2026-12-31' && ax.front === '2026-11-30' && /in tender since Sun 01 Nov \(5 d\): the page follows DEC-26/.test(ax.reason ?? '')
+    && /autoExpiry=\{auto\}/.test(src('components/gold/GoldPage.tsx')) && /sel\.expiry \|\| !auto\.expiry \? sel/.test(src('components/gold/GoldPage.tsx')))
+  check('Y8 negative controls: a front not in tender keeps the server\'s pick; no family data → the server\'s pick',
+    F.autoExpiry({ expiries: [{ expiry: '2026-12-04', oi: 15726, in_tender: false }, { expiry: '2027-02-05', oi: 1334 }] }).expiry === null && F.autoExpiry(null).expiry === null
+    && F.autoExpiry({ expiries: [{ expiry: '2026-11-30', oi: 5, in_tender: true }] }).expiry === null)
+  check('Y8 the accuracy read: the [B] copy says how many scored mornings were stale; the counterfactual is labelled, never the score',
+    /7 of them priced off a stale settlement/.test(F.preOpenCopyB({ days: 8, median_abs_error: 1360, mean_abs_error: 1885, naive_mean_abs_error: 2008, stale_baseline_count: 7 }))
+    && !/stale/.test(F.preOpenCopyB({ days: 8, median_abs_error: 1360, stale_baseline_count: 0 }))
+    && /^counterfactual, not the score .* median miss ₹187 .* 71\.4 % within ₹300 .* naive ₹898/.test(F.onVwap30Line({ on_vwap30: { days: 7, median_abs_error: 187, mean_abs_error: 330.1, within_threshold_pct: 71.4, naive_mean_abs_error: 898.1 } }) ?? '')
+    && F.onVwap30Line({ on_vwap30: null }) === null && /band midpoint labelled one session late/.test(F.staleReasonWords(['band_rule'])) && F.staleReasonWords([]) === '')
+  const thu = S.dailyOhlc([{ ts: '2026-11-04', o: 4000, h: 4080, l: 3990, c: 4072.2 }, { ts: '2026-11-05', o: 3940.8, h: 4155.8, l: 4067.0, c: 4098.4, partial: true }])
+  check('Y8 WEEKLY: the impossible Thu open (3,940.8 under a low of 4,067.0) is flagged, not drawn; the partial flag is carried',
+    thu[1].openOutside === true && thu[1].o === 4098.4 && thu[1].rawOpen === 3940.8 && thu[1].partial === true && !thu[0].openOutside && !thu[0].partial)
+  check('Y8 negative control: an open inside the range and the partial dates from /bars.daily_closes', S.dailyOhlc([{ ts: '2026-11-05', o: 4070, h: 4155.8, l: 4067, c: 4098.4 }], new Set(['2026-11-05']))[0].partial === true
+    && !S.dailyOhlc([{ ts: '2026-11-05', o: 4070, h: 4155.8, l: 4067, c: 4098.4 }])[0].openOutside)
 }
 
 console.log(`gold.check: ${passed} passed, ${failed} failed`)

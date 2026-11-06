@@ -1,0 +1,804 @@
+{
+  "gold": {
+    "name": "Gold terminal",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261106_wave1d/chromium/gold.png",
+    "load_s": 7.1,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "chromium",
+    "browser_version": "156.0.8078.80",
+    "code": "GOLD",
+    "url": "http://127.0.0.1:8010/?tab=gold",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 35,
+      "ready_ms": 133,
+      "ready": true,
+      "idle_ms": 1143,
+      "total_ms": 7148
+    },
+    "nav_timing": {
+      "ttfb_ms": 2,
+      "dcl_ms": 25,
+      "load_ms": 62,
+      "fcp_ms": 140,
+      "resources": 104,
+      "js_files": 65,
+      "js_transfer_kb": 872
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 26,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "GOLD \u00b7 SuryaDhana",
+      "page_headers": [
+        "GOLD Gold terminal"
+      ],
+      "panels": [
+        "Verdict",
+        "Eight gauges",
+        "Today's open",
+        "What moved since the MCX close",
+        "Your inputs",
+        "Headlines",
+        "Accuracy log",
+        "Event risk \u00b7 next # days",
+        "Automated brief"
+      ],
+      "headings": [],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 3,
+      "body_text_len": 12857
+    },
+    "pending_at_leave": [],
+    "repetition_hits": [],
+    "live": {
+      "market": "closed",
+      "feed": "DISCONNECTED",
+      "authoritative": true,
+      "exempt": true,
+      "live_chips": 0,
+      "chips": [
+        {
+          "kind": "feed",
+          "state": "closed",
+          "label": "CLOSE 05-NOV",
+          "title": "NSE closed: the last session's close",
+          "asof": null,
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 00:46",
+          "title": "Stored or delayed data from COMEX + USD/INR \u00b7 as of 2026-11-06T00:46:20.151339+05:30",
+          "asof": "2026-11-06T00:46:20.151339+05:30",
+          "age_s": null,
+          "source": "COMEX + USD/INR"
+        },
+        {
+          "kind": "chip",
+          "state": "input",
+          "label": "INPUT",
+          "title": "Computed from your pre-open inputs (synced); no stored or live feed behind this panel",
+          "asof": null,
+          "age_s": null,
+          "source": null
+        }
+      ],
+      "failures": []
+    }
+  },
+  "mcxgold": {
+    "name": "MCX gold desk",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261106_wave1d/chromium/mcxgold.png",
+    "load_s": 7.0,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "chromium",
+    "browser_version": "156.0.8078.80",
+    "code": "MCXG",
+    "url": "http://127.0.0.1:8010/?tab=mcxgold",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 17,
+      "ready_ms": 35,
+      "ready": true,
+      "idle_ms": 974,
+      "total_ms": 6975
+    },
+    "nav_timing": {
+      "ttfb_ms": 2,
+      "dcl_ms": 15,
+      "load_ms": 16,
+      "fcp_ms": 48,
+      "resources": 100,
+      "js_files": 65,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 23,
+    "non_get_api": [
+      "POST /api/mcx/ticket"
+    ],
+    "fingerprint": {
+      "title": "MCXG \u00b7 SuryaDhana",
+      "page_headers": [
+        "MCXG MCX gold desk"
+      ],
+      "panels": [
+        "Session",
+        "MCX holidays ahead",
+        "Quote",
+        "Contracts \u2014 MCX gold family",
+        "Paper gold ticket"
+      ],
+      "headings": [],
+      "tables": 3,
+      "table_headers": [
+        "Date | MCX holiday | Closure",
+        "Expiry | Source | settle \u20b9/# g | band \u20b9/# g | OI lots \u2195 | \u0394OI lots | carry vs front % p.a. | COMEX month | Tender",
+        "Leg | Brokerage | Exch # | CTT # (sell) | Stamp (buy) | SEBI | GST # | Total"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 7248
+    },
+    "pending_at_leave": [],
+    "repetition_hits": [],
+    "live": {
+      "market": "closed",
+      "feed": "DISCONNECTED",
+      "authoritative": true,
+      "exempt": true,
+      "live_chips": 0,
+      "chips": [
+        {
+          "kind": "feed",
+          "state": "closed",
+          "label": "CLOSE 05-NOV",
+          "title": "NSE closed: the last session's close",
+          "asof": null,
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 00:46",
+          "title": "Stored or delayed data from MCX SESSION CLOCK \u00b7 as of 2026-11-06T00:46:27+05:30",
+          "asof": "2026-11-06T00:46:27+05:30",
+          "age_s": null,
+          "source": "MCX session clock"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 MCX HOLIDAY CALENDAR",
+          "title": "Stored or delayed data from MCX HOLIDAY CALENDAR \u00b7 no as-of",
+          "asof": null,
+          "age_s": null,
+          "source": "MCX holiday calendar"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 BREEZE \u00b7 00:46",
+          "title": "Stored or delayed data from BREEZE \u00b7 as of 2026-11-06T00:46:19+05:30",
+          "asof": "2026-11-06T00:46:19+05:30",
+          "age_s": null,
+          "source": "Breeze"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 MCX CONTRACT MASTER",
+          "title": "Stored or delayed data from MCX CONTRACT MASTER \u00b7 no as-of \u2014 margins from the Zerodha NRML mirror, dated",
+          "asof": null,
+          "age_s": null,
+          "source": "MCX contract master"
+        },
+        {
+          "kind": "chip",
+          "state": "input",
+          "label": "INPUT",
+          "title": "Computed from the ticket you fill in (PAPER, records nothing); no stored or live feed behind this panel",
+          "asof": null,
+          "age_s": null,
+          "source": null
+        }
+      ],
+      "failures": []
+    }
+  },
+  "commodity": {
+    "name": "Commodity",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261106_wave1d/chromium/commodity.png",
+    "load_s": 9.8,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "chromium",
+    "browser_version": "156.0.8078.80",
+    "code": "CMDT",
+    "url": "http://127.0.0.1:8010/?tab=commodity",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 27,
+      "ready_ms": 2643,
+      "ready": true,
+      "idle_ms": 3761,
+      "total_ms": 9765
+    },
+    "nav_timing": {
+      "ttfb_ms": 4,
+      "dcl_ms": 20,
+      "load_ms": 20,
+      "fcp_ms": 48,
+      "resources": 95,
+      "js_files": 65,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 18,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "CMDT \u00b7 SuryaDhana",
+      "page_headers": [
+        "CMDT Commodities"
+      ],
+      "panels": [],
+      "headings": [
+        "WTI Crude \u00b7 #",
+        "FRED \u00b7 Commodity / Macro",
+        "EIA \u00b7 Energy Fundamentals"
+      ],
+      "tables": 0,
+      "table_headers": [],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 1974
+    },
+    "pending_at_leave": [],
+    "repetition_hits": [],
+    "live": {
+      "market": "closed",
+      "feed": "DISCONNECTED",
+      "authoritative": true,
+      "exempt": true,
+      "live_chips": 0,
+      "chips": [
+        {
+          "kind": "feed",
+          "state": "closed",
+          "label": "CLOSE 05-NOV",
+          "title": "NSE closed: the last session's close",
+          "asof": null,
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 00:46",
+          "title": "Stored or delayed data from YAHOO (USD FUTURES) \u00b7 as of 2026-11-05T19:16:37.000Z",
+          "asof": "2026-11-05T19:16:37.000Z",
+          "age_s": null,
+          "source": "Yahoo (USD futures)"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 00:36",
+          "title": "Stored or delayed data from YAHOO (USD FUTURES) \u00b7 as of 2026-11-05T19:06:33.000Z",
+          "asof": "2026-11-05T19:06:33.000Z",
+          "age_s": null,
+          "source": "Yahoo (USD futures)"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "EOD \u00b7 03 NOV",
+          "title": "End-of-day data from FRED \u00b7 as of 03 NOV: published once a day, not a live feed",
+          "asof": "2026-11-03",
+          "age_s": null,
+          "source": "FRED"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "EOD \u00b7 30 OCT",
+          "title": "End-of-day data from EIA \u00b7 as of 30 OCT: published once a day, not a live feed",
+          "asof": "2026-10-30",
+          "age_s": null,
+          "source": "EIA"
+        }
+      ],
+      "failures": []
+    }
+  },
+  "brief": {
+    "name": "Morning brief",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261106_wave1d/chromium/brief.png",
+    "load_s": 8.6,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "chromium",
+    "browser_version": "156.0.8078.80",
+    "code": "BRF",
+    "url": "http://127.0.0.1:8010/?tab=brief",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 20,
+      "ready_ms": 101,
+      "ready": true,
+      "idle_ms": 2596,
+      "total_ms": 8600
+    },
+    "nav_timing": {
+      "ttfb_ms": 3,
+      "dcl_ms": 16,
+      "load_ms": 17,
+      "fcp_ms": 68,
+      "resources": 123,
+      "js_files": 65,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 42,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "BRF \u00b7 SuryaDhana",
+      "page_headers": [
+        "BRF Overnight Brief"
+      ],
+      "panels": [
+        "Market",
+        "Your book",
+        "Market today",
+        "This week",
+        "News scanner",
+        "Headlines",
+        "System"
+      ],
+      "headings": [],
+      "tables": 1,
+      "table_headers": [
+        ""
+      ],
+      "canvas": 7,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 1,
+      "body_text_len": 7507
+    },
+    "pending_at_leave": [],
+    "repetition_hits": [],
+    "live": {
+      "market": "closed",
+      "feed": "DISCONNECTED",
+      "authoritative": true,
+      "exempt": false,
+      "live_chips": 0,
+      "chips": [
+        {
+          "kind": "feed",
+          "state": "closed",
+          "label": "CLOSE 05-NOV",
+          "title": "NSE closed: the last session's close",
+          "asof": null,
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "EOD \u00b7 05 NOV",
+          "title": "End-of-day data from NSE EOD \u00b7 as of 05 NOV: published once a day, not a live feed",
+          "asof": "2026-11-05",
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "EOD \u00b7 05 NOV",
+          "title": "End-of-day data from DESK LEDGER + ICICI \u00b7 as of 05 NOV: published once a day, not a live feed",
+          "asof": "2026-11-05",
+          "age_s": null,
+          "source": "Desk ledger + ICICI"
+        },
+        {
+          "kind": "chip",
+          "state": "closed",
+          "label": "CLOSE \u00b7 05 NOV",
+          "title": "NSE closed: the last session's close (NSE) \u00b7 as of 05 NOV \u2014 NSE chart feed, 1-min points",
+          "asof": "2026-11-05",
+          "age_s": null,
+          "source": "NSE"
+        },
+        {
+          "kind": "chip",
+          "state": "closed",
+          "label": "CLOSE \u00b7 05 NOV",
+          "title": "NSE closed: the last session's close (NSE EOD) \u00b7 as of 05 NOV \u2014 51 prices at the last session's close",
+          "asof": "2026-11-05",
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 NSE CALENDAR",
+          "title": "Stored or delayed data from NSE CALENDAR \u00b7 no as-of \u2014 board meetings and corporate actions, refreshed every 2 min",
+          "asof": null,
+          "age_s": null,
+          "source": "NSE calendar"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "EOD \u00b7 05 NOV",
+          "title": "End-of-day data from NEWS SCANNER \u00b7 as of 05 NOV: published once a day, not a live feed",
+          "asof": "2026-11-05",
+          "age_s": null,
+          "source": "news scanner"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 HEADLINES \u00b7 00:43",
+          "title": "Stored or delayed data from HEADLINES \u00b7 as of 2026-11-05T19:13:04+00:00",
+          "asof": "2026-11-05T19:13:04+00:00",
+          "age_s": null,
+          "source": "headlines"
+        },
+        {
+          "kind": "chip",
+          "state": "live",
+          "label": "LIVE \u00b7 CONTROLLER",
+          "title": "Live feed (CONTROLLER) \u00b7 last 00:46 IST",
+          "asof": "2026-11-06T00:46:45.287196+05:30",
+          "age_s": null,
+          "source": "controller"
+        }
+      ],
+      "failures": []
+    }
+  },
+  "world": {
+    "name": "World markets",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261106_wave1d/chromium/world.png",
+    "load_s": 8.3,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "chromium",
+    "browser_version": "156.0.8078.80",
+    "code": "WEI",
+    "url": "http://127.0.0.1:8010/?tab=world",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 22,
+      "ready_ms": 52,
+      "ready": true,
+      "idle_ms": 2317,
+      "total_ms": 8322
+    },
+    "nav_timing": {
+      "ttfb_ms": 4,
+      "dcl_ms": 17,
+      "load_ms": 18,
+      "fcp_ms": 56,
+      "resources": 99,
+      "js_files": 65,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 20,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "WEI \u00b7 SuryaDhana",
+      "page_headers": [
+        "WEI World Markets"
+      ],
+      "panels": [
+        "India",
+        "Americas",
+        "Asia-Pacific",
+        "Europe",
+        "Currencies",
+        "Commodities",
+        "Rates & crypto"
+      ],
+      "headings": [],
+      "tables": 7,
+      "table_headers": [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 0,
+      "body_text_len": 3232
+    },
+    "pending_at_leave": [],
+    "repetition_hits": [],
+    "live": {
+      "market": "closed",
+      "feed": "DISCONNECTED",
+      "authoritative": true,
+      "exempt": false,
+      "live_chips": 0,
+      "chips": [
+        {
+          "kind": "feed",
+          "state": "closed",
+          "label": "CLOSE 05-NOV",
+          "title": "NSE closed: the last session's close",
+          "asof": null,
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "closed",
+          "label": "CLOSE \u00b7 05 NOV",
+          "title": "NSE closed: the last session's close (NSE EOD) \u00b7 as of 05 NOV \u2014 NSE indices: 4 prices at the last session's close \u00b7 SENSEX and the sparks: Yahoo, delayed",
+          "asof": "2026-11-05",
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 YAHOO \u00b7 00:46",
+          "title": "Stored or delayed data from YAHOO \u00b7 as of 2026-11-05T19:16:55.826Z",
+          "asof": "2026-11-05T19:16:55.826Z",
+          "age_s": null,
+          "source": "Yahoo"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 YAHOO \u00b7 00:46",
+          "title": "Stored or delayed data from YAHOO \u00b7 as of 2026-11-05T19:16:55.826Z",
+          "asof": "2026-11-05T19:16:55.826Z",
+          "age_s": null,
+          "source": "Yahoo"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 YAHOO \u00b7 00:46",
+          "title": "Stored or delayed data from YAHOO \u00b7 as of 2026-11-05T19:16:55.826Z",
+          "asof": "2026-11-05T19:16:55.826Z",
+          "age_s": null,
+          "source": "Yahoo"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 YAHOO \u00b7 00:46",
+          "title": "Stored or delayed data from YAHOO \u00b7 as of 2026-11-05T19:16:55.826Z",
+          "asof": "2026-11-05T19:16:55.826Z",
+          "age_s": null,
+          "source": "Yahoo"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 YAHOO \u00b7 00:46",
+          "title": "Stored or delayed data from YAHOO \u00b7 as of 2026-11-05T19:16:55.826Z",
+          "asof": "2026-11-05T19:16:55.826Z",
+          "age_s": null,
+          "source": "Yahoo"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 YAHOO \u00b7 00:46",
+          "title": "Stored or delayed data from YAHOO \u00b7 as of 2026-11-05T19:16:55.826Z",
+          "asof": "2026-11-05T19:16:55.826Z",
+          "age_s": null,
+          "source": "Yahoo"
+        }
+      ],
+      "failures": []
+    }
+  },
+  "system": {
+    "name": "System",
+    "ok": true,
+    "screenshot": "reports/gold_program/qa/ui_audit_20261106_wave1d/chromium/system.png",
+    "load_s": 27.4,
+    "console": [],
+    "failed_api": [],
+    "error_text": false,
+    "engine": "chromium",
+    "browser_version": "156.0.8078.80",
+    "code": "SYS",
+    "url": "http://127.0.0.1:8010/?tab=system",
+    "pass": true,
+    "failures": [],
+    "timing": {
+      "nav_ms": 27,
+      "ready_ms": 357,
+      "ready": true,
+      "idle_ms": null,
+      "total_ms": 27362
+    },
+    "nav_timing": {
+      "ttfb_ms": 4,
+      "dcl_ms": 20,
+      "load_ms": 20,
+      "fcp_ms": 64,
+      "resources": 106,
+      "js_files": 65,
+      "js_transfer_kb": 0
+    },
+    "console_errors": [],
+    "console_warnings": [],
+    "console_detail": [],
+    "failures_non_seam": [],
+    "page_errors": [],
+    "failed_requests": [],
+    "allowed_aborts": [
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:8010/api/telemetry/logs/stream",
+        "status": 200,
+        "failure": "net::ERR_ABORTED",
+        "resource_type": "eventsource",
+        "kind": "stream_abort_on_navigation",
+        "reason": "net::ERR_ABORTED (allowlisted: stream torn down by navigation)",
+        "seam": false
+      }
+    ],
+    "third_party_failures": [],
+    "websockets": [],
+    "api_endpoints": 20,
+    "non_get_api": [],
+    "fingerprint": {
+      "title": "SYS \u00b7 SuryaDhana",
+      "page_headers": [
+        "SYS System"
+      ],
+      "panels": [
+        "System status",
+        "Live feeds"
+      ],
+      "headings": [
+        "System Telemetry"
+      ],
+      "tables": 1,
+      "table_headers": [
+        "Job | Schedule (IST) | Next Run In | Last Latency | Status"
+      ],
+      "canvas": 0,
+      "recharts": 0,
+      "iframes": [],
+      "error_boxes": [],
+      "skeleton": false,
+      "loading_bars": 3,
+      "body_text_len": 6065
+    },
+    "pending_at_leave": [],
+    "repetition_hits": [],
+    "live": {
+      "market": "closed",
+      "feed": "DISCONNECTED",
+      "authoritative": true,
+      "exempt": false,
+      "live_chips": 0,
+      "chips": [
+        {
+          "kind": "feed",
+          "state": "closed",
+          "label": "CLOSE 05-NOV",
+          "title": "NSE closed: the last session's close",
+          "asof": null,
+          "age_s": null,
+          "source": "NSE EOD"
+        },
+        {
+          "kind": "chip",
+          "state": "live",
+          "label": "LIVE \u00b7 SERVICE PROBES",
+          "title": "Live feed (SERVICE PROBES) \u00b7 last 00:47 IST",
+          "asof": "2026-11-05T19:17:02.865Z",
+          "age_s": null,
+          "source": "service probes"
+        },
+        {
+          "kind": "chip",
+          "state": "delayed",
+          "label": "DELAYED \u00b7 LIVE SERVICE \u00b7 00:47",
+          "title": "Stored or delayed data from LIVE SERVICE \u00b7 as of 2026-11-05T19:17:23.092Z \u2014 GET /api/live/status every 10 s",
+          "asof": "2026-11-05T19:17:23.092Z",
+          "age_s": null,
+          "source": "live service"
+        }
+      ],
+      "failures": []
+    }
+  }
+}

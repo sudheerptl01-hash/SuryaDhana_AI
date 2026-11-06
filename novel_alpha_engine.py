@@ -8,12 +8,18 @@ contract (`validated_alpha.md`, Section 3b) into an importable, scalable backend
 component for the institutional trading terminal.
 
 Surviving strategy (the ONLY one approved in Phase 2b):
-    S3-Simplified — Gap Polarity Engine
+    Gap Polarity Engine (once labelled "S3-Simplified"; unrelated to alpha_lab's S3 leader-dip, whose delivery
+    version is a pre-registered FAIL — STAY AWAY)
         2 free hyper-parameters: gap_threshold (0.05), phi (0.50)
         Two long legs:
-            Leg B (gap-up continuation, C_T >= O_T) — robust, +56.5 bps standalone
+            Leg B (gap-up continuation, C_T >= O_T) — +56.5 bps standalone at a 0.15 % friction; at the real ICICI
+                                                       round trip (≈ 0.93 % + ₹24) that edge is negative
             Leg A (gap-down reversal)              — fails standalone, default OFF
         Entry: T+1 open. Exit: 5-day time-stop (sole exit). No -2%-from-entry stop.
+
+Costs (5 Nov 2026 review, M19): the forward diagnostics charge the real delivery round trip from
+shared/trading_costs.py (COST_PROFILE, ICICI MoneySaver by default) at a stated position size, never a flat
+friction: ₹1,00,000 a position ≈ 0.93 %.
 
 Design contract for downstream agents:
     * `DuckDBDataSource`     — read-only loader; pushes filtering/windowing into SQL.
@@ -39,6 +45,7 @@ Python : /Users/sudheer/Desktop/jupyter_env/bin/python
 from __future__ import annotations
 
 import logging
+import sys
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -78,6 +85,31 @@ MIN_PRICE_INR: float = 20.0  # penny-stock floor on the latest bar
 #: index series as if it were a stock.
 INDEX_EXCLUDE_PATTERN: str = "^%"  # SQL LIKE pattern for caret-prefixed index symbols
 INDEX_EXCLUDE_SYMBOLS: tuple[str, ...] = ("NIFTY500", "NIFTY50", "NIFTY")
+
+# The one cost model (shared/trading_costs.py): the engine sits at the repo root, beside shared/ (Docker: /app/shared).
+for _p in (Path(__file__).resolve().parent, Path("/app")):
+    if (_p / "shared" / "trading_costs.py").is_file() and str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
+from shared.trading_costs import default_model as _cost_model  # noqa: E402
+
+#: ₹ size of one position for the cost maths. The ICICI round trip carries a fixed ₹24 DP charge, so its percentage
+#: depends on the size: ₹1,00,000 ≈ 0.93 %, ₹25,000 ≈ 1.00 %, ₹10,000 ≈ 1.14 %.
+DEFAULT_POSITION_INR: float = 100_000.0
+
+
+def round_trip_cost(position_inr: float = DEFAULT_POSITION_INR) -> float:
+    """Fractional delivery round-trip cost of one position from shared/trading_costs.py (buy + sell of the same ₹ value,
+    price change ignored: the model's own round-trip convention)."""
+    return _cost_model().round_trip_pct(float(position_inr), "delivery") / 100.0
+
+
+def cost_info(position_inr: float = DEFAULT_POSITION_INR) -> dict[str, Any]:
+    """The cost assumption behind every net figure, for display beside it (profile, size, % and ₹ of the round trip)."""
+    model = _cost_model()
+    rt = model.round_trip(float(position_inr))
+    return {"model": "shared/trading_costs.py", "profile": model.broker.name, "position_inr": float(position_inr),
+            "round_trip_pct": round(rt.pct_of(float(position_inr)), 4), "round_trip_inr": round(rt.total, 2)}
+
 
 logger = logging.getLogger("suryadhana.alpha_engine")
 if not logger.handlers:
@@ -446,11 +478,11 @@ class Strategy(ABC):
 
 
 # --------------------------------------------------------------------------------------
-# Concrete strategy: S3-Simplified — Gap Polarity Engine
+# Concrete strategy: Gap Polarity Engine (formerly "S3-Simplified"; not alpha_lab's S3)
 # --------------------------------------------------------------------------------------
 
 class GapPolarityStrategy(Strategy):
-    """S3-Simplified — Gap Polarity Engine (validated_alpha.md Section 3b).
+    """Gap Polarity Engine (validated_alpha.md Section 3b; formerly "S3-Simplified").
 
     Long-only, two-leg gap strategy. Signal computed at close of bar T; trade at the
     open of T+1; sole exit is the 5-day time-stop.
@@ -481,7 +513,7 @@ class GapPolarityStrategy(Strategy):
     """
 
     STRATEGY_ID: ClassVar[str] = "S3_GAP_POLARITY"
-    NAME: ClassVar[str] = "Gap Polarity Engine (S3-Simplified)"
+    NAME: ClassVar[str] = "Gap Polarity Engine (not alpha_lab S3)"
 
     # The two free hyper-parameters — defaults/ranges copied verbatim from the
     # Phase 4 UI-knob table in validated_alpha.md Section 3b.
@@ -507,9 +539,9 @@ class GapPolarityStrategy(Strategy):
         ),
     }
 
-    # Fixed project rules (zero DoF) — documented constants, not tunable.
+    # Fixed project rules (zero DoF) — documented constants, not tunable. Costs are not a constant here: they come
+    # from shared/trading_costs.py at the position size (round_trip_cost), never a flat 0.15 % (M19).
     TIME_STOP_DAYS: ClassVar[int] = 5  # exit at close of T+5
-    FRICTION_ROUND_TRIP: ClassVar[float] = 0.0015  # 30 bps
 
     def __init__(self, **params: Any) -> None:
         super().__init__(**params)
@@ -577,7 +609,7 @@ class GapPolarityStrategy(Strategy):
 
     # -- diagnostics (NOT used by the signal — forward-looking, evaluation only) ---
 
-    def forward_diagnostics(self, data: pd.DataFrame) -> pd.DataFrame:
+    def forward_diagnostics(self, data: pd.DataFrame, position_inr: float = DEFAULT_POSITION_INR) -> pd.DataFrame:
         """Attach T+1 adjusted-entry and 5-day-time-stop forward returns for QA only.
 
         These columns are *strictly forward-looking* and must never be fed back into a
@@ -587,7 +619,8 @@ class GapPolarityStrategy(Strategy):
             entry_adj = open[T+1]  * (adjusted_close[T+1] / close[T+1])
             exit_adj  = adjusted_close[T+5]
             fwd5      = exit_adj / entry_adj - 1
-            net5      = fwd5 - FRICTION_ROUND_TRIP
+            cost      = round_trip_cost(position_inr)     # shared/trading_costs.py, ≈ 0.93 % at ₹1,00,000
+            net5      = fwd5 - cost
 
         Per-ticker shifts (-1 / -5) are vectorized via groupby; no loops.
         """
@@ -614,8 +647,10 @@ class GapPolarityStrategy(Strategy):
             fwd5 = df["exit_adj"].to_numpy() / df["entry_adj"].to_numpy() - 1.0
         fwd5 = np.where(np.isfinite(fwd5), fwd5, np.nan)
         df["fwd5"] = fwd5
-        df["net5"] = fwd5 - self.FRICTION_ROUND_TRIP
-        return df[["ticker", "date", "entry_adj", "exit_adj", "fwd5", "net5"]]
+        cost = round_trip_cost(position_inr)
+        df["cost"] = cost
+        df["net5"] = fwd5 - cost
+        return df[["ticker", "date", "entry_adj", "exit_adj", "fwd5", "cost", "net5"]]
 
 
 # --------------------------------------------------------------------------------------

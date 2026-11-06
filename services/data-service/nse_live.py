@@ -58,7 +58,7 @@ def parse_volume_gainers(payload: dict, n: int = 60) -> list[dict[str, Any]]:
             for r in ((payload or {}).get("data") or [])[:n] if r.get("symbol")]
 
 
-def parse_52w(payload: dict, n: int = 30) -> dict[str, Any]:
+def parse_52w(payload: dict, n: int = 500) -> dict[str, Any]:
     rows = [{"symbol": r.get("symbol"), "company": r.get("comapnyName") or r.get("companyName"), "ltp": _f(r.get("ltp")),
              "change_pct": _f(r.get("pChange")), "new_level": _f(r.get("new52WHL")), "prev_level": _f(r.get("prev52WHL")),
              "prev_date": r.get("prevHLDate")}

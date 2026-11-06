@@ -14,6 +14,8 @@ import { usePins } from '@/lib/pins'
 import { useWatchlist } from '@/context/AppContext'
 import { Chip, DataTable, ErrorBox, EventBadge, Input, Loading, PageHeader, Panel, Stat, T, TickerLink, type Column, fmtPct, fmtPx, fmtSigned, tone, sourceOf, nseStampIso } from '@/components/terminal'
 import { nseDelayedSource } from '@/components/liveModel'
+import { nseSession } from '@/components/desktop/session'
+import { preopenLabel, suspectYearHigh } from '@/components/marketPagesModel'
 
 type Key = 'FO' | 'NIFTY' | 'BANKNIFTY' | 'ALL'
 const KEYS: [Key, string][] = [['FO', 'F&O STOCKS'], ['NIFTY', 'NIFTY 50'], ['BANKNIFTY', 'BANK NIFTY'], ['ALL', 'ALL NSE']]
@@ -23,14 +25,14 @@ const pct = fmtPct
 const money = (v: number | null) => (v == null ? '—' : v >= 1e7 ? `₹${(v / 1e7).toFixed(1)} cr` : `₹${(v / 1e5).toFixed(1)} L`)
 const qty = (v: number | null) => (v == null ? '—' : Math.round(v).toLocaleString('en-IN'))
 
-function auctionPhase(now: Date): { live: boolean; label: string } {
-  const m = now.getHours() * 60 + now.getMinutes()
-  const wd = now.getDay() >= 1 && now.getDay() <= 5
-  if (!wd) return { live: false, label: 'market closed today · showing the last session' }
-  if (m < 9 * 60) return { live: false, label: 'auction opens 09:00 · showing the last session' }
-  if (m < 9 * 60 + 8) return { live: true, label: 'ORDER ENTRY · 09:00–09:08' }
-  if (m < 9 * 60 + 15) return { live: true, label: 'PRICE DISCOVERY DONE · trading at 09:15' }
-  return { live: false, label: 'regular session · this is the morning auction' }
+/**
+ * The auction phase in IST (whatever the machine's zone) and m013: the label names the book's own session, so after
+ * hours a newcomer never reads this morning's (or the last session's) book as tomorrow's.
+ */
+function auctionPhase(now: Date, bookStamp?: string | null): { live: boolean; label: string; lastSession: boolean } {
+  const s = nseSession(now.getTime())
+  const hhmm = Number(s.istTime.slice(0, 5).replace(':', ''))
+  return preopenLabel(s.istDate, hhmm, s.istWeekday >= 1 && s.istWeekday <= 5 && s.holiday == null, bookStamp)
 }
 
 function Imbalance({ v }: { v: number | null }) {
@@ -57,7 +59,7 @@ export function PreOpen() {
   const events = useCorpEvents()
   const { watchlist } = useWatchlist()
   const { pins } = usePins()
-  const phase = auctionPhase(now)
+  const phase = auctionPhase(now, data?.timestamp)
 
   const load = useCallback(() => {
     getPreOpen(key).then(r => { setData(r.data); setError(null) }).catch(e => setError(apiError(e, 'unavailable')))
@@ -81,7 +83,7 @@ export function PreOpen() {
   const median = useMemo(() => { const v = rows.map(r => r.change_pct!).sort((a, b) => a - b); return v.length ? v[Math.floor(v.length / 2)] : null }, [rows])
   // PLAN §0.5 + live program (reports/live_nse): the auction book's NSE timestamp. NSE's website is not a live feed: while
   // the 09:00–09:08 auction runs the chip reads DELAYED · NSE · <age of the book>, afterwards the book's date
-  const preSrc = auctionPhase(now).live && data?.timestamp
+  const preSrc = phase.live && data?.timestamp
     ? nseDelayedSource(data.timestamp, { marketOpen: true, now: Date.now(), source: 'NSE pre-open', hint: 'the auction book, re-read every 20 s' })
     : sourceOf(nseStampIso(data?.timestamp) ?? data?.fetched_at ?? null, { source: 'NSE pre-open' })
   const top = (list: PreOpenRow[], f: (r: PreOpenRow) => number, n = 10) => [...list].sort((a, b) => f(b) - f(a)).slice(0, n)
@@ -98,7 +100,10 @@ export function PreOpen() {
     { key: 'sell', label: 'Sell left', align: 'right', sort: r => r.sell_qty ?? 0, render: r => <span style={{ color: T.red }}>{qty(r.sell_qty)}</span> },
     { key: 'imb', label: 'Imbalance', sort: r => r.imbalance ?? 0, render: r => <Imbalance v={r.imbalance} /> },
     { key: 'yh', label: 'vs 52w high', align: 'right', sort: r => r.vs_year_high_pct ?? -999,
-      render: r => <span style={{ color: r.vs_year_high_pct != null && r.vs_year_high_pct >= 0 ? T.amber : T.muted }}>{r.vs_year_high_pct != null && r.vs_year_high_pct >= 0 ? 'NEW HIGH' : pct(r.vs_year_high_pct, 1)}</span> },
+      title: "IEP vs NSE's 52-week high, which is not adjusted for demergers or special dividends (⚑ = check the stock's corporate actions)",
+      render: r => <span style={{ color: r.vs_year_high_pct != null && r.vs_year_high_pct >= 0 ? T.amber : T.muted }}
+        title={suspectYearHigh(r.vs_year_high_pct) ? "a gap this deep is often a demerger or a capital reduction NSE's 52-week high does not adjust for (VEDL): check its Profile › actions" : undefined}>
+        {r.vs_year_high_pct != null && r.vs_year_high_pct >= 0 ? 'NEW HIGH' : pct(r.vs_year_high_pct, 1)}{suspectYearHigh(r.vs_year_high_pct) ? ' ⚑' : ''}</span> },
     { key: 'event', label: 'Next event', render: r => { const e = events.get(r.symbol)?.[0]; return e ? <EventBadge kind={e.kind} date={e.event_date} days={daysUntil(e.event_date)} typical={e.typical_move_pct} detail={e.detail} /> : <span style={{ color: T.dim }}>—</span> } },
   ]
   const mini = (title: string, list: PreOpenRow[], accent: string, show: (r: PreOpenRow) => ReactNode) => (
@@ -122,7 +127,7 @@ export function PreOpen() {
       <PageHeader code="PRE" title="Pre-Open Auction"
         subtitle={`NSE call auction: IEP, gap and the order book left after matching · ${data?.timestamp ? `book as of ${data.timestamp}` : 'loading'}`}
         right={<div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <span style={{ fontSize: 10, color: phase.live ? T.green : T.dim, marginRight: 8, letterSpacing: 0.5 }}>{phase.live ? '● ' : ''}{phase.label}</span>
+          <span data-pre-phase style={{ fontSize: 10, color: phase.live ? T.green : phase.lastSession ? T.amber : T.dim, marginRight: 8, letterSpacing: 0.5 }}>{phase.live ? '● ' : ''}{phase.label}</span>
           {KEYS.map(([k, l]) => <Chip key={k} color={T.amber} active={key === k} onClick={() => setKey(k)}>{l}</Chip>)}
         </div>} />
       {error && <ErrorBox error={error} />}
@@ -166,11 +171,12 @@ export function PreOpen() {
               </div>
             </Panel>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12, marginBottom: 12 }}>
+          {/* m014: the four leader panels at ≥ 340 px with short titles, so the DELAYED · NSE PRE-OPEN chip is never clipped ("09:0") */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 12, marginBottom: 12 }}>
             {mini('Gap up', top(liquid, r => r.change_pct!).filter(r => r.change_pct! > 0), T.green, r => <span style={{ color: T.green, fontWeight: 600 }}>{pct(r.change_pct)}</span>)}
             {mini('Gap down', top(liquid, r => -r.change_pct!).filter(r => r.change_pct! < 0), T.red, r => <span style={{ color: T.red, fontWeight: 600 }}>{pct(r.change_pct)}</span>)}
-            {mini('Buyers left over', top(liquid.filter(r => r.imbalance != null && (r.buy_qty ?? 0) + (r.sell_qty ?? 0) > 0), r => r.imbalance!).filter(r => r.imbalance! > 0), T.green, r => <Imbalance v={r.imbalance} />)}
-            {mini('Sellers left over', top(liquid.filter(r => r.imbalance != null && (r.buy_qty ?? 0) + (r.sell_qty ?? 0) > 0), r => -r.imbalance!).filter(r => r.imbalance! < 0), T.red, r => <Imbalance v={r.imbalance} />)}
+            {mini('Buyers left', top(liquid.filter(r => r.imbalance != null && (r.buy_qty ?? 0) + (r.sell_qty ?? 0) > 0), r => r.imbalance!).filter(r => r.imbalance! > 0), T.green, r => <Imbalance v={r.imbalance} />)}
+            {mini('Sellers left', top(liquid.filter(r => r.imbalance != null && (r.buy_qty ?? 0) + (r.sell_qty ?? 0) > 0), r => -r.imbalance!).filter(r => r.imbalance! < 0), T.red, r => <Imbalance v={r.imbalance} />)}
           </div>
           <Panel source={preSrc} title={`Full book · ${filtered.length.toLocaleString('en-IN')} stocks`} pad={0} accent={T.amber}
             subtitle="imbalance = (buy − sell) ÷ (buy + sell) of the orders left unmatched at the IEP · leaders above need ≥ ₹10 L matched"

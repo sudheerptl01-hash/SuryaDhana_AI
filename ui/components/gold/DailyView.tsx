@@ -20,7 +20,7 @@ import { getGoldBars, getGoldPositioningDaily, memoGet } from '@/lib/gold/api'
 import { UNIT_LABEL, comexCode, comexMonthLabel, convertUsdOz, dayLabel, fmtCount, fmtInUnit, fmtSignedPctSp, istClock, pctChange, unitDp } from '@/lib/gold/format'
 import { istDateISO } from '@/lib/format'
 import { KITCO_ALL_FROM, KITCO_SHORT_DAYS, KITCO_TIMEFRAMES, KITCO_UNITS, KITCO_UNIT_LABEL, KITCO_URL, dailyCloseIn, dailyFxPoints, dailyFxRows, decimate, dutyMultiplier, fxAsOf,
-         isRupee, kitcoConvert, kitcoDp, kitcoLegend, kitcoSeries, kitcoStats, kitcoUnitFromPage, mergeFx, timeframe, type DailyFx, type DutyMode, type FxPt, type KitcoTf, type KitcoUnit,
+         fmtKitco, fmtKitcoSigned, isRupee, kitcoConvert, kitcoDp, kitcoLegend, kitcoSeries, kitcoStats, kitcoUnitFromPage, mergeFx, timeframe, type DailyFx, type DutyMode, type FxPt, type KitcoTf, type KitcoUnit,
          type KPt } from '@/lib/gold/kitco'
 import { barMs, dailyOhlc, dayGroups, fmtHM, istDate, istMinutes, istToNy, legendCloses, prevSessionClose, resample5m, shiftDays,
          ukDstActive, usDstActive, type DayPt } from '@/lib/gold/sessions'
@@ -71,14 +71,15 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
     return prev.date === today.date ? groups : [prev, today]
   }, [groups, prevGroup])
   const sgePts = useMemo(() => (sge.data?.bars?.length ? dayGroups(sge.data.bars, usDst).slice(-1)[0]?.pts ?? null : null), [sge.data, usDst])
-  const daily = useMemo(() => dailyOhlc(dailyBars.data?.bars ?? []), [dailyBars.data])
+  // the store's partial flag rides along (per bar, or /bars.daily_closes): a pre-close bar is never labelled a final close (wave 1e)
+  const daily = useMemo(() => dailyOhlc(dailyBars.data?.bars ?? [], new Set((dailyBars.data?.daily_closes ?? []).filter(d => d.partial).map(d => d.date))), [dailyBars.data])
   const todayDate = groups[groups.length - 1]?.date ?? null
   // the dashed line is the PREVIOUS session's stored daily close, labelled with its date and source; the server's
   // settle_line is drawn only when it is a bulletin settlement (quality 'settlement'), never today's last trade
   const serverSettle = data?.settle_line && /settle/i.test(data.settle_line.quality ?? '') && !/last.?trade/i.test(data.settle_line.quality ?? '') ? data.settle_line : null
   const prevClose = useMemo(() => prevSessionClose(daily, todayDate), [daily, todayDate])
   const settle = serverSettle?.value ?? prevClose?.c ?? null
-  const settleLabel = serverSettle ? serverSettle.label : prevClose ? `${dayLabel(prevClose.date)} close (Yahoo daily, not settlement)` : ''
+  const settleLabel = serverSettle ? serverSettle.label : prevClose ? `${dayLabel(prevClose.date)} ${prevClose.partial ? 'close (Yahoo daily, partial: fetched before the Globex close)' : 'close (Yahoo daily, not settlement)'}` : ''
   const live = data?.last ? { price: data.last.price, as_of: data.last.as_of } : null
   const tape = useMemo(() => resample5m(data?.bars ?? []).slice(-12).reverse(), [data])
 
@@ -183,7 +184,7 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
         subtitle={<>{tf === '24h' ? `${res} line · Globex day` : tfDef.source === '1m' ? '1-minute bars, last 3 days' : 'stored daily closes'} · {comexCode(BARS_SYMBOL)} (continuous front; the matched month is {comexMonthLabel(symbol)}){live ? ` · last trade as of ${istClock(live.as_of)}` : ''}{rupee ? (tfDef.source === '1d' ? ' · ₹ at the INR=X close of each date' : ' · ₹ at each minute\'s USD/INR; closes at their date\'s INR=X close') : ''}</>}
         freshness={tfDef.source === '1d' ? (dailyK.data?.freshness ?? null) : data ? (data.freshness ?? { state: live ? 'delayed' : 'stale', source: 'gold_bars_intraday', as_of: live?.as_of ?? null }) : null}
         catalogRow={catalog.COMEX_GC_FRONT ?? null}
-        copyB={<>Kitco&apos;s chart, from what this terminal stores: pick a window and a unit. On 24 h the dotted line is yesterday on the same clock, the dashed line the previous session&apos;s close (a Yahoo daily close, not an exchange settlement — see <Term t="settlement by session" />) and the bands show which centre was trading. Rupee prices use the dollar rate of each moment; duty-paid adds the dated import duty.</>}
+        copyB={<>Kitco&apos;s chart, from what this terminal stores: pick a window and a unit. On 24 h the dotted line is yesterday on the same clock, the dashed line the previous session&apos;s close (a Yahoo daily close, not an exchange settlement — see <Term t="settlement by session" />) and the bands show which centre was trading. Rupee prices: each minute at that minute&apos;s dollar rate, each daily close at that day&apos;s closing rate; duty-paid adds the dated import duty. Dollar prices use Western grouping (132,339), rupees Indian (₹1,32,339).</>}
         copyP="GC=F (continuous front future, rolls before first notice) from gold_bars_intraday (1-minute) and gold_daily_bars (daily, Yahoo, not settlement); ₹ = $/oz × USD/INR × 10 ÷ 31.1034768 — a daily close at the INR=X close of its own date (so a date's close is the same rupee number on every window), a 1-minute point at the latest stored 1-minute INR=X at or before it; duty-paid × (1 + duty) only from the duty's effective date (no duty history is stored); USD/kg = $/oz × 1000 ÷ 31.1034768. High/low/change are of the plotted series; change vs the previous stored close on 24 h and 3 days, vs the window's first close otherwise. Axis on 24 h = the Globex day (18:00 ET → 17:00 ET), bands DST-aware (lib/gold/sessions.ts)."
         right={<>
           <a href={KITCO_URL} target="_blank" rel="noreferrer" data-gold-kitco-link title="Kitco's own gold chart — a link only: the terminal never fetches kitco.com (terms; PLAN 0.1 #6)" style={{ textDecoration: 'none' }}><Chip color={T.cyan}>Kitco ↗</Chip></a>
@@ -210,9 +211,9 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
         {/* the window's numbers: high · low · change · previous close */}
         <div data-gold-kitco-stats style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 16px', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginBottom: 4 }}>
           {kstats ? <>
-            <span>{tfDef.label} high <b style={{ color: T.text }}>{fmtFixed(kstats.hi, kdp)}</b> {whenLabel(kstats.hiMs)}</span>
-            <span>low <b style={{ color: T.text }}>{fmtFixed(kstats.lo, kdp)}</b> {whenLabel(kstats.loMs)}</span>
-            <span data-gold-kitco-change>change <b style={{ color: kstats.chg > 0 ? T.green : kstats.chg < 0 ? T.red : T.text }}>{fmtSigned(kstats.chg, kdp)} ({fmtSignedPctSp(kstats.chgPct, 2)})</b>
+            <span>{tfDef.label} high <b style={{ color: T.text }}>{fmtKitco(kstats.hi, kdp, kUnit)}</b> {whenLabel(kstats.hiMs)}</span>
+            <span>low <b style={{ color: T.text }}>{fmtKitco(kstats.lo, kdp, kUnit)}</b> {whenLabel(kstats.loMs)}</span>
+            <span data-gold-kitco-change>change <b style={{ color: kstats.chg > 0 ? T.green : kstats.chg < 0 ? T.red : T.text }}>{fmtKitcoSigned(kstats.chg, kdp, kUnit)} ({fmtSignedPctSp(kstats.chgPct, 2)})</b>
               {' '}{kstats.baseKind === 'prev_close' ? `vs the ${prevClose ? dayLabel(prevClose.date) : 'previous'} COMEX close (Yahoo daily, the dashed line)` : `vs the window's first close${kser.firstMs ? ` (${dayLabel(istDate(kser.firstMs))} ${istDate(kser.firstMs).slice(0, 4)})` : ''}`}</span>
             {kstats.baseKind === 'prev_close' && overview?.strip?.comex_live_chg_pct != null && <span data-gold-kitco-strip-ref style={{ color: T.dim }} title="two references, two instruments: this panel is GC1 (continuous front) vs its previous daily close; the header strip is the matched month vs the 30-min reference before the last MCX close">
               the header strip&apos;s COMEX Δ is {overview.strip.comex_ref_note ?? 'vs the 30-min reference before the last MCX close'} (matched month)</span>}
@@ -225,7 +226,7 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
             <IntradayChart groups={groups24} usDst={usDst} ukDst={ukDst} conv={kconv} unitLabel={kLabel} dp={kdp} settle={settle} settleValue={serverSettle ? undefined : prevCloseK} settleLabel={settleLabel}
               showPrev={showPrev} showBands={showBands} mode="24h" live={live} sge={sgePts} />
             <div data-gold-legend style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 14px', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginTop: 4 }}>
-              {kitcoLegend(groups, daily, live, closeIn, kdp, serverSettle ? null : prevClose?.date ?? null).map(l => <span key={l}>{l}</span>)}
+              {kitcoLegend(groups, daily, live, closeIn, kdp, serverSettle ? null : prevClose?.date ?? null, kUnit).map(l => <span key={l}>{l}</span>)}
               {showBands && <span style={{ color: T.dim }}>bands: Sydney/Tokyo · Shanghai (SGE) · London · New York · hatched = CME maintenance 17:00–18:00 ET</span>}
             </div>
           </>}
@@ -283,7 +284,7 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
           <div>
             <div style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1, color: T.muted, marginBottom: 4 }}>MCX {quadMcx.data?.family ?? sel.family} · OI (lots){quadMcx.data?.since ? ` · since ${quadMcx.data.since}` : ''}</div>
             <Pending s={quadMcx} label="MCX OI">
-              <OiQuadrantTape tape={quadMcx.data?.quadrant_tape ?? []} days={20} tips={k => tooltips[k]} />
+              <OiQuadrantTape tape={quadMcx.data?.quadrant_tape ?? []} days={20} tips={k => tooltips[k]} oiScope={`all ${sel.family} expiries`} />
             </Pending>
           </div>
         </div>

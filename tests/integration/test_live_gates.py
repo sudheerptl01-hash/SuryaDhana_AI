@@ -923,8 +923,14 @@ class TestRound2NseRowsL2UI:
         assert nse_live_sites(sb) == 0
         start = sb.index("axios.post<Analysis>('/api/options/strategy/analyze'")
         analyze = sb[start:sb.index("}, { timeout: 15000 })", start)]
-        assert "spotNow" not in analyze and "ulRow" not in analyze and "days_to_expiry: Math.max(0, chain.days_to_expiry) + 0.5" in analyze
+        assert "spotNow" not in analyze and "ulRow" not in analyze
+        # the time to expiry comes from the seeded chain (its days, or the chain's own t_days since W2-BOOK's 6 Nov M04
+        # cal365-15:30 convention): never a live quote and never the wall clock in the browser. The convention itself is
+        # W2-BOOK's to pin (6 Nov: this gate pinned the old "+ 0.5" and broke on M04's legitimate change).
+        dte = re.search(r"days_to_expiry:([^\n]*)", analyze)
+        assert dte and re.search(r"\bchain\b", dte.group(1)) and not re.search(r"Date\.now|new Date|spotNow|ulRow", dte.group(1))
         assert "spotNow" in "forward: spotNow ?? forward,"                                                          # control
+        assert re.search(r"Date\.now|new Date", "days_to_expiry: (Date.now() - exp) / 864e5")                       # control
 
 
 class TestNseWebsiteNeverLiveS4:
@@ -992,12 +998,52 @@ def _data_service_path() -> None:
             sys.path.insert(0, p)
 
 
+CAP_ENV = "LIVE_TICKS_MAX_SYMBOLS"     # read ONCE, at live_ticks' import (MAX_SYMBOLS, REQUESTED_CAP)
+CAP_CONSTANTS = ("MAX_SYMBOLS", "REQUESTED_CAP")
+
+
+def import_sandbox_copy(mod: Any, env: dict[str, str | None]) -> Any:
+    """A FRESH import of `mod`'s file under another module name, with `env` applied (None = unset) during the import
+    only. The shared module is left alone: an in-place importlib.reload would drop what its importers registered on it
+    (data-service main's live_ticks.set_pins_source: tests/unit/test_live_quotes.py checks it)."""
+    import importlib.util
+
+    name = f"_{mod.__name__}_sandbox"
+    spec = importlib.util.spec_from_file_location(name, mod.__file__)
+    assert spec is not None and spec.loader is not None
+    copy = importlib.util.module_from_spec(spec)
+    with pytest.MonkeyPatch.context() as mp:
+        for k, v in env.items():
+            if v is None:
+                mp.delenv(k, raising=False)
+            else:
+                mp.setenv(k, v)
+        mp.setitem(sys.modules, name, copy)
+        spec.loader.exec_module(copy)
+    return copy
+
+
 @pytest.fixture(scope="module")
 def lt() -> Any:
+    """live_ticks with the CODE's cap, whatever ran before this module (the 6 Nov flaky-test fix, O-OPS).
+
+    MAX_SYMBOLS / REQUESTED_CAP are module constants computed from LIVE_TICKS_MAX_SYMBOLS at import. Any test module that
+    imports data-service ``main`` at collection (tests/unit/test_index_valuation_history.py did, before every test ran)
+    exports the project ``.env`` into os.environ (shared.config.load_env_into_process) and imports live_ticks under it:
+    the owner's .env sets the cap to 500, so in the full core run the cached module carried 500 and
+    test_cap_is_the_contract_range failed, while the file alone passed. This fixture unsets the variable and gives the
+    shared module the constants a fresh import computes without it (a sandbox copy runs the module's own import-time
+    code), both through monkeypatch: at teardown the variable and the constants are back to what the other test modules
+    saw, so no state leaks in either direction."""
     _data_service_path()
     import live_ticks
 
-    return live_ticks
+    fresh = import_sandbox_copy(live_ticks, {CAP_ENV: None})
+    with pytest.MonkeyPatch.context() as mp:
+        mp.delenv(CAP_ENV, raising=False)
+        for k in CAP_CONSTANTS:
+            mp.setattr(live_ticks, k, getattr(fresh, k))
+        yield live_ticks
 
 
 @pytest.fixture(scope="module")
@@ -1147,7 +1193,16 @@ class TestTickEngineBTicks:
         assert {"NIFTY 50", "NIFTY BANK", "INDIA VIX"} <= set(idx)
 
     def test_cap_is_the_contract_range(self, lt: Any):
+        assert CAP_ENV not in os.environ, "the lt fixture must run with the cap variable unset"
         assert CAP_MIN <= lt.MAX_SYMBOLS <= CAP_MAX, lt.MAX_SYMBOLS
+        assert lt.REQUESTED_CAP == 2 * lt.MAX_SYMBOLS
+
+    def test_negative_control_an_exported_env_cap_is_what_broke_the_contract_range(self, lt: Any):
+        """The leak, reproduced on purpose: the same module imported with the .env's cap exported (500) is outside the
+        contract range, and so would be the shared module without this file's lt fixture."""
+        leaked = import_sandbox_copy(lt, {CAP_ENV: "500"})
+        assert leaked.MAX_SYMBOLS == 500 and not (CAP_MIN <= leaked.MAX_SYMBOLS <= CAP_MAX), leaked.MAX_SYMBOLS
+        assert CAP_ENV not in os.environ and CAP_MIN <= lt.MAX_SYMBOLS <= CAP_MAX     # the fixture's module is untouched
 
     def test_pins_first_never_evicted_ttl_drops_requests_and_overflow_drops_the_oldest(self, lt: Any, provider_mod: Any):
         clock = [10_000.0]

@@ -33,7 +33,7 @@ export const contextTone = T.muted
 // wave 1b (`india.freshness` / `shanghai.freshness`, `wgc_india_holdings_t`, `drivers[].report_date`, `family`), so the
 // views read types.ts directly; nothing here widens them.
 
-export type AttributionSource = 'WGC' | 'SPDR' | 'IBJA' | 'SGE' | 'LBMA' | 'IMF' | 'CFTC' | 'CME' | 'FRED' | 'RBI' | 'Atlanta Fed'
+export type AttributionSource = 'WGC' | 'SPDR' | 'IBJA' | 'SGE' | 'LBMA' | 'IMF' | 'CFTC' | 'CME' | 'FRED' | 'RBI' | 'Atlanta Fed' | 'US Treasury' | 'Yahoo'
 const ATTRIB: Record<AttributionSource, string> = {
   WGC: 'World Gold Council (Goldhub) — displayed with attribution on this private terminal; not re-served or exported (O-1)',
   SPDR: 'SPDR® Gold Trust (spdrgoldshares.com) — displayed with attribution on this private terminal; not re-served or exported (O-1)',
@@ -46,6 +46,8 @@ const ATTRIB: Record<AttributionSource, string> = {
   FRED: 'FRED, Federal Reserve Bank of St. Louis — free with attribution',
   RBI: 'Reserve Bank of India Weekly Statistical Supplement — public',
   'Atlanta Fed': 'Federal Reserve Bank of Atlanta Market Probability Tracker — licence to be read by eye (O-10)',
+  'US Treasury': 'U.S. Department of the Treasury, daily par yield / real yield curve rates (home.treasury.gov) — US public domain',
+  Yahoo: 'Yahoo Finance chart data through the app\'s one cached fetcher (DX-Y.NYB, INR=X, ^GVZ, BZ=F …) — delayed, last trade',
 }
 
 /** The visible attribution line (one per source) under a panel that shows a publisher's numbers. */

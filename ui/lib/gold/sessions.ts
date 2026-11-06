@@ -143,7 +143,7 @@ export function axisTicksIst(usDst: boolean, stepMin = 180): { pos: number; ist:
 // ── bars: pure helpers shared by DAILY / WEEKLY / MONTHLY (unit-tested under node) ───────────────
 
 /** The bar shape `/api/gold/bars` sends (ts = ISO instant, 'YYYY-MM-DD' for daily bars, or epoch s/ms). */
-export interface BarLike { ts: string | number; o: number | null; h: number | null; l: number | null; c: number | null; v?: number | null }
+export interface BarLike { ts: string | number; o: number | null; h: number | null; l: number | null; c: number | null; v?: number | null; partial?: boolean | null }
 
 /** An ISO datetime with no zone: 'YYYY-MM-DDTHH:MM[:SS[.fff]]' (also with a space). The store writes these in UTC. */
 const NAIVE_DATETIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/
@@ -232,10 +232,10 @@ export function legendCloses(groups: readonly { date: string; pts: readonly { c:
 }
 
 /** The previous finished session's stored daily close (the dashed reference line of d.24h), or null. */
-export function prevSessionClose(daily: readonly Ohlc[], todayDate: string | null | undefined): { date: string; c: number } | null {
+export function prevSessionClose(daily: readonly Ohlc[], todayDate: string | null | undefined): { date: string; c: number; partial?: boolean } | null {
   const before = todayDate ? daily.filter(k => k.date < todayDate) : daily.slice(0, -1)
   const k = before[before.length - 1]
-  return k ? { date: k.date, c: k.c } : null
+  return k ? { date: k.date, c: k.c, ...(k.partial ? { partial: true } : {}) } : null
 }
 
 /** 1-minute → 5-minute buckets (open = first, close = last, hi/lo, volume summed); bucket ts = epoch ms. */
@@ -259,16 +259,39 @@ export function resample5m(bars: readonly BarLike[]): BarLike[] {
 }
 
 /** A daily / weekly / monthly candle keyed by its (period-end) trade date. */
-export interface Ohlc { date: string; o: number; h: number; l: number; c: number; v: number }
+export interface Ohlc {
+  date: string; o: number; h: number; l: number; c: number; v: number
+  /** the store's own flag: fetched before the Globex close (a partial day, not a settlement) */
+  partial?: boolean
+  /** wave 1e: the served open lies outside [low, high] — impossible; a partial Yahoo daily bar carried the previous session's
+   *  open (Thu 05 Nov: open 3,940.8 under a low of 4,067.0). `o` is then set to the close (no body is drawn from it) and the
+   *  table prints '—' for the open; `rawOpen` keeps what was served */
+  openOutside?: boolean
+  rawOpen?: number
+}
 
-/** Daily bars → clean candles (close required; open/high/low default to the close), sorted, one per date. */
-export function dailyOhlc(bars: readonly BarLike[]): Ohlc[] {
+/** True when an open is impossible for its bar: outside [low, high] by more than a rounding tick. */
+export function openOutsideRange(o: number | null | undefined, h: number | null | undefined, l: number | null | undefined, tol = 1e-6): boolean {
+  return o != null && h != null && l != null && Number.isFinite(o) && Number.isFinite(h) && Number.isFinite(l) && (o > h + tol || o < l - tol)
+}
+
+/**
+ * Daily bars → clean candles (close required; open/high/low default to the close), sorted, one per date. Wave 1e (WEEKLY
+ * minor): an open outside [low, high] is never drawn or printed as data (`openOutside`, `o` = the close); the store's
+ * `partial` flag is carried (or `partialDates`, the dates `/bars.daily_closes` marks partial).
+ */
+export function dailyOhlc(bars: readonly BarLike[], partialDates?: ReadonlySet<string> | null): Ohlc[] {
   const map = new Map<string, Ohlc>()
   for (const b of bars) {
     if (b.c == null || !Number.isFinite(b.c)) continue
     const date = barDate(b.ts)
     if (!date) continue
-    map.set(date, { date, o: b.o ?? b.c, h: b.h ?? b.c, l: b.l ?? b.c, c: b.c, v: b.v ?? 0 })
+    const h = b.h ?? b.c, l = b.l ?? b.c, o = b.o ?? b.c
+    const bad = openOutsideRange(o, h, l)
+    const k: Ohlc = { date, o: bad ? b.c : o, h, l, c: b.c, v: b.v ?? 0 }
+    if (bad) { k.openOutside = true; k.rawOpen = o }
+    if (b.partial || partialDates?.has(date)) k.partial = true
+    map.set(date, k)
   }
   return [...map.values()].sort((a, b) => a.date.localeCompare(b.date))
 }

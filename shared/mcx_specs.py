@@ -18,7 +18,8 @@ Holiday calendar 2026 — three closure kinds (MCX holidays ≠ NSE holidays):
     - 5paisa MCX holidays (5paisa.com/stock-market-holidays/mcx-holidays)
   The three agree on every row except 1 Jan 2026, where ICICI Direct + 5paisa say
   "morning open, evening closed" and Kotak says full close; the broker this desk uses
-  (ICICI) wins. Muhurat trading: Sunday 8 Nov 2026, evening timings by MCX circular.
+  (ICICI) wins. Muhurat trading: Sunday 8 Nov 2026, 14:20–15:30 IST by MCX circular MCX/TRD/590/2026 — a dated
+  special SESSION (SPECIAL_SESSIONS_2026): trading_window and every session rule built on it count it.
 
 Contract specs (GOLD / GOLDM / GOLDPETAL / GOLDGUINEA) and expiry rules:
   * lot, quotation, tick: Rupeezy specs sheet + OneTradeJournal MCX basics (both list
@@ -88,11 +89,30 @@ MCX_HOLIDAYS_2026: dict[date, tuple[str, Closure]] = {
     date(2026, 12, 25): ("Christmas", "full"),
 }
 CALENDAR_YEARS = (2026,)             # outside these years only the weekend rule applies
+# Dated special sessions (a TRADING session on a day the weekend rule or the holiday table would close): MCX trades the
+# `opens`–`closes` window only; it is a session for every session rule — trading_window, the settlement chain
+# (gold_preopen.previous_session / band_session / latest_completed_session, data-service previous_mcx_session /
+# mcx_close.latest_completed_session) and the VWAP30 window (its last 30 minutes, 15:00–15:30 for Muhurat 2026).
+# Muhurat 2026: MCX circular MCX/TRD/590/2026 (19 Oct 2026), "special session 14:05–14:19, trading 14:20–15:30" as
+# republished by TeamLease RegTech (docs/GOLD_DATA_DICTIONARY.md F6; the 06 Nov automated brief cites the same circular and
+# times). mcxindia.com itself is never fetched (PLAN 0.1 #6); the owner confirms against the circular (O-11).
+# Keep the literal `"date": "YYYY-MM-DD"` keys: ui/components/desktop/__tests__/desktop.check.ts reads them for its drift check.
 SPECIAL_SESSIONS_2026 = [
     {"date": "2026-11-08", "name": "Muhurat trading (Diwali Laxmi Pujan)",
+     "opens": "14:20", "closes": "15:30", "pre_open": "14:05–14:19", "circular": "MCX/TRD/590/2026",
      "note": ("Sunday special session 14:05–14:19 (special), 14:20–15:30 trading "
               "(MCX/TRD/590/2026 per PLAN §d; owner to confirm the circular)")},
 ]
+
+
+def _hhmm(text: str) -> time:
+    hh, mm = str(text).split(":")
+    return time(int(hh), int(mm))
+
+
+SPECIAL_SESSION_WINDOWS: dict[date, tuple[time, time]] = {
+    date.fromisoformat(s["date"]): (_hhmm(s["opens"]), _hhmm(s["closes"])) for s in SPECIAL_SESSIONS_2026
+}
 # Customs duty on gold, dated (SOURCES.md F9; PLAN §d): the ladder prints the rate and its notification on every render.
 DUTY_HISTORY: tuple[tuple[str, float], ...] = (("2024-07-24", 6.0), ("2026-05-13", 15.0))
 DUTY_NOTIFICATION = "Notification 16/2026-Customs (BCD 10 % + AIDC 5 %)"
@@ -113,8 +133,22 @@ def evening_close(day: date) -> time:
     return time(23, 30) if noon_ny.dst() else time(23, 55)
 
 
+def special_session_on(day: date) -> dict[str, Any] | None:
+    """The dated special session on `day` (SPECIAL_SESSIONS_2026 row), or None."""
+    return next((dict(s) for s in SPECIAL_SESSIONS_2026 if s["date"] == day.isoformat()), None)
+
+
+def is_session_day(day: date) -> bool:
+    """True when MCX trades on `day` at all: a weekday that is not a full closure, or a dated special session."""
+    return trading_window(day) is not None
+
+
 def trading_window(day: date) -> tuple[datetime, datetime] | None:
-    """The continuous trading stretch on `day` in IST, or None when MCX is shut."""
+    """The continuous trading stretch on `day` in IST, or None when MCX is shut. A dated special session (Muhurat, Sun
+    8 Nov 2026: 14:20–15:30) is a trading window like any other, whatever the weekday."""
+    special = SPECIAL_SESSION_WINDOWS.get(day)
+    if special is not None:
+        return datetime.combine(day, special[0], tzinfo=IST), datetime.combine(day, special[1], tzinfo=IST)
     if day.weekday() >= 5:
         return None
     hol = holiday_on(day)
@@ -158,6 +192,8 @@ def session_state(now: datetime) -> dict[str, Any]:
         "segment": seg,
         "weekend": today.weekday() >= 5,
         "holiday": {"name": hol[0], "closure": hol[1]} if hol else None,
+        # a dated special session today (Muhurat): its window is `opens_at`/`closes_at` while it is still ahead or open
+        "special": special_session_on(today),
         "opens_at": start.isoformat(timespec="seconds"),
         "closes_at": end.isoformat(timespec="seconds"),
         "seconds_to_close": int((end - now).total_seconds()) if is_open else None,

@@ -19,6 +19,20 @@ POST /api/options/margin (PLAN 1.3 "Real SPAN margin on OSTR"): the fallback cha
 The ticket shows `span_margin_required`, `non_span_margin_required` and the source chip BREEZE / NSE SPAN FILE / HEURISTIC.
 Badge `arithmetic`; `paper_only: true`; nothing here routes an order.
 
+OSTR v2 (Terminal v2 PLAN 2.2 / review M39, W2-BOOK, 6 Nov 2026) — still PRICES ONLY:
+  * multi-expiry books (calendars, diagonals): each leg may carry its own `days`, `expiry` and `forward` (that expiry's
+    chain forward). A spot scenario x moves every leg's forward by the same factor (F_leg · x / F_ref: the basis held
+    as a ratio — stated); the "at expiry" curve of a mixed book is the NEAREST expiry, later legs valued by Black-76;
+  * `scenario_days` (T+n) and `iv_shift` (vol points, parallel) → a third payoff curve `payoff[].scenario`;
+  * `grid=true` → the 2-D P&L grid: spot −5 … +5 % × IV −10 … +10 pts, at a few dates up to the nearest expiry;
+  * `pop` — probability of profit at the nearest expiry from the risk-neutral LOGNORMAL at one IV (no skew), badge
+    `heuristic`: it restates the market's pricing — describes, does not predict;
+  * costs: the itemised round trip with display items that ADD UP (stamp + SEBI + IPFT listed), the exercise STT if
+    held to expiry (0.125 % of intrinsic on long ITM legs at the current forward), a bid–ask input (the chain served
+    carries no bid / ask), shares (`kind: "EQ"`, a covered call on holdings) costed by shared/trading_costs.py;
+  * GET / POST / DELETE /strategy/saved — save and name a structure (fo_book_store.fo_saved_structures; not a booking).
+Booking legs into the PAPER F&O book is routers/fo_book.py; nothing here routes an order.
+
 Event-loop purity: the analyzer is sync `def` (threadpool, microseconds of arithmetic); the margin route is async and
 runs the Breeze call and the file parse on worker threads.
 """
@@ -26,6 +40,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import math
 import os
 import re
 import sys
@@ -67,15 +82,33 @@ _SPAN_PARSE_LOCK = threading.Lock()
 _SPAN_CACHE: dict[tuple[str, str], Any] = {}        # (file path, pfCode) → SpanProduct (one parse per product per file)
 
 
+# ── OSTR v2 constants ─────────────────────────────────────────────────────────────────────────────────────────────
+IV_FLOOR_PCT = 1.0                    # an IV shift never takes a leg's vol below 1 %
+BASIS_SLOPE_TOL = 0.05                # a tail slope under 5 % of a leg's units is basis drift, not an open-ended position
+EXERCISE_STT_PCT = 0.125              # STT on the intrinsic (settlement) value of a long ITM option exercised at expiry
+GRID_SPOT_PCTS = (-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0)
+GRID_IV_SHIFTS = (-10.0, -7.5, -5.0, -2.5, 0.0, 2.5, 5.0, 7.5, 10.0)
+TIME_CONVENTION = ("each leg is valued at the days to its own expiry as sent: OSTR sends the chain's t_days (calendar time to 15:30 IST on "
+                   "expiry ÷ 365, whole days at end of day, fractional intraday, no half-day: the app-wide rule, review M04); theta per calendar day")
+POP_NOTE = ("Probability that the book is in profit at the nearest expiry under a risk-neutral lognormal at one IV (no skew, "
+            "no fat tails). A fairly priced structure has an expected P&L of about minus its costs whatever this number is: a "
+            "high probability pairs with a large loss when it fails. It restates the market's pricing: it describes, does not predict.")
+SPOT_BASIS_NOTE = ("a spot move of x % moves every leg's reference (each expiry's forward, the future, the shares) by x %: "
+                   "the basis is held as a ratio")
+
+
 class LegIn(BaseModel):
     side: Literal["buy", "sell"]
-    kind: Literal["CE", "PE", "FUT"]
+    kind: Literal["CE", "PE", "FUT", "EQ"] = Field(..., description="EQ = shares (a covered call on holdings): payoff S − entry")
     strike: float | None = Field(None, gt=0)
-    premium: float = Field(..., ge=0, description="option premium / futures entry price, ₹ per unit")
+    premium: float = Field(..., ge=0, description="option premium / futures entry price / share price, ₹ per unit")
     lots: int = Field(1, ge=1, le=10_000)
     lot_size: int = Field(..., ge=1, le=100_000, description="from the chain payload — never hardcoded")
     iv: float | None = Field(None, gt=0, le=500, description="percent, e.g. 12.5")
     days: float | None = Field(None, ge=0, le=2000, description="this leg's days to expiry")
+    forward: float | None = Field(None, gt=0, description="this leg's reference level: its expiry's chain forward (options), "
+                                                          "the future's price (FUT), spot (EQ); default = the book's forward")
+    expiry: date | None = Field(None, description="this leg's expiry (labels; the margin route needs it)")
 
 
 class AnalyzeIn(BaseModel):
@@ -88,53 +121,304 @@ class AnalyzeIn(BaseModel):
     fut_margin_pct: float | None = Field(None, gt=0, le=100, description="margin heuristic override")
     is_index: bool = True
     brokerage_per_order: float = Field(20.0, ge=0, le=500)
+    scenario_days: float = Field(0.0, ge=0, le=2000, description="T+n: days from now for the scenario curve")
+    iv_shift: float = Field(0.0, ge=-50, le=50, description="parallel IV shift in vol points for the scenario curve")
+    grid: bool = Field(False, description="add the 2-D P&L grid (spot ±5 % × IV ±10 pts × dates)")
+    pop_iv: float | None = Field(None, gt=0, le=500, description="IV % for the probability of profit (default: default_iv)")
+    slippage_per_unit: float = Field(0.0, ge=0, le=10_000, description="your bid–ask assumption, ₹ per unit per side")
+
+
+# ── OSTR v2 valuation (pure; Black-76 from options_math) ──────────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class VLeg:
+    """One leg for scenario valuation: the options_math leg (EQ carried as FUT: payoff S − entry, delta ±qty), its
+    reference level as a ratio of the book's forward, its days to expiry and its IV (percent)."""
+    leg: om.Leg
+    ratio: float
+    days: float
+    iv: float
+    equity: bool = False
+
+
+def vlegs_from(legs: list[LegIn], ref_forward: float, default_days: float, default_iv: float) -> list[VLeg]:
+    out = []
+    for leg_in in legs:
+        kind = "FUT" if leg_in.kind == "EQ" else leg_in.kind
+        leg = om.Leg(side=leg_in.side, kind=kind, strike=leg_in.strike if kind != "FUT" else None, premium=leg_in.premium,
+                     lots=leg_in.lots, lot_size=leg_in.lot_size, iv=leg_in.iv, days=leg_in.days)
+        ratio = (leg_in.forward / ref_forward) if leg_in.forward and ref_forward > 0 else 1.0
+        days = leg_in.days if leg_in.days is not None else default_days
+        iv = leg_in.iv if leg_in.iv is not None and leg_in.iv > 0 else default_iv
+        out.append(VLeg(leg, ratio, float(days), float(iv), equity=leg_in.kind == "EQ"))
+    return out
+
+
+def _intrinsic(kind: str, level: float, k: float) -> float:
+    return max(level - k, 0.0) if kind == "CE" else max(k - level, 0.0)
+
+
+def leg_pnl(v: VLeg, x: float, days_fwd: float = 0.0, iv_shift: float = 0.0, r: float = om.R_DEFAULT) -> float:
+    """₹ P&L of one leg if the book's reference moves to ``x``, ``days_fwd`` days from now, IV shifted ``iv_shift`` pts."""
+    lg = v.leg
+    level = x * v.ratio
+    if lg.kind == "FUT":
+        return lg.sign * (level - lg.premium) * lg.qty
+    residual = max(v.days - days_fwd, 0.0)
+    if residual <= 1e-9:
+        unit = _intrinsic(lg.kind, level, lg.k)
+    else:
+        sigma = max(v.iv + iv_shift, IV_FLOOR_PCT) / 100.0
+        unit = om.black76(lg.kind, level, lg.k, residual / om.DAYS_IN_YEAR, sigma, r).price  # type: ignore[arg-type]
+    return lg.sign * (unit - lg.premium) * lg.qty
+
+
+def book_pnl(vlegs: list[VLeg], x: float, days_fwd: float = 0.0, iv_shift: float = 0.0, r: float = om.R_DEFAULT) -> float:
+    return sum(leg_pnl(v, x, days_fwd, iv_shift, r) for v in vlegs)
+
+
+def nearest_days(vlegs: list[VLeg], default_days: float) -> float:
+    opts = [v.days for v in vlegs if v.leg.kind != "FUT"]
+    return min(opts) if opts else float(default_days)
+
+
+def is_uniform(vlegs: list[VLeg]) -> bool:
+    return all(abs(v.ratio - 1.0) < 1e-12 for v in vlegs)
+
+
+def tail_slope(vlegs: list[VLeg]) -> float:
+    """d(P&L)/dx as x → ∞ at the nearest expiry: calls (expired or not) and futures / shares count, puts vanish."""
+    return sum(v.leg.sign * v.leg.qty * v.ratio for v in vlegs if v.leg.kind in ("CE", "FUT"))
+
+
+def find_roots(f: Any, lo: float, hi: float, n: int = 600) -> list[float]:
+    """Every sign change of ``f`` on [lo, hi], each bisected to 1e-12 relative (a root-find, never a sampled guess)."""
+    xs = [lo + (hi - lo) * i / n for i in range(n + 1)]
+    vals = [f(x) for x in xs]
+    roots: list[float] = []
+    for i in range(n):
+        a, b, fa, fb = xs[i], xs[i + 1], vals[i], vals[i + 1]
+        if fa == 0.0:
+            roots.append(a)
+            continue
+        if fa * fb < 0:
+            x0, x1, f0 = a, b, fa
+            for _ in range(200):
+                mid = (x0 + x1) / 2
+                fm = f(mid)
+                if f0 * fm <= 0:
+                    x1 = mid
+                else:
+                    x0, f0 = mid, fm
+                if x1 - x0 <= 1e-12 * max(1.0, x1):
+                    break
+            roots.append((x0 + x1) / 2)
+    out: list[float] = []
+    for rt in sorted(roots):
+        if not out or abs(rt - out[-1]) > 1e-6 * max(1.0, rt):
+            out.append(rt)
+    return out
+
+
+def leg_greeks_v(v: VLeg, x: float, r: float = om.R_DEFAULT) -> dict[str, float | None]:
+    """Signed ₹ Greeks of one leg with respect to the BOOK's reference x (delta × ratio, gamma × ratio²)."""
+    lg = v.leg
+    q = lg.sign * lg.qty
+    if lg.kind == "FUT":
+        return {"delta": float(q * v.ratio), "gamma": 0.0, "theta_day": 0.0, "vega": 0.0, "rho": 0.0, "price": None}
+    g = om.black76(lg.kind, x * v.ratio, lg.k, max(v.days, 0.0) / om.DAYS_IN_YEAR, v.iv / 100.0, r)  # type: ignore[arg-type]
+    return {"delta": g.delta * v.ratio * q, "gamma": g.gamma * v.ratio * v.ratio * q, "theta_day": g.theta_day * q,
+            "vega": g.vega * q, "rho": g.rho * q, "price": g.price}
+
+
+def grid_days(t_near: float) -> list[float]:
+    """The dates of the 2-D grid: today, +1, +2 sessions-ish, the quarter points, and the nearest expiry."""
+    if t_near <= 0.25:
+        return [0.0, round(max(t_near, 0.0), 2)] if t_near > 0 else [0.0]
+    mids = [float(d) for d in (1, 2, 3, 5, 7, 10, 14, 21, 30, 45, 60, 90, 180, 365) if d <= t_near - max(0.5, 0.1 * t_near)]
+    if len(mids) > 5:                                   # keep five evenly spaced interior dates
+        mids = [mids[round(i * (len(mids) - 1) / 4)] for i in range(5)]
+    return [0.0, *sorted(set(mids)), round(t_near, 2)]
+
+
+def pnl_grid(vlegs: list[VLeg], f_ref: float, days_list: list[float], r: float = om.R_DEFAULT,
+             spot_pcts: tuple[float, ...] = GRID_SPOT_PCTS, iv_shifts: tuple[float, ...] = GRID_IV_SHIFTS) -> dict[str, Any]:
+    """P&L (₹) on spot % × IV shift × date — pnl[d][i][j] = date d, spot step i, IV step j."""
+    pnl = [[[round(book_pnl(vlegs, f_ref * (1 + p / 100.0), d, s, r), 2) for s in iv_shifts] for p in spot_pcts] for d in days_list]
+    return {"spot_pct": list(spot_pcts), "spot": [round(f_ref * (1 + p / 100.0), 2) for p in spot_pcts], "iv_shift": list(iv_shifts),
+            "days": days_list, "pnl": pnl, "badge": BADGE_ARITH,
+            "note": "Black-76 revaluation of every leg; " + SPOT_BASIS_NOTE + "; IV shifted in parallel, floored at 1 %; costs excluded"}
+
+
+def prob_of_profit(vlegs: list[VLeg], f_ref: float, iv_pct: float, t_days: float, r: float = om.R_DEFAULT) -> dict[str, Any]:
+    """P(book P&L at the nearest expiry > 0) for a reference level X ~ lognormal(mean F, vol iv over t_days)."""
+    t = max(t_days, 0.25) / om.DAYS_IN_YEAR
+    s = max(iv_pct, IV_FLOOR_PCT) / 100.0 * math.sqrt(t)
+    lo, hi = f_ref * math.exp(-6.0 * s), f_ref * math.exp(6.0 * s)
+
+    def g(x: float) -> float:
+        return book_pnl(vlegs, x, t_days, 0.0, r)
+
+    def above(k: float) -> float:                       # P(X > k) = N(d2(k)), d2 = (ln(F/k) − s²/2) / s
+        if k <= 0:
+            return 1.0
+        if math.isinf(k):
+            return 0.0
+        return om.norm_cdf((math.log(f_ref / k) - s * s / 2.0) / s)
+
+    roots = find_roots(g, lo, hi)
+    bounds = [0.0, *roots, math.inf]
+    p = 0.0
+    for a, b in zip(bounds, bounds[1:], strict=False):
+        probe = (max(a, lo) + min(b, hi)) / 2.0
+        if g(probe) > 0:
+            p += above(a) - above(b)
+    return {"value": round(max(0.0, min(1.0, p)) * 100.0, 1), "unit": "%", "iv_used": round(iv_pct, 2),
+            "horizon_days": round(t_days, 2), "profit_bounds": [round(x, 2) for x in roots], "badge": BADGE_HEURISTIC,
+            "method": "risk-neutral lognormal at one IV, nearest expiry", "note": POP_NOTE}
+
+
+def _x_values(anchors: list[float], f: float, days: float, iv: float, points: int = 101) -> list[float]:
+    sd = f * max(0.02, iv / 100.0 * math.sqrt(max(days, 1.0) / om.DAYS_IN_YEAR))
+    lo, hi = min(f - 2.5 * sd, f * 0.88), max(f + 2.5 * sd, f * 1.12)
+    for a in anchors:
+        lo, hi = min(lo, a * 0.96), max(hi, a * 1.04)
+    lo = max(lo, 0.01)
+    base = [lo + (hi - lo) * i / (points - 1) for i in range(points)]
+    return sorted({round(x, 6) for x in base + [a for a in anchors if lo <= a <= hi]})
+
+
+def exercise_stt(vlegs: list[VLeg], f_ref: float) -> dict[str, Any]:
+    """If held to expiry and settled at today's forward: 0.125 % of the intrinsic value of each LONG in-the-money option."""
+    value = 0.0
+    for v in vlegs:
+        lg = v.leg
+        if lg.kind in ("CE", "PE") and lg.side == "buy":
+            value += _intrinsic(lg.kind, f_ref * v.ratio, lg.k) * lg.qty * EXERCISE_STT_PCT / 100.0
+    return {"value": round(value, 2), "rate_pct": EXERCISE_STT_PCT, "at_forward": round(f_ref, 2), "badge": BADGE_ARITH,
+            "note": "only if long in-the-money options are held to expiry and exercised (STT on the settlement value); "
+                    "squaring off before expiry pays the 0.1 % sell-side STT already in the round trip instead"}
+
+
+def cost_display(round_trip: dict[str, float]) -> dict[str, Any]:
+    """Display items that ADD UP (review m061): each rounded to ₹1, the total their sum; the exact total beside it."""
+    other = round_trip.get("stamp", 0.0) + round_trip.get("sebi", 0.0) + round_trip.get("ipft", 0.0)
+    items = [("brokerage", round_trip.get("brokerage", 0.0)), ("STT", round_trip.get("stt", 0.0)), ("txn", round_trip.get("txn", 0.0)),
+             ("GST", round_trip.get("gst", 0.0)), ("stamp + SEBI + IPFT", other)]
+    shown = [[k, int(round(v))] for k, v in items]
+    return {"items": shown, "total": sum(v for _, v in shown), "exact_total": round(round_trip.get("total", 0.0), 2),
+            "note": "each item rounded to ₹1; the total is the sum of the items shown"}
+
+
+def equity_costs(vlegs: list[VLeg]) -> dict[str, Any] | None:
+    """Shares legs (EQ): the delivery round trip from shared/trading_costs.py (COST_PROFILE), never the F&O schedule."""
+    eq = [v for v in vlegs if v.equity]
+    if not eq:
+        return None
+    from shared.trading_costs import default_model
+    model = default_model()
+    total: dict[str, float] = {}
+    for v in eq:
+        d = model.round_trip(v.leg.premium * v.leg.qty, "delivery").as_dict()
+        for k, val in d.items():
+            total[k] = total.get(k, 0.0) + float(val)
+    return {"round_trip": {k: round(val, 2) for k, val in total.items()}, "source": "shared/trading_costs.py (COST_PROFILE)",
+            "note": "shares already in the demat cost nothing to enter here; this is the delivery round trip if bought for the "
+                    "structure. A call assigned at expiry is physically settled: the shares are delivered"}
 
 
 @router.post("/strategy/analyze")
 def analyze(body: AnalyzeIn) -> dict:
-    """Payoff at expiry + today, exact breakevens, max P&L, Greeks, margin & cost ESTIMATES."""
+    """Payoff at expiry + today (+ a T+n / IV-shift scenario), exact breakevens, max P&L, Greeks, probability of profit
+    (heuristic), the optional 2-D grid, margin & cost ESTIMATES."""
     try:
-        legs = [om.Leg(side=l.side, kind=l.kind, strike=l.strike, premium=l.premium,
-                       lots=l.lots, lot_size=l.lot_size, iv=l.iv, days=l.days)
-                for l in body.legs]
+        vlegs = vlegs_from(body.legs, body.forward, body.days_to_expiry, body.default_iv)
     except ValueError as exc:
         fail(400, "invalid", str(exc), "check each leg's strike, lots and premium")
+    legs = [v.leg for v in vlegs]
+    fno = [v.leg for v in vlegs if not v.equity]
 
     days = body.days_to_expiry
     iv = body.default_iv
-    option_legs = [l for l in legs if l.kind != "FUT"]
-    if any(l.iv is None for l in option_legs) and iv <= 0:
-        fail(400, "invalid", "no IV available", "set iv per leg or default_iv (chain ATM IV)")
+    single = om.is_single_expiry(legs, days)
+    uniform = is_uniform(vlegs)
+    t_near = nearest_days(vlegs, days)
 
-    profit, loss = om.max_profit_loss(legs)
-    bes = om.breakevens_any(legs, days, iv, body.r)
-    grid = om.payoff_grid(legs, body.forward, days, iv, body.r)
-    per_leg = [om.leg_greeks(l, body.forward, days, iv, body.r) for l in legs]
-    net = om.net_greeks(legs, body.forward, days, iv, body.r)
-    fut_pct = body.fut_margin_pct or (om.FUT_MARGIN_PCT_INDEX if body.is_index
-                                      else om.FUT_MARGIN_PCT_STOCK)
-    margin = om.margin_estimate(legs, body.forward, fut_pct, loss)
+    if single and uniform:
+        profit, loss = om.max_profit_loss(legs)
+        bes = om.breakevens_any(legs, days, iv, body.r)
+        grid = om.payoff_grid(legs, body.forward, days, iv, body.r)
+        per_leg = [om.leg_greeks(lg, body.forward, days, iv, body.r) for lg in legs]
+        sampled_extremes = False
+    else:
+        anchors = [v.leg.k / v.ratio for v in vlegs if v.leg.kind != "FUT"]
+        xs0 = _x_values(anchors, body.forward, t_near, iv)
+        bes = find_roots(lambda x: book_pnl(vlegs, x, t_near, 0.0, body.r), xs0[0], xs0[-1])
+        be_set = {round(b, 6) for b in bes}
+        xs = sorted(set(xs0) | be_set)
+        # a breakeven IS a root: its expiry P&L is 0 exactly (the chart cuts the green / red curve there)
+        grid = [{"s": round(x, 2), "expiry": 0.0 if x in be_set else round(book_pnl(vlegs, x, t_near, 0.0, body.r), 2),
+                 "now": round(book_pnl(vlegs, x, 0.0, 0.0, body.r), 2)} for x in xs]
+        vals = [(p["expiry"], p["s"]) for p in grid] + [(round(book_pnl(vlegs, 0.01, t_near, 0.0, body.r), 2), 0.0)]
+        slope = tail_slope(vlegs)
+        if abs(slope) < BASIS_SLOPE_TOL * max(v.leg.qty for v in vlegs):
+            slope = 0.0                                 # a calendar's basis drift (ratio ≈ 1.002), not a naked unit
+        best, worst = max(vals), min(vals)
+        profit = om.Extreme(None, True) if slope > 1e-9 else om.Extreme(best[0], False, best[1])
+        loss = om.Extreme(None, True) if slope < -1e-9 else om.Extreme(worst[0], False, worst[1])
+        per_leg = [leg_greeks_v(v, body.forward, body.r) for v in vlegs]
+        sampled_extremes = True
+    net = {k: sum(float(p[k] or 0.0) for p in per_leg) for k in om.GREEK_KEYS}
+    lot = next((v.leg.lot_size for v in vlegs if not v.equity), vlegs[0].leg.lot_size)
+    net_units = {"delta_lots": net["delta"] / lot if lot else None,
+                 "delta_inr_per_1pct": net["delta"] * body.forward * 0.01,
+                 "gamma_pnl_1pct_inr": 0.5 * net["gamma"] * (body.forward * 0.01) ** 2,
+                 "lot_size": lot}
+    for p in grid:                                    # the T+n / IV-shift curve (equals "now" at 0 days, 0 pts)
+        p["scenario"] = round(book_pnl(vlegs, p["s"], body.scenario_days, body.iv_shift, body.r), 2)
+
+    fut_pct = body.fut_margin_pct or (om.FUT_MARGIN_PCT_INDEX if body.is_index else om.FUT_MARGIN_PCT_STOCK)
+    margin = om.margin_estimate(fno, body.forward, fut_pct, loss) if fno else om.MarginEstimate(total=0.0)
     cash = om.entry_cashflow(legs)
+    costs = om.costs_estimate(fno, body.brokerage_per_order) if fno else om.costs_estimate([], body.brokerage_per_order)
+    spread = sum(v.leg.qty for v in vlegs) * body.slippage_per_unit * 2.0
+    costs["note"] = str(costs.get("note", "")).replace("exercise STT at expiry (0.125% of intrinsic) not included",
+                                                       "the exercise STT at expiry is shown separately (only if held)")
+    costs["display"] = cost_display(costs["round_trip"])
+    costs["exercise_stt"] = exercise_stt(vlegs, body.forward)
+    costs["spread"] = {"value": round(spread, 2), "per_unit_per_side": body.slippage_per_unit, "badge": "input",
+                       "note": "your bid–ask assumption × units × 2 sides; the chain served (EOD bhavcopy / NSE live) carries no bid or ask"}
+    costs["equity"] = equity_costs(vlegs)
+    pop = prob_of_profit(vlegs, body.forward, body.pop_iv or iv, t_near, body.r) if any(v.leg.kind != "FUT" for v in vlegs) else None
 
-    return {
+    out: dict[str, Any] = {
         "symbol": body.symbol.upper(),
         "forward": body.forward,
         "days_to_expiry": days,
         "r": body.r,
-        "single_expiry": om.is_single_expiry(legs, days),
+        "single_expiry": single,
+        "multi_expiry": not single,
+        "nearest_expiry_days": round(t_near, 4),
+        "time_convention": TIME_CONVENTION,
         "entry_cashflow": round(cash, 2),               # + credit · − debit, option premiums only
         "net_label": "CREDIT" if cash > 0 else "DEBIT" if cash < 0 else "FLAT",
         "breakevens": [round(b, 2) for b in bes],
         "max_profit": {"value": profit.value, "unbounded": profit.unbounded, "at": profit.at},
         "max_loss": {"value": loss.value, "unbounded": loss.unbounded, "at": loss.at},
+        "extremes_basis": ("the nearest-expiry curve on the plotted range (later legs by Black-76); the upside tail from "
+                           "the net call / futures slope") if sampled_extremes else "exact, at expiry",
         "greeks": {
             "per_leg": [{k: (round(v, 6) if v is not None else None) for k, v in p.items()}
                         for p in per_leg],
             "net": {k: round(v, 6) for k, v in net.items()},
-            "note": "Black-76 on the forward · delta = futures-equivalent N(d1) · theta ₹/day · "
-                    "vega ₹/vol-pt · rho ₹ per +1% rate · futures legs: delta only (carry ignored)",
+            "net_units": {k: (round(v, 6) if isinstance(v, float) else v) for k, v in net_units.items()},
+            "note": "Black-76 on each leg's forward · delta = futures-equivalent N(d1) on the book's reference · theta ₹/day · "
+                    "vega ₹/vol-pt · rho ₹ per +1% rate · futures and shares legs: delta only (carry ignored)",
         },
         "payoff": grid,
+        "scenario": {"days_forward": body.scenario_days, "iv_shift": body.iv_shift, "badge": BADGE_ARITH,
+                     "note": f"P&L {body.scenario_days:g} days from now with IV {body.iv_shift:+g} pts; " + SPOT_BASIS_NOTE},
+        "pop": pop,
         "margin": {
             "estimate": True,
             "total": margin.total,
@@ -145,10 +429,65 @@ def analyze(body: AnalyzeIn) -> dict:
             "note": margin.note,
             "error_factor_measured": HEURISTIC_ERROR_FACTOR,
             "real_margin": "POST /api/options/margin (Breeze SPAN when live → NSE SPAN file → this heuristic)",
+            "excludes_shares": any(v.equity for v in vlegs),
         },
-        "costs": om.costs_estimate(legs, body.brokerage_per_order),
+        "costs": costs,
         "paper_only": True,
     }
+    if body.grid:
+        out["grid"] = pnl_grid(vlegs, body.forward, grid_days(t_near), body.r)
+    return out
+
+
+# ── saved structures (OSTR: save / name a structure; NOT a booking — booking is routers/fo_book.py) ────────────────
+
+class SavedLegIn(BaseModel):
+    side: Literal["buy", "sell"]
+    kind: Literal["CE", "PE", "FUT", "EQ"]
+    strike: float | None = Field(None, gt=0)
+    expiry: date | None = None
+    premium: float = Field(..., ge=0)
+    iv: float | None = Field(None, gt=0, le=500)
+    lots: int = Field(1, ge=1, le=10_000)
+    lot_size: int = Field(..., ge=1, le=100_000)
+    price_source: str | None = Field(None, max_length=120)
+
+
+class SaveIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=60)
+    symbol: str = Field(..., min_length=1, max_length=30)
+    legs: list[SavedLegIn] = Field(..., min_length=1, max_length=MAX_LEGS)
+    note: str | None = Field(None, max_length=300)
+
+
+def _store() -> Any:
+    import fo_book_store
+    return fo_book_store.get_store()
+
+
+@router.get("/strategy/saved")
+def saved_list(symbol: str | None = None) -> dict:
+    """Named structures saved from OSTR (newest first), with the premiums and their source as saved."""
+    rows = _store().saved_list(symbol.upper() if symbol else None)
+    return {"rows": rows, "count": len(rows), "badge": BADGE_ARITH, "paper_only": True,
+            "note": "saved structures keep the premiums they were saved with; re-price them on the current chain before reading a P&L"}
+
+
+@router.post("/strategy/saved")
+def saved_save(body: SaveIn) -> dict:
+    """Save (or overwrite by name + symbol) a structure. Writes the OSTR store only; books nothing."""
+    name = body.name.strip()
+    if not name:
+        fail(422, "invalid", "a saved structure needs a name")
+    legs = [leg.model_dump(mode="json") for leg in body.legs]
+    return {"saved": _store().save_structure(name=name, symbol=body.symbol.upper(), legs=legs, note=body.note), "paper_only": True}
+
+
+@router.delete("/strategy/saved/{saved_id}")
+def saved_delete(saved_id: int) -> dict:
+    if not _store().delete_saved(saved_id):
+        fail(404, "not_found", f"saved structure {saved_id} does not exist")
+    return {"deleted": saved_id, "paper_only": True}
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════

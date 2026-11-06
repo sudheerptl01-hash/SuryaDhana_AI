@@ -185,8 +185,16 @@ def g_treasury(ctx: Ctx) -> dict[str, Any]:
 def g_yahoo_daily(ctx: Ctx) -> dict[str, Any]:
     syms = ctx.params.get("symbols")
     res = ingest_yahoo.fetch_daily(ctx.store, ctx.http, symbols=syms, backfill_from=ctx.backfill_from, now=ctx.now)
-    return {"symbols": res, "inserted": sum(int(v.get("rows") or 0) for v in res.values()),
-            "stale": [s for s, v in res.items() if v.get("stale")]}
+    out = {"symbols": res, "inserted": sum(int(v.get("rows") or 0) for v in res.values()),
+           "stale": [s for s, v in res.items() if v.get("stale")]}
+    # wave 1e (M-C): a CNY=X bar revised by this run re-derives the Shanghai pair now (store arithmetic, no fetch), not at
+    # 21:30 — the printed legs and the premium never disagree for a day
+    if "CNY=X" in res:
+        try:
+            out["shanghai_rederive"] = derive.derive_shanghai(ctx.store, now=ctx.now)
+        except Exception as exc:  # noqa: BLE001 — a derive failure never fails the fetch group
+            out["shanghai_rederive"] = {"status": "error", "error": str(exc)[:160]}
+    return out
 
 
 def g_yahoo_curve(ctx: Ctx) -> dict[str, Any]:

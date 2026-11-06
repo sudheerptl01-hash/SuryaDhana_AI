@@ -67,7 +67,8 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
     const vix = rows.map(r => vixByDate.get(r.date) ?? null)
     const hasVix = vix.some(v => v != null)
     const since = dayLabel(v2.since)
-    const subtitle = `${since} → ${dayLabel(v2.as_of)} · ${v2.sessions} sessions · violet = IV30 (constant maturity) · amber = monthly ATM IV${hasVix ? ' · green = India VIX' : ''} · ┆ results · ┊ monthly expiry · model ${v2.model_version ?? '—'} · r ${v2.r_source}`
+    // m051: the amber line is the first expiry 20–60 days out — a weekly when one falls in the window — not NSE's monthly
+    const subtitle = `${since} → ${dayLabel(v2.as_of)} · ${v2.sessions} sessions · violet = IV30 (constant maturity) · amber = ~1-month ATM IV (first expiry 20–60 d)${hasVix ? ' · green = India VIX' : ''} · ┆ results · ┊ ~1-month series roll · model ${v2.model_version ?? '—'} · r ${v2.r_source}`
     return (
       <Panel title={`${symbol} implied volatility · history`} accent={T.violet} pad={collapsed ? 6 : 8} style={{ marginBottom: 12 }}
         source={sourceOf(v2.as_of, { source: 'NSE F&O bhavcopy' })} badge={v2.badges.iv}
@@ -83,8 +84,8 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
           // the strip names the window and the overlay; the IV levels themselves are in the chain header strip (one number,
           // one place: PLAN §0.4), so the collapsed chart repeats none of them
           <div style={{ fontSize: 10.5, color: T.muted, fontFamily: T.mono, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-            <span>IV30 (constant maturity) · monthly ATM line{hasVix ? ' · India VIX overlay' : ''} · results / expiry markers</span>
-            <span style={{ color: T.dim }}>{since} → {dayLabel(v2.as_of)} · {v2.sessions} sessions · last monthly expiry {last.monthly_expiry ?? '—'}</span>
+            <span>IV30 (constant maturity) · ~1-month ATM line{hasVix ? ' · India VIX overlay' : ''} · results / series-roll markers</span>
+            <span style={{ color: T.dim }}>{since} → {dayLabel(v2.as_of)} · {v2.sessions} sessions · ~1-month series {last.monthly_expiry ?? '—'} (first expiry 20–60 d)</span>
           </div>
         ) : (
           <>
@@ -92,7 +93,7 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
             <LineChart dates={rows.map(r => r.date)} height={190} lUnit="%" markers={markers} ariaLabel="IV history with VIX overlay"
               series={[
                 { label: 'IV30', color: T.violet, values: rows.map(r => r.iv30_cm), w: 1.7 },
-                { label: 'monthly ATM IV', color: T.amber, values: rows.map(r => r.monthly_atm_iv), w: 1.1 },
+                { label: '~1-month ATM IV', color: T.amber, values: rows.map(r => r.monthly_atm_iv), w: 1.1 },
                 ...(hasVix ? [{ label: 'India VIX', color: T.green, values: vix, w: 1.1, dash: '4 3' }] : []),
               ]} />
             <div style={{ fontSize: 10, color: T.dim, marginTop: 4, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>

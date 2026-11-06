@@ -21,10 +21,12 @@ const CELL: Record<string, { col: number; row: number; glyph: string }> = {
   'long unwinding': { col: 0, row: 1, glyph: '▼▼' },
 }
 
-export function OiQuadrantTape({ tape, days = 20, tips, missingOiNote }: {
+export function OiQuadrantTape({ tape, days = 20, tips, missingOiNote, oiScope }: {
   tape: QuadrantTapeRow[]; days?: number; tips: (k: string) => string | undefined
   /** why ΔOI can be missing on the newest session (COMEX: "CME file lands T+1 ≈ 15:30 IST"; MCX: the 07:35 master) */
   missingOiNote?: string
+  /** what the ΔOI sums (wave 1e minor: the tape's −391 is the family total, the table's −1,010 one expiry): 'all GOLDTEN expiries' */
+  oiScope?: string
 }) {
   const rows = tape.slice(-days)
   const all = tape
@@ -56,7 +58,7 @@ export function OiQuadrantTape({ tape, days = 20, tips, missingOiNote }: {
           <div style={{ fontSize: 11, color: T.text, marginTop: 6 }} data-tape-last>
             {istLabel(last.trade_date)}: <b style={{ color: T.bright }}>{lastRead.word}</b>
             {lastLabel && <span style={{ color: T.muted }}> — {QUADRANT_READ[lastLabel]}</span>}
-            <span style={{ color: T.dim }}> · Δprice {signedPct(last.dprice_pct)} · ΔOI {signed(last.doi)}{last.mechanical ? ' · roll/expiry day' : ''}</span>
+            <span style={{ color: T.dim }} data-tape-oi-scope={oiScope ?? ''}> · Δprice {signedPct(last.dprice_pct)} · ΔOI{oiScope ? ` (${oiScope})` : ''} {signed(last.doi)}{last.mechanical ? ' · roll/expiry day' : ''}</span>
             {lastRead.note && <div style={{ fontSize: 10, color: T.amber }}>{lastRead.note}</div>}
           </div>
         )}

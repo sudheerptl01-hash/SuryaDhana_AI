@@ -42,8 +42,9 @@ COMMANDS: list[tuple[str, str, str]] = [
     ("valuation", "", "index P/E against its own history and vs NIFTY"),
     ("desk", "", "Decision Desk: NAV, positions, crash filter, next signal"),
     ("wrap", "", "the latest end-of-day market wrap"),
-    ("alerts", "", "your price / move alerts"),
-    ("alert", "TCS above 2400", "set an alert: above / below a price, or move 3 (± % today)"),
+    ("alerts", "", "your price / move alerts · /alerts list: every alert rule (typed engine)"),
+    ("alert", "TCS above 2400", "set an alert: above / below a price, or move 3 (± % today) · "
+                                "/alert add iv_pctile:NIFTY above 80 repeat: a typed rule"),
     ("unalert", "TCS", "remove a stock's alerts"),
     ("status", "", "system health: services, ICICI session, data dates"),
 ("shadow", "", "S1 paper-shadow NAV and book (alpha_lab forward test)"),

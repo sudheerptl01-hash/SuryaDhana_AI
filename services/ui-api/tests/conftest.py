@@ -43,6 +43,7 @@ def _isolated_state_files(tmp_path, monkeypatch):
     monkeypatch.setenv("GOLD_LOG_PATH", str(tmp_path / "gold_log.json"))
     monkeypatch.setenv("PREFS_DB", str(tmp_path / "ui_prefs.sqlite"))
     monkeypatch.setenv("PAPER_TRADES_DB", str(tmp_path / "paper_trades.db"))  # legacy execution engine
+    monkeypatch.setenv("PAPER_FO_DB", str(tmp_path / "paper_fo.sqlite"))      # the PAPER F&O book + saved OSTR structures (W2-BOOK)
     try:
         import routers.positions as pos
         monkeypatch.setattr(pos, "_last_holdings_path", lambda: tmp_path / "last_holdings.json")

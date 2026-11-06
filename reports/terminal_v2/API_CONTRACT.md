@@ -60,6 +60,10 @@ master-controller mocked through the process-wide client; Breeze faked; the real
 | `GET /api/market/index-drivers/monthly?index=&months=12` | SWR | `/db/index-drivers/{contribution,fit}` |
 | `GET /api/desk/attribution?horizon=` | SWR (desk 60/600 s) | the paper ledger (`routers.desk.get_desk().status()` on a thread) + `/db/index-drivers/*` + `/db/security/{sym}/history` |
 | `POST /api/options/margin` | none | Breeze (live session, ledger) → `data/nse_archive/span/nsccl.YYYYMMDD.s.zip` (disk) → heuristic |
+| `POST /api/options/strategy/analyze` (v2: per-leg `days` / `forward` / `expiry`; `scenario_days`, `iv_shift`, `grid`, `pop_iv`, `slippage_per_unit`; `kind: EQ`) | none | arithmetic only (options_math Black-76; shares costed by `shared/trading_costs.py`) |
+| `GET` · `POST /api/options/strategy/saved`, `DELETE /api/options/strategy/saved/{id}` | none | ui-api SQLite `data/paper_fo.sqlite` (`fo_saved_structures`) |
+| `GET /api/options/book` (`/list`) · `POST /api/options/book` · `POST /api/options/book/close` · `POST /api/options/book/roll` · `GET /api/options/book/marks` · `POST /api/options/book/mark` · `GET /api/options/book/greeks` · `GET /api/options/book/journal` | chains TTL 60 s (live) / 600 s (EOD) | `/db/option-chain/{symbol}?expiry=`, `/db/option-chain-live/{symbol}?expiry=` + `data/paper_fo.sqlite` (PAPER ONLY, §4a) |
+| `GET /api/risk/fo?mode=&margin=` | history 30 min · margin 10 min | the paper book + `/db/index-ohlc/{index}` (fallback `/db/index-daily`), `/db/security/{sym}/history`, `POST /api/options/margin` in-process |
 | `GET /api/data/health?page=` | SWR 60/600 s | `/db/data-health` (B1) + `/db/market-holidays` + master-controller `/api/scheduler/status`; until B1 is deployed (404): `/db/nse-positions-meta`, `/db/freshness`, `/db/archive-meta`, `/db/data-health/ingest-log` and the built-in seed |
 | `GET /api/positions/breeze-budget` | none | the SQLite ledger |
 
@@ -126,6 +130,125 @@ Every answer carries `source`, `source_chip` (BREEZE / NSE SPAN FILE / HEURISTIC
 `non_span_margin_required`, `total_margin`, `heuristic{}` (always, labelled), `badge` (`arithmetic` for 1–2),
 `paper_only: true`. `/strategy/analyze` keeps its ESTIMATE block and now prints `error_factor_measured: 4.8` and the
 pointer to this route.
+
+## 4a. OSTR v2 and the PAPER F&O book (PLAN 2.2, Wave 2 — W2-BOOK, 6 Nov 2026)
+
+**PAPER ONLY.** No route here names a broker order method (`tests/test_fo_book.py` scans the four modules, with a planted
+negative control); every request model takes `mode: "paper"` only (anything else → 422 "PAPER ONLY", whatever
+`EXECUTION_LIVE_ALLOWED` says — there is no live mode to enable); `paper_fo_positions` / `paper_fo_structures` carry
+`CHECK (mode = 'paper')`. The only broker method reachable is the read-only `margin_calculator`, through
+`POST /api/options/margin`'s ledger guard, for the RSK margin figure. Nothing here feeds the Desk, the S1 shadow, an alert
+or a ticket price.
+
+`POST /api/options/strategy/analyze` (v2, backward compatible): legs may carry `days`, `forward` (that expiry's chain
+forward; FUT: the future; `kind: "EQ"` shares: spot) and `expiry`; body adds `scenario_days`, `iv_shift`, `grid`,
+`pop_iv`, `slippage_per_unit`. A spot move x moves every leg's reference by the same ratio (stated). New keys:
+`multi_expiry`, `nearest_expiry_days`, `time_convention`, `extremes_basis`, `payoff[].scenario`, `scenario{}`,
+`pop{value %, iv_used, horizon_days, profit_bounds[], badge: heuristic, method, note … "describes, does not predict."}`,
+`grid{spot_pct[11], spot[], iv_shift[9], days[], pnl[day][spot][iv], badge: arithmetic, note}` (when `grid=true`),
+`greeks.net_units{delta_lots, delta_inr_per_1pct, gamma_pnl_1pct_inr, lot_size}`,
+`costs.display{items[[name, ₹]], total (= the sum of the items), exact_total, note}`, `costs.exercise_stt{value,
+rate_pct 0.125, at_forward}`, `costs.spread{value, per_unit_per_side, badge: input}`, `costs.equity` (shares: the delivery
+round trip from `shared/trading_costs.py`), `margin.excludes_shares`. A mixed-expiry book's breakevens are root-found on
+the nearest-expiry curve (later legs by Black-76) and its max P&L is read on the plotted range with the upside tail from
+the net call / futures slope (a basis drift under 5 % of a leg's units is not "unlimited").
+
+`GET /api/options/strategy/saved?symbol=` · `POST /api/options/strategy/saved {name, symbol, legs[≤4]{side, kind, strike,
+expiry, premium, iv, lots, lot_size, price_source}, note}` (upsert by name + symbol) · `DELETE /api/options/strategy/saved/{id}`
+— saving books nothing.
+
+`/api/options/book` (store `data/paper_fo.sqlite`, `PAPER_FO_DB` overrides; tables `paper_fo_structures`,
+`paper_fo_positions`, `paper_fo_marks`, `paper_fo_journal`, `fo_saved_structures`):
+- `POST ""` `{symbol, name?, legs[≤4]{side, kind CE|PE|FUT, strike, expiry, premium, iv?, lots, lot_size, forward?,
+  price_source}, note?, source, mode: "paper"}` → `{structure{…, positions[]}, paper_only}`; shares (`EQ`) → 422 (they live
+  in the cash book). The fill is the premium sent and its `price_source` (chain + date, or "edited by hand on OSTR");
+  `entry_costs` = the entry side of the F&O statutory schedule.
+- `GET ""` / `GET /list` `?status=open|closed|all&mode=auto|eod|live` → `{structures[]{…, positions[]{…, mark, pnl{unrealised,
+  realised, costs, net}, greeks{delta, gamma, theta_day, vega, delta_inr_per_1pct, gamma_pnl_1pct_inr}, days_to_expiry},
+  summary{entry_cashflow, net_label, pnl_gross, pnl_unrealised, pnl_realised, costs, pnl_net, marks_complete, max_profit,
+  max_loss, pct_of_max_profit, loss_x_credit, nearest_expiry, open_legs}}, open_positions, greeks{by_underlying[]{symbol,
+  lot_size, positions, delta, delta_lots, gamma, theta_day, vega, delta_inr_per_1pct, gamma_pnl_1pct_inr, forward},
+  total{theta_day, vega, delta_inr_per_1pct, gamma_pnl_1pct_inr}, total_note}, totals{}, marks_meta{requested, used,
+  notes[], chains[]}, mark_source{state delayed|closed|offline, source, as_of}, time_convention, capital{value, source},
+  badges, paper_only, note}`. Units never add across underlyings: the total is ₹ only.
+- Marks: in session (`auto` between 09:15 and 15:30 IST on a weekday, or `live`) NSE's live chain through
+  `/db/option-chain-live/{symbol}?expiry=` (a chain dated another day, or a failure → EOD with the reason in
+  `marks_meta.notes`; in session that read reaches NSE through data-service's paced client, cached 30 s there and 60 s
+  here); else `/db/option-chain/{symbol}?expiry=` (the F&O bhavcopy close, settlement where untraded — the file the IV
+  surface is computed from). A chain served for another expiry never marks a position. IV is implied from the mark by
+  Black-76 on the chain's forward at the chain's own T (`t_days`; the same rule computed here when absent): review M04's
+  app-wide `cal365-1530` — calendar time to 15:30 IST on expiry ÷ 365, whole days at end of day, fractional in session,
+  no half-day (`fo_book.t_days` = `fo_iv.black76.t_years` × 365), so the book's IV for a contract is the chain's.
+  `mark_method`: `close` / `live` / `future` (the near monthly's traded future) / `parity-forward` / `model` (strike
+  outside the chain window: Black-76 at the nearest strike's IV, heuristic) / `settlement` (an expired contract at NSE's
+  final settlement: intrinsic on the underlying's close ON the expiry day — the expiry-day chain's underlying price, kept
+  with the stored EOD marks, else `/db/index-ohlc/{index}` · `/db/index-daily` · `/db/security/{sym}/history` for that
+  date; never a later spot; Greeks 0, no margin, no scenario P&L) / `expired-unsettled` (heuristic: that close is not
+  stored yet; the last mark on or before the expiry is shown and a close at it is refused, 409).
+  EOD marks are appended (an unchanged close is not re-written; a revised one is a new row with its own `first_seen_at`);
+  session marks at most every 15 min; settlements derived from stored data are recomputed on read, never stored. A read
+  of a book that does not exist yet answers empty and creates no file.
+- `POST /close {position_ids | structure_id, prices?{id: ₹ ≥ 0} (labelled "edited by hand at close"), confirm?{id: {price,
+  source}} + previewed_at (the previewed fills, confirmed as shown: "… · confirmed as previewed at HH:MM IST"), mark_mode,
+  preview, mode: "paper"}` → `{preview, as_of, fills[]{position_id, exit_price, exit_price_source, exit_costs, basis, pnl},
+  closed?}`; 404 when nothing open matches; 409 when a leg was closed meanwhile (another window) or an expired leg has no
+  settlement yet; a negative price → 422 (and `CHECK (exit_price >= 0)`); an expired leg pays only the exercise STT
+  (0.125 % of the settlement value of a long ITM option); a structure closes when its last leg does.
+- `POST /roll {position_ids[≤8] (one underlying), to_expiry, strike_shift, confirm?{id: {close_at, close_source, open_at,
+  open_source}} + previewed_at, mark_mode, preview (default true), mode}` → `{preview, as_of, legs[]{position_id, close_at,
+  close_source, open_at, open_source, new_strike, cash, costs}, net_cash, net_label, costs, closed?, opened?}`; closes at
+  the mark (status `rolled`, `rolled_to`) and opens the same side / kind / lots at the target chain's price (`rolled_from`),
+  one transaction; an unlisted expiry, the same expiry, a strike outside the target window or an expired leg → 422; a
+  leg closed meanwhile → 409.
+- `GET /marks?mode=&history=` · `POST /mark?settle=true` (store today's EOD marks, idempotent; with `settle` (default)
+  close every expired leg at its `settlement` mark, journal action `settle`, `settled[]` in the answer; for the evening
+  scheduler) · `GET /greeks?mode=` · `GET /journal?limit=`.
+
+`GET /api/risk/fo?mode=&margin=true` (routers/riskdash.py → `fo_book.risk_payload`): `{empty, message?, open_positions,
+greeks{…}, var{delta_gamma{method, var95_1d_inr, es95_1d_inr, var99_1d_inr, es99_1d_inr, sessions}, full_revaluation{…},
+from, to, covered[], excluded[], history_source{}, badge, note}, scenarios{iv_shock[]{iv_shift, pnl_inr},
+gap[]{spot_pct, pnl_inr}, combined[]{spot_pct, iv_shift, pnl_inr}, theta_1d_inr, badge, note}, margin{by_underlying[]{symbol,
+total_margin, sources[], chunks[], badge, note}, total_margin, capital, utilisation_pct, badge, note}, capital{value,
+source}, notes[], vega_total_inr, theta_total_inr, paper_only}`. Delta-gamma VaR: Δ·dS + ½Γ·dS² per underlying on each of
+the last 750 common sessions (indices: `/db/index-ohlc/{NIFTY 50|NIFTY BANK|…}`, fallback `/db/index-daily`; stocks:
+`/db/security/{sym}/history` change), IV held, plus one day of theta; the full Black-76 revaluation beside it. Scenarios
+are instant full revaluations. Margin: `POST /api/options/margin`'s chain per underlying in ≤ 4-leg chunks per structure
+(no offset across chunks, stated), cached 10 min per contract set (side, kind, strike, expiry, lots, lot size — never
+the mark, so in session an RSK refresh spends at most one Breeze margin call per chunk every 10 min); expired legs are not
+margined; capital `PAPER_FO_CAPITAL` (default ₹10,00,000, labelled).
+
+`GET /api/risk/dashboard` gains `size=desk|nav|custom` (+ `notional=` ₹ for custom; default `desk`: the ledger's
+`config.equity_share`, 66 %) and `sizing{mode, equity_share, nav_inr, notional_inr, per_name_inr, label}`; VaR "% of
+book" stays against the full NAV. `ladder.rules` lists the Desk rules only; `ladder.legacy_rules` carries the legacy
+5-day −2 % daily halt, labelled; `stress[]` adds `names_total`, `names_covered`, `partial`.
+
+## 4b. Alerts (PLAN 2.3, Wave 2 — W2-ALERTS, 6 Nov 2026)
+
+Router `services/ui-api/routers/alerts.py` (mounted at `/api/alerts`, unchanged); the rule model, series catalogue and
+evaluator are pure (`services/ui-api/alert_engine.py`). Storage: ui-api SQLite `data/alerts.sqlite` (`alert_rules`,
+`alert_fires` append-only, `alert_meta`; WAL), mirrored to `data/price_alerts.json` for the legacy price levels.
+
+| Route | Answer |
+|---|---|
+| `GET /api/alerts` · `PUT /api/alerts/{sym}` | the legacy price levels `{alerts, history}` (unchanged) |
+| `POST /api/alerts/run?scope=all\|live\|eod&dispatch=0\|1` | `{hits, checked, priced, fires[], rules_checked, scope}` + `dispatch[]` (dispatch=1) or `page_notify` (dispatch=0) |
+| `GET /api/alerts/series` | `{kinds[{kind, name, label, unit, badge, cadence, params, optional, ops, source, group, definition, example}], ops, op_words, …}` |
+| `GET /api/alerts/rules?origin=&symbol=` · `POST /api/alerts/rules` · `PUT /api/alerts/rules/{id}` · `DELETE /api/alerts/rules/{id}` | rules with `summary, label, condition, unit, badge, cadence, source, state, last_fired_at` (422 + the reason) |
+| `PUT /api/alerts/rules/{id}/action` `{action: snooze\|resume\|pause\|delete, minutes}` · `PUT /api/alerts/rules/from-text` `{text}` | the rule · always 200 `{ok, rule\|error}` |
+| `GET /api/alerts/rules/evaluate?ids=` | dry run `{rows[{id, value, as_of, source, metric, satisfied, reason, unit, badge, history_n}]}`: no state change |
+| `GET /api/alerts/fires?symbol=&limit=&origin=` | `{fires[], groups[{symbol, count, last_at, fires}], count, as_of}` |
+| `GET /api/alerts/feed?limit=` | the scheduler's notifications (`data/notifications.jsonl`) |
+
+**Badges**: every series and fire carries `arithmetic` or `context`; no `signal` exists; no composite score; no template,
+label or note carries a direction word (the note scan also refuses predictive phrasing; position names such as a long or
+short straddle pass). **Delivery is at most once**: a `dispatch=1` run marks the fires it returns before the controller
+delivers them; a fire unclaimed for 30 min is `expired`. **Reads**: stored series through data-service
+(`/db/iv/summary`, `/db/option-chain/{sym}`, `/db/fo/basis-history`, `/db/vix-daily`, `/db/index-drivers?index=NIFTY 50|NIFTY BANK`,
+`/db/gold/health-daily`) and four routes that can start a refresh of their own (`/db/fii-dii-cash`, `/db/events`,
+`/db/surveillance`, `/db/fo/rollover`), which `POST /run` skips inside the restart freeze windows (07:45–09:20,
+18:30–21:15 IST); quotes from the live NSE hub only (never Yahoo). Units: OI at a strike in contracts (OMON's unit);
+IV − RV20 is close-to-close (`iv_minus_rv20`, catalog `IV_MINUS_RV20`). Nothing here feeds the Decision Desk, the S1
+shadow, a ticket price or an order (PAPER ONLY).
 
 ## 5. Data health (PLAN 1.4)
 
@@ -228,10 +351,20 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `definitions.fovolt_ann` | string |
 | `definitions.iv30_cm` | string |
 | `definitions.iv_minus_rv20` | string |
+| `definitions.iv_minus_rv20_parkinson` | string |
+| `definitions.iv_minus_rv20_yz` | string |
 | `definitions.iv_pctile_252` | string |
 | `definitions.iv_rank_252` | string |
+| `definitions.monthly_atm_iv` | string |
+| `definitions.near_skew_25d` | string |
+| `definitions.rv20_cc` | string |
+| `definitions.rv20_parkinson` | string |
+| `definitions.rv20_yz` | string |
 | `definitions.skew_25d_30` | string |
+| `definitions.term_near_next` | string |
+| `definitions.term_slope_30_60` | string |
 | `definitions.term_slope_30_90` | string |
+| `definitions.time_to_expiry` | string |
 | `events` | array |
 | `events[]` | object |
 | `events[].date` | string |
@@ -249,6 +382,8 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `rank.stored.{*}` | number |
 | `rank.window_sessions` | number |
 | `rank.window_target` | number |
+| `rank_base` | string |
+| `rank_prior_observations` | number |
 | `rows` | array |
 | `rows[]` | object |
 | `rows[].date` | string |
@@ -275,8 +410,10 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `series` | string |
 | `sessions` | number |
 | `since` | string |
+| `spread_estimator` | string |
 | `store_errors` | object |
 | `symbol` | string |
+| `time_convention` | string |
 | `vix` | array |
 | `vix[]` | object |
 | `vix[].close` | null, number |
@@ -461,21 +598,42 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `as_of` | string |
 | `badges` | object |
 | `badges.iv30_cm` | string |
+| `badges.iv60_cm` | string |
 | `badges.iv_minus_rv20` | string |
+| `badges.iv_minus_rv20_parkinson` | string |
+| `badges.iv_minus_rv20_yz` | string |
 | `badges.iv_pctile_252` | string |
 | `badges.iv_rank_252` | string |
 | `badges.mwpl_pct` | string |
+| `badges.near_atm_iv` | string |
+| `badges.next_atm_iv` | string |
+| `badges.rv20_cc` | string |
+| `badges.rv20_parkinson` | string |
 | `badges.rv20_yz` | string |
 | `badges.skew_25d_30` | string |
+| `badges.term_near_next` | string |
+| `badges.term_slope_30_60` | string |
 | `badges.term_slope_30_90` | string |
+| `ban_date` | null |
+| `ban_source` | string |
 | `definitions` | object |
 | `definitions.fovolt_ann` | string |
 | `definitions.iv30_cm` | string |
 | `definitions.iv_minus_rv20` | string |
+| `definitions.iv_minus_rv20_parkinson` | string |
+| `definitions.iv_minus_rv20_yz` | string |
 | `definitions.iv_pctile_252` | string |
 | `definitions.iv_rank_252` | string |
+| `definitions.monthly_atm_iv` | string |
+| `definitions.near_skew_25d` | string |
+| `definitions.rv20_cc` | string |
+| `definitions.rv20_parkinson` | string |
+| `definitions.rv20_yz` | string |
 | `definitions.skew_25d_30` | string |
+| `definitions.term_near_next` | string |
+| `definitions.term_slope_30_60` | string |
 | `definitions.term_slope_30_90` | string |
+| `definitions.time_to_expiry` | string |
 | `n` | number |
 | `note` | string |
 | `ok` | bool |
@@ -486,18 +644,33 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `rows[].ban` | bool |
 | `rows[].date` | string |
 | `rows[].iv30_cm` | null, number |
+| `rows[].iv30_flat` | bool |
+| `rows[].iv60_cm` | null |
 | `rows[].iv_minus_rv20` | null, number |
+| `rows[].iv_minus_rv20_parkinson` | null |
+| `rows[].iv_minus_rv20_yz` | null, number |
 | `rows[].iv_pctile_252` | null, number |
 | `rows[].iv_rank_252` | null, number |
+| `rows[].mwpl_date` | null |
 | `rows[].mwpl_pct` | number |
+| `rows[].near_atm_iv` | null |
+| `rows[].near_dte` | null |
+| `rows[].next_atm_iv` | null |
+| `rows[].next_dte` | null |
 | `rows[].next_results` | string |
+| `rows[].quality_flags` | null |
 | `rows[].results_in_days` | number |
+| `rows[].rv20_cc` | null |
+| `rows[].rv20_parkinson` | null |
 | `rows[].rv20_yz` | number |
 | `rows[].skew_25d_30` | null, number |
 | `rows[].spot` | number |
 | `rows[].symbol` | string |
+| `rows[].term_near_next` | null |
+| `rows[].term_slope_30_60` | null |
 | `rows[].term_slope_30_90` | null, number |
 | `sort` | string |
+| `spread_estimator` | string |
 | `store_errors` | object |
 
 ### `option_history_legacy` — `GET /api/market/option-history/NIFTY`
@@ -551,6 +724,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `concentration.weight_hhi` | number |
 | `driver` | object |
 | `driver.as_of` | string |
+| `driver.challenger` | null |
 | `driver.change_date` | string |
 | `driver.changed_from` | string |
 | `driver.ew_minus_cw_pp` | number |
@@ -602,6 +776,10 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `sectors[].points` | number |
 | `sectors[].weight_pct` | number |
 | `store_errors` | object |
+| `tab` | object |
+| `tab.sentence` | string |
+| `tab.sessions` | number |
+| `tab.state` | string |
 | `weight_method` | object |
 | `weight_method.label` | string |
 | `weight_method.method` | string |
@@ -634,10 +812,12 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | key path | types |
 |---|---|
 | `as_of` | string |
+| `as_of_month` | string |
 | `badge` | string |
 | `index` | string |
 | `months` | array |
 | `months[]` | object |
+| `months[].bad_sessions` | array |
 | `months[].explained_pts` | number |
 | `months[].index_move_pts` | number |
 | `months[].leader` | string |
@@ -645,6 +825,8 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `months[].leader_pts` | number |
 | `months[].leader_share` | number |
 | `months[].month` | string |
+| `months[].note` | null |
+| `months[].residual_pts` | number |
 | `months[].sessions` | number |
 | `months[].top3_add` | array |
 | `months[].top3_add[]` | object |
@@ -863,7 +1045,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `rows[]` | object |
 | `rows[].as_of` | null, string |
 | `rows[].badge` | string |
-| `rows[].catchup_at` | null, string |
+| `rows[].catchup_at` | null |
 | `rows[].dictionary_anchor` | string |
 | `rows[].expected_by` | null, string |
 | `rows[].id` | string |
@@ -881,6 +1063,7 @@ had no value there). Regenerate with `TERMINAL_CONTRACT_WRITE=1`.
 | `rows[].pages[]` | string |
 | `rows[].published_ist` | string |
 | `rows[].publisher` | string |
+| `rows[].running_since` | null |
 | `rows[].state` | string |
 | `rows[].unrecoverable` | bool |
 | `service` | string |

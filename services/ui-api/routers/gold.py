@@ -28,6 +28,7 @@ written to reports/gold_program/API_CONTRACT.md (B4A/B4B read it).
 from __future__ import annotations
 
 import asyncio
+import bisect
 import json
 import logging
 import math
@@ -281,6 +282,36 @@ def _iso_any(value: Any) -> str | None:
     if len(s) == 10 and "T" not in s and " " not in s:
         return s if _d(s) else None
     return _iso(_dt(value))
+
+
+BROKER_TIME_FORMATS = ("%d-%b-%Y %H:%M:%S", "%d-%b-%Y %H:%M", "%a %b %d %H:%M:%S %Y", "%d/%m/%Y %H:%M:%S")
+
+
+def _iso_ist(value: Any) -> str | None:
+    """A BROKER wall-clock time as IST ISO with +05:30: ICICI Breeze prints IST without an offset ('2026-11-06 09:16:00',
+    '06-Nov-2026 09:16:00'), so a naive value is IST here — never the UTC reading `_iso_any` gives a stored zone-less stamp
+    (wave 1e minor, C-DATA-3 / C-TRADER-3: strip.mcx_live_as_of printed 14:46 +05:30 for the 09:16 bar). An aware value keeps
+    its instant; a date-only string passes through; anything unparseable → None."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        return _iso(value if value.tzinfo else value.replace(tzinfo=IST))
+    s = str(value).strip()
+    if len(s) == 10 and "T" not in s and " " not in s:
+        return s if _d(s) else None
+    dt: datetime | None = None
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except ValueError:
+        for fmt in BROKER_TIME_FORMATS:
+            try:
+                dt = datetime.strptime(s, fmt).replace(tzinfo=IST)   # broker wall clock = IST
+                break
+            except ValueError:
+                continue
+    if dt is None:
+        return None
+    return _iso(dt if dt.tzinfo else dt.replace(tzinfo=IST))
 
 
 def _points(rows: Iterable[dict[str, Any]], date_key: str = "report_date", value_key: str = "value") -> list[dict[str, Any]]:
@@ -794,7 +825,7 @@ async def fair_block(contract: str = "GOLD", expiry: str | None = None) -> dict[
             if str(cached_quote.get("expiry") or exp.isoformat()) != exp.isoformat():
                 continue  # a 'front' entry for another expiry is not this contract's price
             live, live_source = float(cached_quote["quote"]["ltp"]), cached_quote["quote"].get("source")
-            live_at = _iso_any(cached_quote["quote"].get("time") or cached_quote.get("as_of"))
+            live_at = _iso_ist(cached_quote["quote"].get("time") or cached_quote.get("as_of"))   # Breeze time is IST
             break
     today_row = next((r for r in gp.log_rows(1) if r.get("date") == today.isoformat()), None)
     hol = specs.holiday_on(today)
@@ -1079,17 +1110,23 @@ def verdict_sentence(gauges: list[dict[str, Any]], window: str, extras: dict[str
         usd = extras.get("usd_effect_pct")
         if usd is not None:
             bits.append(f"of which the dollar {usd:+.1f} %")
+        ry_g = g.get("real_yield") or {}
         if ry_bp is not None:
-            bits.append(f"real yield {ry_bp:+.0f} bp")
+            # dated (wave 1e, M-B): the tile's own series and last date — the same value MACRO prints
+            bits.append(f"real yield {ry_bp:+.0f} bp" + (f" (to {_day_label(ry_g.get('report_date'))})" if ry_g.get("report_date") else ""))
         if note:
             bits.append(note)
         clauses.append(
             {
                 "text": " · ".join(bits),
                 "rule_id": "H2",
-                "series_id": "FRED_DFII10",
+                "series_id": ry_g.get("series_id") or "FRED_DFII10",
                 "value": _r(usd),
                 "threshold": HEALTH_RULES[1]["threshold"],
+                "real_yield_series_id": ry_g.get("series_id"),
+                "real_yield_value": ry_g.get("value"),
+                "real_yield_date": ry_g.get("report_date"),
+                "real_yield_change_bp": ry_bp,
             }
         )
     pos = g.get("positioning")
@@ -1106,14 +1143,18 @@ def verdict_sentence(gauges: list[dict[str, Any]], window: str, extras: dict[str
         # the gauge's ONE value with its clock and purity named (5 Nov review: +0.72 / 0.02 / +0.0 / −2.1 / +0.7 % in ten minutes)
         clock = "live" if basis.get("clock") == "now" else (basis.get("settle_basis_session_label") or "settlement")
         ref = str(basis.get("basis_reference") or "").replace("landed_", "")
+        what = basis.get("basis_contract")   # the page's pick (wave 1e, M-A): the clause names the contract it divides
         clauses.append(
             {
-                "text": f"India basis {basis['value']:+.1f} % vs duty-paid landed{f' {ref}' if ref else ''} ({clock})",
+                "text": f"India basis {basis['value']:+.1f} % vs duty-paid landed{f' {ref}' if ref else ''} ({clock})"
+                f"{f' on {what}' if what else ''}",
                 "rule_id": "H4",
                 "series_id": "MCX_BASIS_PCT",
                 "value": basis["value"],
                 "threshold": None,
                 "clock": basis.get("clock"),
+                "clock_label": basis.get("clock_label"),
+                "basis_contract": what,
             }
         )
     roll = g.get("curve_roll")
@@ -1269,6 +1310,59 @@ def shanghai_change(g: dict[str, Any], pts: list[dict[str, Any]]) -> dict[str, A
     return g
 
 
+SH_RECONCILE_USD = 0.1   # |SGE $/oz − LBMA PM − premium| allowed on a printed pair (wave 1e, M-C)
+
+
+def shanghai_pairs(
+    sge_pts: list[dict[str, Any]],
+    lbma_pts: list[dict[str, Any]],
+    cny_pts: list[dict[str, Any]],
+    stored_pts: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Every same-date Shanghai pair, its premium recomputed FROM THE LEGS THE PAGE PRINTS (wave 1e, M-C: the stored
+    SHANGHAI_PREMIUM_USD +$1.50 was derived at 21:30 with an earlier CNY=X vintage; the 03:10 revision to 6.6701 made the
+    printed legs give −$2.0): SGE PM (CNY/g) × 31.1035 ÷ USDCNY (the latest vintage on/before the SGE date) − LBMA PM of the
+    same date. A date without all three legs keeps the stored derive (`source` 'stored'). Each row: {report_date, value,
+    premium_usd, premium_pct, sge_cny_g, usdcny, usdcny_date, usdcny_release_at, sge_usd_oz, london_pm_usd, stored_usd,
+    source, release_at}. Sorted by date. Pure."""
+    lb = {p["report_date"]: p for p in lbma_pts if p.get("value")}
+    stored = {p["report_date"]: p for p in stored_pts if p.get("value") is not None}
+    cny = sorted((p for p in cny_pts if p.get("value")), key=lambda p: p["report_date"])
+    cny_days = [p["report_date"] for p in cny]
+    out: dict[str, dict[str, Any]] = {}
+    for sg in sge_pts:
+        d = sg["report_date"]
+        lp = lb.get(d)
+        i = bisect.bisect_right(cny_days, d) - 1
+        cn = cny[i] if i >= 0 else None
+        if not (lp and cn and sg.get("value")):
+            continue
+        usd = sg["value"] * GRAMS_PER_TROY_OZ / cn["value"]
+        prem = round(usd - lp["value"], 2)
+        stamps = [x for x in (_dt(sg.get("release_at")), _dt(lp.get("release_at")), _dt(cn.get("release_at"))) if x]
+        out[d] = {
+            "report_date": d,
+            "value": prem,
+            "premium_usd": prem,
+            "premium_pct": round(prem / lp["value"] * 100, 3),
+            "sge_cny_g": sg["value"],
+            "usdcny": cn["value"],
+            "usdcny_date": cn["report_date"],
+            "usdcny_release_at": _iso_any(cn.get("release_at")),
+            "sge_usd_oz": round(usd, 2),
+            "london_pm_usd": lp["value"],
+            "stored_usd": stored[d]["value"] if d in stored else None,
+            "source": "legs",
+            "release_at": _iso(max(stamps)) if stamps else None,
+        }
+    for d, sp in stored.items():
+        if d not in out:
+            out[d] = {"report_date": d, "value": sp["value"], "premium_usd": sp["value"], "premium_pct": None, "sge_cny_g": None,
+                      "usdcny": None, "usdcny_date": None, "usdcny_release_at": None, "sge_usd_oz": None, "london_pm_usd": None,
+                      "stored_usd": sp["value"], "source": "stored", "release_at": sp.get("release_at")}
+    return [out[d] for d in sorted(out)]
+
+
 def _bar_partial(p: dict[str, Any]) -> bool | None:
     """The store's own partial flag on a daily bar (data-service marks a bar fetched before the Globex close), None when absent."""
     v = p.get("partial")
@@ -1303,6 +1397,11 @@ async def build_health(window: str = "W", contract: str = "GOLD", expiry: str | 
                 "SHANGHAI_PREMIUM_USD",
                 "SHANGHAI_PREMIUM_PCT",
                 "COMEX_CARRY_ANN_PCT",
+                # the Shanghai legs (wave 1e, M-C): the tile's premium is recomputed from the legs PHYSICAL prints
+                "SGE_SHAU_PM",
+                "LBMA_PM_USD",
+                "FX_CNY",
+                "FRED_DEXCHUS",
             ],
             days=400,
         ),
@@ -1436,12 +1535,14 @@ async def build_health(window: str = "W", contract: str = "GOLD", expiry: str | 
         rule: str,
         scale_change: float = 1.0,
         change_unit: str = "%",
+        twin: bool = False,
     ) -> dict[str, Any]:
         """A tile from a stored series: the change is the DIFFERENCE over the verdict window (the same Monday-to-date /
         5-session anchor as TREND), scaled (`scale_change` 100 → bp) and labelled with `change_unit`; `change_bp` is kept
-        on the real-yield tile as an alias (C-DATA-18: the tile showed no Δ while the verdict quoted it)."""
-        pts = series.get(sid) or (series.get(alt) if alt else None) or []
-        used = sid if series.get(sid) else (alt if alt and series.get(alt) else sid)
+        on the real-yield tile as an alias (C-DATA-18: the tile showed no Δ while the verdict quoted it). `twin`: `alt`
+        measures the SAME quantity, so MACRO's fresher-twin rule (`pick_twin`) picks the series (wave 1e, M-B)."""
+        used, twin_note = pick_twin(series, sid, alt, cat, twin)
+        pts = series.get(used) or []
         if not pts or not is_published(cat, used):
             g = _gauge(
                 key,
@@ -1489,6 +1590,9 @@ async def build_health(window: str = "W", contract: str = "GOLD", expiry: str | 
                 "percentile_3y": pct_rank(window_values(pts, 1095), last_p["value"]) if len(pts) > 300 else None,
                 "window_label": anchor["label"],
                 "window_from": anchor["from_date"],
+                "label_note": twin_note,
+                "primary_series_id": sid,
+                "instrument": MACRO_INSTRUMENT.get(used),
             },
             change_unit=change_unit,
         )
@@ -1505,9 +1609,11 @@ async def build_health(window: str = "W", contract: str = "GOLD", expiry: str | 
             "UST_REAL_10Y",
             "%",
             "falling = supportive",
-            "10-y TIPS yield; Δ in bp over the window; contemporaneous only (G-MACRO H1)",
+            "10-y TIPS yield; Δ in bp over the window; contemporaneous only (G-MACRO H1); the fresher of FRED DFII10 and "
+            "the Treasury curve (the MACRO rule)",
             100.0,
             "bp",
+            twin=True,
         )
         gauges.append(ry)
         dxy_pts = series.get("DXY_CLOSE") or []
@@ -1721,6 +1827,13 @@ async def build_health(window: str = "W", contract: str = "GOLD", expiry: str | 
                     "context · no in-house evidence (GS-PREMIUM after 2 y)",
                     {
                         "clock": shown["clock"],
+                        # the chip names its clock (wave 1e, M-A): 'LIVE · GOLDTEN NOV-26 · 09:16 IST' or
+                        # 'SETTLEMENT · VWAP30 PROXY · Thu 05 Nov' — render verbatim
+                        "clock_label": basis_clock_label(
+                            shown["clock"], f"{fair.get('contract') or 'GOLD'} {_mmy(fair.get('expiry')) or ''}".strip(),
+                            fair.get("mcx_live_as_of") if lb else None, fair.get("settlement_source"), sb.get("date"),
+                        ),
+                        "mcx_live_as_of": fair.get("mcx_live_as_of") if lb else None,
                         "basis_label": shown["label"],
                         "basis_reference": shown.get("basis_reference") or fair.get("basis_reference"),
                         "purity": fair.get("purity"),
@@ -1769,6 +1882,16 @@ async def build_health(window: str = "W", contract: str = "GOLD", expiry: str | 
             )
             if shown.get("value") is not None:
                 gauges[-1].update(published=False, note=unpublished_note(cat, "MCX_BASIS_PCT"))
+        # ONE Shanghai premium per page (wave 1e, M-C): the same legs-recomputed pairs as /premiums (PHYSICAL), so the tile and
+        # the hero print the same number and SGE $/oz − LBMA PM reproduces it; the stored derive only where a leg is missing
+        def _pub(sid: str) -> list[dict[str, Any]]:
+            return (series.get(sid) or []) if is_published(cat, sid) else []
+
+        sh_pairs = shanghai_pairs(_pub("SGE_SHAU_PM"), _pub("LBMA_PM_USD"), _pub("FX_CNY") or _pub("FRED_DEXCHUS"),
+                                  series.get("SHANGHAI_PREMIUM_USD") or [])
+        if sh_pairs and series.get("SHANGHAI_PREMIUM_USD"):
+            series = {**series, "SHANGHAI_PREMIUM_USD": [{"report_date": p["report_date"], "value": p["premium_usd"],
+                                                           "release_at": p["release_at"]} for p in sh_pairs]}
         sh_gauge = _series_gauge(
             "shanghai",
             "SHANGHAI PREMIUM",
@@ -1780,6 +1903,11 @@ async def build_health(window: str = "W", contract: str = "GOLD", expiry: str | 
             1.0,
             "$/oz" if series.get("SHANGHAI_PREMIUM_USD") or not series.get("SHANGHAI_PREMIUM_PCT") else "pp",
         )
+        sh_last = sh_pairs[-1] if sh_pairs else None
+        if sh_last and sh_gauge.get("series_id") == "SHANGHAI_PREMIUM_USD":
+            sh_gauge.update(premium_source=sh_last["source"], sge_usd_oz=sh_last["sge_usd_oz"],
+                            london_pm_usd=sh_last["london_pm_usd"], usdcny=sh_last["usdcny"],
+                            usdcny_date=sh_last["usdcny_date"], premium_usd_stored=sh_last["stored_usd"])
         gauges.append(shanghai_change(sh_gauge, series.get(sh_gauge.get("series_id") or "") or []))
     except Exception as exc:  # noqa: BLE001
         reads.errors["gauge:premiums"] = type(exc).__name__
@@ -1972,6 +2100,8 @@ def apply_live_mcx(health: dict[str, Any], live: float | None, source: str | Non
             release_at=lb["as_of"],
             source="live MCX (Breeze) vs COMEX × INR × duty, now",
             clock="now",
+            clock_label=basis_clock_label("now", g.get("basis_contract"), live_at, None, None),
+            mcx_live_as_of=live_at,
             basis_label=lb["label"],
             basis_reference=lb.get("basis_reference"),
             live_basis_pct=lb["value"],
@@ -2085,17 +2215,39 @@ def _bar_rows(payload: Any) -> list[dict[str, Any]]:
         ts = r.get("ts") or r.get("trade_date") or r.get("t")
         if not ts:
             continue
-        out.append(
-            {
-                "ts": _iso_any(ts) or str(ts),
-                "o": _f(r.get("open", r.get("o"))),
-                "h": _f(r.get("high", r.get("h"))),
-                "l": _f(r.get("low", r.get("l"))),
-                "c": _f(r.get("close", r.get("c"))),
-                "v": _f(r.get("volume", r.get("v"))),
-            }
-        )
+        bar = {
+            "ts": _iso_any(ts) or str(ts),
+            "o": _f(r.get("open", r.get("o"))),
+            "h": _f(r.get("high", r.get("h"))),
+            "l": _f(r.get("low", r.get("l"))),
+            "c": _f(r.get("close", r.get("c"))),
+            "v": _f(r.get("volume", r.get("v"))),
+        }
+        if r.get("partial") is not None:          # the store's flag: a daily bar fetched before its Globex close (wave 1e)
+            bar["partial"] = bool(r.get("partial"))
+        if r.get("volume_repeat"):
+            bar["volume_repeat"] = True
+        out.append(ohlc_sane(bar))
     out.sort(key=lambda b: b["ts"])
+    return out
+
+
+def ohlc_sane(bar: dict[str, Any]) -> dict[str, Any]:
+    """An OHLC that can exist (wave 1e minor, C-DATA-3 / C-TRADER-3: the partial Thu 05 Nov GC=F bar carried Wed's open
+    3,940.8 under a low of 4,067.0 and WEEKLY drew a +4 % candle that never happened): an open (or close) outside
+    [low, high] is withheld (`o` None, the raw value kept as `o_raw`, `ohlc_note` says why) — never printed, never drawn.
+    A bar without a high or low is left as it is. Pure."""
+    h, lo = bar.get("h"), bar.get("l")
+    if h is None or lo is None or h < lo:
+        return bar
+    bad = [k for k in ("o", "c") if bar.get(k) is not None and not (lo - 1e-9 <= bar[k] <= h + 1e-9)]
+    if not bad:
+        return bar
+    out = dict(bar)
+    for k in bad:
+        out[f"{k}_raw"], out[k] = out[k], None
+    out["ohlc_note"] = ("open outside the day's range (Yahoo repeated the previous bar's open on a partial bar): withheld"
+                        if bad == ["o"] else "a price outside the day's high–low range: withheld")
     return out
 
 
@@ -2104,16 +2256,69 @@ def _bar_rows(payload: Any) -> list[dict[str, Any]]:
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
 
+def fold_live_quote(health: dict[str, Any] | None, quote: dict[str, Any] | None, now: datetime) -> dict[str, Any]:
+    """The page's live MCX quote folded into a freshly built HEALTH payload — the ONE rule /overview and /health share
+    (wave 1e, M-A): only inside an MCX trading window (`mcx_is_open`: a cached LTP after the close is frozen, never 'now'),
+    the quote's own minute read as IST (Breeze prints IST wall time; a stamp after `now` is dropped, never served).
+    Returns {mcx_live, source, as_of, is_open, applied}."""
+    q: dict[str, Any] = ((quote or {}).get("quote") or {}) if (quote or {}).get("available") else {}
+    live = _f(q.get("ltp"))
+    live_at = _iso_ist(q.get("time")) or _iso_ist((quote or {}).get("as_of"))
+    at = _dt(live_at) if live_at and len(live_at) > 10 else None
+    if at is not None and at > now + timedelta(minutes=2):
+        live_at = None                     # a clock ahead of the read is a zone error, not a time (C-DATA-3 minor)
+    is_open = mcx_is_open(now)
+    applied = bool(health is not None and live and is_open and apply_live_mcx(health, live, q.get("source"), live_at))
+    return {"mcx_live": live, "source": q.get("source") if live else None, "as_of": live_at if live else None,
+            "is_open": is_open, "applied": applied}
+
+
+async def build_contract_health(window: str, contract: str = "GOLD", expiry: str | None = None,
+                                quote: dict[str, Any] | None = None, read_quote: bool = True) -> dict[str, Any]:
+    """HEALTH for the page's contract with the live MCX quote folded in during MCX hours (wave 1e, M-A: the gauge and the
+    verdict read GOLD at the settlement clock while the strip read the picked contract, live). `quote` is the page's quote
+    when the caller holds one (/overview); else ONE `mcx_quote` read (its 15 s cache, at most 12 s) — only while MCX trades
+    and only when `read_quote` (an explicit contract pick): outside the window no quote is read and the gauge stays at the
+    settlement clock; the default echo (WEI / BRF poll it) folds only a quote the cache already holds (no broker call)."""
+    now = _now_ist()
+    want_quote = quote is None and read_quote and mcx_is_open(now)
+    got = await _gather(build_health(window, contract, expiry),
+                        asyncio.wait_for(mcxr.mcx_quote(contract=contract, expiry=expiry), 12.0) if want_quote else _none())
+    health_t, quote_t = got[0], got[1]
+    if isinstance(health_t, BaseException):
+        raise health_t
+    q = quote if quote is not None else (quote_t if isinstance(quote_t, dict) else {"available": False})
+    health_t["live_quote"] = fold_live_quote(health_t, q, now)
+    return health_t
+
+
+async def _none() -> None:
+    return None
+
+
 @router.get("/health")
-async def gold_health(window: str = Query("W", pattern="^[DWMdwm]$"), response: Response = None) -> dict[str, Any]:  # type: ignore[assignment]
+async def gold_health(
+    window: str = Query("W", pattern="^[DWMdwm]$"),
+    contract: str | None = Query(None),
+    expiry: str | None = Query(None),
+    response: Response = None,  # type: ignore[assignment]
+) -> dict[str, Any]:
     """The HEALTH payload (PLAN §d): eight gauges, the rule-based verdict (NO score, ends 'describes, does not predict'),
-    the fair block and the one-line echoes for WEI (`line`) and BRF (`brf_line`). 60 s TTL per window; no Breeze on
-    this path (the fair block reads the quote cache only)."""
-    key = f"health:{window.upper()}"
+    the fair block and the one-line echoes for WEI (`line`) and BRF (`brf_line`). `contract` / `expiry` (default GOLD front:
+    the WEI / BRF echo and the 08:40 snapshot) pick the MCX contract of the INDIA BASIS gauge and the H4 clause; while MCX
+    trades the live quote is folded in exactly as on /overview (wave 1e, M-A), so `/health?contract=X&expiry=Y` equals
+    `/overview?contract=X&expiry=Y`.health. Without `contract` (the WEI / BRF echo, polled) no quote is read: a live quote the
+    cache already holds is still folded in. 60 s TTL per (contract, expiry, window)."""
+    code = (contract or "GOLD").upper()
+    if code not in mcxr.contract_specs():
+        fail(422, "invalid", f"Unknown MCX contract '{contract}'", hint=f"One of {', '.join(mcxr.contract_specs())}")
+    if expiry:
+        _date_arg(expiry, "expiry")
+    key = f"health:{code}:{expiry or 'front'}:{window.upper()}"
     hit = _memo_hit(key, response)
     if hit is not None:
         return hit
-    payload = await build_health(window.upper())
+    payload = await build_contract_health(window.upper(), code, expiry, read_quote=contract is not None or expiry is not None)
     served = _served_of(payload)  # PLAN §f.4 (no score key) is enforced by test_health_verdict_is_descriptive_and_has_no_score
     payload.pop("_extras", None)
     _memo(key, HEALTH_TTL_S, payload, served)
@@ -2153,6 +2358,9 @@ def brf_line(health: dict[str, Any]) -> str:
         parts.append(words)
     parts.append("GOLD ›")
     return " · ".join(parts)
+
+
+COMEX_DELAYED_S = 300    # a Yahoo COMEX print older than this is chipped 'delayed', never LIVE (wave 1e minor)
 
 
 async def build_fair(
@@ -2198,9 +2406,13 @@ async def build_fair(
     body["badge"] = BADGE_ARITH
     body.setdefault("verdict", {})["badge"] = BADGE_HEURISTIC
     model = body.get("model") or {}
-    body["freshness"] = freshness(
-        (model.get("comex") or {}).get("as_of"), 1, "Yahoo (cached fetcher)", live=bool(model.get("fair_open"))
-    )
+    comex_at = (model.get("comex") or {}).get("as_of")
+    body["freshness"] = freshness(comex_at, 1, "Yahoo (cached fetcher)", live=bool(model.get("fair_open")))
+    # Yahoo's CME print runs 10–12 minutes behind (wave 1e minor, C-DATA-3: chipped LIVE beside real-time Breeze MCX): past
+    # COMEX_DELAYED_S it is 'delayed', with the lag in minutes for the chip ('COMEX ≈10 min delayed (Yahoo)')
+    age = body["freshness"].get("age_s")
+    if body["freshness"].get("state") == "live" and age is not None and age > COMEX_DELAYED_S:
+        body["freshness"].update(state="delayed", delay_min=round(age / 60), chip=f"COMEX ≈{round(age / 60)} min delayed (Yahoo)")
     code = (contract or "GOLD").upper()
     if code != "GOLD" or expiry:
         if code not in mcxr.contract_specs():
@@ -2335,12 +2547,20 @@ async def gold_bars(
     # session's close, never the live last (C-TRADER-2 / C-TRADER-17); an IST-day bucket's last tick is labelled 'last'
     daily = _closes_from_bars(daily_t) if not isinstance(daily_t, Exception) else []
     comex_open = comex_session(now)["is_open"]
+    # the store's own partial flag wins (wave 1e minor: Thu 05 Nov was partial in the store and 'partial False' here, so the
+    # Kitco dashed line printed a pre-close bar as the close); the clock rule only for a row that carries no flag
+    def _partial(p: dict[str, Any]) -> bool:
+        flag = _bar_partial(p)
+        return bool(flag) if flag is not None else (_dd(p["report_date"]) >= now.date() and comex_open)
+
     daily_closes = [
         {
             "date": p["report_date"],
             "close": p["value"],
-            "partial": _dd(p["report_date"]) >= now.date() and comex_open,
-            "label": f"{_day_label(p['report_date'])} {'last (partial day)' if _dd(p['report_date']) >= now.date() and comex_open else 'close'} (Yahoo daily bar)",
+            "partial": _partial(p),
+            "partial_source": "store" if _bar_partial(p) is not None else "clock rule",
+            "label": f"{_day_label(p['report_date'])} "
+            f"{'last (partial: fetched before the Globex close)' if _partial(p) else 'close'} (Yahoo daily bar)",
         }
         for p in daily[-4:]
     ]
@@ -2610,6 +2830,23 @@ def _fnd_for_month(events: list[dict[str, Any]], rows: list[dict[str, Any]], ym:
 def _purity_txt(fair: dict[str, Any]) -> str:
     p = fair.get("purity")
     return f" at {p}" if p else ""
+
+
+def basis_clock_label(clock: str | None, contract: str | None, live_at: Any, settlement_source: str | None,
+                      settle_date: Any) -> str | None:
+    """The INDIA BASIS chip, naming its clock (wave 1e, M-A — the tile said 'SETTLEMENT' while its blurb said 'live while
+    MCX trades'): 'LIVE · GOLDTEN NOV-26 · 09:16 IST' (the quote's own minute) or 'SETTLEMENT · VWAP30 PROXY · Thu 05 Nov'
+    (BAND PROXY for the band midpoint). Pure."""
+    if clock == "now":
+        t = _dt(live_at) if live_at and len(str(live_at)) > 10 else None
+        parts = ["LIVE", contract or None, f"{t.astimezone(IST):%H:%M} IST" if t else None]
+        return " · ".join(p for p in parts if p)
+    if clock == "settlement":
+        how = ("VWAP30 PROXY" if settlement_source == "breeze_vwap30"
+               else "BAND PROXY" if settlement_source == "band_midpoint" else "STORED")
+        d = _d(settle_date)
+        return " · ".join(p for p in ("SETTLEMENT", how, f"{d:%a %d %b}" if d else None) if p)
+    return None
 
 
 def settle_basis(fair: dict[str, Any], basis_pts: list[dict[str, Any]]) -> dict[str, Any]:
@@ -3043,13 +3280,14 @@ def _is_futures(foi: Any) -> bool:
 
 def sessions_between(a: date, b: date) -> int:
     """Weekday sessions in (a, b] — how many sessions a stored delta spans when the master skipped days (C-TRADER-18:
-    a 29 Oct → 3 Nov OI change printed as one day's). Holidays are not subtracted: an upper bound, labelled 'over N sessions'."""
+    a 29 Oct → 3 Nov OI change printed as one day's). Holidays are not subtracted: an upper bound, labelled 'over N sessions'.
+    A dated MCX special session (Muhurat, Sun 8 Nov 2026) counts (wave 1e, M-D)."""
     if b <= a:
         return 0
     n, d = 0, a
     while d < b:
         d += timedelta(days=1)
-        if d.weekday() < 5:
+        if d.weekday() < 5 or d in specs.SPECIAL_SESSION_WINDOWS:
             n += 1
     return n
 
@@ -3282,7 +3520,9 @@ def tender_state(tender_start: date, expiry: date, today: date) -> dict[str, Any
         else f"{days} days to tender (from {tender_start:%a %d %b})" if days > 0
         else None
     )
-    return {"days_to_tender": max(days, 0) if running else days, "in_tender": running, "tender_note": note}
+    # `days_in_tender` (wave 1e minor): the running tender's age, so no client turns the clamped 0 into 'starts today'
+    return {"days_to_tender": max(days, 0) if running else days, "in_tender": running, "tender_note": note,
+            "days_in_tender": -days if running else None, "tender_start": tender_start.isoformat()}
 
 
 def build_positioning_mcx(
@@ -3398,6 +3638,9 @@ def build_positioning_mcx(
         "days_to_tender_or_fnd": ts.get("days_to_tender"),
         "in_tender": ts.get("in_tender"),
         "tender_note": ts.get("tender_note"),
+        # wave 1e minor (C-DATA-3 / C-TRADER-3: 'tender starts today (Sun 01 Nov)' printed on Fri 06 Nov): the running
+        # tender's age in days; while `in_tender` print `tender_note`, never words built from the clamped 0
+        "days_in_tender": ts.get("days_in_tender"),
         "days_unit": "calendar days",
         "tender_start": tender_start.isoformat() if tender_start else None,
         "expiry": str(front["expiry"])[:10] if front else None,
@@ -4239,47 +4482,49 @@ def build_premiums(
     ]
     # Shanghai: SGE PM and the London PM of the SAME report date only (C-TRADER-5 / C-DATA-10: the Wed SGE against the
     # Tue LBMA after a +3.5 % day printed +$109 while the stored same-day figure was −$1.55). When today's PM is not
-    # stored yet, the last stored SHANGHAI_PREMIUM_USD stands, labelled, and the newer SGE fix is shown on its own.
+    # stored yet, the last pair stands, labelled, and the newer SGE fix is shown on its own. Wave 1e (M-C): every pair's
+    # premium is recomputed from the legs printed beside it (`shanghai_pairs`), so SGE $/oz − LBMA PM = premium to the cent;
+    # the stored derive is kept as `premium_usd_stored` and named when an input vintage moved it.
     sge_pts, lbma_pts = pts("SGE_SHAU_PM"), pts("LBMA_PM_USD")
     cny_pts = pts("FX_CNY") or pts("FRED_DEXCHUS")
     sge = sge_pts[-1] if sge_pts else None
-    lbma_same = next((p for p in reversed(lbma_pts) if sge and p["report_date"] == sge["report_date"]), None)
-    cny_same = next((p for p in reversed(cny_pts) if sge and p["report_date"] <= sge["report_date"]), None) if sge else None
     sh_hist_usd, sh_hist_pct = pts("SHANGHAI_PREMIUM_USD"), pts("SHANGHAI_PREMIUM_PCT")
-    stored_sh = sh_hist_usd[-1] if sh_hist_usd else None
+    pairs = shanghai_pairs(sge_pts, lbma_pts, cny_pts, sh_hist_usd)
+    last_pair = pairs[-1] if pairs else None
     sge_usd = sh_prem = sh_pct = ref_usd = None
-    pair_date = pairing = sh_note = None
-    if sge and lbma_same and cny_same and cny_same["value"]:
-        sge_usd = _r(sge["value"] * GRAMS_PER_TROY_OZ / cny_same["value"], 2)
-        ref_usd = lbma_same["value"]
-        sh_prem = _r(sge_usd - ref_usd, 2)
-        sh_pct = _r(sh_prem / ref_usd * 100, 2) if ref_usd else None
-        pair_date, pairing = sge["report_date"], "same report date (SGE PM 14:15 Beijing · LBMA PM 15:00 London)"
-    elif stored_sh:
-        sh_prem = _r(stored_sh["value"], 2)
-        sh_pct = _close_on(sh_hist_pct, _d(stored_sh["report_date"])) if sh_hist_pct else None
-        sh_pct = _r(sh_pct, 2) if sh_pct is not None else None
-        pair_date, pairing = stored_sh["report_date"], "last stored same-date pair (data-service derive)"
-        lb_at = next((p for p in reversed(lbma_pts) if p["report_date"] == stored_sh["report_date"]), None)
-        ref_usd = lb_at["value"] if lb_at else None
-        sg_at = next((p for p in reversed(sge_pts) if p["report_date"] == stored_sh["report_date"]), None)
-        cn_at = next((p for p in reversed(cny_pts) if sg_at and p["report_date"] <= sg_at["report_date"]), None) if sg_at else None
-        sge_usd = _r(sg_at["value"] * GRAMS_PER_TROY_OZ / cn_at["value"], 2) if sg_at and cn_at and cn_at["value"] else None
-        if sge and sge["report_date"] > stored_sh["report_date"]:
+    pair_date = pairing = sh_note = recompute_note = None
+    sge_shown: dict[str, Any] | None = None
+    cny_shown: dict[str, Any] | None = None
+    if last_pair:
+        pair_date, sh_prem = last_pair["report_date"], _r(last_pair["premium_usd"], 2)
+        sge_shown = next((p for p in reversed(sge_pts) if p["report_date"] == pair_date), None)
+        ref_usd = last_pair["london_pm_usd"]
+        if last_pair["source"] == "legs":
+            sge_usd, sh_pct = last_pair["sge_usd_oz"], _r(last_pair["premium_pct"], 2)
+            cny_shown = {"value": last_pair["usdcny"], "report_date": last_pair["usdcny_date"],
+                         "release_at": last_pair["usdcny_release_at"]}
+            pairing = ("same report date (SGE PM 14:15 Beijing · LBMA PM 15:00 London), recomputed from the printed legs"
+                       if sge and pair_date == sge["report_date"] else
+                       "last same-date pair, recomputed from the printed legs")
+            st = last_pair.get("stored_usd")
+            if st is not None and abs(st - last_pair["premium_usd"]) >= SH_RECONCILE_USD:
+                recompute_note = (f"the stored derive {st:+.2f} $/oz used an earlier USDCNY vintage; the premium is recomputed "
+                                  f"from the printed legs (USDCNY {last_pair['usdcny']} of {_day_label(last_pair['usdcny_date'])})")
+        else:
+            st_pct = _close_on(sh_hist_pct, _d(pair_date)) if sh_hist_pct else None
+            sh_pct = _r(st_pct, 2) if st_pct is not None else None
+            lb_at = next((p for p in reversed(lbma_pts) if p["report_date"] == pair_date), None)
+            ref_usd = lb_at["value"] if lb_at else None
+            pairing = "last stored same-date pair (data-service derive; a leg is not stored, so it is not recomputed)"
+        if sge and sge["report_date"] > pair_date:
             sh_note = f"awaiting today's PM: SGE {_day_label(sge['report_date'])} is in, its London PM is not stored yet"
     elif sge:
         sh_note = "no same-date London PM stored: no premium (never SGE vs an earlier London fix)"
     # the legs printed beside the premium are the PAIR's legs (same date); a newer SGE print is shown on its own
     # (re-review C-DATA-2 N1: '865.47 CNY/g = $3,935.1' glued a 4 Nov CNY leg to the 3 Nov USD leg)
-    sge_shown: dict[str, Any] | None
-    cny_shown: dict[str, Any] | None
-    if sge and lbma_same and cny_same and cny_same["value"]:
-        sge_shown, cny_shown = sge, cny_same
-    elif stored_sh:
-        sge_shown, cny_shown = sg_at, cn_at
-    else:
-        sge_shown, cny_shown = None, None
     sge_latest = sge if sge and (not sge_shown or sge["report_date"] > sge_shown["report_date"]) else None
+    reconciles = (None if sge_usd is None or ref_usd is None or sh_prem is None
+                  else abs(sge_usd - ref_usd - sh_prem) < SH_RECONCILE_USD)
     hist_in = [
         {
             "report_date": p["report_date"],
@@ -4292,13 +4537,16 @@ def build_premiums(
     hist_cn = [
         {
             "report_date": p["report_date"],
-            "premium_usd": p["value"],
-            "premium_pct": next((q["value"] for q in sh_hist_pct if q["report_date"] == p["report_date"]), None),
+            "premium_usd": p["premium_usd"],
+            "premium_pct": (p["premium_pct"] if p["premium_pct"] is not None
+                            else next((q["value"] for q in sh_hist_pct if q["report_date"] == p["report_date"]), None)),
+            "source": p["source"],              # 'legs' (recomputed from the stored legs) | 'stored' (the derive)
+            "stored_usd": p["stored_usd"],
             # a pair far from its neighbours' median is most likely the 14:15 Beijing vs 15:00 London timing gap on a big
             # day (+$75.34 on Fri 30 Oct, a −3.3 % day), not a premium: flagged so the chart can mark it (5 Nov review)
-            "timing_spike_suspect": _timing_spike(sh_hist_usd, i),
+            "timing_spike_suspect": _timing_spike(pairs, i),
         }
-        for i, p in enumerate(sh_hist_usd)
+        for i, p in enumerate(pairs)
     ]
     duty_hist = [{"effective": d, "pct": p} for d, p in gp.DUTY_HISTORY]
     wgc_in, wgc_cn = last_of("WGC_PREMIUM_IN"), last_of("WGC_PREMIUM_CN")
@@ -4326,6 +4574,14 @@ def build_premiums(
             "basis_date": sb["date"],
             "basis_label": sb["label"],
             "basis_source": sb["source"],
+            # the settlement the basis divides (wave 1e minor, C-DATA-3: under GOLDTEN the line said 'price-band midpoint …
+            # source not stated' beside a VWAP30 bar — `india.settlement_source` did not exist): the contract's own, named
+            "contract": fair.get("contract"),
+            "expiry": fair.get("expiry"),
+            "settlement_source": fair.get("settlement_source"),
+            "settlement_quality": fair.get("settlement_quality"),
+            "settlement_session": fair.get("settlement_session"),
+            "settlement_session_label": fair.get("settlement_session_label"),
             "live_basis": live_basis(fair),
             "carry_adj_pct": None,
             "duty": {
@@ -4349,6 +4605,8 @@ def build_premiums(
             "sge_pm_date": sge_shown["report_date"] if sge_shown else None,
             "usdcny": cny_shown["value"] if cny_shown else None,
             "usdcny_date": cny_shown["report_date"] if cny_shown else None,
+            # the vintage of the USDCNY leg the premium uses (wave 1e, M-C): its stored time, so a revision is visible
+            "usdcny_as_of": cny_shown.get("release_at") if cny_shown else None,
             "sge_latest_cny_g": sge_latest["value"] if sge_latest else None,
             "sge_latest_date": sge_latest["report_date"] if sge_latest else None,
             "legs_note": "CNY/g, USDCNY and $/oz are the pair date's own legs; a newer SGE print stands alone until its London PM is stored",
@@ -4358,6 +4616,10 @@ def build_premiums(
             "comex_at_1415_bj": None,
             "premium_usd": sh_prem,
             "premium_pct": sh_pct,
+            "premium_usd_stored": last_pair.get("stored_usd") if last_pair else None,
+            "premium_source": last_pair["source"] if last_pair else None,
+            "reconciles": reconciles,          # |sge_usd_oz − london_pm_usd − premium_usd| < 0.1 when all three are printed
+            "recompute_note": recompute_note,
             "pair_date": pair_date,
             "pairing": pairing,
             "note": sh_note,
@@ -4691,7 +4953,44 @@ MACRO_DRIVERS: tuple[tuple[str, str, str, str, int, str], ...] = (
     ("brent", "Brent", "FRED_DCOILBRENTEU", "BRENT_FRONT", +1, "$/bbl"),   # BZ=F daily (G-DATA); WTI is not Brent
 )
 TRUE_TWINS = ("brent", "real_10y", "nominal_2y", "gvz")   # the drivers whose alternate series measures the SAME thing
+
+
+def pick_twin(series: dict[str, list[dict[str, Any]]], sid: str, alt: str | None, cat: dict[str, dict[str, Any]],
+              twin: bool = True) -> tuple[str, str | None]:
+    """(the series id to print, its label note) — MACRO's fresher-twin rule, the ONE rule for the whole page (wave 1e, M-B:
+    HEALTH printed FRED_DFII10 2.65 % Tue '+5 bp' while MACRO printed the Treasury twin 2.60 % Thu '−3 bp'): the primary
+    when it has points, else the alternate as a labelled stand-in; for a TRUE twin (`twin`, the same quantity) the
+    alternate wins when it is published and its last point is NEWER. Pure."""
+    used = sid if series.get(sid) else (alt if alt and series.get(alt) else sid)
+    if (twin and alt and series.get(sid) and series.get(alt) and is_published(cat, alt)
+            and series[alt][-1]["report_date"] > series[sid][-1]["report_date"]):
+        used = alt
+    if used == sid:
+        return used, None
+    if not series.get(sid):
+        return used, f"stand-in: {used} ({sid} has no stored points)"
+    return used, f"{used}: fresher than {sid} (last {series[sid][-1]['report_date']})"
 REGIMES: tuple[tuple[str, int, int], ...] = (("2003–09", 2003, 2009), ("2010–21", 2010, 2021), ("2022–26", 2022, 2026))
+# what each driver series IS (wave 1e minor, C-DATA-3 / C-TRADER-3: 'BRENT 98.68' under 'Source: FRED' was the NYMEX BZ=F
+# front future, about 10 % from dated spot): the tile label, the instrument line and the source line, per series shown
+MACRO_SERIES_LABEL: dict[str, str] = {"BRENT_FRONT": "Brent front future (BZ=F)"}
+MACRO_INSTRUMENT: dict[str, str] = {
+    "BRENT_FRONT": "front-month NYMEX Brent future (BZ=F), last trade — not dated Brent spot",
+    "FRED_DCOILBRENTEU": "dated Brent spot (EIA via FRED)",
+    "UST_REAL_10Y": "10-y TIPS real yield, US Treasury par real curve",
+    "FRED_DFII10": "10-y TIPS real yield, constant maturity (FRED DFII10)",
+    "UST_NOM_2Y": "2-y Treasury yield, US Treasury par curve",
+    "FRED_DGS2": "2-y Treasury yield, constant maturity (FRED DGS2)",
+}
+MACRO_SOURCE_LABEL: dict[str, str] = {
+    "BRENT_FRONT": "Yahoo BZ=F daily bar (last trade; a bar fetched before the close is partial)",
+    "FRED_DCOILBRENTEU": "FRED, Federal Reserve Bank of St. Louis",
+    "UST_REAL_10Y": "US Treasury daily real yield curve (CSV)",
+    "FRED_DFII10": "FRED, Federal Reserve Bank of St. Louis",
+    "UST_NOM_2Y": "US Treasury daily par yield curve (CSV)",
+    "FRED_DGS2": "FRED, Federal Reserve Bank of St. Louis",
+}
+MACRO_SAME_LEVEL: dict[tuple[str, str], bool] = {("FRED_DCOILBRENTEU", "BRENT_FRONT"): False}
 
 
 def _daily_changes(points: list[dict[str, Any]], pct: bool) -> dict[str, float]:
@@ -4798,13 +5097,11 @@ def build_macro(
     keys60 = sorted(gold_chg)[-60:]
     drivers: list[dict[str, Any]] = []
     for key, label, sid, alt, direction, unit in MACRO_DRIVERS:
-        used = sid if series.get(sid) else (alt if alt and series.get(alt) else sid)
         # wave 1d (G-DATA's patch, PM decision D6): for a TRUE twin the fresher stored (and published) series wins — Brent's BZ=F
         # front future vs FRED's spot (2–4 d late), the Treasury CSV vs FRED for the yields, Yahoo ^GVZ vs FRED GVZCLS — shown
-        # under its own id and date. DXY vs the Fed broad index is not a twin and is excluded on purpose.
-        if (key in TRUE_TWINS and alt and series.get(sid) and series.get(alt) and is_published(cat, alt)
-                and series[alt][-1]["report_date"] > series[sid][-1]["report_date"]):
-            used = alt
+        # under its own id and date. DXY vs the Fed broad index is not a twin and is excluded on purpose. Wave 1e: the same
+        # `pick_twin` now decides HEALTH's real-yield tile, its H2 clause and the header strip (one value per page).
+        used, twin_note = pick_twin(series, sid, alt, cat, key in TRUE_TWINS)
         pts = series.get(used) or []
         if pts and not is_published(cat, used):
             pts = []
@@ -4848,12 +5145,14 @@ def build_macro(
                 "key": key,
                 # the tile is labelled by the series actually used (C-DATA-4 / C-TRADER-8): the Fed broad index is never
                 # presented under the DXY name
-                "label": DXY_SOURCE_LABEL.get(used, label),
-                "label_note": (
-                    (f"stand-in: {used} ({sid} has no stored points)" if not series.get(sid)
-                     else f"{used}: fresher than {sid} (last {series[sid][-1]['report_date']})")
-                    if used != sid else None
-                ),
+                "label": MACRO_SERIES_LABEL.get(used) or DXY_SOURCE_LABEL.get(used, label),
+                "label_note": twin_note,
+                # the relation of a twin to its primary (wave 1e minor: Brent's BZ=F front FUTURE printed under 'Source: FRED'
+                # as if it were dated spot) — `instrument` / `source_label` name what is shown, `same_level` False = a different
+                # quantity, never read as the primary's value
+                "instrument": MACRO_INSTRUMENT.get(used),
+                "source_label": MACRO_SOURCE_LABEL.get(used),
+                "same_level": MACRO_SAME_LEVEL.get((sid, used), True) if used != sid else True,
                 "value": last_p["value"],
                 "unit": unit,
                 "report_date": last_p["report_date"],
@@ -4964,6 +5263,8 @@ def build_macro(
                     "p_hike": _f(r.get("prob_hike")),
                     "p_hold": _f(r.get("prob_hold")),
                     "mean_bp": _f(r.get("rate_mean_bp")),
+                    # the tracker's mean is a rate LEVEL in bp (416 bp = 4.16 %), not a move (wave 1e minor): print this
+                    "mean_rate_pct": _r(_ff(r.get("rate_mean_bp")) / 100, 2) if _f(r.get("rate_mean_bp")) is not None else None,
                     "p10_bp": _f(r.get("p10_bp")),
                     "p90_bp": _f(r.get("p90_bp")),
                 }
@@ -4992,9 +5293,7 @@ def build_macro(
         "meeting days — the next FOMC decision is `next_fomc`",
         "as_of": latest_asof,
         "source": "Atlanta Fed Market Probability Tracker (licence: owner reads it, O-10)",
-        "zq": [
-            {"month": _mmy(p["report_date"]), "implied_pct": _r(100 - p["value"], 3)} for p in (series.get("ZQ_FRONT") or [])[-1:]
-        ],
+        "zq": zq_rows(series.get("ZQ_FRONT") or [], effr["value"] if effr else None),
         "effr": effr["value"] if effr else None,
         "effr_date": effr["report_date"] if effr else None,
         "target": f"{tgt['value'] - 0.25:.2f}–{tgt['value']:.2f} %" if tgt else None,
@@ -5252,8 +5551,25 @@ def event_is_past(e: dict[str, Any], now: datetime) -> bool:
     return bool(t) and t < now.astimezone(IST).strftime("%H:%M")
 
 
+def untimed_label(e: dict[str, Any]) -> str | None:
+    """How an event row WITHOUT a time is described (wave 1e minor, C-TRADER-3: Dhanteras and 'MCX morning closure Tue 10 Nov'
+    carried 'AFTER CLOSE · gap risk'): an MCX closure names the part of the session it closes, anything else is 'all day'.
+    None for a timed row (its time decides in-session / after-close)."""
+    if str(e.get("time_ist") or "").strip():
+        return None
+    name = str(e.get("name") or "").lower()
+    if str(e.get("kind") or "").upper() == "MCX_HOLIDAY" or "closure" in name:
+        if "morning" in name:
+            return "MCX morning session closed (evening session from 17:00)"
+        if "evening" in name:
+            return "MCX evening session closed (morning session until 17:00)"
+        return "MCX closed all day"
+    return "all day"
+
+
 def decorate_event(e: dict[str, Any], now: datetime) -> dict[str, Any]:
-    """The row with its page kind, `kind_stored` when relabelled, `star`, `impact_rank` and `past`."""
+    """The row with its page kind, `kind_stored` when relabelled, `star`, `impact_rank`, `past` and, for an untimed row,
+    `timing_label` ('all day' / the MCX closure's part of the session) — never an 'after close · gap risk' guess."""
     kind = event_kind(e)
     stored = str(e.get("kind") or "").upper()
     return {
@@ -5263,6 +5579,7 @@ def decorate_event(e: dict[str, Any], now: datetime) -> dict[str, Any]:
         "star": event_star(e),
         "impact_rank": impact_rank(e),
         "past": event_is_past(e, now),
+        "timing_label": untimed_label(e),
     }
 
 
@@ -5278,6 +5595,36 @@ FOMC_DECISION_DAYS_ET: tuple[str, ...] = (
     "2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09",
     "2027-01-27", "2027-03-17", "2027-04-28", "2027-06-16", "2027-07-28", "2027-09-15", "2027-10-27", "2027-12-08",
 )
+
+
+ZQ_ROLL_GAP_PCT = 0.10   # a front ZQ this far from EFFR with no FOMC decision left in its month has rolled (wave 1e minor)
+
+
+def zq_rows(points: list[dict[str, Any]], effr: float | None) -> list[dict[str, Any]]:
+    """The continuous ZQ=F front, labelled by what it can be (wave 1e minor, C-DATA-3: 'ZQ implied: NOV-26 4.05 %' — the
+    observation date's month — when ZQ=F had rolled: 96.12 → 95.95 on 5 Nov with EFFR 3.88 % and no November FOMC). Yahoo
+    does not report the contract month, so the label is the observation month only when the implied rate is consistent with
+    EFFR or a decision falls in that month; otherwise `rolled_suspect` and the next month as the likely contract. Pure."""
+    if not points:
+        return []
+    p = points[-1]
+    implied = _r(100 - p["value"], 3)
+    obs = _dd(p["report_date"])
+    decision_in_month = any(_dd(d).year == obs.year and _dd(d).month == obs.month and _dd(d) >= obs for d in FOMC_DECISION_DAYS_ET)
+    rolled = (effr is not None and implied is not None and not decision_in_month and abs(implied - effr) > ZQ_ROLL_GAP_PCT)
+    nxt_month = (obs.replace(day=28) + timedelta(days=4)).replace(day=1)
+    guess = _mmy(nxt_month) if rolled else _mmy(obs)
+    return [{
+        "month": f"likely {guess} (ZQ=F rolled)" if rolled else guess,
+        "contract": "ZQ=F continuous front (Yahoo does not report the contract month)",
+        "month_guess": guess,
+        "observed": obs.isoformat(),
+        "implied_pct": implied,
+        "effr": effr,
+        "rolled_suspect": rolled,
+        "note": (f"implied {implied:.2f} % vs EFFR {effr:.2f} % with no FOMC decision left in {obs:%b}: the continuous future has "
+                 f"most likely rolled to {guess}" if rolled else None),
+    }]
 
 
 def next_fomc(events: list[dict[str, Any]], meeting_dates: list[str], now: datetime) -> dict[str, Any] | None:
@@ -5402,7 +5749,10 @@ def computed_events(today: date, days: int) -> list[dict[str, Any]]:
             out.append(
                 {
                     "event_date": s["date"],
-                    "time_ist": None,
+                    # the trading window's open, the circular's own time (wave 1e, M-D: a SESSION in shared/mcx_specs now)
+                    "time_ist": s.get("opens"),
+                    "time_note": f"trading {s.get('opens')}–{s.get('closes')} IST (pre-open {s.get('pre_open')}), "
+                    f"circular {s.get('circular')}" if s.get("opens") else None,
                     "kind": "MCX_SPECIAL",
                     "name": s["name"],
                     "detail": s["note"],
@@ -5802,7 +6152,7 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
     health_t, fair_t, quote_t, brief_t, events_t, series_t, cot_t, curve_t = await _gather(
         build_health(window, code, expiry),   # the page's contract: ONE basis per clock on strip, gauge and verdict (wave 1d)
         build_fair(None, None, 300.0, None, code if code != "GOLD" else None, expiry),
-        asyncio.wait_for(mcxr.mcx_quote(contract=code, expiry=expiry), 12.0),
+        asyncio.wait_for(mcxr.mcx_quote(contract=code, expiry=expiry), 12.0),   # displayed in every state; folded only in hours
         reads.get("/db/gold/brief"),
         reads.get("/db/gold/events", **{"from": now.date().isoformat()}, to=(now.date() + timedelta(days=7)).isoformat()),
         fetch_series(reads, ["FRED_DFII10", "UST_REAL_10Y", "XAU_CROSSCHECK", "USDINR_CLOSE"], days=30),
@@ -5818,11 +6168,13 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
     # the live MCX quote the page holds (Breeze through mcx_quote) folded into THIS health payload: one basis, one desk
     # state on the page (C-TRADER-10 / C-DATA-13); the memoised /health is untouched (it reads the quote cache itself)
     q: dict[str, Any] = (quote.get("quote") or {}) if quote.get("available") else {}
-    mcx_live = _f(q.get("ltp"))
-    mcx_live_at = _iso_any(q.get("time")) or _iso_any(quote.get("as_of"))
-    mcx_open = mcx_is_open(now)
-    if health is not None and mcx_live and mcx_open:   # a frozen LTP outside hours is never folded in (re-check major)
-        apply_live_mcx(health, mcx_live, q.get("source"), mcx_live_at)
+    # the SAME fold /health?contract=&expiry= runs (wave 1e, M-A): live only in MCX hours, the Breeze minute read as IST
+    folded = fold_live_quote(health, quote, now)
+    if health is not None:
+        health["live_quote"] = folded
+    mcx_live = folded["mcx_live"]
+    mcx_live_at = folded["as_of"]
+    mcx_open = folded["is_open"]
     hf: dict[str, Any] = (health or {}).get("fair") or {}
     cf: dict[str, Any] = (fair or {}).get("contract_fair") or hf
     ib: dict[str, Any] = next((g for g in (health or {}).get("gauges") or [] if g.get("key") == "india_basis"), {})
@@ -5830,7 +6182,15 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
     family, published = got if got else (None, None)
     exp, exp_source, row = mcxr._resolve_expiry(code, now.date(), _d(expiry) if expiry else None, family)
     spec = mcxr.contract_specs()[code]
-    ry = latest(series.get("FRED_DFII10") or series.get("UST_REAL_10Y") or [])
+    # ONE real yield per page (wave 1e, M-B): the HEALTH tile's own series, value and date (MACRO's fresher-twin rule);
+    # without a health payload the same rule on the strip's own read (no catalog here: the fresher stored series)
+    ry_g = next((g for g in (health or {}).get("gauges") or [] if g.get("key") == "real_yield" and g.get("value") is not None), None)
+    if ry_g is not None:
+        ry: dict[str, Any] | None = {"value": ry_g["value"], "report_date": ry_g.get("report_date"), "series_id": ry_g.get("series_id")}
+    else:
+        pr, al = latest(series.get("FRED_DFII10") or []), latest(series.get("UST_REAL_10Y") or [])
+        best = al if al and (not pr or str(al["report_date"]) > str(pr["report_date"])) else pr
+        ry = ({**best, "series_id": "UST_REAL_10Y" if best is al else "FRED_DFII10"} if best else None)
     xc = latest(series.get("XAU_CROSSCHECK") or [])
     cot_rows = _cot_rows(cot_t) if not isinstance(cot_t, Exception) else []
     cot_last = cot_rows[-1] if cot_rows else None
@@ -5877,6 +6237,8 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
         "usdinr_as_of": _iso_any((cf.get("usdinr") or {}).get("as_of")),
         "real_10y": ry["value"] if ry else None,
         "real_10y_date": ry["report_date"] if ry else None,
+        "real_10y_series_id": ry.get("series_id") if ry else None,
+        "real_10y_source": MACRO_SOURCE_LABEL.get(str(ry.get("series_id"))) if ry else None,
         "mcx_live": mcx_live,
         "mcx_live_source": q.get("source") if mcx_live else None,
         "mcx_live_as_of": mcx_live_at if mcx_live else None,
@@ -5996,6 +6358,8 @@ async def build_overview(contract: str, expiry: str | None, window: str) -> dict
                 "seconds_to_open": session.get("seconds_to_open"),
                 "seconds_to_close": session.get("seconds_to_close"),
                 "weekend": session.get("weekend"),
+                # a dated special session today (Muhurat, Sun 8 Nov 2026 14:20–15:30): open on a weekend (wave 1e, M-D)
+                "special": session.get("special"),
             },
             "comex": comex_session(now),
         },

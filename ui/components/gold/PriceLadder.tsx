@@ -97,7 +97,8 @@ export function PriceLadder({ steps, duty, premium, premiumPending, basisPct, ba
             : <span style={{ color: T.muted }}>— {premiumPending ?? 'the stored fix-minute premium for this IBJA date is not in yet (18:10 job)'}</span>}
         </span>
         <span title={tips('mcx_basis_pct')} data-ladder-basis>MCX basis <b style={{ color: T.text }}>{signedPct(basisPct)}</b>{basisClock && basisPct != null ? <span style={{ color: T.muted }}> · {basisClock}</span> : null}{carryAdjPct != null && <span style={{ color: T.muted }}> · carry-adjusted {signedPct(carryAdjPct)}</span>}</span>
-        <span style={{ color: T.dim }} title={tips('landed_999_vs_995')}>999 ÷ 995 = 1.00402 applied where the purities differ</span>
+        {/* D1 (wave 1e copy fix): landed is FINE gold; each price of purity P is compared with landed × P/1000 — never a 999 ÷ 995 ratio */}
+        <span style={{ color: T.dim }} title={tips('landed_999_vs_995')} data-ladder-purity-rule>purity: landed is fine gold; each price of purity P compares with landed × P/1000 (995 GOLD / GOLDM, 999 TEN / PETAL / GUINEA)</span>
       </div>
       <div data-ladder-clock-line style={{ fontSize: 10, color: T.muted, marginTop: 4, lineHeight: 1.5 }}>
         <span style={{ fontFamily: T.mono, fontSize: 9, letterSpacing: 1, color: T.cyan, marginRight: 6 }}>[B]</span>

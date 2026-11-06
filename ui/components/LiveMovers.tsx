@@ -13,7 +13,8 @@ import { apiError } from '@/lib/errors'
  * and the sector drill-down members come from the live NSE quote service (Breeze websocket) when it answers.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { getIndexMembers, getLiveMovers, getMarketMonitor, type LiveIndex, type LiveMover, type LiveMovers as Data } from '@/lib/api'
+import { getIndexMembers, getLiveMovers, getLiveQuotes, getMarketMonitor, type LiveIndex, type LiveMover, type LiveMovers as Data, type MarketMonitor as Monitor } from '@/lib/api'
+import { fillValue, nseDateIso, shortDateWithYear, sortHighLow, splitNoHistory, volumeSurge } from '@/components/marketPagesModel'
 import { MarketMap, type MapRow } from '@/components/MarketMap'
 import { Chip, ErrorBox, Loading, PageHeader, Panel, Stat, T, TickerLink, fmtPct, fmtPx, fmtSigned, sourceOf, type SourceInfo } from '@/components/terminal'
 import { goToPage } from '@/lib/navigate'
@@ -37,7 +38,7 @@ function Mini<R extends { symbol: string }>({ title, accent, rows, cols, note, s
   cols: { label: string; render: (r: R) => ReactNode; align?: 'right' }[]
 }) {
   return (
-    <Panel title={title} accent={accent} pad={0} subtitle={note} source={source}>
+    <Panel title={title} accent={accent} pad={0} source={source}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: T.mono, fontSize: 11.5, fontVariantNumeric: 'tabular-nums' }}>
         <thead>
           <tr>{[{ label: '', align: undefined }, ...cols].map((c, i) => (
@@ -52,6 +53,8 @@ function Mini<R extends { symbol: string }>({ title, accent, rows, cols, note, s
           {!rows.length && <tr><td colSpan={cols.length + 1} style={{ padding: 10, color: T.dim }}>—</td></tr>}
         </tbody>
       </table>
+      {/* m020: the panel's note sits under its table (in the header it wrapped one word per line beside the chip) */}
+      {note && <div style={{ padding: '5px 8px', fontSize: 10, color: T.dim, borderTop: `1px solid ${T.border}`, lineHeight: 1.45 }}>{note}</div>}
     </Panel>
   )
 }
@@ -90,7 +93,9 @@ export function LiveMovers() {
     get(); const iv = setInterval(get, 60_000)
     return () => { alive = false; clearInterval(iv) }
   }, [drill, group])
-  useEffect(() => { getMarketMonitor().then(r => setMapRows((r.data as { map?: MapRow[] }).map ?? null)).catch(() => {}) }, [])
+  // MKT's end-of-day picture: the map, and after the close the volume shockers and the day's turnover (M27, m017)
+  const [eod, setEod] = useState<Monitor | null>(null)
+  useEffect(() => { getMarketMonitor().then(r => { setEod(r.data); setMapRows((r.data as { map?: MapRow[] }).map ?? null) }).catch(() => {}) }, [])
 
   const load = useCallback(() => {
     getLiveMovers(universe).then(r => { setData(r.data); setError(null) }).catch(e => setError(apiError(e, 'unavailable')))
@@ -109,6 +114,34 @@ export function LiveMovers() {
              tiles: all.filter(i => i.group === group).sort((a, b) => (b.change_pct ?? 0) - (a.change_pct ?? 0)) }
   }, [data, group])
 
+  // m017: after the close NSE's live lists drop the traded value; fill it from MKT's EOD turnover and the live-quotes
+  // map (NSE heatmap, which keeps the session's value), never left as "—" on every row
+  const closed = !!data && !data.market_open
+  const [quoteValues, setQuoteValues] = useState<Record<string, number | null>>({})
+  useEffect(() => {
+    if (!closed) return
+    let live = true
+    getLiveQuotes().then(r => { if (live) setQuoteValues(Object.fromEntries(Object.entries(r.data.quotes).map(([k, q]) => [k, q.value_cr]))) }).catch(() => {})
+    return () => { live = false }
+  }, [closed])
+  const eodValue = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const list of Object.values(eod?.movers ?? {})) for (const r of (list as { symbol: string; turnover_cr: number | null }[])) if (r.turnover_cr != null) m.set(r.symbol, r.turnover_cr)
+    return m
+  }, [eod])
+  const sessionIso = nseDateIso(data?.timestamp)
+  const eodSame = !!eod?.as_of && (!sessionIso || eod.as_of === sessionIso)
+  const valueOf = useCallback((sym: string) => (eodSame ? eodValue.get(sym) : undefined) ?? quoteValues[sym] ?? undefined, [eodSame, eodValue, quoteValues])
+  const withValue = useCallback(<R extends { symbol: string; value_cr?: number | null }>(rows: R[]) => fillValue(rows, [valueOf]), [valueOf])
+  // M27: the 52-week lists by date, then by ₹ traded (not NSE's alphabetical order); a row with no previous level
+  // (a new listing, in BOTH lists with "old high 0.00") leaves them and is named once (m018)
+  const hl = useMemo(() => {
+    const split = splitNoHistory(data?.highs.rows ?? [], data?.lows.rows ?? [])
+    return { highs: sortHighLow(withValue(split.highs), valueOf), lows: sortHighLow(withValue(split.lows), valueOf), noHistory: split.noHistory }
+  }, [data, withValue, valueOf])
+  const surge = useMemo(() => volumeSurge(data?.volume_surge ?? [], !!data?.market_open,
+    (eod?.movers as { volume_shockers?: { symbol: string; close: number | null; chg_pct: number | null; turnover_cr: number | null; vol_x: number | null }[] } | undefined)?.volume_shockers ?? null,
+    eod?.as_of ?? null, sessionIso), [data, eod, sessionIso])
   const chg = (r: LiveMover) => <span style={{ color: tone(r.change_pct), fontWeight: 600 }}>{fmtPct(r.change_pct)}</span>
   const last = (r: LiveMover) => <span style={{ color: T.text }}>{px(r.ltp)}</span>
   const when = sessionWord(data?.market_open, data?.timestamp)
@@ -143,7 +176,9 @@ export function LiveMovers() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 12 }}>
             <Stat label="NIFTY 50" value={px(n50.last)} sub={<span><span style={{ color: tone(n50.change_pct) }}>{fmtPct(n50.change_pct)}</span> · {breadth(idx.n50)}
               {' '}<SourceChip info={n50.fromService && liveIdx.source ? liveIdx.source : sectorSource} style={{ marginLeft: 4 }} /></span>} />
-            <Stat label="NIFTY 500 breadth" value={breadth(idx.n500)} sub={<span style={{ color: tone(idx.n500?.change_pct) }}>{fmtPct(idx.n500?.change_pct)}</span>} />
+            {/* m019: name the universe and the clock (MKT's breadth is a different, 1,394-stock liquid universe at the close) */}
+            <Stat label="NIFTY 500 breadth" value={breadth(idx.n500)} sub={<span><span style={{ color: tone(idx.n500?.change_pct) }}>{fmtPct(idx.n500?.change_pct)}</span>
+              <span style={{ color: T.dim }}> · the index&apos;s members, NSE {data.timestamp?.slice(12, 17) ?? ''}{eod?.breadth?.universe ? ` · MKT counts ${Number(eod.breadth.universe).toLocaleString('en-IN')} liquid stocks` : ''}</span></span>} />
             <Stat label="Midcap 100 / Smallcap 100" value={<span><span style={{ color: tone(idx.mid?.change_pct) }}>{fmtPct(idx.mid?.change_pct, 1)}</span> / <span style={{ color: tone(idx.small?.change_pct) }}>{fmtPct(idx.small?.change_pct, 1)}</span></span>} />
             <Stat label="52-week highs / lows" value={<span><span style={{ color: T.green }}>{data.highs.count}</span> / <span style={{ color: T.red }}>{data.lows.count}</span></span>} sub={`new ${when === 'today' ? 'today' : `in the ${when}`}, all NSE`} />
           </div>
@@ -194,20 +229,24 @@ export function LiveMovers() {
           {mapRows && mapRows.length > 0 && <div style={{ marginBottom: 12 }}><MarketMap rows={mapRows} /></div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 12, alignItems: 'start' }}>
-            <Mini source={feedSource} title={`Gainers · ${UNIVERSES.find(u => u[0] === universe)?.[1]}`} accent={T.green} rows={data.gainers}
+            <Mini source={feedSource} title={`Gainers · ${UNIVERSES.find(u => u[0] === universe)?.[1]}`} accent={T.green} rows={withValue(data.gainers)}
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Value', render: r => <span style={{ color: T.muted }}>{cr(r.value_cr)}</span>, align: 'right' }]} />
-            <Mini source={feedSource} title={`Losers · ${UNIVERSES.find(u => u[0] === universe)?.[1]}`} accent={T.red} rows={data.losers}
+            <Mini source={feedSource} title={`Losers · ${UNIVERSES.find(u => u[0] === universe)?.[1]}`} accent={T.red} rows={withValue(data.losers)}
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Value', render: r => <span style={{ color: T.muted }}>{cr(r.value_cr)}</span>, align: 'right' }]} />
-            <Mini source={feedSource} title="Most active · by value" accent={T.amber} rows={data.most_active} note="all NSE"
+            <Mini source={feedSource} title="Most active · by value" accent={T.amber} rows={withValue(data.most_active)} note={closed ? 'all NSE · value: the session total (MKT EOD / NSE heatmap)' : 'all NSE'}
               cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Value', render: r => <span style={{ color: T.text }}>{cr(r.value_cr)}</span>, align: 'right' }]} />
-            <Mini source={feedSource} title="Volume surge" accent={T.cyan} rows={data.volume_surge.filter(r => (r.value_cr ?? 0) >= 1).slice(0, 20)} note={`${when === 'today' ? "today's" : `the ${when}'s`} volume ÷ the 1-week average · all NSE · ≥ ₹1 cr traded`}
+            <Mini source={surge.basis === 'eod' ? sourceOf(eod?.as_of ?? null, { source: 'NSE EOD (MKT)' }) : feedSource} title="Volume surge" accent={T.cyan} rows={surge.rows} note={surge.note}
               cols={[{ label: '× week', render: r => <span style={{ color: (r.vs_week ?? 0) >= 10 ? T.amber : T.text, fontWeight: 600 }}>{r.vs_week != null ? `${r.vs_week.toFixed(1)}×` : '—'}</span>, align: 'right' },
                      { label: 'Chg', render: chg, align: 'right' }, { label: 'Value', render: r => <span style={{ color: T.muted }}>{cr(r.value_cr)}</span>, align: 'right' }]} />
-            <Mini source={feedSource} title={`New 52-week highs · ${data.highs.count}`} accent={T.green} rows={data.highs.rows} note="newest first, all NSE"
-              cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Old high', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 9.5 }}>{r.prev_date?.slice(0, 6)}</span></span>, align: 'right' }]} />
-            <Mini source={feedSource} title={`New 52-week lows · ${data.lows.count}`} accent={T.red} rows={data.lows.rows} note="newest first, all NSE"
-              cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' }, { label: 'Old low', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 9.5 }}>{r.prev_date?.slice(0, 6)}</span></span>, align: 'right' }]} />
-            <Mini source={feedSource} title="F&O open-interest spurts" accent={T.violet} rows={data.oi_spurts} note="futures + options OI vs yesterday · rising OI with a falling price often means fresh shorts"
+            <Mini source={feedSource} title={`New 52-week highs · ${data.highs.count}`} accent={T.green} rows={hl.highs}
+              note={`all NSE · newest date first, then by ₹ traded${data.highs.rows.length < data.highs.count ? ` · NSE's list carries ${data.highs.rows.length} of ${data.highs.count}` : ''}${hl.noHistory.length ? ` · no 52-week history yet (left out): ${hl.noHistory.join(', ')}` : ''}`}
+              cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' },
+                     { label: 'Old high', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 9.5 }}>{shortDateWithYear(r.prev_date)}</span></span>, align: 'right' }]} />
+            <Mini source={feedSource} title={`New 52-week lows · ${data.lows.count}`} accent={T.red} rows={hl.lows}
+              note={`all NSE · newest date first, then by ₹ traded${data.lows.rows.length < data.lows.count ? ` · NSE's list carries ${data.lows.rows.length} of ${data.lows.count}` : ''}`}
+              cols={[{ label: 'Last', render: last, align: 'right' }, { label: 'Chg', render: chg, align: 'right' },
+                     { label: 'Old low', render: r => <span style={{ color: T.dim }}>{px(r.prev_level)} <span style={{ fontSize: 9.5 }}>{shortDateWithYear(r.prev_date)}</span></span>, align: 'right' }]} />
+            <Mini source={feedSource} title="F&O open-interest spurts" accent={T.violet} rows={data.oi_spurts} note="futures + options OI vs yesterday · context: the held-overnight study found no edge in OI build-ups (RSCH)"
               cols={[{ label: 'OI chg', render: r => <span style={{ color: tone(r.oi_change_pct), fontWeight: 600 }}>{fmtPct(r.oi_change_pct, 1)}</span>, align: 'right' },
                      { label: 'Contracts', render: r => <span style={{ color: T.muted }}>{fmtSigned(r.oi_change == null ? null : Math.round(r.oi_change), 0)}</span>, align: 'right' },
                      { label: 'Price', render: r => <span style={{ color: T.text }}>{px(r.underlying)}</span>, align: 'right' }]} />

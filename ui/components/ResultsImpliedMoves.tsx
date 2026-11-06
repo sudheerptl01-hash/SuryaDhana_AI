@@ -9,15 +9,23 @@
 import { useEffect, useState } from 'react'
 import { getResultsImpliedMoves, type ImpliedMoveRow } from '@/lib/api'
 import { DataTable, Panel, T, TickerLink, type Column, fmtDay, sourceOf } from '@/components/terminal'
+import { hhmm, postEvent } from '@/components/marketPagesModel'
 
 const pm = (v: number | null | undefined, d = 1) => (v == null ? '—' : `±${v.toFixed(d)}%`)
 
-export function ResultsImpliedMoves() {
+/**
+ * `filedAt` (EVTS: symbol → the earliest results filing NSE broadcast): m043 — a name that filed during or before the
+ * session of the chain shown (M&M 12:57, MOTHERSON 14:58 on a 05 Nov chain) is post-event: its "priced" move is not
+ * a price of the event. Those rows leave the table and the median, and are named under it.
+ */
+export function ResultsImpliedMoves({ filedAt }: { filedAt?: ReadonlyMap<string, string> } = {}) {
   const [d, setD] = useState<Awaited<ReturnType<typeof getResultsImpliedMoves>>['data'] | null>(null)
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => { getResultsImpliedMoves(10).then(r => setD(r.data)).catch(e => setErr(e?.message || 'unavailable')) }, [])
   if (err || !d || !d.rows.length) return null
-  const ratios = d.rows.map(r => r.ratio).filter((x): x is number => x != null).sort((a, b) => a - b)
+  const post = d.rows.filter(r => postEvent(r.results_date, d.fo_date, filedAt?.get(r.symbol)))
+  const pre = d.rows.filter(r => !post.includes(r))
+  const ratios = pre.map(r => r.ratio).filter((x): x is number => x != null).sort((a, b) => a - b)
   const med = ratios.length ? ratios[Math.floor(ratios.length / 2)] : 1
   const cols: Column<ImpliedMoveRow>[] = [
     { key: 'sym', label: 'Stock', sort: r => r.symbol, render: r => <TickerLink symbol={r.symbol} /> },
@@ -38,9 +46,16 @@ export function ResultsImpliedMoves() {
         {r.method === 'term' ? 'options' : r.method === 'realised' ? 'realised vol' : '—'}</span> },
   ]
   return (
-    <Panel source={sourceOf(d.fo_date ?? null, { source: 'NSE F&O bhavcopy' })} badge="context" title={`Options into results · ${d.rows.length} F&O names`} accent={T.violet} pad={0} style={{ marginBottom: 12 }}
+    <Panel source={sourceOf(d.fo_date ?? null, { source: 'NSE F&O bhavcopy' })} badge="context" title={`Options into results · ${pre.length} F&O names`} accent={T.violet} pad={0} style={{ marginBottom: 12 }}
       subtitle={`next ${d.days} days · NSE F&O bhavcopy ${d.fo_date ?? ''} · this week's median priced ÷ usual ${med.toFixed(2)}× · amber = ≥ 1.5× that median (an unusually big reaction priced), cyan = ≤ ⅔ of it`}>
-      <DataTable columns={cols} rows={d.rows} rowKey={r => `${r.symbol}-${r.results_date}`} dense initialSort={{ key: 'ratio', dir: 'desc' }} exportName="results_implied_moves" />
+      <DataTable columns={cols} rows={pre} rowKey={r => `${r.symbol}-${r.results_date}`} dense initialSort={{ key: 'ratio', dir: 'desc' }} exportName="results_implied_moves" />
+      {post.length > 0 && (
+        <div data-evts-post-event style={{ fontSize: 10.5, color: T.muted, padding: '6px 10px', borderTop: `1px solid ${T.border}`, lineHeight: 1.5 }}>
+          Already reported before the {d.fo_date ? fmtDay(d.fo_date) : ''} close, so the options shown are post-event (left out of the table and the median):{' '}
+          {post.map(r => <span key={r.symbol} style={{ marginRight: 8, whiteSpace: 'nowrap' }}><TickerLink symbol={r.symbol} />
+            <span style={{ color: T.dim }}> {filedAt?.get(r.symbol) ? `filed ${hhmm(filedAt.get(r.symbol))}` : fmtDay(r.results_date)}</span></span>)}
+        </div>
+      )}
       <div style={{ fontSize: 10, color: T.dim, padding: '6px 10px', lineHeight: 1.5 }}>
         Results-day move priced = √(priced variance to expiry − normal days × recent daily variance) × 0.8 (σ → average absolute move).
         An approximation from end-of-day option prices: it describes what the options charge, not which way the stock moves.

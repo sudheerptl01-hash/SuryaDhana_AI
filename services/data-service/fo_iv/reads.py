@@ -4,15 +4,18 @@
 """
 from __future__ import annotations
 
+import math
 from datetime import date
+from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from data_health import db
 
-from fo_iv import catalog_seed
-from fo_iv.black76 import MODEL_VERSION
-from fo_iv.iv_eod import rate_for
+from fo_iv import catalog_seed, realised
+from fo_iv.black76 import MODEL_VERSION, TIME_CONVENTION, TIME_CONVENTION_NOTE
+from fo_iv.iv_eod import INDEX_NAMES, INDEX_SYMBOLS, NEAR_MIN_DTE, rate_for
 from fo_iv.schema import FRESHNESS_COLUMN, positions_meta
 
 SUMMARY_COLS = ["date", "spot", "iv30_cm", "iv60_cm", "iv90_cm", "monthly_atm_iv", "monthly_expiry", "near_atm_iv", "near_expiry", "near_dte",
@@ -223,6 +226,164 @@ def contract_vix(store: Any, *, days: int = 3000) -> dict[str, Any]:
     return vix(store, days=days)
 
 
+# ── M02: IV paid vs vol delivered, over each MONTHLY option's own life ────────────────────────────────────────────────
+PAID_ENTRY_DTE = 30
+PAID_ENTRY_TOL = 5
+PAID_ALIVE_DAYS = 7          # a contract is "alive" when its last stored row is within a week of min(expiry, the last session)
+PAID_DEFINITION = ("monthly expiry = the last expiry of each calendar month that traded into its final week (a contract NSE "
+                   "re-dated for a holiday leaves a dead twin under the old date, which is skipped); entry = the session nearest 30 calendar days "
+                   "before it (25–35); IV paid = that expiry's stored ATM IV at entry (iv_expiry_daily); vol delivered = the "
+                   "close-to-close realised vol from the entry close to the expiry close, zero-mean (√(252 · mean r²), the "
+                   "variance a held straddle is paid on); paid − delivered in vol points")
+
+
+def monthly_expiries(expiries: list[date], last_seen: dict[date, date] | None = None, last_session: date | None = None) -> list[date]:
+    """The last expiry of each calendar month (NSE's monthly series; a weekly is never chosen).
+
+    With ``last_seen`` (expiry → its last stored session) and ``last_session``, only ALIVE contracts count: the last stored
+    row lies within ``PAID_ALIVE_DAYS`` of min(expiry, last_session). Round 2 (checker): NSE re-dated the March 2026
+    NIFTY / BANKNIFTY monthly from 31 to 30 March; the 2026-03-31 rows stop at 95 DTE (Dec 2025), so "the last listed
+    expiry" picked the dead twin, no row sat 25–35 DTE and March vanished from the ledger with no note."""
+    last: dict[tuple[int, int], date] = {}
+    for e in expiries:
+        if last_seen is not None and last_session is not None:
+            seen = last_seen.get(e)
+            if seen is None or (min(e, last_session) - seen).days > PAID_ALIVE_DAYS:
+                continue
+        k = (e.year, e.month)
+        if k not in last or e > last[k]:
+            last[k] = e
+    return sorted(last.values())
+
+
+def _underlying_closes(store: Any, symbol: str, start: date, end: date) -> pd.DataFrame:
+    """(date, close, prev_close) for an index (index_ohlc_daily, the NSE name) or a stock (nse_bhavcopy EQ, NSE's prev_close)."""
+    if symbol in INDEX_SYMBOLS:
+        if not db.table_exists(store, "index_ohlc_daily"):
+            return pd.DataFrame(columns=["date", "open", "high", "low", "close", "prev_close"])
+        df = db.query_df(store, "SELECT date, open, high, low, close FROM index_ohlc_daily WHERE symbol = ? AND date >= ? AND date <= ? ORDER BY date",
+                         [INDEX_NAMES.get(symbol, symbol), start, end])
+        df["prev_close"] = df["close"].shift(1)
+        return df
+    if not db.table_exists(store, "nse_bhavcopy"):
+        return pd.DataFrame(columns=["date", "open", "high", "low", "close", "prev_close"])
+    return db.query_df(store, """SELECT date, open, high, low, close, prev_close FROM nse_bhavcopy WHERE symbol = ? AND series = 'EQ'
+                                 AND date >= ? AND date <= ? ORDER BY date""", [symbol, start, end])
+
+
+def delivered_vol(frame: pd.DataFrame, entry: date, expiry: date) -> dict[str, Any]:
+    """Realised vol over (entry close → expiry close]: close-to-close zero-mean (the delivered number), plus the demeaned σ and
+    Yang-Zhang over the same sessions for the tooltip. Corporate-action jumps (> 25 %) are dropped as everywhere."""
+    d = realised._clean(frame)
+    if d.empty:                                           # no underlying closes stored (a name without EQ rows): nothing delivered
+        return {"rv_delivered": None, "rv_demeaned": None, "rv_yz": None, "sessions": 0}
+    d = d.assign(_d=[db.to_date(x) for x in d["date"]])
+    life = d[(d["_d"] > entry) & (d["_d"] <= expiry)]
+    r = np.log(life["close"] / life["prev_close"]).replace([np.inf, -np.inf], np.nan).dropna()
+    n = int(len(r))
+    if n < 5:
+        return {"rv_delivered": None, "rv_demeaned": None, "rv_yz": None, "sessions": n}
+    zero_mean = math.sqrt(float((r ** 2).mean()) * 252.0) * 100.0
+    life_frame = d[(d["_d"] <= expiry)].drop(columns=["_d"])
+    yz = realised.yang_zhang(life_frame, n=n)
+    return {"rv_delivered": round(zero_mean, 4), "rv_demeaned": round(float(r.std(ddof=1)) * math.sqrt(252.0) * 100.0, 4),
+            "rv_yz": round(yz, 4) if yz is not None else None, "sessions": n}
+
+
+def paid_vs_delivered(store: Any, symbol: str, *, n: int = 12) -> dict[str, Any]:
+    """M02 (review 5 Nov 2026): the old ledger took the first expiry 20–60 days out (a weekly), the trailing RV20 ≈ 20
+    sessions BEFORE expiry, and close-to-close under a Yang-Zhang header (mean +2.22 pts; the review's −1.76 was its own
+    re-computation over those weekly rows). Here: true monthlies (alive contracts only, see ``monthly_expiries``), entry
+    ≈ 30 DTE, realised over the option's own life (``PAID_DEFINITION``): NIFTY +0.63 pts over the 11 closed months to 27 Oct
+    2026, 6 of 11 paid above, March 2026 −14.90 (it was +2.35 while the re-dated March monthly was dropped).
+    A month with no usable row is listed in ``skipped`` with its reason, never dropped silently."""
+    sym = symbol.upper()
+    out: dict[str, Any] = {"symbol": sym, "rows": [], "definition": PAID_DEFINITION, "estimator": "cc_zero_mean", "entry_dte": PAID_ENTRY_DTE,
+                           "badge": "context", "verdict": "IV paid vs vol delivered: describes past months, does not predict the next"}
+    if not db.table_exists(store, "iv_expiry_daily"):
+        return out
+    allx = db.query_df(store, "SELECT date, expiry, dte, atm_iv FROM iv_expiry_daily WHERE symbol = ? ORDER BY date", [sym])
+    if allx.empty:
+        return out
+    allx["date"], allx["expiry"] = allx["date"].map(db.to_date), allx["expiry"].map(db.to_date)
+    exp = allx[allx["atm_iv"].notna()]
+    if exp.empty:
+        return out
+    last_session = max(allx["date"])
+    last_seen: dict[date, date] = {}
+    for k, v in allx.groupby("expiry")["date"].max().items():
+        ek, ev = db.to_date(k), db.to_date(v)
+        if ek is not None and ev is not None:
+            last_seen[ek] = ev
+    months = monthly_expiries(sorted(set(allx["expiry"])), last_seen, last_session)
+    rows: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for e in months:
+        cand = exp[(exp["expiry"] == e) & (exp["dte"] >= PAID_ENTRY_DTE - PAID_ENTRY_TOL) & (exp["dte"] <= PAID_ENTRY_DTE + PAID_ENTRY_TOL)]
+        if cand.empty:
+            if (e - last_session).days > PAID_ENTRY_DTE - PAID_ENTRY_TOL:
+                continue                                  # its entry window has not come yet: not a gap
+            skipped.append({"month": f"{e.year:04d}-{e.month:02d}", "expiry": e,
+                            "reason": f"no stored ATM IV {PAID_ENTRY_DTE - PAID_ENTRY_TOL}–{PAID_ENTRY_DTE + PAID_ENTRY_TOL} days before the expiry"})
+            continue
+        c = cand.assign(gap=(cand["dte"] - PAID_ENTRY_DTE).abs()).sort_values(["gap", "dte"], ascending=[True, False]).iloc[0]
+        rows.append({"expiry": e, "entry": c["date"], "entry_dte": int(c["dte"]), "iv_paid": round(float(c["atm_iv"]), 4)})
+    # months with no alive expiry at all inside the span (a data gap), named too
+    if rows:
+        have = {(r["expiry"].year, r["expiry"].month) for r in rows} | {(x["expiry"].year, x["expiry"].month) for x in skipped}
+        y, mth = rows[0]["expiry"].year, rows[0]["expiry"].month
+        end = (rows[-1]["expiry"].year, rows[-1]["expiry"].month)
+        while (y, mth) < end:
+            if (y, mth) not in have:
+                skipped.append({"month": f"{y:04d}-{mth:02d}", "expiry": None, "reason": "no contract of the month in the store (out of F&O, or a data gap)"})
+            y, mth = (y + 1, 1) if mth == 12 else (y, mth + 1)
+    rows = rows[-n:]
+    first = f"{rows[0]['expiry'].year:04d}-{rows[0]['expiry'].month:02d}" if rows else None
+    skipped = sorted([x for x in skipped if first is None or x["month"] >= first], key=lambda x: x["month"])[-n:]
+    out["skipped"] = [{**x, "expiry": x["expiry"].isoformat() if x["expiry"] else None} for x in skipped]
+    if rows:
+        frame = _underlying_closes(store, sym, min(r["entry"] for r in rows) - pd.Timedelta(days=10).to_pytimedelta(), max(r["expiry"] for r in rows))
+        for r in rows:
+            closed = r["expiry"] <= last_session
+            dv = delivered_vol(frame, r["entry"], r["expiry"]) if closed else {"rv_delivered": None, "rv_demeaned": None, "rv_yz": None, "sessions": 0}
+            r.update(dv)
+            r["open"] = not closed
+            r["paid_minus_delivered"] = round(r["iv_paid"] - dv["rv_delivered"], 4) if dv["rv_delivered"] is not None else None
+            r["expiry"], r["entry"] = r["expiry"].isoformat(), r["entry"].isoformat()
+    done = [r["paid_minus_delivered"] for r in rows if r["paid_minus_delivered"] is not None]
+    out.update(rows=rows, closed=len(done), mean_paid_minus_delivered=round(float(np.mean(done)), 4) if done else None,
+               paid_above=sum(1 for v in done if v > 0), as_of=last_session.isoformat())
+    return out
+
+
+def near_skew(store: Any, symbol: str, *, days: int = 750) -> dict[str, Any]:
+    """M03: the NEAR expiry's own 25Δ skew history (the first expiry with dte > 2 each session — the series OMON's skew
+    tile prints), so its percentile is taken against itself, never against the 30-day series."""
+    sym = symbol.upper()
+    if not db.table_exists(store, "iv_expiry_daily"):
+        return {"symbol": sym, "rows": []}
+    df = db.query_df(store, """SELECT date, expiry, dte, skew_25d FROM iv_expiry_daily WHERE symbol = ? AND dte >= ? AND atm_iv IS NOT NULL
+                               QUALIFY ROW_NUMBER() OVER (PARTITION BY date ORDER BY expiry) = 1 ORDER BY date DESC LIMIT ?""", [sym, NEAR_MIN_DTE, days])
+    df = df.sort_values("date")
+    return {"symbol": sym, "rows": db.records(df, DATE_COLS), "series": "near expiry (dte > 2) 25Δ put − call", "badge": "context"}
+
+
+def contract_delta(store: Any, symbol: str, *, expiry: date | None = None, day: date | None = None) -> dict[str, Any]:
+    """M44: NSE Clearing's own delta per contract (Contract_Delta file, ``nse_contract_delta``) for one expiry, on the latest
+    stored session on or before ``day``; the chain shows it beside the model delta (context)."""
+    sym = symbol.upper()
+    if not db.table_exists(store, "nse_contract_delta"):
+        return {"symbol": sym, "as_of": None, "rows": []}
+    d = _latest_on_or_before(store, "nse_contract_delta", sym, day)
+    if d is None:
+        return {"symbol": sym, "as_of": None, "rows": []}
+    exp = expiry or db.to_date(db.scalar(store, "SELECT MIN(expiry) FROM nse_contract_delta WHERE symbol = ? AND date = ? AND expiry >= ?", [sym, d, d]))
+    df = db.query_df(store, "SELECT strike, opt_type, delta_factor FROM nse_contract_delta WHERE symbol = ? AND date = ? AND expiry = ? ORDER BY strike, opt_type",
+                     [sym, d, exp]) if exp else None
+    return {"symbol": sym, "as_of": d.isoformat(), "expiry": exp.isoformat() if exp else None, "rows": db.records(df, ()),
+            "source": "NSE Clearing Contract_Delta", "badge": "context"}
+
+
 def _ban(mwpl_pct: Any) -> bool | None:
     """NSE's rule: a stock enters the F&O ban above 95 % of MWPL and leaves below 80 %; between, the state needs yesterday's."""
     if mwpl_pct is None or (isinstance(mwpl_pct, float) and pd.isna(mwpl_pct)):
@@ -230,17 +391,52 @@ def _ban(mwpl_pct: Any) -> bool | None:
     return True if mwpl_pct > 95 else False if mwpl_pct < 80 else None
 
 
-def contract_screen(store: Any) -> dict[str, Any]:
-    """The latest ``iv_summary_daily`` row per symbol + ``next_results``, ``mwpl_pct``, ``ban``; payload ``date``."""
+def ban_list(ban_dir: Path | None, day: date) -> tuple[set[str] | None, str | None]:
+    """NSE's securities-in-ban file for the session AFTER ``day`` (``fo_secban`` is named for the trade date it applies to and
+    published the evening before; surveillance.py caches it as ``<trade date>.csv``), else the one for ``day`` itself.
+    (symbols, its trade date) or (None, None) when no file is stored."""
+    if ban_dir is None or not ban_dir.is_dir():
+        return None, None
+    files = sorted(p for p in ban_dir.glob("*.csv") if len(p.stem) == 10)
+    after = [p for p in files if p.stem > day.isoformat()]
+    pick = after[0] if after else next((p for p in reversed(files) if p.stem == day.isoformat()), None)
+    if pick is None:
+        return None, None
+    syms = set()
+    for line in pick.read_text(encoding="utf-8", errors="ignore").splitlines()[1:]:
+        parts = [x.strip() for x in line.split(",")]
+        if len(parts) >= 2 and parts[1]:
+            syms.add(parts[1].upper())
+    return syms, pick.stem
+
+
+def contract_screen(store: Any, *, ban_dir: Path | None = None) -> dict[str, Any]:
+    """The latest ``iv_summary_daily`` row per symbol + ``next_results``, ``mwpl_pct``, ``ban``; payload ``date``.
+
+    M43: % MWPL = futures-equivalent OI ÷ MWPL on the newest ``nse_combined_oi`` row on or before the session that carries
+    BOTH (the deleq file alone has no MWPL: 224 of 224 were empty); BAN = NSE's own ban list for the next session (the
+    authoritative list: KAYNES sat at 85.5 % of MWPL inside its ban on 5 Nov), the 95 % / 80 % rule only without a file."""
     d = db.to_date(db.scalar(store, "SELECT MAX(date) FROM iv_summary_daily"))
     if d is None:
         return {"date": None, "rows": []}
     nxt = ("(SELECT MIN(e.event_date) FROM nse_events e WHERE e.symbol = s.symbol AND e.kind = 'RESULTS' AND e.event_date >= s.date)"
            if db.table_exists(store, "nse_events") else "NULL")
-    mw = ("(SELECT c.fut_equiv_oi / NULLIF(c.mwpl, 0) * 100 FROM nse_combined_oi c WHERE c.symbol = s.symbol AND c.date = s.date)"
-          if db.table_exists(store, "nse_combined_oi") else "NULL")
-    df = db.query_df(store, f"SELECT s.*, {nxt} AS next_results, {mw} AS mwpl_pct FROM iv_summary_daily s WHERE s.date = ? ORDER BY s.symbol", [d])
-    rows = db.records(df, (*DATE_COLS, "next_results"))
+    have_oi = db.table_exists(store, "nse_combined_oi")
+    mw = ("""(SELECT c.fut_equiv_oi / NULLIF(c.mwpl, 0) * 100 FROM nse_combined_oi c WHERE c.symbol = s.symbol AND c.date <= s.date
+              AND c.mwpl IS NOT NULL AND c.fut_equiv_oi IS NOT NULL ORDER BY c.date DESC LIMIT 1)""" if have_oi else "NULL")
+    mwd = ("""(SELECT MAX(c.date) FROM nse_combined_oi c WHERE c.symbol = s.symbol AND c.date <= s.date AND c.mwpl IS NOT NULL
+               AND c.fut_equiv_oi IS NOT NULL)""" if have_oi else "NULL")
+    # m070: stocks list ≈ 3 monthlies and the third is too thin for an ATM IV (iv60 on 23 of 224, iv90 on 2), so the screen also
+    # carries the NEXT expiry after the near one (dte > 2): near → next is the term read a stock actually has
+    nx = ("""(SELECT e.{c} FROM iv_expiry_daily e WHERE e.symbol = s.symbol AND e.date = s.date AND e.dte >= ? AND e.atm_iv IS NOT NULL
+              ORDER BY e.expiry LIMIT 1 OFFSET 1)""" if db.table_exists(store, "iv_expiry_daily") else "NULL")
+    nx_iv, nx_dte = nx.replace("{c}", "atm_iv"), nx.replace("{c}", "dte")
+    n_ph = 2 if nx != "NULL" else 0
+    df = db.query_df(store, f"""SELECT s.*, {nxt} AS next_results, {mw} AS mwpl_pct, {mwd} AS mwpl_date, {nx_iv} AS next_atm_iv, {nx_dte} AS next_dte
+                                FROM iv_summary_daily s WHERE s.date = ? ORDER BY s.symbol""", [*([NEAR_MIN_DTE] * n_ph), d])
+    rows = db.records(df, (*DATE_COLS, "next_results", "mwpl_date"))
+    banned, ban_date = ban_list(ban_dir, d)
     for r in rows:
-        r["ban"] = _ban(r.get("mwpl_pct"))
-    return {"date": d.isoformat(), "rows": rows}
+        r["ban"] = (r["symbol"] in banned) if banned is not None else _ban(r.get("mwpl_pct"))
+    return {"date": d.isoformat(), "rows": rows, "ban_date": ban_date, "ban_source": "NSE fo_secban" if banned is not None else "MWPL rule (95 % / 80 %)",
+            "time_convention": TIME_CONVENTION, "time_convention_note": TIME_CONVENTION_NOTE}

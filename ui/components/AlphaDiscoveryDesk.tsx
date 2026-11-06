@@ -3,7 +3,8 @@
 import { apiError } from '@/lib/errors'
 import { fmtSigned } from '@/lib/format'   // signed numbers with U+2212 (C1-trader-ux-18)
 import { useRequestSeq } from '@/components/useRequestSeq'
-import { TickerLink, ResearchNote } from '@/components/terminal'
+import { TickerLink, ResearchNote, BadgeChip } from '@/components/terminal'
+import { goToPage } from '@/lib/navigate'
 
 /**
  * AlphaDiscoveryDesk — Phase 4 Glass-Box Alpha Discovery tab.
@@ -11,8 +12,6 @@ import { TickerLink, ResearchNote } from '@/components/terminal'
  * Every number on screen is traceable to a live endpoint; every strategy parameter is a
  * live, tweakable control rendered from the engine's own PARAM_SPEC.
  *
- *   • System Status widget       → /api/data/health · /ready · /provider/status
- *   • Data Pipeline panel        → /api/data/fetch/refresh-batch (async, non-blocking)
  *   • Strategy registry + knobs  → /api/alpha/strategies (PARAM_SPEC, never hardcoded)
  *   • Universe-wide scan         → /api/alpha/scan (full ~1500 NSE universe)
  *   • Live watchlist             → addToWatchlist() ⇒ /api/monitor/subscribe + WS filter
@@ -20,6 +19,12 @@ import { TickerLink, ResearchNote } from '@/components/terminal'
  *   • Ticker activation          → <StockDetailModal/> (intraday + OHLCV charts)
  *
  * Air-gap: MODE = PAPER. No execution affordances. Read/scan only.
+ *
+ * Honesty (5 Nov 2026 review): every net figure is after the real ICICI round trip (shared/trading_costs.py at the
+ * position size the payload names, ≈ 0.93 % at ₹1,00,000), with n and a 95 % interval for the window and for the whole
+ * loaded history (M19); no Yahoo call from this page (the "Refresh Matched" button and the System Status widget's
+ * quick refresh were Yahoo fetches on the request path: removed, the stored EOD panel is the source); the LIVE chip no
+ * longer overlaps the KPI strip (m089); CHG % shows the last close-to-close change after the close (m090).
  * Aesthetic: NSE void terminal — JetBrains Mono + Chakra Petch, #05070a/#0a0d13 voids,
  * amber/jade/violet/crimson accents.
  */
@@ -28,7 +33,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Chip, PageHeader, T, fmtInrPx } from '@/components/terminal'
 import clsx from 'clsx'
 import {
-  getAlphaStrategies, runAlphaScan, fetchRefreshBatch,
+  getAlphaStrategies, runAlphaScan,
   type AlphaStrategiesResponse, type AlphaScanResponse, type AlphaScanResult,
   type AlphaParamSpec,
 } from '@/lib/api'
@@ -36,10 +41,61 @@ import { useWatchlist, useLiveQuotes } from '@/context/AppContext'
 import { socketChip } from '@/lib/feedState'
 import { useFeedState } from '@/components/shell/useFeed'
 import { useToast } from '@/context/ToastContext'
-import { SystemStatusWidget } from './SystemStatusWidget'
 import { StockDetailModal } from './StockDetailModal'
 
 interface Props { isDark?: boolean }
+
+/** Realised-edge block of /api/alpha/scan (routers/alpha.py edge_stats): after the real round trip, with intervals. */
+export interface AlphaEdgeStats {
+  n_with_forward: number; mean_net5_bps: number; median_net5_bps: number; win_rate: number
+  mean_gross5_bps?: number; cost_bps?: number; win_rate_ci95?: [number, number] | null
+  mean_net5_ci95_bps?: [number, number] | null; n_dates?: number | null; ci_method?: string
+  top3_dates?: { date: string; n: number; mean_net5_bps: number }[]; top3_dates_signal_share?: number
+}
+export interface AlphaCost { model: string; profile: string; position_inr: number; round_trip_pct: number; round_trip_inr: number }
+type ScanV2 = AlphaScanResponse & {
+  edge_history?: AlphaEdgeStats | null
+  cost?: AlphaCost
+  history_window?: { from: string; to: string; days: number }
+  results: (AlphaScanResult & { eod_change_pct?: number | null; eod_change_date?: string | null })[]
+}
+
+const fmtBps = (v: number | null | undefined) => v == null ? '—' : `${fmtSigned(v, 0)} bps`
+const fmtCi = (ci: [number, number] | null | undefined, f: (v: number) => string) => ci ? `95% ${f(ci[0])} to ${f(ci[1])}` : 'no interval (one signal date)'
+const pct0 = (v: number) => `${(v * 100).toFixed(0)}%`
+
+/** One realised-edge tile: mean net with its interval, win rate with its interval, n on n dates. Neutral colour: these
+ *  are realised outcomes of a NO EDGE family (arithmetic), never a buy / sell cue. */
+export function EdgeTile({ label, e, sub }: { label: string; e: AlphaEdgeStats | null | undefined; sub?: string }) {
+  return (
+    <div className="rounded-xl border px-3 py-2.5" style={{ background: PANEL, borderColor: '#2A3F58', minWidth: 0 }}>
+      <div className="flex items-center gap-2">
+        <span className="text-[9px] font-bold tracking-widest chakra" style={{ color: '#5E7793' }}>{label}</span>
+        <span style={{ flex: 1 }} />
+        <BadgeChip badge="arithmetic" note="Realised 5-session outcomes after the real round trip; no forecast is claimed." />
+      </div>
+      {e ? (
+        <>
+          <div className="text-lg font-bold font-mono tabular-nums leading-tight" style={{ color: T.text }}>
+            {fmtBps(e.mean_net5_bps)} <span className="text-[10px]" style={{ color: T.muted }}>mean net</span>
+          </div>
+          <div className="text-[9.5px] font-mono" style={{ color: T.muted }}>{fmtCi(e.mean_net5_ci95_bps, v => fmtBps(v))}</div>
+          <div className="text-[10px] font-mono mt-0.5" style={{ color: '#aab3c2' }}>
+            win {pct0(e.win_rate)}{e.win_rate_ci95 ? ` (${pct0(e.win_rate_ci95[0])}–${pct0(e.win_rate_ci95[1])})` : ''} · n = {e.n_with_forward}
+            {e.n_dates != null ? ` on ${e.n_dates} dates` : ''}
+          </div>
+          {e.top3_dates_signal_share != null && e.top3_dates_signal_share >= 0.25 && (
+            <div className="text-[9.5px] mt-0.5" style={{ color: T.amber }}
+                 title={(e.top3_dates ?? []).map(d => `${d.date}: ${d.n} signals, mean ${fmtBps(d.mean_net5_bps)}`).join('\n')}>
+              {pct0(e.top3_dates_signal_share)} of the signals fell on 3 days
+            </div>
+          )}
+        </>
+      ) : <div className="text-lg font-bold font-mono" style={{ color: T.muted }}>—</div>}
+      {sub && <div className="text-[9px] mt-0.5" style={{ color: T.muted }}>{sub}</div>}
+    </div>
+  )
+}
 
 const VOID = T.bg
 const PANEL = T.panel
@@ -115,7 +171,7 @@ function ParamKnob({
 function ResultRow({
   r, watched, ltp, changePct, flash, onToggle, onActivate,
 }: {
-  r: AlphaScanResult
+  r: AlphaScanResult & { eod_change_pct?: number | null; eod_change_date?: string | null }
   watched: boolean
   ltp?: number
   changePct?: number
@@ -124,6 +180,9 @@ function ResultRow({
   onActivate: () => void
 }) {
   const net5bps = r.net5 != null ? r.net5 * 1e4 : null
+  // after the close there is no live change: show the last session's close-to-close move, marked EOD (m090)
+  const chg = changePct != null ? changePct : r.eod_change_pct ?? null
+  const chgEod = changePct == null && r.eod_change_pct != null
   return (
     <tr
       className="alpha-row transition-colors cursor-pointer"
@@ -157,14 +216,15 @@ function ResultRow({
       </td>
       <td
         className="px-3 py-2 text-[11px] font-mono text-right tabular-nums"
-        style={{ color: changePct == null ? T.muted : changePct >= 0 ? '#34D399' : '#FF6080' }}
+        style={{ color: chg == null ? T.muted : chg >= 0 ? '#34D399' : '#FF6080' }}
+        title={chgEod ? `Close-to-close change of the last session (${r.eod_change_date ?? 'EOD'}); no live tick` : 'Live change vs the previous close'}
       >
-        {changePct != null ? `${fmtSigned(changePct, 2)}%` : '—'}
+        {chg != null ? `${fmtSigned(chg, 2)}%` : '—'}{chgEod && <span style={{ color: T.dim, fontSize: 9 }}> EOD</span>}
       </td>
       <td
         className="px-3 py-2 text-[11px] font-mono text-right tabular-nums"
-        style={{ color: net5bps == null ? T.muted : net5bps >= 0 ? '#34D399' : '#FF6080' }}
-        title="Realised net 5-day edge (forward diagnostic, friction-adjusted)"
+        style={{ color: net5bps == null ? T.muted : T.text }}
+        title="Realised 5-session return after the real ICICI round trip (shared/trading_costs.py); '—' = fewer than 5 sessions since the signal"
       >
         {net5bps != null ? `${fmtSigned(net5bps, 0)} bps` : '—'}
       </td>
@@ -187,11 +247,10 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
   const [strategyId, setStrategyId] = useState<string>('')
   const [params, setParams] = useState<Record<string, number | boolean>>({})
 
-  const [scan, setScan] = useState<AlphaScanResponse | null>(null)
+  const [scan, setScan] = useState<ScanV2 | null>(null)
   const [scanning, setScanning] = useState(false)
   const [scanMode, setScanMode] = useState<'latest' | 'recent' | 'all'>('recent')
   const [activeTicker, setActiveTicker] = useState<string | null>(null)
-  const [pipelineBusy, setPipelineBusy] = useState(false)
 
   // Flash bookkeeping — prior LTP per symbol for green/red diff
   const prevLtpRef = useRef<Record<string, number>>({})
@@ -327,23 +386,6 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
     }
   }, [liveQuotes])
 
-  // ── Data Pipeline: refresh matched tickers' data (async, non-blocking) ───────
-  const refreshMatched = useCallback(async () => {
-    if (!scan || !scan.tickers.length) { addToast('Run a scan first', 'warning'); return }
-    setPipelineBusy(true)
-    addToast(`Refreshing OHLCV for ${Math.min(scan.tickers.length, 25)} matched tickers…`, 'info')
-    try {
-      const res = await fetchRefreshBatch({ tickers: scan.tickers.slice(0, 25), years: 1 })
-      const refreshed = res.data?.refreshed ?? {}
-      const total = Object.values(refreshed).reduce((s: number, v: any) => s + (Number(v) || 0), 0)
-      addToast(`Pipeline: ${total} rows refreshed`, 'success')
-    } catch (err: any) {
-      addToast(`Refresh failed: ${apiError(err)}`, 'error')
-    } finally {
-      setPipelineBusy(false)
-    }
-  }, [scan, addToast])
-
   const knobEntries = useMemo(
     () => Object.entries(strategy?.knobs ?? {}),
     [strategy],
@@ -380,33 +422,19 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
       <div className="grid grid-cols-1 xl:grid-cols-[340px_1fr] gap-4">
         {/* ── Left rail: status + pipeline + knobs ──────────────────────────── */}
         <div className="space-y-4">
-          <SystemStatusWidget isDark={isDark} />
-
-          {/* Data Pipeline panel */}
+          {/* Data source: the stored EOD panel. No fetch from this page (Yahoo budget, CLAUDE.md; M29). */}
           <div className="rounded-2xl border" style={{ background: PANEL, borderColor: '#2A3F58' }}>
             <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(42,63,88,0.5)' }}>
               <h3 className="chakra text-xs font-bold tracking-widest uppercase" style={{ color: '#E8F0FA' }}>
-                ⚙ Data Pipeline
+                ⚙ Data
               </h3>
             </div>
-            <div className="px-4 py-3 space-y-2">
-              <p className="text-[10px]" style={{ color: '#5E7793' }}>
-                Refresh OHLCV for the current matched set via the data-service async fetch.
-              </p>
-              <button
-                onClick={refreshMatched}
-                disabled={pipelineBusy || !scan?.tickers.length}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all"
-                style={{
-                  border: `1px solid ${pipelineBusy ? '#2A3F58' : '#6E56CF'}`,
-                  background: pipelineBusy ? 'rgba(110,86,207,0.06)' : 'rgba(110,86,207,0.14)',
-                  color: pipelineBusy ? '#5E7793' : '#A78BFA',
-                  cursor: pipelineBusy || !scan?.tickers.length ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {pipelineBusy && <span className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#A78BFA', borderTopColor: 'transparent' }} />}
-                {pipelineBusy ? 'Refreshing…' : `↻ Refresh Matched (${Math.min(scan?.tickers.length ?? 0, 25)})`}
-              </button>
+            <div className="px-4 py-3 space-y-1.5 text-[10.5px]" style={{ color: '#8aa0b8' }}>
+              <p>Scans read the stored EOD panel (data-service{scan ? `, as of ${scan.as_of}` : ''}), refreshed by the scheduled
+                evening pipeline. This page fetches nothing itself.</p>
+              <p>Service health: <span role="button" tabIndex={0} onClick={() => goToPage('system')}
+                onKeyDown={e => { if (e.key === 'Enter') goToPage('system') }}
+                style={{ color: T.cyan, cursor: 'pointer' }}>SYS ›</span></p>
             </div>
           </div>
 
@@ -507,12 +535,23 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
         {/* ── Right: stats + live results grid ──────────────────────────────── */}
         <div className="space-y-4">
           {/* Scan summary strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
             <SummaryStat label="ELIGIBLE UNIVERSE" value={scan ? `${scan.universe.eligible}` : '—'} sub={scan ? `/ ${scan.universe.total} total` : ''} accent="#4ACFE8" />
-            <SummaryStat label="SIGNALS (WINDOW)" value={scan ? `${scan.n_signals_window}` : '—'} sub={scan ? `${scan.n_signals_total} hist` : ''} accent="#ffb000" />
-            <SummaryStat label="WIN RATE" value={scan?.edge ? `${(scan.edge.win_rate * 100).toFixed(1)}%` : '—'} sub={scan?.edge ? `n=${scan.edge.n_with_forward}` : 'no fwd window'} accent="#34D399" />
-            <SummaryStat label="MEAN NET 5D" value={scan?.edge ? `${fmtSigned(scan.edge.mean_net5_bps, 2)} bps` : '—'} sub="friction-adj" accent={scan?.edge && scan.edge.mean_net5_bps >= 0 ? '#34D399' : '#FF6080'} />
+            <SummaryStat label="SIGNALS (WINDOW)" value={scan ? `${scan.n_signals_window}` : '—'}
+              sub={scan ? `${scan.n_signals_total} in the loaded history${scan.history_window ? ` (${scan.history_window.from} → ${scan.history_window.to})` : ''}` : ''} accent="#ffb000" />
+            <EdgeTile label="WINDOW · NET 5D" e={scan?.edge as AlphaEdgeStats | null | undefined}
+              sub={scan?.edge ? 'signals in this window with 5 sessions since' : 'no signal here has 5 sessions yet'} />
+            <EdgeTile label="HISTORY · NET 5D" e={scan?.edge_history}
+              sub="every signal in the loaded history: the sample that matters" />
           </div>
+          {scan?.cost && (
+            <div className="text-[10px] px-1" style={{ color: T.muted }}>
+              Net = 5-session return − {scan.cost.round_trip_pct.toFixed(2)}% (the {scan.cost.profile.replace('icici_moneysaver', 'ICICI MoneySaver').replace(/_/g, ' ')} delivery round trip
+              at ₹{Math.round(scan.cost.position_inr).toLocaleString('en-IN')} a position, {scan.cost.model}). A gap open fills worse than the
+              adjusted open: slippage is not modelled. Interval: {scan.edge_history?.ci_method ?? 'bootstrap over signal dates'}. One year of an
+              in-sample window: the pre-registered idea-lab holdout found no edge after costs.
+            </div>
+          )}
 
           {/* Results grid */}
           <div className="rounded-2xl border overflow-hidden" style={{ background: PANEL, borderColor: '#2A3F58' }}>
@@ -538,7 +577,7 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
                   cursor: scan?.tickers.length ? 'pointer' : 'not-allowed',
                 }}
               >
-                ★ Monitor All ({scan?.tickers.length ?? 0})
+                ★ Monitor all {scan?.tickers.length ?? 0} names
               </button>
             </div>
 
@@ -562,7 +601,7 @@ export function AlphaDiscoveryDesk({ isDark = true }: Props) {
                 <table className="w-full">
                   <thead>
                     <tr className="sticky top-0 z-10" style={{ background: VOID }}>
-                      {['', 'TICKER', 'SIGNAL DATE', 'LTP / CLOSE', 'CHG%', 'NET 5D'].map((h, i) => (
+                      {['', 'TICKER', 'SIGNAL DATE', 'LTP / CLOSE', 'CHG% (LIVE / EOD)', 'NET 5D (AFTER COSTS)'].map((h, i) => (
                         <th key={i} className={clsx('px-3 py-2 text-[9px] font-bold tracking-widest uppercase', i >= 3 ? 'text-right' : 'text-left')} style={{ color: '#5E7793' }}>
                           {h}
                         </th>

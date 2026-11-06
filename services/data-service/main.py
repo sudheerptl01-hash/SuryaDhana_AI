@@ -1036,6 +1036,10 @@ class ResultsIngestRequest(BaseModel):
     replace_since: str | None = None
     # only symbols that have rows for quarters ending on/after this date (with replace_since: the affected ones)
     having_since: str | None = None
+    # review M12: days of each company's NSE announcements read for the results-filing time (nse_results.filed_at, its own
+    # column: released_at, alpha_lab's S1 input, is unchanged). The one-off history repair passes 800; 0 = feeds only.
+    # The recent pass (recent_events_days) reads NSE's day-wide list instead: one paced request per day, not per symbol.
+    announcement_days: int = 30
 
 
 def _run_results_ingest(req: ResultsIngestRequest, progress) -> dict:
@@ -1058,13 +1062,18 @@ def _run_results_ingest(req: ResultsIngestRequest, progress) -> dict:
     else:
         symbols = store.get_historical_liquid_symbols(req.top_n)
     out: dict[str, Any] = {"symbols": len(symbols), "fetched": 0, "skipped_fresh": 0, "empty": [], "rows": 0, "replaced": 0}
+    filings = None                       # review M12: the recent pass reads NSE's day-wide announcement list once per day
+    if req.recent_events_days is not None and symbols and req.announcement_days > 0:
+        filings = rh.results_filings_by_day(date.today() - _td(days=req.recent_events_days + 1), date.today())
+    out["filings"] = "off" if req.announcement_days == 0 else "day-wide" if filings is not None else "per-symbol"
     with httpx.Client(headers=nse_filings.API_HEADERS, timeout=30, follow_redirects=True) as client:
         for i, sym in enumerate(symbols, 1):
             seen = store.results_fetched_at(sym)
             if seen is not None and _dt.now() - pd.Timestamp(seen).to_pydatetime() < _td(days=req.max_age_days):
                 out["skipped_fresh"] += 1
             else:
-                rel = rh.fetch_releases(sym, client=client)
+                rel = rh.fetch_releases(sym, client=client, announcement_days=min(max(req.announcement_days, 0), 800),
+                                        announcements=None if filings is None else filings.get(sym, []))
                 out["fetched"] += 1
                 if rel.empty:
                     out["empty"].append(sym)
@@ -1075,7 +1084,7 @@ def _run_results_ingest(req: ResultsIngestRequest, progress) -> dict:
                             out["replaced"] += con.execute(
                                 "DELETE FROM nse_results WHERE symbol = ? AND period_end >= ?::DATE RETURNING 1",
                                 [sym, req.replace_since]).fetchall().__len__()
-                    out["rows"] += store.upsert_results(rel)
+                    out["rows"] += rh.store_releases(store, rel)     # review M12: released_at as before + filed_at in its own column
             progress(i, len(symbols))
     store.checkpoint()
     out["empty_count"] = len(out["empty"])
@@ -1109,8 +1118,8 @@ def security_results(symbol: str, store: DuckDBStore = Depends(get_store)) -> di
         if rel.empty:
             _results_misses[sym] = time.time()
         else:
-            store.upsert_results(rel)
-    rel = store.get_results(sym)
+            rh.store_releases(store, rel)                # review M12: released_at as before + filed_at in its own column
+    rel = rh.display_releases(store, sym)                # ERN shows the results filing's time when stored (display only)
     if rel.empty:
         return {"symbol": sym, "reactions": [], "summary": {"quarters": 0}}
     rel = rel[rel["released_at"] >= pd.Timestamp.now() - pd.Timedelta(days=4 * 365)]
@@ -1658,7 +1667,36 @@ def fii_dii_cash(days: int = Query(90, ge=5, le=3650), store: DuckDBStore = Depe
                 pass
         threading.Thread(target=_bg, daemon=True).start()
     rows = store.fii_dii_cash(days)
-    return {"rows": rows, "summary": fii_dii.summarize(rows), "error": _fii_dii_state["error"]}
+    sessions = None
+    if rows:                                       # review M09: count NSE sessions, never skip a missing day silently
+        try:
+            with store.reader() as con:
+                sessions = fii_dii.session_calendar(con, str(rows[0]["date"])[:8] + "01")
+        except Exception:  # noqa: BLE001 — no calendar: the summary says "calendar unknown"
+            sessions = None
+    return {"rows": rows, "summary": fii_dii.summarize(rows, sessions), "error": _fii_dii_state["error"]}
+
+
+class FiiDiiBackfillRequest(BaseModel):
+    since: str | None = None          # first session to check (default: the first stored day)
+    csv_text: str | None = None       # an owner-saved NSE FII/DII CSV export (validated; fills gaps only)
+    fetch_latest: bool = True
+
+
+@app.post("/jobs/fii-dii-backfill")
+def fii_dii_backfill(req: FiiDiiBackfillRequest | None = None, store: DuckDBStore = Depends(get_store)) -> dict:
+    """Review M09: fill nse_fii_dii_cash gaps where a source exists (NSE's latest day; an owner-saved NSE CSV) and
+    list the sessions that stay missing (NSE keeps no archive of the provisional figures)."""
+    import fii_dii
+    from bhavcopy import HEADERS
+    req = req or FiiDiiBackfillRequest()
+    with store.reader() as con:
+        stored = [str(r[0])[:10] for r in con.execute("SELECT DISTINCT date FROM nse_fii_dii_cash").fetchall()]
+        since = req.since or (min(stored) if stored else date.today().isoformat())
+        sessions = fii_dii.session_calendar(con, since)
+    return fii_dii.backfill(stored, sessions, store.upsert_fii_dii_cash,
+                            fetch_latest=(lambda: fii_dii.fetch(HEADERS)) if req.fetch_latest else None,
+                            csv_text=req.csv_text, since=since)
 
 
 _nse_live: Any = None
@@ -2467,14 +2505,54 @@ def _nifty500_nse(start: str, session: str) -> tuple[pd.Series, str] | None:
     return s, "Nifty 500"
 
 
+_monitor_as_of_cache: dict[str, Any] = {}
+
+
+def _market_monitor_as_of(store: DuckDBStore, as_of: str) -> dict:
+    """Review M10: the monitor snapshot of a PAST session (the wrap's backfill), from stored data only: the panel cut at
+    `as_of`, VIX and the Nifty 500 history up to it (NIFTY 50 from the DB when NSE's file history lacks that day). No
+    network. Its `as_of` is the last session on or before the date asked; the caller checks it."""
+    import market_monitor
+    from shared.momentum import industries
+    from shared.nse_panel import load_panel
+    if as_of in _monitor_as_of_cache:
+        return _monitor_as_of_cache[as_of]
+    start = (pd.Timestamp(as_of) - pd.Timedelta(days=620)).date().isoformat()
+    with store.reader() as con:
+        panel = load_panel(con, start=start, end=as_of)
+    vix = store.get_index_daily("INDIAVIX")
+    vix = pd.Series(vix["close"].to_numpy(), index=pd.to_datetime(vix["date"]))
+    vix = vix[vix.index <= pd.Timestamp(as_of)]
+    got = None
+    h = _index_valuation_history()
+    if h is not None:
+        g = h[(h["index"] == "NIFTY 500") & (h["date"] >= start) & (h["date"] <= as_of)]
+        s = pd.Series(g["close"].to_numpy(dtype=float), index=pd.to_datetime(g["date"])).sort_index()
+        if not s.empty and s.index[-1] >= panel["close"].index[-1]:
+            got = (s, "Nifty 500")
+    if got is None:
+        n50 = store.get_index_daily("NIFTY50")
+        s = pd.Series(n50["close"].to_numpy(), index=pd.to_datetime(n50["date"]))
+        got = (s[s.index <= pd.Timestamp(as_of)], "NIFTY 50")
+    value = market_monitor.snapshot(panel, got[0], got[1], vix, industries())
+    if len(_monitor_as_of_cache) > 16:
+        _monitor_as_of_cache.clear()
+    _monitor_as_of_cache[as_of] = value
+    return value
+
+
 @app.get("/db/market-monitor")
-def market_monitor_snapshot(store: DuckDBStore = Depends(get_store)) -> dict:
-    """Breadth, regime score, sectors and movers from the NSE bhavcopy (cached until the next EOD file)."""
+def market_monitor_snapshot(as_of: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
+                            store: DuckDBStore = Depends(get_store)) -> dict:
+    """Breadth, regime score, sectors and movers from the NSE bhavcopy (cached until the next EOD file); `as_of` = the
+    snapshot of a past session from stored data (review M10)."""
     import market_monitor
     from shared.momentum import industries
     from shared.nse_panel import load_panel
     meta = store.get_bhavcopy_meta()
     key = str(meta.get("last_date"))
+    if as_of and as_of < key[:10]:
+        return _market_monitor_as_of(store, as_of)
     with _monitor_lock:
         if _monitor_cache["key"] == key and _monitor_cache["value"] is not None:
             return _monitor_cache["value"]
@@ -2933,13 +3011,29 @@ class FetchHistoricalResponse(BaseModel):
     statuses: dict[str, str] = {}
 
 
+# Manual Yahoo pulls on the request path (5 Nov 2026 review, M29): refused inside the restart freeze windows and beside
+# the 03:10 gold Yahoo pull unless the caller confirms; DEXP no longer offers these buttons (UPDATE DATA is the guarded path).
+_YAHOO_QUIET_IST = ((7, 45, 9, 20), (18, 30, 21, 15), (3, 0, 3, 40))
+
+
+def _yahoo_manual_guard(confirm: bool) -> None:
+    n = _ist_now()
+    m = n.hour * 60 + n.minute
+    for h1, m1, h2, m2 in _YAHOO_QUIET_IST:
+        if h1 * 60 + m1 <= m < h2 * 60 + m2 and not confirm:
+            raise HTTPException(status_code=409, detail=f"Manual Yahoo fetch refused {h1:02d}:{m1:02d}–{h2:02d}:{m2:02d} IST "
+                                "(freeze window / gold Yahoo slot, CLAUDE.md Yahoo budget); pass confirm=true to override.")
+
+
 @app.post("/fetch/historical", response_model=FetchHistoricalResponse)
 def fetch_historical(
     req: FetchHistoricalRequest,
     yf: DirectYahooProvider = Depends(get_yfinance),
     store: DuckDBStore = Depends(get_store),
+    confirm: bool = Query(False),
 ) -> FetchHistoricalResponse:
     """Full (re)download of each ticker's history from Yahoo, replacing stored bars."""
+    _yahoo_manual_guard(confirm)
     results: dict[str, int] = {}
     statuses: dict[str, str] = {}
     errors: list[str] = []
@@ -3091,12 +3185,14 @@ class FetchFundamentalsResponse(BaseModel):
 def fetch_fundamentals(
     req: FetchFundamentalsRequest,
     store: DuckDBStore = Depends(get_store),
+    confirm: bool = Query(False),
 ) -> FetchFundamentalsResponse:
     """
     Fetch PE, market cap, revenue, margins, ROCE etc. from Yahoo Finance
     and write to stock_metrics + fundamentals tables.
     ~0.6s per ticker; call with batches of 50-100 at a time.
     """
+    _yahoo_manual_guard(confirm)
     import time as _time
     import random as _random
     from providers.fundamentals_provider import fetch_fundamentals as _fetch_fund, _get_session

@@ -24,6 +24,16 @@ from typing import Literal
 
 R_DEFAULT = 0.065          # annualized risk-free rate, same as OMON / ui/lib/black76.ts
 DAYS_IN_YEAR = 365.0
+# M04 (review 5 Nov 2026): the app's one time convention, data-service fo_iv.black76.TIME_CONVENTION — T = calendar time to
+# 15:30 IST on the expiry day ÷ 365 (end of day: the chain's whole `days_to_expiry`; intraday: its fractional `t_days`). This
+# module values whatever days a caller sends; OSTR must send the chain's `t_days` (the pre-v2 "+ 0.5 day" made one expiry
+# print two ATM IVs: OMON Θ −18.7 / ν 10.24 per unit against OSTR's −17.6 / 10.86 for the same NIFTY 24,550 call).
+TIME_CONVENTION = "cal365-1530"
+
+
+def t_years(days: float) -> float:
+    """Years for a days-to-expiry value under TIME_CONVENTION (calendar days ÷ 365, never negative)."""
+    return max(float(days), 0.0) / DAYS_IN_YEAR
 
 Side = Literal["buy", "sell"]
 Kind = Literal["CE", "PE", "FUT"]

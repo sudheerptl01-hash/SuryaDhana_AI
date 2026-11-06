@@ -1232,13 +1232,15 @@ class DuckDBStore:
                      tv AS (SELECT symbol, AVG(turnover_lacs) AS avg_tv_lakh, arg_max(close, date) AS close
                             FROM nse_bhavcopy WHERE series = 'EQ' AND date > ?::DATE - INTERVAL 35 DAY AND date <= ?
                             GROUP BY symbol)
-                SELECT n.symbol, n.name, n.qty, n.amount_lakh, b.qty0, b.amt0, t.avg_tv_lakh, t.close
-                FROM now n LEFT JOIN base b USING (symbol) LEFT JOIN tv t USING (symbol)""", [d1, d0, d1, d1]).df()
+                SELECT n.symbol, n.name, n.qty, n.amount_lakh, b.qty0, b.amt0, t.avg_tv_lakh, t.close,
+                       (SELECT COUNT(*) FROM nse_mtf h WHERE h.symbol = n.symbol AND h.date <= ?)::DOUBLE AS mtf_sessions
+                FROM now n LEFT JOIN base b USING (symbol) LEFT JOIN tv t USING (symbol)""", [d1, d0, d1, d1, d1]).df()
         df["amount_cr"] = df["amount_lakh"] / 100
+        df["amount_chg_cr"] = (df["amount_lakh"] - df["amt0"]) / 100
         df["qty_chg_pct"] = np.where(df["qty0"] > 0, (df["qty"] / df["qty0"] - 1) * 100, np.nan)
         df["days_to_unwind"] = np.where(df["avg_tv_lakh"] > 0, df["amount_lakh"] / df["avg_tv_lakh"], np.nan)
         df = df.replace([np.inf, -np.inf], np.nan)
-        stocks = df[["symbol", "name", "amount_cr", "qty_chg_pct", "days_to_unwind", "close"]].sort_values("amount_cr", ascending=False)
+        stocks = df[["symbol", "name", "amount_cr", "amount_chg_cr", "qty_chg_pct", "days_to_unwind", "close", "mtf_sessions"]].sort_values("amount_cr", ascending=False)
         mkt = mkt.sort_values("date")
         mkt["date"] = mkt["date"].astype(str)
         clean = lambda f: f.astype(object).where(f.notna(), None).to_dict(orient="records")  # noqa: E731
@@ -1846,7 +1848,7 @@ class DuckDBStore:
                     ),
                     stock_metrics_latest AS (
                         SELECT ticker, cmp, pe_ratio, mktcap_cr, div_yld_pct,
-                               np_qtr_cr, qtr_pft_var, sales_qtr_cr, qtr_sal_var, roce_pct
+                               np_qtr_cr, qtr_pft_var, sales_qtr_cr, qtr_sal_var, roce_pct, as_of_date
                         FROM stock_metrics
                         QUALIFY ROW_NUMBER() OVER (PARTITION BY ticker ORDER BY as_of_date DESC) = 1
                     )
@@ -1862,7 +1864,8 @@ class DuckDBStore:
                         CAST((CURRENT_DATE - s.latest_date) AS INT) AS days_since_update,
                         m.cmp,        m.pe_ratio,    m.mktcap_cr,  m.div_yld_pct,
                         m.np_qtr_cr,  m.qtr_pft_var, m.sales_qtr_cr, m.qtr_sal_var, m.roce_pct,
-                        ss.behind AS sessions_behind
+                        ss.behind AS sessions_behind,
+                        m.as_of_date::VARCHAR AS metrics_as_of
                     FROM stock_stats s
                     JOIN latest_price p ON s.ticker = p.ticker
                     LEFT JOIN stock_metrics_latest m ON s.ticker = m.ticker
@@ -1899,6 +1902,7 @@ class DuckDBStore:
                 "sales_qtr_cr":      _f(r[15]),
                 "qtr_sal_var":       _f(r[16]),
                 "roce_pct":          _f(r[17]),
+                "metrics_as_of":     _s(r[19]),
             })
         _OHLCV_META_CACHE = result
         _OHLCV_META_TS = time.time()

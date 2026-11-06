@@ -185,7 +185,25 @@ def test_q_basis_history_nifty_and_stock_spot_sources(conn):
     assert source == "nse_bhavcopy:EQ" and len(rows) == 1
     assert rows[0]["spot"] == 1174.61                      # EQ row, not the BE series
     assert rows[0]["basis_ann_pct"] == pytest.approx((1182.2 / 1174.61 - 1) * 365 / 13 * 100, abs=0.01)
-    assert fa.q_basis_history(conn, "BANKNIFTY", 10)[0] == []   # no spot series stored → empty
+    # negative control: a store without the v2 index_ohlc_daily table → empty, never a CatalogException (it was a 500)
+    assert fa.q_basis_history(conn, "BANKNIFTY", 10) == ([], "index_ohlc_daily:NIFTY BANK")
+    assert fa.q_basis_history(conn, "ZEROCALL", 10)[0] == []    # a stock with no EQ row stored → empty
+
+
+def test_q_basis_history_index_spot_from_the_daily_index_file(conn):
+    """BANKNIFTY's spot is NSE's daily index file (index_ohlc_daily 'NIFTY BANK'), not NIFTY's and not a stock's."""
+    _seed(conn)
+    conn.execute("CREATE TABLE index_ohlc_daily (symbol VARCHAR, date DATE, open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE)")
+    conn.execute("INSERT INTO nse_fo_daily (date, symbol, kind, fut_close, near_expiry) VALUES ('2026-10-14', 'BANKNIFTY', 'index', 56300.0, '2026-10-27')")
+    conn.execute("INSERT INTO index_ohlc_daily VALUES ('NIFTY BANK', '2026-10-14', 56000, 56300, 55900, 56100.0), "
+                 "('NIFTY 50', '2026-10-14', 25000, 25100, 24900, 25050.0)")
+    rows, source = fa.q_basis_history(conn, "BANKNIFTY", 10)
+    assert source == "index_ohlc_daily:NIFTY BANK" and len(rows) == 1
+    assert rows[0]["spot"] == 56100.0 and rows[0]["dte"] == 13
+    assert rows[0]["basis_ann_pct"] == pytest.approx((56300 / 56100 - 1) * 365 / 13 * 100, abs=0.01)
+    # negative control: an index with no row of its own in the file stays empty (never borrows NIFTY 50's close)
+    conn.execute("INSERT INTO nse_fo_daily (date, symbol, kind, fut_close, near_expiry) VALUES ('2026-10-14', 'FINNIFTY', 'index', 27000.0, '2026-10-27')")
+    assert fa.q_basis_history(conn, "FINNIFTY", 10)[0] == []
 
 
 def test_q_pcr_history_and_zero_call_guard(conn):

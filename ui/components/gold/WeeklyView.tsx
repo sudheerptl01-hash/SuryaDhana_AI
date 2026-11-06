@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { IChartApi } from 'lightweight-charts'
 import { Chip, DataTable, T, fmtFixed, fmtSigned, type Column } from '@/components/terminal'
 import { getGoldBars, getGoldCot, getGoldFlows, getGoldPositioningDaily, getGoldSeries } from '@/lib/gold/api'
-import { NO_VERDICT, dayLabel, fmtCount, fmtInr0, fmtSignedCount, fmtSignedPctSp, fmtUsd, parseIso, publishGate } from '@/lib/gold/format'
+import { NO_VERDICT, dayLabel, fmtCount, fmtInr0, fmtSignedCount, fmtSignedPctSp, fmtUsd, oiSpanByDate, parseIso, publishGate } from '@/lib/gold/format'
 import { istDateISO } from '@/lib/format'
 import { dailyChanges, dailyOhlc, istDate, shiftDays, sma, weekRows, weekdayIndex, type Ohlc } from '@/lib/gold/sessions'
 import type { DailyPositioningRow, GoldCot, GoldSubViewProps } from '@/lib/gold/types'
@@ -153,7 +153,9 @@ export function releaseIstDate(releaseAt: string | null | undefined): string | n
   return d ? istDate(d) : null
 }
 
-interface WeekTableRow { date: string; day: string; k: Ohlc | null; chg: number | null; comexOi: number | null; mcxOi: number | null; ibja: number | null; gld: number | null; cot: string | null }
+interface WeekTableRow { date: string; day: string; k: Ohlc | null; chg: number | null; comexOi: number | null; mcxOi: number | null; mcxSpan: { n: number; note: string | null } | null
+  ibja: number | null; gld: number | null; cot: string | null }
+
 
 export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSubViewProps) {
   const today = istDateISO()
@@ -168,7 +170,8 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
   const [showMcx, setShowMcx] = useState(true)
   const [weekBack, setWeekBack] = useState(0)
 
-  const daily = useMemo(() => dailyOhlc(bars.data?.bars ?? []), [bars.data])
+  // the store's partial flag (per bar, or the dates /bars.daily_closes marks partial) and the impossible-open guard (wave 1e)
+  const daily = useMemo(() => dailyOhlc(bars.data?.bars ?? [], new Set((bars.data?.daily_closes ?? []).filter(d => d.partial).map(d => d.date))), [bars.data])
   const last60 = useMemo(() => daily.slice(-60), [daily])
   const smaLines = useMemo(() => {
     const closes = daily.map(k => k.c)
@@ -180,6 +183,7 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
   // the GC product only — the same definition POSITIONING and DAILY print (the 5 Nov review: +14,150 all products here vs GC +3,381 there)
   const comexOi = useMemo(() => oiChangeByDate(comex.data?.rows, 'GC'), [comex.data])
   const mcxOi = useMemo(() => oiChangeByDate(mcx.data?.rows, sel.family), [mcx.data, sel.family])
+  const mcxSpan = useMemo(() => oiSpanByDate(mcx.data?.quadrant_tape), [mcx.data])
   const ibja = useMemo(() => new Map((series.data?.series.find(s => s.series_id === 'IBJA_999_PM')?.points ?? []).map(p => [p.report_date, p.value])), [series.data])
   const gld = useMemo(() => {
     const fromSeries = series.data?.series.find(s => s.series_id === 'GLD_TONNES')?.points ?? []
@@ -199,7 +203,7 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
     const date = shiftDays(week.monday, i)
     // a Saturday IST release lands on the Friday row (the last session of that week)
     const cotHere = cotRelease != null && (cotRelease === date || (i === 4 && cotRelease === shiftDays(date, 1)))
-    return { date, day: DAY_NAMES[i], k, chg: changes.get(date) ?? null, comexOi: comexOi.get(date) ?? null, mcxOi: mcxOi.get(date) ?? null,
+    return { date, day: DAY_NAMES[i], k, chg: changes.get(date) ?? null, comexOi: comexOi.get(date) ?? null, mcxOi: mcxOi.get(date) ?? null, mcxSpan: mcxSpan.get(date) ?? null,
              ibja: ibja.get(date) ?? null, gld: gld.get(date) ?? null, cot: cotHere ? cotCell : null }
   }) : []
   // a daily volume identical to the previous session's is a stale partial-day value, not a coincidence (C-TRADER-25 / C-DATA-20)
@@ -213,11 +217,15 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
   const colOk = (id: string) => publishGate(catalog, id) !== 'no-verdict'
   const gated = (id: string, cell: ReactNode) => (colOk(id) ? cell : <span style={{ color: T.dim }} title={`${NO_VERDICT} (${id})`}>—</span>)
   const cols: Column<WeekTableRow>[] = [
-    { key: 'day', label: 'Day', render: r => <span style={{ color: r.k ? T.text : T.dim }}>{r.day} <span style={{ color: T.dim }}>{r.date.slice(5)}</span></span> },
-    { key: 'o', label: 'open $/oz', align: 'right', render: r => fmtFixed(r.k?.o, 1) },
-    { key: 'h', label: 'high $/oz', align: 'right', render: r => fmtFixed(r.k?.h, 1) },
-    { key: 'l', label: 'low $/oz', align: 'right', render: r => fmtFixed(r.k?.l, 1) },
-    { key: 'c', label: 'close $/oz', align: 'right', render: r => <span style={{ color: T.bright }}>{fmtFixed(r.k?.c, 1)}</span> },
+    // a partial Globex day (fetched before the close) is greyed and says so; an impossible open prints '—' (wave 1e)
+    { key: 'day', label: 'Day', render: r => <span style={{ color: r.k && !r.k.partial ? T.text : T.dim }} data-gold-week-partial={r.k?.partial ? 'true' : undefined}>{r.day} <span style={{ color: T.dim }}>{r.date.slice(5)}</span>
+      {r.k?.partial && <span style={{ color: T.amber, fontSize: 9 }} title="the store marks this bar partial: fetched before the Globex close — not the session's final OHLC, not a settlement"> partial</span>}</span> },
+    { key: 'o', label: 'open $/oz', align: 'right', render: r => (r.k?.openOutside
+      ? <span data-gold-week-bad-open style={{ color: T.dim }} title={`served open ${fmtFixed(r.k.rawOpen, 1)} lies outside the day's high–low range: a partial Yahoo bar carried the previous session's open — not printed, no candle body drawn from it`}>—</span>
+      : <span style={r.k?.partial ? { color: T.dim } : undefined}>{fmtFixed(r.k?.o, 1)}</span>) },
+    { key: 'h', label: 'high $/oz', align: 'right', render: r => <span style={r.k?.partial ? { color: T.dim } : undefined}>{fmtFixed(r.k?.h, 1)}</span> },
+    { key: 'l', label: 'low $/oz', align: 'right', render: r => <span style={r.k?.partial ? { color: T.dim } : undefined}>{fmtFixed(r.k?.l, 1)}</span> },
+    { key: 'c', label: 'close $/oz', align: 'right', render: r => <span style={{ color: r.k?.partial ? T.muted : T.bright }}>{fmtFixed(r.k?.c, 1)}</span> },
     { key: 'chg', label: 'Δ %', align: 'right', sort: r => r.chg, render: r => <span style={{ color: r.chg == null ? T.dim : r.chg > 0 ? T.green : r.chg < 0 ? T.red : T.muted }}>{fmtSignedPctSp(r.chg, 2)}</span> },
     { key: 'range', label: 'range %', align: 'right', render: r => (r.k && r.k.c ? `${fmtFixed(((r.k.h - r.k.l) / r.k.c) * 100, 2)} %` : '—') },
     // a volume identical to the previous session's is a carried-forward placeholder, not data: not printed (the 5 Nov review)
@@ -225,7 +233,8 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
       ? <span data-gold-vol-placeholder style={{ color: T.dim }} title="identical to the previous session: a carried-forward partial-day Yahoo value, not this session's volume; the 03:10 job re-fetches it">— (repeat)</span>
       : <span style={{ color: T.text }}>{fmtCount(r.k.v)}</span>) : '—') },
     { key: 'comexOi', label: 'COMEX GC OI Δ', align: 'right', title: tip('oi_change'), render: r => gated('CME_VOI', <span style={{ color: T.muted }}>{fmtSignedCount(r.comexOi)}</span>) },
-    { key: 'mcxOi', label: `MCX ${sel.family} OI Δ lots`, align: 'right', title: tip('mcx_oi_by_expiry'), render: r => gated('MCX_CURVE_ICICI', <span style={{ color: T.muted }}>{fmtSignedCount(r.mcxOi)}</span>) },
+    { key: 'mcxOi', label: `MCX ${sel.family} OI Δ lots`, align: 'right', title: tip('mcx_oi_by_expiry'), render: r => gated('MCX_CURVE_ICICI', <span style={{ color: T.muted }} data-gold-week-span={r.mcxSpan?.n ?? undefined}
+      title={r.mcxSpan ? (r.mcxSpan.note ?? `over ${r.mcxSpan.n} sessions`) : undefined}>{fmtSignedCount(r.mcxOi)}{r.mcxSpan && r.mcxOi != null ? <span style={{ color: T.amber, fontSize: 9 }}> over {r.mcxSpan.n} sessions</span> : null}</span>) },
     { key: 'ibja', label: 'IBJA 999 PM ₹/10 g', align: 'right', title: tip('ibja_999'), render: r => gated('IBJA_999_PM', <>{fmtInr0(r.ibja)}</>) },
     { key: 'gld', label: 'GLD Δ t', align: 'right', title: tip('etf_chg_1d'), render: r => gated('GLD_TONNES', <span style={{ color: T.muted }}>{fmtSigned(r.gld, 2)}</span>) },
     { key: 'cot', label: 'COT (Fri release)', render: r => gated('COT_DISAGG_F', <span style={{ color: T.muted, whiteSpace: 'normal' }}>{r.cot ?? '—'}</span>) },
@@ -260,7 +269,7 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
         subtitle={week ? `week of ${dayLabel(week.monday)}${week.total_pct != null ? ` · week ${fmtSignedPctSp(week.total_pct, 2)}` : ''}` : 'no week stored yet'}
         freshness={bars.data ? (bars.data.freshness ?? { state: 'delayed', source: 'gold_daily_bars' }) : null}
         copyB={<>One row per session, one unit per column: dollars for COMEX, lots for MCX open interest, rupees for the <Term t="IBJA rate" />, tonnes for <Term t="GLD" />. The CSV button on hover exports it.</>}
-        copyP="OI Δ columns are exchange OI, all months summed: COMEX the GC product only (T+1 from the CME FTP file — the same figure as POSITIONING and DAILY), MCX the picked family (07:35 ICICI master) — an MCX Δ that spans missed sessions is the server's multi-session delta; the COT cell appears on the Friday row of the IST release (Saturday 01:00/02:00 IST). A volume that repeats the previous session's is a carried-forward placeholder and prints '— (repeat)'. During a live COMEX session the last row is the last FINISHED session (today's bar lands after the Globex close), so a STALE chip on a trading evening means 'as of the last close', not a broken feed."
+        copyP="OI Δ columns are exchange OI, all months summed: COMEX the GC product only (T+1 from the CME FTP file — the same figure as POSITIONING and DAILY), MCX the picked family (07:35 ICICI master) — an MCX Δ that spans missed sessions is the server's multi-session delta; the COT cell appears on the Friday row of the IST release (Saturday 01:00/02:00 IST). A volume that repeats the previous session's is a carried-forward placeholder and prints '— (repeat)'. A bar the store marks partial (fetched before the Globex close) is greyed and labelled; an open outside the day's high–low range is not printed and no candle body is drawn from it; an MCX Δ over missed sessions says 'over N sessions'. During a live COMEX session the last row is the last FINISHED session (today's bar lands after the Globex close), so a STALE chip on a trading evening means 'as of the last close', not a broken feed."
         right={<>
           <Chip color={T.muted} onClick={() => setWeekBack(b => Math.min(weeks.length - 1, b + 1))} title="previous week">‹</Chip>
           <Chip color={T.muted} onClick={() => setWeekBack(b => Math.max(0, b - 1))} title="next week">›</Chip>

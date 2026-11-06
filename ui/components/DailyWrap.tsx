@@ -11,6 +11,9 @@ import { getWrap, getWraps } from '@/lib/api'
 import { ErrorBox, Loading, PageHeader, Panel, T, sourceOf } from '@/components/terminal'
 import { unicodeMinus } from '@/lib/format'   // server-built wrap: negative numbers with U+2212 (C1-18)
 import { Markdown } from '@/components/terminal/Markdown'
+import { istDateISO } from '@/lib/format'
+import { nseSession } from '@/components/desktop/session'
+import { wrapForeignDates, wrapPending } from '@/components/marketPagesModel'
 
 const label = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
 
@@ -29,11 +32,18 @@ export function DailyWrap() {
     getWrap(day).then(r => setMd(r.data.markdown)).catch(e => setError(apiError(e, 'unavailable')))
   }, [day])
   const i = list?.findIndex(w => w.date === day) ?? -1
+  // m022: between the close and tonight's write, say when today's wrap lands (it used to show yesterday's silently)
+  const sess = nseSession(Date.now())
+  const hhmm = Number(sess.istTime.replace(':', '').slice(0, 4))
+  const pending = list ? wrapPending(istDateISO(), hhmm, list[0]?.date ?? null, sess.holiday == null && sess.istWeekday >= 1 && sess.istWeekday <= 5) : null
+  // M10 (UI): a wrap whose sections carry another session's data ("NSE end of day 2026-10-30" under 04 Nov) says so
+  const foreign = md && day ? wrapForeignDates(md, day) : []
 
   return (
     <div>
       <PageHeader code="WRAP" title="Daily Market Wrap"
-        subtitle="one page per session, written 21:00 IST from the terminal's data · facts only, not signals" />
+        subtitle="one page per session, written after the evening data pass (≈ 21:00–21:30 IST) from the terminal's data · facts only, not signals" />
+      {pending && <div data-wrap-pending style={{ fontSize: 11, color: T.muted, border: `1px solid ${T.border}`, padding: '6px 10px', marginBottom: 10 }}>{pending}</div>}
       {error && <ErrorBox error={error} />}
       {!list && !error && <Loading label="Reading wraps" />}
       {list && list.length === 0 && (
@@ -64,6 +74,10 @@ export function DailyWrap() {
               <button disabled={i >= (list.length - 1)} onClick={() => setDay(list[i + 1].date)} style={navBtn(i >= list.length - 1)}>‹ OLDER</button>
               <button disabled={i <= 0} onClick={() => setDay(list[i - 1].date)} style={navBtn(i <= 0)}>NEWER ›</button>
             </div>}>
+            {foreign.length > 0 && (
+              <div data-wrap-foreign style={{ border: `1px solid ${T.amber}66`, background: '#120e04', color: T.amber, fontSize: 11, padding: '6px 10px', marginBottom: 10 }}>
+                ⚠ Parts of this wrap carry data from {foreign.join(', ')}, not {day}: the session&apos;s own data was not stored when it was written. Read those sections as that date&apos;s.
+              </div>)}
             {!md ? <Loading label="Reading the wrap" /> : <div style={{ maxWidth: 1000 }}><Markdown source={unicodeMinus(md)} /></div>}
           </Panel>
         </div>

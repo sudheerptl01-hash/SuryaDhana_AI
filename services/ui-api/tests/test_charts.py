@@ -232,3 +232,87 @@ def test_intraday_bad_interval_and_bad_date_are_invalid(monkeypatch):
 def test_routes_are_sync_def_for_threadpool_dispatch():
     assert not inspect.iscoroutinefunction(charts.get_ohlcv)
     assert not inspect.iscoroutinefunction(charts.get_intraday)
+
+
+# ── M42 (5 Nov review): an index, IV30, OI and the near future; the 09:15–15:30 session (M45) ─────────────────────────
+
+INDEX_ROWS = [
+    {"date": "2026-11-03", "open": 23582.25, "high": 23810.85, "low": 23482.8, "close": 23810.85, "source": "nse_daily_file"},
+    {"date": "2026-11-04", "open": 23742.25, "high": 23960.6, "low": 23696.15, "close": 23960.6, "source": "nse_daily_file"},
+    {"date": "2026-11-05", "open": None, "high": None, "low": None, "close": 24536.6, "source": "index_valuation_history"},
+]
+
+
+def test_an_index_charts_from_the_nse_index_file(monkeypatch):
+    seen: list[tuple[str, dict]] = []
+
+    def fake(path, params):
+        seen.append((path, params))
+        return {"rows": INDEX_ROWS}
+
+    monkeypatch.setattr(charts, "_fetch_json", fake)
+    monkeypatch.setattr(charts, "_fetch_daily", lambda s, d: (_ for _ in ()).throw(AssertionError("an index never reads /ohlcv")))
+    for spelling in ("NIFTY", "nifty 50", "^NSEI", "NIFTY50"):
+        body = _client().get("/api/charts/ohlcv", params={"symbol": spelling, "tf": "D", "days": 3650}).json()
+        assert body["symbol"] == "NIFTY" and body["kind"] == "index" and body["source"] == "nse-index-file"
+        assert body["bars"][0] == {"t": "2026-11-03", "o": 23582.25, "h": 23810.85, "l": 23482.8, "c": 23810.85, "v": 0}
+        assert body["bars"][-1]["o"] == body["bars"][-1]["c"] == 24536.6 and body["close_only"] == 1
+    assert seen[0][0] == "/db/index-ohlc/NIFTY%2050"
+    # negative controls: a stock still reads /ohlcv; garbage is still rejected
+    calls = _patch_daily(monkeypatch)
+    assert _client().get("/api/charts/ohlcv", params={"symbol": "RELIANCE"}).json().get("kind") is None and calls[0][0] == "RELIANCE"
+    assert _client().get("/api/charts/ohlcv", params={"symbol": "NIFTY 50; DROP"}).status_code == 400
+
+
+def test_overlays_iv_oi_and_future_from_stored_tables(monkeypatch):
+    payloads = {
+        "/db/iv/summary": {"rows": [{"date": "2026-11-04", "iv30_cm": 13.1, "near_atm_iv": 14.0, "rv20_cc": 17.0},
+                                    {"date": "2026-11-05", "iv30_cm": 12.8, "near_atm_iv": 14.6, "rv20_cc": 17.2}]},
+        "/db/fo/pcr-history": {"rows": [{"date": "2026-11-05", "call_oi": 2.0e8, "put_oi": 1.8e8, "fut_oi": 1.5e7}]},
+        "/db/fo/basis-history": {"rows": [{"date": "2026-11-05", "spot": 24536.6, "fut": 24588.0, "dte": 18, "basis_pct": 0.21, "basis_ann_pct": 4.25}]},
+    }
+    monkeypatch.setattr(charts, "_fetch_json", lambda path, params: payloads[path])
+    iv = _client().get("/api/charts/overlay", params={"symbol": "NIFTY", "kind": "iv", "days": 3650}).json()
+    assert iv["badge"] == "arithmetic" and iv["points"][-1] == {"t": "2026-11-05", "iv30": 12.8, "near": 14.6, "rv20": 17.2} and iv["as_of"] == "2026-11-05"
+    oi = _client().get("/api/charts/overlay", params={"symbol": "NIFTY", "kind": "oi", "days": 3650}).json()
+    assert oi["badge"] == "context" and oi["points"][0]["pcr"] == 0.9 and oi["unit"] == "shares"
+    fut = _client().get("/api/charts/overlay", params={"symbol": "NIFTY", "kind": "future", "days": 3650}).json()
+    assert fut["points"][0]["fut"] == 24588.0 and fut["points"][0]["basis_ann_pct"] == 4.25
+    assert "signal" not in {iv["badge"], oi["badge"], fut["badge"]} and iv["note"] == "describes, does not predict"
+    assert _client().get("/api/charts/overlay", params={"kind": "gex"}).status_code == 400           # negative control
+
+
+def test_a_missing_overlay_degrades_with_the_reason(monkeypatch):
+    def gone(path, params):
+        raise charts.UpstreamError(404, "No basis history for BANKNIFTY")
+
+    monkeypatch.setattr(charts, "_fetch_json", gone)
+    body = _client().get("/api/charts/overlay", params={"symbol": "BANKNIFTY", "kind": "future"}).json()
+    assert body["ok"] is False and body["points"] == [] and "spot series" in body["note"]
+    # negative control: a stock's 404 keeps the upstream's own words
+    body2 = _client().get("/api/charts/overlay", params={"symbol": "TCS", "kind": "future"}).json()
+    assert body2["ok"] is False and body2["note"] == "No basis history for BANKNIFTY"
+
+
+def test_intraday_keeps_the_session_only_and_names_a_late_start(monkeypatch):
+    upstream = {"symbol": "RELIANCE", "date": "2026-11-05", "interval": "15m", "source": "icici-ws", "vwap": 1313.7,
+                "bars": [{"t": "13:00", "o": 10, "h": 12, "l": 9, "c": 11, "v": 100}, {"t": "15:15", "o": 11, "h": 13, "l": 10, "c": 12, "v": 100},
+                         {"t": "15:45", "o": 12, "h": 20, "l": 12, "c": 20, "v": 10_000}]}
+    monkeypatch.setattr(charts, "_fetch_ticks", lambda s, d, i: dict(upstream))
+    body = _client().get("/api/charts/intraday", params={"symbol": "RELIANCE", "date": "2026-11-05", "interval": "15m"}).json()
+    assert [b["t"] for b in body["bars"]] == ["13:00", "15:15"] and body["dropped_outside_session"] == 1
+    assert body["vwap"] == round(((12 + 9 + 11) / 3 * 100 + (13 + 10 + 12) / 3 * 100) / 200, 2)            # recomputed without 15:45
+    assert "13:00" in body["coverage_note"] and "note" not in body
+    seen = {}
+    monkeypatch.setattr(charts, "_fetch_ticks", lambda s, d, i: seen.setdefault("sym", s) and {"bars": [], "source": "icici-ws"})
+    _client().get("/api/charts/intraday", params={"symbol": "BANKNIFTY", "date": "2026-11-05"})
+    assert seen["sym"] == "NIFTY BANK"                                                                   # the tick store's index name
+    # negative control: an in-session morning start keeps the upstream VWAP and adds no coverage note
+    ok = {"bars": [{"t": "09:15", "o": 1, "h": 2, "l": 1, "c": 2, "v": 5}], "vwap": 1.5, "source": "icici-ws"}
+    monkeypatch.setattr(charts, "_fetch_ticks", lambda s, d, i: dict(ok))
+    b2 = _client().get("/api/charts/intraday", params={"symbol": "RELIANCE", "date": "2026-11-05"}).json()
+    assert b2["vwap"] == 1.5 and "coverage_note" not in b2 and "dropped_outside_session" not in b2
+
+
+def test_overlay_route_is_sync_def():
+    assert not inspect.iscoroutinefunction(charts.get_overlay)

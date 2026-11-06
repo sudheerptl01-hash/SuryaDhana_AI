@@ -1,4 +1,6 @@
 """data-service index valuation vs history: same-basis percentiles only (NSE moved index P/E to consolidated in 2021)."""
+import importlib
+import os
 import sys
 from pathlib import Path
 
@@ -7,7 +9,55 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "services" / "data-service"))
 
-import main as data_service  # noqa: E402
+
+def restore_env(before: dict[str, str]) -> list[str]:
+    """Put os.environ back to `before` exactly (keys added since removed, changed ones reset); returns the keys removed."""
+    added = sorted(set(os.environ) - set(before))
+    for k in added:
+        del os.environ[k]
+    for k, v in before.items():
+        if os.environ.get(k) != v:
+            os.environ[k] = v
+    return added
+
+
+LIVE_TICKS_ENV_CONSTANTS = ("MAX_SYMBOLS", "REQUESTED_CAP")     # live_ticks computes these from the env at import
+
+
+def env_constants_of_a_fresh_import(mod, names: tuple[str, ...]) -> dict:
+    """`names` as a fresh import of `mod`'s file computes them under the CURRENT env: a sandbox copy under another
+    module name (an in-place importlib.reload would drop what importers registered on the shared module, e.g. data-service
+    main's live_ticks.set_pins_source, which tests/unit/test_live_quotes.py checks)."""
+    import importlib.util
+
+    name = f"_{mod.__name__}_env_sandbox"
+    spec = importlib.util.spec_from_file_location(name, mod.__file__)
+    copy = importlib.util.module_from_spec(spec)
+    sys.modules[name] = copy
+    try:
+        spec.loader.exec_module(copy)
+    finally:
+        sys.modules.pop(name, None)
+    return {n: getattr(copy, n) for n in names}
+
+
+def import_env_neutral(name: str):
+    """Import `name` and undo whatever it exported into os.environ. data-service ``main`` calls
+    shared.config.load_env_into_process() at import, i.e. the WHOLE project .env (LIVE_TICKS=1, LIVE_TICKS_MAX_SYMBOLS=500
+    on the owner's Mac, …) lands in os.environ at COLLECTION time, before any test of the core run, and stays there: the
+    6 Nov flaky test (tests/integration/test_live_gates.py::…::test_cap_is_the_contract_range) read 500 from it. The
+    module itself keeps what it read (its constants are its business); live_ticks, imported by main under that env, gets
+    back the cap constants the restored env gives (no reload: its registrations stay)."""
+    before = dict(os.environ)
+    mod = importlib.import_module(name)
+    if restore_env(before) and "live_ticks" in sys.modules:
+        lt = sys.modules["live_ticks"]
+        for k, v in env_constants_of_a_fresh_import(lt, LIVE_TICKS_ENV_CONSTANTS).items():
+            setattr(lt, k, v)
+    return mod
+
+
+data_service = import_env_neutral("main")
 
 
 def _history() -> pd.DataFrame:
@@ -92,3 +142,47 @@ def test_term_structure_event_move() -> None:
     out = oc.implied_event_move_term(em1, 10, em2, 30)
     assert out["normal_daily_pct"] == 1.0 and out["event_sigma_pct"] == 4.0
     assert oc.implied_event_move_term(5.0, 10, 4.0, 30)["event_sigma_pct"] is None     # inverted: no reading
+
+
+# ── the 6 Nov flaky-test fix (O-OPS): importing data-service main must not leave the project .env in os.environ ──
+
+def _env_module(tmp_path, monkeypatch, name: str):
+    """A throw-away module that exports a variable at import, as load_env_into_process() does."""
+    (tmp_path / f"{name}.py").write_text("import os\nos.environ['SD_TEST_LEAK_' + __name__.upper()] = '500'\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.delitem(sys.modules, name, raising=False)
+    return f"SD_TEST_LEAK_{name.upper()}"
+
+
+def test_import_env_neutral_removes_what_the_import_exported(tmp_path, monkeypatch) -> None:
+    key = _env_module(tmp_path, monkeypatch, "sd_leaky_mod_a")
+    mod = import_env_neutral("sd_leaky_mod_a")
+    assert mod.__name__ == "sd_leaky_mod_a" and key not in os.environ
+
+
+def test_negative_control_a_plain_import_leaks_the_variable(tmp_path, monkeypatch) -> None:
+    key = _env_module(tmp_path, monkeypatch, "sd_leaky_mod_b")
+    try:
+        importlib.import_module("sd_leaky_mod_b")
+        assert os.environ.get(key) == "500", "the control must leak, else the guard above proves nothing"
+    finally:
+        os.environ.pop(key, None)                # this test must not leak what it demonstrates
+
+
+def test_restore_env_resets_changed_values_and_keeps_the_rest(monkeypatch) -> None:
+    monkeypatch.setenv("SD_TEST_KEEP", "1")
+    before = dict(os.environ)
+    monkeypatch.setenv("SD_TEST_KEEP", "2")
+    monkeypatch.setenv("SD_TEST_NEW", "x")
+    assert restore_env(before) == ["SD_TEST_NEW"]
+    assert os.environ["SD_TEST_KEEP"] == "1" and "SD_TEST_NEW" not in os.environ
+
+
+def test_the_data_service_import_left_no_cap_override() -> None:
+    """After this module's import the live cap variable is whatever the shell had (never the .env's), and live_ticks
+    carries the cap that env gives."""
+    lt = sys.modules.get("live_ticks")
+    assert lt is not None
+    assert lt.MAX_SYMBOLS == lt.cap_from_env(os.environ.get("LIVE_TICKS_MAX_SYMBOLS"))
+    assert lt.REQUESTED_CAP == env_constants_of_a_fresh_import(lt, ("REQUESTED_CAP",))["REQUESTED_CAP"]
+    assert lt._pins_source is not None, "data-service main's pin-source registration survived the env restore"

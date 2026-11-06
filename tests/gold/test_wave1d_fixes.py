@@ -164,7 +164,8 @@ def test_vwap30_of_real_breeze_bars_matches_the_pm_numbers():
     (datetime(2026, 11, 4, 18, 26), TUE),       # 23:56 IST Wed: the close + 2 min has not passed
     (datetime(2026, 11, 4, 18, 27), WED),       # 23:57 IST Wed
     (datetime(2026, 11, 7, 6, 0), date(2026, 11, 6)),     # Saturday: Friday
-    (datetime(2026, 11, 9, 2, 0), date(2026, 11, 6)),     # Monday 07:30 IST: Friday
+    (datetime(2026, 11, 16, 2, 0), date(2026, 11, 13)),   # Monday 07:30 IST: Friday
+    (datetime(2026, 11, 9, 2, 0), date(2026, 11, 8)),     # wave 1e (M-D): Mon 9 Nov follows the Sun 8 Nov Muhurat session
 ])
 def test_latest_completed_session(now, expected):
     assert mcx_close.latest_completed_session(now) == expected

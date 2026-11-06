@@ -106,7 +106,8 @@ def test_iv_rank_window_is_252_sessions_whatever_days_the_chart_asks(client: Tes
     assert short["sessions"] == 20 and len(short["rows"]) == 20 and short["rows"][-1]["date"] == "2026-11-04"
     assert short["rank"]["window_sessions"] == 252 and short["rank"]["window_target"] == 252
     assert short["rank"]["iv_rank_252"] == full["rank"]["iv_rank_252"] and short["rank"]["iv_pctile_252"] == full["rank"]["iv_pctile_252"]
-    assert any(p == "/db/iv/summary" and q.get("days") == "252" for _, p, q in rec.requests)
+    # 253 = today + the 252 sessions before it: the store's percentile window (m058, review 5 Nov 2026)
+    assert any(p == "/db/iv/summary" and q.get("days") == "253" for _, p, q in rec.requests)
     # negative control: the old computation (rank over the 20 chart rows only) differs from the 252-session rank
     twenty = [r["iv30_cm"] for r in short["rows"] if r["iv30_cm"] is not None]
     assert drv.iv_rank(twenty) != short["rank"]["iv_rank_252"]
@@ -504,7 +505,11 @@ def test_data_health_route(client: TestClient) -> None:
     by_id = {row["id"]: row for row in b["rows"]}
     assert by_id["nse_fo_daily"]["state"] == "fresh" and by_id["nse_fo_daily"]["as_of"] == "2026-11-05" and by_id["nse_fo_daily"]["lag_sessions"] == 0
     assert by_id["nse_fo_daily"]["last_run"] == {"ts": "2026-11-05T20:31:00+05:30", "status": "ok", "ms": 41000}
-    assert by_id["nse_results"]["state"] == "red" and by_id["nse_results"]["lag_sessions"] == 4 and by_id["nse_results"]["catchup_at"] == "2026-11-06T20:30:00+05:30"
+    assert by_id["nse_results"]["state"] == "red" and by_id["nse_results"]["lag_sessions"] == 4
+    # M30 (6 Nov): no catch-up is claimed for results_capture_daily (none scheduled; its 3-day window does not reach 4
+    # sessions back)
+    assert by_id["nse_results"]["catchup_at"] is None     # (the positive control, a self-catching job's next run:
+                                                          # nse_combined_oi in test_data_health_prefers_the_data_service_catalog)
     assert by_id["archive:internals"]["state"] == "gap" and by_id["archive:internals"]["unrecoverable"] is True
     assert by_id["nse_mtf"]["state"] == "fresh" and by_id["gold_etf_holdings"]["state"] == "red"
     assert by_id["iv_summary_daily"]["state"] == "red" and by_id["iv_summary_daily"]["note"] == "nothing stored"
