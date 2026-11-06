@@ -95,3 +95,27 @@
   19:20 snapshot; the shadow's data-health row is fresh again.
 - ICICI: the forced login at 20:28 logged in on the authenticator code alone (no SMS), so the 08:00 job can start the Breeze feed
   unattended. The market-hours confirmation is the 6 Nov 09:26 acceptance run.
+
+## Market hours, 6 Nov acceptance (audit `ui_audit_20261106_acceptance`, 09:26–09:38 IST)
+
+43/43 pages pass in Chromium and WebKit with the market open; every page shows a Breeze LIVE chip no more than 10 s old.
+- ICICI: the 08:00 job logged in unattended on the authenticator code (08:00:09, no SMS, no OTP prompt).
+- Feed: 4,723 ticks/min, 0 unmapped ticks, last tick 0.0 s, every subscribed name had its first tick. NIFTY 50, NIFTY BANK,
+  INDIA VIX (now from the websocket, no longer NSE's website) and 7 large caps all read `breeze_ws` live, under 2 s old over a
+  20 s sample (ITC up to 5–7 s: its price changes less often). The news hover card reads `breeze_ws`, 0.5 s.
+- Still DELAYED · NSE by design during the session: panes that read NSE's website (the option chain v3, about 1 min, on
+  OMON / OSTR / BRF; allIndices sector rows and valuation, 1–3 min, on MOV / MKT; the heatmap lists, about 1 min). They are
+  live-capable only through Breeze option and sector-index subscriptions, which are not built. Dated EOD / periodic chips
+  (bhavcopy, F&O files, MTF T+1, results, deals, calendar, the pre-open snapshot) are not live data. Yahoo appears on WORLD
+  only (non-NSE indices).
+- EQS read "STALE · NSE · 22m · 27/60 LIVE". Cause (adversarial review wf_2d40b24a-03b, from the tick store and the access
+  log): the page had last been asked for at 09:03, the tick engine unsubscribed its names after 10 min without demand and
+  kept their 09:08 auction ticks; the audit re-asked at 09:29:5x and captured the page about 7 s later. Breeze sends no
+  snapshot on subscribe, so a row waits for its next trade: 50 of the 52 names ticked within 20 s. The old reason text said
+  "the feed is not healthy". Fixed in the tree (not yet deployed): a tick older than the current subscription is never
+  quiet-LIVE and never "covered" for the NSE poller, which now fetches NSE's copy at once; reasons name the cause
+  ("re-subscribed 5 s ago, waiting for the first tick").
+- Not shipped, an owner decision: keeping a quiet name LIVE past 120 s when NSE's copy shows the same price and volume.
+  Two review rounds (wf_2d40b24a-03b, wf_45861533-2e5) found it needs transport-gap detection, a 66 s NextApi age floor,
+  stamped copies only and honest-time storage, and even then a silently dead token could read LIVE for about 3.5 min after a
+  missed trade (today's bound is 120 s).

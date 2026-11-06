@@ -367,6 +367,13 @@ class LiveTicks:
     def is_subscribed(self, sym: str) -> bool:
         return sym in self._subscribed
 
+    def subscribed_since(self, sym: str) -> Optional[float]:
+        """When the CURRENT subscription of `sym` started (epoch s), or None when it is not subscribed. A cached tick older
+        than this predates the subscription (a lapse, a cap eviction or a reconnect), so the socket does not vouch for
+        the time since it; live_quotes uses this to keep such ticks out of the quiet-LIVE rule."""
+        with self._lock:
+            return self._subscribed_at.get(sym) if sym in self._subscribed else None
+
     def heartbeat_age(self) -> Optional[float]:
         """Seconds since ANY tick on the socket (NIFTY 50 is pinned and ticks at 10 Hz in session)."""
         return round(self._clock() - self.last_tick_at, 1) if self.last_tick_at else None

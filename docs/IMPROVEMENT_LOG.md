@@ -1,9 +1,22 @@
 # Improvement log: terminal polish sprint (11–15 Oct 2026)
 
-Last updated Thu 5 Nov 2026 22:00 IST (evening checks and the unattended ICICI login, entry below; live NSE program + Terminal v2 wave 1 deployed 13:01; GOLD program
+Last updated Fri 6 Nov 2026 10:45 IST (market-hours acceptance, entry below; evening checks and the unattended ICICI login; live NSE program + Terminal v2 wave 1 deployed 13:01; GOLD program
 deployed on the night of 4 Nov; the Terminal v2 research round is written up in `reports/terminal_v2/`). The 11–15 Oct
 sprint entries further down were run and checked against live data at the time; today the terminal has 43 pages and
 `scripts/tests` collects 414 tests.
+
+**6 Nov 2026, 09:26–10:45: market-hours acceptance PASSED; the EQS warm-up rows explained and labelled honestly.**
+- The 08:00 ICICI job logged in unattended on the authenticator code (no SMS). Breeze: 4,723 ticks/min, 0 unmapped, every
+  subscribed name ticked; NIFTY 50 / NIFTY BANK / INDIA VIX and the large caps read `breeze_ws` under 2 s; the hover card too.
+- Audit `ui_audit_20261106_acceptance`: 43/43 in Chromium and WebKit, every page with a LIVE chip ≤ 10 s
+  (`reports/live_nse/COVERAGE.md`, acceptance section, lists what stays DELAYED · NSE by design).
+- EQS showed 24 rows STALE · BREEZE · 22m. An adversarial review traced it to lapsed subscriptions (no demand for 10 min,
+  cached 09:08 auction ticks kept, page captured before the first new tick; Breeze sends no snapshot), not to quiet names or
+  a sick feed as the reason text claimed. Fix (data-service `live_quotes.py` + `LiveTicks.subscribed_since`): a tick older
+  than the current subscription is never quiet-LIVE and never covered for the NSE poller, and reasons name the cause. Not
+  deployed: another session's uncommitted data-service work is in the tree, so the restart waits for it.
+- Built, reviewed twice and NOT shipped: keeping quiet names LIVE past 120 s through NSE's copy (owner decision; the
+  residual risk is a dead token reading LIVE for about 3.5 min after a missed trade).
 
 **5 Nov 2026, evening (20:28–22:00): unattended ICICI login proven; evening checks.**
 - ICICI auto-login: the Keychain item `ICICI_TOTP_SECRET` held a password-like value (not base32), so the 15:47 check stopped

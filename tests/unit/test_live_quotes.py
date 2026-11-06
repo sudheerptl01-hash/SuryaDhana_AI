@@ -43,8 +43,10 @@ def at(h: int, m: int, s: int = 0, day: date = DAY) -> float:
 class FakeTicks:
     """The LiveTicks surface LiveQuotes uses, with ages set by hand."""
 
-    def __init__(self, clock, rows: dict[str, dict] | None = None, healthy: bool = True, subscribed=(), state="LIVE"):
+    def __init__(self, clock, rows: dict[str, dict] | None = None, healthy: bool = True, subscribed=(), state="LIVE",
+                 since: dict[str, float] | None = None):
         self.clock, self.rows, self.healthy, self.subs, self.state = clock, rows or {}, healthy, set(subscribed), state
+        self.since = since or {}                       # sym → when its current subscription started (absent: unknown)
         self.ensured: list[list[str]] = []
 
     def ensure(self, syms):
@@ -64,6 +66,9 @@ class FakeTicks:
 
     def is_subscribed(self, s):
         return s in self.subs
+
+    def subscribed_since(self, s):
+        return self.since.get(s) if s in self.subs else None
 
     def heartbeat_age(self):
         return 0.1 if self.healthy else 30.0
@@ -233,6 +238,74 @@ def test_quiet_name_on_a_healthy_feed_stays_live_but_not_on_a_sick_one():
     assert unsub.quotes(["ILLIQ"])["quotes"]["ILLIQ"]["state"] == "delayed"   # not subscribed: no quiet-live claim
     too_old = engine(clock, ticks=FakeTicks(clock, {"ILLIQ": tick(55.0, clock.t - 200, 54.0)}, healthy=True, subscribed=["ILLIQ"]))
     assert too_old.quotes(["ILLIQ"])["quotes"]["ILLIQ"]["state"] == "stale"
+
+
+def _quiet_case(clock, nse_row=None, healthy=True, subscribed=("ILLIQ",), tick_age=600.0, ttq=1200, sub_age=None):
+    """ILLIQ last ticked `tick_age` s ago on a (healthy) socket, its current subscription `sub_age` s old (None: unknown);
+    `nse_row` is NSE's copy as (price, volume, age_s)."""
+    since = {"ILLIQ": clock.t - sub_age} if sub_age is not None else None
+    e = engine(clock, ticks=FakeTicks(clock, {"ILLIQ": tick(55.0, clock.t - tick_age, 54.0, ttq=ttq, avg=55.0)},
+                                      healthy=healthy, subscribed=list(subscribed), since=since))
+    if nse_row is not None:
+        price, volume, age = nse_row
+        e._store_eq({"ILLIQ": {"price": price, "volume": volume, "prev_close": 54.0, "stamp_epoch": clock.t - age}},
+                    clock.t - age)
+    return e, e.quotes(["ILLIQ"])["quotes"]["ILLIQ"]
+
+
+def test_a_tick_older_than_the_subscription_is_never_vouched_for_by_the_socket():
+    """6 Nov acceptance: EQS read 24 rows STALE · BREEZE · 22m: subscriptions that lapsed after 10 min without demand
+    (asked 09:03, re-asked 09:29) kept their 09:08 auction ticks; the page was captured before the first new tick."""
+    clock = Clock(at(10, 16))
+    _, lapsed = _quiet_case(clock, tick_age=1300.0, sub_age=5.0)          # re-subscribed 5 s ago, no NSE copy yet
+    assert lapsed["state"] == "stale" and lapsed["reason"] == "re-subscribed 5 s ago, waiting for the first tick; last tick 1300 s old"
+    _, recent = _quiet_case(clock, tick_age=60.0, sub_age=10.0)           # ≤ 120 s, but the socket only joined 10 s ago
+    assert recent["state"] == "delayed" and recent["reason"].startswith("re-subscribed 10 s ago")   # no quiet-LIVE claim
+    _, with_nse = _quiet_case(clock, (55.5, 1900, 20.0), tick_age=700.0, sub_age=40.0)
+    assert (with_nse["source"], with_nse["state"], with_nse["price"]) == ("nse_api", "delayed", 55.5)
+    _, within = _quiet_case(clock, tick_age=60.0, sub_age=300.0)          # subscribed before the tick: the old quiet rule
+    assert within["state"] == "live" and within["reason"].startswith("quiet")
+    _, unknown = _quiet_case(clock, tick_age=60.0)                        # an engine without the accessor: the old rule
+    assert unknown["state"] == "live"
+    _, same_ms = _quiet_case(clock, tick_age=60.0, sub_age=60.0)          # the tick landed on the subscription stamp
+    assert same_ms["state"] == "live"
+
+
+def test_fallback_reasons_name_the_cause_and_fit_ui_apis_cap():
+    clock = Clock(at(10, 16))
+    _, quiet = _quiet_case(clock, sub_age=3600.0)                          # past the quiet bound, no NSE copy
+    assert quiet["state"] == "stale" and quiet["reason"] == "no tick for 600 s; last tick 600 s old"
+    _, traded = _quiet_case(clock, (55.0, 1250, 70.0), sub_age=3600.0)     # NSE counts more shares than the last tick
+    assert (traded["source"], traded["state"]) == ("nse_api", "delayed")
+    assert traded["reason"] == "no tick for 600 s; NSE's volume is higher; NSE website copy 70 s old"
+    _, sick = _quiet_case(clock, (55.0, 1200, 70.0), healthy=False)
+    assert sick["reason"].startswith("the feed is not healthy")
+    _, unsub = _quiet_case(clock, (55.0, 1200, 70.0), subscribed=())
+    assert unsub["reason"].startswith("not subscribed on the feed")
+    pre_clock = Clock(at(9, 6))
+    _, pre = _quiet_case(pre_clock, (55.0, 1200, 70.0), tick_age=200.0, sub_age=40.0)
+    assert len(pre["reason"]) <= 200 and "(pre-open:" in pre["reason"]
+    for q in (quiet, traded, sick, unsub, pre):
+        assert "confirmed_by" not in q and "not healthy" not in q["reason"] or q is sick
+
+
+def test_the_poller_fetches_nse_at_once_for_a_re_subscribed_name():
+    clock = Clock(at(10, 16))
+    rows = {"ILLIQ": tick(55.0, clock.t - 60, 54.0, ttq=1200), "OLDSUB": tick(70.0, clock.t - 60, 69.0, ttq=10)}
+    ticks = FakeTicks(clock, rows, healthy=True, subscribed=["ILLIQ", "OLDSUB"],
+                      since={"ILLIQ": clock.t - 10, "OLDSUB": clock.t - 3600})
+    e = engine(clock, ticks=ticks)
+    assert e._covered_by_ticks(["ILLIQ", "OLDSUB"]) == {"OLDSUB"}         # ILLIQ's tick predates its subscription
+
+
+def test_live_ticks_reports_when_the_current_subscription_started():
+    import live_ticks as lt
+    obj = lt.LiveTicks(lambda: None, clock=lambda: 1000.0, enabled_fn=lambda: False, market_hours_fn=lambda: True)
+    assert obj.subscribed_since("ABB") is None
+    obj._subscribed["ABB"], obj._subscribed_at["ABB"] = "4.1!123", 950.0
+    assert obj.subscribed_since("ABB") == 950.0
+    obj._subscribed.pop("ABB")                                            # dropped: the stamp no longer counts
+    assert obj.subscribed_since("ABB") is None
 
 
 def test_clamped_corporate_action_move_drops_change_and_says_why():

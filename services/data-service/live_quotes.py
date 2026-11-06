@@ -52,6 +52,13 @@ def _env_floor(name: str, default: float, floor: float) -> float:
         return default
 
 
+def tick_vouched(tick_ts: Optional[float], subscribed_since: Optional[float]) -> bool:
+    """True when the socket vouches for the time since this tick: the tick arrived on the CURRENT subscription (raw
+    epochs, so a tick landing a few ms after the stamp is not flipped by rounding). Unknown subscription start → True
+    (the rule before 6 Nov)."""
+    return subscribed_since is None or (tick_ts is not None and tick_ts >= subscribed_since)
+
+
 MAX_REQUEST = 300                   # symbols per /live/quotes call (the contract)
 FRESH_S = lt_mod.FRESH_S            # ≤ 5 s = live, always
 QUIET_LIVE_S = 120.0                # healthy socket + subscribed: the last tick is the current price up to this age
@@ -76,6 +83,14 @@ NSE_GAP_S = 1.2                     # between any two NSE network calls from thi
 NEXTAPI_MAX_SYMBOLS = 20
 NEXTAPI_MIN_LAG_S = 50.0            # L-CAPACITY: NextApi values were 48.6-65.2 s behind Breeze while lastUpdateTime claimed 8-9 s
 MINUTE_STAMP_SPAN_S = 59.0          # allIndices: a minute label; its values were 2-60 s old while the label read 1-2 min
+# The socket vouches for a quiet name only from the moment its CURRENT subscription started: Breeze sends no snapshot on
+# subscribe, and a lapse (SYMBOL_TTL_S without demand), a cap eviction or a reconnect keeps the old tick in the cache, so a
+# tick older than the subscription is never quiet-LIVE and never 'covered' for the NSE poller (tick_vouched). 6 Nov
+# acceptance: EQS read 24 rows STALE · BREEZE · 22m: subscriptions lapsed (asked 09:03, re-asked 09:29, captured before the
+# first new tick) whose cached 09:08 auction ticks the old text called 'the feed is not healthy'. Keeping a quiet name LIVE
+# past QUIET_LIVE_S through NSE's copy was built and reviewed twice (wf_2d40b24a-03b, wf_45861533-2e5) and NOT shipped: it
+# needs transport-gap detection, a 66 s NextApi floor, stamped copies only and honest-time storage, and still lets a
+# silently dead token read LIVE ~3.5 min after a missed trade (an owner decision, reports/live_nse/COVERAGE.md).
 LIST_RELEARN_S = 3600.0
 SECTOR_INDEX_PATH = "heatmap-index?type=Sectoral%20Indices"
 
@@ -215,9 +230,12 @@ class LiveQuotes:
                 logger.warning("live-quotes: tick snapshot failed", error=str(exc)[:160])
         eod = self._eod_rows(syms, now)
         out: dict[str, dict] = {}
+        since_fn = getattr(lt, "subscribed_since", None) if lt is not None else None
         for s in syms:
             subscribed = bool(lt is not None and lt.is_subscribed(s))
-            out[s] = self._compose(s, now, state, session, snap.get(s), self._nse_row(s), eod.get(s), healthy, subscribed)
+            since = since_fn(s) if (subscribed and callable(since_fn)) else None
+            out[s] = self._compose(s, now, state, session, snap.get(s), self._nse_row(s), eod.get(s), healthy, subscribed,
+                                   subscribed_since=since)
         if syms:
             self._ensure_poller()
         return {"as_of": _iso(now), "market": {"state": state, "session_date": session.isoformat()}, "quotes": out,
@@ -311,24 +329,29 @@ class LiveQuotes:
                 "_t": close_at, "eod_table": e.get("table")}
 
     def _compose(self, sym: str, now: float, state: str, session: date, tick: Optional[dict], nse: Optional[dict],
-                 eod: Optional[dict], healthy: bool, subscribed: bool) -> dict:
+                 eod: Optional[dict], healthy: bool, subscribed: bool, subscribed_since: Optional[float] = None) -> dict:
         today = self._now_ist(now).date().isoformat()
         b = self._from_tick(sym, tick, now) if tick and tick.get("price") is not None else None
         n = self._from_nse(nse, now) if nse and nse.get("price") is not None else None
         e = self._from_eod(eod, now) if eod and eod.get("close") is not None else None
         base = {"kind": "index" if lt_mod.is_index(sym) else "equity", "subscribed": subscribed}
+        # seconds the CURRENT subscription has run (None: unknown, e.g. an engine without the accessor → the old rule)
+        sub_age = max(0.0, now - subscribed_since) if subscribed and subscribed_since is not None else None
         if state in ("open", "pre-open"):
             intraday = [c for c in (b, n) if c is not None and c["date"] == today]
             pre = " (pre-open: prices before 09:15 may be the indicative auction price, not trades)" if state == "pre-open" else ""
             b_today = b is not None and any(c is b for c in intraday)
-            if b is not None and b_today and (b["age_s"] <= FRESH_S or (healthy and subscribed and b["age_s"] <= QUIET_LIVE_S)):
+            # a tick older than the subscription says nothing about the time since: the socket was not carrying the name
+            vouched = b is not None and tick_vouched(b["_t"], subscribed_since if subscribed else None)
+            if b is not None and b_today and (b["age_s"] <= FRESH_S or
+                                              (healthy and subscribed and vouched and b["age_s"] <= QUIET_LIVE_S)):
                 why = None if b["age_s"] <= FRESH_S else f"quiet: no new trade or quote for {b['age_s']:.0f} s on a healthy feed"
                 return self._finish(b, LIVE, (why or "") + pre or None, base)
             if intraday:
                 best = min(intraday, key=lambda c: c["age_s"])
                 st = DELAYED if best["age_s"] <= DELAYED_MAX_S else STALE
-                why = ("no live tick; " if b is None or b is not best else "the feed is not healthy; ") + \
-                      f"{'NSE website copy' if best['source'] == SOURCE_NSE else 'last tick'} {best['age_s']:.0f} s old"
+                why = self._fallback_lead(b, b_today, n, healthy, subscribed, vouched, sub_age) + \
+                    f"{'NSE website copy' if best['source'] == SOURCE_NSE else 'last tick'} {best['age_s']:.0f} s old"
                 return self._finish(best, st, why + pre, base)
             if e is not None:
                 if state == "pre-open":
@@ -349,6 +372,25 @@ class LiveQuotes:
             return self._finish(e, STALE, f"the {session.isoformat()} close is not stored yet; showing the {e['date']} close",
                                 base)
         return self._unavailable(base, "no stored close")
+
+    @staticmethod
+    def _fallback_lead(b: Optional[dict], b_today: bool, n: Optional[dict], healthy: bool, subscribed: bool,
+                       vouched: bool, sub_age: Optional[float]) -> str:
+        """Why a row is not LIVE, in short words that match the cause (6 Nov: lapsed subscriptions read 'the feed is not
+        healthy' on a healthy feed, and names with a tick read 'no live tick'). ui-api caps a reason at 200 characters."""
+        if b is None or not b_today:
+            return "no live tick this session; "
+        if not healthy:
+            return "the feed is not healthy; "
+        if not subscribed:
+            return "not subscribed on the feed; "
+        if not vouched:
+            since = f" {sub_age:.0f} s ago" if sub_age is not None else ""
+            return f"re-subscribed{since}, waiting for the first tick; "
+        if n is not None and n.get("date") == b.get("date") and n["age_s"] < b["age_s"] and \
+                n.get("volume") is not None and b.get("volume") is not None and float(n["volume"]) > float(b["volume"]):
+            return f"no tick for {b['age_s']:.0f} s; NSE's volume is higher; "
+        return f"no tick for {b['age_s']:.0f} s; "
 
     @staticmethod
     def _finish(c: dict, state: str, reason: Optional[str], base: dict) -> dict:
@@ -479,11 +521,20 @@ class LiveQuotes:
             healthy = bool(lt.feed_healthy())
         except Exception:  # noqa: BLE001
             return set()
+        since_fn = getattr(lt, "subscribed_since", None)
         out = set()
         for s, t in snap.items():
             age = t.get("ts_age_s")
-            if age is not None and (age <= FRESH_S or (healthy and lt.is_subscribed(s) and age <= QUIET_LIVE_S)):
+            if age is None:
+                continue
+            if age <= FRESH_S:
                 out.add(s)
+            elif healthy and age <= QUIET_LIVE_S and lt.is_subscribed(s):
+                # the composer's rule: a tick older than the current subscription is not covered, so NSE's copy is
+                # fetched at once for a re-subscribed name (6 Nov review: it waited until the old tick passed 120 s)
+                since = since_fn(s) if callable(since_fn) else None
+                if tick_vouched(t.get("ts"), since):
+                    out.add(s)
         return out
 
     def poll_nse_once(self) -> dict:
