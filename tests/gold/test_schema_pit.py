@@ -59,8 +59,11 @@ def test_catalog_seed_is_complete_and_honest(store):
             by["GLD_TONNES"]["max_age_days"], by["WGC_ETF_FLOW_T_GLOBAL"]["max_age_days"], by["IMF_GOLD_OZ_IND"]["max_age_days"],
             by["GOLD_IMPORT_DUTY_PCT"]["max_age_days"]) == (4, 5, 9, 5, 10, 60, 400)
     assert by["COT_DISAGG_F"]["badge"] == "context" and "does not forecast" in by["COT_DISAGG_F"]["verdict_reason"]
-    for dormant in ("MCX_BHAVCOPY", "MCX_CATEGORY_OI", "BREEZE_DAILY", "COMEX_WAREHOUSE", "CME_BULLETIN_SETTLE"):
+    for dormant in ("MCX_BHAVCOPY", "MCX_CATEGORY_OI", "COMEX_WAREHOUSE", "CME_BULLETIN_SETTLE"):
         assert by[dormant]["verdict"] == "LINK-ONLY" and by[dormant]["verdict_reason"]
+    # O-8 (6 Nov 2026): the Breeze daily MCX history is collected and published as a description, never a signal
+    assert (by["BREEZE_DAILY"]["verdict"], by["BREEZE_DAILY"]["badge"]) == ("PUBLISH-CONTEXT", "arithmetic")
+    assert "FAILS as a forecast" in by["BREEZE_DAILY"]["verdict_reason"]
     assert "attribution" in by["GLD_TONNES"]["terms"].lower() or "display-only" in by["GLD_TONNES"]["terms"]
     assert catalog_seed.seed(store) == n                        # idempotent re-seed
 
