@@ -234,7 +234,10 @@ the India ladder · 15:45 CME daily OI (retry 17:15) · 16:10 SGE / SHFE · 21:3
 hourly retries to 06:30 and a Telegram digest line · Mon / Fri / Sat WGC, RBI, LBMA · Sun 04:00 CME calendar), each a
 `POST :8001/jobs/ingest-gold?job=<id>` with its groups: they fetch and never restart anything; a 404 (gold package not
 deployed) pauses them for an hour; after downtime the key ones (`gold_overnight`, `gold_mcx_master`, `gold_cot_weekly`)
-re-run with `backfill_from`. Dormant until the owner decides O-8: `gold_mcx_bhavcopy`, `gold_mcx_category`, `gold_breeze_daily`.
+re-run with `backfill_from`. 6 Nov additions: `gold_sge_quotes` every 5 min in SGE hours (06:30–13:00, 17:30–00:00 IST;
+light) and `gold_breeze_daily` 09:35 Mon–Fri (O-8: ICICI Breeze daily OHLC + OI per live MCX gold expiry into
+`gold_mcx_daily`, read at `/db/gold/mcx/daily`; a session job). Dormant by owner decision O-8 (6 Nov): `gold_mcx_bhavcopy`,
+`gold_mcx_category` (MCX's site blocks bots). O-1 / O-2 decided 6 Nov: keep as built / CME files link-only.
 
 **Restart order:** never restart data-service while ui-api is up and data-service is down for a moment (ui-api grabs a read lock on market.duckdb and data-service comes back READ-ONLY, every ingest 503s): stop ui-api → restart data-service (`/ready` 200) → start ui-api (RUNBOOK 'After an outage').
 

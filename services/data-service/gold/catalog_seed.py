@@ -426,7 +426,9 @@ def build_rows() -> list[dict[str, Any]]:
                      reason="DORMANT: 403 Akamai bot wall (O-8); the ICICI master band midpoint stands in (quality=proxy)"))
     rows.append(_row("BREEZE_DAILY", "ICICI Breeze daily bars with OI per MCX expiry", "F2", "ICICI Breeze",
                      "https://api.icicidirect.com/breezeapi/documents/index.html", "D", "INR/10g", "LINK-ONLY", "arithmetic", 4, job=None,
-                     access="FREE-REGISTRATION", reason="DORMANT: live-verify after an 08:00 login (O-8); OI unreliable for old contracts"))
+                     access="FREE-REGISTRATION", reason="COLLECTED since 6 Nov 2026 (O-8, owner-authorised; live-verified: 5 Breeze codes, 15 "
+                     "contracts, OI matches the ICICI master) into gold_mcx_daily, live expiries only (OI unreliable for old "
+                     "contracts); not rendered until a study shows it adds to the master's OI (usefulness gate)"))
     rows.append(_row("COMEX_WAREHOUSE", "COMEX warehouse stocks (registered / eligible / pledged)", "C8", "CME Group (www)",
                      "https://www.cmegroup.com/delivery_reports/Gold_Stocks.xls", "D", "oz", "LINK-ONLY", "context", 4, job=None,
                      access="BLOCKED", reason="www.cmegroup.com 403 to this IP (O-2); never fetched by the stack"))

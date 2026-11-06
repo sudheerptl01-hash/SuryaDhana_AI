@@ -417,7 +417,12 @@ def g_sge_quotes(ctx: Ctx) -> dict[str, Any]:
     if resp.status_code != 200:
         return {"status": f"http_{resp.status_code}", "inserted": 0}
     df = ingest_physical.parse_sge_quotations(resp.text, now=ctx.now)
-    return {"inserted": db.upsert(ctx.store, "gold_bars_intraday", df)}
+    inserted = db.upsert(ctx.store, "gold_bars_intraday", df)
+    # self-heal (6 Nov 2026): runs before the trading-day fix stored the night session's padding with future stamps
+    future = int(db.scalar(ctx.store, "SELECT COUNT(*) FROM gold_bars_intraday WHERE symbol = 'SGE_AU9999' AND ts > ?", [ctx.now]) or 0)
+    if future:
+        db.execute(ctx.store, "DELETE FROM gold_bars_intraday WHERE symbol = 'SGE_AU9999' AND ts > ?", [ctx.now])
+    return {"inserted": inserted, "purged_future": future}
 
 
 def g_sge_monthly(ctx: Ctx) -> dict[str, Any]:

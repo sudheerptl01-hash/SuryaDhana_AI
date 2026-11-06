@@ -2,6 +2,9 @@
 (G-MACRO) and the Yahoo chart bodies saved by G-KITCO (incl. the range=max monthly trap)."""
 from __future__ import annotations
 
+# ruff: noqa: DTZ001
+# (timestamps are UTC-naive by the store's convention)
+
 from datetime import date
 
 import pandas as pd
@@ -143,6 +146,67 @@ def test_sge_quotations_body_is_dated_by_the_night_session_rule(now):
     from _support import G_CME
     from gold import ingest_physical
 
+    # the recorded body: delaystr '2026年10月26日 02:29:55' = trading day Mon 26 Oct, last quote 02:29 — the end of the night
+    # session that ran Fri 23 Oct 20:00 → Sat 24 Oct 02:30 Beijing. Monday's day-session minutes are padding (dropped).
     df = ingest_physical.parse_sge_quotations(read(G_CME / "sge_graph_quotations.json"), now=now)
-    assert len(df) == 782 and (df["symbol"] == "SGE_AU9999").all()
-    assert df["ts"].min() == pd.Timestamp("2026-10-22 12:00") and df["ts"].max() == pd.Timestamp("2026-10-23 07:30")   # Thu 20:00 → Fri 15:30 Beijing
+    assert len(df) == 390 and (df["symbol"] == "SGE_AU9999").all()                      # 20:00 … 02:29, not the 782-minute template
+    assert df["ts"].min() == pd.Timestamp("2026-10-23 12:00") and df["ts"].max() == pd.Timestamp("2026-10-23 18:29")   # Fri 20:00 → Sat 02:29 Beijing
+    # negative control: the pre-6-Nov reading (Thu 22 Oct 20:00 → Fri 23 Oct 15:30, 782 rows) put Monday's padding on Friday
+    assert pd.Timestamp("2026-10-23 07:30") not in set(df["ts"])
+
+
+def _sge_body(delaystr: str) -> str:
+    import json as _json
+    from _support import G_CME
+
+    o = _json.loads(read(G_CME / "sge_graph_quotations.json"))
+    o["delaystr"] = delaystr
+    return _json.dumps(o)
+
+
+def test_sge_quotations_friday_night_is_friday_not_monday():
+    """Seen live Fri 6 Nov 2026 20:08 Beijing: delaystr '2026年11月09日 20:07:54' (Monday's trading day). The old parser stamped
+    the evening's quotes on Sun 8 / Mon 9 Nov and padded Monday's day session into the future."""
+    from datetime import datetime as _dt
+
+    from gold import ingest_physical
+
+    now = _dt(2026, 11, 6, 12, 8)                                                        # Fri 20:08 Beijing, UTC-naive
+    df = ingest_physical.parse_sge_quotations(_sge_body("2026年11月09日 20:07:54"), now=now)
+    assert len(df) == 8                                                                  # 20:00 … 20:07: the quotes so far
+    assert df["ts"].min() == pd.Timestamp("2026-11-06 12:00") and df["ts"].max() == pd.Timestamp("2026-11-06 12:07")
+    assert (df["ts"] <= pd.Timestamp(now)).all()                                         # nothing from the future
+
+
+def test_sge_quotations_after_the_day_close_keeps_the_whole_session():
+    from datetime import datetime as _dt
+
+    from gold import ingest_physical
+
+    df = ingest_physical.parse_sge_quotations(_sge_body("2026年11月06日 15:30:00"), now=_dt(2026, 11, 6, 8, 0))   # Fri 16:00 Beijing
+    assert len(df) == 782
+    assert df["ts"].min() == pd.Timestamp("2026-11-05 12:00") and df["ts"].max() == pd.Timestamp("2026-11-06 07:30")   # Thu 20:00 → Fri 15:30
+    # a Monday template's night session is Friday's evening, never Sunday's
+    mon = ingest_physical.parse_sge_quotations(_sge_body("2026年11月09日 09:05:00"), now=_dt(2026, 11, 9, 1, 10))   # Mon 09:10 Beijing
+    assert mon["ts"].min() == pd.Timestamp("2026-11-06 12:00") and pd.Timestamp("2026-11-08 12:00") not in set(mon["ts"])
+    assert mon["ts"].max() == pd.Timestamp("2026-11-09 01:05")
+
+
+def test_sge_quotes_job_purges_future_stamped_rows(store):
+    """Rows stored before the fix carry future stamps; the next run deletes them (and only them)."""
+    from datetime import datetime as _dt
+
+    from _support import FakeHttp, FakeResponse
+    from gold import db, jobs
+
+    now = _dt(2026, 11, 6, 12, 8)
+    bad = pd.DataFrame([{"symbol": "SGE_AU9999", "ts": _dt(2026, 11, 9, 7, 30), "interval": "1m", "open": 1.0, "high": 1.0, "low": 1.0,
+                         "close": 1.0, "volume": 0, "source": "sge_quotations", "first_seen_at": now},
+                        {"symbol": "GC=F", "ts": _dt(2026, 11, 9, 7, 30), "interval": "1m", "open": 1.0, "high": 1.0, "low": 1.0,
+                         "close": 1.0, "volume": 0, "source": "yahoo", "first_seen_at": now}])
+    db.upsert(store, "gold_bars_intraday", bad)
+    http = FakeHttp({"graph/quotations": FakeResponse(200, _sge_body("2026年11月09日 20:07:54"))})
+    res = jobs.run_job(store, http, "t", ["sge_quotes"], now=now, force=True)["groups"]["sge_quotes"]
+    assert res["inserted"] == 8 and res["purged_future"] == 1
+    left = db.query_df(store, "SELECT symbol, ts FROM gold_bars_intraday WHERE ts > ?", [now])
+    assert list(left["symbol"]) == ["GC=F"]                                              # another symbol's row is untouched

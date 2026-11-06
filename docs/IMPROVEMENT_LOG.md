@@ -48,6 +48,12 @@ has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suit
   Friday by design (9 → 11 days); the Swiss customs parser matched 0 rows on the real 692 MB file (ISO-code and unit-count
   columns; fixed, 177 months Jan 2012 → Sep 2026 stored). data-service + ui-api restarted twice in the lock-safe order
   (16:37, 16:47), controller once. DATA health: 66 green, 1 amber (news track record, cleared by 19:45), 0 red.
+- Gold, 17:00–17:55 — the last open items: owner decisions O-1 (keep as built), O-2 (CME files link-only), O-8 (Breeze daily
+  MCX history only) answered; the Breeze collector built (`gold/mcx_daily.py`, table `gold_mcx_daily`, 09:35 Mon–Fri) and
+  live-verified (15 contracts, 1,456 bars, OI = the master's roll ratio); Muhurat circular MCX/TRD/590/2026 confirmed by two
+  republications; India imports Aug/Sep 2025–26 entered (cross-checked); SGE quotes scheduled every 5 min in SGE hours and
+  the SGE parser's trading-day dating fixed (Friday-night quotes had been stamped on Monday, padded into the future; 782
+  future rows purged). Deployed 17:44 in the lock-safe order. `reports/gold_program/VERIFY_20261106.md` §5.
 - Still to run: the outage backfill's inbox notes after 21:15 tonight; the NIFTY / NIFTY BANK drivers history on Sun 8 Nov
   10:00 (PLAN 1.8). Owner items: the IMPORT click; adopting `filed_at` for the S1 shadow (review); O-T13 (BANK pre-list days).
 

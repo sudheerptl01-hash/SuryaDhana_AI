@@ -538,37 +538,55 @@ def parse_sge_benchmark_json(obj: Any, *, now: datetime | None = None, since: da
 # ── D4 SGE delayed intraday quotations (JSON) ───────────────────────────────────────────────────────
 
 def parse_sge_quotations(obj: Any, *, now: datetime | None = None) -> pd.DataFrame:
-    """``{times: ['20:00', …], data: ['865.0', …], heyue: 'Au99.99', delaystr: '2026年10月26日 02:29:55'}`` → 1-minute
-    rows for symbol SGE_AU9999 (Beijing clock; the night session crosses midnight, so a time that goes backwards
-    starts the next calendar day; the session's first bar is dated the day before ``delaystr`` when needed)."""
+    """``{times: ['20:00', …, '15:30'], data: ['865.0', …], heyue: 'Au99.99', delaystr: '2026年11月09日 20:07:54', now: '20:08'}``
+    → 1-minute rows for symbol SGE_AU9999.
+
+    SGE's convention (seen live Fri 6 Nov 2026 20:08 Beijing, when delaystr read 09 Nov): ``delaystr`` is the TRADING DAY T
+    plus the Beijing clock of the last delayed quote, and ``times`` is T's whole session template — the night session
+    20:00→02:30 that runs on the evening of the business day before T, then T's day session — with every minute after
+    the last quote padded with the last price. So: a minute ≥ 20:00 is on prev_business_day(T), a minute before 03:00 the
+    calendar day after that, a day-session minute on T; minutes later in the session than the delaystr clock are padding
+    and dropped, and nothing later than ``now`` is ever returned. (Until 6 Nov the parser read delaystr's date as the
+    calendar day: a Friday-night fetch stamped the evening's quotes on Sunday and padded Monday's day session into the
+    future; a weekend fetch could overwrite the previous Friday's real day bars with padding.)"""
     now = now or utcnow()
     o = json.loads(obj) if isinstance(obj, str) else obj
     m = re.search(r"(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2}):(\d{2})", str(o.get("delaystr") or ""))
     if not m:
         return pd.DataFrame()
-    end_day = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-    end_t = int(m.group(4)) * 60 + int(m.group(5))
+    trading_day = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    last_quote = int(m.group(4)) * 60 + int(m.group(5))
     times, data = o.get("times") or [], o.get("data") or []
-    mins = []
-    for t in times:
-        hh, mm = str(t).split(":")[:2]
-        mins.append(int(hh) * 60 + int(mm))
-    if not mins:
-        return pd.DataFrame()
-    # anchor: the last bar sits on the last weekday whose clock time precedes the delay stamp; earlier bars step back
-    # one calendar day at every backwards midnight crossing (the night session 20:00→02:30 precedes the day session)
-    anchor = end_day - timedelta(days=1) if end_t < mins[-1] else end_day
-    while anchor.weekday() >= 5:
-        anchor -= timedelta(days=1)
-    days: list[date] = [anchor] * len(mins)
-    for i in range(len(mins) - 2, -1, -1):
-        days[i] = days[i + 1] - timedelta(days=1) if mins[i] > mins[i + 1] else days[i + 1]
+    night_day = trading_day - timedelta(days=1)
+    while night_day.weekday() >= 5:                     # Monday's night session runs on Friday evening
+        night_day -= timedelta(days=1)
+
+    def offset(minute: int) -> int:                     # minutes since the session opened at 20:00 (monotonic in `times`)
+        return (minute - 20 * 60) % 1440
+
+    cut = offset(last_quote)
+    now_naive = now.replace(tzinfo=None) if now.tzinfo is None else now.astimezone(timezone.utc).replace(tzinfo=None)
     rows = []
-    for t, v, day in zip(mins, data, days):
+    for t, v in zip(times, data):
+        try:
+            hh, mm = (int(x) for x in str(t).split(":")[:2])
+        except ValueError:
+            continue
+        minute = hh * 60 + mm
+        if offset(minute) > cut:                        # after the last delayed quote: padding, not a price
+            continue
         px = _flt(v)
         if px is None:
             continue
-        ts = datetime(day.year, day.month, day.day, t // 60, t % 60, tzinfo=SHANGHAI).astimezone(timezone.utc).replace(tzinfo=None)
+        if minute >= 20 * 60:
+            day = night_day
+        elif minute < 3 * 60:
+            day = night_day + timedelta(days=1)
+        else:
+            day = trading_day
+        ts = datetime(day.year, day.month, day.day, hh, mm, tzinfo=SHANGHAI).astimezone(timezone.utc).replace(tzinfo=None)
+        if ts > now_naive:                              # defensive: never a bar from the future
+            continue
         rows.append({"symbol": "SGE_AU9999", "ts": ts, "interval": "1m", "open": px, "high": px, "low": px, "close": px, "volume": 0,
                      "source": "sge_quotations", "first_seen_at": now})
     return pd.DataFrame(rows)
