@@ -551,7 +551,8 @@ stack is healthy and `<url>/fail` when it is not; a free outside service alerts 
    ```
    No restart is needed: the watchdog reads `.env` on every run. Treat the URL like a password (anyone who has it
    can send fake "healthy" pings); `status`, Telegram `/status` and the watchdog log never print it.
-5. Check it — one command, which pings every configured check once and never prints the URL:
+5. Check it — one command, which pings every configured check once and never prints the URL.
+   (Done for the stack check on 8 Nov 2026: configured, pinged, `/fail` and recovery both verified.)
    ```bash
    bash scripts/stack_watchdog.sh --ping-test     # stack OK (HTTP 200) · mac OK (HTTP 200)
    ./start-local.sh status                        # within 2 min: dead-man-ping  ok  hc-ping.com pinged … ago

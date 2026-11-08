@@ -5,6 +5,19 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 17:05: the off-Mac dead-man alert is LIVE — the 6 Nov silence cannot repeat.**
+- The owner created the healthchecks.io check and pasted its ping URL; `HEALTHCHECK_PING_URL` is set in `.env` (never
+  committed, never echoed — the URL is a credential: anyone holding it can keep the check green). `./start-local.sh status`
+  reads `dead-man-ping  ok  hc-ping.com pinged 1 s ago (stack healthy)`.
+- Verified end to end, not just configured: `--ping-test` → HTTP 200; a deliberate `/fail` → 200; back to success → 200;
+  the status row returned to ok. One down + one up notification were sent to the owner's check by that test.
+- **This single check already covers the power-loss case.** `ping_deadman` pings success only when all three services
+  answer, hits `<url>/fail` the moment one does not, and sends NOTHING when the Mac is off or frozen — so the check goes
+  red by itself after the grace period. On 6 Nov the Mac was off for 38 hours with nobody told; that is now impossible
+  provided the check's period / grace are set (5 min / 15 min recommended; the watchdog pings every 120 s).
+- Still optional and still unset: `HEALTHCHECK_WATCHDOG_URL`, the second check. It adds only the ability to TELL APART
+  "the stack is down but the Mac is up" from "the Mac is down" — useful, not load-bearing.
+
 **8 Nov 2026, 16:50: the 24-hour power clue narrowed from the logs — a daily timer does not fit.**
 - Of the four multi-hour outages in the service logs (gaps > 12 h, which the 02:15 backup and 03:10 gold job rule out as
   idle), the stops are Wed 28 Oct 12:46 (43.4 h), Sat 31 Oct 11:00 (106.5 h), Thu 5 Nov 19:35 (20 min) and Fri 6 Nov 19:52
