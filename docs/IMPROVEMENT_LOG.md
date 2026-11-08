@@ -5,6 +5,18 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 16:10: the owner closed the gold goal; the power decision is "keep FileVault + an off-Mac alert".**
+- Gold goal CONFIRMED COMPLETE by the owner after the final verification on the deployed build: 22/22 goal checks, every
+  GOLD page 22/22 in Chromium and WebKit, each family priced in its own unit (GOLDPETAL ₹14,342 per 1 g beside GOLD's
+  ₹1,42,540 per 10 g, which used to be printed as the pick's own), positions opened / closed by day / week / month for all
+  five families, today's Muhurat settlement stored, 160 glossary terms and 270 tooltips with no dangling links.
+- Power / boot (the RCA's O1): the owner keeps FileVault ON and adds the off-Mac dead-man ping, NOT auto-login — auto-login
+  cannot coexist with FileVault, so it would have meant decrypting a disk that holds the broker credentials. `autorestart`
+  is already 1. Remaining owner step: create two free healthchecks.io checks (period 5 min, grace 15 min — the watchdog
+  runs every 120 s) and paste them into `.env` as `HEALTHCHECK_PING_URL` (stack healthy / `/fail`) and
+  `HEALTHCHECK_WATCHDOG_URL` (the Mac is up at all). Both are already wired in `scripts/stack_watchdog.sh`; the controller's
+  `_deadman_line` warns while they are unset. A UPS remains the only fix for the brownouts themselves.
+
 **8 Nov 2026, 10:05–15:52: the gold program independently reviewed, 18 confirmed defects fixed, and the settlement store filled.**
 - Review (`wf_962189ca-105`): three critics on the LIVE page against the owner's goal — a data auditor recomputing every
   number, a Bloomberg-style gold trader, and a newcomer — all PUBLISH-WITH-FIXES (6.4 / 6.8 / 6.8). An adversarial verifier
