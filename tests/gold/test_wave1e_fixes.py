@@ -70,7 +70,7 @@ class _Breeze:
 def test_the_monday_night_run_also_stores_the_muhurat_window(store):
     br = _Breeze()
     res = mcx_close.run(store, lambda: br, now=_utc(MON, 23, 58) + timedelta(minutes=15), families=["GOLD"], pace_s=0,
-                        sleep=lambda s: None)
+                        sleep=lambda s: None, backfill_lookback=0)        # the special-session rule alone (sweep off)
     assert res["sessions"] == ["2026-11-08", "2026-11-09"]
     asked = sorted({c["from_date"][:10] for c in br.calls})
     assert asked == ["2026-11-08", "2026-11-09"]
@@ -79,15 +79,30 @@ def test_the_monday_night_run_also_stores_the_muhurat_window(store):
     assert mcx_close.stored(store, "GOLD", date(2026, 12, 4), SUN) and mcx_close.stored(store, "GOLD", date(2026, 12, 4), MON)
     # a re-run costs nothing (stored sessions are skipped)
     br2 = _Breeze()
-    mcx_close.run(store, lambda: br2, now=_utc(MON, 23, 58) + timedelta(minutes=20), families=["GOLD"], pace_s=0, sleep=lambda s: None)
+    mcx_close.run(store, lambda: br2, now=_utc(MON, 23, 58) + timedelta(minutes=20), families=["GOLD"], pace_s=0,
+                  sleep=lambda s: None, backfill_lookback=0)
     assert br2.calls == []
 
 
 def test_an_ordinary_night_run_stores_only_the_latest_session(store):
+    """Steady state: with the recent sessions already stored, a nightly run asks Breeze for the latest session only. (The
+    8 Nov 2026 sweep adds a session no run ever stored — see the second half, which is why the store is seeded first.)"""
+    night = _utc(date(2026, 11, 16), 23, 58) + timedelta(minutes=15)
+    for d in mcx_close.missing_sessions(store, date(2026, 11, 13)):                     # everything before Monday 16 Nov
+        mcx_close.run(store, lambda: _Breeze(), now=night, families=["GOLD"], sessions=[d], pace_s=0, sleep=lambda s: None)
     br = _Breeze()
-    res = mcx_close.run(store, lambda: br, now=_utc(date(2026, 11, 16), 23, 58) + timedelta(minutes=15), families=["GOLD"],
-                        pace_s=0, sleep=lambda s: None)
+    res = mcx_close.run(store, lambda: br, now=night, families=["GOLD"], pace_s=0, sleep=lambda s: None)
     assert res["sessions"] == ["2026-11-16"] and {c["from_date"][:10] for c in br.calls} == {"2026-11-16"}
+    # the sweep itself: drop one stored session and the next ordinary run fetches it again, newest first
+    db.execute(store, "DELETE FROM gold_series WHERE series_id LIKE 'MCX_%_VWAP30' AND report_date = ?", [date(2026, 11, 12)])
+    br2 = _Breeze()
+    res2 = mcx_close.run(store, lambda: br2, now=night, families=["GOLD"], pace_s=0, sleep=lambda s: None)
+    assert "2026-11-12" in res2["sessions"]                                             # filled without being asked for
+    # negative control: the sweep can be pinned off (the nightly job's old behaviour)
+    db.execute(store, "DELETE FROM gold_series WHERE series_id LIKE 'MCX_%_VWAP30' AND report_date = ?", [date(2026, 11, 12)])
+    res3 = mcx_close.run(store, lambda: _Breeze(), now=night, families=["GOLD"], pace_s=0, sleep=lambda s: None,
+                         backfill_lookback=0)
+    assert res3["sessions"] == ["2026-11-16"] and "2026-11-12" not in res3["sessions"]
 
 
 def test_oi_deltas_spanning_the_muhurat_sunday_count_it():

@@ -185,7 +185,7 @@ class FakeBreeze:
 
 def test_vwap30_group_stores_pit_rows_once_and_is_honest_without_a_session(masters):
     fake = FakeBreeze(BARS)
-    res = mcx_close.run(masters, lambda: fake, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None)
+    res = mcx_close.run(masters, lambda: fake, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     # contracts: DEC (front) — FEB has OI 0 on the Wed file, so it is not averaged (negative control)
     assert res["status"] == "ok" and res["breeze_calls"] == 1 and res["sessions"] == ["2026-11-04"] and res["inserted"] == 2
     kw = fake.calls[0]
@@ -196,7 +196,7 @@ def test_vwap30_group_stores_pit_rows_once_and_is_honest_without_a_session(maste
     assert (rows["source"] == "breeze_1m_vwap30").all() and (rows["quality"] == "proxy").all()
     assert (rows["release_at"] == pd.Timestamp("2026-11-04 18:25")).all()               # 23:55 IST, the session close
     assert rows.iloc[0]["value"] == pytest.approx(143236.8, abs=0.05) and db.to_date(rows.iloc[0]["report_date"]) == WED
-    again = mcx_close.run(masters, lambda: fake, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None)
+    again = mcx_close.run(masters, lambda: fake, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     assert again["breeze_calls"] == 0 and again["already_stored"] == 1 and len(fake.calls) == 1          # stored → zero Breeze calls
     none = mcx_close.run(masters, lambda: None, now=AFTER_WED_CLOSE, sessions=[TUE])
     assert none["status"] == "no_session" and none["planned"] == 2 and "Breeze session" in none["reason"]   # Tue: DEC + FEB (OI 1,180)
@@ -223,13 +223,14 @@ def test_vwap30_group_stops_on_budget_and_after_three_failures(masters, monkeypa
 
     monkeypatch.setattr(breeze_budget, "ledger", lambda: Refuse())
     fake = FakeBreeze(BARS)
-    res = mcx_close.run(masters, lambda: fake, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None)
+    res = mcx_close.run(masters, lambda: fake, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     assert res["status"] == "budget" and res["breeze_calls"] == 0 and fake.calls == []           # refused BEFORE the SDK ran
 
 
 def test_vwap30_group_registered_with_the_breeze_getter(store, now):
     assert jobs.resolve("mcx_close") == "mcx_close_vwap30" and jobs.GROUPS["mcx_close_vwap30"].cadence == "always"
-    res = jobs.run_job(store, None, "gold_mcx_close", ["mcx_close_vwap30"], now=AFTER_WED_CLOSE)       # no getter (tests / no session)
+    res = jobs.run_job(store, None, "gold_mcx_close", ["mcx_close_vwap30"], now=AFTER_WED_CLOSE,
+                       params={"backfill_lookback": 0})                                 # no getter (tests / no session)
     g = res["groups"]["mcx_close_vwap30"]
     assert g["status"] == "no_session" and g["planned"] == 2                            # the computed GOLD and GOLDM fronts, no master
     fake = FakeBreeze(BARS)
@@ -464,7 +465,7 @@ def test_a_broken_family_is_skipped_for_the_session_and_the_others_still_run(mas
             return super().get_historical_data_v2(**kw)
 
     fake = TenBroken(BARS)
-    res = mcx_close.run(masters, lambda: fake, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None)
+    res = mcx_close.run(masters, lambda: fake, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     st = {(c["family"], c["expiry"]): c["status"] for c in res["contracts"]}
     assert st == {("GOLD", "2026-12-04"): "ok", ("GOLDTEN", "2026-11-30"): "error", ("GOLDTEN", "2026-12-31"): "skipped"}
     assert res["status"] == "ok" and res["breeze_calls"] == 2                           # GOLDTEN's second month never called
@@ -474,3 +475,28 @@ def test_log_fallback_stale_rule_honours_a_flagged_settlement_check():
     base = {"day": THU, "baseline_source": "VWAP30 proxy", "inr_now": 94.6, "inr_ref": 94.5}
     assert ingest_local.stale_baseline_rule({**base, "settlement_check": {"band_vs_vwap30_pct": -2.642, "flagged": True}}) is True
     assert ingest_local.stale_baseline_rule({**base, "settlement_check": {"band_vs_vwap30_pct": 0.003, "flagged": False}}) is False
+
+
+# ── 8 Nov 2026: a session missed while the Mac was off is filled by the next run ──────────────────────────────────────
+def test_missing_sessions_finds_the_windows_no_run_ever_stored(store, now):
+    """The nightly run asked only for the latest session (plus a dated special one), so a session whose 23:58 run never
+    happened was never computed again. On 8 Nov the store held NO window at all and every 'settlement' on the page was the
+    ICICI band proxy — the bug wave 1d set out to fix."""
+    import pandas as pd
+    from gold import db, mcx_close as mc
+
+    last = date(2026, 11, 6)                                             # Friday
+    assert mc.missing_sessions(store, last) == mc.sessions_between(last - timedelta(days=30), last)[-5:]
+    # store Thursday's window → only the other four sessions are still missing
+    df = pd.DataFrame([{"series_id": mc.series_id("GOLDTEN", date(2026, 11, 30)), "report_date": date(2026, 11, 5),
+                        "freq": "D", "value": 144091.7, "release_at": now, "release_source": "fetch", "first_seen_at": now,
+                        "source": "breeze_vwap30", "quality": "proxy", "revision": 0}])
+    db.upsert(store, "gold_series", df)
+    missing = mc.missing_sessions(store, last)
+    assert date(2026, 11, 5) not in missing and date(2026, 11, 6) in missing
+    assert len(missing) == 4
+    # negative controls: the lookback is bounded, and 0 disables the sweep
+    assert mc.missing_sessions(store, last, lookback=2) == [last]        # 5 Nov is stored, so only Friday is left
+    assert mc.missing_sessions(store, last, lookback=0) == []
+    # every returned day is a real MCX session inside Breeze's 1-minute reach
+    assert all(mc.session_close(d) is not None and (last - d).days <= mc.PENDING_MAX_AGE_DAYS for d in missing)

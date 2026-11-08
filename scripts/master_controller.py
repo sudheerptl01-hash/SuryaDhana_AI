@@ -3934,6 +3934,34 @@ def otp_hint(detail: str) -> str:
             else "On Telegram: /password (or /userid) to fix it, then /login.")
 
 
+async def special_session_login() -> None:
+    """Log in to ICICI before an MCX SPECIAL session (Muhurat), which the Mon–Fri 08:00 job never covers.
+
+    8 Nov 2026: today's Muhurat session (pre-open 14:05, trading 14:20–15:30) fell on a Sunday, so without this there is no
+    broker session — no live MCX quote on GOLD / MCXG and, worse, no last-30-min VWAP for the session, which is the baseline
+    Monday's 08:45 fair open is measured against. Does nothing on an ordinary day."""
+    JOB = "special_session_login"
+    now = datetime.now(IST)
+    sp = mcx_specs.special_session_on(now.date())
+    if not sp:
+        return
+    _log.info(JOB, f"{sp['name']}: pre-open {sp['pre_open']}, trading {sp['opens']}–{sp['closes']} — logging in")
+    await icici_session_refresh()
+
+
+async def special_session_close() -> None:
+    """After a SPECIAL session closes, store its last-30-min VWAP settlement while the broker session is still alive (the
+    23:58 Mon–Fri job does not run on a Saturday or Sunday, and an ICICI session dies at midnight IST). The group also
+    sweeps sessions no run ever stored, so a window missed during downtime is filled in the same pass."""
+    JOB = "special_session_close"
+    now = datetime.now(IST)
+    if not mcx_specs.special_session_on(now.date()):
+        return
+    async with _get_lock(JOB), _track(JOB):
+        out = await _gold_ingest("gold_mcx_close", ("mcx_close_vwap30", "derive_india"))
+        _log.info(JOB, f"special-session settlement: {out}")
+
+
 async def icici_session_refresh(startup: bool = False, force: bool = False) -> None:
     """08:00 IST Mon–Fri (and once at start-up on a trading morning): keep today's ICICI
     Breeze session alive; logs in unattended with TOTP when the token has expired. `force` (the BRKR panel's
@@ -4795,6 +4823,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         max_instances=1,
         coalesce=True,
         misfire_grace_time=4 * 3600,
+    )
+    # ── MCX special sessions (Muhurat): the Mon–Fri jobs above never fire on a Saturday or Sunday, so a special session
+    #    would have no broker session and no stored settlement (8 Nov 2026). Both jobs return at once on an ordinary day.
+    scheduler.add_job(
+        special_session_login,
+        trigger=CronTrigger(hour=13, minute=0, timezone=IST),
+        id="special_session_login",
+        name="ICICI login before an MCX special session (Muhurat)",
+        max_instances=1, coalesce=True, misfire_grace_time=3600,
+    )
+    scheduler.add_job(
+        special_session_close,
+        trigger=CronTrigger(hour=15, minute=45, timezone=IST),
+        id="special_session_close",
+        name="MCX special-session settlement (VWAP30) while the session is alive",
+        max_instances=1, coalesce=True, misfire_grace_time=3600,
     )
     # Started after 08:00 on a trading day (Mac just booted)? Check the session once now.
     _now = datetime.now(IST)

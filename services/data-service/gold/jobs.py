@@ -549,7 +549,8 @@ def g_mcx_close_vwap30(ctx: Ctx) -> dict[str, Any]:
     ``params.sessions`` / every session since ``backfill_from``; stored contracts are skipped (zero Breeze calls)."""
     p = ctx.params
     return mcx_close.run(ctx.store, ctx.breeze, now=ctx.now, sessions=p.get("sessions"), backfill_from=ctx.backfill_from,
-                         families=p.get("families"), force=ctx.force, max_calls=p.get("max_calls"))
+                         families=p.get("families"), force=ctx.force, max_calls=p.get("max_calls"),
+                         backfill_lookback=p.get("backfill_lookback"))
 
 
 def g_breeze_daily(ctx: Ctx) -> dict[str, Any]:

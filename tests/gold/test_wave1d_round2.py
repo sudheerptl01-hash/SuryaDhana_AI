@@ -126,14 +126,14 @@ def test_curve_session_date_is_the_session_of_the_served_settle_even_before_the_
 
 def test_a_window_without_its_final_minute_is_not_stored_at_2358_and_the_next_run_fetches_it(masters):
     early = FakeBreeze(cut="23:53")                                                       # the 23:53 and 23:54 bars are not in yet
-    res = mcx_close.run(masters, lambda: early, now=AT_2358_WED, pace_s=0, sleep=lambda s: None)
+    res = mcx_close.run(masters, lambda: early, now=AT_2358_WED, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     c = res["contracts"][0]
     assert (res["status"], res["inserted"], c["status"], c["last_bar"]) == ("ok", 0, "incomplete", "23:52")
     assert mcx_close.stored(masters, "GOLD", DEC, WED) is False and res["queued"] == 1
     assert [(q["session"], q["family"], q["reason"]) for q in mcx_close.load_pending(masters)] == [("2026-11-04", "GOLD", "incomplete")]
     # the 00:15 retry (a run without explicit sessions): Breeze's bars are complete and final → stored, the queue empties
     full = FakeBreeze()
-    res2 = mcx_close.run(masters, lambda: full, now=AT_0015_THU, pace_s=0, sleep=lambda s: None)
+    res2 = mcx_close.run(masters, lambda: full, now=AT_0015_THU, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     assert res2["inserted"] == 2 and res2["contracts"][0]["complete"] is True and res2["queued"] == 0
     stored = pit.asof_series(masters, [mcx_close.series_id("GOLD", DEC)])
     assert stored["value"].iloc[0] == pytest.approx(143236.8, abs=0.05) and mcx_close.load_pending(masters) == []
@@ -141,7 +141,7 @@ def test_a_window_without_its_final_minute_is_not_stored_at_2358_and_the_next_ru
 
 def test_a_complete_window_is_stored_at_2358_and_a_thin_one_after_the_final_mark(store):
     db.upsert(store, "gold_curve", pd.DataFrame([_master_row(WED, DEC, 135269.0, 143635.0, 16110)]))
-    res = mcx_close.run(store, lambda: FakeBreeze(), now=AT_2358_WED, pace_s=0, sleep=lambda s: None)
+    res = mcx_close.run(store, lambda: FakeBreeze(), now=AT_2358_WED, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     assert res["inserted"] == 2 and res["contracts"][0]["status"] == "ok" and res["queued"] == 0       # negative control: complete
     thin = mcx_close.run(store, lambda: FakeBreeze(cut="23:50"), now=AT_0015_THU, sessions=[WED], force=True, pace_s=0, sleep=lambda s: None)
     o = thin["contracts"][0]
@@ -164,7 +164,7 @@ def test_a_capped_catch_up_spends_its_calls_on_the_fronts_and_the_queue_drains_n
     queue = mcx_close.load_pending(masters)
     assert {q["reason"] for q in queue} == {"capped"} and all(q["family"] in ("GOLD", "GOLDM") for q in queue)
     nightly = FakeBreeze()
-    res2 = mcx_close.run(masters, lambda: nightly, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None)
+    res2 = mcx_close.run(masters, lambda: nightly, now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     assert res2["queued_in"] == 6 and res2["breeze_calls"] == 6 and res2["queued"] == 0              # the queue is drained
     assert [(k["stock_code"], k["from_date"][:10]) for k in nightly.calls][:3] == [("GOLDMI", "2026-11-04"), ("GOLDMI", "2026-11-03"),
                                                                                    ("GOLDMI", "2026-11-02")]
@@ -182,10 +182,10 @@ def test_errors_stay_queued_until_three_attempts_then_drop(masters):
             return {"Status": 500, "Error": "Internal Server Error", "Success": None}
 
     for i in range(3):
-        res = mcx_close.run(masters, lambda: Down(), now=AFTER_WED_CLOSE + timedelta(minutes=i), pace_s=0, sleep=lambda s: None)
+        res = mcx_close.run(masters, lambda: Down(), now=AFTER_WED_CLOSE + timedelta(minutes=i), pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     assert res["queued"] == 0 and res["dropped_after_errors"] and res["dropped_after_errors"][0]["attempts"] == 3
     assert mcx_close.load_pending(masters) == []
-    res = mcx_close.run(masters, lambda: Down(), now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None)
+    res = mcx_close.run(masters, lambda: Down(), now=AFTER_WED_CLOSE, pace_s=0, sleep=lambda s: None, backfill_lookback=0)
     assert res["queued"] == 1 and mcx_close.load_pending(masters)[0]["attempts"] == 1               # a fresh failure is queued again
 
 

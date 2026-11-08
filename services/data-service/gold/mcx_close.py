@@ -65,6 +65,10 @@ PENDING_MAX_AGE_DAYS = 21             # Breeze 1-minute history reached back ≈
 PENDING_MAX_ATTEMPTS = 3              # a contract that errored three times is dropped from the queue (logged in the result)
 PENDING_MAX_ITEMS = 300
 SPECIAL_LOOKBACK_DAYS = 4             # a run without sessions also stores a special session (Muhurat) this recent
+# a run without sessions also fills recent sessions that have NO stored window (8 Nov 2026: the job first ran on the night
+# the Mac died, so the store held no VWAP30 at all and every page fell back to the band proxy — one session stale, the very
+# bug wave 1d fixed). Bounded by Breeze's 1-minute history (PENDING_MAX_AGE_DAYS) and by MAX_CALLS, newest first.
+BACKFILL_LOOKBACK_SESSIONS = int(os.getenv("GOLD_VWAP30_BACKFILL_SESSIONS", "5"))
 FAMILY_PRIORITY: dict[str, int] = {"GOLD": 0, "GOLDM": 1, "GOLDTEN": 2, "GOLDPETAL": 3, "GOLDGUINEA": 4}
 SERIES_RE = re.compile(r"^MCX_(GOLD|GOLDM|GOLDTEN|GOLDPETAL|GOLDGUINEA)_(\d{4})(\d{2})_VWAP30(_LOTS)?$")
 
@@ -220,6 +224,23 @@ def contracts_for(store: Any, session: date, *, families: Iterable[str] | None =
     return out
 
 
+def missing_sessions(store: Any, last: date, *, lookback: int | None = None) -> list[date]:
+    """The recent sessions with no stored VWAP30 window at all — what a run after downtime must fill.
+
+    The nightly run only ever asked for the latest session (plus a dated special one), so a session whose 23:58 run never
+    happened was never computed again: on 8 Nov 2026 the store held no window at all and every 'settlement' on the page was
+    the ICICI band proxy. Bounded by Breeze's 1-minute reach (``PENDING_MAX_AGE_DAYS``) and ``BACKFILL_LOOKBACK_SESSIONS``."""
+    n = BACKFILL_LOOKBACK_SESSIONS if lookback is None else lookback
+    if n <= 0:
+        return []
+    oldest = max(last - timedelta(days=PENDING_MAX_AGE_DAYS), last - timedelta(days=n * 2 + 10))
+    days = [d for d in sessions_between(oldest, last)][-n:]
+    have = {db.to_date(d) for d in (db.query_df(
+        store, "SELECT DISTINCT report_date FROM gold_series WHERE series_id LIKE 'MCX_%_VWAP30' AND report_date >= ?",
+        [oldest])["report_date"] if len(days) else [])}
+    return [d for d in days if d not in have]
+
+
 def stored(store: Any, family: str, expiry: date, session: date) -> bool:
     return bool(db.scalar(store, "SELECT COUNT(*) FROM gold_series WHERE series_id = ? AND report_date = ?",
                           [series_id(family, expiry), session]))
@@ -274,9 +295,11 @@ def save_pending(store: Any, items: list[dict[str, Any]], *, now: datetime) -> b
 
 def run(store: Any, get_breeze: Callable[[], Any] | None, *, now: datetime | None = None, sessions: list[Any] | None = None,
         backfill_from: date | None = None, families: Iterable[str] | None = None, force: bool = False,
-        max_calls: int | None = None, pace_s: float | None = None, sleep: Callable[[float], None] = _time.sleep) -> dict[str, Any]:
+        max_calls: int | None = None, pace_s: float | None = None, sleep: Callable[[float], None] = _time.sleep,
+        backfill_lookback: int | None = None) -> dict[str, Any]:
     """Compute and store the VWAP30 proxy of the latest completed session (or ``sessions`` / every session since
     ``backfill_from``) for the contracts ``contracts_for`` picks, plus — on a run without explicit ``sessions`` — the
+    ``backfill_lookback`` bounds the missed-session sweep of a default run (0 disables it; None = BACKFILL_LOOKBACK_SESSIONS),
     contracts queued by earlier runs (``PENDING_KEY``: a window that was not final yet, a capped or budget-refused
     remainder, a failed call). The plan runs fronts first and newest first (``_priority``). Returns per-contract
     outcomes, Breeze call counts and the queue left behind."""
@@ -294,6 +317,8 @@ def run(store: Any, get_breeze: Callable[[], Any] | None, *, now: datetime | Non
         # runs Mon–Fri, so the Monday run also stores Sunday's window (stored contracts cost no call; wave 1e M-D)
         days = ([d for d in sessions_between(last - timedelta(days=SPECIAL_LOOKBACK_DAYS), last)
                  if d == last or d in specs.SPECIAL_SESSION_WINDOWS] if last is not None else [])
+        days = (sorted(set(days) | set(missing_sessions(store, last, lookback=backfill_lookback)))
+                if last is not None else days)          # sessions no run ever stored (after downtime); empty in steady state
     oldest = (now.date() - timedelta(days=PENDING_MAX_AGE_DAYS))
     pending_in = load_pending(store)
     queued: dict[tuple[date, str, date], dict[str, Any]] = {}

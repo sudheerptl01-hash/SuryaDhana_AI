@@ -1070,3 +1070,41 @@ def test_quiet_track_records_the_run_without_a_log_line(ctl):
     assert mc._latency.stats()["five_minute_job"]["last_status"] == "done"
     assert [ln for ln in log_lines() if "Finished" in ln] == ["Finished in " + log_lines()[-1].split("Finished in ")[1]]
     assert json.loads(mc._log.tail(1)[0])["job"] == "daily_job"
+
+
+def test_special_session_jobs_cover_a_muhurat_sunday(monkeypatch: pytest.MonkeyPatch):
+    """8 Nov 2026: the Muhurat session (pre-open 14:05, trading 14:20–15:30) fell on a Sunday. Every ICICI and settlement
+    job runs Mon–Fri, so there was no broker session: no live MCX quote and — the costly part — no last-30-min VWAP for the
+    session Monday's 08:45 fair open is measured against. Two jobs now cover it; both no-op on an ordinary day."""
+    import asyncio
+
+    from apscheduler.triggers.cron import CronTrigger
+
+    login_t = CronTrigger(hour=13, minute=0, timezone=IST)
+    close_t = CronTrigger(hour=15, minute=45, timezone=IST)
+    assert _fires(login_t, at(2026, 11, 8, 6, 0), 1) == ["Sun 08 13:00"]            # before the 14:05 pre-open
+    assert _fires(close_t, at(2026, 11, 8, 6, 0), 1) == ["Sun 08 15:45"]            # after the 15:30 close
+
+    calls: list[str] = []
+
+    async def fake_login(startup: bool = False, force: bool = False) -> None:
+        calls.append("login")
+
+    async def fake_ingest(job: str, groups, backfill_from=None, quiet=False) -> dict:
+        calls.append(f"ingest:{job}:{','.join(groups)}")
+        return {"status": "ok"}
+
+    monkeypatch.setattr(mc, "icici_session_refresh", fake_login)
+    monkeypatch.setattr(mc, "_gold_ingest", fake_ingest)
+    fake_clock(monkeypatch, at(2026, 11, 8, 13, 0))                                 # the Muhurat Sunday
+    asyncio.run(mc.special_session_login())
+    fake_clock(monkeypatch, at(2026, 11, 8, 15, 45))
+    asyncio.run(mc.special_session_close())
+    assert calls == ["login", "ingest:gold_mcx_close:mcx_close_vwap30,derive_india"]
+
+    calls.clear()                                                                   # negative control: an ordinary Monday
+    fake_clock(monkeypatch, at(2026, 11, 9, 13, 0))
+    asyncio.run(mc.special_session_login())
+    fake_clock(monkeypatch, at(2026, 11, 9, 15, 45))
+    asyncio.run(mc.special_session_close())
+    assert calls == []
