@@ -174,13 +174,32 @@ def test_vol_screen_sorts_and_filters(client: TestClient) -> None:
     assert [r["symbol"] for r in b["rows"]][:4] == ["KAYNES", "INFY", "NIFTY", "RELIANCE"] and b["rows"][-1]["symbol"] == "IDEA"  # nulls last
     assert b["rows"][0]["ban"] is True and b["rows"][0]["mwpl_pct"] == 96.0
     b2 = client.get("/api/derivatives/vol-screen", params={"sort": "iv_minus_rv", "results_within": 10}).json()
-    assert [r["symbol"] for r in b2["rows"]] == ["KAYNES", "INFY"] or [r["symbol"] for r in b2["rows"]] == ["KAYNES", "INFY", "IDEA"]
     assert all(r["results_in_days"] <= 10 for r in b2["rows"])
     # pure negative control: a fixed today keeps the window deterministic (RELIANCE reports in 2027 → excluded)
     rows = drv.screen_rows(fx.SCREEN_ROWS, "skew", 10, today=date(2026, 11, 5))
     assert [r["symbol"] for r in rows] == ["KAYNES", "INFY", "IDEA"]
     assert client.get("/api/derivatives/vol-screen", params={"sort": "alpha"}).status_code == 422
     assert b["badges"]["iv_minus_rv20"] == "context" and b["badges"]["iv30_cm"] == "arithmetic" and "score" not in b
+
+
+def test_vol_screen_window_counts_from_the_ist_clock_seam(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """8 Nov 2026: the route let `screen_rows` fall back to `date.today()`, so `results_within` answered differently as the
+    calendar moved and the generated API_CONTRACT §8 drifted with it (it failed two days after it was written). The route
+    now reads `_today()` — pinned here, so the window is a property of the data, not of the day the suite runs."""
+    def at(day: date) -> list[str]:
+        monkeypatch.setattr(drv, "_today", lambda: day)
+        return [r["symbol"] for r in client.get("/api/derivatives/vol-screen",
+                                                params={"sort": "skew", "results_within": 10}).json()["rows"]]
+    assert at(date(2026, 11, 5)) == ["KAYNES", "INFY", "IDEA"]
+    assert at(date(2026, 11, 20)) == []                       # every fixture result date is outside a 10-day window by then
+    assert at(date(2026, 11, 5)) == [r["symbol"] for r in drv.screen_rows(fx.SCREEN_ROWS, "skew", 10,
+                                                                        today=date(2026, 11, 5))]   # route == helper
+    # negative control: without the window the clock changes nothing
+    monkeypatch.setattr(drv, "_today", lambda: date(2027, 6, 1))
+    assert len(client.get("/api/derivatives/vol-screen", params={"sort": "skew"}).json()["rows"]) == 5
+    # the seam reads IST, not the machine zone (a UTC machine at 23:00 IST would otherwise be a day behind)
+    monkeypatch.undo()
+    assert drv._today() == datetime.now(drv.IST).date()
 
 
 def test_legacy_option_history_serves_both_rank_and_percentile_defined(client: TestClient) -> None:

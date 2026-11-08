@@ -5,6 +5,26 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 09:50–10:45: back from a 38-hour outage; the drivers history backfilled; two honest-label fixes.**
+- The Mac stopped Fri 6 Nov at 19:52 (controller's last heartbeat 19:52:08) and stayed off until Sun 8 Nov 09:50 — the same
+  minute as Thu 5 Nov, which restarted itself. `pmset autorestart 0`, so nothing powered it back on; no panic file. A
+  four-lens RCA (system log, the 19:45/19:50 jobs, power/updates, the stack's own watchdog), each hypothesis adversarially
+  refuted, runs in `wf_962189ca-105`. Owner action, still open: `sudo pmset -a autorestart 1`.
+- The start-up catch-up re-ran Friday's evening work by itself (bhavcopy, positions, events, results 769 symbols, NSE files,
+  index drivers, `iv_eod`, data-health) and the missed Saturday COT caught up: the latest report is 3 Nov, 1.4 days old.
+- Index drivers backfilled from 2019-10-01 (PLAN 1.8 Sunday window, nothing else running): 1,763 sessions in 30 s.
+  NIFTY 50 — 354 weight days, 1,044 driver states, tab `ok`, MAE 6 pts/day over 60 sessions (r² 0.9987). NIFTY BANK — 28 days,
+  tab `insufficient` with 3 sessions, correct: nothing before its first archived constituent list (4 Nov) is computed.
+- **Honesty fix (drivers):** that `insufficient` sentence blamed "the backfill has not run" — false the moment the backfill
+  finished. A point-in-time index now names the real limit (its first archived list) and carries `limit: archive|backfill`;
+  the UI fallback no longer invents a cause. Tests with negative controls (`tab_state`, `drivers_tab.check`).
+- **Flaky-test fix (vol screen):** `/api/derivatives/vol-screen?results_within=N` counted from `date.today()`, so the
+  generated `API_CONTRACT.md` §8 drifted with the calendar and failed two days after it was written. The route now reads an
+  IST clock seam `_today()`, pinned in the contract test; the committed contract needed no change (proof the test, not the
+  contract, was wrong). The old either/or row assertion is exact again.
+- Deployed 10:38 (ui-api + UI release `20261108-103820`). Still to do today: Friday's MCX settlement VWAP30 (needs Monday's
+  08:00 ICICI login), the Muhurat session at 14:05–15:30, and Monday's fair-open check.
+
 **6 Nov 2026, 15:36: Terminal v2 wave 2, every non-gold defect of the 5 Nov 43-page review, and gold wave 1e DEPLOYED (`0b27dcc`).**
 - Built 09:00–10:35 by two workflow rounds (nine builders with disjoint files, each re-checked by an adversarial checker; round 2
   closed every remaining major) plus gold wave 1e (two builders, two checkers). The PM applied 120 cross-builder patch requests

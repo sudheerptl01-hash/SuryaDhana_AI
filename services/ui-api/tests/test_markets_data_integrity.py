@@ -154,6 +154,14 @@ def test_challenger_pending_is_named():
 
 def test_tab_state_degrades_honestly():
     assert mk.tab_state({"sessions": 2, "mae_60s": 90.8, "degraded": True}, 2, 2, "2026-11-04")["state"] == "insufficient"
+    # 8 Nov 2026: after the 2019 backfill ran, NIFTY BANK still had 3 sessions (its first archived list is 4 Nov) and the
+    # page said "the backfill has not run". A point-in-time index names the archive, not the job; every other index does not.
+    bank = mk.tab_state({"sessions": 3, "mae_60s": 75.1, "degraded": True}, 3, 3, "2026-11-04", index="NIFTY BANK")
+    assert bank["limit"] == "archive" and "point-in-time" in bank["sentence"] and "backfill" not in bank["sentence"]
+    assert "2026-11-04" in bank["sentence"] and bank["state"] == "insufficient"
+    other = mk.tab_state({"sessions": 3, "mae_60s": 75.1, "degraded": True}, 3, 3, "2026-11-04", index="NIFTY 50")
+    assert other["limit"] == "backfill" and "the backfill has not run" in other["sentence"]      # negative control
+    assert mk.tab_state({"sessions": 3, "mae_60s": 75.1, "degraded": True}, 3, 3, "2026-11-04")["limit"] == "backfill"
     assert mk.tab_state({"sessions": 60, "mae_60s": 55.3, "degraded": True}, 21, 400, "2019-10-01")["state"] == "degraded"
     ok = mk.tab_state({"sessions": 60, "mae_60s": 5.8, "degraded": False}, 21, 700, "2023-11-01")
     assert ok["state"] == "ok" and "6 pts" in ok["sentence"]

@@ -16,6 +16,7 @@ import os
 import re
 import sys
 from collections.abc import Iterator
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import _terminal_v2_fixtures as fx  # noqa: E402
+import routers.derivatives as drv  # noqa: E402
 import routers.markets as mk  # noqa: E402
 import routers.options_strategy as osr  # noqa: E402
 from shared import breeze_budget as bb  # noqa: E402
@@ -76,6 +78,9 @@ def client(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[TestClie
         return fx.DESK_STATUS_CASH
 
     monkeypatch.setattr(mk, "_desk_status", cash)
+    # §8 must not move with the calendar: /vol-screen?results_within=10 keeps names reporting within N days of TODAY, so
+    # the recorded JSON types changed as days passed (8 Nov 2026: the inventory generated on 6 Nov no longer matched).
+    monkeypatch.setattr(drv, "_today", lambda: date(2026, 11, 6))
     yield TestClient(fx.make_app())
     bb.reset_ledger()
 

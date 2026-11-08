@@ -100,7 +100,7 @@ export function tabView(tab: TabLike | null | undefined): TabView {
   if (s !== 'degraded' && s !== 'insufficient') return { grey: false, state: s === 'ok' ? 'ok' : null, label: s === 'ok' ? TAB_LABEL.ok : null, caption: null }
   const caption = s === 'degraded'
     ? "the rebuilt weights miss the index by more than the 25-pt bar (error on the fit chip): members' points, sectors and the monthly board are approximate; the residual is shown"
-    : (tab?.sentence ?? '').trim().replace(/[.\s]+$/, '') || 'too few sessions of attribution stored: the backfill has not run'
+    : (tab?.sentence ?? '').trim().replace(/[.\s]+$/, '') || 'too few sessions of attribution stored'
   return { grey: true, state: s, label: TAB_LABEL[s], caption }
 }
 

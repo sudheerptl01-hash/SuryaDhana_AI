@@ -2000,15 +2000,31 @@ def challenger_of(rows: list[dict[str, Any]], leader: Any, window: int) -> dict[
                         f"({streak} so far) — {DRIVER_DESCRIBES}"}
 
 
-def tab_state(fit: dict[str, Any], horizon_sessions: int, stored_sessions: int, history_since: str | None) -> dict[str, Any]:
-    """M46: how far the page can be read. 'insufficient' when fewer than 20 fit sessions are stored (a backfill has not
-    run), 'degraded' when the 60-session MAE is above the 25-pt bar, else 'ok'; a sentence says which and why."""
+#: indices whose members are known only from their first archived constituent list, so earlier sessions are never computed
+#: (point-in-time; the rule and its owner opt-out O-T13 live in data-service `index_drivers/jobs.py` PIT_MEMBERS_ONLY).
+#: For these, a short history is the archive's limit, NOT a backfill that has not run — the sentence must not blame the job.
+PIT_MEMBERS_ONLY = frozenset({"NIFTY BANK"})
+
+
+def tab_state(fit: dict[str, Any], horizon_sessions: int, stored_sessions: int, history_since: str | None,
+              index: str | None = None) -> dict[str, Any]:
+    """M46: how far the page can be read. 'insufficient' when fewer than 20 fit sessions are stored, 'degraded' when the
+    60-session MAE is above the 25-pt bar, else 'ok'; a sentence says which and why.
+
+    8 Nov 2026: the insufficient sentence named one cause ("the backfill has not run") for two different situations. After
+    the 2019 backfill ran, NIFTY BANK still had 3 sessions — correctly, because nothing earlier than its first archived
+    constituent list is computed — and the page blamed a job that had just finished. A PIT index now says the real reason."""
     n = int(fit.get("sessions") or 0)
     mae = fit.get("mae_60s")
     if n < 20:
-        return {"state": "insufficient", "sessions": n,
-                "sentence": f"only {n} session{'s' if n != 1 else ''} of attribution stored (since {history_since or '—'}): "
-                            "the backfill has not run, so horizons longer than that are not shown in full"}
+        pit = index in PIT_MEMBERS_ONLY
+        since = history_since or "—"
+        head = (f"only {n} session{'s' if n != 1 else ''} of attribution stored (since {since}"
+                f"{', its first archived constituent list' if pit else ''})")
+        why = ("earlier sessions are not computed because that day's members are not known (point-in-time)"
+               if pit else "the backfill has not run")
+        return {"state": "insufficient", "sessions": n, "limit": "archive" if pit else "backfill",
+                "sentence": f"{head}: {why}, so horizons longer than that are not shown in full"}
     if fit.get("degraded"):
         return {"state": "degraded", "sessions": n,
                 "sentence": f"the weights miss the index by {mae:.0f} pts a day on average over {n} sessions (bar 25): "
@@ -2144,7 +2160,7 @@ async def index_drivers(response: Response, index: str = Query("NIFTY 50"),
         "as_of": win[-1] if win else None, "index": name,
         "horizon": {"name": horizon, "from": win[0] if win else None, "to": win[-1] if win else None, "sessions": len(win)},
         **sliced, "fit": fs, "weight_method": _weight_method(weights, win[-1] if win else None),
-        "tab": tab_state(fs, len(win), len(dates), since),
+        "tab": tab_state(fs, len(win), len(dates), since, index=name),
         "driver": driver, "history_since": since, "badges": DRIVER_BADGES,
         "note": f"points = previous index level × weight × return (additive; the residual is shown); {DRIVER_DESCRIBES}",
         "precedent": "Bloomberg MEMB / IMAP contribution; NSE daily top-10 file (display-only, O-T11)",

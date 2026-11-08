@@ -39,7 +39,7 @@ import re
 import sys
 from collections import defaultdict
 from collections.abc import Iterable
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -484,6 +484,18 @@ def _spread(iv: float | None, rv: float | None) -> float | None:
     return round(iv - rv, 4) if iv is not None and rv is not None else None
 
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def _today() -> date:
+    """Today's IST session date — the clock the `results_within` window counts from.
+
+    A seam, not a style choice (8 Nov 2026): `screen_rows` fell back to `date.today()`, so `/vol-screen?results_within=N`
+    answered differently as the calendar moved and the generated API_CONTRACT §8 drifted with it (the inventory failed on
+    8 Nov with types recorded on 6 Nov). Tests pin this; it also reads IST explicitly instead of the machine's zone."""
+    return datetime.now(IST).date()
+
+
 def screen_rows(rows: list[dict[str, Any]], sort: str, results_within: int | None, today: date | None = None) -> list[dict[str, Any]]:
     key = {"iv_pctile": "iv_pctile_252", "iv_rank": "iv_rank_252", "iv_minus_rv": "iv_minus_rv20",
            "term_slope": "term_slope_30_90", "skew": "skew_25d_30"}[sort]
@@ -642,7 +654,7 @@ async def vol_screen(response: Response, sort: str = Query("iv_pctile", pattern=
     next results date, ban flag and % of MWPL; sortable; `results_within=N` keeps names reporting inside N days."""
     reads = Reads()
     payload = await reads.get("/db/iv/screen")
-    rows = screen_rows(_rows(payload), sort, results_within)
+    rows = screen_rows(_rows(payload), sort, results_within, today=_today())
     as_of = (payload or {}).get("date") if isinstance(payload, dict) else None
     reads.headers(response)
     ban_date = (payload or {}).get("ban_date") if isinstance(payload, dict) else None

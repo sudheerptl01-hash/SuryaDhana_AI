@@ -46,7 +46,13 @@ function check(name: string, cond: unknown, extra?: unknown): void {
   check('T2 an older ui-api (no tab) changes nothing', !D.tabView(undefined).grey && !D.tabView(null).grey && !D.tabView({}).grey)
   check('T2 an unknown state is not greyed', !D.tabView({ state: 'bogus' }).grey)
   check('T3 a greyed panel is captioned, an ok one is not', D.tabPanelCaption(vi) === 'HISTORY INSUFFICIENT · read with the note above the table' && D.tabPanelCaption(ok) === null)
-  check('T3 an insufficient tab without a sentence still says why', (D.tabView({ state: 'insufficient' }).caption ?? '').includes('backfill has not run'))
+  // 8 Nov 2026: the fallback used to assert a cause ("the backfill has not run"). Only the route knows which limit applies
+  // (a backfill that has not run, or a point-in-time index whose archive starts later), so the fallback states the fact only.
+  const noSentence = (D.tabView({ state: 'insufficient' }).caption ?? '')
+  check('T3 an insufficient tab without a sentence states the fact', noSentence.includes('too few sessions of attribution stored'))
+  check('T3 the fallback invents no cause', !/backfill|point-in-time|archive/i.test(noSentence), noSentence)
+  const pit = D.tabView({ state: 'insufficient', sessions: 3, sentence: 'only 3 sessions of attribution stored (since 2026-11-04): its first archived constituent list: earlier sessions are not computed because that day\'s members are not known (point-in-time), so horizons longer than that are not shown in full' })
+  check('T3 negative control: the route sentence is printed verbatim when it names the archive limit', (pit.caption ?? '').includes('point-in-time') && !/backfill/i.test(pit.caption ?? ''))
 }
 
 // ── C. challenger ──────────────────────────────────────────────────────────────────────────────────
