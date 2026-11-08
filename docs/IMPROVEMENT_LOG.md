@@ -5,6 +5,18 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 17:25: India's gold-import figure — a SECOND automation route probed and closed; the ICICI login evidenced.**
+- The RBI route looked promising because the Bulletin prints the number in prose and `rbi.org.in` is already allowlisted.
+  It is closed too: the Bulletin's statistical annex has no gold-import table (Table 32 Foreign Trade is POL / non-POL
+  only; Table 21 is gold PRICES, already covered by IBJA), and `rbidocs.rbi.org.in` answers an automated XLSX download
+  with a **captcha page**, not the file (47,938 bytes of HTML, not a zip). Recorded in SOURCES.md F14 beside the
+  tradestat finding, so the question is settled with evidence rather than assertion: the hand-typed entry stands, now via
+  `scripts/gold_india_imports.py`, with the data-health row raising it on the 16th.
+- The ICICI auto-login is evidenced, not asserted: today's controller log shows `[special_session_login] Muhurat trading
+  (Diwali Laxmi Pujan) ... logging in` followed by `[icici_session_refresh] refreshed: logged in, token applied via
+  ui-api` — unattended, on the authenticator code alone, on a Sunday. The earlier `ICICI login needs you` lines are from
+  before the TOTP key was stored in the Keychain.
+
 **8 Nov 2026, 17:05: the off-Mac dead-man alert is LIVE — the 6 Nov silence cannot repeat.**
 - The owner created the healthchecks.io check and pasted its ping URL; `HEALTHCHECK_PING_URL` is set in `.env` (never
   committed, never echoed — the URL is a credential: anyone holding it can keep the check green). `./start-local.sh status`
