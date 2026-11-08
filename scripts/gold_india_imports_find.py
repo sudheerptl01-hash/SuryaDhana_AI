@@ -21,8 +21,10 @@ is printed, so you can read it yourself) · 3 no trade release found in the wind
 from __future__ import annotations
 
 import argparse
+import calendar
 import html
 import re
+import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -87,9 +89,29 @@ def find_figure(text: str) -> tuple[float, str] | None:
     return usd_bn, text[start:m.end() + 160].strip()
 
 
+def month_named(sentence: str, month: str) -> bool:
+    """Does the figure's OWN sentence name the month it is being claimed for?
+
+    This is the guard that makes `--store` safe. A trade release quotes several periods — the month, the year to date,
+    the same month a year earlier — so a figure is only trusted when its own sentence says which month it is. Accepts
+    "October 2026", "Oct 2026", "October" and "2026-10"; rejects a sentence that names a DIFFERENT month, which is how
+    a year-earlier comparison or a quarter would otherwise be stored under this month's date.
+    """
+    y, m = (int(x) for x in month.split("-"))
+    full, abbr = calendar.month_name[m].lower(), calendar.month_abbr[m].lower()
+    low = sentence.lower()
+    if not any(t in low for t in (full, abbr, month)):
+        return False
+    # a different month named in the same sentence makes it ambiguous: refuse rather than guess
+    others = {calendar.month_name[i].lower() for i in range(1, 13)} - {full}
+    return not any(re.search(rf"\b{re.escape(o)}\b", low) for o in others)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Find India's monthly gold-import figure in PIB releases.")
     ap.add_argument("--month", default=None, help="the month to propose (YYYY-MM); default: last month")
+    ap.add_argument("--store", action="store_true",
+                    help="store it too, but ONLY if the figure's own sentence names the month (else it just reports)")
     ap.add_argument("--max-releases", type=int, default=MAX_RELEASES, help=argparse.SUPPRESS)
     a = ap.parse_args(argv)
 
@@ -118,9 +140,20 @@ def main(argv: list[str] | None = None) -> int:
                     print(f'\n  read: "…{sentence[:300]}…"')
                     print(f"\n  → US${usd_bn:g} bn. Check that sentence says GOLD, the month {month}, and not silver,")
                     print("    then store it:\n")
-                    print(f"      python scripts/gold_india_imports.py --month {month} --usd-bn {usd_bn:g} \\")
-                    print(f'          --source "PIB PRID {prid}"')
-                    return 0
+                    cmd = ["scripts/gold_india_imports.py", "--month", month, "--usd-bn", f"{usd_bn:g}",
+                           "--source", f"PIB PRID {prid}: {' '.join(sentence.split())[:160]}"]
+                    if not a.store:
+                        print(f"      python {cmd[0]} --month {month} --usd-bn {usd_bn:g} \\")
+                        print(f'          --source "PIB PRID {prid}"')
+                        return 0
+                    if not month_named(sentence, month):
+                        print(f"  NOT stored: that sentence does not name {month} on its own (it may be a year-earlier")
+                        print("    comparison, a quarter or a year-to-date total). Read it and store it by hand:")
+                        print(f"      python {cmd[0]} --month {month} --usd-bn {usd_bn:g}")
+                        return 2
+                    print(f"  the sentence names {month}: storing")
+                    r = subprocess.run([sys.executable, *cmd], check=False)
+                    return 0 if r.returncode == 0 else 1
                 print("    (no gold figure in this release)")
             print("\nFound trade releases but no gold figure in them — open the links above and read it yourself,")
             print(f"then: python scripts/gold_india_imports.py --month {month} --usd-bn <figure>")

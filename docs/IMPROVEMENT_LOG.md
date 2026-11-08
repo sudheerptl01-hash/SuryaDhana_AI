@@ -5,6 +5,20 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 18:40: India's gold-import figure is now stored WITHOUT the owner — a monthly job reads the PIB release.**
+- `india_imports_watch` in `scripts/master_controller.py`, `CronTrigger(day="15-22", hour=11, minute=15)` — the release
+  lands about the 15th, 11:15 is outside both freeze windows, and the job returns immediately once the month is stored
+  (it reads `/db/gold/series` first) or when `GOLD_JOBS_ENABLED=0`.
+- It runs `gold_india_imports_find.py --store`, which writes **only when the figure's own sentence names the month it is
+  claimed for** (`month_named`). A year-earlier comparison, a quarter or a year-to-date total is reported instead, with
+  the link and the command — never stored under the wrong date. The stored source carries the PRID and the sentence, so
+  every row is auditable and revisable.
+- Telegram: one line when a month is stored, one line when a release is out but ambiguous. Silent when nothing is
+  published yet or PIB does not answer — it simply runs again tomorrow, and the data-health row still raises the month on
+  the 16th if nothing is ever stored.
+- Verified: `--store` run today exits 3 and the store is unchanged (`2026-08-31 2.298`, `2026-09-30 1.8`) — it does not
+  invent a figure when none is published. 539 scripts tests, incl. 11 for this path with negative controls.
+
 **8 Nov 2026, 18:05: the last manual number now finds itself — PIB turned out to be open.**
 - After the trade portal (form only) and RBI (captcha on the XLSX) were closed, the third route worked: PIB, the
   government's press agency, answers a plain client with HTTP 200 and no captcha on both its RSS listing and its release

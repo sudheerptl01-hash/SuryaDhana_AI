@@ -3949,6 +3949,56 @@ async def special_session_login() -> None:
     await icici_session_refresh()
 
 
+async def india_imports_watch() -> None:
+    """Fetch India's monthly gold-import figure from PIB once it is published, and store it if it is unambiguous.
+
+    This is the one gold number with no machine-readable feed: the trade portal is a form with no download and RBI
+    answers an automated XLSX download with a captcha (both probed 8 Nov 2026). PIB — the government's press agency —
+    does answer, and the Commerce Ministry's monthly release states the figure in prose, so this job reads it there.
+
+    It runs on the days around publication (the release lands about the 15th) and does nothing once the month is stored.
+    `--store` writes ONLY when the figure's own sentence names the month it is claimed for; a year-earlier comparison, a
+    quarter or a year-to-date total is reported for the owner to read instead of being stored under the wrong date. The
+    stored source string carries the PRID and the sentence, so any row can be audited and revised later.
+    """
+    JOB = "india_imports_watch"
+    if not GOLD_JOBS_ENABLED:
+        return
+    now = datetime.now(IST)
+    month = (now.date().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    try:                                        # already stored (by this job, or typed by the owner)? then stay quiet
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.get(f"{DATA_SVC}/db/gold/series",
+                                 params={"ids": "INDIA_GOLD_IMPORTS_USD_BN", "freq": "M"})
+        if r.status_code == 200:
+            pts = ((r.json().get("series") or [{}])[0] or {}).get("points") or []
+            if any(str(pt.get("report_date", ""))[:7] == month for pt in pts):
+                return
+    except Exception as exc:                    # noqa: BLE001  — a read failure is not a reason to skip the fetch
+        _log.info(JOB, f"could not read the stored series ({type(exc).__name__}); looking for the release anyway")
+    cmd = [PYTHON_BIN, str(_ROOT / "scripts" / "gold_india_imports_find.py"), "--month", month, "--store"]
+    try:
+        res = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=300,
+                                      cwd=str(_ROOT), env={**os.environ, "PYTHONPATH": str(_ROOT)})
+    except Exception as exc:                    # noqa: BLE001
+        _log.warning(JOB, f"finder failed to run: {type(exc).__name__}")
+        return
+    out = (res.stdout or "").strip()
+    _log.info(JOB, f"{month}: exit {res.returncode}")
+    if res.returncode == 0 and "storing" in out:
+        stored = next((ln for ln in out.splitlines() if ln.startswith("INDIA_GOLD_IMPORTS")), "")
+        await _alerts.info(f"India gold imports {month} stored",
+                           f"{stored or out.splitlines()[-1][:160]}\nRead from a PIB release; correct it with "
+                           f"scripts/gold_india_imports.py if the release says otherwise.")
+    elif res.returncode == 2:                   # found, but not unambiguous enough to store by itself
+        link = next((ln.strip() for ln in out.splitlines() if "PressRelease" in ln), "")
+        await _alerts.info(f"India gold imports {month}: needs your eye",
+                           f"A PIB trade release is out but the figure is not unambiguous.\n{link}\n"
+                           f"Store it with: python scripts/gold_india_imports.py --month {month} --usd-bn <figure>")
+    # exit 3 (no release yet) and 4 (PIB did not answer) stay quiet: the job runs again tomorrow, and the
+    # data-health row raises the month on the 16th if nothing is ever stored.
+
+
 async def special_session_close() -> None:
     """After a SPECIAL session closes, store its last-30-min VWAP settlement while the broker session is still alive (the
     23:58 Mon–Fri job does not run on a Saturday or Sunday, and an ICICI session dies at midnight IST). The group also
@@ -4839,6 +4889,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         id="special_session_close",
         name="MCX special-session settlement (VWAP30) while the session is alive",
         max_instances=1, coalesce=True, misfire_grace_time=3600,
+    )
+    # ── India's monthly gold-import figure: the only gold number with no feed. PIB publishes it around the 15th, so look
+    #    on the days after, at 11:15 (outside both freeze windows), and stop once the month is stored (8 Nov 2026).
+    scheduler.add_job(
+        india_imports_watch,
+        trigger=CronTrigger(day="15-22", hour=11, minute=15, timezone=IST),
+        id="india_imports_watch",
+        name="India gold imports from the PIB monthly trade release",
+        max_instances=1, coalesce=True, misfire_grace_time=7200,
     )
     # Started after 08:00 on a trading day (Mac just booted)? Check the session once now.
     _now = datetime.now(IST)
