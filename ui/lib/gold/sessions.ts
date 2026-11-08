@@ -143,7 +143,14 @@ export function axisTicksIst(usDst: boolean, stepMin = 180): { pos: number; ist:
 // ── bars: pure helpers shared by DAILY / WEEKLY / MONTHLY (unit-tested under node) ───────────────
 
 /** The bar shape `/api/gold/bars` sends (ts = ISO instant, 'YYYY-MM-DD' for daily bars, or epoch s/ms). */
-export interface BarLike { ts: string | number; o: number | null; h: number | null; l: number | null; c: number | null; v?: number | null; partial?: boolean | null }
+export interface BarLike {
+  ts: string | number; o: number | null; h: number | null; l: number | null; c: number | null; v?: number | null; partial?: boolean | null
+  /** the shape ui-api's `ohlc_sane` actually serves for an impossible price: the field is WITHHELD (null) and the served
+   *  value is kept here with the reason. The UI must treat it exactly like an impossible value it was sent (C-DATA-06). */
+  o_raw?: number | null
+  c_raw?: number | null
+  ohlc_note?: string | null
+}
 
 /** An ISO datetime with no zone: 'YYYY-MM-DDTHH:MM[:SS[.fff]]' (also with a space). The store writes these in UTC. */
 const NAIVE_DATETIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/
@@ -268,6 +275,8 @@ export interface Ohlc {
    *  table prints '—' for the open; `rawOpen` keeps what was served */
   openOutside?: boolean
   rawOpen?: number
+  /** the server's own reason, when it withheld the price rather than sending an impossible one (`ohlc_note`; C-DATA-06) */
+  note?: string
 }
 
 /** True when an open is impossible for its bar: outside [low, high] by more than a rounding tick. */
@@ -279,6 +288,12 @@ export function openOutsideRange(o: number | null | undefined, h: number | null 
  * Daily bars → clean candles (close required; open/high/low default to the close), sorted, one per date. Wave 1e (WEEKLY
  * minor): an open outside [low, high] is never drawn or printed as data (`openOutside`, `o` = the close); the store's
  * `partial` flag is carried (or `partialDates`, the dates `/bars.daily_closes` marks partial).
+ *
+ * C-DATA-06 (8 Nov 2026): the server's own guard WITHHOLDS such an open (`o: null, o_raw: 3940.8, ohlc_note: …`), and
+ * `o = b.o ?? b.c` then resurrected it as the close — so `openOutsideRange` saw a possible open, the flag was never set
+ * and WEEKLY printed the close (4,098.4) in the "open $/oz" column of a row whose own copy promises a '—'. A withheld
+ * open is now treated EXACTLY like an impossible one: `o` stays the close (the designed zero-body candle), and
+ * `openOutside` / `rawOpen` / `note` carry the server's value and reason so the table prints '—'.
  */
 export function dailyOhlc(bars: readonly BarLike[], partialDates?: ReadonlySet<string> | null): Ohlc[] {
   const map = new Map<string, Ohlc>()
@@ -287,9 +302,14 @@ export function dailyOhlc(bars: readonly BarLike[], partialDates?: ReadonlySet<s
     const date = barDate(b.ts)
     if (!date) continue
     const h = b.h ?? b.c, l = b.l ?? b.c, o = b.o ?? b.c
-    const bad = openOutsideRange(o, h, l)
+    const withheld = b.o == null && b.o_raw != null && Number.isFinite(b.o_raw)   // ui-api `ohlc_sane` withheld it
+    const bad = withheld || openOutsideRange(o, h, l)
     const k: Ohlc = { date, o: bad ? b.c : o, h, l, c: b.c, v: b.v ?? 0 }
-    if (bad) { k.openOutside = true; k.rawOpen = o }
+    if (bad) {
+      k.openOutside = true
+      k.rawOpen = withheld ? (b.o_raw as number) : o
+      if (b.ohlc_note) k.note = b.ohlc_note
+    }
     if (b.partial || partialDates?.has(date)) k.partial = true
     map.set(date, k)
   }

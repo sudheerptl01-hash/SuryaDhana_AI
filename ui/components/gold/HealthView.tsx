@@ -17,11 +17,22 @@ import { HEALTH_SUFFIX, arrow, basisAgreement, basisClockChip, basisTileWords, b
          gaugeChangeText, hasCompositeScore, healthLine, istNowKey, orderEvents, pageRealYield, percentileText, publishGate, realYieldSeriesWords, stripSettlement,
          trendValuesLine, trendWords, verdictWindowLabel } from '@/lib/gold/format'
 import type { GoldEvent, GoldSubViewProps, HealthGauge } from '@/lib/gold/types'
+import { usdEffectWords } from './goldViewModel'
 import { GoldPreOpen } from './GoldPreOpen'
 import { Term } from './ViewBits'
 import { BadgeChip, GoldPanel, LagChipEl, NoVerdict, Pending, useGoldLoad, usePageHealth } from './kit'
 
 const HEALTH_MS = 60_000
+
+/**
+ * The DOLLAR gauge's 8 Nov 2026 fields (C-DATA-03 / F4), carried locally until types.ts takes them (that file belongs to
+ * another lane this round): the dollar's contribution to gold over gold's own window, its two dates, and whether that
+ * span really is the window's.
+ */
+type DollarGauge = HealthGauge & {
+  usd_effect_pct?: number | null; usd_effect_from?: string | null; usd_effect_to?: string | null
+  usd_effect_source?: string | null; usd_effect_aligned?: boolean | null; usd_effect_note?: string | null
+}
 
 /**
  * The eight tiles in order (a.2 h.gauges); a missing gauge keeps its slot as a placeholder. The [B] line wraps the
@@ -31,7 +42,7 @@ const HEALTH_MS = 60_000
 const TILES: { key: string; label: string; b: ReactNode; p: string; price?: boolean }[] = [
   { key: 'trend', label: 'Trend', price: true, b: 'Where the price sits against its 20-day and 200-day averages and the 52-week high.', p: 'Price vs 20d/200d simple averages; drawdown from the 52-week high; Yahoo GC=F daily closes.' },
   { key: 'real_yield', label: 'Real yield', b: <>The cost of holding gold: a falling <Term t="real yield" /> supports gold. Δ in <Term t="basis point">bp</Term>.</>, p: '10-y TIPS yield: the fresher of the Treasury real curve (UST_REAL_10Y) and FRED DFII10 — the same quantity, the later date wins, the same value the header strip, the H2 clause and MACRO print; T+1; Δ over the window in bp (1 bp = 0.01 %); contemporaneous beta ≈ −5 %/100 bp since 2022, no lead (G-MACRO H1).' },
-  { key: 'dollar', label: 'Dollar', b: <>A rising <Term t="DXY">dollar index</Term> is a headwind for gold in dollars.</>, p: 'ICE dollar index DX-Y.NYB, Δ over the window; weekly beta ≈ −1.0 in every regime (H2); both rise in liquidity crises.' },
+  { key: 'dollar', label: 'Dollar', b: <>A rising <Term t="DXY">dollar index</Term> is a headwind for gold in dollars: the line below turns that into how much of gold&apos;s own move it accounts for.</>, p: 'ICE dollar index DX-Y.NYB, Δ over the window; the contribution to gold is −Δln(DXY) over gold’s own two dates — the ONE number the verdict’s H2 clause and MACRO’s KGX split also print (8 Nov 2026: the tile read +0.41 % HEADWIND beside a KGX panel saying the dollar added 0.17 %); weekly beta ≈ −1.0 in every regime (H2); both rise in liquidity crises.' },
   { key: 'positioning', label: 'Positioning', b: <>What the funds (<Term t="managed money" />) hold and did this week; the words below are this week&apos;s read.</>, p: 'CFTC managed-money net futures (Tuesday positions, Friday release); Δ w/w; 3-y percentile once history exists. No forecasting power 2006–2026 (G-STUDY).' },
   { key: 'india_basis', label: 'India basis', b: <>The picked MCX contract vs the <Term t="duty-paid landed" /> price of the same purity, both legs at one clock (live while MCX trades, else the settlement) — the same figure as the header strip: above = local demand exceeds importable supply.</>, p: 'the page\'s picked contract (the overview\'s health block, the same load as the header strip); live MCX ÷ duty-paid landed now − 1 while a quote exists, else settle ÷ that session\'s duty-paid − 1; settle = last-30-min VWAP of the Breeze 1-minute bars (else the ICICI band midpoint), both PROXY; landed at the contract\'s purity (GOLD/GOLDM 995, TEN/PETAL/GUINEA 999), a PETAL or GUINEA price scaled to ₹/10 g first; duty 15 % dated 13 May 2026; IBJA premium beside it (M8/M7).' },
   { key: 'shanghai', label: 'Shanghai premium', b: <>Shanghai paying more than London (<Term t="SGE premium" />) means Chinese demand is pulling metal east; the Δ is in $/oz.</>, p: 'SGE PM (CNY/g × 31.1035 ÷ USDCNY) − LBMA PM / COMEX at 14:15 Beijing (M9); read changes and sign flips in $/oz, not the level (7-hour gap).' },
@@ -171,6 +182,9 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
               const tWords = trendTile ? trendWords(g) : null
               const tValues = trendTile ? trendValuesLine(g) : ''
               // the clock words ONCE: the server's label, the purity only when the label does not already name it (round 2)
+              // the ONE dollar effect, from the gauge the server dated (C-DATA-03 / F4)
+              const dollarG = t.key === 'dollar' ? (g as DollarGauge) : null
+              const usdWords = dollarG ? usdEffectWords(dollarG) : null
               const basisWords = t.key === 'india_basis' ? basisTileWords(basisClock === 'now' ? (g.basis_label ?? 'live MCX vs duty-paid landed now') : (g.settle_basis_label ?? g.basis_label ?? 'at the settlement'), g.basis_reference) : null
               return (
                 <div key={t.key} data-gold-gauge={t.key} data-badge={g.badge} data-gauge-state={g.state} style={{ minWidth: 0 }}>
@@ -193,6 +207,10 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
                       {/* INDIA BASIS: which contract, clock and purity the one value is at (wave 1d / 1e) */}
                       {t.key === 'india_basis' && <span data-gold-basis-clock={basisClock ?? ''} data-gold-basis-contract={g.basis_contract ?? ''} style={{ color: T.muted, fontSize: 10, whiteSpace: 'normal' }}>
                         {g.basis_contract ? <span style={{ color: T.text }}>{g.basis_contract} · </span> : null}{basisWords}</span>}
+                      {/* DOLLAR: the dollar's CONTRIBUTION to gold — the one number H2 and MACRO's KGX split print, with
+                          its own two dates, and an amber line when that span is not gold's (C-DATA-03 / F4, 8 Nov 2026) */}
+                      {usdWords && <span data-gold-usd-effect={dollarG?.usd_effect_source ?? ''} style={{ color: T.text, fontFamily: T.mono, fontSize: 10, whiteSpace: 'normal' }}>
+                        {usdWords.text}{usdWords.note ? <span style={{ color: T.amber }} data-gold-usd-effect-off> · {usdWords.note}</span> : null}</span>}
                       {/* REAL YIELD: the series the value came from (the fresher twin, M-B); an older point than the strip's is said */}
                       {t.key === 'real_yield' && <span data-gold-ry-series={g.series_id ?? ''} style={{ color: T.dim, fontSize: 10, whiteSpace: 'normal' }}>
                         {realYieldSeriesWords(g.series_id)}{g.label_note ? ` · ${g.label_note}` : ''}

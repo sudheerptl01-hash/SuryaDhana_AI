@@ -26,6 +26,7 @@ from shared.logging import get_logger
 logger = get_logger(__name__)
 
 IST = ZoneInfo("Asia/Kolkata")
+NY = ZoneInfo("America/New_York")
 TREASURY_URL = ("https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/{year}/all"
                 "?type={kind}&field_tdr_date_value={year}")
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id={id}"
@@ -183,9 +184,43 @@ def parse_ff_calendar(text: str, *, now: datetime | None = None, countries: Iter
     return df.drop_duplicates(["event_date", "kind", "name"], keep="last") if not df.empty else df
 
 
+def ff_week_window(text: str) -> tuple[datetime, datetime] | None:
+    """What the loaded Forex Factory file actually covers: `(the Sunday 00:00 America/New_York that starts its week,
+    that Sunday + 7 days)`. None when the body carries no dated event.
+
+    `ff_calendar_thisweek.json` is ONE Sunday-to-Saturday week in New York time and `ff_calendar_nextweek.json` is a 404
+    (SOURCES.md G19), so the file's own week is the hard limit of what the US calendar can show. Critics CT-04 / F3
+    (8 Nov 2026): HEALTH's event-risk panel and MACRO's US calendar both run a now + 7 days window and said "the whole
+    week, nothing cut off" while every US row past the file's Saturday was silently missing. The roll time is NOT
+    midnight New York (the 00:30 EST fetch on Sun 8 Nov still returned the 1–7 Nov week), so this records coverage from
+    the body instead of assuming a schedule."""
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError):
+        return None
+    days: list[date] = []
+    for ev in data if isinstance(data, list) else []:
+        try:
+            ts = datetime.fromisoformat(ev["date"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        days.append(ts.astimezone(NY).date())
+    if not days:
+        return None
+    first = min(days)
+    sunday = first - timedelta(days=(first.weekday() + 1) % 7)   # the Sunday on or before the earliest event
+    start = datetime(sunday.year, sunday.month, sunday.day, tzinfo=NY)
+    return start, start + timedelta(days=7)
+
+
 def ingest_ff_calendar(store: Any, text: str, *, now: datetime | None = None) -> dict[str, Any]:
     df = parse_ff_calendar(text, now=now)
-    return {"rows": db.upsert(store, "gold_events", df)}
+    out: dict[str, Any] = {"rows": db.upsert(store, "gold_events", df)}
+    win = ff_week_window(text)
+    if win:   # what this body covers, so the page can say where the US calendar ends instead of implying it is complete
+        out["covers_from"] = win[0].isoformat()
+        out["covers_until"] = win[1].isoformat()
+    return out
 
 
 # ── GPR (G23, G24) ──────────────────────────────────────────────────────────────────────────────────

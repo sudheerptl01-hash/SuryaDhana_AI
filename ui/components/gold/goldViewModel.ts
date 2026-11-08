@@ -477,12 +477,99 @@ export function zqLabel(z: { month: string; contract?: string | null; symbol?: s
 
 /**
  * MACRO's KGX window caption vs HEALTH's (wave 1e minor: it said 'not HEALTH's week to date' while the windows were equal).
+ * 8 Nov 2026 (C-DATA-04 / F4): the caption names the window's END too — it claimed "as of Fri 06 Nov" while legs came from
+ * rows dated Mon 09 Nov.
  */
-export function kgxWindowCaption(kgx: { period?: string | null; from_date?: string | null; window_label?: string | null } | null | undefined, healthFrom: string | null | undefined): string | null {
+export function kgxWindowCaption(kgx: { period?: string | null; from_date?: string | null; to_date?: string | null; window_label?: string | null } | null | undefined, healthFrom: string | null | undefined): string | null {
   if (!kgx?.from_date) return null
-  const head = `window from ${istLabel(kgx.from_date)}${kgx.window_label ? ` (${kgx.window_label})` : ''}`
+  const span = `window from ${istLabel(kgx.from_date)}${kgx.to_date ? ` to ${istLabel(kgx.to_date)}` : ''}`
+  const head = `${span}${kgx.window_label ? ` (${kgx.window_label})` : ''}`
   if (!healthFrom) return head
   return kgx.from_date === healthFrom ? `${head} — the same window as HEALTH's` : `${head} — HEALTH's window starts ${istLabel(healthFrom)}`
+}
+
+/**
+ * The KGX dollar leg's label. 8 Nov 2026 (C-DATA-03 / F4): the leg was "USD effect (DXY basket)" and really summed six
+ * Yahoo "=X" closes that are start-of-day prints a session behind gold's and DXY's — which put the opposite sign on it
+ * on 90 of the 191 days DXY moved ≥ 0.1 %. It is now −Δln of the ICE DXY close, and the label says which.
+ */
+export function kgxUsdLabel(usdSource?: string | null): string {
+  return usdSource === 'DXY_CLOSE' || !usdSource ? 'USD effect (−Δln DXY close)' : `USD effect (${usdSource})`
+}
+
+/** The basket caption: the server's sentence when it sends one, else the weights it carries (series ids, as before). */
+export function kgxBasketText(basketLabel?: string | null, weights?: Record<string, number> | null): string | null {
+  if (basketLabel) return basketLabel
+  if (!weights || Object.keys(weights).length === 0) return null
+  return `basket ${Object.entries(weights).map(([k, v]) => `${k} ${(v * 100).toFixed(1)} %`).join(' · ')}`
+}
+
+/**
+ * The window letter the page asked for ('D' / 'W' / 'M'), for the column that carries the server's `d_window`.
+ */
+export function windowTag(window: string | null | undefined): string {
+  const w = String(window ?? 'W').toUpperCase()
+  return w === 'D' || w === 'W' || w === 'M' ? w : 'W'
+}
+
+/**
+ * The one-line caption that says what each MACRO column means (C-DATA-04 / F4, 8 Nov 2026): "W" in the picker is the
+ * page's window (HEALTH's and KGX's), while 1 d / 7 d / 30 d are TRAILING calendar days from the series' last stored
+ * point. The two used to be called "W" and "1W" side by side, with the trailing one defined in a hover tooltip only.
+ */
+export function windowColumnsCaption(window: string | null | undefined, label?: string | null, from?: string | null, to?: string | null): string {
+  const w = windowTag(window)
+  // the label's own parenthetical names its start date ("week to date (since the Fri 30 Oct close)"); when the caption
+  // prints the span itself, the words come without it, so one caption never prints one date twice (§f.6)
+  const words = from ? (label ?? 'the page’s window').split(' (')[0] : (label ?? 'the page’s window')
+  const win = `${w} = ${words}${from ? `, from the ${istLabel(from)} close` : ''}${to ? ` to ${istLabel(to)}` : ''}`
+  return `${win} · 7 d / 30 d = trailing calendar days (not 5 / 21 sessions: a holiday week has fewer)`
+}
+
+/**
+ * PLAN §f.6 (the same number appears once per page): the window column is rendered only when it is not the very figure
+ * the 1 d column already prints. In the 'D' window the page's window IS the previous session, so the two coincide by
+ * definition (the 8 Nov round-2 checker saw "D +0.683 · 1d +0.683" on the DXY tile and a 'D' and a '1D' column both
+ * reading −0.573 for USD); in 'W' / 'M' they coincide on a day when the window happens to span one session. Compare the
+ * PRINTED strings, so two values that round to the same figure are not shown twice either.
+ */
+export function showWindowColumn(windowText: string | null | undefined,
+                                 ...others: (string | null | undefined)[]): boolean {
+  // PLAN §f.6, the same number once per page: the WINDOW column is hidden when it would reprint ANY trailing column, not
+  // just the 1-day one. 8 Nov 2026: W and M start at the Friday close, so on every currency row and the DXY tile the
+  // window figure equalled the 7-day one and both were printed ('W +4.51 % · 7 D +4.51 %').
+  return !!windowText && windowText !== '—' && !others.includes(windowText)
+}
+
+/**
+ * The note the KGX panel prints. The SERVER owns the sentence — it knows which series it read and over which dates
+ * (`kgx.note`) — and the client's `kgxUnavailableNote` is the fallback; when both exist the client's trailing hint
+ * (which dollar series the driver strip fell back to, and when) is appended, because the server does not carry it.
+ * 8 Nov round-2 checker: the client's text won whenever the leg was missing, so the server's gold-span words never
+ * reached the screen.
+ */
+export function kgxNoteText(serverNote?: string | null, clientNote?: string | null): string | null {
+  if (!serverNote) return clientNote ?? null
+  if (!clientNote) return serverNote
+  const hint = clientNote.split('; ').slice(1).join('; ')
+  return hint ? `${serverNote}; ${hint}` : serverNote
+}
+
+/**
+ * HEALTH's DOLLAR tile: the dollar's CONTRIBUTION to gold — the ONE number the H2 verdict clause and MACRO's KGX split
+ * also print (C-DATA-03 / F4, 8 Nov 2026: the tile said "+0.41 % HEADWIND", the verdict "the dollar −0.4 %" and the KGX
+ * panel "+0.17 % the dollar", for one labelled week). Null when the server did not measure it; the dates come with it
+ * whenever the dollar leg's own span is not the window's.
+ */
+export function usdEffectWords(g: {
+  usd_effect_pct?: number | null; usd_effect_from?: string | null; usd_effect_to?: string | null
+  usd_effect_aligned?: boolean | null; usd_effect_note?: string | null; window_from?: string | null; report_date?: string | null
+} | null | undefined): { text: string; note: string | null } | null {
+  if (!g || !finite(g.usd_effect_pct)) return null
+  const span = g.usd_effect_from && g.usd_effect_to ? ` (${istLabel(g.usd_effect_from)} → ${istLabel(g.usd_effect_to)})` : ''
+  const text = `contribution to gold ${signedPct(g.usd_effect_pct, 2)}${span}`
+  const off = g.usd_effect_aligned === false
+  return { text, note: off ? (g.usd_effect_note ?? 'the dollar leg’s dates are not gold’s') : null }
 }
 
 /**
@@ -560,15 +647,16 @@ export function kgxConsistent(total: number | null | undefined, pure: number | n
 }
 
 /**
- * Why the "gold or the dollar?" split is empty (C-BEGINNER-14): the dollar leg needs the DXY basket's daily closes; when
- * `usd_effect_pct` is null the panel prints the reason (which dollar series the drivers fell back to and its date) and
- * hides the identity check — a reader never sees "identity off — check the inputs". Null when the split is complete.
+ * Why the "gold or the dollar?" split is empty (C-BEGINNER-14): the dollar leg needs the ICE DXY's close on gold's own two
+ * dates; when `usd_effect_pct` is null the panel prints the reason (which dollar series the drivers fell back to and its
+ * date) and hides the identity check — a reader never sees "identity off — check the inputs". Null when the split is
+ * complete. 8 Nov 2026 (C-DATA-03): the leg is DXY_CLOSE, no longer the six Yahoo "=X" closes, so the reason says so.
  */
 export function kgxUnavailableNote(usdEffect: number | null | undefined, dollar?: { series_id?: string | null; report_date?: string | null; state?: string | null } | null): string | null {
   if (finite(usdEffect)) return null
   const src = dollar?.series_id ? (SERIES_LABEL[dollar.series_id] ?? dollar.series_id) : null
   const when = dollar?.report_date ? istLabel(dollar.report_date) : null
-  const head = 'USD effect unavailable: the split needs the DXY basket\u2019s daily closes (DXY_CLOSE, FX_EURUSD/JPY/GBP/… have no stored points)'
+  const head = 'USD effect unavailable: the split takes \u2212\u0394ln of the ICE DXY close (DXY_CLOSE) on gold\u2019s own two dates, and one of them has no stored point'
   return src ? `${head}; the driver strip shows ${src}${when ? ` last ${when}` : ''}${dollar?.state === 'stale' ? ' (STALE)' : ''}` : head
 }
 

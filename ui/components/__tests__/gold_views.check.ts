@@ -526,11 +526,102 @@ check('1e MACRO: ZQ is labelled by contract when served, else honestly as the co
 check('1e MACRO: the KGX caption compares its window with HEALTH\'s (same window says so; another names HEALTH\'s start)',
   /the same window as HEALTH's/.test(M.kgxWindowCaption({ period: 'W', from_date: '2026-10-30' }, '2026-10-30') ?? '') && /HEALTH's window starts/.test(M.kgxWindowCaption({ period: 'D', from_date: '2026-11-04' }, '2026-10-30') ?? '')
   && M.kgxWindowCaption(null, '2026-10-30') === null && !/not HEALTH\\'s week to date/.test(sources['gold/MacroView.tsx']))
-check('1e POSITIONING / DAILY: the tape\'s ΔOI names its scope (all expiries); the table\'s is \'this expiry\'',
-  /oiScope=\{`all \$\{fam\} expiries`\}/.test(sources['gold/PositioningView.tsx']) && /'ΔOI \(this expiry\)'/.test(sources['gold/PositioningView.tsx']) && /data-tape-oi-scope/.test(read('components/gold/OiQuadrantTape.tsx')))
+// 8 Nov 2026 (critic CT-06): the scope is no longer a constant in the client. The server reads the PICKED contract's
+// Breeze daily bars when it can and says what it summed (`tape_oi_scope`: 'GOLDM DEC-26' or 'all GOLDM expiries'), so
+// this rule now asserts the client prints the SERVER's scope — the old literal would re-introduce a scope the client
+// invents. `tapeScopeLabel` keeps `all <FAM> expiries` as the fallback when the server sends none.
+check('1e / CT-06 POSITIONING: the tape\'s ΔOI names the scope the SERVER summed; the table\'s is \'this expiry\' (DAILY\'s own scope is still invented — see gold_feed.check.ts)',
+  /oiScope=\{tapeScopeLabel\(data, fam\)\}/.test(sources['gold/PositioningView.tsx']) && !/oiScope=\{`all \$\{fam\} expiries`\}/.test(sources['gold/PositioningView.tsx'])
+  && /`all \$\{family\} expiries`/.test(read('components/gold/feedModel.ts'))
+  && /'ΔOI \(this expiry\)'/.test(sources['gold/PositioningView.tsx']) && /data-tape-oi-scope/.test(read('components/gold/OiQuadrantTape.tsx')))
 check('1e PHYSICAL: the pick reaches /premiums; the MCX settle source is the STEP\'s own; no 999 ÷ 995 ratio in the basis copy',
   /getGoldPremiums\(365, \{ contract: props\.sel\.family, expiry: props\.sel\.expiry \}\)/.test(sources['gold/PhysicalView.tsx']) && /const settleSrc = mcxStep\?\.settlement_source \?\?/.test(sources['gold/PhysicalView.tsx'])
   && !/999 ÷ 995 = 1\.00402/.test(sources['gold/PhysicalView.tsx']) && /P\/1000/.test(sources['gold/PhysicalView.tsx']))
+
+// ── 8 Nov 2026, the RCA round (G-WINDOW: C-DATA-03 · C-DATA-04 · F4 · F5) ────────────────────────
+// One window and one dollar effect per GOLD page. Every rule below has a negative control that fails on the pre-fix
+// behaviour: the label "USD effect (DXY basket)", the look-alike 1W / 1M headers, a hover-only window definition, the
+// identity words over two spans, the client note winning over the server's, and the window column repeating 1 d.
+const mv8 = sources['gold/MacroView.tsx']
+const kb8 = sources['gold/KgxBar.tsx']
+const hv8 = read(path.join('components', 'gold/HealthView.tsx'))
+const MINUS8 = '−'
+
+check('8N C-DATA-03 the KGX dollar leg is labelled by the series it reads (−Δln of the DXY CLOSE)',
+  M.kgxUsdLabel('DXY_CLOSE') === `USD effect (${MINUS8}Δln DXY close)` && M.kgxUsdLabel(null) === `USD effect (${MINUS8}Δln DXY close)`
+  && M.kgxUsdLabel('FRED_DTWEXBGS') === 'USD effect (FRED_DTWEXBGS)' && /kgxUsdLabel\(usdSource\)/.test(kb8))
+// the rebased chart IS a basket series ("gold in the DXY basket (rebased)") and the prop comment quotes the old label:
+// what must be gone is the dollar LEG's label and the summed-legs formula printed under the bar
+check('8N C-DATA-03 negative control: the dollar LEG can no longer be labelled or explained as the summed FX basket',
+  !/USD effect \(DXY/.test(kb8 + mv8) && M.kgxUsdLabel('DXY_CLOSE') !== 'USD effect (DXY basket)'
+  && !/Σ\s*wᵢ/.test(kb8 + mv8) && !/the split needs the DXY basket/.test(kb8)
+  && /usd_effect = −Δln\(DXY close\)/.test(mv8))
+check('8N C-DATA-03 the basket caption is the server\'s DXY composition; the weights are only the fallback',
+  M.kgxBasketText('DXY = the ICE basket: EUR 57.6 %', { FX_EURUSD: 0.576 }) === 'DXY = the ICE basket: EUR 57.6 %'
+  && M.kgxBasketText(null, { FX_EURUSD: 0.576, FX_JPY: 0.136 }) === 'basket FX_EURUSD 57.6 % · FX_JPY 13.6 %'
+  && M.kgxBasketText(null, {}) === null && M.kgxBasketText(undefined, null) === null
+  && /basketLabel=\{kgxWin\?\.basket_label\}/.test(mv8) && /usdSource=\{kgxWin\?\.usd_source\}/.test(mv8))
+
+const usdOn = { usd_effect_pct: -0.41, usd_effect_from: '2026-10-30', usd_effect_to: '2026-11-06', usd_effect_aligned: true }
+const usdOff = { usd_effect_pct: 0.27, usd_effect_from: '2026-10-30', usd_effect_to: '2026-11-05', usd_effect_aligned: false,
+  usd_effect_note: 'the dollar leg runs Fri 30 Oct → Thu 5 Nov; gold runs Fri 30 Oct → Fri 6 Nov' }
+check('8N C-DATA-03 HEALTH\'s DOLLAR tile prints the CONTRIBUTION to gold with the two dates it was measured on',
+  M.usdEffectWords(usdOn)?.text === `contribution to gold ${MINUS8}0.41% (Fri 30 Oct → Fri 06 Nov)` && M.usdEffectWords(usdOn)?.note === null
+  && M.usdEffectWords(usdOff)?.note === usdOff.usd_effect_note && /usdEffectWords\(dollarG\)/.test(hv8) && /data-gold-usd-effect/.test(hv8))
+check('8N C-DATA-03 negative control: no contribution line without a measured number, and HEALTH never re-derives one',
+  M.usdEffectWords({ usd_effect_pct: null }) === null && M.usdEffectWords(null) === null && M.usdEffectWords(undefined) === null
+  && !/usd_effect_pct[^}]*\*\s*-1|Math\.log/.test(hv8))
+
+check('8N C-DATA-04 / F4 the window columns are defined in VISIBLE text, with the span printed once',
+  /Fri 30 Oct/.test(M.windowColumnsCaption('W', 'week to date (since the Fri 30 Oct close)', '2026-10-30', '2026-11-06'))
+  && /Fri 06 Nov/.test(M.windowColumnsCaption('W', 'week to date (since the Fri 30 Oct close)', '2026-10-30', '2026-11-06'))
+  && M.windowColumnsCaption('W', 'week to date (since the Fri 30 Oct close)', '2026-10-30', '2026-11-06').split('Fri 30 Oct').length === 2
+  && /trailing calendar days/.test(M.windowColumnsCaption('D'))
+  && /data-driver-columns/.test(mv8) && /data-ccy-columns/.test(mv8)
+  && /windowColumnsCaption\(props\.window, winWords, winFrom, winTo\)/.test(mv8)
+  && /windowColumnsCaption\(props\.window, ccyWin\?\.label, ccyWin\?\.from_date, ccyWin\?\.to_date\)/.test(mv8))
+check('8N C-DATA-04 / F4 negative control: the look-alike 1W / 1M headers are gone and the window column is the picker\'s letter',
+  !/>1W</.test(mv8) && !/>1M</.test(mv8) && /\{windowTag\(props\.window\)\}<\/th>/.test(mv8)
+  && M.windowTag('D') === 'D' && M.windowTag('M') === 'M' && M.windowTag(null) === 'W' && M.windowTag('x') === 'W')
+check('8N §f.6 the window column is dropped when it would print a figure ANY trailing column already prints',
+  M.showWindowColumn('+0.68%', '+0.68%') === false && M.showWindowColumn(`${MINUS8}0.41%`, '+0.68%') === true
+  && M.showWindowColumn('—', '—') === false && M.showWindowColumn(null, '+1%') === false
+  // 8 Nov: W and M start at the Friday close, so the window figure equalled the 7-DAY one on every currency row and the
+  // DXY tile ('W +4.51 % · 7 D +4.51 %') — comparing against d1 alone printed the same number twice (PLAN §f.6).
+  && M.showWindowColumn('+4.51%', '-0.57%', '+4.51%', '-1.59%') === false            // duplicates the 7-day column
+  && M.showWindowColumn('+4.51%', '-0.57%', '+3.90%', '+4.51%') === false            // duplicates the 30-day column
+  && M.showWindowColumn('+4.51%', '-0.57%', '+3.90%', '-1.59%') === true             // genuinely its own figure
+  && M.showWindowColumn('+4.51%') === true                                            // no trailing columns to clash with
+  && /showWindowColumn\(fmtDelta\(d, d\.d_window\), fmtDelta\(d, d\.d1\), fmtDelta\(d, d\.d1w\), fmtDelta\(d, d\.d1m\)\)/.test(mv8)
+  && /showWindowColumn\(signedPct\(c\.d_window\), signedPct\(c\.d1\),\s*\n?\s*signedPct\(c\.d1w\), signedPct\(c\.d1m\)\)/.test(mv8))
+check('8N §f.6 negative control: neither the driver tile nor the table renders d_window on a bare null check',
+  !/d\.d_window != null &&/.test(mv8) && !/<td data-ccy-window=\{c\.ccy\}>\{signedPct\(c\.d_window\)\}<\/td>(?!\})/.test(mv8.replace(/\{showCcyWindow && /g, '')))
+check('8N C-DATA-02 the driver tile says when its window column could not read its own newest row',
+  /data-driver-window-cut/.test(mv8) && /d\.window_note &&/.test(mv8) && /data-driver-window=\{d\.window_from/.test(mv8))
+
+check('8N C-DATA-03 the identity words stand down when the dollar leg ends on another day',
+  /usdAligned === false/.test(kb8) && /mixes two spans/.test(kb8) && /data-kgx-identity=\{usdAligned === false \? 'mixed'/.test(kb8)
+  && /usdAligned=\{kgxWin\?\.usd_aligned\}/.test(mv8))
+const kb8flat = kb8.replace(/\s+/g, ' ')
+check('8N C-DATA-03 negative control: "identity holds" is reachable only after the aligned test, and the empty-split text names the DXY close',
+  /usdAligned === false[^!]{0,400}identity holds/.test(kb8flat) && /ICE DXY close \(DX-Y\.NYB\)/.test(kb8)
+  && !/needs the DXY basket/.test(kb8) && !/total = pure \+ USD effect \{?\s*ok \?/.test(kb8flat))
+check('8N the KGX note is the SERVER\'s sentence, with the client\'s driver-strip hint appended',
+  M.kgxNoteText('server words', 'head; the driver strip shows Fed broad last Fri 6 Nov') === 'server words; the driver strip shows Fed broad last Fri 6 Nov'
+  && M.kgxNoteText(null, 'client only') === 'client only' && M.kgxNoteText('server only', null) === 'server only'
+  && M.kgxNoteText(null, null) === null && /kgxNoteText\(kgxWin\?\.note, kgxUnavailableNote\(/.test(mv8))
+check('8N negative control: the client note no longer wins over the server\'s', !/note=\{kgxNote\}[\s\S]{0,40}kgxUnavailableNote\(m\.kgx\.usd_effect_pct, dollar\)\s*:/.test(mv8)
+  && !/const kgxNote = m\?\.kgx \? kgxUnavailableNote/.test(mv8))
+check('8N F4 the KGX caption names the window\'s END, so a leg dated later cannot borrow its words',
+  /to Fri 06 Nov/.test(M.kgxWindowCaption({ period: 'W', from_date: '2026-10-30', to_date: '2026-11-06' }, '2026-10-30') ?? '')
+  && !/to /.test((M.kgxWindowCaption({ period: 'W', from_date: '2026-10-30' }, '2026-10-30') ?? '').split(' — ')[0].replace('window from ', ''))
+  && /data-gold-kgx-usd-dates/.test(mv8))
+check('8N F4 MACRO\'s driver subtitle says which WINDOW the supportive / headwind tag is applied to, and where it is printed',
+  /applied to the page's \$\{windowTag\(props\.window\)\} window/.test(mv8)
+  && /the one HEALTH's gauges and the KGX split use, printed as its own column where it differs from 1 d/.test(mv8)
+  // negative control: the old claim of a column that the D window does not print
+  && !/applied to the \$\{windowTag\(props\.window\)\} column/.test(mv8)
+  && !/applied to the selected window/.test(mv8))
 
 console.log(failures ? `\n${failures} check(s) failed` : '\nall gold view checks passed')
 process.exit(failures ? 1 : 0)

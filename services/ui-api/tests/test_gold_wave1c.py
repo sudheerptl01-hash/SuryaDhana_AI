@@ -164,6 +164,11 @@ def test_dollar_gauge_reads_dxy_bars_then_the_labelled_fed_index_never_dtwexbgs_
     h = client.get("/api/gold/health").json()
     g = next(x for x in h["gauges"] if x["key"] == "dollar")
     assert g["series_id"] == "DXY_CLOSE" and g["read_from"] == f"daily bars {gold.DXY_SYMBOL}" and g["value"] == 99.0
+    # the tile keeps its own newest close and its own window; the CONTRIBUTION to gold (the one number H2 and the KGX
+    # split print) is measured over gold's window and says which two dates it used (8 Nov 2026, C-DATA-03)
+    trend = next(x for x in h["gauges"] if x["key"] == "trend")
+    assert g["usd_effect_source"] == "DXY_CLOSE" and g["usd_effect_pct"] is not None
+    assert g["usd_effect_to"] <= trend["report_date"] and g["usd_effect_from"] <= g["usd_effect_to"]
     assert "driver untested" not in h["verdict"]["line"]
     # (c) neither: the Fed broad index stands in, LABELLED as such, and the driver word is withheld with the reason
     dtw = [{"series_id": "FRED_DTWEXBGS", "report_date": (NOW.date() - timedelta(days=k)).isoformat(), "value": 121.0 + 0.01 * k,

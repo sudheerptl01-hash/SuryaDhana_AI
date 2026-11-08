@@ -188,7 +188,11 @@ def g_yahoo_daily(ctx: Ctx) -> dict[str, Any]:
     syms = ctx.params.get("symbols")
     res = ingest_yahoo.fetch_daily(ctx.store, ctx.http, symbols=syms, backfill_from=ctx.backfill_from, now=ctx.now)
     out = {"symbols": res, "inserted": sum(int(v.get("rows") or 0) for v in res.values()),
-           "stale": [s for s, v in res.items() if v.get("stale")]}
+           "stale": [s for s, v in res.items() if v.get("stale")],
+           # wave 2 (C-DATA-05): a bar fetched before its session closed is re-fetched until it is final; the run says how
+           # many healed and how many are still in-progress (today's own bar is normally one of them)
+           "repaired_partials": sum(int(v.get("repaired_partials") or 0) for v in res.values()),
+           "partials_open": sum(int(v.get("partials_open") or 0) for v in res.values())}
     # wave 1e (M-C): a CNY=X bar revised by this run re-derives the Shanghai pair now (store arithmetic, no fetch), not at
     # 21:30 — the printed legs and the premium never disagree for a day
     if "CNY=X" in res:
@@ -197,6 +201,15 @@ def g_yahoo_daily(ctx: Ctx) -> dict[str, Any]:
         except Exception as exc:  # noqa: BLE001 — a derive failure never fails the fetch group
             out["shanghai_rederive"] = {"status": "error", "error": str(exc)[:160]}
     return out
+
+
+def g_yahoo_partials(ctx: Ctx) -> dict[str, Any]:
+    """Heal a bar that was fetched before its session closed WITHOUT waiting for the next 03:10 overnight pull
+    (C-DATA-05, round 2). Only the symbols whose LATEST stored bar is such a bar and whose session has since closed are
+    re-pulled — at most ``PARTIAL_REPAIR_MAX_SYMBOLS`` paced calls through the one gold fetcher, and no call at all when
+    there is nothing to heal. A session still running is never re-pulled, so this cannot store another partial bar."""
+    res = ingest_yahoo.repair_partials(ctx.store, ctx.http, symbols=ctx.params.get("symbols"), now=ctx.now)
+    return {**res, "inserted": sum(int(v.get("rows") or 0) for v in res.get("symbols", {}).values())}
 
 
 def g_yahoo_curve(ctx: Ctx) -> dict[str, Any]:
@@ -672,6 +685,8 @@ GROUPS: dict[str, Group] = {g.name: g for g in (
     Group("catalog", g_catalog, "always", note="seed the data dictionary (code, not data)"),
     Group("treasury", g_treasury, "daily", "gold_series", "source = 'treasury_csv'"),
     Group("yahoo_daily", g_yahoo_daily, "daily", "gold_daily_bars", "source = 'yahoo'", note="CODE ONLY in the build; one call per symbol 6 s apart"),
+    Group("yahoo_partials", g_yahoo_partials, "always",
+          note="re-pull only the symbols whose latest bar is an in-progress session that has since closed; no calls when there are none"),
     Group("yahoo_curve", g_yahoo_curve, "daily", "gold_curve", "exchange = 'COMEX' AND source = 'yahoo'"),
     Group("intraday_bars", g_intraday_bars, "always", note="every 5 min while COMEX trades; 7d/1m (+60d/5m on the first run)"),
     Group("cot", g_cot, "always", note="incremental: report_date > max stored; 0 rows = not yet released"),

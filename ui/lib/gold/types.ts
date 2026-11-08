@@ -546,7 +546,25 @@ export interface GoldSeries { as_of: string; asof_applied?: string | null; freq:
 export type BarInterval = '1m' | '5m' | '1d'
 
 /** `ts`: an ISO instant WITH offset (B1 wave 1c), a zone-less ISO datetime (= UTC, the store's older form), 'YYYY-MM-DD', or epoch s/ms — `sessions.barMs` reads all four */
-export interface Bar { ts: string | number; o: number | null; h: number | null; l: number | null; c: number | null; v?: number | null; partial?: boolean | null }
+export interface Bar {
+  ts: string | number; o: number | null; h: number | null; l: number | null; c: number | null; v?: number | null; partial?: boolean | null
+  /** wave 1e `ohlc_sane`: a price outside the bar's [low, high] is WITHHELD (`o` / `c` null) and kept here with the reason.
+   *  A withheld open must be treated exactly like an impossible one (C-DATA-06: `o ?? c` silently resurrected it as the close). */
+  o_raw?: number | null
+  c_raw?: number | null
+  ohlc_note?: string | null
+  /** SGE Au99.99 only (CT-01 / F1): the server converts CNY/g → $/oz and keeps the native price and the rate it used —
+   *  ONE rate per drawn session, so the line cannot step at Beijing midnight without a price move. */
+  o_cny_g?: number | null
+  h_cny_g?: number | null
+  l_cny_g?: number | null
+  c_cny_g?: number | null
+  /** the native twins of a WITHHELD price (`o_raw` / `c_raw` are the converted ones) */
+  o_raw_cny_g?: number | null
+  c_raw_cny_g?: number | null
+  usdcny?: number | null
+  usdcny_date?: string | null
+}
 
 export interface SessionBand { name: string; start_ist: string; end_ist: string; hatched?: boolean; bar?: boolean; closed?: boolean }
 
@@ -571,6 +589,22 @@ export interface GoldBars {
   since?: string | null
   note?: string | null
   freshness?: Freshness
+  /** what `bars`, `hi` / `lo`, `prev_day` and the lines are in — every payload states it (CT-01 / F1). An overlay whose
+   *  unit is not the chart's own is NEVER drawn: raw CNY/g on the USD/oz axis stretched the 24-h y-range to 1,000–4,000. */
+  unit?: string | null
+  /** the unit the store keeps (SGE Au99.99: 'CNY/g'), beside each bar as `c_cny_g` … */
+  unit_native?: string | null
+  /** the USDCNY leg the conversion used — the SAME ladder the Shanghai premium reads, the LAST drawn session's vintage.
+   *  `partial` is the rate's own flag: a USDCNY point can itself be a pre-close print, and the page labels it. */
+  fx?: { series: string | null; value: number | null; report_date: string | null; release_at?: string | null; partial?: boolean | null; conversion?: string | null } | null
+  conversion?: string | null
+  /** every USDCNY vintage the window used, one per drawn session (> 1 = the window spans sessions priced at different rates) */
+  fx_vintages?: string[] | null
+  /** rows the conversion refused: no stored USDCNY vintage on or before their session, so a short series is not a short store */
+  dropped_no_fx?: number | null
+  /** the same bar as `hi` / `lo`, read in the native unit (never a different bar's extreme) */
+  hi_native?: number | null
+  lo_native?: number | null
   /** when the live last is appended by the server from the SWR cache */
   last?: { price: number; as_of: string; source: string; age_s?: number | null } | null
   store_errors?: Record<string, string> | null

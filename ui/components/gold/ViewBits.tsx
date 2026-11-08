@@ -18,6 +18,7 @@
 import { type CSSProperties, type ReactNode } from 'react'
 import { Chip, T } from '@/components/terminal'
 import { publishGate } from '@/lib/gold/format'
+import { coverageIsAmber, type FeedCoverage } from './feedModel'
 import type { Badge, CatalogRow, Freshness, Layer } from '@/lib/gold/types'
 import glossaryJson from '@/lib/gold/glossary.json'
 import { indexGlossary, lookupTerm, type GlossaryEntry } from '@/lib/gold/learn'
@@ -161,6 +162,27 @@ export function Field({ label, value, tip, mono = true, color }: { label: ReactN
     </div>
   )
 }
+
+/**
+ * What a feed's own window covers, when the panel asks for more than it can serve.
+ *
+ * Critics CT-04 / F3 (8 Nov 2026): HEALTH's event-risk panel and MACRO's US calendar both run a now + 7 days window,
+ * while the only US source (Forex Factory) serves one New York Sun–Sat week at a time. From roughly Thursday to the
+ * source's Sunday roll most of the next US week is missing, and the panels read "the whole week, nothing cut off".
+ * The server now returns `us_coverage` / `calendar_coverage` ({state, note, covers_through_label, uncovered}); this row
+ * prints its note — amber while the window is mostly uncovered, dim for a day or two, nothing when it fits.
+ */
+export function CoverageNote({ cov, links }: { cov?: FeedCoverage | null; links?: ReactNode }) {
+  if (!cov?.note) return null
+  const amber = coverageIsAmber(cov)
+  return (
+    <div data-coverage-note={cov.state ?? ''} style={{ fontSize: 10.5, color: amber ? T.amber : T.dim, lineHeight: 1.5, marginBottom: 6 }}>
+      {amber ? '▲ ' : ''}{cov.note}{links ? <> {links}</> : null}
+    </div>
+  )
+}
+
+export { coverageSubtitle, type FeedCoverage } from './feedModel'
 
 /** Error line that keeps the panel's last values visible (degrade-honest, never blank). */
 export function Degraded({ error, what }: { error: string | null; what: string }) {

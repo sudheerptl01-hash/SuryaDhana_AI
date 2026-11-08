@@ -20,7 +20,7 @@ import { getGoldBars, getGoldPositioningDaily, memoGet } from '@/lib/gold/api'
 import { UNIT_LABEL, comexCode, comexMonthLabel, convertUsdOz, dayLabel, fmtCount, fmtInUnit, fmtSignedPctSp, istClock, pctChange, unitDp } from '@/lib/gold/format'
 import { istDateISO } from '@/lib/format'
 import { KITCO_ALL_FROM, KITCO_SHORT_DAYS, KITCO_TIMEFRAMES, KITCO_UNITS, KITCO_UNIT_LABEL, KITCO_URL, dailyCloseIn, dailyFxPoints, dailyFxRows, decimate, dutyMultiplier, fxAsOf,
-         fmtKitco, fmtKitcoSigned, isRupee, kitcoConvert, kitcoDp, kitcoLegend, kitcoSeries, kitcoStats, kitcoUnitFromPage, mergeFx, timeframe, type DailyFx, type DutyMode, type FxPt, type KitcoTf, type KitcoUnit,
+         fmtKitco, fmtKitcoSigned, isRupee, kitcoConvert, kitcoDp, kitcoLegend, kitcoSeries, kitcoStats, kitcoUnitFromPage, mergeFx, overlayOnScale, timeframe, type DailyFx, type DutyMode, type FxPt, type KitcoTf, type KitcoUnit,
          type KPt } from '@/lib/gold/kitco'
 import { barMs, dailyOhlc, dayGroups, fmtHM, istDate, istMinutes, istToNy, legendCloses, prevSessionClose, resample5m, shiftDays,
          ukDstActive, usDstActive, type DayPt } from '@/lib/gold/sessions'
@@ -70,7 +70,32 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
     const prev = prevGroup[prevGroup.length - 1]
     return prev.date === today.date ? groups : [prev, today]
   }, [groups, prevGroup])
-  const sgePts = useMemo(() => (sge.data?.bars?.length ? dayGroups(sge.data.bars, usDst).slice(-1)[0]?.pts ?? null : null), [sge.data, usDst])
+  // ── the SGE overlay (CT-01 / F1): drawn only when the SERVER says the bars are in this chart's unit, only for the
+  // COMEX day on screen, and only when it is on the same scale. Raw CNY/g once reached the USD/oz y-domain and stretched
+  // it from 868 to 4,100, pressing the COMEX line flat; and between the Monday Globex reopen (04:30 IST) and the SGE open
+  // (06:30 IST) `.slice(-1)` drew FRIDAY's Shanghai line on Monday's axis.
+  const sgeUnitOk = (sge.data?.unit ?? null) === 'USD/oz'
+  const sgeGroups = useMemo(() => (sge.data?.bars?.length ? dayGroups(sge.data.bars, usDst) : []), [sge.data, usDst])
+  const sgeLast = sgeGroups.length ? sgeGroups[sgeGroups.length - 1] : null
+  const comexDay = groups24.length ? groups24[groups24.length - 1] : null
+  const sgeDay = useMemo(() => (comexDay ? sgeGroups.find(g => g.date === comexDay.date) ?? null : null), [sgeGroups, comexDay])
+  const sgeFit = useMemo(() => overlayOnScale(sgeUnitOk ? sgeDay?.pts : null, comexDay?.pts, 25), [sgeUnitOk, sgeDay, comexDay])
+  const sgePts = sgeFit.pts
+  const sgeBar = sgeDay?.pts.length ? sge.data?.bars?.find(b => barMs(b.ts) === sgeDay.pts[sgeDay.pts.length - 1].ms) ?? null : null
+  // one sentence per reason the overlay is withheld — never silence, and never a drawn line the axis cannot carry
+  const sgeWhyNoOverlay = !sge.data?.bars?.length
+    ? `No SGE bars stored for this window yet — the asia job writes them during SGE hours (06:30–13:00 and 17:30–00:00 IST).${sge.data?.since ? ` Stored since ${dayLabel(sge.data.since)}.` : ''}`
+    : !sgeUnitOk
+      ? `SGE bars arrived ${sge.data?.unit ? `labelled ${sge.data.unit}` : 'with no unit'}${sge.data?.unit_native ? ` (the store keeps ${sge.data.unit_native})` : ''}, not $/oz — not overlaid: a series in another unit would set this chart's axis.`
+      : !sgeDay
+        ? `Shanghai's last stored session is ${sgeLast ? dayLabel(sgeLast.date) : '—'}, not the COMEX day on screen${comexDay ? ` (${dayLabel(comexDay.date)})` : ''} — not overlaid.`
+        : sgeFit.why
+          ? `The Shanghai line is ${sgeFit.why} — not overlaid.`
+          : sgeDay.pts.length < 2
+            ? `Only ${sgeDay.pts.length} SGE bar${sgeDay.pts.length === 1 ? '' : 's'} on ${dayLabel(sgeDay.date)}: a line needs two.`
+            // the render gate also needs the payload row behind the session's last point; without it the panel has no
+            // native price and no rate to name, so it says that instead of the 'needs two' line it used to fall through to
+            : `The last SGE bar of ${dayLabel(sgeDay.date)} could not be matched to its payload row — not overlaid.`
   // the store's partial flag rides along (per bar, or /bars.daily_closes): a pre-close bar is never labelled a final close (wave 1e)
   const daily = useMemo(() => dailyOhlc(dailyBars.data?.bars ?? [], new Set((dailyBars.data?.daily_closes ?? []).filter(d => d.partial).map(d => d.date))), [dailyBars.data])
   const todayDate = groups[groups.length - 1]?.date ?? null
@@ -254,16 +279,22 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
           </Pending>
         </GoldPanel>
 
-        <GoldPanel id="d.sge" title="Shanghai (SGE Au99.99)" subtitle="delayed intraday · drawn on the Shanghai band" badge="context" layer={layer} accent={T.violet}
+        <GoldPanel id="d.sge" title="Shanghai (SGE Au99.99)" subtitle="delayed intraday · drawn on the Shanghai day and night sessions" badge="context" layer={layer} accent={T.violet}
           freshness={sge.data ? (sge.data.freshness ?? { state: 'delayed', source: 'SGE delayed quotes' }) : { state: 'unavailable', reason: sge.error ?? 'not stored yet' }}
-          catalog={catalog} series={['SGE_DAILY']}
-          copyB="Does Shanghai lead or lag the COMEX print? The violet dotted line on the 24-h chart is SGE during its hours."
-          copyP="SGE delayed quotations (D4), CNY/g converted to $/oz by the server; displayed with attribution (O-1), never re-served.">
-          {sgePts && sgePts.length > 1
-            ? <div style={{ fontSize: 11, color: T.text }}>{sgePts.length} bars today · last {fmtInUnit(sgePts[sgePts.length - 1].c, unit, usdinr)} — overlaid above in violet. <span style={{ color: T.dim }}>Source: Shanghai Gold Exchange (sge.com.cn), displayed with attribution.</span></div>
+          catalog={catalog} series={['SGE_DAILY', 'BARS_1M', 'FX_CNY']}
+          copyB="Does Shanghai lead or lag the COMEX print? The violet dotted line on the 24-h chart is SGE during its hours, in the same unit as the gold line."
+          copyP={`SGE delayed quotations (D4), stored in CNY/g and converted by the server: ${sge.data?.conversion ?? 'CNY/g × 31.1034768 ÷ USDCNY — one vintage per drawn session (the latest on or before that session’s first Shanghai date)'}. ONE rate per session, so the line cannot step on an FX revision at Beijing midnight without a price move. The overlay is drawn only when the payload says $/oz, only for the COMEX day on screen and only when it is within 25 % of that day’s median — a foreign unit never sets this chart’s axis. Displayed with attribution (O-1), never re-served.`}>
+          {sgePts && sgePts.length > 1 && sgeDay && sgeBar
+            ? <div data-gold-sge-overlay style={{ fontSize: 11, color: T.text }}>{sgePts.length} bars · {dayLabel(sgeDay.date)} · last{' '}
+                {sgeBar.c_cny_g != null && <span data-gold-sge-native>¥{fmtFixed(sgeBar.c_cny_g, 2)}/g ≈ </span>}
+                <b>{fmtInUnit(sgeBar.c, unit, usdinr)}</b>
+                {/* the session's ONE rate, named once: every bar of this drawn session converts at it */}
+                {sgeBar.usdcny != null && <span data-gold-sge-rate style={{ color: T.dim }}> — the whole session at USDCNY {fmtFixed(sgeBar.usdcny, 4)}{sgeBar.usdcny_date ? ` of ${dayLabel(sgeBar.usdcny_date)}` : ''}{sge.data?.fx?.series ? ` (${sge.data.fx.series})` : ''}{sge.data?.fx?.partial && sgeBar.usdcny_date === sge.data.fx.report_date ? ', itself a partial print' : ''}</span>}
+                {!!sge.data?.dropped_no_fx && <span data-gold-sge-dropped style={{ color: T.dim }}> · {sge.data.dropped_no_fx} row{sge.data.dropped_no_fx === 1 ? '' : 's'} not served (no stored USDCNY on or before their session)</span>}
+                {' '}— overlaid above in violet. <span style={{ color: T.dim }}>Source: Shanghai Gold Exchange (sge.com.cn), displayed with attribution.</span></div>
             : <div data-gold-sge-empty style={{ display: 'grid', gap: 6 }}>
-                {/* not a verdict question (the series is PUBLISH-CONTEXT): the bars are not stored yet, so the page links the source instead (C-TRADER-26) */}
-                <div style={{ fontSize: 11, color: T.muted }}>No SGE bars stored for today yet — the asia job writes them during SGE hours (06:30–13:00 and 17:30–00:00 IST).</div>
+                {/* not a verdict question (the series is PUBLISH-CONTEXT): the page says WHY there is no overlay and links the source (C-TRADER-26) */}
+                <div style={{ fontSize: 11, color: T.muted }}>{sgeWhyNoOverlay}</div>
                 <LinkTile name="SGE delayed quotes" url="https://en.sge.com.cn/data_DelayedQuotes" what="Au99.99 / Au(T+D), delayed" why="the publisher's own page; nothing is fetched by the terminal from here" />
               </div>}
         </GoldPanel>

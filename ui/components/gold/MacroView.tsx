@@ -32,7 +32,7 @@ import tooltipsJson from '@/lib/gold/tooltips.json'
 import { KgxBar } from './KgxBar'
 import { LineChart, SmallMultiple } from './FlowCharts'
 import { Attribution, Degraded, Field, GPanel, Term, contextTone, useGoldLoad } from './ViewBits'
-import { DRIVER_RULES, LOT_MULTIPLIER, betaText, driverDelta, driverInstrumentNote, driverNote, driverSources, driverTag, driverTileLabel, fedMeanText, inr, istLabel, kgxUnavailableNote, kgxWindowCaption, latestDate, num, pct, serverFreshness, sigmaPerLot, signed, signedPct, usd, zqLabel } from './goldViewModel'
+import { DRIVER_RULES, LOT_MULTIPLIER, betaText, driverDelta, driverInstrumentNote, driverNote, driverSources, driverTag, driverTileLabel, fedMeanText, inr, istLabel, kgxNoteText, kgxUnavailableNote, kgxWindowCaption, latestDate, num, pct, serverFreshness, showWindowColumn, sigmaPerLot, signed, signedPct, usd, windowColumnsCaption, windowTag, zqLabel } from './goldViewModel'
 import { eventSessionTag, pageRealYield, realYieldMismatch } from '@/lib/gold/format'
 
 const BUNDLED = (tooltipsJson as { tooltips: Record<string, string> }).tooltips
@@ -45,6 +45,19 @@ const DRIVER_TIP: Record<string, string> = {
 /** `/macro` calendar rows are this week's events as `{date, time_ist, title, kind, …}` (§2.11), not `/calendar`'s `{event_date, name}` */
 type MacroCalRow = Omit<GoldEvent, 'name' | 'event_date'> & { date?: string | null; event_date?: string | null; title?: string | null; name?: string | null }
 type MacroFreshKey = 'drivers' | 'fed' | 'gold'
+/**
+ * The 8 Nov 2026 window fields (C-DATA-04 / F4), carried locally until types.ts takes them (that file belongs to another
+ * lane this round): the page's window on each driver tile, the KGX dollar leg's real source, and the currency table's
+ * one-window column with the caption block that says what each column means.
+ */
+type DriverWin = MacroDriver & { window_label?: string | null; window_from?: string | null; window_to?: string | null
+                                 window_note?: string | null; trailing_note?: string | null }
+type KgxWin = { to_date?: string | null; usd_source?: string | null; usd_from_date?: string | null; usd_to_date?: string | null
+                usd_aligned?: boolean | null; basket_label?: string | null; note?: string | null }
+type CcyRow = { ccy: string; price: number | null; unit?: string | null; d1?: number | null; d1w?: number | null
+                d1m?: number | null; ytd?: number | null; d_window?: number | null; report_date?: string | null }
+type CcyWindow = { window?: string | null; label?: string | null; from_date?: string | null; to_date?: string | null
+                   trailing?: Record<string, { days?: number | null; from_date?: string | null }> | null; note?: string | null }
 
 const fmtDriver = (d: MacroDriver, v: number | null | undefined, dp?: number) =>
   d.unit === '%' ? pct(v, dp ?? 2) : d.unit === 'bp' ? `${num(v, dp ?? 0)} bp` : d.unit === 't' ? `${num(v, dp ?? 1)} t` : num(v, dp ?? 2)
@@ -73,7 +86,21 @@ export function MacroView(props: GoldSubViewProps) {
   const ctxDate = day(m?.context?.hy_oas_date)
   // the dollar driver as served (DXY_CLOSE, or the Fed broad index when the DXY series has no points): the KGX note names it
   const dollar = m?.drivers.find(d => d.key === 'dxy') ?? null
-  const kgxNote = m?.kgx ? kgxUnavailableNote(m.kgx.usd_effect_pct, dollar) : null
+  // the 8 Nov window block: the dollar leg's real source and dates (C-DATA-03) and the table's one window (C-DATA-04)
+  const kgxWin = (m?.kgx ?? null) as (NonNullable<typeof m>['kgx'] & KgxWin) | null
+  // the SERVER's sentence first (it names the series and the dates it read); the client's text is the fallback
+  const kgxNote = m?.kgx ? kgxNoteText(kgxWin?.note, kgxUnavailableNote(m.kgx.usd_effect_pct, dollar)) : null
+  const ccyWin = ((m as unknown as { currencies_window?: CcyWindow } | null)?.currencies_window) ?? null
+  const ccyRows = ((m?.currencies ?? []) as CcyRow[])
+  const driverWin = (m?.drivers ?? []) as DriverWin[]
+  // the window's own words for the driver grid's visible caption (F4: the definition must not be hover-only) — the
+  // currency block's when it has one, else the first driver that resolved a window
+  const winWords = ccyWin?.label ?? driverWin.find(d => d.window_label)?.window_label ?? null
+  const winFrom = ccyWin?.from_date ?? driverWin.find(d => d.window_from)?.window_from ?? null
+  const winTo = ccyWin?.to_date ?? driverWin.find(d => d.window_to)?.window_to ?? null
+  // the currency table's window column: dropped when every row would print the figure its 1D column already prints
+  const showCcyWindow = ccyRows.some(c => showWindowColumn(signedPct(c.d_window), signedPct(c.d1),
+                                                          signedPct(c.d1w), signedPct(c.d1m)))
   // ONE 10-y real yield per page (wave 1e, M-B): the header strip / HEALTH point this tile must equal; a mismatch is said
   const pageRy = useMemo(() => pageRealYield(props.overview?.strip, props.overview?.health), [props.overview])
   // HEALTH's window start (the TREND gauge's), so the KGX caption compares like with like (wave 1e minor)
@@ -113,7 +140,7 @@ export function MacroView(props: GoldSubViewProps) {
       {/* mc.drivers */}
       <GPanel id="mc.drivers" title="Drivers" badge="context" evidence="G-MACRO H1/H2: contemporaneous betas; the level link broke in 2022" fresh={fb('drivers')} dateOnly={driversDate}
         series={['FRED_DFII10', 'DXY_CLOSE', 'USDINR_CLOSE', 'GVZ_CLOSE', 'FRED_T10YIE', 'FRED_DGS2']} catalog={catalog} layer={layer}
-        subtitle="supportive / headwind = the server's sign rule, printed on each tile, applied to the selected window; a description of today, not a forecast"
+        subtitle={`supportive / headwind = the server's sign rule, printed on each tile, applied to the page's ${windowTag(props.window)} window — the one HEALTH's gauges and the KGX split use, printed as its own column where it differs from 1 d; a description of today, not a forecast`}
         copyB={<>the cost of holding gold (the <Term t="real yield" />) and the dollar (<Term t="DXY" />) explain most days; the rupee is the MCX leg. Changes in bp for yields: 1 bp = 0.01 pp.</>}
         copyP="weekly beta to real yields −9.9 %/100 bp in 2010–21, −5.0 since 2022 (t −4.0, R² 0.06); dollar beta ≈ −1 in every regime (H2). 4-week changes forecast nothing (G-STUDY).">
         <Degraded error={macro.error} what="macro" />
@@ -121,7 +148,7 @@ export function MacroView(props: GoldSubViewProps) {
         {m && (
           <>
             <Grid min={180}>
-              {m.drivers.map(d => {
+              {driverWin.map(d => {
                 const tag = driverTag(d.tag)                                   // the server's tag; null → neutral (no client rule)
                 const rule = d.rule ?? DRIVER_RULES[d.key] ?? 'no sign rule'   // the server's rule text; the local table only when absent
                 const label = driverTileLabel(d)                                // the series the server used, never the key's nominal name
@@ -135,7 +162,17 @@ export function MacroView(props: GoldSubViewProps) {
                     value={d.state === 'unavailable' && d.value == null ? '—' : fmtDriver(d, d.value)} color={contextTone} big={false}
                     sub={<span>
                       {d.state === 'unavailable' && d.value == null && <span style={{ color: T.amber }}>{d.series_id ?? d.key}: no stored points · </span>}
-                      <span title={tip('d1')}>1d {fmtDelta(d, d.d1)}</span> · <span title={tip('d1w')}>1w {fmtDelta(d, d.d1w)}</span> · <span title={tip('d1m')}>1m {fmtDelta(d, d.d1m)}</span>
+                      {/* the WINDOW the tag rests on, printed with the number it rests on and the window's own words
+                          (C-DATA-04 / F4): the tile used to print only 1d / 1w / 1m while the tag was computed on a
+                          trailing 7 or 30 calendar days the panel called "the selected window". The trailing figures keep
+                          their place, renamed 7 d / 30 d — `change_over` counts calendar days, not 5 or 21 sessions. */}
+                      {/* …and only when it is a DIFFERENT figure from the 1 d one: in the 'D' window the page's window
+                          IS the previous session, and printing "D +0.683 · 1d +0.683" is the same number twice (§f.6). */}
+                      {showWindowColumn(fmtDelta(d, d.d_window), fmtDelta(d, d.d1), fmtDelta(d, d.d1w), fmtDelta(d, d.d1m)) && <span data-driver-window={d.window_from ?? ''} title={d.window_label ? `${windowTag(props.window)} = ${d.window_label}${d.window_to ? `, to ${istLabel(d.window_to)}` : ''}` : undefined}><b>{windowTag(props.window)} {fmtDelta(d, d.d_window)}</b>
+                        {/* the window column ends on gold's close; when this series carries a LATER row (a future-dated
+                            weekend FX bar) the tile says so rather than quietly printing two weeks for one quantity */}
+                        {d.window_note && <span style={{ color: T.amber }} data-driver-window-cut={d.window_to ?? ''} title={d.window_note}> (to {istLabel(d.window_to)})</span>} · </span>}
+                      <span title={tip('d1')}>1d {fmtDelta(d, d.d1)}</span> · <span title={tip('d1w')}>7 d {fmtDelta(d, d.d1w)}</span> · <span title={tip('d1m')}>30 d {fmtDelta(d, d.d1m)}</span>
                       {d.pct_1y != null && <span title={tip('pct_1y')}> · percentile {num(d.pct_1y, 0)} (1 y)</span>}
                       {d.report_date && <span> · {istLabel(d.report_date)}</span>}
                       {instrument && <span style={{ color: T.muted }} data-driver-instrument={d.series_id ?? ''}> · {instrument}</span>}
@@ -150,6 +187,10 @@ export function MacroView(props: GoldSubViewProps) {
               })}
             </Grid>
             {m.drivers.length === 0 && <div style={{ color: T.dim, fontSize: 11 }}>no drivers stored yet (21:30 FRED job, 03:10 Treasury / Yahoo job)</div>}
+            {/* what each column means, VISIBLE (F4: one of the two definitions lived in a hover tooltip only) */}
+            {/* the definition only: each tile names its own window and its own date, which can differ when a series'
+                last stored point does (the tile's `title` carries its words, the sub-line its report date) */}
+            <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }} data-driver-columns>{windowColumnsCaption(props.window, winWords, winFrom, winTo)} · each tile&apos;s own window start and date are on the tile</div>
             <Attribution sources={driverSources(m.drivers)} />
           </>
         )}
@@ -158,12 +199,14 @@ export function MacroView(props: GoldSubViewProps) {
       <Grid min={340}>
         {/* mc.kgx */}
         <GPanel id="mc.kgx" title="Gold or the dollar?" badge="arithmetic" evidence="identity" fresh={fb('gold')} dateOnly={goldDate} series={['KGX_PURE_GOLD_PCT', 'KGX_USD_EFFECT_PCT', 'KGX_INR_EFFECT_PCT']} catalog={catalog} layer={layer}
-          formula="usd_effect = −Σ wᵢ Δln fᵢ (DXY weights); pure = total − usd_effect; inr_effect = Δln(USD/INR)"
+          formula="usd_effect = −Δln(DXY close) over gold's own window; pure = total − usd_effect; inr_effect = Δln(USD/INR)"
           copyB={<>"gold rose $20; $12 was the dollar falling, $8 was buying" — and for MCX, how much was the rupee. <Term t="KGX">What is KGX?</Term></>}
-          copyP="DXY weights (EUR 57.6 %, JPY 13.6 %, GBP 11.9 %, CAD 9.1 %, SEK 4.2 %, CHF 3.6 %) are replicable but Europe-heavy; Fed broad weights would add CNY/INR with a weekly lag (open question j.2 #11).">
-          {m?.kgx ? <KgxBar period={m.kgx.period} total={m.kgx.total_pct} pure={m.kgx.pure_gold_pct} usdEffect={m.kgx.usd_effect_pct} inrEffect={m.kgx.inr_effect_pct} weights={m.kgx.weights} note={kgxNote} tips={tip} />
+          copyP="the dollar leg is −Δln of the ICE DXY close (DX-Y.NYB, settled 17:00 New York like GC=F), on gold's own two dates — the same number HEALTH's verdict and DOLLAR tile print. The six Yahoo '=X' closes it used to sum are start-of-day prints about a session behind (8 Nov 2026 RCA: 0.09 same-day correlation with the DXY close, 0.84 with the previous day's). The basket itself (EUR 57.6 %, JPY 13.6 %, GBP 11.9 %, CAD 9.1 %, SEK 4.2 %, CHF 3.6 %) is replicable but Europe-heavy; Fed broad weights would add CNY/INR with a weekly lag (open question j.2 #11).">
+          {m?.kgx ? <KgxBar period={m.kgx.period} total={m.kgx.total_pct} pure={m.kgx.pure_gold_pct} usdEffect={m.kgx.usd_effect_pct} inrEffect={m.kgx.inr_effect_pct} weights={m.kgx.weights} basketLabel={kgxWin?.basket_label} usdSource={kgxWin?.usd_source} usdAligned={kgxWin?.usd_aligned} note={kgxNote} tips={tip} />
             : <div style={{ color: T.dim, fontSize: 11 }}>KGX block pending (derived at 21:30)</div>}
-          {m?.kgx?.from_date && <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }} data-gold-kgx-window>{kgxWindowCaption(m.kgx, healthFrom)}</div>}
+          {m?.kgx?.from_date && <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }} data-gold-kgx-window>{kgxWindowCaption(kgxWin, healthFrom)}
+            {/* when the dollar leg's own two dates are not gold's, the panel says so instead of letting the caption claim them */}
+            {kgxWin?.usd_aligned === false && <span style={{ color: T.amber }} data-gold-kgx-usd-dates> · dollar leg {istLabel(kgxWin.usd_from_date)} → {istLabel(kgxWin.usd_to_date)}</span>}</div>}
           {rebasedSeries ? <div style={{ marginTop: 8 }}><LineChart series={rebasedSeries} height={120} dp={0} label="gold vs gold-in-basket, rebased" /></div>
             : <div style={{ fontSize: 10, color: T.dim, marginTop: 6 }}>rebased 1-y line appears once COMEX_GC_FRONT and DXY_CLOSE have daily history{rebased.error ? ` (${rebased.error})` : ''}</div>}
         </GPanel>
@@ -173,11 +216,18 @@ export function MacroView(props: GoldSubViewProps) {
           copyB="up in USD but down in EUR = it was the dollar."
           copyP="INR row = landed ₹/10 g before duty (M57); the duty-paid and MCX legs live on PHYSICAL, the trading desk is MCXG.">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, fontFamily: T.mono }} title={tip('gold_in_ccy')}>
+            {/* the page's window is its own column, the trailing ones are named by their calendar days (C-DATA-04 / F4):
+                the headers used to read 1D / 1W / 1M, where "1W" was a trailing 7 calendar days and "W" in the picker was
+                week to date — two meanings, one of them hover-only */}
+            {/* …and the window column is dropped altogether when it would repeat the 1D one — in the 'D' window the
+                page's window IS the previous session, so both columns read −0.573 for USD (§f.6, round-2 checker) */}
             <thead><tr style={{ color: T.muted, fontSize: 9.5, textAlign: 'right' }}>
-              <th style={{ textAlign: 'left', padding: '5px 10px' }}>CCY</th><th>PRICE</th><th title={tip('d1')}>1D</th><th title={tip('d1w')}>1W</th><th title={tip('d1m')}>1M</th><th style={{ padding: '5px 10px' }}>YTD</th>
+              <th style={{ textAlign: 'left', padding: '5px 10px' }}>CCY</th><th>PRICE</th><th title={tip('d1')}>1D</th>
+              {showCcyWindow && <th title={ccyWin?.label ? `${windowTag(props.window)} = ${ccyWin.label}` : undefined}>{windowTag(props.window)}</th>}
+              <th title={tip('d1w')}>7 D</th><th title={tip('d1m')}>30 D</th><th style={{ padding: '5px 10px' }}>YTD</th>
             </tr></thead>
             <tbody>
-              {(m?.currencies ?? []).map(c => (
+              {ccyRows.map(c => (
                 <tr key={c.ccy} style={{ borderTop: `1px solid ${T.border}`, textAlign: 'right' }}>
                   <td style={{ textAlign: 'left', padding: '5px 10px', color: T.text }}>{c.ccy}{c.ccy === 'INR' && (
                     <span style={{ fontSize: 9.5 }}>
@@ -187,12 +237,16 @@ export function MacroView(props: GoldSubViewProps) {
                     </span>
                   )}</td>
                   <td style={{ color: T.bright }}>{CCY_SYM[c.ccy] ?? ''}{num(c.price, c.ccy === 'JPY' || c.ccy === 'INR' ? 0 : 1)}</td>
-                  <td>{signedPct(c.d1)}</td><td>{signedPct(c.d1w)}</td><td>{signedPct(c.d1m)}</td><td style={{ padding: '5px 10px' }}>{signedPct(c.ytd)}</td>
+                  <td>{signedPct(c.d1)}</td>{showCcyWindow && <td data-ccy-window={c.ccy}>{signedPct(c.d_window)}</td>}<td>{signedPct(c.d1w)}</td><td>{signedPct(c.d1m)}</td><td style={{ padding: '5px 10px' }}>{signedPct(c.ytd)}</td>
                 </tr>
               ))}
-              {!m?.currencies?.length && <tr><td colSpan={6} style={{ padding: 10, color: T.dim }}>currency table pending</td></tr>}
+              {!ccyRows.length && <tr><td colSpan={showCcyWindow ? 7 : 6} style={{ padding: 10, color: T.dim }}>currency table pending</td></tr>}
             </tbody>
           </table>
+          <div style={{ fontSize: 10, color: T.dim, padding: '4px 10px 8px' }} data-ccy-columns>
+            {windowColumnsCaption(props.window, ccyWin?.label, ccyWin?.from_date, ccyWin?.to_date)}
+            {ccyWin?.note ? ` · ${ccyWin.note}` : ''}
+          </div>
         </GPanel>
       </Grid>
 

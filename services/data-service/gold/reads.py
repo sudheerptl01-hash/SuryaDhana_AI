@@ -122,14 +122,24 @@ def catalog(store: Any) -> dict[str, Any]:
 
 # ── series (PIT, resampled) ─────────────────────────────────────────────────────────────────────────
 
+def ist_day(ts: Any) -> date:
+    """The IST calendar day of an instant (the store is UTC-naive; an aware value is converted, not re-stamped). The
+    day a terminal reader is in — what "today" means for a session date, an age in days and a future-row guard."""
+    t = pd.Timestamp(ts)
+    t = t.tz_localize("UTC") if t.tzinfo is None else t
+    return t.tz_convert("Asia/Kolkata").date()
+
+
 def _table_backed(store: Any, sid: str, *, start: date | None, end: date | None, asof: datetime) -> pd.DataFrame | None:
     """PIT points for a catalog id served from a typed table (None when ``sid`` is not one of them). Columns:
-    report_date, value, release_at, quality, source — the same shape ``pit.asof_series`` returns."""
+    report_date, value, release_at, quality, source — the same shape ``pit.asof_series`` returns. No row dated after the
+    as-of's IST day is ever served (wave 2, C-DATA-02: a weekend quote stored as next Monday read back as age −1)."""
     cols = ["report_date", "value", "release_at", "quality", "source"]
     window = ""
     params: list[Any]
     if sid in SYMBOL_BY_SERIES:
-        base = """SELECT trade_date AS report_date, close AS value, first_seen_at AS release_at, 'close' AS quality, source
+        base = """SELECT trade_date AS report_date, close AS value, adj_close AS vendor_close, first_seen_at AS release_at,
+                         'close' AS quality, source
                   FROM gold_daily_bars WHERE symbol = ? AND close IS NOT NULL AND first_seen_at <= ?"""
         params = [SYMBOL_BY_SERIES[sid], asof]
     elif sid in ETF_SERIES:
@@ -159,27 +169,69 @@ def _table_backed(store: Any, sid: str, *, start: date | None, end: date | None,
     df = db.query_df(store, base + window + " ORDER BY report_date", params)
     if df.empty:
         return pd.DataFrame(columns=cols)
+    today = ist_day(asof)                           # never a session dated after the reader's own IST day
+    keep = [(db.to_date(d) or today) <= today for d in df["report_date"]]
+    n_future = len(keep) - sum(keep)
+    if n_future:
+        df = df[keep]
+        if df.empty:
+            out = pd.DataFrame(columns=cols)
+            out.attrs["future_dropped"] = n_future
+            return out
     if sid == "SGE_AUTD_DIRECTION":
         df["value"] = df["value"].map(lambda v: DIRECTION_CODE.get(str(v or "").strip().lower(), 0.0))
     elif sid in SYMBOL_BY_SERIES:                   # a bar fetched before its session close is 'partial', not a 'close'
         sym = SYMBOL_BY_SERIES[sid]
-        df["quality"] = ["partial" if is_partial(sym, d, t) else "close" for d, t in zip(df["report_date"], df["release_at"])]
-    return df.drop_duplicates("report_date", keep="last")[cols]
+        df["quality"] = [_bar_quality(sym, d, t, c, v) for d, t, c, v in
+                         zip(df["report_date"], df["release_at"], df["value"], df["vendor_close"], strict=True)]
+    out = df.drop_duplicates("report_date", keep="last")[cols]
+    out.attrs["future_dropped"] = n_future          # read by ``series`` so the guard can never fire silently
+    return out
+
+
+def _bar_quality(sym: str, day: Any, seen: Any, close: Any, vendor_close: Any) -> str:
+    """The clock a daily bar's close was read on: ``partial`` (fetched before the session closed — an in-progress price,
+    never a settlement), ``open_snapshot`` (an FX row still carrying Yahoo's own completed-bar close, which is the
+    00:00 London OPENING snapshot ≈ the PREVIOUS session's close — written before the wave-2 fix, see
+    ``ingest_yahoo.fx_session_close``) or ``close``.
+
+    On an ``=X`` row the label is INFERRED from ``close`` vs the vendor's ``adj_close``, not recorded: a close equal to
+    the vendor's is read as the un-rebuilt opening snapshot, which also catches a genuinely FLAT session and a pair
+    whose rebuilt close rounds to the same 4 dp. The label therefore UNDER-claims (it can call a rebuilt close an
+    opening snapshot) and never over-claims — an FX row whose vendor number is missing is ``open_snapshot`` too, since
+    nothing recorded which clock it came from. Recording it needs a ``close_source`` column on ``gold_daily_bars``
+    (``gold/schema.py``, raised as a patch request); until then this is the honest reading of what is stored."""
+    if is_partial(sym, day, seen):
+        return "partial"
+    if sym.endswith("=X") and not (close is not None and vendor_close is not None and float(close) != float(vendor_close)):
+        return "open_snapshot"
+    return "close"
 
 
 def series(store: Any, ids: list[str], *, start: date | None = None, end: date | None = None, asof: datetime | None = None,
            freq: str | None = None) -> dict[str, Any]:
     asof_dt = asof or utcnow()
+    today_ist = ist_day(asof_dt)
     cat = _catalog_map(store)
     df = pit.asof_series(store, ids, start=start, end=end, asof=asof_dt)
     out = []
     for sid in ids:
         sub = df[df["series_id"] == sid] if not df.empty else pd.DataFrame()
+        # wave 2 (C-DATA-02): a DAILY observation dated after the reader's own IST day describes a session that has not
+        # happened — it is dropped and COUNTED, never served (a derived series inherits the bad date from its input)
+        future = 0
         if sub.empty:                                   # not in gold_series: a table-backed id (bars, ETF tonnes, Asia OI) or unknown
             tb = _table_backed(store, sid, start=start, end=end, asof=asof_dt)
-            sub = tb if tb is not None else sub
+            if tb is not None:
+                future = int(tb.attrs.get("future_dropped", 0))
+                sub = tb
         sub, superseded = drop_superseded(sid, sub)
         row = catalog_row(cat, sid)
+        if not sub.empty and (sid in SYMBOL_BY_SERIES or str(row.get("freq") or "D") == "D"):
+            keep = [(db.to_date(d) or today_ist) <= today_ist for d in sub["report_date"]]
+            future += len(keep) - sum(keep)
+            if not all(keep):
+                sub = sub[keep]
         how = str(row.get("resample") or "last")
         pts = sub[["report_date", "value", "release_at"]].reset_index(drop=True) if not sub.empty else pd.DataFrame(
             columns=["report_date", "value", "release_at"])
@@ -196,14 +248,16 @@ def series(store: Any, ids: list[str], *, start: date | None = None, end: date |
             points.append(p)
         last_day = db.to_date(points[-1]["report_date"]) if points else None
         max_age = row.get("max_age_days")
-        age = (asof_dt.date() - last_day).days if last_day else None
+        # the age a reader lives in: IST days since the last observation, never negative (a negative age meant a
+        # future-dated row, which is now dropped above and reported as future_points_dropped)
+        age = max(0, (today_ist - last_day).days) if last_day else None
         out.append({"series_id": sid, "name": row.get("name"), "unit": row.get("unit"), "freq_native": row.get("freq"),
                     "quality": (sub["quality"].iloc[-1] if not sub.empty else None), "resample": how,
                     "points": points,
                     "last_point_partial": bool(points and points[-1].get("partial")),
                     "age_days": age, "stale": (age is not None and max_age is not None and age > int(max_age)),
                     "fresher_twin": _fresher_twin(store, sid, last_day, asof_dt, cat),
-                    "superseded_points": superseded,
+                    "superseded_points": superseded, "future_points_dropped": future,
                     "catalog": {k: row.get(k) for k in ("publisher", "verdict", "badge", "lag_note", "terms", "max_age_days", "source_entry")}})
     return {"as_of": iso_utc(utcnow()), "asof_applied": iso_utc(asof_dt), "freq": freq or "D", "series": out}
 
@@ -216,12 +270,18 @@ def _fresher_twin(store: Any, sid: str, last_day: date | None, asof: datetime, c
     twin = TWINS.get(sid)
     if not twin:
         return None
+    today = ist_day(asof)
     start = (last_day or asof.date() - timedelta(days=30))
     df = pit.asof_series(store, [twin], start=start, asof=asof)
     if df.empty:
         df = _table_backed(store, twin, start=start, end=None, asof=asof)
         if df is None or df.empty:
             return None
+    # wave 2 (C-DATA-02): a point dated after the reader's IST day describes a session that has not happened, so it is
+    # not "fresher" — and it must not hide the twin's real latest point either (``gold_series`` has no session clock)
+    df = df[[(db.to_date(d) or today) <= today for d in df["report_date"]]]
+    if df.empty:
+        return None
     last = df.iloc[-1]
     d = db.to_date(last["report_date"])
     if d is None or (last_day is not None and d <= last_day):
@@ -691,24 +751,39 @@ def cme_calendar(store: Any, *, symbol: str = "GC", as_of: date | None = None) -
 def bars(store: Any, *, symbol: str, interval: str = "1d", start: date | datetime | None = None, end: date | datetime | None = None,
          limit: int = 20000) -> dict[str, Any]:
     """``symbol`` is a Yahoo symbol (``GC=F``, ``GCZ26.CMX``) or a catalog id (``COMEX_GC_FRONT``); ``interval`` 1d | 1m | 5m.
-    Intraday ``ts`` is serialised with an explicit ``+00:00`` (the store is UTC-naive; wave 1c, C-TRADER-1 / C-DATA-1)."""
+    Intraday ``ts`` is serialised with an explicit ``+00:00`` (the store is UTC-naive; wave 1c, C-TRADER-1 / C-DATA-1).
+    A daily bar dated after the reader's IST day is not served and is counted in ``future_rows_dropped`` (wave 2,
+    C-DATA-02: a weekend snapshot of Friday's last quote had been stored under next Monday's date)."""
     sym = SYMBOL_BY_SERIES.get(symbol, symbol)
     params: list[Any]
+    dropped = 0
     if interval == "1d":
         start_d = db.to_date(start) or (utcnow().date() - timedelta(days=400))
+        today_ist = ist_day(utcnow())
+        end_d = min(db.to_date(end) or today_ist, today_ist)
         sql = ("SELECT trade_date, open, high, low, close, adj_close, volume, source, first_seen_at FROM gold_daily_bars "
-               "WHERE symbol = ? AND trade_date >= ?")
-        params = [sym, start_d]
-        if end:
-            sql += " AND trade_date <= ?"
-            params.append(db.to_date(end))
+               "WHERE symbol = ? AND trade_date >= ? AND trade_date <= ?")
+        params = [sym, start_d, end_d]
+        # the counter means what it says: rows THIS read asked for and did not serve. A window that ended before today
+        # never asked for them, so it reports 0 (and pays no COUNT(*)) — the count is the honesty check on the clamp
+        # above, not a property of the symbol.
+        if (db.to_date(end) or today_ist) >= today_ist:
+            dropped = int(db.scalar(store, "SELECT COUNT(*) FROM gold_daily_bars "
+                                           "WHERE symbol = ? AND trade_date > ? AND trade_date >= ?",
+                                    [sym, today_ist, start_d]) or 0)
         df = db.query_df(store, sql + " ORDER BY trade_date", params).tail(limit)
         if not df.empty:        # a bar fetched before its session close is the in-progress session, not a close (C-DATA-21)
             df["partial"] = [is_partial(sym, d, t) for d, t in zip(df["trade_date"], df["first_seen_at"])]
             # wave 1d (WEEKLY 'Tue 172,512 ?'): Yahoo sometimes repeats the previous session's volume on a futures bar; the
-            # store flags an exact repeat so a reader can grey it instead of printing it as that day's volume
+            # store flags an exact repeat so a reader can grey it instead of printing it as that day's volume.
+            # wave 2 (C-DATA-05): the previous row's volume may itself be a mid-session count, so the comparison also runs
+            # against the last SETTLED (non-partial) volume — a value carried forward over a partial bar is still a repeat
             vol = pd.to_numeric(df["volume"], errors="coerce")
-            df["volume_repeat"] = ((vol == vol.shift(1)) & vol.notna() & (vol > 0)).astype(bool)
+            partial = df["partial"].to_numpy(dtype=bool)
+            settled = vol.where(~partial).shift(1).ffill()                     # the last volume of a session that had closed
+            after_partial = pd.Series(partial, index=df.index).shift(1).fillna(False).to_numpy(dtype=bool)
+            df["volume_repeat"] = (((vol == vol.shift(1)) | ((vol == settled) & after_partial))
+                                   & vol.notna() & (vol > 0)).astype(bool)
     else:
         start_dt = pd.Timestamp(start).to_pydatetime() if start else (utcnow() - timedelta(days=7))
         sql = "SELECT ts, open, high, low, close, volume, source FROM gold_bars_intraday WHERE symbol = ? AND interval = ? AND ts >= ?"
@@ -717,7 +792,8 @@ def bars(store: Any, *, symbol: str, interval: str = "1d", start: date | datetim
             sql += " AND ts <= ?"
             params.append(pd.Timestamp(end).to_pydatetime())
         df = db.query_df(store, sql + " ORDER BY ts", params).tail(limit)
-    return {"symbol": sym, "series_id": SERIES_BY_SYMBOL.get(sym), "interval": interval, "rows": db.records(df), "count": len(df)}
+    return {"symbol": sym, "series_id": SERIES_BY_SYMBOL.get(sym), "interval": interval, "rows": db.records(df), "count": len(df),
+            "future_rows_dropped": dropped}
 
 
 def asia(store: Any, *, start: date | None = None, exchange: str | None = None) -> dict[str, Any]:

@@ -982,13 +982,18 @@ def _data_obs(params: dict[str, Any], p: Any, src: str) -> Observation:
 
 
 _NUMBER = re.compile(r"[+\-−]?\d[\d,]*(\.\d+)?")
+# a weekday + day + month is a CLOCK, not a figure. Since the 8 Nov 2026 RCA (critic F5) the HEALTH verdict dates every
+# clause that sits on its own day — "funds −1.8 % w/w to Tue 3 Nov", "GLD +2.9 t on Wed 4 Nov", "gold +4.5 % week to date
+# (Fri 30 Oct close → Fri 6 Nov)" — so without this the key changes as those dates roll and a `gold_health changed` rule
+# fires on most days. `_DAY` runs FIRST, so `_NUMBER` never has to see the day's digits.
+_DAY = re.compile(r"\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b")
 
 
 def gold_clause_key(verdict: str) -> str:
-    """'India basis +1.4 % vs duty-paid landed · GLD +2.1 t on the day · describes, does not predict' →
-    'GLD # t on the day | India basis # % vs duty-paid landed': the clauses without their figures, sorted."""
+    """'India basis +1.4 % vs duty-paid landed · GLD +2.1 t on Wed 4 Nov · describes, does not predict' →
+    'GLD # t on <d> | India basis # % vs duty-paid landed': the clauses without their figures OR their dates, sorted."""
     parts = [p.strip() for p in str(verdict).split(" · ") if p.strip() and p.strip() != DESCRIBES]
-    return " | ".join(sorted({_NUMBER.sub("#", p) for p in parts}))
+    return " | ".join(sorted({_NUMBER.sub("#", _DAY.sub("<d>", p)) for p in parts}))
 
 
 # ── Telegram / GO text → a rule ──────────────────────────────────────────────────────────────────────────────

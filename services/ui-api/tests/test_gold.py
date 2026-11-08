@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import math
 import re
 import sys
 import threading
@@ -924,19 +925,76 @@ def test_macro_drivers_kgx_and_move(client: TestClient) -> None:
 
 
 def test_kgx_split_identity() -> None:
+    """The split's dollar leg is −Δln(DXY_CLOSE), not the Yahoo "=X" basket (8 Nov 2026, C-DATA-03). This test used to
+    assert `set(k["weights"]) == {"FX_EURUSD", "FX_JPY"}` — "the legs this split summed" — which is the behaviour the RCA
+    removed: those stored closes are start-of-day prints a session behind gold's and DXY's, and summing them gave the
+    dollar's effect the opposite sign on 90 of the 191 days DXY moved ≥ 0.1 %. `weights` is now the DXY's composition."""
     gold_pts = [{"report_date": "2026-10-19", "value": 4100.0}, {"report_date": "2026-10-26", "value": 4018.0}]
     fx = {
+        "DXY_CLOSE": [{"report_date": "2026-10-19", "value": 99.0}, {"report_date": "2026-10-26", "value": 99.6}],
         "FX_EURUSD": [{"report_date": "2026-10-19", "value": 1.17}, {"report_date": "2026-10-26", "value": 1.16}],
         "FX_JPY": [{"report_date": "2026-10-19", "value": 150.0}, {"report_date": "2026-10-26", "value": 152.0}],
         "USDINR_CLOSE": [{"report_date": "2026-10-19", "value": 94.5}, {"report_date": "2026-10-26", "value": 94.93}],
     }
     k = gold.kgx_split(gold_pts, fx, 7)
     assert k["total_pct"] == pytest.approx(-2.0, abs=0.01) and k["usd_effect_pct"] < 0  # dollar up → negative effect
+    assert k["usd_effect_pct"] == pytest.approx(-math.log(99.6 / 99.0) * 100, abs=0.01)
     assert k["pure_gold_pct"] == pytest.approx(k["total_pct"] - k["usd_effect_pct"], abs=0.001)
-    assert k["inr_effect_pct"] == pytest.approx((94.93 / 94.5 - 1) * 100, abs=0.01) and set(k["weights"]) == {
-        "FX_EURUSD",
-        "FX_JPY",
+    assert k["inr_effect_pct"] == pytest.approx((94.93 / 94.5 - 1) * 100, abs=0.01)
+    assert k["usd_source"] == "DXY_CLOSE" and k["usd_from_date"] == "2026-10-19" and k["usd_to_date"] == "2026-10-26"
+    assert set(k["weights"]) == set(gold.DXY_WEIGHTS) and "ICE basket" in k["basket_label"]
+    # negative control: the FX legs alone can no longer produce a dollar effect, and the note says which series is needed
+    nod = gold.kgx_split(gold_pts, {s: v for s, v in fx.items() if s != "DXY_CLOSE"}, 7)
+    assert nod["usd_effect_pct"] is None and nod["pure_gold_pct"] is None and nod["line"] is None
+    assert "DXY" in nod["note"] and "a session behind" in nod["note"]
+
+
+def test_kgx_split_never_reads_a_row_dated_after_golds_close() -> None:
+    """8 Nov 2026 (C-DATA-03 / C-DATA-04): on a Sunday the store held JPY=X / CAD=X / INR=X rows dated Mon 09 Nov, and the
+    split dated "as of Fri 06 Nov" was built from them. Every leg is now cut at gold's own last stored date."""
+    gold_pts = [{"report_date": "2026-10-30", "value": 3898.9}, {"report_date": "2026-11-06", "value": 4074.9}]
+    fx = {
+        "DXY_CLOSE": [
+            {"report_date": "2026-10-30", "value": 101.88},
+            {"report_date": "2026-11-06", "value": 102.30},
+            {"report_date": "2026-11-09", "value": 104.00},   # a future-dated weekend stub
+        ],
+        "USDINR_CLOSE": [
+            {"report_date": "2026-10-30", "value": 95.1524},
+            {"report_date": "2026-11-06", "value": 94.4589},
+            {"report_date": "2026-11-09", "value": 93.91},
+        ],
     }
+    k = gold.kgx_split(gold_pts, fx, 7, date(2026, 10, 30), "week to date (since the Fri 30 Oct close)")
+    assert k["to_date"] == "2026-11-06" and k["usd_to_date"] == "2026-11-06"
+    assert k["usd_effect_pct"] == pytest.approx(-math.log(102.30 / 101.88) * 100, abs=0.005)    # ≈ −0.41, not +0.17
+    assert k["usd_effect_pct"] < 0 and k["inr_effect_pct"] == pytest.approx((94.4589 / 95.1524 - 1) * 100, abs=0.01)
+    assert k["usd_aligned"] is True and k["note"] is None
+    # negative control: the pre-fix numbers — the 09 Nov rows — are what we must NOT see
+    assert k["usd_effect_pct"] != pytest.approx(-math.log(104.00 / 101.88) * 100, abs=0.005)
+    assert k["inr_effect_pct"] != pytest.approx((93.91 / 95.1524 - 1) * 100, abs=0.01)
+
+
+def test_one_dollar_effect_per_page_health_and_kgx_agree(client: TestClient) -> None:
+    """C-DATA-03 / F4: HEALTH's H2 clause, the DOLLAR gauge and MACRO's KGX split print ONE dollar effect per window —
+    live on 8 Nov 2026 the page said "of which the dollar −0.4 %" beside a KGX panel badged "arithmetic · identity · the
+    same window as HEALTH's" that said "+0.17 % the dollar"."""
+    for window in ("D", "W", "M"):
+        h = client.get("/api/gold/health", params={"window": window}).json()
+        m = client.get("/api/gold/macro", params={"window": window}).json()
+        dollar = next(g for g in h["gauges"] if g["key"] == "dollar")
+        h2 = next(c for c in h["verdict"]["clauses"] if c["rule_id"] == "H2")
+        kgx = m["kgx"]
+        assert kgx["usd_effect_pct"] == pytest.approx(h2["value"], abs=0.01), window
+        assert kgx["usd_effect_pct"] == pytest.approx(dollar["usd_effect_pct"], abs=0.01), window
+        assert kgx["usd_source"] == dollar["usd_effect_source"] == "DXY_CLOSE"
+        # the same window AND the same two dates on both views
+        assert kgx["usd_from_date"] == dollar["usd_effect_from"] == h2["usd_effect_from"], window
+        assert kgx["usd_to_date"] == dollar["usd_effect_to"] == h2["usd_effect_to"], window
+        assert kgx["from_date"] == next(g for g in h["gauges"] if g["key"] == "trend")["window_from"], window
+        # the sign the headline rests on agrees with the panel's leg
+        if h2["value"] and kgx["usd_effect_pct"]:
+            assert (h2["value"] > 0) == (kgx["usd_effect_pct"] > 0), window
 
 
 def test_calendar_merges_stored_and_computed_rows(client: TestClient) -> None:

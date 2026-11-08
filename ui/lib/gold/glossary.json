@@ -1267,7 +1267,7 @@
   {
    "term": "KGX",
    "short": "The Kitco Gold Index idea: split a gold move into the part due to the dollar (DXY weights EUR 57.6 / JPY 13.6 / GBP 11.9 / CAD 9.1 / SEK 4.2 / CHF 3.6) and the 'pure' part.",
-   "long": "usd_move = −Σ wᵢ Δln fᵢ; pure_gold = gold_usd + usd_move. 22 Oct 2026: −2.18% = −2.29% pure + 0.10% USD. Replicated on MACRO as 'Gold or the dollar?'; Kitco's numbers stay a link.",
+   "long": "Kitco's own formula is usd_move = −Σ wᵢ Δln fᵢ over those six crosses. MACRO's 'Gold or the dollar?' takes the idea, not the formula: since the 8 Nov 2026 RCA its dollar leg is −Δln of the ICE DXY close (DX-Y.NYB) over gold's own two dates, and pure = total − usd_effect. The stored '=X' crosses are start-of-day prints a session behind gold's and DXY's settles, which gave the summed basket the opposite sign on 90 of the 191 days DXY moved ≥ 0.1 %. Kitco's numbers stay a link.",
    "see_also": [
     "KGX rupee leg",
     "DXY",

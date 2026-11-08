@@ -18,6 +18,7 @@ import type { IChartApi } from 'lightweight-charts'
 import { Chip, DataTable, T, fmtFixed, fmtSigned, type Column } from '@/components/terminal'
 import { getGoldBars, getGoldCot, getGoldFlows, getGoldPositioningDaily, getGoldSeries } from '@/lib/gold/api'
 import { NO_VERDICT, dayLabel, fmtCount, fmtInr0, fmtSignedCount, fmtSignedPctSp, fmtUsd, oiSpanByDate, parseIso, publishGate } from '@/lib/gold/format'
+import { cotOverdueWords, tapeDoiByDate, tapeFamilyScopeLabel, tapeScopeLabel } from './feedModel'
 import { istDateISO } from '@/lib/format'
 import { dailyChanges, dailyOhlc, istDate, shiftDays, sma, weekRows, weekdayIndex, type Ohlc } from '@/lib/gold/sessions'
 import type { DailyPositioningRow, GoldCot, GoldSubViewProps } from '@/lib/gold/types'
@@ -135,6 +136,10 @@ export function whoDidLine(c: GoldCot | null | undefined): string {
   parts.push(`as of ${dayLabel(c.latest.report_date) || c.latest.report_date}`)
   const released = c.latest.release_ist ?? (() => { const d = parseIso(c.latest.release_at); return d ? `${dayLabel(istDate(d))} IST` : null })()
   if (released) parts.push(`released ${released}`)
+  // a scheduled release already past with nothing stored is named BEFORE `next`, which keeps meaning the next upcoming
+  // release (API_CONTRACT §2.5) and so would otherwise imply no report is due before it (CT-03 / F2 / C-DATA-01)
+  const due = cotOverdueWords(c.latest, dayLabel)
+  if (due) parts.push(due)
   // `next_release_ist` is a label ("Sat 07 Nov 01:00 IST"); an ISO instant in its place is formatted, never printed raw
   if (c.latest.next_release_ist) parts.push(`next ${/^\d{4}-\d{2}-\d{2}T/.test(c.latest.next_release_ist) ? istStamp(c.latest.next_release_ist) : c.latest.next_release_ist}`)
   return parts.join(' · ')
@@ -153,9 +158,20 @@ export function releaseIstDate(releaseAt: string | null | undefined): string | n
   return d ? istDate(d) : null
 }
 
+/**
+ * The MCX OI column's two scopes, from the daily payload's own tape (CT-06, 8 Nov 2026): `doi` is the PICKED contract's
+ * ΔOI when the server read the Breeze daily bars (else the master's family sum), `doi_family` always the 07:35 master's
+ * sum across every expiry. WEEKLY printed the family sum under a per-expiry header and tooltip, so it read −9,871 for
+ * GOLDM on 03 Nov (NOV −22,119 of expiry run-off + DEC +9,389) while POSITIONING's history said the traded DEC contract
+ * opened +9,389 — two opposite directions on one page with nothing to explain why. Read without widening types.ts.
+ *
+ * `mcxFill` marks a session the server had no Breeze bar for: the per-contract ΔOI is unknown there, so this column
+ * prints '— no bar' with the reason and only the family column carries a number. Until the checker's 8 Nov round those
+ * rows carried the family sum as `doi`, so both columns printed the identical −9,871 (PLAN §f.6).
+ */
 interface WeekTableRow { date: string; day: string; k: Ohlc | null; chg: number | null; comexOi: number | null; mcxOi: number | null; mcxSpan: { n: number; note: string | null } | null
+  mcxFamOi: number | null; mcxFamMech: boolean; mcxFill: string | null; mcxNote: string | null
   ibja: number | null; gld: number | null; cot: string | null }
-
 
 export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSubViewProps) {
   const today = istDateISO()
@@ -182,7 +198,11 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
   const changes = useMemo(() => dailyChanges(daily), [daily])
   // the GC product only — the same definition POSITIONING and DAILY print (the 5 Nov review: +14,150 all products here vs GC +3,381 there)
   const comexOi = useMemo(() => oiChangeByDate(comex.data?.rows, 'GC'), [comex.data])
-  const mcxOi = useMemo(() => oiChangeByDate(mcx.data?.rows, sel.family), [mcx.data, sel.family])
+  // the server's tape carries BOTH scopes per session: the picked contract and the master's all-expiry sum (CT-06)
+  const mcxDoi = useMemo(() => tapeDoiByDate(mcx.data?.quadrant_tape), [mcx.data])
+  const mcxScope = useMemo(() => tapeScopeLabel(mcx.data, sel.family), [mcx.data, sel.family])
+  // the family sum's own header comes from the server too, so `doi_family` is never printed under the per-contract one
+  const mcxFamScope = useMemo(() => tapeFamilyScopeLabel(mcx.data, sel.family), [mcx.data, sel.family])
   const mcxSpan = useMemo(() => oiSpanByDate(mcx.data?.quadrant_tape), [mcx.data])
   const ibja = useMemo(() => new Map((series.data?.series.find(s => s.series_id === 'IBJA_999_PM')?.points ?? []).map(p => [p.report_date, p.value])), [series.data])
   const gld = useMemo(() => {
@@ -203,7 +223,9 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
     const date = shiftDays(week.monday, i)
     // a Saturday IST release lands on the Friday row (the last session of that week)
     const cotHere = cotRelease != null && (cotRelease === date || (i === 4 && cotRelease === shiftDays(date, 1)))
-    return { date, day: DAY_NAMES[i], k, chg: changes.get(date) ?? null, comexOi: comexOi.get(date) ?? null, mcxOi: mcxOi.get(date) ?? null, mcxSpan: mcxSpan.get(date) ?? null,
+    const md = mcxDoi.get(date)
+    return { date, day: DAY_NAMES[i], k, chg: changes.get(date) ?? null, comexOi: comexOi.get(date) ?? null, mcxOi: md?.doi ?? null, mcxSpan: mcxSpan.get(date) ?? null,
+             mcxFamOi: md?.family ?? null, mcxFamMech: md?.familyMech ?? false, mcxFill: md?.fill ?? null, mcxNote: md?.note ?? null,
              ibja: ibja.get(date) ?? null, gld: gld.get(date) ?? null, cot: cotHere ? cotCell : null }
   }) : []
   // a daily volume identical to the previous session's is a stale partial-day value, not a coincidence (C-TRADER-25 / C-DATA-20)
@@ -233,8 +255,15 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
       ? <span data-gold-vol-placeholder style={{ color: T.dim }} title="identical to the previous session: a carried-forward partial-day Yahoo value, not this session's volume; the 03:10 job re-fetches it">— (repeat)</span>
       : <span style={{ color: T.text }}>{fmtCount(r.k.v)}</span>) : '—') },
     { key: 'comexOi', label: 'COMEX GC OI Δ', align: 'right', title: tip('oi_change'), render: r => gated('CME_VOI', <span style={{ color: T.muted }}>{fmtSignedCount(r.comexOi)}</span>) },
-    { key: 'mcxOi', label: `MCX ${sel.family} OI Δ lots`, align: 'right', title: tip('mcx_oi_by_expiry'), render: r => gated('MCX_CURVE_ICICI', <span style={{ color: T.muted }} data-gold-week-span={r.mcxSpan?.n ?? undefined}
-      title={r.mcxSpan ? (r.mcxSpan.note ?? `over ${r.mcxSpan.n} sessions`) : undefined}>{fmtSignedCount(r.mcxOi)}{r.mcxSpan && r.mcxOi != null ? <span style={{ color: T.amber, fontSize: 9 }}> over {r.mcxSpan.n} sessions</span> : null}</span>) },
+    // the header names the SCOPE the server summed, so this column and POSITIONING's per-contract history never read as
+    // opposite answers to the same question (CT-06)
+    { key: 'mcxOi', label: `MCX ${mcxScope} OI Δ lots`, align: 'right', title: tip('mcx_oi_by_expiry'), render: r => gated('MCX_CURVE_ICICI', <span style={{ color: T.muted }} data-gold-week-span={r.mcxSpan?.n ?? undefined}
+      data-gold-week-fill={r.mcxFill ?? undefined}
+      title={r.mcxFill ? (r.mcxNote ?? 'no Breeze bar for this session: this contract\'s own ΔOI is not known') : r.mcxSpan ? (r.mcxSpan.note ?? `over ${r.mcxSpan.n} sessions`) : undefined}>{fmtSignedCount(r.mcxOi)}{r.mcxSpan && r.mcxOi != null ? <span style={{ color: T.amber, fontSize: 9 }}> over {r.mcxSpan.n} sessions</span> : null}{r.mcxFill && r.mcxOi == null ? <span style={{ color: T.dim, fontSize: 9 }}> no bar</span> : null}</span>) },
+    { key: 'mcxFamOi', label: `${mcxFamScope} Δ lots`, align: 'right',
+      title: tip('mcx_oi_family_sum') ?? 'the 07:35 ICICI master\'s ΔOI summed over every expiry of the family: it also holds an expiring month\'s run-off, which is mechanical, not a position view',
+      render: r => gated('MCX_CURVE_ICICI', <span data-gold-week-fam-mech={r.mcxFamMech ? 'true' : undefined} style={{ color: r.mcxFamMech ? T.dim : T.muted }}
+        title={r.mcxFamMech ? 'includes an expiring contract\'s run-off (tender / expiry): partly mechanical' : undefined}>{fmtSignedCount(r.mcxFamOi)}{r.mcxFamMech && r.mcxFamOi != null ? <span style={{ color: T.amber, fontSize: 9 }}> incl. expiry run-off</span> : null}</span>) },
     { key: 'ibja', label: 'IBJA 999 PM ₹/10 g', align: 'right', title: tip('ibja_999'), render: r => gated('IBJA_999_PM', <>{fmtInr0(r.ibja)}</>) },
     { key: 'gld', label: 'GLD Δ t', align: 'right', title: tip('etf_chg_1d'), render: r => gated('GLD_TONNES', <span style={{ color: T.muted }}>{fmtSigned(r.gld, 2)}</span>) },
     { key: 'cot', label: 'COT (Fri release)', render: r => gated('COT_DISAGG_F', <span style={{ color: T.muted, whiteSpace: 'normal' }}>{r.cot ?? '—'}</span>) },

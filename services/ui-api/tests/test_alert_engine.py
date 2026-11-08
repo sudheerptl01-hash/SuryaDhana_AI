@@ -326,6 +326,21 @@ def test_ban_results_flows_vix_driver_gold_and_data() -> None:
     g = E.extract("gold_health", {}, got_for("gold_health", {}, gold), TODAY)
     assert g.value == "GLD # t on the day | India basis # % vs duty-paid landed" and g.as_of == "2026-11-05"
     assert E.gold_clause_key("India basis +1.4 % vs duty-paid landed") == E.gold_clause_key("India basis −0.3 % vs duty-paid landed")
+    # the verdict's clauses carry their own clock since 8 Nov 2026 (critic F5): a DATE ROLL is not a change of state, so
+    # the key strips the weekday + day + month too. Without this a `gold_health changed` rule fires on most days.
+    assert E.gold_clause_key("real yield +3 bp (to Fri 6 Nov)") == E.gold_clause_key("real yield +0 bp (to Thu 5 Nov)")
+    assert E.gold_clause_key("GLD +2.9 t on Wed 4 Nov") == E.gold_clause_key("GLD -2.9 t on Tue 3 Nov")
+    assert E.gold_clause_key("funds -1.8 % w/w to Tue 3 Nov (new shorts; gold -3.3 % that week)") == E.gold_clause_key(
+        "funds +1.3 % w/w to Tue 27 Oct (new shorts; gold -1.6 % that week)")
+    # the price clause carries TWO dates (the checker's addition: the proposed test did not exercise it)
+    assert E.gold_clause_key("gold +4.5 % week to date (Fri 30 Oct close → Fri 6 Nov)") == E.gold_clause_key(
+        "gold +1.1 % week to date (Fri 6 Nov close → Fri 13 Nov)")
+    # negative controls: a different CLAUSE, a different DRIVER WORD and a different WINDOW still give a different key
+    assert E.gold_clause_key("GLD +2.9 t on Wed 4 Nov") != E.gold_clause_key("GLD +2.9 t on Wed 4 Nov (notable)")
+    assert E.gold_clause_key("funds -1.8 % w/w to Tue 3 Nov (new shorts)") != E.gold_clause_key(
+        "funds -1.8 % w/w to Tue 3 Nov (long liquidation)")
+    assert E.gold_clause_key("gold +4.5 % week to date (Fri 30 Oct close → Fri 6 Nov)") != E.gold_clause_key(
+        "gold +4.5 % month to date (Fri 30 Oct close → Fri 6 Nov)")
     dh = {"as_of": "2026-11-06T08:30:00+05:30", "rows": [{"id": "nse_bhavcopy", "state": "fresh"}, {"id": "fii_dii", "state": "amber"},
                                                          {"id": "gold_cot", "state": "red"}, {"id": "x", "state": "gap"}]}
     any_ = {"dataset": "any"}

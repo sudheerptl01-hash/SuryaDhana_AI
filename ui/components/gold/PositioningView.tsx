@@ -36,6 +36,7 @@ import { CotWhoIsLong } from './CotWhoIsLong'
 import { OiQuadrantTape, QuadrantTag } from './OiQuadrantTape'
 import { Gauge, LineChart, StackedBars, type StackRow } from './FlowCharts'
 import { Attribution, Degraded, Field, GPanel, LinkOnlyExplainer, LinkTile, Term, contextTone, useGoldLoad } from './ViewBits'
+import { cotOverdueWords, settleStandIn, tapeScopeLabel, tapeSinceLabel } from './feedModel'
 import {
   ALL_HISTORY_MIN_REPORTS, COT_RANGES, CROWD_LABEL, MINUS, type CotRange, concentrationLines, contractsToMoz, contractsToTonnes, contractsToUsdBn, cotRangeLabel,
   fundDriverLabel, inr, istLabel, num, pct, percentileLabel, serverFreshness, signed, signedPct, whoDidWords, oiQuadrantWords, tenderWords } from './goldViewModel'
@@ -71,6 +72,8 @@ function crowdPercentile(crowd: unknown, nReports: number | null): { value: numb
   const win = serverNum(crowd, 'percentile_window')
   return { value: win, label: serverStr(crowd, 'window_label') ?? serverStr(crowd, 'percentile_label') }
 }
+/** the COT reports the store owes (CT-03 / F2 / C-DATA-01) and which stand-in a settle cell holds (CT-06) — pure models */
+const cotOverdueLine = (latest: unknown): string | null => cotOverdueWords(latest, istLabel)
 /** the release build hides a panel whose feed ui-api does not serve yet (PLAN §f.2: placeholder in dev, hidden in release) */
 const RELEASE_BUILD = process.env.NODE_ENV === 'production'
 /** GC volume ÷ its 20-d average needs a few sessions stored, or the ratio is 1.00× by construction (C-DATA-19) */
@@ -153,8 +156,14 @@ export function PositioningView(props: GoldSubViewProps) {
             </Grid>
             <div style={{ fontSize: 10.5, color: T.muted, marginTop: 8 }}>
               {/* release_ist / next_release_ist are LABELS the server prints (API_CONTRACT §2.5) — never a converted release_at (C-DATA-6) */}
-              <span title={tip('cot_as_of')}>as of {istLabel(c.latest?.report_date ?? null)}</span> · <span title={tip('cot_release')} data-cot-release>released {c.latest?.release_ist ?? '—'}</span> · <span title={tip('next_release_ist')}>next {c.latest?.next_release_ist ?? '—'}</span>
+              <span title={tip('cot_as_of')}>as of {istLabel(c.latest?.report_date ?? null)}</span> · <span title={tip('cot_release')} data-cot-release>released {c.latest?.release_ist ?? '—'}</span>
+              {/* a scheduled release that has passed with nothing stored is named before `next`, so the line never implies
+                  the stored week is the latest one published (CT-03 / F2 / C-DATA-01) */}
+              {cotOverdueLine(c.latest) && <> · <span data-cot-overdue style={{ color: T.amber }}
+                title={tip('cot_overdue') ?? 'a report whose CFTC release time has passed with nothing stored here: a missed fetch, an outage or a CFTC delay — the numbers above are still the older report\'s'}>{cotOverdueLine(c.latest)}</span></>}
+              {' · '}<span title={tip('next_release_ist')}>next {c.latest?.next_release_ist ?? '—'}</span>
             </div>
+            {c.latest?.catch_up_note && <div data-cot-catchup style={{ fontSize: 10, color: T.amber, marginTop: 4 }}>▲ {c.latest.catch_up_note}</div>}
             <Attribution sources={['CFTC']} />
           </>
         )}
@@ -347,13 +356,19 @@ function DailyMcx({ data, error, tip, layer, catalog, family }: DailyProps & { f
     { key: 'expiry', label: 'Expiry', render: r => <span style={{ color: T.text }}>{r.expiry ? istLabel(r.expiry) : '—'}</span> },
     { key: 'open_interest', label: 'OI (lots)', align: 'right', title: tip('mcx_oi_by_expiry'), render: r => num(r.open_interest) },
     { key: 'oi_change', label: 'ΔOI (this expiry)', align: 'right', title: tip('oi_change'), render: r => signed(r.oi_change) },
-    { key: 'settle', label: 'Settle ₹/10 g', align: 'right', title: tip('settlement_from_band'), render: r => <span>{inr(r.settle_or_close)} {r.quality === 'proxy' && <Chip color={T.amber} style={{ fontSize: 8 }}>PROXY</Chip>}</span> },
+    // the chip names WHICH stand-in, and only when there is a value: '— PROXY' printed on every empty cell (CT-06)
+    { key: 'settle', label: 'Settle ₹/10 g', align: 'right', title: tip('settlement_from_band'), render: r => {
+      const chip = settleStandIn(r)
+      return <span>{inr(r.settle_or_close)} {chip && <Chip color={T.amber} style={{ fontSize: 8 }} title={chip.why}>{chip.text}</Chip>}</span>
+    } },
   ]
   return (
     <GPanel id="p.daily.mcx" title={`MCX ${fam} open interest by expiry (07:35)`} badge="arithmetic" evidence="ICICI master: lots per contract" fresh={data && !mismatch ? serverFreshness(data.freshness) : null} dateOnly={lastDate ? istLabel(lastDate) : null}
-      series={['MCX_CURVE_ICICI']} catalog={catalog} subtitle={data?.since && !mismatch ? `since ${istLabel(data.since)}` : 'history starts the day the job started'} layer={layer}
-      copyB="where MCX liquidity sits and when it moves: the front month's OI falls into the tender period while the next month's rises."
-      copyP="proxy settlement (band midpoint) until official bhavcopy rows exist (O-8); no volume until the Breeze daily path is verified (F3).">
+      series={['MCX_CURVE_ICICI']} catalog={catalog} subtitle={data?.since && !mismatch
+        ? `ladder since ${istLabel(data.since)}${tapeSinceLabel(data) ? ` · tape since ${istLabel(tapeSinceLabel(data) as string)}` : ''}`
+        : 'history starts the day the job started'} layer={layer}
+      copyB={<>where MCX liquidity sits and when it moves: the front month&apos;s OI falls into the tender period while the next month&apos;s rises. The ladder is the 07:35 master&apos;s OI per expiry; the tape below reads {tapeScopeLabel(data, fam)}.</>}
+      copyP="proxy settlement (band midpoint) until official bhavcopy rows exist (O-8), then the last-30-min VWAP, then the Breeze daily close — each chipped with which one it is; no volume until the Breeze daily path is verified (F3).">
       <Degraded error={error} what="MCX daily OI" />
       {!data && !error && <Loading label="MCX open interest" />}
       {data && mismatch && (
@@ -366,7 +381,15 @@ function DailyMcx({ data, error, tip, layer, catalog, family }: DailyProps & { f
           <div>
             {stack.length > 0 ? <StackedBars rows={stack} keys={expiries.map(e => ({ key: e, label: istLabel(e) }))} height={160} dp={0} label="MCX OI by expiry" /> : <div data-mcx-no-rows style={{ color: T.dim, fontSize: 11 }}>no rows for {fam} yet{data.since ? ` — since ${istLabel(data.since)}` : ' (the 07:35 master job writes one row per expiry per session)'}</div>}
             {data.roll && <div style={{ fontSize: 10.5, color: T.muted, marginTop: 6 }}><span title={tip('roll_ratio')}>roll ratio front ÷ next {num(data.roll.ratio, 2)}</span> · <span title={tip('days_to_tender')} data-days-to-tender>{tenderWords(data.roll.days_to_tender_or_fnd, data.roll.tender_start ? istLabel(data.roll.tender_start) : null, data.roll, todayIst())}</span>{data.roll.tender_start && !data.roll.in_tender && (data.roll.days_to_tender_or_fnd ?? 0) > 0 ? <span title={tip('tender_start')}> · tender from {istLabel(data.roll.tender_start)} (computed; the MCX circular is the legal source)</span> : null}</div>}
-            {data.quadrant_tape?.length ? <div style={{ marginTop: 8 }}><OiQuadrantTape tape={data.quadrant_tape} tips={tip} missingOiNote={MCX_OI_LAG} oiScope={`all ${fam} expiries`} /></div> : null}
+            {/* the scope the SERVER summed (CT-06): one contract when it read the Breeze daily bars, 'all <FAM> expiries'
+                when it fell back to the 07:35 master — never a scope this component invents */}
+            {data.quadrant_tape?.length ? <div style={{ marginTop: 8 }}>
+              <OiQuadrantTape tape={data.quadrant_tape} tips={tip} missingOiNote={MCX_OI_LAG} oiScope={tapeScopeLabel(data, fam)} />
+              {serverStr(data, 'tape_note') && <div data-tape-note style={{ fontSize: 9.5, color: T.dim, marginTop: 4, lineHeight: 1.5 }}>{serverStr(data, 'tape_note')}</div>}
+              {/* a session with no Breeze bar keeps the master's price and all-expiry sum and carries no per-contract
+                  ΔOI at all: said here, so the tape's own scope label stays true of every tile under it */}
+              {serverStr(data, 'tape_fill_note') && <div data-tape-fill-note style={{ fontSize: 9.5, color: T.amber, marginTop: 3, lineHeight: 1.5 }}>▲ {serverStr(data, 'tape_fill_note')}</div>}
+            </div> : null}
           </div>
           <DataTable columns={cols} rows={ladder} rowKey={r => `${r.symbol_or_product}-${r.expiry}`} dense empty={<div style={{ padding: 8, color: T.dim, fontSize: 11 }}>ladder empty</div>} />
         </div>

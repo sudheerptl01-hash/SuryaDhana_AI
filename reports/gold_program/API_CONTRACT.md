@@ -147,6 +147,16 @@ naive_mean_abs_error, bias, threshold, badge}`, `today_log` (today's log row or 
 `freshness`, and — when `contract` ≠ GOLD or `expiry` is given — `contract_fair` (the `/health.fair` block for that
 family). `eurusd_trigger` and the headline topics come from prefs `gold.triggers.v1` unless sent.
 
+**The pick's own verdict (8 Nov 2026, critic F6).** `model`, `verdict`, `baseline`, the 08:45 snapshot and the accuracy
+log stay on GOLD 1 kg (₹ per 10 g) — that is the scored history and it is not re-pointed. For another family,
+`contract_fair` now also carries `model_contract: "GOLD"`, `model_note` (which says in words that the model and the log
+run on GOLD, not on this contract), `chase_limit` and `verdict{state: OK|WAIT|NEED_PRICE, title, detail, diff, price,
+price_source: typed|live, fair_value, threshold, quote_unit, contract, expiry, badge: "heuristic", note}` — the typed
+`mcx_price` (else the cached live MCX price) against the PICK's own fair value and the ₹ limit in the pick's own
+quotation unit: `threshold × quote_grams ÷ 10`, so ₹30 for GOLDPETAL (₹ per 1 g), ₹240 for GOLDGUINEA (₹ per 8 g), ₹300
+for GOLDM / GOLDTEN. Before this, a GOLDTEN price sitting exactly on GOLDTEN's fair came back `WAIT, ₹413 above fair`
+and a GOLDPETAL price came back `₹1,27,663 below fair`. `/health.fair.desk_verdict_state` uses the same scaled limit.
+
 ### 2.3 `/series`
 ```
 { as_of, asof_applied, freq, store_errors,
@@ -161,12 +171,28 @@ series (verdict not PUBLISH-*) returns `published: false` and **no points**; an 
 
 ### 2.4 `/bars`
 ```
-{ symbol, interval, instrument, day, hi, lo, bars[{ts, o, h, l, c, v}], sessions[{name, start_ist, end_ist, hatched?, bar?, closed?}],
+{ symbol, interval, instrument, day, unit, unit_native, conversion,
+  fx{series, value, report_date, release_at, partial, conversion}|null, fx_vintages[]|null, dropped_no_fx|null,
+  hi, lo, hi_native, lo_native,
+  bars[{ts, o, h, l, c, v, o_raw?, c_raw?, ohlc_note?, o_cny_g?, h_cny_g?, l_cny_g?, c_cny_g?, o_raw_cny_g?, c_raw_cny_g?, usdcny?, usdcny_date?}],
+  sessions[{name, start_ist, end_ist, hatched?, bar?, closed?}],
   settle_line{value, label, source, quality, is_settlement}|null, matched_last{value, label, source, quality, is_settlement}|null,
   prev_close{date, close, partial, label}|null, daily_closes[{date, close, partial, label}], prev_day[{ts, c}],
   last{price, as_of, source, age_s}|null, since, freshness, note }
 ```
-Symbols are Yahoo symbols as data-service stores them (`GC=F`, `GCZ26.CMX`, `INR=X`). Intraday `ts` is IST with the offset
+EVERY payload states its `unit` (CT-01 / F1, 8 Nov 2026): `USD/oz` for the COMEX future and the spot proxy, `INR per USD`
+for `INR=X` (a rate, not a gold price), `null` for a symbol the route does not recognise — it never claims a unit it
+cannot vouch for. `SGE_AU9999` is stored in CNY per gram (`unit_native`) and SERVED converted: `conversion` spells out
+CNY/g × 31.1034768 ÷ USDCNY, `fx` is the leg used (FX_CNY, else FRED_DEXCHUS — the same ladder the Shanghai premium
+reads, with the rate's own `partial` flag, because a USDCNY point can itself be a pre-close print), and each bar keeps its
+native twin (`c_cny_g` …, `o_raw_cny_g` / `c_raw_cny_g` for a price `ohlc_sane` withheld) with the rate (`usdcny`,
+`usdcny_date`). The vintage is chosen ONCE PER DRAWN SESSION — the latest dated ON OR BEFORE that CME trade date's first
+**Shanghai** date, never a later one (the store can hold a future-dated weekend stub). Per bar instead, the line stepped
+at Beijing midnight with no price move: the real 2026-11-05 session served native 880.0 CNY/g as $4,110.82 and then
+$4,092.56. `fx_vintages` lists every vintage the window used, one per session. A session with no vintage on or before it
+is DROPPED rather than served as raw yuan, counted in `dropped_no_fx` and named in `note`, so a truncated series cannot
+read as a short store. `hi_native` / `lo_native` are the SAME bar as `hi` / `lo`, read in the native unit.
+Symbols are Yahoo symbols as data-service stores them (`GC=F`, `GCZ26.CMX`, `INR=X`, `SGE_AU9999`). Intraday `ts` is IST with the offset
 (`2026-11-04T23:49:57+05:30`; the store's naive UTC re-stamped — C-TRADER-1 / C-DATA-1); daily `ts` is a date. `day`,
 `prev_day` and `hi/lo` bucket by the IST calendar day. `sessions` are the IST bands for today (Sydney/Tokyo, SGE day/night,
 London, New York, COMEX maintenance hour, MCX bar) from zoneinfo (DST-aware). `matched_last` is the stored COMEX curve
@@ -181,7 +207,8 @@ today while Globex trades is `partial: true` and labelled `last (partial day)`.
 ```
 { as_of, report, fut_or_combined,
   latest{report_date, release_at, release_ist, next_report_date, next_release_at, next_release_ist, next_release_source,
-         age_days, stale, catch_up_note},
+         age_days, stale, catch_up_note, overdue[{report_date, at, ist, source}], overdue_count, overdue_report_date,
+         overdue_release_ist},
   open_interest{total, chg, pct_rank, pct_rank_label},
   groups[{key: mm|or|nr|sd|pm (+nc, c for legacy), label, long, short, spread, net, net_moz, net_t, net_usd_bn,
           chg_long, chg_short, chg_net, pct_oi_long, pct_oi_short, net_pct_oi, traders_long, traders_short,
@@ -196,6 +223,19 @@ today while Globex trades is `partial: true` and labelled `last (partial day)`.
          identity_gap, identity_note},
   badge: "context", evidence, footer, freshness, store_errors }
 ```
+**Overdue reports (8 Nov 2026, critics CT-03 / F2 / C-DATA-01).** `next_release_*` is unchanged and still names a
+release AFTER `now`, so a stale store always names an UPCOMING date (the Saturday Telegram digest prints `next_release_ist`
+verbatim). Beside it, `overdue` lists every report dated after the stored one whose scheduled release instant is already
+past by the same holiday-aware CFTC calendar of §0 — due, and not in the store (a missed Saturday fetch, an outage or a
+CFTC delay). It is oldest-first and `[]` when nothing is due; `overdue_count` is its length and `overdue_report_date` /
+`overdue_release_ist` the newest due one, which is what POSITIONING and WEEKLY print (`overdue: Tue 03 Nov report due
+Sat 07 Nov 02:00 IST — not stored yet`). There is no grace period: between the Saturday 02:00 release and the 02:30 fetch
+the report genuinely is released-and-not-stored. `stale` is now true the MOMENT a scheduled release passes unstored (the
+10-day age rule stays as the shutdown fallback), `catch_up_note` says `was due`, never `released` — the calendar cannot
+prove the CFTC published — and `freshness.state` is forced to `stale` with a `reason` naming the due report, so the chip
+agrees with `latest.stale` and with `/api/data/health` instead of reading DELAYED for another two days. `/overview` builds
+`freshness.cot` the same way and carries `strip.cot_overdue_report_date`.
+
 **Driver label (wave 1c)** = a byte-for-byte mirror of data-service `gold/driver_rule.py` (`driver_rule` carries the rule
 text): the net-sign test first, then the bigger leg — down week: `funds bought the dip` if the net rose; else `long
 liquidation` if ΔL<0 and |ΔL| ≥ max(ΔS,0); else `new shorts` · up week, mirrored: `funds sold into it` if the net fell;
@@ -234,6 +274,29 @@ carrying `sessions_spanned, multi_session, span_note` (`"over 3 sessions (master
 days — a 29 Oct → 3 Nov OI change is never printed as one day's; data-service's own count wins when the row carries it;
 C-TRADER-18), `roll.tender_start` = the 1st of the expiry month (contract spec) with `roll.days_unit: "calendar days"`
 (C-TRADER-28), `badge: "arithmetic"`.
+
+**The tape's source and scope (8 Nov 2026, critic CT-06).** `?expiry=` picks the contract the MCX tape is read off
+(default: the front p.mcx.history picks on the same page — the family's nearest live expiry on its newest stored Breeze
+session). When the `BREEZE_DAILY` catalog row is published, every tape row is that ONE contract's Breeze daily close ×
+OI run through `mcx_history_periods`, the same quadrant rule the history panel uses — no second rule exists. The payload
+says so: `tape_source` (`breeze_daily+icici_master` | `icici_master`), `tape_contract`, `tape_expiry`, `tape_oi_scope`
+(`GOLDM DEC-26` or `all GOLDM expiries`), `tape_since` (the tape's own first session — the Breeze bars reach further
+back than the master's history, and `since` describes the OI ladder's rows) and `tape_note`. Each row carries `price_source`, `oi_source`, `oi_scope`,
+`price_contract` and, beside them, `doi_family` — the 07:35 master's ΔOI summed over every expiry — with
+`family_mechanical: true` when an expiring month's run-off is inside that sum (GOLDM's −9,871 on 03 Nov was NOV −22,119 +
+DEC +9,389). That sum carries its OWN scope, `tape_family_scope` (`all GOLDM expiries`), so `doi_family` is never read
+under the per-contract header; `tape_fill_sessions` counts the sessions with no Breeze bar at all and `tape_fill_note`
+says what those rows do and do not carry (`null` when there are none). POSITIONING and WEEKLY print the server's scopes,
+never one of their own; DAILY's copy of the tape still labels its ΔOI `all <FAM> expiries` from the client side and is an
+open patch request (asserted as a known gap in `ui/components/__tests__/gold_feed.check.ts`). A session Breeze has no bar for keeps the
+master's row for its PRICE and for `doi_family`, marked `oi_source: "icici_master"` and `fill: "icici_master"`, and
+carries `doi: null`, `oi_scope: null` and `label: null` — the master's ΔOI is the all-expiry sum, so it is never
+presented as the picked contract's, and no quadrant word is built from it (`note` says why). Every tape row carries
+`fill` (`null` on a Breeze row). The master's own front never picks a contract with no settle that expires within 2
+sessions (which is where the permanent 04 Nov hole came from). `rows[].settle_or_close` falls back to Breeze's close for
+a (session, expiry) that has neither a band nor a VWAP30 — `settle_source: "breeze_close"`, `quality: "broker"`,
+`settle_note: "close (Breeze broker bar), not the settlement"` — and `quality` is `null`, never `"proxy"`, on a cell with
+no value at all.
 
 ### 2.6b `/positioning/mcx-history` (p.mcx.history, 6 Nov 2026)
 `?family=GOLDTEN&expiry=2026-11-30&window=D|W|M` (defaults: `GOLD`, that family's front LIVE expiry on its newest stored
@@ -344,9 +407,12 @@ reported ounces for India in tonnes (`tonnes_month`, `tonnes_source`), the one t
 
 ### 2.11 `/macro`
 `{as_of, window, drivers[{key: real_10y|nominal_2y|breakeven_10y|dxy|usdinr|gvz|brent|gld_t, label, label_note, value, unit, report_date,
-d1, d1w, d1m, d_window, change_unit, d1_bp, pct_1y, corr_60d, tag: supportive|headwind|null, rule, series_id, badge, evidence, state}],
-kgx{period, from_date, total_pct, usd_effect_pct, pure_gold_pct, inr_effect_pct, weights{}, badge, line, note, inr_note},
-currencies[{ccy: USD|INR|EUR|JPY|GBP|CNY, price, unit, d1, d1w, d1m, ytd, badge}],
+d1, d1w, d1m, d_window, window_label, window_from, window_to, window_note, trailing_note, change_unit, d1_bp, pct_1y, corr_60d,
+tag: supportive|headwind|null, rule, series_id, badge, evidence, state}],
+kgx{period, from_date, to_date, window_label, total_pct, usd_effect_pct, pure_gold_pct, inr_effect_pct, inr_from_date,
+usd_source: "DXY_CLOSE"|null, usd_from_date, usd_to_date, usd_aligned, weights{}, basket_label, badge, line, note, inr_note},
+currencies[{ccy: USD|INR|EUR|JPY|GBP|CNY, price, unit, d1, d_window, d1w, d1m, ytd, report_date, badge}],
+currencies_window{window, label, from_date, to_date, trailing{d1w{days, from_date}, d1m{days, from_date}}, note},
 fed{meetings[{meeting, p_cut, p_hike, p_hold, mean_bp, p10_bp, p90_bp}], as_of, source, zq[{month, implied_pct}], effr, effr_date,
 target, next_fomc_ist, after_mcx_close, next_fomc{date_et, ist, at, statement_ist, name, kind: "FOMC", source, after_mcx_close, days}|null,
 speakers[{date, time_ist, title, impact, kind: "FOMC_SPEECH"}], badge, fedwatch_link},
@@ -354,9 +420,21 @@ calendar[{date, time_ist, title, kind, country, impact, impact_rank, star, forec
 move{gvz, gvz_date, sigma_day_pct, usd_oz, inr_10g, per_lot{GOLD, GOLDM, GOLDTEN, GOLDGUINEA, GOLDPETAL}, realised_20d, atr14_usd, atr14_inr, read, badge},
 driver_health{rolling_corr[{year, real_yield, dxy}], betas_by_regime[{regime, beta_real_yield_per_100bp, beta_dxy}], beta_units{}, dxy_series, lesson},
 context{gsr, gsr_pct, gpr_m, gpr_pct_m, gpr_pct_d, hy_oas, hy_oas_date, gold_m2_pct, badge}, badge, freshness{drivers, fed, gold}, store_errors}`.
-KGX identity holds on the printed numbers: `pure_gold_pct = total_pct − usd_effect_pct` (DXY weights; a stronger dollar is a
-negative usd effect; the rupee leg is USD/INR's own change); when a leg is missing `kgx.note` / `kgx.inr_note` say why in
-words (`USD effect unavailable: no DXY-basket FX closes stored for this window …`; C-BEGINNER-14). The `dxy` driver is
+KGX identity holds on the printed numbers: `pure_gold_pct = total_pct − usd_effect_pct`, where the dollar leg is
+**−Δln of the ICE DXY close (`DXY_CLOSE`, `usd_source`) over GOLD's own window anchor and gold's own last stored date** —
+the SAME number `health.gauges[dollar].usd_effect_pct` and the H2 verdict clause print (8 Nov 2026 RCA C-DATA-03: it used
+to sum the six Yahoo `=X` legs, whose stored closes are start-of-day prints about a session behind, and said the dollar
+ADDED 0.17 % to a week HEALTH said it took 0.4 % off). A stronger dollar is a negative usd effect; the rupee leg is
+USD/INR's own change. EVERY leg — gold, DXY, USD/INR — is cut at gold's last stored date, so a future-dated weekend FX
+row can never reach a split dated on gold's close; `usd_aligned` is false when the dollar leg's own two dates are not the
+window's, and `note` then names both spans. `weights` is the DXY's documented COMPOSITION (with `basket_label`), no
+longer "the legs this split summed". `currencies_window` names the one window the `d_window` column measures (the page's,
+HEALTH's and KGX's) and what the trailing `d1w` / `d1m` columns are; `drivers[].d_window` is on that same window, with
+its own `window_label` / `window_from` / `window_to` — its END is gold's last close, and `window_note` says so whenever
+that series also carries a later row (the tile's own level and `report_date` stay its newest, so the row is still
+visible). When a leg is missing `kgx.note` / `kgx.inr_note` say why in words (`USD effect unavailable: no DXY close
+stored for this window (the split takes −Δln of the ICE DXY close, not the Yahoo FX legs — they are a session behind)`;
+C-BEGINNER-14). The `dxy` driver is
 labelled by the series actually used: `Dollar index (DXY)` for `DXY_CLOSE`, `Fed broad USD index (DTWEXBGS, weekly lag —
 not DXY)` with `label_note: "stand-in: …"` when the FRED fallback is used — never DTWEXBGS under the DXY name (C-DATA-4 /
 C-TRADER-8); `driver_health.dxy_series` names the one the correlations / betas use and `beta_units` spell the units
@@ -378,6 +456,30 @@ federal holiday`), deduped on (date, kind, name), sorted by date/time. Stored ro
 (`first_seen_at` re-stamped with its offset). Every row is decorated (wave 1c): `kind` is the page kind (`FOMC_SPEECH` /
 `FOMC_MINUTES` split off `FOMC`, `kind_stored` keeps the store's word when relabelled), `star` (High impact or an FOMC
 decision), `impact_rank` (0 = decision / High … 4 = Low, 5 = unknown) and `past` (today's row whose IST time has passed).
+
+**US coverage (8 Nov 2026, critics CT-04 / F3).** The only US event source is Forex Factory's `ff_calendar_thisweek.json`,
+ONE Sunday-to-Saturday week in New York time (`ff_calendar_nextweek.json` is a 404 — SOURCES.md G19 — so there is nothing
+to add and no second fetch was added). The panels run a `now + days` window, so from roughly Thursday to the source's
+Sunday roll most or all of the next US week is simply absent, and that week always carries releases. `/calendar` therefore
+returns `us_coverage{source, source_note, window_days, events, checked_at, covers_from, covers_until,
+covers_through_label, uncovered[], uncovered_label, state, note}`: `covers_until` is the Sunday 00:00 New York that ENDS
+the loaded week, as an IST instant, and `covers_through_label` the Saturday it covers through; `uncovered` lists the US
+weekdays of the window whose 08:30 ET falls past it. `state` is `stale` once the week has ended or ≥ 3 US weekdays are
+uncovered, `delayed` for 1–2, `live` when the window fits inside the loaded week, `unavailable` with no Forex Factory row
+at all. The week is derived from each row's INSTANT, not its IST date (a 01:30 IST print is the previous New York
+afternoon), and the route reads `gold_events` from 8 days BEFORE today as well as forward so the week is findable on a
+weekend — the printed list still drops everything before today. `freshness` now comes from that coverage (`state`,
+`note` as `reason`, plus `covers_through`) instead of `live: bool(stored)` on the request clock, which reported
+`{state: "live", age_s: 0}` on a payload with no US rows at all. Its `as_of` is `checked_at`, the LAST CHECK of the
+file — never `covers_until`, which is normally in the FUTURE (an `as_of` built from it printed "as of 15 Nov" on
+Mon 09 Nov with `age_s` still 0). `checked_at` is the data-service `calendar_us.last_fetch` state key when one exists,
+else the newest `first_seen_at` over the feed's own rows (the hourly refresh re-stamps them, so it is a last-seen
+value; `checked_at_source` names which of the two it is), and `null` when neither exists — in which case the route
+falls back to the request clock for `as_of` only. `/macro` carries the same block as
+`calendar_coverage` and `/overview` as `us_coverage`. No roll time is promised: the file had NOT rolled by 00:30 New York
+on Sun 8 Nov 2026, so the note names the hourly 09:00–23:00 IST check window and the BLS / BEA schedule pages instead.
+On the data-service side `gold/ingest_macro.ff_week_window(text)` returns the loaded body's own `(Sunday 00:00
+America/New_York, +7 days)` and `ingest_ff_calendar` reports it as `covers_from` / `covers_until`.
 
 ### 2.13 `/log`, `/catalog`, `/brief`, LEARN, POSTs
 - `/log` → `{rows[{date, snapshot_at, contract, expiry, comex_symbol, baseline, baseline_source, baseline_session, stale_baseline,
@@ -1105,6 +1207,12 @@ health.gauges[].source: string
 health.gauges[].state: string
 health.gauges[].trend_words: string
 health.gauges[].unit: string
+health.gauges[].usd_effect_aligned: bool
+health.gauges[].usd_effect_from: string
+health.gauges[].usd_effect_note: string
+health.gauges[].usd_effect_pct: number
+health.gauges[].usd_effect_source: string
+health.gauges[].usd_effect_to: string
 health.gauges[].value: null|number
 health.gauges[].vs_200d_pct: number
 health.gauges[].vs_20d_pct: number
@@ -1130,10 +1238,13 @@ health.verdict.badge: string
 health.verdict.clauses: array
 health.verdict.clauses[]: object
 health.verdict.clauses[].note: null
+health.verdict.clauses[].price_from: string
+health.verdict.clauses[].price_to: string
 health.verdict.clauses[].real_yield_change_bp: number
 health.verdict.clauses[].real_yield_date: string
 health.verdict.clauses[].real_yield_series_id: string
 health.verdict.clauses[].real_yield_value: number
+health.verdict.clauses[].report_date: string
 health.verdict.clauses[].rule_id: string
 health.verdict.clauses[].rule_part: string
 health.verdict.clauses[].series_id: string
@@ -1147,7 +1258,11 @@ health.verdict.clauses[].threshold.strong_pct: number
 health.verdict.clauses[].threshold.usd_share: number
 health.verdict.clauses[].threshold.weak_pct: number
 health.verdict.clauses[].trend_words: string
+health.verdict.clauses[].usd_effect_from: string
+health.verdict.clauses[].usd_effect_source: string
+health.verdict.clauses[].usd_effect_to: string
 health.verdict.clauses[].value: number
+health.verdict.clauses[].week_price_chg_pct: number
 health.verdict.ends_with: string
 health.verdict.headline: string
 health.verdict.line: string
@@ -1309,6 +1424,7 @@ strip.comex_ref_note: string
 strip.cot_as_of: string
 strip.cot_mm_chg: number
 strip.cot_mm_net: number
+strip.cot_overdue_report_date: null
 strip.crosscheck: null
 strip.instruments: object
 strip.instruments.front: string
@@ -1353,6 +1469,20 @@ strip.settlement_source: string
 strip.usdinr: number
 strip.usdinr_as_of: string
 strip.vwap30: null
+us_coverage: object
+us_coverage.checked_at: null
+us_coverage.checked_at_source: null
+us_coverage.covers_from: null
+us_coverage.covers_through_label: null
+us_coverage.covers_until: null
+us_coverage.events: number
+us_coverage.note: string
+us_coverage.source: string
+us_coverage.source_note: string
+us_coverage.state: string
+us_coverage.uncovered: array
+us_coverage.uncovered_label: null
+us_coverage.window_days: number
 window: string
 ```
 
@@ -1518,6 +1648,12 @@ gauges[].source: string
 gauges[].state: string
 gauges[].trend_words: string
 gauges[].unit: string
+gauges[].usd_effect_aligned: bool
+gauges[].usd_effect_from: string
+gauges[].usd_effect_note: string
+gauges[].usd_effect_pct: number
+gauges[].usd_effect_source: string
+gauges[].usd_effect_to: string
 gauges[].value: null|number
 gauges[].vs_200d_pct: number
 gauges[].vs_20d_pct: number
@@ -1543,10 +1679,13 @@ verdict.badge: string
 verdict.clauses: array
 verdict.clauses[]: object
 verdict.clauses[].note: null
+verdict.clauses[].price_from: string
+verdict.clauses[].price_to: string
 verdict.clauses[].real_yield_change_bp: number
 verdict.clauses[].real_yield_date: string
 verdict.clauses[].real_yield_series_id: string
 verdict.clauses[].real_yield_value: number
+verdict.clauses[].report_date: string
 verdict.clauses[].rule_id: string
 verdict.clauses[].rule_part: string
 verdict.clauses[].series_id: string
@@ -1560,7 +1699,11 @@ verdict.clauses[].threshold.strong_pct: number
 verdict.clauses[].threshold.usd_share: number
 verdict.clauses[].threshold.weak_pct: number
 verdict.clauses[].trend_words: string
+verdict.clauses[].usd_effect_from: string
+verdict.clauses[].usd_effect_source: string
+verdict.clauses[].usd_effect_to: string
 verdict.clauses[].value: number
+verdict.clauses[].week_price_chg_pct: number
 verdict.ends_with: string
 verdict.headline: string
 verdict.line: string
@@ -1750,6 +1893,7 @@ bars[].l: number
 bars[].o: number
 bars[].ts: string
 bars[].v: number
+conversion: null
 daily_closes: array
 daily_closes[]: object
 daily_closes[].close: number
@@ -1758,16 +1902,21 @@ daily_closes[].label: string
 daily_closes[].partial: bool
 daily_closes[].partial_source: string
 day: string
+dropped_no_fx: null
 freshness: object
 freshness.age_s: number
 freshness.as_of: string
 freshness.source: string
 freshness.state: string
+fx: null
+fx_vintages: null
 hi: number
+hi_native: null
 instrument: string
 interval: string
 last: null
 lo: number
+lo_native: null
 matched_last: object
 matched_last.is_settlement: bool
 matched_last.label: string
@@ -1802,6 +1951,8 @@ settle_line.value: number
 since: string
 store_errors: null
 symbol: string
+unit: string
+unit_native: null
 ```
 
 #### `/api/gold/cot?weeks=4` (cot)
@@ -1920,6 +2071,10 @@ latest.next_release_at: string
 latest.next_release_ist: string
 latest.next_release_source: string
 latest.next_report_date: string
+latest.overdue: array
+latest.overdue_count: number
+latest.overdue_release_ist: null
+latest.overdue_report_date: null
 latest.release_at: string
 latest.release_ist: string
 latest.report_date: string
@@ -2007,6 +2162,26 @@ freshness.as_of: null
 freshness.source: string
 freshness.state: string
 quadrant_tape: array
+quadrant_tape[]: object
+quadrant_tape[].close: number
+quadrant_tape[].doi: null|number
+quadrant_tape[].doi_family: null
+quadrant_tape[].dprice_pct: null|number
+quadrant_tape[].family_mechanical: null
+quadrant_tape[].fill: null
+quadrant_tape[].label: null|string
+quadrant_tape[].mechanical: bool
+quadrant_tape[].multi_session: bool
+quadrant_tape[].note: null
+quadrant_tape[].oi: number
+quadrant_tape[].oi_scope: string
+quadrant_tape[].oi_source: string
+quadrant_tape[].price_contract: string
+quadrant_tape[].price_only: bool
+quadrant_tape[].price_source: string
+quadrant_tape[].sessions_spanned: null|number
+quadrant_tape[].span_note: null
+quadrant_tape[].trade_date: string
 read: string
 roll: object
 roll.days_in_tender: null
@@ -2025,6 +2200,15 @@ roll.tender_start: null
 rows: array
 since: null
 store_errors: null
+tape_contract: string
+tape_expiry: string
+tape_family_scope: string
+tape_fill_note: null
+tape_fill_sessions: number
+tape_note: string
+tape_oi_scope: string
+tape_since: string
+tape_source: string
 ```
 
 #### `/api/gold/positioning/mcx-history?family=GOLD&window=W` (positioning_mcx_history)
@@ -2557,6 +2741,20 @@ calendar[].previous: null
 calendar[].star: bool
 calendar[].time_ist: string
 calendar[].title: string
+calendar_coverage: object
+calendar_coverage.checked_at: null
+calendar_coverage.checked_at_source: null
+calendar_coverage.covers_from: null
+calendar_coverage.covers_through_label: null
+calendar_coverage.covers_until: null
+calendar_coverage.events: number
+calendar_coverage.note: string
+calendar_coverage.source: string
+calendar_coverage.source_note: string
+calendar_coverage.state: string
+calendar_coverage.uncovered: array
+calendar_coverage.uncovered_label: null
+calendar_coverage.window_days: number
 context: object
 context.badge: string
 context.gold_m2_pct: null
@@ -2576,9 +2774,24 @@ currencies[].ccy: string
 currencies[].d1: number
 currencies[].d1m: number
 currencies[].d1w: number
+currencies[].d_window: number
 currencies[].price: null|number
+currencies[].report_date: string
 currencies[].unit: null|string
 currencies[].ytd: number
+currencies_window: object
+currencies_window.from_date: string
+currencies_window.label: string
+currencies_window.note: string
+currencies_window.to_date: string
+currencies_window.trailing: object
+currencies_window.trailing.d1m: object
+currencies_window.trailing.d1m.days: number
+currencies_window.trailing.d1m.from_date: string
+currencies_window.trailing.d1w: object
+currencies_window.trailing.d1w.days: number
+currencies_window.trailing.d1w.from_date: string
+currencies_window.window: string
 driver_health: object
 driver_health.beta_units: object
 driver_health.beta_units.beta_dxy: string
@@ -2620,8 +2833,13 @@ drivers[].source_label: null|string
 drivers[].state: string
 drivers[].tag: null|string
 drivers[].tag_note: null
+drivers[].trailing_note: string
 drivers[].unit: string
 drivers[].value: null|number
+drivers[].window_from: string
+drivers[].window_label: string
+drivers[].window_note: null|string
+drivers[].window_to: string
 fed: object
 fed.after_mcx_close: bool
 fed.as_of: null
@@ -2670,15 +2888,22 @@ freshness.gold.source: string
 freshness.gold.state: string
 kgx: object
 kgx.badge: string
+kgx.basket_label: string
 kgx.from_date: string
 kgx.inr_effect_pct: number
+kgx.inr_from_date: string
 kgx.inr_note: null
 kgx.line: string
-kgx.note: null
+kgx.note: string
 kgx.period: string
 kgx.pure_gold_pct: number
+kgx.to_date: string
 kgx.total_pct: number
+kgx.usd_aligned: bool
 kgx.usd_effect_pct: number
+kgx.usd_from_date: string
+kgx.usd_source: string
+kgx.usd_to_date: string
 kgx.weights: object
 kgx.weights.{*}: number
 kgx.window_label: string
@@ -2733,9 +2958,25 @@ events[].timing_label: null|string
 freshness: object
 freshness.age_s: number
 freshness.as_of: string
+freshness.covers_through: null
+freshness.reason: string
 freshness.source: string
 freshness.state: string
 store_errors: null
+us_coverage: object
+us_coverage.checked_at: null
+us_coverage.checked_at_source: null
+us_coverage.covers_from: null
+us_coverage.covers_through_label: null
+us_coverage.covers_until: null
+us_coverage.events: number
+us_coverage.note: string
+us_coverage.source: string
+us_coverage.source_note: string
+us_coverage.state: string
+us_coverage.uncovered: array
+us_coverage.uncovered_label: null
+us_coverage.window_days: number
 ```
 
 #### `/api/gold/log` (log)
@@ -2864,6 +3105,7 @@ tooltips.cot_index_156w: string
 tooltips.cot_index_52w: string
 tooltips.cot_mm_chg: string
 tooltips.cot_mm_net: string
+tooltips.cot_overdue: string
 tooltips.cot_pctile_all: string
 tooltips.cot_release: string
 tooltips.cot_z52: string
@@ -2975,6 +3217,7 @@ tooltips.mcx_basis_pct: string
 tooltips.mcx_category_oi: string
 tooltips.mcx_daily_close: string
 tooltips.mcx_oi_by_expiry: string
+tooltips.mcx_oi_family_sum: string
 tooltips.mean_abs_error: string
 tooltips.mechanical: string
 tooltips.micro_gold: string

@@ -393,7 +393,10 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
   check('F3 a deep link\'s ?c=/?exp= is a page-local override, never written to prefs on mount', /useState<Partial<GoldContractSel> \| null>/.test(gp) && !/updateSel\(\{ \.\.\.\(initial\.family/.test(gp) && !/updateStored\(\{ \.\.\.\(initial/.test(gp))
   check('F4 c.links wears a plain LINK-ONLY chip, no evidence badge', /LINK-ONLY<\/Chip>/.test(src('components/gold/ContractsView.tsx')) && !/<BadgeChip badge="context" evidence="links"/.test(src('components/gold/ContractsView.tsx')))
   check('F4 c.mcx has its own full-width row', /id="c\.mcx"[\s\S]{0,300}gridColumn: '1 \/ -1'/.test(src('components/gold/ContractsView.tsx')))
-  check('F5 DAILY gates the SGE panel on the catalog id SGE_DAILY (not an invented one)', /series=\{\['SGE_DAILY'\]\}/.test(src('components/gold/DailyView.tsx')) && !/SGE_AU9999 \?\?/.test(src('components/gold/DailyView.tsx')))
+  // round 2 (CT-01): the list grew from ['SGE_DAILY'] to every catalog id the panel RENDERS — the 1-minute bars it draws
+  // and the USDCNY leg it converts at — so the §f.2 gate covers all three. Still exact, still only real seeded ids.
+  check('F5 DAILY gates the SGE panel on the catalog ids it renders (SGE_DAILY + BARS_1M + the FX leg; no invented one)',
+    /series=\{\['SGE_DAILY', 'BARS_1M', 'FX_CNY'\]\}/.test(src('components/gold/DailyView.tsx')) && !/SGE_AU9999 \?\?/.test(src('components/gold/DailyView.tsx')))
   check('F5 the POSITIONING tile copy is a rule; g.words carries the state', !/long, not crowded\.'/.test(src('components/gold/HealthView.tsx')) && /g\.words &&/.test(src('components/gold/HealthView.tsx')))
   const kitSrc = src('components/gold/kit.tsx')
   check('F6 kit.tsx parses store timestamps through parseIso', /parseIso\(f\.as_of\)/.test(kitSrc) && !/new Date\(f\.as_of\)/.test(kitSrc))
@@ -902,6 +905,59 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
     thu[1].openOutside === true && thu[1].o === 4098.4 && thu[1].rawOpen === 3940.8 && thu[1].partial === true && !thu[0].openOutside && !thu[0].partial)
   check('Y8 negative control: an open inside the range and the partial dates from /bars.daily_closes', S.dailyOhlc([{ ts: '2026-11-05', o: 4070, h: 4155.8, l: 4067, c: 4098.4 }], new Set(['2026-11-05']))[0].partial === true
     && !S.dailyOhlc([{ ts: '2026-11-05', o: 4070, h: 4155.8, l: 4067, c: 4098.4 }])[0].openOutside)
+
+  // ── C-DATA-06: the shape ui-api ACTUALLY serves — the open withheld, the raw value beside it ──────────────────
+  const served = S.dailyOhlc([{ ts: '2026-11-05', o: null, o_raw: 3940.8, ohlc_note: "open outside the day's range (Yahoo repeated the previous bar's open on a partial bar): withheld",
+    h: 4155.8, l: 4067.0, c: 4098.4, v: 208286, partial: true }])[0]
+  check('Y8b a WITHHELD open (o null, o_raw 3,940.8) is flagged exactly like an impossible one: o stays the close, the table prints —',
+    served.openOutside === true && served.rawOpen === 3940.8 && served.o === 4098.4 && served.partial === true && /withheld/.test(served.note ?? ''),
+    served)
+  check('Y8b negative controls: o null with NO o_raw defaults to the close and is NOT flagged; a sane bar carries no note',
+    S.dailyOhlc([{ ts: '2026-11-05', o: null, h: 4155.8, l: 4067, c: 4098.4 }])[0].openOutside === undefined
+    && S.dailyOhlc([{ ts: '2026-11-05', o: null, h: 4155.8, l: 4067, c: 4098.4 }])[0].o === 4098.4
+    && S.dailyOhlc([{ ts: '2026-11-04', o: 4000, h: 4080, l: 3990, c: 4072.2, o_raw: 3940.8 }])[0].openOutside === undefined)
+  check('Y8b the withheld-open shape is typed (Bar and BarLike carry o_raw / c_raw / ohlc_note)',
+    /o_raw\?: number \| null/.test(src('lib/gold/types.ts')) && /ohlc_note\?: string \| null/.test(src('lib/gold/types.ts'))
+    && /o_raw\?: number \| null/.test(src('lib/gold/sessions.ts')))
+
+  // ── CT-01 / F1: the SGE overlay may never set the 24-h axis in a foreign unit ─────────────────────────────────
+  const main = [4035, 4046, 4098, 4128].map(c => ({ c }))
+  const cny = [868, 884].map(c => ({ c }))
+  const usd = [4036.76, 4129.92].map(c => ({ c }))
+  check('CT-01 overlayOnScale: raw CNY/g (868) is OFF the $/oz scale and withheld with a reason; the converted series fits',
+    KK.overlayOnScale(cny, main).pts === null && /off this chart's scale by 79 %/.test(KK.overlayOnScale(cny, main).why ?? '')
+    && KK.overlayOnScale(usd, main).pts?.length === 2 && KK.overlayOnScale(usd, main).why === null,
+    { cny: KK.overlayOnScale(cny, main), usd: KK.overlayOnScale(usd, main) })
+  check('CT-01 overlayOnScale negative controls: an empty overlay is silent, no main series never draws, the tolerance is the only gate',
+    KK.overlayOnScale([], main).pts === null && KK.overlayOnScale([], main).why === null
+    && KK.overlayOnScale(usd, []).pts === null && /no series to scale/.test(KK.overlayOnScale(usd, []).why ?? '')
+    && KK.overlayOnScale([{ c: 4046 * 1.24 }], main).pts?.length === 1 && KK.overlayOnScale([{ c: 4046 * 1.3 }], main).pts === null)
+  const dv = src('components/gold/DailyView.tsx')
+  check('CT-01 DailyView gates the SGE overlay on the SERVER\'s unit, matches it to the COMEX day on screen and runs it through overlayOnScale',
+    /sgeUnitOk = \(sge\.data\?\.unit \?\? null\) === 'USD\/oz'/.test(dv)
+    && /sgeGroups\.find\(g => g\.date === comexDay\.date\)/.test(dv)
+    && /overlayOnScale\(sgeUnitOk \? sgeDay\?\.pts : null, comexDay\?\.pts, 25\)/.test(dv)
+    && /sge=\{sgePts\}/.test(dv) && !/dayGroups\(sge\.data\.bars, usDst\)\.slice\(-1\)/.test(dv))
+  check('CT-01 the d.sge panel dates its bars (never "today" for Friday\'s on a Sunday) and prints the native price and the rate it converted at',
+    !/bars today/.test(dv) && /dayLabel\(sgeDay\.date\)/.test(dv) && /c_cny_g/.test(dv) && /at USDCNY /.test(dv)
+    && /sgeWhyNoOverlay/.test(dv))
+  // round 2: ONE rate per drawn session (the per-bar rule stepped the line $18 at Beijing midnight with no price move),
+  // the rate's own partial flag, the refused-row count, the catalog gate over BOTH series the panel renders plus the FX
+  // leg, and a lookup miss that no longer borrows the 'a line needs two' wording
+  check('CT-01 r2 the panel names ONE rate for the whole session, flags a partial rate and says how many rows were refused',
+    /the whole session at USDCNY /.test(dv) && /itself a partial print/.test(dv)
+    && /sge\.data\?\.fx\?\.partial && sgeBar\.usdcny_date === sge\.data\.fx\.report_date/.test(dv)
+    && /dropped_no_fx/.test(dv) && /no stored USDCNY on or before their session/.test(dv)
+    && /ONE rate per session/.test(dv))
+  check('CT-01 r2 negative controls: the old per-bar wording is gone, the catalog gate covers the FX leg and the 1-m bars, and a payload-row miss has its own sentence',
+    !/\bat USDCNY \{fmtFixed\(sgeBar\.usdcny, 4\)\}[^]]*?\{' '\}— overlaid/.test(dv)
+    && /series=\{\['SGE_DAILY', 'BARS_1M', 'FX_CNY'\]\}/.test(dv)
+    && /could not be matched to its payload row/.test(dv)
+    && /sgeDay\.pts\.length < 2/.test(dv))
+  check('CT-01 r2 the payload shape is typed: the native twins of a withheld price, the rate\'s partial flag, the window\'s vintages and the refused count',
+    /o_raw_cny_g\?: number \| null/.test(src('lib/gold/types.ts')) && /c_raw_cny_g\?: number \| null/.test(src('lib/gold/types.ts'))
+    && /partial\?: boolean \| null; conversion\?: string \| null/.test(src('lib/gold/types.ts'))
+    && /fx_vintages\?: string\[\] \| null/.test(src('lib/gold/types.ts')) && /dropped_no_fx\?: number \| null/.test(src('lib/gold/types.ts')))
 }
 
 console.log(`gold.check: ${passed} passed, ${failed} failed`)

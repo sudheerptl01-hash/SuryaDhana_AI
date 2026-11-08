@@ -541,6 +541,13 @@ def parse_sge_quotations(obj: Any, *, now: datetime | None = None) -> pd.DataFra
     """``{times: ['20:00', …, '15:30'], data: ['865.0', …], heyue: 'Au99.99', delaystr: '2026年11月09日 20:07:54', now: '20:08'}``
     → 1-minute rows for symbol SGE_AU9999.
 
+    **Unit: CNY per gram, as SGE publishes it.** ``gold_bars_intraday`` has no unit column, so the SYMBOL carries the
+    unit: SGE_AU9999 is yuan per gram, GC=F is USD per troy ounce, INR=X is a rupee rate. Whoever serves these bars must
+    convert (ui-api ``bars_unit`` / ``sge_usd_oz_bars`` does: CNY/g × 31.1034768 ÷ the USDCNY vintage on or before the
+    FIRST Shanghai date of the drawn session, one rate for the whole session — a rate chosen per bar stepped the served
+    line at Beijing midnight). Never convert here: the store is point-in-time and keeps what the publisher printed. CT-01 / F1
+    (8 Nov 2026): nothing converted, so 868.0 CNY/g was drawn on the 24-h chart's USD/oz axis and printed as "$868.00".
+
     SGE's convention (seen live Fri 6 Nov 2026 20:08 Beijing, when delaystr read 09 Nov): ``delaystr`` is the TRADING DAY T
     plus the Beijing clock of the last delayed quote, and ``times`` is T's whole session template — the night session
     20:00→02:30 that runs on the evening of the business day before T, then T's day session — with every minute after

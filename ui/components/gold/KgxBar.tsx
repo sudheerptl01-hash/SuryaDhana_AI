@@ -2,17 +2,26 @@
 
 /**
  * mc.kgx — "Gold or the dollar?" (PLAN a.8): the period's gold move in USD split into pure gold + the USD effect
- * (DXY weights) with a separate rupee leg for MCX. An identity (arithmetic badge): total = pure + usd_effect; the
+ * (−Δln of the ICE DXY close over gold's own window, 8 Nov 2026 C-DATA-03 — never the six Yahoo "=X" legs, whose stored
+ * closes are start-of-day prints a session behind) with a separate rupee leg for MCX. An identity (arithmetic badge):
+ * total = pure + usd_effect; the
  * identity line prints only when all three legs exist. When the dollar leg is missing the bar shows the total (and the
  * rupee leg when present) and the caller's `note` says why the split is empty — never the developer assertion the
  * critic saw (C-BEGINNER-14). Signs use U+2212; the bar colours are the neutral palette with the pure-gold leg in amber.
  */
 import { CHART_BOX, T, useChartSize } from '@/components/terminal'
-import { kgxConsistent, signedPct } from './goldViewModel'
+import { kgxBasketText, kgxConsistent, kgxUsdLabel, signedPct } from './goldViewModel'
 
-export function KgxBar({ period, total, pure, usdEffect, inrEffect, weights, note, tips }: {
+export function KgxBar({ period, total, pure, usdEffect, inrEffect, weights, basketLabel, usdSource, usdAligned, note, tips }: {
   period: string; total: number | null; pure: number | null; usdEffect: number | null; inrEffect?: number | null
-  weights?: Record<string, number>; /** why the split is empty (shown instead of the identity line) */ note?: string | null
+  weights?: Record<string, number>
+  /** the DXY's composition in words, and the series the dollar leg really came from (C-DATA-03: never "DXY basket") */
+  basketLabel?: string | null; usdSource?: string | null
+  /** false when the dollar leg's own two dates are not the window's: the residual then MIXES two spans and the line
+   *  stops calling itself an identity (8 Nov round-2 checker — the words said "identity holds" over legs that ended on
+   *  different days; MacroView prints the leg's own dates beside the caption) */
+  usdAligned?: boolean | null
+  /** why the split is empty (shown instead of the identity line) */ note?: string | null
   tips: (k: string) => string | undefined
 }) {
   const { ref, w } = useChartSize(640, 70, { minRatio: 1, maxRatio: 1 })
@@ -21,7 +30,7 @@ export function KgxBar({ period, total, pure, usdEffect, inrEffect, weights, not
     { key: 'total', label: `gold in USD (${period})`, v: total, color: T.borderHi, tip: 'kgx_total' },
     ...(split ? [
       { key: 'pure', label: 'pure gold', v: pure, color: T.amber, tip: 'kgx_pure_gold' },
-      { key: 'usd', label: 'USD effect (DXY basket)', v: usdEffect, color: T.cyan, tip: 'kgx_usd_effect' },
+      { key: 'usd', label: kgxUsdLabel(usdSource), v: usdEffect, color: T.cyan, tip: 'kgx_usd_effect' },
     ] : []),
     ...(inrEffect != null ? [{ key: 'inr', label: 'rupee leg (USD/INR), for MCX', v: inrEffect, color: T.violet, tip: 'kgx_inr_effect' }] : []),
   ]
@@ -51,9 +60,12 @@ export function KgxBar({ period, total, pure, usdEffect, inrEffect, weights, not
       </svg>
       <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>
         {split
-          ? <span data-kgx-identity={ok ? 'holds' : 'off'}>total = pure + USD effect {ok ? <span style={{ color: T.dim }}>(identity holds)</span> : <span style={{ color: T.amber }}>(identity off by more than 0.02 pp)</span>}</span>
-          : <span data-kgx-unavailable style={{ color: T.amber }}>{note ?? 'USD effect unavailable: the split needs the DXY basket’s daily closes'}</span>}
-        {split && weights && Object.keys(weights).length > 0 && <span style={{ color: T.dim }}> · basket {Object.entries(weights).map(([k, v]) => `${k} ${(v * 100).toFixed(1)} %`).join(' · ')}</span>}
+          ? <span data-kgx-identity={usdAligned === false ? 'mixed' : ok ? 'holds' : 'off'}>total = pure + USD effect {
+              usdAligned === false
+                ? <span style={{ color: T.amber }}>(total − pure mixes two spans: the dollar leg ends on another day)</span>
+                : ok ? <span style={{ color: T.dim }}>(identity holds)</span> : <span style={{ color: T.amber }}>(identity off by more than 0.02 pp)</span>}</span>
+          : <span data-kgx-unavailable style={{ color: T.amber }}>{note ?? 'USD effect unavailable: the split needs the ICE DXY close (DX-Y.NYB) on gold’s own two dates'}</span>}
+        {split && kgxBasketText(basketLabel, weights) && <span style={{ color: T.dim }} data-kgx-basket> · {kgxBasketText(basketLabel, weights)}</span>}
       </div>
     </div>
   )

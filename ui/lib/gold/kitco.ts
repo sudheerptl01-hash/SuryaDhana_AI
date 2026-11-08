@@ -241,6 +241,37 @@ export function kitcoStats(pts: readonly KPt[], prevClose?: number | null): KSta
   return { first, last, hi, lo, hiMs, loMs, chg: last - base, chgPct: base ? (last / base - 1) * 100 : 0, base, baseKind: usePrev ? 'prev_close' : 'window_first' }
 }
 
+/** Whether an overlay fits the main series' scale, and why not when it does not (`pts` null = do not draw it). */
+export interface OverlayFit<P> { pts: P[] | null; why: string | null; median: number | null; offPct: number | null }
+
+/**
+ * An overlay series (the SGE line on the 24-h chart) is drawn ONLY when it is on the same scale as the main series:
+ * every point within `tolPct` of the main series' median. A foreign unit can then never set the y-axis again — CT-01 /
+ * F1, 8 Nov 2026: the SGE bars were served in CNY per gram, pushed into the USD/oz y-domain and stretched it from about
+ * 868 to 4,100, pressing the COMEX line flat against the top of the plot. The unit gate on the payload is the first
+ * guard; this is arithmetic defence in depth, so a future series with no unit cannot break the axis either.
+ *
+ * Returns the overlay unchanged when it fits, `pts: null` with a `why` when it does not (the caller says so instead of
+ * drawing it) and `offPct` = the largest deviation from the median, in per cent. Pure.
+ */
+export function overlayOnScale<P extends { c: number }>(
+  overlay: readonly P[] | null | undefined, main: readonly { c: number }[] | null | undefined, tolPct = 25,
+): OverlayFit<P> {
+  if (!overlay?.length) return { pts: null, why: null, median: null, offPct: null }
+  const base = (main ?? []).map(p => p.c).filter(v => v != null && Number.isFinite(v)).sort((a, b) => a - b)
+  if (!base.length) return { pts: null, why: 'no series to scale the overlay against', median: null, offPct: null }
+  const median = base.length % 2 ? base[(base.length - 1) / 2] : (base[base.length / 2 - 1] + base[base.length / 2]) / 2
+  if (!(median > 0)) return { pts: null, why: 'no series to scale the overlay against', median: null, offPct: null }
+  let offPct = 0
+  for (const p of overlay) {
+    if (p.c == null || !Number.isFinite(p.c)) continue
+    offPct = Math.max(offPct, Math.abs(p.c / median - 1) * 100)
+  }
+  return offPct > tolPct
+    ? { pts: null, why: `off this chart's scale by ${offPct.toFixed(0)} % (limit ${tolPct} %) — a different unit, not a different price`, median, offPct }
+    : { pts: [...overlay], why: null, median, offPct }
+}
+
 /**
  * Thin a long series for drawing, keeping each bucket's low and high in time order so the window's extremes survive (the
  * stats are computed on the full series, never on the thinned one).
