@@ -5,6 +5,23 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 18:05: the last manual number now finds itself — PIB turned out to be open.**
+- After the trade portal (form only) and RBI (captcha on the XLSX) were closed, the third route worked: PIB, the
+  government's press agency, answers a plain client with HTTP 200 and no captcha on both its RSS listing and its release
+  pages, and the Commerce Ministry's monthly release states the gold figure in prose.
+- `scripts/gold_india_imports_find.py` fetches the newest trade release, reads the figure, **quotes the sentence it came
+  from**, and prints the ready `gold_india_imports.py --month --usd-bn` command. Exit codes say which case happened
+  (0 found · 2 release found but no figure, link printed · 3 no release yet · 4 network refused).
+- **It never writes to the store.** A number parsed out of prose can be a revision, a quarter, or silver in the same
+  sentence; a wrong point-in-time row is worse than a missing one, so the owner reads the quoted sentence and runs the
+  command. Read-only, at most 5 requests spaced 1.2 s, no crawl, generic UA.
+- 6 parsing tests with negative controls (rupee figures, a gold-less sentence, a number borrowed across a sentence
+  boundary, script-tag digits). One of them caught a real bug before release: the first regex used `[^.]` between "gold"
+  and the figure, which rejects the commonest phrasing ("grew by 4.8 per cent to US$ 4.2 billion") because the decimal
+  point looks like a sentence end; it now tempers on a period FOLLOWED BY whitespace.
+- Verified live: 20 releases fetched, 0 trade releases, exit 3 — right answer on 8 Nov, since the release lands ~15th.
+  The first real run is this month's; the data-health row still raises it on the 16th if nothing is stored.
+
 **8 Nov 2026, 17:25: India's gold-import figure — a SECOND automation route probed and closed; the ICICI login evidenced.**
 - The RBI route looked promising because the Bulletin prints the number in prose and `rbi.org.in` is already allowlisted.
   It is closed too: the Bulletin's statistical annex has no gold-import table (Table 32 Foreign Trade is POL / non-POL
