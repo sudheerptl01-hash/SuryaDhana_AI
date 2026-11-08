@@ -79,13 +79,31 @@ PLACEMENT: tuple[tuple[str, re.Pattern[str], frozenset[str]], ...] = (
 
 def resolve_tabs(spec: str, tab_ids: list[str]) -> list[str]:
     """``all`` → every TAB_ID in page order; a TAB_SETS name (``v2``) → that set (only ids page.tsx still lists, when it
-    could be read); otherwise a comma list (unknown ids are kept: the page ignores them)."""
+    could be read); otherwise a comma list, matched case-insensitively against the real ids.
+
+    An id the router does not know is an ERROR, not a pass (8 Nov 2026). The page falls back to the brief for an
+    unknown ``?tab=``, and ``visit`` has no ready code for an id that is not in the page source, so its ready check
+    returns true at once: ``--tabs GOLD`` (the right page, the wrong case) audited the BRIEF page and reported
+    "GOLD PASS". A typo must stop the run instead of quietly auditing the wrong page.
+    """
     key = spec.strip().lower()
     if key == "all":
         return list(tab_ids)
     if key in TAB_SETS:
         return [t for t in TAB_SETS[key] if not tab_ids or t in tab_ids]
-    return [t.strip() for t in spec.split(",") if t.strip()]
+    wanted = [t.strip() for t in spec.split(",") if t.strip()]
+    if not tab_ids:                       # page source unreadable: keep the old pass-through rather than block a run
+        return wanted
+    by_lower = {t.lower(): t for t in tab_ids}
+    out, unknown = [], []
+    for t in wanted:
+        real = by_lower.get(t.lower())
+        (out.append(real) if real else unknown.append(t))
+    if unknown:
+        near = {u: [i for i in tab_ids if u.lower() in i or i in u.lower()] for u in unknown}
+        hint = "; ".join(f"{u} (did you mean {', '.join(n)}?)" if n else u for u, n in near.items())
+        raise SystemExit(f"ui_audit: unknown tab id(s): {hint}\n  known ids: {', '.join(tab_ids)}")
+    return out
 
 
 def repetition_hits(fingerprint: dict[str, Any] | None) -> list[str]:

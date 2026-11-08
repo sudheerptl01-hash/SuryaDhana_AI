@@ -103,3 +103,47 @@ def test_the_job_returns_without_storing_when_the_month_is_already_present():
     assert "--store" in body
     # quiet on 'nothing published yet': no alert for exit 3 / 4
     assert "exit 3 (no release yet)" in body or "stay quiet" in body
+
+
+# --- the --store path, end to end, with no network and no write -------------------------------------------------
+
+
+def test_store_mode_builds_the_right_command_from_a_real_shaped_release(monkeypatch):
+    """Proves what the 15 Nov job will do, without waiting for it or inventing a figure."""
+    rss = """<rss><channel><item><title>India's Foreign Trade: October 2026</title>
+      <link>https://pib.gov.in/PressReleaseIframePage.aspx?PRID=9001</link></item></channel></rss>"""
+    page = ("<html><body><p>India's merchandise exports in October 2026 were US$ 39.2 billion. "
+            "Gold imports in October 2026 stood at US$ 1.8 billion, lower than a year earlier."
+            "</p></body></html>")
+    monkeypatch.setattr(f, "PACE_S", 0)
+    monkeypatch.setattr(f, "get", lambda client, url: rss if "RssMain" in url else page)
+    seen = {}
+
+    class _R:
+        returncode = 0
+
+    def fake_run(cmd, **kw):
+        seen["cmd"] = cmd
+        return _R()
+
+    monkeypatch.setattr(f.subprocess, "run", fake_run)
+    rc = f.main(["--month", "2026-10", "--store"])
+    assert rc == 0
+    cmd = seen["cmd"]
+    assert cmd[1].endswith("gold_india_imports.py")
+    assert cmd[2:6] == ["--month", "2026-10", "--usd-bn", "1.8"]
+    src = cmd[cmd.index("--source") + 1]
+    assert "PIB PRID 9001" in src and "October 2026" in src      # provenance: the id AND the sentence
+    assert "39.2" not in str(cmd), "the exports figure must never be stored as gold"
+
+
+def test_store_mode_refuses_when_the_sentence_does_not_name_that_month(monkeypatch):
+    rss = """<rss><channel><item><title>India's Foreign Trade</title>
+      <link>https://pib.gov.in/PressReleaseIframePage.aspx?PRID=9002</link></item></channel></rss>"""
+    page = "<html><p>Gold imports during the financial year so far were US$ 29 billion.</p></html>"
+    monkeypatch.setattr(f, "PACE_S", 0)
+    monkeypatch.setattr(f, "get", lambda client, url: rss if "RssMain" in url else page)
+    called = []
+    monkeypatch.setattr(f.subprocess, "run", lambda cmd, **kw: called.append(cmd))
+    rc = f.main(["--month", "2026-10", "--store"])
+    assert rc == 2 and called == [], "a year-to-date total must never be stored as a month"

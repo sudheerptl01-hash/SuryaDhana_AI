@@ -85,8 +85,13 @@ def find_figure(text: str) -> tuple[float, str] | None:
         return None
     val, unit = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
     usd_bn = float(val) / 1000 if unit.lower() in ("million", "mn") else float(val)
-    start = max(0, m.start() - 160)
-    return usd_bn, text[start:m.end() + 160].strip()
+    # The figure's OWN sentence, not a fixed window: a release puts several periods and several commodities in
+    # neighbouring sentences ("exports … US$ 39.2 billion. Gold imports in October 2026 …"), and dragging one in would
+    # both muddy the stored provenance and feed the month guard text the figure does not belong to.
+    left = text.rfind(". ", 0, m.start())
+    right = text.find(". ", m.end())
+    sentence = text[(left + 2) if left != -1 else 0:(right + 1) if right != -1 else len(text)]
+    return usd_bn, sentence.strip()
 
 
 def month_named(sentence: str, month: str) -> bool:

@@ -5,6 +5,20 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 18:55: `ui_audit --tabs <wrong case or typo>` reported PASS while auditing the BRIEF page.**
+- Found by accident: `scripts/ui_audit.py --tabs GOLD` printed "GOLD PASS ready=70ms console=0" and the screenshot was
+  the EVENING BRIEF. Two things lined up — the router falls back to the brief for an unknown `?tab=`, and `probe.visit`
+  gets no ready code for an id that is not in the page source, so `READY_JS` returns true at once (`if (!code) return
+  true`). The run therefore "passed" a page nobody asked for.
+- `resolve_tabs` now matches ids case-insensitively (so `GOLD` → `gold`, the real page) and **raises on an id the router
+  does not know**, listing the known ids and suggesting near misses, instead of the old documented behaviour
+  ("unknown ids are kept: the page ignores them"). 5 tests, incl. the negative control that an unreadable page source
+  still falls back to pass-through rather than blocking a run.
+- **The 43-page audits are unaffected**: `--tabs all` and the named sets always used real ids. Only a hand-typed id
+  could hit this, which is exactly what happened here.
+- Verified live after the fix: `--tabs GOLD` now audits `gold` (code GOLD, ready 154 ms, 0 console, 0 page errors) and
+  `--tabs gld` stops with "unknown tab id(s): gld".
+
 **8 Nov 2026, 18:40: India's gold-import figure is now stored WITHOUT the owner — a monthly job reads the PIB release.**
 - `india_imports_watch` in `scripts/master_controller.py`, `CronTrigger(day="15-22", hour=11, minute=15)` — the release
   lands about the 15th, 11:15 is outside both freeze windows, and the job returns immediately once the month is stored
