@@ -579,6 +579,20 @@ const B4A_VIEWS = ['GoldPage', 'HealthView', 'DailyView', 'WeeklyView', 'Monthly
     F.bandReferenceLine(vw) === 'ICICI band midpoint ₹1,39,452 · belongs to the Tue 03 Nov session (reference)' && F.bandReferenceLine({ settlement_source: 'band_midpoint', band_midpoint: 1 }) === null)
   check('X3 R2 bandReferenceLine without its value (the strip\'s flagged note prints it): the session, no rupee figure', /Tue 03 Nov/.test(F.bandReferenceLine(vw, false) ?? '') && !/₹|1,39,452/.test(F.bandReferenceLine(vw, false) ?? '₹'))
   check('X3 R2 h.open drops the band value exactly when its amber check note shows', /bandReferenceLine\(bl, blNote\?\.tone !== 'amber'\)/.test(src('components/gold/GoldPreOpen.tsx')))
+  // F6 (8 Nov 2026): h.open sent the pick's family but printed GOLD 1 kg's numbers under the pick's header — a GOLDPETAL
+  // reader met a ₹1,42,540 'settlement' beside their own ₹14,339, ten times out, with nothing saying which was which.
+  {
+    const pre8 = src('components/gold/GoldPreOpen.tsx')
+    check('X3 F6 h.open prints ONE line for the pick, in the pick\'s own unit, from the server\'s contract_fair',
+      /data-gold-open-pick/.test(pre8) && /cf\.fair_value/.test(pre8) && /cf\.quote_unit/.test(pre8)
+      && /cf\.chase_limit/.test(pre8) && /\{cf\.model_note\}/.test(pre8))
+    check('X3 F6 the pick line appears ONLY for a non-GOLD family (the scored history is GOLD, and it is not re-pointed)',
+      /sel\?\.family && sel\.family !== 'GOLD' \? \(data\?\.contract_fair \?\? null\) : null/.test(pre8))
+    check('X3 F6 the subtitle says whose model the other numbers are',
+      /model on GOLD 1 kg, not your \$\{cf\.contract\}/.test(pre8))
+    check('X3 F6 negative control: the panel never prices the pick from the GOLD baseline',
+      !/contract_fair[^\n]*baseline/.test(pre8) && !/cf\.fair_value[^\n]*data\.baseline/.test(pre8))
+  }
   eq('X3 quality chip', [F.settlementQualityChip('vwap30_proxy'), F.settlementQualityChip('band_proxy'), F.settlementQualityChip('proxy'), F.settlementQualityChip(null, 'breeze_vwap30')], ['VWAP30 PROXY', 'BAND PROXY', 'BAND PROXY', 'VWAP30 PROXY'])
   // X4 TREND: values and the words they earn; the server's words win
   eq('X4 trendWordsFrom: below both / above both / between / missing', [F.trendWordsFrom(-0.47, -9.72), F.trendWordsFrom(1, 2), F.trendWordsFrom(0.5, -3), F.trendWordsFrom(null, 1)], ['below both averages', 'above both', 'between', null])

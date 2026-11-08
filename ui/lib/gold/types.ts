@@ -288,6 +288,12 @@ export interface HealthFair extends Omit<SettlementFields, 'settlement' | 'settl
   mcx_live_source?: string | null
   premium_rupees: number | null
   premium_pct: number | null
+  // the PICK's own economics, served only on `contract_fair` for a non-GOLD family (F6, 8 Nov 2026): its quotation unit,
+  // its own ₹ chase limit, the GOLD-1-kg model the page's other numbers come from, and the sentence that says so
+  quote_unit?: string | null
+  chase_limit?: number | null
+  model_contract?: string | null
+  model_note?: string | null
   comex: FairLeg | number | null
   comex_symbol?: string | null
   usdinr: FairLeg | number | null

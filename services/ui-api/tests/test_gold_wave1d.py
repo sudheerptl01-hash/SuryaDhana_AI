@@ -925,8 +925,18 @@ def test_the_previous_sessions_vwap_stands_in_before_a_two_session_old_band() ->
     assert old["settlement_source"] == "band_midpoint" and old["settlement_session"] == "2026-11-04"
 
 
+def _is_session(d: date) -> bool:
+    """A weekday, or a DATED special session (Muhurat) — the same rule shared/mcx_specs gives the live pages."""
+    from shared import mcx_specs as _specs
+    return d.weekday() < 5 or _specs.special_session_on(d) is not None
+
+
 def _stored_vwap_fake(monkeypatch: pytest.MonkeyPatch, value: float = 146_950.0) -> list[str]:
-    """data-service answering every MCX_*_VWAP30 id with one point per weekday from 01 Oct to tomorrow (wall clock)."""
+    """data-service answering every MCX_*_VWAP30 id with one point per SESSION from 01 Oct to tomorrow (wall clock).
+
+    A session is a weekday or a dated special session (the Muhurat Sunday, 8 Nov 2026): since wave 1e those count as
+    completed sessions, so the pages ask for their window too. A weekday-only fake made this test fail on that Sunday
+    alone — the store had no point for it and the page queued a Breeze read the test forbids."""
     asked: list[str] = []
     real = gold._db_fetch
     days = [date(2026, 10, 1) + timedelta(days=k) for k in range((datetime.now(IST).date() - date(2026, 10, 1)).days + 2)]
@@ -936,7 +946,7 @@ def _stored_vwap_fake(monkeypatch: pytest.MonkeyPatch, value: float = 146_950.0)
         if path == "/db/gold/series" and "_VWAP30" in ids:
             asked.append(ids)
             out = [{"series_id": sid, "points": [{"report_date": d.isoformat(), "value": value + (0 if sid.endswith("_VWAP30") else -value + 50),
-                                                  "release_at": None} for d in days if d.weekday() < 5]}
+                                                  "release_at": None} for d in days if _is_session(d)]}
                    for sid in ids.split(",") if "_VWAP30" in sid]
             return {"series": out}
         return await real(path, params)

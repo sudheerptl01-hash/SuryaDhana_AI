@@ -170,11 +170,15 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
   const bandApplies = dayLabel((data?.contract as { band_applies_to?: string | null } | undefined)?.band_applies_to ?? null)
   // the server's own flagged-check note repeats the strip's numbers: not printed here when the check is shown (PLAN §f.6)
   const notes = (data?.notes ?? []).filter(n => !(blNote && /ICICI band midpoint/i.test(n)))
+  // F6 (8 Nov 2026): the model, the 08:45 call and the accuracy log run on GOLD 1 kg — the scored history is GOLD and it
+  // is not re-pointed. The PICK is priced from the server's own contract_fair block, which now carries its own fair
+  // value, its own ₹ limit (₹30 per 1 g PETAL, ₹240 per 8 g GUINEA) and its own OK/WAIT verdict.
+  const cf = sel?.family && sel.family !== 'GOLD' ? (data?.contract_fair ?? null) : null
 
   return (
     <GoldPanel id="h.open" title="Today's open" accent={T.amber} badge="arithmetic" layer={layer} catalog={catalog}
       series={['PREOPEN_LOG', 'COMEX_GC_FRONT', 'USDINR_CLOSE', 'MCX_CURVE_ICICI']}
-      subtitle={data ? `${data.contract.name} ↔ COMEX ${comexCode(data.contract.comex)} · updated ${istTime(data.as_of)} IST · every 60 s` : 'MCX gold fair open from COMEX and the rupee'}
+      subtitle={data ? `${data.contract.name} ↔ COMEX ${comexCode(data.contract.comex)} · updated ${istTime(data.as_of)} IST · every 60 s` + (cf ? ` · model on GOLD 1 kg, not your ${cf.contract}` : '') : 'MCX gold fair open from COMEX and the rupee'}
       freshness={data ? (data.freshness ?? { state: 'delayed', source: 'Yahoo', as_of: data.as_of }) : null}
       copyB={<>{preOpenCopyB(stats, threshold)} The <Term t="fair open" /> is arithmetic; the <Term t="chase limit" /> is the house rule.</>}
       copyP={`Multiplicative: settlement × COMEX ratio × USD/INR ratio; references are 30-min averages before the MCX close; settlement = last-30-min VWAP of the Breeze 1-minute bars (PROXY), else the ICICI band midpoint (PROXY; flagged when the two differ > 0.6 %). ${preOpenCopyB(stats, threshold).replace(/^Where MCX .*?close\. /u, '')} After 09:15 the panel shows the 08:45 snapshot against the captured open, never the live fair value.`}
@@ -184,6 +188,19 @@ export function GoldPreOpen({ sel, layer = 'B', tooltips = {}, catalog = null, f
       </>}
       bodyStyle={{ display: 'grid', gap: 12 }}>
 
+      {cf && (
+        /* F6: ONE line for the pick, in the pick's own unit, so a GOLDPETAL reader never reads GOLD 1 kg's ₹1,42,540 as
+           theirs. The model's own numbers below stay GOLD's and the subtitle says so (the scored history is GOLD). */
+        <div data-gold-open-pick style={{ padding: '8px 12px', border: `1px solid ${T.border}`, background: '#080b10', fontSize: 11.5 }}>
+          <span style={{ color: T.muted }}>YOUR PICK · </span>
+          <span style={{ color: T.bright }}>{cf.contract}{cf.expiry ? ` ${dayLabel(cf.expiry)}` : ''}</span>
+          <span style={{ color: T.muted }}> fair </span>
+          <span style={{ color: T.bright }}>{fmtInr(cf.fair_value)}</span>
+          <span style={{ color: T.dim }}> {cf.quote_unit ?? '₹ per 10 g'}</span>
+          {cf.chase_limit != null && <span style={{ color: T.muted }}> · its own limit {fmtInr(cf.chase_limit)}</span>}
+          {cf.model_note && <div style={{ color: T.dim, marginTop: 2 }}>{cf.model_note}</div>}
+        </div>
+      )}
       {error && <Notice color={T.red}>Pre-open model unavailable: {error}</Notice>}
       {!data && !error && <Loading label="Computing fair open from COMEX, the rupee and the MCX settlement" />}
       {data?.holiday && <Notice color={T.amber}>MCX {data.holiday.closure === 'full' ? 'closed today' : `${data.holiday.closure} closure today`}: {data.holiday.note}</Notice>}
