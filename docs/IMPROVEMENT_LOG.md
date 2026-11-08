@@ -5,6 +5,14 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 16:50: the 24-hour power clue narrowed from the logs — a daily timer does not fit.**
+- Of the four multi-hour outages in the service logs (gaps > 12 h, which the 02:15 backup and 03:10 gold job rule out as
+  idle), the stops are Wed 28 Oct 12:46 (43.4 h), Sat 31 Oct 11:00 (106.5 h), Thu 5 Nov 19:35 (20 min) and Fri 6 Nov 19:52
+  (38.0 h). The 5–6 Nov pair really is ~24 h apart, but the October pair is eight hours earlier in the day, so NO single
+  daily clock time fits them all: a timer or smart plug is not the general explanation, and the owner need not hunt for one
+  first. The PMU's under-voltage record stands — irregular supply failures — so a UPS remains the fix that covers every
+  candidate (house feed, inverter changeover, strip or socket). Written up in the incident report §8.
+
 **8 Nov 2026, 16:10: the owner closed the gold goal; the power decision is "keep FileVault + an off-Mac alert".**
 - Gold goal CONFIRMED COMPLETE by the owner after the final verification on the deployed build: 22/22 goal checks, every
   GOLD page 22/22 in Chromium and WebKit, each family priced in its own unit (GOLDPETAL ₹14,342 per 1 g beside GOLD's
