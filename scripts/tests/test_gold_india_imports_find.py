@@ -147,3 +147,46 @@ def test_store_mode_refuses_when_the_sentence_does_not_name_that_month(monkeypat
     monkeypatch.setattr(f.subprocess, "run", lambda cmd, **kw: called.append(cmd))
     rc = f.main(["--month", "2026-10", "--store"])
     assert rc == 2 and called == [], "a year-to-date total must never be stored as a month"
+
+
+# --- the real document, which nearly caused a 28x wrong figure ---------------------------------------------------
+
+# Verbatim from the Commerce Ministry's September 2026 release (commerce.gov.in "PIB Release - Septermber 2026.pdf",
+# fetched 8 Nov 2026). The release carries NO standalone gold figure: gold appears only inside an aggregate that
+# EXCLUDES it. Parsed naively this returned US$51.64 bn for a month whose real figure is US$1.8 bn, and the month guard
+# passed it because the sentence does name September 2026.
+REAL_RELEASE = (
+    "Non-petroleum imports in September 2026 were US$ 34.81 Billion compared to US$ 28.53 Billion in September 2025. "
+    "Non-petroleum, non-gems & jewellery (gold, silver & precious metals) imports in September 2026 were "
+    "US$ 51.64 Billion compared to US$ 42.33 Billion in September 2025. "
+    "Note: Gems & Jewellery Imports include Gold, Silver & Pearls, precious & Semi-precious stones."
+)
+
+
+def test_an_aggregate_that_only_excludes_gold_is_never_read_as_the_gold_figure():
+    assert f.find_figure(REAL_RELEASE) is None, "51.64 is non-petroleum non-gems imports, not gold imports"
+    # the month guard alone would NOT have saved us: the sentence does name the month
+    sentence = [s for s in REAL_RELEASE.split(". ") if "51.64" in s][0]
+    assert f.month_named(sentence, "2026-09") is True
+
+
+def test_the_phrases_that_mark_an_aggregate_are_all_refused():
+    for s in ("Non-petroleum, non-gems & jewellery (gold) imports in October 2026 were US$ 51 billion",
+              "Imports excluding gold in October 2026 were US$ 40 billion",
+              "Gems & jewellery imports including gold in October 2026 were US$ 5 billion",
+              "Gold, silver & precious metals imports in October 2026 were US$ 9 billion"):
+        assert f.find_figure(s) is None, s
+
+
+def test_a_real_gold_sentence_still_parses_after_the_exclusions():
+    for s, want in (("Gold imports in October 2026 stood at US$ 1.8 billion.", 1.8),
+                    ("gold imports grew by 4.8 per cent to US$ 4.2 billion in July 2026", 4.2),
+                    ("India imported gold worth US$ 2.3 billion in August 2026", 2.3)):
+        got = f.find_figure(s)
+        assert got is not None and got[0] == want, s
+
+
+def test_it_skips_the_aggregate_and_finds_a_true_sentence_later_in_the_same_document():
+    doc = REAL_RELEASE + " Gold imports in September 2026 were US$ 1.8 billion."
+    hit = f.find_figure(doc)
+    assert hit is not None and hit[0] == 1.8      # not 51.64, not 34.81

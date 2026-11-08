@@ -78,20 +78,35 @@ def page_text(raw: str) -> str:
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", s))).strip()
 
 
+# Sentences that mention gold only to EXCLUDE it. The Commerce Ministry's monthly release carries no standalone gold
+# figure at all — gold appears only inside "Non-petroleum, non-gems & jewellery (gold, silver & precious metals)
+# imports in September 2026 were US$ 51.64 Billion". Parsed naively that stores 51.64 for a month whose real figure is
+# 1.8, and the month guard cannot tell, because the sentence does name the month. Verified against the real release
+# (commerce.gov.in "PIB Release - Septermber 2026.pdf", 8 Nov 2026), which is why this exclusion exists.
+EXCLUDING_RE = re.compile(
+    r"non-?gems|non-?petroleum|excluding|other than|gems\s*&?\s*jewellery|precious\s+(?:metals|stones)|"
+    r"silver\s*&|&\s*silver|pearls", re.IGNORECASE)
+# and the sentence must be ABOUT gold imports, not merely contain the word
+ABOUT_GOLD_RE = re.compile(r"\bgold\b[^.]{0,40}\bimport|import[^.]{0,40}\bgold\b|\bgold\b\s+(?:import|inbound)",
+                           re.IGNORECASE)
+
+
 def find_figure(text: str) -> tuple[float, str] | None:
-    """The first gold+currency figure, normalised to US$ billions, with the sentence it came from."""
-    m = FIGURE_RE.search(text)
-    if not m:
-        return None
-    val, unit = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
-    usd_bn = float(val) / 1000 if unit.lower() in ("million", "mn") else float(val)
-    # The figure's OWN sentence, not a fixed window: a release puts several periods and several commodities in
-    # neighbouring sentences ("exports … US$ 39.2 billion. Gold imports in October 2026 …"), and dragging one in would
-    # both muddy the stored provenance and feed the month guard text the figure does not belong to.
-    left = text.rfind(". ", 0, m.start())
-    right = text.find(". ", m.end())
-    sentence = text[(left + 2) if left != -1 else 0:(right + 1) if right != -1 else len(text)]
-    return usd_bn, sentence.strip()
+    """The first figure that is genuinely GOLD IMPORTS, normalised to US$ bn, with the sentence it came from.
+
+    Two filters, both learned from the real documents: the sentence must be about gold imports (not a list that merely
+    names gold), and it must not be an aggregate that mentions gold only to exclude it.
+    """
+    for m in FIGURE_RE.finditer(text):
+        left = text.rfind(". ", 0, m.start())
+        right = text.find(". ", m.end())
+        sent = text[(left + 2) if left != -1 else 0:(right + 1) if right != -1 else len(text)].strip()
+        if EXCLUDING_RE.search(sent) or not ABOUT_GOLD_RE.search(sent):
+            continue
+        val, unit = (m.group(1), m.group(2)) if m.group(1) else (m.group(3), m.group(4))
+        usd_bn = float(val) / 1000 if unit.lower() in ("million", "mn") else float(val)
+        return usd_bn, sent
+    return None
 
 
 def month_named(sentence: str, month: str) -> bool:

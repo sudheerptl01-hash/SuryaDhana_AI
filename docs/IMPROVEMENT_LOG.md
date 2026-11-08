@@ -5,6 +5,23 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 19:10: the auto-store would have stored a figure 28x too high — caught by testing the real document.**
+- Fetched the Commerce Ministry's actual September 2026 release (`commerce.gov.in` serves the PDF, HTTP 200) and ran the
+  parser over it. It returned **US$51.64 bn** for September, whose real gold figure is **US$1.8 bn**, because the release
+  carries no standalone gold number: gold appears only inside "Non-petroleum, non-gems & jewellery (gold, silver &
+  precious metals) imports in September 2026 were US$ 51.64 Billion". **The month guard passed it** — that sentence does
+  name September 2026 — so the guard that was supposed to make `--store` safe would not have saved the row.
+- Fixed: a figure is accepted only when its sentence is ABOUT gold imports (`ABOUT_GOLD_RE`) and does not mention gold
+  merely to exclude it (`EXCLUDING_RE`: non-gems, non-petroleum, excluding, gems & jewellery, precious metals, silver &,
+  pearls). The real release now returns nothing, which is the correct answer; a true gold sentence still parses.
+- 8 new tests, including the ministry's own wording verbatim as a fixture and the case where an aggregate precedes a
+  genuine gold sentence in the same document (it must return 1.8, not 51.64).
+- **Independent confirmation of the stored history** while doing this: agencies report September 2026 gold imports at
+  US$1.8 bn and August at US$2.3 bn — the store holds 1.8 and 2.298. The hand-typed rows are right.
+- Honest consequence: the headline release does not contain the figure, so the 15 Nov job will usually send "a release
+  is out, read it" rather than store silently. That is the correct behaviour, not a shortfall — and the plausibility band
+  (> US$25 bn refused) remains the last line of defence.
+
 **8 Nov 2026, 18:55: `ui_audit --tabs <wrong case or typo>` reported PASS while auditing the BRIEF page.**
 - Found by accident: `scripts/ui_audit.py --tabs GOLD` printed "GOLD PASS ready=70ms console=0" and the screenshot was
   the EVENING BRIEF. Two things lined up — the router falls back to the brief for an unknown `?tab=`, and `probe.visit`
