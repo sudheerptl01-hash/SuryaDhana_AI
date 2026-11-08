@@ -622,6 +622,16 @@ C3, C4, D3, E1, E5, E12, F1, F2, F9, F10, G1, G2, G3, G5, G8, G16, G19, H2, H3, 
 - **[B]** The demand pulse after a duty change and the current-account driver of duty policy.
 - **Verdict:** PUBLISH-CONTEXT — one monthly bar; ingest by regex on the ~16th or by hand; keep the PRID. · **Catalog:** `INDIA_GOLD_IMPORTS_USD_BN` · `gold_series` (M)
 
+### F14b · UN Comtrade — India HS 7108 monthly (the machine-readable official filing) — **added 8 Nov 2026**
+- **URL:** `https://comtradeapi.un.org/public/v1/preview/C/M/HS?reporterCode=699&period=YYYYMM&partnerCode=0&cmdCode=7108&flowCode=M` — **no key**, JSON, US$ and kg.
+- **Why it matters:** the four other routes are closed — tradestat is a POST form (F15), RBI answers an automated XLSX download with a **captcha**, the Commerce Ministry's monthly release carries **no standalone gold figure** (gold appears only inside "Non-petroleum, non-gems & jewellery (gold, silver & precious metals) imports … US$ 51.64 Billion", which a naive parse stored as the gold figure — 28x wrong), and PIB's RSS reaches that same release.
+- **Lag ≈ 2 months** (filed through 2026-07 on 8 Nov 2026), so it never replaces the press-release figure for the current month: it fills the months behind it and **verifies** what is already stored.
+- **Traps, both handled:** one period per request (preview limit), and a **throttled call answers HTTP 200 with an EMPTY data list, not an error** — believed naively that silently holes the series, so an empty answer is always re-asked slowly before it is accepted (202509 came back empty at a 1.2 s cadence and returned its real 9.61 at 6 s).
+- **Never overwrites:** a stored month beyond 10 % of the filing is reported (Telegram + exit 1), never applied.
+- **First run (8 Nov 2026):** series 4 → **33 points** (2024-01 → 2026-09); the hand-typed 2025-08 (5.439), 2025-09 (9.61) and 2026-08 (2.298) each matched the filing, and 2026-07 (4.162) matches the RBI Bulletin's "US$ 4.2 billion in July 2026".
+- **Code:** `scripts/gold_india_imports_comtrade.py` · job `india_imports_comtrade` (20th, 11:45 IST).
+- **Verdict:** PUBLISH-CORE — official, keyless, point-in-time by filing month. · **Catalog:** `INDIA_GOLD_IMPORTS_USD_BN` · `gold_series` (M)
+
 ### F15 · DGCI&S tradestat portal (HS 7108)
 - **URL:** `https://tradestat.commerce.gov.in/eidb/commodity_wise_import` (POST form with viewstate; "Last data updated on 07/08/2026"; `commerce.gov.in/press-releases/` 404; `ddp.dgcis.gov.in` fails DNS) · **Verdict:** LINK-ONLY (F14 gives the number).
 

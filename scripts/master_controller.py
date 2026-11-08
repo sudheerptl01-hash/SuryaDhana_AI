@@ -4009,6 +4009,36 @@ async def icici_session_guard() -> None:
                             f"Use /login, or BRKR › force a new login.")
 
 
+async def india_imports_comtrade() -> None:
+    """Fill and verify India's monthly gold imports from UN Comtrade — the official machine-readable filing.
+
+    Comtrade runs about two months behind (8 Nov 2026: filed through 2026-07), so this never replaces the press-release
+    figure for the current month; it fills the months behind it and CHECKS the ones already stored against India's own
+    filing, which is how a hand-typed value gets independently verified. It never overwrites: a divergence beyond the
+    tolerance is reported, not applied.
+    """
+    JOB = "india_imports_comtrade"
+    if not GOLD_JOBS_ENABLED:
+        return
+    cmd = [PYTHON_BIN, str(_ROOT / "scripts" / "gold_india_imports_comtrade.py"),
+           "--since", (datetime.now(IST).date().replace(day=1) - timedelta(days=200)).strftime("%Y-%m")]
+    try:
+        res = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=1800,
+                                      cwd=str(_ROOT), env={**os.environ, "PYTHONPATH": str(_ROOT)})
+    except Exception as exc:                        # noqa: BLE001
+        _log.warning(JOB, f"comtrade backfill failed to run: {type(exc).__name__}")
+        return
+    out = (res.stdout or "").strip()
+    tail = next((ln for ln in reversed(out.splitlines()) if ln.startswith(("filled:", "would fill:"))), "")
+    _log.info(JOB, f"exit {res.returncode} · {tail or 'no summary'}")
+    if res.returncode == 1:                         # a stored month disagrees with India's own filing: worth a look
+        rows = [ln.strip() for ln in out.splitlines() if ln.strip().startswith("MISMATCH")]
+        await _alerts.info("India gold imports: a stored month disagrees with Comtrade",
+                           "\n".join(rows[:4]) + "\nNothing was overwritten.")
+    elif tail.startswith("filled:") and not tail.startswith("filled: 0"):
+        await _alerts.info("India gold imports backfilled", f"{tail}\nSource: UN Comtrade HS 7108 (India's filing).")
+
+
 async def india_imports_watch() -> None:
     """Fetch India's monthly gold-import figure from PIB once it is published, and store it if it is unambiguous.
 
@@ -4967,6 +4997,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         id="icici_session_guard_day",
         name="ICICI session guard (re-login if it dies mid-session)",
         max_instances=1, coalesce=True, misfire_grace_time=600,
+    )
+    # ── Comtrade fills the months behind the press release and verifies what is already stored (8 Nov 2026). Monthly,
+    #    on the 20th at 11:45 IST — outside both freeze windows, and well after the 15th release the watch job covers.
+    scheduler.add_job(
+        india_imports_comtrade,
+        trigger=CronTrigger(day=20, hour=11, minute=45, timezone=IST),
+        id="india_imports_comtrade",
+        name="India gold imports from UN Comtrade (fill + verify)",
+        max_instances=1, coalesce=True, misfire_grace_time=12 * 3600,
     )
     # ── India's monthly gold-import figure: the only gold number with no feed. PIB publishes it around the 15th, so look
     #    on the days after, at 11:15 (outside both freeze windows), and stop once the month is stored (8 Nov 2026).
