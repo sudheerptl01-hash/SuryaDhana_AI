@@ -3949,6 +3949,66 @@ async def special_session_login() -> None:
     await icici_session_refresh()
 
 
+_SESSION_GUARD_TRIES: dict[str, int] = {}          # date -> re-logins attempted, so a broker-side refusal cannot loop
+SESSION_GUARD_MAX_PER_DAY = 3
+
+
+async def icici_session_guard() -> None:
+    """Re-login if the ICICI session dies DURING a session, instead of waiting for tomorrow's 08:00 job.
+
+    The 08:00 Mon–Fri job (and the start-up and special-session ones) covers every planned case, but a session can still
+    end mid-market: ICICI invalidates the token, or a login from the app or another machine ends this one. Until now that
+    meant no live MCX/NSE quote for the rest of the day, with nobody told. This checks the two booleans ui-api exposes
+    (`connected`, `needs_session_refresh`) and calls the same unattended TOTP login when they say the session is gone.
+
+    Quiet by design: it logs and alerts only when it actually re-logs in, or when a re-login fails. It never reads or
+    logs anything else from that payload — `login_url` embeds the API key.
+    """
+    JOB = "icici_session_guard"
+    if not ICICI_AUTO_LOGIN:
+        return
+    now = datetime.now(IST)
+    if now.weekday() >= 5 and not mcx_specs.special_session_on(now.date()):
+        return                                      # not a trading day (a special session counts)
+    if _login_running():
+        return                                      # a login is already in flight: never interrupt one
+    day = now.date().isoformat()
+    if _SESSION_GUARD_TRIES.get(day, 0) >= SESSION_GUARD_MAX_PER_DAY:
+        return                                      # tried enough today; the 08:00 job and the owner's /login remain
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(f"{UI_API}/api/positions/connection-status")
+        if r.status_code != 200:
+            return
+        body = r.json()
+        alive = bool(body.get("connected")) and not bool(body.get("needs_session_refresh"))
+        kind = str(body.get("error_kind") or "")     # a short code, never the payload
+    except Exception as exc:                        # noqa: BLE001  — ui-api down is the watchdog's business, not ours
+        _log.info(JOB, f"could not read the session state ({type(exc).__name__})")
+        return
+    if alive:
+        return
+    _SESSION_GUARD_TRIES[day] = _SESSION_GUARD_TRIES.get(day, 0) + 1
+    _log.warning(JOB, f"session not connected mid-session (kind={kind or 'unknown'}) — logging in again "
+                      f"(attempt {_SESSION_GUARD_TRIES[day]}/{SESSION_GUARD_MAX_PER_DAY})")
+    await icici_session_refresh()
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r2 = await client.get(f"{UI_API}/api/positions/connection-status")
+        ok = r2.status_code == 200 and bool(r2.json().get("connected"))
+    except Exception:                               # noqa: BLE001
+        ok = False
+    if ok:
+        await _alerts.info("ICICI session recovered",
+                           f"The session had ended mid-market ({kind or 'unknown'}); an unattended TOTP login "
+                           f"restored it at {now:%H:%M} IST. Live quotes are back.")
+    else:
+        await _alerts.error("ICICI session still down",
+                            f"The session ended mid-market ({kind or 'unknown'}) and the re-login did not restore it "
+                            f"(attempt {_SESSION_GUARD_TRIES[day]}/{SESSION_GUARD_MAX_PER_DAY}). "
+                            f"Use /login, or BRKR › force a new login.")
+
+
 async def india_imports_watch() -> None:
     """Fetch India's monthly gold-import figure from PIB once it is published, and store it if it is unambiguous.
 
@@ -4889,6 +4949,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         id="special_session_close",
         name="MCX special-session settlement (VWAP30) while the session is alive",
         max_instances=1, coalesce=True, misfire_grace_time=3600,
+    )
+    # ── ICICI session guard: the 08:00 job covers every planned case, but a session that dies MID-market used to mean
+    #    no live quote until tomorrow. Every 15 min while a session is on; quiet unless it actually re-logs in.
+    #    Two triggers, because 09:00 and 09:15 fall inside the 07:45-09:20 freeze window (the 08:00 login owns that
+    #    stretch, and scripts/tests/test_tv2_g11_jobs_gate.py enforces it): the guard starts at 09:30.
+    scheduler.add_job(
+        icici_session_guard,
+        trigger=CronTrigger(minute="30,45", hour=9, timezone=IST),
+        id="icici_session_guard",
+        name="ICICI session guard (re-login if it dies mid-session)",
+        max_instances=1, coalesce=True, misfire_grace_time=600,
+    )
+    scheduler.add_job(
+        icici_session_guard,
+        trigger=CronTrigger(minute="*/15", hour="10-15", timezone=IST),
+        id="icici_session_guard_day",
+        name="ICICI session guard (re-login if it dies mid-session)",
+        max_instances=1, coalesce=True, misfire_grace_time=600,
     )
     # ── India's monthly gold-import figure: the only gold number with no feed. PIB publishes it around the 15th, so look
     #    on the days after, at 11:15 (outside both freeze windows), and stop once the month is stored (8 Nov 2026).
