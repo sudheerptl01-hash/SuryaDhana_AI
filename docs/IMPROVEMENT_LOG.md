@@ -5,6 +5,29 @@ below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
 
+**8 Nov 2026, 10:05–15:52: the gold program independently reviewed, 18 confirmed defects fixed, and the settlement store filled.**
+- Review (`wf_962189ca-105`): three critics on the LIVE page against the owner's goal — a data auditor recomputing every
+  number, a Bloomberg-style gold trader, and a newcomer — all PUBLISH-WITH-FIXES (6.4 / 6.8 / 6.8). An adversarial verifier
+  reproduced each serious finding on the live stack: **18 of 18 real, 0 refuted**. Evidence
+  `~/.suryadhana_pm_scratch/wf_rca_gold_20261108/` (confirmed_findings.json, goldReport.md).
+- Fixes (`wf_ffb21be0-507`, two rounds, four disjoint lanes, each adversarially checked; commit `38e9148`): the Kitco-style
+  chart drew Shanghai in ¥/g on the $/oz axis (now $4,036.75 from ¥868.0/g, server-converted at the vintage ON OR BEFORE
+  that Shanghai session, with a UI guard); one dollar effect and one window per page (the window column refuses a row dated
+  after today on EVERY driver and says why; the verdict prints a leg's own span when it is not gold's; MACRO hides the
+  window column when it would reprint ANY trailing column); point-in-time dating (the FX day rolls 17:00 New York; a dated
+  special session is a session of its own for Indian symbols, while COMEX / ICE / FX keep the weekend rule); the feeds say
+  what they cover (calendar coverage, an overdue COT flag, the MCX tape reading the Breeze store, a contract-aware open).
+  The round-2 checkers rejected one lane twice; the PM closed the last five majors by hand, each with a negative control.
+- **The settlement store went from ZERO rows to a filled history.** The critics were right that no VWAP30 had ever been
+  stored: the job's first scheduled run was the night the Mac died. The sweep + the special-session jobs fixed it live —
+  `MCX_GOLD_202612_VWAP30` now holds 16 sessions incl. Fri 6 Nov (₹1,42,164.92, the session lost to the outage) and today's
+  Muhurat (₹1,42,540.53 from 235 lots). `/api/gold/fair` baseline: session 2026-11-08, `breeze_vwap30`,
+  `older_than_expected` false — Monday's 08:45 fair open is measured against today's session, as designed.
+- Unattended ICICI login on a Sunday: `special_session_login` fired at 13:00:06 and logged in by TOTP for the Muhurat
+  session (pre-open 14:05, trading 14:20–15:30); `special_session_close` stored the settlement at 15:45 (50 s).
+- Open: GOLDTEN / PETAL / GUINEA have no stored window yet (their front is in tender; `contracts_for` picked the GOLD and
+  GOLDM fronts). The nightly 23:58 run should fill them from Monday — verify.
+
 **8 Nov 2026, 09:50–10:45: back from a 38-hour outage; the drivers history backfilled; two honest-label fixes.**
 - The Mac stopped Fri 6 Nov at 19:52 (controller's last heartbeat 19:52:08) and stayed off until Sun 8 Nov 09:50 — the same
   minute as Thu 5 Nov, which restarted itself. `pmset autorestart 0`, so nothing powered it back on; no panic file. A
