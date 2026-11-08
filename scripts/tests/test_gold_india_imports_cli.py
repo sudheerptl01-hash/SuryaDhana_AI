@@ -5,7 +5,7 @@ Every rule has a negative control, because the only guard against a typo in a ha
 from __future__ import annotations
 
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -32,7 +32,7 @@ def test_the_typo_guard_refuses_the_two_mistakes_the_unit_invites():
 
 
 def test_a_month_that_has_not_ended_is_refused(monkeypatch, capsys):
-    nxt = (date.today().replace(day=1) + timedelta(days=40)).strftime("%Y-%m")
+    nxt = (datetime.now(cli.IST).date().replace(day=1) + timedelta(days=40)).strftime("%Y-%m")
     with pytest.raises(SystemExit) as e:
         cli.main(["--month", nxt, "--usd-bn", "1.8"])
     assert "has not ended yet" in str(e.value)
