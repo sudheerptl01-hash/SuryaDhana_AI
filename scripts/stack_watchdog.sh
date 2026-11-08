@@ -77,6 +77,10 @@ tg() {
   curl -s -m 15 -X POST "https://api.telegram.org/bot$tok/sendMessage" \
        --data-urlencode "chat_id=$chat" --data-urlencode "text=$1" > /dev/null 2>&1 || true
 }
+# the script's own first argument, captured at load time: the entry line is fixed as `main` with no args
+# (scripts/tests/test_ops_shell.py pins it), so a flag cannot be passed down any other way.
+WATCHDOG_ARGV="${1:-}"
+
 # once per key per N minutes
 throttled() { local f="$STATE/throttle-$1"; [ -n "$(find "$f" -mmin -"$2" 2>/dev/null)" ] && return 0; touch "$f"; return 1; }
 
@@ -488,6 +492,9 @@ ping_watchdog_alive() {
 }
 
 main() {   # (body kept at column 0: it is the former top-level code)
+# `--ping-test`: the owner's one command after pasting a dead-man URL (8 Nov 2026). It takes no lock and touches no
+# service — it only pings what is configured — so it is handled before everything else and returns.
+if [ "${WATCHDOG_ARGV:-}" = "--ping-test" ]; then ping_test; return $?; fi
 # single instance (see take_lock: a lock whose run is gone is taken over at once)
 take_lock || exit 0
 trap release_lock EXIT
@@ -579,6 +586,33 @@ fi
 
 ping_deadman "$now_all_up"
 exit 0
+}
+
+# ── --ping-test: the owner checks a freshly pasted dead-man URL without waiting for the next run ─────────────
+# Sends ONE ping per configured check and reports the HTTP result. Never prints the URL itself (it is a credential of
+# sorts: anyone holding it can keep the check green). Added 8 Nov 2026, after a 38-hour outage nobody was told about.
+ping_test() {
+  local rc=0 u1 u2
+  u1=$(env_val HEALTHCHECK_PING_URL); u1=${u1%/}
+  u2=$(env_val HEALTHCHECK_WATCHDOG_URL); u2=${u2%/}
+  if [ -z "$u1" ] && [ -z "$u2" ]; then
+    echo "no off-Mac alert configured: set HEALTHCHECK_PING_URL (the stack) and HEALTHCHECK_WATCHDOG_URL (the Mac) in .env"
+    echo "  a free healthchecks.io check each, period 5 min / grace 15 min (this watchdog runs every 120 s)"
+    return 1
+  fi
+  for pair in "stack:$u1" "mac:$u2"; do
+    local name=${pair%%:*} url=${pair#*:} code
+    if [ -z "$url" ]; then printf '  %-6s not set\n' "$name"; rc=1; continue; fi
+    case "$url" in
+      http://*|https://*) ;;
+      *) printf '  %-6s NOT A URL (expected https://hc-ping.com/<uuid> or your own host)\n' "$name"; rc=1; continue ;;
+    esac
+    code=$(curl -s -o /dev/null -m 10 -w '%{http_code}' "$url" 2>/dev/null)
+    if [ "$code" = "200" ]; then printf '  %-6s OK (HTTP 200) — the check should now read "up"\n' "$name"
+    else printf '  %-6s FAILED (HTTP %s): the ping did not reach the service\n' "$name" "${code:-000}"; rc=1; fi
+  done
+  [ $rc -eq 0 ] && echo "both pings delivered; the watchdog sends them every 120 s from now on"
+  return $rc
 }
 
 # Run main only when executed (tests source this file for its functions); one line (see the header).

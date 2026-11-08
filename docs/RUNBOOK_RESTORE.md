@@ -551,14 +551,19 @@ stack is healthy and `<url>/fail` when it is not; a free outside service alerts 
    ```
    No restart is needed: the watchdog reads `.env` on every run. Treat the URL like a password (anyone who has it
    can send fake "healthy" pings); `status`, Telegram `/status` and the watchdog log never print it.
-5. Check it:
+5. Check it — one command, which pings every configured check once and never prints the URL:
    ```bash
-   curl -fsS -m 10 "$(grep '^HEALTHCHECK_PING_URL=' .env | tail -1 | cut -d= -f2- | tr -d "\"'")"; echo   # OK
-   ./start-local.sh status          # within 2 min: dead-man-ping  ok  hc-ping.com pinged … ago
+   bash scripts/stack_watchdog.sh --ping-test     # stack OK (HTTP 200) · mac OK (HTTP 200)
+   ./start-local.sh status                        # within 2 min: dead-man-ping  ok  hc-ping.com pinged … ago
    ```
+   It names anything missing or mistyped ("not set", "NOT A URL", or the HTTP code the service answered).
    On healthchecks.io the check turns green with a last ping under 2 minutes. `failing` in `status` means the
    ping itself fails: no network, or a mistyped URL (healthchecks.io answers 404 for an unknown check).
 6. Test the alert path once: on the Integrations page use **Test!** next to Telegram and email.
+7. Recommended (8 Nov 2026 RCA): add a SECOND check, `Mac alive`, same schedule, and put its URL in `.env` as
+   `HEALTHCHECK_WATCHDOG_URL`. The first check goes `fail` when the STACK is down; this one is pinged on every
+   watchdog run whatever the stack is doing, so its only meaning is "this Mac is up and launchd still runs the
+   watchdog" — the signal that was missing when the Mac lost power on 6 Nov and stayed off for 38 hours.
 
 What it catches: no ping for 15 minutes (Mac off, frozen, asleep, at the FileVault or login screen after a reboot,
 the watchdog not loaded, no network), and `fail` on every watchdog run while a core service you did not stop is
