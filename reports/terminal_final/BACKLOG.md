@@ -40,3 +40,11 @@ enforcement, gold program behaviours, GO bar, atomic UI releases + rollback, wat
 - F-23 (W1) data/job_queue.sqlite + data/ask_audit.sqlite into db_backup FAMILIES (builder-flagged).
 - F-24 (W1) R2-QUEUE test_error_is_persisted timing flake under parallel load (1-in-10; de-flake).
 - F-25 (RSCH) ASK: wire a local Ollama model + the nightly eval run; MINOR-1 detector is pattern-based — the describe-only prompt stays the real fence.
+
+## F2 polish queue (13 Nov 23:50 — next round)
+- F-26 (W4) ellipsis-truncated cells get hover/tap tooltips (news headlines, sector names; shared kit).
+- F-27 (W6) wire catalogVerdictOf into Panel chips for catalogued-dataset panels (risk critic F1+F2 named fix).
+- F-28 (W2) OMON 8.25px SVG axis tick; volume/OI unit chips; expiry scorecard bogus 329-day row.
+- F-29 (W7) ASK: example questions + recent-audit list in the empty state; louder snapshot-age when stale; F-25 eval run on qwen3.5:9b.
+- F-30 (W4) GOLD gauge-delta sub clipping; WTCH one-time settings-import prompt; LAYOUT SAVE toast.
+- F-31 (W1) /jobs/recent retention bump; NIFTY BANK drivers recalibration; off-machine DB copy (owner disk).

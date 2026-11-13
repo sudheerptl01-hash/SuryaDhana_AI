@@ -115,4 +115,8 @@
   }
   /* the one-per-page GO bar / dialogs keep their own backdrops clickable: a backdrop is never < 40 px, so
      its overlay equals its own box and nothing changes. No exceptions needed. */
+
+  /* MEMB (F2-TRADER, 13 Nov 2026): the members table was the one 390px offender left (346px over) — it scrolls
+     inside its own panel instead of widening the document. Scoped to the page; desktop untouched. */
+  .sd-page[data-page='memb'] table { display: block; overflow-x: auto; max-width: 100%; }
 }
