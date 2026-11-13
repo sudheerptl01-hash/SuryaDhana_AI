@@ -19,6 +19,10 @@
 #     checked, whatever the stack's state — it stops only when the Mac itself is off, asleep, at the FileVault screen
 #     or launchd no longer runs this script. Read with the first: first = fail while the second beats → the stack is
 #     down on a live Mac; both silent → the Mac is gone. Result in .pids/watchdog/deadman_watchdog ("<epoch> ok|error");
+#   * data-service answering /health but READ-ONLY (DuckDB write lock held, usually by ui-api starting first
+#     on a cold boot, 13 Nov 2026): healed with the lock-safe stop ui-api → restart data-service → start ui-api
+#     order, throttled to one attempt per 50 min and never inside a data-service freeze window; and every
+#     data-service START while ui-api is up uses that same order, so the trap cannot re-arm.
 #   * also: Telegram when ui-api is up but there is no UI release to serve (at most every 6 h), and an
 #     hourly `start-local.sh rotate-logs` (the .logs/*.log size cap);
 #   * a HUNG core service (25 Oct 2026: ui-api listened but stopped answering for 8 min, and the old watchdog
@@ -96,6 +100,19 @@ health_url() {
 health_code() { curl -s -o /dev/null -m "$HEALTH_TIMEOUT_S" -w '%{http_code}' "$(health_url "$1")" 2>/dev/null; }
 is_up() { [ "$(health_code "$1")" = "200" ]; }
 start_local_running() { pgrep -f "start-local.sh" > /dev/null 2>&1; }
+ready_url()  { echo "http://127.0.0.1:$(svc_port "$1")/ready"; }
+ready_code() { curl -s -o /dev/null -m "$HEALTH_TIMEOUT_S" -w '%{http_code}' "$(ready_url "$1")" 2> /dev/null; }
+# data-service that lost the DuckDB write-lock race opens READ-ONLY: /health stays 200 (is_up cannot see it) but
+# /ready answers 503 and names it, and every ingest 503s until a lock-safe restart (hit on the 13 Nov cold boot).
+ready_says_read_only() { curl -s -m "$HEALTH_TIMEOUT_S" "$(ready_url data-service)" 2> /dev/null | grep -qi "read.only"; }
+wait_ready() {   # wait_ready <svc> [seconds] — poll /ready until 200
+  local svc=$1 budget=${2:-90} waited=0
+  while [ "$waited" -lt "$budget" ]; do
+    [ "$(ready_code "$svc")" = "200" ] && return 0
+    sleep 3; waited=$((waited + 3))
+  done
+  return 1
+}
 
 # ── single instance ─────────────────────────────────────────────────────────────────────────────────────────
 # The lock is a directory with an owner file "<pid> <boot epoch>". A lock left by a run that died without its EXIT
@@ -437,6 +454,49 @@ foreign_listener() {
 Free the port, then: ./start-local.sh start $svc"
 }
 
+# A data-service START while ui-api is up opens DuckDB under ui-api's read lock and comes back READ-ONLY
+# (13 Nov 2026 cold boot: ui-api up 14:07, data-service's first start failed on a transient dep check, its 14:13
+# start landed read-only and every ingest 503'd). The only safe order is CLAUDE.md's: stop ui-api → start
+# data-service (wait /ready 200) → start ui-api. ui-api has no freeze window and is restarted on EVERY path out,
+# even when data-service fails, so the terminal never stays dark because of this dance.
+start_data_service_lock_safe() {
+  local ok=0
+  log "data-service start must be lock-safe: stopping ui-api first (it holds a read lock on market.duckdb)"
+  SURYADHANA_WATCHDOG=1 timeout 120 "$ROOT/start-local.sh" stop ui-api >> "$LOG" 2>&1
+  if SURYADHANA_WATCHDOG=1 timeout 300 "$ROOT/start-local.sh" start data-service >> "$LOG" 2>&1 && is_up data-service; then
+    if wait_ready data-service 90; then log "data-service ready (writable)"; else log "data-service is up but /ready is not 200 yet (see .logs/data-service.log)"; fi
+  else
+    ok=1
+  fi
+  SURYADHANA_WATCHDOG=1 timeout 300 "$ROOT/start-local.sh" start ui-api >> "$LOG" 2>&1
+  is_up ui-api || log "ui-api did not come back after the lock-safe start (see .logs/ui-api.log)"
+  return $ok
+}
+
+# data-service up but READ-ONLY is a crippled stack the up/down logic cannot see: heal it in the lock-safe order.
+# Never a data-service restart inside a freeze window (alert instead; healed after the window); at most one
+# attempt per 50 min so a persistent foreign lock holder cannot cause a restart storm.
+heal_read_only() {
+  is_up data-service || return 0
+  [ "$(ready_code data-service)" = "503" ] || return 0
+  ready_says_read_only || return 0
+  if in_freeze data-service; then
+    log "data-service is READ-ONLY but inside a freeze window: not restarted"
+    throttled "rolock-freeze" 115 || tg "⛔ SuryaDhana: data-service is READ-ONLY (every ingest fails) and a freeze window blocks the restart. It heals after the window, or run: ./start-local.sh stop ui-api && ./start-local.sh restart data-service && ./start-local.sh start ui-api"
+    return 0
+  fi
+  if throttled "rolock" 50; then log "read-only heal attempted recently — waiting"; return 0; fi
+  log "data-service is READ-ONLY (DuckDB write lock was held at its start) — healing in the lock-safe order"
+  SURYADHANA_WATCHDOG=1 timeout 120 "$ROOT/start-local.sh" stop ui-api >> "$LOG" 2>&1
+  SURYADHANA_WATCHDOG=1 timeout 300 "$ROOT/start-local.sh" restart data-service >> "$LOG" 2>&1
+  local verdict="healed — /ready 200, ingestion is back"
+  wait_ready data-service 90 || verdict="still not ready (see .logs/data-service.log)"
+  SURYADHANA_WATCHDOG=1 timeout 300 "$ROOT/start-local.sh" start ui-api >> "$LOG" 2>&1
+  is_up ui-api || log "ui-api did not come back after the read-only heal (see .logs/ui-api.log)"
+  log "read-only heal: $verdict"
+  tg "🔧 SuryaDhana watchdog: data-service came up READ-ONLY (the DuckDB write lock was held at its start). Lock-safe restart done — $verdict."
+}
+
 candidates() {
   local out=""
   for svc in $CORE; do
@@ -537,6 +597,14 @@ fi
 started=""; failed=""
 for svc in $dead; do
   log "$svc is down — starting"
+  if [ "$svc" = "data-service" ] && is_up ui-api; then
+    if start_data_service_lock_safe; then
+      started="$started $svc"; log "$svc started (lock-safe)"
+    else
+      failed="$failed $svc"; log "$svc FAILED to start (see .logs/$svc.log)"
+    fi
+    continue
+  fi
   if SURYADHANA_WATCHDOG=1 timeout 300 "$ROOT/start-local.sh" start "$svc" >> "$LOG" 2>&1 && is_up "$svc"; then
     started="$started $svc"; log "$svc started"
   else
@@ -550,6 +618,8 @@ done
 for svc in $foreign; do
   foreign_listener "$svc"
 done
+
+heal_read_only
 
 now_all_up=1
 for svc in $CORE; do

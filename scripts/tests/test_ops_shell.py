@@ -270,3 +270,55 @@ def test_watchdog_main_with_a_healthy_stack(tree):
     assert (state / "last_all_up").exists() and not (state / "lock").exists()
     log = (tree / ".logs" / "watchdog.log").read_text()
     assert "is down" not in log and "alert: ⚠️ SuryaDhana: the terminal UI is missing" in log
+
+
+# ── watchdog: READ-ONLY data-service self-heal and the lock-safe start (13 Nov 2026 cold-boot incident) ──────
+
+RECORDER = "#!/bin/bash\necho \"$@\" >> .logs/calls.txt\nexit 0\n"
+STUBS = ("timeout() { shift; \"$@\"; }; tg() { log \"alert: $*\"; }; wait_ready() { return 0; }; "
+         "is_up() { return 0; }; ready_code() { echo 503; }; ready_says_read_only() { return 0; }; ")
+
+
+def test_watchdog_heals_a_read_only_data_service_in_the_lock_safe_order(tree):
+    (tree / "start-local.sh").write_text(RECORDER)
+    r = sh(tree, WATCHDOG + STUBS + "in_freeze() { return 1; }; heal_read_only; echo RC=$?")
+    assert "RC=0" in r.stdout, r.stderr
+    calls = (tree / ".logs" / "calls.txt").read_text().splitlines()
+    assert calls == ["stop ui-api", "restart data-service", "start ui-api"], calls
+    assert (tree / ".pids" / "watchdog" / "throttle-rolock").exists(), "one heal per 50 min: the throttle marker"
+    log = (tree / ".logs" / "watchdog.log").read_text()
+    assert "READ-ONLY" in log and "healed — /ready 200" in log
+    # a second pass inside the throttle window must not restart anything again
+    r2 = sh(tree, WATCHDOG + STUBS + "in_freeze() { return 1; }; heal_read_only; echo RC=$?")
+    assert "RC=0" in r2.stdout
+    assert (tree / ".logs" / "calls.txt").read_text().splitlines() == calls, "throttled: no second restart"
+
+
+def test_watchdog_never_restarts_a_read_only_data_service_inside_a_freeze_window(tree):
+    (tree / "start-local.sh").write_text(RECORDER)
+    r = sh(tree, WATCHDOG + STUBS + "in_freeze() { return 0; }; heal_read_only; echo RC=$?")
+    assert "RC=0" in r.stdout, r.stderr
+    assert not (tree / ".logs" / "calls.txt").exists(), "freeze window: nothing restarted"
+    log = (tree / ".logs" / "watchdog.log").read_text()
+    assert "freeze window" in log and "alert: " in log, "the owner is told instead"
+
+
+def test_watchdog_starts_a_dead_data_service_lock_safe_while_ui_api_is_up(tree):
+    (tree / "start-local.sh").write_text(RECORDER)
+    r = sh(tree, WATCHDOG + "timeout() { shift; \"$@\"; }; is_up() { return 0; }; wait_ready() { return 0; }; "
+           "start_data_service_lock_safe; echo RC=$?")
+    assert "RC=0" in r.stdout, r.stderr
+    calls = (tree / ".logs" / "calls.txt").read_text().splitlines()
+    assert calls == ["stop ui-api", "start data-service", "start ui-api"], calls
+    log = (tree / ".logs" / "watchdog.log").read_text()
+    assert "lock-safe" in log and "ready (writable)" in log
+
+
+def test_watchdog_lock_safe_start_restarts_ui_api_even_when_data_service_fails(tree):
+    (tree / "start-local.sh").write_text("#!/bin/bash\necho \"$@\" >> .logs/calls.txt\n"
+                                         "case \"$*\" in 'start data-service') exit 1 ;; esac\nexit 0\n")
+    r = sh(tree, WATCHDOG + "timeout() { shift; \"$@\"; }; is_up() { return 0; }; wait_ready() { return 0; }; "
+           "start_data_service_lock_safe; echo RC=$?")
+    assert "RC=1" in r.stdout, "the failure is reported"
+    calls = (tree / ".logs" / "calls.txt").read_text().splitlines()
+    assert calls == ["stop ui-api", "start data-service", "start ui-api"], "ui-api comes back on the failure path too"

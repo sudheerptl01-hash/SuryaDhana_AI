@@ -1,9 +1,28 @@
 # Improvement log: the operations journal (newest entry first)
 
-Last updated Fri 6 Nov 2026 16:00 IST (Terminal v2 wave 2 + the 5 Nov review fixes + gold wave 1e DEPLOYED 15:36, entry
+Last updated Fri 13 Nov 2026 15:05 IST (Terminal v2 wave 2 + the 5 Nov review fixes + gold wave 1e DEPLOYED 15:36, entry
 below; market-hours acceptance; live NSE program + Terminal v2 wave 1 deployed 5 Nov 13:01; GOLD program deployed on the night
 of 4 Nov). The 11–15 Oct sprint entries further down were run and checked against live data at the time; today the terminal
 has 43 pages, `scripts/tests` collects 522 tests, ui-api 1,566 and the core suite 1,425.
+
+**13 Nov 2026, 15:05: the cold-boot READ-ONLY trap is closed — the watchdog heals it and can no longer cause it.**
+- This morning's incident, end to end: the Mac rebooted 12 Nov 13:11 (FileVault holds everything until login, 14:07
+  today); the watchdog started ui-api 14:07 while data-service's first start failed on a transient dependency check;
+  data-service finally started 14:13 UNDER ui-api's read lock and opened DuckDB READ-ONLY — /health 200 (so the
+  watchdog saw "healthy"), /ready 503, every ingest doomed, and the app greeted the owner with a raw
+  "data-service unreachable". Healed by hand in the lock-safe order at 14:15.
+- Two watchdog changes (`scripts/stack_watchdog.sh`), both bash-3.2-safe, entry line untouched:
+  1. **Every data-service START while ui-api is up is now lock-safe** (`start_data_service_lock_safe`): stop ui-api →
+     start data-service → wait `/ready` 200 → start ui-api; ui-api is restarted on every path out, even when
+     data-service fails, so the terminal never stays dark because of the dance.
+  2. **A READ-ONLY data-service is now detected and healed** (`heal_read_only`, every 2-min run): /health 200 +
+     /ready 503 + the body naming read-only → the same lock-safe restart, throttled to one attempt per 50 min,
+     never inside a data-service freeze window (one Telegram line instead; it heals after the window).
+- 4 new tests in `scripts/tests/test_ops_shell.py` (23 pass): heal order + throttle, freeze-window refusal,
+  lock-safe start order, and ui-api coming back even when data-service's start fails. Live no-op run verified on
+  the healthy stack (exit 0, no action). launchd picks the new code up on its next 2-minute run — nothing to restart.
+- Also today: master-controller had been dead since 11 Nov 17:03 (two days, no jobs); the 14:13 restart's downtime
+  catch-up re-ran bhavcopy/positions/events/results/backup and the ICICI login landed unattended.
 
 **8 Nov 2026, 19:10: the auto-store would have stored a figure 28x too high — caught by testing the real document.**
 - Fetched the Commerce Ministry's actual September 2026 release (`commerce.gov.in` serves the PDF, HTTP 200) and ran the
