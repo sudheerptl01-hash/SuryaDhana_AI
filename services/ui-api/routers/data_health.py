@@ -402,7 +402,7 @@ def compose_b1_health(payload: Any, jobs: list[dict[str, Any]], holidays: list[d
                      "lag_sessions": lag, "state": state, "unrecoverable": bool(r.get("unrecoverable")),
                      **_job_info(jobs, r.get("job_id")), "catchup_at": _catchup_at(jobs, r.get("job_id")) if state in ("amber", "red") else None,
                      "note": note, "dictionary_anchor": r.get("dictionary_anchor") or "", "badge": r.get("badge") or "context",
-                     "max_age_sessions": r.get("max_age_sessions")})
+                     "max_age_sessions": r.get("max_age_sessions"), "job_check": r.get("job_check")})
     return {"rows": _sorted(rows), "summary": _summary(rows),
             "last_session": str(payload.get("last_session") or last_close_session(now, holidays).isoformat())}
 

@@ -74,7 +74,7 @@ def test_ui_audit_v2_set_and_repetition_rules():
     assert ui_audit.resolve_tabs("v2", src.tab_ids + ["x"]) == v2
     assert ui_audit.resolve_tabs("v2", [t for t in src.tab_ids if t != "memb"]) == [t for t in v2 if t != "memb"], \
         "negative control: a page dropped from page.tsx drops out of the set"
-    assert ui_audit.resolve_tabs("all", src.tab_ids) == src.tab_ids and len(src.tab_ids) == 43
+    assert ui_audit.resolve_tabs("all", src.tab_ids) == src.tab_ids and len(src.tab_ids) == 44
     # placement: the live "who moved the index" panel and the MEMB horizon views
     fp = {"panels": ["Who moved the index", "Breadth"], "headings": []}
     assert ui_audit.placement_failures("movers", fp) == [] and ui_audit.placement_failures("brief", fp) == []

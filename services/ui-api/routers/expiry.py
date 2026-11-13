@@ -9,6 +9,10 @@ Two reads, both mounted at ``/api/derivatives`` beside ``routers/derivatives.py`
                                             today's straddle decay against the historical expiry-day curve (Breeze 1-minute
                                             replays), the pin-risk strikes; every day the next expiry and the
                                             implied-vs-realised scorecard of past expiries
+  GET /replay?symbol=&expiry=              E-REPLAY (FINAL ROUND wave E, F-17): the practice simulator's stored tapes — the
+                                            list of replayed expiries, or one expiry's 1-minute rows (minutes after 09:15
+                                            IST, clock times only; the date-bearing fields sit at the top level so the
+                                            client's date-hidden mode shows no date until the reveal)
 
 Store, then show (PLAN §0.2): both read data-service (``/db/fo-iv/oi-tape/{symbol}``, ``/db/fo-iv/expiry-day/{symbol}``) through
 the process-wide client and ONE stale-while-revalidate cache; no publisher is ever on the request path. A data-service that
@@ -160,6 +164,47 @@ def shape_expiry(body: dict[str, Any] | None, symbol: str, err: str | None, now:
     return out
 
 
+# ── E-REPLAY (FINAL ROUND wave E, F-17): the expiry replay simulator's read — stored rows only ───────────────────────
+# The simulator practises on recorded expiry-day tapes (``iv_expiry_replay``; the PM's after-close job O-T16 fills it,
+# never this service). Practice entries never exist server-side: the browser keeps them, the paper F&O book's store is
+# never written, no alert and no ticket is touched. Scoring is client arithmetic over these stored rows. No direction
+# words; the copy is "your mark vs the actual print", never a side having been the better one.
+
+REPLAY_BADGES = {"tape": "context", "scoring": "arithmetic"}
+REPLAY_NOTE = f"a rehearsal on recorded data — {DESCRIBES}"
+REPLAY_PRACTICE = ("practice entries stay in this browser (localStorage) — never the paper F&O book, never an order; "
+                   "PAPER ONLY stands")
+# the per-row keys served to the client: clock times only (no per-row date), so date-hidden mode leaks nothing per print
+_REPLAY_ROW_KEYS = ("minute", "ist", "straddle", "ce_close", "pe_close", "ce_oi", "pe_oi", "ce_volume", "pe_volume")
+
+
+def replay_chip(as_of: str | None, stored: bool, hint: str) -> dict[str, Any]:
+    """Recorded history is REFERENCE (never LIVE, never DELAYED: there is no feed to be behind); none stored → OFFLINE."""
+    if not stored:
+        return {"state": "offline", "source": "Breeze 1-minute replay", "as_of": None, "age_s": None, "hint": hint}
+    return {"state": "reference", "source": "Breeze 1-minute replay", "as_of": as_of, "age_s": None, "hint": hint}
+
+
+def shape_replay(body: dict[str, Any] | None, symbol: str, expiry: str | None, err: str | None) -> dict[str, Any]:
+    """The replay payload: the list of replayed expiries (no ``expiry``) or one expiry's tape. Rows pass through
+    point-in-time (a null stays a gap) but are re-keyed to ``_REPLAY_ROW_KEYS`` so no per-row timestamp carries a date."""
+    b = body or {}
+    base: dict[str, Any] = {"symbol": symbol, "badges": REPLAY_BADGES, "note": REPLAY_NOTE, "practice": REPLAY_PRACTICE,
+                            "ok": err is None, "store_errors": {"replay": err} if err else {}}
+    if expiry is None:
+        exps = [e for e in (b.get("expiries") or []) if isinstance(e, dict)]
+        last = str(exps[-1].get("expiry")) if exps else None
+        return {**base, "mode": "list", "expiries": exps, "n": len(exps),
+                "chip": replay_chip(last, bool(exps),
+                                    "replayed expiry days stored by the after-close job (O-T16); recorded history, not a feed"),
+                "empty_note": None if exps else str(b.get("note") or "no expiry day replayed yet (the PM's after-close job, O-T16)")}
+    rows = [{k: r.get(k) for k in _REPLAY_ROW_KEYS} for r in (b.get("rows") or []) if isinstance(r, dict)]
+    return {**base, "mode": "tape", "expiry": str(b.get("expiry") or expiry), "strike": b.get("strike"),
+            "spot_open": b.get("spot_open"), "source": b.get("source"), "rows": rows, "n": len(rows),
+            "chip": replay_chip(str(b.get("expiry") or expiry), bool(rows),
+                                "one recorded expiry day (Breeze 1-minute bars, backfilled); every print is historical")}
+
+
 @router.get("/iv/{symbol}/oi-tape")
 async def oi_tape(symbol: str, response: Response, date_: str | None = Query(None, alias="date", pattern=_DATE),
                   expiry: str | None = Query(None, pattern=_DATE)) -> dict:
@@ -181,3 +226,20 @@ async def expiry_day(response: Response, symbol: str = Query("NIFTY"), date_: st
             fail(422, "invalid", f"bad date {date_!r}", "YYYY-MM-DD")
     body, err = await _read("expiry-day", f"/db/fo-iv/expiry-day/{sym}", response, date=date_, n=n)
     return shape_expiry(body, sym, err)
+
+
+@router.get("/replay")
+async def expiry_replay(response: Response, symbol: str = Query("NIFTY"),
+                        expiry: str | None = Query(None, pattern=_DATE)) -> dict:
+    """E-REPLAY (F-17): the stored expiry-day replay tapes for the practice simulator — the list of replayed expiries
+    (no ``expiry``), or one expiry's 1-minute rows. Read-only over ``iv_expiry_replay``; the backfill is the PM's
+    after-close job (O-T16), never run from here. A data-service without the replay read (404) degrades to
+    ``ok: false`` with the reason, never a 500."""
+    sym = _check_symbol(symbol)
+    if expiry:
+        try:
+            date.fromisoformat(expiry)
+        except ValueError:
+            fail(422, "invalid", f"bad expiry {expiry!r}", "YYYY-MM-DD")
+    body, err = await _read("replay", f"/db/fo-iv/replay/{sym}", response, expiry=expiry)
+    return shape_replay(body, sym, expiry, err)

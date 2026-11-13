@@ -33,6 +33,8 @@ import { openTicker } from '@/lib/openTicker'
 import { useExternalPrefChange } from '@/lib/prefs/useExternalChange'
 import { AvoidFlag, BadgeChip, Chip, EventBadge, PageHeader, Panel, SourceChip, Stat, T, TickerLink, fmtIdx, fmtInr, fmtPct, ordinal, tone, sourceOf, type SourceInfo } from '@/components/terminal'
 import { nseSession } from '@/components/desktop/session'
+import { getAlertFires } from '@/lib/alertsClient'
+import { BRIEF_LASTLOOK_KEY, briefChanges, istStamp, parseBriefSnapshot, sinceLabel, type BriefSnapshot } from '@/lib/alertOverlay'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { liveContribution, nseDelayedSource } from '@/components/liveModel'
 import { trackVerdict, type TrackRecordData } from '@/components/news/TrackRecord'
@@ -261,6 +263,32 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
   const pnl = hold.reduce((a: number, p: any) => a + (p.pnl ?? 0), 0)
   const invested = hold.reduce((a: number, p: any) => a + (p.invested ?? 0), 0)
   const picks = [...(scan.data?.picks ?? [])].sort((a: any, z: any) => (z.conviction_score ?? 0) - (a.conviction_score ?? 0))
+
+  // ── E-DIFF F-19b: "since your last look" — the one-pager diffs itself against the snapshot stored at the
+  // previous visit (localStorage, per-device by design — the whatsnew-strip pattern; key + pure logic in
+  // lib/alertOverlay.ts). Facts only: numbers old → new, new events for your stocks, alert fires since.
+  const fires = useLoad(() => getAlertFires(50))
+  const [lastLook, setLastLook] = useState<BriefSnapshot | null | 'unread'>('unread')
+  useEffect(() => {
+    try { setLastLook(parseBriefSnapshot(localStorage.getItem(BRIEF_LASTLOOK_KEY))) } catch { setLastLook(null) }
+  }, [])
+  const [hideDiff, setHideDiff] = useState(false)
+  const curSnap = useMemo<BriefSnapshot | null>(() => {
+    if (!m || !b) return null
+    const nums: Record<string, string> = {}
+    if (b.index != null) nums['NIFTY'] = fmtIdx(b.index)
+    if (b.vix != null) nums['India VIX'] = b.vix.toFixed(2)
+    nums['Regime'] = `${m.regime.score}/4 ${SCORE_WORD[m.regime.score]}`
+    if (b.new_highs != null && b.new_lows != null) nums['New highs / lows'] = `${b.new_highs} / ${b.new_lows}`
+    return { at: istStamp(new Date()), nums, events: week.mine.map(e => `${e.symbol}·${e.kind}·${e.event_date}`) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [m, b, week.mine])
+  useEffect(() => {    // written only AFTER the previous snapshot was read, so a reload still diffs the prior visit
+    if (!curSnap || lastLook === 'unread') return
+    try { localStorage.setItem(BRIEF_LASTLOOK_KEY, JSON.stringify(curSnap)) } catch { /* private window */ }
+  }, [curSnap, lastLook])
+  const changed = useMemo(() => (lastLook === 'unread' || lastLook == null || !curSnap)
+    ? [] : briefChanges(lastLook, curSnap, (fires.data?.fires ?? []).map(f => f.at)), [lastLook, curSnap, fires.data])
   const jobs = [...(tele.data?.scheduler?.jobs ?? [])].sort((a: any, z: any) => (a.next_run_unix ?? 9e12) - (z.next_run_unix ?? 9e12)).slice(0, 6)
 
   // the gold open in one line (before 09:00 the fair open and the chase verdict; after the captured open this morning's
@@ -289,6 +317,20 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
           <span role="button" title="hide until the next release" onClick={() => { setShowNew(false); try { localStorage.setItem('suryadhana.whatsnew', WHATS_NEW_VERSION) } catch { /* private window */ } }}
             style={{ marginLeft: 'auto', color: T.dim, cursor: 'pointer', fontSize: 10.5 }}>✕ GOT IT</span>
         </div>)}
+      {/* E-DIFF F-19b: what changed since the previous visit — neutral tones only (facts, never a direction) */}
+      {!hideDiff && lastLook !== 'unread' && lastLook != null && changed.length > 0 && (
+        <div data-brief-lastlook style={{ border: `1px solid ${T.border}`, background: '#0b0f16', padding: '6px 12px', marginBottom: 8,
+                      fontSize: 11.5, display: 'flex', gap: '2px 14px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span style={{ fontFamily: T.display, fontSize: 10.5, letterSpacing: 1.4, color: T.muted }}>SINCE YOUR LAST LOOK · {sinceLabel(lastLook.at)}</span>
+          {changed.map(c => c.text
+            ? <span key={c.label} style={{ color: T.text }}>{c.text}</span>
+            : <span key={c.label} style={{ whiteSpace: 'nowrap' }}><span style={{ color: T.dim }}>{c.label}</span>{' '}
+                <span style={{ color: T.text, fontFamily: T.mono }}>{c.from}</span> <span style={{ color: T.dim }}>→</span>{' '}
+                <span style={{ color: T.text, fontFamily: T.mono }}>{c.to}</span></span>)}
+          <span role="button" title="hide for this visit (the marker advances either way)" onClick={() => setHideDiff(true)}
+            style={{ marginLeft: 'auto', color: T.dim, cursor: 'pointer', fontSize: 10.5 }}>✕</span>
+        </div>
+      )}
       {(() => {
         // owner-only setup items: shown until done (Desk industry gaps come from the Desk's own watchlist)
         const unknown = (desk.data?.plans?.[0]?.summary?.watchlist ?? []).filter((w: any) => w.sector === 'Unknown').map((w: any) => w.symbol)
@@ -389,7 +431,8 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
                   <Line k={<span style={{ whiteSpace: 'nowrap' }}>Pre-open F&O <span role="button" onClick={() => onNavigate('preopen')} style={{ color: T.cyan, cursor: 'pointer', fontSize: 10 }}>PRE ›</span></span>}
                         v={<span style={{ fontSize: 11 }}>
                           {!today && <span style={{ color: T.dim }}>last session · </span>}
-                          <span style={{ color: T.green }}>{pre.data.advances}</span>/<span style={{ color: T.red }}>{pre.data.declines}</span>
+                          {/* L-15 (E-DIFF): A/D counts are neutral figures — tone stays with prices and the owner's own rules */}
+                          <span style={{ color: T.text }}>{pre.data.advances} / {pre.data.declines}</span>
                           {big.map(r => <span key={r.symbol} style={{ marginLeft: 7, whiteSpace: 'nowrap' }}><span style={{ color: T.dim }}>{r.symbol}</span> <span style={{ color: r.change_pct! >= 0 ? T.green : T.red }}>{fmtSigned(r.change_pct!, 1)}%</span></span>)}
                         </span>} />
                 )
@@ -509,7 +552,8 @@ export function Brief({ onNavigate }: { onNavigate: (tab: string) => void }) {
               const sm = internals.data?.summary
               if (!sm?.n500_adv) return null
               return <div style={{ fontSize: 10.5, fontFamily: T.mono, color: T.muted, marginTop: 6, borderTop: `1px solid ${T.border}`, paddingTop: 5 }}>
-                NIFTY 500 <span style={{ color: T.green }}>{sm.n500_adv} up</span> / <span style={{ color: T.red }}>{sm.n500_dec} down</span>
+                {/* L-15 (E-DIFF): the breadth counts are neutral (MarketInternals' convention) */}
+                NIFTY 500 <span style={{ color: T.text }}>{sm.n500_adv} up</span> / <span style={{ color: T.text }}>{sm.n500_dec} down</span>
                 {sm.samples > 10 && sm.net_worst != null && <span style={{ color: T.dim }}> · net {fmtSigned(sm.net_worst, 0)} … +{Math.max(0, sm.net_best ?? 0)} {sessionDayLabel(internals.data?.day)}</span>}
                 {sm.divergence && <span style={{ color: T.amber, fontWeight: 700 }}> · ⚠ {sm.divergence}</span>}
                 <span role="button" onClick={() => onNavigate('movers')} style={{ color: T.cyan, cursor: 'pointer' }}> · internals ›</span>

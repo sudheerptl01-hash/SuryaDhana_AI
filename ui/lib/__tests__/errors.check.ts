@@ -4,7 +4,7 @@
  * executed by `npx tsx ui/lib/__tests__/errors.check.ts` when tsx is available.
  * Exits non-zero on the first failing case.
  */
-import { apiError, normalizeError } from '../errors'
+import { apiError, normalizeError, UPSTREAM_WAIT_TEXT } from '../errors'
 
 const ax = (data: unknown, message = 'Request failed with status code 503') =>
   ({ message, response: { data } })
@@ -12,11 +12,35 @@ const ax = (data: unknown, message = 'Request failed with status code 503') =>
 const CASES: Array<{ name: string; input: unknown; msg: string; code?: string | null }> = [
   // 1. legacy FastAPI: detail string
   { name: 'detail string', input: ax({ detail: 'no rows for RELIANCE' }), msg: 'no rows for RELIANCE' },
-  // 2. new contract: detail string + sibling error{} → error wins
+  // 2. new contract: detail string + sibling error{} → error wins; the data-service prefix is calmed (O-F5a)
   {
-    name: 'sibling error preferred',
+    name: 'sibling error preferred + calmed',
     input: ax({ detail: 'upstream', error: { code: 'upstream_down', message: 'data-service unreachable', hint: 'start-local.sh' } }),
-    msg: 'data-service unreachable', code: 'upstream_down',
+    msg: UPSTREAM_WAIT_TEXT, code: 'upstream_down',
+  },
+  // 2b. legacy router detail leaking httpx internals → calm copy on the panel, never the transport text
+  {
+    name: 'raw transport detail calmed',
+    input: ax({ detail: 'data-service unreachable: All connection attempts failed' }),
+    msg: UPSTREAM_WAIT_TEXT, code: 'upstream_down',
+  },
+  // 2c. exception-class flavour (old charts.py shape) calmed too
+  {
+    name: 'exception-class detail calmed',
+    input: ax({ detail: 'data-service unreachable: ConnectError' }),
+    msg: UPSTREAM_WAIT_TEXT, code: 'upstream_down',
+  },
+  // 2d. other upstreams keep their own honest message (gold/mcx use upstream_down for Yahoo)
+  {
+    name: 'non-data-service upstream_down untouched',
+    input: ax({ error: { code: 'upstream_down', message: 'COMEX/USDINR unavailable from Yahoo right now' } }),
+    msg: 'COMEX/USDINR unavailable from Yahoo right now', code: 'upstream_down',
+  },
+  // 2e. a data-service message that is not "unreachable" stays honest
+  {
+    name: 'data-service non-transport message untouched',
+    input: ax({ detail: 'data-service returned no OHLCV rows' }),
+    msg: 'data-service returned no OHLCV rows',
   },
   // 3. soft-200 degraded payload passed directly (not thrown)
   { name: 'raw degraded payload', input: { error: { code: 'degraded', message: 'yahoo fallback' } }, msg: 'yahoo fallback', code: 'degraded' },
@@ -57,6 +81,10 @@ for (const c of CASES) {
 // custom fallback + hint surfacing
 if (apiError(undefined, 'chart unavailable') !== 'chart unavailable') { failed++; console.error('FAIL custom fallback') }
 if (normalizeError(ax({ error: { code: 'degraded', message: 'm', hint: 'retry at 09:15' } })).hint !== 'retry at 09:15') { failed++; console.error('FAIL hint surfacing') }
+// O-F5a: the calmed info keeps the raw text for logging only, and the message never carries transport internals
+const calm = normalizeError(ax({ detail: 'data-service unreachable: All connection attempts failed' }))
+if (calm.raw !== 'data-service unreachable: All connection attempts failed') { failed++; console.error('FAIL raw preserved') }
+if (/All connection attempts failed|ConnectError/i.test(calm.message)) { failed++; console.error('FAIL transport text leaked into message') }
 
 if (failed) { console.error(`${failed} case(s) failed`); process.exit(1) }
-console.log(`errors.check: all ${CASES.length + 2} cases pass`)
+console.log(`errors.check: all ${CASES.length + 4} cases pass`)

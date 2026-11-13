@@ -12,7 +12,9 @@
  */
 import { useMemo, type ReactNode } from 'react'
 import { Chip, Notice, Spark, Stat, T, fmtFixed } from '@/components/terminal'
-import { getGoldBrief, getGoldCalendar } from '@/lib/gold/api'
+import { ExpandableChart } from '@/components/terminal/ExpandableChart'
+import { InteractiveSeries } from '@/components/terminal/InteractiveSeries'
+import { getGoldBrief, getGoldCalendar, getGoldPremiums } from '@/lib/gold/api'
 import { HEALTH_SUFFIX, arrow, basisAgreement, basisClockChip, basisTileWords, briefHeader, dayLabel, eventSessionTag, eventStar, fmtInUnit, fmtSignedCount, fmtSignedPctSp,
          gaugeChangeText, hasCompositeScore, healthLine, istNowKey, orderEvents, pageRealYield, percentileText, publishGate, realYieldSeriesWords, stripSettlement,
          trendValuesLine, trendWords, verdictWindowLabel } from '@/lib/gold/format'
@@ -91,6 +93,15 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
   const health = usePageHealth({ overview, overviewStatus, window, sel }, HEALTH_MS)
   const events = useGoldLoad(() => getGoldCalendar(7), [], 600_000)
   const brief = useGoldLoad(() => getGoldBrief(), [], 900_000)
+  // h.basis_history (FINAL ROUND W3 / C-GOLD): the stored settlement-clock basis rows, from the same /api/gold/premiums
+  // read PHYSICAL's ladder uses (MCX_BASIS_PCT) — no new ingest, no new endpoint
+  const prem = useGoldLoad(() => getGoldPremiums(240, { contract: sel.family, expiry: sel.expiry }), [sel.family, sel.expiry], 900_000)
+  const basisHist = useMemo(() => {
+    const rows = (prem.data?.india?.history ?? []).filter(h => h.basis_pct != null)
+      .slice().sort((a, b) => a.report_date.localeCompare(b.report_date))
+    // the latest stored session is dropped: the page's CURRENT basis prints exactly once, in the INDIA BASIS gauge (§f.6)
+    return rows.length ? rows.filter(h => h.report_date !== rows[rows.length - 1].report_date) : rows
+  }, [prem.data])
   const h = health.data
   const composite = useMemo(() => hasCompositeScore(h), [h])
   const line = healthLine(h?.verdict?.line ?? h?.line)
@@ -235,6 +246,30 @@ export function HealthView({ sel, unit, window, layer, usdinr, tooltips, catalog
 
       {/* h.open · h.moved · h.headlines · h.accuracy: the desk, rendered exactly once on the terminal */}
       <GoldPreOpen sel={sel} layer={layer} tooltips={tooltips} catalog={catalog} fair={fair} />
+
+      {/* h.basis_history */}
+      <GoldPanel id="h.basis_history" title="India basis · history" badge="context" layer={layer} accent={T.cyan} pad={8}
+        catalog={catalog} series={['MCX_BASIS_PCT']}
+        freshness={prem.data?.india?.freshness ?? (prem.data ? { state: 'delayed', source: 'gold premiums (18:10 job)' } : null)}
+        reportDate={basisHist.length ? basisHist[basisHist.length - 1].report_date : null}
+        subtitle="daily settlement-clock rows through the previous stored session — the current basis prints once, in the INDIA BASIS gauge above"
+        copyB={<>Where the <Term t="MCX basis" /> has been sitting against the <Term t="duty-paid landed" /> price, session by session: above parity = local demand exceeded importable supply that day. It describes, does not predict.</>}
+        copyP="MCX front settle ÷ duty-paid landed − 1 at the settlement clock (M8), one stored MCX_BASIS_PCT point per session; a read across the 13 May 2026 duty step is a duty change, not demand. Wheel = zoom, drag = pan, FIT = whole series.">
+        <Pending s={prem} label="the basis history">
+          {basisHist.length < 2
+            ? <NoVerdict what="fewer than two stored MCX_BASIS_PCT sessions before today (the 18:10 job writes one per session)" />
+            : <ExpandableChart title="MCX basis vs duty-paid landed" height={170}
+                legend={<span><span style={{ color: T.cyan }}>— MCX basis %</span> · <span style={{ color: T.dim }}>– – parity</span></span>}>
+                <InteractiveSeries height={170} ariaLabel="India basis history" series={[
+                  { id: 'basis', label: 'MCX basis', color: T.cyan, format: v => fmtSignedPctSp(v, 2),
+                    points: basisHist.map(h => ({ t: h.report_date, v: h.basis_pct ?? null })) },
+                  // a two-point parity guide: a straight line that stays silent in the crosshair legend between its ends
+                  { id: 'parity', label: 'parity', color: T.dim, dashed: true, w: 1, format: v => fmtSignedPctSp(v, 2),
+                    points: [{ t: basisHist[0].report_date, v: 0 }, { t: basisHist[basisHist.length - 1].report_date, v: 0 }] },
+                ]} />
+              </ExpandableChart>}
+        </Pending>
+      </GoldPanel>
 
       <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', alignItems: 'start' }}>
         {/* h.events */}

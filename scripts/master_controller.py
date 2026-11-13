@@ -535,6 +535,26 @@ async def _dataset_snapshot(job_id: str) -> dict[str, tuple[Any, ...]] | None:
     return dataset_fingerprints(payload, job_id)
 
 
+async def _watermark_verdict(job_id: str, before: dict[str, tuple[Any, ...]] | None) -> str | None:
+    """P0-2 (D-PIPE): data-service's job-vs-catalog check. FAILED only when a dataset the job claims was EXPECTED to
+    advance (the catalog's expected_by + trading-day session logic; a holiday, weekend or pre-deadline run expects
+    nothing) and did not move past its prior watermark. None (keep the current status) without an answer — no
+    evidence is never a failure. The check also records the deduped escalation server-side."""
+    body: dict[str, Any] = {"ingest_job": job_id}
+    if before:
+        body["before"] = {ds: (v[0] if v else None) for ds, v in before.items()}
+    try:
+        async with httpx.AsyncClient(timeout=DATASET_CHECK_TIMEOUT_S) as client:
+            r = await client.post(f"{DATA_SVC}/jobs/data-health?job=job_watermark_check", json=body)
+        payload = r.json() if r.status_code == 200 else None
+    except Exception:  # noqa: BLE001 — no evidence, never a failure of the job
+        return None
+    if not isinstance(payload, dict) or payload.get("status") != "FAILED":
+        return None
+    reasons = ", ".join(str(x) for x in (payload.get("reasons") or []))[:160]
+    return f"FAILED ({reasons})" if reasons else None
+
+
 @asynccontextmanager
 async def _track(job_id: str, quiet: bool = False) -> AsyncIterator[None]:
     """Record the run for SYS (latency + persisted history). `quiet` (a job firing every few minutes) keeps the result
@@ -566,6 +586,8 @@ async def _track(job_id: str, quiet: bool = False) -> AsyncIterator[None]:
             status = mark
         elif status == "done" and completed and before:
             status = dataset_outcome(before, await _dataset_snapshot(job_id)) or status
+            if status == STATUS_NO_NEW_DATA:
+                status = await _watermark_verdict(job_id, before) or status
         _latency.record(job_id, ms, status)
         _history.record(job_id, status, ms)
         try:                                          # M38: sd_job_seconds{job, status} on /metrics (0 callers before)
@@ -2159,6 +2181,22 @@ def health_transitions(prev: dict[str, str], rows: list[dict[str, Any]]) -> list
     return out
 
 
+async def _escalations_scan(job: str) -> list[dict[str, Any]]:
+    """P0-2/P0-3 (D-PIPE): run data-service's escalation scan; the records it created this call (deduped per
+    dataset per day server-side) are the ones that become Telegram lines. Quiet on 404 / no answer."""
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            r = await client.post(f"{DATA_SVC}/jobs/data-health?job=escalations_scan")
+        if r.status_code != 200:
+            return []
+        d = r.json()
+    except Exception as exc:  # noqa: BLE001
+        _log.warning(job, f"escalations_scan unreachable: {type(exc).__name__}")
+        return []
+    new = d.get("new") if isinstance(d, dict) else None
+    return [e for e in new if isinstance(e, dict) and e.get("dataset")] if isinstance(new, list) else []
+
+
 async def data_health_check() -> None:
     """Hourly (PLAN 1.4) — read ui-api's /api/data/health; one Telegram line per state transition since the last check
     (warning channel when a dataset worsened, info when it recovered), nothing when nothing moved. The state lives in
@@ -2177,6 +2215,12 @@ async def data_health_check() -> None:
         moved = health_transitions(prev, rows)
         states = {**prev, **{str(r["id"]): str(r.get("state")) for r in rows if r.get("state") in HEALTH_RANK}}
         write_health_state(DATA_HEALTH_STATE_FILE, states)
+        esc = await _escalations_scan(JOB)
+        if esc:
+            lines = [f"{e['dataset']}: {e.get('kind')} — {e.get('detail') or ''}"[:300] for e in esc]
+            _log.warning(JOB, "escalations: " + "; ".join(lines))
+            await _alerts.warning(f"DATA escalation{'s' if len(esc) != 1 else ''}: {len(esc)}",
+                                  "\n".join(lines) + "\nOne line per dataset per day; SYS › DATA has every row.")
         if moved and not (time(9, 15) <= datetime.now(IST).time() <= time(15, 30)):
             _alerts_after_soon(JOB)             # data_stale rules (in session the per-minute round covers them)
         if not moved:
@@ -3067,6 +3111,30 @@ async def morning_note() -> None:
             _log.info(JOB, note)
             await asyncio.to_thread(_notify_mac, "SuryaDhana · pre-market note", note, "morning")
             await _alerts.info("Pre-market note", note)
+        except Exception as exc:
+            _log.error(JOB, f"FAILED: {type(exc).__name__}: {exc}")
+
+
+async def morning_gameplan_digest() -> None:
+    """08:50 IST Mon–Fri — the Morning Game Plan digest (terminal_final W7 / F-11): GET ui-api /api/gameplan
+    (the SAME assembly the GPLN page renders) and send scripts/morning_gameplan.render_digest's text lines as a
+    Mac notification, inbox entry and Telegram message. Facts assembled, the trader decides; the digest carries
+    its own "describes, does not predict" line and no direction words."""
+    JOB = "morning_gameplan"
+    lock = _get_lock(JOB)
+    if lock.locked():
+        return
+    async with lock, _track(JOB):
+        try:
+            from morning_gameplan import render_digest
+            async with httpx.AsyncClient(timeout=60) as client:
+                r = await client.get(f"{UI_API}/api/gameplan", params={"symbol": "NIFTY"})
+                r.raise_for_status()
+                payload = r.json()
+            note = render_digest(payload)
+            _log.info(JOB, note)
+            await asyncio.to_thread(_notify_mac, "SuryaDhana · morning game plan", note, "morning")
+            await _alerts.info("Morning game plan", note)
         except Exception as exc:
             _log.error(JOB, f"FAILED: {type(exc).__name__}: {exc}")
 
@@ -4844,6 +4912,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         trigger=CronTrigger(day_of_week="mon-fri", hour=8, minute=50, timezone=IST),
         id="morning_note", name="Pre-market Note",
         max_instances=1, coalesce=True, misfire_grace_time=1800,     # useless after the open
+    )
+    scheduler.add_job(
+        morning_gameplan_digest,
+        trigger=CronTrigger(day_of_week="mon-fri", hour=8, minute=50, timezone=IST),
+        id="morning_gameplan", name="Morning Game Plan digest",
+        max_instances=1, coalesce=True, misfire_grace_time=1500,     # useless after the open (same rule as the note)
     )
     scheduler.add_job(
         index_valuation_daily,

@@ -161,7 +161,9 @@ def test_job_names_match_the_plan():
     from fo_iv import jobs as ivj
     from index_drivers import jobs as drj
 
-    assert {"iv_eod", "iv_intraday", "iv_weekly"} <= set(ivj.JOBS) and "index_drivers_daily" in drj.JOBS and dh_api.JOB_IDS == ("data_health_refresh",)
+    # FINAL round D-PIPE (P0-2/P0-3): job_watermark_check (table-unmoved verdict) and escalations_scan joined the plan
+    assert {"iv_eod", "iv_intraday", "iv_weekly"} <= set(ivj.JOBS) and "index_drivers_daily" in drj.JOBS
+    assert dh_api.JOB_IDS == ("data_health_refresh", "job_watermark_check", "escalations_scan")
     assert date(2026, 11, 5) and datetime(2026, 11, 5, 0, 0)
 
 

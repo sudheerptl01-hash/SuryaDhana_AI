@@ -42,6 +42,7 @@ import { loadTabModule, resolvedTabModule, tabModuleIds } from '@/components/she
 import { buildSearch, closeStockAction, isTerminalState, normalizeSym, parseLocation, type TerminalHistoryState } from '@/lib/deepLink'
 import { RECONNECTED_EVENT, needsReloadAfterOutage, reconnectDelayMs } from '@/lib/reconnect'
 import { GO_COMMAND_EVENT, footerHint, goOpenAfterRetry, onMac } from '@/lib/shortcuts'
+import { useFooterDataTone } from '@/lib/dataHealthStore'
 import { newWindow } from '@/lib/platform'
 import dynamic from 'next/dynamic'
 
@@ -105,6 +106,7 @@ const StrategyBuilder = lazyTab('ostrategy', m => m.StrategyBuilder)
 const McxGoldDesk = lazyTab('mcxgold', m => m.McxGoldDesk)
 const GoldPage = lazyTab('gold', m => m.GoldPage)
 const RiskDashboard = lazyTab('risk', m => m.RiskDashboard)
+const GamePlan = lazyTab('gameplan', m => m.GamePlan)
 // the stock window opens over any tab; its chunk loads on first open (or during the boot gate for a ?sym= link)
 const StockDetailModalLazy = dynamic(() => loadTabModule('stock').then(m => m.StockDetailModal as AnyComponent),
   { loading: () => <Loading label="stock window" />, ssr: false })
@@ -117,16 +119,17 @@ import { OPEN_TICKER_EVENT, type TickerFocus } from '@/lib/openTicker'
 import { GOTO_EVENT } from '@/lib/navigate'
 import { Btn, Chip, ErrorBox, Grid, KV, Loading, Meter, PageHeader, Panel, ResearchNote, Stat, T, TabSkeleton, fmtInr, fmtSignedPct, tone, sourceOf, referenceSource } from '@/components/terminal'
 
-type Tab = 'brief' | 'watch' | 'charts' | 'compare' | 'screen' | 'alerts' | 'eco' | 'seag' | 'memb' | 'options' | 'ostrategy' | 'derivatives' | 'insiders' | 'deals' | 'preopen' | 'ipo' | 'movers' | 'wrap' | 'filings' | 'margin' | 'holders' | 'world' | 'desk' | 'markets' | 'events' | 'overview' | 'stocks' | 'backtest' | 'positions' | 'broker' | 'pipeline' | 'scanner' | 'discovery' | 'commodity' | 'mcxgold' | 'gold' | 'glassbox' | 'mlengine' | 'explorer' | 'warehouse' | 'research' | 'risk' | 'system'
+type Tab = 'brief' | 'watch' | 'charts' | 'compare' | 'screen' | 'alerts' | 'eco' | 'seag' | 'memb' | 'options' | 'ostrategy' | 'derivatives' | 'insiders' | 'deals' | 'preopen' | 'ipo' | 'movers' | 'wrap' | 'filings' | 'margin' | 'holders' | 'world' | 'desk' | 'markets' | 'events' | 'overview' | 'stocks' | 'backtest' | 'positions' | 'broker' | 'pipeline' | 'scanner' | 'discovery' | 'commodity' | 'mcxgold' | 'gold' | 'glassbox' | 'mlengine' | 'explorer' | 'warehouse' | 'research' | 'risk' | 'system' | 'gameplan'
 
 const FILTERS_INIT = { t1: false, t2: false, t3: false, t4: false, t5: false, t6: false, t7: false, t8: false }
 
 const TAB_IDS: Tab[] = ['brief', 'watch', 'charts', 'compare', 'screen', 'alerts', 'eco', 'seag', 'memb', 'options', 'ostrategy', 'derivatives', 'insiders', 'deals', 'preopen', 'ipo', 'movers', 'wrap', 'filings', 'margin', 'holders', 'world', 'desk', 'markets', 'events', 'overview', 'stocks', 'backtest', 'positions', 'broker', 'pipeline', 'scanner',
-  'discovery', 'commodity', 'mcxgold', 'gold', 'glassbox', 'mlengine', 'explorer', 'warehouse', 'research', 'risk', 'system']
+  'discovery', 'commodity', 'mcxgold', 'gold', 'glassbox', 'mlengine', 'explorer', 'warehouse', 'research', 'risk', 'system', 'gameplan']
 
 // Bloomberg-style function codes for the command bar ("/" or Ctrl/⌘+K)
 const COMMAND_PAGES: CommandPage[] = [
   { id: 'brief',     code: 'BRF',   label: 'Morning brief',         hint: 'market, book, events, gold, news, system' },
+  { id: 'gameplan',  code: 'GPLN',  label: 'Morning game plan',     hint: 'overnight moves, prior-session levels, OI walls & max pain, IV regime, today\'s events, focus list — assembled, dated, badged' },
   { id: 'watch',     code: 'WTCH',  label: 'Watch monitor',         hint: 'watchlist, pins, holdings: live quotes' },
   { id: 'charts',    code: 'CHRT',  label: 'Chart studio',          hint: 'candles, indicators, intraday VWAP' },
   { id: 'world',     code: 'WEI',   label: 'World markets',         hint: 'global indices, FX, commodities, rates' },
@@ -210,6 +213,9 @@ function HomeContent() {
   const { isDark, toggleTheme } = useTheme()
   const { watchlist, addToWatchlist, removeFromWatchlist, isWatched } = useWatchlist()
   const [dashboard, setDashboard] = useState<any>(null)
+  // FINAL ROUND D-TONE (G3): the footer's DATA date turns amber when behind the last NSE session (weekend-safe;
+  // the health service's holiday-aware last_session when it answers, else the shared Mon–Fri helper)
+  const dataTone = useFooterDataTone(dashboard?.latest_date ?? null)
   const [enrichment, setEnrichment] = useState<any>(null)
 
   const [allStocks, setAllStocks] = useState<any[]>([])
@@ -686,6 +692,7 @@ function HomeContent() {
       case 'positions': return <LivePortfolio isDark={isDark} />
       case 'broker': return <PortfolioSummary />
       case 'brief': return <Brief onNavigate={id => setView(id as Tab)} />
+      case 'gameplan': return <GamePlan />
       case 'watch': return <WatchMonitor />
       case 'compare': return <Compare />
       case 'charts': return <ChartStudio />
@@ -829,7 +836,8 @@ function HomeContent() {
         <span className="sd-foot-chip" data-link={linkDown ? 'down' : 'up'} style={{ color: linkDown ? 'var(--t-red)' : 'var(--t-green)' }}
               title={linkDown ? 'ui-api unreachable: reconnecting' : 'terminal connected'}>
           ● {linkDown ? 'OFFLINE · LINK DOWN' : 'READY'}</span>
-        <span className="sd-foot-opt">DATA {dashboard?.latest_date ?? '—'}</span>
+        <span className="sd-foot-opt" title={dataTone.title} data-data-behind={dataTone.amber ? '1' : undefined}
+              style={dataTone.amber ? { color: 'var(--t-amber)' } : undefined}>DATA {dashboard?.latest_date ?? '—'}</span>
         <span className="sd-foot-opt">{(dashboard?.total_stocks ?? totalStocks).toLocaleString('en-IN')} STOCKS</span>
         {dashError && !linkDown && (
           <span className="sd-foot-chip" style={{ color: 'var(--t-amber)' }} title={`${dashError} · retrying every 15 s`}>◌ UNIVERSE STATS UNAVAILABLE</span>

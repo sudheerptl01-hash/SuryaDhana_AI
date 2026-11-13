@@ -328,11 +328,68 @@ def ingest_zerodha(store: Any, html_text: str, *, now: datetime | None = None) -
 # ── F10 IBJA AM/PM tables ───────────────────────────────────────────────────────────────────────────
 
 _IBJA_HEADER = ["999", "995", "916", "750", "585", "silver 999"]
+_IBJA_TODAY_KEYS: tuple[tuple[str, str], ...] = tuple((p, f"lblGold{p}") for p in IBJA_PURITIES) + (("SILVER_999", "lblSilver999"),)
+_DDMMYYYY = re.compile(r"^\d{2}/\d{2}/\d{4}$")
+
+
+def _ibja_uploaded_fixes(soup: Any) -> set[str]:
+    """Which fixes the page says are uploaded today (hidden input ``HdnRatesAvaliable``: RateTime '12AM' → AM,
+    '6PM' → PM). A page without the input (layout change) gates nothing: value-level checks still apply."""
+    import json as _json
+
+    el = soup.find(id="HdnRatesAvaliable")
+    raw = el.get("value") if el is not None else None
+    if not raw:
+        return {"AM", "PM"}
+    try:
+        entries = _json.loads(raw)
+        return {"AM" if str(e.get("RateTime", "")).strip().upper().endswith("AM") else "PM" for e in entries}
+    except (ValueError, TypeError, AttributeError):
+        return set()
+
+
+def _ibja_current_day(soup: Any) -> tuple[date, dict[str, float]] | None:
+    """Today's fixes from the populated current-day table (id ``TodayRatesTableDataYes``, spans ``lblGold999_AM`` …
+    ``lblSilver999_PM``). The 'Previous 30 days' tables gain a day's row only the NEXT day, so parsing them alone
+    leaves the 13:45 / 18:10 ingests one session behind (the 18:30 amber-by-design). The current-day block prints
+    no date (the page clock is client-side JS), so the date is NEVER guessed from the fetch time: it is the LAST
+    label of the server-rendered ``HdnGold`` chart input, accepted only when that label's own purity-999 value
+    equals the block's 999 rate (PM when present, else AM). A pre-upload page (``TodayRatesTableDataNo``), a
+    stale-served copy or a half-rendered page yields None — never a wrongly dated row. Platinum is not a stored
+    series and is skipped; the chart history itself is still never backfilled from."""
+    import json as _json
+
+    allowed = _ibja_uploaded_fixes(soup)
+    vals: dict[str, float] = {}
+    for key, span in _IBJA_TODAY_KEYS:
+        for fix in ("AM", "PM"):
+            el = soup.find(id=f"{span}_{fix}")
+            v = _flt(el.get_text(" ", strip=True)) if el is not None else None
+            if v is not None and v > 0 and fix in allowed:
+                vals[f"{key}_{fix}"] = v
+    anchor = vals.get("999_PM", vals.get("999_AM"))
+    hdn = soup.find(id="HdnGold")
+    raw = hdn.get("value") if hdn is not None else None
+    if anchor is None or not raw:
+        return None
+    try:
+        chart = _json.loads(raw)
+        labels, p999 = chart["labels"], chart["purity999"]
+        label = str(labels[-1])
+        if not labels or len(p999) != len(labels) or not _DDMMYYYY.match(label):
+            return None
+        if abs(float(p999[-1]) - anchor) > 0.5:
+            return None
+        return db.strptime(label, "%d/%m/%Y").date(), vals
+    except (KeyError, IndexError, TypeError, ValueError):
+        return None
 
 
 def parse_ibja_html(html_text: str, *, now: datetime | None = None) -> pd.DataFrame:
-    """The two 'Previous 30 days' tables (first AM, then PM): date dd/mm/yyyy, 999…585 ₹/10 g, silver ₹/kg.
-    Today's row before the fix says 'Rates will be uploaded soon' and is skipped; nothing is backfilled from the chart."""
+    """The two 'Previous 30 days' tables (first AM, then PM: date dd/mm/yyyy, 999…585 ₹/10 g, silver ₹/kg) PLUS the
+    current-day block, which those tables carry only from the next day (``_ibja_current_day``: server-dated via the
+    HdnGold anchor, never the fetch clock). A pre-upload page ('Rates will be uploaded soon') adds no current-day
+    row; nothing is ever backfilled from the chart history."""
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(html_text, "html.parser")
@@ -346,10 +403,12 @@ def parse_ibja_html(html_text: str, *, now: datetime | None = None) -> pd.DataFr
         if len(head) >= 7 and head[1:7] == _IBJA_HEADER:
             body = [[c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])] for tr in trs[1:]]
             fixes.append([r for r in body if r and re.match(r"^\d{2}/\d{2}/\d{4}$", r[0])])
+    today = _ibja_current_day(soup)
+    rows_by_fix: dict[str, list[list[str]]] = dict(zip(("AM", "PM"), fixes[:2]))
     frames = []
-    for fix, rows in zip(("AM", "PM"), fixes[:2]):
+    for fix in ("AM", "PM"):
         pts: dict[str, list[tuple[date, float]]] = {}
-        for r in rows:
+        for r in rows_by_fix.get(fix, []):
             d = db.strptime(r[0], "%d/%m/%Y").date()
             for i, p in enumerate(IBJA_PURITIES, start=1):
                 v = _flt(r[i]) if i < len(r) else None
@@ -358,6 +417,13 @@ def parse_ibja_html(html_text: str, *, now: datetime | None = None) -> pd.DataFr
             silver = _flt(r[6]) if len(r) > 6 else None
             if silver is not None:
                 pts.setdefault(f"IBJA_SILVER_999_{fix}", []).append((d, silver))
+        if today is not None:
+            t_day, t_vals = today
+            for key in (*IBJA_PURITIES, "SILVER_999"):
+                v = t_vals.get(f"{key}_{fix}")
+                sid = f"IBJA_{key}_{fix}"
+                if v is not None and all(d != t_day for d, _ in pts.get(sid, [])):
+                    pts.setdefault(sid, []).append((t_day, v))
         for sid, series_pts in pts.items():
             frames.append(pit.series_frame(sid, sorted(series_pts), freq="D", source="ibja_page", release_kind=f"ibja_{fix.lower()}",
                                            now=now))

@@ -144,8 +144,8 @@ def build_rows() -> list[dict[str, Any]]:
     # India monthly gold imports are a hand-typed figure (no machine-readable official release; SOURCES.md F14): aged from the
     # MONTH it covers, so the row turns amber on the 16th when the Commerce Ministry's ~15th release has not been entered, and
     # the hourly data_health_check sends its one Telegram line on that transition (6 Nov 2026)
-    r.append(_row("gold_india_imports", "Gold: India monthly gold imports (manual entry)", "GOLD", "Ministry of Commerce (PIB)",
-                  "~15th, month M-1", None, "monthly", 46, None, "table", table="gold_series", column="report_date",
+    r.append(_row("gold_india_imports", "Gold: India monthly gold imports (PIB auto-store + Comtrade verify)", "GOLD", "Ministry of Commerce (PIB)",
+                  "~15th, month M-1", None, "monthly", 46, "india_imports_watch", "table", table="gold_series", column="report_date",
                   where="series_id = 'INDIA_GOLD_IMPORTS_USD_BN'", anchor="docs/GOLD_DATA_DICTIONARY.md#F14", verdict="PUBLISH-CONTEXT",
                   badge="context", note="enter after each release: POST /jobs/ingest-gold groups [india_imports] params.values"))
     # COT budget 11 days: Tuesday's report lands Sat ~02:00 IST, so the newest stored one is 10–11 days old every Friday

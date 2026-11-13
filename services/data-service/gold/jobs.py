@@ -643,7 +643,11 @@ def g_brief(ctx: Ctx) -> dict[str, Any]:
 
 
 def g_preopen_log(ctx: Ctx) -> dict[str, Any]:
-    return ingest_local.migrate_preopen_log(ctx.store, ctx.params.get("path"), now=ctx.now)
+    """Standing sync of data/gold_preopen/log.json → gold_preopen_log (missing days only, FINAL P0-11); the original
+    full migration (overwrites, strips inputs_json) only on an explicit ``params.full``."""
+    if ctx.params.get("full"):
+        return ingest_local.migrate_preopen_log(ctx.store, ctx.params.get("path"), now=ctx.now)
+    return ingest_local.sync_preopen_log(ctx.store, ctx.params.get("path"), now=ctx.now)
 
 
 def g_health(ctx: Ctx) -> dict[str, Any]:
@@ -736,7 +740,9 @@ GROUPS: dict[str, Group] = {g.name: g for g in (
     Group("derive_india", g_derive_india, "always"),
     Group("derive_global", g_derive_global, "always"),
     Group("brief", g_brief, "always"),
-    Group("preopen_log", g_preopen_log, "always", note="one-off migration of data/gold_preopen/log.json"),
+    Group("preopen_log", g_preopen_log, "always",
+          note="sync data/gold_preopen/log.json → gold_preopen_log (missing days only; params.full = the old migration); "
+               "the data-health refresh also runs it so the catalog row never says gap while the log holds the row"),
     Group("health", g_health, "always", note="reads ui-api /api/gold/health"),
     Group("monthly_due", g_monthly_due, "always", note="every monthly group whose due rule says so"),
 )}

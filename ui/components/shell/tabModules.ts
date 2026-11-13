@@ -57,6 +57,7 @@ export const TAB_MODULES: Readonly<Record<string, Loader>> = Object.freeze({
   mcxgold: () => import('@/components/McxGoldDesk'),
   gold: () => import('@/components/gold/GoldPage'),
   risk: () => import('@/components/RiskDashboard'),
+  gameplan: () => import('@/components/gameplan/GamePlan'),  // GPLN (FINAL ROUND wave E, F-11)
   /** The stock window (opened over any page; ?sym= deep links). */
   stock: () => import('@/components/StockDetailModal'),
 })

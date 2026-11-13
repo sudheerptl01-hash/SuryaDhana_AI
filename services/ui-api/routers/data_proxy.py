@@ -39,8 +39,8 @@ async def data_health() -> Any:
             r = await client.get(f"{DATA_SVC}/health")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.get("/ready")
@@ -50,8 +50,8 @@ async def data_ready() -> Any:
             r = await client.get(f"{DATA_SVC}/ready")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.get("/provider/status")
@@ -61,8 +61,8 @@ async def provider_status() -> Any:
             r = await client.get(f"{DATA_SVC}/provider/status")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.post("/provider/configure")
@@ -73,8 +73,8 @@ async def configure_provider(request: Request) -> Any:
             r = await client.post(f"{DATA_SVC}/provider/configure", json=body)
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 # ── Historical fetch ───────────────────────────────────────────────────────────
@@ -87,8 +87,8 @@ async def fetch_historical(request: Request) -> Any:
             r = await client.post(f"{DATA_SVC}/fetch/historical", json=body)
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.post("/fetch/refresh")
@@ -99,8 +99,8 @@ async def fetch_refresh(request: Request) -> Any:
             r = await client.post(f"{DATA_SVC}/fetch/refresh", json=body)
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.post("/fetch/refresh-batch")
@@ -111,8 +111,8 @@ async def fetch_refresh_batch(request: Request) -> Any:
             r = await client.post(f"{DATA_SVC}/fetch/refresh-batch", json=body)
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.post("/fetch/icici/daily", deprecated=True)
@@ -125,8 +125,8 @@ async def fetch_icici_daily(request: Request) -> Any:
             r = await client.post(f"{DATA_SVC}/fetch/icici/daily", json=body)
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.post("/fetch/fundamentals")
@@ -137,8 +137,8 @@ async def fetch_fundamentals(request: Request) -> Any:
             r = await client.post(f"{DATA_SVC}/fetch/fundamentals", json=body)
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 # ── OHLCV read ─────────────────────────────────────────────────────────────────
@@ -159,8 +159,8 @@ async def get_ohlcv(
             r = await client.get(f"{DATA_SVC}/ohlcv/{ticker}", params=params)
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 # ── Live quotes ────────────────────────────────────────────────────────────────
@@ -172,8 +172,8 @@ async def get_live_quote(ticker: str) -> Any:
             r = await client.get(f"{DATA_SVC}/live/quote/{ticker}")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.get("/live/index/nifty")
@@ -183,8 +183,8 @@ async def get_live_nifty_direct() -> Any:
             r = await client.get(f"{DATA_SVC}/live/index/nifty")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.get("/live/intraday/{ticker}")
@@ -204,8 +204,8 @@ async def get_intraday(
             )
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 # ── DB stats proxy (bridges virtioFS DuckDB concurrent-lock limitation) ────────
@@ -225,8 +225,8 @@ async def db_stats() -> Any:
             r = await client.get(f"{DATA_SVC}/db/stats")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.get("/db/archive-meta")
@@ -236,8 +236,8 @@ async def archive_meta() -> Any:
             r = await client.get(f"{DATA_SVC}/db/archive-meta")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.get("/db/nse-positions-meta")
@@ -248,8 +248,8 @@ async def nse_datasets_meta() -> Any:
             r = await client.get(f"{DATA_SVC}/db/nse-positions-meta")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.get("/db/ohlcv-meta")
@@ -263,8 +263,8 @@ async def db_ohlcv_meta() -> Any:
             r = await client.get(f"{DATA_SVC}/db/ohlcv-meta")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")
 
 
 @router.get("/db/ml-stats")
@@ -282,5 +282,5 @@ async def db_ml_stats() -> Any:
             r = await client.get(f"{DATA_SVC}/db/ml-stats")
         _raise_upstream(r)
         return r.json()
-    except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+    except httpx.RequestError:
+        raise HTTPException(status_code=502, detail="data-service unreachable")

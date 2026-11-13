@@ -53,6 +53,7 @@ import { iciciLightTitle } from '@/lib/iciciStatus'
 import { headerSession, istParts, nseSession } from '@/components/desktop/session'
 import { useNseHolidays } from '@/components/desktop/holidays'
 import { useSecondTick } from '@/components/desktop/TitleStrip'
+import { useUpstreamSnapshot } from '@/components/desktop/ShellNotices'
 import { useShellState } from '@/components/shell/ShellState'
 import { useFeedState } from '@/components/shell/useFeed'
 import { useDocumentHidden, usePolling } from '@/components/shell/usePoll'
@@ -636,6 +637,8 @@ export function inEodWindow(epochMs: number): boolean {
  */
 function UpdateDataButton({ refreshing, onConfirm }: { refreshing: boolean; onConfirm: () => void }) {
   const [ask, setAsk] = useState(false)
+  // O-F5a (D-BOOT): while DuckDB is READ-ONLY the download would 503 — say so and disable START instead
+  const readOnly = useUpstreamSnapshot().state === 'readonly'
   // inside the EOD window START DOWNLOAD needs a second, explicit click (CT-04)
   const [armed, setArmed] = useState(false)
   useEffect(() => { if (!ask) setArmed(false) }, [ask])
@@ -685,19 +688,28 @@ function UpdateDataButton({ refreshing, onConfirm }: { refreshing: boolean; onCo
               The EOD pipeline runs 18:30–21:15 IST: a download now competes with it for data-service.
             </p>
           )}
+          {readOnly && (
+            <p style={{ margin: '6px 0 0', fontSize: 10.5, lineHeight: 1.5, color: T.amber }}>
+              DB READ-ONLY: the store holds a write lock, so ingest is paused and this download cannot run.
+              It re-enables by itself when the lock clears (the header strip shows the state).
+            </p>
+          )}
           <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
             {/* focus starts on CANCEL: a reflexive Enter / Space never starts a universe-wide download (R-UI-SHELL-12) */}
             <button autoFocus onClick={() => setAsk(false)}
               style={{ fontFamily: T.mono, fontSize: 10, letterSpacing: 1.2, color: T.muted, background: 'transparent',
                        border: `1px solid ${T.border}`, padding: '4px 10px', cursor: 'pointer' }}>CANCEL</button>
-            <button data-update-start onClick={() => {
+            <button data-update-start disabled={readOnly} onClick={() => {
+                if (readOnly) return
                 if (eod && !armed) { setArmed(true); return }
                 setAsk(false); onConfirm()
               }}
-              title={eod && !armed ? 'The EOD pipeline is running: click again to start anyway' : undefined}
-              style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: T.bg, background: T.amber,
-                       border: `1px solid ${T.amber}`, padding: '4px 10px', cursor: 'pointer' }}>
-              {eod ? (armed ? 'CONFIRM: START DURING EOD' : 'START ANYWAY…') : 'START DOWNLOAD'}</button>
+              title={readOnly ? 'DuckDB is read-only: ingest would fail until the lock clears'
+                : eod && !armed ? 'The EOD pipeline is running: click again to start anyway' : undefined}
+              style={{ fontFamily: T.mono, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, color: T.bg,
+                       background: readOnly ? T.muted : T.amber, border: `1px solid ${readOnly ? T.muted : T.amber}`,
+                       padding: '4px 10px', cursor: readOnly ? 'not-allowed' : 'pointer' }}>
+              {readOnly ? 'DB READ-ONLY' : eod ? (armed ? 'CONFIRM: START DURING EOD' : 'START ANYWAY…') : 'START DOWNLOAD'}</button>
           </div>
         </div>
       )}

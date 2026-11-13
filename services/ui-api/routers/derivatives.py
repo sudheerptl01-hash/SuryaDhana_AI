@@ -33,6 +33,7 @@ data shows its date (`as_of`), never a clock. Errors follow errors.py: fail(stat
 """
 from __future__ import annotations
 
+import logging
 import math
 import os
 import re
@@ -54,6 +55,7 @@ for _p in (Path(__file__).resolve().parents[3], Path(__file__).resolve().parents
 from shared.http_client import UpstreamError, get_json  # noqa: E402
 
 router = APIRouter()
+_log = logging.getLogger("ui-api.derivatives")
 DATA_SVC = os.environ.get("DATA_SERVICE_URL", "http://localhost:8001").rstrip("/")
 _SYMBOL = re.compile(r"^[A-Za-z0-9&\-]{1,20}$")
 
@@ -137,7 +139,10 @@ async def _get(path: str, params: dict[str, Any] | None = None, timeout: float =
         body = await get_json(f"{DATA_SVC}{path}", route="read", params=params, timeout=timeout)
     except UpstreamError as exc:
         if exc.status_code == 503:
-            fail(503, "upstream_down", f"data-service unreachable: {exc.detail}", "is data-service on :8001 up?")
+            # O-F5a normalization (D-BOOT): transport/breaker internals go to the log, never onto the wire —
+            # the client maps this exact message to its calm "waiting for the data service" placeholder.
+            _log.warning("data-service unreachable: %s", exc.detail)
+            fail(503, "upstream_down", "data-service unreachable", "is data-service on :8001 up?")
         fail(exc.status_code, code_for_status(exc.status_code), exc.detail)
     return body if isinstance(body, dict) else {"data": body}
 

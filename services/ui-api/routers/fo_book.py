@@ -13,6 +13,15 @@ Routes (mounted at ``/api/options/book``):
   GET  /journal                the append-only action log
   GET  /day                    one IST session day aggregated in the store (realised net of costs, open MTM change,
                                bookings/closes, loss streak, the day's trades) — the risk cockpit's TODAY read (SPEC M1)
+  GET  /debrief                the weekly debrief (E-JRNL, F-12): closed structures in a date window with the realised
+                               money split Θ/Δ/ν + residual (arithmetic · approximation, method stated), the shape-
+                               template win rate and per-day facts — no composite score of any kind (SPEC §7)
+
+Journal context (E-JRNL, F-12): a booking and a close each journal a point-in-time snapshot beside the action — the
+stored IV summary's last row (spot, IV30 constant-maturity, percentile, rank, IV30 − RV20), days to the nearest expiry,
+and (on a booking) the OSTR checklist payload the client sent (ticks, max-loss typed, margin + its source). Captured at
+the action from data-service, best-effort — a read that does not answer is noted and never blocks the action — and
+never recomputed later.
 The RSK F&O section reads ``risk_payload`` through ``GET /api/risk/fo`` (routers/riskdash.py).
 
 PAPER ONLY (PLAN §0.9 — binding): nothing in this module, in ``fo_book_store`` or in the OSTR router names a broker order
@@ -42,7 +51,7 @@ import json
 import math
 import os
 import sys
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
@@ -122,6 +131,8 @@ class BookIn(BaseModel):
     note: str | None = Field(None, max_length=300)
     source: str = Field("OSTR", max_length=40)
     mode: str = Field("paper", max_length=10, description="always 'paper' — the book has no live mode")
+    context: dict[str, Any] | None = Field(None, description="the OSTR checklist payload as shown at booking (ticks, "
+                                           "max-loss typed, margin + source) — journalled point-in-time (E-JRNL F-12)")
 
 
 Price = Annotated[float, Field(ge=0, le=10_000_000)]
@@ -600,6 +611,141 @@ def mark_source_chip(meta: dict[str, Any]) -> dict[str, Any]:
 
 
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+# journal context + weekly debrief (E-JRNL, F-12)
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+
+CONTEXT_MAX_CHARS = 6000              # the checklist payload is ~400 chars; refuse anything that is not a snapshot
+IV_CONTEXT_FIELDS = ("date", "spot", "iv30_cm", "iv_pctile_252", "iv_rank_252", "iv_minus_rv20")
+ATTRIBUTION_LABEL = "arithmetic · approximation"
+ATTRIBUTION_METHOD = ("first-order at the entry Greeks: Θ/day at entry × calendar days held, plus Δ at entry × the "
+                      "forward's move and ν at entry × the IV move (entry → the last stored mark at the close), per "
+                      "leg; the remainder (gamma and every higher-order / cross term) is the residual, so the four "
+                      "parts sum to the realised gross exactly; costs are listed separately")
+
+
+def _client_context(raw: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The client's booking context (the checklist payload), size-gated: a snapshot, never a document."""
+    if raw is None:
+        return None
+    if len(json.dumps(raw, default=str, ensure_ascii=False)) > CONTEXT_MAX_CHARS:
+        fail(422, "invalid", f"context over {CONTEXT_MAX_CHARS} characters",
+             "send the checklist payload as shown, not a document")
+    return raw
+
+
+async def market_context(symbol: str, expiries: list[str], now: datetime | None = None) -> dict[str, Any]:
+    """The point-in-time market snapshot journalled beside a book / close (E-JRNL F-12): the stored IV summary's last
+    row (spot, IV30 constant-maturity, its percentile and rank, IV30 − RV20, each as stored, EOD) and calendar days to
+    the nearest expiry. Best-effort: a read that does not answer is noted — it never blocks the action — and the
+    captured figures are never recomputed later."""
+    now = now or now_ist()
+    out: dict[str, Any] = {"symbol": symbol.upper(), "captured_at": now.isoformat(timespec="seconds")}
+    if expiries:
+        out["nearest_expiry"] = min(str(e)[:10] for e in expiries)
+        out["dte_days"] = round(min(t_days(e, now) for e in expiries), 3)
+    try:
+        body = await get_json(f"{DATA_SVC}/db/iv/summary", route="read", params={"symbol": symbol.upper(), "days": 5})
+        rows = (body.get("rows") or []) if isinstance(body, dict) else []
+        last = max(rows, key=lambda r: str(r.get("date") or "")) if rows else None
+        if last:
+            out["iv"] = {**{k: last.get(k) for k in IV_CONTEXT_FIELDS}, "source": "iv_summary_daily (EOD store)"}
+        else:
+            out["note"] = "no IV summary stored for this symbol at capture"
+    except UpstreamError as exc:
+        out["note"] = f"IV summary unavailable at capture ({str(exc)[:80]})"
+    return out
+
+
+async def close_context(targets: list[dict[str, Any]], now: datetime | None = None) -> dict[str, dict[str, Any]]:
+    """One market snapshot per UPPER-CASE symbol among ``targets`` (the store keys each structure's journal row by
+    its own symbol), wrapped as ``{"market": …}`` — the same shape a booking's journal context carries."""
+    out: dict[str, dict[str, Any]] = {}
+    for sym in sorted({str(p["symbol"]).upper() for p in targets}):
+        exps = [str(p["expiry"])[:10] for p in targets if str(p["symbol"]).upper() == sym]
+        out[sym] = {"market": await market_context(sym, exps, now)}
+    return out
+
+
+def classify_template(legs: list[dict[str, Any]]) -> str:
+    """The structure's shape at booking (original legs only — a roll keeps its template): arithmetic over the legs'
+    sides / kinds / strikes, a label and never a judgement."""
+    orig = [p for p in legs if p.get("rolled_from") is None] or legs
+    kinds = sorted(str(p["kind"]) for p in orig)
+    if kinds and all(k == "FUT" for k in kinds):
+        return "futures"
+    if len(orig) == 1:
+        return "single option"
+    if len(orig) == 2:
+        a, b = orig
+        if a["kind"] == b["kind"] and a["kind"] in ("CE", "PE") and a["side"] != b["side"]:
+            return "vertical spread" if str(a["expiry"])[:10] == str(b["expiry"])[:10] else "calendar"
+        if {a["kind"], b["kind"]} == {"CE", "PE"} and a["side"] == b["side"]:
+            return "straddle" if a.get("strike") == b.get("strike") else "strangle"
+    if len(orig) == 4 and kinds == ["CE", "CE", "PE", "PE"]:
+        ce = [p for p in orig if p["kind"] == "CE"]
+        pe = [p for p in orig if p["kind"] == "PE"]
+        if {p["side"] for p in ce} == {"buy", "sell"} and {p["side"] for p in pe} == {"buy", "sell"}:
+            short_ce = next(p for p in ce if p["side"] == "sell")
+            short_pe = next(p for p in pe if p["side"] == "sell")
+            return "iron butterfly" if short_ce.get("strike") == short_pe.get("strike") else "iron condor"
+    return "custom"
+
+
+def attribute_leg(pos: dict[str, Any]) -> dict[str, Any]:
+    """One closed/rolled leg's realised gross split Θ / Δ / ν / residual (ATTRIBUTION_METHOD — an approximation,
+    labelled so). A part whose input was not stored (no entry IV / forward, no stored mark at the close, a settlement
+    without an IV) is null and sits in the residual, noted — so Θ+Δ+ν+residual equals the gross exactly, always."""
+    q = _sign(pos) * _qty(pos)
+    gross = round(q * (float(pos["exit_price"]) - float(pos["entry_price"])), 2)
+    costs = round(float(pos.get("entry_costs") or 0.0) + float(pos.get("exit_costs") or 0.0), 2)
+    base: dict[str, Any] = {"position_id": int(pos["id"]), "kind": pos["kind"], "side": pos["side"],
+                            "strike": pos.get("strike"), "expiry": str(pos["expiry"])[:10],
+                            "gross_inr": gross, "costs_inr": costs, "realised_inr": round(gross - costs, 2)}
+    if pos["kind"] == "FUT":
+        return {**base, "theta_inr": 0.0, "delta_inr": gross, "vega_inr": 0.0, "residual_inr": 0.0, "complete": True,
+                "notes": ["a future is all Δ: the price move is the whole realised gross"]}
+    notes: list[str] = []
+    try:
+        opened = datetime.fromisoformat(str(pos["opened_at"]))
+        opened = opened if opened.tzinfo else opened.replace(tzinfo=IST)
+        closed = datetime.fromisoformat(str(pos["closed_at"]))
+        closed = closed if closed.tzinfo else closed.replace(tzinfo=IST)
+        days_held: float | None = max((closed - opened).total_seconds() / 86400.0, 0.0)
+    except (TypeError, ValueError):
+        days_held = None
+        notes.append("open/close times did not parse: Θ is unassigned (in the residual)")
+    mk = pos.get("exit_mark") or {}
+    f0 = float(pos.get("entry_forward") or 0.0) or None
+    iv0 = float(pos.get("entry_iv") or 0.0) or None
+    f1 = mk.get("forward")
+    iv1 = mk.get("iv")
+    t0 = t_days(pos["expiry"], opened) if days_held is not None else None
+    theta = delta = vega = None
+    if f0 and iv0 and t0 and t0 > 0 and days_held is not None:
+        g = om.black76(pos["kind"], f0, float(pos["strike"]), om.t_years(t0), iv0 / 100.0)
+        theta = round(g.theta_day * q * days_held, 2)
+        if f1:
+            delta = round(g.delta * q * (float(f1) - f0), 2)
+        else:
+            notes.append("no stored forward at the close: Δ is unassigned (in the residual)")
+        if iv1 is not None:
+            vega = round(g.vega * q * (float(iv1) - iv0), 2)
+        else:
+            notes.append("no stored IV at the close (e.g. a settlement): ν is unassigned (in the residual)")
+    else:
+        notes.append("entry forward / IV / time not stored: Θ, Δ and ν are unassigned (all in the residual)")
+    residual = round(gross - sum(x for x in (theta, delta, vega) if x is not None), 2)
+    return {**base, "theta_inr": theta, "delta_inr": delta, "vega_inr": vega, "residual_inr": residual,
+            "complete": theta is not None and delta is not None and vega is not None, "notes": notes,
+            "exit_mark_as_of": mk.get("as_of"), "exit_mark_method": mk.get("mark_method")}
+
+
+def _sum_known(legs: list[dict[str, Any]], key: str) -> float:
+    return round(sum(float(x[key]) for x in legs if x.get(key) is not None), 2)
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 # the book payload (list / greeks)
 # ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
 
@@ -677,8 +823,14 @@ async def book(body: BookIn) -> dict:
         legs.append({**pos, "expiry": leg.expiry.isoformat(), "entry_iv": leg.iv, "entry_forward": leg.forward,
                      "entry_price_source": leg.price_source, "entry_costs": round(leg_costs(pos, leg.premium, "entry"), 2)})
     name = (body.name or "").strip() or f"{sym} {len(legs)}-leg {min(leg['expiry'] for leg in legs)}"
+    # E-JRNL F-12: the booking's point-in-time context — the market snapshot (best-effort) + the checklist payload
+    ctx: dict[str, Any] = {"market": await market_context(sym, [leg["expiry"] for leg in legs])}
+    client_ctx = _client_context(body.context)
+    if client_ctx is not None:
+        ctx["client"] = client_ctx
     store = fbs.get_store()
-    struct = await asyncio.to_thread(store.book, name=name, symbol=sym, legs=legs, source=body.source, note=body.note)
+    struct = await asyncio.to_thread(store.book, name=name, symbol=sym, legs=legs, source=body.source, note=body.note,
+                                     context=ctx)
     return {"structure": struct, "paper_only": True, "note": PAPER_NOTE, "badge": BADGE_ARITH}
 
 
@@ -751,8 +903,14 @@ async def close(body: CloseIn) -> dict:
     as_of = now_ist().isoformat(timespec="seconds")
     if body.preview:
         return {"preview": True, "as_of": as_of, "fills": fills, "marks_meta": meta, "paper_only": True, "note": PAPER_NOTE}
-    closed = await _store_write(store.close, [{k: f[k] for k in ("position_id", "exit_price", "exit_price_source", "exit_costs")}
-                                              for f in fills])
+    # E-JRNL F-12: the market at the close, journalled point-in-time. Only for live contracts: an expired leg's
+    # context IS its settlement (already in the fill's source) and its close never fetches anything (W2-BOOK's rule).
+    live_targets = [p for p in targets if (marks.get(int(p["id"])) or {}).get("mark_method") not in (SETTLEMENT, UNSETTLED)
+                    and date.fromisoformat(str(p["expiry"])[:10]) >= now_ist().date()]
+    ctx = await close_context(live_targets) if live_targets else None
+    closed = await _store_write(lambda rows: store.close(rows, context=ctx),
+                                [{k: f[k] for k in ("position_id", "exit_price", "exit_price_source", "exit_costs")}
+                                 for f in fills])
     return {"preview": False, "as_of": as_of, "fills": fills, "closed": closed, "marks_meta": meta, "paper_only": True, "note": PAPER_NOTE}
 
 
@@ -899,6 +1057,68 @@ async def book_day(day: str | None = Query(None, alias="date", description="IST 
     summary = await asyncio.to_thread(store.day_summary, d)
     return {**summary, "as_of": now_ist().isoformat(timespec="seconds"), "badge": BADGE_ARITH,
             "marks_meta": meta, "mark_source": mark_source_chip(meta) if meta else None,
+            "paper_only": True, "note": PAPER_NOTE}
+
+
+@router.get("/debrief")
+async def debrief(frm: str | None = Query(None, alias="from", description="IST day YYYY-MM-DD; default: 6 days before `to`"),
+                  to: str | None = Query(None, description="IST day YYYY-MM-DD; default today IST")) -> dict:
+    """The weekly debrief (E-JRNL, F-12): closed structures in [from, to] with the realised money split
+    Θ / Δ / ν / residual (ATTRIBUTION_LABEL — an approximation, its method stated and sent with the payload), the
+    shape-template tally (win = realised net > 0) and per-day facts the discipline card compares against the OWNER'S
+    OWN rules client-side. Facts only — no composite score of any kind exists here (SPEC §7). Counts the PAPER book
+    only; describes, does not predict."""
+    t_iso = (to or now_ist().date().isoformat()).strip()[:10]
+    try:
+        t_day = date.fromisoformat(t_iso)
+        f_iso = (frm or (t_day - timedelta(days=6)).isoformat()).strip()[:10]
+        f_day = date.fromisoformat(f_iso)
+    except ValueError:
+        fail(422, "invalid", "from / to must be dates (YYYY-MM-DD)")
+    span = (t_day - f_day).days
+    if span < 0 or span > 62:
+        fail(422, "invalid", f"the window must run forward and span at most 62 days (got {span})")
+    store = fbs.get_store()
+    structs = await asyncio.to_thread(store.closed_structures, f_iso, t_iso)
+    rows: list[dict[str, Any]] = []
+    for s in structs:
+        legs = [attribute_leg(p) for p in s["positions"] if p["status"] in ("closed", "rolled") and p.get("exit_price") is not None]
+        if not legs:
+            continue
+        gross, costs = _sum_known(legs, "gross_inr"), _sum_known(legs, "costs_inr")
+        split = {k: _sum_known(legs, k) for k in ("theta_inr", "delta_inr", "vega_inr", "residual_inr")}
+        notes = sorted({n for x in legs for n in x.get("notes") or []})
+        rows.append({"structure_id": int(s["id"]), "name": s["name"], "symbol": s["symbol"],
+                     "template": classify_template(s["positions"]), "closed_at": s["closed_at"],
+                     "opened_at": min(str(p["opened_at"]) for p in s["positions"]),
+                     "gross_inr": gross, "costs_inr": costs, "realised_inr": round(gross - costs, 2),
+                     "attribution": {**split, "complete": all(x["complete"] for x in legs), "notes": notes, "legs": legs}})
+    by_t: dict[str, dict[str, Any]] = {}
+    for r in rows:
+        b = by_t.setdefault(r["template"], {"template": r["template"], "n": 0, "wins": 0, "realised_inr": 0.0})
+        b["n"] += 1
+        b["wins"] += 1 if r["realised_inr"] > 0 else 0
+        b["realised_inr"] = round(b["realised_inr"] + r["realised_inr"], 2)
+    for b in by_t.values():
+        b["win_rate_pct"] = round(b["wins"] / b["n"] * 100.0, 1) if b["n"] else None
+
+    def _days() -> list[dict[str, Any]]:
+        out, cur = [], f_day
+        while cur <= t_day:
+            d = store.day_summary(cur.isoformat())
+            if d["bookings"] or d["closes"] or d["rolls"]:
+                out.append({k: d[k] for k in ("date", "realised_inr", "mtm_change_inr", "bookings", "closes", "rolls", "notes")})
+            cur += timedelta(days=1)
+        return out
+
+    return {"from": f_iso, "to": t_iso, "as_of": now_ist().isoformat(timespec="seconds"),
+            "structures": rows, "by_template": sorted(by_t.values(), key=lambda b: (-b["n"], b["template"])),
+            "days": await asyncio.to_thread(_days),
+            "attribution_label": ATTRIBUTION_LABEL, "attribution_method": ATTRIBUTION_METHOD,
+            "template_note": "the shape tally is arithmetic over this book's few closed trades — " + DESCRIBES,
+            "facts_note": ("facts only, no composite score (SPEC §7); the owner's own caps live in RSK › DISCIPLINE "
+                           "and the page compares against them client-side"),
+            "badge": BADGE_ARITH, "realised_basis": "net of the recorded entry + exit costs",
             "paper_only": True, "note": PAPER_NOTE}
 
 

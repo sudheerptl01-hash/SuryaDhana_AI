@@ -366,7 +366,7 @@ function check(name: string, cond: unknown, extra?: unknown): void {
   check('P3 the horizon table on MEMB only', JSON.stringify(horizonUsers) === '["components/IndexMembers.tsx"]', horizonUsers)
   check('P3 MOV keeps the live panel with a "history on MEMB" footer', mv.includes('history on MEMB ›') && mv.includes("goToPage('memb')"))
   // W2-TAPE mounted XPRY (PLAN 2.4) as DERV's third sub-view: DESK | VOL | XPRY, still one page
-  check('P4 DERV › VOL (and › XPRY) are sub-views (O-T14), not a 44th page', dv.includes("useSubView(['desk', 'vol', 'xpry'] as const, 'desk')") && dv.includes('<VolView symbol={symbol}')
+  check('P4 DERV › VOL (and › XPRY, › RADAR) are sub-views (O-T14), not a 44th page', dv.includes("useSubView(['desk', 'vol', 'xpry', 'radar'] as const, 'desk')") && dv.includes('<VolView symbol={symbol}')
     && dv.includes('<ExpiryDay symbol={symbol}') && !src('app/page.tsx').includes("id: 'vol'") && !src('app/page.tsx').includes("id: 'xpry'"))
   check('P4 negative control: the two-view list (before XPRY) no longer matches', !dv.includes("useSubView(['desk', 'vol'] as const, 'desk')"))
   check('P5 OMON: OPEN IN OSTR carries symbol + expiry + strikes through the active-symbol store', oc.includes('writeActive({ symbol: data.symbol, expiry: data.expiry, strikes: picks })') && oc.includes("goToPage('ostrategy')"))

@@ -128,6 +128,7 @@ export function IvHistoryChart({ symbol, state, collapsed = false, onToggle }: {
           </div>
           <div style={{ flex: 1, minHeight: 0 }}>
             <InteractiveSeries height={170} linkGroup="omon" unitL="%" series={series} markers={markers}
+              alertOverlay={{ symbol, kind: 'iv30' }}
               ariaLabel="IV history with VIX overlay (wheel zoom, drag pan, crosshair)" />
           </div>
           <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>{v2.note}</div>

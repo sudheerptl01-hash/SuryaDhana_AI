@@ -64,10 +64,10 @@ def test_parse_page_source_rejects_bad_shape():
         pages.parse_tab_ids("const TAB_IDS: Tab[] = ['a', 'a']")
 
 
-def test_real_page_tsx_has_43_consistent_pages():
-    """43 since the gold program (reports/gold_program/PLAN.md Appendix A; B4A registers the GOLD page)."""
+def test_real_page_tsx_has_44_consistent_pages():
+    """44 since the FINAL round (GPLN, wave E); 43 was the gold program (PLAN Appendix A)."""
     src = pages.load_page_source()
-    assert len(src.tab_ids) == 43 and len(src.command_pages) == 43, (len(src.tab_ids), len(src.command_pages))
+    assert len(src.tab_ids) == 44 and len(src.command_pages) == 44, (len(src.tab_ids), len(src.command_pages))
     assert {p.id for p in src.command_pages} == set(src.tab_ids)
     assert len(src.tab_strip) >= 9
 

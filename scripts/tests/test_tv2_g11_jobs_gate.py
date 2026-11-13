@@ -35,6 +35,8 @@ NOT_REPLAYED = {
 }
 #: jobs that fire inside a freeze window today, and why that is allowed (freeze windows forbid restarts, not light work)
 KNOWN_IN_WINDOW: dict[str, str] = {
+    "morning_gameplan": "08:50 game-plan digest (FINAL ROUND E-PLAN): assembles stored/live READS + one Telegram\n"
+                        "line; fetches nothing heavy, restarts nothing — the light class, like morning_sweep",
     "eod_data_pipeline": "the 18:30 EOD pipeline IS the evening window's work",
     "shared_snapshot_build": "19:20 read-only snapshot after the pipeline",
     "index_valuation_daily": "19:15 stored-data job of the evening pass",

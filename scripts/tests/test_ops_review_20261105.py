@@ -763,7 +763,9 @@ def test_a_disabled_desk_or_a_run_that_moved_nothing_is_never_a_replay(ctl: dict
     monkeypatch.setattr(mc, "dataset_outcome", lambda before, after: mc.STATUS_NO_NEW_DATA)
     monkeypatch.setattr(mc, "_dataset_snapshot", lambda job_id: asyncio.sleep(0, result={"desk_mark": ("2026-10-30",)}))
     body = catchup()
-    assert posts == ["/api/desk/daily"] and "desk_daily: re-run (no new data)" in body and "the Desk replayed" not in body
+    assert posts[0] == "/api/desk/daily" and [p for p in posts[1:] if "data-health" not in p] == [], \
+        f"only the desk replay + its watermark check may post here: {posts}"
+    assert "desk_daily: re-run (no new data)" in body and "the Desk replayed" not in body
     # NEGATIVE CONTROL: the Desk enabled and its datasets moved → done → "the Desk replayed every missed session"
     monkeypatch.setattr(mc, "dataset_outcome", lambda before, after: None)
     body = catchup()

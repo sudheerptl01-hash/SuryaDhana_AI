@@ -1,12 +1,20 @@
 'use client'
 
 /**
- * Shell notices: the connection banner (ui-api down / reconnected), the browser-mode "new build" pill, the
- * one-time "settings not imported yet" notice and the boot gate. Presentational only; PlatformShell decides when
- * each one shows.
+ * Shell notices: the connection banner (ui-api down / reconnected), the data-service WARMING UP / DB READ-ONLY
+ * strip (O-F5a, D-BOOT), the browser-mode "new build" pill, the one-time "settings not imported yet" notice and
+ * the boot gate. Presentational only except the upstream poller hook; PlatformShell decides when each one shows
+ * with precedence LINK DOWN > WARMING UP > DB READ-ONLY > STAND DOWN.
  */
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { Z } from '@/lib/z'
+import { T } from '@/components/news/format'
+import { RECONNECTED_EVENT, type ReconnectedDetail } from '@/lib/reconnect'
+import {
+  latestUpstream, publishUpstream, reduceUpstreamProbe, subscribeUpstream, upstreamDelayMs, upstreamRecovered,
+  READONLY_DETAIL, READONLY_MAIN, READONLY_TAG, UPSTREAM_URL, WARMING_DETAIL, WARMING_MAIN, WARMING_TAG,
+  type UpstreamProbeResult, type UpstreamSnapshot,
+} from './upstream'
 import { useSecondTick, Z_SHELL } from './TitleStrip'
 
 /**
@@ -72,6 +80,126 @@ export const ConnectionBanner = memo(function ConnectionBanner({ phase, top, dow
             <span className="sd-banner-dim">{BANNER_UP_DETAIL}</span>
           </>
         )}
+    </div>
+  )
+})
+
+// ── data-service upstream strip (O-F5a, RISK §b; D-BOOT) ─────────────────────────────────────────────────────
+
+const UPSTREAM_FETCH_TIMEOUT_MS = 3_000
+
+/** One GET of /api/health/upstream. null = no signal (ui-api unreachable → ConnectionBanner's territory,
+ *  or an older ui-api build without the route → never a strip of its own). */
+async function probeUpstream(): Promise<UpstreamProbeResult | null> {
+  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null
+  const timer = setTimeout(() => ctl?.abort(), UPSTREAM_FETCH_TIMEOUT_MS)
+  try {
+    const r = await fetch(UPSTREAM_URL, {
+      cache: 'no-store', credentials: 'same-origin', signal: ctl?.signal, headers: { Accept: 'application/json' },
+    })
+    if (!r.ok) return null
+    const b = await r.json() as { data_service?: unknown; db_read_only?: unknown }
+    return { dataService: b.data_service === 'up' ? 'up' : 'down', dbReadOnly: b.db_read_only === true }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * The shell's upstream poller (PlatformShell mounts it once). Publishes every verdict to the module store in
+ * ./upstream so any component (UPDATE DATA's read-only reason) can subscribe, and on warming → up it dispatches
+ * the SAME reconnected event as a ui-api recovery, so panels whose one-shot load failed while data-service was
+ * starting reload through lib/reconnect.ts (pages that poll recover by themselves).
+ */
+export function useUpstreamHealth(active: boolean): UpstreamSnapshot {
+  const [snap, setSnap] = useState<UpstreamSnapshot>(latestUpstream)
+  useEffect(() => subscribeUpstream(setSnap), [])
+  useEffect(() => {
+    if (!active) return
+    let alive = true
+    let inFlight = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const clear = () => { if (timer) { clearTimeout(timer); timer = null } }
+    const schedule = (ms: number) => {
+      if (!alive || (typeof document !== 'undefined' && document.hidden)) return
+      publishUpstream({ ...latestUpstream(), nextProbeAt: Date.now() + ms })
+      timer = setTimeout(run, ms)
+    }
+    const run = () => {
+      if (!alive || inFlight) return
+      clear()
+      inFlight = true
+      void probeUpstream().then(res => {
+        inFlight = false
+        if (!alive) return
+        const prev = latestUpstream()
+        const next = reduceUpstreamProbe(prev, res, Date.now())
+        publishUpstream(next)
+        if (upstreamRecovered(prev, next)) {
+          try {
+            window.dispatchEvent(new CustomEvent<ReconnectedDetail>(RECONNECTED_EVENT, { detail: { outageMs: Date.now() - prev.since } }))
+          } catch { /* no CustomEvent: polling panels recover on their next poll */ }
+        }
+        schedule(upstreamDelayMs(next))
+      })
+    }
+    const onWake = () => { if (!document.hidden) run() }
+    const onVis = () => { if (document.hidden) clear(); else run() }
+    window.addEventListener('focus', onWake)
+    window.addEventListener('online', onWake)
+    document.addEventListener('visibilitychange', onVis)
+    run()
+    return () => {
+      alive = false
+      clear()
+      window.removeEventListener('focus', onWake)
+      window.removeEventListener('online', onWake)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [active])
+  return snap
+}
+
+/** The latest upstream verdict for any component (read-only disable reasons etc.); no polling of its own. */
+export function useUpstreamSnapshot(): UpstreamSnapshot {
+  const [snap, setSnap] = useState<UpstreamSnapshot>(latestUpstream)
+  useEffect(() => subscribeUpstream(setSnap), [])
+  return snap
+}
+
+/**
+ * WARMING UP / DB READ-ONLY strip: ConnectionBanner's geometry (24 px under the title strip), calm amber, no
+ * flashing, 150 ms ease-in (W4). Copy is SPEC verbatim — a fact and a visible self-retry, never a raw transport
+ * string, never an instruction.
+ */
+export const UpstreamStrip = memo(function UpstreamStrip({ kind, top, nextProbeAt }: {
+  kind: 'warming' | 'readonly'; top: number; nextProbeAt: number | null
+}) {
+  const now = useSecondTick()
+  const retryIn = nextProbeAt ? Math.max(0, Math.ceil((nextProbeAt - now) / 1000)) : null
+  const warming = kind === 'warming'
+  return (
+    <div role="status" aria-live="polite" data-sd-upstream={kind}
+      style={{ position: 'fixed', left: 0, right: 0, top, height: BANNER_HEIGHT, zIndex: Z_SHELL - 1,
+               display: 'flex', alignItems: 'center', gap: 12, padding: '0 10px 0 0', overflow: 'hidden',
+               whiteSpace: 'nowrap', fontFamily: T.mono, fontSize: 10, letterSpacing: '.08em',
+               background: '#100c03', color: T.amber, borderBottom: `1px solid ${T.amber}77`,
+               animation: 'sd-upstream-in .15s ease-in both' }}>
+      <span style={{ alignSelf: 'stretch', display: 'flex', alignItems: 'center', padding: '0 10px', fontWeight: 700,
+                     letterSpacing: '.16em', color: '#05070a', background: T.amber }}>
+        {warming ? WARMING_TAG : READONLY_TAG}
+      </span>
+      <span style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {warming ? WARMING_MAIN : READONLY_MAIN}
+      </span>
+      <span style={{ color: T.muted }}>{warming ? WARMING_DETAIL : READONLY_DETAIL}</span>
+      <span style={{ flex: 1 }} />
+      {retryIn !== null && (
+        <span style={{ color: T.muted }}>{warming ? 'retry' : 're-check'} in {retryIn} s</span>
+      )}
+      <style>{`@keyframes sd-upstream-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }`}</style>
     </div>
   )
 })

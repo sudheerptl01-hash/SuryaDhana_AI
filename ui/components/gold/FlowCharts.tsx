@@ -1,21 +1,28 @@
 'use client'
 
 /**
- * Inline-SVG chart kit for the gold sub-views (no new chart library, PLAN a.1): px-sized via `useChartSize`
- * (C1-trader-ux-17: one SVG unit = one CSS px, round ticks from `axisTicks`), one y-axis per chart (never dual-axis).
+ * Chart kit for the gold sub-views (PLAN a.1; FINAL ROUND W3 / charts/PLAN.md C1): the date-axis charts
+ * (`LineChart`, `BarChart`) render through the terminal's one lightweight-charts wrapper (`InteractiveSeries`
+ * inside an `ExpandableChart` shell) — wheel zoom, drag pan, crosshair values in the shell legend, FIT / PNG /
+ * ⛶ expand — so every call site on POSITIONING / PHYSICAL / MACRO / MONTHLY inherits the interaction with NO
+ * prop change. The rest stays inline SVG on `useChartSize`:
  *
- *  - `LineChart`: one or more series on a date axis, optional horizontal bands (20/80) and reference lines;
- *  - `BarChart`: signed bars (flows, Δ) with a zero line;
- *  - `StackedBars`: stacked signed bars by category (net by trader group, ETF flows by region, balance sheet);
+ *  - `StackedBars`: stacked signed bars by category — SVG, now inside the ExpandableChart shell (⛶ expand);
  *  - `Gauge`: a 0–100 bar with a marker (the crowd gauge; neutral colour, worded "not a signal" by the caller);
  *  - `SmallMultiple`: a tiny bar strip (rolling correlations by year).
+ *    Gauge and SmallMultiple stay bare micro-meters on purpose (the vol/charts BarRow precedent): a panel shell
+ *    around a 26-px meter wrecks the strips they sit in, and a wheel listener there would break page scroll;
+ *    their exact values are already printed beside them.
  *
  * Colours: context series use the neutral palette (muted / violet / cyan); green/red are passed explicitly only for
- * price changes and the arithmetic comparisons (PLAN §f.3).
+ * price changes and the arithmetic comparisons (PLAN §f.3). The kit changes rendering only — wording, badges and
+ * colour semantics stay with the caller (GOLD labelling rules).
  */
 import { type ReactNode } from 'react'
 import { CHART_BOX, T, useChartSize } from '@/components/terminal'
 import { axisTicks, pickAxisLabels } from '@/components/terminal/chart'
+import { ExpandableChart } from '@/components/terminal/ExpandableChart'
+import { InteractiveSeries, type SeriesPoint, type SeriesSpec } from '@/components/terminal/InteractiveSeries'
 import { MINUS } from './goldViewModel'
 
 export interface XY { x: string; y: number | null }
@@ -30,9 +37,80 @@ const shortDate = (iso: string) => {
 
 export const SERIES_COLORS = [T.violet, T.cyan, T.amber, T.muted, T.bright, '#7fb3ff', '#ff9c6b']
 
-/** Shared frame: axis ticks, x labels, hover column. */
-function Frame({ w, h, xs, lo, hi, children, bands, refs, dp, label, fmtY }: {
-  w: number; h: number; xs: string[]; lo: number; hi: number; children: ReactNode; bands?: [number, number][]; refs?: { y: number; label: string }[]
+/** The resting legend (series swatches) shown in the shell header until the crosshair overwrites it. */
+function LegendRow({ items }: { items: { label: string; color: string }[] }) {
+  return (
+    <span style={{ display: 'inline-flex', gap: 10, flexWrap: 'wrap' }}>
+      {items.map(s => (
+        <span key={s.label}><span style={{ display: 'inline-block', width: 10, height: 2, background: s.color, verticalAlign: 'middle', marginRight: 4 }} />{s.label}</span>
+      ))}
+    </span>
+  )
+}
+
+/**
+ * Horizontal guide lines (the old `refs` / band edges) as two-point constant series: a straight line across the
+ * window that stays SILENT in the crosshair legend between its endpoints (LWC only reports a series where it has
+ * a data point), so guides never flood the hover readout.
+ */
+function guideSpecs(xs: string[], refs: { y: number; label: string }[] | undefined,
+                    bandEdges: number[], fmt: ((v: number) => string) | undefined): SeriesSpec[] {
+  if (xs.length < 2) return []
+  const ends = (y: number): SeriesPoint[] => [{ t: xs[0], v: y }, { t: xs[xs.length - 1], v: y }]
+  const out: SeriesSpec[] = []
+  for (const r of refs ?? []) out.push({ id: `ref-${r.y}`, label: r.label || 'ref', color: T.amber, dashed: true, w: 1, points: ends(r.y), format: fmt })
+  for (const y of bandEdges) out.push({ id: `band-${y}`, label: `${y}`, color: T.dim, dashed: true, w: 1, points: ends(y), format: fmt })
+  return out
+}
+
+export function LineChart({ series, height = 150, bands, refs, dp, label, fmtY, legend = true }: {
+  series: Series[]; height?: number; bands?: [number, number][]; refs?: { y: number; label: string }[]; dp?: number; label?: string
+  fmtY?: (v: number) => string; legend?: boolean
+}) {
+  const xs = series[0]?.values.map(v => v.x) ?? []
+  if (!xs.length) return <div style={{ color: T.dim, fontSize: 11, padding: 8 }}>no history yet</div>
+  const fmt = fmtY ?? (dp != null ? (v: number) => fmtTick(v, dp) : undefined)
+  // the old 20/80 shading becomes its edge lines (each band's bounds), drawn dim and dashed
+  const edges = [...new Set((bands ?? []).flatMap(([a, b]) => [a, b]))]
+  const colorOf = (s: Series, i: number) => s.color ?? SERIES_COLORS[i % SERIES_COLORS.length]
+  const specs: SeriesSpec[] = [
+    ...series.map((s, i): SeriesSpec => ({
+      id: s.key, label: s.label, color: colorOf(s, i), w: s.width ?? (i === 0 ? 2 : 1), dashed: s.dashed,
+      points: s.values.map((v): SeriesPoint => ({ t: v.x, v: v.y })), format: fmt,
+    })),
+    ...guideSpecs(xs, refs, edges, fmt),
+  ]
+  return (
+    <ExpandableChart title={label ?? series[0]?.label ?? 'series'} height={height}
+      legend={legend ? <LegendRow items={series.map((s, i) => ({ label: s.label, color: colorOf(s, i) }))} /> : undefined}>
+      <InteractiveSeries height={height} series={specs} ariaLabel={label} />
+    </ExpandableChart>
+  )
+}
+
+export function BarChart({ values, height = 110, color, posColor, negColor, dp, label, fmtY }: {
+  values: XY[]; height?: number; color?: string; posColor?: string; negColor?: string; dp?: number; label?: string; fmtY?: (v: number) => string
+}) {
+  if (!values.length) return <div style={{ color: T.dim, fontSize: 11, padding: 8 }}>no history yet</div>
+  const fmt = fmtY ?? ((v: number) => fmtTick(v, dp ?? 0))
+  // signed bars keep their two tones (both neutral, PLAN §f.3) as a positive and a negative histogram: a point
+  // belongs to one of them and is a whitespace gap in the other, so the crosshair legend prints one value
+  const specs: SeriesSpec[] = [
+    { id: 'pos', label: label ?? 'Δ', type: 'histogram', color: color ?? posColor ?? T.violet,
+      points: values.map((v): SeriesPoint => ({ t: v.x, v: v.y != null && v.y >= 0 ? v.y : null })), format: fmt },
+    { id: 'neg', label: label ?? 'Δ', type: 'histogram', color: color ?? negColor ?? T.muted,
+      points: values.map((v): SeriesPoint => ({ t: v.x, v: v.y != null && v.y < 0 ? v.y : null })), format: fmt },
+  ]
+  return (
+    <ExpandableChart title={label ?? 'change'} height={height}>
+      <InteractiveSeries height={height} series={specs} ariaLabel={label} />
+    </ExpandableChart>
+  )
+}
+
+/** Shared SVG frame for StackedBars: axis ticks, x labels. */
+function Frame({ w, h, xs, lo, hi, children, refs, dp, label, fmtY }: {
+  w: number; h: number; xs: string[]; lo: number; hi: number; children: ReactNode; refs?: { y: number; label: string }[]
   dp?: number; label?: string; fmtY?: (v: number) => string
 }) {
   const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b
@@ -43,7 +121,6 @@ function Frame({ w, h, xs, lo, hi, children, bands, refs, dp, label, fmtY }: {
   const labelIdx = pickAxisLabels(xs.length, plotW / Math.max(1, xs.length - 1), 64, [0, xs.length - 1])
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={label} style={{ display: 'block' }}>
-      {bands?.map(([a, b], i) => <rect key={i} x={PAD.l} y={Math.min(y(a), y(b))} width={plotW} height={Math.abs(y(a) - y(b))} fill={T.borderHi} opacity={0.25} />)}
       {ticks.ticks.map(t => (
         <g key={t}>
           <line x1={PAD.l} x2={w - PAD.r} y1={y(t)} y2={y(t)} stroke={T.border} strokeDasharray="2 3" />
@@ -51,9 +128,9 @@ function Frame({ w, h, xs, lo, hi, children, bands, refs, dp, label, fmtY }: {
         </g>
       ))}
       {refs?.map(r => (
-        <g key={r.label}>
+        <g key={r.label || String(r.y)}>
           <line x1={PAD.l} x2={w - PAD.r} y1={y(r.y)} y2={y(r.y)} stroke={T.amber} strokeDasharray="4 3" opacity={0.8} />
-          <text x={w - PAD.r} y={y(r.y) - 3} textAnchor="end" fontSize={9} fontFamily={T.mono} fill={T.amber}>{r.label}</text>
+          {r.label && <text x={w - PAD.r} y={y(r.y) - 3} textAnchor="end" fontSize={9} fontFamily={T.mono} fill={T.amber}>{r.label}</text>}
         </g>
       ))}
       {labelIdx.map(i => <text key={i} x={x(i)} y={h - 6} textAnchor={i === 0 ? 'start' : i === xs.length - 1 ? 'end' : 'middle'} fontSize={9} fontFamily={T.mono} fill={T.dim}>{shortDate(xs[i])}</text>)}
@@ -72,67 +149,28 @@ function extent(vals: (number | null | undefined)[], includeZero = false): [numb
   return [lo - pad, hi + pad]
 }
 
-export function LineChart({ series, height = 150, bands, refs, dp, label, fmtY, legend = true, baseW = 640 }: {
-  series: Series[]; height?: number; bands?: [number, number][]; refs?: { y: number; label: string }[]; dp?: number; label?: string
-  fmtY?: (v: number) => string; legend?: boolean; baseW?: number
-}) {
-  const { ref, w, h } = useChartSize(baseW, height, { minRatio: 0.9, maxRatio: 1.1 })
-  const xs = series[0]?.values.map(v => v.x) ?? []
-  const [lo, hi] = extent(series.flatMap(s => s.values.map(v => v.y)))
-  const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b
-  const y = (v: number) => PAD.t + plotH - ((v - lo) / (hi - lo || 1)) * plotH
-  const x = (i: number) => PAD.l + (xs.length > 1 ? (i / (xs.length - 1)) * plotW : plotW / 2)
-  if (!xs.length) return <div style={{ color: T.dim, fontSize: 11, padding: 8 }}>no history yet</div>
-  return (
-    <div ref={ref} style={CHART_BOX}>
-      {legend && <div style={{ display: 'flex', gap: 12, fontSize: 9.5, color: T.muted, marginBottom: 2, flexWrap: 'wrap' }}>
-        {series.map((s, i) => <span key={s.key}><span style={{ display: 'inline-block', width: 10, height: 2, background: s.color ?? SERIES_COLORS[i % SERIES_COLORS.length], verticalAlign: 'middle', marginRight: 4 }} />{s.label}</span>)}
-      </div>}
-      <Frame w={w} h={h} xs={xs} lo={lo} hi={hi} bands={bands} refs={refs} dp={dp} label={label} fmtY={fmtY}>
-        {series.map((s, i) => {
-          const d = s.values.map((v, j) => (v.y == null || !Number.isFinite(v.y) ? null : `${x(j)},${y(v.y)}`))
-          let path = '', pen = false
-          for (const p of d) { if (p == null) { pen = false; continue } path += `${pen ? 'L' : 'M'}${p} `; pen = true }
-          return <path key={s.key} d={path} fill="none" stroke={s.color ?? SERIES_COLORS[i % SERIES_COLORS.length]} strokeWidth={s.width ?? 1.4} strokeDasharray={s.dashed ? '3 3' : undefined} />
-        })}
-      </Frame>
-    </div>
-  )
-}
-
-export function BarChart({ values, height = 110, color, posColor, negColor, dp, label, baseW = 640, fmtY }: {
-  values: XY[]; height?: number; color?: string; posColor?: string; negColor?: string; dp?: number; label?: string; baseW?: number; fmtY?: (v: number) => string
-}) {
-  const { ref, w, h } = useChartSize(baseW, height, { minRatio: 0.9, maxRatio: 1.1 })
-  const xs = values.map(v => v.x)
-  const [lo, hi] = extent(values.map(v => v.y), true)
-  const plotW = w - PAD.l - PAD.r, plotH = h - PAD.t - PAD.b
-  const y = (v: number) => PAD.t + plotH - ((v - lo) / (hi - lo || 1)) * plotH
-  const bw = Math.max(1, (plotW / Math.max(1, xs.length)) * 0.7)
-  const x = (i: number) => PAD.l + (i + 0.5) * (plotW / Math.max(1, xs.length)) - bw / 2
-  if (!xs.length) return <div style={{ color: T.dim, fontSize: 11, padding: 8 }}>no history yet</div>
-  return (
-    <div ref={ref} style={CHART_BOX}>
-      <Frame w={w} h={h} xs={xs} lo={lo} hi={hi} dp={dp} label={label} fmtY={fmtY} refs={[{ y: 0, label: '' }]}>
-        {values.map((v, i) => v.y == null ? null : (
-          <rect key={v.x} x={x(i)} y={Math.min(y(v.y), y(0))} width={bw} height={Math.max(0.5, Math.abs(y(v.y) - y(0)))}
-            fill={color ?? (v.y >= 0 ? (posColor ?? T.violet) : (negColor ?? T.muted))} opacity={0.9}>
-            <title>{`${shortDate(v.x)}: ${fmtTick(v.y, dp ?? 0)}`}</title>
-          </rect>
-        ))}
-      </Frame>
-    </div>
-  )
-}
-
 export interface StackRow { x: string; parts: Record<string, number | null | undefined> }
 
-/** Stacked signed bars: positives stack up from zero, negatives stack down; one colour per key. */
+/** Stacked signed bars: positives stack up from zero, negatives stack down; one colour per key. SVG, shell for ⛶. */
 export function StackedBars({ rows, keys, colors, height = 160, dp, label, baseW = 640, fmtY, legend = true }: {
   rows: StackRow[]; keys: { key: string; label: string }[]; colors?: Record<string, string>; height?: number; dp?: number; label?: string; baseW?: number
   fmtY?: (v: number) => string; legend?: boolean
 }) {
-  const { ref, w, h } = useChartSize(baseW, height, { minRatio: 0.9, maxRatio: 1.1 })
+  const colorOf = (k: string, i: number) => colors?.[k] ?? SERIES_COLORS[i % SERIES_COLORS.length]
+  if (!rows.length) return <div style={{ color: T.dim, fontSize: 11, padding: 8 }}>no history yet</div>
+  return (
+    <ExpandableChart title={label ?? 'stacked'} height={height}
+      legend={legend ? <LegendRow items={keys.map((k, i) => ({ label: k.label, color: colorOf(k.key, i) }))} /> : undefined}>
+      <StackedBarsSvg rows={rows} keys={keys} colorOf={colorOf} height={height} dp={dp} label={label} baseW={baseW} fmtY={fmtY} />
+    </ExpandableChart>
+  )
+}
+
+function StackedBarsSvg({ rows, keys, colorOf, height, dp, label, baseW, fmtY }: {
+  rows: StackRow[]; keys: { key: string; label: string }[]; colorOf: (k: string, i: number) => string
+  height: number; dp?: number; label?: string; baseW: number; fmtY?: (v: number) => string
+}) {
+  const { ref, w, h } = useChartSize(baseW, height, { minRatio: 0.9, maxRatio: 1.0 })
   const xs = rows.map(r => r.x)
   const tops = rows.map(r => keys.reduce((a, k) => a + Math.max(0, r.parts[k.key] ?? 0), 0))
   const bots = rows.map(r => keys.reduce((a, k) => a + Math.min(0, r.parts[k.key] ?? 0), 0))
@@ -141,13 +179,8 @@ export function StackedBars({ rows, keys, colors, height = 160, dp, label, baseW
   const y = (v: number) => PAD.t + plotH - ((v - lo) / (hi - lo || 1)) * plotH
   const pitch = plotW / Math.max(1, xs.length)
   const bw = Math.max(1, pitch * 0.72)
-  const colorOf = (k: string, i: number) => colors?.[k] ?? SERIES_COLORS[i % SERIES_COLORS.length]
-  if (!xs.length) return <div style={{ color: T.dim, fontSize: 11, padding: 8 }}>no history yet</div>
   return (
     <div ref={ref} style={CHART_BOX}>
-      {legend && <div style={{ display: 'flex', gap: 12, fontSize: 9.5, color: T.muted, marginBottom: 2, flexWrap: 'wrap' }}>
-        {keys.map((k, i) => <span key={k.key}><span style={{ display: 'inline-block', width: 8, height: 8, background: colorOf(k.key, i), verticalAlign: 'middle', marginRight: 4 }} />{k.label}</span>)}
-      </div>}
       <Frame w={w} h={h} xs={xs} lo={lo} hi={hi} dp={dp} label={label} fmtY={fmtY} refs={[{ y: 0, label: '' }]}>
         {rows.map((r, i) => {
           let up = 0, down = 0

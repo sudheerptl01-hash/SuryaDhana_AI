@@ -103,6 +103,27 @@ def detect_session_gaps(store: Any, archive_root: Path, start: date, end: date, 
     return out
 
 
+def clear_recovered(store: Any, archive_root: Path) -> dict[str, list[str]]:
+    """Remove the gap rows whose capture actually exists now (P0-11: gold_preopen_log said ``gap`` for 5 Nov while the
+    accuracy log held the row — once the store is synced, the stale gap row must go). Only days present in the dataset's
+    own capture store are cleared; a genuinely lost session keeps its point-in-time gap row."""
+    out: dict[str, list[str]] = {}
+    for ds, spec in SESSION_CAPTURES.items():
+        have_gaps = db.query_df(store, "SELECT date FROM data_gaps WHERE dataset = ?", [ds])
+        days = sorted(d for d in (db.to_date(v) for v in have_gaps["date"]) if d is not None) if not have_gaps.empty else []
+        if not days:
+            continue
+        if spec["kind"] == "archive":
+            have = archive_days(archive_root, spec["folder"])
+        else:
+            have = table_days(store, spec["table"], spec["column"], days[0], days[-1])
+        recovered = [d for d in days if d in have]
+        if recovered:
+            clear_if_recovered(store, ds, recovered)
+            out[ds] = [d.isoformat() for d in recovered]
+    return out
+
+
 def clear_if_recovered(store: Any, dataset: str, days: Iterable[date]) -> int:
     n = 0
     for d in days:

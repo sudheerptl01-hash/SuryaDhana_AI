@@ -8,6 +8,11 @@
  *
  * Components call `apiError(e, fallback)` for display text, or `normalizeError(e)` when they
  * also want the machine `code`/`hint` (e.g. SourceChip's DEGRADED detail).
+ *
+ * O-F5a (D-BOOT): any "data-service unreachable…" message — from the normalized routers or a legacy one that
+ * still embeds transport internals ("All connection attempts failed", exception class names) — is replaced here,
+ * at the one choke point, by the calm placeholder text. The shell's WARMING UP strip says what is happening;
+ * panels just wait. The raw text is kept on `raw` and logged (console.debug) only — it never reaches a panel.
  */
 
 export type ErrorCode =
@@ -17,6 +22,29 @@ export interface ApiErrorInfo {
   code: ErrorCode | null
   message: string
   hint?: string
+  /** The raw upstream text when `message` was replaced by the calm copy (logging/debug only — never render it). */
+  raw?: string
+}
+
+/** The calm per-panel placeholder while data-service is unreachable (ErrorBox renders it muted). */
+export const UPSTREAM_WAIT_TEXT = 'waiting for the data service — retries by itself'
+
+/** Any message a router family prefixes this way is a data-service transport failure, whatever the suffix. */
+const UPSTREAM_RAW_RE = /^data[- ]service unreachable\b/i
+
+const loggedRaw = new Set<string>()
+
+/** Replace a raw data-service-unreachable message by the calm copy; keep the raw text off every panel. */
+function calmUpstream(info: ApiErrorInfo): ApiErrorInfo {
+  if (!UPSTREAM_RAW_RE.test(info.message)) return info
+  // other upstreams (Yahoo, Breeze…) keep their own honest messages; only the data-service prefix is calmed
+  if (info.code !== null && info.code !== 'upstream_down' && info.code !== 'degraded') return info
+  const raw = info.message
+  if (!loggedRaw.has(raw) && loggedRaw.size < 50) {
+    loggedRaw.add(raw)
+    try { console.debug('[upstream]', raw) } catch { /* logging only */ }
+  }
+  return { code: 'upstream_down', message: UPSTREAM_WAIT_TEXT, raw }
 }
 
 const CODES: ReadonlySet<string> = new Set([
@@ -51,20 +79,20 @@ function fromPayload(data: Dict): ApiErrorInfo | null {
 
 /** Any thrown value or payload → { code, message, hint }. Never throws, never returns an object child. */
 export function normalizeError(e: unknown, fallback = 'unavailable'): ApiErrorInfo {
-  if (typeof e === 'string' && e) return { code: null, message: e }
+  if (typeof e === 'string' && e) return calmUpstream({ code: null, message: e })
   if (isDict(e)) {
     // axios error: e.response.data is the payload
     const resp = e.response
     if (isDict(resp) && isDict(resp.data)) {
       const info = fromPayload(resp.data)
-      if (info) return info
+      if (info) return calmUpstream(info)
     }
     // raw payload passed directly (soft-200 bodies)
     const direct = fromPayload(e)
-    if (direct) return direct
-    if (typeof e.message === 'string' && e.message) return { code: null, message: e.message }
+    if (direct) return calmUpstream(direct)
+    if (typeof e.message === 'string' && e.message) return calmUpstream({ code: null, message: e.message })
   }
-  if (e instanceof Error && e.message) return { code: null, message: e.message }
+  if (e instanceof Error && e.message) return calmUpstream({ code: null, message: e.message })
   return { code: null, message: fallback }
 }
 

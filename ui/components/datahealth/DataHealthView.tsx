@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Chip, DataTable, Panel, T, sourceOf, type Column } from '@/components/terminal'
 import { setSubInUrl } from '@/components/terminal/source'
 import { goToPage } from '@/lib/navigate'
+import { staleChipFace, useDataHealthStore } from '@/lib/dataHealthStore'
 import { filterByPage, getDataHealth, rowSentence, sortRows, staleCount, type DataHealth, type HealthRow } from './api'
 
 const STATE_COLOR: Record<string, string> = { gap: T.red, red: T.red, amber: T.amber, live: T.green, fresh: T.muted }
@@ -86,32 +87,21 @@ export function openDataView(): void {
 }
 
 /**
- * The header's `DATA n STALE` chip (PLAN 1.4): n = amber + red + gaps from /api/data/health, read every 5 min (15 min
- * while the window is hidden); a click opens SYS › DATA. Renders nothing while the route is not deployed (pre-v2) —
- * the chip never guesses.
+ * The header's `DATA n STALE` chip (PLAN 1.4): n = amber + red + gaps from the window's shared /api/data/health store
+ * (ui/lib/dataHealthStore, 5 min visible / 15 min hidden); a click opens SYS › DATA. Renders nothing ONLY while the
+ * route is not deployed (pre-v2 404) — the chip never guesses. FINAL ROUND G8: a fetch error keeps the last good count
+ * greyed with '?' ("health endpoint unreachable" is no longer indistinguishable from "fresh" or from "not deployed").
  */
 export function DataStaleChip() {
-  const [n, setN] = useState<number | null>(null)
-  const [title, setTitle] = useState('')
-  useEffect(() => {
-    let alive = true
-    const read = () => getDataHealth().then(r => {
-      if (!alive) return
-      const bad = sortRows(r.data.rows ?? []).filter(x => x.state === 'gap' || x.state === 'red' || x.state === 'amber')
-      setN(staleCount(r.data))
-      setTitle(bad.length ? `Not fresh: ${bad.slice(0, 6).map(x => `${x.label} (${x.state})`).join(', ')}${bad.length > 6 ? ` +${bad.length - 6}` : ''} · click for SYS › DATA`
-        : 'Every catalogued dataset is fresh · click for SYS › DATA')
-    }).catch(() => { if (alive) setN(null) })
-    read()
-    const iv = setInterval(() => read(), typeof document !== 'undefined' && document.hidden ? 900_000 : 300_000)
-    return () => { alive = false; clearInterval(iv) }
-  }, [])
-  if (n == null) return null
-  const c = n > 0 ? T.amber : T.muted
+  const snap = useDataHealthStore()
+  const face = staleChipFace(snap)
+  if (!face) return null
+  const c = face.tone === 'warn' ? T.amber : face.tone === 'ok' ? T.muted : T.dim
   return (
-    <span role="button" tabIndex={0} data-data-stale={n} title={title} onClick={openDataView} onKeyDown={e => { if (e.key === 'Enter') openDataView() }}
+    <span role="button" tabIndex={0} data-data-stale={face.n ?? '?'} data-data-health={snap.status} title={face.title}
+      onClick={openDataView} onKeyDown={e => { if (e.key === 'Enter') openDataView() }}
       style={{ fontFamily: T.mono, fontSize: 9.5, letterSpacing: 1.1, color: c, border: `1px solid ${c}66`, padding: '1px 6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-      {n > 0 ? `DATA ${n} STALE` : 'DATA FRESH'}
+      {face.label}
     </span>
   )
 }

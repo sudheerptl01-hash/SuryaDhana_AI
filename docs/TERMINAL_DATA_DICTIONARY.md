@@ -90,6 +90,7 @@ Context metrics render in the neutral token and are never coloured bullish or be
 | `icici_session_refresh` | [`breeze_session`](#breeze_session) |
 | `index_drivers_daily` | [`index_constituents_daily`](#index_constituents_daily), [`index_contribution_daily`](#index_contribution_daily), [`index_contribution_fit`](#index_contribution_fit), [`index_driver_state`](#index_driver_state), [`index_weights_daily`](#index_weights_daily) |
 | `index_valuation_daily` | [`index_valuation_history`](#index_valuation_history) |
+| `india_imports_watch` | [`gold_india_imports`](#gold_india_imports) |
 | `internals_sample` | [`archive:internals`](#archive:internals) |
 | `iv_eod` | [`index_ohlc_daily`](#index_ohlc_daily), [`iv_event_log`](#iv_event_log), [`iv_expiry_daily`](#iv_expiry_daily), [`iv_summary_daily`](#iv_summary_daily), [`iv_surface_daily`](#iv_surface_daily), [`nse_contract_delta`](#nse_contract_delta), [`nse_fo_volt`](#nse_fo_volt), [`rate_curve`](#rate_curve), [`vix_daily`](#vix_daily) |
 | `iv_intraday` | [`archive:chain`](#archive:chain), [`iv_intraday`](#iv_intraday) |
@@ -380,11 +381,11 @@ Never fetched: `mcxindia.com`, `www.cmegroup.com`, `kitco.com`, `investing.com`,
 - **Verdict · badge:** PUBLISH-CORE · `context` · **Dictionary:** [GOLD_DATA_DICTIONARY.md#A1](../docs/GOLD_DATA_DICTIONARY.md#A1)
 
 <a id="gold_india_imports"></a>
-### `gold_india_imports` · Gold: India monthly gold imports (manual entry)
+### `gold_india_imports` · Gold: India monthly gold imports (PIB auto-store + Comtrade verify)
 
 - **Pages:** GOLD · **Publisher:** Ministry of Commerce (PIB)
 - **Published (IST):** ~15th, month M-1 · **Expected stored by:** no deadline · **Cadence:** monthly · **Amber after:** 46 days, red beyond that
-- **Ingest job:** none (read on request) · **Freshness read from:** `MAX(report_date)` of `gold_series` where `series_id = 'INDIA_GOLD_IMPORTS_USD_BN'`
+- **Ingest job:** `india_imports_watch` · **Freshness read from:** `MAX(report_date)` of `gold_series` where `series_id = 'INDIA_GOLD_IMPORTS_USD_BN'`
 - **Verdict · badge:** PUBLISH-CONTEXT · `context` · **Dictionary:** [GOLD_DATA_DICTIONARY.md#F14](../docs/GOLD_DATA_DICTIONARY.md#F14)
 - **Note:** enter after each release: POST /jobs/ingest-gold groups [india_imports] params.values
 

@@ -1,4 +1,12 @@
 // Terminal palette + number formatting for the News Catalyst Terminal.
+// This file is the T token source (mirrored by the CSS variables in app/globals.css — keep both in step;
+// pages.check.ts §7 verifies the mirror and the dim-contrast floor).
+//
+// Refined-dark token pass (FINAL ROUND wave C, O-F2): refinement, not redesign — every colour value is
+// unchanged except `dim` (#747e92 → #788296), lifted so every text token clears 4.5:1 on every ground
+// incl. panel3 (#747e92 was 4.30:1 there; hex hardcodes across pages pin the other values — see
+// ~/.suryadhana_pm_scratch/final_round_20261113/c-tokens/CONTRAST.md). Amber is the ONE accent
+// (cyan secondary); green/red stay data semantics (price direction, errors), never decoration.
 
 export const T = {
   bg: '#05070a',
@@ -10,7 +18,7 @@ export const T = {
   bright: '#f2f5fa',
   panel3: '#131926',
   muted: '#8691a5',
-  dim: '#747e92',
+  dim: '#788296',
   amber: '#ffb000',
   amberDim: '#8a6400',
   green: '#16d98a',
@@ -19,6 +27,23 @@ export const T = {
   violet: '#b58bff',
   mono: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
   display: "'Chakra Petch', 'JetBrains Mono', sans-serif",
+  // ── type scale (wave C): 12/13/15/18, one mono family for data/body (T.mono); Chakra Petch stays the
+  //    display face for page titles / wordmarks only. px numbers — drop straight into inline fontSize.
+  fsMicro: 12,
+  fsBody: 13,
+  fsLead: 15,
+  fsTitle: 18,
+  // ── spacing grid (wave C): 4/8 px steps. px numbers for inline padding/gap/margin.
+  sp1: 4,
+  sp2: 8,
+  sp3: 12,
+  sp4: 16,
+  sp5: 24,
+  sp6: 32,
+  // ── motion (wave C): one duration + easing terminal-wide; 150 ms ease, no flash (O-F2).
+  dur: '150ms',
+  ease: 'ease',
+  motion: '150ms ease',
 } as const
 
 const CCY: Record<string, string> = { USD: '$', INR: '₹', GBP: '£', GBp: 'p', EUR: '€' }

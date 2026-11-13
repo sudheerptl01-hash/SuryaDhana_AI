@@ -237,7 +237,7 @@ function vixLevels(s: string): number {
     const n = files.reduce((a, f) => a + vixLevels(SRC.get(f) ?? ''), 0)
     if (n > 1) over[id] = n
   }
-  check('G9.5 the page map resolves every page incl. the eager BRF', pages.size === 43 && pages.has('brief'), [...pages.keys()].length)
+  check('G9.5 the page map resolves every page incl. the eager BRF', pages.size === 44 && pages.has('brief'), [...pages.keys()].length)
   check('G9.5 the VIX level once per page', Object.keys(over).length === 0, over)
   const count = (id: string): number => (pages.get(id) ?? []).reduce((a, f) => a + vixLevels(SRC.get(f) ?? ''), 0)
   check('G9.5 DERV, MKT and BRF each show it once, so the rule is not vacuous', count('derivatives') === 1 && count('markets') === 1 && count('brief') === 1,
@@ -251,7 +251,7 @@ function vixLevels(s: string): number {
   const page = read('app/page.tsx')
   const tabBlock = /const TAB_IDS: Tab\[\] = \[([\s\S]*?)\]/.exec(page)?.[1] ?? ''
   const tabs = [...tabBlock.matchAll(/'([^']+)'/g)].map(m => m[1])
-  check('G9.6 TAB_IDS parsed (43 pages)', tabs.length === 43, tabs.length)
+  check('G9.6 TAB_IDS parsed (44 pages)', tabs.length === 44, tabs.length)
   check('G9.6 unknown ?tab= names the page and the release for any id not in TAB_IDS',
     tabs.every(t => DL.unknownTab(`?tab=${t}`, tabs) === null) && DL.unknownTab('?tab=vol', tabs) === 'vol' && DL.unknownTab('?tab=data', tabs) === 'data')
   check('G9.6 the toast text names the release date', DL.unknownTabText('vol', '20261105-041017-abc1234') === 'VOL is not in this release (built 05 Nov) — showing BRF')

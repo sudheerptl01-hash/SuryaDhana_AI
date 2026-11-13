@@ -25,6 +25,7 @@ import { KITCO_ALL_FROM, KITCO_SHORT_DAYS, KITCO_TIMEFRAMES, KITCO_UNITS, KITCO_
 import { barMs, dailyOhlc, dayGroups, fmtHM, istDate, istMinutes, istToNy, legendCloses, prevSessionClose, resample5m, shiftDays,
          ukDstActive, usDstActive, type DayPt } from '@/lib/gold/sessions'
 import type { Bar, GoldBars, GoldSubViewProps } from '@/lib/gold/types'
+import { ExpandableChart } from '@/components/terminal/ExpandableChart'
 import { IntradayChart, TimeChart, type Conv } from './KitcoChart'
 import { OiQuadrantTape } from './OiQuadrantTape'
 import { LinkTile, Term } from './ViewBits'
@@ -248,16 +249,21 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
         <Pending s={kLoad} label={tfDef.source === '1m' ? 'intraday bars' : 'daily bars'}>
           {tf === '24h' && dayCount === 0 && <NoVerdict what="no 1-minute bars stored yet — the 5-minute job fills gold_bars_intraday from the day it starts" />}
           {tf === '24h' && dayCount > 0 && <>
-            <IntradayChart groups={groups24} usDst={usDst} ukDst={ukDst} conv={kconv} unitLabel={kLabel} dp={kdp} settle={settle} settleValue={serverSettle ? undefined : prevCloseK} settleLabel={settleLabel}
-              showPrev={showPrev} showBands={showBands} mode="24h" live={live} sge={sgePts} />
+            {/* W3 / C2: the ExpandableChart shell (crosshair legend, FIT = zoom reset, ⛶ expand); the chart itself stays SVG v2 */}
+            <ExpandableChart title="24 h · Globex day" height={300}>
+              {sz => <IntradayChart box={sz} groups={groups24} usDst={usDst} ukDst={ukDst} conv={kconv} unitLabel={kLabel} dp={kdp} settle={settle} settleValue={serverSettle ? undefined : prevCloseK} settleLabel={settleLabel}
+                showPrev={showPrev} showBands={showBands} mode="24h" live={live} sge={sgePts} />}
+            </ExpandableChart>
             <div data-gold-legend style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 14px', fontFamily: T.mono, fontSize: 10.5, color: T.muted, marginTop: 4 }}>
               {kitcoLegend(groups, daily, live, closeIn, kdp, serverSettle ? null : prevClose?.date ?? null, kUnit).map(l => <span key={l}>{l}</span>)}
               {showBands && <span style={{ color: T.dim }}>bands: Sydney/Tokyo · Shanghai (SGE) · London · New York · hatched = CME maintenance 17:00–18:00 ET</span>}
             </div>
           </>}
-          {tf !== '24h' && <TimeChart pts={drawn} dp={kdp} unitLabel={kLabel} prevClose={tf === '3d' ? prevCloseK : null}
-            prevCloseLabel={prevClose ? `${dayLabel(prevClose.date)} close` : 'prev close'} label={`gold, ${tfDef.label}, ${kLabel}`}
-            hi={kstats ? { v: kstats.hi, ms: kstats.hiMs } : null} lo={kstats ? { v: kstats.lo, ms: kstats.loMs } : null} />}
+          {tf !== '24h' && <ExpandableChart title={`${tfDef.label} · stored closes`} height={300}>
+            {sz => <TimeChart box={sz} pts={drawn} dp={kdp} unitLabel={kLabel} prevClose={tf === '3d' ? prevCloseK : null}
+              prevCloseLabel={prevClose ? `${dayLabel(prevClose.date)} close` : 'prev close'} label={`gold, ${tfDef.label}, ${kLabel}`}
+              hi={kstats ? { v: kstats.hi, ms: kstats.hiMs } : null} lo={kstats ? { v: kstats.lo, ms: kstats.loMs } : null} />}
+          </ExpandableChart>}
           {kNotes.length > 0 && <div data-gold-kitco-notes style={{ fontSize: 10, color: T.muted, marginTop: 4, lineHeight: 1.5 }}>{kNotes.map(n => <div key={n}>· {n}</div>)}</div>}
           <div style={{ fontSize: 9.5, color: T.dim, marginTop: 4 }}>COMEX front future (GC=F), not spot: it runs a few dollars above Kitco&apos;s spot price (carry to the front month). Source: the terminal&apos;s store (Yahoo, via data-service), never kitco.com.</div>
         </Pending>
@@ -271,8 +277,10 @@ export function DailyView({ sel, unit, layer, comexMatched, usdinr, tooltips, ca
           copyP="Three CME trade days on the Globex-day axis; no inference is drawn from the overlay (context).">
           <Pending s={bars} label="intraday bars">
             {dayCount < 2 ? <NoVerdict what={`${dayCount} day${dayCount === 1 ? '' : 's'} stored; three are needed`} />
-              : <IntradayChart groups={groups} usDst={usDst} ukDst={ukDst} conv={v => convertUsdOz(v, unit, usdinr)} unitLabel={UNIT_LABEL[unit]} dp={unitDp(unit)} settle={null} settleLabel="" showPrev={false}
-                  showBands={showBands} mode="3day" live={null} sge={null} />}
+              : <ExpandableChart title="3-day overlay" height={280}>
+                  {sz => <IntradayChart box={sz} groups={groups} usDst={usDst} ukDst={ukDst} conv={v => convertUsdOz(v, unit, usdinr)} unitLabel={UNIT_LABEL[unit]} dp={unitDp(unit)} settle={null} settleLabel="" showPrev={false}
+                    showBands={showBands} mode="3day" live={null} sge={null} />}
+                </ExpandableChart>}
             <div style={{ fontFamily: T.mono, fontSize: 10, color: T.muted, marginTop: 4 }}>
               {groups.slice(-3).map((g, i, a) => <span key={g.date} style={{ marginRight: 12, color: [T.violet, T.cyan, T.amber][i + (3 - a.length)] }}>■ {dayLabel(g.date)}</span>)}
             </div>

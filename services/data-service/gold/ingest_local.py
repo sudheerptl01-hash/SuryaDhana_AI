@@ -194,6 +194,36 @@ def migrate_preopen_log(store: Any, path: Path | str | None = None, *, now: date
             "stale_flagged": [str(d) for d, s in zip(df["day"], df["stale_baseline"]) if s] if n else []}
 
 
+def sync_preopen_log(store: Any, path: Path | str | None = None, *, now: datetime | None = None) -> dict[str, Any]:
+    """Standing one-store sync (FINAL P0-11): insert only the ``log.json`` days ``gold_preopen_log`` lacks, so the table
+    the catalog watches is complete even where the best-effort dual write was refused (5 Nov held the row in the file
+    only). Never overwrites a stored row — the dual-written copy may carry ``inputs_json`` the file copy strips."""
+    p = Path(path or PREOPEN_LOG_PATH)
+    if not p.exists():
+        return {"inserted": 0, "missing": str(p)}
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        return {"inserted": 0, "error": f"unreadable log.json: {exc}"}
+    have: set[str] = set()
+    if db.scalar(store, "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'gold_preopen_log'"):
+        have = {str(db.to_date(v)) for (v,) in store.read_rows("SELECT day FROM gold_preopen_log")}
+    frames = []
+    for day, rec in sorted(data.items()):
+        if str(db.to_date(day)) in have:
+            continue
+        rec = dict(rec)
+        rec.setdefault("day", day)
+        rec.pop("inputs_json", None)
+        try:
+            frames.append(preopen_log_row(rec, now=now))
+        except ValueError:
+            continue                                   # a malformed record never blocks the rest of the sync
+    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    n = db.upsert(store, "gold_preopen_log", df) if not df.empty else 0
+    return {"inserted": n, "days": [str(d) for d in df["day"]] if n else []}
+
+
 # ── health snapshot (ui-api /api/gold/health → gold_health_daily) ───────────────────────────────────
 
 def health_row(payload: dict[str, Any], *, now: datetime | None = None, day: date | None = None) -> pd.DataFrame:

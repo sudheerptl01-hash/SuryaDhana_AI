@@ -1,4 +1,4 @@
-//! The 43 terminal pages (function codes) known to the shell.
+//! The 44 terminal pages (function codes) known to the shell.
 //!
 //! Source of truth: `ui/app/page.tsx` -> `COMMAND_PAGES` (id, code, label; same order here) and the
 //! `tabList` order that drives the UI's ALT+1..9 shortcuts (mirrored by the shell's Cmd+1..9). Since the page review of
@@ -57,11 +57,12 @@ pub struct Page {
     pub shortcut: u8,
 }
 
-pub const PAGE_COUNT: usize = 43;
+pub const PAGE_COUNT: usize = 44;
 
 #[rustfmt::skip]
 pub const PAGES: [Page; PAGE_COUNT] = [
     Page { id: "brief", code: "BRF", label: "Morning brief", group: Group::Markets, shortcut: 1 },
+    Page { id: "gameplan", code: "GPLN", label: "Morning game plan", group: Group::Markets, shortcut: 0 },
     Page { id: "watch", code: "WTCH", label: "Watch monitor", group: Group::Markets, shortcut: 2 },
     Page { id: "charts", code: "CHRT", label: "Chart studio", group: Group::Markets, shortcut: 3 },
     Page { id: "world", code: "WEI", label: "World markets", group: Group::Markets, shortcut: 0 },
@@ -120,7 +121,7 @@ pub fn by_id(id: &str) -> Option<&'static Page> {
     PAGES.iter().find(|p| p.id == id)
 }
 
-/// True iff `id` is one of the 43 tab ids.
+/// True iff `id` is one of the 44 tab ids.
 pub fn is_valid_tab(id: &str) -> bool {
     by_id(id).is_some()
 }
@@ -143,13 +144,13 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    fn exactly_43_unique_ids_and_codes() {
-        assert_eq!(PAGES.len(), 43);
+    fn exactly_44_unique_ids_and_codes() {
+        assert_eq!(PAGES.len(), 44);
         assert_eq!(PAGES.len(), PAGE_COUNT);
         let ids: HashSet<_> = PAGES.iter().map(|p| p.id).collect();
         let codes: HashSet<_> = PAGES.iter().map(|p| p.code).collect();
-        assert_eq!(ids.len(), 43, "duplicate tab id");
-        assert_eq!(codes.len(), 43, "duplicate function code");
+        assert_eq!(ids.len(), 44, "duplicate tab id");
+        assert_eq!(codes.len(), 44, "duplicate function code");
         for p in PAGES.iter() {
             assert!(!p.label.is_empty());
             assert!(
@@ -188,9 +189,9 @@ mod tests {
     }
 
     #[test]
-    fn every_page_is_in_exactly_one_group_and_groups_cover_43() {
+    fn every_page_is_in_exactly_one_group_and_groups_cover_44() {
         let total: usize = Group::ALL.iter().map(|g| pages_in(*g).count()).sum();
-        assert_eq!(total, 43);
+        assert_eq!(total, 44);
         for g in Group::ALL {
             assert!(pages_in(g).count() > 0, "empty group {:?}", g);
         }

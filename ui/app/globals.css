@@ -1,9 +1,15 @@
+/* Phone compact (≤ 720 px + 390 px work) lives in ./compact.css (FINAL ROUND wave C: C-PHONE owns it;
+   this import line is C-TOKENS's — the agreed interface). @import must precede every other rule. */
+@import './compact.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SuryaDhana Terminal — design tokens (single source; mirrors components/news/format.ts T)
+   Refined-dark token pass (wave C, O-F2): colour values unchanged except --t-dim (lifted to clear
+   4.5:1 on every ground incl. panel3); type scale / spacing grid / motion tokens are additive.
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
   --t-bg: #05070a;
@@ -15,7 +21,7 @@
   --t-text: #d6dbe4;
   --t-bright: #f2f5fa;
   --t-muted: #8691a5;
-  --t-dim: #747e92;
+  --t-dim: #788296;
   --t-amber: #ffb000;
   --t-amber-dim: #8a6400;
   --t-green: #16d98a;
@@ -24,6 +30,21 @@
   --t-violet: #b58bff;
   --t-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
   --t-display: 'Chakra Petch', 'JetBrains Mono', sans-serif;
+  /* type scale (wave C): 12/13/15/18, one mono family for data/body; --t-display for page titles only */
+  --t-fs-micro: 12px;
+  --t-fs-body: 13px;
+  --t-fs-lead: 15px;
+  --t-fs-title: 18px;
+  /* spacing grid (wave C): 4/8 px steps */
+  --t-sp-1: 4px;
+  --t-sp-2: 8px;
+  --t-sp-3: 12px;
+  --t-sp-4: 16px;
+  --t-sp-5: 24px;
+  --t-sp-6: 32px;
+  /* motion (wave C): one duration + easing terminal-wide — 150 ms ease, no flash (O-F2) */
+  --t-dur: 150ms;
+  --t-ease: ease;
   color-scheme: dark;
 }
 
@@ -50,12 +71,19 @@ body {
 *::-webkit-scrollbar-thumb { background: var(--t-border-hi); border-radius: 0; }
 *::-webkit-scrollbar-thumb:hover { background: var(--t-amber-dim); }
 
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+/* Consistent focus states (wave C): one amber focus ring on everything focusable, keyboard only */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible,
+summary:focus-visible, [role="button"]:focus-visible, [role="tab"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
   outline: 1px solid var(--t-amber);
   outline-offset: 1px;
 }
 
-button, a { transition: color 120ms, background-color 120ms, border-color 120ms, opacity 120ms; }
+/* Motion (wave C): the one terminal transition — 150 ms ease via the motion tokens */
+button, a {
+  transition: color var(--t-dur) var(--t-ease), background-color var(--t-dur) var(--t-ease),
+    border-color var(--t-dur) var(--t-ease), opacity var(--t-dur) var(--t-ease);
+}
 
 table { border-collapse: collapse; }
 
@@ -446,7 +474,7 @@ body.terminal { padding-top: var(--shell-top); }
 @keyframes nd-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 .nd-dot-new { animation: nd-pulse 1.2s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
-  .nd-dot-new, .sd-newbuild, .sd-dot.is-down, .t-pulse, .sd-linkdown { animation: none !important; transition: none !important; }
+  .nd-dot-new, .sd-newbuild, .sd-dot.is-down, .t-pulse, .sd-linkdown, .t-fade-up { animation: none !important; transition: none !important; }
   .sd-main[data-link="down"] .sd-page::after { animation: none; }
 }
 
@@ -458,61 +486,8 @@ body.terminal { padding-top: var(--shell-top); }
 .sd-foot-btn { background: none; border: 1px solid transparent; padding: 0 5px; cursor: pointer; font: inherit; letter-spacing: inherit; }
 .sd-foot-btn:hover { border-color: var(--t-border-hi); }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Phone mode, ≤ 720 px (page review 5 Nov 2026, M36). One column, 44 px targets, wide tables scroll sideways inside
-   their own box with a visible edge cue, and the page itself never scrolls sideways (the review measured
-   scrollWidth 511–766 at 390 px on BRF / ALRT / MOV / OMON / GOLD). The header keeps NIFTY whole: the brand text,
-   service lights, clock and the UPDATE DATA word drop out (the strip names the page; SYS has the lights).
-   Inline styles win over class rules, so the overrides below carry !important; they apply only at this width.
-   ═══════════════════════════════════════════════════════════════════════════ */
-@media (max-width: 720px) {
-  /* header row 1 */
-  .sd-h-brand, .sd-h-lights, .sd-h-clock, .sd-h-word, .sd-h-kbd { display: none !important; }
-  .sd-h-nifty { flex: 1 1 auto !important; padding: 0 10px !important; gap: 8px !important; border-left: none !important; }
-  .sd-h-nifty-k { font-size: 9px !important; letter-spacing: .8px !important; }
-  .sd-h-actions { padding: 0 6px !important; gap: 6px !important; }
-  /* the strip: 44 px targets; it scrolls inside itself (never the page) */
-  .sd-pstrip { max-width: 100vw;
-    background:
-      linear-gradient(to left, #07090d 30%, rgba(7, 9, 13, 0)) right / 24px 100% no-repeat local,
-      radial-gradient(farthest-side at 100% 50%, rgba(255, 176, 0, .35), rgba(0, 0, 0, 0)) right / 10px 100% no-repeat scroll,
-      #07090d !important; }
-  .sd-pstrip-end { position: static !important; }   /* the menus scroll with the strip: four tabs stay visible, not one */
-  .sd-pstrip-tab { min-height: 44px; min-width: 44px; }
-  .sd-menu-row { min-height: 44px; }
-  .sd-tap { min-height: 44px; min-width: 44px; }
-  /* page content */
-  .sd-main { padding: 8px !important; }
-  .sd-page { max-width: 100%; }
-  .sd-page [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
-  .sd-page [style*="grid-column"] { grid-column: auto !important; }
-  .sd-page [style*="display: flex"]:not(.sd-keep-row) { flex-wrap: wrap !important; }
-  .sd-page :not(td):not(th):not(svg):not(svg *)[style*="min-width"] { min-width: 0 !important; }
-  .sd-page :not(table):not(thead):not(tbody):not(tr):not(td):not(th):not(svg):not(svg *):not(canvas) { max-width: 100%; }
-  .sd-page section, .sd-page [class~="t-fade-up"] { min-width: 0; }
-  .sd-page button, .sd-page [role="button"], .sd-page select, .sd-page input[type="checkbox"] + label { min-height: 44px; }
-  .sd-page input:not([type="checkbox"]):not([type="radio"]), .sd-page select { min-height: 44px; font-size: 16px; }
-  /* tables: their own horizontal scroll with an edge shadow as the cue (the shadow fades once scrolled to the end) */
-  .sd-page .t-table, .sd-page table:not(.t-table table) {
-    display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
-    background:
-      linear-gradient(to right, var(--t-panel, #0a0d13) 30%, rgba(10, 13, 19, 0)) left / 24px 100% no-repeat local,
-      linear-gradient(to left, var(--t-panel, #0a0d13) 30%, rgba(10, 13, 19, 0)) right / 24px 100% no-repeat local,
-      radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, .55), rgba(0, 0, 0, 0)) left / 10px 100% no-repeat scroll,
-      radial-gradient(farthest-side at 100% 50%, rgba(255, 176, 0, .28), rgba(0, 0, 0, 0)) right / 10px 100% no-repeat scroll;
-  }
-  .sd-page .t-table table { min-width: max-content; }
-  .sd-page td, .sd-page th { white-space: nowrap; }
-  .sd-page td[colspan] { white-space: normal; }   /* empty-state rows read in full */
-  /* charts and images never widen the page */
-  .sd-page canvas, .sd-page img, .sd-page svg { max-width: 100%; }
-  .sd-page iframe { max-width: 100% !important; }
-  /* long words (tickers + units, URLs) wrap instead of pushing the page */
-  .sd-page { overflow-wrap: anywhere; }
-  /* the status line: the hints, the data date and the stock count drop out; READY, NEWS, GO and PAPER stay on screen */
-  footer .t-hide-md, footer .sd-foot-opt { display: none !important; }
-  footer { gap: 10px !important; padding: 0 8px !important; }
-}
+/* Phone mode (≤ 720 px, M36) MOVED to app/compact.css (wave C: C-PHONE owns it, incl. the 390 px pass).
+   It is pulled in by the @import at the top of this file. */
 
 /* ARRANGE THE STRIP: a disabled move (first ↑, last ↓) reads as disabled */
 [data-sd-arrange-strip] button:disabled { opacity: .35; cursor: default; }

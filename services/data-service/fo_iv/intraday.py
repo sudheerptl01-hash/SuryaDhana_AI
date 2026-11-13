@@ -719,7 +719,8 @@ def oi_by_strike(df: pd.DataFrame, raw_latest: pd.DataFrame | None = None, *, ar
             rr = raw.get((k, side.upper()), {})
             row.update({f"{side}_oi_open": o0, f"{side}_oi": o1, f"{side}_chg_open": (o1 - o0) if o0 is not None and o1 is not None else None,
                         f"{side}_mid": mids.get(k, (None, None))[mi], f"{side}_bid": _num(rr.get("bid")), f"{side}_ask": _num(rr.get("ask")),
-                        f"{side}_chg_prev": _num(rr.get("chnge_oi"), signed=True)})
+                        f"{side}_chg_prev": _num(rr.get("chnge_oi"), signed=True),
+                        f"{side}_volume": _num(rr.get("volume"))})
         out.append(row)
     return out
 
@@ -798,6 +799,60 @@ def stored_expiries(store: Any, symbol: str, *, since: date | None = None, until
     df = db.query_df(store, "SELECT DISTINCT expiry FROM iv_expiry_daily WHERE symbol = ? AND expiry >= ? AND expiry <= ? ORDER BY expiry",
                      [symbol.upper(), since or date(2000, 1, 1), until or date(2100, 1, 1)])
     return [e for e in (db.to_date(v) for v in df["expiry"]) if e is not None]
+
+
+def _replay_ist(ts: Any) -> tuple[int, str] | None:
+    """A stored UTC-naive replay stamp -> (minute after 09:15 IST, 'HH:MM' IST); None when unusable."""
+    try:
+        t = pd.Timestamp(ts)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(t):
+        return None
+    ist = (t.tz_localize("UTC") if t.tzinfo is None else t).tz_convert(IST)
+    return ist.hour * 60 + ist.minute - (9 * 60 + 15), f"{ist.hour:02d}:{ist.minute:02d}"
+
+
+def replay_read(store: Any, symbol: str, *, expiry: date | None = None) -> dict[str, Any]:
+    """E-REPLAY (FINAL ROUND wave E, F-17): read-only over ``iv_expiry_replay`` — the replayed expiries of one
+    underlying (no ``expiry``), or one expiry's 1-minute rows as (minute after 09:15 IST, IST clock; no per-row
+    date, so the simulator's date-hidden mode leaks nothing per print). Stored history for the practice simulator;
+    nothing here calls Breeze, and the backfill stays the PM's after-close job (O-T16)."""
+    sym = symbol.upper()
+    if not db.table_exists(store, "iv_expiry_replay"):
+        base: dict[str, Any] = {"symbol": sym, "note": "no replay stored yet (the PM's after-close job, O-T16)"}
+        return {**base, "expiries": [], "n": 0} if expiry is None else {**base, "expiry": expiry.isoformat(), "rows": [], "n": 0}
+    if expiry is None:
+        df = db.query_df(store, """SELECT expiry, COUNT(*) AS n_rows, MIN(ts) AS first_ts, MAX(ts) AS last_ts,
+                                          MAX(strike) AS strike, MAX(spot_open) AS spot_open, MAX(source) AS source
+                                   FROM iv_expiry_replay WHERE symbol = ? GROUP BY expiry ORDER BY expiry""", [sym])
+        exps = []
+        for r in df.to_dict("records"):
+            e = db.to_date(r["expiry"])
+            if e is None:
+                continue
+            first, last = _replay_ist(r["first_ts"]), _replay_ist(r["last_ts"])
+            exps.append({"expiry": e.isoformat(), "rows": int(r["n_rows"]), "first_ist": first[1] if first else None,
+                         "last_ist": last[1] if last else None, "strike": _f(r["strike"]), "spot_open": _f(r["spot_open"]),
+                         "source": None if r["source"] is None else str(r["source"])})
+        return {"symbol": sym, "expiries": exps, "n": len(exps)}
+    df = db.query_df(store, """SELECT ts, strike, ce_close, pe_close, ce_oi, pe_oi, ce_volume, pe_volume, straddle, spot_open, source
+                               FROM iv_expiry_replay WHERE symbol = ? AND expiry = ? ORDER BY ts""", [sym, expiry])
+    rows: list[dict[str, Any]] = []
+    strike = spot_open = None
+    src = None
+    for r in df.to_dict("records"):
+        mt = _replay_ist(r["ts"])
+        if mt is None:
+            continue
+        strike = _f(r["strike"]) if r["strike"] is not None else strike
+        spot_open = _f(r["spot_open"]) if r["spot_open"] is not None else spot_open
+        src = str(r["source"]) if r["source"] is not None else src
+        rows.append({"minute": mt[0], "ist": mt[1], "straddle": _f(r["straddle"]), "ce_close": _f(r["ce_close"]),
+                     "pe_close": _f(r["pe_close"]), "ce_oi": _f(r["ce_oi"]), "pe_oi": _f(r["pe_oi"]),
+                     "ce_volume": _f(r["ce_volume"]), "pe_volume": _f(r["pe_volume"])})
+    return {"symbol": sym, "expiry": expiry.isoformat(), "strike": strike, "spot_open": spot_open, "source": src,
+            "rows": rows, "n": len(rows)}
 
 
 def upcoming_expiries(store: Any, symbol: str, today: date) -> list[date]:

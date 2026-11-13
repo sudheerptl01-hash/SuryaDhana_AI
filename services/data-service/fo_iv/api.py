@@ -329,6 +329,14 @@ def fo_iv_expiry_day(symbol: str, date_: str | None = Query(None, alias="date"),
     return intraday.expiry_day(_store(), symbol, day=_d(date_), parquet_root=_paths.get("parquet_root"), n_score=n)
 
 
+@router.get("/db/fo-iv/replay/{symbol}")
+def fo_iv_replay(symbol: str, expiry: str | None = Query(None)) -> dict[str, Any]:
+    """E-REPLAY (F-17): the stored expiry replay tapes — the list per underlying, or one expiry's 1-minute rows
+    (read-only; the backfill below stays the PM's job)."""
+    from fo_iv import intraday
+    return intraday.replay_read(_store(), symbol, expiry=_d(expiry))
+
+
 class ExpiryReplayRequest(BaseModel):
     symbols: list[str] = Field(default_factory=lambda: ["NIFTY", "BANKNIFTY", "FINNIFTY"])
     since: date | None = None

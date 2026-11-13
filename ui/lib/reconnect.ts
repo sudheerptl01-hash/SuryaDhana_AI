@@ -25,7 +25,7 @@ export interface ReconnectedDetail {
  * pages, and the per-page error boundary ('failed to render').
  */
 export const FAILED_LOAD_TEXT =
-  /Network Error|Load failed|Failed to fetch|NetworkError when attempting|timeout of \d+ms exceeded|Request failed with status code 5\d\d|\bHTTP 5\d\d\b|ECONNREFUSED|ECONNRESET|Bad Gateway|Service Unavailable|Gateway Time-?out|failed to render|server unreachable|backend unreachable/i
+  /Network Error|Load failed|Failed to fetch|NetworkError when attempting|timeout of \d+ms exceeded|Request failed with status code 5\d\d|\bHTTP 5\d\d\b|ECONNREFUSED|ECONNRESET|Bad Gateway|Service Unavailable|Gateway Time-?out|failed to render|server unreachable|backend unreachable|waiting for the data service/i
 
 /**
  * Each window waits a random 0–RECONNECT_JITTER_MS before it reloads what failed (R-UI-SHELL-05): every window sees

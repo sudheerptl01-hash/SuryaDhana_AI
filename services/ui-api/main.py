@@ -67,6 +67,7 @@ from shared.metrics import install_observability  # noqa: E402
 from routers import dashboard, stocks, analytics, performance, positions, config, pipeline, execution, telemetry, lw_scanner
 from routers import monitor
 from routers import data_proxy
+from routers import health_upstream  # O-F5a (D-BOOT): data-service up/down + db_read_only for the shell strip
 from routers import alpha
 from routers import ml_workspace
 from routers import commodity
@@ -83,9 +84,11 @@ from routers import alerts as price_alerts
 from routers import charts
 from routers import derivatives
 from routers import expiry
+from routers import flow_radar    # FINAL ROUND E-RADAR: DERV › RADAR (/api/derivatives/flow-radar/{symbol})
 from routers import data_health   # Terminal v2 PLAN 1.4: GET /api/data/health (B3)
 from routers import options_strategy
 from routers import fo_book       # PLAN 2.2: the PAPER F&O book /api/options/book/* (W2-BOOK)
+from routers import gameplan      # FINAL ROUND wave E (F-11): GPLN Morning Game Plan — /api/gameplan, existing reads only
 from routers import mcx
 from routers import riskdash
 import static_ui  # desktop Layer 1: static terminal UI (ui/dist/current) + /version, /ready, /live
@@ -188,6 +191,9 @@ app.include_router(monitor.router,     prefix="/api/monitor",  tags=["monitor"])
 # Terminal v2 (PLAN 1.4): the dataset-health view owns /api/data/health; registered BEFORE data_proxy so its old
 # data-service /health relay (defined in ui/lib/api.ts, called by no component) no longer shadows it.
 app.include_router(data_health.router, prefix="/api/data", tags=["data-health"])
+# O-F5a (D-BOOT): the shell's WARMING UP / DB READ-ONLY strip polls this one cached probe instead of
+# 43 panels each discovering an outage one raw transport error at a time.
+app.include_router(health_upstream.router, prefix="/api/health", tags=["health"])
 app.include_router(data_proxy.router,  prefix="/api/data",     tags=["data-proxy"])
 app.include_router(alpha.router,       prefix="/api/alpha",    tags=["alpha-discovery"])
 app.include_router(ml_workspace.router, prefix="/api/ml",       tags=["ml-workspace"])
@@ -206,10 +212,12 @@ app.include_router(price_alerts.router, prefix="/api/alerts", tags=["alerts"])
 app.include_router(charts.router, prefix="/api/charts", tags=["charts"])
 app.include_router(derivatives.router, prefix="/api/derivatives", tags=["derivatives"])
 app.include_router(expiry.router, prefix="/api/derivatives", tags=["expiry"])
+app.include_router(flow_radar.router, prefix="/api/derivatives", tags=["flow-radar"])  # E-RADAR: /flow-radar/{symbol} only, no overlap
 app.include_router(options_strategy.router, prefix="/api/options", tags=["options-strategy"])
 app.include_router(fo_book.router, prefix="/api/options/book", tags=["paper-fo-book"])  # PLAN 2.2 PAPER F&O book (W2-BOOK); /api/risk/fo lives in riskdash
 app.include_router(mcx.router, prefix="/api/mcx", tags=["mcx-gold"])
 app.include_router(riskdash.router, prefix="/api/risk", tags=["risk"])
+app.include_router(gameplan.router, prefix="/api/gameplan", tags=["gameplan"])  # GPLN (wave E, F-11): assembles existing reads; nothing feeds the Desk / S1 / alerts / tickets
 app.include_router(ui_prefs.router, prefix="/api/prefs", tags=["prefs"])  # user settings (desktop program D3)
 app.include_router(client_errors.router, prefix="/api/client-errors", tags=["client-errors"])  # UI error reports (K1)
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])  # shell feed (K5)

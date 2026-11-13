@@ -43,6 +43,7 @@ export const LOCAL_KEYS = [
   'suryadhana.prefs.hash', //         sync bookkeeping: {key: hash of the server-confirmed value}
   'suryadhana.prefs.dirty', //        sync bookkeeping: {key: updated_at to upload}
   'suryadhana.prefs.legacy', //       sync bookkeeping: SYNC keys present before sync first ran on this origin
+  'suryadhana.replay.practice.v1', // components/expiry/Replay.tsx — practice rehearsals, this browser only (never the paper book)
   'suryadhana.prefs.backup', //       local copies of unsynced values the server's copy replaced (recovery)
   'suryadhana.prefs.mode', //         'off' | 'readonly' (QA audits against live) | absent = sync
   'suryadhana.migrate.notice.v1', //  prefs/migration.ts — 'dismissed' | 'imported': the not-imported notice is done here
@@ -50,6 +51,8 @@ export const LOCAL_KEYS = [
   'suryadhana.ostr.template.v1', //   lib/goAliases.ts OSTR_TEMPLATE_KEY — one-shot GO hand-off (`NIFTY OSTR IC`), read + removed by OSTR
   'suryadhana.alrt.prefill.v1', //    lib/goAliases.ts ALRT_PREFILL_KEY — one-shot GO hand-off (`ALRT TCS >3200`), read + removed by ALRT
   'suryadhana.migrate.offer.v1', //   components/shell/SettingsImport.tsx — 'seen': the one-time settings-import toast was shown here
+  'suryadhana.alerts.focus.v1', //    lib/alertOverlay.ts ALERT_FOCUS_KEY — one-shot chart-line → ALRT hand-off (sessionStorage, read + removed)
+  'suryadhana.brief.lastlook.v1', //  lib/alertOverlay.ts BRIEF_LASTLOOK_KEY — BRF "since your last look" snapshot (per-device by design)
 ] as const
 
 export const PREFS_META_KEY = 'suryadhana.prefs.meta'

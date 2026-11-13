@@ -163,7 +163,7 @@ async function pagesChecks(): Promise<void> {
   const block = /const COMMAND_PAGES: CommandPage\[\] = \[([\s\S]*?)\n\]/.exec(src)?.[1] ?? ''
   const rows = [...block.matchAll(/\{\s*id:\s*'([^']+)',\s*code:\s*'([^']+)',\s*label:\s*'((?:[^'\\]|\\.)*)'/g)]
     .map(m => [m[1], m[2], m[3].replace(/\\'/g, "'")])
-  check('page.tsx parsed (43 pages)', rows.length === 43, `parsed ${rows.length}`)
+  check('page.tsx parsed (44 pages)', rows.length === 44, `parsed ${rows.length}`)
   const mine = Object.entries(P.PAGE_META).map(([id, m]) => [id, m.code, m.label])
   eq('PAGE_META matches COMMAND_PAGES (order, id, code, label)', mine, rows)
   eq('tabFromSearch', [P.tabFromSearch('?tab=desk'), P.tabFromSearch('?tab=nope'), P.tabFromSearch(''), P.tabFromSearch('?x=1&tab=risk')],
@@ -512,7 +512,7 @@ async function bootstrapGateChecks(): Promise<void> {
   const ge = await read('../../../app/global-error.tsx')
   check('global-error shows no raw stack by default (details disclosure)', /\{details && \(/.test(ge) && /reportClientError\(error/.test(ge))
   const tabs = await read('../../shell/tabModules.ts')
-  check('boot preload: one loader per split page + the stock window', (tabs.match(/: \(\) => import\('@\/components\//g) ?? []).length === 43)
+  check('boot preload: one loader per split page + the stock window', (tabs.match(/: \(\) => import\('@\/components\//g) ?? []).length === 44)
   const shell = await read('../PlatformShell.tsx')
   check('PlatformShell preloads the URL page during the boot gate (C2-performance-02)', /preloadTab\(first\)/.test(shell) && /BOOT_PRELOAD_MAX_MS/.test(shell))
 }
@@ -1252,8 +1252,8 @@ async function platformReviewChecks(): Promise<void> {
   eq('M37 default strip = the trader\'s day', codes(S.DEFAULT_STRIP), ['BRF', 'WTCH', 'CHRT', 'OMON', 'OSTR', 'DERV', 'MOV', 'EVTS', 'ALRT', 'RSK', 'GOLD', 'MCXG', 'MKT', 'DESK'])
   eq('M37 RESEARCH ▾ holds the research / legacy pages', codes(S.RESEARCH_PAGES), ['OVRV', 'EQS', 'BTST', 'PIPE', 'LWSC', 'ALFA', 'GBOX', 'MLEN', 'DEXP', 'WHSE', 'RSCH', 'PORT'])
   const split = S.splitMenus(S.DEFAULT_STRIP, known)
-  eq('strip + RESEARCH + MORE cover the 43 pages exactly once', [S.DEFAULT_STRIP.length + split.research.length + split.more.length,
-    new Set([...S.DEFAULT_STRIP, ...split.research, ...split.more]).size], [43, 43])
+  eq('strip + RESEARCH + MORE cover the 44 pages exactly once', [S.DEFAULT_STRIP.length + split.research.length + split.more.length,
+    new Set([...S.DEFAULT_STRIP, ...split.research, ...split.more]).size], [44, 44])
   const page = await read('../../../app/page.tsx')
   const tl = [...(/const tabList = \[([\s\S]*?)\n {2}\]/.exec(page)?.[1] ?? '').matchAll(/id: '([a-z]+)'/g)].map(m => m[1])
   eq('page.tsx tabList (the QA harness / pages.rs source) = DEFAULT_STRIP', tl, [...S.DEFAULT_STRIP])

@@ -354,9 +354,31 @@ export function errorText(error: unknown): ReactNode {
   try { return JSON.stringify(error) } catch { return String(error) }
 }
 
-export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+/** True for "the data service is unreachable" errors (O-F5a / RISK §b): the error contract's
+ *  `code: upstream_down`, or the router detail before normalization. Raw transport strings never reach a panel. */
+export function isUpstreamDown(error: unknown): boolean {
+  if (error != null && typeof error === 'object' && (error as { code?: unknown }).code === 'upstream_down') return true
+  const t = errorText(error)
+  const msg = typeof t === 'string' ? t : ''
+  return msg.includes('upstream_down') || msg.includes('data-service unreachable') || msg.includes('All connection attempts failed') || msg.includes('waiting for the data service')
+}
+
+export function ErrorBox({ error, onRetry, asOf }: { error: unknown; onRetry?: () => void
+  /** the panel's last good as-of, shown while waiting for the data service (RISK §b) */
+  asOf?: string | null }) {
+  // O-F5a: a data-service outage is a calm self-healing state, never a screenful of raw transport errors
+  if (isUpstreamDown(error)) {
+    return (
+      <div data-sd-error="upstream" style={{ border: `1px solid ${T.border}`, background: '#080b10', padding: '8px 12px',
+                    display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: T.muted }}>
+        <span>● waiting for the data service — retries by itself{asOf ? ` · last data ${asOf}` : ''}</span>
+        <span style={{ flex: 1 }} />
+        {onRetry && <Btn size="sm" onClick={onRetry}>Retry</Btn>}
+      </div>
+    )
+  }
   return (
-    <div style={{ border: `1px solid ${T.red}55`, background: 'rgba(255,77,94,.07)', padding: '8px 12px',
+    <div data-sd-error="error" style={{ border: `1px solid ${T.red}55`, background: 'rgba(255,77,94,.07)', padding: '8px 12px',
                   display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: T.red }}>
       <span>▲ {errorText(error)}</span>
       <span style={{ flex: 1 }} />
@@ -774,7 +796,7 @@ export function SourceChip({ state, hint, info, style }: { state?: SourceState; 
       style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: T.mono, fontSize: 9.5,
                letterSpacing: 1, color, border: `1px solid ${color}55`, padding: '1px 6px',
                whiteSpace: 'nowrap', ...style }}>
-      <Dot color={color} pulse={st === 'live'} size={5} />{text.label}
+      <Dot color={color} pulse={st === 'live' && !info?.quiet} size={5} />{text.label}
     </span>
   )
 }

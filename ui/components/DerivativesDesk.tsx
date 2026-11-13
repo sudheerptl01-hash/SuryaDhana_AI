@@ -27,6 +27,7 @@ import { CHART_BOX, Chip, DataTable, ErrorBox, Input, Loading, Notice, PageHeade
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { underlyingLiveSymbol } from '@/components/liveModel'
 import { VolView } from '@/components/vol/VolView'
+import { FlowRadar } from '@/components/vol/FlowRadar'   // FINAL ROUND E-RADAR: the RADAR sub-view (this import + the tab item + its branch below are E-RADAR's one registration)
 import { ExpiryDay } from '@/components/expiry/ExpiryDay'
 import { basisForChart, fnoVerdict } from '@/components/vol/volModel'
 import { useActiveSymbol } from '@/lib/activeSymbol'
@@ -347,7 +348,7 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
   const [maxPain, setMaxPain] = useState<MaxPain | null>(null)
   const [vix, setVix] = useState<Vix | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [sub, setSub] = useSubView(['desk', 'vol', 'xpry'] as const, 'desk')
+  const [sub, setSub] = useSubView(['desk', 'vol', 'xpry', 'radar'] as const, 'desk')
   const seq = useRef(0)
 
   useEffect(() => {
@@ -404,7 +405,7 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
   const ulPriced = !!ulRow && ulRow.price != null && ulRow.state !== 'unavailable'
 
   // PLAN 1.1 (O-T14 default: a sub-view, not a 44th page): DESK | VOL in `?sub=`; the GO alias VOL hands `vol` over
-  const tabs = <Tabs items={[{ id: 'desk', label: 'Desk · basis · rollover · PCR · VIX' }, { id: 'vol', label: 'VOL · skew · term · cone · screener' }, { id: 'xpry', label: 'XPRY · expiry day · OI unwind · decay · scorecard' }]}
+  const tabs = <Tabs items={[{ id: 'desk', label: 'Desk · basis · rollover · PCR · VIX' }, { id: 'vol', label: 'VOL · skew · term · cone · screener' }, { id: 'xpry', label: 'XPRY · expiry day · OI unwind · decay · scorecard' }, { id: 'radar', label: 'RADAR · rolling OI Δ · vol/OI · IV change' }]}
     active={sub} onChange={setSub} />
   const picker = (
     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -428,6 +429,19 @@ export function DerivativesDesk({ onSelectTicker }: { onSelectTicker?: (s: strin
           {tabs}
           {picker}
           {symbolReady ? <ExpiryDay symbol={symbol} /> : <Loading label="Reading the F&O list" />}
+        </div>
+      </div>
+    )
+  }
+
+  if (sub === 'radar') {
+    return (
+      <div>
+        <PageHeader code="DERV" title="Derivatives desk" subtitle={`RADAR · ${symbol} · per-strike flow over a rolling window from the stored 2-minute tape`} />
+        <div style={{ display: 'grid', gap: 12 }}>
+          {tabs}
+          {picker}
+          {symbolReady ? <FlowRadar symbol={symbol} /> : <Loading label="Reading the F&O list" />}
         </div>
       </div>
     )

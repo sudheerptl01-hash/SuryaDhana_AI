@@ -48,7 +48,8 @@ import { RECONNECTED_EVENT, type ReconnectedDetail } from '@/lib/reconnect'
 import { ShellStateContext, type ShellState } from '@/components/shell/ShellState'
 import { preloadTab } from '@/components/shell/tabModules'
 import { TitleStrip, clampZoom, stripHeightCss, useMinuteWhile } from './TitleStrip'
-import { BANNER_HEIGHT, BootGate, BuildPill, ConnectionBanner, MigrationNotice, type BannerPhase } from './ShellNotices'
+import { BANNER_HEIGHT, BootGate, BuildPill, ConnectionBanner, MigrationNotice, UpstreamStrip, useUpstreamHealth, type BannerPhase } from './ShellNotices'
+import { upstreamStripKind } from './upstream'
 import { StandDownBanner, useStandDownState } from '@/components/risk/StandDownBanner'
 import { FindBar } from './FindBar'
 import { isStatusStale, statusFreshAt, STATUS_PULL_MS } from './status'
@@ -242,15 +243,21 @@ export function PlatformShell({ children }: { children: ReactNode }) {
     return undefined
   }, [down, phase, downSince, useShellSignal, health?.since])
 
+  // ── data-service strip (O-F5a, D-BOOT): WARMING UP while data-service starts, DB READ-ONLY while the store
+  // holds a stale lock. One poller for the whole shell; precedence LINK DOWN > WARMING UP > DB READ-ONLY.
+  const upstream = useUpstreamHealth(ready)
+  const upstreamKind = phase === 'hidden' ? upstreamStripKind(upstream) : null
+
   // ── risk cockpit (O-F3, SPEC §3): the STAND DOWN banner is a ConnectionBanner sibling with the same
-  // geometry, with precedence BELOW the outage messages (LINK DOWN / recovered outrank a discipline message).
+  // geometry, with precedence BELOW the outage messages (LINK DOWN / recovered / WARMING UP / DB READ-ONLY
+  // outrank a discipline message).
   const standDown = useStandDownState()
-  const showStandDown = ready && standDown.banner && phase === 'hidden'
+  const showStandDown = ready && standDown.banner && phase === 'hidden' && upstreamKind === null
 
   // ── layout offset: strip + banner (the single writer of --shell-top; before paint, so no shift) ─────────
   // The strip is window chrome: 32 SCREEN px at every page zoom (K3), i.e. 32 / zoom CSS px of the page.
   const stripTop = desktop ? stripHeightCss(zoom) : 0
-  const shellTop = stripTop + (phase !== 'hidden' || showStandDown ? BANNER_HEIGHT : 0)
+  const shellTop = stripTop + (upstreamKind !== null || phase !== 'hidden' || showStandDown ? BANNER_HEIGHT : 0)
   useLayoutEffect(() => { setShellTop(shellTop, desktop ? 'desktop' : 'browser') }, [shellTop, desktop])
 
   // ── desktop: current page for the strip + native window title ──────────────────────────────────────────
@@ -347,6 +354,9 @@ export function PlatformShell({ children }: { children: ReactNode }) {
       <ConnectionBanner phase={phase} top={stripTop} downSince={downSince} outageMs={outageMs}
         nextProbeAt={health?.nextProbeAt ?? null} desktop={useShellSignal}
         onRetry={useShellSignal ? undefined : retry} />
+      {ready && upstreamKind !== null && (
+        <UpstreamStrip kind={upstreamKind} top={stripTop} nextProbeAt={upstream.nextProbeAt} />
+      )}
       {showStandDown && <StandDownBanner top={stripTop} />}
       {!desktop && newBuild && newBuild !== dismissed && (
         <BuildPill build={newBuild} onReload={reload} onDismiss={() => setDismissed(newBuild)} />

@@ -172,7 +172,8 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
       ),
     })),
     { key: 'pct_above50', label: '> 50-DMA', align: 'right', sort: r => r.pct_above50,
-      render: r => <span style={{ color: (r.pct_above50 ?? 0) >= 50 ? T.green : T.muted }}>{num(r.pct_above50)}%</span> },
+      // L-15: breadth is context — emphasis by brightness only, never green/red
+      render: r => <span style={{ color: (r.pct_above50 ?? 0) >= 50 ? T.text : T.muted }}>{num(r.pct_above50)}%</span> },
   ]
 
   if (error && !data) return <div><PageHeader code="MKT" title="Market Monitor" /><ErrorBox error={error} onRetry={load} /></div>
@@ -198,18 +199,19 @@ export function MarketMonitor({ onSelectTicker }: { onSelectTicker: (s: string) 
             <Stat label={data.index_name} value={fmtIdx(b.index)} color={tone(b.index_chg_pct)} accent={T.amber}
               sub={`${pct(b.index_chg_pct)} ${day} · 200-DMA ${fmtIdx(b.index_sma200)}`} />
             {/* m007 / m019: the universe named (BRF and MOV read the Nifty 500's own members) */}
-            <Stat label={`Advances / declines · ${num(b.universe)} liquid`} value={`${num(b.adv)} / ${num(b.dec)}`} accent={tone((b.adv ?? 0) - (b.dec ?? 0))}
+            {/* L-15 sweep: breadth figures are context — neutral tone; the sub-lines keep the thresholds in words */}
+            <Stat label={`Advances / declines · ${num(b.universe)} liquid`} value={`${num(b.adv)} / ${num(b.dec)}`}
               sub={`ratio ${b.dec ? ((b.adv ?? 0) / b.dec).toFixed(2) : '—'} · not the Nifty 500`} />
-            <Stat label="Above 50-DMA" value={pct(b.pct_above50, 0, false)} accent={T.cyan} color={(b.pct_above50 ?? 0) >= 50 ? T.green : T.red}
+            <Stat label="Above 50-DMA" value={pct(b.pct_above50, 0, false)} accent={T.cyan}
               sub={`20-DMA ${pct(b.pct_above20, 0, false)} (${pct(b.pct_above20_chg, 1)} ${day})`} />
-            <Stat label="Above 200-DMA" value={pct(b.pct_above200, 0, false)} accent={T.violet} color={(b.pct_above200 ?? 0) >= 50 ? T.green : T.red}
+            <Stat label="Above 200-DMA" value={pct(b.pct_above200, 0, false)} accent={T.violet}
               sub="the long-term trend" />
-            <Stat label="New 52w highs / lows" value={`${num(b.new_highs)} / ${num(b.new_lows)}`} accent={tone((b.new_highs ?? 0) - (b.new_lows ?? 0))}
+            <Stat label="New 52w highs / lows" value={`${num(b.new_highs)} / ${num(b.new_lows)}`}
               sub={`10-day avg net ${fmtSigned(b.nh_nl_10d, 0)}`} />
-            <Stat label="Market Monitor ±4%" value={`${num(b.up4)} / ${num(b.dn4)}`} accent={(b.mm_ratio10 ?? 0) >= 1.5 ? T.green : T.amber}
+            <Stat label="Market Monitor ±4%" value={`${num(b.up4)} / ${num(b.dn4)}`}
               sub={`5d ${num(b.mm_ratio5, 2)} · 10d ${num(b.mm_ratio10, 2)} (≥ 1.5 bullish)`} />
-            <Stat label="Distribution days" value={`${num(b.dist_days_25)} / 25`} accent={(b.dist_days_25 ?? 0) <= 4 ? T.green : T.red}
-              color={(b.dist_days_25 ?? 0) <= 4 ? T.green : T.red} sub="≥ 5 = institutions selling" />
+            <Stat label="Distribution days" value={`${num(b.dist_days_25)} / 25`}
+              sub="≥ 5 = institutions selling" />
             <Stat label="India VIX" value={num(b.vix, 2)} accent={T.muted}
               sub={`${ordinal(b.vix_pct)} percentile of the past year`} />
           </div>

@@ -15,10 +15,11 @@
  * `context` (OI, max pain, PCR, pin risk, curve) / `arithmetic` (scorecard). No signal, no score; describes, does not predict.
  */
 import { useEffect, useState } from 'react'
-import { Chip, DataTable, Notice, Panel, Stat, T, fmtNum, sourceOf, type Column } from '@/components/terminal'
+import { Chip, DataTable, Notice, Panel, Stat, T, Tabs, fmtNum, sourceOf, type Column } from '@/components/terminal'
 import { ExpandableChart } from '@/components/terminal/ExpandableChart'
 import { useActiveSymbol } from '@/lib/activeSymbol'
 import { getExpiryDay, storeReason, tapeError } from './api'
+import { Replay } from './Replay'
 import { CALL_COLOR, ChartWithNotes, PUT_COLOR, SessionChart, StrikeBars } from './charts'
 import {
   DESCRIBES, TAPE_INDICES, decayVsCurve, expiryWords, fmtOi, fmtSignedOi, minuteLabel, minuteOf, scoreRead, sentence, sinceLabel, tapeSource, unwindRead, weekday,
@@ -37,6 +38,8 @@ export function ExpiryDay({ symbol: symbolProp }: { symbol?: string }) {
   useEffect(() => { if (symbolProp) setSymbol(symbolProp.toUpperCase()) }, [symbolProp])
   useEffect(() => { if (!symbolProp && active?.symbol && active.symbol !== symbol) setSymbol(active.symbol.toUpperCase()) },
     [active?.symbol])  // eslint-disable-line react-hooks/exhaustive-deps
+  // E-REPLAY (F-17): the practice simulator mounts as a second tab; the cockpit stays the default view.
+  const [view, setView] = useState<'cockpit' | 'replay'>('cockpit')
   const [d, setD] = useState<Xpry | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
@@ -98,6 +101,12 @@ export function ExpiryDay({ symbol: symbolProp }: { symbol?: string }) {
         <span style={{ flex: 1 }} />
         <span style={{ fontSize: 10, color: T.dim }}>{d?.precedent}</span>
       </div>
+      <div style={{ marginBottom: 10 }}>
+        <Tabs items={[{ id: 'cockpit' as const, label: 'EXPIRY DAY' }, { id: 'replay' as const, label: 'REPLAY · PRACTICE' }]}
+          active={view} onChange={setView} />
+      </div>
+      {view === 'replay' && <Replay symbol={symbol} />}
+      {view === 'cockpit' && <>
       {err && <div style={{ marginBottom: 8 }}><Notice color={T.amber}>Expiry view unavailable: {err}</Notice></div>}
       {!err && reason && <div style={{ marginBottom: 8 }}><Notice color={T.amber}>Expiry view unavailable: {reason}</Notice></div>}
       {d && <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }} data-xpry-words>{expiryWords(d)}</div>}
@@ -195,6 +204,7 @@ export function ExpiryDay({ symbol: symbolProp }: { symbol?: string }) {
             NSE files (PLAN §0.3); nothing here is re-scored by hand.</div>
         </Panel>
       )}
+      </>}
     </div>
   )
 }

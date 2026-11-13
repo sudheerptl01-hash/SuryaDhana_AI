@@ -30,6 +30,7 @@ blocking httpx calls and the pandas resample never touch the event loop.
 """
 from __future__ import annotations
 
+import logging
 import os
 import re
 import threading
@@ -46,6 +47,7 @@ from errors import degraded, fail
 from routers._upstream import upstream_detail
 
 router = APIRouter()
+_log = logging.getLogger("ui-api.charts")
 
 DATA_SVC = os.environ.get("DATA_SERVICE_URL", "http://localhost:8001")
 _TIMEOUT = httpx.Timeout(20.0)
@@ -119,7 +121,9 @@ def _fetch_daily(symbol: str, start: date) -> list[dict]:
         r = httpx.get(f"{DATA_SVC}/ohlcv/{symbol}", params={"start": start.isoformat()},
                       timeout=_TIMEOUT)
     except httpx.RequestError as exc:
-        raise UpstreamError(None, f"data-service unreachable: {exc.__class__.__name__}") from exc
+        # O-F5a normalization (D-BOOT): the exception class goes to the log, never onto the wire
+        _log.warning("charts: data-service unreachable (%s)", exc.__class__.__name__)
+        raise UpstreamError(None, "data-service unreachable") from exc
     if r.status_code >= 400:
         raise UpstreamError(r.status_code, str(upstream_detail(r)))
     rows = r.json().get("data", [])
@@ -141,7 +145,9 @@ def _fetch_json(path: str, params: dict) -> dict:
     try:
         r = httpx.get(f"{DATA_SVC}{path}", params=params, timeout=_TIMEOUT)
     except httpx.RequestError as exc:
-        raise UpstreamError(None, f"data-service unreachable: {exc.__class__.__name__}") from exc
+        # O-F5a normalization (D-BOOT): the exception class goes to the log, never onto the wire
+        _log.warning("charts: data-service unreachable (%s)", exc.__class__.__name__)
+        raise UpstreamError(None, "data-service unreachable") from exc
     if r.status_code >= 400:
         raise UpstreamError(r.status_code, str(upstream_detail(r)))
     body = r.json()
@@ -178,7 +184,9 @@ def _fetch_ticks(symbol: str, day: str, interval: str) -> dict:
                       params={"symbol": symbol, "date": day, "interval": interval},
                       timeout=_TIMEOUT)
     except httpx.RequestError as exc:
-        raise UpstreamError(None, f"data-service unreachable: {exc.__class__.__name__}") from exc
+        # O-F5a normalization (D-BOOT): the exception class goes to the log, never onto the wire
+        _log.warning("charts: data-service unreachable (%s)", exc.__class__.__name__)
+        raise UpstreamError(None, "data-service unreachable") from exc
     if r.status_code >= 400:
         raise UpstreamError(r.status_code, str(upstream_detail(r)))
     body = r.json()
@@ -305,7 +313,7 @@ def get_overlay(symbol: str = "NIFTY", kind: str = "iv", days: int = 365) -> dic
     try:
         body = _fetch_json(path, params)
     except UpstreamError as exc:
-        why = exc.detail if exc.status is not None else f"data-service unreachable ({exc.detail})"
+        why = exc.detail if exc.status is not None else "data-service unreachable"
         if exc.status == 404 and kind == "future" and is_index(sym) and sym != "NIFTY":
             why = (f"no near-future series served for {sym}: data-service's basis read joins a spot series it holds for "
                    "NIFTY and the stocks only")

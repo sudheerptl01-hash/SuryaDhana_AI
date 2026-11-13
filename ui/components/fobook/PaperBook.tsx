@@ -12,6 +12,8 @@ import { getOptionChain } from '@/lib/api'
 import { apiError } from '@/lib/errors'
 import { BadgeChip, Btn, Chip, ErrorBox, Input, Label, Loading, Notice, Panel, Select, T, fmtInr, type SourceInfo } from '@/components/terminal'
 import { ScenarioStrip } from '@/components/risk/ScenarioStrip'
+import { Debrief } from './Debrief'
+import { Journal } from './Journal'
 import { closeBook, confirmFills, confirmRoll, getBook, rollBook, type BookPayload, type BookPosition, type BookStructure, type ClosePreview, type RollPreview } from './api'
 
 const n = (v: number | null | undefined, d = 2) => v == null || !Number.isFinite(v) ? '—' : v.toLocaleString('en-IN', { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -203,6 +205,8 @@ export function PaperBook({ refreshKey }: { refreshKey?: number }) {
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showAll, setShowAll] = useState(false)
+  // E-JRNL (F-12): the journal / weekly-debrief panels toggle in BELOW the book — the book card itself is untouched
+  const [extra, setExtra] = useState<null | 'journal' | 'debrief'>(null)
   const load = useCallback(() => {
     let alive = true
     setLoading(true)
@@ -214,9 +218,14 @@ export function PaperBook({ refreshKey }: { refreshKey?: number }) {
   useEffect(() => load(), [load, refreshKey])
 
   return (
+    <div style={{ display: 'grid', gap: 10 }}>
     <Panel title="Paper F&O book" accent={T.violet} badge="arithmetic" source={bookSource(data)}
       subtitle={data ? `${data.open_positions} open leg(s) · marks ${data.marks_meta.used === 'live' ? 'from NSE\'s option chain in session' : 'at the stored F&O bhavcopy close'} · PAPER ONLY` : 'PAPER ONLY'}
       right={<div style={{ display: 'flex', gap: 6 }}>
+        <Chip color={T.muted} active={extra === 'journal'} onClick={() => setExtra(v => v === 'journal' ? null : 'journal')}
+          title="the action log with the context captured at each action (E-JRNL)">JOURNAL</Chip>
+        <Chip color={T.muted} active={extra === 'debrief'} onClick={() => setExtra(v => v === 'debrief' ? null : 'debrief')}
+          title="the weekly debrief: closed structures' money split Θ/Δ/ν + the week's facts (E-JRNL)">DEBRIEF</Chip>
         <Chip color={T.muted} active={showAll} onClick={() => setShowAll(v => !v)}>{showAll ? 'OPEN + CLOSED' : 'OPEN'}</Chip>
         <Btn size="sm" onClick={load}>{loading ? '…' : '↻'}</Btn>
       </div>}>
@@ -242,5 +251,8 @@ export function PaperBook({ refreshKey }: { refreshKey?: number }) {
         </div>
       )}
     </Panel>
+    {extra === 'journal' && <Journal refreshKey={refreshKey} />}
+    {extra === 'debrief' && <Debrief />}
+    </div>
   )
 }

@@ -141,10 +141,11 @@ export function PreOpen() {
       {data && rows.length > 0 && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 12 }}>
-            <Stat label="Advances / declines" value={<span><span style={{ color: T.green }}>{data.advances ?? '—'}</span> / <span style={{ color: T.red }}>{data.declines ?? '—'}</span></span>}
+            {/* L-15: A/D figures are context, never direction-coloured (tone stays for the trader's own rules and errors) */}
+            <Stat label="Advances / declines" value={`${data.advances ?? '—'} / ${data.declines ?? '—'}`}
                   sub={`${data.unchanged ?? 0} unchanged · ${sessionDay ?? ''}`} />
             <Stat label="Median gap" value={pct(median)} color={tone(median)} sub={`${rows.length} stocks`} />
-            <Stat label="Gaps > ±2%" value={<span><span style={{ color: T.green }}>{rows.filter(r => r.change_pct! > 2).length}</span> / <span style={{ color: T.red }}>{rows.filter(r => r.change_pct! < -2).length}</span></span>} sub="up / down" />
+            <Stat label="Gaps > ±2%" value={`${rows.filter(r => r.change_pct! > 2).length} / ${rows.filter(r => r.change_pct! < -2).length}`} sub="up / down" />
             <Stat label="Matched in auction" value={money(data.total_value)} sub="total value crossed" />
             <div style={{ border: `1px solid ${T.border}`, background: T.panel, padding: '10px 12px' }}>
               <div style={{ fontSize: 10, color: T.muted, letterSpacing: 1, marginBottom: 6 }}>GAP DISTRIBUTION</div>

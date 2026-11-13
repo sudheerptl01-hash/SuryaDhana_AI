@@ -20,6 +20,7 @@ import { Chip, DataTable, Input, Loading, Notice, PageHeader, Panel, Select, Sta
          fmtInr, fmtNum, type Column, sourceOf, inputSource, undatedSource } from '@/components/terminal'
 import { fmtSigned, fmtSignedInr } from '@/lib/format'   // +₹ / −₹ with U+2212 (C1-18)
 import { ContractSelector, frontExpiry } from '@/components/gold/ContractsView'
+import { FairOpenHistory } from '@/components/gold/FairOpenHistory'
 import { goToPage } from '@/lib/navigate'
 import { getGoldContracts } from '@/lib/gold/api'
 import { fmtInr0, mcxOverlayLine, settlementSourceWords, ticketMargin } from '@/lib/gold/format'
@@ -365,6 +366,9 @@ export function McxGoldDesk() {
             right={<Chip color={T.amber} onClick={() => openGold('contracts')} title="Term structure, MCX chain, roll calendar, COMEX spec card">GOLD › CONTRACTS</Chip>}>
             <ContractSelector families={families} sel={sel} onSel={updateSel} dense livePrice={liveLtp} />
           </Panel>
+
+          {/* 4b. fair open vs actual, day by day (FINAL ROUND W3 / C-GOLD): reads /api/gold/log; arithmetic, PAPER-neutral */}
+          <FairOpenHistory />
 
           {/* 5. paper ticket */}
           <Panel source={inputSource('the ticket you fill in (PAPER, records nothing)')} title="Paper gold ticket" accent={T.green}

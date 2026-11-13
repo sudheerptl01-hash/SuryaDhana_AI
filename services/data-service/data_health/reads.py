@@ -154,6 +154,8 @@ def health(store: Any, archive_root: Path, *, now: datetime | None = None, holid
         if d:
             gap_map.setdefault(str(g.dataset), set()).add(d)
     last_fetch = ingest_log.last_fetch_by_dataset(store)
+    from data_health import watermarks                 # local import: watermarks imports reads (cycle-safe at call time)
+    job_checks = watermarks.last_checks(store)
     out_rows: list[dict[str, Any]] = []
     summary = {"fresh": 0, "amber": 0, "red": 0, "gap": 0, "unknown": 0}
     for row in cat:
@@ -166,6 +168,7 @@ def health(store: Any, archive_root: Path, *, now: datetime | None = None, holid
                "job_id": row.get("ingest_job"), "freshness_kind": row["freshness_kind"], "dictionary_anchor": row.get("dictionary_anchor"),
                "verdict": row["verdict"], "badge": row["badge"], "catalog_note": row.get("note"),
                "last_fetch": last_fetch.get(str(row["id"])), "gap_dates": sorted(d.isoformat() for d in gap_map.get(str(row["id"]), ())),
+               "job_check": job_checks.get(str(row.get("ingest_job") or "")),
                **st}
         out_rows.append(rec)
     return {"as_of": db.iso_utc(now or db.utcnow()), "now_ist": now_ist.isoformat(), "last_session": calendar.last_completed_session(now_ist, holidays, extra_sessions).isoformat(),

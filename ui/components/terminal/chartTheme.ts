@@ -6,6 +6,10 @@
  *
  * The TradingView attribution mark (layout.attributionLogo, default true in 4.2.3) is left ON — licence
  * attribution; do not override it here or per chart.
+ *
+ * Wave C token pass (C-TOKENS, 13 Nov 2026): verified in lockstep — every colour here reads T at call time,
+ * so the refined-dark pass (T.dim lift; additive type/spacing/motion tokens) flows through with no edit.
+ * MARKER_PALETTE.expiry (T.dim) follows the lifted value automatically.
  */
 import type { ChartOptions, DeepPartial } from 'lightweight-charts'
 import { T } from '@/components/news/format'

@@ -73,8 +73,10 @@ export interface SavedStructure { id: number; name: string; symbol: string; legs
 
 export const getBook = (status: 'open' | 'closed' | 'all' = 'open') =>
   client.get<BookPayload>('/api/options/book', { params: { status }, timeout: 30_000 })
-export const postBook = (symbol: string, name: string, legs: BookLegBody[], note?: string) =>
-  client.post<{ structure: BookStructure; paper_only: true; note: string }>('/api/options/book', { symbol, name, legs, note, mode: 'paper', source: 'OSTR' }, { timeout: 20_000 })
+/** `context` (E-JRNL F-12): the OSTR pre-trade checklist payload as shown at booking — journalled point-in-time
+ *  with the booking (ticks, max-loss typed, margin + its source); the server stores it verbatim, size-gated. */
+export const postBook = (symbol: string, name: string, legs: BookLegBody[], note?: string, context?: unknown) =>
+  client.post<{ structure: BookStructure; paper_only: true; note: string }>('/api/options/book', { symbol, name, legs, note, context: context ?? undefined, mode: 'paper', source: 'OSTR' }, { timeout: 20_000 })
 /** close (or preview a close). CONFIRM sends the previewed fills back (`confirm`, `previewed_at`): the paper fill is what
  *  the owner saw, labelled "confirmed as previewed at HH:MM IST" — never a silent re-price. */
 export const closeBook = (body: { position_ids?: number[]; structure_id?: number; preview?: boolean; prices?: Record<number, number>

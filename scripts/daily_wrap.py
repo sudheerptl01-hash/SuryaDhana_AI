@@ -617,6 +617,13 @@ def build_report(api: Api, day: date, *, refresh: bool = True, now: Optional[dat
     else:
         L += section("Decision Desk (paper)", [not_stored(day, "Desk mark", (desk.get("latest") or {}).get("date"))])
         st["desk"] = NOT_STORED
+    # ── paper F&O book (E-JRNL): one line when paper closes happened that day; the debrief holds the split ──
+    fo_day = api.get("/api/options/book/day", date=iso) or {}
+    if fo_day.get("closes"):
+        L += section("Paper F&O book", [
+            f"- {fo_day['closes']} paper close(s) journalled, realised {inr(fo_day.get('realised_inr') or 0)} net of the "
+            "recorded costs (PAPER only) · the Θ/Δ/ν split and the week's facts: OSTR › Paper F&O book › DEBRIEF"])
+
 
     gaps = [k for k in REQUIRED if st.get(k) == NOT_STORED]
     if gaps:

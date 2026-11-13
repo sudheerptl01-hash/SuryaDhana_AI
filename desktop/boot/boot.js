@@ -179,7 +179,14 @@ requestAnimationFrame(function () {
     var wdOk = watchdogPresent(s);
     switch (state) {
       case 'checking': progress = 'Checking services…'; break;
-      case 'loading': progress = 'Loading terminal' + (s.target_code ? ' · ' + s.target_code : '') + '…'; break;
+      case 'loading': {
+        // O-F5a (D-BOOT): ui-api is up so the terminal opens, but say when data-service is still behind —
+        // the terminal itself shows a WARMING UP strip until it answers (no action needed here).
+        var dsBehind = s.services.some(function (x) { return x.name === 'data-service' && !x.up; });
+        progress = 'Loading terminal' + (s.target_code ? ' · ' + s.target_code : '') + '…' +
+          (dsBehind ? ' data-service is still starting; the terminal shows WARMING UP until it answers.' : '');
+        break;
+      }
       case 'starting': progress = startingLine(s); break;
       case 'norelease':
         progress = 'ui-api is running, but there is no terminal UI release to serve. Build one (about 15 s), or bring back the previous release; the window opens by itself once it is there.';

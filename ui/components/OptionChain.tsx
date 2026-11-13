@@ -40,7 +40,7 @@ import { apiError } from '@/lib/errors'
 import { OptionPricer, type PricerPick } from '@/components/OptionPricer'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getSurveillance, getOptionChain, getOptionChainLive, getOptionHistory, type OptionChain as Chain, type OptionHistoryRow } from '@/lib/api'
-import { BadgeChip, CHART_BOX, Chip, ErrorBox, Loading, PageHeader, Panel, SourceChip, Stat, T, fmtNum, sourceOf, useChartSize } from '@/components/terminal'
+import { BadgeChip, CHART_BOX, Chip, ErrorBox, Loading, PageHeader, Panel, SourceChip, Stat, T, fmtNum, setSubInUrl, sourceOf, useChartSize } from '@/components/terminal'
 import { useLiveQuotes } from '@/lib/liveQuotes'
 import { nseDelayedSource, underlyingLiveSymbol } from '@/components/liveModel'
 import { IvHistoryChart, useIvHistory } from '@/components/vol/IvHistoryChart'
@@ -548,6 +548,9 @@ export function OptionChain() {
             <Chip color={T.violet} active={picks.length > 0} onClick={openInOstr} aria-label="open in OSTR"
               title={picks.length ? `Open the strategy builder on ${data.symbol} ${data.expiry} with ${legsFromStrikes(picks).length} legs seeded from the picked strikes (key: o)` : `Open the strategy builder on ${data.symbol} ${data.expiry}; pick up to 4 strikes first to seed the legs`}>
               OPEN IN OSTR ›</Chip>
+            <Chip color={T.cyan} onClick={() => { setSubInUrl('radar'); goToPage('derivatives') }}
+              title={`per-strike OI change over a rolling window from the stored 2-minute tape — DERV › RADAR on ${data.symbol}`}>
+              FLOW RADAR ›</Chip>
             <Chip color={T.cyan} active={greeks} onClick={() => setGreeks(g => !g)} title="Greeks per strike from Black-76 on the forward with the out-of-the-money side's IV (r 6.5 %, T = calendar time to 15:30 IST on expiry ÷ 365). Arithmetic.">Δ Γ Θ ν</Chip>
             {greeks && <Chip color={T.muted} active={perLot} onClick={() => setPerLot(v => !v)} title={`Θ and ν ${perLot ? 'per lot' : 'per unit'}; click for ${perLot ? 'per unit' : `per lot (× ${data.lot ?? '—'})`}. Δ and Γ stay per unit.`}>{perLot ? 'PER LOT' : 'PER UNIT'}</Chip>}
           </span>}>

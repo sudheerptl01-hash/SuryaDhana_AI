@@ -77,7 +77,8 @@ export function MarketInternals({ height = 200, onSource }: { height?: number; o
     const seen = new Set<number>(), uniq = rows.filter(x => !seen.has(x.t) && seen.add(x.t))
     bars.current.setData(uniq.filter(x => x.r.n500_adv != null && x.r.n500_dec != null).map(({ r, t }) => {
       const net = r.n500_adv! - r.n500_dec!
-      return { time: t as any, value: net, color: net >= 0 ? 'rgba(22,217,138,0.55)' : 'rgba(255,77,94,0.55)' }
+      // L-15: A/D is context — one neutral bar colour; the sign reads from the zero baseline, not from green/red
+      return { time: t as any, value: net, color: 'rgba(134,145,165,0.5)' }
     }))
     LINES.forEach(([k], i) => lines.current[i]?.setData(uniq.filter(x => x.r[k] != null).map(({ r, t }) => ({ time: t as any, value: r[k] as number }))))
     chart.current.timeScale().fitContent()
@@ -87,7 +88,8 @@ export function MarketInternals({ height = 200, onSource }: { height?: number; o
   return (
     <div>
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'baseline', fontFamily: T.mono, fontSize: 11, marginBottom: 4 }}>
-        {s?.n500_adv != null && <span>NIFTY 500 <span style={{ color: T.green }}>{s.n500_adv} up</span> / <span style={{ color: T.red }}>{s.n500_dec} down</span>
+        {/* L-15: A/D counts stay neutral — tone is reserved for the trader's own rules and errors */}
+        {s?.n500_adv != null && <span>NIFTY 500 <span style={{ color: T.text }}>{s.n500_adv} up</span> / <span style={{ color: T.text }}>{s.n500_dec} down</span>
           <span style={{ color: T.dim }}> · A/D {s.ad_ratio?.toFixed(2) ?? '—'}</span></span>}
         {LINES.map(([k, label, color]) => last?.[k] != null &&
           <span key={label}><span style={{ color }}>■</span> {label} <span style={{ color: tone(last[k] as number) }}>{fmtPct(last[k] as number, 2)}</span></span>)}

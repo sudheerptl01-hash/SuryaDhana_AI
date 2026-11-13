@@ -380,6 +380,7 @@ def test_an_expired_leg_is_marked_and_closed_at_the_expiry_day_settlement(env: d
     assert m12["mark_method"] == "settlement" and m12["price"] == 50.0 and "stored expiry-day mark" in m12["price_source"]
     # negative control: intrinsic on the LATER spot would have been 450 (the 5 Nov reproduction's +₹19,100)
     assert max(25000.0 - 24550.0, 0.0) == 450.0 != m12["price"]
+    env["calls"].clear()                           # scope the no-fetch claim to the CLOSE below (E-JRNL books now capture context)
     done = c.post("/api/options/book/close", json={"position_ids": [ce]}).json()
     fill = done["fills"][0]
     assert fill["exit_price"] == 50.0 and fill["exit_price_source"].startswith("NSE final settlement 2026-11-09")

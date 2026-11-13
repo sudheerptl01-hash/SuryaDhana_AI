@@ -43,7 +43,6 @@ NOT_AN_INGEST: dict[str, str] = {
     "icici_session_guard_day": "the market-hours leg of icici_session_guard (a session, not data)",
     "special_session_login": "ICICI login for an MCX special session, e.g. Muhurat (a session, not data)",
     "special_session_close": "special-session run of the MCX settle capture (catalogued under gold_mcx_close)",
-    "india_imports_watch": "stores the PIB figure into the catalogued india-imports row (catalogued under gold_india_imports)",
     "india_imports_comtrade": "UN Comtrade backfill/verify of the same series, never overwrites (catalogued under gold_india_imports)",
     "morning_sweep": "08:35 pass that re-runs catalogued fetches",
     "nse_evening_pass": "22:45 pass that re-runs catalogued fetches",
@@ -51,6 +50,7 @@ NOT_AN_INGEST: dict[str, str] = {
     "filing_alerts": "alerts read stored filings",
     "move_alerts": "alerts read stored quotes",
     "price_alerts_check": "alerts read live quotes",
+    "morning_gameplan": "Telegram digest rendered from the /api/gameplan assembly (reads only, wave E F-11)",
     "shared_snapshot_build": "read-only copy of market.duckdb for readers (no new data)",
     "weekly_journal": "a report written from stored data",
     "eod_rebalancing": "dormant legacy 5-day pipeline (autopilot OFF)",
@@ -89,6 +89,7 @@ KNOWN_PAGE_GAPS: dict[str, str] = {
     "LWSC": "legacy LW scanner (stored daily bars)",
     "CMDT": "/api/commodity/overview (Yahoo through the one cached fetcher)",
     "DEXP": "data explorer (every DuckDB table)",
+    "GPLN": "/api/gameplan (assembles existing catalogued reads + local prefs/alerts stores; no store of its own)",
 }
 
 #: data-service job ids run inside a controller pass (POST /jobs/... with ?job=)
@@ -136,7 +137,7 @@ def pages() -> set[str]:
 
 
 def test_the_parsers_see_the_real_registries(jobs, pages):
-    assert len(pages) == 43 and {"OMON", "DERV", "MEMB", "SYS", "GOLD"} <= pages
+    assert len(pages) == 44 and {"OMON", "DERV", "MEMB", "SYS", "GOLD", "GPLN"} <= pages
     assert {"index_drivers_daily", "nse_evening_pass", "morning_sweep", "iv_intraday", "iv_weekly", "data_health_check",
             "gold_overnight", "eod_data_pipeline"} <= jobs and len(jobs) >= 50
 

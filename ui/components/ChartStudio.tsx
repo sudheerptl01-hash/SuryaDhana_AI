@@ -25,7 +25,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type {
-  IChartApi, IPriceLine, ISeriesApi, LogicalRange, Time, UTCTimestamp,
+  IChartApi, IPriceLine, ISeriesApi, LogicalRange, MouseEventParams, Time, UTCTimestamp,
 } from 'lightweight-charts'
 import {
   Chip, Empty, ErrorBox, Label, Loading, Notice, PageHeader, Panel, SourceChip, T, TickerLink, fmtPct, tone, sourceOf } from '@/components/terminal'
@@ -34,9 +34,12 @@ import { useActiveSymbol } from '@/lib/activeSymbol'
 import { ALERTS_EVENT, draftAlert } from '@/lib/alerts'
 import { getAlertRules } from '@/lib/alertsClient'
 import { alertLevelsFor } from '@/lib/alertsEngine'
+import { draftAtLevel, nearestLevel } from '@/lib/alertOverlay'
+import { goToPage } from '@/lib/navigate'
 import { alignOverlay, inSession, type OverlayPoint } from '@/components/expiry/chartModel'
 import { fmtVol } from '@/components/news/format'
 import { apiError } from '@/lib/errors'
+import { saveDownload } from '@/lib/platform'
 import { Z } from '@/lib/z'
 import {
   DEFAULT_DAYS, RANGE_OPTIONS, bollinger, ema, fetchDailyBars, fetchIntradayBars, istChartTime, rsi,
@@ -131,6 +134,9 @@ export function ChartStudio({ symbol: symbolProp }: { symbol?: string }) {
   const [loading, setLoading] = useState(true)
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
   const [ready, setReady] = useState(false)
+  // FINAL ROUND C5 (chart kit consistency): ⛶ grows the panes to the window height in place (Esc restores) —
+  // CHRT is already a full-page chart, so "expand" here means taller panes, never a remounting overlay
+  const [tall, setTall] = useState(false)
 
   const isIntraday = tf === '1m' || tf === '5m' || tf === '15m'
   const days = range === 'auto' ? DEFAULT_DAYS[isIntraday ? 'D' : (tf as Timeframe)] : Number(range)
@@ -317,6 +323,31 @@ export function ChartStudio({ symbol: symbolProp }: { symbol?: string }) {
                                                                             axisLabelVisible: true, title: 'ALERT' }))
   }, [alertLevels, ready, data])  // eslint-disable-line react-hooks/exhaustive-deps
 
+  // E-DIFF T-22: click an ALERT line → the rule in ALRT; right-click a level → "alert at this level"
+  // (pre-fills the typed-rule builder — the existing draftAlert path; the owner reviews and saves)
+  useEffect(() => {
+    const a = api.current
+    const el = mainBox.current
+    if (!a || !el || !ready) return
+    const click = (p: MouseEventParams) => {
+      if (!p.point) return
+      const hit = nearestLevel(alertLevels, p.point.y, px => a.candles.priceToCoordinate(px))
+      if (hit != null) goToPage('alerts')
+    }
+    a.main.subscribeClick(click)
+    const onCtx = (e: MouseEvent) => {
+      const r = el.getBoundingClientRect()
+      const raw = a.candles.coordinateToPrice(e.clientY - r.top)
+      const price = raw == null ? null : Number(raw)
+      if (price == null || !Number.isFinite(price)) return
+      e.preventDefault()
+      const d = draftAtLevel('price', symbol, price, lq?.price ?? null)
+      if (d) draftAlert(d)
+    }
+    el.addEventListener('contextmenu', onCtx)
+    return () => { a.main.unsubscribeClick(click); el.removeEventListener('contextmenu', onCtx) }
+  }, [ready, alertLevels, symbol, lq?.price])  // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── push bars + indicators into the series ─────────────────────────────────────
   useEffect(() => {
     const a = api.current
@@ -440,6 +471,37 @@ export function ChartStudio({ symbol: symbolProp }: { symbol?: string }) {
 
   const degradedNote = data?.kind === 'ticks' && !bars.length ? (data.note ?? 'no intraday bars') : null
 
+  // ── FIT · PNG ⤓ · ⛶ (FINAL ROUND C5: the chart-kit header actions, CHRT keeps its own toolbar) ─────────
+  const mainH = tall && typeof window !== 'undefined' ? Math.max(MAIN_H, window.innerHeight - 360) : MAIN_H
+  useEffect(() => {
+    const a = api.current
+    if (!a) return
+    a.main.applyOptions({ height: mainH })
+  }, [mainH, ready])
+  useEffect(() => {
+    if (!tall) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setTall(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [tall])
+  const fitChart = () => api.current?.main.timeScale().fitContent()
+  const pngChart = () => {
+    const a = api.current
+    if (!a) return
+    const c1 = a.main.takeScreenshot()
+    const c2 = show.rsi ? a.rsiChart.takeScreenshot() : null
+    const out = document.createElement('canvas')
+    out.width = Math.max(c1.width, c2?.width ?? 0)
+    out.height = c1.height + (c2?.height ?? 0)
+    const ctx = out.getContext('2d')
+    if (!ctx) return
+    ctx.fillStyle = T.bg
+    ctx.fillRect(0, 0, out.width, out.height)
+    ctx.drawImage(c1, 0, 0)
+    if (c2) ctx.drawImage(c2, 0, c1.height)
+    out.toBlob(b => { if (b) void saveDownload(b, `chrt-${symbol.toLowerCase()}-${tf}-${new Date().toLocaleDateString('en-CA')}.png`) }, 'image/png')
+  }
+
   return (
     <div>
       <PageHeader code="CHRT" title="Chart Studio"
@@ -494,6 +556,13 @@ export function ChartStudio({ symbol: symbolProp }: { symbol?: string }) {
                 {RANGE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             )}
+            <Chip color={T.cyan} onClick={fitChart} title="Fit the whole series back into view" aria-label="fit chart"
+              style={{ fontSize: 9, padding: '1px 6px' }}>FIT</Chip>
+            <Chip color={T.cyan} onClick={pngChart} title="Save the chart (both panes) as a PNG image" aria-label="download chart as png"
+              style={{ fontSize: 9, padding: '1px 6px' }}>PNG ⤓</Chip>
+            <Chip color={T.cyan} active={tall} onClick={() => setTall(v => !v)} aria-label={tall ? 'restore chart height' : 'expand chart panes to the window height'}
+              title={tall ? 'Restore the standard pane height (Esc)' : 'Grow the panes to the window height (Esc restores)'}
+              style={{ fontSize: 9, padding: '1px 6px' }}>{tall ? '✕ RESTORE' : '⛶'}</Chip>
             <Chip color={T.cyan} onClick={() => { void load() }} title="refresh">↻</Chip>
           </span>
         }
@@ -570,7 +639,7 @@ export function ChartStudio({ symbol: symbolProp }: { symbol?: string }) {
 
         {/* panes */}
         <div style={{ position: 'relative' }}>
-          <div ref={mainBox} style={{ width: '100%', height: MAIN_H }} />
+          <div ref={mainBox} style={{ width: '100%', height: mainH }} />
           {(!ready || (loading && !bars.length)) && !error && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: Z.raised }}>
               <Loading label={ready ? `${symbol} ${tf}` : 'chart engine'} />

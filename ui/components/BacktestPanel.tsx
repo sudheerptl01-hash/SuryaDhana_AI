@@ -589,11 +589,10 @@ export function BacktestPanel({ watchlist = [] }: BacktestPanelProps) {
                 </div>
               </div>
 
-              {/* Equity cockpit */}
+              {/* Equity cockpit — the chart carries its own shell header (title · FIT · PNG ⤓ · ⛶, FINAL ROUND C7) */}
               {results.equity_curve.length > 0 && (
                 <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wide">Compounded Equity · NAV vs Benchmark · Drawdown</h3>
+                  <div className="flex items-center justify-end mb-3">
                     <div className="flex gap-2">
                       <button onClick={() => results && exportBacktestCSV(results)} className="px-2.5 py-1 rounded bg-slate-700/50 text-slate-300 text-[11px] font-semibold hover:bg-slate-700">⬇ CSV</button>
                       <button onClick={() => results && exportBacktestExcel(results)} className="px-2.5 py-1 rounded bg-emerald-600/30 text-emerald-200 text-[11px] font-semibold hover:bg-emerald-600/50 border border-emerald-600/40">⬇ Excel</button>

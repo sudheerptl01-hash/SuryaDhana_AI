@@ -32,6 +32,7 @@ from __future__ import annotations
 import asyncio
 
 import importlib.util
+import logging
 import os
 import sys
 import time
@@ -121,7 +122,11 @@ async def _load_bulk_ohlcv(days: int) -> pd.DataFrame:
     except httpx.HTTPStatusError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
     except httpx.RequestError as exc:
-        raise HTTPException(status_code=502, detail=f"data-service unreachable: {exc}")
+        # O-F5a normalization (D-BOOT): the transport detail ("All connection attempts failed", …) goes to
+        # the log, never onto the wire — the client maps this exact prefix to its calm placeholder.
+        logging.getLogger("ui-api.alpha").warning(
+            "bulk OHLCV: data-service unreachable: %s: %s", type(exc).__name__, exc)
+        raise HTTPException(status_code=502, detail="data-service unreachable")
     if df.empty:
         raise HTTPException(status_code=503, detail="data-service returned no OHLCV rows")
     return df

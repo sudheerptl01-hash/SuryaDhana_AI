@@ -91,7 +91,7 @@ def rust_pages():
     return parse_rust_pages(PAGES_RS.read_text())
 
 
-PAGE_COUNT = 43   # 42 + the gold program's GOLD page (PLAN Appendix A); pages.rs PAGE_COUNT must agree
+PAGE_COUNT = 44   # 43 + the FINAL round's GPLN page (wave E); pages.rs PAGE_COUNT must agree
 
 
 def test_page_source_is_self_consistent(ui_pages):

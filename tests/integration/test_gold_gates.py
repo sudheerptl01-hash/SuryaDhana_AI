@@ -54,7 +54,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from desktop_qa.pages import PAGE_TSX, PAGES_RS, PageSource, load_page_source, parse_rust_pages
 
-PAGE_COUNT = 43
+PAGE_COUNT = 44  # 43 + GPLN (FINAL round wave E)
 GOLD_ID, GOLD_CODE, GOLD_LABEL = "gold", "GOLD", "Gold terminal"
 GOLD_AFTER = "mcxgold"                 # GOLD sits right after MCXG (next to CMDT/MCXG, PLAN §a.1)
 GOLD_ALIASES = ("XAU", "GC")           # PM decision; PLAN §a.1's GPHY/GMAC/LRN/COT are B4A's call
@@ -463,7 +463,7 @@ class TestPageRegistries:
 
     def test_page_tsx_registers_gold_as_the_43rd_page(self, ui_pages: PageSource):
         assert len(ui_pages.tab_ids) == PAGE_COUNT, (f"B4A: TAB_IDS lists {len(ui_pages.tab_ids)} pages, expected "
-                                                     f"{PAGE_COUNT} (42 + gold)")
+                                                     f"{PAGE_COUNT} (43 + gameplan)")
         assert GOLD_ID in ui_pages.tab_ids, "B4A: 'gold' is not in TAB_IDS"
         page = ui_pages.by_id.get(GOLD_ID)
         assert page is not None, "B4A: COMMAND_PAGES has no gold entry"

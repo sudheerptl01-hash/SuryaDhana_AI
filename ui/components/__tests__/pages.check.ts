@@ -753,7 +753,7 @@ const MINUS = '−'
 
 // ── 19. page review 5 Nov 2026 (U-PLATFORM): M36 phone mode, m004 no docked banner, M37 strip in the shell ─────────
 {
-  const css = src('app/globals.css')
+  const css = src('app/compact.css')   // FINAL ROUND C-PHONE: the M36 phone block moved to compact.css
   const phone = /@media \(max-width: 720px\) \{\n {2}\/\* header row 1 \*\/([\s\S]*?)\n\}/.exec(css)?.[1] ?? ''
   check('M36 a ≤ 720 px phone block exists (the 5 Nov globals.css had no layout breakpoint below 720 px)', phone.length > 500)
   check('M36 phone: one column (every inline grid collapses)', /\.sd-page \[style\*="grid-template-columns"\] \{ grid-template-columns: minmax\(0, 1fr\) !important; \}/.test(phone))

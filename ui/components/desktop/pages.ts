@@ -14,6 +14,7 @@ export interface PageMeta {
 
 export const PAGE_META: Readonly<Record<string, PageMeta>> = Object.freeze({
   brief: { code: 'BRF', label: 'Morning brief' },
+  gameplan: { code: 'GPLN', label: 'Morning game plan' },
   watch: { code: 'WTCH', label: 'Watch monitor' },
   charts: { code: 'CHRT', label: 'Chart studio' },
   world: { code: 'WEI', label: 'World markets' },

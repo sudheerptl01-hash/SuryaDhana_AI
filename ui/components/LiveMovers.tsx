@@ -73,7 +73,8 @@ function SectorTile({ x, active, onClick }: { x: LiveIndex; active?: boolean; on
         <span style={{ fontSize: 13, fontWeight: 700, color: T.bright }}>{fmtPct(x.change_pct)}</span>
         <span style={{ fontSize: 9.5, color: T.muted }}>{x.advances ?? '—'}/{x.declines ?? '—'}</span>
       </div>
-      <div style={{ height: 3, background: T.red, marginTop: 4 }}><div style={{ height: 3, width: `${up}%`, background: T.green }} /></div>
+      {/* L-15: the advancers-share bar is breadth context — neutral fill over the border track, not green on red */}
+      <div style={{ height: 3, background: T.border, marginTop: 4 }}><div style={{ height: 3, width: `${up}%`, background: T.muted }} /></div>
     </div>
   )
 }
@@ -159,7 +160,8 @@ export function LiveMovers() {
   const liveIdx = useLiveQuotes(['NIFTY 50'], { intervalMs: 3_000 })
   const n50 = liveLevel(idx.n50 ?? null, liveIdx.quotes['NIFTY 50'])
   const liveMembers = useLiveQuotes(members?.members.map(m => m.symbol) ?? [], { intervalMs: 3_000, enabled: !!drill })
-  const breadth = (i?: LiveIndex) => i ? <span><span style={{ color: T.green }}>{i.advances}</span> / <span style={{ color: T.red }}>{i.declines}</span></span> : '—'
+  // L-15: A/D figures are context — neutral, never green/red
+  const breadth = (i?: LiveIndex) => i ? <span style={{ color: T.text }}>{i.advances} / {i.declines}</span> : '—'
 
   return (
     <div>

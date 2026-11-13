@@ -30,9 +30,16 @@ CREATE TABLE IF NOT EXISTS data_gaps (
   source VARCHAR NOT NULL, first_seen_at TIMESTAMP NOT NULL, PRIMARY KEY (dataset, date));
 
 CREATE TABLE IF NOT EXISTS terminal_ingest_state (key VARCHAR PRIMARY KEY, value VARCHAR, updated_at TIMESTAMP);
+
+-- silent-rot escalations (FINAL P0-2/P0-3): one record per (dataset, session, kind) — the PK IS the
+-- "one Telegram line per dataset per day" dedupe; the controller reads them and sends the line
+CREATE TABLE IF NOT EXISTS data_health_escalations (
+  dataset VARCHAR NOT NULL, date DATE NOT NULL, kind VARCHAR NOT NULL,
+  detail VARCHAR, first_seen_at TIMESTAMP NOT NULL,
+  PRIMARY KEY (dataset, date, kind));
 """
 
-TABLES: tuple[str, ...] = ("dataset_catalog", "ingest_log", "data_gaps", "terminal_ingest_state")
+TABLES: tuple[str, ...] = ("dataset_catalog", "ingest_log", "data_gaps", "terminal_ingest_state", "data_health_escalations")
 
 COLUMNS: dict[str, list[str]] = {
     "dataset_catalog": ["id", "label", "pages", "publisher", "publish_time_ist", "expected_by", "expected_offset_days", "cadence",
@@ -41,6 +48,7 @@ COLUMNS: dict[str, list[str]] = {
     "ingest_log": ["dataset", "date", "url", "fetched_at", "last_modified", "etag", "sha256", "bytes", "rows", "status", "revision", "note"],
     "data_gaps": ["dataset", "date", "reason", "unrecoverable", "source", "first_seen_at"],
     "terminal_ingest_state": ["key", "value", "updated_at"],
+    "data_health_escalations": ["dataset", "date", "kind", "detail", "first_seen_at"],
 }
 
 CASTS: dict[str, dict[str, str]] = {
@@ -48,6 +56,7 @@ CASTS: dict[str, dict[str, str]] = {
     "ingest_log": {"date": "DATE", "fetched_at": "TIMESTAMP", "bytes": "BIGINT", "rows": "INTEGER", "revision": "INTEGER"},
     "data_gaps": {"date": "DATE", "unrecoverable": "BOOLEAN", "first_seen_at": "TIMESTAMP"},
     "terminal_ingest_state": {"updated_at": "TIMESTAMP"},
+    "data_health_escalations": {"date": "DATE", "first_seen_at": "TIMESTAMP"},
 }
 
 FRESHNESS_COLUMN: dict[str, str] = {"ingest_log": "fetched_at", "data_gaps": "date"}

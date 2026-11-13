@@ -191,9 +191,10 @@ export function quoteSource(q: LiveQuote | null | undefined, market: LiveMarket 
   if (q.state === 'live' && local <= LOCAL_LIVE_MAX_S) {
     // a quiet name (healthy socket, no trade lately): LIVE as of this window's last refresh; the trade age goes in the hint.
     // 5 Nov audit: EQS read 'LIVE · BREEZE · 2m' from one quiet name's 92 s since its last trade.
+    // G5 (FINAL ROUND): the face carries the cue too — SourceInfo.quiet renders 'LIVE·q'; the policy window is unchanged
     if (q.quiet) {
       const clock = istClock(q.ltt)
-      return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS: Math.max(0, local),
+      return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS: Math.max(0, local), quiet: true,
                hint: `quiet: no trade for ${ageS != null ? fmtAge(ageS) : 'a while'} on a healthy feed${clock ? ` · last trade ${clock} IST` : ''}` }
     }
     return { state: 'live', source, asOf: q.ltt, ageDays: 0, ageS, hint: q.reason }
@@ -237,6 +238,8 @@ export function liveSourceInfo(rows: readonly (LiveQuote | null | undefined)[], 
   const missing = infos.length - priced.length
   return {
     state: worst.state, source: worst.source, asOf: worst.asOf ?? null, ageDays: 0, ageS,
+    // G5: a pane whose every live row is quiet carries the face cue too (one loud row keeps the plain LIVE face)
+    quiet: worst.state === 'live' && open.every(i => i.quiet === true) ? true : undefined,
     mix: { live, total: infos.length },
     hint: `${breakdown}${missing ? ` · ${missing} without a quote` : ''}`,
   }

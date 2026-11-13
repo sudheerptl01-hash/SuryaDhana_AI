@@ -21,6 +21,7 @@ import { useActiveSymbol } from '@/lib/activeSymbol'
 import { ALRT_PREFILL_EVENT, ALRT_PREFILL_KEY, parseAlertPrefill } from '@/lib/goAliases'
 import { holidaysFromEco } from '@/components/desktop/session'
 import { alertRuleAction, getAlertDryRun, getAlertFires, getAlertRules, getAlertSeries, postAlertRule } from '@/lib/alertsClient'
+import { ALERT_FOCUS_KEY } from '@/lib/alertOverlay'
 import {
   ALERT_DRAFT_EVENT, ALERT_DRAFT_KEY, CHANNEL_LABEL, OP_LABEL, PRESETS, draftFromForm, fmtAlertValue, formFromDraft, groupFires, noteHints,
   INDEX_NAMES, parseDraft, prefillTarget, ruleStateText, type AlertChannel, type HolidayCover, type AlertFire, type AlertOp, type AlertRepeat, type AlertRule, type AlertRuleDraft,
@@ -71,7 +72,9 @@ export function AlertsCenter() {
 
   const loadRules = useCallback(async () => {
     try {
-      const [r, f] = await Promise.all([getAlertRules('rule'), getAlertFires(200)])
+      // E-DIFF T-22 merge view: BOTH stores in one table — the legacy one-shot price alerts arrive as
+      // origin 'price' rows (ids px:SYM:side) and render labelled `one-shot · legacy`; no store migration
+      const [r, f] = await Promise.all([getAlertRules('all'), getAlertFires(200)])
       setRules(r.data.rules); setFires(f.data.fires); setEngineDown(null)
     } catch (e) { setEngineDown(apiError(e, 'ui-api did not answer')) }
     getAlertDryRun().then(d => { setDry(Object.fromEntries(d.data.rows.map(x => [x.id, x]))); setDryAt(d.data.as_of) }).catch(() => {})
@@ -202,6 +205,26 @@ export function AlertsCenter() {
   const act = async (id: string, action: 'snooze' | 'resume' | 'pause' | 'delete', minutes?: number) => {
     try { await alertRuleAction(id, action, minutes); loadRules() } catch (e) { setRuleMsg(apiError(e, `could not ${action}`)) }
   }
+  // a merged legacy row's ✕: the price store's own write (PUT /api/alerts/{sym}), clearing just that side
+  const removeLegacy = (r: AlertRule) => {
+    const sym = r.symbol ?? ''
+    const side = String(r.id).split(':')[2]
+    const lv = alerts[sym] ?? {}
+    save(sym, side === 'above' ? null : lv.above ?? null, side === 'below' ? null : lv.below ?? null, side === 'move' ? null : lv.move ?? null)
+  }
+  // E-DIFF T-22: a chart's alert line was clicked — point the owner at that rule (sessionStorage one-shot)
+  useEffect(() => {
+    if (!rules.length) return
+    let raw: string | null = null
+    try { raw = sessionStorage.getItem(ALERT_FOCUS_KEY) } catch { return }
+    if (!raw) return
+    try { sessionStorage.removeItem(ALERT_FOCUS_KEY) } catch { /* ignore */ }
+    const r = rules.find(x => x.id === raw)
+    if (r) {
+      setRuleMsg(`from the chart line: ${r.label ?? r.series} ${r.condition ?? ''} — the rule is in the table below`)
+      builderRef.current?.scrollIntoView?.({ block: 'center' })
+    }
+  }, [rules])
   const preset = (id: string) => {
     const p = PRESETS.find(x => x.id === id)
     if (!p || !kinds) return
@@ -242,7 +265,13 @@ export function AlertsCenter() {
           <span style={{ color: T.text }}>{r.label ?? r.series}</span> <span style={{ color: T.muted }}>{r.condition}</span>
           {r.note && <span style={{ color: T.dim, display: 'block', fontSize: 10 }}>note: {r.note}</span>}
         </span>) },
-    { key: 'now', label: 'Now', align: 'right', render: r => { const d = dry[r.id]
+    { key: 'now', label: 'Now', align: 'right', render: r => {
+        if (r.origin === 'price') {   // a merged legacy row: the live quote its minute-check compares against
+          const sym = r.symbol ?? ''
+          const p = (isNse(alerts[sym]) ? livePx(sym) : null) ?? prices[sym] ?? null
+          return p != null ? <span title="the quote the minute-check compares against (live NSE service, else the quotes route)">{fmtPx(p)}</span> : <span style={{ color: T.dim }}>—</span>
+        }
+        const d = dry[r.id]
         if (!d) return <span style={{ color: T.dim }}>—</span>
         if (d.value == null) return <span style={{ color: T.dim, fontSize: 10 }} title={d.reason ?? undefined}>no reading</span>
         return <span title={`${d.source}${d.metric != null && d.metric !== d.value ? ` · compared: ${d.metric}` : ''}`}>
@@ -252,10 +281,15 @@ export function AlertsCenter() {
         if (!d || d.satisfied == null) return <span style={{ color: T.dim, fontSize: 10 }}>{d?.reason ? 'not measurable yet' : '—'}</span>
         return <span style={{ color: d.satisfied ? T.amber : T.muted, fontSize: 10.5 }}>{d.satisfied ? 'holds now' : 'not now'}</span> } },
     { key: 'badge', label: 'Badge', render: r => <BadgeChip badge={r.badge ?? 'arithmetic'} /> },
-    { key: 'state', label: 'State', render: r => <span style={{ color: r.status === 'active' ? T.text : T.muted, fontSize: 10.5 }}>{ruleStateText(r)}
+    { key: 'state', label: 'State', render: r => r.origin === 'price'
+        ? <span style={{ color: T.muted, fontSize: 10.5 }}>{ruleStateText(r)}<span style={{ color: T.dim }}> · one-shot · legacy</span></span>
+        : <span style={{ color: r.status === 'active' ? T.text : T.muted, fontSize: 10.5 }}>{ruleStateText(r)}
         <span style={{ color: T.dim }}> · {r.repeat === 'once' ? 'one-shot' : r.cooldown_min ? `repeat, ${r.cooldown_min} min apart` : 'repeat'} · {CHANNEL_LABEL[(r.channel ?? 'both') as AlertChannel]}</span></span> },
     { key: 'last', label: 'Last fired', sort: r => r.last_fired_at ?? '', render: r => <span style={{ color: T.dim }}>{r.last_fired_at ? r.last_fired_at.replace('T', ' ').slice(0, 16) : '—'}</span> },
-    { key: 'act', label: '', render: r => (
+    { key: 'act', label: '', render: r => r.origin === 'price'
+      ? <span role="button" style={{ color: T.dim, cursor: 'pointer', fontSize: 10 }}
+          title="remove this price alert — the legacy store's own write, same as ✕ remove in the Price alerts panel" onClick={() => removeLegacy(r)}>✕</span>
+      : (
         <span style={{ display: 'inline-flex', gap: 8, fontSize: 10 }}>
           {r.status === 'active' && <span role="button" style={{ color: T.muted, cursor: 'pointer' }} title="silence for an hour (a level still crossed fires after it)" onClick={() => act(r.id, 'snooze', 60)}>snooze 1h</span>}
           {r.status !== 'active' && <span role="button" style={{ color: T.amber, cursor: 'pointer' }} title="watch again (re-armed)" onClick={() => act(r.id, 'resume')}>resume</span>}
@@ -330,7 +364,7 @@ export function AlertsCenter() {
       {/* no panel-level badge: the table mixes arithmetic and context series, so each row carries its own (Badge column) */}
       <Panel title={`Rules · ${rules.length}`} accent={T.amber} pad={0} style={{ marginTop: 12 }}
         source={dryAt ? sourceOf(dryAt, { source: 'stored series (dry run)', maxAgeDays: null }) : inputSource('your rules over stored series')}
-        subtitle="typed alerts · repeat, cooldown, snooze · never a direction · badge per row">
+        subtitle="typed rules + the one-shot price alerts in one table (display-level merge, both stores) · never a direction · badge per row">
         {engineDown && <div style={{ padding: 10 }}><Notice color={T.muted}>The typed alert engine did not answer ({engineDown}). It serves after ui-api restarts on this release; the price alerts above work as before.</Notice></div>}
         <div ref={builderRef} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', padding: 10, borderBottom: `1px solid ${T.border}`, flexWrap: 'wrap' }}>
           <Select label="Series" value={rf.kind} onChange={setKindTo}

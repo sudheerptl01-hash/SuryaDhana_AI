@@ -219,9 +219,12 @@ class FoBookStore:
 
     # ── book ────────────────────────────────────────────────────────────────────────────────────────────────────
     def book(self, *, name: str, symbol: str, legs: list[dict[str, Any]], source: str, note: str | None = None,
-             opened_at: str | None = None) -> dict[str, Any]:
+             opened_at: str | None = None, context: dict[str, Any] | None = None) -> dict[str, Any]:
         """Write one structure and its legs. ``legs`` items carry kind, side, strike, expiry, lots, lot_size,
-        entry_price, entry_iv, entry_forward, entry_price_source, entry_costs. Mode is always 'paper'."""
+        entry_price, entry_iv, entry_forward, entry_price_source, entry_costs. Mode is always 'paper'.
+
+        ``context`` (E-JRNL, F-12) is the point-in-time snapshot taken AT the booking (the router's market read +
+        the OSTR checklist payload as shown); it is stored verbatim in the journal row and never recomputed."""
         if not legs:
             raise BookError("a structure needs at least one leg")
         ts = opened_at or now_ist()
@@ -230,7 +233,10 @@ class FoBookStore:
                                (name, symbol.upper(), ts, source, note))
             sid = int(cur.lastrowid or 0)
             ids = [self._insert_leg(conn, sid, symbol, leg, ts) for leg in legs]
-            self._journal(conn, "book", sid, {"name": name, "symbol": symbol.upper(), "legs": legs, "position_ids": ids})
+            payload: dict[str, Any] = {"name": name, "symbol": symbol.upper(), "legs": legs, "position_ids": ids}
+            if context is not None:
+                payload["context"] = context
+            self._journal(conn, "book", sid, payload)
         return self.structure(sid)
 
     @staticmethod
@@ -247,13 +253,16 @@ class FoBookStore:
 
     # ── close / roll ────────────────────────────────────────────────────────────────────────────────────────────
     def close(self, fills: list[dict[str, Any]], *, closed_at: str | None = None, action: str = "close",
-              status: str = "closed") -> list[dict[str, Any]]:
+              status: str = "closed", context: dict[str, dict[str, Any]] | None = None) -> list[dict[str, Any]]:
         """``fills``: [{position_id, exit_price, exit_price_source, exit_costs}]. Refuses a position that is not open.
 
         The journal (one row per touched structure, carrying THAT structure's fills only) records each fill's realised
         money point-in-time (SPEC M3): ``gross_inr`` (signed qty × (exit − entry)), ``costs_inr`` (the entry and exit
         cost sides it already knows), ``realised_inr`` (net of those costs). The day read and the loss streak read
-        these recorded facts back; they are never recomputed against moved marks."""
+        these recorded facts back; they are never recomputed against moved marks.
+
+        ``context`` (E-JRNL, F-12), keyed by UPPER-CASE symbol, is the market snapshot taken AT the close; each
+        structure's journal row stores its own symbol's entry verbatim, point-in-time."""
         ts = closed_at or now_ist()
         by_struct: dict[int, list[dict[str, Any]]] = {}
         with self._tx() as conn:
@@ -279,7 +288,11 @@ class FoBookStore:
                      "costs_inr": round(costs, 2), "realised_inr": round(gross - costs, 2)})
             for sid, sfills in by_struct.items():
                 self._settle_structure(conn, sid, ts)
-                self._journal(conn, action, sid, {"fills": sfills})
+                payload: dict[str, Any] = {"fills": sfills}
+                ctx = (context or {}).get(str(sfills[0]["symbol"]).upper())
+                if ctx is not None:
+                    payload["context"] = ctx
+                self._journal(conn, action, sid, payload)
         return [self.position(int(f["position_id"])) for f in fills]
 
     def roll(self, closes: list[dict[str, Any]], opens: list[dict[str, Any]], *, ts: str | None = None) -> dict[str, Any]:
@@ -491,6 +504,37 @@ class FoBookStore:
             if marked:
                 out["mtm_change_inr"] = round(mtm, 2)
         out["notes"] = sorted(notes)
+        return out
+
+    # ── debrief read (E-JRNL F-12: data assembly only; the attribution math lives in the router) ────────────────
+    def closed_structures(self, frm: str, to: str) -> list[dict[str, Any]]:
+        """Closed structures whose ``closed_at`` falls on an IST day in [``frm``, ``to``], each with its legs and,
+        per closed/rolled leg, ``exit_mark``: the last stored mark on or before that leg's close (the point-in-time
+        IV / forward / spot the weekly debrief's Θ/Δ/ν attribution reads). Assembly only — no money math here."""
+        if self._absent():
+            return []
+        frm, to = str(frm)[:10], str(to)[:10]
+        out: list[dict[str, Any]] = []
+        with self._conn() as conn:
+            rows = conn.execute("""SELECT * FROM paper_fo_structures WHERE status = 'closed' AND closed_at IS NOT NULL
+                                   ORDER BY closed_at, id""").fetchall()
+            for s in rows:
+                d = ist_day(s["closed_at"])
+                if d is None or d < frm or d > to:
+                    continue
+                legs = conn.execute("SELECT * FROM paper_fo_positions WHERE structure_id = ? ORDER BY id", (s["id"],)).fetchall()
+                lrows: list[dict[str, Any]] = []
+                for p in legs:
+                    leg = self._pos(p)
+                    leg["exit_mark"] = None
+                    if leg["closed_at"]:
+                        mk = conn.execute("""SELECT * FROM paper_fo_marks WHERE position_id = ? AND as_of <= ?
+                                             ORDER BY as_of DESC, first_seen_at DESC LIMIT 1""",
+                                          (int(leg["id"]), str(leg["closed_at"]))).fetchone()
+                        if mk is not None:
+                            leg["exit_mark"] = {k: mk[k] for k in MARK_COLS}
+                    lrows.append(leg)
+                out.append({**{k: s[k] for k in s.keys()}, "positions": lrows})
         return out
 
     # ── marks (append-only) ─────────────────────────────────────────────────────────────────────────────────────

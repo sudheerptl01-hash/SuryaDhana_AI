@@ -18,7 +18,7 @@ from __future__ import annotations
 # ruff: noqa: DTZ001
 # (timestamps are UTC-naive by the store's convention)
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 import pandas as pd
@@ -324,7 +324,7 @@ def test_bars_does_not_serve_a_future_dated_bar(store):
     # future relative to the real today (the fixed NEXT_MON row rotted into the past on 10 Nov 2026 and the test
     # went red while the behaviour it guards stayed right).
     _seed_fx(store)
-    real_future = date.today() + timedelta(days=7)
+    real_future = datetime.now(timezone(timedelta(hours=5, minutes=30))).date() + timedelta(days=7)  # IST, like the reader
     db.upsert(store, "gold_daily_bars", pd.DataFrame([
         _bar("INR=X", real_future, 94.0, 94.1, 93.9, 94.0, datetime(2026, 11, 8, 4, 47))]))
     out = reads.bars(store, symbol="INR=X", start=MON)

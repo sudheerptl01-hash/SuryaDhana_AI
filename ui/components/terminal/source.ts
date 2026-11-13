@@ -3,9 +3,11 @@
  *
  *  - `sourceOf(asOf, …)` turns a payload's as-of into the SourceChip state every panel header carries
  *    (LIVE · BREEZE / EOD · <day> / DELAYED · NSE · <age> / STALE <day> / CLOSE · <day> / OFFLINE / GAP): daily data
- *    shows its date as EOD · <day>, never a clock; a date older than `maxAgeDays` reads STALE; no as-of at all reads
- *    OFFLINE. Live program (reports/live_nse): an intraday quote's age prints as '48s' (`ageS`), a pane mixing live
- *    and delayed rows adds ' · 40/52 LIVE' (`mix`), and after the session a price reads CLOSE · <session day>.
+ *    shows its date as EOD · <day>, never a clock; by default an as-of ≥ STALE_AFTER_SESSIONS NSE sessions behind the
+ *    last expected session reads STALE (FINAL ROUND D-TONE G3 — an explicit `maxAgeDays` keeps a plain calendar
+ *    bound); no as-of at all reads OFFLINE. Live program (reports/live_nse): an intraday quote's age prints as '48s'
+ *    (`ageS`), a pane mixing live and delayed rows adds ' · 40/52 LIVE' (`mix`), a quiet LIVE row reads 'LIVE·q' on
+ *    the face (G5), the face always carries the source word (G7), and after the session a price reads CLOSE · <day>.
  *  - `inputSource(what)`: the chip of a panel with no data source behind it (a form, a calculator on your inputs):
  *    INPUT, so every Panel header still says where its numbers come from (PLAN §0.5, G9's static scan).
  *  - `nseStampIso('23-Oct-2026 16:00:00')`: NSE's live-feed timestamps as ISO (IST) for `sourceOf`.
@@ -36,6 +38,12 @@ export interface SourceInfo {
   ageS?: number | null
   /** a pane mixing live and non-live rows: how many of `total` rows are live (the chip adds ' · 40/52 LIVE') */
   mix?: { live: number; total: number } | null
+  /**
+   * FINAL ROUND G5 (reports/terminal_final, risk/TRUST_GAPS.md): a LIVE row on a healthy socket whose name simply has
+   * not traded lately (data-service QUIET_LIVE_S ≤ 120 s, owner-accepted window — the POLICY is unchanged). The face
+   * gets the on-face cue 'LIVE·q'; the hover keeps the trade age (the hint quoteSource already writes).
+   */
+  quiet?: boolean | null
 }
 
 const DAY_RE = /^(\d{4})-(\d{2})-(\d{2})/
@@ -61,12 +69,89 @@ export function ageDaysOf(asOf: string | null | undefined, now: Date = new Date(
   return Math.max(0, (nowDay - t) / 86_400_000)
 }
 
+// ── NSE session arithmetic (FINAL ROUND D-TONE, risk/TRUST_GAPS.md G3) ────────────────────────────────
+// The one shared session-aware helper: weekend-safe Mon–Fri arithmetic (NSE holidays are NOT known here — the
+// /api/data/health catalog is holiday-aware and takes precedence wherever it has answered; see ui/lib/dataHealthStore).
+
+/** Daily (EOD) data is expected to have advanced to today's session by this IST wall-clock time (the evening pass SLO). */
+export const EOD_EXPECTED_BY_IST = '21:30'
+const EOD_EXPECTED_BY_MIN = 21 * 60 + 30
+/** A daily as-of this many NSE sessions behind the last expected one reads STALE (was 4 calendar days, which let a
+ *  2-session lag read as a calm 'EOD · <day>' — the 13 Nov trust audit's G3). */
+export const STALE_AFTER_SESSIONS = 2
+
+/**
+ * The last NSE session day ('YYYY-MM-DD') whose EOD data is expected to be stored at `now`: the previous weekday, or
+ * today once the IST clock passes EOD_EXPECTED_BY_IST on a weekday. Weekend-safe (Sat/Sun → Friday); holidays are not
+ * known here, so a holiday week can read one session early — honest in the hover, corrected by the catalog when it answers.
+ */
+export function lastExpectedNseSessionDay(now: Date = new Date()): string {
+  const ist = new Date(now.getTime() + 330 * 60_000)
+  let t = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate())
+  const minutes = ist.getUTCHours() * 60 + ist.getUTCMinutes()
+  const dow = new Date(t).getUTCDay()
+  if (!(dow >= 1 && dow <= 5 && minutes >= EOD_EXPECTED_BY_MIN)) {
+    do { t -= 86_400_000 } while (new Date(t).getUTCDay() === 0 || new Date(t).getUTCDay() === 6)
+  }
+  return new Date(t).toISOString().slice(0, 10)
+}
+
+/**
+ * How many Mon–Fri NSE sessions `asOf` (date or timestamp; its IST day) sits behind the last expected session at
+ * `now`. 0 when current (or ahead), null when unparsable. Weekend-safe: Friday data reads 0 behind all weekend and
+ * Monday until the evening pass.
+ */
+export function nseSessionsBehind(asOf: string | null | undefined, now: Date = new Date()): number | null {
+  if (!DAY_RE.exec(asOf ?? '')) return null
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(asOf as string) ? (asOf as string) : istDay(asOf)
+  if (!day) return null
+  const last = lastExpectedNseSessionDay(now)
+  if (day >= last) return 0
+  let t = Date.UTC(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10))
+  const end = Date.UTC(+last.slice(0, 4), +last.slice(5, 7) - 1, +last.slice(8, 10))
+  let n = 0
+  while (t < end && n < 260) {
+    t += 86_400_000
+    const dw = new Date(t).getUTCDay()
+    if (dw >= 1 && dw <= 5) n++
+  }
+  return n
+}
+
+export interface FooterDataTone {
+  /** true = the stored equity EOD date is behind the last NSE session (D-TONE: the footer date turns amber) */
+  amber: boolean
+  title: string
+}
+
+/**
+ * The footer's DATA-date tone (D-TONE G3, weekend-safe): behind = stored date < the last NSE session — the data-health
+ * service's own `last_session` (holiday-aware) when the caller has one, else this file's Mon–Fri helper (21:30 IST
+ * cutoff). Pure; the React side is ui/lib/dataHealthStore's useFooterDataTone.
+ */
+export function footerDataTone(latestDate: string | null | undefined, lastSessionFromHealth: string | null | undefined, now: Date = new Date()): FooterDataTone {
+  const day = /^\d{4}-\d{2}-\d{2}/.exec(latestDate ?? '')?.[0] ?? null
+  if (!day) return { amber: false, title: 'last stored equity EOD session (date unknown)' }
+  const fromHealth = lastSessionFromHealth && /^\d{4}-\d{2}-\d{2}$/.test(lastSessionFromHealth) ? lastSessionFromHealth : null
+  const last = fromHealth ?? lastExpectedNseSessionDay(now)
+  const via = fromHealth ? 'per SYS › DATA' : 'Mon–Fri calendar; holidays not counted'
+  if (day < last) {
+    return { amber: true, title: `equity EOD store is behind: stored ${day} · last NSE session ${last} (${via}) — see SYS › DATA` }
+  }
+  return { amber: false, title: `last stored equity EOD session · last NSE session ${last} (${via})` }
+}
+
 export interface SourceOpts {
   /** the feed name printed on the chip */
   source?: string | null
   /** true while a live feed is ticking (the chip reads LIVE · <source>) */
   live?: boolean
-  /** a daily value older than this many calendar days reads STALE (default 4: a weekend plus one missed session) */
+  /**
+   * a daily value older than this many calendar days reads STALE. When OMITTED, the default is session-aware
+   * (D-TONE G3): an as-of ≥ STALE_AFTER_SESSIONS Mon–Fri sessions behind the last expected NSE session reads STALE,
+   * so a 2-session lag no longer passes as a calm 'EOD · <day>'. Pass a number to keep a plain calendar bound
+   * (weekly/monthly data), or null for data that is never stale by age.
+   */
   maxAgeDays?: number | null
   /** an explicit session gap (the capture never ran) */
   gap?: boolean
@@ -78,13 +163,23 @@ export interface SourceOpts {
 
 /** The SourceChip state for a payload's as-of (PLAN §0.5: value · source · as-of · lag chip). */
 export function sourceOf(asOf: string | null | undefined, opts: SourceOpts = {}): SourceInfo {
-  const { source = null, live = false, maxAgeDays = 4, gap = false, degraded = false, hint = null, now } = opts
+  const { source = null, live = false, gap = false, degraded = false, hint = null, now } = opts
   if (gap) return { state: 'gap', source, asOf: asOf ?? null, ageDays: ageDaysOf(asOf, now), hint }
   if (degraded) return { state: 'degraded', source, asOf: asOf ?? null, ageDays: ageDaysOf(asOf, now), hint }
   if (live) return { state: 'live', source, asOf: asOf ?? null, ageDays: 0, hint }
   const age = ageDaysOf(asOf, now)
   if (age == null) return { state: 'offline', source, asOf: asOf ?? null, ageDays: null, hint: hint ?? 'no as-of in the payload' }
-  if (maxAgeDays != null && age > maxAgeDays) return { state: 'stale', source, asOf: asOf ?? null, ageDays: age, hint }
+  if ('maxAgeDays' in opts && opts.maxAgeDays !== undefined) {
+    // an explicit calendar bound (weekly/monthly data, or null = never stale by age): the pre-G3 rule, unchanged
+    if (opts.maxAgeDays != null && age > opts.maxAgeDays) return { state: 'stale', source, asOf: asOf ?? null, ageDays: age, hint }
+  } else {
+    // D-TONE G3 default: session-aware — ≥ STALE_AFTER_SESSIONS NSE sessions behind the last expected one reads STALE
+    const behind = nseSessionsBehind(asOf, now ?? new Date())
+    if (behind != null && behind >= STALE_AFTER_SESSIONS) {
+      return { state: 'stale', source, asOf: asOf ?? null, ageDays: age,
+               hint: hint ?? `${behind} NSE sessions behind the last expected session (Mon–Fri calendar; holidays not counted)` }
+    }
+  }
   return { state: 'delayed', source, asOf: asOf ?? null, ageDays: age, hint }
 }
 
@@ -153,15 +248,32 @@ function istDay(iso: string | null | undefined): string {
 }
 
 /**
+ * The face form of a source word (FINAL ROUND G7: faces always carry the source word — 'DELAYED · RISK ENGINE · 15:03',
+ * never a bare clock): any parenthetical is dropped (it stays in the hover) and the name is trimmed word-by-word to
+ * 18 characters so the chip stays a chip. '' for no source.
+ */
+export function faceSource(src: string | null | undefined): string {
+  if (!src) return ''
+  let s = String(src).toUpperCase().replace(/\s*\(.*$/, '').trim()
+  if (s.length <= 18) return s
+  const words = s.split(/\s+/)
+  while (words.length > 1 && words.join(' ').length > 18) words.pop()
+  s = words.join(' ')
+  return s.length <= 18 ? s : `${s.slice(0, 17)}…`
+}
+
+/**
  * The chip's text and hover text for a SourceInfo. Daily data shows its date ('DELAYED · 04 NOV'); an intraday as-of
- * from today shows the feed and its IST clock ('DELAYED · YAHOO · 10:42'); an older timestamp shows its date.
+ * from today shows the feed and its IST clock ('DELAYED · YAHOO · 10:42' — the source word always on the face, G7);
+ * an older timestamp shows its date. A quiet LIVE row (G5) reads 'LIVE·q' on the face; the trade age stays in the hover.
  */
 export function sourceChipText(s: SourceInfo, now: Date = new Date()): ChipText {
   const src = s.source ? String(s.source).toUpperCase() : ''
+  const face = faceSource(s.source)
   const clock = chipClock(s.asOf)
   const today = clock !== '' && istDay(s.asOf) === istDay(now.toISOString())
   const day = chipDay(istDay(s.asOf))
-  const stamp = today ? `${src && src.length <= 14 ? `${src} · ` : ''}${clock}` : day
+  const stamp = today ? `${face ? `${face} · ` : ''}${clock}` : day
   const when = s.asOf && !/^\d{4}-\d{2}-\d{2}$/.test(s.asOf) ? `as of ${s.asOf}` : day ? `as of ${day}` : 'no as-of'
   const why = s.hint ? ` — ${s.hint}` : ''
   // live program: an intraday quote's age in seconds replaces the clock ('DELAYED · NSE · 48s'), and a pane mixing
@@ -171,16 +283,18 @@ export function sourceChipText(s: SourceInfo, now: Date = new Date()): ChipText 
   const ageTag = age ? ` · ${age}` : ''
   const mix = s.mix && s.mix.total > 0 && s.mix.live > 0 && s.mix.live < s.mix.total ? ` · ${s.mix.live}/${s.mix.total} LIVE` : ''
   const ageWhy = age ? ` · ${age} old` : ''
+  // G5: a quiet LIVE face carries its cue ('LIVE·q'); the hover keeps the trade age (the hint)
+  const liveWord = s.quiet ? 'LIVE·q' : 'LIVE'
   switch (s.state) {
-    case 'live': return { label: `LIVE${src ? ` · ${src}` : ''}${ageTag}${mix}`, title: `Live feed${src ? ` (${src})` : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
+    case 'live': return { label: `${liveWord}${face ? ` · ${face}` : ''}${ageTag}${mix}`, title: `Live feed${src ? ` (${src})` : ''}${s.quiet ? ' · quiet: no recent trade' : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
     case 'delayed': return age
-      ? { label: `DELAYED${src ? ` · ${src}` : ''}${ageTag}${mix}`, title: `Delayed quote${src ? ` from ${src}` : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
+      ? { label: `DELAYED${face ? ` · ${face}` : ''}${ageTag}${mix}`, title: `Delayed quote${src ? ` from ${src}` : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
       // live program (honesty rule): daily data cannot be live and says so — EOD + the date it describes
       : dateOnly && day
         ? { label: `EOD · ${day}`, title: `End-of-day data${src ? ` from ${src}` : ''} · as of ${day}: published once a day, not a live feed${why}` }
-        : { label: `DELAYED${stamp ? ` · ${stamp}` : src ? ` · ${src}` : ''}`, title: `Stored or delayed data${src ? ` from ${src}` : ''} · ${when}${why}` }
+        : { label: `DELAYED${stamp ? ` · ${stamp}` : face ? ` · ${face}` : ''}`, title: `Stored or delayed data${src ? ` from ${src}` : ''} · ${when}${why}` }
     case 'stale': return age
-      ? { label: `STALE${src ? ` · ${src}` : ''}${ageTag}${mix}`, title: `Older than expected${src ? ` (${src})` : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
+      ? { label: `STALE${face ? ` · ${face}` : ''}${ageTag}${mix}`, title: `Older than expected${src ? ` (${src})` : ''}${clock ? ` · last ${clock} IST` : ''}${ageWhy}${why}` }
       : { label: `STALE${stamp ? ` · ${stamp}` : ''}`, title: `Older than expected${src ? ` (${src})` : ''} · ${when}${s.ageDays != null ? ` · ${Math.round(s.ageDays)} d old` : ''}${why}` }
     case 'closed': return { label: `CLOSE${day ? ` · ${day}` : ''}`, title: `NSE closed: the last session's close${src ? ` (${src})` : ''}${s.asOf ? ` · ${when}` : ''}${why}` }
     case 'gap': return { label: `GAP${day ? ` · ${day}` : ''}`, title: `No capture for this session${src ? ` (${src})` : ''}${why}` }
@@ -189,6 +303,21 @@ export function sourceChipText(s: SourceInfo, now: Date = new Date()): ChipText 
     case 'reference': return { label: 'REFERENCE', title: `Fixed reference text (${s.hint ?? 'documentation'}); no data feed behind this panel` }
     default: return { label: 'OFFLINE', title: `No source is responding${src ? ` (${src})` : ''}${why}` }
   }
+}
+
+/**
+ * D-TONE (G3): a panel whose dataset has a `dataset_catalog` row adopts the catalog's verdict for the chip's tone.
+ * red/gap → the STALE treatment (the face keeps its own date/age text: 'STALE · 09 NOV'); amber → the hover names the
+ * verdict (the face is unchanged); fresh/live → unchanged. Live/input/reference chips are never downgraded (a live feed
+ * is its own evidence). Pure — the caller brings the verdict (ui/lib/dataHealthStore reads /api/data/health).
+ */
+export function applyCatalogVerdict(info: SourceInfo, verdict: string | null | undefined, note?: string | null): SourceInfo {
+  if (!verdict || info.state === 'live' || info.state === 'input' || info.state === 'reference') return info
+  if (verdict !== 'red' && verdict !== 'gap' && verdict !== 'amber') return info
+  const why = `catalog: ${verdict}${note ? ` — ${note}` : ''} (SYS › DATA)`
+  const hint = info.hint ? `${info.hint} · ${why}` : why
+  if (verdict === 'red' || verdict === 'gap') return { ...info, state: 'stale', hint }
+  return { ...info, hint }
 }
 
 // ── badges (PLAN §0.1) ────────────────────────────────────────────────────────────────────────────────

@@ -718,7 +718,8 @@ export function StrategyBuilder() {
   const bookNow = async () => {
     setBookAsk(false)
     try {
-      const r = await postBook(symbol, structName(), bookLegs(legs, lotOf, legForward, priceSource), checklistNote(checklistPayload.current))
+      const r = await postBook(symbol, structName(), bookLegs(legs, lotOf, legForward, priceSource), checklistNote(checklistPayload.current),
+                               checklistPayload.current ?? undefined)
       setBookMsg({ ok: true, text: `booked #${r.data.structure.id} "${r.data.structure.name}" to the PAPER F&O book (below) — no order was sent` })
       setBookKey(k => k + 1)
     } catch (e) { setBookMsg({ ok: false, text: `book failed: ${apiError(e)}` }) }

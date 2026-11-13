@@ -16,6 +16,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { IChartApi } from 'lightweight-charts'
 import { Chip, DataTable, T, fmtFixed, fmtSigned, type Column } from '@/components/terminal'
+import { ExpandableChart, useChartShell } from '@/components/terminal/ExpandableChart'
+import { saveDownload } from '@/lib/platform'
 import { getGoldBars, getGoldCot, getGoldFlows, getGoldPositioningDaily, getGoldSeries } from '@/lib/gold/api'
 import { NO_VERDICT, dayLabel, fmtCount, fmtInr0, fmtSignedCount, fmtSignedPctSp, fmtUsd, oiSpanByDate, parseIso, publishGate } from '@/lib/gold/format'
 import { cotOverdueWords, tapeDoiByDate, tapeFamilyScopeLabel, tapeScopeLabel } from './feedModel'
@@ -36,12 +38,17 @@ export interface LinePts { date: string; value: number }
  * Candles via the vendored lightweight-charts: left axis = the candles and their moving averages, right axis = an
  * optional overlay in another unit (the MCX settle in ₹/10 g), volume below, Mondays shaded through a full-height
  * histogram on a hidden scale. Rebuilt when the data changes; the chart follows the box width.
+ * FINAL ROUND W3 (charts/PLAN.md C3): inside an ExpandableChart it registers FIT (fitContent) and PNG
+ * (takeScreenshot) on the shell; zoom / pan / crosshair are lightweight-charts' own, as before.
  */
 export function LwCandles({ candles, lines = [], overlay, log = false, height = 320, mondays = true, volume = true, dp = 1, overlayLabel }: {
   candles: Ohlc[]; lines?: { color: string; values: (number | null)[]; dotted?: boolean }[]; overlay?: LinePts[] | null
   log?: boolean; height?: number; mondays?: boolean; volume?: boolean; dp?: number; overlayLabel?: string
 }) {
   const box = useRef<HTMLDivElement>(null)
+  const shell = useChartShell()
+  const chartRef = useRef<IChartApi | null>(null)
+  const [built, setBuilt] = useState(0)
   useEffect(() => {
     let disposed = false
     let chart: IChartApi | null = null
@@ -90,9 +97,23 @@ export function LwCandles({ candles, lines = [], overlay, log = false, height = 
         ro = new ResizeObserver(() => { if (chart && el.clientWidth > 0) chart.applyOptions({ width: el.clientWidth }) })
         ro.observe(el)
       }
+      chartRef.current = chart
+      setBuilt(b => b + 1)
     })()
-    return () => { disposed = true; ro?.disconnect(); chart?.remove(); chart = null }
+    return () => { disposed = true; ro?.disconnect(); chart?.remove(); chart = null; chartRef.current = null }
   }, [candles, lines, overlay, log, height, mondays, volume, dp, overlayLabel])
+  // the surrounding ExpandableChart's FIT / PNG act on this chart (no-ops when mounted bare)
+  useEffect(() => {
+    if (!shell || !built) return
+    const fit = () => chartRef.current?.timeScale().fitContent()
+    const png = () => {
+      const c = chartRef.current
+      if (!c) return
+      const stem = (shell.title ?? 'gold-candles').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'gold-candles'
+      c.takeScreenshot().toBlob(b => { if (b) void saveDownload(b, `${stem}-${new Date().toLocaleDateString('en-CA')}.png`) }, 'image/png')
+    }
+    return shell.registerActions({ fit, png })
+  }, [shell, built])
   return <div ref={box} data-gold-candles style={{ width: '100%', minWidth: 0, height }} />
 }
 
@@ -289,7 +310,9 @@ export function WeeklyView({ sel, layer, tooltips, catalog, onNavigate }: GoldSu
         right={<Chip color={T.amber} active={showMcx} onClick={() => setShowMcx(v => !v)} title="MCX proxy settle on the right axis">MCX ₹</Chip>}>
         <Pending s={bars} label="daily bars">
           {last60.length < 2 ? <NoVerdict what="daily bars are stored from the day the overnight job starts (gold_daily_bars)" />
-            : <LwCandles candles={last60} lines={smaLines} overlay={settle} dp={1} overlayLabel={`MCX ${sel.family} ₹/10 g`} height={320} />}
+            : <ExpandableChart title="60-session candles" height={320}>
+                {sz => <LwCandles candles={last60} lines={smaLines} overlay={settle} dp={1} overlayLabel={`MCX ${sel.family} ₹/10 g`} height={sz.height} />}
+              </ExpandableChart>}
         </Pending>
       </GoldPanel>
 
