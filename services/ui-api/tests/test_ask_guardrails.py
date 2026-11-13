@@ -666,3 +666,14 @@ def test_r3_llm_call_honours_the_env_timeout(monkeypatch: pytest.MonkeyPatch) ->
     assert out == "NO_QUERY" and captured["timeout"] == 150.0
     _call_provider(_prov(), [{"role": "user", "content": "u"}], timeout_s=5.0)   # an explicit value still wins
     assert captured["timeout"] == 5.0
+
+
+def test_f3_citation_tag_inside_the_sql_fence_is_stripped():
+    """F3-RISK live defect: the model appended its citation tag inside the fenced SQL and DuckDB died at the
+    middle dot. The tag lines are dropped; the statement survives; a tag-only block yields None."""
+    from ask_engine import extract_sql
+    block = "```sql\nSELECT iv30_cm FROM iv_summary_daily LIMIT 1\n[iv_summary_daily \u00b7 as-of 2026-11-12]\n```"
+    assert extract_sql(block) == "SELECT iv30_cm FROM iv_summary_daily LIMIT 1"
+    assert extract_sql("```sql\n[iv_summary_daily \u00b7 as-of 2026-11-12]\n```") is None
+    assert extract_sql("```sql\nSELECT 1\n```") == "SELECT 1"
+

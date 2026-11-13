@@ -216,7 +216,15 @@ def extract_sql(llm_text: str) -> Optional[str]:
         return None
     m = _SQL_FENCE_RE.search(text)
     if m:
-        return m.group(1).strip() or None
+        block = m.group(1).strip()
+        # F3-RISK (14 Nov 2026): the live model sometimes appends its citation tag ("[iv_summary_daily · as-of …]")
+        # INSIDE the fenced SQL, which then reaches DuckDB verbatim and dies at '·'. Citation tags belong to answer
+        # lines, never to SQL — drop any trailing bracket-tag-only lines from the block before validation.
+        lines = [ln for ln in block.split("\n")]
+        while lines and re.fullmatch(r"\s*\[[^\]]+\]\s*", lines[-1]):
+            lines.pop()
+        block = "\n".join(lines).strip()
+        return block or None
     head = text.split(None, 1)
     if head and head[0].lower() in ("select", "with"):
         return text

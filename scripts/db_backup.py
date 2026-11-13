@@ -64,6 +64,7 @@ FAMILIES: tuple[tuple[str, ...], ...] = (
     ("alerts-*.sqlite",),
     ("job_queue-*.sqlite",),    # data-service's durable job queue (R2-QUEUE; F-24/F-31)
     ("ask_audit-*.sqlite",),    # ASK's audit log (questions + SQL, never payloads)
+    ("paper_fo-*.sqlite",),    # the paper F&O book — the owner's track record (F3-RISK, 14 Nov 2026)
 )
 
 
@@ -311,6 +312,12 @@ def default_ask_audit_db() -> Path:
     return Path(env).expanduser() if env else ROOT / "data" / "ask_audit.sqlite"
 
 
+def default_paper_fo_db() -> Path:
+    """The paper F&O book — the owner's track record (fo_book_store: PAPER_FO_DB, else data/paper_fo.sqlite)."""
+    env = os.environ.get("PAPER_FO_DB", "").strip()
+    return Path(env).expanduser() if env else ROOT / "data" / "paper_fo.sqlite"
+
+
 def _backup_sqlite_store(db: Path, dest: Path, stamp: str, prefix: str,
                          counters: dict[str, str]) -> dict[str, Any]:
     """Online-backup a small SQLite store into dest/<prefix>-<stamp>.sqlite (+ .meta.json), exactly the way the
@@ -382,6 +389,20 @@ def _backup_ask_audit_safely(ask_audit_db: Path | None, dest: Path, stamp: str) 
         return {"error": f"{type(exc).__name__}: {exc}"[:300]}
 
 
+def backup_paper_fo(db: Path, dest: Path, stamp: str) -> dict[str, Any]:
+    """Online-backup the paper F&O book (the owner's track record) into dest/paper_fo-<stamp>.sqlite, the alerts
+    way. {"skipped": "absent"} quietly before the first booked structure. F3-RISK (14 Nov 2026): this store was
+    in no backup family at all."""
+    return _backup_sqlite_store(db, dest, stamp, "paper_fo", {"structures": "paper_fo_structures", "positions": "paper_fo_positions", "journal": "paper_fo_journal"})
+
+
+def _backup_paper_fo_safely(paper_fo_db: Path | None, dest: Path, stamp: str) -> dict[str, Any]:
+    try:
+        return backup_paper_fo(paper_fo_db or default_paper_fo_db(), dest, stamp)
+    except Exception as exc:  # noqa: BLE001 - reported in the result; main() exits 1
+        return {"error": f"{type(exc).__name__}: {exc}"[:300]}
+
+
 def run_prefs(dest: Path = DEST_DEFAULT, prefs_db: Path | None = None) -> dict[str, Any]:
     """Settings-store backup alone (with rotation): `--prefs-only`, e.g. before a migration."""
     meta = _backup_prefs_safely(prefs_db, dest, _now().strftime("%Y%m%d"))
@@ -392,13 +413,14 @@ def run_prefs(dest: Path = DEST_DEFAULT, prefs_db: Path | None = None) -> dict[s
 
 def run(db: Path = snap.DB, dest: Path = DEST_DEFAULT, pointer: Path = snap.POINTER,
         prefs_db: Path | None = None, alerts_db: Path | None = None,
-        job_queue_db: Path | None = None, ask_audit_db: Path | None = None) -> dict:
+        job_queue_db: Path | None = None, paper_fo_db: Path | None = None, ask_audit_db: Path | None = None) -> dict:
     dest.mkdir(parents=True, exist_ok=True)
     stamp = _now().strftime("%Y%m%d")
     # The small SQLite stores first (tiny, seconds): a DuckDB failure below must not cost the night's copies.
     prefs = _backup_prefs_safely(prefs_db, dest, stamp)
     alerts = _backup_alerts_safely(alerts_db, dest, stamp)
     job_queue = _backup_job_queue_safely(job_queue_db, dest, stamp)     # the durable queue's trail (F-24/F-31)
+    paper_fo = _backup_paper_fo_safely(paper_fo_db, dest, stamp)     # the durable queue's trail (F-24/F-31)
     ask_audit = _backup_ask_audit_safely(ask_audit_db, dest, stamp)     # ASK's audit log (no payloads inside)
     stem = dest / f"market-{stamp}"
     with tempfile.TemporaryDirectory(prefix="dbbackup_") as td:
@@ -422,6 +444,7 @@ def run(db: Path = snap.DB, dest: Path = DEST_DEFAULT, pointer: Path = snap.POIN
     meta["alerts"] = alerts
     meta["job_queue"] = job_queue
     meta["ask_audit"] = ask_audit
+    meta["paper_fo"] = paper_fo
     return meta
 
 
@@ -441,7 +464,8 @@ def copy_offsite(dest: Path, meta: dict[str, Any], target: Path, *, keep_daily: 
     rotation (7 daily + 4 Sundays). Raises on any failure; the local backup is already complete by then."""
     files: list[str] = []
     for name in (meta.get("file"), (meta.get("prefs") or {}).get("file"), (meta.get("alerts") or {}).get("file"),
-                 (meta.get("job_queue") or {}).get("file"), (meta.get("ask_audit") or {}).get("file")):
+                 (meta.get("job_queue") or {}).get("file"), (meta.get("ask_audit") or {}).get("file"),
+                 (meta.get("paper_fo") or {}).get("file")):
         if name and (dest / name).is_file():
             files.append(name)
             stem_meta = name.split(".")[0] + ".meta.json"
